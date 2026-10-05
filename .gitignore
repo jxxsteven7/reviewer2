@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Environment variables and secrets: never commit them; list the variables you need in .env.example
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Personal AI assistant settings and temporary worktrees (the shared .claude/settings.json is committed)
+.claude/settings.local.json
+.claude/worktrees/

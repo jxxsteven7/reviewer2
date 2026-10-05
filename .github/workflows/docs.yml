@@ -1,0 +1,22 @@
+name: Docs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  readme-sync:
+    # This name is the status check to require in the main branch ruleset; see docs/rules/github.md.
+    name: README sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Check that README.md and README.zh-CN.md are in sync
+        run: node scripts/check-readme-sync.mjs

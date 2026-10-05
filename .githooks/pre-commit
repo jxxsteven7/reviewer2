@@ -1,0 +1,17 @@
+#!/bin/sh
+# Refuse commits on main. Do your work in your own worktree and branch; see docs/rules/git.md.
+
+branch=$(git symbolic-ref --short -q HEAD)
+
+if [ "$branch" = "main" ]; then
+  cat >&2 <<'EOF'
+Commits on main are not allowed. Create a worktree and branch for this work, for example:
+
+  git fetch origin
+  git worktree add ../feat-xxx -b feat/xxx origin/main
+
+If you have already changed files here, run git stash, then run git stash pop inside the new worktree.
+See docs/rules/git.md.
+EOF
+  exit 1
+fi

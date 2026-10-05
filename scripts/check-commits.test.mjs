@@ -1,0 +1,240 @@
+// Tests for scripts/check-commits.mjs. Run them with: node --test "scripts/*.test.mjs"
+
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, describe, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+import {
+  checkAttribution,
+  checkMessage,
+  checkPackageJson,
+  checkSubject,
+  cleanMessage,
+  fixedTitle,
+  splitVersion,
+  successors,
+} from './check-commits.mjs';
+
+const SCRIPT = fileURLToPath(new URL('./check-commits.mjs', import.meta.url));
+const rules = (problems) => problems.map((problem) => problem.rule);
+
+describe('versions', () => {
+  test('splitVersion reads a "vX.Y.Z " prefix', () => {
+    assert.deepEqual(splitVersion('v1.2.3 feat: add rooms'), [[1, 2, 3], 'feat: add rooms']);
+    assert.deepEqual(splitVersion('feat: add rooms'), [null, 'feat: add rooms']);
+    assert.deepEqual(splitVersion('v1.2.3feat: add rooms'), [null, 'v1.2.3feat: add rooms']);
+  });
+
+  test('successors are the next patch, minor and major versions', () => {
+    assert.deepEqual(successors([0, 1, 3]), { patch: [0, 1, 4], minor: [0, 2, 0], major: [1, 0, 0] });
+  });
+
+  test('fixedTitle fills in the next patch version', () => {
+    const previous = [0, 1, 3];
+    assert.equal(fixedTitle('feat: add rooms', previous), 'v0.1.4 feat: add rooms');
+    assert.equal(fixedTitle('  feat: add rooms  ', previous), 'v0.1.4 feat: add rooms');
+    assert.equal(fixedTitle('v0.1.3 feat: add rooms', previous), 'v0.1.4 feat: add rooms');
+    assert.equal(fixedTitle('v0.1.9 feat: add rooms', previous), 'v0.1.4 feat: add rooms');
+    assert.equal(fixedTitle('v0.0.0 feat: add rooms', previous), 'v0.1.4 feat: add rooms');
+  });
+
+  test('fixedTitle keeps a legal minor or major version and moves a stale one on', () => {
+    assert.equal(fixedTitle('v0.2.0 feat: add rooms', [0, 1, 3]), 'v0.2.0 feat: add rooms');
+    assert.equal(fixedTitle('v1.0.0 feat: add rooms', [0, 1, 3]), 'v1.0.0 feat: add rooms');
+    assert.equal(fixedTitle('v0.2.0 feat: add rooms', [0, 2, 0]), 'v0.3.0 feat: add rooms');
+    assert.equal(fixedTitle('v1.0.0 feat: add rooms', [1, 0, 0]), 'v2.0.0 feat: add rooms');
+  });
+});
+
+describe('subjects', () => {
+  const branch = (subject) => rules(checkSubject(subject, 'test', { version: 'forbidden' }));
+  const landed = (subject) => rules(checkSubject(subject, 'test', { version: 'required' }));
+
+  test('accepts a well-formed subject', () => {
+    assert.deepEqual(branch('feat: add room codes'), []);
+    assert.deepEqual(branch('words: add 200 machine learning terms'), []);
+    assert.deepEqual(landed('v0.0.7 fix: return players to their team after reconnecting'), []);
+  });
+
+  test('rejects subjects that break the format', () => {
+    assert.deepEqual(branch('Add room codes'), ['type']);
+    assert.deepEqual(branch('feature: add room codes'), ['type']);
+    assert.deepEqual(branch('feat: Add room codes'), ['lowercase']);
+    assert.deepEqual(branch('feat: add room codes.'), ['period']);
+    assert.deepEqual(branch(`feat: ${'a'.repeat(70)}`), ['length']);
+    assert.deepEqual(branch('feat: 加房间码'), ['english', 'lowercase']);
+    assert.deepEqual(branch('docs: explain the “stamp”'), ['english']);
+    assert.deepEqual(branch(''), ['subject']);
+  });
+
+  test('requires or forbids the version prefix', () => {
+    assert.deepEqual(branch('v0.0.1 feat: add room codes'), ['version']);
+    assert.deepEqual(landed('feat: add room codes'), ['version']);
+  });
+});
+
+describe('attribution', () => {
+  const found = (message) => rules(checkAttribution(message, 'test'));
+
+  test('rejects AI trailers, footers, addresses and session links', () => {
+    assert.deepEqual(found('feat: x\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'), ['attribution']);
+    assert.deepEqual(found('feat: x\n\nCo-authored-by: openai-codex[bot] <bot@users.noreply.github.com>'), ['attribution']);
+    assert.deepEqual(found('feat: x\n\n  Signed-off-by: GitHub Copilot <copilot@github.com>'), ['attribution']);
+    assert.deepEqual(found('feat: x\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)'), ['attribution']);
+    assert.deepEqual(found('feat: x\n\nClaude-Session: https://claude.ai/code/session_123'), ['attribution']);
+    assert.deepEqual(found('feat: x\n\nSee https://chatgpt.com/codex/tasks/abc'), ['attribution']);
+    assert.deepEqual(found('feat: x\n\nWritten with help from noreply@openai.com'), ['attribution']);
+  });
+
+  test('allows prose about the rule and human co-authors', () => {
+    assert.deepEqual(found('docs: forbid Co-Authored-By trailers from Claude or Codex'), []);
+    assert.deepEqual(found('feat: x\n\nCo-authored-by: Alice Wang <alice@cursorlabs.example>'), []);
+    assert.deepEqual(found('feat: x\n\nGenerated by the word list validation script.'), []);
+  });
+});
+
+describe('messages', () => {
+  const branch = (message, options = {}) =>
+    rules(checkMessage(message, 'test', { version: 'forbidden', ...options }));
+
+  test('needs a blank line before the body', () => {
+    assert.deepEqual(branch('feat: add rooms\nBody text'), ['blank-line']);
+    assert.deepEqual(branch('feat: add rooms\n\nBody text'), []);
+  });
+
+  test('rejects Chinese text in the body', () => {
+    assert.deepEqual(branch('feat: add rooms\n\n修复了问题。'), ['english']);
+    assert.deepEqual(branch('feat: add rooms\n\nNow it works，see notes'), ['english']);
+    assert.deepEqual(branch('docs: explain the stamp\n\nThe “stamp” — and why… 🚧 still early'), []);
+  });
+
+  test('keeps the line git writes in a revert', () => {
+    assert.deepEqual(branch('revert: add rooms'), ['revert']);
+    assert.deepEqual(branch('revert: add rooms\n\nThis reverts commit 0123456789abcdef.'), []);
+  });
+
+  test('allows fixup commits only where asked to', () => {
+    assert.deepEqual(branch('fixup! feat: add rooms', { allowFixup: true }), []);
+    assert.deepEqual(branch('fixup! feat: add rooms'), ['fixup']);
+  });
+
+  test('cleanMessage drops comments and the diff below the scissors line', () => {
+    const raw = '\nfeat: add rooms\n\nBody\n# a comment\n# ------------------------ >8 ------------------------\ndiff --git a/x b/x\n+Co-Authored-By: Claude\n';
+    assert.equal(cleanMessage(raw), 'feat: add rooms\n\nBody');
+    assert.equal(cleanMessage('feat: x\r\n\r\nBody\r\n'), 'feat: x\n\nBody');
+  });
+
+  test('package.json must hold the minor line', () => {
+    assert.deepEqual(checkPackageJson([0, 3, 5], null, 'test'), []);
+    assert.deepEqual(rules(checkPackageJson([0, 3, 5], '{"version": "0.3.0"}', 'test')), []);
+    assert.deepEqual(rules(checkPackageJson([0, 3, 5], '{"version": "1.0.0"}', 'test')), ['package.json']);
+  });
+});
+
+describe('in a git repository', () => {
+  const directories = [];
+  after(() => directories.forEach((directory) => rmSync(directory, { recursive: true, force: true })));
+
+  function makeRepo() {
+    const directory = mkdtempSync(join(tmpdir(), 'check-commits-'));
+    directories.push(directory);
+    const git = (...args) => {
+      const result = spawnSync('git', args, { cwd: directory, encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+      return result.stdout.trim();
+    };
+    git('init', '-q', '-b', 'main');
+    git('config', 'user.name', 'Test Person');
+    git('config', 'user.email', 'test@example.com');
+    git('config', 'commit.gpgsign', 'false');
+    git('config', 'tag.gpgsign', 'false');
+    mkdirSync(join(directory, 'no-hooks'));
+    git('config', 'core.hooksPath', join(directory, 'no-hooks'));
+    const commit = (subject) => git('commit', '-q', '--allow-empty', '-m', subject);
+    const cli = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { cwd: directory, encoding: 'utf8' });
+    return { directory, git, commit, cli };
+  }
+
+  test('counts from v0.0.0 when nothing has a version yet', () => {
+    const { commit, cli } = makeRepo();
+    commit('chore: initial commit');
+    assert.equal(cli('next', '--base', 'main').stdout.trim(), 'v0.0.1');
+    assert.equal(cli('pr-title', 'docs: add rules', '--base', 'main', '--fix').stdout.trim(), 'v0.0.1 docs: add rules');
+  });
+
+  test('takes the highest version from subjects and tags', () => {
+    const { git, commit, cli } = makeRepo();
+    commit('chore: initial commit');
+    commit('v0.0.1 docs: add rules (#1)');
+    commit('v0.0.2 fix: correct a link (#2)');
+    assert.equal(cli('next', '--base', 'main').stdout.trim(), 'v0.0.3');
+    git('tag', 'v0.3.0');
+    assert.equal(cli('next', '--base', 'main').stdout.trim(), 'v0.3.1');
+    assert.equal(cli('next', '--base', 'main', '--minor').stdout.trim(), 'v0.4.0');
+    assert.equal(cli('next', '--base', 'main', '--major').stdout.trim(), 'v1.0.0');
+  });
+
+  test('pr-title checks the version, the branch name and the body', () => {
+    const { directory, commit, cli } = makeRepo();
+    commit('v0.0.1 docs: add rules (#1)');
+    assert.equal(cli('pr-title', 'v0.0.2 feat: add rooms', '--base', 'main', '--head-ref', 'feat/rooms').status, 0);
+    assert.equal(cli('pr-title', 'v0.1.0 feat: add rooms', '--base', 'main').status, 0);
+    assert.equal(cli('pr-title', 'v0.0.1 feat: add rooms', '--base', 'main').status, 1);
+    assert.equal(cli('pr-title', 'feat: add rooms', '--base', 'main').status, 1);
+    assert.equal(cli('pr-title', 'v0.0.2 feat: add rooms', '--base', 'main', '--head-ref', 'rooms').status, 1);
+    const body = join(directory, 'body.md');
+    writeFileSync(body, '## What\n\nAdds rooms.\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n');
+    assert.equal(cli('pr-title', 'v0.0.2 feat: add rooms', '--base', 'main', '--body-file', body).status, 1);
+    writeFileSync(join(directory, 'package.json'), '{"version": "1.0.0"}\n');
+    assert.equal(cli('pr-title', 'v0.0.2 feat: add rooms', '--base', 'main').status, 1);
+    writeFileSync(join(directory, 'package.json'), '{"version": "0.0.0"}\n');
+    assert.equal(cli('pr-title', 'v0.0.2 feat: add rooms', '--base', 'main').status, 0);
+  });
+
+  test('head accepts the next version and rejects a skipped one', () => {
+    const { commit, cli } = makeRepo();
+    commit('chore: initial commit');
+    commit('v0.0.1 docs: add rules (#1)');
+    assert.equal(cli('head').status, 0);
+    commit('v0.0.5 feat: add rooms (#2)');
+    const result = cli('head');
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /must be v0\.0\.2/);
+    commit('feat: add a lobby');
+    assert.equal(cli('head').status, 1);
+  });
+
+  test('msg forbids a version on a branch commit', () => {
+    const { directory, git, commit, cli } = makeRepo();
+    commit('v0.0.1 docs: add rules (#1)');
+    git('switch', '-q', '-c', 'feat/rooms');
+    const file = join(directory, 'message.txt');
+    writeFileSync(file, 'v0.0.2 feat: add rooms\n');
+    assert.equal(cli('msg', file).status, 1);
+    writeFileSync(file, 'feat: add rooms\n\n# Please enter the commit message\n');
+    const result = cli('msg', file);
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, '');
+  });
+
+  test('release names the tag for a new minor or major version only', () => {
+    const { git, commit, cli } = makeRepo();
+    commit('v0.0.1 docs: add rules (#1)');
+    assert.equal(cli('release').stdout, '');
+    commit('v0.1.0 feat: play a full game (#2)');
+    assert.equal(cli('release').stdout.trim(), 'v0.1.0');
+    git('tag', 'v0.1.0');
+    assert.equal(cli('release').stdout, '');
+  });
+
+  test('reports usage errors with exit code 2', () => {
+    const { cli } = makeRepo();
+    assert.equal(cli('pr-title', 'feat: x').status, 2);
+    assert.equal(cli('bogus').status, 2);
+    assert.equal(cli().status, 2);
+  });
+});

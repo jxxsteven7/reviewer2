@@ -1,0 +1,13 @@
+#!/bin/sh
+# Refuse pushes to main on the remote, including deleting it. Push your own branch and open a PR instead;
+# see docs/rules/git.md.
+# Git passes one line per ref on stdin: <local ref> <local sha> <remote ref> <remote sha>
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "Pushing to main is not allowed. Push your own branch and open a pull request on GitHub. See docs/rules/git.md." >&2
+    exit 1
+  fi
+done
+
+exit 0
