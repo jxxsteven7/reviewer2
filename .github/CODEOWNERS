@@ -1,0 +1,4 @@
+# Ask the repository maintainer to review every change by default.
+# As the team grows, assign owners per directory, for example:
+# /words/  @word-list-owner
+*  @jxxsteven7

@@ -1,0 +1,15 @@
+#!/bin/sh
+# Check the commit message against the convention in docs/rules/git.md: the subject format,
+# English only, no AI or agent attribution, and no version prefix on branch commits.
+# The rules themselves live in scripts/check-commits.mjs, which CI runs as well.
+
+if [ ! -f scripts/check-commits.mjs ]; then
+  exit 0 # a branch that predates the checker
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "The commit-msg hook needs Node.js 20 or later to check your commit message. See docs/rules/git.md." >&2
+  exit 1
+fi
+
+exec node scripts/check-commits.mjs msg "$1"
