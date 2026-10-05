@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   readme-sync:
-    # This name is the status check to require in the main branch ruleset; see docs/rules/github.md.
+    # This name is the status check to require in the main branch ruleset; see docs/maintainers.md.
     name: README sync
     runs-on: ubuntu-latest
     steps:

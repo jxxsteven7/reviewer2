@@ -1,6 +1,6 @@
-# GitHub repository settings (maintainers)
+# Maintainer guide
 
-This file records how `main` is protected on GitHub. Update it whenever the settings change.
+Settings and tasks for the people who maintain the repository. This file records how `main` is protected on GitHub; update it whenever the settings change.
 
 ## Branch protection
 

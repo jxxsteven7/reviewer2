@@ -12,7 +12,7 @@ The project rules live in `docs/rules/` and are shared by people and AI assistan
 @docs/rules/constraints.md
 @docs/rules/language.md
 
-When working on word lists, also read `docs/rules/words.md`.
+When working on word lists, also read `words/README.md`.
 
 ## Always
 

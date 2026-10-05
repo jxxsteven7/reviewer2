@@ -105,7 +105,7 @@ git push -u origin fix/reconnect
 
 ### 贡献词库
 
-词库在 `words/` 目录，每个领域一个 JSON 文件。好的词条是圈内人人都认识、又容易引发联想的短名词，比如"注意力""收敛""基线""泛化"。词库 PR 只改 `words/` 下的文件，和其他 PR 一样需要 review。格式和选词标准见 [docs/rules/words.md](docs/rules/words.md)。
+`words/` 目录下的词库由所有游戏共用，每个学术领域一个 JSON 文件。好的词条要短，而且领域内人人都认识，比如"注意力""收敛""基线""泛化"。词库 PR 只改 `words/` 下的文件，和其他 PR 一样需要 review。格式、选词标准以及各个游戏怎么使用词库，见 [words/README.md](words/README.md)。
 
 所有词条必须原创，不得使用任何商业桌游的官方词表。
 
@@ -113,4 +113,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: 3774dfdb6f20fb0512fc864e5306e185231590d7d0ff3bbaa7018790a329c5b7 -->
+<!-- readme-sync: 02d100b46a822c6322a26cb598efde4d00138d858bce482ab770f6fcf1737409 -->

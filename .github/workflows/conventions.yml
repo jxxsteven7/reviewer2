@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   pull-request:
-    # This name is a required status check; see docs/rules/github.md.
+    # This name is a required status check; see docs/maintainers.md.
     name: Commits and version
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -70,7 +70,7 @@ jobs:
             --head-ref "$HEAD_REF" --body-file "$RUNNER_TEMP/pr-body.md"
 
   scripts:
-    # This name is a required status check; see docs/rules/github.md.
+    # This name is a required status check; see docs/maintainers.md.
     name: Script tests
     runs-on: ubuntu-latest
     steps:

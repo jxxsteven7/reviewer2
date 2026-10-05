@@ -105,7 +105,7 @@ For larger changes, please open an issue first.
 
 ### Contributing words
 
-Word lists live in `words/`, one JSON file per field. A good term is a short noun that everyone in the field knows and that invites associations, such as "attention", "convergence", "baseline" or "generalization". Word-list PRs change only files under `words/`, and they are reviewed like any other PR. The format and selection criteria are in [docs/rules/words.md](docs/rules/words.md).
+The word library in `words/` is shared by all the games, with one JSON file per academic field. A good term is short, and everyone in its field knows it, such as "attention", "convergence", "baseline" or "generalization". Word-list PRs change only files under `words/`, and they are reviewed like any other PR. The format, what makes a good term and how each game uses the library are described in [words/README.md](words/README.md).
 
 All terms must be original. Do not use the official word list of any commercial board game.
 

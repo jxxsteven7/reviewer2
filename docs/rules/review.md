@@ -4,7 +4,7 @@ All code is reviewed. Code written by people or by AI, by members or by outside 
 
 ## Rules
 
-- Every PR needs approval from **at least one person other than its author** before it can be merged. For the interim arrangement while there is only one maintainer, see [github.md](github.md).
+- Every PR needs approval from **at least one person other than its author** before it can be merged. For the interim arrangement while there is only one maintainer, see the [maintainer guide](../maintainers.md).
 - If new commits are pushed after approval, the PR needs another review.
 - Respond to every review comment: either make the change, or explain your reasoning and reach agreement with the reviewer. All conversations must be resolved before merging.
 - PRs are always merged with **Squash and merge**. Members may merge their own PR once it is approved and all checks pass. PRs from outside contributors are merged by a maintainer.

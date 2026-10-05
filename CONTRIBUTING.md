@@ -22,8 +22,8 @@ The detailed rules are split by topic and shared by people and AI assistants:
 | [docs/rules/review.md](docs/rules/review.md) | Review rules, AI-written code, what reviewers check |
 | [docs/rules/constraints.md](docs/rules/constraints.md) | Hard constraints: access from mainland China, intellectual property, game state, UI, secrets |
 | [docs/rules/language.md](docs/rules/language.md) | English in the repository, keeping the two READMEs in sync |
-| [docs/rules/words.md](docs/rules/words.md) | Word list format, choosing terms, submitting word lists |
-| [docs/rules/github.md](docs/rules/github.md) | For maintainers: GitHub repository settings |
+| [words/README.md](words/README.md) | The word library shared by all games: format, what makes a good term, how to contribute |
+| [docs/maintainers.md](docs/maintainers.md) | For maintainers: GitHub repository settings |
 
 ## Working with AI assistants
 
@@ -36,7 +36,7 @@ To bring a specific rule into a conversation, reference its file with `@` in Cla
 ```
 @docs/rules/review.md review the changes on this branch against this checklist
 @docs/rules/constraints.md can we use this new dependency?
-@docs/rules/words.md check words/ml.json
+@words/README.md check words/ml.json
 ```
 
 ## Issues
