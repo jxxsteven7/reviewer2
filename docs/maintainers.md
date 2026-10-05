@@ -23,6 +23,11 @@ Settings and tasks for the people who maintain the repository. This file records
     - `Commits and version` and `Script tests`, from `.github/workflows/conventions.yml`
     - `README sync`, from `.github/workflows/docs.yml`
     - Tests, type checks and word list validation for the app, once CI runs them
+  - Require branches to be up to date before merging. This one matters for versioning: once another PR has merged, a PR's `Commits and version` result is older than `main`, and without this rule two PRs could land with the same version. Updating the branch runs the check again, and the check retitles the PR to the version that is now next.
+
+## Maintainers
+
+A maintainer is anyone with the **Admin** or **Maintain** role on the repository (**Settings → Collaborators and teams**). CI uses the role to decide who may give a PR a minor or major version: when anyone else sets one, the `Commits and version` check puts the next patch version back and says so in a warning.
 
 ## Merging
 

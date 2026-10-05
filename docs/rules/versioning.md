@@ -29,9 +29,9 @@ Only maintainers decide these. To make a PR a minor or major version, edit its t
 - minor: `vX.(Y+1).0`, for example `v0.1.0 feat: play a full game of team word guessing`
 - major: `v(X+1).0.0`, for example `v1.0.0 chore: open the game to the public`
 
-CI keeps a legal minor or major version as it is. If another PR lands first and takes that number, CI moves the title on to the next version of the same kind.
+CI keeps a legal minor or major version as it is, provided a maintainer put it there: someone with the Admin or Maintain role on the repository, who opened the PR with that version or edited it into the title. When anyone else sets one, CI puts the next patch version back and says so in a warning on the check. If another PR lands first and takes the number, CI moves the title on to the next version of the same kind.
 
-When a PR with a new minor or major version is merged, CI tags the commit `vX.Y.0` and publishes a GitHub Release with notes generated from the merged PRs. Patch versions get no tag and no release. They exist only in the commit titles on `main`.
+When a PR with a new minor or major version is merged, CI tags the commit `vX.Y.0` and publishes a GitHub Release with notes generated from the merged PRs. Should that run fail or be cancelled, the next run on `main` creates the missing tag and release. Patch versions get no tag and no release. They exist only in the commit titles on `main`.
 
 Once the root `package.json` exists, its `version` field holds the current minor line, `X.Y.0`. A PR that changes the minor or major version also updates `package.json`, and patch PRs leave it alone. CI checks this.
 

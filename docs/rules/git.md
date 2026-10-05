@@ -71,9 +71,9 @@ git fetch --prune
 
 ### Local hooks
 
-The repository ships three git hooks in `.githooks/` that catch rule violations on your machine:
+The repository ships four git hooks in `.githooks/` that catch rule violations on your machine:
 
-- `pre-commit` refuses commits while `main` is checked out.
+- `pre-commit` and `pre-merge-commit` refuse commits, including the merge commits that `git merge` and `git pull` make, while `main` is checked out.
 - `commit-msg` runs `scripts/check-commits.mjs`, the same checker CI uses. It refuses commit messages that break the format below, contain Chinese text or AI or agent attribution, or carry a version.
 - `pre-push` refuses pushes to `main` on the remote.
 
@@ -145,7 +145,7 @@ every reconnect. Look them up by their player token instead.
 - The summary is one imperative sentence in English that makes sense on its own: "fix: return players to their team after reconnecting", not "fix: bug" or "chore: update code". It starts with a lowercase letter or a digit and doesn't end with a period.
 - The subject uses printable ASCII only and is at most 72 characters long.
 - The body, if there is one, explains what changed, why, and any known shortcomings. It is in English too.
-- A revert is titled `revert: <summary>` and keeps the "This reverts commit <sha>." line that `git revert` writes.
+- A revert is titled `revert: <summary>` and keeps the "This reverts commit <sha>." line that `git revert` writes. This is about branch commits: the squash commit on `main` carries only the PR title.
 - Branch commits carry **no** version. The version goes on the PR title; see [versioning.md](versioning.md).
 - **No AI or agent attribution.** Don't add trailers such as `Co-Authored-By: Claude …` or `Co-Authored-By: Codex …`, "Generated with …" lines, or links to AI sessions. The author of a commit is the person who commits it, and that person is responsible for its content. The same applies to PR titles and descriptions.
   - The `commit-msg` hook blocks these lines locally.

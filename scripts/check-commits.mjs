@@ -10,15 +10,18 @@
 //       one commit message (the commit-msg hook)
 //   node scripts/check-commits.mjs range <rev-range>
 //       every commit in a pull request
-//   node scripts/check-commits.mjs pr-title <title> --base <ref> [--fix] [--body-file <file>] [--head-ref <branch>]
+//   node scripts/check-commits.mjs pr-title --base <ref> [--fix [--patch]] [--body-file <file>] [--head-ref <branch>] -- <title>
 //       the pull request title, which becomes the squash commit, and the PR body;
-//       with --fix, print the title with the right version instead of checking it
+//       with --fix, print the title with the right version instead of checking it, and with
+//       --fix --patch, print it with the next patch version even if it asks for a minor or
+//       major one
 //   node scripts/check-commits.mjs head [--base <ref>]
 //       the commits that landed on main since <ref> (default HEAD^)
 //   node scripts/check-commits.mjs next [--base <ref>] [--minor | --major]
 //       print the next version (default: the next patch version on origin/main)
 //   node scripts/check-commits.mjs release [--ref <ref>]
-//       print the tag to create if <ref> (default HEAD) carries a new minor or major version
+//       print "<tag>\t<sha>" for every minor or major version on <ref> (default HEAD) that has
+//       no tag yet, oldest first
 //
 // Versions: the previous version on a ref is the highest "vX.Y.Z " subject prefix on its
 // first-parent history or the highest vX.Y.Z tag merged into it, whichever is greater, and
@@ -28,7 +31,7 @@
 // Exit codes: 0 pass, 1 convention violated, 2 usage or environment error.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -43,29 +46,61 @@ const TYPE_RE = new RegExp(`^(${TYPES.join('|')}): `);
 const BRANCH_RE = new RegExp(`^(${BRANCH_TYPES.join('|')})/[a-z0-9]+(-[a-z0-9]+)*$`);
 const VERSION_PREFIX_RE = /^v(\d+)\.(\d+)\.(\d+) (?=\S)/;
 const TAG_RE = /^v(\d+)\.(\d+)\.(\d+)$/;
-const FIXUP_RE = /^(fixup|squash|amend)! /;
+// A fixup of a fixup commit stacks the prefixes: "fixup! fixup! <subject>".
+const FIXUP_RE = /^((fixup|squash|amend)! )+/;
 const PRINTABLE_ASCII_RE = /^[\x20-\x7e]+$/;
 // CJK punctuation and ideographs (U+3000 to U+9FFF) and fullwidth forms (U+FF00 to U+FF7F).
 const CHINESE_RE = /[\u3000-\u9fff\uff00-\uff7f]/;
 const REVERTS_RE = /^this reverts commit [0-9a-f]{7,40}\b/im;
-const SCISSORS_RE = /^# -+ >8 -+$/m;
+const SCISSORS_RE = /^ -+ >8 -+$/; // after the comment string, on the line `git commit --verbose` adds
 const PR_NUMBER_RE = / \(#\d+\)$/; // GitHub appends this to the subject of a squash merge
 
-const AGENTS = 'claude|anthropic|codex|openai|chatgpt|copilot|cursor|gemini|devin|aider|windsurf';
-// Each pattern is tested against every line, ignoring case. Trailers and footers must open the
-// line, so prose that merely names one, as the rules themselves do, is not attribution. Agent
+// AI coding assistants, by the product names under which they sign commits. A name is an agent
+// when it is one of these on its own or followed by a model, version or role, as in "Claude
+// Opus 5.5", "GitHub Copilot" or "Cursor Agent". A person who shares a first name with one,
+// such as "Claude Dupont", is not.
+const AGENTS = 'claude|codex|chatgpt|copilot|cursor|gemini|jules|devin|aider|windsurf';
+const AGENT_NAME =
+  `(?:(?:anthropic|openai|github|google|cursor) )?(?:${AGENTS})` +
+  '(?: (?:code|cli|agent|ai|assistant|bot|opus|sonnet|haiku|fable|\\d[\\w.-]*))*';
+const AGENT_NAME_RE = new RegExp(`^${AGENT_NAME}$`, 'i');
+// GitHub Apps commit as "<app>[bot]". Only the apps of AI agents count, not dependabot and co.
+const AGENT_BOT_RE = new RegExp(`\\b(?:${AGENTS})\\b.*\\[bot\\]$`, 'i');
+const AGENT_EMAIL_RE = /noreply@(anthropic|openai)\.com/i;
+const TRAILER_RE = /^\s*(?:co-authored-by|signed-off-by|assisted-by|generated-by|helped-by):\s*(.*?)\s*$/i;
+// The footer that an assistant appends: a line that is nothing but "Generated with <agent>",
+// with the agent possibly linked. A sentence that goes on, such as the AI disclosure the pull
+// request template asks for, is not a footer.
+const GENERATED_RE = new RegExp(
+  `^[^\\p{L}\\p{N}]*generated (?:with|by) \\[?${AGENT_NAME}\\]?(?:\\([^)]*\\))?[^\\p{L}\\p{N}]*$`,
+  'iu',
+);
+
+// Parses "Name <email>" or a bare name.
+function parseIdentity(text) {
+  const match = text.match(/^(.*?)\s*<([^>]*)>$/);
+  return match ? { name: match[1].trim(), email: match[2].trim() } : { name: text.trim(), email: '' };
+}
+
+export function isAgent({ name, email }) {
+  return AGENT_NAME_RE.test(name) || AGENT_BOT_RE.test(name) || AGENT_EMAIL_RE.test(email);
+}
+
+function isAgentTrailer(line) {
+  const match = line.match(TRAILER_RE);
+  return Boolean(match) && isAgent(parseIdentity(match[1]));
+}
+
+// Each test runs against every line, ignoring case. Trailers and footers must open the line, so
+// prose that merely names an assistant, as the rules themselves do, is not attribution. Agent
 // email addresses and links to AI sessions count anywhere.
 export const ATTRIBUTION = [
-  [
-    new RegExp(`^\\s*(co-authored-by|signed-off-by|assisted-by|generated-by|helped-by):.*\\b(${AGENTS})\\b`, 'i'),
-    'an AI co-author or sign-off trailer',
-  ],
-  [new RegExp(`^[^\\p{L}\\p{N}]*generated (with|by) .*\\b(${AGENTS})\\b`, 'iu'), 'a "Generated with" footer'],
-  [/^\s*claude-session:/i, 'a Claude-Session trailer'],
-  [/noreply@(anthropic|openai)\.com/i, 'an AI agent email address'],
-  [/claude\.ai\/code\/session|chatgpt\.com\/codex/i, 'a link to an AI session'],
+  [isAgentTrailer, 'an AI co-author or sign-off trailer'],
+  [(line) => GENERATED_RE.test(line), 'a "Generated with" footer'],
+  [(line) => /^\s*claude-session:/i.test(line), 'a Claude-Session trailer'],
+  [(line) => AGENT_EMAIL_RE.test(line), 'an AI agent email address'],
+  [(line) => /claude\.ai\/code\/session|chatgpt\.com\/codex/i.test(line), 'a link to an AI session'],
 ];
-const AGENT_EMAILS = ['noreply@anthropic.com', 'noreply@openai.com'];
 const LOG_FORMAT = '%H%x00%P%x00%an%x00%ae%x00%cn%x00%ce%x00%B%x1e';
 
 export class GitError extends Error {}
@@ -77,22 +112,25 @@ const firstLine = (message) => message.split('\n', 1)[0];
 // Pure rules
 // --------------------------------------------------------------------------------------------
 
-// Normalizes a message the way git does before storing it: drops a byte order mark, normalizes
-// line endings, cuts everything from the scissors line that `git commit --verbose` adds, drops
-// comment lines (unless the message already comes from `git log`) and trims blank lines.
-export function cleanMessage(raw, { stripComments = true } = {}) {
-  let text = raw.replace(/^\ufeff/, '').replace(/\r\n?/g, '\n');
-  let lines;
-  if (stripComments) {
-    const cut = text.search(SCISSORS_RE);
-    if (cut !== -1) text = text.slice(0, cut);
-    lines = text.split('\n').filter((line) => !line.startsWith('#'));
-  } else {
-    lines = text.split('\n');
+// Normalizes a message the way `git commit --cleanup=<mode>` does before storing it. 'strip'
+// drops the lines that start with the comment string, then does what 'whitespace' does: trims
+// trailing whitespace (which also normalizes line endings), collapses runs of blank lines and
+// drops leading and trailing blank lines. Both cut everything from the scissors line that
+// `git commit --verbose` adds. 'verbatim' only drops the final newline; it is for messages that
+// git has already stored.
+export function cleanMessage(raw, { mode = 'strip', comment = '#' } = {}) {
+  const text = raw.replace(/^\ufeff/, '');
+  if (mode === 'verbatim') return text.replace(/\n+$/, '');
+  let lines = text.split('\n').map((line) => line.trimEnd());
+  const cut = lines.findIndex((line) => line.startsWith(comment) && SCISSORS_RE.test(line.slice(comment.length)));
+  if (cut !== -1) lines = lines.slice(0, cut);
+  if (mode !== 'whitespace') lines = lines.filter((line) => !line.startsWith(comment));
+  const kept = [];
+  for (const line of lines) {
+    if (line || (kept.length && kept.at(-1))) kept.push(line);
   }
-  while (lines.length && !lines[0].trim()) lines.shift();
-  while (lines.length && !lines.at(-1).trim()) lines.pop();
-  return lines.join('\n');
+  while (kept.length && !kept.at(-1)) kept.pop();
+  return kept.join('\n');
 }
 
 // Returns [version, rest] for a "vX.Y.Z <rest>" subject, or [null, subject].
@@ -157,7 +195,7 @@ export function checkSubject(subject, where, { version: versionRule }) {
 export function checkAttribution(message, where) {
   const problems = [];
   message.split('\n').forEach((line, index) => {
-    const hit = ATTRIBUTION.find(([pattern]) => pattern.test(line));
+    const hit = ATTRIBUTION.find(([test]) => test(line));
     if (hit) {
       problems.push(problem(where, 'attribution', `${hit[1]} on line ${index + 1}: "${line.trim()}"`));
     }
@@ -174,7 +212,9 @@ function checkBodyEnglish(lines, where) {
   );
 }
 
-// Subject, structure, language and attribution rules for one cleaned message.
+// Subject, structure, language and attribution rules for one cleaned message. A message whose
+// version is 'required' is a squash commit on main, which carries only the pull request title,
+// so the body rules for branch commits do not apply to it.
 export function checkMessage(message, where, { version, allowFixup = false }) {
   const lines = message.split('\n');
   let subject = lines[0] ?? '';
@@ -188,7 +228,7 @@ export function checkMessage(message, where, { version, allowFixup = false }) {
     problems.push(problem(where, 'blank-line', 'leave a blank line between the subject and the body'));
   }
   const [, rest] = splitVersion(subject);
-  if (rest.startsWith('revert: ') && !REVERTS_RE.test(message)) {
+  if (version !== 'required' && rest.startsWith('revert: ') && !REVERTS_RE.test(message)) {
     problems.push(problem(where, 'revert', 'a revert keeps the "This reverts commit <sha>." line that git writes'));
   }
   problems.push(...checkBodyEnglish(lines, where), ...checkAttribution(message, where));
@@ -200,8 +240,8 @@ export function checkIdentity(commit, where) {
     ['author', commit.authorName, commit.authorEmail],
     ['committer', commit.committerName, commit.committerEmail],
   ].flatMap(([role, name, email]) =>
-    AGENT_EMAILS.includes(email.toLowerCase())
-      ? [problem(where, 'identity', `the ${role}, ${name} <${email}>, is an AI agent address`)]
+    isAgent({ name, email })
+      ? [problem(where, 'identity', `the ${role}, ${name} <${email}>, is an AI agent; commit as yourself`)]
       : [],
   );
 }
@@ -243,12 +283,16 @@ export function checkPackageJson(version, text, where) {
 // the title is kept: that is how a maintainer asks for a minor or major version. A minor or
 // major version that went stale because another PR took it moves to the next one of the same
 // kind. Anything else (no version, a reused, skipped or older number) becomes the next patch.
-export function fixedTitle(title, previous) {
+// With `patchOnly`, for a title that someone other than a maintainer set, a minor or major
+// version is not honored and the title gets the next patch version as well.
+export function fixedTitle(title, previous, { patchOnly = false } = {}) {
   const [version, rest] = splitVersion(title.trim());
   const next = successors(previous);
-  if (version && isSuccessor(version, previous)) return title.trim();
-  if (version && version[2] === 0 && version[1] > 0) return `${formatVersion(next.minor)} ${rest}`;
-  if (version && version[2] === 0 && version[1] === 0 && version[0] > 0) return `${formatVersion(next.major)} ${rest}`;
+  if (version && !patchOnly) {
+    if (isSuccessor(version, previous)) return title.trim();
+    if (version[2] === 0 && version[1] > 0) return `${formatVersion(next.minor)} ${rest}`;
+    if (version[2] === 0 && version[1] === 0 && version[0] > 0) return `${formatVersion(next.major)} ${rest}`;
+  }
   return `${formatVersion(next.patch)} ${rest}`;
 }
 
@@ -271,6 +315,25 @@ function git(...args) {
 }
 
 const gitOk = (...args) => runGit(args).status === 0;
+
+// One config value, or null when it is not set.
+function gitConfig(key) {
+  const result = runGit(['config', '--get', key]);
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+// How git will clean the message up after the commit-msg hook has seen it: the mode from
+// commit.cleanup when set, otherwise comments are stripped only when an editor was used. Git
+// runs the commit hooks with GIT_EDITOR=: when it will not open one, as with `git commit -m`.
+function messageCleanup() {
+  const configured = gitConfig('commit.cleanup');
+  const mode = configured && configured !== 'default' ? configured : process.env.GIT_EDITOR === ':' ? 'whitespace' : 'strip';
+  const comment = gitConfig('core.commentString') ?? gitConfig('core.commentChar') ?? '#';
+  return {
+    mode: mode === 'scissors' ? 'whitespace' : mode,
+    comment: comment === 'auto' ? '#' : comment, // with 'auto', git uses '#' unless the message itself needs another
+  };
+}
 
 // The current branch, or null when HEAD is detached.
 function currentBranch() {
@@ -324,7 +387,7 @@ function rootPackageJson() {
 // --------------------------------------------------------------------------------------------
 
 function modeMsg(file) {
-  const message = cleanMessage(readFileSync(file, 'utf8'));
+  const message = cleanMessage(readFileSync(file, 'utf8'), messageCleanup());
   const where = 'message';
   if (gitOk('rev-parse', '-q', '--verify', 'MERGE_HEAD')) {
     return { problems: checkAttribution(message, where), note: 'merge commit: attribution rules only' };
@@ -362,7 +425,9 @@ function modeRange(revRange) {
   const list = commits(revRange);
   for (const commit of list) {
     const where = commit.sha.slice(0, 7);
-    const message = cleanMessage(commit.message, { stripComments: false });
+    const message = cleanMessage(commit.message, { mode: 'verbatim' });
+    // Merge commits and the commits of automation such as dependabot have messages of their
+    // own. The identity check still rejects commits that an AI agent made in its own name.
     if (commit.parents.length > 1 || commit.authorName.endsWith('[bot]')) {
       problems.push(...checkAttribution(message, where));
     } else {
@@ -375,9 +440,10 @@ function modeRange(revRange) {
 
 function modePrTitle(title, options) {
   if (!options.base) throw new UsageError('pr-title needs --base <ref>');
+  if (options.patch && !options.fix) throw new UsageError('--patch goes with --fix');
   const previous = previousVersion(options.base);
   if (options.fix) {
-    console.log(fixedTitle(title, previous));
+    console.log(fixedTitle(title, previous, { patchOnly: options.patch }));
     return null;
   }
   const where = 'pr-title';
@@ -391,7 +457,8 @@ function modePrTitle(title, options) {
     problems.push(...checkPackageJson(version, rootPackageJson(), where));
   }
   if (options['body-file']) {
-    const body = cleanMessage(readFileSync(options['body-file'], 'utf8'), { stripComments: false });
+    // The body is Markdown, where a leading "#" is a heading, not a comment.
+    const body = cleanMessage(readFileSync(options['body-file'], 'utf8'), { mode: 'whitespace' });
     problems.push(...checkAttribution(body, 'pr-body'));
   }
   const branch = options['head-ref'];
@@ -413,7 +480,7 @@ function modeHead(options) {
   const list = commits(`${base}..HEAD`, { firstParent: true });
   for (const commit of list) {
     const where = commit.sha.slice(0, 7);
-    const cleaned = cleanMessage(commit.message, { stripComments: false });
+    const cleaned = cleanMessage(commit.message, { mode: 'verbatim' });
     const [subject, ...body] = cleaned.split('\n');
     const message = [subject.replace(PR_NUMBER_RE, ''), ...body].join('\n');
     problems.push(...checkMessage(message, where, { version: 'required' }));
@@ -438,13 +505,18 @@ function modeNext(options) {
   return 0;
 }
 
+// Every minor or major version on the first-parent history of the ref that has no tag yet,
+// oldest first. Looking at the whole history rather than only the last commit means that a
+// release which an earlier run missed, because it failed or was cancelled, is tagged by the
+// next run on main.
 function modeRelease(options) {
   const ref = options.ref || 'HEAD';
-  const [version] = splitVersion(git('log', '-1', '--format=%s', ref).trim());
-  const isRelease = version && version[2] === 0 && (version[0] > 0 || version[1] > 0);
-  if (isRelease) {
-    const tag = formatVersion(version);
-    if (!gitOk('rev-parse', '-q', '--verify', `refs/tags/${tag}`)) console.log(tag);
+  const tagged = new Set(git('tag', '--list', 'v[0-9]*').split('\n').map((tag) => tag.trim()));
+  for (const line of git('log', '--first-parent', '--reverse', '--format=%H %s', ref).split('\n')) {
+    const [sha, ...subject] = line.split(' ');
+    const [version] = splitVersion(subject.join(' '));
+    const isRelease = version && version[2] === 0 && (version[0] > 0 || version[1] > 0);
+    if (isRelease && !tagged.has(formatVersion(version))) console.log(`${formatVersion(version)}\t${sha}`);
   }
   return 0;
 }
@@ -458,7 +530,7 @@ class UsageError extends Error {}
 const USAGE = `Usage:
   node scripts/check-commits.mjs msg <file>
   node scripts/check-commits.mjs range <rev-range>
-  node scripts/check-commits.mjs pr-title <title> --base <ref> [--fix] [--body-file <file>] [--head-ref <branch>]
+  node scripts/check-commits.mjs pr-title --base <ref> [--fix [--patch]] [--body-file <file>] [--head-ref <branch>] -- <title>
   node scripts/check-commits.mjs head [--base <ref>]
   node scripts/check-commits.mjs next [--base <ref>] [--minor | --major]
   node scripts/check-commits.mjs release [--ref <ref>]`;
@@ -466,6 +538,7 @@ const USAGE = `Usage:
 const OPTIONS = {
   base: { type: 'string' },
   fix: { type: 'boolean' },
+  patch: { type: 'boolean' },
   'body-file': { type: 'string' },
   'head-ref': { type: 'string' },
   minor: { type: 'boolean' },
@@ -526,6 +599,8 @@ export function main(argv) {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Run as a script, not when imported by the tests. Node resolves import.meta.url to the real
+// path, so the path on the command line must be resolved too in case it goes through a symlink.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   process.exitCode = main(process.argv.slice(2));
 }

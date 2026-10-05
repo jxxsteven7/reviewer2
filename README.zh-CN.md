@@ -59,7 +59,7 @@
 
 ## 参与贡献
 
-欢迎贡献代码、词库和想法。完整规则见 **[CONTRIBUTING.md](CONTRIBUTING.md)**（英文），核心是五条：
+欢迎贡献代码、词库和想法。完整规则见 **[CONTRIBUTING.md](CONTRIBUTING.md)**（英文），核心规则如下：
 
 1. **`main` 受保护**：任何人（包括维护者）都不直接提交或推送 `main`，所有改动都通过 Pull Request 合入。
 2. **在自己的分支上开发**：项目成员用 git worktree 加独立分支。外部贡献者 fork 本仓库，在自己 fork 的分支上开发。
@@ -113,4 +113,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: 02d100b46a822c6322a26cb598efde4d00138d858bce482ab770f6fcf1737409 -->
+<!-- readme-sync: 83a01cd9c6f63265c601617b0d9bd60329c591864506aadef67d0698ef6d653f -->
