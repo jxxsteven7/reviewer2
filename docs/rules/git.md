@@ -158,6 +158,7 @@ every reconnect. Look them up by their player token instead.
 - Each PR does one thing. Split large changes into several PRs so they are easy to review.
 - Base it on the latest `main`, with no conflicts.
 - Fill in the template: what changed, why, and how you tested it.
+- Before merging, check that the title and description still match the final change. Review often changes a PR along the way.
 - Tests pass. If you change game rules, add unit tests.
 - For UI changes, check them at phone width, attach screenshots, and look at both the Chinese and the English version.
 - If you used an AI coding assistant, say which parts it generated in the template's "AI assistance" section. That section is for reviewers only. It is not attribution, and it does not end up in the commit message.

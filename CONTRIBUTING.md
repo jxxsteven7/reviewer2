@@ -19,7 +19,7 @@ The detailed rules are split by topic and shared by people and AI assistants:
 |---|---|
 | [docs/rules/git.md](docs/rules/git.md) | Worktree workflow, fork workflow, branch names, commit messages, PR requirements, local hooks |
 | [docs/rules/versioning.md](docs/rules/versioning.md) | Version numbers, how a PR gets its version, minor and major versions, tags and releases |
-| [docs/rules/review.md](docs/rules/review.md) | Review rules, AI-written code, what reviewers check |
+| [docs/rules/review.md](docs/rules/review.md) | Review rules, when to approve, settling disagreements, AI-written code, what reviewers check |
 | [docs/rules/constraints.md](docs/rules/constraints.md) | Hard constraints: access from mainland China, intellectual property, game state, UI, secrets |
 | [docs/rules/language.md](docs/rules/language.md) | English in the repository, keeping the two READMEs in sync |
 | [words/README.md](words/README.md) | The word library shared by all games: format, what makes a good term, how to contribute |

@@ -11,6 +11,19 @@ All code is reviewed. Code written by people or by AI, by members or by outside 
 - When merging, check that the merge form uses the PR title, version included, as the commit title. See [versioning.md](versioning.md).
 - Only maintainers decide on a minor or major version.
 
+## When to approve
+
+Approve a PR once it clearly makes the project better, even if it isn't perfect. There is no perfect code, only better code. Hold a PR back for problems that make the project worse, not for improvements that could come in a later PR. Mark those as `nit:` or suggest a follow-up.
+
+## Settling disagreements
+
+- Technical facts and data outweigh opinions and personal preferences.
+- On style, the rules in `docs/rules/` decide. Where they say nothing, stay consistent with the existing code. Where there is no existing code to follow, the author decides.
+- Design is almost never just a matter of style. Weigh it on its merits and explain your reasoning.
+- If the author and the reviewer still disagree, ask a maintainer to decide in the PR. Don't let a PR stall.
+
+These two sections are adapted from Google's [The Standard of Code Review](https://google.github.io/eng-practices/review/reviewer/standard.html), licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+
 ## AI-written code
 
 You may use AI coding assistants, on these conditions:
