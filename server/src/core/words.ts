@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { LANGUAGES, type Language } from '@reviewer2/shared';
+import { LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
 import { shuffle, type Rng } from './random';
 
 // The word library: one list per academic field, from the JSON files in words/ (see
@@ -22,11 +22,9 @@ export interface FieldInfo {
 
 interface Field {
   info: FieldInfo;
-  words: Record<Language, string[]>;
+  // The words in each language, once each, with the same terms in the other languages.
+  words: Record<Language, BoardWord[]>;
 }
-
-// Terms count as the same word whatever their case or width.
-const sameWord = (text: string): string => text.normalize('NFKC').trim().toLowerCase();
 
 export class WordLibrary {
   readonly #fields = new Map<string, Field>();
@@ -35,7 +33,7 @@ export class WordLibrary {
     for (const list of lists) {
       const words = Object.fromEntries(LANGUAGES.map((language) => [language, unique(list, language)])) as Record<
         Language,
-        string[]
+        BoardWord[]
       >;
       const counts = Object.fromEntries(LANGUAGES.map((language) => [language, words[language].length])) as Record<
         Language,
@@ -56,52 +54,63 @@ export class WordLibrary {
     return this.#fields.has(id);
   }
 
-  // Every word of the chosen fields in one language, once each.
-  pool(fieldIds: readonly string[], language: Language): string[] {
-    const seen = new Set<string>();
-    const pool: string[] = [];
+  // Every word of the chosen fields in one language, once each, with the same term in the other
+  // languages. The game refuses those translations as clues. A word that two fields share brings
+  // the translations of both.
+  pool(fieldIds: readonly string[], language: Language): BoardWord[] {
+    const pool = new Map<string, { word: string; translations: string[] }>();
     for (const id of fieldIds) {
-      for (const word of this.#fields.get(id)?.words[language] ?? []) {
-        const key = sameWord(word);
-        if (seen.has(key)) continue;
-        seen.add(key);
-        pool.push(word);
+      for (const { word, translations = [] } of this.#fields.get(id)?.words[language] ?? []) {
+        const key = wordKey(word);
+        const entry = pool.get(key) ?? { word, translations: [] };
+        pool.set(key, entry);
+        for (const translation of translations) {
+          if (!entry.translations.includes(translation)) entry.translations.push(translation);
+        }
       }
     }
-    return pool;
+    return [...pool.values()].map(({ word, translations }) =>
+      translations.length ? { word, translations } : { word },
+    );
   }
 }
 
-function unique(list: WordListData, language: Language): string[] {
+// The terms of a list in one language, once each. Terms are the same word when their letters and
+// digits are, as the game compares them (`wordKey`), so "Co-author" and "coauthor" are one word.
+function unique(list: WordListData, language: Language): BoardWord[] {
   const seen = new Set<string>();
-  const words: string[] = [];
+  const words: BoardWord[] = [];
   for (const term of list.terms) {
     const word = term[language];
-    if (!word || seen.has(sameWord(word))) continue;
-    seen.add(sameWord(word));
-    words.push(word);
+    if (!word || seen.has(wordKey(word))) continue;
+    seen.add(wordKey(word));
+    const translations = LANGUAGES.flatMap((other) => {
+      const translation = term[other];
+      return other !== language && translation ? [translation] : [];
+    });
+    words.push(translations.length ? { word, translations } : { word });
   }
   return words;
 }
 
-// Draws `count` words from the pool, preferring words this room hasn't used yet. When too few
-// unused words are left, it starts over with the whole pool. Returns null when even the whole
-// pool is too small.
+// Draws `count` words from the pool, preferring words this room hasn't used yet. `used` holds the
+// `wordKey` of every word drawn so far. When too few unused words are left, it starts over with
+// the whole pool. Returns null when even the whole pool is too small.
 export function drawWords(
-  pool: readonly string[],
+  pool: readonly BoardWord[],
   count: number,
   used: ReadonlySet<string>,
   rng: Rng,
-): { words: string[]; used: Set<string> } | null {
+): { words: BoardWord[]; used: Set<string> } | null {
   if (pool.length < count) return null;
-  let fresh = pool.filter((word) => !used.has(sameWord(word)));
+  let fresh = pool.filter(({ word }) => !used.has(wordKey(word)));
   let remembered = new Set(used);
   if (fresh.length < count) {
     fresh = [...pool];
     remembered = new Set();
   }
   const words = shuffle(fresh, rng).slice(0, count);
-  for (const word of words) remembered.add(sameWord(word));
+  for (const { word } of words) remembered.add(wordKey(word));
   return { words, used: remembered };
 }
 

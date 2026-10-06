@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { wordKey } from '@reviewer2/shared';
 import { afterAll, describe, expect, test } from 'vitest';
 import { seededRng } from './random';
 import { drawWords, loadWordLibrary, WordLibrary, type WordListData } from './words';
@@ -28,7 +29,7 @@ describe('the word library', () => {
     expect(library.has('nope')).toBe(false);
   });
 
-  test('pools the words of several fields once each, whatever their case', () => {
+  test('pools the words of several fields once each, with their terms in the other language', () => {
     const library = new WordLibrary([
       list('a', 3),
       {
@@ -40,26 +41,63 @@ describe('the word library', () => {
         ],
       },
     ]);
-    expect(library.pool(['a', 'b'], 'en')).toEqual(['Term 0', 'Term 1', 'Term 2', 'Other']);
-    expect(library.pool(['a', 'missing'], 'zh')).toEqual([zh(0), zh(1), zh(2)]);
+    expect(library.pool(['a', 'b'], 'en')).toEqual([
+      { word: 'Term 0', translations: [zh(0)] },
+      { word: 'Term 1', translations: [zh(1)] },
+      { word: 'Term 2', translations: [zh(2)] },
+      { word: 'Other' },
+    ]);
+    expect(library.pool(['a', 'missing'], 'zh')).toEqual([
+      { word: zh(0), translations: ['Term 0'] },
+      { word: zh(1), translations: ['Term 1'] },
+      { word: zh(2), translations: ['Term 2'] },
+    ]);
+  });
+
+  test('takes words to be the same when their letters and digits are', () => {
+    const library = new WordLibrary([
+      {
+        id: 'a',
+        name: { zh: 'A', en: 'A' },
+        terms: [
+          { id: 'x', en: 'Co-author' },
+          { id: 'y', en: 'coauthor' },
+          { id: 'z', en: 'CO AUTHOR' },
+        ],
+      },
+    ]);
+    expect(library.pool(['a'], 'en')).toEqual([{ word: 'Co-author' }]);
+    expect(library.fields()[0]?.counts.en).toBe(1);
+  });
+
+  test('gives a word that two fields share the translations of both', () => {
+    const field = (id: string, translation: string): WordListData => ({
+      id,
+      name: { zh: id, en: id },
+      terms: [{ id: 'model', zh: translation, en: 'Model' }],
+    });
+    const library = new WordLibrary([field('a', zh(1)), field('b', zh(2)), field('c', zh(1))]);
+    expect(library.pool(['a', 'b', 'c'], 'en')).toEqual([{ word: 'Model', translations: [zh(1), zh(2)] }]);
   });
 });
 
 describe('drawing words', () => {
-  const pool = Array.from({ length: 60 }, (_, i) => `Word ${i}`);
+  const pool = Array.from({ length: 60 }, (_, i) => ({ word: `Word ${i}`, translations: [zh(i)] }));
+  const words = (draw: ReturnType<typeof drawWords>) => draw?.words.map(({ word }) => word) ?? [];
 
-  test('draws different words, preferring those not used yet', () => {
+  test('draws different words with their translations, preferring those not used yet', () => {
     const rng = seededRng(4);
     const first = drawWords(pool, 25, new Set(), rng);
     expect(first?.words).toHaveLength(25);
-    expect(new Set(first?.words).size).toBe(25);
+    expect(new Set(words(first)).size).toBe(25);
+    expect(first?.words.every(({ word, translations }) => translations?.[0] === zh(Number(word.slice(5))))).toBe(true);
     const second = drawWords(pool, 25, first?.used ?? new Set(), rng);
-    expect(second?.words.some((word) => first?.words.includes(word))).toBe(false);
+    expect(words(second).some((word) => words(first).includes(word))).toBe(false);
     expect(second?.used.size).toBe(50);
   });
 
   test('starts over when too few unused words are left', () => {
-    const used = new Set(pool.slice(0, 50).map((word) => word.toLowerCase()));
+    const used = new Set(pool.slice(0, 50).map(({ word }) => wordKey(word)));
     const draw = drawWords(pool, 25, used, seededRng(1));
     expect(draw?.words).toHaveLength(25);
     expect(draw?.used.size).toBe(25);

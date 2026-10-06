@@ -52,7 +52,7 @@ These apply to every game:
 
 | Game | Fields it uses | What makes a term work well in it |
 |---|---|---|
-| Team word guessing (`keywords`) | `zh`, `en` | Terms with several meanings, or that invite associations across concepts, such as "attention", "convergence", "baseline" or "generalization". A captain has to link several of them with a single clue, so terms that are too obscure don't work. A board needs 25 different words in the room's language, and short terms fit the cards best: up to 5 Chinese characters or 14 letters. |
+| Team word guessing (`keywords`) | `zh`, `en` | Terms with several meanings, or that invite associations across concepts, such as "attention", "convergence", "baseline" or "generalization". A captain has to link several of them with a single clue, so terms that are too obscure don't work. A board needs 25 different words in the room's language, and short terms fit the cards best: up to 5 Chinese characters or 14 letters. A card also carries the term in the other language, and a captain may not give it as a clue, so the two must really mean the same thing. |
 
 Add a row when a new game starts using the library.
 
