@@ -2,6 +2,8 @@
 # Check the commit message against the convention in docs/rules/git.md: the subject format,
 # English only, no AI or agent attribution, and no version prefix on branch commits.
 # The rules themselves live in scripts/check-commits.mjs, which CI runs as well.
+# Then check that the message doesn't contain the name of the board game the first game is
+# based on (docs/rules/constraints.md), with scripts/check-names.mjs.
 
 if [ ! -f scripts/check-commits.mjs ]; then
   exit 0 # a branch that predates the checker
@@ -12,4 +14,8 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-exec node scripts/check-commits.mjs msg "$1"
+node scripts/check-commits.mjs msg "$1" || exit 1
+
+if [ -f scripts/check-names.mjs ]; then
+  exec node scripts/check-names.mjs msg "$1"
+fi

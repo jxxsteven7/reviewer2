@@ -306,7 +306,7 @@ function runGit(args) {
   return result;
 }
 
-function git(...args) {
+export function git(...args) {
   const result = runGit(args);
   if (result.status !== 0) {
     throw new GitError(`git ${args.join(' ')}: ${(result.stderr || result.stdout).trim()}`);
@@ -325,7 +325,7 @@ function gitConfig(key) {
 // How git will clean the message up after the commit-msg hook has seen it: the mode from
 // commit.cleanup when set, otherwise comments are stripped only when an editor was used. Git
 // runs the commit hooks with GIT_EDITOR=: when it will not open one, as with `git commit -m`.
-function messageCleanup() {
+export function messageCleanup() {
   const configured = gitConfig('commit.cleanup');
   const mode = configured && configured !== 'default' ? configured : process.env.GIT_EDITOR === ':' ? 'whitespace' : 'strip';
   const comment = gitConfig('core.commentString') ?? gitConfig('core.commentChar') ?? '#';

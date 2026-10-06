@@ -1,5 +1,7 @@
 #!/bin/sh
 # Refuse commits on main. Do your work in your own worktree and branch; see docs/rules/git.md.
+# Then check the staged files for the name of the board game the first game is based on, which
+# must not appear anywhere; see docs/rules/constraints.md.
 
 branch=$(git symbolic-ref --short -q HEAD)
 
@@ -14,4 +16,8 @@ If you have already changed files here, run git stash, then run git stash pop in
 See docs/rules/git.md.
 EOF
   exit 1
+fi
+
+if [ -f scripts/check-names.mjs ] && command -v node >/dev/null 2>&1; then
+  exec node scripts/check-names.mjs staged
 fi
