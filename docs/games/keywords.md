@@ -23,7 +23,7 @@ The game wraps its mechanics in academic life. The code uses plain names, and th
 - A room has one language, chosen when it is created, and the words on the cards are in that language.
 - To start, each group needs exactly one captain, who must be online, and at least one guesser who is online. Until then, the chair's start button stays disabled and says what is missing.
 - The server draws 25 different words and picks the starting group at random. That group gets 9 cards and the other group 8. There are 7 irrelevant papers and 1 Reviewer 2, all in random places. The server uses the crypto module for randomness, so the key can't be predicted.
-- The 25 words must really differ: two spellings of one word, such as "Attention" and "attention", can't share a board, because the clue check couldn't tell their cards apart.
+- The 25 words must really differ: two spellings of one word, such as "Attention" and "attention" or "Coauthor" and "Co-author", can't share a board, because the clue check couldn't tell their cards apart.
 - A word may bring its term in the other languages of the word library. The translations stay with the card, and every player's view carries them, so that the clue check can refuse them on the captain's screen as well. They are no secret.
 - Each game gets a new random `gameId`.
 
@@ -45,7 +45,7 @@ Turns are numbered from 1, and the groups alternate: the starting group plays th
 
 The clue check is shared: the captain's screen runs it while they type, and the server runs it again before it accepts a clue.
 
-A clue must be **one word**: letters, digits, hyphens and apostrophes, with no spaces or other punctuation, and with at least one letter or digit. "Self-attention" is one word. A letter may carry accents, but no more than two combining marks. A clue may be up to 24 characters long, or 10 when it contains Chinese characters. A Chinese room may use English abbreviations such as GPU.
+A clue must be **one word**: letters, digits, hyphens and apostrophes, with no spaces or other punctuation, and with at least one letter or digit. "Self-attention" is one word. A letter may carry accents, but no more than two combining marks once the text is normalized. A clue may be up to 24 characters long, or 10 when it contains Chinese characters. A Chinese room may use English abbreviations such as GPU.
 
 Two things are done before anything else:
 
@@ -54,8 +54,8 @@ Two things are done before anything else:
 
 The server **refuses** a clue that repeats a word still on the board. The two are compared in a common form: full-width and compatibility forms are folded (NFKC), spaces at the ends are trimmed, Latin letters are lowercased, accents are dropped, and traditional Chinese characters are turned into simplified ones. Then the clue is refused when:
 
-- it is the same as a word on the board or a plain plural of it, also once hyphens, spaces and apostrophes are taken out of both. So "co-author" is refused for "coauthor", and "jetlag" for "jet lag";
-- a part of the clue is the same as a part of the word, or a plain plural of it. The parts are the runs of letters between spaces, hyphens, apostrophes and digits, with Latin and Chinese characters apart. So "models" is refused for "model", "review" for "peer review", "self-attention" for "attention" and "model2" for "model". A single letter is not a part, so "Occam's" is fine while "Master's" is on the board, and neither are digits;
+- it is the same as a word on the board or a plain plural of it, once everything but letters and digits is taken out of both. So "co-author" is refused for "coauthor", "jetlag" for "jet lag" and "phd" for "Ph.D.";
+- a part of the clue is the same as a part of the word, or a plain plural of it. The parts are the runs of letters between spaces, hyphens, apostrophes and digits, with Latin and Chinese characters apart. So "models" is refused for "model", "review" for "peer review", "self-attention" for "attention" and "model2" for "model". Three things are not parts. A single letter: "Occam's" is fine while "Master's" is on the board. Digits. And the small words that hold a compound together, such as "of", "the", "to" and "and": "state-of-the-art" is fine while "out-of-distribution" is on the board;
 - a run of Chinese characters in the clue contains a run in the word, or is contained in one. Latin parts are never searched inside other words, so "email" is fine while "AI" is on the board;
 - it is the card's term in another language of the word library, or a plain plural of it. In a Chinese room, "journal" is refused while the card for that term is on the board.
 
@@ -65,7 +65,9 @@ The captain is **warned, but not refused**, when the clue may be another form of
 
 Words that have been revealed no longer count, and may be used as clues again. The clue is recorded as the captain typed it, without invisible characters and without the spaces at its ends.
 
-The table of traditional and simplified characters is `shared/src/han-variants.ts`. `scripts/build-han-variants.mjs` builds it from the Unicode Han Database.
+The table of traditional and simplified characters is `shared/src/han-variants.ts`. `scripts/build-han-variants.mjs` builds it from the character table of the [OpenCC](https://github.com/BYVoid/OpenCC) project, which is used under the Apache License 2.0.
+
+The check doesn't know letters of different alphabets that look alike, such as a Cyrillic "o" inside a Latin word. Whoever writes a clue that way has made a new word as far as the server can tell.
 
 ## Talking it over
 
@@ -80,7 +82,7 @@ Players in one room can simply talk. Players who are apart need to see what the 
 **The group chat.** A guesser may write to their group at any time during a game, in either group's turn.
 
 - Only guessers write. Captains read their own group's chat, as they would hear their group at a table, but can't write: the clue is all a captain may say. Spectators and screens see no chat, since they can see both groups and could carry a message across.
-- A message is one line of up to 200 characters. Line breaks become spaces, and invisible characters and piles of combining marks are dropped. The check is shared, like the clue check: the player's screen runs it while they type, and the server runs it again.
+- A message is one line of up to 200 characters. Line breaks become spaces, and invisible characters and piles of combining marks are dropped; the joiners and selectors that emoji are built with stay. The check is shared, like the clue check: the player's screen runs it while they type, and the server runs it again.
 - Each group keeps its latest 50 messages. Every message has an ID that counts up from 1 within its group, and carries the turn in which it was written.
 - The chat lasts for one game. It stays in its group after the game is over, even though every color is shown then, and the next game starts with an empty one.
 

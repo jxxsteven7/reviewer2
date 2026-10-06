@@ -63,7 +63,7 @@ describe('dealing', () => {
   });
 
   test('takes two spellings of a word for the same word', () => {
-    for (const again of ['term1', ' TERM1 ', '\uff34\uff45\uff52\uff4d\uff11', 'Te\u0301rm1']) {
+    for (const again of ['term1', ' TERM1 ', '\uff34\uff45\uff52\uff4d\uff11', 'Te\u0301rm1', 'Term-1', 'term 1']) {
       expect(() => deal([...WORDS.slice(1), again], seededRng(1)), again).toThrow('got 25, 24 of them different');
     }
   });

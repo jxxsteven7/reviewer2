@@ -17,8 +17,8 @@ import type { Card } from './state';
 // which stay with its card.
 export function deal(words: readonly (string | BoardWord)[], rng: Rng): { cards: Card[]; startingTeam: Team } {
   const terms = words.map((word): BoardWord => (typeof word === 'string' ? { word } : word));
-  // Two spellings of one word, such as "Attention" and "attention", are one word: the clue
-  // check couldn't tell their cards apart.
+  // Two spellings of one word, such as "Coauthor" and "co-author", are one word: the clue check
+  // couldn't tell their cards apart.
   const different = new Set(terms.map((term) => wordKey(term.word))).size;
   if (terms.length !== BOARD_SIZE || different !== BOARD_SIZE) {
     throw new Error(`a board needs ${BOARD_SIZE} different words: got ${terms.length}, ${different} of them different`);

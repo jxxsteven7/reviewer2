@@ -34,12 +34,14 @@ describe('random', () => {
   });
 
   test('both generators refuse a range that is empty or not whole', () => {
-    for (const below of [0, -5, 2.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    for (const below of [0, -5, 2.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 48]) {
       expect(() => seededRng(1).int(below), `seeded ${below}`).toThrow();
       expect(() => cryptoRng.int(below), `crypto ${below}`).toThrow();
     }
     expect(seededRng(1).int(1)).toBe(0);
     expect(cryptoRng.int(1)).toBe(0);
+    expect(seededRng(1).int(2 ** 48 - 1)).toBeLessThan(2 ** 48 - 1);
+    expect(cryptoRng.int(2 ** 48 - 1)).toBeLessThan(2 ** 48 - 1);
   });
 
   test('pick and the crypto generator', () => {

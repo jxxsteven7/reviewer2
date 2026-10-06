@@ -21,7 +21,7 @@ describe('a chat message', () => {
     expect(cleanChat('bell\u0007and\u0000null')).toBe('bell and null');
   });
 
-  test('loses invisible characters, but keeps emoji whole', () => {
+  test('loses invisible characters, but keeps the emoji that are built with a joiner or a selector', () => {
     expect(cleanChat(`a${ZERO_WIDTH_SPACE}b${SOFT_HYPHEN}c`)).toBe('abc');
     expect(cleanChat(`${RIGHT_TO_LEFT_OVERRIDE}abc`)).toBe('abc');
     expect(cleanChat(`${HEART} ${FAMILY}`)).toBe(`${HEART} ${FAMILY}`);
@@ -30,6 +30,9 @@ describe('a chat message', () => {
   test('keeps accents, but no pile of them', () => {
     expect(cleanChat(`cafe${ACUTE}`)).toBe(`cafe${ACUTE}`);
     expect(cleanChat(`e${ACUTE.repeat(40)}!`)).toBe(`e${ACUTE.repeat(2)}!`);
+    // Joiners and selectors between the marks don't keep the pile standing.
+    expect(cleanChat(`e${`${ACUTE}${ACUTE}${ZERO_WIDTH_JOINER}`.repeat(60)}!`)).toBe(`e${ACUTE.repeat(2)}!`);
+    expect(cleanChat(`e${`${ACUTE}${EMOJI_SELECTOR}`.repeat(60)}!`)).toBe(`e${ACUTE.repeat(2)}!`);
   });
 
   test('must show something', () => {
@@ -45,6 +48,10 @@ describe('a chat message', () => {
     }
     expect(checkChat('?').problem).toBeNull();
     expect(checkChat(HEART).problem).toBeNull();
+    // Whatever a player sends instead of a text is no message either.
+    for (const text of [42, null, undefined, ['hi'], {}]) {
+      expect(checkChat(text as unknown as string), JSON.stringify(text)).toEqual({ text: '', problem: 'chat_empty' });
+    }
   });
 
   test('may be up to 200 characters long, counted after cleaning', () => {

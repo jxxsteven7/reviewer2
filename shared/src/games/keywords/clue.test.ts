@@ -50,11 +50,23 @@ describe('the forms of a clue', () => {
     expect(wordKey(REVIEWER_TRADITIONAL)).toBe(REVIEWER);
     expect(wordKey(REVIEWER)).toBe(REVIEWER);
   });
+
+  test('wordKey keeps only letters and digits', () => {
+    for (const spelling of ['Co-author', 'co author', 'COAUTHOR', ' Co\u2013Author ', "co'author."]) {
+      expect(wordKey(spelling), spelling).toBe('coauthor');
+    }
+    expect(wordKey('COVID-19')).toBe('covid19');
+    expect(wordKey(`GPU ${SPEED_UP}`)).toBe(`gpu${SPEED_UP}`);
+  });
 });
 
 describe('a clue must be one word', () => {
   test('refuses empty clues, also when they only look empty', () => {
     expect(problemOf('', [])).toBe('clue_empty');
+    // Whatever a player sends instead of a text is no clue either.
+    for (const clue of [42, null, undefined, ['model'], {}]) {
+      expect(problemOf(clue as unknown as string, ['Model']), JSON.stringify(clue)).toBe('clue_empty');
+    }
     expect(problemOf('   ', [])).toBe('clue_empty');
     expect(problemOf(HANGUL_FILLER, [])).toBe('clue_empty');
     expect(problemOf(`${GRAPHEME_JOINER}${VARIATION_SELECTOR}`, [])).toBe('clue_empty');
@@ -151,6 +163,14 @@ describe('a clue must not repeat a word on the board', () => {
     expect(problemOf('masters', ["Master's"])).toBe('clue_on_board');
   });
 
+  test('refuses the word spelled with other punctuation', () => {
+    expect(problemOf('phd', ['Ph.D.'])).toBe('clue_on_board');
+    expect(problemOf('qa', ['Q&A'])).toBe('clue_on_board');
+    expect(problemOf('io', ['I/O'])).toBe('clue_on_board');
+    expect(problemOf('unet', ['U\u2013Net'])).toBe('clue_on_board'); // an en dash
+    expect(problemOf('ios', ['I/O'])).toBe('clue_on_board');
+  });
+
   test('refuses the word with digits next to it', () => {
     expect(problemOf('model2', ['Model'])).toBe('clue_on_board');
     expect(problemOf('2model', ['Model'])).toBe('clue_on_board');
@@ -172,6 +192,19 @@ describe('a clue must not repeat a word on the board', () => {
     expect(problemOf('net', ['U-Net'])).toBe('clue_on_board');
     expect(problemOf('unet', ['U-Net'])).toBe('clue_on_board');
     expect(problemOf('x', ['X'])).toBe('clue_on_board');
+  });
+
+  test('does not take the small words inside a compound for parts of it', () => {
+    expect(problemOf('state-of-the-art', ['Out-of-distribution'])).toBeNull();
+    expect(problemOf('state-of-the-art', ['Bag of words'])).toBeNull();
+    expect(problemOf('end-to-end', ['Text-to-image'])).toBeNull();
+    expect(problemOf('in-context', ['Human-in-the-loop'])).toBeNull();
+    expect(problemOf('plug-and-play', ['Trial and error'])).toBeNull();
+    // The words that carry the compound still count, and so does the compound itself.
+    expect(problemOf('bag', ['Bag of words'])).toBe('clue_on_board');
+    expect(problemOf('out-of-order', ['Out-of-distribution'])).toBe('clue_on_board');
+    expect(problemOf('bagofwords', ['Bag of words'])).toBe('clue_on_board');
+    expect(problemOf('the', ['The'])).toBe('clue_on_board');
   });
 
   test('refuses plain plurals both ways', () => {
@@ -253,6 +286,8 @@ describe('a clue that may be a form of a word on the board', () => {
     expect(similarTo('making', ['Make'])).toEqual([0]);
     expect(similarTo('reviewers', ['Peer review'])).toEqual([0]);
     expect(similarTo('co-authoring', ['Coauthor'])).toEqual([0]);
+    expect(similarTo('used', ['Use'])).toEqual([0]);
+    expect(similarTo('user', ['Use'])).toEqual([0]);
   });
 
   test('knows the verbs in -ate behind nouns in -ation', () => {
@@ -275,6 +310,12 @@ describe('a clue that may be a form of a word on the board', () => {
       ['formulae', 'Formula'],
       ['mice', 'Mouse'],
       ['mouse', 'Mice'],
+      ['axes', 'Axis'],
+      ['corpora', 'Corpus'],
+      ['genera', 'Genus'],
+      ['schemata', 'Schema'],
+      ['leaves', 'Leaf'],
+      ['lives', 'Life'],
     ] as const) {
       expect(checkClue(clue, board(word)), clue).toEqual({ problem: null, conflict: null, similar: [0] });
     }

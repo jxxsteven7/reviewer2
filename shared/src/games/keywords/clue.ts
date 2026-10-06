@@ -45,7 +45,10 @@ const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 // The parts of a word: runs of Latin letters, runs of Chinese characters and runs of other
 // letters. Spaces, hyphens, apostrophes, digits and anything else come between them.
 const PART = /\p{Script=Latin}+|\p{Script=Han}+|[^\P{L}\p{Script=Latin}\p{Script=Han}]+/gu;
-const SEPARATORS = /[\s'\u2019-]+/g;
+const NOT_LETTER_OR_DIGIT = /[^\p{L}\p{N}]+/gu;
+// Small words that hold a compound together without being what it is about. "State-of-the-art"
+// doesn't repeat "out-of-distribution".
+const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
 
 // A clue as it is recorded and shown: as the captain typed it, but without invisible characters
 // and without the spaces at its ends.
@@ -55,24 +58,27 @@ export const cleanClue = (text: string): string => text.replace(INVISIBLE, '').t
 // case.
 export const normalizeClue = (text: string): string => cleanClue(text.normalize('NFKC')).toLowerCase();
 
-// The form in which words are compared: normalized, without accents, and with traditional
-// Chinese characters turned into simplified ones. Two texts with the same key are the same word.
-export const wordKey = (text: string): string => toSimplified(normalizeClue(text).normalize('NFD').replace(MARKS, ''));
+// A word as it is compared: normalized, without accents, and with traditional Chinese characters
+// turned into simplified ones.
+const fold = (text: string): string => toSimplified(normalizeClue(text).normalize('NFD').replace(MARKS, ''));
+
+// What makes two texts the same word: their letters and digits, in the form in which words are
+// compared. "Co-author", "co author", "Coauthor" and "COAUTHOR" all have the key "coauthor".
+export const wordKey = (text: string): string => fold(text).replace(NOT_LETTER_OR_DIGIT, '');
 
 interface Word {
-  // The word without its separators: "co-author", "co author" and "coauthor" are all "coauthor".
-  joined: string;
-  // The parts that count on their own: every run of Chinese characters, and runs of two or more
-  // other letters. One letter alone, such as the "s" of "Master's" or the "u" of "U-Net", is
-  // not a word that a clue could repeat.
+  key: string;
+  // The parts that count on their own: every run of Chinese characters, and other runs of two
+  // or more letters that aren't small words. One letter alone, such as the "s" of "Master's" or
+  // the "u" of "U-Net", is not a word that a clue could repeat.
   parts: string[];
 }
 
 function wordOf(text: string): Word {
-  const key = wordKey(text);
+  const folded = fold(text);
   return {
-    joined: key.replace(SEPARATORS, ''),
-    parts: (key.match(PART) ?? []).filter((part) => HAN.test(part) || part.length > 1),
+    key: folded.replace(NOT_LETTER_OR_DIGIT, ''),
+    parts: (folded.match(PART) ?? []).filter((part) => HAN.test(part) || (part.length > 1 && !SMALL_WORDS.has(part))),
   };
 }
 
@@ -82,8 +88,8 @@ const isPluralOf = (plural: string, word: string) =>
 const sameOrPlural = (a: string, b: string) => a === b || isPluralOf(a, b) || isPluralOf(b, a);
 
 // Common endings, each with what it may stand in place of: nothing ("models"), the -e or -y
-// that it replaced ("making", "studies", "simulation" from "simulate"), or the ending of a Latin
-// or Greek singular ("hypotheses", "appendices", "spectra", "stimuli", "formulae").
+// that it replaced ("making", "studies", "simulation" from "simulate"), or the ending of the
+// singular ("hypotheses", "appendices", "spectra", "corpora", "stimuli", "formulae", "leaves").
 const ENDINGS: readonly (readonly [ending: string, ...replaced: string[]])[] = [
   ['ations', '', 'e'],
   ['ation', '', 'e'],
@@ -98,10 +104,14 @@ const ENDINGS: readonly (readonly [ending: string, ...replaced: string[]])[] = [
   ['ies', '', 'y'],
   ['ied', '', 'y'],
   ['ices', 'ix', 'ex'],
+  ['ves', 'f', 'fe'],
   ['es', '', 'e', 'is'],
   ['ed', '', 'e'],
   ['ly', '', 'e'],
   ['ae', 'a'],
+  ['ata', 'a'],
+  ['ora', 'us'],
+  ['era', 'us'],
   ['s', '', 'e'],
   ['a', 'um', 'on'],
   ['i', 'us'],
@@ -126,7 +136,7 @@ function stems(word: string): Set<string> {
   for (const [ending, ...replaced] of ENDINGS) {
     if (!word.endsWith(ending)) continue;
     const base = word.slice(0, -ending.length);
-    if (base.length < 3) continue;
+    if (base.length < 2) continue;
     for (const letters of replaced) found.add(base + letters);
     if (replaced.includes('') && /([b-df-hj-np-tv-z])\1$/.test(base)) found.add(base.slice(0, -1));
   }
@@ -138,7 +148,7 @@ const shareStem = (a: string, b: string) => [...stems(a)].some((stem) => stems(b
 // The clue is the word, a plain plural of it, or the same for one of its parts. Chinese parts
 // also count when one contains the other. Latin parts are never searched inside other words.
 function repeats(clue: Word, word: Word): boolean {
-  if (sameOrPlural(clue.joined, word.joined)) return true;
+  if (sameOrPlural(clue.key, word.key)) return true;
   return clue.parts.some((part) =>
     word.parts.some((other) =>
       HAN.test(part) && HAN.test(other) ? part.includes(other) || other.includes(part) : sameOrPlural(part, other),
@@ -148,7 +158,7 @@ function repeats(clue: Word, word: Word): boolean {
 
 // The clue may be another form of the word, or of one of its parts.
 function resembles(clue: Word, word: Word): boolean {
-  if (LATIN_ONLY.test(clue.joined) && LATIN_ONLY.test(word.joined) && shareStem(clue.joined, word.joined)) return true;
+  if (LATIN_ONLY.test(clue.key) && LATIN_ONLY.test(word.key) && shareStem(clue.key, word.key)) return true;
   const latin = word.parts.filter((part) => LATIN.test(part));
   return clue.parts.some((part) => LATIN.test(part) && latin.some((other) => shareStem(part, other)));
 }
@@ -159,6 +169,8 @@ export function checkClue(clue: string, board: readonly ClueCard[]): ClueCheck {
     conflict,
     similar,
   });
+  // The types promise a string, but the clue comes from a player.
+  if (typeof clue !== 'string') return verdict('clue_empty');
   if (clue.length > MAX_CLUE_INPUT) return verdict('clue_too_long');
   const text = normalizeClue(clue);
   if (!text) return verdict('clue_empty');
@@ -177,7 +189,7 @@ export function checkClue(clue: string, board: readonly ClueCard[]): ClueCheck {
       const other = wordOf(translation);
       // The translation itself is refused like the word. A part or a form of it only brings a
       // warning, because the room plays in the other language.
-      if (sameOrPlural(given.joined, other.joined)) return verdict('clue_on_board', index);
+      if (sameOrPlural(given.key, other.key)) return verdict('clue_on_board', index);
       close ||= repeats(given, other) || resembles(given, other);
     }
     if (close) similar.push(index);

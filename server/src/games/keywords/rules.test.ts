@@ -99,6 +99,7 @@ describe('giving a clue', () => {
     expect(word('two words')).toBe('clue_not_one_word');
     expect(word('x'.repeat(30))).toBe('clue_too_long');
     expect(word('word3')).toBe('clue_on_board');
+    expect(word(42 as unknown as string)).toBe('clue_empty');
   });
 
   test("refuses a card's translation as a clue", () => {
@@ -350,6 +351,7 @@ describe('the group chat', () => {
     expect(refused(said(state, ann, 'x'.repeat(MAX_CHAT_LENGTH + 1)))).toBe('chat_too_long');
     expect(refused(said(state, ann, 'x'.repeat(MAX_CHAT_LENGTH)))).toBeNull();
     expect(refused(said(state, captain('red'), ''))).toBe('not_guesser');
+    expect(refused(said(state, ann, null as unknown as string))).toBe('chat_empty');
   });
 
   test('keeps only the latest messages of a group, and goes on counting', () => {
