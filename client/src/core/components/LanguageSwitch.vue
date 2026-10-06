@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { LANGUAGES } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
-import { setLanguage } from '../i18n';
+import { HTML_LANG, setLanguage } from '../i18n';
 
 const { t, locale } = useI18n();
 </script>
@@ -12,7 +12,7 @@ const { t, locale } = useI18n();
       v-for="language in LANGUAGES"
       :key="language"
       type="button"
-      :lang="language === 'zh' ? 'zh-CN' : 'en'"
+      :lang="HTML_LANG[language]"
       :aria-pressed="locale === language"
       @click="setLanguage(language)"
     >

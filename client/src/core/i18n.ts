@@ -9,7 +9,9 @@ import { readStored, writeStored } from './storage';
 // setLanguage can show without making it the visitor's choice.
 
 const STORAGE_KEY = 'r2.language';
-const HTML_LANG: Record<Language, string> = { zh: 'zh-CN', en: 'en' };
+
+// What each language is called in a lang attribute.
+export const HTML_LANG: Record<Language, string> = { zh: 'zh-CN', en: 'en' };
 
 // The language the visitor chose on an earlier visit, if any.
 export function storedLanguage(): Language | null {
