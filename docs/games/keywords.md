@@ -14,7 +14,7 @@ The game wraps its mechanics in academic life. The code uses plain names, and th
 | `captain` | PI | Gives the clues and sees the key |
 | `guesser` | Student | Reveals cards |
 | `spectator` | Spectator | Watches |
-| host | Chair | Runs the room: starts games, manages seats |
+| chair | Chair | Runs the room: starts games, manages seats |
 | `neutral` | Irrelevant paper | A card that belongs to nobody |
 | `reviewer2` | Reviewer 2 | The card that loses the game for the group that reveals it |
 
