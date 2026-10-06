@@ -93,5 +93,5 @@ export type KeywordsError =
   | 'bad_count';
 
 // Why a seat can't be taken, or why a game can't start yet.
-export type SeatError = 'seat_taken' | 'key_viewer' | 'bad_seat';
+export type SeatError = 'seat_taken' | 'key_viewer' | 'other_team' | 'bad_seat';
 export type StartProblem = { problem: 'needs_captain' | 'needs_guesser' | 'captain_offline'; team: Team };

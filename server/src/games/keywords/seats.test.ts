@@ -5,6 +5,7 @@ import {
   captainOf,
   changeSeat,
   emptySeating,
+  endGame,
   removeSeat,
   seatOf,
   shuffleGroups,
@@ -20,8 +21,11 @@ const redGuesser: Seat = { team: 'red', role: 'guesser' };
 const blueGuesser: Seat = { team: 'blue', role: 'guesser' };
 
 function seated(seats: Record<string, Seat>, keyViewers: string[] = []): Seating {
-  return { seats: new Map(Object.entries(seats)), keyViewers: new Set(keyViewers) };
+  return { seats: new Map(Object.entries(seats)), keyViewers: new Set(keyViewers), sides: new Map() };
 }
+
+// The same seats once a game has started.
+const started = (seats: Record<string, Seat>) => startGame(seated(seats), (id) => `key-${id}`);
 
 function moved(seating: Seating, id: string, seat: Seat, playing = false): Seating {
   const change = changeSeat(seating, member(id), seat, playing);
@@ -52,36 +56,75 @@ describe('seats in the waiting room', () => {
     expect(refusal(emptySeating(), 'ann', { team: 'red', role: 'spectator' } as unknown as Seat)).toBe('bad_seat');
   });
 
-  test('changes nothing in the waiting room for key viewers', () => {
-    const seating = moved(seated({ ann: redCaptain }, ['key-ann']), 'ann', redGuesser);
+  test('is free for key viewers and for players of either group', () => {
+    const before = startGame(seated({ ann: redCaptain, bob: redGuesser }), (id) => `key-${id}`);
+    let seating = moved(before, 'ann', redGuesser);
+    seating = moved(seating, 'bob', blueCaptain);
     expect(seatOf(seating, 'ann')).toEqual(redGuesser);
+    expect(seatOf(seating, 'bob')).toEqual(blueCaptain);
+    // Only a game adds key viewers and sides.
+    expect(seating.keyViewers).toEqual(before.keyViewers);
+    expect(seating.sides).toEqual(before.sides);
   });
 });
 
 describe('seats during a game', () => {
   test('a captain who takes over sees the key, and so cannot be a guesser again', () => {
-    let seating = seated({ ann: redGuesser });
+    let seating = started({ ann: redGuesser });
     seating = moved(seating, 'ann', redCaptain, true);
     expect(seating.keyViewers.has('key-ann')).toBe(true);
     expect(refusal(seating, 'ann', redGuesser, true)).toBe('key_viewer');
-    expect(refusal(seating, 'ann', blueGuesser, true)).toBe('key_viewer');
     expect(refusal(seating, 'ann', SPECTATOR, true)).toBeNull();
   });
 
-  test('guessers and spectators may swap freely', () => {
-    let seating = seated({ ann: redGuesser, bob: SPECTATOR });
-    seating = moved(seating, 'ann', blueGuesser, true);
+  test('spectators may join either group, and whoever plays may step out and come back', () => {
+    let seating = started({ ann: redGuesser, bob: SPECTATOR, cat: SPECTATOR });
     seating = moved(seating, 'bob', redGuesser, true);
-    expect(seatOf(seating, 'ann')).toEqual(blueGuesser);
+    seating = moved(seating, 'cat', blueGuesser, true);
+    seating = moved(seating, 'ann', SPECTATOR, true);
+    seating = moved(seating, 'ann', redGuesser, true);
+    expect(seatOf(seating, 'ann')).toEqual(redGuesser);
     expect(seatOf(seating, 'bob')).toEqual(redGuesser);
+    expect(seatOf(seating, 'cat')).toEqual(blueGuesser);
   });
 
-  test('a key viewer who leaves and comes back with a new ID is still one', () => {
-    let seating = startGame(seated({ ann: redCaptain }), (id) => `key-${id}`);
-    seating = removeSeat(seating, 'ann');
-    const returning = { id: 'ann-again', key: 'key-ann' };
-    const change = changeSeat(seating, returning, redGuesser, true);
-    expect(change).toEqual({ ok: false, error: 'key_viewer' });
+  test('nobody changes groups: a seat in the other group is refused until the next game', () => {
+    let seating = started({ ann: redGuesser, bob: SPECTATOR });
+    expect(refusal(seating, 'ann', blueGuesser, true)).toBe('other_team');
+    expect(refusal(seating, 'ann', blueCaptain, true)).toBe('other_team');
+    // Stepping out to watch doesn't free a player from their group.
+    seating = moved(seating, 'ann', SPECTATOR, true);
+    expect(refusal(seating, 'ann', blueGuesser, true)).toBe('other_team');
+    // A latecomer belongs to the group they join first.
+    seating = moved(seating, 'bob', blueGuesser, true);
+    expect(refusal(seating, 'bob', redGuesser, true)).toBe('other_team');
+    expect(refusal(seating, 'bob', redCaptain, true)).toBe('other_team');
+    expect(refusal(seating, 'bob', blueCaptain, true)).toBeNull();
+
+    const next = endGame(seating);
+    expect(seatOf(next, 'bob')).toEqual(blueGuesser);
+    expect(
+      refusal(
+        startGame(next, (id) => `key-${id}`),
+        'ann',
+        blueGuesser,
+        true,
+      ),
+    ).toBeNull();
+  });
+
+  test('whoever leaves and comes back with a new ID keeps their group and what they have seen', () => {
+    let seating = started({ ann: redCaptain, bob: blueGuesser });
+    seating = removeSeat(removeSeat(seating, 'ann'), 'bob');
+    expect(changeSeat(seating, { id: 'ann-again', key: 'key-ann' }, redGuesser, true)).toEqual({
+      ok: false,
+      error: 'key_viewer',
+    });
+    expect(changeSeat(seating, { id: 'bob-again', key: 'key-bob' }, redGuesser, true)).toEqual({
+      ok: false,
+      error: 'other_team',
+    });
+    expect(changeSeat(seating, { id: 'bob-again', key: 'key-bob' }, blueGuesser, true).ok).toBe(true);
   });
 });
 
@@ -101,9 +144,27 @@ describe('starting a game', () => {
     expect(startProblems(ready, new Set(['ann', 'cat', 'dan']))).toEqual([{ problem: 'needs_guesser', team: 'red' }]);
   });
 
-  test('makes exactly the two captains the key viewers', () => {
-    const seating = startGame({ ...ready, keyViewers: new Set(['key-old']) }, (id) => `key-${id}`);
+  test('makes exactly the two captains the key viewers, and ties everyone seated to their group', () => {
+    const before: Seating = {
+      seats: new Map([...ready.seats, ['eve', SPECTATOR]]),
+      keyViewers: new Set(['key-old']),
+      sides: new Map([['key-old', 'blue']]),
+    };
+    const seating = startGame(before, (id) => `key-${id}`);
     expect(seating.keyViewers).toEqual(new Set(['key-ann', 'key-cat']));
+    expect([...seating.sides]).toEqual([
+      ['key-ann', 'red'],
+      ['key-bob', 'red'],
+      ['key-cat', 'blue'],
+      ['key-dan', 'blue'],
+    ]);
+  });
+
+  test('ending it frees everyone again, in their seats', () => {
+    const seating = endGame(startGame(ready, (id) => `key-${id}`));
+    expect(seating.seats).toEqual(ready.seats);
+    expect(seating.keyViewers.size).toBe(0);
+    expect(seating.sides.size).toBe(0);
   });
 });
 
