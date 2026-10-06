@@ -47,7 +47,7 @@ describe('a word list', () => {
       zh: `\u8bcd${i}`,
       en: `Term ${i}`,
       difficulty: 1 + (i % 5),
-      related: ['term-0'],
+      related: [`term-${(i + 1) % MIN_TERMS}`],
       note: { zh: '\u4e00\u53e5\u8bdd', en: 'One line' },
     }));
     assert.deepEqual(check(list({ terms: rich })).problems, []);
@@ -132,6 +132,16 @@ describe('a term', () => {
     assert.ok(has(withTerm({ id: 'rel', en: 'Rel', related: 'term-1' }).problems, /"related" must be/));
     assert.ok(has(withTerm({ id: 'note', en: 'Note', note: { fr: 'Non' } }).problems, /"note" must have/));
     assert.ok(has(withTerm({ id: 'extra', en: 'Extra', hint: 'x' }).problems, /unknown field "hint"/));
+  });
+
+  test('may be related only to other terms of the same file', () => {
+    const related = (...ids) => withTerm({ id: 'rel', en: 'Rel', related: ids }).problems;
+    assert.deepEqual(related('term-1', 'term-2'), []);
+    assert.ok(has(related('term-1', 'nope'), /\(rel\): "related" names "nope", which is not the id of a term/));
+    assert.ok(has(related('rel'), /\(rel\): "related" names the term itself/));
+    // A term may name one that comes after it.
+    const forward = [{ id: 'first', en: 'First', related: ['term-3'] }, ...terms(MIN_TERMS)];
+    assert.deepEqual(check(list({ terms: forward })).problems, []);
   });
 
   test("brings warnings for long terms and the game's own names", () => {

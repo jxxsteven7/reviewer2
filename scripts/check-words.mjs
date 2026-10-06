@@ -124,6 +124,7 @@ export function checkWordList(data, file) {
 
   const ids = new Map();
   const texts = Object.fromEntries(LANGUAGES.map((language) => [language, new Map()]));
+  const links = [];
   data.terms.forEach((term, index) => {
     const where = `${file}: terms[${index}]${term && isText(term.id) ? ` (${term.id})` : ''}`;
     if (term === null || typeof term !== 'object' || Array.isArray(term)) {
@@ -184,6 +185,8 @@ export function checkWordList(data, file) {
     if (term.related !== undefined) {
       if (!Array.isArray(term.related) || !term.related.every((id) => typeof id === 'string' && ID.test(id))) {
         problems.push(`${where}: "related" must be a list of term ids`);
+      } else {
+        links.push({ where, id: term.id, related: term.related });
       }
     }
     if (term.note !== undefined) {
@@ -194,6 +197,18 @@ export function checkWordList(data, file) {
       }
     }
   });
+
+  // "related" names other terms of this file, and a term may name one further down the list, so
+  // this waits until every id is known.
+  for (const { where, id, related } of links) {
+    for (const other of new Set(related)) {
+      if (other === id) {
+        problems.push(`${where}: "related" names the term itself`);
+      } else if (!ids.has(other)) {
+        problems.push(`${where}: "related" names ${describe(other)}, which is not the id of a term in this file`);
+      }
+    }
+  }
 
   const playable = LANGUAGES.filter((language) => counts[language] >= MIN_TERMS);
   if (playable.length === 0) {
