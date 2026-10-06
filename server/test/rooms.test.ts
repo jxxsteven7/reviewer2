@@ -713,6 +713,22 @@ describe('housekeeping', () => {
     await chair.waitFor((state) => state.players.length === 1, 'Bob dropped');
   });
 
+  test('closes a waiting room once everyone has been dropped from it, and tells its screens', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    const screen = await connect({ watch: code, roomId });
+    chair.close();
+    bob.close();
+    await until(() => server.app.rooms.find(code)?.onlineCount() === 0, 'everyone offline');
+    server.advance(10 * 60_000 + 1);
+    server.app.sockets.sweep();
+    await until(() => screen.closed.includes('expired'), 'the screen hears');
+    expect(server.app.rooms.find(code)).toBeUndefined();
+    // Nobody takes over what is left of the room by its code.
+    const late = await connect();
+    expect(await late.send('room:join', { code, name: 'Cat' })).toEqual({ ok: false, error: 'room_not_found' });
+  });
+
   test('gives a player who was away during a game the same ten minutes in the waiting room', async () => {
     const { chair, code } = await room();
     const bob = await join(code, 'Bob');

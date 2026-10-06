@@ -107,6 +107,14 @@ export class Rooms {
           changed = true;
         }
       }
+      // A room that the sweep has emptied closes, as it does when its last member leaves. Left
+      // open, it would have no chair, would show its screens an empty list for hours, and would
+      // make whoever came next with the code the chair of a room that others had set up.
+      if (room.members.size === 0) {
+        changed = false;
+        result.closed.push({ room, sockets: this.close(room) });
+        return;
+      }
       if (room.passChairIfAway(this.limits.chairAwayMs)) changed = true;
       room.forgetOldRemovals();
     } finally {
