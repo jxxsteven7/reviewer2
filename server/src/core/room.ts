@@ -60,6 +60,8 @@ export class Room {
   readonly members = new Map<string, Member>();
   readonly screens = new Set<string>();
   readonly #removed = new Map<string, number>(); // member key -> until when
+  // Since when the room has been in the waiting room this time.
+  #lobbySince: number;
   readonly #rng: Rng;
   readonly #now: () => number;
 
@@ -72,6 +74,7 @@ export class Room {
     this.#now = options.now;
     this.createdAt = options.now();
     this.lastActivity = this.createdAt;
+    this.#lobbySince = this.createdAt;
     this.data = options.game.create();
   }
 
@@ -226,6 +229,7 @@ export class Room {
     this.data = this.game.again(this.data);
     this.gameId = null;
     this.phase = 'lobby';
+    this.#lobbySince = this.#now();
     this.changed();
     return done;
   }
@@ -288,11 +292,13 @@ export class Room {
     return true;
   }
 
-  // Members who have been offline longer than `after`, which matters in the waiting room.
-  offlineFor(after: number): string[] {
+  // Members who have kept the waiting room waiting for longer than `after`. Time offline during
+  // a game doesn't count: a player whose phone was locked through the game still has their seat
+  // when the room comes back to the waiting room, and all of `after` to return to it.
+  awayFromLobby(after: number): string[] {
     const now = this.#now();
     return [...this.members.values()]
-      .filter((member) => member.offlineSince !== null && now - member.offlineSince >= after)
+      .filter(({ offlineSince }) => offlineSince !== null && now - Math.max(offlineSince, this.#lobbySince) >= after)
       .map((member) => member.id);
   }
 

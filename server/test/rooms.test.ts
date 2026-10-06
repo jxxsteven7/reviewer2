@@ -36,6 +36,8 @@ const names = (client: TestClient) => client.state?.players.map((player) => play
 const online = (client: TestClient, name: string) =>
   client.state?.players.find((player) => player.name === name)?.online;
 const game = (client: TestClient) => client.state?.data as FakeView;
+// The names of a room's members as the server has them, whatever has reached the clients.
+const members = (code: string) => [...(server.app.rooms.find(code)?.members.values() ?? [])].map(({ name }) => name);
 
 describe('identity', () => {
   test('a new browser gets a token, and a browser that has one keeps it', async () => {
@@ -318,7 +320,6 @@ describe('games', () => {
 
 describe('a game module that throws', () => {
   const errors = () => server.logs.filter((entry) => entry.event === 'error');
-  const members = (code: string) => [...(server.app.rooms.find(code)?.members.values() ?? [])].map(({ name }) => name);
 
   test('may throw anything at all', async () => {
     const { chair } = await room();
@@ -534,6 +535,26 @@ describe('housekeeping', () => {
     server.advance(10 * 60_000 + 1);
     server.app.sockets.sweep();
     await chair.waitFor((state) => state.players.length === 1, 'Bob dropped');
+  });
+
+  test('gives a player who was away during a game the same ten minutes in the waiting room', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    await chair.send('room:start');
+    bob.close();
+    await chair.waitFor(() => online(chair, 'Bob') === false);
+    server.advance(15 * 60_000);
+    server.app.sockets.sweep();
+    expect(members(code)).toEqual(['Ann', 'Bob']);
+
+    await chair.send('test:finish');
+    expect(await chair.send('room:again')).toEqual({ ok: true });
+    server.advance(60_000);
+    server.app.sockets.sweep();
+    expect(members(code)).toEqual(['Ann', 'Bob']);
+    server.advance(9 * 60_000 + 1);
+    server.app.sockets.sweep();
+    expect(members(code)).toEqual(['Ann']);
   });
 
   test('closes rooms nobody has been in for half an hour', async () => {

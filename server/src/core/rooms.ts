@@ -13,7 +13,7 @@ export interface RoomLimits {
   idleMs: number;
   // A room in which nothing at all has happened for this long is closed, even with people online.
   staleMs: number;
-  // In the waiting room, a member who has been offline for this long is dropped.
+  // A member who has been offline for this long while the room was in the waiting room is dropped.
   lobbyOfflineMs: number;
   // The chair passes to someone else after being offline for this long.
   chairAwayMs: number;
@@ -103,7 +103,7 @@ export class Rooms {
     let changed = false;
     try {
       if (room.phase === 'lobby') {
-        for (const id of room.offlineFor(this.limits.lobbyOfflineMs)) {
+        for (const id of room.awayFromLobby(this.limits.lobbyOfflineMs)) {
           result.dropped.push(...room.drop(id));
           changed = true;
         }
