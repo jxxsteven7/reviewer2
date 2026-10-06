@@ -17,7 +17,7 @@
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w client && npm run build -w server",
     "start": "node server/dist/index.cjs",
-    "test": "vitest run",
+    "test": "node --test scripts/*.test.mjs && vitest run",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write . && eslint --fix .",
     "typecheck": "tsc -p . && tsc -p shared && tsc -p server && vue-tsc -p client && vue-tsc -p client/tsconfig.node.json",
