@@ -263,8 +263,8 @@ export function annotation(kind, line, path) {
   return `::${kind} ${file}title=check-words::${data(line)}`;
 }
 
-export function main(argv) {
-  const wordsDir = join(root, 'words');
+// `wordsDir` is where the lists are when no file is named. The tests pass their own.
+export function main(argv, wordsDir = join(root, 'words')) {
   let paths = argv;
   try {
     // Terms are compared with this table, so make sure of it before any list is read.

@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { after, describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { annotation, checkWordList, MIN_TERMS } from './check-words.mjs';
+import { annotation, checkWordList, main, MIN_TERMS } from './check-words.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./check-words.mjs', import.meta.url));
 const ATTENTION = '\u6ce8\u610f\u529b';
@@ -249,5 +249,35 @@ describe('command line', () => {
   test("checks the repository's own word lists by default", () => {
     const result = run();
     assert.equal(result.status, 0, result.stdout);
+    // Either there are none yet, or each one is listed as passing, perhaps after its warnings.
+    assert.match(result.stdout, /^check-words: (no word lists in words\/ yet|OK [a-z0-9-]+\.json \()/m);
+  });
+
+  test('checks every JSON file of the directory when no file is named', (t) => {
+    const log = t.mock.method(console, 'log', () => {});
+    const printed = () => log.mock.calls.map((call) => call.arguments[0]);
+    const lists = mkdtempSync(join(tmpdir(), 'check-words-lists-'));
+    t.after(() => rmSync(lists, { recursive: true, force: true }));
+    writeFileSync(join(lists, 'README.md'), '# Word library');
+    assert.equal(main([], lists), 0);
+    assert.deepEqual(printed(), ['check-words: no word lists in words/ yet']);
+
+    log.mock.resetCalls();
+    writeFileSync(join(lists, 'nlp.json'), JSON.stringify(list({ id: 'nlp' })));
+    writeFileSync(join(lists, 'ml.json'), JSON.stringify(list()));
+    assert.equal(main([], lists), 0);
+    assert.deepEqual(printed(), ['check-words: OK ml.json (25 zh, 25 en)', 'check-words: OK nlp.json (25 zh, 25 en)']);
+
+    log.mock.resetCalls();
+    writeFileSync(join(lists, 'cv.json'), JSON.stringify(list()));
+    assert.equal(main([], lists), 1);
+    assert.ok(has(printed(), /cv\.json: "id" must be "cv"/));
+    assert.ok(has(printed(), /1 problem\(s\)/));
+  });
+
+  test("exits with 2 when it can't read the directory of the word lists", (t) => {
+    const error = t.mock.method(console, 'error', () => {});
+    assert.equal(main([], join(dir, 'missing')), 2);
+    assert.match(error.mock.calls[0].arguments[0], /^check-words: error: ENOENT/);
   });
 });
