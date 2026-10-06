@@ -1,0 +1,100 @@
+# Double Blind: team word guessing
+
+The first game in Reviewer 2. Its module in the code is called `keywords`. The name players see, Double Blind, lives in the locale files like every other piece of interface text, so it can change without touching the code.
+
+This document describes the rules as the server enforces them. The pure rules are in `server/src/games/keywords/`, and the types and the clue check that the client shares are in `shared/src/games/keywords/`.
+
+## Names
+
+The game wraps its mechanics in academic life. The code uses plain names, and the interface uses themed ones from the locale files:
+
+| In the code | In the interface (English) | What it is |
+|---|---|---|
+| `red`, `blue` | Red group, Blue group | The two teams, which are research groups |
+| `captain` | PI | Gives the clues and sees the key |
+| `guesser` | Student | Reveals cards |
+| `spectator` | Spectator | Watches |
+| host | Chair | Runs the room: starts games, manages seats |
+| `neutral` | Irrelevant paper | A card that belongs to nobody |
+| `reviewer2` | Reviewer 2 | The card that loses the game for the group that reveals it |
+
+## Setting up
+
+- A room has one language, chosen when it is created, and the words on the cards are in that language.
+- To start, each group needs exactly one captain, who must be online, and at least one guesser who is online. Until then, the chair's start button stays disabled and says what is missing.
+- The server draws 25 different words and picks the starting group at random. That group gets 9 cards and the other group 8. There are 7 irrelevant papers and 1 Reviewer 2, all in random places. The server uses the crypto module for randomness, so the key can't be predicted.
+- Each game gets a new random `gameId`.
+
+## Turns
+
+Turns are numbered from 1, and the groups alternate: the starting group plays the odd turns.
+
+1. **Clue.** The current group's captain gives one word and a number from 0 to 9, or "unlimited".
+2. **Guesses.** The group's guessers reveal cards one at a time.
+   - With a number from 1 to 9, they may reveal up to that number plus one.
+   - With 0 or "unlimited", there is no limit.
+   - Revealing one of their own cards lets them go on. Revealing as many as the limit allows ends the turn.
+   - Revealing an irrelevant paper or a card of the other group ends the turn at once. A card of the other group counts for that group.
+   - Once they have revealed at least one card, they may end the turn themselves.
+3. The turn passes to the other group.
+
+## The clue
+
+The clue check is shared: the captain's screen runs it while they type, and the server runs it again before it accepts a clue.
+
+A clue must be **one word**: letters, digits, hyphens and apostrophes, with no spaces or other punctuation. "Self-attention" is one word. It may be up to 24 characters long, or 10 when it contains Chinese characters. A Chinese room may use English abbreviations such as GPU.
+
+The server **refuses** a clue that repeats a word still on the board. Both sides are first normalized: the full-width and compatibility forms are folded (NFKC), spaces at the ends are trimmed, and Latin letters are lowercased. Then the clue is refused when:
+
+- it is the same as a word on the board;
+- after both are split into parts at spaces, hyphens and apostrophes, and between Latin and Chinese characters, a part of the clue is the same as a part of the word, or differs from it only by a plain plural "-s" or "-es". So "models" is refused for "model", "review" for "peer review" and "self-attention" for "attention";
+- a run of Chinese characters in the clue contains a run in the word, or is contained in one. Latin parts are never searched inside other words, so "email" is fine while "AI" is on the board.
+
+The captain is **warned, but not refused**, when the clue may be another form of a word on the board, with an ending such as "-ing", "-ed", "-er" or "-ies". "Modeling" for "model" is an example. The standard rules forbid any form of a word on the board, but endings are too ambiguous for a machine to judge, so the captain decides.
+
+Words that have been revealed no longer count, and may be used as clues again. The clue is recorded as the captain typed it, without the spaces at its ends.
+
+## Winning
+
+- Revealing **Reviewer 2** ends the game at once: the group that revealed it loses.
+- Otherwise, a group wins as soon as all its cards are revealed, even if the other group revealed the last one.
+- The chair may also **withdraw** a game. It ends without a winner.
+
+At the end, everyone sees the colors of all the cards. "Play again" takes the room back to the waiting room with everyone in their seats, and the next game deals a new board.
+
+## What each player sees
+
+| Seat | Cards | Can do |
+|---|---|---|
+| Captain | All 25 words and all their colors | Give the clue in their group's clue phase |
+| Guesser | All 25 words; colors only of revealed cards | Reveal cards and end the turn in their group's guess phase |
+| Spectator | Like a guesser | Watch |
+| After the game, everyone | Every color | |
+
+`view.ts` is the only way game state leaves the server. In the public view, an unrevealed card has no `color` key at all, rather than an empty one, so the key can't be found even with the browser's developer tools. The server never sends its random seed or its own order of the words.
+
+Everyone sees the public facts: whose turn it is and in which phase, the current clue, how many more cards may be revealed, how many cards each group has left, and every earlier clue with the cards revealed after it.
+
+## Seats
+
+- Everyone joins as a spectator.
+- In the waiting room, anyone may take a free captain's seat, become a guesser in either group, or watch. The chair can shuffle the groups: everyone seated in a group is dealt into the two groups at random, as evenly as possible, with a random captain for each. Spectators stay where they are.
+- During a game, guessers and spectators may swap freely, so latecomers can join in. Anyone may take over an empty captain's seat. Whoever has been a captain in the current game has seen the key, and may not be a guesser again until the next game. A captain may step down to watch. This list of key viewers is kept by a key that stays the same when a player leaves the room and comes back.
+
+## Order of the checks
+
+Every action carries the `gameId` and the `turn` it was meant for, and the server checks it in this order:
+
+1. `stale`: the action is for an earlier game or turn. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
+2. `game_over`: the game has ended.
+3. `not_your_turn`, `not_captain` or `not_guesser`: the action isn't this player's to make.
+4. `wrong_phase`: it isn't the moment, such as revealing a card before the clue.
+5. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_long` and `clue_on_board` for clues; `no_such_card` and `card_revealed` for reveals; and `must_guess_first` for ending a turn before revealing anything.
+
+Because the content comes last, nothing a player can't see changes the answer they get. A guesser of the wrong group gets `not_your_turn` whichever card they try.
+
+## Edge cases
+
+- **Two guessers reveal at once.** The server handles actions one at a time, and never pauses between reading the state and writing it. If the first reveal ends the turn, the second is `stale`.
+- **Repeated clicks.** Revealing a revealed card again is `card_revealed`. A second "start" or a second clue fails the phase check.
+- **A captain or all guessers go offline.** The game waits and shows them as offline. The chair can make an offline player a spectator so that someone else can take over, or withdraw the game.
