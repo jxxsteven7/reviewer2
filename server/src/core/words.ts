@@ -60,10 +60,15 @@ export class WordLibrary {
   // Every word of the chosen fields in one language, once each, with the same term in the other
   // languages. The game refuses those translations as clues. A word that two fields share brings
   // the translations of both.
+  //
+  // Throws for a field that the library doesn't have, rather than hand back a smaller pool that
+  // nothing explains: check what a player chose with has() first.
   pool(fieldIds: readonly string[], language: Language): BoardWord[] {
     const pool: Collected = new Map();
     for (const id of fieldIds) {
-      for (const { word, translations = [] } of this.#fields.get(id)?.words[language] ?? []) {
+      const field = this.#fields.get(id);
+      if (!field) throw new Error(`no word list has the id "${id}"`);
+      for (const { word, translations = [] } of field.words[language]) {
         collect(pool, wordKey(word), word, translations);
       }
     }

@@ -55,11 +55,17 @@ describe('the word library', () => {
       { word: 'Term 2', translations: [zh(2)] },
       { word: 'Other' },
     ]);
-    expect(library.pool(['a', 'missing'], 'zh')).toEqual([
+    expect(library.pool(['a'], 'zh')).toEqual([
       { word: zh(0), translations: ['Term 0'] },
       { word: zh(1), translations: ['Term 1'] },
       { word: zh(2), translations: ['Term 2'] },
     ]);
+    expect(library.pool([], 'zh')).toEqual([]);
+  });
+
+  test("refuses to pool a field that it doesn't have", () => {
+    const library = new WordLibrary([list('a', 3)]);
+    expect(() => library.pool(['a', 'missing'], 'zh')).toThrow('no word list has the id "missing"');
   });
 
   test('takes words to be the same when their letters and digits are', () => {
