@@ -296,7 +296,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
-    on(socket, 'room:end', () => asChair(socket, (room) => changed(room, room.withdraw())));
+    on(socket, 'room:end', ({ gameId }) => asChair(socket, (room) => changed(room, room.withdraw(gameId))));
     on(socket, 'room:again', () => asChair(socket, (room) => changed(room, room.again())));
     on(socket, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
     on(socket, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));

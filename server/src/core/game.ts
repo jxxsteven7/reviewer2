@@ -1,4 +1,4 @@
-import type { Language, RoomPhase } from '@reviewer2/shared';
+import type { BoardWord, Language, RoomPhase } from '@reviewer2/shared';
 import type { Rng } from './random';
 
 // What the shared layer needs from a game (docs/architecture.md). The shared layer runs rooms,
@@ -34,10 +34,12 @@ export interface GameModule<Data = unknown, View = unknown> {
   shuffle(data: Data, ctx: GameContext): Data;
   // Why the game can't start yet, as error codes; empty when it can.
   startProblems(data: Data, ctx: GameContext): string[];
-  start(data: Data, ctx: GameContext, words: string[], gameId: string): Data;
+  // The words come with their terms in the other languages of the word library.
+  start(data: Data, ctx: GameContext, words: BoardWord[], gameId: string): Data;
   isOver(data: Data): boolean;
-  // The chair ends the game early.
-  withdraw(data: Data): Data;
+  // The chair ends the game early. The withdrawal names the game it is meant for, and the game
+  // refuses one for another game or one that comes after it has ended.
+  withdraw(data: Data, gameId: string): GameResult<Data>;
   // Back to the waiting room after a game, with everyone in their seats.
   again(data: Data): Data;
   // The game's own messages, such as "keywords:reveal". Must not await anything, so that no

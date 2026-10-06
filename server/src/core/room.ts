@@ -1,4 +1,11 @@
-import { MAX_PLAYERS, MAX_SCREENS, type Language, type RoomPhase, type RoomView } from '@reviewer2/shared';
+import {
+  MAX_PLAYERS,
+  MAX_SCREENS,
+  type BoardWord,
+  type Language,
+  type RoomPhase,
+  type RoomView,
+} from '@reviewer2/shared';
 import type { GameContext, GameModule, Viewer } from './game';
 import { cleanName, newPlayerId, sameName } from './identity';
 import { randomId, type Rng } from './random';
@@ -43,6 +50,8 @@ export class Room {
   rev = 0;
   chairId: string | null = null;
   data: unknown;
+  // The game being played or just ended, until the room goes back to the waiting room.
+  gameId: string | null = null;
   usedWords = new Set<string>();
   lastActivity: number;
   readonly members = new Map<string, Member>();
@@ -184,10 +193,11 @@ export class Room {
     return this.phase === 'lobby' ? this.game.startProblems(this.data, this.context) : [];
   }
 
-  start(words: string[], gameId: string): Done {
+  start(words: BoardWord[], gameId: string): Done {
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (this.startProblems().length) return fail('cannot_start');
     this.data = this.game.start(this.data, { ...this.context, phase: 'playing' }, words, gameId);
+    this.gameId = gameId;
     this.phase = 'playing';
     this.changed();
     return done;
@@ -198,9 +208,14 @@ export class Room {
     if (this.phase === 'playing' && this.game.isOver(this.data)) this.phase = 'ended';
   }
 
-  withdraw(): Done {
+  // A withdrawal names the game it is meant for, so that one sent late, for instance by a tab
+  // that was offline, can't end the next game.
+  withdraw(gameId: string): Done {
+    if (gameId !== this.gameId) return fail('stale');
     if (this.phase !== 'playing') return fail('wrong_phase');
-    this.data = this.game.withdraw(this.data);
+    const result = this.game.withdraw(this.data, gameId);
+    if (!result.ok) return fail(result.error);
+    this.data = result.data;
     this.phase = 'ended';
     this.changed();
     return done;
@@ -209,6 +224,7 @@ export class Room {
   again(): Done {
     if (this.phase !== 'ended') return fail('wrong_phase');
     this.data = this.game.again(this.data);
+    this.gameId = null;
     this.phase = 'lobby';
     this.changed();
     return done;

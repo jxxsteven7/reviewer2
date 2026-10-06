@@ -14,6 +14,7 @@ export interface FakeData {
 }
 
 export interface FakeView {
+  gameId: string | null;
   presses: number;
   words: string[];
   benched: string[];
@@ -29,9 +30,19 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   bench: (data, _ctx, id) => ({ ...data, benched: [...data.benched, id] }),
   shuffle: (data) => ({ ...data, joined: [...data.joined].reverse() }),
   startProblems: (data, ctx) => (data.joined.filter((id) => ctx.isOnline(id)).length < 2 ? ['needs_players'] : []),
-  start: (data, _ctx, words, gameId) => ({ ...data, words, gameId, presses: 0, over: false }),
+  start: (data, _ctx, words, gameId) => ({
+    ...data,
+    words: words.map(({ word }) => word),
+    gameId,
+    presses: 0,
+    over: false,
+  }),
   isOver: (data) => data.over,
-  withdraw: (data) => ({ ...data, over: true }),
+  withdraw(data, gameId) {
+    if (gameId !== data.gameId) return { ok: false, error: 'stale' };
+    if (data.over) return { ok: false, error: 'game_over' };
+    return { ok: true, data: { ...data, over: true } };
+  },
   again: (data) => ({ ...data, words: [], gameId: null, over: false }),
   handle(data, ctx, _playerId, type) {
     if (ctx.phase !== 'playing') return { ok: false, error: 'wrong_phase' };
@@ -41,6 +52,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     return { ok: false, error: 'bad_request' };
   },
   view: (data, _ctx, viewer) => ({
+    gameId: data.gameId,
     presses: data.presses,
     words: data.words,
     benched: data.benched,

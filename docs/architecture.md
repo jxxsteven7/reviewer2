@@ -54,7 +54,8 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` def
 | `room:watch` | `code` | A screen |
 | `room:leave`, `room:rename` | `name` for renaming | Members |
 | `room:settings` | `fields` | The chair, in the waiting room |
-| `room:start`, `room:end`, `room:again`, `room:shuffle` | | The chair |
+| `room:start`, `room:again`, `room:shuffle` | | The chair |
+| `room:end` | `gameId` | The chair; refused as `stale` when it names another game |
 | `room:spectate`, `room:remove`, `room:chair` | `playerId` | The chair |
 
 ## The handshake and reconnecting
@@ -63,7 +64,7 @@ Phones drop their connection whenever the screen locks or the browser goes to th
 
 - **Sooner detection.** The server pings every 10 seconds and gives up after 8 more, sooner than Socket.IO's defaults, so dead connections are noticed quickly.
 - **The handshake.** The client sends `{ token, code, roomId }`. A connection whose token belongs to a member of that room is put back into it before any of its messages run, so a message that waited out the disconnect lands in the right room. A screen sends `{ watch: code }` instead.
-- **Stale actions.** Every game action carries the game and turn it was meant for, so a late one is refused instead of landing in a later turn.
+- **Stale actions.** Every game action carries the game and turn it was meant for, and the chair's withdrawal carries the game, so a late one is refused instead of landing in a later turn or the next game.
 - **On the client** (with the lobby UI): it checks the connection with `sys:ping` when the page becomes visible again, when the browser restores it from its cache, and when the network comes back, and reconnects at once if the ping goes unanswered. It drops anything that was queued while offline, and sends nothing while disconnected. It stops trying to rejoin a room that no longer exists.
 
 ## Games

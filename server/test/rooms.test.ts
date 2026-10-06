@@ -283,9 +283,16 @@ describe('games', () => {
     expect(await chair.send('room:again')).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'lobby');
     await chair.send('room:start');
-    expect(await chair.send('room:end')).toEqual({ ok: true });
+    const { gameId } = game(chair);
+    expect(await chair.send('room:end')).toEqual({ ok: false, error: 'bad_request' });
+    expect(await chair.send('room:end', { gameId: 'an-earlier-game' })).toEqual({ ok: false, error: 'stale' });
+    expect(await chair.send('room:end', { gameId })).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'ended');
-    expect(await chair.send('room:end')).toEqual({ ok: false, error: 'wrong_phase' });
+    expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'wrong_phase' });
+    // A withdrawal that arrives after the room went back to the waiting room is for no game.
+    await chair.send('room:again');
+    await chair.waitFor((state) => state.phase === 'lobby');
+    expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'stale' });
   });
 
   test('a game that throws answers internal, and the server goes on', async () => {

@@ -32,6 +32,7 @@ export const ROOM_ERRORS = [
   'no_such_player',
   'wrong_phase',
   'cannot_start',
+  'stale',
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 
@@ -49,6 +50,7 @@ export interface Handshake {
 const code = z.string().max(16);
 const name = z.string().max(64);
 const playerId = z.string().max(32);
+const gameId = z.string().max(64);
 const fields = z.array(z.string().max(64)).min(1).max(20);
 const none = z.object({});
 
@@ -63,7 +65,8 @@ export const ROOM_MESSAGES = {
   // The chair's controls.
   'room:settings': z.object({ fields }),
   'room:start': none,
-  'room:end': none,
+  // A withdrawal names its game, so that one sent late can't end the next game.
+  'room:end': z.object({ gameId }),
   'room:again': none,
   'room:shuffle': none,
   'room:spectate': z.object({ playerId }),
