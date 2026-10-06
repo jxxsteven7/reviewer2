@@ -1,0 +1,10 @@
+{
+  "name": "@reviewer2/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Types and rules shared by the client and the server",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

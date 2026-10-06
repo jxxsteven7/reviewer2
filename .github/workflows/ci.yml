@@ -1,0 +1,70 @@
+# Lints, type-checks, tests and builds the app, and builds the Docker image. Each job's name is
+# a required status check; see docs/maintainers.md. There are no `paths:` filters on purpose:
+# a required check that a filter skips stays pending and blocks the merge.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Docker image
+        env:
+          SHA: ${{ github.sha }}
+        run: docker build --build-arg "APP_VERSION=${SHA::7}" --tag reviewer2:ci .
+      - name: The image serves the app
+        run: |
+          docker run --detach --name reviewer2 --publish 3000:3000 reviewer2:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
+            sleep 1
+          done
+          echo
+          curl --fail --silent http://127.0.0.1:3000/ | grep -q '<div id="app">'
+          curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
+          docker logs reviewer2

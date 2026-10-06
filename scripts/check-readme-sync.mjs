@@ -77,7 +77,10 @@ function outline(markdown) {
 
     if (line.trim().startsWith('|')) {
       if (tableRows === 0) {
-        tableColumns = line.trim().replace(/^\||\|$/g, '').split('|').length;
+        tableColumns = line
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split('|').length;
       }
       tableRows += 1;
     } else {
@@ -131,9 +134,7 @@ function compare(en, zh) {
   if (onlyInZh.length) problems.push(`Links only in ${ZH}: ${onlyInZh.join(', ')}`);
 
   if (en.tables.join() !== zh.tables.join()) {
-    problems.push(
-      `Tables differ. ${EN}: [${en.tables.join('; ')}]. ${ZH}: [${zh.tables.join('; ')}].`,
-    );
+    problems.push(`Tables differ. ${EN}: [${en.tables.join('; ')}]. ${ZH}: [${zh.tables.join('; ')}].`);
   }
 
   return problems;

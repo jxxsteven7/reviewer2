@@ -34,10 +34,11 @@ The first version will include a game lobby, creating and joining rooms, choosin
 
 | Part | Choice |
 |---|---|
-| Language | TypeScript, front end and back end |
+| Language | TypeScript, front end and back end, in an npm workspace |
 | Front end | Vue 3 + Vite, vue-i18n |
 | Back end | Node.js + Socket.IO |
 | Storage | Room state in server memory; no database in the first version |
+| Tests | Vitest |
 | Deployment | One Node process serves both the static front end and WebSocket, on one domain and one port |
 
 ## Project layout (planned)
@@ -55,7 +56,14 @@ The first version will include a game lobby, creating and joining rooms, choosin
 
 ## Running locally
 
-The code skeleton is still being set up. Install and start commands will be added here once it is ready. The goal is a single command that starts both the front end and the back end.
+You need [Node.js](https://nodejs.org) 22.13 or later. CI uses 24 LTS.
+
+```bash
+npm install   # also turns on the git hooks
+npm run dev   # front end on http://localhost:5173, server on port 3000
+```
+
+`npm run build && npm start` runs the production build on one port, <http://localhost:3000>. The other commands, testing on a phone, Docker and the environment variables are in [docs/development.md](docs/development.md).
 
 ## Contributing
 

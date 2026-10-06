@@ -32,7 +32,13 @@ describe('spellings', () => {
   test('entryFor folds case, accents, separators and full-width forms', () => {
     const plain = entryFor('zorblax');
     assert.deepEqual(plain, { script: 'latin', length: 7, sha256: plain.sha256 });
-    for (const spelling of ['Zorblax', 'ZOR-BLAX', 'zor blax', 'z\u00f3rbl\u00e0x', '\uff5a\uff4f\uff52\uff42\uff4c\uff41\uff58']) {
+    for (const spelling of [
+      'Zorblax',
+      'ZOR-BLAX',
+      'zor blax',
+      'z\u00f3rbl\u00e0x',
+      '\uff5a\uff4f\uff52\uff42\uff4c\uff41\uff58',
+    ]) {
       assert.deepEqual(entryFor(spelling), plain, spelling);
     }
     assert.equal(entryFor(FAKE_HAN).script, 'han');
