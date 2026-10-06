@@ -183,25 +183,34 @@ export class Room {
     return { ok: true, member };
   }
 
-  attach(member: Member, socketId: string): void {
+  // A member's connection. Returns whether the room looks any different with it, which it does
+  // only when it is the member's first: they come online. Another tab of someone who is online
+  // is news to nobody.
+  attach(member: Member, socketId: string): boolean {
+    const first = member.sockets.size === 0;
     member.sockets.add(socketId);
     member.offlineSince = null;
     this.lastSeen = this.#now();
-    this.changed();
+    if (first) this.changed();
+    return first;
   }
 
-  // Forgets a connection, whether it was a member's or a screen's.
-  detach(socketId: string): void {
+  // Forgets a connection, whether it was a member's or a screen's. Returns whether the room looks
+  // any different without it: a screen fewer, or a member who has gone offline with their last
+  // connection.
+  detach(socketId: string): boolean {
     this.lastSeen = this.#now();
     if (this.screens.delete(socketId)) {
       this.changed();
-      return;
+      return true;
     }
     const member = this.memberBySocket(socketId);
-    if (!member) return;
+    if (!member) return false;
     member.sockets.delete(socketId);
-    if (member.sockets.size === 0) member.offlineSince = this.#now();
+    if (member.sockets.size > 0) return false;
+    member.offlineSince = this.#now();
     this.changed();
+    return true;
   }
 
   screensFull(): boolean {

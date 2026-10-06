@@ -286,6 +286,36 @@ describe('the handshake', () => {
   });
 });
 
+describe('snapshots', () => {
+  test('are not sent around for a second tab, or for asking again', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    await chair.waitFor(() => online(chair, 'Bob') === true);
+    const found = server.app.rooms.find(code);
+    const tabsOfBob = () => found?.memberByKey(found.members.get(bob.me)?.key ?? '')?.sockets.size;
+    const before = { rev: found?.rev, chair: chair.states.length, bob: bob.states.length };
+
+    // Bob asks again on his connection, as a client does after every reconnect. Then he opens a
+    // second tab, which comes in through the handshake and asks again too, and closes it.
+    expect(await bob.send('room:join', { code, roomId })).toMatchObject({ ok: true });
+    const tab = await connect({ token: bob.token, code, roomId });
+    await tab.waitFor((state) => state.me === bob.me, 'the tab gets the state for itself');
+    expect(await tab.send('room:join', { code, roomId })).toMatchObject({ ok: true });
+    expect(tab.states).toHaveLength(1);
+    tab.close();
+    await until(() => tabsOfBob() === 1, 'the tab is gone');
+
+    // Nobody could have seen a difference, so nobody was sent anything.
+    await chair.send('sys:ping');
+    await bob.send('sys:ping');
+    expect({ rev: found?.rev, chair: chair.states.length, bob: bob.states.length }).toEqual(before);
+
+    // Going offline with the last connection is a difference.
+    bob.close();
+    await chair.waitFor(() => online(chair, 'Bob') === false, 'Bob offline');
+  });
+});
+
 describe('leaving', () => {
   test("removes the player and tells the player's other tabs", async () => {
     const { chair, code } = await room();

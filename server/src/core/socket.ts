@@ -143,18 +143,21 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const conn = connection(socket);
     const { room } = conn;
     if (!room) return;
-    room.detach(socket.id);
     Object.assign(conn, { room: null, screen: false });
-    if (isOpen(room)) broadcast(room);
+    if (room.detach(socket.id) && isOpen(room)) broadcast(room);
   }
 
-  // Puts a connection into a room as a member, out of any room it was in before.
+  // Puts a connection into a room as a member, out of any room it was in before. A snapshot goes
+  // to everyone only when they can see a difference: the member has come online. A second tab of
+  // someone who is online gets the state for itself, and a connection that is in the room already
+  // and asks again, as a client does after every reconnect, gets nothing new.
   function enter(socket: Socket, room: Room, member: Member): void {
     const conn = connection(socket);
-    if (conn.room !== room || conn.screen) release(socket);
+    if (conn.room === room && !conn.screen && member.sockets.has(socket.id)) return;
+    release(socket);
     Object.assign(conn, { room, screen: false });
-    room.attach(member, socket.id);
-    broadcast(room);
+    if (room.attach(member, socket.id)) broadcast(room);
+    else send(room, [socket.id], { playerId: member.id });
   }
 
   // Makes a connection a screen that shows a room without playing in it.
