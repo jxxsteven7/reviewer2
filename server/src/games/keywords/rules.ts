@@ -1,5 +1,6 @@
 import {
   checkClue,
+  cleanClue,
   isClueCount,
   otherTeam,
   TEAMS,
@@ -86,7 +87,7 @@ export function giveClue(
   const { problem } = checkClue(action.word, state.cards);
   if (problem) return refuse(problem);
 
-  const word = action.word.normalize('NFKC').trim();
+  const word = cleanClue(action.word);
   return ok({
     ...state,
     phase: 'guess',

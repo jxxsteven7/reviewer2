@@ -37,6 +37,17 @@ describe('giving a clue', () => {
     const state = gameState();
     const next = accepted(giveClue(state, captain('red'), { ...now(state), word: '  Self-Attention ', count: 1 }));
     expect(next.clue?.word).toBe('Self-Attention');
+    expect(next.history[0]?.word).toBe('Self-Attention');
+  });
+
+  test('records the clue as it was typed, without invisible characters', () => {
+    const state = gameState();
+    const typed = (word: string) => accepted(giveClue(state, captain('red'), { ...now(state), word, count: 1 })).clue;
+    // A superscript two and full-width letters stay what they are, although the check folds them.
+    expect(typed('R\u00b2')?.word).toBe('R\u00b2');
+    expect(typed('\uff27\uff30\uff35')?.word).toBe('\uff27\uff30\uff35');
+    // A soft hyphen and a zero-width space.
+    expect(typed('Gra\u00addi\u200bent')?.word).toBe('Gradient');
   });
 
   test("is only for the current team's captain", () => {
