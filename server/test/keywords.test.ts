@@ -1,4 +1,11 @@
-import type { KeywordsRoomData, KeywordsView, RoomView, Team } from '@reviewer2/shared';
+import {
+  MAX_CHAT_INPUT,
+  otherTeam,
+  type KeywordsRoomData,
+  type KeywordsView,
+  type RoomView,
+  type Team,
+} from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { GameModule } from '../src/core/game';
 import { WordLibrary } from '../src/core/words';
@@ -27,7 +34,7 @@ function bigLibrary(): WordLibrary {
     {
       id: 'general',
       name: { zh: 'G', en: 'G' },
-      terms: Array.from({ length: 60 }, (_, i) => ({ id: `w${i}`, en: general[i] ?? `extra word ${i}` })),
+      terms: Array.from({ length: 60 }, (_, i) => ({ id: `w${i}`, en: general[i]?.word ?? `extra word ${i}` })),
     },
   ]);
 }
@@ -97,6 +104,38 @@ function expectNoKey(states: RoomView[]) {
     }
   }
   expect(checked).toBeGreaterThan(0);
+}
+
+// A group's chat and its guessers' choices never reach anyone outside the group. In every
+// snapshot that this client received during a game, a spectator or a screen has neither key, and
+// a player in `team` has only their own group's chat, and its choices only in its turn.
+function expectOwnGroupOnly(client: TestClient, team: Team | null, group: readonly string[] = []) {
+  let checked = 0;
+  for (const state of client.states) {
+    const game = (state.data as KeywordsRoomData).game;
+    if (!game) continue;
+    checked += 1;
+    if (team === null) {
+      expect(game).not.toHaveProperty('chat');
+      expect(game).not.toHaveProperty('selections');
+      continue;
+    }
+    expect(game.chat?.every((message) => group.includes(message.player))).toBe(true);
+    if (game.team === team) expect(game.selections?.every((choice) => group.includes(choice.player))).toBe(true);
+    else expect(game).not.toHaveProperty('selections');
+  }
+  expect(checked).toBeGreaterThan(0);
+}
+
+// Checks expectOwnGroupOnly for everyone at a table whose seats didn't change.
+function expectGroupsApart(table: Table) {
+  for (const team of ['red', 'blue'] as const) {
+    const group = [table.captains[team].me, table.guessers[team].me];
+    expectOwnGroupOnly(table.captains[team], team, group);
+    expectOwnGroupOnly(table.guessers[team], team, group);
+  }
+  expectOwnGroupOnly(table.spectator, null);
+  expectOwnGroupOnly(table.screen, null);
 }
 
 describe('seats and starting', () => {
@@ -264,9 +303,14 @@ describe('seats during a game', () => {
     expect(await back.send('room:join', { code: table.code, name: 'Ann' })).toMatchObject({ ok: true });
     await back.waitFor((state) => state.me !== null);
     expect(data(back).keyViewers).toContain(back.me);
-    expect(await back.send('keywords:seat', { team: 'blue', role: 'guesser' })).toEqual({
+    expect(await back.send('keywords:seat', { team: 'red', role: 'guesser' })).toEqual({
       ok: false,
       error: 'key_viewer',
+    });
+    // Leaving the room doesn't change the group a player belongs to in this game.
+    expect(await back.send('keywords:seat', { team: 'blue', role: 'guesser' })).toEqual({
+      ok: false,
+      error: 'other_team',
     });
     await expectOk(back.send('keywords:seat', { team: null, role: 'spectator' }));
   });
@@ -280,6 +324,144 @@ describe('seats during a game', () => {
     await expectOk(ann.send('keywords:seat', { team: null, role: 'spectator' }));
     expect(board(ann).cards.some((card) => !card.revealed && card.color)).toBe(false);
   });
+
+  test('nobody changes groups in the middle of a game', async () => {
+    const table = await seatTable();
+    const bob = table.guessers.red;
+    expect(await bob.send('keywords:seat', { team: 'blue', role: 'guesser' })).toEqual({
+      ok: false,
+      error: 'other_team',
+    });
+    await expectOk(bob.send('keywords:seat', { team: null, role: 'spectator' }));
+    expect(await bob.send('keywords:seat', { team: 'blue', role: 'captain' })).toEqual({
+      ok: false,
+      error: 'other_team',
+    });
+    await expectOk(bob.send('keywords:seat', { team: 'red', role: 'guesser' }));
+    // Eve hasn't played in this game, so she may join either group.
+    await expectOk(table.spectator.send('keywords:seat', { team: 'blue', role: 'guesser' }));
+  });
+});
+
+describe('talking it over', () => {
+  test('a guesser chooses cards for their group to see, and a reveal clears every choice', async () => {
+    const table = await seatTable();
+    const team = board(table.captains.red).team;
+    const other = otherTeam(team);
+    const captain = table.captains[team];
+    const guesser = table.guessers[team];
+    const choose = (client: TestClient, card: unknown) =>
+      client.send('keywords:select', { ...moment(board(client)), card });
+
+    expect(await choose(guesser, 0)).toEqual({ ok: false, error: 'wrong_phase' });
+    await expectOk(captain.send('keywords:clue', { ...moment(board(captain)), word: 'Hint', count: 2 }));
+    await settle(table);
+    const own = board(captain).cards.findIndex((card) => card.color === team);
+    const neutral = board(captain).cards.findIndex((card) => card.color === 'neutral');
+
+    await expectOk(choose(guesser, neutral));
+    await settle(table);
+    for (const client of [captain, guesser]) {
+      expect(board(client).selections).toEqual([{ player: guesser.me, card: neutral }]);
+    }
+    for (const client of [table.captains[other], table.guessers[other], table.spectator, table.screen]) {
+      expect(board(client)).not.toHaveProperty('selections');
+    }
+
+    expect(await choose(table.guessers[other], own)).toEqual({ ok: false, error: 'not_your_turn' });
+    expect(await choose(table.spectator, own)).toEqual({ ok: false, error: 'not_your_turn' });
+    expect(await choose(captain, own)).toEqual({ ok: false, error: 'not_guesser' });
+    expect(await choose(guesser, 30)).toEqual({ ok: false, error: 'no_such_card' });
+    expect(await choose(guesser, 'card')).toEqual({ ok: false, error: 'bad_request' });
+
+    await expectOk(choose(guesser, null));
+    expect(board(guesser).selections).toEqual([]);
+    await expectOk(choose(guesser, neutral));
+    await expectOk(guesser.send('keywords:reveal', { ...moment(board(guesser)), card: own }));
+    expect(board(guesser).phase).toBe('guess');
+    expect(board(guesser).selections).toEqual([]);
+    await settle(table);
+    expectGroupsApart(table);
+  });
+
+  test('a guesser who leaves their seat or the room takes their choice along', async () => {
+    const table = await seatTable();
+    const team = board(table.captains.red).team;
+    const captain = table.captains[team];
+    const bob = table.guessers[team];
+    const eve = table.spectator;
+    const choose = (client: TestClient, card: number) =>
+      expectOk(client.send('keywords:select', { ...moment(board(client)), card }));
+    const chosen = (count: number) =>
+      captain.waitFor(
+        (state) => (state.data as KeywordsRoomData).game?.selections?.length === count,
+        `${count} chosen`,
+      );
+
+    await expectOk(eve.send('keywords:seat', { team, role: 'guesser' }));
+    await expectOk(captain.send('keywords:clue', { ...moment(board(captain)), word: 'Hint', count: 1 }));
+    await settle(table);
+    await choose(bob, 0);
+    await choose(eve, 1);
+    await chosen(2);
+
+    // Eve steps out to watch, comes back, and is moved to the spectators by the chair.
+    await expectOk(eve.send('keywords:seat', { team: null, role: 'spectator' }));
+    await chosen(1);
+    await expectOk(eve.send('keywords:seat', { team, role: 'guesser' }));
+    await choose(eve, 1);
+    await chosen(2);
+    await expectOk(table.captains.red.send('room:spectate', { playerId: eve.me }));
+    await chosen(1);
+
+    // She comes back once more, chooses, and leaves the room.
+    await expectOk(eve.send('keywords:seat', { team, role: 'guesser' }));
+    await choose(eve, 1);
+    await chosen(2);
+    await expectOk(eve.send('room:leave'));
+    await chosen(1);
+    expect(board(captain).selections).toEqual([{ player: bob.me, card: 0 }]);
+  });
+
+  test('guessers write to their group, captains only read it, and nobody else sees it', async () => {
+    const table = await seatTable();
+    const team = board(table.captains.red).team;
+    const other = otherTeam(team);
+    const { gameId } = board(table.captains.red);
+    const say = (client: TestClient, text: unknown, game = gameId) =>
+      client.send('keywords:say', { gameId: game, text });
+
+    // Either group may talk in either group's turn.
+    await expectOk(say(table.guessers[other], 'wait for their clue'));
+    await expectOk(say(table.guessers[team], '  line one\nline two  '));
+    await settle(table);
+    const ours = [{ id: 1, player: table.guessers[team].me, turn: 1, text: 'line one line two' }];
+    const theirs = [{ id: 1, player: table.guessers[other].me, turn: 1, text: 'wait for their clue' }];
+    expect(board(table.captains[team]).chat).toEqual(ours);
+    expect(board(table.guessers[team]).chat).toEqual(ours);
+    expect(board(table.captains[other]).chat).toEqual(theirs);
+    expect(board(table.spectator)).not.toHaveProperty('chat');
+    expect(board(table.screen)).not.toHaveProperty('chat');
+
+    expect(await say(table.captains[team], 'psst')).toEqual({ ok: false, error: 'not_guesser' });
+    expect(await say(table.spectator, 'hello')).toEqual({ ok: false, error: 'not_guesser' });
+    expect(await say(table.guessers[team], ' \n ')).toEqual({ ok: false, error: 'chat_empty' });
+    expect(await say(table.guessers[team], 'x'.repeat(201))).toEqual({ ok: false, error: 'chat_too_long' });
+    expect(await say(table.guessers[team], 'x'.repeat(MAX_CHAT_INPUT + 1))).toEqual({
+      ok: false,
+      error: 'bad_request',
+    });
+    expect(await say(table.guessers[team], 42)).toEqual({ ok: false, error: 'bad_request' });
+    expect(await say(table.guessers[team], 'hi', 'an-earlier-game')).toEqual({ ok: false, error: 'stale' });
+
+    // Once the game is over, every color is shown, but the chat stays in its group.
+    await expectOk(table.captains.red.send('room:end', { gameId }));
+    await settle(table);
+    expect(board(table.spectator).phase).toBe('over');
+    expect(board(table.captains[team]).chat).toEqual(ours);
+    expect(await say(table.guessers[team], 'gg')).toEqual({ ok: false, error: 'game_over' });
+    expectGroupsApart(table);
+  });
 });
 
 describe('playing again', () => {
@@ -288,7 +470,7 @@ describe('playing again', () => {
     const ann = table.captains.red;
     const firstWords = board(ann).cards.map((card) => card.word);
     const firstGame = board(ann).gameId;
-    await expectOk(ann.send('room:end'));
+    await expectOk(ann.send('room:end', { gameId: firstGame }));
     expect(board(ann).result).toEqual({ winner: null, reason: 'withdrawn' });
     await expectOk(ann.send('room:again'));
     expect(ann.state?.phase).toBe('lobby');

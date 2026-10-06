@@ -7,10 +7,11 @@ import {
   type Seat,
 } from '@reviewer2/shared';
 import type { GameContext, GameModule, GameResult } from '../../core/game';
-import { giveClue, newGame, pass, reveal, withdraw, type Outcome } from './rules';
+import { dropSelection, giveClue, newGame, pass, reveal, say, select, withdraw, type Outcome } from './rules';
 import {
   changeSeat,
   emptySeating,
+  endGame,
   removeSeat,
   seatOf,
   shuffleGroups,
@@ -34,6 +35,9 @@ const online = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.
 const fromOutcome = (data: KeywordsData, outcome: Outcome): GameResult<KeywordsData> =>
   outcome.ok ? { ok: true, data: { ...data, game: outcome.state } } : outcome;
 
+// Whoever leaves their seat or the room takes their choice of a card with them.
+const withoutSelection = (game: KeywordsState | null, playerId: string) => game && dropSelection(game, playerId);
+
 function play(data: KeywordsData, ctx: GameContext, playerId: string, type: KeywordsMessage, payload: unknown) {
   const parsed = KEYWORDS_MESSAGES[type].safeParse(payload ?? {});
   if (!parsed.success) return { ok: false as const, error: 'bad_request' };
@@ -43,18 +47,28 @@ function play(data: KeywordsData, ctx: GameContext, playerId: string, type: Keyw
     const { team, role } = body as { team: Seat['team']; role: Seat['role'] };
     const seat = { team, role } as Seat;
     const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, seat, ctx.phase === 'playing');
-    return change.ok ? { ok: true as const, data: { ...data, seating: change.seating } } : change;
+    if (!change.ok) return change;
+    const before = seatOf(data.seating, playerId);
+    const moved = before.team !== seat.team || before.role !== seat.role;
+    const game = moved ? withoutSelection(data.game, playerId) : data.game;
+    return { ok: true as const, data: { seating: change.seating, game } };
   }
 
-  if (ctx.phase !== 'playing' || !data.game) return { ok: false as const, error: 'wrong_phase' };
-  const actor = seatOf(data.seating, playerId);
+  // Once a game has ended, its actions still reach the rules, which answer stale or game_over in
+  // the order of the checks. In the waiting room there is no game to act on.
+  if (!data.game) return { ok: false as const, error: 'wrong_phase' };
+  const actor = { id: playerId, ...seatOf(data.seating, playerId) };
   switch (type) {
     case 'keywords:clue':
       return fromOutcome(data, giveClue(data.game, actor, body as Parameters<typeof giveClue>[2]));
+    case 'keywords:select':
+      return fromOutcome(data, select(data.game, actor, body as Parameters<typeof select>[2]));
     case 'keywords:reveal':
       return fromOutcome(data, reveal(data.game, actor, body as Parameters<typeof reveal>[2]));
     case 'keywords:pass':
       return fromOutcome(data, pass(data.game, actor, body as Parameters<typeof pass>[2]));
+    case 'keywords:say':
+      return fromOutcome(data, say(data.game, actor, body as Parameters<typeof say>[2]));
   }
   return { ok: false as const, error: 'bad_request' };
 }
@@ -68,8 +82,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // Newcomers are spectators until they take a seat.
   join: (data) => data,
 
-  // A captain who leaves frees the seat; the key viewers remember them anyway.
-  leave: (data, playerId) => ({ ...data, seating: removeSeat(data.seating, playerId) }),
+  // A captain who leaves frees the seat; the key viewers remember them anyway, and the groups
+  // remember whom each player has played for.
+  leave: (data, playerId) => ({
+    seating: removeSeat(data.seating, playerId),
+    game: withoutSelection(data.game, playerId),
+  }),
 
   bench(data, ctx, playerId) {
     const change = changeSeat(
@@ -78,10 +96,10 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       SPECTATOR,
       ctx.phase === 'playing',
     );
-    return change.ok ? { ...data, seating: change.seating } : data;
+    return change.ok ? { seating: change.seating, game: withoutSelection(data.game, playerId) } : data;
   },
 
-  shuffle: (data, ctx) => ({ ...data, seating: shuffleGroups(data.seating, ctx.rng) }),
+  shuffle: (data, ctx) => ({ ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) }),
 
   startProblems: (data, ctx) =>
     startProblems(data.seating, online(ctx)).map(({ problem, team }) => `${problem}:${team}`),
@@ -93,10 +111,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   isOver: (data) => data.game?.phase === 'over',
 
-  withdraw: (data) => (data.game ? { ...data, game: withdraw(data.game) } : data),
+  withdraw: (data, gameId) =>
+    data.game ? fromOutcome(data, withdraw(data.game, { gameId })) : { ok: false, error: 'stale' },
 
-  // Back to the waiting room: everyone keeps their seat, and nobody has seen the next key yet.
-  again: (data) => ({ seating: { seats: data.seating.seats, keyViewers: new Set() }, game: null }),
+  // Back to the waiting room: everyone keeps their seat, and nobody has seen the next key or
+  // played for a group yet.
+  again: (data) => ({ seating: endGame(data.seating), game: null }),
 
   handle(data, ctx, playerId, type, payload) {
     if (!Object.hasOwn(KEYWORDS_MESSAGES, type)) return { ok: false, error: 'bad_request' };
@@ -107,14 +127,14 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     const members = ctx.playerIds();
     const seats: Record<string, Seat> = {};
     for (const id of members) seats[id] = seatOf(data.seating, id);
-    // Only a member who sits as a captain right now sees the key. A captain who has stepped down
-    // to watch gets the public view again, and screens always do.
-    const sees = 'playerId' in viewer && seats[viewer.playerId]?.role === 'captain' ? 'key' : 'public';
+    // What a viewer sees depends on the seat they are in right now (view.ts): a captain who has
+    // stepped down to watch gets a spectator's view, and a screen always does.
+    const seat = ('playerId' in viewer && seats[viewer.playerId]) || SPECTATOR;
     return {
       seats,
       keyViewers: members.filter((id) => data.seating.keyViewers.has(ctx.keyOf(id))),
       startProblems: ctx.phase === 'lobby' ? startProblems(data.seating, online(ctx)) : [],
-      game: data.game ? viewFor(data.game, sees) : null,
+      game: data.game ? viewFor(data.game, seat) : null,
     };
   },
 };

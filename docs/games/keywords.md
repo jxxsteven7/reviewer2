@@ -124,15 +124,19 @@ The game's messages, on top of the room messages in [../architecture.md](../arch
 |---|---|---|
 | `keywords:seat` | `team` (`red`, `blue` or `null`) and `role` (`captain`, `guesser` or `spectator`) | Any member, within the seat rules |
 | `keywords:clue` | `gameId`, `turn`, `word`, `count` (0 to 9, or `"unlimited"`) | The current team's captain |
+| `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null` to take the choice back) | The current team's guessers |
 | `keywords:reveal` | `gameId`, `turn`, `card` (0 to 24) | The current team's guessers |
 | `keywords:pass` | `gameId`, `turn` | The current team's guessers |
+| `keywords:say` | `gameId`, `text` (one line, up to 200 characters once cleaned) | The guessers of either group, in either group's turn |
+
+A guesser who steps out to watch, is moved to the spectators by the chair or leaves the room loses their choice of a card.
 
 In every snapshot, the game's part (`RoomView.data`) holds:
 
 - the seats of everyone in the room;
 - the players who have seen the key in the current game;
 - in the waiting room, what still keeps the game from starting;
-- the game itself, from `view.ts`. A player sees the key only while sitting as a captain, so a captain who steps down to watch gets the public view again.
+- the game itself, from `view.ts`. A player sees the key only while sitting as a captain, so a captain who steps down to watch gets the public view again. In the same way, a player gets their group's chat, and its choices of cards in its turn, only while sitting in it; spectators and screens get neither.
 
 ## Order of the checks
 
