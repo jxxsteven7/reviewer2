@@ -61,6 +61,9 @@ export class Room {
   round = 0;
   usedWords = new Set<string>();
   lastActivity: number;
+  // When a connection last came to the room or went. The sweep keeps this at the present while
+  // anyone is connected, so it tells for how long nobody has been.
+  lastSeen: number;
   readonly members = new Map<string, Member>();
   readonly screens = new Set<string>();
   readonly #removed = new Map<string, number>(); // member key -> until when
@@ -78,6 +81,7 @@ export class Room {
     this.#now = options.now;
     this.createdAt = options.now();
     this.lastActivity = this.createdAt;
+    this.lastSeen = this.createdAt;
     this.#lobbySince = this.createdAt;
     this.data = options.game.create();
   }
@@ -159,11 +163,13 @@ export class Room {
   attach(member: Member, socketId: string): void {
     member.sockets.add(socketId);
     member.offlineSince = null;
+    this.lastSeen = this.#now();
     this.changed();
   }
 
   // Forgets a connection, whether it was a member's or a screen's.
   detach(socketId: string): void {
+    this.lastSeen = this.#now();
     if (this.screens.delete(socketId)) {
       this.changed();
       return;
@@ -181,6 +187,7 @@ export class Room {
 
   addScreen(socketId: string): void {
     this.screens.add(socketId);
+    this.lastSeen = this.#now();
     this.changed();
   }
 

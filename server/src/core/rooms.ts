@@ -38,7 +38,6 @@ export interface SweepResult {
 
 export class Rooms {
   readonly #rooms = new Map<string, Room>();
-  readonly #lastOnline = new Map<Room, number>();
 
   constructor(
     private readonly rng: Rng,
@@ -56,7 +55,6 @@ export class Rooms {
     while (this.#rooms.has(code)) code = newCode(this.rng);
     const room = new Room({ ...options, code, rng: this.rng, now: this.now });
     this.#rooms.set(code, room);
-    this.#lastOnline.set(room, this.now());
     return room;
   }
 
@@ -72,7 +70,6 @@ export class Rooms {
 
   close(room: Room): string[] {
     this.#rooms.delete(room.code);
-    this.#lastOnline.delete(room);
     return [...room.screens, ...[...room.members.values()].flatMap((member) => [...member.sockets])];
   }
 
@@ -91,8 +88,10 @@ export class Rooms {
 
   #sweepRoom(room: Room, result: SweepResult): void {
     const now = this.now();
-    if (room.onlineCount() > 0 || room.screens.size > 0) this.#lastOnline.set(room, now);
-    const idle = now - (this.#lastOnline.get(room) ?? now) >= this.limits.idleMs;
+    // The room itself notes every connection that comes or goes, so a visit that begins and ends
+    // between two sweeps counts as well.
+    if (room.onlineCount() > 0 || room.screens.size > 0) room.lastSeen = now;
+    const idle = now - room.lastSeen >= this.limits.idleMs;
     const stale = now - room.lastActivity >= this.limits.staleMs;
     if (idle || stale) {
       result.closed.push({ room, sockets: this.close(room) });

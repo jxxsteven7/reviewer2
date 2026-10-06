@@ -839,11 +839,40 @@ describe('housekeeping', () => {
     expect(members(code)).toEqual(['Ann']);
   });
 
-  test('closes rooms nobody has been in for half an hour', async () => {
-    const { chair, code } = await room();
+  // In a game the sweep drops nobody, so that only the half-hour rule can close the room.
+  const abandoned = async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    await start(chair);
     chair.close();
-    await until(() => server.app.rooms.find(code)?.onlineCount() === 0);
-    server.advance(30 * 60_000 + 1);
+    bob.close();
+    await until(() => server.app.rooms.find(code)?.onlineCount() === 0, 'everyone offline');
+    return { chair, code, roomId };
+  };
+
+  test('closes rooms nobody has been in for half an hour', async () => {
+    const { code } = await abandoned();
+    server.advance(30 * 60_000 - 1000);
+    server.app.sockets.sweep();
+    expect(server.app.rooms.find(code)).toBeDefined();
+    server.advance(1001);
+    server.app.sockets.sweep();
+    expect(server.app.rooms.find(code)).toBeUndefined();
+  });
+
+  test('counts the half hour from the last visit, also one that no sweep saw', async () => {
+    const { chair, code, roomId } = await abandoned();
+    server.advance(28 * 60_000);
+    server.app.sockets.sweep();
+    // The chair looks in and is gone again before the next sweep runs.
+    const back = await connect({ token: chair.token, code, roomId });
+    await back.waitFor((state) => state.code === code);
+    back.close();
+    await until(() => server.app.rooms.find(code)?.onlineCount() === 0, 'the chair offline again');
+    server.advance(2 * 60_000 + 1);
+    server.app.sockets.sweep();
+    expect(server.app.rooms.find(code)).toBeDefined();
+    server.advance(28 * 60_000);
     server.app.sockets.sweep();
     expect(server.app.rooms.find(code)).toBeUndefined();
   });
