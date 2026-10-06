@@ -36,6 +36,8 @@ export interface GameModule<Data = unknown, View = unknown> {
   startProblems(data: Data, ctx: GameContext): string[];
   // The words come with their terms in the other languages of the word library.
   start(data: Data, ctx: GameContext, words: BoardWord[], gameId: string): Data;
+  // Whether the game has ended by itself. The room asks after every change to the data during a
+  // game, whatever made it: one of the game's messages, or a player who left or was benched.
   isOver(data: Data): boolean;
   // The chair ends the game early. The withdrawal names the game it is meant for, and the game
   // refuses one for another game or one that comes after it has ended.

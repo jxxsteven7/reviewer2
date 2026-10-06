@@ -198,8 +198,9 @@ export class Room {
     const member = this.members.get(id);
     if (!member) return [];
     const data = this.game.leave(this.data, id);
+    const over = this.#endsWith(data);
     this.members.delete(id);
-    this.data = data;
+    this.#take(data, over);
     if (this.chairId === id) this.chairId = this.#nextChair();
     this.changed();
     return [...member.sockets];
@@ -279,7 +280,8 @@ export class Room {
 
   bench(id: string): Done {
     if (!this.members.has(id)) return fail('no_such_player');
-    this.data = this.game.bench(this.data, this.context, id);
+    const data = this.game.bench(this.data, this.context, id);
+    this.#take(data, this.#endsWith(data));
     this.changed();
     return done;
   }
@@ -300,16 +302,26 @@ export class Room {
     return done;
   }
 
-  // A game message from a member. The game reports when it has ended by itself, such as when a
-  // team wins.
+  // A game message from a member.
   act(id: string, type: string, payload: unknown): Done {
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return fail(result.error);
-    const over = this.phase === 'playing' && this.game.isOver(result.data);
-    this.data = result.data;
-    if (over) this.phase = 'ended';
+    this.#take(result.data, this.#endsWith(result.data));
     this.changed();
     return done;
+  }
+
+  // Whether the game has ended by itself with this data, such as when a team wins. A game may
+  // end with any change to its data, not only with one of its own messages: a module is free to
+  // end a game when a player leaves it or is moved to the spectators.
+  #endsWith(data: unknown): boolean {
+    return this.phase === 'playing' && this.game.isOver(data);
+  }
+
+  // Takes the game's new data, and the end of the game if the data brought it.
+  #take(data: unknown, over: boolean): void {
+    this.data = data;
+    if (over) this.phase = 'ended';
   }
 
   // --- housekeeping -----------------------------------------------------------------------

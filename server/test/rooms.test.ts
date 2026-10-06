@@ -408,6 +408,24 @@ describe('games', () => {
     expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'stale' });
   });
 
+  test('end when the game says so, whatever brought the end about', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    const cat = await join(code, 'Cat');
+    await chair.send('test:fragile'); // from now on a game ends when someone leaves it
+    await start(chair);
+    expect(await bob.send('room:leave')).toEqual({ ok: true });
+    await chair.waitFor((state) => state.phase === 'ended', 'ended by a player who left');
+    expect(await again(chair)).toEqual({ ok: true });
+    expect(await start(chair)).toEqual({ ok: true });
+    expect(await chair.send('room:spectate', { playerId: cat.me })).toEqual({ ok: true });
+    await chair.waitFor((state) => state.phase === 'ended', 'ended by a player who was benched');
+    expect(await again(chair)).toEqual({ ok: true });
+    expect(await start(chair)).toEqual({ ok: true });
+    expect(await chair.send('room:remove', { playerId: cat.me })).toEqual({ ok: true });
+    await chair.waitFor((state) => state.phase === 'ended', 'ended by a player who was removed');
+  });
+
   test('a start that comes late or twice starts no second game', async () => {
     const { chair, code } = await room();
     await join(code, 'Bob');

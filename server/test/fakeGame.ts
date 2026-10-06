@@ -12,6 +12,8 @@ export interface FakeData {
   gameId: string | null;
   over: boolean;
   broken: 'join' | 'leave' | 'view' | null;
+  // A fragile game ends as soon as a player leaves it or is moved to the spectators.
+  fragile: boolean;
 }
 
 // The view leaves the game's ID out on purpose: the chair's controls have to work with what the
@@ -26,16 +28,25 @@ export interface FakeView {
 export const fakeGame: GameModule<FakeData, FakeView> = {
   id: 'test',
   wordsNeeded: 3,
-  create: () => ({ joined: [], benched: [], presses: 0, words: [], gameId: null, over: false, broken: null }),
+  create: () => ({
+    joined: [],
+    benched: [],
+    presses: 0,
+    words: [],
+    gameId: null,
+    over: false,
+    broken: null,
+    fragile: false,
+  }),
   join(data, id) {
     if (data.broken === 'join') throw new Error('joining broke');
     return { ...data, joined: [...data.joined, id] };
   },
   leave(data, id) {
     if (data.broken === 'leave') throw new Error('leaving broke');
-    return { ...data, joined: data.joined.filter((other) => other !== id) };
+    return { ...data, joined: data.joined.filter((other) => other !== id), over: data.over || data.fragile };
   },
-  bench: (data, _ctx, id) => ({ ...data, benched: [...data.benched, id] }),
+  bench: (data, _ctx, id) => ({ ...data, benched: [...data.benched, id], over: data.over || data.fragile }),
   shuffle: (data) => ({ ...data, joined: [...data.joined].reverse() }),
   startProblems: (data, ctx) => (data.joined.filter((id) => ctx.isOnline(id)).length < 2 ? ['needs_players'] : []),
   start: (data, _ctx, words, gameId) => ({
@@ -55,6 +66,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   handle(data, ctx, _playerId, type, payload) {
     if (type === 'test:break') return { ok: true, data: { ...data, broken: payload as FakeData['broken'] } };
     if (type === 'test:mend') return { ok: true, data: { ...data, broken: null } };
+    if (type === 'test:fragile') return { ok: true, data: { ...data, fragile: true } };
     // A module may throw anything at all, not only errors.
     if (type === 'test:throw') throw payload;
     if (ctx.phase !== 'playing') return { ok: false, error: 'wrong_phase' };
