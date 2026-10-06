@@ -36,15 +36,26 @@ export default defineConfig([
       'no-restricted-imports': [
         'error',
         {
-          paths: [
-            { name: 'zod', message: 'Only shared/src/schemas.ts may import zod, and only the server imports it.' },
-          ],
           patterns: [
             {
-              group: ['@reviewer2/shared/schemas', './schemas', '../schemas', '../../schemas'],
+              // zod itself and its other entry points, such as zod/mini.
+              group: ['zod', 'zod/*'],
+              message: 'Only shared/src/schemas.ts may import zod, and only the server imports it.',
+            },
+            {
+              // The module by its package path and by any relative one, with or without ".ts".
+              group: ['**/schemas', '**/schemas.*'],
               message: "The schemas are for the server only: they would pull zod into the client's bundle.",
             },
           ],
+        },
+      ],
+      // The rule above doesn't look at import().
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/^zod(\\/|$)|(^|\\/)schemas(\\.|$)/]',
+          message: 'Neither zod nor the schemas may be imported here, also not with import().',
         },
       ],
     },
