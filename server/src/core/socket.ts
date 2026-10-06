@@ -282,6 +282,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // it a message has its payload and nothing else.
   function listen(socket: Socket, handlers: Handlers): void {
     socket.onAny((event: unknown, ...args: unknown[]) => {
+      // One request may carry several packets, and one of them may end the connection. Socket.IO
+      // still hands the rest to this listener, though not to those registered with socket.on().
+      // A message that came in after its connection ended must not put that connection into a
+      // room: nothing would ever take it out again.
+      if (!socket.connected) return;
       const ack = typeof args.at(-1) === 'function' ? args.pop() : undefined;
       respond(socket, ack, () => {
         // Socket.IO also delivers events that are named by a number.

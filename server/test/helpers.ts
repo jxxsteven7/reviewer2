@@ -66,6 +66,22 @@ export async function until(condition: () => boolean, what = 'condition', timeou
 
 export type Reply = Ack<Record<string, unknown>>;
 
+// A connection made by hand over Engine.IO's long polling, for what no client would do: put
+// several packets into one request, or stop asking for what the server has for it. Packets in one
+// request are separated by "\x1e"; "40" connects to Socket.IO, "41" disconnects from it, and
+// "42[...]" is an event.
+export async function rawPolling(url: string) {
+  const base = `${url}/socket.io/?EIO=4&transport=polling`;
+  const opened = await (await fetch(base)).text();
+  const { sid } = JSON.parse(opened.slice(1)) as { sid: string };
+  const session = `${base}&sid=${sid}`;
+  const post = async (body: string) => (await fetch(session, { method: 'POST', body })).text();
+  const get = async () => (await fetch(session)).text();
+  await post('40');
+  await get();
+  return { post, get };
+}
+
 export class TestClient {
   readonly states: RoomView[] = [];
   readonly closed: ClosedReason[] = [];

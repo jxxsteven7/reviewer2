@@ -4,7 +4,16 @@ import type { GameModule } from '../src/core/game';
 import { seededRng } from '../src/core/random';
 import type { FakeView } from './fakeGame';
 import { fakeGame } from './fakeGame';
-import { createRoom, joinRoom, startServer, TestClient, until, type Reply, type TestServer } from './helpers';
+import {
+  createRoom,
+  joinRoom,
+  rawPolling,
+  startServer,
+  TestClient,
+  until,
+  type Reply,
+  type TestServer,
+} from './helpers';
 
 let server: TestServer;
 let clients: TestClient[];
@@ -782,6 +791,22 @@ describe('messages', () => {
     expect(reply).toEqual({ ok: false, error: 'bad_request' });
     expect(await chair.send('sys:ping')).toEqual({ ok: true });
     expect(names(chair)).toEqual(['Ann']);
+  });
+
+  test('one that arrives after its connection has ended is ignored', async () => {
+    const { chair, code } = await room();
+    const create = ['room:create', { game: 'test', language: 'en', fields: ['general'], name: 'Ghost' }];
+    // One request that disconnects and then sends a message. Whoever that message put into a
+    // room would stay "online" for good, with no connection that could ever be closed.
+    for (const message of [create, ['room:join', { code, name: 'Ghost' }], ['room:watch', { code }]]) {
+      const raw = await rawPolling(server.url);
+      await raw.post(`41\x1e42${JSON.stringify(message)}`);
+    }
+    await chair.send('sys:ping');
+    expect(server.app.rooms.size).toBe(1);
+    expect(members(code)).toEqual(['Ann']);
+    expect(server.app.rooms.find(code)?.screens.size).toBe(0);
+    expect(logged('room_created')).toHaveLength(1);
   });
 
   test("a game can't be named after the room's own messages", async () => {
