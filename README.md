@@ -56,7 +56,7 @@ The first version will include a game lobby, creating and joining rooms, choosin
 
 ## Running locally
 
-You need [Node.js](https://nodejs.org) 22.13 or later. CI uses 24 LTS.
+You need [Node.js](https://nodejs.org) 22.13 or later, but not 23 or 25, which the test runner doesn't support. CI uses 24 LTS.
 
 ```bash
 npm install   # also turns on the git hooks

@@ -4,7 +4,7 @@ How to set up, run and test the app on your own machine. The rules for branches,
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) 22.13 or later. Use an even-numbered release (22, 24 or 26): the test runner doesn't support 23 or 25. CI and the Docker image use 24 LTS, which `.node-version` names for version managers such as fnm.
+- [Node.js](https://nodejs.org) 22.13 or later, but not 23 or 25: the test runner doesn't support them, and `npm install` refuses to run on a version outside `engines` in `package.json`. CI and the Docker image use 24 LTS, which `.node-version` names for version managers such as fnm.
 - npm, which comes with Node. The repository is an npm workspace with three packages: `shared`, `server` and `client`.
 - Git.
 

@@ -56,7 +56,7 @@
 
 ## 本地运行
 
-需要 [Node.js](https://nodejs.org) 22.13 或更高版本，CI 使用 24 LTS。
+需要 [Node.js](https://nodejs.org) 22.13 或更高版本，但不能是 23 或 25（测试框架不支持这两个版本）。CI 使用 24 LTS。
 
 ```bash
 npm install   # also turns on the git hooks
@@ -121,4 +121,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: bd6a39bc6199c3fff6b5032999e9f7b9a950a7e54d9fa6b1b162c7325886ca45 -->
+<!-- readme-sync: 973f501473c912dbc487c49a79853c7bf49400956f98e0d525b01bc941294699 -->
