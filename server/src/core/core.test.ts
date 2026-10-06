@@ -34,13 +34,45 @@ describe('addresses', () => {
     expect(clientIp('10.0.0.2', headers, false)).toBe('10.0.0.2');
     expect(clientIp('10.0.0.2', headers, true)).toBe('198.51.100.7');
     expect(clientIp('10.0.0.2', {}, true)).toBe('10.0.0.2');
+    expect(clientIp('10.0.0.2', { 'x-forwarded-for': ['203.0.113.9', '198.51.100.7'] }, true)).toBe('198.51.100.7');
   });
 
   test('group IPv6 by /64 and unwrap IPv4', () => {
     expect(groupIp('::ffff:192.0.2.1')).toBe('192.0.2.1');
     expect(groupIp('2001:db8:0:1:aaaa:bbbb:cccc:dddd')).toBe('2001:db8:0:1::/64');
     expect(groupIp('2001:DB8::1')).toBe('2001:db8:0:0::/64');
+    expect(groupIp('2001:0db8:0000:0001::')).toBe('2001:db8:0:1::/64');
     expect(groupIp('::1')).toBe('0:0:0:0::/64');
+    expect(groupIp('::')).toBe('0:0:0:0::/64');
+  });
+
+  test('are the same address however a proxy writes them', () => {
+    // With a port, which changes with every connection.
+    expect(groupIp('203.0.113.9:4711')).toBe('203.0.113.9');
+    expect(groupIp('203.0.113.9:52000')).toBe('203.0.113.9');
+    expect(groupIp('[2001:db8:0:1::7]:4711')).toBe('2001:db8:0:1::/64');
+    expect(groupIp('[2001:db8:0:1::7]')).toBe('2001:db8:0:1::/64');
+    expect(groupIp(' 203.0.113.9 ')).toBe('203.0.113.9');
+    // With a zone.
+    expect(groupIp('fe80::1%eth0')).toBe('fe80:0:0:0::/64');
+    // IPv4 inside IPv6, in hexadecimal and written out in full.
+    expect(groupIp('::ffff:c000:201')).toBe('192.0.2.1');
+    expect(groupIp('0:0:0:0:0:ffff:c000:0201')).toBe('192.0.2.1');
+    expect(groupIp('0000:0000:0000:0000:0000:FFFF:192.0.2.1')).toBe('192.0.2.1');
+    expect(groupIp('::ffff:c633:6407')).toBe('198.51.100.7');
+    // The same four groups in front of another prefix are not IPv4.
+    expect(groupIp('64:ff9b::c000:201')).toBe('64:ff9b:0:0::/64');
+  });
+
+  test('are never made up from something that is no address', () => {
+    for (const text of ['', 'unknown', '_hidden', '203.0.113', '203.0.113.9.1', '2001:db8::1::2', 'example.org:80']) {
+      expect(groupIp(text), text).toBeNull();
+    }
+    // A forwarded entry that is no address leaves the proxy's own address to count.
+    expect(clientIp('10.0.0.2', { 'x-forwarded-for': '203.0.113.9, unknown' }, true)).toBe('10.0.0.2');
+    // And a connection without any address is counted with the others like it, not let off.
+    expect(clientIp(undefined, {}, false)).toBe('unknown');
+    expect(clientIp(undefined, { 'x-forwarded-for': 'unknown' }, true)).toBe('unknown');
   });
 });
 

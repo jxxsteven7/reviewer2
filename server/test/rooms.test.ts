@@ -668,6 +668,20 @@ describe('limits', () => {
     await back.waitFor((state) => state.me === bob.me);
   });
 
+  test('counts a forwarded address as one, whatever port the proxy saw it on', async () => {
+    await server.close();
+    server = await startServer({ trustProxy: true });
+    const create = async (forwarded: string) => {
+      const client = await connect({}, { extraHeaders: { 'x-forwarded-for': forwarded } });
+      return client.send('room:create', { game: 'test', language: 'en', fields: ['general'], name: 'Ann' });
+    };
+    for (let port = 5000; port < 5005; port += 1) {
+      expect(await create(`203.0.113.9:${port}`)).toMatchObject({ ok: true });
+    }
+    expect(await create('203.0.113.9:5005')).toEqual({ ok: false, error: 'rate_limited' });
+    expect(await create('198.51.100.7')).toMatchObject({ ok: true });
+  });
+
   test('says so once when it ignores the address that a proxy passed on', async () => {
     await connect({}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
     await connect({}, { extraHeaders: { 'x-forwarded-for': '203.0.113.10' } });
