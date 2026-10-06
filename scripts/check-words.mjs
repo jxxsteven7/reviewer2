@@ -72,7 +72,9 @@ export function wordKey(text) {
 }
 
 // What the game itself calls its roles and cards, in both languages. Such terms are allowed, since
-// most are everyday academic words, but players may confuse them with the game's own labels.
+// most are everyday academic words, but players may confuse them with the game's own labels. A
+// term is compared with them as words are, by its key, so "Reviewer-2" is one of them, and so is
+// a plain plural such as "Students".
 const GAME_NAMES = [
   '\u5bfc\u5e08',
   '\u5b66\u751f',
@@ -88,7 +90,10 @@ const GAME_NAMES = [
   'irrelevant paper',
 ];
 let gameNames;
-const isGameName = (key) => (gameNames ??= new Set(GAME_NAMES.map(wordKey))).has(key);
+// A plain plural: -s, or -es after s, x, z, ch or sh, as the clue check takes it.
+const isPluralOf = (plural, word) => plural === `${word}s` || (/(?:[sxz]|[cs]h)$/.test(word) && plural === `${word}es`);
+const isGameName = (key) =>
+  (gameNames ??= GAME_NAMES.map(wordKey)).some((name) => key === name || isPluralOf(key, name));
 
 // What a term must not hold. Any space but the plain one, such as a tab, a line break, a no-break
 // space or a full-width space, shows wrongly on a card. A character that shows nothing at all,

@@ -175,6 +175,15 @@ describe('a term', () => {
     assert.ok(has(withTerm({ id: 'supervisor', zh: SUPERVISOR }).warnings, /name of a role or card/));
     assert.deepEqual(withTerm({ id: 'attention', zh: ATTENTION, en: 'Attention' }).warnings, []);
   });
+
+  test("takes other spellings and plurals of the game's names for those names", () => {
+    for (const name of ['Students', 'PIs', 'Chairs', 'Reviewer2', 'Reviewer-2', 'REVIEWER 2', 'Irrelevant papers']) {
+      assert.ok(has(withTerm({ id: 'name', en: name }).warnings, /name of a role or card/), name);
+    }
+    for (const word of ['Chairman', 'Pi\u00f1ata', 'Reviewer', 'Paper', 'Studentship', 'Pie']) {
+      assert.deepEqual(withTerm({ id: 'word', en: word }).warnings, [], word);
+    }
+  });
 });
 
 describe('command line', () => {
