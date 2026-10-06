@@ -70,7 +70,7 @@ The table of traditional and simplified characters is `shared/src/han-variants.t
 
 - Revealing **Reviewer 2** ends the game at once: the group that revealed it loses.
 - Otherwise, a group wins as soon as all its cards are revealed, even if the other group revealed the last one.
-- The chair may also **withdraw** a game. It ends without a winner.
+- The chair may also **withdraw** a game. It ends without a winner. A withdrawal names the game it is meant for, so that one that arrives late, for instance from a tab that was offline, can't end the next game.
 
 At the end, everyone sees the colors of all the cards. "Play again" takes the room back to the waiting room with everyone in their seats, and the next game deals a new board.
 
@@ -98,7 +98,7 @@ Everyone sees the public facts: whose turn it is and in which phase, the current
 
 ## Order of the checks
 
-Every action carries the `gameId` and the `turn` it was meant for, and the server checks it in this order:
+Every action carries the `gameId` and the `turn` it was meant for. A withdrawal carries only the `gameId`, because it is meant for the game, whatever the turn. The server checks an action in this order:
 
 1. `stale`: the action is for an earlier game or turn. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
 2. `game_over`: the game has ended.

@@ -134,7 +134,10 @@ export function pass(state: KeywordsState, actor: Actor, action: Moment): Outcom
   return ok(endTurn(state));
 }
 
-// The chair ends the game early. Nobody wins.
-export function withdraw(state: KeywordsState): KeywordsState {
-  return state.phase === 'over' ? state : finish(state, null, 'withdrawn');
+// The chair ends the game early. Nobody wins. A withdrawal names its game like every other
+// action, so that one that arrives late can't end the next game. The turn doesn't matter to it.
+export function withdraw(state: KeywordsState, action: Pick<Moment, 'gameId'>): Outcome {
+  if (action.gameId !== state.gameId) return refuse('stale');
+  if (state.phase === 'over') return refuse('game_over');
+  return ok(finish(state, null, 'withdrawn'));
 }

@@ -27,7 +27,7 @@ describe('what each player sees', () => {
   });
 
   test('everyone sees every color once the game is over', () => {
-    const view = viewFor(withdraw(playing()), 'public');
+    const view = viewFor(accepted(withdraw(playing(), { gameId: 'game-1' })), 'public');
     expect(view.cards.every((card) => card.color !== undefined)).toBe(true);
     expect(view.result).toEqual({ winner: null, reason: 'withdrawn' });
   });

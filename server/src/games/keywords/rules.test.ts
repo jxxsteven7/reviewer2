@@ -73,7 +73,7 @@ describe('giving a clue', () => {
     expect(refused(giveClue(guessing, captain('red'), { ...now(guessing), word: 'Loss', count: 1 }))).toBe(
       'wrong_phase',
     );
-    const over = withdraw(gameState());
+    const over = accepted(withdraw(gameState(), now(gameState())));
     expect(refused(giveClue(over, captain('red'), { ...now(over), word: 'Loss', count: 1 }))).toBe('game_over');
   });
 
@@ -245,11 +245,25 @@ describe('passing', () => {
 });
 
 describe('withdrawing', () => {
-  test('ends the game without a winner, once', () => {
-    const over = withdraw(clued());
-    expect(over.phase).toBe('over');
-    expect(over.result).toEqual({ winner: null, reason: 'withdrawn' });
+  test('ends the game without a winner, in any phase and whatever the turn', () => {
+    for (const state of [gameState(), clued(), revealAll(clued(), [17])]) {
+      const over = accepted(withdraw(state, { gameId: state.gameId }));
+      expect(over.phase).toBe('over');
+      expect(over.clue).toBeNull();
+      expect(over.result).toEqual({ winner: null, reason: 'withdrawn' });
+    }
+  });
+
+  test('is refused once the game is over', () => {
     const finished = revealAll(clued(), [24]);
-    expect(withdraw(finished)).toBe(finished);
+    expect(refused(withdraw(finished, now(finished)))).toBe('game_over');
+    const withdrawn = accepted(withdraw(clued(), now(clued())));
+    expect(refused(withdraw(withdrawn, now(withdrawn)))).toBe('game_over');
+  });
+
+  test('meant for another game is stale', () => {
+    const next = gameState({ gameId: 'game-2' });
+    expect(refused(withdraw(next, { gameId: 'game-1' }))).toBe('stale');
+    expect(refused(withdraw(revealAll(clued(), [24]), { gameId: 'game-0' }))).toBe('stale');
   });
 });

@@ -104,9 +104,10 @@ describe('random games', () => {
       for (let step = 0; state.phase !== 'over'; step += 1) {
         expect(step).toBeLessThan(2000);
         const untouched = JSON.stringify(state);
+        // Now and then the chair withdraws the game, sometimes one that is long over.
         const outcome =
-          seed % 50 === 49 && step === 20
-            ? { ok: true as const, state: withdraw(state) }
+          seed % 50 === 49 && step >= 20
+            ? withdraw(state, { gameId: step === 20 ? 'an-earlier-game' : state.gameId })
             : randomStep(state, rng, step);
         // The rules never write to the state they are given. A refusal returns no state at all,
         // so this is also what makes a refusal change nothing.
