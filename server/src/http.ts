@@ -46,7 +46,7 @@ function send(res: ServerResponse, status: number, type: string, body: string): 
 
 const notFound = (res: ServerResponse) => send(res, 404, 'text/plain; charset=utf-8', 'Not found\n');
 
-const NOT_BUILT = 'The front end has not been built. Run npm run build, or use npm run dev.\n';
+const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
 
 // The path of a request target: everything before the query string, as sirv reads it too. Not
 // new URL(), which takes a target that starts with two slashes for a host name and throws when
@@ -58,7 +58,8 @@ function pathOf(target: string): string {
 
 export function createRequestHandler({ publicDir, version }: HttpOptions): RequestListener {
   const startedAt = Date.now();
-  // sirv lists the files when it starts, so it can only serve a front end that has been built.
+  // sirv lists the files when it starts, so it only serves the front end that was built then.
+  // A new build needs a restart: until then, a new index.html would name assets sirv doesn't know.
   const files = existsSync(publicDir) ? staticFiles(publicDir) : null;
 
   return (req, res) => {
