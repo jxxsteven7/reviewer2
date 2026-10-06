@@ -24,9 +24,10 @@ function get(
   base: string,
   target: string,
   headers: Record<string, string> = {},
+  method = 'GET',
 ): Promise<{ status: number; headers: IncomingHttpHeaders; body: Buffer }> {
   return new Promise((resolve, reject) => {
-    const sent = request(base, { path: target, headers }, (response) => {
+    const sent = request(base, { path: target, headers, method }, (response) => {
       const chunks: Buffer[] = [];
       response.on('data', (chunk: Buffer) => chunks.push(chunk));
       response.on('end', () =>
@@ -123,6 +124,21 @@ describe('with a built front end', () => {
     }
   });
 
+  test('only GET and HEAD are answered; other methods get a 405', async () => {
+    for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
+      for (const target of ['/', '/room/K7QX', '/assets/index-abc123.js', '/healthz']) {
+        const response = await get(base, target, {}, method);
+        expect(response.status, `${method} ${target}`).toBe(405);
+        expect(response.headers.allow, `${method} ${target}`).toBe('GET, HEAD');
+        expect(response.headers['x-content-type-options'], `${method} ${target}`).toBe('nosniff');
+      }
+    }
+    const head = await get(base, '/room/K7QX', {}, 'HEAD');
+    expect(head.status).toBe(200);
+    expect(head.headers['content-type']).toMatch(/^text\/html/);
+    expect(head.body.length).toBe(0);
+  });
+
   test('every response carries the security headers', async () => {
     const response = await fetch(`${base}/`);
     const csp = response.headers.get('content-security-policy') ?? '';
@@ -134,16 +150,19 @@ describe('with a built front end', () => {
     expect(response.headers.get('referrer-policy')).toBe('same-origin');
   });
 
-  test('Socket.IO answers on the same port', async () => {
-    const socket = connect(base, { transports: ['websocket'], reconnection: false });
-    try {
-      await new Promise<void>((resolve, reject) => {
-        socket.once('connect', resolve);
-        socket.once('connect_error', reject);
-      });
-      expect(socket.connected).toBe(true);
-    } finally {
-      socket.close();
+  test('Socket.IO answers on the same port, over WebSocket and over long-polling', async () => {
+    // Long-polling sends with POST, which Socket.IO handles before the static files see it.
+    for (const transport of ['websocket', 'polling']) {
+      const socket = connect(base, { transports: [transport], reconnection: false });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          socket.once('connect', resolve);
+          socket.once('connect_error', reject);
+        });
+        expect(socket.connected, transport).toBe(true);
+      } finally {
+        socket.close();
+      }
     }
   });
 });

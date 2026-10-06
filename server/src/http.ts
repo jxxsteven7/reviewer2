@@ -64,7 +64,13 @@ export function createRequestHandler({ publicDir, version }: HttpOptions): Reque
   return (req, res) => {
     setSecurityHeaders(req, res);
     const path = pathOf(req.url ?? '/');
-    if (path === '/healthz') {
+    // Everything here is read-only. sirv would answer any method with the file or the page, so
+    // a stray POST would look like a success. Socket.IO's own requests, POSTs included, never
+    // reach this handler.
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.setHeader('Allow', 'GET, HEAD');
+      send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed\n');
+    } else if (path === '/healthz') {
       const uptime = Math.round((Date.now() - startedAt) / 1000);
       send(res, 200, 'application/json', JSON.stringify({ ok: true, version, uptime }));
     } else if (!files) {
