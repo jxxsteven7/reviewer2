@@ -31,6 +31,27 @@ describe('dealing', () => {
     expect(firstWords.size).toBeGreaterThan(10);
   });
 
+  // If the colors stayed in the order they are listed in, anyone could read the key from the
+  // places of the cards and the starting team, which everyone sees.
+  test('puts the colors in random places, whatever the words are', () => {
+    const reviewer2At = new Set<number>();
+    const reviewer2Word = new Set<string>();
+    const startersAt = new Set<number>();
+    const layouts = new Set<string>();
+    for (let seed = 0; seed < 200; seed += 1) {
+      const { cards, startingTeam } = deal(WORDS, seededRng(seed));
+      const place = cards.findIndex((card) => card.color === 'reviewer2');
+      reviewer2At.add(place);
+      reviewer2Word.add(cards[place]?.word ?? '');
+      cards.forEach((card, index) => card.color === startingTeam && startersAt.add(index));
+      layouts.add(cards.map((card) => (card.color === startingTeam ? 's' : card.color[0])).join(''));
+    }
+    expect(reviewer2At.size).toBeGreaterThan(20);
+    expect(reviewer2Word.size).toBeGreaterThan(20);
+    expect(startersAt.size).toBe(25);
+    expect(layouts.size).toBe(200);
+  });
+
   test('is repeatable with the same seed', () => {
     expect(deal(WORDS, seededRng(3))).toEqual(deal(WORDS, seededRng(3)));
   });

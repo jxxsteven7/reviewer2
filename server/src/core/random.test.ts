@@ -19,6 +19,20 @@ describe('random', () => {
     expect(items[0]).toBe(0);
   });
 
+  // A shuffle that is off by one never leaves the last item in its place, and reaches only some
+  // of the orders.
+  test('shuffle reaches every order, with both generators', () => {
+    const seeded = new Set<string>();
+    const crypto = new Set<string>();
+    for (let seed = 0; seed < 200; seed += 1) {
+      seeded.add(shuffle(['a', 'b', 'c'], seededRng(seed)).join(''));
+      crypto.add(shuffle(['a', 'b', 'c'], cryptoRng).join(''));
+    }
+    const orders = ['abc', 'acb', 'bac', 'bca', 'cab', 'cba'];
+    expect([...seeded].sort()).toEqual(orders);
+    expect([...crypto].sort()).toEqual(orders);
+  });
+
   test('pick and the crypto generator', () => {
     expect(['a', 'b', 'c']).toContain(pick(['a', 'b', 'c'], cryptoRng));
     expect(() => pick([], cryptoRng)).toThrow();
