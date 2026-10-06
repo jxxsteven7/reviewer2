@@ -59,6 +59,7 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 | `room:end`, `room:again` | `gameId` | The chair; refused as `stale` when it names another game than the room's |
 | `room:shuffle` | | The chair |
 | `room:spectate`, `room:remove`, `room:chair` | `playerId` | The chair |
+| `room:dismiss` | | The chair; sends every screen away |
 
 ## The handshake and reconnecting
 
@@ -84,6 +85,8 @@ A module's data is immutable: every call returns new data. `view()` is the only 
 ## Screens
 
 A screen, such as a projector in a lab meeting, watches a room without a token and without a seat. It starts with `room:watch`, and comes back after a dropped connection through the handshake, by the `roomId` it was sent. The server gives it the view that a spectator would get, so even a chair who is also a captain can put the board on the wall without showing the key. A room can have up to 5 screens.
+
+A screen has no name, so all that anyone sees of the screens is how many there are, in the room's view. Whoever has the code can put one up, which could fill all five places or let someone watch who should not. So the chair can send every screen away at once with `room:dismiss`: they get `room:closed` with the reason `removed`, and the ones that belong there are put up again. A player whom the chair has just removed can't watch from the same browser for the same 2 minutes.
 
 ## Limits and housekeeping
 

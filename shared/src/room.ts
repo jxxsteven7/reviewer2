@@ -29,6 +29,9 @@ export interface RoomView<Game = unknown> {
   gameId: string | null;
   chairId: string | null;
   players: PlayerView[];
+  // How many screens are watching. They have no name and no seat, so this number is all that
+  // anyone sees of them; the chair can send them all away.
+  screens: number;
   // The viewer's own player ID, or null for a screen, which watches without playing.
   me: string | null;
   // The game's own part of the view, built for this viewer alone.

@@ -122,9 +122,14 @@ export class Room {
   // Why nobody new can come in with this key for now, whatever they call themselves. A newcomer
   // hears this before being asked for a name, rather than after having typed one.
   refusal(key: string): 'removed_recently' | 'room_full' | null {
-    const until = this.#removed.get(key);
-    if (until !== undefined && until > this.#now()) return 'removed_recently';
+    if (this.removedRecently(key)) return 'removed_recently';
     return this.members.size >= MAX_PLAYERS ? 'room_full' : null;
+  }
+
+  // Whether the chair removed whoever has this key so recently that they must still wait.
+  removedRecently(key: string): boolean {
+    const until = this.#removed.get(key);
+    return until !== undefined && until > this.#now();
   }
 
   // A new member. The first one chairs the room.
@@ -159,7 +164,10 @@ export class Room {
 
   // Forgets a connection, whether it was a member's or a screen's.
   detach(socketId: string): void {
-    if (this.screens.delete(socketId)) return;
+    if (this.screens.delete(socketId)) {
+      this.changed();
+      return;
+    }
     const member = this.memberBySocket(socketId);
     if (!member) return;
     member.sockets.delete(socketId);
@@ -173,6 +181,15 @@ export class Room {
 
   addScreen(socketId: string): void {
     this.screens.add(socketId);
+    this.changed();
+  }
+
+  // The chair sends every screen away. Returns their connections.
+  dismissScreens(): string[] {
+    const screens = [...this.screens];
+    this.screens.clear();
+    if (screens.length > 0) this.changed();
+    return screens;
   }
 
   // A member goes for good: they left, the chair removed them, or they were offline too long in
@@ -344,6 +361,7 @@ export class Room {
         name: member.name,
         online: member.sockets.size > 0,
       })),
+      screens: this.screens.size,
       me: 'playerId' in viewer ? viewer.playerId : null,
       data: this.game.view(this.data, this.context, viewer),
     };

@@ -145,12 +145,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   function watch(socket: Socket, room: Room): Reply {
     const conn = connection(socket);
     if (conn.room !== room || !conn.screen) {
+      // A screen shows what a spectator sees. Whoever the chair has just removed can't put one
+      // up in place of the seat they lost, at least not from the same browser.
+      if (room.removedRecently(conn.key)) return fail('removed_recently');
       if (room.screensFull()) return fail('screens_full');
       release(socket);
       room.addScreen(socket.id);
       Object.assign(conn, { room, screen: true });
+      // Everyone sees how many screens there are, and this one gets its first view.
+      broadcast(room);
     }
-    send(room, [socket.id], { screen: true });
     return ok({ code: room.code, roomId: room.id });
   }
 
@@ -415,6 +419,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
     on(handlers, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));
     on(handlers, 'room:chair', ({ playerId }) => asChair(socket, (room) => changed(room, room.handOver(playerId))));
+
+    // Screens have no token and no name, so the chair can't pick one out: all of them go, and
+    // those that belong there come back by themselves.
+    on(handlers, 'room:dismiss', () =>
+      asChair(socket, (room) => {
+        closeFor(room.dismissScreens(), 'removed');
+        broadcast(room);
+        return ok();
+      }),
+    );
 
     on(handlers, 'room:remove', ({ playerId }) =>
       asChair(socket, (room, chair) => {

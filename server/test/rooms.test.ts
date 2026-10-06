@@ -73,6 +73,7 @@ describe('creating a room', () => {
     });
     expect(chair.state?.chairId).toBe(chair.me);
     expect(chair.state?.players).toEqual([{ id: chair.me, name: 'Ann', online: true }]);
+    expect(chair.state?.screens).toBe(0);
   });
 
   test('checks what it is given', async () => {
@@ -315,6 +316,7 @@ describe("the chair's controls", () => {
       ['room:spectate', { playerId: chair.me }],
       ['room:remove', { playerId: chair.me }],
       ['room:chair', { playerId: bob.me }],
+      ['room:dismiss', {}],
     ] as const) {
       expect(await bob.send(message, payload), message).toEqual({ ok: false, error: 'not_chair' });
     }
@@ -551,6 +553,33 @@ describe('screens', () => {
     for (let i = 1; i < MAX_SCREENS; i += 1) await connect({ watch: code, roomId });
     const extra = await connect();
     expect(await extra.send('room:watch', { code })).toEqual({ ok: false, error: 'screens_full' });
+  });
+
+  test('are counted for everyone to see, and the chair can send them all away', async () => {
+    const { chair, code, roomId } = await room();
+    const taken = await Promise.all(Array.from({ length: MAX_SCREENS }, () => connect({ watch: code, roomId })));
+    await chair.waitFor((state) => state.screens === MAX_SCREENS, 'the chair sees five screens');
+    const projector = await connect();
+    expect(await projector.send('room:watch', { code })).toEqual({ ok: false, error: 'screens_full' });
+
+    expect(await chair.send('room:dismiss')).toEqual({ ok: true });
+    await until(() => taken.every((screen) => screen.closed.includes('removed')), 'the screens hear');
+    await chair.waitFor((state) => state.screens === 0, 'the chair sees none');
+    expect(await taken[0]?.send('test:press')).toEqual({ ok: false, error: 'not_member' });
+    expect(await projector.send('room:watch', { code })).toMatchObject({ ok: true });
+    await chair.waitFor((state) => state.screens === 1);
+    projector.close();
+    await chair.waitFor((state) => state.screens === 0, 'the count follows a screen that goes');
+  });
+
+  test("can't be put up by someone the chair has just removed", async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    await chair.send('room:remove', { playerId: bob.me });
+    expect(await bob.send('room:watch', { code })).toEqual({ ok: false, error: 'removed_recently' });
+    expect(server.app.rooms.find(code)?.screens.size).toBe(0);
+    server.advance(2 * 60_000 + 1);
+    expect(await bob.send('room:watch', { code })).toMatchObject({ ok: true });
   });
 
   test('are not taken to the room that got their code later', async () => {

@@ -37,6 +37,7 @@ export const ROOM_MESSAGES = {
   'room:spectate': z.object({ playerId }),
   'room:remove': z.object({ playerId }),
   'room:chair': z.object({ playerId }),
+  'room:dismiss': none,
 } as const;
 
 export type RoomMessage = keyof typeof ROOM_MESSAGES;
