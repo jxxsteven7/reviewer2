@@ -9,31 +9,29 @@ import sirv from 'sirv';
 export interface HttpOptions {
   publicDir: string;
   version: string;
-  startedAt?: number;
 }
 
 // A Host header we're willing to repeat in the CSP: a host name or IP address and a port.
 const HOST = /^[a-z0-9.-]+(:\d{1,5})?$/i;
+
+// The Content Security Policy, except for connect-src, which names the host of each request.
+const CSP = [
+  "default-src 'self'",
+  "img-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
 
 function setSecurityHeaders(req: IncomingMessage, res: ServerResponse): void {
   // 'self' covers WebSocket connections to the same host in current browsers, but WebKit only
   // learned that in 2022, so older iOS in-app browsers need the ws:// and wss:// origins spelled out.
   const host = req.headers.host;
   const sockets = host && HOST.test(host) ? ` ws://${host} wss://${host}` : '';
-  res.setHeader(
-    'Content-Security-Policy',
-    [
-      "default-src 'self'",
-      `connect-src 'self'${sockets}`,
-      "img-src 'self' data:",
-      "style-src 'self' 'unsafe-inline'",
-      "script-src 'self'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-    ].join('; '),
-  );
+  res.setHeader('Content-Security-Policy', `${CSP}; connect-src 'self'${sockets}`);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -58,7 +56,8 @@ function pathOf(target: string): string {
   return query === -1 ? target : target.slice(0, query);
 }
 
-export function createRequestHandler({ publicDir, version, startedAt = Date.now() }: HttpOptions): RequestListener {
+export function createRequestHandler({ publicDir, version }: HttpOptions): RequestListener {
+  const startedAt = Date.now();
   // sirv lists the files when it starts, so it can only serve a front end that has been built.
   const files = existsSync(publicDir) ? staticFiles(publicDir) : null;
 
