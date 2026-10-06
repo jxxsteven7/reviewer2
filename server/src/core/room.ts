@@ -57,6 +57,8 @@ export class Room {
   data: unknown;
   // The game being played or just ended, until the room goes back to the waiting room.
   gameId: string | null = null;
+  // How many games have been started here.
+  round = 0;
   usedWords = new Set<string>();
   lastActivity: number;
   readonly members = new Map<string, Member>();
@@ -210,11 +212,16 @@ export class Room {
     return this.phase === 'lobby' ? this.game.startProblems(this.data, this.context) : [];
   }
 
-  start(words: BoardWord[], gameId: string): Done {
+  // A start is for the waiting room that its sender saw: `round` is how many games the room had
+  // started then. One that arrives after another start, such as from a second tab whose
+  // connection had stalled, is stale, even when the room is back in the waiting room by now.
+  start(round: number, words: BoardWord[], gameId: string): Done {
+    if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (this.startProblems().length) return fail('cannot_start');
     this.data = this.game.start(this.data, { ...this.context, phase: 'playing' }, words, gameId);
     this.gameId = gameId;
+    this.round += 1;
     this.phase = 'playing';
     this.changed();
     return done;
@@ -233,7 +240,10 @@ export class Room {
     return done;
   }
 
-  again(): Done {
+  // Back to the waiting room after the game that the message names. A late one must not clear
+  // away the result of a later game.
+  again(gameId: string): Done {
+    if (gameId !== this.gameId) return fail('stale');
     if (this.phase !== 'ended') return fail('wrong_phase');
     this.data = this.game.again(this.data);
     this.gameId = null;
@@ -326,6 +336,7 @@ export class Room {
       language: this.language,
       fields: [...this.fields],
       phase: this.phase,
+      round: this.round,
       gameId: this.gameId,
       chairId: this.chairId,
       players: [...this.members.values()].map((member) => ({

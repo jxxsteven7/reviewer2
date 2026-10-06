@@ -38,6 +38,9 @@ const names = (client: TestClient) => client.state?.players.map((player) => play
 const online = (client: TestClient, name: string) =>
   client.state?.players.find((player) => player.name === name)?.online;
 const game = (client: TestClient) => client.state?.data as FakeView;
+// The chair's messages about a game say which game they mean; these send what the chair sees.
+const start = (chair: TestClient) => chair.send('room:start', { round: chair.state?.round });
+const again = (chair: TestClient) => chair.send('room:again', { gameId: chair.state?.gameId });
 // The names of a room's members as the server has them, whatever has reached the clients.
 const members = (code: string) => [...(server.app.rooms.find(code)?.members.values() ?? [])].map(({ name }) => name);
 
@@ -305,7 +308,9 @@ describe("the chair's controls", () => {
     const bob = await join(code, 'Bob');
     for (const [message, payload] of [
       ['room:settings', { fields: ['general'] }],
-      ['room:start', {}],
+      ['room:start', { round: 0 }],
+      ['room:end', { gameId: 'a-game' }],
+      ['room:again', { gameId: 'a-game' }],
       ['room:shuffle', {}],
       ['room:spectate', { playerId: chair.me }],
       ['room:remove', { playerId: chair.me }],
@@ -347,20 +352,21 @@ describe("the chair's controls", () => {
 describe('games', () => {
   test('start only when the game says so, with words from the library', async () => {
     const { chair, code } = await room();
-    expect(await chair.send('room:start')).toEqual({ ok: false, error: 'cannot_start' });
+    expect(await start(chair)).toEqual({ ok: false, error: 'cannot_start' });
     const bob = await join(code, 'Bob');
-    expect(await chair.send('room:start')).toEqual({ ok: true });
+    expect(await start(chair)).toEqual({ ok: true });
     const state = await bob.waitFor((view) => view.phase === 'playing');
     expect(game(bob).words).toHaveLength(3);
     expect(game(bob).words.every((word) => word.startsWith('general word'))).toBe(true);
     expect(state.fields).toEqual(['general']);
-    expect(await chair.send('room:start')).toEqual({ ok: false, error: 'wrong_phase' });
+    await chair.waitFor((view) => view.phase === 'playing');
+    expect(await start(chair)).toEqual({ ok: false, error: 'wrong_phase' });
   });
 
   test('send every connection its own view', async () => {
     const { chair, code } = await room();
     const bob = await join(code, 'Bob');
-    await chair.send('room:start');
+    await start(chair);
     expect(await bob.send('test:press')).toEqual({ ok: true });
     await chair.waitFor(() => game(chair).presses === 1);
     expect(game(chair).forViewer).toBe(`for ${chair.me}`);
@@ -370,7 +376,7 @@ describe('games', () => {
   test('take game messages only from members, and only for their own game', async () => {
     const { chair, code } = await room();
     await join(code, 'Bob');
-    await chair.send('room:start');
+    await start(chair);
     const stranger = await connect();
     expect(await stranger.send('test:press')).toEqual({ ok: false, error: 'not_member' });
     expect(await chair.send('chess:move', { to: 'e4' })).toEqual({ ok: false, error: 'bad_request' });
@@ -379,14 +385,14 @@ describe('games', () => {
   test('end by themselves or when the chair withdraws, and can be played again', async () => {
     const { chair, code } = await room();
     await join(code, 'Bob');
-    await chair.send('room:start');
+    await start(chair);
     await chair.send('test:finish');
     await chair.waitFor((state) => state.phase === 'ended');
     expect(server.logs.some((entry) => entry.event === 'game_ended')).toBe(true);
-    expect(await chair.send('room:again')).toEqual({ ok: true });
+    expect(await again(chair)).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'lobby');
     expect(chair.state?.gameId).toBeNull();
-    await chair.send('room:start');
+    await start(chair);
     const gameId = (await chair.waitFor((state) => state.phase === 'playing')).gameId;
     expect(gameId).toEqual(expect.any(String));
     expect(await chair.send('room:end')).toEqual({ ok: false, error: 'bad_request' });
@@ -395,15 +401,50 @@ describe('games', () => {
     await chair.waitFor((state) => state.phase === 'ended');
     expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'wrong_phase' });
     // A withdrawal that arrives after the room went back to the waiting room is for no game.
-    await chair.send('room:again');
+    await again(chair);
     await chair.waitFor((state) => state.phase === 'lobby');
     expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'stale' });
+  });
+
+  test('a start that comes late or twice starts no second game', async () => {
+    const { chair, code } = await room();
+    await join(code, 'Bob');
+    // Two tabs of the chair send the same start, and one of them arrives after the game that
+    // the other started is over and the room is back in the waiting room.
+    expect(await chair.send('room:start', { round: 0 })).toEqual({ ok: true });
+    expect(await chair.send('room:start', { round: 0 })).toEqual({ ok: false, error: 'stale' });
+    await chair.send('test:finish');
+    await again(chair);
+    await chair.waitFor((state) => state.phase === 'lobby' && state.round === 1);
+    expect(await chair.send('room:start', { round: 0 })).toEqual({ ok: false, error: 'stale' });
+    expect(server.app.rooms.find(code)?.phase).toBe('lobby');
+    expect(await chair.send('room:start', {})).toEqual({ ok: false, error: 'bad_request' });
+    expect(await chair.send('room:start', { round: 1 })).toEqual({ ok: true });
+    expect(await chair.send('room:start', { round: 2 })).toEqual({ ok: false, error: 'wrong_phase' });
+  });
+
+  test('"play again" is for one game, and a late one leaves the next game alone', async () => {
+    const { chair, code } = await room();
+    await join(code, 'Bob');
+    await start(chair);
+    const first = (await chair.waitFor((state) => state.phase === 'playing')).gameId;
+    expect(await chair.send('room:again', { gameId: first })).toEqual({ ok: false, error: 'wrong_phase' });
+    await chair.send('test:finish');
+    expect(await chair.send('room:again', { gameId: first })).toEqual({ ok: true });
+    await chair.waitFor((state) => state.phase === 'lobby');
+    await start(chair);
+    await chair.send('test:finish');
+    await chair.waitFor((state) => state.phase === 'ended' && state.gameId !== first);
+    // The second "play again" for the first game comes in only now.
+    expect(await chair.send('room:again', { gameId: first })).toEqual({ ok: false, error: 'stale' });
+    expect(await chair.send('room:again', {})).toEqual({ ok: false, error: 'bad_request' });
+    expect(server.app.rooms.find(code)?.phase).toBe('ended');
   });
 
   test('a game that throws answers internal, and the server goes on', async () => {
     const { chair, code } = await room();
     await join(code, 'Bob');
-    await chair.send('room:start');
+    await start(chair);
     expect(await chair.send('test:explode')).toEqual({ ok: false, error: 'internal' });
     expect(await chair.send('test:press')).toEqual({ ok: true });
     expect(server.logs.some((entry) => entry.event === 'error')).toBe(true);
@@ -551,7 +592,7 @@ describe('messages', () => {
     await join(code, 'Bob');
     // Sent together, without waiting for the first answer: the game message must not overtake
     // the start of its game.
-    const [started, pressed] = await Promise.all([chair.send('room:start'), chair.send('test:press')]);
+    const [started, pressed] = await Promise.all([start(chair), chair.send('test:press')]);
     expect(started).toEqual({ ok: true });
     expect(pressed).toEqual({ ok: true });
   });
@@ -734,7 +775,7 @@ describe('housekeeping', () => {
   test('gives a player who was away during a game the same ten minutes in the waiting room', async () => {
     const { chair, code } = await room();
     const bob = await join(code, 'Bob');
-    await chair.send('room:start');
+    await start(chair);
     bob.close();
     await chair.waitFor(() => online(chair, 'Bob') === false);
     server.advance(15 * 60_000);
@@ -742,7 +783,7 @@ describe('housekeeping', () => {
     expect(members(code)).toEqual(['Ann', 'Bob']);
 
     await chair.send('test:finish');
-    expect(await chair.send('room:again')).toEqual({ ok: true });
+    expect(await again(chair)).toEqual({ ok: true });
     server.advance(60_000);
     server.app.sockets.sweep();
     expect(members(code)).toEqual(['Ann', 'Bob']);

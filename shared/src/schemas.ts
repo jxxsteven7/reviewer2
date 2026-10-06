@@ -27,10 +27,12 @@ export const ROOM_MESSAGES = {
   'room:rename': z.object({ name }),
   // The chair's controls.
   'room:settings': z.object({ fields }),
-  'room:start': none,
-  // A withdrawal names its game, so that one sent late can't end the next game.
+  // The chair's messages about a game say which game they mean, so that one that comes late or
+  // twice can't land in another: a start gives how many games the room has started so far, and a
+  // withdrawal and "play again" give the game's ID.
+  'room:start': z.object({ round: z.number().int().min(0) }),
   'room:end': z.object({ gameId }),
-  'room:again': none,
+  'room:again': z.object({ gameId }),
   'room:shuffle': none,
   'room:spectate': z.object({ playerId }),
   'room:remove': z.object({ playerId }),

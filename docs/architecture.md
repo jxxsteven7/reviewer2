@@ -22,6 +22,7 @@ Adding a game means adding a module on each side, without changing the core.
 - **Room IDs.** Each room also has a random `roomId`. Codes are reused after a room closes, so every snapshot carries the `roomId`, and a client that has been in a room gives it whenever it asks to be let back in: in the handshake, in `room:join` and in `room:watch`. When the code has gone to another room since, the server answers that the room is gone, and nobody ends up in a stranger's room.
 - **Language.** A room's language is set when it is created and never changes. It decides both the interface language inside the room and the words on the cards.
 - **Phases.** A room moves from `lobby` to `playing` to `ended`, and back to `lobby` for another game.
+- **Games.** The room gives each game a random `gameId`, which its view shows while the game is being played and after it has ended, and counts the games it has started in `round`. The chair's messages about a game say which game they mean.
 - **The chair.** The first member chairs the room. Only the chair can change the fields, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, or hand the chair over. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
 - **Removal.** A member the chair removes can't come back for 2 minutes.
 - **Revisions.** Every change bumps the room's `rev`.
@@ -54,8 +55,9 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 | `room:watch` | `code`, `roomId` (for a screen that has shown the room) | A screen |
 | `room:leave`, `room:rename` | `name` for renaming | Members |
 | `room:settings` | `fields` | The chair, in the waiting room |
-| `room:start`, `room:again`, `room:shuffle` | | The chair |
-| `room:end` | `gameId` | The chair; refused as `stale` when it names another game |
+| `room:start` | `round` | The chair; `round` is how many games the room had started when the chair pressed start, and the start is refused as `stale` when that is no longer so |
+| `room:end`, `room:again` | `gameId` | The chair; refused as `stale` when it names another game than the room's |
+| `room:shuffle` | | The chair |
 | `room:spectate`, `room:remove`, `room:chair` | `playerId` | The chair |
 
 ## The handshake and reconnecting
@@ -65,7 +67,7 @@ Phones drop their connection whenever the screen locks or the browser goes to th
 - **Sooner detection.** The server pings every 10 seconds and gives up after 8 more, sooner than Socket.IO's defaults, so dead connections are noticed quickly.
 - **The handshake.** The client sends `{ token, code, roomId }`. A connection whose token belongs to a member of that room is put back into it before any of its messages run, so a message that waited out the disconnect lands in the right room. A screen sends `{ watch: code, roomId }` instead and is put back to watching. The server checks the handshake against a schema like any payload, and takes a field that isn't what it should be for a missing one.
 - **The handshake only brings back.** It lets nobody into a room for the first time: a token that isn't a member's, or a screen that gives no `roomId`, gets no answer from it. Its one answer is `room:closed` with the reason `expired`, to a `roomId` that is no longer the code's. So a client always follows the handshake with `room:join` or `room:watch`, which are answered: that is where a newcomer is asked for a name, and where a player learns that the room is full, that they were removed or that the code belongs to no room.
-- **Stale actions.** Every game action carries the game and turn it was meant for, and the chair's withdrawal carries the game, so a late one is refused instead of landing in a later turn or the next game.
+- **Stale actions.** Every game action carries the game and turn it was meant for, and the chair's start, withdrawal and "play again" say which game they mean. A late or repeated one is refused as `stale` instead of landing in a later turn or in another game: a second tab whose connection had stalled can't start a game that nobody asked for, or clear away the result of the next one.
 - **On the client** (with the lobby UI): it checks the connection with `sys:ping` when the page becomes visible again, when the browser restores it from its cache, and when the network comes back, and reconnects at once if the ping goes unanswered. It drops anything that was queued while offline, and sends nothing while disconnected. It stops trying to rejoin a room that no longer exists.
 
 ## Games

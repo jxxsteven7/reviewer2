@@ -393,14 +393,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
-    on(handlers, 'room:start', () =>
+    on(handlers, 'room:start', ({ round }) =>
       asChair(socket, (room) => {
+        if (round !== room.round) return fail('stale');
         if (room.phase !== 'lobby') return fail('wrong_phase');
         if (room.startProblems().length > 0) return fail('cannot_start');
         const pool = words.pool(room.fields, room.language);
         const draw = drawWords(pool, room.game.wordsNeeded, room.usedWords, rng);
         if (!draw) return fail('no_words');
-        const result = room.start(draw.words, randomId());
+        const result = room.start(round, draw.words, randomId());
         if (result.ok) {
           room.usedWords = draw.used;
           log('game_started', { code: room.code, players: room.members.size });
@@ -410,7 +411,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     );
 
     on(handlers, 'room:end', ({ gameId }) => asChair(socket, (room) => changed(room, room.withdraw(gameId))));
-    on(handlers, 'room:again', () => asChair(socket, (room) => changed(room, room.again())));
+    on(handlers, 'room:again', ({ gameId }) => asChair(socket, (room) => changed(room, room.again(gameId))));
     on(handlers, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
     on(handlers, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));
     on(handlers, 'room:chair', ({ playerId }) => asChair(socket, (room) => changed(room, room.handOver(playerId))));

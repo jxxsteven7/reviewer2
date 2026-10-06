@@ -21,6 +21,9 @@ export interface RoomView<Game = unknown> {
   language: Language;
   fields: string[];
   phase: RoomPhase;
+  // How many games this room has started. A start gives the number it saw, so that one that
+  // comes late or twice can't start a game that nobody asked for.
+  round: number;
   // The game that is being played or has just ended, and null in the waiting room. The chair's
   // messages about a game name it, so that a late one can't land in the next game.
   gameId: string | null;
