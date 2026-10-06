@@ -349,6 +349,10 @@ describe("the chair's controls", () => {
     await until(() => bob.closed.includes('removed'), 'Bob hears');
     await chair.waitFor((state) => state.players.length === 1);
     expect(await bob.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'removed_recently' });
+    // Another browser has another token, which the wait can't know. It doesn't get Bob's name.
+    const other = await connect();
+    expect(await other.send('room:join', { code, name: 'bob' })).toEqual({ ok: false, error: 'name_taken' });
+    expect(await chair.send('room:rename', { name: 'Bob' })).toEqual({ ok: false, error: 'name_taken' });
     server.advance(2 * 60_000 + 1);
     expect(await bob.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
   });

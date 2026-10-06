@@ -32,7 +32,8 @@ export type Done = { ok: true } | { ok: false; error: string };
 const done: Done = { ok: true };
 const fail = (error: string): Done => ({ ok: false, error });
 
-// How long someone the chair removed must wait before they may come back.
+// How long someone the chair removed must wait before they may come back, and how long nobody
+// else may take their name.
 export const REMOVED_FOR_MS = 2 * 60_000;
 
 export interface RoomOptions {
@@ -66,7 +67,8 @@ export class Room {
   lastSeen: number;
   readonly members = new Map<string, Member>();
   readonly screens = new Set<string>();
-  readonly #removed = new Map<string, number>(); // member key -> until when
+  // Whom the chair has removed, by member key: until when they must wait, and the name they had.
+  readonly #removed = new Map<string, { until: number; name: string }>();
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
   readonly #rng: Rng;
@@ -132,8 +134,8 @@ export class Room {
 
   // Whether the chair removed whoever has this key so recently that they must still wait.
   removedRecently(key: string): boolean {
-    const until = this.#removed.get(key);
-    return until !== undefined && until > this.#now();
+    const removed = this.#removed.get(key);
+    return removed !== undefined && removed.until > this.#now();
   }
 
   // A new member. The first one chairs the room.
@@ -298,7 +300,7 @@ export class Room {
     const member = this.members.get(id);
     if (!member) return { ok: false, error: 'no_such_player' };
     const sockets = this.drop(id);
-    this.#removed.set(member.key, this.#now() + REMOVED_FOR_MS);
+    this.#removed.set(member.key, { until: this.#now() + REMOVED_FOR_MS, name: member.name });
     return { ok: true, sockets };
   }
 
@@ -362,7 +364,7 @@ export class Room {
   }
 
   forgetOldRemovals(): void {
-    for (const [key, until] of this.#removed) if (until <= this.#now()) this.#removed.delete(key);
+    for (const [key, { until }] of this.#removed) if (until <= this.#now()) this.#removed.delete(key);
   }
 
   // --- what people see --------------------------------------------------------------------
@@ -390,8 +392,14 @@ export class Room {
     };
   }
 
+  // A name is taken by a member who has it, and for a while by a member who was removed with it.
+  // The wait after a removal goes by the browser's token, which is all the server knows a player
+  // by, so another browser gets around it. It should at least not come back as the same person.
   #nameTaken(name: string, except?: string): boolean {
     for (const member of this.members.values()) if (member.id !== except && sameName(member.name, name)) return true;
+    for (const removed of this.#removed.values()) {
+      if (removed.until > this.#now() && sameName(removed.name, name)) return true;
+    }
     return false;
   }
 
