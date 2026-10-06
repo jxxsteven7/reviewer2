@@ -58,39 +58,49 @@ export class WordLibrary {
   // languages. The game refuses those translations as clues. A word that two fields share brings
   // the translations of both.
   pool(fieldIds: readonly string[], language: Language): BoardWord[] {
-    const pool = new Map<string, { word: string; translations: string[] }>();
+    const pool: Collected = new Map();
     for (const id of fieldIds) {
       for (const { word, translations = [] } of this.#fields.get(id)?.words[language] ?? []) {
-        const key = wordKey(word);
-        const entry = pool.get(key) ?? { word, translations: [] };
-        pool.set(key, entry);
-        for (const translation of translations) {
-          if (!entry.translations.includes(translation)) entry.translations.push(translation);
-        }
+        collect(pool, word, translations);
       }
     }
-    return [...pool.values()].map(({ word, translations }) =>
-      translations.length ? { word, translations } : { word },
-    );
+    return boardWords(pool);
   }
 }
 
+// Words on their way into a field or a pool, each under its `wordKey`.
+type Collected = Map<string, { word: string; translations: string[] }>;
+
+// Adds a word to those collected so far. A word that is there already keeps its spelling and
+// gains the translations that it doesn't have yet.
+function collect(words: Collected, word: string, translations: readonly string[]): void {
+  const key = wordKey(word);
+  const entry = words.get(key) ?? { word, translations: [] };
+  words.set(key, entry);
+  for (const translation of translations) {
+    if (!entry.translations.includes(translation)) entry.translations.push(translation);
+  }
+}
+
+const boardWords = (words: Collected): BoardWord[] =>
+  [...words.values()].map(({ word, translations }) => (translations.length ? { word, translations } : { word }));
+
 // The terms of a list in one language, once each. Terms are the same word when their letters and
 // digits are, as the game compares them (`wordKey`), so "Co-author" and "coauthor" are one word.
+// It is spelled as its first term spells it and brings the translations of them all, because a
+// clue must not repeat any of them.
 function unique(list: WordListData, language: Language): BoardWord[] {
-  const seen = new Set<string>();
-  const words: BoardWord[] = [];
+  const words: Collected = new Map();
   for (const term of list.terms) {
     const word = term[language];
-    if (!word || seen.has(wordKey(word))) continue;
-    seen.add(wordKey(word));
+    if (!word) continue;
     const translations = LANGUAGES.flatMap((other) => {
       const translation = term[other];
       return other !== language && translation ? [translation] : [];
     });
-    words.push(translations.length ? { word, translations } : { word });
+    collect(words, word, translations);
   }
-  return words;
+  return boardWords(words);
 }
 
 // Draws `count` words from the pool, preferring words this room hasn't used yet. `used` holds the

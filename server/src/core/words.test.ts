@@ -73,6 +73,26 @@ describe('the word library', () => {
     expect(library.fields()[0]?.counts.en).toBe(1);
   });
 
+  test('gives a word the translations of every term that spells it', () => {
+    const library = new WordLibrary([
+      {
+        id: 'a',
+        name: { zh: 'A', en: 'A' },
+        terms: [
+          { id: 'x', en: 'Co-author', zh: zh(1) },
+          { id: 'y', en: 'coauthor', zh: zh(2) },
+          { id: 'z', en: 'CO AUTHOR', zh: zh(1) },
+        ],
+      },
+    ]);
+    expect(library.pool(['a'], 'en')).toEqual([{ word: 'Co-author', translations: [zh(1), zh(2)] }]);
+    expect(library.pool(['a'], 'zh')).toEqual([
+      { word: zh(1), translations: ['Co-author', 'CO AUTHOR'] },
+      { word: zh(2), translations: ['coauthor'] },
+    ]);
+    expect(library.fields()[0]?.counts).toEqual({ zh: 2, en: 1 });
+  });
+
   test('gives a word that two fields share the translations of both', () => {
     const field = (id: string, translation: string): WordListData => ({
       id,
