@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ClueCount, KeywordsView, RoomView } from '@reviewer2/shared';
-import { computed, ref, toRef, watch } from 'vue';
+import { computed, ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
@@ -9,6 +9,7 @@ import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
 import GameRosters from './GameRosters.vue';
+import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
 import RulesSheet from './RulesSheet.vue';
@@ -29,29 +30,35 @@ const canClue = computed(() => game.value.phase === 'clue' && myTurn.value && my
 const canGuess = computed(() => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser');
 const group = computed(() => t(`lobby.group.${game.value.team}`));
 
-const selected = ref<number | null>(null);
-watch(
-  () => [game.value.turn, game.value.phase, game.value.guessesMade],
-  () => (selected.value = null),
+// The choices of cards come from the server, which shows them to the group whose turn it is:
+// the viewer's own choice is outlined, and the others' names run along the bottom of a card. A
+// reveal, or the end of the turn, clears them all.
+const selections = computed(() => game.value.selections ?? []);
+const selected = computed(() => selections.value.find((choice) => choice.player === room.value.me)?.card ?? null);
+const nameOf = (id: string) => room.value.players.find((player) => player.id === id)?.name ?? '';
+const choosers = computed(() =>
+  game.value.cards.map((_, index) =>
+    selections.value
+      .filter((choice) => choice.card === index && choice.player !== room.value.me)
+      .map((choice) => nameOf(choice.player)),
+  ),
 );
 
-function choose(index: number) {
-  selected.value = selected.value === index ? null : index;
-}
+// Tapping a card chooses it, tapping it again takes the choice back, and tapping another one
+// moves the choice there. Revealing takes a second step, in the guess bar.
+const choose = (card: number) =>
+  act('keywords:select', { ...moment.value, card: selected.value === card ? null : card });
 
 const giveClue = (word: string, count: ClueCount) => act('keywords:clue', { ...moment.value, word, count });
 
-async function reveal(card: number) {
-  selected.value = null;
-  await act('keywords:reveal', { ...moment.value, card });
-}
+const reveal = (card: number) => act('keywords:reveal', { ...moment.value, card });
 
 const pass = () => act('keywords:pass', moment.value);
 
 const ending = ref(false);
 async function withdraw() {
   ending.value = false;
-  await act('room:end');
+  await act('room:end', { gameId: game.value.gameId });
 }
 
 const whoAmI = computed(() => {
@@ -72,11 +79,15 @@ const whoAmI = computed(() => {
           :cards="game.cards"
           :selectable="canGuess"
           :selected="selected"
+          :choosers="choosers"
           :lang="room.language === 'zh' ? 'zh-CN' : 'en'"
           @select="choose"
         />
         <div v-if="!game.result" class="actions">
-          <p class="who">{{ whoAmI }}</p>
+          <div class="who-row">
+            <p class="who">{{ whoAmI }}</p>
+            <GroupChat :room="room" />
+          </div>
           <CluePanel v-if="canClue" :game="game" @give="giveClue" />
           <GuessBar v-else-if="canGuess" :game="game" :selected="selected" @reveal="reveal" @pass="pass" />
           <p v-else class="status">
@@ -91,6 +102,7 @@ const whoAmI = computed(() => {
         <ClueLog :game="game" />
         <div class="tools">
           <RulesSheet />
+          <GroupChat v-if="game.result" :room="room" />
           <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
             {{ t('game.end') }}
           </UiButton>
@@ -125,6 +137,14 @@ const whoAmI = computed(() => {
   padding: var(--space-3) 0 max(var(--space-3), env(safe-area-inset-bottom));
   border-top: 1px solid var(--ink);
   background: var(--paper);
+}
+
+.who-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .who {

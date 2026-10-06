@@ -164,7 +164,8 @@
     "unlimited": "不限",
     "sendClue": "给出提示",
     "similar": "这可能是{words}的另一种形式，而它还在牌上。规则不允许这样做。",
-    "pick": "点一张牌选中它，再翻开。",
+    "pick": "点一张牌选中它，组里的人都能看到；商量好了再翻开。",
+    "chosenBy": "{names}选了这张",
     "reveal": "翻开“{word}”",
     "endTurn": "结束回合",
     "log": "提示记录",
@@ -191,7 +192,20 @@
       "again": "再来一局",
       "waitAgain": "主持可以开始下一局。"
     },
-    "revealChoose": "翻开一张牌"
+    "revealChoose": "翻开一张牌",
+    "chat": {
+      "open": "组内讨论",
+      "openUnread": "组内讨论，{count} 条新消息",
+      "title": "{group}的组内讨论",
+      "empty": "还没有消息。这里的内容只有本组能看到。",
+      "input": "发给本组的消息",
+      "send": "发送",
+      "count": "{count}/{max}",
+      "readOnly": "导师可以看本组的讨论，但不能发言：提示就是导师能说的全部。",
+      "over": "本局已经结束，不能再发言了。",
+      "you": "我",
+      "someone": "已离开的玩家"
+    }
   },
   "errors": {
     "bad_request": "服务器无法理解这个请求。",

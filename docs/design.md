@@ -63,11 +63,16 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 
 ## Cards
 
-- **Hidden** (what students and spectators see): white with a thin rule, the word centered. A chosen card gets a double ink border, and the student confirms it with the "Reveal" button below the board. Revealing takes two steps so that a stray tap can't reveal anything.
+- **Hidden** (what students and spectators see): white with a thin rule, the word centered. A student's own choice gets a double ink border, and the student confirms it with the "Reveal" button below the board. Revealing takes two steps so that a stray tap can't reveal anything.
+- **Chosen by others**: the group sees each student's choice. The names of the others who chose a card run along its bottom, in small type above a dotted rule, for the group's students and its PI. The choice comes from the server, so every screen in the group shows the same one.
 - **Known but hidden** (the PI's key, and every card after the game): a tint of the card's color, with a band along the top and a small label: Red, Blue, Irrelevant or R2.
 - **Revealed**: the full color, with white type on red, blue and Reviewer 2, and ink on grey. Reviewer 2 gets a slanted "Reject" stamp in `--stamp`.
 - **Type**: English words are set in Source Serif 4, Chinese words in the system sans. Long words get smaller type, and English words are hyphenated with Liang's en-us patterns (the `hyphen` package, the same patterns that TeX uses), because many browsers don't hyphenate at all.
 - **The board** is a 5×5 grid that fills the width on a phone. On a big screen it is sized to fit the screen's height.
+
+## The group chat
+
+The students of a group talk it over in a chat that only their group sees. A "Group chat" button next to the line that says who you are opens it as a sheet, and shows in a small ink box how many messages are new. The sheet lists the messages under small-capital turn headings, each with its sender's name in bold, and ends with a one-line input. The input runs the same check as the server: the count of characters sits below it, and the send button stays disabled for an empty or too long message. A PI reads the chat but gets a note instead of the input, and spectators and screens have no button at all.
 
 ## Writing
 

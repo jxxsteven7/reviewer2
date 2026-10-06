@@ -164,7 +164,8 @@
     "unlimited": "No limit",
     "sendClue": "Give the clue",
     "similar": "This may be a form of {words}, which is still on the board. The rules don't allow that.",
-    "pick": "Tap a card to choose it, then reveal it.",
+    "pick": "Tap a card to choose it. Your group sees your choice; reveal it once you agree.",
+    "chosenBy": "chosen by {names}",
     "reveal": "Reveal “{word}”",
     "endTurn": "End the turn",
     "log": "Clue log",
@@ -191,7 +192,20 @@
       "again": "Play again",
       "waitAgain": "The chair can start another game."
     },
-    "revealChoose": "Reveal a card"
+    "revealChoose": "Reveal a card",
+    "chat": {
+      "open": "Group chat",
+      "openUnread": "Group chat, {count} new",
+      "title": "Chat of the {group}",
+      "empty": "No messages yet. Only your group sees what is written here.",
+      "input": "Message to your group",
+      "send": "Send",
+      "count": "{count}/{max}",
+      "readOnly": "As the PI you can read your group's chat but not write in it: the clue is all a PI may say.",
+      "over": "The game is over, so nobody can write any more.",
+      "you": "You",
+      "someone": "A player who left"
+    }
   },
   "errors": {
     "bad_request": "That request didn't make sense to the server.",

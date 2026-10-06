@@ -3,8 +3,18 @@ import type { CardView } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import KeywordsCard from './KeywordsCard.vue';
 
-// The 5 by 5 board. Cards can be chosen only when the viewer may reveal one.
-defineProps<{ cards: CardView[]; selectable: boolean; selected: number | null; lang: string }>();
+// The 5 by 5 board. Cards can be chosen only when the viewer may reveal one. `choosers` holds,
+// for each card, the names of the others in the group who have chosen it.
+withDefaults(
+  defineProps<{
+    cards: CardView[];
+    selectable: boolean;
+    selected: number | null;
+    choosers?: string[][];
+    lang: string;
+  }>(),
+  { choosers: () => [] },
+);
 const emit = defineEmits<{ select: [index: number] }>();
 const { t } = useI18n();
 </script>
@@ -18,6 +28,7 @@ const { t } = useI18n();
       :index="index"
       :selectable="selectable && !card.revealed"
       :selected="selected === index"
+      :choosers="choosers[index] ?? []"
       @select="emit('select', $event)"
     />
   </div>

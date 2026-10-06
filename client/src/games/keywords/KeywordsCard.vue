@@ -6,8 +6,15 @@ import { hyphenate } from './hyphenate';
 
 // One card. A revealed card is filled with its color. A card whose color the viewer may know
 // without its being revealed (a PI's key, or the end of the game) is tinted with a colored band.
-// Every color also comes with a short text label, so that color is never the only signal.
-const props = defineProps<{ card: CardView; index: number; selectable: boolean; selected: boolean }>();
+// Every color also comes with a short text label, so that color is never the only signal. The
+// names of the others in the group who have chosen the card run along its bottom.
+const props = defineProps<{
+  card: CardView;
+  index: number;
+  selectable: boolean;
+  selected: boolean;
+  choosers: string[];
+}>();
 const emit = defineEmits<{ select: [index: number] }>();
 const { t } = useI18n();
 
@@ -26,14 +33,21 @@ const state = computed(() => {
 });
 
 const label = computed(() => (props.card.color ? t(`game.card.${props.card.color}`) : ''));
-const ariaLabel = computed(() => [props.card.word, props.card.color ? label.value : t('game.hidden')].join(', '));
+const chosenBy = computed(() => props.choosers.join(', '));
+const ariaLabel = computed(() =>
+  [
+    props.card.word,
+    props.card.color ? label.value : t('game.hidden'),
+    ...(props.choosers.length ? [t('game.chosenBy', { names: chosenBy.value })] : []),
+  ].join(', '),
+);
 </script>
 
 <template>
   <button
     type="button"
     class="card"
-    :class="[state, card.color, size, { selected, selectable }]"
+    :class="[state, card.color, size, { selected, selectable, chosen: choosers.length > 0 }]"
     :disabled="!selectable"
     :aria-pressed="selectable ? selected : undefined"
     :aria-label="ariaLabel"
@@ -44,6 +58,7 @@ const ariaLabel = computed(() => [props.card.word, props.card.color ? label.valu
     <span v-if="card.revealed && card.color === 'reviewer2'" class="stamp" aria-hidden="true">{{
       t('game.stamp')
     }}</span>
+    <span v-if="choosers.length" class="choosers" aria-hidden="true">{{ chosenBy }}</span>
   </button>
 </template>
 
@@ -197,6 +212,29 @@ const ariaLabel = computed(() => [props.card.word, props.card.color ? label.valu
 
 .card:disabled.revealed.neutral {
   color: var(--ink);
+}
+
+/* Room for the names of the students who chose the card. */
+.chosen {
+  padding-bottom: 13px;
+}
+
+.choosers {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  left: 3px;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hidden .choosers,
+.known .choosers {
+  border-top: 1px dotted currentColor;
 }
 
 .stamp {

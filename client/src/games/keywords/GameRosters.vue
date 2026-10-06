@@ -10,10 +10,11 @@ import { useKeywords } from './useKeywords';
 
 // Who plays where during a game, and the seat changes the rules allow: latecomers can play for
 // a group, students can step out to watch, and anyone can take over an empty PI seat, after a
-// warning that they will see the key.
+// warning that they will see the key. Whoever has sat in a group in this game belongs to it until
+// the next one, so they are offered seats in that group only.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
-const { data, mySeat, isChair, isKeyViewer, groups, spectators, sit } = useKeywords(toRef(props, 'room'));
+const { data, mySeat, mySide, isChair, isKeyViewer, groups, spectators, sit } = useKeywords(toRef(props, 'room'));
 // Seats change only while the game is on; afterwards the waiting room is the place for that.
 const playing = computed(() => data.value.game !== null && data.value.game.phase !== 'over');
 const managing = ref<PlayerView | null>(null);
@@ -22,6 +23,7 @@ const takingOver = ref<Team | null>(null);
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 const manageable = (player: PlayerView) => isChair.value && !isMe(player);
+const mayJoin = (team: Team) => playing.value && props.room.me !== null && (mySide.value ?? team) === team;
 
 async function takeOver() {
   if (takingOver.value) await sit(takingOver.value, 'captain');
@@ -46,7 +48,7 @@ async function takeOver() {
         />
         <template v-else>
           <span class="vacant">{{ t('lobby.vacant') }}</span>
-          <UiButton v-if="room.me && playing" size="small" @click="takingOver = group.team">{{
+          <UiButton v-if="mayJoin(group.team)" size="small" @click="takingOver = group.team">{{
             t('game.takeOver')
           }}</UiButton>
         </template>
@@ -66,7 +68,7 @@ async function takeOver() {
         </span>
       </p>
       <UiButton
-        v-if="playing && room.me && !isKeyViewer && mySeat?.role !== 'captain' && mySeat?.team !== group.team"
+        v-if="mayJoin(group.team) && !isKeyViewer && mySeat?.role !== 'captain' && mySeat?.team !== group.team"
         size="small"
         @click="sit(group.team, 'guesser')"
       >
