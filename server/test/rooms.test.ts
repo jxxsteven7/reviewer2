@@ -339,6 +339,18 @@ describe('leaving', () => {
     expect(logged('room_closed')).toEqual([{ code, why: 'empty' }]);
   });
 
+  test('passes the chair to whoever joined first, in the order that everyone sees', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    // A clock that is set back between two joins doesn't change who came first.
+    server.advance(-5000);
+    const cat = await join(code, 'Cat');
+    await chair.send('room:leave');
+    await cat.waitFor((state) => state.chairId !== chair.me, 'the chair has passed on');
+    expect(names(cat)).toEqual(['Bob', 'Cat']);
+    expect(cat.state?.chairId).toBe(bob.me);
+  });
+
   test('a renamed player keeps their seat, and names stay unique', async () => {
     const { chair, code } = await room();
     const bob = await join(code, 'Bob');

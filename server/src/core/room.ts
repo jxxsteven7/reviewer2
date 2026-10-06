@@ -23,7 +23,6 @@ export interface Member {
   id: string;
   key: string;
   name: string;
-  joinedAt: number;
   sockets: Set<string>;
   offlineSince: number | null;
 }
@@ -82,6 +81,8 @@ export class Room {
   // When a connection last came to the room or went. The sweep keeps this at the present while
   // anyone is connected, so it tells for how long nobody has been.
   lastSeen: number;
+  // By player ID, in the order in which they joined. Whatever goes by "who joined first", such as
+  // the next chair, reads this order, and so does the list that players see.
   readonly members = new Map<string, Member>();
   readonly screens = new Set<string>();
   // Whom the chair has removed, by member key: until when they must wait, and the name they had.
@@ -171,7 +172,6 @@ export class Room {
       id: newPlayerId(),
       key,
       name,
-      joinedAt: this.#now(),
       sockets: new Set(),
       offlineSince: null,
     };
@@ -382,9 +382,7 @@ export class Room {
   passChairIfAway(after: number): boolean {
     const chair = this.chairId === null ? undefined : this.members.get(this.chairId);
     if (chair && (chair.offlineSince === null || this.#now() - chair.offlineSince < after)) return false;
-    const next = [...this.members.values()]
-      .sort((a, b) => a.joinedAt - b.joinedAt)
-      .find((member) => member.sockets.size > 0 && member.id !== this.chairId);
+    const next = [...this.members.values()].find((member) => member.sockets.size > 0 && member.id !== this.chairId);
     if (!next) return false;
     this.chairId = next.id;
     this.changed();
@@ -443,7 +441,7 @@ export class Room {
 
   // The member who joined first among those online, or else among everyone.
   #nextChair(): string | null {
-    const members = [...this.members.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+    const members = [...this.members.values()];
     return (members.find((member) => member.sockets.size > 0) ?? members[0])?.id ?? null;
   }
 }
