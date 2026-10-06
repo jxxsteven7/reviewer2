@@ -1,0 +1,880 @@
+{
+  "id": "general",
+  "name": {
+    "zh": "学术圈通用",
+    "en": "General Academia"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "peer-review",
+      "zh": "同行评审",
+      "en": "Peer review"
+    },
+    {
+      "id": "submission",
+      "zh": "投稿",
+      "en": "Submission"
+    },
+    {
+      "id": "manuscript",
+      "zh": "稿件",
+      "en": "Manuscript"
+    },
+    {
+      "id": "abstract",
+      "zh": "摘要",
+      "en": "Abstract"
+    },
+    {
+      "id": "citation",
+      "zh": "引用",
+      "en": "Citation"
+    },
+    {
+      "id": "impact-factor",
+      "zh": "影响因子",
+      "en": "Impact factor"
+    },
+    {
+      "id": "journal",
+      "zh": "期刊",
+      "en": "Journal"
+    },
+    {
+      "id": "conference",
+      "zh": "会议",
+      "en": "Conference"
+    },
+    {
+      "id": "poster",
+      "zh": "海报",
+      "en": "Poster"
+    },
+    {
+      "id": "deadline",
+      "zh": "截止日期",
+      "en": "Deadline"
+    },
+    {
+      "id": "preprint",
+      "zh": "预印本",
+      "en": "Preprint"
+    },
+    {
+      "id": "revision",
+      "zh": "返修",
+      "en": "Revision"
+    },
+    {
+      "id": "major-revision",
+      "zh": "大修",
+      "en": "Major revision"
+    },
+    {
+      "id": "minor-revision",
+      "zh": "小修",
+      "en": "Minor revision"
+    },
+    {
+      "id": "plagiarism",
+      "zh": "抄袭",
+      "en": "Plagiarism"
+    },
+    {
+      "id": "editor",
+      "zh": "编辑",
+      "en": "Editor"
+    },
+    {
+      "id": "open-access",
+      "zh": "开放获取",
+      "en": "Open access"
+    },
+    {
+      "id": "h-index",
+      "zh": "h指数",
+      "en": "H-index"
+    },
+    {
+      "id": "coauthor",
+      "zh": "合著者",
+      "en": "Coauthor"
+    },
+    {
+      "id": "first-author",
+      "zh": "第一作者",
+      "en": "First author"
+    },
+    {
+      "id": "appendix",
+      "zh": "附录",
+      "en": "Appendix"
+    },
+    {
+      "id": "footnote",
+      "zh": "脚注",
+      "en": "Footnote"
+    },
+    {
+      "id": "references",
+      "zh": "参考文献",
+      "en": "References"
+    },
+    {
+      "id": "keyword",
+      "zh": "关键词",
+      "en": "Keyword"
+    },
+    {
+      "id": "supplement",
+      "zh": "补充材料",
+      "en": "Supplement"
+    },
+    {
+      "id": "figure",
+      "zh": "插图",
+      "en": "Figure"
+    },
+    {
+      "id": "table",
+      "zh": "表格",
+      "en": "Table"
+    },
+    {
+      "id": "template",
+      "zh": "模板",
+      "en": "Template"
+    },
+    {
+      "id": "draft",
+      "zh": "草稿",
+      "en": "Draft"
+    },
+    {
+      "id": "proofreading",
+      "zh": "校对",
+      "en": "Proofreading"
+    },
+    {
+      "id": "typo",
+      "zh": "错别字",
+      "en": "Typo"
+    },
+    {
+      "id": "word-count",
+      "zh": "字数",
+      "en": "Word count"
+    },
+    {
+      "id": "page-limit",
+      "zh": "页数限制",
+      "en": "Page limit"
+    },
+    {
+      "id": "best-paper",
+      "zh": "最佳论文",
+      "en": "Best paper"
+    },
+    {
+      "id": "anonymity",
+      "zh": "匿名",
+      "en": "Anonymity"
+    },
+    {
+      "id": "introduction",
+      "zh": "引言",
+      "en": "Introduction"
+    },
+    {
+      "id": "conclusion",
+      "zh": "结论",
+      "en": "Conclusion"
+    },
+    {
+      "id": "discussion",
+      "zh": "讨论",
+      "en": "Discussion"
+    },
+    {
+      "id": "results",
+      "zh": "结果",
+      "en": "Results"
+    },
+    {
+      "id": "related-work",
+      "zh": "相关工作",
+      "en": "Related work"
+    },
+    {
+      "id": "motivation",
+      "zh": "动机",
+      "en": "Motivation"
+    },
+    {
+      "id": "contribution",
+      "zh": "贡献",
+      "en": "Contribution"
+    },
+    {
+      "id": "novelty",
+      "zh": "创新点",
+      "en": "Novelty"
+    },
+    {
+      "id": "limitation",
+      "zh": "局限性",
+      "en": "Limitation"
+    },
+    {
+      "id": "future-work",
+      "zh": "未来工作",
+      "en": "Future work"
+    },
+    {
+      "id": "assumption",
+      "zh": "前提",
+      "en": "Assumption"
+    },
+    {
+      "id": "lab-meeting",
+      "zh": "组会",
+      "en": "Lab meeting"
+    },
+    {
+      "id": "laboratory",
+      "zh": "实验室",
+      "en": "Laboratory"
+    },
+    {
+      "id": "experiment",
+      "zh": "实验",
+      "en": "Experiment"
+    },
+    {
+      "id": "hypothesis",
+      "zh": "假设",
+      "en": "Hypothesis"
+    },
+    {
+      "id": "data",
+      "zh": "数据",
+      "en": "Data"
+    },
+    {
+      "id": "dataset",
+      "zh": "数据集",
+      "en": "Dataset"
+    },
+    {
+      "id": "sample",
+      "zh": "样本",
+      "en": "Sample"
+    },
+    {
+      "id": "control-group",
+      "zh": "对照组",
+      "en": "Control group"
+    },
+    {
+      "id": "baseline",
+      "zh": "基线",
+      "en": "Baseline"
+    },
+    {
+      "id": "benchmark",
+      "zh": "基准",
+      "en": "Benchmark"
+    },
+    {
+      "id": "ablation",
+      "zh": "消融",
+      "en": "Ablation"
+    },
+    {
+      "id": "replication",
+      "zh": "复现",
+      "en": "Replication"
+    },
+    {
+      "id": "significance",
+      "zh": "显著性",
+      "en": "Significance"
+    },
+    {
+      "id": "p-value",
+      "zh": "p值",
+      "en": "P-value"
+    },
+    {
+      "id": "error-bar",
+      "zh": "误差棒",
+      "en": "Error bar"
+    },
+    {
+      "id": "outlier",
+      "zh": "异常值",
+      "en": "Outlier"
+    },
+    {
+      "id": "noise",
+      "zh": "噪声",
+      "en": "Noise"
+    },
+    {
+      "id": "bias",
+      "zh": "偏差",
+      "en": "Bias"
+    },
+    {
+      "id": "variance",
+      "zh": "方差",
+      "en": "Variance"
+    },
+    {
+      "id": "mean",
+      "zh": "均值",
+      "en": "Mean"
+    },
+    {
+      "id": "median",
+      "zh": "中位数",
+      "en": "Median"
+    },
+    {
+      "id": "distribution",
+      "zh": "分布",
+      "en": "Distribution"
+    },
+    {
+      "id": "correlation",
+      "zh": "相关性",
+      "en": "Correlation"
+    },
+    {
+      "id": "causality",
+      "zh": "因果",
+      "en": "Causality"
+    },
+    {
+      "id": "regression",
+      "zh": "回归",
+      "en": "Regression"
+    },
+    {
+      "id": "model",
+      "zh": "模型",
+      "en": "Model"
+    },
+    {
+      "id": "theory",
+      "zh": "理论",
+      "en": "Theory"
+    },
+    {
+      "id": "simulation",
+      "zh": "仿真",
+      "en": "Simulation"
+    },
+    {
+      "id": "method",
+      "zh": "方法",
+      "en": "Method"
+    },
+    {
+      "id": "framework",
+      "zh": "框架",
+      "en": "Framework"
+    },
+    {
+      "id": "paradigm",
+      "zh": "范式",
+      "en": "Paradigm"
+    },
+    {
+      "id": "survey",
+      "zh": "综述",
+      "en": "Survey"
+    },
+    {
+      "id": "questionnaire",
+      "zh": "问卷",
+      "en": "Questionnaire"
+    },
+    {
+      "id": "interview",
+      "zh": "访谈",
+      "en": "Interview"
+    },
+    {
+      "id": "fieldwork",
+      "zh": "田野调查",
+      "en": "Fieldwork"
+    },
+    {
+      "id": "archive",
+      "zh": "档案",
+      "en": "Archive"
+    },
+    {
+      "id": "library",
+      "zh": "图书馆",
+      "en": "Library"
+    },
+    {
+      "id": "database",
+      "zh": "数据库",
+      "en": "Database"
+    },
+    {
+      "id": "metric",
+      "zh": "指标",
+      "en": "Metric"
+    },
+    {
+      "id": "accuracy",
+      "zh": "准确率",
+      "en": "Accuracy"
+    },
+    {
+      "id": "robustness",
+      "zh": "鲁棒性",
+      "en": "Robustness"
+    },
+    {
+      "id": "annotation",
+      "zh": "标注",
+      "en": "Annotation"
+    },
+    {
+      "id": "ethics",
+      "zh": "伦理",
+      "en": "Ethics"
+    },
+    {
+      "id": "collaboration",
+      "zh": "合作",
+      "en": "Collaboration"
+    },
+    {
+      "id": "proof",
+      "zh": "证明",
+      "en": "Proof"
+    },
+    {
+      "id": "lemma",
+      "zh": "引理",
+      "en": "Lemma"
+    },
+    {
+      "id": "theorem",
+      "zh": "定理",
+      "en": "Theorem"
+    },
+    {
+      "id": "axiom",
+      "zh": "公理",
+      "en": "Axiom"
+    },
+    {
+      "id": "equation",
+      "zh": "方程",
+      "en": "Equation"
+    },
+    {
+      "id": "variable",
+      "zh": "变量",
+      "en": "Variable"
+    },
+    {
+      "id": "parameter",
+      "zh": "参数",
+      "en": "Parameter"
+    },
+    {
+      "id": "tuning",
+      "zh": "调参",
+      "en": "Tuning"
+    },
+    {
+      "id": "overfitting",
+      "zh": "过拟合",
+      "en": "Overfitting"
+    },
+    {
+      "id": "convergence",
+      "zh": "收敛",
+      "en": "Convergence"
+    },
+    {
+      "id": "generalization",
+      "zh": "泛化",
+      "en": "Generalization"
+    },
+    {
+      "id": "gradient",
+      "zh": "梯度",
+      "en": "Gradient"
+    },
+    {
+      "id": "loss",
+      "zh": "损失",
+      "en": "Loss"
+    },
+    {
+      "id": "attention",
+      "zh": "注意力",
+      "en": "Attention"
+    },
+    {
+      "id": "network",
+      "zh": "网络",
+      "en": "Network"
+    },
+    {
+      "id": "node",
+      "zh": "节点",
+      "en": "Node"
+    },
+    {
+      "id": "iteration",
+      "zh": "迭代",
+      "en": "Iteration"
+    },
+    {
+      "id": "dimension",
+      "zh": "维度",
+      "en": "Dimension"
+    },
+    {
+      "id": "entropy",
+      "zh": "熵",
+      "en": "Entropy"
+    },
+    {
+      "id": "server",
+      "zh": "服务器",
+      "en": "Server"
+    },
+    {
+      "id": "cluster",
+      "zh": "集群",
+      "en": "Cluster"
+    },
+    {
+      "id": "gpu",
+      "zh": "显卡",
+      "en": "GPU"
+    },
+    {
+      "id": "code",
+      "zh": "代码",
+      "en": "Code"
+    },
+    {
+      "id": "open-source",
+      "zh": "开源",
+      "en": "Open source"
+    },
+    {
+      "id": "version",
+      "zh": "版本",
+      "en": "Version"
+    },
+    {
+      "id": "log",
+      "zh": "日志",
+      "en": "Log"
+    },
+    {
+      "id": "spectrum",
+      "zh": "光谱",
+      "en": "Spectrum"
+    },
+    {
+      "id": "signal",
+      "zh": "信号",
+      "en": "Signal"
+    },
+    {
+      "id": "frequency",
+      "zh": "频率",
+      "en": "Frequency"
+    },
+    {
+      "id": "energy",
+      "zh": "能量",
+      "en": "Energy"
+    },
+    {
+      "id": "pressure",
+      "zh": "压力",
+      "en": "Pressure"
+    },
+    {
+      "id": "temperature",
+      "zh": "温度",
+      "en": "Temperature"
+    },
+    {
+      "id": "microscope",
+      "zh": "显微镜",
+      "en": "Microscope"
+    },
+    {
+      "id": "centrifuge",
+      "zh": "离心机",
+      "en": "Centrifuge"
+    },
+    {
+      "id": "pipette",
+      "zh": "移液枪",
+      "en": "Pipette"
+    },
+    {
+      "id": "petri-dish",
+      "zh": "培养皿",
+      "en": "Petri dish"
+    },
+    {
+      "id": "reagent",
+      "zh": "试剂",
+      "en": "Reagent"
+    },
+    {
+      "id": "mouse",
+      "zh": "小鼠",
+      "en": "Mouse"
+    },
+    {
+      "id": "cell",
+      "zh": "细胞",
+      "en": "Cell"
+    },
+    {
+      "id": "specimen",
+      "zh": "标本",
+      "en": "Specimen"
+    },
+    {
+      "id": "notebook",
+      "zh": "笔记本",
+      "en": "Notebook"
+    },
+    {
+      "id": "whiteboard",
+      "zh": "白板",
+      "en": "Whiteboard"
+    },
+    {
+      "id": "slides",
+      "zh": "幻灯片",
+      "en": "Slides"
+    },
+    {
+      "id": "laser-pointer",
+      "zh": "激光笔",
+      "en": "Laser pointer"
+    },
+    {
+      "id": "projector",
+      "zh": "投影仪",
+      "en": "Projector"
+    },
+    {
+      "id": "coffee",
+      "zh": "咖啡",
+      "en": "Coffee"
+    },
+    {
+      "id": "lecture",
+      "zh": "讲座",
+      "en": "Lecture"
+    },
+    {
+      "id": "seminar",
+      "zh": "研讨会",
+      "en": "Seminar"
+    },
+    {
+      "id": "workshop",
+      "zh": "工作坊",
+      "en": "Workshop"
+    },
+    {
+      "id": "keynote",
+      "zh": "主旨报告",
+      "en": "Keynote"
+    },
+    {
+      "id": "session",
+      "zh": "分会场",
+      "en": "Session"
+    },
+    {
+      "id": "coffee-break",
+      "zh": "茶歇",
+      "en": "Coffee break"
+    },
+    {
+      "id": "banquet",
+      "zh": "晚宴",
+      "en": "Banquet"
+    },
+    {
+      "id": "office-hours",
+      "zh": "答疑时间",
+      "en": "Office hours"
+    },
+    {
+      "id": "teaching-assistant",
+      "zh": "助教",
+      "en": "TA"
+    },
+    {
+      "id": "course",
+      "zh": "课程",
+      "en": "Course"
+    },
+    {
+      "id": "semester",
+      "zh": "学期",
+      "en": "Semester"
+    },
+    {
+      "id": "homework",
+      "zh": "作业",
+      "en": "Homework"
+    },
+    {
+      "id": "exam",
+      "zh": "考试",
+      "en": "Exam"
+    },
+    {
+      "id": "gpa",
+      "zh": "绩点",
+      "en": "GPA"
+    },
+    {
+      "id": "credit",
+      "zh": "学分",
+      "en": "Credit"
+    },
+    {
+      "id": "grant",
+      "zh": "基金",
+      "en": "Grant"
+    },
+    {
+      "id": "funding",
+      "zh": "经费",
+      "en": "Funding"
+    },
+    {
+      "id": "budget",
+      "zh": "预算",
+      "en": "Budget"
+    },
+    {
+      "id": "reimbursement",
+      "zh": "报销",
+      "en": "Reimbursement"
+    },
+    {
+      "id": "proposal",
+      "zh": "开题",
+      "en": "Proposal"
+    },
+    {
+      "id": "midterm-review",
+      "zh": "中期考核",
+      "en": "Midterm review"
+    },
+    {
+      "id": "defense",
+      "zh": "答辩",
+      "en": "Defense"
+    },
+    {
+      "id": "thesis",
+      "zh": "学位论文",
+      "en": "Thesis"
+    },
+    {
+      "id": "committee",
+      "zh": "委员会",
+      "en": "Committee"
+    },
+    {
+      "id": "postdoc",
+      "zh": "博士后",
+      "en": "Postdoc"
+    },
+    {
+      "id": "phd",
+      "zh": "博士",
+      "en": "PhD"
+    },
+    {
+      "id": "masters",
+      "zh": "硕士",
+      "en": "Master's"
+    },
+    {
+      "id": "undergraduate",
+      "zh": "本科生",
+      "en": "Undergraduate"
+    },
+    {
+      "id": "tenure",
+      "zh": "终身教职",
+      "en": "Tenure"
+    },
+    {
+      "id": "sabbatical",
+      "zh": "学术休假",
+      "en": "Sabbatical"
+    },
+    {
+      "id": "cv",
+      "zh": "简历",
+      "en": "CV"
+    },
+    {
+      "id": "scholarship",
+      "zh": "奖学金",
+      "en": "Scholarship"
+    },
+    {
+      "id": "stipend",
+      "zh": "补助",
+      "en": "Stipend"
+    },
+    {
+      "id": "tuition",
+      "zh": "学费",
+      "en": "Tuition"
+    },
+    {
+      "id": "graduation",
+      "zh": "毕业",
+      "en": "Graduation"
+    },
+    {
+      "id": "diploma",
+      "zh": "学位证",
+      "en": "Diploma"
+    },
+    {
+      "id": "visa",
+      "zh": "签证",
+      "en": "Visa"
+    },
+    {
+      "id": "jet-lag",
+      "zh": "时差",
+      "en": "Jet lag"
+    }
+  ]
+}
