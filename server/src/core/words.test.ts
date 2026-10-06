@@ -119,11 +119,40 @@ describe('drawing words', () => {
     expect(second?.used.size).toBe(50);
   });
 
-  test('starts over when too few unused words are left', () => {
+  test('draws every unused word before it repeats any, then starts over', () => {
+    const keys = (from: number, to: number) => pool.slice(from, to).map(({ word }) => wordKey(word));
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const draw = drawWords(pool, 25, new Set(keys(0, 50)), seededRng(seed));
+      const drawn = words(draw);
+      expect(new Set(drawn).size).toBe(25);
+      // All ten words that the room hasn't seen, and fifteen that it has.
+      expect(pool.slice(50).every(({ word }) => drawn.includes(word))).toBe(true);
+      // The room remembers this board only, so the next one avoids its words first.
+      expect(draw?.used).toEqual(new Set(drawn.map(wordKey)));
+      const next = words(drawWords(pool, 25, draw?.used ?? new Set(), seededRng(seed)));
+      expect(next.some((word) => drawn.includes(word))).toBe(false);
+    }
+  });
+
+  test("doesn't put the unused words first when it repeats some", () => {
     const used = new Set(pool.slice(0, 50).map(({ word }) => wordKey(word)));
+    const unusedFirst = (seed: number) =>
+      words(drawWords(pool, 25, used, seededRng(seed)))
+        .slice(0, 10)
+        .every((word) => Number(word.slice(5)) >= 50);
+    expect(Array.from({ length: 20 }, (_, seed) => unusedFirst(seed)).every(Boolean)).toBe(false);
+  });
+
+  test('draws from the whole pool once the room has used all of it', () => {
+    const used = new Set(pool.map(({ word }) => wordKey(word)));
     const draw = drawWords(pool, 25, used, seededRng(1));
-    expect(draw?.words).toHaveLength(25);
+    expect(new Set(words(draw)).size).toBe(25);
     expect(draw?.used.size).toBe(25);
+  });
+
+  test('forgets no word that the room used while enough unused ones are left', () => {
+    const elsewhere = new Set(['fromanotherfield']);
+    expect(drawWords(pool, 25, elsewhere, seededRng(1))?.used.size).toBe(26);
   });
 
   test('gives up when the pool is too small', () => {

@@ -104,8 +104,9 @@ function unique(list: WordListData, language: Language): BoardWord[] {
 }
 
 // Draws `count` words from the pool, preferring words this room hasn't used yet. `used` holds the
-// `wordKey` of every word drawn so far. When too few unused words are left, it starts over with
-// the whole pool. Returns null when even the whole pool is too small.
+// `wordKey` of every word drawn so far. When fewer than `count` unused words are left, all of
+// them are drawn and the rest come from the used ones; the room then starts over, remembering
+// only the words of this draw. Returns null when even the whole pool is too small.
 export function drawWords(
   pool: readonly BoardWord[],
   count: number,
@@ -113,15 +114,17 @@ export function drawWords(
   rng: Rng,
 ): { words: BoardWord[]; used: Set<string> } | null {
   if (pool.length < count) return null;
-  let fresh = pool.filter(({ word }) => !used.has(wordKey(word)));
-  let remembered = new Set(used);
-  if (fresh.length < count) {
-    fresh = [...pool];
-    remembered = new Set();
+  const keys = (words: readonly BoardWord[]) => words.map(({ word }) => wordKey(word));
+  const isUsed = ({ word }: BoardWord) => used.has(wordKey(word));
+  const fresh = pool.filter((word) => !isUsed(word));
+  if (fresh.length >= count) {
+    const words = shuffle(fresh, rng).slice(0, count);
+    return { words, used: new Set([...used, ...keys(words)]) };
   }
-  const words = shuffle(fresh, rng).slice(0, count);
-  for (const { word } of words) remembered.add(wordKey(word));
-  return { words, used: remembered };
+  const again = shuffle(pool.filter(isUsed), rng).slice(0, count - fresh.length);
+  // Shuffled once more, so that the order doesn't tell the new words from the repeated ones.
+  const words = shuffle([...fresh, ...again], rng);
+  return { words, used: new Set(keys(words)) };
 }
 
 const isText = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
