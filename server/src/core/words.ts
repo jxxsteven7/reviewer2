@@ -5,7 +5,7 @@ import { shuffle, type Rng } from './random';
 
 // The word library: one list per academic field, from the JSON files in words/ (see
 // words/README.md). CI checks those files with scripts/check-words.mjs, so the server only makes
-// sure of the shapes it relies on, and skips anything else.
+// sure of the shapes it relies on, skips anything else and says what it skipped.
 
 export interface WordListData {
   id: string;
@@ -26,15 +26,16 @@ interface Field {
   words: Record<Language, BoardWord[]>;
 }
 
+// Hears of everything that the library leaves out, so that the server can log it: a file, or one
+// term of a file when `term` names it. A list's file is `<id>.json`, as in words/.
+export type Skip = (file: string, reason: string, term?: string) => void;
+
 export class WordLibrary {
   readonly #fields = new Map<string, Field>();
 
-  constructor(lists: readonly WordListData[]) {
+  constructor(lists: readonly WordListData[], skip: Skip = () => {}) {
     for (const list of lists) {
-      const words = Object.fromEntries(LANGUAGES.map((language) => [language, unique(list, language)])) as Record<
-        Language,
-        BoardWord[]
-      >;
+      const words = unique(list, skip);
       const counts = Object.fromEntries(LANGUAGES.map((language) => [language, words[language].length])) as Record<
         Language,
         number
@@ -61,7 +62,7 @@ export class WordLibrary {
     const pool: Collected = new Map();
     for (const id of fieldIds) {
       for (const { word, translations = [] } of this.#fields.get(id)?.words[language] ?? []) {
-        collect(pool, word, translations);
+        collect(pool, wordKey(word), word, translations);
       }
     }
     return boardWords(pool);
@@ -73,8 +74,7 @@ type Collected = Map<string, { word: string; translations: string[] }>;
 
 // Adds a word to those collected so far. A word that is there already keeps its spelling and
 // gains the translations that it doesn't have yet.
-function collect(words: Collected, word: string, translations: readonly string[]): void {
-  const key = wordKey(word);
+function collect(words: Collected, key: string, word: string, translations: readonly string[]): void {
   const entry = words.get(key) ?? { word, translations: [] };
   words.set(key, entry);
   for (const translation of translations) {
@@ -85,22 +85,39 @@ function collect(words: Collected, word: string, translations: readonly string[]
 const boardWords = (words: Collected): BoardWord[] =>
   [...words.values()].map(({ word, translations }) => (translations.length ? { word, translations } : { word }));
 
-// The terms of a list in one language, once each. Terms are the same word when their letters and
+// The terms of a list in each language, once each. Terms are the same word when their letters and
 // digits are, as the game compares them (`wordKey`), so "Co-author" and "coauthor" are one word.
 // It is spelled as its first term spells it and brings the translations of them all, because a
 // clue must not repeat any of them.
-function unique(list: WordListData, language: Language): BoardWord[] {
-  const words: Collected = new Map();
+//
+// CI refuses a list in which a term has no letters or digits, or is the same word as another, so
+// either means that the list wasn't checked. `skip` hears of both.
+function unique(list: WordListData, skip: Skip): Record<Language, BoardWord[]> {
+  const file = `${list.id}.json`;
+  const quote = (text: string) => JSON.stringify(text);
+  const words = Object.fromEntries(LANGUAGES.map((language) => [language, new Map()])) as Record<Language, Collected>;
   for (const term of list.terms) {
-    const word = term[language];
-    if (!word) continue;
-    const translations = LANGUAGES.flatMap((other) => {
-      const translation = term[other];
-      return other !== language && translation ? [translation] : [];
+    // The term in each language in which it is a word. Without a letter or a digit it has no key,
+    // so nothing could tell it from another word: it is no card and no translation.
+    const texts = LANGUAGES.flatMap((language) => {
+      const word = term[language];
+      if (!word) return [];
+      const key = wordKey(word);
+      if (key) return [{ language, word, key }];
+      skip(file, `"${language}" ${quote(word)} has no letters or digits`, term.id);
+      return [];
     });
-    collect(words, word, translations);
+    for (const { language, word, key } of texts) {
+      const same = words[language].get(key);
+      if (same) skip(file, `"${language}" ${quote(word)} is the same word as ${quote(same.word)}`, term.id);
+      const translations = texts.filter((other) => other.language !== language).map((other) => other.word);
+      collect(words[language], key, word, translations);
+    }
   }
-  return boardWords(words);
+  return Object.fromEntries(LANGUAGES.map((language) => [language, boardWords(words[language])])) as Record<
+    Language,
+    BoardWord[]
+  >;
 }
 
 // Draws `count` words from the pool, preferring words this room hasn't used yet. `used` holds the
@@ -133,7 +150,7 @@ const isText = (value: unknown): value is string => typeof value === 'string' &&
 // words at all, which is a mistake in how it was set up, so this throws, as a bad PORT does. A
 // file or a term that isn't in the expected shape is skipped and reported through `skip`, so that
 // one bad file can't stop the server.
-export function loadWordLibrary(dir: string, skip: (file: string, reason: string) => void = () => {}): WordLibrary {
+export function loadWordLibrary(dir: string, skip: Skip = () => {}): WordLibrary {
   const lists: WordListData[] = [];
   let files: string[];
   try {
@@ -159,12 +176,30 @@ export function loadWordLibrary(dir: string, skip: (file: string, reason: string
     lists.push({
       id: list.id,
       name: { zh: isText(name.zh) ? name.zh : list.id, en: isText(name.en) ? name.en : list.id },
-      terms: list.terms.flatMap((term) =>
-        term && isText(term.id)
-          ? [{ id: term.id, ...(isText(term.zh) ? { zh: term.zh } : {}), ...(isText(term.en) ? { en: term.en } : {}) }]
-          : [],
+      terms: list.terms.flatMap((term: unknown, index) =>
+        readTerm(term, index, (reason, name) => skip(file, reason, name)),
       ),
     });
   }
-  return new WordLibrary(lists);
+  return new WordLibrary(lists, skip);
+}
+
+// One term as it comes out of a file: the term with the texts that the library can use, or
+// nothing. Whatever it leaves out, it reports with the term's id, or with the term's place in the
+// list when it has no id.
+function readTerm(value: unknown, index: number, skip: (reason: string, term: string) => void): WordListData['terms'] {
+  const term = value as Partial<Record<'id' | Language, unknown>> | null;
+  if (!term || typeof term !== 'object' || !isText(term.id)) {
+    skip('not a term with an "id"', `terms[${index}]`);
+    return [];
+  }
+  const texts: Partial<Record<Language, string>> = {};
+  const given = LANGUAGES.filter((language) => term[language] !== undefined);
+  for (const language of given) {
+    const text = term[language];
+    if (isText(text)) texts[language] = text;
+    else skip(`"${language}" is not text`, term.id);
+  }
+  if (given.length === 0) skip('has neither "zh" nor "en"', term.id);
+  return Object.keys(texts).length > 0 ? [{ id: term.id, ...texts }] : [];
 }

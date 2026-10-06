@@ -93,6 +93,35 @@ describe('the word library', () => {
     expect(library.fields()[0]?.counts).toEqual({ zh: 2, en: 1 });
   });
 
+  test('reports the terms that are no word of their own', () => {
+    const skipped: unknown[][] = [];
+    const library = new WordLibrary(
+      [
+        {
+          id: 'a',
+          name: { zh: 'A', en: 'A' },
+          terms: [
+            { id: 'co-author', en: 'Co-author', zh: zh(1) },
+            { id: 'coauthor', en: 'coauthor', zh: zh(2) },
+            { id: 'plus', en: '+++', zh: zh(3) },
+          ],
+        },
+      ],
+      (...report) => skipped.push(report),
+    );
+    expect(skipped).toEqual([
+      ['a.json', '"en" "coauthor" is the same word as "Co-author"', 'coauthor'],
+      ['a.json', '"en" "+++" has no letters or digits', 'plus'],
+    ]);
+    // What has no letters or digits is no card and no translation either.
+    expect(library.pool(['a'], 'en')).toEqual([{ word: 'Co-author', translations: [zh(1), zh(2)] }]);
+    expect(library.pool(['a'], 'zh')).toEqual([
+      { word: zh(1), translations: ['Co-author'] },
+      { word: zh(2), translations: ['coauthor'] },
+      { word: zh(3) },
+    ]);
+  });
+
   test('gives a word that two fields share the translations of both', () => {
     const field = (id: string, translation: string): WordListData => ({
       id,
@@ -173,6 +202,42 @@ describe('loading word lists', () => {
     const library = loadWordLibrary(dir, (file) => skipped.push(file));
     expect(library.fields().map((field) => field.id)).toEqual(['ml']);
     expect(skipped.sort()).toEqual(['broken.json', 'odd.json']);
+  });
+
+  test("skips the terms that it can't use and says which", () => {
+    const terms = [
+      { id: 'fine', zh: zh(1), en: 'Fine' },
+      'not a term',
+      null,
+      { en: 'No id' },
+      { id: 7, en: 'Bad id' },
+      { id: 'number', en: 3, zh: zh(2) },
+      { id: 'blank', en: '  ' },
+      { id: 'empty' },
+      { id: 'symbols', en: '?!' },
+      { id: 'again', en: 'FINE', zh: zh(3) },
+    ];
+    const lists = mkdtempSync(join(tmpdir(), 'reviewer2-terms-'));
+    try {
+      writeFileSync(join(lists, 'odd.json'), JSON.stringify({ ...list('odd', 0), terms }));
+      const skipped: unknown[][] = [];
+      const library = loadWordLibrary(lists, (...report) => skipped.push(report));
+      expect(skipped).toEqual([
+        ['odd.json', 'not a term with an "id"', 'terms[1]'],
+        ['odd.json', 'not a term with an "id"', 'terms[2]'],
+        ['odd.json', 'not a term with an "id"', 'terms[3]'],
+        ['odd.json', 'not a term with an "id"', 'terms[4]'],
+        ['odd.json', '"en" is not text', 'number'],
+        ['odd.json', '"en" is not text', 'blank'],
+        ['odd.json', 'has neither "zh" nor "en"', 'empty'],
+        ['odd.json', '"en" "?!" has no letters or digits', 'symbols'],
+        ['odd.json', '"en" "FINE" is the same word as "Fine"', 'again'],
+      ]);
+      expect(library.pool(['odd'], 'en')).toEqual([{ word: 'Fine', translations: [zh(1), zh(3)] }]);
+      expect(library.fields()[0]?.counts).toEqual({ zh: 3, en: 1 });
+    } finally {
+      rmSync(lists, { recursive: true, force: true });
+    }
   });
 
   test("refuses a directory that isn't there or isn't one", () => {
@@ -256,6 +321,7 @@ describe('the word list check', async () => {
         { id: 'g', en: 'atten\u200btion' },
         { id: 'h', en: 'Attention', zh: zh(1) },
         { id: 'i', en: 'Model', zh: 'Model' },
+        { id: 'j', en: '+++', zh: '\u3002' },
       ],
     };
     const { counts } = check.checkWordList(tricky, 'tricky.json');
