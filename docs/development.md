@@ -30,6 +30,7 @@ Run it in every worktree, because each worktree has its own `node_modules`. It a
 | `npm run format` | Rewrites files with Prettier and fixes what ESLint can |
 | `npm run typecheck` | TypeScript and vue-tsc over every package |
 | `npm run check:names` | Looks for the name of the board game in every tracked file; see [rules/constraints.md](rules/constraints.md) |
+| `npm run check:words` | Checks the word lists in `words/`; see [../words/README.md](../words/README.md) |
 | `node --test scripts/*.test.mjs` | Tests the scripts in `scripts/` |
 
 Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs them too, and also checks that the production build works.
@@ -51,6 +52,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | `PORT` | `3000` | The port the server listens on |
 | `HOST` | `127.0.0.1` | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
 | `PUBLIC_DIR` | `client/dist` | Where the built front end is |
+| `WORDS_DIR` | `words` | Where the word lists are |
 | `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
 
 Never commit passwords, keys or tokens. `.env` files are ignored by git.
@@ -78,5 +80,6 @@ APP_VERSION="$(git rev-parse --short HEAD)" npm run build
 
 Then copy `server/dist/`, `client/dist/` and `words/` to the server, in the same layout, and run `node server/dist/index.cjs` there. It listens on `127.0.0.1:3000` unless `HOST` and `PORT` say otherwise, and `/healthz` answers once it is up.
 
+- **Keep `words/` beside the build.** The server refuses to start when it can't read the directory of the word lists, which is `words/` unless `WORDS_DIR` names another.
 - **Restart the server after replacing the build.** It lists the front end's files when it starts, so a running server would serve the new `index.html` but answer its new assets with 404.
 - **Behind a reverse proxy,** pass the original `Host` header on, for nginx `proxy_set_header Host $host;`, along with the WebSocket upgrade headers. The Content Security Policy names the host the page was requested from, so that older iPhones allow the WebSocket connection to it.

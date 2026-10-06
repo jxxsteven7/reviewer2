@@ -1,4 +1,4 @@
-# Lints, type-checks, tests and builds the app, and checks that the build serves it. Each job's name is
+# Lints, type-checks, tests and builds the app, checks the word lists, and checks that the build serves it. Each job's name is
 # a required status check; see docs/maintainers.md. There are no `paths:` filters on purpose:
 # a required check that a filter skips stays pending and blocks the merge.
 
@@ -41,6 +41,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+  words:
+    name: Word lists
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node scripts/check-words.mjs
 
   build:
     name: Build

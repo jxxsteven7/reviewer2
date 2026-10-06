@@ -1,0 +1,325 @@
+#!/usr/bin/env node
+// Checks the word lists in words/ against the format that words/README.md describes. It needs
+// only Node, so contributors can run it without installing anything, and CI runs it too:
+//
+//   node scripts/check-words.mjs              every words/*.json
+//   node scripts/check-words.mjs <file>...    only these files
+//
+// Problems fail the check. Warnings point at terms that may not play well, and don't.
+//
+// Exit codes: 0 pass (perhaps with warnings), 1 problems found, 2 usage or environment error.
+
+import { readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+export const LANGUAGES = ['zh', 'en'];
+// A board needs 25 different words, so a field is playable in a language once it has 25 terms in
+// it. This is BOARD_SIZE in shared/src/games/keywords/types.ts, which this script can't import:
+// it runs without TypeScript. A test in server/src/core/words.test.ts holds the two together.
+export const MIN_TERMS = 25;
+// Longer terms don't fit on a card on a 360 px wide phone.
+export const MAX_LENGTH = { zh: 5, en: 14 };
+export const MAX_DIFFICULTY = 5;
+
+const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const LIST_KEYS = new Set(['id', 'name', 'contributors', 'terms']);
+const TERM_KEYS = new Set(['id', 'zh', 'en', 'difficulty', 'related', 'note']);
+
+// The table of traditional Chinese characters and their simplified forms that the game compares
+// words with (shared/src/han.ts). The generated file holds it as one string of \u escapes, each
+// traditional character followed by its simplified form, and is read here as text.
+const HAN_VARIANTS = join(root, 'shared', 'src', 'han-variants.ts');
+let simplified;
+
+function readHanVariants() {
+  const source = readFileSync(HAN_VARIANTS, 'utf8');
+  const start = source.indexOf('export const HAN_VARIANTS');
+  const chars = Array.from(source.slice(Math.max(start, 0)).matchAll(/\\u([0-9a-f]{4})/g), ([, hex]) =>
+    String.fromCharCode(parseInt(hex, 16)),
+  );
+  if (start < 0 || chars.length === 0 || chars.length % 2 !== 0) {
+    throw new Error(`${HAN_VARIANTS} doesn't hold the table of Chinese characters in the expected form`);
+  }
+  const forms = new Map();
+  for (let i = 0; i < chars.length; i += 2) forms.set(chars[i], chars[i + 1]);
+  return forms;
+}
+
+function toSimplified(text) {
+  simplified ??= readHanVariants();
+  return text.replace(/[\u4e00-\u9fff]/g, (char) => simplified.get(char) ?? char);
+}
+
+const INVISIBLE = /\p{Default_Ignorable_Code_Point}/gu;
+const MARKS = /\p{M}/gu;
+const NOT_LETTER_OR_DIGIT = /[^\p{L}\p{N}]+/gu;
+
+// What makes two terms the same word: their letters and digits, compared as the game compares
+// words. Full-width and compatibility forms are folded (NFKC); invisible characters, case and
+// accents are dropped; traditional Chinese characters count as their simplified forms; and
+// everything that is not a letter or a digit is left out. "Co-author", "co author" and "COAUTHOR"
+// are one word, and so are "C++" and "C#".
+//
+// This must stay the same as wordKey() in shared/src/games/keywords/clue.ts, with which the server
+// builds its word library and deals a board: a list that passes here must be playable there. This
+// script can't import that function, so a test in server/src/core/words.test.ts compares the two.
+export function wordKey(text) {
+  const folded = text.normalize('NFKC').replace(INVISIBLE, '').trim().toLowerCase().normalize('NFD').replace(MARKS, '');
+  return toSimplified(folded).replace(NOT_LETTER_OR_DIGIT, '');
+}
+
+// What the game itself calls its roles and cards, in both languages. Such terms are allowed, since
+// most are everyday academic words, but players may confuse them with the game's own labels. A
+// term is compared with them as words are, by its key, so "Reviewer-2" is one of them, and so is
+// a plain plural such as "Students".
+const GAME_NAMES = [
+  '\u5bfc\u5e08',
+  '\u5b66\u751f',
+  '\u65c1\u542c',
+  '\u4e3b\u6301',
+  '\u4e8c\u53f7\u5ba1\u7a3f\u4eba',
+  '\u65e0\u5173\u8bba\u6587',
+  'pi',
+  'student',
+  'spectator',
+  'chair',
+  'reviewer 2',
+  'irrelevant paper',
+];
+let gameNames;
+// A plain plural: -s, or -es after s, x, z, ch or sh, as the clue check takes it.
+const isPluralOf = (plural, word) => plural === `${word}s` || (/(?:[sxz]|[cs]h)$/.test(word) && plural === `${word}es`);
+const isGameName = (key) =>
+  (gameNames ??= GAME_NAMES.map(wordKey)).some((name) => key === name || isPluralOf(key, name));
+
+// What a term must not hold. Any space but the plain one, such as a tab, a line break, a no-break
+// space or a full-width space, shows wrongly on a card. A character that shows nothing at all,
+// such as a zero-width space or a soft hyphen, makes a word look like another one.
+const HIDDEN = /[^\S ]|\p{Cc}|\p{Default_Ignorable_Code_Point}/gu;
+const codePoint = (char) => `U+${char.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`;
+
+const isText = (value) => typeof value === 'string' && value.trim() !== '';
+const describe = (value) => JSON.stringify(value);
+
+// Problems and warnings for one parsed list. `file` is its file name, such as "ml.json".
+export function checkWordList(data, file) {
+  const problems = [];
+  const warnings = [];
+  const counts = Object.fromEntries(LANGUAGES.map((language) => [language, 0]));
+  const result = () => ({ problems, warnings, counts });
+
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    problems.push(`${file}: the file must hold one JSON object`);
+    return result();
+  }
+  for (const key of Object.keys(data)) {
+    if (!LIST_KEYS.has(key)) problems.push(`${file}: unknown field ${describe(key)}`);
+  }
+  const expectedId = basename(file, '.json');
+  if (data.id !== expectedId)
+    problems.push(`${file}: "id" must be ${describe(expectedId)}, the file name without .json`);
+  if (!ID.test(expectedId)) problems.push(`${file}: the file name must be lowercase English words joined by "-"`);
+  if (!data.name || typeof data.name !== 'object' || !LANGUAGES.every((language) => isText(data.name[language]))) {
+    problems.push(`${file}: "name" needs both "zh" and "en"`);
+  }
+  if (!Array.isArray(data.contributors) || data.contributors.length === 0 || !data.contributors.every(isText)) {
+    problems.push(`${file}: "contributors" must list at least one name`);
+  }
+  if (!Array.isArray(data.terms)) {
+    problems.push(`${file}: "terms" must be a list`);
+    return result();
+  }
+
+  const ids = new Map();
+  const texts = Object.fromEntries(LANGUAGES.map((language) => [language, new Map()]));
+  const links = [];
+  data.terms.forEach((term, index) => {
+    const where = `${file}: terms[${index}]${term && isText(term.id) ? ` (${term.id})` : ''}`;
+    if (term === null || typeof term !== 'object' || Array.isArray(term)) {
+      problems.push(`${where}: a term must be an object`);
+      return;
+    }
+    for (const key of Object.keys(term)) {
+      if (!TERM_KEYS.has(key)) problems.push(`${where}: unknown field ${describe(key)}`);
+    }
+    if (!isText(term.id) || !ID.test(term.id)) {
+      problems.push(`${where}: "id" must be lowercase English words joined by "-"`);
+    } else if (ids.has(term.id)) {
+      problems.push(`${where}: the id is already used by terms[${ids.get(term.id)}]`);
+    } else {
+      ids.set(term.id, index);
+    }
+
+    const present = LANGUAGES.filter((language) => term[language] !== undefined);
+    if (present.length === 0) problems.push(`${where}: needs "zh", "en" or both`);
+    for (const language of present) {
+      const text = term[language];
+      if (!isText(text)) {
+        problems.push(`${where}: "${language}" must be a non-empty string`);
+        continue;
+      }
+      const hidden = [...new Set(text.match(HIDDEN))].map(codePoint);
+      if (hidden.length > 0) {
+        // JSON shows a tab or a line break as an escape, but an invisible character as it is, so
+        // name each one by its code point.
+        problems.push(
+          `${where}: "${language}" ${describe(text)} holds ${hidden.join(', ')}: use plain spaces only, and no invisible characters`,
+        );
+      } else if (text !== text.trim() || / {2}/.test(text)) {
+        problems.push(`${where}: "${language}" has spaces at its ends or two spaces in a row`);
+      }
+      const key = wordKey(text);
+      const earlier = texts[language].get(key);
+      if (key === '') {
+        problems.push(`${where}: "${language}" ${describe(text)} has no letters or digits`);
+      } else if (earlier) {
+        // Say what the other spelling is, since the two may not look alike.
+        const other =
+          earlier.text === text ? '' : ` (${describe(earlier.text)}), which has the same letters and digits`;
+        problems.push(`${where}: "${language}" ${describe(text)} repeats terms[${earlier.index}]${other}`);
+      } else {
+        texts[language].set(key, { index, text });
+        counts[language] += 1;
+      }
+      if ([...text].length > MAX_LENGTH[language]) {
+        warnings.push(
+          `${where}: "${language}" ${describe(text)} is longer than ${MAX_LENGTH[language]} characters and may not fit on a card`,
+        );
+      }
+      if (isGameName(key)) {
+        warnings.push(`${where}: "${language}" ${describe(text)} is also the name of a role or card in the game`);
+      }
+    }
+
+    if (term.difficulty !== undefined) {
+      const { difficulty } = term;
+      if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > MAX_DIFFICULTY) {
+        problems.push(`${where}: "difficulty" must be a whole number from 1 to ${MAX_DIFFICULTY}`);
+      }
+    }
+    if (term.related !== undefined) {
+      if (!Array.isArray(term.related) || !term.related.every((id) => typeof id === 'string' && ID.test(id))) {
+        problems.push(`${where}: "related" must be a list of term ids`);
+      } else {
+        links.push({ where, id: term.id, related: term.related });
+      }
+    }
+    if (term.note !== undefined) {
+      const { note } = term;
+      const keys = note && typeof note === 'object' && !Array.isArray(note) ? Object.keys(note) : null;
+      if (!keys || keys.length === 0 || !keys.every((key) => LANGUAGES.includes(key) && isText(note[key]))) {
+        problems.push(`${where}: "note" must have a "zh" text, an "en" text or both`);
+      }
+    }
+  });
+
+  // "related" names other terms of this file, and a term may name one further down the list, so
+  // this waits until every id is known.
+  for (const { where, id, related } of links) {
+    for (const other of new Set(related)) {
+      if (other === id) {
+        problems.push(`${where}: "related" names the term itself`);
+      } else if (!ids.has(other)) {
+        problems.push(`${where}: "related" names ${describe(other)}, which is not the id of a term in this file`);
+      }
+    }
+  }
+
+  const playable = LANGUAGES.filter((language) => counts[language] >= MIN_TERMS);
+  if (playable.length === 0) {
+    problems.push(`${file}: needs at least ${MIN_TERMS} different terms in Chinese or in English to be playable`);
+  }
+  for (const language of LANGUAGES) {
+    if (counts[language] > 0 && counts[language] < MIN_TERMS) {
+      warnings.push(
+        `${file}: only ${counts[language]} terms have "${language}", so players can't pick this field in that language until it has ${MIN_TERMS}`,
+      );
+    }
+  }
+  return result();
+}
+
+// Problems and warnings for the list in one file. A file that can't be read is not a problem
+// with a word list, so this throws, and main() reports an error.
+export function checkFile(path) {
+  const file = basename(path);
+  const text = readFileSync(path, 'utf8');
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    return { problems: [`${file}: not valid JSON: ${error.message}`], warnings: [], counts: {} };
+  }
+  return checkWordList(data, file);
+}
+
+// A problem or a warning as a GitHub Actions workflow command. The log shows it as an error or a
+// warning, and GitHub attaches it to the file in the pull request, which needs the file's path
+// from the root of the repository. A file outside the repository gets no path.
+export function annotation(kind, line, path) {
+  const data = (text) => text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+  const property = (text) => data(text).replaceAll(':', '%3A').replaceAll(',', '%2C');
+  const fromRoot = relative(root, resolve(path));
+  const inside = fromRoot !== '' && !fromRoot.startsWith('..') && !isAbsolute(fromRoot);
+  const file = inside ? `file=${property(fromRoot.split(sep).join('/'))},` : '';
+  return `::${kind} ${file}title=check-words::${data(line)}`;
+}
+
+// `wordsDir` is where the lists are when no file is named. The tests pass their own.
+export function main(argv, wordsDir = join(root, 'words')) {
+  let paths = argv;
+  try {
+    // Terms are compared with this table, so make sure of it before any list is read.
+    simplified ??= readHanVariants();
+    if (paths.length === 0) {
+      paths = readdirSync(wordsDir)
+        .filter((name) => name.endsWith('.json'))
+        .sort()
+        .map((name) => join(wordsDir, name));
+    }
+  } catch (error) {
+    console.error(`check-words: error: ${error.message}`);
+    return 2;
+  }
+
+  let problems = 0;
+  let unreadable = 0;
+  for (const path of paths) {
+    let result;
+    try {
+      result = checkFile(path);
+    } catch (error) {
+      // A mistyped path, a directory, or a file that this user may not read.
+      console.error(`check-words: error: ${error.message}`);
+      unreadable += 1;
+      continue;
+    }
+    // On GitHub Actions the workflow command is the line in the log, so each is printed once.
+    const actions = Boolean(process.env.GITHUB_ACTIONS);
+    for (const line of result.problems) {
+      console.log(actions ? annotation('error', line, path) : `check-words: ${line}`);
+    }
+    for (const line of result.warnings) {
+      console.log(actions ? annotation('warning', line, path) : `check-words: warning: ${line}`);
+    }
+    if (result.problems.length === 0) {
+      const counts = LANGUAGES.map((language) => `${result.counts[language]} ${language}`).join(', ');
+      console.log(`check-words: OK ${basename(path)} (${counts})`);
+    }
+    problems += result.problems.length;
+  }
+  if (paths.length === 0) console.log('check-words: no word lists in words/ yet');
+  if (problems) console.log(`check-words: ${problems} problem(s). See words/README.md.`);
+  // A file that wasn't checked counts for more than what the others have: the run is not complete.
+  if (unreadable) return 2;
+  return problems ? 1 : 0;
+}
+
+// Run as a script, not when imported by the tests. Node resolves import.meta.url to the real
+// path, so the path on the command line must be resolved too in case it goes through a symlink.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+  process.exitCode = main(process.argv.slice(2));
+}

@@ -5,6 +5,7 @@ export interface Config {
   host: string;
   port: number;
   publicDir: string;
+  wordsDir: string;
   version: string;
 }
 
@@ -25,6 +26,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     host: env.HOST || '127.0.0.1',
     port: portNumber(env.PORT, 3000),
     publicDir: env.PUBLIC_DIR || join(root, 'client', 'dist'),
+    wordsDir: env.WORDS_DIR || join(root, 'words'),
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   };
 }
