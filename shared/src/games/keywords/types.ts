@@ -70,6 +70,21 @@ export interface ClueRecord {
   guesses: { card: number; color: CardColor }[];
 }
 
+// A card that a guesser has chosen but not revealed yet, for the rest of their group to see.
+export interface Selection {
+  player: string;
+  card: number;
+}
+
+// A message that a guesser wrote to their group, with the turn in which it was written. The IDs
+// of a group's messages count up from 1, also when the oldest messages have been dropped.
+export interface ChatMessage {
+  id: number;
+  player: string;
+  turn: number;
+  text: string;
+}
+
 export interface KeywordsView {
   gameId: string;
   turn: number;
@@ -85,6 +100,12 @@ export interface KeywordsView {
   guessesLeft: number | null;
   history: ClueRecord[];
   result: GameResult | null;
+  // The cards that the guessers of the team whose turn it is have chosen. Only that team's
+  // captain and guessers get this; for everyone else the key is absent.
+  selections?: Selection[];
+  // The messages of the viewer's own group. Only a captain or a guesser gets this; spectators
+  // and screens don't.
+  chat?: ChatMessage[];
 }
 
 // Why the server refused a game action. The order of the checks (see docs/games/keywords.md)
@@ -103,7 +124,9 @@ export type KeywordsError =
   | 'clue_not_one_word'
   | 'clue_too_long'
   | 'clue_on_board'
-  | 'bad_count';
+  | 'bad_count'
+  | 'chat_empty'
+  | 'chat_too_long';
 
 // Why a seat can't be taken, or why a game can't start yet.
 export type SeatError = 'seat_taken' | 'key_viewer' | 'other_team' | 'bad_seat';

@@ -1,4 +1,13 @@
-import type { CardColor, ClueCount, ClueRecord, GameResult, Team, TurnPhase } from '@reviewer2/shared';
+import type {
+  CardColor,
+  ChatMessage,
+  ClueCount,
+  ClueRecord,
+  GameResult,
+  Selection,
+  Team,
+  TurnPhase,
+} from '@reviewer2/shared';
 
 // The full state of one game. It never leaves the server as it is: view.ts decides what each
 // player sees of it.
@@ -22,6 +31,11 @@ export interface KeywordsState {
   guessesMade: number; // in this turn
   history: ClueRecord[];
   result: GameResult | null;
+  // The cards that guessers of the current team have chosen in this turn, one for each of them
+  // at most.
+  selections: Selection[];
+  // What the guessers of each team have written to their group, oldest first.
+  chat: Record<Team, ChatMessage[]>;
 }
 
 export const remaining = (cards: readonly Card[], team: Team): number =>

@@ -1,6 +1,7 @@
+import { CHAT_KEPT, MAX_CHAT_LENGTH } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
-import { giveClue, newGame, pass, reveal, withdraw } from './rules';
+import { dropSelection, giveClue, newGame, pass, reveal, say, select, withdraw } from './rules';
 import { guessesLeft, remaining, type KeywordsState } from './state';
 import { accepted, captain, gameState, guesser, now, refused, spectator } from './testing';
 
@@ -21,6 +22,8 @@ describe('a new game', () => {
     expect(remaining(state.cards, state.startingTeam)).toBe(9);
     expect(state.history).toEqual([]);
     expect(state.result).toBeNull();
+    expect(state.selections).toEqual([]);
+    expect(state.chat).toEqual({ red: [], blue: [] });
   });
 });
 
@@ -218,6 +221,151 @@ describe('revealing a card', () => {
 
     const blueWins = revealAll(clued('unlimited', almost), [16]);
     expect(blueWins.result).toEqual({ winner: 'blue', reason: 'found' });
+  });
+});
+
+describe('choosing a card', () => {
+  const ann = guesser('red', 'ann');
+  const bob = guesser('red', 'bob');
+
+  test('shows the choice of each guesser, one card each', () => {
+    let state = clued();
+    state = accepted(select(state, ann, { ...now(state), card: 3 }));
+    state = accepted(select(state, bob, { ...now(state), card: 17 }));
+    expect(state.selections).toEqual([
+      { player: 'ann', card: 3 },
+      { player: 'bob', card: 17 },
+    ]);
+    // Choosing again replaces the choice, and two guessers may choose the same card.
+    state = accepted(select(state, ann, { ...now(state), card: 17 }));
+    expect(state.selections).toEqual([
+      { player: 'bob', card: 17 },
+      { player: 'ann', card: 17 },
+    ]);
+    expect(state).toMatchObject({ phase: 'guess', guessesMade: 0, team: 'red', turn: 1 });
+    expect(state.cards.every((card) => !card.revealed)).toBe(true);
+  });
+
+  test('can be taken back', () => {
+    let state = clued();
+    state = accepted(select(state, ann, { ...now(state), card: 3 }));
+    state = accepted(select(state, bob, { ...now(state), card: 4 }));
+    state = accepted(select(state, ann, { ...now(state), card: null }));
+    expect(state.selections).toEqual([{ player: 'bob', card: 4 }]);
+    // Taking back nothing is fine too.
+    expect(accepted(select(state, ann, { ...now(state), card: null })).selections).toEqual(state.selections);
+  });
+
+  test("is only for the current team's guessers, after the clue", () => {
+    const before = gameState();
+    expect(refused(select(before, ann, { ...now(before), card: 0 }))).toBe('wrong_phase');
+    const state = clued();
+    expect(refused(select(state, guesser('blue'), { ...now(state), card: 0 }))).toBe('not_your_turn');
+    expect(refused(select(state, captain('red'), { ...now(state), card: 0 }))).toBe('not_guesser');
+    expect(refused(select(state, spectator, { ...now(state), card: 0 }))).toBe('not_your_turn');
+    expect(refused(select(state, ann, { gameId: 'game-1', turn: 2, card: 0 }))).toBe('stale');
+    expect(refused(select(state, ann, { gameId: 'other', turn: 1, card: null }))).toBe('stale');
+    const over = accepted(withdraw(state, now(state)));
+    expect(refused(select(over, ann, { ...now(over), card: 0 }))).toBe('game_over');
+  });
+
+  test('needs a card that exists and has not been revealed', () => {
+    const state = revealAll(clued(), [0]);
+    for (const card of [-1, 25, 1.5, Number.NaN]) {
+      expect(refused(select(state, ann, { ...now(state), card })), String(card)).toBe('no_such_card');
+    }
+    expect(refused(select(state, ann, { ...now(state), card: 0 }))).toBe('card_revealed');
+  });
+
+  test('is cleared for everyone when a card is revealed, and when the turn or the game ends', () => {
+    let state = clued(3);
+    const choose = (current: KeywordsState) => {
+      const one = accepted(select(current, ann, { ...now(current), card: 5 }));
+      return accepted(select(one, bob, { ...now(one), card: 6 }));
+    };
+    state = revealAll(choose(state), [0]);
+    expect(state).toMatchObject({ phase: 'guess', selections: [] });
+    expect(accepted(pass(choose(state), ann, now(state)))).toMatchObject({ phase: 'clue', selections: [] });
+    expect(revealAll(choose(state), [17])).toMatchObject({ phase: 'clue', selections: [] });
+    expect(revealAll(choose(state), [24])).toMatchObject({ phase: 'over', selections: [] });
+    expect(accepted(withdraw(choose(state), now(state)))).toMatchObject({ phase: 'over', selections: [] });
+  });
+
+  test('goes with a guesser who leaves their seat', () => {
+    let state = clued();
+    state = accepted(select(state, ann, { ...now(state), card: 3 }));
+    state = accepted(select(state, bob, { ...now(state), card: 4 }));
+    expect(dropSelection(state, 'ann').selections).toEqual([{ player: 'bob', card: 4 }]);
+    // Nothing changes for a player who has chosen nothing.
+    expect(dropSelection(state, 'cat')).toBe(state);
+  });
+});
+
+describe('the group chat', () => {
+  const ann = guesser('red', 'ann');
+  const dan = guesser('blue', 'dan');
+  const said = (state: KeywordsState, actor = ann, text = 'Hello') => say(state, actor, { gameId: state.gameId, text });
+
+  test("keeps each group's messages apart, in order, with the turn they were written in", () => {
+    let state = gameState();
+    state = accepted(said(state, ann, '  Is it  the\nthird one? '));
+    state = accepted(said(state, dan, 'They are stuck.'));
+    state = revealAll(clued(1, state), [17]);
+    state = accepted(said(state, guesser('red', 'bob'), 'Sorry!'));
+    expect(state.chat).toEqual({
+      red: [
+        { id: 1, player: 'ann', turn: 1, text: 'Is it the third one?' },
+        { id: 2, player: 'bob', turn: 2, text: 'Sorry!' },
+      ],
+      blue: [{ id: 1, player: 'dan', turn: 1, text: 'They are stuck.' }],
+    });
+  });
+
+  test("is open to guessers in either team's turn and in either phase", () => {
+    const guessing = clued();
+    for (const state of [gameState(), guessing]) {
+      expect(refused(said(state, ann))).toBeNull();
+      expect(refused(said(state, dan))).toBeNull();
+    }
+  });
+
+  test('is closed to captains and spectators: a captain may only give the clue', () => {
+    const state = gameState();
+    expect(refused(said(state, captain('red')))).toBe('not_guesser');
+    expect(refused(said(state, captain('blue')))).toBe('not_guesser');
+    expect(refused(said(state, spectator))).toBe('not_guesser');
+  });
+
+  test('refuses a message for another game, and any message once the game is over', () => {
+    const state = gameState();
+    expect(refused(say(state, ann, { gameId: 'other', text: 'Hello' }))).toBe('stale');
+    const over = accepted(withdraw(state, now(state)));
+    expect(refused(said(over))).toBe('game_over');
+    expect(refused(say(over, ann, { gameId: 'other', text: 'Hello' }))).toBe('stale');
+  });
+
+  test('refuses empty and overlong messages, after the checks on the player', () => {
+    const state = gameState();
+    expect(refused(said(state, ann, ' \n '))).toBe('chat_empty');
+    expect(refused(said(state, ann, 'x'.repeat(MAX_CHAT_LENGTH + 1)))).toBe('chat_too_long');
+    expect(refused(said(state, ann, 'x'.repeat(MAX_CHAT_LENGTH)))).toBeNull();
+    expect(refused(said(state, captain('red'), ''))).toBe('not_guesser');
+  });
+
+  test('keeps only the latest messages of a group, and goes on counting', () => {
+    let state = gameState();
+    for (let i = 1; i <= CHAT_KEPT + 5; i += 1) state = accepted(said(state, ann, `Message ${i}`));
+    expect(state.chat.red).toHaveLength(CHAT_KEPT);
+    expect(state.chat.red[0]).toMatchObject({ id: 6, text: 'Message 6' });
+    expect(state.chat.red.at(-1)).toMatchObject({ id: CHAT_KEPT + 5, text: `Message ${CHAT_KEPT + 5}` });
+    expect(state.chat.blue).toEqual([]);
+  });
+
+  test('survives the turns of a game, and starts empty in the next one', () => {
+    let state = accepted(said(gameState()));
+    state = revealAll(clued(1, state), [17]);
+    expect(state.chat.red).toHaveLength(1);
+    expect(newGame(WORDS, seededRng(1), 'next').chat).toEqual({ red: [], blue: [] });
   });
 });
 

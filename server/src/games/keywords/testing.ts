@@ -25,13 +25,16 @@ export function gameState(overrides: Partial<KeywordsState> = {}, layout = LAYOU
     guessesMade: 0,
     history: [],
     result: null,
+    selections: [],
+    chat: { red: [], blue: [] },
     ...overrides,
   };
 }
 
-export const captain = (team: Team): Actor => ({ team, role: 'captain' });
-export const guesser = (team: Team): Actor => ({ team, role: 'guesser' });
-export const spectator: Actor = { team: null, role: 'spectator' };
+// The players of the tests. Each team has one captain and as many guessers as a test names.
+export const captain = (team: Team): Actor => ({ id: `${team}-captain`, team, role: 'captain' });
+export const guesser = (team: Team, id = `${team}-guesser`): Actor => ({ id, team, role: 'guesser' });
+export const spectator: Actor = { id: 'spectator', team: null, role: 'spectator' };
 
 export const now = (state: KeywordsState): Moment => ({ gameId: state.gameId, turn: state.turn });
 

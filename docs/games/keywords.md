@@ -38,6 +38,7 @@ Turns are numbered from 1, and the groups alternate: the starting group plays th
    - Revealing one of their own cards lets them go on. Revealing as many as the limit allows ends the turn.
    - Revealing an irrelevant paper or a card of the other group ends the turn at once. A card of the other group counts for that group.
    - Once they have revealed at least one card, they may end the turn themselves.
+   - Before revealing a card, a guesser may choose it, which shows the choice to the rest of the group. See [Talking it over](#talking-it-over).
 3. The turn passes to the other group.
 
 ## The clue
@@ -66,6 +67,23 @@ Words that have been revealed no longer count, and may be used as clues again. T
 
 The table of traditional and simplified characters is `shared/src/han-variants.ts`. `scripts/build-han-variants.mjs` builds it from the Unicode Han Database.
 
+## Talking it over
+
+Players in one room can simply talk. Players who are apart need to see what the others in their group are thinking, so the game gives each group two things that the other group never sees.
+
+**Choosing a card.** In their group's guess phase, a guesser may choose a card before revealing it, or take the choice back.
+
+- The group's guessers and its captain see who has chosen which card. Each guesser has one choice at a time, and several may choose the same card.
+- Choosing reveals nothing and doesn't count as a guess. Revealing a card doesn't need a choice first.
+- Every choice is cleared when a card is revealed, because the board has changed, and when the turn or the game ends. A guesser who leaves their seat or the room takes their choice with them.
+
+**The group chat.** A guesser may write to their group at any time during a game, in either group's turn.
+
+- Only guessers write. Captains read their own group's chat, as they would hear their group at a table, but can't write: the clue is all a captain may say. Spectators and screens see no chat, since they can see both groups and could carry a message across.
+- A message is one line of up to 200 characters. Line breaks become spaces, and invisible characters and piles of combining marks are dropped. The check is shared, like the clue check: the player's screen runs it while they type, and the server runs it again.
+- Each group keeps its latest 50 messages. Every message has an ID that counts up from 1 within its group, and carries the turn in which it was written.
+- The chat lasts for one game. It stays in its group after the game is over, even though every color is shown then, and the next game starts with an empty one.
+
 ## Winning
 
 - Revealing **Reviewer 2** ends the game at once: the group that revealed it loses.
@@ -76,14 +94,14 @@ At the end, everyone sees the colors of all the cards. "Play again" takes the ro
 
 ## What each player sees
 
-| Seat | Cards | Can do |
-|---|---|---|
-| Captain | All 25 words and all their colors | Give the clue in their group's clue phase |
-| Guesser | All 25 words; colors only of revealed cards | Reveal cards and end the turn in their group's guess phase |
-| Spectator | Like a guesser | Watch |
-| After the game, everyone | Every color | |
+| Seat | Cards | Of the groups | Can do |
+|---|---|---|---|
+| Captain | All 25 words and all their colors | Their group's chat, and its guessers' choices in its turn | Give the clue in their group's clue phase |
+| Guesser | All 25 words; colors only of revealed cards | Their group's chat, and its guessers' choices in its turn | Choose and reveal cards and end the turn in their group's guess phase; write to their group |
+| Spectator, screen | Like a guesser | Nothing | Watch |
+| After the game, everyone | Every color | As before | |
 
-`view.ts` is the only way game state leaves the server. In the public view, an unrevealed card has no `color` key at all, rather than an empty one, so the key can't be found even with the browser's developer tools. The server never sends its random seed or its own order of the words.
+`view.ts` is the only way game state leaves the server. It decides by the seat a viewer is in right now, so a captain who steps down to watch gets a spectator's view. In every view but a captain's, an unrevealed card has no `color` key at all, rather than an empty one, so the key can't be found even with the browser's developer tools. In the same way, a view has no `chat` key for a viewer outside the two groups, and no `selections` key for anyone but the group whose turn it is. The server never sends its random seed or its own order of the words.
 
 Everyone sees the public facts: whose turn it is and in which phase, the current clue, how many more cards may be revealed, how many cards each group has left, and every earlier clue with the cards revealed after it.
 
@@ -98,13 +116,13 @@ Everyone sees the public facts: whose turn it is and in which phase, the current
 
 ## Order of the checks
 
-Every action carries the `gameId` and the `turn` it was meant for. A withdrawal carries only the `gameId`, because it is meant for the game, whatever the turn. The server checks an action in this order:
+Every action carries the `gameId` and the `turn` it was meant for. A withdrawal and a chat message carry only the `gameId`, because they are meant for the game, whatever the turn. The server checks an action in this order:
 
 1. `stale`: the action is for an earlier game or turn. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
 2. `game_over`: the game has ended.
-3. `not_your_turn`, `not_captain` or `not_guesser`: the action isn't this player's to make.
-4. `wrong_phase`: it isn't the moment, such as revealing a card before the clue.
-5. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_long` and `clue_on_board` for clues; `no_such_card` and `card_revealed` for reveals; and `must_guess_first` for ending a turn before revealing anything.
+3. `not_your_turn`, `not_captain` or `not_guesser`: the action isn't this player's to make. A chat message is never out of turn: it only needs a guesser.
+4. `wrong_phase`: it isn't the moment, such as revealing or choosing a card before the clue.
+5. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_long` and `clue_on_board` for clues; `no_such_card` and `card_revealed` for reveals and choices; `must_guess_first` for ending a turn before revealing anything; and `chat_empty` and `chat_too_long` for chat messages.
 
 Because the content comes last, nothing a player can't see changes the answer they get. A guesser of the wrong group gets `not_your_turn` whichever card they try.
 
@@ -112,4 +130,5 @@ Because the content comes last, nothing a player can't see changes the answer th
 
 - **Two guessers reveal at once.** The server handles actions one at a time, and never pauses between reading the state and writing it. If the first reveal ends the turn, the second is `stale`.
 - **Repeated clicks.** Revealing a revealed card again is `card_revealed`. A second "start" or a second clue fails the phase check.
+- **A guesser chooses a card while another reveals one.** If the choice arrives second, it stands for the new board, unless the turn has ended (`stale`) or it was the very card that was revealed (`card_revealed`).
 - **A captain or all guessers go offline.** The game waits and shows them as offline. The chair can make an offline player a spectator so that someone else can take over, or withdraw the game.
