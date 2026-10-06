@@ -3,7 +3,7 @@ import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule } from './game';
 import type { Rng } from './random';
-import { chooseFields, Room } from './room';
+import { chooseFields, Room, type Member } from './room';
 import type { WordLibrary } from './words';
 
 // All the rooms on this server, which live in memory (docs/architecture.md), and the rules for
@@ -53,23 +53,37 @@ export class Rooms {
     return this.#rooms.size;
   }
 
-  // A new room, or why there can't be one: the server is full, or the fields won't do.
-  create(options: { game: GameModule; language: Language; fields: readonly string[] }): Ack<{ room: Room }> {
+  // A new room with its creator in it, who chairs it, or why there can't be one: the server is
+  // full, the fields won't do, or the name won't. `key` is the creator's member key.
+  //
+  // The room is listed only once its creator has joined it. A game module that throws there
+  // leaves no room behind: one without a member would belong to whoever found its code first.
+  create(options: {
+    game: GameModule;
+    language: Language;
+    fields: readonly string[];
+    key: string;
+    name: string;
+  }): Ack<{ room: Room; member: Member }> {
+    const { game, language, key, name } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
-    const chosen = chooseFields(this.words, options.fields, options.language, options.game.wordsNeeded);
+    const chosen = chooseFields(this.words, options.fields, language, game.wordsNeeded);
     if (!chosen.ok) return chosen;
     let code = newCode(this.rng);
     while (this.#rooms.has(code)) code = newCode(this.rng);
     const room = new Room({
-      ...options,
-      fields: chosen.fields,
       code,
+      game,
+      language,
+      fields: chosen.fields,
       words: this.words,
       rng: this.rng,
       now: this.now,
     });
+    const joined = room.join(key, name);
+    if (!joined.ok) return joined;
     this.#rooms.set(code, room);
-    return { ok: true, room };
+    return { ok: true, room, member: joined.member };
   }
 
   // Finds a room by a code as someone typed it.

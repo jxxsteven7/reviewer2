@@ -615,6 +615,39 @@ describe('a game module that throws', () => {
     expect(await chair.send('sys:ping')).toEqual({ ok: true });
   });
 
+  test('has its refusals passed on as a code and nothing else', async () => {
+    const { chair, code } = await room();
+    await join(code, 'Bob');
+    await start(chair);
+    // The fake game puts its words and a number that can't be encoded into this refusal.
+    expect(await chair.send('test:refuse')).toEqual({ ok: false, error: 'odd' });
+    expect(await chair.send('sys:ping')).toEqual({ ok: true });
+    expect(errors()).toEqual([]);
+  });
+
+  test('when its first player joins, leaves no room behind', async () => {
+    const grumpy = {
+      ...fakeGame,
+      id: 'grumpy',
+      join: () => {
+        throw new Error('nobody may join');
+      },
+    } as GameModule;
+    await server.close();
+    server = await startServer({ games: [fakeGame as GameModule, grumpy] });
+    const client = await connect();
+    const reply = await client.send('room:create', {
+      game: 'grumpy',
+      language: 'en',
+      fields: ['general'],
+      name: 'Ann',
+    });
+    expect(reply).toEqual({ ok: false, error: 'internal' });
+    expect(server.app.rooms.size).toBe(0);
+    expect(logged('room_created')).toEqual([]);
+    expect(errors()).toHaveLength(1);
+  });
+
   test('in a view costs only that view, wherever the view is built', async () => {
     const { chair, code, roomId } = await room();
     const bob = await join(code, 'Bob');

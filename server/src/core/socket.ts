@@ -249,7 +249,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       report(error, 'message');
       answer = fail('internal');
     }
-    reply(answer);
+    try {
+      reply(answer);
+    } catch (error) {
+      // Socket.IO couldn't encode the answer. The message has been handled, so say that something
+      // went wrong, which is better than saying nothing.
+      report(error, 'answer');
+      reply(fail('internal'));
+    }
   }
 
   // The handlers of one connection's room messages. They are looked up when a message arrives
@@ -349,17 +356,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (!module) return fail('bad_game');
       if (cleanName(name) === null) return fail('name_invalid');
       // From here on the attempt counts against the address, whatever comes of it. Checking the
-      // fields goes through all of their words, which is the one costly step of all the messages,
-      // and it must not be free to anyone who asks for rooms that can't be.
+      // fields goes through all of their words, which costs more than anything else a message
+      // can ask for. The chair's messages that do the same need a room first; this one is open
+      // to anyone, and must not be free to whoever asks for rooms that can't be.
       creations.add(conn.ip);
-      const created = rooms.create({ game: module, language, fields });
+      const created = rooms.create({ game: module, language, fields, key: conn.key, name });
       if (!created.ok) return created;
-      const { room } = created;
-      const joined = room.join(conn.key, name);
-      // The name was checked above and the room is new, so nothing can refuse its first member.
-      if (!joined.ok) throw new Error(`a new room refused its creator: ${joined.error}`);
+      const { room, member } = created;
       log('room_created', { code: room.code, game, language, fields: room.fields });
-      enter(socket, room, joined.member);
+      enter(socket, room, member);
       return ok({ code: room.code, roomId: room.id });
     });
 

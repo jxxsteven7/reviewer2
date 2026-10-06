@@ -25,7 +25,13 @@ describe('the list of rooms', () => {
     const drawn = seededRng(3);
     const rooms = new Rooms(testWords(), { int: (below) => next.shift() ?? drawn.int(below) }, () => 0);
     const create = () => {
-      const created = rooms.create({ game: fakeGame as GameModule, language: 'en', fields: ['general'] });
+      const created = rooms.create({
+        game: fakeGame as GameModule,
+        language: 'en',
+        fields: ['general'],
+        key: 'a-member-key',
+        name: 'Ann',
+      });
       if (!created.ok) throw new Error(created.error);
       return created.room;
     };

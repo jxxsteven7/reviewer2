@@ -8,7 +8,7 @@ import {
   type RoomPhase,
   type RoomView,
 } from '@reviewer2/shared';
-import { done, fail } from './answers';
+import { done, fail, refusalOf } from './answers';
 import type { GameContext, GameModule, Viewer } from './game';
 import { newPlayerId } from './identity';
 import { randomId, type Rng } from './random';
@@ -296,7 +296,7 @@ export class Room {
   withdraw(gameId: string): Ack {
     if (this.gameId === null || gameId !== this.gameId) return fail('stale');
     const result = this.game.withdraw(this.data, gameId);
-    if (!result.ok) return result;
+    if (!result.ok) return refusalOf(result);
     this.data = result.data;
     this.phase = 'ended';
     this.changed();
@@ -354,7 +354,7 @@ export class Room {
   // A game message from a member.
   act(id: string, type: string, payload: unknown): Ack {
     const result = this.game.handle(this.data, this.context, id, type, payload);
-    if (!result.ok) return result;
+    if (!result.ok) return refusalOf(result);
     this.#take(result.data, this.#endsWith(result.data));
     this.changed();
     return done;

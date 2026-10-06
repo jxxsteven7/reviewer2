@@ -12,3 +12,8 @@ export type Refusal = Extract<Ack, { ok: false }>;
 
 export const done: Ack = { ok: true };
 export const fail = (error: RoomError): Refusal => ({ ok: false, error });
+
+// A game module's refusal, reduced to its error code. Whatever else a module put into it stays on
+// the server: view() is the only way a game's data leaves, and an answer must be something that
+// can be sent at all.
+export const refusalOf = (refusal: Refusal): Refusal => ({ ok: false, error: String(refusal.error) });

@@ -67,6 +67,9 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (type === 'test:break') return { ok: true, data: { ...data, broken: payload as FakeData['broken'] } };
     if (type === 'test:mend') return { ok: true, data: { ...data, broken: null } };
     if (type === 'test:fragile') return { ok: true, data: { ...data, fragile: true } };
+    // A refusal with more in it than a code: something that the game knows, and something that
+    // can't be sent at all.
+    if (type === 'test:refuse') return { ok: false, error: 'odd', secret: data.words, count: 10n } as never;
     // A module may throw anything at all, not only errors.
     if (type === 'test:throw') throw payload;
     if (ctx.phase !== 'playing') return { ok: false, error: 'wrong_phase' };
