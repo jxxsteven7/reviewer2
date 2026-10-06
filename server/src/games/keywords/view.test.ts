@@ -32,6 +32,16 @@ describe('what each player sees', () => {
     expect(view.result).toEqual({ winner: null, reason: 'withdrawn' });
   });
 
+  test("every view carries a card's translations, which are no secret", () => {
+    const state = playing();
+    state.cards = state.cards.map((card, i) => (i === 5 ? { ...card, translations: ['Other5'] } : card));
+    for (const sees of ['public', 'key'] as const) {
+      const view = viewFor(state, sees);
+      expect(view.cards[5]?.translations).toEqual(['Other5']);
+      expect(view.cards.filter((card) => 'translations' in card)).toHaveLength(1);
+    }
+  });
+
   test('both views share the public facts of the game', () => {
     const state = playing();
     const shared = { turn: 1, team: 'red', phase: 'guess', startingTeam: 'red', guessesMade: 1, guessesLeft: 2 };

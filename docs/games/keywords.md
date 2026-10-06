@@ -23,6 +23,8 @@ The game wraps its mechanics in academic life. The code uses plain names, and th
 - A room has one language, chosen when it is created, and the words on the cards are in that language.
 - To start, each group needs exactly one captain, who must be online, and at least one guesser who is online. Until then, the chair's start button stays disabled and says what is missing.
 - The server draws 25 different words and picks the starting group at random. That group gets 9 cards and the other group 8. There are 7 irrelevant papers and 1 Reviewer 2, all in random places. The server uses the crypto module for randomness, so the key can't be predicted.
+- The 25 words must really differ: two spellings of one word, such as "Attention" and "attention", can't share a board, because the clue check couldn't tell their cards apart.
+- A word may bring its term in the other languages of the word library. The translations stay with the card, and every player's view carries them, so that the clue check can refuse them on the captain's screen as well. They are no secret.
 - Each game gets a new random `gameId`.
 
 ## Turns

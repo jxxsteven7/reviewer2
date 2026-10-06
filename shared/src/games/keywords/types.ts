@@ -42,12 +42,21 @@ export interface GameResult {
   reason: EndReason;
 }
 
+// A term for a card: the word in the room's language and, when the word library has them, the
+// same term in its other languages. A clue must not repeat any of these (see clue.ts).
+export interface BoardWord {
+  word: string;
+  translations?: readonly string[];
+}
+
 // What a player sees of a card. `color` is there only when the player may know it: the card has
 // been revealed, the player is a captain, or the game is over. Otherwise the key is absent.
+// `translations` is there when the card has any, for the clue check on the captain's screen.
 export interface CardView {
   word: string;
   revealed: boolean;
   color?: CardColor;
+  translations?: string[];
 }
 
 export interface ClueRecord {

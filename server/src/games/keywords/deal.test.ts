@@ -57,7 +57,23 @@ describe('dealing', () => {
   });
 
   test('needs exactly 25 different words', () => {
-    expect(() => deal(WORDS.slice(1), seededRng(1))).toThrow(/25 different words/);
-    expect(() => deal([...WORDS.slice(1), 'Term1'], seededRng(1))).toThrow(/25 different words/);
+    expect(() => deal(WORDS.slice(1), seededRng(1))).toThrow('got 24, 24 of them different');
+    expect(() => deal([...WORDS.slice(1), 'Term1'], seededRng(1))).toThrow('got 25, 24 of them different');
+    expect(() => deal([...WORDS, 'Term1'], seededRng(1))).toThrow('got 26, 25 of them different');
+  });
+
+  test('takes two spellings of a word for the same word', () => {
+    for (const again of ['term1', ' TERM1 ', '\uff34\uff45\uff52\uff4d\uff11', 'Te\u0301rm1']) {
+      expect(() => deal([...WORDS.slice(1), again], seededRng(1)), again).toThrow('got 25, 24 of them different');
+    }
+  });
+
+  test("keeps each word's translations with its card", () => {
+    const terms = WORDS.map((word, i) => (i % 2 === 0 ? { word, translations: [`Other${i}`] } : word));
+    for (const card of deal(terms, seededRng(2)).cards) {
+      const index = Number(card.word.slice(4));
+      if (index % 2 === 0) expect(card.translations).toEqual([`Other${index}`]);
+      else expect('translations' in card).toBe(false);
+    }
   });
 });

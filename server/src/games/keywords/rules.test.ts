@@ -98,6 +98,15 @@ describe('giving a clue', () => {
     expect(word('word3')).toBe('clue_on_board');
   });
 
+  test("refuses a card's translation as a clue", () => {
+    const state = gameState();
+    const cards = state.cards.map((card, i) => (i === 3 ? { ...card, translations: ['Entropie'] } : card));
+    const translated = { ...state, cards };
+    const clue = { ...now(state), word: 'entropie', count: 1 };
+    expect(refused(giveClue(translated, captain('red'), clue))).toBe('clue_on_board');
+    expect(refused(giveClue(state, captain('red'), clue))).toBeNull();
+  });
+
   test('may repeat a word that has been covered', () => {
     const state = gameState();
     const entropy = (revealed: boolean) =>

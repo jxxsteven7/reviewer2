@@ -16,9 +16,12 @@ export function viewFor(state: KeywordsState, sees: Sees): KeywordsView {
     team: state.team,
     phase: state.phase,
     startingTeam: state.startingTeam,
-    cards: state.cards.map(({ word, color, revealed }): CardView =>
-      revealed || showKey ? { word, revealed, color } : { word, revealed },
-    ),
+    cards: state.cards.map(({ word, color, revealed, translations }): CardView => ({
+      word,
+      revealed,
+      ...(revealed || showKey ? { color } : {}),
+      ...(translations ? { translations: [...translations] } : {}),
+    })),
     remaining: { red: remaining(state.cards, 'red'), blue: remaining(state.cards, 'blue') },
     clue: state.clue && { ...state.clue },
     guessesMade: state.guessesMade,

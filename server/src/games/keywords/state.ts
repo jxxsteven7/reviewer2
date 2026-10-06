@@ -5,6 +5,8 @@ import type { CardColor, ClueCount, ClueRecord, GameResult, Team, TurnPhase } fr
 
 export interface Card {
   word: string;
+  // The same term in the other languages of the word library, if it has any.
+  translations?: readonly string[];
   color: CardColor;
   revealed: boolean;
 }

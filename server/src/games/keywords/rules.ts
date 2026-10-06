@@ -4,6 +4,7 @@ import {
   isClueCount,
   otherTeam,
   TEAMS,
+  type BoardWord,
   type ClueCount,
   type KeywordsError,
   type Role,
@@ -37,7 +38,7 @@ export type Outcome = { ok: true; state: KeywordsState } | { ok: false; error: K
 const ok = (state: KeywordsState): Outcome => ({ ok: true, state });
 const refuse = (error: KeywordsError): Outcome => ({ ok: false, error });
 
-export function newGame(words: readonly string[], rng: Rng, gameId: string): KeywordsState {
+export function newGame(words: readonly (string | BoardWord)[], rng: Rng, gameId: string): KeywordsState {
   const { cards, startingTeam } = deal(words, rng);
   return {
     gameId,
