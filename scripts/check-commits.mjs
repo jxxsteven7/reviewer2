@@ -3,6 +3,10 @@
 // state the rules in prose and this script enforces them. When the two disagree, change one of
 // them so that they match again.
 //
+// It also keeps the name of the board game the first game is based on out of commit messages,
+// pull request titles and bodies, and branch names (docs/rules/constraints.md). The spellings of
+// the name and the search for them live in scripts/check-names.mjs, which checks the files.
+//
 // It needs only Node and git, so the same file runs as the commit-msg hook, in CI
 // (.github/workflows/conventions.yml) and by hand:
 //
@@ -36,11 +40,14 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
+import { findSpellings, masked } from './check-names.mjs';
+
 export const MAIN = 'main';
 export const TYPES = ['feat', 'fix', 'words', 'docs', 'refactor', 'test', 'chore', 'ci', 'perf', 'revert'];
 export const BRANCH_TYPES = TYPES.filter((type) => type !== 'revert');
 export const SUBJECT_MAX = 72;
 const RULES = 'docs/rules/git.md and docs/rules/versioning.md';
+const NAME_RULES = 'docs/rules/constraints.md';
 
 const TYPE_RE = new RegExp(`^(${TYPES.join('|')}): `);
 const BRANCH_RE = new RegExp(`^(${BRANCH_TYPES.join('|')})/[a-z0-9]+(-[a-z0-9]+)*$`);
@@ -203,6 +210,17 @@ export function checkAttribution(message, where) {
   return problems;
 }
 
+// The name of the board game the first game is based on must not appear in any text that ends
+// up on GitHub. The problem says where a spelling starts without repeating it.
+export function checkName(text, where, spellings) {
+  return findSpellings(text, spellings).map(({ line, column }) =>
+    problem(where, 'name', `line ${line}, column ${column} contains the name of the board game; see ${NAME_RULES}`),
+  );
+}
+
+// The rules for the messages that have a format of their own, such as those of merge commits.
+const checkForeignMessage = (message, where) => [...checkAttribution(message, where), ...checkName(message, where)];
+
 // The subject is covered by the printable-ASCII rule, so this looks at the body only.
 function checkBodyEnglish(lines, where) {
   return lines.slice(1).flatMap((line, index) =>
@@ -212,10 +230,10 @@ function checkBodyEnglish(lines, where) {
   );
 }
 
-// Subject, structure, language and attribution rules for one cleaned message. A message whose
-// version is 'required' is a squash commit on main, which carries only the pull request title,
-// so the body rules for branch commits do not apply to it.
-export function checkMessage(message, where, { version, allowFixup = false }) {
+// Subject, structure, language, attribution and name rules for one cleaned message. A message
+// whose version is 'required' is a squash commit on main, which carries only the pull request
+// title, so the body rules for branch commits do not apply to it.
+export function checkMessage(message, where, { version, allowFixup = false, spellings }) {
   const lines = message.split('\n');
   let subject = lines[0] ?? '';
   const problems = [];
@@ -231,7 +249,11 @@ export function checkMessage(message, where, { version, allowFixup = false }) {
   if (version !== 'required' && rest.startsWith('revert: ') && !REVERTS_RE.test(message)) {
     problems.push(problem(where, 'revert', 'a revert keeps the "This reverts commit <sha>." line that git writes'));
   }
-  problems.push(...checkBodyEnglish(lines, where), ...checkAttribution(message, where));
+  problems.push(
+    ...checkBodyEnglish(lines, where),
+    ...checkAttribution(message, where),
+    ...checkName(message, where, spellings),
+  );
   return problems;
 }
 
@@ -306,7 +328,7 @@ function runGit(args) {
   return result;
 }
 
-export function git(...args) {
+function git(...args) {
   const result = runGit(args);
   if (result.status !== 0) {
     throw new GitError(`git ${args.join(' ')}: ${(result.stderr || result.stdout).trim()}`);
@@ -325,7 +347,7 @@ function gitConfig(key) {
 // How git will clean the message up after the commit-msg hook has seen it: the mode from
 // commit.cleanup when set, otherwise comments are stripped only when an editor was used. Git
 // runs the commit hooks with GIT_EDITOR=: when it will not open one, as with `git commit -m`.
-export function messageCleanup() {
+function messageCleanup() {
   const configured = gitConfig('commit.cleanup');
   const mode = configured && configured !== 'default' ? configured : process.env.GIT_EDITOR === ':' ? 'whitespace' : 'strip';
   const comment = gitConfig('core.commentString') ?? gitConfig('core.commentChar') ?? '#';
@@ -390,7 +412,7 @@ function modeMsg(file) {
   const message = cleanMessage(readFileSync(file, 'utf8'), messageCleanup());
   const where = 'message';
   if (gitOk('rev-parse', '-q', '--verify', 'MERGE_HEAD')) {
-    return { problems: checkAttribution(message, where), note: 'merge commit: attribution rules only' };
+    return { problems: checkForeignMessage(message, where), note: 'merge commit: attribution and name rules only' };
   }
   const branch = currentBranch();
   if (branch === null) {
@@ -429,7 +451,7 @@ function modeRange(revRange) {
     // Merge commits and the commits of automation such as dependabot have messages of their
     // own. The identity check still rejects commits that an AI agent made in its own name.
     if (commit.parents.length > 1 || commit.authorName.endsWith('[bot]')) {
-      problems.push(...checkAttribution(message, where));
+      problems.push(...checkForeignMessage(message, where));
     } else {
       problems.push(...checkMessage(message, where, { version: 'forbidden', allowFixup: true }));
     }
@@ -450,6 +472,7 @@ function modePrTitle(title, options) {
   const problems = [
     ...checkSubject(title.trim(), where, { version: 'required' }),
     ...checkAttribution(title, where),
+    ...checkName(title, where),
   ];
   const [version] = splitVersion(title.trim());
   if (version) {
@@ -459,9 +482,10 @@ function modePrTitle(title, options) {
   if (options['body-file']) {
     // The body is Markdown, where a leading "#" is a heading, not a comment.
     const body = cleanMessage(readFileSync(options['body-file'], 'utf8'), { mode: 'whitespace' });
-    problems.push(...checkAttribution(body, 'pr-body'));
+    problems.push(...checkForeignMessage(body, 'pr-body'));
   }
   const branch = options['head-ref'];
+  if (branch) problems.push(...checkName(branch, 'branch'));
   if (branch && !BRANCH_RE.test(branch)) {
     problems.push(
       problem(where, 'branch', `the branch "${branch}" must be named <type>/<kebab-case-description>, with <type> one of ${BRANCH_TYPES.join(', ')}`),
@@ -548,7 +572,8 @@ const OPTIONS = {
 
 function report({ problems, note }, { quiet = false } = {}) {
   for (const { where, rule, detail } of problems) {
-    const line = `${where} ${rule}: ${detail}`;
+    // Other rules quote the text they object to, so the name is blotted out of every line.
+    const line = masked(`${where} ${rule}: ${detail}`);
     console.log(`check-commits: ${line}`);
     if (process.env.GITHUB_ACTIONS) console.log(`::error title=check-commits::${line}`);
   }

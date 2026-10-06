@@ -10,19 +10,19 @@
 // "two-words", "two_words" and "TwoWords" all count. A Chinese spelling is found in any run of
 // Chinese characters; spaces and middle dots don't end a run, but other punctuation does.
 //
-// It needs only Node and git, so the same file runs as the pre-commit and commit-msg hooks, in
-// CI (.github/workflows/conventions.yml) and by hand:
+// This script checks files and file paths. Commit messages, pull request titles and bodies, and
+// branch names are checked by scripts/check-commits.mjs, which imports findSpellings from here
+// and applies it along with its other rules.
+//
+// It needs only Node and git, so the same file runs as the pre-commit hook, in CI
+// (.github/workflows/conventions.yml) and by hand:
 //
 //   node scripts/check-names.mjs files
 //       every tracked file: its path and its contents
 //   node scripts/check-names.mjs staged
 //       the files staged for the next commit (the pre-commit hook)
-//   node scripts/check-names.mjs msg <file>
-//       one commit message (the commit-msg hook)
-//   node scripts/check-names.mjs range <rev-range>
-//       the message of every commit in a range
 //   node scripts/check-names.mjs text [--label <what>] [--file <file>] [-- <text>]
-//       any other text, such as a pull request title or body, or a branch name
+//       any other text, such as the draft of a pull request description
 //   node scripts/check-names.mjs hash <spelling>
 //       print the SPELLINGS entry for a new spelling
 //
@@ -34,8 +34,6 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-
-import { cleanMessage, git, GitError, messageCleanup } from './check-commits.mjs';
 
 // The hash of each normalized spelling (see entryFor): the English name, the Chinese name in
 // simplified and in traditional characters, and the pinyin of the Chinese name. To add a
@@ -61,6 +59,7 @@ const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const isUpper = (char) => char !== char.toLowerCase();
 const isLower = (char) => char !== char.toUpperCase();
 
+class GitError extends Error {}
 class UsageError extends Error {}
 
 // The SPELLINGS entry for a spelling: its Chinese characters or else its letters, folded the
@@ -185,8 +184,16 @@ function checkFile(path, buffer) {
 // Modes
 // --------------------------------------------------------------------------------------------
 
-const repoRoot = () => git('rev-parse', '--show-toplevel').trim();
-const nulSeparated = (output) => output.split('\0').filter(Boolean);
+// Runs git and returns its output as a buffer, because the contents of a file may not be text.
+function git(...args) {
+  const result = spawnSync('git', args, { maxBuffer: 256 * 1024 * 1024 });
+  if (result.error) throw new GitError(`could not run git: ${result.error.message}`);
+  if (result.status !== 0) throw new GitError(`git ${args.join(' ')}: ${result.stderr.toString().trim()}`);
+  return result.stdout;
+}
+
+const repoRoot = () => git('rev-parse', '--show-toplevel').toString().trim();
+const nulSeparated = (output) => output.toString().split('\0').filter(Boolean);
 
 function modeFiles() {
   const root = repoRoot();
@@ -210,31 +217,9 @@ function modeStaged() {
   const paths = nulSeparated(git('-C', root, 'diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR'));
   const problems = [];
   for (const path of paths) {
-    const result = spawnSync('git', ['-C', root, 'show', `:${path}`], { maxBuffer: 256 * 1024 * 1024 });
-    if (result.error || result.status !== 0) {
-      throw new GitError(`git show :${masked(path)}: ${result.error?.message ?? result.stderr.toString().trim()}`);
-    }
-    problems.push(...checkFile(path, result.stdout));
+    problems.push(...checkFile(path, git('-C', root, 'show', `:${path}`)));
   }
   return { problems, note: `${paths.length} staged file(s)` };
-}
-
-function modeMsg(file) {
-  const message = cleanMessage(readFileSync(file, 'utf8'), messageCleanup());
-  return { problems: checkText(message, 'commit message'), note: 'commit message' };
-}
-
-function modeRange(revRange) {
-  const records = git('log', '--format=%H%x00%B%x1e', revRange)
-    .split('\x1e')
-    .map((record) => record.trim())
-    .filter(Boolean);
-  const problems = [];
-  for (const record of records) {
-    const [sha, message] = record.split('\x00');
-    problems.push(...checkText(message, `commit ${sha.slice(0, 7)}`));
-  }
-  return { problems, note: `${records.length} commit(s) in ${revRange}` };
 }
 
 function modeText(texts, options) {
@@ -257,8 +242,6 @@ function modeHash(spelling) {
 const USAGE = `Usage:
   node scripts/check-names.mjs files
   node scripts/check-names.mjs staged
-  node scripts/check-names.mjs msg <file>
-  node scripts/check-names.mjs range <rev-range>
   node scripts/check-names.mjs text [--label <what>] [--file <file>] [-- <text>]
   node scripts/check-names.mjs hash <spelling>`;
 
@@ -268,7 +251,7 @@ const OPTIONS = {
 };
 
 // How many positional arguments each mode takes; text takes any number.
-const ARGUMENTS = { files: 0, staged: 0, msg: 1, range: 1, hash: 1 };
+const ARGUMENTS = { files: 0, staged: 0, hash: 1 };
 
 function report({ problems, note }, { quiet = false } = {}) {
   for (const { where, detail } of problems) {
@@ -296,10 +279,6 @@ export function main(argv) {
         return report(modeFiles());
       case 'staged':
         return report(modeStaged(), { quiet: true });
-      case 'msg':
-        return report(modeMsg(rest[0]), { quiet: true });
-      case 'range':
-        return report(modeRange(rest[0]));
       case 'text':
         return report(modeText(rest, options));
       case 'hash':
@@ -308,12 +287,13 @@ export function main(argv) {
         throw new UsageError(mode ? `unknown mode "${mode}"` : 'no mode given');
     }
   } catch (error) {
+    // An error message may quote a path or an argument, so it is masked like the rest of a report.
     if (error instanceof UsageError || error.code?.startsWith('ERR_PARSE_ARGS')) {
-      console.error(`check-names: ${error.message}\n\n${USAGE}`);
+      console.error(`check-names: ${masked(error.message)}\n\n${USAGE}`);
       return 2;
     }
     if (error instanceof GitError || error.code === 'ENOENT') {
-      console.error(`check-names: error: ${error.message}`);
+      console.error(`check-names: error: ${masked(error.message)}`);
       return 2;
     }
     throw error;

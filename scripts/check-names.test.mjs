@@ -144,7 +144,7 @@ describe('command line', () => {
   test('rejects wrong arguments', () => {
     assert.equal(run().status, 2);
     assert.equal(run('nonsense').status, 2);
-    assert.equal(run('msg').status, 2);
+    assert.equal(run('hash').status, 2);
     assert.equal(run('files', 'extra').status, 2);
     assert.equal(run('text').status, 2);
   });

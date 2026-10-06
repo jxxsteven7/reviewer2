@@ -15,6 +15,7 @@ import {
   checkAttribution,
   checkIdentity,
   checkMessage,
+  checkName,
   checkPackageJson,
   checkSubject,
   cleanMessage,
@@ -23,6 +24,7 @@ import {
   splitVersion,
   successors,
 } from './check-commits.mjs';
+import { entryFor } from './check-names.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./check-commits.mjs', import.meta.url));
 const rules = (problems) => problems.map((problem) => problem.rule);
@@ -199,6 +201,26 @@ describe('messages', () => {
     assert.deepEqual(checkPackageJson([0, 3, 5], null, 'test'), []);
     assert.deepEqual(rules(checkPackageJson([0, 3, 5], '{"version": "0.3.0"}', 'test')), []);
     assert.deepEqual(rules(checkPackageJson([0, 3, 5], '{"version": "1.0.0"}', 'test')), ['package.json']);
+  });
+});
+
+describe('the name of the board game', () => {
+  // The real spellings must not appear in the repository, so the tests look for a made-up one.
+  const spellings = [entryFor('zorblax')];
+
+  test('checkName says where the name starts without repeating it', () => {
+    const problems = checkName('feat: add rooms\n\nLike Zor-Blax, but online.', 'test', spellings);
+    assert.deepEqual(rules(problems), ['name']);
+    assert.match(problems[0].detail, /line 3, column 6 /);
+    assert.doesNotMatch(problems[0].detail, /zor/i);
+    assert.deepEqual(checkName('feat: add rooms', 'test', spellings), []);
+  });
+
+  test('is refused in the subject and in the body of a message', () => {
+    const check = (message) => rules(checkMessage(message, 'test', { version: 'forbidden', spellings }));
+    assert.deepEqual(check('feat: add zorblax rooms'), ['name']);
+    assert.deepEqual(check('feat: add rooms\n\nThe rules of Zorblax.'), ['name']);
+    assert.deepEqual(check('feat: add rooms\n\nThe rules of the game.'), []);
   });
 });
 

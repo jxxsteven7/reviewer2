@@ -12,7 +12,7 @@ Follow these in every line of code. Reviewers check them item by item.
 ## Intellectual property
 
 - The first game borrows its mechanics from a commercial board game. **The name of that game must not appear anywhere**: not in the UI, copy, code identifiers, docs, file names, commit messages, branch names or PR titles and descriptions, in English or in Chinese.
-  - `scripts/check-names.mjs` enforces this. The `pre-commit` and `commit-msg` hooks run it on your machine, and the `Forbidden name` check runs it in CI. It stores the name only as hashes, so the script doesn't contain it either.
+  - `scripts/check-names.mjs` enforces this. It checks files and file paths, in the `pre-commit` hook on your machine and in the `Forbidden name` check in CI. `scripts/check-commits.mjs` uses it to check commit messages, PR titles and descriptions, and branch names, in the `commit-msg` hook and in the `Commits and version` check. It stores the name only as hashes, so the script doesn't contain it either.
   - If the check flags something by mistake, rephrase the text. Don't weaken the check.
 - All word lists are original. Don't use the official word list of any commercial board game.
 - Art, icons and color schemes are original and don't imitate the original game's visual design.

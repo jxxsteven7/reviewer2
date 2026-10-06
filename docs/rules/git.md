@@ -74,7 +74,7 @@ git fetch --prune
 The repository ships four git hooks in `.githooks/` that catch rule violations on your machine:
 
 - `pre-commit` and `pre-merge-commit` refuse commits, including the merge commits that `git merge` and `git pull` make, while `main` is checked out. On other branches they run `scripts/check-names.mjs`, which refuses staged files whose name or contents contain the name of the board game the first game is based on; see [constraints.md](constraints.md).
-- `commit-msg` runs `scripts/check-commits.mjs`, the same checker CI uses. It refuses commit messages that break the format below, contain Chinese text or AI or agent attribution, or carry a version. It then runs `scripts/check-names.mjs` on the message.
+- `commit-msg` runs `scripts/check-commits.mjs`, the same checker CI uses. It refuses commit messages that break the format below, contain Chinese text, AI or agent attribution or the name of that board game, or carry a version.
 - `pre-push` refuses pushes to `main` on the remote.
 
 Run `git config core.hooksPath .githooks` once in the main checkout. It then applies to every worktree. Never bypass the hooks with `--no-verify`.
