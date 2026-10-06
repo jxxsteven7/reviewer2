@@ -52,8 +52,27 @@ describe('seats in the waiting room', () => {
   });
 
   test('refuses seats that make no sense', () => {
-    expect(refusal(emptySeating(), 'ann', { team: 'green', role: 'guesser' } as unknown as Seat)).toBe('bad_seat');
-    expect(refusal(emptySeating(), 'ann', { team: 'red', role: 'spectator' } as unknown as Seat)).toBe('bad_seat');
+    for (const seat of [
+      { team: 'green', role: 'guesser' },
+      { team: 'red', role: 'spectator' },
+      { team: null, role: 'guesser' },
+      { team: 'red', role: 'chair' },
+      { team: 'red' },
+      { role: 'captain' },
+      null,
+      'red',
+    ]) {
+      expect(refusal(emptySeating(), 'ann', seat as unknown as Seat), JSON.stringify(seat)).toBe('bad_seat');
+    }
+  });
+
+  test('keeps a seat of its own, not the one it was given', () => {
+    const given = { team: 'red', role: 'guesser', extra: 'kept?' } as unknown as Seat;
+    const seat = seatOf(moved(emptySeating(), 'ann', given), 'ann');
+    expect(seat).toEqual(redGuesser);
+    expect(seat).not.toBe(given);
+    expect(Object.isFrozen(SPECTATOR)).toBe(true);
+    expect(seatOf(moved(emptySeating(), 'ann', { team: null, role: 'spectator' }), 'ann')).toBe(SPECTATOR);
   });
 
   test('is free for key viewers and for players of either group', () => {

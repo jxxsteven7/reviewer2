@@ -14,10 +14,13 @@ export type CardColor = Team | 'neutral' | 'reviewer2';
 // The captain gives the clues (shown as the group's PI); guessers reveal cards (shown as students).
 export type Role = 'captain' | 'guesser' | 'spectator';
 
-// Where a player sits. Spectators belong to no team.
-export type Seat = { team: Team; role: 'captain' | 'guesser' } | { team: null; role: 'spectator' };
+// Where a player sits. Spectators belong to no team. A seat is never changed: moving a player
+// gives them another seat.
+export type Seat =
+  { readonly team: Team; readonly role: 'captain' | 'guesser' } | { readonly team: null; readonly role: 'spectator' };
 
-export const SPECTATOR: Seat = { team: null, role: 'spectator' };
+// Every spectator shares this one seat, so it is frozen.
+export const SPECTATOR: Seat = Object.freeze({ team: null, role: 'spectator' });
 
 export const BOARD_SIZE = 25;
 // How many cards of each kind a board has. The team that starts gets the extra card.
@@ -77,7 +80,8 @@ export interface KeywordsView {
   remaining: Record<Team, number>;
   clue: { word: string; count: ClueCount } | null;
   guessesMade: number;
-  // How many more cards the guessers may reveal this turn, or null when there is no limit.
+  // How many more cards the guessers may reveal this turn, or null when there is no limit or no
+  // clue yet.
   guessesLeft: number | null;
   history: ClueRecord[];
   result: GameResult | null;

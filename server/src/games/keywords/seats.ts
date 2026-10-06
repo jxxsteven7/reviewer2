@@ -38,16 +38,25 @@ export function captainOf(seating: Seating, team: Team): string | null {
   return null;
 }
 
-const isValidSeat = (seat: Seat): boolean =>
-  seat.role === 'spectator' ? seat.team === null : TEAMS.includes(seat.team as Team);
+// The seats that exist: a spectator's, and a captain's or a guesser's in one of the two teams.
+// Anything else is refused, whatever the caller's types promise, and the seat that is kept is a
+// new one, so that nothing the caller passed in stays in the room.
+function seatLike(seat: Seat): Seat | null {
+  if (typeof seat !== 'object' || seat === null) return null;
+  const { team, role } = seat;
+  if (role === 'spectator') return team === null ? SPECTATOR : null;
+  if (role !== 'captain' && role !== 'guesser') return null;
+  return TEAMS.includes(team) ? { team, role } : null;
+}
 
 // Moves a player to a seat. `playing` is true while a game is on. Then whoever sits down in a
 // group belongs to it until the next game: they may step out to watch and come back, but not sit
 // in the other group, where they could act in the other group's turn. A captain's seat taken over
 // in the middle of a game shows that player the key, and nobody who has seen the key may become
 // a guesser until the next game.
-export function changeSeat(seating: Seating, member: Member, seat: Seat, playing: boolean): SeatChange {
-  if (!isValidSeat(seat)) return { ok: false, error: 'bad_seat' };
+export function changeSeat(seating: Seating, member: Member, wanted: Seat, playing: boolean): SeatChange {
+  const seat = seatLike(wanted);
+  if (!seat) return { ok: false, error: 'bad_seat' };
   if (playing && seat.team !== null) {
     const side = seating.sides.get(member.key);
     if (side !== undefined && side !== seat.team) return { ok: false, error: 'other_team' };
