@@ -6,6 +6,7 @@ export interface Config {
   port: number;
   publicDir: string;
   wordsDir: string;
+  trustProxy: boolean;
   version: string;
 }
 
@@ -27,6 +28,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: portNumber(env.PORT, 3000),
     publicDir: env.PUBLIC_DIR || join(root, 'client', 'dist'),
     wordsDir: env.WORDS_DIR || join(root, 'words'),
+    // Only behind a reverse proxy that sets X-Forwarded-For; see core/clientIp.ts.
+    trustProxy: env.TRUST_PROXY === '1' || env.TRUST_PROXY === 'true',
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   };
 }

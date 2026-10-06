@@ -40,8 +40,8 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | Path | Contents |
 |---|---|
 | `shared/src/` | Types and rules that the client and the server share. The package is `@reviewer2/shared`, and both sides import its TypeScript source directly |
-| `server/src/` | The server. `config.ts` reads the environment variables, `http.ts` serves the front end with its cache and security headers, `server.ts` puts HTTP and Socket.IO on one port, and `index.ts` starts it |
-| `server/test/` | Integration tests that start a real server |
+| `server/src/` | The server. `config.ts` reads the environment variables, `http.ts` serves the front end with its cache and security headers, `server.ts` puts HTTP and Socket.IO on one port, and `index.ts` starts it. `core/` holds rooms, players and connections, and `games/` one module per game; see [architecture.md](architecture.md) |
+| `server/test/` | Integration tests that start a real server and connect to it with Socket.IO clients |
 | `client/src/` | The Vue app: `core/` for the parts that all games share, `styles/` for the design tokens, `locales/` for all interface text |
 | `scripts/` | Repository scripts with no dependencies: the commit and name checks, the README sync check and the hook installer |
 
@@ -53,6 +53,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | `HOST` | `127.0.0.1` | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
 | `PUBLIC_DIR` | `client/dist` | Where the built front end is |
 | `WORDS_DIR` | `words` | Where the word lists are |
+| `TRUST_PROXY` | off | Set it to `1` only behind a reverse proxy that sets `X-Forwarded-For`, so that rate limits count each player's own address; see [architecture.md](architecture.md) |
 | `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
 
 Never commit passwords, keys or tokens. `.env` files are ignored by git.
