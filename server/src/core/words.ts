@@ -35,6 +35,8 @@ export class WordLibrary {
 
   constructor(lists: readonly WordListData[], skip: Skip = () => {}) {
     for (const list of lists) {
+      // Rooms name their fields by id, so a second list with the same id would replace the first.
+      if (this.#fields.has(list.id)) throw new Error(`two word lists have the id "${list.id}"`);
       const words = unique(list, skip);
       const counts = Object.fromEntries(LANGUAGES.map((language) => [language, words[language].length])) as Record<
         Language,
@@ -170,6 +172,11 @@ export function loadWordLibrary(dir: string, skip: Skip = () => {}): WordLibrary
     const list = data as Partial<WordListData> | null;
     if (!list || !isText(list.id) || !list.name || !Array.isArray(list.terms)) {
       skip(file, 'not a word list');
+      continue;
+    }
+    // The id is the file name, so no two files can give the same field.
+    if (`${list.id}.json` !== file) {
+      skip(file, `its "id" is "${list.id}", which is not the file name without .json`);
       continue;
     }
     const name = list.name;

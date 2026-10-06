@@ -32,6 +32,11 @@ describe('the word library', () => {
     expect(library.has('nope')).toBe(false);
   });
 
+  test('refuses two lists with the same id', () => {
+    const lists = [list('ml', 3), list('nlp', 3), list('ml', 5)];
+    expect(() => new WordLibrary(lists)).toThrow('two word lists have the id "ml"');
+  });
+
   test('pools the words of several fields once each, with their terms in the other language', () => {
     const library = new WordLibrary([
       list('a', 3),
@@ -202,6 +207,21 @@ describe('loading word lists', () => {
     const library = loadWordLibrary(dir, (file) => skipped.push(file));
     expect(library.fields().map((field) => field.id)).toEqual(['ml']);
     expect(skipped.sort()).toEqual(['broken.json', 'odd.json']);
+  });
+
+  test('skips a list whose id is not its file name', () => {
+    const lists = mkdtempSync(join(tmpdir(), 'reviewer2-ids-'));
+    try {
+      writeFileSync(join(lists, 'ml.json'), JSON.stringify(list('ml', 30)));
+      // An old copy that someone left beside the list must not take its place.
+      writeFileSync(join(lists, 'ml-old.json'), JSON.stringify(list('ml', 2)));
+      const skipped: unknown[][] = [];
+      const library = loadWordLibrary(lists, (...report) => skipped.push(report));
+      expect(library.fields().map(({ id, counts }) => [id, counts.en])).toEqual([['ml', 30]]);
+      expect(skipped).toEqual([['ml-old.json', 'its "id" is "ml", which is not the file name without .json']]);
+    } finally {
+      rmSync(lists, { recursive: true, force: true });
+    }
   });
 
   test("skips the terms that it can't use and says which", () => {
