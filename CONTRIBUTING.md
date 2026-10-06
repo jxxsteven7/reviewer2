@@ -5,7 +5,7 @@ Thank you for helping out! This file is the entry point to the project's rules. 
 ## Core rules
 
 1. **`main` is protected.** Nobody, maintainers included, commits directly to `main`, pushes to it, force-pushes it or deletes it. Every change reaches `main` through a pull request.
-2. **Work in your own worktree and branch.** Project members create a new branch and a matching git worktree for each piece of work, and keep the main checkout on `main`. Outside contributors fork the repository and work on a branch in their fork.
+2. **Work in a worktree, on a branch of your own.** Project members create a new branch for each piece of work, work on it in a git worktree, and keep the main checkout on `main`. Outside contributors fork the repository and work on a branch in their fork.
 3. **All code is reviewed.** Code written by people or by AI, by members or by outside contributors, must be reviewed and approved by someone other than its author before it is merged. Docs, word lists and one-line changes are no exception.
 4. **No AI or agent attribution in commits.** No `Co-Authored-By` trailers for AI tools, no "Generated with" lines, no links to AI sessions. The committer is responsible for the content.
 5. **The repository is written in English.** Code, comments, commit messages, pull requests, docs and rules use clear, standard English. The only translated document is `README.zh-CN.md`, and CI keeps it in sync with `README.md`.
@@ -17,7 +17,7 @@ The detailed rules are split by topic and shared by people and AI assistants:
 
 | File | Covers |
 |---|---|
-| [docs/rules/git.md](docs/rules/git.md) | Worktree workflow, fork workflow, branch names, commit messages, PR requirements, local hooks |
+| [docs/rules/git.md](docs/rules/git.md) | Worktree workflow, stacked pull requests, fork workflow, branch names, commit messages, PR requirements, local hooks |
 | [docs/rules/versioning.md](docs/rules/versioning.md) | Version numbers, how a PR gets its version, minor and major versions, tags and releases |
 | [docs/rules/review.md](docs/rules/review.md) | Review rules, when to approve, settling disagreements, AI-written code, what reviewers check |
 | [docs/rules/constraints.md](docs/rules/constraints.md) | Hard constraints: access from mainland China, intellectual property, game state, UI, secrets |

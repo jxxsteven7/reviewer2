@@ -5,7 +5,7 @@ How to develop, commit and open pull requests. These rules apply to project memb
 ## Basics
 
 - **`main` is protected.** Nobody, maintainers included, commits directly to `main`, pushes to it, force-pushes it or deletes it. Every change reaches `main` through a pull request.
-- **Work in your own worktree and branch.** Project members create a new branch and a matching git worktree for each piece of work. They keep the main checkout on `main` and use it only to sync. Outside contributors fork the repository and work on a branch in their fork.
+- **Work in a worktree, on a branch of your own.** Project members create a new branch for each piece of work and work on it in a git worktree. They keep the main checkout on `main` and use it only to sync. Outside contributors fork the repository and work on a branch in their fork.
 - **No AI or agent attribution in commits.** See [Commit messages](#commit-messages).
 - **Every pull request is squash-merged and versioned.** It lands on `main` as one commit titled `vX.Y.Z <type>: <summary>`. See [versioning.md](versioning.md).
 
@@ -18,13 +18,15 @@ Put the main checkout and all worktrees side by side inside one parent directory
 ```
 reviewer2-project/
 ├── reviewer2/              # main checkout: stays on main; used to sync and create worktrees, never to write code
-├── feat-keywords-rules/    # one worktree per piece of work, each on its own branch
-└── fix-reconnect/
+├── feat-keywords-rules/    # a worktree for one piece of work, named after its branch
+├── fix-reconnect/
+├── keywords-stack/         # a worktree shared by a stack of branches
+└── review-pr/              # a worktree for looking at other branches
 ```
 
 ### First-time setup
 
-Install [Node.js](https://nodejs.org) 20 or later first. The commit-msg hook and the repository's scripts run on it.
+Install [Node.js](https://nodejs.org) 20 or later first. The pre-commit and commit-msg hooks and the repository's scripts run on it.
 
 ```bash
 mkdir reviewer2-project && cd reviewer2-project
@@ -43,8 +45,8 @@ git worktree add ../feat-keywords-rules -b feat/keywords-rules origin/main
 cd ../feat-keywords-rules
 ```
 
-- One piece of work gets one branch and one worktree. You can have several open at once without them getting in each other's way.
-- Name the worktree directory after the branch, with `/` replaced by `-`.
+- Each piece of work gets its own branch, and each branch becomes one PR.
+- A piece of work that stands on its own gets its own worktree too. Name the directory after the branch, with `/` replaced by `-`. You can have several open at once without them getting in each other's way.
 - Each worktree has its own `node_modules`, so install dependencies in each one.
 
 ### While you work
@@ -55,6 +57,65 @@ git push -u origin feat/keywords-rules       # first push
 git fetch origin && git rebase origin/main   # catch up when main moves
 git push --force-with-lease                  # push after a rebase; only ever on your own branch
 ```
+
+### Worktrees that hold more than one branch
+
+A worktree doesn't have to stay on one branch. Opening one per branch is wasted effort when the branches belong together or when you only want to look at one. Two kinds of worktree move between branches, and they are named after what they are for:
+
+- **A stack.** Branches that build on each other share one worktree; see [Stacked pull requests](#stacked-pull-requests). Move between them with `git switch`.
+- **A review worktree.** Keep one worktree for reading and running other branches. Create it once with `git worktree add --detach ../review-pr origin/main`. Check a branch out detached, so that the branch itself stays free for its own worktree:
+
+  ```bash
+  git fetch origin
+  git switch --detach origin/feat/rooms
+  ```
+
+  To push a fix to that branch, run `git switch feat/rooms`, commit and push. Run `git switch --detach` when you are done.
+
+In a worktree like this:
+
+- Commit before you switch branches. A work-in-progress commit that you amend later is fine. All worktrees share one stash, so a stashed change is easy to pop in the wrong place.
+- Git refuses to check out a branch that is checked out in another worktree. Don't force it. Switch the other worktree to a different branch, or do the work there.
+- Install dependencies again after switching to a branch whose lockfile differs.
+- The main checkout is never one of these. It stays on `main`.
+
+### Stacked pull requests
+
+When a change is too large for one PR, split it into a stack: a chain of branches in which each one builds on the one below it, with one PR per branch. The bottom PR targets `main`, and every other PR targets the branch below it, so each PR shows only its own changes.
+
+```bash
+git worktree add ../keywords-stack -b feat/keywords-rules origin/main   # the bottom of the stack
+cd ../keywords-stack
+# commit, push, and open a PR against main
+git switch -c feat/keywords-online                                      # the next branch starts where this one ends
+# commit, push, and open a PR against feat/keywords-rules
+git switch -c feat/keywords-ui                                          # the top of the stack, for now
+# commit, push, and open a PR against feat/keywords-online
+```
+
+A stack is rebased as a whole, from its top branch. With `--update-refs`, which needs Git 2.38 or later, `git rebase` moves every branch of the stack along with the commits it replays.
+
+- **After changing a branch lower down**, for example to address a review, bring the branches above it along:
+
+  ```bash
+  git switch feat/keywords-ui                     # the top of the stack
+  git rebase --update-refs feat/keywords-rules    # the branch you changed
+  ```
+
+- **When `main` moves**, run `git fetch origin && git rebase --update-refs origin/main` on the top branch.
+- **After the bottom PR is merged.** A squash merge puts one new commit on `main` in place of the branch's commits, so take those commits out of the rest of the stack:
+
+  ```bash
+  git fetch origin
+  git switch feat/keywords-ui
+  git rebase --update-refs --onto origin/main feat/keywords-rules   # the branch that was merged
+  ```
+
+  GitHub points the next PR at `main` when the merged branch is deleted.
+
+After each of these, push every branch that moved, for example `git push --force-with-lease origin feat/keywords-online feat/keywords-ui`.
+
+Stacks merge from the bottom up, one PR at a time. Each PR is still reviewed and versioned on its own.
 
 ### Cleaning up after a merge
 
@@ -67,14 +128,16 @@ git branch -D feat/keywords-rules   # git doesn't recognize squash-merged branch
 git fetch --prune
 ```
 
+A worktree that holds more than one branch stays until all of its work has merged. Delete each of its branches as it lands.
+
 `git worktree list` shows all existing worktrees.
 
 ### Local hooks
 
 The repository ships four git hooks in `.githooks/` that catch rule violations on your machine:
 
-- `pre-commit` and `pre-merge-commit` refuse commits, including the merge commits that `git merge` and `git pull` make, while `main` is checked out.
-- `commit-msg` runs `scripts/check-commits.mjs`, the same checker CI uses. It refuses commit messages that break the format below, contain Chinese text or AI or agent attribution, or carry a version.
+- `pre-commit` and `pre-merge-commit` refuse commits, including the merge commits that `git merge` and `git pull` make, while `main` is checked out. On other branches they run `scripts/check-names.mjs`, which refuses staged files whose name or contents contain the name of the board game the first game is based on; see [constraints.md](constraints.md).
+- `commit-msg` runs `scripts/check-commits.mjs`, the same checker CI uses. It refuses commit messages that break the format below, contain Chinese text, AI or agent attribution or the name of that board game, or carry a version.
 - `pre-push` refuses pushes to `main` on the remote.
 
 Run `git config core.hooksPath .githooks` once in the main checkout. It then applies to every worktree. Never bypass the hooks with `--no-verify`.
@@ -155,8 +218,8 @@ every reconnect. Look them up by their player token instead.
 ## Pull request requirements
 
 - Title the PR `<type>: <summary>`, following the same rules as a commit subject. CI puts the version in front of it, and the title becomes the commit on `main` when the PR is squash-merged. See [versioning.md](versioning.md).
-- Each PR does one thing. Split large changes into several PRs so they are easy to review.
-- Base it on the latest `main`, with no conflicts.
+- Each PR does one thing. Split large changes into several PRs so they are easy to review; when they build on each other, make them a [stack](#stacked-pull-requests).
+- Base it on the latest `main`, with no conflicts. A PR in a stack is based on the branch below it instead.
 - Fill in the template: what changed, why, and how you tested it.
 - Before merging, check that the title and description still match the final change. Review often changes a PR along the way.
 - Tests pass. If you change game rules, add unit tests.

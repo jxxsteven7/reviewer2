@@ -1,5 +1,7 @@
 #!/bin/sh
 # Refuse commits on main. Do your work in your own worktree and branch; see docs/rules/git.md.
+# Then check the staged files for the name of the board game the first game is based on, which
+# must not appear anywhere; see docs/rules/constraints.md.
 
 branch=$(git symbolic-ref --short -q HEAD)
 
@@ -15,3 +17,14 @@ See docs/rules/git.md.
 EOF
   exit 1
 fi
+
+if [ ! -f scripts/check-names.mjs ]; then
+  exit 0 # a branch that predates the check
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "The pre-commit hook needs Node.js 20 or later to check the staged files. See docs/rules/git.md." >&2
+  exit 1
+fi
+
+exec node scripts/check-names.mjs staged

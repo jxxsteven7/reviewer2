@@ -1,5 +1,7 @@
 # Checks the commit and versioning convention (docs/rules/git.md and docs/rules/versioning.md)
-# with scripts/check-commits.mjs.
+# with scripts/check-commits.mjs, and keeps the name of the board game the first game is based on
+# out of the repository (docs/rules/constraints.md): scripts/check-commits.mjs refuses it in commit
+# messages, pull request titles and bodies, and branch names, and scripts/check-names.mjs in files.
 #
 # On a pull request: every commit in it, plus the PR title and body. The title becomes the squash
 # commit on main, so it must carry the next version. The job fills the version in when it is
@@ -111,7 +113,23 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - run: node --test scripts/check-commits.test.mjs
+      - run: node --test scripts/*.test.mjs
+
+  names:
+    # The name of the board game the first game is based on must not appear anywhere
+    # (docs/rules/constraints.md). scripts/check-names.mjs looks for it in every file and file
+    # path. The commit messages, the pull request title and body, and the branch name are checked
+    # by scripts/check-commits.mjs in the jobs for pull requests and for main.
+    # This name is a required status check; see docs/maintainers.md.
+    name: Forbidden name
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Files and file paths
+        run: node scripts/check-names.mjs files
 
   main:
     name: Landed commits and release

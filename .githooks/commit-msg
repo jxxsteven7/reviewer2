@@ -1,6 +1,8 @@
 #!/bin/sh
 # Check the commit message against the convention in docs/rules/git.md: the subject format,
-# English only, no AI or agent attribution, and no version prefix on branch commits.
+# English only, no AI or agent attribution, and no version prefix on branch commits. The message
+# must not contain the name of the board game the first game is based on either
+# (docs/rules/constraints.md).
 # The rules themselves live in scripts/check-commits.mjs, which CI runs as well.
 
 if [ ! -f scripts/check-commits.mjs ]; then
