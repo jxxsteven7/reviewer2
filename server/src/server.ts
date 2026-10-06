@@ -42,7 +42,11 @@ export function createAppServer(options: AppOptions): AppServer {
     maxHttpBufferSize: 16 * 1024,
   });
   const rng = options.rng ?? cryptoRng;
-  const now = options.now ?? Date.now;
+  // The server only ever asks how long ago something happened, never what time it is: for the
+  // limits, for how long a player has been away, for when a removed player may come back. So its
+  // clock is one that only runs forward. The system's clock gets corrected, sometimes by a lot,
+  // and every one of those waits would stretch or collapse with it.
+  const now = options.now ?? (() => performance.now());
   const rooms = new Rooms(rng, now, options.limits ?? DEFAULT_LIMITS);
   const sockets = attachSockets(io, {
     rooms,

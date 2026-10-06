@@ -100,6 +100,28 @@ describe('rate limits', () => {
     expect([bucket.take(), bucket.take(), bucket.take(), bucket.take()]).toEqual([true, true, true, false]);
   });
 
+  test('a clock that is set back locks nobody out', () => {
+    let time = 100_000;
+    const bucket = new TokenBucket(10, 3, () => time);
+    expect([bucket.take(), bucket.take(), bucket.take(), bucket.take()]).toEqual([true, true, true, false]);
+    time -= 60_000;
+    expect(bucket.take()).toBe(false); // nothing is owed, and nothing is given away either
+    time += 100;
+    expect(bucket.take()).toBe(true);
+
+    const counter = new WindowCounter(2, 1000, () => time);
+    counter.add('a');
+    counter.add('a');
+    expect(counter.allowed('a')).toBe(false);
+    time -= 3_600_000;
+    expect(counter.allowed('a')).toBe(true);
+    counter.add('a');
+    counter.add('a');
+    expect(counter.allowed('a')).toBe(false);
+    time += 1000;
+    expect(counter.allowed('a')).toBe(true);
+  });
+
   test('a window counter limits each key within its window', () => {
     let time = 0;
     const counter = new WindowCounter(2, 1000, () => time);
