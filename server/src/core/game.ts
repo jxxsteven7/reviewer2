@@ -40,7 +40,8 @@ export interface GameModule<Data = unknown, View = unknown> {
   // game, whatever made it: one of the game's messages, or a player who left or was benched.
   isOver(data: Data): boolean;
   // The chair ends the game early. The withdrawal names the game it is meant for, and the game
-  // refuses one for another game or one that comes after it has ended.
+  // refuses one for another game or one that comes after it has ended. The room passes that
+  // refusal on as it is, so the chair reads the game's own codes, such as game_over.
   withdraw(data: Data, gameId: string): GameResult<Data>;
   // Back to the waiting room after a game, with everyone in their seats.
   again(data: Data): Data;

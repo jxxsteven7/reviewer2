@@ -418,7 +418,8 @@ describe('games', () => {
     await join(code, 'Bob');
     await start(chair);
     await chair.send('test:finish');
-    await chair.waitFor((state) => state.phase === 'ended');
+    const finished = await chair.waitFor((state) => state.phase === 'ended');
+    expect(await chair.send('room:end', { gameId: finished.gameId })).toEqual({ ok: false, error: 'game_over' });
     expect(logged('game_ended')).toEqual([{ code }]);
     expect(await again(chair)).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'lobby');
@@ -434,7 +435,9 @@ describe('games', () => {
     await chair.send('sys:ping');
     expect(logged('game_started')).toHaveLength(2);
     expect(logged('game_ended')).toEqual([{ code }, { code }]);
-    expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'wrong_phase' });
+    // A second withdrawal, such as from a double click, gets the game's own answer for any
+    // action on a game that is over.
+    expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'game_over' });
     // A withdrawal that arrives after the room went back to the waiting room is for no game.
     await again(chair);
     await chair.waitFor((state) => state.phase === 'lobby');

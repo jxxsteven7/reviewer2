@@ -256,9 +256,11 @@ export class Room {
 
   // A withdrawal names the game it is meant for, so that one sent late, for instance by a tab
   // that was offline, can't end the next game.
+  //
+  // The room only knows which game it has. Whether that game can still be withdrawn is for the
+  // module to say, in the same words it has for any other action on a game that is over.
   withdraw(gameId: string): Done {
-    if (gameId !== this.gameId) return fail('stale');
-    if (this.phase !== 'playing') return fail('wrong_phase');
+    if (this.gameId === null || gameId !== this.gameId) return fail('stale');
     const result = this.game.withdraw(this.data, gameId);
     if (!result.ok) return fail(result.error);
     this.data = result.data;
