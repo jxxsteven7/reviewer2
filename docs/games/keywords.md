@@ -116,6 +116,24 @@ Everyone sees the public facts: whose turn it is and in which phase, the current
 - A group's empty captain's seat is open to that group's players and to spectators who haven't played in this game. Whoever has been a captain in the current game has seen the key, and may not be a guesser again until the next game (`key_viewer`). A captain may step down to watch.
 - Both lists, the key viewers and each player's group, are kept by a key that stays the same when a player leaves the room and comes back.
 
+## Messages
+
+The game's messages, on top of the room messages in [../architecture.md](../architecture.md). Their schemas are in `shared/src/games/keywords/protocol.ts`, and `server/src/games/keywords/index.ts` connects them to the rules.
+
+| Message | Payload | Who |
+|---|---|---|
+| `keywords:seat` | `team` (`red`, `blue` or `null`) and `role` (`captain`, `guesser` or `spectator`) | Any member, within the seat rules |
+| `keywords:clue` | `gameId`, `turn`, `word`, `count` (0 to 9, or `"unlimited"`) | The current team's captain |
+| `keywords:reveal` | `gameId`, `turn`, `card` (0 to 24) | The current team's guessers |
+| `keywords:pass` | `gameId`, `turn` | The current team's guessers |
+
+In every snapshot, the game's part (`RoomView.data`) holds:
+
+- the seats of everyone in the room;
+- the players who have seen the key in the current game;
+- in the waiting room, what still keeps the game from starting;
+- the game itself, from `view.ts`. A player sees the key only while sitting as a captain, so a captain who steps down to watch gets the public view again.
+
 ## Order of the checks
 
 Every action carries the `gameId` and the `turn` it was meant for. A withdrawal and a chat message carry only the `gameId`, because they are meant for the game, whatever the turn. The server checks an action in this order:
