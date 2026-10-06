@@ -1,5 +1,5 @@
-import type { Language } from '@reviewer2/shared';
-import { newCode, parseCode } from './codes';
+import { parseCode, type Language } from '@reviewer2/shared';
+import { newCode } from './codes';
 import type { GameModule } from './game';
 import type { Rng } from './random';
 import { Room } from './room';

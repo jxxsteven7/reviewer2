@@ -18,7 +18,7 @@ Adding a game means adding a module on each side, without changing the core.
 
 ## Rooms
 
-- **Codes.** A room has a 4-character code in Crockford's base32 (digits and capital letters without I, L, O and U), which gives about a million codes. Links look like `/room/K7QX`, and the interface shows the code as a manuscript number, `R2-K7QX`. The server reads a typed code in any case, with or without the `R2-` prefix, and takes I and L for 1 and O for 0.
+- **Codes.** A room has a 4-character code in Crockford's base32 (digits and capital letters without I, L, O and U), which gives about a million codes. Links look like `/room/K7QX`, and the interface shows the code as a manuscript number, `R2-K7QX`. A typed code is read in any case, with or without the `R2` prefix, with spaces or dashes anywhere in it, and with I and L for 1 and O for 0. `parseCode()` in `shared/src/codes.ts` does the reading for both sides, so the client never refuses a code that the server would take.
 - **Room IDs.** Each room also has a random `roomId`. Codes are reused after a room closes, so every snapshot carries the `roomId`, and a client that has been in a room gives it whenever it asks to be let back in: in the handshake, in `room:join` and in `room:watch`. When the code has gone to another room since, the server answers that the room is gone, and nobody ends up in a stranger's room.
 - **Language.** A room's language is set when it is created and never changes. It decides both the interface language inside the room and the words on the cards.
 - **Phases.** A room moves from `lobby` to `playing` to `ended`, and back to `lobby` for another game.

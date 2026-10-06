@@ -1,30 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import { clientIp, groupIp } from './clientIp';
-import { CODE_ALPHABET, newCode, parseCode } from './codes';
+import { newCode } from './codes';
 import { isToken, memberKey, newToken } from './identity';
 import { seededRng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
 
 describe('room codes', () => {
   test('are 4 characters without I, L, O or U', () => {
-    expect(CODE_ALPHABET).toHaveLength(32);
-    expect(CODE_ALPHABET).not.toMatch(/[ILOU]/);
     const rng = seededRng(9);
     for (let i = 0; i < 200; i += 1) expect(newCode(rng)).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}$/);
-  });
-
-  test('are read however they are typed', () => {
-    expect(parseCode('K7QX')).toBe('K7QX');
-    expect(parseCode(' k7qx ')).toBe('K7QX');
-    expect(parseCode('R2-K7QX')).toBe('K7QX');
-    expect(parseCode('r2-k7 qx')).toBe('K7QX');
-    expect(parseCode('lo1O')).toBe('1010');
-    expect(parseCode('\uff2b\uff17\uff31\uff38')).toBe('K7QX');
-    expect(parseCode('R2AB')).toBe('R2AB');
-  });
-
-  test('refuse anything else', () => {
-    for (const input of ['', 'K7Q', 'K7QXY', 'KUQX', 'K?QX', 'R2-']) expect(parseCode(input), input).toBeNull();
   });
 });
 

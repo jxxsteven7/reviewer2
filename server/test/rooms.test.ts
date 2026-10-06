@@ -1,6 +1,5 @@
-import { MAX_PLAYERS, MAX_SCREENS } from '@reviewer2/shared';
+import { CODE_ALPHABET, MAX_PLAYERS, MAX_SCREENS } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { CODE_ALPHABET } from '../src/core/codes';
 import type { GameModule } from '../src/core/game';
 import { seededRng } from '../src/core/random';
 import type { FakeView } from './fakeGame';
@@ -126,9 +125,11 @@ describe('joining a room', () => {
 
   test('accepts the code however it is typed', async () => {
     const { code } = await room();
-    const loose = `r2-${code.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'l')}`;
+    const loose = `r2 ${code.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'l')}`;
     const client = await connect();
     expect(await client.send('room:join', { code: loose, name: 'Bob' })).toMatchObject({ ok: true, code });
+    // None of the spellings of the right code is a wrong code: nothing was counted.
+    expect(await client.send('room:watch', { code: `R2${code}` })).toMatchObject({ ok: true, code });
   });
 
   test('stops at the room size limit', async () => {
