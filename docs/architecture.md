@@ -43,14 +43,14 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 - **Validation.** The server checks every payload against a zod schema before it looks at it. The schemas are in `shared/src/schemas.ts`, which the server imports as `@reviewer2/shared/schemas`. The client never imports that module, and ESLint refuses it if it tries: zod would add half again to the page's script, and it probes `new Function`, which the Content Security Policy below refuses.
 - **Snapshots.** After every change, the server sends each connection in the room its own complete snapshot, `room:state`. The client keeps the snapshot with the highest `rev` for its `roomId`. The server sends the snapshots before it answers the message that caused them, so an answer never arrives before the state it refers to.
 - **No interleaving.** Handlers never await anything between reading a room and writing it, so two messages can't interleave.
-- **Closing.** `room:closed` tells a connection that its room is gone for it. The reason is `removed`, `expired`, `left` (from another tab) or `restart`.
+- **Closing.** `room:closed` tells a connection that its room is gone for it. The reason is `removed`, `expired`, `left` (from another tab) or `restart`. It goes to the connections that are open at that moment. Whoever is offline when the chair removes them, or when the sweep drops them, has no connection to tell, and finds out from the answer to `room:join` when they come back.
 
 | Message | Payload | Who |
 |---|---|---|
 | `sys:ping` | | Anyone; checks that a connection is really alive |
 | `meta:fields` | | Anyone; returns the fields of the word library with their word counts |
 | `room:create` | `game`, `language`, `fields`, `name` | Anyone; the creator becomes the chair |
-| `room:join` | `code`, `name` (for newcomers), `roomId` (for whoever has been in the room) | Anyone; a member who comes back needs no name, and a newcomer without one gets `name_required` with the room's language |
+| `room:join` | `code`, `name` (for newcomers), `roomId` (for whoever has been in the room) | Anyone; a member who comes back needs no name. A newcomer first hears what keeps them out, `removed_recently` or `room_full`, and only then, without a name, gets `name_required` with the room's language |
 | `room:watch` | `code`, `roomId` (for a screen that has shown the room) | A screen |
 | `room:leave`, `room:rename` | `name` for renaming | Members |
 | `room:settings` | `fields` | The chair, in the waiting room |

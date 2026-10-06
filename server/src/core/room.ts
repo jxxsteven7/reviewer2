@@ -117,11 +117,18 @@ export class Room {
     return count;
   }
 
+  // Why nobody new can come in with this key for now, whatever they call themselves. A newcomer
+  // hears this before being asked for a name, rather than after having typed one.
+  refusal(key: string): 'removed_recently' | 'room_full' | null {
+    const until = this.#removed.get(key);
+    if (until !== undefined && until > this.#now()) return 'removed_recently';
+    return this.members.size >= MAX_PLAYERS ? 'room_full' : null;
+  }
+
   // A new member. The first one chairs the room.
   join(key: string, rawName: string): { ok: true; member: Member } | { ok: false; error: string } {
-    const until = this.#removed.get(key);
-    if (until !== undefined && until > this.#now()) return { ok: false, error: 'removed_recently' };
-    if (this.members.size >= MAX_PLAYERS) return { ok: false, error: 'room_full' };
+    const refusal = this.refusal(key);
+    if (refusal) return { ok: false, error: refusal };
     const name = cleanName(rawName);
     if (name === null) return { ok: false, error: 'name_invalid' };
     if (this.#nameTaken(name)) return { ok: false, error: 'name_taken' };

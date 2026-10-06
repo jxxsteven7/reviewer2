@@ -352,6 +352,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         enter(socket, room, member);
         return ok({ code: room.code, roomId: room.id });
       }
+      // Whatever keeps a newcomer out comes before the question for a name: nobody should fill
+      // in the form only to hear that the room is full or that they were removed.
+      const refusal = room.refusal(conn.key);
+      if (refusal) return fail(refusal);
       if (name === undefined) return { ok: false, error: 'name_required', language: room.language };
       const joined = room.join(conn.key, name);
       if (!joined.ok) return fail(joined.error);
@@ -437,7 +441,6 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
           closeFor(sockets, 'expired');
           log('room_closed', { code: room.code });
         }
-        closeFor(result.dropped, 'expired');
         for (const room of result.changed) broadcast(room);
         creations.prune();
         failedLookups.prune();

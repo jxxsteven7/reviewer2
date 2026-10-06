@@ -32,8 +32,6 @@ export interface SweepResult {
   closed: { room: Room; sockets: string[] }[];
   // Rooms that changed, whose members need a new snapshot.
   changed: Room[];
-  // Connections of members who were dropped from rooms that stay open.
-  dropped: string[];
   // Rooms whose game module threw. They are left as they were.
   failed: { room: Room; error: unknown }[];
 }
@@ -80,7 +78,7 @@ export class Rooms {
 
   // Runs every minute. A game module that throws stops the sweep of its own room only.
   sweep(): SweepResult {
-    const result: SweepResult = { closed: [], changed: [], dropped: [], failed: [] };
+    const result: SweepResult = { closed: [], changed: [], failed: [] };
     for (const room of this.all()) {
       try {
         this.#sweepRoom(room, result);
@@ -104,7 +102,8 @@ export class Rooms {
     try {
       if (room.phase === 'lobby') {
         for (const id of room.awayFromLobby(this.limits.lobbyOfflineMs)) {
-          result.dropped.push(...room.drop(id));
+          // Whoever is dropped here is offline, so there is no connection left to tell.
+          room.drop(id);
           changed = true;
         }
       }

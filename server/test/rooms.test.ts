@@ -132,6 +132,8 @@ describe('joining a room', () => {
     for (let i = 1; i < MAX_PLAYERS; i += 1) await join(code, `Player ${i}`);
     const late = await connect();
     expect(await late.send('room:join', { code, name: 'Late' })).toEqual({ ok: false, error: 'room_full' });
+    // A newcomer hears it before being asked for a name.
+    expect(await late.send('room:join', { code })).toEqual({ ok: false, error: 'room_full' });
   });
 });
 
@@ -217,6 +219,38 @@ describe('the handshake', () => {
       expect(client.closed, JSON.stringify(auth)).toEqual(['expired']);
       expect(client.states).toEqual([]);
     }
+  });
+
+  test('leaves it to room:join to tell a player who lost their seat while away', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    const cat = await join(code, 'Cat');
+    bob.close();
+    cat.close();
+    await chair.waitFor(() => online(chair, 'Bob') === false && online(chair, 'Cat') === false);
+    expect(await chair.send('room:remove', { playerId: bob.me })).toEqual({ ok: true });
+    server.advance(10 * 60_000 + 1);
+    server.app.sockets.sweep(); // drops Cat, who has been away from the waiting room too long
+
+    // Neither is a member any more, so the handshake brings neither back and says nothing.
+    const bobBack = await connect({ token: bob.token, code, roomId });
+    const catBack = await connect({ token: cat.token, code, roomId });
+    for (const client of [bobBack, catBack]) {
+      expect(await client.send('sys:ping')).toEqual({ ok: true });
+      expect(client.states).toEqual([]);
+      expect(client.closed).toEqual([]);
+    }
+    // The message that follows does. Bob was removed more than two minutes ago by now, so
+    // remove him again to see that answer.
+    expect(await catBack.send('room:join', { code, roomId })).toEqual({
+      ok: false,
+      error: 'name_required',
+      language: 'en',
+    });
+    expect(await bobBack.send('room:join', { code, roomId, name: 'Bob' })).toMatchObject({ ok: true });
+    expect(await chair.send('room:remove', { playerId: bobBack.me })).toEqual({ ok: true });
+    const again = await connect({ token: bob.token, code, roomId });
+    expect(await again.send('room:join', { code, roomId })).toEqual({ ok: false, error: 'removed_recently' });
   });
 
   test('takes a field that is not what it should be for a missing one', async () => {
