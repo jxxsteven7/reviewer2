@@ -661,13 +661,19 @@ describe('a game module that throws', () => {
     await until(() => server.app.rooms.find(code)?.onlineCount() === 1, 'Bob offline');
     const back = await connect({ token: bob.token, code, roomId });
     await until(() => server.app.rooms.find(code)?.onlineCount() === 2, 'Bob back');
-    server.advance(3 * 60_000);
-    server.app.sockets.sweep();
     expect(errors().length).toBeGreaterThan(0);
+    // The sweep sends a view when it changes something: here it passes the chair on to Bob.
+    chair.close();
+    await until(() => server.app.rooms.find(code)?.onlineCount() === 1, 'the chair offline');
+    const before = errors().length;
+    server.advance(3 * 60_000 + 1);
+    server.app.sockets.sweep();
+    expect(server.app.rooms.find(code)?.chairId).toBe(bob.me);
+    expect(errors().length).toBeGreaterThan(before);
     expect(errors().every((entry) => entry.fields?.where === 'view')).toBe(true);
 
-    expect(await chair.send('test:mend')).toEqual({ ok: true });
-    await back.waitFor((state) => state.me === bob.me, 'Bob sees the room again');
+    expect(await back.send('test:mend')).toEqual({ ok: true });
+    await back.waitFor((state) => state.chairId === bob.me, 'Bob sees the room again');
   });
 
   test('when someone leaves, leaves the room as it was', async () => {
@@ -693,6 +699,22 @@ describe('a game module that throws', () => {
     expect(await client.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'internal' });
     expect(members(code)).toEqual(['Ann']);
     expect(await client.send('test:press')).toEqual({ ok: false, error: 'not_member' });
+  });
+
+  test('in the sweep still lets the room hear what changed before it threw', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    const cat = await join(code, 'Cat');
+    await chair.send('test:break', { what: 'leave', only: cat.me });
+    bob.close();
+    cat.close();
+    await chair.waitFor(() => online(chair, 'Bob') === false && online(chair, 'Cat') === false);
+    server.advance(10 * 60_000 + 1);
+    server.app.sockets.sweep();
+    // Bob was dropped before the game threw for Cat, and the chair is told so.
+    await chair.waitFor((state) => state.players.length === 2, 'Bob dropped');
+    expect(names(chair)).toEqual(['Ann', 'Cat']);
+    expect(errors().map((entry) => entry.fields?.where)).toEqual(['sweep']);
   });
 
   test('in the sweep stops the sweep of its own room only', async () => {
@@ -921,8 +943,10 @@ describe('limits', () => {
     await mistype(client, 'room:watch');
     expect(await client.send('room:watch', { code })).toEqual({ ok: false, error: 'rate_limited' });
     expect(await client.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'rate_limited' });
-    // Whoever gives the room's ID has been there, and is not held up.
+    // Whoever gives the room's ID has been there, and is not held up. Nor is that connection
+    // from then on: it is in the room.
     expect(await client.send('room:watch', { code, roomId })).toMatchObject({ ok: true });
+    expect(await client.send('room:watch', { code })).toMatchObject({ ok: true });
 
     // Handshakes with wrong codes are not counted, because they are not answered either.
     server.advance(60_000);

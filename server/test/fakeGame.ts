@@ -12,6 +12,8 @@ export interface FakeData {
   gameId: string | null;
   over: boolean;
   broken: 'join' | 'leave' | 'view' | null;
+  // The one player for whom the broken part throws, or null when it throws for everyone.
+  brokenFor: string | null;
   // A fragile game ends as soon as a player leaves it or is moved to the spectators.
   fragile: boolean;
 }
@@ -25,6 +27,11 @@ export interface FakeView {
   forViewer: string;
 }
 
+interface Breakage {
+  what: string;
+  only?: string | null;
+}
+
 export const fakeGame: GameModule<FakeData, FakeView> = {
   id: 'test',
   wordsNeeded: 3,
@@ -36,6 +43,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     gameId: null,
     over: false,
     broken: null,
+    brokenFor: null,
     fragile: false,
   }),
   join(data, id) {
@@ -43,7 +51,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     return { ...data, joined: [...data.joined, id] };
   },
   leave(data, id) {
-    if (data.broken === 'leave') throw new Error('leaving broke');
+    if (data.broken === 'leave' && (data.brokenFor === null || data.brokenFor === id)) throw new Error('leaving broke');
     return { ...data, joined: data.joined.filter((other) => other !== id), over: data.over || data.fragile };
   },
   bench: (data, _ctx, id) => ({ ...data, benched: [...data.benched, id], over: data.over || data.fragile }),
@@ -64,8 +72,12 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   },
   again: (data) => ({ ...data, words: [], gameId: null, over: false }),
   handle(data, ctx, _playerId, type, payload) {
-    if (type === 'test:break') return { ok: true, data: { ...data, broken: payload as FakeData['broken'] } };
-    if (type === 'test:mend') return { ok: true, data: { ...data, broken: null } };
+    if (type === 'test:break') {
+      // What to break, or what to break and for whom.
+      const { what, only = null } = typeof payload === 'string' ? { what: payload } : (payload as Breakage);
+      return { ok: true, data: { ...data, broken: what as FakeData['broken'], brokenFor: only } };
+    }
+    if (type === 'test:mend') return { ok: true, data: { ...data, broken: null, brokenFor: null } };
     if (type === 'test:fragile') return { ok: true, data: { ...data, fragile: true } };
     // A refusal with more in it than a code: something that the game knows, and something that
     // can't be sent at all.
