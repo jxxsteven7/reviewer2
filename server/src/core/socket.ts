@@ -93,14 +93,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     }
   }
 
-  // Sends some connections the room as one viewer sees it. A view that the game can't build is
-  // that viewer's loss alone: everyone else still gets theirs.
-  function send(room: Room, socketIds: Iterable<string>, viewer: Viewer): void {
+  // Sends some connections the room as one viewer sees it: every tab of a member, or every
+  // screen. They get the same snapshot, so it is built once and goes out in one emit, which
+  // Socket.IO encodes once for all of them. A view that the game can't build is that viewer's
+  // loss alone: everyone else still gets theirs.
+  function send(room: Room, socketIds: Iterable<string>, viewer: Viewer, view = room.views()): void {
     const ids = [...socketIds];
     if (ids.length === 0) return;
     try {
-      const view = room.view(viewer);
-      for (const id of ids) io.to(id).emit('room:state', view);
+      io.to(ids).emit('room:state', view(viewer));
     } catch (error) {
       report(error, 'view', { code: room.code });
     }
@@ -117,8 +118,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       endLogged.set(room, room.gameId);
       log('game_ended', { code: room.code });
     }
-    for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id });
-    send(room, room.screens, { screen: true });
+    const view = room.views();
+    for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id }, view);
+    send(room, room.screens, { screen: true }, view);
   }
 
   // Closes a room, tells whoever is still connected to it, and logs it. `why` is for the log:

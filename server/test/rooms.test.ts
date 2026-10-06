@@ -287,6 +287,28 @@ describe('the handshake', () => {
 });
 
 describe('snapshots', () => {
+  test('reach every tab of a player and every screen, each with its own view', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    const tab = await connect({ token: bob.token, code, roomId });
+    const screens = [await connect({ watch: code, roomId }), await connect({ watch: code, roomId })];
+    expect(await chair.send('room:rename', { name: 'Anna' })).toEqual({ ok: true });
+    for (const client of [chair, bob, tab, ...screens]) await client.waitFor(() => names(client)?.[0] === 'Anna');
+    expect([chair, bob, tab, ...screens].map((client) => client.state?.me)).toEqual([
+      chair.me,
+      bob.me,
+      bob.me,
+      null,
+      null,
+    ]);
+    expect([bob, tab, ...screens].map((client) => game(client).forViewer)).toEqual([
+      `for ${bob.me}`,
+      `for ${bob.me}`,
+      'for screens',
+      'for screens',
+    ]);
+  });
+
   test('are not sent around for a second tab, or for asking again', async () => {
     const { chair, code, roomId } = await room();
     const bob = await join(code, 'Bob');

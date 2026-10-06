@@ -403,8 +403,12 @@ export class Room {
 
   // --- what people see --------------------------------------------------------------------
 
-  view(viewer: Viewer): RoomView {
-    return {
+  // The room as it is now, for any number of viewers. Most of a view is the same for everyone, so
+  // that part is put together once; the function that this returns adds what one viewer sees,
+  // which is who they are and the game's part for them.
+  views(): (viewer: Viewer) => RoomView {
+    const context = this.context;
+    const shared = {
       roomId: this.id,
       code: this.code,
       rev: this.rev,
@@ -421,9 +425,16 @@ export class Room {
         online: member.sockets.size > 0,
       })),
       screens: this.screens.size,
-      me: 'playerId' in viewer ? viewer.playerId : null,
-      data: this.game.view(this.data, this.context, viewer),
     };
+    return (viewer) => ({
+      ...shared,
+      me: 'playerId' in viewer ? viewer.playerId : null,
+      data: this.game.view(this.data, context, viewer),
+    });
+  }
+
+  view(viewer: Viewer): RoomView {
+    return this.views()(viewer);
   }
 
   // A name is taken by a member who has it, and for a while by a member who was removed with it.
