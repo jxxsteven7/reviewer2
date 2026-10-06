@@ -30,6 +30,7 @@ Run it in every worktree, because each worktree has its own `node_modules`. It a
 | `npm run format` | Rewrites files with Prettier and fixes what ESLint can |
 | `npm run typecheck` | TypeScript and vue-tsc over every package |
 | `npm run check:names` | Looks for the name of the board game in every tracked file; see [rules/constraints.md](rules/constraints.md) |
+| `npm run check:words` | Checks the word lists in `words/`; see [../words/README.md](../words/README.md) |
 | `node --test scripts/*.test.mjs` | Tests the scripts in `scripts/` |
 
 Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs them too, and also checks that the production build works.
@@ -51,6 +52,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | `PORT` | `3000` | The port the server listens on |
 | `HOST` | `127.0.0.1` | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
 | `PUBLIC_DIR` | `client/dist` | Where the built front end is |
+| `WORDS_DIR` | `words` | Where the word lists are |
 | `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
 
 Never commit passwords, keys or tokens. `.env` files are ignored by git.

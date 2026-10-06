@@ -1,0 +1,147 @@
+// Tests for scripts/check-words.mjs. Run them with: node --test scripts/check-words.test.mjs
+//
+// The fixtures that stand for Chinese text are written as \u escapes, because everything in the
+// repository is in English (docs/rules/language.md).
+
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, describe, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+import { checkWordList, MIN_TERMS } from './check-words.mjs';
+
+const SCRIPT = fileURLToPath(new URL('./check-words.mjs', import.meta.url));
+const ATTENTION = '\u6ce8\u610f\u529b';
+const SUPERVISOR = '\u5bfc\u5e08'; // what the game calls the PI in Chinese
+
+const terms = (count, make = (i) => ({ id: `term-${i}`, zh: `\u8bcd${i}`, en: `Term ${i}` })) =>
+  Array.from({ length: count }, (_, i) => make(i));
+
+const list = (overrides = {}) => ({
+  id: 'ml',
+  name: { zh: '\u673a\u5668\u5b66\u4e60', en: 'Machine Learning' },
+  contributors: ['Ann'],
+  terms: terms(MIN_TERMS),
+  ...overrides,
+});
+
+const check = (data, file = 'ml.json') => checkWordList(data, file);
+const has = (lines, pattern) => lines.some((line) => pattern.test(line));
+
+describe('a word list', () => {
+  test('in the documented format passes', () => {
+    const result = check(list());
+    assert.deepEqual(result.problems, []);
+    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.counts, { zh: MIN_TERMS, en: MIN_TERMS });
+  });
+
+  test('allows the optional fields', () => {
+    const rich = terms(MIN_TERMS, (i) => ({
+      id: `term-${i}`,
+      zh: `\u8bcd${i}`,
+      en: `Term ${i}`,
+      difficulty: 1 + (i % 5),
+      related: ['term-0'],
+      note: { zh: '\u4e00\u53e5\u8bdd', en: 'One line' },
+    }));
+    assert.deepEqual(check(list({ terms: rich })).problems, []);
+  });
+
+  test('must match its file name and have a name, contributors and terms', () => {
+    assert.ok(has(check(list(), 'nlp.json').problems, /"id" must be "nlp"/));
+    assert.ok(has(check(list({ id: 'Bad_Name' }), 'Bad_Name.json').problems, /file name must be lowercase/));
+    assert.ok(has(check(list({ name: { en: 'Machine Learning' } })).problems, /"name" needs both/));
+    assert.ok(has(check(list({ contributors: [] })).problems, /"contributors" must list/));
+    assert.ok(has(check(list({ terms: 'none' })).problems, /"terms" must be a list/));
+    assert.ok(has(check(list({ extra: true })).problems, /unknown field "extra"/));
+    assert.ok(has(check([]).problems, /one JSON object/));
+  });
+
+  test('needs 25 terms in at least one language', () => {
+    assert.ok(has(check(list({ terms: terms(MIN_TERMS - 1) })).problems, /at least 25 different terms/));
+    const englishOnly = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: `Term ${i}` }));
+    const result = check(list({ terms: englishOnly }));
+    assert.deepEqual(result.problems, []);
+    assert.deepEqual(result.counts, { zh: 0, en: MIN_TERMS });
+  });
+
+  test('warns about a language that has some terms, but fewer than 25', () => {
+    const mixed = terms(MIN_TERMS, (i) => ({
+      id: `term-${i}`,
+      en: `Term ${i}`,
+      ...(i < 3 ? { zh: `\u8bcd${i}` } : {}),
+    }));
+    const { problems, warnings } = check(list({ terms: mixed }));
+    assert.deepEqual(problems, []);
+    assert.ok(has(warnings, /only 3 terms have "zh"/));
+  });
+});
+
+describe('a term', () => {
+  const withTerm = (term) => check(list({ terms: [...terms(MIN_TERMS), term] }));
+
+  test('needs a well-formed, unique id', () => {
+    assert.ok(has(withTerm({ id: 'Attention', en: 'Attention' }).problems, /"id" must be lowercase/));
+    assert.ok(has(withTerm({ id: 'term-3', en: 'Attention' }).problems, /already used by terms\[3\]/));
+  });
+
+  test('needs Chinese, English or both, as non-empty text', () => {
+    assert.ok(has(withTerm({ id: 'empty' }).problems, /needs "zh", "en" or both/));
+    assert.ok(has(withTerm({ id: 'blank', en: '  ' }).problems, /must be a non-empty string/));
+    assert.ok(has(withTerm({ id: 'number', en: 3 }).problems, /must be a non-empty string/));
+    assert.ok(has(withTerm({ id: 'padded', en: ' Attention' }).problems, /spaces at its ends/));
+    assert.ok(has(withTerm({ id: 'spaced', en: 'Peer  review' }).problems, /two spaces in a row/));
+  });
+
+  test('must not repeat another term in the same language, whatever the case or width', () => {
+    assert.ok(has(withTerm({ id: 'again', en: 'TERM 3' }).problems, /repeats terms\[3\]/));
+    assert.ok(has(withTerm({ id: 'again', zh: '\u8bcd\uff13' }).problems, /repeats terms\[3\]/));
+  });
+
+  test('checks the optional fields', () => {
+    assert.ok(has(withTerm({ id: 'hard', en: 'Hard', difficulty: 6 }).problems, /"difficulty" must be/));
+    assert.ok(has(withTerm({ id: 'hard', en: 'Hard', difficulty: 1.5 }).problems, /"difficulty" must be/));
+    assert.ok(has(withTerm({ id: 'rel', en: 'Rel', related: 'term-1' }).problems, /"related" must be/));
+    assert.ok(has(withTerm({ id: 'note', en: 'Note', note: { fr: 'Non' } }).problems, /"note" must have/));
+    assert.ok(has(withTerm({ id: 'extra', en: 'Extra', hint: 'x' }).problems, /unknown field "hint"/));
+  });
+
+  test("brings warnings for long terms and the game's own names", () => {
+    const long = withTerm({ id: 'long', en: 'Reproducibility', zh: '\u53ef\u91cd\u590d\u6027\u7814\u7a76' });
+    assert.deepEqual(long.problems, []);
+    assert.ok(has(long.warnings, /"en" "Reproducibility" is longer than 14/));
+    assert.ok(has(long.warnings, /"zh" .* is longer than 5/));
+    assert.ok(has(withTerm({ id: 'chair', en: 'Chair' }).warnings, /name of a role or card/));
+    assert.ok(has(withTerm({ id: 'supervisor', zh: SUPERVISOR }).warnings, /name of a role or card/));
+    assert.deepEqual(withTerm({ id: 'attention', zh: ATTENTION, en: 'Attention' }).warnings, []);
+  });
+});
+
+describe('command line', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-words-'));
+  after(() => rmSync(dir, { recursive: true, force: true }));
+  const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
+
+  test('passes good files and fails bad ones', () => {
+    const good = join(dir, 'ml.json');
+    writeFileSync(good, JSON.stringify(list()));
+    const ok = run(good);
+    assert.equal(ok.status, 0, ok.stdout);
+    assert.match(ok.stdout, /OK ml\.json \(25 zh, 25 en\)/);
+
+    const bad = join(dir, 'broken.json');
+    writeFileSync(bad, '{ not json');
+    const failed = run(good, bad);
+    assert.equal(failed.status, 1);
+    assert.match(failed.stdout, /broken\.json: not valid JSON/);
+  });
+
+  test("checks the repository's own word lists by default", () => {
+    const result = run();
+    assert.equal(result.status, 0, result.stdout);
+  });
+});

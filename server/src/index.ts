@@ -1,8 +1,11 @@
 import { loadConfig } from './config';
+import { loadWordLibrary } from './core/words';
 import { log } from './log';
 import { createAppServer } from './server';
 
 const config = loadConfig();
+const words = loadWordLibrary(config.wordsDir, (file, reason) => log('word_list_skipped', { file, reason }));
+log('word_lists_loaded', { fields: words.fields().map(({ id, counts }) => ({ id, ...counts })) });
 const server = createAppServer(config);
 
 server.http.listen(config.port, config.host, () => {

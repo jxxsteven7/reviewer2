@@ -22,6 +22,7 @@
     "format": "prettier --write . && eslint --fix .",
     "typecheck": "tsc -p . && tsc -p shared && tsc -p server && vue-tsc -p client && vue-tsc -p client/tsconfig.node.json",
     "check:names": "node scripts/check-names.mjs files",
+    "check:words": "node scripts/check-words.mjs",
     "prepare": "node scripts/install-hooks.mjs"
   },
   "devDependencies": {
