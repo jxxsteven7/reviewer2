@@ -1,4 +1,5 @@
 export * from './language';
+export * from './names';
 export * from './protocol';
 export * from './room';
 export * from './games/keywords/types';

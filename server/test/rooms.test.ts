@@ -95,6 +95,20 @@ describe('joining a room', () => {
     expect(await client.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true, code });
   });
 
+  test("refuses a name that looks like someone else's", async () => {
+    const { code } = await room();
+    const client = await connect();
+    const tryName = (name: string) => client.send('room:join', { code, name });
+    // A soft hyphen, a bidi isolate and a grapheme joiner show nothing at all.
+    for (const name of ['An\u00adn', 'Ann\u2066', 'An\u034fn']) {
+      expect(await tryName(name), JSON.stringify(name)).toEqual({ ok: false, error: 'name_invalid' });
+    }
+    // A variation selector is part of many emoji, and shows nothing after a letter.
+    expect(await tryName('Ann\ufe0f')).toEqual({ ok: false, error: 'name_taken' });
+    // A Hangul filler is a name that looks empty.
+    expect(await tryName('\u3164')).toEqual({ ok: false, error: 'name_invalid' });
+  });
+
   test('tells everyone who is there', async () => {
     const { chair, code } = await room();
     const bob = await join(code, 'Bob');

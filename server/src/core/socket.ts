@@ -1,8 +1,8 @@
-import { ROOM_MESSAGES, type ClosedReason, type Handshake, type RoomMessage } from '@reviewer2/shared';
+import { cleanName, ROOM_MESSAGES, type ClosedReason, type Handshake, type RoomMessage } from '@reviewer2/shared';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { clientIp } from './clientIp';
-import { cleanName, isToken, memberKey, newToken } from './identity';
+import { isToken, memberKey, newToken } from './identity';
 import { randomId, type Rng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
 import type { GameModule, Viewer } from './game';

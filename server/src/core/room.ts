@@ -1,13 +1,15 @@
 import {
+  cleanName,
   MAX_PLAYERS,
   MAX_SCREENS,
+  sameName,
   type BoardWord,
   type Language,
   type RoomPhase,
   type RoomView,
 } from '@reviewer2/shared';
 import type { GameContext, GameModule, Viewer } from './game';
-import { cleanName, newPlayerId, sameName } from './identity';
+import { newPlayerId } from './identity';
 import { randomId, type Rng } from './random';
 
 // One room: who is in it, who chairs it, which connections belong to whom, and the game's data.

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { clientIp, groupIp } from './clientIp';
 import { CODE_ALPHABET, newCode, parseCode } from './codes';
-import { cleanName, isToken, memberKey, newToken, sameName } from './identity';
+import { isToken, memberKey, newToken } from './identity';
 import { seededRng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
 
@@ -53,21 +53,6 @@ describe('identity', () => {
     expect(memberKey(token)).toBe(memberKey(token));
     expect(memberKey(token)).not.toContain(token);
     expect(memberKey(newToken())).not.toBe(memberKey(token));
-  });
-
-  test('names are trimmed, folded and limited to 16 characters', () => {
-    expect(cleanName('  Ann  ')).toBe('Ann');
-    expect(cleanName('Ann   Lee')).toBe('Ann Lee');
-    expect(cleanName('\uff21\uff4e\uff4e')).toBe('Ann');
-    expect(cleanName('x'.repeat(16))).toBe('x'.repeat(16));
-    expect(cleanName('x'.repeat(17))).toBeNull();
-    expect(cleanName('\u{1f469}\u200d\u{1f52c}'.repeat(16))).not.toBeNull();
-    for (const bad of ['', '   ', 'A\u200bnn', 'A\u202enn', 'A\nB\u0000']) expect(cleanName(bad), bad).toBeNull();
-  });
-
-  test('names that differ only in case clash', () => {
-    expect(sameName('Ann', 'ANN')).toBe(true);
-    expect(sameName('Ann', 'Anne')).toBe(false);
   });
 });
 
