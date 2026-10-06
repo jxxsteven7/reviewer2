@@ -1,4 +1,4 @@
-import { MAX_NAME_LENGTH } from './protocol';
+import { MAX_NAME_INPUT, MAX_NAME_LENGTH } from './protocol';
 
 // Nicknames (docs/architecture.md). Both sides run these rules: the client while a player types,
 // and the server before it lets anyone in or renames them.
@@ -17,8 +17,9 @@ const HIDDEN = /(?!\u200d|\ufe0e|\ufe0f)[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Default_Igno
 const TAG_FLAGS =
   /\u{1f3f4}\u{e0067}\u{e0062}(?:\u{e0065}\u{e006e}\u{e0067}|\u{e0073}\u{e0063}\u{e0074}|\u{e0077}\u{e006c}\u{e0073})\u{e007f}/gu;
 // No emoji has a joiner or a selector after a combining mark, so one that stands there only hides
-// a run of marks from the next check.
-const GLUE_AFTER_MARK = /\p{M}(?:\u200d|\ufe0e|\ufe0f)/u;
+// a run of marks from the next check. The selectors are marks themselves, and a joiner does follow
+// one of them, as in a heart on fire, so they don't count as the mark here.
+const GLUE_AFTER_MARK = /(?!\ufe0e|\ufe0f)\p{M}(?:\u200d|\ufe0e|\ufe0f)/u;
 // A combining mark at the start of a name settles on whatever stands before the name on the page,
 // and a long run of marks piles up over the lines above. Scripts that stack their letters, such
 // as Tibetan, need runs of up to four.
@@ -39,6 +40,7 @@ function nameLength(name: string): number {
 // A nickname as it will be shown, or null when it can't be one: empty, too long, or with something
 // in it that a reader can't see. Spaces inside are collapsed and full-width forms folded.
 export function cleanName(raw: string): string | null {
+  if (raw.length > MAX_NAME_INPUT) return null;
   const name = raw.normalize('NFKC').replace(/\s+/gu, ' ').trim();
   if (HIDDEN.test(name.replace(TAG_FLAGS, '')) || GLUE_AFTER_MARK.test(name) || STRAY_MARKS.test(name)) return null;
   // What is left may still show nothing, if it is only the glue between emoji.

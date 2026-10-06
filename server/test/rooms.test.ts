@@ -102,6 +102,17 @@ describe('joining a room', () => {
     expect(await client.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true, code });
   });
 
+  test('takes any name of up to 16 characters, however many code points they are built from', async () => {
+    const { chair, code } = await room();
+    // Ten families of four: 10 characters to a reader, 70 code points, 110 UTF-16 units.
+    const families = '\u{1f468}\u200d\u{1f469}\u200d\u{1f467}\u200d\u{1f466}'.repeat(10);
+    const client = await connect();
+    expect(await client.send('room:join', { code, name: families })).toMatchObject({ ok: true });
+    expect(await chair.send('room:rename', { name: families })).toEqual({ ok: false, error: 'name_taken' });
+    // A name that is too long is an invalid name, not a malformed message.
+    expect(await chair.send('room:rename', { name: 'x'.repeat(200) })).toEqual({ ok: false, error: 'name_invalid' });
+  });
+
   test("refuses a name that looks like someone else's", async () => {
     const { code } = await room();
     const client = await connect();

@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import { cleanName, sameName } from './names';
+import { MAX_NAME_INPUT, MAX_NAME_LENGTH } from './protocol';
 
 const scientist = '\u{1f469}\u200d\u{1f52c}';
 const family = '\u{1f468}\u200d\u{1f469}\u200d\u{1f467}\u200d\u{1f466}';
 const england = '\u{1f3f4}\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f}';
+// The longest emoji there is: two people with skin tones, a heart and a kiss, in 10 code points.
+const kiss = '\u{1f9d1}\u{1f3fb}\u200d\u2764\ufe0f\u200d\u{1f48b}\u200d\u{1f9d1}\u{1f3fc}';
 
 describe('a nickname', () => {
   test('is trimmed, folded and limited to 16 characters', () => {
@@ -16,8 +19,22 @@ describe('a nickname', () => {
     for (const empty of ['', '   ', '\u3000']) expect(cleanName(empty), JSON.stringify(empty)).toBeNull();
   });
 
+  test('is not looked at when the text is far too long to be one', () => {
+    expect(cleanName(`Ann${' '.repeat(MAX_NAME_INPUT - 3)}`)).toBe('Ann');
+    expect(cleanName(`Ann${' '.repeat(MAX_NAME_INPUT - 2)}`)).toBeNull();
+    expect(kiss.repeat(MAX_NAME_LENGTH).length).toBeLessThanOrEqual(MAX_NAME_INPUT);
+  });
+
   test('counts an emoji as one character, however it is built', () => {
-    for (const emoji of [scientist, family, england, '\u{1f1f8}\u{1f1ec}', '#\ufe0f\u20e3', '\u{1f44d}\u{1f3fd}']) {
+    for (const emoji of [
+      scientist,
+      family,
+      kiss,
+      england,
+      '\u{1f1f8}\u{1f1ec}',
+      '#\ufe0f\u20e3',
+      '\u{1f44d}\u{1f3fd}',
+    ]) {
       expect(cleanName(emoji.repeat(16)), emoji).toBe(emoji.repeat(16));
       expect(cleanName(emoji.repeat(17)), emoji).toBeNull();
     }
@@ -53,6 +70,10 @@ describe('a nickname', () => {
     expect(cleanName('\u0301A')).toBeNull();
     // A selector between the marks hides the run from nobody.
     expect(cleanName('A' + '\u0301\ufe0f'.repeat(8))).toBeNull();
+    expect(cleanName('x\u0301\u200dy')).toBeNull();
+    // A joiner after a selector is how some emoji are built: a heart on fire, a keycap.
+    expect(cleanName('Ann \u2764\ufe0f\u200d\u{1f525}')).not.toBeNull();
+    expect(cleanName('Ann 1\ufe0f\u20e3')).not.toBeNull();
   });
 
   test('may be written in any script', () => {

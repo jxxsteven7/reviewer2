@@ -4,7 +4,11 @@
 // never imports.
 
 export const ROOM_CODE_LENGTH = 4;
+// The longest nickname, in the characters that a reader sees, and the longest text that is looked
+// at as a name at all, in UTF-16 units as it arrives. One character may take many units: sixteen
+// of the longest emoji, which are built from 10 code points each, come to 240.
 export const MAX_NAME_LENGTH = 16;
+export const MAX_NAME_INPUT = 256;
 export const MAX_PLAYERS = 30;
 export const MAX_SCREENS = 5;
 

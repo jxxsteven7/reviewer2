@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LANGUAGES } from './language';
+import { MAX_NAME_INPUT } from './protocol';
 
 // The schemas that the server checks every message against (docs/architecture.md). Only the
 // server imports this module, so that the client's bundle doesn't need zod: a schema is built
@@ -8,7 +9,10 @@ import { LANGUAGES } from './language';
 
 // A code as someone typed it, with whatever they put around and between its characters.
 const code = z.string().max(32);
-const name = z.string().max(64);
+// The rules for names (names.ts) say what a name may be. This only keeps out what is too long to
+// be looked at, and it is no tighter than they are, so that a name which they would take is never
+// refused here as a bad request.
+const name = z.string().max(MAX_NAME_INPUT);
 const playerId = z.string().max(32);
 const gameId = z.string().max(64);
 const roomId = z.string().max(64);
