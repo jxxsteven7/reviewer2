@@ -3,10 +3,12 @@ import {
   MAX_PLAYERS,
   MAX_SCREENS,
   sameName,
+  type Ack,
   type Language,
   type RoomPhase,
   type RoomView,
 } from '@reviewer2/shared';
+import { done, fail } from './answers';
 import type { GameContext, GameModule, Viewer } from './game';
 import { newPlayerId } from './identity';
 import { randomId, type Rng } from './random';
@@ -26,10 +28,6 @@ export interface Member {
   sockets: Set<string>;
   offlineSince: number | null;
 }
-
-export type Done = { ok: true } | { ok: false; error: string };
-const done: Done = { ok: true };
-const fail = (error: string): Done => ({ ok: false, error });
 
 // How long someone the chair removed must wait before they may come back, and how long nobody
 // else may take their name.
@@ -55,10 +53,10 @@ export function chooseFields(
   fields: readonly string[],
   language: Language,
   needed: number,
-): { ok: true; fields: string[] } | { ok: false; error: 'bad_fields' | 'no_words' } {
+): Ack<{ fields: string[] }> {
   const chosen = [...new Set(fields)];
-  if (!chosen.every((id) => words.has(id))) return { ok: false, error: 'bad_fields' };
-  if (words.pool(chosen, language).length < needed) return { ok: false, error: 'no_words' };
+  if (!chosen.every((id) => words.has(id))) return fail('bad_fields');
+  if (words.pool(chosen, language).length < needed) return fail('no_words');
   return { ok: true, fields: chosen };
 }
 
@@ -161,12 +159,12 @@ export class Room {
   }
 
   // A new member. The first one chairs the room.
-  join(key: string, rawName: string): { ok: true; member: Member } | { ok: false; error: string } {
+  join(key: string, rawName: string): Ack<{ member: Member }> {
     const refusal = this.refusal(key);
-    if (refusal) return { ok: false, error: refusal };
+    if (refusal) return fail(refusal);
     const name = cleanName(rawName);
-    if (name === null) return { ok: false, error: 'name_invalid' };
-    if (this.#nameTaken(name)) return { ok: false, error: 'name_taken' };
+    if (name === null) return fail('name_invalid');
+    if (this.#nameTaken(name)) return fail('name_taken');
 
     const member: Member = {
       id: newPlayerId(),
@@ -245,7 +243,7 @@ export class Room {
     return [...member.sockets];
   }
 
-  rename(id: string, rawName: string): Done {
+  rename(id: string, rawName: string): Ack {
     const name = cleanName(rawName);
     if (name === null) return fail('name_invalid');
     const member = this.members.get(id);
@@ -258,7 +256,7 @@ export class Room {
 
   // --- the chair's controls ---------------------------------------------------------------
 
-  setFields(fields: readonly string[]): Done {
+  setFields(fields: readonly string[]): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
     const chosen = chooseFields(this.#words, fields, this.language, this.game.wordsNeeded);
     if (!chosen.ok) return chosen;
@@ -272,7 +270,7 @@ export class Room {
   // connection had stalled, is stale, even when the room is back in the waiting room by now.
   //
   // The room draws the words itself, preferring those that it hasn't played with yet.
-  start(round: number): Done {
+  start(round: number): Ack {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (this.game.startProblems(this.data, this.context).length > 0) return fail('cannot_start');
@@ -295,10 +293,10 @@ export class Room {
   //
   // The room only knows which game it has. Whether that game can still be withdrawn is for the
   // module to say, in the same words it has for any other action on a game that is over.
-  withdraw(gameId: string): Done {
+  withdraw(gameId: string): Ack {
     if (this.gameId === null || gameId !== this.gameId) return fail('stale');
     const result = this.game.withdraw(this.data, gameId);
-    if (!result.ok) return fail(result.error);
+    if (!result.ok) return result;
     this.data = result.data;
     this.phase = 'ended';
     this.changed();
@@ -307,7 +305,7 @@ export class Room {
 
   // Back to the waiting room after the game that the message names. A late one must not clear
   // away the result of a later game.
-  again(gameId: string): Done {
+  again(gameId: string): Ack {
     if (gameId !== this.gameId) return fail('stale');
     if (this.phase !== 'ended') return fail('wrong_phase');
     this.data = this.game.again(this.data);
@@ -318,14 +316,14 @@ export class Room {
     return done;
   }
 
-  shuffle(): Done {
+  shuffle(): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
     this.data = this.game.shuffle(this.data, this.context);
     this.changed();
     return done;
   }
 
-  bench(id: string): Done {
+  bench(id: string): Ack {
     if (!this.members.has(id)) return fail('no_such_player');
     const data = this.game.bench(this.data, this.context, id);
     this.#take(data, this.#endsWith(data));
@@ -334,9 +332,9 @@ export class Room {
   }
 
   // Removes a member, who then has to wait before coming back.
-  remove(id: string): { ok: true; sockets: string[] } | { ok: false; error: string } {
+  remove(id: string): Ack<{ sockets: string[] }> {
     const member = this.members.get(id);
-    if (!member) return { ok: false, error: 'no_such_player' };
+    if (!member) return fail('no_such_player');
     const sockets = this.drop(id);
     this.#removed.set(member.key, { until: this.#now() + REMOVED_FOR_MS, name: member.name });
     return { ok: true, sockets };
@@ -345,7 +343,7 @@ export class Room {
   // The chair goes to someone who is there to take it. Handed to a member who has been offline
   // for a while, it would pass on again at the next sweep, to whoever joined first, without a
   // word to anyone.
-  handOver(id: string): Done {
+  handOver(id: string): Ack {
     if (!this.members.has(id)) return fail('no_such_player');
     if (!this.isOnline(id)) return fail('player_offline');
     this.chairId = id;
@@ -354,9 +352,9 @@ export class Room {
   }
 
   // A game message from a member.
-  act(id: string, type: string, payload: unknown): Done {
+  act(id: string, type: string, payload: unknown): Ack {
     const result = this.game.handle(this.data, this.context, id, type, payload);
-    if (!result.ok) return fail(result.error);
+    if (!result.ok) return result;
     this.#take(result.data, this.#endsWith(result.data));
     this.changed();
     return done;

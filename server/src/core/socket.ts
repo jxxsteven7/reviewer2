@@ -1,7 +1,8 @@
-import { cleanName, type ClosedReason } from '@reviewer2/shared';
+import { cleanName, type Ack, type ClosedReason } from '@reviewer2/shared';
 import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
+import { fail } from './answers';
 import { clientIp } from './clientIp';
 import { isToken, memberKey, newToken } from './identity';
 import { TokenBucket, WindowCounter } from './rateLimit';
@@ -34,9 +35,9 @@ interface Connection {
   bucket: TokenBucket;
 }
 
-type Reply = { ok: true; [field: string]: unknown } | { ok: false; error: string; [field: string]: unknown };
+// What a message is answered with (docs/architecture.md).
+type Reply = Ack<Record<string, unknown>>;
 const ok = (fields: Record<string, unknown> = {}): Reply => ({ ok: true, ...fields });
-const fail = (error: string): Reply => ({ ok: false, error });
 
 // "<prefix>:<action>". Game messages carry their game's ID as the prefix, so a game can't be named
 // after one of the prefixes of the room messages.
@@ -299,8 +300,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return run(found.room, found.member);
   }
 
-  function changed(room: Room, result: { ok: true } | { ok: false; error: string }): Reply {
-    if (!result.ok) return fail(result.error);
+  // The answer to a message that was to change a room, after telling everyone when it did.
+  function changed(room: Room, result: Ack): Reply {
+    if (!result.ok) return result;
     broadcast(room);
     return ok();
   }
@@ -351,7 +353,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // and it must not be free to anyone who asks for rooms that can't be.
       creations.add(conn.ip);
       const created = rooms.create({ game: module, language, fields });
-      if (!created.ok) return fail(created.error);
+      if (!created.ok) return created;
       const { room } = created;
       const joined = room.join(conn.key, name);
       // The name was checked above and the room is new, so nothing can refuse its first member.
@@ -373,9 +375,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // in the form only to hear that the room is full or that they were removed.
       const refusal = room.refusal(conn.key);
       if (refusal) return fail(refusal);
-      if (name === undefined) return { ok: false, error: 'name_required', language: room.language };
+      if (name === undefined) return { ...fail('name_required'), language: room.language };
       const joined = room.join(conn.key, name);
-      if (!joined.ok) return fail(joined.error);
+      if (!joined.ok) return joined;
       enter(socket, room, joined.member);
       return ok({ code: room.code, roomId: room.id });
     });
@@ -431,7 +433,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       asChair(socket, (room, chair) => {
         if (playerId === chair.id) return fail('bad_request'); // the chair leaves instead
         const removed = room.remove(playerId);
-        if (!removed.ok) return fail(removed.error);
+        if (!removed.ok) return removed;
         closeFor(removed.sockets, 'removed');
         broadcast(room);
         return ok();

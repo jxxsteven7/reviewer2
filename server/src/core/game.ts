@@ -1,4 +1,4 @@
-import type { BoardWord, Language, RoomPhase } from '@reviewer2/shared';
+import type { Ack, BoardWord, Language, RoomPhase } from '@reviewer2/shared';
 import type { Rng } from './random';
 
 // What the shared layer needs from a game (docs/architecture.md). The shared layer runs rooms,
@@ -19,7 +19,9 @@ export interface GameContext {
 // Who is looking: a member of the room, or a screen that only watches.
 export type Viewer = { playerId: string } | { screen: true };
 
-export type GameResult<Data> = { ok: true; data: Data } | { ok: false; error: string };
+// What a module answers when it is asked to change its data: the new data, or a refusal with one
+// of the game's error codes.
+export type GameUpdate<Data> = Ack<{ data: Data }>;
 
 export interface GameModule<Data = unknown, View = unknown> {
   id: string;
@@ -42,12 +44,12 @@ export interface GameModule<Data = unknown, View = unknown> {
   // The chair ends the game early. The withdrawal names the game it is meant for, and the game
   // refuses one for another game or one that comes after it has ended. The room passes that
   // refusal on as it is, so the chair reads the game's own codes, such as game_over.
-  withdraw(data: Data, gameId: string): GameResult<Data>;
+  withdraw(data: Data, gameId: string): GameUpdate<Data>;
   // Back to the waiting room after a game, with everyone in their seats.
   again(data: Data): Data;
   // The game's own messages, such as "keywords:reveal". Must not await anything, so that no
   // other message can run between reading the data and writing it.
-  handle(data: Data, ctx: GameContext, playerId: string, type: string, payload: unknown): GameResult<Data>;
+  handle(data: Data, ctx: GameContext, playerId: string, type: string, payload: unknown): GameUpdate<Data>;
   // The game's part of the room view, filtered for this viewer. The only way a game's data
   // leaves the server.
   view(data: Data, ctx: GameContext, viewer: Viewer): View;

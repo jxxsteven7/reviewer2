@@ -1,3 +1,5 @@
+import type { Language } from './language';
+
 // The messages between the client and the server over Socket.IO (docs/architecture.md). Every
 // message from the client gets an acknowledgement: { ok: true, ... } or { ok: false, error }.
 // The schemas that the server checks every payload against are in schemas.ts, which the client
@@ -39,7 +41,11 @@ export const ROOM_ERRORS = [
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 
-export type Ack<Data extends object = object> = ({ ok: true } & Data) | { ok: false; error: string };
+// What the server answers a message with: that it did what was asked, with whatever it has to
+// say about it, or that it didn't, with an error code. `language` comes with name_required alone:
+// it is the room's language, for the form that asks a newcomer for a name.
+export type Ack<Data extends object = object> =
+  ({ ok: true } & Data) | { ok: false; error: string; language?: Language };
 
 // The handshake, which brings back whoever has been in a room before the first message runs. A
 // browser sends its token and, once it is in a room, that room's code and ID. A screen sends the

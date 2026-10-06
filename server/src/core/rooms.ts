@@ -1,4 +1,5 @@
-import { parseCode, type Language } from '@reviewer2/shared';
+import { parseCode, type Ack, type Language } from '@reviewer2/shared';
+import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule } from './game';
 import type { Rng } from './random';
@@ -53,12 +54,8 @@ export class Rooms {
   }
 
   // A new room, or why there can't be one: the server is full, or the fields won't do.
-  create(options: {
-    game: GameModule;
-    language: Language;
-    fields: readonly string[];
-  }): { ok: true; room: Room } | { ok: false; error: 'too_many_rooms' | 'bad_fields' | 'no_words' } {
-    if (this.#rooms.size >= this.limits.maxRooms) return { ok: false, error: 'too_many_rooms' };
+  create(options: { game: GameModule; language: Language; fields: readonly string[] }): Ack<{ room: Room }> {
+    if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
     const chosen = chooseFields(this.words, options.fields, options.language, options.game.wordsNeeded);
     if (!chosen.ok) return chosen;
     let code = newCode(this.rng);

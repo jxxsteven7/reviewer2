@@ -1,5 +1,5 @@
 import type { AddressInfo } from 'node:net';
-import type { ClosedReason, RoomView } from '@reviewer2/shared';
+import type { Ack, ClosedReason, RoomView } from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 import type { GameModule } from '../src/core/game';
 import { seededRng, type Rng } from '../src/core/random';
@@ -64,7 +64,7 @@ export async function until(condition: () => boolean, what = 'condition', timeou
   }
 }
 
-export type Reply = { ok: boolean; error?: string; [field: string]: unknown };
+export type Reply = Ack<Record<string, unknown>>;
 
 export class TestClient {
   readonly states: RoomView[] = [];
