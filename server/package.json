@@ -1,0 +1,20 @@
+{
+  "name": "@reviewer2/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The game server: static files, rooms and WebSocket",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "sirv": "^3.0.2",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "socket.io-client": "^4.8.4",
+    "tsx": "^4.23.15"
+  }
+}

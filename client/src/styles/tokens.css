@@ -1,0 +1,55 @@
+/* Design tokens: the colors, fonts, sizes, spacing and corners that every style takes its values
+   from. The interface looks like a typeset paper: white paper, black ink, hairline rules and
+   serif headings. There is only a light theme for now: a dark one would redefine these values
+   and nothing else. */
+:root {
+  /* The page and its quiet areas; text, secondary text and captions; hairlines; focus rings. */
+  --paper: #ffffff;
+  --paper-2: #f5f6f8;
+  --ink: #15171c;
+  --ink-2: #4b505b;
+  --ink-3: #878d99;
+  --rule: #d9dce2;
+  --focus: #1f4f8f;
+
+  /* The two groups, in carmine and Prussian blue, the inks of academic printing, and the cards
+     of neither group, each with a tint for backgrounds. Then Reviewer 2's card and its stamp. */
+  --red: #b42318;
+  --red-tint: #fbeae8;
+  --blue: #1f4f8f;
+  --blue-tint: #e7edf6;
+  --neutral: #c8ccd3;
+  --neutral-tint: #f0f1f3;
+  --r2: #15171c;
+  --stamp: #d9442b;
+
+  /* Source Serif 4 is the only web font. Chinese text uses the system's fonts, because a Chinese
+     web font weighs megabytes. */
+  --font-serif:
+    'Source Serif 4 Variable', 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC', Georgia, serif;
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC',
+    'Noto Sans SC', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Corners are nearly square: nothing is more rounded than a control. */
+  --radius-card: 2px;
+  --radius-control: 4px;
+  --measure: 40rem;
+}

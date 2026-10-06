@@ -223,11 +223,13 @@ const checkForeignMessage = (message, where) => [...checkAttribution(message, wh
 
 // The subject is covered by the printable-ASCII rule, so this looks at the body only.
 function checkBodyEnglish(lines, where) {
-  return lines.slice(1).flatMap((line, index) =>
-    CHINESE_RE.test(line)
-      ? [problem(where, 'english', `line ${index + 2} contains Chinese text: "${line.trim()}"`)]
-      : [],
-  );
+  return lines
+    .slice(1)
+    .flatMap((line, index) =>
+      CHINESE_RE.test(line)
+        ? [problem(where, 'english', `line ${index + 2} contains Chinese text: "${line.trim()}"`)]
+        : [],
+    );
 }
 
 // Subject, structure, language, attribution and name rules for one cleaned message. A message
@@ -349,7 +351,8 @@ function gitConfig(key) {
 // runs the commit hooks with GIT_EDITOR=: when it will not open one, as with `git commit -m`.
 function messageCleanup() {
   const configured = gitConfig('commit.cleanup');
-  const mode = configured && configured !== 'default' ? configured : process.env.GIT_EDITOR === ':' ? 'whitespace' : 'strip';
+  const mode =
+    configured && configured !== 'default' ? configured : process.env.GIT_EDITOR === ':' ? 'whitespace' : 'strip';
   const comment = gitConfig('core.commentString') ?? gitConfig('core.commentChar') ?? '#';
   return {
     mode: mode === 'scissors' ? 'whitespace' : mode,
@@ -488,7 +491,11 @@ function modePrTitle(title, options) {
   if (branch) problems.push(...checkName(branch, 'branch'));
   if (branch && !BRANCH_RE.test(branch)) {
     problems.push(
-      problem(where, 'branch', `the branch "${branch}" must be named <type>/<kebab-case-description>, with <type> one of ${BRANCH_TYPES.join(', ')}`),
+      problem(
+        where,
+        'branch',
+        `the branch "${branch}" must be named <type>/<kebab-case-description>, with <type> one of ${BRANCH_TYPES.join(', ')}`,
+      ),
     );
   }
   return { problems, note: `"${title.trim()}" against ${options.base}` };
@@ -525,7 +532,9 @@ function modeNext(options) {
   const previous = previousVersion(base);
   const kind = options.major ? 'major' : options.minor ? 'minor' : 'patch';
   console.log(formatVersion(successors(previous)[kind]));
-  console.error(`check-commits: after ${formatVersion(previous)} on ${base}; run \`git fetch origin\` first if in doubt`);
+  console.error(
+    `check-commits: after ${formatVersion(previous)} on ${base}; run \`git fetch origin\` first if in doubt`,
+  );
   return 0;
 }
 
@@ -535,7 +544,11 @@ function modeNext(options) {
 // next run on main.
 function modeRelease(options) {
   const ref = options.ref || 'HEAD';
-  const tagged = new Set(git('tag', '--list', 'v[0-9]*').split('\n').map((tag) => tag.trim()));
+  const tagged = new Set(
+    git('tag', '--list', 'v[0-9]*')
+      .split('\n')
+      .map((tag) => tag.trim()),
+  );
   for (const line of git('log', '--first-parent', '--reverse', '--format=%H %s', ref).split('\n')) {
     const [sha, ...subject] = line.split(' ');
     const [version] = splitVersion(subject.join(' '));

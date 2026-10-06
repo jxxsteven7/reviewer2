@@ -1,0 +1,111 @@
+import { existsSync } from 'node:fs';
+import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http';
+import sirv from 'sirv';
+
+// HTTP for everything that isn't Socket.IO: the built front end, with the SPA fallback to
+// index.html for routes such as /room/K7QX, and /healthz. The reasons for the security headers
+// and the cache headers are beside the code that sets them.
+
+export interface HttpOptions {
+  publicDir: string;
+  version: string;
+}
+
+// A Host header we're willing to repeat in the CSP: a host name or IP address and a port.
+const HOST = /^[a-z0-9.-]+(:\d{1,5})?$/i;
+
+// The Content Security Policy, except for connect-src, which names the host of each request.
+const CSP = [
+  "default-src 'self'",
+  "img-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
+function setSecurityHeaders(req: IncomingMessage, res: ServerResponse): void {
+  // 'self' covers WebSocket connections to the same host in current browsers, but WebKit only
+  // learned that in 2022, so older iOS in-app browsers need the ws:// and wss:// origins spelled out.
+  const host = req.headers.host;
+  const sockets = host && HOST.test(host) ? ` ws://${host} wss://${host}` : '';
+  res.setHeader('Content-Security-Policy', `${CSP}; connect-src 'self'${sockets}`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'same-origin');
+}
+
+function send(res: ServerResponse, status: number, type: string, body: string): void {
+  res.statusCode = status;
+  res.setHeader('Content-Type', type);
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(body);
+}
+
+const notFound = (res: ServerResponse) => send(res, 404, 'text/plain; charset=utf-8', 'Not found\n');
+
+const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
+
+// The path of a request target: everything before the query string, as sirv reads it too. Not
+// new URL(), which takes a target that starts with two slashes for a host name and throws when
+// that isn't one. Nothing would catch that error, so "GET //" alone would end the process.
+function pathOf(target: string): string {
+  const query = target.indexOf('?');
+  return query === -1 ? target : target.slice(0, query);
+}
+
+export function createRequestHandler({ publicDir, version }: HttpOptions): RequestListener {
+  const startedAt = Date.now();
+  // sirv lists the files when it starts, so it only serves the front end that was built then.
+  // A new build needs a restart: until then, a new index.html would name assets sirv doesn't know.
+  const files = existsSync(publicDir) ? staticFiles(publicDir) : null;
+
+  return (req, res) => {
+    setSecurityHeaders(req, res);
+    const path = pathOf(req.url ?? '/');
+    // Everything here is read-only. sirv would answer any method with the file or the page, so
+    // a stray POST would look like a success. Socket.IO's own requests, POSTs included, never
+    // reach this handler.
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.setHeader('Allow', 'GET, HEAD');
+      send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed\n');
+    } else if (path === '/healthz') {
+      const uptime = Math.round((Date.now() - startedAt) / 1000);
+      send(res, 200, 'application/json', JSON.stringify({ ok: true, version, uptime }));
+    } else if (!files) {
+      send(res, 404, 'text/plain; charset=utf-8', NOT_BUILT);
+    } else if (path.startsWith('/assets/')) {
+      // A missing asset is a 404, not index.html, so that a stale page fails visibly.
+      files.assets(req, res, () => notFound(res));
+    } else {
+      files.pages(req, res, () => notFound(res));
+    }
+  };
+}
+
+// Only file names with a content hash, which Vite puts in /assets/, may be cached for good.
+// Everything else, index.html included, must be checked again on every visit, or a browser
+// that cached an old page would ask for assets that a new build no longer has. sirv passes
+// setHeaders the requested path, not index.html, when it falls back to index.html.
+//
+// sirv doesn't compress anything itself. With gzip and brotli on, it sends the .gz or .br copy
+// that the build leaves beside each text file (client/compress.mjs) to the browsers that accept it.
+function staticFiles(publicDir: string) {
+  return {
+    assets: sirv(publicDir, {
+      etag: true,
+      gzip: true,
+      brotli: true,
+      setHeaders: (res) => res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'),
+    }),
+    pages: sirv(publicDir, {
+      etag: true,
+      gzip: true,
+      brotli: true,
+      single: true,
+      setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
+    }),
+  };
+}

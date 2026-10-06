@@ -23,7 +23,7 @@ if [ ! -f scripts/check-names.mjs ]; then
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "The pre-commit hook needs Node.js 20 or later to check the staged files. See docs/rules/git.md." >&2
+  echo "The pre-commit hook needs Node.js to check the staged files. Install 22.13 or later, but not 23 or 25; see docs/development.md." >&2
   exit 1
 fi
 

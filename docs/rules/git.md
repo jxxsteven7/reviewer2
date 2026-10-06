@@ -26,7 +26,7 @@ reviewer2-project/
 
 ### First-time setup
 
-Install [Node.js](https://nodejs.org) 20 or later first. The pre-commit and commit-msg hooks and the repository's scripts run on it.
+Install [Node.js](https://nodejs.org) 22.13 or later first, but not 23 or 25; [../development.md](../development.md) explains why. The git hooks, the repository's scripts and the app all run on it.
 
 ```bash
 mkdir reviewer2-project && cd reviewer2-project
@@ -47,7 +47,7 @@ cd ../feat-keywords-rules
 
 - Each piece of work gets its own branch, and each branch becomes one PR.
 - A piece of work that stands on its own gets its own worktree too. Name the directory after the branch, with `/` replaced by `-`. You can have several open at once without them getting in each other's way.
-- Each worktree has its own `node_modules`, so install dependencies in each one.
+- Each worktree has its own `node_modules`, so run `npm install` in each one.
 
 ### While you work
 
@@ -140,7 +140,7 @@ The repository ships four git hooks in `.githooks/` that catch rule violations o
 - `commit-msg` runs `scripts/check-commits.mjs`, the same checker CI uses. It refuses commit messages that break the format below, contain Chinese text, AI or agent attribution or the name of that board game, or carry a version.
 - `pre-push` refuses pushes to `main` on the remote.
 
-Run `git config core.hooksPath .githooks` once in the main checkout. It then applies to every worktree. Never bypass the hooks with `--no-verify`.
+`npm install` turns the hooks on by running `git config core.hooksPath .githooks`, which applies to every worktree. You can also run that command yourself. Never bypass the hooks with `--no-verify`.
 
 If you notice that you have already changed files on `main` in the main checkout, run `git stash`, create the worktree, and run `git stash pop` inside it.
 

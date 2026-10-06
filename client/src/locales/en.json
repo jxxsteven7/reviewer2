@@ -1,0 +1,25 @@
+{
+  "app": {
+    "name": "Reviewer 2",
+    "tagline": "Party games for academics"
+  },
+  "language": {
+    "label": "Language",
+    "zh": "中文",
+    "en": "English"
+  },
+  "home": {
+    "status": "In preparation",
+    "intro": "Online party games about academic life, played in the browser. Everyone joins the same room from their own phone or laptop: pick a nickname and you're in, with no sign-up.",
+    "first": "The first game, Double Blind, is being written. Two research groups race to find their keywords, while Reviewer 2 waits for a careless guess."
+  },
+  "footer": {
+    "noSignUp": "No sign-up, no ads.",
+    "build": "Build {version}"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "This page doesn't exist, or the link is incomplete.",
+    "home": "Back to the home page"
+  }
+}

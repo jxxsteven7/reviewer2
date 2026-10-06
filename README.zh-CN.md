@@ -34,10 +34,11 @@
 
 | 部分 | 选型 |
 |---|---|
-| 语言 | TypeScript，前后端统一 |
+| 语言 | TypeScript，前后端统一，使用 npm workspaces |
 | 前端 | Vue 3 + Vite，vue-i18n |
 | 后端 | Node.js + Socket.IO |
 | 存储 | 房间状态放在服务器内存里，第一版没有数据库 |
+| 测试 | Vitest |
 | 部署 | 一个 Node 进程同时提供前端静态文件和 WebSocket，一个域名、一个端口 |
 
 ## 目录结构（规划中）
@@ -55,7 +56,14 @@
 
 ## 本地运行
 
-代码骨架还在搭建，完成后在这里补上安装和启动命令。目标是一条命令同时启动前后端。
+需要 [Node.js](https://nodejs.org) 22.13 或更高版本，但不能是 23 或 25（测试框架不支持这两个版本）。CI 使用 24 LTS。
+
+```bash
+npm install   # also turns on the git hooks
+npm run dev   # front end on http://localhost:5173, server on port 3000
+```
+
+`npm run build && npm start` 在同一个端口 <http://localhost:3000> 上运行生产构建。其他命令、在手机上测试、在生产环境运行和环境变量见 [docs/development.md](docs/development.md)。
 
 ## 参与贡献
 
@@ -113,4 +121,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: 83a01cd9c6f63265c601617b0d9bd60329c591864506aadef67d0698ef6d653f -->
+<!-- readme-sync: 24f189b5805745e387fda77cec548dce8734570bc443a13be56e7b93a0700aa2 -->

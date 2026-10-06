@@ -1,0 +1,87 @@
+# Lints, type-checks, tests and builds the app, and checks that the build serves it. Each job's name is
+# a required status check; see docs/maintainers.md. There are no `paths:` filters on purpose:
+# a required check that a filter skips stays pending and blocks the merge.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build, as for production
+        env:
+          SHA: ${{ github.sha }}
+        run: APP_VERSION="${SHA::7}" npm run build
+      - name: The build serves the app
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          # Production needs no node_modules, so run the build from a copy that has none.
+          app="$RUNNER_TEMP/app"
+          mkdir -p "$app/server" "$app/client"
+          cp -r server/dist "$app/server/"
+          cp -r client/dist "$app/client/"
+          cp -r words "$app/"
+          node "$app/server/dist/index.cjs" > "$RUNNER_TEMP/server.log" 2>&1 &
+          server=$!
+          # Print the server's log however this step ends: a failure is hard to explain without it.
+          # A server that has already stopped can't be killed, so that must not stop the trap.
+          trap 'kill "$server" 2>/dev/null || true; cat "$RUNNER_TEMP/server.log"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "The server did not answer /healthz within 30 seconds." >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          echo
+          curl --fail --silent http://127.0.0.1:3000/healthz | grep -q "\"version\":\"${SHA::7}\""
+          curl --fail --silent http://127.0.0.1:3000/ | grep -q '<div id="app">'
+          curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
+          # The server sends the compressed copies that the build wrote.
+          curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'
