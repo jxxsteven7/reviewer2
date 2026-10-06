@@ -1,9 +1,9 @@
 // Browser storage that never throws. Private modes, some in-app browsers and full disks make
 // localStorage throw or disappear, and the game must still work then (docs/rules/constraints.md),
 // so every read and write goes through here. A value that can't be stored lives in memory for
-// the rest of the page's life.
+// the rest of the page's life, and so does a removal: null means removed.
 
-const memory = new Map<string, string>();
+const memory = new Map<string, string | null>();
 
 function storage(): Storage | null {
   try {
@@ -33,11 +33,13 @@ export function writeStored(key: string, value: string): void {
 }
 
 export function removeStored(key: string): void {
-  memory.delete(key);
+  // Remembered as removed rather than forgotten: if removeItem throws, localStorage still holds
+  // the old value, and readStored would otherwise return it.
+  memory.set(key, null);
   try {
     storage()?.removeItem(key);
   } catch {
-    // nothing to remove
+    // memory keeps the removal for this page
   }
 }
 

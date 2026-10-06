@@ -44,6 +44,17 @@ describe('storage', () => {
     expect(readStored('r2.test')).toBeNull();
   });
 
+  test('a value stays removed when localStorage can read but not remove it', () => {
+    const local = fakeStorage();
+    local.setItem('r2.test', 'old');
+    vi.stubGlobal('localStorage', { ...local, getItem: local.getItem, removeItem: throwing });
+    expect(readStored('r2.test')).toBe('old');
+    removeStored('r2.test');
+    expect(readStored('r2.test')).toBeNull();
+    writeStored('r2.test', 'new');
+    expect(readStored('r2.test')).toBe('new');
+  });
+
   test('falls back to memory when there is no localStorage at all', () => {
     vi.stubGlobal('localStorage', undefined);
     writeStored('r2.test', 'c');
