@@ -1,13 +1,16 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { wordKey } from '@reviewer2/shared';
+import { pathToFileURL } from 'node:url';
+import { BOARD_SIZE, wordKey, type Language } from '@reviewer2/shared';
 import { afterAll, describe, expect, test } from 'vitest';
 import { seededRng } from './random';
 import { drawWords, loadWordLibrary, WordLibrary, type WordListData } from './words';
 
 // Chinese test words are written as \u escapes (docs/rules/language.md).
 const zh = (i: number) => `\u8bcd${i}`;
+const REVIEWER = '\u5ba1\u7a3f\u4eba';
+const REVIEWER_TRADITIONAL = '\u5be9\u7a3f\u4eba';
 
 const list = (id: string, count: number, from = 0): WordListData => ({
   id,
@@ -127,5 +130,82 @@ describe('loading word lists', () => {
     const skipped: string[] = [];
     expect(loadWordLibrary(join(dir, 'missing'), (file) => skipped.push(file)).fields()).toEqual([]);
     expect(skipped).toHaveLength(1);
+  });
+});
+
+// scripts/check-words.mjs runs without TypeScript, so it can't import wordKey() or the size of a
+// board and has its own copies. These tests hold the copies to the originals: a list that the
+// check calls playable must be playable on the server.
+describe('the word list check', async () => {
+  interface CheckWords {
+    MIN_TERMS: number;
+    wordKey(text: string): string;
+    checkWordList(data: unknown, file: string): { problems: string[]; counts: Record<Language, number> };
+  }
+  const script = join(import.meta.dirname, '..', '..', '..', 'scripts', 'check-words.mjs');
+  const check = (await import(/* @vite-ignore */ pathToFileURL(script).href)) as CheckWords;
+
+  test('tells words apart as the game does', () => {
+    const spellings = [
+      'Co-author',
+      'co author',
+      'COAUTHOR',
+      'C++',
+      'C#',
+      'COVID-19',
+      "Master's",
+      'Na\u00efve',
+      'Cafe\u0301',
+      '\uff21\uff22\uff23 \uff11',
+      '\u2460',
+      'atten\u200btion',
+      'soft\u00adware',
+      `GPU ${zh(1)}`,
+      REVIEWER,
+      REVIEWER_TRADITIONAL,
+      '\u00df',
+      '\u0130',
+      '+++',
+      '   ',
+      '',
+    ];
+    for (const spelling of spellings) expect(check.wordKey(spelling), spelling).toBe(wordKey(spelling));
+  });
+
+  test('takes the same traditional Chinese characters for simplified ones', () => {
+    // Every character of the block that the table of variants covers.
+    const different: string[] = [];
+    for (let code = 0x4e00; code <= 0x9fff; code += 1) {
+      const char = String.fromCharCode(code);
+      if (check.wordKey(char) !== wordKey(char)) different.push(`U+${code.toString(16)}`);
+    }
+    expect(different).toEqual([]);
+    expect(check.wordKey(REVIEWER_TRADITIONAL)).toBe(REVIEWER);
+  });
+
+  test('counts the words of a list as the library does', () => {
+    const tricky = {
+      id: 'tricky',
+      name: { zh: 'T', en: 'T' },
+      contributors: ['Ann'],
+      terms: [
+        { id: 'a', en: 'Co-author', zh: REVIEWER },
+        { id: 'b', en: 'coauthor', zh: REVIEWER_TRADITIONAL },
+        { id: 'c', en: 'C++' },
+        { id: 'd', en: 'C#' },
+        { id: 'e', en: 'Na\u00efve' },
+        { id: 'f', en: 'naive' },
+        { id: 'g', en: 'atten\u200btion' },
+        { id: 'h', en: 'Attention', zh: zh(1) },
+        { id: 'i', en: 'Model', zh: 'Model' },
+      ],
+    };
+    const { counts } = check.checkWordList(tricky, 'tricky.json');
+    expect(counts).toEqual({ zh: 3, en: 5 });
+    expect(new WordLibrary([tricky]).fields()[0]?.counts).toEqual(counts);
+  });
+
+  test('asks for as many terms as a board has cards', () => {
+    expect(check.MIN_TERMS).toBe(BOARD_SIZE);
   });
 });

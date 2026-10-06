@@ -60,6 +60,11 @@ Add a row when a new game starts using the library.
 
 - A word-list PR changes only files under `words/`, and only one field per PR. Name the branch `words/<field>` and use the `words` commit type.
 - Before committing, run `node scripts/check-words.mjs`. It needs only Node, not `npm install`, and CI runs it too.
-  - It **fails** on anything that breaks the format above; on an `id` that doesn't match the file name; on a duplicate term ID; on a term that repeats another in the same language, whatever the case or width; and on a list that doesn't have 25 different terms in either language, because a board needs 25.
+  - It **fails** on:
+    - anything that breaks the format above, and an `id` that doesn't match the file name;
+    - a duplicate term ID;
+    - a term that is the same word as another in the same language. Only letters and digits count, as on the board: not case, accents, spaces, hyphens or other punctuation, and not the difference between traditional and simplified Chinese characters. A list can't hold both "Co-author" and "coauthor", or both "C++" and "C#";
+    - a term without a letter or a digit;
+    - a list that doesn't have 25 different terms in either language, because a board needs 25.
   - It **warns** about a language that has some terms but fewer than 25, which players can't pick for this field until it has more. It also warns about terms longer than 5 Chinese characters or 14 letters, which may not fit on a card on a phone, and about terms that are also the game's own names for its roles and cards, such as "PI" or "Reviewer 2", because players may mix them up. Warnings don't fail the check.
 - Word lists are reviewed like everything else. Reviewers check that the terms are accurate and well known, and that the Chinese and English match.

@@ -13,8 +13,12 @@ import { readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
 export const LANGUAGES = ['zh', 'en'];
-// A board needs 25 different words, so a field is playable in a language once it has 25 terms in it.
+// A board needs 25 different words, so a field is playable in a language once it has 25 terms in
+// it. This is BOARD_SIZE in shared/src/games/keywords/types.ts, which this script can't import:
+// it runs without TypeScript. A test in server/src/core/words.test.ts holds the two together.
 export const MIN_TERMS = 25;
 // Longer terms don't fit on a card on a 360 px wide phone.
 export const MAX_LENGTH = { zh: 5, en: 14 };
@@ -24,28 +28,67 @@ const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const LIST_KEYS = new Set(['id', 'name', 'contributors', 'terms']);
 const TERM_KEYS = new Set(['id', 'zh', 'en', 'difficulty', 'related', 'note']);
 
+// The table of traditional Chinese characters and their simplified forms that the game compares
+// words with (shared/src/han.ts). The generated file holds it as one string of \u escapes, each
+// traditional character followed by its simplified form, and is read here as text.
+const HAN_VARIANTS = join(root, 'shared', 'src', 'han-variants.ts');
+let simplified;
+
+function readHanVariants() {
+  const source = readFileSync(HAN_VARIANTS, 'utf8');
+  const start = source.indexOf('export const HAN_VARIANTS');
+  const chars = Array.from(source.slice(Math.max(start, 0)).matchAll(/\\u([0-9a-f]{4})/g), ([, hex]) =>
+    String.fromCharCode(parseInt(hex, 16)),
+  );
+  if (start < 0 || chars.length === 0 || chars.length % 2 !== 0) {
+    throw new Error(`${HAN_VARIANTS} doesn't hold the table of Chinese characters in the expected form`);
+  }
+  const forms = new Map();
+  for (let i = 0; i < chars.length; i += 2) forms.set(chars[i], chars[i + 1]);
+  return forms;
+}
+
+function toSimplified(text) {
+  simplified ??= readHanVariants();
+  return text.replace(/[\u4e00-\u9fff]/g, (char) => simplified.get(char) ?? char);
+}
+
+const INVISIBLE = /\p{Default_Ignorable_Code_Point}/gu;
+const MARKS = /\p{M}/gu;
+const NOT_LETTER_OR_DIGIT = /[^\p{L}\p{N}]+/gu;
+
+// What makes two terms the same word: their letters and digits, compared as the game compares
+// words. Full-width and compatibility forms are folded (NFKC); invisible characters, case and
+// accents are dropped; traditional Chinese characters count as their simplified forms; and
+// everything that is not a letter or a digit is left out. "Co-author", "co author" and "COAUTHOR"
+// are one word, and so are "C++" and "C#".
+//
+// This must stay the same as wordKey() in shared/src/games/keywords/clue.ts, with which the server
+// builds its word library and deals a board: a list that passes here must be playable there. This
+// script can't import that function, so a test in server/src/core/words.test.ts compares the two.
+export function wordKey(text) {
+  const folded = text.normalize('NFKC').replace(INVISIBLE, '').trim().toLowerCase().normalize('NFD').replace(MARKS, '');
+  return toSimplified(folded).replace(NOT_LETTER_OR_DIGIT, '');
+}
+
 // What the game itself calls its roles and cards, in both languages. Such terms are allowed, since
 // most are everyday academic words, but players may confuse them with the game's own labels.
-const GAME_NAMES = new Set(
-  [
-    '\u5bfc\u5e08',
-    '\u5b66\u751f',
-    '\u65c1\u542c',
-    '\u4e3b\u6301',
-    '\u4e8c\u53f7\u5ba1\u7a3f\u4eba',
-    '\u65e0\u5173\u8bba\u6587',
-    'pi',
-    'student',
-    'spectator',
-    'chair',
-    'reviewer 2',
-    'irrelevant paper',
-  ].map((name) => normalize(name)),
-);
-
-function normalize(text) {
-  return text.normalize('NFKC').trim().toLowerCase();
-}
+const GAME_NAMES = [
+  '\u5bfc\u5e08',
+  '\u5b66\u751f',
+  '\u65c1\u542c',
+  '\u4e3b\u6301',
+  '\u4e8c\u53f7\u5ba1\u7a3f\u4eba',
+  '\u65e0\u5173\u8bba\u6587',
+  'pi',
+  'student',
+  'spectator',
+  'chair',
+  'reviewer 2',
+  'irrelevant paper',
+];
+let gameNames;
+const isGameName = (key) => (gameNames ??= new Set(GAME_NAMES.map(wordKey))).has(key);
 
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
 const describe = (value) => JSON.stringify(value);
@@ -109,11 +152,17 @@ export function checkWordList(data, file) {
       if (text !== text.trim() || /\s{2}/.test(text)) {
         problems.push(`${where}: "${language}" has spaces at its ends or two spaces in a row`);
       }
-      const key = normalize(text);
-      if (texts[language].has(key)) {
-        problems.push(`${where}: "${language}" ${describe(text)} repeats terms[${texts[language].get(key)}]`);
+      const key = wordKey(text);
+      const earlier = texts[language].get(key);
+      if (key === '') {
+        problems.push(`${where}: "${language}" ${describe(text)} has no letters or digits`);
+      } else if (earlier) {
+        // Say what the other spelling is, since the two may not look alike.
+        const other =
+          earlier.text === text ? '' : ` (${describe(earlier.text)}), which has the same letters and digits`;
+        problems.push(`${where}: "${language}" ${describe(text)} repeats terms[${earlier.index}]${other}`);
       } else {
-        texts[language].set(key, index);
+        texts[language].set(key, { index, text });
         counts[language] += 1;
       }
       if ([...text].length > MAX_LENGTH[language]) {
@@ -121,7 +170,7 @@ export function checkWordList(data, file) {
           `${where}: "${language}" ${describe(text)} is longer than ${MAX_LENGTH[language]} characters and may not fit on a card`,
         );
       }
-      if (GAME_NAMES.has(key)) {
+      if (isGameName(key)) {
         warnings.push(`${where}: "${language}" ${describe(text)} is also the name of a role or card in the game`);
       }
     }
@@ -172,19 +221,20 @@ export function checkFile(path) {
 }
 
 export function main(argv) {
-  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
   const wordsDir = join(root, 'words');
   let paths = argv;
-  if (paths.length === 0) {
-    try {
+  try {
+    // Terms are compared with this table, so make sure of it before any list is read.
+    simplified ??= readHanVariants();
+    if (paths.length === 0) {
       paths = readdirSync(wordsDir)
         .filter((name) => name.endsWith('.json'))
         .sort()
         .map((name) => join(wordsDir, name));
-    } catch (error) {
-      console.error(`check-words: error: ${error.message}`);
-      return 2;
     }
+  } catch (error) {
+    console.error(`check-words: error: ${error.message}`);
+    return 2;
   }
 
   let problems = 0;

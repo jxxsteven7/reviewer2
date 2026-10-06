@@ -16,6 +16,8 @@ import { checkWordList, MIN_TERMS } from './check-words.mjs';
 const SCRIPT = fileURLToPath(new URL('./check-words.mjs', import.meta.url));
 const ATTENTION = '\u6ce8\u610f\u529b';
 const SUPERVISOR = '\u5bfc\u5e08'; // what the game calls the PI in Chinese
+const REVIEWER = '\u5ba1\u7a3f\u4eba';
+const REVIEWER_TRADITIONAL = '\u5be9\u7a3f\u4eba';
 
 const terms = (count, make = (i) => ({ id: `term-${i}`, zh: `\u8bcd${i}`, en: `Term ${i}` })) =>
   Array.from({ length: count }, (_, i) => make(i));
@@ -97,9 +99,31 @@ describe('a term', () => {
     assert.ok(has(withTerm({ id: 'spaced', en: 'Peer  review' }).problems, /two spaces in a row/));
   });
 
-  test('must not repeat another term in the same language, whatever the case or width', () => {
-    assert.ok(has(withTerm({ id: 'again', en: 'TERM 3' }).problems, /repeats terms\[3\]/));
+  test('must not be the same word as another term in the same language', () => {
+    assert.ok(has(withTerm({ id: 'again', en: 'Term 3' }).problems, /"en" "Term 3" repeats terms\[3\]$/));
+    // Only letters and digits count, as on the board: not case, width, spaces, hyphens or accents.
+    for (const spelling of ['TERM 3', 'term-3', 'Term3', 'T\u00e9rm 3', '\uff34\uff45\uff52\uff4d \uff13']) {
+      const { problems } = withTerm({ id: 'again', en: spelling });
+      assert.ok(has(problems, /repeats terms\[3\] \("Term 3"\), which has the same letters and digits/), spelling);
+    }
     assert.ok(has(withTerm({ id: 'again', zh: '\u8bcd\uff13' }).problems, /repeats terms\[3\]/));
+    const both = (first, second) =>
+      check(list({ terms: [...terms(MIN_TERMS), { id: 'first', ...first }, { id: 'second', ...second }] }));
+    assert.ok(has(both({ en: 'C++' }, { en: 'C#' }).problems, /"en" "C#" repeats terms\[25\] \("C\+\+"\)/));
+    // Traditional and simplified Chinese characters are the same too.
+    assert.ok(has(both({ zh: REVIEWER }, { zh: REVIEWER_TRADITIONAL }).problems, /"zh" .* repeats terms\[25\]/));
+    // The same spelling in the other language is another word.
+    assert.deepEqual(both({ en: 'Model' }, { zh: 'Model' }).problems, []);
+  });
+
+  test('counts each word once', () => {
+    const { counts } = check(list({ terms: [...terms(MIN_TERMS), { id: 'again', en: 'term-3', zh: ATTENTION }] }));
+    assert.deepEqual(counts, { zh: MIN_TERMS + 1, en: MIN_TERMS });
+  });
+
+  test('needs a letter or a digit', () => {
+    assert.ok(has(withTerm({ id: 'symbols', en: '+++' }).problems, /"en" "\+\+\+" has no letters or digits/));
+    assert.deepEqual(withTerm({ id: 'number', en: '42' }).problems, []);
   });
 
   test('checks the optional fields', () => {
