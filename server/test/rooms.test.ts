@@ -287,6 +287,10 @@ describe('the handshake', () => {
     const back = await connect({ token: bob.token, code, roomId: null });
     await back.waitFor((state) => state.me === bob.me, 'Bob back');
     expect(back.closed).toEqual([]);
+    // The message that follows the handshake takes "no room ID" in the same two ways.
+    expect(await back.send('room:join', { code, roomId: null })).toMatchObject({ ok: true });
+    const screen = await connect();
+    expect(await screen.send('room:watch', { code, roomId: null })).toMatchObject({ ok: true });
 
     const odd = await connect({ token: 42, code: { length: 4 }, roomId: 7, watch: ['K7QX'] });
     expect(odd.token).toMatch(/^[A-Za-z0-9_-]{43}$/);

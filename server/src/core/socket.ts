@@ -369,7 +369,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
 
     on(handlers, 'room:join', ({ code, name, roomId }) => {
-      const room = lookup(conn, code, roomId);
+      const room = lookup(conn, code, roomId ?? undefined);
       if (typeof room === 'string') return fail(room);
       const member = room.memberByKey(conn.key);
       if (member) {
@@ -388,7 +388,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
 
     on(handlers, 'room:watch', ({ code, roomId }) => {
-      const room = lookup(conn, code, roomId);
+      const room = lookup(conn, code, roomId ?? undefined);
       return typeof room === 'string' ? fail(room) : watch(socket, room);
     });
 

@@ -24,9 +24,10 @@ export const ROOM_MESSAGES = {
   'meta:fields': none,
   'room:create': z.object({ game: z.string().max(32), language: z.enum(LANGUAGES), fields, name }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
-  // another room doesn't take them there.
-  'room:join': z.object({ code, name: name.optional(), roomId: roomId.optional() }),
-  'room:watch': z.object({ code, roomId: roomId.optional() }),
+  // another room doesn't take them there. A client that has no ID to give may leave the field out
+  // or send null.
+  'room:join': z.object({ code, name: name.optional(), roomId: roomId.nullish() }),
+  'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:rename': z.object({ name }),
   // The chair's controls.
