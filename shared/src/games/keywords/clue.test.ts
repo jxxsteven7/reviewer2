@@ -34,6 +34,7 @@ describe('the forms of a clue', () => {
     expect(normalizeClue('  \uff2d\uff4f\uff44\uff45\uff4c ')).toBe('model');
     expect(normalizeClue('Self-Attention')).toBe('self-attention');
     expect(normalizeClue(`Re${SOFT_HYPHEN}view${ZERO_WIDTH_SPACE}er`)).toBe('reviewer');
+    expect(normalizeClue('Re\u00adview\u00ader')).toBe('reviewer');
   });
 
   test('cleanClue keeps what the captain typed, without invisible characters and stray spaces', () => {

@@ -17,6 +17,7 @@ export function useKeywords(room: Ref<RoomView>) {
   const players = computed(() => room.value.players);
   const mySeat = computed(() => (room.value.me === null ? null : seatOf(room.value.me)));
   const isChair = computed(() => room.value.me !== null && room.value.chairId === room.value.me);
+  const isKeyViewer = computed(() => room.value.me !== null && data.value.keyViewers.includes(room.value.me));
 
   const inSeat = (team: Team | null, role: Seat['role']): PlayerView[] =>
     players.value.filter((player) => {
@@ -35,5 +36,5 @@ export function useKeywords(room: Ref<RoomView>) {
 
   const sit = (team: Team | null, role: Seat['role']) => act('keywords:seat', { team, role });
 
-  return { data, mySeat, isChair, groups, spectators, sit };
+  return { data, mySeat, isChair, isKeyViewer, groups, spectators, sit };
 }

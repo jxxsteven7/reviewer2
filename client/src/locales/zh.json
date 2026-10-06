@@ -134,10 +134,64 @@
     }
   },
   "game": {
-    "started": "游戏已经开始。",
-    "ended": "游戏已经结束。",
-    "end": "结束游戏",
-    "again": "再来一局"
+    "turn": "第 {turn} 回合",
+    "phase": {
+      "clue": "{group}：导师正在想提示",
+      "guess": "{group}正在猜词",
+      "over": "游戏结束"
+    },
+    "clue": "提示",
+    "guessesLeft": "还可猜：{count}",
+    "noLimit": "不限次数",
+    "remaining": "还剩 {count} 张",
+    "card": {
+      "red": "红",
+      "blue": "蓝",
+      "neutral": "无关",
+      "reviewer2": "R2"
+    },
+    "stamp": "拒稿",
+    "hidden": "未翻开",
+    "you": {
+      "captain": "你是{group}的导师。",
+      "guesser": "你是{group}的学生。",
+      "spectator": "你在旁听。"
+    },
+    "waitClue": "等待{group}的导师给出提示。",
+    "waitGuess": "{group}正在猜词。",
+    "clueInput": "你的提示",
+    "clueNumber": "这个提示对应几张牌",
+    "unlimited": "不限",
+    "sendClue": "给出提示",
+    "similar": "这可能是{words}的另一种形式，而它还在牌上。规则不允许这样做。",
+    "pick": "点一张牌选中它，再翻开。",
+    "reveal": "翻开“{word}”",
+    "endTurn": "结束回合",
+    "log": "提示记录",
+    "noClues": "还没有提示。",
+    "groups": "分组",
+    "playFor": "加入{group}",
+    "watch": "只旁听",
+    "takeOver": "接任导师",
+    "takeOverConfirm": "当导师后你能看到答案，本局不能再当学生。",
+    "stepDown": "卸任",
+    "end": "终止本局",
+    "endConfirm": "现在终止本局吗？没有人获胜，所有人都会看到答案。",
+    "keyNote": "只有导师能看到未翻开的牌的颜色。",
+    "board": "棋盘",
+    "letter": {
+      "title": "审稿意见",
+      "accepted": "录用",
+      "rejected": "拒稿",
+      "withdrawn": "撤稿",
+      "found": "尊敬的{group}：很高兴地通知你们，你们的关键词已全部找到。论文予以录用。",
+      "reviewer2": "尊敬的{group}：二号审稿人建议拒稿。{winner}获胜。",
+      "withdrawnBody": "主持在游戏结束前撤回了本局，没有人获胜。",
+      "signature": "编辑部",
+      "again": "再来一局",
+      "waitAgain": "主持可以开始下一局。"
+    },
+    "revealChoose": "翻开一张牌"
   },
   "errors": {
     "bad_request": "服务器无法理解这个请求。",
@@ -191,5 +245,20 @@
     "title": "页面不存在",
     "body": "这个页面不存在，或者链接不完整。",
     "home": "返回首页"
+  },
+  "rules": {
+    "title": "怎么玩",
+    "goalTitle": "目标",
+    "goal": "红蓝两个课题组的关键词藏在棋盘上的 25 张牌里。先找出本组全部关键词的一方获胜。",
+    "rolesTitle": "角色",
+    "roles": "每组有一位导师和任意多名学生。导师能看到每张牌属于谁，学生只能看到词。",
+    "turnTitle": "一个回合",
+    "turn": "导师给出一个词和一个数字：这个词指向几张牌。学生随后一张一张地翻牌，最多翻这个数字加一张。数字是 0 或 ∞ 时不限次数。翻过至少一张后，学生可以结束回合。",
+    "revealTitle": "翻牌",
+    "reveal": "翻到本组的牌：继续。翻到无关论文或对方的牌：回合立即结束，对方的牌算对方的。翻到二号审稿人：论文被拒，本组立即判负。",
+    "clueTitle": "提示",
+    "clue": "提示只能是一个词，不能是牌上的词、牌上的词的一部分，或者它的另一种形式。导师不能说别的话，也不能比划。",
+    "endTitle": "结束",
+    "end": "某组的牌全部翻开时，该组立即获胜，即使最后一张是对方翻开的。"
   }
 }

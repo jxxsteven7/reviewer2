@@ -61,6 +61,14 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 | `ManuscriptId`, `QrCode`, `ShareTools` | The room's number, and ways to bring people in. Sharing falls back from the share sheet, to the clipboard, to a selected link that people copy by hand, which is what WeChat and plain http allow |
 | `PlayerName` | A name with an online dot and marks for "you" and the chair. For the chair, other names open the chair's actions |
 
+## Cards
+
+- **Hidden** (what students and spectators see): white with a thin rule, the word centered. A chosen card gets a double ink border, and the student confirms it with the "Reveal" button below the board. Revealing takes two steps so that a stray tap can't reveal anything.
+- **Known but hidden** (the PI's key, and every card after the game): a tint of the card's color, with a band along the top and a small label: Red, Blue, Irrelevant or R2.
+- **Revealed**: the full color, with white type on red, blue and Reviewer 2, and ink on grey. Reviewer 2 gets a slanted "Reject" stamp in `--stamp`.
+- **Type**: English words are set in Source Serif 4, Chinese words in the system sans. Long words get smaller type, and English words are hyphenated with Liang's en-us patterns (the `hyphen` package, the same patterns that TeX uses), because many browsers don't hyphenate at all.
+- **The board** is a 5×5 grid that fills the width on a phone. On a big screen it is sized to fit the screen's height.
+
 ## Writing
 
 - All interface text is in the locale files, `client/src/locales/en.json` and `zh.json`. The lint rule `@intlify/vue-i18n/no-raw-text` fails on text written straight into a template. A unit test checks that both files have the same keys and placeholders, and a message for every error code.
