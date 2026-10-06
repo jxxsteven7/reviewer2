@@ -3,7 +3,6 @@ import {
   MAX_PLAYERS,
   MAX_SCREENS,
   sameName,
-  type BoardWord,
   type Language,
   type RoomPhase,
   type RoomView,
@@ -11,6 +10,7 @@ import {
 import type { GameContext, GameModule, Viewer } from './game';
 import { newPlayerId } from './identity';
 import { randomId, type Rng } from './random';
+import { drawWords, type WordLibrary } from './words';
 
 // One room: who is in it, who chairs it, which connections belong to whom, and the game's data.
 // The socket layer (socket.ts) calls these methods and then sends everyone the new state.
@@ -40,9 +40,27 @@ export interface RoomOptions {
   code: string;
   game: GameModule;
   language: Language;
+  // As chooseFields() returned them.
   fields: string[];
+  words: WordLibrary;
   rng: Rng;
   now: () => number;
+}
+
+// The fields that a room is to play with, once each, or why it can't play with them: one of them
+// isn't in the library, or together they have too few words in the room's language. Rooms are
+// created and their fields changed only through this check, so a room that exists can always
+// deal a game.
+export function chooseFields(
+  words: WordLibrary,
+  fields: readonly string[],
+  language: Language,
+  needed: number,
+): { ok: true; fields: string[] } | { ok: false; error: 'bad_fields' | 'no_words' } {
+  const chosen = [...new Set(fields)];
+  if (!chosen.every((id) => words.has(id))) return { ok: false, error: 'bad_fields' };
+  if (words.pool(chosen, language).length < needed) return { ok: false, error: 'no_words' };
+  return { ok: true, fields: chosen };
 }
 
 export class Room {
@@ -60,7 +78,6 @@ export class Room {
   gameId: string | null = null;
   // How many games have been started here.
   round = 0;
-  usedWords = new Set<string>();
   lastActivity: number;
   // When a connection last came to the room or went. The sweep keeps this at the present while
   // anyone is connected, so it tells for how long nobody has been.
@@ -71,6 +88,9 @@ export class Room {
   readonly #removed = new Map<string, { until: number; name: string }>();
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
+  readonly #words: WordLibrary;
+  // The words of the games so far, which the next game avoids for as long as it can.
+  #usedWords: ReadonlySet<string> = new Set();
   readonly #rng: Rng;
   readonly #now: () => number;
 
@@ -79,6 +99,7 @@ export class Room {
     this.game = options.game;
     this.language = options.language;
     this.fields = [...options.fields];
+    this.#words = options.words;
     this.#rng = options.rng;
     this.#now = options.now;
     this.createdAt = options.now();
@@ -228,25 +249,31 @@ export class Room {
 
   // --- the chair's controls ---------------------------------------------------------------
 
-  setFields(fields: string[]): Done {
+  setFields(fields: readonly string[]): Done {
     if (this.phase !== 'lobby') return fail('wrong_phase');
-    this.fields = [...fields];
+    const chosen = chooseFields(this.#words, fields, this.language, this.game.wordsNeeded);
+    if (!chosen.ok) return chosen;
+    this.fields = chosen.fields;
     this.changed();
     return done;
-  }
-
-  startProblems(): string[] {
-    return this.phase === 'lobby' ? this.game.startProblems(this.data, this.context) : [];
   }
 
   // A start is for the waiting room that its sender saw: `round` is how many games the room had
   // started then. One that arrives after another start, such as from a second tab whose
   // connection had stalled, is stale, even when the room is back in the waiting room by now.
-  start(round: number, words: BoardWord[], gameId: string): Done {
+  //
+  // The room draws the words itself, preferring those that it hasn't played with yet.
+  start(round: number): Done {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
-    if (this.startProblems().length) return fail('cannot_start');
-    this.data = this.game.start(this.data, { ...this.context, phase: 'playing' }, words, gameId);
+    if (this.game.startProblems(this.data, this.context).length > 0) return fail('cannot_start');
+    const pool = this.#words.pool(this.fields, this.language);
+    const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng);
+    // chooseFields() has made sure of this, and the library doesn't change while the server runs.
+    if (!draw) throw new Error(`the fields of room ${this.code} have too few words for a game`);
+    const gameId = randomId();
+    this.data = this.game.start(this.data, { ...this.context, phase: 'playing' }, draw.words, gameId);
+    this.#usedWords = draw.used;
     this.gameId = gameId;
     this.round += 1;
     this.phase = 'playing';

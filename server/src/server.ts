@@ -47,12 +47,11 @@ export function createAppServer(options: AppOptions): AppServer {
   // clock is one that only runs forward. The system's clock gets corrected, sometimes by a lot,
   // and every one of those waits would stretch or collapse with it.
   const now = options.now ?? (() => performance.now());
-  const rooms = new Rooms(rng, now, options.limits ?? DEFAULT_LIMITS);
+  const rooms = new Rooms(options.words, rng, now, options.limits ?? DEFAULT_LIMITS);
   const sockets = attachSockets(io, {
     rooms,
     words: options.words,
     games: new Map(options.games.map((game) => [game.id, game])),
-    rng,
     now,
     version: options.version,
     trustProxy: options.trustProxy ?? false,

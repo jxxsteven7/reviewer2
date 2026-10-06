@@ -1,6 +1,7 @@
 import { CODE_ALPHABET } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { fakeGame } from '../../test/fakeGame';
+import { testWords } from '../../test/helpers';
 import { clientIp, groupIp } from './clientIp';
 import { newCode } from './codes';
 import type { GameModule } from './game';
@@ -22,15 +23,18 @@ describe('the list of rooms', () => {
     // the first.
     const next: number[] = [];
     const drawn = seededRng(3);
-    const rooms = new Rooms({ int: (below) => next.shift() ?? drawn.int(below) }, () => 0);
-    const options = { game: fakeGame as GameModule, language: 'en' as const, fields: ['general'] };
+    const rooms = new Rooms(testWords(), { int: (below) => next.shift() ?? drawn.int(below) }, () => 0);
+    const create = () => {
+      const created = rooms.create({ game: fakeGame as GameModule, language: 'en', fields: ['general'] });
+      if (!created.ok) throw new Error(created.error);
+      return created.room;
+    };
 
-    const first = rooms.create(options);
-    if (!first) throw new Error('no room');
+    const first = create();
     rooms.close(first);
     next.push(...[...first.code].map((character) => CODE_ALPHABET.indexOf(character)));
-    const second = rooms.create(options);
-    expect(second?.code).toBe(first.code);
+    const second = create();
+    expect(second.code).toBe(first.code);
 
     rooms.close(first);
     expect(rooms.find(first.code)).toBe(second);

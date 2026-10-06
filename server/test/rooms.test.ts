@@ -375,8 +375,21 @@ describe("the chair's controls", () => {
     const { chair } = await room();
     expect(await chair.send('room:settings', { fields: ['tiny'] })).toEqual({ ok: false, error: 'no_words' });
     expect(await chair.send('room:settings', { fields: ['nope'] })).toEqual({ ok: false, error: 'bad_fields' });
-    expect(await chair.send('room:settings', { fields: ['general', 'tiny'] })).toEqual({ ok: true });
+    expect(await chair.send('room:settings', { fields: ['general', 'tiny', 'general'] })).toEqual({ ok: true });
     await chair.waitFor((state) => state.fields.length === 2);
+    expect(chair.state?.fields).toEqual(['general', 'tiny']);
+  });
+
+  test("can't change the fields during a game, whatever the fields are", async () => {
+    const { chair, code } = await room();
+    await join(code, 'Bob');
+    await start(chair);
+    for (const fields of [['general'], ['tiny'], ['nope']]) {
+      expect(await chair.send('room:settings', { fields }), String(fields)).toEqual({
+        ok: false,
+        error: 'wrong_phase',
+      });
+    }
   });
 });
 
@@ -722,6 +735,20 @@ describe('limits', () => {
     expect(replies.filter((reply) => !reply.ok).length).toBeGreaterThan(0);
     server.advance(5_000);
     expect(await client.send('sys:ping')).toEqual({ ok: true });
+  });
+
+  test('an attempt to create a room counts once it reaches the word lists, whatever comes of it', async () => {
+    const client = await connect();
+    const create = (payload: Record<string, unknown>) =>
+      client.send('room:create', { game: 'test', language: 'en', fields: ['general'], name: 'Ann', ...payload });
+    // A name that can't be one is refused first, whatever the fields, and costs nothing.
+    for (let i = 0; i < 8; i += 1) {
+      server.advance(200); // stay under the per-connection limit
+      expect(await create({ name: '  ', fields: ['nope'] })).toEqual({ ok: false, error: 'name_invalid' });
+    }
+    for (let i = 0; i < 5; i += 1) expect(await create({ fields: ['tiny'] })).toEqual({ ok: false, error: 'no_words' });
+    expect(await create({})).toEqual({ ok: false, error: 'rate_limited' });
+    expect(server.app.rooms.size).toBe(0);
   });
 
   test('one address may create only a few rooms a minute', async () => {

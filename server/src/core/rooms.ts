@@ -2,7 +2,8 @@ import { parseCode, type Language } from '@reviewer2/shared';
 import { newCode } from './codes';
 import type { GameModule } from './game';
 import type { Rng } from './random';
-import { Room } from './room';
+import { chooseFields, Room } from './room';
+import type { WordLibrary } from './words';
 
 // All the rooms on this server, which live in memory (docs/architecture.md), and the rules for
 // cleaning them up.
@@ -41,6 +42,7 @@ export class Rooms {
   readonly #rooms = new Map<string, Room>();
 
   constructor(
+    private readonly words: WordLibrary,
     private readonly rng: Rng,
     private readonly now: () => number,
     readonly limits: RoomLimits = DEFAULT_LIMITS,
@@ -50,13 +52,27 @@ export class Rooms {
     return this.#rooms.size;
   }
 
-  create(options: { game: GameModule; language: Language; fields: string[] }): Room | null {
-    if (this.#rooms.size >= this.limits.maxRooms) return null;
+  // A new room, or why there can't be one: the server is full, or the fields won't do.
+  create(options: {
+    game: GameModule;
+    language: Language;
+    fields: readonly string[];
+  }): { ok: true; room: Room } | { ok: false; error: 'too_many_rooms' | 'bad_fields' | 'no_words' } {
+    if (this.#rooms.size >= this.limits.maxRooms) return { ok: false, error: 'too_many_rooms' };
+    const chosen = chooseFields(this.words, options.fields, options.language, options.game.wordsNeeded);
+    if (!chosen.ok) return chosen;
     let code = newCode(this.rng);
     while (this.#rooms.has(code)) code = newCode(this.rng);
-    const room = new Room({ ...options, code, rng: this.rng, now: this.now });
+    const room = new Room({
+      ...options,
+      fields: chosen.fields,
+      code,
+      words: this.words,
+      rng: this.rng,
+      now: this.now,
+    });
     this.#rooms.set(code, room);
-    return room;
+    return { ok: true, room };
   }
 
   // Finds a room by a code as someone typed it.

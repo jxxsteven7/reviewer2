@@ -4,12 +4,11 @@ import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { clientIp } from './clientIp';
 import { isToken, memberKey, newToken } from './identity';
-import { randomId, type Rng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
 import type { GameModule, Viewer } from './game';
 import type { Member, Room } from './room';
 import type { Rooms } from './rooms';
-import { drawWords, type WordLibrary } from './words';
+import type { WordLibrary } from './words';
 
 // Socket.IO for rooms (docs/architecture.md): the handshake, every room message, and sending
 // each connection its own snapshot. Game messages, named "<game>:<action>", go to the room's game
@@ -20,7 +19,6 @@ export interface SocketOptions {
   rooms: Rooms;
   words: WordLibrary;
   games: ReadonlyMap<string, GameModule>;
-  rng: Rng;
   now: () => number;
   version: string;
   trustProxy: boolean;
@@ -46,7 +44,8 @@ const prefixOf = (event: string): string => event.split(':', 1)[0] ?? '';
 const OWN_PREFIXES = new Set(Object.keys(ROOM_MESSAGES).map(prefixOf));
 
 // Per connection: about 10 messages a second, in bursts of up to 20. Per address and minute: 5
-// new rooms and 20 codes that name no room, which keeps anyone from trying codes until one fits.
+// rooms, counting the attempts that came to nothing, and 20 codes that belong to no room, which
+// keeps anyone from trying codes until one fits.
 const MESSAGES_PER_SECOND = 10;
 const MESSAGE_BURST = 20;
 const CREATIONS_PER_MINUTE = 5;
@@ -59,7 +58,7 @@ export interface RoomSockets {
 }
 
 export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
-  const { rooms, words, games, rng, now, version, log } = options;
+  const { rooms, words, games, now, version, log } = options;
   for (const id of games.keys()) {
     if (OWN_PREFIXES.has(id)) throw new Error(`a game can't be named "${id}", which is a prefix of the room messages`);
   }
@@ -343,19 +342,18 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
-      const chosen = [...new Set(fields)];
-      if (!chosen.every((id) => words.has(id))) return fail('bad_fields');
-      if (words.pool(chosen, language).length < module.wordsNeeded) return fail('no_words');
       if (cleanName(name) === null) return fail('name_invalid');
-      const room = rooms.create({ game: module, language, fields: chosen });
-      if (!room) return fail('too_many_rooms');
+      // From here on the attempt counts against the address, whatever comes of it. Checking the
+      // fields goes through all of their words, which is the one costly step of all the messages,
+      // and it must not be free to anyone who asks for rooms that can't be.
       creations.add(conn.ip);
+      const created = rooms.create({ game: module, language, fields });
+      if (!created.ok) return fail(created.error);
+      const { room } = created;
       const joined = room.join(conn.key, name);
-      if (!joined.ok) {
-        rooms.close(room);
-        return fail(joined.error);
-      }
-      log('room_created', { code: room.code, game, language, fields: chosen });
+      // The name was checked above and the room is new, so nothing can refuse its first member.
+      if (!joined.ok) throw new Error(`a new room refused its creator: ${joined.error}`);
+      log('room_created', { code: room.code, game, language, fields: room.fields });
       enter(socket, room, joined.member);
       return ok({ code: room.code, roomId: room.id });
     });
@@ -400,28 +398,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return changed(found.room, found.room.rename(found.member.id, name));
     });
 
-    on(handlers, 'room:settings', ({ fields }) =>
-      asChair(socket, (room) => {
-        const chosen = [...new Set(fields)];
-        if (!chosen.every((id) => words.has(id))) return fail('bad_fields');
-        if (words.pool(chosen, room.language).length < room.game.wordsNeeded) return fail('no_words');
-        return changed(room, room.setFields(chosen));
-      }),
-    );
+    on(handlers, 'room:settings', ({ fields }) => asChair(socket, (room) => changed(room, room.setFields(fields))));
 
     on(handlers, 'room:start', ({ round }) =>
       asChair(socket, (room) => {
-        if (round !== room.round) return fail('stale');
-        if (room.phase !== 'lobby') return fail('wrong_phase');
-        if (room.startProblems().length > 0) return fail('cannot_start');
-        const pool = words.pool(room.fields, room.language);
-        const draw = drawWords(pool, room.game.wordsNeeded, room.usedWords, rng);
-        if (!draw) return fail('no_words');
-        const result = room.start(round, draw.words, randomId());
-        if (result.ok) {
-          room.usedWords = draw.used;
-          log('game_started', { code: room.code, players: room.members.size });
-        }
+        const result = room.start(round);
+        if (result.ok) log('game_started', { code: room.code, players: room.members.size });
         return changed(room, result);
       }),
     );
