@@ -1,14 +1,40 @@
+import { CODE_ALPHABET } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
+import { fakeGame } from '../../test/fakeGame';
 import { clientIp, groupIp } from './clientIp';
 import { newCode } from './codes';
+import type { GameModule } from './game';
 import { isToken, memberKey, newToken } from './identity';
 import { seededRng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
+import { Rooms } from './rooms';
 
 describe('room codes', () => {
   test('are 4 characters without I, L, O or U', () => {
     const rng = seededRng(9);
     for (let i = 0; i < 200; i += 1) expect(newCode(rng)).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}$/);
+  });
+});
+
+describe('the list of rooms', () => {
+  test('closing a room twice leaves the room alone that has its code by then', () => {
+    // A generator that can be told what to draw next, so that the second room gets the code of
+    // the first.
+    const next: number[] = [];
+    const drawn = seededRng(3);
+    const rooms = new Rooms({ int: (below) => next.shift() ?? drawn.int(below) }, () => 0);
+    const options = { game: fakeGame as GameModule, language: 'en' as const, fields: ['general'] };
+
+    const first = rooms.create(options);
+    if (!first) throw new Error('no room');
+    rooms.close(first);
+    next.push(...[...first.code].map((character) => CODE_ALPHABET.indexOf(character)));
+    const second = rooms.create(options);
+    expect(second?.code).toBe(first.code);
+
+    rooms.close(first);
+    expect(rooms.find(first.code)).toBe(second);
+    expect(rooms.size).toBe(1);
   });
 });
 

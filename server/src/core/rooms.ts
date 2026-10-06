@@ -69,8 +69,10 @@ export class Rooms {
     return [...this.#rooms.values()];
   }
 
+  // Closes a room and returns the connections that were still in it. Closing a room a second
+  // time does nothing: by then its code may belong to another room.
   close(room: Room): string[] {
-    this.#rooms.delete(room.code);
+    if (this.#rooms.get(room.code) === room) this.#rooms.delete(room.code);
     return [...room.screens, ...[...room.members.values()].flatMap((member) => [...member.sockets])];
   }
 
