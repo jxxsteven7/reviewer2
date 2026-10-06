@@ -7,8 +7,9 @@ import { captain, guesser, spectator } from './testing';
 import { viewFor } from './view';
 
 // Plays hundreds of random games in which anyone may try anything, including actions from an
-// old turn, and checks after every step that the rules still hold and that no view other than a
-// captain's gives the key away.
+// old turn, and checks after every step that the rules still hold, that the rules left the state
+// they were given alone, and that no view other than a captain's carries the color of an
+// unrevealed card.
 
 const WORDS = Array.from({ length: 25 }, (_, i) => `Term${i}`);
 const ACTORS: Actor[] = [captain('red'), guesser('red'), captain('blue'), guesser('blue'), spectator];
@@ -38,9 +39,28 @@ function expectNoLeak(view: KeywordsView, over: boolean) {
   }
 }
 
-function checkInvariants(before: KeywordsState, after: KeywordsState, outcome: Outcome) {
-  if (!outcome.ok) expect(after).toBe(before); // a refusal changes nothing
+function checkHistory(state: KeywordsState) {
+  const guessed = state.history.flatMap((record) => record.guesses);
+  // Every revealed card was guessed once, under the clue of its turn, with its real color.
+  expect(guessed.map((guess) => guess.card).sort((a, b) => a - b)).toEqual(
+    state.cards.flatMap((card, index) => (card.revealed ? [index] : [])),
+  );
+  expect(guessed.every((guess) => guess.color === state.cards[guess.card]?.color)).toBe(true);
+  // The records are in the order of their turns, each under the team that played that turn.
+  const inOrder = state.history.every(
+    (record, index) =>
+      record.turn > (state.history[index - 1]?.turn ?? 0) &&
+      (record.team === state.startingTeam) === (record.turn % 2 === 1),
+  );
+  expect(inOrder).toBe(true);
+  if (state.phase === 'guess') {
+    const current = state.history.at(-1);
+    expect(current).toMatchObject({ turn: state.turn, team: state.team, word: state.clue?.word });
+    expect(current?.guesses).toHaveLength(state.guessesMade);
+  }
+}
 
+function checkInvariants(before: KeywordsState, after: KeywordsState) {
   const colors = after.cards.map((card) => card.color);
   expect(
     remaining(
@@ -58,6 +78,7 @@ function checkInvariants(before: KeywordsState, after: KeywordsState, outcome: O
   expect(after.phase === 'guess').toBe(after.clue !== null);
   const left = guessesLeft(after);
   if (left !== null) expect(left).toBeGreaterThan(0);
+  checkHistory(after);
 
   const over = after.phase === 'over';
   expectNoLeak(viewFor(after, 'public'), over);
@@ -74,19 +95,24 @@ function checkInvariants(before: KeywordsState, after: KeywordsState, outcome: O
 }
 
 describe('random games', () => {
-  test('always keep the rules and the key, and always end', () => {
+  // Hundreds of games take a few seconds, more than the default allows on a slow machine.
+  test('always keep the rules and the key, and always end', { timeout: 60_000 }, () => {
     const reasons = new Map<string, number>();
     for (let seed = 0; seed < 300; seed += 1) {
       const rng = seededRng(seed);
       let state = newGame(WORDS, rng, `game-${seed}`);
       for (let step = 0; state.phase !== 'over'; step += 1) {
         expect(step).toBeLessThan(2000);
+        const untouched = JSON.stringify(state);
         const outcome =
           seed % 50 === 49 && step === 20
             ? { ok: true as const, state: withdraw(state) }
             : randomStep(state, rng, step);
+        // The rules never write to the state they are given. A refusal returns no state at all,
+        // so this is also what makes a refusal change nothing.
+        expect(JSON.stringify(state)).toBe(untouched);
         const next = outcome.ok ? outcome.state : state;
-        checkInvariants(state, next, outcome);
+        checkInvariants(state, next);
         state = next;
       }
       const reason = state.result?.reason ?? 'none';

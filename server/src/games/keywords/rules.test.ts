@@ -129,6 +129,37 @@ describe('revealing a card', () => {
     ]);
   });
 
+  test('is recorded under the clue of its own turn', () => {
+    let state = revealAll(clued(2), [0, 17]);
+    state = accepted(giveClue(state, captain('blue'), { ...now(state), word: 'Loss', count: 1 }));
+    state = revealAll(state, [9, 10]);
+    state = accepted(giveClue(state, captain('red'), { ...now(state), word: 'Epoch', count: 'unlimited' }));
+    state = revealAll(state, [1]);
+    expect(state.history).toEqual([
+      {
+        turn: 1,
+        team: 'red',
+        word: 'Gradient',
+        count: 2,
+        guesses: [
+          { card: 0, color: 'red' },
+          { card: 17, color: 'neutral' },
+        ],
+      },
+      {
+        turn: 2,
+        team: 'blue',
+        word: 'Loss',
+        count: 1,
+        guesses: [
+          { card: 9, color: 'blue' },
+          { card: 10, color: 'blue' },
+        ],
+      },
+      { turn: 3, team: 'red', word: 'Epoch', count: 'unlimited', guesses: [{ card: 1, color: 'red' }] },
+    ]);
+  });
+
   test('with a clue of 0 or unlimited allows any number of guesses', () => {
     for (const count of [0, 'unlimited'] as const) {
       const state = revealAll(clued(count), [0, 1, 2, 3, 4, 5]);
