@@ -13,9 +13,10 @@ const root = resolve(import.meta.dirname, '..', '..');
 
 function portNumber(value: string | undefined, fallback: number): number {
   if (value === undefined || value === '') return fallback;
-  const port = Number(value);
-  if (!Number.isInteger(port) || port < 0 || port > 65535)
-    throw new Error(`PORT must be a port number, not "${value}"`);
+  // Digits only. Number() alone also reads " " and "0x0", as 0, and on port 0 the server
+  // listens on whichever port the system picks.
+  const port = /^\d+$/.test(value) ? Number(value) : NaN;
+  if (!(port >= 1 && port <= 65535)) throw new Error(`PORT must be a whole number from 1 to 65535, not "${value}"`);
   return port;
 }
 

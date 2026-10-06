@@ -1,0 +1,21 @@
+import { describe, expect, test } from 'vitest';
+import { loadConfig } from './config';
+
+describe('PORT', () => {
+  test('defaults to 3000 when it is unset or empty', () => {
+    expect(loadConfig({}).port).toBe(3000);
+    expect(loadConfig({ PORT: '' }).port).toBe(3000);
+  });
+
+  test('is a whole number from 1 to 65535', () => {
+    for (const port of [1, 3000, 65535]) {
+      expect(loadConfig({ PORT: String(port) }).port).toBe(port);
+    }
+  });
+
+  test('anything else stops the server, rather than start it on a port nobody asked for', () => {
+    for (const PORT of [' ', '0', '0x0', '0x1F90', '1e3', '3000.5', '-1', '+80', '65536', '3000 ', 'http']) {
+      expect(() => loadConfig({ PORT }), JSON.stringify(PORT)).toThrow(/PORT/);
+    }
+  });
+});
