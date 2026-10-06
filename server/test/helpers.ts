@@ -1,5 +1,5 @@
 import type { AddressInfo } from 'node:net';
-import type { Ack, ClosedReason, RoomView } from '@reviewer2/shared';
+import type { Ack, ClosedReason, RoomView, Session } from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 import type { GameModule } from '../src/core/game';
 import { seededRng, type Rng } from '../src/core/random';
@@ -86,7 +86,7 @@ export class TestClient {
     const socket = connect(url, { auth, transports: ['websocket'], reconnection: false, forceNew: true, ...options });
     const client = new TestClient(socket);
     await new Promise<void>((resolve, reject) => {
-      socket.once('session', (session: { token?: string; version: string }) => {
+      socket.once('session', (session: Session) => {
         client.token = session.token ?? (typeof auth.token === 'string' ? auth.token : '');
         client.version = session.version;
         resolve();

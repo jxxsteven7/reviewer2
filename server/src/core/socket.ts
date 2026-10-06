@@ -1,4 +1,4 @@
-import { cleanName, type Ack, type ClosedReason } from '@reviewer2/shared';
+import { cleanName, type Ack, type ClosedReason, type Session } from '@reviewer2/shared';
 import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
@@ -29,7 +29,6 @@ export interface SocketOptions {
 interface Connection {
   key: string;
   ip: string;
-  issued: string | null; // a token that this connection still has to be told about
   room: Room | null;
   screen: boolean;
   bucket: TokenBucket;
@@ -311,32 +310,26 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // share the limits of one address. A forwarded address that goes unread is the sign of it.
   let forwardedIgnored = false;
 
-  io.use((socket, next) => {
+  io.on('connection', (socket) => {
     if (!options.trustProxy && !forwardedIgnored && socket.handshake.headers['x-forwarded-for'] !== undefined) {
       forwardedIgnored = true;
       log('forwarded_address_ignored', { hint: 'behind a reverse proxy, set TRUST_PROXY=1' });
     }
     const auth = HANDSHAKE.parse(socket.handshake.auth);
-    const token = isToken(auth.token) ? auth.token : null;
-    const issued = token === null ? newToken() : null;
+    // A browser that comes without a token, or with something that can't be one, is given one.
+    const issued = isToken(auth.token) ? null : newToken();
     const conn: Connection = {
-      key: memberKey(token ?? (issued as string)),
+      key: memberKey(issued ?? (auth.token as string)),
       ip: clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy),
-      issued,
       room: null,
       screen: false,
       bucket: new TokenBucket(MESSAGES_PER_SECOND, MESSAGE_BURST, now),
     };
     socket.data = conn;
-    next();
-  });
+    const session: Session = issued === null ? { version } : { token: issued, version };
+    socket.emit('session', session);
 
-  io.on('connection', (socket) => {
-    const conn = connection(socket);
-    socket.emit('session', conn.issued ? { token: conn.issued, version } : { version });
-    conn.issued = null;
-
-    safely('handshake', () => comeBack(socket, HANDSHAKE.parse(socket.handshake.auth)));
+    safely('handshake', () => comeBack(socket, auth));
 
     const handlers: Handlers = new Map();
     on(handlers, 'sys:ping', () => ok());

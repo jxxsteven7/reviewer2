@@ -58,6 +58,14 @@ export interface Handshake {
   watch?: string;
 }
 
+// The first thing the server sends on a connection, before anything about a room: the version of
+// the server, and a token when the browser came without a usable one. The browser keeps the token
+// and sends it with every later handshake.
+export interface Session {
+  token?: string;
+  version: string;
+}
+
 // Why the server closed a room for someone: they were removed, the room expired, they left it
 // from another tab, or the server is restarting.
 export type ClosedReason = 'removed' | 'expired' | 'left' | 'restart';
