@@ -24,7 +24,7 @@ reviewer2-project/
 
 ### First-time setup
 
-Install [Node.js](https://nodejs.org) 20 or later first. The commit-msg hook and the repository's scripts run on it.
+Install [Node.js](https://nodejs.org) 20 or later first. The pre-commit and commit-msg hooks and the repository's scripts run on it.
 
 ```bash
 mkdir reviewer2-project && cd reviewer2-project
