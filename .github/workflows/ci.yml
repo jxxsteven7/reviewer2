@@ -60,8 +60,14 @@ jobs:
       - name: The image serves the app
         run: |
           docker run --detach --name reviewer2 --publish 3000:3000 reviewer2:ci
+          # Print the server's log however this step ends: a failure is hard to explain without it.
+          trap 'docker logs reviewer2' EXIT
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "The server did not answer /healthz within 30 seconds." >&2
+              exit 1
+            fi
             sleep 1
           done
           echo
@@ -69,4 +75,3 @@ jobs:
           curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
           # The compressed copies from the build are in the image, and the server sends them.
           curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'
-          docker logs reviewer2
