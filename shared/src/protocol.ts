@@ -28,6 +28,7 @@ export const ROOM_ERRORS = [
   'not_member',
   'not_chair',
   'no_such_player',
+  'player_offline',
   'wrong_phase',
   'cannot_start',
   'stale',

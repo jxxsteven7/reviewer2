@@ -328,6 +328,16 @@ describe("the chair's controls", () => {
     expect(await chair.send('room:chair', { playerId: bob.me })).toEqual({ ok: true });
     await bob.waitFor((state) => state.chairId === bob.me);
     expect(await chair.send('room:chair', { playerId: 'nobody' })).toEqual({ ok: false, error: 'not_chair' });
+    expect(await bob.send('room:chair', { playerId: 'nobody' })).toEqual({ ok: false, error: 'no_such_player' });
+  });
+
+  test("can't hand the chair to someone who is offline", async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    bob.close();
+    await chair.waitFor(() => online(chair, 'Bob') === false, 'Bob offline');
+    expect(await chair.send('room:chair', { playerId: bob.me })).toEqual({ ok: false, error: 'player_offline' });
+    expect(server.app.rooms.find(code)?.chairId).toBe(chair.me);
   });
 
   test('can remove a player, who must then wait two minutes to come back', async () => {

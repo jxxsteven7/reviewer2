@@ -302,8 +302,12 @@ export class Room {
     return { ok: true, sockets };
   }
 
+  // The chair goes to someone who is there to take it. Handed to a member who has been offline
+  // for a while, it would pass on again at the next sweep, to whoever joined first, without a
+  // word to anyone.
   handOver(id: string): Done {
     if (!this.members.has(id)) return fail('no_such_player');
+    if (!this.isOnline(id)) return fail('player_offline');
     this.chairId = id;
     this.changed();
     return done;
