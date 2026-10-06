@@ -195,6 +195,19 @@ describe('drawing words', () => {
     expect(drawWords(pool, 25, elsewhere, seededRng(1))?.used.size).toBe(26);
   });
 
+  test("knows a pool's words by the keys that the library worked out, and any other word by its own", () => {
+    const library = new WordLibrary([list('a', 30), list('b', 30, 20)]);
+    const fromLibrary = library.pool(['a', 'b'], 'en');
+    expect(fromLibrary).toHaveLength(50);
+    const copies = fromLibrary.map((word) => ({ ...word }));
+    for (const pool of [fromLibrary, copies]) {
+      const first = drawWords(pool, 25, new Set(), seededRng(3));
+      expect(first?.used).toEqual(new Set(words(first).map(wordKey)));
+      const second = drawWords(pool, 25, first?.used ?? new Set(), seededRng(3));
+      expect(words(second).some((word) => words(first).includes(word))).toBe(false);
+    }
+  });
+
   test('gives up when the pool is too small', () => {
     expect(drawWords(pool.slice(0, 24), 25, new Set(), seededRng(1))).toBeNull();
   });

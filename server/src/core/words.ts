@@ -23,7 +23,15 @@ export interface FieldInfo {
 interface Field {
   info: FieldInfo;
   // The words in each language, once each, with the same terms in the other languages.
-  words: Record<Language, BoardWord[]>;
+  words: Record<Language, Entry[]>;
+}
+
+// A word as the library keeps it: with its `wordKey`, which is worked out once, when the library
+// is built, and not again for every pool and every draw.
+interface Entry {
+  key: string;
+  word: string;
+  translations: string[];
 }
 
 // Hears of everything that the library leaves out, so that the server can log it: a file, or one
@@ -68,29 +76,33 @@ export class WordLibrary {
     for (const id of fieldIds) {
       const field = this.#fields.get(id);
       if (!field) throw new Error(`no word list has the id "${id}"`);
-      for (const { word, translations = [] } of field.words[language]) {
-        collect(pool, wordKey(word), word, translations);
-      }
+      for (const { key, word, translations } of field.words[language]) collect(pool, key, word, translations);
     }
-    return boardWords(pool);
+    return [...pool.values()].map(({ key, word, translations }) => {
+      const boardWord: BoardWord = translations.length ? { word, translations } : { word };
+      keys.set(boardWord, key);
+      return boardWord;
+    });
   }
 }
 
-// Words on their way into a field or a pool, each under its `wordKey`.
-type Collected = Map<string, { word: string; translations: string[] }>;
+// The key of each word that a pool holds. It is kept beside the word and not in it, because the
+// word goes on to the game as it is. A word that didn't come out of a pool has its key worked out.
+const keys = new WeakMap<BoardWord, string>();
+const keyOf = (word: BoardWord): string => keys.get(word) ?? wordKey(word.word);
+
+// Words on their way into a field or a pool, each under its key.
+type Collected = Map<string, Entry>;
 
 // Adds a word to those collected so far. A word that is there already keeps its spelling and
 // gains the translations that it doesn't have yet.
 function collect(words: Collected, key: string, word: string, translations: readonly string[]): void {
-  const entry = words.get(key) ?? { word, translations: [] };
+  const entry = words.get(key) ?? { key, word, translations: [] };
   words.set(key, entry);
   for (const translation of translations) {
     if (!entry.translations.includes(translation)) entry.translations.push(translation);
   }
 }
-
-const boardWords = (words: Collected): BoardWord[] =>
-  [...words.values()].map(({ word, translations }) => (translations.length ? { word, translations } : { word }));
 
 // The terms of a list in each language, once each. Terms are the same word when their letters and
 // digits are, as the game compares them (`wordKey`), so "Co-author" and "coauthor" are one word.
@@ -99,7 +111,7 @@ const boardWords = (words: Collected): BoardWord[] =>
 //
 // CI refuses a list in which a term has no letters or digits, or is the same word as another, so
 // either means that the list wasn't checked. `skip` hears of both.
-function unique(list: WordListData, skip: Skip): Record<Language, BoardWord[]> {
+function unique(list: WordListData, skip: Skip): Record<Language, Entry[]> {
   const file = `${list.id}.json`;
   const quote = (text: string) => JSON.stringify(text);
   const words = Object.fromEntries(LANGUAGES.map((language) => [language, new Map()])) as Record<Language, Collected>;
@@ -121,9 +133,9 @@ function unique(list: WordListData, skip: Skip): Record<Language, BoardWord[]> {
       collect(words[language], key, word, translations);
     }
   }
-  return Object.fromEntries(LANGUAGES.map((language) => [language, boardWords(words[language])])) as Record<
+  return Object.fromEntries(LANGUAGES.map((language) => [language, [...words[language].values()]])) as Record<
     Language,
-    BoardWord[]
+    Entry[]
   >;
 }
 
@@ -138,17 +150,16 @@ export function drawWords(
   rng: Rng,
 ): { words: BoardWord[]; used: Set<string> } | null {
   if (pool.length < count) return null;
-  const keys = (words: readonly BoardWord[]) => words.map(({ word }) => wordKey(word));
-  const isUsed = ({ word }: BoardWord) => used.has(wordKey(word));
+  const isUsed = (word: BoardWord) => used.has(keyOf(word));
   const fresh = pool.filter((word) => !isUsed(word));
   if (fresh.length >= count) {
     const words = shuffle(fresh, rng).slice(0, count);
-    return { words, used: new Set([...used, ...keys(words)]) };
+    return { words, used: new Set([...used, ...words.map(keyOf)]) };
   }
   const again = shuffle(pool.filter(isUsed), rng).slice(0, count - fresh.length);
   // Shuffled once more, so that the order doesn't tell the new words from the repeated ones.
   const words = shuffle([...fresh, ...again], rng);
-  return { words, used: new Set(keys(words)) };
+  return { words, used: new Set(words.map(keyOf)) };
 }
 
 const isText = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
@@ -189,7 +200,7 @@ export function loadWordLibrary(dir: string, skip: Skip = () => {}): WordLibrary
       id: list.id,
       name: { zh: isText(name.zh) ? name.zh : list.id, en: isText(name.en) ? name.en : list.id },
       terms: list.terms.flatMap((term: unknown, index) =>
-        readTerm(term, index, (reason, name) => skip(file, reason, name)),
+        readTerm(term, index, (reason, which) => skip(file, reason, which)),
       ),
     });
   }
