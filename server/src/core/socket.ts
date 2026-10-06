@@ -2,10 +2,10 @@ import { ROOM_MESSAGES, type ClosedReason, type Handshake, type RoomMessage } fr
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { clientIp } from './clientIp';
-import type { GameModule } from './game';
 import { cleanName, isToken, memberKey, newToken } from './identity';
 import { randomId, type Rng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
+import type { GameModule, Viewer } from './game';
 import type { Member, Room } from './room';
 import type { Rooms } from './rooms';
 import { drawWords, type WordLibrary } from './words';
@@ -67,16 +67,48 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
 
+  // Logs something that went wrong, whatever was thrown: a game module may throw anything.
+  function report(error: unknown, where: string, fields: Record<string, unknown> = {}): void {
+    let message = 'something that cannot be described';
+    try {
+      message = error instanceof Error ? error.message : String(error);
+    } catch {
+      // Keep the placeholder.
+    }
+    log('error', {
+      where,
+      message,
+      ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
+      ...fields,
+    });
+  }
+
+  // Runs what no message is waiting for: a handshake, a disconnect, the sweep. They call the
+  // game modules too, and what a module throws there must not end the process.
+  function safely(where: string, run: () => void): void {
+    try {
+      run();
+    } catch (error) {
+      report(error, where);
+    }
+  }
+
+  // Sends some connections the room as one viewer sees it. A view that the game can't build is
+  // that viewer's loss alone: everyone else still gets theirs.
+  function send(room: Room, socketIds: Iterable<string>, viewer: Viewer): void {
+    const ids = [...socketIds];
+    if (ids.length === 0) return;
+    try {
+      const view = room.view(viewer);
+      for (const id of ids) io.to(id).emit('room:state', view);
+    } catch (error) {
+      report(error, 'view', { code: room.code });
+    }
+  }
+
   function broadcast(room: Room): void {
-    for (const member of room.members.values()) {
-      if (member.sockets.size === 0) continue;
-      const view = room.view({ playerId: member.id });
-      for (const id of member.sockets) io.to(id).emit('room:state', view);
-    }
-    if (room.screens.size > 0) {
-      const view = room.view({ screen: true });
-      for (const id of room.screens) io.to(id).emit('room:state', view);
-    }
+    for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id });
+    send(room, room.screens, { screen: true });
   }
 
   // Tells connections that their room is gone for them.
@@ -117,7 +149,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       room.addScreen(socket.id);
       Object.assign(conn, { room, screen: true });
     }
-    socket.emit('room:state', room.view({ screen: true }));
+    send(room, [socket.id], { screen: true });
     return ok({ code: room.code, roomId: room.id });
   }
 
@@ -135,12 +167,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       reply(fail('rate_limited'));
       return;
     }
+    let answer: Reply;
     try {
-      reply(run());
+      answer = run();
     } catch (error) {
-      log('error', { message: (error as Error).message, stack: (error as Error).stack });
-      reply(fail('internal'));
+      report(error, 'message');
+      answer = fail('internal');
     }
+    reply(answer);
   }
 
   // The handlers of one connection's room messages. They are looked up when a message arrives
@@ -226,22 +260,24 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     // A connection that comes back to its room is put back before any of its messages run, so a
     // message that waited out the disconnect doesn't arrive in a room that has forgotten it.
-    const auth = (socket.handshake.auth ?? {}) as Handshake;
-    if (typeof auth.watch === 'string') {
-      const room = rooms.find(auth.watch);
-      if (room) watch(socket, room);
-      else socket.emit('room:closed', { reason: 'expired' });
-    } else if (typeof auth.code === 'string') {
-      // A different room ID means the code now belongs to a new room, not the one this
-      // connection was in.
-      const room = rooms.find(auth.code);
-      if (!room || (auth.roomId !== undefined && room.id !== auth.roomId)) {
-        socket.emit('room:closed', { reason: 'expired' });
-      } else {
-        const member = room.memberByKey(conn.key);
-        if (member) enter(socket, room, member);
+    safely('handshake', () => {
+      const auth = (socket.handshake.auth ?? {}) as Handshake;
+      if (typeof auth.watch === 'string') {
+        const room = rooms.find(auth.watch);
+        if (room) watch(socket, room);
+        else socket.emit('room:closed', { reason: 'expired' });
+      } else if (typeof auth.code === 'string') {
+        // A different room ID means the code now belongs to a new room, not the one this
+        // connection was in.
+        const room = rooms.find(auth.code);
+        if (!room || (auth.roomId !== undefined && room.id !== auth.roomId)) {
+          socket.emit('room:closed', { reason: 'expired' });
+        } else {
+          const member = room.memberByKey(conn.key);
+          if (member) enter(socket, room, member);
+        }
       }
-    }
+    });
 
     const handlers: Handlers = new Map();
     on(handlers, 'sys:ping', () => ok());
@@ -353,26 +389,24 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     listen(socket, handlers);
 
-    socket.on('disconnect', () => {
-      const { room } = conn;
-      if (!room) return;
-      room.detach(socket.id);
-      if (isOpen(room)) broadcast(room);
-    });
+    socket.on('disconnect', () => safely('disconnect', () => release(socket)));
   });
 
   return {
     broadcast,
     sweep() {
-      const result = rooms.sweep();
-      for (const { room, sockets } of result.closed) {
-        closeFor(sockets, 'expired');
-        log('room_closed', { code: room.code });
-      }
-      closeFor(result.dropped, 'expired');
-      for (const room of result.changed) broadcast(room);
-      creations.prune();
-      failedJoins.prune();
+      safely('sweep', () => {
+        const result = rooms.sweep();
+        for (const { room, error } of result.failed) report(error, 'sweep', { code: room.code });
+        for (const { room, sockets } of result.closed) {
+          closeFor(sockets, 'expired');
+          log('room_closed', { code: room.code });
+        }
+        closeFor(result.dropped, 'expired');
+        for (const room of result.changed) broadcast(room);
+        creations.prune();
+        failedJoins.prune();
+      });
     },
     closeAll(reason) {
       for (const room of rooms.all()) closeFor(rooms.close(room), reason);

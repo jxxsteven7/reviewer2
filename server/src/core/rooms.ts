@@ -34,6 +34,8 @@ export interface SweepResult {
   changed: Room[];
   // Connections of members who were dropped from rooms that stay open.
   dropped: string[];
+  // Rooms whose game module threw. They are left as they were.
+  failed: { room: Room; error: unknown }[];
 }
 
 export class Rooms {
@@ -76,19 +78,30 @@ export class Rooms {
     return [...room.screens, ...[...room.members.values()].flatMap((member) => [...member.sockets])];
   }
 
-  // Runs every minute.
+  // Runs every minute. A game module that throws stops the sweep of its own room only.
   sweep(): SweepResult {
-    const now = this.now();
-    const result: SweepResult = { closed: [], changed: [], dropped: [] };
+    const result: SweepResult = { closed: [], changed: [], dropped: [], failed: [] };
     for (const room of this.all()) {
-      if (room.onlineCount() > 0 || room.screens.size > 0) this.#lastOnline.set(room, now);
-      const idle = now - (this.#lastOnline.get(room) ?? now) >= this.limits.idleMs;
-      const stale = now - room.lastActivity >= this.limits.staleMs;
-      if (idle || stale) {
-        result.closed.push({ room, sockets: this.close(room) });
-        continue;
+      try {
+        this.#sweepRoom(room, result);
+      } catch (error) {
+        result.failed.push({ room, error });
       }
-      let changed = false;
+    }
+    return result;
+  }
+
+  #sweepRoom(room: Room, result: SweepResult): void {
+    const now = this.now();
+    if (room.onlineCount() > 0 || room.screens.size > 0) this.#lastOnline.set(room, now);
+    const idle = now - (this.#lastOnline.get(room) ?? now) >= this.limits.idleMs;
+    const stale = now - room.lastActivity >= this.limits.staleMs;
+    if (idle || stale) {
+      result.closed.push({ room, sockets: this.close(room) });
+      return;
+    }
+    let changed = false;
+    try {
       if (room.phase === 'lobby') {
         for (const id of room.offlineFor(this.limits.lobbyOfflineMs)) {
           result.dropped.push(...room.drop(id));
@@ -97,8 +110,9 @@ export class Rooms {
       }
       if (room.passChairIfAway(this.limits.chairAwayMs)) changed = true;
       room.forgetOldRemovals();
+    } finally {
+      // Whatever did change before a game module threw still has to reach the room's members.
       if (changed) result.changed.push(room);
     }
-    return result;
   }
 }

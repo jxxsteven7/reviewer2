@@ -13,6 +13,9 @@ import { randomId, type Rng } from './random';
 // One room: who is in it, who chairs it, which connections belong to whom, and the game's data.
 // The socket layer (socket.ts) calls these methods and then sends everyone the new state.
 // Every change bumps `rev`, so clients can tell old snapshots from new ones.
+//
+// A method asks the game module first and changes the room afterwards. A module that throws
+// then leaves the room exactly as it was, instead of half changed.
 
 export interface Member {
   id: string;
@@ -126,9 +129,10 @@ export class Room {
       sockets: new Set(),
       offlineSince: null,
     };
+    const data = this.game.join(this.data, member.id);
     this.members.set(member.id, member);
     this.chairId ??= member.id;
-    this.data = this.game.join(this.data, member.id);
+    this.data = data;
     this.changed();
     return { ok: true, member };
   }
@@ -162,8 +166,9 @@ export class Room {
   drop(id: string): string[] {
     const member = this.members.get(id);
     if (!member) return [];
+    const data = this.game.leave(this.data, id);
     this.members.delete(id);
-    this.data = this.game.leave(this.data, id);
+    this.data = data;
     if (this.chairId === id) this.chairId = this.#nextChair();
     this.changed();
     return [...member.sockets];
@@ -201,11 +206,6 @@ export class Room {
     this.phase = 'playing';
     this.changed();
     return done;
-  }
-
-  // The game reports when it has ended by itself, such as when a team wins.
-  settle(): void {
-    if (this.phase === 'playing' && this.game.isOver(this.data)) this.phase = 'ended';
   }
 
   // A withdrawal names the game it is meant for, so that one sent late, for instance by a tab
@@ -248,8 +248,9 @@ export class Room {
   remove(id: string): { ok: true; sockets: string[] } | { ok: false; error: string } {
     const member = this.members.get(id);
     if (!member) return { ok: false, error: 'no_such_player' };
+    const sockets = this.drop(id);
     this.#removed.set(member.key, this.#now() + REMOVED_FOR_MS);
-    return { ok: true, sockets: this.drop(id) };
+    return { ok: true, sockets };
   }
 
   handOver(id: string): Done {
@@ -259,12 +260,14 @@ export class Room {
     return done;
   }
 
-  // A game message from a member.
+  // A game message from a member. The game reports when it has ended by itself, such as when a
+  // team wins.
   act(id: string, type: string, payload: unknown): Done {
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return fail(result.error);
+    const over = this.phase === 'playing' && this.game.isOver(result.data);
     this.data = result.data;
-    this.settle();
+    if (over) this.phase = 'ended';
     this.changed();
     return done;
   }

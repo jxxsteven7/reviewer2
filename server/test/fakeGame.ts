@@ -1,7 +1,8 @@
 import type { GameModule } from '../src/core/game';
 
 // A tiny game for testing the shared layer. Players press a button; each viewer sees a line
-// meant only for them, which shows whether snapshots are really built per connection.
+// meant only for them, which shows whether snapshots are really built per connection. A player can
+// also break one part of the game, which then throws until someone mends it.
 
 export interface FakeData {
   joined: string[];
@@ -10,7 +11,7 @@ export interface FakeData {
   words: string[];
   gameId: string | null;
   over: boolean;
-  explode: boolean;
+  broken: 'join' | 'leave' | 'view' | null;
 }
 
 export interface FakeView {
@@ -24,9 +25,15 @@ export interface FakeView {
 export const fakeGame: GameModule<FakeData, FakeView> = {
   id: 'test',
   wordsNeeded: 3,
-  create: () => ({ joined: [], benched: [], presses: 0, words: [], gameId: null, over: false, explode: false }),
-  join: (data, id) => ({ ...data, joined: [...data.joined, id] }),
-  leave: (data, id) => ({ ...data, joined: data.joined.filter((other) => other !== id) }),
+  create: () => ({ joined: [], benched: [], presses: 0, words: [], gameId: null, over: false, broken: null }),
+  join(data, id) {
+    if (data.broken === 'join') throw new Error('joining broke');
+    return { ...data, joined: [...data.joined, id] };
+  },
+  leave(data, id) {
+    if (data.broken === 'leave') throw new Error('leaving broke');
+    return { ...data, joined: data.joined.filter((other) => other !== id) };
+  },
   bench: (data, _ctx, id) => ({ ...data, benched: [...data.benched, id] }),
   shuffle: (data) => ({ ...data, joined: [...data.joined].reverse() }),
   startProblems: (data, ctx) => (data.joined.filter((id) => ctx.isOnline(id)).length < 2 ? ['needs_players'] : []),
@@ -44,18 +51,25 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     return { ok: true, data: { ...data, over: true } };
   },
   again: (data) => ({ ...data, words: [], gameId: null, over: false }),
-  handle(data, ctx, _playerId, type) {
+  handle(data, ctx, _playerId, type, payload) {
+    if (type === 'test:break') return { ok: true, data: { ...data, broken: payload as FakeData['broken'] } };
+    if (type === 'test:mend') return { ok: true, data: { ...data, broken: null } };
+    // A module may throw anything at all, not only errors.
+    if (type === 'test:throw') throw payload;
     if (ctx.phase !== 'playing') return { ok: false, error: 'wrong_phase' };
     if (type === 'test:press') return { ok: true, data: { ...data, presses: data.presses + 1 } };
     if (type === 'test:finish') return { ok: true, data: { ...data, over: true } };
     if (type === 'test:explode') throw new Error('the game broke');
     return { ok: false, error: 'bad_request' };
   },
-  view: (data, _ctx, viewer) => ({
-    gameId: data.gameId,
-    presses: data.presses,
-    words: data.words,
-    benched: data.benched,
-    forViewer: 'playerId' in viewer ? `for ${viewer.playerId}` : 'for screens',
-  }),
+  view(data, _ctx, viewer) {
+    if (data.broken === 'view') throw new Error('the view broke');
+    return {
+      gameId: data.gameId,
+      presses: data.presses,
+      words: data.words,
+      benched: data.benched,
+      forViewer: 'playerId' in viewer ? `for ${viewer.playerId}` : 'for screens',
+    };
+  },
 };

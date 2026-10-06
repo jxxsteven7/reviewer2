@@ -314,6 +314,79 @@ describe('games', () => {
   });
 });
 
+describe('a game module that throws', () => {
+  const errors = () => server.logs.filter((entry) => entry.event === 'error');
+  const members = (code: string) => [...(server.app.rooms.find(code)?.members.values() ?? [])].map(({ name }) => name);
+
+  test('may throw anything at all', async () => {
+    const { chair } = await room();
+    for (const thrown of [null, 'a string', 42]) {
+      expect(await chair.send('test:throw', thrown), String(thrown)).toEqual({ ok: false, error: 'internal' });
+    }
+    expect(errors()).toHaveLength(3);
+    expect(await chair.send('sys:ping')).toEqual({ ok: true });
+  });
+
+  test('in a view costs only that view, wherever the view is built', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    expect(await chair.send('test:break', 'view')).toEqual({ ok: true });
+    // A disconnect, a handshake and the sweep send views too, with no message to answer.
+    bob.close();
+    await until(() => server.app.rooms.find(code)?.onlineCount() === 1, 'Bob offline');
+    const back = await connect({ token: bob.token, code, roomId });
+    await until(() => server.app.rooms.find(code)?.onlineCount() === 2, 'Bob back');
+    server.advance(3 * 60_000);
+    server.app.sockets.sweep();
+    expect(errors().length).toBeGreaterThan(0);
+    expect(errors().every((entry) => entry.fields?.where === 'view')).toBe(true);
+
+    expect(await chair.send('test:mend')).toEqual({ ok: true });
+    await back.waitFor((state) => state.me === bob.me, 'Bob sees the room again');
+  });
+
+  test('when someone leaves, leaves the room as it was', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    await chair.send('test:break', 'leave');
+    expect(await bob.send('room:leave')).toEqual({ ok: false, error: 'internal' });
+    expect(await chair.send('room:remove', { playerId: bob.me })).toEqual({ ok: false, error: 'internal' });
+    expect(members(code)).toEqual(['Ann', 'Bob']);
+    expect(await chair.send('room:leave')).toEqual({ ok: false, error: 'internal' });
+    expect(server.app.rooms.find(code)?.chairId).toBe(chair.me);
+
+    // Bob is still a member like any other, and nothing says that he was removed.
+    await chair.send('test:mend');
+    expect(await bob.send('room:leave')).toEqual({ ok: true });
+    expect(await bob.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
+  });
+
+  test('when someone joins, lets nobody in', async () => {
+    const { chair, code } = await room();
+    await chair.send('test:break', 'join');
+    const client = await connect();
+    expect(await client.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'internal' });
+    expect(members(code)).toEqual(['Ann']);
+    expect(await client.send('test:press')).toEqual({ ok: false, error: 'not_member' });
+  });
+
+  test('in the sweep stops the sweep of its own room only', async () => {
+    const broken = await room('Ann');
+    const bob = await join(broken.code, 'Bob');
+    const other = await room('Cat');
+    const dan = await join(other.code, 'Dan');
+    await broken.chair.send('test:break', 'leave');
+    bob.close();
+    dan.close();
+    await until(() => [broken, other].every(({ code }) => server.app.rooms.find(code)?.onlineCount() === 1));
+    server.advance(10 * 60_000 + 1);
+    server.app.sockets.sweep();
+    await other.chair.waitFor((state) => state.players.length === 1, 'Dan dropped');
+    expect(members(broken.code)).toEqual(['Ann', 'Bob']);
+    expect(errors().map((entry) => entry.fields?.where)).toEqual(['sweep']);
+  });
+});
+
 describe('screens', () => {
   test('watch without playing, and see the screen view', async () => {
     const { chair, code } = await room();
