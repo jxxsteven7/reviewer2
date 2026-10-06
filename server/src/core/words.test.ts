@@ -32,6 +32,24 @@ describe('the word library', () => {
     expect(library.has('nope')).toBe(false);
   });
 
+  test('lists the fields in the order of their ids as plain strings', () => {
+    // A Czech locale sorts "ch" after "h", and a Danish one "aa" after "z".
+    const ids = ['hci', 'ml-ops', 'cs', 'z', 'ml', 'chemistry', 'ab', 'mlops', 'aa', 'ml2'];
+    const library = new WordLibrary(ids.map((id) => list(id, 1)));
+    expect(library.fields().map((field) => field.id)).toEqual([
+      'aa',
+      'ab',
+      'chemistry',
+      'cs',
+      'hci',
+      'ml',
+      'ml-ops',
+      'ml2',
+      'mlops',
+      'z',
+    ]);
+  });
+
   test('refuses two lists with the same id', () => {
     const lists = [list('ml', 3), list('nlp', 3), list('ml', 5)];
     expect(() => new WordLibrary(lists)).toThrow('two word lists have the id "ml"');

@@ -54,11 +54,13 @@ export class WordLibrary {
     }
   }
 
-  // The fields, in a stable order, with how many words each has in each language.
+  // The fields, in a stable order, with how many words each has in each language. The ids are
+  // compared as plain strings, and no two are the same. localeCompare() would order them by the
+  // locale of the machine: a Czech one puts "chemistry" after "hci".
   fields(): FieldInfo[] {
     return [...this.#fields.values()]
       .map(({ info }) => ({ ...info, name: { ...info.name }, counts: { ...info.counts } }))
-      .sort((a, b) => a.id.localeCompare(b.id));
+      .sort((a, b) => (a.id < b.id ? -1 : 1));
   }
 
   has(id: string): boolean {
