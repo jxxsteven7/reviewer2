@@ -169,28 +169,64 @@ describe('starting a game', () => {
 });
 
 describe('shuffling the groups', () => {
+  const six = seated({
+    ann: redCaptain,
+    bob: redGuesser,
+    cat: redGuesser,
+    dan: blueGuesser,
+    eve: blueGuesser,
+    fay: SPECTATOR,
+  });
+  const teamsOf = (seating: Seating) =>
+    ['red', 'blue'].map((team) => [...seating.seats].filter(([, seat]) => seat.team === team));
+
   test('deals the seated players into two even groups with a captain each, and leaves spectators', () => {
-    const seating = seated({
-      ann: redCaptain,
-      bob: redGuesser,
-      cat: redGuesser,
-      dan: blueGuesser,
-      eve: blueGuesser,
-      fay: SPECTATOR,
-    });
-    const shuffled = shuffleGroups(seating, seededRng(5));
+    const shuffled = shuffleGroups(six, seededRng(5), new Set(six.seats.keys()));
     expect(seatOf(shuffled, 'fay')).toEqual(SPECTATOR);
-    const teams = ['red', 'blue'].map((team) => [...shuffled.seats.values()].filter((seat) => seat.team === team));
+    const teams = teamsOf(shuffled);
     expect(teams.map((members) => members.length).sort()).toEqual([2, 3]);
-    for (const members of teams) expect(members.filter((seat) => seat.role === 'captain')).toHaveLength(1);
+    for (const members of teams) expect(members.filter(([, seat]) => seat.role === 'captain')).toHaveLength(1);
   });
 
   test('is repeatable with the same seed and varies with others', () => {
     const seating = seated({ a: redGuesser, b: redGuesser, c: blueGuesser, d: blueGuesser });
-    expect(shuffleGroups(seating, seededRng(1))).toEqual(shuffleGroups(seating, seededRng(1)));
+    const online = new Set(['a', 'b', 'c', 'd']);
+    expect(shuffleGroups(seating, seededRng(1), online)).toEqual(shuffleGroups(seating, seededRng(1), online));
     const outcomes = new Set(
-      Array.from({ length: 20 }, (_, seed) => JSON.stringify([...shuffleGroups(seating, seededRng(seed)).seats])),
+      Array.from({ length: 20 }, (_, seed) =>
+        JSON.stringify([...shuffleGroups(seating, seededRng(seed), online).seats]),
+      ),
     );
     expect(outcomes.size).toBeGreaterThan(3);
+  });
+
+  test('gives the seats a game needs to players who are online, while there are enough of them', () => {
+    const online = new Set(['ann', 'bob', 'cat', 'dan']); // eve is away, and still gets a seat
+    const captains = new Set<string>();
+    for (let seed = 0; seed < 200; seed += 1) {
+      const shuffled = shuffleGroups(six, seededRng(seed), online);
+      expect(startProblems(shuffled, online), `seed ${seed}`).toEqual([]);
+      expect(seatOf(shuffled, 'eve').role).toBe('guesser');
+      expect(
+        teamsOf(shuffled)
+          .map((members) => members.length)
+          .sort(),
+      ).toEqual([2, 3]);
+      for (const team of ['red', 'blue'] as const) captains.add(captainOf(shuffled, team) ?? '');
+    }
+    expect(captains).toEqual(online);
+  });
+
+  test('still deals everyone when too few players are online', () => {
+    const online = new Set(['ann']);
+    for (let seed = 0; seed < 50; seed += 1) {
+      const shuffled = shuffleGroups(six, seededRng(seed), online);
+      expect(
+        teamsOf(shuffled)
+          .map((members) => members.length)
+          .sort(),
+      ).toEqual([2, 3]);
+      expect(seatOf(shuffled, 'ann').role).toBe('captain');
+    }
   });
 });

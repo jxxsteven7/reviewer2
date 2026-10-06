@@ -90,7 +90,7 @@ Everyone sees the public facts: whose turn it is and in which phase, the current
 ## Seats
 
 - Everyone joins as a spectator.
-- In the waiting room, anyone may take a free captain's seat, become a guesser in either group, or watch. The chair can shuffle the groups: everyone seated in a group is dealt into the two groups at random, as evenly as possible, with a random captain for each. Spectators stay where they are.
+- In the waiting room, anyone may take a free captain's seat, become a guesser in either group, or watch. The chair can shuffle the groups: everyone seated in a group is dealt into the two groups at random, as evenly as possible, with a random captain for each. Players who are online are dealt first, so the captains and a guesser in each group are online whenever at least four seated players are. Spectators stay where they are.
 - During a game, spectators may join either group, so latecomers can play, and anyone may step out to watch.
 - Whoever sits in a group during a game belongs to it until the next game. They may step out and come back, but a seat in the other group is refused with `other_team`. Otherwise a guesser could change groups in the middle of a turn and reveal cards or end the turn for the other group.
 - A group's empty captain's seat is open to that group's players and to spectators who haven't played in this game. Whoever has been a captain in the current game has seen the key, and may not be a guesser again until the next game (`key_viewer`). A captain may step down to watch.

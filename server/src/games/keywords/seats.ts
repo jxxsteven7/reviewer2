@@ -109,15 +109,19 @@ export const endGame = (seating: Seating): Seating => ({
   sides: new Map(),
 });
 
-// The chair's "shuffle the groups": everyone who sits in a group is dealt into the two groups at
-// random, as evenly as possible, and the first player dealt to each group becomes its captain.
-// Spectators keep their seats.
-export function shuffleGroups(seating: Seating, rng: Rng): Seating {
-  const playing = [...seating.seats].filter(([, seat]) => seat.role !== 'spectator').map(([id]) => id);
+// The chair's "shuffle the groups", in the waiting room: everyone who sits in a group is dealt
+// into the two groups at random, as evenly as possible, and the first player dealt to each group
+// becomes its captain. Players who are online are dealt first. A game needs a captain and a
+// guesser online in each group, so the shuffle doesn't hand those seats to someone who is away
+// while enough others are there. Spectators keep their seats.
+export function shuffleGroups(seating: Seating, rng: Rng, online: ReadonlySet<string>): Seating {
+  const seated = [...seating.seats].filter(([, seat]) => seat.role !== 'spectator').map(([id]) => id);
+  const present = seated.filter((id) => online.has(id));
+  const away = seated.filter((id) => !online.has(id));
   const seats = new Map(seating.seats);
   let team: Team = TEAMS[rng.int(TEAMS.length)] as Team;
   const captains = new Set<Team>();
-  for (const id of shuffle(playing, rng)) {
+  for (const id of [...shuffle(present, rng), ...shuffle(away, rng)]) {
     seats.set(id, captains.has(team) ? { team, role: 'guesser' } : { team, role: 'captain' });
     captains.add(team);
     team = otherTeam(team);
