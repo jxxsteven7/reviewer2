@@ -12,16 +12,7 @@ import { join } from 'node:path';
 import { after, describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import {
-  checkPath,
-  checkText,
-  decoded,
-  entryFor,
-  findSpellings,
-  isBinary,
-  masked,
-  SPELLINGS,
-} from './check-names.mjs';
+import { checkPath, checkText, decoded, entryFor, findSpellings, isBinary, masked, SPELLINGS } from './check-names.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./check-names.mjs', import.meta.url));
 
@@ -63,7 +54,28 @@ describe('finding a Latin spelling', () => {
       'z.o.r.b.l.a.x',
       'zor/blax',
       'z\u00f3rbl\u00e0x',
+      'zo\u0301rbla\u0300x', // the same accents as combining marks, as in decomposed text
       '\uff5a\uff4f\uff52\uff42\uff4c\uff41\uff58',
+      'zor\uff0dblax', // a full-width hyphen
+      'zor\uff3fblax', // a full-width underscore
+      'zor\u2011blax', // a non-breaking hyphen
+      'zor\u2013blax', // an en dash
+      'zor\u00adblax', // a soft hyphen
+      'zor\u200bblax', // a zero-width space
+    ]) {
+      assert.equal(found(text), 1, text);
+    }
+  });
+
+  test('across a line break and what opens the next line', () => {
+    for (const text of [
+      'the Zor\nBlax board game',
+      'the zor\r\nblax board game',
+      'zor\n\n  blax',
+      '// the zor\n// blax board game',
+      '# the zor\n#   blax board game',
+      ' * the zor\n * blax board game',
+      '> the zor\n> blax board game',
     ]) {
       assert.equal(found(text), 1, text);
     }
@@ -77,6 +89,8 @@ describe('finding a Latin spelling', () => {
       '#zorblax',
       '2zorblax',
       'myZorblax',
+      'HTTPZorblax',
+      'HTTPZor-Blax',
       '"Zorblax"',
       `${FAKE_HAN.slice(0, 2)}zorblax`,
     ]) {
@@ -84,21 +98,40 @@ describe('finding a Latin spelling', () => {
     }
   });
 
-  test('not inside a word or across other punctuation', () => {
-    for (const text of ['xzorblax', 'unzor blax', 'zor, blax', 'zor:blax', 'zorbl4x', 'zorbla', 'zor(blax)']) {
+  test('glued to other letters when it is in one piece', () => {
+    for (const text of ['xzorblax', 'loadzorblax', 'myzorblax.json', 'MYZORBLAX', 'MYZORBLAXES']) {
+      assert.equal(found(text), 1, text);
+    }
+  });
+
+  test('not as a near miss or across other punctuation', () => {
+    for (const text of [
+      'unzor blax',
+      'unzor-blax',
+      'unzor\nblax',
+      'unzorBlax',
+      'zor, blax',
+      'zor:blax',
+      'zor #blax',
+      'zorbl4x',
+      'zorbla',
+      'zor(blax)',
+    ]) {
       assert.equal(found(text), 0, text);
     }
   });
 });
 
 describe('finding a Chinese spelling', () => {
-  test('in a run of Chinese characters, which spaces and middle dots do not end', () => {
+  test('in a run of Chinese characters, which spaces, middle dots and line breaks do not end', () => {
     for (const text of [
       FAKE_HAN,
       `\u4e00${FAKE_HAN}\u4e8c`,
       `${FAKE_HAN.slice(0, 2)} ${FAKE_HAN.slice(2)}`,
       `${FAKE_HAN.slice(0, 2)}\u00b7${FAKE_HAN.slice(2)}`,
       `${FAKE_HAN.slice(0, 2)}\u3000${FAKE_HAN.slice(2)}`,
+      `${FAKE_HAN.slice(0, 2)}\n${FAKE_HAN.slice(2)}`,
+      `# ${FAKE_HAN.slice(0, 3)}\n# ${FAKE_HAN.slice(3)}`,
     ]) {
       assert.equal(found(text), 1, text);
     }
@@ -113,17 +146,21 @@ describe('finding a Chinese spelling', () => {
 });
 
 describe('reports', () => {
-  test('give the line and column where each spelling starts and ends', () => {
+  test('give the line and column where each spelling starts, and its first and last offset', () => {
     assert.deepEqual(findSpellings('one\ntwo Zor-Blax three zorblax', FAKE), [
-      { line: 2, column: 5, end: 12 },
-      { line: 2, column: 20, end: 26 },
+      { line: 2, column: 5, from: 8, to: 15 },
+      { line: 2, column: 20, from: 23, to: 29 },
     ]);
-    assert.deepEqual(findSpellings(`\r\n\u4e00${FAKE_HAN}`, FAKE), [{ line: 2, column: 2, end: 5 }]);
+    assert.deepEqual(findSpellings(`\r\n\u4e00${FAKE_HAN}`, FAKE), [{ line: 2, column: 2, from: 3, to: 6 }]);
+    assert.deepEqual(findSpellings('one\rtwo\r\n\nthe Zor\n  Blax game', FAKE), [
+      { line: 4, column: 5, from: 14, to: 23 },
+    ]);
   });
 
   test('blot spellings out instead of repeating them', () => {
     assert.equal(masked('feat/zorblax-rules', FAKE), 'feat/\u2022\u2022\u2022\u2022\u2022\u2022\u2022-rules');
     assert.equal(masked('no match here', FAKE), 'no match here');
+    assert.equal(masked('the Zor\r\n  Blax game', FAKE), `the ${'\u2022'.repeat(3)}\r\n${'\u2022'.repeat(6)} game`);
 
     const problems = [...checkText('see zorblax', 'branch zorblax', FAKE), ...checkPath('docs/Zorblax.md', FAKE)];
     assert.equal(problems.length, 2);

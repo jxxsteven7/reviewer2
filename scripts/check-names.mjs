@@ -6,9 +6,11 @@
 // The script holds only SHA-256 hashes of the name's spellings, so the name doesn't appear here
 // either, and a report says where a spelling starts without repeating it. A Latin spelling is
 // found wherever a word starts, whatever the case, accents or full-width forms, and with
-// spaces, hyphens, underscores, dots or slashes between its letters, so "Two Words",
-// "two-words", "two_words" and "TwoWords" all count. A Chinese spelling is found in any run of
-// Chinese characters; spaces and middle dots don't end a run, but other punctuation does.
+// spaces, hyphens, dashes, underscores, dots, slashes or a line break between its letters, so
+// "Two Words", "two-words", "two_words" and "TwoWords" all count, and so does a name that wraps
+// onto the next line. It is also found glued to other letters, as in "mytwowords". A Chinese
+// spelling is found in any run of Chinese characters; spaces, middle dots and line breaks don't
+// end a run, but other punctuation does.
 //
 // This script checks files and file paths. Commit messages, pull request titles and bodies, and
 // branch names are checked by scripts/check-commits.mjs, which imports findSpellings from here
@@ -56,8 +58,12 @@ const UTF16 = [
 
 const LATIN_LETTER = /^[a-z]$/i;
 const HAN = /^\p{Script=Han}$/u;
-// What may stand between the letters or characters of a spelling without breaking it up.
-const SEPARATOR = /^[\s\-_./\\\u00b7\u2027\u30fb]$/u;
+// What may stand between the letters or characters of a spelling without breaking it up: white
+// space, hyphens and dashes, a few other marks that join words, and invisible format characters
+// such as the soft hyphen and the zero-width space.
+const SEPARATOR = /^[\s\p{Pd}\p{Cf}_./\\\u00b7\u2027\u30fb]$/u;
+// What may open a line before its text: the marker of a comment, a quotation or a list item.
+const LINE_MARKER = /^[#*>]$/;
 
 // Folds compatibility forms, such as full-width letters, into their plain forms and drops accents.
 const fold = (char) => [...char.normalize('NFKD').replace(/\p{M}/gu, '')];
@@ -79,8 +85,9 @@ export function entryFor(spelling) {
   return { script: 'latin', length: letters.length, sha256: sha256(letters.join('')) };
 }
 
-// Every place in the text where one of the spellings starts, as { line, column, end }: 1-based
-// numbers counted in code points, with `end` the column where the spelling ends.
+// Every place in the text where one of the spellings is found, as { line, column, from, to }:
+// the 1-based line and column where it starts, and the offsets in the text of its first and its
+// last character. All of them are counted in code points.
 export function findSpellings(text, spellings = SPELLINGS) {
   const wanted = { latin: new Map(), han: new Map() }; // length -> hashes of that length
   for (const { script, length, sha256: hash } of spellings) {
@@ -88,77 +95,122 @@ export function findSpellings(text, spellings = SPELLINGS) {
     wanted[script].get(length).add(hash);
   }
   const found = [];
-  text.split(/\r\n|\r|\n/).forEach((line, index) => scanLine(line, index + 1, wanted, found));
-  return found;
-}
 
-function scanLine(line, lineNumber, wanted, found) {
-  // The current runs of Latin letters and of Chinese characters, folded and lowercased, with
-  // the column of each one and the positions where a spelling may start.
-  const newRun = () => ({ chars: [], columns: [], starts: [] });
+  // The current runs of Latin letters and of Chinese characters. A run goes on across
+  // separators and line breaks and ends at anything else. It holds the folded letters or
+  // characters, the place of each one and, for letters, whether a separator stands before it.
+  const newRun = () => ({ chars: [], places: [], gaps: [] });
   let latin = newRun();
   let han = newRun();
-  let previous = null; // the previous letter as written, while the word goes on
   const endLatin = () => {
-    match(latin, wanted.latin, lineNumber, found);
+    matchLatin(latin, wanted.latin, found);
     latin = newRun();
   };
   const endHan = () => {
-    match(han, wanted.han, lineNumber, found);
+    match(han, wanted.han, found);
     han = newRun();
   };
 
+  let offset = -1;
+  let line = 1;
   let column = 0;
-  for (const char of line) {
+  let afterReturn = false; // the previous character was a carriage return
+  let lineStart = true; // nothing but white space and line markers so far on this line
+  let gap = true; // the next letter is the first of its run or follows a separator
+  for (const char of text) {
+    offset += 1;
+    if (char === '\n' || char === '\r') {
+      // A line break, where "\r\n" is a single one. It separates like other white space, so a
+      // spelling that wraps onto the next line of a paragraph or a comment is found too.
+      if (char === '\r' || !afterReturn) {
+        line += 1;
+        column = 0;
+      }
+      afterReturn = char === '\r';
+      lineStart = true;
+      gap = true;
+      continue;
+    }
+    afterReturn = false;
     column += 1;
     const folded = fold(char);
-    if (folded.length && folded.every((letter) => LATIN_LETTER.test(letter))) {
-      for (const letter of folded) {
-        // A word starts after anything that isn't a letter, and where a capital letter follows
-        // a lowercase one, as in camelCase.
-        if (previous === null || (isUpper(letter) && isLower(previous))) latin.starts.push(latin.chars.length);
-        latin.chars.push(letter.toLowerCase());
-        latin.columns.push(column);
-        previous = letter;
-      }
+    if (!folded.length) continue; // a combining mark on its own, which belongs to the letter before it
+    const place = { offset, line, column };
+    if (folded.every((letter) => LATIN_LETTER.test(letter))) {
       endHan();
-    } else if (folded.length === 1 && HAN.test(folded[0])) {
-      // Chinese has no spaces between words, so a spelling may start at any character.
-      han.starts.push(han.chars.length);
-      han.chars.push(folded[0]);
-      han.columns.push(column);
-      previous = null;
-      endLatin();
-    } else {
-      previous = null;
-      if (!SEPARATOR.test(char)) {
-        endLatin();
-        endHan();
+      for (const letter of folded) {
+        latin.chars.push(letter);
+        latin.places.push(place);
+        latin.gaps.push(gap);
+        gap = false;
       }
+      lineStart = false;
+    } else if (folded.length === 1 && HAN.test(folded[0])) {
+      endLatin();
+      han.chars.push(folded[0]);
+      han.places.push(place);
+      gap = true;
+      lineStart = false;
+    } else if (folded.every((part) => SEPARATOR.test(part)) || (lineStart && LINE_MARKER.test(char))) {
+      gap = true;
+    } else {
+      endLatin();
+      endHan();
+      gap = true;
+      lineStart = false;
     }
   }
   endLatin();
   endHan();
+  return found;
 }
 
-function match(run, byLength, line, found) {
-  for (const start of run.starts) {
+// Looks for the wanted spellings in a run. `mayStart(index, length)` says whether a spelling of
+// that length may start at that position. Chinese has no spaces between words, so there a
+// spelling may start at any character.
+function match({ chars, places }, byLength, found, mayStart = () => true) {
+  for (let index = 0; index < chars.length; index += 1) {
     for (const [length, hashes] of byLength) {
-      if (start + length > run.chars.length) continue;
-      if (hashes.has(sha256(run.chars.slice(start, start + length).join('')))) {
-        found.push({ line, column: run.columns[start], end: run.columns[start + length - 1] });
+      if (index + length > chars.length || !mayStart(index, length)) continue;
+      if (hashes.has(sha256(chars.slice(index, index + length).join('')))) {
+        const { offset, line, column } = places[index];
+        found.push({ line, column, from: offset, to: places[index + length - 1].offset });
       }
     }
   }
 }
 
-// The text with each spelling in it blotted out, so that a report never repeats one.
-export function masked(text, spellings = SPELLINGS) {
-  const lines = text.split(/\r\n|\r|\n/).map((line) => [...line]);
-  for (const { line, column, end } of findSpellings(text, spellings)) {
-    lines[line - 1].fill('\u2022', column - 1, end);
+// In a run of Latin letters, a spelling that starts where a word starts may have separators
+// and capitals inside it. A word starts after a separator, at a capital after a lowercase
+// letter, as in camelCase, and at the last capital of an acronym, like the S in "HTTPServer".
+// Anywhere else a spelling must be in one piece, with no separator and no new capitalized word
+// inside it. That finds it glued to other letters, as in "mytwowords" or "MYTWOWORDS", but not
+// in "untwoWords", which reads "untwo words".
+function matchLatin({ chars, places, gaps }, byLength, found) {
+  // Whether a letter starts a new word within the run. The first letter always has a gap.
+  const capitalized = (index) => !gaps[index] && isUpper(chars[index]) && isLower(chars[index - 1]);
+  // How many letters from each position on are in one piece.
+  const solid = new Array(chars.length);
+  for (let index = chars.length - 1; index >= 0; index -= 1) {
+    const joined = index + 1 < chars.length && !gaps[index + 1] && !capitalized(index + 1);
+    solid[index] = joined ? solid[index + 1] + 1 : 1;
   }
-  return lines.map((chars) => chars.join('')).join('\n');
+  const startsWord = (index) =>
+    gaps[index] || capitalized(index) || (isUpper(chars[index]) && solid[index] > 1 && isLower(chars[index + 1]));
+  const lowercase = chars.map((letter) => letter.toLowerCase());
+  match({ chars: lowercase, places }, byLength, found, (index, length) => startsWord(index) || solid[index] >= length);
+}
+
+// The text with each spelling in it blotted out, so that a report never repeats one. Line
+// breaks inside a spelling stay as they are.
+export function masked(text, spellings = SPELLINGS) {
+  const chars = [...text];
+  for (const { from, to } of findSpellings(text, spellings)) {
+    for (let offset = from; offset <= to; offset += 1) {
+      if (chars[offset] !== '\n' && chars[offset] !== '\r') chars[offset] = '\u2022';
+    }
+  }
+  return chars.join('');
 }
 
 // --------------------------------------------------------------------------------------------
