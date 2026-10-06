@@ -1,6 +1,8 @@
 import { MAX_PLAYERS, MAX_SCREENS } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { CODE_ALPHABET } from '../src/core/codes';
 import type { GameModule } from '../src/core/game';
+import { seededRng } from '../src/core/random';
 import type { FakeView } from './fakeGame';
 import { fakeGame } from './fakeGame';
 import { createRoom, joinRoom, startServer, TestClient, until, type Reply, type TestServer } from './helpers';
@@ -180,6 +182,55 @@ describe('connections', () => {
     tab1.close();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(online(chair, 'Bob')).toBe(true);
+  });
+});
+
+describe('the handshake', () => {
+  test('lets nobody in for the first time, and says nothing about a bare code', async () => {
+    const { code } = await room();
+    const clients = [
+      await connect({ code }),
+      await connect({ watch: code }),
+      await connect({ code: 'ZZZZ' }),
+      await connect({ watch: 'ZZZZ' }),
+    ];
+    for (const client of clients) {
+      // An answered message shows that nothing else was on its way.
+      expect(await client.send('sys:ping')).toEqual({ ok: true });
+      expect(client.states).toEqual([]);
+      expect(client.closed).toEqual([]);
+    }
+    expect(members(code)).toEqual(['Ann']);
+    expect(server.app.rooms.find(code)?.screens.size).toBe(0);
+  });
+
+  test("answers a room ID that is not the room's with room:closed, whatever the code", async () => {
+    const { chair, code } = await room();
+    for (const auth of [
+      { watch: code, roomId: 'another-room' },
+      { watch: 'ZZZZ', roomId: 'another-room' },
+      { token: chair.token, code, roomId: 'another-room' },
+      { code: 'ZZZZ', roomId: 'another-room' },
+    ]) {
+      const client = await connect(auth);
+      await until(() => client.closed.length > 0, 'room:closed');
+      expect(client.closed, JSON.stringify(auth)).toEqual(['expired']);
+      expect(client.states).toEqual([]);
+    }
+  });
+
+  test('takes a field that is not what it should be for a missing one', async () => {
+    const { code } = await room();
+    const bob = await join(code, 'Bob');
+    bob.close();
+    const back = await connect({ token: bob.token, code, roomId: null });
+    await back.waitFor((state) => state.me === bob.me, 'Bob back');
+    expect(back.closed).toEqual([]);
+
+    const odd = await connect({ token: 42, code: { length: 4 }, roomId: 7, watch: ['K7QX'] });
+    expect(odd.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(await odd.send('sys:ping')).toEqual({ ok: true });
+    expect(odd.closed).toEqual([]);
   });
 });
 
@@ -416,13 +467,45 @@ describe('screens', () => {
     expect(await screen.send('test:press')).toEqual({ ok: false, error: 'not_member' });
   });
 
-  test('can come back through the handshake, and are limited per room', async () => {
-    const { code } = await room();
-    const first = await connect({ watch: code });
+  test('come back through the handshake by the room ID, and are limited per room', async () => {
+    const { code, roomId } = await room();
+    const first = await connect({ watch: code, roomId });
     await first.waitFor((view) => view.me === null);
-    for (let i = 1; i < MAX_SCREENS; i += 1) await connect({ watch: code });
+    for (let i = 1; i < MAX_SCREENS; i += 1) await connect({ watch: code, roomId });
     const extra = await connect();
     expect(await extra.send('room:watch', { code })).toEqual({ ok: false, error: 'screens_full' });
+  });
+
+  test('are not taken to the room that got their code later', async () => {
+    // A generator that can be told what to draw next, so that a second room gets the code of
+    // the first.
+    const next: number[] = [];
+    const drawn = seededRng(7);
+    await server.close();
+    server = await startServer({ rng: { int: (below) => next.shift() ?? drawn.int(below) } });
+
+    const first = await room();
+    const screen = await connect();
+    expect(await screen.send('room:watch', { code: first.code })).toMatchObject({ ok: true, roomId: first.roomId });
+    screen.close();
+    expect(await first.chair.send('room:leave')).toEqual({ ok: true });
+    next.push(...[...first.code].map((character) => CODE_ALPHABET.indexOf(character)));
+    const second = await room('Stranger');
+    expect(second.code).toBe(first.code);
+    expect(second.roomId).not.toBe(first.roomId);
+
+    const asked = { code: first.code, roomId: first.roomId };
+    const back = await connect({ watch: first.code, roomId: first.roomId });
+    await until(() => back.closed.includes('expired'), 'room:closed for the screen');
+    expect(await back.send('room:watch', asked)).toEqual({ ok: false, error: 'room_not_found' });
+    expect(back.states).toEqual([]);
+    expect(server.app.rooms.find(second.code)?.screens.size).toBe(0);
+
+    // The same goes for a player of the first room.
+    const player = await connect({ token: first.chair.token, ...asked });
+    await until(() => player.closed.includes('expired'), 'room:closed for the player');
+    expect(await player.send('room:join', { ...asked, name: 'Ann' })).toEqual({ ok: false, error: 'room_not_found' });
+    expect(members(second.code)).toEqual(['Stranger']);
   });
 });
 
@@ -504,6 +587,37 @@ describe('limits', () => {
     // A right code is refused as well, or the address could go on telling right from wrong.
     expect(await client.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'rate_limited' });
     server.advance(60_000);
+    expect(await client.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
+  });
+
+  test('watching counts like joining, and a handshake counts for nothing', async () => {
+    const { code, roomId } = await room();
+    const client = await connect();
+    await mistype(client, 'room:watch');
+    expect(await client.send('room:watch', { code })).toEqual({ ok: false, error: 'rate_limited' });
+    expect(await client.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'rate_limited' });
+    // Whoever gives the room's ID has been there, and is not held up.
+    expect(await client.send('room:watch', { code, roomId })).toMatchObject({ ok: true });
+
+    // Handshakes with wrong codes are not counted, because they are not answered either.
+    server.advance(60_000);
+    for (let i = 0; i < 25; i += 1) await connect(i % 2 ? { code: 'ZZZZ' } : { watch: 'ZZZZ', roomId: 'another-room' });
+    expect(await client.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
+  });
+
+  test('a wrong room ID finds nothing, and tells nothing about the code', async () => {
+    const { code } = await room();
+    const client = await connect();
+    for (const tried of [code, 'ZZZZ']) {
+      const asked = { code: tried, roomId: 'another-room' };
+      expect(await client.send('room:join', { ...asked, name: 'Bob' })).toEqual({ ok: false, error: 'room_not_found' });
+      expect(await client.send('room:watch', asked)).toEqual({ ok: false, error: 'room_not_found' });
+    }
+    // Nor does it count: none of these could have found a room.
+    for (let i = 0; i < 25; i += 1) {
+      server.advance(200);
+      await client.send('room:watch', { code: 'ZZZZ', roomId: 'another-room' });
+    }
     expect(await client.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
   });
 
@@ -589,8 +703,8 @@ describe('housekeeping', () => {
   });
 
   test('tells everyone when the server restarts', async () => {
-    const { chair, code } = await room();
-    const screen = await connect({ watch: code });
+    const { chair, code, roomId } = await room();
+    const screen = await connect({ watch: code, roomId });
     server.app.sockets.closeAll('restart');
     await until(() => chair.closed.includes('restart') && screen.closed.includes('restart'));
   });

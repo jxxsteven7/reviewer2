@@ -36,8 +36,10 @@ export type RoomError = (typeof ROOM_ERRORS)[number];
 
 export type Ack<Data extends object = object> = ({ ok: true } & Data) | { ok: false; error: string };
 
-// The handshake. A browser sends its token, and, when it is reconnecting, the room it was in;
-// a screen sends the code of the room it shows instead.
+// The handshake, which brings back whoever has been in a room before the first message runs. A
+// browser sends its token and, once it is in a room, that room's code and ID. A screen sends the
+// code and ID of the room it shows, as `watch` and `roomId`. Nobody gets into a room for the first
+// time through the handshake: that takes room:join or room:watch.
 export interface Handshake {
   token?: string;
   code?: string;

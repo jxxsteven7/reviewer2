@@ -1,5 +1,5 @@
-import { cleanName, type ClosedReason, type Handshake } from '@reviewer2/shared';
-import { ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
+import { cleanName, type ClosedReason } from '@reviewer2/shared';
+import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { clientIp } from './clientIp';
@@ -154,21 +154,53 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return ok({ code: room.code, roomId: room.id });
   }
 
-  // Finds the room that belongs to a code, for someone who wants in. An address that has named too
-  // many codes without a room is refused for the rest of its minute, whether or not this code is
-  // right: otherwise it could go on telling right from wrong.
+  // Finds the room that belongs to a code, for someone who wants in. Every way into a room comes
+  // through here, so that none of them can be used to try codes until one fits. An address that
+  // has sent too many codes without a room is refused for the rest of its minute, whether or not
+  // this code is right: otherwise it could go on telling right from wrong.
   //
   // An address is rarely one person. A lab shares one, and so does everyone behind a reverse
-  // proxy that isn't trusted. So whoever is in the room already, by their token or on this very
-  // connection, gets in whatever their address has used up: a member who comes back must never
-  // be held up by what someone else did.
-  function lookup(conn: Connection, code: string): Room | 'room_not_found' | 'rate_limited' {
+  // proxy that isn't trusted. So the limit is only for those who could be trying codes, and
+  // never for someone who has been in the room:
+  //
+  // - whoever is in it already, by their token or on this very connection;
+  // - whoever gives its room ID. That takes having been sent it, and a wrong one finds nothing
+  //   whatever the code, so such a lookup tells nobody anything about codes.
+  function lookup(conn: Connection, code: string, roomId?: string): Room | 'room_not_found' | 'rate_limited' {
     const room = rooms.find(code);
+    if (roomId !== undefined) return room?.id === roomId ? room : 'room_not_found';
     if (room && (conn.room === room || room.memberByKey(conn.key))) return room;
     if (!failedLookups.allowed(conn.ip)) return 'rate_limited';
     if (room) return room;
     failedLookups.add(conn.ip);
     return 'room_not_found';
+  }
+
+  // Brings a connection back to the room that its handshake names, before any of its messages
+  // run, so that a message that waited out the disconnect doesn't arrive in a room that has
+  // forgotten the player.
+  //
+  // The handshake only brings back: a member by their token, and a screen by the room ID it was
+  // sent. Nobody gets in for the first time here, and a bare code gets no answer at all, neither
+  // "you are in" nor "no such room", so a handshake can't be used to try codes either. A first
+  // visit, and whatever else the handshake leaves open, goes through room:join or room:watch,
+  // which are answered.
+  function comeBack(socket: Socket, auth: z.infer<typeof HANDSHAKE>): void {
+    const conn = connection(socket);
+    const code = auth.watch ?? auth.code;
+    if (code === undefined) return;
+    const found = rooms.find(code);
+    // A different room ID means the code now belongs to a new room, not the one this connection
+    // was in.
+    const room = found && (auth.roomId === undefined || found.id === auth.roomId) ? found : undefined;
+    if (!room) {
+      if (auth.roomId !== undefined) socket.emit('room:closed', { reason: 'expired' });
+    } else if (auth.watch === undefined) {
+      const member = room.memberByKey(conn.key);
+      if (member) enter(socket, room, member);
+    } else if (auth.roomId !== undefined) {
+      watch(socket, room);
+    }
   }
 
   function membership(socket: Socket): { room: Room; member: Member } | null {
@@ -264,7 +296,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       forwardedIgnored = true;
       log('forwarded_address_ignored', { hint: 'behind a reverse proxy, set TRUST_PROXY=1' });
     }
-    const auth = (socket.handshake.auth ?? {}) as Handshake;
+    const auth = HANDSHAKE.parse(socket.handshake.auth);
     const token = isToken(auth.token) ? auth.token : null;
     const issued = token === null ? newToken() : null;
     const conn: Connection = {
@@ -284,26 +316,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     socket.emit('session', conn.issued ? { token: conn.issued, version } : { version });
     conn.issued = null;
 
-    // A connection that comes back to its room is put back before any of its messages run, so a
-    // message that waited out the disconnect doesn't arrive in a room that has forgotten it.
-    safely('handshake', () => {
-      const auth = (socket.handshake.auth ?? {}) as Handshake;
-      if (typeof auth.watch === 'string') {
-        const room = rooms.find(auth.watch);
-        if (room) watch(socket, room);
-        else socket.emit('room:closed', { reason: 'expired' });
-      } else if (typeof auth.code === 'string') {
-        // A different room ID means the code now belongs to a new room, not the one this
-        // connection was in.
-        const room = rooms.find(auth.code);
-        if (!room || (auth.roomId !== undefined && room.id !== auth.roomId)) {
-          socket.emit('room:closed', { reason: 'expired' });
-        } else {
-          const member = room.memberByKey(conn.key);
-          if (member) enter(socket, room, member);
-        }
-      }
-    });
+    safely('handshake', () => comeBack(socket, HANDSHAKE.parse(socket.handshake.auth)));
 
     const handlers: Handlers = new Map();
     on(handlers, 'sys:ping', () => ok());
@@ -331,8 +344,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ code: room.code, roomId: room.id });
     });
 
-    on(handlers, 'room:join', ({ code, name }) => {
-      const room = lookup(conn, code);
+    on(handlers, 'room:join', ({ code, name, roomId }) => {
+      const room = lookup(conn, code, roomId);
       if (typeof room === 'string') return fail(room);
       const member = room.memberByKey(conn.key);
       if (member) {
@@ -346,9 +359,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ code: room.code, roomId: room.id });
     });
 
-    on(handlers, 'room:watch', ({ code }) => {
-      const room = rooms.find(code);
-      return room ? watch(socket, room) : fail('room_not_found');
+    on(handlers, 'room:watch', ({ code, roomId }) => {
+      const room = lookup(conn, code, roomId);
+      return typeof room === 'string' ? fail(room) : watch(socket, room);
     });
 
     on(handlers, 'room:leave', () => {

@@ -19,7 +19,7 @@ Adding a game means adding a module on each side, without changing the core.
 ## Rooms
 
 - **Codes.** A room has a 4-character code in Crockford's base32 (digits and capital letters without I, L, O and U), which gives about a million codes. Links look like `/room/K7QX`, and the interface shows the code as a manuscript number, `R2-K7QX`. The server reads a typed code in any case, with or without the `R2-` prefix, and takes I and L for 1 and O for 0.
-- **Room IDs.** Each room also has a random `roomId`. Codes are reused after a room closes, so snapshots and reconnects carry the `roomId` as well, and a client never mistakes a new room for its old one.
+- **Room IDs.** Each room also has a random `roomId`. Codes are reused after a room closes, so every snapshot carries the `roomId`, and a client that has been in a room gives it whenever it asks to be let back in: in the handshake, in `room:join` and in `room:watch`. When the code has gone to another room since, the server answers that the room is gone, and nobody ends up in a stranger's room.
 - **Language.** A room's language is set when it is created and never changes. It decides both the interface language inside the room and the words on the cards.
 - **Phases.** A room moves from `lobby` to `playing` to `ended`, and back to `lobby` for another game.
 - **The chair.** The first member chairs the room. Only the chair can change the fields, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, or hand the chair over. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
@@ -50,8 +50,8 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 | `sys:ping` | | Anyone; checks that a connection is really alive |
 | `meta:fields` | | Anyone; returns the fields of the word library with their word counts |
 | `room:create` | `game`, `language`, `fields`, `name` | Anyone; the creator becomes the chair |
-| `room:join` | `code`, `name` (for newcomers) | Anyone; a member who comes back needs no name, and a newcomer without one gets `name_required` with the room's language |
-| `room:watch` | `code` | A screen |
+| `room:join` | `code`, `name` (for newcomers), `roomId` (for whoever has been in the room) | Anyone; a member who comes back needs no name, and a newcomer without one gets `name_required` with the room's language |
+| `room:watch` | `code`, `roomId` (for a screen that has shown the room) | A screen |
 | `room:leave`, `room:rename` | `name` for renaming | Members |
 | `room:settings` | `fields` | The chair, in the waiting room |
 | `room:start`, `room:again`, `room:shuffle` | | The chair |
@@ -63,7 +63,8 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 Phones drop their connection whenever the screen locks or the browser goes to the background, so reconnecting is routine:
 
 - **Sooner detection.** The server pings every 10 seconds and gives up after 8 more, sooner than Socket.IO's defaults, so dead connections are noticed quickly.
-- **The handshake.** The client sends `{ token, code, roomId }`. A connection whose token belongs to a member of that room is put back into it before any of its messages run, so a message that waited out the disconnect lands in the right room. A screen sends `{ watch: code }` instead.
+- **The handshake.** The client sends `{ token, code, roomId }`. A connection whose token belongs to a member of that room is put back into it before any of its messages run, so a message that waited out the disconnect lands in the right room. A screen sends `{ watch: code, roomId }` instead and is put back to watching. The server checks the handshake against a schema like any payload, and takes a field that isn't what it should be for a missing one.
+- **The handshake only brings back.** It lets nobody into a room for the first time: a token that isn't a member's, or a screen that gives no `roomId`, gets no answer from it. Its one answer is `room:closed` with the reason `expired`, to a `roomId` that is no longer the code's. So a client always follows the handshake with `room:join` or `room:watch`, which are answered: that is where a newcomer is asked for a name, and where a player learns that the room is full, that they were removed or that the code belongs to no room.
 - **Stale actions.** Every game action carries the game and turn it was meant for, and the chair's withdrawal carries the game, so a late one is refused instead of landing in a later turn or the next game.
 - **On the client** (with the lobby UI): it checks the connection with `sys:ping` when the page becomes visible again, when the browser restores it from its cache, and when the network comes back, and reconnects at once if the ping goes unanswered. It drops anything that was queued while offline, and sends nothing while disconnected. It stops trying to rejoin a room that no longer exists.
 
@@ -80,12 +81,13 @@ A module's data is immutable: every call returns new data. `view()` is the only 
 
 ## Screens
 
-A screen, such as a projector in a lab meeting, watches a room without a token and without a seat. The server gives it the view that a spectator would get, so even a chair who is also a captain can put the board on the wall without showing the key. A room can have up to 5 screens.
+A screen, such as a projector in a lab meeting, watches a room without a token and without a seat. It starts with `room:watch`, and comes back after a dropped connection through the handshake, by the `roomId` it was sent. The server gives it the view that a spectator would get, so even a chair who is also a captain can put the board on the wall without showing the key. A room can have up to 5 screens.
 
 ## Limits and housekeeping
 
 - **Message rate.** Each connection may send about 10 messages a second, in bursts of up to 20.
-- **Per address.** Each address may create 5 rooms a minute and name 20 codes a minute that belong to no room, which keeps anyone from trying codes until one fits. Past that, the address is refused whether or not its next code is right. An address is rarely one person: a lab shares one. So the limit never holds up someone who is in the room already, by their token or on the same connection. A member always gets back in; only newcomers at that address wait out the minute.
+- **Per address.** Each address may create 5 rooms a minute and send 20 codes a minute that belong to no room, which keeps anyone from trying codes until one fits. Past that, the address is refused whether or not its next code is right. Joining and watching count alike, and the handshake gives a bare code no answer at all, so there is no way around the count.
+- **Never for those who have been there.** An address is rarely one person: a lab shares one. So the limit never holds up someone who is in the room already, by their token or on the same connection, or who gives its `roomId`. A wrong `roomId` finds nothing whatever the code, so it can't be used to try codes. A member always gets back in; only newcomers at that address wait out the minute.
 - **Behind a reverse proxy,** every connection comes from the proxy, so set `TRUST_PROXY` to take the address from `X-Forwarded-For` instead; [development.md](development.md) has the settings. Otherwise all players share the limits of one address. IPv6 addresses count per /64 network.
 - **Sizes.** A message may be up to 16 KB. A room holds up to 30 players and 5 screens, and the server up to 2000 rooms.
 - **The sweep.** Once a minute, the server closes rooms in which nobody has been online for 30 minutes, and rooms in which nothing has happened for 6 hours. It also drops members who have been offline for 10 minutes from waiting rooms, and passes on the chair of anyone who has been away for 3 minutes. Those 10 minutes count only time in the waiting room: a player whose phone was locked during a game still has their seat when the room goes back to the waiting room, and 10 minutes from then to return to it.
