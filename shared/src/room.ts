@@ -1,7 +1,7 @@
 import type { Language } from './language';
 
 // What every member of a room sees of it. The game's own part, such as seats and the board, is
-// in `game`; the server builds it for each viewer separately (docs/architecture.md).
+// in `data`; the server builds it for each viewer separately (docs/architecture.md).
 
 export type RoomPhase = 'lobby' | 'playing' | 'ended';
 
@@ -21,9 +21,13 @@ export interface RoomView<Game = unknown> {
   language: Language;
   fields: string[];
   phase: RoomPhase;
+  // The game that is being played or has just ended, and null in the waiting room. The chair's
+  // messages about a game name it, so that a late one can't land in the next game.
+  gameId: string | null;
   chairId: string | null;
   players: PlayerView[];
   // The viewer's own player ID, or null for a screen, which watches without playing.
   me: string | null;
+  // The game's own part of the view, built for this viewer alone.
   data: Game;
 }

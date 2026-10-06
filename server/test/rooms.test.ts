@@ -385,8 +385,10 @@ describe('games', () => {
     expect(server.logs.some((entry) => entry.event === 'game_ended')).toBe(true);
     expect(await chair.send('room:again')).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'lobby');
+    expect(chair.state?.gameId).toBeNull();
     await chair.send('room:start');
-    const { gameId } = game(chair);
+    const gameId = (await chair.waitFor((state) => state.phase === 'playing')).gameId;
+    expect(gameId).toEqual(expect.any(String));
     expect(await chair.send('room:end')).toEqual({ ok: false, error: 'bad_request' });
     expect(await chair.send('room:end', { gameId: 'an-earlier-game' })).toEqual({ ok: false, error: 'stale' });
     expect(await chair.send('room:end', { gameId })).toEqual({ ok: true });

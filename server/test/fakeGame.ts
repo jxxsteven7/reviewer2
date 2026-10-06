@@ -14,8 +14,9 @@ export interface FakeData {
   broken: 'join' | 'leave' | 'view' | null;
 }
 
+// The view leaves the game's ID out on purpose: the chair's controls have to work with what the
+// room itself says, whatever a game puts into its own part.
 export interface FakeView {
-  gameId: string | null;
   presses: number;
   words: string[];
   benched: string[];
@@ -65,7 +66,6 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   view(data, _ctx, viewer) {
     if (data.broken === 'view') throw new Error('the view broke');
     return {
-      gameId: data.gameId,
       presses: data.presses,
       words: data.words,
       benched: data.benched,

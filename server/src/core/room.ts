@@ -326,6 +326,7 @@ export class Room {
       language: this.language,
       fields: [...this.fields],
       phase: this.phase,
+      gameId: this.gameId,
       chairId: this.chairId,
       players: [...this.members.values()].map((member) => ({
         id: member.id,
