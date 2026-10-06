@@ -3,11 +3,13 @@ import { request, type IncomingHttpHeaders } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { brotliCompressSync, brotliDecompressSync, gunzipSync, gzipSync } from 'node:zlib';
 import { io as connect } from 'socket.io-client';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createAppServer, type AppServer } from '../src/server';
 
 const INDEX = '<!doctype html><title>Reviewer 2</title>';
+const SCRIPT = 'console.log(1);';
 
 async function start(publicDir: string): Promise<{ server: AppServer; base: string }> {
   const server = createAppServer({ publicDir, version: 'test-version' });
@@ -16,10 +18,15 @@ async function start(publicDir: string): Promise<{ server: AppServer; base: stri
   return { server, base: `http://127.0.0.1:${port}` };
 }
 
-// Sends the request target exactly as it is given, which fetch() doesn't: it parses the URL first.
-function get(base: string, target: string): Promise<{ status: number; headers: IncomingHttpHeaders; body: Buffer }> {
+// Sends the request target exactly as it is given and returns the body as it arrives. fetch()
+// does neither: it parses the URL first, and it expands a compressed body.
+function get(
+  base: string,
+  target: string,
+  headers: Record<string, string> = {},
+): Promise<{ status: number; headers: IncomingHttpHeaders; body: Buffer }> {
   return new Promise((resolve, reject) => {
-    const sent = request(base, { path: target }, (response) => {
+    const sent = request(base, { path: target, headers }, (response) => {
       const chunks: Buffer[] = [];
       response.on('data', (chunk: Buffer) => chunks.push(chunk));
       response.on('end', () =>
@@ -40,7 +47,15 @@ describe('with a built front end', () => {
     dir = mkdtempSync(join(tmpdir(), 'reviewer2-http-'));
     mkdirSync(join(dir, 'assets'));
     writeFileSync(join(dir, 'index.html'), INDEX);
-    writeFileSync(join(dir, 'assets', 'index-abc123.js'), 'console.log(1);');
+    writeFileSync(join(dir, 'assets', 'index-abc123.js'), SCRIPT);
+    // The copies that the build leaves beside each text file; see client/compress.mjs.
+    for (const [file, content] of [
+      ['index.html', INDEX],
+      [join('assets', 'index-abc123.js'), SCRIPT],
+    ] as const) {
+      writeFileSync(join(dir, `${file}.gz`), gzipSync(content));
+      writeFileSync(join(dir, `${file}.br`), brotliCompressSync(content));
+    }
     ({ server, base } = await start(dir));
   });
 
@@ -80,6 +95,32 @@ describe('with a built front end', () => {
 
     const missing = await fetch(`${base}/assets/index-old999.js`);
     expect(missing.status).toBe(404);
+  });
+
+  test('text files are sent compressed to the browsers that accept it', async () => {
+    const files = [
+      { target: '/assets/index-abc123.js', content: SCRIPT, cache: 'public, max-age=31536000, immutable' },
+      { target: '/room/K7QX', content: INDEX, cache: 'no-cache' },
+    ];
+    const accepted = [
+      { accept: 'br', encoding: 'br', expand: brotliDecompressSync },
+      { accept: 'gzip', encoding: 'gzip', expand: gunzipSync },
+      { accept: 'gzip, deflate, br', encoding: 'br', expand: brotliDecompressSync },
+    ];
+    for (const { target, content, cache } of files) {
+      for (const { accept, encoding, expand } of accepted) {
+        const response = await get(base, target, { 'accept-encoding': accept });
+        const which = `${target} with ${accept}`;
+        expect(response.status, which).toBe(200);
+        expect(response.headers['content-encoding'], which).toBe(encoding);
+        expect(response.headers.vary, which).toBe('Accept-Encoding');
+        expect(response.headers['cache-control'], which).toBe(cache);
+        expect(expand(response.body).toString(), which).toBe(content);
+      }
+      const plain = await get(base, target);
+      expect(plain.headers['content-encoding'], target).toBeUndefined();
+      expect(plain.body.toString(), target).toBe(content);
+    }
   });
 
   test('every response carries the security headers', async () => {

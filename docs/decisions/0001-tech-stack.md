@@ -19,7 +19,7 @@ The project brief fixed the outline: TypeScript on both sides, a Vue front end, 
 | Validation | zod 4, with schemas in `shared` |
 | Tests | Vitest 5 for unit and integration tests, Playwright for end-to-end tests |
 | Linting and formatting | ESLint 10 with typescript-eslint, eslint-plugin-vue and the vue-i18n plugin's `no-raw-text` rule, plus Prettier |
-| Builds | Vite for the front end; esbuild bundles the server and its dependencies into one CommonJS file |
+| Builds | Vite for the front end, with its text files compressed ahead of time; esbuild bundles the server and its dependencies into one CommonJS file |
 | Fonts | Source Serif 4 from `@fontsource-variable`, bundled and served by our own server. Interface text uses system fonts |
 
 ## Consequences
@@ -30,6 +30,7 @@ The project brief fixed the outline: TypeScript on both sides, a Vue front end, 
 - **No Express.** The server has two HTTP routes besides Socket.IO, the static files and `/healthz`, so Node's own `http` module is enough.
 - **The production image needs no `node_modules`.** The server is bundled into one file. It is CommonJS because socket.io's dependencies call `require()` for Node's built-in modules, which an ES module bundle can't do.
 - **One web font.** Every byte counts on a slow link into mainland China. Chinese text uses the system's fonts, because a Chinese web font weighs several megabytes.
+- **Compression at build time.** sirv sends files as they are, so the build writes a gzip and a Brotli copy of each text file at the highest level, and the server sends the copy that the browser accepts. That makes the script about a third of its size, at no cost per request.
 
 ## Alternatives considered
 

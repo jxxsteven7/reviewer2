@@ -83,14 +83,21 @@ export function createRequestHandler({ publicDir, version, startedAt = Date.now(
 // Everything else, index.html included, must be checked again on every visit, or a browser
 // that cached an old page would ask for assets that a new build no longer has. sirv passes
 // setHeaders the requested path, not index.html, when it falls back to index.html.
+//
+// sirv doesn't compress anything itself. With gzip and brotli on, it sends the .gz or .br copy
+// that the build leaves beside each text file (client/compress.mjs) to the browsers that accept it.
 function staticFiles(publicDir: string) {
   return {
     assets: sirv(publicDir, {
       etag: true,
+      gzip: true,
+      brotli: true,
       setHeaders: (res) => res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'),
     }),
     pages: sirv(publicDir, {
       etag: true,
+      gzip: true,
+      brotli: true,
       single: true,
       setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
     }),

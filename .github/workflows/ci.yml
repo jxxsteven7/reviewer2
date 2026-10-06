@@ -67,4 +67,6 @@ jobs:
           echo
           curl --fail --silent http://127.0.0.1:3000/ | grep -q '<div id="app">'
           curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
+          # The compressed copies from the build are in the image, and the server sends them.
+          curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'
           docker logs reviewer2

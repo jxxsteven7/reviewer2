@@ -23,7 +23,7 @@ Run it in every worktree, because each worktree has its own `node_modules`. It a
 | Command | What it does |
 |---|---|
 | `npm run dev` | Starts the server on port 3000, restarting it when its code changes, and the Vite dev server on <http://localhost:5173>, which forwards Socket.IO and `/healthz` to the server. Open the Vite address. |
-| `npm run build` | Builds the front end into `client/dist` and bundles the server into `server/dist/index.cjs` |
+| `npm run build` | Builds the front end into `client/dist`, with a gzip and a Brotli copy beside each text file, and bundles the server into `server/dist/index.cjs` |
 | `npm start` | Runs the production build: the front end and Socket.IO on one port, <http://localhost:3000> |
 | `npm test` | Runs the unit and integration tests with Vitest. `npx vitest` keeps watching |
 | `npm run lint` | ESLint, then Prettier's check |
