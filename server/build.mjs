@@ -1,5 +1,5 @@
-// Bundles the server and its dependencies into one CommonJS file, dist/index.cjs, so that the
-// production image needs no node_modules. It is CommonJS because socket.io's dependencies call
+// Bundles the server and its dependencies into one CommonJS file, dist/index.cjs, so that
+// production needs no node_modules. It is CommonJS because socket.io's dependencies call
 // require() for Node's built-in modules, which an ES module bundle can't do.
 //
 // APP_VERSION, when set, becomes the version that /healthz reports; see docs/development.md.

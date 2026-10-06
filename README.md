@@ -63,7 +63,7 @@ npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-`npm run build && npm start` runs the production build on one port, <http://localhost:3000>. The other commands, testing on a phone, Docker and the environment variables are in [docs/development.md](docs/development.md).
+`npm run build && npm start` runs the production build on one port, <http://localhost:3000>. The other commands, testing on a phone, running in production and the environment variables are in [docs/development.md](docs/development.md).
 
 ## Contributing
 

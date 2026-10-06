@@ -63,7 +63,7 @@ npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-`npm run build && npm start` 在同一个端口 <http://localhost:3000> 上运行生产构建。其他命令、在手机上测试、Docker 和环境变量见 [docs/development.md](docs/development.md)。
+`npm run build && npm start` 在同一个端口 <http://localhost:3000> 上运行生产构建。其他命令、在手机上测试、在生产环境运行和环境变量见 [docs/development.md](docs/development.md)。
 
 ## 参与贡献
 
@@ -121,4 +121,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: 973f501473c912dbc487c49a79853c7bf49400956f98e0d525b01bc941294699 -->
+<!-- readme-sync: 24f189b5805745e387fda77cec548dce8734570bc443a13be56e7b93a0700aa2 -->

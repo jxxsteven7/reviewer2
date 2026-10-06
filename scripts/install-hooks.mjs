@@ -3,7 +3,7 @@
 // the "prepare" script, so `npm install` in a new clone or worktree sets core.hooksPath.
 //
 // It does nothing, and succeeds, wherever there are no hooks to turn on: in CI, outside a git
-// checkout (such as a Docker build) and when git isn't installed. It never fails an install.
+// checkout and when git isn't installed. It never fails an install.
 
 import { spawnSync } from 'node:child_process';
 

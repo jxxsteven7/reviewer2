@@ -1,4 +1,4 @@
-# Lints, type-checks, tests and builds the app, and builds the Docker image. Each job's name is
+# Lints, type-checks, tests and builds the app, and checks that the build serves it. Each job's name is
 # a required status check; see docs/maintainers.md. There are no `paths:` filters on purpose:
 # a required check that a filter skips stays pending and blocks the merge.
 
@@ -52,16 +52,25 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run build
-      - name: Docker image
+      - name: Build, as for production
         env:
           SHA: ${{ github.sha }}
-        run: docker build --build-arg "APP_VERSION=${SHA::7}" --tag reviewer2:ci .
-      - name: The image serves the app
+        run: APP_VERSION="${SHA::7}" npm run build
+      - name: The build serves the app
+        env:
+          SHA: ${{ github.sha }}
         run: |
-          docker run --detach --name reviewer2 --publish 3000:3000 reviewer2:ci
+          # Production needs no node_modules, so run the build from a copy that has none.
+          app="$RUNNER_TEMP/app"
+          mkdir -p "$app/server" "$app/client"
+          cp -r server/dist "$app/server/"
+          cp -r client/dist "$app/client/"
+          cp -r words "$app/"
+          node "$app/server/dist/index.cjs" > "$RUNNER_TEMP/server.log" 2>&1 &
+          server=$!
           # Print the server's log however this step ends: a failure is hard to explain without it.
-          trap 'docker logs reviewer2' EXIT
+          # A server that has already stopped can't be killed, so that must not stop the trap.
+          trap 'kill "$server" 2>/dev/null || true; cat "$RUNNER_TEMP/server.log"' EXIT
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
             if [ "$attempt" -eq 30 ]; then
@@ -71,7 +80,8 @@ jobs:
             sleep 1
           done
           echo
+          curl --fail --silent http://127.0.0.1:3000/healthz | grep -q "\"version\":\"${SHA::7}\""
           curl --fail --silent http://127.0.0.1:3000/ | grep -q '<div id="app">'
           curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
-          # The compressed copies from the build are in the image, and the server sends them.
+          # The server sends the compressed copies that the build wrote.
           curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'

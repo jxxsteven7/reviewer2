@@ -4,7 +4,7 @@ How to set up, run and test the app on your own machine. The rules for branches,
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) 22.13 or later, but not 23 or 25: the test runner doesn't support them, and `npm install` refuses to run on a version outside `engines` in `package.json`. CI and the Docker image use 24 LTS, which `.node-version` names for version managers such as fnm.
+- [Node.js](https://nodejs.org) 22.13 or later, but not 23 or 25: the test runner doesn't support them, and `npm install` refuses to run on a version outside `engines` in `package.json`. CI uses 24 LTS, which `.node-version` names for version managers such as fnm.
 - npm, which comes with Node. The repository is an npm workspace with three packages: `shared`, `server` and `client`.
 - Git.
 
@@ -32,7 +32,7 @@ Run it in every worktree, because each worktree has its own `node_modules`. It a
 | `npm run check:names` | Looks for the name of the board game in every tracked file; see [rules/constraints.md](rules/constraints.md) |
 | `node --test scripts/*.test.mjs` | Tests the scripts in `scripts/` |
 
-Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs them too, and also checks that the production build and the Docker image work.
+Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs them too, and also checks that the production build works.
 
 ## Project layout
 
@@ -49,9 +49,9 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `3000` | The port the server listens on |
-| `HOST` | `127.0.0.1`, or `0.0.0.0` in Docker | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
+| `HOST` | `127.0.0.1` | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
 | `PUBLIC_DIR` | `client/dist` | Where the built front end is |
-| `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. The Docker build sets it to the commit |
+| `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
 
 Never commit passwords, keys or tokens. `.env` files are ignored by git.
 
@@ -68,11 +68,12 @@ Then open `http://<your computer's address>:3000` on the phone. On a Mac, `ipcon
 
 `npm run dev` listens only on your own computer. For hot reload on a phone, run `npm run dev -w client -- --host` together with `npm run dev -w server`.
 
-## Docker
+## Running in production
+
+The production build needs Node and nothing from `node_modules`. Build it with the commit as its version:
 
 ```bash
-docker build --build-arg APP_VERSION="$(git rev-parse --short HEAD)" --tag reviewer2 .
-docker run --rm --publish 3000:3000 reviewer2
+APP_VERSION="$(git rev-parse --short HEAD)" npm run build
 ```
 
-The image holds only the bundled server, the built front end and `words/`. It runs as the unprivileged `node` user and checks its own health on `/healthz`.
+Then copy `server/dist/`, `client/dist/` and `words/` to the server, in the same layout, and run `node server/dist/index.cjs` there. It listens on `127.0.0.1:3000` unless `HOST` and `PORT` say otherwise, and `/healthz` answers once it is up.
