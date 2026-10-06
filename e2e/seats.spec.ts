@@ -1,12 +1,33 @@
-import { joinByLink, newPlayer, seatTable, TEXT, expect, test } from './helpers';
+import type { Team } from '@reviewer2/shared';
+import { joinByLink, newPlayer, seatTable, sideChannel, TEXT, expect, test } from './helpers';
+
+const playFor = (team: Team) => ({ name: TEXT.en.game.playFor.replace('{group}', TEXT.en.lobby.group[team]) });
 
 test('a latecomer joins in the middle of a game and plays for a group', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
   const fay = await newPlayer(browser);
   await joinByLink(fay, table.url, 'Fay', 'en');
   await expect(fay.locator('.keywords-game')).toBeVisible();
-  await fay.getByRole('button', { name: TEXT.en.game.playFor.replace('{group}', TEXT.en.lobby.group.blue) }).click();
+  await fay.getByRole('button', playFor('blue')).click();
   await expect(table.captains.red.locator('.rosters .group.blue')).toContainText('Fay');
+});
+
+test('nobody changes groups in the middle of a game', async ({ browser }) => {
+  const table = await seatTable(browser, 'en');
+  const bob = table.guessers.red;
+  // A student is offered no seat in the other group, also after stepping out to watch.
+  await expect(bob.getByRole('button', playFor('blue'))).toHaveCount(0);
+  await bob.getByRole('button', { name: TEXT.en.game.watch }).click();
+  await expect(bob.getByRole('button', playFor('red'))).toBeVisible();
+  await expect(bob.getByRole('button', playFor('blue'))).toHaveCount(0);
+  // A page that asks for it anyway, such as an outdated tab, is refused.
+  const tab = await sideChannel(bob, table.url);
+  expect(await tab.send('keywords:seat', { team: 'blue', role: 'guesser' })).toEqual({
+    ok: false,
+    error: 'other_team',
+  });
+  await bob.getByRole('button', playFor('red')).click();
+  await expect(table.captains.red.locator('.rosters .group.red')).toContainText('Bob');
 });
 
 test('an empty PI seat can be taken over, and its new PI sees the key and stays out of guessing', async ({

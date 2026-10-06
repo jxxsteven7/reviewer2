@@ -7,6 +7,7 @@ import {
   type Page,
 } from '@playwright/test';
 import type { KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
+import { io, type Socket } from 'socket.io-client';
 import en from '../client/src/locales/en.json' with { type: 'json' };
 import zh from '../client/src/locales/zh.json' with { type: 'json' };
 
@@ -20,14 +21,17 @@ export const TEXT = { en, zh };
 // Script errors on any page, which tests check at their end.
 export const pageErrors: string[] = [];
 const contexts: BrowserContext[] = [];
+const sockets: Socket[] = [];
 
 // The tests' own `test`: after each test, it closes every player's browser context, since a
-// browser slows to a halt with dozens of them open, and forgets the page errors.
+// browser slows to a halt with dozens of them open, and every side channel, and forgets the page
+// errors.
 export const test = base.extend<{ cleanup: void }>({
   cleanup: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
       await use();
+      for (const socket of sockets.splice(0)) socket.close();
       await Promise.all(contexts.splice(0).map((context) => context.close()));
       pageErrors.length = 0;
     },
@@ -82,8 +86,10 @@ export function recordSnapshots(page: Page): RoomView[] {
   return states;
 }
 
-// No snapshot before the end of a game held the color of an unrevealed card. Returns how many
-// unrevealed cards it checked, so that a test can tell that it looked at something.
+// No snapshot before the end of a game held the color of an unrevealed card: such a card has no
+// `color` key at all, only its word and, when the word library has them, its translations, which
+// everyone may see. Returns how many unrevealed cards it checked, so that a test can tell that it
+// looked at something.
 export function expectNoKey(states: RoomView[]): number {
   let checked = 0;
   for (const state of states) {
@@ -91,11 +97,52 @@ export function expectNoKey(states: RoomView[]): number {
     if (!game || game.phase === 'over') continue;
     for (const card of game.cards) {
       if (card.revealed) continue;
-      expect(Object.keys(card).sort()).toEqual(['revealed', 'word']);
+      expect(card).not.toHaveProperty('color');
+      expect(Object.keys(card).filter((key) => !['word', 'revealed', 'translations'].includes(key))).toEqual([]);
       checked += 1;
     }
   }
   return checked;
+}
+
+// No snapshot that this page received during a game held another group's chat or its choices of
+// cards. A page outside the groups has neither key; a page in a group has its own group's chat,
+// and its choices only in its turn. Returns how many snapshots it checked.
+export function expectOwnGroupOnly(states: RoomView[]): number {
+  let checked = 0;
+  for (const state of states) {
+    const { game, seats } = state.data as KeywordsRoomData;
+    if (!game) continue;
+    checked += 1;
+    const team = state.me === null ? null : (seats[state.me]?.team ?? null);
+    if (team === null) {
+      expect(game).not.toHaveProperty('chat');
+      expect(game).not.toHaveProperty('selections');
+      continue;
+    }
+    const inGroup = (player: string) => seats[player]?.team === team;
+    for (const message of game.chat ?? []) expect(inGroup(message.player), `a message to the ${team} group`).toBe(true);
+    if (game.team !== team) expect(game).not.toHaveProperty('selections');
+    for (const choice of game.selections ?? [])
+      expect(inGroup(choice.player), `a choice in the ${team} group`).toBe(true);
+  }
+  return checked;
+}
+
+// A second connection for a player who is in the room, as another tab of theirs would open it.
+// It lets a test send what the interface no longer offers, as an outdated page could.
+export async function sideChannel(page: Page, url: string) {
+  const token = await page.evaluate(() => localStorage.getItem('r2.token'));
+  const socket = io(new URL(url).origin, { auth: { token }, transports: ['websocket'] });
+  sockets.push(socket);
+  await new Promise((resolve, reject) => {
+    socket.once('connect', () => resolve(undefined));
+    socket.once('connect_error', reject);
+  });
+  const send = (event: string, payload: object = {}) =>
+    socket.timeout(5000).emitWithAck(event, payload) as Promise<object>;
+  expect(await send('room:join', { code: url.split('/').at(-1) })).toMatchObject({ ok: true });
+  return { send };
 }
 
 export async function createRoom(page: Page, language: Language, name: string): Promise<string> {
