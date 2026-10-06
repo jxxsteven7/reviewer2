@@ -107,9 +107,26 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     }
   }
 
+  // The last game of each room whose end has been logged.
+  const endLogged = new WeakMap<Room, string>();
+
+  // Sends everyone in a room its new state. Every change to a room ends here, so this is also
+  // where the end of a game is logged, however it came about: by one of the game's messages, by
+  // the chair's withdrawal, or because someone left.
   function broadcast(room: Room): void {
+    if (room.phase === 'ended' && room.gameId !== null && endLogged.get(room) !== room.gameId) {
+      endLogged.set(room, room.gameId);
+      log('game_ended', { code: room.code });
+    }
     for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id });
     send(room, room.screens, { screen: true });
+  }
+
+  // Closes a room, tells whoever is still connected to it, and logs it. `why` is for the log:
+  // "empty", "idle", "stale" or "restart".
+  function shut(room: Room, reason: ClosedReason, why: string): void {
+    closeFor(rooms.close(room), reason);
+    log('room_closed', { code: room.code, why });
   }
 
   // Tells connections that their room is gone for them.
@@ -253,12 +270,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const found = membership(socket);
     if (!found) return fail('not_member');
     if (prefixOf(event) !== found.room.game.id) return fail('bad_request');
-    const before = found.room.phase;
-    const result = found.room.act(found.member.id, event, payload);
-    if (result.ok && before === 'playing' && found.room.phase === 'ended') {
-      log('game_ended', { code: found.room.code });
-    }
-    return changed(found.room, result);
+    return changed(found.room, found.room.act(found.member.id, event, payload));
   }
 
   // Every message of a connection comes through here, one after the other and in the order in
@@ -377,7 +389,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (!found) return fail('not_member');
       const { room, member } = found;
       closeFor(room.drop(member.id), 'left', socket.id);
-      if (room.members.size === 0) closeFor(rooms.close(room), 'expired');
+      if (room.members.size === 0) shut(room, 'expired', 'empty');
       else broadcast(room);
       return ok();
     });
@@ -452,9 +464,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       safely('sweep', () => {
         const result = rooms.sweep();
         for (const { room, error } of result.failed) report(error, 'sweep', { code: room.code });
-        for (const { room, sockets } of result.closed) {
+        for (const { room, sockets, why } of result.closed) {
           closeFor(sockets, 'expired');
-          log('room_closed', { code: room.code });
+          log('room_closed', { code: room.code, why });
         }
         for (const room of result.changed) broadcast(room);
         creations.prune();
@@ -462,7 +474,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       });
     },
     closeAll(reason) {
-      for (const room of rooms.all()) closeFor(rooms.close(room), reason);
+      for (const room of rooms.all()) shut(room, reason, reason);
     },
   };
 }

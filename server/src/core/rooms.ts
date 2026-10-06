@@ -28,8 +28,9 @@ export const DEFAULT_LIMITS: RoomLimits = {
 };
 
 export interface SweepResult {
-  // Rooms that closed, with the connections that were still in them.
-  closed: { room: Room; sockets: string[] }[];
+  // Rooms that closed, with the connections that were still in them and why they closed: nobody
+  // had been connected for too long, nothing had happened for too long, or no member was left.
+  closed: { room: Room; sockets: string[]; why: 'idle' | 'stale' | 'empty' }[];
   // Rooms that changed, whose members need a new snapshot.
   changed: Room[];
   // Rooms whose game module threw. They are left as they were.
@@ -94,7 +95,7 @@ export class Rooms {
     const idle = now - room.lastSeen >= this.limits.idleMs;
     const stale = now - room.lastActivity >= this.limits.staleMs;
     if (idle || stale) {
-      result.closed.push({ room, sockets: this.close(room) });
+      result.closed.push({ room, sockets: this.close(room), why: idle ? 'idle' : 'stale' });
       return;
     }
     let changed = false;
@@ -111,7 +112,7 @@ export class Rooms {
       // make whoever came next with the code the chair of a room that others had set up.
       if (room.members.size === 0) {
         changed = false;
-        result.closed.push({ room, sockets: this.close(room) });
+        result.closed.push({ room, sockets: this.close(room), why: 'empty' });
         return;
       }
       if (room.passChairIfAway(this.limits.chairAwayMs)) changed = true;

@@ -37,6 +37,8 @@ const names = (client: TestClient) => client.state?.players.map((player) => play
 const online = (client: TestClient, name: string) =>
   client.state?.players.find((player) => player.name === name)?.online;
 const game = (client: TestClient) => client.state?.data as FakeView;
+// What the server has logged of one kind of event.
+const logged = (event: string) => server.logs.filter((entry) => entry.event === event).map((entry) => entry.fields);
 // The chair's messages about a game say which game they mean; these send what the chair sees.
 const start = (chair: TestClient) => chair.send('room:start', { round: chair.state?.round });
 const again = (chair: TestClient) => chair.send('room:again', { gameId: chair.state?.gameId });
@@ -293,6 +295,7 @@ describe('leaving', () => {
     await bob.send('room:leave');
     const late = await connect();
     expect(await late.send('room:join', { code, name: 'Cat' })).toEqual({ ok: false, error: 'room_not_found' });
+    expect(logged('room_closed')).toEqual([{ code, why: 'empty' }]);
   });
 
   test('a renamed player keeps their seat, and names stay unique', async () => {
@@ -405,7 +408,7 @@ describe('games', () => {
     await start(chair);
     await chair.send('test:finish');
     await chair.waitFor((state) => state.phase === 'ended');
-    expect(server.logs.some((entry) => entry.event === 'game_ended')).toBe(true);
+    expect(logged('game_ended')).toEqual([{ code }]);
     expect(await again(chair)).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'lobby');
     expect(chair.state?.gameId).toBeNull();
@@ -416,6 +419,10 @@ describe('games', () => {
     expect(await chair.send('room:end', { gameId: 'an-earlier-game' })).toEqual({ ok: false, error: 'stale' });
     expect(await chair.send('room:end', { gameId })).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'ended');
+    // A game that the chair withdraws has ended like any other, and is logged once.
+    await chair.send('sys:ping');
+    expect(logged('game_started')).toHaveLength(2);
+    expect(logged('game_ended')).toEqual([{ code }, { code }]);
     expect(await chair.send('room:end', { gameId })).toEqual({ ok: false, error: 'wrong_phase' });
     // A withdrawal that arrives after the room went back to the waiting room is for no game.
     await again(chair);
@@ -439,6 +446,7 @@ describe('games', () => {
     expect(await start(chair)).toEqual({ ok: true });
     expect(await chair.send('room:remove', { playerId: cat.me })).toEqual({ ok: true });
     await chair.waitFor((state) => state.phase === 'ended', 'ended by a player who was removed');
+    expect(logged('game_ended')).toHaveLength(3);
   });
 
   test('a start that comes late or twice starts no second game', async () => {
@@ -829,6 +837,7 @@ describe('housekeeping', () => {
     server.app.sockets.sweep();
     await until(() => screen.closed.includes('expired'), 'the screen hears');
     expect(server.app.rooms.find(code)).toBeUndefined();
+    expect(logged('room_closed')).toEqual([{ code, why: 'empty' }]);
     // Nobody takes over what is left of the room by its code.
     const late = await connect();
     expect(await late.send('room:join', { code, name: 'Cat' })).toEqual({ ok: false, error: 'room_not_found' });
@@ -873,6 +882,7 @@ describe('housekeeping', () => {
     server.advance(1001);
     server.app.sockets.sweep();
     expect(server.app.rooms.find(code)).toBeUndefined();
+    expect(logged('room_closed')).toEqual([{ code, why: 'idle' }]);
   });
 
   test('counts the half hour from the last visit, also one that no sweep saw', async () => {
@@ -898,6 +908,7 @@ describe('housekeeping', () => {
     server.app.sockets.sweep();
     await until(() => chair.closed.includes('expired'), 'room:closed');
     expect(server.app.rooms.find(code)).toBeUndefined();
+    expect(logged('room_closed')).toEqual([{ code, why: 'stale' }]);
   });
 
   test('a restart reaches a connection that is between two long polls', async () => {
@@ -920,6 +931,7 @@ describe('housekeeping', () => {
     const screen = await connect({ watch: code, roomId });
     server.app.sockets.closeAll('restart');
     await until(() => chair.closed.includes('restart') && screen.closed.includes('restart'));
+    expect(logged('room_closed')).toEqual([{ code, why: 'restart' }]);
   });
 });
 

@@ -108,3 +108,5 @@ A screen has no name, so all that anyone sees of the screens is how many there a
 ## Logging
 
 The server writes one JSON object per line to stdout: room creation, game starts and ends, rooms closing, skipped word lists and terms, errors, and a warning when it ignores the address that a reverse proxy passed on. It never logs tokens.
+
+Every room that was created is logged once more when it closes, with the reason: `empty` when its last member has gone, `idle` or `stale` when the sweep closed it, `restart` when the server stopped. Every game that started is logged once more when it ends, whether it ended by itself or the chair withdrew it; a game is logged as started only, when its room closes in the middle of it. So the log can be counted.
