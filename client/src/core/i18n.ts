@@ -5,7 +5,8 @@ import zh from '../locales/zh.json';
 import { readStored, writeStored } from './storage';
 
 // All interface text lives in the locale files (docs/rules/constraints.md). The home page uses
-// the visitor's own language; inside a room, the room's language takes over (docs/games/keywords.md).
+// the visitor's own language. A room has a language of its own (shared/src/language.ts), which
+// setLanguage can show without making it the visitor's choice.
 
 const STORAGE_KEY = 'r2.language';
 const HTML_LANG: Record<Language, string> = { zh: 'zh-CN', en: 'en' };

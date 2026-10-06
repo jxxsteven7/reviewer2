@@ -1,6 +1,9 @@
-/* Design tokens; docs/design.md explains them. There is only a light theme for now: a dark one
-   would redefine these values and nothing else. */
+/* Design tokens: the colors, fonts, sizes, spacing and corners that every style takes its values
+   from. The interface looks like a typeset paper: white paper, black ink, hairline rules and
+   serif headings. There is only a light theme for now: a dark one would redefine these values
+   and nothing else. */
 :root {
+  /* The page and its quiet areas; text, secondary text and captions; hairlines; focus rings. */
   --paper: #ffffff;
   --paper-2: #f5f6f8;
   --ink: #15171c;
@@ -9,6 +12,8 @@
   --rule: #d9dce2;
   --focus: #1f4f8f;
 
+  /* The two groups, in carmine and Prussian blue, the inks of academic printing, and the cards
+     of neither group, each with a tint for backgrounds. Then Reviewer 2's card and its stamp. */
   --red: #b42318;
   --red-tint: #fbeae8;
   --blue: #1f4f8f;
@@ -18,6 +23,8 @@
   --r2: #15171c;
   --stamp: #d9442b;
 
+  /* Source Serif 4 is the only web font. Chinese text uses the system's fonts, because a Chinese
+     web font weighs megabytes. */
   --font-serif:
     'Source Serif 4 Variable', 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC', Georgia, serif;
   --font-sans:
@@ -41,6 +48,7 @@
   --space-6: 32px;
   --space-7: 48px;
 
+  /* Corners are nearly square: nothing is more rounded than a control. */
   --radius-card: 2px;
   --radius-control: 4px;
   --measure: 40rem;

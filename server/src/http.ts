@@ -3,8 +3,8 @@ import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http
 import sirv from 'sirv';
 
 // HTTP for everything that isn't Socket.IO: the built front end, with the SPA fallback to
-// index.html for routes such as /room/K7QX, and /healthz. docs/architecture.md explains the
-// cache and security headers.
+// index.html for routes such as /room/K7QX, and /healthz. The reasons for the security headers
+// and the cache headers are beside the code that sets them.
 
 export interface HttpOptions {
   publicDir: string;
