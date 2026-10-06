@@ -13,7 +13,7 @@ import { checkPath, checkText, entryFor, findSpellings, masked, SPELLINGS } from
 
 const SCRIPT = fileURLToPath(new URL('./check-names.mjs', import.meta.url));
 
-const FAKE_HAN = '假名字样'; // four made-up Chinese characters
+const FAKE_HAN = '\u5047\u540d\u5b57\u6837'; // four made-up Chinese characters
 const FAKE = [entryFor('zorblax'), entryFor(FAKE_HAN)];
 const found = (text) => findSpellings(text, FAKE).length;
 
@@ -29,7 +29,7 @@ describe('spellings', () => {
   test('entryFor folds case, accents, separators and full-width forms', () => {
     const plain = entryFor('zorblax');
     assert.deepEqual(plain, { script: 'latin', length: 7, sha256: plain.sha256 });
-    for (const spelling of ['Zorblax', 'ZOR-BLAX', 'zor blax', 'zórblàx', 'ｚｏｒｂｌａｘ']) {
+    for (const spelling of ['Zorblax', 'ZOR-BLAX', 'zor blax', 'z\u00f3rbl\u00e0x', '\uff5a\uff4f\uff52\uff42\uff4c\uff41\uff58']) {
       assert.deepEqual(entryFor(spelling), plain, spelling);
     }
     assert.equal(entryFor(FAKE_HAN).script, 'han');
@@ -50,8 +50,8 @@ describe('finding a Latin spelling', () => {
       'ZorBlax',
       'z.o.r.b.l.a.x',
       'zor/blax',
-      'zórblàx',
-      'ｚｏｒｂｌａｘ',
+      'z\u00f3rbl\u00e0x',
+      '\uff5a\uff4f\uff52\uff42\uff4c\uff41\uff58',
     ]) {
       assert.equal(found(text), 1, text);
     }
@@ -83,17 +83,17 @@ describe('finding a Chinese spelling', () => {
   test('in a run of Chinese characters, which spaces and middle dots do not end', () => {
     for (const text of [
       FAKE_HAN,
-      `一${FAKE_HAN}二`,
+      `\u4e00${FAKE_HAN}\u4e8c`,
       `${FAKE_HAN.slice(0, 2)} ${FAKE_HAN.slice(2)}`,
-      `${FAKE_HAN.slice(0, 2)}·${FAKE_HAN.slice(2)}`,
-      `${FAKE_HAN.slice(0, 2)}　${FAKE_HAN.slice(2)}`,
+      `${FAKE_HAN.slice(0, 2)}\u00b7${FAKE_HAN.slice(2)}`,
+      `${FAKE_HAN.slice(0, 2)}\u3000${FAKE_HAN.slice(2)}`,
     ]) {
       assert.equal(found(text), 1, text);
     }
   });
 
   test('not across other punctuation or letters', () => {
-    for (const separator of ['。', '，', ',', 'a', '1']) {
+    for (const separator of ['\u3002', '\uff0c', ',', 'a', '1']) {
       const text = `${FAKE_HAN.slice(0, 2)}${separator}${FAKE_HAN.slice(2)}`;
       assert.equal(found(text), 0, text);
     }
@@ -106,11 +106,11 @@ describe('reports', () => {
       { line: 2, column: 5, end: 12 },
       { line: 2, column: 20, end: 26 },
     ]);
-    assert.deepEqual(findSpellings(`\r\n一${FAKE_HAN}`, FAKE), [{ line: 2, column: 2, end: 5 }]);
+    assert.deepEqual(findSpellings(`\r\n\u4e00${FAKE_HAN}`, FAKE), [{ line: 2, column: 2, end: 5 }]);
   });
 
   test('blot spellings out instead of repeating them', () => {
-    assert.equal(masked('feat/zorblax-rules', FAKE), 'feat/•••••••-rules');
+    assert.equal(masked('feat/zorblax-rules', FAKE), 'feat/\u2022\u2022\u2022\u2022\u2022\u2022\u2022-rules');
     assert.equal(masked('no match here', FAKE), 'no match here');
 
     const problems = [...checkText('see zorblax', 'branch zorblax', FAKE), ...checkPath('docs/Zorblax.md', FAKE)];
@@ -118,7 +118,7 @@ describe('reports', () => {
     for (const { where, detail } of problems) {
       assert.equal(found(`${where} ${detail}`), 0, where);
     }
-    assert.equal(problems[0].where, 'branch •••••••:1:5');
+    assert.equal(problems[0].where, 'branch \u2022\u2022\u2022\u2022\u2022\u2022\u2022:1:5');
   });
 
   test('find nothing in ordinary text', () => {

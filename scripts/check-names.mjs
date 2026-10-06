@@ -53,7 +53,7 @@ const BINARY_PROBE = 8000; // like git, a NUL byte in the first 8000 bytes marks
 const LATIN_LETTER = /^[a-z]$/i;
 const HAN = /^\p{Script=Han}$/u;
 // What may stand between the letters or characters of a spelling without breaking it up.
-const SEPARATOR = /^[\s\-_./\\·‧・]$/u;
+const SEPARATOR = /^[\s\-_./\\\u00b7\u2027\u30fb]$/u;
 
 // Folds compatibility forms, such as full-width letters, into their plain forms and drops accents.
 const fold = (char) => [...char.normalize('NFKD').replace(/\p{M}/gu, '')];
@@ -151,7 +151,7 @@ function match(run, byLength, line, found) {
 export function masked(text, spellings = SPELLINGS) {
   const lines = text.split(/\r\n|\r|\n/).map((line) => [...line]);
   for (const { line, column, end } of findSpellings(text, spellings)) {
-    lines[line - 1].fill('•', column - 1, end);
+    lines[line - 1].fill('\u2022', column - 1, end);
   }
   return lines.map((chars) => chars.join('')).join('\n');
 }
