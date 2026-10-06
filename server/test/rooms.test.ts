@@ -753,7 +753,18 @@ describe('screens', () => {
   test("can't be put up by someone the chair has just removed", async () => {
     const { chair, code } = await room();
     const bob = await join(code, 'Bob');
+    // A screen that Bob's browser has up already goes with him; another one stays.
+    const bobsScreen = await connect({ token: bob.token });
+    const projector = await connect();
+    expect(await bobsScreen.send('room:watch', { code })).toMatchObject({ ok: true });
+    expect(await projector.send('room:watch', { code })).toMatchObject({ ok: true });
     await chair.send('room:remove', { playerId: bob.me });
+    await until(() => bobsScreen.closed.includes('removed'), "Bob's screen hears");
+    await chair.waitFor((state) => state.screens === 1 && state.players.length === 1);
+    expect(projector.closed).toEqual([]);
+    projector.close();
+    await chair.waitFor((state) => state.screens === 0);
+
     expect(await bob.send('room:watch', { code })).toEqual({ ok: false, error: 'removed_recently' });
     expect(server.app.rooms.find(code)?.screens.size).toBe(0);
     server.advance(2 * 60_000 + 1);

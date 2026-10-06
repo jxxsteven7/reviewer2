@@ -331,13 +331,14 @@ export class Room {
     return done;
   }
 
-  // Removes a member, who then has to wait before coming back.
-  remove(id: string): Ack<{ sockets: string[] }> {
+  // Removes a member, who then has to wait before coming back. Returns the connections they
+  // still had and their member key.
+  remove(id: string): Ack<{ sockets: string[]; key: string }> {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');
     const sockets = this.drop(id);
     this.#removed.set(member.key, { until: this.#now() + REMOVED_FOR_MS, name: member.name });
-    return { ok: true, sockets };
+    return { ok: true, sockets, key: member.key };
   }
 
   // The chair goes to someone who is there to take it. Handed to a member who has been offline
