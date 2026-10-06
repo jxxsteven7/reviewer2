@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { GameModule } from '../src/core/game';
 import type { FakeView } from './fakeGame';
 import { fakeGame } from './fakeGame';
-import { createRoom, joinRoom, startServer, TestClient, until, type TestServer } from './helpers';
+import { createRoom, joinRoom, startServer, TestClient, until, type Reply, type TestServer } from './helpers';
 
 let server: TestServer;
 let clients: TestClient[];
@@ -333,6 +333,50 @@ describe('screens', () => {
     for (let i = 1; i < MAX_SCREENS; i += 1) await connect({ watch: code });
     const extra = await connect();
     expect(await extra.send('room:watch', { code })).toEqual({ ok: false, error: 'screens_full' });
+  });
+});
+
+describe('messages', () => {
+  test('are handled in the order in which a connection sent them', async () => {
+    const { chair, code } = await room();
+    await join(code, 'Bob');
+    // Sent together, without waiting for the first answer: the game message must not overtake
+    // the start of its game.
+    const [started, pressed] = await Promise.all([chair.send('room:start'), chair.send('test:press')]);
+    expect(started).toEqual({ ok: true });
+    expect(pressed).toEqual({ ok: true });
+  });
+
+  test('a message named by a number is refused, and the server goes on', async () => {
+    const client = await connect();
+    const numbered = 1 as unknown as string;
+    expect(await client.socket.timeout(2000).emitWithAck(numbered)).toEqual({ ok: false, error: 'bad_request' });
+    client.socket.emit(numbered); // and one that asks for no answer
+    expect(await client.send('sys:ping')).toEqual({ ok: true });
+  });
+
+  test('all get an answer, unknown ones too', async () => {
+    const { chair } = await room();
+    for (const message of ['room:nonsense', 'sys:nonsense', 'meta:nonsense']) {
+      expect(await chair.send(message), message).toEqual({ ok: false, error: 'bad_request' });
+    }
+    // Unknown messages use up the connection's allowance like any other.
+    const replies = await Promise.all(Array.from({ length: 30 }, () => chair.send('room:nonsense')));
+    expect(replies.some((reply) => reply.error === 'rate_limited')).toBe(true);
+  });
+
+  test('one with more than a payload is refused, and still answered', async () => {
+    const { chair } = await room();
+    const reply = (await chair.socket.timeout(2000).emitWithAck('room:rename', { name: 'Zed' }, 'extra')) as Reply;
+    expect(reply).toEqual({ ok: false, error: 'bad_request' });
+    expect(await chair.send('sys:ping')).toEqual({ ok: true });
+    expect(names(chair)).toEqual(['Ann']);
+  });
+
+  test("a game can't be named after the room's own messages", async () => {
+    for (const id of ['room', 'sys', 'meta']) {
+      await expect(startServer({ games: [{ ...fakeGame, id } as GameModule] }), id).rejects.toThrow(/can't be named/);
+    }
   });
 });
 

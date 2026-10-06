@@ -39,7 +39,10 @@ type Reply = { ok: true; [field: string]: unknown } | { ok: false; error: string
 const ok = (fields: Record<string, unknown> = {}): Reply => ({ ok: true, ...fields });
 const fail = (error: string): Reply => ({ ok: false, error });
 
-const OWN_PREFIXES = new Set(['sys', 'meta', 'room']);
+// "<prefix>:<action>". Game messages carry their game's ID as the prefix, so a game can't be named
+// after one of the prefixes of the room messages.
+const prefixOf = (event: string): string => event.split(':', 1)[0] ?? '';
+const OWN_PREFIXES = new Set(Object.keys(ROOM_MESSAGES).map(prefixOf));
 
 // Per connection: about 10 messages a second, in bursts of up to 20. Per address and minute: 5
 // new rooms and 20 failed attempts to join one, which is enough to stop anyone from trying codes.
@@ -56,6 +59,9 @@ export interface RoomSockets {
 
 export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const { rooms, words, games, rng, now, version, log } = options;
+  for (const id of games.keys()) {
+    if (OWN_PREFIXES.has(id)) throw new Error(`a game can't be named "${id}", which is a prefix of the room messages`);
+  }
   const creations = new WindowCounter(CREATIONS_PER_MINUTE, 60_000, now);
   const failedJoins = new WindowCounter(FAILED_JOINS_PER_MINUTE, 60_000, now);
   const connection = (socket: Socket) => socket.data as Connection;
@@ -137,17 +143,48 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     }
   }
 
+  // The handlers of one connection's room messages. They are looked up when a message arrives
+  // (see `listen`) and not registered with socket.on(): Socket.IO runs such listeners a tick
+  // later than the one that takes game messages, so a game message could overtake a room
+  // message that the same connection had sent before it.
+  type Handlers = Map<string, (body: unknown) => Reply>;
+
   function on<M extends RoomMessage>(
-    socket: Socket,
+    handlers: Handlers,
     message: M,
     handler: (payload: z.infer<(typeof ROOM_MESSAGES)[M]>) => Reply,
   ): void {
-    const event: string = message;
-    socket.on(event, (...args: unknown[]) => {
-      const [body, answer] = typeof args[0] === 'function' ? [undefined, args[0]] : [args[0], args[1]];
-      respond(socket, answer, () => {
-        const parsed = ROOM_MESSAGES[message].safeParse(body ?? {});
-        return parsed.success ? handler(parsed.data as z.infer<(typeof ROOM_MESSAGES)[M]>) : fail('bad_request');
+    handlers.set(message, (body) => {
+      const parsed = ROOM_MESSAGES[message].safeParse(body ?? {});
+      return parsed.success ? handler(parsed.data as z.infer<(typeof ROOM_MESSAGES)[M]>) : fail('bad_request');
+    });
+  }
+
+  // A game message, which goes to the game of the room that the connection is in.
+  function play(socket: Socket, event: string, payload: unknown): Reply {
+    const found = membership(socket);
+    if (!found) return fail('not_member');
+    if (prefixOf(event) !== found.room.game.id) return fail('bad_request');
+    const before = found.room.phase;
+    const result = found.room.act(found.member.id, event, payload);
+    if (result.ok && before === 'playing' && found.room.phase === 'ended') {
+      log('game_ended', { code: found.room.code });
+    }
+    return changed(found.room, result);
+  }
+
+  // Every message of a connection comes through here, one after the other and in the order in
+  // which it arrived, and every one is answered. Socket.IO puts the acknowledgement last; before
+  // it a message has its payload and nothing else.
+  function listen(socket: Socket, handlers: Handlers): void {
+    socket.onAny((event: unknown, ...args: unknown[]) => {
+      const ack = typeof args.at(-1) === 'function' ? args.pop() : undefined;
+      respond(socket, ack, () => {
+        // Socket.IO also delivers events that are named by a number.
+        if (typeof event !== 'string' || args.length > 1) return fail('bad_request');
+        const handler = handlers.get(event);
+        if (handler) return handler(args[0]);
+        return OWN_PREFIXES.has(prefixOf(event)) ? fail('bad_request') : play(socket, event, args[0]);
       });
     });
   }
@@ -206,11 +243,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }
     }
 
-    on(socket, 'sys:ping', () => ok());
+    const handlers: Handlers = new Map();
+    on(handlers, 'sys:ping', () => ok());
 
-    on(socket, 'meta:fields', () => ok({ fields: words.fields() }));
+    on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
 
-    on(socket, 'room:create', ({ game, language, fields, name }) => {
+    on(handlers, 'room:create', ({ game, language, fields, name }) => {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
@@ -231,7 +269,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ code: room.code, roomId: room.id });
     });
 
-    on(socket, 'room:join', ({ code, name }) => {
+    on(handlers, 'room:join', ({ code, name }) => {
       if (!failedJoins.allowed(conn.ip)) return fail('rate_limited');
       const room = rooms.find(code);
       if (!room) {
@@ -250,12 +288,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ code: room.code, roomId: room.id });
     });
 
-    on(socket, 'room:watch', ({ code }) => {
+    on(handlers, 'room:watch', ({ code }) => {
       const room = rooms.find(code);
       return room ? watch(socket, room) : fail('room_not_found');
     });
 
-    on(socket, 'room:leave', () => {
+    on(handlers, 'room:leave', () => {
       const found = membership(socket);
       if (!found) return fail('not_member');
       const { room, member } = found;
@@ -265,13 +303,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok();
     });
 
-    on(socket, 'room:rename', ({ name }) => {
+    on(handlers, 'room:rename', ({ name }) => {
       const found = membership(socket);
       if (!found) return fail('not_member');
       return changed(found.room, found.room.rename(found.member.id, name));
     });
 
-    on(socket, 'room:settings', ({ fields }) =>
+    on(handlers, 'room:settings', ({ fields }) =>
       asChair(socket, (room) => {
         const chosen = [...new Set(fields)];
         if (!chosen.every((id) => words.has(id))) return fail('bad_fields');
@@ -280,7 +318,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
-    on(socket, 'room:start', () =>
+    on(handlers, 'room:start', () =>
       asChair(socket, (room) => {
         if (room.phase !== 'lobby') return fail('wrong_phase');
         if (room.startProblems().length > 0) return fail('cannot_start');
@@ -296,13 +334,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
-    on(socket, 'room:end', ({ gameId }) => asChair(socket, (room) => changed(room, room.withdraw(gameId))));
-    on(socket, 'room:again', () => asChair(socket, (room) => changed(room, room.again())));
-    on(socket, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
-    on(socket, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));
-    on(socket, 'room:chair', ({ playerId }) => asChair(socket, (room) => changed(room, room.handOver(playerId))));
+    on(handlers, 'room:end', ({ gameId }) => asChair(socket, (room) => changed(room, room.withdraw(gameId))));
+    on(handlers, 'room:again', () => asChair(socket, (room) => changed(room, room.again())));
+    on(handlers, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
+    on(handlers, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));
+    on(handlers, 'room:chair', ({ playerId }) => asChair(socket, (room) => changed(room, room.handOver(playerId))));
 
-    on(socket, 'room:remove', ({ playerId }) =>
+    on(handlers, 'room:remove', ({ playerId }) =>
       asChair(socket, (room, chair) => {
         if (playerId === chair.id) return fail('bad_request'); // the chair leaves instead
         const removed = room.remove(playerId);
@@ -313,24 +351,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
-    // Everything else is a game message.
-    socket.onAny((event: string, ...args: unknown[]) => {
-      const prefix = event.split(':', 1)[0] ?? '';
-      if (OWN_PREFIXES.has(prefix)) return;
-      const ack = args.at(-1);
-      const payload = typeof args[0] === 'function' ? undefined : args[0];
-      respond(socket, ack, () => {
-        const found = membership(socket);
-        if (!found) return fail('not_member');
-        if (prefix !== found.room.game.id) return fail('bad_request');
-        const before = found.room.phase;
-        const result = found.room.act(found.member.id, event, payload);
-        if (result.ok && before === 'playing' && found.room.phase === 'ended') {
-          log('game_ended', { code: found.room.code });
-        }
-        return changed(found.room, result);
-      });
-    });
+    listen(socket, handlers);
 
     socket.on('disconnect', () => {
       const { room } = conn;
