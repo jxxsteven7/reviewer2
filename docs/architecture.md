@@ -41,9 +41,10 @@ Adding a game means adding a module on each side, without changing the core.
 
 Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` describes the room messages, and each game defines its own, named `<game>:<action>`.
 
-- **Answers.** Every message from the client gets an acknowledgement: `{ ok: true, ... }` or `{ ok: false, error }`. Error codes are shared, and the client shows each one with the text under `errors.<code>` in the locale files. The server never sends interface text, only the words on the cards.
+- **Answers.** Every message from the client gets an acknowledgement: `{ ok: true, ... }` or `{ ok: false, error }`. That includes a message the server doesn't know and one with more in it than a payload, which are `bad_request`. Error codes are shared, and the client shows each one with the text under `errors.<code>` in the locale files. The server never sends interface text, only the words on the cards.
+- **In order.** The messages of one connection are handled in the order in which they arrived, room messages and game messages alike, so a game action that is sent right after the start of its game finds the game started.
 - **Validation.** The server checks every payload against a zod schema before it looks at it. The schemas are in `shared/src/schemas.ts`, which the server imports as `@reviewer2/shared/schemas`. The client never imports that module, and ESLint refuses it if it tries: zod would add half again to the page's script, and it probes `new Function`, which the Content Security Policy below refuses.
-- **Snapshots.** After every change, the server sends each connection in the room its own complete snapshot, `room:state`. The client keeps the snapshot with the highest `rev` for its `roomId`. The server sends the snapshots before it answers the message that caused them, so an answer never arrives before the state it refers to.
+- **Snapshots.** After every change that anyone in the room can see, the server sends each connection in it its own complete snapshot, `room:state`. A second tab of a player who is online changes nothing for the others, so only that tab is sent one. The client keeps the snapshot with the highest `rev` for its `roomId`. The server sends the snapshots before it answers the message that caused them, so an answer never arrives before the state it refers to.
 - **No interleaving.** Handlers never await anything between reading a room and writing it, so two messages can't interleave.
 - **Closing.** `room:closed` tells a connection that its room is gone for it. The reason is `removed`, `expired`, `left` (from another tab) or `restart`. It goes to the connections that are open at that moment. Whoever is offline when the chair removes them, or when the sweep drops them, has no connection to tell, and finds out from the answer to `room:join` when they come back.
 
@@ -82,6 +83,10 @@ A game is a module that implements `GameModule` (`server/src/core/game.ts`). The
 - what each viewer sees.
 
 A module's data is immutable: every call returns new data. `view()` is the only way a game's data leaves the server. It is called for each member and for screens, so a game can show each player only what that player may know. `server/test/fakeGame.ts` is a minimal module that the core's tests use.
+
+The room draws the words for each game from the fields that the chair chose, preferring words it hasn't played with yet, and hands them to the module. After every change to a module's data during a game, the room asks the module whether the game is over.
+
+A module that throws can't take the server down or leave a room half changed. The room asks the module first and changes itself afterwards, so the room stays as it was; the message is answered with `internal`, and the error is logged. Where no message is waiting for an answer, in the handshake, on a disconnect and in the sweep, the error is logged and the rest goes on. A view that can't be built costs only that viewer's snapshot.
 
 ## Screens
 
