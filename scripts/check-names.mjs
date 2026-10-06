@@ -18,7 +18,7 @@
 // (.github/workflows/conventions.yml) and by hand:
 //
 //   node scripts/check-names.mjs files
-//       every tracked file: its path and its contents
+//       every tracked file: its path and, unless the file is binary, its contents
 //   node scripts/check-names.mjs staged
 //       the files staged for the next commit (the pre-commit hook)
 //   node scripts/check-names.mjs text [--label <what>] [--file <file>] [-- <text>]
@@ -30,7 +30,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, realpathSync } from 'node:fs';
+import { closeSync, openSync, readFileSync, readSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -47,6 +47,12 @@ export const SPELLINGS = [
 
 const RULES = 'docs/rules/constraints.md';
 const BINARY_PROBE = 8000; // like git, a NUL byte in the first 8000 bytes marks a binary file
+const GITLINK = '160000'; // the file mode of a submodule
+// The byte order marks that open UTF-16 text, which is full of NUL bytes without being binary.
+const UTF16 = [
+  ['utf-16le', Buffer.from([0xff, 0xfe])],
+  ['utf-16be', Buffer.from([0xfe, 0xff])],
+];
 
 const LATIN_LETTER = /^[a-z]$/i;
 const HAN = /^\p{Script=Han}$/u;
@@ -174,10 +180,29 @@ export function checkPath(path, spellings = SPELLINGS) {
     : [];
 }
 
-const isBinary = (buffer) => buffer.subarray(0, BINARY_PROBE).includes(0);
+const utf16 = (buffer) => UTF16.find(([, mark]) => buffer.subarray(0, mark.length).equals(mark))?.[0];
 
-function checkFile(path, buffer) {
-  return [...checkPath(path), ...(isBinary(buffer) ? [] : checkText(buffer.toString('utf8'), path))];
+// Whether the bytes, or the start of them, belong to a binary file, whose contents aren't checked.
+export const isBinary = (buffer) => !utf16(buffer) && buffer.subarray(0, BINARY_PROBE).includes(0);
+
+// The text of a file that isn't binary.
+export function decoded(buffer) {
+  const encoding = utf16(buffer);
+  return encoding ? new TextDecoder(encoding).decode(buffer) : buffer.toString('utf8');
+}
+
+// The text of the file at a path, or null for a binary file. Only the start of a binary file is
+// read, so a large image or font costs next to nothing.
+function readText(path) {
+  const file = openSync(path, 'r');
+  try {
+    const probe = Buffer.alloc(BINARY_PROBE);
+    const start = probe.subarray(0, readSync(file, probe, 0, BINARY_PROBE, 0));
+    if (isBinary(start)) return null;
+    return decoded(start.length < BINARY_PROBE ? start : readFileSync(file));
+  } finally {
+    closeSync(file);
+  }
 }
 
 // --------------------------------------------------------------------------------------------
@@ -200,26 +225,45 @@ function modeFiles() {
   const paths = nulSeparated(git('-C', root, 'ls-files', '-z'));
   const problems = [];
   for (const path of paths) {
-    let buffer;
+    problems.push(...checkPath(path));
+    let text;
     try {
-      buffer = readFileSync(join(root, path));
+      text = readText(join(root, path));
     } catch (error) {
       if (error.code === 'ENOENT' || error.code === 'EISDIR') continue; // deleted, or a submodule
       throw error;
     }
-    problems.push(...checkFile(path, buffer));
+    if (text !== null) problems.push(...checkText(text, path));
   }
   return { problems, note: `${paths.length} tracked file(s)` };
 }
 
+// What is staged for the next commit, as { path, mode, blob }. --raw prints, for each file, a
+// record ":<old mode> <new mode> <old blob> <new blob> <status>" and then its path. Without
+// rename detection, a renamed file is listed as an added one.
+function stagedFiles(root) {
+  const fields = nulSeparated(
+    git('-C', root, 'diff', '--cached', '--raw', '-z', '--no-abbrev', '--no-renames', '--diff-filter=ACMT'),
+  );
+  const files = [];
+  for (let index = 0; index + 1 < fields.length; index += 2) {
+    const [, mode, , blob] = fields[index].split(' ');
+    files.push({ path: fields[index + 1], mode, blob });
+  }
+  return files;
+}
+
 function modeStaged() {
   const root = repoRoot();
-  const paths = nulSeparated(git('-C', root, 'diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR'));
+  const files = stagedFiles(root);
   const problems = [];
-  for (const path of paths) {
-    problems.push(...checkFile(path, git('-C', root, 'show', `:${path}`)));
+  for (const { path, mode, blob } of files) {
+    problems.push(...checkPath(path));
+    if (mode === GITLINK) continue; // the commit a submodule points to lives in another repository
+    const buffer = git('-C', root, 'cat-file', 'blob', blob);
+    if (!isBinary(buffer)) problems.push(...checkText(decoded(buffer), path));
   }
-  return { problems, note: `${paths.length} staged file(s)` };
+  return { problems, note: `${files.length} staged file(s)` };
 }
 
 function modeText(texts, options) {
@@ -292,7 +336,8 @@ export function main(argv) {
       console.error(`check-names: ${masked(error.message)}\n\n${USAGE}`);
       return 2;
     }
-    if (error instanceof GitError || error.code === 'ENOENT') {
+    // Node sets `syscall` on the errors of the file system, such as a file it may not read.
+    if (error instanceof GitError || error.syscall) {
       console.error(`check-names: error: ${masked(error.message)}`);
       return 2;
     }

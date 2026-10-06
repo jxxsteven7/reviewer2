@@ -6,10 +6,22 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'node:test';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { checkPath, checkText, entryFor, findSpellings, masked, SPELLINGS } from './check-names.mjs';
+import {
+  checkPath,
+  checkText,
+  decoded,
+  entryFor,
+  findSpellings,
+  isBinary,
+  masked,
+  SPELLINGS,
+} from './check-names.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./check-names.mjs', import.meta.url));
 
@@ -123,6 +135,60 @@ describe('reports', () => {
 
   test('find nothing in ordinary text', () => {
     assert.deepEqual(checkText('feat: add rooms\n\nPlayers join with a code.', 'commit', FAKE), []);
+  });
+});
+
+describe('file contents', () => {
+  const PNG_START = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
+
+  test('a NUL byte near the start marks a binary file', () => {
+    assert.equal(isBinary(Buffer.from('the zorblax rules\n')), false);
+    assert.equal(isBinary(PNG_START), true);
+    assert.equal(isBinary(Buffer.concat([Buffer.alloc(8000, 'a'), PNG_START])), false);
+  });
+
+  test('UTF-16 text with a byte order mark is read as text', () => {
+    const littleEndian = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('the Zorblax rules\n', 'utf16le')]);
+    const bigEndian = Buffer.from(littleEndian).swap16();
+    for (const buffer of [littleEndian, bigEndian]) {
+      assert.equal(isBinary(buffer), false);
+      assert.equal(decoded(buffer), 'the Zorblax rules\n');
+      assert.equal(found(decoded(buffer)), 1);
+    }
+  });
+});
+
+describe('in a git repository', () => {
+  const directories = [];
+  after(() => directories.forEach((directory) => rmSync(directory, { recursive: true, force: true })));
+
+  // A repository with a text file, a binary file and a submodule in its index. Staging a
+  // submodule leaves a gitlink there, which points to a commit that this repository doesn't have.
+  function makeRepo() {
+    const directory = mkdtempSync(join(tmpdir(), 'check-names-'));
+    directories.push(directory);
+    const git = (...args) => {
+      const result = spawnSync('git', args, { cwd: directory, encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+    };
+    git('init', '-q', '-b', 'main');
+    writeFileSync(join(directory, 'notes.md'), 'Players join with a code.\n');
+    writeFileSync(join(directory, 'logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0x0d]));
+    git('add', 'notes.md', 'logo.png');
+    mkdirSync(join(directory, 'vendor', 'library'), { recursive: true });
+    git('update-index', '--add', '--cacheinfo', `160000,${'1'.repeat(40)},vendor/library`);
+    return (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { cwd: directory, encoding: 'utf8' });
+  }
+
+  test('staged passes over a submodule', () => {
+    const result = makeRepo()('staged');
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+  });
+
+  test('files passes over a submodule', () => {
+    const result = makeRepo()('files');
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /OK \(3 tracked file\(s\)\)/);
   });
 });
 
