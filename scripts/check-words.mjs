@@ -209,11 +209,14 @@ export function checkWordList(data, file) {
   return result();
 }
 
+// Problems and warnings for the list in one file. A file that can't be read is not a problem
+// with a word list, so this throws, and main() reports an error.
 export function checkFile(path) {
   const file = basename(path);
+  const text = readFileSync(path, 'utf8');
   let data;
   try {
-    data = JSON.parse(readFileSync(path, 'utf8'));
+    data = JSON.parse(text);
   } catch (error) {
     return { problems: [`${file}: not valid JSON: ${error.message}`], warnings: [], counts: {} };
   }
@@ -238,8 +241,17 @@ export function main(argv) {
   }
 
   let problems = 0;
+  let unreadable = 0;
   for (const path of paths) {
-    const result = checkFile(path);
+    let result;
+    try {
+      result = checkFile(path);
+    } catch (error) {
+      // A mistyped path, a directory, or a file that this user may not read.
+      console.error(`check-words: error: ${error.message}`);
+      unreadable += 1;
+      continue;
+    }
     for (const line of result.problems) {
       console.log(`check-words: ${line}`);
       if (process.env.GITHUB_ACTIONS) console.log(`::error title=check-words::${line}`);
@@ -255,11 +267,10 @@ export function main(argv) {
     problems += result.problems.length;
   }
   if (paths.length === 0) console.log('check-words: no word lists in words/ yet');
-  if (problems) {
-    console.log(`check-words: ${problems} problem(s). See words/README.md.`);
-    return 1;
-  }
-  return 0;
+  if (problems) console.log(`check-words: ${problems} problem(s). See words/README.md.`);
+  // A file that wasn't checked counts for more than what the others have: the run is not complete.
+  if (unreadable) return 2;
+  return problems ? 1 : 0;
 }
 
 // Run as a script, not when imported by the tests. Node resolves import.meta.url to the real

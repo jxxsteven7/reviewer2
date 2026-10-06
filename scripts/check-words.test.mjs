@@ -149,19 +149,37 @@ describe('command line', () => {
   const dir = mkdtempSync(join(tmpdir(), 'check-words-'));
   after(() => rmSync(dir, { recursive: true, force: true }));
   const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
+  const good = join(dir, 'ml.json');
+  writeFileSync(good, JSON.stringify(list()));
+  const bad = join(dir, 'broken.json');
+  writeFileSync(bad, '{ not json');
 
   test('passes good files and fails bad ones', () => {
-    const good = join(dir, 'ml.json');
-    writeFileSync(good, JSON.stringify(list()));
     const ok = run(good);
     assert.equal(ok.status, 0, ok.stdout);
     assert.match(ok.stdout, /OK ml\.json \(25 zh, 25 en\)/);
 
-    const bad = join(dir, 'broken.json');
-    writeFileSync(bad, '{ not json');
     const failed = run(good, bad);
     assert.equal(failed.status, 1);
     assert.match(failed.stdout, /broken\.json: not valid JSON/);
+  });
+
+  test("reports a file that it can't read as an error, not as a broken list", () => {
+    const mistyped = run(join(dir, 'ml.jsn'));
+    assert.equal(mistyped.status, 2);
+    assert.match(mistyped.stderr, /check-words: error: ENOENT.*ml\.jsn/);
+    assert.doesNotMatch(mistyped.stdout, /not valid JSON/);
+
+    const directory = run(dir);
+    assert.equal(directory.status, 2);
+    assert.match(directory.stderr, /check-words: error: EISDIR/);
+
+    // The other files are still checked, but the run doesn't pass, whatever they hold.
+    const mixed = run(join(dir, 'ml.jsn'), good, bad);
+    assert.equal(mixed.status, 2);
+    assert.match(mixed.stdout, /OK ml\.json/);
+    assert.match(mixed.stdout, /broken\.json: not valid JSON/);
+    assert.equal(run(join(dir, 'ml.jsn'), good).status, 2);
   });
 
   test("checks the repository's own word lists by default", () => {
