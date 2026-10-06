@@ -26,10 +26,8 @@ setInterval(() => server.sockets.sweep(), 60_000).unref();
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {
     log('stopping', { signal, rooms: server.rooms.size });
-    // Rooms live in memory, so they end with the process. Say so, rather than leave players waiting.
-    server.sockets.closeAll('restart');
     // Give open connections a moment to close, then go regardless.
     setTimeout(() => process.exit(0), 5_000).unref();
-    void server.close().then(() => process.exit(0));
+    void server.stop().then(() => process.exit(0));
   });
 }

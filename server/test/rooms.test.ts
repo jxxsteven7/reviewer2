@@ -766,6 +766,21 @@ describe('housekeeping', () => {
     expect(server.app.rooms.find(code)).toBeUndefined();
   });
 
+  test('a restart reaches a connection that is between two long polls', async () => {
+    const { chair, code } = await room();
+    const bob = await connect({}, { transports: ['polling'] });
+    expect(await bob.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
+    await bob.waitFor((state) => state.code === code);
+    const found = server.app.rooms.find(code);
+    if (!found) throw new Error('the room is gone');
+    // A snapshot answers the request that Bob's connection had waiting, so for a moment the
+    // server has nowhere to send him anything. That is when it is told to stop.
+    server.app.sockets.broadcast(found);
+    await server.app.stop();
+    await until(() => bob.closed.includes('restart'), 'Bob hears of the restart');
+    expect(chair.closed).toEqual(['restart']);
+  });
+
   test('tells everyone when the server restarts', async () => {
     const { chair, code, roomId } = await room();
     const screen = await connect({ watch: code, roomId });

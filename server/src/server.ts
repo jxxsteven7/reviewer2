@@ -15,6 +15,9 @@ export interface AppServer {
   io: Server;
   rooms: Rooms;
   sockets: RoomSockets;
+  // Tells everyone that the server is restarting, waits until they have been sent it, and closes.
+  stop(graceMs?: number): Promise<void>;
+  // Closes at once, and drops whatever a connection hasn't been sent yet.
   close(): Promise<void>;
 }
 
@@ -53,5 +56,28 @@ export function createAppServer(options: AppOptions): AppServer {
   });
   // io.close() also closes the HTTP server.
   const close = () => new Promise<void>((resolve) => io.close(() => resolve()));
-  return { http, io, rooms, sockets, close };
+
+  // Rooms live in memory, so they end with the process, and everyone is told so rather than left
+  // waiting. io.close() throws away whatever a connection hasn't been sent yet, which is the
+  // notice itself for anyone on a long poll that is between two requests, or on a slow
+  // connection. So each connection is first ended in the way that sends what is waiting, and
+  // gets a moment for it.
+  const stop = async (graceMs = 2_000) => {
+    sockets.closeAll('restart');
+    let timer: NodeJS.Timeout | undefined;
+    const sent = [...io.sockets.sockets.values()].map(
+      (socket) =>
+        new Promise<void>((resolve) => {
+          socket.conn.once('close', () => resolve());
+          socket.disconnect(true);
+        }),
+    );
+    const grace = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, graceMs);
+    });
+    await Promise.race([Promise.all(sent), grace]);
+    clearTimeout(timer);
+    await close();
+  };
+  return { http, io, rooms, sockets, stop, close };
 }

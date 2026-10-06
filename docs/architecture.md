@@ -91,7 +91,7 @@ A screen, such as a projector in a lab meeting, watches a room without a token a
 - **Behind a reverse proxy,** every connection comes from the proxy, so set `TRUST_PROXY` to take the address from `X-Forwarded-For` instead; [development.md](development.md) has the settings. Otherwise all players share the limits of one address. IPv6 addresses count per /64 network.
 - **Sizes.** A message may be up to 16 KB. A room holds up to 30 players and 5 screens, and the server up to 2000 rooms.
 - **The sweep.** Once a minute, the server closes rooms in which nobody has been online for 30 minutes, and rooms in which nothing has happened for 6 hours. It also drops members who have been offline for 10 minutes from waiting rooms, closes a waiting room that this leaves empty, and passes on the chair of anyone who has been away for 3 minutes. Those 10 minutes count only time in the waiting room: a player whose phone was locked during a game still has their seat when the room goes back to the waiting room, and 10 minutes from then to return to it.
-- **Restarts.** When the process is asked to stop, it first tells every connection `room:closed` with the reason `restart`.
+- **Restarts.** When the process is asked to stop, it first tells every connection `room:closed` with the reason `restart`. It then ends each connection in the way that sends what is still waiting to go out, and gives that up to 2 seconds before it closes, so that the notice also reaches a connection on a long poll or a slow network.
 
 ## HTTP
 
