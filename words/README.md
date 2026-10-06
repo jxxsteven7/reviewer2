@@ -65,6 +65,7 @@ Add a row when a new game starts using the library.
     - a duplicate term ID, and a `related` ID that is not another term of the file;
     - a term that is the same word as another in the same language. Only letters and digits count, as on the board: not case, accents, spaces, hyphens or other punctuation, and not the difference between traditional and simplified Chinese characters. A list can't hold both "Co-author" and "coauthor", or both "C++" and "C#";
     - a term without a letter or a digit;
+    - a term with spaces at its ends or two spaces in a row, with a tab, a line break or any other space than a plain one, or with a character that shows nothing, such as a zero-width space;
     - a list that doesn't have 25 different terms in either language, because a board needs 25.
   - It **warns** about a language that has some terms but fewer than 25, which players can't pick for this field until it has more. It also warns about terms longer than 5 Chinese characters or 14 letters, which may not fit on a card on a phone, and about terms that are also the game's own names for its roles and cards, such as "PI" or "Reviewer 2", because players may mix them up. Warnings don't fail the check.
 - Word lists are reviewed like everything else. Reviewers check that the terms are accurate and well known, and that the Chinese and English match.

@@ -99,6 +99,28 @@ describe('a term', () => {
     assert.ok(has(withTerm({ id: 'spaced', en: 'Peer  review' }).problems, /two spaces in a row/));
   });
 
+  test('holds no space but the plain one, and nothing invisible', () => {
+    const hidden = {
+      'deep\tlearning': 'U+0009',
+      'deep\nlearning': 'U+000A',
+      'Peer\u00a0review': 'U+00A0',
+      'Peer\u3000review': 'U+3000',
+      'atten\u200btion': 'U+200B',
+      'soft\u00adware': 'U+00AD',
+      'bell\u0007': 'U+0007',
+      'Attention\n': 'U+000A',
+    };
+    for (const [text, code] of Object.entries(hidden)) {
+      const { problems } = withTerm({ id: 'hidden', en: text });
+      assert.ok(has(problems, new RegExp(`"en" .* holds ${code.replace('+', '\\+')}: use plain spaces only`)), code);
+    }
+    // Each character is named once, and the spaces around it aren't reported a second time.
+    const several = withTerm({ id: 'hidden', en: 'a\t\tb\u200b' }).problems;
+    assert.ok(has(several, /holds U\+0009, U\+200B: /));
+    assert.equal(several.length, 1);
+    assert.deepEqual(withTerm({ id: 'plain', en: 'Peer review', zh: ATTENTION }).problems, []);
+  });
+
   test('must not be the same word as another term in the same language', () => {
     assert.ok(has(withTerm({ id: 'again', en: 'Term 3' }).problems, /"en" "Term 3" repeats terms\[3\]$/));
     // Only letters and digits count, as on the board: not case, width, spaces, hyphens or accents.

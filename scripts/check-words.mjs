@@ -90,6 +90,12 @@ const GAME_NAMES = [
 let gameNames;
 const isGameName = (key) => (gameNames ??= new Set(GAME_NAMES.map(wordKey))).has(key);
 
+// What a term must not hold. Any space but the plain one, such as a tab, a line break, a no-break
+// space or a full-width space, shows wrongly on a card. A character that shows nothing at all,
+// such as a zero-width space or a soft hyphen, makes a word look like another one.
+const HIDDEN = /[^\S ]|\p{Cc}|\p{Default_Ignorable_Code_Point}/gu;
+const codePoint = (char) => `U+${char.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`;
+
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
 const describe = (value) => JSON.stringify(value);
 
@@ -150,7 +156,14 @@ export function checkWordList(data, file) {
         problems.push(`${where}: "${language}" must be a non-empty string`);
         continue;
       }
-      if (text !== text.trim() || /\s{2}/.test(text)) {
+      const hidden = [...new Set(text.match(HIDDEN))].map(codePoint);
+      if (hidden.length > 0) {
+        // JSON shows a tab or a line break as an escape, but an invisible character as it is, so
+        // name each one by its code point.
+        problems.push(
+          `${where}: "${language}" ${describe(text)} holds ${hidden.join(', ')}: use plain spaces only, and no invisible characters`,
+        );
+      } else if (text !== text.trim() || / {2}/.test(text)) {
         problems.push(`${where}: "${language}" has spaces at its ends or two spaces in a row`);
       }
       const key = wordKey(text);
