@@ -80,5 +80,6 @@ APP_VERSION="$(git rev-parse --short HEAD)" npm run build
 
 Then copy `server/dist/`, `client/dist/` and `words/` to the server, in the same layout, and run `node server/dist/index.cjs` there. It listens on `127.0.0.1:3000` unless `HOST` and `PORT` say otherwise, and `/healthz` answers once it is up.
 
+- **Keep `words/` beside the build.** The server refuses to start when it can't read the directory of the word lists, which is `words/` unless `WORDS_DIR` names another.
 - **Restart the server after replacing the build.** It lists the front end's files when it starts, so a running server would serve the new `index.html` but answer its new assets with 404.
 - **Behind a reverse proxy,** pass the original `Host` header on, for nginx `proxy_set_header Host $host;`, along with the WebSocket upgrade headers. The Content Security Policy names the host the page was requested from, so that older iPhones allow the WebSocket connection to it.

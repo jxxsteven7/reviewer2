@@ -175,10 +175,19 @@ describe('loading word lists', () => {
     expect(skipped.sort()).toEqual(['broken.json', 'odd.json']);
   });
 
-  test('copes with a missing directory', () => {
-    const skipped: string[] = [];
-    expect(loadWordLibrary(join(dir, 'missing'), (file) => skipped.push(file)).fields()).toEqual([]);
-    expect(skipped).toHaveLength(1);
+  test("refuses a directory that isn't there or isn't one", () => {
+    expect(() => loadWordLibrary(join(dir, 'missing'))).toThrow(/^cannot read the word lists: ENOENT.*missing/);
+    expect(() => loadWordLibrary(join(dir, 'notes.txt'))).toThrow(/^cannot read the word lists: ENOTDIR.*notes\.txt/);
+  });
+
+  test('loads nothing from a directory without word lists', () => {
+    const empty = mkdtempSync(join(tmpdir(), 'reviewer2-no-words-'));
+    try {
+      writeFileSync(join(empty, 'README.md'), '# Word library');
+      expect(loadWordLibrary(empty).fields()).toEqual([]);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
   });
 });
 
