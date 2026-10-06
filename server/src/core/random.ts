@@ -4,17 +4,20 @@ import { randomBytes, randomInt } from 'node:crypto';
 // module, because a predictable sequence could let someone work out the key. Tests pass a seeded
 // generator instead, to replay the same games.
 export interface Rng {
-  // A whole number from 0 up to, but not including, `below`.
+  // A whole number from 0 up to, but not including, `below`, which is a whole number of at
+  // least 1. Anything else throws.
   int(below: number): number;
 }
 
 export const cryptoRng: Rng = { int: (below) => randomInt(below) };
 
-// mulberry32: fast and repeatable, and never to be used for real games.
+// mulberry32: fast and repeatable, and never to be used for real games. It refuses what the
+// crypto generator refuses, so that a test can't pass on a call that would throw in a real game.
 export function seededRng(seed: number): Rng {
   let state = seed >>> 0;
   return {
     int(below) {
+      if (!Number.isSafeInteger(below) || below < 1) throw new RangeError(`cannot draw a number below ${below}`);
       state = (state + 0x6d2b79f5) >>> 0;
       let t = state;
       t = Math.imul(t ^ (t >>> 15), t | 1);

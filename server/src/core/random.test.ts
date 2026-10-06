@@ -33,6 +33,15 @@ describe('random', () => {
     expect([...crypto].sort()).toEqual(orders);
   });
 
+  test('both generators refuse a range that is empty or not whole', () => {
+    for (const below of [0, -5, 2.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => seededRng(1).int(below), `seeded ${below}`).toThrow();
+      expect(() => cryptoRng.int(below), `crypto ${below}`).toThrow();
+    }
+    expect(seededRng(1).int(1)).toBe(0);
+    expect(cryptoRng.int(1)).toBe(0);
+  });
+
   test('pick and the crypto generator', () => {
     expect(['a', 'b', 'c']).toContain(pick(['a', 'b', 'c'], cryptoRng));
     expect(() => pick([], cryptoRng)).toThrow();
