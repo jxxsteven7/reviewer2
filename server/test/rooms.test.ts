@@ -819,10 +819,12 @@ describe('housekeeping', () => {
     const bob = await join(code, 'Bob');
     chair.close();
     await bob.waitFor(() => online(bob, 'Ann') === false);
-    server.advance(2 * 60_000);
+    server.advance(3 * 60_000 - 1000);
     server.app.sockets.sweep();
-    expect(bob.state?.chairId).not.toBe(bob.me);
-    server.advance(60_000 + 1);
+    // Asked of the server itself: a snapshot from this sweep could not have reached Bob yet, so
+    // his view would say "Ann" whatever the sweep had done.
+    expect(server.app.rooms.find(code)?.chairId).toBe(chair.me);
+    server.advance(1001);
     server.app.sockets.sweep();
     await bob.waitFor((state) => state.chairId === bob.me, 'Bob chairs');
   });
