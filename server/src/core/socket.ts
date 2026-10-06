@@ -1,4 +1,5 @@
-import { cleanName, ROOM_MESSAGES, type ClosedReason, type Handshake, type RoomMessage } from '@reviewer2/shared';
+import { cleanName, type ClosedReason, type Handshake } from '@reviewer2/shared';
+import { ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { clientIp } from './clientIp';

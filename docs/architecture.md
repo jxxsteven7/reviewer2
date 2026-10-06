@@ -8,7 +8,7 @@ A single Node process serves everything on one port: the built front end, `/heal
 
 | Layer | Where | What it does |
 |---|---|---|
-| Shared | `shared/src/` | Types, message schemas and the rules that both sides run, such as the clue check |
+| Shared | `shared/src/` | Types and the rules that both sides run, such as the checks of a nickname and of a clue. `schemas.ts` holds the message schemas, for the server alone |
 | Server core | `server/src/core/` | Rooms, players, connections, the chair's controls, limits, the word library |
 | Server games | `server/src/games/<game>/` | One module per game: its seats, its rules and what each player sees |
 | Client core | `client/src/core/` | Connection, rooms, lobby, language, storage |
@@ -37,10 +37,10 @@ Adding a game means adding a module on each side, without changing the core.
 
 ## Messages
 
-Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` defines the room messages, and each game defines its own, named `<game>:<action>`.
+Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` describes the room messages, and each game defines its own, named `<game>:<action>`.
 
 - **Answers.** Every message from the client gets an acknowledgement: `{ ok: true, ... }` or `{ ok: false, error }`. Error codes are shared, and the client shows each one with the text under `errors.<code>` in the locale files. The server never sends interface text, only the words on the cards.
-- **Validation.** The server checks every payload against a zod schema before it looks at it.
+- **Validation.** The server checks every payload against a zod schema before it looks at it. The schemas are in `shared/src/schemas.ts`, which the server imports as `@reviewer2/shared/schemas`. The client never imports that module, and ESLint refuses it if it tries: zod would add half again to the page's script, and it probes `new Function`, which the Content Security Policy below refuses.
 - **Snapshots.** After every change, the server sends each connection in the room its own complete snapshot, `room:state`. The client keeps the snapshot with the highest `rev` for its `roomId`. The server sends the snapshots before it answers the message that caused them, so an answer never arrives before the state it refers to.
 - **No interleaving.** Handlers never await anything between reading a room and writing it, so two messages can't interleave.
 - **Closing.** `room:closed` tells a connection that its room is gone for it. The reason is `removed`, `expired`, `left` (from another tab) or `restart`.
