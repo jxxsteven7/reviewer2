@@ -42,17 +42,27 @@ Turns are numbered from 1, and the groups alternate: the starting group plays th
 
 The clue check is shared: the captain's screen runs it while they type, and the server runs it again before it accepts a clue.
 
-A clue must be **one word**: letters, digits, hyphens and apostrophes, with no spaces or other punctuation. "Self-attention" is one word. It may be up to 24 characters long, or 10 when it contains Chinese characters. A Chinese room may use English abbreviations such as GPU.
+A clue must be **one word**: letters, digits, hyphens and apostrophes, with no spaces or other punctuation, and with at least one letter or digit. "Self-attention" is one word. A letter may carry accents, but no more than two combining marks. A clue may be up to 24 characters long, or 10 when it contains Chinese characters. A Chinese room may use English abbreviations such as GPU.
 
-The server **refuses** a clue that repeats a word still on the board. Both sides are first normalized: the full-width and compatibility forms are folded (NFKC), spaces at the ends are trimmed, and Latin letters are lowercased. Then the clue is refused when:
+Two things are done before anything else:
 
-- it is the same as a word on the board;
-- after both are split into parts at spaces, hyphens and apostrophes, and between Latin and Chinese characters, a part of the clue is the same as a part of the word, or differs from it only by a plain plural "-s" or "-es". So "models" is refused for "model", "review" for "peer review" and "self-attention" for "attention";
-- a run of Chinese characters in the clue contains a run in the word, or is contained in one. Latin parts are never searched inside other words, so "email" is fine while "AI" is on the board.
+- A text of more than 64 UTF-16 units is refused as too long without being looked at. Normalizing text is the expensive step of the check, and a text can be built to make it slow.
+- Invisible characters, such as zero-width spaces, soft hyphens and variation selectors, are dropped. Inside a clue they could make a word on the board look like a new word.
 
-The captain is **warned, but not refused**, when the clue may be another form of a word on the board, with an ending such as "-ing", "-ed", "-er" or "-ies". "Modeling" for "model" is an example. The standard rules forbid any form of a word on the board, but endings are too ambiguous for a machine to judge, so the captain decides.
+The server **refuses** a clue that repeats a word still on the board. The two are compared in a common form: full-width and compatibility forms are folded (NFKC), spaces at the ends are trimmed, Latin letters are lowercased, accents are dropped, and traditional Chinese characters are turned into simplified ones. Then the clue is refused when:
 
-Words that have been revealed no longer count, and may be used as clues again. The clue is recorded as the captain typed it, without the spaces at its ends.
+- it is the same as a word on the board or a plain plural of it, also once hyphens, spaces and apostrophes are taken out of both. So "co-author" is refused for "coauthor", and "jetlag" for "jet lag";
+- a part of the clue is the same as a part of the word, or a plain plural of it. The parts are the runs of letters between spaces, hyphens, apostrophes and digits, with Latin and Chinese characters apart. So "models" is refused for "model", "review" for "peer review", "self-attention" for "attention" and "model2" for "model". A single letter is not a part, so "Occam's" is fine while "Master's" is on the board, and neither are digits;
+- a run of Chinese characters in the clue contains a run in the word, or is contained in one. Latin parts are never searched inside other words, so "email" is fine while "AI" is on the board;
+- it is the card's term in another language of the word library, or a plain plural of it. In a Chinese room, "journal" is refused while the card for that term is on the board.
+
+A plain plural ends in "-s", or in "-es" after s, x, z, ch or sh: "classes" is a plural of "class", but "grades" is not one of "grad".
+
+The captain is **warned, but not refused**, when the clue may be another form of a word on the board: one with an ending such as "-ing", "-ed", "-er", "-ion" or "-ies", or a Latin, Greek or irregular plural. "Modeling" for "model", "simulate" for "simulation" and "hypotheses" for "hypothesis" are examples. The same warning comes up for a part or a form of a card's term in another language. The standard rules forbid any form of a word on the board, but endings are too ambiguous for a machine to judge, so the captain decides.
+
+Words that have been revealed no longer count, and may be used as clues again. The clue is recorded as the captain typed it, without invisible characters and without the spaces at its ends.
+
+The table of traditional and simplified characters is `shared/src/han-variants.ts`. `scripts/build-han-variants.mjs` builds it from the Unicode Han Database.
 
 ## Winning
 

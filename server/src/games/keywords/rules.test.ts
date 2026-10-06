@@ -89,8 +89,12 @@ describe('giving a clue', () => {
 
   test('may repeat a word that has been covered', () => {
     const state = gameState();
-    const covered = { ...state, cards: state.cards.map((card, i) => (i === 3 ? { ...card, revealed: true } : card)) };
-    expect(refused(giveClue(covered, captain('red'), { ...now(covered), word: 'Word3', count: 1 }))).toBeNull();
+    const entropy = (revealed: boolean) =>
+      state.cards.map((card, i) => (i === 3 ? { ...card, word: 'Entropy', revealed } : card));
+    const open = { ...state, cards: entropy(false) };
+    expect(refused(giveClue(open, captain('red'), { ...now(open), word: 'entropy', count: 1 }))).toBe('clue_on_board');
+    const covered = { ...state, cards: entropy(true) };
+    expect(refused(giveClue(covered, captain('red'), { ...now(covered), word: 'entropy', count: 1 }))).toBeNull();
   });
 });
 
