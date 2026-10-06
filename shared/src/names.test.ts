@@ -68,18 +68,23 @@ describe('a nickname', () => {
     expect(cleanName('A' + '\u0301'.repeat(6))).toBeNull();
     expect(cleanName('x' + '\u0301'.repeat(5))).toBeNull();
     expect(cleanName('\u0301A')).toBeNull();
-    // A selector between the marks hides the run from nobody.
+    // A selector or a joiner between the marks hides the run from nobody.
     expect(cleanName('A' + '\u0301\ufe0f'.repeat(8))).toBeNull();
-    expect(cleanName('x\u0301\u200dy')).toBeNull();
+    expect(cleanName('x' + '\u0301\u200d'.repeat(5))).toBeNull();
+    expect(cleanName('x' + '\u200d\u0301'.repeat(5))).toBeNull();
+    expect(cleanName('\u200d\u0301A')).toBeNull();
     // A joiner after a selector is how some emoji are built: a heart on fire, a keycap.
     expect(cleanName('Ann \u2764\ufe0f\u200d\u{1f525}')).not.toBeNull();
     expect(cleanName('Ann 1\ufe0f\u20e3')).not.toBeNull();
   });
 
   test('may be written in any script', () => {
-    // Chinese, Thai, Arabic with its vowel marks, Tibetan with stacked letters, and Vietnamese
-    // typed as letters and separate marks.
+    // Chinese, Thai, Arabic with its vowel marks, Tibetan with stacked letters, Sinhala and
+    // Devanagari with a joiner after the mark that binds two letters, and Vietnamese typed as
+    // letters and separate marks.
     for (const name of [
+      '\u0dc1\u0dca\u200d\u0dbb\u0dd3',
+      '\u0915\u094d\u200d\u0937',
       '\u5f20\u4f1f',
       '\u0e2a\u0e21\u0e0a\u0e32\u0e22',
       '\u0645\u064f\u062d\u064e\u0645\u0651\u064e\u062f',

@@ -16,14 +16,14 @@ const HIDDEN = /(?!\u200d|\ufe0e|\ufe0f)[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Default_Igno
 // among those that show nothing. These three sequences are the only tags that a name may have.
 const TAG_FLAGS =
   /\u{1f3f4}\u{e0067}\u{e0062}(?:\u{e0065}\u{e006e}\u{e0067}|\u{e0073}\u{e0063}\u{e0074}|\u{e0077}\u{e006c}\u{e0073})\u{e007f}/gu;
-// No emoji has a joiner or a selector after a combining mark, so one that stands there only hides
-// a run of marks from the next check. The selectors are marks themselves, and a joiner does follow
-// one of them, as in a heart on fire, so they don't count as the mark here.
-const GLUE_AFTER_MARK = /(?!\ufe0e|\ufe0f)\p{M}(?:\u200d|\ufe0e|\ufe0f)/u;
 // A combining mark at the start of a name settles on whatever stands before the name on the page,
 // and a long run of marks piles up over the lines above. Scripts that stack their letters, such
-// as Tibetan, need runs of up to four.
+// as Tibetan, need runs of up to four. The selectors are marks themselves and count; the joiner
+// is not, so it is taken out before the runs are measured, or it could split a long run into
+// short ones. It may stand after a mark all the same: that is how Sinhala and other scripts
+// write some of their letters.
 const STRAY_MARKS = /^\p{M}|\p{M}{5}/u;
+const JOINERS = /\u200d/g;
 
 let segmenter: Intl.Segmenter | null | undefined;
 
@@ -42,7 +42,7 @@ function nameLength(name: string): number {
 export function cleanName(raw: string): string | null {
   if (raw.length > MAX_NAME_INPUT) return null;
   const name = raw.normalize('NFKC').replace(/\s+/gu, ' ').trim();
-  if (HIDDEN.test(name.replace(TAG_FLAGS, '')) || GLUE_AFTER_MARK.test(name) || STRAY_MARKS.test(name)) return null;
+  if (HIDDEN.test(name.replace(TAG_FLAGS, '')) || STRAY_MARKS.test(name.replace(JOINERS, ''))) return null;
   // What is left may still show nothing, if it is only the glue between emoji.
   if (!name.replace(EMOJI_GLUE, '').trim()) return null;
   return nameLength(name) <= MAX_NAME_LENGTH ? name : null;
