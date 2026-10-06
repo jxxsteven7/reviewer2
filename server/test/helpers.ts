@@ -1,8 +1,8 @@
 import type { AddressInfo } from 'node:net';
 import type { ClosedReason, RoomView } from '@reviewer2/shared';
-import { io as connect, type Socket } from 'socket.io-client';
+import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 import type { GameModule } from '../src/core/game';
-import { seededRng } from '../src/core/random';
+import { seededRng, type Rng } from '../src/core/random';
 import type { RoomLimits } from '../src/core/rooms';
 import { WordLibrary, type WordListData } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
@@ -28,7 +28,7 @@ export interface TestServer {
 }
 
 export async function startServer(
-  options: { games?: GameModule[]; words?: WordLibrary; limits?: RoomLimits } = {},
+  options: { games?: GameModule[]; words?: WordLibrary; limits?: RoomLimits; trustProxy?: boolean; rng?: Rng } = {},
 ): Promise<TestServer> {
   let offset = 0;
   const logs: TestServer['logs'] = [];
@@ -37,8 +37,9 @@ export async function startServer(
     version: 'test',
     words: options.words ?? testWords(),
     games: options.games ?? [fakeGame as GameModule],
-    rng: seededRng(1),
+    rng: options.rng ?? seededRng(1),
     now: () => Date.now() + offset,
+    trustProxy: options.trustProxy ?? false,
     ...(options.limits ? { limits: options.limits } : {}),
     log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
   });
@@ -76,15 +77,17 @@ export class TestClient {
     socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => this.closed.push(reason));
   }
 
+  // `auth` is the handshake. It is typed loosely, because tests also send what no client should.
   static async connect(
     url: string,
-    auth: { token?: string; code?: string; roomId?: string; watch?: string } = {},
+    auth: Record<string, unknown> = {},
+    options: Partial<ManagerOptions & SocketOptions> = {},
   ): Promise<TestClient> {
-    const socket = connect(url, { auth, transports: ['websocket'], reconnection: false, forceNew: true });
+    const socket = connect(url, { auth, transports: ['websocket'], reconnection: false, forceNew: true, ...options });
     const client = new TestClient(socket);
     await new Promise<void>((resolve, reject) => {
       socket.once('session', (session: { token?: string; version: string }) => {
-        client.token = session.token ?? auth.token ?? '';
+        client.token = session.token ?? (typeof auth.token === 'string' ? auth.token : '');
         client.version = session.version;
         resolve();
       });

@@ -45,11 +45,11 @@ const prefixOf = (event: string): string => event.split(':', 1)[0] ?? '';
 const OWN_PREFIXES = new Set(Object.keys(ROOM_MESSAGES).map(prefixOf));
 
 // Per connection: about 10 messages a second, in bursts of up to 20. Per address and minute: 5
-// new rooms and 20 failed attempts to join one, which is enough to stop anyone from trying codes.
+// new rooms and 20 codes that name no room, which keeps anyone from trying codes until one fits.
 const MESSAGES_PER_SECOND = 10;
 const MESSAGE_BURST = 20;
 const CREATIONS_PER_MINUTE = 5;
-const FAILED_JOINS_PER_MINUTE = 20;
+const FAILED_LOOKUPS_PER_MINUTE = 20;
 
 export interface RoomSockets {
   broadcast(room: Room): void;
@@ -63,7 +63,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (OWN_PREFIXES.has(id)) throw new Error(`a game can't be named "${id}", which is a prefix of the room messages`);
   }
   const creations = new WindowCounter(CREATIONS_PER_MINUTE, 60_000, now);
-  const failedJoins = new WindowCounter(FAILED_JOINS_PER_MINUTE, 60_000, now);
+  const failedLookups = new WindowCounter(FAILED_LOOKUPS_PER_MINUTE, 60_000, now);
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
 
@@ -153,6 +153,23 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return ok({ code: room.code, roomId: room.id });
   }
 
+  // Finds the room that belongs to a code, for someone who wants in. An address that has named too
+  // many codes without a room is refused for the rest of its minute, whether or not this code is
+  // right: otherwise it could go on telling right from wrong.
+  //
+  // An address is rarely one person. A lab shares one, and so does everyone behind a reverse
+  // proxy that isn't trusted. So whoever is in the room already, by their token or on this very
+  // connection, gets in whatever their address has used up: a member who comes back must never
+  // be held up by what someone else did.
+  function lookup(conn: Connection, code: string): Room | 'room_not_found' | 'rate_limited' {
+    const room = rooms.find(code);
+    if (room && (conn.room === room || room.memberByKey(conn.key))) return room;
+    if (!failedLookups.allowed(conn.ip)) return 'rate_limited';
+    if (room) return room;
+    failedLookups.add(conn.ip);
+    return 'room_not_found';
+  }
+
   function membership(socket: Socket): { room: Room; member: Member } | null {
     const { room, screen } = connection(socket);
     const member = room && !screen ? room.memberBySocket(socket.id) : undefined;
@@ -237,7 +254,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return ok();
   }
 
+  // Behind a reverse proxy every connection comes from the proxy's address, and then all players
+  // share the limits of one address. A forwarded address that goes unread is the sign of it.
+  let forwardedIgnored = false;
+
   io.use((socket, next) => {
+    if (!options.trustProxy && !forwardedIgnored && socket.handshake.headers['x-forwarded-for'] !== undefined) {
+      forwardedIgnored = true;
+      log('forwarded_address_ignored', { hint: 'behind a reverse proxy, set TRUST_PROXY=1' });
+    }
     const auth = (socket.handshake.auth ?? {}) as Handshake;
     const token = isToken(auth.token) ? auth.token : null;
     const issued = token === null ? newToken() : null;
@@ -306,12 +331,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
 
     on(handlers, 'room:join', ({ code, name }) => {
-      if (!failedJoins.allowed(conn.ip)) return fail('rate_limited');
-      const room = rooms.find(code);
-      if (!room) {
-        failedJoins.add(conn.ip);
-        return fail('room_not_found');
-      }
+      const room = lookup(conn, code);
+      if (typeof room === 'string') return fail(room);
       const member = room.memberByKey(conn.key);
       if (member) {
         enter(socket, room, member);
@@ -405,7 +426,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         closeFor(result.dropped, 'expired');
         for (const room of result.changed) broadcast(room);
         creations.prune();
-        failedJoins.prune();
+        failedLookups.prune();
       });
     },
     closeAll(reason) {

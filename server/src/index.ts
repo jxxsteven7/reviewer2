@@ -12,7 +12,12 @@ log('word_lists_loaded', { fields: words.fields().map(({ id, counts }) => ({ id,
 const server = createAppServer({ ...config, words, games: [] });
 
 server.http.listen(config.port, config.host, () => {
-  log('listening', { host: config.host, port: config.port, version: config.version });
+  log('listening', {
+    host: config.host,
+    port: config.port,
+    version: config.version,
+    trustProxy: config.trustProxy,
+  });
 });
 
 // Closes idle rooms, drops long-gone players from waiting rooms and passes on absent chairs.

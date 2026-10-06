@@ -19,3 +19,23 @@ describe('PORT', () => {
     }
   });
 });
+
+describe('TRUST_PROXY', () => {
+  test('is off unless it is switched on', () => {
+    for (const TRUST_PROXY of [undefined, '', '0', 'false', 'no', 'off', 'OFF']) {
+      expect(loadConfig({ TRUST_PROXY }).trustProxy, String(TRUST_PROXY)).toBe(false);
+    }
+  });
+
+  test('is on however "yes" is spelled', () => {
+    for (const TRUST_PROXY of ['1', 'true', 'TRUE', 'True', 'yes', 'on', ' 1 ']) {
+      expect(loadConfig({ TRUST_PROXY }).trustProxy, TRUST_PROXY).toBe(true);
+    }
+  });
+
+  test('anything else stops the server, rather than leave the proxy untrusted without a word', () => {
+    for (const TRUST_PROXY of ['2', 'y', 'enabled', '127.0.0.1', 'loopback']) {
+      expect(() => loadConfig({ TRUST_PROXY }), TRUST_PROXY).toThrow(/TRUST_PROXY/);
+    }
+  });
+});

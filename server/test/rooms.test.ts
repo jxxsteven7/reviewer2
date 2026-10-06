@@ -22,8 +22,10 @@ const track = <T extends TestClient>(client: T): T => {
   clients.push(client);
   return client;
 };
-const connect = async (auth: Parameters<typeof TestClient.connect>[1] = {}) =>
-  track(await TestClient.connect(server.url, auth));
+const connect = async (
+  auth: Parameters<typeof TestClient.connect>[1] = {},
+  options: Parameters<typeof TestClient.connect>[2] = {},
+) => track(await TestClient.connect(server.url, auth, options));
 const room = async (name = 'Ann') => {
   const created = await createRoom(server.url, name);
   track(created.chair);
@@ -470,13 +472,43 @@ describe('limits', () => {
     expect(reply).toEqual({ ok: false, error: 'rate_limited' });
   });
 
-  test('one address may fail to join only so often', async () => {
-    const client = await connect();
+  // Uses up what one address may get wrong in a minute. Every client in these tests has the
+  // same address, as the people in one lab do.
+  const mistype = async (client: TestClient, message = 'room:join') => {
     for (let i = 0; i < 20; i += 1) {
       server.advance(200); // stay under the per-connection limit
-      expect(await client.send('room:join', { code: 'ZZZZ' })).toEqual({ ok: false, error: 'room_not_found' });
+      expect(await client.send(message, { code: 'ZZZZ' })).toEqual({ ok: false, error: 'room_not_found' });
     }
+  };
+
+  test('one address may name only so many codes that belong to no room', async () => {
+    const { code } = await room();
+    const client = await connect();
+    await mistype(client);
     expect(await client.send('room:join', { code: 'ZZZZ' })).toEqual({ ok: false, error: 'rate_limited' });
+    // A right code is refused as well, or the address could go on telling right from wrong.
+    expect(await client.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'rate_limited' });
+    server.advance(60_000);
+    expect(await client.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
+  });
+
+  test('a member comes back whatever their address has used up', async () => {
+    const { code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    await mistype(await connect());
+    const newcomer = await connect();
+    expect(await newcomer.send('room:join', { code, name: 'Cat' })).toEqual({ ok: false, error: 'rate_limited' });
+    // Bob asks again on the connection he has, and comes back on a new one.
+    expect(await bob.send('room:join', { code })).toMatchObject({ ok: true, roomId });
+    const back = await connect({ token: bob.token });
+    expect(await back.send('room:join', { code })).toMatchObject({ ok: true, roomId });
+    await back.waitFor((state) => state.me === bob.me);
+  });
+
+  test('says so once when it ignores the address that a proxy passed on', async () => {
+    await connect({}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
+    await connect({}, { extraHeaders: { 'x-forwarded-for': '203.0.113.10' } });
+    expect(server.logs.filter((entry) => entry.event === 'forwarded_address_ignored')).toHaveLength(1);
   });
 });
 

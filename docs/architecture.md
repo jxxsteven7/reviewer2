@@ -85,7 +85,8 @@ A screen, such as a projector in a lab meeting, watches a room without a token a
 ## Limits and housekeeping
 
 - **Message rate.** Each connection may send about 10 messages a second, in bursts of up to 20.
-- **Per address.** Each address may create 5 rooms a minute and fail to join 20 times a minute, which stops anyone from trying codes. Behind a reverse proxy, set `TRUST_PROXY` so that the address comes from `X-Forwarded-For`. IPv6 addresses count per /64 network.
+- **Per address.** Each address may create 5 rooms a minute and name 20 codes a minute that belong to no room, which keeps anyone from trying codes until one fits. Past that, the address is refused whether or not its next code is right. An address is rarely one person: a lab shares one. So the limit never holds up someone who is in the room already, by their token or on the same connection. A member always gets back in; only newcomers at that address wait out the minute.
+- **Behind a reverse proxy,** every connection comes from the proxy, so set `TRUST_PROXY` to take the address from `X-Forwarded-For` instead; [development.md](development.md) has the settings. Otherwise all players share the limits of one address. IPv6 addresses count per /64 network.
 - **Sizes.** A message may be up to 16 KB. A room holds up to 30 players and 5 screens, and the server up to 2000 rooms.
 - **The sweep.** Once a minute, the server closes rooms in which nobody has been online for 30 minutes, and rooms in which nothing has happened for 6 hours. It also drops members who have been offline for 10 minutes from waiting rooms, and passes on the chair of anyone who has been away for 3 minutes.
 - **Restarts.** When the process is asked to stop, it first tells every connection `room:closed` with the reason `restart`.
@@ -98,4 +99,4 @@ A screen, such as a projector in a lab meeting, watches a room without a token a
 
 ## Logging
 
-The server writes one JSON object per line to stdout: room creation, game starts and ends, rooms closing, skipped word lists and errors. It never logs tokens.
+The server writes one JSON object per line to stdout: room creation, game starts and ends, rooms closing, skipped word lists and terms, errors, and a warning when it ignores the address that a reverse proxy passed on. It never logs tokens.

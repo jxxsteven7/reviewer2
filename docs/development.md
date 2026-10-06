@@ -53,7 +53,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | `HOST` | `127.0.0.1` | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
 | `PUBLIC_DIR` | `client/dist` | Where the built front end is |
 | `WORDS_DIR` | `words` | Where the word lists are |
-| `TRUST_PROXY` | off | Set it to `1` only behind a reverse proxy that sets `X-Forwarded-For`, so that rate limits count each player's own address; see [architecture.md](architecture.md) |
+| `TRUST_PROXY` | off | Set it to `1` behind a reverse proxy that sets `X-Forwarded-For`, and only there, so that the limits count each player's own address; see [architecture.md](architecture.md). `1`, `true`, `yes` and `on` switch it on, and a value the server doesn't know stops it |
 | `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
 
 Never commit passwords, keys or tokens. `.env` files are ignored by git.
@@ -84,3 +84,4 @@ Then copy `server/dist/`, `client/dist/` and `words/` to the server, in the same
 - **Keep `words/` beside the build.** The server refuses to start when it can't read the directory of the word lists, which is `words/` unless `WORDS_DIR` names another.
 - **Restart the server after replacing the build.** It lists the front end's files when it starts, so a running server would serve the new `index.html` but answer its new assets with 404.
 - **Behind a reverse proxy,** pass the original `Host` header on, for nginx `proxy_set_header Host $host;`, along with the WebSocket upgrade headers. The Content Security Policy names the host the page was requested from, so that older iPhones allow the WebSocket connection to it.
+- **Behind a reverse proxy, also set `TRUST_PROXY=1`** and have the proxy add the player's address to `X-Forwarded-For`, for nginx `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. Without it every connection comes from the proxy's own address, so all players together may create 5 rooms a minute and mistype 20 codes, and anyone can use that up for everyone. The server logs `forwarded_address_ignored` once when it sees the header while the setting is off, and the `listening` line says which way it is set.
