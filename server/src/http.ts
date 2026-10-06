@@ -50,13 +50,21 @@ const notFound = (res: ServerResponse) => send(res, 404, 'text/plain; charset=ut
 
 const NOT_BUILT = 'The front end has not been built. Run npm run build, or use npm run dev.\n';
 
+// The path of a request target: everything before the query string, as sirv reads it too. Not
+// new URL(), which takes a target that starts with two slashes for a host name and throws when
+// that isn't one. Nothing would catch that error, so "GET //" alone would end the process.
+function pathOf(target: string): string {
+  const query = target.indexOf('?');
+  return query === -1 ? target : target.slice(0, query);
+}
+
 export function createRequestHandler({ publicDir, version, startedAt = Date.now() }: HttpOptions): RequestListener {
   // sirv lists the files when it starts, so it can only serve a front end that has been built.
   const files = existsSync(publicDir) ? staticFiles(publicDir) : null;
 
   return (req, res) => {
     setSecurityHeaders(req, res);
-    const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+    const path = pathOf(req.url ?? '/');
     if (path === '/healthz') {
       const uptime = Math.round((Date.now() - startedAt) / 1000);
       send(res, 200, 'application/json', JSON.stringify({ ok: true, version, uptime }));

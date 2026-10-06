@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { request, type IncomingHttpHeaders } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,6 +14,21 @@ async function start(publicDir: string): Promise<{ server: AppServer; base: stri
   await new Promise<void>((resolve) => server.http.listen(0, '127.0.0.1', resolve));
   const { port } = server.http.address() as AddressInfo;
   return { server, base: `http://127.0.0.1:${port}` };
+}
+
+// Sends the request target exactly as it is given, which fetch() doesn't: it parses the URL first.
+function get(base: string, target: string): Promise<{ status: number; headers: IncomingHttpHeaders; body: Buffer }> {
+  return new Promise((resolve, reject) => {
+    const sent = request(base, { path: target }, (response) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer) => chunks.push(chunk));
+      response.on('end', () =>
+        resolve({ status: response.statusCode ?? 0, headers: response.headers, body: Buffer.concat(chunks) }),
+      );
+    });
+    sent.on('error', reject);
+    sent.end();
+  });
 }
 
 describe('with a built front end', () => {
@@ -46,6 +62,15 @@ describe('with a built front end', () => {
       expect(await response.text(), path).toBe(INDEX);
       expect(response.headers.get('cache-control'), path).toBe('no-cache');
     }
+  });
+
+  test('a request target that is not a valid URL gets the page, like any other unknown path', async () => {
+    for (const target of ['//', '//[', '//x:99999/', 'http://[::1']) {
+      const response = await get(base, target);
+      expect(response.status, target).toBe(200);
+      expect(response.body.toString(), target).toBe(INDEX);
+    }
+    expect((await fetch(`${base}/healthz`)).status).toBe(200);
   });
 
   test('hashed assets are cached for good, and missing ones are a 404', async () => {
