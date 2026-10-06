@@ -13,7 +13,7 @@ export interface AppServer {
 export function createAppServer(config: Pick<Config, 'publicDir' | 'version'>): AppServer {
   const http = createServer(createRequestHandler({ publicDir: config.publicDir, version: config.version }));
   const io = new Server(http, {
-    serveClient: false, // the client bundles socket.io-client itself
+    serveClient: false, // don't offer Socket.IO's client script: the front end loads only its own bundle
     // Notice dead connections sooner than the defaults of 25 s + 20 s: phones drop them whenever
     // the screen locks.
     pingInterval: 10_000,

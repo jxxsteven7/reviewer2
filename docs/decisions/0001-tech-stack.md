@@ -22,6 +22,8 @@ The project brief fixed the outline: TypeScript on both sides, a Vue front end, 
 | Builds | Vite for the front end, with its text files compressed ahead of time; esbuild bundles the server and its dependencies into one CommonJS file |
 | Fonts | Source Serif 4 from `@fontsource-variable`, bundled and served by our own server. Interface text uses system fonts |
 
+zod and Playwright are decided here but are not dependencies yet. Each is added with the first code that uses it: zod with the first messages between the client and the server, and Playwright with the first end-to-end test.
+
 ## Consequences
 
 - **npm instead of pnpm.** Node 25 stopped shipping corepack, so pnpm would be one more thing for every contributor to install, including people who only add words. npm comes with Node.

@@ -64,7 +64,7 @@ npm run build
 HOST=0.0.0.0 npm start
 ```
 
-Then open `http://<your computer's address>:3000` on the phone. On a Mac, `ipconfig getifaddr en0` prints the address. To try WeChat's built-in browser, send the link to yourself in WeChat and open it there. On plain `http`, browsers turn off `navigator.share` and the clipboard, so the page falls back to letting you select the link and copy it by hand.
+Then open `http://<your computer's address>:3000` on the phone. On a Mac, `ipconfig getifaddr en0` prints the address. To try WeChat's built-in browser, send the link to yourself in WeChat and open it there.
 
 `npm run dev` listens only on your own computer. For hot reload on a phone, run `npm run dev -w client -- --host` together with `npm run dev -w server`.
 
