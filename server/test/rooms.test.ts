@@ -1095,6 +1095,19 @@ describe('housekeeping', () => {
     expect(chair.closed).toEqual(['restart']);
   });
 
+  test('a restart also reaches whoever made a room while the others were being told', async () => {
+    const { chair } = await room();
+    // A connection that never asks for what the server has for it, so that the server waits for
+    // it as long as it is willing to.
+    await rawPolling(server.url);
+    const stopped = server.app.stop(400);
+    await until(() => chair.closed.includes('restart'), 'the chair hears at once');
+    const late = await room('Late');
+    await stopped;
+    await until(() => late.chair.closed.includes('restart'), 'the latecomer hears as well');
+    expect(server.app.rooms.size).toBe(0);
+  });
+
   test('tells everyone when the server restarts', async () => {
     const { chair, code, roomId } = await room();
     const screen = await connect({ watch: code, roomId });

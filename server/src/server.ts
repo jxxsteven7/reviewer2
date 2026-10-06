@@ -80,6 +80,10 @@ export function createAppServer(options: AppOptions): AppServer {
     });
     await Promise.race([Promise.all(sent), grace]);
     clearTimeout(timer);
+    // Whoever connected and made a room in the meantime is told as well, as far as that goes
+    // without waiting once more.
+    sockets.closeAll('restart');
+    for (const socket of io.sockets.sockets.values()) socket.disconnect(true);
     await close();
   };
   return { http, io, rooms, sockets, stop, close };
