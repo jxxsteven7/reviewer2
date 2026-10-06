@@ -1,0 +1,229 @@
+import {
+  test as base,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type Page,
+} from '@playwright/test';
+import type { KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
+import en from '../client/src/locales/en.json' with { type: 'json' };
+import zh from '../client/src/locales/zh.json' with { type: 'json' };
+
+// Helpers for the end-to-end tests. Every player is a separate browser context, so each has its
+// own storage, token and connection, as on separate phones. Button labels come from the locale
+// files, so the tests read the interface the way players do.
+
+export type Language = 'en' | 'zh';
+export const TEXT = { en, zh };
+
+// Script errors on any page, which tests check at their end.
+export const pageErrors: string[] = [];
+const contexts: BrowserContext[] = [];
+
+// The tests' own `test`: after each test, it closes every player's browser context, since a
+// browser slows to a halt with dozens of them open, and forgets the page errors.
+export const test = base.extend<{ cleanup: void }>({
+  cleanup: [
+    // eslint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      await use();
+      await Promise.all(contexts.splice(0).map((context) => context.close()));
+      pageErrors.length = 0;
+    },
+    { auto: true },
+  ],
+});
+
+export { expect };
+
+// A new player with the current project's device: its viewport, touch and user agent.
+export async function newPlayer(browser: Browser, language: Language = 'en'): Promise<Page> {
+  const use = test.info().project.use;
+  const options: BrowserContextOptions = {
+    ...(use.viewport ? { viewport: use.viewport } : {}),
+    ...(use.userAgent ? { userAgent: use.userAgent } : {}),
+    ...(use.deviceScaleFactor ? { deviceScaleFactor: use.deviceScaleFactor } : {}),
+    ...(use.isMobile !== undefined ? { isMobile: use.isMobile } : {}),
+    ...(use.hasTouch !== undefined ? { hasTouch: use.hasTouch } : {}),
+    baseURL: use.baseURL,
+    locale: language === 'zh' ? 'zh-CN' : 'en-US',
+  };
+  const context = await browser.newContext(options);
+  contexts.push(context);
+  const page = await context.newPage();
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  return page;
+}
+
+// Every room:state this page receives, over WebSocket and over HTTP long-polling alike.
+export function recordSnapshots(page: Page): RoomView[] {
+  const states: RoomView[] = [];
+  const read = (text: string) => {
+    for (const packet of text.split('\x1e')) {
+      if (!packet.startsWith('42')) continue;
+      const [event, state] = JSON.parse(packet.slice(2)) as [string, RoomView];
+      if (event === 'room:state') states.push(state);
+    }
+  };
+  page.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) => {
+      if (typeof payload === 'string') read(payload);
+    }),
+  );
+  page.on('response', async (response) => {
+    if (!response.url().includes('transport=polling') || response.request().method() !== 'GET') return;
+    try {
+      read(await response.text());
+    } catch {
+      // the page went away
+    }
+  });
+  return states;
+}
+
+// No snapshot before the end of a game held the color of an unrevealed card. Returns how many
+// unrevealed cards it checked, so that a test can tell that it looked at something.
+export function expectNoKey(states: RoomView[]): number {
+  let checked = 0;
+  for (const state of states) {
+    const game = (state.data as KeywordsRoomData).game;
+    if (!game || game.phase === 'over') continue;
+    for (const card of game.cards) {
+      if (card.revealed) continue;
+      expect(Object.keys(card).sort()).toEqual(['revealed', 'word']);
+      checked += 1;
+    }
+  }
+  return checked;
+}
+
+export async function createRoom(page: Page, language: Language, name: string): Promise<string> {
+  const text = TEXT[language];
+  await page.goto('/');
+  await page.getByRole('button', { name: new RegExp(`^${text.language[language]}`) }).click();
+  await page.getByRole('button', { name: text.home.newRoom }).click();
+  await expect(page.locator('.fields li').first()).toBeVisible();
+  await page.getByLabel(text.create.name).fill(name);
+  await page.getByRole('button', { name: text.create.submit }).click();
+  await page.waitForURL(/\/room\/[0-9A-Z]{4}$/);
+  await expect(page.locator('.lobby')).toBeVisible();
+  return page.url();
+}
+
+export async function joinByLink(page: Page, url: string, name: string, language: Language): Promise<void> {
+  const text = TEXT[language];
+  await page.goto(url);
+  await page.getByLabel(text.room.join.name).fill(name);
+  await page.getByRole('button', { name: text.room.join.submit, exact: true }).click();
+  await expect(page.locator('.lobby, .keywords-game').first()).toBeVisible();
+}
+
+export async function sit(page: Page, team: Team, role: 'captain' | 'guesser', language: Language): Promise<void> {
+  const text = TEXT[language];
+  const label = role === 'captain' ? text.lobby.takeCaptain : text.lobby.joinAsGuesser;
+  await page.locator(`.group.${team}`).getByRole('button', { name: label }).click();
+}
+
+export interface Table {
+  language: Language;
+  url: string;
+  captains: Record<Team, Page>;
+  guessers: Record<Team, Page>;
+  spectator: Page;
+  screen: Page;
+  // What the guessers, the spectator and the screen received, which must never hold the key.
+  public: RoomView[][];
+}
+
+// Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
+// blue. Eve watches, and a screen shows the room. The game has started when this returns.
+export async function seatTable(browser: Browser, language: Language): Promise<Table> {
+  const ann = await newPlayer(browser, language);
+  const url = await createRoom(ann, language, 'Ann');
+  const players: Page[] = [];
+  const recorded: RoomView[][] = [];
+  for (const name of ['Bob', 'Cat', 'Dan', 'Eve']) {
+    const page = await newPlayer(browser, language);
+    if (name !== 'Cat') recorded.push(recordSnapshots(page));
+    await joinByLink(page, url, name, language);
+    players.push(page);
+  }
+  const [bob, cat, dan, eve] = players as [Page, Page, Page, Page];
+  await sit(ann, 'red', 'captain', language);
+  await sit(bob, 'red', 'guesser', language);
+  await sit(cat, 'blue', 'captain', language);
+  await sit(dan, 'blue', 'guesser', language);
+
+  const screen = await newPlayer(browser, language);
+  recorded.push(recordSnapshots(screen));
+  await screen.goto(`${url}/screen`);
+  await expect(screen.locator('.screen')).toBeVisible();
+
+  const text = TEXT[language];
+  await expect(ann.locator('.desk .ready')).toBeVisible();
+  await ann.getByRole('button', { name: text.lobby.start }).click();
+  for (const page of [ann, bob, cat, dan, eve]) await expect(page.locator('.keywords-game')).toBeVisible();
+  return {
+    language,
+    url,
+    captains: { red: ann, blue: cat },
+    guessers: { red: bob, blue: dan },
+    spectator: eve,
+    screen,
+    public: recorded,
+  };
+}
+
+export async function teamOnTurn(page: Page): Promise<Team> {
+  const strip = page.locator('.strip');
+  await expect(strip).toBeVisible();
+  return ((await strip.getAttribute('class')) ?? '').includes('red') ? 'red' : 'blue';
+}
+
+export async function giveClue(captain: Page, word: string, count: number | 'unlimited', language: Language) {
+  const text = TEXT[language];
+  await captain.getByLabel(text.game.clueInput).fill(word);
+  await captain.getByRole('radio', { name: count === 'unlimited' ? text.game.unlimited : String(count) }).click();
+  await captain.getByRole('button', { name: text.game.sendClue }).click();
+}
+
+// The index of a hidden card of this color, read from a PI's key.
+export async function keyCard(captain: Page, color: string): Promise<number> {
+  const index = await captain
+    .locator('.board .card')
+    .evaluateAll(
+      (cards, wanted) =>
+        cards.findIndex((card) => !card.classList.contains('revealed') && card.classList.contains(wanted)),
+      color,
+    );
+  expect(index, `a hidden ${color} card`).toBeGreaterThanOrEqual(0);
+  return index;
+}
+
+// A guesser chooses a card and confirms it.
+export async function reveal(guesser: Page, index: number): Promise<void> {
+  await expect(guesser.locator('.guess-bar')).toBeVisible();
+  await guesser.locator('.board .card').nth(index).click();
+  await guesser.locator('.guess-bar button.primary').click();
+  await expect(guesser.locator('.board .card').nth(index)).toHaveClass(/revealed/);
+}
+
+// Plays until the game ends: each turn, the PI gives a clue and the group reveals one of its own
+// cards, then ends the turn.
+export async function playToTheEnd(table: Table): Promise<void> {
+  const text = TEXT[table.language];
+  const ann = table.captains.red;
+  for (let turn = 1; turn < 40; turn += 1) {
+    if (await ann.locator('.letter').isVisible()) return;
+    const team = await teamOnTurn(ann);
+    await giveClue(table.captains[team], `Hint${turn}`, 2, table.language);
+    await reveal(table.guessers[team], await keyCard(table.captains[team], team));
+    const guesser = table.guessers[team];
+    if (await guesser.locator('.guess-bar').isVisible()) {
+      await guesser.getByRole('button', { name: text.game.endTurn }).click();
+    }
+    await expect(ann.locator('.strip.over, .strip:not(.' + team + '), .letter').first()).toBeVisible();
+  }
+  throw new Error('the game did not end');
+}

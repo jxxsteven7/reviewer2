@@ -1,4 +1,5 @@
-# Lints, type-checks, tests and builds the app, checks the word lists, and checks that the build serves it. Each job's name is
+# Lints, type-checks and tests the app, checks the word lists, plays it end to end in real
+# browsers, and builds it and checks that the build serves it. Each job's name is
 # a required status check; see docs/maintainers.md. There are no `paths:` filters on purpose:
 # a required check that a filter skips stays pending and blocks the merge.
 
@@ -51,6 +52,28 @@ jobs:
         with:
           node-version: 24
       - run: node scripts/check-words.mjs
+
+  e2e:
+    # Real browsers against the production build; see playwright.config.ts.
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run build
+      - run: npm run test:e2e
+      - name: Keep the report of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   build:
     name: Build
