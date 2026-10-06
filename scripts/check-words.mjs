@@ -10,7 +10,7 @@
 // Exit codes: 0 pass (perhaps with warnings), 1 problems found, 2 usage or environment error.
 
 import { readdirSync, readFileSync, realpathSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -251,6 +251,18 @@ export function checkFile(path) {
   return checkWordList(data, file);
 }
 
+// A problem or a warning as a GitHub Actions workflow command. The log shows it as an error or a
+// warning, and GitHub attaches it to the file in the pull request, which needs the file's path
+// from the root of the repository. A file outside the repository gets no path.
+export function annotation(kind, line, path) {
+  const data = (text) => text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+  const property = (text) => data(text).replaceAll(':', '%3A').replaceAll(',', '%2C');
+  const fromRoot = relative(root, resolve(path));
+  const inside = fromRoot !== '' && !fromRoot.startsWith('..') && !isAbsolute(fromRoot);
+  const file = inside ? `file=${property(fromRoot.split(sep).join('/'))},` : '';
+  return `::${kind} ${file}title=check-words::${data(line)}`;
+}
+
 export function main(argv) {
   const wordsDir = join(root, 'words');
   let paths = argv;
@@ -280,13 +292,13 @@ export function main(argv) {
       unreadable += 1;
       continue;
     }
+    // On GitHub Actions the workflow command is the line in the log, so each is printed once.
+    const actions = Boolean(process.env.GITHUB_ACTIONS);
     for (const line of result.problems) {
-      console.log(`check-words: ${line}`);
-      if (process.env.GITHUB_ACTIONS) console.log(`::error title=check-words::${line}`);
+      console.log(actions ? annotation('error', line, path) : `check-words: ${line}`);
     }
     for (const line of result.warnings) {
-      console.log(`check-words: warning: ${line}`);
-      if (process.env.GITHUB_ACTIONS) console.log(`::warning title=check-words::${line}`);
+      console.log(actions ? annotation('warning', line, path) : `check-words: warning: ${line}`);
     }
     if (result.problems.length === 0) {
       const counts = LANGUAGES.map((language) => `${result.counts[language]} ${language}`).join(', ');

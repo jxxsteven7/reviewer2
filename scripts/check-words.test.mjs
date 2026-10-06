@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { after, describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { checkWordList, MIN_TERMS } from './check-words.mjs';
+import { annotation, checkWordList, MIN_TERMS } from './check-words.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./check-words.mjs', import.meta.url));
 const ATTENTION = '\u6ce8\u610f\u529b';
@@ -180,7 +180,10 @@ describe('a term', () => {
 describe('command line', () => {
   const dir = mkdtempSync(join(tmpdir(), 'check-words-'));
   after(() => rmSync(dir, { recursive: true, force: true }));
-  const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
+  // CI runs these tests on GitHub Actions, where the script writes its lines another way.
+  const runWith = (env, ...args) =>
+    spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', env: { ...process.env, ...env } });
+  const run = (...args) => runWith({ GITHUB_ACTIONS: '' }, ...args);
   const good = join(dir, 'ml.json');
   writeFileSync(good, JSON.stringify(list()));
   const bad = join(dir, 'broken.json');
@@ -212,6 +215,35 @@ describe('command line', () => {
     assert.match(mixed.stdout, /OK ml\.json/);
     assert.match(mixed.stdout, /broken\.json: not valid JSON/);
     assert.equal(run(join(dir, 'ml.jsn'), good).status, 2);
+  });
+
+  test('writes problems and warnings as annotations on GitHub Actions, once each', () => {
+    const long = join(dir, 'long.json');
+    writeFileSync(
+      long,
+      JSON.stringify(list({ id: 'long', terms: [...terms(MIN_TERMS), { id: 'x', en: '100% Reproducible' }] })),
+    );
+    const result = runWith({ GITHUB_ACTIONS: 'true' }, bad, long);
+    assert.equal(result.status, 1);
+    const lines = result.stdout.split('\n');
+    assert.equal(lines.filter((line) => /broken\.json: not valid JSON/.test(line)).length, 1);
+    assert.ok(has(lines, /^::error title=check-words::broken\.json: not valid JSON/));
+    assert.ok(has(lines, /^::warning title=check-words::long\.json: .*"100%25 Reproducible" is longer than 14/));
+    assert.ok(has(lines, /^check-words: OK long\.json/));
+
+    const plain = run(bad, long).stdout.split('\n');
+    assert.ok(has(plain, /^check-words: broken\.json: not valid JSON/));
+    assert.ok(has(plain, /^check-words: warning: long\.json: .*"100% Reproducible"/));
+    assert.ok(!has(plain, /^::/));
+  });
+
+  test('attaches an annotation to a file of the repository by its path from the root', () => {
+    const inRepository = fileURLToPath(new URL('../words/ml.json', import.meta.url));
+    assert.equal(
+      annotation('error', 'ml.json: "terms" must be a list', inRepository),
+      '::error file=words/ml.json,title=check-words::ml.json: "terms" must be a list',
+    );
+    assert.equal(annotation('warning', 'a\nb', join(tmpdir(), 'ml.json')), '::warning title=check-words::a%0Ab');
   });
 
   test("checks the repository's own word lists by default", () => {
