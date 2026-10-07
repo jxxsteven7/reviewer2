@@ -67,8 +67,10 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run build
       - run: npm run test:e2e
-      - name: Keep the report of a failed run
-        if: failure()
+      - name: Keep the report
+        # Also of a run that passed: a test that failed once and passed on its retry is in it,
+        # with the trace of the attempt that failed.
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
