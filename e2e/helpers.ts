@@ -206,19 +206,21 @@ export async function seatTable(
 ): Promise<Table> {
   const ann = await newPlayer(browser, language);
   const url = await createRoom(ann, language, 'Ann');
-  const players: Page[] = [];
-  for (const name of ['Bob', 'Cat', 'Dan', 'Eve']) {
+  // The others join at the same time, as separate people do.
+  const join = async (name: string) => {
     const page = await newPlayer(browser, language);
     snapshotsOf(page);
     await prepare?.(page, name);
     await joinByLink(page, url, name, language);
-    players.push(page);
-  }
-  const [bob, cat, dan, eve] = players as [Page, Page, Page, Page];
-  await sit(ann, 'red', 'captain', language);
-  await sit(bob, 'red', 'guesser', language);
-  await sit(cat, 'blue', 'captain', language);
-  await sit(dan, 'blue', 'guesser', language);
+    return page;
+  };
+  const [bob, cat, dan, eve] = await Promise.all([join('Bob'), join('Cat'), join('Dan'), join('Eve')]);
+  await Promise.all([
+    sit(ann, 'red', 'captain', language),
+    sit(bob, 'red', 'guesser', language),
+    sit(cat, 'blue', 'captain', language),
+    sit(dan, 'blue', 'guesser', language),
+  ]);
 
   const screen = await newPlayer(browser, language);
   snapshotsOf(screen);
