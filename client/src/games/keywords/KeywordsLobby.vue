@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { BOARD_SIZE, type FieldInfo, type PlayerView, type RoomView } from '@reviewer2/shared';
-import { computed, onMounted, ref, toRef, watch } from 'vue';
+import { BOARD_SIZE, type PlayerView, type RoomView } from '@reviewer2/shared';
+import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FieldPicker from '../../core/components/FieldPicker.vue';
 import PlayerMenu from '../../core/components/PlayerMenu.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import ShareTools from '../../core/components/ShareTools.vue';
 import UiButton from '../../core/components/UiButton.vue';
-import { send } from '../../core/socket';
+import { fields, loadFields } from '../../core/fields';
+import { act } from '../../core/socket';
 import { useKeywords } from './useKeywords';
 
 // The waiting room: the two groups with their PI and students, the spectators and the screens,
@@ -15,22 +16,21 @@ import { useKeywords } from './useKeywords';
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
-const { data, mySeat, isChair, groups, spectators, act, sit } = useKeywords(room);
+const { data, mySeat, isChair, groups, spectators, sit } = useKeywords(room);
 
 const managing = ref<PlayerView | null>(null);
-const fields = ref<FieldInfo[]>([]);
+
+// The chair's choice of word lists, which is only sent when they save it. Every snapshot brings
+// the room's lists as a new array, so they are compared by their contents: an unsaved choice
+// survives the snapshots that others cause by taking seats or coming and going.
+const roomFields = computed(() => [...props.room.fields].sort().join());
 const chosenFields = ref<string[]>([...props.room.fields]);
-const fieldsChanged = computed(() => [...chosenFields.value].sort().join() !== [...props.room.fields].sort().join());
+const fieldsChanged = computed(() => [...chosenFields.value].sort().join() !== roomFields.value);
 
-watch(
-  () => props.room.fields,
-  (current) => (chosenFields.value = [...current]),
-);
+watch(roomFields, () => (chosenFields.value = [...props.room.fields]));
 
-onMounted(async () => {
-  const reply = await send<{ fields: FieldInfo[] }>('meta:fields');
-  if (reply.ok) fields.value = reply.fields;
-});
+// Only the chair's desk shows the word lists, so only the chair asks for them.
+watch(isChair, (chair) => chair && loadFields(), { immediate: true });
 
 const problems = computed(() => data.value.startProblems);
 const isMe = (player: PlayerView) => player.id === props.room.me;
@@ -121,7 +121,8 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
       <section v-if="isChair" class="desk">
         <h2 class="section-title">{{ t('lobby.desk') }}</h2>
         <h3 class="label">{{ t('lobby.fields') }}</h3>
-        <FieldPicker v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
+        <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
+        <FieldPicker v-else v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
         <UiButton
           v-if="fieldsChanged"
           size="small"
@@ -198,8 +199,9 @@ dl {
   margin: var(--space-3) 0 0;
 }
 
+/* Lined up with the middle of the 44 px row that a name or a button makes. */
 dt {
-  padding-top: 6px;
+  padding-top: 11px;
   color: var(--ink-3);
   font-size: var(--text-sm);
   font-variant-caps: all-small-caps;
@@ -233,11 +235,17 @@ dd {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 0 var(--space-4);
-  margin: var(--space-3) 0 var(--space-2);
+  margin: var(--space-2) 0;
 }
 
 .vacant {
   color: var(--ink-3);
+}
+
+dd .vacant {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .spectators .vacant {
@@ -266,6 +274,11 @@ dd {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: 500;
+}
+
+.hint {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
 }
 
 .problems {

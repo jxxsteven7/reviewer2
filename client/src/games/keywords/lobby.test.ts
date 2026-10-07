@@ -7,7 +7,12 @@ import en from '../../locales/en.json';
 import KeywordsLobby from './KeywordsLobby.vue';
 
 const send = vi.hoisted(() => vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean; fields?: [] }>>());
-vi.mock('../../core/socket', () => ({ send }));
+vi.mock('../../core/socket', () => ({
+  send,
+  act: (event: string, payload: object = {}) => send(event, payload),
+  connect: vi.fn(),
+  socket: { connected: true, on: vi.fn(), once: vi.fn() },
+}));
 
 const global = () => ({ plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] });
 
