@@ -130,8 +130,6 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   withdraw: (data, gameId) => (data.game ? fromOutcome(data, withdraw(data.game, { gameId })) : fail('stale')),
 
-  // Back to the waiting room: everyone keeps their seat, and nobody has seen the next key or
-  // played for a group yet.
   again: (data) => ({ seating: endGame(data.seating), game: null }),
 
   handle(data, ctx, playerId, type, payload) {

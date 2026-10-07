@@ -123,13 +123,13 @@ The game's messages, on top of the room messages in [../architecture.md](../arch
 | Message | Payload | Who |
 |---|---|---|
 | `keywords:seat` | `team` (`red`, `blue` or `null`) and `role` (`captain`, `guesser` or `spectator`) | Any member, within the seat rules |
-| `keywords:clue` | `gameId`, `turn`, `word`, `count` (0 to 9, or `"unlimited"`) | The current team's captain |
-| `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null` to take the choice back) | The current team's guessers |
-| `keywords:reveal` | `gameId`, `turn`, `card` (0 to 24) | The current team's guessers |
-| `keywords:pass` | `gameId`, `turn` | The current team's guessers |
+| `keywords:clue` | `gameId`, `turn`, `word`, `count` (0 to 9, or `"unlimited"`) | The current group's captain |
+| `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null` to take the choice back) | The current group's guessers |
+| `keywords:reveal` | `gameId`, `turn`, `card` (0 to 24) | The current group's guessers |
+| `keywords:pass` | `gameId`, `turn` | The current group's guessers |
 | `keywords:say` | `gameId`, `text` (one line, up to 200 characters once cleaned) | The guessers of either group, in either group's turn |
 
-A guesser who steps out to watch, is moved to the spectators by the chair or leaves the room loses their choice of a card.
+A guesser who leaves their seat in any of these ways, or leaves the room, takes their choice of a card with them; see [Talking it over](#talking-it-over).
 
 In every snapshot, the game's part (`RoomView.data`) holds:
 
