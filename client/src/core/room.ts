@@ -1,6 +1,6 @@
 import { parseCode, type Ack, type ClosedReason, type Language, type RoomView } from '@reviewer2/shared';
 import { reactive, shallowRef } from 'vue';
-import { connect, send, setHandshake, socket } from './socket';
+import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 // The room this page shows, as the server last described it, and how far the page has got in
 // entering it (docs/architecture.md).
@@ -17,10 +17,20 @@ export const entry = reactive<{
   error: string | null;
 }>({ status: 'idle', language: null, closed: null, error: null });
 
+// The address that brings someone into a room.
+export const roomLink = (code: string): string => `${window.location.origin}/room/${code}`;
+
 // The room the page wants to be in, or null when it has left it. Its ID is known once the server
 // has sent the room, and goes with every request to be let back in, so that a code that has since
-// gone to another room doesn't take the page there (docs/architecture.md).
-let wanted: { code: string; screen: boolean; roomId?: string } | null = null;
+// gone to another room doesn't take the page there (docs/architecture.md). Opening a room makes a
+// new object, so that an answer or a snapshot can be told to belong to the room that is wanted now.
+interface Wanted {
+  code: string;
+  screen: boolean;
+  roomId?: string;
+}
+
+let wanted: Wanted | null = null;
 
 // The newest snapshot that this connection has been sent, whichever page is showing. The server
 // keeps a connection in its room when the page goes elsewhere, and goes on sending it snapshots.
@@ -31,6 +41,13 @@ let latest: RoomView | null = null;
 
 socket.on('disconnect', () => (latest = null));
 
+// Whether a snapshot shows the room the page wants, the way the page wants to see it: as a player
+// or as a screen. The room's ID settles it once it is known; until then its code does.
+function isWanted(view: RoomView): boolean {
+  if (!wanted || (view.me === null) !== wanted.screen) return false;
+  return wanted.roomId === undefined ? view.code === parseCode(wanted.code) : view.roomId === wanted.roomId;
+}
+
 function show(view: RoomView): void {
   room.value = view;
   entry.status = 'in';
@@ -38,17 +55,23 @@ function show(view: RoomView): void {
   setHandshake(view.me === null ? { watch: view.code, roomId: view.roomId } : { code: view.code, roomId: view.roomId });
 }
 
+// Snapshots of a room that the page has left still arrive while the connection is in it. They are
+// kept, in case the page comes back, but not shown.
 socket.on('room:state', (view: RoomView) => {
   if (!latest || latest.roomId !== view.roomId || view.rev >= latest.rev) latest = view;
-  if (!wanted) return; // the page has left this room
+  if (!isWanted(view)) return;
   const current = room.value;
   if (current && current.roomId === view.roomId && view.rev < current.rev) return;
   show(view);
 });
 
+// The server closes the room that the connection is in, without naming it: that is the room of
+// the newest snapshot, or the handshake's room when no snapshot has come since connecting. Only a
+// closing of the room the page wants concerns the page.
 socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => {
+  const closed = latest;
   latest = null;
-  if (!wanted) return;
+  if (!wanted || (closed && !isWanted(closed))) return;
   wanted = null;
   room.value = null;
   setHandshake({});
@@ -62,16 +85,19 @@ socket.on('connect', () => {
 });
 
 async function ask(name?: string): Promise<Ack> {
-  if (!wanted) return { ok: false, error: 'unknown' };
-  const { code, screen, roomId } = wanted;
-  if (entry.status !== 'in') entry.status = 'joining';
-  const reply = await send(screen ? 'room:watch' : 'room:join', {
+  const asked = wanted;
+  if (!asked) return { ok: false, error: 'unknown' };
+  const { code, screen, roomId } = asked;
+  // A newcomer stays on the name form while their name is on its way; the form says so itself.
+  if (entry.status !== 'in' && name === undefined) entry.status = 'joining';
+  const reply = await send<{ code: string; roomId: string }>(screen ? 'room:watch' : 'room:join', {
     code,
     ...(roomId === undefined ? {} : { roomId }),
     ...(screen || name === undefined ? {} : { name }),
   });
-  if (!wanted) return reply;
+  if (wanted !== asked) return reply; // the page has left this room, or wants another one now
   if (reply.ok) {
+    asked.roomId = reply.roomId;
     if (!room.value) entry.status = 'joining';
     return reply;
   }
@@ -85,8 +111,12 @@ async function ask(name?: string): Promise<Ack> {
       entry.status = 'not_found';
       break;
     case 'offline':
-    case 'timeout':
       break; // the next connection asks again
+    case 'timeout':
+      // The server didn't answer in time. A fresh connection asks again, as after a ping that goes
+      // unanswered. A newcomer's name goes back to the form, which asks them to try again.
+      if (name === undefined) reconnect();
+      break;
     default:
       // A newcomer whose name was refused stays on the name form, which shows the reason.
       if (name === undefined) Object.assign(entry, { status: 'failed', error: reply.error });
@@ -101,7 +131,7 @@ export function openRoom(code: string, { screen = false } = {}): void {
   Object.assign(entry, { status: 'connecting', language: null, closed: null, error: null });
   setHandshake(screen ? { watch: code } : { code });
   // This connection may be in the room already, as a player or as a screen, whichever the page is.
-  if (latest && latest.code === parseCode(code) && (latest.me === null) === screen) show(latest);
+  if (latest && isWanted(latest)) show(latest);
   if (socket.connected) void ask();
   else connect();
 }
@@ -119,6 +149,10 @@ export function closeRoomPage(): void {
 
 export async function leaveRoom(): Promise<Ack> {
   const reply = await send('room:leave');
-  if (reply.ok) closeRoomPage();
+  if (reply.ok) {
+    // The server tells the player's other connections, not the one that asked: it knows.
+    latest = null;
+    closeRoomPage();
+  }
   return reply;
 }

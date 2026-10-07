@@ -2,6 +2,7 @@ import type { Ack, Handshake, Session } from '@reviewer2/shared';
 import { io } from 'socket.io-client';
 import { reactive } from 'vue';
 import { storedToken, storeToken } from './session';
+import { toastError } from './toast';
 
 // The page's one Socket.IO connection (docs/architecture.md).
 //
@@ -46,6 +47,14 @@ export function connect(): void {
   if (!socket.connected && !socket.active) socket.connect();
 }
 
+// Makes a fresh connection now. A connection that Socket.IO is waiting to retry would otherwise
+// keep waiting: connect() alone does nothing while a retry is pending, and the pauses between
+// retries grow to several seconds. Closing first drops the pending retry.
+export function reconnect(): void {
+  socket.disconnect();
+  socket.connect();
+}
+
 // Sends a message and waits for the server's answer. Offline or unanswered messages fail at once
 // rather than wait in a queue.
 export async function send<Data extends object = object>(event: string, payload: object = {}): Promise<Ack<Data>> {
@@ -57,12 +66,20 @@ export async function send<Data extends object = object>(event: string, payload:
   }
 }
 
+// Sends a message and shows the reason if the server refuses it. For the actions of a page, whose
+// outcome arrives as a new snapshot of the room.
+export async function act<Data extends object = object>(event: string, payload: object = {}): Promise<Ack<Data>> {
+  const reply = await send<Data>(event, payload);
+  if (!reply.ok) toastError(reply.error);
+  return reply;
+}
+
 let checking = false;
 
 async function checkConnection(): Promise<void> {
   if (!connection.everConnected) return;
   if (!socket.connected) {
-    socket.connect();
+    reconnect();
     return;
   }
   if (checking) return;
@@ -70,8 +87,7 @@ async function checkConnection(): Promise<void> {
   try {
     await socket.timeout(3000).emitWithAck('sys:ping', {});
   } catch {
-    socket.disconnect();
-    socket.connect();
+    reconnect();
   } finally {
     checking = false;
   }
