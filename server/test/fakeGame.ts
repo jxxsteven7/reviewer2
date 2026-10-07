@@ -56,7 +56,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   },
   bench: (data, _ctx, id) => ({ ...data, benched: [...data.benched, id], over: data.over || data.fragile }),
   shuffle: (data) => ({ ...data, joined: [...data.joined].reverse() }),
-  startProblems: (data, ctx) => (data.joined.filter((id) => ctx.isOnline(id)).length < 2 ? ['needs_players'] : []),
+  canStart: (data, ctx) => data.joined.filter((id) => ctx.isOnline(id)).length >= 2,
   start: (data, _ctx, words, gameId) => ({
     ...data,
     words: words.map(({ word }) => word),
@@ -78,6 +78,8 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
       return { ok: true, data: { ...data, broken: what as FakeData['broken'], brokenFor: only } };
     }
     if (type === 'test:mend') return { ok: true, data: { ...data, broken: null, brokenFor: null } };
+    // A message that is granted but changes nothing.
+    if (type === 'test:nothing') return { ok: true, data };
     if (type === 'test:fragile') return { ok: true, data: { ...data, fragile: true } };
     // A refusal with more in it than a code: something that the game knows, and something that
     // can't be sent at all.
@@ -90,13 +92,13 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (type === 'test:explode') throw new Error('the game broke');
     return { ok: false, error: 'bad_request' };
   },
-  view(data, _ctx, viewer) {
+  views(data) {
     if (data.broken === 'view') throw new Error('the view broke');
-    return {
+    return (viewer) => ({
       presses: data.presses,
       words: data.words,
       benched: data.benched,
       forViewer: 'playerId' in viewer ? `for ${viewer.playerId}` : 'for screens',
-    };
+    });
   },
 };

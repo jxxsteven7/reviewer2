@@ -83,7 +83,7 @@ Players in one room can simply talk. Players who are apart need to see what the 
 
 - Only guessers write. Captains read their own group's chat, as they would hear their group at a table, but can't write: the clue is all a captain may say. Spectators and screens see no chat, since they can see both groups and could carry a message across.
 - A message is one line of up to 200 characters. Line breaks become spaces, and invisible characters and piles of combining marks are dropped; the joiners and selectors that emoji are built with stay. The check is shared, like the clue check: the player's screen runs it while they type, and the server runs it again.
-- Each group keeps its latest 50 messages. Every message has an ID that counts up from 1 within its group, and carries the turn in which it was written.
+- Each group keeps its latest 20 messages. Every message has an ID that counts up from 1 within its group, and carries the turn in which it was written. The chat goes out with every snapshot, and a snapshot goes to everyone after every change, so a group's chat is kept short to keep the snapshots small.
 - The chat lasts for one game. It stays in its group after the game is over, even though every color is shown then, and the next game starts with an empty one.
 
 ## Winning
@@ -112,15 +112,38 @@ Everyone sees the public facts: whose turn it is and in which phase, the current
 - Everyone joins as a spectator.
 - In the waiting room, anyone may take a free captain's seat, become a guesser in either group, or watch. The chair can shuffle the groups: everyone seated in a group is dealt into the two groups at random, as evenly as possible, with a random captain for each. Players who are online are dealt first, so the captains and a guesser in each group are online whenever at least four seated players are. Spectators stay where they are.
 - During a game, spectators may join either group, so latecomers can play, and anyone may step out to watch.
-- Whoever sits in a group during a game belongs to it until the next game. They may step out and come back, but a seat in the other group is refused with `other_team`. Otherwise a guesser could change groups in the middle of a turn and reveal cards or end the turn for the other group.
+- Whoever sits in a group during a game belongs to it until the next game. They may step out and come back, but a seat in the other group is refused with `other_team`. Otherwise a guesser could change groups in the middle of a turn and reveal cards or end the turn for the other group. This holds after the game has ended as well, until the chair plays again, because each group's chat is still there to read.
 - A group's empty captain's seat is open to that group's players and to spectators who haven't played in this game. Whoever has been a captain in the current game has seen the key, and may not be a guesser again until the next game (`key_viewer`). A captain may step down to watch.
 - Both lists, the key viewers and each player's group, are kept by a key that stays the same when a player leaves the room and comes back.
+
+## Messages
+
+The game's messages, on top of the room messages in [../architecture.md](../architecture.md). Their schemas are in `shared/src/schemas.ts`, and `server/src/games/keywords/index.ts` connects them to the rules.
+
+| Message | Payload | Who |
+|---|---|---|
+| `keywords:seat` | `team` (`red`, `blue` or `null`) and `role` (`captain`, `guesser` or `spectator`) | Any member, within the seat rules |
+| `keywords:clue` | `gameId`, `turn`, `word`, `count` (0 to 9, or `"unlimited"`) | The current group's captain |
+| `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null` to take the choice back) | The current group's guessers |
+| `keywords:reveal` | `gameId`, `turn`, `card` (0 to 24) | The current group's guessers |
+| `keywords:pass` | `gameId`, `turn` | The current group's guessers |
+| `keywords:say` | `gameId`, `text` (one line, up to 200 characters once cleaned) | The guessers of either group, in either group's turn |
+
+A guesser who leaves their seat in any of these ways, or leaves the room, takes their choice of a card with them; see [Talking it over](#talking-it-over).
+
+In every snapshot, the game's part (`RoomView.data`) holds:
+
+- the seats of everyone in the room;
+- the players who have seen the key in the current game;
+- the group that the viewer plays for in the current game, if any, so that the interface offers only the seats they may take;
+- in the waiting room, what still keeps the game from starting;
+- the game itself, from `view.ts`. A player sees the key only while sitting as a captain, so a captain who steps down to watch gets the public view again. In the same way, a player gets their group's chat, and its choices of cards in its turn, only while sitting in it; spectators and screens get neither.
 
 ## Order of the checks
 
 Every action carries the `gameId` and the `turn` it was meant for. A withdrawal and a chat message carry only the `gameId`, because they are meant for the game, whatever the turn. The server checks an action in this order:
 
-1. `stale`: the action is for an earlier game or turn. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
+1. `stale`: the action is for an earlier game or turn, or arrives in the waiting room, where there is no game. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
 2. `game_over`: the game has ended.
 3. `not_your_turn`, `not_captain` or `not_guesser`: the action isn't this player's to make. A chat message is never out of turn: it only needs a guesser.
 4. `wrong_phase`: it isn't the moment, such as revealing or choosing a card before the clue.

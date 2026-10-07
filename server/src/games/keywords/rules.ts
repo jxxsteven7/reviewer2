@@ -114,16 +114,19 @@ export function giveClue(
 
 // One of the current team's guessers chooses a card without revealing it, or takes the choice
 // back with `card: null`. The rest of the group sees the choice, so that they can talk it over
-// before anyone reveals anything. Each guesser has one choice at a time.
+// before anyone reveals anything. Each guesser has one choice at a time. A choice that is made
+// already, or a withdrawal of none, gives the state back as it is: nothing has changed.
 export function select(state: KeywordsState, actor: Actor, action: Moment & { card: number | null }): Outcome {
   const denied = refusal(state, action, actor, 'guesser');
   if (denied) return refuse(denied);
   if (state.phase !== 'guess') return refuse('wrong_phase');
-  const others = state.selections.filter((selection) => selection.player !== actor.id);
-  if (action.card === null) return ok({ ...state, selections: others });
+  if (action.card === null) return ok(dropSelection(state, actor.id));
   const target = Number.isInteger(action.card) ? state.cards[action.card] : undefined;
   if (!target) return refuse('no_such_card');
   if (target.revealed) return refuse('card_revealed');
+  const own = state.selections.find((selection) => selection.player === actor.id);
+  if (own?.card === action.card) return ok(state);
+  const others = state.selections.filter((selection) => selection !== own);
   return ok({ ...state, selections: [...others, { player: actor.id, card: action.card }] });
 }
 

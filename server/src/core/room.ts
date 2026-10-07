@@ -248,6 +248,7 @@ export class Room {
     if (name === null) return fail('name_invalid');
     const member = this.members.get(id);
     if (!member) return fail('not_member');
+    if (member.name === name) return done;
     if (this.#nameTaken(name, id)) return fail('name_taken');
     member.name = name;
     this.changed();
@@ -273,7 +274,7 @@ export class Room {
   start(round: number): Ack {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
-    if (this.game.startProblems(this.data, this.context).length > 0) return fail('cannot_start');
+    if (!this.game.canStart(this.data, this.context)) return fail('cannot_start');
     const pool = this.#words.pool(this.fields, this.language);
     const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng);
     // chooseFields() has made sure of this, and the library doesn't change while the server runs.
@@ -325,9 +326,7 @@ export class Room {
 
   bench(id: string): Ack {
     if (!this.members.has(id)) return fail('no_such_player');
-    const data = this.game.bench(this.data, this.context, id);
-    this.#take(data, this.#endsWith(data));
-    this.changed();
+    this.#update(this.game.bench(this.data, this.context, id));
     return done;
   }
 
@@ -356,8 +355,7 @@ export class Room {
   act(id: string, type: string, payload: unknown): Ack {
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return refusalOf(result);
-    this.#take(result.data, this.#endsWith(result.data));
-    this.changed();
+    this.#update(result.data);
     return done;
   }
 
@@ -372,6 +370,15 @@ export class Room {
   #take(data: unknown, over: boolean): void {
     this.data = data;
     if (over) this.phase = 'ended';
+  }
+
+  // Takes what a module answered to a message or to the chair's bench. A module that gives back
+  // the data it was given, as for a player who asks for the seat they are in, has changed
+  // nothing, and then the room hasn't either: nobody is sent a snapshot.
+  #update(data: unknown): void {
+    if (data === this.data) return;
+    this.#take(data, this.#endsWith(data));
+    this.changed();
   }
 
   // --- housekeeping -----------------------------------------------------------------------
@@ -406,9 +413,12 @@ export class Room {
 
   // The room as it is now, for any number of viewers. Most of a view is the same for everyone, so
   // that part is put together once; the function that this returns adds what one viewer sees,
-  // which is who they are and the game's part for them.
+  // which is who they are and the game's part for them. The game builds its part when the first
+  // viewer asks, so that a module which can't build it throws to each viewer in turn, where the
+  // socket layer catches it, and costs each of them their snapshot alone.
   views(): (viewer: Viewer) => RoomView {
     const context = this.context;
+    let game: ((viewer: Viewer) => unknown) | undefined;
     const shared = {
       roomId: this.id,
       code: this.code,
@@ -430,7 +440,7 @@ export class Room {
     return (viewer) => ({
       ...shared,
       me: 'playerId' in viewer ? viewer.playerId : null,
-      data: this.game.view(this.data, context, viewer),
+      data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }
 

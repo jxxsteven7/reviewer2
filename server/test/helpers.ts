@@ -36,7 +36,7 @@ export async function startServer(
     publicDir: '/no/front/end',
     version: 'test',
     words: options.words ?? testWords(),
-    games: options.games ?? [fakeGame as GameModule],
+    games: options.games ?? [fakeGame],
     rng: options.rng ?? seededRng(1),
     now: () => Date.now() + offset,
     trustProxy: options.trustProxy ?? false,

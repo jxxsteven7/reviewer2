@@ -109,6 +109,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // The last game of each room whose end has been logged.
   const endLogged = new WeakMap<Room, string>();
+  // The rev that each room's last snapshots carried.
+  const sent = new WeakMap<Room, number>();
 
   // Sends everyone in a room its new state. Every change to a room ends here, so this is also
   // where the end of a game is logged, however it came about: by one of the game's messages, by
@@ -118,6 +120,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       endLogged.set(room, room.gameId);
       log('game_ended', { code: room.code });
     }
+    sent.set(room, room.rev);
     const view = room.views();
     for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id }, view);
     send(room, room.screens, { screen: true }, view);
@@ -313,10 +316,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return run(found.room, found.member);
   }
 
-  // The answer to a message that was to change a room, after telling everyone when it did.
+  // The answer to a message that was to change a room, after telling everyone when it did. A
+  // message that was granted but changed nothing, such as asking for the seat one is in, bumps
+  // no rev, and then nobody is sent a snapshot that would only repeat the last one.
   function changed(room: Room, result: Ack): Reply {
     if (!result.ok) return result;
-    broadcast(room);
+    if (room.rev !== sent.get(room)) broadcast(room);
     return ok();
   }
 

@@ -253,8 +253,9 @@ describe('choosing a card', () => {
     state = accepted(select(state, bob, { ...now(state), card: 4 }));
     state = accepted(select(state, ann, { ...now(state), card: null }));
     expect(state.selections).toEqual([{ player: 'bob', card: 4 }]);
-    // Taking back nothing is fine too.
-    expect(accepted(select(state, ann, { ...now(state), card: null })).selections).toEqual(state.selections);
+    // Taking back nothing is fine too, and changes nothing, like choosing the same card again.
+    expect(accepted(select(state, ann, { ...now(state), card: null }))).toBe(state);
+    expect(accepted(select(state, bob, { ...now(state), card: 4 }))).toBe(state);
   });
 
   test("is only for the current team's guessers, after the clue", () => {

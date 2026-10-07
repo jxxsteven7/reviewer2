@@ -12,7 +12,8 @@ export const otherTeam = (team: Team): Team => (team === 'red' ? 'blue' : 'red')
 export type CardColor = Team | 'neutral' | 'reviewer2';
 
 // The captain gives the clues (shown as the group's PI); guessers reveal cards (shown as students).
-export type Role = 'captain' | 'guesser' | 'spectator';
+export const ROLES = ['captain', 'guesser', 'spectator'] as const;
+export type Role = (typeof ROLES)[number];
 
 // Where a player sits. Spectators belong to no team. A seat is never changed: moving a player
 // gives them another seat.
@@ -110,24 +111,44 @@ export interface KeywordsView {
 
 // Why the server refused a game action. The order of the checks (see docs/games/keywords.md)
 // makes sure that the answer never depends on the color of a card.
-export type KeywordsError =
-  | 'stale'
-  | 'game_over'
-  | 'not_your_turn'
-  | 'not_captain'
-  | 'not_guesser'
-  | 'wrong_phase'
-  | 'no_such_card'
-  | 'card_revealed'
-  | 'must_guess_first'
-  | 'clue_empty'
-  | 'clue_not_one_word'
-  | 'clue_too_long'
-  | 'clue_on_board'
-  | 'bad_count'
-  | 'chat_empty'
-  | 'chat_too_long';
+export const KEYWORDS_ERRORS = [
+  'stale',
+  'game_over',
+  'not_your_turn',
+  'not_captain',
+  'not_guesser',
+  'wrong_phase',
+  'no_such_card',
+  'card_revealed',
+  'must_guess_first',
+  'clue_empty',
+  'clue_not_one_word',
+  'clue_too_long',
+  'clue_on_board',
+  'bad_count',
+  'chat_empty',
+  'chat_too_long',
+] as const;
+export type KeywordsError = (typeof KEYWORDS_ERRORS)[number];
 
-// Why a seat can't be taken, or why a game can't start yet.
-export type SeatError = 'seat_taken' | 'key_viewer' | 'other_team' | 'bad_seat';
-export type StartProblem = { problem: 'needs_captain' | 'needs_guesser' | 'captain_offline'; team: Team };
+// Why a seat can't be taken.
+export const SEAT_ERRORS = ['seat_taken', 'key_viewer', 'other_team', 'bad_seat'] as const;
+export type SeatError = (typeof SEAT_ERRORS)[number];
+
+// What keeps a game from starting, for each team.
+export const START_PROBLEMS = ['needs_captain', 'captain_offline', 'needs_guesser'] as const;
+export type StartProblem = { problem: (typeof START_PROBLEMS)[number]; team: Team };
+
+// The game's part of the room view (RoomView.data).
+export interface KeywordsRoomData {
+  // Where every member of the room sits.
+  seats: Record<string, Seat>;
+  // The members who have seen the key during the current game, and so can't be guessers in it.
+  keyViewers: string[];
+  // The group that the viewer plays for in the current game, so that the interface offers only
+  // the seats they may take. Null for a screen and for anyone who hasn't sat in a group yet.
+  side: Team | null;
+  // What still keeps the game from starting; empty outside the waiting room.
+  startProblems: StartProblem[];
+  game: KeywordsView | null;
+}

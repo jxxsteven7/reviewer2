@@ -1,5 +1,6 @@
 import { loadConfig } from './config';
 import { loadWordLibrary } from './core/words';
+import { keywordsGame } from './games/keywords';
 import { log } from './log';
 import { createAppServer } from './server';
 
@@ -9,7 +10,7 @@ const words = loadWordLibrary(config.wordsDir, (file, reason, term) =>
 );
 log('word_lists_loaded', { fields: words.fields().map(({ id, counts }) => ({ id, ...counts })) });
 
-const server = createAppServer({ ...config, words, games: [] });
+const server = createAppServer({ ...config, words, games: [keywordsGame] });
 
 server.http.listen(config.port, config.host, () => {
   log('listening', {
