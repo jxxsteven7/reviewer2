@@ -245,10 +245,11 @@ export async function seatTable(browser: Browser, language: Language): Promise<T
   };
 }
 
+// The group whose turn it is, from the color of the turn strip.
 export async function teamOnTurn(page: Page): Promise<Team> {
   const strip = page.locator('.strip');
-  await expect(strip).toBeVisible();
-  return ((await strip.getAttribute('class')) ?? '').includes('red') ? 'red' : 'blue';
+  await expect(strip).toHaveClass(/\b(red|blue)\b/);
+  return (await strip.evaluate((element) => element.classList.contains('red'))) ? 'red' : 'blue';
 }
 
 export async function giveClue(captain: Page, word: string, count: number | 'unlimited', language: Language) {
@@ -307,7 +308,8 @@ export async function playToTheEnd(table: Table): Promise<void> {
     await revealByKey(table, team);
     const guesser = table.guessers[team];
     if (await guesser.locator('.guess-bar').isVisible()) await endTurn(guesser, table.language);
-    await expect(ann.locator('.strip.over, .strip:not(.' + team + '), .letter').first()).toBeVisible();
+    // The other group's turn, or the letter that ends the game.
+    await expect(ann.locator(`.strip:not(.${team}), .letter`).first()).toBeVisible();
   }
   throw new Error('the game did not end');
 }
