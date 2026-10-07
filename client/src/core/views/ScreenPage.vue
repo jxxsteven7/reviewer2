@@ -35,6 +35,12 @@ onBeforeUnmount(() => {
 });
 
 const screens = computed(() => (room.value ? games[room.value.game] : undefined));
+
+// A screen has no seat to lose: when the chair sends the screens away, the ones that belong there
+// are put up again from the link.
+const closed = computed(() =>
+  t(entry.closed === 'removed' ? 'room.screenRemoved' : `room.closed.${entry.closed ?? 'expired'}`),
+);
 </script>
 
 <template>
@@ -50,7 +56,7 @@ const screens = computed(() => (room.value ? games[room.value.game] : undefined)
         :title="t('room.notFound.title')"
         :body="t('room.notFound.body')"
       />
-      <RoomNotice v-else-if="entry.status === 'closed'" :body="t(`room.closed.${entry.closed ?? 'expired'}`)" />
+      <RoomNotice v-else-if="entry.status === 'closed'" :body="closed" />
       <RoomNotice v-else-if="entry.status === 'failed'" :body="t(errorKey(entry.error ?? 'unknown'))" />
       <p v-else class="loading">{{ t('room.joining') }}</p>
     </main>

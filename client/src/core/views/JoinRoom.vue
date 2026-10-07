@@ -1,23 +1,24 @@
 <script setup lang="ts">
+import { parseCode } from '@reviewer2/shared';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 
-// Joining by the manuscript number. The room page takes it from there.
+// Joining by the manuscript number, read as the server reads it. The room page takes it from there.
 const { t } = useI18n();
 const router = useRouter();
 const code = ref('');
 const error = ref<string | undefined>();
 
 function join() {
-  const cleaned = code.value.trim().toUpperCase().replace(/^R2-?/, '').replace(/[\s-]/g, '');
-  if (cleaned.length !== 4) {
+  const parsed = parseCode(code.value);
+  if (!parsed) {
     error.value = t('home.join.invalid');
     return;
   }
-  void router.push(`/room/${cleaned}`);
+  void router.push(`/room/${parsed}`);
 }
 </script>
 

@@ -10,8 +10,8 @@ import UiButton from '../../core/components/UiButton.vue';
 import { send } from '../../core/socket';
 import { useKeywords } from './useKeywords';
 
-// The waiting room: the two groups with their PI and students, the spectators, and the chair's
-// desk with the word lists, the shuffle and the start button.
+// The waiting room: the two groups with their PI and students, the spectators and the screens,
+// and the chair's desk with the word lists, the shuffle and the start button.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -108,6 +108,12 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
         <UiButton v-if="mySeat?.role !== 'spectator'" size="small" @click="sit(null, 'spectator')">
           {{ t('lobby.watch') }}
         </UiButton>
+        <p v-if="room.screens > 0" class="screens">
+          {{ t('lobby.screens', { count: room.screens }) }}
+          <UiButton v-if="isChair" size="small" variant="quiet" @click="act('room:dismiss')">
+            {{ t('lobby.dismissScreens') }}
+          </UiButton>
+        </p>
       </section>
 
       <p class="footnote">{{ t('lobby.captainNote') }}</p>
@@ -132,7 +138,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
         </ul>
         <div class="desk-actions">
           <UiButton @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
-          <UiButton variant="primary" :disabled="problems.length > 0" @click="act('room:start')">
+          <UiButton variant="primary" :disabled="problems.length > 0" @click="act('room:start', { round: room.round })">
             {{ t('lobby.start') }}
           </UiButton>
         </div>
@@ -236,6 +242,16 @@ dd {
 
 .spectators .vacant {
   margin: var(--space-3) 0 var(--space-2);
+}
+
+.screens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-3);
+  margin: var(--space-3) 0 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
 }
 
 .footnote {

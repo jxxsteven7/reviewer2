@@ -17,8 +17,10 @@ export const entry = reactive<{
   error: string | null;
 }>({ status: 'idle', language: null, closed: null, error: null });
 
-// The room the page wants to be in, or null when it has left it.
-let wanted: { code: string; screen: boolean } | null = null;
+// The room the page wants to be in, or null when it has left it. Its ID is known once the server
+// has sent the room, and goes with every request to be let back in, so that a code that has since
+// gone to another room doesn't take the page there (docs/architecture.md).
+let wanted: { code: string; screen: boolean; roomId?: string } | null = null;
 
 socket.on('room:state', (view: RoomView) => {
   if (!wanted) return; // the page has left this room
@@ -26,7 +28,8 @@ socket.on('room:state', (view: RoomView) => {
   if (current && current.roomId === view.roomId && view.rev < current.rev) return;
   room.value = view;
   entry.status = 'in';
-  setHandshake(view.me === null ? { watch: view.code } : { code: view.code, roomId: view.roomId });
+  wanted.roomId = view.roomId;
+  setHandshake(view.me === null ? { watch: view.code, roomId: view.roomId } : { code: view.code, roomId: view.roomId });
 });
 
 socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => {
@@ -45,12 +48,13 @@ socket.on('connect', () => {
 
 async function ask(name?: string): Promise<Ack> {
   if (!wanted) return { ok: false, error: 'unknown' };
-  const { code, screen } = wanted;
+  const { code, screen, roomId } = wanted;
   if (entry.status !== 'in') entry.status = 'joining';
-  const reply = await send(
-    screen ? 'room:watch' : 'room:join',
-    screen || name === undefined ? { code } : { code, name },
-  );
+  const reply = await send(screen ? 'room:watch' : 'room:join', {
+    code,
+    ...(roomId === undefined ? {} : { roomId }),
+    ...(screen || name === undefined ? {} : { name }),
+  });
   if (!wanted) return reply;
   if (reply.ok) {
     if (!room.value) entry.status = 'joining';
@@ -58,7 +62,7 @@ async function ask(name?: string): Promise<Ack> {
   }
   switch (reply.error) {
     case 'name_required':
-      Object.assign(entry, { status: 'needs_name', language: (reply as { language?: Language }).language ?? null });
+      Object.assign(entry, { status: 'needs_name', language: reply.language ?? null });
       break;
     case 'room_not_found':
       wanted = null;

@@ -1,4 +1,4 @@
-import type { Ack, Handshake } from '@reviewer2/shared';
+import type { Ack, Handshake, Session } from '@reviewer2/shared';
 import { io } from 'socket.io-client';
 import { reactive } from 'vue';
 import { storedToken, storeToken } from './session';
@@ -32,7 +32,7 @@ socket.on('disconnect', () => {
   socket.sendBuffer.length = 0;
 });
 
-socket.on('session', ({ token, version }: { token?: string; version: string }) => {
+socket.on('session', ({ token, version }: Session) => {
   if (token) storeToken(token);
   reloadIfOutdated(version);
 });
