@@ -8,6 +8,11 @@ export const CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const CODE = new RegExp(`^[${CODE_ALPHABET}]{${ROOM_CODE_LENGTH}}$`);
 const PREFIX = 'R2';
 
+// What stands before the code in a manuscript number, and the number itself: R2-K7QX. It is the
+// same in every language.
+export const CODE_PREFIX = `${PREFIX}-`;
+export const formatCode = (code: string): string => CODE_PREFIX + code;
+
 // What people put around and between the characters of a code: spaces, dashes of every kind, the
 // minus sign, underscores, and the characters that show nothing, which come along when a code is
 // copied from a chat.

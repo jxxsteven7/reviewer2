@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCode } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 
 defineProps<{ code: string }>();
@@ -8,7 +9,7 @@ const { t } = useI18n();
 <template>
   <span class="manuscript">
     <span class="label">{{ t('room.manuscript') }}</span>
-    <span class="code">R2-{{ code }}</span>
+    <span class="code">{{ formatCode(code) }}</span>
   </span>
 </template>
 

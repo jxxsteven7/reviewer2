@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { formatCode } from '@reviewer2/shared';
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { roomLink } from '../room';
 import { toast } from '../toast';
 import QrCode from './QrCode.vue';
 import UiButton from './UiButton.vue';
@@ -12,8 +14,9 @@ import UiSheet from './UiSheet.vue';
 const props = defineProps<{ code: string }>();
 const { t } = useI18n();
 
-const link = computed(() => `${window.location.origin}/room/${props.code}`);
+const link = computed(() => roomLink(props.code));
 const screenLink = computed(() => `/room/${props.code}/screen`);
+const number = computed(() => formatCode(props.code));
 const canShare = typeof navigator.share === 'function';
 const showQr = ref(false);
 const showLink = ref(false);
@@ -48,8 +51,8 @@ async function copy() {
 
     <UiSheet :open="showQr" :title="t('room.qr')" @close="showQr = false">
       <div class="qr">
-        <QrCode :text="link" :label="t('room.qrHint', { code: `R2-${code}` })" />
-        <p class="hint">{{ t('room.qrHint', { code: `R2-${code}` }) }}</p>
+        <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
+        <p class="hint">{{ t('room.qrHint', { code: number }) }}</p>
         <p class="link mono">{{ link }}</p>
         <p class="hint">{{ t('room.screenHint') }}</p>
       </div>
@@ -73,7 +76,7 @@ async function copy() {
 .screen {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 var(--space-1);
   font-size: var(--text-sm);
 }

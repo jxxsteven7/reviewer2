@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { parseCode } from '@reviewer2/shared';
+import { CODE_PREFIX, parseCode } from '@reviewer2/shared';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -27,7 +27,7 @@ function join() {
     <UiField
       v-model="code"
       :label="t('home.join.label')"
-      prefix="R2-"
+      :prefix="CODE_PREFIX"
       :placeholder="t('home.join.placeholder')"
       :maxlength="8"
       autocapitalize="characters"
