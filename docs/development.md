@@ -38,7 +38,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 
 ## End-to-end tests
 
-The tests in `e2e/` start the bundled server on port 3210 and open a browser context for each player, as if on separate phones. They play whole games in both languages, reload pages, leave for the home page and come back, and cut the network in the middle of a game, take over an empty PI seat, keep players in their group, let two students of a group choose cards and chat, and check every snapshot that guessers, spectators and screens receive, over WebSocket and over long-polling, for the colors of unrevealed cards and for another group's chat and choices.
+The tests in `e2e/` start the bundled server on a free port and open a browser context for each player, as if on separate phones. They play whole games in both languages. They reload a page, go to the home page and back, and cut the network in the middle of a game. They take over an empty PI seat, keep players in their group, and let two students of a group choose cards and chat. Every snapshot that the guessers, the spectator and the screen receive is checked for the colors of unrevealed cards, over WebSocket and, for one guesser, over long-polling; every snapshot that a group's students receive is checked for the other group's chat and choices.
 
 ```bash
 npx playwright install chromium webkit   # once: the browsers the tests use
@@ -47,7 +47,7 @@ npm run test:e2e
 npx playwright test --project=iphone-webkit e2e/seats.spec.ts   # one browser, one file
 ```
 
-In mainland China, the browsers download faster from a mirror: set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright` for the install. When a test fails, `npx playwright show-trace` opens its trace from `test-results/`.
+On Linux, add `--with-deps` to the install the first time: WebKit needs system libraries, which it then installs with apt, asking for sudo. In mainland China, the browsers download faster from a mirror: set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright` for the install. When a test fails, `npx playwright show-trace` opens its trace from `test-results/`. Each run picks a free port for its server, so the tests of two worktrees can run at the same time.
 
 ## Project layout
 
