@@ -22,21 +22,32 @@ export const CHAT_KEPT = 20;
 
 // Line breaks, tabs and other control characters count as spaces: a message is one line.
 const SPACES = /[\s\p{Cc}]+/gu;
-// Characters that show nothing, such as zero-width spaces and the marks that turn the direction
-// of text around. The zero-width joiner and the two variation selectors stay, because many
+// The zero-width joiner and the two variation selectors show nothing by themselves, but many
 // emoji are built with them.
-const INVISIBLE = /(?!\u200d|\ufe0e|\ufe0f)\p{Default_Ignorable_Code_Point}/gu;
 const EMOJI_GLUE = /\u200d|\ufe0e|\ufe0f/g;
-// No emoji has a joiner or a selector after a combining mark, so one that stands there only
-// serves to hide a pile of marks from the next step.
-const GLUE_AFTER_MARK = /(\p{M})(?:\u200d|\ufe0e|\ufe0f)+/gu;
-// More than two combining marks in a row only pile up over the line above.
-const PILED_MARKS = /(\p{M}{2})\p{M}+/gu;
+// The flags of England, Scotland and Wales are a black flag followed by tag characters, which
+// show nothing by themselves.
+const TAG_FLAG =
+  /\u{1f3f4}\u{e0067}\u{e0062}(?:\u{e0065}\u{e006e}\u{e0067}|\u{e0073}\u{e0063}\u{e0074}|\u{e0077}\u{e006c}\u{e0073})\u{e007f}/u;
+// Characters that show nothing, such as zero-width spaces and the marks that turn the direction
+// of text around, but not the emoji glue. The first group matches one of those three flags
+// whole, so that its tags can be put back.
+const INVISIBLE = new RegExp(`(${TAG_FLAG.source})|(?!${EMOJI_GLUE.source})\\p{Default_Ignorable_Code_Point}`, 'gu');
+// A long run of combining marks piles up over the line above. Scripts that stack their letters,
+// such as Tibetan and Burmese, need runs of up to four, so a run keeps its first four marks and
+// loses the rest. The selectors are marks themselves and count. The joiner is not a mark, and it
+// may stand after one, as Sinhala and other scripts write some of their letters with it, so the
+// run is measured across it; otherwise it could split a long run into short ones.
+const PILED_MARKS = /(\p{M}(?:\u200d*\p{M}){3})(?:\u200d*\p{M})+\u200d*/gu;
 
 // A message as it is kept and shown: what the player typed, on one line, without invisible
 // characters and piles of combining marks, and without spaces at its ends.
 export const cleanChat = (text: string): string =>
-  text.replace(INVISIBLE, '').replace(GLUE_AFTER_MARK, '$1').replace(SPACES, ' ').replace(PILED_MARKS, '$1').trim();
+  text
+    .replace(INVISIBLE, (_, flag?: string) => flag ?? '')
+    .replace(SPACES, ' ')
+    .replace(PILED_MARKS, '$1')
+    .trim();
 
 export function checkChat(text: string): ChatCheck {
   // The types promise a string, but the message comes from a player.
