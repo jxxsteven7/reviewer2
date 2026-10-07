@@ -38,7 +38,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 
 ## End-to-end tests
 
-The tests in `e2e/` start the bundled server on port 3210 and open a browser context for each player, as if on separate phones. They play whole games in both languages, reload pages and cut the network in the middle of a game, take over an empty PI seat, keep players in their group, let two students of a group choose cards and chat, and check every snapshot that guessers, spectators and screens receive, over WebSocket and over long-polling, for the colors of unrevealed cards and for another group's chat and choices.
+The tests in `e2e/` start the bundled server on port 3210 and open a browser context for each player, as if on separate phones. They play whole games in both languages, reload pages, leave for the home page and come back, and cut the network in the middle of a game, take over an empty PI seat, keep players in their group, let two students of a group choose cards and chat, and check every snapshot that guessers, spectators and screens receive, over WebSocket and over long-polling, for the colors of unrevealed cards and for another group's chat and choices.
 
 ```bash
 npx playwright install chromium webkit   # once: the browsers the tests use

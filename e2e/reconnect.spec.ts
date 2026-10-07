@@ -1,7 +1,7 @@
 import { giveClue, keyCard, pageErrors, reveal, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
 
-// After a refresh, a locked screen or a lost network, players come back to their room, group and
-// role (docs/rules/constraints.md).
+// After a refresh, a locked screen, a lost network or a visit to the home page, players come back
+// to their room, group and role (docs/rules/constraints.md).
 
 test('a player who reloads the page is back in their seat', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
@@ -11,6 +11,20 @@ test('a player who reloads the page is back in their seat', async ({ browser }) 
   await guesser.reload();
   await expect(guesser.locator('.keywords-game')).toBeVisible();
   await expect(guesser.locator('form.name-form')).toHaveCount(0);
+  await reveal(guesser, await keyCard(table.captains[team], team));
+  expect(pageErrors).toEqual([]);
+});
+
+test('a player who goes to the home page and back is in their seat at once', async ({ browser }) => {
+  const table = await seatTable(browser, 'en');
+  const team = await teamOnTurn(table.captains.red);
+  const guesser = table.guessers[team];
+  // The page leaves the room and its connection stays in it, so the clue reaches the page anyway.
+  await guesser.getByRole('link', { name: 'Reviewer 2' }).click();
+  await expect(guesser.locator('.keywords-game')).toHaveCount(0);
+  await giveClue(table.captains[team], 'Hint', 2, 'en');
+  await guesser.goBack();
+  await expect(guesser.locator('.strip .clue .word')).toHaveText('Hint');
   await reveal(guesser, await keyCard(table.captains[team], team));
   expect(pageErrors).toEqual([]);
 });
