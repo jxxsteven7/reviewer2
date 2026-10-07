@@ -117,16 +117,6 @@
       "en": "Keyword"
     },
     {
-      "id": "supplement",
-      "zh": "补充材料",
-      "en": "Supplement"
-    },
-    {
-      "id": "figure",
-      "zh": "插图",
-      "en": "Figure"
-    },
-    {
       "id": "table",
       "zh": "表格",
       "en": "Table"
@@ -198,7 +188,7 @@
     },
     {
       "id": "novelty",
-      "zh": "创新点",
+      "zh": "新颖性",
       "en": "Novelty"
     },
     {
@@ -212,9 +202,9 @@
       "en": "Future work"
     },
     {
-      "id": "assumption",
+      "id": "premise",
       "zh": "前提",
-      "en": "Assumption"
+      "en": "Premise"
     },
     {
       "id": "lab-meeting",
@@ -355,11 +345,6 @@
       "id": "paradigm",
       "zh": "范式",
       "en": "Paradigm"
-    },
-    {
-      "id": "survey",
-      "zh": "综述",
-      "en": "Survey"
     },
     {
       "id": "questionnaire",
@@ -667,11 +652,6 @@
       "en": "Keynote"
     },
     {
-      "id": "session",
-      "zh": "分会场",
-      "en": "Session"
-    },
-    {
       "id": "banquet",
       "zh": "晚宴",
       "en": "Banquet"
@@ -737,11 +717,6 @@
       "en": "Reimbursement"
     },
     {
-      "id": "proposal",
-      "zh": "开题",
-      "en": "Proposal"
-    },
-    {
       "id": "defense",
       "zh": "答辩",
       "en": "Defense"
@@ -793,7 +768,7 @@
     },
     {
       "id": "stipend",
-      "zh": "补助",
+      "zh": "津贴",
       "en": "Stipend"
     },
     {
@@ -808,7 +783,7 @@
     },
     {
       "id": "diploma",
-      "zh": "学位证",
+      "zh": "文凭",
       "en": "Diploma"
     },
     {
