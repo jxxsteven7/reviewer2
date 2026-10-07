@@ -135,6 +135,7 @@ In every snapshot, the game's part (`RoomView.data`) holds:
 
 - the seats of everyone in the room;
 - the players who have seen the key in the current game;
+- the group that the viewer plays for in the current game, if any, so that the interface offers only the seats they may take;
 - in the waiting room, what still keeps the game from starting;
 - the game itself, from `view.ts`. A player sees the key only while sitting as a captain, so a captain who steps down to watch gets the public view again. In the same way, a player gets their group's chat, and its choices of cards in its turn, only while sitting in it; spectators and screens get neither.
 

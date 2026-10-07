@@ -128,6 +128,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return {
       seats,
       keyViewers: members.filter((id) => data.seating.keyViewers.has(ctx.keyOf(id))),
+      side: ('playerId' in viewer && data.seating.sides.get(ctx.keyOf(viewer.playerId))) || null,
       startProblems: ctx.phase === 'lobby' ? startProblems(data.seating, online(ctx)) : [],
       game: data.game ? viewFor(data.game, seat) : null,
     };

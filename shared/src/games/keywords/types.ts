@@ -145,6 +145,9 @@ export interface KeywordsRoomData {
   seats: Record<string, Seat>;
   // The members who have seen the key during the current game, and so can't be guessers in it.
   keyViewers: string[];
+  // The group that the viewer plays for in the current game, so that the interface offers only
+  // the seats they may take. Null for a screen and for anyone who hasn't sat in a group yet.
+  side: Team | null;
   // What still keeps the game from starting; empty outside the waiting room.
   startProblems: StartProblem[];
   game: KeywordsView | null;

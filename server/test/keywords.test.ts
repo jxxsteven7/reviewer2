@@ -341,11 +341,15 @@ describe('seats during a game', () => {
   test('nobody changes groups in the middle of a game', async () => {
     const table = await seatTable();
     const bob = table.guessers.red;
+    expect(data(bob).side).toBe('red');
+    expect(data(table.spectator).side).toBeNull();
+    expect(data(table.screen).side).toBeNull();
     expect(await bob.send('keywords:seat', { team: 'blue', role: 'guesser' })).toEqual({
       ok: false,
       error: 'other_team',
     });
     await expectOk(bob.send('keywords:seat', { team: null, role: 'spectator' }));
+    expect(data(bob).side).toBe('red');
     expect(await bob.send('keywords:seat', { team: 'blue', role: 'captain' })).toEqual({
       ok: false,
       error: 'other_team',
@@ -353,6 +357,7 @@ describe('seats during a game', () => {
     await expectOk(bob.send('keywords:seat', { team: 'red', role: 'guesser' }));
     // Eve hasn't played in this game, so she may join either group.
     await expectOk(table.spectator.send('keywords:seat', { team: 'blue', role: 'guesser' }));
+    expect(data(table.spectator).side).toBe('blue');
   });
 });
 
@@ -509,6 +514,7 @@ describe('playing again', () => {
     expect(data(ann).game).toBeNull();
     expect(data(ann).seats[ann.me]).toEqual({ team: 'red', role: 'captain' });
     expect(data(ann).keyViewers).toEqual([]);
+    expect(data(ann).side).toBeNull();
     await expectOk(ann.send('room:start', { round: ann.state?.round }));
     expect(board(ann).gameId).not.toBe(firstGame);
     expect(board(ann).cards.some((card) => firstWords.includes(card.word))).toBe(false);
