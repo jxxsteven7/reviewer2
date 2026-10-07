@@ -1,7 +1,7 @@
 /* Design tokens: the colors, fonts, sizes, spacing and corners that every style takes its values
    from. The interface looks like a typeset paper: white paper, black ink, hairline rules and
    serif headings. There is only a light theme for now: a dark one would redefine these values
-   and nothing else. */
+   and nothing else. docs/design.md explains the choices. */
 :root {
   /* The page and its quiet areas; text, secondary text and captions; hairlines; focus rings. */
   --paper: #ffffff;
