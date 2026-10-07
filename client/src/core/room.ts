@@ -1,4 +1,4 @@
-import type { Ack, ClosedReason, Language, RoomView } from '@reviewer2/shared';
+import { parseCode, type Ack, type ClosedReason, type Language, type RoomView } from '@reviewer2/shared';
 import { reactive, shallowRef } from 'vue';
 import { connect, send, setHandshake, socket } from './socket';
 
@@ -22,17 +22,32 @@ export const entry = reactive<{
 // gone to another room doesn't take the page there (docs/architecture.md).
 let wanted: { code: string; screen: boolean; roomId?: string } | null = null;
 
+// The newest snapshot that this connection has been sent, whichever page is showing. The server
+// keeps a connection in its room when the page goes elsewhere, and goes on sending it snapshots.
+// It sends nothing when the connection asks to join a room that it is in already, as the page does
+// when it comes back to the room, or opens the room it has just created. The page starts from this
+// snapshot then. A new connection is in no room until the server has said so with a snapshot.
+let latest: RoomView | null = null;
+
+socket.on('disconnect', () => (latest = null));
+
+function show(view: RoomView): void {
+  room.value = view;
+  entry.status = 'in';
+  if (wanted) wanted.roomId = view.roomId;
+  setHandshake(view.me === null ? { watch: view.code, roomId: view.roomId } : { code: view.code, roomId: view.roomId });
+}
+
 socket.on('room:state', (view: RoomView) => {
+  if (!latest || latest.roomId !== view.roomId || view.rev >= latest.rev) latest = view;
   if (!wanted) return; // the page has left this room
   const current = room.value;
   if (current && current.roomId === view.roomId && view.rev < current.rev) return;
-  room.value = view;
-  entry.status = 'in';
-  wanted.roomId = view.roomId;
-  setHandshake(view.me === null ? { watch: view.code, roomId: view.roomId } : { code: view.code, roomId: view.roomId });
+  show(view);
 });
 
 socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => {
+  latest = null;
   if (!wanted) return;
   wanted = null;
   room.value = null;
@@ -85,6 +100,8 @@ export function openRoom(code: string, { screen = false } = {}): void {
   room.value = null;
   Object.assign(entry, { status: 'connecting', language: null, closed: null, error: null });
   setHandshake(screen ? { watch: code } : { code });
+  // This connection may be in the room already, as a player or as a screen, whichever the page is.
+  if (latest && latest.code === parseCode(code) && (latest.me === null) === screen) show(latest);
   if (socket.connected) void ask();
   else connect();
 }
