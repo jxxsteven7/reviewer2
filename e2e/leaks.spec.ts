@@ -5,10 +5,16 @@ import { createRoom, expectNoKey, joinByLink, newPlayer, recordSnapshots, sit, T
 test('a guesser who can only long-poll never receives the key', async ({ browser }) => {
   const ann = await newPlayer(browser);
   const url = await createRoom(ann, 'en', 'Ann');
+  let cut = 0;
   const pages = [];
   for (const name of ['Bob', 'Cat', 'Dan']) {
     const page = await newPlayer(browser);
-    if (name === 'Bob') await page.routeWebSocket(/\/socket\.io\//, (socket) => socket.close());
+    if (name === 'Bob') {
+      await page.routeWebSocket(/\/socket\.io\//, (socket) => {
+        cut += 1;
+        socket.close();
+      });
+    }
     await joinByLink(page, url, name, 'en');
     pages.push(page);
   }
@@ -22,5 +28,8 @@ test('a guesser who can only long-poll never receives the key', async ({ browser
   await ann.getByRole('button', { name: TEXT.en.lobby.start }).click();
   await expect(bob!.locator('.keywords-game')).toBeVisible();
   await expect(bob!.locator('.board .card')).toHaveCount(25);
-  expect(expectNoKey(bobStates)).toBeGreaterThan(0);
+  // A snapshot is read from the body of a polling response, a moment after the page has shown it.
+  await expect.poll(() => expectNoKey(bobStates)).toBeGreaterThan(0);
+  // Bob's browser did try WebSockets and was cut off every time, so all of that came by polling.
+  expect(cut, 'WebSocket connections cut off').toBeGreaterThan(0);
 });
