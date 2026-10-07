@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { RoomView } from '@reviewer2/shared';
+import { formatCode, type RoomView } from '@reviewer2/shared';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerName from '../../core/components/PlayerName.vue';
 import QrCode from '../../core/components/QrCode.vue';
+import { roomLink } from '../../core/room';
 import { useKeywords } from './useKeywords';
 
 // The room on a big screen. In the waiting room, it shows how to join and who sits where. The
@@ -11,15 +12,16 @@ import { useKeywords } from './useKeywords';
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const { groups, spectators } = useKeywords(toRef(props, 'room'));
-const link = computed(() => `${window.location.origin}/room/${props.room.code}`);
+const link = computed(() => roomLink(props.room.code));
+const number = computed(() => formatCode(props.room.code));
 </script>
 
 <template>
   <section class="screen">
     <div class="join">
-      <QrCode :text="link" :label="t('room.qrHint', { code: `R2-${room.code}` })" />
-      <p class="code mono">R2-{{ room.code }}</p>
-      <p class="hint">{{ t('room.qrHint', { code: `R2-${room.code}` }) }}</p>
+      <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
+      <p class="code mono">{{ number }}</p>
+      <p class="hint">{{ t('room.qrHint', { code: number }) }}</p>
     </div>
     <div class="people">
       <p class="kicker">{{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}</p>
@@ -35,7 +37,8 @@ const link = computed(() => `${window.location.origin}/room/${props.room.code}`)
           </li>
         </ul>
       </section>
-      <p v-if="room.phase !== 'lobby'">{{ t('game.started') }}</p>
+      <p v-if="room.phase === 'ended'">{{ t('game.ended') }}</p>
+      <p v-else-if="room.phase !== 'lobby'">{{ t('game.started') }}</p>
       <p v-else class="role">{{ t('lobby.roles.spectator') }} &middot; {{ spectators.length }}</p>
     </div>
   </section>
