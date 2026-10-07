@@ -119,8 +119,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   shuffle: (data, ctx) => ({ ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) }),
 
-  startProblems: (data, ctx) =>
-    startProblems(data.seating, online(ctx)).map(({ problem, team }) => `${problem}:${team}`),
+  canStart: (data, ctx) => startProblems(data.seating, online(ctx)).length === 0,
 
   start: (data, ctx, words, gameId) => ({
     seating: startGame(data.seating, ctx.keyOf),

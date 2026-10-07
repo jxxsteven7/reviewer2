@@ -78,7 +78,7 @@ Phones drop their connection whenever the screen locks or the browser goes to th
 A game is a module that implements `GameModule` (`server/src/core/game.ts`). The core owns the room, its members and the chair; the module owns its data and decides:
 
 - the seats, and what the chair's bench and shuffle do to them;
-- what keeps a game from starting;
+- whether a game can start, and, in its view, what still keeps it from starting;
 - how a game starts, how many words it needs and what happens on each of its messages;
 - what each viewer sees.
 

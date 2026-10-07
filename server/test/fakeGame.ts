@@ -56,7 +56,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   },
   bench: (data, _ctx, id) => ({ ...data, benched: [...data.benched, id], over: data.over || data.fragile }),
   shuffle: (data) => ({ ...data, joined: [...data.joined].reverse() }),
-  startProblems: (data, ctx) => (data.joined.filter((id) => ctx.isOnline(id)).length < 2 ? ['needs_players'] : []),
+  canStart: (data, ctx) => data.joined.filter((id) => ctx.isOnline(id)).length >= 2,
   start: (data, _ctx, words, gameId) => ({
     ...data,
     words: words.map(({ word }) => word),

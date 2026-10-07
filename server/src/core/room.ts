@@ -274,7 +274,7 @@ export class Room {
   start(round: number): Ack {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
-    if (this.game.startProblems(this.data, this.context).length > 0) return fail('cannot_start');
+    if (!this.game.canStart(this.data, this.context)) return fail('cannot_start');
     const pool = this.#words.pool(this.fields, this.language);
     const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng);
     // chooseFields() has made sure of this, and the library doesn't change while the server runs.

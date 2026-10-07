@@ -34,8 +34,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   bench(data: Data, ctx: GameContext, playerId: string): Data;
   // The chair's "shuffle the groups", or whatever the game makes of it.
   shuffle(data: Data, ctx: GameContext): Data;
-  // Why the game can't start yet, as error codes; empty when it can.
-  startProblems(data: Data, ctx: GameContext): string[];
+  // Whether a game can start. What still keeps it from starting is for the module's view to
+  // say, in its own words; the room only needs the answer.
+  canStart(data: Data, ctx: GameContext): boolean;
   // The words come with their terms in the other languages of the word library.
   start(data: Data, ctx: GameContext, words: BoardWord[], gameId: string): Data;
   // Whether the game has ended by itself. The room asks after every change to the data during a
