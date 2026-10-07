@@ -302,11 +302,6 @@
       "en": "Significance"
     },
     {
-      "id": "p-value",
-      "zh": "p值",
-      "en": "P-value"
-    },
-    {
       "id": "error-bar",
       "zh": "误差棒",
       "en": "Error bar"
