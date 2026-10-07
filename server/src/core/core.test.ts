@@ -4,7 +4,6 @@ import { fakeGame } from '../../test/fakeGame';
 import { testWords } from '../../test/helpers';
 import { clientIp, groupIp } from './clientIp';
 import { newCode } from './codes';
-import type { GameModule } from './game';
 import { isToken, memberKey, newToken } from './identity';
 import { seededRng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
@@ -26,7 +25,7 @@ describe('the list of rooms', () => {
     const rooms = new Rooms(testWords(), { int: (below) => next.shift() ?? drawn.int(below) }, () => 0);
     const create = () => {
       const created = rooms.create({
-        game: fakeGame as GameModule,
+        game: fakeGame,
         language: 'en',
         fields: ['general'],
         key: 'a-member-key',

@@ -1,5 +1,4 @@
 import { loadConfig } from './config';
-import type { GameModule } from './core/game';
 import { loadWordLibrary } from './core/words';
 import { keywordsGame } from './games/keywords';
 import { log } from './log';
@@ -11,7 +10,7 @@ const words = loadWordLibrary(config.wordsDir, (file, reason, term) =>
 );
 log('word_lists_loaded', { fields: words.fields().map(({ id, counts }) => ({ id, ...counts })) });
 
-const server = createAppServer({ ...config, words, games: [keywordsGame as GameModule] });
+const server = createAppServer({ ...config, words, games: [keywordsGame] });
 
 server.http.listen(config.port, config.host, () => {
   log('listening', {

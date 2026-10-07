@@ -11,7 +11,7 @@ import {
   type Team,
 } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import type { GameContext, GameModule } from '../src/core/game';
+import type { GameContext } from '../src/core/game';
 import { seededRng } from '../src/core/random';
 import { WordLibrary } from '../src/core/words';
 import { keywordsGame } from '../src/games/keywords';
@@ -24,7 +24,7 @@ let server: TestServer;
 let clients: TestClient[];
 
 beforeEach(async () => {
-  server = await startServer({ games: [keywordsGame as GameModule], words: bigLibrary() });
+  server = await startServer({ games: [keywordsGame], words: bigLibrary() });
   clients = [];
 });
 
