@@ -1,10 +1,15 @@
 import { describe, expect, test } from 'vitest';
-import { CODE_ALPHABET, parseCode } from './codes';
+import { CODE_ALPHABET, formatCode, parseCode } from './codes';
 
 describe('a room code', () => {
   test('has 32 characters to choose from, without I, L, O or U', () => {
     expect(CODE_ALPHABET).toHaveLength(32);
     expect(CODE_ALPHABET).not.toMatch(/[ILOU]/);
+  });
+
+  test('is shown as a manuscript number, which is read back as the code', () => {
+    expect(formatCode('K7QX')).toBe('R2-K7QX');
+    expect(parseCode(formatCode('K7QX'))).toBe('K7QX');
   });
 
   test('is read however it is typed', () => {

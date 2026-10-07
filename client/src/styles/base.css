@@ -56,6 +56,48 @@ hr {
   outline-offset: 2px;
 }
 
+.page {
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+@media (min-width: 40rem) {
+  .page {
+    padding: 0 var(--space-5);
+  }
+}
+
+.kicker {
+  color: var(--red);
+  font-size: var(--text-sm);
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sections are numbered like those of a paper: section 1, section 2, and so on. */
+.sections {
+  counter-reset: section;
+}
+
+.section-title {
+  font-size: var(--text-lg);
+}
+
+.sections .section-title::before {
+  margin-right: 0.5em;
+  color: var(--ink-3);
+  font-weight: 400;
+  content: '\00a7' counter(section);
+  counter-increment: section;
+}
+
 .small-caps {
   font-variant-caps: all-small-caps;
   letter-spacing: 0.06em;

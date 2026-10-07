@@ -8,10 +8,180 @@
     "zh": "中文",
     "en": "English"
   },
+  "gate": {
+    "title": "Choose a language",
+    "description": "The interface and the words on the cards will be in English."
+  },
   "home": {
-    "status": "In preparation",
     "intro": "Online party games about academic life, played in the browser. Everyone joins the same room from their own phone or laptop: pick a nickname and you're in, with no sign-up.",
-    "first": "The first game, Double Blind, is being written. Two research groups race to find their keywords, while Reviewer 2 waits for a careless guess."
+    "contents": "Contents",
+    "players": "4 to 30 players",
+    "newRoom": "New room",
+    "forthcoming": "Forthcoming",
+    "games": {
+      "keywords": {
+        "name": "Double Blind",
+        "summary": "Two research groups race to find their keywords from one-word clues. Reveal Reviewer 2, and your paper is rejected."
+      },
+      "impostor": {
+        "name": "Spot the Impostor",
+        "summary": "Everyone gets the same term except one, who gets a close cousin."
+      },
+      "titles": {
+        "name": "Real or Fake",
+        "summary": "Tell real paper titles from invented ones."
+      },
+      "abstracts": {
+        "name": "Bluff the Abstract",
+        "summary": "Write a convincing abstract for a paper nobody has read."
+      }
+    },
+    "join": {
+      "title": "Join a room",
+      "label": "Manuscript number",
+      "placeholder": "K7QX",
+      "submit": "Join",
+      "invalid": "Enter the 4 characters after R2-."
+    }
+  },
+  "create": {
+    "language": "Language",
+    "languageHint": "Everything in the room, the words on the cards included, will be in {language}.",
+    "fields": "Word lists",
+    "fieldTerms": "{count} terms",
+    "fieldTooSmall": "Not enough terms in this language",
+    "noFields": "No word lists are available in this language yet.",
+    "loadingFields": "Loading the word lists...",
+    "name": "Your name",
+    "submit": "Create the room",
+    "cancel": "Cancel"
+  },
+  "room": {
+    "manuscript": "Manuscript",
+    "copyLink": "Copy link",
+    "copied": "Link copied.",
+    "share": "Share",
+    "shareTitle": "Join my room on Reviewer 2",
+    "qr": "QR code",
+    "qrHint": "Scan to join {code}.",
+    "screen": "Big screen",
+    "screenHint": "Open this on a projector or a shared screen. It shows the board without the key.",
+    "selectLink": "Select the link and copy it.",
+    "close": "Close",
+    "reconnecting": "Reconnecting...",
+    "joining": "Opening the room...",
+    "join": {
+      "title": "Join {code}",
+      "name": "Your name",
+      "submit": "Join"
+    },
+    "notFound": {
+      "title": "No such room",
+      "body": "This room doesn't exist, or it has closed."
+    },
+    "closed": {
+      "removed": "The chair removed you from this room.",
+      "expired": "This room has closed.",
+      "left": "You left this room in another tab.",
+      "restart": "The server is being updated, so this room has closed. Please start a new one in a moment."
+    },
+    "screenRemoved": "The chair took this screen down. Open the link again to put it back up.",
+    "home": "Back to the home page",
+    "you": "you",
+    "chair": "chair",
+    "offline": "offline",
+    "rename": "Change name",
+    "renameSubmit": "Save",
+    "leave": "Leave the room",
+    "leaveConfirm": "Leave this room? Your seat will be given up."
+  },
+  "lobby": {
+    "kicker": "Waiting room",
+    "group": {
+      "red": "Red group",
+      "blue": "Blue group"
+    },
+    "roles": {
+      "captain": "PI",
+      "guesser": "Students",
+      "spectator": "Spectators"
+    },
+    "vacant": "vacant",
+    "nobody": "nobody yet",
+    "takeCaptain": "Be the PI",
+    "joinAsGuesser": "Join as a student",
+    "watch": "Watch",
+    "screens": "Big screens showing this room: {count}.",
+    "dismissScreens": "Send the screens away",
+    "captainNote": "The PI sees which cards belong to the group and gives one-word clues.",
+    "desk": "Chair's desk",
+    "fields": "Word lists",
+    "saveFields": "Save",
+    "shuffle": "Shuffle the groups",
+    "start": "Start the game",
+    "ready": "Everyone needed is seated.",
+    "waiting": "Waiting for the chair to start the game.",
+    "problems": {
+      "needs_captain": "The {group} needs a PI.",
+      "captain_offline": "The PI of the {group} is offline.",
+      "needs_guesser": "The {group} needs at least one student who is online."
+    },
+    "manage": {
+      "spectate": "Move to the spectators",
+      "remove": "Remove from the room",
+      "chair": "Make chair",
+      "cancel": "Cancel"
+    }
+  },
+  "game": {
+    "started": "The game has started.",
+    "ended": "The game is over.",
+    "end": "End the game",
+    "again": "Play again"
+  },
+  "errors": {
+    "bad_request": "That request didn't make sense to the server.",
+    "rate_limited": "Too many requests. Please wait a moment.",
+    "internal": "Something went wrong on the server.",
+    "bad_game": "That game doesn't exist.",
+    "bad_fields": "Choose word lists that exist.",
+    "no_words": "These word lists don't have enough terms in this language.",
+    "too_many_rooms": "The server is full. Please try again later.",
+    "room_not_found": "No room has that number.",
+    "room_full": "This room is full.",
+    "screens_full": "This room already has the most screens it can have.",
+    "name_required": "Enter a name.",
+    "name_invalid": "Use 1 to 16 visible characters.",
+    "name_taken": "Someone in the room already has that name.",
+    "removed_recently": "You were removed from this room. You can come back in two minutes.",
+    "not_member": "You're not in this room.",
+    "not_chair": "Only the chair can do that.",
+    "no_such_player": "That player has left.",
+    "player_offline": "The chair can only go to someone who is online.",
+    "wrong_phase": "That can't be done right now.",
+    "cannot_start": "The game can't start yet.",
+    "stale": "That turn or that game is already over.",
+    "game_over": "The game is over.",
+    "not_your_turn": "It's not your group's turn.",
+    "not_captain": "Only the PI can give the clue.",
+    "not_guesser": "Only students can reveal cards.",
+    "no_such_card": "That card doesn't exist.",
+    "card_revealed": "That card has already been revealed.",
+    "must_guess_first": "Reveal at least one card before you end the turn.",
+    "clue_empty": "Enter a clue.",
+    "clue_not_one_word": "A clue is one word, without spaces or punctuation.",
+    "clue_too_long": "That clue is too long.",
+    "clue_on_board": "The clue can't be a word on the board, or part of one.",
+    "bad_count": "Choose a number from 0 to 9, or unlimited.",
+    "chat_empty": "Write a message first.",
+    "chat_too_long": "That message is too long.",
+    "seat_taken": "Someone already has that seat.",
+    "key_viewer": "You have seen the key in this game, so you can't be a student until the next one.",
+    "other_team": "You play for the other group in this game. You can change groups in the next one.",
+    "bad_seat": "That seat doesn't exist.",
+    "offline": "You're offline. Waiting for the connection...",
+    "timeout": "The server didn't answer. Please try again.",
+    "unknown": "Something went wrong."
   },
   "footer": {
     "noSignUp": "No sign-up, no ads.",

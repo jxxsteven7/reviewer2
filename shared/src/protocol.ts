@@ -41,6 +41,14 @@ export const ROOM_ERRORS = [
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 
+// A field of the word library, as the room setup shows it: its name and how many words it has
+// in each language.
+export interface FieldInfo {
+  id: string;
+  name: Record<Language, string>;
+  counts: Record<Language, number>;
+}
+
 // What the server answers a message with: that it did what was asked, with whatever it has to
 // say about it, or that it didn't, with an error code. `language` comes with name_required alone:
 // it is the room's language, for the form that asks a newcomer for a name.
