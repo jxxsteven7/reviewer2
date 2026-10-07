@@ -247,11 +247,6 @@
       "en": "Benchmark"
     },
     {
-      "id": "ablation",
-      "zh": "消融",
-      "en": "Ablation"
-    },
-    {
       "id": "replication",
       "zh": "复现",
       "en": "Replication"
@@ -387,11 +382,6 @@
       "en": "Accuracy"
     },
     {
-      "id": "robustness",
-      "zh": "鲁棒性",
-      "en": "Robustness"
-    },
-    {
       "id": "annotation",
       "zh": "标注",
       "en": "Annotation"
@@ -442,41 +432,6 @@
       "en": "Parameter"
     },
     {
-      "id": "tuning",
-      "zh": "调参",
-      "en": "Tuning"
-    },
-    {
-      "id": "overfitting",
-      "zh": "过拟合",
-      "en": "Overfitting"
-    },
-    {
-      "id": "convergence",
-      "zh": "收敛",
-      "en": "Convergence"
-    },
-    {
-      "id": "generalization",
-      "zh": "泛化",
-      "en": "Generalization"
-    },
-    {
-      "id": "gradient",
-      "zh": "梯度",
-      "en": "Gradient"
-    },
-    {
-      "id": "loss",
-      "zh": "损失",
-      "en": "Loss"
-    },
-    {
-      "id": "attention",
-      "zh": "注意力",
-      "en": "Attention"
-    },
-    {
       "id": "network",
       "zh": "网络",
       "en": "Network"
@@ -510,11 +465,6 @@
       "id": "cluster",
       "zh": "集群",
       "en": "Cluster"
-    },
-    {
-      "id": "gpu",
-      "zh": "显卡",
-      "en": "GPU"
     },
     {
       "id": "code",
@@ -565,26 +515,6 @@
       "id": "microscope",
       "zh": "显微镜",
       "en": "Microscope"
-    },
-    {
-      "id": "centrifuge",
-      "zh": "离心机",
-      "en": "Centrifuge"
-    },
-    {
-      "id": "pipette",
-      "zh": "移液枪",
-      "en": "Pipette"
-    },
-    {
-      "id": "petri-dish",
-      "zh": "培养皿",
-      "en": "Petri dish"
-    },
-    {
-      "id": "reagent",
-      "zh": "试剂",
-      "en": "Reagent"
     },
     {
       "id": "mouse",
