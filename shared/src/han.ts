@@ -1,5 +1,11 @@
 import { HAN_VARIANTS } from './han-variants';
 
+// Matches a Chinese character. Without the g flag, so it keeps no state between tests.
+export const HAN = /\p{Script=Han}/u;
+
+// Whether a text has any Chinese characters in it.
+export const hasHan = (text: string): boolean => HAN.test(text);
+
 // Traditional Chinese characters and their simplified forms, built from the table on first use.
 let simplified: Map<string, string> | undefined;
 

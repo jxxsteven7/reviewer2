@@ -3,17 +3,24 @@
 // again before it accepts the clue. docs/games/keywords.md says which conflicts are refused and
 // which only bring up a warning.
 
-import { toSimplified } from '../../han';
+import { HAN, toSimplified } from '../../han';
 
 export type ClueProblem = 'clue_empty' | 'clue_not_one_word' | 'clue_too_long' | 'clue_on_board';
+
+// A card that the clue runs into, with the text on it that the clue repeats or may be a form
+// of: the card's word, or one of its translations.
+export interface ClueMatch {
+  card: number;
+  text: string;
+}
 
 export interface ClueCheck {
   problem: ClueProblem | null;
   // The card that the clue repeats, when the problem is clue_on_board.
-  conflict: number | null;
+  conflict: ClueMatch | null;
   // Cards that the clue may be a form of, such as "modeling" for "model". These are allowed,
   // but the captain sees a warning.
-  similar: number[];
+  similar: ClueMatch[];
 }
 
 // What the check needs to know about a card. The translations are the card's term in the other
@@ -31,7 +38,6 @@ export const MAX_CLUE_HAN = 10;
 // slow, so a longer text is refused before it is normalized.
 export const MAX_CLUE_INPUT = 64;
 
-const HAN = /\p{Script=Han}/u;
 const LATIN = /\p{Script=Latin}/u;
 const LATIN_ONLY = /^\p{Script=Latin}+$/u;
 // Characters that show nothing: zero-width spaces and joiners, variation selectors, soft hyphens
@@ -164,11 +170,11 @@ function resembles(clue: Word, word: Word): boolean {
 }
 
 export function checkClue(clue: string, board: readonly ClueCard[]): ClueCheck {
-  const verdict = (problem: ClueProblem | null, conflict: number | null = null, similar: number[] = []): ClueCheck => ({
-    problem,
-    conflict,
-    similar,
-  });
+  const verdict = (
+    problem: ClueProblem | null,
+    conflict: ClueMatch | null = null,
+    similar: ClueMatch[] = [],
+  ): ClueCheck => ({ problem, conflict, similar });
   // The types promise a string, but the clue comes from a player.
   if (typeof clue !== 'string') return verdict('clue_empty');
   if (clue.length > MAX_CLUE_INPUT) return verdict('clue_too_long');
@@ -179,20 +185,20 @@ export function checkClue(clue: string, board: readonly ClueCard[]): ClueCheck {
   if (length > MAX_CLUE_LENGTH || (HAN.test(text) && length > MAX_CLUE_HAN)) return verdict('clue_too_long');
 
   const given = wordOf(text);
-  const similar: number[] = [];
-  for (const [index, card] of board.entries()) {
-    if (card.revealed) continue; // a covered word may be said again
-    const word = wordOf(card.word);
-    if (repeats(given, word)) return verdict('clue_on_board', index);
-    let close = resembles(given, word);
-    for (const translation of card.translations ?? []) {
+  const similar: ClueMatch[] = [];
+  for (const [card, { word: shown, revealed, translations }] of board.entries()) {
+    if (revealed) continue; // a covered word may be said again
+    const word = wordOf(shown);
+    if (repeats(given, word)) return verdict('clue_on_board', { card, text: shown });
+    let close = resembles(given, word) ? shown : null;
+    for (const translation of translations ?? []) {
       const other = wordOf(translation);
       // The translation itself is refused like the word. A part or a form of it only brings a
       // warning, because the room plays in the other language.
-      if (sameOrPlural(given.key, other.key)) return verdict('clue_on_board', index);
-      close ||= repeats(given, other) || resembles(given, other);
+      if (sameOrPlural(given.key, other.key)) return verdict('clue_on_board', { card, text: translation });
+      if (close === null && (repeats(given, other) || resembles(given, other))) close = translation;
     }
-    if (close) similar.push(index);
+    if (close !== null) similar.push({ card, text: close });
   }
   return verdict(null, null, similar);
 }

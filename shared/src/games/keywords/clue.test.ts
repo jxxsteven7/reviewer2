@@ -27,7 +27,7 @@ const CURLY_APOSTROPHE = '\u2019';
 
 const board = (...words: string[]) => words.map((word) => ({ word, revealed: false }));
 const problemOf = (clue: string, words: string[]) => checkClue(clue, board(...words)).problem;
-const similarTo = (clue: string, words: string[]) => checkClue(clue, board(...words)).similar;
+const similarTo = (clue: string, words: string[]) => checkClue(clue, board(...words)).similar.map(({ card }) => card);
 
 describe('the forms of a clue', () => {
   test('normalizeClue folds width and case, trims, and drops invisible characters', () => {
@@ -128,7 +128,7 @@ describe('a clue must not repeat a word on the board', () => {
   test('refuses the same word in any case or width', () => {
     expect(checkClue('Model', board('Baseline', 'MODEL'))).toEqual({
       problem: 'clue_on_board',
-      conflict: 1,
+      conflict: { card: 1, text: 'MODEL' },
       similar: [],
     });
     expect(problemOf('\uff4d\uff4f\uff44\uff45\uff4c', ['Model'])).toBe('clue_on_board');
@@ -225,7 +225,11 @@ describe('a clue must not repeat a word on the board', () => {
       ['notes', 'Not'],
       ['slid', 'Slides'],
     ] as const) {
-      expect(checkClue(clue, board(word)), clue).toEqual({ problem: null, conflict: null, similar: [0] });
+      expect(checkClue(clue, board(word)), clue).toEqual({
+        problem: null,
+        conflict: null,
+        similar: [{ card: 0, text: word }],
+      });
     }
   });
 
@@ -258,10 +262,10 @@ describe('a clue must not repeat a word on the board', () => {
 describe("a clue must not be a card's word in another language", () => {
   const card = (word: string, ...translations: string[]) => [{ word, revealed: false, translations }];
 
-  test('refuses the translation and its plain plural', () => {
+  test('refuses the translation and its plain plural, and names the translation', () => {
     expect(checkClue('journal', card(JOURNAL, 'Journal'))).toEqual({
       problem: 'clue_on_board',
-      conflict: 0,
+      conflict: { card: 0, text: 'Journal' },
       similar: [],
     });
     expect(checkClue('Journals', card(JOURNAL, 'Journal')).problem).toBe('clue_on_board');
@@ -269,18 +273,28 @@ describe("a clue must not be a card's word in another language", () => {
     expect(checkClue(ATTENTION, card('Attention', ATTENTION)).problem).toBe('clue_on_board');
   });
 
-  test('only warns about a part or a form of the translation', () => {
-    const warned = { problem: null, conflict: null, similar: [0] };
-    expect(checkClue('review', card(PEER_REVIEW, 'Peer review'))).toEqual(warned);
-    expect(checkClue('reviewing', card(PEER_REVIEW, 'Peer review'))).toEqual(warned);
-    expect(checkClue(NOTICE, card('Attention', ATTENTION))).toEqual(warned);
+  test('only warns about a part or a form of the translation, and names the translation', () => {
+    const warned = (text: string) => ({ problem: null, conflict: null, similar: [{ card: 0, text }] });
+    expect(checkClue('review', card(PEER_REVIEW, 'Peer review'))).toEqual(warned('Peer review'));
+    expect(checkClue('reviewing', card(PEER_REVIEW, 'Peer review'))).toEqual(warned('Peer review'));
+    expect(checkClue(NOTICE, card('Attention', ATTENTION))).toEqual(warned(ATTENTION));
     expect(checkClue('gradient', card(JOURNAL, 'Journal')).similar).toEqual([]);
+  });
+
+  test("names the card's own word when the clue may be a form of both", () => {
+    expect(checkClue('modeling', [{ word: 'Model', revealed: false, translations: ['Modell'] }]).similar).toEqual([
+      { card: 0, text: 'Model' },
+    ]);
   });
 });
 
 describe('a clue that may be a form of a word on the board', () => {
   test('is allowed with a warning that names the card', () => {
-    expect(checkClue('modeling', board('Baseline', 'Model'))).toEqual({ problem: null, conflict: null, similar: [1] });
+    expect(checkClue('modeling', board('Baseline', 'Model'))).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [{ card: 1, text: 'Model' }],
+    });
     expect(similarTo('modelling', ['Model'])).toEqual([0]);
     expect(similarTo('biased', ['Bias'])).toEqual([0]);
     expect(similarTo('studies', ['Study'])).toEqual([0]);
@@ -318,7 +332,11 @@ describe('a clue that may be a form of a word on the board', () => {
       ['leaves', 'Leaf'],
       ['lives', 'Life'],
     ] as const) {
-      expect(checkClue(clue, board(word)), clue).toEqual({ problem: null, conflict: null, similar: [0] });
+      expect(checkClue(clue, board(word)), clue).toEqual({
+        problem: null,
+        conflict: null,
+        similar: [{ card: 0, text: word }],
+      });
     }
   });
 

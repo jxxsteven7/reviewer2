@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import { clearMemory } from '../../core/storage';
 import en from '../../locales/en.json';
+import CluePanel from './CluePanel.vue';
 import GroupChat from './GroupChat.vue';
 import KeywordsCard from './KeywordsCard.vue';
 
@@ -30,7 +31,25 @@ const seats: Record<string, Seat> = {
 };
 
 function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = 'guess'): RoomView {
-  const game = { gameId: 'g1', turn: 2, team: 'red', phase, cards: [], history: [], ...(chat ? { chat } : {}) };
+  const game: KeywordsView = {
+    gameId: 'g1',
+    turn: 2,
+    team: 'red',
+    phase,
+    startingTeam: 'red',
+    cards: cards('Baseline', 'Model', 'Journal'),
+    remaining: { red: 9, blue: 8 },
+    clue: { word: 'Science', count: 2 },
+    guessesMade: 0,
+    guessesLeft: 3,
+    history: [{ turn: 2, team: 'red', word: 'Science', count: 2, guesses: [] }],
+    result: null,
+    selections: [],
+    ...(chat ? { chat } : {}),
+  };
+const cards = (...words: string[]) => words.map((word) => ({ word, revealed: false }));
+
+// A game in the red group's guess phase, with the one clue "Science 2" and no guess yet.
   const data: KeywordsRoomData = {
     seats,
     keyViewers: ['ann'],

@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { checkClue, MAX_CLUE_NUMBER, type ClueCount, type KeywordsView } from '@reviewer2/shared';
-import { computed, ref, watch } from 'vue';
+import {
+  checkClue,
+  MAX_CLUE_INPUT,
+  MAX_CLUE_NUMBER,
+  type ClueCount,
+  type ClueMatch,
+  type KeywordsView,
+} from '@reviewer2/shared';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
 import { errorKey } from '../../core/errors';
+import { formatList } from '../../core/i18n';
 
 // The PI's clue: one word and a number. The same check that the server runs shows problems
-// while the PI types, and warns about words that may be forms of a word on the board.
-const props = defineProps<{ game: KeywordsView }>();
+// while the PI types, and warns about words that may be forms of a word on the board. The panel
+// is mounted for one clue: it goes away once the clue is given. `busy` holds the button while a
+// clue is on its way.
+const props = withDefaults(defineProps<{ game: KeywordsView; busy?: boolean }>(), { busy: false });
 const emit = defineEmits<{ give: [word: string, count: ClueCount] }>();
 const { t, locale } = useI18n();
 
@@ -16,30 +26,28 @@ const count = ref<ClueCount>(1);
 const INFINITY = '\u221e';
 const counts: ClueCount[] = [...Array.from({ length: MAX_CLUE_NUMBER + 1 }, (_, i) => i), 'unlimited'];
 
-watch(
-  () => props.game.turn,
-  () => {
-    word.value = '';
-    count.value = 1;
-  },
-);
-
 const check = computed(() => checkClue(word.value, props.game.cards));
-const problem = computed(() =>
-  check.value.problem && check.value.problem !== 'clue_empty' ? t(errorKey(check.value.problem)) : '',
-);
+
+// A card the clue runs into, named by its word in quotation marks, with the translation after
+// it in brackets when that is what the clue matched: the Chinese word for "journal", and then
+// "(Journal)", when "journals" is typed in a Chinese room.
+function nameOf({ card, text }: ClueMatch): string {
+  const shown = props.game.cards[card]?.word ?? text;
+  return shown === text ? `\u201c${shown}\u201d` : `\u201c${shown}\u201d (${text})`;
+}
+
+const problem = computed(() => {
+  const { problem, conflict } = check.value;
+  if (!problem || problem === 'clue_empty') return '';
+  return conflict ? t('game.onBoard', { word: nameOf(conflict) }) : t(errorKey(problem));
+});
 const warning = computed(() => {
   if (check.value.problem || check.value.similar.length === 0) return '';
-  const words = check.value.similar.map((index) => `\u201c${props.game.cards[index]?.word}\u201d`);
-  const list =
-    typeof Intl.ListFormat === 'function'
-      ? new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(words)
-      : words.join(', ');
-  return t('game.similar', { words: list });
+  return t('game.similar', { words: formatList(locale.value, check.value.similar.map(nameOf)) });
 });
 
 function give() {
-  if (check.value.problem) return;
+  if (check.value.problem || props.busy) return;
   emit('give', word.value.trim(), count.value);
 }
 </script>
@@ -51,7 +59,7 @@ function give() {
       id="clue-word"
       v-model="word"
       class="word"
-      maxlength="24"
+      :maxlength="MAX_CLUE_INPUT"
       autocomplete="off"
       autocapitalize="off"
       spellcheck="false"
@@ -76,7 +84,9 @@ function give() {
         {{ option === 'unlimited' ? INFINITY : option }}
       </button>
     </div>
-    <UiButton variant="primary" type="submit" :disabled="check.problem !== null">{{ t('game.sendClue') }}</UiButton>
+    <UiButton variant="primary" type="submit" :disabled="check.problem !== null || busy">{{
+      t('game.sendClue')
+    }}</UiButton>
   </form>
 </template>
 

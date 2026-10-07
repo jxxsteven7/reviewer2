@@ -42,3 +42,13 @@ export function currentLanguage(): Language {
   const locale = i18n.global.locale.value;
   return isLanguage(locale) ? locale : 'en';
 }
+
+// Words in a list, joined the way the language joins them: "Ann and Cat" in English, and with
+// the Chinese word for "and" in Chinese. Browsers without Intl.ListFormat get the language's
+// plain separator: a comma, or the Chinese enumeration comma.
+export function formatList(locale: string, items: readonly string[]): string {
+  if (typeof Intl.ListFormat === 'function') {
+    return new Intl.ListFormat(locale, { type: 'conjunction' }).format(items);
+  }
+  return items.join(locale.startsWith('zh') ? '\u3001' : ', ');
+}
