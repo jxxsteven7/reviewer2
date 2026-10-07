@@ -5,6 +5,8 @@ import { expectNoKey, playToTheEnd, seatTable, TEXT, expect, test } from './help
 
 for (const language of ['en', 'zh'] as const) {
   test(`a whole game in ${language}, with the key only for the PIs`, async ({ browser }) => {
+    // A whole game is up to 17 turns, and WebKit on a CI runner takes about 4 seconds a turn.
+    test.slow();
     const table = await seatTable(browser, language);
     const text = TEXT[language];
 
