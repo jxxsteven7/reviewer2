@@ -62,19 +62,9 @@
       "en": "Preprint"
     },
     {
-      "id": "revision",
-      "zh": "返修",
-      "en": "Revision"
-    },
-    {
       "id": "major-revision",
       "zh": "大修",
       "en": "Major revision"
-    },
-    {
-      "id": "minor-revision",
-      "zh": "小修",
-      "en": "Minor revision"
     },
     {
       "id": "plagiarism",
@@ -167,11 +157,6 @@
       "en": "Word count"
     },
     {
-      "id": "page-limit",
-      "zh": "页数限制",
-      "en": "Page limit"
-    },
-    {
       "id": "best-paper",
       "zh": "最佳论文",
       "en": "Best paper"
@@ -200,11 +185,6 @@
       "id": "results",
       "zh": "结果",
       "en": "Results"
-    },
-    {
-      "id": "related-work",
-      "zh": "相关工作",
-      "en": "Related work"
     },
     {
       "id": "motivation",
@@ -242,11 +222,6 @@
       "en": "Lab meeting"
     },
     {
-      "id": "laboratory",
-      "zh": "实验室",
-      "en": "Laboratory"
-    },
-    {
       "id": "experiment",
       "zh": "实验",
       "en": "Experiment"
@@ -255,11 +230,6 @@
       "id": "hypothesis",
       "zh": "假设",
       "en": "Hypothesis"
-    },
-    {
-      "id": "data",
-      "zh": "数据",
-      "en": "Data"
     },
     {
       "id": "dataset",
@@ -567,11 +537,6 @@
       "en": "Code"
     },
     {
-      "id": "open-source",
-      "zh": "开源",
-      "en": "Open source"
-    },
-    {
       "id": "version",
       "zh": "版本",
       "en": "Version"
@@ -707,11 +672,6 @@
       "en": "Session"
     },
     {
-      "id": "coffee-break",
-      "zh": "茶歇",
-      "en": "Coffee break"
-    },
-    {
       "id": "banquet",
       "zh": "晚宴",
       "en": "Banquet"
@@ -782,11 +742,6 @@
       "en": "Proposal"
     },
     {
-      "id": "midterm-review",
-      "zh": "中期考核",
-      "en": "Midterm review"
-    },
-    {
       "id": "defense",
       "zh": "答辩",
       "en": "Defense"
@@ -800,11 +755,6 @@
       "id": "committee",
       "zh": "委员会",
       "en": "Committee"
-    },
-    {
-      "id": "postdoc",
-      "zh": "博士后",
-      "en": "Postdoc"
     },
     {
       "id": "phd",
