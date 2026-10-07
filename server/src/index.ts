@@ -18,6 +18,7 @@ server.http.listen(config.port, config.host, () => {
     port: config.port,
     version: config.version,
     trustProxy: config.trustProxy,
+    roomsPerMinute: config.roomsPerMinute,
   });
 });
 

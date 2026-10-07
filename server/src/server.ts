@@ -4,7 +4,7 @@ import type { Config } from './config';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
 import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
-import { attachSockets, type RoomSockets } from './core/socket';
+import { attachSockets, DEFAULT_ROOMS_PER_MINUTE, type RoomSockets } from './core/socket';
 import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
 import { log as defaultLog } from './log';
@@ -25,6 +25,7 @@ export interface AppOptions extends Pick<Config, 'publicDir' | 'version'> {
   words: WordLibrary;
   games: GameModule[];
   trustProxy?: boolean;
+  roomsPerMinute?: number;
   rng?: Rng;
   now?: () => number;
   limits?: RoomLimits;
@@ -55,6 +56,7 @@ export function createAppServer(options: AppOptions): AppServer {
     now,
     version: options.version,
     trustProxy: options.trustProxy ?? false,
+    roomsPerMinute: options.roomsPerMinute ?? DEFAULT_ROOMS_PER_MINUTE,
     log: options.log ?? defaultLog,
   });
   // io.close() also closes the HTTP server.

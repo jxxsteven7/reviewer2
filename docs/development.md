@@ -53,6 +53,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | `HOST` | `127.0.0.1` | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
 | `PUBLIC_DIR` | `client/dist` | Where the built front end is |
 | `WORDS_DIR` | `words` | Where the word lists are |
+| `ROOMS_PER_MINUTE` | `5` | How many times a minute one address may try to create a room; see [architecture.md](architecture.md). The `listening` line reports the value in use. Raise it only for tests, where every room comes from one address |
 | `TRUST_PROXY` | off | Set it to `1` behind a reverse proxy that sets `X-Forwarded-For`, and only there, so that the limits count each player's own address; see [architecture.md](architecture.md). `1`, `true`, `yes` and `on` switch it on, and a value the server doesn't know stops it |
 | `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
 

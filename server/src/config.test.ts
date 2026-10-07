@@ -39,3 +39,17 @@ describe('TRUST_PROXY', () => {
     }
   });
 });
+
+describe('ROOMS_PER_MINUTE', () => {
+  test('defaults to 5 when it is unset or empty', () => {
+    expect(loadConfig({}).roomsPerMinute).toBe(5);
+    expect(loadConfig({ ROOMS_PER_MINUTE: '' }).roomsPerMinute).toBe(5);
+    expect(loadConfig({ ROOMS_PER_MINUTE: '1000' }).roomsPerMinute).toBe(1000);
+  });
+
+  test('anything but a whole number from 1 up stops the server', () => {
+    for (const ROOMS_PER_MINUTE of [' ', '0', '-1', '1.5', '1e3', '5 ', 'many']) {
+      expect(() => loadConfig({ ROOMS_PER_MINUTE }), JSON.stringify(ROOMS_PER_MINUTE)).toThrow(/ROOMS_PER_MINUTE/);
+    }
+  });
+});

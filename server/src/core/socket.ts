@@ -23,6 +23,7 @@ export interface SocketOptions {
   now: () => number;
   version: string;
   trustProxy: boolean;
+  roomsPerMinute: number;
   log: (event: string, fields?: Record<string, unknown>) => void;
 }
 
@@ -44,11 +45,11 @@ const prefixOf = (event: string): string => event.split(':', 1)[0] ?? '';
 const OWN_PREFIXES = new Set(Object.keys(ROOM_MESSAGES).map(prefixOf));
 
 // Per connection: about 10 messages a second, in bursts of up to 20. Per address and minute: 5
-// rooms, counting the attempts that came to nothing, and 20 codes that belong to no room, which
-// keeps anyone from trying codes until one fits.
+// rooms, unless ROOMS_PER_MINUTE says otherwise, counting the attempts that came to nothing, and
+// 20 codes that belong to no room, which keeps anyone from trying codes until one fits.
 const MESSAGES_PER_SECOND = 10;
 const MESSAGE_BURST = 20;
-const CREATIONS_PER_MINUTE = 5;
+export const DEFAULT_ROOMS_PER_MINUTE = 5;
 const FAILED_LOOKUPS_PER_MINUTE = 20;
 
 export interface RoomSockets {
@@ -62,7 +63,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   for (const id of games.keys()) {
     if (OWN_PREFIXES.has(id)) throw new Error(`a game can't be named "${id}", which is a prefix of the room messages`);
   }
-  const creations = new WindowCounter(CREATIONS_PER_MINUTE, 60_000, now);
+  const creations = new WindowCounter(options.roomsPerMinute, 60_000, now);
   const failedLookups = new WindowCounter(FAILED_LOOKUPS_PER_MINUTE, 60_000, now);
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
