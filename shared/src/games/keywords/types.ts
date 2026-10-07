@@ -12,7 +12,8 @@ export const otherTeam = (team: Team): Team => (team === 'red' ? 'blue' : 'red')
 export type CardColor = Team | 'neutral' | 'reviewer2';
 
 // The captain gives the clues (shown as the group's PI); guessers reveal cards (shown as students).
-export type Role = 'captain' | 'guesser' | 'spectator';
+export const ROLES = ['captain', 'guesser', 'spectator'] as const;
+export type Role = (typeof ROLES)[number];
 
 // Where a player sits. Spectators belong to no team. A seat is never changed: moving a player
 // gives them another seat.

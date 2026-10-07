@@ -1,5 +1,7 @@
 import {
   MAX_CHAT_INPUT,
+  MAX_CHAT_LENGTH,
+  MAX_CLUE_INPUT,
   otherTeam,
   type KeywordsRoomData,
   type KeywordsView,
@@ -253,10 +255,20 @@ describe('a game over sockets', () => {
       ok: false,
       error: 'stale',
     });
-    expect(await send(table.captains[team], 'clue', { ...now, word: 'Hint', count: 12 })).toEqual({
-      ok: false,
-      error: 'bad_count',
-    });
+    for (const count of [12, 1.5, 2 ** 53]) {
+      expect(await send(table.captains[team], 'clue', { ...now, word: 'Hint', count }), String(count)).toEqual({
+        ok: false,
+        error: 'bad_count',
+      });
+    }
+    // The content of an action is for the rules to judge, whatever the characters: a text of too
+    // many UTF-16 units is refused before it is looked at, with the game's own code.
+    for (const word of ['x'.repeat(MAX_CLUE_INPUT + 1), '\u{1f600}'.repeat(MAX_CLUE_INPUT / 2 + 1)]) {
+      expect(await send(table.captains[team], 'clue', { ...now, word, count: 1 })).toEqual({
+        ok: false,
+        error: 'clue_too_long',
+      });
+    }
     expect(await send(table.captains[team], 'clue', { ...now, word: 'two words', count: 1 })).toEqual({
       ok: false,
       error: 'clue_not_one_word',
@@ -447,11 +459,13 @@ describe('talking it over', () => {
     expect(await say(table.captains[team], 'psst')).toEqual({ ok: false, error: 'not_guesser' });
     expect(await say(table.spectator, 'hello')).toEqual({ ok: false, error: 'not_guesser' });
     expect(await say(table.guessers[team], ' \n ')).toEqual({ ok: false, error: 'chat_empty' });
-    expect(await say(table.guessers[team], 'x'.repeat(201))).toEqual({ ok: false, error: 'chat_too_long' });
-    expect(await say(table.guessers[team], 'x'.repeat(MAX_CHAT_INPUT + 1))).toEqual({
-      ok: false,
-      error: 'bad_request',
-    });
+    for (const text of [
+      'x'.repeat(MAX_CHAT_LENGTH + 1),
+      'x'.repeat(MAX_CHAT_INPUT + 1),
+      '\u{1f600}'.repeat(MAX_CHAT_INPUT / 2 + 1),
+    ]) {
+      expect(await say(table.guessers[team], text)).toEqual({ ok: false, error: 'chat_too_long' });
+    }
     expect(await say(table.guessers[team], 42)).toEqual({ ok: false, error: 'bad_request' });
     expect(await say(table.guessers[team], 'hi', 'an-earlier-game')).toEqual({ ok: false, error: 'stale' });
 

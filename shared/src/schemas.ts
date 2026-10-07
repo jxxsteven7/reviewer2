@@ -1,7 +1,5 @@
 import { z } from 'zod';
-import { MAX_CHAT_INPUT } from './games/keywords/chat';
-import { MAX_CLUE_INPUT } from './games/keywords/clue';
-import { TEAMS } from './games/keywords/types';
+import { ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
 import { MAX_NAME_INPUT } from './protocol';
 
@@ -52,26 +50,23 @@ export type RoomMessage = keyof typeof ROOM_MESSAGES;
 
 // The messages of the team word guessing game (docs/games/keywords.md). Each game action names the
 // game and the turn it was meant for, so that a late one can't land in a later turn.
+//
+// The content of an action is for the rules to judge: a clue or a chat message that is too long,
+// or a count that isn't one, gets the game's own answer from them, such as clue_too_long or
+// bad_count, and not bad_request from here. The rules refuse a long text before looking at it,
+// and the server takes no message of more than 16 KB at all (server.ts).
 const moment = { gameId, turn: z.number().int().min(1).max(10_000) };
 
 export const KEYWORDS_MESSAGES = {
-  'keywords:seat': z.object({
-    team: z.enum(TEAMS).nullable(),
-    role: z.enum(['captain', 'guesser', 'spectator']),
-  }),
-  'keywords:clue': z.object({
-    ...moment,
-    word: z.string().max(MAX_CLUE_INPUT),
-    // Any whole number is let through here, so that the rules can answer bad_count.
-    count: z.union([z.number().int(), z.literal('unlimited')]),
-  }),
+  'keywords:seat': z.object({ team: z.enum(TEAMS).nullable(), role: z.enum(ROLES) }),
+  'keywords:clue': z.object({ ...moment, word: z.string(), count: z.union([z.number(), z.literal('unlimited')]) }),
   // A guesser chooses a card for the group to see, or takes the choice back with null.
   'keywords:select': z.object({ ...moment, card: z.number().int().nullable() }),
   'keywords:reveal': z.object({ ...moment, card: z.number().int() }),
   'keywords:pass': z.object(moment),
   // A guesser writes one line to their group. It names the game but not the turn: a message is
   // welcome in whatever turn it arrives.
-  'keywords:say': z.object({ gameId, text: z.string().max(MAX_CHAT_INPUT) }),
+  'keywords:say': z.object({ gameId, text: z.string() }),
 } as const;
 
 export type KeywordsMessage = keyof typeof KEYWORDS_MESSAGES;
