@@ -1,7 +1,20 @@
 import { BOARD_SIZE, SPECTATOR, type KeywordsRoomData, type Seat } from '@reviewer2/shared';
 import { KEYWORDS_MESSAGES, type KeywordsMessage } from '@reviewer2/shared/schemas';
+import type { z } from 'zod';
+import { fail } from '../../core/answers';
 import type { GameContext, GameModule, GameUpdate } from '../../core/game';
-import { dropSelection, giveClue, newGame, pass, reveal, say, select, withdraw, type Outcome } from './rules';
+import {
+  dropSelection,
+  giveClue,
+  newGame,
+  pass,
+  reveal,
+  say,
+  select,
+  withdraw,
+  type Actor,
+  type Outcome,
+} from './rules';
 import {
   changeSeat,
   emptySeating,
@@ -12,6 +25,7 @@ import {
   startGame,
   startProblems,
   type Seating,
+  type SeatRequest,
 } from './seats';
 import type { KeywordsState } from './state';
 import { viewFor } from './view';
@@ -33,7 +47,6 @@ const fromOutcome = (data: KeywordsData, outcome: Outcome): GameUpdate<KeywordsD
   return { ok: true, data: outcome.state === data.game ? data : { ...data, game: outcome.state } };
 };
 
-// Whoever leaves their seat or the room takes their choice of a card with them.
 const withoutSelection = (game: KeywordsState | null, playerId: string) => game && dropSelection(game, playerId);
 
 // The seat rules of a game, which keep everyone in their group and key viewers out of the
@@ -42,39 +55,46 @@ const withoutSelection = (game: KeywordsState | null, playerId: string) => game 
 // them as soon as the game has ended, while the groups still have their chats.
 const inGame = (data: KeywordsData) => data.game !== null;
 
-function play(data: KeywordsData, ctx: GameContext, playerId: string, type: KeywordsMessage, payload: unknown) {
-  const parsed = KEYWORDS_MESSAGES[type].safeParse(payload ?? {});
-  if (!parsed.success) return { ok: false as const, error: 'bad_request' };
-  const body = parsed.data;
-
-  if (type === 'keywords:seat') {
-    const { team, role } = body as { team: Seat['team']; role: Seat['role'] };
-    const seat = { team, role } as Seat;
-    const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, seat, inGame(data));
-    if (!change.ok) return change;
-    if (change.seating === data.seating) return { ok: true as const, data };
-    return { ok: true as const, data: { seating: change.seating, game: withoutSelection(data.game, playerId) } };
-  }
-
-  // Once a game has ended, its actions still reach the rules, which answer stale or game_over in
-  // the order of the checks. In the waiting room there is no game, so an action there is for an
-  // earlier one, if any: stale, as the room answers a withdrawal or "play again" then.
-  if (!data.game) return { ok: false as const, error: 'stale' };
-  const actor = { id: playerId, ...seatOf(data.seating, playerId) };
-  switch (type) {
-    case 'keywords:clue':
-      return fromOutcome(data, giveClue(data.game, actor, body as Parameters<typeof giveClue>[2]));
-    case 'keywords:select':
-      return fromOutcome(data, select(data.game, actor, body as Parameters<typeof select>[2]));
-    case 'keywords:reveal':
-      return fromOutcome(data, reveal(data.game, actor, body as Parameters<typeof reveal>[2]));
-    case 'keywords:pass':
-      return fromOutcome(data, pass(data.game, actor, body as Parameters<typeof pass>[2]));
-    case 'keywords:say':
-      return fromOutcome(data, say(data.game, actor, body as Parameters<typeof say>[2]));
-  }
-  return { ok: false as const, error: 'bad_request' };
+// Moves a player to the seat they ask for, or to the spectators when the chair benches them.
+// Whoever leaves their seat takes their choice of a card with them (rules.ts); whoever asks for
+// the seat they are in changes nothing.
+function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: SeatRequest): GameUpdate<KeywordsData> {
+  const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, wanted, inGame(data));
+  if (!change.ok) return change;
+  if (change.seating === data.seating) return { ok: true, data };
+  return { ok: true, data: { seating: change.seating, game: withoutSelection(data.game, playerId) } };
 }
+
+// An action on the game, which the rules judge for the player in the seat they are in right
+// now. Once a game has ended, its actions still reach the rules, which answer stale or game_over
+// in the order of the checks. In the waiting room there is no game, so an action there is for an
+// earlier one, if any: stale, as the room answers a withdrawal or "play again" then.
+function act(data: KeywordsData, playerId: string, rule: (game: KeywordsState, actor: Actor) => Outcome) {
+  if (!data.game) return fail('stale');
+  return fromOutcome(data, rule(data.game, { id: playerId, ...seatOf(data.seating, playerId) }));
+}
+
+// What the game does on each of its messages, with the payload as the message's schema reads it.
+// Each action hands the rules exactly what its schema gives, so that a field which is named one
+// way in the schema and another in the rules doesn't compile, and neither does a message without
+// an action.
+type Payload<M extends KeywordsMessage> = z.infer<(typeof KEYWORDS_MESSAGES)[M]>;
+type Action<M extends KeywordsMessage> = (
+  data: KeywordsData,
+  ctx: GameContext,
+  playerId: string,
+  payload: Payload<M>,
+) => GameUpdate<KeywordsData>;
+
+const actions: { [M in KeywordsMessage]: Action<M> } = {
+  'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
+  'keywords:clue': (data, _ctx, playerId, clue) => act(data, playerId, (game, actor) => giveClue(game, actor, clue)),
+  'keywords:select': (data, _ctx, playerId, choice) =>
+    act(data, playerId, (game, actor) => select(game, actor, choice)),
+  'keywords:reveal': (data, _ctx, playerId, guess) => act(data, playerId, (game, actor) => reveal(game, actor, guess)),
+  'keywords:pass': (data, _ctx, playerId, moment) => act(data, playerId, (game, actor) => pass(game, actor, moment)),
+  'keywords:say': (data, _ctx, playerId, line) => act(data, playerId, (game, actor) => say(game, actor, line)),
+};
 
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
@@ -93,9 +113,8 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   }),
 
   bench(data, ctx, playerId) {
-    const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, SPECTATOR, inGame(data));
-    if (!change.ok || change.seating === data.seating) return data;
-    return { seating: change.seating, game: withoutSelection(data.game, playerId) };
+    const seated = sit(data, ctx, playerId, SPECTATOR);
+    return seated.ok ? seated.data : data;
   },
 
   shuffle: (data, ctx) => ({ ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) }),
@@ -110,16 +129,20 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   isOver: (data) => data.game?.phase === 'over',
 
-  withdraw: (data, gameId) =>
-    data.game ? fromOutcome(data, withdraw(data.game, { gameId })) : { ok: false, error: 'stale' },
+  withdraw: (data, gameId) => (data.game ? fromOutcome(data, withdraw(data.game, { gameId })) : fail('stale')),
 
   // Back to the waiting room: everyone keeps their seat, and nobody has seen the next key or
   // played for a group yet.
   again: (data) => ({ seating: endGame(data.seating), game: null }),
 
   handle(data, ctx, playerId, type, payload) {
-    if (!Object.hasOwn(KEYWORDS_MESSAGES, type)) return { ok: false, error: 'bad_request' };
-    return play(data, ctx, playerId, type as KeywordsMessage, payload);
+    if (!Object.hasOwn(KEYWORDS_MESSAGES, type)) return fail('bad_request');
+    const message = type as KeywordsMessage;
+    const parsed = KEYWORDS_MESSAGES[message].safeParse(payload ?? {});
+    if (!parsed.success) return fail('bad_request');
+    // The schema and the action of one message go together, which the types can't see across a
+    // lookup by name, as in socket.ts.
+    return (actions[message] as Action<KeywordsMessage>)(data, ctx, playerId, parsed.data);
   },
 
   view(data, ctx, viewer) {

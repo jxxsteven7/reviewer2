@@ -2,6 +2,7 @@ import {
   otherTeam,
   SPECTATOR,
   TEAMS,
+  type Role,
   type Seat,
   type SeatError,
   type StartProblem,
@@ -27,6 +28,13 @@ export interface Member {
   key: string;
 }
 
+// A seat as someone asks for it. A message names a team and a role apart, so the two may not go
+// together; changeSeat() takes only the seats that exist.
+export interface SeatRequest {
+  readonly team: Team | null;
+  readonly role: Role;
+}
+
 export type SeatChange = { ok: true; seating: Seating } | { ok: false; error: SeatError };
 
 export const emptySeating = (): Seating => ({ seats: new Map(), keyViewers: new Set(), sides: new Map() });
@@ -41,12 +49,12 @@ export function captainOf(seating: Seating, team: Team): string | null {
 // The seats that exist: a spectator's, and a captain's or a guesser's in one of the two teams.
 // Anything else is refused, whatever the caller's types promise, and the seat that is kept is a
 // new one, so that nothing the caller passed in stays in the room.
-function seatLike(seat: Seat): Seat | null {
-  if (typeof seat !== 'object' || seat === null) return null;
-  const { team, role } = seat;
+function seatLike(wanted: SeatRequest): Seat | null {
+  if (typeof wanted !== 'object' || wanted === null) return null;
+  const { team, role } = wanted;
   if (role === 'spectator') return team === null ? SPECTATOR : null;
   if (role !== 'captain' && role !== 'guesser') return null;
-  return TEAMS.includes(team) ? { team, role } : null;
+  return team !== null && TEAMS.includes(team) ? { team, role } : null;
 }
 
 // Moves a player to a seat. `playing` is true while a game is on. Then whoever sits down in a
@@ -54,7 +62,7 @@ function seatLike(seat: Seat): Seat | null {
 // in the other group, where they could act in the other group's turn. A captain's seat taken over
 // in the middle of a game shows that player the key, and nobody who has seen the key may become
 // a guesser until the next game.
-export function changeSeat(seating: Seating, member: Member, wanted: Seat, playing: boolean): SeatChange {
+export function changeSeat(seating: Seating, member: Member, wanted: SeatRequest, playing: boolean): SeatChange {
   const seat = seatLike(wanted);
   if (!seat) return { ok: false, error: 'bad_seat' };
   // Whoever asks for the seat they are in has it, and the seating is given back as it is, so that
