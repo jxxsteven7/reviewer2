@@ -5,6 +5,10 @@
   "description": "Types and rules shared by the client and the server",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
   }
 }

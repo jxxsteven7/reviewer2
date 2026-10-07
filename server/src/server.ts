@@ -1,17 +1,38 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import type { Config } from './config';
+import type { GameModule } from './core/game';
+import { cryptoRng, type Rng } from './core/random';
+import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
+import { attachSockets, type RoomSockets } from './core/socket';
+import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
+import { log as defaultLog } from './log';
 
 // One HTTP server on one port for both the front end and Socket.IO (docs/rules/constraints.md).
 export interface AppServer {
   http: HttpServer;
   io: Server;
+  rooms: Rooms;
+  sockets: RoomSockets;
+  // Tells everyone that the server is restarting, waits until they have been sent it, and closes.
+  stop(graceMs?: number): Promise<void>;
+  // Closes at once, and drops whatever a connection hasn't been sent yet.
   close(): Promise<void>;
 }
 
-export function createAppServer(config: Pick<Config, 'publicDir' | 'version'>): AppServer {
-  const http = createServer(createRequestHandler({ publicDir: config.publicDir, version: config.version }));
+export interface AppOptions extends Pick<Config, 'publicDir' | 'version'> {
+  words: WordLibrary;
+  games: GameModule[];
+  trustProxy?: boolean;
+  rng?: Rng;
+  now?: () => number;
+  limits?: RoomLimits;
+  log?: (event: string, fields?: Record<string, unknown>) => void;
+}
+
+export function createAppServer(options: AppOptions): AppServer {
+  const http = createServer(createRequestHandler({ publicDir: options.publicDir, version: options.version }));
   const io = new Server(http, {
     serveClient: false, // don't offer Socket.IO's client script: the front end loads only its own bundle
     // Notice dead connections sooner than the defaults of 25 s + 20 s: phones drop them whenever
@@ -20,7 +41,50 @@ export function createAppServer(config: Pick<Config, 'publicDir' | 'version'>): 
     pingTimeout: 8_000,
     maxHttpBufferSize: 16 * 1024,
   });
+  const rng = options.rng ?? cryptoRng;
+  // The server only ever asks how long ago something happened, never what time it is: for the
+  // limits, for how long a player has been away, for when a removed player may come back. So its
+  // clock is one that only runs forward. The system's clock gets corrected, sometimes by a lot,
+  // and every one of those waits would stretch or collapse with it.
+  const now = options.now ?? (() => performance.now());
+  const rooms = new Rooms(options.words, rng, now, options.limits ?? DEFAULT_LIMITS);
+  const sockets = attachSockets(io, {
+    rooms,
+    words: options.words,
+    games: new Map(options.games.map((game) => [game.id, game])),
+    now,
+    version: options.version,
+    trustProxy: options.trustProxy ?? false,
+    log: options.log ?? defaultLog,
+  });
   // io.close() also closes the HTTP server.
   const close = () => new Promise<void>((resolve) => io.close(() => resolve()));
-  return { http, io, close };
+
+  // Rooms live in memory, so they end with the process, and everyone is told so rather than left
+  // waiting. io.close() throws away whatever a connection hasn't been sent yet, which is the
+  // notice itself for anyone on a long poll that is between two requests, or on a slow
+  // connection. So each connection is first ended in the way that sends what is waiting, and
+  // gets a moment for it.
+  const stop = async (graceMs = 2_000) => {
+    sockets.closeAll('restart');
+    let timer: NodeJS.Timeout | undefined;
+    const sent = [...io.sockets.sockets.values()].map(
+      (socket) =>
+        new Promise<void>((resolve) => {
+          socket.conn.once('close', () => resolve());
+          socket.disconnect(true);
+        }),
+    );
+    const grace = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, graceMs);
+    });
+    await Promise.race([Promise.all(sent), grace]);
+    clearTimeout(timer);
+    // Whoever connected and made a room in the meantime is told as well, as far as that goes
+    // without waiting once more.
+    sockets.closeAll('restart');
+    for (const socket of io.sockets.sockets.values()) socket.disconnect(true);
+    await close();
+  };
+  return { http, io, rooms, sockets, stop, close };
 }

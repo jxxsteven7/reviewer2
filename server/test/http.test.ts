@@ -6,13 +6,14 @@ import { join } from 'node:path';
 import { brotliCompressSync, brotliDecompressSync, gunzipSync, gzipSync } from 'node:zlib';
 import { io as connect } from 'socket.io-client';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { WordLibrary } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
 
 const INDEX = '<!doctype html><title>Reviewer 2</title>';
 const SCRIPT = 'console.log(1);';
 
 async function start(publicDir: string): Promise<{ server: AppServer; base: string }> {
-  const server = createAppServer({ publicDir, version: 'test-version' });
+  const server = createAppServer({ publicDir, version: 'test-version', words: new WordLibrary([]), games: [] });
   await new Promise<void>((resolve) => server.http.listen(0, '127.0.0.1', resolve));
   const { port } = server.http.address() as AddressInfo;
   return { server, base: `http://127.0.0.1:${port}` };

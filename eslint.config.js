@@ -26,6 +26,41 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
   {
+    // The front end must not bundle zod. A schema is built when its module loads, so no bundler
+    // can leave it out, and building one probes `new Function`, which the page's own Content
+    // Security Policy refuses. The schemas are in shared/src/schemas.ts, which only the server
+    // imports, and nothing else on the client's side may reach zod or that module.
+    files: ['client/**', 'shared/src/**'],
+    ignores: ['shared/src/schemas.ts', 'shared/src/**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              // zod itself and its other entry points, such as zod/mini.
+              group: ['zod', 'zod/*'],
+              message: 'Only shared/src/schemas.ts may import zod, and only the server imports it.',
+            },
+            {
+              // The module by its package path and by any relative one, with or without ".ts".
+              group: ['**/schemas', '**/schemas.*'],
+              message: "The schemas are for the server only: they would pull zod into the client's bundle.",
+            },
+          ],
+        },
+      ],
+      // The rule above doesn't look at import().
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/^zod(\\/|$)|(^|\\/)schemas(\\.|$)/]',
+          message: 'Neither zod nor the schemas may be imported here, also not with import().',
+        },
+      ],
+    },
+  },
+  {
     // All interface text lives in the locale files (docs/rules/constraints.md), so templates may
     // contain only numbers and symbols as they are: the section sign, middle dot, infinity,
     // arrows, bullet, ellipsis, slashes, brackets and dashes.
