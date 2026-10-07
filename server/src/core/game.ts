@@ -50,7 +50,8 @@ export interface GameModule<Data = unknown, View = unknown> {
   // The game's own messages, such as "keywords:reveal". Must not await anything, so that no
   // other message can run between reading the data and writing it.
   handle(data: Data, ctx: GameContext, playerId: string, type: string, payload: unknown): GameUpdate<Data>;
-  // The game's part of the room view, filtered for this viewer. The only way a game's data
-  // leaves the server.
-  view(data: Data, ctx: GameContext, viewer: Viewer): View;
+  // The game's part of the room view, as a function of the viewer. The only way a game's data
+  // leaves the server. The room asks once for a snapshot and calls the function for each member
+  // and for the screens, so a module builds what everyone sees once, and filters it for each.
+  views(data: Data, ctx: GameContext): (viewer: Viewer) => View;
 }

@@ -1,4 +1,4 @@
-import { BOARD_SIZE, SPECTATOR, type KeywordsRoomData, type Seat } from '@reviewer2/shared';
+import { BOARD_SIZE, SPECTATOR, type KeywordsRoomData, type KeywordsView, type Seat } from '@reviewer2/shared';
 import { KEYWORDS_MESSAGES, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
@@ -145,19 +145,30 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return (actions[message] as Action<KeywordsMessage>)(data, ctx, playerId, parsed.data);
   },
 
-  view(data, ctx, viewer) {
+  views(data, ctx) {
     const members = ctx.playerIds();
+    // The seats are copied, so that a snapshot shares nothing with the room's own state.
     const seats: Record<string, Seat> = {};
-    for (const id of members) seats[id] = seatOf(data.seating, id);
-    // What a viewer sees depends on the seat they are in right now (view.ts): a captain who has
-    // stepped down to watch gets a spectator's view, and a screen always does.
-    const seat = ('playerId' in viewer && seats[viewer.playerId]) || SPECTATOR;
-    return {
+    for (const id of members) seats[id] = { ...seatOf(data.seating, id) };
+    const shared = {
       seats,
       keyViewers: members.filter((id) => data.seating.keyViewers.has(ctx.keyOf(id))),
-      side: ('playerId' in viewer && data.seating.sides.get(ctx.keyOf(viewer.playerId))) || null,
       startProblems: ctx.phase === 'lobby' ? startProblems(data.seating, online(ctx)) : [],
-      game: data.game ? viewFor(data.game, seat) : null,
+    };
+    // What a viewer sees of the game depends on the seat they are in right now (view.ts): a
+    // captain who has stepped down to watch gets a spectator's view, and a screen always does.
+    // So there are at most five views of a game, one for each seat, and each is built once.
+    const boards = new Map<string, KeywordsView | null>();
+    return (viewer) => {
+      const seat = ('playerId' in viewer && seats[viewer.playerId]) || SPECTATOR;
+      const key = `${seat.team}:${seat.role}`;
+      let game = boards.get(key);
+      if (game === undefined) boards.set(key, (game = data.game && viewFor(data.game, seat)));
+      return {
+        ...shared,
+        side: ('playerId' in viewer && data.seating.sides.get(ctx.keyOf(viewer.playerId))) || null,
+        game,
+      };
     };
   },
 };

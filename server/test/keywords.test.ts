@@ -3,6 +3,7 @@ import {
   MAX_CHAT_LENGTH,
   MAX_CLUE_INPUT,
   otherTeam,
+  SPECTATOR,
   TEAMS,
   type KeywordsRoomData,
   type KeywordsView,
@@ -10,7 +11,8 @@ import {
   type Team,
 } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import type { GameModule } from '../src/core/game';
+import type { GameContext, GameModule } from '../src/core/game';
+import { seededRng } from '../src/core/random';
 import { WordLibrary } from '../src/core/words';
 import { keywordsGame } from '../src/games/keywords';
 import { createRoom, joinRoom, startServer, TestClient, testWords, type Reply, type TestServer } from './helpers';
@@ -141,6 +143,43 @@ function expectGroupsApart(table: Table) {
   expectOwnGroupOnly(table.spectator, null);
   expectOwnGroupOnly(table.screen, null);
 }
+
+describe('the view', () => {
+  test("shares nothing with the room's own state, and is built once for each seat", () => {
+    const ctx: GameContext = {
+      phase: 'playing',
+      language: 'en',
+      rng: seededRng(1),
+      keyOf: (id) => id,
+      isOnline: () => true,
+      playerIds: () => ['ann', 'bob', 'cat'],
+    };
+    let data = keywordsGame.create();
+    for (const [id, seat] of [
+      ['ann', { team: 'red', role: 'captain' }],
+      ['bob', { team: 'red', role: 'guesser' }],
+    ] as const) {
+      const seated = keywordsGame.handle(data, ctx, id, 'keywords:seat', seat);
+      if (!seated.ok) throw new Error(seated.error);
+      data = seated.data;
+    }
+    data = keywordsGame.start(data, ctx, testWords().pool(['general'], 'en').slice(0, 25), 'game-1');
+    const view = keywordsGame.views(data, ctx);
+    const [ann, bob, cat, screen] = [
+      view({ playerId: 'ann' }),
+      view({ playerId: 'bob' }),
+      view({ playerId: 'cat' }),
+      view({ screen: true }),
+    ];
+    expect(ann.seats.ann).toEqual({ team: 'red', role: 'captain' });
+    expect(ann.seats.ann).not.toBe(data.seating.seats.get('ann'));
+    expect(ann.seats.cat).not.toBe(SPECTATOR);
+    expect(ann.game?.cards.every((card) => card.color)).toBe(true);
+    expect(bob.game?.cards.some((card) => card.color)).toBe(false);
+    expect(cat.game).toBe(screen.game);
+    expect([ann.side, bob.side, cat.side, screen.side]).toEqual(['red', 'red', null, null]);
+  });
+});
 
 describe('seats and starting', () => {
   test('the waiting room shows what is missing', async () => {

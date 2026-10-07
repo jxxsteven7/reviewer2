@@ -92,13 +92,13 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (type === 'test:explode') throw new Error('the game broke');
     return { ok: false, error: 'bad_request' };
   },
-  view(data, _ctx, viewer) {
+  views(data) {
     if (data.broken === 'view') throw new Error('the view broke');
-    return {
+    return (viewer) => ({
       presses: data.presses,
       words: data.words,
       benched: data.benched,
       forViewer: 'playerId' in viewer ? `for ${viewer.playerId}` : 'for screens',
-    };
+    });
   },
 };

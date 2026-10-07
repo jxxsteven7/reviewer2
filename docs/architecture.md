@@ -82,7 +82,7 @@ A game is a module that implements `GameModule` (`server/src/core/game.ts`). The
 - how a game starts, how many words it needs and what happens on each of its messages;
 - what each viewer sees.
 
-A module's data is immutable: every call returns new data. `view()` is the only way a game's data leaves the server. It is called for each member and for screens, so a game can show each player only what that player may know. `server/test/fakeGame.ts` is a minimal module that the core's tests use.
+A module's data is immutable: every call returns new data. `views()` is the only way a game's data leaves the server. The room asks it once for a snapshot and calls what it returns for each member and for the screens, so a game builds what everyone sees once, and shows each player only what that player may know. `server/test/fakeGame.ts` is a minimal module that the core's tests use.
 
 The room draws the words for each game from the fields that the chair chose, preferring words it hasn't played with yet, and hands them to the module. After every change to a module's data during a game, the room asks the module whether the game is over.
 

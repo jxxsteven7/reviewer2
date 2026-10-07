@@ -413,9 +413,12 @@ export class Room {
 
   // The room as it is now, for any number of viewers. Most of a view is the same for everyone, so
   // that part is put together once; the function that this returns adds what one viewer sees,
-  // which is who they are and the game's part for them.
+  // which is who they are and the game's part for them. The game builds its part when the first
+  // viewer asks, so that a module which can't build it throws to each viewer in turn, where the
+  // socket layer catches it, and costs each of them their snapshot alone.
   views(): (viewer: Viewer) => RoomView {
     const context = this.context;
+    let game: ((viewer: Viewer) => unknown) | undefined;
     const shared = {
       roomId: this.id,
       code: this.code,
@@ -437,7 +440,7 @@ export class Room {
     return (viewer) => ({
       ...shared,
       me: 'playerId' in viewer ? viewer.playerId : null,
-      data: this.game.view(this.data, context, viewer),
+      data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }
 
