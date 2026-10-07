@@ -32,6 +32,12 @@ const fromOutcome = (data: KeywordsData, outcome: Outcome): GameUpdate<KeywordsD
 // Whoever leaves their seat or the room takes their choice of a card with them.
 const withoutSelection = (game: KeywordsState | null, playerId: string) => game && dropSelection(game, playerId);
 
+// The seat rules of a game, which keep everyone in their group and key viewers out of the
+// guessers' seats, hold from the start of a game until "play again" takes the room back to the
+// waiting room: `data.game` is there for exactly that long. The room's phase would let go of
+// them as soon as the game has ended, while the groups still have their chats.
+const inGame = (data: KeywordsData) => data.game !== null;
+
 function play(data: KeywordsData, ctx: GameContext, playerId: string, type: KeywordsMessage, payload: unknown) {
   const parsed = KEYWORDS_MESSAGES[type].safeParse(payload ?? {});
   if (!parsed.success) return { ok: false as const, error: 'bad_request' };
@@ -40,7 +46,7 @@ function play(data: KeywordsData, ctx: GameContext, playerId: string, type: Keyw
   if (type === 'keywords:seat') {
     const { team, role } = body as { team: Seat['team']; role: Seat['role'] };
     const seat = { team, role } as Seat;
-    const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, seat, ctx.phase === 'playing');
+    const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, seat, inGame(data));
     if (!change.ok) return change;
     const before = seatOf(data.seating, playerId);
     const moved = before.team !== seat.team || before.role !== seat.role;
@@ -84,12 +90,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   }),
 
   bench(data, ctx, playerId) {
-    const change = changeSeat(
-      data.seating,
-      { id: playerId, key: ctx.keyOf(playerId) },
-      SPECTATOR,
-      ctx.phase === 'playing',
-    );
+    const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, SPECTATOR, inGame(data));
     return change.ok ? { seating: change.seating, game: withoutSelection(data.game, playerId) } : data;
   },
 

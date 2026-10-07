@@ -462,6 +462,23 @@ describe('talking it over', () => {
     expect(board(table.captains[team]).chat).toEqual(ours);
     expect(await say(table.guessers[team], 'gg')).toEqual({ ok: false, error: 'game_over' });
     expectGroupsApart(table);
+
+    // The groups hold until the next game, also for whoever the chair moves to the spectators
+    // now, since the chats are still there to read. "Play again" frees everyone.
+    const bob = table.guessers[team];
+    await expectOk(table.captains.red.send('room:spectate', { playerId: bob.me }));
+    expect(await bob.send('keywords:seat', { team: other, role: 'guesser' })).toEqual({
+      ok: false,
+      error: 'other_team',
+    });
+    expect(await table.captains[team].send('keywords:seat', { team, role: 'guesser' })).toEqual({
+      ok: false,
+      error: 'key_viewer',
+    });
+    await expectOk(bob.send('keywords:seat', { team, role: 'guesser' }));
+    expect(board(bob).chat).toEqual(ours);
+    await expectOk(table.captains.red.send('room:again', { gameId }));
+    await expectOk(bob.send('keywords:seat', { team: other, role: 'guesser' }));
   });
 });
 
