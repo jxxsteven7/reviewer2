@@ -1,4 +1,4 @@
-import { giveClue, keyCard, pageErrors, reveal, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
+import { endTurn, giveClue, keyCard, pageErrors, reveal, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
 
 test('an unlimited clue allows any number of guesses, until the group ends its turn', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
@@ -8,18 +8,22 @@ test('an unlimited clue allows any number of guesses, until the group ends its t
   await giveClue(captain, 'Everything', 'unlimited', 'en');
   for (let i = 0; i < 4; i += 1) await reveal(guesser, await keyCard(captain, team));
   await expect(guesser.locator('.strip')).toContainText(TEXT.en.game.noLimit);
-  await guesser.getByRole('button', { name: TEXT.en.game.endTurn }).click();
+  await endTurn(guesser, 'en');
   await expect(guesser.locator('.strip')).not.toHaveClass(new RegExp(`\\b${team}\\b`));
   expect(pageErrors).toEqual([]);
 });
 
-test('a clue that repeats a word on the board is refused while the PI types', async ({ browser }) => {
+test('a clue that repeats a word on the board is refused while the PI types, naming the card', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
   const captain = table.captains[team];
-  const word = await captain.locator('.board .card').first().getAttribute('aria-label');
-  await captain.getByLabel(TEXT.en.game.clueInput).fill((word ?? '').split(',')[0]?.split(' ')[0] ?? '');
-  await expect(captain.locator('.clue-panel .problem')).toHaveText(TEXT.en.errors.clue_on_board);
+  // The first card's word, from its label "word, not revealed", and the first word of it.
+  const label = await captain.locator('.board .card').first().getAttribute('aria-label');
+  const word = (label ?? '').split(',')[0] ?? '';
+  await captain.getByLabel(TEXT.en.game.clueInput).fill(word.split(' ')[0] ?? '');
+  await expect(captain.locator('.clue-panel .problem')).toHaveText(
+    TEXT.en.game.onBoard.replace('{word}', `\u201c${word}\u201d`),
+  );
   await expect(captain.getByRole('button', { name: TEXT.en.game.sendClue })).toBeDisabled();
 });
 

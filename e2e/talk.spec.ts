@@ -55,7 +55,7 @@ test("a group's students see each other's choices, and nobody else does", async 
   await expect(card(student, 7).locator('.choosers')).toHaveCount(0);
   await card(fay, 3).click();
   await expect(card(student, 3).locator('.choosers')).toHaveText('Fay');
-  await expect(card(captain, 3).locator('.choosers')).toHaveText(`${name}, Fay`);
+  await expect(card(captain, 3).locator('.choosers')).toHaveText(`${name} and Fay`);
   for (const page of [table.captains[other], table.guessers[other], table.spectator, table.screen]) {
     await expect(page.locator('.board .choosers')).toHaveCount(0);
   }

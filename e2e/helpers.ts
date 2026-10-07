@@ -256,10 +256,16 @@ export async function reveal(guesser: Page, index: number): Promise<void> {
   await expect(guesser.locator('.board .card').nth(index)).toHaveClass(/revealed/);
 }
 
+// A guesser ends the turn, and confirms it in the sheet that asks first.
+export async function endTurn(guesser: Page, language: Language): Promise<void> {
+  const text = TEXT[language];
+  await guesser.locator('.guess-bar').getByRole('button', { name: text.game.endTurn }).click();
+  await guesser.locator('[role=dialog]').getByRole('button', { name: text.game.endTurn }).click();
+}
+
 // Plays until the game ends: each turn, the PI gives a clue and the group reveals one of its own
 // cards, then ends the turn.
 export async function playToTheEnd(table: Table): Promise<void> {
-  const text = TEXT[table.language];
   const ann = table.captains.red;
   for (let turn = 1; turn < 40; turn += 1) {
     if (await ann.locator('.letter').isVisible()) return;
@@ -267,9 +273,7 @@ export async function playToTheEnd(table: Table): Promise<void> {
     await giveClue(table.captains[team], `Hint${turn}`, 2, table.language);
     await reveal(table.guessers[team], await keyCard(table.captains[team], team));
     const guesser = table.guessers[team];
-    if (await guesser.locator('.guess-bar').isVisible()) {
-      await guesser.getByRole('button', { name: text.game.endTurn }).click();
-    }
+    if (await guesser.locator('.guess-bar').isVisible()) await endTurn(guesser, table.language);
     await expect(ann.locator('.strip.over, .strip:not(.' + team + '), .letter').first()).toBeVisible();
   }
   throw new Error('the game did not end');
