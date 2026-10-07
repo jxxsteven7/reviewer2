@@ -83,7 +83,7 @@ Players in one room can simply talk. Players who are apart need to see what the 
 
 - Only guessers write. Captains read their own group's chat, as they would hear their group at a table, but can't write: the clue is all a captain may say. Spectators and screens see no chat, since they can see both groups and could carry a message across.
 - A message is one line of up to 200 characters. Line breaks become spaces, and invisible characters and piles of combining marks are dropped; the joiners and selectors that emoji are built with stay. The check is shared, like the clue check: the player's screen runs it while they type, and the server runs it again.
-- Each group keeps its latest 50 messages. Every message has an ID that counts up from 1 within its group, and carries the turn in which it was written.
+- Each group keeps its latest 20 messages. Every message has an ID that counts up from 1 within its group, and carries the turn in which it was written. The chat goes out with every snapshot, and a snapshot goes to everyone after every change, so a group's chat is kept short to keep the snapshots small.
 - The chat lasts for one game. It stays in its group after the game is over, even though every color is shown then, and the next game starts with an empty one.
 
 ## Winning

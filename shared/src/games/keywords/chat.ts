@@ -13,9 +13,12 @@ export interface ChatCheck {
 export const MAX_CHAT_LENGTH = 200;
 // The longest text that is looked at at all, in UTF-16 units as it arrives.
 export const MAX_CHAT_INPUT = 1000;
-// How many messages a group keeps. Older ones are dropped, so that the state of a room, which
-// every change sends to every player, stays small.
-export const CHAT_KEPT = 50;
+// How many messages a group keeps. Every change to a room sends each member a whole snapshot
+// with their group's chat in it, so the chat decides how large a snapshot can get, and a guesser
+// may send ten messages of 200 characters a second, each of which goes out to everyone in the
+// room with the whole chat. Twenty messages are what a group has said in the turn or two that it
+// is still thinking about, and at most 4,000 characters in a snapshot.
+export const CHAT_KEPT = 20;
 
 // Line breaks, tabs and other control characters count as spaces: a message is one line.
 const SPACES = /[\s\p{Cc}]+/gu;
