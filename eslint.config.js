@@ -72,7 +72,10 @@ export default defineConfig([
     rules: {
       '@intlify/vue-i18n/no-raw-text': [
         'error',
-        { ignorePattern: '^[\\s\\d\u00a7\u00b7\u221e\u2192\u2190\u2022\u2026/:#()+\\-\u2013\u2014]+$' },
+        {
+          ignorePattern: '^[\\s\\d\u00a7\u00b7\u00d7\u221e\u2192\u2190\u2022\u2026/:#()+\\-\u2013\u2014]+$',
+          ignoreText: ['R2-'],
+        },
       ],
       '@intlify/vue-i18n/no-missing-keys': 'error',
     },

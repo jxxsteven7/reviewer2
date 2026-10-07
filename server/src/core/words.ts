@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
+import { LANGUAGES, wordKey, type BoardWord, type FieldInfo, type Language } from '@reviewer2/shared';
 import { shuffle, type Rng } from './random';
 
 // The word library: one list per academic field, from the JSON files in words/ (see
@@ -11,13 +11,6 @@ export interface WordListData {
   id: string;
   name: Record<Language, string>;
   terms: { id: string; zh?: string; en?: string }[];
-}
-
-// What players see of a field when they set up a room.
-export interface FieldInfo {
-  id: string;
-  name: Record<Language, string>;
-  counts: Record<Language, number>;
 }
 
 interface Field {

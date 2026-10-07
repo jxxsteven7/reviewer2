@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
+import { KEYWORDS_ERRORS, ROOM_ERRORS, SEAT_ERRORS } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
+import { CLIENT_ERRORS } from '../core/errors';
 
 // Every interface string exists in both languages (docs/rules/constraints.md). The files are
 // read as plain JSON: importing them would hand back the compiled messages instead.
@@ -39,5 +41,11 @@ describe('locale files', () => {
 
   test('use the same placeholders and plural forms in both languages', () => {
     for (const [key, message] of en) expect(shape(zh.get(key) ?? ''), key).toEqual(shape(message));
+  });
+
+  test('explain every error the server or the client can report', () => {
+    for (const code of [...ROOM_ERRORS, ...KEYWORDS_ERRORS, ...SEAT_ERRORS, ...CLIENT_ERRORS]) {
+      expect(en.has(`errors.${code}`), code).toBe(true);
+    }
   });
 });

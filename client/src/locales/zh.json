@@ -8,10 +8,173 @@
     "zh": "中文",
     "en": "English"
   },
+  "gate": {
+    "title": "选择语言",
+    "description": "界面和牌上的词都将使用中文。"
+  },
   "home": {
-    "status": "撰写中",
     "intro": "在浏览器里玩的学术主题聚会游戏。每人用自己的手机或电脑加入同一个房间，输入昵称就能开始，无需注册。",
-    "first": "第一个游戏《双盲》正在撰写中：两个课题组比赛找出自己的关键词，二号审稿人则在等着有人一不小心翻到它。"
+    "contents": "目录",
+    "players": "4 到 30 人",
+    "newRoom": "新建房间",
+    "forthcoming": "即将发表",
+    "games": {
+      "keywords": {
+        "name": "双盲",
+        "summary": "两个课题组根据一个词的提示，比赛找出自己的关键词。翻到二号审稿人，论文当场被拒。"
+      },
+      "impostor": {
+        "name": "找出卧底",
+        "summary": "大家拿到同一个术语，只有一人拿到的是相近的另一个。"
+      },
+      "titles": {
+        "name": "真假标题",
+        "summary": "分辨真实的论文标题和编出来的标题。"
+      },
+      "abstracts": {
+        "name": "瞎编摘要",
+        "summary": "为一篇谁都没读过的论文写一段像样的摘要。"
+      }
+    },
+    "join": {
+      "title": "加入房间",
+      "label": "稿件编号",
+      "placeholder": "K7QX",
+      "submit": "加入",
+      "invalid": "请输入 R2- 后面的 4 个字符。"
+    },
+    "rules": "怎么玩"
+  },
+  "create": {
+    "title": "新建房间",
+    "language": "语言",
+    "languageHint": "房间里的一切，包括牌上的词，都将使用{language}。",
+    "fields": "词库",
+    "fieldTerms": "{count} 个词",
+    "fieldTooSmall": "这种语言的词不够",
+    "noFields": "这种语言暂时还没有可用的词库。",
+    "name": "你的昵称",
+    "submit": "创建房间",
+    "cancel": "取消"
+  },
+  "room": {
+    "manuscript": "稿件编号",
+    "copyLink": "复制链接",
+    "copied": "链接已复制。",
+    "share": "分享",
+    "shareTitle": "来 Reviewer 2 加入我的房间",
+    "qr": "二维码",
+    "qrHint": "扫码加入 {code}。",
+    "screen": "投屏",
+    "screenHint": "在投影或共享屏幕上打开这个页面。它显示棋盘，但不显示答案。",
+    "selectLink": "请选中链接，手动复制。",
+    "close": "关闭",
+    "connecting": "正在连接……",
+    "reconnecting": "正在重新连接……",
+    "joining": "正在打开房间……",
+    "join": {
+      "title": "加入 {code}",
+      "name": "你的昵称",
+      "submit": "加入"
+    },
+    "notFound": {
+      "title": "没有这个房间",
+      "body": "这个房间不存在，或者已经关闭。"
+    },
+    "closed": {
+      "removed": "主持已将你移出这个房间。",
+      "expired": "这个房间已经关闭。",
+      "left": "你已在另一个标签页里离开了这个房间。",
+      "restart": "服务器正在更新，这个房间已经关闭。请稍后新建一个房间。"
+    },
+    "home": "返回首页",
+    "you": "你",
+    "chair": "主持",
+    "offline": "离线",
+    "rename": "修改昵称",
+    "renameSubmit": "保存",
+    "leave": "离开房间",
+    "leaveConfirm": "确定离开这个房间吗？你的座位会被让出。",
+    "people": "房间里有 {count} 人"
+  },
+  "lobby": {
+    "kicker": "等待区",
+    "group": {
+      "red": "红组",
+      "blue": "蓝组"
+    },
+    "roles": {
+      "captain": "导师",
+      "guesser": "学生",
+      "spectator": "旁听"
+    },
+    "vacant": "空缺",
+    "nobody": "还没有人",
+    "takeCaptain": "担任导师",
+    "joinAsGuesser": "加入当学生",
+    "watch": "旁听",
+    "captainNote": "导师能看到哪些牌属于本组，并给出一个词的提示。",
+    "desk": "主持台",
+    "fields": "词库",
+    "saveFields": "保存",
+    "shuffle": "随机分组",
+    "start": "开始游戏",
+    "ready": "需要的人都已就座。",
+    "waiting": "等待主持开始游戏。",
+    "problems": {
+      "needs_captain": "{group}还需要一位导师。",
+      "captain_offline": "{group}的导师不在线。",
+      "needs_guesser": "{group}还需要至少一名在线的学生。"
+    },
+    "manage": {
+      "spectate": "改为旁听",
+      "remove": "移出房间",
+      "chair": "设为主持",
+      "cancel": "取消"
+    }
+  },
+  "game": {
+    "started": "游戏已经开始。"
+  },
+  "errors": {
+    "bad_request": "服务器无法理解这个请求。",
+    "rate_limited": "请求太频繁了，请稍等一下。",
+    "internal": "服务器出错了。",
+    "bad_game": "没有这个游戏。",
+    "bad_fields": "请选择存在的词库。",
+    "no_words": "这些词库在这种语言下的词不够。",
+    "too_many_rooms": "服务器已满，请稍后再试。",
+    "room_not_found": "没有这个编号的房间。",
+    "room_full": "这个房间已经满了。",
+    "screens_full": "这个房间的投屏数量已达上限。",
+    "name_required": "请输入昵称。",
+    "name_invalid": "昵称需要 1 到 16 个可见字符。",
+    "name_taken": "房间里已经有人用了这个昵称。",
+    "removed_recently": "你刚被移出这个房间，两分钟后才能回来。",
+    "not_member": "你不在这个房间里。",
+    "not_chair": "只有主持可以这样做。",
+    "no_such_player": "这名玩家已经离开了。",
+    "wrong_phase": "现在不能这样做。",
+    "cannot_start": "游戏还不能开始。",
+    "stale": "那个回合已经结束了。",
+    "game_over": "游戏已经结束了。",
+    "not_your_turn": "现在不是你们组的回合。",
+    "not_captain": "只有导师可以给提示。",
+    "not_guesser": "只有学生可以翻牌。",
+    "no_such_card": "没有这张牌。",
+    "card_revealed": "这张牌已经翻开了。",
+    "must_guess_first": "至少翻开一张牌，才能结束回合。",
+    "clue_empty": "请输入提示词。",
+    "clue_not_one_word": "提示只能是一个词，不能有空格或标点。",
+    "clue_too_long": "这个提示太长了。",
+    "clue_on_board": "提示词不能是牌上的词，也不能是牌上的词的一部分。",
+    "bad_count": "请选择 0 到 9 的数字，或者不限。",
+    "seat_taken": "这个座位已经有人了。",
+    "key_viewer": "你在这一局里看过答案，下一局才能当学生。",
+    "bad_seat": "没有这个座位。",
+    "offline": "你已离线，正在等待连接……",
+    "timeout": "服务器没有回应，请再试一次。",
+    "unknown": "出错了。"
   },
   "footer": {
     "noSignUp": "无需注册，没有广告。",
