@@ -5,8 +5,9 @@ import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
 
 // The result, written as an editor's decision letter: accepted for the group that found all its
-// keywords, rejected for the group that revealed Reviewer 2, or withdrawn by the chair.
-const props = defineProps<{ result: GameResult; isChair: boolean }>();
+// keywords, rejected for the group that revealed Reviewer 2, or withdrawn by the chair. `busy`
+// holds "Play again" while a press of it is on its way.
+const props = withDefaults(defineProps<{ result: GameResult; isChair: boolean; busy?: boolean }>(), { busy: false });
 const emit = defineEmits<{ again: [] }>();
 const { t } = useI18n();
 
@@ -35,7 +36,9 @@ const letter = computed(() => {
     <h2 class="verdict">{{ letter.verdict }}</h2>
     <p class="body">{{ letter.body }}</p>
     <p class="signature">{{ t('game.letter.signature') }}</p>
-    <UiButton v-if="isChair" variant="primary" @click="emit('again')">{{ t('game.letter.again') }}</UiButton>
+    <UiButton v-if="isChair" variant="primary" :disabled="busy" @click="emit('again')">
+      {{ t('game.letter.again') }}
+    </UiButton>
     <p v-else class="wait">{{ t('game.letter.waitAgain') }}</p>
   </article>
 </template>

@@ -169,6 +169,7 @@
     "chosenBy": "{names}选了这张",
     "reveal": "翻开“{word}”",
     "endTurn": "结束回合",
+    "endTurnConfirm": "现在结束回合吗？本组要到下一回合才能再翻牌。",
     "log": "提示记录",
     "noClues": "还没有提示。",
     "groups": "分组",

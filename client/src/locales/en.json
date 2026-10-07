@@ -169,6 +169,7 @@
     "chosenBy": "chosen by {names}",
     "reveal": "Reveal “{word}”",
     "endTurn": "End the turn",
+    "endTurnConfirm": "End the turn now? Your group reveals no more cards until its next turn.",
     "log": "Clue log",
     "noClues": "No clues yet.",
     "groups": "Groups",
