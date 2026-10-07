@@ -55,11 +55,24 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 | `UiButton` | `primary` for the one main action of a screen, `secondary` for the others, `quiet` for link-like actions, `danger` for actions that can't be undone |
 | `UiField` | A labelled input with a hint or an error below it, and an optional prefix such as `R2-` |
 | `UiSheet` | A sheet that rises from the bottom on phones and a dialog on wider screens. It is built by hand rather than with `<dialog>`, which older in-app browsers lack |
-| `UiToasts` | Short messages at the bottom, such as the reason the server refused something |
+| `UiToasts` | Short messages at the top, such as the reason the server refused something. At the bottom they would cover the game's action bar or a sheet's input, right where the player just tapped |
 | `ConnectionBanner` | "Reconnecting..." at the top, whenever the connection is gone |
 | `PageMasthead`, `SiteWordmark` | The top of every page: the wordmark on the left, the manuscript number or the language switch on the right |
 | `ManuscriptId`, `QrCode`, `ShareTools` | The room's number, and ways to bring people in. Sharing falls back from the share sheet, to the clipboard, to a selected link that people copy by hand, which is what WeChat and plain http allow |
 | `PlayerName` | A name with an online dot and marks for "you" and the chair. For the chair, other names open the chair's actions |
+
+## Cards
+
+- **Hidden** (what students and spectators see): white with a thin rule, the word centered. A student's own choice gets a double ink border, and the student confirms it with the "Reveal" button below the board. Revealing takes two steps so that a stray tap can't reveal anything, and "End the turn", which sits next to "Reveal", asks for a confirmation for the same reason.
+- **Chosen by others**: the group sees each student's choice. The names of the others who chose a card run along its bottom, in small type above a dotted rule, for the group's students and its PI. The choice comes from the server, so every screen in the group shows the same one; the student's own choice shows at once, before the server confirms it.
+- **Known but hidden** (the PI's key, and every card after the game): a tint of the card's color, with a band along the top and a small label: Red, Blue, Irrelevant or R2.
+- **Revealed**: the full color, with white type on red, blue and Reviewer 2, and ink on grey. Reviewer 2 gets a slanted "Reject" stamp in `--stamp`.
+- **Type**: English words are set in Source Serif 4, Chinese words in the system sans. Long words get smaller type, and English words are hyphenated with Liang's en-us patterns (the `hyphen` package, the same patterns that TeX uses), because many browsers don't hyphenate at all. The build hyphenates the terms of the word library, so the page carries their break points and not the patterns. A card grows a little when a word needs the room, rather than cut it off.
+- **The board** is a 5×5 grid that fills the width on a phone. On a big screen it is sized to fit the screen's height, with the type scaled up to match.
+
+## The group chat
+
+The students of a group talk it over in a chat that only their group sees. A "Group chat" button next to the line that says who you are opens it as a sheet, and shows in a small ink box how many messages are new. The sheet lists the messages under small-capital turn headings, each with its sender's name in bold, and ends with a one-line input. The input runs the same check as the server: the count of characters sits below it, and the send button stays disabled for an empty or too long message. The list follows new messages only while it is scrolled to its end, so that a student reading older messages isn't pulled away from them. A PI reads the chat but gets a note instead of the input, and spectators and screens have no button at all. After the game the button stays where it is, and the input is gone.
 
 ## Writing
 

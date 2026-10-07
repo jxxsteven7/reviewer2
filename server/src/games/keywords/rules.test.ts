@@ -41,6 +41,8 @@ describe('giving a clue', () => {
     const next = accepted(giveClue(state, captain('red'), { ...now(state), word: '  Self-Attention ', count: 1 }));
     expect(next.clue?.word).toBe('Self-Attention');
     expect(next.history[0]?.word).toBe('Self-Attention');
+    const pasted = accepted(giveClue(state, captain('red'), { ...now(state), word: 'Gra\u00addi\u00adent', count: 1 }));
+    expect(pasted.clue?.word).toBe('Gradient');
   });
 
   test('records the clue as it was typed, without invisible characters', () => {

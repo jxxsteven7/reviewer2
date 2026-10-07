@@ -1,23 +1,30 @@
 <script setup lang="ts">
-import { formatCode, type RoomView } from '@reviewer2/shared';
+import { formatCode, type KeywordsView, type RoomView } from '@reviewer2/shared';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerName from '../../core/components/PlayerName.vue';
 import QrCode from '../../core/components/QrCode.vue';
+import { HTML_LANG } from '../../core/i18n';
 import { roomLink } from '../../core/room';
+import ClueLog from './ClueLog.vue';
+import DecisionLetter from './DecisionLetter.vue';
+import KeywordsBoard from './KeywordsBoard.vue';
+import TurnStrip from './TurnStrip.vue';
 import { useKeywords } from './useKeywords';
 
-// The room on a big screen. In the waiting room, it shows how to join and who sits where. The
-// board for the game itself comes in the next change.
+// The room on a big screen. In the waiting room: how to join, and who sits where. During the
+// game: the board as spectators see it, with the turn and the clue log. A screen never gets the
+// key, so it can stay on the wall for everyone.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
-const { groups, spectators } = useKeywords(toRef(props, 'room'));
+const { data, groups, spectators } = useKeywords(toRef(props, 'room'));
 const link = computed(() => roomLink(props.room.code));
 const number = computed(() => formatCode(props.room.code));
+const game = computed(() => data.value.game as KeywordsView | null);
 </script>
 
 <template>
-  <section class="screen">
+  <section v-if="room.phase === 'lobby' || !game" class="screen">
     <div class="join">
       <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
       <p class="code mono">{{ number }}</p>
@@ -37,10 +44,23 @@ const number = computed(() => formatCode(props.room.code));
           </li>
         </ul>
       </section>
-      <p v-if="room.phase === 'ended'">{{ t('game.ended') }}</p>
-      <p v-else-if="room.phase !== 'lobby'">{{ t('game.started') }}</p>
-      <p v-else class="role">{{ t('lobby.roles.spectator') }} &middot; {{ spectators.length }}</p>
+      <p class="role">{{ t('lobby.roles.spectator') }} &middot; {{ spectators.length }}</p>
     </div>
+  </section>
+
+  <section v-else class="screen-game">
+    <div class="main" :class="{ over: game.result }">
+      <DecisionLetter v-if="game.result" :result="game.result" :is-chair="false" />
+      <TurnStrip v-else :game="game" />
+      <KeywordsBoard :cards="game.cards" :selectable="false" :selected="null" :lang="HTML_LANG[room.language]" large />
+    </div>
+    <aside class="side">
+      <div class="join small">
+        <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
+        <p class="mono">{{ number }}</p>
+      </div>
+      <ClueLog :game="game" />
+    </aside>
   </section>
 </template>
 
@@ -61,6 +81,10 @@ const number = computed(() => formatCode(props.room.code));
 
 .join :deep(.qr) {
   max-width: 20rem;
+}
+
+.join.small :deep(.qr) {
+  max-width: 9rem;
 }
 
 .code {
@@ -108,15 +132,38 @@ ul {
   color: var(--ink-3);
 }
 
+.vacant:lang(en) {
+  font-style: italic;
+}
+
+.screen-game {
+  display: grid;
+  gap: var(--space-5);
+  padding-bottom: var(--space-5);
+}
+
+/* The whole board fits on the screen: five rows of cards that are 4/5 as tall as they are wide,
+   under the masthead and the turn strip. The decision letter that takes the strip's place at
+   the end is about 10rem taller, and the board makes room for it. */
+.screen-game .main {
+  width: min(100%, calc((100vh - 15rem) * 1.25));
+  width: min(100%, calc((100dvh - 15rem) * 1.25));
+}
+
+.screen-game .main.over {
+  width: min(100%, calc((100vh - 25rem) * 1.25));
+  width: min(100%, calc((100dvh - 25rem) * 1.25));
+}
+
 @media (min-width: 60rem) {
   .screen {
     grid-template-columns: auto 1fr;
     align-items: start;
   }
-}
 
-/* Chinese has no true italics, and slanted characters look broken. */
-.vacant:lang(en) {
-  font-style: italic;
+  .screen-game {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+  }
 }
 </style>

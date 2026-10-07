@@ -14,7 +14,7 @@
 
 Two research groups, Red and Blue, face off over 25 academic terms. Each group's captain knows which cards belong to their group, but may give only **one word and one number** as a clue. The rest of the group then flips cards based on the clue. Flip an irrelevant paper or one of the other group's cards and your turn ends. Flip **Reviewer 2** and your paper is rejected on the spot: your group loses. That card gave the project its name.
 
-The game does not have an official name yet. In the code, its module is called `keywords`.
+The game is called **Double Blind** for now. In the code, its module is called `keywords`, and [docs/games/keywords.md](docs/games/keywords.md) has the full rules.
 
 ## Features
 
@@ -26,9 +26,9 @@ The game does not have an official name yet. In the code, its module is called `
 
 ## Status
 
-🚧 In early development and not playable yet. Once it launches, it will live at <https://playreviewer2.com>.
+🚧 In early development. The first game can be played from a local build (see [Running locally](#running-locally)), but it isn't online yet. Once it launches, it will live at <https://playreviewer2.com>.
 
-The first version will include a game lobby, creating and joining rooms, choosing teams and roles, separate captain and guesser views, real-time sync, automatic reconnection, a bilingual interface, a default "general academia" word list with a validation script, and "play again".
+The first version has a game lobby, creating and joining rooms, choosing teams and roles, separate captain and guesser views, a view for a projector, real-time sync, automatic reconnection, a bilingual interface, a default "general academia" word list with a validation script, and "play again".
 
 ## Tech stack
 

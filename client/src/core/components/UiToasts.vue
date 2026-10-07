@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { connection } from '../socket';
 import { dismiss, toasts } from '../toast';
 
+// Short messages at the top of the screen. At the bottom they would cover the game's action bar
+// and a sheet's input, right where a player just tapped, or sit behind a phone's keyboard. While
+// the "Reconnecting..." banner shows at the top, they move down below it.
 const { t } = useI18n();
 </script>
 
 <template>
-  <div class="toasts" role="status" aria-live="polite">
+  <div
+    class="toasts"
+    :class="{ 'under-banner': connection.everConnected && !connection.connected }"
+    role="status"
+    aria-live="polite"
+  >
     <button v-for="item in toasts" :key="item.id" type="button" class="toast" @click="dismiss(item.id)">
       {{ t(item.key, item.params) }}
     </button>
@@ -15,9 +24,11 @@ const { t } = useI18n();
 
 <style scoped>
 .toasts {
+  --toasts-top: max(var(--space-4), calc(env(safe-area-inset-top) + var(--space-3)));
+
   position: fixed;
+  top: var(--toasts-top);
   left: 50%;
-  bottom: max(var(--space-5), calc(env(safe-area-inset-bottom) + var(--space-3)));
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -25,6 +36,10 @@ const { t } = useI18n();
   width: min(28rem, calc(100% - 2 * var(--space-4)));
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+.toasts.under-banner {
+  top: calc(var(--toasts-top) + 2.5rem);
 }
 
 .toast {

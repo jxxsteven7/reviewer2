@@ -1,7 +1,7 @@
 import { reactive } from 'vue';
 import { errorKey } from './errors';
 
-// Short messages at the bottom of the screen, such as the reason the server refused something.
+// Short messages at the top of the screen, such as the reason the server refused something.
 
 export interface Toast {
   id: number;

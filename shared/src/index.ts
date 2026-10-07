@@ -1,4 +1,5 @@
 export * from './codes';
+export { hasHan } from './han';
 export * from './language';
 export * from './names';
 export * from './protocol';
