@@ -1,11 +1,11 @@
-import { endTurn, giveClue, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
+import { checkClue } from '@reviewer2/shared';
+import { endTurn, giveClue, interpolate, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
 
 test('an unlimited clue allows any number of guesses, until the group ends its turn', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
-  const captain = table.captains[team];
   const guesser = table.guessers[team];
-  await giveClue(captain, 'Everything', 'unlimited', 'en');
+  await giveClue(table.captains[team], 'Everything', 'unlimited', 'en');
   for (let i = 0; i < 4; i += 1) await revealByKey(table, team);
   await expect(guesser.locator('.strip')).toContainText(TEXT.en.game.noLimit);
   await endTurn(guesser, 'en');
@@ -16,12 +16,23 @@ test('a clue that repeats a word on the board is refused while the PI types, nam
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
   const captain = table.captains[team];
-  // The first card's word, from its label "word, not revealed", and the first word of it.
-  const label = await captain.locator('.board .card').first().getAttribute('aria-label');
-  const word = (label ?? '').split(',')[0] ?? '';
-  await captain.getByLabel(TEXT.en.game.clueInput).fill(word.split(' ')[0] ?? '');
+  // The words on the board, without the soft hyphens that let a long one break on a phone, and
+  // the first of them that would be a clue on its own: one word with nothing else wrong with it.
+  // The rules refuse it as being on the board and name a card. Which card is up to them, as the
+  // word may repeat part of an earlier card's word; the rules have tests of their own.
+  const words = (await captain.locator('.board .card .word').allTextContents()).map((word) =>
+    word.replaceAll('\u00ad', ''),
+  );
+  const clue = words.find((word) => checkClue(word, []).problem === null);
+  if (clue === undefined) throw new Error('no card on the board carries a single word');
+  const { problem, conflict } = checkClue(
+    clue,
+    words.map((word) => ({ word, revealed: false })),
+  );
+  expect(problem).toBe('clue_on_board');
+  await captain.getByLabel(TEXT.en.game.clueInput).fill(clue);
   await expect(captain.locator('.clue-panel .problem')).toHaveText(
-    TEXT.en.game.onBoard.replace('{word}', `\u201c${word}\u201d`),
+    interpolate(TEXT.en.game.onBoard, { word: `\u201c${conflict?.text}\u201d` }),
   );
   await expect(captain.getByRole('button', { name: TEXT.en.game.sendClue })).toBeDisabled();
 });
