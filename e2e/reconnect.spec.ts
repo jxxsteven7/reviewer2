@@ -19,7 +19,7 @@ test('a player who goes to the home page and back is in their seat at once', asy
   const team = await teamOnTurn(table.captains.red);
   const guesser = table.guessers[team];
   // The page leaves the room and its connection stays in it, so the clue reaches the page anyway.
-  await guesser.getByRole('link', { name: 'Reviewer 2' }).click();
+  await guesser.getByRole('link', { name: TEXT.en.app.name, exact: true }).click();
   await expect(guesser.locator('.keywords-game')).toHaveCount(0);
   await giveClue(table.captains[team], 'Hint', 2, 'en');
   await guesser.goBack();

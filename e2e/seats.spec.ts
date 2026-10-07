@@ -1,7 +1,4 @@
-import type { Team } from '@reviewer2/shared';
-import { joinByLink, newPlayer, seatTable, sideChannel, TEXT, expect, test } from './helpers';
-
-const playFor = (team: Team) => ({ name: TEXT.en.game.playFor.replace('{group}', TEXT.en.lobby.group[team]) });
+import { joinByLink, newPlayer, playFor, seatTable, sideChannel, TEXT, expect, test } from './helpers';
 
 test('a latecomer joins in the middle of a game and plays for a group', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
@@ -47,5 +44,5 @@ test('an empty PI seat can be taken over, and its new PI sees the key and stays 
   // Ann comes back with the same browser. Having seen the key, she can't play as a student.
   await joinByLink(ann, table.url, 'Ann', 'en');
   await expect(ann.locator('.keywords-game')).toBeVisible();
-  await expect(ann.getByRole('button', { name: /^Play for/ })).toHaveCount(0);
+  for (const team of ['red', 'blue'] as const) await expect(ann.getByRole('button', playFor(team))).toHaveCount(0);
 });

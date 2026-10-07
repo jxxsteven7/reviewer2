@@ -18,6 +18,16 @@ import zh from '../client/src/locales/zh.json' with { type: 'json' };
 export type Language = 'en' | 'zh';
 export const TEXT = { en, zh };
 
+// A locale string with its {placeholders} filled in, as vue-i18n fills them.
+export const interpolate = (template: string, values: Record<string, string>): string =>
+  template.replace(/\{(\w+)\}/g, (placeholder, key: string) => values[key] ?? placeholder);
+
+// The button that offers a seat as a student of this group during a game.
+export function playFor(team: Team, language: Language = 'en'): { name: string } {
+  const text = TEXT[language];
+  return { name: interpolate(text.game.playFor, { group: text.lobby.group[team] }) };
+}
+
 // Script errors on any page. A test fails at its end if there were any.
 const pageErrors: string[] = [];
 const contexts: BrowserContext[] = [];

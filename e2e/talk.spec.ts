@@ -3,8 +3,10 @@ import type { Team } from '@reviewer2/shared';
 import {
   expectOwnGroupOnly,
   giveClue,
+  interpolate,
   joinByLink,
   newPlayer,
+  playFor,
   recordSnapshots,
   seatTable,
   teamOnTurn,
@@ -28,9 +30,9 @@ async function groupOfTwo(browser: Browser) {
   const fay = await newPlayer(browser);
   const fayStates = recordSnapshots(fay);
   await joinByLink(fay, table.url, 'Fay', 'en');
-  await fay.getByRole('button', { name: text.game.playFor.replace('{group}', text.lobby.group[team]) }).click();
+  await fay.getByRole('button', playFor(team)).click();
   await expect(fay.locator('.actions .who')).toHaveText(
-    text.game.you.guesser.replace('{group}', text.lobby.group[team]),
+    interpolate(text.game.you.guesser, { group: text.lobby.group[team] }),
   );
   const student = table.guessers[team];
   const name = team === 'red' ? 'Bob' : 'Dan';
