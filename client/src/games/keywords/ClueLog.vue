@@ -105,22 +105,23 @@ li.blue {
   border: 1px solid var(--ink-3);
 }
 
-.red .swatch {
+/* The swatch takes the card's color, never the group's, which the li carries too. */
+.guess.red .swatch {
   border-color: var(--red);
   background: var(--red);
 }
 
-.blue .swatch {
+.guess.blue .swatch {
   border-color: var(--blue);
   background: var(--blue);
 }
 
-.neutral .swatch {
+.guess.neutral .swatch {
   border-color: var(--neutral);
   background: var(--neutral);
 }
 
-.reviewer2 .swatch {
+.guess.reviewer2 .swatch {
   border-color: var(--r2);
   background: var(--r2);
 }
