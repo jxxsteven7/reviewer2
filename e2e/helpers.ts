@@ -18,14 +18,14 @@ import zh from '../client/src/locales/zh.json' with { type: 'json' };
 export type Language = 'en' | 'zh';
 export const TEXT = { en, zh };
 
-// Script errors on any page, which tests check at their end.
-export const pageErrors: string[] = [];
+// Script errors on any page. A test fails at its end if there were any.
+const pageErrors: string[] = [];
 const contexts: BrowserContext[] = [];
 const sockets: Socket[] = [];
 
 // The tests' own `test`: after each test, it closes every player's browser context, since a
-// browser slows to a halt with dozens of them open, and every side channel, and forgets the page
-// errors.
+// browser slows to a halt with dozens of them open, and every side channel, and then fails the
+// test if any page had a script error.
 export const test = base.extend<{ cleanup: void }>({
   cleanup: [
     // eslint-disable-next-line no-empty-pattern
@@ -33,7 +33,7 @@ export const test = base.extend<{ cleanup: void }>({
       await use();
       for (const socket of sockets.splice(0)) socket.close();
       await Promise.all(contexts.splice(0).map((context) => context.close()));
-      pageErrors.length = 0;
+      expect(pageErrors.splice(0), 'script errors on the pages').toEqual([]);
     },
     { auto: true },
   ],

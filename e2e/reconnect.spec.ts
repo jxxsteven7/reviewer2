@@ -1,4 +1,4 @@
-import { giveClue, pageErrors, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
+import { giveClue, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
 
 // After a refresh, a locked screen, a lost network or a visit to the home page, players come back
 // to their room, group and role (docs/rules/constraints.md).
@@ -12,7 +12,6 @@ test('a player who reloads the page is back in their seat', async ({ browser }) 
   await expect(guesser.locator('.keywords-game')).toBeVisible();
   await expect(guesser.locator('form.name-form')).toHaveCount(0);
   await revealByKey(table, team);
-  expect(pageErrors).toEqual([]);
 });
 
 test('a player who goes to the home page and back is in their seat at once', async ({ browser }) => {
@@ -26,7 +25,6 @@ test('a player who goes to the home page and back is in their seat at once', asy
   await guesser.goBack();
   await expect(guesser.locator('.strip .clue .word')).toHaveText('Hint');
   await revealByKey(table, team);
-  expect(pageErrors).toEqual([]);
 });
 
 test('a player who loses the network for half a minute comes back by themselves', async ({ browser }) => {

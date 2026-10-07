@@ -1,4 +1,4 @@
-import { endTurn, giveClue, pageErrors, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
+import { endTurn, giveClue, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
 
 test('an unlimited clue allows any number of guesses, until the group ends its turn', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
@@ -10,7 +10,6 @@ test('an unlimited clue allows any number of guesses, until the group ends its t
   await expect(guesser.locator('.strip')).toContainText(TEXT.en.game.noLimit);
   await endTurn(guesser, 'en');
   await expect(guesser.locator('.strip')).not.toHaveClass(new RegExp(`\\b${team}\\b`));
-  expect(pageErrors).toEqual([]);
 });
 
 test('a clue that repeats a word on the board is refused while the PI types, naming the card', async ({ browser }) => {
