@@ -3,6 +3,7 @@ import {
   MAX_CHAT_LENGTH,
   MAX_CLUE_INPUT,
   otherTeam,
+  TEAMS,
   type KeywordsRoomData,
   type KeywordsView,
   type RoomView,
@@ -142,7 +143,7 @@ function expectGroupsApart(table: Table) {
 }
 
 describe('seats and starting', () => {
-  test('the waiting room shows what is missing, and the game starts once nothing is', async () => {
+  test('the waiting room shows what is missing', async () => {
     const { chair } = await createRoom(server.url, 'Ann', { game: 'keywords' });
     clients.push(chair);
     expect(data(chair).startProblems).toEqual([
@@ -153,6 +154,35 @@ describe('seats and starting', () => {
     ]);
     expect(data(chair).seats[chair.me]).toEqual({ team: null, role: 'spectator' });
     expect(await chair.send('room:start', { round: chair.state?.round })).toEqual({ ok: false, error: 'cannot_start' });
+  });
+
+  test('the game needs the captains and a guesser of each group online, and starts once they are', async () => {
+    const table = await seatTable(false);
+    const ann = table.captains.red;
+    const problems = (count: number) =>
+      ann.waitFor((state) => (state.data as KeywordsRoomData).startProblems.length === count, `${count} problems`);
+    await problems(0);
+
+    // The blue captain and the blue guesser lose their connections.
+    table.captains.blue.close();
+    table.guessers.blue.close();
+    await problems(2);
+    expect(data(ann).startProblems).toEqual([
+      { problem: 'captain_offline', team: 'blue' },
+      { problem: 'needs_guesser', team: 'blue' },
+    ]);
+    expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: false, error: 'cannot_start' });
+
+    // They come back from the same browsers, and the game can start.
+    for (const gone of [table.captains.blue, table.guessers.blue]) {
+      const back = await TestClient.connect(server.url, { token: gone.token });
+      clients.push(back);
+      expect(await back.send('room:join', { code: table.code })).toMatchObject({ ok: true });
+    }
+    await problems(0);
+    await expectOk(ann.send('room:start', { round: ann.state?.round }));
+    expect(ann.state?.phase).toBe('playing');
+    expect(data(ann).startProblems).toEqual([]);
   });
 
   test('a captain seat holds one player, and seats must make sense', async () => {
@@ -173,13 +203,18 @@ describe('seats and starting', () => {
 
   test('the chair can shuffle the groups', async () => {
     const table = await seatTable(false);
-    await expectOk(table.spectator.send('keywords:seat', { team: 'blue', role: 'guesser' }));
+    // Everyone crowds into the red group, so that only a shuffle can make the groups even.
+    for (const client of [table.captains.blue, table.guessers.blue, table.spectator]) {
+      await expectOk(client.send('keywords:seat', { team: 'red', role: 'guesser' }));
+    }
     await expectOk(table.captains.red.send('room:shuffle'));
     const seats = Object.values(data(table.captains.red).seats);
-    for (const team of ['red', 'blue']) {
+    const sizes = TEAMS.map((team) => seats.filter((seat) => seat.team === team).length);
+    expect([...sizes].sort()).toEqual([2, 3]);
+    for (const team of TEAMS) {
       expect(seats.filter((seat) => seat.team === team && seat.role === 'captain')).toHaveLength(1);
     }
-    expect(seats.filter((seat) => seat.role !== 'spectator')).toHaveLength(5);
+    expect(data(table.captains.red).startProblems).toEqual([]);
   });
 });
 
@@ -250,6 +285,10 @@ describe('a game over sockets', () => {
     expect(await send(table.spectator, 'clue', { ...now, word: 'Hint', count: 1 })).toEqual({
       ok: false,
       error: 'not_your_turn',
+    });
+    expect(await send(table.guessers[team], 'clue', { ...now, word: 'Hint', count: 1 })).toEqual({
+      ok: false,
+      error: 'not_captain',
     });
     expect(await send(table.captains[team], 'clue', { ...now, turn: 2, word: 'Hint', count: 1 })).toEqual({
       ok: false,
