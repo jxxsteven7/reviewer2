@@ -126,8 +126,13 @@ export function expectNoKey(states: RoomView[]): number {
 // and its choices only in its turn. Returns how many snapshots it checked.
 export function expectOwnGroupOnly(states: RoomView[]): number {
   let checked = 0;
+  // The group of every player this page has seen in a seat. A player who left the room is in no
+  // seat any more, but what they wrote stays in their group's chat; nobody changes groups during
+  // a game, so the group a player was last seen in is the one they wrote to.
+  const groups = new Map<string, Team>();
   for (const state of states) {
     const { game, seats } = state.data as KeywordsRoomData;
+    for (const [player, seat] of Object.entries(seats)) if (seat.team) groups.set(player, seat.team);
     if (!game) continue;
     checked += 1;
     const team = state.me === null ? null : (seats[state.me]?.team ?? null);
@@ -136,11 +141,13 @@ export function expectOwnGroupOnly(states: RoomView[]): number {
       expect(game).not.toHaveProperty('selections');
       continue;
     }
-    const inGroup = (player: string) => seats[player]?.team === team;
-    for (const message of game.chat ?? []) expect(inGroup(message.player), `a message to the ${team} group`).toBe(true);
+    for (const { player } of game.chat ?? []) {
+      expect(groups.get(player), `the group of ${player}, who wrote to the ${team} group`).toBe(team);
+    }
     if (game.team !== team) expect(game).not.toHaveProperty('selections');
-    for (const choice of game.selections ?? [])
-      expect(inGroup(choice.player), `a choice in the ${team} group`).toBe(true);
+    for (const { player } of game.selections ?? []) {
+      expect(groups.get(player), `the group of ${player}, who chose a card for the ${team} group`).toBe(team);
+    }
   }
   return checked;
 }
