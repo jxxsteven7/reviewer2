@@ -46,8 +46,11 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     language: 'en',
     fields: ['general'],
     phase: 'playing',
+    round: 1,
+    gameId: 'g1',
     chairId: 'ann',
     players: ['ann', 'bob', 'cat', 'eve'].map((id) => ({ id, name: id[0]?.toUpperCase() + id.slice(1), online: true })),
+    screens: 0,
     me,
     data,
   };

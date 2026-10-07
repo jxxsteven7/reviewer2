@@ -70,7 +70,12 @@ const whoAmI = computed(() => {
 
 <template>
   <section class="keywords-game">
-    <DecisionLetter v-if="game.result" :result="game.result" :is-chair="isChair" @again="act('room:again')" />
+    <DecisionLetter
+      v-if="game.result"
+      :result="game.result"
+      :is-chair="isChair"
+      @again="act('room:again', { gameId: game.gameId })"
+    />
     <TurnStrip v-else :game="game" />
 
     <div class="layout">
