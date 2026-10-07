@@ -1,12 +1,6 @@
-import {
-  BOARD_SIZE,
-  KEYWORDS_MESSAGES,
-  SPECTATOR,
-  type KeywordsMessage,
-  type KeywordsRoomData,
-  type Seat,
-} from '@reviewer2/shared';
-import type { GameContext, GameModule, GameResult } from '../../core/game';
+import { BOARD_SIZE, SPECTATOR, type KeywordsRoomData, type Seat } from '@reviewer2/shared';
+import { KEYWORDS_MESSAGES, type KeywordsMessage } from '@reviewer2/shared/schemas';
+import type { GameContext, GameModule, GameUpdate } from '../../core/game';
 import { dropSelection, giveClue, newGame, pass, reveal, say, select, withdraw, type Outcome } from './rules';
 import {
   changeSeat,
@@ -32,7 +26,7 @@ export interface KeywordsData {
 
 const online = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.isOnline(id)));
 
-const fromOutcome = (data: KeywordsData, outcome: Outcome): GameResult<KeywordsData> =>
+const fromOutcome = (data: KeywordsData, outcome: Outcome): GameUpdate<KeywordsData> =>
   outcome.ok ? { ok: true, data: { ...data, game: outcome.state } } : outcome;
 
 // Whoever leaves their seat or the room takes their choice of a card with them.

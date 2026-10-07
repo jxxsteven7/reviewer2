@@ -69,7 +69,8 @@ async function seatTable(start = true): Promise<Table> {
   const [bob, cat, dan, eve] = await Promise.all(
     ['Bob', 'Cat', 'Dan', 'Eve'].map((name) => joinRoom(server.url, code, name)),
   );
-  const screen = await TestClient.connect(server.url, { watch: code });
+  const screen = await TestClient.connect(server.url);
+  expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
   const table: Table = {
     code,
     captains: { red: ann, blue: cat as TestClient },
@@ -85,7 +86,7 @@ async function seatTable(start = true): Promise<Table> {
   await expectOk(table.guessers.blue.send('keywords:seat', { team: 'blue', role: 'guesser' }));
   if (start) {
     await ann.waitFor((state) => (state.data as KeywordsRoomData).startProblems.length === 0, 'ready to start');
-    await expectOk(ann.send('room:start'));
+    await expectOk(ann.send('room:start', { round: ann.state?.round }));
     for (const client of table.everyone) await client.waitFor((state) => state.phase === 'playing', 'the game');
   }
   return table;
@@ -149,7 +150,7 @@ describe('seats and starting', () => {
       { problem: 'needs_guesser', team: 'blue' },
     ]);
     expect(data(chair).seats[chair.me]).toEqual({ team: null, role: 'spectator' });
-    expect(await chair.send('room:start')).toEqual({ ok: false, error: 'cannot_start' });
+    expect(await chair.send('room:start', { round: chair.state?.round })).toEqual({ ok: false, error: 'cannot_start' });
   });
 
   test('a captain seat holds one player, and seats must make sense', async () => {
@@ -472,12 +473,12 @@ describe('playing again', () => {
     const firstGame = board(ann).gameId;
     await expectOk(ann.send('room:end', { gameId: firstGame }));
     expect(board(ann).result).toEqual({ winner: null, reason: 'withdrawn' });
-    await expectOk(ann.send('room:again'));
+    await expectOk(ann.send('room:again', { gameId: firstGame }));
     expect(ann.state?.phase).toBe('lobby');
     expect(data(ann).game).toBeNull();
     expect(data(ann).seats[ann.me]).toEqual({ team: 'red', role: 'captain' });
     expect(data(ann).keyViewers).toEqual([]);
-    await expectOk(ann.send('room:start'));
+    await expectOk(ann.send('room:start', { round: ann.state?.round }));
     expect(board(ann).gameId).not.toBe(firstGame);
     expect(board(ann).cards.some((card) => firstWords.includes(card.word))).toBe(false);
   });

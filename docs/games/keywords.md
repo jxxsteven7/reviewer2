@@ -118,7 +118,7 @@ Everyone sees the public facts: whose turn it is and in which phase, the current
 
 ## Messages
 
-The game's messages, on top of the room messages in [../architecture.md](../architecture.md). Their schemas are in `shared/src/games/keywords/protocol.ts`, and `server/src/games/keywords/index.ts` connects them to the rules.
+The game's messages, on top of the room messages in [../architecture.md](../architecture.md). Their schemas are in `shared/src/schemas.ts`, and `server/src/games/keywords/index.ts` connects them to the rules.
 
 | Message | Payload | Who |
 |---|---|---|
