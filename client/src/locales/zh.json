@@ -42,17 +42,16 @@
       "placeholder": "K7QX",
       "submit": "加入",
       "invalid": "请输入 R2- 后面的 4 个字符。"
-    },
-    "rules": "怎么玩"
+    }
   },
   "create": {
-    "title": "新建房间",
     "language": "语言",
     "languageHint": "房间里的一切，包括牌上的词，都将使用{language}。",
     "fields": "词库",
     "fieldTerms": "{count} 个词",
     "fieldTooSmall": "这种语言的词不够",
     "noFields": "这种语言暂时还没有可用的词库。",
+    "loadingFields": "正在加载词库……",
     "name": "你的昵称",
     "submit": "创建房间",
     "cancel": "取消"
@@ -69,7 +68,6 @@
     "screenHint": "在投影或共享屏幕上打开这个页面。它显示棋盘，但不显示答案。",
     "selectLink": "请选中链接，手动复制。",
     "close": "关闭",
-    "connecting": "正在连接……",
     "reconnecting": "正在重新连接……",
     "joining": "正在打开房间……",
     "join": {
@@ -95,8 +93,7 @@
     "rename": "修改昵称",
     "renameSubmit": "保存",
     "leave": "离开房间",
-    "leaveConfirm": "确定离开这个房间吗？你的座位会被让出。",
-    "people": "房间里有 {count} 人"
+    "leaveConfirm": "确定离开这个房间吗？你的座位会被让出。"
   },
   "lobby": {
     "kicker": "等待区",
@@ -137,7 +134,10 @@
     }
   },
   "game": {
-    "started": "游戏已经开始。"
+    "started": "游戏已经开始。",
+    "ended": "游戏已经结束。",
+    "end": "结束游戏",
+    "again": "再来一局"
   },
   "errors": {
     "bad_request": "服务器无法理解这个请求。",

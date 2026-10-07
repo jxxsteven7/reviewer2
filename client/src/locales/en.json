@@ -42,17 +42,16 @@
       "placeholder": "K7QX",
       "submit": "Join",
       "invalid": "Enter the 4 characters after R2-."
-    },
-    "rules": "How to play"
+    }
   },
   "create": {
-    "title": "New room",
     "language": "Language",
     "languageHint": "Everything in the room, the words on the cards included, will be in {language}.",
     "fields": "Word lists",
     "fieldTerms": "{count} terms",
     "fieldTooSmall": "Not enough terms in this language",
     "noFields": "No word lists are available in this language yet.",
+    "loadingFields": "Loading the word lists...",
     "name": "Your name",
     "submit": "Create the room",
     "cancel": "Cancel"
@@ -69,7 +68,6 @@
     "screenHint": "Open this on a projector or a shared screen. It shows the board without the key.",
     "selectLink": "Select the link and copy it.",
     "close": "Close",
-    "connecting": "Connecting...",
     "reconnecting": "Reconnecting...",
     "joining": "Opening the room...",
     "join": {
@@ -95,8 +93,7 @@
     "rename": "Change name",
     "renameSubmit": "Save",
     "leave": "Leave the room",
-    "leaveConfirm": "Leave this room? Your seat will be given up.",
-    "people": "{count} in the room"
+    "leaveConfirm": "Leave this room? Your seat will be given up."
   },
   "lobby": {
     "kicker": "Waiting room",
@@ -125,9 +122,9 @@
     "ready": "Everyone needed is seated.",
     "waiting": "Waiting for the chair to start the game.",
     "problems": {
-      "needs_captain": "{group} needs a PI.",
+      "needs_captain": "The {group} needs a PI.",
       "captain_offline": "The PI of the {group} is offline.",
-      "needs_guesser": "{group} needs at least one student who is online."
+      "needs_guesser": "The {group} needs at least one student who is online."
     },
     "manage": {
       "spectate": "Move to the spectators",
@@ -137,7 +134,10 @@
     }
   },
   "game": {
-    "started": "The game has started."
+    "started": "The game has started.",
+    "ended": "The game is over.",
+    "end": "End the game",
+    "again": "Play again"
   },
   "errors": {
     "bad_request": "That request didn't make sense to the server.",
