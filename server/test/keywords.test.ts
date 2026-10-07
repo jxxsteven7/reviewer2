@@ -71,18 +71,21 @@ interface Table {
 // watches, and a screen shows the room.
 async function seatTable(start = true): Promise<Table> {
   const { chair: ann, code } = await createRoom(server.url, 'Ann', { game: 'keywords' });
-  const [bob, cat, dan, eve] = await Promise.all(
-    ['Bob', 'Cat', 'Dan', 'Eve'].map((name) => joinRoom(server.url, code, name)),
-  );
+  const [bob, cat, dan, eve] = await Promise.all([
+    joinRoom(server.url, code, 'Bob'),
+    joinRoom(server.url, code, 'Cat'),
+    joinRoom(server.url, code, 'Dan'),
+    joinRoom(server.url, code, 'Eve'),
+  ]);
   const screen = await TestClient.connect(server.url);
   expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
   const table: Table = {
     code,
-    captains: { red: ann, blue: cat as TestClient },
-    guessers: { red: bob as TestClient, blue: dan as TestClient },
-    spectator: eve as TestClient,
+    captains: { red: ann, blue: cat },
+    guessers: { red: bob, blue: dan },
+    spectator: eve,
     screen,
-    everyone: [ann, bob, cat, dan, eve, screen] as TestClient[],
+    everyone: [ann, bob, cat, dan, eve, screen],
   };
   clients.push(...table.everyone);
   await expectOk(ann.send('keywords:seat', { team: 'red', role: 'captain' }));
@@ -135,7 +138,7 @@ function expectOwnGroupOnly(client: TestClient, team: Team | null, group: readon
 
 // Checks expectOwnGroupOnly for everyone at a table whose seats didn't change.
 function expectGroupsApart(table: Table) {
-  for (const team of ['red', 'blue'] as const) {
+  for (const team of TEAMS) {
     const group = [table.captains[team].me, table.guessers[team].me];
     expectOwnGroupOnly(table.captains[team], team, group);
     expectOwnGroupOnly(table.guessers[team], team, group);
@@ -322,7 +325,7 @@ describe('a game over sockets', () => {
   test('checks who may do what, and refuses stale actions', async () => {
     const table = await seatTable();
     const team = board(table.captains.red).team;
-    const other: Team = team === 'red' ? 'blue' : 'red';
+    const other = otherTeam(team);
     const now = moment(board(table.captains[team]));
     const send = (client: TestClient, type: string, payload: object) => client.send(`keywords:${type}`, payload);
 
