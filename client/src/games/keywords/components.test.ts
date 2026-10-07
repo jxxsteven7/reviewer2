@@ -152,6 +152,31 @@ describe('GroupChat', () => {
 
   test('lets a PI read the chat but not write in it', async () => {
     const wrapper = mount(GroupChat, { props: { room: room('ann', messages) }, global: global() });
+  test('keeps what is typed while a message is on its way, and brings back one that was refused', async () => {
+    const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
+    const later = () => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve));
+    send.mockImplementationOnce(later).mockImplementationOnce(later);
+    const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
+    await wrapper.get('button').trigger('click');
+    const value = () => (wrapper.get('input').element as HTMLInputElement).value;
+
+    await wrapper.get('input').setValue('first');
+    await wrapper.get('form').trigger('submit');
+    expect(send).toHaveBeenCalledWith('keywords:say', { gameId: 'g1', text: 'first' });
+    expect(value()).toBe('');
+    await wrapper.get('input').setValue('second');
+    answers[0]?.({ ok: true });
+    await flushPromises();
+    expect(value()).toBe('second');
+
+    await wrapper.get('form').trigger('submit');
+    expect(send).toHaveBeenLastCalledWith('keywords:say', { gameId: 'g1', text: 'second' });
+    await wrapper.get('input').setValue('third');
+    answers[1]?.({ ok: false, error: 'offline' });
+    await flushPromises();
+    expect(value()).toBe('second third');
+  });
+
     await wrapper.get('button').trigger('click');
     expect(wrapper.findAll('.message')).toHaveLength(3);
     expect(wrapper.find('input').exists()).toBe(false);

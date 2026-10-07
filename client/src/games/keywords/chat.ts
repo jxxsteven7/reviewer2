@@ -3,9 +3,14 @@ import { readStored, writeStored } from '../../core/storage';
 
 // The group chat on the client: the messages grouped by the turn in which they were written, and
 // how many of them the viewer hasn't read yet. The ID of the last message the viewer has seen is
-// stored with the game's ID, so that it survives a reload and starts over with the next game.
+// stored by game, so that it survives a reload, starts over with the next game, and two tabs in
+// different rooms don't overwrite each other's.
 
 const SEEN = 'r2.chatSeen';
+// How many games are remembered: the latest few, so that the entry never grows.
+const GAMES_KEPT = 8;
+
+type Seen = [gameId: string, id: number][];
 
 export interface ChatTurn {
   turn: number;
@@ -26,11 +31,24 @@ export function byTurn(messages: readonly ChatMessage[]): ChatTurn[] {
 export const unread = (messages: readonly ChatMessage[], seen: number, me: string | null): number =>
   messages.filter((message) => message.id > seen && message.player !== me).length;
 
-export function seenIn(gameId: string): number {
-  const stored = readStored(SEEN) ?? '';
-  const split = stored.lastIndexOf(':');
-  if (split < 0 || stored.slice(0, split) !== gameId) return 0;
-  return Number(stored.slice(split + 1)) || 0;
+// What is stored: the last message seen in each remembered game, oldest game first. Anything
+// else in the entry, such as a value from an older build, counts as nothing seen.
+function readSeen(): Seen {
+  try {
+    const stored: unknown = JSON.parse(readStored(SEEN) ?? '[]');
+    if (!Array.isArray(stored)) return [];
+    return stored.filter(
+      (entry): entry is Seen[number] =>
+        Array.isArray(entry) && typeof entry[0] === 'string' && typeof entry[1] === 'number',
+    );
+  } catch {
+    return [];
+  }
 }
 
-export const markSeen = (gameId: string, id: number): void => writeStored(SEEN, `${gameId}:${id}`);
+export const seenIn = (gameId: string): number => readSeen().find(([game]) => game === gameId)?.[1] ?? 0;
+
+export function markSeen(gameId: string, id: number): void {
+  const others = readSeen().filter(([game]) => game !== gameId);
+  writeStored(SEEN, JSON.stringify([...others.slice(1 - GAMES_KEPT), [gameId, id]]));
+}

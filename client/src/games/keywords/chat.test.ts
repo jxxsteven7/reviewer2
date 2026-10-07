@@ -1,6 +1,6 @@
 import type { ChatMessage } from '@reviewer2/shared';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { clearMemory } from '../../core/storage';
+import { clearMemory, writeStored } from '../../core/storage';
 import { byTurn, markSeen, seenIn, unread } from './chat';
 
 const message = (id: number, player: string, turn: number): ChatMessage => ({ id, player, turn, text: `m${id}` });
@@ -28,13 +28,32 @@ describe('the group chat', () => {
     expect(unread(messages, 0, null)).toBe(5);
   });
 
-  test('remembers the last message seen for the current game only', () => {
+  test('remembers the last message seen in each of the latest games', () => {
     vi.stubGlobal('localStorage', undefined);
     expect(seenIn('game-1')).toBe(0);
     markSeen('game-1', 4);
     expect(seenIn('game-1')).toBe(4);
     expect(seenIn('game-2')).toBe(0);
+    // Another game, such as one in a second tab, doesn't take the first one's place.
     markSeen('game-2', 1);
+    expect(seenIn('game-1')).toBe(4);
+    expect(seenIn('game-2')).toBe(1);
+    markSeen('game-1', 6);
+    expect(seenIn('game-1')).toBe(6);
+    // Only the latest few games are kept.
+    for (let game = 3; game <= 9; game += 1) markSeen(`game-${game}`, game);
+    expect(seenIn('game-9')).toBe(9);
+    expect(seenIn('game-1')).toBe(6);
+    expect(seenIn('game-2')).toBe(0);
+  });
+
+  test('takes a stored value it does not understand as nothing seen', () => {
+    vi.stubGlobal('localStorage', undefined);
+    writeStored('r2.chatSeen', 'game-1:4');
     expect(seenIn('game-1')).toBe(0);
+    writeStored('r2.chatSeen', '{"game-1":4}');
+    expect(seenIn('game-1')).toBe(0);
+    markSeen('game-1', 2);
+    expect(seenIn('game-1')).toBe(2);
   });
 });

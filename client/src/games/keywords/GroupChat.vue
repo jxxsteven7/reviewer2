@@ -32,17 +32,27 @@ watch(
   (gameId) => (seen.value = gameId ? seenIn(gameId) : 0),
 );
 
-// While the chat is open, every message counts as read, and the list shows the newest one.
+// While the chat is open, every message counts as read. The list shows the newest message when
+// the chat opens, and follows new ones only while it is at its end, so that a player reading
+// older messages isn't pulled away from them; the viewer's own message always comes into view.
+const NEAR_END = 40;
 watch(
   [open, () => chat.value?.at(-1)?.id ?? 0],
-  async ([isOpen, last]) => {
+  async ([isOpen, last], [wasOpen]) => {
     if (!isOpen || !game.value) return;
     if (last > seen.value) {
       seen.value = last;
       markSeen(game.value.gameId, last);
     }
+    // Measured before the new message is rendered: was the list at its end until now?
+    const before = list.value;
+    const follow =
+      !wasOpen ||
+      !before ||
+      before.scrollHeight - before.scrollTop - before.clientHeight <= NEAR_END ||
+      chat.value?.at(-1)?.player === props.room.me;
     await nextTick();
-    if (list.value) list.value.scrollTop = list.value.scrollHeight;
+    if (follow && list.value) list.value.scrollTop = list.value.scrollHeight;
   },
   { immediate: true },
 );
@@ -61,11 +71,15 @@ const tooLong = computed(() => check.value.problem === 'chat_too_long');
 
 async function say() {
   if (check.value.problem || sending.value || !game.value) return;
-  sending.value = true;
-  const reply = await act('keywords:say', { gameId: game.value.gameId, text: text.value });
-  sending.value = false;
-  if (!reply.ok) return;
+  // The input is cleared before the answer comes, so that the next message, which a player on
+  // a slow connection may already be typing, isn't wiped out with the sent one. A message the
+  // server refuses comes back into the input, in front of whatever was typed since.
+  const sent = text.value;
   text.value = '';
+  sending.value = true;
+  const reply = await act('keywords:say', { gameId: game.value.gameId, text: sent });
+  sending.value = false;
+  if (!reply.ok) text.value = text.value ? `${sent} ${text.value}` : sent;
   // Tapping "Send" moves the focus to the button, which closes a phone's keyboard. The next
   // message is likely to follow, so the input gets the focus back.
   input.value?.focus();

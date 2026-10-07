@@ -72,7 +72,7 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 
 ## The group chat
 
-The students of a group talk it over in a chat that only their group sees. A "Group chat" button next to the line that says who you are opens it as a sheet, and shows in a small ink box how many messages are new. The sheet lists the messages under small-capital turn headings, each with its sender's name in bold, and ends with a one-line input. The input runs the same check as the server: the count of characters sits below it, and the send button stays disabled for an empty or too long message. A PI reads the chat but gets a note instead of the input, and spectators and screens have no button at all.
+The students of a group talk it over in a chat that only their group sees. A "Group chat" button next to the line that says who you are opens it as a sheet, and shows in a small ink box how many messages are new. The sheet lists the messages under small-capital turn headings, each with its sender's name in bold, and ends with a one-line input. The input runs the same check as the server: the count of characters sits below it, and the send button stays disabled for an empty or too long message. The list follows new messages only while it is scrolled to its end, so that a student reading older messages isn't pulled away from them. A PI reads the chat but gets a note instead of the input, and spectators and screens have no button at all. After the game the button stays where it is, and the input is gone.
 
 ## Writing
 
