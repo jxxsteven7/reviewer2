@@ -6,7 +6,7 @@ import {
   type BrowserContextOptions,
   type Page,
 } from '@playwright/test';
-import type { KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
+import type { CardColor, KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
 import { io, type Socket } from 'socket.io-client';
 import en from '../client/src/locales/en.json' with { type: 'json' };
 import zh from '../client/src/locales/zh.json' with { type: 'json' };
@@ -236,7 +236,7 @@ export async function giveClue(captain: Page, word: string, count: number | 'unl
 }
 
 // The index of a hidden card of this color, read from a PI's key.
-export async function keyCard(captain: Page, color: string): Promise<number> {
+async function keyCard(captain: Page, color: CardColor): Promise<number> {
   const index = await captain
     .locator('.board .card')
     .evaluateAll(
@@ -249,11 +249,21 @@ export async function keyCard(captain: Page, color: string): Promise<number> {
 }
 
 // A guesser chooses a card and confirms it.
-export async function reveal(guesser: Page, index: number): Promise<void> {
+async function reveal(guesser: Page, index: number): Promise<void> {
   await expect(guesser.locator('.guess-bar')).toBeVisible();
   await guesser.locator('.board .card').nth(index).click();
   await guesser.locator('.guess-bar button.primary').click();
   await expect(guesser.locator('.board .card').nth(index)).toHaveClass(/revealed/);
+}
+
+// A group's student reveals a card of this color, usually one of the group's own, which the PI's
+// key points out. Returns once the PI's page shows the card revealed as well, so that the next
+// look at the key doesn't find the same card again.
+export async function revealByKey(table: Table, team: Team, color: CardColor = team): Promise<void> {
+  const captain = table.captains[team];
+  const index = await keyCard(captain, color);
+  await reveal(table.guessers[team], index);
+  await expect(captain.locator('.board .card').nth(index)).toHaveClass(/revealed/);
 }
 
 // A guesser ends the turn, and confirms it in the sheet that asks first.
@@ -271,7 +281,7 @@ export async function playToTheEnd(table: Table): Promise<void> {
     if (await ann.locator('.letter').isVisible()) return;
     const team = await teamOnTurn(ann);
     await giveClue(table.captains[team], `Hint${turn}`, 2, table.language);
-    await reveal(table.guessers[team], await keyCard(table.captains[team], team));
+    await revealByKey(table, team);
     const guesser = table.guessers[team];
     if (await guesser.locator('.guess-bar').isVisible()) await endTurn(guesser, table.language);
     await expect(ann.locator('.strip.over, .strip:not(.' + team + '), .letter').first()).toBeVisible();

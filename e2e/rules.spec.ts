@@ -1,4 +1,4 @@
-import { endTurn, giveClue, keyCard, pageErrors, reveal, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
+import { endTurn, giveClue, pageErrors, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
 
 test('an unlimited clue allows any number of guesses, until the group ends its turn', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
@@ -6,7 +6,7 @@ test('an unlimited clue allows any number of guesses, until the group ends its t
   const captain = table.captains[team];
   const guesser = table.guessers[team];
   await giveClue(captain, 'Everything', 'unlimited', 'en');
-  for (let i = 0; i < 4; i += 1) await reveal(guesser, await keyCard(captain, team));
+  for (let i = 0; i < 4; i += 1) await revealByKey(table, team);
   await expect(guesser.locator('.strip')).toContainText(TEXT.en.game.noLimit);
   await endTurn(guesser, 'en');
   await expect(guesser.locator('.strip')).not.toHaveClass(new RegExp(`\\b${team}\\b`));
@@ -31,7 +31,7 @@ test('revealing Reviewer 2 rejects the group at once', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
   await giveClue(table.captains[team], 'Danger', 1, 'en');
-  await reveal(table.guessers[team], await keyCard(table.captains[team], 'reviewer2'));
+  await revealByKey(table, team, 'reviewer2');
   for (const page of [table.guessers[team], table.screen]) {
     await expect(page.locator('.letter .verdict')).toHaveText(TEXT.en.game.letter.rejected);
   }
