@@ -1,11 +1,4 @@
-import {
-  test as base,
-  expect,
-  type Browser,
-  type BrowserContext,
-  type BrowserContextOptions,
-  type Page,
-} from '@playwright/test';
+import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { CardColor, KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
 import { io, type Socket } from 'socket.io-client';
 import en from '../client/src/locales/en.json' with { type: 'json' };
@@ -51,19 +44,9 @@ export const test = base.extend<{ cleanup: void }>({
 
 export { expect };
 
-// A new player with the current project's device: its viewport, touch and user agent.
+// A new player in the language: a browser context of their own, on the project's device.
 export async function newPlayer(browser: Browser, language: Language = 'en'): Promise<Page> {
-  const use = test.info().project.use;
-  const options: BrowserContextOptions = {
-    ...(use.viewport ? { viewport: use.viewport } : {}),
-    ...(use.userAgent ? { userAgent: use.userAgent } : {}),
-    ...(use.deviceScaleFactor ? { deviceScaleFactor: use.deviceScaleFactor } : {}),
-    ...(use.isMobile !== undefined ? { isMobile: use.isMobile } : {}),
-    ...(use.hasTouch !== undefined ? { hasTouch: use.hasTouch } : {}),
-    baseURL: use.baseURL,
-    locale: language === 'zh' ? 'zh-CN' : 'en-US',
-  };
-  const context = await browser.newContext(options);
+  const context = await browser.newContext({ locale: language === 'zh' ? 'zh-CN' : 'en-US' });
   contexts.push(context);
   const page = await context.newPage();
   page.on('pageerror', (error) => pageErrors.push(error.message));
