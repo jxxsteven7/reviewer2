@@ -7,8 +7,8 @@ import {
   joinByLink,
   newPlayer,
   playFor,
-  recordSnapshots,
   seatTable,
+  snapshotsOf,
   teamOnTurn,
   TEXT,
   expect,
@@ -28,7 +28,7 @@ async function groupOfTwo(browser: Browser) {
   const team = await teamOnTurn(table.captains.red);
   const other: Team = team === 'red' ? 'blue' : 'red';
   const fay = await newPlayer(browser);
-  const fayStates = recordSnapshots(fay);
+  const fayStates = snapshotsOf(fay);
   await joinByLink(fay, table.url, 'Fay', 'en');
   await fay.getByRole('button', playFor(team)).click();
   await expect(fay.locator('.actions .who')).toHaveText(

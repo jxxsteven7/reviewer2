@@ -53,9 +53,15 @@ export async function newPlayer(browser: Browser, language: Language = 'en'): Pr
   return page;
 }
 
-// Every room:state this page receives, over WebSocket and over HTTP long-polling alike.
-export function recordSnapshots(page: Page): RoomView[] {
+const snapshots = new WeakMap<Page, RoomView[]>();
+
+// Every room:state this page receives from the first call on, over WebSocket and over HTTP
+// long-polling alike. Later calls for the same page return the same list.
+export function snapshotsOf(page: Page): RoomView[] {
+  const known = snapshots.get(page);
+  if (known) return known;
   const states: RoomView[] = [];
+  snapshots.set(page, states);
   // A Socket.IO event is "42", an acknowledgement ID if it asks for one, and the JSON array of
   // the event's name and its payload. A long-polling response carries several packets, with a
   // record separator between them. A packet that can't be read fails the test.
@@ -190,15 +196,21 @@ export interface Table {
 }
 
 // Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
-// blue. Eve watches, and a screen shows the room. The game has started when this returns.
-export async function seatTable(browser: Browser, language: Language): Promise<Table> {
+// blue. Eve watches, and a screen shows the room. `prepare` runs on each page before it joins,
+// for a test that needs a player's connection set up in some other way. The game has started
+// when this returns.
+export async function seatTable(
+  browser: Browser,
+  language: Language,
+  prepare?: (page: Page, name: string) => Promise<void>,
+): Promise<Table> {
   const ann = await newPlayer(browser, language);
   const url = await createRoom(ann, language, 'Ann');
   const players: Page[] = [];
-  const recorded: RoomView[][] = [];
   for (const name of ['Bob', 'Cat', 'Dan', 'Eve']) {
     const page = await newPlayer(browser, language);
-    if (name !== 'Cat') recorded.push(recordSnapshots(page));
+    snapshotsOf(page);
+    await prepare?.(page, name);
     await joinByLink(page, url, name, language);
     players.push(page);
   }
@@ -209,7 +221,7 @@ export async function seatTable(browser: Browser, language: Language): Promise<T
   await sit(dan, 'blue', 'guesser', language);
 
   const screen = await newPlayer(browser, language);
-  recorded.push(recordSnapshots(screen));
+  snapshotsOf(screen);
   await screen.goto(`${url}/screen`);
   await expect(screen.locator('.screen')).toBeVisible();
 
@@ -224,7 +236,7 @@ export async function seatTable(browser: Browser, language: Language): Promise<T
     guessers: { red: bob, blue: dan },
     spectator: eve,
     screen,
-    public: recorded,
+    public: [bob, dan, eve, screen].map(snapshotsOf),
   };
 }
 
