@@ -4,7 +4,8 @@ import { useI18n } from 'vue-i18n';
 import KeywordsCard from './KeywordsCard.vue';
 
 // The 5 by 5 board. Cards can be chosen only when the viewer may reveal one. `choosers` holds,
-// for each card, the names of the others in the group who have chosen it.
+// for each card, the names of the others in the group who have chosen it. A `large` board, for a
+// big screen, sets its words in bigger type.
 withDefaults(
   defineProps<{
     cards: CardView[];
@@ -12,8 +13,9 @@ withDefaults(
     selected: number | null;
     choosers?: string[][];
     lang: string;
+    large?: boolean;
   }>(),
-  { choosers: () => [] },
+  { choosers: () => [], large: false },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t } = useI18n();
@@ -29,6 +31,7 @@ const { t } = useI18n();
       :selectable="selectable && !card.revealed"
       :selected="selected === index"
       :choosers="choosers[index] ?? []"
+      :large="large"
       @select="emit('select', $event)"
     />
   </div>

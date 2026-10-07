@@ -1,29 +1,33 @@
 <script setup lang="ts">
-import type { CardView } from '@reviewer2/shared';
+import { hasHan, type CardView } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { formatList } from '../../core/i18n';
 import { hyphenate } from './hyphenate';
 
 // One card. A revealed card is filled with its color. A card whose color the viewer may know
 // without its being revealed (a PI's key, or the end of the game) is tinted with a colored band.
 // Every color also comes with a short text label, so that color is never the only signal. The
-// names of the others in the group who have chosen the card run along its bottom.
-const props = defineProps<{
-  card: CardView;
-  index: number;
-  selectable: boolean;
-  selected: boolean;
-  choosers: string[];
-}>();
+// names of the others in the group who have chosen the card run along its bottom. On a big
+// screen the cards are `large`, with bigger type.
+const props = withDefaults(
+  defineProps<{
+    card: CardView;
+    index: number;
+    selectable: boolean;
+    selected: boolean;
+    choosers: string[];
+    large?: boolean;
+  }>(),
+  { large: false },
+);
 const emit = defineEmits<{ select: [index: number] }>();
-const { t } = useI18n();
-
-const HAN = /\p{Script=Han}/u;
+const { t, locale } = useI18n();
 
 // Long words get smaller type so that they fit on a phone.
 const size = computed(() => {
   const length = [...props.card.word].length;
-  if (HAN.test(props.card.word)) return length <= 3 ? 'm' : length === 4 ? 's' : 'xs';
+  if (hasHan(props.card.word)) return length <= 3 ? 'm' : length === 4 ? 's' : 'xs';
   return length <= 7 ? 'm' : length <= 10 ? 's' : 'xs';
 });
 
@@ -33,7 +37,7 @@ const state = computed(() => {
 });
 
 const label = computed(() => (props.card.color ? t(`game.card.${props.card.color}`) : ''));
-const chosenBy = computed(() => props.choosers.join(', '));
+const chosenBy = computed(() => formatList(locale.value, props.choosers));
 const ariaLabel = computed(() =>
   [
     props.card.word,
@@ -44,14 +48,21 @@ const ariaLabel = computed(() =>
 </script>
 
 <template>
+  <!--
+    A card that can't be chosen stays a button that assistive technology reads like the others,
+    word and color included, but it says so with aria-disabled and leaves the Tab order: a
+    disabled button is skipped by screen readers' quick navigation too, and a PI reading the key
+    needs every card.
+  -->
   <button
     type="button"
     class="card"
-    :class="[state, card.color, size, { selected, selectable, chosen: choosers.length > 0 }]"
-    :disabled="!selectable"
+    :class="[state, card.color, size, { large, selected, selectable, chosen: choosers.length > 0 }]"
+    :aria-disabled="selectable ? undefined : 'true'"
+    :tabindex="selectable ? undefined : -1"
     :aria-pressed="selectable ? selected : undefined"
     :aria-label="ariaLabel"
-    @click="emit('select', index)"
+    @click="selectable && emit('select', index)"
   >
     <span class="word">{{ hyphenate(card.word) }}</span>
     <span v-if="card.color" class="tag" aria-hidden="true">{{ label }}</span>
@@ -73,7 +84,10 @@ const ariaLabel = computed(() =>
   min-height: 48px;
   aspect-ratio: 5 / 4;
   padding: 4px;
+  /* clip, unlike hidden, lets a card grow past 5:4 when its word needs the room, so that a
+     two-line word between a PI's color band and the names of the students is never cut off. */
   overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--ink-3);
   border-radius: var(--radius-card);
   background: var(--paper);
@@ -114,6 +128,22 @@ const ariaLabel = computed(() =>
   font-size: clamp(10px, 2.5cqi, 15px);
 }
 
+/* On a big screen the type grows with the board, further than on a phone or a laptop. */
+.large.m .word {
+  font-size: 16px;
+  font-size: clamp(14px, 3.6cqi, 30px);
+}
+
+.large.s .word {
+  font-size: 14px;
+  font-size: clamp(12px, 3cqi, 26px);
+}
+
+.large.xs .word {
+  font-size: 12px;
+  font-size: clamp(11px, 2.5cqi, 22px);
+}
+
 .selectable {
   cursor: pointer;
 }
@@ -121,10 +151,6 @@ const ariaLabel = computed(() =>
 .selected {
   border: 2px solid var(--ink);
   box-shadow: inset 0 0 0 1px var(--ink);
-}
-
-.card:disabled {
-  color: var(--ink);
 }
 
 @media (hover: hover) {
@@ -204,14 +230,6 @@ const ariaLabel = computed(() =>
 
 .revealed .word {
   opacity: 0.9;
-}
-
-.card:disabled.revealed {
-  color: var(--paper);
-}
-
-.card:disabled.revealed.neutral {
-  color: var(--ink);
 }
 
 /* Room for the names of the students who chose the card. */

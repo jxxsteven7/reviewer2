@@ -4,6 +4,7 @@ import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerName from '../../core/components/PlayerName.vue';
 import QrCode from '../../core/components/QrCode.vue';
+import { HTML_LANG } from '../../core/i18n';
 import { roomLink } from '../../core/room';
 import ClueLog from './ClueLog.vue';
 import DecisionLetter from './DecisionLetter.vue';
@@ -48,15 +49,10 @@ const game = computed(() => data.value.game as KeywordsView | null);
   </section>
 
   <section v-else class="screen-game">
-    <div class="main">
+    <div class="main" :class="{ over: game.result }">
       <DecisionLetter v-if="game.result" :result="game.result" :is-chair="false" />
       <TurnStrip v-else :game="game" />
-      <KeywordsBoard
-        :cards="game.cards"
-        :selectable="false"
-        :selected="null"
-        :lang="room.language === 'zh' ? 'zh-CN' : 'en'"
-      />
+      <KeywordsBoard :cards="game.cards" :selectable="false" :selected="null" :lang="HTML_LANG[room.language]" large />
     </div>
     <aside class="side">
       <div class="join small">
@@ -146,14 +142,17 @@ ul {
   padding-bottom: var(--space-5);
 }
 
-/* The whole board fits on the screen: five rows of cards that are 4/5 as tall as they are wide. */
+/* The whole board fits on the screen: five rows of cards that are 4/5 as tall as they are wide,
+   under the masthead and the turn strip. The decision letter that takes the strip's place at
+   the end is about 10rem taller, and the board makes room for it. */
 .screen-game .main {
   width: min(100%, calc((100vh - 15rem) * 1.25));
   width: min(100%, calc((100dvh - 15rem) * 1.25));
 }
 
-.screen-game .main :deep(.word) {
-  font-size: clamp(14px, 3.4cqi, 30px);
+.screen-game .main.over {
+  width: min(100%, calc((100vh - 25rem) * 1.25));
+  width: min(100%, calc((100dvh - 25rem) * 1.25));
 }
 
 @media (min-width: 60rem) {

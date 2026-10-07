@@ -179,8 +179,8 @@ describe('KeywordsCard', () => {
       props: { card, index: 3, selectable: true, selected: false, choosers: ['Ann', 'Cat'] },
       global: global(),
     });
-    expect(wrapper.get('.choosers').text()).toBe('Ann, Cat');
-    expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann, Cat');
+    expect(wrapper.get('.choosers').text()).toBe('Ann and Cat');
+    expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann and Cat');
   });
 
   test('shows no names when nobody else has chosen it', () => {

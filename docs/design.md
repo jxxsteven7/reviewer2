@@ -67,8 +67,8 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 - **Chosen by others**: the group sees each student's choice. The names of the others who chose a card run along its bottom, in small type above a dotted rule, for the group's students and its PI. The choice comes from the server, so every screen in the group shows the same one.
 - **Known but hidden** (the PI's key, and every card after the game): a tint of the card's color, with a band along the top and a small label: Red, Blue, Irrelevant or R2.
 - **Revealed**: the full color, with white type on red, blue and Reviewer 2, and ink on grey. Reviewer 2 gets a slanted "Reject" stamp in `--stamp`.
-- **Type**: English words are set in Source Serif 4, Chinese words in the system sans. Long words get smaller type, and English words are hyphenated with Liang's en-us patterns (the `hyphen` package, the same patterns that TeX uses), because many browsers don't hyphenate at all.
-- **The board** is a 5×5 grid that fills the width on a phone. On a big screen it is sized to fit the screen's height.
+- **Type**: English words are set in Source Serif 4, Chinese words in the system sans. Long words get smaller type, and English words are hyphenated with Liang's en-us patterns (the `hyphen` package, the same patterns that TeX uses), because many browsers don't hyphenate at all. The build hyphenates the terms of the word library, so the page carries their break points and not the patterns. A card grows a little when a word needs the room, rather than cut it off.
+- **The board** is a 5×5 grid that fills the width on a phone. On a big screen it is sized to fit the screen's height, with the type scaled up to match.
 
 ## The group chat
 
