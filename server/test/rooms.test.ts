@@ -300,6 +300,25 @@ describe('the handshake', () => {
 });
 
 describe('snapshots', () => {
+  test('are not sent for a message that changed nothing', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    await chair.waitFor(() => online(chair, 'Bob') === true);
+    await bob.send('sys:ping');
+    const before = { rev: chair.state?.rev, chair: chair.states.length, bob: bob.states.length };
+    // A game message that the module grants without changing its data, and a rename to the name
+    // one has.
+    expect(await bob.send('test:nothing')).toEqual({ ok: true });
+    expect(await chair.send('room:rename', { name: 'Ann' })).toEqual({ ok: true });
+    await chair.send('sys:ping');
+    await bob.send('sys:ping');
+    expect({ rev: chair.state?.rev, chair: chair.states.length, bob: bob.states.length }).toEqual(before);
+    expect(await bob.send('test:press')).toEqual({ ok: false, error: 'wrong_phase' });
+    await start(chair);
+    expect(await bob.send('test:press')).toEqual({ ok: true });
+    await chair.waitFor((state) => state.rev === (before.rev as number) + 2, 'the start and the press');
+  });
+
   test('reach every tab of a player and every screen, each with its own view', async () => {
     const { chair, code, roomId } = await room();
     const bob = await join(code, 'Bob');

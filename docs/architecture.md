@@ -25,7 +25,7 @@ Adding a game means adding a module on each side, without changing the core.
 - **Games.** The room gives each game a random `gameId`, which its view shows while the game is being played and after it has ended, and counts the games it has started in `round`. The chair's messages about a game say which game they mean.
 - **The chair.** The first member chairs the room. Only the chair can change the fields, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, or hand the chair over. The chair can be handed only to a member who is online. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
 - **Removal.** A member the chair removes can't come back from the same browser for 2 minutes, and for those 2 minutes nobody else can take the name they had. A player is known only by the token in their browser, so this doesn't keep out someone who opens another browser and picks another name: it gives the room a pause, and the chair can remove them again.
-- **Revisions.** Every change bumps the room's `rev`.
+- **Revisions.** Every change bumps the room's `rev`. A message that is granted but changes nothing, such as asking for the seat one is in, bumps nothing, and nobody is sent a snapshot for it.
 
 ## Players and identity
 

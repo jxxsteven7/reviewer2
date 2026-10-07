@@ -51,6 +51,14 @@ describe('seats in the waiting room', () => {
     expect(captainOf(moved(seating, 'ann', blueCaptain), 'red')).toBeNull();
   });
 
+  test('gives the seating back as it is to whoever asks for the seat they are in', () => {
+    const seating = moved(emptySeating(), 'ann', redCaptain);
+    expect(moved(seating, 'ann', redCaptain)).toBe(seating);
+    expect(moved(seating, 'bob', { team: null, role: 'spectator' })).toBe(seating);
+    const playing = started({ ann: redCaptain, bob: redGuesser });
+    expect(moved(playing, 'bob', redGuesser, true)).toBe(playing);
+  });
+
   test('refuses seats that make no sense', () => {
     for (const seat of [
       { team: 'green', role: 'guesser' },

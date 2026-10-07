@@ -201,6 +201,19 @@ describe('seats and starting', () => {
     });
   });
 
+  test('asking for the seat one is in changes nothing, and nobody is told', async () => {
+    const table = await seatTable(false);
+    const eve = table.spectator;
+    // An answered message shows that nothing else was on its way.
+    await eve.send('sys:ping');
+    const before = { rev: eve.state?.rev, states: eve.states.length };
+    await expectOk(table.guessers.red.send('keywords:seat', { team: 'red', role: 'guesser' }));
+    await expectOk(eve.send('keywords:seat', { team: null, role: 'spectator' }));
+    await expectOk(table.captains.red.send('room:spectate', { playerId: eve.me }));
+    await eve.send('sys:ping');
+    expect({ rev: eve.state?.rev, states: eve.states.length }).toEqual(before);
+  });
+
   test('the chair can shuffle the groups', async () => {
     const table = await seatTable(false);
     // Everyone crowds into the red group, so that only a shuffle can make the groups even.
@@ -421,6 +434,11 @@ describe('talking it over', () => {
     for (const client of [captain, guesser]) {
       expect(board(client).selections).toEqual([{ player: guesser.me, card: neutral }]);
     }
+    // The same choice again is granted, and changes nothing.
+    const rev = guesser.state?.rev;
+    await expectOk(choose(guesser, neutral));
+    await guesser.send('sys:ping');
+    expect(guesser.state?.rev).toBe(rev);
     for (const client of [table.captains[other], table.guessers[other], table.spectator, table.screen]) {
       expect(board(client)).not.toHaveProperty('selections');
     }

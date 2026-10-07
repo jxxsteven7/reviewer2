@@ -57,6 +57,10 @@ function seatLike(seat: Seat): Seat | null {
 export function changeSeat(seating: Seating, member: Member, wanted: Seat, playing: boolean): SeatChange {
   const seat = seatLike(wanted);
   if (!seat) return { ok: false, error: 'bad_seat' };
+  // Whoever asks for the seat they are in has it, and the seating is given back as it is, so that
+  // the caller can tell that nothing has changed.
+  const current = seatOf(seating, member.id);
+  if (current.team === seat.team && current.role === seat.role) return { ok: true, seating };
   if (playing && seat.team !== null) {
     const side = seating.sides.get(member.key);
     if (side !== undefined && side !== seat.team) return { ok: false, error: 'other_team' };

@@ -78,6 +78,8 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
       return { ok: true, data: { ...data, broken: what as FakeData['broken'], brokenFor: only } };
     }
     if (type === 'test:mend') return { ok: true, data: { ...data, broken: null, brokenFor: null } };
+    // A message that is granted but changes nothing.
+    if (type === 'test:nothing') return { ok: true, data };
     if (type === 'test:fragile') return { ok: true, data: { ...data, fragile: true } };
     // A refusal with more in it than a code: something that the game knows, and something that
     // can't be sent at all.

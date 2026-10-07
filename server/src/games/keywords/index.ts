@@ -26,8 +26,12 @@ export interface KeywordsData {
 
 const online = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.isOnline(id)));
 
-const fromOutcome = (data: KeywordsData, outcome: Outcome): GameUpdate<KeywordsData> =>
-  outcome.ok ? { ok: true, data: { ...data, game: outcome.state } } : outcome;
+// The rules give the state back as it is when an action changed nothing, and then so does the
+// module: the room sends no snapshot for that.
+const fromOutcome = (data: KeywordsData, outcome: Outcome): GameUpdate<KeywordsData> => {
+  if (!outcome.ok) return outcome;
+  return { ok: true, data: outcome.state === data.game ? data : { ...data, game: outcome.state } };
+};
 
 // Whoever leaves their seat or the room takes their choice of a card with them.
 const withoutSelection = (game: KeywordsState | null, playerId: string) => game && dropSelection(game, playerId);
@@ -48,10 +52,8 @@ function play(data: KeywordsData, ctx: GameContext, playerId: string, type: Keyw
     const seat = { team, role } as Seat;
     const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, seat, inGame(data));
     if (!change.ok) return change;
-    const before = seatOf(data.seating, playerId);
-    const moved = before.team !== seat.team || before.role !== seat.role;
-    const game = moved ? withoutSelection(data.game, playerId) : data.game;
-    return { ok: true as const, data: { seating: change.seating, game } };
+    if (change.seating === data.seating) return { ok: true as const, data };
+    return { ok: true as const, data: { seating: change.seating, game: withoutSelection(data.game, playerId) } };
   }
 
   // Once a game has ended, its actions still reach the rules, which answer stale or game_over in
@@ -92,7 +94,8 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   bench(data, ctx, playerId) {
     const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, SPECTATOR, inGame(data));
-    return change.ok ? { seating: change.seating, game: withoutSelection(data.game, playerId) } : data;
+    if (!change.ok || change.seating === data.seating) return data;
+    return { seating: change.seating, game: withoutSelection(data.game, playerId) };
   },
 
   shuffle: (data, ctx) => ({ ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) }),

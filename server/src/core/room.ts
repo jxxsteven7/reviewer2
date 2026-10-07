@@ -248,6 +248,7 @@ export class Room {
     if (name === null) return fail('name_invalid');
     const member = this.members.get(id);
     if (!member) return fail('not_member');
+    if (member.name === name) return done;
     if (this.#nameTaken(name, id)) return fail('name_taken');
     member.name = name;
     this.changed();
@@ -325,9 +326,7 @@ export class Room {
 
   bench(id: string): Ack {
     if (!this.members.has(id)) return fail('no_such_player');
-    const data = this.game.bench(this.data, this.context, id);
-    this.#take(data, this.#endsWith(data));
-    this.changed();
+    this.#update(this.game.bench(this.data, this.context, id));
     return done;
   }
 
@@ -356,8 +355,7 @@ export class Room {
   act(id: string, type: string, payload: unknown): Ack {
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return refusalOf(result);
-    this.#take(result.data, this.#endsWith(result.data));
-    this.changed();
+    this.#update(result.data);
     return done;
   }
 
@@ -372,6 +370,15 @@ export class Room {
   #take(data: unknown, over: boolean): void {
     this.data = data;
     if (over) this.phase = 'ended';
+  }
+
+  // Takes what a module answered to a message or to the chair's bench. A module that gives back
+  // the data it was given, as for a player who asks for the seat they are in, has changed
+  // nothing, and then the room hasn't either: nobody is sent a snapshot.
+  #update(data: unknown): void {
+    if (data === this.data) return;
+    this.#take(data, this.#endsWith(data));
+    this.changed();
   }
 
   // --- housekeeping -----------------------------------------------------------------------
