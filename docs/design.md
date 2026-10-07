@@ -55,7 +55,7 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 | `UiButton` | `primary` for the one main action of a screen, `secondary` for the others, `quiet` for link-like actions, `danger` for actions that can't be undone |
 | `UiField` | A labelled input with a hint or an error below it, and an optional prefix such as `R2-` |
 | `UiSheet` | A sheet that rises from the bottom on phones and a dialog on wider screens. It is built by hand rather than with `<dialog>`, which older in-app browsers lack |
-| `UiToasts` | Short messages at the bottom, such as the reason the server refused something |
+| `UiToasts` | Short messages at the top, such as the reason the server refused something. At the bottom they would cover the game's action bar or a sheet's input, right where the player just tapped |
 | `ConnectionBanner` | "Reconnecting..." at the top, whenever the connection is gone |
 | `PageMasthead`, `SiteWordmark` | The top of every page: the wordmark on the left, the manuscript number or the language switch on the right |
 | `ManuscriptId`, `QrCode`, `ShareTools` | The room's number, and ways to bring people in. Sharing falls back from the share sheet, to the clipboard, to a selected link that people copy by hand, which is what WeChat and plain http allow |
