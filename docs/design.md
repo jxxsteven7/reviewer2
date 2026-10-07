@@ -21,7 +21,7 @@ The interface is designed like a carefully typeset paper rather than an app: whi
 | Token | Value | Use |
 |---|---|---|
 | `--paper`, `--paper-2` | `#FFFFFF`, `#F5F6F8` | The page; quiet areas and disabled controls |
-| `--ink`, `--ink-2`, `--ink-3` | `#15171C`, `#4B505B`, `#878D99` | Text; secondary text; captions, notes and placeholders |
+| `--ink`, `--ink-2`, `--ink-3` | `#15171C`, `#4B505B`, `#656B78` | Text; secondary text; captions, notes and placeholders |
 | `--rule` | `#D9DCE2` | Hairlines between sections |
 | `--red`, `--red-tint` | `#B42318`, `#FBEAE8` | The red group; labels; problems |
 | `--blue`, `--blue-tint` | `#1F4F8F`, `#E7EDF6` | The blue group; focus rings |

@@ -30,7 +30,7 @@ const { t } = useI18n();
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 32px;
+  min-height: 44px;
   max-width: 100%;
   padding: 0;
   border: 0;

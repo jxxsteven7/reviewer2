@@ -28,7 +28,8 @@ const { t, locale } = useI18n();
 }
 
 button {
-  padding: var(--space-1) var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-2);
   border: 0;
   background: none;
   color: var(--ink-3);

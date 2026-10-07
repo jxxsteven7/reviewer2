@@ -37,8 +37,8 @@ withDefaults(
   touch-action: manipulation;
 }
 
+/* Small and quiet buttons take less room sideways, but stay 44 px high to tap (docs/design.md). */
 .button.small {
-  min-height: 36px;
   padding: 0 var(--space-3);
   font-size: var(--text-sm);
 }
@@ -49,7 +49,6 @@ withDefaults(
 }
 
 .quiet {
-  min-height: 36px;
   padding: 0 var(--space-1);
   border-color: transparent;
   background: none;
