@@ -11,7 +11,7 @@ vi.mock('../../core/socket', () => ({ send }));
 
 const global = () => ({ plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] });
 
-const data: KeywordsRoomData = { seats: {}, keyViewers: [], startProblems: [], game: null };
+const data: KeywordsRoomData = { seats: {}, keyViewers: [], side: null, startProblems: [], game: null };
 
 const view = (me: string, screens: number): RoomView => ({
   roomId: 'room-1',
