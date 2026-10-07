@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FieldInfo, Language } from '@reviewer2/shared';
+import { MAX_NAME_INPUT, type Language } from '@reviewer2/shared';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -8,9 +8,11 @@ import LanguageSwitch from '../components/LanguageSwitch.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
+import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
 import { storedName, storeName } from '../session';
-import { connect, send, socket } from '../socket';
+import { send } from '../socket';
+import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
 // lists, and the creator's nickname. The creator becomes the chair.
@@ -19,38 +21,25 @@ const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
 const router = useRouter();
 
-const fields = ref<FieldInfo[]>([]);
 const chosen = ref<string[]>([]);
-const name = ref(storedName());
-const error = ref<string | undefined>();
+const { name, clean, problem, refuse } = useNameField(storedName());
+// What the server had against the form, apart from the name, which the name field shows.
+const formError = ref<string | undefined>();
 const busy = ref(false);
 const language = computed(() => locale.value as Language);
-const usable = computed(() => fields.value.filter((field) => field.counts[language.value] >= props.wordsNeeded));
-
-async function loadFields() {
-  const reply = await send<{ fields: FieldInfo[] }>('meta:fields');
-  if (!reply.ok) return;
-  fields.value = reply.fields;
-  pickDefault();
-}
+const usable = computed(() =>
+  (fields.value ?? []).filter((field) => field.counts[language.value] >= props.wordsNeeded),
+);
 
 // Start with every usable list chosen; a room with one list is the usual case.
-function pickDefault() {
-  chosen.value = usable.value.map((field) => field.id);
-}
+watch(usable, (lists) => (chosen.value = lists.map((field) => field.id)), { immediate: true });
 
-watch(language, pickDefault);
+onMounted(loadFields);
 
-onMounted(() => {
-  if (socket.connected) void loadFields();
-  else {
-    socket.once('connect', () => void loadFields());
-    connect();
-  }
-});
+const NAME_ERRORS = ['name_required', 'name_invalid', 'name_taken'];
 
 async function create() {
-  error.value = undefined;
+  formError.value = undefined;
   busy.value = true;
   const reply = await send<{ code: string }>('room:create', {
     game: props.game,
@@ -60,10 +49,11 @@ async function create() {
   });
   busy.value = false;
   if (!reply.ok) {
-    error.value = t(errorKey(reply.error));
+    if (NAME_ERRORS.includes(reply.error)) refuse(reply.error);
+    else formError.value = t(errorKey(reply.error));
     return;
   }
-  storeName(name.value.trim());
+  storeName(clean.value ?? name.value.trim());
   await router.push(`/room/${reply.code}`);
 }
 </script>
@@ -78,7 +68,14 @@ async function create() {
 
     <section class="step">
       <h3>{{ t('create.fields') }}</h3>
-      <FieldPicker v-if="usable.length" v-model="chosen" :fields="fields" :language="language" :needed="wordsNeeded" />
+      <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
+      <FieldPicker
+        v-else-if="usable.length"
+        v-model="chosen"
+        :fields="fields"
+        :language="language"
+        :needed="wordsNeeded"
+      />
       <p v-else class="hint">{{ t('create.noFields') }}</p>
     </section>
 
@@ -86,15 +83,17 @@ async function create() {
       <UiField
         v-model="name"
         :label="t('create.name')"
-        :maxlength="32"
+        :maxlength="MAX_NAME_INPUT"
         autocomplete="nickname"
         enterkeyhint="go"
-        :error="error"
+        :error="problem"
       />
     </section>
 
+    <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
+
     <div class="actions">
-      <UiButton variant="primary" type="submit" :disabled="busy || !chosen.length || !name.trim()">
+      <UiButton variant="primary" type="submit" :disabled="busy || !chosen.length || !clean">
         {{ t('create.submit') }}
       </UiButton>
       <UiButton variant="quiet" @click="emit('cancel')">{{ t('create.cancel') }}</UiButton>
@@ -127,6 +126,11 @@ h3 {
 
 .hint {
   color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.problem {
+  color: var(--red);
   font-size: var(--text-sm);
 }
 

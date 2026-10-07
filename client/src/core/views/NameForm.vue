@@ -1,41 +1,43 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { formatCode, MAX_NAME_INPUT, parseCode } from '@reviewer2/shared';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
-import { errorKey } from '../errors';
 import { submitName } from '../room';
 import { storedName, storeName } from '../session';
+import { useNameField } from '../useNameField';
 
-// A newcomer gives a nickname before joining. The page is already in the room's language.
+// A newcomer gives a nickname before joining. The page is already in the room's language. A name
+// that the server refuses comes back here with the reason, for another try.
 const props = defineProps<{ code: string }>();
 const { t } = useI18n();
-const name = ref(storedName());
-const error = ref<string | undefined>();
+const { name, clean, problem, refuse } = useNameField(storedName());
 const busy = ref(false);
+// The code as the address gives it may be in any case, or carry the prefix already.
+const number = computed(() => formatCode(parseCode(props.code) ?? props.code));
 
 async function join() {
-  error.value = undefined;
   busy.value = true;
   const reply = await submitName(name.value);
   busy.value = false;
-  if (reply.ok) storeName(name.value.trim());
-  else error.value = t(errorKey(reply.error));
+  if (reply.ok) storeName(clean.value ?? name.value.trim());
+  else refuse(reply.error);
 }
 </script>
 
 <template>
   <form class="name-form" @submit.prevent="join">
-    <h1>{{ t('room.join.title', { code: `R2-${props.code}` }) }}</h1>
+    <h1>{{ t('room.join.title', { code: number }) }}</h1>
     <UiField
       v-model="name"
       :label="t('room.join.name')"
-      :maxlength="32"
+      :maxlength="MAX_NAME_INPUT"
       autocomplete="nickname"
       enterkeyhint="go"
-      :error="error"
+      :error="problem"
     />
-    <UiButton variant="primary" type="submit" :disabled="busy || !name.trim()">{{ t('room.join.submit') }}</UiButton>
+    <UiButton variant="primary" type="submit" :disabled="busy || !clean">{{ t('room.join.submit') }}</UiButton>
   </form>
 </template>
 

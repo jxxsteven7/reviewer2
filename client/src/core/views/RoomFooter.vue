@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { PlayerView } from '@reviewer2/shared';
+import { MAX_NAME_INPUT, type PlayerView } from '@reviewer2/shared';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
-import { errorKey } from '../errors';
 import { leaveRoom } from '../room';
 import { storeName } from '../session';
 import { send } from '../socket';
 import { toastError } from '../toast';
+import { useNameField } from '../useNameField';
 
 // Footnotes of the room page: who you are, and ways to rename yourself or leave.
 const props = defineProps<{ me: PlayerView }>();
@@ -18,27 +18,31 @@ const { t } = useI18n();
 const router = useRouter();
 const renaming = ref(false);
 const leaving = ref(false);
-const name = ref('');
-const error = ref<string | undefined>();
+const { name, clean, problem, refuse } = useNameField();
+// While a request is on its way, so that a second tap doesn't send it again.
+const busy = ref(false);
 
 function startRenaming() {
   name.value = props.me.name;
-  error.value = undefined;
   renaming.value = true;
 }
 
 async function rename() {
+  busy.value = true;
   const reply = await send('room:rename', { name: name.value });
+  busy.value = false;
   if (!reply.ok) {
-    error.value = t(errorKey(reply.error));
+    refuse(reply.error);
     return;
   }
-  storeName(name.value.trim());
+  storeName(clean.value ?? name.value.trim());
   renaming.value = false;
 }
 
 async function leave() {
+  busy.value = true;
   const reply = await leaveRoom();
+  busy.value = false;
   if (!reply.ok) {
     toastError(reply.error);
     return;
@@ -55,15 +59,21 @@ async function leave() {
 
     <UiSheet :open="renaming" :title="t('room.rename')" @close="renaming = false">
       <form class="sheet-form" @submit.prevent="rename">
-        <UiField v-model="name" :label="t('room.join.name')" :maxlength="32" enterkeyhint="done" :error="error" />
-        <UiButton variant="primary" type="submit" :disabled="!name.trim()">{{ t('room.renameSubmit') }}</UiButton>
+        <UiField
+          v-model="name"
+          :label="t('room.join.name')"
+          :maxlength="MAX_NAME_INPUT"
+          enterkeyhint="done"
+          :error="problem"
+        />
+        <UiButton variant="primary" type="submit" :disabled="busy || !clean">{{ t('room.renameSubmit') }}</UiButton>
       </form>
     </UiSheet>
 
     <UiSheet :open="leaving" :title="t('room.leave')" @close="leaving = false">
       <div class="sheet-form">
         <p>{{ t('room.leaveConfirm') }}</p>
-        <UiButton variant="danger" @click="leave">{{ t('room.leave') }}</UiButton>
+        <UiButton variant="danger" :disabled="busy" @click="leave">{{ t('room.leave') }}</UiButton>
         <UiButton variant="quiet" @click="leaving = false">{{ t('lobby.manage.cancel') }}</UiButton>
       </div>
     </UiSheet>
