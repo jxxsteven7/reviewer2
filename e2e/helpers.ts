@@ -63,10 +63,14 @@ export async function newPlayer(browser: Browser, language: Language = 'en'): Pr
 // Every room:state this page receives, over WebSocket and over HTTP long-polling alike.
 export function recordSnapshots(page: Page): RoomView[] {
   const states: RoomView[] = [];
+  // A Socket.IO event is "42", an acknowledgement ID if it asks for one, and the JSON array of
+  // the event's name and its payload. A long-polling response carries several packets, with a
+  // record separator between them. A packet that can't be read fails the test.
   const read = (text: string) => {
     for (const packet of text.split('\x1e')) {
-      if (!packet.startsWith('42')) continue;
-      const [event, state] = JSON.parse(packet.slice(2)) as [string, RoomView];
+      const json = /^42\d*(\[.*)$/s.exec(packet)?.[1];
+      if (!json) continue;
+      const [event, state] = JSON.parse(json) as [string, RoomView];
       if (event === 'room:state') states.push(state);
     }
   };
@@ -77,11 +81,13 @@ export function recordSnapshots(page: Page): RoomView[] {
   );
   page.on('response', async (response) => {
     if (!response.url().includes('transport=polling') || response.request().method() !== 'GET') return;
+    let text: string;
     try {
-      read(await response.text());
+      text = await response.text();
     } catch {
-      // the page went away
+      return; // the page went away before the body came
     }
+    read(text);
   });
   return states;
 }
