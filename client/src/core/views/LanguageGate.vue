@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { LANGUAGES, type Language } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
-import { setLanguage } from '../i18n';
+import { HTML_LANG, setLanguage } from '../i18n';
 
 // The first visit to the home page starts with the choice of language, because it decides the
 // words as well as the interface. Each option speaks its own language.
 const emit = defineEmits<{ chosen: [language: Language] }>();
 const { t } = useI18n();
-
-const htmlLang = (language: Language) => (language === 'zh' ? 'zh-CN' : 'en');
 
 function choose(language: Language) {
   setLanguage(language);
@@ -20,7 +18,7 @@ function choose(language: Language) {
   <main class="gate">
     <p class="title">{{ t('app.name') }}</p>
     <p class="tagline">
-      <span v-for="language in LANGUAGES" :key="language" :lang="htmlLang(language)">
+      <span v-for="language in LANGUAGES" :key="language" :lang="HTML_LANG[language]">
         {{ t('app.tagline', {}, { locale: language }) }}
       </span>
     </p>
@@ -30,7 +28,7 @@ function choose(language: Language) {
         :key="language"
         type="button"
         class="choice"
-        :lang="htmlLang(language)"
+        :lang="HTML_LANG[language]"
         @click="choose(language)"
       >
         <span class="name">{{ t(`language.${language}`) }}</span>
@@ -38,7 +36,7 @@ function choose(language: Language) {
       </button>
     </div>
     <p class="prompt">
-      <span v-for="language in LANGUAGES" :key="language" :lang="htmlLang(language)">
+      <span v-for="language in LANGUAGES" :key="language" :lang="HTML_LANG[language]">
         {{ t('gate.title', {}, { locale: language }) }}
       </span>
     </p>
