@@ -143,7 +143,7 @@ In every snapshot, the game's part (`RoomView.data`) holds:
 
 Every action carries the `gameId` and the `turn` it was meant for. A withdrawal and a chat message carry only the `gameId`, because they are meant for the game, whatever the turn. The server checks an action in this order:
 
-1. `stale`: the action is for an earlier game or turn. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
+1. `stale`: the action is for an earlier game or turn, or arrives in the waiting room, where there is no game. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
 2. `game_over`: the game has ended.
 3. `not_your_turn`, `not_captain` or `not_guesser`: the action isn't this player's to make. A chat message is never out of turn: it only needs a guesser.
 4. `wrong_phase`: it isn't the moment, such as revealing or choosing a card before the clue.

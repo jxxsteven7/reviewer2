@@ -55,8 +55,9 @@ function play(data: KeywordsData, ctx: GameContext, playerId: string, type: Keyw
   }
 
   // Once a game has ended, its actions still reach the rules, which answer stale or game_over in
-  // the order of the checks. In the waiting room there is no game to act on.
-  if (!data.game) return { ok: false as const, error: 'wrong_phase' };
+  // the order of the checks. In the waiting room there is no game, so an action there is for an
+  // earlier one, if any: stale, as the room answers a withdrawal or "play again" then.
+  if (!data.game) return { ok: false as const, error: 'stale' };
   const actor = { id: playerId, ...seatOf(data.seating, playerId) };
   switch (type) {
     case 'keywords:clue':

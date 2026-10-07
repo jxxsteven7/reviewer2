@@ -557,5 +557,17 @@ describe('playing again', () => {
     await expectOk(ann.send('room:start', { round: ann.state?.round }));
     expect(board(ann).gameId).not.toBe(firstGame);
     expect(board(ann).cards.some((card) => firstWords.includes(card.word))).toBe(false);
+    // An action for the first game is stale now, as it would be in the waiting room.
+    expect(await ann.send('keywords:clue', { gameId: firstGame, turn: 1, word: 'Hint', count: 1 })).toEqual({
+      ok: false,
+      error: 'stale',
+    });
+    await expectOk(ann.send('room:end', { gameId: board(ann).gameId }));
+    await expectOk(ann.send('room:again', { gameId: board(ann).gameId }));
+    expect(await ann.send('keywords:clue', { gameId: firstGame, turn: 1, word: 'Hint', count: 1 })).toEqual({
+      ok: false,
+      error: 'stale',
+    });
+    expect(await ann.send('keywords:say', { gameId: firstGame, text: 'late' })).toEqual({ ok: false, error: 'stale' });
   });
 });
