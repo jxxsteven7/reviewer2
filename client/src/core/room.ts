@@ -147,12 +147,17 @@ export function closeRoomPage(): void {
   Object.assign(entry, { status: 'idle', language: null, closed: null, error: null });
 }
 
-export async function leaveRoom(): Promise<Ack> {
-  const reply = await send('room:leave');
+// The player leaves the room, or the chair closes it for everyone. The server tells the player's
+// other connections, and everyone else when the room closes, but not the connection that asked:
+// it knows.
+async function goAway(message: 'room:leave' | 'room:close'): Promise<Ack> {
+  const reply = await send(message);
   if (reply.ok) {
-    // The server tells the player's other connections, not the one that asked: it knows.
     latest = null;
     closeRoomPage();
   }
   return reply;
 }
+
+export const leaveRoom = (): Promise<Ack> => goAway('room:leave');
+export const closeRoom = (): Promise<Ack> => goAway('room:close');

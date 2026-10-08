@@ -76,5 +76,5 @@ export interface Session {
 }
 
 // Why the server closed a room for someone: they were removed, the room expired, they left it
-// from another tab, or the server is restarting.
-export type ClosedReason = 'removed' | 'expired' | 'left' | 'restart';
+// from another tab, the chair closed it for everyone, or the server is restarting.
+export type ClosedReason = 'removed' | 'expired' | 'left' | 'closed' | 'restart';

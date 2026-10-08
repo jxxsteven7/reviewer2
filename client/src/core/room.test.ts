@@ -20,7 +20,7 @@ const mock = vi.hoisted(() => {
 });
 vi.mock('./socket', () => mock);
 
-import { closeRoomPage, entry, leaveRoom, openRoom, room, submitName } from './room';
+import { closeRoom, closeRoomPage, entry, leaveRoom, openRoom, room, submitName } from './room';
 
 const emit = (event: string, payload?: unknown) => mock.handlers.get(event)?.(payload);
 const fail = (error: string, extra: object = {}): Ack => ({ ok: false, error, ...extra });
@@ -121,9 +121,12 @@ describe('the room page', () => {
     expect(room.value?.roomId).toBe('room-a');
   });
 
-  test('forgets the room after leaving it', async () => {
+  test.each([
+    ['leaving it', 'room:leave', leaveRoom],
+    ['closing it', 'room:close', closeRoom],
+  ])('forgets the room after %s', async (_, message, goAway) => {
     mock.send.mockImplementation(async (event) => {
-      if (event === 'room:leave') return { ok: true };
+      if (event === message) return { ok: true };
       emit('room:state', view('K7QX', 'room-a', 'ann'));
       return ok('K7QX', 'room-a');
     });
@@ -131,7 +134,8 @@ describe('the room page', () => {
     await flushPromises();
     expect(entry.status).toBe('in');
 
-    expect((await leaveRoom()).ok).toBe(true);
+    expect((await goAway()).ok).toBe(true);
+    expect(mock.send).toHaveBeenLastCalledWith(message);
     expect(entry.status).toBe('idle');
     mock.send.mockResolvedValue(fail('name_required', { language: 'en' }));
     openRoom('K7QX');

@@ -23,7 +23,7 @@ Adding a game means adding a module on each side, without changing the core.
 - **Language.** A room's language is set when it is created and never changes. It decides both the interface language inside the room and the words on the cards.
 - **Phases.** A room moves from `lobby` to `playing` to `ended`, and back to `lobby` for another game.
 - **Games.** The room gives each game a random `gameId`, which its view shows while the game is being played and after it has ended, and counts the games it has started in `round`. The chair's messages about a game say which game they mean.
-- **The chair.** The first member chairs the room. Only the chair can change the fields or the game's settings, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, or hand the chair over. The chair can be handed only to a member who is online. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
+- **The chair.** The first member chairs the room. Only the chair can change the fields or the game's settings, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, hand the chair over, or close the room for everyone. The chair can be handed only to a member who is online. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
 - **Removal.** A member the chair removes can't come back from the same browser for 2 minutes, and for those 2 minutes nobody else can take the name they had. A player is known only by the token in their browser, so this doesn't keep out someone who opens another browser and picks another name: it gives the room a pause, and the chair can remove them again.
 - **Revisions.** Every change bumps the room's `rev`. A message that is granted but changes nothing, such as asking for the seat one is in, bumps nothing, and nobody is sent a snapshot for it.
 
@@ -46,7 +46,7 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 - **Validation.** The server checks every payload against a zod schema before it looks at it. The schemas are in `shared/src/schemas.ts`, which the server imports as `@reviewer2/shared/schemas`. The client never imports that module, and ESLint refuses it if it tries: zod would add half again to the page's script, and it probes `new Function`, which the Content Security Policy below refuses.
 - **Snapshots.** After every change that anyone in the room can see, the server sends each connection in it its own complete snapshot, `room:state`. A second tab of a player who is online changes nothing for the others, so only that tab is sent one. The client keeps the snapshot with the highest `rev` for its `roomId`. The server sends the snapshots before it answers the message that caused them, so an answer never arrives before the state it refers to.
 - **No interleaving.** Handlers never await anything between reading a room and writing it, so two messages can't interleave.
-- **Closing.** `room:closed` tells a connection that its room is gone for it. The reason is `removed`, `expired`, `left` (from another tab) or `restart`. It goes to the connections that are open at that moment. Whoever is offline when the chair removes them, or when the sweep drops them, has no connection to tell, and finds out from the answer to `room:join` when they come back.
+- **Closing.** `room:closed` tells a connection that its room is gone for it. The reason is `removed`, `expired`, `left` (from another tab), `closed` (the chair closed the room for everyone) or `restart`. It goes to the connections that are open at that moment. Whoever is offline when the chair removes them, when the sweep drops them or when the room closes has no connection to tell, and finds out when they come back: from the handshake, which answers the room's old ID with `expired`, or from the answer to `room:join`. The connection that sent `room:leave` or `room:close` is answered instead of told, since its page knows what it asked for.
 
 | Message | Payload | Who |
 |---|---|---|
@@ -62,6 +62,7 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 | `room:shuffle` | | The chair |
 | `room:spectate`, `room:remove`, `room:chair` | `playerId` | The chair |
 | `room:dismiss` | | The chair; sends every screen away |
+| `room:close` | | The chair; closes the room for everyone, screens included, in any phase. A game in progress ends with it |
 
 ## The handshake and reconnecting
 
@@ -119,7 +120,7 @@ A screen has no name, so all that anyone sees of the screens is how many there a
 
 The server writes one JSON object per line to stdout: room creation, game starts and ends, rooms closing, skipped word lists and terms, errors, a warning when it ignores the address that a reverse proxy passed on, and every 5 minutes the `stats` line described under [Status](#status). It never logs tokens.
 
-Every room that was created is logged once more when it closes, with the reason: `empty` when its last member has gone, `idle` or `stale` when the sweep closed it, `restart` when the server stopped. Every game that started is logged once more when it ends, whether it ended by itself or the chair withdrew it; a game is logged as started only, when its room closes in the middle of it. So the log can be counted.
+Every room that was created is logged once more when it closes, with the reason: `empty` when its last member has gone, `idle` or `stale` when the sweep closed it, `chair` when the chair closed it, `restart` when the server stopped. Every game that started is logged once more when it ends, whether it ended by itself or the chair withdrew it; a game is logged as started only, when its room closes in the middle of it. So the log can be counted.
 
 ## Status
 

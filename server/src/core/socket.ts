@@ -187,10 +187,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
   }
 
-  // Closes a room, tells whoever is still connected to it, and logs it. `why` is for the log:
-  // "empty", "idle", "stale" or "restart".
-  function shut(room: Room, reason: ClosedReason, why: string): void {
-    closeFor(rooms.close(room), reason);
+  // Closes a room, tells whoever is still connected to it, apart from `except`, and logs it.
+  // `why` is for the log: "empty", "idle", "stale", "chair" or "restart".
+  function shut(room: Room, reason: ClosedReason, why: string, except?: string): void {
+    closeFor(rooms.close(room), reason, except);
     unschedule(room);
     log('room_closed', { code: room.code, why });
   }
@@ -522,6 +522,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       asChair(socket, (room) => {
         closeFor(room.dismissScreens(), 'removed');
         broadcast(room);
+        return ok();
+      }),
+    );
+
+    // The chair closes the room for everyone, screens included. The connection that asked is
+    // answered rather than told, as when a player leaves: its page knows what it did. Members who
+    // are offline find out when they come back, as from any room that closed while they were away.
+    on(handlers, 'room:close', () =>
+      asChair(socket, (room) => {
+        shut(room, 'closed', 'chair', socket.id);
         return ok();
       }),
     );

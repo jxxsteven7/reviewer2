@@ -84,6 +84,7 @@
       "removed": "The chair removed you from this room.",
       "expired": "This room has closed.",
       "left": "You left this room in another tab.",
+      "closed": "The chair closed this room.",
       "restart": "The server is being updated, so this room has closed. Please start a new one in a moment."
     },
     "screenRemoved": "The chair took this screen down. Open the link again to put it back up.",
@@ -94,7 +95,13 @@
     "rename": "Change name",
     "renameSubmit": "Save",
     "leave": "Leave the room",
-    "leaveConfirm": "Leave this room? Your seat will be given up."
+    "leaveConfirm": "Leave this room? Your seat will be given up.",
+    "leaveChair": "Leave this room? Your seat will be given up, and {name} will chair the room.",
+    "leaveLast": "Leave this room? You're the last one in it, so it will close.",
+    "closeInstead": "Close the room for everyone",
+    "closeRoom": "Close the room",
+    "closeConfirm": "Close this room for everyone? Everyone in it, big screens included, is told that it has closed, and its number stops working.",
+    "closeConfirmGame": "Close this room for everyone? The game in progress ends without a winner. Everyone in it, big screens included, is told that the room has closed, and its number stops working."
   },
   "lobby": {
     "kicker": "Waiting room",

@@ -30,7 +30,7 @@ const me = computed(() => room.value?.players.find((player) => player.id === roo
       <RoomNotice v-else />
     </main>
 
-    <RoomFooter v-if="entry.status === 'in' && me" :me="me" />
+    <RoomFooter v-if="entry.status === 'in' && room && me" :room="room" :me="me" />
   </div>
 </template>
 
