@@ -18,15 +18,18 @@ export const DEFAULT_ROOMS_PER_MINUTE = 5;
 // The repository root, two levels up from both server/src and server/dist.
 const root = resolve(import.meta.dirname, '..', '..');
 
-// A whole number from 1 up, to `max` if there is one, or the fallback when the variable is unset
-// or empty. Digits only: Number() alone also reads " " and "0x0", as 0, and on port 0 the server
-// listens on whichever port the system picks. Anything else stops the server rather than quietly
-// mean something else.
-function wholeNumber(name: string, value: string | undefined, fallback: number, max?: number): number {
-  if (value === undefined || value === '') return fallback;
-  const number = /^\d+$/.test(value) ? Number(value) : NaN;
-  if (!(number >= 1 && number <= (max ?? Number.MAX_SAFE_INTEGER))) {
-    throw new Error(`${name} must be a whole number from 1 ${max === undefined ? 'up' : `to ${max}`}, not "${value}"`);
+// A whole number from 1 to `max`, or the fallback when the variable is unset or blank. Whitespace
+// around the value is ignored, as it is around a switch. Digits only: Number() alone also reads
+// "0x0" as 0 and "1e3" as 1000, and 0 is never what anyone means, because on port 0 the server
+// listens on whichever port the system picks, and 0 rooms a minute would be no game at all.
+// Anything else stops the server rather than quietly mean something else.
+function wholeNumber(name: string, value: string | undefined, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
+  const text = (value ?? '').trim();
+  if (text === '') return fallback;
+  const number = /^\d+$/.test(text) ? Number(text) : NaN;
+  if (!(number >= 1 && number <= max)) {
+    const range = max === Number.MAX_SAFE_INTEGER ? 'from 1 up' : `from 1 to ${max}`;
+    throw new Error(`${name} must be a whole number ${range}, not "${value}"`);
   }
   return number;
 }
