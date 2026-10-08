@@ -57,6 +57,9 @@ jobs:
     # Real browsers against the production build; see playwright.config.ts.
     name: End-to-end
     runs-on: ubuntu-latest
+    # About 11 minutes when all goes well. A browser install or a server that hangs must not
+    # hold the check for the six hours that GitHub allows a job.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
