@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
 import { MAX_NAME_INPUT } from './protocol';
@@ -19,11 +20,20 @@ const gameId = z.string().max(64);
 const roomId = z.string().max(64);
 const fields = z.array(z.string().max(64)).min(1).max(20);
 const none = z.object({});
+// A game's settings, which its module checks (GameModule.configure on the server).
+const settings = z.unknown();
 
 export const ROOM_MESSAGES = {
   'sys:ping': none,
   'meta:fields': none,
-  'room:create': z.object({ game: z.string().max(32), language: z.enum(LANGUAGES), fields, name }),
+  // A room starts with its game's default settings when `settings` is left out.
+  'room:create': z.object({
+    game: z.string().max(32),
+    language: z.enum(LANGUAGES),
+    fields,
+    settings: settings.optional(),
+    name,
+  }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out
   // or send null.
@@ -31,8 +41,8 @@ export const ROOM_MESSAGES = {
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:rename': z.object({ name }),
-  // The chair's controls.
-  'room:settings': z.object({ fields }),
+  // The chair's controls. The settings change the word lists, the game's own settings, or both.
+  'room:settings': z.object({ fields: fields.optional(), settings: settings.optional() }),
   // The chair's messages about a game say which game they mean, so that one that comes late or
   // twice can't land in another: a start gives how many games the room has started so far, and a
   // withdrawal and "play again" give the game's ID.
@@ -70,6 +80,18 @@ export const KEYWORDS_MESSAGES = {
 } as const;
 
 export type KeywordsMessage = keyof typeof KEYWORDS_MESSAGES;
+
+// The settings of a room of the game (settings.ts). The schema only takes their shape: whether
+// the numbers are whole and in range is for settingsProblems() to say, which the room setup runs
+// too.
+export const KEYWORDS_SETTINGS = z.object({
+  guessRule: z.enum(GUESS_RULES),
+  clueRule: z.enum(CLUE_RULES),
+  clueLength: z.number(),
+  firstClueTime: z.number(),
+  clueTime: z.number(),
+  guessTime: z.number(),
+});
 
 // The handshake (`Handshake` in protocol.ts). A field that isn't what it should be counts as
 // missing, rather than spoil the others or the connection.

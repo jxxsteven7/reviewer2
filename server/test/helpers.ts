@@ -4,12 +4,14 @@ import { io as connect, type ManagerOptions, type Socket, type SocketOptions } f
 import type { GameModule } from '../src/core/game';
 import { seededRng, type Rng } from '../src/core/random';
 import type { RoomLimits } from '../src/core/rooms';
+import type { Timers } from '../src/core/socket';
 import { WordLibrary, type WordListData } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
 import { fakeGame } from './fakeGame';
 
 // Helpers for the integration tests: a real server on a free port, with a clock that tests can
-// move forward, and clients that record everything the server sends them.
+// move forward and timers that go by it, and clients that record everything the server sends
+// them.
 
 const list = (id: string, count: number): WordListData => ({
   id,
@@ -23,7 +25,11 @@ export interface TestServer {
   app: AppServer;
   url: string;
   logs: { event: string; fields?: Record<string, unknown> }[];
-  advance(ms: number): void;
+  // Moves the clock forward, and runs the timers that are due by then, in the order of their
+  // times, unless a test wants them late.
+  advance(ms: number, runTimers?: boolean): void;
+  // How many timers are waiting.
+  timers(): number;
   close(): Promise<void>;
 }
 
@@ -38,14 +44,26 @@ export async function startServer(
   } = {},
 ): Promise<TestServer> {
   let offset = 0;
+  const now = () => Date.now() + offset;
   const logs: TestServer['logs'] = [];
+  // The timers that are waiting, each with the time it is due by the clock above.
+  const waiting = new Set<{ due: number; run: () => void }>();
+  const timers: Timers = {
+    start(run, ms) {
+      const timer = { due: now() + ms, run };
+      waiting.add(timer);
+      return timer;
+    },
+    stop: (timer) => waiting.delete(timer as { due: number; run: () => void }),
+  };
   const app = createAppServer({
     publicDir: '/no/front/end',
     version: 'test',
     words: options.words ?? testWords(),
     games: options.games ?? [fakeGame],
     rng: options.rng ?? seededRng(1),
-    now: () => Date.now() + offset,
+    now,
+    timers,
     trustProxy: options.trustProxy ?? false,
     ...(options.roomsPerMinute === undefined ? {} : { roomsPerMinute: options.roomsPerMinute }),
     ...(options.limits ? { limits: options.limits } : {}),
@@ -57,9 +75,16 @@ export async function startServer(
     app,
     url: `http://127.0.0.1:${port}`,
     logs,
-    advance: (ms) => {
+    advance: (ms, runTimers = true) => {
       offset += ms;
+      while (runTimers) {
+        const due = [...waiting].filter((timer) => timer.due <= now()).sort((a, b) => a.due - b.due)[0];
+        if (!due) break;
+        waiting.delete(due);
+        due.run();
+      }
     },
+    timers: () => waiting.size,
     close: () => app.close(),
   };
 }

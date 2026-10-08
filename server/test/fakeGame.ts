@@ -2,7 +2,8 @@ import type { GameModule } from '../src/core/game';
 
 // A tiny game for testing the shared layer. Players press a button; each viewer sees a line
 // meant only for them, which shows whether snapshots are really built per connection. A player can
-// also break one part of the game, which then throws until someone mends it.
+// also break one part of the game, which then throws until someone mends it, and set an alarm,
+// which rings by itself at its time. The game has one setting, a level from 1 to 3.
 
 export interface FakeData {
   joined: string[];
@@ -11,11 +12,16 @@ export interface FakeData {
   words: string[];
   gameId: string | null;
   over: boolean;
-  broken: 'join' | 'leave' | 'view' | null;
+  broken: 'join' | 'leave' | 'view' | 'configure' | 'tick' | null;
   // The one player for whom the broken part throws, or null when it throws for everyone.
   brokenFor: string | null;
   // A fragile game ends as soon as a player leaves it or is moved to the spectators.
   fragile: boolean;
+  language: string;
+  level: number;
+  // When the alarm rings, on the room's clock, and how often it has rung.
+  alarm: number | null;
+  rings: number;
 }
 
 // The view leaves the game's ID out on purpose: the chair's controls have to work with what the
@@ -25,6 +31,8 @@ export interface FakeView {
   words: string[];
   benched: string[];
   forViewer: string;
+  level: number;
+  rings: number;
 }
 
 interface Breakage {
@@ -32,10 +40,13 @@ interface Breakage {
   only?: string | null;
 }
 
+const isLevel = (value: unknown): value is number =>
+  Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 3;
+
 export const fakeGame: GameModule<FakeData, FakeView> = {
   id: 'test',
   wordsNeeded: 3,
-  create: () => ({
+  create: (language) => ({
     joined: [],
     benched: [],
     presses: 0,
@@ -45,7 +56,23 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     broken: null,
     brokenFor: null,
     fragile: false,
+    language,
+    level: 1,
+    alarm: null,
+    rings: 0,
   }),
+  configure(data, _ctx, settings) {
+    const { level } = (settings ?? {}) as { level?: unknown };
+    if (data.broken === 'configure') throw new Error('configuring broke');
+    if (!isLevel(level)) return { ok: false, error: 'bad_settings' };
+    return { ok: true, data: level === data.level ? data : { ...data, level } };
+  },
+  deadline: (data) => data.alarm,
+  tick(data, ctx) {
+    if (data.broken === 'tick') throw new Error('ticking broke');
+    if (data.alarm === null || ctx.now() < data.alarm) return data;
+    return { ...data, alarm: null, rings: data.rings + 1 };
+  },
   join(data, id) {
     if (data.broken === 'join') throw new Error('joining broke');
     return { ...data, joined: [...data.joined, id] };
@@ -70,7 +97,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (data.over) return { ok: false, error: 'game_over' };
     return { ok: true, data: { ...data, over: true } };
   },
-  again: (data) => ({ ...data, words: [], gameId: null, over: false }),
+  again: (data) => ({ ...data, words: [], gameId: null, over: false, alarm: null }),
   handle(data, ctx, _playerId, type, payload) {
     if (type === 'test:break') {
       // What to break, or what to break and for whom.
@@ -88,7 +115,9 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (type === 'test:throw') throw payload;
     if (ctx.phase !== 'playing') return { ok: false, error: 'wrong_phase' };
     if (type === 'test:press') return { ok: true, data: { ...data, presses: data.presses + 1 } };
-    if (type === 'test:finish') return { ok: true, data: { ...data, over: true } };
+    if (type === 'test:finish') return { ok: true, data: { ...data, over: true, alarm: null } };
+    // The alarm rings this many milliseconds from now, by the room's clock.
+    if (type === 'test:alarm') return { ok: true, data: { ...data, alarm: ctx.now() + (payload as number) } };
     if (type === 'test:explode') throw new Error('the game broke');
     return { ok: false, error: 'bad_request' };
   },
@@ -99,6 +128,8 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
       words: data.words,
       benched: data.benched,
       forViewer: 'playerId' in viewer ? `for ${viewer.playerId}` : 'for screens',
+      level: data.level,
+      rings: data.rings,
     });
   },
 };

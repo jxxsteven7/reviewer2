@@ -4,7 +4,7 @@ import { DEFAULT_ROOMS_PER_MINUTE, type Config } from './config';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
 import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
-import { attachSockets, type RoomSockets } from './core/socket';
+import { attachSockets, realTimers, type RoomSockets, type Timers } from './core/socket';
 import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
 import { log as defaultLog } from './log';
@@ -32,6 +32,8 @@ export interface AppOptions
   games: GameModule[];
   rng?: Rng;
   now?: () => number;
+  // The timers for the games' deadlines, which go by `now`.
+  timers?: Timers;
   limits?: RoomLimits;
   log?: (event: string, fields?: Record<string, unknown>) => void;
 }
@@ -69,6 +71,7 @@ export function createAppServer(options: AppOptions): AppServer {
     words: options.words,
     games: new Map(options.games.map((game) => [game.id, game])),
     now,
+    timers: options.timers ?? realTimers,
     version: options.version,
     trustProxy: options.trustProxy ?? false,
     roomsPerMinute,

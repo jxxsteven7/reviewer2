@@ -23,7 +23,7 @@ Adding a game means adding a module on each side, without changing the core.
 - **Language.** A room's language is set when it is created and never changes. It decides both the interface language inside the room and the words on the cards.
 - **Phases.** A room moves from `lobby` to `playing` to `ended`, and back to `lobby` for another game.
 - **Games.** The room gives each game a random `gameId`, which its view shows while the game is being played and after it has ended, and counts the games it has started in `round`. The chair's messages about a game say which game they mean.
-- **The chair.** The first member chairs the room. Only the chair can change the fields, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, or hand the chair over. The chair can be handed only to a member who is online. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
+- **The chair.** The first member chairs the room. Only the chair can change the fields or the game's settings, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, or hand the chair over. The chair can be handed only to a member who is online. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
 - **Removal.** A member the chair removes can't come back from the same browser for 2 minutes, and for those 2 minutes nobody else can take the name they had. A player is known only by the token in their browser, so this doesn't keep out someone who opens another browser and picks another name: it gives the room a pause, and the chair can remove them again.
 - **Revisions.** Every change bumps the room's `rev`. A message that is granted but changes nothing, such as asking for the seat one is in, bumps nothing, and nobody is sent a snapshot for it.
 
@@ -52,11 +52,11 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 |---|---|---|
 | `sys:ping` | | Anyone; checks that a connection is really alive |
 | `meta:fields` | | Anyone; returns the fields of the word library with their word counts |
-| `room:create` | `game`, `language`, `fields`, `name` | Anyone; the creator becomes the chair |
+| `room:create` | `game`, `language`, `fields`, `settings` (optional), `name` | Anyone; the creator becomes the chair. Without `settings` the room has the game's defaults; settings that the game won't take are `bad_settings`, and no room is made |
 | `room:join` | `code`, `name` (for newcomers), `roomId` (for whoever has been in the room) | Anyone; a member who comes back needs no name. A newcomer first hears what keeps them out, `removed_recently` or `room_full`, and only then, without a name, gets `name_required` with the room's language |
 | `room:watch` | `code`, `roomId` (for a screen that has shown the room) | A screen |
 | `room:leave`, `room:rename` | `name` for renaming | Members |
-| `room:settings` | `fields` | The chair, in the waiting room |
+| `room:settings` | `fields`, `settings`, either or both | The chair, in the waiting room. Both change, or neither does; the same fields in another order, and settings that change nothing, change nothing |
 | `room:start` | `round` | The chair; `round` is how many games the room had started when the chair pressed start, and the start is refused as `stale` when that is no longer so |
 | `room:end`, `room:again` | `gameId` | The chair; refused as `stale` when it names another game than the room's |
 | `room:shuffle` | | The chair |
@@ -78,15 +78,19 @@ Phones drop their connection whenever the screen locks or the browser goes to th
 A game is a module that implements `GameModule` (`server/src/core/game.ts`). The core owns the room, its members and the chair; the module owns its data and decides:
 
 - the seats, and what the chair's bench and shuffle do to them;
+- its own settings: their defaults for a room's language, and whether it takes the settings that the chair sends with `room:create` and `room:settings`. The core passes them on as they came and knows nothing of what is in them;
 - whether a game can start, and, in its view, what still keeps it from starting;
 - how a game starts, how many words it needs and what happens on each of its messages;
+- what happens by itself when its time comes, such as the end of a turn whose time has run out (see below);
 - what each viewer sees.
 
 A module's data is immutable: every call returns new data. `views()` is the only way a game's data leaves the server. The room asks it once for a snapshot and calls what it returns for each member and for the screens, so a game builds what everyone sees once, and shows each player only what that player may know. `server/test/fakeGame.ts` is a minimal module that the core's tests use.
 
 The room draws the words for each game from the fields that the chair chose, preferring words it hasn't played with yet, and hands them to the module. After every change to a module's data during a game, the room asks the module whether the game is over.
 
-A module that throws can't take the server down or leave a room half changed. The room asks the module first and changes itself afterwards, so the room stays as it was; the message is answered with `internal`, and the error is logged. Where no message is waiting for an answer, in the handshake, on a disconnect and in the sweep, the error is logged and the rest goes on. A view that can't be built costs only that viewer's snapshot.
+A module that keeps time says when it next has something to do, with `deadline()`, on the room's clock, which `GameContext.now()` reads. After every change to a room, the server sets a timer for that moment, at most one for each room, and when it fires, the room calls the module's `tick()` and sends everyone the new state. The room also calls `tick()` before each of the game's messages, so that a message which arrives after a deadline finds what the deadline brought, however late the timer is: an action meant for a turn whose time has run out is `stale`, even before the timer has fired. A refused message can therefore still bring a new snapshot. A deadline that the data no longer has, because the game ended or went back to the waiting room, takes its timer with it, and so does a room that closes. What `tick()` changes bumps the room's `rev` but doesn't count as activity for the sweep.
+
+A module that throws can't take the server down or leave a room half changed. The room asks the module first and changes itself afterwards, so the room stays as it was; the message is answered with `internal`, and the error is logged. Where no message is waiting for an answer, in the handshake, on a disconnect, at a deadline and in the sweep, the error is logged and the rest goes on. A view that can't be built costs only that viewer's snapshot.
 
 ## Screens
 
@@ -100,7 +104,7 @@ A screen has no name, so all that anyone sees of the screens is how many there a
 - **Per address.** Each address may try to create 5 rooms a minute, or as many as `ROOMS_PER_MINUTE` allows ([development.md](development.md)), counting the attempts whose fields turned out not to do, because checking them means going through their words. It may send 20 codes a minute that belong to no room, which keeps anyone from trying codes until one fits. Past that, the address is refused whether or not its next code is right. Joining and watching count alike, and the handshake gives a bare code no answer at all, so there is no way around the count.
 - **Never for those who have been there.** An address is rarely one person: a lab shares one. So the limit never holds up someone who is in the room already, by their token or on the same connection, or who gives its `roomId`. A wrong `roomId` finds nothing whatever the code, so it can't be used to try codes. A member always gets back in; only newcomers at that address wait out the minute.
 - **Behind a reverse proxy,** every connection comes from the proxy, so set `TRUST_PROXY` to take the address from `X-Forwarded-For` instead; [development.md](development.md) has the settings. Otherwise all players share the limits of one address. IPv6 addresses count per /64 network.
-- **The clock.** Every limit and every wait here is a length of time, so the server measures them all with a clock that only runs forward and that a correction of the system's clock doesn't move.
+- **The clock.** Every limit and every wait here is a length of time, and so are the games' deadlines, so the server measures them all with a clock that only runs forward and that a correction of the system's clock doesn't move. Its readings never leave the server: a game's view says how long is left, not when.
 - **Sizes.** A message may be up to 16 KB. A room holds up to 30 players and 5 screens, and the server up to 2000 rooms.
 - **The sweep.** Once a minute, the server closes rooms in which nobody has been online for 30 minutes, and rooms in which nothing has happened for 6 hours. It also drops members who have been offline for 10 minutes from waiting rooms, closes a waiting room that this leaves empty, and passes on the chair of anyone who has been away for 3 minutes. Those 10 minutes count only time in the waiting room: a player whose phone was locked during a game still has their seat when the room goes back to the waiting room, and 10 minutes from then to return to it.
 - **Restarts.** When the process is asked to stop, it first tells every connection `room:closed` with the reason `restart`. It then ends each connection in the way that sends what is still waiting to go out, and gives that up to 2 seconds before it closes, so that the notice also reaches a connection on a long poll or a slow network. A room that someone made during those seconds is told the same before the server goes.

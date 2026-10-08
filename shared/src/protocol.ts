@@ -22,6 +22,7 @@ export const ROOM_ERRORS = [
   'internal',
   'bad_game',
   'bad_fields',
+  'bad_settings',
   'no_words',
   'too_many_rooms',
   'room_not_found',

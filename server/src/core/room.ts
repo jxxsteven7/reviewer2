@@ -60,6 +60,9 @@ export function chooseFields(
   return { ok: true, fields: chosen };
 }
 
+// The same fields in another order are no change.
+const sameFields = (a: readonly string[], b: readonly string[]) => [...a].sort().join() === [...b].sort().join();
+
 export class Room {
   readonly id = randomId();
   readonly code: string;
@@ -105,7 +108,7 @@ export class Room {
     this.lastActivity = this.createdAt;
     this.lastSeen = this.createdAt;
     this.#lobbySince = this.createdAt;
-    this.data = options.game.create();
+    this.data = options.game.create(options.language);
   }
 
   get context(): GameContext {
@@ -113,6 +116,7 @@ export class Room {
       phase: this.phase,
       language: this.language,
       rng: this.#rng,
+      now: this.#now,
       keyOf: (id) => this.members.get(id)?.key ?? id,
       isOnline: (id) => this.isOnline(id),
       playerIds: () => [...this.members.keys()],
@@ -257,11 +261,25 @@ export class Room {
 
   // --- the chair's controls ---------------------------------------------------------------
 
-  setFields(fields: readonly string[]): Ack {
+  // The chair changes the fields, the game's own settings, or both, in the waiting room. Both
+  // change together or neither does: one that won't do refuses the other with it.
+  setSettings(changes: { fields?: readonly string[]; settings?: unknown }): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
-    const chosen = chooseFields(this.#words, fields, this.language, this.game.wordsNeeded);
-    if (!chosen.ok) return chosen;
-    this.fields = chosen.fields;
+    let fields = this.fields;
+    if (changes.fields !== undefined) {
+      const chosen = chooseFields(this.#words, changes.fields, this.language, this.game.wordsNeeded);
+      if (!chosen.ok) return chosen;
+      fields = chosen.fields;
+    }
+    let data = this.data;
+    if (changes.settings !== undefined) {
+      const configured = this.game.configure(this.data, this.context, changes.settings);
+      if (!configured.ok) return refusalOf(configured);
+      data = configured.data;
+    }
+    if (data === this.data && sameFields(fields, this.fields)) return done;
+    this.fields = fields;
+    this.data = data;
     this.changed();
     return done;
   }
@@ -351,8 +369,11 @@ export class Room {
     return done;
   }
 
-  // A game message from a member.
+  // A game message from a member. Whatever the game had due by now happens first, so that a
+  // message which arrives after its turn's time has run out finds the turn over, even when the
+  // timer that ends it hasn't fired yet.
   act(id: string, type: string, payload: unknown): Ack {
+    this.expire();
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return refusalOf(result);
     this.#update(result.data);
@@ -379,6 +400,27 @@ export class Room {
     if (data === this.data) return;
     this.#take(data, this.#endsWith(data));
     this.changed();
+  }
+
+  // --- the game's own time ----------------------------------------------------------------
+
+  // When the game next has something to do by itself, on the room's clock, or null for never.
+  // Only a game in progress has.
+  deadline(): number | null {
+    return this.phase === 'playing' ? this.game.deadline(this.data) : null;
+  }
+
+  // Lets the game do what is due by now, such as ending a turn whose time has run out. Returns
+  // whether that changed anything. Everyone needs a new snapshot then, but time running out is
+  // not activity: a room in which nobody does anything still closes when the sweep finds that
+  // nothing has happened in it for too long.
+  expire(): boolean {
+    if (this.phase !== 'playing') return false;
+    const data = this.game.tick(this.data, this.context);
+    if (data === this.data) return false;
+    this.#take(data, this.#endsWith(data));
+    this.rev += 1;
+    return true;
   }
 
   // --- housekeeping -----------------------------------------------------------------------

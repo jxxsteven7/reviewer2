@@ -100,6 +100,28 @@ describe('creating a room', () => {
     expect(await create({ name: 'x'.repeat(17) })).toEqual({ ok: false, error: 'name_invalid' });
     expect(await client.send('room:create', 'nonsense')).toEqual({ ok: false, error: 'bad_request' });
   });
+
+  test("takes the game's settings, or starts with the game's defaults", async () => {
+    const plain = await room();
+    expect(game(plain.chair).level).toBe(1);
+    const { chair } = await createRoom(server.url, 'Bob', { settings: { level: 3 } });
+    track(chair);
+    expect(game(chair).level).toBe(3);
+  });
+
+  test('leaves no room behind when the game refuses its settings', async () => {
+    const client = await connect();
+    const reply = await client.send('room:create', {
+      game: 'test',
+      language: 'en',
+      fields: ['general'],
+      settings: { level: 9 },
+      name: 'Ann',
+    });
+    expect(reply).toEqual({ ok: false, error: 'bad_settings' });
+    expect(server.app.rooms.size).toBe(0);
+    expect(client.states).toEqual([]);
+  });
 });
 
 describe('joining a room', () => {
@@ -477,6 +499,35 @@ describe("the chair's controls", () => {
     expect(chair.state?.fields).toEqual(['general', 'tiny']);
   });
 
+  test("can change the game's settings in the waiting room, with the fields or without them", async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    expect(await chair.send('room:settings', { settings: { level: 2 } })).toEqual({ ok: true });
+    await bob.waitFor(() => game(bob).level === 2);
+    expect(await bob.send('room:settings', { settings: { level: 3 } })).toEqual({ ok: false, error: 'not_chair' });
+    // Both change together, or neither does.
+    expect(await chair.send('room:settings', { fields: ['general', 'tiny'], settings: { level: 9 } })).toEqual({
+      ok: false,
+      error: 'bad_settings',
+    });
+    expect(await chair.send('room:settings', { fields: ['nope'], settings: { level: 3 } })).toEqual({
+      ok: false,
+      error: 'bad_fields',
+    });
+    expect(server.app.rooms.find(code)?.fields).toEqual(['general']);
+    expect(await chair.send('room:settings', { fields: ['general', 'tiny'], settings: { level: 3 } })).toEqual({
+      ok: true,
+    });
+    await bob.waitFor((state) => state.fields.length === 2 && game(bob).level === 3);
+    // Settings that change nothing are granted, and nobody is sent a snapshot for them.
+    const rev = server.app.rooms.find(code)?.rev;
+    expect(await chair.send('room:settings', { fields: ['tiny', 'general'], settings: { level: 3 } })).toEqual({
+      ok: true,
+    });
+    expect(await chair.send('room:settings', {})).toEqual({ ok: true });
+    expect(server.app.rooms.find(code)?.rev).toBe(rev);
+  });
+
   test("can't change the fields during a game, whatever the fields are", async () => {
     const { chair, code } = await room();
     await join(code, 'Bob');
@@ -487,6 +538,7 @@ describe("the chair's controls", () => {
         error: 'wrong_phase',
       });
     }
+    expect(await chair.send('room:settings', { settings: { level: 2 } })).toEqual({ ok: false, error: 'wrong_phase' });
   });
 });
 
@@ -624,6 +676,92 @@ describe('games', () => {
     await chair.waitFor(() => game(chair).benched.includes(bob.me));
     expect(await chair.send('room:spectate', { playerId: 'nobody' })).toEqual({ ok: false, error: 'no_such_player' });
     expect(await chair.send('room:shuffle')).toEqual({ ok: true });
+  });
+});
+
+describe("a game's deadlines", () => {
+  const playing = async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    await start(chair);
+    await bob.waitFor((state) => state.phase === 'playing');
+    return { chair, bob, code };
+  };
+
+  test('come by themselves on the server, and everyone hears of them', async () => {
+    const { chair, bob } = await playing();
+    expect(server.timers()).toBe(0);
+    expect(await chair.send('test:alarm', 5000)).toEqual({ ok: true });
+    expect(server.timers()).toBe(1);
+    server.advance(4999);
+    expect(game(bob).rings).toBe(0);
+    server.advance(1);
+    await bob.waitFor(() => game(bob).rings === 1, 'the alarm');
+    await chair.waitFor(() => game(chair).rings === 1, 'the alarm');
+    expect(server.timers()).toBe(0);
+  });
+
+  test('come before a message that arrives after them, however late the timer is', async () => {
+    const { chair, bob } = await playing();
+    await chair.send('test:alarm', 1000);
+    server.advance(2000, false);
+    expect(await bob.send('test:press')).toEqual({ ok: true });
+    const state = await chair.waitFor(() => game(chair).presses === 1);
+    expect((state.data as FakeView).rings).toBe(1);
+    // The timer is no longer needed.
+    expect(server.timers()).toBe(0);
+  });
+
+  test('reach everyone even when the message that came after them is refused', async () => {
+    const { chair, bob, code } = await playing();
+    await chair.send('test:alarm', 1000);
+    server.advance(1000, false);
+    const rev = server.app.rooms.find(code)?.rev ?? 0;
+    expect(await bob.send('test:refuse')).toEqual({ ok: false, error: 'odd' });
+    await chair.waitFor((state) => state.rev > rev && game(chair).rings === 1, 'the alarm');
+  });
+
+  test("don't count as something happening in the room", async () => {
+    const { chair, code } = await playing();
+    const room = server.app.rooms.find(code);
+    const before = room?.lastActivity;
+    await chair.send('test:alarm', 1000);
+    const set = room?.lastActivity;
+    server.advance(1000);
+    await chair.waitFor(() => game(chair).rings === 1);
+    expect(room?.lastActivity).toBe(set);
+    expect(set).toBeGreaterThanOrEqual(before ?? 0);
+  });
+
+  test('go when the game ends, is withdrawn, or goes back to the waiting room, and when the room closes', async () => {
+    const { chair, bob, code } = await playing();
+    await chair.send('test:alarm', 1000);
+    await chair.send('test:finish');
+    expect(server.timers()).toBe(0);
+    await again(chair);
+    await start(chair);
+    await chair.waitFor((state) => state.phase === 'playing');
+    await chair.send('test:alarm', 1000);
+    expect(await chair.send('room:end', { gameId: chair.state?.gameId })).toEqual({ ok: true });
+    expect(server.timers()).toBe(0);
+    await again(chair);
+    await start(chair);
+    await chair.waitFor((state) => state.phase === 'playing');
+    await chair.send('test:alarm', 1000);
+    expect(server.timers()).toBe(1);
+    await bob.send('room:leave');
+    await chair.send('room:leave');
+    expect(server.app.rooms.find(code)).toBeUndefined();
+    expect(server.timers()).toBe(0);
+  });
+
+  test('of a game that throws are logged, and the server goes on', async () => {
+    const { chair } = await playing();
+    await chair.send('test:alarm', 1000);
+    await chair.send('test:break', 'tick');
+    server.advance(1000);
+    expect(server.logs.some((entry) => entry.event === 'error' && entry.fields?.where === 'deadline')).toBe(true);
+    expect(await chair.send('sys:ping')).toEqual({ ok: true });
   });
 });
 
