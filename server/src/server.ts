@@ -1,10 +1,10 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
-import type { Config } from './config';
+import { DEFAULT_ROOMS_PER_MINUTE, type Config } from './config';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
 import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
-import { attachSockets, DEFAULT_ROOMS_PER_MINUTE, type RoomSockets } from './core/socket';
+import { attachSockets, type RoomSockets } from './core/socket';
 import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
 import { log as defaultLog } from './log';

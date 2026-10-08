@@ -44,12 +44,12 @@ const ok = (fields: Record<string, unknown> = {}): Reply => ({ ok: true, ...fiel
 const prefixOf = (event: string): string => event.split(':', 1)[0] ?? '';
 const OWN_PREFIXES = new Set(Object.keys(ROOM_MESSAGES).map(prefixOf));
 
-// Per connection: about 10 messages a second, in bursts of up to 20. Per address and minute: 5
-// rooms, unless ROOMS_PER_MINUTE says otherwise, counting the attempts that came to nothing, and
-// 20 codes that belong to no room, which keeps anyone from trying codes until one fits.
+// Per connection: about 10 messages a second, in bursts of up to 20. Per address and minute: as
+// many rooms as the options say (config.ts has the default), counting the attempts that came to
+// nothing, and 20 codes that belong to no room, which keeps anyone from trying codes until one
+// fits.
 const MESSAGES_PER_SECOND = 10;
 const MESSAGE_BURST = 20;
-export const DEFAULT_ROOMS_PER_MINUTE = 5;
 const FAILED_LOOKUPS_PER_MINUTE = 20;
 
 export interface RoomSockets {

@@ -1,5 +1,4 @@
 import { join, resolve } from 'node:path';
-import { DEFAULT_ROOMS_PER_MINUTE } from './core/socket';
 
 // Settings come from environment variables; docs/development.md lists them.
 export interface Config {
@@ -11,6 +10,10 @@ export interface Config {
   roomsPerMinute: number;
   version: string;
 }
+
+// How many times a minute one address may try to create a room unless ROOMS_PER_MINUTE says
+// otherwise (docs/architecture.md). The server applies it when it is given no number.
+export const DEFAULT_ROOMS_PER_MINUTE = 5;
 
 // The repository root, two levels up from both server/src and server/dist.
 const root = resolve(import.meta.dirname, '..', '..');
