@@ -52,18 +52,22 @@ export interface AppOptions extends Pick<Config, 'publicDir' | 'version'>, Parti
 
 export function createAppServer(options: AppOptions): AppServer {
   const log = options.log ?? defaultLog;
-  // The config refuses a bad ROOMS_PER_MINUTE, and a bad limit given in code is refused here,
-  // rather than counted as one a minute, which is what the counters make of 0 or NaN. A limit on
-  // rooms above the default protects less against abuse, so the server says when it has one.
+  // The config refuses a bad ROOMS_PER_MINUTE or FEEDBACK_PER_10_MINUTES, and a bad limit given
+  // in code is refused here, rather than counted as one a minute, which is what the counters make
+  // of 0 or NaN. A limit above the default protects less against abuse, so the server says when
+  // it has one.
   const socketLimits = options.socketLimits ?? DEFAULT_SOCKET_LIMITS;
   for (const [name, value] of Object.entries(socketLimits)) {
     if (!(Number.isInteger(value) && value >= 1)) {
       throw new Error(`${name} must be a whole number from 1 up, not ${value}`);
     }
   }
-  const { roomsPerMinute } = socketLimits;
+  const { roomsPerMinute, feedbackPerWindow } = socketLimits;
   if (roomsPerMinute > DEFAULT_SOCKET_LIMITS.roomsPerMinute) {
     log('rooms_per_minute_raised', { roomsPerMinute, default: DEFAULT_SOCKET_LIMITS.roomsPerMinute });
+  }
+  if (feedbackPerWindow > DEFAULT_SOCKET_LIMITS.feedbackPerWindow) {
+    log('feedback_limit_raised', { feedbackPerWindow, default: DEFAULT_SOCKET_LIMITS.feedbackPerWindow });
   }
   const http = createServer(createRequestHandler({ publicDir: options.publicDir, version: options.version }));
   const io = new Server(http, {

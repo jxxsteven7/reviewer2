@@ -8,7 +8,7 @@ import { log as defaultLog } from './log';
 import { createAppServer, type AppServer } from './server';
 import { History, watchStats } from './stats';
 import { createStatusHandler, STATUS_HOST } from './status';
-import { openDatabase } from './store/database';
+import { openDatabase, truncateWal } from './store/database';
 import { FeedbackStore } from './store/feedback';
 import { SNAPSHOT_MS, Snapshots } from './store/snapshots';
 
@@ -62,7 +62,7 @@ export async function main({
   );
   log('word_lists_loaded', { fields: words.fields().map(({ id, counts }) => ({ id, ...counts })) });
 
-  const database = await openDatabase(config.dataDir);
+  const database = await openDatabase(config.dataDir, { log });
   const { db } = database;
   if (database.file === null) {
     log('database_opened', {
@@ -86,12 +86,17 @@ export async function main({
 
   // Clears the contacts that have been kept for 90 days. Secure delete overwrites them in the
   // database file, but the WAL beside it still holds the pages as they were before, until a
-  // checkpoint writes them back and a truncation drops them.
+  // checkpoint writes them back and a truncation drops them. That can't be done while another
+  // connection is in the middle of the database, so it is tried again every hour until it is,
+  // and the log says each time whether it was.
+  let walHoldsContacts = false;
   const clearContacts = () => {
     const count = feedback.clearContacts();
-    if (count === 0) return;
-    db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-    log('contacts_cleared', { count });
+    if (count > 0) walHoldsContacts = true;
+    if (!walHoldsContacts) return;
+    const walTruncated = truncateWal(db);
+    if (walTruncated) walHoldsContacts = false;
+    log('contacts_cleared', { count, walTruncated });
   };
 
   let server: AppServer;
@@ -102,7 +107,11 @@ export async function main({
       words,
       games: [keywordsGame],
       feedback,
-      socketLimits: { ...DEFAULT_SOCKET_LIMITS, roomsPerMinute: config.roomsPerMinute },
+      socketLimits: {
+        ...DEFAULT_SOCKET_LIMITS,
+        roomsPerMinute: config.roomsPerMinute,
+        feedbackPerWindow: config.feedbackPerWindow,
+      },
       log,
     });
   } catch (error) {
@@ -127,6 +136,7 @@ export async function main({
         version: config.version,
         trustProxy: config.trustProxy,
         roomsPerMinute: config.roomsPerMinute,
+        feedbackPer10Minutes: config.feedbackPerWindow,
       });
       resolve(true);
     });

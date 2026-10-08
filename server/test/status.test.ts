@@ -223,9 +223,18 @@ describe('the status server', () => {
     const screen = await TestClient.connect(server.url, {}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
     clients.push(chair, quentin, screen);
     expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
+    expect(
+      await chair.send('meta:feedback', {
+        kind: 'bug',
+        text: 'From the room',
+        version: 'v',
+        language: 'en',
+        page: 'room',
+      }),
+    ).toEqual({ ok: true });
     await startStatus();
 
-    for (const path of ['/', '/status.json']) {
+    for (const path of ['/', '/feedback', '/status.json']) {
       const { body } = await get(base, path);
       for (const secret of [
         roomId,
@@ -262,18 +271,28 @@ describe('the status server', () => {
     const shown = (body: string) =>
       [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
 
-    const latest = (await get(base, '/')).body;
-    expect(latest).toContain(`${total} in all, newest first.`);
-    expect(shown(latest)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
-    expect(latest).toContain('<p class="more"><a href="/?before=6#feedback">Older</a></p>');
+    // The status page has the count and the link, and none of the feedback.
+    const status = await get(base, '/');
+    expect(status.body).toContain(`<p>${total} in all &middot; <a href="/feedback">Read it</a></p>`);
+    expect(shown(status.body)).toEqual([]);
 
-    const older = (await get(base, '/?before=6')).body;
+    const latest = await get(base, '/feedback');
+    expect(latest.status).toBe(200);
+    expect(latest.headers['content-type']).toBe('text/html; charset=utf-8');
+    expect(latest.headers['cache-control']).toBe('no-store');
+    expect(latest.headers['content-security-policy']).toMatch(/^default-src 'none'; style-src 'unsafe-inline';/);
+    expect(latest.body).toContain(`${total} in all, newest first`);
+    expect(latest.body).not.toContain('http-equiv="refresh"');
+    expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
+    expect(latest.body).toContain('<p class="more"><a href="/feedback?before=6">Older</a></p>');
+
+    const older = (await get(base, '/feedback?before=6')).body;
     expect(shown(older)).toEqual([5, 4, 3, 2, 1]);
-    expect(older).toContain('<p class="more"><a href="/#feedback">Latest</a></p>');
+    expect(older).toContain('<p class="more"><a href="/feedback">Latest</a></p>');
 
     // A query that isn't a number is taken for none.
     for (const query of ['?before=abc', '?before=-1', '?before=1e3', '?other=1']) {
-      expect(shown((await get(base, `/${query}`)).body), query).toEqual(shown(latest));
+      expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual(shown(latest.body));
     }
   });
 
@@ -296,7 +315,7 @@ describe('the status server', () => {
     const post = await get(base, '/status.json', {}, 'POST');
     expect(post.status).toBe(405);
     expect(post.headers.allow).toBe('GET, HEAD');
-    for (const path of ['/status', '/status.json/', '/index.html', '/healthz', '//']) {
+    for (const path of ['/status', '/status.json/', '/feedback/', '/index.html', '/healthz', '//']) {
       expect((await get(base, path)).status, path).toBe(404);
     }
   });

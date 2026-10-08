@@ -3,10 +3,10 @@ import { basename, join } from 'node:path';
 import { backup, DatabaseSync } from 'node:sqlite';
 
 // Snapshots of the database (docs/architecture.md): a copy every hour in DATA_DIR/snapshots, of
-// which the last three are kept, and one before every migration, which is kept for a week. A
-// snapshot holds the contacts that players left, so none is kept for long: a contact outlives its
-// 90 days by no more than the snapshots that were taken before it was cleared. A database in
-// memory has none.
+// which the last three are kept, and one before every migration, of which the latest for each
+// version is kept for a week. A snapshot holds the contacts that players left, so none is kept
+// for long: a contact outlives its 90 days by no more than the snapshots that were taken before
+// it was cleared. A database in memory has none.
 
 export const SNAPSHOT_MS = 60 * 60_000;
 export const SNAPSHOTS_KEPT = 3;
@@ -17,7 +17,7 @@ export const BEFORE_MIGRATION_MS = 7 * 24 * 60 * 60_000;
 // the migration went to after the time.
 const STAMP = '(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})Z';
 const HOURLY = new RegExp(`^reviewer2-${STAMP}\\.db$`);
-const BEFORE_MIGRATION = new RegExp(`^reviewer2-${STAMP}-before-v\\d+\\.db$`);
+const BEFORE_MIGRATION = new RegExp(`^reviewer2-${STAMP}-before-v(\\d+)\\.db$`);
 // What a snapshot is written to before it gets its name, and the files that SQLite keeps beside it
 // while it is open.
 const TEMPORARY = /\.tmp(-wal|-shm|-journal)?$/;
@@ -81,16 +81,25 @@ function timeOf(file: string, kind: RegExp): number | null {
   return Date.UTC(year, month - 1, day, hours, minutes, seconds);
 }
 
-// Deletes all but the latest `kept` hourly snapshots, and the snapshots from before a migration
-// that are older than a week at `now`, by the time in their names.
+// Deletes all but the latest `kept` hourly snapshots, and of the snapshots from before a
+// migration those older than a week at `now` and those that a later one to the same version
+// supersedes, all by the time in their names. An earlier snapshot to the same version comes from
+// a start whose migration failed; the database hasn't moved on since, unless the service went
+// back to the release before, and then the later snapshot is the one that has what it wrote.
 export function pruneSnapshots(dir: string, now: number, kept = SNAPSHOTS_KEPT): void {
   const files = readdirSync(dir);
   const hourly = files.filter((file) => HOURLY.test(file)).sort();
-  const expired = files.filter((file) => {
-    const time = timeOf(file, BEFORE_MIGRATION);
-    return time !== null && time < now - BEFORE_MIGRATION_MS;
+  const latestByVersion = new Map<string, string>();
+  for (const file of files.filter((file) => BEFORE_MIGRATION.test(file)).sort()) {
+    latestByVersion.set(BEFORE_MIGRATION.exec(file)?.[7] ?? '', file);
+  }
+  const beforeMigration = files.filter((file) => {
+    const match = BEFORE_MIGRATION.exec(file);
+    if (!match) return false;
+    const time = timeOf(file, BEFORE_MIGRATION) ?? 0;
+    return time < now - BEFORE_MIGRATION_MS || latestByVersion.get(match[7] ?? '') !== file;
   });
-  for (const file of [...hourly.slice(0, Math.max(0, hourly.length - kept)), ...expired]) {
+  for (const file of [...hourly.slice(0, Math.max(0, hourly.length - kept)), ...beforeMigration]) {
     rmSync(join(dir, file), { force: true });
   }
 }

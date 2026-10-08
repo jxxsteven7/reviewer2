@@ -43,6 +43,14 @@ describe('the feedback', () => {
     ]);
   });
 
+  test('never gets an id that another had, even after the operator deleted the newest', () => {
+    const feedback = store();
+    for (let i = 0; i < 3; i += 1) feedback.add(entry());
+    db.exec('DELETE FROM feedback WHERE id = 3');
+    expect(feedback.add(entry())).toBe(4);
+    expect(feedback.latest(10).map(({ id }) => id)).toEqual([4, 2, 1]);
+  });
+
   test('is read a page at a time, back from an id', () => {
     const feedback = store();
     for (let i = 1; i <= 5; i += 1) feedback.add(entry({ text: `Number ${i}` }));

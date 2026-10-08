@@ -1,15 +1,15 @@
 import type { RequestListener } from 'node:http';
 import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
-import { renderStatusPage, type FeedbackListing } from './statusPage';
+import { FEEDBACK_PATH, renderFeedbackPage, renderStatusPage, type FeedbackListing } from './statusPage';
 import type { FeedbackStore } from './store/feedback';
 
 // The status page for the operator (docs/architecture.md). It has a port of its own, STATUS_PORT,
 // which listens on 127.0.0.1 whatever HOST says, so only the server's own machine can reach it:
 // the tunnel and any reverse proxy lead to the game's port alone. That is why it needs no
-// password. `/` is the page and `/status.json` the same numbers for scripts. Both are read-only.
-// The page also shows the feedback that players sent, a page of it at a time: `/?before=<id>`
-// shows what came before that one.
+// password. `/` is the page and `/status.json` the same numbers for scripts. `/feedback` is the
+// feedback that players sent, a page of it at a time: `/feedback?before=<id>` shows what came
+// before that one. All of it is read-only.
 
 export const STATUS_HOST = '127.0.0.1';
 
@@ -17,14 +17,13 @@ export const STATUS_HOST = '127.0.0.1';
 // name of its own at 127.0.0.1, to read the status through a browser on this machine.
 const LOCAL = /^(localhost|127\.0\.0\.1)(:\d{1,5})?$/i;
 
-// The page loads nothing and runs no script.
+// The pages load nothing and run no script.
 const CSP =
   "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
-// How much feedback the page shows at a time. The page reloads every 5 seconds, so it is never
-// all of it.
+// How much feedback the feedback page shows at a time.
 export const FEEDBACK_SHOWN = 50;
 
 // The feedback for the page, before the id in the query when it has one, and whether there is
@@ -57,8 +56,11 @@ export function createStatusHandler(
         const path = pathOf(target);
         if (path === '/') {
           res.setHeader('Content-Security-Policy', CSP);
-          const page = renderStatusPage(stats(), history.samples(), history.now(), feedbackListing(feedback, target));
+          const page = renderStatusPage(stats(), history.samples(), history.now(), feedback.count());
           send(res, 200, 'text/html; charset=utf-8', page);
+        } else if (path === FEEDBACK_PATH) {
+          res.setHeader('Content-Security-Policy', CSP);
+          send(res, 200, 'text/html; charset=utf-8', renderFeedbackPage(feedbackListing(feedback, target)));
         } else if (path === '/status.json') {
           send(res, 200, 'application/json', JSON.stringify(stats()));
         } else {
@@ -67,8 +69,8 @@ export function createStatusHandler(
       }
     } catch (error) {
       // Counting throws when the system does (stats.ts), and reading the feedback when the
-      // database does. The page is the operator's alone, and an error in it must not end the game
-      // for everyone, which an error thrown from here would.
+      // database does. The pages are the operator's alone, and an error in them must not end the
+      // game for everyone, which an error thrown from here would.
       log('error', { where: 'status', message: error instanceof Error ? error.message : String(error) });
       if (res.headersSent) res.destroy();
       else send(res, 500, 'text/plain; charset=utf-8', 'Internal server error\n');

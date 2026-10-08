@@ -9,6 +9,7 @@ export interface Config {
   wordsDir: string;
   trustProxy: boolean;
   roomsPerMinute: number;
+  feedbackPerWindow: number;
   // Where the database and its snapshots are kept, or null for a database in memory, which is
   // lost when the server stops (docs/architecture.md).
   dataDir: string | null;
@@ -65,6 +66,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     trustProxy: flag('TRUST_PROXY', env.TRUST_PROXY),
     // How many times a minute one address may try to create a room (docs/architecture.md).
     roomsPerMinute: wholeNumber('ROOMS_PER_MINUTE', env.ROOMS_PER_MINUTE, DEFAULT_SOCKET_LIMITS.roomsPerMinute),
+    // How much feedback one address may send in 10 minutes, which is the window of the default.
+    feedbackPerWindow: wholeNumber(
+      'FEEDBACK_PER_10_MINUTES',
+      env.FEEDBACK_PER_10_MINUTES,
+      DEFAULT_SOCKET_LIMITS.feedbackPerWindow,
+    ),
     // A relative path is taken from the repository's root, as the defaults above are, wherever the
     // server is started from: `npm run dev` starts it in server/.
     dataDir: env.DATA_DIR?.trim() ? resolve(root, env.DATA_DIR.trim()) : null,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { Sample, Stats } from './stats';
-import { duration, renderStatusPage, type FeedbackListing } from './statusPage';
+import { duration, renderFeedbackPage, renderStatusPage, type FeedbackListing } from './statusPage';
 import type { Feedback } from './store/feedback';
 
 const MB = 2 ** 20;
@@ -135,10 +135,22 @@ describe('the feedback', () => {
     ...changes,
   });
   const page = (changes: Partial<FeedbackListing> = {}) =>
-    renderStatusPage(stats(), [], NOW, { total: 0, entries: [], paged: false, older: false, ...changes });
+    renderFeedbackPage({ total: 0, entries: [], paged: false, older: false, ...changes });
 
-  test('says when there is none yet', () => {
-    expect(text(page())).toContain('Feedback None yet.');
+  test('has a page of its own, which the status page counts and links to', () => {
+    const status = renderStatusPage(stats(), [], NOW);
+    expect(text(status)).toContain('Feedback None yet.');
+    expect(status).toContain('<meta http-equiv="refresh" content="5">');
+    const some = renderStatusPage(stats(), [], NOW, 12);
+    expect(some).toContain('<p>12 in all &middot; <a href="/feedback">Read it</a></p>');
+    expect(some).not.toContain('<article>');
+
+    // The feedback page is for reading, so it doesn't reload.
+    const html = page();
+    expect(html).toContain('<title>Reviewer 2 feedback</title>');
+    expect(html).not.toContain('http-equiv="refresh"');
+    expect(html).toContain('<a href="/">Status</a>');
+    expect(text(html)).toContain('Feedback 0 in all, newest first &middot; Status None yet.');
   });
 
   test('shows each one with what came along, the newest first', () => {
@@ -155,7 +167,7 @@ describe('the feedback', () => {
     ];
     const html = page({ total: 2, entries });
     const shown = text(html);
-    expect(shown).toContain('2 in all, newest first.');
+    expect(shown).toContain('2 in all, newest first');
     expect(shown).toContain(
       '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; Chinese &middot; from the room ' +
         'Line one Line two Contact: wechat: r2 Browser: Mozilla/5.0',
@@ -182,7 +194,8 @@ describe('the feedback', () => {
         }),
       ],
     });
-    expect(html).not.toMatch(/<script|<img|<a |<b>|onerror=alert\(1\)>/);
+    // The one link on the page is the page's own.
+    expect(html.replace('<a href="/">Status</a>', '')).not.toMatch(/<script|<img|<a |<b>|onerror=alert\(1\)>/);
     expect(html).toContain(
       '&#60;script&#62;alert(&#34;text&#34;)&#60;/script&#62;&#60;img src=x onerror=alert(1)&#62;',
     );
@@ -194,10 +207,10 @@ describe('the feedback', () => {
   test('links to older feedback, and back to the latest', () => {
     const entries = [feedback(60), feedback(59)];
     expect(page({ total: 99, entries, older: true })).toContain(
-      '<p class="more"><a href="/?before=59#feedback">Older</a></p>',
+      '<p class="more"><a href="/feedback?before=59">Older</a></p>',
     );
     expect(page({ total: 99, entries, paged: true, older: true })).toContain(
-      '<p class="more"><a href="/#feedback">Latest</a> &middot; <a href="/?before=59#feedback">Older</a></p>',
+      '<p class="more"><a href="/feedback">Latest</a> &middot; <a href="/feedback?before=59">Older</a></p>',
     );
     expect(page({ total: 2, entries })).not.toContain('class="more"');
   });

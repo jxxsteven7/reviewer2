@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   checkContact,
   checkFeedback,
@@ -122,6 +123,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const creations = new WindowCounter(limits.roomsPerMinute, 60_000, now);
   const failedLookups = new WindowCounter(limits.failedLookupsPerMinute, 60_000, now);
   const feedbackSent = new WindowCounter(limits.feedbackPerWindow, limits.feedbackWindowMs, now);
+  // The feedback that each address sent in the last window, as a hash of what was kept and when,
+  // so that the same feedback sent again, as when the answer to the first was lost on the way
+  // and the player pressed Send once more, is kept once (docs/architecture.md).
+  const feedbackSeen = new Map<string, number>();
+  const feedbackKey = (ip: string, kind: string, text: string, contact: string | null) =>
+    `${ip}\n${createHash('sha256')
+      .update(JSON.stringify([kind, text, contact]))
+      .digest('base64')}`;
   // Whether the log has been told that no more feedback is taken. Once is enough until feedback
   // is taken again, which takes the operator's doing.
   let feedbackFullLogged = false;
@@ -482,13 +491,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
     // who they are. The log gets its number and kind, and never its text or contact. Only what
     // was kept counts against the address, so that a player who is told to shorten their text
-    // doesn't lose a turn for it.
-    on(handlers, 'meta:feedback', ({ kind, text, contact, version, language, page }) => {
-      if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
+    // doesn't lose a turn for it, and feedback that the address sent once already in the window
+    // is answered as it was the first time, without being kept or counted again.
+    on(handlers, 'meta:feedback', ({ kind, text, contact, version: pageVersion, language, page }) => {
       const checked = checkFeedback(text);
       if (checked.problem) return fail(checked.problem);
       const given = checkContact(contact);
       if (given.problem) return fail(given.problem);
+      const key = feedbackKey(conn.ip, kind, checked.text, given.contact);
+      if (feedbackSeen.has(key)) return ok();
+      if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
       const full = feedback.full();
       if (full) {
         if (!feedbackFullLogged) log('feedback_full', { reason: full });
@@ -500,12 +512,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         kind,
         text: checked.text,
         contact: given.contact,
-        version,
+        version: pageVersion,
         language,
         page,
         userAgent: kind === 'bug' && userAgent ? userAgent.slice(0, MAX_USER_AGENT) : null,
       });
       feedbackSent.add(conn.ip);
+      feedbackSeen.set(key, now());
       feedbackFullLogged = false;
       log('feedback_received', { id, kind });
       return ok();
@@ -661,6 +674,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         creations.prune();
         failedLookups.prune();
         feedbackSent.prune();
+        for (const [key, time] of feedbackSeen) {
+          if (now() - time >= limits.feedbackWindowMs) feedbackSeen.delete(key);
+        }
       });
     },
     closeAll(reason) {

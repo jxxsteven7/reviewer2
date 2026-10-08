@@ -4,11 +4,13 @@
 // schema is a new migration at the end.
 
 export const MIGRATIONS: readonly string[] = [
-  // 1: feedback from players. Rows are never deleted, so an id is never given out twice. The
-  // contact is cleared 90 days after the feedback came, which the partial index finds quickly.
+  // 1: feedback from players. The server never deletes a row, but the operator may, to make room
+  // (docs/architecture.md); AUTOINCREMENT keeps a deleted id from being given out again, so that
+  // an id in the log names one piece of feedback for good. The contact is cleared 90 days after
+  // the feedback came, which the partial index finds quickly.
   `
   CREATE TABLE feedback (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at TEXT NOT NULL,
     kind TEXT NOT NULL CHECK (kind IN ('idea', 'bug', 'words')),
     text TEXT NOT NULL,

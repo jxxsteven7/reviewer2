@@ -163,17 +163,23 @@ describe('the limit on feedback', () => {
     const client = await connect();
     expect(await client.send('meta:feedback', message({ text: '' }))).toEqual({ ok: false, error: 'feedback_empty' });
     for (let i = 0; i < DEFAULT_SOCKET_LIMITS.feedbackPerWindow; i += 1) {
-      expect(await client.send('meta:feedback', message())).toEqual({ ok: true });
+      expect(await client.send('meta:feedback', message({ text: `Idea ${i}` }))).toEqual({ ok: true });
     }
     // A new connection from the same address doesn't start the count again.
     const again = await connect();
-    expect(await again.send('meta:feedback', message())).toEqual({ ok: false, error: 'feedback_limited' });
+    expect(await again.send('meta:feedback', message({ text: 'Idea 3' }))).toEqual({
+      ok: false,
+      error: 'feedback_limited',
+    });
     expect(server.feedback.count()).toBe(3);
 
     server.advance(DEFAULT_SOCKET_LIMITS.feedbackWindowMs - 1000);
-    expect(await again.send('meta:feedback', message())).toEqual({ ok: false, error: 'feedback_limited' });
+    expect(await again.send('meta:feedback', message({ text: 'Idea 3' }))).toEqual({
+      ok: false,
+      error: 'feedback_limited',
+    });
     server.advance(1000);
-    expect(await again.send('meta:feedback', message())).toEqual({ ok: true });
+    expect(await again.send('meta:feedback', message({ text: 'Idea 3' }))).toEqual({ ok: true });
   });
 
   test('counts each address on its own behind a trusted proxy', async () => {
@@ -181,8 +187,47 @@ describe('the limit on feedback', () => {
     const lab = await connect({ 'x-forwarded-for': '203.0.113.9' });
     const home = await connect({ 'x-forwarded-for': '198.51.100.7' });
     expect(await lab.send('meta:feedback', message())).toEqual({ ok: true });
-    expect(await lab.send('meta:feedback', message())).toEqual({ ok: false, error: 'feedback_limited' });
+    expect(await lab.send('meta:feedback', message({ text: 'Another' }))).toEqual({
+      ok: false,
+      error: 'feedback_limited',
+    });
     expect(await home.send('meta:feedback', message())).toEqual({ ok: true });
+  });
+
+  test('keeps the same feedback from one address once in a window, as when the first answer was lost', async () => {
+    server = await startServer({ trustProxy: true });
+    const client = await connect({ 'x-forwarded-for': '203.0.113.9' });
+    const sent = message({ kind: 'bug', text: ' Same  text ', contact: 'me@example.com' });
+    expect(await client.send('meta:feedback', sent)).toEqual({ ok: true });
+    // Sent again, as the panel does when it heard no answer: the same, give or take the cleaning.
+    const again = await connect({ 'x-forwarded-for': '203.0.113.9' });
+    expect(await again.send('meta:feedback', { ...sent, text: 'Same text' })).toEqual({ ok: true });
+    expect(server.feedback.count()).toBe(1);
+    expect(server.logs.filter(({ event }) => event === 'feedback_received')).toHaveLength(1);
+    // It didn't count against the address either.
+    for (let i = 1; i < DEFAULT_SOCKET_LIMITS.feedbackPerWindow; i += 1) {
+      expect(await client.send('meta:feedback', message({ text: `Idea ${i}` }))).toEqual({ ok: true });
+    }
+    expect(await client.send('meta:feedback', message({ text: 'One more' }))).toEqual({
+      ok: false,
+      error: 'feedback_limited',
+    });
+    // The same feedback again is still answered as it was, limit or no limit.
+    expect(await client.send('meta:feedback', sent)).toEqual({ ok: true });
+    expect(server.feedback.count()).toBe(3);
+
+    // Another address, or another kind or contact, is other feedback.
+    const other = await connect({ 'x-forwarded-for': '198.51.100.7' });
+    expect(await other.send('meta:feedback', sent)).toEqual({ ok: true });
+    expect(await other.send('meta:feedback', { ...sent, kind: 'idea' })).toEqual({ ok: true });
+    expect(await other.send('meta:feedback', { ...sent, contact: 'other@example.com' })).toEqual({ ok: true });
+    expect(server.feedback.count()).toBe(6);
+
+    // After the window, the same feedback is new again.
+    server.advance(DEFAULT_SOCKET_LIMITS.feedbackWindowMs);
+    server.app.sockets.sweep();
+    expect(await client.send('meta:feedback', sent)).toEqual({ ok: true });
+    expect(server.feedback.count()).toBe(7);
   });
 
   test('is a whole number from 1 up, like every limit of the sockets', async () => {
@@ -199,9 +244,11 @@ describe('a server that takes no more feedback', () => {
   test('says so to the player, and once to the log', async () => {
     server = await startServer({ feedbackLimits: { maxEntries: 2 }, socketLimits: { feedbackPerWindow: 10 } });
     const client = await connect();
-    for (let i = 0; i < 2; i += 1) expect(await client.send('meta:feedback', message())).toEqual({ ok: true });
+    let n = 0;
+    const next = () => message({ text: `Idea ${(n += 1)}` });
+    for (let i = 0; i < 2; i += 1) expect(await client.send('meta:feedback', next())).toEqual({ ok: true });
     for (let i = 0; i < 2; i += 1) {
-      expect(await client.send('meta:feedback', message())).toEqual({ ok: false, error: 'feedback_full' });
+      expect(await client.send('meta:feedback', next())).toEqual({ ok: false, error: 'feedback_full' });
     }
     expect(server.feedback.count()).toBe(2);
     expect(server.logs.filter(({ event }) => event === 'feedback_full')).toEqual([
@@ -211,8 +258,8 @@ describe('a server that takes no more feedback', () => {
     // Once the operator has made room, feedback is taken again, and the log hears of the next time
     // that it is full.
     server.db.exec('DELETE FROM feedback WHERE id = 1');
-    expect(await client.send('meta:feedback', message())).toEqual({ ok: true });
-    expect(await client.send('meta:feedback', message())).toEqual({ ok: false, error: 'feedback_full' });
+    expect(await client.send('meta:feedback', next())).toEqual({ ok: true });
+    expect(await client.send('meta:feedback', next())).toEqual({ ok: false, error: 'feedback_full' });
     expect(server.logs.filter(({ event }) => event === 'feedback_full')).toHaveLength(2);
   });
 });

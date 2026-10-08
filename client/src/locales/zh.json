@@ -413,8 +413,8 @@
     "feedback_empty": "先写点内容吧。",
     "feedback_too_long": "最多 1000 个字。",
     "contact_too_long": "联系方式最多 100 个字。",
-    "feedback_limited": "同一个网络 10 分钟内最多发 3 条建议，请稍后再试。",
-    "feedback_full": "服务器暂时不收新的建议，请改天再试。"
+    "feedback_limited": "同一个网络 10 分钟内最多发 3 条反馈，请稍后再试。",
+    "feedback_full": "服务器暂时不收新的反馈，请改天再试。"
   },
   "footer": {
     "noSignUp": "无需注册，没有广告。",
@@ -440,7 +440,7 @@
     "contactHint": "邮箱、微信号或别的能联系到你的方式。",
     "bugNote": "报告 bug 时会附带浏览器的 User-Agent，方便查找问题：里面有浏览器和系统的名称、版本，有的手机还有型号。",
     "submit": "发送",
-    "sent": "谢谢！建议已经发出。"
+    "sent": "谢谢！反馈已经发出。"
   },
   "notFound": {
     "title": "页面不存在",

@@ -22,8 +22,9 @@ const server = spawn(process.execPath, [join(root, 'server', 'dist', 'index.cjs'
     PUBLIC_DIR: join(root, 'client', 'dist'),
     WORDS_DIR: join(root, 'words'),
     TRUST_PROXY: '0',
-    // Every test makes a room from the same address.
+    // Every test makes a room from the same address, and every browser sends its feedback from it.
     ROOMS_PER_MINUTE: '1000',
+    FEEDBACK_PER_10_MINUTES: '1000',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });

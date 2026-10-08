@@ -184,4 +184,15 @@ describe('the hourly snapshots', () => {
     expect(readdirSync(snapshots)).toEqual([]);
     expect(BEFORE_MIGRATION_MS).toBe(7 * 24 * HOUR);
   });
+
+  test('keep only the latest snapshot from before a migration to each version', () => {
+    const snapshots = join(dir, 'snapshots');
+    mkdirSync(snapshots);
+    // Three starts whose migration to version 2 failed, seconds apart, then the migration to 3.
+    const attempts = [0, 3000, 6000].map((ms) => snapshotName(START + ms, '-before-v2'));
+    const toThree = snapshotName(START + HOUR, '-before-v3');
+    for (const file of [...attempts, toThree]) writeFileSync(join(snapshots, file), '');
+    pruneSnapshots(snapshots, START + 2 * HOUR);
+    expect(readdirSync(snapshots).sort()).toEqual([attempts[2], toThree]);
+  });
 });

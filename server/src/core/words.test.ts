@@ -383,6 +383,34 @@ describe('loading word lists', () => {
       rmSync(empty, { recursive: true, force: true });
     }
   });
+
+  test('refuses word lists that have no term that can be read, since a room needs words', () => {
+    const empty = mkdtempSync(join(tmpdir(), 'reviewer2-no-terms-'));
+    try {
+      const list = (id: string, terms: unknown[]) =>
+        writeFileSync(join(empty, `${id}.json`), JSON.stringify({ id, name: { zh: id, en: id }, terms }));
+      list('ml', []);
+      expect(() => loadWordLibrary(empty)).toThrow(`there are no words in the word lists in ${empty}`);
+      const skipped: string[] = [];
+      list('hci', [{ nope: 1 }, { id: 'x' }]);
+      expect(() => loadWordLibrary(empty, (_file, _reason, term) => skipped.push(term ?? ''))).toThrow(
+        /^there are no words in the word lists/,
+      );
+      expect(skipped).toEqual(['terms[0]', 'x']);
+      // One term in one list is enough.
+      list('hci', [{ id: 'x', en: 'X' }]);
+      expect(
+        loadWordLibrary(empty)
+          .fields()
+          .map(({ id, counts }) => [id, counts.en]),
+      ).toEqual([
+        ['hci', 1],
+        ['ml', 0],
+      ]);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
 });
 
 // scripts/check-words.mjs runs without TypeScript, so it can't import wordKey() or the size of a

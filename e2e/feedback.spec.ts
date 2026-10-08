@@ -2,11 +2,9 @@ import { readFileSync } from 'node:fs';
 import { expect, newPlayer, TEXT, test } from './helpers';
 
 // Feedback from the home page, through its panel, to the server, which keeps it and logs its
-// number and kind (docs/architecture.md).
-//
-// One address may send 3 pieces of feedback in 10 minutes, and the browsers of every project come
-// from 127.0.0.1 to the one server of a run. So this runs on one phone only, which leaves room for
-// a retry.
+// number and kind (docs/architecture.md). The browsers of every project come from 127.0.0.1 to
+// the one server of a run, so e2e/server.mjs raises the limit per address, and each project
+// sends a text of its own, since the server keeps the same text from one address only once.
 const text = TEXT.en;
 
 const logged = (): { event: string; id?: number; kind?: string }[] =>
@@ -18,7 +16,6 @@ const logged = (): { event: string; id?: number; kind?: string }[] =>
 test('a bug report goes from the home page to the server, which logs its number and kind', async ({
   browser,
 }, testInfo) => {
-  test.skip(testInfo.project.name !== 'phone-chromium', 'one address may send 3 pieces of feedback in 10 minutes');
   const page = await newPlayer(browser, 'en');
   await page.goto('/');
   await page.getByRole('button', { name: /^English/ }).click();
@@ -34,7 +31,7 @@ test('a bug report goes from the home page to the server, which logs its number 
   await expect(send).toBeDisabled();
   await sheet
     .getByLabel(text.feedback.text)
-    .fill('Lock the phone in a game,\nand the board is gone when it comes back.');
+    .fill(`Lock the phone in a game,\nand the board is gone when it comes back. (${testInfo.project.name})`);
   await sheet.getByLabel(text.feedback.contact).fill('reviewer@example.com');
   await send.click();
 

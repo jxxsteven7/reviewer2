@@ -2,7 +2,9 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { until } from '../test/helpers';
 import { main, type MainOptions, type Running } from './main';
 import { DATABASE_FILE, openDatabase, SNAPSHOT_DIR } from './store/database';
 
@@ -104,9 +106,7 @@ describe('starting', () => {
     mkdirSync(data);
     await start({ DATA_DIR: data }, { housekeepingMs: 50 });
     const saved = () => logs.filter(({ event }) => event === 'snapshot_saved');
-    const until = Date.now() + 2000;
-    while (saved().length < 2 && Date.now() < until) await new Promise((r) => setTimeout(r, 5));
-    expect(saved().length).toBeGreaterThanOrEqual(2);
+    await until(() => saved().length >= 2, 'the second snapshot');
     const file = saved()[0]?.fields?.file;
     expect(file).toMatch(/^reviewer2-\d{8}T\d{6}Z\.db$/);
     expect(readdirSync(join(data, SNAPSHOT_DIR))).toContain(file);
@@ -130,12 +130,54 @@ describe('starting', () => {
     expect(holds()).toEqual([DATABASE_FILE]);
 
     const started = (await start({ DATA_DIR: data })) as Running;
-    expect(logged('contacts_cleared')).toEqual({ count: 1 });
+    expect(logged('contacts_cleared')).toEqual({ count: 1, walTruncated: true });
     expect(started.feedback.latest(1)[0]).toMatchObject({ text: 'Old', contact: null });
     // The snapshot that the start takes comes after the clearing.
-    const until = Date.now() + 2000;
-    while (!events().includes('snapshot_saved') && Date.now() < until) await new Promise((r) => setTimeout(r, 5));
+    await until(() => events().includes('snapshot_saved'), 'the snapshot');
     expect(holds()).toEqual([]);
+  });
+
+  test('truncates the WAL of a cleared contact at the next hour when another connection was in the way', async () => {
+    const data = join(dir, 'data');
+    mkdirSync(data);
+    const contact = 'old-contact@example.com';
+    const old = new Date(Date.now() - 91 * 24 * 60 * 60_000).toISOString();
+    const { db } = await openDatabase(data);
+    db.prepare(
+      "INSERT INTO feedback (created_at, kind, text, contact, version, language, page) VALUES (?, 'idea', 'Old', ?, 'v1', 'en', 'home')",
+    ).run(old, contact);
+    db.close();
+    // The operator's sqlite3, in the middle of reading when the server starts.
+    const reader = new DatabaseSync(join(data, DATABASE_FILE));
+    reader.exec('BEGIN');
+    reader.prepare('SELECT count(*) FROM feedback').get();
+    // Until the WAL is written back into the database file, the file still has the page as it
+    // was, contact and all; the WAL has the page as it is now.
+    const holds = () =>
+      readdirSync(data, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .filter((entry) => readFileSync(join(entry.parentPath, entry.name)).includes(contact))
+        .map((entry) => entry.name);
+
+    const started = performance.now();
+    await start({ DATA_DIR: data }, { housekeepingMs: 50 });
+    // The server didn't wait the busy timeout out: the start took well under its 5 seconds.
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(logged('contacts_cleared')).toEqual({ count: 1, walTruncated: false });
+    expect(holds()).toEqual([DATABASE_FILE]);
+    // Nothing more is cleared, but the WAL is tried again every hour, until it is truncated.
+    const cleared = () => logs.filter(({ event }) => event === 'contacts_cleared');
+    await until(() => cleared().length >= 3, 'two more tries');
+    expect(cleared().at(-1)?.fields).toEqual({ count: 0, walTruncated: false });
+    expect(holds()).toEqual([DATABASE_FILE]);
+    reader.exec('COMMIT');
+    reader.close();
+    await until(() => cleared().at(-1)?.fields?.walTruncated === true, 'the WAL to be truncated');
+    expect(holds()).toEqual([]);
+    // Once it is, the hour's clearing has nothing to say.
+    const done = cleared().length;
+    await until(() => logs.filter(({ event }) => event === 'snapshot_saved').length >= 2, 'another hour');
+    expect(cleared().length).toBe(done);
   });
 
   test('ends with 1 and one line of log when the port is taken', async () => {
@@ -177,10 +219,11 @@ describe('starting', () => {
       page: 'room',
       userAgent: 'Agent',
     });
-    const until = Date.now() + 2000;
-    while (!events().includes('status_listening') && Date.now() < until) await new Promise((r) => setTimeout(r, 5));
-    const page = await (await fetch(`http://127.0.0.1:${statusPort}/`)).text();
-    expect(page).toContain('1 in all, newest first.');
+    await until(() => events().includes('status_listening'), 'the status page');
+    const status = await (await fetch(`http://127.0.0.1:${statusPort}/`)).text();
+    expect(status).toContain('<p>1 in all &middot; <a href="/feedback">Read it</a></p>');
+    const page = await (await fetch(`http://127.0.0.1:${statusPort}/feedback`)).text();
+    expect(page).toContain('1 in all, newest first');
     expect(page).toContain('&#60;script&#62;alert(1)&#60;/script&#62;');
     expect(page).not.toContain('<script>');
   });
@@ -208,8 +251,7 @@ describe('stopping', () => {
         finish = () => void stop().then(resolve);
       });
     const stopping = started.stop('SIGTERM');
-    const until = Date.now() + 2000;
-    while (exits.length === 0 && Date.now() < until) await new Promise((r) => setTimeout(r, 5));
+    await until(() => exits.length > 0, 'the process to end');
     expect(exits).toEqual([1]);
     expect(logged('stop_timed_out')).toEqual({ ms: 50 });
     // When the stop finishes after all, the process has ended already.

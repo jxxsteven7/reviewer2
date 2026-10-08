@@ -93,6 +93,22 @@ describe('STATUS_PORT', () => {
   });
 });
 
+describe('FEEDBACK_PER_10_MINUTES', () => {
+  test('defaults to 3', () => {
+    expect(loadConfig({}).feedbackPerWindow).toBe(3);
+    expect(loadConfig({ FEEDBACK_PER_10_MINUTES: ' ' }).feedbackPerWindow).toBe(3);
+  });
+
+  test('is a whole number from 1 up', () => {
+    expect(loadConfig({ FEEDBACK_PER_10_MINUTES: '1000' }).feedbackPerWindow).toBe(1000);
+    for (const value of ['0', '-1', '1.5', 'three']) {
+      expect(() => loadConfig({ FEEDBACK_PER_10_MINUTES: value })).toThrow(
+        `FEEDBACK_PER_10_MINUTES must be a whole number from 1 up, not "${value}"`,
+      );
+    }
+  });
+});
+
 describe('DATA_DIR', () => {
   test('keeps the database in memory when it is unset, empty or blank', () => {
     for (const DATA_DIR of [undefined, '', '  ']) {
