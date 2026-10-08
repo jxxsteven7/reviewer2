@@ -29,7 +29,9 @@ export const MAX_DIFFICULTY = 5;
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const LIST_KEYS = new Set(['id', 'name', 'contributors', 'terms']);
 const TERM_KEYS = new Set(['id', 'zh', 'en', 'forms', 'difficulty', 'related', 'note']);
-const HAN = /\p{Script=Han}/u;
+// Matches a Chinese character, as HAN in shared/src/han.ts does, which the card sizes words by.
+// A test holds the two together.
+export const HAN = /\p{Script=Han}/u;
 const maxLength = (text) => (HAN.test(text) ? MAX_LENGTH.zh : MAX_LENGTH.en);
 
 // The table of traditional Chinese characters and their simplified forms that the game compares

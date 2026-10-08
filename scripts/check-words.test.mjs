@@ -5,15 +5,25 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { annotation, checkAcrossLists, checkWordList, lineOf, main, MIN_TERMS, termLines } from './check-words.mjs';
+import {
+  annotation,
+  checkAcrossLists,
+  checkWordList,
+  HAN,
+  lineOf,
+  main,
+  MIN_TERMS,
+  termLines,
+} from './check-words.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./check-words.mjs', import.meta.url));
+const SHARED_HAN = fileURLToPath(new URL('../shared/src/han.ts', import.meta.url));
 const ATTENTION = '\u6ce8\u610f\u529b';
 const SUPERVISOR = '\u5bfc\u5e08'; // what the game calls the PI in Chinese
 const REVIEWER = '\u5ba1\u7a3f\u4eba';
@@ -184,6 +194,14 @@ describe('a term', () => {
     );
     // Chinese characters with others are measured as Chinese.
     assert.ok(has(withTerm({ id: 'mixed', zh: `GPU ${ATTENTION}` }).warnings, /"zh" .* is longer than 5/));
+  });
+
+  test('is told to have Chinese characters as the card tells it', () => {
+    // The card sizes a word by HAN in shared/src/han.ts. The script can't import TypeScript, so
+    // it has its own copy, which this holds to the original as it is written in the source.
+    const shared = readFileSync(SHARED_HAN, 'utf8').match(/^export const HAN = (\/.+\/[a-z]*);$/mu);
+    assert.ok(shared, 'shared/src/han.ts exports HAN as a regular expression');
+    assert.equal(String(HAN), shared[1]);
   });
 
   test('may list its other forms in each language', () => {
