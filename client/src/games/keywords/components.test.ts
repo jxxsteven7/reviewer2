@@ -20,6 +20,7 @@ import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
+import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
 
@@ -341,10 +342,10 @@ describe('CluePanel', () => {
       '\u201cData\u201d (dataset) is on the board, and this clue repeats a form of it that the word lists give. ' +
         "This room's clue check doesn't allow it.",
     );
-    const loose = panel({ ...STANDARD, clueRule: 'loose' });
     // The form is named after the card when the clue only repeats a part of it.
     await strict.get('input').setValue('dataset-scale');
     expect(strict.get('.problem').text()).toContain('\u201cData\u201d (dataset) is on the board');
+    const loose = panel({ ...STANDARD, clueRule: 'loose' });
     await loose.get('input').setValue('datasets');
     expect(loose.find('.problem').exists()).toBe(false);
     expect(loose.get('.warning').text()).toBe(
@@ -452,6 +453,31 @@ describe('ClueLog', () => {
     expect(items[1]?.text()).toContain('Science');
     expect(items[1]?.text()).toContain('Time ran out');
     expect(items[0]?.text()).not.toContain('Time ran out');
+  });
+});
+
+describe('RulesSheet', () => {
+  // The lines of the rules' section on time, once the sheet is open, in a room with these time
+  // limits.
+  const timeLines = async (times: Partial<KeywordsSettings>) => {
+    const wrapper = mount(RulesSheet, {
+      props: { settings: { ...STANDARD, ...times }, language: 'en' },
+      global: global(),
+    });
+    await wrapper.get('button').trigger('click');
+    const section = wrapper.findAll('.rules section').find((found) => found.get('h3').text() === 'Time');
+    return section?.findAll('p').map((line) => line.text());
+  };
+  const BAR = 'The settings above say how much time each phase has, and the bar under the turn shows what is left.';
+  const CLUE = 'A PI who gives no clue in time loses the turn to the other group.';
+  const GUESS = 'Students whose time runs out end their turn, even if they have revealed nothing.';
+
+  test('tells what time does in the phases that have a limit, and nothing about the others', async () => {
+    expect(await timeLines({})).toEqual([BAR, CLUE, GUESS]);
+    expect(await timeLines({ guessTime: 0 })).toEqual([BAR, CLUE]);
+    expect(await timeLines({ firstClueTime: 0 })).toEqual([BAR, CLUE, GUESS]);
+    expect(await timeLines({ firstClueTime: 0, clueTime: 0 })).toEqual([BAR, GUESS]);
+    expect(await timeLines({ firstClueTime: 0, clueTime: 0, guessTime: 0 })).toEqual(['This room has no time limits.']);
   });
 });
 

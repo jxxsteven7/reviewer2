@@ -338,7 +338,9 @@
       "loose": "This room's clue check is loose: other forms of a word on the board, and Chinese characters in common with one, only bring a warning, and the PI decides."
     },
     "timeTitle": "Time",
-    "time": "Each phase has a time limit, and the bar under the turn shows what is left. A PI who gives no clue in time loses the turn to the other group. Students whose time runs out end their turn, even if they have revealed nothing.",
+    "time": "The settings above say how much time each phase has, and the bar under the turn shows what is left.",
+    "timeClue": "A PI who gives no clue in time loses the turn to the other group.",
+    "timeGuess": "Students whose time runs out end their turn, even if they have revealed nothing.",
     "noTime": "This room has no time limits.",
     "endTitle": "The end",
     "end": "A group wins as soon as all its cards are revealed, even when the other group revealed the last one."

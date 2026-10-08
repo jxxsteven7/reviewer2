@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TIME_SETTINGS, type KeywordsSettings, type Language } from '@reviewer2/shared';
+import type { KeywordsSettings, Language } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
@@ -12,7 +12,16 @@ const props = defineProps<{ settings: KeywordsSettings; language: Language }>();
 const { t } = useI18n();
 const open = ref(false);
 
-const timed = computed(() => TIME_SETTINGS.some((key) => props.settings[key] > 0));
+// What time does in this room: a line for the clues and one for the guesses, for the phases that
+// have a limit, or one line when none has.
+const time = computed(() => {
+  const { firstClueTime, clueTime, guessTime } = props.settings;
+  const lines = [
+    ...(firstClueTime > 0 || clueTime > 0 ? [t('rules.timeClue')] : []),
+    ...(guessTime > 0 ? [t('rules.timeGuess')] : []),
+  ];
+  return lines.length > 0 ? [t('rules.time'), ...lines] : [t('rules.noTime')];
+});
 const sections = computed(() => [
   { title: t('rules.goalTitle'), text: [t('rules.goal')] },
   { title: t('rules.rolesTitle'), text: [t('rules.roles')] },
@@ -26,7 +35,7 @@ const sections = computed(() => [
       t(`rules.clueRule.${props.settings.clueRule}`),
     ],
   },
-  { title: t('rules.timeTitle'), text: [timed.value ? t('rules.time') : t('rules.noTime')] },
+  { title: t('rules.timeTitle'), text: time.value },
   { title: t('rules.endTitle'), text: [t('rules.end')] },
 ]);
 </script>
