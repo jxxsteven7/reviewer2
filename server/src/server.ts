@@ -21,11 +21,12 @@ export interface AppServer {
   close(): Promise<void>;
 }
 
-export interface AppOptions extends Pick<Config, 'publicDir' | 'version'> {
+// The settings that the server is started with (index.ts), named as in the Config so that one
+// spread passes them on, and the parts that tests replace.
+export interface AppOptions
+  extends Pick<Config, 'publicDir' | 'version'>, Partial<Pick<Config, 'trustProxy' | 'roomsPerMinute'>> {
   words: WordLibrary;
   games: GameModule[];
-  trustProxy?: boolean;
-  roomsPerMinute?: number;
   rng?: Rng;
   now?: () => number;
   limits?: RoomLimits;
