@@ -246,6 +246,19 @@ describe('RoleBanner', () => {
     expect(wrapper.find('.line').text()).toBe('The Red group is guessing.');
     expect(wrapper.classes()).toEqual(['role-banner', 'spectator']);
   });
+
+  test('reads out its words as they change, but not the button beside them', () => {
+    const wrapper = mount(RoleBanner, {
+      props: { seat: seats.eve as Seat, game },
+      slots: { default: '<button>React (9)</button>' },
+      global: global(),
+    });
+    const live = wrapper.findAll('[aria-live]');
+    expect(live).toHaveLength(1);
+    expect(live[0]?.find('.line').text()).toBe('The Red group is guessing.');
+    expect(live[0]?.find('button').exists()).toBe(false);
+    expect(wrapper.find('button').text()).toBe('React (9)');
+  });
 });
 
 describe('DecisionLetter', () => {

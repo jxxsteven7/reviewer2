@@ -6,7 +6,9 @@ import { bannerFor } from './banner';
 
 // A strip across the top of the waiting room and the game, in the viewer's group color: who they
 // are, and what is going on for them now (banner.ts). It stands out when it is the viewer's move,
-// and so does the tab's title, for a player who has gone to another tab while they wait.
+// and so does the tab's title, for a player who has gone to another tab while they wait. A screen
+// reader is told the words as they change, but not what is in the slot: that is the reaction
+// button, whose countdown would otherwise be read out second by second.
 const props = withDefaults(defineProps<{ seat: Seat; game: KeywordsView | null; chair?: boolean }>(), {
   chair: false,
 });
@@ -33,8 +35,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="role-banner" :class="[seat.team ?? 'spectator', { urgent: banner.urgent }]" aria-live="polite">
-    <div class="text">
+  <section class="role-banner" :class="[seat.team ?? 'spectator', { urgent: banner.urgent }]">
+    <div class="text" aria-live="polite">
       <p class="who">{{ who }}</p>
       <p class="line">{{ line }}</p>
     </div>
