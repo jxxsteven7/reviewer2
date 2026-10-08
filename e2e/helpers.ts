@@ -9,6 +9,7 @@ import {
   type Team,
 } from '@reviewer2/shared';
 import { io, type Socket } from 'socket.io-client';
+import { TOKEN } from '../client/src/core/session';
 import en from '../client/src/locales/en.json' with { type: 'json' };
 import zh from '../client/src/locales/zh.json' with { type: 'json' };
 
@@ -248,7 +249,7 @@ export function expectOwnGroupOnly(states: RoomView[]): number {
 // A second connection for a player who is in the room, as another tab of theirs would open it.
 // It lets a test send what the interface no longer offers, as an outdated page could.
 export async function sideChannel(page: Page, url: string) {
-  const token = await page.evaluate(() => localStorage.getItem('r2.token'));
+  const token = await page.evaluate((key) => localStorage.getItem(key), TOKEN);
   const socket = io(new URL(url).origin, { auth: { token }, transports: ['websocket'] });
   sockets.push(socket);
   await new Promise((resolve, reject) => {
@@ -261,10 +262,14 @@ export async function sideChannel(page: Page, url: string) {
   return { send };
 }
 
+// A string as a regular expression that matches it and nothing else.
+const literally = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export async function createRoom(page: Page, language: Language, name: string): Promise<string> {
   const text = TEXT[language];
   await page.goto('/');
-  await page.getByRole('button', { name: new RegExp(`^${text.language[language]}`) }).click();
+  // The language's button begins with the language's name, and goes on with a description.
+  await page.getByRole('button', { name: new RegExp(`^${literally(text.language[language])}`) }).click();
   await page.getByRole('button', { name: text.home.newRoom }).click();
   await expect(page.locator('.fields li').first()).toBeVisible();
   await page.getByLabel(text.create.name).fill(name);

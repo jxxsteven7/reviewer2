@@ -60,7 +60,7 @@ test('revealing Reviewer 2 rejects the group at once', async ({ browser }) => {
 test('the chair can withdraw a game and play again with the same seats', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
   const chair = table.captains.red;
-  await chair.getByRole('button', { name: TEXT.en.game.end }).first().click();
+  await chair.getByRole('button', { name: TEXT.en.game.end }).click();
   await chair.locator('[role=dialog]').getByRole('button', { name: TEXT.en.game.end }).click();
   await expect(table.spectator.locator('.letter .verdict')).toHaveText(TEXT.en.game.letter.withdrawn);
   await chair.getByRole('button', { name: TEXT.en.game.letter.again }).click();
