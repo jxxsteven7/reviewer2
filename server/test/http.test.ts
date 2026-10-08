@@ -8,12 +8,23 @@ import { io as connect } from 'socket.io-client';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { WordLibrary } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
+import { openDatabase } from '../src/store/database';
+import { FeedbackStore } from '../src/store/feedback';
 
 const INDEX = '<!doctype html><title>Reviewer 2</title>';
 const SCRIPT = 'console.log(1);';
 
 async function start(publicDir: string): Promise<{ server: AppServer; base: string }> {
-  const server = createAppServer({ publicDir, version: 'test-version', words: new WordLibrary([]), games: [] });
+  const { db } = await openDatabase(null);
+  const feedback = new FeedbackStore(db);
+  const server = createAppServer({
+    publicDir,
+    version: 'test-version',
+    words: new WordLibrary([]),
+    games: [],
+    feedback,
+  });
+  server.http.once('close', () => db.close());
   await new Promise<void>((resolve) => server.http.listen(0, '127.0.0.1', resolve));
   const { port } = server.http.address() as AddressInfo;
   return { server, base: `http://127.0.0.1:${port}` };
@@ -95,8 +106,12 @@ describe('with a built front end', () => {
     expect(asset.status).toBe(200);
     expect(asset.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
 
-    const missing = await fetch(`${base}/assets/index-old999.js`);
-    expect(missing.status).toBe(404);
+    // Whether or not the name has an extension, a missing asset is never the page.
+    for (const path of ['/assets/index-old999.js', '/assets/index-old999', '/assets/']) {
+      const missing = await fetch(`${base}${path}`);
+      expect(missing.status, path).toBe(404);
+      expect(await missing.text(), path).toBe('Not found\n');
+    }
   });
 
   test('text files are sent compressed to the browsers that accept it', async () => {

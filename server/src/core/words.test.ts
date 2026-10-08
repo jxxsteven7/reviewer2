@@ -368,11 +368,17 @@ describe('loading word lists', () => {
     expect(() => loadWordLibrary(join(dir, 'notes.txt'))).toThrow(/^cannot read the word lists: ENOTDIR.*notes\.txt/);
   });
 
-  test('loads nothing from a directory without word lists', () => {
+  test('refuses a directory without word lists, or with none that can be read', () => {
     const empty = mkdtempSync(join(tmpdir(), 'reviewer2-no-words-'));
     try {
+      expect(() => loadWordLibrary(empty)).toThrow(`there are no word lists in ${empty}`);
       writeFileSync(join(empty, 'README.md'), '# Word library');
-      expect(loadWordLibrary(empty).fields()).toEqual([]);
+      expect(() => loadWordLibrary(empty)).toThrow(`there are no word lists in ${empty}`);
+      const skipped: string[] = [];
+      writeFileSync(join(empty, 'broken.json'), '{ nope');
+      expect(() => loadWordLibrary(empty, (file) => skipped.push(file))).toThrow(/^there are no word lists/);
+      // What was skipped is still reported, so that the log says why there are none.
+      expect(skipped).toEqual(['broken.json']);
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }

@@ -2,7 +2,7 @@ import { createServer, request, type IncomingHttpHeaders, type Server } from 'no
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
 import { History } from '../src/stats';
-import { createStatusHandler } from '../src/status';
+import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
 import { createRoom, joinRoom, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
 
 // The numbers that the `stats` line and the status page show, counted on a real server, and the
@@ -169,7 +169,7 @@ describe('the status server', () => {
   async function startStatus({ history = new History(), stats = () => server.app.stats() } = {}) {
     const log = (event: string, fields?: Record<string, unknown>) =>
       server.logs.push({ event, ...(fields ? { fields } : {}) });
-    const started = createServer(createStatusHandler(stats, history, log));
+    const started = createServer(createStatusHandler(stats, history, server.feedback, log));
     status = started;
     await new Promise<void>((resolve) => started.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(started.address() as AddressInfo).port}`;
@@ -242,6 +242,39 @@ describe('the status server', () => {
       expect(body, path).not.toMatch(new RegExp(`\\b${code}\\b`));
     }
     expect(JSON.parse((await get(base, '/status.json')).body).connections).toEqual({ websocket: 3, polling: 0 });
+  });
+
+  test('shows the feedback a page at a time, back from the latest', async () => {
+    server = await startServer();
+    const total = FEEDBACK_SHOWN + 5;
+    for (let i = 1; i <= total; i += 1) {
+      server.feedback.add({
+        kind: 'idea',
+        text: `Number ${i}`,
+        contact: null,
+        version: 'test',
+        language: 'en',
+        page: 'home',
+        userAgent: null,
+      });
+    }
+    await startStatus();
+    const shown = (body: string) =>
+      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
+
+    const latest = (await get(base, '/')).body;
+    expect(latest).toContain(`${total} in all, newest first.`);
+    expect(shown(latest)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
+    expect(latest).toContain('<p class="more"><a href="/?before=6#feedback">Older</a></p>');
+
+    const older = (await get(base, '/?before=6')).body;
+    expect(shown(older)).toEqual([5, 4, 3, 2, 1]);
+    expect(older).toContain('<p class="more"><a href="/#feedback">Latest</a></p>');
+
+    // A query that isn't a number is taken for none.
+    for (const query of ['?before=abc', '?before=-1', '?before=1e3', '?other=1']) {
+      expect(shown((await get(base, `/${query}`)).body), query).toEqual(shown(latest));
+    }
   });
 
   test('answers only to the names of this machine, to keep a page elsewhere from reading it', async () => {

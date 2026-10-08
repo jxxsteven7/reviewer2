@@ -409,7 +409,12 @@
     "bad_seat": "That seat doesn't exist.",
     "offline": "You're offline. Waiting for the connection...",
     "timeout": "The server didn't answer. Please try again.",
-    "unknown": "Something went wrong."
+    "unknown": "Something went wrong.",
+    "feedback_empty": "Write something first.",
+    "feedback_too_long": "Use at most 1000 characters.",
+    "contact_too_long": "Use at most 100 characters for the contact.",
+    "feedback_limited": "At most 3 pieces of feedback can come from one network in 10 minutes. Please try again later.",
+    "feedback_full": "The server isn't taking feedback right now. Please try again another day."
   },
   "footer": {
     "noSignUp": "No sign-up, no ads.",
@@ -418,6 +423,24 @@
     "tipCode": "The author's WeChat reward code",
     "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
     "build": "Build {version}"
+  },
+  "feedback": {
+    "open": "Send feedback",
+    "title": "Send feedback",
+    "privacy": "Only the author can read this. Your contact details are used only to reply to you.",
+    "kind": "About",
+    "kinds": {
+      "idea": "A suggestion",
+      "bug": "A bug",
+      "words": "The word lists"
+    },
+    "text": "Your feedback",
+    "count": "{count} / {max}",
+    "contact": "Contact (optional)",
+    "contactHint": "An email address, a WeChat ID or anything else to reach you by.",
+    "bugNote": "With a bug report, your browser's name and version are sent along, to help find the bug.",
+    "submit": "Send",
+    "sent": "Thank you! Your feedback has been sent."
   },
   "notFound": {
     "title": "Page not found",

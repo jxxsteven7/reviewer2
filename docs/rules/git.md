@@ -26,7 +26,7 @@ reviewer2-project/
 
 ### First-time setup
 
-Install [Node.js](https://nodejs.org) 22.13 or later first, but not 23 or 25; [../development.md](../development.md) explains why. The git hooks, the repository's scripts and the app all run on it.
+Install [Node.js](https://nodejs.org) 22.22.2 or later first (24.15 or later on Node 24), but not 23 or 25; [../development.md](../development.md) explains why. The git hooks, the repository's scripts and the app all run on it.
 
 ```bash
 mkdir reviewer2-project && cd reviewer2-project

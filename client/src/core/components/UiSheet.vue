@@ -13,7 +13,7 @@ const id = useId();
 const panel = ref<HTMLElement | null>(null);
 let returnFocus: HTMLElement | null = null;
 
-const FOCUSABLE = 'input, button, [href], [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE = 'input, textarea, button, [href], [tabindex]:not([tabindex="-1"])';
 
 function onKey(event: KeyboardEvent) {
   if (event.key === 'Escape') {

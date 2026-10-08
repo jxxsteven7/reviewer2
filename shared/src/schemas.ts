@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
@@ -29,6 +30,17 @@ const settings = z.unknown();
 export const ROOM_MESSAGES = {
   'sys:ping': none,
   'meta:fields': none,
+  // Feedback for the author. Its text and contact are for the rules in feedback.ts to judge, which
+  // refuse a long text before looking at it, so that it gets feedback_too_long and not
+  // bad_request. The server takes no message of more than 16 KB at all (server.ts).
+  'meta:feedback': z.object({
+    kind: z.enum(FEEDBACK_KINDS),
+    text: z.string(),
+    contact: z.string().optional(),
+    version: z.string().max(64),
+    language: z.enum(LANGUAGES),
+    page: z.enum(FEEDBACK_PAGES),
+  }),
   // A room starts with its game's default settings when `settings` is left out.
   'room:create': z.object({
     game: z.string().max(32),

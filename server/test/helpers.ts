@@ -4,9 +4,11 @@ import { io as connect, type ManagerOptions, type Socket, type SocketOptions } f
 import type { GameModule } from '../src/core/game';
 import { seededRng, type Rng } from '../src/core/random';
 import type { RoomLimits } from '../src/core/rooms';
-import type { Timers } from '../src/core/socket';
+import { DEFAULT_SOCKET_LIMITS, type SocketLimits, type Timers } from '../src/core/socket';
 import { WordLibrary, type WordListData } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
+import { openDatabase } from '../src/store/database';
+import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, type FeedbackLimits } from '../src/store/feedback';
 import { fakeGame } from './fakeGame';
 
 // Helpers for the integration tests: a real server on a free port, with a clock that only the
@@ -25,6 +27,8 @@ export const testWords = () => new WordLibrary([list('general', 40), list('tiny'
 
 export interface TestServer {
   app: AppServer;
+  // The feedback that the server keeps, in a database in memory, on the system's clock.
+  feedback: FeedbackStore;
   url: string;
   logs: { event: string; fields?: Record<string, unknown> }[];
   // Moves the clock forward, and runs the timers that are due by then, in the order of their
@@ -42,6 +46,8 @@ export async function startServer(
     limits?: RoomLimits;
     trustProxy?: boolean;
     roomsPerMinute?: number;
+    socketLimits?: Partial<SocketLimits>;
+    feedbackLimits?: Partial<FeedbackLimits>;
     rng?: Rng;
   } = {},
 ): Promise<TestServer> {
@@ -59,23 +65,35 @@ export async function startServer(
     },
     stop: (timer) => waiting.delete(timer as { due: number; run: () => void }),
   };
-  const app = createAppServer({
-    publicDir: '/no/front/end',
-    version: 'test',
-    words: options.words ?? testWords(),
-    games: options.games ?? [fakeGame],
-    rng: options.rng ?? seededRng(1),
-    now,
-    timers,
-    trustProxy: options.trustProxy ?? false,
-    ...(options.roomsPerMinute === undefined ? {} : { roomsPerMinute: options.roomsPerMinute }),
-    ...(options.limits ? { limits: options.limits } : {}),
-    log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
-  });
+  const { db } = await openDatabase(null);
+  const feedback = new FeedbackStore(db, undefined, { ...DEFAULT_FEEDBACK_LIMITS, ...options.feedbackLimits });
+  const socketLimits = { ...DEFAULT_SOCKET_LIMITS, ...options.socketLimits };
+  if (options.roomsPerMinute !== undefined) socketLimits.roomsPerMinute = options.roomsPerMinute;
+  let app: AppServer;
+  try {
+    app = createAppServer({
+      publicDir: '/no/front/end',
+      version: 'test',
+      words: options.words ?? testWords(),
+      games: options.games ?? [fakeGame],
+      rng: options.rng ?? seededRng(1),
+      now,
+      timers,
+      trustProxy: options.trustProxy ?? false,
+      feedback,
+      socketLimits,
+      ...(options.limits ? { limits: options.limits } : {}),
+      log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
+    });
+  } catch (error) {
+    db.close();
+    throw error;
+  }
   await new Promise<void>((resolve) => app.http.listen(0, '127.0.0.1', resolve));
   const { port } = app.http.address() as AddressInfo;
   return {
     app,
+    feedback,
     url: `http://127.0.0.1:${port}`,
     logs,
     advance: (ms, runTimers = true) => {
@@ -88,7 +106,10 @@ export async function startServer(
       }
     },
     timers: () => waiting.size,
-    close: () => app.close(),
+    close: async () => {
+      await app.close();
+      db.close();
+    },
   };
 }
 

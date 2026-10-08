@@ -409,7 +409,12 @@
     "bad_seat": "没有这个座位。",
     "offline": "你已离线，正在等待连接……",
     "timeout": "服务器没有回应，请再试一次。",
-    "unknown": "出错了。"
+    "unknown": "出错了。",
+    "feedback_empty": "先写点内容吧。",
+    "feedback_too_long": "最多 1000 个字。",
+    "contact_too_long": "联系方式最多 100 个字。",
+    "feedback_limited": "同一个网络 10 分钟内最多发 3 条建议，请稍后再试。",
+    "feedback_full": "服务器暂时不收新的建议，请改天再试。"
   },
   "footer": {
     "noSignUp": "无需注册，没有广告。",
@@ -418,6 +423,24 @@
     "tipCode": "作者的微信赞赏码",
     "tipHint": "在微信里长按识别，或用微信扫一扫。",
     "build": "版本 {version}"
+  },
+  "feedback": {
+    "open": "提建议",
+    "title": "提建议",
+    "privacy": "只有作者能看到；联系方式只用来回复你。",
+    "kind": "类型",
+    "kinds": {
+      "idea": "建议",
+      "bug": "Bug",
+      "words": "词库"
+    },
+    "text": "内容",
+    "count": "{count} / {max}",
+    "contact": "联系方式（选填）",
+    "contactHint": "邮箱、微信号或别的能联系到你的方式。",
+    "bugNote": "报告 bug 时会附带浏览器的名称和版本，方便查找问题。",
+    "submit": "发送",
+    "sent": "谢谢！建议已经发出。"
   },
   "notFound": {
     "title": "页面不存在",

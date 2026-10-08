@@ -1,12 +1,15 @@
 import type { RequestListener } from 'node:http';
 import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
-import { renderStatusPage } from './statusPage';
+import { renderStatusPage, type FeedbackPage } from './statusPage';
+import type { FeedbackStore } from './store/feedback';
 
 // The status page for the operator (docs/architecture.md). It has a port of its own, STATUS_PORT,
 // which listens on 127.0.0.1 whatever HOST says, so only the server's own machine can reach it:
 // the tunnel and any reverse proxy lead to the game's port alone. That is why it needs no
 // password. `/` is the page and `/status.json` the same numbers for scripts. Both are read-only.
+// The page also shows the feedback that players sent, a page of it at a time: `/?before=<id>`
+// shows what came before that one.
 
 export const STATUS_HOST = '127.0.0.1';
 
@@ -20,17 +23,42 @@ const CSP =
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
-export function createStatusHandler(stats: () => Stats, history: History, log: Log): RequestListener {
+// How much feedback the page shows at a time. The page reloads every 5 seconds, so it is never
+// all of it.
+export const FEEDBACK_SHOWN = 50;
+
+// The feedback for the page, before the id in the query when it has one, and whether there is
+// more before that. A query that isn't a number is taken for none.
+function feedbackPage(feedback: FeedbackStore, target: string): FeedbackPage {
+  const query = new URLSearchParams(target.slice(pathOf(target).length));
+  const before = /^\d{1,15}$/.test(query.get('before') ?? '') ? Number(query.get('before')) : undefined;
+  const entries = feedback.latest(FEEDBACK_SHOWN + 1, before);
+  return {
+    total: feedback.count(),
+    entries: entries.slice(0, FEEDBACK_SHOWN),
+    paged: before !== undefined,
+    older: entries.length > FEEDBACK_SHOWN,
+  };
+}
+
+export function createStatusHandler(
+  stats: () => Stats,
+  history: History,
+  feedback: FeedbackStore,
+  log: Log,
+): RequestListener {
   return (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       if (!LOCAL.test(req.headers.host ?? '')) {
         notFound(res);
       } else if (methodAllowed(req, res)) {
-        const path = pathOf(req.url ?? '/');
+        const target = req.url ?? '/';
+        const path = pathOf(target);
         if (path === '/') {
           res.setHeader('Content-Security-Policy', CSP);
-          send(res, 200, 'text/html; charset=utf-8', renderStatusPage(stats(), history.samples(), history.now()));
+          const page = renderStatusPage(stats(), history.samples(), history.now(), feedbackPage(feedback, target));
+          send(res, 200, 'text/html; charset=utf-8', page);
         } else if (path === '/status.json') {
           send(res, 200, 'application/json', JSON.stringify(stats()));
         } else {
@@ -38,8 +66,9 @@ export function createStatusHandler(stats: () => Stats, history: History, log: L
         }
       }
     } catch (error) {
-      // Counting throws when the system does (stats.ts). The page is the operator's alone, and an
-      // error in it must not end the game for everyone, which an error thrown from here would.
+      // Counting throws when the system does (stats.ts), and reading the feedback when the
+      // database does. The page is the operator's alone, and an error in it must not end the game
+      // for everyone, which an error thrown from here would.
       log('error', { where: 'status', message: error instanceof Error ? error.message : String(error) });
       if (res.headersSent) res.destroy();
       else send(res, 500, 'text/plain; charset=utf-8', 'Internal server error\n');

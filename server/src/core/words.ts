@@ -182,10 +182,10 @@ export function drawWords(
 
 const isText = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
 
-// Reads every words/*.json. The directory must be there: without it the server would run with no
-// words at all, which is a mistake in how it was set up, so this throws, as a bad PORT does. A
-// file or a term that isn't in the expected shape is skipped and reported through `skip`, so that
-// one bad file can't stop the server.
+// Reads every words/*.json. The directory must be there and hold at least one word list that can
+// be read: without one the server would run with no words at all, which is a mistake in how it
+// was set up, so this throws, as a bad PORT does. A file or a term that isn't in the expected
+// shape is skipped and reported through `skip`, so that one bad file can't stop the server.
 export function loadWordLibrary(dir: string, skip: Skip = () => {}): WordLibrary {
   const lists: WordListData[] = [];
   let files: string[];
@@ -222,6 +222,7 @@ export function loadWordLibrary(dir: string, skip: Skip = () => {}): WordLibrary
       ),
     });
   }
+  if (lists.length === 0) throw new Error(`there are no word lists in ${dir}`);
   return new WordLibrary(lists, skip);
 }
 

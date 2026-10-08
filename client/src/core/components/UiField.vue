@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useId } from 'vue';
 
-// A labelled text input, with an optional hint and error below it.
+// A labelled text input, with an optional hint and error below it. With `multiline`, it is a text
+// area of `rows` lines, which the player can make taller.
 defineProps<{
   label: string;
   hint?: string | undefined;
@@ -14,6 +15,8 @@ defineProps<{
   autocapitalize?: 'off' | 'characters' | 'words' | 'sentences';
   spellcheck?: boolean;
   prefix?: string;
+  multiline?: boolean;
+  rows?: number;
 }>();
 const model = defineModel<string>({ required: true });
 const id = useId();
@@ -24,7 +27,22 @@ const id = useId();
     <label :for="id" class="label">{{ label }}</label>
     <div class="control">
       <span v-if="prefix" class="prefix" aria-hidden="true">{{ prefix }}</span>
+      <textarea
+        v-if="multiline"
+        :id="id"
+        v-model="model"
+        :rows="rows ?? 4"
+        :placeholder="placeholder"
+        :maxlength="maxlength"
+        :autocomplete="autocomplete ?? 'off'"
+        :inputmode="inputmode"
+        :autocapitalize="autocapitalize ?? 'off'"
+        :spellcheck="spellcheck ?? false"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error || hint ? `${id}-note` : undefined"
+      ></textarea>
       <input
+        v-else
         :id="id"
         v-model="model"
         :placeholder="placeholder"
@@ -80,7 +98,8 @@ const id = useId();
   font-family: var(--font-mono);
 }
 
-input {
+input,
+textarea {
   flex: 1;
   min-width: 0;
   min-height: 44px;
@@ -92,6 +111,12 @@ input {
   font: inherit;
   font-size: max(16px, var(--text-md));
   outline: none;
+}
+
+textarea {
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.45;
+  resize: vertical;
 }
 
 .prefix + input {

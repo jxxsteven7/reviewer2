@@ -1,5 +1,9 @@
+import { join, resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { loadConfig } from './config';
+
+// The repository's root, from server/src.
+const root = resolve(import.meta.dirname, '..', '..');
 
 describe('PORT', () => {
   test('defaults to 3000 when it is unset, empty or blank', () => {
@@ -86,5 +90,19 @@ describe('STATUS_PORT', () => {
     expect(() => loadConfig({ STATUS_PORT: '3000' })).toThrow(/STATUS_PORT must be another port than PORT/);
     expect(() => loadConfig({ PORT: '4000', STATUS_PORT: '4000' })).toThrow(/STATUS_PORT/);
     expect(loadConfig({ PORT: '4000', STATUS_PORT: '3000' }).statusPort).toBe(3000);
+  });
+});
+
+describe('DATA_DIR', () => {
+  test('keeps the database in memory when it is unset, empty or blank', () => {
+    for (const DATA_DIR of [undefined, '', '  ']) {
+      expect(loadConfig({ DATA_DIR }).dataDir, JSON.stringify(DATA_DIR)).toBeNull();
+    }
+  });
+
+  test('is a directory, taken from the repository root when it is relative', () => {
+    expect(loadConfig({ DATA_DIR: '/var/lib/reviewer2' }).dataDir).toBe('/var/lib/reviewer2');
+    expect(loadConfig({ DATA_DIR: ' /var/lib/reviewer2/ ' }).dataDir).toBe('/var/lib/reviewer2');
+    expect(loadConfig({ DATA_DIR: 'data' }).dataDir).toBe(join(root, 'data'));
   });
 });

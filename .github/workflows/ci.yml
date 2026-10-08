@@ -1,8 +1,8 @@
-# Lints, type-checks and tests the app, checks the word lists, plays it end to end in real
-# browsers, and builds it and checks that the build serves it. Each job's name is a required
-# status check, except the browser jobs, which report through `End-to-end`; see
-# docs/maintainers.md. There are no `paths:` filters on purpose: a required check that a filter
-# skips stays pending and blocks the merge.
+# Lints, type-checks and tests the app, on Node 24 and on the lowest Node that package.json
+# allows, checks the word lists, plays it end to end in real browsers, and builds it and checks
+# that the build serves it. Each job's name is a required status check, except the browser jobs,
+# which report through `End-to-end`; see docs/maintainers.md. There are no `paths:` filters on
+# purpose: a required check that a filter skips stays pending and blocks the merge.
 
 name: CI
 
@@ -42,6 +42,21 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm test
+
+  lowest-node:
+    # The lowest version that `engines` in package.json allows. `npm ci` checks that every
+    # dependency takes it, and the tests that node:sqlite works on it, backup() included.
+    name: Lowest Node
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
       - run: npm test
 
   words:
@@ -127,11 +142,12 @@ jobs:
         run: |
           # Production needs no node_modules, so run the build from a copy that has none.
           app="$RUNNER_TEMP/app"
-          mkdir -p "$app/server" "$app/client"
+          data="$RUNNER_TEMP/data"
+          mkdir -p "$app/server" "$app/client" "$data"
           cp -r server/dist "$app/server/"
           cp -r client/dist "$app/client/"
           cp -r words "$app/"
-          node "$app/server/dist/index.cjs" > "$RUNNER_TEMP/server.log" 2>&1 &
+          DATA_DIR="$data" node "$app/server/dist/index.cjs" > "$RUNNER_TEMP/server.log" 2>&1 &
           server=$!
           # Print the server's log however this step ends: a failure is hard to explain without it.
           # A server that has already stopped can't be killed, so that must not stop the trap.
@@ -150,3 +166,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
           # The server sends the compressed copies that the build wrote.
           curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'
+          # The bundle opened its database in DATA_DIR, and every line of its log is JSON.
+          test -f "$data/reviewer2.db"
+          grep -q '"event":"database_opened","storage":"file"' "$RUNNER_TEMP/server.log"
+          node -e 'for (const line of require("fs").readFileSync(process.argv[1], "utf8").split("\n").filter(Boolean)) JSON.parse(line)' "$RUNNER_TEMP/server.log"

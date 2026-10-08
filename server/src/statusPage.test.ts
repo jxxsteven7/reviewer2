@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { Sample, Stats } from './stats';
-import { duration, renderStatusPage } from './statusPage';
+import { duration, renderStatusPage, type FeedbackPage } from './statusPage';
+import type { Feedback } from './store/feedback';
 
 const MB = 2 ** 20;
 const NOW = Date.UTC(2026, 9, 8, 12);
@@ -117,6 +118,88 @@ describe('the chart', () => {
     const page = renderStatusPage(stats(), [sample(1, 0, 0), sample(0, 0, 0)], NOW);
     expect(page).toContain('points="0,160 600,160"');
     expect(text(page)).toContain(' 1 0 ');
+  });
+});
+
+describe('the feedback', () => {
+  const feedback = (id: number, changes: Partial<Feedback> = {}): Feedback => ({
+    id,
+    createdAt: '2026-10-09T13:05:42.123Z',
+    kind: 'idea',
+    text: 'More fields, please.',
+    contact: null,
+    version: 'v0.0.15',
+    language: 'en',
+    page: 'home',
+    userAgent: null,
+    ...changes,
+  });
+  const page = (changes: Partial<FeedbackPage> = {}) =>
+    renderStatusPage(stats(), [], NOW, { total: 0, entries: [], paged: false, older: false, ...changes });
+
+  test('says when there is none yet', () => {
+    expect(text(page())).toContain('Feedback None yet.');
+  });
+
+  test('shows each one with what came along, the newest first', () => {
+    const entries = [
+      feedback(2, {
+        kind: 'bug',
+        text: 'Line one\nLine two',
+        contact: 'wechat: r2',
+        language: 'zh',
+        page: 'room',
+        userAgent: 'Mozilla/5.0',
+      }),
+      feedback(1),
+    ];
+    const html = page({ total: 2, entries });
+    const shown = text(html);
+    expect(shown).toContain('2 in all, newest first.');
+    expect(shown).toContain(
+      '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; Chinese &middot; from the room ' +
+        'Line one Line two Contact: wechat: r2 Browser: Mozilla/5.0',
+    );
+    expect(shown).toContain(
+      '#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; English &middot; ' +
+        'from the home page More fields, please. No contact',
+    );
+    expect(shown.indexOf('#2')).toBeLessThan(shown.indexOf('#1'));
+    // The text keeps its line breaks, which the page shows as they are.
+    expect(html).toContain('<p class="text">Line one\nLine two</p>');
+  });
+
+  test('escapes everything that came from outside', () => {
+    const html = page({
+      total: 1,
+      entries: [
+        feedback(1, {
+          kind: 'bug',
+          text: '<script>alert("text")</script><img src=x onerror=alert(1)>',
+          contact: "<a href='javascript:alert(1)'>me</a>",
+          version: '<b>v1</b>',
+          userAgent: '</p><script>alert("agent")</script>',
+        }),
+      ],
+    });
+    expect(html).not.toMatch(/<script|<img|<a |<b>|onerror=alert\(1\)>/);
+    expect(html).toContain(
+      '&#60;script&#62;alert(&#34;text&#34;)&#60;/script&#62;&#60;img src=x onerror=alert(1)&#62;',
+    );
+    expect(html).toContain('&#60;a href=&#39;javascript:alert(1)&#39;&#62;me&#60;/a&#62;');
+    expect(html).toContain('version &#60;b&#62;v1&#60;/b&#62;');
+    expect(html).toContain('Browser: &#60;/p&#62;&#60;script&#62;');
+  });
+
+  test('links to older feedback, and back to the latest', () => {
+    const entries = [feedback(60), feedback(59)];
+    expect(page({ total: 99, entries, older: true })).toContain(
+      '<p class="more"><a href="/?before=59#feedback">Older</a></p>',
+    );
+    expect(page({ total: 99, entries, paged: true, older: true })).toContain(
+      '<p class="more"><a href="/#feedback">Latest</a> &middot; <a href="/?before=59#feedback">Older</a></p>',
+    );
+    expect(page({ total: 2, entries })).not.toContain('class="more"');
   });
 });
 

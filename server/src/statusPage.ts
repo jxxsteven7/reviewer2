@@ -1,5 +1,6 @@
 import { UNKNOWN_COUNTRY } from './core/clientIp';
 import { megabytes, type Sample, type Stats } from './stats';
+import type { Feedback } from './store/feedback';
 
 // The status page (status.ts) as one HTML document, built on the server from the numbers. It has
 // no script: it reloads itself every 5 seconds, and its chart is inline SVG. It is for the
@@ -42,6 +43,11 @@ polyline { fill: none; stroke-width: 2; stroke-linejoin: round; }
 .key { display: inline-block; width: 12px; height: 3px; margin: 0 6px 3px 0; vertical-align: middle; }
 .legend { margin-top: 8px; }
 .legend span + span { margin-left: 16px; }
+article { background: var(--tile); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+article p { font-size: 0.85rem; overflow-wrap: anywhere; }
+article .text { margin: 6px 0; color: var(--fg); font-size: 1rem; white-space: pre-wrap; }
+.more { margin-top: 12px; }
+a { color: var(--players); }
 `;
 
 const regions = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -117,8 +123,65 @@ function chart(samples: readonly Sample[], now: number): string {
   );
 }
 
+// One page of the feedback that players sent (store/feedback.ts), newest first: the latest, or
+// those before an id that the operator paged back to.
+export interface FeedbackPage {
+  total: number;
+  entries: readonly Feedback[];
+  // Whether the page was paged back from the latest.
+  paged: boolean;
+  // Whether there is older feedback than the last entry on the page.
+  older: boolean;
+}
+
+const KINDS: Record<Feedback['kind'], string> = { idea: 'Idea', bug: 'Bug', words: 'Word lists' };
+const LANGUAGES: Record<Feedback['language'], string> = { zh: 'Chinese', en: 'English' };
+const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room' };
+
+// "2026-10-09 13:05 UTC" from the ISO time that the database keeps.
+const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
+
+// Players wrote the text and the contact, and the page sent the version, so all of it is escaped
+// like anything else that comes from outside. The text keeps its line breaks.
+function entry(feedback: Feedback): string {
+  const facts = [
+    `#${feedback.id}`,
+    KINDS[feedback.kind],
+    escape(when(feedback.createdAt)),
+    `version ${escape(feedback.version)}`,
+    LANGUAGES[feedback.language],
+    `from the ${PAGES[feedback.page]}`,
+  ];
+  return (
+    `<article><p>${facts.join(' &middot; ')}</p>` +
+    `<p class="text">${escape(feedback.text)}</p>` +
+    `<p>${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
+    (feedback.userAgent === null ? '' : `<p>Browser: ${escape(feedback.userAgent)}</p>`) +
+    '</article>'
+  );
+}
+
+function feedbackSection({ total, entries, paged, older }: FeedbackPage): string {
+  if (total === 0) return '<p>None yet.</p>';
+  const links = [
+    ...(paged ? ['<a href="/#feedback">Latest</a>'] : []),
+    ...(older ? [`<a href="/?before=${(entries.at(-1) as Feedback).id}#feedback">Older</a>`] : []),
+  ];
+  return (
+    `<p>${total} in all, newest first.</p>${entries.map(entry).join('')}` +
+    (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '')
+  );
+}
+
+const NO_FEEDBACK: FeedbackPage = { total: 0, entries: [], paged: false, older: false };
+
 // `now` is the time on the clock that the samples were taken on (History in stats.ts).
-export function renderStatusPage(stats: Stats, samples: readonly Sample[], now: number): string {
+export function renderStatusPage(
+  stats: Stats,
+  samples: readonly Sample[],
+  now: number,
+  feedback = NO_FEEDBACK,
+): string {
   const { memory } = stats;
   // The limit is the service's as a whole, with its file cache (stats.ts); this is the process's
   // share of it.
@@ -148,6 +211,8 @@ ${countries(stats)}
 <dl>${tile('Process', mb(memory.rss), share)}${tile('JavaScript heap', mb(memory.heapUsed))}</dl>
 <h2>Last 24 hours</h2>
 ${chart(samples, now)}
+<h2 id="feedback">Feedback</h2>
+${feedbackSection(feedback)}
 </main>
 </body>
 </html>

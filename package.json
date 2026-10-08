@@ -11,7 +11,7 @@
     "client"
   ],
   "engines": {
-    "node": "^22.13 || ^24 || >=26"
+    "node": "^22.22.2 || ^24.15 || >=26"
   },
   "scripts": {
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",

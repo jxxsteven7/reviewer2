@@ -1,16 +1,26 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
-import { DEFAULT_ROOMS_PER_MINUTE, type Config } from './config';
+import type { Config } from './config';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
 import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
-import { attachSockets, realTimers, type RoomSockets, type Timers } from './core/socket';
+import {
+  attachSockets,
+  DEFAULT_SOCKET_LIMITS,
+  realTimers,
+  type RoomSockets,
+  type SocketLimits,
+  type Timers,
+} from './core/socket';
 import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
 import { log as defaultLog } from './log';
 import { collectStats, type Stats } from './stats';
+import type { FeedbackStore } from './store/feedback';
 
-// One HTTP server on one port for both the front end and Socket.IO (docs/rules/constraints.md).
+// One HTTP server on one port for both the front end and Socket.IO (docs/rules/constraints.md),
+// put together as docs/architecture.md describes: the HTTP handler for everything that isn't
+// Socket.IO (http.ts), the rooms, and the connections to them (core/socket.ts).
 export interface AppServer {
   http: HttpServer;
   io: Server;
@@ -24,31 +34,36 @@ export interface AppServer {
   close(): Promise<void>;
 }
 
-// The settings that the server is started with (index.ts), named as in the Config so that one
-// spread passes them on, and the parts that tests replace.
-export interface AppOptions
-  extends Pick<Config, 'publicDir' | 'version'>, Partial<Pick<Config, 'trustProxy' | 'roomsPerMinute'>> {
+// The settings that the server is started with (main.ts), named as in the Config so that one
+// spread passes them on, and the parts that tests replace. The database that the feedback is kept
+// in belongs to whoever opened it, who also closes it (main.ts).
+export interface AppOptions extends Pick<Config, 'publicDir' | 'version'>, Partial<Pick<Config, 'trustProxy'>> {
   words: WordLibrary;
   games: GameModule[];
+  feedback: FeedbackStore;
   rng?: Rng;
   now?: () => number;
   // The timers for the games' deadlines, which go by `now`.
   timers?: Timers;
   limits?: RoomLimits;
+  socketLimits?: SocketLimits;
   log?: (event: string, fields?: Record<string, unknown>) => void;
 }
 
 export function createAppServer(options: AppOptions): AppServer {
   const log = options.log ?? defaultLog;
-  // The config refuses a bad ROOMS_PER_MINUTE, and a bad number given in code is refused here,
-  // rather than counted as one room a minute, which is what the counter makes of 0 or NaN. A
-  // limit above the default protects less against abuse, so the server says when it has one.
-  const roomsPerMinute = options.roomsPerMinute ?? DEFAULT_ROOMS_PER_MINUTE;
-  if (!(Number.isInteger(roomsPerMinute) && roomsPerMinute >= 1)) {
-    throw new Error(`roomsPerMinute must be a whole number from 1 up, not ${roomsPerMinute}`);
+  // The config refuses a bad ROOMS_PER_MINUTE, and a bad limit given in code is refused here,
+  // rather than counted as one a minute, which is what the counters make of 0 or NaN. A limit on
+  // rooms above the default protects less against abuse, so the server says when it has one.
+  const socketLimits = options.socketLimits ?? DEFAULT_SOCKET_LIMITS;
+  for (const [name, value] of Object.entries(socketLimits)) {
+    if (!(Number.isInteger(value) && value >= 1)) {
+      throw new Error(`${name} must be a whole number from 1 up, not ${value}`);
+    }
   }
-  if (roomsPerMinute > DEFAULT_ROOMS_PER_MINUTE) {
-    log('rooms_per_minute_raised', { roomsPerMinute, default: DEFAULT_ROOMS_PER_MINUTE });
+  const { roomsPerMinute } = socketLimits;
+  if (roomsPerMinute > DEFAULT_SOCKET_LIMITS.roomsPerMinute) {
+    log('rooms_per_minute_raised', { roomsPerMinute, default: DEFAULT_SOCKET_LIMITS.roomsPerMinute });
   }
   const http = createServer(createRequestHandler({ publicDir: options.publicDir, version: options.version }));
   const io = new Server(http, {
@@ -74,7 +89,8 @@ export function createAppServer(options: AppOptions): AppServer {
     timers: options.timers ?? realTimers,
     version: options.version,
     trustProxy: options.trustProxy ?? false,
-    roomsPerMinute,
+    limits: socketLimits,
+    feedback: options.feedback,
     log,
   });
   // io.close() also closes the HTTP server.

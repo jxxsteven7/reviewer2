@@ -3,8 +3,8 @@ import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http
 import sirv from 'sirv';
 
 // HTTP for everything that isn't Socket.IO: the built front end, with the SPA fallback to
-// index.html for routes such as /room/K7QX, and /healthz. The reasons for the security headers
-// and the cache headers are beside the code that sets them.
+// index.html for routes such as /room/K7QX, and /healthz. docs/architecture.md describes what it
+// answers and why; the reasons for each header are also beside the code that sets it.
 
 export interface HttpOptions {
   publicDir: string;
@@ -84,15 +84,18 @@ export function createRequestHandler({ publicDir, version }: HttpOptions): Reque
       send(res, 200, 'application/json', JSON.stringify({ ok: true, version, uptime }));
     } else if (!files) {
       send(res, 404, 'text/plain; charset=utf-8', NOT_BUILT);
-    } else if (path.startsWith('/assets/')) {
-      // A missing asset is a 404, not index.html, so that a stale page fails visibly.
-      files.assets(req, res, () => notFound(res));
     } else {
-      files.pages(req, res, () => notFound(res));
+      files(req, res, () => notFound(res));
     }
   };
 }
 
+const ASSETS = '/assets/';
+
+// The front end, with every route that isn't a file falling back to index.html. A missing asset
+// is a 404 rather than the page, so that a stale page fails visibly: sirv falls back for no path
+// under /assets/, and for no path that ends in an extension.
+//
 // Only file names with a content hash, which Vite puts in /assets/, may be cached for good.
 // Everything else, index.html included, must be checked again on every visit, or a browser
 // that cached an old page would ask for assets that a new build no longer has. sirv passes
@@ -101,19 +104,13 @@ export function createRequestHandler({ publicDir, version }: HttpOptions): Reque
 // sirv doesn't compress anything itself. With gzip and brotli on, it sends the .gz or .br copy
 // that the build leaves beside each text file (client/compress.mjs) to the browsers that accept it.
 function staticFiles(publicDir: string) {
-  return {
-    assets: sirv(publicDir, {
-      etag: true,
-      gzip: true,
-      brotli: true,
-      setHeaders: (res) => res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'),
-    }),
-    pages: sirv(publicDir, {
-      etag: true,
-      gzip: true,
-      brotli: true,
-      single: true,
-      setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
-    }),
-  };
+  return sirv(publicDir, {
+    etag: true,
+    gzip: true,
+    brotli: true,
+    single: true,
+    ignores: [`^${ASSETS}`],
+    setHeaders: (res, path) =>
+      res.setHeader('Cache-Control', path.startsWith(ASSETS) ? 'public, max-age=31536000, immutable' : 'no-cache'),
+  });
 }

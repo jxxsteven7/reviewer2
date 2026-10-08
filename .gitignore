@@ -7,6 +7,9 @@ build/
 coverage/
 *.tsbuildinfo
 
+# The database and its snapshots when DATA_DIR=data, as docs/development.md suggests
+/data/
+
 # Environment variables and secrets: never commit them; list the variables you need in .env.example
 .env
 .env.*

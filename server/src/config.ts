@@ -1,4 +1,5 @@
 import { join, resolve } from 'node:path';
+import { DEFAULT_SOCKET_LIMITS } from './core/socket';
 
 // Settings come from environment variables; docs/development.md lists them.
 export interface Config {
@@ -8,14 +9,13 @@ export interface Config {
   wordsDir: string;
   trustProxy: boolean;
   roomsPerMinute: number;
+  // Where the database and its snapshots are kept, or null for a database in memory, which is
+  // lost when the server stops (docs/architecture.md).
+  dataDir: string | null;
   // The port of the status page, or null when it is off (docs/architecture.md).
   statusPort: number | null;
   version: string;
 }
-
-// How many times a minute one address may try to create a room unless ROOMS_PER_MINUTE says
-// otherwise (docs/architecture.md). The server applies it when it is given no number.
-export const DEFAULT_ROOMS_PER_MINUTE = 5;
 
 // The repository root, two levels up from both server/src and server/dist.
 const root = resolve(import.meta.dirname, '..', '..');
@@ -64,7 +64,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // Only behind a reverse proxy that sets X-Forwarded-For; see core/clientIp.ts.
     trustProxy: flag('TRUST_PROXY', env.TRUST_PROXY),
     // How many times a minute one address may try to create a room (docs/architecture.md).
-    roomsPerMinute: wholeNumber('ROOMS_PER_MINUTE', env.ROOMS_PER_MINUTE, DEFAULT_ROOMS_PER_MINUTE),
+    roomsPerMinute: wholeNumber('ROOMS_PER_MINUTE', env.ROOMS_PER_MINUTE, DEFAULT_SOCKET_LIMITS.roomsPerMinute),
+    // A relative path is taken from the repository's root, as the defaults above are, wherever the
+    // server is started from: `npm run dev` starts it in server/.
+    dataDir: env.DATA_DIR?.trim() ? resolve(root, env.DATA_DIR.trim()) : null,
     statusPort,
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   };

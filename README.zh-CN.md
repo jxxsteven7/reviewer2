@@ -37,7 +37,7 @@
 | 语言 | TypeScript，前后端统一，使用 npm workspaces |
 | 前端 | Vue 3 + Vite，vue-i18n |
 | 后端 | Node.js + Socket.IO |
-| 存储 | 房间状态放在服务器内存里，第一版没有数据库 |
+| 存储 | 房间放在服务器内存里；玩家的建议存在 SQLite 里，用 Node 自带的 `node:sqlite` |
 | 测试 | Vitest，端到端测试用 Playwright |
 | 部署 | 一个 Node 进程同时提供前端静态文件和 WebSocket，一个域名、一个端口 |
 
@@ -56,7 +56,7 @@
 
 ## 本地运行
 
-需要 [Node.js](https://nodejs.org) 22.13 或更高版本，但不能是 23 或 25（测试框架不支持这两个版本）。CI 使用 24 LTS。
+需要 [Node.js](https://nodejs.org) 22.22.2 或更高版本（Node 24 需要 24.15 或更高），但不能是 23 或 25（测试框架不支持这两个版本）。CI 使用 24 LTS。
 
 ```bash
 npm install   # also turns on the git hooks
@@ -121,4 +121,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: 1029d7b11a0579c22984e28537baf780c98a19cdb9d5541b441ca97fdbd82d91 -->
+<!-- readme-sync: f1bd786a096a1442524baa799224beb938ec14dc5a6b354ac15c2e30e20b4d60 -->

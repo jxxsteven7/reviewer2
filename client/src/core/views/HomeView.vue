@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import tipCode from '../../assets/wechat-tip.jpg';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
+import SendFeedback from '../components/SendFeedback.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { storedLanguage } from '../i18n';
@@ -13,10 +14,10 @@ import JoinRoom from './JoinRoom.vue';
 import LanguageGate from './LanguageGate.vue';
 
 // The home page, set out like the contents page of a journal: the games, the way into a room,
-// and footnotes, which name the author and offer a way to buy them a cola. The WeChat reward code
-// is bundled with the page, as is everything it shows, and kept as the author gave it but for its
-// metadata: WeChat reads it when a player presses and holds it, which a smaller or recompressed
-// copy could spoil.
+// and footnotes, which name the author, offer a way to buy them a cola and the way to send them
+// feedback. The WeChat reward code is bundled with the page, as is everything it shows, and kept
+// as the author gave it but for its metadata: WeChat reads it when a player presses and holds it,
+// which a smaller or recompressed copy could spoil.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const chosen = ref(storedLanguage() !== null);
@@ -76,6 +77,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <UiButton variant="quiet" size="small" @click="tipping = true">{{ t('footer.tip') }}</UiButton>
       </p>
       <p>{{ t('footer.build', { version }) }}</p>
+      <SendFeedback page="home" />
     </footer>
 
     <UiSheet :open="tipping" :title="t('footer.tip')" @close="tipping = false">
@@ -224,6 +226,11 @@ ol {
   color: var(--ink-2);
   font-size: var(--text-sm);
   text-align: center;
+}
+
+/* The feedback button lines up with the footnotes above it. */
+.footnotes > :deep(.button) {
+  margin-left: calc(-1 * var(--space-3));
 }
 
 @media (min-width: 40rem) {
