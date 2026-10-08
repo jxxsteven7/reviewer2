@@ -10,6 +10,7 @@ import { leaveRoom } from '../room';
 import { storeName } from '../session';
 import { send } from '../socket';
 import { toastError } from '../toast';
+import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
 // Footnotes of the room page: who you are, and ways to rename yourself or leave.
@@ -19,8 +20,7 @@ const router = useRouter();
 const renaming = ref(false);
 const leaving = ref(false);
 const { name, clean, problem, refuse } = useNameField();
-// While a request is on its way, so that a second tap doesn't send it again.
-const busy = ref(false);
+const { busy, run } = useBusy();
 
 function startRenaming() {
   name.value = props.me.name;
@@ -28,9 +28,8 @@ function startRenaming() {
 }
 
 async function rename() {
-  busy.value = true;
-  const reply = await send('room:rename', { name: name.value });
-  busy.value = false;
+  const reply = await run(() => send('room:rename', { name: name.value }));
+  if (!reply) return;
   if (!reply.ok) {
     refuse(reply.error);
     return;
@@ -40,9 +39,8 @@ async function rename() {
 }
 
 async function leave() {
-  busy.value = true;
-  const reply = await leaveRoom();
-  busy.value = false;
+  const reply = await run(leaveRoom);
+  if (!reply) return;
   if (!reply.ok) {
     toastError(reply.error);
     return;

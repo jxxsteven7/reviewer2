@@ -13,6 +13,7 @@ import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
 import { storedName, storeName } from '../session';
 import { send } from '../socket';
+import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
@@ -26,7 +27,7 @@ const chosen = ref<string[]>([]);
 const { name, clean, problem, refuse } = useNameField(storedName());
 // What the server had against the form, apart from the name, which the name field shows.
 const formError = ref<string | undefined>();
-const busy = ref(false);
+const { busy, run } = useBusy();
 const language = computed(() => locale.value as Language);
 const usable = computed(() =>
   (fields.value ?? []).filter((field) => field.counts[language.value] >= props.wordsNeeded),
@@ -45,15 +46,16 @@ const NAME_ERRORS = ['name_required', 'name_invalid', 'name_taken'];
 
 async function create() {
   formError.value = undefined;
-  busy.value = true;
-  const reply = await send<{ code: string }>('room:create', {
-    game: props.game,
-    language: currentLanguage(),
-    fields: chosen.value,
-    ...(settings.value ? { settings: settings.value } : {}),
-    name: name.value,
-  });
-  busy.value = false;
+  const reply = await run(() =>
+    send<{ code: string }>('room:create', {
+      game: props.game,
+      language: currentLanguage(),
+      fields: chosen.value,
+      ...(settings.value ? { settings: settings.value } : {}),
+      name: name.value,
+    }),
+  );
+  if (!reply) return;
   if (!reply.ok) {
     if (NAME_ERRORS.includes(reply.error)) refuse(reply.error);
     else formError.value = t(errorKey(reply.error));
