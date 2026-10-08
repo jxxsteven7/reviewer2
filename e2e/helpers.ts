@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import type { CardColor, KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
+import type { CardColor, KeywordsRoomData, KeywordsView, RoomView, Team } from '@reviewer2/shared';
 import { io, type Socket } from 'socket.io-client';
 import en from '../client/src/locales/en.json' with { type: 'json' };
 import zh from '../client/src/locales/zh.json' with { type: 'json' };
@@ -65,8 +65,19 @@ export const test = base.extend<{ cleanup: void }>({
       await use();
       for (const socket of sockets.splice(0)) socket.close();
       await Promise.all(contexts.splice(0).map((context) => context.close()));
-      expect(pageErrors.splice(0), 'script errors on the pages').toEqual([]);
-      expect(serverErrors(logLines(start).lines), 'errors the server logged').toEqual([]);
+      // Everything is taken out of the lists before the first check can fail, so that nothing
+      // of this test is left for the next.
+      const errors = pageErrors.splice(0);
+      const pages = recorded.splice(0);
+      const { lines } = logLines(start);
+      expect(errors, 'script errors on the pages').toEqual([]);
+      expect(serverErrors(lines), 'errors the server logged').toEqual([]);
+      // Whatever a page received during the test is checked, whether or not the test looked at
+      // it: no key outside a PI's seat, and nothing of another group's chat or choices.
+      for (const states of pages) {
+        expectNoKey(states);
+        expectOwnGroupOnly(states);
+      }
     },
     { auto: true },
   ],
@@ -95,6 +106,8 @@ export async function newPlayer(browser: Browser, language: Language = 'en'): Pr
 }
 
 const snapshots = new WeakMap<Page, RoomView[]>();
+// The lists of every page of the current test, for the checks at its end.
+const recorded: RoomView[][] = [];
 
 // Every room:state this page receives from the first call on, over WebSocket and over HTTP
 // long-polling alike. Later calls for the same page return the same list.
@@ -103,6 +116,7 @@ export function snapshotsOf(page: Page): RoomView[] {
   if (known) return known;
   const states: RoomView[] = [];
   snapshots.set(page, states);
+  recorded.push(states);
   // A Socket.IO event is "42", an acknowledgement ID if it asks for one, and the JSON array of
   // the event's name and its payload. A long-polling response carries several packets, with a
   // record separator between them. A packet that can't be read fails the test.
@@ -132,21 +146,55 @@ export function snapshotsOf(page: Page): RoomView[] {
   return states;
 }
 
-// No snapshot before the end of a game held the color of an unrevealed card: such a card has no
-// `color` key at all, only its word and, when the word library has them, its translations, which
-// everyone may see. Returns how many unrevealed cards it checked, so that a test can tell that it
-// looked at something.
+// A snapshot that may hold the key: a PI's, by their seat in that same snapshot, or anyone's once
+// the game is over. Whoever else has seen the key, such as a PI who left their seat, gets none
+// (server/src/games/keywords/view.ts).
+function mayHoldKey(state: RoomView): boolean {
+  const { seats, game } = state.data as KeywordsRoomData;
+  if (!game || game.phase === 'over') return true;
+  return state.me !== null && seats[state.me]?.role === 'captain';
+}
+
+// Every path in a value at which an object has a key that names a color, as
+// "data.game.cards.3.color".
+function colorPaths(value: unknown, path = ''): string[] {
+  if (value === null || typeof value !== 'object') return [];
+  return Object.entries(value).flatMap(([key, child]) => {
+    const here = path ? `${path}.${key}` : key;
+    return [...(/color/i.test(key) ? [here] : []), ...colorPaths(child, here)];
+  });
+}
+
+// No snapshot sent to someone outside a PI's seat before the end of a game held the color of an
+// unrevealed card: such a card has no `color` key at all, only its word and, when the word
+// library has them, its translations, which everyone may see. Nor is a color anywhere else in
+// the snapshot, under another name for the board or in the record of the clues, in which every
+// guess is a revealed card. Returns how many unrevealed cards it checked, so that a test can tell
+// that it looked at something.
 export function expectNoKey(states: RoomView[]): number {
   let checked = 0;
   for (const state of states) {
-    const game = (state.data as KeywordsRoomData).game;
-    if (!game || game.phase === 'over') continue;
+    if (mayHoldKey(state)) continue;
+    const game = (state.data as KeywordsRoomData).game as KeywordsView;
     for (const card of game.cards) {
       if (card.revealed) continue;
       expect(card).not.toHaveProperty('color');
       expect(Object.keys(card).filter((key) => !['word', 'revealed', 'translations'].includes(key))).toEqual([]);
       checked += 1;
     }
+    const allowed = new Set([
+      ...game.cards.flatMap((card, i) => (card.revealed ? [`data.game.cards.${i}.color`] : [])),
+      ...game.history.flatMap((clue, i) =>
+        clue.guesses.map((guess, j) => {
+          expect(game.cards[guess.card]?.revealed, `the card of guess ${j} of clue ${i} is revealed`).toBe(true);
+          return `data.game.history.${i}.guesses.${j}.color`;
+        }),
+      ),
+    ]);
+    expect(
+      colorPaths(state).filter((path) => !allowed.has(path)),
+      'colors anywhere but on the revealed cards',
+    ).toEqual([]);
   }
   return checked;
 }
@@ -234,6 +282,8 @@ export interface Table {
   screen: Page;
   // What the guessers, the spectator and the screen received, which must never hold the key.
   public: RoomView[][];
+  // What every page at the table received, the PIs' included.
+  everyone: RoomView[][];
 }
 
 // Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
@@ -246,6 +296,7 @@ export async function seatTable(
   prepare?: (page: Page, name: string) => Promise<void>,
 ): Promise<Table> {
   const ann = await newPlayer(browser, language);
+  snapshotsOf(ann);
   const url = await createRoom(ann, language, 'Ann');
   // The others join at the same time, as separate people do.
   const join = async (name: string) => {
@@ -280,6 +331,7 @@ export async function seatTable(
     spectator: eve,
     screen,
     public: [bob, dan, eve, screen].map(snapshotsOf),
+    everyone: [ann, bob, cat, dan, eve, screen].map(snapshotsOf),
   };
 }
 

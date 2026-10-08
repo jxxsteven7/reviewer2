@@ -36,7 +36,7 @@ async function groupOfTwo(browser: Browser) {
   );
   const student = table.guessers[team];
   const name = team === 'red' ? 'Bob' : 'Dan';
-  return { table, team, other, fay, fayStates, student, name, states: [...table.public, fayStates] };
+  return { table, team, other, fay, fayStates, student, name, states: [...table.everyone, fayStates] };
 }
 
 test("a group's students see each other's choices, and nobody else does", async ({ browser }) => {

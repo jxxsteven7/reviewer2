@@ -38,7 +38,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 
 ## End-to-end tests
 
-The tests in `e2e/` start the bundled server on a free port and open a browser context for each player, as if on separate phones. They play whole games in both languages. They reload a page, go to the home page and back, and cut the network in the middle of a game. They take over an empty PI seat, keep players in their group, and let two students of a group choose cards and chat. Every snapshot that the guessers, the spectator and the screen receive is checked for the colors of unrevealed cards, over WebSocket and, for one guesser, over long-polling; every snapshot that a group's students receive is checked for the other group's chat and choices.
+The tests in `e2e/` start the bundled server on a free port and open a browser context for each player, as if on separate phones. They play whole games in both languages. They reload a page, go to the home page and back, and cut the network in the middle of a game. They take over an empty PI seat, keep players in their group, and let two students of a group choose cards and chat. After every test, every snapshot that any page received during it is checked, whether or not the test looked at it: outside a PI's seat, no snapshot before the end of a game holds the color of an unrevealed card anywhere in it, and no snapshot holds another group's chat or choices of cards. One guesser gets the snapshots over long-polling instead of WebSocket. A test also fails on a script error or a console error on any page, and on an error that the server logged.
 
 ```bash
 npx playwright install chromium webkit   # once: the browsers the tests use
