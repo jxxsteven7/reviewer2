@@ -21,7 +21,7 @@
     "games": {
       "keywords": {
         "name": "Double Blind",
-        "summary": "Two research groups race to find their keywords from one-word clues. Reveal Reviewer 2, and your paper is rejected."
+        "summary": "Two research groups race to find their keywords from short clues. Reveal Reviewer 2, and your paper is rejected."
       },
       "impostor": {
         "name": "Spot the Impostor",
@@ -114,7 +114,7 @@
     "watch": "Watch",
     "screens": "Big screens showing this room: {count}.",
     "dismissScreens": "Send the screens away",
-    "captainNote": "The PI sees which cards belong to the group and gives one-word clues.",
+    "captainNote": "The PI sees which cards belong to the group and gives the clues.",
     "desk": "Chair's desk",
     "fields": "Word lists",
     "save": "Save",
