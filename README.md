@@ -38,7 +38,7 @@ The first version has a game lobby, creating and joining rooms, choosing teams a
 | Front end | Vue 3 + Vite, vue-i18n |
 | Back end | Node.js + Socket.IO |
 | Storage | Room state in server memory; no database in the first version |
-| Tests | Vitest |
+| Tests | Vitest, and Playwright end to end |
 | Deployment | One Node process serves both the static front end and WebSocket, on one domain and one port |
 
 ## Project layout (planned)

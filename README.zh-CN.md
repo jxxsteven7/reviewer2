@@ -38,7 +38,7 @@
 | 前端 | Vue 3 + Vite，vue-i18n |
 | 后端 | Node.js + Socket.IO |
 | 存储 | 房间状态放在服务器内存里，第一版没有数据库 |
-| 测试 | Vitest |
+| 测试 | Vitest，端到端测试用 Playwright |
 | 部署 | 一个 Node 进程同时提供前端静态文件和 WebSocket，一个域名、一个端口 |
 
 ## 目录结构（规划中）
@@ -121,4 +121,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: 6c00586b4c31a27e2445ecf2fc4927372cdbc941c96c962b4f90fa4dab275c39 -->
+<!-- readme-sync: 4a2c8931a10349dd295a092b8b9f541b98a9b7a7d9302866728d67466c5204c9 -->

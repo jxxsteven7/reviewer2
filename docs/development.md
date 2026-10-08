@@ -26,6 +26,7 @@ Run it in every worktree, because each worktree has its own `node_modules`. It a
 | `npm run build` | Builds the front end into `client/dist`, with a gzip and a Brotli copy beside each text file, and bundles the server into `server/dist/index.cjs` |
 | `npm start` | Runs the production build: the front end and Socket.IO on one port, <http://localhost:3000> |
 | `npm test` | Runs the tests of the scripts in `scripts/` with Node's test runner, then the unit and integration tests with Vitest. `npx vitest` keeps watching |
+| `npm run test:e2e` | Plays the game end to end in desktop Chromium, phone Chromium and iPhone WebKit with Playwright, against the production build. Run `npm run build` first; see [End-to-end tests](#end-to-end-tests) |
 | `npm run lint` | ESLint, then Prettier's check |
 | `npm run format` | Rewrites files with Prettier and fixes what ESLint can |
 | `npm run typecheck` | TypeScript and vue-tsc over every package |
@@ -33,7 +34,20 @@ Run it in every worktree, because each worktree has its own `node_modules`. It a
 | `npm run check:words` | Checks the word lists in `words/`; see [../words/README.md](../words/README.md) |
 | `node --test scripts/*.test.mjs` | Tests the scripts in `scripts/` |
 
-Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs them too, and also checks that the production build works.
+Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. When you change the interface or the flow of a game, also run `npm run build && npm run test:e2e`; see [End-to-end tests](#end-to-end-tests). CI runs all of them, and also checks that the production build works.
+
+## End-to-end tests
+
+The tests in `e2e/` start the bundled server on a free port and open a browser context for each player, as if on separate phones. They play whole games in both languages. They reload a page, go to the home page and back, and cut the network in the middle of a game. They take over an empty PI seat, keep players in their group, and let two students of a group choose cards and chat. After every test, every snapshot that any page received during it is checked, whether or not the test looked at it: outside a PI's seat, no snapshot before the end of a game holds the color of an unrevealed card anywhere in it, and no snapshot holds another group's chat or choices of cards. One guesser gets the snapshots over long-polling instead of WebSocket. A test also fails on a script error or a console error on any page, and on an error that the server logged.
+
+```bash
+npx playwright install chromium webkit   # once: the browsers the tests use
+npm run build
+npm run test:e2e
+npx playwright test --project=iphone-webkit e2e/seats.spec.ts   # one browser, one file
+```
+
+On Linux, add `--with-deps` to the install the first time: WebKit needs system libraries, which it then installs with apt, asking for sudo. In mainland China, the browsers download faster from a mirror: set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright` for the install. When a test fails, `npx playwright show-trace` opens its trace from `test-results/`. Each run picks a free port for its server, so the tests of two worktrees can run at the same time.
 
 ## Project layout
 
@@ -43,6 +57,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs
 | `server/src/` | The server. `config.ts` reads the environment variables, `http.ts` serves the front end with its cache and security headers, `server.ts` puts HTTP and Socket.IO on one port, and `index.ts` starts it. `core/` holds rooms, players and connections, and `games/` one module per game; see [architecture.md](architecture.md) |
 | `server/test/` | Integration tests that start a real server and connect to it with Socket.IO clients |
 | `client/src/` | The Vue app: `core/` for the parts that all games share, `styles/` for the design tokens, `locales/` for all interface text |
+| `e2e/` | End-to-end tests with Playwright |
 | `scripts/` | Repository scripts with no dependencies: the commit and name checks, the README sync check and the hook installer |
 
 ## Environment variables

@@ -23,7 +23,7 @@ The project brief fixed the outline: TypeScript on both sides, a Vue front end, 
 | Fonts | Source Serif 4 from `@fontsource-variable`, bundled and served by our own server. Interface text uses system fonts |
 | Deployment | The build, run directly with Node; no container image |
 
-zod and Playwright are decided here but are not dependencies yet. Each is added with the first code that uses it: zod with the first messages between the client and the server, and Playwright with the first end-to-end test.
+zod and Playwright were decided here before they were dependencies. Each came with the first code that used it: zod with the first messages between the client and the server, and Playwright with the first end-to-end tests.
 
 ## Consequences
 

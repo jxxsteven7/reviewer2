@@ -24,3 +24,8 @@ coverage/
 # Personal AI assistant settings and temporary worktrees (the shared .claude/settings.json is committed)
 .claude/settings.local.json
 .claude/worktrees/
+
+# End-to-end test output
+playwright-report/
+test-results/
+blob-report/
