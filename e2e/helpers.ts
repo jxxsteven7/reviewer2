@@ -44,12 +44,23 @@ export const test = base.extend<{ cleanup: void }>({
 
 export { expect };
 
+// What a browser writes to the console when it can't reach the server, which the tests that cut
+// the network or the WebSocket provoke: "Failed to load resource: ..." and "WebSocket
+// connection to ... failed", worded a little differently by each browser.
+const NETWORK_NOTICE = /Failed to load resource|WebSocket|network/i;
+
 // A new player in the language: a browser context of their own, on the project's device.
 export async function newPlayer(browser: Browser, language: Language = 'en'): Promise<Page> {
   const context = await browser.newContext({ locale: language === 'zh' ? 'zh-CN' : 'en-US' });
   contexts.push(context);
   const page = await context.newPage();
   page.on('pageerror', (error) => pageErrors.push(error.message));
+  // The production build of Vue doesn't throw an error from a component, a watcher or a click
+  // handler: it hands it to console.error, and the page goes on with what it had. Such an error
+  // counts all the same.
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !NETWORK_NOTICE.test(message.text())) pageErrors.push(message.text());
+  });
   return page;
 }
 
