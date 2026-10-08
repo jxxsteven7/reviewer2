@@ -17,7 +17,7 @@ describe('PORT', () => {
 
   test('anything else stops the server, rather than start it on a port nobody asked for', () => {
     for (const PORT of ['0', '0x0', '0x1F90', '1e3', '3000.5', '-1', '+80', '65536', '30 00', 'http']) {
-      expect(() => loadConfig({ PORT }), JSON.stringify(PORT)).toThrow(/PORT/);
+      expect(() => loadConfig({ PORT }), JSON.stringify(PORT)).toThrow(/PORT must be a whole number from 1 to 65535/);
     }
   });
 });
@@ -44,16 +44,23 @@ describe('TRUST_PROXY', () => {
 
 describe('ROOMS_PER_MINUTE', () => {
   test('defaults to 5 when it is unset, empty or blank', () => {
-    expect(loadConfig({}).roomsPerMinute).toBe(5);
-    expect(loadConfig({ ROOMS_PER_MINUTE: '' }).roomsPerMinute).toBe(5);
-    expect(loadConfig({ ROOMS_PER_MINUTE: ' ' }).roomsPerMinute).toBe(5);
-    expect(loadConfig({ ROOMS_PER_MINUTE: '1000' }).roomsPerMinute).toBe(1000);
+    for (const ROOMS_PER_MINUTE of [undefined, '', ' ']) {
+      expect(loadConfig({ ROOMS_PER_MINUTE }).roomsPerMinute, JSON.stringify(ROOMS_PER_MINUTE)).toBe(5);
+    }
+  });
+
+  test('is a whole number from 1 up, whatever whitespace is around it', () => {
+    for (const limit of [1, 1000, Number.MAX_SAFE_INTEGER]) {
+      expect(loadConfig({ ROOMS_PER_MINUTE: String(limit) }).roomsPerMinute).toBe(limit);
+    }
     expect(loadConfig({ ROOMS_PER_MINUTE: ' 7 ' }).roomsPerMinute).toBe(7);
   });
 
-  test('anything but a whole number from 1 up stops the server', () => {
-    for (const ROOMS_PER_MINUTE of ['0', '-1', '1.5', '1e3', '5 5', 'many']) {
-      expect(() => loadConfig({ ROOMS_PER_MINUTE }), JSON.stringify(ROOMS_PER_MINUTE)).toThrow(/ROOMS_PER_MINUTE/);
+  test('anything else stops the server, rather than count rooms by some other number', () => {
+    for (const ROOMS_PER_MINUTE of ['0', '-1', '+5', '0x5', '1.5', '1e3', '9007199254740992', '5 5', 'many']) {
+      expect(() => loadConfig({ ROOMS_PER_MINUTE }), JSON.stringify(ROOMS_PER_MINUTE)).toThrow(
+        /ROOMS_PER_MINUTE must be a whole number from 1 up/,
+      );
     }
   });
 });
