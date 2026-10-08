@@ -338,13 +338,19 @@ describe('CluePanel', () => {
     const strict = panel();
     await strict.get('input').setValue('datasets');
     expect(strict.get('.problem').text()).toBe(
-      'The word lists give this as another form of \u201cData\u201d, which is on the board. ' +
+      '\u201cData\u201d (dataset) is on the board, and this clue repeats a form of it that the word lists give. ' +
         "This room's clue check doesn't allow it.",
     );
     const loose = panel({ ...STANDARD, clueRule: 'loose' });
+    // The form is named after the card when the clue only repeats a part of it.
+    await strict.get('input').setValue('dataset-scale');
+    expect(strict.get('.problem').text()).toContain('\u201cData\u201d (dataset) is on the board');
     await loose.get('input').setValue('datasets');
     expect(loose.find('.problem').exists()).toBe(false);
-    expect(loose.get('.warning').text()).toContain('another form of a word still on the board: \u201cData\u201d.');
+    expect(loose.get('.warning').text()).toBe(
+      'This clue repeats a form that the word lists give of a word still on the board: \u201cData\u201d (dataset). ' +
+        "This room's clue check leaves it to you.",
+    );
   });
 
   test('gives one line to each kind of warning', async () => {

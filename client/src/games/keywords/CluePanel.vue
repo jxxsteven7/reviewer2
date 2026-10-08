@@ -38,11 +38,11 @@ const check = computed(() => checkClue(word.value, props.game.cards, clueOptions
 
 // A card the clue runs into, named by its word in quotation marks, with the translation after
 // it in brackets when that is what the clue matched: the Chinese word for "journal", and then
-// "(Journal)", when "journals" is typed in a Chinese room. A form that the word lists give is the
-// clue itself, so the card's word is enough.
-function nameOf({ card, text, kind }: ClueMatch): string {
+// "(Journal)", when "journals" is typed in a Chinese room, and the same for a form that the word
+// lists give, such as "(Computer vision)" after the card "CV" when "vision" is typed.
+function nameOf({ card, text }: ClueMatch): string {
   const shown = props.game.cards[card]?.word ?? text;
-  return shown === text || kind === 'form' ? `\u201c${shown}\u201d` : `\u201c${shown}\u201d (${text})`;
+  return shown === text ? `\u201c${shown}\u201d` : `\u201c${shown}\u201d (${text})`;
 }
 
 // What the panel says about a card, by the kind of match: for a conflict, which refuses the clue,

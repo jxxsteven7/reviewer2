@@ -12,8 +12,8 @@ export type ClueProblem =
 // - 'same': it repeats the card's word: the word itself, a plain plural of it or a part of it, or
 //   a run of Chinese characters that contains one of the word's or lies inside one. Or it is the
 //   card's term in another language, or a plain plural of that. Always refused.
-// - 'form': it is one of the other forms of the term that the word library lists for the card,
-//   or a plain plural of one. Refused under the strict rule.
+// - 'form': it repeats one of the other forms of the term that the word library lists for the
+//   card, in any of the ways that 'same' repeats the card's word. Refused under the strict rule.
 // - 'character': it has a Chinese character in common with the card's word, which the strict
 //   rule refuses, or with the card's term in another language, which only brings a warning.
 // - 'similar': it may be another form of the card's word by its ending, such as "modeling" for
@@ -247,10 +247,12 @@ function judge(clues: readonly Word[], card: ClueCard, index: number): Verdict {
   if (refused) return { refused, strict: null, warned: null };
 
   // What the word library lists as a form of the term counts as the term under the strict rule:
-  // the library knows. The endings that the warnings go by are only a guess.
+  // the library knows. A clue repeats a form as it would repeat the word on the board: a form of
+  // several words gives the term away word by word, and a room's clue length may never let it
+  // through whole. The endings that the warnings go by are only a guess.
   const form = (card.forms ?? []).find((text) => {
-    const key = wordKey(text);
-    return key !== '' && clues.some((clue) => sameOrPlural(clue.key, key));
+    const other = wordOf(text);
+    return other.key !== '' && clues.some((clue) => repeats(clue, other));
   });
   const strict =
     form === undefined ? ofWord(sharesHan, 'character') : { card: index, text: form, kind: 'form' as const };

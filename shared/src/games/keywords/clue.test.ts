@@ -445,6 +445,31 @@ describe('the strict and the loose clue rules', () => {
     expect(strict('big dataset', data, 2).conflict).toEqual({ card: 0, text: 'dataset', kind: 'form' });
   });
 
+  test('a clue repeats a form as it would repeat the word on the board', () => {
+    // By a part of the clue: the form is a part of a hyphenated compound.
+    const data = [card('Data', { forms: ['dataset', DATASET] })];
+    expect(strict('dataset-scale', data).conflict).toEqual({ card: 0, text: 'dataset', kind: 'form' });
+    expect(loose('dataset-scale', data).similar).toEqual([{ card: 0, text: 'dataset', kind: 'form' }]);
+    // By a part of the form, or a plain plural of one: a form of several words gives the term
+    // away word by word, and a room that takes one word could never see it whole.
+    const cv = [card('CV', { forms: ['Computer vision'] })];
+    expect(strict('vision', cv).conflict).toEqual({ card: 0, text: 'Computer vision', kind: 'form' });
+    expect(strict('computers', cv).conflict).toEqual({ card: 0, text: 'Computer vision', kind: 'form' });
+    expect(loose('vision', cv).similar).toEqual([{ card: 0, text: 'Computer vision', kind: 'form' }]);
+    // By a run of Chinese characters inside a form.
+    expect(strict(DATA, data).conflict).toEqual({ card: 0, text: DATASET, kind: 'form' });
+    // The small words of a form are no part of it, and a Latin form is not looked for inside
+    // other words: a clue that only contains one gets the warning that the word brings, if any.
+    const sota = [card('SOTA', { forms: ['state of the art'] })];
+    expect(strict('of', sota)).toEqual({ problem: null, conflict: null, similar: [] });
+    expect(strict('artwork', sota)).toEqual({ problem: null, conflict: null, similar: [] });
+    expect(strict('bigdataset', data)).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [{ card: 0, text: 'Data', kind: 'inside' }],
+    });
+  });
+
   test('a Chinese character in common with a word on the board is refused under the strict rule only', () => {
     expect(strict(NUMBER, [card(SAMPLE), card(DATA)])).toEqual({
       problem: 'clue_on_board',
