@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { checkClue, cleanClue, MAX_CLUE_INPUT, normalizeClue, wordKey } from './clue';
+import { checkClue, cleanClue, MAX_CLUE_INPUT, normalizeClue, wordKey, type ClueOptions } from './clue';
 
 // The fixtures that stand for Chinese words are written as \u escapes, because everything in
 // the repository is in English (docs/rules/language.md). So are invisible characters and
@@ -15,6 +15,10 @@ const DATA = '\u6570\u636e'; // "data"
 const DATA_SCIENCE_TRADITIONAL = '\u6578\u64da\u79d1\u5b78'; // "data science" in traditional characters
 const JOURNAL = '\u671f\u520a'; // "journal"
 const PEER_REVIEW = '\u540c\u884c\u8bc4\u5ba1'; // "peer review"
+const NUMBER = '\u6570\u5b57'; // "number": shares its first character with DATA
+const NUMBER_TRADITIONAL = '\u6578\u5b57'; // the same word in traditional characters
+const DATASET = '\u6570\u636e\u96c6'; // "dataset"
+const SAMPLE = '\u6837\u672c'; // "sample": shares no character with DATA
 
 const SOFT_HYPHEN = '\u00ad';
 const ZERO_WIDTH_SPACE = '\u200b';
@@ -28,6 +32,8 @@ const CURLY_APOSTROPHE = '\u2019';
 const board = (...words: string[]) => words.map((word) => ({ word, revealed: false }));
 const problemOf = (clue: string, words: string[]) => checkClue(clue, board(...words)).problem;
 const similarTo = (clue: string, words: string[]) => checkClue(clue, board(...words)).similar.map(({ card }) => card);
+
+const LOOSE: ClueOptions = { words: 1, han: 10, strict: false };
 
 describe('the forms of a clue', () => {
   test('normalizeClue folds width and case, trims, and drops invisible characters', () => {
@@ -128,7 +134,7 @@ describe('a clue must not repeat a word on the board', () => {
   test('refuses the same word in any case or width', () => {
     expect(checkClue('Model', board('Baseline', 'MODEL'))).toEqual({
       problem: 'clue_on_board',
-      conflict: { card: 1, text: 'MODEL' },
+      conflict: { card: 1, text: 'MODEL', kind: 'same' },
       similar: [],
     });
     expect(problemOf('\uff4d\uff4f\uff44\uff45\uff4c', ['Model'])).toBe('clue_on_board');
@@ -228,7 +234,7 @@ describe('a clue must not repeat a word on the board', () => {
       expect(checkClue(clue, board(word)), clue).toEqual({
         problem: null,
         conflict: null,
-        similar: [{ card: 0, text: word }],
+        similar: [{ card: 0, text: word, kind: 'similar' }],
       });
     }
   });
@@ -238,7 +244,8 @@ describe('a clue must not repeat a word on the board', () => {
     expect(problemOf(FORCE, [ATTENTION])).toBe('clue_on_board');
     expect(problemOf(ATTENTION, [NOTICE])).toBe('clue_on_board');
     expect(problemOf(`${DATA}2`, [DATA])).toBe('clue_on_board');
-    expect(problemOf(MANUSCRIPT, [REVIEWER])).toBeNull();
+    // A character in common is something else: see the strict rule below.
+    expect(checkClue(MANUSCRIPT, board(REVIEWER), LOOSE).problem).toBeNull();
   });
 
   test('refuses the traditional spelling of a Chinese word', () => {
@@ -265,7 +272,7 @@ describe("a clue must not be a card's word in another language", () => {
   test('refuses the translation and its plain plural, and names the translation', () => {
     expect(checkClue('journal', card(JOURNAL, 'Journal'))).toEqual({
       problem: 'clue_on_board',
-      conflict: { card: 0, text: 'Journal' },
+      conflict: { card: 0, text: 'Journal', kind: 'same' },
       similar: [],
     });
     expect(checkClue('Journals', card(JOURNAL, 'Journal')).problem).toBe('clue_on_board');
@@ -274,7 +281,7 @@ describe("a clue must not be a card's word in another language", () => {
   });
 
   test('only warns about a part or a form of the translation, and names the translation', () => {
-    const warned = (text: string) => ({ problem: null, conflict: null, similar: [{ card: 0, text }] });
+    const warned = (text: string) => ({ problem: null, conflict: null, similar: [{ card: 0, text, kind: 'similar' }] });
     expect(checkClue('review', card(PEER_REVIEW, 'Peer review'))).toEqual(warned('Peer review'));
     expect(checkClue('reviewing', card(PEER_REVIEW, 'Peer review'))).toEqual(warned('Peer review'));
     expect(checkClue(NOTICE, card('Attention', ATTENTION))).toEqual(warned(ATTENTION));
@@ -283,7 +290,7 @@ describe("a clue must not be a card's word in another language", () => {
 
   test("names the card's own word when the clue may be a form of both", () => {
     expect(checkClue('modeling', [{ word: 'Model', revealed: false, translations: ['Modell'] }]).similar).toEqual([
-      { card: 0, text: 'Model' },
+      { card: 0, text: 'Model', kind: 'similar' },
     ]);
   });
 });
@@ -293,7 +300,7 @@ describe('a clue that may be a form of a word on the board', () => {
     expect(checkClue('modeling', board('Baseline', 'Model'))).toEqual({
       problem: null,
       conflict: null,
-      similar: [{ card: 1, text: 'Model' }],
+      similar: [{ card: 1, text: 'Model', kind: 'similar' }],
     });
     expect(similarTo('modelling', ['Model'])).toEqual([0]);
     expect(similarTo('biased', ['Bias'])).toEqual([0]);
@@ -335,7 +342,7 @@ describe('a clue that may be a form of a word on the board', () => {
       expect(checkClue(clue, board(word)), clue).toEqual({
         problem: null,
         conflict: null,
-        similar: [{ card: 0, text: word }],
+        similar: [{ card: 0, text: word, kind: 'similar' }],
       });
     }
   });
@@ -345,5 +352,163 @@ describe('a clue that may be a form of a word on the board', () => {
     expect(similarTo('ai', ['Aim'])).toEqual([]);
     expect(similarTo('data', ['Date'])).toEqual([]);
     expect(similarTo('beta', ['Bet'])).toEqual([]);
+  });
+});
+
+describe('a clue of several words', () => {
+  const TWO: ClueOptions = { words: 2, han: 10, strict: true };
+  const THREE: ClueOptions = { words: 3, han: 10, strict: true };
+
+  test('is allowed up to the number of words that the room takes', () => {
+    expect(checkClue('peer review', [], TWO).problem).toBeNull();
+    expect(checkClue('peer review', []).problem).toBe('clue_not_one_word');
+    expect(checkClue('one two three', [], TWO).problem).toBe('clue_too_many_words');
+    expect(checkClue('one two three', [], THREE).problem).toBeNull();
+    expect(checkClue('one two three four', [], THREE).problem).toBe('clue_too_many_words');
+  });
+
+  test('has one plain space between its words, however they were typed', () => {
+    expect(checkClue('  peer \u00a0  review ', [], TWO).problem).toBeNull();
+    expect(cleanClue('  peer \u00a0  review ')).toBe('peer review');
+    expect(cleanClue(`peer${ZERO_WIDTH_SPACE} review`)).toBe('peer review');
+  });
+
+  test('checks the characters and the length of every word', () => {
+    expect(checkClue('peer review!', [], TWO).problem).toBe('clue_not_one_word');
+    expect(checkClue('peer -', [], TWO).problem).toBe('clue_not_one_word');
+    expect(checkClue(`${'a'.repeat(24)} ${'b'.repeat(24)}`, [], TWO).problem).toBeNull();
+    expect(checkClue(`${'a'.repeat(25)} b`, [], TWO).problem).toBe('clue_too_long');
+  });
+
+  test('holds every word against the board as if it were the clue', () => {
+    expect(checkClue('deep models', board('Model'), TWO).conflict).toEqual({ card: 0, text: 'Model', kind: 'same' });
+    expect(checkClue('deep jetlag', board('Jet lag'), TWO).problem).toBe('clue_on_board');
+    expect(checkClue('deep modeling', board('Model'), TWO).similar).toEqual([
+      { card: 0, text: 'Model', kind: 'similar' },
+    ]);
+    // The words together are a clue too: "machine learning" is the card's word.
+    expect(checkClue('machine learning', board('Machinelearning'), TWO).problem).toBe('clue_on_board');
+  });
+});
+
+describe('the number of Chinese characters', () => {
+  test('is at most what the room allows', () => {
+    const four: ClueOptions = { words: 1, han: 4, strict: true };
+    expect(checkClue(NOTICE.repeat(2), [], four).problem).toBeNull();
+    expect(checkClue(`${NOTICE.repeat(2)}${FORCE}`, [], four).problem).toBe('clue_too_long');
+    expect(checkClue(`GPU${SPEED_UP}`, [], { ...four, han: 2 }).problem).toBeNull();
+    expect(checkClue(`GPU${SPEED_UP}`, [], { ...four, han: 1 }).problem).toBe('clue_too_long');
+    // Latin letters don't count against it, but a clue with Chinese characters is still at most
+    // 10 characters long.
+    expect(checkClue('abcdefghi', [], { ...four, han: 1 }).problem).toBeNull();
+    expect(checkClue(`abcdefghi${FORCE}x`, [], { ...four, han: 1 }).problem).toBe('clue_too_long');
+  });
+});
+
+describe('the strict and the loose clue rules', () => {
+  const card = (word: string, more: { translations?: string[]; forms?: string[] } = {}) => ({
+    word,
+    revealed: false,
+    ...more,
+  });
+  const strict = (clue: string, cards: ReturnType<typeof card>[], words = 1) =>
+    checkClue(clue, cards, { words, han: 10, strict: true });
+  const loose = (clue: string, cards: ReturnType<typeof card>[], words = 1) =>
+    checkClue(clue, cards, { words, han: 10, strict: false });
+
+  test('a form that the word library lists is refused under the strict rule and a warning under the loose one', () => {
+    const data = [card('Data', { forms: ['dataset', 'database', DATASET] })];
+    expect(strict('dataset', data)).toEqual({
+      problem: 'clue_on_board',
+      conflict: { card: 0, text: 'dataset', kind: 'form' },
+      similar: [],
+    });
+    expect(loose('dataset', data)).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [{ card: 0, text: 'dataset', kind: 'form' }],
+    });
+    // Its plain plural, another spelling of it, and a form in the other language count as well.
+    expect(strict('Datasets', data).conflict).toEqual({ card: 0, text: 'dataset', kind: 'form' });
+    expect(strict('DataBase', data).conflict).toEqual({ card: 0, text: 'database', kind: 'form' });
+    expect(strict(DATASET, data).conflict).toEqual({ card: 0, text: DATASET, kind: 'form' });
+    // A form of a revealed card doesn't count, and neither does a word that only looks like one.
+    expect(strict('dataset', [{ ...card('Data', { forms: ['dataset'] }), revealed: true }]).problem).toBeNull();
+    expect(strict('datum', data).problem).toBeNull();
+  });
+
+  test('a form may be a word of the clue, or the clue as a whole', () => {
+    const cv = [card('CV', { forms: ['Computer vision'] })];
+    expect(strict('computer vision', cv, 2).conflict).toEqual({ card: 0, text: 'Computer vision', kind: 'form' });
+    expect(strict('computervision', cv).conflict).toEqual({ card: 0, text: 'Computer vision', kind: 'form' });
+    const data = [card('Data', { forms: ['dataset'] })];
+    expect(strict('big dataset', data, 2).conflict).toEqual({ card: 0, text: 'dataset', kind: 'form' });
+  });
+
+  test('a Chinese character in common with a word on the board is refused under the strict rule only', () => {
+    expect(strict(NUMBER, [card(SAMPLE), card(DATA)])).toEqual({
+      problem: 'clue_on_board',
+      conflict: { card: 1, text: DATA, kind: 'character' },
+      similar: [],
+    });
+    expect(strict(NUMBER_TRADITIONAL, [card(DATA)]).conflict).toEqual({ card: 0, text: DATA, kind: 'character' });
+    expect(loose(NUMBER, [card(SAMPLE), card(DATA)])).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [{ card: 1, text: DATA, kind: 'character' }],
+    });
+    expect(strict(MANUSCRIPT, [card(REVIEWER)]).conflict).toEqual({ card: 0, text: REVIEWER, kind: 'character' });
+    expect(strict(SAMPLE, [card(DATA)]).problem).toBeNull();
+  });
+
+  test("a Chinese character in common with a card's translation is only a warning", () => {
+    expect(strict(NUMBER, [card('Data', { translations: [DATA] })])).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [{ card: 0, text: DATA, kind: 'character' }],
+    });
+  });
+
+  test('a word on the board, or a part of one, of four letters or more inside the clue is a warning', () => {
+    for (const check of [strict, loose]) {
+      expect(check('datacenter', [card('Data')]).similar).toEqual([{ card: 0, text: 'Data', kind: 'inside' }]);
+      expect(check('metadata', [card('Big data')]).similar).toEqual([{ card: 0, text: 'Big data', kind: 'inside' }]);
+      expect(check('datacenter', [card(DATA, { translations: ['Data'] })]).similar).toEqual([
+        { card: 0, text: 'Data', kind: 'inside' },
+      ]);
+    }
+    // A clue of several words contains what runs across its words as well.
+    expect(checkClue('big data center', [card('Datacenter')], { words: 3, han: 10, strict: true }).similar).toEqual([
+      { card: 0, text: 'Datacenter', kind: 'inside' },
+    ]);
+    // Shorter words are left alone, and so are clues inside a word.
+    expect(strict('email', [card('AI')]).similar).toEqual([]);
+    expect(strict('datum', [card('Dat')]).similar).toEqual([]);
+    expect(strict('data', [card('Datacenter')]).similar).toEqual([]);
+  });
+
+  test('what the endings suggest stays a warning under both rules', () => {
+    expect(strict('modeling', [card('Model')]).similar).toEqual([{ card: 0, text: 'Model', kind: 'similar' }]);
+    expect(loose('modeling', [card('Model')]).similar).toEqual([{ card: 0, text: 'Model', kind: 'similar' }]);
+  });
+
+  test('the loose rule still refuses what the rules always refuse', () => {
+    expect(loose('models', [card('Model')]).conflict).toEqual({ card: 0, text: 'Model', kind: 'same' });
+    expect(loose('journal', [card(JOURNAL, { translations: ['Journal'] })]).conflict).toEqual({
+      card: 0,
+      text: 'Journal',
+      kind: 'same',
+    });
+    expect(loose(NOTICE, [card(ATTENTION)]).conflict).toEqual({ card: 0, text: ATTENTION, kind: 'same' });
+  });
+
+  test('names a conflict that every rule refuses before one that only the strict rule does', () => {
+    const cards = [card('Data', { forms: ['dataset'] }), card('Dataset')];
+    expect(strict('dataset', cards).conflict).toEqual({ card: 1, text: 'Dataset', kind: 'same' });
+  });
+
+  test('gives each card one warning, the strongest', () => {
+    const cards = [card('Data', { forms: ['datacenter'] }), card('Model')];
+    expect(loose('datacenter', cards).similar).toEqual([{ card: 0, text: 'datacenter', kind: 'form' }]);
   });
 });
