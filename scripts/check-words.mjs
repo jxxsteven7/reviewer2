@@ -96,6 +96,9 @@ const GAME_NAMES = [
 let gameNames;
 // A plain plural: -s, or -es after s, x, z, ch or sh, as the clue check takes it.
 const isPluralOf = (plural, word) => plural === `${word}s` || (/(?:[sxz]|[cs]h)$/.test(word) && plural === `${word}es`);
+// The game takes a word and its plain plural for each other, as sameOrPlural() in
+// shared/src/games/keywords/clue.ts does.
+const sameOrPlural = (a, b) => a === b || isPluralOf(a, b) || isPluralOf(b, a);
 const isGameName = (key) =>
   (gameNames ??= GAME_NAMES.map(wordKey)).some((name) => key === name || isPluralOf(key, name));
 
@@ -250,9 +253,11 @@ export function checkWordList(data, file) {
 }
 
 // Problems with the forms of a term: the other forms of it, in Chinese and in English, that a
-// clue must not be either, such as "modeling" for "Model" or "CV" for "Computer vision". The
-// game puts the forms of both languages together, so a form must not repeat any other form of the
-// term, and it must not be the term itself or a plain plural of it, which the game refuses anyway.
+// clue must not be either, such as "modeling" for "Model" or "CV" for "Computer vision". The game
+// takes a word and its plain plural for each other, so a form must not be the term itself or its
+// plain plural, or a word that the term is the plain plural of, such as "acoustic" for
+// "Acoustics", which the game refuses anyway. The game puts the forms of both languages together,
+// so a form must not repeat any other form of the term, or be its plain plural, either.
 function checkForms(term, where) {
   const { forms } = term;
   const languages = forms && typeof forms === 'object' && !Array.isArray(forms) ? Object.keys(forms) : [];
@@ -275,15 +280,20 @@ function checkForms(term, where) {
       const wrong = spacing(form);
       if (wrong) problems.push(`${where}: ${label} ${describe(form)} ${wrong}`);
       const key = wordKey(form);
-      const earlier = seen.get(key);
+      const earlier = [...seen].find(([other]) => sameOrPlural(key, other))?.[1];
       if (key === '') {
         problems.push(`${where}: ${label} ${describe(form)} has no letters or digits`);
-      } else if (own.some((word) => key === word || isPluralOf(key, word))) {
+      } else if (own.some((word) => sameOrPlural(key, word))) {
         problems.push(
-          `${where}: ${label} ${describe(form)} is the term itself or its plain plural, so it needs no listing`,
+          `${where}: ${label} ${describe(form)} is the term itself, its plain plural or its singular, so it needs no listing`,
         );
       } else if (earlier !== undefined) {
-        const other = earlier === form ? '' : ` (${describe(earlier)}), which has the same letters and digits`;
+        const other =
+          earlier === form
+            ? ''
+            : wordKey(earlier) === key
+              ? ` (${describe(earlier)}), which has the same letters and digits`
+              : ` (${describe(earlier)}), which the game takes for the same word`;
         problems.push(`${where}: ${label} ${describe(form)} repeats another form${other}`);
       } else {
         seen.set(key, form);

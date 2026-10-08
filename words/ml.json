@@ -1037,7 +1037,7 @@
       "id": "robot",
       "zh": "机器人",
       "en": "Robot",
-      "forms": { "en": ["robotic", "robotics"] }
+      "forms": { "en": ["robotic"] }
     },
     {
       "id": "robotic-arm",
@@ -1766,8 +1766,7 @@
     {
       "id": "cybernetics",
       "zh": "控制论",
-      "en": "Cybernetics",
-      "forms": { "en": ["cybernetic"] }
+      "en": "Cybernetics"
     },
     {
       "id": "fuzzy-logic",

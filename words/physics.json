@@ -33,7 +33,7 @@
       "id": "photon",
       "zh": "光子",
       "en": "Photon",
-      "forms": { "en": ["photonic", "photonics"] }
+      "forms": { "en": ["photonic"] }
     },
     {
       "id": "momentum",
@@ -578,7 +578,7 @@
       "id": "electron",
       "zh": "电子",
       "en": "Electron",
-      "forms": { "en": ["electronic", "electronics"] }
+      "forms": { "en": ["electronic"] }
     },
     {
       "id": "proton",
@@ -1081,8 +1081,7 @@
     {
       "id": "acoustics",
       "zh": "声学",
-      "en": "Acoustics",
-      "forms": { "en": ["acoustic"] }
+      "en": "Acoustics"
     },
     {
       "id": "echo",
@@ -1122,8 +1121,7 @@
     {
       "id": "thermodynamics",
       "zh": "热力学",
-      "en": "Thermodynamics",
-      "forms": { "en": ["thermodynamic"] }
+      "en": "Thermodynamics"
     },
     {
       "id": "absolute-zero",
@@ -1220,8 +1218,7 @@
     {
       "id": "cryogenics",
       "zh": "低温学",
-      "en": "Cryogenics",
-      "forms": { "en": ["cryogenic"] }
+      "en": "Cryogenics"
     },
     {
       "id": "thermometer",

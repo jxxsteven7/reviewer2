@@ -16,7 +16,7 @@
       "id": "gene",
       "zh": "基因",
       "en": "Gene",
-      "forms": { "en": ["genetic", "genetics"] }
+      "forms": { "en": ["genetic"] }
     },
     {
       "id": "mitochondria",
@@ -132,7 +132,7 @@
       "id": "genome",
       "zh": "基因组",
       "en": "Genome",
-      "forms": { "en": ["genomic", "genomics"] }
+      "forms": { "en": ["genomic"] }
     },
     {
       "id": "double-helix",
@@ -341,8 +341,7 @@
     {
       "id": "epigenetics",
       "zh": "表观遗传",
-      "en": "Epigenetics",
-      "forms": { "en": ["epigenetic"] }
+      "en": "Epigenetics"
     },
     {
       "id": "methylation",
@@ -635,8 +634,7 @@
     {
       "id": "optogenetics",
       "zh": "光遗传学",
-      "en": "Optogenetics",
-      "forms": { "en": ["optogenetic"] }
+      "en": "Optogenetics"
     },
     {
       "id": "dopamine",
@@ -744,7 +742,7 @@
       "id": "phylogeny",
       "zh": "系统发育",
       "en": "Phylogeny",
-      "forms": { "en": ["phylogenetic", "phylogenetics"] }
+      "forms": { "en": ["phylogenetic"] }
     },
     {
       "id": "taxonomy",
@@ -1282,13 +1280,13 @@
       "id": "proteome",
       "zh": "蛋白质组",
       "en": "Proteome",
-      "forms": { "en": ["proteomic", "proteomics"] }
+      "forms": { "en": ["proteomic"] }
     },
     {
       "id": "transcriptome",
       "zh": "转录组",
       "en": "Transcriptome",
-      "forms": { "en": ["transcriptomic", "transcriptomics"] }
+      "forms": { "en": ["transcriptomic"] }
     },
     {
       "id": "wild-type",

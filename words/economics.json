@@ -372,7 +372,7 @@
       "id": "economy",
       "zh": "经济",
       "en": "Economy",
-      "forms": { "en": ["economic", "economics", "economist", "economies"] }
+      "forms": { "en": ["economic", "economist", "economies"] }
     },
     {
       "id": "market",
@@ -1606,7 +1606,7 @@
       "id": "econometrics",
       "zh": "计量经济学",
       "en": "Econometrics",
-      "forms": { "en": ["econometric", "econometrician"] }
+      "forms": { "en": ["econometrician"] }
     },
     {
       "id": "panel-data",

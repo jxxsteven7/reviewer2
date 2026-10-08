@@ -205,12 +205,17 @@ describe('a term', () => {
     assert.ok(has(forms({ en: ['+++'] }), /"forms\.en" "\+\+\+" has no letters or digits/));
   });
 
-  test('lists no form twice, and neither the term itself nor its plain plural', () => {
+  test('lists no form twice, and neither the term itself, its plain plural nor its singular', () => {
     const forms = (value) => withTerm({ id: 'model', zh: ATTENTION, en: 'Model', forms: value }).problems;
     for (const same of ['model', 'MODEL', 'Models', 'mo-del']) {
-      assert.ok(has(forms({ en: [same] }), /\(model\): "forms\.en" .* is the term itself or its plain plural/), same);
+      assert.ok(has(forms({ en: [same] }), /\(model\): "forms\.en" .* is the term itself, its plain plural/), same);
     }
     assert.ok(has(forms({ zh: [ATTENTION] }), /"forms\.zh" .* is the term itself/));
+    // The game takes a word and its plain plural for each other, so the singular of a term that
+    // is a plural needs no listing either.
+    const acoustics = (value) => withTerm({ id: 'acoustics', en: 'Acoustics', forms: value }).problems;
+    assert.ok(has(acoustics({ en: ['acoustic'] }), /"acoustic" is the term itself, its plain plural or its singular/));
+    assert.deepEqual(acoustics({ en: ['acoustical'] }), []);
     assert.ok(has(forms({ en: ['modeling', 'modeling'] }), /"modeling" repeats another form$/));
     assert.ok(
       has(
@@ -218,6 +223,18 @@ describe('a term', () => {
         /"Model-ing" repeats another form \("modeling"\), which has the same/,
       ),
     );
+    for (const [first, second] of [
+      ['genetic', 'genetics'],
+      ['genetics', 'genetic'],
+    ]) {
+      assert.ok(
+        has(
+          forms({ en: [first, second] }),
+          new RegExp(`"${second}" repeats another form \\("${first}"\\), which the game takes for the same word`),
+        ),
+        second,
+      );
+    }
     // The game puts the forms of both languages together.
     assert.ok(has(forms({ zh: ['CV'], en: ['cv'] }), /"forms\.en" "cv" repeats another form \("CV"\)/));
   });

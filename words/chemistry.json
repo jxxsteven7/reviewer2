@@ -998,8 +998,7 @@
     {
       "id": "kinetics",
       "zh": "化学动力学",
-      "en": "Kinetics",
-      "forms": { "en": ["kinetic"] }
+      "en": "Kinetics"
     },
     {
       "id": "enthalpy",
@@ -1339,7 +1338,7 @@
       "id": "photovoltaics",
       "zh": "光伏",
       "en": "Photovoltaics",
-      "forms": { "en": ["photovoltaic", "PV"] }
+      "forms": { "en": ["PV"] }
     },
     {
       "id": "graphite",

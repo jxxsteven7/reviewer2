@@ -21,7 +21,7 @@
       "id": "diagnosis",
       "zh": "诊断",
       "en": "Diagnosis",
-      "forms": { "en": ["diagnose", "diagnoses", "diagnostic"] }
+      "forms": { "en": ["diagnose", "diagnostic"] }
     },
     {
       "id": "clinical-trial",
@@ -261,13 +261,13 @@
       "id": "pediatrics",
       "zh": "儿科",
       "en": "Pediatrics",
-      "forms": { "en": ["paediatrics", "pediatric", "paediatric", "pediatrician"] }
+      "forms": { "en": ["paediatrics", "pediatrician"] }
     },
     {
       "id": "obstetrics",
       "zh": "产科",
       "en": "Obstetrics",
-      "forms": { "en": ["obstetric", "obstetrician"] }
+      "forms": { "en": ["obstetrician"] }
     },
     {
       "id": "gynecology",
@@ -327,13 +327,12 @@
       "id": "orthopedics",
       "zh": "骨科",
       "en": "Orthopedics",
-      "forms": { "en": ["orthopaedics", "orthopedic", "orthopaedic"] }
+      "forms": { "en": ["orthopaedics"] }
     },
     {
       "id": "geriatrics",
       "zh": "老年医学",
-      "en": "Geriatrics",
-      "forms": { "en": ["geriatric"] }
+      "en": "Geriatrics"
     },
     {
       "id": "rehabilitation",

@@ -56,7 +56,7 @@ Some forms of a term give it away as surely as the term itself, so games that ch
 
 Don't list:
 
-- the term itself or its plain plural, which games refuse anyway;
+- the term itself, its plain plural, or the singular of a term that is a plural, such as "acoustic" for "Acoustics": games take a word and its plain plural for each other, so they refuse these anyway. For the same reason, one of "genetic" and "genetics" is enough;
 - compounds with a space or a hyphen, such as "self-attention" or "data science", which already repeat a part of the term;
 - synonyms, other names and other translations, such as "ConvNet" for "CNN" or "散列" for "哈希". They make good clues.
 
@@ -95,7 +95,7 @@ Add a row when a new game starts using the library.
     - a term that is the same word as another in the same language. Only letters and digits count, as on the board: not case, accents, spaces, hyphens or other punctuation, and not the difference between traditional and simplified Chinese characters. A list can't hold both "Co-author" and "coauthor", or both "C++" and "C#";
     - a term without a letter or a digit;
     - a term or a form with spaces at its ends or two spaces in a row, with a tab, a line break or any other space than a plain one, or with a character that shows nothing, such as a zero-width space;
-    - a form that is the term itself, in either language, or its plain plural, and a form that repeats another form of the term;
+    - a form that is the term itself, in either language, its plain plural or its singular, and a form that repeats another form of the term or is its plain plural;
     - a list that doesn't have 25 different terms in either language, because a board needs 25;
     - a word that two lists translate differently, or spell their translations differently. This compares the lists that it checks, which are all of them unless you name some.
   - It **warns** about a language that has some terms but fewer than 25, which players can't pick for this field until it has more. It also warns about terms longer than 5 Chinese characters or 14 letters, which may not fit on a card on a phone. As on a card, a Chinese term without Chinese characters, such as "GitHub", is measured in letters. Finally, it warns about terms that are also the game's own names for its roles and cards, such as "PI" or "Reviewer 2", because players may mix them up. Another spelling or a plain plural of such a name counts too, such as "Reviewer-2" or "Students". Warnings don't fail the check.

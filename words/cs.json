@@ -334,8 +334,7 @@
     {
       "id": "generics",
       "zh": "泛型",
-      "en": "Generics",
-      "forms": { "en": ["generic"] }
+      "en": "Generics"
     },
     {
       "id": "encoding",
