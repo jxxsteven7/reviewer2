@@ -118,6 +118,7 @@
     "desk": "Chair's desk",
     "fields": "Word lists",
     "save": "Save",
+    "saveHint": "Starting the game saves these as well.",
     "shuffle": "Shuffle the groups",
     "start": "Start the game",
     "ready": "Everyone needed is seated.",

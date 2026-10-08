@@ -331,13 +331,15 @@ export interface Table {
 
 // Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
 // blue. Eve watches, and a screen shows the room. `prepare` runs on each page before it joins,
-// for a test that needs a player's connection set up in some other way, and `setup` on Ann's
-// room setup (createRoom). The game has started when this returns.
+// for a test that needs a player's connection set up in some other way, `setup` on Ann's room
+// setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before she starts
+// the game. The game has started when this returns.
 export async function seatTable(
   browser: Browser,
   language: Language,
   prepare?: (page: Page, name: string) => Promise<void>,
   setup?: (page: Page) => Promise<void>,
+  desk?: (chair: Page) => Promise<void>,
 ): Promise<Table> {
   const ann = await newPlayer(browser, language);
   snapshotsOf(ann);
@@ -365,6 +367,7 @@ export async function seatTable(
 
   const text = TEXT[language];
   await expect(ann.locator('.desk .ready')).toBeVisible();
+  await desk?.(ann);
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of [ann, bob, cat, dan, eve]) await expect(page.locator('.keywords-game')).toBeVisible();
   // The screen shows the board too, so that a test's look at its cards finds them.

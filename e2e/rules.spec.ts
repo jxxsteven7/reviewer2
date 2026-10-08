@@ -74,6 +74,17 @@ test('the chair changes the rules in the waiting room, and everyone sees them', 
   await expect(ann.getByRole('button', { name: TEXT.en.lobby.save })).toHaveCount(0);
 });
 
+test('the game starts with what the chair changed at the desk, saved or not', async ({ browser }) => {
+  const table = await seatTable(browser, 'en', undefined, undefined, async (ann) => {
+    await chooseRule(ann, settings.guess.standard);
+    await expect(ann.locator('.desk .save')).toContainText(TEXT.en.lobby.saveHint);
+  });
+  const team = await teamOnTurn(table.captains.red);
+  // The standard rule offers 0 to 9 and unlimited; the free rule, which the room was created
+  // with, never offers unlimited.
+  await expect(table.captains[team].locator('.counts button').last()).toHaveText('∞');
+});
+
 test('the server ends a turn whose time has run out', async ({ browser }) => {
   const table = await seatTable(browser, 'en', undefined, (page) => setSetting(page, settings.firstClueTime, 10));
   const team = await teamOnTurn(table.captains.red);

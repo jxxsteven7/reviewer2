@@ -42,7 +42,22 @@ watch(roomSettings, (settings, before) => {
   if (!sameSettings(settings, before)) chosenSettings.value = { ...settings };
 });
 
+const unsaved = computed(() => fieldsChanged.value || settingsChanged.value);
+const savable = computed(() => chosenFields.value.length > 0 && settingsValid.value);
 const save = () => act('room:settings', { fields: chosenFields.value, settings: chosenSettings.value });
+
+// The game starts with the word lists and the settings that the chair sees at the desk, so what
+// they have changed there is saved first. A change that the server refuses stops the start.
+const starting = ref(false);
+async function start() {
+  starting.value = true;
+  try {
+    if (unsaved.value && !(await save()).ok) return;
+    await act('room:start', { round: props.room.round });
+  } finally {
+    starting.value = false;
+  }
+}
 
 // Only the chair's desk shows the word lists, so only the chair asks for them.
 watch(isChair, (chair) => chair && loadFields(), { immediate: true });
@@ -145,10 +160,9 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
         <FieldPicker v-else v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
         <h3 class="label">{{ t('settings.title') }}</h3>
         <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
-        <div v-if="fieldsChanged || settingsChanged" class="save">
-          <UiButton size="small" :disabled="!chosenFields.length || !settingsValid" @click="save">
-            {{ t('lobby.save') }}
-          </UiButton>
+        <div v-if="unsaved" class="save">
+          <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
+          <p class="hint">{{ t('lobby.saveHint') }}</p>
         </div>
         <ul class="problems">
           <li v-for="item in problems" :key="`${item.problem}-${item.team}`">
@@ -158,7 +172,11 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
         </ul>
         <div class="desk-actions">
           <UiButton @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
-          <UiButton variant="primary" :disabled="problems.length > 0" @click="act('room:start', { round: room.round })">
+          <UiButton
+            variant="primary"
+            :disabled="problems.length > 0 || starting || (unsaved && !savable)"
+            @click="start"
+          >
             {{ t('lobby.start') }}
           </UiButton>
         </div>
@@ -310,6 +328,10 @@ dd .vacant {
 }
 
 .save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   margin-top: var(--space-3);
 }
 
