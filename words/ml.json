@@ -985,7 +985,7 @@
     {
       "id": "actor-critic",
       "zh": "Actor-Critic",
-      "en": "Actor-critic"
+      "en": "Actor-Critic"
     },
     {
       "id": "exploration",
@@ -1045,9 +1045,9 @@
       "en": "Robotic arm"
     },
     {
-      "id": "self-driving",
+      "id": "autonomous-driving",
       "zh": "自动驾驶",
-      "en": "Self-driving"
+      "en": "Autonomous driving"
     },
     {
       "id": "slam",
