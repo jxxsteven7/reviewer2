@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { BOARD_SIZE, sameSettings, type KeywordsSettings, type PlayerView, type RoomView } from '@reviewer2/shared';
+import {
+  BOARD_SIZE,
+  SPECTATOR,
+  sameSettings,
+  type KeywordsSettings,
+  type PlayerView,
+  type RoomView,
+} from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FieldPicker from '../../core/components/FieldPicker.vue';
@@ -9,13 +16,14 @@ import ShareTools from '../../core/components/ShareTools.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { fields, loadFields } from '../../core/fields';
 import { act } from '../../core/socket';
+import RoleBanner from './RoleBanner.vue';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
 import { useKeywords } from './useKeywords';
 
-// The waiting room: the two groups with their PI and students, the spectators and the screens,
-// the room's settings, and the chair's desk with the word lists, the settings, the shuffle and
-// the start button.
+// The waiting room: the banner that says where the viewer sits, the two groups with their PI and
+// students, the spectators and the screens, the room's settings, and the chair's desk with the
+// word lists, the settings, the shuffle and the start button.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -70,6 +78,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 
 <template>
   <section class="lobby">
+    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="null" :chair="isChair" />
     <header class="lobby-head">
       <p class="kicker">{{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}</p>
       <ShareTools :code="room.code" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ClueCount, KeywordsView, RoomView } from '@reviewer2/shared';
+import { SPECTATOR, type ClueCount, type KeywordsView, type RoomView } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
@@ -14,12 +14,14 @@ import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
+import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import TurnStrip from './TurnStrip.vue';
 import { useKeywords } from './useKeywords';
 
-// A game in progress, and its result. The turn strip, the board and what the viewer can do now
-// come first; the groups and the clue log follow, or sit beside the board on wide screens.
+// A game in progress, and its result. The banner that says what is going on for the viewer, the
+// turn strip, the board and what the viewer can do now come first; the groups and the clue log
+// follow, or sit beside the board on wide screens.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -98,6 +100,7 @@ const whoAmI = computed(() => {
 
 <template>
   <section class="keywords-game">
+    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game" />
     <DecisionLetter v-if="game.result" :result="game.result" :is-chair="isChair" :busy="busy" @again="again" />
     <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
 

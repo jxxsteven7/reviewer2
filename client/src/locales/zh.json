@@ -272,6 +272,28 @@
     "seconds": "{count} 秒",
     "noLimit": "不限时"
   },
+  "banner": {
+    "seat": "{group} · {role}",
+    "spectator": "旁听",
+    "roles": {
+      "captain": "导师",
+      "guesser": "学生"
+    },
+    "lines": {
+      "lobby": "等待主持开始游戏。",
+      "lobbyChair": "两组人齐后，就可以在下方开始游戏。",
+      "over": "本局已结束。",
+      "yourClue": "轮到你出题了！",
+      "studentsGuessing": "学生正在猜，你只能看着。",
+      "piThinking": "你们的导师正在出题。",
+      "yourGuess": "轮到你们猜了！",
+      "otherClue": "对方正在出题。",
+      "otherGuess": "对方正在猜词。",
+      "watchClue": "{group}的导师正在出题。",
+      "watchGuess": "{group}正在猜词。"
+    },
+    "tabTitle": "轮到你了！"
+  },
   "errors": {
     "bad_request": "服务器无法理解这个请求。",
     "rate_limited": "请求太频繁了，请稍等一下。",

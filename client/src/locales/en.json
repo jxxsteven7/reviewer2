@@ -272,6 +272,28 @@
     "seconds": "{count} s",
     "noLimit": "no limit"
   },
+  "banner": {
+    "seat": "{group} · {role}",
+    "spectator": "Spectator",
+    "roles": {
+      "captain": "PI",
+      "guesser": "Student"
+    },
+    "lines": {
+      "lobby": "Waiting for the chair to start the game.",
+      "lobbyChair": "Start the game below once both groups are ready.",
+      "over": "The game is over.",
+      "yourClue": "Your turn to give a clue!",
+      "studentsGuessing": "Your students are guessing. All you can do is watch.",
+      "piThinking": "Your PI is thinking of a clue.",
+      "yourGuess": "Your turn to guess!",
+      "otherClue": "The other group's PI is thinking of a clue.",
+      "otherGuess": "The other group is guessing.",
+      "watchClue": "The PI of the {group} is thinking of a clue.",
+      "watchGuess": "The {group} is guessing."
+    },
+    "tabTitle": "Your turn!"
+  },
   "errors": {
     "bad_request": "That request didn't make sense to the server.",
     "rate_limited": "Too many requests. Please wait a moment.",

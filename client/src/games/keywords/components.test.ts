@@ -20,6 +20,7 @@ import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
+import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
@@ -213,6 +214,36 @@ describe('GroupChat', () => {
   test('offers nothing to someone without a chat, such as a spectator', () => {
     const wrapper = mount(GroupChat, { props: { room: room('eve') }, global: global() });
     expect(wrapper.find('button').exists()).toBe(false);
+  });
+});
+
+describe('RoleBanner', () => {
+  const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
+
+  test("stands out on the viewer's move, and says so in the tab's title for as long as it lasts", async () => {
+    document.title = 'Reviewer 2';
+    const wrapper = mount(RoleBanner, { props: { seat: seats.bob as Seat, game }, global: global() });
+    expect(wrapper.find('.who').text()).toBe('Red group · Student');
+    expect(wrapper.find('.line').text()).toBe('Your turn to guess!');
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['red', 'urgent']));
+    expect(document.title).toBe('Your turn!');
+
+    await wrapper.setProps({ game: { ...game, phase: 'clue' } });
+    expect(wrapper.find('.line').text()).toBe('Your PI is thinking of a clue.');
+    expect(wrapper.classes()).not.toContain('urgent');
+    expect(document.title).toBe('Reviewer 2');
+
+    await wrapper.setProps({ game });
+    expect(document.title).toBe('Your turn!');
+    wrapper.unmount();
+    expect(document.title).toBe('Reviewer 2');
+  });
+
+  test('tells a spectator who is doing what', () => {
+    const wrapper = mount(RoleBanner, { props: { seat: seats.eve as Seat, game }, global: global() });
+    expect(wrapper.find('.who').text()).toBe('Spectator');
+    expect(wrapper.find('.line').text()).toBe('The Red group is guessing.');
+    expect(wrapper.classes()).toEqual(['role-banner', 'spectator']);
   });
 });
 
