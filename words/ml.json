@@ -34,7 +34,7 @@
       "id": "loss",
       "zh": "损失",
       "en": "Loss",
-      "forms": { "en": ["lose", "lost"] }
+      "forms": { "en": ["lose"] }
     },
     {
       "id": "hallucination",

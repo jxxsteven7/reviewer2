@@ -35,8 +35,7 @@
     {
       "id": "impact-factor",
       "zh": "影响因子",
-      "en": "Impact factor",
-      "forms": { "en": ["IF"] }
+      "en": "Impact factor"
     },
     {
       "id": "journal",

@@ -1250,8 +1250,7 @@
     {
       "id": "dice",
       "zh": "骰子",
-      "en": "Dice",
-      "forms": { "en": ["die"] }
+      "en": "Dice"
     },
     {
       "id": "coin-toss",
