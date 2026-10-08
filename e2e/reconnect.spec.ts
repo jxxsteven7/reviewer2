@@ -1,4 +1,4 @@
-import { giveClue, revealByKey, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
+import { gameOf, giveClue, revealByKey, seatTable, snapshotsOf, teamOnTurn, TEXT, expect, test } from './helpers';
 
 // After a refresh, a locked screen, a lost network or a visit to the home page, players come back
 // to their room, group and role (docs/rules/constraints.md).
@@ -18,16 +18,23 @@ test('a player who goes to the home page and back is in their seat at once', asy
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
   const guesser = table.guessers[team];
+  const received = snapshotsOf(guesser);
   // The page leaves the room and its connection stays in it, so the clue reaches the page anyway.
   await guesser.getByRole('link', { name: TEXT.en.app.name, exact: true }).click();
   await expect(guesser.locator('.keywords-game')).toHaveCount(0);
   await giveClue(table.captains[team], 'Hint', 2, 'en');
+  await expect.poll(() => gameOf(received.at(-1))?.clue?.word).toBe('Hint');
+  const before = received.length;
   await guesser.goBack();
-  await expect(guesser.locator('.strip .clue .word')).toHaveText('Hint');
+  // At once: from what the connection has, with no handshake and no new snapshot, so the page
+  // never says that the room is opening or asks for a name.
+  await expect(guesser.locator('.strip .clue .word')).toHaveText('Hint', { timeout: 2_000 });
+  await expect(guesser.locator('.loading, .banner, form.name-form')).toHaveCount(0);
+  expect(received.length, 'snapshots received on the way back').toBe(before);
   await revealByKey(table, team);
 });
 
-test('a player who loses the network for half a minute comes back by themselves', async ({ browser }) => {
+test('a player whose network drops until the page says so comes back by themselves', async ({ browser }) => {
   test.slow();
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
