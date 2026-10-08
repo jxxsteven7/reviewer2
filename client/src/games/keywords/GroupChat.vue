@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, type ChatMessage, type RoomView } from '@reviewer2/shared';
+import {
+  checkChat,
+  MAX_CHAT_INPUT,
+  MAX_CHAT_LENGTH,
+  textLength,
+  type ChatMessage,
+  type RoomView,
+} from '@reviewer2/shared';
 import { computed, nextTick, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
@@ -66,7 +73,7 @@ const text = ref('');
 const input = ref<HTMLInputElement | null>(null);
 const sending = ref(false);
 const check = computed(() => checkChat(text.value));
-const length = computed(() => [...check.value.text].length);
+const length = computed(() => textLength(check.value.text));
 const tooLong = computed(() => check.value.problem === 'chat_too_long');
 
 async function say() {
