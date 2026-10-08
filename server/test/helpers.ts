@@ -9,9 +9,11 @@ import { WordLibrary, type WordListData } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
 import { fakeGame } from './fakeGame';
 
-// Helpers for the integration tests: a real server on a free port, with a clock that tests can
-// move forward and timers that go by it, and clients that record everything the server sends
-// them.
+// Helpers for the integration tests: a real server on a free port, with a clock that only the
+// tests move forward and timers that go by it, and clients that record everything the server
+// sends them. The clock stands still between two moves, so that what a test measures with it, such
+// as the latency of a heartbeat or the time a turn has left, doesn't depend on how long the test
+// itself takes.
 
 const list = (id: string, count: number): WordListData => ({
   id,
@@ -44,7 +46,8 @@ export async function startServer(
   } = {},
 ): Promise<TestServer> {
   let offset = 0;
-  const now = () => Date.now() + offset;
+  const start = Date.now();
+  const now = () => start + offset;
   const logs: TestServer['logs'] = [];
   // The timers that are waiting, each with the time it is due by the clock above.
   const waiting = new Set<{ due: number; run: () => void }>();

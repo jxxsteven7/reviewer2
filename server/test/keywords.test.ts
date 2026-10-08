@@ -162,14 +162,6 @@ const context = (): GameContext => ({
   playerIds: () => ['ann', 'bob', 'cat'],
 });
 
-// The clock of a phase that was given `total` milliseconds and had `left` of them left on the
-// test's clock. The snapshot went out a moment later, by the real time that the test took.
-function expectClock(view: KeywordsView, left: number, total: number) {
-  expect(view.clock?.total).toBe(total);
-  expect(view.clock?.left).toBeGreaterThan(left - 1000);
-  expect(view.clock?.left).toBeLessThanOrEqual(left);
-}
-
 describe('the view', () => {
   test("shares nothing with the room's own state, and is built once for each seat", () => {
     const ctx = context();
@@ -479,18 +471,18 @@ describe('the time limits', () => {
     const table = await seatTable(true, { firstClueTime: 30, clueTime: 10, guessTime: 20 });
     const ann = table.captains.red;
     const first = board(ann).team;
-    expectClock(board(ann), 30_000, 30_000);
+    expect(board(ann).clock).toEqual({ left: 30_000, total: 30_000 });
     server.advance(12_000);
     // A new snapshot says how much time is left when it is sent.
     await expectOk(table.guessers.red.send('keywords:say', { gameId: board(ann).gameId, text: 'Hurry' }));
     await ann.waitFor((state) => ((state.data as KeywordsRoomData).game?.chat?.length ?? 0) > 0, 'the message');
-    expectClock(board(ann), 18_000, 30_000);
+    expect(board(ann).clock).toEqual({ left: 18_000, total: 30_000 });
 
     // The first PI says nothing in time: the turn goes to the other group, with no clue on record.
     server.advance(18_000);
     await settle(table);
     expect(board(table.spectator)).toMatchObject({ turn: 2, team: otherTeam(first), phase: 'clue' });
-    expectClock(board(table.spectator), 10_000, 10_000);
+    expect(board(table.spectator).clock).toEqual({ left: 10_000, total: 10_000 });
     expect(board(table.spectator).history).toEqual([
       { turn: 1, team: first, word: null, count: null, guesses: [], timedOut: true },
     ]);
@@ -499,7 +491,7 @@ describe('the time limits', () => {
     const second = otherTeam(first);
     await expectOk(table.captains[second].send('keywords:clue', { ...moment(board(ann)), word: 'Hint', count: 1 }));
     await settle(table);
-    expectClock(board(table.spectator), 20_000, 20_000);
+    expect(board(table.spectator).clock).toEqual({ left: 20_000, total: 20_000 });
     const guesser = table.guessers[second];
     const late = moment(board(guesser));
     // Their reveal arrives just after the time is up, before the timer has fired: it is stale.
