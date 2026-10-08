@@ -1,15 +1,27 @@
 // @vitest-environment happy-dom
-import type { ChatMessage, KeywordsRoomData, KeywordsView, RoomView, Seat } from '@reviewer2/shared';
+import {
+  defaultSettings,
+  type ChatMessage,
+  type KeywordsRoomData,
+  type KeywordsSettings,
+  type KeywordsView,
+  type RoomView,
+  type Seat,
+} from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import { clearMemory } from '../../core/storage';
 import en from '../../locales/en.json';
+import ClockBar from './ClockBar.vue';
+import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
+import SettingsForm from './SettingsForm.vue';
+import TurnStrip from './TurnStrip.vue';
 
 const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>(async () => ({ ok: true })),
@@ -34,6 +46,9 @@ const seats: Record<string, Seat> = {
 
 const cards = (...words: string[]) => words.map((word) => ({ word, revealed: false }));
 
+// The standard guess rule, under which a clue's number limits the guesses.
+const STANDARD: KeywordsSettings = { ...defaultSettings('en'), guessRule: 'standard' };
+
 // A game in the red group's guess phase, with the one clue "Science 2" and no guess yet.
 function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = 'guess'): RoomView {
   const game: KeywordsView = {
@@ -47,12 +62,14 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     clue: { word: 'Science', count: 2 },
     guessesMade: 0,
     guessesLeft: 3,
+    clock: null,
     history: [{ turn: 2, team: 'red', word: 'Science', count: 2, guesses: [] }],
     result: null,
     selections: [],
     ...(chat ? { chat } : {}),
   };
   const data: KeywordsRoomData = {
+    settings: STANDARD,
     seats,
     keyViewers: ['ann'],
     side: seats[me]?.team ?? null,
@@ -265,12 +282,25 @@ describe('GuessBar', () => {
 
 describe('CluePanel', () => {
   const JOURNAL = '\u671f\u520a'; // "journal"
-  const board = [...cards('Model', 'Peer review'), { word: JOURNAL, revealed: false, translations: ['Journal'] }];
-  const panel = () =>
+  const DATA = '\u6570\u636e'; // "data"
+  const NUMBER = '\u6570\u5b57'; // "number", which shares a character with DATA
+  const board = [
+    ...cards('Model', 'Peer review'),
+    { word: JOURNAL, revealed: false, translations: ['Journal'] },
+    { word: 'Data', revealed: false, translations: [DATA], forms: ['dataset'] },
+  ];
+  const panel = (settings: KeywordsSettings = STANDARD, language: 'en' | 'zh' = 'en') =>
     mount(CluePanel, {
-      props: { game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView, busy: false },
+      props: {
+        game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView,
+        settings,
+        language,
+        busy: false,
+      },
       global: global(),
     });
+  const counts = (wrapper: ReturnType<typeof panel>) =>
+    wrapper.findAll('.counts button').map((button) => button.text());
 
   test('names the card that a clue repeats, and the translation when that is what it repeats', async () => {
     const wrapper = panel();
@@ -296,6 +326,187 @@ describe('CluePanel', () => {
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     expect(wrapper.emitted('give')).toEqual([['modeling', 1]]);
+  });
+
+  test("offers the numbers of the room's guess rule", () => {
+    expect(counts(panel())).toEqual(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '\u221e']);
+    // Red has 9 cards left in the test game.
+    expect(counts(panel({ ...STANDARD, guessRule: 'free' }))).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+  });
+
+  test('refuses a listed form under the strict rule, and only warns about it under the loose one', async () => {
+    const strict = panel();
+    await strict.get('input').setValue('datasets');
+    expect(strict.get('.problem').text()).toBe(
+      'The word lists give this as another form of \u201cData\u201d, which is on the board. ' +
+        "This room's clue check doesn't allow it.",
+    );
+    const loose = panel({ ...STANDARD, clueRule: 'loose' });
+    await loose.get('input').setValue('datasets');
+    expect(loose.find('.problem').exists()).toBe(false);
+    expect(loose.get('.warning').text()).toContain('another form of a word still on the board: \u201cData\u201d.');
+  });
+
+  test('gives one line to each kind of warning', async () => {
+    const wrapper = panel();
+    await wrapper.get('input').setValue(NUMBER);
+    expect(wrapper.findAll('.warning').map((line) => line.text())).toEqual([
+      `This clue has a Chinese character in common with a word still on the board: \u201cData\u201d (${DATA}). ` +
+        "It's your call.",
+    ]);
+    await wrapper.get('input').setValue('metamodeling');
+    expect(wrapper.findAll('.warning')).toHaveLength(1);
+    await wrapper.get('input').setValue('datacenter');
+    expect(wrapper.get('.warning').text()).toContain('contains a word still on the board: \u201cData\u201d.');
+  });
+
+  test("shows the room's limit on the length of a clue, and holds a clue that goes over it", async () => {
+    const wrapper = panel({ ...STANDARD, clueLength: 2 });
+    expect(wrapper.get('.limit').text()).toBe('Words in a clue: at most 2.');
+    await wrapper.get('input').setValue('gentle nudge');
+    expect(wrapper.find('.problem').exists()).toBe(false);
+    await wrapper.get('input').setValue('a gentle nudge');
+    expect(wrapper.get('.problem').text()).toBe('That clue has more words than this room allows.');
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
+    const chinese = panel({ ...STANDARD, clueLength: 4 }, 'zh');
+    expect(chinese.get('.limit').text()).toBe('Chinese characters in a clue: at most 4.');
+  });
+});
+
+describe('TurnStrip', () => {
+  const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
+
+  test('shows how many guesses are left under the standard rule only', () => {
+    const standard = mount(TurnStrip, { props: { game, guessRule: 'standard' }, global: global() });
+    expect(standard.get('.left').text()).toBe('Guesses left: 3');
+    const free = mount(TurnStrip, {
+      props: { game: { ...game, guessesLeft: null }, guessRule: 'free' },
+      global: global(),
+    });
+    expect(free.find('.left').exists()).toBe(false);
+  });
+
+  test('shows the time that the phase has left, if it has a limit', () => {
+    const untimed = mount(TurnStrip, { props: { game, guessRule: 'free' }, global: global() });
+    expect(untimed.find('.clock').exists()).toBe(false);
+    const timed = mount(TurnStrip, {
+      props: { game: { ...game, clock: { left: 42_000, total: 90_000 } }, guessRule: 'free' },
+      global: global(),
+    });
+    expect(timed.get('.clock').attributes('aria-label')).toBe('42 seconds left');
+  });
+});
+
+describe('ClockBar', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  test('counts down from what the server said, turns red for the last 10 seconds, and stops at zero', async () => {
+    const wrapper = mount(ClockBar, { props: { clock: { left: 12_000, total: 60_000 } }, global: global() });
+    expect(wrapper.get('.seconds').text()).toBe('0:12');
+    expect(wrapper.get('.fill').attributes('style')).toContain('scaleX(0.2)');
+    expect(wrapper.classes()).not.toContain('urgent');
+    vi.advanceTimersByTime(2_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:10');
+    expect(wrapper.classes()).toContain('urgent');
+    vi.advanceTimersByTime(30_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:00');
+    expect(wrapper.get('.fill').attributes('style')).toContain('scaleX(0)');
+  });
+
+  test('sets itself right with every snapshot', async () => {
+    const wrapper = mount(ClockBar, { props: { clock: { left: 50_000, total: 60_000 } }, global: global() });
+    vi.advanceTimersByTime(5_000);
+    await wrapper.setProps({ clock: { left: 30_000, total: 60_000 } });
+    expect(wrapper.get('.seconds').text()).toBe('0:30');
+    vi.advanceTimersByTime(1_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:29');
+  });
+
+  test('shows minutes and seconds', () => {
+    const wrapper = mount(ClockBar, { props: { clock: { left: 600_000, total: 600_000 } }, global: global() });
+    expect(wrapper.get('.seconds').text()).toBe('10:00');
+  });
+});
+
+describe('ClueLog', () => {
+  test('says when a turn ran out of time, before the clue or during the guesses', () => {
+    const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
+    const history: KeywordsView['history'] = [
+      { turn: 1, team: 'red', word: null, count: null, guesses: [], timedOut: true },
+      { turn: 2, team: 'blue', word: 'Science', count: 2, guesses: [{ card: 0, color: 'blue' }], timedOut: true },
+      { turn: 3, team: 'red', word: 'Loss', count: 1, guesses: [] },
+    ];
+    const wrapper = mount(ClueLog, { props: { game: { ...game, history } }, global: global() });
+    const items = wrapper.findAll('li');
+    expect(items[2]?.text()).toContain('No clue in time');
+    expect(items[1]?.text()).toContain('Science');
+    expect(items[1]?.text()).toContain('Time ran out');
+    expect(items[0]?.text()).not.toContain('Time ran out');
+  });
+});
+
+describe('SettingsForm', () => {
+  const form = (language: 'en' | 'zh' = 'en', settings = defaultSettings(language)) =>
+    mount(SettingsForm, { props: { modelValue: settings, language }, global: global() });
+  const sent = (wrapper: ReturnType<typeof form>) =>
+    wrapper.emitted('update:modelValue')?.at(-1)?.[0] as KeywordsSettings;
+  // The form says whether the settings will do when that changes; they start out fine.
+  const valid = (wrapper: ReturnType<typeof form>) => wrapper.emitted('update:valid')?.at(-1)?.[0] ?? true;
+  // The parent takes what the form sends, as v-model does.
+  const take = (wrapper: ReturnType<typeof form>) => wrapper.setProps({ modelValue: sent(wrapper) });
+  const boxes = (wrapper: ReturnType<typeof form>) => wrapper.findAll('input[inputmode="numeric"]');
+
+  test('sends the rules that are chosen', async () => {
+    const wrapper = form();
+    await wrapper.find('input[value="standard"]').setValue(true);
+    expect(sent(wrapper).guessRule).toBe('standard');
+  });
+
+  test('takes whole numbers in range, full-width digits too, and says what is wrong with the rest', async () => {
+    const wrapper = form();
+    const [length, first] = boxes(wrapper);
+    await first?.setValue('\uff11\uff12\uff10');
+    expect(sent(wrapper).firstClueTime).toBe(120);
+    expect(valid(wrapper)).toBe(true);
+    await take(wrapper);
+
+    await first?.setValue('5');
+    await take(wrapper);
+    expect(wrapper.text()).toContain('0, or from 10 to 600.');
+    expect(valid(wrapper)).toBe(false);
+
+    await first?.setValue('1.5');
+    await take(wrapper);
+    expect(wrapper.text()).toContain('Enter a whole number.');
+    // What was typed stays in the box.
+    expect((first?.element as HTMLInputElement).value).toBe('1.5');
+
+    await length?.setValue('4');
+    await take(wrapper);
+    expect(wrapper.text()).toContain('From 1 to 3.');
+    await first?.setValue('0');
+    await length?.setValue('3');
+    await take(wrapper);
+    expect(valid(wrapper)).toBe(true);
+  });
+
+  test('counts a clue in Chinese characters in a Chinese room', async () => {
+    const wrapper = form('zh');
+    expect(wrapper.text()).toContain('Chinese characters in a clue');
+    expect((boxes(wrapper)[0]?.element as HTMLInputElement).value).toBe('4');
+    // Another language brings its own default length.
+    await wrapper.setProps({ language: 'en' });
+    expect(sent(wrapper).clueLength).toBe(1);
+  });
+
+  test('shows settings that change elsewhere', async () => {
+    const wrapper = form();
+    await wrapper.setProps({ modelValue: { ...defaultSettings('en'), guessTime: 45 } });
+    expect((boxes(wrapper)[3]?.element as HTMLInputElement).value).toBe('45');
   });
 });
 

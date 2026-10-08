@@ -3,6 +3,7 @@ import { MAX_NAME_INPUT, type Language } from '@reviewer2/shared';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { games } from '../../games';
 import FieldPicker from '../components/FieldPicker.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import UiButton from '../components/UiButton.vue';
@@ -15,7 +16,7 @@ import { send } from '../socket';
 import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
-// lists, and the creator's nickname. The creator becomes the chair.
+// lists, the game's own settings, and the creator's nickname. The creator becomes the chair.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
@@ -30,6 +31,10 @@ const language = computed(() => locale.value as Language);
 const usable = computed(() =>
   (fields.value ?? []).filter((field) => field.counts[language.value] >= props.wordsNeeded),
 );
+// The game's settings, with its own form, which also says whether they will do.
+const screens = computed(() => games[props.game]);
+const settings = ref<object | undefined>(screens.value?.defaultSettings(language.value));
+const settingsValid = ref(true);
 
 // Start with every usable list chosen; a room with one list is the usual case.
 watch(usable, (lists) => (chosen.value = lists.map((field) => field.id)), { immediate: true });
@@ -45,6 +50,7 @@ async function create() {
     game: props.game,
     language: currentLanguage(),
     fields: chosen.value,
+    ...(settings.value ? { settings: settings.value } : {}),
     name: name.value,
   });
   busy.value = false;
@@ -79,6 +85,11 @@ async function create() {
       <p v-else class="hint">{{ t('create.noFields') }}</p>
     </section>
 
+    <section v-if="screens && settings" class="step">
+      <h3>{{ t('create.settings') }}</h3>
+      <component :is="screens.Settings" v-model="settings" v-model:valid="settingsValid" :language="language" />
+    </section>
+
     <section class="step">
       <UiField
         v-model="name"
@@ -93,7 +104,7 @@ async function create() {
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
 
     <div class="actions">
-      <UiButton variant="primary" type="submit" :disabled="busy || !chosen.length || !clean">
+      <UiButton variant="primary" type="submit" :disabled="busy || !chosen.length || !clean || !settingsValid">
         {{ t('create.submit') }}
       </UiButton>
       <UiButton variant="quiet" @click="emit('cancel')">{{ t('create.cancel') }}</UiButton>

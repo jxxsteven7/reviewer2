@@ -195,7 +195,9 @@ export function expectNoKey(states: RoomView[]): number {
     for (const card of game.cards) {
       if (card.revealed) continue;
       expect(card).not.toHaveProperty('color');
-      expect(Object.keys(card).filter((key) => !['word', 'revealed', 'translations'].includes(key))).toEqual([]);
+      expect(Object.keys(card).filter((key) => !['word', 'revealed', 'translations', 'forms'].includes(key))).toEqual(
+        [],
+      );
       checked += 1;
     }
     const allowed = new Set([
@@ -265,7 +267,25 @@ export async function sideChannel(page: Page, url: string) {
 // A string as a regular expression that matches it and nothing else.
 const literally = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-export async function createRoom(page: Page, language: Language, name: string): Promise<string> {
+// Chooses one of the rules on the settings form, on the room setup or at the chair's desk, by
+// its label.
+export async function chooseRule(page: Page, label: string): Promise<void> {
+  await page.locator('.settings-form').getByLabel(label, { exact: true }).check();
+}
+
+// Types a number into one of the boxes of the settings form, by its label.
+export async function setSetting(page: Page, label: string, value: number): Promise<void> {
+  await page.locator('.settings-form').getByLabel(label, { exact: true }).fill(String(value));
+}
+
+// Creates a room. `setup` runs on the room setup once the name is filled in, for a test that
+// wants other settings than the defaults.
+export async function createRoom(
+  page: Page,
+  language: Language,
+  name: string,
+  setup?: (page: Page) => Promise<void>,
+): Promise<string> {
   const text = TEXT[language];
   await page.goto('/');
   // The language's button begins with the language's name, and goes on with a description.
@@ -273,6 +293,7 @@ export async function createRoom(page: Page, language: Language, name: string): 
   await page.getByRole('button', { name: text.home.newRoom }).click();
   await expect(page.locator('.fields li').first()).toBeVisible();
   await page.getByLabel(text.create.name).fill(name);
+  await setup?.(page);
   await page.getByRole('button', { name: text.create.submit }).click();
   await page.waitForURL(/\/room\/[0-9A-Z]{4}$/);
   await expect(page.locator('.lobby')).toBeVisible();
@@ -310,16 +331,17 @@ export interface Table {
 
 // Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
 // blue. Eve watches, and a screen shows the room. `prepare` runs on each page before it joins,
-// for a test that needs a player's connection set up in some other way. The game has started
-// when this returns.
+// for a test that needs a player's connection set up in some other way, and `setup` on Ann's
+// room setup (createRoom). The game has started when this returns.
 export async function seatTable(
   browser: Browser,
   language: Language,
   prepare?: (page: Page, name: string) => Promise<void>,
+  setup?: (page: Page) => Promise<void>,
 ): Promise<Table> {
   const ann = await newPlayer(browser, language);
   snapshotsOf(ann);
-  const url = await createRoom(ann, language, 'Ann');
+  const url = await createRoom(ann, language, 'Ann', setup);
   // The others join at the same time, as separate people do.
   const join = async (name: string) => {
     const page = await newPlayer(browser, language);
@@ -434,16 +456,17 @@ export async function endTurn(guesser: Page, language: Language): Promise<void> 
   await guesser.locator('[role=dialog]').getByRole('button', { name: text.game.endTurn }).click();
 }
 
-// Plays until the game ends: each turn, the PI gives a clue and the group reveals one of its own
-// cards, then ends the turn. Returns how many turns that took: 16, because the group that goes
-// second reveals its eighth card, the last one, in its eighth turn, before the first group gets
-// to its ninth.
+// Plays until the game ends: each turn, the PI gives a clue for one card and the group reveals one
+// of its own cards, then ends the turn. Returns how many turns that took: 16, because the group
+// that goes second reveals its eighth card, the last one, in its eighth turn, before the first
+// group gets to its ninth. Under the free guess rule, 1 is the only number that a group with one
+// card left may give.
 export async function playToTheEnd(table: Table): Promise<number> {
   const ann = table.captains.red;
   for (let turn = 1; turn < 40; turn += 1) {
     if (await ann.locator('.letter').isVisible()) return turn - 1;
     const team = await teamOnTurn(ann);
-    await giveClue(table.captains[team], `Hint${turn}`, 2, table.language);
+    await giveClue(table.captains[team], `Hint${turn}`, 1, table.language);
     await revealByKey(table, team);
     const guesser = table.guessers[team];
     if (await guesser.locator('.guess-bar').isVisible()) await endTurn(guesser, table.language);

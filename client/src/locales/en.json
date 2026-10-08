@@ -51,6 +51,7 @@
     "fieldTerms": "{count} terms",
     "fieldTooSmall": "Not enough terms in this language",
     "noFields": "No word lists are available in this language yet.",
+    "settings": "Rules",
     "loadingFields": "Loading the word lists...",
     "name": "Your name",
     "submit": "Create the room",
@@ -116,7 +117,7 @@
     "captainNote": "The PI sees which cards belong to the group and gives one-word clues.",
     "desk": "Chair's desk",
     "fields": "Word lists",
-    "saveFields": "Save",
+    "save": "Save",
     "shuffle": "Shuffle the groups",
     "start": "Start the game",
     "ready": "Everyone needed is seated.",
@@ -143,6 +144,7 @@
     "clue": "Clue",
     "guessesLeft": "Guesses left: {count}",
     "noLimit": "No limit on guesses",
+    "clock": "{seconds} seconds left",
     "remaining": "{count} to find",
     "card": {
       "red": "Red",
@@ -160,11 +162,20 @@
     "waitClue": "Waiting for the PI of the {group} to give a clue.",
     "waitGuess": "The {group} is guessing.",
     "clueInput": "Your clue",
+    "clueLimit": {
+      "zh": "Chinese characters in a clue: at most {count}.",
+      "en": "Words in a clue: at most {count}."
+    },
     "clueNumber": "How many cards it points to",
     "unlimited": "No limit",
     "sendClue": "Give the clue",
     "onBoard": "{word} is on the board. A clue can't be a word on the board, or part of one.",
+    "formOnBoard": "The word lists give this as another form of {word}, which is on the board. This room's clue check doesn't allow it.",
+    "characterOnBoard": "This clue has a Chinese character in common with {word}, which is on the board. This room's clue check doesn't allow it.",
     "similar": "This may be another form of a word still on the board: {words}. The rules don't allow that, but the check can't be sure, so it's your call.",
+    "formWarning": "The word lists give this as another form of a word still on the board: {words}. This room's clue check leaves it to you.",
+    "characterWarning": "This clue has a Chinese character in common with a word still on the board: {words}. It's your call.",
+    "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
     "pick": "Tap a card to choose it. Your group sees your choice; reveal it once you agree.",
     "chosenBy": "chosen by {names}",
     "reveal": "Reveal “{word}”",
@@ -172,6 +183,8 @@
     "endTurnConfirm": "End the turn now? Your group reveals no more cards until its next turn.",
     "log": "Clue log",
     "noClues": "No clues yet.",
+    "noClueInTime": "No clue in time",
+    "timeRanOut": "Time ran out",
     "groups": "Groups",
     "playFor": "Play for the {group}",
     "watch": "Just watch",
@@ -209,12 +222,49 @@
       "someone": "A player who left"
     }
   },
+  "settings": {
+    "title": "Rules of this room",
+    "guessRule": "Guessing",
+    "guess": {
+      "free": "Free",
+      "standard": "Standard"
+    },
+    "guessHint": {
+      "free": "Students go on for as long as they find their group's cards. The PI's number is a hint, from 1 to the cards the group has left.",
+      "standard": "Students may reveal up to the PI's number plus one. With 0 or ∞ there is no limit."
+    },
+    "clueRule": "Clue check",
+    "clue": {
+      "strict": "Strict",
+      "loose": "Loose"
+    },
+    "clueHint": {
+      "strict": "Refuses the other forms of a word on the board that the word lists give, and clues with a Chinese character in common with one.",
+      "loose": "Other forms of a word on the board that the word lists give, and Chinese characters in common with one, only bring a warning, and the PI decides."
+    },
+    "clueLength": {
+      "zh": "Chinese characters in a clue",
+      "en": "Words in a clue"
+    },
+    "lengthRange": "From {min} to {max}.",
+    "times": "Time limits, in seconds",
+    "firstClueTime": "Time for the first clue",
+    "clueTime": "Time for each later clue",
+    "guessTime": "Time for guessing",
+    "timesHint": "0 means no limit.",
+    "timeRange": "0, or from {min} to {max}.",
+    "notWhole": "Enter a whole number.",
+    "upTo": "up to {count}",
+    "seconds": "{count} s",
+    "noLimit": "no limit"
+  },
   "errors": {
     "bad_request": "That request didn't make sense to the server.",
     "rate_limited": "Too many requests. Please wait a moment.",
     "internal": "Something went wrong on the server.",
     "bad_game": "That game doesn't exist.",
     "bad_fields": "Choose word lists that exist.",
+    "bad_settings": "Those settings won't do. Check the numbers.",
     "no_words": "These word lists don't have enough terms in this language.",
     "too_many_rooms": "The server is full. Please try again later.",
     "room_not_found": "No room has that number.",
@@ -239,10 +289,11 @@
     "card_revealed": "That card has already been revealed.",
     "must_guess_first": "Reveal at least one card before you end the turn.",
     "clue_empty": "Enter a clue.",
-    "clue_not_one_word": "A clue is one word, without spaces or punctuation.",
+    "clue_not_one_word": "A clue has no punctuation, and no more words than the room allows.",
+    "clue_too_many_words": "That clue has more words than this room allows.",
     "clue_too_long": "That clue is too long.",
     "clue_on_board": "The clue can't be a word on the board, or part of one.",
-    "bad_count": "Choose a number from 0 to 9, or unlimited.",
+    "bad_count": "That number isn't allowed under this room's rules.",
     "chat_empty": "Write a message first.",
     "chat_too_long": "That message is too long.",
     "seat_taken": "Someone already has that seat.",
@@ -269,11 +320,25 @@
     "rolesTitle": "Roles",
     "roles": "Each group has one PI and as many students as it likes. The PIs see which cards belong to whom; the students see only the words.",
     "turnTitle": "A turn",
-    "turn": "The PI gives one word and a number: how many cards the word points to. The students then reveal cards one at a time, up to that number plus one. With 0 or ∞ there is no limit. Once they have revealed a card, they may end the turn.",
+    "turn": {
+      "free": "The PI gives a clue and a number: how many cards the clue points to, from 1 to the cards the group has left. The students then reveal cards one at a time, and go on for as long as they find their group's cards. Once they have revealed a card, they may end the turn.",
+      "standard": "The PI gives a clue and a number: how many cards the clue points to. The students then reveal cards one at a time, up to that number plus one. With 0 or ∞ there is no limit. Once they have revealed a card, they may end the turn."
+    },
     "revealTitle": "Revealing a card",
     "reveal": "One of your group's cards: go on. An irrelevant paper or a card of the other group: your turn ends, and the other group's card counts for them. Reviewer 2: your paper is rejected, and your group loses at once.",
     "clueTitle": "Clues",
-    "clue": "A clue is one word. It can't be a word on the board, part of one, or another form of one. The PI says nothing else and makes no gestures.",
+    "clue": {
+      "zh": "A clue is one word, with at most one Chinese character. | A clue is one word, with at most {count} Chinese characters.",
+      "en": "A clue is one word. | A clue has at most {count} words."
+    },
+    "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
+    "clueRule": {
+      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, or have a Chinese character in common with one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
+      "loose": "This room's clue check is loose: other forms of a word on the board, and Chinese characters in common with one, only bring a warning, and the PI decides."
+    },
+    "timeTitle": "Time",
+    "time": "Each phase has a time limit, and the bar under the turn shows what is left. A PI who gives no clue in time loses the turn to the other group. Students whose time runs out end their turn, even if they have revealed nothing.",
+    "noTime": "This room has no time limits.",
     "endTitle": "The end",
     "end": "A group wins as soon as all its cards are revealed, even when the other group revealed the last one."
   }

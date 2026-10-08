@@ -24,33 +24,60 @@ The game wraps its mechanics in academic life. The code uses plain names, and th
 - To start, each group needs exactly one captain, who must be online, and at least one guesser who is online. Until then, the chair's start button stays disabled and says what is missing.
 - The server draws 25 different words and picks the starting group at random. That group gets 9 cards and the other group 8. There are 7 irrelevant papers and 1 Reviewer 2, all in random places. The server uses the crypto module for randomness, so the key can't be predicted.
 - The 25 words must really differ: two spellings of one word, such as "Attention" and "attention" or "Coauthor" and "Co-author", can't share a board, because the clue check couldn't tell their cards apart.
-- A word may bring its term in the other languages of the word library. The translations stay with the card, and every player's view carries them, so that the clue check can refuse them on the captain's screen as well. They are no secret.
+- A word may bring its term in the other languages of the word library, and the other forms of the term that the library lists in its `forms` field (see [The clue](#the-clue)). Both stay with the card, and every player's view carries them, so that the clue check can run on the captain's screen as well. They are no secret.
 - Each game gets a new random `gameId`.
+
+## Settings
+
+A room has settings of its own, which the chair chooses when creating the room and may change in the waiting room, where the word lists are chosen too. Once a game has started they are locked: the game plays with the settings that the room had when it started. Everyone sees them, in the waiting room and in the rules during a game.
+
+| Setting | Choices | Default |
+|---|---|---|
+| Guess rule | `free` or `standard`; see [Turns](#turns) | `free` |
+| Clue rule | `strict` or `loose`; see [The clue](#the-clue) | `strict` |
+| Clue length | In a Chinese room, the most Chinese characters a clue may have, 1 to 10. In an English room, the most words, 1 to 3 | 4 in a Chinese room, 1 in an English room |
+| Time for the first clue of a game | 0 for no limit, or 10 to 600 seconds | 90 |
+| Time for every later clue | The same | 60 |
+| Time for the guesses of a turn | The same | 90 |
+
+Every number is a whole number. The room setup checks the settings as the chair types them, says what is wrong with each, and sends them only when they will do; the server checks them again with the same function, `settingsProblems()` in `shared/src/games/keywords/settings.ts`, and refuses them with `bad_settings`. The settings are the game's own, so they live in the game module's data on the server, not in the room.
 
 ## Turns
 
 Turns are numbered from 1, and the groups alternate: the starting group plays the odd turns.
 
-1. **Clue.** The current group's captain gives one word and a number from 0 to 9, or "unlimited".
+1. **Clue.** The current group's captain gives a clue and a number. Which numbers they may give depends on the room's guess rule.
 2. **Guesses.** The group's guessers reveal cards one at a time.
-   - With a number from 1 to 9, they may reveal up to that number plus one.
-   - With 0 or "unlimited", there is no limit.
-   - Revealing one of their own cards lets them go on. Revealing as many as the limit allows ends the turn.
+   - Under the **free** rule, the number is from 1 to the cards the group still has to find, and it is only a hint: the guessers may go on for as long as they reveal their own cards. There is no 0 and no "unlimited".
+   - Under the **standard** rule, the number is from 0 to 9, or "unlimited". With a number from 1 to 9, the guessers may reveal up to that number plus one, and revealing as many as that ends the turn. With 0 or "unlimited", there is no limit.
+   - Revealing one of their own cards lets them go on.
    - Revealing an irrelevant paper or a card of the other group ends the turn at once. A card of the other group counts for that group.
    - Once they have revealed at least one card, they may end the turn themselves.
    - Before revealing a card, a guesser may choose it, which shows the choice to the rest of the group. See [Talking it over](#talking-it-over).
 3. The turn passes to the other group.
 
+Each phase may have a time limit; see [Time limits](#time-limits).
+
 ## The clue
 
-The clue check is shared: the captain's screen runs it while they type, and the server runs it again before it accepts a clue.
+The clue check is shared: the captain's screen runs it while they type, and the server runs it again before it accepts a clue. It takes the room's clue rule and clue length into account.
 
-A clue must be **one word**: letters, digits, hyphens and apostrophes, with no spaces or other punctuation, and with at least one letter or digit. "Self-attention" is one word. A letter may carry accents, but no more than two combining marks once the text is normalized. A clue may be up to 24 characters long, or 10 when it contains Chinese characters. A Chinese room may use English abbreviations such as GPU.
+A clue is made of **words**: letters, digits, hyphens and apostrophes, with no other punctuation, and each with at least one letter or digit. "Self-attention" is one word. A letter may carry accents, but no more than two combining marks once the text is normalized. How many words a clue may have, and how many Chinese characters, depends on the room:
+
+- In an **English room**, a clue may have as many words as the room's clue length, 1 to 3, with spaces between them. Each word may be up to 24 characters long. Spaces in a row count as one, and the clue is recorded with one plain space between its words.
+- In a **Chinese room**, a clue is one word, and it may have as many Chinese characters as the room's clue length, 1 to 10. A Chinese room may use English abbreviations such as GPU; an English clue there is still one word.
+- In either room, a clue with Chinese characters in it is at most 10 characters long.
+
+A clue with more words than the room allows is refused with `clue_too_many_words`, or with `clue_not_one_word` when the room allows one; punctuation is refused with `clue_not_one_word` as well. A clue that is too long is refused with `clue_too_long`.
 
 Two things are done before anything else:
 
-- A text of more than 64 UTF-16 units is refused as too long without being looked at. Normalizing text is the expensive step of the check, and a text can be built to make it slow.
+- A text of more than 128 UTF-16 units is refused as too long without being looked at. Normalizing text is the expensive step of the check, and a text can be built to make it slow.
 - Invisible characters, such as zero-width spaces, soft hyphens and variation selectors, are dropped. Inside a clue they could make a word on the board look like a new word.
+
+The clue is then held against every word that is still on the board, whatever its color, so the check gives nothing away about the key. A clue of several words is held against the board as a whole and word by word: each of its words must pass as if it were the clue.
+
+### What is refused under either rule
 
 The server **refuses** a clue that repeats a word still on the board. The two are compared in a common form: full-width and compatibility forms are folded (NFKC), spaces at the ends are trimmed, Latin letters are lowercased, accents are dropped, and traditional Chinese characters are turned into simplified ones. Then the clue is refused when:
 
@@ -61,13 +88,40 @@ The server **refuses** a clue that repeats a word still on the board. The two ar
 
 A plain plural ends in "-s", or in "-es" after s, x, z, ch or sh: "classes" is a plural of "class", but "grades" is not one of "grad".
 
-The captain is **warned, but not refused**, when the clue may be another form of a word on the board: one with an ending such as "-ing", "-ed", "-er", "-ion" or "-ies", or a Latin, Greek or irregular plural. "Modeling" for "model", "simulate" for "simulation" and "hypotheses" for "hypothesis" are examples. The same warning comes up for a part or a form of a card's term in another language. The standard rules forbid any form of a word on the board, but endings are too ambiguous for a machine to judge, so the captain decides.
+### The strict and the loose rule
 
-Words that have been revealed no longer count, and may be used as clues again. The clue is recorded as the captain typed it, without invisible characters and without the spaces at its ends.
+Two more conflicts depend on the room's clue rule. The **strict** rule refuses them; the **loose** rule only warns the captain and lets them decide:
+
+- **A form that the word library lists.** A term in the library may have a `forms` field, `{ "zh": [...], "en": [...] }`, with the other forms of the term: inflections and derived words beyond the plain plural ("modeling" and "modelled" for "Model", "simulate" for "Simulation"), common compounds that contain it ("dataset" and "database" for "Data"), and its standard abbreviation or full name ("CV" for "Computer vision"). Synonyms are not forms: a synonym is a good clue. A clue, or any word of it, that is one of a card's forms or a plain plural of one is a conflict. The forms of both languages count in either room, and are compared like words on the board. When two word lists have the same word, its card gets the forms of both.
+- **A Chinese character in common.** A clue that has a Chinese character in common with the word on a card is a conflict, with traditional and simplified characters folded as above. A character in common with a card's term in another language only brings a warning, under either rule, as other near misses with a translation do.
+
+### What only brings a warning
+
+The captain is **warned, but not refused**, under either rule, when the check can only guess:
+
+- The clue may be another form of a word on the board: one with an ending such as "-ing", "-ed", "-er", "-ion" or "-ies", or a Latin, Greek or irregular plural. "Modeling" for "model", "simulate" for "simulation" and "hypotheses" for "hypothesis" are examples. The same warning comes up for a part or a form of a card's term in another language. The standard rules forbid any form of a word on the board, but endings are too ambiguous for a machine to judge, so the captain decides. A form that the word library lists is no guess, and falls under the clue rule above.
+- The clue contains a word on the board, or a part of one, of four Latin letters or more: "datacenter" while "Data" is on the board, or "metadata" while "Big data" is. The same goes for a card's term in another language.
+
+The captain's screen shows one line for each kind of warning, naming the cards. When a clue runs into several cards, a conflict that every rule refuses is named before one that only the strict rule refuses.
+
+Words that have been revealed no longer count, and may be used as clues again. The clue is recorded as the captain typed it, without invisible characters, without the spaces at its ends, and with one plain space between its words.
 
 The table of traditional and simplified characters is `shared/src/han-variants.ts`. `scripts/build-han-variants.mjs` builds it from the character table of the [OpenCC](https://github.com/BYVoid/OpenCC) project, which is used under the Apache License 2.0.
 
 The check doesn't know letters of different alphabets that look alike, such as a Cyrillic "o" inside a Latin word. Whoever writes a clue that way has made a new word as far as the server can tell.
+
+## Time limits
+
+Each phase of a turn may have a time limit, from the room's settings: the first clue of a game, every later clue, and the guesses of each turn. The server keeps the time and ends a phase whose time has run out:
+
+- **A captain who gives no clue in time** loses the turn: it passes to the other group, and the record of the game gets an entry for the turn without a clue (`word` and `count` are null, and `timedOut` is true).
+- **Guessers who run out of time** end their turn, whether or not they have revealed a card. The turn's clue is marked `timedOut` in the record.
+
+The next phase's time counts from the moment the server ended the last one. Time runs whether or not the players are online: a captain who has gone offline loses the turn like any other. Revealing a card gives the guessers no more time.
+
+The state holds the moment at which the current phase ends, on the server's clock, which only runs forward. When that moment comes, a timer ends the phase and everyone gets a snapshot. An action that arrives after it, even before the timer has fired, finds the turn over: the server applies whatever was due before it looks at any game action, so the action is `stale` like any other that is meant for a turn that has ended. An action that the server handles before that moment stands, and the time of the phase it starts counts from it. A game that ends, is withdrawn or goes back to the waiting room has no time running, and its timer is cleared, as is the timer of a room that closes. Time running out is not something happening in the room: a room in which nobody does anything still closes when the sweep finds that nothing has happened in it for six hours ([../architecture.md](../architecture.md#limits-and-housekeeping)).
+
+Every view of the game carries `clock`, with how much time the phase had left when the view was sent and how much it was given, in milliseconds, or null when the phase has no limit. A client draws its countdown from that, counting down from when the view arrived, and starts again from every new view. It never ends a phase itself. The bar turns red for the last 10 seconds.
 
 ## Talking it over
 
@@ -105,7 +159,7 @@ At the end, everyone sees the colors of all the cards. "Play again" takes the ro
 
 `view.ts` is the only way game state leaves the server. It decides by the seat a viewer is in right now, so a captain who steps down to watch gets a spectator's view. In every view but a captain's, an unrevealed card has no `color` key at all, rather than an empty one, so the key can't be found even with the browser's developer tools. In the same way, a view has no `chat` key for a viewer outside the two groups, and no `selections` key for anyone but the group whose turn it is. The server never sends its random seed or its own order of the words.
 
-Everyone sees the public facts: whose turn it is and in which phase, the current clue, how many more cards may be revealed, how many cards each group has left, and every earlier clue with the cards revealed after it.
+Everyone sees the public facts: the room's settings, whose turn it is and in which phase, the current clue, how many more cards may be revealed under the standard rule, how much time the phase has left, how many cards each group has left, and every earlier clue with the cards revealed after it. Every card carries its translations and its forms, which are no secret.
 
 ## Seats
 
@@ -123,7 +177,7 @@ The game's messages, on top of the room messages in [../architecture.md](../arch
 | Message | Payload | Who |
 |---|---|---|
 | `keywords:seat` | `team` (`red`, `blue` or `null`) and `role` (`captain`, `guesser` or `spectator`) | Any member, within the seat rules |
-| `keywords:clue` | `gameId`, `turn`, `word`, `count` (0 to 9, or `"unlimited"`) | The current group's captain |
+| `keywords:clue` | `gameId`, `turn`, `word`, `count`: 1 to the cards the group has left under the free rule; 0 to 9, or `"unlimited"`, under the standard rule | The current group's captain |
 | `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null` to take the choice back) | The current group's guessers |
 | `keywords:reveal` | `gameId`, `turn`, `card` (0 to 24) | The current group's guessers |
 | `keywords:pass` | `gameId`, `turn` | The current group's guessers |
@@ -131,8 +185,11 @@ The game's messages, on top of the room messages in [../architecture.md](../arch
 
 A guesser who leaves their seat in any of these ways, or leaves the room, takes their choice of a card with them; see [Talking it over](#talking-it-over).
 
+The room's settings come with `room:create` and `room:settings` ([../architecture.md](../architecture.md#messages)), as an object with the fields `guessRule`, `clueRule`, `clueLength`, `firstClueTime`, `clueTime` and `guessTime`. Its schema, `KEYWORDS_SETTINGS`, is in `shared/src/schemas.ts`.
+
 In every snapshot, the game's part (`RoomView.data`) holds:
 
+- the room's settings;
 - the seats of everyone in the room;
 - the players who have seen the key in the current game;
 - the group that the viewer plays for in the current game, if any, so that the interface offers only the seats they may take;
@@ -141,13 +198,13 @@ In every snapshot, the game's part (`RoomView.data`) holds:
 
 ## Order of the checks
 
-Every action carries the `gameId` and the `turn` it was meant for. A withdrawal and a chat message carry only the `gameId`, because they are meant for the game, whatever the turn. The server checks an action in this order:
+Every action carries the `gameId` and the `turn` it was meant for. A withdrawal and a chat message carry only the `gameId`, because they are meant for the game, whatever the turn. Before it checks a game action, the server ends the phase whose time has run out, if any; see [Time limits](#time-limits). It then checks the action in this order:
 
 1. `stale`: the action is for an earlier game or turn, or arrives in the waiting room, where there is no game. This stops an action that a phone sends late, for instance after reconnecting, from landing in the wrong turn.
 2. `game_over`: the game has ended.
 3. `not_your_turn`, `not_captain` or `not_guesser`: the action isn't this player's to make. A chat message is never out of turn: it only needs a guesser.
 4. `wrong_phase`: it isn't the moment, such as revealing or choosing a card before the clue.
-5. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_long` and `clue_on_board` for clues; `no_such_card` and `card_revealed` for reveals and choices; `must_guess_first` for ending a turn before revealing anything; and `chat_empty` and `chat_too_long` for chat messages.
+5. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_many_words`, `clue_too_long` and `clue_on_board` for clues; `no_such_card` and `card_revealed` for reveals and choices; `must_guess_first` for ending a turn before revealing anything; and `chat_empty` and `chat_too_long` for chat messages. Which numbers `bad_count` allows depends on the guess rule, and the clue checks depend on the clue rule and the clue length.
 
 Because the content comes last, nothing a player can't see changes the answer they get. A guesser of the wrong group gets `not_your_turn` whichever card they try.
 
@@ -156,4 +213,5 @@ Because the content comes last, nothing a player can't see changes the answer th
 - **Two guessers reveal at once.** The server handles actions one at a time, and never pauses between reading the state and writing it. If the first reveal ends the turn, the second is `stale`.
 - **Repeated clicks.** Revealing a revealed card again is `card_revealed`. A second "start" or a second clue fails the phase check.
 - **A guesser chooses a card while another reveals one.** If the choice arrives second, it stands for the new board, unless the turn has ended (`stale`) or it was the very card that was revealed (`card_revealed`).
-- **A captain or all guessers go offline.** The game waits and shows them as offline. The chair can make an offline player a spectator so that someone else can take over, or withdraw the game.
+- **A captain or all guessers go offline.** The game shows them as offline. Without a time limit, it waits for them; with one, their time runs out as it would anyway. The chair can make an offline player a spectator so that someone else can take over, or withdraw the game.
+- **An action and the end of the time arrive together.** Whichever the server handles first wins. An action that comes after the time is up is `stale`, even if the timer that ends the phase hasn't fired yet.

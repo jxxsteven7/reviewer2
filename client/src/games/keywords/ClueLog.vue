@@ -2,7 +2,8 @@
 import type { KeywordsView } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 
-// Every clue so far, newest first, with the cards revealed after it, like a list of references.
+// Every clue so far, newest first, with the cards revealed after it, like a list of references. A
+// turn whose time ran out says so: before the clue, it has none.
 const props = defineProps<{ game: KeywordsView }>();
 const { t } = useI18n();
 const INFINITY = '\u221e';
@@ -16,7 +17,8 @@ const word = (index: number) => props.game.cards[index]?.word ?? '';
     <ol v-if="game.history.length" reversed>
       <li v-for="record in [...game.history].reverse()" :key="record.turn" :class="record.team">
         <span class="turn mono">[{{ record.turn }}]</span>
-        <span class="clue">
+        <span v-if="record.word === null" class="clue missing">{{ t('game.noClueInTime') }}</span>
+        <span v-else class="clue">
           <span class="word">{{ record.word }}</span>
           <span class="count mono">{{ record.count === 'unlimited' ? INFINITY : record.count }}</span>
         </span>
@@ -27,6 +29,7 @@ const word = (index: number) => props.game.cards[index]?.word ?? '';
             <span class="sr">{{ t(`game.card.${guess.color}`) }}</span>
           </span>
         </span>
+        <span v-if="record.timedOut && record.word !== null" class="timed-out">{{ t('game.timeRanOut') }}</span>
       </li>
     </ol>
     <p v-else class="empty">{{ t('game.noClues') }}</p>
@@ -82,6 +85,22 @@ li.blue {
 
 .count {
   color: var(--ink-2);
+}
+
+.missing,
+.timed-out {
+  color: var(--ink-3);
+  font-size: var(--text-sm);
+}
+
+.timed-out {
+  grid-column: 2;
+}
+
+/* Chinese has no true italics, and slanted characters look broken. */
+.missing:lang(en),
+.timed-out:lang(en) {
+  font-style: italic;
 }
 
 .guesses {
