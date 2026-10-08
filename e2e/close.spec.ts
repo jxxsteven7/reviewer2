@@ -17,6 +17,11 @@ test('the chair closes the room in the middle of a game, and every page is told'
   for (const page of others.slice(0, 3)) {
     await expect(page.getByRole('button', { name: TEXT.en.room.closeRoom })).toHaveCount(0);
   }
+  // A reaction sent just before the room closes doesn't outlive it.
+  const eve = table.spectator;
+  await eve.locator('.role-banner').getByRole('button', { name: TEXT.en.emotes.open }).click();
+  await eve.locator('[role=dialog]').getByRole('button', { name: TEXT.en.emotes.phrases.deadline }).click();
+  for (const page of others) await expect(page.locator('.bubble')).toHaveCount(1);
   await ann.getByRole('button', { name: TEXT.en.room.closeRoom }).click();
   const sheet = ann.locator('[role=dialog]');
   await expect(sheet).toContainText(TEXT.en.room.closeConfirmGame);
@@ -27,6 +32,8 @@ test('the chair closes the room in the middle of a game, and every page is told'
     await expect(page.getByText(TEXT.en.room.closed.closed)).toBeVisible();
     await expect(page.getByRole('link', { name: TEXT.en.room.home })).toBeVisible();
     await expect(page.locator('.keywords-game, .screen-game')).toHaveCount(0);
+    // Gone with the room, well before its four seconds are up.
+    await expect(page.locator('.bubble')).toHaveCount(0, { timeout: 1500 });
   }
 
   // Bob hears that the room has gone when his network comes back.
