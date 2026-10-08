@@ -34,7 +34,7 @@ Run it in every worktree, because each worktree has its own `node_modules`. It a
 | `npm run check:words` | Checks the word lists in `words/`; see [../words/README.md](../words/README.md) |
 | `node --test scripts/*.test.mjs` | Tests the scripts in `scripts/` |
 
-Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. CI runs them too, and also checks that the production build works.
+Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. When you change the interface or the flow of a game, also run `npm run build && npm run test:e2e`; see [End-to-end tests](#end-to-end-tests). CI runs all of them, and also checks that the production build works.
 
 ## End-to-end tests
 
