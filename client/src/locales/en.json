@@ -391,6 +391,10 @@
   },
   "footer": {
     "noSignUp": "No sign-up, no ads.",
+    "byline": "By Jiaxiao Shi",
+    "tip": "Buy the author a cola",
+    "tipCode": "The author's WeChat reward code",
+    "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
     "build": "Build {version}"
   },
   "notFound": {

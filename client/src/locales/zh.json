@@ -391,6 +391,10 @@
   },
   "footer": {
     "noSignUp": "无需注册，没有广告。",
+    "byline": "By Jiaxiao Shi",
+    "tip": "给作者点一杯可乐",
+    "tipCode": "作者的微信赞赏码",
+    "tipHint": "在微信里长按识别，或用微信扫一扫。",
     "build": "版本 {version}"
   },
   "notFound": {
