@@ -937,15 +937,28 @@ describe('limits', () => {
     const client = await connect();
     const reply = await client.send('room:create', { game: 'test', language: 'en', fields: ['general'], name: 'More' });
     expect(reply).toEqual({ ok: false, error: 'rate_limited' });
+    expect(server.logs.map((entry) => entry.event)).not.toContain('rooms_per_minute_raised');
   });
 
   test('the options say how many rooms a minute, and the number goes all the way to the counter', async () => {
     await server.close();
-    server = await startServer({ roomsPerMinute: DEFAULT_ROOMS_PER_MINUTE + 2 });
-    for (let i = 0; i < DEFAULT_ROOMS_PER_MINUTE + 2; i += 1) await room(`Chair ${i}`);
+    const raised = DEFAULT_ROOMS_PER_MINUTE + 2;
+    server = await startServer({ roomsPerMinute: raised });
+    // A raised limit protects less against abuse, so the server says that it has one.
+    expect(server.logs).toContainEqual({
+      event: 'rooms_per_minute_raised',
+      fields: { roomsPerMinute: raised, default: DEFAULT_ROOMS_PER_MINUTE },
+    });
+    for (let i = 0; i < raised; i += 1) await room(`Chair ${i}`);
     const client = await connect();
     const reply = await client.send('room:create', { game: 'test', language: 'en', fields: ['general'], name: 'More' });
     expect(reply).toEqual({ ok: false, error: 'rate_limited' });
+  });
+
+  test('a limit on rooms that is not a whole number from 1 up is refused, not counted as one', async () => {
+    for (const roomsPerMinute of [0, -1, 2.5, NaN]) {
+      await expect(startServer({ roomsPerMinute }), String(roomsPerMinute)).rejects.toThrow(/roomsPerMinute/);
+    }
   });
 
   // Uses up what one address may get wrong in a minute. Every client in these tests has the
