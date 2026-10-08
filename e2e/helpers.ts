@@ -401,11 +401,13 @@ export async function endTurn(guesser: Page, language: Language): Promise<void> 
 }
 
 // Plays until the game ends: each turn, the PI gives a clue and the group reveals one of its own
-// cards, then ends the turn.
-export async function playToTheEnd(table: Table): Promise<void> {
+// cards, then ends the turn. Returns how many turns that took: 16, because the group that goes
+// second reveals its eighth card, the last one, in its eighth turn, before the first group gets
+// to its ninth.
+export async function playToTheEnd(table: Table): Promise<number> {
   const ann = table.captains.red;
   for (let turn = 1; turn < 40; turn += 1) {
-    if (await ann.locator('.letter').isVisible()) return;
+    if (await ann.locator('.letter').isVisible()) return turn - 1;
     const team = await teamOnTurn(ann);
     await giveClue(table.captains[team], `Hint${turn}`, 2, table.language);
     await revealByKey(table, team);
