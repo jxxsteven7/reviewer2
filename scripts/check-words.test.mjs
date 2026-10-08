@@ -414,7 +414,8 @@ describe('command line', () => {
     log.mock.resetCalls();
     write('nlp', { id: 'focus', zh: ATTENTION, en: 'Focus' });
     assert.equal(main([], lists), 1);
-    assert.ok(has(printed(), /^check-words: nlp\.json: terms\[25\] \(focus\): "zh" .* but "Attention" in ml\.json/));
+    // Without an anchor, since CI prints the same line as an annotation.
+    assert.ok(has(printed(), /nlp\.json: terms\[25\] \(focus\): "zh" .* but "Attention" in ml\.json/));
     assert.ok(has(printed(), /^check-words: OK ml\.json/));
     assert.ok(!has(printed(), /OK nlp\.json/));
     // Only the files named are checked against each other.
