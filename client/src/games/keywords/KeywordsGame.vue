@@ -26,7 +26,7 @@ import { useKeywords } from './useKeywords';
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
-const { data, mySeat, isChair } = useKeywords(room);
+const { data, mySeat, mySide, isChair } = useKeywords(room);
 const { busy, run } = useBusy();
 
 const game = computed(() => data.value.game as KeywordsView);
@@ -104,7 +104,14 @@ const whoAmI = computed(() => {
     <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game">
       <EmoteButton />
     </RoleBanner>
-    <DecisionLetter v-if="game.result" :result="game.result" :is-chair="isChair" :busy="busy" @again="again" />
+    <DecisionLetter
+      v-if="game.result"
+      :game="game"
+      :side="mySide ?? mySeat?.team ?? null"
+      :is-chair="isChair"
+      :busy="busy"
+      @again="again"
+    />
     <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
 
     <div class="layout">

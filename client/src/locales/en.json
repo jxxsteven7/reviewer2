@@ -211,13 +211,48 @@
     "board": "The board",
     "letter": {
       "title": "Decision letter",
-      "accepted": "Accepted",
-      "rejected": "Rejected",
-      "withdrawn": "Withdrawn",
-      "found": "Dear {group}, we are pleased to tell you that all your keywords have been found. Your paper is accepted.",
-      "reviewer2": "Dear {group}, Reviewer 2 has recommended rejection. The {winner} wins.",
-      "withdrawnBody": "The chair withdrew this game before the end. Nobody wins.",
-      "signature": "The Editors",
+      "titleFor": "Decision letter · {group}",
+      "verdicts": {
+        "oral": "Accept (Oral)",
+        "spotlight": "Accept (Spotlight)",
+        "poster": "Accept (Poster)",
+        "deskReject": "Desk Reject",
+        "reject": "Reject",
+        "withdrawn": "Withdrawn"
+      },
+      "bodies": {
+        "oral": {
+          "1": "Dear authors of the {group}, we are delighted to inform you that your submission has been accepted to R2Conf as an oral presentation. The reviewers were struck by how far ahead you finished: the other group still had {left} keywords to find. Please prepare a twelve-minute talk, and resist the urge to fit forty slides into it.",
+          "2": "Dear {group}, congratulations! Out of a record number of submissions, yours is one of the very few selected for an oral at R2Conf. You found every keyword while your competitors still had {left} left on the table. The plenary hall is yours.",
+          "3": "Dear {group}, the program committee is pleased to accept your paper as an oral presentation. Reviewer 2 looked hard for a weakness and found none. Your rivals are still looking for {left} keywords of their own."
+        },
+        "spotlight": {
+          "1": "Dear {group}, we are pleased to inform you that your paper has been accepted to R2Conf as a spotlight. It was close: the other group had only {left} keywords left to find. You will have five minutes on stage; please use them wisely.",
+          "2": "Dear {group}, congratulations on your acceptance with a spotlight presentation. The reviewers praised your clear clues and steady guessing, and noted that your rivals were just {left} keywords behind.",
+          "3": "Dear {group}, your submission has been accepted as a spotlight paper. The area chair writes: “Solid work, finished with {left} keywords to spare on the other side. We expect the camera-ready version by Friday.”"
+        },
+        "poster": {
+          "1": "Dear {group}, we are happy to let you know that your paper has been accepted to R2Conf as a poster. You won by a single keyword, which the reviewers called “a thrilling finish”. Please bring a poster tube and a strong voice.",
+          "2": "Dear {group}, after a long discussion, your paper has been accepted as a poster. The other group was one keyword away from taking your slot. Posters are A0 and portrait; the coffee is at the back.",
+          "3": "Dear {group}, congratulations: your paper squeezed in as a poster. One more keyword on the other side, and this letter would read very differently."
+        },
+        "deskReject": {
+          "1": "Dear {group}, we regret to inform you that your submission has been desk rejected without review. Your group revealed Reviewer 2, who needed no further evidence. The {other} goes on to the conference without you.",
+          "2": "Dear {group}, your paper has been desk rejected. Reviewer 2 read the first line, wrote “major flaws throughout” and left. We wish you better luck in the next cycle.",
+          "3": "Dear {group}, thank you for your submission. Unfortunately, it was assigned to Reviewer 2, and that was the end of it: desk reject. The {other} sends its regards."
+        },
+        "reject": {
+          "1": "Dear {group}, we regret to inform you that your paper was not accepted to R2Conf. The {other} found all of its keywords first, and there was room for only one of you. We received many strong submissions this year.",
+          "2": "Dear {group}, thank you for submitting to R2Conf. After careful consideration, the committee has decided to reject your paper. The {other} simply got there first. The reviews, all three words of them, are attached.",
+          "3": "Dear {group}, unfortunately your submission has been rejected. It was not a bad paper; the {other} just finished its paper sooner. We hope to see a revised version in the next game."
+        },
+        "withdrawn": {
+          "1": "The chair withdrew this game before the end. The submission is closed: nobody is accepted, and nobody is rejected.",
+          "2": "This submission has been withdrawn by the chair. No decision will be made, and no reviewer was harmed.",
+          "3": "The chair pulled this paper before the decision. Both groups keep their keywords, and their dignity, for the next game."
+        }
+      },
+      "signature": "The Program Chairs, R2Conf",
       "again": "Play again",
       "waitAgain": "The chair can start another game."
     },
