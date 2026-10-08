@@ -8,6 +8,8 @@ export interface Config {
   wordsDir: string;
   trustProxy: boolean;
   roomsPerMinute: number;
+  // The port of the status page, or null when it is off (docs/architecture.md).
+  statusPort: number | null;
   version: string;
 }
 
@@ -23,7 +25,12 @@ const root = resolve(import.meta.dirname, '..', '..');
 // "0x0" as 0 and "1e3" as 1000, and 0 is never what anyone means, because on port 0 the server
 // listens on whichever port the system picks, and 0 rooms a minute would be no game at all.
 // Anything else stops the server rather than quietly mean something else.
-function wholeNumber(name: string, value: string | undefined, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
+function wholeNumber<Fallback extends number | null>(
+  name: string,
+  value: string | undefined,
+  fallback: Fallback,
+  max = Number.MAX_SAFE_INTEGER,
+): number | Fallback {
   const text = (value ?? '').trim();
   if (text === '') return fallback;
   const number = /^\d+$/.test(text) ? Number(text) : NaN;
@@ -45,15 +52,20 @@ function flag(name: string, value: string | undefined): boolean {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+  const port = wholeNumber('PORT', env.PORT, 3000, 65535);
+  // The status page listens on 127.0.0.1 only, and is off unless STATUS_PORT names a port for it.
+  const statusPort = wholeNumber('STATUS_PORT', env.STATUS_PORT, null, 65535);
+  if (statusPort === port) throw new Error(`STATUS_PORT must be another port than PORT, not ${port} as well`);
   return {
     host: env.HOST || '127.0.0.1',
-    port: wholeNumber('PORT', env.PORT, 3000, 65535),
+    port,
     publicDir: env.PUBLIC_DIR || join(root, 'client', 'dist'),
     wordsDir: env.WORDS_DIR || join(root, 'words'),
     // Only behind a reverse proxy that sets X-Forwarded-For; see core/clientIp.ts.
     trustProxy: flag('TRUST_PROXY', env.TRUST_PROXY),
     // How many times a minute one address may try to create a room (docs/architecture.md).
     roomsPerMinute: wholeNumber('ROOMS_PER_MINUTE', env.ROOMS_PER_MINUTE, DEFAULT_ROOMS_PER_MINUTE),
+    statusPort,
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   };
 }

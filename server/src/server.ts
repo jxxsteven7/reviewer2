@@ -8,6 +8,7 @@ import { attachSockets, type RoomSockets } from './core/socket';
 import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
 import { log as defaultLog } from './log';
+import { collectStats, type Stats } from './stats';
 
 // One HTTP server on one port for both the front end and Socket.IO (docs/rules/constraints.md).
 export interface AppServer {
@@ -15,6 +16,8 @@ export interface AppServer {
   io: Server;
   rooms: Rooms;
   sockets: RoomSockets;
+  // The numbers for the `stats` log line and the status page (stats.ts).
+  stats(): Stats;
   // Tells everyone that the server is restarting, waits until they have been sent it, and closes.
   stop(graceMs?: number): Promise<void>;
   // Closes at once, and drops whatever a connection hasn't been sent yet.
@@ -100,5 +103,6 @@ export function createAppServer(options: AppOptions): AppServer {
     for (const socket of io.sockets.sockets.values()) socket.disconnect(true);
     await close();
   };
-  return { http, io, rooms, sockets, stop, close };
+  const stats = () => collectStats(options.version, rooms, sockets.connections());
+  return { http, io, rooms, sockets, stats, stop, close };
 }

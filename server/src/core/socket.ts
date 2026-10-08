@@ -3,7 +3,7 @@ import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/sc
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { fail } from './answers';
-import { clientIp } from './clientIp';
+import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
 import { isToken, memberKey, newToken } from './identity';
 import { TokenBucket, WindowCounter } from './rateLimit';
@@ -30,9 +30,19 @@ export interface SocketOptions {
 interface Connection {
   key: string;
   ip: string;
+  // For the status page only.
+  country: string;
   room: Room | null;
   screen: boolean;
   bucket: TokenBucket;
+}
+
+// What the status page is told about one connection (stats.ts): how it is carried, the country it
+// comes from, and in how many milliseconds its last heartbeat came back, if one has.
+export interface ConnectionInfo {
+  transport: string;
+  country: string;
+  latency: number | null;
 }
 
 // What a message is answered with (docs/architecture.md).
@@ -56,6 +66,7 @@ export interface RoomSockets {
   broadcast(room: Room): void;
   sweep(): void;
   closeAll(reason: ClosedReason): void;
+  connections(): ConnectionInfo[];
 }
 
 export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
@@ -326,6 +337,29 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return ok();
   }
 
+  // Times Engine.IO's heartbeat, which costs nothing extra: the server pings every connection every
+  // 10 seconds, and the client answers at once, so the time to the answer is the round trip. The
+  // heartbeat belongs to the Engine.IO connection underneath, and so does the timing: a client
+  // can leave Socket.IO and come back on the same connection as often as it likes, and listeners
+  // added for each of its sockets would pile up on the connection for as long as it lasts. The
+  // clock starts when the ping is flushed to the wire, not when it is made: on long polling, a
+  // ping made between two polls waits in the buffer for the next one.
+  const latencies = new WeakMap<Socket['conn'], number>();
+
+  function measureLatency(raw: Socket['conn']): void {
+    let pingedAt: number | null = null;
+    raw.on('flush', (packets: { type: string }[]) => {
+      if (packets.some((packet) => packet.type === 'ping')) pingedAt = now();
+    });
+    raw.on('packet', (packet: { type: string }) => {
+      if (packet.type !== 'pong' || pingedAt === null) return;
+      latencies.set(raw, Math.round(now() - pingedAt));
+      pingedAt = null;
+    });
+  }
+
+  io.engine.on('connection', measureLatency);
+
   // Behind a reverse proxy every connection comes from the proxy's address, and then all players
   // share the limits of one address. A forwarded address that goes unread is the sign of it.
   let forwardedIgnored = false;
@@ -341,6 +375,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const conn: Connection = {
       key: memberKey(issued ?? (auth.token as string)),
       ip: clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy),
+      country: clientCountry(socket.handshake.headers, options.trustProxy),
       room: null,
       screen: false,
       bucket: new TokenBucket(MESSAGES_PER_SECOND, MESSAGE_BURST, now),
@@ -480,6 +515,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     },
     closeAll(reason) {
       for (const room of rooms.all()) shut(room, reason, reason);
+    },
+    connections() {
+      return [...io.sockets.sockets.values()].map((socket) => ({
+        transport: socket.conn.transport.name,
+        country: connection(socket).country,
+        latency: latencies.get(socket.conn) ?? null,
+      }));
     },
   };
 }
