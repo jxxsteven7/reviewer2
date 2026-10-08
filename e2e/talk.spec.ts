@@ -5,6 +5,7 @@ import {
   giveClue,
   interpolate,
   joinByLink,
+  keyCard,
   newPlayer,
   playFor,
   seatTable,
@@ -44,27 +45,32 @@ test("a group's students see each other's choices, and nobody else does", async 
   const captain = table.captains[team];
   await giveClue(captain, 'Hint', 2, 'en');
   await expect(student.locator('.guess-bar')).toBeVisible();
+  // One of the group's own cards, so that revealing it leaves the group its turn: what clears
+  // the choices then is the reveal itself, not the end of the turn. And any other card.
+  const own = await keyCard(captain, team);
+  const another = (own + 1) % 25;
 
-  await card(student, 3).click();
-  await expect(card(student, 3)).toHaveClass(/selected/);
-  await expect(card(fay, 3).locator('.choosers')).toHaveText(name);
-  await expect(card(captain, 3).locator('.choosers')).toHaveText(name);
+  await card(student, own).click();
+  await expect(card(student, own)).toHaveClass(/selected/);
+  await expect(card(fay, own).locator('.choosers')).toHaveText(name);
+  await expect(card(captain, own).locator('.choosers')).toHaveText(name);
 
   // Fay chooses another card, takes the choice back, and joins the first one.
-  await card(fay, 7).click();
-  await expect(card(student, 7).locator('.choosers')).toHaveText('Fay');
-  await card(fay, 7).click();
-  await expect(card(student, 7).locator('.choosers')).toHaveCount(0);
-  await card(fay, 3).click();
-  await expect(card(student, 3).locator('.choosers')).toHaveText('Fay');
-  await expect(card(captain, 3).locator('.choosers')).toHaveText(`${name} and Fay`);
+  await card(fay, another).click();
+  await expect(card(student, another).locator('.choosers')).toHaveText('Fay');
+  await card(fay, another).click();
+  await expect(card(student, another).locator('.choosers')).toHaveCount(0);
+  await card(fay, own).click();
+  await expect(card(student, own).locator('.choosers')).toHaveText('Fay');
+  await expect(card(captain, own).locator('.choosers')).toHaveText(`${name} and Fay`);
   for (const page of [table.captains[other], table.guessers[other], table.spectator, table.screen]) {
     await expect(page.locator('.board .choosers')).toHaveCount(0);
   }
 
-  // Revealing a card clears every choice.
+  // Revealing a card clears every choice, while the turn goes on.
   await student.locator('.guess-bar button.primary').click();
-  await expect(card(student, 3)).toHaveClass(/revealed/);
+  await expect(card(student, own)).toHaveClass(/revealed/);
+  await expect(student.locator('.guess-bar')).toBeVisible();
   for (const page of [student, fay, captain]) {
     await expect(page.locator('.board .choosers, .board .selected')).toHaveCount(0);
   }
@@ -74,10 +80,15 @@ test("a group's students see each other's choices, and nobody else does", async 
 test('students write to their group, the PI only reads, and nobody else sees the chat', async ({ browser }) => {
   const { table, team, other, fay, student, name, states } = await groupOfTwo(browser);
   const chat = text.game.chat;
+  // Written, and back from the server as the writer's own message. The input is empty before
+  // the server has answered, so it says nothing about whether the message was taken.
   const write = async (page: Page, line: string) => {
+    const own = page.locator('[role=dialog] .message.own');
+    const before = await own.count();
     await page.getByLabel(chat.input).fill(line);
     await page.getByRole('button', { name: chat.send }).click();
-    await expect(page.getByLabel(chat.input)).toHaveValue('');
+    await expect(own).toHaveCount(before + 1);
+    await expect(own.last().locator('.text')).toHaveText(line);
   };
 
   await openChat(student);

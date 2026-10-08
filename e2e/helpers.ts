@@ -355,7 +355,7 @@ export async function giveClue(captain: Page, word: string, count: number | 'unl
 }
 
 // The index of a hidden card of this color, read from a PI's key.
-async function keyCard(captain: Page, color: CardColor): Promise<number> {
+export async function keyCard(captain: Page, color: CardColor): Promise<number> {
   const index = await captain
     .locator('.board .card')
     .evaluateAll(
