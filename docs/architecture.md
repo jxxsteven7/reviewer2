@@ -4,7 +4,7 @@ How the app is put together. The hard constraints behind it are in [rules/constr
 
 ## One process, one port
 
-A single Node process serves everything on one port: the built front end, `/healthz`, and Socket.IO under `/socket.io/`. There is no database. Rooms live in the server's memory and end when the process restarts.
+A single Node process serves everything on one port: the built front end, `/healthz`, and Socket.IO under `/socket.io/`. There is no database. Rooms live in the server's memory and end when the process restarts. The status page for the operator is the one exception: when it is on, the same process serves it on a second port that only its own machine can reach; see [Status](#status).
 
 | Layer | Where | What it does |
 |---|---|---|
@@ -113,6 +113,15 @@ A screen has no name, so all that anyone sees of the screens is how many there a
 
 ## Logging
 
-The server writes one JSON object per line to stdout: room creation, game starts and ends, rooms closing, skipped word lists and terms, errors, and a warning when it ignores the address that a reverse proxy passed on. It never logs tokens.
+The server writes one JSON object per line to stdout: room creation, game starts and ends, rooms closing, skipped word lists and terms, errors, a warning when it ignores the address that a reverse proxy passed on, and every 5 minutes the `stats` line described under [Status](#status). It never logs tokens.
 
 Every room that was created is logged once more when it closes, with the reason: `empty` when its last member has gone, `idle` or `stale` when the sweep closed it, `restart` when the server stopped. Every game that started is logged once more when it ends, whether it ended by itself or the chair withdrew it; a game is logged as started only, when its room closes in the middle of it. So the log can be counted.
+
+## Status
+
+The operator sees how the server is doing in two ways. `server/src/stats.ts` counts the numbers for both, so they always agree. Neither says who anyone is: there are no addresses, tokens, names or room codes in them, and countries appear only as counts.
+
+- **The `stats` log line.** Every 5 minutes the server logs the rooms in each phase, the members online and offline, the connections over WebSocket and over long-polling, the connections from each country, and its memory in megabytes. A line with the same counts as the last one is skipped, so a quiet server writes nothing; a change in memory alone doesn't count. These lines are the only history that survives a restart.
+- **The status page.** With `STATUS_PORT` set ([development.md](development.md)), the server also listens on that port, on `127.0.0.1` whatever `HOST` says. Only the server's own machine can reach it, which is why it has no password: a reverse proxy or a tunnel leads to the game's port alone. It answers only requests whose `Host` is `localhost` or `127.0.0.1`, so that a web page elsewhere can't point a name of its own at `127.0.0.1` and read the page through a browser on that machine. `/` is the page, and `/status.json` has the same numbers for scripts. The page is built on the server, has no script and reloads itself every 5 seconds. As a tool for the operator, it is in English only. Besides the numbers of the log line, it shows the version, the uptime, the memory against the limit that the system sets the process, the median latency of each country, and a chart of the players online and the rooms over the last 24 hours, sampled every 30 seconds and kept in memory.
+- **Countries** come from the `CF-IPCountry` header that Cloudflare adds to every request it passes on. Like `X-Forwarded-For`, it is read only with `TRUST_PROXY` on. Without the header, every connection counts as unknown.
+- **Latency** is the round trip of Engine.IO's heartbeat: the server pings every connection every 10 seconds, and the client answers at once. The page shows the median of the last heartbeats of each country's connections. The latency stays out of the log, because it never stays the same.

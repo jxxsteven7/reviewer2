@@ -3,7 +3,7 @@ import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/sc
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { fail } from './answers';
-import { clientIp } from './clientIp';
+import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
 import { isToken, memberKey, newToken } from './identity';
 import { TokenBucket, WindowCounter } from './rateLimit';
@@ -30,9 +30,20 @@ export interface SocketOptions {
 interface Connection {
   key: string;
   ip: string;
+  // For the status page only.
+  country: string;
+  latency: number | null;
   room: Room | null;
   screen: boolean;
   bucket: TokenBucket;
+}
+
+// What the status page is told about one connection (stats.ts): how it is carried, the country it
+// comes from, and in how many milliseconds its last heartbeat came back, if one has.
+export interface ConnectionInfo {
+  transport: string;
+  country: string;
+  latency: number | null;
 }
 
 // What a message is answered with (docs/architecture.md).
@@ -56,6 +67,7 @@ export interface RoomSockets {
   broadcast(room: Room): void;
   sweep(): void;
   closeAll(reason: ClosedReason): void;
+  connections(): ConnectionInfo[];
 }
 
 export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
@@ -326,6 +338,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return ok();
   }
 
+  // Times Engine.IO's heartbeat, which costs nothing extra: the server pings every connection every
+  // 10 seconds, and the client answers at once, so the time to the answer is the round trip.
+  function measureLatency(socket: Socket, conn: Connection): void {
+    let pingedAt: number | null = null;
+    socket.conn.on('packetCreate', (packet: { type: string }) => {
+      if (packet.type === 'ping') pingedAt = now();
+    });
+    socket.conn.on('packet', (packet: { type: string }) => {
+      if (packet.type !== 'pong' || pingedAt === null) return;
+      conn.latency = Math.round(now() - pingedAt);
+      pingedAt = null;
+    });
+  }
+
   // Behind a reverse proxy every connection comes from the proxy's address, and then all players
   // share the limits of one address. A forwarded address that goes unread is the sign of it.
   let forwardedIgnored = false;
@@ -341,11 +367,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const conn: Connection = {
       key: memberKey(issued ?? (auth.token as string)),
       ip: clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy),
+      country: clientCountry(socket.handshake.headers, options.trustProxy),
+      latency: null,
       room: null,
       screen: false,
       bucket: new TokenBucket(MESSAGES_PER_SECOND, MESSAGE_BURST, now),
     };
     socket.data = conn;
+    measureLatency(socket, conn);
     const session: Session = issued === null ? { version } : { token: issued, version };
     socket.emit('session', session);
 
@@ -480,6 +509,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     },
     closeAll(reason) {
       for (const room of rooms.all()) shut(room, reason, reason);
+    },
+    connections() {
+      return [...io.sockets.sockets.values()].map((socket) => {
+        const { country, latency } = connection(socket);
+        return { transport: socket.conn.transport.name, country, latency };
+      });
     },
   };
 }

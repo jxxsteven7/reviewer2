@@ -1,8 +1,11 @@
+import { createServer } from 'node:http';
 import { loadConfig } from './config';
 import { loadWordLibrary } from './core/words';
 import { keywordsGame } from './games/keywords';
 import { log } from './log';
 import { createAppServer } from './server';
+import { History, watchStats } from './stats';
+import { createStatusHandler, STATUS_HOST } from './status';
 
 const config = loadConfig();
 const words = loadWordLibrary(config.wordsDir, (file, reason, term) =>
@@ -24,6 +27,17 @@ server.http.listen(config.port, config.host, () => {
 
 // Closes idle rooms, drops long-gone players from waiting rooms and passes on absent chairs.
 setInterval(() => server.sockets.sweep(), 60_000).unref();
+
+// The `stats` log line every 5 minutes, and the samples for the status page's chart.
+const history = new History();
+watchStats(server.stats, log, history);
+
+if (config.statusPort !== null) {
+  const port = config.statusPort;
+  createServer(createStatusHandler(server.stats, history)).listen(port, STATUS_HOST, () =>
+    log('status_listening', { host: STATUS_HOST, port }),
+  );
+}
 
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {

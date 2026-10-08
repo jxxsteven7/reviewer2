@@ -64,3 +64,27 @@ describe('ROOMS_PER_MINUTE', () => {
     }
   });
 });
+
+describe('STATUS_PORT', () => {
+  test('leaves the status page off when it is unset, empty or blank', () => {
+    for (const STATUS_PORT of [undefined, '', ' ']) {
+      expect(loadConfig({ STATUS_PORT }).statusPort, JSON.stringify(STATUS_PORT)).toBeNull();
+    }
+  });
+
+  test('is a port, whatever whitespace is around it', () => {
+    expect(loadConfig({ STATUS_PORT: '3302' }).statusPort).toBe(3302);
+    expect(loadConfig({ STATUS_PORT: ' 3302 ' }).statusPort).toBe(3302);
+  });
+
+  test('anything else stops the server, and so does the port of the game', () => {
+    for (const STATUS_PORT of ['0', '65536', 'on', '33 02']) {
+      expect(() => loadConfig({ STATUS_PORT }), STATUS_PORT).toThrow(
+        /STATUS_PORT must be a whole number from 1 to 65535/,
+      );
+    }
+    expect(() => loadConfig({ STATUS_PORT: '3000' })).toThrow(/STATUS_PORT must be another port than PORT/);
+    expect(() => loadConfig({ PORT: '4000', STATUS_PORT: '4000' })).toThrow(/STATUS_PORT/);
+    expect(loadConfig({ PORT: '4000', STATUS_PORT: '3000' }).statusPort).toBe(3000);
+  });
+});
