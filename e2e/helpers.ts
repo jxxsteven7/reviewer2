@@ -146,6 +146,10 @@ export function snapshotsOf(page: Page): RoomView[] {
   return states;
 }
 
+// The game in a snapshot, if there is one.
+export const gameOf = (state: RoomView | undefined): KeywordsView | null =>
+  (state?.data as KeywordsRoomData | undefined)?.game ?? null;
+
 // A snapshot that may hold the key: a PI's, by their seat in that same snapshot, or anyone's once
 // the game is over. Whoever else has seen the key, such as a PI who left their seat, gets none
 // (server/src/games/keywords/view.ts).
