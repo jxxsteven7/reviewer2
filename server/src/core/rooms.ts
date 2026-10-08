@@ -108,7 +108,7 @@ export class Rooms {
   // time does nothing: by then its code may belong to another room.
   close(room: Room): string[] {
     if (this.#rooms.get(room.code) === room) this.#rooms.delete(room.code);
-    return [...room.screens, ...[...room.members.values()].flatMap((member) => [...member.sockets])];
+    return room.connections();
   }
 
   // Runs every minute. A game module that throws stops the sweep of its own room only.
@@ -154,6 +154,7 @@ export class Rooms {
       }
       if (room.passChairIfAway(this.limits.chairAwayMs)) changed = true;
       room.forgetOldRemovals();
+      room.forgetOldEmotes();
     } finally {
       // Whatever did change before a game module threw still has to reach the room's members.
       if (changed) result.changed.push(room);

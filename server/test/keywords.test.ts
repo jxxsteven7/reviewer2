@@ -17,7 +17,16 @@ import type { GameContext } from '../src/core/game';
 import { seededRng } from '../src/core/random';
 import { WordLibrary } from '../src/core/words';
 import { keywordsGame } from '../src/games/keywords';
-import { createRoom, joinRoom, startServer, TestClient, testWords, type Reply, type TestServer } from './helpers';
+import {
+  createRoom,
+  joinRoom,
+  startServer,
+  TestClient,
+  testWords,
+  until,
+  type Reply,
+  type TestServer,
+} from './helpers';
 
 // The word guessing game over real sockets: seats, a whole game, the checks on every action, and
 // above all that only captains ever receive the colors of unrevealed cards.
@@ -578,6 +587,16 @@ describe('coming to play', () => {
     await annBack.waitFor((state) => state.me !== null);
     expect(data(annBack).seats[annBack.me]).toEqual(SPECTATOR);
     expect(data(annBack).side).toBe('red');
+  });
+});
+
+describe('quick reactions', () => {
+  test('come from spectators as well as players, and reach the screen', async () => {
+    const table = await seatTable();
+    await expectOk(table.spectator.send('room:emote', { emote: 'deadline' }));
+    await expectOk(table.guessers.red.send('room:emote', { emote: 'waiting' }));
+    await until(() => table.screen.emotes.length === 2, 'the screen hears both');
+    expect(table.screen.emotes.map(({ playerId }) => playerId)).toEqual([table.spectator.me, table.guessers.red.me]);
   });
 });
 

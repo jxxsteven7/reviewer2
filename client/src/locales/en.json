@@ -294,6 +294,19 @@
     },
     "tabTitle": "Your turn!"
   },
+  "emotes": {
+    "open": "React",
+    "wait": "React ({seconds})",
+    "title": "Quick reactions",
+    "hint": "Everyone in the room sees and hears it, big screens included. You can send one every 10 seconds.",
+    "phrases": {
+      "waiting": "I could have finished a PhD by now.",
+      "deadline": "The deadline is 23:59 AoE. Hurry up!",
+      "reviewer2": "Reviewer 2 is on the way."
+    },
+    "bubble": "{name}: {phrase}",
+    "mute": "Mute the sounds"
+  },
   "errors": {
     "bad_request": "That request didn't make sense to the server.",
     "rate_limited": "Too many requests. Please wait a moment.",
@@ -317,6 +330,7 @@
     "wrong_phase": "That can't be done right now.",
     "cannot_start": "The game can't start yet.",
     "stale": "That turn or that game is already over.",
+    "emote_cooldown": "Wait a few seconds before you send another reaction.",
     "game_over": "The game is over.",
     "not_your_turn": "It's not your group's turn.",
     "not_captain": "Only the PI can give the clue.",

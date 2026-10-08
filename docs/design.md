@@ -59,7 +59,14 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 | `ConnectionBanner` | "Reconnecting..." at the top, whenever the connection is gone |
 | `PageMasthead`, `SiteWordmark` | The top of every page: the wordmark on the left, the manuscript number or the language switch on the right |
 | `ManuscriptId`, `QrCode`, `ShareTools` | The room's number, and ways to bring people in. Sharing falls back from the share sheet, to the clipboard, to a selected link that people copy by hand, which is what WeChat and plain http allow |
+| `RoomFooter` | The foot of a room page: the player's name, renaming, leaving, and for the chair, closing the room for everyone. Leaving and closing ask first |
+| `PlayChoice` | Whether a newcomer comes to play or to watch, when they create or join a room. Playing is chosen to begin with |
+| `EmoteButton`, `EmoteBubbles`, `SoundToggle` | The quick reactions: a button in the banner that opens the three phrases, the bubbles near the top that show "Name: phrase" for four seconds, and the switch for their sounds. While a player waits for the next reaction, the button counts down the seconds |
 | `PlayerName` | A name with an online dot and marks for "you" and the chair. For the chair, other names open the chair's actions |
+
+## Sound
+
+The quick reactions are the only sounds, one short motif each: a sagging "wah, wah, wah, waaah" for "I could have finished a PhD by now.", a fast tick and an alarm for the deadline, and two low notes a tritone apart for Reviewer 2. `client/src/core/sound.ts` makes them with Web Audio from plain waves as they play, so the page carries no audio files, and none of them comes from a game; that file also says where a recording would go instead. Phones play a page's sound only after the player has touched it, so the first touch, click or key press unlocks the audio. The switch to mute them is in the reactions' sheet and on the big screen, and the browser remembers it.
 
 ## Cards
 

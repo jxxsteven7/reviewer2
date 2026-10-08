@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
 import ConnectionBanner from '../components/ConnectionBanner.vue';
+import EmoteBubbles from '../components/EmoteBubbles.vue';
 import ManuscriptId from '../components/ManuscriptId.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import RoomNotice from '../components/RoomNotice.vue';
@@ -17,6 +18,7 @@ const me = computed(() => room.value?.players.find((player) => player.id === roo
 
 <template>
   <ConnectionBanner />
+  <EmoteBubbles />
   <div class="page room-page">
     <PageMasthead>
       <ManuscriptId v-if="room" :code="room.code" />

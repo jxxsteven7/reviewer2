@@ -1,4 +1,4 @@
-import { cleanName, type Ack, type ClosedReason, type Session } from '@reviewer2/shared';
+import { cleanName, type Ack, type ClosedReason, type EmoteEvent, type Session } from '@reviewer2/shared';
 import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
@@ -498,6 +498,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const found = membership(socket);
       if (!found) return fail('not_member');
       return changed(found.room, found.room.rename(found.member.id, name));
+    });
+
+    // A quick reaction goes to every connection in the room, screens and the sender's own tabs
+    // included. It is a moment rather than a change to the room: it bumps no rev and no snapshot
+    // carries it, so whoever is offline misses it.
+    on(handlers, 'room:emote', ({ emote }) => {
+      const found = membership(socket);
+      if (!found) return fail('not_member');
+      const { room, member } = found;
+      const result = room.emote(member.id);
+      if (!result.ok) return result;
+      const event: EmoteEvent = { roomId: room.id, playerId: member.id, emote };
+      io.to(room.connections()).emit('room:emote', event);
+      return ok();
     });
 
     on(handlers, 'room:settings', (changes) => asChair(socket, (room) => changed(room, room.setSettings(changes))));

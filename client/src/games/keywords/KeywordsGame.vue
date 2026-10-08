@@ -2,6 +2,7 @@
 import { SPECTATOR, type ClueCount, type KeywordsView, type RoomView } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import EmoteButton from '../../core/components/EmoteButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
@@ -100,7 +101,9 @@ const whoAmI = computed(() => {
 
 <template>
   <section class="keywords-game">
-    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game" />
+    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game">
+      <EmoteButton />
+    </RoleBanner>
     <DecisionLetter v-if="game.result" :result="game.result" :is-chair="isChair" :busy="busy" @again="again" />
     <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
 

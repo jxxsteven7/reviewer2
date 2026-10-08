@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
-import { MAX_NAME_INPUT } from './protocol';
+import { EMOTES, MAX_NAME_INPUT } from './protocol';
 
 // The schemas that the server checks every message against (docs/architecture.md). Only the
 // server imports this module, so that the client's bundle doesn't need zod: a schema is built
@@ -45,6 +45,7 @@ export const ROOM_MESSAGES = {
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:rename': z.object({ name }),
+  'room:emote': z.object({ emote: z.enum(EMOTES) }),
   // The chair's controls. The settings change the word lists, the game's own settings, or both.
   'room:settings': z.object({ fields: fields.optional(), settings: settings.optional() }),
   // The chair's messages about a game say which game they mean, so that one that comes late or

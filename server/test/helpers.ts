@@ -1,5 +1,5 @@
 import type { AddressInfo } from 'node:net';
-import type { Ack, ClosedReason, RoomView, Session } from '@reviewer2/shared';
+import type { Ack, ClosedReason, EmoteEvent, RoomView, Session } from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 import type { GameModule } from '../src/core/game';
 import { seededRng, type Rng } from '../src/core/random';
@@ -121,12 +121,14 @@ export async function rawPolling(url: string) {
 export class TestClient {
   readonly states: RoomView[] = [];
   readonly closed: ClosedReason[] = [];
+  readonly emotes: EmoteEvent[] = [];
   token = '';
   version = '';
 
   private constructor(readonly socket: Socket) {
     socket.on('room:state', (state: RoomView) => this.states.push(state));
     socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => this.closed.push(reason));
+    socket.on('room:emote', (event: EmoteEvent) => this.emotes.push(event));
   }
 
   // `auth` is the handshake. It is typed loosely, because tests also send what no client should.

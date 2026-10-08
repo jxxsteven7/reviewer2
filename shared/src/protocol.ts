@@ -39,6 +39,7 @@ export const ROOM_ERRORS = [
   'wrong_phase',
   'cannot_start',
   'stale',
+  'emote_cooldown',
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 
@@ -73,6 +74,20 @@ export interface Handshake {
 export interface Session {
   token?: string;
   version: string;
+}
+
+// The quick reactions that anyone in a room can send, spectators included (docs/architecture.md).
+// Their text and their sounds are the client's. A member may send one every EMOTE_COOLDOWN_MS.
+export const EMOTES = ['waiting', 'deadline', 'reviewer2'] as const;
+export type Emote = (typeof EMOTES)[number];
+export const EMOTE_COOLDOWN_MS = 10_000;
+
+// A reaction, as the server passes it on to every connection in the room as `room:emote`. It is a
+// moment rather than a change: no snapshot carries it.
+export interface EmoteEvent {
+  roomId: string;
+  playerId: string;
+  emote: Emote;
 }
 
 // Why the server closed a room for someone: they were removed, the room expired, they left it

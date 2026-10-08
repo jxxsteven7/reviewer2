@@ -13,6 +13,7 @@ import FieldPicker from '../../core/components/FieldPicker.vue';
 import PlayerMenu from '../../core/components/PlayerMenu.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import ShareTools from '../../core/components/ShareTools.vue';
+import EmoteButton from '../../core/components/EmoteButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { fields, loadFields } from '../../core/fields';
 import { act } from '../../core/socket';
@@ -78,7 +79,9 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 
 <template>
   <section class="lobby">
-    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="null" :chair="isChair" />
+    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="null" :chair="isChair">
+      <EmoteButton />
+    </RoleBanner>
     <header class="lobby-head">
       <p class="kicker">{{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}</p>
       <ShareTools :code="room.code" />
