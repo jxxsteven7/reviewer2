@@ -354,7 +354,7 @@
     "open": "表情",
     "wait": "表情（{seconds}）",
     "title": "快捷表情",
-    "hint": "房间里的每个人和每块投屏都会看到、听到。每 10 秒可以发一次。",
+    "hint": "房间里的每个人和每块投屏都会看到、听到。每 {seconds} 秒可以发一次。",
     "phrases": {
       "waiting": "我等的花都谢了",
       "deadline": "DDL 要到了，快点吧",
@@ -387,7 +387,7 @@
     "wrong_phase": "现在不能这样做。",
     "cannot_start": "游戏还不能开始。",
     "stale": "那个回合或那一局已经结束了。",
-    "emote_cooldown": "每 10 秒只能发一次表情，请稍等。",
+    "emote_cooldown": "稍等一下，再发下一条表情。",
     "game_over": "游戏已经结束了。",
     "not_your_turn": "现在不是你们组的回合。",
     "not_captain": "只有导师可以给提示。",

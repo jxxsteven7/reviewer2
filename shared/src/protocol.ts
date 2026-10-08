@@ -53,9 +53,10 @@ export interface FieldInfo {
 
 // What the server answers a message with: that it did what was asked, with whatever it has to
 // say about it, or that it didn't, with an error code. `language` comes with name_required alone:
-// it is the room's language, for the form that asks a newcomer for a name.
+// it is the room's language, for the form that asks a newcomer for a name. `waitMs` comes with
+// emote_cooldown alone: how much longer the member has to wait before the next reaction.
 export type Ack<Data extends object = object> =
-  ({ ok: true } & Data) | { ok: false; error: string; language?: Language };
+  ({ ok: true } & Data) | { ok: false; error: string; language?: Language; waitMs?: number };
 
 // The handshake, which brings back whoever has been in a room before the first message runs. A
 // browser sends its token and, once it is in a room, that room's code and ID. A screen sends the

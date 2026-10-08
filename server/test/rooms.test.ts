@@ -485,21 +485,29 @@ describe('quick reactions', () => {
     const bob = await join(code, 'Bob');
     const tab = await connect({ token: bob.token });
     await tab.send('room:join', { code });
+    // Refused as too soon, with how long is left.
+    const tooSoon = async (client: TestClient, atMost = 10_000) => {
+      const reply = await client.send('room:emote', { emote: 'deadline' });
+      expect(reply).toMatchObject({ ok: false, error: 'emote_cooldown' });
+      const { waitMs } = reply as { waitMs?: number };
+      expect(waitMs).toBeGreaterThan(0);
+      expect(waitMs).toBeLessThanOrEqual(atMost);
+    };
     expect(await bob.send('room:emote', { emote: 'waiting' })).toEqual({ ok: true });
-    expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: false, error: 'emote_cooldown' });
-    expect(await tab.send('room:emote', { emote: 'deadline' })).toEqual({ ok: false, error: 'emote_cooldown' });
+    await tooSoon(bob);
+    await tooSoon(tab);
     // Everyone has a wait of their own.
     expect(await chair.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
 
     // The test's clock runs on as well, so it moves less than the whole wait at first.
     server.advance(9_000);
-    expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: false, error: 'emote_cooldown' });
+    await tooSoon(bob, 1_000);
     server.advance(1_000);
     expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
 
     expect(await bob.send('room:leave')).toEqual({ ok: true });
     expect(await bob.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
-    expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: false, error: 'emote_cooldown' });
+    await tooSoon(bob);
     // A clock that was set back doesn't keep anyone waiting until it has caught up.
     server.advance(-60_000);
     expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });

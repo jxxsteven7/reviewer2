@@ -256,14 +256,17 @@ export class Room {
   }
 
   // A member's quick reaction, at most one every EMOTE_COOLDOWN_MS. It changes nothing in the room:
-  // the socket layer passes it on, and no snapshot carries it. A clock that was set back counts as
-  // a wait that is over, rather than one that lasts until the clock has caught up.
+  // the socket layer passes it on, and no snapshot carries it. One that comes too soon is refused
+  // with how long is left, so that the tab it came from, which may not be the one that sent the
+  // last, counts down the right wait. A clock that was set back counts as a wait that is over,
+  // rather than one that lasts until the clock has caught up.
   emote(id: string): Ack {
     const member = this.members.get(id);
     if (!member) return fail('not_member');
     const now = this.#now();
     const since = now - (this.#emoted.get(member.key) ?? -Infinity);
-    if (since >= 0 && since < EMOTE_COOLDOWN_MS) return fail('emote_cooldown');
+    if (since >= 0 && since < EMOTE_COOLDOWN_MS)
+      return { ...fail('emote_cooldown'), waitMs: EMOTE_COOLDOWN_MS - since };
     this.#emoted.set(member.key, now);
     return done;
   }

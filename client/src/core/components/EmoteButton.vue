@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EMOTES, type Emote } from '@reviewer2/shared';
+import { EMOTE_COOLDOWN_MS, EMOTES, type Emote } from '@reviewer2/shared';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { readyAt, sendEmote } from '../emotes';
@@ -47,7 +47,7 @@ function send(emote: Emote) {
     </UiButton>
     <UiSheet :open="open" :title="t('emotes.title')" @close="open = false">
       <div class="emotes">
-        <p class="hint">{{ t('emotes.hint') }}</p>
+        <p class="hint">{{ t('emotes.hint', { seconds: EMOTE_COOLDOWN_MS / 1000 }) }}</p>
         <UiButton v-for="emote in EMOTES" :key="emote" class="phrase" @click="send(emote)">
           {{ t(`emotes.phrases.${emote}`) }}
         </UiButton>

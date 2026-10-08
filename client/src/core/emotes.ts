@@ -1,5 +1,5 @@
 import { EMOTE_COOLDOWN_MS, EMOTES, type Emote, type EmoteEvent } from '@reviewer2/shared';
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { room } from './room';
 import { act, socket } from './socket';
 import { playSound } from './sound';
@@ -40,12 +40,24 @@ socket.on('room:emote', ({ roomId, playerId, emote }: EmoteEvent) => {
 });
 
 // When this player may send the next reaction, by the page's clock. The server keeps the same wait,
-// for every tab of the player.
+// for every tab of the player, and says how much is left when a tab asks too soon.
 export const readyAt = ref(0);
 
 export async function sendEmote(emote: Emote): Promise<void> {
   readyAt.value = Date.now() + EMOTE_COOLDOWN_MS;
   const reply = await act('room:emote', { emote });
-  // One that never reached the server, such as while offline, doesn't count.
-  if (!reply.ok && reply.error !== 'emote_cooldown') readyAt.value = 0;
+  if (reply.ok) return;
+  // Too soon after one from another tab: the wait is what the server says is left. One that never
+  // reached the server, such as while offline, doesn't count.
+  readyAt.value = reply.error === 'emote_cooldown' ? Date.now() + (reply.waitMs ?? EMOTE_COOLDOWN_MS) : 0;
 }
+
+// The bubbles and the wait are the room's: when the page shows another room, or none any more,
+// after the chair closed it, they go.
+watch(
+  () => room.value?.roomId,
+  () => {
+    bubbles.splice(0);
+    readyAt.value = 0;
+  },
+);

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { Ack, RoomView } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { nextTick } from 'vue';
 
 const mock = vi.hoisted(() => {
   const handlers = new Map<string, (payload: unknown) => void>();
@@ -67,16 +68,37 @@ describe('quick reactions', () => {
     expect(bubbles).toEqual([]);
   });
 
-  test('wait ten seconds after one has gone, unless it never reached the server', async () => {
+  test('wait ten seconds after one has gone, or as long as the server says, unless it never got there', async () => {
     const start = Date.now();
     await sendEmote('deadline');
     expect(mock.act).toHaveBeenLastCalledWith('room:emote', { emote: 'deadline' });
     expect(readyAt.value).toBe(start + 10_000);
+    // Another tab sent one eight seconds ago.
+    mock.act.mockResolvedValueOnce({ ok: false, error: 'emote_cooldown', waitMs: 2000 });
+    await sendEmote('deadline');
+    expect(readyAt.value).toBe(start + 2000);
     mock.act.mockResolvedValueOnce({ ok: false, error: 'emote_cooldown' });
     await sendEmote('deadline');
     expect(readyAt.value).toBe(start + 10_000);
     mock.act.mockResolvedValueOnce({ ok: false, error: 'offline' });
     await sendEmote('deadline');
     expect(readyAt.value).toBe(0);
+  });
+
+  test('stay behind, with the wait, when the page shows another room or none', async () => {
+    emit({ roomId: 'room-a', playerId: 'ann', emote: 'waiting' });
+    await sendEmote('deadline');
+    expect(bubbles).toHaveLength(1);
+    expect(readyAt.value).toBeGreaterThan(0);
+    room.value = { ...shown, roomId: 'room-b' };
+    await nextTick();
+    expect(bubbles).toEqual([]);
+    expect(readyAt.value).toBe(0);
+
+    emit({ roomId: 'room-b', playerId: 'ann', emote: 'waiting' });
+    expect(bubbles).toHaveLength(1);
+    room.value = null;
+    await nextTick();
+    expect(bubbles).toEqual([]);
   });
 });
