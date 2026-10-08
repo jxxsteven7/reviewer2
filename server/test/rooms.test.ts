@@ -543,11 +543,14 @@ describe('closing a room', () => {
     await chair.waitFor((state) => state.screens === 1, 'the screen is up');
 
     expect(await chair.send('room:close')).toEqual({ ok: true });
+    const [chairTab, bobTab] = tabs;
     const told = [bob, ...tabs, screen];
     await until(() => told.every((client) => client.closed.length > 0), 'everyone hears');
-    for (const client of told) expect(client.closed).toEqual(['closed']);
-    // The chair's page asked, and is answered instead.
+    for (const client of [bob, bobTab, screen]) expect(client?.closed).toEqual(['closed']);
+    // The chair's page asked, and is answered instead; the chair's other tab hears that the chair
+    // acted elsewhere, as after room:leave.
     expect(chair.closed).toEqual([]);
+    expect(chairTab?.closed).toEqual(['left']);
     expect(server.app.rooms.find(code)).toBeUndefined();
     expect(logged('room_closed')).toEqual([{ code, why: 'chair' }]);
 

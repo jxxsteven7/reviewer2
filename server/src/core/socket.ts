@@ -189,19 +189,21 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // Closes a room, tells whoever is still connected to it, apart from `except`, and logs it.
   // `why` is for the log: "empty", "idle", "stale", "chair" or "restart".
-  function shut(room: Room, reason: ClosedReason, why: string, except?: string): void {
+  function shut(room: Room, reason: ClosedReason, why: string, except?: Iterable<string>): void {
     closeFor(rooms.close(room), reason, except);
     unschedule(room);
     log('room_closed', { code: room.code, why });
   }
 
-  // Tells connections that their room is gone for them.
-  function closeFor(socketIds: Iterable<string>, reason: ClosedReason, except?: string): void {
+  // Takes connections out of their room and tells them why, apart from `except`, which have been
+  // told already or asked for it themselves.
+  function closeFor(socketIds: Iterable<string>, reason: ClosedReason, except: Iterable<string> = []): void {
+    const quiet = new Set(except);
     for (const id of socketIds) {
       const socket = io.sockets.sockets.get(id);
       if (!socket) continue;
       Object.assign(connection(socket), { room: null, screen: false });
-      if (id !== except) socket.emit('room:closed', { reason });
+      if (!quiet.has(id)) socket.emit('room:closed', { reason });
     }
   }
 
@@ -488,7 +490,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const found = membership(socket);
       if (!found) return fail('not_member');
       const { room, member } = found;
-      closeFor(room.drop(member.id), 'left', socket.id);
+      closeFor(room.drop(member.id), 'left', [socket.id]);
       if (room.members.size === 0) shut(room, 'expired', 'empty');
       else broadcast(room);
       return ok();
@@ -541,11 +543,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     );
 
     // The chair closes the room for everyone, screens included. The connection that asked is
-    // answered rather than told, as when a player leaves: its page knows what it did. Members who
-    // are offline find out when they come back, as from any room that closed while they were away.
+    // answered rather than told, as when a player leaves: its page knows what it did. The chair's
+    // other tabs hear that the chair acted in another tab, as after room:leave, rather than that
+    // the chair closed the room on them. Members who are offline find out when they come back, as
+    // from any room that closed while they were away.
     on(handlers, 'room:close', () =>
-      asChair(socket, (room) => {
-        shut(room, 'closed', 'chair', socket.id);
+      asChair(socket, (room, chair) => {
+        const own = [...chair.sockets];
+        closeFor(own, 'left', [socket.id]);
+        shut(room, 'closed', 'chair', own);
         return ok();
       }),
     );
