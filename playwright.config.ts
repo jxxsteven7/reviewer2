@@ -1,4 +1,4 @@
-import { createServer, type AddressInfo } from 'node:net';
+import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
@@ -6,17 +6,25 @@ import { defineConfig, devices } from '@playwright/test';
 // first (docs/development.md). Each test plays with several browser contexts, one per player.
 
 // The server listens on a free port, so that the tests of two worktrees can run at the same
-// time. Every worker loads this file again, so the port that the main process picked reaches
-// them through the environment, which they inherit.
-const freePort = () =>
-  new Promise<number>((resolve, reject) => {
+// time. The port is picked below the range that the system hands to outgoing connections,
+// which starts at 32768 on Linux and at 49152 on macOS and Windows, so that nothing is given
+// the port between the probe here and the server's start. Two runs that pick the same number in
+// the same moment remain possible, one chance in ten thousand. Every worker loads this file
+// again, so the port that the main process picked reaches them through the environment, which
+// they inherit.
+const isFree = (port: number) =>
+  new Promise<boolean>((resolve) => {
     const probe = createServer();
-    probe.once('error', reject);
-    probe.listen(0, '127.0.0.1', () => {
-      const { port } = probe.address() as AddressInfo;
-      probe.close(() => resolve(port));
-    });
+    probe.once('error', () => resolve(false));
+    probe.listen(port, '127.0.0.1', () => probe.close(() => resolve(true)));
   });
+async function freePort(): Promise<number> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const port = 20000 + Math.floor(Math.random() * 10000);
+    if (await isFree(port)) return port;
+  }
+  throw new Error('no free port between 20000 and 29999 for the test server');
+}
 process.env.E2E_PORT ||= String(await freePort());
 const PORT = Number(process.env.E2E_PORT);
 // The server's log, which helpers.ts reads after each test. It is in the output directory, which
