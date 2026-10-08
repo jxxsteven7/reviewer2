@@ -276,6 +276,28 @@ describe('DecisionLetter', () => {
     expect(letters(mountFor(null))).toEqual([blue, red]);
   });
 
+  test('writes to a winner whose rivals revealed Reviewer 2 about that, not about a finish', () => {
+    // The letters as they read for this game, from both sets of the verdict.
+    const { t } = i18n().global;
+    const set = (name: string) =>
+      [1, 2, 3].map((n) =>
+        t(`game.letter.bodies.oral.${name}.${n}`, { group: 'Blue group', other: 'Red group', left: 4 }),
+      );
+    const luck = set('reviewer2');
+    const finish = set('found');
+    for (let game = 0; game < 12; game += 1) {
+      const props = {
+        game: over({ winner: 'blue', reason: 'reviewer2' }, { red: 4, blue: 6 }, `g${game}`),
+        side: 'blue' as const,
+        isChair: false,
+      };
+      const [letter] = letters(mount(DecisionLetter, { props, global: global() }));
+      expect(letter?.verdict).toBe('Accept (Oral)');
+      expect(luck).toContain(letter?.body);
+      expect(finish).not.toContain(letter?.body);
+    }
+  });
+
   test('reads the same for a group however often it is shown, and may differ in the next game', () => {
     const bodies = new Set<string>();
     for (let game = 0; game < 12; game += 1) {

@@ -3,7 +3,7 @@ import { otherTeam, type KeywordsView, type Team } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
-import { letterNumber, verdictFor } from './letters';
+import { letterNumber, lettersFor, verdictFor } from './letters';
 
 // The result, written as each group's decision letter from a conference that doesn't exist
 // (letters.ts). A player reads their own group's letter; a spectator and a screen read both, the
@@ -31,7 +31,7 @@ const letters = computed(() => {
   return teams.map((team) => {
     const verdict = verdictFor(result, remaining, team);
     const other = otherTeam(team);
-    const body = t(`game.letter.bodies.${verdict}.${letterNumber(gameId, team, verdict)}`, {
+    const body = t(`game.letter.bodies.${lettersFor(verdict, result)}.${letterNumber(gameId, team, verdict)}`, {
       group: group(team),
       other: group(other),
       left: remaining[other],

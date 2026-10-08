@@ -1,6 +1,6 @@
 import type { GameResult } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { letterNumber, LETTERS_PER_VERDICT, verdictFor } from './letters';
+import { letterNumber, LETTERS_PER_VERDICT, lettersFor, verdictFor } from './letters';
 
 const found: GameResult = { winner: 'red', reason: 'found' };
 const reviewer2: GameResult = { winner: 'red', reason: 'reviewer2' };
@@ -29,6 +29,16 @@ describe('the verdict', () => {
 });
 
 describe('the letter', () => {
+  test("is written to the winner about its finish, or about the other group's Reviewer 2", () => {
+    for (const verdict of ['oral', 'spotlight', 'poster'] as const) {
+      expect(lettersFor(verdict, found)).toBe(`${verdict}.found`);
+      expect(lettersFor(verdict, reviewer2)).toBe(`${verdict}.reviewer2`);
+    }
+    expect(lettersFor('reject', found)).toBe('reject');
+    expect(lettersFor('deskReject', reviewer2)).toBe('deskReject');
+    expect(lettersFor('withdrawn', withdrawn)).toBe('withdrawn');
+  });
+
   test('is the same for a group whenever it is asked for, and one of those there are', () => {
     expect(letterNumber('game-1', 'red', 'oral')).toBe(letterNumber('game-1', 'red', 'oral'));
     const drawn = new Set<number>();
