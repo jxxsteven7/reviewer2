@@ -1,5 +1,5 @@
 import type { Browser, Page } from '@playwright/test';
-import type { Team } from '@reviewer2/shared';
+import { otherTeam } from '@reviewer2/shared';
 import {
   expectOwnGroupOnly,
   giveClue,
@@ -26,7 +26,7 @@ const openChat = (page: Page) => page.locator('.who-row').getByRole('button').cl
 async function groupOfTwo(browser: Browser) {
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
-  const other: Team = team === 'red' ? 'blue' : 'red';
+  const other = otherTeam(team);
   const fay = await newPlayer(browser);
   const fayStates = snapshotsOf(fay);
   await joinByLink(fay, table.url, 'Fay', 'en');
@@ -35,7 +35,7 @@ async function groupOfTwo(browser: Browser) {
     interpolate(text.game.you.guesser, { group: text.lobby.group[team] }),
   );
   const student = table.guessers[team];
-  const name = team === 'red' ? 'Bob' : 'Dan';
+  const name = table.names.guessers[team];
   return { table, team, other, fay, fayStates, student, name, states: [...table.everyone, fayStates] };
 }
 

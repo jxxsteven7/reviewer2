@@ -278,6 +278,8 @@ export interface Table {
   url: string;
   captains: Record<Team, Page>;
   guessers: Record<Team, Page>;
+  // The names the pages above joined with.
+  names: { captains: Record<Team, string>; guessers: Record<Team, string> };
   spectator: Page;
   screen: Page;
   // What the guessers, the spectator and the screen received, which must never hold the key.
@@ -323,11 +325,14 @@ export async function seatTable(
   await expect(ann.locator('.desk .ready')).toBeVisible();
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of [ann, bob, cat, dan, eve]) await expect(page.locator('.keywords-game')).toBeVisible();
+  // The screen shows the board too, so that a test's look at its cards finds them.
+  await expect(screen.locator('.screen-game .board .card')).toHaveCount(25);
   return {
     language,
     url,
     captains: { red: ann, blue: cat },
     guessers: { red: bob, blue: dan },
+    names: { captains: { red: 'Ann', blue: 'Cat' }, guessers: { red: 'Bob', blue: 'Dan' } },
     spectator: eve,
     screen,
     public: [bob, dan, eve, screen].map(snapshotsOf),
