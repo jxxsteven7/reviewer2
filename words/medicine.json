@@ -587,10 +587,9 @@
       "en": "Hearing aid"
     },
     {
-      "id": "glasses",
+      "id": "eyeglasses",
       "zh": "眼镜",
-      "en": "Glasses",
-      "forms": { "en": ["eyeglasses"] }
+      "en": "Eyeglasses"
     },
     {
       "id": "braces",
