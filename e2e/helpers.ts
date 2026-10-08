@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { CardColor, KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
 import { io, type Socket } from 'socket.io-client';
@@ -26,17 +27,46 @@ const pageErrors: string[] = [];
 const contexts: BrowserContext[] = [];
 const sockets: Socket[] = [];
 
+// The server's log, one JSON object a line, which e2e/server.mjs writes. The lines written during
+// a test are read at its end, because the server logs an error it caught, such as a view that
+// the game module couldn't build, and goes on without the connection it was for; on a page that
+// no assertion looks at, nothing else would show it.
+const serverLog = process.env.E2E_SERVER_LOG;
+if (!serverLog) throw new Error('E2E_SERVER_LOG must be set; playwright.config.ts sets it');
+
+// The whole lines of the log from `from` on, and where they end, which is where the next read
+// starts: a line that is still being written waits for the next read.
+function logLines(from = 0): { lines: string[]; end: number } {
+  const log = readFileSync(serverLog as string);
+  const end = log.lastIndexOf('\n') + 1;
+  const lines = log.subarray(from, end).toString().split('\n').filter(Boolean);
+  return { lines, end };
+}
+
+// The errors among the log's lines: the error events, and anything that isn't a log line at all,
+// such as the trace of a crash.
+const serverErrors = (lines: string[]) =>
+  lines.filter((line) => {
+    try {
+      return (JSON.parse(line) as { event?: string }).event === 'error';
+    } catch {
+      return true;
+    }
+  });
+
 // The tests' own `test`: after each test, it closes every player's browser context, since a
 // browser slows to a halt with dozens of them open, and every side channel, and then fails the
-// test if any page had a script error.
+// test if any page had a script error or the server logged one.
 export const test = base.extend<{ cleanup: void }>({
   cleanup: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
+      const { end: start } = logLines();
       await use();
       for (const socket of sockets.splice(0)) socket.close();
       await Promise.all(contexts.splice(0).map((context) => context.close()));
       expect(pageErrors.splice(0), 'script errors on the pages').toEqual([]);
+      expect(serverErrors(logLines(start).lines), 'errors the server logged').toEqual([]);
     },
     { auto: true },
   ],

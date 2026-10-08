@@ -19,6 +19,10 @@ const freePort = () =>
   });
 process.env.E2E_PORT ||= String(await freePort());
 const PORT = Number(process.env.E2E_PORT);
+// The server's log, which helpers.ts reads after each test. It is in the output directory, which
+// Playwright empties before it starts the server, and named after the port, so that two runs in
+// one worktree don't write into the same file.
+process.env.E2E_SERVER_LOG ||= join(import.meta.dirname, 'test-results', `server-${PORT}.log`);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -38,19 +42,10 @@ export default defineConfig({
     { name: 'iphone-webkit', use: { ...devices['iPhone 13'] } },
   ],
   webServer: {
-    command: 'node server/dist/index.cjs',
+    // e2e/server.mjs starts the server with its settings pinned and keeps its log.
+    command: 'node e2e/server.mjs',
     url: `http://127.0.0.1:${PORT}/healthz`,
     reuseExistingServer: false,
-    // Every variable the server reads (docs/development.md), so that none exported in a shell,
-    // such as HOST or PUBLIC_DIR for testing on a phone, reaches it. The limit on creating rooms
-    // is raised, since every test makes a room from the same address.
-    env: {
-      HOST: '127.0.0.1',
-      PORT: String(PORT),
-      PUBLIC_DIR: join(import.meta.dirname, 'client', 'dist'),
-      WORDS_DIR: join(import.meta.dirname, 'words'),
-      TRUST_PROXY: '0',
-      ROOMS_PER_MINUTE: '1000',
-    },
+    env: { E2E_PORT: String(PORT), E2E_SERVER_LOG: process.env.E2E_SERVER_LOG },
   },
 });
