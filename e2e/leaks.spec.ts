@@ -28,7 +28,7 @@ test('a guesser who can only long-poll never receives the key', async ({ browser
   // A turn, so that the snapshots after a clue, after a reveal and after the end of a turn come
   // by polling too, whichever group is on.
   const team = await teamOnTurn(table.captains.red);
-  await giveClue(table.captains[team], 'Hint', 2, 'en');
+  const clue = await giveClue(table.captains[team], 'Hint', 2, 'en');
   await revealByKey(table, team);
   await endTurn(table.guessers[team], 'en');
   // A snapshot is read from the body of a polling response, a moment after the page has shown it.
@@ -36,7 +36,7 @@ test('a guesser who can only long-poll never receives the key', async ({ browser
   await expect.poll(() => gameOf(polled.at(-1))?.team).toBe(otherTeam(team));
   const games = polled.map(gameOf);
   expect(
-    games.some((game) => game?.clue?.word === 'Hint'),
+    games.some((game) => game?.clue?.word === clue),
     'a snapshot with the clue',
   ).toBe(true);
   expect(

@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import type { CardColor, KeywordsRoomData, KeywordsView, RoomView, Team } from '@reviewer2/shared';
+import {
+  checkClue,
+  type CardColor,
+  type KeywordsRoomData,
+  type KeywordsView,
+  type RoomView,
+  type Team,
+} from '@reviewer2/shared';
 import { io, type Socket } from 'socket.io-client';
 import en from '../client/src/locales/en.json' with { type: 'json' };
 import zh from '../client/src/locales/zh.json' with { type: 'json' };
@@ -355,11 +362,33 @@ export async function teamOnTurn(page: Page): Promise<Team> {
   return (await strip.evaluate((element) => element.classList.contains('red'))) ? 'red' : 'blue';
 }
 
-export async function giveClue(captain: Page, word: string, count: number | 'unlimited', language: Language) {
+// Clues that no word list is likely to hold, for when the clue a test asked for repeats a word
+// on the board.
+const SPARE_CLUES = ['Nudge', 'Pointer', 'Whisper', 'Beacon', 'Signpost'];
+
+// A clue that the rules allow on this PI's board (docs/games/keywords.md): the one asked for,
+// or the first spare one that the board doesn't repeat. A word list that gains a term such as
+// "danger zone" must not leave a test waiting for a button that stays off.
+export function clueFor(captain: Page, wanted: string): string {
+  const cards = gameOf(snapshotsOf(captain).at(-1))?.cards ?? [];
+  const clue = [wanted, ...SPARE_CLUES].find((word) => checkClue(word, cards).problem === null);
+  if (clue === undefined) throw new Error(`the board repeats "${wanted}" and every spare clue`);
+  return clue;
+}
+
+// The PI gives the clue, or a spare one when the board repeats it. Returns the clue given.
+export async function giveClue(
+  captain: Page,
+  word: string,
+  count: number | 'unlimited',
+  language: Language,
+): Promise<string> {
   const text = TEXT[language];
-  await captain.getByLabel(text.game.clueInput).fill(word);
+  const clue = clueFor(captain, word);
+  await captain.getByLabel(text.game.clueInput).fill(clue);
   await captain.getByRole('radio', { name: count === 'unlimited' ? text.game.unlimited : String(count) }).click();
   await captain.getByRole('button', { name: text.game.sendClue }).click();
+  return clue;
 }
 
 // The index of a hidden card of this color, read from a PI's key.

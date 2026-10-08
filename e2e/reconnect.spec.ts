@@ -22,13 +22,13 @@ test('a player who goes to the home page and back is in their seat at once', asy
   // The page leaves the room and its connection stays in it, so the clue reaches the page anyway.
   await guesser.getByRole('link', { name: TEXT.en.app.name, exact: true }).click();
   await expect(guesser.locator('.keywords-game')).toHaveCount(0);
-  await giveClue(table.captains[team], 'Hint', 2, 'en');
-  await expect.poll(() => gameOf(received.at(-1))?.clue?.word).toBe('Hint');
+  const clue = await giveClue(table.captains[team], 'Hint', 2, 'en');
+  await expect.poll(() => gameOf(received.at(-1))?.clue?.word).toBe(clue);
   const before = received.length;
   await guesser.goBack();
   // At once: from what the connection has, with no handshake and no new snapshot, so the page
   // never says that the room is opening or asks for a name.
-  await expect(guesser.locator('.strip .clue .word')).toHaveText('Hint', { timeout: 2_000 });
+  await expect(guesser.locator('.strip .clue .word')).toHaveText(clue, { timeout: 2_000 });
   await expect(guesser.locator('.loading, .banner, form.name-form')).toHaveCount(0);
   expect(received.length, 'snapshots received on the way back').toBe(before);
   await revealByKey(table, team);
@@ -41,10 +41,10 @@ test('a player whose network drops until the page says so comes back by themselv
   const guesser = table.guessers[team];
   await guesser.context().setOffline(true);
   await expect(guesser.locator('.banner')).toHaveText(TEXT.en.room.reconnecting, { timeout: 30_000 });
-  await giveClue(table.captains[team], 'Hint', 2, 'en');
+  const clue = await giveClue(table.captains[team], 'Hint', 2, 'en');
   await guesser.context().setOffline(false);
   await expect(guesser.locator('.banner')).toHaveCount(0, { timeout: 15_000 });
   // The clue that came while it was away is there, and the player can carry on.
-  await expect(guesser.locator('.strip .clue .word')).toHaveText('Hint');
+  await expect(guesser.locator('.strip .clue .word')).toHaveText(clue);
   await revealByKey(table, team);
 });
