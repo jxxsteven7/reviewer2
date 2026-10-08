@@ -10,7 +10,10 @@ import { guessesLeft, remaining, type KeywordsState } from './state';
 //   everyone sees every color.
 // - A group's chat goes to its own captain and guessers, and the cards that its guessers have
 //   chosen go to them while it is the group's turn. Nobody else gets either: the keys are absent.
-export function viewFor(state: KeywordsState, viewer: Seat): KeywordsView {
+//
+// `at` is the time on the room's clock when the view is sent, from which the view counts how
+// long the current phase has left.
+export function viewFor(state: KeywordsState, viewer: Seat, at: number): KeywordsView {
   const showKey = viewer.role === 'captain' || state.phase === 'over';
   const view: KeywordsView = {
     gameId: state.gameId,
@@ -18,16 +21,18 @@ export function viewFor(state: KeywordsState, viewer: Seat): KeywordsView {
     team: state.team,
     phase: state.phase,
     startingTeam: state.startingTeam,
-    cards: state.cards.map(({ word, color, revealed, translations }): CardView => ({
+    cards: state.cards.map(({ word, color, revealed, translations, forms }): CardView => ({
       word,
       revealed,
       ...(revealed || showKey ? { color } : {}),
       ...(translations ? { translations: [...translations] } : {}),
+      ...(forms ? { forms: [...forms] } : {}),
     })),
     remaining: { red: remaining(state.cards, 'red'), blue: remaining(state.cards, 'blue') },
     clue: state.clue && { ...state.clue },
     guessesMade: state.guessesMade,
     guessesLeft: guessesLeft(state),
+    clock: state.clock && { left: Math.max(0, state.clock.ends - at), total: state.clock.length },
     history: state.history.map((record) => ({ ...record, guesses: record.guesses.map((guess) => ({ ...guess })) })),
     result: state.result && { ...state.result },
   };

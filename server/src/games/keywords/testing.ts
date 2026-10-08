@@ -1,8 +1,25 @@
-import type { CardColor, Team } from '@reviewer2/shared';
-import type { Actor, Moment, Outcome } from './rules';
+import { defaultSettings, type CardColor, type KeywordsSettings, type Language, type Team } from '@reviewer2/shared';
+import type { Actor, Moment, Outcome, Setup } from './rules';
 import type { KeywordsState } from './state';
 
 // Helpers for the tests of this module.
+
+// The settings that most tests play with: the standard guess rule, which gives a clue's number a
+// meaning, and no time limits, so that the time of an action doesn't matter. The tests of the
+// free rule and of the clock set their own.
+export const STANDARD: KeywordsSettings = {
+  ...defaultSettings('en'),
+  guessRule: 'standard',
+  firstClueTime: 0,
+  clueTime: 0,
+  guessTime: 0,
+};
+
+export const setup = (gameId: string, settings: Partial<KeywordsSettings> = {}, language: Language = 'en'): Setup => ({
+  gameId,
+  settings: { ...STANDARD, ...settings },
+  language,
+});
 
 // A board laid out by hand, one letter per card: R red, B blue, N an irrelevant paper and X
 // Reviewer 2. The default gives red cards 0-8, blue cards 9-16, papers 17-23 and Reviewer 2 at 24.
@@ -12,6 +29,8 @@ const COLORS: Record<string, CardColor> = { R: 'red', B: 'blue', N: 'neutral', X
 export function gameState(overrides: Partial<KeywordsState> = {}, layout = LAYOUT): KeywordsState {
   return {
     gameId: 'game-1',
+    settings: STANDARD,
+    language: 'en',
     cards: [...layout].map((letter, index) => ({
       word: `Word${index}`,
       color: COLORS[letter] as CardColor,
@@ -21,6 +40,7 @@ export function gameState(overrides: Partial<KeywordsState> = {}, layout = LAYOU
     turn: 1,
     team: 'red',
     phase: 'clue',
+    clock: null,
     clue: null,
     guessesMade: 0,
     history: [],

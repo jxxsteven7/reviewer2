@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { pick, seededRng, type Rng } from '../../core/random';
 import {
   dropSelection,
+  expire,
   giveClue,
   newGame,
   pass,
@@ -14,13 +15,14 @@ import {
   type Outcome,
 } from './rules';
 import { guessesLeft, remaining, type KeywordsState } from './state';
-import { captain, guesser, spectator } from './testing';
+import { captain, guesser, setup, spectator } from './testing';
 import { viewFor } from './view';
 
 // Plays hundreds of random games in which anyone may try anything, including actions from an
 // old turn, and checks after every step that the rules still hold, that the rules left the state
 // they were given alone, and that no view carries what its viewer may not see: the color of an
-// unrevealed card, another group's chat, or the cards another group is choosing.
+// unrevealed card, another group's chat, or the cards another group is choosing. Half the games
+// play under the free guess rule with time limits, and time runs out on some of their turns.
 
 const WORDS = Array.from({ length: 25 }, (_, i) => `Term${i}`);
 const GUESSERS: Actor[] = TEAMS.flatMap((team) => [guesser(team, `${team}-ann`), guesser(team, `${team}-bob`)]);
@@ -28,7 +30,7 @@ const ACTORS: Actor[] = [captain('red'), captain('blue'), ...GUESSERS, spectator
 const COUNTS: ClueCount[] = [0, 1, 2, 3, 4, 9, 'unlimited'];
 const TEXTS = ['Card three?', 'Not that one', '', '   ', 'x'.repeat(300)];
 
-function randomStep(state: KeywordsState, rng: Rng, step: number): Outcome {
+function randomStep(state: KeywordsState, rng: Rng, step: number, at: number): Outcome {
   // Most of the time the right player acts, so that games finish; the rest is noise.
   const right = rng.int(10) < 6;
   const turnGuesser = () =>
@@ -43,12 +45,12 @@ function randomStep(state: KeywordsState, rng: Rng, step: number): Outcome {
   switch (action) {
     case 0: {
       const word = rng.int(5) === 0 ? pick(['', 'two words', ...WORDS], rng) : `Clue${step}`;
-      return giveClue(state, actor, { ...moment, word, count: pick(COUNTS, rng) });
+      return giveClue(state, actor, { ...moment, word, count: pick(COUNTS, rng) }, at);
     }
     case 1:
-      return reveal(state, actor, { ...moment, card: rng.int(27) - 1 });
+      return reveal(state, actor, { ...moment, card: rng.int(27) - 1 }, at);
     case 2:
-      return pass(state, actor, moment);
+      return pass(state, actor, moment, at);
     case 3:
       return select(state, actor, { ...moment, card: rng.int(4) === 0 ? null : rng.int(27) - 1 });
     default:
@@ -70,6 +72,10 @@ function checkHistory(state: KeywordsState) {
       (record.team === state.startingTeam) === (record.turn % 2 === 1),
   );
   expect(inOrder).toBe(true);
+  // A turn without a clue is one whose time ran out.
+  expect(state.history.every((record) => record.word !== null || (record.timedOut && !record.guesses.length))).toBe(
+    true,
+  );
   if (state.phase === 'guess') {
     const current = state.history.at(-1);
     expect(current).toMatchObject({ turn: state.turn, team: state.team, word: state.clue?.word });
@@ -110,7 +116,7 @@ function checkViews(state: KeywordsState) {
   for (const team of TEAMS) {
     for (const role of ['captain', 'guesser'] as const) {
       const seat: Seat = { team, role };
-      const view = viewFor(state, seat);
+      const view = viewFor(state, seat, 0);
       const leak = view.cards.some((card) => !card.revealed && 'color' in card);
       expect(leak).toBe(role === 'captain' || over);
       expect(view.chat).toEqual(state.chat[team]);
@@ -118,7 +124,7 @@ function checkViews(state: KeywordsState) {
       expect('selections' in view).toBe(team === state.team);
     }
   }
-  const watching = viewFor(state, SPECTATOR);
+  const watching = viewFor(state, SPECTATOR, 0);
   expect(watching.cards.every((card) => card.revealed || over === 'color' in card)).toBe(true);
   expect('chat' in watching || 'selections' in watching).toBe(false);
 }
@@ -139,6 +145,11 @@ function checkInvariants(before: KeywordsState, after: KeywordsState) {
   expect(after.phase === 'guess').toBe(after.clue !== null);
   const left = guessesLeft(after);
   if (left !== null) expect(left).toBeGreaterThan(0);
+  if (after.settings.guessRule === 'free') expect(left).toBeNull();
+  // A phase runs on the clock for as long as the settings give it; a game that is over doesn't.
+  const { firstClueTime, clueTime, guessTime } = after.settings;
+  const time = after.phase === 'guess' ? guessTime : after.turn === 1 ? firstClueTime : clueTime;
+  expect(after.clock?.length ?? 0).toBe(after.phase === 'over' ? 0 : time * 1000);
   checkHistory(after);
   checkGroups(before, after);
   checkViews(after);
@@ -157,10 +168,12 @@ describe('random games', () => {
   // Hundreds of games take a few seconds, more than the default allows on a slow machine.
   test('always keep the rules and the key, and always end', { timeout: 60_000 }, () => {
     const reasons = new Map<string, number>();
-    const seen = { selections: 0, messages: 0, dropped: 0 };
+    const seen = { selections: 0, messages: 0, dropped: 0, expired: 0 };
+    const TIMED = { guessRule: 'free', firstClueTime: 90, clueTime: 60, guessTime: 90 } as const;
     for (let seed = 0; seed < 300; seed += 1) {
       const rng = seededRng(seed);
-      let state = newGame(WORDS, rng, `game-${seed}`);
+      let at = 0;
+      let state = newGame(WORDS, rng, setup(`game-${seed}`, seed % 2 === 0 ? {} : TIMED), at);
       for (let step = 0; state.phase !== 'over'; step += 1) {
         expect(step).toBeLessThan(2000);
         const untouched = JSON.stringify(state);
@@ -172,8 +185,14 @@ describe('random games', () => {
         } else if (rng.int(40) === 0) {
           outcome = { ok: true, state: dropSelection(state, pick(GUESSERS, rng).id) };
           seen.dropped += Number(outcome.state !== state);
+        } else if (rng.int(10) === 0) {
+          // Time passes, and may run out.
+          at += rng.int(100_000);
+          outcome = { ok: true, state: expire(state, at) };
+          seen.expired += Number(outcome.state !== state);
         } else {
-          outcome = randomStep(state, rng, step);
+          at += rng.int(5_000);
+          outcome = randomStep(state, rng, step, at);
         }
         // The rules never write to the state they are given. A refusal returns no state at all,
         // so this is also what makes a refusal change nothing.
@@ -192,5 +211,6 @@ describe('random games', () => {
     expect(seen.selections).toBe(2);
     expect(seen.messages).toBeGreaterThan(5);
     expect(seen.dropped).toBeGreaterThan(5);
+    expect(seen.expired).toBeGreaterThan(20);
   });
 });
