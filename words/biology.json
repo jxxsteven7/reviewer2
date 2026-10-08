@@ -1,0 +1,1652 @@
+{
+  "id": "biology",
+  "name": {
+    "zh": "生物与生命科学",
+    "en": "Biology & Life Sciences"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "dna",
+      "zh": "DNA",
+      "en": "DNA",
+      "forms": { "zh": ["脱氧核糖核酸"], "en": ["deoxyribonucleic acid"] }
+    },
+    {
+      "id": "gene",
+      "zh": "基因",
+      "en": "Gene",
+      "forms": { "en": ["genetic", "genetics"] }
+    },
+    {
+      "id": "mitochondria",
+      "zh": "线粒体",
+      "en": "Mitochondria",
+      "forms": { "en": ["mitochondrion", "mitochondrial"] }
+    },
+    {
+      "id": "evolution",
+      "zh": "演化",
+      "en": "Evolution",
+      "forms": { "en": ["evolve", "evolutionary"] }
+    },
+    {
+      "id": "protein",
+      "zh": "蛋白质",
+      "en": "Protein"
+    },
+    {
+      "id": "enzyme",
+      "zh": "酶",
+      "en": "Enzyme",
+      "forms": { "en": ["enzymatic"] }
+    },
+    {
+      "id": "virus",
+      "zh": "病毒",
+      "en": "Virus",
+      "forms": { "en": ["viral", "virology"] }
+    },
+    {
+      "id": "crispr",
+      "zh": "CRISPR",
+      "en": "CRISPR"
+    },
+    {
+      "id": "photosynthesis",
+      "zh": "光合作用",
+      "en": "Photosynthesis",
+      "forms": { "en": ["photosynthetic", "photosynthesize"] }
+    },
+    {
+      "id": "species",
+      "zh": "物种",
+      "en": "Species",
+      "forms": { "en": ["speciation"] }
+    },
+    {
+      "id": "mutation",
+      "zh": "突变",
+      "en": "Mutation",
+      "forms": { "en": ["mutate", "mutant"] }
+    },
+    {
+      "id": "stem-cell",
+      "zh": "干细胞",
+      "en": "Stem cell"
+    },
+    {
+      "id": "bacteria",
+      "zh": "细菌",
+      "en": "Bacteria",
+      "forms": { "en": ["bacterium", "bacterial"] }
+    },
+    {
+      "id": "clone",
+      "zh": "克隆",
+      "en": "Clone",
+      "forms": { "en": ["cloning", "cloned"] }
+    },
+    {
+      "id": "hormone",
+      "zh": "激素",
+      "en": "Hormone",
+      "forms": { "en": ["hormonal"] }
+    },
+    {
+      "id": "symbiosis",
+      "zh": "共生",
+      "en": "Symbiosis",
+      "forms": { "en": ["symbiotic"] }
+    },
+    {
+      "id": "chromosome",
+      "zh": "染色体",
+      "en": "Chromosome",
+      "forms": { "en": ["chromosomal"] }
+    },
+    {
+      "id": "fruit-fly",
+      "zh": "果蝇",
+      "en": "Fruit fly"
+    },
+    {
+      "id": "pcr",
+      "zh": "PCR",
+      "en": "PCR",
+      "forms": { "zh": ["聚合酶链式反应"], "en": ["polymerase chain reaction"] }
+    },
+    {
+      "id": "rna",
+      "zh": "RNA",
+      "en": "RNA",
+      "forms": { "zh": ["核糖核酸"], "en": ["ribonucleic acid"] }
+    },
+    {
+      "id": "mrna",
+      "zh": "mRNA",
+      "en": "mRNA",
+      "forms": { "zh": ["信使RNA"], "en": ["messenger RNA"] }
+    },
+    {
+      "id": "genome",
+      "zh": "基因组",
+      "en": "Genome",
+      "forms": { "en": ["genomic", "genomics"] }
+    },
+    {
+      "id": "double-helix",
+      "zh": "双螺旋",
+      "en": "Double helix"
+    },
+    {
+      "id": "base-pair",
+      "zh": "碱基对",
+      "en": "Base pair"
+    },
+    {
+      "id": "nucleotide",
+      "zh": "核苷酸",
+      "en": "Nucleotide"
+    },
+    {
+      "id": "codon",
+      "zh": "密码子",
+      "en": "Codon"
+    },
+    {
+      "id": "central-dogma",
+      "zh": "中心法则",
+      "en": "Central dogma"
+    },
+    {
+      "id": "transcription",
+      "zh": "转录",
+      "en": "Transcription",
+      "forms": { "en": ["transcribe", "transcriptional"] }
+    },
+    {
+      "id": "expression",
+      "zh": "表达",
+      "en": "Expression",
+      "forms": { "en": ["express", "expressed"] }
+    },
+    {
+      "id": "promoter",
+      "zh": "启动子",
+      "en": "Promoter"
+    },
+    {
+      "id": "enhancer",
+      "zh": "增强子",
+      "en": "Enhancer"
+    },
+    {
+      "id": "intron",
+      "zh": "内含子",
+      "en": "Intron"
+    },
+    {
+      "id": "exon",
+      "zh": "外显子",
+      "en": "Exon"
+    },
+    {
+      "id": "splicing",
+      "zh": "剪接",
+      "en": "Splicing",
+      "forms": { "en": ["splice", "spliced"] }
+    },
+    {
+      "id": "junk-dna",
+      "zh": "垃圾DNA",
+      "en": "Junk DNA"
+    },
+    {
+      "id": "transposon",
+      "zh": "转座子",
+      "en": "Transposon"
+    },
+    {
+      "id": "telomere",
+      "zh": "端粒",
+      "en": "Telomere",
+      "forms": { "en": ["telomeric"] }
+    },
+    {
+      "id": "oncogene",
+      "zh": "癌基因",
+      "en": "Oncogene",
+      "forms": { "en": ["oncogenic"] }
+    },
+    {
+      "id": "polymerase",
+      "zh": "聚合酶",
+      "en": "Polymerase"
+    },
+    {
+      "id": "kinase",
+      "zh": "激酶",
+      "en": "Kinase"
+    },
+    {
+      "id": "amino-acid",
+      "zh": "氨基酸",
+      "en": "Amino acid"
+    },
+    {
+      "id": "peptide",
+      "zh": "肽",
+      "en": "Peptide"
+    },
+    {
+      "id": "alpha-helix",
+      "zh": "α螺旋",
+      "en": "Alpha helix"
+    },
+    {
+      "id": "chaperone",
+      "zh": "分子伴侣",
+      "en": "Chaperone"
+    },
+    {
+      "id": "prion",
+      "zh": "朊病毒",
+      "en": "Prion"
+    },
+    {
+      "id": "atp",
+      "zh": "ATP",
+      "en": "ATP",
+      "forms": { "zh": ["三磷酸腺苷"], "en": ["adenosine triphosphate"] }
+    },
+    {
+      "id": "glucose",
+      "zh": "葡萄糖",
+      "en": "Glucose"
+    },
+    {
+      "id": "lipid",
+      "zh": "脂质",
+      "en": "Lipid"
+    },
+    {
+      "id": "phospholipid",
+      "zh": "磷脂",
+      "en": "Phospholipid"
+    },
+    {
+      "id": "carbohydrate",
+      "zh": "碳水化合物",
+      "en": "Carbohydrate"
+    },
+    {
+      "id": "collagen",
+      "zh": "胶原蛋白",
+      "en": "Collagen"
+    },
+    {
+      "id": "hemoglobin",
+      "zh": "血红蛋白",
+      "en": "Hemoglobin",
+      "forms": { "en": ["haemoglobin"] }
+    },
+    {
+      "id": "inhibitor",
+      "zh": "抑制剂",
+      "en": "Inhibitor",
+      "forms": { "en": ["inhibit", "inhibition"] }
+    },
+    {
+      "id": "allele",
+      "zh": "等位基因",
+      "en": "Allele",
+      "forms": { "en": ["allelic"] }
+    },
+    {
+      "id": "genotype",
+      "zh": "基因型",
+      "en": "Genotype",
+      "forms": { "en": ["genotypic"] }
+    },
+    {
+      "id": "phenotype",
+      "zh": "表型",
+      "en": "Phenotype",
+      "forms": { "en": ["phenotypic"] }
+    },
+    {
+      "id": "dominant",
+      "zh": "显性",
+      "en": "Dominant",
+      "forms": { "en": ["dominance"] }
+    },
+    {
+      "id": "recessive",
+      "zh": "隐性",
+      "en": "Recessive"
+    },
+    {
+      "id": "heredity",
+      "zh": "遗传",
+      "en": "Heredity",
+      "forms": { "en": ["hereditary"] }
+    },
+    {
+      "id": "heritability",
+      "zh": "遗传力",
+      "en": "Heritability",
+      "forms": { "en": ["heritable"] }
+    },
+    {
+      "id": "epigenetics",
+      "zh": "表观遗传",
+      "en": "Epigenetics",
+      "forms": { "en": ["epigenetic"] }
+    },
+    {
+      "id": "methylation",
+      "zh": "甲基化",
+      "en": "Methylation",
+      "forms": { "en": ["methylate", "methylated"] }
+    },
+    {
+      "id": "genetic-drift",
+      "zh": "遗传漂变",
+      "en": "Genetic drift"
+    },
+    {
+      "id": "inbreeding",
+      "zh": "近亲繁殖",
+      "en": "Inbreeding",
+      "forms": { "en": ["inbred"] }
+    },
+    {
+      "id": "pea",
+      "zh": "豌豆",
+      "en": "Pea"
+    },
+    {
+      "id": "gene-editing",
+      "zh": "基因编辑",
+      "en": "Gene editing"
+    },
+    {
+      "id": "gmo",
+      "zh": "转基因生物",
+      "en": "GMO",
+      "forms": { "zh": ["转基因"], "en": ["genetically modified organism"] }
+    },
+    {
+      "id": "knockout",
+      "zh": "敲除",
+      "en": "Knockout"
+    },
+    {
+      "id": "rnai",
+      "zh": "RNA干扰",
+      "en": "RNAi",
+      "forms": { "en": ["RNA interference"] }
+    },
+    {
+      "id": "plasmid",
+      "zh": "质粒",
+      "en": "Plasmid"
+    },
+    {
+      "id": "sequencing",
+      "zh": "测序",
+      "en": "Sequencing",
+      "forms": { "en": ["sequence", "sequenced", "sequencer"] }
+    },
+    {
+      "id": "primer",
+      "zh": "引物",
+      "en": "Primer"
+    },
+    {
+      "id": "probe",
+      "zh": "探针",
+      "en": "Probe"
+    },
+    {
+      "id": "bioinformatics",
+      "zh": "生物信息学",
+      "en": "Bioinformatics"
+    },
+    {
+      "id": "biotechnology",
+      "zh": "生物技术",
+      "en": "Biotechnology",
+      "forms": { "en": ["biotech"] }
+    },
+    {
+      "id": "nucleus",
+      "zh": "细胞核",
+      "en": "Nucleus",
+      "forms": { "en": ["nuclei", "nuclear"] }
+    },
+    {
+      "id": "cell-membrane",
+      "zh": "细胞膜",
+      "en": "Cell membrane"
+    },
+    {
+      "id": "cell-wall",
+      "zh": "细胞壁",
+      "en": "Cell wall"
+    },
+    {
+      "id": "cytoplasm",
+      "zh": "细胞质",
+      "en": "Cytoplasm",
+      "forms": { "en": ["cytoplasmic"] }
+    },
+    {
+      "id": "organelle",
+      "zh": "细胞器",
+      "en": "Organelle"
+    },
+    {
+      "id": "ribosome",
+      "zh": "核糖体",
+      "en": "Ribosome",
+      "forms": { "en": ["ribosomal"] }
+    },
+    {
+      "id": "chloroplast",
+      "zh": "叶绿体",
+      "en": "Chloroplast"
+    },
+    {
+      "id": "lysosome",
+      "zh": "溶酶体",
+      "en": "Lysosome",
+      "forms": { "en": ["lysosomal"] }
+    },
+    {
+      "id": "vesicle",
+      "zh": "囊泡",
+      "en": "Vesicle"
+    },
+    {
+      "id": "vacuole",
+      "zh": "液泡",
+      "en": "Vacuole"
+    },
+    {
+      "id": "cytoskeleton",
+      "zh": "细胞骨架",
+      "en": "Cytoskeleton"
+    },
+    {
+      "id": "flagellum",
+      "zh": "鞭毛",
+      "en": "Flagellum",
+      "forms": { "en": ["flagella"] }
+    },
+    {
+      "id": "mitosis",
+      "zh": "有丝分裂",
+      "en": "Mitosis",
+      "forms": { "en": ["mitotic"] }
+    },
+    {
+      "id": "meiosis",
+      "zh": "减数分裂",
+      "en": "Meiosis",
+      "forms": { "en": ["meiotic"] }
+    },
+    {
+      "id": "cell-cycle",
+      "zh": "细胞周期",
+      "en": "Cell cycle"
+    },
+    {
+      "id": "apoptosis",
+      "zh": "细胞凋亡",
+      "en": "Apoptosis",
+      "forms": { "en": ["apoptotic"] }
+    },
+    {
+      "id": "autophagy",
+      "zh": "自噬",
+      "en": "Autophagy",
+      "forms": { "en": ["autophagic"] }
+    },
+    {
+      "id": "endocytosis",
+      "zh": "内吞",
+      "en": "Endocytosis"
+    },
+    {
+      "id": "receptor",
+      "zh": "受体",
+      "en": "Receptor"
+    },
+    {
+      "id": "ion-channel",
+      "zh": "离子通道",
+      "en": "Ion channel"
+    },
+    {
+      "id": "osmosis",
+      "zh": "渗透",
+      "en": "Osmosis",
+      "forms": { "en": ["osmotic"] }
+    },
+    {
+      "id": "organoid",
+      "zh": "类器官",
+      "en": "Organoid"
+    },
+    {
+      "id": "cell-culture",
+      "zh": "细胞培养",
+      "en": "Cell culture"
+    },
+    {
+      "id": "homeostasis",
+      "zh": "稳态",
+      "en": "Homeostasis",
+      "forms": { "en": ["homeostatic"] }
+    },
+    {
+      "id": "metabolism",
+      "zh": "代谢",
+      "en": "Metabolism",
+      "forms": { "en": ["metabolic", "metabolize", "metabolite"] }
+    },
+    {
+      "id": "glycolysis",
+      "zh": "糖酵解",
+      "en": "Glycolysis",
+      "forms": { "en": ["glycolytic"] }
+    },
+    {
+      "id": "krebs-cycle",
+      "zh": "三羧酸循环",
+      "en": "Krebs cycle"
+    },
+    {
+      "id": "fermentation",
+      "zh": "发酵",
+      "en": "Fermentation",
+      "forms": { "en": ["ferment", "fermented"] }
+    },
+    {
+      "id": "chlorophyll",
+      "zh": "叶绿素",
+      "en": "Chlorophyll"
+    },
+    {
+      "id": "aging",
+      "zh": "衰老",
+      "en": "Aging",
+      "forms": { "en": ["ageing"] }
+    },
+    {
+      "id": "lifespan",
+      "zh": "寿命",
+      "en": "Lifespan"
+    },
+    {
+      "id": "neuron",
+      "zh": "神经元",
+      "en": "Neuron",
+      "forms": { "en": ["neuronal", "neural"] }
+    },
+    {
+      "id": "synapse",
+      "zh": "突触",
+      "en": "Synapse",
+      "forms": { "en": ["synaptic"] }
+    },
+    {
+      "id": "axon",
+      "zh": "轴突",
+      "en": "Axon",
+      "forms": { "en": ["axonal"] }
+    },
+    {
+      "id": "dendrite",
+      "zh": "树突",
+      "en": "Dendrite",
+      "forms": { "en": ["dendritic"] }
+    },
+    {
+      "id": "myelin",
+      "zh": "髓鞘",
+      "en": "Myelin",
+      "forms": { "en": ["myelinated", "myelination"] }
+    },
+    {
+      "id": "glia",
+      "zh": "胶质细胞",
+      "en": "Glia",
+      "forms": { "en": ["glial"] }
+    },
+    {
+      "id": "hippocampus",
+      "zh": "海马体",
+      "en": "Hippocampus",
+      "forms": { "en": ["hippocampal", "hippocampi"] }
+    },
+    {
+      "id": "optogenetics",
+      "zh": "光遗传学",
+      "en": "Optogenetics",
+      "forms": { "en": ["optogenetic"] }
+    },
+    {
+      "id": "dopamine",
+      "zh": "多巴胺",
+      "en": "Dopamine",
+      "forms": { "en": ["dopaminergic"] }
+    },
+    {
+      "id": "serotonin",
+      "zh": "血清素",
+      "en": "Serotonin"
+    },
+    {
+      "id": "adrenaline",
+      "zh": "肾上腺素",
+      "en": "Adrenaline"
+    },
+    {
+      "id": "oxytocin",
+      "zh": "催产素",
+      "en": "Oxytocin"
+    },
+    {
+      "id": "endorphin",
+      "zh": "内啡肽",
+      "en": "Endorphin"
+    },
+    {
+      "id": "melatonin",
+      "zh": "褪黑素",
+      "en": "Melatonin"
+    },
+    {
+      "id": "circadian-rhythm",
+      "zh": "昼夜节律",
+      "en": "Circadian rhythm"
+    },
+    {
+      "id": "instinct",
+      "zh": "本能",
+      "en": "Instinct",
+      "forms": { "en": ["instinctive"] }
+    },
+    {
+      "id": "pheromone",
+      "zh": "信息素",
+      "en": "Pheromone"
+    },
+    {
+      "id": "echolocation",
+      "zh": "回声定位",
+      "en": "Echolocation",
+      "forms": { "en": ["echolocate"] }
+    },
+    {
+      "id": "taste-bud",
+      "zh": "味蕾",
+      "en": "Taste bud"
+    },
+    {
+      "id": "natural-selection",
+      "zh": "自然选择",
+      "en": "Natural selection"
+    },
+    {
+      "id": "adaptation",
+      "zh": "适应",
+      "en": "Adaptation",
+      "forms": { "en": ["adapt", "adaptive"] }
+    },
+    {
+      "id": "fitness",
+      "zh": "适应度",
+      "en": "Fitness"
+    },
+    {
+      "id": "coevolution",
+      "zh": "协同演化",
+      "en": "Coevolution",
+      "forms": { "en": ["coevolve"] }
+    },
+    {
+      "id": "extinction",
+      "zh": "灭绝",
+      "en": "Extinction",
+      "forms": { "en": ["extinct"] }
+    },
+    {
+      "id": "fossil",
+      "zh": "化石",
+      "en": "Fossil",
+      "forms": { "en": ["fossilize", "fossilized"] }
+    },
+    {
+      "id": "living-fossil",
+      "zh": "活化石",
+      "en": "Living fossil"
+    },
+    {
+      "id": "dinosaur",
+      "zh": "恐龙",
+      "en": "Dinosaur"
+    },
+    {
+      "id": "phylogeny",
+      "zh": "系统发育",
+      "en": "Phylogeny",
+      "forms": { "en": ["phylogenetic", "phylogenetics"] }
+    },
+    {
+      "id": "taxonomy",
+      "zh": "分类学",
+      "en": "Taxonomy",
+      "forms": { "en": ["taxonomic"] }
+    },
+    {
+      "id": "ancestor",
+      "zh": "祖先",
+      "en": "Ancestor",
+      "forms": { "en": ["ancestral", "ancestry"] }
+    },
+    {
+      "id": "tree-of-life",
+      "zh": "生命之树",
+      "en": "Tree of life"
+    },
+    {
+      "id": "origin-of-life",
+      "zh": "生命起源",
+      "en": "Origin of life"
+    },
+    {
+      "id": "primordial-soup",
+      "zh": "原始汤",
+      "en": "Primordial soup"
+    },
+    {
+      "id": "endosymbiosis",
+      "zh": "内共生",
+      "en": "Endosymbiosis",
+      "forms": { "en": ["endosymbiotic"] }
+    },
+    {
+      "id": "organism",
+      "zh": "生物体",
+      "en": "Organism",
+      "forms": { "en": ["organismal"] }
+    },
+    {
+      "id": "ecosystem",
+      "zh": "生态系统",
+      "en": "Ecosystem"
+    },
+    {
+      "id": "biosphere",
+      "zh": "生物圈",
+      "en": "Biosphere"
+    },
+    {
+      "id": "biodiversity",
+      "zh": "生物多样性",
+      "en": "Biodiversity"
+    },
+    {
+      "id": "food-chain",
+      "zh": "食物链",
+      "en": "Food chain"
+    },
+    {
+      "id": "niche",
+      "zh": "生态位",
+      "en": "Niche"
+    },
+    {
+      "id": "habitat",
+      "zh": "栖息地",
+      "en": "Habitat"
+    },
+    {
+      "id": "predator",
+      "zh": "捕食者",
+      "en": "Predator",
+      "forms": { "en": ["predation", "predatory"] }
+    },
+    {
+      "id": "herbivore",
+      "zh": "食草动物",
+      "en": "Herbivore",
+      "forms": { "en": ["herbivorous"] }
+    },
+    {
+      "id": "carnivore",
+      "zh": "食肉动物",
+      "en": "Carnivore",
+      "forms": { "en": ["carnivorous"] }
+    },
+    {
+      "id": "decomposer",
+      "zh": "分解者",
+      "en": "Decomposer",
+      "forms": { "en": ["decompose", "decomposition"] }
+    },
+    {
+      "id": "parasite",
+      "zh": "寄生虫",
+      "en": "Parasite",
+      "forms": { "en": ["parasitic", "parasitism"] }
+    },
+    {
+      "id": "host",
+      "zh": "宿主",
+      "en": "Host"
+    },
+    {
+      "id": "carbon-cycle",
+      "zh": "碳循环",
+      "en": "Carbon cycle"
+    },
+    {
+      "id": "coral-reef",
+      "zh": "珊瑚礁",
+      "en": "Coral reef"
+    },
+    {
+      "id": "rainforest",
+      "zh": "雨林",
+      "en": "Rainforest"
+    },
+    {
+      "id": "wetland",
+      "zh": "湿地",
+      "en": "Wetland"
+    },
+    {
+      "id": "plankton",
+      "zh": "浮游生物",
+      "en": "Plankton",
+      "forms": { "en": ["planktonic"] }
+    },
+    {
+      "id": "algae",
+      "zh": "藻类",
+      "en": "Algae",
+      "forms": { "en": ["alga", "algal"] }
+    },
+    {
+      "id": "lichen",
+      "zh": "地衣",
+      "en": "Lichen"
+    },
+    {
+      "id": "hibernation",
+      "zh": "冬眠",
+      "en": "Hibernation",
+      "forms": { "en": ["hibernate"] }
+    },
+    {
+      "id": "camouflage",
+      "zh": "伪装",
+      "en": "Camouflage"
+    },
+    {
+      "id": "mimicry",
+      "zh": "拟态",
+      "en": "Mimicry",
+      "forms": { "en": ["mimic"] }
+    },
+    {
+      "id": "courtship",
+      "zh": "求偶",
+      "en": "Courtship"
+    },
+    {
+      "id": "pollination",
+      "zh": "授粉",
+      "en": "Pollination",
+      "forms": { "en": ["pollinate", "pollinator"] }
+    },
+    {
+      "id": "pollen",
+      "zh": "花粉",
+      "en": "Pollen"
+    },
+    {
+      "id": "seed",
+      "zh": "种子",
+      "en": "Seed"
+    },
+    {
+      "id": "bioluminescence",
+      "zh": "生物发光",
+      "en": "Bioluminescence",
+      "forms": { "en": ["bioluminescent"] }
+    },
+    {
+      "id": "venom",
+      "zh": "毒液",
+      "en": "Venom",
+      "forms": { "en": ["venomous"] }
+    },
+    {
+      "id": "toxin",
+      "zh": "毒素",
+      "en": "Toxin",
+      "forms": { "en": ["toxic", "toxicity"] }
+    },
+    {
+      "id": "microbe",
+      "zh": "微生物",
+      "en": "Microbe",
+      "forms": { "en": ["microbial"] }
+    },
+    {
+      "id": "bacteriophage",
+      "zh": "噬菌体",
+      "en": "Bacteriophage",
+      "forms": { "en": ["phage"] }
+    },
+    {
+      "id": "fungus",
+      "zh": "真菌",
+      "en": "Fungus",
+      "forms": { "en": ["fungi", "fungal"] }
+    },
+    {
+      "id": "yeast",
+      "zh": "酵母",
+      "en": "Yeast"
+    },
+    {
+      "id": "e-coli",
+      "zh": "大肠杆菌",
+      "en": "E. coli",
+      "forms": { "en": ["Escherichia coli"] }
+    },
+    {
+      "id": "microbiome",
+      "zh": "微生物组",
+      "en": "Microbiome"
+    },
+    {
+      "id": "probiotic",
+      "zh": "益生菌",
+      "en": "Probiotic"
+    },
+    {
+      "id": "archaea",
+      "zh": "古菌",
+      "en": "Archaea",
+      "forms": { "en": ["archaeon", "archaeal"] }
+    },
+    {
+      "id": "prokaryote",
+      "zh": "原核生物",
+      "en": "Prokaryote",
+      "forms": { "en": ["prokaryotic"] }
+    },
+    {
+      "id": "eukaryote",
+      "zh": "真核生物",
+      "en": "Eukaryote",
+      "forms": { "en": ["eukaryotic"] }
+    },
+    {
+      "id": "spore",
+      "zh": "孢子",
+      "en": "Spore"
+    },
+    {
+      "id": "mycoplasma",
+      "zh": "支原体",
+      "en": "Mycoplasma"
+    },
+    {
+      "id": "pathogen",
+      "zh": "病原体",
+      "en": "Pathogen",
+      "forms": { "en": ["pathogenic"] }
+    },
+    {
+      "id": "biofilm",
+      "zh": "生物膜",
+      "en": "Biofilm"
+    },
+    {
+      "id": "quorum-sensing",
+      "zh": "群体感应",
+      "en": "Quorum sensing"
+    },
+    {
+      "id": "gram-stain",
+      "zh": "革兰氏染色",
+      "en": "Gram stain"
+    },
+    {
+      "id": "macrophage",
+      "zh": "巨噬细胞",
+      "en": "Macrophage"
+    },
+    {
+      "id": "embryo",
+      "zh": "胚胎",
+      "en": "Embryo",
+      "forms": { "en": ["embryonic"] }
+    },
+    {
+      "id": "fertilization",
+      "zh": "受精",
+      "en": "Fertilization",
+      "forms": { "en": ["fertilize", "fertilisation"] }
+    },
+    {
+      "id": "larva",
+      "zh": "幼虫",
+      "en": "Larva",
+      "forms": { "en": ["larvae", "larval"] }
+    },
+    {
+      "id": "cocoon",
+      "zh": "茧",
+      "en": "Cocoon"
+    },
+    {
+      "id": "regeneration",
+      "zh": "再生",
+      "en": "Regeneration",
+      "forms": { "en": ["regenerate"] }
+    },
+    {
+      "id": "tree-ring",
+      "zh": "年轮",
+      "en": "Tree ring"
+    },
+    {
+      "id": "grafting",
+      "zh": "嫁接",
+      "en": "Grafting",
+      "forms": { "en": ["graft", "grafted"] }
+    },
+    {
+      "id": "transpiration",
+      "zh": "蒸腾作用",
+      "en": "Transpiration",
+      "forms": { "en": ["transpire"] }
+    },
+    {
+      "id": "hybrid-rice",
+      "zh": "杂交水稻",
+      "en": "Hybrid rice"
+    },
+    {
+      "id": "arabidopsis",
+      "zh": "拟南芥",
+      "en": "Arabidopsis"
+    },
+    {
+      "id": "zebrafish",
+      "zh": "斑马鱼",
+      "en": "Zebrafish"
+    },
+    {
+      "id": "nematode",
+      "zh": "线虫",
+      "en": "Nematode"
+    },
+    {
+      "id": "model-organism",
+      "zh": "模式生物",
+      "en": "Model organism"
+    },
+    {
+      "id": "rat",
+      "zh": "大鼠",
+      "en": "Rat"
+    },
+    {
+      "id": "guinea-pig",
+      "zh": "豚鼠",
+      "en": "Guinea pig"
+    },
+    {
+      "id": "macaque",
+      "zh": "猕猴",
+      "en": "Macaque"
+    },
+    {
+      "id": "chimpanzee",
+      "zh": "黑猩猩",
+      "en": "Chimpanzee"
+    },
+    {
+      "id": "primate",
+      "zh": "灵长类",
+      "en": "Primate"
+    },
+    {
+      "id": "mammal",
+      "zh": "哺乳动物",
+      "en": "Mammal",
+      "forms": { "en": ["mammalian"] }
+    },
+    {
+      "id": "reptile",
+      "zh": "爬行动物",
+      "en": "Reptile",
+      "forms": { "en": ["reptilian"] }
+    },
+    {
+      "id": "amphibian",
+      "zh": "两栖动物",
+      "en": "Amphibian"
+    },
+    {
+      "id": "vertebrate",
+      "zh": "脊椎动物",
+      "en": "Vertebrate"
+    },
+    {
+      "id": "insect",
+      "zh": "昆虫",
+      "en": "Insect"
+    },
+    {
+      "id": "exoskeleton",
+      "zh": "外骨骼",
+      "en": "Exoskeleton"
+    },
+    {
+      "id": "bee",
+      "zh": "蜜蜂",
+      "en": "Bee"
+    },
+    {
+      "id": "butterfly",
+      "zh": "蝴蝶",
+      "en": "Butterfly"
+    },
+    {
+      "id": "silkworm",
+      "zh": "蚕",
+      "en": "Silkworm"
+    },
+    {
+      "id": "octopus",
+      "zh": "章鱼",
+      "en": "Octopus",
+      "forms": { "en": ["octopi"] }
+    },
+    {
+      "id": "chameleon",
+      "zh": "变色龙",
+      "en": "Chameleon"
+    },
+    {
+      "id": "tardigrade",
+      "zh": "水熊虫",
+      "en": "Tardigrade"
+    },
+    {
+      "id": "platypus",
+      "zh": "鸭嘴兽",
+      "en": "Platypus"
+    },
+    {
+      "id": "in-vitro",
+      "zh": "体外",
+      "en": "In vitro"
+    },
+    {
+      "id": "in-vivo",
+      "zh": "体内",
+      "en": "In vivo"
+    },
+    {
+      "id": "petri-dish",
+      "zh": "培养皿",
+      "en": "Petri dish"
+    },
+    {
+      "id": "agar",
+      "zh": "琼脂",
+      "en": "Agar"
+    },
+    {
+      "id": "centrifuge",
+      "zh": "离心机",
+      "en": "Centrifuge",
+      "forms": { "en": ["centrifugation", "centrifugal"] }
+    },
+    {
+      "id": "electrophoresis",
+      "zh": "电泳",
+      "en": "Electrophoresis"
+    },
+    {
+      "id": "western-blot",
+      "zh": "Western blot",
+      "en": "Western blot",
+      "forms": { "en": ["Western blotting"] }
+    },
+    {
+      "id": "elisa",
+      "zh": "ELISA",
+      "en": "ELISA",
+      "forms": { "zh": ["酶联免疫吸附测定"], "en": ["enzyme-linked immunosorbent assay"] }
+    },
+    {
+      "id": "gfp",
+      "zh": "GFP",
+      "en": "GFP",
+      "forms": { "zh": ["绿色荧光蛋白"], "en": ["green fluorescent protein"] }
+    },
+    {
+      "id": "flow-cytometry",
+      "zh": "流式细胞术",
+      "en": "Flow cytometry",
+      "forms": { "en": ["flow cytometer"] }
+    },
+    {
+      "id": "cryo-em",
+      "zh": "冷冻电镜",
+      "en": "Cryo-EM",
+      "forms": { "en": ["cryo-electron microscopy"] }
+    },
+    {
+      "id": "transfection",
+      "zh": "转染",
+      "en": "Transfection",
+      "forms": { "en": ["transfect", "transfected"] }
+    },
+    {
+      "id": "well-plate",
+      "zh": "96孔板",
+      "en": "96-well plate"
+    },
+    {
+      "id": "autoclave",
+      "zh": "高压灭菌锅",
+      "en": "Autoclave",
+      "forms": { "en": ["autoclaved"] }
+    },
+    {
+      "id": "proteome",
+      "zh": "蛋白质组",
+      "en": "Proteome",
+      "forms": { "en": ["proteomic", "proteomics"] }
+    },
+    {
+      "id": "transcriptome",
+      "zh": "转录组",
+      "en": "Transcriptome",
+      "forms": { "en": ["transcriptomic", "transcriptomics"] }
+    },
+    {
+      "id": "wild-type",
+      "zh": "野生型",
+      "en": "Wild type"
+    },
+    {
+      "id": "trait",
+      "zh": "性状",
+      "en": "Trait"
+    },
+    {
+      "id": "gene-pool",
+      "zh": "基因库",
+      "en": "Gene pool"
+    },
+    {
+      "id": "locus",
+      "zh": "基因座",
+      "en": "Locus",
+      "forms": { "en": ["loci"] }
+    },
+    {
+      "id": "haploid",
+      "zh": "单倍体",
+      "en": "Haploid",
+      "forms": { "en": ["haploidy"] }
+    },
+    {
+      "id": "diploid",
+      "zh": "二倍体",
+      "en": "Diploid",
+      "forms": { "en": ["diploidy"] }
+    },
+    {
+      "id": "heterozygote",
+      "zh": "杂合子",
+      "en": "Heterozygote",
+      "forms": { "en": ["heterozygous"] }
+    },
+    {
+      "id": "homozygote",
+      "zh": "纯合子",
+      "en": "Homozygote",
+      "forms": { "en": ["homozygous"] }
+    },
+    {
+      "id": "linkage",
+      "zh": "连锁",
+      "en": "Linkage",
+      "forms": { "en": ["linked"] }
+    },
+    {
+      "id": "ancient-dna",
+      "zh": "古DNA",
+      "en": "Ancient DNA"
+    },
+    {
+      "id": "cytokine",
+      "zh": "细胞因子",
+      "en": "Cytokine"
+    },
+    {
+      "id": "vitamin",
+      "zh": "维生素",
+      "en": "Vitamin"
+    },
+    {
+      "id": "cellulose",
+      "zh": "纤维素",
+      "en": "Cellulose"
+    },
+    {
+      "id": "starch",
+      "zh": "淀粉",
+      "en": "Starch",
+      "forms": { "en": ["starchy"] }
+    },
+    {
+      "id": "melanin",
+      "zh": "黑色素",
+      "en": "Melanin"
+    },
+    {
+      "id": "luciferase",
+      "zh": "荧光素酶",
+      "en": "Luciferase"
+    },
+    {
+      "id": "microarray",
+      "zh": "基因芯片",
+      "en": "Microarray"
+    },
+    {
+      "id": "cell-line",
+      "zh": "细胞系",
+      "en": "Cell line"
+    },
+    {
+      "id": "culture-medium",
+      "zh": "培养基",
+      "en": "Culture medium"
+    },
+    {
+      "id": "dissection",
+      "zh": "解剖",
+      "en": "Dissection",
+      "forms": { "en": ["dissect", "dissected"] }
+    },
+    {
+      "id": "superbug",
+      "zh": "超级细菌",
+      "en": "Superbug"
+    },
+    {
+      "id": "colony",
+      "zh": "菌落",
+      "en": "Colony"
+    },
+    {
+      "id": "ant-colony",
+      "zh": "蚁群",
+      "en": "Ant colony"
+    },
+    {
+      "id": "cyanobacteria",
+      "zh": "蓝藻",
+      "en": "Cyanobacteria",
+      "forms": { "en": ["cyanobacterium", "cyanobacterial"] }
+    },
+    {
+      "id": "red-tide",
+      "zh": "赤潮",
+      "en": "Red tide"
+    },
+    {
+      "id": "reflex-arc",
+      "zh": "反射弧",
+      "en": "Reflex arc"
+    },
+    {
+      "id": "mirror-neuron",
+      "zh": "镜像神经元",
+      "en": "Mirror neuron"
+    },
+    {
+      "id": "gray-matter",
+      "zh": "灰质",
+      "en": "Gray matter",
+      "forms": { "en": ["grey matter"] }
+    },
+    {
+      "id": "skeleton",
+      "zh": "骨骼",
+      "en": "Skeleton",
+      "forms": { "en": ["skeletal"] }
+    },
+    {
+      "id": "muscle",
+      "zh": "肌肉",
+      "en": "Muscle",
+      "forms": { "en": ["muscular"] }
+    },
+    {
+      "id": "digestion",
+      "zh": "消化",
+      "en": "Digestion",
+      "forms": { "en": ["digest", "digestive"] }
+    },
+    {
+      "id": "reproduction",
+      "zh": "生殖",
+      "en": "Reproduction",
+      "forms": { "en": ["reproduce", "reproductive"] }
+    },
+    {
+      "id": "molting",
+      "zh": "蜕皮",
+      "en": "Molting",
+      "forms": { "en": ["molt", "moult", "moulting"] }
+    },
+    {
+      "id": "dormancy",
+      "zh": "休眠",
+      "en": "Dormancy",
+      "forms": { "en": ["dormant"] }
+    },
+    {
+      "id": "feather",
+      "zh": "羽毛",
+      "en": "Feather",
+      "forms": { "en": ["feathered"] }
+    },
+    {
+      "id": "ecology",
+      "zh": "生态学",
+      "en": "Ecology",
+      "forms": { "en": ["ecological", "ecologist"] }
+    },
+    {
+      "id": "neuroscience",
+      "zh": "神经科学",
+      "en": "Neuroscience",
+      "forms": { "en": ["neuroscientist"] }
+    },
+    {
+      "id": "biochemistry",
+      "zh": "生物化学",
+      "en": "Biochemistry",
+      "forms": { "en": ["biochemical", "biochemist"] }
+    },
+    {
+      "id": "paleontology",
+      "zh": "古生物学",
+      "en": "Paleontology",
+      "forms": { "en": ["palaeontology", "paleontologist"] }
+    },
+    {
+      "id": "botany",
+      "zh": "植物学",
+      "en": "Botany",
+      "forms": { "en": ["botanical", "botanist"] }
+    },
+    {
+      "id": "zoology",
+      "zh": "动物学",
+      "en": "Zoology",
+      "forms": { "en": ["zoological", "zoologist"] }
+    },
+    {
+      "id": "amber",
+      "zh": "琥珀",
+      "en": "Amber"
+    },
+    {
+      "id": "jurassic",
+      "zh": "侏罗纪",
+      "en": "Jurassic"
+    },
+    {
+      "id": "cambrian",
+      "zh": "寒武纪",
+      "en": "Cambrian"
+    },
+    {
+      "id": "homo-sapiens",
+      "zh": "智人",
+      "en": "Homo sapiens"
+    },
+    {
+      "id": "neanderthal",
+      "zh": "尼安德特人",
+      "en": "Neanderthal",
+      "forms": { "en": ["Neandertal"] }
+    },
+    {
+      "id": "ginkgo",
+      "zh": "银杏",
+      "en": "Ginkgo"
+    },
+    {
+      "id": "cordyceps",
+      "zh": "冬虫夏草",
+      "en": "Cordyceps"
+    },
+    {
+      "id": "bat",
+      "zh": "蝙蝠",
+      "en": "Bat"
+    },
+    {
+      "id": "mosquito",
+      "zh": "蚊子",
+      "en": "Mosquito",
+      "forms": { "en": ["mosquitoes"] }
+    },
+    {
+      "id": "cockroach",
+      "zh": "蟑螂",
+      "en": "Cockroach"
+    },
+    {
+      "id": "jellyfish",
+      "zh": "水母",
+      "en": "Jellyfish"
+    },
+    {
+      "id": "firefly",
+      "zh": "萤火虫",
+      "en": "Firefly",
+      "forms": { "en": ["fireflies"] }
+    },
+    {
+      "id": "nucleic-acid",
+      "zh": "核酸",
+      "en": "Nucleic acid"
+    },
+    {
+      "id": "protease",
+      "zh": "蛋白酶",
+      "en": "Protease"
+    },
+    {
+      "id": "spike-protein",
+      "zh": "刺突蛋白",
+      "en": "Spike protein"
+    },
+    {
+      "id": "cilia",
+      "zh": "纤毛",
+      "en": "Cilia",
+      "forms": { "en": ["cilium", "ciliary"] }
+    },
+    {
+      "id": "gene-silencing",
+      "zh": "基因沉默",
+      "en": "Gene silencing"
+    },
+    {
+      "id": "founder-effect",
+      "zh": "奠基者效应",
+      "en": "Founder effect"
+    },
+    {
+      "id": "imprinting",
+      "zh": "印随",
+      "en": "Imprinting",
+      "forms": { "en": ["imprint", "imprinted"] }
+    },
+    {
+      "id": "queen-bee",
+      "zh": "蜂王",
+      "en": "Queen bee"
+    },
+    {
+      "id": "nitrogen-cycle",
+      "zh": "氮循环",
+      "en": "Nitrogen cycle"
+    },
+    {
+      "id": "nature-reserve",
+      "zh": "自然保护区",
+      "en": "Nature reserve"
+    },
+    {
+      "id": "seed-bank",
+      "zh": "种子库",
+      "en": "Seed bank"
+    },
+    {
+      "id": "biobank",
+      "zh": "生物样本库",
+      "en": "Biobank"
+    },
+    {
+      "id": "pipette-tip",
+      "zh": "枪头",
+      "en": "Pipette tip"
+    }
+  ]
+}
