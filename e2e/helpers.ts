@@ -138,8 +138,12 @@ export function snapshotsOf(page: Page): RoomView[] {
     let text: string;
     try {
       text = await response.text();
-    } catch {
-      return; // the page went away before the body came
+    } catch (error) {
+      // The page closed before the body came, at the end of the test. For any other reason, the
+      // snapshots in the body went unchecked, and the test fails.
+      if (page.isClosed()) return;
+      pageErrors.push(`the body of a polling response was lost: ${String(error)}`);
+      return;
     }
     read(text);
   });
