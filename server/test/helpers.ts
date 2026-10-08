@@ -28,7 +28,14 @@ export interface TestServer {
 }
 
 export async function startServer(
-  options: { games?: GameModule[]; words?: WordLibrary; limits?: RoomLimits; trustProxy?: boolean; rng?: Rng } = {},
+  options: {
+    games?: GameModule[];
+    words?: WordLibrary;
+    limits?: RoomLimits;
+    trustProxy?: boolean;
+    roomsPerMinute?: number;
+    rng?: Rng;
+  } = {},
 ): Promise<TestServer> {
   let offset = 0;
   const logs: TestServer['logs'] = [];
@@ -40,6 +47,7 @@ export async function startServer(
     rng: options.rng ?? seededRng(1),
     now: () => Date.now() + offset,
     trustProxy: options.trustProxy ?? false,
+    ...(options.roomsPerMinute === undefined ? {} : { roomsPerMinute: options.roomsPerMinute }),
     ...(options.limits ? { limits: options.limits } : {}),
     log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
   });

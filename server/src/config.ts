@@ -7,19 +7,31 @@ export interface Config {
   publicDir: string;
   wordsDir: string;
   trustProxy: boolean;
+  roomsPerMinute: number;
   version: string;
 }
+
+// How many times a minute one address may try to create a room unless ROOMS_PER_MINUTE says
+// otherwise (docs/architecture.md). The server applies it when it is given no number.
+export const DEFAULT_ROOMS_PER_MINUTE = 5;
 
 // The repository root, two levels up from both server/src and server/dist.
 const root = resolve(import.meta.dirname, '..', '..');
 
-function portNumber(value: string | undefined, fallback: number): number {
-  if (value === undefined || value === '') return fallback;
-  // Digits only. Number() alone also reads " " and "0x0", as 0, and on port 0 the server
-  // listens on whichever port the system picks.
-  const port = /^\d+$/.test(value) ? Number(value) : NaN;
-  if (!(port >= 1 && port <= 65535)) throw new Error(`PORT must be a whole number from 1 to 65535, not "${value}"`);
-  return port;
+// A whole number from 1 to `max`, or the fallback when the variable is unset or blank. Whitespace
+// around the value is ignored, as it is around a switch. Digits only: Number() alone also reads
+// "0x0" as 0 and "1e3" as 1000, and 0 is never what anyone means, because on port 0 the server
+// listens on whichever port the system picks, and 0 rooms a minute would be no game at all.
+// Anything else stops the server rather than quietly mean something else.
+function wholeNumber(name: string, value: string | undefined, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
+  const text = (value ?? '').trim();
+  if (text === '') return fallback;
+  const number = /^\d+$/.test(text) ? Number(text) : NaN;
+  if (!(number >= 1 && number <= max)) {
+    const range = max === Number.MAX_SAFE_INTEGER ? 'from 1 up' : `from 1 to ${max}`;
+    throw new Error(`${name} must be a whole number ${range}, not "${value}"`);
+  }
+  return number;
 }
 
 // A switch is on or off and nothing else. A value that is neither stops the server, as a bad PORT
@@ -35,11 +47,13 @@ function flag(name: string, value: string | undefined): boolean {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     host: env.HOST || '127.0.0.1',
-    port: portNumber(env.PORT, 3000),
+    port: wholeNumber('PORT', env.PORT, 3000, 65535),
     publicDir: env.PUBLIC_DIR || join(root, 'client', 'dist'),
     wordsDir: env.WORDS_DIR || join(root, 'words'),
     // Only behind a reverse proxy that sets X-Forwarded-For; see core/clientIp.ts.
     trustProxy: flag('TRUST_PROXY', env.TRUST_PROXY),
+    // How many times a minute one address may try to create a room (docs/architecture.md).
+    roomsPerMinute: wholeNumber('ROOMS_PER_MINUTE', env.ROOMS_PER_MINUTE, DEFAULT_ROOMS_PER_MINUTE),
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   };
 }

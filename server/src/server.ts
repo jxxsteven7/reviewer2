@@ -1,6 +1,6 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
-import type { Config } from './config';
+import { DEFAULT_ROOMS_PER_MINUTE, type Config } from './config';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
 import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
@@ -21,10 +21,12 @@ export interface AppServer {
   close(): Promise<void>;
 }
 
-export interface AppOptions extends Pick<Config, 'publicDir' | 'version'> {
+// The settings that the server is started with (index.ts), named as in the Config so that one
+// spread passes them on, and the parts that tests replace.
+export interface AppOptions
+  extends Pick<Config, 'publicDir' | 'version'>, Partial<Pick<Config, 'trustProxy' | 'roomsPerMinute'>> {
   words: WordLibrary;
   games: GameModule[];
-  trustProxy?: boolean;
   rng?: Rng;
   now?: () => number;
   limits?: RoomLimits;
@@ -32,6 +34,17 @@ export interface AppOptions extends Pick<Config, 'publicDir' | 'version'> {
 }
 
 export function createAppServer(options: AppOptions): AppServer {
+  const log = options.log ?? defaultLog;
+  // The config refuses a bad ROOMS_PER_MINUTE, and a bad number given in code is refused here,
+  // rather than counted as one room a minute, which is what the counter makes of 0 or NaN. A
+  // limit above the default protects less against abuse, so the server says when it has one.
+  const roomsPerMinute = options.roomsPerMinute ?? DEFAULT_ROOMS_PER_MINUTE;
+  if (!(Number.isInteger(roomsPerMinute) && roomsPerMinute >= 1)) {
+    throw new Error(`roomsPerMinute must be a whole number from 1 up, not ${roomsPerMinute}`);
+  }
+  if (roomsPerMinute > DEFAULT_ROOMS_PER_MINUTE) {
+    log('rooms_per_minute_raised', { roomsPerMinute, default: DEFAULT_ROOMS_PER_MINUTE });
+  }
   const http = createServer(createRequestHandler({ publicDir: options.publicDir, version: options.version }));
   const io = new Server(http, {
     serveClient: false, // don't offer Socket.IO's client script: the front end loads only its own bundle
@@ -55,7 +68,8 @@ export function createAppServer(options: AppOptions): AppServer {
     now,
     version: options.version,
     trustProxy: options.trustProxy ?? false,
-    log: options.log ?? defaultLog,
+    roomsPerMinute,
+    log,
   });
   // io.close() also closes the HTTP server.
   const close = () => new Promise<void>((resolve) => io.close(() => resolve()));
