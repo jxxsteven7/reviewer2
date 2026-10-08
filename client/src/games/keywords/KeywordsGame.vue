@@ -104,14 +104,7 @@ const whoAmI = computed(() => {
     <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game">
       <EmoteButton />
     </RoleBanner>
-    <DecisionLetter
-      v-if="game.result"
-      :game="game"
-      :side="mySide ?? mySeat?.team ?? null"
-      :is-chair="isChair"
-      :busy="busy"
-      @again="again"
-    />
+    <DecisionLetter v-if="game.result" :game="game" :side="mySide" :is-chair="isChair" :busy="busy" @again="again" />
     <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
 
     <div class="layout">

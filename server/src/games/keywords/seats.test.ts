@@ -12,6 +12,7 @@ import {
   shuffleGroups,
   startGame,
   startProblems,
+  type GameStage,
   type Seating,
 } from './seats';
 
@@ -28,14 +29,14 @@ function seated(seats: Record<string, Seat>, keyViewers: string[] = []): Seating
 // The same seats once a game has started.
 const started = (seats: Record<string, Seat>) => startGame(seated(seats), (id) => `key-${id}`);
 
-function moved(seating: Seating, id: string, seat: Seat, playing = false): Seating {
-  const change = changeSeat(seating, member(id), seat, playing);
+function moved(seating: Seating, id: string, seat: Seat, stage: GameStage = 'none'): Seating {
+  const change = changeSeat(seating, member(id), seat, stage);
   if (!change.ok) throw new Error(change.error);
   return change.seating;
 }
 
-const refusal = (seating: Seating, id: string, seat: Seat, playing = false) => {
-  const change = changeSeat(seating, member(id), seat, playing);
+const refusal = (seating: Seating, id: string, seat: Seat, stage: GameStage = 'none') => {
+  const change = changeSeat(seating, member(id), seat, stage);
   return change.ok ? null : change.error;
 };
 
@@ -57,7 +58,7 @@ describe('seats in the waiting room', () => {
     expect(moved(seating, 'ann', redCaptain)).toBe(seating);
     expect(moved(seating, 'bob', { team: null, role: 'spectator' })).toBe(seating);
     const playing = started({ ann: redCaptain, bob: redGuesser });
-    expect(moved(playing, 'bob', redGuesser, true)).toBe(playing);
+    expect(moved(playing, 'bob', redGuesser, 'on')).toBe(playing);
   });
 
   test('refuses seats that make no sense', () => {
@@ -99,18 +100,18 @@ describe('seats in the waiting room', () => {
 describe('seats during a game', () => {
   test('a captain who takes over sees the key, and so cannot be a guesser again', () => {
     let seating = started({ ann: redGuesser });
-    seating = moved(seating, 'ann', redCaptain, true);
+    seating = moved(seating, 'ann', redCaptain, 'on');
     expect(seating.keyViewers.has('key-ann')).toBe(true);
-    expect(refusal(seating, 'ann', redGuesser, true)).toBe('key_viewer');
-    expect(refusal(seating, 'ann', SPECTATOR, true)).toBeNull();
+    expect(refusal(seating, 'ann', redGuesser, 'on')).toBe('key_viewer');
+    expect(refusal(seating, 'ann', SPECTATOR, 'on')).toBeNull();
   });
 
   test('spectators may join either group, and whoever plays may step out and come back', () => {
     let seating = started({ ann: redGuesser, bob: SPECTATOR, cat: SPECTATOR });
-    seating = moved(seating, 'bob', redGuesser, true);
-    seating = moved(seating, 'cat', blueGuesser, true);
-    seating = moved(seating, 'ann', SPECTATOR, true);
-    seating = moved(seating, 'ann', redGuesser, true);
+    seating = moved(seating, 'bob', redGuesser, 'on');
+    seating = moved(seating, 'cat', blueGuesser, 'on');
+    seating = moved(seating, 'ann', SPECTATOR, 'on');
+    seating = moved(seating, 'ann', redGuesser, 'on');
     expect(seatOf(seating, 'ann')).toEqual(redGuesser);
     expect(seatOf(seating, 'bob')).toEqual(redGuesser);
     expect(seatOf(seating, 'cat')).toEqual(blueGuesser);
@@ -118,16 +119,16 @@ describe('seats during a game', () => {
 
   test('nobody changes groups: a seat in the other group is refused until the next game', () => {
     let seating = started({ ann: redGuesser, bob: SPECTATOR });
-    expect(refusal(seating, 'ann', blueGuesser, true)).toBe('other_team');
-    expect(refusal(seating, 'ann', blueCaptain, true)).toBe('other_team');
+    expect(refusal(seating, 'ann', blueGuesser, 'on')).toBe('other_team');
+    expect(refusal(seating, 'ann', blueCaptain, 'on')).toBe('other_team');
     // Stepping out to watch doesn't free a player from their group.
-    seating = moved(seating, 'ann', SPECTATOR, true);
-    expect(refusal(seating, 'ann', blueGuesser, true)).toBe('other_team');
+    seating = moved(seating, 'ann', SPECTATOR, 'on');
+    expect(refusal(seating, 'ann', blueGuesser, 'on')).toBe('other_team');
     // A latecomer belongs to the group they join first.
-    seating = moved(seating, 'bob', blueGuesser, true);
-    expect(refusal(seating, 'bob', redGuesser, true)).toBe('other_team');
-    expect(refusal(seating, 'bob', redCaptain, true)).toBe('other_team');
-    expect(refusal(seating, 'bob', blueCaptain, true)).toBeNull();
+    seating = moved(seating, 'bob', blueGuesser, 'on');
+    expect(refusal(seating, 'bob', redGuesser, 'on')).toBe('other_team');
+    expect(refusal(seating, 'bob', redCaptain, 'on')).toBe('other_team');
+    expect(refusal(seating, 'bob', blueCaptain, 'on')).toBeNull();
 
     const next = endGame(seating);
     expect(seatOf(next, 'bob')).toEqual(blueGuesser);
@@ -136,29 +137,44 @@ describe('seats during a game', () => {
         startGame(next, (id) => `key-${id}`),
         'ann',
         blueGuesser,
-        true,
+        'on',
       ),
     ).toBeNull();
+  });
+
+  test('once the game is over, the groups and the key still bind, but a seat taken then joins no group', () => {
+    const seating = started({ ann: redCaptain, bob: redGuesser, cat: blueGuesser, eve: SPECTATOR });
+    expect(refusal(seating, 'bob', blueGuesser, 'over')).toBe('other_team');
+    expect(refusal(seating, 'ann', redGuesser, 'over')).toBe('key_viewer');
+    // Eve watched the whole game and sits down for the next one: no player of this one, and free
+    // to sit anywhere.
+    let after = moved(seating, 'eve', redGuesser, 'over');
+    expect(seatOf(after, 'eve')).toEqual(redGuesser);
+    expect(after.sides.has('key-eve')).toBe(false);
+    after = moved(after, 'eve', blueCaptain, 'over');
+    expect(seatOf(after, 'eve')).toEqual(blueCaptain);
+    expect(after.keyViewers.has('key-eve')).toBe(false);
+    expect(after.sides).toEqual(seating.sides);
   });
 
   test('whoever leaves and comes back with a new ID keeps their group and what they have seen', () => {
     let seating = started({ ann: redCaptain, bob: blueGuesser });
     seating = removeSeat(removeSeat(seating, 'ann'), 'bob');
-    expect(changeSeat(seating, { id: 'ann-again', key: 'key-ann' }, redGuesser, true)).toEqual({
+    expect(changeSeat(seating, { id: 'ann-again', key: 'key-ann' }, redGuesser, 'on')).toEqual({
       ok: false,
       error: 'key_viewer',
     });
-    expect(changeSeat(seating, { id: 'bob-again', key: 'key-bob' }, redGuesser, true)).toEqual({
+    expect(changeSeat(seating, { id: 'bob-again', key: 'key-bob' }, redGuesser, 'on')).toEqual({
       ok: false,
       error: 'other_team',
     });
-    expect(changeSeat(seating, { id: 'bob-again', key: 'key-bob' }, blueGuesser, true).ok).toBe(true);
+    expect(changeSeat(seating, { id: 'bob-again', key: 'key-bob' }, blueGuesser, 'on').ok).toBe(true);
   });
 });
 
 describe('seating a newcomer who has come to play', () => {
-  const join = (seating: Seating, id: string, seed = 1, playing = false) =>
-    autoSeat(seating, member(id), seededRng(seed), playing);
+  const join = (seating: Seating, id: string, seed = 1, stage: GameStage = 'none') =>
+    autoSeat(seating, member(id), seededRng(seed), stage);
 
   test('makes them a guesser in the group with fewer players, captains and players who are away counted', () => {
     expect(seatOf(join(seated({ ann: redCaptain, bob: redGuesser, cat: blueGuesser }), 'dan'), 'dan')).toEqual(
@@ -182,20 +198,26 @@ describe('seating a newcomer who has come to play', () => {
 
   test('during a game, ties them to the group, and sends whoever has played for a group back to it', () => {
     let seating = started({ ann: redCaptain, bob: blueCaptain, cat: blueGuesser, dan: blueGuesser });
-    seating = join(seating, 'eve', 1, true);
+    seating = join(seating, 'eve', 1, 'on');
     expect(seatOf(seating, 'eve')).toEqual(redGuesser);
     expect(seating.sides.get('key-eve')).toBe('red');
     // Dan leaves the bigger group and comes back with a new ID: to the same group all the same.
     seating = removeSeat(seating, 'dan');
-    seating = autoSeat(seating, { id: 'dan-again', key: 'key-dan' }, seededRng(1), true);
+    seating = autoSeat(seating, { id: 'dan-again', key: 'key-dan' }, seededRng(1), 'on');
     expect(seatOf(seating, 'dan-again')).toEqual(blueGuesser);
   });
 
   test('leaves someone who has seen the key in this game a spectator', () => {
     const before = removeSeat(started({ ann: redCaptain, bob: blueGuesser }), 'ann');
-    const after = autoSeat(before, { id: 'ann-again', key: 'key-ann' }, seededRng(1), true);
+    const after = autoSeat(before, { id: 'ann-again', key: 'key-ann' }, seededRng(1), 'on');
     expect(after).toBe(before);
     expect(seatOf(after, 'ann-again')).toEqual(SPECTATOR);
+  });
+
+  test('after the game has ended, seats them for the next one without making them a player of this one', () => {
+    const after = join(started({ ann: redCaptain, bob: redGuesser, cat: blueCaptain }), 'fay', 1, 'over');
+    expect(seatOf(after, 'fay')).toEqual(blueGuesser);
+    expect(after.sides.has('key-fay')).toBe(false);
   });
 });
 

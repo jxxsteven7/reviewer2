@@ -729,6 +729,21 @@ describe('KeywordsGame', () => {
     send.mockImplementation(async () => ({ ok: true }));
   });
 
+  test('shows both letters to a player who sat down only after the game, as to a spectator', () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game = {
+      ...(data.game as KeywordsView),
+      phase: 'over' as const,
+      result: { winner: 'red' as const, reason: 'found' as const },
+    };
+    const wrapper = mount(KeywordsGame, {
+      props: { room: { ...view, data: { ...data, side: null, game } } },
+      global: global(),
+    });
+    expect(wrapper.findAll('.letter .verdict').map((verdict) => verdict.text())).toEqual(['Accept (Oral)', 'Reject']);
+  });
+
   test('renders the group chat once, and keeps it after the game', async () => {
     const view = room('bob', []);
     const wrapper = mount(KeywordsGame, { props: { room: view }, global: global() });

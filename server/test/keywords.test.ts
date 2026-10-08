@@ -588,6 +588,21 @@ describe('coming to play', () => {
     expect(data(annBack).seats[annBack.me]).toEqual(SPECTATOR);
     expect(data(annBack).side).toBe('red');
   });
+
+  test('after the game has ended, whoever sits down for the next one is no player of this one', async () => {
+    const table = await seatTable();
+    await expectOk(table.captains.red.send('room:end', { gameId: board(table.captains.red).gameId }));
+    const fay = await joinRoom(server.url, table.code, 'Fay', { play: true });
+    clients.push(fay);
+    expect(data(fay).seats[fay.me]?.role).toBe('guesser');
+    expect(data(fay).side).toBeNull();
+    // Eve watched the game, and takes a seat for the next one; Bob played for red and stays red.
+    const eve = table.spectator;
+    await expectOk(eve.send('keywords:seat', { team: 'red', role: 'guesser' }));
+    expect(data(eve).seats[eve.me]).toEqual({ team: 'red', role: 'guesser' });
+    expect(data(eve).side).toBeNull();
+    expect(data(table.guessers.red).side).toBe('red');
+  });
 });
 
 describe('quick reactions', () => {
