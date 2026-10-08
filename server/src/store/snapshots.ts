@@ -15,13 +15,16 @@ export const BEFORE_MIGRATION_MS = 7 * 24 * 60 * 60_000;
 
 // The hourly snapshots, and the snapshots from before a migration, which have the version that
 // the migration went to after the time.
-const HOURLY = /^reviewer2-\d{8}T\d{6}Z\.db$/;
-const BEFORE_MIGRATION = /^reviewer2-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z-before-v\d+\.db$/;
+const STAMP = '(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})Z';
+const HOURLY = new RegExp(`^reviewer2-${STAMP}\\.db$`);
+const BEFORE_MIGRATION = new RegExp(`^reviewer2-${STAMP}-before-v\\d+\\.db$`);
 // What a snapshot is written to before it gets its name, and the files that SQLite keeps beside it
 // while it is open.
 const TEMPORARY = /\.tmp(-wal|-shm|-journal)?$/;
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
+
+const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 // "reviewer2-20261009T130000Z.db", with the time in UTC, so that the names sort by time.
 export function snapshotName(time: number, suffix = ''): string {
@@ -70,23 +73,22 @@ export function removeTemporary(dir: string): void {
   for (const file of files) if (TEMPORARY.test(file)) rmSync(join(dir, file), { force: true });
 }
 
+// The time in the name of a snapshot of the kind, or null for any other file.
+function timeOf(file: string, kind: RegExp): number | null {
+  const match = kind.exec(file);
+  if (!match) return null;
+  const [year = 0, month = 1, day, hours, minutes, seconds] = match.slice(1, 7).map(Number);
+  return Date.UTC(year, month - 1, day, hours, minutes, seconds);
+}
+
 // Deletes all but the latest `kept` hourly snapshots, and the snapshots from before a migration
 // that are older than a week at `now`, by the time in their names.
 export function pruneSnapshots(dir: string, now: number, kept = SNAPSHOTS_KEPT): void {
   const files = readdirSync(dir);
   const hourly = files.filter((file) => HOURLY.test(file)).sort();
   const expired = files.filter((file) => {
-    const [, ...parts] = BEFORE_MIGRATION.exec(file) ?? [];
-    if (parts.length === 0) return false;
-    const [year, month, day, hours, minutes, seconds] = parts.map(Number) as [
-      number,
-      number,
-      number,
-      number,
-      number,
-      number,
-    ];
-    return Date.UTC(year, month - 1, day, hours, minutes, seconds) < now - BEFORE_MIGRATION_MS;
+    const time = timeOf(file, BEFORE_MIGRATION);
+    return time !== null && time < now - BEFORE_MIGRATION_MS;
   });
   for (const file of [...hourly.slice(0, Math.max(0, hourly.length - kept)), ...expired]) {
     rmSync(join(dir, file), { force: true });
@@ -115,6 +117,20 @@ export class Snapshots {
     return this.#running;
   }
 
+  // Whether the latest hourly snapshot is an hour old or older, or there is none. A server that is
+  // restarted more often than once an hour, as on a day of many releases, would otherwise never
+  // get to its first.
+  due(): boolean {
+    let files: string[];
+    try {
+      files = readdirSync(this.dir);
+    } catch {
+      return true;
+    }
+    const times = files.map((file) => timeOf(file, HOURLY)).filter((time) => time !== null);
+    return times.length === 0 || Math.max(...times) <= this.now() - SNAPSHOT_MS;
+  }
+
   // Settles once no snapshot is being written, so that the database can be closed.
   idle(): Promise<void> {
     return this.#running ?? Promise.resolve();
@@ -122,12 +138,19 @@ export class Snapshots {
 
   async #take(): Promise<void> {
     const started = performance.now();
+    let file: string;
     try {
-      const file = await writeSnapshot(this.db, this.dir, snapshotName(this.now()));
-      pruneSnapshots(this.dir, this.now(), this.kept);
-      this.log('snapshot_saved', { file: basename(file), ms: Math.round(performance.now() - started) });
+      file = await writeSnapshot(this.db, this.dir, snapshotName(this.now()));
     } catch (error) {
-      this.log('snapshot_failed', { message: error instanceof Error ? error.message : String(error) });
+      this.log('snapshot_failed', { message: describe(error) });
+      return;
+    }
+    this.log('snapshot_saved', { file: basename(file), ms: Math.round(performance.now() - started) });
+    // The snapshot is there all the same when the old ones can't be deleted.
+    try {
+      pruneSnapshots(this.dir, this.now(), this.kept);
+    } catch (error) {
+      this.log('snapshots_not_pruned', { message: describe(error) });
     }
   }
 }

@@ -1,10 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { main, type MainOptions, type Running } from './main';
-import { DATABASE_FILE, SNAPSHOT_DIR } from './store/database';
+import { DATABASE_FILE, openDatabase, SNAPSHOT_DIR } from './store/database';
 
 // Starting and stopping the server as index.ts does, with an environment, a log and an exit of
 // the tests' own.
@@ -99,17 +99,43 @@ describe('starting', () => {
     expect(events()).not.toContain('database_migrated');
   });
 
-  test('with DATA_DIR takes a snapshot every hour', async () => {
+  test('with DATA_DIR takes a snapshot on start and every hour', async () => {
     const data = join(dir, 'data');
     mkdirSync(data);
     await start({ DATA_DIR: data }, { housekeepingMs: 50 });
+    const saved = () => logs.filter(({ event }) => event === 'snapshot_saved');
+    const until = Date.now() + 2000;
+    while (saved().length < 2 && Date.now() < until) await new Promise((r) => setTimeout(r, 5));
+    expect(saved().length).toBeGreaterThanOrEqual(2);
+    const file = saved()[0]?.fields?.file;
+    expect(file).toMatch(/^reviewer2-\d{8}T\d{6}Z\.db$/);
+    expect(readdirSync(join(data, SNAPSHOT_DIR))).toContain(file);
+  });
+
+  test('clears a contact that is 90 days old, from the files and not only the table', async () => {
+    const data = join(dir, 'data');
+    mkdirSync(data);
+    const contact = 'old-contact@example.com';
+    const old = new Date(Date.now() - 91 * 24 * 60 * 60_000).toISOString();
+    const { db } = await openDatabase(data);
+    db.prepare(
+      "INSERT INTO feedback (created_at, kind, text, contact, version, language, page) VALUES (?, 'idea', 'Old', ?, 'v1', 'en', 'home')",
+    ).run(old, contact);
+    db.close();
+    const holds = () =>
+      readdirSync(data, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .filter((entry) => readFileSync(join(entry.parentPath, entry.name)).includes(contact))
+        .map((entry) => entry.name);
+    expect(holds()).toEqual([DATABASE_FILE]);
+
+    const started = (await start({ DATA_DIR: data })) as Running;
+    expect(logged('contacts_cleared')).toEqual({ count: 1 });
+    expect(started.feedback.latest(1)[0]).toMatchObject({ text: 'Old', contact: null });
+    // The snapshot that the start takes comes after the clearing.
     const until = Date.now() + 2000;
     while (!events().includes('snapshot_saved') && Date.now() < until) await new Promise((r) => setTimeout(r, 5));
-    expect(logged('snapshot_saved')).toEqual({
-      file: expect.stringMatching(/^reviewer2-\d{8}T\d{6}Z\.db$/),
-      ms: expect.any(Number),
-    });
-    expect(readdirSync(join(data, SNAPSHOT_DIR))).toContain(logged('snapshot_saved')?.file);
+    expect(holds()).toEqual([]);
   });
 
   test('ends with 1 and one line of log when the port is taken', async () => {

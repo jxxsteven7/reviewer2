@@ -1,4 +1,5 @@
 import type { AddressInfo } from 'node:net';
+import type { DatabaseSync } from 'node:sqlite';
 import type { Ack, ClosedReason, EmoteEvent, RoomView, Session } from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 import type { GameModule } from '../src/core/game';
@@ -29,6 +30,7 @@ export interface TestServer {
   app: AppServer;
   // The feedback that the server keeps, in a database in memory, on the system's clock.
   feedback: FeedbackStore;
+  db: DatabaseSync;
   url: string;
   logs: { event: string; fields?: Record<string, unknown> }[];
   // Moves the clock forward, and runs the timers that are due by then, in the order of their
@@ -94,6 +96,7 @@ export async function startServer(
   return {
     app,
     feedback,
+    db,
     url: `http://127.0.0.1:${port}`,
     logs,
     advance: (ms, runTimers = true) => {

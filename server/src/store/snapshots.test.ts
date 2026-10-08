@@ -126,6 +126,45 @@ describe('the hourly snapshots', () => {
     expect(logs[1]?.event).toBe('snapshot_saved');
   });
 
+  test('are due when the latest is an hour old, or there is none', () => {
+    let now = START;
+    const snapshots = join(dir, 'snapshots');
+    const hourly = new Snapshots(
+      db,
+      snapshots,
+      () => {},
+      () => now,
+    );
+    expect(hourly.due()).toBe(true);
+    mkdirSync(snapshots);
+    // A snapshot from before a migration isn't an hourly one.
+    writeFileSync(join(snapshots, snapshotName(START, '-before-v2')), '');
+    expect(hourly.due()).toBe(true);
+    writeFileSync(join(snapshots, snapshotName(START)), '');
+    expect(hourly.due()).toBe(false);
+    now = START + HOUR - 1000;
+    expect(hourly.due()).toBe(false);
+    now = START + HOUR;
+    expect(hourly.due()).toBe(true);
+  });
+
+  test('log a snapshot that was written as saved, even when the old ones stay', async () => {
+    const snapshots = join(dir, 'snapshots');
+    mkdirSync(snapshots);
+    // A directory where an old snapshot should be can't be deleted with rmSync({ force }).
+    mkdirSync(join(snapshots, snapshotName(START - 3 * HOUR)));
+    for (let hour = 2; hour >= 1; hour -= 1) writeFileSync(join(snapshots, snapshotName(START - hour * HOUR)), '');
+    const logs: { event: string; fields?: Record<string, unknown> }[] = [];
+    await new Snapshots(
+      db,
+      snapshots,
+      (event, fields) => logs.push({ event, fields }),
+      () => START,
+    ).take();
+    expect(logs.map(({ event }) => event)).toEqual(['snapshot_saved', 'snapshots_not_pruned']);
+    expect(readdirSync(snapshots)).toContain(snapshotName(START));
+  });
+
   test('pruning leaves a directory with fewer than three alone', () => {
     const snapshots = join(dir, 'snapshots');
     mkdirSync(snapshots);

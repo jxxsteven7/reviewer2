@@ -37,7 +37,7 @@
 | 语言 | TypeScript，前后端统一，使用 npm workspaces |
 | 前端 | Vue 3 + Vite，vue-i18n |
 | 后端 | Node.js + Socket.IO |
-| 存储 | 房间放在服务器内存里；玩家的建议存在 SQLite 里，用 Node 自带的 `node:sqlite` |
+| 存储 | 房间放在服务器内存里；玩家的反馈存在 SQLite 里，用 Node 自带的 `node:sqlite` |
 | 测试 | Vitest，端到端测试用 Playwright |
 | 部署 | 一个 Node 进程同时提供前端静态文件和 WebSocket，一个域名、一个端口 |
 
@@ -121,4 +121,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: f1bd786a096a1442524baa799224beb938ec14dc5a6b354ac15c2e30e20b4d60 -->
+<!-- readme-sync: d0e9b3180ae3e16fa342487a4090265c0c2474ca23dc4a6d81abf47f8ed05cdc -->

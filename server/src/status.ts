@@ -1,7 +1,7 @@
 import type { RequestListener } from 'node:http';
 import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
-import { renderStatusPage, type FeedbackPage } from './statusPage';
+import { renderStatusPage, type FeedbackListing } from './statusPage';
 import type { FeedbackStore } from './store/feedback';
 
 // The status page for the operator (docs/architecture.md). It has a port of its own, STATUS_PORT,
@@ -29,7 +29,7 @@ export const FEEDBACK_SHOWN = 50;
 
 // The feedback for the page, before the id in the query when it has one, and whether there is
 // more before that. A query that isn't a number is taken for none.
-function feedbackPage(feedback: FeedbackStore, target: string): FeedbackPage {
+function feedbackListing(feedback: FeedbackStore, target: string): FeedbackListing {
   const query = new URLSearchParams(target.slice(pathOf(target).length));
   const before = /^\d{1,15}$/.test(query.get('before') ?? '') ? Number(query.get('before')) : undefined;
   const entries = feedback.latest(FEEDBACK_SHOWN + 1, before);
@@ -57,7 +57,7 @@ export function createStatusHandler(
         const path = pathOf(target);
         if (path === '/') {
           res.setHeader('Content-Security-Policy', CSP);
-          const page = renderStatusPage(stats(), history.samples(), history.now(), feedbackPage(feedback, target));
+          const page = renderStatusPage(stats(), history.samples(), history.now(), feedbackListing(feedback, target));
           send(res, 200, 'text/html; charset=utf-8', page);
         } else if (path === '/status.json') {
           send(res, 200, 'application/json', JSON.stringify(stats()));

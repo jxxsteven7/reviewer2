@@ -84,10 +84,14 @@ export async function main({
   const feedback = new FeedbackStore(db);
   const snapshots = database.snapshots === null ? null : new Snapshots(db, database.snapshots, log);
 
-  // Clears the contacts that have been kept for 90 days.
+  // Clears the contacts that have been kept for 90 days. Secure delete overwrites them in the
+  // database file, but the WAL beside it still holds the pages as they were before, until a
+  // checkpoint writes them back and a truncation drops them.
   const clearContacts = () => {
     const count = feedback.clearContacts();
-    if (count > 0) log('contacts_cleared', { count });
+    if (count === 0) return;
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    log('contacts_cleared', { count });
   };
 
   let server: AppServer;
@@ -149,6 +153,8 @@ export async function main({
     }, housekeepingMs),
   ];
   for (const timer of timers) timer.unref();
+  // The first snapshot comes at once unless the latest is less than an hour old.
+  if (snapshots?.due()) void snapshots.take();
 
   // The `stats` log line every 5 minutes, and the samples for the status page's chart, which are
   // only taken while there is a page to show them on.
@@ -200,8 +206,13 @@ export async function main({
         log('error', { where: 'stop', message: describe(error) });
         code = 1;
       }
-      await snapshots?.idle();
-      db.close();
+      try {
+        await snapshots?.idle();
+        db.close();
+      } catch (error) {
+        log('error', { where: 'database', message: describe(error) });
+        code = 1;
+      }
       clearTimeout(timeout);
       end(code);
     })());

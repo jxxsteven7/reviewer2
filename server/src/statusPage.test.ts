@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { Sample, Stats } from './stats';
-import { duration, renderStatusPage, type FeedbackPage } from './statusPage';
+import { duration, renderStatusPage, type FeedbackListing } from './statusPage';
 import type { Feedback } from './store/feedback';
 
 const MB = 2 ** 20;
@@ -134,7 +134,7 @@ describe('the feedback', () => {
     userAgent: null,
     ...changes,
   });
-  const page = (changes: Partial<FeedbackPage> = {}) =>
+  const page = (changes: Partial<FeedbackListing> = {}) =>
     renderStatusPage(stats(), [], NOW, { total: 0, entries: [], paged: false, older: false, ...changes });
 
   test('says when there is none yet', () => {

@@ -125,7 +125,7 @@ function chart(samples: readonly Sample[], now: number): string {
 
 // One page of the feedback that players sent (store/feedback.ts), newest first: the latest, or
 // those before an id that the operator paged back to.
-export interface FeedbackPage {
+export interface FeedbackListing {
   total: number;
   entries: readonly Feedback[];
   // Whether the page was paged back from the latest.
@@ -161,7 +161,7 @@ function entry(feedback: Feedback): string {
   );
 }
 
-function feedbackSection({ total, entries, paged, older }: FeedbackPage): string {
+function feedbackSection({ total, entries, paged, older }: FeedbackListing): string {
   if (total === 0) return '<p>None yet.</p>';
   const links = [
     ...(paged ? ['<a href="/#feedback">Latest</a>'] : []),
@@ -173,7 +173,7 @@ function feedbackSection({ total, entries, paged, older }: FeedbackPage): string
   );
 }
 
-const NO_FEEDBACK: FeedbackPage = { total: 0, entries: [], paged: false, older: false };
+const NO_FEEDBACK: FeedbackListing = { total: 0, entries: [], paged: false, older: false };
 
 // `now` is the time on the clock that the samples were taken on (History in stats.ts).
 export function renderStatusPage(

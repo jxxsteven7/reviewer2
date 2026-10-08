@@ -87,19 +87,19 @@ function directory(dataDir: string): string {
 
 // Settings that hold for one connection, so they are made every time it opens:
 //
+// - A busy timeout, so that a write that finds someone else writing, such as the operator's own
+//   sqlite3, waits for its turn rather than fail at once. It comes first, because the switch to
+//   WAL needs a lock too.
 // - WAL, so that reading never waits for writing, and a snapshot can be taken while the server
 //   writes. With it, NORMAL is enough to keep the database whole through a crash; a power cut
 //   may cost the last few writes.
-// - A busy timeout, so that a write that finds someone else writing, such as the operator's own
-//   sqlite3, waits for its turn rather than fail at once.
 // - Foreign keys, which SQLite leaves off by default.
 // - Secure delete, so that what is deleted or overwritten, such as a contact after 90 days, is
 //   zeroed in the file instead of lingering in its free pages, and in the snapshots made from it.
 function configure(db: DatabaseSync): string {
+  db.exec('PRAGMA busy_timeout = 5000');
   const { journal_mode: journal } = db.prepare('PRAGMA journal_mode = WAL').get() as { journal_mode: string };
-  db.exec(
-    'PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON',
-  );
+  db.exec('PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON');
   return journal;
 }
 

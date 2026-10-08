@@ -67,15 +67,15 @@ export interface SocketLimits {
 }
 
 // The limits unless something says otherwise. ROOMS_PER_MINUTE can change `roomsPerMinute`
-// (config.ts), and tests change the others.
-export const DEFAULT_SOCKET_LIMITS: SocketLimits = {
+// (config.ts), and tests change the others, on copies: these are frozen.
+export const DEFAULT_SOCKET_LIMITS: Readonly<SocketLimits> = Object.freeze({
   messagesPerSecond: 10,
   messageBurst: 20,
   roomsPerMinute: 5,
   failedLookupsPerMinute: 20,
   feedbackPerWindow: 3,
   feedbackWindowMs: 10 * 60_000,
-};
+});
 
 // The longest user agent that is kept with a bug report. Real ones are a few hundred characters.
 const MAX_USER_AGENT = 512;
@@ -122,7 +122,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const creations = new WindowCounter(limits.roomsPerMinute, 60_000, now);
   const failedLookups = new WindowCounter(limits.failedLookupsPerMinute, 60_000, now);
   const feedbackSent = new WindowCounter(limits.feedbackPerWindow, limits.feedbackWindowMs, now);
-  // Whether the log has been told that no more feedback is taken. Once is enough until a restart.
+  // Whether the log has been told that no more feedback is taken. Once is enough until feedback
+  // is taken again, which takes the operator's doing.
   let feedbackFullLogged = false;
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
@@ -505,6 +506,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         userAgent: kind === 'bug' && userAgent ? userAgent.slice(0, MAX_USER_AGENT) : null,
       });
       feedbackSent.add(conn.ip);
+      feedbackFullLogged = false;
       log('feedback_received', { id, kind });
       return ok();
     });

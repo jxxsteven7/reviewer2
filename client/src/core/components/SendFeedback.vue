@@ -24,10 +24,11 @@ import UiSheet from './UiSheet.vue';
 
 // "Send feedback", for the footer of the home page and of a room, and its panel
 // (docs/architecture.md). The text and the contact are checked by the rules that the server
-// applies (shared/src/feedback.ts). Along with them go the build of this page, the language it is
-// shown in and whether it is the home page or a room, but never the room's code. With a bug, the
-// server also keeps the browser's user agent, which it reads from the connection, and the panel
-// says so.
+// applies (shared/src/feedback.ts), and go as those rules clean them: what the player pasted may
+// hold characters that JSON writes out at six bytes each, and the message has to stay under the
+// server's 16 KB. Along with them go the build of this page, the language it is shown in and
+// whether it is the home page or a room, but never the room's code. With a bug, the server also
+// keeps the browser's user agent, which it reads from the connection, and the panel says so.
 const props = defineProps<{ page: FeedbackPage }>();
 const { t } = useI18n();
 const name = useId();
@@ -63,9 +64,10 @@ function submit() {
   void run(async () => {
     const message: FeedbackMessage = {
       kind: kind.value,
-      text: text.value,
-      ...(checkedContact.value.contact === null ? {} : { contact: contact.value }),
-      version: __APP_VERSION__,
+      text: checked.value.text,
+      ...(checkedContact.value.contact === null ? {} : { contact: checkedContact.value.contact }),
+      // The schema takes 64 characters; a build is named by its commit.
+      version: __APP_VERSION__.slice(0, 64),
       language: currentLanguage(),
       page: props.page,
     };

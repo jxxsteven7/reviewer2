@@ -49,10 +49,11 @@ describe('the feedback panel', () => {
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
+    // What goes is what the rules made of it, as the server will keep it.
     expect(socket.send).toHaveBeenCalledWith('meta:feedback', {
       kind: 'words',
-      text: '  More terms from biology, please.  ',
-      contact: ' me@example.com ',
+      text: 'More terms from biology, please.',
+      contact: 'me@example.com',
       version: 'dev',
       language: 'en',
       page: 'room',
@@ -75,9 +76,9 @@ describe('the feedback panel', () => {
 
   test('says that a bug report takes the browser along, and only then', async () => {
     const wrapper = await opened();
-    expect(wrapper.text()).not.toContain("your browser's name and version");
+    expect(wrapper.text()).not.toContain("your browser's user agent");
     await wrapper.get('input[value="bug"]').setValue(true);
-    expect(wrapper.text()).toContain("your browser's name and version are sent along");
+    expect(wrapper.text()).toContain("your browser's user agent is sent along");
   });
 
   test("won't send what the server would refuse", async () => {

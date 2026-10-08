@@ -207,5 +207,12 @@ describe('a server that takes no more feedback', () => {
     expect(server.logs.filter(({ event }) => event === 'feedback_full')).toEqual([
       { event: 'feedback_full', fields: { reason: 'entries' } },
     ]);
+
+    // Once the operator has made room, feedback is taken again, and the log hears of the next time
+    // that it is full.
+    server.db.exec('DELETE FROM feedback WHERE id = 1');
+    expect(await client.send('meta:feedback', message())).toEqual({ ok: true });
+    expect(await client.send('meta:feedback', message())).toEqual({ ok: false, error: 'feedback_full' });
+    expect(server.logs.filter(({ event }) => event === 'feedback_full')).toHaveLength(2);
   });
 });

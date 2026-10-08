@@ -438,7 +438,7 @@
     "count": "{count} / {max}",
     "contact": "Contact (optional)",
     "contactHint": "An email address, a WeChat ID or anything else to reach you by.",
-    "bugNote": "With a bug report, your browser's name and version are sent along, to help find the bug.",
+    "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model.",
     "submit": "Send",
     "sent": "Thank you! Your feedback has been sent."
   },
