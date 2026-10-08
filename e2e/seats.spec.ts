@@ -1,4 +1,4 @@
-import { joinByLink, newPlayer, playFor, seatTable, sideChannel, TEXT, expect, test } from './helpers';
+import { interpolate, joinByLink, newPlayer, playFor, seatTable, sideChannel, TEXT, expect, test } from './helpers';
 
 test('a latecomer joins in the middle of a game and plays for a group', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
@@ -15,6 +15,8 @@ test('nobody changes groups in the middle of a game', async ({ browser }) => {
   // A student is offered no seat in the other group, also after stepping out to watch.
   await expect(bob.getByRole('button', playFor('blue'))).toHaveCount(0);
   await bob.getByRole('button', { name: TEXT.en.game.watch }).click();
+  await expect(bob.locator('.actions .who')).toHaveText(TEXT.en.game.you.spectator);
+  await expect(table.captains.red.locator('.rosters .spectators')).toContainText('Bob');
   await expect(bob.getByRole('button', playFor('red'))).toBeVisible();
   await expect(bob.getByRole('button', playFor('blue'))).toHaveCount(0);
   // A page that asks for it anyway, such as an outdated tab, is refused.
@@ -24,6 +26,11 @@ test('nobody changes groups in the middle of a game', async ({ browser }) => {
     error: 'other_team',
   });
   await bob.getByRole('button', playFor('red')).click();
+  // Back in the red group, on his own page and on the PI's.
+  await expect(bob.locator('.actions .who')).toHaveText(
+    interpolate(TEXT.en.game.you.guesser, { group: TEXT.en.lobby.group.red }),
+  );
+  await expect(table.captains.red.locator('.rosters .spectators')).not.toContainText('Bob');
   await expect(table.captains.red.locator('.rosters .group.red')).toContainText('Bob');
 });
 
@@ -45,4 +52,7 @@ test('an empty PI seat can be taken over, and its new PI sees the key and stays 
   await joinByLink(ann, table.url, 'Ann', 'en');
   await expect(ann.locator('.keywords-game')).toBeVisible();
   for (const team of ['red', 'blue'] as const) await expect(ann.getByRole('button', playFor(team))).toHaveCount(0);
+  // Nor by asking the server straight out, as an outdated tab could.
+  const tab = await sideChannel(ann, table.url);
+  expect(await tab.send('keywords:seat', { team: 'red', role: 'guesser' })).toEqual({ ok: false, error: 'key_viewer' });
 });
