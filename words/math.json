@@ -1,0 +1,1649 @@
+{
+  "id": "math",
+  "name": {
+    "zh": "数学与统计",
+    "en": "Mathematics & Statistics"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "derivative",
+      "zh": "导数",
+      "en": "Derivative",
+      "forms": { "en": ["derive", "derived"] }
+    },
+    {
+      "id": "integral",
+      "zh": "积分",
+      "en": "Integral",
+      "forms": { "en": ["integrate", "integration"] }
+    },
+    {
+      "id": "matrix",
+      "zh": "矩阵",
+      "en": "Matrix",
+      "forms": { "en": ["matrices"] }
+    },
+    {
+      "id": "vector",
+      "zh": "向量",
+      "en": "Vector",
+      "forms": { "en": ["vectorize", "vectorized"] }
+    },
+    {
+      "id": "limit",
+      "zh": "极限",
+      "en": "Limit",
+      "forms": { "en": ["limited", "limiting"] }
+    },
+    {
+      "id": "prime",
+      "zh": "素数",
+      "en": "Prime",
+      "forms": { "en": ["primality"] }
+    },
+    {
+      "id": "infinity",
+      "zh": "无穷大",
+      "en": "Infinity",
+      "forms": { "en": ["infinite", "infinitely"] }
+    },
+    {
+      "id": "probability",
+      "zh": "概率",
+      "en": "Probability",
+      "forms": { "en": ["probable", "probabilistic"] }
+    },
+    {
+      "id": "topology",
+      "zh": "拓扑",
+      "en": "Topology",
+      "forms": { "en": ["topological"] }
+    },
+    {
+      "id": "symmetry",
+      "zh": "对称性",
+      "en": "Symmetry",
+      "forms": { "en": ["symmetric", "symmetrical"] }
+    },
+    {
+      "id": "fractal",
+      "zh": "分形",
+      "en": "Fractal"
+    },
+    {
+      "id": "permutation",
+      "zh": "排列",
+      "en": "Permutation",
+      "forms": { "en": ["permute"] }
+    },
+    {
+      "id": "polynomial",
+      "zh": "多项式",
+      "en": "Polynomial"
+    },
+    {
+      "id": "convergence",
+      "zh": "收敛",
+      "en": "Convergence",
+      "forms": { "en": ["converge", "convergent"] }
+    },
+    {
+      "id": "induction",
+      "zh": "归纳法",
+      "en": "Induction",
+      "forms": { "en": ["inductive"] }
+    },
+    {
+      "id": "set",
+      "zh": "集合",
+      "en": "Set",
+      "forms": { "en": ["subset", "superset"] }
+    },
+    {
+      "id": "function",
+      "zh": "函数",
+      "en": "Function",
+      "forms": { "en": ["functional"] }
+    },
+    {
+      "id": "logarithm",
+      "zh": "对数",
+      "en": "Logarithm",
+      "forms": { "en": ["logarithmic", "log"] }
+    },
+    {
+      "id": "paradox",
+      "zh": "悖论",
+      "en": "Paradox",
+      "forms": { "en": ["paradoxical"] }
+    },
+    {
+      "id": "p-value",
+      "zh": "p值",
+      "en": "p-value"
+    },
+    {
+      "id": "calculus",
+      "zh": "微积分",
+      "en": "Calculus",
+      "forms": { "en": ["calculi"] }
+    },
+    {
+      "id": "differential",
+      "zh": "微分",
+      "en": "Differential",
+      "forms": { "en": ["differentiate", "differentiation", "differentiable"] }
+    },
+    {
+      "id": "continuity",
+      "zh": "连续性",
+      "en": "Continuity",
+      "forms": { "en": ["continuous", "continuously"] }
+    },
+    {
+      "id": "series",
+      "zh": "级数",
+      "en": "Series"
+    },
+    {
+      "id": "taylor-series",
+      "zh": "泰勒级数",
+      "en": "Taylor series"
+    },
+    {
+      "id": "extremum",
+      "zh": "极值",
+      "en": "Extremum",
+      "forms": { "en": ["extrema"] }
+    },
+    {
+      "id": "maximum",
+      "zh": "最大值",
+      "en": "Maximum",
+      "forms": { "en": ["maxima", "max", "maximize", "maximise", "maximal"] }
+    },
+    {
+      "id": "minimum",
+      "zh": "最小值",
+      "en": "Minimum",
+      "forms": { "en": ["minima", "min", "minimize", "minimise", "minimal"] }
+    },
+    {
+      "id": "optimization",
+      "zh": "优化",
+      "en": "Optimization",
+      "forms": { "en": ["optimize", "optimise", "optimisation", "optimal", "optimum"] }
+    },
+    {
+      "id": "saddle-point",
+      "zh": "鞍点",
+      "en": "Saddle point"
+    },
+    {
+      "id": "asymptote",
+      "zh": "渐近线",
+      "en": "Asymptote",
+      "forms": { "en": ["asymptotic", "asymptotically"] }
+    },
+    {
+      "id": "tangent",
+      "zh": "切线",
+      "en": "Tangent",
+      "forms": { "en": ["tangential"] }
+    },
+    {
+      "id": "slope",
+      "zh": "斜率",
+      "en": "Slope"
+    },
+    {
+      "id": "curvature",
+      "zh": "曲率",
+      "en": "Curvature"
+    },
+    {
+      "id": "infinitesimal",
+      "zh": "无穷小",
+      "en": "Infinitesimal"
+    },
+    {
+      "id": "divergence",
+      "zh": "发散",
+      "en": "Divergence",
+      "forms": { "en": ["diverge", "divergent"] }
+    },
+    {
+      "id": "curl",
+      "zh": "旋度",
+      "en": "Curl"
+    },
+    {
+      "id": "fourier-transform",
+      "zh": "傅里叶变换",
+      "en": "Fourier transform"
+    },
+    {
+      "id": "chain-rule",
+      "zh": "链式法则",
+      "en": "Chain rule"
+    },
+    {
+      "id": "monotonicity",
+      "zh": "单调性",
+      "en": "Monotonicity",
+      "forms": { "en": ["monotonic", "monotone"] }
+    },
+    {
+      "id": "interval",
+      "zh": "区间",
+      "en": "Interval"
+    },
+    {
+      "id": "pde",
+      "zh": "偏微分方程",
+      "en": "PDE",
+      "forms": { "en": ["partial differential equation"] }
+    },
+    {
+      "id": "jacobian",
+      "zh": "雅可比矩阵",
+      "en": "Jacobian"
+    },
+    {
+      "id": "fixed-point",
+      "zh": "不动点",
+      "en": "Fixed point"
+    },
+    {
+      "id": "bifurcation",
+      "zh": "分岔",
+      "en": "Bifurcation",
+      "forms": { "en": ["bifurcate"] }
+    },
+    {
+      "id": "convexity",
+      "zh": "凸性",
+      "en": "Convexity",
+      "forms": { "en": ["convex", "nonconvex"] }
+    },
+    {
+      "id": "duality",
+      "zh": "对偶",
+      "en": "Duality",
+      "forms": { "en": ["dual"] }
+    },
+    {
+      "id": "constraint",
+      "zh": "约束",
+      "en": "Constraint",
+      "forms": { "en": ["constrain", "constrained", "unconstrained"] }
+    },
+    {
+      "id": "interpolation",
+      "zh": "插值",
+      "en": "Interpolation",
+      "forms": { "en": ["interpolate"] }
+    },
+    {
+      "id": "extrapolation",
+      "zh": "外推",
+      "en": "Extrapolation",
+      "forms": { "en": ["extrapolate"] }
+    },
+    {
+      "id": "approximation",
+      "zh": "近似",
+      "en": "Approximation",
+      "forms": { "en": ["approximate", "approximately", "approx"] }
+    },
+    {
+      "id": "least-squares",
+      "zh": "最小二乘法",
+      "en": "Least squares"
+    },
+    {
+      "id": "measure",
+      "zh": "测度",
+      "en": "Measure",
+      "forms": { "en": ["measurable"] }
+    },
+    {
+      "id": "imaginary-number",
+      "zh": "虚数",
+      "en": "Imaginary number"
+    },
+    {
+      "id": "complex-number",
+      "zh": "复数",
+      "en": "Complex number"
+    },
+    {
+      "id": "real-number",
+      "zh": "实数",
+      "en": "Real number"
+    },
+    {
+      "id": "rational-number",
+      "zh": "有理数",
+      "en": "Rational number"
+    },
+    {
+      "id": "integer",
+      "zh": "整数",
+      "en": "Integer"
+    },
+    {
+      "id": "natural-number",
+      "zh": "自然数",
+      "en": "Natural number"
+    },
+    {
+      "id": "fraction",
+      "zh": "分数",
+      "en": "Fraction",
+      "forms": { "en": ["fractional"] }
+    },
+    {
+      "id": "decimal",
+      "zh": "小数",
+      "en": "Decimal"
+    },
+    {
+      "id": "percentage",
+      "zh": "百分比",
+      "en": "Percentage",
+      "forms": { "en": ["percent"] }
+    },
+    {
+      "id": "proportion",
+      "zh": "比例",
+      "en": "Proportion",
+      "forms": { "en": ["proportional", "proportionality"] }
+    },
+    {
+      "id": "even-number",
+      "zh": "偶数",
+      "en": "Even number"
+    },
+    {
+      "id": "odd-number",
+      "zh": "奇数",
+      "en": "Odd number"
+    },
+    {
+      "id": "factorial",
+      "zh": "阶乘",
+      "en": "Factorial"
+    },
+    {
+      "id": "exponent",
+      "zh": "指数",
+      "en": "Exponent",
+      "forms": { "en": ["exponential", "exponentiation"] }
+    },
+    {
+      "id": "square-root",
+      "zh": "平方根",
+      "en": "Square root"
+    },
+    {
+      "id": "absolute-value",
+      "zh": "绝对值",
+      "en": "Absolute value"
+    },
+    {
+      "id": "zero",
+      "zh": "零",
+      "en": "Zero"
+    },
+    {
+      "id": "constant",
+      "zh": "常数",
+      "en": "Constant"
+    },
+    {
+      "id": "coefficient",
+      "zh": "系数",
+      "en": "Coefficient"
+    },
+    {
+      "id": "formula",
+      "zh": "公式",
+      "en": "Formula",
+      "forms": { "en": ["formulae", "formulate", "formulation"] }
+    },
+    {
+      "id": "addition",
+      "zh": "加法",
+      "en": "Addition",
+      "forms": { "en": ["add", "additive"] }
+    },
+    {
+      "id": "subtraction",
+      "zh": "减法",
+      "en": "Subtraction",
+      "forms": { "en": ["subtract"] }
+    },
+    {
+      "id": "multiplication",
+      "zh": "乘法",
+      "en": "Multiplication",
+      "forms": { "en": ["multiply", "multiplicative", "multiplier"] }
+    },
+    {
+      "id": "division",
+      "zh": "除法",
+      "en": "Division",
+      "forms": { "en": ["divide", "divided"] }
+    },
+    {
+      "id": "remainder",
+      "zh": "余数",
+      "en": "Remainder"
+    },
+    {
+      "id": "multiple",
+      "zh": "倍数",
+      "en": "Multiple"
+    },
+    {
+      "id": "rounding",
+      "zh": "四舍五入",
+      "en": "Rounding",
+      "forms": { "en": ["round", "rounded"] }
+    },
+    {
+      "id": "golden-ratio",
+      "zh": "黄金比例",
+      "en": "Golden ratio"
+    },
+    {
+      "id": "roman-numerals",
+      "zh": "罗马数字",
+      "en": "Roman numerals"
+    },
+    {
+      "id": "number-theory",
+      "zh": "数论",
+      "en": "Number theory"
+    },
+    {
+      "id": "divisor",
+      "zh": "约数",
+      "en": "Divisor",
+      "forms": { "en": ["divisible", "divisibility"] }
+    },
+    {
+      "id": "factor",
+      "zh": "因子",
+      "en": "Factor",
+      "forms": { "en": ["factorize", "factorise", "factorization", "factorisation"] }
+    },
+    {
+      "id": "gcd",
+      "zh": "最大公约数",
+      "en": "GCD",
+      "forms": { "en": ["greatest common divisor"] }
+    },
+    {
+      "id": "congruence",
+      "zh": "同余",
+      "en": "Congruence",
+      "forms": { "en": ["congruent"] }
+    },
+    {
+      "id": "coprime",
+      "zh": "互质",
+      "en": "Coprime"
+    },
+    {
+      "id": "perfect-number",
+      "zh": "完全数",
+      "en": "Perfect number"
+    },
+    {
+      "id": "riemann-hypothesis",
+      "zh": "黎曼猜想",
+      "en": "Riemann hypothesis"
+    },
+    {
+      "id": "algebra",
+      "zh": "代数",
+      "en": "Algebra",
+      "forms": { "en": ["algebraic"] }
+    },
+    {
+      "id": "arithmetic",
+      "zh": "算术",
+      "en": "Arithmetic",
+      "forms": { "en": ["arithmetical"] }
+    },
+    {
+      "id": "linearity",
+      "zh": "线性",
+      "en": "Linearity",
+      "forms": { "en": ["linear", "nonlinear"] }
+    },
+    {
+      "id": "determinant",
+      "zh": "行列式",
+      "en": "Determinant"
+    },
+    {
+      "id": "eigenvalue",
+      "zh": "特征值",
+      "en": "Eigenvalue"
+    },
+    {
+      "id": "rank",
+      "zh": "秩",
+      "en": "Rank",
+      "forms": { "en": ["ranking", "ranked"] }
+    },
+    {
+      "id": "trace",
+      "zh": "迹",
+      "en": "Trace"
+    },
+    {
+      "id": "transpose",
+      "zh": "转置",
+      "en": "Transpose",
+      "forms": { "en": ["transposition"] }
+    },
+    {
+      "id": "inverse",
+      "zh": "逆",
+      "en": "Inverse",
+      "forms": { "en": ["invert", "inversion", "invertible"] }
+    },
+    {
+      "id": "orthogonality",
+      "zh": "正交",
+      "en": "Orthogonality",
+      "forms": { "en": ["orthogonal"] }
+    },
+    {
+      "id": "projection",
+      "zh": "投影",
+      "en": "Projection",
+      "forms": { "en": ["project", "projective"] }
+    },
+    {
+      "id": "dot-product",
+      "zh": "点积",
+      "en": "Dot product"
+    },
+    {
+      "id": "cross-product",
+      "zh": "叉积",
+      "en": "Cross product"
+    },
+    {
+      "id": "tensor",
+      "zh": "张量",
+      "en": "Tensor",
+      "forms": { "en": ["tensorial"] }
+    },
+    {
+      "id": "scalar",
+      "zh": "标量",
+      "en": "Scalar"
+    },
+    {
+      "id": "basis",
+      "zh": "基",
+      "en": "Basis",
+      "forms": { "en": ["bases"] }
+    },
+    {
+      "id": "sparsity",
+      "zh": "稀疏性",
+      "en": "Sparsity",
+      "forms": { "en": ["sparse"] }
+    },
+    {
+      "id": "group",
+      "zh": "群",
+      "en": "Group",
+      "forms": { "en": ["subgroup"] }
+    },
+    {
+      "id": "ring",
+      "zh": "环",
+      "en": "Ring"
+    },
+    {
+      "id": "isomorphism",
+      "zh": "同构",
+      "en": "Isomorphism",
+      "forms": { "en": ["isomorphic"] }
+    },
+    {
+      "id": "homomorphism",
+      "zh": "同态",
+      "en": "Homomorphism",
+      "forms": { "en": ["homomorphic"] }
+    },
+    {
+      "id": "equivalence",
+      "zh": "等价",
+      "en": "Equivalence",
+      "forms": { "en": ["equivalent"] }
+    },
+    {
+      "id": "mapping",
+      "zh": "映射",
+      "en": "Mapping",
+      "forms": { "en": ["map", "mapped"] }
+    },
+    {
+      "id": "bijection",
+      "zh": "双射",
+      "en": "Bijection",
+      "forms": { "en": ["bijective"] }
+    },
+    {
+      "id": "surjection",
+      "zh": "满射",
+      "en": "Surjection",
+      "forms": { "en": ["surjective"] }
+    },
+    {
+      "id": "domain",
+      "zh": "定义域",
+      "en": "Domain"
+    },
+    {
+      "id": "range",
+      "zh": "值域",
+      "en": "Range"
+    },
+    {
+      "id": "geometry",
+      "zh": "几何",
+      "en": "Geometry",
+      "forms": { "en": ["geometric", "geometrical"] }
+    },
+    {
+      "id": "point",
+      "zh": "点",
+      "en": "Point"
+    },
+    {
+      "id": "line-segment",
+      "zh": "线段",
+      "en": "Line segment"
+    },
+    {
+      "id": "plane",
+      "zh": "平面",
+      "en": "Plane",
+      "forms": { "en": ["planar"] }
+    },
+    {
+      "id": "angle",
+      "zh": "角",
+      "en": "Angle",
+      "forms": { "en": ["angular"] }
+    },
+    {
+      "id": "perpendicular",
+      "zh": "垂直",
+      "en": "Perpendicular",
+      "forms": { "en": ["perpendicularity"] }
+    },
+    {
+      "id": "triangle",
+      "zh": "三角形",
+      "en": "Triangle",
+      "forms": { "en": ["triangular", "triangulate", "triangulation"] }
+    },
+    {
+      "id": "square",
+      "zh": "正方形",
+      "en": "Square",
+      "forms": { "en": ["squared"] }
+    },
+    {
+      "id": "rectangle",
+      "zh": "长方形",
+      "en": "Rectangle",
+      "forms": { "en": ["rectangular"] }
+    },
+    {
+      "id": "parallelogram",
+      "zh": "平行四边形",
+      "en": "Parallelogram"
+    },
+    {
+      "id": "rhombus",
+      "zh": "菱形",
+      "en": "Rhombus",
+      "forms": { "en": ["rhombi", "rhombic"] }
+    },
+    {
+      "id": "trapezoid",
+      "zh": "梯形",
+      "en": "Trapezoid",
+      "forms": { "en": ["trapezoidal"] }
+    },
+    {
+      "id": "hexagon",
+      "zh": "六边形",
+      "en": "Hexagon",
+      "forms": { "en": ["hexagonal"] }
+    },
+    {
+      "id": "pentagram",
+      "zh": "五角星",
+      "en": "Pentagram"
+    },
+    {
+      "id": "polygon",
+      "zh": "多边形",
+      "en": "Polygon",
+      "forms": { "en": ["polygonal"] }
+    },
+    {
+      "id": "circle",
+      "zh": "圆",
+      "en": "Circle",
+      "forms": { "en": ["circular", "semicircle"] }
+    },
+    {
+      "id": "radius",
+      "zh": "半径",
+      "en": "Radius",
+      "forms": { "en": ["radii"] }
+    },
+    {
+      "id": "diameter",
+      "zh": "直径",
+      "en": "Diameter"
+    },
+    {
+      "id": "perimeter",
+      "zh": "周长",
+      "en": "Perimeter"
+    },
+    {
+      "id": "area",
+      "zh": "面积",
+      "en": "Area"
+    },
+    {
+      "id": "arc",
+      "zh": "弧",
+      "en": "Arc"
+    },
+    {
+      "id": "diagonal",
+      "zh": "对角线",
+      "en": "Diagonal",
+      "forms": { "en": ["diagonalize", "diagonalise"] }
+    },
+    {
+      "id": "ellipse",
+      "zh": "椭圆",
+      "en": "Ellipse",
+      "forms": { "en": ["elliptic", "elliptical"] }
+    },
+    {
+      "id": "parabola",
+      "zh": "抛物线",
+      "en": "Parabola",
+      "forms": { "en": ["parabolic"] }
+    },
+    {
+      "id": "hyperbola",
+      "zh": "双曲线",
+      "en": "Hyperbola",
+      "forms": { "en": ["hyperbolic"] }
+    },
+    {
+      "id": "curve",
+      "zh": "曲线",
+      "en": "Curve",
+      "forms": { "en": ["curved"] }
+    },
+    {
+      "id": "sphere",
+      "zh": "球面",
+      "en": "Sphere",
+      "forms": { "en": ["spherical", "hemisphere"] }
+    },
+    {
+      "id": "cube",
+      "zh": "立方体",
+      "en": "Cube",
+      "forms": { "en": ["cubic"] }
+    },
+    {
+      "id": "cone",
+      "zh": "圆锥",
+      "en": "Cone",
+      "forms": { "en": ["conic", "conical"] }
+    },
+    {
+      "id": "cylinder",
+      "zh": "圆柱",
+      "en": "Cylinder",
+      "forms": { "en": ["cylindrical"] }
+    },
+    {
+      "id": "polyhedron",
+      "zh": "多面体",
+      "en": "Polyhedron",
+      "forms": { "en": ["polyhedra", "polyhedral"] }
+    },
+    {
+      "id": "platonic-solid",
+      "zh": "正多面体",
+      "en": "Platonic solid"
+    },
+    {
+      "id": "hypercube",
+      "zh": "超立方体",
+      "en": "Hypercube"
+    },
+    {
+      "id": "coordinate",
+      "zh": "坐标",
+      "en": "Coordinate"
+    },
+    {
+      "id": "origin",
+      "zh": "原点",
+      "en": "Origin"
+    },
+    {
+      "id": "axis",
+      "zh": "坐标轴",
+      "en": "Axis",
+      "forms": { "en": ["axes", "axial"] }
+    },
+    {
+      "id": "rotation",
+      "zh": "旋转",
+      "en": "Rotation",
+      "forms": { "en": ["rotate", "rotational"] }
+    },
+    {
+      "id": "distance",
+      "zh": "距离",
+      "en": "Distance"
+    },
+    {
+      "id": "pythagorean-theorem",
+      "zh": "勾股定理",
+      "en": "Pythagorean theorem"
+    },
+    {
+      "id": "trigonometry",
+      "zh": "三角学",
+      "en": "Trigonometry",
+      "forms": { "en": ["trigonometric", "trig"] }
+    },
+    {
+      "id": "sine",
+      "zh": "正弦",
+      "en": "Sine",
+      "forms": { "en": ["sin", "sinusoid", "sinusoidal"] }
+    },
+    {
+      "id": "cosine",
+      "zh": "余弦",
+      "en": "Cosine",
+      "forms": { "en": ["cos"] }
+    },
+    {
+      "id": "radian",
+      "zh": "弧度",
+      "en": "Radian"
+    },
+    {
+      "id": "tessellation",
+      "zh": "密铺",
+      "en": "Tessellation",
+      "forms": { "en": ["tessellate"] }
+    },
+    {
+      "id": "manifold",
+      "zh": "流形",
+      "en": "Manifold"
+    },
+    {
+      "id": "torus",
+      "zh": "环面",
+      "en": "Torus",
+      "forms": { "en": ["tori", "toroidal"] }
+    },
+    {
+      "id": "mobius-strip",
+      "zh": "莫比乌斯带",
+      "en": "Möbius strip"
+    },
+    {
+      "id": "klein-bottle",
+      "zh": "克莱因瓶",
+      "en": "Klein bottle"
+    },
+    {
+      "id": "knot",
+      "zh": "纽结",
+      "en": "Knot",
+      "forms": { "en": ["knotted"] }
+    },
+    {
+      "id": "homeomorphism",
+      "zh": "同胚",
+      "en": "Homeomorphism",
+      "forms": { "en": ["homeomorphic"] }
+    },
+    {
+      "id": "neighborhood",
+      "zh": "邻域",
+      "en": "Neighborhood",
+      "forms": { "en": ["neighbourhood"] }
+    },
+    {
+      "id": "boundary",
+      "zh": "边界",
+      "en": "Boundary"
+    },
+    {
+      "id": "mandelbrot-set",
+      "zh": "曼德博集合",
+      "en": "Mandelbrot set"
+    },
+    {
+      "id": "koch-snowflake",
+      "zh": "科赫雪花",
+      "en": "Koch snowflake"
+    },
+    {
+      "id": "cantor-set",
+      "zh": "康托尔集",
+      "en": "Cantor set"
+    },
+    {
+      "id": "combination",
+      "zh": "组合",
+      "en": "Combination",
+      "forms": { "en": ["combine", "combinatorial", "combinatorics"] }
+    },
+    {
+      "id": "pigeonhole-principle",
+      "zh": "抽屉原理",
+      "en": "Pigeonhole principle"
+    },
+    {
+      "id": "graph",
+      "zh": "图",
+      "en": "Graph",
+      "forms": { "en": ["subgraph"] }
+    },
+    {
+      "id": "vertex",
+      "zh": "顶点",
+      "en": "Vertex",
+      "forms": { "en": ["vertices"] }
+    },
+    {
+      "id": "edge",
+      "zh": "边",
+      "en": "Edge"
+    },
+    {
+      "id": "path",
+      "zh": "路径",
+      "en": "Path"
+    },
+    {
+      "id": "recurrence",
+      "zh": "递推",
+      "en": "Recurrence",
+      "forms": { "en": ["recur", "recurrent"] }
+    },
+    {
+      "id": "empty-set",
+      "zh": "空集",
+      "en": "Empty set"
+    },
+    {
+      "id": "union",
+      "zh": "并集",
+      "en": "Union"
+    },
+    {
+      "id": "intersection",
+      "zh": "交集",
+      "en": "Intersection",
+      "forms": { "en": ["intersect"] }
+    },
+    {
+      "id": "venn-diagram",
+      "zh": "韦恩图",
+      "en": "Venn diagram"
+    },
+    {
+      "id": "cardinality",
+      "zh": "基数",
+      "en": "Cardinality",
+      "forms": { "en": ["cardinal"] }
+    },
+    {
+      "id": "logic",
+      "zh": "逻辑",
+      "en": "Logic",
+      "forms": { "en": ["logical", "logician"] }
+    },
+    {
+      "id": "proposition",
+      "zh": "命题",
+      "en": "Proposition",
+      "forms": { "en": ["propositional"] }
+    },
+    {
+      "id": "implication",
+      "zh": "蕴含",
+      "en": "Implication",
+      "forms": { "en": ["imply"] }
+    },
+    {
+      "id": "negation",
+      "zh": "否定",
+      "en": "Negation",
+      "forms": { "en": ["negate"] }
+    },
+    {
+      "id": "contrapositive",
+      "zh": "逆否命题",
+      "en": "Contrapositive"
+    },
+    {
+      "id": "incompleteness",
+      "zh": "不完备性",
+      "en": "Incompleteness",
+      "forms": { "en": ["incomplete"] }
+    },
+    {
+      "id": "conjecture",
+      "zh": "猜想",
+      "en": "Conjecture",
+      "forms": { "en": ["conjectural"] }
+    },
+    {
+      "id": "corollary",
+      "zh": "推论",
+      "en": "Corollary"
+    },
+    {
+      "id": "definition",
+      "zh": "定义",
+      "en": "Definition",
+      "forms": { "en": ["define", "defined"] }
+    },
+    {
+      "id": "counterexample",
+      "zh": "反例",
+      "en": "Counterexample"
+    },
+    {
+      "id": "qed",
+      "zh": "证毕",
+      "en": "QED",
+      "forms": { "en": ["quod erat demonstrandum"] }
+    },
+    {
+      "id": "trivial",
+      "zh": "平凡",
+      "en": "Trivial",
+      "forms": { "en": ["trivially", "triviality", "nontrivial"] }
+    },
+    {
+      "id": "elegance",
+      "zh": "优雅",
+      "en": "Elegance",
+      "forms": { "en": ["elegant", "elegantly"] }
+    },
+    {
+      "id": "uniqueness",
+      "zh": "唯一性",
+      "en": "Uniqueness",
+      "forms": { "en": ["unique", "uniquely"] }
+    },
+    {
+      "id": "construction",
+      "zh": "构造",
+      "en": "Construction",
+      "forms": { "en": ["construct", "constructive"] }
+    },
+    {
+      "id": "abacus",
+      "zh": "算盘",
+      "en": "Abacus",
+      "forms": { "en": ["abaci"] }
+    },
+    {
+      "id": "ruler",
+      "zh": "直尺",
+      "en": "Ruler"
+    },
+    {
+      "id": "protractor",
+      "zh": "量角器",
+      "en": "Protractor"
+    },
+    {
+      "id": "calculator",
+      "zh": "计算器",
+      "en": "Calculator",
+      "forms": { "en": ["calculate", "calculation"] }
+    },
+    {
+      "id": "slide-rule",
+      "zh": "计算尺",
+      "en": "Slide rule"
+    },
+    {
+      "id": "math-olympiad",
+      "zh": "奥数",
+      "en": "Math olympiad"
+    },
+    {
+      "id": "fields-medal",
+      "zh": "菲尔兹奖",
+      "en": "Fields Medal"
+    },
+    {
+      "id": "magic-square",
+      "zh": "幻方",
+      "en": "Magic square"
+    },
+    {
+      "id": "sudoku",
+      "zh": "数独",
+      "en": "Sudoku"
+    },
+    {
+      "id": "tangram",
+      "zh": "七巧板",
+      "en": "Tangram"
+    },
+    {
+      "id": "pascals-triangle",
+      "zh": "杨辉三角",
+      "en": "Pascal's triangle"
+    },
+    {
+      "id": "randomness",
+      "zh": "随机性",
+      "en": "Randomness",
+      "forms": { "en": ["random", "randomize", "randomise", "randomized"] }
+    },
+    {
+      "id": "independence",
+      "zh": "独立性",
+      "en": "Independence",
+      "forms": { "en": ["independent", "independently"] }
+    },
+    {
+      "id": "expectation",
+      "zh": "期望",
+      "en": "Expectation",
+      "forms": { "en": ["expect", "expected"] }
+    },
+    {
+      "id": "event",
+      "zh": "事件",
+      "en": "Event"
+    },
+    {
+      "id": "bayes-theorem",
+      "zh": "贝叶斯定理",
+      "en": "Bayes' theorem",
+      "forms": { "en": ["Bayesian"] }
+    },
+    {
+      "id": "prior",
+      "zh": "先验",
+      "en": "Prior"
+    },
+    {
+      "id": "posterior",
+      "zh": "后验",
+      "en": "Posterior"
+    },
+    {
+      "id": "likelihood",
+      "zh": "似然",
+      "en": "Likelihood"
+    },
+    {
+      "id": "markov-chain",
+      "zh": "马尔可夫链",
+      "en": "Markov chain"
+    },
+    {
+      "id": "monte-carlo",
+      "zh": "蒙特卡洛",
+      "en": "Monte Carlo"
+    },
+    {
+      "id": "random-walk",
+      "zh": "随机游走",
+      "en": "Random walk"
+    },
+    {
+      "id": "binomial",
+      "zh": "二项式",
+      "en": "Binomial"
+    },
+    {
+      "id": "normal-distribution",
+      "zh": "正态分布",
+      "en": "Normal distribution"
+    },
+    {
+      "id": "dice",
+      "zh": "骰子",
+      "en": "Dice",
+      "forms": { "en": ["die"] }
+    },
+    {
+      "id": "coin-toss",
+      "zh": "抛硬币",
+      "en": "Coin toss"
+    },
+    {
+      "id": "statistics",
+      "zh": "统计学",
+      "en": "Statistics",
+      "forms": { "en": ["statistical", "statistician"] }
+    },
+    {
+      "id": "mode",
+      "zh": "众数",
+      "en": "Mode",
+      "forms": { "en": ["modal"] }
+    },
+    {
+      "id": "standard-deviation",
+      "zh": "标准差",
+      "en": "Standard deviation"
+    },
+    {
+      "id": "covariance",
+      "zh": "协方差",
+      "en": "Covariance"
+    },
+    {
+      "id": "percentile",
+      "zh": "百分位数",
+      "en": "Percentile"
+    },
+    {
+      "id": "skewness",
+      "zh": "偏度",
+      "en": "Skewness",
+      "forms": { "en": ["skew", "skewed"] }
+    },
+    {
+      "id": "kurtosis",
+      "zh": "峰度",
+      "en": "Kurtosis"
+    },
+    {
+      "id": "histogram",
+      "zh": "直方图",
+      "en": "Histogram"
+    },
+    {
+      "id": "scatter-plot",
+      "zh": "散点图",
+      "en": "Scatter plot"
+    },
+    {
+      "id": "box-plot",
+      "zh": "箱线图",
+      "en": "Box plot"
+    },
+    {
+      "id": "pie-chart",
+      "zh": "饼图",
+      "en": "Pie chart"
+    },
+    {
+      "id": "bar-chart",
+      "zh": "柱状图",
+      "en": "Bar chart"
+    },
+    {
+      "id": "t-test",
+      "zh": "t检验",
+      "en": "t-test"
+    },
+    {
+      "id": "chi-square",
+      "zh": "卡方",
+      "en": "Chi-square",
+      "forms": { "en": ["chi-squared"] }
+    },
+    {
+      "id": "anova",
+      "zh": "方差分析",
+      "en": "ANOVA",
+      "forms": { "en": ["analysis of variance"] }
+    },
+    {
+      "id": "confidence-interval",
+      "zh": "置信区间",
+      "en": "Confidence interval"
+    },
+    {
+      "id": "effect-size",
+      "zh": "效应量",
+      "en": "Effect size"
+    },
+    {
+      "id": "estimation",
+      "zh": "估计",
+      "en": "Estimation",
+      "forms": { "en": ["estimate", "estimator"] }
+    },
+    {
+      "id": "error",
+      "zh": "误差",
+      "en": "Error"
+    },
+    {
+      "id": "residual",
+      "zh": "残差",
+      "en": "Residual"
+    },
+    {
+      "id": "fitting",
+      "zh": "拟合",
+      "en": "Fitting",
+      "forms": { "en": ["fit", "fitted"] }
+    },
+    {
+      "id": "confounder",
+      "zh": "混杂因素",
+      "en": "Confounder",
+      "forms": { "en": ["confounding", "confound"] }
+    },
+    {
+      "id": "frequentist",
+      "zh": "频率学派",
+      "en": "Frequentist"
+    },
+    {
+      "id": "ab-test",
+      "zh": "A/B测试",
+      "en": "A/B test"
+    },
+    {
+      "id": "census",
+      "zh": "普查",
+      "en": "Census"
+    },
+    {
+      "id": "time-series",
+      "zh": "时间序列",
+      "en": "Time series"
+    },
+    {
+      "id": "moving-average",
+      "zh": "移动平均",
+      "en": "Moving average"
+    },
+    {
+      "id": "seasonality",
+      "zh": "季节性",
+      "en": "Seasonality",
+      "forms": { "en": ["seasonal"] }
+    },
+    {
+      "id": "trend",
+      "zh": "趋势",
+      "en": "Trend",
+      "forms": { "en": ["trending", "trendy"] }
+    },
+    {
+      "id": "benfords-law",
+      "zh": "本福特定律",
+      "en": "Benford's law"
+    },
+    {
+      "id": "zipfs-law",
+      "zh": "齐普夫定律",
+      "en": "Zipf's law"
+    },
+    {
+      "id": "denominator",
+      "zh": "分母",
+      "en": "Denominator"
+    },
+    {
+      "id": "quotient",
+      "zh": "商",
+      "en": "Quotient"
+    },
+    {
+      "id": "summation",
+      "zh": "求和",
+      "en": "Summation",
+      "forms": { "en": ["sum"] }
+    },
+    {
+      "id": "reciprocal",
+      "zh": "倒数",
+      "en": "Reciprocal"
+    },
+    {
+      "id": "bisection",
+      "zh": "二分法",
+      "en": "Bisection",
+      "forms": { "en": ["bisect"] }
+    },
+    {
+      "id": "discretization",
+      "zh": "离散化",
+      "en": "Discretization",
+      "forms": { "en": ["discretize", "discretise", "discrete"] }
+    },
+    {
+      "id": "martingale",
+      "zh": "鞅",
+      "en": "Martingale"
+    },
+    {
+      "id": "ergodicity",
+      "zh": "遍历性",
+      "en": "Ergodicity",
+      "forms": { "en": ["ergodic"] }
+    },
+    {
+      "id": "missing-value",
+      "zh": "缺失值",
+      "en": "Missing value"
+    },
+    {
+      "id": "heatmap",
+      "zh": "热力图",
+      "en": "Heatmap"
+    },
+    {
+      "id": "line-chart",
+      "zh": "折线图",
+      "en": "Line chart"
+    },
+    {
+      "id": "uncertainty",
+      "zh": "不确定性",
+      "en": "Uncertainty",
+      "forms": { "en": ["uncertain"] }
+    },
+    {
+      "id": "consistency",
+      "zh": "一致性",
+      "en": "Consistency",
+      "forms": { "en": ["consistent"] }
+    },
+    {
+      "id": "stability",
+      "zh": "稳定性",
+      "en": "Stability",
+      "forms": { "en": ["stable", "unstable", "instability"] }
+    },
+    {
+      "id": "three-d",
+      "zh": "三维",
+      "en": "3D",
+      "forms": { "en": ["three-dimensional"] }
+    },
+    {
+      "id": "self-reference",
+      "zh": "自指",
+      "en": "Self-reference"
+    },
+    {
+      "id": "barber-paradox",
+      "zh": "理发师悖论",
+      "en": "Barber paradox"
+    },
+    {
+      "id": "postulate",
+      "zh": "公设",
+      "en": "Postulate"
+    },
+    {
+      "id": "quadrant",
+      "zh": "象限",
+      "en": "Quadrant"
+    },
+    {
+      "id": "number-line",
+      "zh": "数轴",
+      "en": "Number line"
+    },
+    {
+      "id": "quaternion",
+      "zh": "四元数",
+      "en": "Quaternion"
+    },
+    {
+      "id": "wavelet",
+      "zh": "小波",
+      "en": "Wavelet"
+    },
+    {
+      "id": "homotopy",
+      "zh": "同伦",
+      "en": "Homotopy",
+      "forms": { "en": ["homotopic"] }
+    },
+    {
+      "id": "lie-group",
+      "zh": "李群",
+      "en": "Lie group"
+    },
+    {
+      "id": "midpoint",
+      "zh": "中点",
+      "en": "Midpoint"
+    },
+    {
+      "id": "pentagon",
+      "zh": "五边形",
+      "en": "Pentagon",
+      "forms": { "en": ["pentagonal"] }
+    },
+    {
+      "id": "sieve",
+      "zh": "筛法",
+      "en": "Sieve",
+      "forms": { "en": ["sieving"] }
+    },
+    {
+      "id": "catalan-number",
+      "zh": "卡特兰数",
+      "en": "Catalan number"
+    },
+    {
+      "id": "coloring",
+      "zh": "着色",
+      "en": "Coloring",
+      "forms": { "en": ["colouring"] }
+    },
+    {
+      "id": "type-i-error",
+      "zh": "第一类错误",
+      "en": "Type I error"
+    },
+    {
+      "id": "r-squared",
+      "zh": "R方",
+      "en": "R-squared"
+    },
+    {
+      "id": "collinearity",
+      "zh": "共线性",
+      "en": "Collinearity",
+      "forms": { "en": ["collinear", "multicollinearity"] }
+    },
+    {
+      "id": "iid",
+      "zh": "独立同分布",
+      "en": "i.i.d.",
+      "forms": { "en": ["independent and identically distributed"] }
+    },
+    {
+      "id": "shuffle",
+      "zh": "洗牌",
+      "en": "Shuffle",
+      "forms": { "en": ["shuffled", "shuffling"] }
+    },
+    {
+      "id": "intercept",
+      "zh": "截距",
+      "en": "Intercept"
+    },
+    {
+      "id": "simplex",
+      "zh": "单纯形",
+      "en": "Simplex",
+      "forms": { "en": ["simplices", "simplicial"] }
+    },
+    {
+      "id": "ideal",
+      "zh": "理想",
+      "en": "Ideal"
+    },
+    {
+      "id": "functor",
+      "zh": "函子",
+      "en": "Functor",
+      "forms": { "en": ["functorial"] }
+    },
+    {
+      "id": "geodesic",
+      "zh": "测地线",
+      "en": "Geodesic"
+    },
+    {
+      "id": "eulerian-path",
+      "zh": "一笔画",
+      "en": "Eulerian path"
+    },
+    {
+      "id": "word-problem",
+      "zh": "应用题",
+      "en": "Word problem"
+    }
+  ]
+}
