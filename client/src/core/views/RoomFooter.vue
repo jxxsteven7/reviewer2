@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MAX_NAME_INPUT, type Ack, type PlayerView, type RoomView } from '@reviewer2/shared';
+import { MAX_NAME_INPUT, nextChair, type Ack, type PlayerView, type RoomView } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -25,11 +25,11 @@ const { name, clean, problem, refuse } = useNameField();
 const { busy, run } = useBusy();
 
 const isChair = computed(() => props.room.chairId === props.me.id);
-// Whoever would chair the room after the chair has left: the first to have joined among those
-// online, or else among everyone, as the server picks. Nobody, when the chair is the last one.
+// Whoever would chair the room after the chair has left, by the server's own rule. Nobody, when
+// the chair is the last one.
 const successor = computed(() => {
-  const others = props.room.players.filter((player) => player.id !== props.me.id);
-  return others.find((player) => player.online) ?? others[0] ?? null;
+  const id = nextChair(props.room.players.filter((player) => player.id !== props.me.id));
+  return props.room.players.find((player) => player.id === id) ?? null;
 });
 const leaveText = computed(() => {
   if (!isChair.value) return t('room.leaveConfirm');

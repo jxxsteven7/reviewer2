@@ -11,6 +11,14 @@ export interface PlayerView {
   online: boolean;
 }
 
+// Who chairs the room when the chair has gone: the first to have joined among those online, or
+// else among everyone, in the order of `players`, which is the order they joined in. Nobody when
+// there is no one. The server hands the chair over with this, and the chair's leave sheet names
+// whom it will be, so the two can't drift apart.
+export function nextChair(players: readonly Pick<PlayerView, 'id' | 'online'>[]): string | null {
+  return (players.find((player) => player.online) ?? players[0])?.id ?? null;
+}
+
 export interface RoomView<Game = unknown> {
   // A new random ID for every room, so that a code that is used again later never mixes two rooms up.
   roomId: string;

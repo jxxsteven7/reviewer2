@@ -3,6 +3,7 @@ import {
   EMOTE_COOLDOWN_MS,
   MAX_PLAYERS,
   MAX_SCREENS,
+  nextChair,
   sameName,
   type Ack,
   type Language,
@@ -537,9 +538,9 @@ export class Room {
     return false;
   }
 
-  // The member who joined first among those online, or else among everyone.
+  // The member who joined first among those online, or else among everyone: the rule is shared with
+  // the client, whose leave sheet names them.
   #nextChair(): string | null {
-    const members = [...this.members.values()];
-    return (members.find((member) => member.sockets.size > 0) ?? members[0])?.id ?? null;
+    return nextChair([...this.members.values()].map((member) => ({ id: member.id, online: member.sockets.size > 0 })));
   }
 }
