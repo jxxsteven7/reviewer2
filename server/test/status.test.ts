@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
 import { History } from '../src/stats';
 import { createStatusHandler } from '../src/status';
-import { createRoom, joinRoom, startServer, TestClient, until, type TestServer } from './helpers';
+import { createRoom, joinRoom, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
 
 // The numbers that the `stats` line and the status page show, counted on a real server, and the
 // status page's own HTTP server.
@@ -89,11 +89,11 @@ describe('the numbers', () => {
     server = await startServer({ trustProxy: true });
     for (const country of ['SG', 'SG', 'SG', 'CN']) await connect(country);
     const sockets = [...server.app.io.sockets.sockets.values()];
-    // Engine.IO pings every 10 seconds, so the heartbeats are played here by hand: a ping goes
-    // out, the clock moves on, and the pong comes back.
+    // Engine.IO pings every 10 seconds, so the heartbeats are played here by hand: a ping is
+    // flushed to the wire, the clock moves on, and the pong comes back.
     const beat = (index: number, ms: number) => {
       const conn = sockets[index]?.conn;
-      conn?.emit('packetCreate', { type: 'ping' });
+      conn?.emit('flush', [{ type: 'ping' }]);
       server.advance(ms);
       conn?.emit('packet', { type: 'pong' });
     };
@@ -110,6 +110,36 @@ describe('the numbers', () => {
     // The last heartbeat is the one that counts.
     beat(0, 20);
     expect(server.app.stats().countries[0]).toEqual({ country: 'SG', connections: 3, latency: 160 });
+    // A ping that is made but waits in the buffer, as it does between two polls, hasn't gone out
+    // yet: the clock starts when it is flushed.
+    sockets[3]?.conn.emit('packetCreate', { type: 'ping' });
+    server.advance(500);
+    beat(3, 40);
+    expect(server.app.stats().countries[1]).toEqual({ country: 'CN', connections: 1, latency: 40 });
+  });
+
+  test('time the heartbeat once per connection, however often a client leaves and comes back on it', async () => {
+    server = await startServer();
+    const raw = await rawPolling(server.url);
+    const socket = () => [...server.app.io.sockets.sockets.values()][0];
+    const conn = socket()?.conn;
+    expect(conn).toBeDefined();
+    const listeners = () => ({ flush: conn?.listenerCount('flush'), packet: conn?.listenerCount('packet') });
+    const before = listeners();
+    // "41" leaves Socket.IO and "40" comes back, on the same Engine.IO connection. Listeners added
+    // for each socket, and never removed, would pile up on the connection, round after round.
+    for (let round = 0; round < 15; round += 1) {
+      await raw.post('41');
+      await raw.post('40');
+      await raw.get();
+    }
+    await until(() => socket()?.conn === conn && socket()?.connected === true, 'the last socket to connect');
+    expect(listeners()).toEqual(before);
+    // The connection is still timed.
+    conn?.emit('flush', [{ type: 'ping' }]);
+    server.advance(30);
+    conn?.emit('packet', { type: 'pong' });
+    expect(server.app.stats().countries).toEqual([{ country: 'XX', connections: 1, latency: 30 }]);
   });
 });
 
@@ -133,24 +163,30 @@ function get(
 }
 
 describe('the status server', () => {
-  let status: Server;
+  let status: Server | undefined;
   let base: string;
 
-  async function startStatus(history = new History()) {
-    status = createServer(createStatusHandler(server.app.stats, history));
-    await new Promise<void>((resolve) => status.listen(0, '127.0.0.1', resolve));
-    base = `http://127.0.0.1:${(status.address() as AddressInfo).port}`;
+  async function startStatus({ history = new History(), stats = () => server.app.stats() } = {}) {
+    const log = (event: string, fields?: Record<string, unknown>) =>
+      server.logs.push({ event, ...(fields ? { fields } : {}) });
+    const started = createServer(createStatusHandler(stats, history, log));
+    status = started;
+    await new Promise<void>((resolve) => started.listen(0, '127.0.0.1', resolve));
+    base = `http://127.0.0.1:${(started.address() as AddressInfo).port}`;
   }
 
   afterEach(async () => {
-    await new Promise((resolve) => status.close(resolve));
+    // A test that failed before it started the server has none to close.
+    const started = status;
+    status = undefined;
+    if (started) await new Promise((resolve) => started.close(resolve));
   });
 
   test('serves the page without a script and the numbers as JSON', async () => {
     server = await startServer();
     const history = new History();
     history.add(server.app.stats());
-    await startStatus(history);
+    await startStatus({ history });
 
     const page = await get(base, '/');
     expect(page.status).toBe(200);
@@ -230,6 +266,28 @@ describe('the status server', () => {
     for (const path of ['/status', '/status.json/', '/index.html', '/healthz', '//']) {
       expect((await get(base, path)).status, path).toBe(404);
     }
+  });
+
+  test('answers 500 and logs it when counting throws, and the game goes on', async () => {
+    server = await startServer();
+    const message = 'EMFILE: too many open files, uv_resident_set_memory';
+    await startStatus({
+      stats: () => {
+        throw new Error(message);
+      },
+    });
+    for (const path of ['/', '/status.json']) {
+      const response = await get(base, path);
+      expect(response.status, path).toBe(500);
+      expect(response.body).toBe('Internal server error\n');
+    }
+    expect(server.logs.filter(({ event }) => event === 'error')).toEqual([
+      { event: 'error', fields: { where: 'status', message } },
+      { event: 'error', fields: { where: 'status', message } },
+    ]);
+    const client = await TestClient.connect(server.url);
+    clients.push(client);
+    expect(await client.send('sys:ping')).toEqual({ ok: true });
   });
 
   test("isn't part of the game's own port", async () => {

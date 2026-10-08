@@ -1,4 +1,5 @@
-import type { RequestListener, ServerResponse } from 'node:http';
+import type { RequestListener } from 'node:http';
+import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
 import { renderStatusPage } from './statusPage';
 
@@ -17,31 +18,31 @@ const LOCAL = /^(localhost|127\.0\.0\.1)(:\d{1,5})?$/i;
 const CSP =
   "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
-function send(res: ServerResponse, status: number, type: string, body: string): void {
-  res.statusCode = status;
-  res.setHeader('Content-Type', type);
-  res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.end(body);
-}
+type Log = (event: string, fields?: Record<string, unknown>) => void;
 
-const notFound = (res: ServerResponse) => send(res, 404, 'text/plain; charset=utf-8', 'Not found\n');
-
-export function createStatusHandler(stats: () => Stats, history: History): RequestListener {
+export function createStatusHandler(stats: () => Stats, history: History, log: Log): RequestListener {
   return (req, res) => {
-    const path = (req.url ?? '/').split('?', 1)[0];
-    if (!LOCAL.test(req.headers.host ?? '')) {
-      notFound(res);
-    } else if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.setHeader('Allow', 'GET, HEAD');
-      send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed\n');
-    } else if (path === '/') {
-      res.setHeader('Content-Security-Policy', CSP);
-      send(res, 200, 'text/html; charset=utf-8', renderStatusPage(stats(), history.samples()));
-    } else if (path === '/status.json') {
-      send(res, 200, 'application/json', JSON.stringify(stats()));
-    } else {
-      notFound(res);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    try {
+      if (!LOCAL.test(req.headers.host ?? '')) {
+        notFound(res);
+      } else if (methodAllowed(req, res)) {
+        const path = pathOf(req.url ?? '/');
+        if (path === '/') {
+          res.setHeader('Content-Security-Policy', CSP);
+          send(res, 200, 'text/html; charset=utf-8', renderStatusPage(stats(), history.samples(), history.now()));
+        } else if (path === '/status.json') {
+          send(res, 200, 'application/json', JSON.stringify(stats()));
+        } else {
+          notFound(res);
+        }
+      }
+    } catch (error) {
+      // Counting throws when the system does (stats.ts). The page is the operator's alone, and an
+      // error in it must not end the game for everyone, which an error thrown from here would.
+      log('error', { where: 'status', message: error instanceof Error ? error.message : String(error) });
+      if (res.headersSent) res.destroy();
+      else send(res, 500, 'text/plain; charset=utf-8', 'Internal server error\n');
     }
   };
 }

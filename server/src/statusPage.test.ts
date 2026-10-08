@@ -40,13 +40,13 @@ describe('the status page', () => {
     expect(page).toContain('Singapore 9 38 ms');
     expect(page).toContain('China 6 212 ms');
     expect(page).toContain('Unknown 3 &ndash;');
-    expect(page).toContain('In use 128 MB 25% of 512 MB');
+    expect(page).toContain('Process 128 MB 25% of the 512 MB limit');
     expect(page).toContain('JavaScript heap 21 MB');
   });
 
   test('leaves out the share of memory when the system sets no limit', () => {
     const page = text(renderStatusPage(stats({ memory: { rss: 128 * MB, heapUsed: 21 * MB, limit: null } }), [], NOW));
-    expect(page).toContain('In use 128 MB JavaScript heap');
+    expect(page).toContain('Process 128 MB JavaScript heap');
     expect(page).not.toContain('% of');
   });
 
@@ -96,6 +96,14 @@ describe('the chart', () => {
     expect(labels).toContain(' 8 0 ');
     expect(labels).toContain('2h 0m ago now');
     expect(labels).toContain('Players online Rooms');
+  });
+
+  test('runs to now, and holds the last value until then', () => {
+    // The last sample is up to 30 seconds old, and the clock may have been read later still.
+    const page = renderStatusPage(stats(), [sample(120, 4, 1), sample(30, 8, 2)], NOW);
+    expect(page).toContain('class="players" vector-effect="non-scaling-stroke" points="0,80 450,0 600,0"');
+    expect(page).toContain('class="rooms" vector-effect="non-scaling-stroke" points="0,140 450,120 600,120"');
+    expect(text(page)).toContain('2h 0m ago now');
   });
 
   test('draws a single sample as a level line', () => {

@@ -1,5 +1,5 @@
 import { UNKNOWN_COUNTRY } from './core/clientIp';
-import type { Sample, Stats } from './stats';
+import { megabytes, type Sample, type Stats } from './stats';
 
 // The status page (status.ts) as one HTML document, built on the server from the numbers. It has
 // no script: it reloads itself every 5 seconds, and its chart is inline SVG. It is for the
@@ -68,7 +68,7 @@ export function duration(seconds: number): string {
   return `${Math.floor(seconds)}s`;
 }
 
-const megabytes = (bytes: number) => `${Math.round(bytes / 2 ** 20)} MB`;
+const mb = (bytes: number) => `${megabytes(bytes)} MB`;
 
 function tile(label: string, value: string | number, note = ''): string {
   return `<div><dt>${label}</dt><dd>${value}${note ? `<small>${note}</small>` : ''}</dd></div>`;
@@ -87,23 +87,24 @@ function countries(stats: Stats): string {
   );
 }
 
-// The chart spans the samples there are, up to the last 24 hours, and its scale starts at 0.
+// The chart runs from the first sample there is, up to 24 hours back, to now, and its scale
+// starts at 0. `now` is read off the clock that the samples were taken on.
 const WIDTH = 600;
 const HEIGHT = 160;
 
 function chart(samples: readonly Sample[], now: number): string {
   const first = samples[0];
-  const last = samples.at(-1);
-  if (!first || !last) return '<p>No samples yet. The first is taken 30 seconds after the server starts.</p>';
-  const span = Math.max(last.at - first.at, 1);
+  if (!first) return '<p>No samples yet. The first is taken 30 seconds after the server starts.</p>';
+  const span = Math.max(now - first.at, 1);
   const top = Math.max(1, ...samples.map(({ players, rooms }) => Math.max(players, rooms)));
+  const x = (sample: Sample) => Math.round(((sample.at - first.at) / span) * WIDTH);
+  const y = (value: number) => Math.round(HEIGHT - (value / top) * HEIGHT);
+  const last = samples.at(-1) as Sample;
   const line = (key: 'players' | 'rooms') => {
-    const points = samples.map(
-      (sample) =>
-        `${Math.round(((sample.at - first.at) / span) * WIDTH)},${Math.round(HEIGHT - (sample[key] / top) * HEIGHT)}`,
-    );
-    // A single sample is a level line across the chart rather than a point nobody can see.
-    if (samples.length === 1) points.push(`${WIDTH},${points[0]?.split(',')[1]}`);
+    const points = samples.map((sample) => `${x(sample)},${y(sample[key])}`);
+    // The last value holds until now, so a single sample is a level line across the chart rather
+    // than a point nobody can see.
+    if (x(last) < WIDTH) points.push(`${WIDTH},${y(last[key])}`);
     return `<polyline class="${key}" vector-effect="non-scaling-stroke" points="${points.join(' ')}"/>`;
   };
   return (
@@ -116,10 +117,13 @@ function chart(samples: readonly Sample[], now: number): string {
   );
 }
 
-export function renderStatusPage(stats: Stats, samples: readonly Sample[], now = Date.now()): string {
+// `now` is the time on the clock that the samples were taken on (History in stats.ts).
+export function renderStatusPage(stats: Stats, samples: readonly Sample[], now: number): string {
   const { memory } = stats;
+  // The limit is the service's as a whole, with its file cache (stats.ts); this is the process's
+  // share of it.
   const share =
-    memory.limit === null ? '' : `${Math.round((memory.rss / memory.limit) * 100)}% of ${megabytes(memory.limit)}`;
+    memory.limit === null ? '' : `${Math.round((memory.rss / memory.limit) * 100)}% of the ${mb(memory.limit)} limit`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -141,7 +145,7 @@ export function renderStatusPage(stats: Stats, samples: readonly Sample[], now =
 <dl>${tile('WebSocket', stats.connections.websocket)}${tile('Long-polling', stats.connections.polling)}</dl>
 ${countries(stats)}
 <h2>Memory</h2>
-<dl>${tile('In use', megabytes(memory.rss), share)}${tile('JavaScript heap', megabytes(memory.heapUsed))}</dl>
+<dl>${tile('Process', mb(memory.rss), share)}${tile('JavaScript heap', mb(memory.heapUsed))}</dl>
 <h2>Last 24 hours</h2>
 ${chart(samples, now)}
 </main>

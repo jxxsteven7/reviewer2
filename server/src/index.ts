@@ -28,15 +28,21 @@ server.http.listen(config.port, config.host, () => {
 // Closes idle rooms, drops long-gone players from waiting rooms and passes on absent chairs.
 setInterval(() => server.sockets.sweep(), 60_000).unref();
 
-// The `stats` log line every 5 minutes, and the samples for the status page's chart.
-const history = new History();
+// The `stats` log line every 5 minutes, and the samples for the status page's chart, which are
+// only taken while there is a page to show them on.
+const { statusPort } = config;
+const history = statusPort === null ? null : new History();
 watchStats(server.stats, log, history);
 
-if (config.statusPort !== null) {
-  const port = config.statusPort;
-  createServer(createStatusHandler(server.stats, history)).listen(port, STATUS_HOST, () =>
-    log('status_listening', { host: STATUS_HOST, port }),
+if (statusPort !== null && history !== null) {
+  const status = createServer(createStatusHandler(server.stats, history, log));
+  // The page is the operator's alone. A port that can't be opened, because something else has
+  // it, is logged, and the game goes on without the page: the listen error would otherwise end
+  // the process.
+  status.on('error', (error) =>
+    log('status_unavailable', { host: STATUS_HOST, port: statusPort, message: error.message }),
   );
+  status.listen(statusPort, STATUS_HOST, () => log('status_listening', { host: STATUS_HOST, port: statusPort }));
 }
 
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {

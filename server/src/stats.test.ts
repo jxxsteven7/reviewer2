@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { Rooms } from './core/rooms';
-import { collectStats, History, STATS_LOG_MS, statsLog, watchStats, type Stats } from './stats';
+import {
+  collectStats,
+  History,
+  HISTORY_MS,
+  STATS_LOG_ALWAYS_MS,
+  STATS_LOG_MS,
+  statsLog,
+  watchStats,
+  type Stats,
+} from './stats';
 
 const noRooms = { all: () => [] } as unknown as Rooms;
 
@@ -91,21 +100,49 @@ describe('the stats line', () => {
     write(stats());
     expect(log).toHaveBeenCalledTimes(3);
   });
+
+  test('is written once an hour anyway, so that the memory stays in the log', () => {
+    expect(STATS_LOG_ALWAYS_MS / STATS_LOG_MS).toBe(12);
+    const log = vi.fn();
+    const write = statsLog(log, 3);
+    for (let call = 1; call <= 7; call += 1) {
+      write(stats({ memory: { rss: call * 2 ** 20, heapUsed: 2 ** 20, limit: null } }));
+    }
+    // The first line, and then every third call: the memory of the 1st, the 4th and the 7th.
+    expect(log.mock.calls.map(([, fields]) => (fields as { memoryMb: { rss: number } }).memoryMb.rss)).toEqual([
+      1, 4, 7,
+    ]);
+    // A change starts the hour over.
+    write(stats({ players: { online: 1, offline: 0 } }));
+    write(stats({ players: { online: 1, offline: 0 } }));
+    write(stats({ players: { online: 1, offline: 0 } }));
+    expect(log).toHaveBeenCalledTimes(4);
+    write(stats({ players: { online: 1, offline: 0 } }));
+    expect(log).toHaveBeenCalledTimes(5);
+  });
 });
 
 describe('History', () => {
-  test('keeps the players online and the rooms of each sample, and only the last ones', () => {
-    const history = new History(3);
-    for (let at = 1; at <= 5; at += 1) history.add(stats({ players: { online: at, offline: 0 } }), at);
+  test('keeps the players online and the rooms of each sample, as far back as its span', () => {
+    let at = 0;
+    const history = new History({ span: 2, now: () => at });
+    for (at = 1; at <= 5; at += 1) history.add(stats({ players: { online: at, offline: 0 } }));
     expect(history.samples()).toEqual([
       { at: 3, players: 3, rooms: 3 },
       { at: 4, players: 4, rooms: 3 },
       { at: 5, players: 5, rooms: 3 },
     ]);
+    expect(history.now()).toBe(6);
   });
 
-  test('holds 24 hours of samples taken every 30 seconds', () => {
-    expect(new History().size).toBe(2880);
+  test('goes back 24 hours, on a clock that only runs forward', () => {
+    const history = new History();
+    expect(history.span).toBe(HISTORY_MS);
+    expect(HISTORY_MS).toBe(24 * 60 * 60_000);
+    const before = performance.now();
+    const now = history.now();
+    expect(now).toBeGreaterThanOrEqual(before);
+    expect(now).toBeLessThanOrEqual(performance.now());
   });
 });
 
@@ -150,5 +187,42 @@ describe('watchStats', () => {
     stop();
     expect(log).toHaveBeenCalledTimes(1);
     expect(history.samples()).toHaveLength(10);
+  });
+
+  test('takes no samples without a history to keep them', () => {
+    vi.useFakeTimers();
+    const log = vi.fn();
+    const collect = vi.fn(() => stats());
+    const stop = watchStats(collect, log, null, { logMs: 1_000, sampleMs: 100 });
+    vi.advanceTimersByTime(1_000);
+    stop();
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledTimes(1);
+  });
+
+  test('logs what counting throws and goes on, rather than end the process', () => {
+    vi.useFakeTimers();
+    const log = vi.fn();
+    const history = new History();
+    let broken = true;
+    const collect = () => {
+      if (broken) throw new Error('EMFILE: too many open files, uv_resident_set_memory');
+      return stats();
+    };
+    const stop = watchStats(collect, log, history, { logMs: 100, sampleMs: 50 });
+    vi.advanceTimersByTime(100);
+    const message = 'EMFILE: too many open files, uv_resident_set_memory';
+    expect(log).toHaveBeenCalledWith('error', { where: 'sample', message });
+    expect(log).toHaveBeenCalledWith('error', { where: 'stats', message });
+    expect(history.samples()).toHaveLength(0);
+    broken = false;
+    log.mockClear();
+    vi.advanceTimersByTime(100);
+    stop();
+    expect(log).toHaveBeenCalledExactlyOnceWith(
+      'stats',
+      expect.objectContaining({ players: { online: 7, offline: 1 } }),
+    );
+    expect(history.samples()).toHaveLength(2);
   });
 });

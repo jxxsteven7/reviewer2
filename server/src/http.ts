@@ -37,24 +37,36 @@ function setSecurityHeaders(req: IncomingMessage, res: ServerResponse): void {
   res.setHeader('Referrer-Policy', 'same-origin');
 }
 
-function send(res: ServerResponse, status: number, type: string, body: string): void {
+// The answers that this handler and the status page's (status.ts) have in common.
+
+export function send(res: ServerResponse, status: number, type: string, body: string): void {
   res.statusCode = status;
   res.setHeader('Content-Type', type);
   res.setHeader('Cache-Control', 'no-store');
   res.end(body);
 }
 
-const notFound = (res: ServerResponse) => send(res, 404, 'text/plain; charset=utf-8', 'Not found\n');
+export const notFound = (res: ServerResponse) => send(res, 404, 'text/plain; charset=utf-8', 'Not found\n');
 
-const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
+// Everything the server answers over plain HTTP is read-only. A request by any method but GET and
+// HEAD is answered with 405 here, and false says so. sirv would otherwise answer a stray POST with
+// the file or the page, as if it had done something.
+export function methodAllowed(req: IncomingMessage, res: ServerResponse): boolean {
+  if (req.method === 'GET' || req.method === 'HEAD') return true;
+  res.setHeader('Allow', 'GET, HEAD');
+  send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed\n');
+  return false;
+}
 
 // The path of a request target: everything before the query string, as sirv reads it too. Not
 // new URL(), which takes a target that starts with two slashes for a host name and throws when
 // that isn't one. Nothing would catch that error, so "GET //" alone would end the process.
-function pathOf(target: string): string {
+export function pathOf(target: string): string {
   const query = target.indexOf('?');
   return query === -1 ? target : target.slice(0, query);
 }
+
+const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
 
 export function createRequestHandler({ publicDir, version }: HttpOptions): RequestListener {
   const startedAt = Date.now();
@@ -64,14 +76,10 @@ export function createRequestHandler({ publicDir, version }: HttpOptions): Reque
 
   return (req, res) => {
     setSecurityHeaders(req, res);
+    // Socket.IO's own requests, POSTs included, never reach this handler.
+    if (!methodAllowed(req, res)) return;
     const path = pathOf(req.url ?? '/');
-    // Everything here is read-only. sirv would answer any method with the file or the page, so
-    // a stray POST would look like a success. Socket.IO's own requests, POSTs included, never
-    // reach this handler.
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.setHeader('Allow', 'GET, HEAD');
-      send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed\n');
-    } else if (path === '/healthz') {
+    if (path === '/healthz') {
       const uptime = Math.round((Date.now() - startedAt) / 1000);
       send(res, 200, 'application/json', JSON.stringify({ ok: true, version, uptime }));
     } else if (!files) {

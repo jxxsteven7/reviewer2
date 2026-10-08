@@ -12,7 +12,9 @@ export interface Stats {
   // Seconds since the process started.
   uptime: number;
   // In bytes. `limit` is the memory that the system allows the process, such as systemd's
-  // MemoryMax, or null when it sets none.
+  // MemoryMax, or null when it sets none. The system counts the limit against more than `rss`:
+  // against every process of the service and the file cache it uses. The cache is given up
+  // first, so the process's own share is still what matters.
   memory: { rss: number; heapUsed: number; limit: number | null };
   rooms: Record<RoomPhase, number>;
   // The members of all rooms: online with at least one connection, or offline, with a seat to
@@ -24,9 +26,13 @@ export interface Stats {
   countries: { country: string; connections: number; latency: number | null }[];
 }
 
-// How often the log gets a `stats` line, and how often the status page's chart gets a sample.
+// How often the log gets a `stats` line when something changed, how often it gets one anyway, and
+// how often the status page's chart gets a sample.
 export const STATS_LOG_MS = 5 * 60_000;
+export const STATS_LOG_ALWAYS_MS = 60 * 60_000;
 export const SAMPLE_MS = 30_000;
+// How far back the chart goes.
+export const HISTORY_MS = 24 * 60 * 60_000;
 
 export function collectStats(version: string, rooms: Rooms, connections: readonly ConnectionInfo[]): Stats {
   const stats: Stats = {
@@ -75,16 +81,19 @@ function median(values: number[]): number | null {
     : Math.round(((sorted[middle - 1] as number) + (sorted[middle] as number)) / 2);
 }
 
-const megabytes = (bytes: number) => Math.round(bytes / 2 ** 20);
+export const megabytes = (bytes: number) => Math.round(bytes / 2 ** 20);
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
 // Returns what writes a `stats` line, unless the rooms, players, connections and countries are
-// what they were in the last one, so a quiet server writes nothing. The memory comes along in
+// what they were in the last one, so a quiet server writes little. The memory comes along in
 // megabytes but doesn't count as a change, since it is never quite the same. The latency stays
-// out of the log for that reason.
-export function statsLog(log: Log): (stats: Stats) => void {
+// out of the log for that reason. A line is written anyway once in `always` calls, with the
+// 5-minute timer once an hour, so that the log still shows how the memory goes while nothing
+// else changes.
+export function statsLog(log: Log, always = STATS_LOG_ALWAYS_MS / STATS_LOG_MS): (stats: Stats) => void {
   let last = '';
+  let skipped = 0;
   return (stats) => {
     const counts = {
       rooms: stats.rooms,
@@ -93,8 +102,12 @@ export function statsLog(log: Log): (stats: Stats) => void {
       countries: Object.fromEntries(stats.countries.map(({ country, connections }) => [country, connections])),
     };
     const key = JSON.stringify(counts);
-    if (key === last) return;
+    if (key === last && skipped < always - 1) {
+      skipped += 1;
+      return;
+    }
     last = key;
+    skipped = 0;
     log('stats', {
       ...counts,
       memoryMb: { rss: megabytes(stats.memory.rss), heapUsed: megabytes(stats.memory.heapUsed) },
@@ -103,23 +116,31 @@ export function statsLog(log: Log): (stats: Stats) => void {
 }
 
 export interface Sample {
-  // When the sample was taken, in milliseconds since 1970.
+  // When the sample was taken, on the history's clock.
   at: number;
   players: number;
   rooms: number;
 }
 
 // The players online and the rooms open, every 30 seconds for the last 24 hours, for the status
-// page's chart. It lives in memory, so it starts again with every restart.
+// page's chart. It lives in memory, so it starts again with every restart. Its clock is one that
+// only runs forward, as the server's is (server.ts): the system's clock gets corrected, and the
+// chart would fold up with it. The samples are read against the same clock, through `now`.
 export class History {
   readonly #samples: Sample[] = [];
+  readonly span: number;
+  readonly now: () => number;
 
-  constructor(readonly size = (24 * 60 * 60_000) / SAMPLE_MS) {}
+  constructor({ span = HISTORY_MS, now = () => performance.now() }: { span?: number; now?: () => number } = {}) {
+    this.span = span;
+    this.now = now;
+  }
 
-  add(stats: Stats, at = Date.now()): void {
+  add(stats: Stats): void {
+    const at = this.now();
     const { lobby, playing, ended } = stats.rooms;
     this.#samples.push({ at, players: stats.players.online, rooms: lobby + playing + ended });
-    if (this.#samples.length > this.size) this.#samples.shift();
+    while (this.#samples.length > 0 && (this.#samples[0] as Sample).at < at - this.span) this.#samples.shift();
   }
 
   samples(): readonly Sample[] {
@@ -127,16 +148,38 @@ export class History {
   }
 }
 
-// Writes the `stats` line and takes the chart's samples on their own clocks until the returned
-// function stops them. The times can be changed for tests.
+// Writes the `stats` line, and takes the chart's samples when there is a history to take them
+// for, on their own clocks until the returned function stops them. The times can be changed for
+// tests. Counting throws only when the system does, as process.memoryUsage() does when the
+// process has run out of file descriptors, and a timer that threw would end the process: here it
+// is logged and the next tick tries again.
 export function watchStats(
   collect: () => Stats,
   log: Log,
-  history: History,
+  history: History | null,
   { logMs = STATS_LOG_MS, sampleMs = SAMPLE_MS } = {},
 ): () => void {
   const write = statsLog(log);
-  const timers = [setInterval(() => write(collect()), logMs), setInterval(() => history.add(collect()), sampleMs)];
+  const tick = (where: string, run: () => void) => () => {
+    try {
+      run();
+    } catch (error) {
+      log('error', { where, message: error instanceof Error ? error.message : String(error) });
+    }
+  };
+  const timers = [
+    setInterval(
+      tick('stats', () => write(collect())),
+      logMs,
+    ),
+  ];
+  if (history)
+    timers.push(
+      setInterval(
+        tick('sample', () => history.add(collect())),
+        sampleMs,
+      ),
+    );
   for (const timer of timers) timer.unref();
   return () => timers.forEach((timer) => clearInterval(timer));
 }

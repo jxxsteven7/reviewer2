@@ -29,9 +29,13 @@ export function clientIp(address: string | undefined, headers: IncomingHttpHeade
 export const UNKNOWN_COUNTRY = 'XX';
 
 // The country of a connection, for the status page: the two letters of the CF-IPCountry header
-// that Cloudflare adds to every request it passes on. Like X-Forwarded-For, the header is only
-// believed with TRUST_PROXY set, since anyone else can send it too. Cloudflare writes "T1" for
-// Tor, which counts as unknown, like anything that isn't two letters.
+// that Cloudflare adds to every request it passes on. The header is only believed with
+// TRUST_PROXY set, since anyone can send it too. That setting says no more than that a proxy
+// adds to X-Forwarded-For, which is why its last entry can be trusted; a proxy other than
+// Cloudflare passes a CF-IPCountry that a client made up straight through, so the deployment
+// docs ask such a proxy to drop the header (docs/development.md). Only the counts on the status
+// page are at stake. Cloudflare writes "T1" for Tor, which counts as unknown, like anything that
+// isn't two letters.
 export function clientCountry(headers: IncomingHttpHeaders, trustProxy: boolean): string {
   const header = trustProxy ? headers['cf-ipcountry'] : undefined;
   return typeof header === 'string' && /^[a-z]{2}$/i.test(header) ? header.toUpperCase() : UNKNOWN_COUNTRY;

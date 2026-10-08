@@ -6,7 +6,7 @@ Follow these in every line of code. Reviewers check them item by item.
 
 - Don't use any Google services, such as Firebase, Google Fonts, Google Analytics, Google Sign-In or reCAPTCHA.
 - Don't load anything from public CDNs such as unpkg, jsDelivr or cdnjs. Bundle fonts, scripts and icons into the project and serve them from our own server.
-- Keep the architecture simple: one Node process serves both the static front end and WebSocket, on one domain and one port.
+- Keep the architecture simple: one Node process serves both the static front end and WebSocket, on one domain and one port. The status page for the operator is the one exception: the same process may serve it on a second port that only the server's own machine can reach, and nothing that players use goes there; see [../architecture.md](../architecture.md#status).
 - Before adding an external dependency or third-party service, confirm that it is available and reliable in mainland China.
 
 ## Intellectual property
@@ -25,7 +25,7 @@ Follow these in every line of code. Reviewers check them item by item.
 
 ## UI
 
-- All UI text lives in the locale files (`zh.json` and `en.json`), never hard-coded in components, and every string exists in both languages.
+- All UI text lives in the locale files (`zh.json` and `en.json`), never hard-coded in components, and every string exists in both languages. The status page for the operator is the one exception: it is a tool for whoever runs the server, not part of the game, so it is in English only and its text lives with its template in `server/src/statusPage.ts`.
 - The UI is mobile-first and works in WeChat's built-in browser.
 - Don't break reconnection. After a refresh or a locked screen, players return to their room, team and role.
 
