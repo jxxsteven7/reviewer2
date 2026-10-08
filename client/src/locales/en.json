@@ -361,7 +361,8 @@
       "reviewer2": "Reviewer 2 is on the way."
     },
     "bubble": "{name}: {phrase}",
-    "mute": "Mute the sounds"
+    "mute": "Mute the sounds",
+    "locked": "Click anywhere on this page to turn the sounds on."
   },
   "errors": {
     "bad_request": "That request didn't make sense to the server.",

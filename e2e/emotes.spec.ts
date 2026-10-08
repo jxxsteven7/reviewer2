@@ -36,4 +36,9 @@ test('a reaction reaches every page, and the sender waits before the next', asyn
   // After ten seconds, Eve can send another.
   await expect(eve.locator('.role-banner button')).toHaveText(text.emotes.open, { timeout: 15_000 });
   await expect(eve.locator('.role-banner button')).toBeEnabled();
+
+  // The screen, which nobody has clicked, asks for a click to turn its sounds on, until someone does.
+  await expect(table.screen.locator('.sound-hint')).toHaveText(text.emotes.locked);
+  await table.screen.locator('.screen-game').click();
+  await expect(table.screen.locator('.sound-hint')).toHaveCount(0);
 });

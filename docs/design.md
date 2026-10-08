@@ -66,7 +66,7 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 
 ## Sound
 
-The quick reactions are the only sounds, one short motif each: a sagging "wah, wah, wah, waaah" for "I could have finished a PhD by now.", a fast tick and an alarm for the deadline, and two low notes a tritone apart for Reviewer 2. `client/src/core/sound.ts` makes them with Web Audio from plain waves as they play, so the page carries no audio files, and none of them comes from a game; that file also says where a recording would go instead. Phones play a page's sound only after the player has touched it, so the first touch, click or key press unlocks the audio. The switch to mute them is in the reactions' sheet and on the big screen, and the browser remembers it.
+The quick reactions are the only sounds, one short motif each: a sagging "wah, wah, wah, waaah" for "I could have finished a PhD by now.", a fast tick and an alarm for the deadline, and two low notes a tritone apart for Reviewer 2. `client/src/core/sound.ts` makes them with Web Audio from plain waves as they play, so the page carries no audio files, and none of them comes from a game; that file also says where a recording would go instead. Phones play a page's sound only after the player has touched it, so a touch, click or key press unlocks the audio, and does so again when a locked screen or a switch to another app has put it to sleep. A big screen that nobody has clicked says so next to its switch. The switch to mute them is in the reactions' sheet and on the big screen, and the browser remembers it.
 
 ## Cards
 

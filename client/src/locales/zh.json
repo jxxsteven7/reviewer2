@@ -361,7 +361,8 @@
       "reviewer2": "Reviewer 2 正在路上"
     },
     "bubble": "{name}：{phrase}",
-    "mute": "静音"
+    "mute": "静音",
+    "locked": "点一下页面任意位置，开启声音。"
   },
   "errors": {
     "bad_request": "服务器无法理解这个请求。",

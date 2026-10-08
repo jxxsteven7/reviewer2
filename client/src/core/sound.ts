@@ -4,8 +4,8 @@ import { readStored, writeStored } from './storage';
 
 // The sounds of the quick reactions. They are made with Web Audio as they play, so that the page
 // carries no audio files. Phones, WeChat's browser among them, let a page make a sound only after
-// the player has touched it, so the audio is unlocked by the first touch, click or key press, and
-// stays silent until then. Whoever turns the sounds off keeps them off on their next visit.
+// the player has touched it, so the audio is unlocked by a touch, click or key press, and stays
+// silent until then. Whoever turns the sounds off keeps them off on their next visit.
 
 const MUTED = 'r2.muted';
 
@@ -88,6 +88,14 @@ const SOUNDS: Record<Emote, (audio: AudioContext, at: number) => void> = {
 
 let audio: AudioContext | null = null;
 
+// Whether the audio runs, for a page to say when it doesn't: a big screen that nobody has clicked
+// would stay silent without a word otherwise.
+export const unlocked = ref(false);
+
+const sync = () => {
+  unlocked.value = audio?.state === 'running';
+};
+
 function audioContext(): AudioContext | null {
   if (audio) return audio;
   const Context =
@@ -98,6 +106,8 @@ function audioContext(): AudioContext | null {
   } catch {
     return null;
   }
+  audio.addEventListener('statechange', sync);
+  sync();
   return audio;
 }
 
@@ -106,16 +116,14 @@ function audioContext(): AudioContext | null {
 const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
 
 // Creates the audio, or wakes it up, inside a gesture. Older versions of iOS also want a sound to
-// start within the gesture, and a sample of silence will do. Once the audio runs, it is left alone.
+// start within the gesture, and a sample of silence will do. The listeners stay for as long as
+// the page does: a phone that was locked, a call, or a switch to another app puts the audio to
+// sleep again, and only the next touch may wake it up.
 function unlock(): void {
   const context = audioContext();
-  if (!context) return;
-  if (context.state === 'running') {
-    for (const gesture of GESTURES) window.removeEventListener(gesture, unlock, true);
-    return;
-  }
+  if (!context || context.state === 'running') return;
   try {
-    context.resume().catch(() => {});
+    context.resume().then(sync, () => {});
   } catch {
     // Older versions of WebKit give nothing back from resume() to catch.
   }
