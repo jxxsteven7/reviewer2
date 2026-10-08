@@ -41,13 +41,13 @@ describe('a nickname', () => {
   });
 
   test("can't hide a character that makes it look like someone else's", () => {
-    // A zero-width space, a soft hyphen, a bidi isolate, a grapheme joiner, a zero-width
-    // non-joiner, a variation selector that no emoji uses and a tag character.
-    for (const hidden of ['\u200b', '\u00ad', '\u2066', '\u034f', '\u200c', '\ufe00', '\u{e0041}']) {
+    // A zero-width space, a soft hyphen, a bidi isolate, a grapheme joiner, a tag character and
+    // an interlinear annotation anchor.
+    for (const hidden of ['\u200b', '\u00ad', '\u2066', '\u034f', '\u{e0041}', '\ufff9']) {
       expect(cleanName(`An${hidden}n`), JSON.stringify(hidden)).toBeNull();
       expect(cleanName(`Ann${hidden}`), JSON.stringify(hidden)).toBeNull();
     }
-    for (const bad of ['A\u202enn', 'A\u0000', '\ue000', '\ud800', 'A\u{f0000}']) {
+    for (const bad of ['A\u202enn', 'A\u0000', '\ue000', '\ud800', 'A\u{f0000}', 'An\u2800n']) {
       expect(cleanName(bad), JSON.stringify(bad)).toBeNull();
     }
     // A byte order mark counts as a space, so it shows when it stands inside a name.
@@ -56,22 +56,41 @@ describe('a nickname', () => {
   });
 
   test("can't be one that shows nothing", () => {
-    // Hangul fillers, the joiner and the selectors by themselves, and the blank Braille pattern.
-    for (const blank of ['\u3164', '\u115f', '\u1160', '\uffa0', '\u200d', '\ufe0f', '\u200d\ufe0f', '\u2800']) {
+    // Hangul fillers, the joiners and the selectors by themselves, a direction mark and the
+    // blank Braille pattern.
+    for (const blank of [
+      '\u3164',
+      '\u115f',
+      '\u1160',
+      '\uffa0',
+      '\u200d',
+      '\u200c',
+      '\ufe0f',
+      '\u200d\ufe0f',
+      '\u200f',
+      '\u2800',
+    ]) {
       expect(cleanName(blank), JSON.stringify(blank)).toBeNull();
     }
   });
 
-  test("can't pile up combining marks, or start with one", () => {
+  test("can't pile up combining marks, or carry one with nothing to sit on", () => {
     expect(cleanName('A' + '\u0301'.repeat(60))).toBeNull();
-    // The first mark becomes part of the letter, which leaves a run of five.
-    expect(cleanName('A' + '\u0301'.repeat(6))).toBeNull();
     expect(cleanName('x' + '\u0301'.repeat(5))).toBeNull();
+    expect(cleanName('x' + '\u0301'.repeat(4))).not.toBeNull();
+    // Marks that stand beside the letter are counted apart from those that sit on it, and are
+    // limited to four as well.
+    expect(cleanName('\u0915' + '\u093e'.repeat(4))).not.toBeNull();
+    expect(cleanName('\u0915' + '\u093e'.repeat(5))).toBeNull();
+    // A mark at the start would settle on whatever stands before the name on the page, and one
+    // after the last letter hides a space.
     expect(cleanName('\u0301A')).toBeNull();
-    // A selector or a joiner between the marks hides the run from nobody.
+    expect(cleanName('Ann \u0301')).toBeNull();
+    // A selector, a joiner or a direction mark between the marks hides the run from nobody.
     expect(cleanName('A' + '\u0301\ufe0f'.repeat(8))).toBeNull();
     expect(cleanName('x' + '\u0301\u200d'.repeat(5))).toBeNull();
     expect(cleanName('x' + '\u200d\u0301'.repeat(5))).toBeNull();
+    expect(cleanName('x' + '\u0301\u200f'.repeat(5))).toBeNull();
     expect(cleanName('\u200d\u0301A')).toBeNull();
     // A joiner after a selector is how some emoji are built: a heart on fire, a keycap.
     expect(cleanName('Ann \u2764\ufe0f\u200d\u{1f525}')).not.toBeNull();
@@ -80,8 +99,10 @@ describe('a nickname', () => {
 
   test('may be written in any script', () => {
     // Chinese, Thai, Arabic with its vowel marks, Tibetan with stacked letters, Sinhala and
-    // Devanagari with a joiner after the mark that binds two letters, and Vietnamese typed as
-    // letters and separate marks.
+    // Devanagari with a joiner after the mark that binds two letters, Persian with the non-joiner
+    // that keeps two letters apart, Burmese with five marks on one letter, Mongolian with a
+    // variation selector and the vowel separator, a Chinese character in its variant form, and
+    // Vietnamese typed as letters and separate marks.
     for (const name of [
       '\u0dc1\u0dca\u200d\u0dbb\u0dd3',
       '\u0915\u094d\u200d\u0937',
@@ -89,11 +110,14 @@ describe('a nickname', () => {
       '\u0e2a\u0e21\u0e0a\u0e32\u0e22',
       '\u0645\u064f\u062d\u064e\u0645\u0651\u064e\u062f',
       '\u0f56\u0f66\u0f92\u0fb2\u0f74\u0f56\u0f66',
+      '\u0645\u06cc\u200c\u0644\u0627\u062f',
+      '\u1019\u103b\u103e\u1031\u102c\u103a',
+      '\u1820\u180b\u1821 \u1828\u180e\u1820',
+      '\u845b\u{e0100}',
     ]) {
       expect(cleanName(name), name).toBe(name.normalize('NFKC'));
     }
     expect(cleanName('Nguye\u0302\u0303n')).toBe('Nguy\u1ec5n');
-    expect(cleanName('x' + '\u0301'.repeat(4))).not.toBeNull();
   });
 
   test('may carry the flags that are spelled with tag characters, and no other tags', () => {
@@ -112,10 +136,13 @@ describe('two nicknames', () => {
   });
 
   test('clash when they differ only in what shows nothing', () => {
-    // A selector or a joiner where no emoji needs it is a valid name that looks like "Ann".
-    expect(cleanName('Ann\ufe0f')).not.toBeNull();
+    // A selector, a joiner, a non-joiner or a direction mark where no letter or emoji needs it
+    // is a valid name that looks like "Ann".
+    for (const silent of ['\ufe0f', '\u200d', '\u200c', '\u200f', '\ufe00']) {
+      expect(cleanName(`An${silent}n`), JSON.stringify(silent)).not.toBeNull();
+      expect(sameName('Ann', `An${silent}n`), JSON.stringify(silent)).toBe(true);
+    }
     expect(sameName('Ann', 'Ann\ufe0f')).toBe(true);
-    expect(sameName('Ann', 'An\u200dn')).toBe(true);
     expect(sameName(scientist, family)).toBe(false);
   });
 });
