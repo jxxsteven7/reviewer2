@@ -19,6 +19,9 @@ const playerId = z.string().max(32);
 const gameId = z.string().max(64);
 const roomId = z.string().max(64);
 const fields = z.array(z.string().max(64)).min(1).max(20);
+// Whether a newcomer has come to play rather than to watch. The game seats a player; whoever
+// leaves the field out watches, as everyone did before there was a choice.
+const play = z.boolean().optional();
 const none = z.object({});
 // A game's settings, which its module checks (GameModule.configure on the server).
 const settings = z.unknown();
@@ -33,11 +36,12 @@ export const ROOM_MESSAGES = {
     fields,
     settings: settings.optional(),
     name,
+    play,
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out
   // or send null.
-  'room:join': z.object({ code, name: name.optional(), roomId: roomId.nullish() }),
+  'room:join': z.object({ code, name: name.optional(), roomId: roomId.nullish(), play }),
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:rename': z.object({ name }),

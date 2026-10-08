@@ -30,7 +30,7 @@ async function groupOfTwo(browser: Browser) {
   const other = otherTeam(team);
   const fay = await newPlayer(browser);
   const fayStates = snapshotsOf(fay);
-  await joinByLink(fay, table.url, 'Fay', 'en');
+  await joinByLink(fay, table.url, 'Fay', 'en', { watch: true });
   await fay.getByRole('button', playFor(team)).click();
   await expect(fay.locator('.actions .who')).toHaveText(
     interpolate(text.game.you.guesser, { group: text.lobby.group[team] }),

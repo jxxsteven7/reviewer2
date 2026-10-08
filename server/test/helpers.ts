@@ -187,9 +187,9 @@ export async function createRoom(url: string, name = 'Ann', payload: Record<stri
   return { chair, code: reply.code as string, roomId: reply.roomId as string };
 }
 
-export async function joinRoom(url: string, code: string, name: string) {
+export async function joinRoom(url: string, code: string, name: string, payload: Record<string, unknown> = {}) {
   const client = await TestClient.connect(url);
-  const reply = await client.send('room:join', { code, name });
+  const reply = await client.send('room:join', { code, name, ...payload });
   if (!reply.ok) throw new Error(`could not join: ${reply.error}`);
   await client.waitFor((state) => state.code === code);
   return client;

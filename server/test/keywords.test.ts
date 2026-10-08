@@ -529,6 +529,58 @@ describe('the time limits', () => {
   });
 });
 
+describe('coming to play', () => {
+  test('a newcomer who comes to play becomes a student of the smaller group, and the others watch', async () => {
+    const { chair: ann, code } = await createRoom(server.url, 'Ann', { game: 'keywords', play: true });
+    clients.push(ann);
+    const annSeat = data(ann).seats[ann.me];
+    expect(annSeat?.role).toBe('guesser');
+    const bob = await joinRoom(server.url, code, 'Bob', { play: true });
+    const cat = await joinRoom(server.url, code, 'Cat', { play: false });
+    const dan = await joinRoom(server.url, code, 'Dan');
+    clients.push(bob, cat, dan);
+    const seats = data(dan).seats;
+    expect(seats[bob.me]).toEqual({ team: otherTeam(annSeat?.team ?? 'red'), role: 'guesser' });
+    expect(seats[cat.me]).toEqual(SPECTATOR);
+    expect(seats[dan.me]).toEqual(SPECTATOR);
+    // Nobody is made a PI: the chair's shuffle picks them.
+    expect(data(dan).startProblems.map(({ problem }) => problem)).toEqual(['needs_captain', 'needs_captain']);
+    await expectOk(ann.send('room:shuffle'));
+    expect(data(ann).startProblems.map(({ problem }) => problem)).toEqual(['needs_guesser', 'needs_guesser']);
+  });
+
+  test('during a game, the seat rules hold for whoever comes to play', async () => {
+    const table = await seatTable();
+    const ann = table.captains.red;
+    // A latecomer evens out the groups.
+    await expectOk(table.spectator.send('keywords:seat', { team: 'blue', role: 'guesser' }));
+    const fay = await joinRoom(server.url, table.code, 'Fay', { play: true });
+    clients.push(fay);
+    expect(data(fay).seats[fay.me]).toEqual({ team: 'red', role: 'guesser' });
+    expect(data(fay).side).toBe('red');
+
+    // Dan leaves the blue group, which is still the bigger one, and comes back to it.
+    const dan = table.guessers.blue;
+    await expectOk(dan.send('room:leave'));
+    const danBack = await TestClient.connect(server.url, { token: dan.token });
+    clients.push(danBack);
+    expect(await danBack.send('room:join', { code: table.code, name: 'Dan', play: true })).toMatchObject({ ok: true });
+    await danBack.waitFor((state) => state.me !== null);
+    expect(data(danBack).seats[danBack.me]).toEqual({ team: 'blue', role: 'guesser' });
+
+    // Ann has seen the key, so she comes back as a spectator.
+    await expectOk(ann.send('room:leave'));
+    const annBack = await TestClient.connect(server.url, { token: ann.token });
+    clients.push(annBack);
+    expect(await annBack.send('room:join', { code: table.code, name: 'Ann', play: true })).toMatchObject({
+      ok: true,
+    });
+    await annBack.waitFor((state) => state.me !== null);
+    expect(data(annBack).seats[annBack.me]).toEqual(SPECTATOR);
+    expect(data(annBack).side).toBe('red');
+  });
+});
+
 describe('seats during a game', () => {
   test('a captain who leaves can be replaced, and cannot come back as a guesser', async () => {
     const table = await seatTable();

@@ -24,6 +24,7 @@ Adding a game means adding a module on each side, without changing the core.
 - **Phases.** A room moves from `lobby` to `playing` to `ended`, and back to `lobby` for another game.
 - **Games.** The room gives each game a random `gameId`, which its view shows while the game is being played and after it has ended, and counts the games it has started in `round`. The chair's messages about a game say which game they mean.
 - **The chair.** The first member chairs the room. Only the chair can change the fields or the game's settings, start, withdraw or replay a game, shuffle the groups, move someone to the spectators, remove someone, hand the chair over, or close the room for everyone. The chair can be handed only to a member who is online. When the chair leaves, or has been offline for 3 minutes while someone else is online, the chair passes to the member who joined first among those online.
+- **Playing or watching.** A newcomer says in `room:create` or `room:join` whether they have come to play, with `play: true`, or only to watch. The game decides what playing means: the team word guessing game gives a player a student's seat ([games/keywords.md](games/keywords.md#seats)). A newcomer who doesn't say watches. A member who comes back keeps the seat they had, whatever they say.
 - **Removal.** A member the chair removes can't come back from the same browser for 2 minutes, and for those 2 minutes nobody else can take the name they had. A player is known only by the token in their browser, so this doesn't keep out someone who opens another browser and picks another name: it gives the room a pause, and the chair can remove them again.
 - **Revisions.** Every change bumps the room's `rev`. A message that is granted but changes nothing, such as asking for the seat one is in, bumps nothing, and nobody is sent a snapshot for it.
 
@@ -52,8 +53,8 @@ Everything after the page load goes over Socket.IO. `shared/src/protocol.ts` des
 |---|---|---|
 | `sys:ping` | | Anyone; checks that a connection is really alive |
 | `meta:fields` | | Anyone; returns the fields of the word library with their word counts |
-| `room:create` | `game`, `language`, `fields`, `settings` (optional), `name` | Anyone; the creator becomes the chair. Without `settings` the room has the game's defaults; settings that the game won't take are `bad_settings`, and no room is made |
-| `room:join` | `code`, `name` (for newcomers), `roomId` (for whoever has been in the room) | Anyone; a member who comes back needs no name. A newcomer first hears what keeps them out, `removed_recently` or `room_full`, and only then, without a name, gets `name_required` with the room's language |
+| `room:create` | `game`, `language`, `fields`, `settings` (optional), `name`, `play` | Anyone; the creator becomes the chair. Without `settings` the room has the game's defaults; settings that the game won't take are `bad_settings`, and no room is made |
+| `room:join` | `code`, `name` and `play` (for newcomers), `roomId` (for whoever has been in the room) | Anyone; a member who comes back needs no name. A newcomer first hears what keeps them out, `removed_recently` or `room_full`, and only then, without a name, gets `name_required` with the room's language |
 | `room:watch` | `code`, `roomId` (for a screen that has shown the room) | A screen |
 | `room:leave`, `room:rename` | `name` for renaming | Members |
 | `room:settings` | `fields`, `settings`, either or both | The chair, in the waiting room. Both change, or neither does; the same fields in another order, and settings that change nothing, change nothing |
@@ -78,7 +79,7 @@ Phones drop their connection whenever the screen locks or the browser goes to th
 
 A game is a module that implements `GameModule` (`server/src/core/game.ts`). The core owns the room, its members and the chair; the module owns its data and decides:
 
-- the seats, and what the chair's bench and shuffle do to them;
+- the seats, where a newcomer who has come to play sits, and what the chair's bench and shuffle do to them;
 - its own settings: their defaults for a room's language, and whether it takes the settings that the chair sends with `room:create` and `room:settings`. The core passes them on as they came and knows nothing of what is in them;
 - whether a game can start, and, in its view, what still keeps it from starting;
 - how a game starts, how many words it needs and what happens on each of its messages;

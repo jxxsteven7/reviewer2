@@ -8,7 +8,7 @@ import {
   type StartProblem,
   type Team,
 } from '@reviewer2/shared';
-import { shuffle, type Rng } from '../../core/random';
+import { pick, shuffle, type Rng } from '../../core/random';
 
 // Who sits where, and the rules for changing seats (docs/games/keywords.md). Seats are keyed by
 // player ID. keyViewers and sides are keyed by member key: a member key, unlike a player ID,
@@ -55,6 +55,25 @@ function seatLike(wanted: SeatRequest): Seat | null {
   if (role === 'spectator') return team === null ? SPECTATOR : null;
   if (role !== 'captain' && role !== 'guesser') return null;
   return team !== null && TEAMS.includes(team) ? { team, role } : null;
+}
+
+// Seats a newcomer who has come to play as a guesser. Whoever has played for a group in the
+// current game goes back to it. Anyone else goes to the group with fewer players in it, its
+// captain and those who are offline included, or to either at random when both have as many. The
+// rules of changeSeat() hold as for any other seat, so a newcomer who has seen the key in this
+// game stays a spectator. Captains are never given out here: the chair's shuffle picks them.
+export function autoSeat(seating: Seating, member: Member, rng: Rng, playing: boolean): Seating {
+  const team = seating.sides.get(member.key) ?? smallerTeam(seating, rng);
+  const change = changeSeat(seating, member, { team, role: 'guesser' }, playing);
+  return change.ok ? change.seating : seating;
+}
+
+function smallerTeam(seating: Seating, rng: Rng): Team {
+  const size = (team: Team) => [...seating.seats.values()].filter((seat) => seat.team === team).length;
+  const red = size('red');
+  const blue = size('blue');
+  if (red === blue) return pick(TEAMS, rng);
+  return red < blue ? 'red' : 'blue';
 }
 
 // Moves a player to a seat. `playing` is true while a game is on. Then whoever sits down in a

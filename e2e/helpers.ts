@@ -278,6 +278,15 @@ export async function setSetting(page: Page, label: string, value: number): Prom
   await page.locator('.settings-form').getByLabel(label, { exact: true }).fill(String(value));
 }
 
+// How a newcomer takes part: to play, which the forms offer first, or only to watch.
+export interface Joining {
+  watch?: boolean;
+}
+
+async function chooseToWatch(page: Page, language: Language, { watch = false }: Joining): Promise<void> {
+  if (watch) await page.getByRole('radio', { name: TEXT[language].room.join.watch }).check();
+}
+
 // Creates a room. `setup` runs on the room setup once the name is filled in, for a test that
 // wants other settings than the defaults.
 export async function createRoom(
@@ -285,6 +294,7 @@ export async function createRoom(
   language: Language,
   name: string,
   setup?: (page: Page) => Promise<void>,
+  joining: Joining = {},
 ): Promise<string> {
   const text = TEXT[language];
   await page.goto('/');
@@ -294,24 +304,36 @@ export async function createRoom(
   await expect(page.locator('.fields li').first()).toBeVisible();
   await page.getByLabel(text.create.name).fill(name);
   await setup?.(page);
+  await chooseToWatch(page, language, joining);
   await page.getByRole('button', { name: text.create.submit }).click();
   await page.waitForURL(/\/room\/[0-9A-Z]{4}$/);
   await expect(page.locator('.lobby')).toBeVisible();
   return page.url();
 }
 
-export async function joinByLink(page: Page, url: string, name: string, language: Language): Promise<void> {
+export async function joinByLink(
+  page: Page,
+  url: string,
+  name: string,
+  language: Language,
+  joining: Joining = {},
+): Promise<void> {
   const text = TEXT[language];
   await page.goto(url);
   await page.getByLabel(text.room.join.name).fill(name);
+  await chooseToWatch(page, language, joining);
   await page.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(page.locator('.lobby, .keywords-game').first()).toBeVisible();
 }
 
+// A player in the waiting room takes a seat. Whoever came to play has been given a student's seat
+// in one of the groups already, and the page offers no button for the seat a player is in.
 export async function sit(page: Page, team: Team, role: 'captain' | 'guesser', language: Language): Promise<void> {
   const text = TEXT[language];
   const label = role === 'captain' ? text.lobby.takeCaptain : text.lobby.joinAsGuesser;
-  await page.locator(`.group.${team}`).getByRole('button', { name: label }).click();
+  const button = page.locator(`.group.${team}`).getByRole('button', { name: label });
+  if (role === 'guesser' && (await button.count()) === 0) return;
+  await button.click();
 }
 
 export interface Table {
@@ -330,10 +352,11 @@ export interface Table {
 }
 
 // Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
-// blue. Eve watches, and a screen shows the room. `prepare` runs on each page before it joins,
-// for a test that needs a player's connection set up in some other way, `setup` on Ann's room
-// setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before she starts
-// the game. The game has started when this returns.
+// blue. Eve watches, and a screen shows the room. Everyone but Eve comes to play, so the server
+// seats them first, and they move to their seats from there. `prepare` runs on each page before
+// it joins, for a test that needs a player's connection set up in some other way, `setup` on
+// Ann's room setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before
+// she starts the game. The game has started when this returns.
 export async function seatTable(
   browser: Browser,
   language: Language,
@@ -345,14 +368,14 @@ export async function seatTable(
   snapshotsOf(ann);
   const url = await createRoom(ann, language, 'Ann', setup);
   // The others join at the same time, as separate people do.
-  const join = async (name: string) => {
+  const join = async (name: string, joining: Joining = {}) => {
     const page = await newPlayer(browser, language);
     snapshotsOf(page);
     await prepare?.(page, name);
-    await joinByLink(page, url, name, language);
+    await joinByLink(page, url, name, language, joining);
     return page;
   };
-  const [bob, cat, dan, eve] = await Promise.all([join('Bob'), join('Cat'), join('Dan'), join('Eve')]);
+  const [bob, cat, dan, eve] = await Promise.all([join('Bob'), join('Cat'), join('Dan'), join('Eve', { watch: true })]);
   await Promise.all([
     sit(ann, 'red', 'captain', language),
     sit(bob, 'red', 'guesser', language),

@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router';
 import { games } from '../../games';
 import FieldPicker from '../components/FieldPicker.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
+import PlayChoice from '../components/PlayChoice.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
@@ -17,7 +18,8 @@ import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
-// lists, the game's own settings, and the creator's nickname. The creator becomes the chair.
+// lists, the game's own settings, the creator's nickname, and whether they play or only watch.
+// The creator becomes the chair either way.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
@@ -25,6 +27,7 @@ const router = useRouter();
 
 const chosen = ref<string[]>([]);
 const { name, clean, problem, refuse } = useNameField(storedName());
+const play = ref(true);
 // What the server had against the form, apart from the name, which the name field shows.
 const formError = ref<string | undefined>();
 const { busy, run } = useBusy();
@@ -53,6 +56,7 @@ async function create() {
       fields: chosen.value,
       ...(settings.value ? { settings: settings.value } : {}),
       name: name.value,
+      play: play.value,
     }),
   );
   if (!reply) return;
@@ -101,6 +105,7 @@ async function create() {
         enterkeyhint="go"
         :error="problem"
       />
+      <PlayChoice v-model="play" />
     </section>
 
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>

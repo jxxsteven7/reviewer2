@@ -98,6 +98,7 @@ describe('creating a room', () => {
     expect(await create({ fields: [] })).toEqual({ ok: false, error: 'bad_request' });
     expect(await create({ name: '   ' })).toEqual({ ok: false, error: 'name_invalid' });
     expect(await create({ name: 'x'.repeat(17) })).toEqual({ ok: false, error: 'name_invalid' });
+    expect(await create({ play: 'yes' })).toEqual({ ok: false, error: 'bad_request' });
     expect(await client.send('room:create', 'nonsense')).toEqual({ ok: false, error: 'bad_request' });
   });
 
@@ -121,6 +122,26 @@ describe('creating a room', () => {
     expect(reply).toEqual({ ok: false, error: 'bad_settings' });
     expect(server.app.rooms.size).toBe(0);
     expect(client.states).toEqual([]);
+  });
+
+  test('tells the game whether each newcomer came to play, once', async () => {
+    const created = await createRoom(server.url, 'Ann', { play: true });
+    const chair = track(created.chair);
+    const { code } = created;
+    const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
+    await join(code, 'Cat');
+    track(await joinRoom(server.url, code, 'Dan', { play: false }));
+    await chair.waitFor((state) => state.players.length === 4, 'four players');
+    expect(game(chair).players).toEqual([chair.me, bob.me]);
+    // Whoever is in the room already has made their choice: asking again changes nothing.
+    const tab = await connect({ token: bob.token });
+    expect(await tab.send('room:join', { code, play: false })).toMatchObject({ ok: true });
+    const eve = await connect();
+    expect(await eve.send('room:join', { code, name: 'Eve', play: 'yes' })).toEqual({
+      ok: false,
+      error: 'bad_request',
+    });
+    expect(game(chair).players).toEqual([chair.me, bob.me]);
   });
 });
 

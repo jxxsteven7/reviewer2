@@ -2,6 +2,7 @@ import { SPECTATOR, type Seat } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
 import {
+  autoSeat,
   captainOf,
   changeSeat,
   emptySeating,
@@ -152,6 +153,49 @@ describe('seats during a game', () => {
       error: 'other_team',
     });
     expect(changeSeat(seating, { id: 'bob-again', key: 'key-bob' }, blueGuesser, true).ok).toBe(true);
+  });
+});
+
+describe('seating a newcomer who has come to play', () => {
+  const join = (seating: Seating, id: string, seed = 1, playing = false) =>
+    autoSeat(seating, member(id), seededRng(seed), playing);
+
+  test('makes them a guesser in the group with fewer players, captains and players who are away counted', () => {
+    expect(seatOf(join(seated({ ann: redCaptain, bob: redGuesser, cat: blueGuesser }), 'dan'), 'dan')).toEqual(
+      blueGuesser,
+    );
+    expect(seatOf(join(seated({ ann: blueCaptain, fay: SPECTATOR }), 'dan'), 'dan')).toEqual(redGuesser);
+  });
+
+  test('picks either group at random when both have as many, and never a captain', () => {
+    const outcomes = new Set<string>();
+    for (let seed = 0; seed < 20; seed += 1) {
+      for (const seating of [emptySeating(), seated({ ann: redCaptain, bob: blueGuesser })]) {
+        const seat = seatOf(join(seating, 'dan', seed), 'dan');
+        expect(seat.role).toBe('guesser');
+        outcomes.add(seat.team ?? 'none');
+      }
+    }
+    expect(outcomes).toEqual(new Set(['red', 'blue']));
+    expect(join(emptySeating(), 'dan', 3)).toEqual(join(emptySeating(), 'dan', 3));
+  });
+
+  test('during a game, ties them to the group, and sends whoever has played for a group back to it', () => {
+    let seating = started({ ann: redCaptain, bob: blueCaptain, cat: blueGuesser, dan: blueGuesser });
+    seating = join(seating, 'eve', 1, true);
+    expect(seatOf(seating, 'eve')).toEqual(redGuesser);
+    expect(seating.sides.get('key-eve')).toBe('red');
+    // Dan leaves the bigger group and comes back with a new ID: to the same group all the same.
+    seating = removeSeat(seating, 'dan');
+    seating = autoSeat(seating, { id: 'dan-again', key: 'key-dan' }, seededRng(1), true);
+    expect(seatOf(seating, 'dan-again')).toEqual(blueGuesser);
+  });
+
+  test('leaves someone who has seen the key in this game a spectator', () => {
+    const before = removeSeat(started({ ann: redCaptain, bob: blueGuesser }), 'ann');
+    const after = autoSeat(before, { id: 'ann-again', key: 'key-ann' }, seededRng(1), true);
+    expect(after).toBe(before);
+    expect(seatOf(after, 'ann-again')).toEqual(SPECTATOR);
   });
 });
 

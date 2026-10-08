@@ -162,8 +162,8 @@ export class Room {
     return removed !== undefined && removed.until > this.#now();
   }
 
-  // A new member. The first one chairs the room.
-  join(key: string, rawName: string): Ack<{ member: Member }> {
+  // A new member, who has come to play or only to watch. The first one chairs the room.
+  join(key: string, rawName: string, play = false): Ack<{ member: Member }> {
     const refusal = this.refusal(key);
     if (refusal) return fail(refusal);
     const name = cleanName(rawName);
@@ -177,7 +177,11 @@ export class Room {
       sockets: new Set(),
       offlineSince: null,
     };
-    const data = this.game.join(this.data, member.id);
+    // The newcomer becomes a member only once the module has taken them, so the context learns
+    // their key here.
+    const context = this.context;
+    const keyOf = (id: string) => (id === member.id ? key : context.keyOf(id));
+    const data = this.game.join(this.data, { ...context, keyOf }, member.id, play);
     this.members.set(member.id, member);
     this.chairId ??= member.id;
     this.data = data;

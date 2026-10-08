@@ -74,7 +74,12 @@
     "join": {
       "title": "Join {code}",
       "name": "Your name",
-      "submit": "Join"
+      "submit": "Join",
+      "as": "Taking part",
+      "play": "Play",
+      "playHint": "You'll be given a seat, and you can move later.",
+      "watch": "Watch",
+      "watchHint": "Just watch. You can take a seat whenever you like."
     },
     "notFound": {
       "title": "No such room",
@@ -127,6 +132,7 @@
     "save": "Save",
     "saveHint": "Starting the game saves these as well.",
     "shuffle": "Shuffle the groups",
+    "shuffleHint": "Shuffling deals everyone seated into two even groups and picks a PI for each.",
     "start": "Start the game",
     "ready": "Everyone needed is seated.",
     "waiting": "Waiting for the chair to start the game.",

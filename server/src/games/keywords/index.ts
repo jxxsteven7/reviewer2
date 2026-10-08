@@ -27,6 +27,7 @@ import {
   type Outcome,
 } from './rules';
 import {
+  autoSeat,
   changeSeat,
   emptySeating,
   endGame,
@@ -128,8 +129,13 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { ok: true, data: sameSettings(parsed.data, data.settings) ? data : { ...data, settings: parsed.data } };
   },
 
-  // Newcomers are spectators until they take a seat.
-  join: (data) => data,
+  // A newcomer who has come to play becomes a guesser in a group (seats.ts); anyone else watches
+  // until they take a seat.
+  join(data, ctx, playerId, play) {
+    if (!play) return data;
+    const seating = autoSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, ctx.rng, inGame(data));
+    return seating === data.seating ? data : { ...data, seating };
+  },
 
   // A captain who leaves frees the seat; the key viewers remember them anyway, and the groups
   // remember whom each player has played for.

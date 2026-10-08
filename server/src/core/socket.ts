@@ -442,7 +442,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
 
-    on(handlers, 'room:create', ({ game, language, fields, settings, name }) => {
+    on(handlers, 'room:create', ({ game, language, fields, settings, name, play }) => {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
@@ -452,7 +452,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // can ask for. The chair's messages that do the same need a room first; this one is open
       // to anyone, and must not be free to whoever asks for rooms that can't be.
       creations.add(conn.ip);
-      const created = rooms.create({ game: module, language, fields, settings, key: conn.key, name });
+      const created = rooms.create({ game: module, language, fields, settings, key: conn.key, name, play });
       if (!created.ok) return created;
       const { room, member } = created;
       log('room_created', { code: room.code, game, language, fields: room.fields });
@@ -460,7 +460,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ code: room.code, roomId: room.id });
     });
 
-    on(handlers, 'room:join', ({ code, name, roomId }) => {
+    on(handlers, 'room:join', ({ code, name, roomId, play }) => {
       const room = lookup(conn, code, roomId ?? undefined);
       if (typeof room === 'string') return fail(room);
       const member = room.memberByKey(conn.key);
@@ -473,7 +473,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const refusal = room.refusal(conn.key);
       if (refusal) return fail(refusal);
       if (name === undefined) return { ...fail('name_required'), language: room.language };
-      const joined = room.join(conn.key, name);
+      const joined = room.join(conn.key, name, play);
       if (!joined.ok) return joined;
       enter(socket, room, joined.member);
       return ok({ code: room.code, roomId: room.id });

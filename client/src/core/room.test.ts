@@ -72,9 +72,12 @@ describe('the room page', () => {
     expect(entry.language).toBe('zh');
 
     mock.send.mockResolvedValueOnce(fail('name_taken'));
-    const reply = await submitName('Ann');
+    const reply = await submitName('Ann', true);
     expect(reply).toEqual(fail('name_taken'));
-    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', name: 'Ann' });
+    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', name: 'Ann', play: true });
+    mock.send.mockResolvedValueOnce(fail('name_taken'));
+    await submitName('Ann', false);
+    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', name: 'Ann', play: false });
     expect(entry.status).toBe('needs_name');
   });
 

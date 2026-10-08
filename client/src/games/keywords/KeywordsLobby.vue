@@ -170,6 +170,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
           </li>
           <li v-if="!problems.length" class="ready">{{ t('lobby.ready') }}</li>
         </ul>
+        <p class="hint shuffle-hint">{{ t('lobby.shuffleHint') }}</p>
         <div class="desk-actions">
           <UiButton @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
           <UiButton
@@ -345,6 +346,10 @@ dd .vacant {
 
 .problems .ready {
   color: var(--ink-2);
+}
+
+.shuffle-hint {
+  margin-bottom: var(--space-3);
 }
 
 .desk-actions {
