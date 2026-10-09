@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MAX_NAME_INPUT, type Language } from '@reviewer2/shared';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { games } from '../../games';
@@ -47,7 +47,10 @@ watch(usable, (lists) => {
   chosen.value = chosen.value.filter((id) => ids.has(id));
 });
 // Whether to say that a list must be chosen: while there are lists to choose from and none is.
+// The group of lists points at the hint, so that a screen reader reads it with them. The button
+// can't: it is disabled while the hint shows, so the keyboard never reaches it.
 const needsField = computed(() => usable.value.length > 0 && !chosen.value.length);
+const id = useId();
 // Whether the form will do. create() checks it too, since a form can be submitted without its
 // button.
 const ready = computed(() => chosen.value.length > 0 && !!clean.value && settingsValid.value);
@@ -88,8 +91,13 @@ async function create() {
       <p class="hint">{{ t('create.languageHint', { language: t(`language.${language}`) }) }}</p>
     </section>
 
-    <section class="step">
-      <h3>{{ t('create.fields') }}</h3>
+    <section
+      class="step"
+      role="group"
+      :aria-labelledby="`${id}-fields`"
+      :aria-describedby="needsField ? `${id}-hint` : undefined"
+    >
+      <h3 :id="`${id}-fields`">{{ t('create.fields') }}</h3>
       <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
       <FieldPicker
         v-else-if="usable.length"
@@ -120,16 +128,9 @@ async function create() {
 
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
 
-    <p v-if="needsField" id="create-needs-field" class="hint">{{ t('create.chooseField') }}</p>
+    <p v-if="needsField" :id="`${id}-hint`" class="hint">{{ t('create.chooseField') }}</p>
     <div class="actions">
-      <UiButton
-        variant="primary"
-        type="submit"
-        :disabled="busy || !ready"
-        :aria-describedby="needsField ? 'create-needs-field' : undefined"
-      >
-        {{ t('create.submit') }}
-      </UiButton>
+      <UiButton variant="primary" type="submit" :disabled="busy || !ready">{{ t('create.submit') }}</UiButton>
       <UiButton variant="quiet" @click="emit('cancel')">{{ t('create.cancel') }}</UiButton>
     </div>
   </form>

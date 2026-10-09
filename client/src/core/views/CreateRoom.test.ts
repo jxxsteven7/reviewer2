@@ -43,9 +43,12 @@ async function opened() {
   return wrapper;
 }
 
-const box = (wrapper: Awaited<ReturnType<typeof opened>>, index: number) =>
-  wrapper.findAll<HTMLInputElement>('.fields input').at(index)!;
-const submit = (wrapper: Awaited<ReturnType<typeof opened>>) => wrapper.get('button[type="submit"]');
+type Wrapper = Awaited<ReturnType<typeof opened>>;
+const box = (wrapper: Wrapper, index: number) => wrapper.findAll<HTMLInputElement>('.fields input').at(index)!;
+const submit = (wrapper: Wrapper) => wrapper.get('button[type="submit"]');
+// The group of word lists, which the hint describes while none is chosen.
+const lists = (wrapper: Wrapper) => wrapper.get('section[role="group"]');
+const byId = (wrapper: Wrapper, id: string | undefined) => wrapper.get(`[id="${id}"]`);
 const HINT = 'Choose at least one word list to create the room.';
 
 describe('the room setup', () => {
@@ -58,8 +61,8 @@ describe('the room setup', () => {
   test('says to choose a list, and creates no room, until one is chosen', async () => {
     const wrapper = await opened();
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
-    expect(wrapper.get('#create-needs-field').text()).toBe(HINT);
-    expect(submit(wrapper).attributes('aria-describedby')).toBe('create-needs-field');
+    expect(byId(wrapper, lists(wrapper).attributes('aria-labelledby')).text()).toBe('Word lists');
+    expect(byId(wrapper, lists(wrapper).attributes('aria-describedby')).text()).toBe(HINT);
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(socket.send).not.toHaveBeenCalled();
@@ -69,8 +72,8 @@ describe('the room setup', () => {
     const wrapper = await opened();
     await box(wrapper, 1).setValue(true);
     expect(wrapper.text()).not.toContain(HINT);
+    expect(lists(wrapper).attributes('aria-describedby')).toBeUndefined();
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
-    expect(submit(wrapper).attributes('aria-describedby')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(socket.send).toHaveBeenCalledWith('room:create', expect.objectContaining({ fields: ['ml'], name: 'Ann' }));
