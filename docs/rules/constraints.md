@@ -32,3 +32,9 @@ Follow these in every line of code. Reviewers check them item by item.
 ## Secrets
 
 - Never commit passwords, keys or tokens. Use environment variables. `.env` is already ignored by `.gitignore`.
+
+## The live deployment
+
+- Don't describe how the project's own servers are run: their hosts and network, the settings of the services in front of them, their paths and ports, their service units and sandboxing, or their release scripts. This holds for files, commit messages, issues, pull requests and review comments.
+- Document what the code supports instead, in general terms that fit any deployment, as [../development.md](../development.md#running-in-production) does. Use placeholders or made-up values in examples and tests.
+- The operators keep the details of the live site to themselves.

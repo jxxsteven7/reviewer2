@@ -42,8 +42,8 @@ describe('avatar remove', () => {
     const file = annWithAvatar();
     expect(run('avatar', 'remove', 'ANN LEE')).toBe(0);
     expect(printed[0]).toBe(
-      `Took down /avatars/${file} of Ann Lee. Browsers and Cloudflare may keep a copy for up to a year: ` +
-        "purge that address from Cloudflare's cache too.",
+      `Took down /avatars/${file} of Ann Lee. Browsers, and a CDN in front of the site, may keep a copy ` +
+        "for up to a year: purge that address from the CDN's cache too.",
     );
     expect(accounts.store.byKey('ann lee')).toMatchObject({ avatar: null, avatarBanned: false });
     expect(existsSync(join(dir, AVATAR_DIR, file))).toBe(false);
