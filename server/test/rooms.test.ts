@@ -98,6 +98,7 @@ describe('creating a room', () => {
     expect(await create({ fields: [] })).toEqual({ ok: false, error: 'bad_request' });
     expect(await create({ name: '   ' })).toEqual({ ok: false, error: 'name_invalid' });
     expect(await create({ name: 'x'.repeat(17) })).toEqual({ ok: false, error: 'name_invalid' });
+    expect(await create({ play: 'yes' })).toEqual({ ok: false, error: 'bad_request' });
     expect(await client.send('room:create', 'nonsense')).toEqual({ ok: false, error: 'bad_request' });
   });
 
@@ -121,6 +122,26 @@ describe('creating a room', () => {
     expect(reply).toEqual({ ok: false, error: 'bad_settings' });
     expect(server.app.rooms.size).toBe(0);
     expect(client.states).toEqual([]);
+  });
+
+  test('tells the game whether each newcomer came to play, once', async () => {
+    const created = await createRoom(server.url, 'Ann', { play: true });
+    const chair = track(created.chair);
+    const { code } = created;
+    const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
+    await join(code, 'Cat');
+    track(await joinRoom(server.url, code, 'Dan', { play: false }));
+    await chair.waitFor((state) => state.players.length === 4, 'four players');
+    expect(game(chair).players).toEqual([chair.me, bob.me]);
+    // Whoever is in the room already has made their choice: asking again changes nothing.
+    const tab = await connect({ token: bob.token });
+    expect(await tab.send('room:join', { code, play: false })).toMatchObject({ ok: true });
+    const eve = await connect();
+    expect(await eve.send('room:join', { code, name: 'Eve', play: 'yes' })).toEqual({
+      ok: false,
+      error: 'bad_request',
+    });
+    expect(game(chair).players).toEqual([chair.me, bob.me]);
   });
 });
 
@@ -437,6 +458,151 @@ describe('leaving', () => {
   });
 });
 
+describe('quick reactions', () => {
+  test('reach every connection in the room, the sender and screens included, and change nothing', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    const tab = await connect({ token: bob.token, code, roomId });
+    await tab.waitFor((state) => state.code === code, 'the tab is in the room');
+    const screen = await connect({ watch: code, roomId });
+    await chair.waitFor((state) => state.screens === 1, 'the screen is up');
+    const outsider = (await room('Zed')).chair;
+    const before = { rev: chair.state?.rev, states: chair.states.length };
+
+    expect(await bob.send('room:emote', { emote: 'reviewer2' })).toEqual({ ok: true });
+    const everyone = [chair, bob, tab, screen];
+    await until(() => everyone.every((client) => client.emotes.length === 1), 'everyone hears');
+    for (const client of everyone) expect(client.emotes).toEqual([{ roomId, playerId: bob.me, emote: 'reviewer2' }]);
+    expect(outsider.emotes).toEqual([]);
+    // No snapshot, and no new rev.
+    await chair.send('sys:ping');
+    expect({ rev: chair.state?.rev, states: chair.states.length }).toEqual(before);
+    expect(server.app.rooms.find(code)?.rev).toBe(before.rev);
+  });
+
+  test('come one every ten seconds from each member, from any tab, and also after leaving and coming back', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    const tab = await connect({ token: bob.token });
+    await tab.send('room:join', { code });
+    // Refused as too soon, with how long is left.
+    const tooSoon = async (client: TestClient, atMost = 10_000) => {
+      const reply = await client.send('room:emote', { emote: 'deadline' });
+      expect(reply).toMatchObject({ ok: false, error: 'emote_cooldown' });
+      const { waitMs } = reply as { waitMs?: number };
+      expect(waitMs).toBeGreaterThan(0);
+      expect(waitMs).toBeLessThanOrEqual(atMost);
+    };
+    expect(await bob.send('room:emote', { emote: 'waiting' })).toEqual({ ok: true });
+    await tooSoon(bob);
+    await tooSoon(tab);
+    // Everyone has a wait of their own.
+    expect(await chair.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
+
+    // The test's clock runs on as well, so it moves less than the whole wait at first.
+    server.advance(9_000);
+    await tooSoon(bob, 1_000);
+    server.advance(1_000);
+    expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
+
+    expect(await bob.send('room:leave')).toEqual({ ok: true });
+    expect(await bob.send('room:join', { code, name: 'Bob' })).toMatchObject({ ok: true });
+    await tooSoon(bob);
+    // A clock that was set back doesn't keep anyone waiting until it has caught up.
+    server.advance(-60_000);
+    expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
+    await until(() => chair.emotes.length === 4, 'the chair hears all four');
+  });
+
+  test('are for members, and only the ones there are', async () => {
+    const { chair, code } = await room();
+    const screen = await connect();
+    expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
+    expect(await screen.send('room:emote', { emote: 'waiting' })).toEqual({ ok: false, error: 'not_member' });
+    const stranger = await connect();
+    expect(await stranger.send('room:emote', { emote: 'waiting' })).toEqual({ ok: false, error: 'not_member' });
+    for (const payload of [{}, { emote: 'hello' }, { emote: 1 }]) {
+      expect(await chair.send('room:emote', payload)).toEqual({ ok: false, error: 'bad_request' });
+    }
+    // None of the refusals counts as a reaction.
+    expect(await chair.send('room:emote', { emote: 'waiting' })).toEqual({ ok: true });
+  });
+});
+
+describe('closing a room', () => {
+  test('tells every member and every screen, and leaves no room behind the code', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    // Another tab of each player, and a screen, all brought back by the handshake.
+    const tabs = [
+      await connect({ token: chair.token, code, roomId }),
+      await connect({ token: bob.token, code, roomId }),
+    ];
+    for (const tab of tabs) await tab.waitFor((state) => state.code === code, 'the tab is in the room');
+    const screen = await connect({ watch: code, roomId });
+    await chair.waitFor((state) => state.screens === 1, 'the screen is up');
+
+    expect(await chair.send('room:close')).toEqual({ ok: true });
+    const [chairTab, bobTab] = tabs;
+    const told = [bob, ...tabs, screen];
+    await until(() => told.every((client) => client.closed.length > 0), 'everyone hears');
+    for (const client of [bob, bobTab, screen]) expect(client?.closed).toEqual(['closed']);
+    // The chair's page asked, and is answered instead; the chair's other tab hears that the chair
+    // acted elsewhere, as after room:leave.
+    expect(chair.closed).toEqual([]);
+    expect(chairTab?.closed).toEqual(['left']);
+    expect(server.app.rooms.find(code)).toBeUndefined();
+    expect(logged('room_closed')).toEqual([{ code, why: 'chair' }]);
+
+    // Nobody is in a room any more, and the code finds none.
+    for (const client of [chair, bob, ...tabs]) {
+      expect(await client.send('room:rename', { name: 'Zed' })).toEqual({ ok: false, error: 'not_member' });
+    }
+    expect(await screen.send('room:watch', { code, roomId })).toEqual({ ok: false, error: 'room_not_found' });
+    const late = await connect();
+    expect(await late.send('room:join', { code, name: 'Cat' })).toEqual({ ok: false, error: 'room_not_found' });
+  });
+
+  test('is for the chair alone, also from a screen of their own browser', async () => {
+    const { chair, code } = await room();
+    const bob = await join(code, 'Bob');
+    const screen = await connect({ token: chair.token });
+    expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
+    expect(await bob.send('room:close')).toEqual({ ok: false, error: 'not_chair' });
+    expect(await screen.send('room:close')).toEqual({ ok: false, error: 'not_member' });
+    expect(server.app.rooms.find(code)).toBeDefined();
+    expect(bob.closed).toEqual([]);
+  });
+
+  test('tells members who were offline when they come back', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    const cat = await join(code, 'Cat');
+    bob.close();
+    cat.close();
+    await chair.waitFor(() => online(chair, 'Bob') === false && online(chair, 'Cat') === false, 'both offline');
+    expect(await chair.send('room:close')).toEqual({ ok: true });
+
+    // One comes back with the room's ID in the handshake, and hears at once.
+    const bobBack = await connect({ token: bob.token, code, roomId });
+    await until(() => bobBack.closed.includes('expired'), 'Bob hears');
+    expect(bobBack.states).toEqual([]);
+    // The other asks with the code alone, and finds no room.
+    const catBack = await connect({ token: cat.token });
+    expect(await catBack.send('room:join', { code })).toEqual({ ok: false, error: 'room_not_found' });
+  });
+
+  test('in the middle of a game logs the game as started only', async () => {
+    const { chair, code } = await room();
+    await join(code, 'Bob');
+    expect(await start(chair)).toEqual({ ok: true });
+    expect(await chair.send('room:close')).toEqual({ ok: true });
+    expect(logged('game_started')).toHaveLength(1);
+    expect(logged('game_ended')).toEqual([]);
+    expect(logged('room_closed')).toEqual([{ code, why: 'chair' }]);
+  });
+});
+
 describe("the chair's controls", () => {
   test('are only for the chair', async () => {
     const { chair, code } = await room();
@@ -451,6 +617,7 @@ describe("the chair's controls", () => {
       ['room:remove', { playerId: chair.me }],
       ['room:chair', { playerId: bob.me }],
       ['room:dismiss', {}],
+      ['room:close', {}],
     ] as const) {
       expect(await bob.send(message, payload), message).toEqual({ ok: false, error: 'not_chair' });
     }

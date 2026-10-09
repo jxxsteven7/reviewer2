@@ -8,7 +8,7 @@ import {
   type StartProblem,
   type Team,
 } from '@reviewer2/shared';
-import { shuffle, type Rng } from '../../core/random';
+import { pick, shuffle, type Rng } from '../../core/random';
 
 // Who sits where, and the rules for changing seats (docs/games/keywords.md). Seats are keyed by
 // player ID. keyViewers and sides are keyed by member key: a member key, unlike a player ID,
@@ -37,6 +37,12 @@ export interface SeatRequest {
 
 export type SeatChange = { ok: true; seating: Seating } | { ok: false; error: SeatError };
 
+// How far the current game has got, as far as the seats care: there is none in the waiting room,
+// one is on, or one is over but the chair hasn't played again yet. The seat rules of a game hold
+// from its start until "play again", but only a seat taken while the game is on makes someone a
+// player of it, or shows them a key that the end doesn't show everyone anyway.
+export type GameStage = 'none' | 'on' | 'over';
+
 export const emptySeating = (): Seating => ({ seats: new Map(), keyViewers: new Set(), sides: new Map() });
 
 export const seatOf = (seating: Seating, id: string): Seat => seating.seats.get(id) ?? SPECTATOR;
@@ -57,19 +63,40 @@ function seatLike(wanted: SeatRequest): Seat | null {
   return team !== null && TEAMS.includes(team) ? { team, role } : null;
 }
 
-// Moves a player to a seat. `playing` is true while a game is on. Then whoever sits down in a
-// group belongs to it until the next game: they may step out to watch and come back, but not sit
-// in the other group, where they could act in the other group's turn. A captain's seat taken over
-// in the middle of a game shows that player the key, and nobody who has seen the key may become
-// a guesser until the next game.
-export function changeSeat(seating: Seating, member: Member, wanted: SeatRequest, playing: boolean): SeatChange {
+// Seats a newcomer who has come to play as a guesser. Whoever has played for a group in the
+// current game goes back to it. Anyone else goes to the group with fewer players in it, its
+// captain and those who are offline included, or to either at random when both have as many. The
+// rules of changeSeat() hold as for any other seat, so a newcomer who has seen the key in this
+// game stays a spectator. Captains are never given out here: the chair's shuffle picks them.
+export function autoSeat(seating: Seating, member: Member, rng: Rng, stage: GameStage): Seating {
+  const team = seating.sides.get(member.key) ?? smallerTeam(seating, rng);
+  const change = changeSeat(seating, member, { team, role: 'guesser' }, stage);
+  return change.ok ? change.seating : seating;
+}
+
+function smallerTeam(seating: Seating, rng: Rng): Team {
+  const size = (team: Team) => [...seating.seats.values()].filter((seat) => seat.team === team).length;
+  const red = size('red');
+  const blue = size('blue');
+  if (red === blue) return pick(TEAMS, rng);
+  return red < blue ? 'red' : 'blue';
+}
+
+// Moves a player to a seat. While a game is on, whoever sits down in a group belongs to it until
+// the next game: they may step out to watch and come back, but not sit in the other group, where
+// they could act in the other group's turn. A captain's seat taken over in the middle of a game
+// shows that player the key, and nobody who has seen the key may become a guesser until the next
+// game. Both rules hold once the game is over as well, until the chair plays again, because each
+// group's chat is still there to read; but a seat taken then makes nobody a player of that game.
+export function changeSeat(seating: Seating, member: Member, wanted: SeatRequest, stage: GameStage): SeatChange {
   const seat = seatLike(wanted);
   if (!seat) return { ok: false, error: 'bad_seat' };
   // Whoever asks for the seat they are in has it, and the seating is given back as it is, so that
   // the caller can tell that nothing has changed.
   const current = seatOf(seating, member.id);
   if (current.team === seat.team && current.role === seat.role) return { ok: true, seating };
-  if (playing && seat.team !== null) {
+  const bound = stage !== 'none';
+  if (bound && seat.team !== null) {
     const side = seating.sides.get(member.key);
     if (side !== undefined && side !== seat.team) return { ok: false, error: 'other_team' };
   }
@@ -77,11 +104,11 @@ export function changeSeat(seating: Seating, member: Member, wanted: SeatRequest
     const holder = captainOf(seating, seat.team);
     if (holder !== null && holder !== member.id) return { ok: false, error: 'seat_taken' };
   }
-  if (playing && seat.role === 'guesser' && seating.keyViewers.has(member.key)) {
+  if (bound && seat.role === 'guesser' && seating.keyViewers.has(member.key)) {
     return { ok: false, error: 'key_viewer' };
   }
   const seats = new Map(seating.seats).set(member.id, seat);
-  if (!playing || seat.team === null) return { ok: true, seating: { ...seating, seats } };
+  if (stage !== 'on' || seat.team === null) return { ok: true, seating: { ...seating, seats } };
   const sides = new Map(seating.sides).set(member.key, seat.team);
   const keyViewers = seat.role === 'captain' ? new Set(seating.keyViewers).add(member.key) : seating.keyViewers;
   return { ok: true, seating: { seats, keyViewers, sides } };

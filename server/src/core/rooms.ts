@@ -55,7 +55,8 @@ export class Rooms {
 
   // A new room with its creator in it, who chairs it, or why there can't be one: the server is
   // full, or the fields, the game's settings or the name won't do. `key` is the creator's member
-  // key. Without settings, the room has the game's defaults.
+  // key, and `play` says whether they have come to play or only to watch. Without settings, the
+  // room has the game's defaults.
   //
   // The room is listed only once its creator has joined it. A game module that throws there
   // leaves no room behind: one without a member would belong to whoever found its code first.
@@ -66,8 +67,9 @@ export class Rooms {
     settings?: unknown;
     key: string;
     name: string;
+    play?: boolean;
   }): Ack<{ room: Room; member: Member }> {
-    const { game, language, key, name } = options;
+    const { game, language, key, name, play = false } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
     const chosen = chooseFields(this.words, options.fields, language, game.wordsNeeded);
     if (!chosen.ok) return chosen;
@@ -86,7 +88,7 @@ export class Rooms {
       const configured = room.setSettings({ settings: options.settings });
       if (!configured.ok) return configured;
     }
-    const joined = room.join(key, name);
+    const joined = room.join(key, name, play);
     if (!joined.ok) return joined;
     this.#rooms.set(code, room);
     return { ok: true, room, member: joined.member };
@@ -106,7 +108,7 @@ export class Rooms {
   // time does nothing: by then its code may belong to another room.
   close(room: Room): string[] {
     if (this.#rooms.get(room.code) === room) this.#rooms.delete(room.code);
-    return [...room.screens, ...[...room.members.values()].flatMap((member) => [...member.sockets])];
+    return room.connections();
   }
 
   // Runs every minute. A game module that throws stops the sweep of its own room only.
@@ -152,6 +154,7 @@ export class Rooms {
       }
       if (room.passChairIfAway(this.limits.chairAwayMs)) changed = true;
       room.forgetOldRemovals();
+      room.forgetOldEmotes();
     } finally {
       // Whatever did change before a game module threw still has to reach the room's members.
       if (changed) result.changed.push(room);

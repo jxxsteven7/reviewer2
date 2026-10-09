@@ -59,7 +59,14 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 | `ConnectionBanner` | "Reconnecting..." at the top, whenever the connection is gone |
 | `PageMasthead`, `SiteWordmark` | The top of every page: the wordmark on the left, the manuscript number or the language switch on the right |
 | `ManuscriptId`, `QrCode`, `ShareTools` | The room's number, and ways to bring people in. Sharing falls back from the share sheet, to the clipboard, to a selected link that people copy by hand, which is what WeChat and plain http allow |
+| `RoomFooter` | The foot of a room page: the player's name, renaming, leaving, and for the chair, closing the room for everyone. Leaving and closing ask first |
+| `PlayChoice` | Whether a newcomer comes to play or to watch, when they create or join a room. Playing is chosen to begin with |
+| `EmoteButton`, `EmoteBubbles`, `SoundToggle` | The quick reactions: a button in the banner that opens the three phrases, the bubbles near the top that show "Name: phrase" for four seconds, and the switch for their sounds. While a player waits for the next reaction, the button counts down the seconds |
 | `PlayerName` | A name with an online dot and marks for "you" and the chair. For the chair, other names open the chair's actions |
+
+## Sound
+
+The quick reactions are the only sounds, one short motif each: a sagging "wah, wah, wah, waaah" for "I could have finished a PhD by now.", a fast tick and an alarm for the deadline, and two low notes a tritone apart for Reviewer 2. `client/src/core/sound.ts` makes them with Web Audio from plain waves as they play, so the page carries no audio files, and none of them comes from a game; that file also says where a recording would go instead. Phones play a page's sound only after the player has touched it, so a touch, click or key press unlocks the audio, and does so again when a locked screen or a switch to another app has put it to sleep. A big screen that nobody has clicked says so next to its switch. The switch to mute them is in the reactions' sheet and on the big screen, and the browser remembers it.
 
 ## Cards
 
@@ -69,6 +76,14 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 - **Revealed**: the full color, with white type on red, blue and Reviewer 2, and ink on grey. Reviewer 2 gets a slanted "Reject" stamp in `--stamp`.
 - **Type**: English words are set in Source Serif 4, Chinese words in the system sans. Long words get smaller type, and English words are hyphenated with Liang's en-us patterns (the `hyphen` package, the same patterns that TeX uses), because many browsers don't hyphenate at all. The build hyphenates the terms of the word library, so the page carries their break points and not the patterns. A card grows a little when a word needs the room, rather than cut it off.
 - **The board** is a 5×5 grid that fills the width on a phone. On a big screen it is sized to fit the screen's height, with the type scaled up to match.
+
+## The banner
+
+A strip across the top of the waiting room and the game says who the viewer is, "Red group · Student", "Blue group · PI" or "Spectator", and below it what is going on for them now: "Your turn to give a clue!", "Your PI is thinking of a clue.", "The other group is guessing." and so on, and for a spectator, which group is doing what. It has a tint of the viewer's group, with a rule in its color down the left edge, and spectators get the quiet grey. When the viewer has to act, as a PI in their group's clue phase or a student in its guess phase, the strip takes the group's full color with white type, and the tab's title becomes "Your turn!" until the moment has passed, so that a player who has gone to another tab sees it there. The banner is in `client/src/games/keywords/RoleBanner.vue`, and what it says is worked out in `banner.ts` next to it.
+
+## Decision letters
+
+The game ends with a decision letter for each group, from R2Conf, a conference that doesn't exist. No real conference or person is named. The winner is accepted, in a slot that goes by how many cards the other group still had to find: an oral with 4 or more, a spotlight with 2 or 3, a poster with 1. The loser gets a desk reject for revealing Reviewer 2, and a reject when the other group found all its cards first. A withdrawn game has one letter for everyone. Each verdict has three letters in each language in the locale files, and the winner's come in two sets, since a group that found every keyword and a group whose rivals revealed Reviewer 2 can't be congratulated in the same words. The game's ID picks one for each group, so everyone in a group reads the same letter, after a refresh too. Players read their own group's letter; spectators and big screens read both, the winner's first, side by side on a wide screen. The verdict is set large in the group's color, and the letter is signed by the program chairs. The rules are in `client/src/games/keywords/letters.ts`.
 
 ## The group chat
 

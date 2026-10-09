@@ -1,4 +1,5 @@
-import { expectNoKey, gameOf, playToTheEnd, seatTable, TEXT, expect, test } from './helpers';
+import { otherTeam } from '@reviewer2/shared';
+import { expectNoKey, gameOf, playToTheEnd, seatTable, snapshotsOf, TEXT, expect, test } from './helpers';
 
 // The brief's acceptance test: four players, one per browser, play a whole game, and the
 // guessers' network data never holds the colors of unrevealed cards. In both languages.
@@ -20,10 +21,22 @@ for (const language of ['en', 'zh'] as const) {
     const turns = await playToTheEnd(table);
     expect(turns).toBe(16);
 
-    for (const page of [table.captains.red, table.guessers.blue, table.spectator, table.screen]) {
-      await expect(page.locator('.letter')).toBeVisible();
+    // The group that went second found its last card first, while the other group had one left: a
+    // poster for the winner, and a rejection for the other group. Each group reads its own letter,
+    // and the spectator and the screen read both, the winner's first.
+    const winner = gameOf(snapshotsOf(table.spectator).at(-1))?.result?.winner ?? 'red';
+    const loser = otherTeam(winner);
+    const { verdicts } = text.game.letter;
+    for (const page of [table.captains[winner], table.guessers[winner]]) {
+      await expect(page.locator('.letter .verdict')).toHaveText(verdicts.poster);
     }
-    await expect(table.captains.red.locator('.letter .verdict')).toHaveText(text.game.letter.accepted);
+    for (const page of [table.captains[loser], table.guessers[loser]]) {
+      await expect(page.locator('.letter .verdict')).toHaveText(verdicts.reject);
+    }
+    for (const page of [table.spectator, table.screen]) {
+      await expect(page.locator(`.letter.${winner} .verdict`)).toHaveText(verdicts.poster);
+      await expect(page.locator('.letter .verdict')).toHaveText([verdicts.poster, verdicts.reject]);
+    }
     // After the end, everyone sees every color.
     await expect(table.spectator.locator('.board .card.known, .board .card.revealed')).toHaveCount(25);
 

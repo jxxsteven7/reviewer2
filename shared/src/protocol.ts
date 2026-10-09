@@ -39,6 +39,7 @@ export const ROOM_ERRORS = [
   'wrong_phase',
   'cannot_start',
   'stale',
+  'emote_cooldown',
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 
@@ -52,9 +53,10 @@ export interface FieldInfo {
 
 // What the server answers a message with: that it did what was asked, with whatever it has to
 // say about it, or that it didn't, with an error code. `language` comes with name_required alone:
-// it is the room's language, for the form that asks a newcomer for a name.
+// it is the room's language, for the form that asks a newcomer for a name. `waitMs` comes with
+// emote_cooldown alone: how much longer the member has to wait before the next reaction.
 export type Ack<Data extends object = object> =
-  ({ ok: true } & Data) | { ok: false; error: string; language?: Language };
+  ({ ok: true } & Data) | { ok: false; error: string; language?: Language; waitMs?: number };
 
 // The handshake, which brings back whoever has been in a room before the first message runs. A
 // browser sends its token and, once it is in a room, that room's code and ID. A screen sends the
@@ -75,6 +77,20 @@ export interface Session {
   version: string;
 }
 
+// The quick reactions that anyone in a room can send, spectators included (docs/architecture.md).
+// Their text and their sounds are the client's. A member may send one every EMOTE_COOLDOWN_MS.
+export const EMOTES = ['waiting', 'deadline', 'reviewer2'] as const;
+export type Emote = (typeof EMOTES)[number];
+export const EMOTE_COOLDOWN_MS = 10_000;
+
+// A reaction, as the server passes it on to every connection in the room as `room:emote`. It is a
+// moment rather than a change: no snapshot carries it.
+export interface EmoteEvent {
+  roomId: string;
+  playerId: string;
+  emote: Emote;
+}
+
 // Why the server closed a room for someone: they were removed, the room expired, they left it
-// from another tab, or the server is restarting.
-export type ClosedReason = 'removed' | 'expired' | 'left' | 'restart';
+// from another tab, the chair closed it for everyone, or the server is restarting.
+export type ClosedReason = 'removed' | 'expired' | 'left' | 'closed' | 'restart';

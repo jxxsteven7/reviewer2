@@ -1,58 +1,96 @@
 <script setup lang="ts">
-import { otherTeam, type GameResult, type Team } from '@reviewer2/shared';
+import { otherTeam, type KeywordsView, type Team } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
+import { letterNumber, lettersFor, verdictFor } from './letters';
 
-// The result, written as an editor's decision letter: accepted for the group that found all its
-// keywords, rejected for the group that revealed Reviewer 2, or withdrawn by the chair. `busy`
-// holds "Play again" while a press of it is on its way.
-const props = withDefaults(defineProps<{ result: GameResult; isChair: boolean; busy?: boolean }>(), { busy: false });
+// The result, written as each group's decision letter from a conference that doesn't exist
+// (letters.ts). A player reads their own group's letter; a spectator and a screen read both, the
+// winner's first. A withdrawn game has one letter for everyone. `side` is the group the viewer
+// plays for, if any. `busy` holds "Play again" while a press of it is on its way, and `compact`
+// makes the letters smaller for a big screen, where they sit above the board.
+const props = withDefaults(
+  defineProps<{ game: KeywordsView; side: Team | null; isChair: boolean; busy?: boolean; compact?: boolean }>(),
+  { busy: false, compact: false },
+);
 const emit = defineEmits<{ again: [] }>();
 const { t } = useI18n();
 
 const group = (team: Team) => t(`lobby.group.${team}`);
 
-const letter = computed(() => {
-  const { winner, reason } = props.result;
-  if (reason === 'withdrawn' || winner === null) {
-    return { verdict: t('game.letter.withdrawn'), tone: 'withdrawn', body: t('game.letter.withdrawnBody') };
+const letters = computed(() => {
+  const { result, remaining, gameId } = props.game;
+  if (!result) return [];
+  if (result.reason === 'withdrawn' || result.winner === null) {
+    const number = letterNumber(gameId, null, 'withdrawn');
+    return [{ team: null, verdict: 'withdrawn', body: t(`game.letter.bodies.withdrawn.${number}`) }];
   }
-  if (reason === 'reviewer2') {
-    const loser = otherTeam(winner);
-    return {
-      verdict: t('game.letter.rejected'),
-      tone: loser,
-      body: t('game.letter.reviewer2', { group: group(loser), winner: group(winner) }),
-    };
-  }
-  return { verdict: t('game.letter.accepted'), tone: winner, body: t('game.letter.found', { group: group(winner) }) };
+  const { winner } = result;
+  const teams = props.side ? [props.side] : [winner, otherTeam(winner)];
+  return teams.map((team) => {
+    const verdict = verdictFor(result, remaining, team);
+    const other = otherTeam(team);
+    const body = t(`game.letter.bodies.${lettersFor(verdict, result)}.${letterNumber(gameId, team, verdict)}`, {
+      group: group(team),
+      other: group(other),
+      left: remaining[other],
+    });
+    return { team, verdict, body };
+  });
 });
 </script>
 
 <template>
-  <article class="letter" :class="letter.tone">
-    <p class="kicker">{{ t('game.letter.title') }}</p>
-    <h2 class="verdict">{{ letter.verdict }}</h2>
-    <p class="body">{{ letter.body }}</p>
-    <p class="signature">{{ t('game.letter.signature') }}</p>
+  <section class="decision" :class="{ compact }">
+    <div class="letters" :class="{ both: letters.length > 1 }">
+      <article v-for="letter in letters" :key="letter.team ?? 'all'" class="letter" :class="letter.team ?? 'withdrawn'">
+        <p class="kicker">
+          {{ letter.team ? t('game.letter.titleFor', { group: group(letter.team) }) : t('game.letter.title') }}
+        </p>
+        <h2 class="verdict">{{ t(`game.letter.verdicts.${letter.verdict}`) }}</h2>
+        <p class="body">{{ letter.body }}</p>
+        <p class="signature">{{ t('game.letter.signature') }}</p>
+      </article>
+    </div>
     <UiButton v-if="isChair" variant="primary" :disabled="busy" @click="emit('again')">
       {{ t('game.letter.again') }}
     </UiButton>
     <p v-else class="wait">{{ t('game.letter.waitAgain') }}</p>
-  </article>
+  </section>
 </template>
 
 <style scoped>
+.decision {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.letters {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+}
+
 .letter {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
-  margin: var(--space-4) 0;
   padding: var(--space-4);
   border: 1px solid var(--ink);
   border-radius: var(--radius-card);
+}
+
+.letter.red {
+  border-left: 4px solid var(--red);
+}
+
+.letter.blue {
+  border-left: 4px solid var(--blue);
 }
 
 .verdict {
@@ -79,7 +117,6 @@ const letter = computed(() => {
 
 .signature {
   align-self: flex-end;
-  margin-bottom: var(--space-2);
   color: var(--ink-2);
   font-family: var(--font-serif);
 }
@@ -91,5 +128,24 @@ const letter = computed(() => {
 .wait {
   color: var(--ink-3);
   font-size: var(--text-sm);
+}
+
+.compact .letter {
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.compact .verdict {
+  font-size: var(--text-2xl);
+}
+
+.compact .body {
+  font-size: var(--text-md);
+}
+
+@media (min-width: 48rem) {
+  .letters.both {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

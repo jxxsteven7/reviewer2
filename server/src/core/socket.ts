@@ -1,4 +1,4 @@
-import { cleanName, type Ack, type ClosedReason, type Session } from '@reviewer2/shared';
+import { cleanName, type Ack, type ClosedReason, type EmoteEvent, type Session } from '@reviewer2/shared';
 import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
@@ -187,21 +187,23 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
   }
 
-  // Closes a room, tells whoever is still connected to it, and logs it. `why` is for the log:
-  // "empty", "idle", "stale" or "restart".
-  function shut(room: Room, reason: ClosedReason, why: string): void {
-    closeFor(rooms.close(room), reason);
+  // Closes a room, tells whoever is still connected to it, apart from `except`, and logs it.
+  // `why` is for the log: "empty", "idle", "stale", "chair" or "restart".
+  function shut(room: Room, reason: ClosedReason, why: string, except?: Iterable<string>): void {
+    closeFor(rooms.close(room), reason, except);
     unschedule(room);
     log('room_closed', { code: room.code, why });
   }
 
-  // Tells connections that their room is gone for them.
-  function closeFor(socketIds: Iterable<string>, reason: ClosedReason, except?: string): void {
+  // Takes connections out of their room and tells them why, apart from `except`, which have been
+  // told already or asked for it themselves.
+  function closeFor(socketIds: Iterable<string>, reason: ClosedReason, except: Iterable<string> = []): void {
+    const quiet = new Set(except);
     for (const id of socketIds) {
       const socket = io.sockets.sockets.get(id);
       if (!socket) continue;
       Object.assign(connection(socket), { room: null, screen: false });
-      if (id !== except) socket.emit('room:closed', { reason });
+      if (!quiet.has(id)) socket.emit('room:closed', { reason });
     }
   }
 
@@ -442,7 +444,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
 
-    on(handlers, 'room:create', ({ game, language, fields, settings, name }) => {
+    on(handlers, 'room:create', ({ game, language, fields, settings, name, play }) => {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
@@ -452,7 +454,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // can ask for. The chair's messages that do the same need a room first; this one is open
       // to anyone, and must not be free to whoever asks for rooms that can't be.
       creations.add(conn.ip);
-      const created = rooms.create({ game: module, language, fields, settings, key: conn.key, name });
+      const created = rooms.create({ game: module, language, fields, settings, key: conn.key, name, play });
       if (!created.ok) return created;
       const { room, member } = created;
       log('room_created', { code: room.code, game, language, fields: room.fields });
@@ -460,7 +462,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ code: room.code, roomId: room.id });
     });
 
-    on(handlers, 'room:join', ({ code, name, roomId }) => {
+    on(handlers, 'room:join', ({ code, name, roomId, play }) => {
       const room = lookup(conn, code, roomId ?? undefined);
       if (typeof room === 'string') return fail(room);
       const member = room.memberByKey(conn.key);
@@ -473,7 +475,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const refusal = room.refusal(conn.key);
       if (refusal) return fail(refusal);
       if (name === undefined) return { ...fail('name_required'), language: room.language };
-      const joined = room.join(conn.key, name);
+      const joined = room.join(conn.key, name, play);
       if (!joined.ok) return joined;
       enter(socket, room, joined.member);
       return ok({ code: room.code, roomId: room.id });
@@ -488,7 +490,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const found = membership(socket);
       if (!found) return fail('not_member');
       const { room, member } = found;
-      closeFor(room.drop(member.id), 'left', socket.id);
+      closeFor(room.drop(member.id), 'left', [socket.id]);
       if (room.members.size === 0) shut(room, 'expired', 'empty');
       else broadcast(room);
       return ok();
@@ -498,6 +500,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const found = membership(socket);
       if (!found) return fail('not_member');
       return changed(found.room, found.room.rename(found.member.id, name));
+    });
+
+    // A quick reaction goes to every connection in the room, screens and the sender's own tabs
+    // included. It is a moment rather than a change to the room: it bumps no rev and no snapshot
+    // carries it, so whoever is offline misses it.
+    on(handlers, 'room:emote', ({ emote }) => {
+      const found = membership(socket);
+      if (!found) return fail('not_member');
+      const { room, member } = found;
+      const result = room.emote(member.id);
+      if (!result.ok) return result;
+      const event: EmoteEvent = { roomId: room.id, playerId: member.id, emote };
+      io.to(room.connections()).emit('room:emote', event);
+      return ok();
     });
 
     on(handlers, 'room:settings', (changes) => asChair(socket, (room) => changed(room, room.setSettings(changes))));
@@ -522,6 +538,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       asChair(socket, (room) => {
         closeFor(room.dismissScreens(), 'removed');
         broadcast(room);
+        return ok();
+      }),
+    );
+
+    // The chair closes the room for everyone, screens included. The connection that asked is
+    // answered rather than told, as when a player leaves: its page knows what it did. The chair's
+    // other tabs hear that the chair acted in another tab, as after room:leave, rather than that
+    // the chair closed the room on them. Members who are offline find out when they come back, as
+    // from any room that closed while they were away.
+    on(handlers, 'room:close', () =>
+      asChair(socket, (room, chair) => {
+        const own = [...chair.sockets];
+        closeFor(own, 'left', [socket.id]);
+        shut(room, 'closed', 'chair', own);
         return ok();
       }),
     );

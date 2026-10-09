@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { PlayerView } from '@reviewer2/shared';
-import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { act } from '../socket';
+import { useBusy } from '../useBusy';
 import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
 
@@ -11,14 +11,12 @@ import UiSheet from './UiSheet.vue';
 const props = defineProps<{ player: PlayerView | null }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
-// While an action is on its way, so that a second tap doesn't send another.
-const busy = ref(false);
+const { busy, run } = useBusy();
 
-async function run(message: 'room:spectate' | 'room:remove' | 'room:chair') {
-  if (!props.player || busy.value) return;
-  busy.value = true;
-  await act(message, { playerId: props.player.id });
-  busy.value = false;
+async function manage(message: 'room:spectate' | 'room:remove' | 'room:chair') {
+  const player = props.player;
+  if (!player) return;
+  await run(() => act(message, { playerId: player.id }));
   emit('close');
 }
 </script>
@@ -26,9 +24,11 @@ async function run(message: 'room:spectate' | 'room:remove' | 'room:chair') {
 <template>
   <UiSheet :open="player !== null" :title="player?.name ?? ''" @close="emit('close')">
     <div class="actions">
-      <UiButton :disabled="busy" @click="run('room:spectate')">{{ t('lobby.manage.spectate') }}</UiButton>
-      <UiButton :disabled="busy" @click="run('room:chair')">{{ t('lobby.manage.chair') }}</UiButton>
-      <UiButton variant="danger" :disabled="busy" @click="run('room:remove')">{{ t('lobby.manage.remove') }}</UiButton>
+      <UiButton :disabled="busy" @click="manage('room:spectate')">{{ t('lobby.manage.spectate') }}</UiButton>
+      <UiButton :disabled="busy" @click="manage('room:chair')">{{ t('lobby.manage.chair') }}</UiButton>
+      <UiButton variant="danger" :disabled="busy" @click="manage('room:remove')">
+        {{ t('lobby.manage.remove') }}
+      </UiButton>
       <UiButton variant="quiet" @click="emit('close')">{{ t('lobby.manage.cancel') }}</UiButton>
     </div>
   </UiSheet>

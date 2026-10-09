@@ -84,16 +84,22 @@ socket.on('connect', () => {
   if (wanted && entry.status !== 'needs_name') void ask();
 });
 
-async function ask(name?: string): Promise<Ack> {
+// A newcomer's name, and whether they have come to play or only to watch.
+interface Newcomer {
+  name: string;
+  play: boolean;
+}
+
+async function ask(newcomer?: Newcomer): Promise<Ack> {
   const asked = wanted;
   if (!asked) return { ok: false, error: 'unknown' };
   const { code, screen, roomId } = asked;
   // A newcomer stays on the name form while their name is on its way; the form says so itself.
-  if (entry.status !== 'in' && name === undefined) entry.status = 'joining';
+  if (entry.status !== 'in' && !newcomer) entry.status = 'joining';
   const reply = await send<{ code: string; roomId: string }>(screen ? 'room:watch' : 'room:join', {
     code,
     ...(roomId === undefined ? {} : { roomId }),
-    ...(screen || name === undefined ? {} : { name }),
+    ...(screen || !newcomer ? {} : newcomer),
   });
   if (wanted !== asked) return reply; // the page has left this room, or wants another one now
   if (reply.ok) {
@@ -115,11 +121,11 @@ async function ask(name?: string): Promise<Ack> {
     case 'timeout':
       // The server didn't answer in time. A fresh connection asks again, as after a ping that goes
       // unanswered. A newcomer's name goes back to the form, which asks them to try again.
-      if (name === undefined) reconnect();
+      if (!newcomer) reconnect();
       break;
     default:
       // A newcomer whose name was refused stays on the name form, which shows the reason.
-      if (name === undefined) Object.assign(entry, { status: 'failed', error: reply.error });
+      if (!newcomer) Object.assign(entry, { status: 'failed', error: reply.error });
   }
   return reply;
 }
@@ -136,8 +142,8 @@ export function openRoom(code: string, { screen = false } = {}): void {
   else connect();
 }
 
-// A newcomer's name.
-export const submitName = (name: string): Promise<Ack> => ask(name);
+// A newcomer's name, and whether they have come to play or only to watch.
+export const submitName = (name: string, play: boolean): Promise<Ack> => ask({ name, play });
 
 // The page goes elsewhere. The player keeps their seat until the room drops them.
 export function closeRoomPage(): void {
@@ -147,12 +153,17 @@ export function closeRoomPage(): void {
   Object.assign(entry, { status: 'idle', language: null, closed: null, error: null });
 }
 
-export async function leaveRoom(): Promise<Ack> {
-  const reply = await send('room:leave');
+// The player leaves the room, or the chair closes it for everyone. The server tells the player's
+// other connections, and everyone else when the room closes, but not the connection that asked:
+// it knows.
+async function goAway(message: 'room:leave' | 'room:close'): Promise<Ack> {
+  const reply = await send(message);
   if (reply.ok) {
-    // The server tells the player's other connections, not the one that asked: it knows.
     latest = null;
     closeRoomPage();
   }
   return reply;
 }
+
+export const leaveRoom = (): Promise<Ack> => goAway('room:leave');
+export const closeRoom = (): Promise<Ack> => goAway('room:close');

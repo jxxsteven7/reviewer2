@@ -49,9 +49,9 @@ const game = computed(() => data.value.game as KeywordsView | null);
   </section>
 
   <section v-else class="screen-game">
+    <DecisionLetter v-if="game.result" class="letters-row" :game="game" :side="null" :is-chair="false" compact />
     <div class="main" :class="{ over: game.result }">
-      <DecisionLetter v-if="game.result" :result="game.result" :is-chair="false" />
-      <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
+      <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" />
       <KeywordsBoard :cards="game.cards" :selectable="false" :selected="null" :lang="HTML_LANG[room.language]" large />
     </div>
     <aside class="side">
@@ -143,16 +143,21 @@ ul {
 }
 
 /* The whole board fits on the screen: five rows of cards that are 4/5 as tall as they are wide,
-   under the masthead and the turn strip. The decision letter that takes the strip's place at
-   the end is about 10rem taller, and the board makes room for it. */
+   under the masthead and the turn strip. At the end, the two decision letters take the strip's
+   place, side by side above the board and the clue log, and the board makes room for them. */
 .screen-game .main {
   width: min(100%, calc((100vh - 15rem) * 1.25));
   width: min(100%, calc((100dvh - 15rem) * 1.25));
 }
 
 .screen-game .main.over {
-  width: min(100%, calc((100vh - 25rem) * 1.25));
-  width: min(100%, calc((100dvh - 25rem) * 1.25));
+  width: min(100%, calc((100vh - 28rem) * 1.25));
+  width: min(100%, calc((100dvh - 28rem) * 1.25));
+}
+
+.letters-row {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
 }
 
 @media (min-width: 60rem) {

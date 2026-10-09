@@ -1,12 +1,54 @@
-import { interpolate, joinByLink, newPlayer, playFor, seatTable, sideChannel, TEXT, expect, test } from './helpers';
+import {
+  createRoom,
+  interpolate,
+  joinByLink,
+  newPlayer,
+  playFor,
+  seatTable,
+  sideChannel,
+  TEXT,
+  expect,
+  test,
+} from './helpers';
 
-test('a latecomer joins in the middle of a game and plays for a group', async ({ browser }) => {
+const guesserIn = (team: 'red' | 'blue') => interpolate(TEXT.en.game.you.guesser, { group: TEXT.en.lobby.group[team] });
+
+test('players who come to play are dealt into the groups evenly, and the shuffle picks the PIs', async ({
+  browser,
+}) => {
+  const ann = await newPlayer(browser);
+  const url = await createRoom(ann, 'en', 'Ann');
+  // One at a time, so that each finds the groups as the one before left them.
+  for (const name of ['Bob', 'Cat', 'Dan']) await joinByLink(await newPlayer(browser), url, name, 'en');
+  await joinByLink(await newPlayer(browser), url, 'Eve', 'en', { watch: true });
+  for (const team of ['red', 'blue'] as const) {
+    await expect(ann.locator(`.group.${team} .names li`)).toHaveCount(2);
+    await expect(ann.locator(`.group.${team}`)).toContainText(TEXT.en.lobby.vacant);
+  }
+  await expect(ann.locator('.spectators')).toContainText('Eve');
+
+  await ann.getByRole('button', { name: TEXT.en.lobby.shuffle }).click();
+  await expect(ann.locator('.desk .ready')).toBeVisible();
+  await expect(ann.locator('.spectators')).toContainText('Eve');
+});
+
+test('a latecomer who comes to play gets a seat in the smaller group in the middle of a game', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
+  // Eve joins the blue group, which leaves the red one smaller.
+  await table.spectator.getByRole('button', playFor('blue')).click();
+  await expect(table.captains.red.locator('.rosters .group.blue')).toContainText('Eve');
+
   const fay = await newPlayer(browser);
   await joinByLink(fay, table.url, 'Fay', 'en');
-  await expect(fay.locator('.keywords-game')).toBeVisible();
-  await fay.getByRole('button', playFor('blue')).click();
-  await expect(table.captains.red.locator('.rosters .group.blue')).toContainText('Fay');
+  await expect(fay.locator('.actions .who')).toHaveText(guesserIn('red'));
+  await expect(table.captains.red.locator('.rosters .group.red')).toContainText('Fay');
+
+  // A latecomer who comes to watch may still choose either group.
+  const gus = await newPlayer(browser);
+  await joinByLink(gus, table.url, 'Gus', 'en', { watch: true });
+  await expect(gus.locator('.actions .who')).toHaveText(TEXT.en.game.you.spectator);
+  await gus.getByRole('button', playFor('blue')).click();
+  await expect(gus.locator('.actions .who')).toHaveText(guesserIn('blue'));
 });
 
 test('nobody changes groups in the middle of a game', async ({ browser }) => {
@@ -27,9 +69,7 @@ test('nobody changes groups in the middle of a game', async ({ browser }) => {
   });
   await bob.getByRole('button', playFor('red')).click();
   // Back in the red group, on his own page and on the PI's.
-  await expect(bob.locator('.actions .who')).toHaveText(
-    interpolate(TEXT.en.game.you.guesser, { group: TEXT.en.lobby.group.red }),
-  );
+  await expect(bob.locator('.actions .who')).toHaveText(guesserIn('red'));
   await expect(table.captains.red.locator('.rosters .spectators')).not.toContainText('Bob');
   await expect(table.captains.red.locator('.rosters .group.red')).toContainText('Bob');
 });
@@ -48,8 +88,10 @@ test('an empty PI seat can be taken over, and its new PI sees the key and stays 
   await eve.locator('[role=dialog]').getByRole('button', { name: TEXT.en.game.takeOver }).click();
   await expect(eve.locator('.board .card.known')).toHaveCount(25);
 
-  // Ann comes back with the same browser. Having seen the key, she can't play as a student.
+  // Ann comes back with the same browser, to play. Having seen the key, she can't play as a
+  // student, and the server leaves her watching.
   await joinByLink(ann, table.url, 'Ann', 'en');
+  await expect(ann.locator('.actions .who')).toHaveText(TEXT.en.game.you.spectator);
   await expect(ann.locator('.keywords-game')).toBeVisible();
   for (const team of ['red', 'blue'] as const) await expect(ann.getByRole('button', playFor(team))).toHaveCount(0);
   // Nor by asking the server straight out, as an outdated tab could.

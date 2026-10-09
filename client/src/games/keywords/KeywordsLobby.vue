@@ -1,21 +1,30 @@
 <script setup lang="ts">
-import { BOARD_SIZE, sameSettings, type KeywordsSettings, type PlayerView, type RoomView } from '@reviewer2/shared';
+import {
+  BOARD_SIZE,
+  SPECTATOR,
+  sameSettings,
+  type KeywordsSettings,
+  type PlayerView,
+  type RoomView,
+} from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FieldPicker from '../../core/components/FieldPicker.vue';
 import PlayerMenu from '../../core/components/PlayerMenu.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import ShareTools from '../../core/components/ShareTools.vue';
+import EmoteButton from '../../core/components/EmoteButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { fields, loadFields } from '../../core/fields';
 import { act } from '../../core/socket';
+import RoleBanner from './RoleBanner.vue';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
 import { useKeywords } from './useKeywords';
 
-// The waiting room: the two groups with their PI and students, the spectators and the screens,
-// the room's settings, and the chair's desk with the word lists, the settings, the shuffle and
-// the start button.
+// The waiting room: the banner that says where the viewer sits, the two groups with their PI and
+// students, the spectators and the screens, the room's settings, and the chair's desk with the
+// word lists, the settings, the shuffle and the start button.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -70,6 +79,9 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 
 <template>
   <section class="lobby">
+    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="null" :chair="isChair">
+      <EmoteButton />
+    </RoleBanner>
     <header class="lobby-head">
       <p class="kicker">{{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}</p>
       <ShareTools :code="room.code" />
@@ -170,6 +182,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
           </li>
           <li v-if="!problems.length" class="ready">{{ t('lobby.ready') }}</li>
         </ul>
+        <p class="hint shuffle-hint">{{ t('lobby.shuffleHint') }}</p>
         <div class="desk-actions">
           <UiButton @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
           <UiButton
@@ -345,6 +358,10 @@ dd .vacant {
 
 .problems .ready {
   color: var(--ink-2);
+}
+
+.shuffle-hint {
+  margin-bottom: var(--space-3);
 }
 
 .desk-actions {

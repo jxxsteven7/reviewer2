@@ -2,25 +2,28 @@
 import { formatCode, MAX_NAME_INPUT, parseCode } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import PlayChoice from '../components/PlayChoice.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { submitName } from '../room';
 import { storedName, storeName } from '../session';
+import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
-// A newcomer gives a nickname before joining. The page is already in the room's language. A name
-// that the server refuses comes back here with the reason, for another try.
+// A newcomer gives a nickname before joining, and says whether they have come to play or only to
+// watch. The page is already in the room's language. A name that the server refuses comes back
+// here with the reason, for another try.
 const props = defineProps<{ code: string }>();
 const { t } = useI18n();
 const { name, clean, problem, refuse } = useNameField(storedName());
-const busy = ref(false);
+const play = ref(true);
+const { busy, run } = useBusy();
 // The code as the address gives it may be in any case, or carry the prefix already.
 const number = computed(() => formatCode(parseCode(props.code) ?? props.code));
 
 async function join() {
-  busy.value = true;
-  const reply = await submitName(name.value);
-  busy.value = false;
+  const reply = await run(() => submitName(name.value, play.value));
+  if (!reply) return;
   if (reply.ok) storeName(clean.value ?? name.value.trim());
   else refuse(reply.error);
 }
@@ -37,6 +40,7 @@ async function join() {
       enterkeyhint="go"
       :error="problem"
     />
+    <PlayChoice v-model="play" />
     <UiButton variant="primary" type="submit" :disabled="busy || !clean">{{ t('room.join.submit') }}</UiButton>
   </form>
 </template>

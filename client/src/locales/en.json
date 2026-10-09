@@ -74,7 +74,12 @@
     "join": {
       "title": "Join {code}",
       "name": "Your name",
-      "submit": "Join"
+      "submit": "Join",
+      "as": "Taking part",
+      "play": "Play",
+      "playHint": "You'll be given a seat, and you can move later.",
+      "watch": "Watch",
+      "watchHint": "Just watch. You can take a seat whenever you like."
     },
     "notFound": {
       "title": "No such room",
@@ -84,6 +89,7 @@
       "removed": "The chair removed you from this room.",
       "expired": "This room has closed.",
       "left": "You left this room in another tab.",
+      "closed": "The chair closed this room.",
       "restart": "The server is being updated, so this room has closed. Please start a new one in a moment."
     },
     "screenRemoved": "The chair took this screen down. Open the link again to put it back up.",
@@ -94,7 +100,13 @@
     "rename": "Change name",
     "renameSubmit": "Save",
     "leave": "Leave the room",
-    "leaveConfirm": "Leave this room? Your seat will be given up."
+    "leaveConfirm": "Leave this room? Your seat will be given up.",
+    "leaveChair": "Leave this room? Your seat will be given up, and {name} will chair the room.",
+    "leaveLast": "Leave this room? You're the last one in it, so it will close.",
+    "closeInstead": "Close the room for everyone",
+    "closeRoom": "Close the room",
+    "closeConfirm": "Close this room for everyone? Everyone in it, big screens included, is told that it has closed, and its number stops working.",
+    "closeConfirmGame": "Close this room for everyone? The game in progress ends without a winner. Everyone in it, big screens included, is told that the room has closed, and its number stops working."
   },
   "lobby": {
     "kicker": "Waiting room",
@@ -120,6 +132,7 @@
     "save": "Save",
     "saveHint": "Starting the game saves these as well.",
     "shuffle": "Shuffle the groups",
+    "shuffleHint": "Shuffling deals everyone seated into two even groups and picks a PI for each.",
     "start": "Start the game",
     "ready": "Everyone needed is seated.",
     "waiting": "Waiting for the chair to start the game.",
@@ -198,13 +211,69 @@
     "board": "The board",
     "letter": {
       "title": "Decision letter",
-      "accepted": "Accepted",
-      "rejected": "Rejected",
-      "withdrawn": "Withdrawn",
-      "found": "Dear {group}, we are pleased to tell you that all your keywords have been found. Your paper is accepted.",
-      "reviewer2": "Dear {group}, Reviewer 2 has recommended rejection. The {winner} wins.",
-      "withdrawnBody": "The chair withdrew this game before the end. Nobody wins.",
-      "signature": "The Editors",
+      "titleFor": "Decision letter · {group}",
+      "verdicts": {
+        "oral": "Accept (Oral)",
+        "spotlight": "Accept (Spotlight)",
+        "poster": "Accept (Poster)",
+        "deskReject": "Desk Reject",
+        "reject": "Reject",
+        "withdrawn": "Withdrawn"
+      },
+      "bodies": {
+        "oral": {
+          "found": {
+            "1": "Dear authors of the {group}, we are delighted to inform you that your submission has been accepted to R2Conf as an oral presentation. The reviewers were struck by how far ahead you finished: the other group still had {left} keywords to find. Please prepare a twelve-minute talk, and resist the urge to fit forty slides into it.",
+            "2": "Dear {group}, congratulations! Out of a record number of submissions, yours is one of the very few selected for an oral at R2Conf. You found every keyword while your competitors still had {left} left on the table. The plenary hall is yours.",
+            "3": "Dear {group}, the program committee is pleased to accept your paper as an oral presentation. Reviewer 2 looked hard for a weakness and found none. Your rivals are still looking for {left} keywords of their own."
+          },
+          "reviewer2": {
+            "1": "Dear authors of the {group}, we are delighted to inform you that your submission has been accepted to R2Conf as an oral presentation. The competing paper from the {other} was assigned to Reviewer 2, and that was the end of it, with {left} keywords still to find. The stage is yours; please keep the talk under twelve minutes.",
+            "2": "Dear {group}, congratulations! Your paper has been accepted for an oral at R2Conf. To be frank, the committee never got to compare the two papers: Reviewer 2 found the {other}'s first, {left} keywords from the finish line. A win is a win.",
+            "3": "Dear {group}, the program committee is pleased to accept your paper as an oral presentation. The {other} turned over Reviewer 2 with {left} keywords still to find, and the slot went to you. Nobody will count how many you had found yourselves."
+          }
+        },
+        "spotlight": {
+          "found": {
+            "1": "Dear {group}, we are pleased to inform you that your paper has been accepted to R2Conf as a spotlight. It was close: the other group had only {left} keywords left to find. You will have five minutes on stage; please use them wisely.",
+            "2": "Dear {group}, congratulations on your acceptance with a spotlight presentation. The reviewers praised your clear clues and steady guessing, and noted that your rivals were just {left} keywords behind.",
+            "3": "Dear {group}, your submission has been accepted as a spotlight paper. The area chair writes: “Solid work, finished with {left} keywords to spare on the other side. We expect the camera-ready version by Friday.”"
+          },
+          "reviewer2": {
+            "1": "Dear {group}, we are pleased to inform you that your paper has been accepted to R2Conf as a spotlight. The {other} was only {left} keywords from the finish when it ran into Reviewer 2. You will have five minutes on stage; please remember to thank the reviewer.",
+            "2": "Dear {group}, congratulations on your acceptance with a spotlight presentation. It could have gone either way: the {other} had {left} keywords left when it found Reviewer 2 instead. The reviewers call this “a decisive contribution by the competition”.",
+            "3": "Dear {group}, your submission has been accepted as a spotlight paper. The area chair writes: “The rival paper was {left} keywords short when Reviewer 2 got to it. Fortune favors the careful.” The camera-ready version is due on Friday."
+          }
+        },
+        "poster": {
+          "found": {
+            "1": "Dear {group}, we are happy to let you know that your paper has been accepted to R2Conf as a poster. You won by a single keyword, which the reviewers called “a thrilling finish”. Please bring a poster tube and a strong voice.",
+            "2": "Dear {group}, after a long discussion, your paper has been accepted as a poster. The other group was one keyword away from taking your slot. Posters are A0 and portrait; the coffee is at the back.",
+            "3": "Dear {group}, congratulations: your paper squeezed in as a poster. One more keyword on the other side, and this letter would read very differently."
+          },
+          "reviewer2": {
+            "1": "Dear {group}, we are happy to let you know that your paper has been accepted to R2Conf as a poster. The {other} was one keyword from the finish line, and turned over Reviewer 2 instead. Please bring a poster tube, and perhaps a thank-you card.",
+            "2": "Dear {group}, after a short discussion, your paper has been accepted as a poster. The {other} needed one more keyword and found Reviewer 2 instead. The committee calls this “a narrow escape”. Posters are A0 and portrait.",
+            "3": "Dear {group}, congratulations: your paper squeezed in as a poster. One more keyword for the {other}, and this letter would have gone to them. Reviewer 2 had other plans."
+          }
+        },
+        "deskReject": {
+          "1": "Dear {group}, we regret to inform you that your submission has been desk rejected without review. Your group revealed Reviewer 2, who needed no further evidence. The {other} goes on to the conference without you.",
+          "2": "Dear {group}, your paper has been desk rejected. Reviewer 2 read the first line, wrote “major flaws throughout” and left. We wish you better luck in the next cycle.",
+          "3": "Dear {group}, thank you for your submission. Unfortunately, it was assigned to Reviewer 2, and that was the end of it: desk reject. The {other} sends its regards."
+        },
+        "reject": {
+          "1": "Dear {group}, we regret to inform you that your paper was not accepted to R2Conf. The {other} found all of its keywords first, and there was room for only one of you. We received many strong submissions this year.",
+          "2": "Dear {group}, thank you for submitting to R2Conf. After careful consideration, the committee has decided to reject your paper. The {other} simply got there first. The reviews, all three words of them, are attached.",
+          "3": "Dear {group}, unfortunately your submission has been rejected. It was not a bad paper; the {other} just finished its paper sooner. We hope to see a revised version in the next game."
+        },
+        "withdrawn": {
+          "1": "The chair withdrew this game before the end. The submission is closed: nobody is accepted, and nobody is rejected.",
+          "2": "This submission has been withdrawn by the chair. No decision will be made, and no reviewer was harmed.",
+          "3": "The chair pulled this paper before the decision. Both groups keep their keywords, and their dignity, for the next game."
+        }
+      },
+      "signature": "The Program Chairs, R2Conf",
       "again": "Play again",
       "waitAgain": "The chair can start another game."
     },
@@ -259,6 +328,42 @@
     "seconds": "{count} s",
     "noLimit": "no limit"
   },
+  "banner": {
+    "seat": "{group} · {role}",
+    "spectator": "Spectator",
+    "roles": {
+      "captain": "PI",
+      "guesser": "Student"
+    },
+    "lines": {
+      "lobby": "Waiting for the chair to start the game.",
+      "lobbyChair": "Start the game below once both groups are ready.",
+      "over": "The game is over.",
+      "yourClue": "Your turn to give a clue!",
+      "studentsGuessing": "Your students are guessing. All you can do is watch.",
+      "piThinking": "Your PI is thinking of a clue.",
+      "yourGuess": "Your turn to guess!",
+      "otherClue": "The other group's PI is thinking of a clue.",
+      "otherGuess": "The other group is guessing.",
+      "watchClue": "The PI of the {group} is thinking of a clue.",
+      "watchGuess": "The {group} is guessing."
+    },
+    "tabTitle": "Your turn!"
+  },
+  "emotes": {
+    "open": "React",
+    "wait": "React ({seconds})",
+    "title": "Quick reactions",
+    "hint": "Everyone in the room sees and hears it, big screens included. You can send one every {seconds} seconds.",
+    "phrases": {
+      "waiting": "I could have finished a PhD by now.",
+      "deadline": "The deadline is 23:59 AoE. Hurry up!",
+      "reviewer2": "Reviewer 2 is on the way."
+    },
+    "bubble": "{name}: {phrase}",
+    "mute": "Mute the sounds",
+    "locked": "Click anywhere on this page to turn the sounds on."
+  },
   "errors": {
     "bad_request": "That request didn't make sense to the server.",
     "rate_limited": "Too many requests. Please wait a moment.",
@@ -282,6 +387,7 @@
     "wrong_phase": "That can't be done right now.",
     "cannot_start": "The game can't start yet.",
     "stale": "That turn or that game is already over.",
+    "emote_cooldown": "Wait a moment before you send another reaction.",
     "game_over": "The game is over.",
     "not_your_turn": "It's not your group's turn.",
     "not_captain": "Only the PI can give the clue.",
@@ -307,6 +413,10 @@
   },
   "footer": {
     "noSignUp": "No sign-up, no ads.",
+    "byline": "By Jiaxiao Shi",
+    "tip": "Buy the author a cola",
+    "tipCode": "The author's WeChat reward code",
+    "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
     "build": "Build {version}"
   },
   "notFound": {

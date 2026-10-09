@@ -1,7 +1,9 @@
 import {
   cleanName,
+  EMOTE_COOLDOWN_MS,
   MAX_PLAYERS,
   MAX_SCREENS,
+  nextChair,
   sameName,
   type Ack,
   type Language,
@@ -88,6 +90,9 @@ export class Room {
   readonly screens = new Set<string>();
   // Whom the chair has removed, by member key: until when they must wait, and the name they had.
   readonly #removed = new Map<string, { until: number; name: string }>();
+  // When each member last sent a quick reaction, by member key, so that neither another tab nor
+  // leaving and coming back starts the wait again.
+  readonly #emoted = new Map<string, number>();
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
   readonly #words: WordLibrary;
@@ -162,8 +167,8 @@ export class Room {
     return removed !== undefined && removed.until > this.#now();
   }
 
-  // A new member. The first one chairs the room.
-  join(key: string, rawName: string): Ack<{ member: Member }> {
+  // A new member, who has come to play or only to watch. The first one chairs the room.
+  join(key: string, rawName: string, play = false): Ack<{ member: Member }> {
     const refusal = this.refusal(key);
     if (refusal) return fail(refusal);
     const name = cleanName(rawName);
@@ -177,7 +182,11 @@ export class Room {
       sockets: new Set(),
       offlineSince: null,
     };
-    const data = this.game.join(this.data, member.id);
+    // The newcomer becomes a member only once the module has taken them, so the context learns
+    // their key here.
+    const context = this.context;
+    const keyOf = (id: string) => (id === member.id ? key : context.keyOf(id));
+    const data = this.game.join(this.data, { ...context, keyOf }, member.id, play);
     this.members.set(member.id, member);
     this.chairId ??= member.id;
     this.data = data;
@@ -245,6 +254,27 @@ export class Room {
     if (this.chairId === id) this.chairId = this.#nextChair();
     this.changed();
     return [...member.sockets];
+  }
+
+  // A member's quick reaction, at most one every EMOTE_COOLDOWN_MS. It changes nothing in the room:
+  // the socket layer passes it on, and no snapshot carries it. One that comes too soon is refused
+  // with how long is left, so that the tab it came from, which may not be the one that sent the
+  // last, counts down the right wait. A clock that was set back counts as a wait that is over,
+  // rather than one that lasts until the clock has caught up.
+  emote(id: string): Ack {
+    const member = this.members.get(id);
+    if (!member) return fail('not_member');
+    const now = this.#now();
+    const since = now - (this.#emoted.get(member.key) ?? -Infinity);
+    if (since >= 0 && since < EMOTE_COOLDOWN_MS)
+      return { ...fail('emote_cooldown'), waitMs: EMOTE_COOLDOWN_MS - since };
+    this.#emoted.set(member.key, now);
+    return done;
+  }
+
+  // Every connection in the room: the members' and the screens'.
+  connections(): string[] {
+    return [...this.screens, ...[...this.members.values()].flatMap((member) => [...member.sockets])];
   }
 
   rename(id: string, rawName: string): Ack {
@@ -451,6 +481,13 @@ export class Room {
     for (const [key, { until }] of this.#removed) if (until <= this.#now()) this.#removed.delete(key);
   }
 
+  forgetOldEmotes(): void {
+    for (const [key, at] of this.#emoted) {
+      const age = this.#now() - at;
+      if (age < 0 || age >= EMOTE_COOLDOWN_MS) this.#emoted.delete(key);
+    }
+  }
+
   // --- what people see --------------------------------------------------------------------
 
   // The room as it is now, for any number of viewers. Most of a view is the same for everyone, so
@@ -501,9 +538,9 @@ export class Room {
     return false;
   }
 
-  // The member who joined first among those online, or else among everyone.
+  // The member who joined first among those online, or else among everyone: the rule is shared with
+  // the client, whose leave sheet names them.
   #nextChair(): string | null {
-    const members = [...this.members.values()];
-    return (members.find((member) => member.sockets.size > 0) ?? members[0])?.id ?? null;
+    return nextChair([...this.members.values()].map((member) => ({ id: member.id, online: member.sockets.size > 0 })));
   }
 }

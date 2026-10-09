@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
-import { MAX_NAME_INPUT } from './protocol';
+import { EMOTES, MAX_NAME_INPUT } from './protocol';
 
 // The schemas that the server checks every message against (docs/architecture.md). Only the
 // server imports this module, so that the client's bundle doesn't need zod: a schema is built
@@ -19,6 +19,9 @@ const playerId = z.string().max(32);
 const gameId = z.string().max(64);
 const roomId = z.string().max(64);
 const fields = z.array(z.string().max(64)).min(1).max(20);
+// Whether a newcomer has come to play rather than to watch. The game seats a player; whoever
+// leaves the field out watches, as everyone did before there was a choice.
+const play = z.boolean().optional();
 const none = z.object({});
 // A game's settings, which its module checks (GameModule.configure on the server).
 const settings = z.unknown();
@@ -33,14 +36,16 @@ export const ROOM_MESSAGES = {
     fields,
     settings: settings.optional(),
     name,
+    play,
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out
   // or send null.
-  'room:join': z.object({ code, name: name.optional(), roomId: roomId.nullish() }),
+  'room:join': z.object({ code, name: name.optional(), roomId: roomId.nullish(), play }),
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:rename': z.object({ name }),
+  'room:emote': z.object({ emote: z.enum(EMOTES) }),
   // The chair's controls. The settings change the word lists, the game's own settings, or both.
   'room:settings': z.object({ fields: fields.optional(), settings: settings.optional() }),
   // The chair's messages about a game say which game they mean, so that one that comes late or
@@ -54,6 +59,7 @@ export const ROOM_MESSAGES = {
   'room:remove': z.object({ playerId }),
   'room:chair': z.object({ playerId }),
   'room:dismiss': none,
+  'room:close': none,
 } as const;
 
 export type RoomMessage = keyof typeof ROOM_MESSAGES;

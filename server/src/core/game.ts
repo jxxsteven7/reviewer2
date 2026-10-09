@@ -37,7 +37,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // checks them all and refuses them with bad_settings when it can't take them. Settings that
   // change nothing give the data back as it is.
   configure(data: Data, ctx: GameContext, settings: unknown): GameUpdate<Data>;
-  join(data: Data, playerId: string): Data;
+  // A newcomer, who has come to play or only to watch. The game decides what that means, such as
+  // a seat in a group; the context already knows the newcomer's member key.
+  join(data: Data, ctx: GameContext, playerId: string, play: boolean): Data;
   leave(data: Data, playerId: string): Data;
   // The chair takes a player out of play, for instance to free a seat.
   bench(data: Data, ctx: GameContext, playerId: string): Data;

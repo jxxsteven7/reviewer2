@@ -27,6 +27,7 @@ import {
   type Outcome,
 } from './rules';
 import {
+  autoSeat,
   changeSeat,
   emptySeating,
   endGame,
@@ -35,6 +36,7 @@ import {
   shuffleGroups,
   startGame,
   startProblems,
+  type GameStage,
   type Seating,
   type SeatRequest,
 } from './seats';
@@ -62,17 +64,20 @@ const fromOutcome = (data: KeywordsData, outcome: Outcome): GameUpdate<KeywordsD
 
 const withoutSelection = (game: KeywordsState | null, playerId: string) => game && dropSelection(game, playerId);
 
-// The seat rules of a game, which keep everyone in their group and key viewers out of the
-// guessers' seats, hold from the start of a game until "play again" takes the room back to the
-// waiting room: `data.game` is there for exactly that long. The room's phase would let go of
-// them as soon as the game has ended, while the groups still have their chats.
-const inGame = (data: KeywordsData) => data.game !== null;
+// How far the current game has got, for the seat rules (seats.ts). They hold from the start of a
+// game until "play again" takes the room back to the waiting room: `data.game` is there for
+// exactly that long. The room's phase would let go of them as soon as the game has ended, while
+// the groups still have their chats.
+function stageOf(data: KeywordsData): GameStage {
+  if (data.game === null) return 'none';
+  return data.game.phase === 'over' ? 'over' : 'on';
+}
 
 // Moves a player to the seat they ask for, or to the spectators when the chair benches them.
 // Whoever leaves their seat takes their choice of a card with them (rules.ts); whoever asks for
 // the seat they are in changes nothing.
 function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: SeatRequest): GameUpdate<KeywordsData> {
-  const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, wanted, inGame(data));
+  const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, wanted, stageOf(data));
   if (!change.ok) return change;
   if (change.seating === data.seating) return { ok: true, data };
   return { ok: true, data: { ...data, seating: change.seating, game: withoutSelection(data.game, playerId) } };
@@ -128,8 +133,13 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { ok: true, data: sameSettings(parsed.data, data.settings) ? data : { ...data, settings: parsed.data } };
   },
 
-  // Newcomers are spectators until they take a seat.
-  join: (data) => data,
+  // A newcomer who has come to play becomes a guesser in a group (seats.ts); anyone else watches
+  // until they take a seat.
+  join(data, ctx, playerId, play) {
+    if (!play) return data;
+    const seating = autoSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, ctx.rng, stageOf(data));
+    return seating === data.seating ? data : { ...data, seating };
+  },
 
   // A captain who leaves frees the seat; the key viewers remember them anyway, and the groups
   // remember whom each player has played for.

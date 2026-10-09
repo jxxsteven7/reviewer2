@@ -16,10 +16,12 @@ import en from '../../locales/en.json';
 import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
+import DecisionLetter from './DecisionLetter.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
+import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
@@ -213,6 +215,127 @@ describe('GroupChat', () => {
   test('offers nothing to someone without a chat, such as a spectator', () => {
     const wrapper = mount(GroupChat, { props: { room: room('eve') }, global: global() });
     expect(wrapper.find('button').exists()).toBe(false);
+  });
+});
+
+describe('RoleBanner', () => {
+  const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
+
+  test("stands out on the viewer's move, and says so in the tab's title for as long as it lasts", async () => {
+    document.title = 'Reviewer 2';
+    const wrapper = mount(RoleBanner, { props: { seat: seats.bob as Seat, game }, global: global() });
+    expect(wrapper.find('.who').text()).toBe('Red group · Student');
+    expect(wrapper.find('.line').text()).toBe('Your turn to guess!');
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['red', 'urgent']));
+    expect(document.title).toBe('Your turn!');
+
+    await wrapper.setProps({ game: { ...game, phase: 'clue' } });
+    expect(wrapper.find('.line').text()).toBe('Your PI is thinking of a clue.');
+    expect(wrapper.classes()).not.toContain('urgent');
+    expect(document.title).toBe('Reviewer 2');
+
+    await wrapper.setProps({ game });
+    expect(document.title).toBe('Your turn!');
+    wrapper.unmount();
+    expect(document.title).toBe('Reviewer 2');
+  });
+
+  test('tells a spectator who is doing what', () => {
+    const wrapper = mount(RoleBanner, { props: { seat: seats.eve as Seat, game }, global: global() });
+    expect(wrapper.find('.who').text()).toBe('Spectator');
+    expect(wrapper.find('.line').text()).toBe('The Red group is guessing.');
+    expect(wrapper.classes()).toEqual(['role-banner', 'spectator']);
+  });
+
+  test('reads out its words as they change, but not the button beside them', () => {
+    const wrapper = mount(RoleBanner, {
+      props: { seat: seats.eve as Seat, game },
+      slots: { default: '<button>React (9)</button>' },
+      global: global(),
+    });
+    const live = wrapper.findAll('[aria-live]');
+    expect(live).toHaveLength(1);
+    expect(live[0]?.find('.line').text()).toBe('The Red group is guessing.');
+    expect(live[0]?.find('button').exists()).toBe(false);
+    expect(wrapper.find('button').text()).toBe('React (9)');
+  });
+});
+
+describe('DecisionLetter', () => {
+  const over = (result: KeywordsView['result'], remaining = { red: 0, blue: 2 }, gameId = 'g1'): KeywordsView => ({
+    ...((room('bob').data as KeywordsRoomData).game as KeywordsView),
+    phase: 'over',
+    result,
+    remaining,
+    gameId,
+  });
+  const letters = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('.letter').map((letter) => ({
+      to: letter.find('.kicker').text(),
+      verdict: letter.find('.verdict').text(),
+      body: letter.find('.body').text(),
+    }));
+
+  test("gives each group its own letter, and a spectator both, the winner's first", () => {
+    const game = over({ winner: 'blue', reason: 'reviewer2' }, { red: 4, blue: 3 });
+    const mountFor = (side: 'red' | 'blue' | null) =>
+      mount(DecisionLetter, { props: { game, side, isChair: false }, global: global() });
+    const [blue] = letters(mountFor('blue'));
+    const [red] = letters(mountFor('red'));
+    expect(blue?.to).toBe('Decision letter · Blue group');
+    expect(blue?.verdict).toBe('Accept (Oral)');
+    expect(blue?.body).toContain('Blue group');
+    expect(red?.verdict).toBe('Desk Reject');
+    expect(letters(mountFor(null))).toEqual([blue, red]);
+  });
+
+  test('writes to a winner whose rivals revealed Reviewer 2 about that, not about a finish', () => {
+    // The letters as they read for this game, from both sets of the verdict.
+    const { t } = i18n().global;
+    const set = (name: string) =>
+      [1, 2, 3].map((n) =>
+        t(`game.letter.bodies.oral.${name}.${n}`, { group: 'Blue group', other: 'Red group', left: 4 }),
+      );
+    const luck = set('reviewer2');
+    const finish = set('found');
+    for (let game = 0; game < 12; game += 1) {
+      const props = {
+        game: over({ winner: 'blue', reason: 'reviewer2' }, { red: 4, blue: 6 }, `g${game}`),
+        side: 'blue' as const,
+        isChair: false,
+      };
+      const [letter] = letters(mount(DecisionLetter, { props, global: global() }));
+      expect(letter?.verdict).toBe('Accept (Oral)');
+      expect(luck).toContain(letter?.body);
+      expect(finish).not.toContain(letter?.body);
+    }
+  });
+
+  test('reads the same for a group however often it is shown, and may differ in the next game', () => {
+    const bodies = new Set<string>();
+    for (let game = 0; game < 12; game += 1) {
+      const props = {
+        game: over({ winner: 'red', reason: 'found' }, { red: 0, blue: 1 }, `g${game}`),
+        side: 'red' as const,
+        isChair: false,
+      };
+      const first = letters(mount(DecisionLetter, { props, global: global() }));
+      expect(letters(mount(DecisionLetter, { props, global: global() }))).toEqual(first);
+      expect(first[0]?.verdict).toBe('Accept (Poster)');
+      bodies.add(first[0]?.body ?? '');
+    }
+    expect(bodies.size).toBeGreaterThan(1);
+  });
+
+  test('has one letter for everyone when the chair withdrew the game, and offers the chair another game', async () => {
+    const game = over({ winner: null, reason: 'withdrawn' });
+    for (const side of ['red', null] as const) {
+      const wrapper = mount(DecisionLetter, { props: { game, side, isChair: side === 'red' }, global: global() });
+      expect(letters(wrapper).map(({ verdict }) => verdict)).toEqual(['Withdrawn']);
+    }
+    const chair = mount(DecisionLetter, { props: { game, side: 'red', isChair: true }, global: global() });
+    await chair.find('button').trigger('click');
+    expect(chair.emitted('again')).toHaveLength(1);
   });
 });
 
@@ -619,6 +742,21 @@ describe('KeywordsGame', () => {
     send.mockImplementation(async () => ({ ok: true }));
   });
 
+  test('shows both letters to a player who sat down only after the game, as to a spectator', () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game = {
+      ...(data.game as KeywordsView),
+      phase: 'over' as const,
+      result: { winner: 'red' as const, reason: 'found' as const },
+    };
+    const wrapper = mount(KeywordsGame, {
+      props: { room: { ...view, data: { ...data, side: null, game } } },
+      global: global(),
+    });
+    expect(wrapper.findAll('.letter .verdict').map((verdict) => verdict.text())).toEqual(['Accept (Oral)', 'Reject']);
+  });
+
   test('renders the group chat once, and keeps it after the game', async () => {
     const view = room('bob', []);
     const wrapper = mount(KeywordsGame, { props: { room: view }, global: global() });
@@ -634,7 +772,7 @@ describe('KeywordsGame', () => {
       },
     });
     expect(wrapper.findAll('.who-row button')).toHaveLength(1);
-    expect(wrapper.text()).toContain('Accepted');
+    expect(wrapper.find('.letter .verdict').text()).toBe('Accept (Oral)');
     expect(wrapper.text()).not.toContain('Only the PIs see the colors of hidden cards.');
     expect(wrapper.find('.actions').classes()).not.toContain('sticky');
   });

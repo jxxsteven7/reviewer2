@@ -7,6 +7,8 @@ import type { GameModule } from '../src/core/game';
 
 export interface FakeData {
   joined: string[];
+  // The newcomers who came to play rather than to watch.
+  players: string[];
   benched: string[];
   presses: number;
   words: string[];
@@ -27,6 +29,7 @@ export interface FakeData {
 // The view leaves the game's ID out on purpose: the chair's controls have to work with what the
 // room itself says, whatever a game puts into its own part.
 export interface FakeView {
+  players: string[];
   presses: number;
   words: string[];
   benched: string[];
@@ -48,6 +51,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   wordsNeeded: 3,
   create: (language) => ({
     joined: [],
+    players: [],
     benched: [],
     presses: 0,
     words: [],
@@ -73,9 +77,9 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (data.alarm === null || ctx.now() < data.alarm) return data;
     return { ...data, alarm: null, rings: data.rings + 1 };
   },
-  join(data, id) {
+  join(data, _ctx, id, play) {
     if (data.broken === 'join') throw new Error('joining broke');
-    return { ...data, joined: [...data.joined, id] };
+    return { ...data, joined: [...data.joined, id], players: play ? [...data.players, id] : data.players };
   },
   leave(data, id) {
     if (data.broken === 'leave' && (data.brokenFor === null || data.brokenFor === id)) throw new Error('leaving broke');
@@ -124,6 +128,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   views(data) {
     if (data.broken === 'view') throw new Error('the view broke');
     return (viewer) => ({
+      players: data.players,
       presses: data.presses,
       words: data.words,
       benched: data.benched,
