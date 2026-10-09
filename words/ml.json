@@ -1,0 +1,2159 @@
+{
+  "id": "ml",
+  "name": {
+    "zh": "机器学习与人工智能",
+    "en": "Machine Learning & AI"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "attention",
+      "zh": "注意力",
+      "en": "Attention",
+      "forms": { "en": ["attend"] }
+    },
+    {
+      "id": "transformer",
+      "zh": "Transformer",
+      "en": "Transformer",
+      "forms": { "en": ["transform"] }
+    },
+    {
+      "id": "overfitting",
+      "zh": "过拟合",
+      "en": "Overfitting",
+      "forms": { "en": ["overfit", "overfitted"] }
+    },
+    {
+      "id": "embedding",
+      "zh": "嵌入",
+      "en": "Embedding",
+      "forms": { "en": ["embed", "embedded"] }
+    },
+    {
+      "id": "loss",
+      "zh": "损失",
+      "en": "Loss",
+      "forms": { "en": ["lose"] }
+    },
+    {
+      "id": "hallucination",
+      "zh": "幻觉",
+      "en": "Hallucination",
+      "forms": { "en": ["hallucinate"] }
+    },
+    {
+      "id": "agent",
+      "zh": "智能体",
+      "en": "Agent",
+      "forms": { "en": ["agentic"] }
+    },
+    {
+      "id": "reward",
+      "zh": "奖励",
+      "en": "Reward",
+      "forms": { "en": ["rewarded", "rewarding"] }
+    },
+    {
+      "id": "pretraining",
+      "zh": "预训练",
+      "en": "Pretraining",
+      "forms": { "en": ["pretrain", "pretrained"] }
+    },
+    {
+      "id": "fine-tuning",
+      "zh": "微调",
+      "en": "Fine-tuning",
+      "forms": { "en": ["fine-tune", "fine-tuned"] }
+    },
+    {
+      "id": "dropout",
+      "zh": "Dropout",
+      "en": "Dropout"
+    },
+    {
+      "id": "gpu",
+      "zh": "GPU",
+      "en": "GPU",
+      "forms": { "zh": ["图形处理器"], "en": ["graphics processing unit"] }
+    },
+    {
+      "id": "cnn",
+      "zh": "CNN",
+      "en": "CNN",
+      "forms": { "zh": ["卷积神经网络"], "en": ["convolutional neural network"] }
+    },
+    {
+      "id": "llm",
+      "zh": "LLM",
+      "en": "LLM",
+      "forms": { "zh": ["大语言模型"], "en": ["large language model"] }
+    },
+    {
+      "id": "computer-vision",
+      "zh": "计算机视觉",
+      "en": "Computer vision",
+      "forms": { "en": ["CV"] }
+    },
+    {
+      "id": "neural-network",
+      "zh": "神经网络",
+      "en": "Neural network",
+      "forms": { "en": ["NN"] }
+    },
+    {
+      "id": "label",
+      "zh": "标签",
+      "en": "Label",
+      "forms": { "en": ["labeled", "labelled", "labeling", "labelling"] }
+    },
+    {
+      "id": "generalization",
+      "zh": "泛化",
+      "en": "Generalization",
+      "forms": { "en": ["generalize", "generalise", "generalisation"] }
+    },
+    {
+      "id": "activation",
+      "zh": "激活",
+      "en": "Activation",
+      "forms": { "en": ["activate", "activated"] }
+    },
+    {
+      "id": "alignment",
+      "zh": "对齐",
+      "en": "Alignment",
+      "forms": { "en": ["align", "aligned"] }
+    },
+    {
+      "id": "artificial-intelligence",
+      "zh": "人工智能",
+      "en": "AI",
+      "forms": { "en": ["artificial intelligence"] }
+    },
+    {
+      "id": "agi",
+      "zh": "AGI",
+      "en": "AGI",
+      "forms": { "zh": ["通用人工智能"], "en": ["artificial general intelligence"] }
+    },
+    {
+      "id": "deep-learning",
+      "zh": "深度学习",
+      "en": "Deep learning"
+    },
+    {
+      "id": "reinforcement-learning",
+      "zh": "强化学习",
+      "en": "RL",
+      "forms": { "en": ["reinforcement learning"] }
+    },
+    {
+      "id": "supervision",
+      "zh": "监督",
+      "en": "Supervision",
+      "forms": { "en": ["supervise", "supervised"] }
+    },
+    {
+      "id": "meta-learning",
+      "zh": "元学习",
+      "en": "Meta-learning"
+    },
+    {
+      "id": "few-shot",
+      "zh": "少样本",
+      "en": "Few-shot"
+    },
+    {
+      "id": "zero-shot",
+      "zh": "零样本",
+      "en": "Zero-shot"
+    },
+    {
+      "id": "training",
+      "zh": "训练",
+      "en": "Training",
+      "forms": { "en": ["train", "trained", "trainer"] }
+    },
+    {
+      "id": "test-set",
+      "zh": "测试集",
+      "en": "Test set"
+    },
+    {
+      "id": "validation-set",
+      "zh": "验证集",
+      "en": "Validation set"
+    },
+    {
+      "id": "classification",
+      "zh": "分类",
+      "en": "Classification",
+      "forms": { "en": ["classify", "classifier"] }
+    },
+    {
+      "id": "clustering",
+      "zh": "聚类",
+      "en": "Clustering",
+      "forms": { "en": ["cluster", "clustered"] }
+    },
+    {
+      "id": "k-means",
+      "zh": "k均值",
+      "en": "k-means"
+    },
+    {
+      "id": "k-nn",
+      "zh": "k近邻",
+      "en": "k-NN",
+      "forms": { "en": ["k-nearest neighbors"] }
+    },
+    {
+      "id": "decision-tree",
+      "zh": "决策树",
+      "en": "Decision tree"
+    },
+    {
+      "id": "random-forest",
+      "zh": "随机森林",
+      "en": "Random forest"
+    },
+    {
+      "id": "svm",
+      "zh": "SVM",
+      "en": "SVM",
+      "forms": { "zh": ["支持向量机"], "en": ["support vector machine"] }
+    },
+    {
+      "id": "pca",
+      "zh": "PCA",
+      "en": "PCA",
+      "forms": { "zh": ["主成分分析"], "en": ["principal component analysis"] }
+    },
+    {
+      "id": "naive-bayes",
+      "zh": "朴素贝叶斯",
+      "en": "Naive Bayes"
+    },
+    {
+      "id": "ensemble",
+      "zh": "集成",
+      "en": "Ensemble",
+      "forms": { "en": ["ensembling"] }
+    },
+    {
+      "id": "boosting",
+      "zh": "Boosting",
+      "en": "Boosting",
+      "forms": { "en": ["boost", "boosted"] }
+    },
+    {
+      "id": "xgboost",
+      "zh": "XGBoost",
+      "en": "XGBoost"
+    },
+    {
+      "id": "lasso",
+      "zh": "Lasso",
+      "en": "Lasso"
+    },
+    {
+      "id": "perceptron",
+      "zh": "感知机",
+      "en": "Perceptron"
+    },
+    {
+      "id": "hyperplane",
+      "zh": "超平面",
+      "en": "Hyperplane"
+    },
+    {
+      "id": "inductive-bias",
+      "zh": "归纳偏置",
+      "en": "Inductive bias"
+    },
+    {
+      "id": "hidden-markov-model",
+      "zh": "HMM",
+      "en": "HMM",
+      "forms": { "zh": ["隐马尔可夫模型"], "en": ["hidden Markov model"] }
+    },
+    {
+      "id": "similarity",
+      "zh": "相似度",
+      "en": "Similarity",
+      "forms": { "en": ["similar"] }
+    },
+    {
+      "id": "kl-divergence",
+      "zh": "KL散度",
+      "en": "KL divergence"
+    },
+    {
+      "id": "cross-entropy",
+      "zh": "交叉熵",
+      "en": "Cross-entropy"
+    },
+    {
+      "id": "prediction",
+      "zh": "预测",
+      "en": "Prediction",
+      "forms": { "en": ["predict", "predictor", "predictive"] }
+    },
+    {
+      "id": "ground-truth",
+      "zh": "真值",
+      "en": "Ground truth"
+    },
+    {
+      "id": "confidence",
+      "zh": "置信度",
+      "en": "Confidence",
+      "forms": { "en": ["confident"] }
+    },
+    {
+      "id": "robustness",
+      "zh": "鲁棒性",
+      "en": "Robustness",
+      "forms": { "en": ["robust"] }
+    },
+    {
+      "id": "double-descent",
+      "zh": "双下降",
+      "en": "Double descent"
+    },
+    {
+      "id": "underfitting",
+      "zh": "欠拟合",
+      "en": "Underfitting",
+      "forms": { "en": ["underfit"] }
+    },
+    {
+      "id": "regularization",
+      "zh": "正则化",
+      "en": "Regularization",
+      "forms": { "en": ["regularize", "regularizer", "regularisation"] }
+    },
+    {
+      "id": "normalization",
+      "zh": "归一化",
+      "en": "Normalization",
+      "forms": { "en": ["normalize", "normalise", "normalisation"] }
+    },
+    {
+      "id": "initialization",
+      "zh": "初始化",
+      "en": "Initialization",
+      "forms": { "en": ["initialize", "initialise", "initialisation"] }
+    },
+    {
+      "id": "gradient",
+      "zh": "梯度",
+      "en": "Gradient"
+    },
+    {
+      "id": "sgd",
+      "zh": "SGD",
+      "en": "SGD",
+      "forms": { "zh": ["随机梯度下降"], "en": ["stochastic gradient descent"] }
+    },
+    {
+      "id": "backpropagation",
+      "zh": "反向传播",
+      "en": "Backpropagation",
+      "forms": { "en": ["backprop", "backpropagate"] }
+    },
+    {
+      "id": "learning-rate",
+      "zh": "学习率",
+      "en": "Learning rate"
+    },
+    {
+      "id": "optimizer",
+      "zh": "优化器",
+      "en": "Optimizer",
+      "forms": { "en": ["optimize", "optimise", "optimiser", "optimization", "optimisation"] }
+    },
+    {
+      "id": "adam",
+      "zh": "Adam",
+      "en": "Adam"
+    },
+    {
+      "id": "hyperparameter",
+      "zh": "超参数",
+      "en": "Hyperparameter",
+      "forms": { "en": ["hyperparam"] }
+    },
+    {
+      "id": "batch",
+      "zh": "批量",
+      "en": "Batch",
+      "forms": { "en": ["minibatch", "batched"] }
+    },
+    {
+      "id": "epoch",
+      "zh": "Epoch",
+      "en": "Epoch"
+    },
+    {
+      "id": "local-optimum",
+      "zh": "局部最优",
+      "en": "Local optimum"
+    },
+    {
+      "id": "early-stopping",
+      "zh": "早停",
+      "en": "Early stopping"
+    },
+    {
+      "id": "warmup",
+      "zh": "预热",
+      "en": "Warmup"
+    },
+    {
+      "id": "checkpoint",
+      "zh": "检查点",
+      "en": "Checkpoint"
+    },
+    {
+      "id": "learning-curve",
+      "zh": "学习曲线",
+      "en": "Learning curve"
+    },
+    {
+      "id": "grid-search",
+      "zh": "网格搜索",
+      "en": "Grid search"
+    },
+    {
+      "id": "random-seed",
+      "zh": "随机种子",
+      "en": "Random seed"
+    },
+    {
+      "id": "autodiff",
+      "zh": "自动微分",
+      "en": "Autodiff",
+      "forms": { "en": ["automatic differentiation"] }
+    },
+    {
+      "id": "weight",
+      "zh": "权重",
+      "en": "Weight",
+      "forms": { "en": ["weighted", "weighting"] }
+    },
+    {
+      "id": "oom",
+      "zh": "OOM",
+      "en": "OOM",
+      "forms": { "en": ["out of memory"] }
+    },
+    {
+      "id": "nan",
+      "zh": "NaN",
+      "en": "NaN",
+      "forms": { "en": ["not a number"] }
+    },
+    {
+      "id": "compute",
+      "zh": "算力",
+      "en": "Compute",
+      "forms": { "en": ["computation", "computational"] }
+    },
+    {
+      "id": "vram",
+      "zh": "显存",
+      "en": "VRAM"
+    },
+    {
+      "id": "tpu",
+      "zh": "TPU",
+      "en": "TPU",
+      "forms": { "zh": ["张量处理器"], "en": ["tensor processing unit"] }
+    },
+    {
+      "id": "cuda",
+      "zh": "CUDA",
+      "en": "CUDA"
+    },
+    {
+      "id": "quantization",
+      "zh": "量化",
+      "en": "Quantization",
+      "forms": { "en": ["quantize", "quantise", "quantized"] }
+    },
+    {
+      "id": "pruning",
+      "zh": "剪枝",
+      "en": "Pruning",
+      "forms": { "en": ["prune", "pruned"] }
+    },
+    {
+      "id": "end-to-end",
+      "zh": "端到端",
+      "en": "End-to-end"
+    },
+    {
+      "id": "layer",
+      "zh": "层",
+      "en": "Layer",
+      "forms": { "en": ["layered"] }
+    },
+    {
+      "id": "convolution",
+      "zh": "卷积",
+      "en": "Convolution",
+      "forms": { "en": ["convolve", "convolutional"] }
+    },
+    {
+      "id": "pooling",
+      "zh": "池化",
+      "en": "Pooling",
+      "forms": { "en": ["pool", "pooled"] }
+    },
+    {
+      "id": "stride",
+      "zh": "步长",
+      "en": "Stride"
+    },
+    {
+      "id": "padding",
+      "zh": "填充",
+      "en": "Padding",
+      "forms": { "en": ["padded"] }
+    },
+    {
+      "id": "encoder",
+      "zh": "编码器",
+      "en": "Encoder",
+      "forms": { "en": ["encode", "encoding"] }
+    },
+    {
+      "id": "decoder",
+      "zh": "解码器",
+      "en": "Decoder",
+      "forms": { "en": ["decode", "decoding"] }
+    },
+    {
+      "id": "autoencoder",
+      "zh": "自编码器",
+      "en": "Autoencoder"
+    },
+    {
+      "id": "adapter",
+      "zh": "适配器",
+      "en": "Adapter"
+    },
+    {
+      "id": "relu",
+      "zh": "ReLU",
+      "en": "ReLU",
+      "forms": { "en": ["rectified linear unit"] }
+    },
+    {
+      "id": "sigmoid",
+      "zh": "Sigmoid",
+      "en": "Sigmoid",
+      "forms": { "en": ["sigmoidal"] }
+    },
+    {
+      "id": "softmax",
+      "zh": "Softmax",
+      "en": "Softmax"
+    },
+    {
+      "id": "one-hot",
+      "zh": "One-hot",
+      "en": "One-hot"
+    },
+    {
+      "id": "mask",
+      "zh": "掩码",
+      "en": "Mask",
+      "forms": { "en": ["masked", "masking"] }
+    },
+    {
+      "id": "mlp",
+      "zh": "MLP",
+      "en": "MLP",
+      "forms": { "zh": ["多层感知机"], "en": ["multilayer perceptron"] }
+    },
+    {
+      "id": "rnn",
+      "zh": "RNN",
+      "en": "RNN",
+      "forms": { "zh": ["循环神经网络"], "en": ["recurrent neural network"] }
+    },
+    {
+      "id": "lstm",
+      "zh": "LSTM",
+      "en": "LSTM",
+      "forms": { "zh": ["长短期记忆"], "en": ["long short-term memory"] }
+    },
+    {
+      "id": "gan",
+      "zh": "GAN",
+      "en": "GAN",
+      "forms": { "zh": ["生成对抗网络"], "en": ["generative adversarial network"] }
+    },
+    {
+      "id": "vae",
+      "zh": "VAE",
+      "en": "VAE",
+      "forms": { "zh": ["变分自编码器"], "en": ["variational autoencoder"] }
+    },
+    {
+      "id": "gnn",
+      "zh": "GNN",
+      "en": "GNN",
+      "forms": { "zh": ["图神经网络"], "en": ["graph neural network"] }
+    },
+    {
+      "id": "resnet",
+      "zh": "ResNet",
+      "en": "ResNet",
+      "forms": { "zh": ["残差网络"], "en": ["residual network"] }
+    },
+    {
+      "id": "u-net",
+      "zh": "U-Net",
+      "en": "U-Net"
+    },
+    {
+      "id": "vit",
+      "zh": "ViT",
+      "en": "ViT",
+      "forms": { "en": ["vision transformer"] }
+    },
+    {
+      "id": "seq2seq",
+      "zh": "Seq2Seq",
+      "en": "Seq2Seq",
+      "forms": { "en": ["sequence-to-sequence"] }
+    },
+    {
+      "id": "moe",
+      "zh": "MoE",
+      "en": "MoE",
+      "forms": { "zh": ["混合专家"], "en": ["mixture of experts"] }
+    },
+    {
+      "id": "discriminator",
+      "zh": "判别器",
+      "en": "Discriminator",
+      "forms": { "en": ["discriminate", "discriminative"] }
+    },
+    {
+      "id": "generator",
+      "zh": "生成器",
+      "en": "Generator",
+      "forms": { "en": ["generate", "generative"] }
+    },
+    {
+      "id": "mode-collapse",
+      "zh": "模式崩溃",
+      "en": "Mode collapse"
+    },
+    {
+      "id": "latent-space",
+      "zh": "潜空间",
+      "en": "Latent space"
+    },
+    {
+      "id": "representation",
+      "zh": "表征",
+      "en": "Representation",
+      "forms": { "en": ["represent", "representational"] }
+    },
+    {
+      "id": "diffusion",
+      "zh": "扩散",
+      "en": "Diffusion",
+      "forms": { "en": ["diffuse"] }
+    },
+    {
+      "id": "denoising",
+      "zh": "去噪",
+      "en": "Denoising",
+      "forms": { "en": ["denoise", "denoiser"] }
+    },
+    {
+      "id": "nlp",
+      "zh": "NLP",
+      "en": "NLP",
+      "forms": { "zh": ["自然语言处理"], "en": ["natural language processing"] }
+    },
+    {
+      "id": "token",
+      "zh": "Token",
+      "en": "Token",
+      "forms": { "en": ["tokenize", "tokenizer", "tokenization"] }
+    },
+    {
+      "id": "vocabulary",
+      "zh": "词表",
+      "en": "Vocabulary",
+      "forms": { "en": ["vocab"] }
+    },
+    {
+      "id": "context",
+      "zh": "上下文",
+      "en": "Context",
+      "forms": { "en": ["contextual", "contextualize"] }
+    },
+    {
+      "id": "bag-of-words",
+      "zh": "词袋",
+      "en": "Bag of words"
+    },
+    {
+      "id": "stop-word",
+      "zh": "停用词",
+      "en": "Stop word"
+    },
+    {
+      "id": "n-gram",
+      "zh": "N-gram",
+      "en": "N-gram"
+    },
+    {
+      "id": "tf-idf",
+      "zh": "TF-IDF",
+      "en": "TF-IDF"
+    },
+    {
+      "id": "word2vec",
+      "zh": "Word2Vec",
+      "en": "Word2Vec"
+    },
+    {
+      "id": "bert",
+      "zh": "BERT",
+      "en": "BERT"
+    },
+    {
+      "id": "gpt",
+      "zh": "GPT",
+      "en": "GPT",
+      "forms": { "en": ["generative pre-trained transformer"] }
+    },
+    {
+      "id": "autoregression",
+      "zh": "自回归",
+      "en": "Autoregression",
+      "forms": { "en": ["autoregressive"] }
+    },
+    {
+      "id": "beam-search",
+      "zh": "束搜索",
+      "en": "Beam search"
+    },
+    {
+      "id": "perplexity",
+      "zh": "困惑度",
+      "en": "Perplexity"
+    },
+    {
+      "id": "chatbot",
+      "zh": "聊天机器人",
+      "en": "Chatbot"
+    },
+    {
+      "id": "asr",
+      "zh": "语音识别",
+      "en": "ASR",
+      "forms": { "en": ["automatic speech recognition"] }
+    },
+    {
+      "id": "tts",
+      "zh": "语音合成",
+      "en": "TTS",
+      "forms": { "en": ["text-to-speech"] }
+    },
+    {
+      "id": "knowledge-graph",
+      "zh": "知识图谱",
+      "en": "Knowledge graph"
+    },
+    {
+      "id": "knowledge-base",
+      "zh": "知识库",
+      "en": "Knowledge base"
+    },
+    {
+      "id": "retrieval",
+      "zh": "检索",
+      "en": "Retrieval",
+      "forms": { "en": ["retrieve", "retriever"] }
+    },
+    {
+      "id": "generative-ai",
+      "zh": "生成式AI",
+      "en": "Generative AI"
+    },
+    {
+      "id": "chatgpt",
+      "zh": "ChatGPT",
+      "en": "ChatGPT"
+    },
+    {
+      "id": "llama",
+      "zh": "LLaMA",
+      "en": "LLaMA"
+    },
+    {
+      "id": "deepseek",
+      "zh": "DeepSeek",
+      "en": "DeepSeek"
+    },
+    {
+      "id": "rag",
+      "zh": "RAG",
+      "en": "RAG",
+      "forms": { "zh": ["检索增强生成"], "en": ["retrieval-augmented generation"] }
+    },
+    {
+      "id": "rlhf",
+      "zh": "RLHF",
+      "en": "RLHF",
+      "forms": { "zh": ["基于人类反馈的强化学习"], "en": ["reinforcement learning from human feedback"] }
+    },
+    {
+      "id": "sft",
+      "zh": "SFT",
+      "en": "SFT",
+      "forms": { "zh": ["监督微调"], "en": ["supervised fine-tuning"] }
+    },
+    {
+      "id": "lora",
+      "zh": "LoRA",
+      "en": "LoRA",
+      "forms": { "en": ["low-rank adaptation"] }
+    },
+    {
+      "id": "post-training",
+      "zh": "后训练",
+      "en": "Post-training"
+    },
+    {
+      "id": "instruction",
+      "zh": "指令",
+      "en": "Instruction",
+      "forms": { "en": ["instruct", "instructed"] }
+    },
+    {
+      "id": "chain-of-thought",
+      "zh": "思维链",
+      "en": "Chain of thought",
+      "forms": { "en": ["CoT"] }
+    },
+    {
+      "id": "reasoning",
+      "zh": "推理",
+      "en": "Reasoning",
+      "forms": { "en": ["reason", "reasoned"] }
+    },
+    {
+      "id": "scaling-law",
+      "zh": "Scaling law",
+      "en": "Scaling law"
+    },
+    {
+      "id": "kv-cache",
+      "zh": "KV缓存",
+      "en": "KV cache"
+    },
+    {
+      "id": "tool-calling",
+      "zh": "工具调用",
+      "en": "Tool calling"
+    },
+    {
+      "id": "role-play",
+      "zh": "角色扮演",
+      "en": "Role-play",
+      "forms": { "en": ["role-playing"] }
+    },
+    {
+      "id": "multimodal",
+      "zh": "多模态",
+      "en": "Multimodal",
+      "forms": { "en": ["multimodality"] }
+    },
+    {
+      "id": "text-to-image",
+      "zh": "文生图",
+      "en": "Text-to-image"
+    },
+    {
+      "id": "digital-human",
+      "zh": "数字人",
+      "en": "Digital human"
+    },
+    {
+      "id": "synthetic-data",
+      "zh": "合成数据",
+      "en": "Synthetic data"
+    },
+    {
+      "id": "world-model",
+      "zh": "世界模型",
+      "en": "World model"
+    },
+    {
+      "id": "embodied-ai",
+      "zh": "具身智能",
+      "en": "Embodied AI"
+    },
+    {
+      "id": "segmentation",
+      "zh": "分割",
+      "en": "Segmentation",
+      "forms": { "en": ["segment", "segmented"] }
+    },
+    {
+      "id": "bounding-box",
+      "zh": "边界框",
+      "en": "Bounding box"
+    },
+    {
+      "id": "keypoint",
+      "zh": "关键点",
+      "en": "Keypoint"
+    },
+    {
+      "id": "point-cloud",
+      "zh": "点云",
+      "en": "Point cloud"
+    },
+    {
+      "id": "edge-detection",
+      "zh": "边缘检测",
+      "en": "Edge detection"
+    },
+    {
+      "id": "style-transfer",
+      "zh": "风格迁移",
+      "en": "Style transfer"
+    },
+    {
+      "id": "ocr",
+      "zh": "OCR",
+      "en": "OCR",
+      "forms": { "zh": ["光学字符识别"], "en": ["optical character recognition"] }
+    },
+    {
+      "id": "yolo",
+      "zh": "YOLO",
+      "en": "YOLO",
+      "forms": { "en": ["you only look once"] }
+    },
+    {
+      "id": "clip",
+      "zh": "CLIP",
+      "en": "CLIP"
+    },
+    {
+      "id": "nerf",
+      "zh": "NeRF",
+      "en": "NeRF",
+      "forms": { "en": ["neural radiance field"] }
+    },
+    {
+      "id": "t-sne",
+      "zh": "t-SNE",
+      "en": "t-SNE"
+    },
+    {
+      "id": "q-learning",
+      "zh": "Q学习",
+      "en": "Q-learning"
+    },
+    {
+      "id": "dqn",
+      "zh": "DQN",
+      "en": "DQN",
+      "forms": { "en": ["deep Q-network"] }
+    },
+    {
+      "id": "ppo",
+      "zh": "PPO",
+      "en": "PPO",
+      "forms": { "en": ["proximal policy optimization"] }
+    },
+    {
+      "id": "actor-critic",
+      "zh": "Actor-Critic",
+      "en": "Actor-Critic"
+    },
+    {
+      "id": "exploration",
+      "zh": "探索",
+      "en": "Exploration",
+      "forms": { "en": ["explore", "exploratory"] }
+    },
+    {
+      "id": "exploitation",
+      "zh": "利用",
+      "en": "Exploitation",
+      "forms": { "en": ["exploit"] }
+    },
+    {
+      "id": "multi-armed-bandit",
+      "zh": "多臂老虎机",
+      "en": "Multi-armed bandit"
+    },
+    {
+      "id": "self-play",
+      "zh": "自我对弈",
+      "en": "Self-play"
+    },
+    {
+      "id": "mcts",
+      "zh": "MCTS",
+      "en": "MCTS",
+      "forms": { "zh": ["蒙特卡洛树搜索"], "en": ["Monte Carlo tree search"] }
+    },
+    {
+      "id": "planning",
+      "zh": "规划",
+      "en": "Planning",
+      "forms": { "en": ["plan", "planner"] }
+    },
+    {
+      "id": "perception",
+      "zh": "感知",
+      "en": "Perception",
+      "forms": { "en": ["perceive", "perceptual"] }
+    },
+    {
+      "id": "autonomy",
+      "zh": "自主性",
+      "en": "Autonomy",
+      "forms": { "en": ["autonomous"] }
+    },
+    {
+      "id": "robot",
+      "zh": "机器人",
+      "en": "Robot",
+      "forms": { "en": ["robotic"] }
+    },
+    {
+      "id": "robotic-arm",
+      "zh": "机械臂",
+      "en": "Robotic arm"
+    },
+    {
+      "id": "autonomous-driving",
+      "zh": "自动驾驶",
+      "en": "Autonomous driving"
+    },
+    {
+      "id": "slam",
+      "zh": "SLAM",
+      "en": "SLAM",
+      "forms": { "en": ["simultaneous localization and mapping"] }
+    },
+    {
+      "id": "sim2real",
+      "zh": "Sim2Real",
+      "en": "Sim2Real",
+      "forms": { "en": ["sim-to-real"] }
+    },
+    {
+      "id": "bci",
+      "zh": "脑机接口",
+      "en": "BCI",
+      "forms": { "en": ["brain-computer interface"] }
+    },
+    {
+      "id": "precision",
+      "zh": "精确率",
+      "en": "Precision",
+      "forms": { "en": ["precise"] }
+    },
+    {
+      "id": "recall",
+      "zh": "召回率",
+      "en": "Recall",
+      "forms": { "en": ["recalled"] }
+    },
+    {
+      "id": "f1-score",
+      "zh": "F1分数",
+      "en": "F1 score"
+    },
+    {
+      "id": "auc",
+      "zh": "AUC",
+      "en": "AUC",
+      "forms": { "en": ["area under the curve"] }
+    },
+    {
+      "id": "roc-curve",
+      "zh": "ROC曲线",
+      "en": "ROC curve"
+    },
+    {
+      "id": "ablation",
+      "zh": "消融",
+      "en": "Ablation",
+      "forms": { "en": ["ablate", "ablated"] }
+    },
+    {
+      "id": "sota",
+      "zh": "SOTA",
+      "en": "SOTA",
+      "forms": { "en": ["state of the art"] }
+    },
+    {
+      "id": "leaderboard",
+      "zh": "排行榜",
+      "en": "Leaderboard"
+    },
+    {
+      "id": "win-rate",
+      "zh": "胜率",
+      "en": "Win rate"
+    },
+    {
+      "id": "ood",
+      "zh": "OOD",
+      "en": "OOD",
+      "forms": { "zh": ["分布外"], "en": ["out-of-distribution"] }
+    },
+    {
+      "id": "cold-start",
+      "zh": "冷启动",
+      "en": "Cold start"
+    },
+    {
+      "id": "ctr",
+      "zh": "点击率",
+      "en": "CTR",
+      "forms": { "en": ["click-through rate"] }
+    },
+    {
+      "id": "data-science",
+      "zh": "数据科学",
+      "en": "Data science"
+    },
+    {
+      "id": "data-cleaning",
+      "zh": "数据清洗",
+      "en": "Data cleaning"
+    },
+    {
+      "id": "data-leakage",
+      "zh": "数据泄露",
+      "en": "Data leakage",
+      "forms": { "en": ["leak"] }
+    },
+    {
+      "id": "data-drift",
+      "zh": "数据漂移",
+      "en": "Data drift"
+    },
+    {
+      "id": "crowdsourcing",
+      "zh": "众包",
+      "en": "Crowdsourcing",
+      "forms": { "en": ["crowdsource", "crowdsourced"] }
+    },
+    {
+      "id": "mnist",
+      "zh": "MNIST",
+      "en": "MNIST"
+    },
+    {
+      "id": "imagenet",
+      "zh": "ImageNet",
+      "en": "ImageNet"
+    },
+    {
+      "id": "coco",
+      "zh": "COCO",
+      "en": "COCO"
+    },
+    {
+      "id": "automl",
+      "zh": "AutoML",
+      "en": "AutoML",
+      "forms": { "en": ["automated machine learning"] }
+    },
+    {
+      "id": "ai-safety",
+      "zh": "AI安全",
+      "en": "AI safety"
+    },
+    {
+      "id": "jailbreak",
+      "zh": "越狱",
+      "en": "Jailbreak",
+      "forms": { "en": ["jailbroken", "jailbreaking"] }
+    },
+    {
+      "id": "red-team",
+      "zh": "红队",
+      "en": "Red team"
+    },
+    {
+      "id": "data-poisoning",
+      "zh": "数据投毒",
+      "en": "Data poisoning"
+    },
+    {
+      "id": "deepfake",
+      "zh": "深度伪造",
+      "en": "Deepfake"
+    },
+    {
+      "id": "watermark",
+      "zh": "水印",
+      "en": "Watermark",
+      "forms": { "en": ["watermarking", "watermarked"] }
+    },
+    {
+      "id": "fairness",
+      "zh": "公平性",
+      "en": "Fairness"
+    },
+    {
+      "id": "explainability",
+      "zh": "可解释性",
+      "en": "Explainability",
+      "forms": { "en": ["explainable"] }
+    },
+    {
+      "id": "filter-bubble",
+      "zh": "信息茧房",
+      "en": "Filter bubble"
+    },
+    {
+      "id": "automation",
+      "zh": "自动化",
+      "en": "Automation",
+      "forms": { "en": ["automate", "automated"] }
+    },
+    {
+      "id": "turing-test",
+      "zh": "图灵测试",
+      "en": "Turing test"
+    },
+    {
+      "id": "expert-system",
+      "zh": "专家系统",
+      "en": "Expert system"
+    },
+    {
+      "id": "connectionism",
+      "zh": "联结主义",
+      "en": "Connectionism",
+      "forms": { "en": ["connectionist"] }
+    },
+    {
+      "id": "ai-winter",
+      "zh": "AI寒冬",
+      "en": "AI winter"
+    },
+    {
+      "id": "uncanny-valley",
+      "zh": "恐怖谷",
+      "en": "Uncanny valley"
+    },
+    {
+      "id": "deep-blue",
+      "zh": "深蓝",
+      "en": "Deep Blue"
+    },
+    {
+      "id": "alphago",
+      "zh": "AlphaGo",
+      "en": "AlphaGo"
+    },
+    {
+      "id": "alphafold",
+      "zh": "AlphaFold",
+      "en": "AlphaFold"
+    },
+    {
+      "id": "pytorch",
+      "zh": "PyTorch",
+      "en": "PyTorch"
+    },
+    {
+      "id": "tensorflow",
+      "zh": "TensorFlow",
+      "en": "TensorFlow"
+    },
+    {
+      "id": "scikit-learn",
+      "zh": "scikit-learn",
+      "en": "scikit-learn"
+    },
+    {
+      "id": "hugging-face",
+      "zh": "Hugging Face",
+      "en": "Hugging Face"
+    },
+    {
+      "id": "kaggle",
+      "zh": "Kaggle",
+      "en": "Kaggle"
+    },
+    {
+      "id": "openreview",
+      "zh": "OpenReview",
+      "en": "OpenReview"
+    },
+    {
+      "id": "neurips",
+      "zh": "NeurIPS",
+      "en": "NeurIPS"
+    },
+    {
+      "id": "icml",
+      "zh": "ICML",
+      "en": "ICML"
+    },
+    {
+      "id": "iclr",
+      "zh": "ICLR",
+      "en": "ICLR"
+    },
+    {
+      "id": "cvpr",
+      "zh": "CVPR",
+      "en": "CVPR"
+    },
+    {
+      "id": "aaai",
+      "zh": "AAAI",
+      "en": "AAAI"
+    },
+    {
+      "id": "feature",
+      "zh": "特征",
+      "en": "Feature"
+    },
+    {
+      "id": "training-set",
+      "zh": "训练集",
+      "en": "Training set"
+    },
+    {
+      "id": "cross-validation",
+      "zh": "交叉验证",
+      "en": "Cross-validation"
+    },
+    {
+      "id": "adaboost",
+      "zh": "AdaBoost",
+      "en": "AdaBoost"
+    },
+    {
+      "id": "bagging",
+      "zh": "Bagging",
+      "en": "Bagging",
+      "forms": { "en": ["bootstrap aggregating"] }
+    },
+    {
+      "id": "weak-learner",
+      "zh": "弱学习器",
+      "en": "Weak learner"
+    },
+    {
+      "id": "logit",
+      "zh": "Logit",
+      "en": "Logit"
+    },
+    {
+      "id": "imputation",
+      "zh": "插补",
+      "en": "Imputation",
+      "forms": { "en": ["impute", "imputed"] }
+    },
+    {
+      "id": "nonlinearity",
+      "zh": "非线性",
+      "en": "Nonlinearity",
+      "forms": { "en": ["nonlinear"] }
+    },
+    {
+      "id": "penalty",
+      "zh": "惩罚",
+      "en": "Penalty",
+      "forms": { "en": ["penalize", "penalise", "penalized"] }
+    },
+    {
+      "id": "sliding-window",
+      "zh": "滑动窗口",
+      "en": "Sliding window"
+    },
+    {
+      "id": "attribution",
+      "zh": "归因",
+      "en": "Attribution",
+      "forms": { "en": ["attribute", "attributed"] }
+    },
+    {
+      "id": "counterfactual",
+      "zh": "反事实",
+      "en": "Counterfactual"
+    },
+    {
+      "id": "grokking",
+      "zh": "顿悟",
+      "en": "Grokking",
+      "forms": { "en": ["grok"] }
+    },
+    {
+      "id": "recognition",
+      "zh": "识别",
+      "en": "Recognition",
+      "forms": { "en": ["recognize", "recognise", "recognizer"] }
+    },
+    {
+      "id": "detection",
+      "zh": "检测",
+      "en": "Detection",
+      "forms": { "en": ["detect", "detector"] }
+    },
+    {
+      "id": "hidden-layer",
+      "zh": "隐藏层",
+      "en": "Hidden layer"
+    },
+    {
+      "id": "feature-map",
+      "zh": "特征图",
+      "en": "Feature map"
+    },
+    {
+      "id": "backbone",
+      "zh": "骨干网络",
+      "en": "Backbone"
+    },
+    {
+      "id": "weight-decay",
+      "zh": "权重衰减",
+      "en": "Weight decay"
+    },
+    {
+      "id": "upsampling",
+      "zh": "上采样",
+      "en": "Upsampling",
+      "forms": { "en": ["upsample", "upsampled"] }
+    },
+    {
+      "id": "downsampling",
+      "zh": "下采样",
+      "en": "Downsampling",
+      "forms": { "en": ["downsample", "downsampled"] }
+    },
+    {
+      "id": "layernorm",
+      "zh": "LayerNorm",
+      "en": "LayerNorm",
+      "forms": { "en": ["layer normalization"] }
+    },
+    {
+      "id": "batchnorm",
+      "zh": "BatchNorm",
+      "en": "BatchNorm",
+      "forms": { "en": ["batch normalization"] }
+    },
+    {
+      "id": "gru",
+      "zh": "GRU",
+      "en": "GRU",
+      "forms": { "zh": ["门控循环单元"], "en": ["gated recurrent unit"] }
+    },
+    {
+      "id": "streaming",
+      "zh": "流式",
+      "en": "Streaming",
+      "forms": { "en": ["stream", "streamed"] }
+    },
+    {
+      "id": "npu",
+      "zh": "NPU",
+      "en": "NPU",
+      "forms": { "zh": ["神经网络处理器"], "en": ["neural processing unit"] }
+    },
+    {
+      "id": "saliency-map",
+      "zh": "显著图",
+      "en": "Saliency map"
+    },
+    {
+      "id": "inpainting",
+      "zh": "图像修复",
+      "en": "Inpainting",
+      "forms": { "en": ["inpaint"] }
+    },
+    {
+      "id": "optical-flow",
+      "zh": "光流",
+      "en": "Optical flow"
+    },
+    {
+      "id": "matting",
+      "zh": "抠图",
+      "en": "Matting"
+    },
+    {
+      "id": "mosaic",
+      "zh": "马赛克",
+      "en": "Mosaic"
+    },
+    {
+      "id": "iou",
+      "zh": "IoU",
+      "en": "IoU",
+      "forms": { "zh": ["交并比"], "en": ["intersection over union"] }
+    },
+    {
+      "id": "inception",
+      "zh": "Inception",
+      "en": "Inception"
+    },
+    {
+      "id": "opencv",
+      "zh": "OpenCV",
+      "en": "OpenCV"
+    },
+    {
+      "id": "ner",
+      "zh": "NER",
+      "en": "NER",
+      "forms": { "zh": ["命名实体识别"], "en": ["named entity recognition"] }
+    },
+    {
+      "id": "cloze",
+      "zh": "完形填空",
+      "en": "Cloze"
+    },
+    {
+      "id": "bleu",
+      "zh": "BLEU",
+      "en": "BLEU"
+    },
+    {
+      "id": "rouge",
+      "zh": "ROUGE",
+      "en": "ROUGE"
+    },
+    {
+      "id": "wordnet",
+      "zh": "WordNet",
+      "en": "WordNet"
+    },
+    {
+      "id": "base-model",
+      "zh": "基座模型",
+      "en": "Base model"
+    },
+    {
+      "id": "refusal",
+      "zh": "拒答",
+      "en": "Refusal",
+      "forms": { "en": ["refuse", "refused"] }
+    },
+    {
+      "id": "sycophancy",
+      "zh": "谄媚",
+      "en": "Sycophancy",
+      "forms": { "en": ["sycophantic", "sycophant"] }
+    },
+    {
+      "id": "guardrail",
+      "zh": "护栏",
+      "en": "Guardrail"
+    },
+    {
+      "id": "data-flywheel",
+      "zh": "数据飞轮",
+      "en": "Data flywheel"
+    },
+    {
+      "id": "ai-assistant",
+      "zh": "AI助手",
+      "en": "AI assistant"
+    },
+    {
+      "id": "ai-art",
+      "zh": "AI绘画",
+      "en": "AI art"
+    },
+    {
+      "id": "voice-cloning",
+      "zh": "声音克隆",
+      "en": "Voice cloning"
+    },
+    {
+      "id": "common-sense",
+      "zh": "常识",
+      "en": "Common sense"
+    },
+    {
+      "id": "dall-e",
+      "zh": "DALL-E",
+      "en": "DALL-E"
+    },
+    {
+      "id": "midjourney",
+      "zh": "Midjourney",
+      "en": "Midjourney"
+    },
+    {
+      "id": "whisper",
+      "zh": "Whisper",
+      "en": "Whisper"
+    },
+    {
+      "id": "mamba",
+      "zh": "Mamba",
+      "en": "Mamba"
+    },
+    {
+      "id": "action-space",
+      "zh": "动作空间",
+      "en": "Action space"
+    },
+    {
+      "id": "advantage",
+      "zh": "优势",
+      "en": "Advantage",
+      "forms": { "en": ["advantageous"] }
+    },
+    {
+      "id": "multi-agent",
+      "zh": "多智能体",
+      "en": "Multi-agent"
+    },
+    {
+      "id": "curiosity",
+      "zh": "好奇心",
+      "en": "Curiosity",
+      "forms": { "en": ["curious"] }
+    },
+    {
+      "id": "gridworld",
+      "zh": "网格世界",
+      "en": "Gridworld"
+    },
+    {
+      "id": "atari",
+      "zh": "Atari",
+      "en": "Atari"
+    },
+    {
+      "id": "minecraft",
+      "zh": "我的世界",
+      "en": "Minecraft"
+    },
+    {
+      "id": "mujoco",
+      "zh": "MuJoCo",
+      "en": "MuJoCo"
+    },
+    {
+      "id": "game-tree",
+      "zh": "博弈树",
+      "en": "Game tree"
+    },
+    {
+      "id": "minimax",
+      "zh": "极小化极大",
+      "en": "Minimax"
+    },
+    {
+      "id": "humanoid",
+      "zh": "人形机器人",
+      "en": "Humanoid"
+    },
+    {
+      "id": "robot-dog",
+      "zh": "机器狗",
+      "en": "Robot dog"
+    },
+    {
+      "id": "robot-vacuum",
+      "zh": "扫地机器人",
+      "en": "Robot vacuum"
+    },
+    {
+      "id": "drone",
+      "zh": "无人机",
+      "en": "Drone"
+    },
+    {
+      "id": "dexterous-hand",
+      "zh": "灵巧手",
+      "en": "Dexterous hand"
+    },
+    {
+      "id": "end-effector",
+      "zh": "末端执行器",
+      "en": "End effector"
+    },
+    {
+      "id": "grasping",
+      "zh": "抓取",
+      "en": "Grasping",
+      "forms": { "en": ["grasp", "grasped"] }
+    },
+    {
+      "id": "teleoperation",
+      "zh": "遥操作",
+      "en": "Teleoperation",
+      "forms": { "en": ["teleoperate", "teleoperated"] }
+    },
+    {
+      "id": "motion-capture",
+      "zh": "动作捕捉",
+      "en": "Motion capture",
+      "forms": { "en": ["mocap"] }
+    },
+    {
+      "id": "navigation",
+      "zh": "导航",
+      "en": "Navigation",
+      "forms": { "en": ["navigate", "navigator"] }
+    },
+    {
+      "id": "sensor",
+      "zh": "传感器",
+      "en": "Sensor"
+    },
+    {
+      "id": "depth-camera",
+      "zh": "深度相机",
+      "en": "Depth camera"
+    },
+    {
+      "id": "smart-speaker",
+      "zh": "智能音箱",
+      "en": "Smart speaker"
+    },
+    {
+      "id": "wake-word",
+      "zh": "唤醒词",
+      "en": "Wake word"
+    },
+    {
+      "id": "recommender-system",
+      "zh": "推荐系统",
+      "en": "Recommender system"
+    },
+    {
+      "id": "feed",
+      "zh": "信息流",
+      "en": "Feed"
+    },
+    {
+      "id": "drug-discovery",
+      "zh": "药物发现",
+      "en": "Drug discovery"
+    },
+    {
+      "id": "cyborg",
+      "zh": "赛博格",
+      "en": "Cyborg"
+    },
+    {
+      "id": "cybernetics",
+      "zh": "控制论",
+      "en": "Cybernetics"
+    },
+    {
+      "id": "fuzzy-logic",
+      "zh": "模糊逻辑",
+      "en": "Fuzzy logic"
+    },
+    {
+      "id": "strong-ai",
+      "zh": "强人工智能",
+      "en": "Strong AI"
+    },
+    {
+      "id": "eliza",
+      "zh": "ELIZA",
+      "en": "ELIZA"
+    },
+    {
+      "id": "jupyter",
+      "zh": "Jupyter",
+      "en": "Jupyter"
+    },
+    {
+      "id": "numpy",
+      "zh": "NumPy",
+      "en": "NumPy"
+    },
+    {
+      "id": "pandas",
+      "zh": "pandas",
+      "en": "pandas"
+    },
+    {
+      "id": "squad",
+      "zh": "SQuAD",
+      "en": "SQuAD"
+    },
+    {
+      "id": "glue",
+      "zh": "GLUE",
+      "en": "GLUE"
+    },
+    {
+      "id": "transfer-learning",
+      "zh": "迁移学习",
+      "en": "Transfer learning"
+    },
+    {
+      "id": "debiasing",
+      "zh": "去偏",
+      "en": "Debiasing",
+      "forms": { "en": ["debias", "debiased"] }
+    },
+    {
+      "id": "soft-label",
+      "zh": "软标签",
+      "en": "Soft label"
+    },
+    {
+      "id": "pseudo-label",
+      "zh": "伪标签",
+      "en": "Pseudo-label"
+    },
+    {
+      "id": "oversampling",
+      "zh": "过采样",
+      "en": "Oversampling",
+      "forms": { "en": ["oversample"] }
+    },
+    {
+      "id": "undersampling",
+      "zh": "欠采样",
+      "en": "Undersampling",
+      "forms": { "en": ["undersample"] }
+    },
+    {
+      "id": "deduplication",
+      "zh": "去重",
+      "en": "Deduplication",
+      "forms": { "en": ["deduplicate", "dedup"] }
+    },
+    {
+      "id": "human-level",
+      "zh": "人类水平",
+      "en": "Human-level"
+    },
+    {
+      "id": "context-window",
+      "zh": "上下文窗口",
+      "en": "Context window"
+    },
+    {
+      "id": "factuality",
+      "zh": "事实性",
+      "en": "Factuality",
+      "forms": { "en": ["factual"] }
+    },
+    {
+      "id": "provenance",
+      "zh": "溯源",
+      "en": "Provenance"
+    },
+    {
+      "id": "reranking",
+      "zh": "重排序",
+      "en": "Reranking",
+      "forms": { "en": ["rerank", "reranker"] }
+    },
+    {
+      "id": "chunking",
+      "zh": "分块",
+      "en": "Chunking",
+      "forms": { "en": ["chunk", "chunked"] }
+    },
+    {
+      "id": "subword",
+      "zh": "子词",
+      "en": "Subword"
+    },
+    {
+      "id": "lemmatization",
+      "zh": "词形还原",
+      "en": "Lemmatization",
+      "forms": { "en": ["lemmatize", "lemmatise"] }
+    },
+    {
+      "id": "top-k",
+      "zh": "Top-k",
+      "en": "Top-k"
+    },
+    {
+      "id": "tracking",
+      "zh": "跟踪",
+      "en": "Tracking",
+      "forms": { "en": ["track", "tracker"] }
+    },
+    {
+      "id": "pose",
+      "zh": "姿态",
+      "en": "Pose"
+    },
+    {
+      "id": "depth-map",
+      "zh": "深度图",
+      "en": "Depth map"
+    },
+    {
+      "id": "stereo-vision",
+      "zh": "双目视觉",
+      "en": "Stereo vision"
+    },
+    {
+      "id": "panorama",
+      "zh": "全景",
+      "en": "Panorama",
+      "forms": { "en": ["panoramic"] }
+    },
+    {
+      "id": "deblurring",
+      "zh": "去模糊",
+      "en": "Deblurring",
+      "forms": { "en": ["deblur"] }
+    },
+    {
+      "id": "voxel",
+      "zh": "体素",
+      "en": "Voxel",
+      "forms": { "en": ["voxelize", "voxelization"] }
+    },
+    {
+      "id": "deepdream",
+      "zh": "DeepDream",
+      "en": "DeepDream"
+    },
+    {
+      "id": "q-value",
+      "zh": "Q值",
+      "en": "Q-value"
+    },
+    {
+      "id": "epsilon-greedy",
+      "zh": "ε-贪心",
+      "en": "Epsilon-greedy"
+    },
+    {
+      "id": "sparse-reward",
+      "zh": "稀疏奖励",
+      "en": "Sparse reward"
+    },
+    {
+      "id": "regret",
+      "zh": "遗憾",
+      "en": "Regret"
+    },
+    {
+      "id": "gripper",
+      "zh": "夹爪",
+      "en": "Gripper"
+    },
+    {
+      "id": "servo",
+      "zh": "舵机",
+      "en": "Servo"
+    },
+    {
+      "id": "path-planning",
+      "zh": "路径规划",
+      "en": "Path planning"
+    },
+    {
+      "id": "keras",
+      "zh": "Keras",
+      "en": "Keras"
+    },
+    {
+      "id": "caffe",
+      "zh": "Caffe",
+      "en": "Caffe"
+    },
+    {
+      "id": "paddlepaddle",
+      "zh": "飞桨",
+      "en": "PaddlePaddle"
+    },
+    {
+      "id": "gating",
+      "zh": "门控",
+      "en": "Gating",
+      "forms": { "en": ["gate", "gated"] }
+    },
+    {
+      "id": "hidden-state",
+      "zh": "隐状态",
+      "en": "Hidden state"
+    },
+    {
+      "id": "forget-gate",
+      "zh": "遗忘门",
+      "en": "Forget gate"
+    },
+    {
+      "id": "operator",
+      "zh": "算子",
+      "en": "Operator"
+    },
+    {
+      "id": "reward-model",
+      "zh": "奖励模型",
+      "en": "Reward model"
+    },
+    {
+      "id": "value-function",
+      "zh": "价值函数",
+      "en": "Value function"
+    },
+    {
+      "id": "mdp",
+      "zh": "MDP",
+      "en": "MDP",
+      "forms": { "zh": ["马尔可夫决策过程"], "en": ["Markov decision process"] }
+    },
+    {
+      "id": "vlm",
+      "zh": "VLM",
+      "en": "VLM",
+      "forms": { "zh": ["视觉语言模型"], "en": ["vision-language model"] }
+    },
+    {
+      "id": "text-to-video",
+      "zh": "文生视频",
+      "en": "Text-to-video"
+    },
+    {
+      "id": "user-profile",
+      "zh": "用户画像",
+      "en": "User profile"
+    },
+    {
+      "id": "topic-model",
+      "zh": "主题模型",
+      "en": "Topic model"
+    },
+    {
+      "id": "word-cloud",
+      "zh": "词云",
+      "en": "Word cloud"
+    },
+    {
+      "id": "svd",
+      "zh": "SVD",
+      "en": "SVD",
+      "forms": { "zh": ["奇异值分解"], "en": ["singular value decomposition"] }
+    },
+    {
+      "id": "reward-hacking",
+      "zh": "奖励黑客",
+      "en": "Reward hacking"
+    },
+    {
+      "id": "terminator",
+      "zh": "终结者",
+      "en": "Terminator"
+    },
+    {
+      "id": "skynet",
+      "zh": "天网",
+      "en": "Skynet"
+    },
+    {
+      "id": "pipeline",
+      "zh": "流水线",
+      "en": "Pipeline",
+      "forms": { "en": ["pipelining"] }
+    },
+    {
+      "id": "loss-landscape",
+      "zh": "损失曲面",
+      "en": "Loss landscape"
+    },
+    {
+      "id": "go",
+      "zh": "围棋",
+      "en": "Go"
+    },
+    {
+      "id": "chess",
+      "zh": "国际象棋",
+      "en": "Chess"
+    },
+    {
+      "id": "label-noise",
+      "zh": "标签噪声",
+      "en": "Label noise"
+    },
+    {
+      "id": "global-optimum",
+      "zh": "全局最优",
+      "en": "Global optimum",
+      "forms": { "en": ["global optima"] }
+    },
+    {
+      "id": "data-lake",
+      "zh": "数据湖",
+      "en": "Data lake"
+    },
+    {
+      "id": "flow-matching",
+      "zh": "流匹配",
+      "en": "Flow matching"
+    },
+    {
+      "id": "anchor-box",
+      "zh": "锚框",
+      "en": "Anchor box"
+    },
+    {
+      "id": "voiceprint",
+      "zh": "声纹",
+      "en": "Voiceprint"
+    },
+    {
+      "id": "reward-shaping",
+      "zh": "奖励塑形",
+      "en": "Reward shaping"
+    },
+    {
+      "id": "environment",
+      "zh": "环境",
+      "en": "Environment",
+      "forms": { "en": ["environmental"] }
+    },
+    {
+      "id": "state",
+      "zh": "状态",
+      "en": "State",
+      "forms": { "en": ["stateful", "stateless"] }
+    },
+    {
+      "id": "replay",
+      "zh": "回放",
+      "en": "Replay",
+      "forms": { "en": ["replayed"] }
+    },
+    {
+      "id": "data-augmentation",
+      "zh": "数据增强",
+      "en": "Data augmentation",
+      "forms": { "en": ["augment", "augmented"] }
+    }
+  ]
+}

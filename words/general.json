@@ -14,7 +14,8 @@
     {
       "id": "submission",
       "zh": "投稿",
-      "en": "Submission"
+      "en": "Submission",
+      "forms": { "en": ["submit", "submitted"] }
     },
     {
       "id": "manuscript",
@@ -54,7 +55,8 @@
     {
       "id": "deadline",
       "zh": "截止日期",
-      "en": "Deadline"
+      "en": "Deadline",
+      "forms": { "en": ["DDL"] }
     },
     {
       "id": "preprint",
@@ -64,22 +66,26 @@
     {
       "id": "major-revision",
       "zh": "大修",
-      "en": "Major revision"
+      "en": "Major revision",
+      "forms": { "en": ["revise", "revised"] }
     },
     {
       "id": "plagiarism",
       "zh": "抄袭",
-      "en": "Plagiarism"
+      "en": "Plagiarism",
+      "forms": { "en": ["plagiarize", "plagiarise", "plagiarist"] }
     },
     {
       "id": "editor",
       "zh": "编辑",
-      "en": "Editor"
+      "en": "Editor",
+      "forms": { "en": ["edit", "edited", "editorial"] }
     },
     {
       "id": "open-access",
       "zh": "开放获取",
-      "en": "Open access"
+      "en": "Open access",
+      "forms": { "en": ["OA"] }
     },
     {
       "id": "h-index",
@@ -89,7 +95,8 @@
     {
       "id": "coauthor",
       "zh": "合著者",
-      "en": "Coauthor"
+      "en": "Coauthor",
+      "forms": { "en": ["coauthored", "coauthorship"] }
     },
     {
       "id": "first-author",
@@ -99,7 +106,8 @@
     {
       "id": "appendix",
       "zh": "附录",
-      "en": "Appendix"
+      "en": "Appendix",
+      "forms": { "en": ["appendices"] }
     },
     {
       "id": "footnote",
@@ -129,17 +137,20 @@
     {
       "id": "draft",
       "zh": "草稿",
-      "en": "Draft"
+      "en": "Draft",
+      "forms": { "en": ["drafted", "drafting"] }
     },
     {
       "id": "proofreading",
       "zh": "校对",
-      "en": "Proofreading"
+      "en": "Proofreading",
+      "forms": { "en": ["proofread", "proofreader"] }
     },
     {
       "id": "typo",
       "zh": "错别字",
-      "en": "Typo"
+      "en": "Typo",
+      "forms": { "en": ["typographical error"] }
     },
     {
       "id": "word-count",
@@ -154,22 +165,26 @@
     {
       "id": "anonymity",
       "zh": "匿名",
-      "en": "Anonymity"
+      "en": "Anonymity",
+      "forms": { "en": ["anonymous", "anonymized", "anonymised"] }
     },
     {
       "id": "introduction",
       "zh": "引言",
-      "en": "Introduction"
+      "en": "Introduction",
+      "forms": { "en": ["introduce", "introductory"] }
     },
     {
       "id": "conclusion",
       "zh": "结论",
-      "en": "Conclusion"
+      "en": "Conclusion",
+      "forms": { "en": ["conclude", "conclusive"] }
     },
     {
       "id": "discussion",
       "zh": "讨论",
-      "en": "Discussion"
+      "en": "Discussion",
+      "forms": { "en": ["discuss", "discussed"] }
     },
     {
       "id": "results",
@@ -179,22 +194,26 @@
     {
       "id": "motivation",
       "zh": "动机",
-      "en": "Motivation"
+      "en": "Motivation",
+      "forms": { "en": ["motivate", "motivated"] }
     },
     {
       "id": "contribution",
       "zh": "贡献",
-      "en": "Contribution"
+      "en": "Contribution",
+      "forms": { "en": ["contribute", "contributor"] }
     },
     {
       "id": "novelty",
       "zh": "新颖性",
-      "en": "Novelty"
+      "en": "Novelty",
+      "forms": { "en": ["novel"] }
     },
     {
       "id": "limitation",
       "zh": "局限性",
-      "en": "Limitation"
+      "en": "Limitation",
+      "forms": { "en": ["limit", "limited"] }
     },
     {
       "id": "future-work",
@@ -214,12 +233,14 @@
     {
       "id": "experiment",
       "zh": "实验",
-      "en": "Experiment"
+      "en": "Experiment",
+      "forms": { "en": ["experimental", "experimenter"] }
     },
     {
       "id": "hypothesis",
       "zh": "假设",
-      "en": "Hypothesis"
+      "en": "Hypothesis",
+      "forms": { "en": ["hypotheses", "hypothesize", "hypothetical"] }
     },
     {
       "id": "dataset",
@@ -229,7 +250,8 @@
     {
       "id": "sample",
       "zh": "样本",
-      "en": "Sample"
+      "en": "Sample",
+      "forms": { "en": ["sampling", "sampled"] }
     },
     {
       "id": "baseline",
@@ -239,17 +261,20 @@
     {
       "id": "benchmark",
       "zh": "基准",
-      "en": "Benchmark"
+      "en": "Benchmark",
+      "forms": { "en": ["benchmarking", "benchmarked"] }
     },
     {
       "id": "replication",
       "zh": "复现",
-      "en": "Replication"
+      "en": "Replication",
+      "forms": { "en": ["replicate", "replicated", "replicability"] }
     },
     {
       "id": "significance",
       "zh": "显著性",
-      "en": "Significance"
+      "en": "Significance",
+      "forms": { "en": ["significant", "significantly"] }
     },
     {
       "id": "error-bar",
@@ -264,17 +289,20 @@
     {
       "id": "noise",
       "zh": "噪声",
-      "en": "Noise"
+      "en": "Noise",
+      "forms": { "en": ["noisy", "denoise", "denoising"] }
     },
     {
       "id": "bias",
       "zh": "偏差",
-      "en": "Bias"
+      "en": "Bias",
+      "forms": { "en": ["biased", "unbiased"] }
     },
     {
       "id": "variance",
       "zh": "方差",
-      "en": "Variance"
+      "en": "Variance",
+      "forms": { "en": ["covariance"] }
     },
     {
       "id": "mean",
@@ -289,42 +317,50 @@
     {
       "id": "distribution",
       "zh": "分布",
-      "en": "Distribution"
+      "en": "Distribution",
+      "forms": { "en": ["distribute", "distributed"] }
     },
     {
       "id": "correlation",
       "zh": "相关性",
-      "en": "Correlation"
+      "en": "Correlation",
+      "forms": { "en": ["correlate", "correlated"] }
     },
     {
       "id": "causality",
       "zh": "因果",
-      "en": "Causality"
+      "en": "Causality",
+      "forms": { "en": ["causal", "causation"] }
     },
     {
       "id": "regression",
       "zh": "回归",
-      "en": "Regression"
+      "en": "Regression",
+      "forms": { "en": ["regress", "regressor"] }
     },
     {
       "id": "model",
       "zh": "模型",
-      "en": "Model"
+      "en": "Model",
+      "forms": { "en": ["modeling", "modelling", "modeled", "modelled"] }
     },
     {
       "id": "theory",
       "zh": "理论",
-      "en": "Theory"
+      "en": "Theory",
+      "forms": { "en": ["theories", "theoretical", "theorist"] }
     },
     {
       "id": "simulation",
       "zh": "仿真",
-      "en": "Simulation"
+      "en": "Simulation",
+      "forms": { "en": ["simulate", "simulated", "simulator"] }
     },
     {
       "id": "method",
       "zh": "方法",
-      "en": "Method"
+      "en": "Method",
+      "forms": { "en": ["methodology", "methodological"] }
     },
     {
       "id": "framework",
@@ -334,7 +370,8 @@
     {
       "id": "paradigm",
       "zh": "范式",
-      "en": "Paradigm"
+      "en": "Paradigm",
+      "forms": { "en": ["paradigmatic"] }
     },
     {
       "id": "questionnaire",
@@ -344,7 +381,8 @@
     {
       "id": "interview",
       "zh": "访谈",
-      "en": "Interview"
+      "en": "Interview",
+      "forms": { "en": ["interviewer", "interviewee"] }
     },
     {
       "id": "fieldwork",
@@ -354,12 +392,14 @@
     {
       "id": "archive",
       "zh": "档案",
-      "en": "Archive"
+      "en": "Archive",
+      "forms": { "en": ["archival", "archived"] }
     },
     {
       "id": "library",
       "zh": "图书馆",
-      "en": "Library"
+      "en": "Library",
+      "forms": { "en": ["libraries", "librarian"] }
     },
     {
       "id": "database",
@@ -374,32 +414,38 @@
     {
       "id": "accuracy",
       "zh": "准确率",
-      "en": "Accuracy"
+      "en": "Accuracy",
+      "forms": { "en": ["accurate", "inaccurate"] }
     },
     {
       "id": "annotation",
       "zh": "标注",
-      "en": "Annotation"
+      "en": "Annotation",
+      "forms": { "en": ["annotate", "annotated", "annotator"] }
     },
     {
       "id": "ethics",
       "zh": "伦理",
-      "en": "Ethics"
+      "en": "Ethics",
+      "forms": { "en": ["ethical", "unethical"] }
     },
     {
       "id": "collaboration",
       "zh": "合作",
-      "en": "Collaboration"
+      "en": "Collaboration",
+      "forms": { "en": ["collaborate", "collaborator"] }
     },
     {
       "id": "proof",
       "zh": "证明",
-      "en": "Proof"
+      "en": "Proof",
+      "forms": { "en": ["prove", "proved", "proven"] }
     },
     {
       "id": "lemma",
       "zh": "引理",
-      "en": "Lemma"
+      "en": "Lemma",
+      "forms": { "en": ["lemmata"] }
     },
     {
       "id": "theorem",
@@ -409,7 +455,8 @@
     {
       "id": "axiom",
       "zh": "公理",
-      "en": "Axiom"
+      "en": "Axiom",
+      "forms": { "en": ["axiomatic"] }
     },
     {
       "id": "equation",
@@ -424,12 +471,14 @@
     {
       "id": "parameter",
       "zh": "参数",
-      "en": "Parameter"
+      "en": "Parameter",
+      "forms": { "en": ["parametric", "parameterize", "parametrize"] }
     },
     {
       "id": "network",
       "zh": "网络",
-      "en": "Network"
+      "en": "Network",
+      "forms": { "en": ["networking", "networked"] }
     },
     {
       "id": "node",
@@ -439,17 +488,20 @@
     {
       "id": "iteration",
       "zh": "迭代",
-      "en": "Iteration"
+      "en": "Iteration",
+      "forms": { "en": ["iterate", "iterative"] }
     },
     {
       "id": "dimension",
       "zh": "维度",
-      "en": "Dimension"
+      "en": "Dimension",
+      "forms": { "en": ["dimensional", "dimensionality"] }
     },
     {
       "id": "entropy",
       "zh": "熵",
-      "en": "Entropy"
+      "en": "Entropy",
+      "forms": { "en": ["entropic"] }
     },
     {
       "id": "server",
@@ -459,47 +511,56 @@
     {
       "id": "cluster",
       "zh": "集群",
-      "en": "Cluster"
+      "en": "Cluster",
+      "forms": { "en": ["clustering", "clustered"] }
     },
     {
       "id": "code",
       "zh": "代码",
-      "en": "Code"
+      "en": "Code",
+      "forms": { "en": ["coding", "coder", "codebase"] }
     },
     {
       "id": "version",
       "zh": "版本",
-      "en": "Version"
+      "en": "Version",
+      "forms": { "en": ["versioning"] }
     },
     {
       "id": "log",
       "zh": "日志",
-      "en": "Log"
+      "en": "Log",
+      "forms": { "en": ["logging", "logged"] }
     },
     {
       "id": "spectrum",
       "zh": "光谱",
-      "en": "Spectrum"
+      "en": "Spectrum",
+      "forms": { "en": ["spectra", "spectral"] }
     },
     {
       "id": "signal",
       "zh": "信号",
-      "en": "Signal"
+      "en": "Signal",
+      "forms": { "en": ["signaling", "signalling"] }
     },
     {
       "id": "frequency",
       "zh": "频率",
-      "en": "Frequency"
+      "en": "Frequency",
+      "forms": { "en": ["frequencies", "frequent"] }
     },
     {
       "id": "energy",
       "zh": "能量",
-      "en": "Energy"
+      "en": "Energy",
+      "forms": { "en": ["energies", "energetic"] }
     },
     {
       "id": "pressure",
       "zh": "压力",
-      "en": "Pressure"
+      "en": "Pressure",
+      "forms": { "en": ["pressurize", "pressurized"] }
     },
     {
       "id": "temperature",
@@ -509,17 +570,20 @@
     {
       "id": "microscope",
       "zh": "显微镜",
-      "en": "Microscope"
+      "en": "Microscope",
+      "forms": { "en": ["microscopy", "microscopic"] }
     },
     {
       "id": "mouse",
       "zh": "小鼠",
-      "en": "Mouse"
+      "en": "Mouse",
+      "forms": { "en": ["mice"] }
     },
     {
       "id": "cell",
       "zh": "细胞",
-      "en": "Cell"
+      "en": "Cell",
+      "forms": { "en": ["cellular"] }
     },
     {
       "id": "specimen",
@@ -559,7 +623,8 @@
     {
       "id": "lecture",
       "zh": "讲座",
-      "en": "Lecture"
+      "en": "Lecture",
+      "forms": { "en": ["lecturer"] }
     },
     {
       "id": "seminar",
@@ -589,12 +654,14 @@
     {
       "id": "teaching-assistant",
       "zh": "助教",
-      "en": "TA"
+      "en": "TA",
+      "forms": { "en": ["teaching assistant"] }
     },
     {
       "id": "course",
       "zh": "课程",
-      "en": "Course"
+      "en": "Course",
+      "forms": { "en": ["coursework"] }
     },
     {
       "id": "semester",
@@ -609,12 +676,14 @@
     {
       "id": "exam",
       "zh": "考试",
-      "en": "Exam"
+      "en": "Exam",
+      "forms": { "en": ["examination", "examiner"] }
     },
     {
       "id": "gpa",
       "zh": "绩点",
-      "en": "GPA"
+      "en": "GPA",
+      "forms": { "en": ["grade point average"] }
     },
     {
       "id": "credit",
@@ -629,27 +698,32 @@
     {
       "id": "funding",
       "zh": "经费",
-      "en": "Funding"
+      "en": "Funding",
+      "forms": { "en": ["fund", "funded", "funder"] }
     },
     {
       "id": "budget",
       "zh": "预算",
-      "en": "Budget"
+      "en": "Budget",
+      "forms": { "en": ["budgeting"] }
     },
     {
       "id": "reimbursement",
       "zh": "报销",
-      "en": "Reimbursement"
+      "en": "Reimbursement",
+      "forms": { "en": ["reimburse"] }
     },
     {
       "id": "defense",
       "zh": "答辩",
-      "en": "Defense"
+      "en": "Defense",
+      "forms": { "en": ["defence", "defend"] }
     },
     {
       "id": "thesis",
       "zh": "学位论文",
-      "en": "Thesis"
+      "en": "Thesis",
+      "forms": { "en": ["theses"] }
     },
     {
       "id": "committee",
@@ -659,7 +733,8 @@
     {
       "id": "phd",
       "zh": "博士",
-      "en": "PhD"
+      "en": "PhD",
+      "forms": { "en": ["Doctor of Philosophy"] }
     },
     {
       "id": "masters",
@@ -669,12 +744,14 @@
     {
       "id": "undergraduate",
       "zh": "本科生",
-      "en": "Undergraduate"
+      "en": "Undergraduate",
+      "forms": { "en": ["undergrad"] }
     },
     {
       "id": "tenure",
       "zh": "终身教职",
-      "en": "Tenure"
+      "en": "Tenure",
+      "forms": { "en": ["tenured"] }
     },
     {
       "id": "sabbatical",
@@ -684,7 +761,8 @@
     {
       "id": "cv",
       "zh": "简历",
-      "en": "CV"
+      "en": "CV",
+      "forms": { "en": ["curriculum vitae"] }
     },
     {
       "id": "scholarship",
@@ -704,7 +782,8 @@
     {
       "id": "graduation",
       "zh": "毕业",
-      "en": "Graduation"
+      "en": "Graduation",
+      "forms": { "en": ["graduate", "graduated"] }
     },
     {
       "id": "diploma",
@@ -720,6 +799,863 @@
       "id": "jet-lag",
       "zh": "时差",
       "en": "Jet lag"
+    },
+    {
+      "id": "publication",
+      "zh": "发表",
+      "en": "Publication",
+      "forms": { "en": ["publish", "published", "publisher"] }
+    },
+    {
+      "id": "acceptance",
+      "zh": "接收",
+      "en": "Acceptance",
+      "forms": { "en": ["accept", "accepted"] }
+    },
+    {
+      "id": "minor-revision",
+      "zh": "小修",
+      "en": "Minor revision",
+      "forms": { "en": ["revise", "revised"] }
+    },
+    {
+      "id": "rebuttal",
+      "zh": "Rebuttal",
+      "en": "Rebuttal",
+      "forms": { "en": ["rebut"] }
+    },
+    {
+      "id": "retraction",
+      "zh": "撤稿",
+      "en": "Retraction",
+      "forms": { "en": ["retract", "retracted"] }
+    },
+    {
+      "id": "misconduct",
+      "zh": "学术不端",
+      "en": "Misconduct"
+    },
+    {
+      "id": "postdoc",
+      "zh": "博士后",
+      "en": "Postdoc",
+      "forms": { "en": ["postdoctoral"] }
+    },
+    {
+      "id": "professor",
+      "zh": "教授",
+      "en": "Professor",
+      "forms": { "en": ["professorship", "prof"] }
+    },
+    {
+      "id": "lab",
+      "zh": "实验室",
+      "en": "Lab",
+      "forms": { "en": ["laboratory"] }
+    },
+    {
+      "id": "alumni",
+      "zh": "校友",
+      "en": "Alumni",
+      "forms": { "en": ["alumnus", "alumna"] }
+    },
+    {
+      "id": "admission",
+      "zh": "录取",
+      "en": "Admission",
+      "forms": { "en": ["admit", "admitted"] }
+    },
+    {
+      "id": "internship",
+      "zh": "实习",
+      "en": "Internship",
+      "forms": { "en": ["intern"] }
+    },
+    {
+      "id": "extension",
+      "zh": "延期",
+      "en": "Extension",
+      "forms": { "en": ["extend", "extended"] }
+    },
+    {
+      "id": "patent",
+      "zh": "专利",
+      "en": "Patent",
+      "forms": { "en": ["patented"] }
+    },
+    {
+      "id": "copyright",
+      "zh": "版权",
+      "en": "Copyright",
+      "forms": { "en": ["copyrighted"] }
+    },
+    {
+      "id": "academia",
+      "zh": "学术界",
+      "en": "Academia",
+      "forms": { "en": ["academic"] }
+    },
+    {
+      "id": "ivory-tower",
+      "zh": "象牙塔",
+      "en": "Ivory tower"
+    },
+    {
+      "id": "all-nighter",
+      "zh": "通宵",
+      "en": "All-nighter"
+    },
+    {
+      "id": "inspiration",
+      "zh": "灵感",
+      "en": "Inspiration",
+      "forms": { "en": ["inspire", "inspired"] }
+    },
+    {
+      "id": "erratum",
+      "zh": "勘误",
+      "en": "Erratum",
+      "forms": { "en": ["errata"] }
+    },
+    {
+      "id": "acknowledgment",
+      "zh": "致谢",
+      "en": "Acknowledgment",
+      "forms": { "en": ["acknowledge", "acknowledgement"] }
+    },
+    {
+      "id": "authorship",
+      "zh": "署名",
+      "en": "Authorship",
+      "forms": { "en": ["author", "authored"] }
+    },
+    {
+      "id": "proposal",
+      "zh": "开题",
+      "en": "Proposal",
+      "forms": { "en": ["propose", "proposed"] }
+    },
+    {
+      "id": "proceedings",
+      "zh": "论文集",
+      "en": "Proceedings"
+    },
+    {
+      "id": "badge",
+      "zh": "胸牌",
+      "en": "Badge"
+    },
+    {
+      "id": "coffee-break",
+      "zh": "茶歇",
+      "en": "Coffee break"
+    },
+    {
+      "id": "q-and-a",
+      "zh": "问答",
+      "en": "Q&A",
+      "forms": { "en": ["question and answer"] }
+    },
+    {
+      "id": "webinar",
+      "zh": "网络研讨会",
+      "en": "Webinar"
+    },
+    {
+      "id": "press",
+      "zh": "出版社",
+      "en": "Press"
+    },
+    {
+      "id": "monograph",
+      "zh": "专著",
+      "en": "Monograph"
+    },
+    {
+      "id": "encyclopedia",
+      "zh": "百科全书",
+      "en": "Encyclopedia",
+      "forms": { "en": ["encyclopaedia"] }
+    },
+    {
+      "id": "wikipedia",
+      "zh": "维基百科",
+      "en": "Wikipedia"
+    },
+    {
+      "id": "doi",
+      "zh": "DOI",
+      "en": "DOI",
+      "forms": { "zh": ["数字对象标识符"], "en": ["digital object identifier"] }
+    },
+    {
+      "id": "pdf",
+      "zh": "PDF",
+      "en": "PDF",
+      "forms": { "en": ["Portable Document Format"] }
+    },
+    {
+      "id": "mooc",
+      "zh": "慕课",
+      "en": "MOOC",
+      "forms": { "en": ["massive open online course"] }
+    },
+    {
+      "id": "research",
+      "zh": "研究",
+      "en": "Research",
+      "forms": { "en": ["researcher", "researched"] }
+    },
+    {
+      "id": "science",
+      "zh": "科学",
+      "en": "Science",
+      "forms": { "en": ["scientist", "scientific"] }
+    },
+    {
+      "id": "scholar",
+      "zh": "学者",
+      "en": "Scholar",
+      "forms": { "en": ["scholarly"] }
+    },
+    {
+      "id": "academician",
+      "zh": "院士",
+      "en": "Academician"
+    },
+    {
+      "id": "dean",
+      "zh": "院长",
+      "en": "Dean"
+    },
+    {
+      "id": "emeritus",
+      "zh": "荣休教授",
+      "en": "Emeritus"
+    },
+    {
+      "id": "technician",
+      "zh": "技术员",
+      "en": "Technician"
+    },
+    {
+      "id": "secretary",
+      "zh": "秘书",
+      "en": "Secretary"
+    },
+    {
+      "id": "colleague",
+      "zh": "同事",
+      "en": "Colleague"
+    },
+    {
+      "id": "roommate",
+      "zh": "室友",
+      "en": "Roommate"
+    },
+    {
+      "id": "freshman",
+      "zh": "新生",
+      "en": "Freshman",
+      "forms": { "en": ["freshmen"] }
+    },
+    {
+      "id": "bachelors",
+      "zh": "学士",
+      "en": "Bachelor's"
+    },
+    {
+      "id": "degree",
+      "zh": "学位",
+      "en": "Degree"
+    },
+    {
+      "id": "major",
+      "zh": "专业",
+      "en": "Major"
+    },
+    {
+      "id": "minor",
+      "zh": "辅修",
+      "en": "Minor"
+    },
+    {
+      "id": "textbook",
+      "zh": "教材",
+      "en": "Textbook"
+    },
+    {
+      "id": "handout",
+      "zh": "讲义",
+      "en": "Handout"
+    },
+    {
+      "id": "syllabus",
+      "zh": "教学大纲",
+      "en": "Syllabus",
+      "forms": { "en": ["syllabi"] }
+    },
+    {
+      "id": "midterm",
+      "zh": "期中考试",
+      "en": "Midterm"
+    },
+    {
+      "id": "final-exam",
+      "zh": "期末考试",
+      "en": "Final exam"
+    },
+    {
+      "id": "fail",
+      "zh": "挂科",
+      "en": "Fail",
+      "forms": { "en": ["failed", "failing"] }
+    },
+    {
+      "id": "makeup-exam",
+      "zh": "补考",
+      "en": "Makeup exam"
+    },
+    {
+      "id": "group-project",
+      "zh": "小组作业",
+      "en": "Group project"
+    },
+    {
+      "id": "roll-call",
+      "zh": "点名",
+      "en": "Roll call"
+    },
+    {
+      "id": "transcript",
+      "zh": "成绩单",
+      "en": "Transcript"
+    },
+    {
+      "id": "recommendation",
+      "zh": "推荐信",
+      "en": "Recommendation",
+      "forms": { "en": ["recommend", "recommender"] }
+    },
+    {
+      "id": "application",
+      "zh": "申请",
+      "en": "Application",
+      "forms": { "en": ["apply", "applicant"] }
+    },
+    {
+      "id": "cold-email",
+      "zh": "套磁",
+      "en": "Cold email"
+    },
+    {
+      "id": "summer-school",
+      "zh": "暑期学校",
+      "en": "Summer school"
+    },
+    {
+      "id": "commencement",
+      "zh": "毕业典礼",
+      "en": "Commencement",
+      "forms": { "en": ["commence"] }
+    },
+    {
+      "id": "campus",
+      "zh": "校园",
+      "en": "Campus"
+    },
+    {
+      "id": "dorm",
+      "zh": "宿舍",
+      "en": "Dorm",
+      "forms": { "en": ["dormitory"] }
+    },
+    {
+      "id": "cafeteria",
+      "zh": "食堂",
+      "en": "Cafeteria"
+    },
+    {
+      "id": "study-room",
+      "zh": "自习室",
+      "en": "Study room"
+    },
+    {
+      "id": "classroom",
+      "zh": "教室",
+      "en": "Classroom"
+    },
+    {
+      "id": "podium",
+      "zh": "讲台",
+      "en": "Podium"
+    },
+    {
+      "id": "blackboard",
+      "zh": "黑板",
+      "en": "Blackboard"
+    },
+    {
+      "id": "chalk",
+      "zh": "粉笔",
+      "en": "Chalk"
+    },
+    {
+      "id": "club",
+      "zh": "社团",
+      "en": "Club"
+    },
+    {
+      "id": "alma-mater",
+      "zh": "母校",
+      "en": "Alma mater"
+    },
+    {
+      "id": "motto",
+      "zh": "校训",
+      "en": "Motto"
+    },
+    {
+      "id": "ranking",
+      "zh": "排名",
+      "en": "Ranking",
+      "forms": { "en": ["rank", "ranked"] }
+    },
+    {
+      "id": "ivy-league",
+      "zh": "常春藤盟校",
+      "en": "Ivy League"
+    },
+    {
+      "id": "nobel-prize",
+      "zh": "诺贝尔奖",
+      "en": "Nobel Prize"
+    },
+    {
+      "id": "vacation",
+      "zh": "假期",
+      "en": "Vacation"
+    },
+    {
+      "id": "winter-break",
+      "zh": "寒假",
+      "en": "Winter break"
+    },
+    {
+      "id": "passport",
+      "zh": "护照",
+      "en": "Passport"
+    },
+    {
+      "id": "time-zone",
+      "zh": "时区",
+      "en": "Time zone"
+    },
+    {
+      "id": "fabrication",
+      "zh": "造假",
+      "en": "Fabrication",
+      "forms": { "en": ["fabricate", "fabricated"] }
+    },
+    {
+      "id": "integrity",
+      "zh": "诚信",
+      "en": "Integrity"
+    },
+    {
+      "id": "double-blind",
+      "zh": "双盲",
+      "en": "Double-blind"
+    },
+    {
+      "id": "literature",
+      "zh": "文献",
+      "en": "Literature"
+    },
+    {
+      "id": "survey",
+      "zh": "调查",
+      "en": "Survey"
+    },
+    {
+      "id": "observation",
+      "zh": "观察",
+      "en": "Observation",
+      "forms": { "en": ["observe", "observer", "observational"] }
+    },
+    {
+      "id": "measurement",
+      "zh": "测量",
+      "en": "Measurement",
+      "forms": { "en": ["measure", "measured"] }
+    },
+    {
+      "id": "control-group",
+      "zh": "对照组",
+      "en": "Control group"
+    },
+    {
+      "id": "case-study",
+      "zh": "案例研究",
+      "en": "Case study"
+    },
+    {
+      "id": "comparison",
+      "zh": "对比",
+      "en": "Comparison",
+      "forms": { "en": ["compare", "comparative"] }
+    },
+    {
+      "id": "validation",
+      "zh": "验证",
+      "en": "Validation",
+      "forms": { "en": ["validate", "validated"] }
+    },
+    {
+      "id": "evaluation",
+      "zh": "评估",
+      "en": "Evaluation",
+      "forms": { "en": ["evaluate", "evaluator"] }
+    },
+    {
+      "id": "evidence",
+      "zh": "证据",
+      "en": "Evidence"
+    },
+    {
+      "id": "argument",
+      "zh": "论证",
+      "en": "Argument",
+      "forms": { "en": ["argue", "argumentation"] }
+    },
+    {
+      "id": "concept",
+      "zh": "概念",
+      "en": "Concept",
+      "forms": { "en": ["conceptual", "conceptualize"] }
+    },
+    {
+      "id": "analogy",
+      "zh": "类比",
+      "en": "Analogy",
+      "forms": { "en": ["analogous"] }
+    },
+    {
+      "id": "visualization",
+      "zh": "可视化",
+      "en": "Visualization",
+      "forms": { "en": ["visualize", "visualise", "visualisation"] }
+    },
+    {
+      "id": "instrument",
+      "zh": "仪器",
+      "en": "Instrument",
+      "forms": { "en": ["instrumentation", "instrumental"] }
+    },
+    {
+      "id": "discovery",
+      "zh": "发现",
+      "en": "Discovery",
+      "forms": { "en": ["discover", "discovered"] }
+    },
+    {
+      "id": "invention",
+      "zh": "发明",
+      "en": "Invention",
+      "forms": { "en": ["invent", "inventor"] }
+    },
+    {
+      "id": "breakthrough",
+      "zh": "突破",
+      "en": "Breakthrough"
+    },
+    {
+      "id": "frontier",
+      "zh": "前沿",
+      "en": "Frontier"
+    },
+    {
+      "id": "discipline",
+      "zh": "学科",
+      "en": "Discipline",
+      "forms": { "en": ["disciplinary"] }
+    },
+    {
+      "id": "insight",
+      "zh": "洞见",
+      "en": "Insight",
+      "forms": { "en": ["insightful"] }
+    },
+    {
+      "id": "brainstorm",
+      "zh": "头脑风暴",
+      "en": "Brainstorm",
+      "forms": { "en": ["brainstorming"] }
+    },
+    {
+      "id": "mind-map",
+      "zh": "思维导图",
+      "en": "Mind map"
+    },
+    {
+      "id": "reputation",
+      "zh": "声誉",
+      "en": "Reputation",
+      "forms": { "en": ["reputable"] }
+    },
+    {
+      "id": "honor",
+      "zh": "荣誉",
+      "en": "Honor",
+      "forms": { "en": ["honour", "honorary"] }
+    },
+    {
+      "id": "award",
+      "zh": "奖项",
+      "en": "Award",
+      "forms": { "en": ["awarded", "awardee"] }
+    },
+    {
+      "id": "certificate",
+      "zh": "证书",
+      "en": "Certificate",
+      "forms": { "en": ["certify", "certified", "certification"] }
+    },
+    {
+      "id": "title",
+      "zh": "标题",
+      "en": "Title"
+    },
+    {
+      "id": "chapter",
+      "zh": "章节",
+      "en": "Chapter"
+    },
+    {
+      "id": "paragraph",
+      "zh": "段落",
+      "en": "Paragraph"
+    },
+    {
+      "id": "endnote",
+      "zh": "尾注",
+      "en": "Endnote"
+    },
+    {
+      "id": "legend",
+      "zh": "图例",
+      "en": "Legend"
+    },
+    {
+      "id": "format",
+      "zh": "格式",
+      "en": "Format",
+      "forms": { "en": ["formatting", "formatted"] }
+    },
+    {
+      "id": "typesetting",
+      "zh": "排版",
+      "en": "Typesetting",
+      "forms": { "en": ["typeset"] }
+    },
+    {
+      "id": "spelling",
+      "zh": "拼写",
+      "en": "Spelling",
+      "forms": { "en": ["spell", "misspelling"] }
+    },
+    {
+      "id": "polishing",
+      "zh": "润色",
+      "en": "Polishing",
+      "forms": { "en": ["polish", "polished"] }
+    },
+    {
+      "id": "page-limit",
+      "zh": "页数限制",
+      "en": "Page limit"
+    },
+    {
+      "id": "printer",
+      "zh": "打印机",
+      "en": "Printer",
+      "forms": { "en": ["print", "printing"] }
+    },
+    {
+      "id": "stapler",
+      "zh": "订书机",
+      "en": "Stapler",
+      "forms": { "en": ["staple"] }
+    },
+    {
+      "id": "sticky-note",
+      "zh": "便利贴",
+      "en": "Sticky note"
+    },
+    {
+      "id": "highlighter",
+      "zh": "荧光笔",
+      "en": "Highlighter",
+      "forms": { "en": ["highlight"] }
+    },
+    {
+      "id": "schedule",
+      "zh": "日程",
+      "en": "Schedule",
+      "forms": { "en": ["scheduling", "scheduled"] }
+    },
+    {
+      "id": "calendar",
+      "zh": "日历",
+      "en": "Calendar"
+    },
+    {
+      "id": "minutes",
+      "zh": "会议纪要",
+      "en": "Minutes"
+    },
+    {
+      "id": "agenda",
+      "zh": "议程",
+      "en": "Agenda"
+    },
+    {
+      "id": "weekly-report",
+      "zh": "周报",
+      "en": "Weekly report"
+    },
+    {
+      "id": "progress",
+      "zh": "进度",
+      "en": "Progress"
+    },
+    {
+      "id": "milestone",
+      "zh": "里程碑",
+      "en": "Milestone"
+    },
+    {
+      "id": "timeline",
+      "zh": "时间线",
+      "en": "Timeline"
+    },
+    {
+      "id": "workload",
+      "zh": "工作量",
+      "en": "Workload"
+    },
+    {
+      "id": "project",
+      "zh": "项目",
+      "en": "Project"
+    },
+    {
+      "id": "administration",
+      "zh": "行政",
+      "en": "Administration",
+      "forms": { "en": ["administrative", "administrator"] }
+    },
+    {
+      "id": "procrastination",
+      "zh": "拖延",
+      "en": "Procrastination",
+      "forms": { "en": ["procrastinate"] }
+    },
+    {
+      "id": "toefl",
+      "zh": "托福",
+      "en": "TOEFL"
+    },
+    {
+      "id": "gre",
+      "zh": "GRE",
+      "en": "GRE",
+      "forms": { "en": ["Graduate Record Examination"] }
+    },
+    {
+      "id": "auditorium",
+      "zh": "报告厅",
+      "en": "Auditorium"
+    },
+    {
+      "id": "page-charge",
+      "zh": "版面费",
+      "en": "Page charge"
+    },
+    {
+      "id": "reading-group",
+      "zh": "读书会",
+      "en": "Reading group"
+    },
+    {
+      "id": "forum",
+      "zh": "论坛",
+      "en": "Forum",
+      "forms": { "en": ["fora"] }
+    },
+    {
+      "id": "mortarboard",
+      "zh": "学位帽",
+      "en": "Mortarboard"
+    },
+    {
+      "id": "qualifying-exam",
+      "zh": "资格考试",
+      "en": "Qualifying exam"
+    },
+    {
+      "id": "writers-block",
+      "zh": "写作障碍",
+      "en": "Writer's block"
+    },
+    {
+      "id": "library-card",
+      "zh": "借书证",
+      "en": "Library card"
+    },
+    {
+      "id": "check-in",
+      "zh": "签到",
+      "en": "Check-in"
+    },
+    {
+      "id": "business-card",
+      "zh": "名片",
+      "en": "Business card"
+    },
+    {
+      "id": "self-citation",
+      "zh": "自引",
+      "en": "Self-citation",
+      "forms": { "en": ["self-cite"] }
+    },
+    {
+      "id": "invitation",
+      "zh": "邀请函",
+      "en": "Invitation",
+      "forms": { "en": ["invite", "invited"] }
+    },
+    {
+      "id": "speaker",
+      "zh": "报告人",
+      "en": "Speaker",
+      "forms": { "en": ["speak"] }
+    },
+    {
+      "id": "informed-consent",
+      "zh": "知情同意",
+      "en": "Informed consent"
+    },
+    {
+      "id": "job-fair",
+      "zh": "招聘会",
+      "en": "Job fair"
+    },
+    {
+      "id": "industry",
+      "zh": "工业界",
+      "en": "Industry",
+      "forms": { "en": ["industrial"] }
     }
   ]
 }

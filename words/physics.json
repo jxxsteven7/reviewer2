@@ -1,0 +1,1605 @@
+{
+  "id": "physics",
+  "name": {
+    "zh": "物理",
+    "en": "Physics"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "quantum",
+      "zh": "量子",
+      "en": "Quantum",
+      "forms": { "en": ["quanta", "quantize", "quantized"] }
+    },
+    {
+      "id": "entanglement",
+      "zh": "纠缠",
+      "en": "Entanglement",
+      "forms": { "en": ["entangle", "entangled"] }
+    },
+    {
+      "id": "gravity",
+      "zh": "引力",
+      "en": "Gravity",
+      "forms": { "en": ["gravitation", "gravitational"] }
+    },
+    {
+      "id": "black-hole",
+      "zh": "黑洞",
+      "en": "Black hole"
+    },
+    {
+      "id": "photon",
+      "zh": "光子",
+      "en": "Photon",
+      "forms": { "en": ["photonic"] }
+    },
+    {
+      "id": "momentum",
+      "zh": "动量",
+      "en": "Momentum",
+      "forms": { "en": ["momenta"] }
+    },
+    {
+      "id": "friction",
+      "zh": "摩擦",
+      "en": "Friction",
+      "forms": { "en": ["frictional", "frictionless"] }
+    },
+    {
+      "id": "relativity",
+      "zh": "相对论",
+      "en": "Relativity",
+      "forms": { "en": ["relativistic"] }
+    },
+    {
+      "id": "superconductor",
+      "zh": "超导体",
+      "en": "Superconductor",
+      "forms": { "en": ["superconducting", "superconductivity"] }
+    },
+    {
+      "id": "wave",
+      "zh": "波",
+      "en": "Wave",
+      "forms": { "en": ["wavelength", "waveform"] }
+    },
+    {
+      "id": "resonance",
+      "zh": "共振",
+      "en": "Resonance",
+      "forms": { "en": ["resonant", "resonate"] }
+    },
+    {
+      "id": "vacuum",
+      "zh": "真空",
+      "en": "Vacuum"
+    },
+    {
+      "id": "inertia",
+      "zh": "惯性",
+      "en": "Inertia",
+      "forms": { "en": ["inertial"] }
+    },
+    {
+      "id": "magnet",
+      "zh": "磁铁",
+      "en": "Magnet",
+      "forms": { "en": ["magnetic", "magnetism"] }
+    },
+    {
+      "id": "dark-matter",
+      "zh": "暗物质",
+      "en": "Dark matter"
+    },
+    {
+      "id": "half-life",
+      "zh": "半衰期",
+      "en": "Half-life"
+    },
+    {
+      "id": "big-bang",
+      "zh": "大爆炸",
+      "en": "Big Bang"
+    },
+    {
+      "id": "schrodingers-cat",
+      "zh": "薛定谔的猫",
+      "en": "Schrödinger's cat"
+    },
+    {
+      "id": "superposition",
+      "zh": "叠加",
+      "en": "Superposition",
+      "forms": { "en": ["superpose", "superposed"] }
+    },
+    {
+      "id": "telescope",
+      "zh": "望远镜",
+      "en": "Telescope",
+      "forms": { "en": ["telescopic"] }
+    },
+    {
+      "id": "force",
+      "zh": "力",
+      "en": "Force"
+    },
+    {
+      "id": "mass",
+      "zh": "质量",
+      "en": "Mass",
+      "forms": { "en": ["massive", "massless"] }
+    },
+    {
+      "id": "acceleration",
+      "zh": "加速度",
+      "en": "Acceleration",
+      "forms": { "en": ["accelerate", "accelerating"] }
+    },
+    {
+      "id": "velocity",
+      "zh": "速度",
+      "en": "Velocity"
+    },
+    {
+      "id": "work",
+      "zh": "功",
+      "en": "Work"
+    },
+    {
+      "id": "kinetic-energy",
+      "zh": "动能",
+      "en": "Kinetic energy"
+    },
+    {
+      "id": "torque",
+      "zh": "力矩",
+      "en": "Torque"
+    },
+    {
+      "id": "pendulum",
+      "zh": "摆",
+      "en": "Pendulum"
+    },
+    {
+      "id": "spring",
+      "zh": "弹簧",
+      "en": "Spring"
+    },
+    {
+      "id": "hookes-law",
+      "zh": "胡克定律",
+      "en": "Hooke's law"
+    },
+    {
+      "id": "free-fall",
+      "zh": "自由落体",
+      "en": "Free fall"
+    },
+    {
+      "id": "vibration",
+      "zh": "振动",
+      "en": "Vibration",
+      "forms": { "en": ["vibrate", "vibrational"] }
+    },
+    {
+      "id": "amplitude",
+      "zh": "振幅",
+      "en": "Amplitude"
+    },
+    {
+      "id": "period",
+      "zh": "周期",
+      "en": "Period",
+      "forms": { "en": ["periodic", "periodicity"] }
+    },
+    {
+      "id": "damping",
+      "zh": "阻尼",
+      "en": "Damping",
+      "forms": { "en": ["damped"] }
+    },
+    {
+      "id": "center-of-mass",
+      "zh": "质心",
+      "en": "Center of mass",
+      "forms": { "en": ["centre of mass"] }
+    },
+    {
+      "id": "rigid-body",
+      "zh": "刚体",
+      "en": "Rigid body"
+    },
+    {
+      "id": "fluid",
+      "zh": "流体",
+      "en": "Fluid",
+      "forms": { "en": ["fluidity"] }
+    },
+    {
+      "id": "buoyancy",
+      "zh": "浮力",
+      "en": "Buoyancy",
+      "forms": { "en": ["buoyant"] }
+    },
+    {
+      "id": "viscosity",
+      "zh": "黏度",
+      "en": "Viscosity",
+      "forms": { "en": ["viscous"] }
+    },
+    {
+      "id": "turbulence",
+      "zh": "湍流",
+      "en": "Turbulence",
+      "forms": { "en": ["turbulent"] }
+    },
+    {
+      "id": "laminar-flow",
+      "zh": "层流",
+      "en": "Laminar flow"
+    },
+    {
+      "id": "tension",
+      "zh": "张力",
+      "en": "Tension"
+    },
+    {
+      "id": "pulley",
+      "zh": "滑轮",
+      "en": "Pulley"
+    },
+    {
+      "id": "inclined-plane",
+      "zh": "斜面",
+      "en": "Inclined plane"
+    },
+    {
+      "id": "gyroscope",
+      "zh": "陀螺仪",
+      "en": "Gyroscope",
+      "forms": { "en": ["gyro", "gyroscopic"] }
+    },
+    {
+      "id": "orbit",
+      "zh": "轨道",
+      "en": "Orbit",
+      "forms": { "en": ["orbital"] }
+    },
+    {
+      "id": "trajectory",
+      "zh": "轨迹",
+      "en": "Trajectory",
+      "forms": { "en": ["trajectories"] }
+    },
+    {
+      "id": "weightlessness",
+      "zh": "失重",
+      "en": "Weightlessness",
+      "forms": { "en": ["weightless"] }
+    },
+    {
+      "id": "newtons-laws",
+      "zh": "牛顿定律",
+      "en": "Newton's laws",
+      "forms": { "en": ["Newtonian"] }
+    },
+    {
+      "id": "newtons-cradle",
+      "zh": "牛顿摆",
+      "en": "Newton's cradle"
+    },
+    {
+      "id": "impulse",
+      "zh": "冲量",
+      "en": "Impulse"
+    },
+    {
+      "id": "deformation",
+      "zh": "形变",
+      "en": "Deformation",
+      "forms": { "en": ["deform", "deformed"] }
+    },
+    {
+      "id": "conservation",
+      "zh": "守恒",
+      "en": "Conservation",
+      "forms": { "en": ["conserve", "conserved"] }
+    },
+    {
+      "id": "perpetual-motion",
+      "zh": "永动机",
+      "en": "Perpetual motion"
+    },
+    {
+      "id": "mechanics",
+      "zh": "力学",
+      "en": "Mechanics",
+      "forms": { "en": ["mechanical"] }
+    },
+    {
+      "id": "siphon",
+      "zh": "虹吸",
+      "en": "Siphon",
+      "forms": { "en": ["syphon"] }
+    },
+    {
+      "id": "shock-wave",
+      "zh": "冲击波",
+      "en": "Shock wave"
+    },
+    {
+      "id": "vortex",
+      "zh": "涡旋",
+      "en": "Vortex",
+      "forms": { "en": ["vortices"] }
+    },
+    {
+      "id": "chaos",
+      "zh": "混沌",
+      "en": "Chaos",
+      "forms": { "en": ["chaotic"] }
+    },
+    {
+      "id": "butterfly-effect",
+      "zh": "蝴蝶效应",
+      "en": "Butterfly effect"
+    },
+    {
+      "id": "attractor",
+      "zh": "吸引子",
+      "en": "Attractor"
+    },
+    {
+      "id": "phase-space",
+      "zh": "相空间",
+      "en": "Phase space"
+    },
+    {
+      "id": "soliton",
+      "zh": "孤子",
+      "en": "Soliton"
+    },
+    {
+      "id": "charge",
+      "zh": "电荷",
+      "en": "Charge",
+      "forms": { "en": ["charged"] }
+    },
+    {
+      "id": "current",
+      "zh": "电流",
+      "en": "Current"
+    },
+    {
+      "id": "voltage",
+      "zh": "电压",
+      "en": "Voltage"
+    },
+    {
+      "id": "resistance",
+      "zh": "电阻",
+      "en": "Resistance",
+      "forms": { "en": ["resist", "resistive", "resistor"] }
+    },
+    {
+      "id": "capacitor",
+      "zh": "电容器",
+      "en": "Capacitor",
+      "forms": { "en": ["capacitance", "capacitive"] }
+    },
+    {
+      "id": "electricity",
+      "zh": "电",
+      "en": "Electricity",
+      "forms": { "en": ["electric", "electrical"] }
+    },
+    {
+      "id": "field",
+      "zh": "场",
+      "en": "Field"
+    },
+    {
+      "id": "magnetic-field",
+      "zh": "磁场",
+      "en": "Magnetic field"
+    },
+    {
+      "id": "electric-field",
+      "zh": "电场",
+      "en": "Electric field"
+    },
+    {
+      "id": "magnetic-flux",
+      "zh": "磁通量",
+      "en": "Magnetic flux"
+    },
+    {
+      "id": "coulombs-law",
+      "zh": "库仑定律",
+      "en": "Coulomb's law"
+    },
+    {
+      "id": "ohms-law",
+      "zh": "欧姆定律",
+      "en": "Ohm's law"
+    },
+    {
+      "id": "lenzs-law",
+      "zh": "楞次定律",
+      "en": "Lenz's law"
+    },
+    {
+      "id": "lorentz-force",
+      "zh": "洛伦兹力",
+      "en": "Lorentz force"
+    },
+    {
+      "id": "eddy-current",
+      "zh": "涡流",
+      "en": "Eddy current"
+    },
+    {
+      "id": "circuit",
+      "zh": "电路",
+      "en": "Circuit",
+      "forms": { "en": ["circuitry"] }
+    },
+    {
+      "id": "short-circuit",
+      "zh": "短路",
+      "en": "Short circuit"
+    },
+    {
+      "id": "conductor",
+      "zh": "导体",
+      "en": "Conductor",
+      "forms": { "en": ["conduct", "conductive", "conductivity"] }
+    },
+    {
+      "id": "insulator",
+      "zh": "绝缘体",
+      "en": "Insulator",
+      "forms": { "en": ["insulate", "insulation"] }
+    },
+    {
+      "id": "fuse",
+      "zh": "保险丝",
+      "en": "Fuse"
+    },
+    {
+      "id": "diode",
+      "zh": "二极管",
+      "en": "Diode"
+    },
+    {
+      "id": "led",
+      "zh": "LED",
+      "en": "LED",
+      "forms": { "zh": ["发光二极管"], "en": ["light-emitting diode"] }
+    },
+    {
+      "id": "electromagnet",
+      "zh": "电磁铁",
+      "en": "Electromagnet",
+      "forms": { "en": ["electromagnetic", "electromagnetism"] }
+    },
+    {
+      "id": "motor",
+      "zh": "电动机",
+      "en": "Motor"
+    },
+    {
+      "id": "railgun",
+      "zh": "电磁炮",
+      "en": "Railgun"
+    },
+    {
+      "id": "maglev",
+      "zh": "磁悬浮",
+      "en": "Maglev",
+      "forms": { "en": ["magnetic levitation"] }
+    },
+    {
+      "id": "hall-effect",
+      "zh": "霍尔效应",
+      "en": "Hall effect"
+    },
+    {
+      "id": "monopole",
+      "zh": "磁单极子",
+      "en": "Monopole"
+    },
+    {
+      "id": "ferromagnetism",
+      "zh": "铁磁性",
+      "en": "Ferromagnetism",
+      "forms": { "en": ["ferromagnetic", "ferromagnet"] }
+    },
+    {
+      "id": "hysteresis",
+      "zh": "磁滞",
+      "en": "Hysteresis",
+      "forms": { "en": ["hysteretic"] }
+    },
+    {
+      "id": "lightning",
+      "zh": "闪电",
+      "en": "Lightning"
+    },
+    {
+      "id": "faraday-cage",
+      "zh": "法拉第笼",
+      "en": "Faraday cage"
+    },
+    {
+      "id": "tesla-coil",
+      "zh": "特斯拉线圈",
+      "en": "Tesla coil"
+    },
+    {
+      "id": "leyden-jar",
+      "zh": "莱顿瓶",
+      "en": "Leyden jar"
+    },
+    {
+      "id": "antenna",
+      "zh": "天线",
+      "en": "Antenna",
+      "forms": { "en": ["antennae"] }
+    },
+    {
+      "id": "radar",
+      "zh": "雷达",
+      "en": "Radar"
+    },
+    {
+      "id": "compass",
+      "zh": "指南针",
+      "en": "Compass"
+    },
+    {
+      "id": "oscilloscope",
+      "zh": "示波器",
+      "en": "Oscilloscope"
+    },
+    {
+      "id": "multimeter",
+      "zh": "万用表",
+      "en": "Multimeter"
+    },
+    {
+      "id": "cathode-ray",
+      "zh": "阴极射线",
+      "en": "Cathode ray"
+    },
+    {
+      "id": "electron",
+      "zh": "电子",
+      "en": "Electron",
+      "forms": { "en": ["electronic"] }
+    },
+    {
+      "id": "proton",
+      "zh": "质子",
+      "en": "Proton"
+    },
+    {
+      "id": "neutron",
+      "zh": "中子",
+      "en": "Neutron"
+    },
+    {
+      "id": "atomic-nucleus",
+      "zh": "原子核",
+      "en": "Atomic nucleus",
+      "forms": { "en": ["nuclei", "nuclear"] }
+    },
+    {
+      "id": "neutrino",
+      "zh": "中微子",
+      "en": "Neutrino"
+    },
+    {
+      "id": "quark",
+      "zh": "夸克",
+      "en": "Quark"
+    },
+    {
+      "id": "gluon",
+      "zh": "胶子",
+      "en": "Gluon"
+    },
+    {
+      "id": "hadron",
+      "zh": "强子",
+      "en": "Hadron",
+      "forms": { "en": ["hadronic"] }
+    },
+    {
+      "id": "lepton",
+      "zh": "轻子",
+      "en": "Lepton"
+    },
+    {
+      "id": "meson",
+      "zh": "介子",
+      "en": "Meson"
+    },
+    {
+      "id": "muon",
+      "zh": "缪子",
+      "en": "Muon"
+    },
+    {
+      "id": "boson",
+      "zh": "玻色子",
+      "en": "Boson",
+      "forms": { "en": ["bosonic"] }
+    },
+    {
+      "id": "fermion",
+      "zh": "费米子",
+      "en": "Fermion",
+      "forms": { "en": ["fermionic"] }
+    },
+    {
+      "id": "higgs-boson",
+      "zh": "希格斯玻色子",
+      "en": "Higgs boson"
+    },
+    {
+      "id": "graviton",
+      "zh": "引力子",
+      "en": "Graviton"
+    },
+    {
+      "id": "antimatter",
+      "zh": "反物质",
+      "en": "Antimatter"
+    },
+    {
+      "id": "positron",
+      "zh": "正电子",
+      "en": "Positron"
+    },
+    {
+      "id": "particle",
+      "zh": "粒子",
+      "en": "Particle"
+    },
+    {
+      "id": "standard-model",
+      "zh": "标准模型",
+      "en": "Standard Model"
+    },
+    {
+      "id": "string-theory",
+      "zh": "弦理论",
+      "en": "String theory"
+    },
+    {
+      "id": "supersymmetry",
+      "zh": "超对称",
+      "en": "Supersymmetry",
+      "forms": { "en": ["SUSY"] }
+    },
+    {
+      "id": "fission",
+      "zh": "裂变",
+      "en": "Fission",
+      "forms": { "en": ["fissile"] }
+    },
+    {
+      "id": "fusion",
+      "zh": "聚变",
+      "en": "Fusion"
+    },
+    {
+      "id": "radioactivity",
+      "zh": "放射性",
+      "en": "Radioactivity",
+      "forms": { "en": ["radioactive"] }
+    },
+    {
+      "id": "decay",
+      "zh": "衰变",
+      "en": "Decay",
+      "forms": { "en": ["decayed", "decaying"] }
+    },
+    {
+      "id": "radiation",
+      "zh": "辐射",
+      "en": "Radiation",
+      "forms": { "en": ["radiate", "radiative"] }
+    },
+    {
+      "id": "cosmic-ray",
+      "zh": "宇宙射线",
+      "en": "Cosmic ray"
+    },
+    {
+      "id": "chain-reaction",
+      "zh": "链式反应",
+      "en": "Chain reaction"
+    },
+    {
+      "id": "critical-mass",
+      "zh": "临界质量",
+      "en": "Critical mass"
+    },
+    {
+      "id": "reactor",
+      "zh": "反应堆",
+      "en": "Reactor"
+    },
+    {
+      "id": "collider",
+      "zh": "对撞机",
+      "en": "Collider",
+      "forms": { "en": ["collide", "collision"] }
+    },
+    {
+      "id": "lhc",
+      "zh": "LHC",
+      "en": "LHC",
+      "forms": { "zh": ["大型强子对撞机"], "en": ["Large Hadron Collider"] }
+    },
+    {
+      "id": "tokamak",
+      "zh": "托卡马克",
+      "en": "Tokamak"
+    },
+    {
+      "id": "geiger-counter",
+      "zh": "盖革计数器",
+      "en": "Geiger counter"
+    },
+    {
+      "id": "cloud-chamber",
+      "zh": "云室",
+      "en": "Cloud chamber"
+    },
+    {
+      "id": "bubble-chamber",
+      "zh": "气泡室",
+      "en": "Bubble chamber"
+    },
+    {
+      "id": "detector",
+      "zh": "探测器",
+      "en": "Detector",
+      "forms": { "en": ["detect", "detection"] }
+    },
+    {
+      "id": "scattering",
+      "zh": "散射",
+      "en": "Scattering",
+      "forms": { "en": ["scatter", "scattered"] }
+    },
+    {
+      "id": "ccd",
+      "zh": "CCD",
+      "en": "CCD",
+      "forms": { "zh": ["电荷耦合器件"], "en": ["charge-coupled device"] }
+    },
+    {
+      "id": "atomic-clock",
+      "zh": "原子钟",
+      "en": "Atomic clock"
+    },
+    {
+      "id": "wave-function",
+      "zh": "波函数",
+      "en": "Wave function"
+    },
+    {
+      "id": "wave-packet",
+      "zh": "波包",
+      "en": "Wave packet"
+    },
+    {
+      "id": "eigenstate",
+      "zh": "本征态",
+      "en": "Eigenstate"
+    },
+    {
+      "id": "tunneling",
+      "zh": "隧穿",
+      "en": "Tunneling",
+      "forms": { "en": ["tunnelling", "tunnel"] }
+    },
+    {
+      "id": "planck-constant",
+      "zh": "普朗克常数",
+      "en": "Planck constant",
+      "forms": { "en": ["Planck's constant"] }
+    },
+    {
+      "id": "qubit",
+      "zh": "量子比特",
+      "en": "Qubit",
+      "forms": { "en": ["quantum bit"] }
+    },
+    {
+      "id": "spin",
+      "zh": "自旋",
+      "en": "Spin"
+    },
+    {
+      "id": "energy-level",
+      "zh": "能级",
+      "en": "Energy level"
+    },
+    {
+      "id": "transition",
+      "zh": "跃迁",
+      "en": "Transition"
+    },
+    {
+      "id": "excited-state",
+      "zh": "激发态",
+      "en": "Excited state"
+    },
+    {
+      "id": "ground-state",
+      "zh": "基态",
+      "en": "Ground state"
+    },
+    {
+      "id": "double-slit",
+      "zh": "双缝",
+      "en": "Double slit"
+    },
+    {
+      "id": "interference",
+      "zh": "干涉",
+      "en": "Interference",
+      "forms": { "en": ["interfere", "interferometry"] }
+    },
+    {
+      "id": "decoherence",
+      "zh": "退相干",
+      "en": "Decoherence",
+      "forms": { "en": ["decohere"] }
+    },
+    {
+      "id": "teleportation",
+      "zh": "隐形传态",
+      "en": "Teleportation",
+      "forms": { "en": ["teleport", "teleported"] }
+    },
+    {
+      "id": "observer",
+      "zh": "观测者",
+      "en": "Observer",
+      "forms": { "en": ["observe", "observation"] }
+    },
+    {
+      "id": "hamiltonian",
+      "zh": "哈密顿量",
+      "en": "Hamiltonian"
+    },
+    {
+      "id": "lagrangian",
+      "zh": "拉格朗日量",
+      "en": "Lagrangian"
+    },
+    {
+      "id": "degeneracy",
+      "zh": "简并",
+      "en": "Degeneracy",
+      "forms": { "en": ["degenerate"] }
+    },
+    {
+      "id": "perturbation",
+      "zh": "微扰",
+      "en": "Perturbation",
+      "forms": { "en": ["perturb", "perturbative"] }
+    },
+    {
+      "id": "path-integral",
+      "zh": "路径积分",
+      "en": "Path integral"
+    },
+    {
+      "id": "zeeman-effect",
+      "zh": "塞曼效应",
+      "en": "Zeeman effect"
+    },
+    {
+      "id": "bohr-model",
+      "zh": "玻尔模型",
+      "en": "Bohr model"
+    },
+    {
+      "id": "many-worlds",
+      "zh": "多世界诠释",
+      "en": "Many-worlds"
+    },
+    {
+      "id": "epr-paradox",
+      "zh": "EPR佯谬",
+      "en": "EPR paradox"
+    },
+    {
+      "id": "potential-well",
+      "zh": "势阱",
+      "en": "Potential well"
+    },
+    {
+      "id": "light",
+      "zh": "光",
+      "en": "Light"
+    },
+    {
+      "id": "optics",
+      "zh": "光学",
+      "en": "Optics",
+      "forms": { "en": ["optical"] }
+    },
+    {
+      "id": "diffraction",
+      "zh": "衍射",
+      "en": "Diffraction",
+      "forms": { "en": ["diffract", "diffractive"] }
+    },
+    {
+      "id": "refraction",
+      "zh": "折射",
+      "en": "Refraction",
+      "forms": { "en": ["refract", "refractive"] }
+    },
+    {
+      "id": "reflection",
+      "zh": "反射",
+      "en": "Reflection",
+      "forms": { "en": ["reflect", "reflective"] }
+    },
+    {
+      "id": "polarization",
+      "zh": "偏振",
+      "en": "Polarization",
+      "forms": { "en": ["polarize", "polarized", "polarisation"] }
+    },
+    {
+      "id": "lens",
+      "zh": "透镜",
+      "en": "Lens"
+    },
+    {
+      "id": "prism",
+      "zh": "棱镜",
+      "en": "Prism"
+    },
+    {
+      "id": "mirror",
+      "zh": "镜子",
+      "en": "Mirror"
+    },
+    {
+      "id": "grating",
+      "zh": "光栅",
+      "en": "Grating"
+    },
+    {
+      "id": "optical-fiber",
+      "zh": "光纤",
+      "en": "Optical fiber",
+      "forms": { "en": ["optical fibre"] }
+    },
+    {
+      "id": "hologram",
+      "zh": "全息图",
+      "en": "Hologram",
+      "forms": { "en": ["holographic", "holography"] }
+    },
+    {
+      "id": "laser",
+      "zh": "激光",
+      "en": "Laser"
+    },
+    {
+      "id": "laser-cooling",
+      "zh": "激光冷却",
+      "en": "Laser cooling"
+    },
+    {
+      "id": "lidar",
+      "zh": "激光雷达",
+      "en": "Lidar"
+    },
+    {
+      "id": "speed-of-light",
+      "zh": "光速",
+      "en": "Speed of light"
+    },
+    {
+      "id": "rainbow",
+      "zh": "彩虹",
+      "en": "Rainbow"
+    },
+    {
+      "id": "mirage",
+      "zh": "海市蜃楼",
+      "en": "Mirage"
+    },
+    {
+      "id": "redshift",
+      "zh": "红移",
+      "en": "Redshift"
+    },
+    {
+      "id": "doppler-effect",
+      "zh": "多普勒效应",
+      "en": "Doppler effect"
+    },
+    {
+      "id": "black-body",
+      "zh": "黑体",
+      "en": "Black body"
+    },
+    {
+      "id": "ultraviolet",
+      "zh": "紫外线",
+      "en": "Ultraviolet",
+      "forms": { "en": ["UV"] }
+    },
+    {
+      "id": "infrared",
+      "zh": "红外线",
+      "en": "Infrared",
+      "forms": { "en": ["IR"] }
+    },
+    {
+      "id": "microwave",
+      "zh": "微波",
+      "en": "Microwave"
+    },
+    {
+      "id": "gamma-ray",
+      "zh": "伽马射线",
+      "en": "Gamma ray"
+    },
+    {
+      "id": "oscillator",
+      "zh": "振荡器",
+      "en": "Oscillator",
+      "forms": { "en": ["oscillate", "oscillation"] }
+    },
+    {
+      "id": "harmonic",
+      "zh": "谐波",
+      "en": "Harmonic"
+    },
+    {
+      "id": "standing-wave",
+      "zh": "驻波",
+      "en": "Standing wave"
+    },
+    {
+      "id": "acoustics",
+      "zh": "声学",
+      "en": "Acoustics"
+    },
+    {
+      "id": "echo",
+      "zh": "回声",
+      "en": "Echo"
+    },
+    {
+      "id": "decibel",
+      "zh": "分贝",
+      "en": "Decibel"
+    },
+    {
+      "id": "sonic-boom",
+      "zh": "音爆",
+      "en": "Sonic boom"
+    },
+    {
+      "id": "mach-number",
+      "zh": "马赫数",
+      "en": "Mach number"
+    },
+    {
+      "id": "sonar",
+      "zh": "声呐",
+      "en": "Sonar"
+    },
+    {
+      "id": "tuning-fork",
+      "zh": "音叉",
+      "en": "Tuning fork"
+    },
+    {
+      "id": "heat",
+      "zh": "热",
+      "en": "Heat"
+    },
+    {
+      "id": "thermodynamics",
+      "zh": "热力学",
+      "en": "Thermodynamics"
+    },
+    {
+      "id": "absolute-zero",
+      "zh": "绝对零度",
+      "en": "Absolute zero"
+    },
+    {
+      "id": "convection",
+      "zh": "对流",
+      "en": "Convection",
+      "forms": { "en": ["convective"] }
+    },
+    {
+      "id": "specific-heat",
+      "zh": "比热容",
+      "en": "Specific heat"
+    },
+    {
+      "id": "ideal-gas",
+      "zh": "理想气体",
+      "en": "Ideal gas"
+    },
+    {
+      "id": "carnot-cycle",
+      "zh": "卡诺循环",
+      "en": "Carnot cycle"
+    },
+    {
+      "id": "heat-engine",
+      "zh": "热机",
+      "en": "Heat engine"
+    },
+    {
+      "id": "heat-pump",
+      "zh": "热泵",
+      "en": "Heat pump"
+    },
+    {
+      "id": "adiabatic",
+      "zh": "绝热",
+      "en": "Adiabatic"
+    },
+    {
+      "id": "triple-point",
+      "zh": "三相点",
+      "en": "Triple point"
+    },
+    {
+      "id": "critical-point",
+      "zh": "临界点",
+      "en": "Critical point"
+    },
+    {
+      "id": "mean-free-path",
+      "zh": "平均自由程",
+      "en": "Mean free path"
+    },
+    {
+      "id": "maxwells-demon",
+      "zh": "麦克斯韦妖",
+      "en": "Maxwell's demon"
+    },
+    {
+      "id": "brownian-motion",
+      "zh": "布朗运动",
+      "en": "Brownian motion"
+    },
+    {
+      "id": "heat-death",
+      "zh": "热寂",
+      "en": "Heat death"
+    },
+    {
+      "id": "arrow-of-time",
+      "zh": "时间之箭",
+      "en": "Arrow of time"
+    },
+    {
+      "id": "phase",
+      "zh": "相位",
+      "en": "Phase"
+    },
+    {
+      "id": "plasma",
+      "zh": "等离子体",
+      "en": "Plasma"
+    },
+    {
+      "id": "superfluid",
+      "zh": "超流体",
+      "en": "Superfluid",
+      "forms": { "en": ["superfluidity"] }
+    },
+    {
+      "id": "cryogenics",
+      "zh": "低温学",
+      "en": "Cryogenics"
+    },
+    {
+      "id": "thermometer",
+      "zh": "温度计",
+      "en": "Thermometer"
+    },
+    {
+      "id": "barometer",
+      "zh": "气压计",
+      "en": "Barometer",
+      "forms": { "en": ["barometric"] }
+    },
+    {
+      "id": "emergence",
+      "zh": "涌现",
+      "en": "Emergence",
+      "forms": { "en": ["emergent", "emerge"] }
+    },
+    {
+      "id": "lattice",
+      "zh": "晶格",
+      "en": "Lattice"
+    },
+    {
+      "id": "phonon",
+      "zh": "声子",
+      "en": "Phonon"
+    },
+    {
+      "id": "fermi-level",
+      "zh": "费米能级",
+      "en": "Fermi level"
+    },
+    {
+      "id": "quasicrystal",
+      "zh": "准晶",
+      "en": "Quasicrystal"
+    },
+    {
+      "id": "time-crystal",
+      "zh": "时间晶体",
+      "en": "Time crystal"
+    },
+    {
+      "id": "spacetime",
+      "zh": "时空",
+      "en": "Spacetime"
+    },
+    {
+      "id": "light-cone",
+      "zh": "光锥",
+      "en": "Light cone"
+    },
+    {
+      "id": "time-dilation",
+      "zh": "时间膨胀",
+      "en": "Time dilation"
+    },
+    {
+      "id": "twin-paradox",
+      "zh": "双生子佯谬",
+      "en": "Twin paradox"
+    },
+    {
+      "id": "time-travel",
+      "zh": "时间旅行",
+      "en": "Time travel"
+    },
+    {
+      "id": "wormhole",
+      "zh": "虫洞",
+      "en": "Wormhole"
+    },
+    {
+      "id": "event-horizon",
+      "zh": "事件视界",
+      "en": "Event horizon"
+    },
+    {
+      "id": "singularity",
+      "zh": "奇点",
+      "en": "Singularity",
+      "forms": { "en": ["singular"] }
+    },
+    {
+      "id": "antigravity",
+      "zh": "反重力",
+      "en": "Antigravity"
+    },
+    {
+      "id": "aether",
+      "zh": "以太",
+      "en": "Aether",
+      "forms": { "en": ["ether"] }
+    },
+    {
+      "id": "cosmology",
+      "zh": "宇宙学",
+      "en": "Cosmology",
+      "forms": { "en": ["cosmological", "cosmologist"] }
+    },
+    {
+      "id": "astrophysics",
+      "zh": "天体物理",
+      "en": "Astrophysics",
+      "forms": { "en": ["astrophysical", "astrophysicist"] }
+    },
+    {
+      "id": "universe",
+      "zh": "宇宙",
+      "en": "Universe"
+    },
+    {
+      "id": "multiverse",
+      "zh": "多重宇宙",
+      "en": "Multiverse"
+    },
+    {
+      "id": "dark-energy",
+      "zh": "暗能量",
+      "en": "Dark energy"
+    },
+    {
+      "id": "galaxy",
+      "zh": "星系",
+      "en": "Galaxy",
+      "forms": { "en": ["galactic"] }
+    },
+    {
+      "id": "milky-way",
+      "zh": "银河系",
+      "en": "Milky Way"
+    },
+    {
+      "id": "solar-system",
+      "zh": "太阳系",
+      "en": "Solar system"
+    },
+    {
+      "id": "star",
+      "zh": "恒星",
+      "en": "Star",
+      "forms": { "en": ["stellar"] }
+    },
+    {
+      "id": "sun",
+      "zh": "太阳",
+      "en": "Sun",
+      "forms": { "en": ["solar"] }
+    },
+    {
+      "id": "moon",
+      "zh": "月球",
+      "en": "Moon",
+      "forms": { "en": ["lunar"] }
+    },
+    {
+      "id": "planet",
+      "zh": "行星",
+      "en": "Planet",
+      "forms": { "en": ["planetary"] }
+    },
+    {
+      "id": "supernova",
+      "zh": "超新星",
+      "en": "Supernova",
+      "forms": { "en": ["supernovae"] }
+    },
+    {
+      "id": "neutron-star",
+      "zh": "中子星",
+      "en": "Neutron star"
+    },
+    {
+      "id": "white-dwarf",
+      "zh": "白矮星",
+      "en": "White dwarf"
+    },
+    {
+      "id": "red-giant",
+      "zh": "红巨星",
+      "en": "Red giant"
+    },
+    {
+      "id": "pulsar",
+      "zh": "脉冲星",
+      "en": "Pulsar"
+    },
+    {
+      "id": "quasar",
+      "zh": "类星体",
+      "en": "Quasar"
+    },
+    {
+      "id": "nebula",
+      "zh": "星云",
+      "en": "Nebula",
+      "forms": { "en": ["nebulae"] }
+    },
+    {
+      "id": "comet",
+      "zh": "彗星",
+      "en": "Comet",
+      "forms": { "en": ["cometary"] }
+    },
+    {
+      "id": "meteor",
+      "zh": "流星",
+      "en": "Meteor",
+      "forms": { "en": ["meteoric"] }
+    },
+    {
+      "id": "asteroid",
+      "zh": "小行星",
+      "en": "Asteroid"
+    },
+    {
+      "id": "oort-cloud",
+      "zh": "奥尔特云",
+      "en": "Oort cloud"
+    },
+    {
+      "id": "kuiper-belt",
+      "zh": "柯伊伯带",
+      "en": "Kuiper belt"
+    },
+    {
+      "id": "corona",
+      "zh": "日冕",
+      "en": "Corona",
+      "forms": { "en": ["coronae"] }
+    },
+    {
+      "id": "solar-flare",
+      "zh": "太阳耀斑",
+      "en": "Solar flare"
+    },
+    {
+      "id": "sunspot",
+      "zh": "太阳黑子",
+      "en": "Sunspot"
+    },
+    {
+      "id": "solar-wind",
+      "zh": "太阳风",
+      "en": "Solar wind"
+    },
+    {
+      "id": "aurora",
+      "zh": "极光",
+      "en": "Aurora"
+    },
+    {
+      "id": "solar-eclipse",
+      "zh": "日食",
+      "en": "Solar eclipse"
+    },
+    {
+      "id": "tide",
+      "zh": "潮汐",
+      "en": "Tide",
+      "forms": { "en": ["tidal"] }
+    },
+    {
+      "id": "constellation",
+      "zh": "星座",
+      "en": "Constellation"
+    },
+    {
+      "id": "light-year",
+      "zh": "光年",
+      "en": "Light-year"
+    },
+    {
+      "id": "parsec",
+      "zh": "秒差距",
+      "en": "Parsec"
+    },
+    {
+      "id": "parallax",
+      "zh": "视差",
+      "en": "Parallax"
+    },
+    {
+      "id": "keplers-laws",
+      "zh": "开普勒定律",
+      "en": "Kepler's laws",
+      "forms": { "en": ["Keplerian"] }
+    },
+    {
+      "id": "satellite",
+      "zh": "卫星",
+      "en": "Satellite"
+    },
+    {
+      "id": "rocket",
+      "zh": "火箭",
+      "en": "Rocket"
+    },
+    {
+      "id": "observatory",
+      "zh": "天文台",
+      "en": "Observatory"
+    },
+    {
+      "id": "electronvolt",
+      "zh": "电子伏特",
+      "en": "Electronvolt",
+      "forms": { "en": ["eV"] }
+    },
+    {
+      "id": "collapse",
+      "zh": "坍缩",
+      "en": "Collapse",
+      "forms": { "en": ["collapsed"] }
+    },
+    {
+      "id": "simultaneity",
+      "zh": "同时性",
+      "en": "Simultaneity",
+      "forms": { "en": ["simultaneous"] }
+    },
+    {
+      "id": "transistor",
+      "zh": "晶体管",
+      "en": "Transistor"
+    },
+    {
+      "id": "radio",
+      "zh": "无线电",
+      "en": "Radio"
+    },
+    {
+      "id": "infrasound",
+      "zh": "次声波",
+      "en": "Infrasound"
+    },
+    {
+      "id": "lightning-rod",
+      "zh": "避雷针",
+      "en": "Lightning rod"
+    },
+    {
+      "id": "focal-length",
+      "zh": "焦距",
+      "en": "Focal length"
+    },
+    {
+      "id": "pinhole-camera",
+      "zh": "小孔成像",
+      "en": "Pinhole camera"
+    },
+    {
+      "id": "kaleidoscope",
+      "zh": "万花筒",
+      "en": "Kaleidoscope"
+    },
+    {
+      "id": "periscope",
+      "zh": "潜望镜",
+      "en": "Periscope"
+    },
+    {
+      "id": "celestial-body",
+      "zh": "天体",
+      "en": "Celestial body"
+    },
+    {
+      "id": "solar-sail",
+      "zh": "太阳帆",
+      "en": "Solar sail"
+    },
+    {
+      "id": "fermi-paradox",
+      "zh": "费米悖论",
+      "en": "Fermi paradox"
+    },
+    {
+      "id": "dyson-sphere",
+      "zh": "戴森球",
+      "en": "Dyson sphere"
+    }
+  ]
+}

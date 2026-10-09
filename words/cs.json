@@ -1,0 +1,1621 @@
+{
+  "id": "cs",
+  "name": {
+    "zh": "计算机科学",
+    "en": "Computer Science"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "algorithm",
+      "zh": "算法",
+      "en": "Algorithm",
+      "forms": { "en": ["algorithmic"] }
+    },
+    {
+      "id": "compiler",
+      "zh": "编译器",
+      "en": "Compiler",
+      "forms": { "en": ["compile", "compiled", "compilation"] }
+    },
+    {
+      "id": "recursion",
+      "zh": "递归",
+      "en": "Recursion",
+      "forms": { "en": ["recursive", "recurse"] }
+    },
+    {
+      "id": "debugging",
+      "zh": "调试",
+      "en": "Debugging",
+      "forms": { "en": ["debug", "debugger"] }
+    },
+    {
+      "id": "cache",
+      "zh": "缓存",
+      "en": "Cache",
+      "forms": { "en": ["cached", "caching"] }
+    },
+    {
+      "id": "thread",
+      "zh": "线程",
+      "en": "Thread",
+      "forms": { "en": ["multithreading", "multithreaded"] }
+    },
+    {
+      "id": "kernel",
+      "zh": "内核",
+      "en": "Kernel"
+    },
+    {
+      "id": "pointer",
+      "zh": "指针",
+      "en": "Pointer"
+    },
+    {
+      "id": "stack",
+      "zh": "栈",
+      "en": "Stack",
+      "forms": { "en": ["stacked", "stacking"] }
+    },
+    {
+      "id": "queue",
+      "zh": "队列",
+      "en": "Queue",
+      "forms": { "en": ["queueing", "queuing"] }
+    },
+    {
+      "id": "hash",
+      "zh": "哈希",
+      "en": "Hash",
+      "forms": { "en": ["hashing", "hashed"] }
+    },
+    {
+      "id": "deadlock",
+      "zh": "死锁",
+      "en": "Deadlock",
+      "forms": { "en": ["deadlocked"] }
+    },
+    {
+      "id": "encryption",
+      "zh": "加密",
+      "en": "Encryption",
+      "forms": { "en": ["encrypt", "encrypted"] }
+    },
+    {
+      "id": "firewall",
+      "zh": "防火墙",
+      "en": "Firewall"
+    },
+    {
+      "id": "cpu",
+      "zh": "CPU",
+      "en": "CPU",
+      "forms": { "zh": ["中央处理器"], "en": ["central processing unit"] }
+    },
+    {
+      "id": "linux",
+      "zh": "Linux",
+      "en": "Linux"
+    },
+    {
+      "id": "github",
+      "zh": "GitHub",
+      "en": "GitHub"
+    },
+    {
+      "id": "binary",
+      "zh": "二进制",
+      "en": "Binary"
+    },
+    {
+      "id": "router",
+      "zh": "路由器",
+      "en": "Router",
+      "forms": { "en": ["route", "routing"] }
+    },
+    {
+      "id": "hacker",
+      "zh": "黑客",
+      "en": "Hacker",
+      "forms": { "en": ["hack", "hacking"] }
+    },
+    {
+      "id": "data-structure",
+      "zh": "数据结构",
+      "en": "Data structure"
+    },
+    {
+      "id": "sorting",
+      "zh": "排序",
+      "en": "Sorting",
+      "forms": { "en": ["sort", "sorted"] }
+    },
+    {
+      "id": "binary-search",
+      "zh": "二分查找",
+      "en": "Binary search"
+    },
+    {
+      "id": "linked-list",
+      "zh": "链表",
+      "en": "Linked list"
+    },
+    {
+      "id": "array",
+      "zh": "数组",
+      "en": "Array"
+    },
+    {
+      "id": "heap",
+      "zh": "堆",
+      "en": "Heap",
+      "forms": { "en": ["heapify"] }
+    },
+    {
+      "id": "tree",
+      "zh": "树",
+      "en": "Tree",
+      "forms": { "en": ["subtree"] }
+    },
+    {
+      "id": "red-black-tree",
+      "zh": "红黑树",
+      "en": "Red-black tree"
+    },
+    {
+      "id": "dictionary",
+      "zh": "字典",
+      "en": "Dictionary"
+    },
+    {
+      "id": "tuple",
+      "zh": "元组",
+      "en": "Tuple"
+    },
+    {
+      "id": "bloom-filter",
+      "zh": "布隆过滤器",
+      "en": "Bloom filter"
+    },
+    {
+      "id": "backtracking",
+      "zh": "回溯",
+      "en": "Backtracking",
+      "forms": { "en": ["backtrack"] }
+    },
+    {
+      "id": "dynamic-programming",
+      "zh": "动态规划",
+      "en": "Dynamic programming"
+    },
+    {
+      "id": "heuristic",
+      "zh": "启发式",
+      "en": "Heuristic"
+    },
+    {
+      "id": "complexity",
+      "zh": "复杂度",
+      "en": "Complexity",
+      "forms": { "en": ["complex"] }
+    },
+    {
+      "id": "shortest-path",
+      "zh": "最短路径",
+      "en": "Shortest path"
+    },
+    {
+      "id": "spanning-tree",
+      "zh": "生成树",
+      "en": "Spanning tree"
+    },
+    {
+      "id": "pseudocode",
+      "zh": "伪代码",
+      "en": "Pseudocode"
+    },
+    {
+      "id": "flowchart",
+      "zh": "流程图",
+      "en": "Flowchart"
+    },
+    {
+      "id": "tower-of-hanoi",
+      "zh": "汉诺塔",
+      "en": "Tower of Hanoi"
+    },
+    {
+      "id": "eight-queens",
+      "zh": "八皇后",
+      "en": "Eight queens"
+    },
+    {
+      "id": "game-of-life",
+      "zh": "生命游戏",
+      "en": "Game of Life"
+    },
+    {
+      "id": "np-complete",
+      "zh": "NP完全",
+      "en": "NP-complete",
+      "forms": { "en": ["NP-completeness"] }
+    },
+    {
+      "id": "halting-problem",
+      "zh": "停机问题",
+      "en": "Halting problem"
+    },
+    {
+      "id": "turing-machine",
+      "zh": "图灵机",
+      "en": "Turing machine"
+    },
+    {
+      "id": "automaton",
+      "zh": "自动机",
+      "en": "Automaton",
+      "forms": { "en": ["automata"] }
+    },
+    {
+      "id": "computability",
+      "zh": "可计算性",
+      "en": "Computability",
+      "forms": { "en": ["computable"] }
+    },
+    {
+      "id": "logic-gate",
+      "zh": "逻辑门",
+      "en": "Logic gate"
+    },
+    {
+      "id": "truth-table",
+      "zh": "真值表",
+      "en": "Truth table"
+    },
+    {
+      "id": "xor",
+      "zh": "异或",
+      "en": "XOR",
+      "forms": { "en": ["exclusive or"] }
+    },
+    {
+      "id": "bit",
+      "zh": "比特",
+      "en": "Bit"
+    },
+    {
+      "id": "byte",
+      "zh": "字节",
+      "en": "Byte",
+      "forms": { "en": ["kilobyte", "megabyte", "gigabyte"] }
+    },
+    {
+      "id": "hexadecimal",
+      "zh": "十六进制",
+      "en": "Hexadecimal",
+      "forms": { "en": ["hex"] }
+    },
+    {
+      "id": "string",
+      "zh": "字符串",
+      "en": "String",
+      "forms": { "en": ["substring"] }
+    },
+    {
+      "id": "character",
+      "zh": "字符",
+      "en": "Character"
+    },
+    {
+      "id": "floating-point",
+      "zh": "浮点数",
+      "en": "Floating point",
+      "forms": { "en": ["float"] }
+    },
+    {
+      "id": "boolean",
+      "zh": "布尔值",
+      "en": "Boolean",
+      "forms": { "en": ["bool"] }
+    },
+    {
+      "id": "null",
+      "zh": "空值",
+      "en": "Null",
+      "forms": { "en": ["nullable"] }
+    },
+    {
+      "id": "type",
+      "zh": "类型",
+      "en": "Type",
+      "forms": { "en": ["typed"] }
+    },
+    {
+      "id": "generics",
+      "zh": "泛型",
+      "en": "Generics"
+    },
+    {
+      "id": "encoding",
+      "zh": "编码",
+      "en": "Encoding",
+      "forms": { "en": ["encode", "encoder", "encoded"] }
+    },
+    {
+      "id": "unicode",
+      "zh": "Unicode",
+      "en": "Unicode"
+    },
+    {
+      "id": "mojibake",
+      "zh": "乱码",
+      "en": "Mojibake"
+    },
+    {
+      "id": "line-break",
+      "zh": "换行",
+      "en": "Line break"
+    },
+    {
+      "id": "programmer",
+      "zh": "程序员",
+      "en": "Programmer",
+      "forms": { "en": ["program", "programming"] }
+    },
+    {
+      "id": "loop",
+      "zh": "循环",
+      "en": "Loop",
+      "forms": { "en": ["looping"] }
+    },
+    {
+      "id": "infinite-loop",
+      "zh": "死循环",
+      "en": "Infinite loop"
+    },
+    {
+      "id": "iterator",
+      "zh": "迭代器",
+      "en": "Iterator"
+    },
+    {
+      "id": "overflow",
+      "zh": "溢出",
+      "en": "Overflow",
+      "forms": { "en": ["overflowed"] }
+    },
+    {
+      "id": "exception",
+      "zh": "异常",
+      "en": "Exception"
+    },
+    {
+      "id": "assertion",
+      "zh": "断言",
+      "en": "Assertion",
+      "forms": { "en": ["assert"] }
+    },
+    {
+      "id": "bug",
+      "zh": "Bug",
+      "en": "Bug",
+      "forms": { "en": ["buggy"] }
+    },
+    {
+      "id": "breakpoint",
+      "zh": "断点",
+      "en": "Breakpoint"
+    },
+    {
+      "id": "segfault",
+      "zh": "段错误",
+      "en": "Segfault",
+      "forms": { "en": ["segmentation fault"] }
+    },
+    {
+      "id": "memory-leak",
+      "zh": "内存泄漏",
+      "en": "Memory leak"
+    },
+    {
+      "id": "hello-world",
+      "zh": "Hello World",
+      "en": "Hello World"
+    },
+    {
+      "id": "interpreter",
+      "zh": "解释器",
+      "en": "Interpreter",
+      "forms": { "en": ["interpret", "interpreted"] }
+    },
+    {
+      "id": "runtime",
+      "zh": "运行时",
+      "en": "Runtime"
+    },
+    {
+      "id": "assembly",
+      "zh": "汇编",
+      "en": "Assembly",
+      "forms": { "en": ["assembler"] }
+    },
+    {
+      "id": "machine-code",
+      "zh": "机器码",
+      "en": "Machine code"
+    },
+    {
+      "id": "lambda",
+      "zh": "Lambda",
+      "en": "Lambda"
+    },
+    {
+      "id": "closure",
+      "zh": "闭包",
+      "en": "Closure"
+    },
+    {
+      "id": "callback",
+      "zh": "回调",
+      "en": "Callback"
+    },
+    {
+      "id": "macro",
+      "zh": "宏",
+      "en": "Macro"
+    },
+    {
+      "id": "coroutine",
+      "zh": "协程",
+      "en": "Coroutine"
+    },
+    {
+      "id": "asynchronous",
+      "zh": "异步",
+      "en": "Asynchronous",
+      "forms": { "en": ["async"] }
+    },
+    {
+      "id": "regex",
+      "zh": "正则表达式",
+      "en": "Regex",
+      "forms": { "zh": ["正则"], "en": ["regular expression"] }
+    },
+    {
+      "id": "wildcard",
+      "zh": "通配符",
+      "en": "Wildcard"
+    },
+    {
+      "id": "pipe",
+      "zh": "管道",
+      "en": "Pipe",
+      "forms": { "en": ["pipeline"] }
+    },
+    {
+      "id": "comment",
+      "zh": "注释",
+      "en": "Comment",
+      "forms": { "en": ["commented"] }
+    },
+    {
+      "id": "camel-case",
+      "zh": "驼峰命名",
+      "en": "Camel case"
+    },
+    {
+      "id": "indentation",
+      "zh": "缩进",
+      "en": "Indentation",
+      "forms": { "en": ["indent"] }
+    },
+    {
+      "id": "semicolon",
+      "zh": "分号",
+      "en": "Semicolon"
+    },
+    {
+      "id": "bracket",
+      "zh": "括号",
+      "en": "Bracket"
+    },
+    {
+      "id": "python",
+      "zh": "Python",
+      "en": "Python"
+    },
+    {
+      "id": "java",
+      "zh": "Java",
+      "en": "Java"
+    },
+    {
+      "id": "c-plus-plus",
+      "zh": "C++",
+      "en": "C++"
+    },
+    {
+      "id": "javascript",
+      "zh": "JavaScript",
+      "en": "JavaScript",
+      "forms": { "en": ["JS"] }
+    },
+    {
+      "id": "rust",
+      "zh": "Rust",
+      "en": "Rust"
+    },
+    {
+      "id": "html",
+      "zh": "HTML",
+      "en": "HTML",
+      "forms": { "zh": ["超文本标记语言"], "en": ["hypertext markup language"] }
+    },
+    {
+      "id": "sql",
+      "zh": "SQL",
+      "en": "SQL",
+      "forms": { "zh": ["结构化查询语言"], "en": ["structured query language"] }
+    },
+    {
+      "id": "vim",
+      "zh": "Vim",
+      "en": "Vim"
+    },
+    {
+      "id": "ide",
+      "zh": "IDE",
+      "en": "IDE",
+      "forms": { "zh": ["集成开发环境"], "en": ["integrated development environment"] }
+    },
+    {
+      "id": "object",
+      "zh": "对象",
+      "en": "Object"
+    },
+    {
+      "id": "interface",
+      "zh": "接口",
+      "en": "Interface"
+    },
+    {
+      "id": "inheritance",
+      "zh": "继承",
+      "en": "Inheritance",
+      "forms": { "en": ["inherit", "inherited"] }
+    },
+    {
+      "id": "instance",
+      "zh": "实例",
+      "en": "Instance",
+      "forms": { "en": ["instantiate", "instantiation"] }
+    },
+    {
+      "id": "polymorphism",
+      "zh": "多态",
+      "en": "Polymorphism",
+      "forms": { "en": ["polymorphic"] }
+    },
+    {
+      "id": "encapsulation",
+      "zh": "封装",
+      "en": "Encapsulation",
+      "forms": { "en": ["encapsulate"] }
+    },
+    {
+      "id": "abstraction",
+      "zh": "抽象",
+      "en": "Abstraction",
+      "forms": { "en": ["abstract"] }
+    },
+    {
+      "id": "overloading",
+      "zh": "重载",
+      "en": "Overloading",
+      "forms": { "en": ["overload", "overloaded"] }
+    },
+    {
+      "id": "design-pattern",
+      "zh": "设计模式",
+      "en": "Design pattern"
+    },
+    {
+      "id": "singleton",
+      "zh": "单例",
+      "en": "Singleton"
+    },
+    {
+      "id": "git",
+      "zh": "Git",
+      "en": "Git"
+    },
+    {
+      "id": "commit",
+      "zh": "提交",
+      "en": "Commit",
+      "forms": { "en": ["committed"] }
+    },
+    {
+      "id": "branch",
+      "zh": "分支",
+      "en": "Branch",
+      "forms": { "en": ["branching"] }
+    },
+    {
+      "id": "merge",
+      "zh": "合并",
+      "en": "Merge",
+      "forms": { "en": ["merged", "merging"] }
+    },
+    {
+      "id": "code-review",
+      "zh": "代码审查",
+      "en": "Code review"
+    },
+    {
+      "id": "refactoring",
+      "zh": "重构",
+      "en": "Refactoring",
+      "forms": { "en": ["refactor", "refactored"] }
+    },
+    {
+      "id": "technical-debt",
+      "zh": "技术债",
+      "en": "Technical debt"
+    },
+    {
+      "id": "unit-test",
+      "zh": "单元测试",
+      "en": "Unit test"
+    },
+    {
+      "id": "test-case",
+      "zh": "测试用例",
+      "en": "Test case"
+    },
+    {
+      "id": "prototype",
+      "zh": "原型",
+      "en": "Prototype",
+      "forms": { "en": ["prototyping"] }
+    },
+    {
+      "id": "documentation",
+      "zh": "文档",
+      "en": "Documentation",
+      "forms": { "en": ["document"] }
+    },
+    {
+      "id": "open-source",
+      "zh": "开源",
+      "en": "Open source"
+    },
+    {
+      "id": "license",
+      "zh": "许可证",
+      "en": "License",
+      "forms": { "en": ["licence", "licensing", "licensed"] }
+    },
+    {
+      "id": "dependency",
+      "zh": "依赖",
+      "en": "Dependency"
+    },
+    {
+      "id": "package",
+      "zh": "软件包",
+      "en": "Package"
+    },
+    {
+      "id": "plugin",
+      "zh": "插件",
+      "en": "Plugin"
+    },
+    {
+      "id": "middleware",
+      "zh": "中间件",
+      "en": "Middleware"
+    },
+    {
+      "id": "microservice",
+      "zh": "微服务",
+      "en": "Microservice"
+    },
+    {
+      "id": "api",
+      "zh": "API",
+      "en": "API",
+      "forms": { "zh": ["应用程序编程接口"], "en": ["application programming interface"] }
+    },
+    {
+      "id": "patch",
+      "zh": "补丁",
+      "en": "Patch",
+      "forms": { "en": ["patched", "patching"] }
+    },
+    {
+      "id": "deployment",
+      "zh": "部署",
+      "en": "Deployment",
+      "forms": { "en": ["deploy", "deployed"] }
+    },
+    {
+      "id": "release",
+      "zh": "发布",
+      "en": "Release"
+    },
+    {
+      "id": "rollback",
+      "zh": "回滚",
+      "en": "Rollback"
+    },
+    {
+      "id": "backup",
+      "zh": "备份",
+      "en": "Backup"
+    },
+    {
+      "id": "snapshot",
+      "zh": "快照",
+      "en": "Snapshot"
+    },
+    {
+      "id": "black-box",
+      "zh": "黑盒",
+      "en": "Black box"
+    },
+    {
+      "id": "compatibility",
+      "zh": "兼容性",
+      "en": "Compatibility",
+      "forms": { "en": ["compatible"] }
+    },
+    {
+      "id": "redundancy",
+      "zh": "冗余",
+      "en": "Redundancy",
+      "forms": { "en": ["redundant"] }
+    },
+    {
+      "id": "scalability",
+      "zh": "可扩展性",
+      "en": "Scalability",
+      "forms": { "en": ["scalable"] }
+    },
+    {
+      "id": "throughput",
+      "zh": "吞吐量",
+      "en": "Throughput"
+    },
+    {
+      "id": "bottleneck",
+      "zh": "瓶颈",
+      "en": "Bottleneck"
+    },
+    {
+      "id": "operating-system",
+      "zh": "操作系统",
+      "en": "Operating system",
+      "forms": { "en": ["OS"] }
+    },
+    {
+      "id": "windows",
+      "zh": "Windows",
+      "en": "Windows"
+    },
+    {
+      "id": "process",
+      "zh": "进程",
+      "en": "Process",
+      "forms": { "en": ["processing"] }
+    },
+    {
+      "id": "daemon",
+      "zh": "守护进程",
+      "en": "Daemon"
+    },
+    {
+      "id": "zombie-process",
+      "zh": "僵尸进程",
+      "en": "Zombie process"
+    },
+    {
+      "id": "scheduling",
+      "zh": "调度",
+      "en": "Scheduling",
+      "forms": { "en": ["schedule", "scheduler"] }
+    },
+    {
+      "id": "interrupt",
+      "zh": "中断",
+      "en": "Interrupt",
+      "forms": { "en": ["interruption"] }
+    },
+    {
+      "id": "concurrency",
+      "zh": "并发",
+      "en": "Concurrency",
+      "forms": { "en": ["concurrent"] }
+    },
+    {
+      "id": "parallelism",
+      "zh": "并行",
+      "en": "Parallelism",
+      "forms": { "en": ["parallel", "parallelize"] }
+    },
+    {
+      "id": "race-condition",
+      "zh": "竞态条件",
+      "en": "Race condition"
+    },
+    {
+      "id": "mutex",
+      "zh": "互斥锁",
+      "en": "Mutex",
+      "forms": { "en": ["mutual exclusion"] }
+    },
+    {
+      "id": "lock",
+      "zh": "锁",
+      "en": "Lock",
+      "forms": { "en": ["locking", "locked"] }
+    },
+    {
+      "id": "semaphore",
+      "zh": "信号量",
+      "en": "Semaphore"
+    },
+    {
+      "id": "memory",
+      "zh": "内存",
+      "en": "Memory"
+    },
+    {
+      "id": "virtual-memory",
+      "zh": "虚拟内存",
+      "en": "Virtual memory"
+    },
+    {
+      "id": "buffer",
+      "zh": "缓冲区",
+      "en": "Buffer",
+      "forms": { "en": ["buffering", "buffered"] }
+    },
+    {
+      "id": "file-system",
+      "zh": "文件系统",
+      "en": "File system"
+    },
+    {
+      "id": "virtual-machine",
+      "zh": "虚拟机",
+      "en": "Virtual machine",
+      "forms": { "en": ["VM"] }
+    },
+    {
+      "id": "container",
+      "zh": "容器",
+      "en": "Container",
+      "forms": { "en": ["containerize", "containerized"] }
+    },
+    {
+      "id": "docker",
+      "zh": "Docker",
+      "en": "Docker"
+    },
+    {
+      "id": "kubernetes",
+      "zh": "Kubernetes",
+      "en": "Kubernetes",
+      "forms": { "en": ["K8s"] }
+    },
+    {
+      "id": "terminal",
+      "zh": "终端",
+      "en": "Terminal"
+    },
+    {
+      "id": "command-line",
+      "zh": "命令行",
+      "en": "Command line",
+      "forms": { "en": ["CLI"] }
+    },
+    {
+      "id": "permission",
+      "zh": "权限",
+      "en": "Permission"
+    },
+    {
+      "id": "sandbox",
+      "zh": "沙箱",
+      "en": "Sandbox"
+    },
+    {
+      "id": "driver",
+      "zh": "驱动",
+      "en": "Driver"
+    },
+    {
+      "id": "firmware",
+      "zh": "固件",
+      "en": "Firmware"
+    },
+    {
+      "id": "bios",
+      "zh": "BIOS",
+      "en": "BIOS"
+    },
+    {
+      "id": "reboot",
+      "zh": "重启",
+      "en": "Reboot",
+      "forms": { "en": ["rebooted"] }
+    },
+    {
+      "id": "blue-screen",
+      "zh": "蓝屏",
+      "en": "Blue screen"
+    },
+    {
+      "id": "crash",
+      "zh": "崩溃",
+      "en": "Crash",
+      "forms": { "en": ["crashed"] }
+    },
+    {
+      "id": "timeout",
+      "zh": "超时",
+      "en": "Timeout"
+    },
+    {
+      "id": "hardware",
+      "zh": "硬件",
+      "en": "Hardware"
+    },
+    {
+      "id": "software",
+      "zh": "软件",
+      "en": "Software"
+    },
+    {
+      "id": "chip",
+      "zh": "芯片",
+      "en": "Chip",
+      "forms": { "en": ["microchip"] }
+    },
+    {
+      "id": "motherboard",
+      "zh": "主板",
+      "en": "Motherboard"
+    },
+    {
+      "id": "register",
+      "zh": "寄存器",
+      "en": "Register"
+    },
+    {
+      "id": "bus",
+      "zh": "总线",
+      "en": "Bus"
+    },
+    {
+      "id": "clock",
+      "zh": "时钟",
+      "en": "Clock"
+    },
+    {
+      "id": "overclocking",
+      "zh": "超频",
+      "en": "Overclocking",
+      "forms": { "en": ["overclock", "overclocked"] }
+    },
+    {
+      "id": "hard-disk",
+      "zh": "硬盘",
+      "en": "Hard disk",
+      "forms": { "en": ["HDD"] }
+    },
+    {
+      "id": "usb",
+      "zh": "USB",
+      "en": "USB",
+      "forms": { "en": ["universal serial bus"] }
+    },
+    {
+      "id": "keyboard",
+      "zh": "键盘",
+      "en": "Keyboard"
+    },
+    {
+      "id": "cursor",
+      "zh": "光标",
+      "en": "Cursor"
+    },
+    {
+      "id": "touchscreen",
+      "zh": "触摸屏",
+      "en": "Touchscreen"
+    },
+    {
+      "id": "supercomputer",
+      "zh": "超级计算机",
+      "en": "Supercomputer"
+    },
+    {
+      "id": "data-center",
+      "zh": "数据中心",
+      "en": "Data center"
+    },
+    {
+      "id": "moores-law",
+      "zh": "摩尔定律",
+      "en": "Moore's law"
+    },
+    {
+      "id": "iot",
+      "zh": "物联网",
+      "en": "IoT",
+      "forms": { "en": ["Internet of Things"] }
+    },
+    {
+      "id": "internet",
+      "zh": "互联网",
+      "en": "Internet"
+    },
+    {
+      "id": "protocol",
+      "zh": "协议",
+      "en": "Protocol"
+    },
+    {
+      "id": "port",
+      "zh": "端口",
+      "en": "Port"
+    },
+    {
+      "id": "socket",
+      "zh": "套接字",
+      "en": "Socket"
+    },
+    {
+      "id": "handshake",
+      "zh": "握手",
+      "en": "Handshake"
+    },
+    {
+      "id": "tcp",
+      "zh": "TCP",
+      "en": "TCP",
+      "forms": { "zh": ["传输控制协议"], "en": ["transmission control protocol"] }
+    },
+    {
+      "id": "http",
+      "zh": "HTTP",
+      "en": "HTTP",
+      "forms": { "zh": ["超文本传输协议"], "en": ["hypertext transfer protocol"] }
+    },
+    {
+      "id": "dns",
+      "zh": "DNS",
+      "en": "DNS",
+      "forms": { "zh": ["域名系统"], "en": ["domain name system"] }
+    },
+    {
+      "id": "ip-address",
+      "zh": "IP地址",
+      "en": "IP address"
+    },
+    {
+      "id": "mac-address",
+      "zh": "MAC地址",
+      "en": "MAC address"
+    },
+    {
+      "id": "domain-name",
+      "zh": "域名",
+      "en": "Domain name"
+    },
+    {
+      "id": "lan",
+      "zh": "局域网",
+      "en": "LAN",
+      "forms": { "en": ["local area network"] }
+    },
+    {
+      "id": "ethernet",
+      "zh": "以太网",
+      "en": "Ethernet"
+    },
+    {
+      "id": "wi-fi",
+      "zh": "Wi-Fi",
+      "en": "Wi-Fi"
+    },
+    {
+      "id": "bluetooth",
+      "zh": "蓝牙",
+      "en": "Bluetooth"
+    },
+    {
+      "id": "5g",
+      "zh": "5G",
+      "en": "5G"
+    },
+    {
+      "id": "modem",
+      "zh": "调制解调器",
+      "en": "Modem"
+    },
+    {
+      "id": "gateway",
+      "zh": "网关",
+      "en": "Gateway"
+    },
+    {
+      "id": "switch",
+      "zh": "交换机",
+      "en": "Switch"
+    },
+    {
+      "id": "bandwidth",
+      "zh": "带宽",
+      "en": "Bandwidth"
+    },
+    {
+      "id": "latency",
+      "zh": "延迟",
+      "en": "Latency"
+    },
+    {
+      "id": "packet",
+      "zh": "数据包",
+      "en": "Packet"
+    },
+    {
+      "id": "broadcast",
+      "zh": "广播",
+      "en": "Broadcast"
+    },
+    {
+      "id": "polling",
+      "zh": "轮询",
+      "en": "Polling",
+      "forms": { "en": ["poll"] }
+    },
+    {
+      "id": "load-balancing",
+      "zh": "负载均衡",
+      "en": "Load balancing"
+    },
+    {
+      "id": "client",
+      "zh": "客户端",
+      "en": "Client"
+    },
+    {
+      "id": "front-end",
+      "zh": "前端",
+      "en": "Front end"
+    },
+    {
+      "id": "back-end",
+      "zh": "后端",
+      "en": "Back end"
+    },
+    {
+      "id": "full-stack",
+      "zh": "全栈",
+      "en": "Full stack"
+    },
+    {
+      "id": "browser",
+      "zh": "浏览器",
+      "en": "Browser",
+      "forms": { "en": ["browse", "browsing"] }
+    },
+    {
+      "id": "cookie",
+      "zh": "Cookie",
+      "en": "Cookie"
+    },
+    {
+      "id": "search-engine",
+      "zh": "搜索引擎",
+      "en": "Search engine"
+    },
+    {
+      "id": "crawler",
+      "zh": "爬虫",
+      "en": "Crawler",
+      "forms": { "en": ["crawl", "crawling"] }
+    },
+    {
+      "id": "404",
+      "zh": "404",
+      "en": "404"
+    },
+    {
+      "id": "email",
+      "zh": "电子邮件",
+      "en": "Email"
+    },
+    {
+      "id": "spam",
+      "zh": "垃圾邮件",
+      "en": "Spam",
+      "forms": { "en": ["spammer"] }
+    },
+    {
+      "id": "login",
+      "zh": "登录",
+      "en": "Login"
+    },
+    {
+      "id": "avatar",
+      "zh": "头像",
+      "en": "Avatar"
+    },
+    {
+      "id": "qr-code",
+      "zh": "二维码",
+      "en": "QR code"
+    },
+    {
+      "id": "download",
+      "zh": "下载",
+      "en": "Download",
+      "forms": { "en": ["downloaded"] }
+    },
+    {
+      "id": "upload",
+      "zh": "上传",
+      "en": "Upload",
+      "forms": { "en": ["uploaded"] }
+    },
+    {
+      "id": "compression",
+      "zh": "压缩",
+      "en": "Compression",
+      "forms": { "en": ["compress", "compressed"] }
+    },
+    {
+      "id": "checksum",
+      "zh": "校验和",
+      "en": "Checksum"
+    },
+    {
+      "id": "cryptography",
+      "zh": "密码学",
+      "en": "Cryptography",
+      "forms": { "en": ["cryptographic"] }
+    },
+    {
+      "id": "public-key",
+      "zh": "公钥",
+      "en": "Public key"
+    },
+    {
+      "id": "private-key",
+      "zh": "私钥",
+      "en": "Private key"
+    },
+    {
+      "id": "password",
+      "zh": "密码",
+      "en": "Password"
+    },
+    {
+      "id": "captcha",
+      "zh": "验证码",
+      "en": "CAPTCHA"
+    },
+    {
+      "id": "vulnerability",
+      "zh": "漏洞",
+      "en": "Vulnerability",
+      "forms": { "en": ["vulnerable"] }
+    },
+    {
+      "id": "zero-day",
+      "zh": "零日漏洞",
+      "en": "Zero-day"
+    },
+    {
+      "id": "backdoor",
+      "zh": "后门",
+      "en": "Backdoor"
+    },
+    {
+      "id": "trojan",
+      "zh": "木马",
+      "en": "Trojan"
+    },
+    {
+      "id": "worm",
+      "zh": "蠕虫",
+      "en": "Worm"
+    },
+    {
+      "id": "ransomware",
+      "zh": "勒索软件",
+      "en": "Ransomware"
+    },
+    {
+      "id": "malware",
+      "zh": "恶意软件",
+      "en": "Malware"
+    },
+    {
+      "id": "antivirus",
+      "zh": "杀毒软件",
+      "en": "Antivirus"
+    },
+    {
+      "id": "phishing",
+      "zh": "网络钓鱼",
+      "en": "Phishing"
+    },
+    {
+      "id": "ddos",
+      "zh": "DDoS",
+      "en": "DDoS",
+      "forms": { "zh": ["分布式拒绝服务攻击"], "en": ["distributed denial of service"] }
+    },
+    {
+      "id": "white-hat",
+      "zh": "白帽子",
+      "en": "White hat"
+    },
+    {
+      "id": "privacy",
+      "zh": "隐私",
+      "en": "Privacy"
+    },
+    {
+      "id": "blockchain",
+      "zh": "区块链",
+      "en": "Blockchain"
+    },
+    {
+      "id": "bitcoin",
+      "zh": "比特币",
+      "en": "Bitcoin"
+    },
+    {
+      "id": "smart-contract",
+      "zh": "智能合约",
+      "en": "Smart contract"
+    },
+    {
+      "id": "index",
+      "zh": "索引",
+      "en": "Index",
+      "forms": { "en": ["indexing", "indexed", "indices"] }
+    },
+    {
+      "id": "query",
+      "zh": "查询",
+      "en": "Query"
+    },
+    {
+      "id": "primary-key",
+      "zh": "主键",
+      "en": "Primary key"
+    },
+    {
+      "id": "big-data",
+      "zh": "大数据",
+      "en": "Big data"
+    },
+    {
+      "id": "data-mining",
+      "zh": "数据挖掘",
+      "en": "Data mining"
+    },
+    {
+      "id": "consensus",
+      "zh": "共识",
+      "en": "Consensus"
+    },
+    {
+      "id": "pixel",
+      "zh": "像素",
+      "en": "Pixel",
+      "forms": { "en": ["pixelated"] }
+    },
+    {
+      "id": "rendering",
+      "zh": "渲染",
+      "en": "Rendering",
+      "forms": { "en": ["render", "renderer"] }
+    },
+    {
+      "id": "ray-tracing",
+      "zh": "光线追踪",
+      "en": "Ray tracing"
+    },
+    {
+      "id": "shader",
+      "zh": "着色器",
+      "en": "Shader"
+    },
+    {
+      "id": "texture",
+      "zh": "纹理",
+      "en": "Texture"
+    },
+    {
+      "id": "resolution",
+      "zh": "分辨率",
+      "en": "Resolution"
+    },
+    {
+      "id": "frame-rate",
+      "zh": "帧率",
+      "en": "Frame rate"
+    },
+    {
+      "id": "animation",
+      "zh": "动画",
+      "en": "Animation",
+      "forms": { "en": ["animate", "animated"] }
+    },
+    {
+      "id": "anti-aliasing",
+      "zh": "抗锯齿",
+      "en": "Anti-aliasing"
+    },
+    {
+      "id": "rgb",
+      "zh": "RGB",
+      "en": "RGB"
+    },
+    {
+      "id": "game-engine",
+      "zh": "游戏引擎",
+      "en": "Game engine"
+    },
+    {
+      "id": "vr",
+      "zh": "VR",
+      "en": "VR",
+      "forms": { "zh": ["虚拟现实"], "en": ["virtual reality"] }
+    },
+    {
+      "id": "metaverse",
+      "zh": "元宇宙",
+      "en": "Metaverse"
+    },
+    {
+      "id": "digital-twin",
+      "zh": "数字孪生",
+      "en": "Digital twin"
+    },
+    {
+      "id": "hci",
+      "zh": "人机交互",
+      "en": "HCI",
+      "forms": { "en": ["human-computer interaction"] }
+    },
+    {
+      "id": "user-interface",
+      "zh": "用户界面",
+      "en": "User interface",
+      "forms": { "en": ["UI"] }
+    },
+    {
+      "id": "ux",
+      "zh": "用户体验",
+      "en": "UX",
+      "forms": { "en": ["user experience"] }
+    },
+    {
+      "id": "usability",
+      "zh": "可用性",
+      "en": "Usability",
+      "forms": { "en": ["usable"] }
+    },
+    {
+      "id": "accessibility",
+      "zh": "无障碍",
+      "en": "Accessibility",
+      "forms": { "en": ["accessible", "a11y"] }
+    },
+    {
+      "id": "dark-mode",
+      "zh": "深色模式",
+      "en": "Dark mode"
+    },
+    {
+      "id": "icon",
+      "zh": "图标",
+      "en": "Icon"
+    },
+    {
+      "id": "pop-up",
+      "zh": "弹窗",
+      "en": "Pop-up"
+    },
+    {
+      "id": "desktop",
+      "zh": "桌面",
+      "en": "Desktop"
+    },
+    {
+      "id": "folder",
+      "zh": "文件夹",
+      "en": "Folder"
+    },
+    {
+      "id": "recycle-bin",
+      "zh": "回收站",
+      "en": "Recycle bin"
+    },
+    {
+      "id": "shortcut",
+      "zh": "快捷键",
+      "en": "Shortcut"
+    },
+    {
+      "id": "copy-paste",
+      "zh": "复制粘贴",
+      "en": "Copy-paste"
+    },
+    {
+      "id": "undo",
+      "zh": "撤销",
+      "en": "Undo"
+    },
+    {
+      "id": "screenshot",
+      "zh": "截图",
+      "en": "Screenshot"
+    },
+    {
+      "id": "clipboard",
+      "zh": "剪贴板",
+      "en": "Clipboard"
+    },
+    {
+      "id": "quicksort",
+      "zh": "快速排序",
+      "en": "Quicksort"
+    },
+    {
+      "id": "random-number",
+      "zh": "随机数",
+      "en": "Random number"
+    },
+    {
+      "id": "turing-award",
+      "zh": "图灵奖",
+      "en": "Turing Award"
+    },
+    {
+      "id": "bitmap",
+      "zh": "位图",
+      "en": "Bitmap"
+    },
+    {
+      "id": "font",
+      "zh": "字体",
+      "en": "Font"
+    },
+    {
+      "id": "emoji",
+      "zh": "表情符号",
+      "en": "Emoji"
+    },
+    {
+      "id": "autocomplete",
+      "zh": "自动补全",
+      "en": "Autocomplete"
+    },
+    {
+      "id": "spreadsheet",
+      "zh": "电子表格",
+      "en": "Spreadsheet"
+    }
+  ]
+}

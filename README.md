@@ -113,7 +113,7 @@ For larger changes, please open an issue first.
 
 ### Contributing words
 
-The word library in `words/` is shared by all the games, with one JSON file per academic field. A good term is short, and everyone in its field knows it, such as "attention", "convergence", "baseline" or "generalization". Word-list PRs change only files under `words/`, and they are reviewed like any other PR. The format, what makes a good term and how each game uses the library are described in [words/README.md](words/README.md).
+The word library in `words/` is shared by all the games, with one JSON file per academic field. A good term is short, and everyone in its field knows it, such as "attention", "convergence", "baseline" or "generalization". A word-list PR changes the files under `words/`, and also `scripts/check-words.mjs` and its tests when it changes the format; it is reviewed like any other PR. The format, what makes a good term and how each game uses the library are described in [words/README.md](words/README.md).
 
 All terms must be original. Do not use the official word list of any commercial board game.
 

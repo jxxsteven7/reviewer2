@@ -1,0 +1,1710 @@
+{
+  "id": "humanities",
+  "name": {
+    "zh": "人文社科",
+    "en": "Humanities & Social Sciences"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "renaissance",
+      "zh": "文艺复兴",
+      "en": "Renaissance"
+    },
+    {
+      "id": "metaphor",
+      "zh": "隐喻",
+      "en": "Metaphor",
+      "forms": { "en": ["metaphorical"] }
+    },
+    {
+      "id": "utopia",
+      "zh": "乌托邦",
+      "en": "Utopia",
+      "forms": { "en": ["utopian"] }
+    },
+    {
+      "id": "ethnography",
+      "zh": "民族志",
+      "en": "Ethnography",
+      "forms": { "en": ["ethnographic", "ethnographer"] }
+    },
+    {
+      "id": "narrative",
+      "zh": "叙事",
+      "en": "Narrative",
+      "forms": { "en": ["narrate", "narrator", "narration"] }
+    },
+    {
+      "id": "ideology",
+      "zh": "意识形态",
+      "en": "Ideology",
+      "forms": { "en": ["ideological"] }
+    },
+    {
+      "id": "capitalism",
+      "zh": "资本主义",
+      "en": "Capitalism",
+      "forms": { "en": ["capitalist"] }
+    },
+    {
+      "id": "existentialism",
+      "zh": "存在主义",
+      "en": "Existentialism",
+      "forms": { "en": ["existentialist", "existential"] }
+    },
+    {
+      "id": "civilization",
+      "zh": "文明",
+      "en": "Civilization",
+      "forms": { "en": ["civilisation", "civilized"] }
+    },
+    {
+      "id": "dialect",
+      "zh": "方言",
+      "en": "Dialect",
+      "forms": { "en": ["dialectal"] }
+    },
+    {
+      "id": "myth",
+      "zh": "神话",
+      "en": "Myth",
+      "forms": { "en": ["mythology", "mythical"] }
+    },
+    {
+      "id": "archaeology",
+      "zh": "考古",
+      "en": "Archaeology",
+      "forms": { "en": ["archeology", "archaeologist", "archaeological"] }
+    },
+    {
+      "id": "postmodernism",
+      "zh": "后现代主义",
+      "en": "Postmodernism",
+      "forms": { "en": ["postmodern"] }
+    },
+    {
+      "id": "hegemony",
+      "zh": "霸权",
+      "en": "Hegemony",
+      "forms": { "en": ["hegemonic"] }
+    },
+    {
+      "id": "silk-road",
+      "zh": "丝绸之路",
+      "en": "Silk Road"
+    },
+    {
+      "id": "globalization",
+      "zh": "全球化",
+      "en": "Globalization",
+      "forms": { "en": ["globalisation", "globalize"] }
+    },
+    {
+      "id": "enlightenment",
+      "zh": "启蒙运动",
+      "en": "Enlightenment",
+      "forms": { "en": ["enlighten", "enlightened"] }
+    },
+    {
+      "id": "anthropology",
+      "zh": "人类学",
+      "en": "Anthropology",
+      "forms": { "en": ["anthropologist", "anthropological"] }
+    },
+    {
+      "id": "aesthetics",
+      "zh": "美学",
+      "en": "Aesthetics",
+      "forms": { "en": ["esthetics", "aesthete"] }
+    },
+    {
+      "id": "irony",
+      "zh": "反讽",
+      "en": "Irony",
+      "forms": { "en": ["ironic", "ironically"] }
+    },
+    {
+      "id": "philosophy",
+      "zh": "哲学",
+      "en": "Philosophy",
+      "forms": { "en": ["philosopher", "philosophical"] }
+    },
+    {
+      "id": "epistemology",
+      "zh": "认识论",
+      "en": "Epistemology",
+      "forms": { "en": ["epistemic", "epistemological"] }
+    },
+    {
+      "id": "metaphysics",
+      "zh": "形而上学",
+      "en": "Metaphysics",
+      "forms": { "en": ["metaphysical"] }
+    },
+    {
+      "id": "ontology",
+      "zh": "本体论",
+      "en": "Ontology",
+      "forms": { "en": ["ontological"] }
+    },
+    {
+      "id": "dialectics",
+      "zh": "辩证法",
+      "en": "Dialectics",
+      "forms": { "en": ["dialectical"] }
+    },
+    {
+      "id": "materialism",
+      "zh": "唯物主义",
+      "en": "Materialism",
+      "forms": { "en": ["materialist"] }
+    },
+    {
+      "id": "idealism",
+      "zh": "唯心主义",
+      "en": "Idealism",
+      "forms": { "en": ["idealist"] }
+    },
+    {
+      "id": "nihilism",
+      "zh": "虚无主义",
+      "en": "Nihilism",
+      "forms": { "en": ["nihilist", "nihilistic"] }
+    },
+    {
+      "id": "utilitarianism",
+      "zh": "功利主义",
+      "en": "Utilitarianism",
+      "forms": { "en": ["utilitarian"] }
+    },
+    {
+      "id": "pragmatism",
+      "zh": "实用主义",
+      "en": "Pragmatism",
+      "forms": { "en": ["pragmatic", "pragmatist"] }
+    },
+    {
+      "id": "rationalism",
+      "zh": "理性主义",
+      "en": "Rationalism",
+      "forms": { "en": ["rationalist", "rational"] }
+    },
+    {
+      "id": "empiricism",
+      "zh": "经验主义",
+      "en": "Empiricism",
+      "forms": { "en": ["empiricist", "empirical"] }
+    },
+    {
+      "id": "skepticism",
+      "zh": "怀疑论",
+      "en": "Skepticism",
+      "forms": { "en": ["skeptic", "skeptical", "scepticism"] }
+    },
+    {
+      "id": "relativism",
+      "zh": "相对主义",
+      "en": "Relativism",
+      "forms": { "en": ["relativist"] }
+    },
+    {
+      "id": "determinism",
+      "zh": "决定论",
+      "en": "Determinism",
+      "forms": { "en": ["determinist", "deterministic"] }
+    },
+    {
+      "id": "free-will",
+      "zh": "自由意志",
+      "en": "Free will"
+    },
+    {
+      "id": "deduction",
+      "zh": "演绎",
+      "en": "Deduction",
+      "forms": { "en": ["deduce", "deductive"] }
+    },
+    {
+      "id": "syllogism",
+      "zh": "三段论",
+      "en": "Syllogism",
+      "forms": { "en": ["syllogistic"] }
+    },
+    {
+      "id": "sophistry",
+      "zh": "诡辩",
+      "en": "Sophistry",
+      "forms": { "en": ["sophist"] }
+    },
+    {
+      "id": "occams-razor",
+      "zh": "奥卡姆剃刀",
+      "en": "Occam's razor",
+      "forms": { "en": ["Ockham's razor"] }
+    },
+    {
+      "id": "trolley-problem",
+      "zh": "电车难题",
+      "en": "Trolley problem"
+    },
+    {
+      "id": "ship-of-theseus",
+      "zh": "忒修斯之船",
+      "en": "Ship of Theseus"
+    },
+    {
+      "id": "phenomenology",
+      "zh": "现象学",
+      "en": "Phenomenology",
+      "forms": { "en": ["phenomenological"] }
+    },
+    {
+      "id": "deconstruction",
+      "zh": "解构",
+      "en": "Deconstruction",
+      "forms": { "en": ["deconstruct", "deconstructive"] }
+    },
+    {
+      "id": "structuralism",
+      "zh": "结构主义",
+      "en": "Structuralism",
+      "forms": { "en": ["structuralist"] }
+    },
+    {
+      "id": "alienation",
+      "zh": "异化",
+      "en": "Alienation",
+      "forms": { "en": ["alienate", "alienated"] }
+    },
+    {
+      "id": "subjectivity",
+      "zh": "主体性",
+      "en": "Subjectivity",
+      "forms": { "en": ["subjective"] }
+    },
+    {
+      "id": "morality",
+      "zh": "道德",
+      "en": "Morality",
+      "forms": { "en": ["moral"] }
+    },
+    {
+      "id": "virtue",
+      "zh": "美德",
+      "en": "Virtue",
+      "forms": { "en": ["virtuous"] }
+    },
+    {
+      "id": "justice",
+      "zh": "正义",
+      "en": "Justice",
+      "forms": { "en": ["injustice"] }
+    },
+    {
+      "id": "consciousness",
+      "zh": "意识",
+      "en": "Consciousness",
+      "forms": { "en": ["conscious"] }
+    },
+    {
+      "id": "dualism",
+      "zh": "二元论",
+      "en": "Dualism",
+      "forms": { "en": ["dualist", "dualistic"] }
+    },
+    {
+      "id": "cynicism",
+      "zh": "犬儒主义",
+      "en": "Cynicism",
+      "forms": { "en": ["cynic", "cynical"] }
+    },
+    {
+      "id": "stoicism",
+      "zh": "斯多葛主义",
+      "en": "Stoicism",
+      "forms": { "en": ["stoic"] }
+    },
+    {
+      "id": "hedonism",
+      "zh": "享乐主义",
+      "en": "Hedonism",
+      "forms": { "en": ["hedonist", "hedonistic"] }
+    },
+    {
+      "id": "category",
+      "zh": "范畴",
+      "en": "Category",
+      "forms": { "en": ["categorical", "categorize"] }
+    },
+    {
+      "id": "truth",
+      "zh": "真理",
+      "en": "Truth"
+    },
+    {
+      "id": "soul",
+      "zh": "灵魂",
+      "en": "Soul"
+    },
+    {
+      "id": "social-contract",
+      "zh": "社会契约",
+      "en": "Social contract"
+    },
+    {
+      "id": "brain-in-a-vat",
+      "zh": "缸中之脑",
+      "en": "Brain in a vat"
+    },
+    {
+      "id": "chinese-room",
+      "zh": "中文房间",
+      "en": "Chinese room"
+    },
+    {
+      "id": "leviathan",
+      "zh": "利维坦",
+      "en": "Leviathan"
+    },
+    {
+      "id": "hermeneutics",
+      "zh": "诠释学",
+      "en": "Hermeneutics",
+      "forms": { "en": ["hermeneutical"] }
+    },
+    {
+      "id": "confucianism",
+      "zh": "儒家",
+      "en": "Confucianism",
+      "forms": { "en": ["Confucian"] }
+    },
+    {
+      "id": "taoism",
+      "zh": "道家",
+      "en": "Taoism",
+      "forms": { "en": ["Taoist", "Daoism"] }
+    },
+    {
+      "id": "zen",
+      "zh": "禅",
+      "en": "Zen"
+    },
+    {
+      "id": "yin-and-yang",
+      "zh": "阴阳",
+      "en": "Yin and yang",
+      "forms": { "en": ["yin-yang"] }
+    },
+    {
+      "id": "analects",
+      "zh": "论语",
+      "en": "Analects"
+    },
+    {
+      "id": "tao-te-ching",
+      "zh": "道德经",
+      "en": "Tao Te Ching",
+      "forms": { "en": ["Daodejing"] }
+    },
+    {
+      "id": "history",
+      "zh": "历史",
+      "en": "History",
+      "forms": { "en": ["historian", "historical", "historic"] }
+    },
+    {
+      "id": "prehistory",
+      "zh": "史前",
+      "en": "Prehistory",
+      "forms": { "en": ["prehistoric"] }
+    },
+    {
+      "id": "bronze-age",
+      "zh": "青铜时代",
+      "en": "Bronze Age"
+    },
+    {
+      "id": "stone-age",
+      "zh": "石器时代",
+      "en": "Stone Age"
+    },
+    {
+      "id": "middle-ages",
+      "zh": "中世纪",
+      "en": "Middle Ages",
+      "forms": { "en": ["medieval", "mediaeval"] }
+    },
+    {
+      "id": "revolution",
+      "zh": "革命",
+      "en": "Revolution",
+      "forms": { "en": ["revolutionary", "revolutionize"] }
+    },
+    {
+      "id": "empire",
+      "zh": "帝国",
+      "en": "Empire",
+      "forms": { "en": ["imperial"] }
+    },
+    {
+      "id": "colonialism",
+      "zh": "殖民主义",
+      "en": "Colonialism",
+      "forms": { "en": ["colonial", "colonize", "colonise"] }
+    },
+    {
+      "id": "feudalism",
+      "zh": "封建主义",
+      "en": "Feudalism",
+      "forms": { "en": ["feudal"] }
+    },
+    {
+      "id": "dynasty",
+      "zh": "王朝",
+      "en": "Dynasty",
+      "forms": { "en": ["dynastic"] }
+    },
+    {
+      "id": "chronicle",
+      "zh": "编年史",
+      "en": "Chronicle",
+      "forms": { "en": ["chronicler"] }
+    },
+    {
+      "id": "oral-history",
+      "zh": "口述史",
+      "en": "Oral history"
+    },
+    {
+      "id": "hieroglyph",
+      "zh": "象形文字",
+      "en": "Hieroglyph",
+      "forms": { "en": ["hieroglyphic"] }
+    },
+    {
+      "id": "cuneiform",
+      "zh": "楔形文字",
+      "en": "Cuneiform"
+    },
+    {
+      "id": "pyramid",
+      "zh": "金字塔",
+      "en": "Pyramid",
+      "forms": { "en": ["pyramidal"] }
+    },
+    {
+      "id": "mummy",
+      "zh": "木乃伊",
+      "en": "Mummy",
+      "forms": { "en": ["mummify", "mummified"] }
+    },
+    {
+      "id": "rosetta-stone",
+      "zh": "罗塞塔石碑",
+      "en": "Rosetta Stone"
+    },
+    {
+      "id": "great-wall",
+      "zh": "长城",
+      "en": "Great Wall"
+    },
+    {
+      "id": "cold-war",
+      "zh": "冷战",
+      "en": "Cold War"
+    },
+    {
+      "id": "black-death",
+      "zh": "黑死病",
+      "en": "Black Death"
+    },
+    {
+      "id": "heritage",
+      "zh": "遗产",
+      "en": "Heritage"
+    },
+    {
+      "id": "museum",
+      "zh": "博物馆",
+      "en": "Museum"
+    },
+    {
+      "id": "folklore",
+      "zh": "民俗",
+      "en": "Folklore",
+      "forms": { "en": ["folkloric", "folklorist"] }
+    },
+    {
+      "id": "totem",
+      "zh": "图腾",
+      "en": "Totem",
+      "forms": { "en": ["totemic", "totemism"] }
+    },
+    {
+      "id": "tribe",
+      "zh": "部落",
+      "en": "Tribe",
+      "forms": { "en": ["tribal", "tribalism"] }
+    },
+    {
+      "id": "pompeii",
+      "zh": "庞贝",
+      "en": "Pompeii"
+    },
+    {
+      "id": "maya",
+      "zh": "玛雅",
+      "en": "Maya",
+      "forms": { "en": ["Mayan"] }
+    },
+    {
+      "id": "viking",
+      "zh": "维京人",
+      "en": "Viking"
+    },
+    {
+      "id": "knight",
+      "zh": "骑士",
+      "en": "Knight",
+      "forms": { "en": ["knighthood"] }
+    },
+    {
+      "id": "samurai",
+      "zh": "武士",
+      "en": "Samurai"
+    },
+    {
+      "id": "city-state",
+      "zh": "城邦",
+      "en": "City-state"
+    },
+    {
+      "id": "pottery",
+      "zh": "陶器",
+      "en": "Pottery",
+      "forms": { "en": ["potter"] }
+    },
+    {
+      "id": "shaman",
+      "zh": "萨满",
+      "en": "Shaman",
+      "forms": { "en": ["shamanism", "shamanic"] }
+    },
+    {
+      "id": "epic",
+      "zh": "史诗",
+      "en": "Epic"
+    },
+    {
+      "id": "tragedy",
+      "zh": "悲剧",
+      "en": "Tragedy",
+      "forms": { "en": ["tragic"] }
+    },
+    {
+      "id": "comedy",
+      "zh": "喜剧",
+      "en": "Comedy",
+      "forms": { "en": ["comic", "comedic", "comedian"] }
+    },
+    {
+      "id": "poetry",
+      "zh": "诗歌",
+      "en": "Poetry",
+      "forms": { "en": ["poet", "poem", "poetic"] }
+    },
+    {
+      "id": "novel",
+      "zh": "小说",
+      "en": "Novel",
+      "forms": { "en": ["novelist"] }
+    },
+    {
+      "id": "fable",
+      "zh": "寓言",
+      "en": "Fable"
+    },
+    {
+      "id": "fairy-tale",
+      "zh": "童话",
+      "en": "Fairy tale"
+    },
+    {
+      "id": "romanticism",
+      "zh": "浪漫主义",
+      "en": "Romanticism",
+      "forms": { "en": ["romantic"] }
+    },
+    {
+      "id": "realism",
+      "zh": "现实主义",
+      "en": "Realism",
+      "forms": { "en": ["realist", "realistic"] }
+    },
+    {
+      "id": "protagonist",
+      "zh": "主人公",
+      "en": "Protagonist"
+    },
+    {
+      "id": "villain",
+      "zh": "反派",
+      "en": "Villain",
+      "forms": { "en": ["villainous", "villainy"] }
+    },
+    {
+      "id": "foreshadowing",
+      "zh": "伏笔",
+      "en": "Foreshadowing",
+      "forms": { "en": ["foreshadow"] }
+    },
+    {
+      "id": "rhetoric",
+      "zh": "修辞",
+      "en": "Rhetoric",
+      "forms": { "en": ["rhetorical", "rhetorician"] }
+    },
+    {
+      "id": "genre",
+      "zh": "体裁",
+      "en": "Genre"
+    },
+    {
+      "id": "rhyme",
+      "zh": "押韵",
+      "en": "Rhyme",
+      "forms": { "en": ["rhyming", "rhymed"] }
+    },
+    {
+      "id": "sonnet",
+      "zh": "十四行诗",
+      "en": "Sonnet"
+    },
+    {
+      "id": "prose",
+      "zh": "散文",
+      "en": "Prose",
+      "forms": { "en": ["prosaic"] }
+    },
+    {
+      "id": "satire",
+      "zh": "讽刺",
+      "en": "Satire",
+      "forms": { "en": ["satirical", "satirist", "satirize"] }
+    },
+    {
+      "id": "allusion",
+      "zh": "典故",
+      "en": "Allusion",
+      "forms": { "en": ["allude"] }
+    },
+    {
+      "id": "symbolism",
+      "zh": "象征",
+      "en": "Symbolism",
+      "forms": { "en": ["symbol", "symbolic", "symbolize"] }
+    },
+    {
+      "id": "criticism",
+      "zh": "批评",
+      "en": "Criticism",
+      "forms": { "en": ["critic", "critical", "criticize"] }
+    },
+    {
+      "id": "canon",
+      "zh": "经典",
+      "en": "Canon",
+      "forms": { "en": ["canonical"] }
+    },
+    {
+      "id": "drama",
+      "zh": "戏剧",
+      "en": "Drama",
+      "forms": { "en": ["dramatic", "dramatist"] }
+    },
+    {
+      "id": "monologue",
+      "zh": "独白",
+      "en": "Monologue",
+      "forms": { "en": ["monolog"] }
+    },
+    {
+      "id": "imagery",
+      "zh": "意象",
+      "en": "Imagery"
+    },
+    {
+      "id": "fourth-wall",
+      "zh": "第四面墙",
+      "en": "Fourth wall"
+    },
+    {
+      "id": "dystopia",
+      "zh": "反乌托邦",
+      "en": "Dystopia",
+      "forms": { "en": ["dystopian"] }
+    },
+    {
+      "id": "science-fiction",
+      "zh": "科幻",
+      "en": "Science fiction",
+      "forms": { "en": ["sci-fi"] }
+    },
+    {
+      "id": "translation",
+      "zh": "翻译",
+      "en": "Translation",
+      "forms": { "en": ["translate", "translator"] }
+    },
+    {
+      "id": "suspense",
+      "zh": "悬念",
+      "en": "Suspense",
+      "forms": { "en": ["suspenseful"] }
+    },
+    {
+      "id": "plot-twist",
+      "zh": "反转",
+      "en": "Plot twist"
+    },
+    {
+      "id": "cliche",
+      "zh": "陈词滥调",
+      "en": "Cliché"
+    },
+    {
+      "id": "parody",
+      "zh": "戏仿",
+      "en": "Parody"
+    },
+    {
+      "id": "epilogue",
+      "zh": "尾声",
+      "en": "Epilogue"
+    },
+    {
+      "id": "pen-name",
+      "zh": "笔名",
+      "en": "Pen name"
+    },
+    {
+      "id": "ghostwriter",
+      "zh": "代笔",
+      "en": "Ghostwriter",
+      "forms": { "en": ["ghostwrite", "ghostwriting"] }
+    },
+    {
+      "id": "odyssey",
+      "zh": "奥德赛",
+      "en": "Odyssey"
+    },
+    {
+      "id": "prometheus",
+      "zh": "普罗米修斯",
+      "en": "Prometheus",
+      "forms": { "en": ["Promethean"] }
+    },
+    {
+      "id": "sphinx",
+      "zh": "斯芬克斯",
+      "en": "Sphinx"
+    },
+    {
+      "id": "faust",
+      "zh": "浮士德",
+      "en": "Faust",
+      "forms": { "en": ["Faustian"] }
+    },
+    {
+      "id": "hamlet",
+      "zh": "哈姆雷特",
+      "en": "Hamlet"
+    },
+    {
+      "id": "don-quixote",
+      "zh": "堂吉诃德",
+      "en": "Don Quixote",
+      "forms": { "en": ["quixotic"] }
+    },
+    {
+      "id": "sisyphus",
+      "zh": "西西弗斯",
+      "en": "Sisyphus",
+      "forms": { "en": ["Sisyphean"] }
+    },
+    {
+      "id": "pandoras-box",
+      "zh": "潘多拉魔盒",
+      "en": "Pandora's box"
+    },
+    {
+      "id": "linguistics",
+      "zh": "语言学",
+      "en": "Linguistics",
+      "forms": { "en": ["linguist"] }
+    },
+    {
+      "id": "grammar",
+      "zh": "语法",
+      "en": "Grammar",
+      "forms": { "en": ["grammatical", "grammarian"] }
+    },
+    {
+      "id": "semantics",
+      "zh": "语义",
+      "en": "Semantics"
+    },
+    {
+      "id": "pragmatics",
+      "zh": "语用学",
+      "en": "Pragmatics"
+    },
+    {
+      "id": "phoneme",
+      "zh": "音位",
+      "en": "Phoneme",
+      "forms": { "en": ["phonemic"] }
+    },
+    {
+      "id": "phonetics",
+      "zh": "语音学",
+      "en": "Phonetics",
+      "forms": { "en": ["phonetician"] }
+    },
+    {
+      "id": "etymology",
+      "zh": "词源",
+      "en": "Etymology",
+      "forms": { "en": ["etymological"] }
+    },
+    {
+      "id": "pinyin",
+      "zh": "拼音",
+      "en": "Pinyin"
+    },
+    {
+      "id": "mother-tongue",
+      "zh": "母语",
+      "en": "Mother tongue"
+    },
+    {
+      "id": "bilingualism",
+      "zh": "双语",
+      "en": "Bilingualism",
+      "forms": { "en": ["bilingual"] }
+    },
+    {
+      "id": "esperanto",
+      "zh": "世界语",
+      "en": "Esperanto"
+    },
+    {
+      "id": "alphabet",
+      "zh": "字母表",
+      "en": "Alphabet",
+      "forms": { "en": ["alphabetical", "alphabetic"] }
+    },
+    {
+      "id": "accent",
+      "zh": "口音",
+      "en": "Accent",
+      "forms": { "en": ["accented"] }
+    },
+    {
+      "id": "slang",
+      "zh": "俚语",
+      "en": "Slang"
+    },
+    {
+      "id": "idiom",
+      "zh": "成语",
+      "en": "Idiom",
+      "forms": { "en": ["idiomatic"] }
+    },
+    {
+      "id": "corpus",
+      "zh": "语料库",
+      "en": "Corpus",
+      "forms": { "en": ["corpora"] }
+    },
+    {
+      "id": "pidgin",
+      "zh": "洋泾浜",
+      "en": "Pidgin"
+    },
+    {
+      "id": "palindrome",
+      "zh": "回文",
+      "en": "Palindrome",
+      "forms": { "en": ["palindromic"] }
+    },
+    {
+      "id": "pun",
+      "zh": "双关",
+      "en": "Pun"
+    },
+    {
+      "id": "onomatopoeia",
+      "zh": "拟声词",
+      "en": "Onomatopoeia",
+      "forms": { "en": ["onomatopoeic"] }
+    },
+    {
+      "id": "lingua-franca",
+      "zh": "通用语",
+      "en": "Lingua franca"
+    },
+    {
+      "id": "sign-language",
+      "zh": "手语",
+      "en": "Sign language"
+    },
+    {
+      "id": "tone",
+      "zh": "声调",
+      "en": "Tone",
+      "forms": { "en": ["tonal"] }
+    },
+    {
+      "id": "punctuation",
+      "zh": "标点",
+      "en": "Punctuation",
+      "forms": { "en": ["punctuate"] }
+    },
+    {
+      "id": "calligraphy",
+      "zh": "书法",
+      "en": "Calligraphy",
+      "forms": { "en": ["calligrapher", "calligraphic"] }
+    },
+    {
+      "id": "sinology",
+      "zh": "汉学",
+      "en": "Sinology",
+      "forms": { "en": ["sinologist"] }
+    },
+    {
+      "id": "sociology",
+      "zh": "社会学",
+      "en": "Sociology",
+      "forms": { "en": ["sociologist", "sociological"] }
+    },
+    {
+      "id": "urbanization",
+      "zh": "城市化",
+      "en": "Urbanization",
+      "forms": { "en": ["urbanisation", "urbanize"] }
+    },
+    {
+      "id": "class",
+      "zh": "阶级",
+      "en": "Class"
+    },
+    {
+      "id": "culture",
+      "zh": "文化",
+      "en": "Culture",
+      "forms": { "en": ["cultural"] }
+    },
+    {
+      "id": "power",
+      "zh": "权力",
+      "en": "Power",
+      "forms": { "en": ["powerful", "empower"] }
+    },
+    {
+      "id": "discourse",
+      "zh": "话语",
+      "en": "Discourse",
+      "forms": { "en": ["discursive"] }
+    },
+    {
+      "id": "identity",
+      "zh": "身份认同",
+      "en": "Identity",
+      "forms": { "en": ["identities"] }
+    },
+    {
+      "id": "social-capital",
+      "zh": "社会资本",
+      "en": "Social capital"
+    },
+    {
+      "id": "stereotype",
+      "zh": "刻板印象",
+      "en": "Stereotype",
+      "forms": { "en": ["stereotypical", "stereotyping"] }
+    },
+    {
+      "id": "prejudice",
+      "zh": "偏见",
+      "en": "Prejudice",
+      "forms": { "en": ["prejudiced"] }
+    },
+    {
+      "id": "discrimination",
+      "zh": "歧视",
+      "en": "Discrimination",
+      "forms": { "en": ["discriminate", "discriminatory"] }
+    },
+    {
+      "id": "socialization",
+      "zh": "社会化",
+      "en": "Socialization",
+      "forms": { "en": ["socialisation", "socialize"] }
+    },
+    {
+      "id": "subculture",
+      "zh": "亚文化",
+      "en": "Subculture",
+      "forms": { "en": ["subcultural"] }
+    },
+    {
+      "id": "consumerism",
+      "zh": "消费主义",
+      "en": "Consumerism",
+      "forms": { "en": ["consumerist"] }
+    },
+    {
+      "id": "bureaucracy",
+      "zh": "官僚制",
+      "en": "Bureaucracy",
+      "forms": { "en": ["bureaucrat", "bureaucratic"] }
+    },
+    {
+      "id": "middle-class",
+      "zh": "中产阶级",
+      "en": "Middle class"
+    },
+    {
+      "id": "elite",
+      "zh": "精英",
+      "en": "Elite",
+      "forms": { "en": ["elitism", "elitist"] }
+    },
+    {
+      "id": "involution",
+      "zh": "内卷",
+      "en": "Involution"
+    },
+    {
+      "id": "gender",
+      "zh": "性别",
+      "en": "Gender",
+      "forms": { "en": ["gendered"] }
+    },
+    {
+      "id": "immigration",
+      "zh": "移民",
+      "en": "Immigration",
+      "forms": { "en": ["immigrant", "immigrate"] }
+    },
+    {
+      "id": "ritual",
+      "zh": "仪式",
+      "en": "Ritual",
+      "forms": { "en": ["ritualistic"] }
+    },
+    {
+      "id": "taboo",
+      "zh": "禁忌",
+      "en": "Taboo"
+    },
+    {
+      "id": "kinship",
+      "zh": "亲属关系",
+      "en": "Kinship"
+    },
+    {
+      "id": "influencer",
+      "zh": "网红",
+      "en": "Influencer",
+      "forms": { "en": ["influence"] }
+    },
+    {
+      "id": "disenchantment",
+      "zh": "祛魅",
+      "en": "Disenchantment",
+      "forms": { "en": ["disenchant", "disenchanted"] }
+    },
+    {
+      "id": "panopticon",
+      "zh": "圆形监狱",
+      "en": "Panopticon",
+      "forms": { "en": ["panoptic"] }
+    },
+    {
+      "id": "nostalgia",
+      "zh": "乡愁",
+      "en": "Nostalgia",
+      "forms": { "en": ["nostalgic"] }
+    },
+    {
+      "id": "modernity",
+      "zh": "现代性",
+      "en": "Modernity",
+      "forms": { "en": ["modern"] }
+    },
+    {
+      "id": "tradition",
+      "zh": "传统",
+      "en": "Tradition",
+      "forms": { "en": ["traditional", "traditionalist"] }
+    },
+    {
+      "id": "secularization",
+      "zh": "世俗化",
+      "en": "Secularization",
+      "forms": { "en": ["secular", "secularisation"] }
+    },
+    {
+      "id": "gentrification",
+      "zh": "士绅化",
+      "en": "Gentrification",
+      "forms": { "en": ["gentrify", "gentrified"] }
+    },
+    {
+      "id": "pop-culture",
+      "zh": "流行文化",
+      "en": "Pop culture",
+      "forms": { "en": ["popular culture"] }
+    },
+    {
+      "id": "diplomacy",
+      "zh": "外交",
+      "en": "Diplomacy",
+      "forms": { "en": ["diplomat", "diplomatic"] }
+    },
+    {
+      "id": "geopolitics",
+      "zh": "地缘政治",
+      "en": "Geopolitics",
+      "forms": { "en": ["geopolitical"] }
+    },
+    {
+      "id": "soft-power",
+      "zh": "软实力",
+      "en": "Soft power"
+    },
+    {
+      "id": "federalism",
+      "zh": "联邦制",
+      "en": "Federalism",
+      "forms": { "en": ["federal", "federalist"] }
+    },
+    {
+      "id": "legitimacy",
+      "zh": "合法性",
+      "en": "Legitimacy",
+      "forms": { "en": ["legitimate"] }
+    },
+    {
+      "id": "matthew-effect",
+      "zh": "马太效应",
+      "en": "Matthew effect"
+    },
+    {
+      "id": "murphys-law",
+      "zh": "墨菲定律",
+      "en": "Murphy's law"
+    },
+    {
+      "id": "echo-chamber",
+      "zh": "回音室",
+      "en": "Echo chamber"
+    },
+    {
+      "id": "gatekeeper",
+      "zh": "把关人",
+      "en": "Gatekeeper",
+      "forms": { "en": ["gatekeeping"] }
+    },
+    {
+      "id": "public-opinion",
+      "zh": "舆论",
+      "en": "Public opinion"
+    },
+    {
+      "id": "agenda-setting",
+      "zh": "议程设置",
+      "en": "Agenda setting"
+    },
+    {
+      "id": "media",
+      "zh": "媒体",
+      "en": "Media",
+      "forms": { "en": ["medium"] }
+    },
+    {
+      "id": "oracle",
+      "zh": "神谕",
+      "en": "Oracle"
+    },
+    {
+      "id": "meme",
+      "zh": "模因",
+      "en": "Meme",
+      "forms": { "en": ["memetic"] }
+    },
+    {
+      "id": "clickbait",
+      "zh": "标题党",
+      "en": "Clickbait"
+    },
+    {
+      "id": "fake-news",
+      "zh": "假新闻",
+      "en": "Fake news"
+    },
+    {
+      "id": "post-truth",
+      "zh": "后真相",
+      "en": "Post-truth"
+    },
+    {
+      "id": "audience",
+      "zh": "受众",
+      "en": "Audience"
+    },
+    {
+      "id": "journalism",
+      "zh": "新闻学",
+      "en": "Journalism",
+      "forms": { "en": ["journalist", "journalistic"] }
+    },
+    {
+      "id": "psychology",
+      "zh": "心理学",
+      "en": "Psychology",
+      "forms": { "en": ["psychologist", "psychological"] }
+    },
+    {
+      "id": "subconscious",
+      "zh": "潜意识",
+      "en": "Subconscious",
+      "forms": { "en": ["subconsciously"] }
+    },
+    {
+      "id": "ego",
+      "zh": "自我",
+      "en": "Ego",
+      "forms": { "en": ["egoism", "egocentric"] }
+    },
+    {
+      "id": "superego",
+      "zh": "超我",
+      "en": "Superego"
+    },
+    {
+      "id": "id",
+      "zh": "本我",
+      "en": "Id"
+    },
+    {
+      "id": "cognition",
+      "zh": "认知",
+      "en": "Cognition",
+      "forms": { "en": ["cognitive"] }
+    },
+    {
+      "id": "emotion",
+      "zh": "情绪",
+      "en": "Emotion",
+      "forms": { "en": ["emotional"] }
+    },
+    {
+      "id": "personality",
+      "zh": "人格",
+      "en": "Personality",
+      "forms": { "en": ["personalities"] }
+    },
+    {
+      "id": "iq",
+      "zh": "智商",
+      "en": "IQ",
+      "forms": { "en": ["intelligence quotient"] }
+    },
+    {
+      "id": "conditioning",
+      "zh": "条件反射",
+      "en": "Conditioning",
+      "forms": { "en": ["conditioned"] }
+    },
+    {
+      "id": "conformity",
+      "zh": "从众",
+      "en": "Conformity",
+      "forms": { "en": ["conform", "conformist"] }
+    },
+    {
+      "id": "groupthink",
+      "zh": "群体思维",
+      "en": "Groupthink"
+    },
+    {
+      "id": "halo-effect",
+      "zh": "光环效应",
+      "en": "Halo effect"
+    },
+    {
+      "id": "confirmation-bias",
+      "zh": "确认偏误",
+      "en": "Confirmation bias"
+    },
+    {
+      "id": "trauma",
+      "zh": "创伤",
+      "en": "Trauma",
+      "forms": { "en": ["traumatic", "traumatize"] }
+    },
+    {
+      "id": "empathy",
+      "zh": "共情",
+      "en": "Empathy",
+      "forms": { "en": ["empathize", "empathetic", "empathic"] }
+    },
+    {
+      "id": "flow",
+      "zh": "心流",
+      "en": "Flow"
+    },
+    {
+      "id": "self-esteem",
+      "zh": "自尊",
+      "en": "Self-esteem"
+    },
+    {
+      "id": "attachment",
+      "zh": "依恋",
+      "en": "Attachment",
+      "forms": { "en": ["attach", "attached"] }
+    },
+    {
+      "id": "intelligence",
+      "zh": "智力",
+      "en": "Intelligence",
+      "forms": { "en": ["intelligent"] }
+    },
+    {
+      "id": "intuition",
+      "zh": "直觉",
+      "en": "Intuition",
+      "forms": { "en": ["intuitive", "intuit"] }
+    },
+    {
+      "id": "illusion",
+      "zh": "错觉",
+      "en": "Illusion",
+      "forms": { "en": ["illusory"] }
+    },
+    {
+      "id": "hypnosis",
+      "zh": "催眠",
+      "en": "Hypnosis",
+      "forms": { "en": ["hypnotic", "hypnotize", "hypnotise"] }
+    },
+    {
+      "id": "counseling",
+      "zh": "心理咨询",
+      "en": "Counseling",
+      "forms": { "en": ["counselling", "counselor", "counsellor"] }
+    },
+    {
+      "id": "introversion",
+      "zh": "内向",
+      "en": "Introversion",
+      "forms": { "en": ["introvert", "introverted"] }
+    },
+    {
+      "id": "extraversion",
+      "zh": "外向",
+      "en": "Extraversion",
+      "forms": { "en": ["extravert", "extrovert", "extroversion"] }
+    },
+    {
+      "id": "stimulus",
+      "zh": "刺激",
+      "en": "Stimulus",
+      "forms": { "en": ["stimuli", "stimulate"] }
+    },
+    {
+      "id": "deja-vu",
+      "zh": "既视感",
+      "en": "Déjà vu"
+    },
+    {
+      "id": "persona",
+      "zh": "人格面具",
+      "en": "Persona",
+      "forms": { "en": ["personae"] }
+    },
+    {
+      "id": "altruism",
+      "zh": "利他主义",
+      "en": "Altruism",
+      "forms": { "en": ["altruist", "altruistic"] }
+    },
+    {
+      "id": "narcissism",
+      "zh": "自恋",
+      "en": "Narcissism",
+      "forms": { "en": ["narcissist", "narcissistic"] }
+    },
+    {
+      "id": "midlife-crisis",
+      "zh": "中年危机",
+      "en": "Midlife crisis"
+    },
+    {
+      "id": "peer-pressure",
+      "zh": "同伴压力",
+      "en": "Peer pressure"
+    },
+    {
+      "id": "mindfulness",
+      "zh": "正念",
+      "en": "Mindfulness",
+      "forms": { "en": ["mindful"] }
+    },
+    {
+      "id": "rumor",
+      "zh": "谣言",
+      "en": "Rumor",
+      "forms": { "en": ["rumour"] }
+    },
+    {
+      "id": "haiku",
+      "zh": "俳句",
+      "en": "Haiku"
+    },
+    {
+      "id": "labyrinth",
+      "zh": "迷宫",
+      "en": "Labyrinth",
+      "forms": { "en": ["labyrinthine"] }
+    },
+    {
+      "id": "hyperbole",
+      "zh": "夸张",
+      "en": "Hyperbole"
+    },
+    {
+      "id": "pedagogy",
+      "zh": "教育学",
+      "en": "Pedagogy",
+      "forms": { "en": ["pedagogical"] }
+    },
+    {
+      "id": "literacy",
+      "zh": "识字",
+      "en": "Literacy",
+      "forms": { "en": ["literate", "illiteracy", "illiterate"] }
+    },
+    {
+      "id": "apprentice",
+      "zh": "学徒",
+      "en": "Apprentice",
+      "forms": { "en": ["apprenticeship"] }
+    },
+    {
+      "id": "grounded-theory",
+      "zh": "扎根理论",
+      "en": "Grounded theory"
+    },
+    {
+      "id": "law",
+      "zh": "法律",
+      "en": "Law",
+      "forms": { "en": ["lawyer", "lawful"] }
+    },
+    {
+      "id": "constitution",
+      "zh": "宪法",
+      "en": "Constitution",
+      "forms": { "en": ["constitutional"] }
+    },
+    {
+      "id": "precedent",
+      "zh": "判例",
+      "en": "Precedent"
+    },
+    {
+      "id": "jury",
+      "zh": "陪审团",
+      "en": "Jury",
+      "forms": { "en": ["juror"] }
+    },
+    {
+      "id": "rule-of-law",
+      "zh": "法治",
+      "en": "Rule of law"
+    },
+    {
+      "id": "due-process",
+      "zh": "正当程序",
+      "en": "Due process"
+    },
+    {
+      "id": "criminology",
+      "zh": "犯罪学",
+      "en": "Criminology",
+      "forms": { "en": ["criminologist"] }
+    },
+    {
+      "id": "verdict",
+      "zh": "判决",
+      "en": "Verdict"
+    },
+    {
+      "id": "alibi",
+      "zh": "不在场证明",
+      "en": "Alibi"
+    },
+    {
+      "id": "baroque",
+      "zh": "巴洛克",
+      "en": "Baroque"
+    },
+    {
+      "id": "impressionism",
+      "zh": "印象派",
+      "en": "Impressionism",
+      "forms": { "en": ["impressionist"] }
+    },
+    {
+      "id": "cubism",
+      "zh": "立体主义",
+      "en": "Cubism",
+      "forms": { "en": ["cubist"] }
+    },
+    {
+      "id": "surrealism",
+      "zh": "超现实主义",
+      "en": "Surrealism",
+      "forms": { "en": ["surrealist", "surreal"] }
+    },
+    {
+      "id": "abstract-art",
+      "zh": "抽象艺术",
+      "en": "Abstract art"
+    },
+    {
+      "id": "perspective",
+      "zh": "透视",
+      "en": "Perspective"
+    },
+    {
+      "id": "sketch",
+      "zh": "素描",
+      "en": "Sketch"
+    },
+    {
+      "id": "oil-painting",
+      "zh": "油画",
+      "en": "Oil painting"
+    },
+    {
+      "id": "sculpture",
+      "zh": "雕塑",
+      "en": "Sculpture",
+      "forms": { "en": ["sculptor", "sculpt", "sculptural"] }
+    },
+    {
+      "id": "mural",
+      "zh": "壁画",
+      "en": "Mural",
+      "forms": { "en": ["muralist"] }
+    },
+    {
+      "id": "masterpiece",
+      "zh": "杰作",
+      "en": "Masterpiece"
+    },
+    {
+      "id": "forgery",
+      "zh": "赝品",
+      "en": "Forgery",
+      "forms": { "en": ["forge", "forger", "forged"] }
+    },
+    {
+      "id": "negative-space",
+      "zh": "留白",
+      "en": "Negative space"
+    },
+    {
+      "id": "symphony",
+      "zh": "交响乐",
+      "en": "Symphony",
+      "forms": { "en": ["symphonic"] }
+    },
+    {
+      "id": "harmony",
+      "zh": "和声",
+      "en": "Harmony",
+      "forms": { "en": ["harmonic", "harmonize"] }
+    },
+    {
+      "id": "improvisation",
+      "zh": "即兴",
+      "en": "Improvisation",
+      "forms": { "en": ["improvise", "improvised"] }
+    },
+    {
+      "id": "avant-garde",
+      "zh": "先锋派",
+      "en": "Avant-garde"
+    },
+    {
+      "id": "minimalism",
+      "zh": "极简主义",
+      "en": "Minimalism",
+      "forms": { "en": ["minimalist"] }
+    },
+    {
+      "id": "pop-art",
+      "zh": "波普艺术",
+      "en": "Pop art"
+    },
+    {
+      "id": "curation",
+      "zh": "策展",
+      "en": "Curation",
+      "forms": { "en": ["curator", "curate", "curatorial"] }
+    },
+    {
+      "id": "mona-lisa",
+      "zh": "蒙娜丽莎",
+      "en": "Mona Lisa"
+    },
+    {
+      "id": "opera",
+      "zh": "歌剧",
+      "en": "Opera",
+      "forms": { "en": ["operatic"] }
+    },
+    {
+      "id": "jazz",
+      "zh": "爵士",
+      "en": "Jazz",
+      "forms": { "en": ["jazzy"] }
+    },
+    {
+      "id": "modernism",
+      "zh": "现代主义",
+      "en": "Modernism",
+      "forms": { "en": ["modernist"] }
+    },
+    {
+      "id": "dadaism",
+      "zh": "达达主义",
+      "en": "Dadaism",
+      "forms": { "en": ["Dada", "Dadaist"] }
+    },
+    {
+      "id": "feng-shui",
+      "zh": "风水",
+      "en": "Feng shui"
+    }
+  ]
+}

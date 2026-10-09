@@ -20,13 +20,19 @@ export const LANGUAGES = ['zh', 'en'];
 // it. This is BOARD_SIZE in shared/src/games/keywords/types.ts, which this script can't import:
 // it runs without TypeScript. A test in server/src/core/words.test.ts holds the two together.
 export const MIN_TERMS = 25;
-// Longer terms don't fit on a card on a 360 px wide phone.
+// Longer terms don't fit on a card on a 360 px wide phone: 5 Chinese characters, or 14 characters
+// of a word in another script. The card sizes a word by its script, not by its language, so a
+// Chinese term without Chinese characters, such as "GitHub", is measured as an English one.
 export const MAX_LENGTH = { zh: 5, en: 14 };
 export const MAX_DIFFICULTY = 5;
 
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const LIST_KEYS = new Set(['id', 'name', 'contributors', 'terms']);
-const TERM_KEYS = new Set(['id', 'zh', 'en', 'difficulty', 'related', 'note']);
+const TERM_KEYS = new Set(['id', 'zh', 'en', 'forms', 'difficulty', 'related', 'note']);
+// Matches a Chinese character, as HAN in shared/src/han.ts does, which the card sizes words by.
+// A test holds the two together.
+export const HAN = /\p{Script=Han}/u;
+const maxLength = (text) => (HAN.test(text) ? MAX_LENGTH.zh : MAX_LENGTH.en);
 
 // The table of traditional Chinese characters and their simplified forms that the game compares
 // words with (shared/src/han.ts). The generated file holds it as one string of \u escapes, each
@@ -92,6 +98,9 @@ const GAME_NAMES = [
 let gameNames;
 // A plain plural: -s, or -es after s, x, z, ch or sh, as the clue check takes it.
 const isPluralOf = (plural, word) => plural === `${word}s` || (/(?:[sxz]|[cs]h)$/.test(word) && plural === `${word}es`);
+// The game takes a word and its plain plural for each other, as sameOrPlural() in
+// shared/src/games/keywords/clue.ts does.
+const sameOrPlural = (a, b) => a === b || isPluralOf(a, b) || isPluralOf(b, a);
 const isGameName = (key) =>
   (gameNames ??= GAME_NAMES.map(wordKey)).some((name) => key === name || isPluralOf(key, name));
 
@@ -103,6 +112,15 @@ const codePoint = (char) => `U+${char.codePointAt(0).toString(16).toUpperCase().
 
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
 const describe = (value) => JSON.stringify(value);
+
+// What is wrong with the characters of a term or a form, if anything. JSON shows a tab or a line
+// break as an escape, but an invisible character as it is, so each one is named by its code point.
+function spacing(text) {
+  const hidden = [...new Set(text.match(HIDDEN))].map(codePoint);
+  if (hidden.length > 0) return `holds ${hidden.join(', ')}: use plain spaces only, and no invisible characters`;
+  if (text !== text.trim() || / {2}/.test(text)) return 'has spaces at its ends or two spaces in a row';
+  return null;
+}
 
 // Problems and warnings for one parsed list. `file` is its file name, such as "ml.json".
 export function checkWordList(data, file) {
@@ -161,16 +179,8 @@ export function checkWordList(data, file) {
         problems.push(`${where}: "${language}" must be a non-empty string`);
         continue;
       }
-      const hidden = [...new Set(text.match(HIDDEN))].map(codePoint);
-      if (hidden.length > 0) {
-        // JSON shows a tab or a line break as an escape, but an invisible character as it is, so
-        // name each one by its code point.
-        problems.push(
-          `${where}: "${language}" ${describe(text)} holds ${hidden.join(', ')}: use plain spaces only, and no invisible characters`,
-        );
-      } else if (text !== text.trim() || / {2}/.test(text)) {
-        problems.push(`${where}: "${language}" has spaces at its ends or two spaces in a row`);
-      }
+      const wrong = spacing(text);
+      if (wrong) problems.push(`${where}: "${language}" ${describe(text)} ${wrong}`);
       const key = wordKey(text);
       const earlier = texts[language].get(key);
       if (key === '') {
@@ -184,15 +194,17 @@ export function checkWordList(data, file) {
         texts[language].set(key, { index, text });
         counts[language] += 1;
       }
-      if ([...text].length > MAX_LENGTH[language]) {
+      if ([...text].length > maxLength(text)) {
         warnings.push(
-          `${where}: "${language}" ${describe(text)} is longer than ${MAX_LENGTH[language]} characters and may not fit on a card`,
+          `${where}: "${language}" ${describe(text)} is longer than ${maxLength(text)} characters and may not fit on a card`,
         );
       }
       if (isGameName(key)) {
         warnings.push(`${where}: "${language}" ${describe(text)} is also the name of a role or card in the game`);
       }
     }
+
+    if (term.forms !== undefined) problems.push(...checkForms(term, where));
 
     if (term.difficulty !== undefined) {
       const { difficulty } = term;
@@ -242,8 +254,141 @@ export function checkWordList(data, file) {
   return result();
 }
 
-// Problems and warnings for the list in one file. A file that can't be read is not a problem
-// with a word list, so this throws, and main() reports an error.
+// Problems with the forms of a term: the other forms of it, in Chinese and in English, that a
+// clue must not be either, such as "modeling" for "Model" or "CV" for "Computer vision". The game
+// takes a word and its plain plural for each other, so a form must not be the term itself or its
+// plain plural, or a word that the term is the plain plural of, such as "acoustic" for
+// "Acoustics", which the game refuses anyway. The game puts the forms of both languages together,
+// so a form must not repeat any other form of the term, or be its plain plural, either.
+function checkForms(term, where) {
+  const { forms } = term;
+  const languages = forms && typeof forms === 'object' && !Array.isArray(forms) ? Object.keys(forms) : [];
+  const lists = languages.every(
+    (language) => LANGUAGES.includes(language) && Array.isArray(forms[language]) && forms[language].length > 0,
+  );
+  if (languages.length === 0 || !lists) {
+    return [`${where}: "forms" must have a "zh" list, an "en" list or both, each with at least one form`];
+  }
+  const problems = [];
+  const own = LANGUAGES.filter((language) => isText(term[language])).map((language) => wordKey(term[language]));
+  const seen = new Map();
+  for (const language of languages) {
+    for (const form of forms[language]) {
+      const label = `"forms.${language}"`;
+      if (!isText(form)) {
+        problems.push(`${where}: ${label} must hold only non-empty strings`);
+        continue;
+      }
+      const wrong = spacing(form);
+      if (wrong) problems.push(`${where}: ${label} ${describe(form)} ${wrong}`);
+      const key = wordKey(form);
+      const earlier = [...seen].find(([other]) => sameOrPlural(key, other))?.[1];
+      if (key === '') {
+        problems.push(`${where}: ${label} ${describe(form)} has no letters or digits`);
+      } else if (own.some((word) => sameOrPlural(key, word))) {
+        problems.push(
+          `${where}: ${label} ${describe(form)} is the term itself, its plain plural or its singular, so it needs no listing`,
+        );
+      } else if (earlier !== undefined) {
+        const other =
+          earlier === form
+            ? ''
+            : wordKey(earlier) === key
+              ? ` (${describe(earlier)}), which has the same letters and digits`
+              : ` (${describe(earlier)}), which the game takes for the same word`;
+        problems.push(`${where}: ${label} ${describe(form)} repeats another form${other}`);
+      } else {
+        seen.set(key, form);
+      }
+    }
+  }
+  return problems;
+}
+
+// Problems with words that more than one list holds, given every list that was read as
+// { file, data }, in order: one list of problems for each. When a room plays with several fields,
+// the server makes one card of a word that they share, and the card carries the translations from
+// all of them. So a word needs the same translation, spelled the same way, in every list. Each
+// later list that translates it differently gets the problem. Words that one list holds twice are
+// that list's own problem, which checkWordList() reports.
+export function checkAcrossLists(lists) {
+  const first = Object.fromEntries(LANGUAGES.map((language) => [language, new Map()]));
+  return lists.map(({ file, data }) => {
+    const problems = [];
+    const own = Object.fromEntries(LANGUAGES.map((language) => [language, new Set()]));
+    const terms = data && typeof data === 'object' && Array.isArray(data.terms) ? data.terms : [];
+    terms.forEach((term, index) => {
+      // Only a term in both languages has a translation that could differ.
+      if (!term || typeof term !== 'object' || !LANGUAGES.every((language) => isText(term[language]))) return;
+      for (const language of LANGUAGES) {
+        const key = wordKey(term[language]);
+        if (key === '' || own[language].has(key)) continue;
+        own[language].add(key);
+        const translation = term[LANGUAGES.find((other) => other !== language)];
+        const before = first[language].get(key);
+        if (!before) {
+          first[language].set(key, { file, translation });
+        } else if (before.translation !== translation) {
+          const where = `${file}: terms[${index}]${isText(term.id) ? ` (${term.id})` : ''}`;
+          problems.push(
+            `${where}: "${language}" ${describe(term[language])} is translated ${describe(translation)} here but ${describe(before.translation)} in ${before.file}: the game makes one card of it, so it needs the same translation in both`,
+          );
+        }
+      }
+    });
+    return problems;
+  });
+}
+
+// The line of the file on which each term of a list starts. JSON.parse() keeps no positions, so
+// this reads the text again: it follows strings and brackets, and notes where each value of the
+// "terms" array at the top level begins. The text must be valid JSON.
+export function termLines(text) {
+  let lines = [];
+  let line = 1;
+  let depth = 0;
+  let key = null; // the last string at the top level, which is the key when a value follows
+  let inTerms = false;
+  let next = false; // the next value starts a term
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === '\n') line += 1;
+    if (char === ' ' || char === '\t' || char === '\r' || char === '\n') continue;
+    if (inTerms && depth === 2 && next && char !== ']') {
+      lines.push(line);
+      next = false;
+    }
+    if (char === '"') {
+      let end = i + 1;
+      while (end < text.length && text[end] !== '"') end += text[end] === '\\' ? 2 : 1;
+      if (depth === 1) key = JSON.parse(text.slice(i, end + 1));
+      i = end;
+    } else if (char === '{' || char === '[') {
+      depth += 1;
+      // A second "terms" replaces the first, as it does for JSON.parse().
+      if (depth === 2 && char === '[' && key === 'terms') [inTerms, next, lines] = [true, true, []];
+    } else if (char === '}' || char === ']') {
+      if (depth === 2) inTerms = false;
+      depth -= 1;
+    } else if (char === ',' && inTerms && depth === 2) {
+      next = true;
+    }
+  }
+  return lines;
+}
+
+// The line that a problem or a warning is about, if any: the line on which the term that it names
+// starts, or the line on which the JSON broke. Lines about the whole list have none.
+export function lineOf(message, lines = []) {
+  const term = message.match(/: terms\[(\d+)\]/);
+  if (term) return lines[Number(term[1])];
+  const broken = message.match(/\(line (\d+) column \d+\)$/);
+  return broken ? Number(broken[1]) : undefined;
+}
+
+// Problems and warnings for the list in one file, with the parsed list and the line of each of
+// its terms. A file that can't be read is not a problem with a word list, so this throws, and
+// main() reports an error.
 export function checkFile(path) {
   const file = basename(path);
   const text = readFileSync(path, 'utf8');
@@ -253,19 +398,20 @@ export function checkFile(path) {
   } catch (error) {
     return { problems: [`${file}: not valid JSON: ${error.message}`], warnings: [], counts: {} };
   }
-  return checkWordList(data, file);
+  return { ...checkWordList(data, file), data, lines: termLines(text) };
 }
 
 // A problem or a warning as a GitHub Actions workflow command. The log shows it as an error or a
-// warning, and GitHub attaches it to the file in the pull request, which needs the file's path
-// from the root of the repository. A file outside the repository gets no path.
-export function annotation(kind, line, path) {
+// warning, and GitHub attaches it to the file in the pull request, at `line` when it is given,
+// which needs the file's path from the root of the repository. A file outside the repository gets
+// no path and no line.
+export function annotation(kind, message, path, line) {
   const data = (text) => text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
   const property = (text) => data(text).replaceAll(':', '%3A').replaceAll(',', '%2C');
   const fromRoot = relative(root, resolve(path));
   const inside = fromRoot !== '' && !fromRoot.startsWith('..') && !isAbsolute(fromRoot);
-  const file = inside ? `file=${property(fromRoot.split(sep).join('/'))},` : '';
-  return `::${kind} ${file}title=check-words::${data(line)}`;
+  const file = inside ? `file=${property(fromRoot.split(sep).join('/'))},${line ? `line=${line},` : ''}` : '';
+  return `::${kind} ${file}title=check-words::${data(message)}`;
 }
 
 // `wordsDir` is where the lists are when no file is named. The tests pass their own.
@@ -285,26 +431,36 @@ export function main(argv, wordsDir = join(root, 'words')) {
     return 2;
   }
 
-  let problems = 0;
+  // Every list is read before any is reported, because the lists are also checked against each
+  // other.
+  const checked = [];
   let unreadable = 0;
   for (const path of paths) {
-    let result;
     try {
-      result = checkFile(path);
+      checked.push({ path, result: checkFile(path) });
     } catch (error) {
       // A mistyped path, a directory, or a file that this user may not read.
       console.error(`check-words: error: ${error.message}`);
       unreadable += 1;
-      continue;
     }
-    // On GitHub Actions the workflow command is the line in the log, so each is printed once.
-    const actions = Boolean(process.env.GITHUB_ACTIONS);
-    for (const line of result.problems) {
-      console.log(actions ? annotation('error', line, path) : `check-words: ${line}`);
-    }
-    for (const line of result.warnings) {
-      console.log(actions ? annotation('warning', line, path) : `check-words: warning: ${line}`);
-    }
+  }
+  const parsed = checked.filter(({ result }) => result.data !== undefined);
+  checkAcrossLists(parsed.map(({ path, result }) => ({ file: basename(path), data: result.data }))).forEach(
+    (problems, index) => parsed[index].result.problems.push(...problems),
+  );
+
+  let problems = 0;
+  // On GitHub Actions the workflow command is the line in the log, so each is printed once.
+  const actions = Boolean(process.env.GITHUB_ACTIONS);
+  for (const { path, result } of checked) {
+    const print = (kind, message) =>
+      console.log(
+        actions
+          ? annotation(kind, message, path, lineOf(message, result.lines))
+          : `check-words: ${kind === 'warning' ? 'warning: ' : ''}${message}`,
+      );
+    for (const message of result.problems) print('error', message);
+    for (const message of result.warnings) print('warning', message);
     if (result.problems.length === 0) {
       const counts = LANGUAGES.map((language) => `${result.counts[language]} ${language}`).join(', ');
       console.log(`check-words: OK ${basename(path)} (${counts})`);
