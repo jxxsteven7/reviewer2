@@ -559,6 +559,7 @@ describe('words that clash on a board', () => {
   const ELECTRICITY = '\u7535'; // "electricity", one character
   const ELECTRIC_FIELD = '\u7535\u573a'; // "electric field"
   const SQUARE = '\u5e73\u65b9'; // "square", as in "R squared" and "square root"
+  const LINE = '\u7ebf'; // "line", as in "candlestick chart" ("K" and LINE) and "curve"
 
   // Fresh objects each time, so that nothing is remembered from one call to the next.
   const clash = (a: string | BoardText, b: string | BoardText) => {
@@ -577,8 +578,12 @@ describe('words that clash on a board', () => {
     expect(clash('Gene editing', 'Gene editing tool')).toBe(true);
     // Two spellings of one word.
     expect(clash('Co-author', 'coauthor')).toBe(true);
-    // A letter on its own is no part: "R squared" lies inside "square root".
-    expect(clash(`R${SQUARE}`, `${SQUARE}\u6839`)).toBe(true);
+    // A letter alone and digits count as pieces of the word that holds them.
+    expect(clash('Test', 't-test')).toBe(true);
+    expect(clash('Ray', 'X-ray')).toBe(true);
+    expect(clash('3D', '3D printing')).toBe(true);
+    expect(clash("Master's", "Master's degree")).toBe(true);
+    expect(clash(SQUARE, `R${SQUARE}`)).toBe(true);
   });
 
   test('when one is a plain plural of the other or of its part', () => {
@@ -617,6 +622,16 @@ describe('words that clash on a board', () => {
     expect(clash('Test set', 'Training set')).toBe(false);
     expect(clash('Learning rate', 'Win rate')).toBe(false);
     expect(clash(`GPU ${GENE}`, GENE_EDITING)).toBe(false);
+    // A letter alone or digits tell the words apart, even an "a".
+    expect(clash('t-test', 'Turing test')).toBe(false);
+    expect(clash('t-test', 'A/B test')).toBe(false);
+    expect(clash('X-ray', 'Gamma ray')).toBe(false);
+    expect(clash('Series A', 'Time series')).toBe(false);
+    expect(clash('Vitamin C', 'Vitamin D')).toBe(false);
+    expect(clash('GPT-3', 'GPT-4')).toBe(false);
+    expect(clash('Type I error', 'Type II error')).toBe(false);
+    expect(clash(`R${SQUARE}`, `${SQUARE}\u6839`)).toBe(false);
+    expect(clash(`K${LINE}`, `\u66f2${LINE}`)).toBe(false);
     expect(clash('Graphics processing unit cluster', { word: 'GPU', forms: ['graphics processing unit'] })).toBe(false);
     // A part in common through a form, or between forms, is no clash either.
     const rlhf = { word: 'RLHF', forms: ['reinforcement learning from human feedback'] };

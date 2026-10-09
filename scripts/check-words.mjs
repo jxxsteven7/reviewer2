@@ -131,46 +131,49 @@ function spacing(text) {
 // This must stay the same as cardsClash() in shared/src/games/keywords/clue.ts, with which the
 // server draws the words for a board. This script can't import it, so a test in
 // server/src/core/words.test.ts compares the two on every list. A term lies inside another when
-// it is that term or a plain plural of it, when each of its parts is a part of that term or of
-// one of its forms, as the strict clue rule counts parts, or when it is that term's translation.
-// Two terms that only share a part, or a Chinese character, don't clash.
+// it is that term or a plain plural of it, when each of its pieces is a piece of that term or of
+// one of its forms, or when it is that term's translation. The pieces are the parts that the
+// strict clue rule counts, and also each letter that stands alone and each run of digits, so that
+// "t-test" and "Turing test" don't clash. Two terms that only share a part, or a Chinese character,
+// don't clash either.
 
 const CLUE_SPACES = /\s+/gu;
-// The parts of a word: runs of Latin letters, runs of Chinese characters and runs of other
-// letters, as PART in clue.ts.
-const PART = /\p{Script=Latin}+|\p{Script=Han}+|[^\P{L}\p{Script=Latin}\p{Script=Han}]+/gu;
+// The pieces of a word: runs of Latin letters, runs of Chinese characters, runs of digits and runs
+// of other letters, as PIECE in clue.ts.
+const PIECE = /\p{Script=Latin}+|\p{Script=Han}+|\p{N}+|[^\P{L}\p{Script=Latin}\p{Script=Han}]+/gu;
 const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
 
 // A text as a clue is checked: normalizeClue() in clue.ts.
 const normalizeClue = (text) =>
   text.normalize('NFKC').replace(INVISIBLE, '').trim().replace(CLUE_SPACES, ' ').toLowerCase();
 
-// wordOf() in clue.ts: the key of a text and the parts that count on their own, which are every
-// run of Chinese characters, and other runs of two or more letters that aren't small words.
+// wordOf() in clue.ts, as far as the clash check needs it: the key of a text and its pieces, which
+// are every run of letters or digits but the small words, such as "of" and "to". A letter alone
+// counts, even an "a".
 function wordOf(text) {
   const folded = toSimplified(normalizeClue(text).normalize('NFD').replace(MARKS, ''));
   return {
     key: folded.replace(NOT_LETTER_OR_DIGIT, ''),
-    parts: (folded.match(PART) ?? []).filter((part) => HAN.test(part) || (part.length > 1 && !SMALL_WORDS.has(part))),
+    pieces: (folded.match(PIECE) ?? []).filter((piece) => piece.length === 1 || !SMALL_WORDS.has(piece)),
   };
 }
 
 // liesInside() in clue.ts: the first word is the second or a plain plural of it, or each of its
-// parts is a part of the second, the same or a plain plural, or, for a run of Chinese characters,
-// lies inside one of the second's runs.
+// pieces is a piece of the second, the same or a plain plural, or, for a run of Chinese
+// characters, lies inside one of the second's runs.
 function liesInside(inner, outer) {
   if (sameOrPlural(inner.key, outer.key)) return true;
   return (
-    inner.parts.length > 0 &&
-    inner.parts.every((part) =>
-      outer.parts.some((other) =>
-        HAN.test(part) && HAN.test(other) ? other.includes(part) : sameOrPlural(part, other),
+    inner.pieces.length > 0 &&
+    inner.pieces.every((piece) =>
+      outer.pieces.some((other) =>
+        HAN.test(piece) && HAN.test(other) ? other.includes(piece) : sameOrPlural(piece, other),
       ),
     )
   );
 }
 
-// A term as the clash check sees it: its word with its parts, the keys of its translations and
+// A term as the clash check sees it: its word with its pieces, the keys of its translations and
 // its forms. `forms` holds the forms of both languages.
 export function clashEntry(word, translations = [], forms = []) {
   return {

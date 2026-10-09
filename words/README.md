@@ -97,6 +97,8 @@ Two terms clash when one of them lies inside the other:
 - one is the other's term in the other language;
 - every part of one is a part of one of the other's `forms`, in either language: "Unit" and "GPU" with the form "graphics processing unit".
 
+Here a letter that stands alone and a number are parts too, though a clue could never repeat them: "Test" lies inside "t-test", but "t-test" doesn't lie inside "Turing test", nor "GPT-3" inside "GPT-4", "Series A" inside "Time series" or "K线" inside "曲线". Small words such as "of" and "to" don't count: "Rate of return" lies inside "Return rate".
+
 A part in common is not enough: "Data science" and "Data cleaning", "Test set" and "Training set", or "Learning rate" and "Win rate" can share a board, and so can "Digital human" and "RLHF" with the form "reinforcement learning from human feedback". Neither is a Chinese character in common: "数学" and "化学" can share a board. Nor is a near miss that only brings a warning when it is a clue, such as "Model" and "Modeling", or "Data" and "Datacenter". The comparison is in the room's language, so a pair may clash in one language and not in the other.
 
 Clashing terms are fine in a list: the game only keeps them apart, and each list has far more terms than a board needs. But a list must keep 25 terms in each language that it is played in of which no two clash, and a term that clashes with many others, such as a one-character Chinese term that many others contain, makes the list play the same terms more often. `node scripts/check-words.mjs` lists the pairs, as described below.

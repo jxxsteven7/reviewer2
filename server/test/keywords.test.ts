@@ -266,14 +266,17 @@ describe('seats and starting', () => {
 
   test('logs a board on which the draw found no way to keep such words apart', async () => {
     await server.close();
-    // Phrases such as "general word 3" all lie inside each other, since digits don't count.
+    // Each phrase is the one before it with a word added, "general", "general wa", "general wa wb"
+    // and so on, so that every one lies inside every later one.
+    const chain = (i: number) =>
+      ['general', ...Array.from({ length: i }, (_, j) => `w${String.fromCharCode(0x61 + j)}`)].join(' ');
     server = await startServer({
       games: [keywordsGame],
       words: new WordLibrary([
         {
           id: 'general',
           name: { zh: 'G', en: 'G' },
-          terms: Array.from({ length: 40 }, (_, i) => ({ id: `w${i}`, en: `general word ${i}` })),
+          terms: Array.from({ length: 26 }, (_, i) => ({ id: `w${i}`, en: chain(i) })),
         },
       ]),
     });

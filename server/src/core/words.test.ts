@@ -688,6 +688,19 @@ describe('the word list check', async () => {
       '\uff21\uff29',
       'AI',
       'Email',
+      'Test',
+      't-test',
+      'Turing test',
+      'A/B test',
+      'Series A',
+      'Time series',
+      'GPT-3',
+      'GPT-4',
+      '3D',
+      '3D printing',
+      "Master's degree",
+      'R\u5e73\u65b9',
+      '\u5e73\u65b9\u6839',
     ];
     const words = texts.map((text) => (typeof text === 'string' ? { word: text } : text));
     const entries = words.map(({ word, translations, forms }) =>

@@ -30,12 +30,7 @@ const SUPERVISOR = '\u5bfc\u5e08'; // what the game calls the PI in Chinese
 const REVIEWER = '\u5ba1\u7a3f\u4eba';
 const REVIEWER_TRADITIONAL = '\u5be9\u7a3f\u4eba';
 
-// The terms of a list that passes. No two of them repeat each other, as "Term 1" and "Term 2" would
-// (see clashes below): each English term ends in a letter of its own, such as "Termd", and each
-// Chinese one in a character of its own.
-const enTerm = (i) => `Term${String.fromCharCode(0x61 + i)}`;
-const zhTerm = (i) => `\u8bcd${String.fromCharCode(0x4e00 + i)}`;
-const terms = (count, make = (i) => ({ id: `term-${i}`, zh: zhTerm(i), en: enTerm(i) })) =>
+const terms = (count, make = (i) => ({ id: `term-${i}`, zh: `\u8bcd${i}`, en: `Term ${i}` })) =>
   Array.from({ length: count }, (_, i) => make(i));
 
 const list = (overrides = {}) => ({
@@ -60,8 +55,8 @@ describe('a word list', () => {
   test('allows the optional fields', () => {
     const rich = terms(MIN_TERMS, (i) => ({
       id: `term-${i}`,
-      zh: zhTerm(i),
-      en: enTerm(i),
+      zh: `\u8bcd${i}`,
+      en: `Term ${i}`,
       difficulty: 1 + (i % 5),
       related: [`term-${(i + 1) % MIN_TERMS}`],
       note: { zh: '\u4e00\u53e5\u8bdd', en: 'One line' },
@@ -81,7 +76,7 @@ describe('a word list', () => {
 
   test('needs 25 terms in at least one language', () => {
     assert.ok(has(check(list({ terms: terms(MIN_TERMS - 1) })).problems, /at least 25 different terms/));
-    const englishOnly = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: enTerm(i) }));
+    const englishOnly = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: `Term ${i}` }));
     const result = check(list({ terms: englishOnly }));
     assert.deepEqual(result.problems, []);
     assert.deepEqual(result.counts, { zh: 0, en: MIN_TERMS });
@@ -90,8 +85,8 @@ describe('a word list', () => {
   test('warns about a language that has some terms, but fewer than 25', () => {
     const mixed = terms(MIN_TERMS, (i) => ({
       id: `term-${i}`,
-      en: enTerm(i),
-      ...(i < 3 ? { zh: zhTerm(i) } : {}),
+      en: `Term ${i}`,
+      ...(i < 3 ? { zh: `\u8bcd${i}` } : {}),
     }));
     const { problems, warnings } = check(list({ terms: mixed }));
     assert.deepEqual(problems, []);
@@ -138,14 +133,13 @@ describe('a term', () => {
   });
 
   test('must not be the same word as another term in the same language', () => {
-    assert.ok(has(withTerm({ id: 'again', en: 'Termd' }).problems, /"en" "Termd" repeats terms\[3\]$/));
+    assert.ok(has(withTerm({ id: 'again', en: 'Term 3' }).problems, /"en" "Term 3" repeats terms\[3\]$/));
     // Only letters and digits count, as on the board: not case, width, spaces, hyphens or accents.
-    for (const spelling of ['TERMD', 'term-d', 'Term d', 'T\u00e9rmd', '\uff34\uff45\uff52\uff4d\uff44']) {
+    for (const spelling of ['TERM 3', 'term-3', 'Term3', 'T\u00e9rm 3', '\uff34\uff45\uff52\uff4d \uff13']) {
       const { problems } = withTerm({ id: 'again', en: spelling });
-      assert.ok(has(problems, /repeats terms\[3\] \("Termd"\), which has the same letters and digits/), spelling);
+      assert.ok(has(problems, /repeats terms\[3\] \("Term 3"\), which has the same letters and digits/), spelling);
     }
-    // The traditional form of the first character.
-    assert.ok(has(withTerm({ id: 'again', zh: '\u8a5e\u4e03' }).problems, /repeats terms\[3\]/));
+    assert.ok(has(withTerm({ id: 'again', zh: '\u8bcd\uff13' }).problems, /repeats terms\[3\]/));
     const both = (first, second) =>
       check(list({ terms: [...terms(MIN_TERMS), { id: 'first', ...first }, { id: 'second', ...second }] }));
     assert.ok(has(both({ en: 'C++' }, { en: 'C#' }).problems, /"en" "C#" repeats terms\[25\] \("C\+\+"\)/));
@@ -156,7 +150,7 @@ describe('a term', () => {
   });
 
   test('counts each word once', () => {
-    const { counts } = check(list({ terms: [...terms(MIN_TERMS), { id: 'again', en: 'term-d', zh: ATTENTION }] }));
+    const { counts } = check(list({ terms: [...terms(MIN_TERMS), { id: 'again', en: 'term-3', zh: ATTENTION }] }));
     assert.deepEqual(counts, { zh: MIN_TERMS + 1, en: MIN_TERMS });
   });
 
@@ -307,6 +301,11 @@ describe('terms that give each other away', () => {
     assert.ok(!clashes({ zh: MATH }, { zh: CHEMISTRY }));
     assert.ok(!clashes({ en: 'Model' }, { en: 'Modeling' }));
     assert.ok(!clashes({ en: 'Data' }, { en: 'Datacenter' }));
+    // A letter alone and digits count: "Test" lies inside "t-test", but "t-test" doesn't lie
+    // inside "Turing test".
+    assert.ok(clashes({ en: 'Test' }, { en: 't-test' }));
+    assert.ok(!clashes({ en: 't-test' }, { en: 'Turing test' }));
+    assert.ok(!clashes({ en: 'Term 1' }, { en: 'Term 2' }));
   });
 
   test('name a term without an id by its place alone', () => {
@@ -317,11 +316,14 @@ describe('terms that give each other away', () => {
   });
 
   test('fail a list that has no 25 terms of which none repeats another', () => {
-    const repetitive = terms(MIN_TERMS + 5, (i) => ({ id: `term-${i}`, en: `Term ${i}`, zh: zhTerm(i) }));
+    // Each Chinese term is the one before it with a character added, so every one lies inside every
+    // later one.
+    const nested = (i) => `\u8bcd${Array.from({ length: i }, (_, j) => String.fromCharCode(0x4e00 + j)).join('')}`;
+    const repetitive = terms(MIN_TERMS + 5, (i) => ({ id: `term-${i}`, en: `Term ${i}`, zh: nested(i) }));
     const { problems, counts } = check(list({ terms: repetitive }));
     assert.deepEqual(counts, { zh: MIN_TERMS + 5, en: MIN_TERMS + 5 });
     assert.deepEqual(problems, [
-      'ml.json: no 25 of its "en" terms could be found of which none repeats another, only 1, so a board would have to hold terms that give each other away',
+      'ml.json: no 25 of its "zh" terms could be found of which none repeats another, only 1, so a board would have to hold terms that give each other away',
     ]);
   });
 
@@ -359,7 +361,7 @@ describe('terms that give each other away', () => {
   });
 
   test('only count in a language that a board can be dealt in', () => {
-    const few = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: enTerm(i), ...(i < 3 ? { zh: GENE } : {}) }));
+    const few = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: `Term ${i}`, ...(i < 3 ? { zh: GENE } : {}) }));
     few[1].zh = GENE_EDITING;
     few[2].zh = MATH;
     const { problems, infos } = check(list({ terms: few }));
