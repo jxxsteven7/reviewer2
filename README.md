@@ -24,6 +24,7 @@ The game is called **Double Blind** for now. In the code, its module is called `
 - Reconnects automatically after a phone locks or the browser goes to the background, returning players to their room, team and role
 - Server-authoritative, with data filtered by role: guessers can't see the colors of unrevealed cards, even with the browser's developer tools
 - Optional accounts, with only a username and a password: an avatar, a record of the games played, and an email address that is only for resetting a forgotten password and is never stored
+- Matches: a room can play a set number of games in a row and score every player, and at the end the best win the Best Paper Award and the last become the game's black hole, titles that accounts keep
 
 ## Status
 

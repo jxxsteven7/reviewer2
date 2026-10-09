@@ -215,3 +215,31 @@ Because the content comes last, nothing a player can't see changes the answer th
 - **A guesser chooses a card while another reveals one.** If the choice arrives second, it stands for the new board, unless the turn has ended (`stale`) or it was the very card that was revealed (`card_revealed`).
 - **A captain or all guessers go offline.** The game shows them as offline. Without a time limit, it waits for them; with one, their time runs out as it would anyway. The chair can make an offline player a spectator so that someone else can take over, or withdraw the game.
 - **An action and the end of the time arrive together.** Whichever the server handles first wins. An action that comes after the time is up is `stale`, even if the timer that ends the phase hasn't fired yet.
+
+## Matches
+
+A room can be a match, which plays a set number of games and ranks the players by their scores ([../architecture.md](../architecture.md#matches)). The game decides how each player scores and how the groups are made from one game to the next (`server/src/games/keywords/match.ts`).
+
+### Scoring
+
+Each player scores in every game of the match that ends by itself, as the server counts it (`shared/src/games/keywords/score.ts`):
+
+| What happened | Who | Points |
+|---|---|---|
+| A student of a group reveals one of the group's own cards | Everyone who played for the group in that game, its PI included | +1 each |
+| The group wins | The same | +3 each |
+| A student reveals a card of the other group | That student | -1 |
+| A student reveals Reviewer 2 | That student | -3 |
+| A student reveals an irrelevant paper | | 0 |
+
+A card that the other group reveals for a group doesn't count as found: the group gets nothing for it, and the student who revealed it loses a point. Everyone who sat in a group during the game played for it, also if they stepped out to watch or left the room before its end, and what a student revealed counts for them after they have left. A game that the chair withdrew counts for nothing. The table shows where each player's points came from.
+
+### The groups
+
+How the waiting room seats the players for each game of a match depends on its rules:
+
+- **Drawn at random** (groups that may change, before every game, and fixed groups, before the first): the players only say that they play, and the waiting room lists them together. When the chair starts the game, the server deals them into the groups as the chair's shuffle does, those who are online first, and the first one dealt to each group is its PI. The game can start once four players in a seat are online. A first game that the chair withdrew is drawn again.
+- **Chosen by the players** (groups that may change, before every game, and fixed groups, before the first): as in a room that isn't a match.
+- **Fixed,** once a game of the match has been scored: everyone who played for a group in it plays for that group for the rest of the match, and is offered seats in it alone. After each scored game, everyone goes back to their group as a student, and each group's PI is the one who has been a PI the fewest times in the match, someone online before someone who isn't, and one of them at random when several have been as often. The players may still swap the PI's seat within their group. A newcomer, who hasn't played for a group yet, goes to the group with fewer players, and stays in it once they have played a game.
+
+While a game of the match is on, only those who have played for a group in it may sit in one. A newcomer who comes to play watches the game and plays from the next one, from 0 points, and the chair's shuffle has nothing to do in a waiting room whose groups are drawn or fixed.
