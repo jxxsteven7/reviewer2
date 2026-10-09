@@ -76,7 +76,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <a href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{ t('footer.byline') }}</a>
         <UiButton variant="quiet" size="small" @click="tipping = true">{{ t('footer.tip') }}</UiButton>
       </p>
-      <p>{{ t('footer.build', { version }) }}</p>
+      <p>{{ t('footer.version', { version }) }}</p>
       <SendFeedback page="home" />
     </footer>
 

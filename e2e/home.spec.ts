@@ -1,10 +1,10 @@
-import { createRoom, newPlayer, TEXT, expect, test } from './helpers';
+import { createRoom, interpolate, newPlayer, TEXT, expect, test } from './helpers';
 
-// The home page names the author and offers the reward code, which is served from our own server
-// as it was given, and which the rooms never show.
+// The home page names the author and the build's version, and offers the reward code, which is
+// served from our own server as it was given, and which the rooms never show.
 
 for (const language of ['en', 'zh'] as const) {
-  test(`the home page names the author and offers a cola, in ${language}`, async ({ browser }) => {
+  test(`the home page names the author and the version, and offers a cola, in ${language}`, async ({ browser }) => {
     const text = TEXT[language];
     const page = await newPlayer(browser, language);
     // Creating a room goes through the home page, and the room has no reward code.
@@ -16,6 +16,11 @@ for (const language of ['en', 'zh'] as const) {
     await expect(byline).toHaveAttribute('href', 'https://jxxsteven7.github.io/');
     await expect(byline).toHaveAttribute('target', '_blank');
     await expect(byline).toHaveAttribute('rel', 'noopener noreferrer');
+
+    // The foot names the version the page was built with, which is the one the server reports.
+    const { version } = (await (await page.request.get('/healthz')).json()) as { version: string };
+    const label = interpolate(text.footer.version, { version });
+    await expect(page.locator('footer').getByText(label, { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: text.footer.tip }).click();
     const sheet = page.locator('[role=dialog]');

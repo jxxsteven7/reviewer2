@@ -450,7 +450,7 @@
     "tip": "给作者点一杯可乐",
     "tipCode": "作者的微信赞赏码",
     "tipHint": "在微信里长按识别，或用微信扫一扫。",
-    "build": "版本 {version}"
+    "version": "版本 {version}"
   },
   "feedback": {
     "open": "提建议",

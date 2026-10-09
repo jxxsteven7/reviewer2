@@ -450,7 +450,7 @@
     "tip": "Buy the author a cola",
     "tipCode": "The author's WeChat reward code",
     "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
-    "build": "Version {version}"
+    "version": "Version {version}"
   },
   "feedback": {
     "open": "Send feedback",
