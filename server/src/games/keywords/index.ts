@@ -1,5 +1,6 @@
 import {
   BOARD_SIZE,
+  cardsClash,
   defaultSettings,
   otherTeam,
   sameSettings,
@@ -181,6 +182,9 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
   wordsNeeded: BOARD_SIZE,
+  // Two words of which one repeats the other, as the strict clue rule sees it, would give each
+  // other away: "Gene" and "Gene editing" can't share a board.
+  wordsClash: cardsClash,
 
   create: (language) => ({ settings: defaultSettings(language), seating: emptySeating(), game: null, match: null }),
 

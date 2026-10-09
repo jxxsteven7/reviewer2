@@ -742,6 +742,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       asChair(socket, (room) => {
         const result = room.start(round);
         if (result.ok) log('game_started', { code: room.code, players: room.members.size });
+        // Only fields that leave no other way get words that clash (Room.start).
+        if (result.ok && result.clashes > 0) {
+          log('words_clashed', {
+            code: room.code,
+            language: room.language,
+            fields: room.fields,
+            clashes: result.clashes,
+          });
+        }
         return changed(room, result);
       }),
     );

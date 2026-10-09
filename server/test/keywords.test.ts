@@ -244,6 +244,30 @@ describe('seats and starting', () => {
     expect(data(ann).startProblems).toEqual([]);
   });
 
+  test('deals no two words of which one gives the other away', async () => {
+    await server.close();
+    // "Gene editing" repeats both "Gene" and "Editing", which a board of these 26 words needs.
+    const others = Array.from({ length: 23 }, (_, i) => `Word${String.fromCharCode(0x61 + i)}`);
+    const words = ['Gene editing', 'Gene', 'Editing', ...others];
+    server = await startServer({
+      games: [keywordsGame],
+      words: new WordLibrary([
+        { id: 'general', name: { zh: 'G', en: 'G' }, terms: words.map((en, i) => ({ id: `w${i}`, en })) },
+      ]),
+    });
+    const table = await seatTable();
+    expect(new Set(board(table.spectator).cards.map((card) => card.word))).toEqual(new Set(words.slice(1)));
+    expect(server.logs.map((entry) => entry.event)).not.toContain('words_clashed');
+  });
+
+  test('logs a board whose fields leave no way to keep such words apart', async () => {
+    // The test words are phrases such as "general word 3", and every two of them share a part.
+    const table = await seatTable();
+    expect(server.logs.filter((entry) => entry.event === 'words_clashed')).toEqual([
+      { event: 'words_clashed', fields: { code: table.code, language: 'en', fields: ['general'], clashes: 300 } },
+    ]);
+  });
+
   test('a captain seat holds one player, and seats must make sense', async () => {
     const table = await seatTable(false);
     expect(await table.spectator.send('keywords:seat', { team: 'red', role: 'captain' })).toEqual({

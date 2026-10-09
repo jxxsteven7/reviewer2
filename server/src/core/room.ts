@@ -378,14 +378,17 @@ export class Room {
   // started then. One that arrives after another start, such as from a second tab whose
   // connection had stalled, is stale, even when the room is back in the waiting room by now.
   //
-  // The room draws the words itself, preferring those that it hasn't played with yet.
-  start(round: number): Ack {
+  // The room draws the words itself, preferring those that it hasn't played with yet, and none
+  // that clash with each other, as far as its fields allow. `clashes` says how many pairs of the
+  // words drawn clash all the same: it is 0 unless the fields leave no other way.
+  start(round: number): Ack<{ clashes: number }> {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (this.match && this.match.status !== 'on') return fail('match_over');
     if (!this.game.canStart(this.data, this.context)) return fail('cannot_start');
     const pool = this.#words.pool(this.fields, this.language);
-    const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng);
+    const clash = this.game.wordsClash?.bind(this.game);
+    const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng, clash);
     // chooseFields() has made sure of this, and the library doesn't change while the server runs.
     if (!draw) throw new Error(`the fields of room ${this.code} have too few words for a game`);
     const gameId = randomId();
@@ -403,7 +406,7 @@ export class Room {
       }
     }
     this.changed();
-    return done;
+    return { ok: true, clashes: draw.clashes };
   }
 
   // A withdrawal names the game it is meant for, so that one sent late, for instance by a tab

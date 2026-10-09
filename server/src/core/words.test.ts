@@ -1,11 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { BOARD_SIZE, wordKey, type Language } from '@reviewer2/shared';
+import { BOARD_SIZE, cardsClash, LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
 import { afterAll, describe, expect, test } from 'vitest';
 import { seededRng } from './random';
-import { drawWords, loadWordLibrary, WordLibrary, type WordListData } from './words';
+import { drawWords, loadWordLibrary, WordLibrary, type Clash, type WordListData } from './words';
 
 // Chinese test words are written as \u escapes (docs/rules/language.md).
 const zh = (i: number) => `\u8bcd${i}`;
@@ -260,6 +260,93 @@ describe('drawing words', () => {
 
   test('gives up when the pool is too small', () => {
     expect(drawWords(pool.slice(0, 24), 25, new Set(), seededRng(1))).toBeNull();
+    expect(drawWords(pool.slice(0, 24), 25, new Set(), seededRng(1), () => false)).toBeNull();
+  });
+});
+
+describe('drawing words that clash', () => {
+  const numbered = (count: number) => Array.from({ length: count }, (_, i) => ({ word: `Word ${i}` }));
+  const number = ({ word }: BoardWord) => Number(word.slice(5));
+  // The pairs of the words that clash, as `clash` sees them.
+  const pairs = (words: readonly BoardWord[], clash: Clash) =>
+    words.flatMap((a, i) => words.slice(i + 1).filter((b) => clash(a, b))).length;
+
+  test('draws no two words that clash', () => {
+    const pool = numbered(60);
+    // Each word clashes with the one 30 further on, and with its neighbor in its pair: 0 and 1,
+    // 2 and 3, and so on. Then each four words, such as 0, 1, 30 and 31, make a ring.
+    const clash = (a: BoardWord, b: BoardWord) => {
+      const apart = Math.abs(number(a) - number(b));
+      return apart === 30 || (apart === 1 && Math.min(number(a), number(b)) % 2 === 0);
+    };
+    let used: ReadonlySet<string> = new Set();
+    for (let seed = 0; seed < 100; seed += 1) {
+      const draw = drawWords(pool, 25, used, seededRng(seed), clash);
+      expect(draw?.words).toHaveLength(25);
+      expect(new Set(draw?.words).size).toBe(25);
+      expect(pairs(draw?.words ?? [], clash)).toBe(0);
+      expect(draw?.clashes).toBe(0);
+      used = draw?.used ?? new Set();
+    }
+  });
+
+  test('still prefers the words not used yet, and starts over once it takes a used one', () => {
+    const pool = numbered(60);
+    // The unused words are 30 to 59, but every odd one clashes with the even one before it.
+    const used = new Set(pool.slice(0, 30).map(({ word }) => wordKey(word)));
+    const clash = (a: BoardWord, b: BoardWord) =>
+      Math.min(number(a), number(b)) >= 30 && Math.floor(number(a) / 2) === Math.floor(number(b) / 2);
+    for (let seed = 0; seed < 20; seed += 1) {
+      const draw = drawWords(pool, 25, used, seededRng(seed), clash);
+      const drawn = draw?.words ?? [];
+      // One of each of the 15 pairs of unused words, and 10 used words.
+      expect(drawn.filter((word) => number(word) >= 30)).toHaveLength(15);
+      expect(pairs(drawn, clash)).toBe(0);
+      expect(draw?.used).toEqual(new Set(drawn.map(({ word }) => wordKey(word))));
+    }
+    // Without clashes it takes 25 unused words and remembers them with the others.
+    const plain = drawWords(pool, 25, used, seededRng(1), () => false);
+    expect(plain?.words.every((word) => number(word) >= 30)).toBe(true);
+    expect(plain?.used.size).toBe(55);
+  });
+
+  test('fills the board from a small pool with many clashes whenever it can', () => {
+    // Word 0 clashes with words 1 and 2: a board needs both of them, and must leave word 0 out,
+    // which a pass in a random order often wouldn't.
+    const pool = numbered(26);
+    const clash = (a: BoardWord, b: BoardWord) =>
+      Math.min(number(a), number(b)) === 0 && Math.max(number(a), number(b)) <= 2;
+    for (let seed = 0; seed < 100; seed += 1) {
+      const draw = drawWords(pool, 25, new Set(), seededRng(seed), clash);
+      expect(draw?.clashes).toBe(0);
+      expect(draw?.words.map(number).sort((a, b) => a - b)).toEqual(Array.from({ length: 25 }, (_, i) => i + 1));
+    }
+  });
+
+  test('lets as few words clash as it must when the pool leaves no other way, and says how many', () => {
+    // Words 0, 1 and 2 all clash with each other, and a board needs two of them.
+    const triangle = (a: BoardWord, b: BoardWord) => number(a) <= 2 && number(b) <= 2;
+    for (let seed = 0; seed < 50; seed += 1) {
+      const draw = drawWords(numbered(26), 25, new Set(), seededRng(seed), triangle);
+      expect(draw?.words).toHaveLength(25);
+      expect(new Set(draw?.words).size).toBe(25);
+      expect(draw?.clashes).toBe(1);
+      expect(pairs(draw?.words ?? [], triangle)).toBe(1);
+    }
+  });
+
+  test('ends even when every word clashes with every other', () => {
+    let calls = 0;
+    const always = () => {
+      calls += 1;
+      return true;
+    };
+    const draw = drawWords(numbered(40), 25, new Set(), seededRng(1), always);
+    expect(draw?.words).toHaveLength(25);
+    expect(new Set(draw?.words).size).toBe(25);
+    expect(draw?.clashes).toBe((25 * 24) / 2);
+    // One pass, then every pair once and each word drawn against the rest.
+    expect(calls).toBeLessThan(40 + (40 * 39) / 2 + 25 * 40);
   });
 });
 
@@ -421,6 +508,8 @@ describe('the word list check', async () => {
     MIN_TERMS: number;
     wordKey(text: string): string;
     checkWordList(data: unknown, file: string): { problems: string[]; counts: Record<Language, number> };
+    clashEntry(word: string, translations?: string[], forms?: string[]): unknown;
+    clash(a: unknown, b: unknown): boolean;
   }
   const script = join(import.meta.dirname, '..', '..', '..', 'scripts', 'check-words.mjs');
   const check = (await import(/* @vite-ignore */ pathToFileURL(script).href)) as CheckWords;
@@ -488,5 +577,99 @@ describe('the word list check', async () => {
 
   test('asks for as many terms as a board has cards', () => {
     expect(check.MIN_TERMS).toBe(BOARD_SIZE);
+  });
+
+  test('finds the words that clash as the game does', () => {
+    const texts: (string | BoardWord)[] = [
+      'Gene',
+      'Gene editing',
+      'Genes',
+      'Editing',
+      'Mixture models',
+      'Model',
+      'Modeling',
+      'Data',
+      'Datacenter',
+      { word: 'Data', forms: ['dataset', 'database'] },
+      'Dataset',
+      { word: 'GPU', forms: ['graphics processing unit', '\u56fe\u5f62\u5904\u7406\u5668'] },
+      'Unit',
+      'Graphics',
+      '\u5904\u7406\u5668',
+      '\u57fa\u56e0',
+      '\u57fa\u56e0\u7f16\u8f91',
+      '\u6570\u5b66',
+      '\u5316\u5b66',
+      `GPU ${zh(1)}`,
+      zh(12),
+      REVIEWER,
+      `${REVIEWER_TRADITIONAL} 2`,
+      { word: '\u53d8\u6362\u5668', translations: ['Transformer'] },
+      'Transformers',
+      'State of the art',
+      'Out of distribution',
+      "Master's",
+      "Occam's razor",
+      'Co-author',
+      'coauthor',
+      'Self\u2011attention',
+      'ATTENTION',
+      'Atte\u0301ntion  span',
+      '\uff21\uff29',
+      'AI',
+      'Email',
+    ];
+    const words = texts.map((text) => (typeof text === 'string' ? { word: text } : text));
+    const entries = words.map(({ word, translations, forms }) =>
+      check.clashEntry(word, [...(translations ?? [])], [...(forms ?? [])]),
+    );
+    let clashes = 0;
+    words.forEach((a, i) =>
+      words.forEach((b, j) => {
+        if (i === j) return;
+        const game = cardsClash(a, b);
+        expect(check.clash(entries[i], entries[j]), `${a.word} and ${b.word}`).toBe(game);
+        if (game) clashes += 1;
+      }),
+    );
+    // Enough of them clash, and enough don't, for the comparison to mean something.
+    expect(clashes).toBeGreaterThan(30);
+    expect(clashes).toBeLessThan(words.length * (words.length - 1) - 200);
+  });
+
+  test('finds the same words that clash as the game in every list of the library', () => {
+    const dir = join(import.meta.dirname, '..', '..', '..', 'words');
+    const library = loadWordLibrary(dir);
+    const files = readdirSync(dir).filter((file) => file.endsWith('.json'));
+    expect(files.length).toBeGreaterThan(0);
+    const pairKey = (a: string, b: string) => [wordKey(a), wordKey(b)].sort().join(' | ');
+    for (const file of files) {
+      const data = JSON.parse(readFileSync(join(dir, file), 'utf8')) as WordListData;
+      for (const language of LANGUAGES) {
+        const other = LANGUAGES.find((each) => each !== language) as Language;
+        const terms = data.terms.filter((term) => term[language]);
+        const entries = terms.map((term) =>
+          check.clashEntry(
+            term[language] as string,
+            term[other] ? [term[other]] : [],
+            LANGUAGES.flatMap((each) => term.forms?.[each] ?? []),
+          ),
+        );
+        const script = new Set<string>();
+        entries.forEach((a, i) =>
+          entries.forEach((b, j) => {
+            if (i < j && check.clash(a, b)) script.add(pairKey(terms[i]?.[language] ?? '', terms[j]?.[language] ?? ''));
+          }),
+        );
+        const pool = library.pool([data.id], language);
+        const game = new Set<string>();
+        pool.forEach((a, i) =>
+          pool.forEach((b, j) => {
+            if (i < j && cardsClash(a, b)) game.add(pairKey(a.word, b.word));
+          }),
+        );
+        expect(script, `${file} in ${language}`).toEqual(game);
+      }
+    }
   });
 });
