@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { MIN_SECRET_LENGTH } from './accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
 
@@ -20,6 +22,10 @@ export interface Config {
   dataDir: string | null;
   // The port of the status page, or null when it is off (docs/architecture.md).
   statusPort: number | null;
+  // The server's secret, which email fingerprints are made with, and the mailer's socket. Without
+  // both, accounts have no email (docs/architecture.md).
+  secret: string | null;
+  mailerSocket: string | null;
   version: string;
 }
 
@@ -58,6 +64,30 @@ function flag(name: string, value: string | undefined, fallback = false): boolea
   throw new Error(`${name} must be 1 or 0, not "${value}"`);
 }
 
+// The server's secret, from SERVER_SECRET or, as systemd's credentials give it, from the file that
+// SERVER_SECRET_FILE names. One that is too short to be safe stops the server.
+function serverSecret(env: NodeJS.ProcessEnv): string | null {
+  const { SERVER_SECRET: value, SERVER_SECRET_FILE: file } = env;
+  if (value?.trim() && file?.trim()) throw new Error('set SERVER_SECRET or SERVER_SECRET_FILE, not both');
+  const secret = file?.trim() ? readFileSync(file.trim(), 'utf8').trim() : (value?.trim() ?? '');
+  if (secret === '') return null;
+  if (secret.length < MIN_SECRET_LENGTH) {
+    throw new Error(
+      `the server's secret must have at least ${MIN_SECRET_LENGTH} characters, such as 32 random bytes in base64`,
+    );
+  }
+  return secret;
+}
+
+// The mailer's socket, taken from the repository's root when it is relative, as DATA_DIR is. A
+// socket's path can have 107 bytes at most on Linux, and a longer one would be cut short.
+function mailerSocket(value: string | undefined): string | null {
+  if (!value?.trim()) return null;
+  const path = resolve(root, value.trim());
+  if (Buffer.byteLength(path) > 107) throw new Error(`MAILER_SOCKET must be a path of at most 107 bytes, not ${path}`);
+  return path;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const port = wholeNumber('PORT', env.PORT, 3000, 65535);
   // The status page listens on 127.0.0.1 only, and is off unless STATUS_PORT names a port for it.
@@ -90,6 +120,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // server is started from: `npm run dev` starts it in server/.
     dataDir: env.DATA_DIR?.trim() ? resolve(root, env.DATA_DIR.trim()) : null,
     statusPort,
+    secret: serverSecret(env),
+    mailerSocket: mailerSocket(env.MAILER_SOCKET),
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   };
 }

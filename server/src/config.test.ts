@@ -1,3 +1,5 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { loadConfig } from './config';
@@ -139,6 +141,45 @@ describe('COOKIE_SECURE', () => {
     for (const COOKIE_SECURE of ['2', 'secure', 'https']) {
       expect(() => loadConfig({ COOKIE_SECURE }), COOKIE_SECURE).toThrow(/COOKIE_SECURE/);
     }
+  });
+});
+
+describe('the server secret', () => {
+  test('is off without SERVER_SECRET or SERVER_SECRET_FILE', () => {
+    expect(loadConfig({}).secret).toBeNull();
+    expect(loadConfig({ SERVER_SECRET: '  ' }).secret).toBeNull();
+  });
+
+  test('comes from the variable or from the file it names, without the space around it', () => {
+    const secret = 'k'.repeat(44);
+    expect(loadConfig({ SERVER_SECRET: ` ${secret} ` }).secret).toBe(secret);
+    const dir = mkdtempSync(join(tmpdir(), 'reviewer2-secret-'));
+    try {
+      writeFileSync(join(dir, 'secret'), `${secret}\n`);
+      expect(loadConfig({ SERVER_SECRET_FILE: join(dir, 'secret') }).secret).toBe(secret);
+      expect(() => loadConfig({ SERVER_SECRET_FILE: join(dir, 'missing') })).toThrow(/ENOENT/);
+      expect(() => loadConfig({ SERVER_SECRET: secret, SERVER_SECRET_FILE: join(dir, 'secret') })).toThrow(/not both/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('that is too short to be safe stops the server', () => {
+    expect(() => loadConfig({ SERVER_SECRET: 'k'.repeat(31) })).toThrow(/at least 32 characters/);
+  });
+});
+
+describe('MAILER_SOCKET', () => {
+  test('is off when unset, and taken from the repository root when it is relative', () => {
+    expect(loadConfig({}).mailerSocket).toBeNull();
+    expect(loadConfig({ MAILER_SOCKET: '/run/reviewer2-mailer/mailer.sock' }).mailerSocket).toBe(
+      '/run/reviewer2-mailer/mailer.sock',
+    );
+    expect(loadConfig({ MAILER_SOCKET: 'data/mailer.sock' }).mailerSocket).toBe(join(root, 'data', 'mailer.sock'));
+  });
+
+  test('is a path that a socket can have', () => {
+    expect(() => loadConfig({ MAILER_SOCKET: `/${'x'.repeat(107)}` })).toThrow(/at most 107 bytes/);
   });
 });
 

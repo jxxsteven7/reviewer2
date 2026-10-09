@@ -3,6 +3,7 @@ export * from './codes';
 export * from './feedback';
 export { hasHan } from './han';
 export * from './language';
+export * from './mail';
 export * from './names';
 export * from './protocol';
 export * from './room';

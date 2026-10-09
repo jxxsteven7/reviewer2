@@ -90,7 +90,21 @@ describe('starting', () => {
     await start({ ACCOUNTS_PER_HOUR: '100', COOKIE_SECURE: '0' });
     expect(logged('accounts_per_hour_raised')).toEqual({ accountsPerHour: 100, default: 5 });
     expect(logged('cookies_not_secure')).toEqual({ hint: 'only for plain HTTP, as in development' });
-    expect(logged('listening')).toMatchObject({ accountsPerHour: 100, cookieSecure: false });
+    expect(logged('listening')).toMatchObject({ accountsPerHour: 100, cookieSecure: false, mail: false });
+  });
+
+  test('gives accounts email with both the server secret and the mailer', async () => {
+    const started = (await start({
+      SERVER_SECRET: 's'.repeat(44),
+      MAILER_SOCKET: join(dir, 'mailer.sock'),
+    })) as Running;
+    expect(logged('listening')).toMatchObject({ mail: true });
+    expect(started.accounts.mailAvailable).toBe(true);
+    await started.stop('test');
+    running.splice(0);
+    logs = [];
+    await start({ SERVER_SECRET: 's'.repeat(44) });
+    expect(logged('listening')).toMatchObject({ mail: false });
   });
 
   test('with DATA_DIR keeps the database there, from one start to the next', async () => {

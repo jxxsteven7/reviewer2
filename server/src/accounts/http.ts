@@ -93,7 +93,7 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
   const signedOut = clearedCookie(secureCookies);
   const state = (login: Login | null): AccountState => ({
     account: login ? accounts.summary(login.account) : null,
-    mail: false,
+    mail: accounts.mailAvailable,
   });
 
   const routes: Record<string, Route> = {
@@ -131,6 +131,32 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
       },
       true,
     ),
+    [ACCOUNT_API.email]: post(
+      ACCOUNT_REQUESTS.email,
+      async ({ ip, login, body }) =>
+        fromResult(await accounts.bindEmail(ip, login as Login, body.email, body.password, body.language)),
+      true,
+    ),
+    [ACCOUNT_API.emailRemove]: post(
+      ACCOUNT_REQUESTS.emailRemove,
+      async ({ ip, login, body }) => fromResult(await accounts.unbindEmail(ip, login as Login, body.password)),
+      true,
+    ),
+    // The links in mails work without a login.
+    [ACCOUNT_API.emailConfirm]: post(ACCOUNT_REQUESTS.emailConfirm, ({ body }) =>
+      fromResult(accounts.confirmEmail(body.token)),
+    ),
+    [ACCOUNT_API.forgot]: post(ACCOUNT_REQUESTS.forgot, ({ ip, body }) =>
+      fromResult(accounts.forgotPassword(ip, body.email, body.language)),
+    ),
+    [ACCOUNT_API.reset]: post(ACCOUNT_REQUESTS.reset, async ({ login, body }) => {
+      const result = await accounts.resetPassword(body.token, body.password);
+      if (!result.ok) return failure(result.error);
+      // A browser that was logged in to another account is logged out of it. A login to this
+      // account has ended with the reset.
+      if (login && login.account.id !== result.accountId) accounts.logOut(login);
+      return ok({}, signedIn(result.secret));
+    }),
     [ACCOUNT_API.remove]: post(
       ACCOUNT_REQUESTS.remove,
       async ({ ip, login, body }) => {

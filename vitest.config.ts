@@ -11,6 +11,7 @@ export default defineConfig({
         test: { name: 'server', root: './server', include: ['src/**/*.test.ts', 'test/**/*.test.ts'] },
       },
       { extends: './client/vite.config.ts', test: { name: 'client', root: './client', include: ['src/**/*.test.ts'] } },
+      { extends: false, test: { name: 'mailer', root: './mailer', include: ['src/**/*.test.ts'] } },
     ],
   },
 });

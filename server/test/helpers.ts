@@ -1,8 +1,10 @@
 import type { AddressInfo } from 'node:net';
 import type { DatabaseSync } from 'node:sqlite';
-import type { Ack, ClosedReason, EmoteEvent, RoomView, Session } from '@reviewer2/shared';
+import type { Ack, ClosedReason, EmoteEvent, MailRequest, RoomView, Session } from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
+import { fingerprintKey } from '../src/accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from '../src/accounts/limits';
+import type { MailChannel, MailOutcome } from '../src/accounts/mail';
 import { PasswordHasher } from '../src/accounts/passwords';
 import { Accounts } from '../src/accounts/service';
 import type { GameModule } from '../src/core/game';
@@ -28,6 +30,26 @@ const list = (id: string, count: number): WordListData => ({
 });
 
 export const testWords = () => new WordLibrary([list('general', 40), list('tiny', 2)]);
+
+// A mailer that keeps what it is asked to send, and answers `outcome`.
+export class FakeMail implements MailChannel {
+  readonly sent: MailRequest[] = [];
+  outcome: MailOutcome = 'sent';
+
+  send(request: MailRequest): Promise<MailOutcome> {
+    this.sent.push(request);
+    return Promise.resolve(this.outcome);
+  }
+
+  // The secret in the last mail of a kind.
+  last(kind: MailRequest['kind']): string {
+    const mail = this.sent.filter((request) => request.kind === kind).at(-1);
+    if (!mail) throw new Error(`no ${kind} mail was sent`);
+    return mail.token;
+  }
+}
+
+export const TEST_SECRET = 'test-secret-'.repeat(4);
 
 // Hashes that take a millisecond, rather than a tenth of a second, so that tests can make many.
 export const fastHasher = (concurrency = 2, queue = 32) =>
@@ -63,6 +85,8 @@ export async function startServer(
     cookieSecure?: boolean;
     // The system's clock for what accounts keep, such as how old a login is.
     clock?: () => number;
+    // A mailer, which gives accounts email, with the server secret of the tests.
+    mail?: MailChannel;
     rng?: Rng;
   } = {},
 ): Promise<TestServer> {
@@ -89,6 +113,7 @@ export async function startServer(
     log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
     limits: { ...DEFAULT_ACCOUNT_LIMITS, ...options.accountLimits },
     hasher: options.hasher ?? fastHasher(),
+    ...(options.mail && { mail: options.mail, fingerprintKey: fingerprintKey(TEST_SECRET) }),
   });
   const socketLimits = { ...DEFAULT_SOCKET_LIMITS, ...options.socketLimits };
   if (options.roomsPerMinute !== undefined) socketLimits.roomsPerMinute = options.roomsPerMinute;

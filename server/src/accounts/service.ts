@@ -3,9 +3,12 @@ import {
   checkPassword,
   checkUsername,
   cleanName,
+  MAIL_LINK_MS,
   usernameKey,
   type AccountError,
   type AccountSummary,
+  type Language,
+  type MailKind,
   type RecordsView,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
@@ -13,7 +16,9 @@ import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { RecordStore, TitleStore, type NewRecord } from '../store/records';
 import { MailTokenStore, SessionStore, type SessionLimits } from '../store/sessions';
+import { fingerprint, normalizeEmail } from './email';
 import { AccountCounters, DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from './limits';
+import type { MailChannel } from './mail';
 import { BusyError, PasswordHasher } from './passwords';
 import { hashSecret, isSecret, newSecret } from './tokens';
 
@@ -68,6 +73,10 @@ export interface AccountsOptions {
   maxDatabaseBytes?: number;
   // Called after an account was deleted, so that what it held can be dropped from the WAL too.
   deleted?: () => void;
+  // The key that email addresses are fingerprinted with, and the way to the mailer. Without both,
+  // accounts have no email: no address can be bound, and no password reset.
+  fingerprintKey?: Buffer | null;
+  mail?: MailChannel | null;
 }
 
 export class Accounts {
@@ -84,6 +93,8 @@ export class Accounts {
   readonly #log: Log;
   readonly #maxDatabaseBytes: number;
   readonly #deleted: () => void;
+  readonly #fingerprintKey: Buffer | null;
+  readonly #mail: MailChannel | null;
   // Whether the log has been told that the database is full. Once is enough until it isn't.
   #fullLogged = false;
 
@@ -93,6 +104,8 @@ export class Accounts {
     this.#log = options.log ?? (() => {});
     this.#maxDatabaseBytes = options.maxDatabaseBytes ?? MAX_DATABASE_BYTES;
     this.#deleted = options.deleted ?? (() => {});
+    this.#fingerprintKey = options.fingerprintKey ?? null;
+    this.#mail = options.mail ?? null;
     this.store = new AccountStore(options.db, clock);
     this.sessions = new SessionStore(options.db, clock, options.sessionLimits);
     this.mailTokens = new MailTokenStore(options.db, clock);
@@ -256,6 +269,140 @@ export class Accounts {
     this.#log('account_deleted', { id });
     this.#deleted();
     return { ok: true, avatar: removed.account.avatar };
+  }
+
+  // Whether accounts have email on this server.
+  get mailAvailable(): boolean {
+    return this.#fingerprintKey !== null && this.#mail !== null;
+  }
+
+  // Asks for a link that binds an address to the account, which takes effect once it is opened.
+  // The password is asked for, since an address can reset the password: whoever has a login and
+  // not the password must not be able to bind an address of their own. Whether or not another
+  // account has the address, the answer is the same and the account has an address waiting to be
+  // confirmed; only the mail isn't sent when another account has it, so that nobody learns from
+  // any of it which addresses are bound.
+  async bindEmail(
+    ip: string,
+    login: Login,
+    rawEmail: string,
+    password: string,
+    language: Language,
+  ): Promise<AccountResult> {
+    if (!this.mailAvailable) return refuse('mail_unavailable');
+    const email = normalizeEmail(rawEmail);
+    if (email === null) return refuse('email_invalid');
+    const { binds, mails } = this.counters;
+    const account = String(login.account.id);
+    if (!binds.allowed(account) || !mails.allowed(ip)) return refuse('email_limited');
+    const confirmed = await this.#confirm(ip, login, password);
+    if (!confirmed.ok) return confirmed;
+    binds.add(account);
+    mails.add(ip);
+    const address = fingerprint(this.#fingerprintKey as Buffer, email);
+    const secret = newSecret();
+    const owner = this.store.transaction(() => {
+      if (!this.store.byId(login.account.id)) return null;
+      this.mailTokens.deleteForAccount(login.account.id, 'bind');
+      this.mailTokens.create(hashSecret(secret), login.account.id, 'bind', address, MAIL_LINK_MS.bind);
+      return this.store.byEmail(address) ?? 'nobody';
+    });
+    if (owner === null) return refuse('not_logged_in');
+    if (owner === 'nobody') this.#send('bind', email, secret, language);
+    return { ok: true };
+  }
+
+  // Binds the address that the link was for, unless another account has bound it meanwhile. The
+  // link works without a login: the mail may be opened on another device.
+  confirmEmail(token: string): AccountResult {
+    if (!isSecret(token)) return refuse('link_invalid');
+    const hash = hashSecret(token);
+    const bound = this.store.transaction(() => {
+      const link = this.mailTokens.find(hash, 'bind');
+      if (!link?.emailFp) return false;
+      this.mailTokens.delete(hash);
+      if (!this.store.setEmail(link.accountId, link.emailFp)) return false;
+      this.mailTokens.deleteForAccount(link.accountId, 'bind');
+      return true;
+    });
+    return bound ? { ok: true } : refuse('link_invalid');
+  }
+
+  // Unbinds the address, and forgets one that waits for its link. Asks for the password, since
+  // without an address a forgotten password can't be reset.
+  async unbindEmail(ip: string, login: Login, password: string): Promise<AccountResult> {
+    const confirmed = await this.#confirm(ip, login, password);
+    if (!confirmed.ok) return confirmed;
+    this.store.transaction(() => {
+      this.store.setEmail(login.account.id, null);
+      this.mailTokens.deleteForAccount(login.account.id, 'bind');
+    });
+    return { ok: true };
+  }
+
+  // Sends a link that resets the password to the address, if an account has it. The answer is the
+  // same either way, and comes before anything is looked up, so that not even the time it takes
+  // says whether an account has the address.
+  forgotPassword(ip: string, rawEmail: string, language: Language): AccountResult {
+    if (!this.mailAvailable) return refuse('mail_unavailable');
+    const email = normalizeEmail(rawEmail);
+    if (email === null) return refuse('email_invalid');
+    const address = fingerprint(this.#fingerprintKey as Buffer, email);
+    const key = address.toString('base64url');
+    const { resets, mails } = this.counters;
+    if (!resets.allowed(key) || !mails.allowed(ip)) return refuse('email_limited');
+    resets.add(key);
+    mails.add(ip);
+    setImmediate(() => {
+      try {
+        const account = this.store.byEmail(address);
+        if (!account) return;
+        const secret = newSecret();
+        this.mailTokens.create(hashSecret(secret), account.id, 'reset', null, MAIL_LINK_MS.reset);
+        this.#send('reset', email, secret, language);
+      } catch (error) {
+        this.#log('error', { where: 'forgot', message: error instanceof Error ? error.message : String(error) });
+      }
+    });
+    return { ok: true };
+  }
+
+  // Sets a new password with a link from a mail. The link works once: setting the password uses it
+  // up, with every other link to reset this account's password, and logs the account out
+  // everywhere. The browser that set it is logged in.
+  async resetPassword(token: string, password: string): Promise<AccountResult<{ secret: string; accountId: number }>> {
+    if (!isSecret(token)) return refuse('link_invalid');
+    const problem = checkPassword(password);
+    if (problem) return refuse(problem);
+    const hash = hashSecret(token);
+    if (!this.mailTokens.find(hash, 'reset')) return refuse('link_invalid');
+    const hashed = await this.#hash(password);
+    if (!hashed.ok) return hashed;
+    const secret = newSecret();
+    // The link may have been used, or the account deleted, while the password was being hashed.
+    const reset = this.store.transaction(() => {
+      const link = this.mailTokens.find(hash, 'reset');
+      const account = link && this.store.byId(link.accountId);
+      if (!account) return null;
+      this.store.setPassword(account.id, hashed.hash);
+      this.mailTokens.deleteForAccount(account.id, 'reset');
+      const ended = this.sessions.deleteForAccount(account.id);
+      this.sessions.create(hashSecret(secret), account.id);
+      return { account, ended };
+    });
+    if (!reset) return refuse('link_invalid');
+    this.counters.forgive(reset.account.key);
+    this.hooks.sessionsEnded(reset.ended);
+    this.#log('password_reset', { id: reset.account.id });
+    return { ok: true, secret, accountId: reset.account.id };
+  }
+
+  // Hands a mail to the mailer, and logs how that went, without the address or the secret.
+  #send(kind: MailKind, to: string, token: string, language: Language): void {
+    this.#log('mail_requested', { kind });
+    void (this.#mail as MailChannel).send({ v: 1, kind, to, token, language }).then((outcome) => {
+      if (outcome !== 'sent') this.#log('mail_not_sent', { kind, outcome });
+    });
   }
 
   // Deletes the logins and the links that have ended, and says how many of each.

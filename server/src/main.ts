@@ -1,6 +1,8 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { basename } from 'node:path';
+import { fingerprintKey } from './accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
+import { socketMail } from './accounts/mail';
 import { Accounts } from './accounts/service';
 import { loadConfig } from './config';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
@@ -116,6 +118,8 @@ export async function main({
       walHoldsDeleted = true;
       dropFromWal();
     },
+    fingerprintKey: config.secret === null ? null : fingerprintKey(config.secret),
+    mail: config.mailerSocket === null ? null : socketMail(config.mailerSocket),
   });
 
   let server: AppServer;
@@ -160,6 +164,8 @@ export async function main({
         feedbackPer10Minutes: config.feedbackPerWindow,
         accountsPerHour,
         cookieSecure: config.cookieSecure,
+        // Email for accounts needs both the server's secret and the mailer.
+        mail: accounts.mailAvailable,
       });
       resolve(true);
     });

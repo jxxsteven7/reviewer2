@@ -17,6 +17,12 @@ export interface AccountLimits {
   loginFailuresPerDay: number;
   // Per address and minute: every request that changes something, whatever it is.
   requestsPerMinute: number;
+  // Mails: per account and day, addresses to confirm; per address and hour, mails of either kind
+  // that were asked for; per fingerprint of an address and hour, links to reset a password. The
+  // last is counted whether or not an account has the address.
+  bindsPerDay: number;
+  mailsPerHour: number;
+  resetsPerHour: number;
 }
 
 export const DEFAULT_ACCOUNT_LIMITS: Readonly<AccountLimits> = Object.freeze({
@@ -26,6 +32,9 @@ export const DEFAULT_ACCOUNT_LIMITS: Readonly<AccountLimits> = Object.freeze({
   loginFailuresPer15Minutes: 10,
   loginFailuresPerDay: 50,
   requestsPerMinute: 60,
+  bindsPerDay: 3,
+  mailsPerHour: 10,
+  resetsPerHour: 3,
 });
 
 const MINUTE = 60_000;
@@ -39,6 +48,9 @@ export class AccountCounters {
   readonly failuresByName: WindowCounter;
   readonly dailyFailuresByName: WindowCounter;
   readonly requests: WindowCounter;
+  readonly binds: WindowCounter;
+  readonly mails: WindowCounter;
+  readonly resets: WindowCounter;
 
   constructor(limits: AccountLimits, now: () => number) {
     this.registrations = new WindowCounter(limits.registrationsPerHour, HOUR, now);
@@ -47,6 +59,9 @@ export class AccountCounters {
     this.failuresByName = new WindowCounter(limits.loginFailuresPer15Minutes, 15 * MINUTE, now);
     this.dailyFailuresByName = new WindowCounter(limits.loginFailuresPerDay, DAY, now);
     this.requests = new WindowCounter(limits.requestsPerMinute, MINUTE, now);
+    this.binds = new WindowCounter(limits.bindsPerDay, DAY, now);
+    this.mails = new WindowCounter(limits.mailsPerHour, HOUR, now);
+    this.resets = new WindowCounter(limits.resetsPerHour, HOUR, now);
   }
 
   // Whether another password may be tried for this name from this address.

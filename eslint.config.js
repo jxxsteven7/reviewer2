@@ -22,7 +22,15 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['server/**', 'scripts/**', 'e2e/*.mjs', '*.config.*', 'client/vite.config.ts', 'client/compress.mjs'],
+    files: [
+      'server/**',
+      'mailer/**',
+      'scripts/**',
+      'e2e/*.mjs',
+      '*.config.*',
+      'client/vite.config.ts',
+      'client/compress.mjs',
+    ],
     languageOptions: { globals: globals.node },
   },
   {
