@@ -3,7 +3,8 @@ import type { GameModule } from '../src/core/game';
 // A tiny game for testing the shared layer. Players press a button; each viewer sees a line
 // meant only for them, which shows whether snapshots are really built per connection. A player can
 // also break one part of the game, which then throws until someone mends it, and set an alarm,
-// which rings by itself at its time. The game has one setting, a level from 1 to 3.
+// which rings by itself at its time. The game has one setting, a level from 1 to 3. A game that
+// is finished, rather than withdrawn, is won by everyone who came to play, for the records.
 
 export interface FakeData {
   joined: string[];
@@ -14,6 +15,7 @@ export interface FakeData {
   words: string[];
   gameId: string | null;
   over: boolean;
+  withdrawn: boolean;
   broken: 'join' | 'leave' | 'view' | 'configure' | 'tick' | null;
   // The one player for whom the broken part throws, or null when it throws for everyone.
   brokenFor: string | null;
@@ -57,6 +59,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     words: [],
     gameId: null,
     over: false,
+    withdrawn: false,
     broken: null,
     brokenFor: null,
     fragile: false,
@@ -94,13 +97,25 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     gameId,
     presses: 0,
     over: false,
+    withdrawn: false,
   }),
   isOver: (data) => data.over,
   withdraw(data, gameId) {
     if (gameId !== data.gameId) return { ok: false, error: 'stale' };
     if (data.over) return { ok: false, error: 'game_over' };
-    return { ok: true, data: { ...data, over: true } };
+    return { ok: true, data: { ...data, over: true, withdrawn: true } };
   },
+  results: (data) =>
+    data.withdrawn
+      ? null
+      : data.players.map((playerId) => ({
+          playerId,
+          side: 'all',
+          role: 'player',
+          winner: 'all',
+          won: true,
+          verdict: `pressed ${data.presses}`,
+        })),
   again: (data) => ({ ...data, words: [], gameId: null, over: false, alarm: null }),
   handle(data, ctx, _playerId, type, payload) {
     if (type === 'test:break') {

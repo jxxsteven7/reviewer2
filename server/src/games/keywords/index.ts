@@ -4,10 +4,13 @@ import {
   sameSettings,
   settingsProblems,
   SPECTATOR,
+  TEAMS,
+  verdictFor,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
   type Seat,
+  type Team,
 } from '@reviewer2/shared';
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
@@ -40,7 +43,7 @@ import {
   type Seating,
   type SeatRequest,
 } from './seats';
-import type { KeywordsState } from './state';
+import { remaining, type KeywordsState } from './state';
 import { viewFor } from './view';
 
 // The team word guessing game as a GameModule: the rules in rules.ts and seats.ts, connected to
@@ -187,6 +190,33 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     // The schema and the action of one message go together, which the types can't see across a
     // lookup by name, as in socket.ts.
     return (actions[message] as Action<KeywordsMessage>)(data, ctx, playerId, parsed.data);
+  },
+
+  // A game that was withdrawn counts for no record. Everyone in a seat when it ended took part: the
+  // captain as the group's PI and the guessers as its students. The verdict is the decision letter
+  // that their group got.
+  results(data) {
+    const result = data.game?.result;
+    if (!data.game || !result || result.winner === null) return null;
+    const left = Object.fromEntries(TEAMS.map((team) => [team, remaining(data.game?.cards ?? [], team)])) as Record<
+      Team,
+      number
+    >;
+    const { winner } = result;
+    return [...data.seating.seats].flatMap(([playerId, seat]) =>
+      seat.team === null
+        ? []
+        : [
+            {
+              playerId,
+              side: seat.team,
+              role: seat.role,
+              winner,
+              won: seat.team === winner,
+              verdict: verdictFor(result, left, seat.team),
+            },
+          ],
+    );
   },
 
   views(data, ctx) {

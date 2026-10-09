@@ -11,7 +11,7 @@ import {
   type RoomView,
 } from '@reviewer2/shared';
 import { done, fail, refusalOf } from './answers';
-import type { GameContext, GameModule, Viewer } from './game';
+import type { GameContext, GameModule, PlayerResult, Viewer } from './game';
 import { newPlayerId } from './identity';
 import { randomId, type Rng } from './random';
 import { drawWords, type WordLibrary } from './words';
@@ -23,10 +23,19 @@ import { drawWords, type WordLibrary } from './words';
 // A method asks the game module first and changes the room afterwards. A module that throws
 // then leaves the room exactly as it was, instead of half changed.
 
+// A member who is logged in to an account: which account, and the address of its avatar, or null
+// for the default one, which the client draws from the name.
+export interface MemberAccount {
+  id: number;
+  avatar: string | null;
+}
+
 export interface Member {
   id: string;
   key: string;
   name: string;
+  // The account, for a member who is logged in, whose name is then the username.
+  account: MemberAccount | null;
   sockets: Set<string>;
   offlineSince: number | null;
 }
@@ -167,8 +176,9 @@ export class Room {
     return removed !== undefined && removed.until > this.#now();
   }
 
-  // A new member, who has come to play or only to watch. The first one chairs the room.
-  join(key: string, rawName: string, play = false): Ack<{ member: Member }> {
+  // A new member, who has come to play or only to watch. The first one chairs the room. A member
+  // with an account comes with its username as the name.
+  join(key: string, rawName: string, play = false, account: MemberAccount | null = null): Ack<{ member: Member }> {
     const refusal = this.refusal(key);
     if (refusal) return fail(refusal);
     const name = cleanName(rawName);
@@ -179,6 +189,7 @@ export class Room {
       id: newPlayerId(),
       key,
       name,
+      account: account && { ...account },
       sockets: new Set(),
       offlineSince: null,
     };
@@ -277,16 +288,53 @@ export class Room {
     return [...this.screens, ...[...this.members.values()].flatMap((member) => [...member.sockets])];
   }
 
+  // A member with an account is called by its username, which changes on the account's page.
   rename(id: string, rawName: string): Ack {
     const name = cleanName(rawName);
     if (name === null) return fail('name_invalid');
     const member = this.members.get(id);
     if (!member) return fail('not_member');
+    if (member.account) return fail('account_name');
     if (member.name === name) return done;
     if (this.#nameTaken(name, id)) return fail('name_taken');
     member.name = name;
     this.changed();
     return done;
+  }
+
+  // A member's account has a new username or a new avatar. The name changes too, unless someone
+  // else in the room has it, as a guest may have since before the account was renamed: then the
+  // member keeps the name they had here. Returns whether the room looks any different.
+  updateAccount(id: string, username: string, avatar: string | null): boolean {
+    const member = this.members.get(id);
+    if (!member?.account) return false;
+    const renamed = this.#takeUsername(member, username);
+    if (!renamed && member.account.avatar === avatar) return false;
+    member.account.avatar = avatar;
+    this.changed();
+    return true;
+  }
+
+  // A guest's seat becomes an account's: the member logged in or registered while they were in the
+  // room, and is found by the account's key from now on. The name becomes the username, as for
+  // updateAccount(). False when the member isn't a guest here.
+  adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
+    const member = this.members.get(id);
+    if (!member || member.account) return false;
+    member.key = key;
+    member.account = { ...account };
+    this.#takeUsername(member, username);
+    this.changed();
+    return true;
+  }
+
+  // Gives a member their username as the name in the room, unless someone else here has it, and
+  // says whether the name changed.
+  #takeUsername(member: Member, username: string): boolean {
+    const name = cleanName(username);
+    if (name === null || name === member.name || this.#nameTaken(name, member.id)) return false;
+    member.name = name;
+    return true;
   }
 
   // --- the chair's controls ---------------------------------------------------------------
@@ -432,6 +480,12 @@ export class Room {
     this.changed();
   }
 
+  // How each player did in the game that has just ended, as the game says, or null when it counts
+  // for no record. Only an ended game has results.
+  results(): PlayerResult[] | null {
+    return this.phase === 'ended' ? (this.game.results?.(this.data, this.context) ?? null) : null;
+  }
+
   // --- the game's own time ----------------------------------------------------------------
 
   // When the game next has something to do by itself, on the room's clock, or null for never.
@@ -513,6 +567,7 @@ export class Room {
         id: member.id,
         name: member.name,
         online: member.sockets.size > 0,
+        ...(member.account?.avatar ? { avatar: member.account.avatar } : {}),
       })),
       screens: this.screens.size,
     };

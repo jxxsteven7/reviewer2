@@ -9,6 +9,7 @@ import {
 } from '@reviewer2/shared';
 import { computed, nextTick, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { act } from '../../core/socket';
@@ -69,6 +70,9 @@ function nameOf(playerId: string): string {
   return props.room.players.find((player) => player.id === playerId)?.name ?? t('game.chat.someone');
 }
 
+// The player who wrote a message, for the avatar beside it, or none for someone who has left.
+const playerOf = (playerId: string) => props.room.players.find((player) => player.id === playerId);
+
 const text = ref('');
 const input = ref<HTMLInputElement | null>(null);
 const sending = ref(false);
@@ -115,6 +119,11 @@ async function say() {
               class="message"
               :class="{ own: message.player === room.me }"
             >
+              <PlayerAvatar
+                v-if="playerOf(message.player)"
+                :name="playerOf(message.player)?.name ?? ''"
+                :avatar="playerOf(message.player)?.avatar"
+              />
               <span class="name">{{ nameOf(message.player) }}</span>
               <span class="text">{{ message.text }}</span>
             </p>
@@ -196,6 +205,11 @@ async function say() {
 
 .message {
   overflow-wrap: anywhere;
+}
+
+.message :deep(.avatar) {
+  margin-right: var(--space-1);
+  vertical-align: -0.4em;
 }
 
 .name {

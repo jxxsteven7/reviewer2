@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_EMAIL_LENGTH } from './accounts';
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { ROLES, TEAMS } from './games/keywords/types';
@@ -41,13 +42,14 @@ export const ROOM_MESSAGES = {
     language: z.enum(LANGUAGES),
     page: z.enum(FEEDBACK_PAGES),
   }),
-  // A room starts with its game's default settings when `settings` is left out.
+  // A room starts with its game's default settings when `settings` is left out. A creator who is
+  // logged in has their username as the name, and needs to give none.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
     fields,
     settings: settings.optional(),
-    name,
+    name: name.optional(),
     play,
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
@@ -118,3 +120,26 @@ const lenient = <Field extends z.ZodType>(field: Field) => field.optional().catc
 export const HANDSHAKE = z
   .object({ token: lenient(z.string().max(64)), code: lenient(code), roomId: lenient(roomId), watch: lenient(code) })
   .catch({});
+
+// The bodies of the requests to the account API (shared/src/accounts.ts), which are JSON. As with
+// the messages, the rules judge what is in a name or a password, so that a long one gets its own
+// answer, such as password_long, and not bad_request; the server reads no body of more than 4 KB.
+const password = z.string();
+const email = z.string().max(4 * MAX_EMAIL_LENGTH);
+// The secret of a link in a mail. One that isn't one finds nothing.
+const linkToken = z.string().max(64);
+
+export const ACCOUNT_REQUESTS = {
+  register: z.object({ username: z.string(), password }),
+  login: z.object({ username: z.string(), password }),
+  logout: none,
+  username: z.object({ username: z.string() }),
+  avatarRemove: none,
+  password: z.object({ current: password, password }),
+  email: z.object({ email, password, language: z.enum(LANGUAGES) }),
+  emailRemove: z.object({ password }),
+  emailConfirm: z.object({ token: linkToken }),
+  forgot: z.object({ email, language: z.enum(LANGUAGES) }),
+  reset: z.object({ token: linkToken, password }),
+  remove: z.object({ password }),
+} as const;

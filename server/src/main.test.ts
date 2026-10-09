@@ -86,6 +86,27 @@ describe('starting', () => {
     expect(exits).toEqual([]);
   });
 
+  test('says when the limit on new accounts is raised, and when the login cookie is not Secure', async () => {
+    await start({ ACCOUNTS_PER_HOUR: '100', COOKIE_SECURE: '0' });
+    expect(logged('accounts_per_hour_raised')).toEqual({ accountsPerHour: 100, default: 5 });
+    expect(logged('cookies_not_secure')).toEqual({ hint: 'only for plain HTTP, as in development' });
+    expect(logged('listening')).toMatchObject({ accountsPerHour: 100, cookieSecure: false, mail: false });
+  });
+
+  test('gives accounts email with both the server secret and the mailer', async () => {
+    const started = (await start({
+      SERVER_SECRET: 's'.repeat(44),
+      MAILER_SOCKET: join(dir, 'mailer.sock'),
+    })) as Running;
+    expect(logged('listening')).toMatchObject({ mail: true });
+    expect(started.accounts.mailAvailable).toBe(true);
+    await started.stop('test');
+    running.splice(0);
+    logs = [];
+    await start({ SERVER_SECRET: 's'.repeat(44) });
+    expect(logged('listening')).toMatchObject({ mail: false });
+  });
+
   test('with DATA_DIR keeps the database there, from one start to the next', async () => {
     const data = join(dir, 'data');
     mkdirSync(data);
@@ -94,9 +115,9 @@ describe('starting', () => {
       storage: 'file',
       file: join(data, DATABASE_FILE),
       journal: 'wal',
-      schema: 1,
+      schema: 2,
     });
-    expect(logged('database_migrated')).toEqual({ from: 0, to: 1, snapshot: null });
+    expect(logged('database_migrated')).toEqual({ from: 0, to: 2, snapshot: null });
     first.feedback.add({
       kind: 'idea',
       text: 'Kept',
@@ -115,6 +136,16 @@ describe('starting', () => {
     const second = (await start({ DATA_DIR: data })) as Running;
     expect(second.feedback.latest(1)[0]?.text).toBe('Kept');
     expect(events()).not.toContain('database_migrated');
+  });
+
+  test('with DATA_DIR keeps avatars beside the database, and deletes those that no account shows', async () => {
+    const data = join(dir, 'data');
+    mkdirSync(join(data, 'avatars'), { recursive: true });
+    const unused = `${'a'.repeat(64)}.jpg`;
+    writeFileSync(join(data, 'avatars', unused), 'nobody shows this');
+    await start({ DATA_DIR: data });
+    expect(logged('avatars_cleared')).toEqual({ count: 1 });
+    expect(readdirSync(join(data, 'avatars'))).toEqual([]);
   });
 
   test('with DATA_DIR takes a snapshot on start and every hour', async () => {
@@ -173,19 +204,21 @@ describe('starting', () => {
     expect(performance.now() - started).toBeLessThan(2000);
     expect(logged('contacts_cleared')).toEqual({ count: 1, walTruncated: false });
     expect(holds()).toEqual([DATABASE_FILE]);
-    // Nothing more is cleared, but the WAL is tried again every hour, until it is truncated.
-    const cleared = () => logs.filter(({ event }) => event === 'contacts_cleared');
-    await until(() => cleared().length >= 3, 'two more tries');
-    expect(cleared().at(-1)?.fields).toEqual({ count: 0, walTruncated: false });
+    // Nothing more is cleared, but the WAL is tried again every hour, until it is truncated, and
+    // the log says so each time, apart from the clearing of contacts, of which there is none.
+    const tried = () => logs.filter(({ event }) => event === 'wal_truncated');
+    await until(() => tried().length >= 2, 'two more tries');
+    expect(tried().at(-1)?.fields).toEqual({ ok: false });
+    expect(logs.filter(({ event }) => event === 'contacts_cleared')).toHaveLength(1);
     expect(holds()).toEqual([DATABASE_FILE]);
     reader.exec('COMMIT');
     reader.close();
-    await until(() => cleared().at(-1)?.fields?.walTruncated === true, 'the WAL to be truncated');
+    await until(() => tried().at(-1)?.fields?.ok === true, 'the WAL to be truncated');
     expect(holds()).toEqual([]);
     // Once it is, the hour's clearing has nothing to say.
-    const done = cleared().length;
+    const done = tried().length;
     await until(() => logs.filter(({ event }) => event === 'snapshot_saved').length >= 2, 'another hour');
-    expect(cleared().length).toBe(done);
+    expect(tried().length).toBe(done);
   });
 
   test('ends with 1 and one line of log when the port is taken', async () => {

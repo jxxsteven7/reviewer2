@@ -84,9 +84,10 @@ socket.on('connect', () => {
   if (wanted && entry.status !== 'needs_name') void ask();
 });
 
-// A newcomer's name, and whether they have come to play or only to watch.
+// A newcomer's name, and whether they have come to play or only to watch. A newcomer who is logged
+// in gives no name: theirs is the username.
 interface Newcomer {
-  name: string;
+  name?: string | undefined;
   play: boolean;
 }
 
@@ -143,7 +144,8 @@ export function openRoom(code: string, { screen = false } = {}): void {
 }
 
 // A newcomer's name, and whether they have come to play or only to watch.
-export const submitName = (name: string, play: boolean): Promise<Ack> => ask({ name, play });
+export const submitName = (name: string | undefined, play: boolean): Promise<Ack> =>
+  ask(name === undefined ? { play } : { name, play });
 
 // The page goes elsewhere. The player keeps their seat until the room drops them.
 export function closeRoomPage(): void {

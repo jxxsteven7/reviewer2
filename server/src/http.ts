@@ -3,12 +3,15 @@ import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http
 import sirv from 'sirv';
 
 // HTTP for everything that isn't Socket.IO: the built front end, with the SPA fallback to
-// index.html for routes such as /room/K7QX, and /healthz. docs/architecture.md describes what it
-// answers and why; the reasons for each header are also beside the code that sets it.
+// index.html for routes such as /room/K7QX, /healthz, and the account API under /api with the
+// avatars under /avatars (accounts/http.ts). docs/architecture.md describes what it answers and
+// why; the reasons for each header are also beside the code that sets it.
 
 export interface HttpOptions {
   publicDir: string;
   version: string;
+  // Answers the paths that it knows, the account API's, and says whether it did.
+  accounts?: (req: IncomingMessage, res: ServerResponse, path: string) => boolean;
 }
 
 // A Host header we're willing to repeat in the CSP: a host name or IP address and a port.
@@ -48,9 +51,9 @@ export function send(res: ServerResponse, status: number, type: string, body: st
 
 export const notFound = (res: ServerResponse) => send(res, 404, 'text/plain; charset=utf-8', 'Not found\n');
 
-// Everything the server answers over plain HTTP is read-only. A request by any method but GET and
-// HEAD is answered with 405 here, and false says so. sirv would otherwise answer a stray POST with
-// the file or the page, as if it had done something.
+// Everything the server answers over plain HTTP, but the account API, is read-only. A request by
+// any method but GET and HEAD is answered with 405 here, and false says so. sirv would otherwise
+// answer a stray POST with the file or the page, as if it had done something.
 export function methodAllowed(req: IncomingMessage, res: ServerResponse): boolean {
   if (req.method === 'GET' || req.method === 'HEAD') return true;
   res.setHeader('Allow', 'GET, HEAD');
@@ -68,7 +71,7 @@ export function pathOf(target: string): string {
 
 const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
 
-export function createRequestHandler({ publicDir, version }: HttpOptions): RequestListener {
+export function createRequestHandler({ publicDir, version, accounts }: HttpOptions): RequestListener {
   const startedAt = Date.now();
   // sirv lists the files when it starts, so it only serves the front end that was built then.
   // A new build needs a restart: until then, a new index.html would name assets sirv doesn't know.
@@ -76,9 +79,10 @@ export function createRequestHandler({ publicDir, version }: HttpOptions): Reque
 
   return (req, res) => {
     setSecurityHeaders(req, res);
+    const path = pathOf(req.url ?? '/');
+    if (accounts?.(req, res, path)) return;
     // Socket.IO's own requests, POSTs included, never reach this handler.
     if (!methodAllowed(req, res)) return;
-    const path = pathOf(req.url ?? '/');
     if (path === '/healthz') {
       const uptime = Math.round((Date.now() - startedAt) / 1000);
       send(res, 200, 'application/json', JSON.stringify({ ok: true, version, uptime }));

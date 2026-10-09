@@ -9,6 +9,9 @@ export interface PlayerView {
   id: string;
   name: string;
   online: boolean;
+  // The address of the avatar that a player with an account uploaded. Without it, the client
+  // draws the default avatar from the name.
+  avatar?: string;
 }
 
 // Who chairs the room when the chair has gone: the first to have joined among those online, or

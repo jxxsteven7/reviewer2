@@ -78,15 +78,34 @@ describe('no more feedback is taken', () => {
     expect(feedback.full()).toBe('entries');
   });
 
-  test('once the database is larger than the limit', () => {
-    const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxBytes: 64 * 1024 });
+  test('once the feedback holds more than the limit', () => {
+    const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxBytes: 20_000 });
     expect(feedback.full()).toBeNull();
-    for (let i = 0; i < 20; i += 1) feedback.add(entry({ text: 'x'.repeat(4000) }));
+    // A Chinese character takes three bytes, so each of these holds 3,107 with its contact and
+    // version.
+    const large = entry({ text: '\u{8bcd}'.repeat(1000), contact: 'x'.repeat(100) });
+    for (let i = 0; i < 6; i += 1) feedback.add(large);
+    expect(feedback.full()).toBeNull();
+    feedback.add(large);
     expect(feedback.full()).toBe('size');
   });
 
-  test('by default after 10,000 or 50 MB', () => {
-    expect(DEFAULT_FEEDBACK_LIMITS).toMatchObject({ maxEntries: 10_000, maxBytes: 50 * 2 ** 20 });
+  test('whatever else the database holds, until the whole database is larger than its limit', () => {
+    const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxDatabaseBytes: 256 * 1024 });
+    db.exec('CREATE TABLE filler (data BLOB) STRICT');
+    const fill = db.prepare('INSERT INTO filler VALUES (randomblob(4096))');
+    for (let i = 0; i < 20; i += 1) fill.run();
+    expect(feedback.full()).toBeNull();
+    for (let i = 0; i < 60; i += 1) fill.run();
+    expect(feedback.full()).toBe('database');
+  });
+
+  test('by default after 10,000, 50 MB of feedback or a database of 1 GB', () => {
+    expect(DEFAULT_FEEDBACK_LIMITS).toMatchObject({
+      maxEntries: 10_000,
+      maxBytes: 50 * 2 ** 20,
+      maxDatabaseBytes: 2 ** 30,
+    });
   });
 });
 

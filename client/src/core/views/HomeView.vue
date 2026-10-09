@@ -3,6 +3,7 @@ import { BOARD_SIZE } from '@reviewer2/shared';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import tipCode from '../../assets/wechat-tip.jpg';
+import AccountEntry from '../components/AccountEntry.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import SendFeedback from '../components/SendFeedback.vue';
@@ -30,7 +31,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
 <template>
   <LanguageGate v-if="!chosen" @chosen="chosen = true" />
   <div v-else class="page home">
-    <PageMasthead><LanguageSwitch /></PageMasthead>
+    <PageMasthead><AccountEntry /><LanguageSwitch /></PageMasthead>
 
     <main>
       <h1>{{ t('app.tagline') }}</h1>

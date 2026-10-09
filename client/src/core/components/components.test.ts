@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import FieldPicker from './FieldPicker.vue';
+import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
@@ -51,5 +52,25 @@ describe('FieldPicker', () => {
     expect(wrapper.text()).toContain('Not enough terms in this language');
     await boxes[0]?.setValue(true);
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([['general']]);
+  });
+});
+
+describe('PlayerAvatar', () => {
+  test('shows the uploaded picture, and the default when it has none or it fails to load', async () => {
+    const wrapper = mount(PlayerAvatar, { props: { name: 'ann', avatar: '/avatars/a.webp' } });
+    expect(wrapper.get('img').attributes('src')).toBe('/avatars/a.webp');
+    await wrapper.get('img').trigger('error');
+    expect(wrapper.find('img').exists()).toBe(false);
+    expect(wrapper.get('.initial').attributes('data-initial')).toBe('A');
+    // The initial is drawn, not written: the name beside the avatar is the text.
+    expect(wrapper.text()).toBe('');
+    // A new picture is tried again.
+    await wrapper.setProps({ avatar: '/avatars/b.webp' });
+    expect(wrapper.get('img').attributes('src')).toBe('/avatars/b.webp');
+
+    const fallback = mount(PlayerAvatar, { props: { name: 'Bob' } });
+    expect(fallback.get('.initial').attributes('data-initial')).toBe('B');
+    expect(fallback.attributes('style')).toContain('background');
+    expect(fallback.attributes('aria-hidden')).toBe('true');
   });
 });

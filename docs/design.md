@@ -43,7 +43,7 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 ## Space and shape
 
 - Spacing comes in steps of 4 px.
-- Cards have 2 px corners and controls 4 px; nothing is more rounded than that.
+- Cards have 2 px corners and controls 4 px; nothing is more rounded than that, but avatars, which are always circles. A player without a picture of their own gets the first character of their name, in white, on one of eight dark colors that the name chooses; none of them is a group's red or blue, and white reads on each at 6:1 or more (`client/src/core/avatar.ts`).
 - Tap targets are at least 44 px high.
 - Pages are one column on phones, with 16 px margins, and never scroll sideways. Rooms grow to two columns from 48rem.
 - The layout leaves room for the notch and the home indicator (`env(safe-area-inset-*)`), and uses `100dvh`, with a fallback, so that WeChat's toolbars don't cover anything.

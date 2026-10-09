@@ -1,11 +1,14 @@
 import { readFileSync } from 'node:fs';
 import {
+  ACCOUNT_ERRORS,
+  EMAIL_STATES,
   FEEDBACK_ERRORS,
   FEEDBACK_KINDS,
   KEYWORDS_ERRORS,
   ROOM_ERRORS,
   SEAT_ERRORS,
   START_PROBLEMS,
+  TITLES,
 } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { CLIENT_ERRORS } from '../core/errors';
@@ -51,9 +54,21 @@ describe('locale files', () => {
   });
 
   test('explain every error the server or the client can report', () => {
-    for (const code of [...ROOM_ERRORS, ...FEEDBACK_ERRORS, ...KEYWORDS_ERRORS, ...SEAT_ERRORS, ...CLIENT_ERRORS]) {
+    for (const code of [
+      ...ROOM_ERRORS,
+      ...FEEDBACK_ERRORS,
+      ...ACCOUNT_ERRORS,
+      ...KEYWORDS_ERRORS,
+      ...SEAT_ERRORS,
+      ...CLIENT_ERRORS,
+    ]) {
       expect(en.has(`errors.${code}`), code).toBe(true);
     }
+  });
+
+  test('say every state of an email address, and name every title', () => {
+    for (const state of EMAIL_STATES) expect(en.has(`account.profile.emailStates.${state}`), state).toBe(true);
+    for (const title of TITLES) expect(en.has(`account.profile.titleNames.${title}`), title).toBe(true);
   });
 
   test('name every kind of feedback', () => {

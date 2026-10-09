@@ -26,6 +26,18 @@ export type Viewer = { playerId: string } | { screen: true };
 // of the game's error codes.
 export type GameUpdate<Data> = Ack<{ data: Data }>;
 
+// One player's part in a game that has ended, as the game describes it, for the record of a player
+// with an account: which side they played for and in what role, which side won, whether they did,
+// and the game's own word for how it went, such as the verdict of a decision letter.
+export interface PlayerResult {
+  playerId: string;
+  side: string;
+  role: string;
+  winner: string;
+  won: boolean;
+  verdict: string;
+}
+
 export interface GameModule<Data = unknown, View = unknown> {
   id: string;
   // How many words a game needs from the word library.
@@ -70,6 +82,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // The game's own messages, such as "keywords:reveal". Must not await anything, so that no
   // other message can run between reading the data and writing it.
   handle(data: Data, ctx: GameContext, playerId: string, type: string, payload: unknown): GameUpdate<Data>;
+  // How each player who took part did in the game that has just ended, for the records of players
+  // with accounts, or null when the game counts for no record, as one that the chair withdrew.
+  // Whoever only watched takes no part. The room asks once, when the game has ended.
+  results?(data: Data, ctx: GameContext): PlayerResult[] | null;
   // The game's part of the room view, as a function of the viewer. The only way a game's data
   // leaves the server. The room asks once for a snapshot and calls the function for each member
   // and for the screens, so a module builds what everyone sees once, and filters it for each.

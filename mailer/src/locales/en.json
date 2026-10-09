@@ -1,0 +1,21 @@
+{
+  "bind": {
+    "subject": "Confirm your email address for Reviewer 2",
+    "lines": [
+      "Someone asked to use this address to reset the password of an account on Reviewer 2.",
+      "If it was you, open this link within 24 hours and press Confirm:",
+      "{link}",
+      "If it wasn't you, ignore this mail. Nothing changes unless the link is opened."
+    ]
+  },
+  "reset": {
+    "subject": "Reset your Reviewer 2 password",
+    "lines": [
+      "Someone asked to reset the password of the Reviewer 2 account that uses this address.",
+      "If it was you, open this link within 30 minutes and choose a new password. The link works once, and logs the account out everywhere else:",
+      "{link}",
+      "If it wasn't you, ignore this mail. Your password stays as it is."
+    ]
+  },
+  "footer": "This mail was sent by playreviewer2.com. Nobody reads the replies to it."
+}

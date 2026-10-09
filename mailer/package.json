@@ -1,0 +1,15 @@
+{
+  "name": "@reviewer2/mailer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sends the mails of accounts for the game server, which can't reach the internet",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --env-file-if-exists=../.env src/index.ts",
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15"
+  }
+}

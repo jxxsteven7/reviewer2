@@ -1,5 +1,5 @@
-// Bundles the server and its dependencies into one CommonJS file, dist/index.cjs, so that
-// production needs no node_modules. It is CommonJS because socket.io's dependencies call
+// Bundles the server and its dependencies into one CommonJS file, dist/index.cjs, and the
+// operator's commands into dist/admin.cjs, so that production needs no node_modules. It is CommonJS because socket.io's dependencies call
 // require() for Node's built-in modules, which an ES module bundle can't do.
 //
 // APP_VERSION, when set, becomes the version that /healthz reports; see docs/development.md.
@@ -7,8 +7,10 @@
 import { build } from 'esbuild';
 
 await build({
-  entryPoints: ['src/index.ts'],
-  outfile: 'dist/index.cjs',
+  // The server, and the operator's commands (src/admin.ts).
+  entryPoints: { index: 'src/index.ts', admin: 'src/adminCli.ts' },
+  outdir: 'dist',
+  outExtension: { '.js': '.cjs' },
   bundle: true,
   platform: 'node',
   target: 'node22',

@@ -31,6 +31,9 @@ const PORT = Number(process.env.E2E_PORT);
 // Playwright empties before it starts the server, and named after the port, so that two runs in
 // one worktree don't write into the same file.
 process.env.E2E_SERVER_LOG ||= join(import.meta.dirname, 'test-results', `server-${PORT}.log`);
+// The mails that the mailer writes out instead of sending them, which helpers.ts reads the links
+// in mails from.
+process.env.E2E_MAIL_LOG ||= join(import.meta.dirname, 'test-results', `mails-${PORT}.jsonl`);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -56,6 +59,6 @@ export default defineConfig({
     command: 'node e2e/server.mjs',
     url: `http://127.0.0.1:${PORT}/healthz`,
     reuseExistingServer: false,
-    env: { E2E_PORT: String(PORT), E2E_SERVER_LOG: process.env.E2E_SERVER_LOG },
+    env: { E2E_PORT: String(PORT), E2E_SERVER_LOG: process.env.E2E_SERVER_LOG, E2E_MAIL_LOG: process.env.E2E_MAIL_LOG },
   },
 });

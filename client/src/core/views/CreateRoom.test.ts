@@ -20,6 +20,13 @@ vi.mock('../fields', async () => {
   return { fields: shallowRef<FieldInfo[] | null>(null), loadFields: vi.fn() };
 });
 vi.mock('../../games', () => ({ games: {} }));
+// A guest, unless a test logs in.
+const signedIn = vi.hoisted(() => ({ account: { loaded: true, summary: null as object | null, mail: false } }));
+vi.mock('../account', async () => {
+  const { reactive } = await import('vue');
+  signedIn.account = reactive(signedIn.account);
+  return signedIn;
+});
 
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
@@ -30,6 +37,7 @@ const FIELDS: FieldInfo[] = [
 ];
 
 beforeEach(() => {
+  signedIn.account.summary = null;
   setLanguage('en', { remember: false });
   fields.value = FIELDS;
   socket.send.mockReset();
@@ -78,6 +86,20 @@ describe('the room setup', () => {
     await flushPromises();
     expect(socket.send).toHaveBeenCalledWith('room:create', expect.objectContaining({ fields: ['ml'], name: 'Ann' }));
     expect(push).toHaveBeenCalledWith('/room/ABCD');
+  });
+
+  test('asks a player who is logged in for no nickname, and sends none', async () => {
+    signedIn.account.summary = { username: 'Ann Lee', avatar: null, email: 'none', titles: [] };
+    const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
+    expect(wrapper.find('input[autocomplete="nickname"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('As Ann Lee');
+    await box(wrapper, 0).setValue(true);
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    const payload = socket.send.mock.calls[0]?.[1];
+    expect(payload).toMatchObject({ fields: ['general'] });
+    expect(payload).not.toHaveProperty('name');
   });
 
   test('keeps only the lists that are still usable when the language changes, and adds none', async () => {

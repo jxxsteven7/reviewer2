@@ -194,9 +194,16 @@ ${body}</main>
 `;
 }
 
-// `now` is the time on the clock that the samples were taken on (History in stats.ts), and
-// `feedback` is how much feedback there is in all, which the feedback page shows.
-export function renderStatusPage(stats: Stats, samples: readonly Sample[], now: number, feedback = 0): string {
+// `now` is the time on the clock that the samples were taken on (History in stats.ts),
+// `feedback` is how much feedback there is in all, which the feedback page shows, and `accounts`
+// how many accounts there are.
+export function renderStatusPage(
+  stats: Stats,
+  samples: readonly Sample[],
+  now: number,
+  feedback = 0,
+  accounts = 0,
+): string {
   const { memory } = stats;
   // The limit is the service's as a whole, with its file cache (stats.ts); this is the process's
   // share of it.
@@ -207,7 +214,7 @@ export function renderStatusPage(stats: Stats, samples: readonly Sample[], now: 
     `<h1>Reviewer 2 status</h1>
 <p>Version ${escape(stats.version)} &middot; up ${duration(stats.uptime)} &middot; reloads every 5 seconds</p>
 <h2>Players</h2>
-<dl>${tile('Online', stats.players.online)}${tile('Offline', stats.players.offline, 'with a seat to come back to')}</dl>
+<dl>${tile('Online', stats.players.online)}${tile('Offline', stats.players.offline, 'with a seat to come back to')}${tile('Accounts', accounts, 'registered')}</dl>
 <h2>Rooms</h2>
 <dl>${tile('Waiting', stats.rooms.lobby)}${tile('Playing', stats.rooms.playing)}${tile('Game over', stats.rooms.ended)}</dl>
 <h2>Connections</h2>

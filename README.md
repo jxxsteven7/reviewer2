@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**Online party games for academics.** Play in the browser: everyone joins the same room from their own phone or laptop. Pick a nickname and you're in, with no sign-up.
+**Online party games for academics.** Play in the browser: everyone joins the same room from their own phone or laptop. Pick a nickname and you're in; an account is optional.
 
 ## What it is
 
@@ -23,6 +23,7 @@ The game is called **Double Blind** for now. In the code, its module is called `
 - Mobile-first, and works in WeChat's built-in browser
 - Reconnects automatically after a phone locks or the browser goes to the background, returning players to their room, team and role
 - Server-authoritative, with data filtered by role: guessers can't see the colors of unrevealed cards, even with the browser's developer tools
+- Optional accounts, with only a username and a password: an avatar, a record of the games played, and an email address that is only for resetting a forgotten password and is never stored
 
 ## Status
 
@@ -37,9 +38,9 @@ The first version has a game lobby, creating and joining rooms, choosing teams a
 | Language | TypeScript, front end and back end, in an npm workspace |
 | Front end | Vue 3 + Vite, vue-i18n |
 | Back end | Node.js + Socket.IO |
-| Storage | Rooms in server memory; players' feedback in SQLite, with Node's built-in `node:sqlite` |
+| Storage | Rooms in server memory; players' feedback and accounts in SQLite, with Node's built-in `node:sqlite`, and avatars as files |
 | Tests | Vitest, and Playwright end to end |
-| Deployment | One Node process serves both the static front end and WebSocket, on one domain and one port |
+| Deployment | One Node process serves both the static front end and WebSocket, on one domain and one port; a small mailer beside it sends the mails of accounts |
 
 ## Project layout (planned)
 
@@ -51,6 +52,7 @@ The first version has a game lobby, creating and joining rooms, choosing teams a
 | `server/src/core/` | Back-end shared layer: room management, player identity, connections |
 | `server/src/games/` | Each game's rules and state |
 | `shared/` | Types shared by the front end and back end |
+| `mailer/` | The program that sends the mails of accounts |
 | `words/` | Word lists, one JSON file per field |
 | `docs/` | Documentation and project rules |
 

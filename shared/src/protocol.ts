@@ -31,6 +31,8 @@ export const ROOM_ERRORS = [
   'name_required',
   'name_invalid',
   'name_taken',
+  'name_reserved',
+  'account_name',
   'removed_recently',
   'not_member',
   'not_chair',
@@ -71,10 +73,12 @@ export interface Handshake {
 
 // The first thing the server sends on a connection, before anything about a room: the version of
 // the server, and a token when the browser came without a usable one. The browser keeps the token
-// and sends it with every later handshake.
+// and sends it with every later handshake. `account` is the account that the connection was
+// recognized as, from the browser's login cookie, or null for a guest.
 export interface Session {
   token?: string;
   version: string;
+  account: { username: string; avatar: string | null } | null;
 }
 
 // The quick reactions that anyone in a room can send, spectators included (docs/architecture.md).
