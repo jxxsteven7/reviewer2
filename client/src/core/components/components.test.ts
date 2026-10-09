@@ -61,13 +61,15 @@ describe('PlayerAvatar', () => {
     expect(wrapper.get('img').attributes('src')).toBe('/avatars/a.webp');
     await wrapper.get('img').trigger('error');
     expect(wrapper.find('img').exists()).toBe(false);
-    expect(wrapper.text()).toBe('A');
+    expect(wrapper.get('.initial').attributes('data-initial')).toBe('A');
+    // The initial is drawn, not written: the name beside the avatar is the text.
+    expect(wrapper.text()).toBe('');
     // A new picture is tried again.
     await wrapper.setProps({ avatar: '/avatars/b.webp' });
     expect(wrapper.get('img').attributes('src')).toBe('/avatars/b.webp');
 
     const fallback = mount(PlayerAvatar, { props: { name: 'Bob' } });
-    expect(fallback.text()).toBe('B');
+    expect(fallback.get('.initial').attributes('data-initial')).toBe('B');
     expect(fallback.attributes('style')).toContain('background');
     expect(fallback.attributes('aria-hidden')).toBe('true');
   });

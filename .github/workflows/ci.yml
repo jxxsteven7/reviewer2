@@ -170,3 +170,35 @@ jobs:
           test -f "$data/reviewer2.db"
           grep -q '"event":"database_opened","storage":"file"' "$RUNNER_TEMP/server.log"
           node -e 'for (const line of require("fs").readFileSync(process.argv[1], "utf8").split("\n").filter(Boolean)) JSON.parse(line)' "$RUNNER_TEMP/server.log"
+      - name: The mailer and the operator's command run from the build
+        run: |
+          # Without node_modules too. The mailer prints the mail instead of sending it.
+          app="$RUNNER_TEMP/tools"
+          mkdir -p "$app/server" "$app/mailer"
+          cp -r server/dist "$app/server/"
+          cp -r mailer/dist "$app/mailer/"
+          socket="$RUNNER_TEMP/mailer.sock"
+          MAILER_TRANSPORT=print MAILER_SOCKET="$socket" node "$app/mailer/dist/mailer.cjs" > "$RUNNER_TEMP/mailer.log" 2>&1 &
+          mailer=$!
+          trap 'kill "$mailer" 2>/dev/null || true; cat "$RUNNER_TEMP/mailer.log"' EXIT
+          for attempt in $(seq 1 30); do
+            if [ -S "$socket" ]; then break; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "The mailer did not open its socket within 30 seconds." >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          node -e '
+            const socket = require("net").connect(process.argv[1], () =>
+              socket.write(JSON.stringify({ v: 1, kind: "reset", to: "ann@example.com", token: "T".repeat(43), language: "en" }) + "\n"));
+            let answer = "";
+            socket.on("data", (data) => (answer += data));
+            socket.on("close", () => { if (answer.trim() !== "{\"ok\":true}") { console.error(answer); process.exit(1); } });
+          ' "$socket"
+          grep -q '"event":"mail_sent","kind":"reset"' "$RUNNER_TEMP/mailer.log"
+          # The operator's command loads, and says how it is used.
+          status=0
+          node "$app/server/dist/admin.cjs" > "$RUNNER_TEMP/admin.log" 2>&1 || status=$?
+          test "$status" -eq 2
+          grep -q '^usage: admin.cjs avatar remove' "$RUNNER_TEMP/admin.log"

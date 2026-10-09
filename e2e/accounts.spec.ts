@@ -1,0 +1,207 @@
+import type { Page } from '@playwright/test';
+import {
+  createRoom,
+  expect,
+  gameOf,
+  joinByLink,
+  logIn,
+  mailedLink,
+  newPlayer,
+  playToTheEnd,
+  register,
+  seatTable,
+  snapshotsOf,
+  TEXT,
+  test,
+} from './helpers';
+
+// Accounts end to end: a game played by players with accounts and guests, on the records; the
+// name and the avatar that rooms show; an email address bound with the link in a mail, and a
+// forgotten password reset with another; and an account deleted. Guests play as they always did,
+// in this file and in all the others.
+//
+// All tests share one server, on which a registered name is nobody else's, a guest's included. So
+// every account and address here has a part that is the test's own, and no guest in any test is
+// called that.
+const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
+
+// A picture as a phone would give it: larger than an avatar, not square, and a PNG.
+async function picture(page: Page): Promise<Buffer> {
+  const data = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+    context.fillStyle = '#1f4f8f';
+    context.fillRect(0, 0, 640, 480);
+    context.fillStyle = '#f5d0a9';
+    context.beginPath();
+    context.arc(320, 240, 150, 0, Math.PI * 2);
+    context.fill();
+    return canvas.toDataURL('image/png').split(',')[1] as string;
+  });
+  return Buffer.from(data, 'base64');
+}
+
+test('players with accounts play a whole game with guests, and find it on their records', async ({
+  browser,
+  browserName,
+}) => {
+  test.slow(browserName === 'webkit', 'a whole game on WebKit takes about a minute');
+  const text = TEXT.en;
+  // Ann chairs the room as red's PI and Dan guesses for blue, both logged in; Bob, Cat and Eve are
+  // guests.
+  const usernames: Record<string, string> = { Ann: own('Ann'), Dan: own('Dan') };
+  const table = await seatTable(browser, 'en', async (page, name) => {
+    if (usernames[name]) await register(page, usernames[name]);
+  });
+  const ann = table.captains.red;
+  // Their names in the room are their usernames, with the default avatar, which is the initial.
+  await expect(ann.locator('.room-footer .who')).toContainText(usernames.Ann as string);
+  await expect(table.spectator.locator('.lobby, .keywords-game').first()).toContainText(usernames.Dan as string);
+
+  await playToTheEnd(table);
+  // Nobody's snapshots say more about a player than the name, whether they are online and the
+  // avatar: nothing of an account, a login or an address.
+  for (const states of table.everyone) {
+    for (const state of states) {
+      for (const player of state.players) {
+        expect(Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar'].includes(key))).toEqual([]);
+      }
+    }
+  }
+  const winner = gameOf(snapshotsOf(table.spectator).at(-1))?.result?.winner;
+  const annWon = winner === 'red';
+
+  await ann.goto('/account');
+  await expect(ann.locator('.records .summary')).toHaveText(
+    text.account.profile.recordSummary.replace('{games}', '1').replace('{wins}', annWon ? '1' : '0'),
+  );
+  const record = ann.locator('.records .record');
+  await expect(record).toHaveCount(1);
+  await expect(record).toContainText(text.game.letter.verdicts[annWon ? 'poster' : 'reject']);
+  await expect(record).toContainText(`${text.lobby.group.red}, ${text.account.profile.roles.captain}`);
+
+  const dan = table.guessers.blue;
+  await dan.goto('/account');
+  await expect(dan.locator('.records .record')).toContainText(
+    `${text.lobby.group.blue}, ${text.account.profile.roles.guesser}`,
+  );
+});
+
+test('a new name and avatar show in the room, and a guest can not take a registered name', async ({ browser }) => {
+  const text = TEXT.zh;
+  const name = own('\u{5b89}\u{59ae}');
+  const ann = await newPlayer(browser, 'zh');
+  await register(ann, name);
+  const url = await createRoom(ann, 'zh', '');
+  const guest = await newPlayer(browser, 'zh');
+  // In any case, the name is the account's.
+  await guest.goto(url);
+  await guest.getByLabel(text.room.join.name).fill(name.toUpperCase());
+  await guest.getByRole('button', { name: text.room.join.submit, exact: true }).click();
+  await expect(guest.getByText(text.errors.name_reserved)).toBeVisible();
+  await joinByLink(guest, url, '\u{9c8d}\u{52c3}', 'zh');
+  await expect(guest.locator('.lobby')).toContainText(name);
+
+  // Ann goes to her page and back, as a player can at any time, and keeps her seat.
+  const renamed = own('Annie');
+  await ann.goto('/account');
+  await ann.getByRole('button', { name: text.account.profile.rename, exact: true }).click();
+  await ann.getByRole('textbox', { name: text.account.username }).fill(renamed);
+  await ann.getByRole('button', { name: text.account.profile.renameSubmit }).click();
+  await expect(ann.locator('.profile .name')).toHaveText(renamed);
+  await expect(guest.locator('.lobby')).toContainText(renamed);
+
+  await ann.locator('input[type=file]').setInputFiles({
+    name: 'photo.png',
+    mimeType: 'image/png',
+    buffer: await picture(ann),
+  });
+  await expect(ann.locator('.cropper canvas')).toBeVisible();
+  await ann.getByRole('button', { name: text.account.avatar.use }).click();
+  await expect(ann.locator('.avatar-row img')).toHaveAttribute('src', /^\/avatars\/[0-9a-f]{64}\.(webp|jpg)$/);
+  const avatar = await ann.locator('.avatar-row img').getAttribute('src');
+  await expect(guest.locator(`.lobby img[src="${avatar}"]`)).toBeVisible();
+  // The picture is served as an image, and nothing more.
+  const response = await guest.request.get(avatar as string);
+  expect(response.headers()).toMatchObject({
+    'content-type': expect.stringMatching(/^image\/(webp|jpeg)$/),
+    'x-content-type-options': 'nosniff',
+    'content-security-policy': "default-src 'none'",
+  });
+  expect((await response.body()).length).toBeLessThanOrEqual(64 * 1024);
+
+  await ann.goto(url);
+  await expect(ann.locator('.room-footer .who img')).toHaveAttribute('src', avatar as string);
+  // A player with an account renames on the account page, not in the room.
+  await expect(ann.locator('.room-footer').getByRole('button', { name: text.room.rename })).toHaveCount(0);
+});
+
+test('an address is bound with the link in a mail, and resets a forgotten password', async ({ browser }) => {
+  const text = TEXT.en;
+  const name = own('Ann ');
+  const address = `${name.slice(4)}@example.com`;
+  const phone = await newPlayer(browser);
+  await register(phone, name);
+  await phone.goto('/account');
+  await phone.getByRole('button', { name: text.account.profile.bind }).click();
+  await phone.getByRole('textbox', { name: text.account.forgot.email }).fill(address.toUpperCase());
+  await phone.getByLabel(text.account.profile.yourPassword).fill('correct horse');
+  await phone.getByRole('button', { name: text.account.profile.bindSubmit }).click();
+  await expect(phone.locator('.email .state')).toHaveText(text.account.profile.emailStates.pending);
+
+  // The mail is opened on another device, which isn't logged in.
+  const inbox = await newPlayer(browser);
+  const confirm = await mailedLink('bind', address);
+  expect(confirm).toMatch(/\/account\/confirm#[\w-]{43}$/);
+  await inbox.goto(confirm);
+  // The secret leaves the address bar at once, and nothing happens until the button is pressed.
+  await expect(inbox).toHaveURL(/\/account\/confirm$/);
+  await inbox.getByRole('button', { name: text.account.confirm.submit }).click();
+  await expect(inbox.getByText(text.account.confirm.done)).toBeVisible();
+  await phone.reload();
+  await expect(phone.locator('.email .state')).toHaveText(text.account.profile.emailStates.bound);
+
+  // Ann forgets her password, and resets it from a laptop.
+  const laptop = await newPlayer(browser);
+  await laptop.goto('/account/forgot');
+  await laptop.getByRole('textbox', { name: text.account.forgot.email }).fill(address);
+  await laptop.getByRole('button', { name: text.account.forgot.submit }).click();
+  await expect(laptop.getByText(text.account.forgot.sent)).toBeVisible();
+  await laptop.goto(await mailedLink('reset', address));
+  await expect(laptop).toHaveURL(/\/account\/reset$/);
+  await laptop.getByLabel(text.account.profile.newPassword).fill('battery staple');
+  await laptop.getByRole('button', { name: text.account.reset.submit }).click();
+  await expect(laptop.locator('.profile .name')).toHaveText(name);
+
+  // The phone was logged out, and the old password no longer works.
+  await phone.reload();
+  await expect(phone.locator('.tabs').getByRole('button', { name: text.account.signIn.login })).toBeVisible();
+  await phone.getByLabel(text.account.username).fill(name);
+  await phone.getByLabel(text.account.password, { exact: true }).fill('correct horse');
+  await phone.locator('form').getByRole('button', { name: text.account.signIn.loginSubmit }).click();
+  await expect(phone.getByRole('alert')).toHaveText(text.errors.login_failed);
+  await logIn(phone, name, 'battery staple');
+  await phone.goto('/account');
+  await expect(phone.locator('.profile .name')).toHaveText(name);
+});
+
+test('an account that is deleted is gone, and its name is free', async ({ browser }) => {
+  const text = TEXT.en;
+  const name = own('Ann');
+  const page = await newPlayer(browser);
+  await register(page, name);
+  await page.goto('/account');
+  await page.getByRole('button', { name: text.account.profile.delete }).click();
+  await page.locator('[role=dialog]').getByLabel(text.account.profile.yourPassword).fill('correct horse');
+  await page.getByRole('button', { name: text.account.profile.deleteSubmit }).click();
+  await page.waitForURL(/\/$/);
+  await page.goto('/account');
+  await expect(page.locator('.tabs').getByRole('button', { name: text.account.signIn.login })).toBeVisible();
+
+  const other = await newPlayer(browser);
+  await register(other, name.toUpperCase());
+  await other.goto('/account');
+  await expect(other.locator('.profile .name')).toHaveText(name.toUpperCase());
+});

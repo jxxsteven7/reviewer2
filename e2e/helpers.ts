@@ -304,7 +304,9 @@ export async function createRoom(
   await page.getByRole('button', { name: new RegExp(`^${literally(text.language[language])}`) }).click();
   await page.getByRole('button', { name: text.home.newRoom }).click();
   await expect(page.locator('.fields li').first()).toBeVisible();
-  await page.getByLabel(text.create.name).fill(name);
+  // A player who is logged in has their username, and is asked for no name.
+  const field = page.getByLabel(text.create.name);
+  if (await field.count()) await field.fill(name);
   const submit = page.getByRole('button', { name: text.create.submit });
   await expect(submit).toBeDisabled();
   await expect(page.getByText(text.create.chooseField)).toBeVisible();
@@ -327,7 +329,10 @@ export async function joinByLink(
 ): Promise<void> {
   const text = TEXT[language];
   await page.goto(url);
-  await page.getByLabel(text.room.join.name).fill(name);
+  await expect(page.locator('.name-form')).toBeVisible();
+  // A player who is logged in has their username, and is asked for no name.
+  const field = page.getByLabel(text.room.join.name);
+  if (await field.count()) await field.fill(name);
   await chooseToWatch(page, language, joining);
   await page.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(page.locator('.lobby, .keywords-game').first()).toBeVisible();
@@ -372,7 +377,8 @@ export interface Table {
 // Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
 // blue. Eve watches, and a screen shows the room. Everyone but Eve comes to play, so the server
 // seats them first, and they move to their seats from there. `prepare` runs on each page before
-// it joins, for a test that needs a player's connection set up in some other way, `setup` on
+// it creates or joins the room, for a test that needs a player's connection set up in some other
+// way or a player logged in to an account with the same name, `setup` on
 // Ann's room setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before
 // she starts the game. The game has started when this returns.
 export async function seatTable(
@@ -384,6 +390,7 @@ export async function seatTable(
 ): Promise<Table> {
   const ann = await newPlayer(browser, language);
   snapshotsOf(ann);
+  await prepare?.(ann, 'Ann');
   const url = await createRoom(ann, language, 'Ann', setup);
   // The others join at the same time, as separate people do.
   const join = async (name: string, joining: Joining = {}) => {
@@ -518,4 +525,69 @@ export async function playToTheEnd(table: Table): Promise<number> {
     await expect(ann.locator(`.strip:not(.${team}), .letter`).first()).toBeVisible();
   }
   throw new Error('the game did not end');
+}
+
+// The mails that the mailer wrote out instead of sending them (e2e/server.mjs), oldest first.
+interface Mail {
+  kind: 'bind' | 'reset';
+  to: string;
+  language: Language;
+  subject: string;
+  link: string;
+}
+
+const mailLog = process.env.E2E_MAIL_LOG;
+
+function mails(): Mail[] {
+  if (!mailLog) throw new Error('E2E_MAIL_LOG must be set; playwright.config.ts sets it');
+  try {
+    return readFileSync(mailLog, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Mail);
+  } catch {
+    return [];
+  }
+}
+
+// The link in the latest mail of this kind to this address, waiting for the mail to be written.
+export async function mailedLink(kind: Mail['kind'], to: string): Promise<string> {
+  let link: string | undefined;
+  await expect
+    .poll(
+      () =>
+        (link = mails()
+          .filter((mail) => mail.kind === kind && mail.to === to)
+          .at(-1)?.link),
+      {
+        message: `a ${kind} mail to ${to}`,
+      },
+    )
+    .toBeTruthy();
+  return link as string;
+}
+
+// Registers an account on the account page, which logs the page in, and ends on the home page.
+export async function register(page: Page, username: string, password = 'correct horse'): Promise<void> {
+  const text = TEXT[await pageLanguage(page)];
+  await page.goto('/account');
+  await page.getByRole('button', { name: text.account.signIn.register, exact: true }).click();
+  await page.getByLabel(text.account.username).fill(username);
+  await page.getByLabel(text.account.password, { exact: true }).fill(password);
+  await page.getByRole('button', { name: text.account.signIn.registerSubmit }).click();
+  await page.waitForURL(/\/$/);
+}
+
+export async function logIn(page: Page, username: string, password = 'correct horse'): Promise<void> {
+  const text = TEXT[await pageLanguage(page)];
+  await page.goto('/account');
+  await page.getByLabel(text.account.username).fill(username);
+  await page.getByLabel(text.account.password, { exact: true }).fill(password);
+  await page.locator('form').getByRole('button', { name: text.account.signIn.loginSubmit }).click();
+  await page.waitForURL(/\/$/);
+}
+
+// The language that a page shows its interface in, before it has chosen one: the browser's.
+async function pageLanguage(page: Page): Promise<Language> {
+  return (await page.evaluate(() => navigator.language)).startsWith('zh') ? 'zh' : 'en';
 }
