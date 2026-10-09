@@ -267,14 +267,14 @@ describe('the settings', () => {
   test('send through Resend by default, with its key, a state directory and the site over https', () => {
     writeFileSync(key(), 're_secret\n');
     expect(
-      loadConfig({ RESEND_API_KEY_FILE: key(), STATE_DIRECTORY: '/var/lib/reviewer2-mailer', MAILER_SOCKET: '/s' }, 1),
+      loadConfig({ RESEND_API_KEY_FILE: key(), STATE_DIRECTORY: '/srv/mailer-state', MAILER_SOCKET: '/s' }, 1),
     ).toEqual({
       transport: 'resend',
       apiKey: 're_secret',
       baseUrl: 'https://playreviewer2.com',
       activated: false,
       socket: '/s',
-      stateDir: '/var/lib/reviewer2-mailer',
+      stateDir: '/srv/mailer-state',
       printFile: null,
     });
     expect(() => loadConfig({ MAILER_SOCKET: '/s', STATE_DIRECTORY: '/d' }, 1)).toThrow(/RESEND_API_KEY/);

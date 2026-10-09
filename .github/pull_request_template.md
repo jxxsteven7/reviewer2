@@ -29,4 +29,5 @@
 - [ ] No name of the commercial board game this is based on; words and art are original
 - [ ] Unrevealed card colors are sent only to captains (if this touches state broadcasts)
 - [ ] No passwords, keys or tokens committed
+- [ ] Nothing about how the project's own servers are run, such as their hosts, paths, ports or service settings
 - [ ] UI changes checked at phone width

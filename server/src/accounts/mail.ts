@@ -3,7 +3,7 @@ import type { MailReply, MailRequest } from '@reviewer2/shared';
 
 // The way to the mailer (docs/architecture.md), a separate program that holds the key of the mail
 // service: a Unix socket, one request on one line and one answer on one line. The game server
-// runs without a network, and a socket on the file system is outside its network namespace.
+// needs no access to the internet for it: a socket on the file system works without a network.
 
 export type MailOutcome = 'sent' | 'quota' | 'refused' | 'failed';
 

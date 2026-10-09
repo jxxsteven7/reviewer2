@@ -6,7 +6,7 @@ import { normalizePassword } from '@reviewer2/shared';
 // base64url. When the parameters are raised, a hash made with the old ones still verifies, and is
 // made again with the new ones at the next login.
 //
-// N = 2^15, r = 8 and p = 3 take 32 MiB and about 115 ms on the workstation that serves the game.
+// N = 2^15, r = 8 and p = 3 take 32 MiB and about 115 ms on a current desktop CPU.
 // At most two hashes are worked on at a time, so that a flood of logins costs at most 64 MiB and
 // two of libuv's four threads, which the static files need too; up to 32 more wait their turn,
 // and past that the server answers `busy`.

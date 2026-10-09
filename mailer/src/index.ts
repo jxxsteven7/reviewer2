@@ -6,8 +6,8 @@ import { Quota } from './quota';
 import { printTransport, resendTransport } from './transports';
 
 // The mailer (docs/architecture.md): it sends the mails of accounts for the game server, which
-// runs without a network. In production, systemd starts it from its socket and hands that over as
-// file descriptor 3; in development it listens on MAILER_SOCKET. It logs one JSON object a line,
+// needs no access to the internet. Started by systemd from its socket, it gets that socket as
+// file descriptor 3; otherwise, as in development, it listens on MAILER_SOCKET. It logs one JSON object a line,
 // as the game server does.
 
 function log(event: string, fields: Record<string, unknown> = {}): void {

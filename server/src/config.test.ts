@@ -79,12 +79,12 @@ describe('STATUS_PORT', () => {
   });
 
   test('is a port, whatever whitespace is around it', () => {
-    expect(loadConfig({ STATUS_PORT: '3302' }).statusPort).toBe(3302);
-    expect(loadConfig({ STATUS_PORT: ' 3302 ' }).statusPort).toBe(3302);
+    expect(loadConfig({ STATUS_PORT: '4100' }).statusPort).toBe(4100);
+    expect(loadConfig({ STATUS_PORT: ' 4100 ' }).statusPort).toBe(4100);
   });
 
   test('anything else stops the server, and so does the port of the game', () => {
-    for (const STATUS_PORT of ['0', '65536', 'on', '33 02']) {
+    for (const STATUS_PORT of ['0', '65536', 'on', '41 00']) {
       expect(() => loadConfig({ STATUS_PORT }), STATUS_PORT).toThrow(
         /STATUS_PORT must be a whole number from 1 to 65535/,
       );
@@ -172,9 +172,7 @@ describe('the server secret', () => {
 describe('MAILER_SOCKET', () => {
   test('is off when unset, and taken from the repository root when it is relative', () => {
     expect(loadConfig({}).mailerSocket).toBeNull();
-    expect(loadConfig({ MAILER_SOCKET: '/run/reviewer2-mailer/mailer.sock' }).mailerSocket).toBe(
-      '/run/reviewer2-mailer/mailer.sock',
-    );
+    expect(loadConfig({ MAILER_SOCKET: '/srv/mail/mailer.sock' }).mailerSocket).toBe('/srv/mail/mailer.sock');
     expect(loadConfig({ MAILER_SOCKET: 'data/mailer.sock' }).mailerSocket).toBe(join(root, 'data', 'mailer.sock'));
   });
 
@@ -191,8 +189,8 @@ describe('DATA_DIR', () => {
   });
 
   test('is a directory, taken from the repository root when it is relative', () => {
-    expect(loadConfig({ DATA_DIR: '/var/lib/reviewer2' }).dataDir).toBe('/var/lib/reviewer2');
-    expect(loadConfig({ DATA_DIR: ' /var/lib/reviewer2/ ' }).dataDir).toBe('/var/lib/reviewer2');
+    expect(loadConfig({ DATA_DIR: '/srv/game-data' }).dataDir).toBe('/srv/game-data');
+    expect(loadConfig({ DATA_DIR: ' /srv/game-data/ ' }).dataDir).toBe('/srv/game-data');
     expect(loadConfig({ DATA_DIR: 'data' }).dataDir).toBe(join(root, 'data'));
   });
 });

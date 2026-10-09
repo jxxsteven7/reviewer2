@@ -35,7 +35,7 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: (l
   }
   const { dataDir } = loadConfig(env);
   if (dataDir === null) {
-    print('Set DATA_DIR to the directory of the server, such as /var/lib/reviewer2.');
+    print("Set DATA_DIR to the server's data directory.");
     return 1;
   }
   const file = join(dataDir, DATABASE_FILE);
@@ -70,8 +70,8 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: (l
     print(
       file === null
         ? `${account.username} has the default avatar.`
-        : `Took down /avatars/${file} of ${account.username}. Browsers and Cloudflare may keep a copy for ` +
-            "up to a year: purge that address from Cloudflare's cache too.",
+        : `Took down /avatars/${file} of ${account.username}. Browsers, and a CDN in front of the site, ` +
+            "may keep a copy for up to a year: purge that address from the CDN's cache too.",
     );
     if (ban) print(`${account.username} may not upload another avatar.`);
     return 0;
