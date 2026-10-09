@@ -433,25 +433,40 @@ describe('ClockBar', () => {
     expect(wrapper.get('.seconds').text()).toBe('0:29');
   });
 
+  // How long the clock waits between wakeups, until it sets no further timer.
+  function waits(): number[] {
+    const result: number[] = [];
+    for (let i = 0; i < 10 && vi.getTimerCount() > 0; i += 1) {
+      const before = performance.now();
+      vi.advanceTimersToNextTimer();
+      result.push(performance.now() - before);
+    }
+    return result;
+  }
+
   // A page with a clock has nothing to draw between two seconds, so the clock wakes up only when
   // the seconds shown change.
   test('wakes up once a second, when the seconds change, and no more once it is at zero', async () => {
     const wrapper = mount(ClockBar, { props: { clock: { left: 2_300, total: 60_000 } }, global: global() });
     expect(wrapper.get('.seconds').text()).toBe('0:03');
-    const waits: number[] = [];
-    for (let i = 0; i < 10 && vi.getTimerCount() > 0; i += 1) {
-      const before = performance.now();
-      vi.advanceTimersToNextTimer();
-      waits.push(performance.now() - before);
-    }
+    expect(waits()).toEqual([300, 1_000, 1_000]);
     await flushPromises();
-    expect(waits).toEqual([300, 1_000, 1_000]);
     expect(wrapper.get('.seconds').text()).toBe('0:00');
 
     const running = mount(ClockBar, { props: { clock: { left: 30_000, total: 60_000 } }, global: global() });
     expect(vi.getTimerCount()).toBe(1);
     running.unmount();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  // The time left is rarely a whole number of milliseconds, and a timer drops the fraction: a wait
+  // of 300.5 ms that was not rounded up would end before the second changed, and the clock would
+  // have to wake up twice for one second.
+  test('rounds its waits up to whole milliseconds', async () => {
+    const wrapper = mount(ClockBar, { props: { clock: { left: 2_300.5, total: 60_000 } }, global: global() });
+    expect(waits()).toEqual([301, 1_000, 1_000]);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:00');
   });
 
   test('shows minutes and seconds', () => {

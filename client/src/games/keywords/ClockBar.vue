@@ -13,34 +13,34 @@ const { t } = useI18n();
 
 const URGENT_MS = 10_000;
 
-// When the phase ends, by this page's own clock, and what that clock says now. The clock moves on
-// only when the seconds shown change, and the bar steps down with them rather than gliding: a bar
-// that glides has the browser draw it again on every frame for as long as the phase lasts, on
-// every page in the room.
-const ends = ref(0);
-const now = ref(performance.now());
+// When the phase ends, by this page's own clock, and how much time is left until then. The clock
+// moves on only when the seconds shown change, and the bar steps down with them rather than
+// gliding: a bar that glides has the browser draw it again on every frame for as long as the phase
+// lasts, on every page in the room.
+let ends = 0;
+const left = ref(0);
 let timer: ReturnType<typeof setTimeout> | undefined;
 
-// The seconds shown change when the time left falls to the next whole second. A timer that reads
-// the clock a moment early sees a sliver of a second left and wakes up again right away.
+// The seconds shown change when the time left falls to the next whole second. A timer keeps whole
+// milliseconds and drops the rest, so the wait is rounded up: a timer that reads the clock a moment
+// early sees a sliver of a second left and wakes up again right away.
 function tick(): void {
-  now.value = performance.now();
   clearTimeout(timer);
-  const left = ends.value - now.value;
-  timer = left > 0 ? setTimeout(tick, left % 1000 || 1000) : undefined;
+  const ms = ends - performance.now();
+  left.value = Math.max(0, ms);
+  timer = ms > 0 ? setTimeout(tick, Math.ceil(ms % 1000) || 1000) : undefined;
 }
 
 watch(
   () => props.clock,
   (clock) => {
-    ends.value = performance.now() + clock.left;
+    ends = performance.now() + clock.left;
     tick();
   },
   { immediate: true },
 );
 onUnmounted(() => clearTimeout(timer));
 
-const left = computed(() => Math.max(0, ends.value - now.value));
 const seconds = computed(() => Math.ceil(left.value / 1000));
 const shown = computed(() => `${Math.floor(seconds.value / 60)}:${String(seconds.value % 60).padStart(2, '0')}`);
 const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.total : 0));
