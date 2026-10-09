@@ -614,7 +614,9 @@ describe('words that clash on a board', () => {
     expect(clash('Model', 'Modeling')).toBe(false);
     expect(clash('Data', 'Datacenter')).toBe(false);
     expect(clash('AI', 'Email')).toBe(false);
-    expect(clash('Attention', { word: '\u6ce8\u610f\u529b\u673a\u5236', translations: ['Attention mechanism'] })).toBe(false);
+    expect(clash('Attention', { word: '\u6ce8\u610f\u529b\u673a\u5236', translations: ['Attention mechanism'] })).toBe(
+      false,
+    );
     expect(clash('State of the art', 'Out of distribution')).toBe(false);
     expect(clash("Occam's razor", "Master's")).toBe(false);
     expect(clash('Gene', 'Genome')).toBe(false);

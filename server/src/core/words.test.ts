@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { BOARD_SIZE, cardsClash, LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
 import { afterAll, describe, expect, test } from 'vitest';
 import { seededRng } from './random';
-import { drawWords, loadWordLibrary, WordLibrary, type Clash, type WordListData } from './words';
+import { drawWords, FALLBACK_WORDS, loadWordLibrary, WordLibrary, type Clash, type WordListData } from './words';
 
 // Chinese test words are written as \u escapes (docs/rules/language.md).
 const zh = (i: number) => `\u8bcd${i}`;
@@ -290,24 +290,44 @@ describe('drawing words that clash', () => {
     }
   });
 
-  test('still prefers the words not used yet, and starts over once it takes a used one', () => {
+  test('still prefers the words not used yet, and remembers the used ones while unused ones are left', () => {
     const pool = numbered(60);
+    const keys = (words: readonly BoardWord[]) => words.map(({ word }) => wordKey(word));
     // The unused words are 30 to 59, but every odd one clashes with the even one before it.
-    const used = new Set(pool.slice(0, 30).map(({ word }) => wordKey(word)));
+    const used = new Set(keys(pool.slice(0, 30)));
     const clash = (a: BoardWord, b: BoardWord) =>
       Math.min(number(a), number(b)) >= 30 && Math.floor(number(a) / 2) === Math.floor(number(b) / 2);
     for (let seed = 0; seed < 20; seed += 1) {
       const draw = drawWords(pool, 25, used, seededRng(seed), clash);
       const drawn = draw?.words ?? [];
       // One of each of the 15 pairs of unused words, and 10 used words.
-      expect(drawn.filter((word) => number(word) >= 30)).toHaveLength(15);
+      const unused = drawn.filter((word) => number(word) >= 30);
+      expect(unused).toHaveLength(15);
       expect(pairs(drawn, clash)).toBe(0);
-      expect(draw?.used).toEqual(new Set(drawn.map(({ word }) => wordKey(word))));
+      // The other 15 unused words were left out by clashes only, so the room doesn't start over.
+      expect(draw?.used).toEqual(new Set([...used, ...keys(unused)]));
+      // The next board takes those 15, and with fewer unused words than a board needs, it starts over.
+      const next = drawWords(pool, 25, draw?.used ?? new Set(), seededRng(seed), clash);
+      const left = pool.slice(30).filter((word) => !unused.includes(word));
+      expect(left.every((word) => next?.words.includes(word))).toBe(true);
+      expect(next?.used).toEqual(new Set(keys(next?.words ?? [])));
     }
     // Without clashes it takes 25 unused words and remembers them with the others.
     const plain = drawWords(pool, 25, used, seededRng(1), () => false);
     expect(plain?.words.every((word) => number(word) >= 30)).toBe(true);
     expect(plain?.used.size).toBe(55);
+  });
+
+  test('looks at a limited number of words when the pass comes out short', () => {
+    // Every word clashes with every other, so the pass keeps one.
+    let calls = 0;
+    const always = () => {
+      calls += 1;
+      return true;
+    };
+    const draw = drawWords(numbered(FALLBACK_WORDS * 4), 25, new Set(), seededRng(1), always);
+    expect(draw?.words).toHaveLength(25);
+    expect(calls).toBeLessThan(FALLBACK_WORDS * 4 + (FALLBACK_WORDS * (FALLBACK_WORDS - 1)) / 2 + 1);
   });
 
   test('fills the board from a small pool with many clashes whenever it can', () => {
@@ -345,8 +365,8 @@ describe('drawing words that clash', () => {
     expect(draw?.words).toHaveLength(25);
     expect(new Set(draw?.words).size).toBe(25);
     expect(draw?.clashes).toBe((25 * 24) / 2);
-    // One pass, then every pair once and each word drawn against the rest.
-    expect(calls).toBeLessThan(40 + (40 * 39) / 2 + 25 * 40);
+    // One pass, then every pair once.
+    expect(calls).toBeLessThanOrEqual(40 + (40 * 39) / 2);
   });
 });
 

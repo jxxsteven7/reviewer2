@@ -15,6 +15,7 @@ import {
   annotation,
   checkAcrossLists,
   checkWordList,
+  compatible,
   HAN,
   lineOf,
   main,
@@ -307,6 +308,13 @@ describe('terms that give each other away', () => {
     assert.ok(!clashes({ en: 'Data' }, { en: 'Datacenter' }));
   });
 
+  test('name a term without an id by its place alone', () => {
+    const { infos } = withTerms({ en: 'Gene' }, { en: 'Gene pool' });
+    assert.ok(has(infos, /terms\[25\] \(extra-0\): "en" "Gene"/));
+    const unnamed = check(list({ terms: [...terms(MIN_TERMS), { en: 'Gene' }, { id: 'pool', en: 'Gene pool' }] }));
+    assert.ok(has(unnamed.infos, /^ml\.json: terms\[25\]: "en" "Gene" can't share a board with "Gene pool"$/));
+  });
+
   test('fail a list that has no 25 terms of which none repeats another', () => {
     const repetitive = terms(MIN_TERMS + 5, (i) => ({ id: `term-${i}`, en: `Term ${i}`, zh: zhTerm(i) }));
     const { problems, counts } = check(list({ terms: repetitive }));
@@ -332,6 +340,21 @@ describe('terms that give each other away', () => {
       { id: 'c', en: 'Gene pool' },
     ];
     assert.ok(has(check(list({ terms: short })).problems, /no 25 of its "en" terms .* only 24/));
+  });
+
+  test('are counted as they stand once some terms are taken', () => {
+    // Term 5 clashes with nothing, and term 1 only with term 2. Once term 2 is out, terms 3 and 4
+    // clash only with term 0, and taking both of them, rather than term 0, makes four.
+    const pairs = [
+      [0, 3],
+      [0, 4],
+      [1, 2],
+      [2, 3],
+      [2, 4],
+    ];
+    assert.equal(compatible(Array(6).fill(null), pairs, MIN_TERMS), 4);
+    assert.equal(compatible(Array(6).fill(null), pairs, 3), 3);
+    assert.equal(compatible(Array(6).fill(null), [], MIN_TERMS), 6);
   });
 
   test('only count in a language that a board can be dealt in', () => {
@@ -507,6 +530,8 @@ describe('command line', () => {
       /^check-words: info: clashing\.json: terms\[25\] \(x\): "en" "Gene" can't share a board with "Gene pool"$/m,
     );
     assert.match(informed.stdout, /^check-words: OK clashing\.json/m);
+    // First, so that problems and warnings end the output.
+    assert.ok(informed.stdout.indexOf('info:') < informed.stdout.indexOf('OK clashing.json'));
     assert.doesNotMatch(informed.stdout, /^::/m);
 
     const plain = run(bad, long).stdout.split('\n');

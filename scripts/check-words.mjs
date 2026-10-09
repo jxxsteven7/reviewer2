@@ -191,21 +191,24 @@ export const clash = (a, b) => givesAway(a, b) || givesAway(b, a);
 
 // How many of the entries can share a board, up to `enough`: the entries are taken one at a time,
 // each time one that clashes with none of those taken, and of those the one that clashes with the
-// fewest of all, which leaves the most room for the others. This may find fewer than the most
+// fewest of the others still open, which shuts out the fewest. This may find fewer than the most
 // there are, but on a list in which it does, a board would be hard to deal anyway.
 export function compatible(entries, clashes, enough) {
-  const degree = entries.map((_, index) => clashes.filter(([a, b]) => a === index || b === index).length);
   const neighbors = entries.map(() => new Set());
   for (const [a, b] of clashes) {
     neighbors[a].add(b);
     neighbors[b].add(a);
   }
   const open = new Set(entries.keys());
+  const close = (index) => {
+    open.delete(index);
+    for (const other of neighbors[index]) neighbors[other].delete(index);
+  };
   let taken = 0;
   while (taken < enough && open.size > 0) {
-    const next = [...open].reduce((best, index) => (degree[index] < degree[best] ? index : best));
-    open.delete(next);
-    for (const other of neighbors[next]) open.delete(other);
+    const next = [...open].reduce((best, index) => (neighbors[index].size < neighbors[best].size ? index : best));
+    for (const other of [...neighbors[next]]) close(other);
+    close(next);
     taken += 1;
   }
   return taken;
@@ -360,14 +363,16 @@ export function checkWordList(data, file) {
   for (const language of LANGUAGES) {
     if (counts[language] === 0) continue;
     const { entries, pairs } = clashesIn(data.terms, language, texts[language]);
-    entries.forEach(({ index, text }, at) => {
-      const others = pairs.filter(([a]) => a === at).map(([, b]) => describe(entries[b].text));
-      if (others.length === 0) return;
-      const term = data.terms[index];
+    // Each pair once, under the term that comes first.
+    const later = new Map();
+    for (const [a, b] of pairs) later.set(a, [...(later.get(a) ?? []), describe(entries[b].text)]);
+    for (const [at, others] of later) {
+      const { index, text } = entries[at];
+      const { id } = data.terms[index];
       infos.push(
-        `${file}: terms[${index}] (${term.id}): "${language}" ${describe(text)} can't share a board with ${others.join(', ')}`,
+        `${file}: terms[${index}]${isText(id) ? ` (${id})` : ''}: "${language}" ${describe(text)} can't share a board with ${others.join(', ')}`,
       );
-    });
+    }
     if (counts[language] < MIN_TERMS) continue;
     const found = compatible(entries, pairs, MIN_TERMS);
     if (found < MIN_TERMS) {
@@ -581,6 +586,12 @@ export function main(argv, wordsDir = join(root, 'words')) {
     (problems, index) => parsed[index].result.problems.push(...problems),
   );
 
+  // The information comes first, so that the problems and warnings end the output. It is no
+  // annotation: there is a lot of it, and none of it needs fixing.
+  for (const { result } of checked) {
+    for (const message of result.infos ?? []) console.log(`check-words: info: ${message}`);
+  }
+
   let problems = 0;
   // On GitHub Actions the workflow command is the line in the log, so each is printed once.
   const actions = Boolean(process.env.GITHUB_ACTIONS);
@@ -593,8 +604,6 @@ export function main(argv, wordsDir = join(root, 'words')) {
       );
     for (const message of result.problems) print('error', message);
     for (const message of result.warnings) print('warning', message);
-    // Not annotations: there are many of them, and none needs fixing.
-    for (const message of result.infos ?? []) console.log(`check-words: info: ${message}`);
     if (result.problems.length === 0) {
       const counts = LANGUAGES.map((language) => `${result.counts[language]} ${language}`).join(', ');
       console.log(`check-words: OK ${basename(path)} (${counts})`);
