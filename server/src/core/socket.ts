@@ -1,7 +1,17 @@
-import { cleanName, type Ack, type ClosedReason, type EmoteEvent, type Session } from '@reviewer2/shared';
+import { createHash } from 'node:crypto';
+import {
+  checkContact,
+  checkFeedback,
+  cleanName,
+  type Ack,
+  type ClosedReason,
+  type EmoteEvent,
+  type Session,
+} from '@reviewer2/shared';
 import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
 import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
+import type { FeedbackStore } from '../store/feedback';
 import { fail } from './answers';
 import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
@@ -38,9 +48,38 @@ export interface SocketOptions {
   timers: Timers;
   version: string;
   trustProxy: boolean;
-  roomsPerMinute: number;
+  limits: SocketLimits;
+  feedback: FeedbackStore;
   log: (event: string, fields?: Record<string, unknown>) => void;
 }
+
+// How much one connection, and one address, may ask of the server (docs/architecture.md).
+export interface SocketLimits {
+  // Per connection: about this many messages a second, in bursts of up to `messageBurst`.
+  messagesPerSecond: number;
+  messageBurst: number;
+  // Per address and minute: attempts to create a room, counting those that came to nothing, and
+  // codes that belong to no room, which keeps anyone from trying codes until one fits.
+  roomsPerMinute: number;
+  failedLookupsPerMinute: number;
+  // Per address: how much feedback it may send in each window of `feedbackWindowMs`.
+  feedbackPerWindow: number;
+  feedbackWindowMs: number;
+}
+
+// The limits unless something says otherwise. ROOMS_PER_MINUTE can change `roomsPerMinute`
+// (config.ts), and tests change the others, on copies: these are frozen.
+export const DEFAULT_SOCKET_LIMITS: Readonly<SocketLimits> = Object.freeze({
+  messagesPerSecond: 10,
+  messageBurst: 20,
+  roomsPerMinute: 5,
+  failedLookupsPerMinute: 20,
+  feedbackPerWindow: 3,
+  feedbackWindowMs: 10 * 60_000,
+});
+
+// The longest user agent that is kept with a bug report. Real ones are a few hundred characters.
+const MAX_USER_AGENT = 512;
 
 interface Connection {
   key: string;
@@ -69,14 +108,6 @@ const ok = (fields: Record<string, unknown> = {}): Reply => ({ ok: true, ...fiel
 const prefixOf = (event: string): string => event.split(':', 1)[0] ?? '';
 const OWN_PREFIXES = new Set(Object.keys(ROOM_MESSAGES).map(prefixOf));
 
-// Per connection: about 10 messages a second, in bursts of up to 20. Per address and minute: as
-// many rooms as the options say (config.ts has the default), counting the attempts that came to
-// nothing, and 20 codes that belong to no room, which keeps anyone from trying codes until one
-// fits.
-const MESSAGES_PER_SECOND = 10;
-const MESSAGE_BURST = 20;
-const FAILED_LOOKUPS_PER_MINUTE = 20;
-
 export interface RoomSockets {
   broadcast(room: Room): void;
   sweep(): void;
@@ -85,12 +116,24 @@ export interface RoomSockets {
 }
 
 export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
-  const { rooms, words, games, now, timers, version, log } = options;
+  const { rooms, words, games, now, timers, version, limits, feedback, log } = options;
   for (const id of games.keys()) {
     if (OWN_PREFIXES.has(id)) throw new Error(`a game can't be named "${id}", which is a prefix of the room messages`);
   }
-  const creations = new WindowCounter(options.roomsPerMinute, 60_000, now);
-  const failedLookups = new WindowCounter(FAILED_LOOKUPS_PER_MINUTE, 60_000, now);
+  const creations = new WindowCounter(limits.roomsPerMinute, 60_000, now);
+  const failedLookups = new WindowCounter(limits.failedLookupsPerMinute, 60_000, now);
+  const feedbackSent = new WindowCounter(limits.feedbackPerWindow, limits.feedbackWindowMs, now);
+  // The feedback that each address sent in the last window, as a hash of what was kept and when,
+  // so that the same feedback sent again, as when the answer to the first was lost on the way
+  // and the player pressed Send once more, is kept once (docs/architecture.md).
+  const feedbackSeen = new Map<string, number>();
+  const feedbackKey = (ip: string, kind: string, text: string, contact: string | null) =>
+    `${ip}\n${createHash('sha256')
+      .update(JSON.stringify([kind, text, contact]))
+      .digest('base64')}`;
+  // Whether the log has been told that no more feedback is taken. Once is enough until feedback
+  // is taken again, which takes the operator's doing.
+  let feedbackFullLogged = false;
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
 
@@ -431,7 +474,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       country: clientCountry(socket.handshake.headers, options.trustProxy),
       room: null,
       screen: false,
-      bucket: new TokenBucket(MESSAGES_PER_SECOND, MESSAGE_BURST, now),
+      bucket: new TokenBucket(limits.messagesPerSecond, limits.messageBurst, now),
     };
     socket.data = conn;
     const session: Session = issued === null ? { version } : { token: issued, version };
@@ -443,6 +486,43 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'sys:ping', () => ok());
 
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
+
+    // Feedback for the author, which the status page shows. What is kept is what the player wrote
+    // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
+    // who they are. The log gets its number and kind, and never its text or contact. Only what
+    // was kept counts against the address, so that a player who is told to shorten their text
+    // doesn't lose a turn for it, and feedback that the address sent once already in the window
+    // is answered as it was the first time, without being kept or counted again.
+    on(handlers, 'meta:feedback', ({ kind, text, contact, version: pageVersion, language, page }) => {
+      const checked = checkFeedback(text);
+      if (checked.problem) return fail(checked.problem);
+      const given = checkContact(contact);
+      if (given.problem) return fail(given.problem);
+      const key = feedbackKey(conn.ip, kind, checked.text, given.contact);
+      if (feedbackSeen.has(key)) return ok();
+      if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
+      const full = feedback.full();
+      if (full) {
+        if (!feedbackFullLogged) log('feedback_full', { reason: full });
+        feedbackFullLogged = true;
+        return fail('feedback_full');
+      }
+      const userAgent = socket.handshake.headers['user-agent'];
+      const id = feedback.add({
+        kind,
+        text: checked.text,
+        contact: given.contact,
+        version: pageVersion,
+        language,
+        page,
+        userAgent: kind === 'bug' && userAgent ? userAgent.slice(0, MAX_USER_AGENT) : null,
+      });
+      feedbackSent.add(conn.ip);
+      feedbackSeen.set(key, now());
+      feedbackFullLogged = false;
+      log('feedback_received', { id, kind });
+      return ok();
+    });
 
     on(handlers, 'room:create', ({ game, language, fields, settings, name, play }) => {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
@@ -593,6 +673,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         for (const room of result.changed) broadcast(room);
         creations.prune();
         failedLookups.prune();
+        feedbackSent.prune();
+        for (const [key, time] of feedbackSeen) {
+          if (now() - time >= limits.feedbackWindowMs) feedbackSeen.delete(key);
+        }
       });
     },
     closeAll(reason) {

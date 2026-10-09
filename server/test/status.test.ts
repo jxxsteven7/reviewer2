@@ -2,7 +2,7 @@ import { createServer, request, type IncomingHttpHeaders, type Server } from 'no
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
 import { History } from '../src/stats';
-import { createStatusHandler } from '../src/status';
+import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
 import { createRoom, joinRoom, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
 
 // The numbers that the `stats` line and the status page show, counted on a real server, and the
@@ -169,7 +169,7 @@ describe('the status server', () => {
   async function startStatus({ history = new History(), stats = () => server.app.stats() } = {}) {
     const log = (event: string, fields?: Record<string, unknown>) =>
       server.logs.push({ event, ...(fields ? { fields } : {}) });
-    const started = createServer(createStatusHandler(stats, history, log));
+    const started = createServer(createStatusHandler(stats, history, server.feedback, log));
     status = started;
     await new Promise<void>((resolve) => started.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(started.address() as AddressInfo).port}`;
@@ -223,9 +223,18 @@ describe('the status server', () => {
     const screen = await TestClient.connect(server.url, {}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
     clients.push(chair, quentin, screen);
     expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
+    expect(
+      await chair.send('meta:feedback', {
+        kind: 'bug',
+        text: 'From the room',
+        version: 'v',
+        language: 'en',
+        page: 'room',
+      }),
+    ).toEqual({ ok: true });
     await startStatus();
 
-    for (const path of ['/', '/status.json']) {
+    for (const path of ['/', '/feedback', '/status.json']) {
       const { body } = await get(base, path);
       for (const secret of [
         roomId,
@@ -242,6 +251,49 @@ describe('the status server', () => {
       expect(body, path).not.toMatch(new RegExp(`\\b${code}\\b`));
     }
     expect(JSON.parse((await get(base, '/status.json')).body).connections).toEqual({ websocket: 3, polling: 0 });
+  });
+
+  test('shows the feedback a page at a time, back from the latest', async () => {
+    server = await startServer();
+    const total = FEEDBACK_SHOWN + 5;
+    for (let i = 1; i <= total; i += 1) {
+      server.feedback.add({
+        kind: 'idea',
+        text: `Number ${i}`,
+        contact: null,
+        version: 'test',
+        language: 'en',
+        page: 'home',
+        userAgent: null,
+      });
+    }
+    await startStatus();
+    const shown = (body: string) =>
+      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
+
+    // The status page has the count and the link, and none of the feedback.
+    const status = await get(base, '/');
+    expect(status.body).toContain(`<p>${total} in all &middot; <a href="/feedback">Read it</a></p>`);
+    expect(shown(status.body)).toEqual([]);
+
+    const latest = await get(base, '/feedback');
+    expect(latest.status).toBe(200);
+    expect(latest.headers['content-type']).toBe('text/html; charset=utf-8');
+    expect(latest.headers['cache-control']).toBe('no-store');
+    expect(latest.headers['content-security-policy']).toMatch(/^default-src 'none'; style-src 'unsafe-inline';/);
+    expect(latest.body).toContain(`${total} in all, newest first`);
+    expect(latest.body).not.toContain('http-equiv="refresh"');
+    expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
+    expect(latest.body).toContain('<p class="more"><a href="/feedback?before=6">Older</a></p>');
+
+    const older = (await get(base, '/feedback?before=6')).body;
+    expect(shown(older)).toEqual([5, 4, 3, 2, 1]);
+    expect(older).toContain('<p class="more"><a href="/feedback">Latest</a></p>');
+
+    // A query that isn't a number is taken for none.
+    for (const query of ['?before=abc', '?before=-1', '?before=1e3', '?other=1']) {
+      expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual(shown(latest.body));
+    }
   });
 
   test('answers only to the names of this machine, to keep a page elsewhere from reading it', async () => {
@@ -263,7 +315,7 @@ describe('the status server', () => {
     const post = await get(base, '/status.json', {}, 'POST');
     expect(post.status).toBe(405);
     expect(post.headers.allow).toBe('GET, HEAD');
-    for (const path of ['/status', '/status.json/', '/index.html', '/healthz', '//']) {
+    for (const path of ['/status', '/status.json/', '/feedback/', '/index.html', '/healthz', '//']) {
       expect((await get(base, path)).status, path).toBe(404);
     }
   });

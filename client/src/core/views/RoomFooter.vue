@@ -3,6 +3,7 @@ import { MAX_NAME_INPUT, nextChair, type Ack, type PlayerView, type RoomView } f
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import SendFeedback from '../components/SendFeedback.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
@@ -13,8 +14,9 @@ import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
-// Footnotes of the room page: who you are, and ways to rename yourself or leave. The chair can
-// also close the room for everyone, in the waiting room, during a game and after it.
+// Footnotes of the room page: who you are, ways to rename yourself or leave, and the way to send
+// the author feedback. The chair can also close the room for everyone, in the waiting room, during
+// a game and after it.
 const props = defineProps<{ room: RoomView; me: PlayerView }>();
 const { t } = useI18n();
 const router = useRouter();
@@ -80,6 +82,7 @@ function closeInstead() {
     <UiButton variant="quiet" size="small" @click="startRenaming">{{ t('room.rename') }}</UiButton>
     <UiButton variant="quiet" size="small" @click="leaving = true">{{ t('room.leave') }}</UiButton>
     <UiButton v-if="isChair" variant="quiet" size="small" @click="closing = true">{{ t('room.closeRoom') }}</UiButton>
+    <SendFeedback page="room" />
 
     <UiSheet :open="renaming" :title="t('room.rename')" @close="renaming = false">
       <form class="sheet-form" @submit.prevent="rename">

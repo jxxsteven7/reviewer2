@@ -12,7 +12,7 @@ The project brief fixed the outline: TypeScript on both sides, a Vue front end, 
 | Area | Choice |
 |---|---|
 | Package manager | npm workspaces: `shared`, `server`, `client` |
-| Node | `^22.13 \|\| ^24 \|\| >=26`; CI uses 24 LTS |
+| Node | `^22.22.2 \|\| ^24.15 \|\| >=26`; CI uses 24 LTS. Raised from `^22.13 \|\| ^24` on 2026-10-09, when `npm ci` no longer ran below 22.22.2 and 24.15 and the server came to use `backup()` from `node:sqlite`, which Node 22 has since 22.16 |
 | Language | TypeScript, pinned to `~6.0.3`; vue-tsc checks `.vue` files |
 | Front end | Vue 3.5, Vite 8, vue-router 5, vue-i18n 11 with messages compiled at build time |
 | Server | Node's `http` module, Socket.IO 4.8 and sirv for static files |

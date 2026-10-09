@@ -368,11 +368,45 @@ describe('loading word lists', () => {
     expect(() => loadWordLibrary(join(dir, 'notes.txt'))).toThrow(/^cannot read the word lists: ENOTDIR.*notes\.txt/);
   });
 
-  test('loads nothing from a directory without word lists', () => {
+  test('refuses a directory without word lists, or with none that can be read', () => {
     const empty = mkdtempSync(join(tmpdir(), 'reviewer2-no-words-'));
     try {
+      expect(() => loadWordLibrary(empty)).toThrow(`there are no word lists in ${empty}`);
       writeFileSync(join(empty, 'README.md'), '# Word library');
-      expect(loadWordLibrary(empty).fields()).toEqual([]);
+      expect(() => loadWordLibrary(empty)).toThrow(`there are no word lists in ${empty}`);
+      const skipped: string[] = [];
+      writeFileSync(join(empty, 'broken.json'), '{ nope');
+      expect(() => loadWordLibrary(empty, (file) => skipped.push(file))).toThrow(/^there are no word lists/);
+      // What was skipped is still reported, so that the log says why there are none.
+      expect(skipped).toEqual(['broken.json']);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
+  test('refuses word lists that have no term that can be read, since a room needs words', () => {
+    const empty = mkdtempSync(join(tmpdir(), 'reviewer2-no-terms-'));
+    try {
+      const list = (id: string, terms: unknown[]) =>
+        writeFileSync(join(empty, `${id}.json`), JSON.stringify({ id, name: { zh: id, en: id }, terms }));
+      list('ml', []);
+      expect(() => loadWordLibrary(empty)).toThrow(`there are no words in the word lists in ${empty}`);
+      const skipped: string[] = [];
+      list('hci', [{ nope: 1 }, { id: 'x' }]);
+      expect(() => loadWordLibrary(empty, (_file, _reason, term) => skipped.push(term ?? ''))).toThrow(
+        /^there are no words in the word lists/,
+      );
+      expect(skipped).toEqual(['terms[0]', 'x']);
+      // One term in one list is enough.
+      list('hci', [{ id: 'x', en: 'X' }]);
+      expect(
+        loadWordLibrary(empty)
+          .fields()
+          .map(({ id, counts }) => [id, counts.en]),
+      ).toEqual([
+        ['hci', 1],
+        ['ml', 0],
+      ]);
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }

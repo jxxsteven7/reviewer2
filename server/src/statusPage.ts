@@ -1,9 +1,12 @@
 import { UNKNOWN_COUNTRY } from './core/clientIp';
 import { megabytes, type Sample, type Stats } from './stats';
+import type { Feedback } from './store/feedback';
 
-// The status page (status.ts) as one HTML document, built on the server from the numbers. It has
-// no script: it reloads itself every 5 seconds, and its chart is inline SVG. It is for the
-// operator alone, so its text is in English only and not in the locale files.
+// The status page (status.ts) as one HTML document, built on the server from the numbers, and
+// the page of the feedback that players sent. Neither has a script: the status page reloads
+// itself every 5 seconds, and its chart is inline SVG; the feedback page doesn't reload, so that
+// the operator can read a long bug report or copy a contact in peace. Both are for the operator
+// alone, so their text is in English only and not in the locale files.
 
 const STYLE = `
 :root {
@@ -42,6 +45,11 @@ polyline { fill: none; stroke-width: 2; stroke-linejoin: round; }
 .key { display: inline-block; width: 12px; height: 3px; margin: 0 6px 3px 0; vertical-align: middle; }
 .legend { margin-top: 8px; }
 .legend span + span { margin-left: 16px; }
+article { background: var(--tile); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+article p { font-size: 0.85rem; overflow-wrap: anywhere; }
+article .text { margin: 6px 0; color: var(--fg); font-size: 1rem; white-space: pre-wrap; }
+.more { margin-top: 12px; }
+a { color: var(--players); }
 `;
 
 const regions = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -117,25 +125,86 @@ function chart(samples: readonly Sample[], now: number): string {
   );
 }
 
-// `now` is the time on the clock that the samples were taken on (History in stats.ts).
-export function renderStatusPage(stats: Stats, samples: readonly Sample[], now: number): string {
-  const { memory } = stats;
-  // The limit is the service's as a whole, with its file cache (stats.ts); this is the process's
-  // share of it.
-  const share =
-    memory.limit === null ? '' : `${Math.round((memory.rss / memory.limit) * 100)}% of the ${mb(memory.limit)} limit`;
+// One page of the feedback that players sent (store/feedback.ts), newest first: the latest, or
+// those before an id that the operator paged back to.
+export interface FeedbackListing {
+  total: number;
+  entries: readonly Feedback[];
+  // Whether the page was paged back from the latest.
+  paged: boolean;
+  // Whether there is older feedback than the last entry on the page.
+  older: boolean;
+}
+
+const KINDS: Record<Feedback['kind'], string> = { idea: 'Idea', bug: 'Bug', words: 'Word lists' };
+const LANGUAGES: Record<Feedback['language'], string> = { zh: 'Chinese', en: 'English' };
+const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room' };
+
+// "2026-10-09 13:05 UTC" from the ISO time that the database keeps.
+const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
+
+// Players wrote the text and the contact, and the page sent the version, so all of it is escaped
+// like anything else that comes from outside. The text keeps its line breaks.
+function entry(feedback: Feedback): string {
+  const facts = [
+    `#${feedback.id}`,
+    KINDS[feedback.kind],
+    escape(when(feedback.createdAt)),
+    `version ${escape(feedback.version)}`,
+    LANGUAGES[feedback.language],
+    `from the ${PAGES[feedback.page]}`,
+  ];
+  return (
+    `<article><p>${facts.join(' &middot; ')}</p>` +
+    `<p class="text">${escape(feedback.text)}</p>` +
+    `<p>${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
+    (feedback.userAgent === null ? '' : `<p>Browser: ${escape(feedback.userAgent)}</p>`) +
+    '</article>'
+  );
+}
+
+export const FEEDBACK_PATH = '/feedback';
+
+// The feedback page: the entries of one page, and the way to the latest and to the older ones.
+function feedbackList({ total, entries, paged, older }: FeedbackListing): string {
+  if (total === 0) return '<p>None yet.</p>';
+  const links = [
+    ...(paged ? [`<a href="${FEEDBACK_PATH}">Latest</a>`] : []),
+    ...(older ? [`<a href="${FEEDBACK_PATH}?before=${(entries.at(-1) as Feedback).id}">Older</a>`] : []),
+  ];
+  return entries.map(entry).join('') + (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '');
+}
+
+// One document, as both pages are built. The status page reloads itself; the feedback page
+// doesn't.
+function document(title: string, body: string, reloads: boolean): string {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="5">
-<title>Reviewer 2 status</title>
+${reloads ? '<meta http-equiv="refresh" content="5">\n' : ''}<title>${title}</title>
 <style>${STYLE}</style>
 </head>
 <body>
 <main>
-<h1>Reviewer 2 status</h1>
+${body}</main>
+</body>
+</html>
+`;
+}
+
+// `now` is the time on the clock that the samples were taken on (History in stats.ts), and
+// `feedback` is how much feedback there is in all, which the feedback page shows.
+export function renderStatusPage(stats: Stats, samples: readonly Sample[], now: number, feedback = 0): string {
+  const { memory } = stats;
+  // The limit is the service's as a whole, with its file cache (stats.ts); this is the process's
+  // share of it.
+  const share =
+    memory.limit === null ? '' : `${Math.round((memory.rss / memory.limit) * 100)}% of the ${mb(memory.limit)} limit`;
+  return document(
+    'Reviewer 2 status',
+    `<h1>Reviewer 2 status</h1>
 <p>Version ${escape(stats.version)} &middot; up ${duration(stats.uptime)} &middot; reloads every 5 seconds</p>
 <h2>Players</h2>
 <dl>${tile('Online', stats.players.online)}${tile('Offline', stats.players.offline, 'with a seat to come back to')}</dl>
@@ -148,8 +217,21 @@ ${countries(stats)}
 <dl>${tile('Process', mb(memory.rss), share)}${tile('JavaScript heap', mb(memory.heapUsed))}</dl>
 <h2>Last 24 hours</h2>
 ${chart(samples, now)}
-</main>
-</body>
-</html>
-`;
+<h2>Feedback</h2>
+<p>${feedback === 0 ? 'None yet.' : `${feedback} in all &middot; <a href="${FEEDBACK_PATH}">Read it</a>`}</p>
+`,
+    true,
+  );
+}
+
+// The feedback that players sent, newest first, a page at a time.
+export function renderFeedbackPage(feedback: FeedbackListing): string {
+  return document(
+    'Reviewer 2 feedback',
+    `<h1>Feedback</h1>
+<p>${feedback.total} in all, newest first &middot; <a href="/">Status</a></p>
+${feedbackList(feedback)}
+`,
+    false,
+  );
 }

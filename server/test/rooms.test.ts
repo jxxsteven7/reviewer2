@@ -1,8 +1,8 @@
 import { CODE_ALPHABET, MAX_PLAYERS, MAX_SCREENS } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { DEFAULT_ROOMS_PER_MINUTE } from '../src/config';
 import type { GameModule } from '../src/core/game';
 import { seededRng } from '../src/core/random';
+import { DEFAULT_SOCKET_LIMITS } from '../src/core/socket';
 import type { FakeView } from './fakeGame';
 import { fakeGame } from './fakeGame';
 import {
@@ -1230,7 +1230,7 @@ describe('limits', () => {
       server.advance(200); // stay under the per-connection limit
       expect(await create({ name: '  ', fields: ['nope'] })).toEqual({ ok: false, error: 'name_invalid' });
     }
-    for (let i = 0; i < DEFAULT_ROOMS_PER_MINUTE; i += 1) {
+    for (let i = 0; i < DEFAULT_SOCKET_LIMITS.roomsPerMinute; i += 1) {
       expect(await create({ fields: ['tiny'] })).toEqual({ ok: false, error: 'no_words' });
     }
     expect(await create({})).toEqual({ ok: false, error: 'rate_limited' });
@@ -1238,7 +1238,7 @@ describe('limits', () => {
   });
 
   test('one address may create only a few rooms a minute', async () => {
-    for (let i = 0; i < DEFAULT_ROOMS_PER_MINUTE; i += 1) await room(`Chair ${i}`);
+    for (let i = 0; i < DEFAULT_SOCKET_LIMITS.roomsPerMinute; i += 1) await room(`Chair ${i}`);
     const client = await connect();
     const reply = await client.send('room:create', { game: 'test', language: 'en', fields: ['general'], name: 'More' });
     expect(reply).toEqual({ ok: false, error: 'rate_limited' });
@@ -1247,12 +1247,12 @@ describe('limits', () => {
 
   test('the options say how many rooms a minute, and the number goes all the way to the counter', async () => {
     await server.close();
-    const raised = DEFAULT_ROOMS_PER_MINUTE + 2;
+    const raised = DEFAULT_SOCKET_LIMITS.roomsPerMinute + 2;
     server = await startServer({ roomsPerMinute: raised });
     // A raised limit protects less against abuse, so the server says that it has one.
     expect(server.logs).toContainEqual({
       event: 'rooms_per_minute_raised',
-      fields: { roomsPerMinute: raised, default: DEFAULT_ROOMS_PER_MINUTE },
+      fields: { roomsPerMinute: raised, default: DEFAULT_SOCKET_LIMITS.roomsPerMinute },
     });
     for (let i = 0; i < raised; i += 1) await room(`Chair ${i}`);
     const client = await connect();
@@ -1339,10 +1339,10 @@ describe('limits', () => {
       const client = await connect({}, { extraHeaders: { 'x-forwarded-for': forwarded } });
       return client.send('room:create', { game: 'test', language: 'en', fields: ['general'], name: 'Ann' });
     };
-    for (let port = 5000; port < 5000 + DEFAULT_ROOMS_PER_MINUTE; port += 1) {
+    for (let port = 5000; port < 5000 + DEFAULT_SOCKET_LIMITS.roomsPerMinute; port += 1) {
       expect(await create(`203.0.113.9:${port}`)).toMatchObject({ ok: true });
     }
-    expect(await create(`203.0.113.9:${5000 + DEFAULT_ROOMS_PER_MINUTE}`)).toEqual({
+    expect(await create(`203.0.113.9:${5000 + DEFAULT_SOCKET_LIMITS.roomsPerMinute}`)).toEqual({
       ok: false,
       error: 'rate_limited',
     });

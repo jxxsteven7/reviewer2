@@ -37,7 +37,7 @@ The first version has a game lobby, creating and joining rooms, choosing teams a
 | Language | TypeScript, front end and back end, in an npm workspace |
 | Front end | Vue 3 + Vite, vue-i18n |
 | Back end | Node.js + Socket.IO |
-| Storage | Room state in server memory; no database in the first version |
+| Storage | Rooms in server memory; players' feedback in SQLite, with Node's built-in `node:sqlite` |
 | Tests | Vitest, and Playwright end to end |
 | Deployment | One Node process serves both the static front end and WebSocket, on one domain and one port |
 
@@ -56,7 +56,7 @@ The first version has a game lobby, creating and joining rooms, choosing teams a
 
 ## Running locally
 
-You need [Node.js](https://nodejs.org) 22.13 or later, but not 23 or 25, which the test runner doesn't support. CI uses 24 LTS.
+You need [Node.js](https://nodejs.org) 22.22.2 or later (24.15 or later on Node 24), but not 23 or 25, which the test runner doesn't support. CI uses 24 LTS.
 
 ```bash
 npm install   # also turns on the git hooks

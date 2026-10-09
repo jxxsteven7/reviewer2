@@ -4,7 +4,7 @@ How to set up, run and test the app on your own machine. The rules for branches,
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) 22.13 or later, but not 23 or 25: the test runner doesn't support them, and `npm install` refuses to run on a version outside `engines` in `package.json`. CI uses 24 LTS, which `.node-version` names for version managers such as fnm.
+- [Node.js](https://nodejs.org) 22.22.2 or later, and 24.15 or later on Node 24, but not 23 or 25: the test runner doesn't support them, and `npm install` refuses to run on a version outside `engines` in `package.json`. Some of the development tools need 22.22.2 or 24.15, and the server needs at least 22.16 for the snapshots of its database, which use `backup()` from `node:sqlite`. CI uses 24 LTS, which `.node-version` names for version managers such as fnm, and runs the type checks and the tests on 22.22.2 as well.
 - npm, which comes with Node. The repository is an npm workspace with three packages: `shared`, `server` and `client`.
 - Git.
 
@@ -54,7 +54,7 @@ On Linux, add `--with-deps` to the install the first time: WebKit needs system l
 | Path | Contents |
 |---|---|
 | `shared/src/` | Types and rules that the client and the server share. The package is `@reviewer2/shared`, and both sides import its TypeScript source directly |
-| `server/src/` | The server. `config.ts` reads the environment variables, `http.ts` serves the front end with its cache and security headers, `server.ts` puts HTTP and Socket.IO on one port, `stats.ts` counts what the operator sees, `status.ts` serves the status page, and `index.ts` starts it all. `core/` holds rooms, players and connections, and `games/` one module per game; see [architecture.md](architecture.md) |
+| `server/src/` | The server. `config.ts` reads the environment variables, `http.ts` serves the front end with its cache and security headers, `server.ts` puts HTTP and Socket.IO on one port, `stats.ts` counts what the operator sees, `status.ts` serves the status page, `main.ts` starts and stops it all, and `index.ts` runs `main.ts`. `core/` holds rooms, players and connections, `games/` one module per game, and `store/` the database and the feedback in it; see [architecture.md](architecture.md) |
 | `server/test/` | Integration tests that start a real server and connect to it with Socket.IO clients |
 | `client/src/` | The Vue app: `core/` for the parts that all games share, `styles/` for the design tokens, `locales/` for all interface text |
 | `e2e/` | End-to-end tests with Playwright |
@@ -67,8 +67,10 @@ On Linux, add `--with-deps` to the install the first time: WebKit needs system l
 | `PORT` | `3000` | The port the server listens on |
 | `HOST` | `127.0.0.1` | The address the server listens on. Set it to `0.0.0.0` to reach the server from other devices |
 | `PUBLIC_DIR` | `client/dist` | Where the built front end is |
-| `WORDS_DIR` | `words` | Where the word lists are |
+| `WORDS_DIR` | `words` | Where the word lists are. The server refuses to start when there is no list in it that it can read, or no term in any list |
+| `DATA_DIR` | off | The directory for the database and its snapshots; see [architecture.md](architecture.md#data). It must be there already. A relative path is taken from the repository's root, so `mkdir data && DATA_DIR=data npm start` keeps the database in `data/`, which git ignores. Leave it unset to keep the database in memory, which is lost when the server stops; the server logs `database_opened` with which of the two it has |
 | `ROOMS_PER_MINUTE` | `5` | How many times a minute one address may try to create a room; see [architecture.md](architecture.md). Raise it where many people share one address, such as a class behind one router, and for tests, where every room comes from one address. A higher limit protects less against abuse, so the server logs `rooms_per_minute_raised` when it starts with one, and the `listening` line reports the value in use |
+| `FEEDBACK_PER_10_MINUTES` | `3` | How much feedback one address may send in 10 minutes; see [architecture.md](architecture.md#feedback). Raise it for the same reasons as `ROOMS_PER_MINUTE`; the server logs `feedback_limit_raised` when it starts with a higher limit, and the `listening` line reports the value in use |
 | `STATUS_PORT` | off | The port of the status page for the operator, which listens on `127.0.0.1` only, whatever `HOST` says; see [architecture.md](architecture.md#status). Leave it unset to keep the page off. It must be another port than `PORT`. When the port can't be opened, the server logs `status_unavailable` and runs without the page |
 | `TRUST_PROXY` | off | Set it to `1` behind a reverse proxy that sets `X-Forwarded-For`, and only there, so that the limits count each player's own address; see [architecture.md](architecture.md). `1`, `true`, `yes` and `on` switch it on, and a value the server doesn't know stops it |
 | `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
@@ -98,9 +100,10 @@ APP_VERSION="$(git rev-parse --short HEAD)" npm run build
 
 Then copy `server/dist/`, `client/dist/` and `words/` to the server, in the same layout, and run `node server/dist/index.cjs` there. It listens on `127.0.0.1:3000` unless `HOST` and `PORT` say otherwise, and `/healthz` answers once it is up.
 
-- **Keep `words/` beside the build.** The server refuses to start when it can't read the directory of the word lists, which is `words/` unless `WORDS_DIR` names another.
+- **Keep `words/` beside the build.** The server refuses to start when it can't read the directory of the word lists, which is `words/` unless `WORDS_DIR` names another, or when there is no list in it, or no term in any list.
+- **Keep the data.** Set `DATA_DIR` to a directory that exists and that the server can write, for example the `StateDirectory` that systemd makes for the service, such as `/var/lib/reviewer2`. The server keeps its database there, with up to three hourly snapshots and one from before each migration in `snapshots/`, and stops taking feedback once the database is larger than 50 MB, so a few hundred MB are plenty. It needs no permission to run programs there, so the directory can be on a volume mounted with `noexec`. The snapshots stay on the same disk; copy them elsewhere for a backup. Without `DATA_DIR`, players' feedback is lost at every restart.
 - **Restart the server after replacing the build.** It lists the front end's files when it starts, so a running server would serve the new `index.html` but answer its new assets with 404.
 - **Behind a reverse proxy,** pass the original `Host` header on, for nginx `proxy_set_header Host $host;`, along with the WebSocket upgrade headers. The Content Security Policy names the host the page was requested from, so that older iPhones allow the WebSocket connection to it.
-- **The status page.** Set `STATUS_PORT`, for example to `3302`, and open `http://127.0.0.1:3302` on the server itself. From another computer, forward the port first: `ssh -L 3302:127.0.0.1:3302 <server>`, then open the same address there.
+- **The status page.** Set `STATUS_PORT`, for example to `3302`, and open `http://127.0.0.1:3302` on the server itself, and `http://127.0.0.1:3302/feedback` for what players sent. From another computer, forward the port first: `ssh -L 3302:127.0.0.1:3302 <server>`, then open the same addresses there.
 - **Behind a reverse proxy, also set `TRUST_PROXY=1`** and have the proxy add the player's address to `X-Forwarded-For`, for nginx `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. Without it every connection comes from the proxy's own address, so all players together may create as many rooms a minute as `ROOMS_PER_MINUTE` allows, 5 unless it is set, and mistype 20 codes, and anyone can use that up for everyone. The server logs `forwarded_address_ignored` once when it sees the header while the setting is off, and the `listening` line says which way it is set.
 - **Behind a reverse proxy that isn't Cloudflare,** have it drop the `CF-IPCountry` header, for nginx `proxy_set_header CF-IPCountry "";`. With `TRUST_PROXY=1` the server believes the header, which Cloudflare sets on every request, and a proxy that passes it through as it came would let anyone pick the country they are counted under on the status page.

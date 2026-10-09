@@ -86,7 +86,7 @@ test('students write to their group, the PI only reads, and nobody else sees the
     const own = page.locator('[role=dialog] .message.own');
     const before = await own.count();
     await page.getByLabel(chat.input).fill(line);
-    await page.getByRole('button', { name: chat.send }).click();
+    await page.getByRole('button', { name: chat.send, exact: true }).click();
     await expect(own).toHaveCount(before + 1);
     await expect(own.last().locator('.text')).toHaveText(line);
   };
