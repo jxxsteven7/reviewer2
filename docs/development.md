@@ -79,7 +79,7 @@ On Linux, add `--with-deps` to the install the first time: WebKit needs system l
 | `ACCOUNTS_PER_HOUR` | `5` | How many accounts one address may create in an hour. Raise it for the same reasons as `ROOMS_PER_MINUTE`; the server logs `accounts_per_hour_raised` when it starts with a higher limit |
 | `SERVER_SECRET` or `SERVER_SECRET_FILE` | off | The server's secret, at least 32 characters, such as `head -c 32 /dev/urandom \| base64`, or the file that holds it, as systemd's credentials give it. It fingerprints email addresses ([architecture.md](architecture.md#mail)), so it must never change or be lost: every address bound with it would stop matching. Keep a copy apart from the database and its backups. Without it, accounts have no email |
 | `MAILER_SOCKET` | off | The mailer's Unix socket, a path of at most 107 bytes, taken from the repository's root when it is relative. Without it, accounts have no email |
-| `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the commit when you build for production |
+| `APP_VERSION` | `dev` | Read at build time: the version that `/healthz` and the page footer report. Set it to the release's version, such as `v0.1.0`, when you build for production |
 
 The mailer has settings of its own:
 
@@ -123,10 +123,10 @@ Then open `http://<your computer's address>:3000` on the phone. On a Mac, `ipcon
 
 ## Running in production
 
-The production build needs Node and nothing from `node_modules`. Build it with the commit as its version:
+The production build needs Node and nothing from `node_modules`. Build it with its version, which begins the title of every commit on `main` ([versioning.md](rules/versioning.md)); a commit without one, such as a branch's, is named by its hash instead:
 
 ```bash
-APP_VERSION="$(git rev-parse --short HEAD)" npm run build
+APP_VERSION="$(git log -1 --format=%s | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+' || git rev-parse --short HEAD)" npm run build
 ```
 
 Then copy `server/dist/`, `client/dist/`, `mailer/dist/` and `words/` to the server, in the same layout, and run `node server/dist/index.cjs` there. It listens on `127.0.0.1:3000` unless `HOST` and `PORT` say otherwise, and `/healthz` answers once it is up.

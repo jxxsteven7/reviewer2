@@ -16,7 +16,6 @@ for (const language of ['en', 'zh'] as const) {
     await expect(byline).toHaveAttribute('href', 'https://jxxsteven7.github.io/');
     await expect(byline).toHaveAttribute('target', '_blank');
     await expect(byline).toHaveAttribute('rel', 'noopener noreferrer');
-    await expect(page.getByText(text.footer.noSignUp)).toBeVisible();
 
     await page.getByRole('button', { name: text.footer.tip }).click();
     const sheet = page.locator('[role=dialog]');

@@ -72,7 +72,6 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
     </main>
 
     <footer class="footnotes">
-      <p>{{ t('footer.noSignUp') }}</p>
       <p class="credits">
         <a href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{ t('footer.byline') }}</a>
         <UiButton variant="quiet" size="small" @click="tipping = true">{{ t('footer.tip') }}</UiButton>
