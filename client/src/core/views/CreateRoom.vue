@@ -40,14 +40,24 @@ const screens = computed(() => games[props.game]);
 const settings = ref<object | undefined>(screens.value?.defaultSettings(language.value));
 const settingsValid = ref(true);
 
-// Start with every usable list chosen; a room with one list is the usual case.
-watch(usable, (lists) => (chosen.value = lists.map((field) => field.id)), { immediate: true });
+// The creator chooses the lists: none is chosen to begin with. When a change of language leaves
+// a chosen list without enough words, it drops out, and nothing is chosen in its place.
+watch(usable, (lists) => {
+  const ids = new Set(lists.map((field) => field.id));
+  chosen.value = chosen.value.filter((id) => ids.has(id));
+});
+// Whether to say that a list must be chosen: while there are lists to choose from and none is.
+const needsField = computed(() => usable.value.length > 0 && !chosen.value.length);
+// Whether the form will do. create() checks it too, since a form can be submitted without its
+// button.
+const ready = computed(() => chosen.value.length > 0 && !!clean.value && settingsValid.value);
 
 onMounted(loadFields);
 
 const NAME_ERRORS = ['name_required', 'name_invalid', 'name_taken'];
 
 async function create() {
+  if (!ready.value) return;
   formError.value = undefined;
   const reply = await run(() =>
     send<{ code: string }>('room:create', {
@@ -110,8 +120,14 @@ async function create() {
 
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
 
+    <p v-if="needsField" id="create-needs-field" class="hint">{{ t('create.chooseField') }}</p>
     <div class="actions">
-      <UiButton variant="primary" type="submit" :disabled="busy || !chosen.length || !clean || !settingsValid">
+      <UiButton
+        variant="primary"
+        type="submit"
+        :disabled="busy || !ready"
+        :aria-describedby="needsField ? 'create-needs-field' : undefined"
+      >
         {{ t('create.submit') }}
       </UiButton>
       <UiButton variant="quiet" @click="emit('cancel')">{{ t('create.cancel') }}</UiButton>

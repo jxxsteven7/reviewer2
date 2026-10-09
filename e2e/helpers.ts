@@ -12,6 +12,7 @@ import { io, type Socket } from 'socket.io-client';
 import { TOKEN } from '../client/src/core/session';
 import en from '../client/src/locales/en.json' with { type: 'json' };
 import zh from '../client/src/locales/zh.json' with { type: 'json' };
+import general from '../words/general.json' with { type: 'json' };
 
 // Helpers for the end-to-end tests. Every player is a separate browser context, so each has its
 // own storage, token and connection, as on separate phones. Button labels come from the locale
@@ -287,8 +288,9 @@ async function chooseToWatch(page: Page, language: Language, { watch = false }: 
   if (watch) await page.getByRole('radio', { name: TEXT[language].room.join.watch }).check();
 }
 
-// Creates a room. `setup` runs on the room setup once the name is filled in, for a test that
-// wants other settings than the defaults.
+// Creates a room with the general word list. The room setup starts with no list chosen and won't
+// create the room until one is. `setup` runs on the room setup once the name is filled in, for a
+// test that wants other settings than the defaults.
 export async function createRoom(
   page: Page,
   language: Language,
@@ -303,9 +305,14 @@ export async function createRoom(
   await page.getByRole('button', { name: text.home.newRoom }).click();
   await expect(page.locator('.fields li').first()).toBeVisible();
   await page.getByLabel(text.create.name).fill(name);
+  const submit = page.getByRole('button', { name: text.create.submit });
+  await expect(submit).toBeDisabled();
+  await expect(page.getByText(text.create.chooseField)).toBeVisible();
+  await page.getByLabel(general.name[language]).check();
+  await expect(submit).toBeEnabled();
   await setup?.(page);
   await chooseToWatch(page, language, joining);
-  await page.getByRole('button', { name: text.create.submit }).click();
+  await submit.click();
   await page.waitForURL(/\/room\/[0-9A-Z]{4}$/);
   await expect(page.locator('.lobby')).toBeVisible();
   return page.url();
