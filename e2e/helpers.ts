@@ -483,7 +483,7 @@ export async function keyCard(captain: Page, color: CardColor): Promise<number> 
 }
 
 // A guesser chooses a card and confirms it.
-async function reveal(guesser: Page, index: number): Promise<void> {
+export async function reveal(guesser: Page, index: number): Promise<void> {
   await expect(guesser.locator('.guess-bar')).toBeVisible();
   await guesser.locator('.board .card').nth(index).click();
   await guesser.locator('.guess-bar button.primary').click();
