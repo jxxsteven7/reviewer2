@@ -212,10 +212,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       safely('records', () => keepRecords(room));
     }
     const { match } = room;
-    if (match?.final && match.status === 'over' && matchLogged.get(room) !== match.id) {
+    if (match?.status === 'over' && matchLogged.get(room) !== match.id) {
       matchLogged.set(room, match.id);
       log('match_ended', { code: room.code, games: match.played });
-      safely('records', () => keepMatchRecords(room));
+      keepMatchRecords(room);
     }
     sent.set(room, room.rev);
     const view = room.views();
@@ -242,7 +242,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // Keeps a match that has run its course on the record of every ranked player with an account,
   // with the title that it awarded them, if any. A match that the chair ended early has no
   // ranking to keep. The database keeps a match once for each account, and a title once for each
-  // match, however often this runs.
+  // match, however often this runs. What goes wrong for one account doesn't keep the match from
+  // the others.
   function keepMatchRecords(room: Room): void {
     const { match } = room;
     if (!accounts || !match?.final || match.status !== 'over') return;
@@ -250,15 +251,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     for (const [key, { rank, total, title }] of match.final) {
       const account = room.memberByKey(key)?.account;
       if (!account) continue;
-      accounts.recordMatch(account.id, {
-        game: room.game.id,
-        matchId: match.id,
-        games: match.played,
-        rank,
-        players,
-        score: total,
-        title,
-      });
+      const record = { game: room.game.id, matchId: match.id, games: match.played, rank, players, score: total, title };
+      safely('records', () => accounts.recordMatch(account.id, record));
     }
   }
 

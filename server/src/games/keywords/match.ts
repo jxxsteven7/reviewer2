@@ -54,6 +54,10 @@ export function drawProblems(seating: Seating, online: ReadonlySet<string>): Sta
   return present >= DRAW_PLAYERS ? [] : [{ problem: 'needs_players', missing: DRAW_PLAYERS - present }];
 }
 
+// Whether a game counts for the match: every game does but one that the chair withdrew. A game in
+// progress counts as it stands.
+export const counts = (game: KeywordsState): boolean => game.result?.reason !== 'withdrawn';
+
 // Each player's points in a game, as they stand (shared/src/games/keywords/score.ts): everyone who
 // played for a group in it, by member key, with what their group found, whether it won, and what
 // they revealed themselves of the other group's cards and Reviewer 2. Null for a game that the
@@ -63,7 +67,7 @@ export function scoreGame(
   sides: ReadonlyMap<string, Team>,
   keyOf: (playerId: string) => string,
 ): MatchScore[] | null {
-  if (game.result?.reason === 'withdrawn') return null;
+  if (!counts(game)) return null;
   const found: Record<Team, number> = { red: 0, blue: 0 };
   const mistakes = new Map<string, { wrong: number; reviewer2: number }>();
   for (const record of game.history) {
@@ -156,11 +160,18 @@ function movedSet(set: ReadonlySet<string>, from: string, to: string): ReadonlyS
   return new Set([...set].map((key) => (key === from ? to : key)));
 }
 
-export const rekeySeating = (seating: Seating, from: string, to: string): Seating => ({
-  seats: seating.seats,
-  keyViewers: movedSet(seating.keyViewers, from, to),
-  sides: moved(seating.sides, from, to),
-});
+// The group that a player plays for in the current game is the one of the seat they are in, under
+// whichever key: a guest who logs in to an account that played earlier in the game plays on for the
+// guest's group.
+export function rekeySeating(seating: Seating, from: string, to: string): Seating {
+  const side = seating.sides.get(from);
+  const sides = new Map(seating.sides);
+  if (side !== undefined) {
+    sides.delete(from);
+    sides.set(to, side);
+  }
+  return { seats: seating.seats, keyViewers: movedSet(seating.keyViewers, from, to), sides };
+}
 
 export const rekeyMatch = (match: MatchSeating, from: string, to: string): MatchSeating => ({
   rules: match.rules,

@@ -48,11 +48,11 @@ const pool = computed(() =>
   groups.value.flatMap((group) => [...(group.captain ? [group.captain] : []), ...group.guessers]),
 );
 // A player who joins the pool sits in the smaller group, which only matters until the draw.
-function joinPool() {
-  const size = (team: Team) => Object.values(data.value.seats).filter((seat) => seat.team === team).length;
-  return sit(size('red') <= size('blue') ? 'red' : 'blue', 'guesser');
-}
-const mayTake = (team: Team) => mySide.value === null || mySide.value === team;
+const joinPool = () => sit(seatedIn('red') <= seatedIn('blue') ? 'red' : 'blue', 'guesser');
+// With fixed groups, a player may sit in their own group only, unless the other one has too few
+// players left to play, as the server allows.
+const seatedIn = (team: Team) => Object.values(data.value.seats).filter((seat) => seat.team === team).length;
+const mayTake = (team: Team) => mySide.value === null || mySide.value === team || seatedIn(team) < 2;
 const problemText = (item: StartProblem) =>
   item.problem === 'needs_players'
     ? t('lobby.problems.needs_players', { missing: item.missing })

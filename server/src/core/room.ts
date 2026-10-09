@@ -646,6 +646,7 @@ export class Room {
   views(): (viewer: Viewer) => RoomView {
     const context = this.context;
     let game: ((viewer: Viewer) => unknown) | undefined;
+    // Undefined until the first viewer asks; null for a room that isn't a match.
     let match: RoomView['match'] | undefined;
     const shared = {
       roomId: this.id,
@@ -676,7 +677,7 @@ export class Room {
     return (viewer) => ({
       ...shared,
       me: 'playerId' in viewer ? viewer.playerId : null,
-      match: (match ??= matchView()),
+      match: match === undefined ? (match = matchView()) : match,
       data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }

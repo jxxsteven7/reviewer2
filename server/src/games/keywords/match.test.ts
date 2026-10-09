@@ -312,3 +312,48 @@ describe('a match of the game', () => {
     expect(keywordsGame.match?.lineup(start({ ...data, seating: { ...data.seating, seats: new Map() } }))).toEqual([]);
   });
 });
+
+describe('fixed groups', () => {
+  const ids = ['ann', 'bob', 'cat', 'dee'];
+  const WORDS = Array.from({ length: 25 }, (_, i) => ({ word: `Word${i}` }));
+
+  function afterFirstGame(): KeywordsData {
+    const setup = keywordsGame.match?.setup(keywordsGame.create('en'), context(ids), {
+      games: 3,
+      teams: 'fixed',
+      grouping: 'choose',
+    }) as KeywordsData;
+    const seats = new Map(Object.entries({ ann: redPI, bob: red, cat: bluePI, dee: blue }));
+    const started = keywordsGame.start({ ...setup, seating: { ...setup.seating, seats } }, context(ids), WORDS, 'g1');
+    const over = {
+      ...started,
+      game: started.game && {
+        ...started.game,
+        phase: 'over' as const,
+        result: { winner: 'red' as const, reason: 'found' as const },
+      },
+    };
+    return keywordsGame.again(over, context(ids));
+  }
+
+  test("tell the view a player's group in the waiting room, but not during a game they don't play in", () => {
+    let data = afterFirstGame();
+    expect(keywordsGame.views(data, context(ids))({ playerId: 'ann' }).side).toBe('red');
+    const out = keywordsGame.handle(data, context(ids), 'ann', 'keywords:seat', SPECTATOR);
+    if (!out.ok) throw new Error(out.error);
+    data = keywordsGame.start(out.data, context(ids, { phase: 'playing' }), WORDS, 'g2');
+    expect(keywordsGame.views(data, context(ids, { phase: 'playing' }))({ playerId: 'ann' }).side).toBeNull();
+  });
+
+  test('let a player join the other group when it has too few players left to play, for good', () => {
+    let data = afterFirstGame();
+    const seat = (id: string, wanted: Seat) => keywordsGame.handle(data, context(ids), id, 'keywords:seat', wanted);
+    expect(seat('bob', blue)).toEqual({ ok: false, error: 'other_team' });
+    // Both of blue's players leave.
+    data = keywordsGame.leave(keywordsGame.leave(data, 'cat'), 'dee');
+    const moved = seat('bob', bluePI);
+    if (!moved.ok) throw new Error(moved.error);
+    expect(moved.data.match?.locked.get(keyOf('bob'))).toBe('blue');
+    expect(keywordsGame.views(moved.data, context(ids))({ playerId: 'bob' }).side).toBe('blue');
+  });
+});

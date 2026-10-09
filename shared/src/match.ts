@@ -27,13 +27,10 @@ export interface MatchRules {
 
 export const defaultMatchRules = (): MatchRules => ({ games: MATCH_GAMES.default, teams: 'fixed', grouping: 'random' });
 
-// Whether the number of games will do: a whole number in range. The room setup and the server
-// check it with this.
+// Whether the number of games will do: a whole number in range. The room setup checks it with
+// this, and the server's schema (schemas.ts) by MATCH_GAMES.
 export const matchGamesValid = (games: unknown): boolean =>
   Number.isInteger(games) && (games as number) >= MATCH_GAMES.min && (games as number) <= MATCH_GAMES.max;
-
-export const sameMatchRules = (a: MatchRules, b: MatchRules): boolean =>
-  a.games === b.games && a.teams === b.teams && a.grouping === b.grouping;
 
 // 'on' while games are left to play, 'over' once the last has been scored, and 'stopped' when the
 // chair ended it early, which awards no titles.

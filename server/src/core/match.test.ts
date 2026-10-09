@@ -104,8 +104,8 @@ describe('a match', () => {
     match.score('g1', scores({ ann: 4, bob: 9, cat: 2 }), presentOnly('ann', 'bob', 'cat'));
     const view = match.view('ended', 'g1', null, presentOnly('ann'));
     expect(view.standings.map(({ name, rank, title, left }) => ({ name, rank, title, left }))).toEqual([
-      { name: 'ann', rank: 2, title: undefined, left: false },
       { name: 'bob', rank: 1, title: 'best_paper', left: true },
+      { name: 'ann', rank: 2, title: undefined, left: false },
       { name: 'cat', rank: 3, title: 'black_hole', left: true },
     ]);
   });
@@ -194,15 +194,30 @@ describe('the table of a match', () => {
     ]);
   });
 
-  test("moves a guest's line to their account, unless the account has one", () => {
-    const match = new Match(RULES);
-    match.score('g1', scores({ guest: 3, other: 1 }), presentOnly('guest', 'other'));
-    match.rekey('guest', 'account');
-    match.rekey('other', 'account');
-    const view = match.view('lobby', null, null, presentOnly('account', 'other'));
-    expect(view.standings.map(({ name, total, left }) => ({ name, total, left }))).toEqual([
-      { name: 'account', total: 3, left: false },
-      { name: 'other', total: 1, left: false },
+  test("moves a guest's line to their account, and adds it to the account's own", () => {
+    const match = new Match({ ...RULES, games: 3 });
+    match.score('g1', scores({ guest: 3, account: 1 }), presentOnly('guest', 'account'));
+    match.rekey('guest', 'newcomer');
+    expect(match.view('lobby', null, null, presentOnly('newcomer', 'account')).standings).toMatchObject([
+      { name: 'newcomer', total: 3, games: 1 },
+      { name: 'account', total: 1, games: 1 },
+    ]);
+    match.rekey('newcomer', 'account');
+    expect(match.view('lobby', null, null, presentOnly('account')).standings).toMatchObject([
+      { name: 'account', total: 4, games: 2, delta: 3 },
+    ]);
+  });
+
+  test('lists the ranked by their place at the end, before those who came back unranked', () => {
+    const match = new Match({ ...RULES, games: 1 });
+    match.enter('bob', 'bob', null);
+    match.score('g1', scores({ ann: 4, bob: 12, cat: 2 }), presentOnly('ann', 'cat'));
+    // Bob left during the last game, and is back after the end.
+    const view = match.view('ended', 'g1', null, presentOnly('ann', 'bob', 'cat'));
+    expect(view.standings.map(({ name, rank }) => ({ name, rank }))).toEqual([
+      { name: 'ann', rank: 1 },
+      { name: 'cat', rank: 2 },
+      { name: 'bob', rank: null },
     ]);
   });
 

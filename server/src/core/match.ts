@@ -59,10 +59,10 @@ export class Match {
   // Names the match on the records and titles of accounts, and in the chair's messages about it.
   readonly id = randomId();
   readonly rules: MatchRules;
-  played = 0;
-  status: MatchStatus = 'on';
+  #played = 0;
+  #status: MatchStatus = 'on';
   // The last game that was scored, which no end can score twice.
-  lastGameId: string | null = null;
+  #lastGameId: string | null = null;
   // In the order in which the players entered the match.
   readonly #entries = new Map<string, Entry>();
   // The places at the end, which stay as they were then, whoever leaves afterwards.
@@ -70,6 +70,15 @@ export class Match {
 
   constructor(rules: MatchRules) {
     this.rules = { ...rules };
+  }
+
+  // How many games have been scored.
+  get played(): number {
+    return this.#played;
+  }
+
+  get status(): MatchStatus {
+    return this.#status;
   }
 
   // Lists a player who plays in a game that starts, with no points if they are new.
@@ -82,7 +91,7 @@ export class Match {
   // Adds up a game that has ended. The match is over once it has scored as many games as its rules
   // say.
   score(gameId: string, scores: readonly MatchScore[], present: Present): void {
-    if (this.status !== 'on' || this.lastGameId === gameId) return;
+    if (this.#status !== 'on' || this.#lastGameId === gameId) return;
     for (const { key, points, detail } of scores) {
       const member = present(key);
       if (!this.#entries.has(key)) this.enter(key, member?.name ?? '', member?.avatar ?? null);
@@ -92,16 +101,16 @@ export class Match {
       entry.games += 1;
       entry.last = { gameId, points, detail };
     }
-    this.played += 1;
-    this.lastGameId = gameId;
-    if (this.played >= this.rules.games) this.finish('over', present);
+    this.#played += 1;
+    this.#lastGameId = gameId;
+    if (this.#played >= this.rules.games) this.finish('over', present);
   }
 
   // Ends the match: it is over, or the chair stopped it early. The players who took part in a
   // scored game and are still in the room are ranked; only a match that is over awards titles.
   finish(status: 'over' | 'stopped', present: Present): void {
-    if (this.status !== 'on') return;
-    this.status = status;
+    if (this.#status !== 'on') return;
+    this.#status = status;
     const ranked = this.ranked(present);
     const ranks = rankings(ranked);
     const titles = status === 'over' ? titlesFor(ranked) : new Map<string, Title>();
@@ -123,16 +132,25 @@ export class Match {
     return this.#final;
   }
 
-  // A guest's seat became an account's: the guest's line becomes the account's, unless the account
-  // has one of its own already, which then stays as it is.
+  // A guest's seat became an account's: the guest's line becomes the account's. They are the same
+  // person, so when the account has a line of its own already, from before it left the room, the
+  // two are added up.
   rekey(from: string, to: string): void {
     const entry = this.#entries.get(from);
-    if (!entry || this.#entries.has(to)) return;
-    const entries = [...this.#entries].map(([key, value]): [string, Entry] =>
-      key === from ? [to, { ...value, key: to }] : [key, value],
-    );
-    this.#entries.clear();
-    for (const [key, value] of entries) this.#entries.set(key, value);
+    if (!entry) return;
+    const own = this.#entries.get(to);
+    if (own) {
+      own.total += entry.total;
+      own.games += entry.games;
+      if (entry.last && (own.last === null || entry.last.gameId === this.#lastGameId)) own.last = entry.last;
+      this.#entries.delete(from);
+    } else {
+      const entries = [...this.#entries].map(([key, value]): [string, Entry] =>
+        key === from ? [to, { ...value, key: to }] : [key, value],
+      );
+      this.#entries.clear();
+      for (const [key, value] of entries) this.#entries.set(key, value);
+    }
     const placing = this.#final?.get(from);
     if (this.#final && placing && !this.#final.has(to)) {
       this.#final.delete(from);
@@ -141,11 +159,11 @@ export class Match {
   }
 
   // The match as everyone sees it. `live` is each player's points in the game being played, as
-  // they stand.
+  // they stand, which the room gives only while a game is being played.
   view(phase: RoomPhase, gameId: string | null, live: readonly MatchScore[] | null, present: Present): MatchView {
-    const scoredNow = phase === 'ended' && gameId !== null && gameId === this.lastGameId;
-    const now = new Map((phase === 'playing' ? (live ?? []) : []).map((score) => [score.key, score]));
-    const focus = phase === 'playing' || (phase === 'ended' && !scoredNow) ? null : this.lastGameId;
+    const scoredNow = phase === 'ended' && gameId !== null && gameId === this.#lastGameId;
+    const now = new Map((live ?? []).map((score) => [score.key, score]));
+    const focus = phase === 'playing' || (phase === 'ended' && !scoredNow) ? null : this.#lastGameId;
     const ranks = this.#final ? null : rankings(this.ranked(present));
     const standings = [...this.#entries.values()].map((entry): StandingView => {
       const member = present(entry.key);
@@ -166,15 +184,20 @@ export class Match {
         ...(placing?.title ? { title: placing.title } : {}),
       };
     });
-    // The sort is stable, so ties keep the order in which the players entered the match.
-    standings.sort((a, b) => Number(a.left) - Number(b.left) || b.total - a.total);
+    // The ranked come first, by their place, then the others who are here, then those who have left,
+    // each by total. The sort is stable, so ties keep the order in which the players entered.
+    const place = (standing: StandingView) => standing.rank ?? Infinity;
+    standings.sort((a, b) => place(a) - place(b) || Number(a.left) - Number(b.left) || b.total - a.total);
     // The game in focus is the next one, unless the one that has just ended was scored.
     return {
       id: this.id,
       rules: { ...this.rules },
-      played: this.played,
-      status: this.status,
-      game: Math.max(1, Math.min(this.rules.games, !scoredNow && this.status === 'on' ? this.played + 1 : this.played)),
+      played: this.#played,
+      status: this.#status,
+      game: Math.max(
+        1,
+        Math.min(this.rules.games, !scoredNow && this.#status === 'on' ? this.#played + 1 : this.#played),
+      ),
       standings,
     };
   }

@@ -32,6 +32,7 @@ import {
 import {
   afterScoredGame,
   arrangeFixed,
+  counts,
   drawProblems,
   lineupOf,
   newMatchSeating,
@@ -102,18 +103,23 @@ function stageOf(data: KeywordsData): GameStage {
 //
 // A match adds two rules. While one of its games is on, only those who have played for a group in
 // it may sit in one: anyone else plays from the next game. And once its groups are fixed, everyone
-// who has played for one sits in it. Whoever was to play from the next game and asks to watch
-// changes their mind.
+// who has played for one sits in it, unless the other group has too few players left to play at
+// all, which they may then join for the rest of the match. Whoever was to play from the next game
+// and asks to watch changes their mind.
 function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: SeatRequest): GameUpdate<KeywordsData> {
   const key = ctx.keyOf(playerId);
   const refusal = data.match && matchRefusal(data, data.match, key, wanted);
   if (refusal) return { ok: false, error: refusal };
   const change = changeSeat(data.seating, { id: playerId, key }, wanted, stageOf(data));
   if (!change.ok) return change;
-  const match =
-    data.match?.waiting.has(key) && wanted.role === 'spectator'
-      ? { ...data.match, waiting: new Set([...data.match.waiting].filter((other) => other !== key)) }
-      : data.match;
+  let { match } = data;
+  if (match?.waiting.has(key) && wanted.role === 'spectator') {
+    match = { ...match, waiting: new Set([...match.waiting].filter((other) => other !== key)) };
+  }
+  const locked = match?.locked.get(key);
+  if (match && wanted.team !== null && locked !== undefined && locked !== wanted.team) {
+    match = { ...match, locked: new Map(match.locked).set(key, wanted.team) };
+  }
   if (change.seating === data.seating && match === data.match) return { ok: true, data };
   return {
     ok: true,
@@ -126,9 +132,14 @@ function matchRefusal(data: KeywordsData, match: MatchSeating, key: string, want
   const stage = stageOf(data);
   if (stage === 'on' && !data.seating.sides.has(key)) return 'between_games';
   const team = match.locked.get(key);
-  if (stage !== 'on' && lineupOf(match) === 'fixed' && team !== undefined && team !== wanted.team) return 'other_team';
+  const switching = stage !== 'on' && lineupOf(match) === 'fixed' && team !== undefined && team !== wanted.team;
+  if (switching && !tooFew(data.seating, wanted.team)) return 'other_team';
   return null;
 }
+
+// Whether a group has too few players in its seats to play a game: it needs a PI and a student.
+const tooFew = (seating: Seating, team: Team) =>
+  [...seating.seats.values()].filter((seat) => seat.team === team).length < 2;
 
 // An action on the game, which the rules judge for the player in the seat they are in right
 // now. Once a game has ended, its actions still reach the rules, which answer stale or game_over
@@ -246,7 +257,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   again(data, ctx) {
     const seating = endGame(data.seating);
     if (!data.match) return { ...data, seating, game: null };
-    const scored = data.game?.result?.winner != null;
+    const scored = data.game !== null && counts(data.game);
     let match = scored ? afterScoredGame(data.match, data.seating) : data.match;
     const members = membersOf(ctx);
     let next = seating;
@@ -330,9 +341,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       let game = boards.get(board);
       if (game === undefined) boards.set(board, (game = data.game && viewFor(data.game, seat, at)));
       const key = 'playerId' in viewer ? ctx.keyOf(viewer.playerId) : null;
+      // In the waiting room of a match whose groups are fixed, the group is the one the player is
+      // fixed to; during and after a game, the one they played for in it, if any.
+      const fixed = stageOf(data) === 'none' && key !== null ? data.match?.locked.get(key) : undefined;
       return {
         ...shared,
-        side: (key !== null && (data.seating.sides.get(key) ?? data.match?.locked.get(key))) || null,
+        side: (key !== null && (data.seating.sides.get(key) ?? fixed)) || null,
         joinsNext: key !== null && (data.match?.waiting.has(key) ?? false),
         game,
       };

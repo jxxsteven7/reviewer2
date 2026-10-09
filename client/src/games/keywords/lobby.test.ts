@@ -170,12 +170,33 @@ describe('KeywordsLobby in a match', () => {
 
   test('offers the seats of their own group alone, when the groups are fixed', () => {
     const lobby = mount(KeywordsLobby, {
-      props: { room: inMatch('bob', { lineup: 'fixed', side: 'red' }, 1) },
+      props: {
+        room: inMatch(
+          'bob',
+          {
+            lineup: 'fixed',
+            side: 'red',
+            seats: {
+              ann: { team: 'red', role: 'captain' },
+              bob: { team: 'red', role: 'guesser' },
+              cat: { team: 'blue', role: 'captain' },
+              dan: { team: 'blue', role: 'guesser' },
+            },
+          },
+          1,
+        ),
+      },
       global: global(),
     });
-    const [red, blue] = lobby.findAll('.group');
-    expect(red?.findAll('button').length).toBeGreaterThan(0);
-    expect(blue?.findAll('button')).toHaveLength(0);
+    const blue = lobby.findAll('.group')[1];
+    expect(blue?.text()).not.toContain('Join as a student');
+    // A group with too few players left to play may be joined.
+    const seats = { ann: { team: 'red', role: 'captain' }, bob: { team: 'red', role: 'guesser' } } as const;
+    const short = mount(KeywordsLobby, {
+      props: { room: inMatch('bob', { lineup: 'fixed', side: 'red', seats }, 1) },
+      global: global(),
+    });
+    expect(short.findAll('.group')[1]?.text()).toContain('Join as a student');
     expect(lobby.text()).toContain('The groups stay the same for the whole match');
   });
 
