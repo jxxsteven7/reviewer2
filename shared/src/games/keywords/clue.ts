@@ -306,3 +306,59 @@ export function checkClue(
     verdicts.flatMap((found) => (found ? (found.strict ?? found.warned ?? []) : [])),
   );
 }
+
+// What keeping two cards off one board needs of a card, worked out once for each card: the card's
+// word as a clue would be checked, whole and word by word, and as a card on the board, with the
+// keys of its translations and its forms.
+interface Dealt {
+  clues: Word[];
+  word: Word;
+  translations: string[];
+  forms: Word[];
+}
+
+const dealt = new WeakMap<object, Dealt>();
+
+function dealtOf(card: BoardText): Dealt {
+  let found = dealt.get(card);
+  if (!found) {
+    const text = normalizeClue(card.word);
+    const word = wordOf(text);
+    const words = text.split(' ');
+    found = {
+      clues: words.length > 1 ? [word, ...words.map(wordOf)] : [word],
+      word,
+      translations: (card.translations ?? []).map(wordKey).filter((key) => key !== ''),
+      forms: (card.forms ?? []).map(wordOf).filter((form) => form.key !== ''),
+    };
+    dealt.set(card, found);
+  }
+  return found;
+}
+
+// The card's word, given as a clue while the other card is on the board, would be refused under
+// the strict rule for repeating it: its word, its term in another language or one of its forms.
+// A Chinese character in common is left out, and so is everything that only brings a warning.
+const givesAway = (clue: Dealt, card: Dealt): boolean =>
+  clue.clues.some(
+    (word) =>
+      repeats(word, card.word) ||
+      card.translations.some((key) => sameOrPlural(word.key, key)) ||
+      card.forms.some((form) => repeats(word, form)),
+  );
+
+// The words of a card, as the word library gives them: what cardsClash() compares.
+export type BoardText = Pick<ClueCard, 'word' | 'translations' | 'forms'>;
+
+// Whether two words must not share a board, because one of them repeats the other: "Gene" and
+// "Gene editing", the Chinese words for "fossil" and "living fossil", or "Unit" and "GPU" with the
+// form "graphics processing unit". Hinting at one would hint at the other, and guessers couldn't
+// tell which was meant. It holds each word, as a clue, against the other as a card, as the strict
+// clue rule would, in both directions. Only a Chinese character in common doesn't count, since so
+// many terms share one. What it works out about a card is kept with the card object, so pass the
+// same objects again. scripts/check-words.mjs has a copy of this, which a test holds to it.
+export function cardsClash(a: BoardText, b: BoardText): boolean {
+  const first = dealtOf(a);
+  const second = dealtOf(b);
+  return givesAway(first, second) || givesAway(second, first);
+}
