@@ -66,12 +66,13 @@ export async function logIn(path: string, body: object): Promise<Ack> {
   return account.summary ? reply : { ok: false, error: 'cookies_blocked' };
 }
 
-// A connection whose login ended elsewhere, as when the password was reset, is told so and closed
-// by the server. It comes back as a guest.
+// A connection whose login ended, as when the password was changed or reset, is told so and closed
+// by the server. It comes back as whoever the browser is now: a guest, or the same account with
+// the new login of the browser that changed the password, which the page asks the server about.
 let endedHere = false;
 socket.on('account:ended', () => {
   endedHere = true;
-  account.summary = null;
+  void loadAccount();
 });
 socket.on('disconnect', (reason) => {
   if (!endedHere || reason !== 'io server disconnect') return;

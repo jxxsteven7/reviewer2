@@ -256,6 +256,44 @@ describe('a forgotten password', () => {
   });
 });
 
+describe('the links that are still out', () => {
+  test('are no use once the password has been changed or reset, or the address unbound', async () => {
+    await start();
+    const ann = await bound('Ann', 'ann@example.com');
+    const stranger = new Browser(server.url);
+    // Asks for a link to reset the password, and waits for the mail with it.
+    const reset = async () => {
+      const before = mail.sent.length;
+      await forgot(stranger, 'ann@example.com');
+      await until(() => mail.sent.length > before, 'the reset mail');
+      return mail.last('reset');
+    };
+    const use = (token: string) => stranger.request('/api/password/reset', { token, password: 'battery staple' });
+
+    // Someone who had the password asked for a link to bind their own address, and one to reset.
+    await bind(ann, 'thief@example.com');
+    const theirs = mail.last('bind');
+    const resetLink = await reset();
+    await ann.request('/api/account/password', { current: 'correct horse', password: 'new password' });
+    expect((await confirm(theirs)).body.error).toBe('link_invalid');
+    expect((await use(resetLink)).body.error).toBe('link_invalid');
+    expect(await ann.account()).toMatchObject({ email: 'bound' });
+
+    // A reset uses up a link to bind an address too.
+    await bind(ann, 'thief@example.com', 'new password');
+    const again = mail.last('bind');
+    expect((await use(await reset())).status).toBe(200);
+    expect((await confirm(again)).body.error).toBe('link_invalid');
+
+    // And unbinding the address uses up the links to reset the password that went to it.
+    const owner = new Browser(server.url);
+    await owner.logIn('Ann', 'battery staple');
+    const lastReset = await reset();
+    await owner.request('/api/account/email/remove', { password: 'battery staple' });
+    expect((await use(lastReset)).body.error).toBe('link_invalid');
+  });
+});
+
 describe('an account that is deleted', () => {
   test('frees its address', async () => {
     await start();

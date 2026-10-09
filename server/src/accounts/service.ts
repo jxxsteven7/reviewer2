@@ -40,8 +40,6 @@ const refuse = (error: AccountFailure): { ok: false; error: AccountFailure } => 
 export interface AccountHooks {
   // These logins have ended: the connections that came with them are no longer the account.
   sessionsEnded(hashes: readonly Uint8Array[]): void;
-  // This browser's login was replaced by a new one, as when its password was changed.
-  sessionReplaced(from: Uint8Array, to: Uint8Array): void;
   // The username or the avatar changed, which the rooms that the account is in show.
   accountChanged(accountId: number): void;
   // The account is gone, and with it its place in every room.
@@ -50,7 +48,6 @@ export interface AccountHooks {
 
 const NO_HOOKS: AccountHooks = {
   sessionsEnded: () => {},
-  sessionReplaced: () => {},
   accountChanged: () => {},
   accountDeleted: () => {},
 };
@@ -234,8 +231,12 @@ export class Accounts {
     return { ok: true };
   }
 
-  // Changes the password. Every other browser is logged out, and this one gets a new secret, so
-  // that a secret that has leaked is no use either.
+  // Changes the password. Every login ends, this browser's with the others, and this browser gets
+  // a new one, so that a secret that has leaked is no use either: not for a request, and not for a
+  // connection that someone else opened with it, which the server can't tell from this browser's
+  // own. This browser's connections come back with the new login. The links in mails that are
+  // still out are no use either, so that one asked for while someone else had the password can't
+  // bind their address after it has been changed.
   async changePassword(
     ip: string,
     login: Login,
@@ -255,12 +256,13 @@ export class Accounts {
       if (!this.sessions.delete(login.hash)) return null;
       this.store.setPassword(login.account.id, hashed.hash);
       const others = this.sessions.deleteForAccount(login.account.id);
+      this.mailTokens.deleteForAccount(login.account.id, 'bind');
+      this.mailTokens.deleteForAccount(login.account.id, 'reset');
       this.sessions.create(hash, login.account.id);
       return others;
     });
     if (ended === null) return refuse('not_logged_in');
-    this.hooks.sessionReplaced(login.hash, hash);
-    this.hooks.sessionsEnded(ended);
+    this.hooks.sessionsEnded([login.hash, ...ended]);
     return { ok: true, secret };
   }
 
@@ -398,14 +400,16 @@ export class Accounts {
     return bound ? { ok: true } : refuse('link_invalid');
   }
 
-  // Unbinds the address, and forgets one that waits for its link. Asks for the password, since
-  // without an address a forgotten password can't be reset.
+  // Unbinds the address, and forgets one that waits for its link, and the links to reset the
+  // password that went to the address. Asks for the password, since without an address a
+  // forgotten password can't be reset.
   async unbindEmail(ip: string, login: Login, password: string): Promise<AccountResult> {
     const confirmed = await this.#confirm(ip, login, password);
     if (!confirmed.ok) return confirmed;
     this.store.transaction(() => {
       this.store.setEmail(login.account.id, null);
       this.mailTokens.deleteForAccount(login.account.id, 'bind');
+      this.mailTokens.deleteForAccount(login.account.id, 'reset');
     });
     return { ok: true };
   }
@@ -456,6 +460,7 @@ export class Accounts {
       if (!account) return null;
       this.store.setPassword(account.id, hashed.hash);
       this.mailTokens.deleteForAccount(account.id, 'reset');
+      this.mailTokens.deleteForAccount(account.id, 'bind');
       const ended = this.sessions.deleteForAccount(account.id);
       this.sessions.create(hashSecret(secret), account.id);
       return { account, ended };

@@ -170,21 +170,29 @@ describe('a login that ends', () => {
     await visitor.waitFor((state) => state.players.some((player) => player.name === 'Ann' && !player.online));
   });
 
-  test('after a password change leaves this browser connected and logs the others out', async () => {
+  test('after a password change closes every connection of the account, which come back with the new login', async () => {
     server = await startServer();
     const phone = await loggedIn('Ann');
     const laptop = new Browser(server.url);
     await laptop.logIn('Ann');
+    // Someone else has the phone's cookie, and a connection open with it.
+    const thief = new Browser(server.url);
+    thief.cookie = phone.cookie;
     const onPhone = track(await phone.connect());
     const onLaptop = track(await laptop.connect());
+    const stolen = track(await thief.connect());
+    expect(stolen.account).toEqual({ username: 'Ann', avatar: null });
+
     await phone.request('/api/account/password', { current: 'correct horse', password: 'battery staple' });
-    await until(() => onLaptop.disconnects.length > 0, 'the laptop to be logged out');
-    expect(onLaptop.loginsEnded).toBe(1);
-    expect(onPhone.socket.connected).toBe(true);
-    // The phone's connection belongs to its new login: logging that out ends it too.
-    await phone.request('/api/logout', {});
-    await until(() => onPhone.disconnects.length > 0, 'the phone to be logged out');
-    expect(onPhone.loginsEnded).toBe(1);
+    await until(
+      () => [onPhone, onLaptop, stolen].every((client) => client.disconnects.length > 0),
+      'every connection to close',
+    );
+    expect([onPhone, onLaptop, stolen].map((client) => client.loginsEnded)).toEqual([1, 1, 1]);
+    // The phone has the new login, and comes back as Ann; the others come back as guests.
+    expect(track(await phone.connect()).account).toEqual({ username: 'Ann', avatar: null });
+    expect(track(await laptop.connect()).account).toBeNull();
+    expect(track(await thief.connect()).account).toBeNull();
   });
 });
 

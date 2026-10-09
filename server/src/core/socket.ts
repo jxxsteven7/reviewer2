@@ -735,12 +735,6 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
           socket.disconnect(true);
         }
       },
-      sessionReplaced(from, to) {
-        const [old, replacement] = [hex(from), hex(to)];
-        for (const socket of connectionsOf(({ session }) => session === old)) {
-          (connection(socket).account as NonNullable<Connection['account']>).session = replacement;
-        }
-      },
       accountChanged(accountId) {
         const account = accounts.store.byId(accountId);
         if (!account) return;
