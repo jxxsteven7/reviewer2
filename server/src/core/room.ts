@@ -378,9 +378,9 @@ export class Room {
   // started then. One that arrives after another start, such as from a second tab whose
   // connection had stalled, is stale, even when the room is back in the waiting room by now.
   //
-  // The room draws the words itself, preferring those that it hasn't played with yet, and none
-  // that clash with each other, as far as its fields allow. `clashes` says how many pairs of the
-  // words drawn clash all the same: it is 0 unless the fields leave no other way.
+  // The room draws the words itself, preferring those that it hasn't played with yet, and keeping
+  // apart those that clash with each other, as far as it can. `clashes` says how many pairs of
+  // the words drawn clash all the same: it is 0 unless the draw found no way to keep them apart.
   start(round: number): Ack<{ clashes: number }> {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');

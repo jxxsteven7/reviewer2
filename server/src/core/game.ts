@@ -67,7 +67,7 @@ export interface GameModule<Data = unknown, View = unknown> {
   // How many words a game needs from the word library.
   wordsNeeded: number;
   // Whether two words must not be in the same game, such as two of which one contains the other.
-  // The room draws words of which no two clash, as long as its fields allow it.
+  // The room draws words of which no two clash, as far as its fields let it.
   wordsClash?(a: BoardWord, b: BoardWord): boolean;
   // A new room's data, with the game's default settings for the room's language.
   create(language: Language): Data;

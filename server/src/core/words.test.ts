@@ -233,6 +233,28 @@ describe('drawing words', () => {
     expect(Array.from({ length: 20 }, (_, seed) => unusedFirst(seed)).every(Boolean)).toBe(false);
   });
 
+  test('repeats the words of the last board only when no other word is left', () => {
+    // A pool of twice a board: the two halves take turns, so no word comes back right away.
+    const half = pool.slice(0, 50);
+    let used: ReadonlySet<string> = new Set();
+    let last: string[] = [];
+    for (let game = 0; game < 10; game += 1) {
+      const draw = drawWords(half, 25, used, seededRng(game));
+      expect(new Set(words(draw)).size).toBe(25);
+      expect(words(draw).some((word) => last.includes(word))).toBe(false);
+      last = words(draw);
+      used = draw?.used ?? new Set();
+    }
+    // With 60 words, the third board takes the 10 unused ones and 15 of the first board, and none
+    // of the second. Every word has been drawn then, so the room starts over.
+    const first = drawWords(pool, 25, new Set(), seededRng(1));
+    const second = drawWords(pool, 25, first?.used ?? new Set(), seededRng(2));
+    const third = drawWords(pool, 25, second?.used ?? new Set(), seededRng(3));
+    expect(words(third).filter((word) => words(first).includes(word))).toHaveLength(15);
+    expect(words(third).some((word) => words(second).includes(word))).toBe(false);
+    expect(third?.used).toEqual(new Set(words(third).map(wordKey)));
+  });
+
   test('draws from the whole pool once the room has used all of it', () => {
     const used = new Set(pool.map(({ word }) => wordKey(word)));
     const draw = drawWords(pool, 25, used, seededRng(1));
@@ -306,7 +328,7 @@ describe('drawing words that clash', () => {
       expect(pairs(drawn, clash)).toBe(0);
       // The other 15 unused words were left out by clashes only, so the room doesn't start over.
       expect(draw?.used).toEqual(new Set([...used, ...keys(unused)]));
-      // The next board takes those 15, and with fewer unused words than a board needs, it starts over.
+      // The next board takes those 15, and once every word has been drawn, the room starts over.
       const next = drawWords(pool, 25, draw?.used ?? new Set(), seededRng(seed), clash);
       const left = pool.slice(30).filter((word) => !unused.includes(word));
       expect(left.every((word) => next?.words.includes(word))).toBe(true);
@@ -316,6 +338,34 @@ describe('drawing words that clash', () => {
     const plain = drawWords(pool, 25, used, seededRng(1), () => false);
     expect(plain?.words.every((word) => number(word) >= 30)).toBe(true);
     expect(plain?.used.size).toBe(55);
+  });
+
+  test('keeps the words that clashes left out ahead of a new cycle, however few were left', () => {
+    const pool = numbered(60);
+    const keys = (words: readonly BoardWord[]) => words.map(({ word }) => wordKey(word));
+    // Only 20 words are unused, fewer than a board needs, and each of 40 to 44 clashes with the
+    // word 5 further on.
+    const used = new Set(keys(pool.slice(0, 40)));
+    const clash = (a: BoardWord, b: BoardWord) => {
+      const low = Math.min(number(a), number(b));
+      return low >= 40 && low < 45 && Math.max(number(a), number(b)) === low + 5;
+    };
+    for (let seed = 0; seed < 20; seed += 1) {
+      const draw = drawWords(pool, 25, used, seededRng(seed), clash);
+      const drawn = draw?.words ?? [];
+      const unused = drawn.filter((word) => number(word) >= 40);
+      expect(unused).toHaveLength(15);
+      expect(pairs(drawn, clash)).toBe(0);
+      // The five words left out have never been played, so the room doesn't start over yet.
+      expect(draw?.used).toEqual(new Set([...used, ...keys(unused)]));
+      // The next board takes all five, and none of this board's words, and then the room starts over.
+      const next = drawWords(pool, 25, draw?.used ?? new Set(), seededRng(seed), clash);
+      const left = pool.slice(40).filter((word) => !unused.includes(word));
+      expect(left).toHaveLength(5);
+      expect(left.every((word) => next?.words.includes(word))).toBe(true);
+      expect(next?.words.some((word) => drawn.includes(word))).toBe(false);
+      expect(next?.used).toEqual(new Set(keys(next?.words ?? [])));
+    }
   });
 
   test('looks at a limited number of words when the pass comes out short', () => {
