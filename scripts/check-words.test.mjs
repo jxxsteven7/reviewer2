@@ -29,7 +29,12 @@ const SUPERVISOR = '\u5bfc\u5e08'; // what the game calls the PI in Chinese
 const REVIEWER = '\u5ba1\u7a3f\u4eba';
 const REVIEWER_TRADITIONAL = '\u5be9\u7a3f\u4eba';
 
-const terms = (count, make = (i) => ({ id: `term-${i}`, zh: `\u8bcd${i}`, en: `Term ${i}` })) =>
+// The terms of a list that passes. No two of them repeat each other, as "Term 1" and "Term 2" would
+// (see clashes below): each English term ends in a letter of its own, such as "Termd", and each
+// Chinese one in a character of its own.
+const enTerm = (i) => `Term${String.fromCharCode(0x61 + i)}`;
+const zhTerm = (i) => `\u8bcd${String.fromCharCode(0x4e00 + i)}`;
+const terms = (count, make = (i) => ({ id: `term-${i}`, zh: zhTerm(i), en: enTerm(i) })) =>
   Array.from({ length: count }, (_, i) => make(i));
 
 const list = (overrides = {}) => ({
@@ -54,8 +59,8 @@ describe('a word list', () => {
   test('allows the optional fields', () => {
     const rich = terms(MIN_TERMS, (i) => ({
       id: `term-${i}`,
-      zh: `\u8bcd${i}`,
-      en: `Term ${i}`,
+      zh: zhTerm(i),
+      en: enTerm(i),
       difficulty: 1 + (i % 5),
       related: [`term-${(i + 1) % MIN_TERMS}`],
       note: { zh: '\u4e00\u53e5\u8bdd', en: 'One line' },
@@ -75,7 +80,7 @@ describe('a word list', () => {
 
   test('needs 25 terms in at least one language', () => {
     assert.ok(has(check(list({ terms: terms(MIN_TERMS - 1) })).problems, /at least 25 different terms/));
-    const englishOnly = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: `Term ${i}` }));
+    const englishOnly = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: enTerm(i) }));
     const result = check(list({ terms: englishOnly }));
     assert.deepEqual(result.problems, []);
     assert.deepEqual(result.counts, { zh: 0, en: MIN_TERMS });
@@ -84,8 +89,8 @@ describe('a word list', () => {
   test('warns about a language that has some terms, but fewer than 25', () => {
     const mixed = terms(MIN_TERMS, (i) => ({
       id: `term-${i}`,
-      en: `Term ${i}`,
-      ...(i < 3 ? { zh: `\u8bcd${i}` } : {}),
+      en: enTerm(i),
+      ...(i < 3 ? { zh: zhTerm(i) } : {}),
     }));
     const { problems, warnings } = check(list({ terms: mixed }));
     assert.deepEqual(problems, []);
@@ -132,13 +137,14 @@ describe('a term', () => {
   });
 
   test('must not be the same word as another term in the same language', () => {
-    assert.ok(has(withTerm({ id: 'again', en: 'Term 3' }).problems, /"en" "Term 3" repeats terms\[3\]$/));
+    assert.ok(has(withTerm({ id: 'again', en: 'Termd' }).problems, /"en" "Termd" repeats terms\[3\]$/));
     // Only letters and digits count, as on the board: not case, width, spaces, hyphens or accents.
-    for (const spelling of ['TERM 3', 'term-3', 'Term3', 'T\u00e9rm 3', '\uff34\uff45\uff52\uff4d \uff13']) {
+    for (const spelling of ['TERMD', 'term-d', 'Term d', 'T\u00e9rmd', '\uff34\uff45\uff52\uff4d\uff44']) {
       const { problems } = withTerm({ id: 'again', en: spelling });
-      assert.ok(has(problems, /repeats terms\[3\] \("Term 3"\), which has the same letters and digits/), spelling);
+      assert.ok(has(problems, /repeats terms\[3\] \("Termd"\), which has the same letters and digits/), spelling);
     }
-    assert.ok(has(withTerm({ id: 'again', zh: '\u8bcd\uff13' }).problems, /repeats terms\[3\]/));
+    // The traditional form of the first character.
+    assert.ok(has(withTerm({ id: 'again', zh: '\u8a5e\u4e03' }).problems, /repeats terms\[3\]/));
     const both = (first, second) =>
       check(list({ terms: [...terms(MIN_TERMS), { id: 'first', ...first }, { id: 'second', ...second }] }));
     assert.ok(has(both({ en: 'C++' }, { en: 'C#' }).problems, /"en" "C#" repeats terms\[25\] \("C\+\+"\)/));
@@ -149,7 +155,7 @@ describe('a term', () => {
   });
 
   test('counts each word once', () => {
-    const { counts } = check(list({ terms: [...terms(MIN_TERMS), { id: 'again', en: 'term-3', zh: ATTENTION }] }));
+    const { counts } = check(list({ terms: [...terms(MIN_TERMS), { id: 'again', en: 'term-d', zh: ATTENTION }] }));
     assert.deepEqual(counts, { zh: MIN_TERMS + 1, en: MIN_TERMS });
   });
 
@@ -264,6 +270,77 @@ describe('a term', () => {
     for (const word of ['Chairman', 'Pi\u00f1ata', 'Reviewer', 'Paper', 'Studentship', 'Pie']) {
       assert.deepEqual(withTerm({ id: 'word', en: word }).warnings, [], word);
     }
+  });
+});
+
+describe('terms that give each other away', () => {
+  const GENE = '\u57fa\u56e0';
+  const GENE_EDITING = '\u57fa\u56e0\u7f16\u8f91';
+  const MATH = '\u6570\u5b66';
+  const CHEMISTRY = '\u5316\u5b66';
+  const withTerms = (...extra) =>
+    check(list({ terms: [...terms(MIN_TERMS), ...extra.map((term, i) => ({ id: `extra-${i}`, ...term }))] }));
+
+  test('are listed as information, once for each pair, and pass', () => {
+    const result = withTerms({ en: 'Gene', zh: GENE }, { en: 'Gene editing', zh: GENE_EDITING });
+    assert.deepEqual(result.problems, []);
+    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.infos, [
+      `ml.json: terms[25] (extra-0): "zh" "${GENE}" can't share a board with "${GENE_EDITING}"`,
+      `ml.json: terms[25] (extra-0): "en" "Gene" can't share a board with "Gene editing"`,
+    ]);
+    assert.deepEqual(check(list()).infos, []);
+  });
+
+  test('are found as the strict clue rule finds a clue that repeats a card', () => {
+    const clashes = (...extra) => withTerms(...extra).infos.length > 0;
+    // A plural, a part of several words, and a form, which counts in either language.
+    assert.ok(clashes({ en: 'Model' }, { en: 'Mixture models' }));
+    assert.ok(clashes({ en: 'Unit' }, { en: 'GPU', forms: { en: ['graphics processing unit'] } }));
+    assert.ok(clashes({ zh: 'Unit' }, { zh: 'GPU', forms: { en: ['graphics processing unit'] } }));
+    // The other term's translation.
+    assert.ok(clashes({ zh: 'Transformer' }, { zh: '\u53d8\u6362\u5668', en: 'Transformer' }));
+    // A Chinese character in common is not enough, and neither is a near miss that only brings a
+    // warning when it is a clue.
+    assert.ok(!clashes({ zh: MATH }, { zh: CHEMISTRY }));
+    assert.ok(!clashes({ en: 'Model' }, { en: 'Modeling' }));
+    assert.ok(!clashes({ en: 'Data' }, { en: 'Datacenter' }));
+  });
+
+  test('fail a list that has no 25 terms of which none repeats another', () => {
+    const repetitive = terms(MIN_TERMS + 5, (i) => ({ id: `term-${i}`, en: `Term ${i}`, zh: zhTerm(i) }));
+    const { problems, counts } = check(list({ terms: repetitive }));
+    assert.deepEqual(counts, { zh: MIN_TERMS + 5, en: MIN_TERMS + 5 });
+    assert.deepEqual(problems, [
+      'ml.json: no 25 of its "en" terms could be found of which none repeats another, only 1, so a board would have to hold terms that give each other away',
+    ]);
+  });
+
+  test('pass a list that has 25 terms of which none repeats another, however they lie', () => {
+    // "Gene editing" clashes with both "Gene" and "Editing", which leave it out together.
+    const tight = [
+      ...terms(MIN_TERMS - 2),
+      { id: 'a', en: 'Gene editing' },
+      { id: 'b', en: 'Gene' },
+      { id: 'c', en: 'Editing' },
+    ];
+    assert.deepEqual(check(list({ terms: tight })).problems, []);
+    const short = [
+      ...terms(MIN_TERMS - 2),
+      { id: 'a', en: 'Gene editing' },
+      { id: 'b', en: 'Gene' },
+      { id: 'c', en: 'Gene pool' },
+    ];
+    assert.ok(has(check(list({ terms: short })).problems, /no 25 of its "en" terms .* only 24/));
+  });
+
+  test('only count in a language that a board can be dealt in', () => {
+    const few = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: enTerm(i), ...(i < 3 ? { zh: GENE } : {}) }));
+    few[1].zh = GENE_EDITING;
+    few[2].zh = MATH;
+    const { problems, infos } = check(list({ terms: few }));
+    assert.deepEqual(problems, []);
+    assert.ok(has(infos, /"zh" .* can't share a board with/));
   });
 });
 
@@ -414,6 +491,23 @@ describe('command line', () => {
     assert.ok(has(lines, /^::error title=check-words::broken\.json: not valid JSON/));
     assert.ok(has(lines, /^::warning title=check-words::long\.json: .*"100%25 Reproducible" is longer than 14/));
     assert.ok(has(lines, /^check-words: OK long\.json/));
+
+    // Information is no annotation: there is a lot of it, and nothing to fix.
+    const clashing = join(dir, 'clashing.json');
+    writeFileSync(
+      clashing,
+      JSON.stringify(
+        list({ id: 'clashing', terms: [...terms(MIN_TERMS), { id: 'x', en: 'Gene' }, { id: 'y', en: 'Gene pool' }] }),
+      ),
+    );
+    const informed = runWith({ GITHUB_ACTIONS: 'true' }, clashing);
+    assert.equal(informed.status, 0);
+    assert.match(
+      informed.stdout,
+      /^check-words: info: clashing\.json: terms\[25\] \(x\): "en" "Gene" can't share a board with "Gene pool"$/m,
+    );
+    assert.match(informed.stdout, /^check-words: OK clashing\.json/m);
+    assert.doesNotMatch(informed.stdout, /^::/m);
 
     const plain = run(bad, long).stdout.split('\n');
     assert.ok(has(plain, /^check-words: broken\.json: not valid JSON/));
