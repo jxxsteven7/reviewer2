@@ -77,6 +77,8 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     keyViewers: ['ann'],
     side: seats[me]?.team ?? null,
     startProblems: [],
+    lineup: 'free',
+    joinsNext: false,
     game,
   };
   return {
@@ -93,6 +95,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     players: ['ann', 'bob', 'cat', 'eve'].map((id) => ({ id, name: id[0]?.toUpperCase() + id.slice(1), online: true })),
     screens: 0,
     me,
+    match: null,
     data,
   };
 }
@@ -603,7 +606,14 @@ describe('ClueLog', () => {
     const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
     const history: KeywordsView['history'] = [
       { turn: 1, team: 'red', word: null, count: null, guesses: [], timedOut: true },
-      { turn: 2, team: 'blue', word: 'Science', count: 2, guesses: [{ card: 0, color: 'blue' }], timedOut: true },
+      {
+        turn: 2,
+        team: 'blue',
+        word: 'Science',
+        count: 2,
+        guesses: [{ card: 0, color: 'blue', player: 'dan' }],
+        timedOut: true,
+      },
       { turn: 3, team: 'red', word: 'Loss', count: 1, guesses: [] },
     ];
     const wrapper = mount(ClueLog, { props: { game: { ...game, history } }, global: global() });

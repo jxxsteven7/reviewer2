@@ -23,7 +23,9 @@ const takingOver = ref<Team | null>(null);
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 const manageable = (player: PlayerView) => isChair.value && !isMe(player);
-const mayJoin = (team: Team) => playing.value && props.room.me !== null && (mySide.value ?? team) === team;
+// In a match, whoever hasn't played for a group in this game plays from the next one instead.
+const mayJoin = (team: Team) =>
+  playing.value && props.room.me !== null && (mySide.value ?? (props.room.match ? null : team)) === team;
 
 async function takeOver() {
   if (takingOver.value) await sit(takingOver.value, 'captain');

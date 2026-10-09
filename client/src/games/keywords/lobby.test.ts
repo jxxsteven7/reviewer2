@@ -22,6 +22,8 @@ const data: KeywordsRoomData = {
   keyViewers: [],
   side: null,
   startProblems: [],
+  lineup: 'free',
+  joinsNext: false,
   game: null,
 };
 
@@ -42,6 +44,7 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   ],
   screens,
   me,
+  match: null,
   data: { ...data, settings },
 });
 
@@ -125,5 +128,63 @@ describe('KeywordsLobby', () => {
     await flushPromises();
     expect(send).toHaveBeenCalledWith('room:settings', expect.anything());
     expect(send).not.toHaveBeenCalledWith('room:start', expect.anything());
+  });
+});
+
+describe('KeywordsLobby in a match', () => {
+  const match = (played: number): RoomView['match'] => ({
+    id: 'm1',
+    rules: { games: 3, teams: 'fixed', grouping: 'random' },
+    played,
+    status: 'on',
+    game: played + 1,
+    standings: [],
+  });
+  const inMatch = (me: string, room: Partial<KeywordsRoomData>, played = 0): RoomView => ({
+    ...view(me, 0),
+    match: match(played),
+    data: { ...data, ...room },
+  });
+
+  beforeEach(() => {
+    send.mockReset();
+    send.mockImplementation(async (event) => (event === 'meta:fields' ? { ok: true, fields: [] } : { ok: true }));
+  });
+
+  test('lists everyone who plays as one, when the groups are drawn as the game starts', async () => {
+    const seats = { ann: { team: 'red', role: 'guesser' } } as const;
+    const lobby = mount(KeywordsLobby, {
+      props: {
+        room: inMatch('bob', { lineup: 'draw', seats, startProblems: [{ problem: 'needs_players', missing: 3 }] }),
+      },
+      global: global(),
+    });
+    expect(lobby.find('.groups').exists()).toBe(false);
+    expect(lobby.get('.pool').text()).toContain('Ann');
+    expect(lobby.get('.pool').text()).toContain('drawn at random');
+    expect(lobby.get('.match-table').text()).toContain('Game 1 of 3');
+    expect(lobby.get('.waiting').text()).toContain('3 more');
+    await lobby.get('.pool button').trigger('click');
+    expect(send).toHaveBeenCalledWith('keywords:seat', { team: 'blue', role: 'guesser' });
+  });
+
+  test('offers the seats of their own group alone, when the groups are fixed', () => {
+    const lobby = mount(KeywordsLobby, {
+      props: { room: inMatch('bob', { lineup: 'fixed', side: 'red' }, 1) },
+      global: global(),
+    });
+    const [red, blue] = lobby.findAll('.group');
+    expect(red?.findAll('button').length).toBeGreaterThan(0);
+    expect(blue?.findAll('button')).toHaveLength(0);
+    expect(lobby.text()).toContain('The groups stay the same for the whole match');
+  });
+
+  test('keeps the word lists and the settings as they are once a game has counted', async () => {
+    const chair = mount(KeywordsLobby, { props: { room: inMatch('ann', { lineup: 'fixed' }, 1) }, global: global() });
+    await flushPromises();
+    expect(chair.find('.settings-form').exists()).toBe(false);
+    expect(chair.find('.settings-summary').exists()).toBe(true);
+    expect(chair.get('.desk').text()).toContain('stay as they are until the match is over');
+    expect(chair.text()).not.toContain('Shuffle the groups');
   });
 });

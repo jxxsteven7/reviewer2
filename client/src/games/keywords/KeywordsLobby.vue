@@ -6,10 +6,14 @@ import {
   type KeywordsSettings,
   type PlayerView,
   type RoomView,
+  type StartProblem,
+  type Team,
 } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FieldPicker from '../../core/components/FieldPicker.vue';
+import MatchResults from '../../core/components/MatchResults.vue';
+import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerMenu from '../../core/components/PlayerMenu.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import ShareTools from '../../core/components/ShareTools.vue';
@@ -25,10 +29,35 @@ import { useKeywords } from './useKeywords';
 // The waiting room: the banner that says where the viewer sits, the two groups with their PI and
 // students, the spectators and the screens, the room's settings, and the chair's desk with the
 // word lists, the settings, the shuffle and the start button.
+//
+// In a match, the match's table comes first, or its final ranking once it is over. When the server
+// draws the groups as the game starts, the players are one list rather than two groups; when the
+// groups are fixed, everyone is offered the seats of their own group only. The word lists and the
+// settings stay as they are once a game of the match has counted.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
-const { data, mySeat, isChair, groups, spectators, sit } = useKeywords(room);
+const { data, mySeat, mySide, isChair, groups, spectators, sit } = useKeywords(room);
+
+const match = computed(() => props.room.match);
+const finished = computed(() => match.value !== null && match.value.status !== 'on');
+const locked = computed(() => match.value?.status === 'on' && match.value.played > 0);
+const lineup = computed(() => data.value.lineup);
+// Everyone who plays, when the groups are drawn as the game starts.
+const pool = computed(() =>
+  groups.value.flatMap((group) => [...(group.captain ? [group.captain] : []), ...group.guessers]),
+);
+// A player who joins the pool sits in the smaller group, which only matters until the draw.
+function joinPool() {
+  const size = (team: Team) => Object.values(data.value.seats).filter((seat) => seat.team === team).length;
+  return sit(size('red') <= size('blue') ? 'red' : 'blue', 'guesser');
+}
+const mayTake = (team: Team) => mySide.value === null || mySide.value === team;
+const problemText = (item: StartProblem) =>
+  item.problem === 'needs_players'
+    ? t('lobby.problems.needs_players', { missing: item.missing })
+    : t(`lobby.problems.${item.problem}`, { group: t(`lobby.group.${item.team}`) });
+const problemKey = (item: StartProblem) => `${item.problem}-${'team' in item ? item.team : item.missing}`;
 
 const managing = ref<PlayerView | null>(null);
 
@@ -51,7 +80,7 @@ watch(roomSettings, (settings, before) => {
   if (!sameSettings(settings, before)) chosenSettings.value = { ...settings };
 });
 
-const unsaved = computed(() => fieldsChanged.value || settingsChanged.value);
+const unsaved = computed(() => !locked.value && (fieldsChanged.value || settingsChanged.value));
 const savable = computed(() => chosenFields.value.length > 0 && settingsValid.value);
 const save = () => act('room:settings', { fields: chosenFields.value, settings: chosenSettings.value });
 
@@ -87,8 +116,30 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
       <ShareTools :code="room.code" />
     </header>
 
+    <MatchResults v-if="finished" :room="room" />
+
     <div class="sections">
-      <div class="groups">
+      <MatchTable v-if="match && !finished" :room="room" />
+
+      <section v-if="lineup === 'draw'" class="pool">
+        <h2 class="section-title">{{ t('match.drawn') }}</h2>
+        <ul v-if="pool.length" class="names inline">
+          <li v-for="player in pool" :key="player.id">
+            <PlayerName
+              :player="player"
+              :me="isMe(player)"
+              :chair="isChairOf(player)"
+              :manageable="manageable(player)"
+              @manage="managing = $event"
+            />
+          </li>
+        </ul>
+        <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
+        <UiButton v-if="mySeat?.role === 'spectator'" size="small" @click="joinPool">{{ t('match.play') }}</UiButton>
+        <p class="hint">{{ t('match.drawnNote') }}</p>
+      </section>
+
+      <div v-else class="groups">
         <section v-for="group in groups" :key="group.team" class="group" :class="group.team">
           <h2 class="section-title">{{ t(`lobby.group.${group.team}`) }}</h2>
           <dl>
@@ -103,7 +154,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
                 @manage="managing = $event"
               />
               <span v-else class="vacant">{{ t('lobby.vacant') }}</span>
-              <UiButton v-if="!group.captain" size="small" @click="sit(group.team, 'captain')">
+              <UiButton v-if="!group.captain && mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
                 {{ t('lobby.takeCaptain') }}
               </UiButton>
             </dd>
@@ -122,7 +173,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
               </ul>
               <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
               <UiButton
-                v-if="!(mySeat?.team === group.team && mySeat.role === 'guesser')"
+                v-if="!(mySeat?.team === group.team && mySeat.role === 'guesser') && mayTake(group.team)"
                 size="small"
                 @click="sit(group.team, 'guesser')"
               >
@@ -158,33 +209,36 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
         </p>
       </section>
 
-      <p class="footnote">{{ t('lobby.captainNote') }}</p>
+      <p class="footnote">
+        {{ lineup === 'fixed' ? t('match.fixedNote') : t('lobby.captainNote') }}
+      </p>
 
-      <section v-if="!isChair" class="rules">
+      <section v-if="!isChair || locked" class="rules">
         <h2 class="section-title">{{ t('settings.title') }}</h2>
         <SettingsSummary :settings="data.settings" :language="room.language" />
       </section>
 
-      <section v-if="isChair" class="desk">
+      <section v-if="isChair && !finished" class="desk">
         <h2 class="section-title">{{ t('lobby.desk') }}</h2>
-        <h3 class="label">{{ t('lobby.fields') }}</h3>
-        <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
-        <FieldPicker v-else v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
-        <h3 class="label">{{ t('settings.title') }}</h3>
-        <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
+        <p v-if="locked" class="hint">{{ t('match.locked') }}</p>
+        <template v-else>
+          <h3 class="label">{{ t('lobby.fields') }}</h3>
+          <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
+          <FieldPicker v-else v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
+          <h3 class="label">{{ t('settings.title') }}</h3>
+          <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
+        </template>
         <div v-if="unsaved" class="save">
           <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
           <p class="hint">{{ t('lobby.saveHint') }}</p>
         </div>
         <ul class="problems">
-          <li v-for="item in problems" :key="`${item.problem}-${item.team}`">
-            {{ t(`lobby.problems.${item.problem}`, { group: t(`lobby.group.${item.team}`) }) }}
-          </li>
+          <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
           <li v-if="!problems.length" class="ready">{{ t('lobby.ready') }}</li>
         </ul>
-        <p class="hint shuffle-hint">{{ t('lobby.shuffleHint') }}</p>
+        <p v-if="lineup === 'free'" class="hint shuffle-hint">{{ t('lobby.shuffleHint') }}</p>
         <div class="desk-actions">
-          <UiButton @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
+          <UiButton v-if="lineup === 'free'" @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
           <UiButton
             variant="primary"
             :disabled="problems.length > 0 || starting || (unsaved && !savable)"
@@ -194,11 +248,9 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
           </UiButton>
         </div>
       </section>
-      <section v-else class="waiting">
+      <section v-else-if="!finished" class="waiting">
         <ul class="problems">
-          <li v-for="item in problems" :key="`${item.problem}-${item.team}`">
-            {{ t(`lobby.problems.${item.problem}`, { group: t(`lobby.group.${item.team}`) }) }}
-          </li>
+          <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
         </ul>
         <p>{{ t('lobby.waiting') }}</p>
       </section>
@@ -222,6 +274,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 }
 
 .group,
+.pool,
 .spectators,
 .rules,
 .desk,

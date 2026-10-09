@@ -197,7 +197,7 @@ describe('the PI of a fixed group', () => {
 
 // The module itself, as the room drives it.
 describe('a match of the game', () => {
-  const WORDS = Array.from({ length: 25 }, (_, i) => `Word${i}`);
+  const WORDS = Array.from({ length: 25 }, (_, i) => ({ word: `Word${i}` }));
   const ids = ['ann', 'bob', 'cat', 'dee', 'eve'];
 
   function withMatch(rules: Omit<MatchRules, 'games'>, seats: Record<string, Seat> = {}): KeywordsData {

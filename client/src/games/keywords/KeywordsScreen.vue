@@ -2,6 +2,8 @@
 import { formatCode, type KeywordsView, type RoomView } from '@reviewer2/shared';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
+import MatchResults from '../../core/components/MatchResults.vue';
+import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import QrCode from '../../core/components/QrCode.vue';
 import { HTML_LANG } from '../../core/i18n';
@@ -14,7 +16,7 @@ import { useKeywords } from './useKeywords';
 
 // The room on a big screen. In the waiting room: how to join, and who sits where. During the
 // game: the board as spectators see it, with the turn and the clue log. A screen never gets the
-// key, so it can stay on the wall for everyone.
+// key, so it can stay on the wall for everyone. A match's table, or its ranking, is shown too.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const { data, groups, spectators } = useKeywords(toRef(props, 'room'));
@@ -45,11 +47,23 @@ const game = computed(() => data.value.game as KeywordsView | null);
         </ul>
       </section>
       <p class="role">{{ t('lobby.roles.spectator') }} &middot; {{ spectators.length }}</p>
+      <template v-if="room.match">
+        <MatchResults v-if="room.match.status !== 'on'" :room="room" />
+        <MatchTable v-else :room="room" :endable="false" />
+      </template>
     </div>
   </section>
 
   <section v-else class="screen-game">
-    <DecisionLetter v-if="game.result" class="letters-row" :game="game" :side="null" :is-chair="false" compact />
+    <DecisionLetter
+      v-if="game.result"
+      class="letters-row"
+      :game="game"
+      :side="null"
+      :is-chair="false"
+      :match="room.match"
+      compact
+    />
     <div class="main" :class="{ over: game.result }">
       <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" />
       <KeywordsBoard :cards="game.cards" :selectable="false" :selected="null" :lang="HTML_LANG[room.language]" large />
@@ -59,6 +73,10 @@ const game = computed(() => data.value.game as KeywordsView | null);
         <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
         <p class="mono">{{ number }}</p>
       </div>
+      <template v-if="room.match">
+        <MatchResults v-if="room.match.status !== 'on'" :room="room" />
+        <MatchTable v-else :room="room" :endable="false" />
+      </template>
       <ClueLog :game="game" />
     </aside>
   </section>
