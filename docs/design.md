@@ -61,6 +61,7 @@ There is only a light theme for now. A dark theme would redefine the tokens and 
 | `ManuscriptId`, `QrCode`, `ShareTools` | The room's number, and ways to bring people in. Sharing falls back from the share sheet, to the clipboard, to a selected link that people copy by hand, which is what WeChat and plain http allow |
 | `RoomFooter` | The foot of a room page: the player's name, renaming, leaving, and for the chair, closing the room for everyone. Leaving and closing ask first |
 | `PlayChoice` | Whether a newcomer comes to play or to watch, when they create or join a room. Playing is chosen to begin with |
+| `FieldPicker` | The word lists a room draws its cards from, on the room setup and at the chair's desk. A list without enough terms in the room's language can't be chosen. The room setup starts with no list chosen and says to choose one; the chair's desk starts with the room's lists |
 | `EmoteButton`, `EmoteBubbles`, `SoundToggle` | The quick reactions: a button in the banner that opens the three phrases, the bubbles near the top that show "Name: phrase" for four seconds, and the switch for their sounds. While a player waits for the next reaction, the button counts down the seconds |
 | `PlayerName` | A name with an online dot and marks for "you" and the chair. For the chair, other names open the chair's actions |
 

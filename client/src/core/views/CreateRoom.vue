@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MAX_NAME_INPUT, type Language } from '@reviewer2/shared';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { games } from '../../games';
@@ -40,14 +40,27 @@ const screens = computed(() => games[props.game]);
 const settings = ref<object | undefined>(screens.value?.defaultSettings(language.value));
 const settingsValid = ref(true);
 
-// Start with every usable list chosen; a room with one list is the usual case.
-watch(usable, (lists) => (chosen.value = lists.map((field) => field.id)), { immediate: true });
+// The creator chooses the lists: none is chosen to begin with. When a change of language leaves
+// a chosen list without enough words, it drops out, and nothing is chosen in its place.
+watch(usable, (lists) => {
+  const ids = new Set(lists.map((field) => field.id));
+  chosen.value = chosen.value.filter((id) => ids.has(id));
+});
+// Whether to say that a list must be chosen: while there are lists to choose from and none is.
+// The group of lists points at the hint, so that a screen reader reads it with them. The button
+// can't: it is disabled while the hint shows, so the keyboard never reaches it.
+const needsField = computed(() => usable.value.length > 0 && !chosen.value.length);
+const id = useId();
+// Whether the form will do. create() checks it too, since a form can be submitted without its
+// button.
+const ready = computed(() => chosen.value.length > 0 && !!clean.value && settingsValid.value);
 
 onMounted(loadFields);
 
 const NAME_ERRORS = ['name_required', 'name_invalid', 'name_taken'];
 
 async function create() {
+  if (!ready.value) return;
   formError.value = undefined;
   const reply = await run(() =>
     send<{ code: string }>('room:create', {
@@ -78,8 +91,13 @@ async function create() {
       <p class="hint">{{ t('create.languageHint', { language: t(`language.${language}`) }) }}</p>
     </section>
 
-    <section class="step">
-      <h3>{{ t('create.fields') }}</h3>
+    <section
+      class="step"
+      role="group"
+      :aria-labelledby="`${id}-fields`"
+      :aria-describedby="needsField ? `${id}-hint` : undefined"
+    >
+      <h3 :id="`${id}-fields`">{{ t('create.fields') }}</h3>
       <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
       <FieldPicker
         v-else-if="usable.length"
@@ -110,10 +128,9 @@ async function create() {
 
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
 
+    <p v-if="needsField" :id="`${id}-hint`" class="hint">{{ t('create.chooseField') }}</p>
     <div class="actions">
-      <UiButton variant="primary" type="submit" :disabled="busy || !chosen.length || !clean || !settingsValid">
-        {{ t('create.submit') }}
-      </UiButton>
+      <UiButton variant="primary" type="submit" :disabled="busy || !ready">{{ t('create.submit') }}</UiButton>
       <UiButton variant="quiet" @click="emit('cancel')">{{ t('create.cancel') }}</UiButton>
     </div>
   </form>

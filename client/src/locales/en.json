@@ -51,6 +51,7 @@
     "fieldTerms": "{count} terms",
     "fieldTooSmall": "Not enough terms in this language",
     "noFields": "No word lists are available in this language yet.",
+    "chooseField": "Choose at least one word list to create the room.",
     "settings": "Rules",
     "loadingFields": "Loading the word lists...",
     "name": "Your name",
