@@ -7,7 +7,7 @@ All code is reviewed. Code written by people or by AI, by members or by outside 
 - Every PR needs approval from **at least one person other than its author** before it can be merged. For the interim arrangement while there is only one maintainer, see the [maintainer guide](../maintainers.md).
 - If new commits are pushed after approval, the PR needs another review.
 - Respond to every review comment: either make the change, or explain your reasoning and reach agreement with the reviewer. All conversations must be resolved before merging.
-- PRs are always merged with **Squash and merge**. Members may merge their own PR once it is approved and all checks pass. PRs from outside contributors are merged by a maintainer.
+- PRs are always merged with **Squash and merge**, by a repository admin, once they are approved and all checks pass. GitHub enforces this: nobody else can merge into `main`, members included. See the [maintainer guide](../maintainers.md#only-admins-merge).
 - When merging, check that the merge form uses the PR title, version included, as the commit title. See [versioning.md](versioning.md).
 - Only maintainers decide on a minor or major version.
 
@@ -39,10 +39,11 @@ First check that the change is right, then that it is good:
 
 1. **Correctness.** Is the logic right? Are edge cases handled, such as dropped connections, repeated clicks and two players acting at once? Do the tests cover it?
 2. **Hard constraints.** Go through [constraints.md](constraints.md) item by item.
-3. **Readability.** Names are clear, the code matches its surroundings, and there is no unnecessary complexity.
-4. **Scope.** The PR does what it says and nothing unrelated.
-5. **Language.** Code, comments, docs and the PR title are in clear, correct English. If one README changed, the other matches. See [language.md](language.md).
-6. **PR title.** It reads `vX.Y.Z <type>: <summary>`, with the version CI filled in or a minor or major version a maintainer chose, and it has no AI or agent attribution.
+3. **Changes to the rules and their checks.** CI runs the checks as the PR has them, so a PR that changes `.github/`, `.githooks/`, `scripts/`, `.claude/`, `AGENTS.md`, `CLAUDE.md` or `docs/rules/` can also loosen the checks it has to pass. Read such changes line by line, and make sure the PR says why it needs them.
+4. **Readability.** Names are clear, the code matches its surroundings, and there is no unnecessary complexity.
+5. **Scope.** The PR does what it says and nothing unrelated.
+6. **Language.** Code, comments, docs and the PR title are in clear, correct English. If one README changed, the other matches. See [language.md](language.md).
+7. **PR title.** It reads `vX.Y.Z <type>: <summary>`, with the version CI filled in or a minor or major version a maintainer chose, and it has no AI or agent attribution.
 
 Make the weight of each comment clear. State required changes directly, and prefix optional suggestions with `nit:` so the author knows they can skip them.
 

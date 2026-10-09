@@ -170,8 +170,8 @@ Branch protection on GitHub is the last line of defense. The local hooks make su
    git push -u origin fix/lobby-typo
    ```
 
-5. Open a pull request against `main` in `jxxsteven7/reviewer2` and fill in the template. We recommend ticking **Allow edits by maintainers**.
-6. Address review comments by pushing more commits to the same branch. The PR updates automatically. Once it is approved, a maintainer merges it.
+5. Open a pull request against `main` in `jxxsteven7/reviewer2` and fill in the template. We recommend ticking **Allow edits by maintainers**. CI runs on the PR once a maintainer has approved the run, which GitHub asks for on PRs from outside contributors.
+6. Address review comments by pushing more commits to the same branch. The PR updates automatically. Once it is approved, a repository admin merges it.
 
 When upstream `main` moves, run `git fetch upstream && git rebase upstream/main`, then `git push --force-with-lease`.
 

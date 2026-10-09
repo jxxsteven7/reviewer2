@@ -28,9 +28,9 @@ The game is called **Double Blind** for now. In the code, its module is called `
 
 ## Status
 
-🚧 In early development. The first game can be played from a local build (see [Running locally](#running-locally)), but it isn't online yet. Once it launches, it will live at <https://playreviewer2.com>.
+🚧 In early development. The first game is online at <https://playreviewer2.com>, and you can run your own copy as well (see [Running locally](#running-locally)).
 
-The first version has a game lobby, creating and joining rooms, choosing teams and roles, separate captain and guesser views, a view for a projector, real-time sync, automatic reconnection, a bilingual interface, a default "general academia" word list with a validation script, and "play again".
+It has creating and joining rooms, to play or to watch, choosing teams and roles, separate captain and guesser views, a view for a projector, settings for the rules and the time limits, a word library of ten fields from which the room's creator picks, real-time sync, automatic reconnection, quick reactions, decision letters at the end, "play again", feedback from players and optional accounts.
 
 ## Tech stack
 
@@ -43,7 +43,7 @@ The first version has a game lobby, creating and joining rooms, choosing teams a
 | Tests | Vitest, and Playwright end to end |
 | Deployment | One Node process serves both the static front end and WebSocket, on one domain and one port; a small mailer beside it sends the mails of accounts |
 
-## Project layout (planned)
+## Project layout
 
 | Path | Contents |
 |---|---|
@@ -52,10 +52,14 @@ The first version has a game lobby, creating and joining rooms, choosing teams a
 | `client/src/locales/` | `zh.json` and `en.json` |
 | `server/src/core/` | Back-end shared layer: room management, player identity, connections |
 | `server/src/games/` | Each game's rules and state |
+| `server/src/accounts/` | Accounts: their API, logins, email and avatars |
+| `server/src/store/` | The SQLite database and what is kept in it |
 | `shared/` | Types shared by the front end and back end |
 | `mailer/` | The program that sends the mails of accounts |
 | `words/` | Word lists, one JSON file per field |
 | `docs/` | Documentation and project rules |
+| `e2e/` | End-to-end tests with Playwright |
+| `scripts/` | Repository scripts, such as the checks of commits, the forbidden name, word lists and the README sync |
 
 ## Running locally
 
@@ -66,7 +70,7 @@ npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-`npm run build && npm start` runs the production build on one port, <http://localhost:3000>. The other commands, testing on a phone, running in production and the environment variables are in [docs/development.md](docs/development.md).
+`npm run build && npm start` runs the production build on one port, <http://localhost:3000>. Everything runs on your own machine, with no key for any outside service: to try accounts with email, copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`, and the mails, such as a password reset, appear in the mailer's output instead of being sent. The other commands, testing on a phone, running in production and the environment variables are in [docs/development.md](docs/development.md).
 
 ## Contributing
 
@@ -74,12 +78,12 @@ Contributions of code, words and ideas are welcome. The full rules are in **[CON
 
 1. **`main` is protected.** Nobody, maintainers included, commits or pushes to `main` directly. Every change goes through a pull request.
 2. **Work on your own branch.** Project members use a git worktree with its own branch. Outside contributors fork the repository and work on a branch in their fork.
-3. **All code is reviewed.** Whether it was written by a person or by AI, by a member or by an outside contributor, someone other than the author must approve it before it is merged.
+3. **All code is reviewed.** Whether it was written by a person or by AI, by a member or by an outside contributor, someone other than the author must approve it before it is merged. Only repository admins merge pull requests, and GitHub enforces this.
 4. **No AI or agent attribution in commits.** The committer is responsible for what they submit.
 5. **The repository is written in English.** Code, comments, commit messages, docs and rules use standard English. This README's Chinese translation is the only translated document, and CI keeps the two in sync.
 6. **Every pull request is squash-merged and versioned.** It lands on `main` as one commit titled `vX.Y.Z <type>: <summary>`. CI raises the patch number by one for every PR, and maintainers decide when the minor or major number goes up. See [docs/rules/versioning.md](docs/rules/versioning.md).
 
-If you work with Codex or Claude Code, they read `AGENTS.md` and `CLAUDE.md` automatically and follow the same rules. The rule files live in `docs/rules/`, and you can reference them in a chat with `@`, for example `@docs/rules/review.md`.
+If you work with Codex or Claude Code, they read `AGENTS.md` and `CLAUDE.md` automatically and follow the same rules. Many other AI assistants read `AGENTS.md` too; if yours doesn't, point it at that file before it starts. The rule files live in `docs/rules/`, and you can reference them in a chat with `@`, for example `@docs/rules/review.md`.
 
 ### Project members
 
@@ -109,8 +113,8 @@ Then open a pull request on GitHub and wait for review. The directory layout, lo
    ```
 
 3. Commit your changes and push them to your fork: `git push -u origin fix/lobby-typo`.
-4. Open a pull request against `main` in this repository and fill in the template.
-5. A maintainer reviews it. Push any follow-up changes to the same branch. Once the PR is approved, a maintainer merges it.
+4. Open a pull request against `main` in this repository and fill in the template. CI runs on it once a maintainer has approved the run.
+5. A maintainer reviews it. Push any follow-up changes to the same branch. Once the PR is approved, a repository admin merges it.
 
 For larger changes, please open an issue first.
 

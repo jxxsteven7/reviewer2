@@ -6,7 +6,7 @@ Thank you for helping out! This file is the entry point to the project's rules. 
 
 1. **`main` is protected.** Nobody, maintainers included, commits directly to `main`, pushes to it, force-pushes it or deletes it. Every change reaches `main` through a pull request.
 2. **Work in a worktree, on a branch of your own.** Project members create a new branch for each piece of work, work on it in a git worktree, and keep the main checkout on `main`. Outside contributors fork the repository and work on a branch in their fork.
-3. **All code is reviewed.** Code written by people or by AI, by members or by outside contributors, must be reviewed and approved by someone other than its author before it is merged. Docs, word lists and one-line changes are no exception.
+3. **All code is reviewed.** Code written by people or by AI, by members or by outside contributors, must be reviewed and approved by someone other than its author before it is merged. Docs, word lists and one-line changes are no exception. Only repository admins merge pull requests, and GitHub enforces this.
 4. **No AI or agent attribution in commits.** No `Co-Authored-By` trailers for AI tools, no "Generated with" lines, no links to AI sessions. The committer is responsible for the content.
 5. **The repository is written in English.** Code, comments, commit messages, pull requests, docs and rules use clear, standard English. The only translated document is `README.zh-CN.md`, and CI keeps it in sync with `README.md`.
 6. **Every pull request is squash-merged and versioned.** It lands on `main` as one commit titled `vX.Y.Z <type>: <summary>`. CI raises the patch number by one for every PR; maintainers decide when the minor or major number goes up.
@@ -29,7 +29,10 @@ The detailed rules are split by topic and shared by people and AI assistants:
 
 - **Codex** reads [AGENTS.md](AGENTS.md) automatically.
 - **Claude Code** reads [CLAUDE.md](CLAUDE.md) automatically. That file only imports `@AGENTS.md`, so both tools follow the same rules.
+- **Other assistants**: many read `AGENTS.md` too. If yours doesn't, point it at that file before it starts.
 - `AGENTS.md` lists what AI assistants must always do and points to the rule files above.
+
+An assistant that has read the rules can still break them. You are responsible for its work, as for your own, and the local hooks and CI catch the most common slips, such as a malformed commit message or AI attribution.
 
 To bring a specific rule into a conversation, reference its file with `@` in Claude Code or Codex:
 

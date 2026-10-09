@@ -28,9 +28,9 @@
 
 ## 当前状态
 
-🚧 早期开发中。第一个游戏已经可以在本地运行后玩（见[本地运行](#本地运行)），但还没有上线。上线后的地址是 <https://playreviewer2.com>。
+🚧 早期开发中。第一个游戏已经在 <https://playreviewer2.com> 上线，你也可以在自己的电脑上运行一份（见[本地运行](#本地运行)）。
 
-第一版包括：游戏大厅、创建和加入房间、选队伍和角色、队长和队员两种视角、投屏视图、实时同步、断线自动重连、中英双语界面、默认的"学术圈通用"词库和校验脚本，以及"再来一局"。
+现在包括：创建和加入房间（可以选择上场或旁观）、选队伍和角色、队长和队员两种视角、投屏视图、规则和限时设置、由房主挑选的十个领域的词库、实时同步、断线自动重连、快捷表情、结束时的审稿决定信、"再来一局"、玩家反馈，以及可选的账号。
 
 ## 技术栈
 
@@ -43,7 +43,7 @@
 | 测试 | Vitest，端到端测试用 Playwright |
 | 部署 | 一个 Node 进程同时提供前端静态文件和 WebSocket，一个域名、一个端口；旁边一个小的发信程序负责账号的邮件 |
 
-## 目录结构（规划中）
+## 目录结构
 
 | 路径 | 内容 |
 |---|---|
@@ -52,10 +52,14 @@
 | `client/src/locales/` | `zh.json` 和 `en.json` |
 | `server/src/core/` | 后端公共层：房间管理、玩家身份、连接 |
 | `server/src/games/` | 各个游戏的规则和状态 |
+| `server/src/accounts/` | 账号：接口、登录、邮件和头像 |
+| `server/src/store/` | SQLite 数据库和里面存的内容 |
 | `shared/` | 前后端共用的类型定义 |
 | `mailer/` | 发送账号邮件的程序 |
 | `words/` | 词库，每个领域一个 JSON 文件 |
 | `docs/` | 文档和项目规则 |
+| `e2e/` | Playwright 端到端测试 |
+| `scripts/` | 仓库脚本，比如提交信息、禁用名称、词库和 README 同步的检查 |
 
 ## 本地运行
 
@@ -66,7 +70,7 @@ npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-`npm run build && npm start` 在同一个端口 <http://localhost:3000> 上运行生产构建。其他命令、在手机上测试、在生产环境运行和环境变量见 [docs/development.md](docs/development.md)。
+`npm run build && npm start` 在同一个端口 <http://localhost:3000> 上运行生产构建。一切都在你自己的电脑上运行，不需要任何外部服务的密钥：想试带邮箱的账号，把 `.env.example` 复制成 `.env`，在 `npm run dev` 旁边再运行 `npm run dev:mailer`，邮件（比如重置密码）会打印在发信程序的输出里，不会真的发出去。其他命令、在手机上测试、在生产环境运行和环境变量见 [docs/development.md](docs/development.md)。
 
 ## 参与贡献
 
@@ -74,12 +78,12 @@ npm run dev   # front end on http://localhost:5173, server on port 3000
 
 1. **`main` 受保护**：任何人（包括维护者）都不直接提交或推送 `main`，所有改动都通过 Pull Request 合入。
 2. **在自己的分支上开发**：项目成员用 git worktree 加独立分支。外部贡献者 fork 本仓库，在自己 fork 的分支上开发。
-3. **所有代码都必须 review**：无论是人写的还是 AI 写的、成员的还是外部贡献者的，都要作者以外的人 approve 后才能合并。
+3. **所有代码都必须 review**：无论是人写的还是 AI 写的、成员的还是外部贡献者的，都要作者以外的人 approve 后才能合并。只有仓库管理员能合并 PR，GitHub 会强制执行。
 4. **提交里不出现 AI 或 agent 署名**：提交者本人对提交的内容负责。
 5. **仓库内容使用英文**：代码、注释、提交信息、文档和规则都用规范的英文。这份中文 README 是唯一的翻译文档，CI 会检查它和英文版保持同步。
 6. **每个 PR 都 squash 合并并带版本号**：合入 `main` 后是一个标题为 `vX.Y.Z <type>: <summary>` 的提交。每个 PR 由 CI 自动把小版本号加一，中版本和大版本由维护者决定。详见 [docs/rules/versioning.md](docs/rules/versioning.md)。
 
-用 Codex 或 Claude Code 开发时，它们会自动读取 `AGENTS.md` 和 `CLAUDE.md`，按同一套规则工作。规则文件在 `docs/rules/` 下，可以在对话里用 `@` 引用，例如 `@docs/rules/review.md`。
+用 Codex 或 Claude Code 开发时，它们会自动读取 `AGENTS.md` 和 `CLAUDE.md`，按同一套规则工作。很多其他 AI 助手也会读 `AGENTS.md`；如果你用的不读，开始前先让它读这个文件。规则文件在 `docs/rules/` 下，可以在对话里用 `@` 引用，例如 `@docs/rules/review.md`。
 
 ### 项目成员
 
@@ -109,8 +113,8 @@ git push -u origin fix/reconnect
    ```
 
 3. 提交改动并推送到你的 fork：`git push -u origin fix/lobby-typo`。
-4. 在本仓库向 `main` 发起 Pull Request，按模板填写。
-5. 维护者 review。后续修改继续推送到同一个分支即可。PR 通过后由维护者合并。
+4. 在本仓库向 `main` 发起 Pull Request，按模板填写。维护者批准运行后，CI 才会在上面运行。
+5. 维护者 review。后续修改继续推送到同一个分支即可。PR 通过后由仓库管理员合并。
 
 大的改动请先开 Issue 讨论。
 
@@ -124,4 +128,4 @@ git push -u origin fix/reconnect
 
 仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
 
-<!-- readme-sync: 240390116c20cdb38698771338c1203c1a159bc1c0880e51ecbd2f4ea6b63d5a -->
+<!-- readme-sync: ab9e0abee2458e92493c234acdefcf03d859555138487d681e57ea1cbdf47615 -->
