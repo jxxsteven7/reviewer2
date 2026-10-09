@@ -293,7 +293,7 @@ describe('terms that give each other away', () => {
     assert.deepEqual(check(list()).infos, []);
   });
 
-  test('are found as the strict clue rule finds a clue that repeats a card', () => {
+  test('are found when one term lies inside the other', () => {
     const clashes = (...extra) => withTerms(...extra).infos.length > 0;
     // A plural, a part of several words, and a form, which counts in either language.
     assert.ok(clashes({ en: 'Model' }, { en: 'Mixture models' }));
@@ -301,8 +301,9 @@ describe('terms that give each other away', () => {
     assert.ok(clashes({ zh: 'Unit' }, { zh: 'GPU', forms: { en: ['graphics processing unit'] } }));
     // The other term's translation.
     assert.ok(clashes({ zh: 'Transformer' }, { zh: '\u53d8\u6362\u5668', en: 'Transformer' }));
-    // A Chinese character in common is not enough, and neither is a near miss that only brings a
-    // warning when it is a clue.
+    // A part in common is not enough, nor a Chinese character, nor a near miss that only brings
+    // a warning when it is a clue.
+    assert.ok(!clashes({ en: 'Data science' }, { en: 'Data cleaning' }));
     assert.ok(!clashes({ zh: MATH }, { zh: CHEMISTRY }));
     assert.ok(!clashes({ en: 'Model' }, { en: 'Modeling' }));
     assert.ok(!clashes({ en: 'Data' }, { en: 'Datacenter' }));
@@ -337,7 +338,7 @@ describe('terms that give each other away', () => {
       ...terms(MIN_TERMS - 2),
       { id: 'a', en: 'Gene editing' },
       { id: 'b', en: 'Gene' },
-      { id: 'c', en: 'Gene pool' },
+      { id: 'c', en: 'Gene editing tool' },
     ];
     assert.ok(has(check(list({ terms: short })).problems, /no 25 of its "en" terms .* only 24/));
   });

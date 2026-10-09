@@ -176,7 +176,7 @@ export const FALLBACK_WORDS = 500;
 // in a random order, unused ones first, and each is kept unless it clashes with one kept already.
 // That is one pass over the pool, so it always ends. A word that clashes with none is always
 // kept, so the pass fills the draw whenever the pool has `count` such words; in every list of the
-// library, about two thirds of the words clash with none. A word that clashes with at most d
+// library, at least two thirds of the words clash with none. A word that clashes with at most d
 // others keeps at most d of them out, so the pass also fills the draw whenever the pool has at
 // least `count` * (d + 1) words, which the whole library does. Should the pass still come out
 // short, the draw is made again word by word from the first FALLBACK_WORDS words of that order,

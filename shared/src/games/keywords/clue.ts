@@ -307,11 +307,9 @@ export function checkClue(
   );
 }
 
-// What keeping two cards off one board needs of a card, worked out once for each card: the card's
-// word as a clue would be checked, whole and word by word, and as a card on the board, with the
-// keys of its translations and its forms.
+// What keeping two cards off one board needs of a card, worked out once for each card: its word,
+// with its parts, the keys of its translations, and its forms.
 interface Dealt {
-  clues: Word[];
   word: Word;
   translations: string[];
   forms: Word[];
@@ -322,12 +320,8 @@ const dealt = new WeakMap<object, Dealt>();
 function dealtOf(card: BoardText): Dealt {
   let found = dealt.get(card);
   if (!found) {
-    const text = normalizeClue(card.word);
-    const word = wordOf(text);
-    const words = text.split(' ');
     found = {
-      clues: words.length > 1 ? [word, ...words.map(wordOf)] : [word],
-      word,
+      word: wordOf(card.word),
       translations: (card.translations ?? []).map(wordKey).filter((key) => key !== ''),
       forms: (card.forms ?? []).map(wordOf).filter((form) => form.key !== ''),
     };
@@ -336,27 +330,43 @@ function dealtOf(card: BoardText): Dealt {
   return found;
 }
 
-// The card's word, given as a clue while the other card is on the board, would be refused under
-// the strict rule for repeating it: its word, its term in another language or one of its forms.
-// A Chinese character in common is left out, and so is everything that only brings a warning.
-const givesAway = (clue: Dealt, card: Dealt): boolean =>
-  clue.clues.some(
-    (word) =>
-      repeats(word, card.word) ||
-      card.translations.some((key) => sameOrPlural(word.key, key)) ||
-      card.forms.some((form) => repeats(word, form)),
+// The first word lies inside the second: it is the second or a plain plural of it, or each of
+// its parts is a part of the second, the same or a plain plural, or, for a run of Chinese
+// characters, lies inside one of the second's runs. The parts are those that a clue could
+// repeat (wordOf()), so "R squared" in Chinese, "R" and the characters for "square", lies inside
+// "square root". A word with no such part, such as "R", lies inside nothing but itself.
+function liesInside(inner: Word, outer: Word): boolean {
+  if (sameOrPlural(inner.key, outer.key)) return true;
+  return (
+    inner.parts.length > 0 &&
+    inner.parts.every((part) =>
+      outer.parts.some((other) =>
+        HAN.test(part) && HAN.test(other) ? other.includes(part) : sameOrPlural(part, other),
+      ),
+    )
   );
+}
+
+// The card's word gives the other card away: it lies inside the other's word or inside one of
+// the other's forms, or it is the other's term in another language, or a plain plural of that.
+const givesAway = (word: Dealt, card: Dealt): boolean =>
+  liesInside(word.word, card.word) ||
+  card.translations.some((key) => sameOrPlural(word.word.key, key)) ||
+  card.forms.some((form) => liesInside(word.word, form));
 
 // The words of a card, as the word library gives them: what cardsClash() compares.
 export type BoardText = Pick<ClueCard, 'word' | 'translations' | 'forms'>;
 
-// Whether two words must not share a board, because one of them repeats the other: "Gene" and
+// Whether two words must not share a board, because one of them lies inside the other: "Gene" and
 // "Gene editing", the Chinese words for "fossil" and "living fossil", or "Unit" and "GPU" with the
 // form "graphics processing unit". Hinting at one would hint at the other, and guessers couldn't
-// tell which was meant. It holds each word, as a clue, against the other as a card, as the strict
-// clue rule would, in both directions. Only a Chinese character in common doesn't count, since so
-// many terms share one. What it works out about a card is kept with the card object, so pass the
-// same objects again. scripts/check-words.mjs has a copy of this, which a test holds to it.
+// tell which was meant. A word lies inside another when it is that word or a plain plural of it,
+// when each of its parts is a part of that word or of one of its forms, as the strict clue rule
+// counts parts (liesInside()), or when it is that word's term in another language. Two words that
+// only share a part, such as "Data science" and "Data cleaning", or a Chinese character, can
+// share a board, and so can two words whose forms share a part. What it works out about a card is
+// kept with the card object, so pass the same objects again. scripts/check-words.mjs has a copy of
+// this, which a test holds to it.
 export function cardsClash(a: BoardText, b: BoardText): boolean {
   const first = dealtOf(a);
   const second = dealtOf(b);

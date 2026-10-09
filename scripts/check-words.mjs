@@ -123,17 +123,17 @@ function spacing(text) {
   return null;
 }
 
-// Terms that must not share a board, because one of them repeats the other: "Gene" and "Gene
+// Terms that must not share a board, because one of them lies inside the other: "Gene" and "Gene
 // editing", or "Unit" and "GPU" with the form "graphics processing unit". The server deals no two
 // such terms together, and a list must still have 25 terms of which no two clash, or the server
 // would have to.
 //
 // This must stay the same as cardsClash() in shared/src/games/keywords/clue.ts, with which the
 // server draws the words for a board. This script can't import it, so a test in
-// server/src/core/words.test.ts compares the two on every list. Each term is held, as a clue,
-// against the other as a card, as the strict clue rule does, in both directions: the clue repeats
-// the card's word, its term in the other language or one of its forms. A Chinese character in
-// common doesn't count.
+// server/src/core/words.test.ts compares the two on every list. A term lies inside another when
+// it is that term or a plain plural of it, when each of its parts is a part of that term or of
+// one of its forms, as the strict clue rule counts parts, or when it is that term's translation.
+// Two terms that only share a part, or a Chinese character, don't clash.
 
 const CLUE_SPACES = /\s+/gu;
 // The parts of a word: runs of Latin letters, runs of Chinese characters and runs of other
@@ -155,37 +155,35 @@ function wordOf(text) {
   };
 }
 
-// repeats() in clue.ts.
-function repeats(clue, word) {
-  if (sameOrPlural(clue.key, word.key)) return true;
-  return clue.parts.some((part) =>
-    word.parts.some((other) =>
-      HAN.test(part) && HAN.test(other) ? part.includes(other) || other.includes(part) : sameOrPlural(part, other),
-    ),
+// liesInside() in clue.ts: the first word is the second or a plain plural of it, or each of its
+// parts is a part of the second, the same or a plain plural, or, for a run of Chinese characters,
+// lies inside one of the second's runs.
+function liesInside(inner, outer) {
+  if (sameOrPlural(inner.key, outer.key)) return true;
+  return (
+    inner.parts.length > 0 &&
+    inner.parts.every((part) =>
+      outer.parts.some((other) =>
+        HAN.test(part) && HAN.test(other) ? other.includes(part) : sameOrPlural(part, other),
+      ),
+    )
   );
 }
 
-// A term as the clash check sees it: its word as a clue, whole and word by word, and as a card,
-// with the keys of its translations and its forms. `forms` holds the forms of both languages.
+// A term as the clash check sees it: its word with its parts, the keys of its translations and
+// its forms. `forms` holds the forms of both languages.
 export function clashEntry(word, translations = [], forms = []) {
-  const text = normalizeClue(word);
-  const whole = wordOf(text);
-  const words = text.split(' ');
   return {
-    clues: words.length > 1 ? [whole, ...words.map(wordOf)] : [whole],
-    word: whole,
+    word: wordOf(word),
     translations: translations.map(wordKey).filter((key) => key !== ''),
     forms: forms.map(wordOf).filter((form) => form.key !== ''),
   };
 }
 
-const givesAway = (clue, card) =>
-  clue.clues.some(
-    (word) =>
-      repeats(word, card.word) ||
-      card.translations.some((key) => sameOrPlural(word.key, key)) ||
-      card.forms.some((form) => repeats(word, form)),
-  );
+const givesAway = (word, card) =>
+  liesInside(word.word, card.word) ||
+  card.translations.some((key) => sameOrPlural(word.word.key, key)) ||
+  card.forms.some((form) => liesInside(word.word, form));
 
 export const clash = (a, b) => givesAway(a, b) || givesAway(b, a);
 

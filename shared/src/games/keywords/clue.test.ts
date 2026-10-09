@@ -556,6 +556,9 @@ describe('words that clash on a board', () => {
   const CHEMISTRY = '\u5316\u5b66'; // "chemistry": shares a character with MATH
   const GPU_ZH = '\u56fe\u5f62\u5904\u7406\u5668'; // "graphics processing unit"
   const PROCESSOR = '\u5904\u7406\u5668'; // "processor": the end of GPU_ZH
+  const ELECTRICITY = '\u7535'; // "electricity", one character
+  const ELECTRIC_FIELD = '\u7535\u573a'; // "electric field"
+  const SQUARE = '\u5e73\u65b9'; // "square", as in "R squared" and "square root"
 
   // Fresh objects each time, so that nothing is remembered from one call to the next.
   const clash = (a: string | BoardText, b: string | BoardText) => {
@@ -571,11 +574,11 @@ describe('words that clash on a board', () => {
     expect(clash('DNA', 'Junk DNA')).toBe(true);
     expect(clash('Attention', 'Self-attention')).toBe(true);
     expect(clash('Review', 'Peer review')).toBe(true);
-    // A part of several words is a part of a clue too: neither contains the other, but each gives
-    // the other's part away, as such a clue would be refused.
-    expect(clash('Data science', 'Data cleaning')).toBe(true);
+    expect(clash('Gene editing', 'Gene editing tool')).toBe(true);
     // Two spellings of one word.
     expect(clash('Co-author', 'coauthor')).toBe(true);
+    // A letter on its own is no part: "R squared" lies inside "square root".
+    expect(clash(`R${SQUARE}`, `${SQUARE}\u6839`)).toBe(true);
   });
 
   test('when one is a plain plural of the other or of its part', () => {
@@ -587,7 +590,9 @@ describe('words that clash on a board', () => {
   test('when a run of Chinese characters contains the other', () => {
     expect(clash(GENE, GENE_EDITING)).toBe(true);
     expect(clash(FOSSIL, LIVING_FOSSIL)).toBe(true);
-    expect(clash(`GPU ${GENE}`, GENE_EDITING)).toBe(true);
+    expect(clash(GENE_EDITING, `GPU ${GENE_EDITING}`)).toBe(true);
+    // One character inside a word is enough.
+    expect(clash(ELECTRICITY, ELECTRIC_FIELD)).toBe(true);
     // Traditional and simplified characters are the same.
     expect(clash(REVIEWER_TRADITIONAL, `${REVIEWER}2`)).toBe(true);
   });
@@ -595,7 +600,7 @@ describe('words that clash on a board', () => {
   test("when one repeats the other's form, in either language", () => {
     const gpu = { word: 'GPU', forms: ['graphics processing unit', GPU_ZH] };
     expect(clash('Unit', gpu)).toBe(true);
-    expect(clash('Processing', gpu)).toBe(true);
+    expect(clash('Processing unit', gpu)).toBe(true);
     expect(clash(PROCESSOR, gpu)).toBe(true);
     expect(clash({ word: 'Data', forms: ['dataset'] }, 'Dataset')).toBe(true);
     expect(clash('Unit', 'GPU')).toBe(false);
@@ -606,7 +611,17 @@ describe('words that clash on a board', () => {
     expect(clash('Transformers', { word: '\u53d8\u6362\u5668', translations: ['Transformer'] })).toBe(true);
   });
 
-  test('not for a Chinese character in common, or for what only brings a warning', () => {
+  test('not for a part or a Chinese character in common, or for what only brings a warning', () => {
+    // Neither lies inside the other.
+    expect(clash('Data science', 'Data cleaning')).toBe(false);
+    expect(clash('Test set', 'Training set')).toBe(false);
+    expect(clash('Learning rate', 'Win rate')).toBe(false);
+    expect(clash(`GPU ${GENE}`, GENE_EDITING)).toBe(false);
+    expect(clash('Graphics processing unit cluster', { word: 'GPU', forms: ['graphics processing unit'] })).toBe(false);
+    // A part in common through a form, or between forms, is no clash either.
+    const rlhf = { word: 'RLHF', forms: ['reinforcement learning from human feedback'] };
+    expect(clash('Digital human', rlhf)).toBe(false);
+    expect(clash({ word: 'Data', forms: ['dataset'] }, { word: 'Set', forms: ['dataset'] })).toBe(false);
     expect(clash(MATH, CHEMISTRY)).toBe(false);
     expect(clash(REVIEWER, MANUSCRIPT)).toBe(false);
     expect(clash(DATA, NUMBER)).toBe(false);
