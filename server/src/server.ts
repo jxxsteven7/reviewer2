@@ -112,6 +112,7 @@ export function createAppServer(options: AppOptions): AppServer {
     trustProxy,
     limits: socketLimits,
     feedback: options.feedback,
+    ...(accounts && { accounts, cookieSecure }),
     log,
   });
   // io.close() also closes the HTTP server.

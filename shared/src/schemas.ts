@@ -42,13 +42,14 @@ export const ROOM_MESSAGES = {
     language: z.enum(LANGUAGES),
     page: z.enum(FEEDBACK_PAGES),
   }),
-  // A room starts with its game's default settings when `settings` is left out.
+  // A room starts with its game's default settings when `settings` is left out. A creator who is
+  // logged in has their username as the name, and needs to give none.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
     fields,
     settings: settings.optional(),
-    name,
+    name: name.optional(),
     play,
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to

@@ -170,6 +170,10 @@ export class TestClient {
   readonly states: RoomView[] = [];
   readonly closed: ClosedReason[] = [];
   readonly emotes: EmoteEvent[] = [];
+  readonly sessions: Session[] = [];
+  // How often the server said that the connection's login had ended, and why it disconnected.
+  loginsEnded = 0;
+  readonly disconnects: string[] = [];
   token = '';
   version = '';
 
@@ -177,6 +181,14 @@ export class TestClient {
     socket.on('room:state', (state: RoomView) => this.states.push(state));
     socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => this.closed.push(reason));
     socket.on('room:emote', (event: EmoteEvent) => this.emotes.push(event));
+    socket.on('session', (session: Session) => this.sessions.push(session));
+    socket.on('account:ended', () => (this.loginsEnded += 1));
+    socket.on('disconnect', (reason) => this.disconnects.push(reason));
+  }
+
+  // The account that the server last said the connection is, or null for a guest.
+  get account(): Session['account'] | undefined {
+    return this.sessions.at(-1)?.account;
   }
 
   // `auth` is the handshake. It is typed loosely, because tests also send what no client should.
@@ -308,5 +320,12 @@ export class Browser {
 
   async account() {
     return (await this.request('/api/account')).body.account as Record<string, unknown> | null;
+  }
+
+  // A connection from a page of this browser, with its login cookie, if it has one.
+  connect(auth: Record<string, unknown> = {}, headers: Record<string, string> = {}): Promise<TestClient> {
+    return TestClient.connect(this.url, auth, {
+      extraHeaders: { origin: this.url, ...(this.cookie ? { cookie: this.cookie } : {}), ...headers },
+    });
   }
 }

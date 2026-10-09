@@ -3,7 +3,7 @@ import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule } from './game';
 import type { Rng } from './random';
-import { chooseFields, Room, type Member } from './room';
+import { chooseFields, Room, type Member, type MemberAccount } from './room';
 import type { WordLibrary } from './words';
 
 // All the rooms on this server, which live in memory (docs/architecture.md), and the rules for
@@ -68,8 +68,9 @@ export class Rooms {
     key: string;
     name: string;
     play?: boolean;
+    account?: MemberAccount | null;
   }): Ack<{ room: Room; member: Member }> {
-    const { game, language, key, name, play = false } = options;
+    const { game, language, key, name, play = false, account = null } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
     const chosen = chooseFields(this.words, options.fields, language, game.wordsNeeded);
     if (!chosen.ok) return chosen;
@@ -88,7 +89,7 @@ export class Rooms {
       const configured = room.setSettings({ settings: options.settings });
       if (!configured.ok) return configured;
     }
-    const joined = room.join(key, name, play);
+    const joined = room.join(key, name, play, account);
     if (!joined.ok) return joined;
     this.#rooms.set(code, room);
     return { ok: true, room, member: joined.member };
