@@ -2,130 +2,85 @@
 
 [English](README.md) | **简体中文**
 
-**学术圈的在线多人聚会游戏合集。** 在浏览器里玩，每人用自己的手机或电脑加入同一个房间。输入昵称就能进，注册账号是可选的。
+**学术圈的在线多人聚会游戏合集。** 每人用自己的手机加入房间。有个昵称就能玩，账号是可选的。
 
 ## 这是什么
 
-- **学术主题**：游戏围绕审稿、投稿、组会、基金申请、答辩这些圈内日常设计。只做学术版，不做通用版。
-- **共享词库**：核心是一套按领域划分的学术术语词库，由社区贡献，所有游戏共用。
+- **学术主题**：审稿、投稿、组会、基金、答辩。
+- **共享词库**：按领域划分的学术术语，由社区贡献。
 - **为同行而做**：不以盈利为目标，不放广告。
 
 ### 第一个游戏：团队猜词
 
-两个课题组（红组、蓝组）围绕 25 个学术术语对战。每组的队长知道哪些牌属于自己组，但只能给出**一个简短的提示 + 一个数字**，组里其他人根据提示去翻牌。翻到无关论文或对方的牌，回合结束；翻到**二号审稿人**，当场被拒稿，本组直接判负。项目名就是这么来的。
+两个课题组（红组、蓝组）围绕 25 个学术术语对战。每组的 PI 知道哪些牌属于自己组，但只能给出**一个简短的提示 + 一个数字**，学生们根据提示去翻牌。翻到无关论文或对方的牌，回合结束；翻到**二号审稿人**，当场被拒稿，本组直接判负。
 
-游戏暂名**双盲**（Double Blind），代码里的模块叫 `keywords`，完整规则见 [docs/games/keywords.md](docs/games/keywords.md)。
+暂名**双盲**（Double Blind），代码里的模块叫 `keywords`，规则见 [docs/games/keywords.md](docs/games/keywords.md)。
 
 ## 特点
 
-- 中英双语界面
-- 全球可玩，**包括中国大陆**：不用任何 Google 服务，不用公共 CDN，字体、脚本、图标全部自托管
-- 手机优先，能在微信内置浏览器里玩
-- 手机锁屏或浏览器切到后台断线后自动重连，回到原来的房间、队伍和角色
-- 服务器权威，按角色过滤数据：队员即使打开浏览器开发者工具，也看不到未翻开牌的颜色
-- 账号可选，只要用户名和密码：可以上传头像、记录战绩，绑定的邮箱只用来找回密码，而且不保存邮箱本身
-- 比赛：一个房间连续打定好的局数，每人计分，最后第一名得 Best Paper Award，最后一名是"游戏黑洞"，称号记进账号
+- 中英双语
+- **中国大陆**可玩：不用 Google 服务和公共 CDN
+- 手机优先；能在微信里玩
+- 锁屏断线后自动重连，回到原来的座位
+- 服务器权威：队员即使打开开发者工具，也看不到未翻开牌的颜色
+- 账号可选：头像、战绩，以及一个只用来找回密码、不保存的邮箱
+- 比赛：连打几局计分，并授予称号
 
 ## 当前状态
 
-🚧 早期开发中。第一个游戏已经在 <https://playreviewer2.com> 上线，你也可以在自己的电脑上运行一份（见[本地运行](#本地运行)）。
-
-现在包括：创建和加入房间（可以上场或旁观）、选队伍和角色、队长和队员两种视角、投屏视图、规则和限时设置、由房主挑选的十个领域的词库、实时同步、断线自动重连、中英双语界面、快捷表情、每队队员之间的聊天、结束时的审稿决定信、"再来一局"、玩家反馈，以及可选的账号。
+🚧 早期开发。第一个游戏已在 <https://playreviewer2.com> 上线，你也可以自己运行一份（[本地运行](#本地运行)）。
 
 ## 技术栈
 
 | 部分 | 选型 |
 |---|---|
-| 语言 | TypeScript，前后端统一，使用 npm workspaces |
+| 语言 | TypeScript，npm workspace |
 | 前端 | Vue 3 + Vite，vue-i18n |
 | 后端 | Node.js + Socket.IO |
-| 存储 | 房间放在服务器内存里；玩家的反馈和账号存在 SQLite 里，用 Node 自带的 `node:sqlite`；头像存成文件 |
-| 测试 | Vitest，端到端测试用 Playwright |
-| 部署 | 一个 Node 进程同时提供前端静态文件和 WebSocket，一个域名、一个端口；旁边一个小的发信程序负责账号的邮件 |
+| 存储 | 房间在内存里；反馈和账号在 SQLite（`node:sqlite`）里；头像存成文件 |
+| 测试 | Vitest，端到端用 Playwright |
+| 部署 | 一个 Node 进程、一个端口，外加一个小发信程序 |
 
 ## 目录结构
 
 | 路径 | 内容 |
 |---|---|
-| `client/src/core/` | 前端公共层：连接、房间、大厅、i18n |
-| `client/src/games/` | 各个游戏的界面，如 `keywords/` |
-| `client/src/locales/` | `zh.json` 和 `en.json` |
-| `server/src/core/` | 后端公共层：房间管理、玩家身份、连接 |
-| `server/src/games/` | 各个游戏的规则和状态 |
-| `server/src/accounts/` | 账号：接口、登录、邮件和头像 |
-| `server/src/store/` | SQLite 数据库和里面存的内容 |
-| `shared/` | 前后端共用的类型定义 |
+| `client/src/` | Vue 应用：`core/` 共用部分，`games/<game>/` 各游戏的界面，`locales/` 全部界面文字 |
+| `server/src/` | 服务器：`core/` 房间，`games/<game>/` 各游戏的规则，`accounts/` 账号，`store/` 数据库 |
+| `shared/` | 前后端共用的类型和规则 |
 | `mailer/` | 发送账号邮件的程序 |
 | `words/` | 词库，每个领域一个 JSON 文件 |
-| `docs/` | 文档和项目规则 |
-| `e2e/` | Playwright 端到端测试 |
-| `scripts/` | 仓库脚本，比如提交信息、禁用名称、词库和 README 同步的检查 |
+| `e2e/`、`scripts/`、`docs/` | 端到端测试、仓库检查脚本、文档 |
 
 ## 本地运行
 
-需要 [Node.js](https://nodejs.org) 22.22.2 或更高版本（Node 24 需要 24.15 或更高），但不能是 23 或 25（测试框架不支持这两个版本）。CI 使用 24 LTS。
+需要 [Node.js](https://nodejs.org) 22.22.2 或更高（Node 24 需要 24.15 或更高），但不能是 23 或 25。
 
 ```bash
 npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-`npm run build && npm start` 在同一个端口 <http://localhost:3000> 上运行生产构建。一切都在你自己的电脑上运行，不需要任何外部服务的密钥：想试带邮箱的账号，把 `.env.example` 复制成 `.env`，在 `npm run dev` 旁边再运行 `npm run dev:mailer`，邮件（比如重置密码）会打印在发信程序的输出里，不会真的发出去。其他命令、在手机上测试、在生产环境运行和环境变量见 [docs/development.md](docs/development.md)。
+其他命令、在手机上测试和环境变量见 [docs/development.md](docs/development.md)。
 
 ## 参与贡献
 
-欢迎贡献代码、词库和想法。完整规则见 **[CONTRIBUTING.md](CONTRIBUTING.md)**（英文），核心规则如下：
+规则见 **[CONTRIBUTING.md](CONTRIBUTING.md)**（英文），简单说：
 
-1. **`main` 受保护**：任何人（包括维护者）都不直接提交或推送 `main`，所有改动都通过 Pull Request 合入。
-2. **在自己的分支上开发**：项目成员用 git worktree 加独立分支。外部贡献者 fork 本仓库，在自己 fork 的分支上开发。
-3. **所有代码都必须 review**：无论是人写的还是 AI 写的、成员的还是外部贡献者的，都要作者以外的人 approve 后才能合并。只有仓库管理员能合并 PR，GitHub 会强制执行。
-4. **提交里不出现 AI 或 agent 署名**：提交者本人对提交的内容负责。
-5. **仓库内容使用英文**：代码、注释、提交信息、文档和规则都用规范的英文。这份中文 README 是唯一的翻译文档，CI 会检查它和英文版保持同步。
-6. **每个 PR 都 squash 合并并带版本号**：合入 `main` 后是一个标题为 `vX.Y.Z <type>: <summary>` 的提交。每个 PR 由 CI 自动把小版本号加一，中版本和大版本由维护者决定。详见 [docs/rules/versioning.md](docs/rules/versioning.md)。
+1. `main` 受保护：所有改动都从自己的分支或 fork 发 Pull Request。
+2. 每个 PR 都要作者以外的人 review，通过且 CI 绿了之后由协作者合并。
+3. 提交里不出现 AI 或 agent 署名。
+4. 仓库内容使用英文；这份 README 是唯一的翻译文件。
+5. 每个 PR squash 合并成一个带版本号的提交，见 [docs/rules/versioning.md](docs/rules/versioning.md)。
 
-用 Codex 或 Claude Code 开发时，它们会自动读取 `AGENTS.md` 和 `CLAUDE.md`，按同一套规则工作。很多其他 AI 助手也会读 `AGENTS.md`；如果你用的不读，开始前先让它读这个文件。规则文件在 `docs/rules/` 下，可以在对话里用 `@` 引用，例如 `@docs/rules/review.md`。
-
-### 项目成员
-
-每项工作开一个 worktree 和分支，主目录始终停在 `main`：
-
-```bash
-git fetch origin
-git worktree add ../fix-reconnect -b fix/reconnect origin/main
-cd ../fix-reconnect
-# edit and commit, then:
-git push -u origin fix/reconnect
-```
-
-然后在 GitHub 上发起 Pull Request，等待 review。目录布局、本地 hook、合并后清理等细节见 [docs/rules/git.md](docs/rules/git.md)。
-
-### 外部贡献者（fork）
-
-1. 在 GitHub 上 **Fork** 本仓库。
-2. 克隆你的 fork，把本仓库添加为 `upstream`，然后从最新的上游 `main` 新建分支：
-
-   ```bash
-   git clone git@github.com:<your-username>/reviewer2.git
-   cd reviewer2
-   git remote add upstream https://github.com/jxxsteven7/reviewer2.git
-   git fetch upstream
-   git switch -c fix/lobby-typo upstream/main
-   ```
-
-3. 提交改动并推送到你的 fork：`git push -u origin fix/lobby-typo`。
-4. 在本仓库向 `main` 发起 Pull Request，按模板填写。维护者批准运行后，CI 才会在上面运行。
-5. 维护者 review。后续修改继续推送到同一个分支即可。PR 通过后由仓库管理员合并。
-
-大的改动请先开 Issue 讨论。
+AI 助手读 `AGENTS.md`。
 
 ### 贡献词库
 
-`words/` 目录下的词库由所有游戏共用，每个学术领域一个 JSON 文件。好的词条要短，而且领域内人人都认识，比如"注意力""收敛""基线""泛化"。词库 PR 改 `words/` 下的文件，改了格式时也一起改 `scripts/check-words.mjs` 和它的测试；和其他 PR 一样需要 review。格式、选词标准以及各个游戏怎么使用词库，见 [words/README.md](words/README.md)。
-
-所有词条必须原创，不得使用任何商业桌游的官方词表。
+`words/` 下每个领域一个 JSON 文件，所有游戏共用。好的词条要短、领域内人人都认识，而且全部原创。见 [words/README.md](words/README.md)。
 
 ## 协议
 
-仓库公开前会补上协议文件，计划代码使用 MIT，词库使用 CC BY-SA 4.0。
+仓库公开前会补上协议文件：代码 MIT，词库 CC BY-SA 4.0。
 
-<!-- readme-sync: 1a7c190ac686f90da357236cf6333ddec6180f23648eb886382baf0b19126f6b -->
+<!-- readme-sync: dac4bd98a4f5088fa4081612301183614cc80915400369f44f495d8a7793751b -->

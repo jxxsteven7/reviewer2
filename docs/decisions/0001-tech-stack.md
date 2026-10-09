@@ -5,39 +5,33 @@
 
 ## Context
 
-The project brief fixed the outline: TypeScript on both sides, a Vue front end, a Node server with Socket.IO, interface text in locale files, room state in memory, and a workspace that shares types between the front end and the back end. The hard constraints rule out Google services and public CDNs and ask for one Node process on one port (see [../rules/constraints.md](../rules/constraints.md)). What was left open was the package manager and the tooling around the code.
+The brief fixed TypeScript on both sides, a Vue front end, a Node server with Socket.IO, interface text in locale files, room state in memory, and shared types. The hard constraints rule out Google services and public CDNs and ask for one Node process on one port ([../rules/constraints.md](../rules/constraints.md)). Open were the package manager and the tooling.
 
 ## Decision
 
 | Area | Choice |
 |---|---|
-| Package manager | npm workspaces: `shared`, `server`, `client` |
-| Node | `^22.22.2 \|\| ^24.15 \|\| >=26`; CI uses 24 LTS. Raised from `^22.13 \|\| ^24` on 2026-10-09, when `npm ci` no longer ran below 22.22.2 and 24.15 and the server came to use `backup()` from `node:sqlite`, which Node 22 has since 22.16 |
-| Language | TypeScript, pinned to `~6.0.3`; vue-tsc checks `.vue` files |
+| Package manager | npm workspaces: `shared`, `server`, `client`, later `mailer` |
+| Node | `^22.22.2 \|\| ^24.15 \|\| >=26`; CI uses 24 LTS. Raised from `^22.13 \|\| ^24` on 2026-10-09, when `npm ci` stopped running below and the server came to use `backup()` from `node:sqlite` |
+| Language | TypeScript `~6.0.3`; vue-tsc for `.vue` files |
 | Front end | Vue 3.5, Vite 8, vue-router 5, vue-i18n 11 with messages compiled at build time |
-| Server | Node's `http` module, Socket.IO 4.8 and sirv for static files |
-| Validation | zod 4, with schemas in `shared` |
-| Tests | Vitest 5 for unit and integration tests, Playwright for end-to-end tests |
-| Linting and formatting | ESLint 10 with typescript-eslint, eslint-plugin-vue and the vue-i18n plugin's `no-raw-text` rule, plus Prettier |
-| Builds | Vite for the front end, with its text files compressed ahead of time; esbuild bundles the server and its dependencies into one CommonJS file |
-| Fonts | Source Serif 4 from `@fontsource-variable`, bundled and served by our own server. Interface text uses system fonts |
-| Deployment | The build, run directly with Node; no container image |
+| Server | Node's `http`, Socket.IO 4.8, sirv for static files |
+| Validation | zod 4, schemas in `shared` |
+| Tests | Vitest 5; Playwright end to end |
+| Lint and format | ESLint 10 with typescript-eslint, eslint-plugin-vue and vue-i18n's `no-raw-text`; Prettier |
+| Builds | Vite, text files compressed ahead of time; esbuild bundles the server into one CommonJS file |
+| Fonts | Source Serif 4 from `@fontsource-variable`, self-served; interface text in system fonts |
+| Deployment | The build, run with Node; no container image |
 
-zod and Playwright were decided here before they were dependencies. Each came with the first code that used it: zod with the first messages between the client and the server, and Playwright with the first end-to-end tests.
+## Why
 
-## Consequences
+- **npm, not pnpm:** Node 25 dropped corepack, so pnpm would be one more install for every contributor.
+- **TypeScript 6, not 7:** typescript-eslint doesn't support the native rewrite yet.
+- **Compiled i18n messages:** the message compiler needs `eval`, which the Content Security Policy forbids.
+- **No Express:** a few HTTP routes besides Socket.IO don't need it.
+- **One CommonJS bundle:** production needs no `node_modules`; CommonJS because socket.io's dependencies `require()` Node's built-ins.
+- **One web font:** every byte counts on a slow link into mainland China, and a Chinese web font weighs megabytes.
+- **No container image:** the build needs only Node, and Docker Hub is hard to reach from mainland China.
+- **Compression at build time:** sirv sends files as they are; gzip and Brotli copies cut the script to a third.
 
-- **npm instead of pnpm.** Node 25 stopped shipping corepack, so pnpm would be one more thing for every contributor to install, including people who only add words. npm comes with Node.
-- **TypeScript 6.0, not 7.** TypeScript 7 is the native rewrite. typescript-eslint doesn't support it yet: its peer range ends below 6.1. We move to 7 once the linting stack supports it.
-- **vue-i18n with compiled messages.** The message compiler would otherwise need `eval`, which the Content Security Policy forbids.
-- **No Express.** The server has two HTTP routes besides Socket.IO, the static files and `/healthz`, so Node's own `http` module is enough.
-- **Production needs no `node_modules`.** The server is bundled into one file. It is CommonJS because socket.io's dependencies call `require()` for Node's built-in modules, which an ES module bundle can't do.
-- **One web font.** Every byte counts on a slow link into mainland China. Chinese text uses the system's fonts, because a Chinese web font weighs several megabytes.
-- **No container image for now.** The first version is one process with no database, and the build needs only Node, so a container would add a Dockerfile to maintain and nothing the app needs. Images from Docker Hub are also hard to pull from mainland China. An image can come back when a host calls for one.
-- **Compression at build time.** sirv sends files as they are, so the build writes a gzip and a Brotli copy of each text file at the highest level, and the server sends the copy that the browser accepts. That makes the script about a third of its size, at no cost per request.
-
-## Alternatives considered
-
-- **pnpm workspaces**: faster and stricter installs, but they need corepack or a separate install.
-- **React**: the team is comfortable with it too, but the brief and the README had already chosen Vue.
-- **Biome instead of ESLint and Prettier**: faster, but its Vue support is incomplete, and there is no equivalent of `no-raw-text`.
+Alternatives: pnpm (needs corepack), React (the brief chose Vue), Biome (incomplete Vue support).

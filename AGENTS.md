@@ -1,10 +1,6 @@
 # AGENTS.md
 
-Project rules for AI coding assistants such as Codex and Claude Code. Codex reads this file automatically. Claude Code loads it through `CLAUDE.md`.
-
-## Rule files
-
-The project rules live in `docs/rules/` and are shared by people and AI assistants. Read the five files below before you start. Claude Code expands the `@` references automatically; other assistants should open and read the files.
+Rules for AI coding assistants. Codex reads this file itself; Claude Code loads it through `CLAUDE.md`. Read these rule files first (Claude Code expands the `@` references), and `words/README.md` for word lists.
 
 @docs/rules/git.md
 @docs/rules/versioning.md
@@ -12,14 +8,12 @@ The project rules live in `docs/rules/` and are shared by people and AI assistan
 @docs/rules/constraints.md
 @docs/rules/language.md
 
-When working on word lists, also read `words/README.md`.
-
 ## Always
 
-- **Never work on `main`.** Before changing any file, make sure you are in a worktree on a branch of your own, as described in `docs/rules/git.md`; create them if the work has none yet. Make your changes there. Do not commit to `main`, push to `main`, force-push other people's branches, or bypass hooks with `--no-verify`.
-- **Never add AI or agent attribution.** Commit messages, PR titles and PR descriptions must not contain `Co-Authored-By` trailers for AI tools, "Generated with" lines or session links. If your tool adds them by default, remove them.
-- **Leave versions to CI and maintainers.** Write commit subjects and PR titles as `<type>: <summary>`, with no version; CI adds it to the PR title. Never choose a minor or major version, and never create tags or releases.
-- **Run the checks.** Before you push, run `npm run lint`, `npm run typecheck` and `npm test`, as `docs/development.md` describes. When you change the interface or the game flow, also run `npm run build && npm run test:e2e`.
-- **Get your work reviewed, and never merge it yourself.** Review your own changes first, then push the branch and open a PR (or give the link to open one), and stop to wait for human review. Do not merge PRs, and do not treat your own review as the required review.
-- **Write in English.** Everything you put into the repository, including code, comments, commit messages, PRs and docs, is in clear, standard English. If you change `README.md` or `README.zh-CN.md`, update the other one to match and run `node scripts/check-readme-sync.mjs --update`.
-- **Follow the hard constraints** in `docs/rules/constraints.md`. Above all, never write the name of the commercial board game that the first game is based on.
+- **Never work on `main`.** Work in a worktree on a branch of your own (`docs/rules/git.md`); create them if needed. Never commit or push to `main`, force-push other people's branches, or bypass hooks with `--no-verify`.
+- **No AI or agent attribution**: no `Co-Authored-By` trailers for AI tools, "Generated with" lines or session links in commits, PR titles or descriptions. Remove any your tool adds.
+- **Leave versions to CI and maintainers.** Commit subjects and PR titles are `<type>: <summary>`, with no version. Never choose a minor or major version or create tags or releases.
+- **Run the checks** before you push: `npm run lint`, `npm run typecheck` and `npm test`; after changing the interface or a game's flow, also `npm run build && npm run test:e2e`.
+- **Get reviewed, never merge.** Review your own changes, push the branch, open a PR, and stop for human review. Your own review is not the required one.
+- **Write in English**, everything in the repository. If you change one README, update the other and run `node scripts/check-readme-sync.mjs --update`.
+- **Follow the hard constraints** in `docs/rules/constraints.md`. Above all, never write the name of the board game the first game is based on, or how the project's own servers are run.

@@ -2,128 +2,83 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**Online party games for academics.** Play in the browser: everyone joins the same room from their own phone or laptop. Pick a nickname and you're in; an account is optional.
+**Online party games for academics.** Everyone joins a room from their own phone. A nickname is enough; an account is optional.
 
 ## What it is
 
-- **Academic themes.** The games are built around everyday academic life: peer review, submissions, lab meetings, grant applications and thesis defenses. There is no general-audience edition.
-- **A shared word library.** At the core is a library of academic terms, organized by field, contributed by the community and shared by all the games.
-- **Made for peers.** The project is non-profit and has no ads.
+- **Academic themes.** Peer review, submissions, lab meetings, grants and defenses.
+- **A shared word library** of academic terms, by field, contributed by the community.
+- **Made for peers.** Non-profit, with no ads.
 
 ### The first game: team word guessing
 
-Two research groups, Red and Blue, face off over 25 academic terms. Each group's captain knows which cards belong to their group, but may give only **a short clue and a number**. The rest of the group then flips cards based on the clue. Flip an irrelevant paper or one of the other group's cards and your turn ends. Flip **Reviewer 2** and your paper is rejected on the spot: your group loses. That card gave the project its name.
+Two research groups, Red and Blue, face off over 25 academic terms. Each group's PI knows which cards are theirs but may give only **a short clue and a number**; the students then flip cards. Flip an irrelevant paper or the other group's card and the turn ends. Flip **Reviewer 2** and your paper is rejected on the spot: your group loses.
 
-The game is called **Double Blind** for now. In the code, its module is called `keywords`, and [docs/games/keywords.md](docs/games/keywords.md) has the full rules.
+**Double Blind** is its name for now; its module is `keywords`, and [docs/games/keywords.md](docs/games/keywords.md) has the rules.
 
 ## Features
 
-- Bilingual interface in Chinese and English
-- Playable worldwide, **including mainland China**: no Google services and no public CDNs; fonts, scripts and icons are all self-hosted
-- Mobile-first, and works in WeChat's built-in browser
-- Reconnects automatically after a phone locks or the browser goes to the background, returning players to their room, team and role
-- Server-authoritative, with data filtered by role: guessers can't see the colors of unrevealed cards, even with the browser's developer tools
-- Optional accounts, with only a username and a password: an avatar, a record of the games played, and an email address that is only for resetting a forgotten password and is never stored
-- Matches: a room can play a set number of games in a row and score every player, and at the end the best win the Best Paper Award and the last become the game's black hole, titles that accounts keep
+- Bilingual, Chinese and English
+- Playable **in mainland China**: no Google services or public CDNs
+- Mobile-first; works in WeChat's browser
+- Reconnects after a locked screen to the same seat
+- Server-authoritative: guessers can't see unrevealed colors, even with developer tools
+- Optional accounts: an avatar, a record of games, and an email address only for resetting a password, never stored
+- Matches: several scored games in a row, with titles
 
 ## Status
 
-🚧 In early development. The first game is online at <https://playreviewer2.com>, and you can run your own copy as well (see [Running locally](#running-locally)).
-
-It has rooms that you create and join as a player or a spectator, a choice of team and role, separate captain and guesser views, a view for a projector, settings for the rules and the time limits, a word library of ten fields from which the room's creator picks, real-time sync, automatic reconnection, a bilingual interface, quick reactions, a chat for each group's guessers, decision letters at the end, "play again", feedback from players and optional accounts.
+🚧 Early development. The first game is online at <https://playreviewer2.com>; you can also run your own copy ([Running locally](#running-locally)).
 
 ## Tech stack
 
 | Part | Choice |
 |---|---|
-| Language | TypeScript, front end and back end, in an npm workspace |
+| Language | TypeScript, in an npm workspace |
 | Front end | Vue 3 + Vite, vue-i18n |
 | Back end | Node.js + Socket.IO |
-| Storage | Rooms in server memory; players' feedback and accounts in SQLite, with Node's built-in `node:sqlite`, and avatars as files |
+| Storage | Rooms in memory; feedback and accounts in SQLite (`node:sqlite`); avatars as files |
 | Tests | Vitest, and Playwright end to end |
-| Deployment | One Node process serves both the static front end and WebSocket, on one domain and one port; a small mailer beside it sends the mails of accounts |
+| Deployment | One Node process on one port, plus a small mailer |
 
 ## Project layout
 
 | Path | Contents |
 |---|---|
-| `client/src/core/` | Front-end shared layer: connection, rooms, lobby, i18n |
-| `client/src/games/` | Each game's UI, such as `keywords/` |
-| `client/src/locales/` | `zh.json` and `en.json` |
-| `server/src/core/` | Back-end shared layer: room management, player identity, connections |
-| `server/src/games/` | Each game's rules and state |
-| `server/src/accounts/` | Accounts: their API, logins, email and avatars |
-| `server/src/store/` | The SQLite database and what is kept in it |
-| `shared/` | Types shared by the front end and back end |
+| `client/src/` | The Vue app: `core/` shared, `games/<game>/` each game's screens, `locales/` all interface text |
+| `server/src/` | The server: `core/` rooms, `games/<game>/` each game's rules, `accounts/`, `store/` the database |
+| `shared/` | Types and rules used by both sides |
 | `mailer/` | The program that sends the mails of accounts |
 | `words/` | Word lists, one JSON file per field |
-| `docs/` | Documentation and project rules |
-| `e2e/` | End-to-end tests with Playwright |
-| `scripts/` | Repository scripts, such as the checks for commit messages, the forbidden name, word lists and README sync |
+| `e2e/`, `scripts/`, `docs/` | End-to-end tests, repository checks, documentation |
 
 ## Running locally
 
-You need [Node.js](https://nodejs.org) 22.22.2 or later (24.15 or later on Node 24), but not 23 or 25, which the test runner doesn't support. CI uses 24 LTS.
+You need [Node.js](https://nodejs.org) 22.22.2 or later (24.15 or later on Node 24), but not 23 or 25.
 
 ```bash
 npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-`npm run build && npm start` runs the production build on one port, <http://localhost:3000>. Everything runs on your own machine, with no key for any outside service: to try accounts with email, copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`, and the mails, such as a password reset, appear in the mailer's output instead of being sent. The other commands, testing on a phone, running in production and the environment variables are in [docs/development.md](docs/development.md).
+The other commands, testing on a phone and the environment variables are in [docs/development.md](docs/development.md).
 
 ## Contributing
 
-Contributions of code, words and ideas are welcome. The full rules are in **[CONTRIBUTING.md](CONTRIBUTING.md)**. The core rules are:
+The rules are in **[CONTRIBUTING.md](CONTRIBUTING.md)**; in short:
 
-1. **`main` is protected.** Nobody, maintainers included, commits or pushes to `main` directly. Every change goes through a pull request.
-2. **Work on your own branch.** Project members use a git worktree with its own branch. Outside contributors fork the repository and work on a branch in their fork.
-3. **All code is reviewed.** Whether it was written by a person or by AI, by a member or by an outside contributor, someone other than the author must approve it before it is merged. Only repository admins merge pull requests, and GitHub enforces this.
-4. **No AI or agent attribution in commits.** The committer is responsible for what they submit.
-5. **The repository is written in English.** Code, comments, commit messages, docs and rules use standard English. This README's Chinese translation is the only translated document, and CI keeps the two in sync.
-6. **Every pull request is squash-merged and versioned.** It lands on `main` as one commit titled `vX.Y.Z <type>: <summary>`. CI raises the patch number by one for every PR, and maintainers decide when the minor or major number goes up. See [docs/rules/versioning.md](docs/rules/versioning.md).
+1. `main` is protected: every change is a pull request from a branch of your own, or from a fork.
+2. Someone other than the author reviews every PR; a collaborator merges it once approved and green.
+3. No AI or agent attribution in commits.
+4. The repository is in English; this README is the only translated file.
+5. Every PR is squash-merged as one versioned commit; see [docs/rules/versioning.md](docs/rules/versioning.md).
 
-If you work with Codex or Claude Code, they read `AGENTS.md` and `CLAUDE.md` automatically and follow the same rules. Many other AI assistants read `AGENTS.md` too; if yours doesn't, point it at that file before it starts. The rule files live in `docs/rules/`, and you can reference them in a chat with `@`, for example `@docs/rules/review.md`.
-
-### Project members
-
-Start each piece of work in its own worktree and branch, and keep the main checkout on `main`:
-
-```bash
-git fetch origin
-git worktree add ../fix-reconnect -b fix/reconnect origin/main
-cd ../fix-reconnect
-# edit and commit, then:
-git push -u origin fix/reconnect
-```
-
-Then open a pull request on GitHub and wait for review. The directory layout, local hooks and cleanup after merging are covered in [docs/rules/git.md](docs/rules/git.md).
-
-### Outside contributors (fork)
-
-1. **Fork** this repository on GitHub.
-2. Clone your fork, add this repository as `upstream`, and create a branch from the latest upstream `main`:
-
-   ```bash
-   git clone git@github.com:<your-username>/reviewer2.git
-   cd reviewer2
-   git remote add upstream https://github.com/jxxsteven7/reviewer2.git
-   git fetch upstream
-   git switch -c fix/lobby-typo upstream/main
-   ```
-
-3. Commit your changes and push them to your fork: `git push -u origin fix/lobby-typo`.
-4. Open a pull request against `main` in this repository and fill in the template. CI runs on it once a maintainer has approved the run.
-5. A maintainer reviews it. Push any follow-up changes to the same branch. Once the PR is approved, a repository admin merges it.
-
-For larger changes, please open an issue first.
+AI assistants read `AGENTS.md`.
 
 ### Contributing words
 
-The word library in `words/` is shared by all the games, with one JSON file per academic field. A good term is short, and everyone in its field knows it, such as "attention", "convergence", "baseline" or "generalization". A word-list PR changes the files under `words/`, and also `scripts/check-words.mjs` and its tests when it changes the format; it is reviewed like any other PR. The format, what makes a good term and how each game uses the library are described in [words/README.md](words/README.md).
-
-All terms must be original. Do not use the official word list of any commercial board game.
+One JSON file per field in `words/`, shared by all games. A good term is short and known to everyone in its field, and all terms are original. See [words/README.md](words/README.md).
 
 ## License
 
-License files will be added before the repository goes public. The plan is MIT for the code and CC BY-SA 4.0 for the word lists.
+License files come before the repository goes public: MIT for the code, CC BY-SA 4.0 for the word lists.
