@@ -16,9 +16,10 @@ import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { RecordStore, TitleStore, type NewRecord } from '../store/records';
 import { MailTokenStore, SessionStore, type SessionLimits } from '../store/sessions';
+import { SettingStore } from '../store/settings';
 import { inspectAvatar, MAX_AVATAR_STORAGE, MemoryAvatars, type AvatarFiles } from './avatars';
 import { fingerprint, normalizeEmail } from './email';
-import { AccountCounters, DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from './limits';
+import { AccountCounters, confirmKey, DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from './limits';
 import type { MailChannel } from './mail';
 import { BusyError, PasswordHasher } from './passwords';
 import { hashSecret, isSecret, newSecret } from './tokens';
@@ -26,8 +27,10 @@ import { hashSecret, isSecret, newSecret } from './tokens';
 // What accounts can do (docs/architecture.md), whatever carries the request: http.ts in this
 // directory reads the requests and the login cookie, and answers them; the socket layer asks who
 // a connection is and records the games. Every method checks its limits before it does anything
-// that costs, and every check that a write depends on is made again after the one thing that is
-// awaited, the password's hash, inside the transaction that writes.
+// that costs, and counts against them before the one thing that is awaited, the password's hash,
+// so that requests that arrive together can't all pass a limit before any is counted. Every check
+// that a write depends on, the login that the request came with above all, is made again after
+// the hash, inside the transaction that writes.
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
@@ -35,6 +38,10 @@ export type AccountFailure = AccountError | 'bad_request' | 'rate_limited' | 'in
 export type AccountResult<Data extends object = object> = ({ ok: true } & Data) | { ok: false; error: AccountFailure };
 
 const refuse = (error: AccountFailure): { ok: false; error: AccountFailure } => ({ ok: false, error });
+
+// The setting that holds the fingerprint of this text, by which a change of the key is told.
+const KEY_SETTING = 'email_fingerprint_key';
+const KEY_TEXT = 'the key that the fingerprints of addresses are made with';
 
 // What the socket layer must do when an account changes, which the HTTP side can't do itself.
 export interface AccountHooks {
@@ -87,6 +94,7 @@ export class Accounts {
   readonly mailTokens: MailTokenStore;
   readonly records: RecordStore;
   readonly titles: TitleStore;
+  readonly settings: SettingStore;
   readonly counters: AccountCounters;
   readonly hasher: PasswordHasher;
   // Set by the socket layer once it is there.
@@ -119,6 +127,7 @@ export class Accounts {
     this.mailTokens = new MailTokenStore(options.db, clock);
     this.records = new RecordStore(options.db, clock);
     this.titles = new TitleStore(options.db, clock);
+    this.settings = new SettingStore(options.db);
     this.counters = new AccountCounters(options.limits ?? DEFAULT_ACCOUNT_LIMITS, options.now);
     this.hasher = options.hasher ?? new PasswordHasher();
   }
@@ -165,8 +174,13 @@ export class Accounts {
     if (this.#full()) return refuse('storage_full');
     const key = usernameKey(checked.username);
     if (this.store.byKey(key)) return failed('username_taken');
+    // The account counts against the address from here on, and is given back if nothing comes of it.
+    registrations.add(ip);
     const hashed = await this.#hash(password);
-    if (!hashed.ok) return hashed;
+    if (!hashed.ok) {
+      registrations.refund(ip);
+      return hashed;
+    }
     const secret = newSecret();
     const account = this.store.transaction(() => {
       const created = this.store.create(checked.username, key, hashed.hash);
@@ -174,8 +188,10 @@ export class Accounts {
       return created;
     });
     // Someone else took the name while the password was being hashed.
-    if (!account) return failed('username_taken');
-    registrations.add(ip);
+    if (!account) {
+      registrations.refund(ip);
+      return failed('username_taken');
+    }
     this.#log('account_created', { id: account.id });
     return { ok: true, secret };
   }
@@ -191,25 +207,30 @@ export class Accounts {
     const name = typeof rawName === 'string' ? cleanName(rawName) : null;
     if (name === null || typeof password !== 'string') return refuse('login_failed');
     const key = usernameKey(name);
-    if (!this.counters.mayTryPassword(ip, key)) return refuse('login_limited');
+    // The try counts as a wrong password until it proves right.
+    if (!this.counters.tryPassword(ip, key)) return refuse('login_limited');
     const account = this.store.byKey(key);
     const verified = await this.#verify(password, account?.password ?? null);
-    if (!verified.ok) return verified;
-    // The account may have gone, or its password changed, while the password was being checked.
-    const current = account === undefined ? undefined : this.store.byId(account.id);
-    if (!verified.match || current === undefined || current.password !== account?.password) {
-      this.counters.wrongPassword(ip, key);
-      return refuse('login_failed');
+    if (!verified.ok) {
+      this.counters.rightPassword(ip, key);
+      return verified;
     }
-    if (verified.outdated) {
-      const rehashed = await this.#hash(password);
-      if (rehashed.ok) this.store.setPassword(current.id, rehashed.hash);
-    }
+    if (!verified.match || account === undefined) return refuse('login_failed');
+    // A hash made with older parameters is made again with the current ones. One that can't be
+    // right now, for the hasher being busy, is left as it is.
+    const rehashed = verified.outdated ? await this.#hash(password) : null;
     const secret = newSecret();
     const ended = this.store.transaction(() => {
+      // The account may have gone, or its password changed, while the password was being checked
+      // and hashed. The hash that was checked is written back over nothing else.
+      const current = this.store.byId(account.id);
+      if (current === undefined || current.password !== account.password) return null;
+      if (rehashed?.ok) this.store.setPassword(current.id, rehashed.hash);
       if (previous) this.sessions.delete(previous.hash);
       return this.sessions.create(hashSecret(secret), current.id);
     });
+    if (ended === null) return refuse('login_failed');
+    this.counters.rightPassword(ip, key);
     this.hooks.sessionsEnded(previous ? [previous.hash, ...ended] : ended);
     return { ok: true, secret };
   }
@@ -272,6 +293,7 @@ export class Accounts {
     if (!confirmed.ok) return confirmed;
     const id = login.account.id;
     const removed = this.store.transaction(() => {
+      if (!this.#stillLoggedIn(login)) return null;
       const ended = this.sessions.deleteForAccount(id);
       const account = this.store.delete(id);
       return account ? { ended, account } : null;
@@ -348,12 +370,36 @@ export class Accounts {
     return this.#fingerprintKey !== null && this.#mail !== null;
   }
 
+  // Makes sure that the fingerprints in the database were made with the key that the server has
+  // now, which comes from the server's secret. A new secret makes a new key, against which the old
+  // fingerprints can never match: an account would seem to have an address, and a forgotten password
+  // could never be reset. So they go, with the links that were to bind an address, and every account
+  // is without an address until its owner binds one again. The database keeps the fingerprint of a
+  // fixed text, by which the change is told. Returns how many addresses were unbound, or null when
+  // the server has no key, and nothing is touched.
+  adoptFingerprintKey(): number | null {
+    if (this.#fingerprintKey === null) return null;
+    const check = fingerprint(this.#fingerprintKey, KEY_TEXT).toString('base64url');
+    return this.store.transaction(() => {
+      const known = this.settings.get(KEY_SETTING);
+      if (known === check) return 0;
+      let unbound = 0;
+      if (known !== null) {
+        unbound = this.store.unbindAll();
+        this.mailTokens.deleteAll('bind');
+      }
+      this.settings.set(KEY_SETTING, check);
+      return unbound;
+    });
+  }
+
   // Asks for a link that binds an address to the account, which takes effect once it is opened.
   // The password is asked for, since an address can reset the password: whoever has a login and
   // not the password must not be able to bind an address of their own. Whether or not another
   // account has the address, the answer is the same and the account has an address waiting to be
   // confirmed; only the mail isn't sent when another account has it, so that nobody learns from
-  // any of it which addresses are bound.
+  // any of it which addresses are bound. An address that this account has already is mailed to
+  // as any other: that tells its owner nothing new.
   async bindEmail(
     ip: string,
     login: Login,
@@ -367,25 +413,32 @@ export class Accounts {
     const { binds, mails } = this.counters;
     const account = String(login.account.id);
     if (!binds.allowed(account) || !mails.allowed(ip)) return refuse('email_limited');
-    const confirmed = await this.#confirm(ip, login, password);
-    if (!confirmed.ok) return confirmed;
+    // The mail counts from here on, and is given back when the password is wrong.
     binds.add(account);
     mails.add(ip);
+    const confirmed = await this.#confirm(ip, login, password);
+    if (!confirmed.ok) {
+      binds.refund(account);
+      mails.refund(ip);
+      return confirmed;
+    }
     const address = fingerprint(this.#fingerprintKey as Buffer, email);
     const secret = newSecret();
     const owner = this.store.transaction(() => {
-      if (!this.store.byId(login.account.id)) return null;
+      if (!this.#stillLoggedIn(login)) return null;
       this.mailTokens.deleteForAccount(login.account.id, 'bind');
       this.mailTokens.create(hashSecret(secret), login.account.id, 'bind', address, MAIL_LINK_MS.bind);
-      return this.store.byEmail(address) ?? 'nobody';
+      return this.store.byEmail(address)?.id ?? 'nobody';
     });
     if (owner === null) return refuse('not_logged_in');
-    if (owner === 'nobody') this.#send('bind', email, secret, language);
+    if (owner === 'nobody' || owner === login.account.id) this.#send('bind', email, secret, language);
     return { ok: true };
   }
 
   // Binds the address that the link was for, unless another account has bound it meanwhile. The
-  // link works without a login: the mail may be opened on another device.
+  // link works without a login: the mail may be opened on another device. The links that reset the
+  // password, which went to the address the account had before, are used up with the other links
+  // to bind an address: the address they went to is no longer the account's.
   confirmEmail(token: string): AccountResult {
     if (!isSecret(token)) return refuse('link_invalid');
     const hash = hashSecret(token);
@@ -395,6 +448,7 @@ export class Accounts {
       this.mailTokens.delete(hash);
       if (!this.store.setEmail(link.accountId, link.emailFp)) return false;
       this.mailTokens.deleteForAccount(link.accountId, 'bind');
+      this.mailTokens.deleteForAccount(link.accountId, 'reset');
       return true;
     });
     return bound ? { ok: true } : refuse('link_invalid');
@@ -406,12 +460,14 @@ export class Accounts {
   async unbindEmail(ip: string, login: Login, password: string): Promise<AccountResult> {
     const confirmed = await this.#confirm(ip, login, password);
     if (!confirmed.ok) return confirmed;
-    this.store.transaction(() => {
+    const unbound = this.store.transaction(() => {
+      if (!this.#stillLoggedIn(login)) return false;
       this.store.setEmail(login.account.id, null);
       this.mailTokens.deleteForAccount(login.account.id, 'bind');
       this.mailTokens.deleteForAccount(login.account.id, 'reset');
+      return true;
     });
-    return { ok: true };
+    return unbound ? { ok: true } : refuse('not_logged_in');
   }
 
   // Sends a link that resets the password to the address, if an account has it. The answer is the
@@ -466,7 +522,7 @@ export class Accounts {
       return { account, ended };
     });
     if (!reset) return refuse('link_invalid');
-    this.counters.forgive(reset.account.key);
+    this.counters.forgive(reset.account.key, reset.account.id);
     this.hooks.sessionsEnded(reset.ended);
     this.#log('password_reset', { id: reset.account.id });
     return { ok: true, secret, accountId: reset.account.id };
@@ -497,18 +553,27 @@ export class Accounts {
   }
 
   // Checks the password of the account that is logged in, for an action that asks for it. A wrong
-  // one counts as a failed login.
+  // one counts as a failed login, against the address and the account (limits.ts).
   async #confirm(ip: string, login: Login, password: string): Promise<AccountResult> {
-    const { key } = login.account;
+    const key = confirmKey(login.account.id);
     if (typeof password !== 'string') return refuse('password_wrong');
-    if (!this.counters.mayTryPassword(ip, key)) return refuse('login_limited');
+    if (!this.counters.tryPassword(ip, key)) return refuse('login_limited');
     const verified = await this.#verify(password, login.account.password);
-    if (!verified.ok) return verified;
-    if (!verified.match) {
-      this.counters.wrongPassword(ip, key);
-      return refuse('password_wrong');
+    if (!verified.ok) {
+      this.counters.rightPassword(ip, key);
+      return verified;
     }
+    if (!verified.match) return refuse('password_wrong');
+    this.counters.rightPassword(ip, key);
     return { ok: true };
+  }
+
+  // Whether the login that a request came with is still there, for the write that the request
+  // asks for, after the wait for the password's hash: another request may have logged the browser
+  // out, changed the password or deleted the account meanwhile. Every change of the password ends
+  // every login, so a login that is still there was made with the password that is there now.
+  #stillLoggedIn(login: Login): boolean {
+    return this.store.byId(login.account.id) !== undefined && this.sessions.find(login.hash) !== null;
   }
 
   async #hash(password: string): Promise<AccountResult<{ hash: string }>> {

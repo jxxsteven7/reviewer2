@@ -118,6 +118,7 @@ export async function startServer(
     ...(options.mail && { mail: options.mail, fingerprintKey: fingerprintKey(TEST_SECRET) }),
     ...(options.maxAvatarBytes !== undefined && { maxAvatarBytes: options.maxAvatarBytes }),
   });
+  accounts.adoptFingerprintKey();
   const socketLimits = { ...DEFAULT_SOCKET_LIMITS, ...options.socketLimits };
   if (options.roomsPerMinute !== undefined) socketLimits.roomsPerMinute = options.roomsPerMinute;
   let app: AppServer;

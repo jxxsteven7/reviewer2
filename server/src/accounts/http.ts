@@ -16,6 +16,11 @@ import type { AccountFailure, AccountResult, Accounts, Login } from './service';
 // Every request that changes something must come from a page of this site (cookies.ts), with a
 // body of JSON, which a form on another site can't send without asking first, and which the
 // server never allows. Each address may make so many of them a minute (limits.ts).
+//
+// Only the answers that log the browser in or out set the cookie. A cookie whose login has ended
+// elsewhere is left alone, not cleared: the page asks who it is right after a login or a password
+// change, and the answer to that, with the cookie as it was, may arrive after the answer that set
+// the new cookie, and must not take it away again.
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
@@ -231,14 +236,9 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
         body = parsed.data;
       }
     }
-    const secret = readLoginCookie(req.headers, secureCookies);
-    const login = accounts.login(secret);
-    if (route.login && !login) {
-      return send(res, { ...failure('not_logged_in'), ...(secret === null ? {} : { cookie: signedOut }) });
-    }
-    const answer = await route.handle({ ip, login, body } as Request<never>);
-    // A cookie that stands for no login, as after its login has ended elsewhere, is cleared.
-    send(res, secret !== null && !login && answer.cookie === undefined ? { ...answer, cookie: signedOut } : answer);
+    const login = accounts.login(readLoginCookie(req.headers, secureCookies));
+    if (route.login && !login) return send(res, failure('not_logged_in'));
+    send(res, await route.handle({ ip, login, body } as Request<never>));
   }
 
   function send(res: ServerResponse, { status, body, cookie }: Answer): void {

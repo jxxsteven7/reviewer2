@@ -224,7 +224,7 @@ describe('the mailer', () => {
   });
 
   test('answers one line with one line over its socket', async () => {
-    const { mailer } = setUp();
+    const { mailer, printed } = setUp();
     const path = join(dir, 'mailer.sock');
     await new Promise<void>((resolve) => mailer.server.listen(path, resolve));
     const ask = (text: string) =>
@@ -241,6 +241,20 @@ describe('the mailer', () => {
       expect(await ask(`${'x'.repeat(3000)}\n`)).toBe('{"ok":false,"error":"bad_request"}\n');
       // A connection that never finishes its line is closed without an answer.
       expect(await ask(line())).toBe('');
+      // What comes after the line is not read: one request, however it is written, is one mail.
+      const sent = printed.length;
+      const answer = await new Promise<string>((resolve) => {
+        let received = '';
+        const socket = connect(path, () => {
+          socket.write(`${line()}\n`);
+          setTimeout(() => socket.write(`${line()}\n`), 20);
+        });
+        socket.setEncoding('utf8');
+        socket.on('data', (chunk: string) => (received += chunk));
+        socket.on('close', () => resolve(received));
+      });
+      expect(answer).toBe('{"ok":true}\n');
+      expect(printed).toHaveLength(sent + 1);
     } finally {
       await new Promise((resolve) => mailer.server.close(resolve));
     }

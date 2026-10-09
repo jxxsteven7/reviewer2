@@ -67,6 +67,7 @@ describe('a database in DATA_DIR', () => {
       'feedback',
       'game_records',
       'sessions',
+      'settings',
       'sqlite_sequence',
       'titles',
     ]);
@@ -301,6 +302,7 @@ describe('a database in memory', () => {
       'feedback',
       'game_records',
       'sessions',
+      'settings',
       'sqlite_sequence',
       'titles',
     ]);

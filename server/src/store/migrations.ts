@@ -38,6 +38,8 @@ export const MIGRATIONS: readonly string[] = [
   // - game_records: one row for each game that a player with an account finished in a seat, as the
   //   game module described their part in it. A game is recorded once for each account.
   // - titles: one row for each title a match awarded.
+  // - settings: what the server must remember between starts and that fits no other table, such as
+  //   the fingerprint of a fixed text, by which it tells that the key for fingerprints has changed.
   `
   CREATE TABLE accounts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,5 +95,10 @@ export const MIGRATIONS: readonly string[] = [
     awarded_at TEXT NOT NULL
   ) STRICT;
   CREATE INDEX titles_account ON titles (account_id);
+
+  CREATE TABLE settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  ) STRICT;
   `,
 ];

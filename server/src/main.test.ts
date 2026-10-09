@@ -204,19 +204,21 @@ describe('starting', () => {
     expect(performance.now() - started).toBeLessThan(2000);
     expect(logged('contacts_cleared')).toEqual({ count: 1, walTruncated: false });
     expect(holds()).toEqual([DATABASE_FILE]);
-    // Nothing more is cleared, but the WAL is tried again every hour, until it is truncated.
-    const cleared = () => logs.filter(({ event }) => event === 'contacts_cleared');
-    await until(() => cleared().length >= 3, 'two more tries');
-    expect(cleared().at(-1)?.fields).toEqual({ count: 0, walTruncated: false });
+    // Nothing more is cleared, but the WAL is tried again every hour, until it is truncated, and
+    // the log says so each time, apart from the clearing of contacts, of which there is none.
+    const tried = () => logs.filter(({ event }) => event === 'wal_truncated');
+    await until(() => tried().length >= 2, 'two more tries');
+    expect(tried().at(-1)?.fields).toEqual({ ok: false });
+    expect(logs.filter(({ event }) => event === 'contacts_cleared')).toHaveLength(1);
     expect(holds()).toEqual([DATABASE_FILE]);
     reader.exec('COMMIT');
     reader.close();
-    await until(() => cleared().at(-1)?.fields?.walTruncated === true, 'the WAL to be truncated');
+    await until(() => tried().at(-1)?.fields?.ok === true, 'the WAL to be truncated');
     expect(holds()).toEqual([]);
     // Once it is, the hour's clearing has nothing to say.
-    const done = cleared().length;
+    const done = tried().length;
     await until(() => logs.filter(({ event }) => event === 'snapshot_saved').length >= 2, 'another hour');
-    expect(cleared().length).toBe(done);
+    expect(tried().length).toBe(done);
   });
 
   test('ends with 1 and one line of log when the port is taken', async () => {

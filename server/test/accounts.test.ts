@@ -198,12 +198,14 @@ describe('logging out', () => {
     expect(reply).toMatchObject({ status: 200, body: { ok: true } });
     expect(reply.cookie).toBe('r2s=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax');
     expect(server.accounts.login(secret)).toBeNull();
-    // A browser that still sends the old cookie is told to drop it.
+    // A browser that still sends the old cookie is a guest, and keeps the cookie: only a login or a
+    // logout sets it, so that no answer can take away a cookie that another answer has just set.
     const stale = new Browser(server.url);
     stale.cookie = `r2s=${secret}`;
     const answer = await stale.request('/api/account');
     expect(answer.body.account).toBeNull();
-    expect(answer.cookie).toMatch(/^r2s=; Max-Age=0/);
+    expect(answer.cookie).toBeUndefined();
+    expect((await stale.request('/api/account/records')).status).toBe(401);
   });
 });
 
@@ -280,14 +282,21 @@ describe('changing the password', () => {
     expect((await new Browser(server.url).logIn('Ann', 'battery staple')).status).toBe(200);
   });
 
-  test('counts a wrong old password as a failed login', async () => {
-    server = await startServer();
+  test('counts a wrong old password against the account, apart from the logins by its name', async () => {
+    server = await startServer({ accountLimits: { loginFailuresPerMinute: 1000 } });
     const browser = new Browser(server.url);
     await browser.register('Ann');
-    for (let i = 0; i < 10; i += 1) {
-      await browser.request('/api/account/password', { current: 'wrong horse', password: 'battery staple' });
-    }
+    const change = (current: string) =>
+      browser.request('/api/account/password', { current, password: 'battery staple' });
+    // Whoever types wrong passwords at the login page doesn't keep the owner from changing theirs.
+    for (let i = 0; i < 10; i += 1) await new Browser(server.url).logIn('Ann', 'wrong horse');
     expect((await new Browser(server.url).logIn('Ann')).body.error).toBe('login_limited');
+    expect((await change('wrong horse')).body.error).toBe('password_wrong');
+    // Ten wrong ones here are as many as at a login, from any address.
+    for (let i = 0; i < 9; i += 1) await change('wrong horse');
+    expect((await change('correct horse')).body.error).toBe('login_limited');
+    server.advance(15 * 60_000);
+    expect((await change('correct horse')).status).toBe(200);
   });
 });
 

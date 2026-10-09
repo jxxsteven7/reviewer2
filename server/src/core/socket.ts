@@ -3,6 +3,7 @@ import {
   checkContact,
   checkFeedback,
   cleanName,
+  isReservedName,
   type Ack,
   type ClosedReason,
   type EmoteEvent,
@@ -67,6 +68,9 @@ export interface SocketLimits {
   // codes that belong to no room, which keeps anyone from trying codes until one fits.
   roomsPerMinute: number;
   failedLookupsPerMinute: number;
+  // Per address and hour: nicknames refused for being someone's username, which says that the
+  // account exists, as registering the name would.
+  reservedNamesPerHour: number;
   // Per address: how much feedback it may send in each window of `feedbackWindowMs`.
   feedbackPerWindow: number;
   feedbackWindowMs: number;
@@ -79,6 +83,7 @@ export const DEFAULT_SOCKET_LIMITS: Readonly<SocketLimits> = Object.freeze({
   messageBurst: 20,
   roomsPerMinute: 5,
   failedLookupsPerMinute: 20,
+  reservedNamesPerHour: 30,
   feedbackPerWindow: 3,
   feedbackWindowMs: 10 * 60_000,
 });
@@ -88,6 +93,9 @@ const MAX_USER_AGENT = 512;
 
 interface Connection {
   key: string;
+  // The key that the browser has as a guest, from its token, which is the key above unless the
+  // browser is logged in. A seat that the browser took as a guest is found by it (adoptGuest).
+  guestKey: string;
   // The account that the connection is logged in to, with the hash of its login's secret, or null
   // for a guest. It is settled in the handshake, and the key comes from it then.
   account: { id: number; session: string } | null;
@@ -132,6 +140,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
   const creations = new WindowCounter(limits.roomsPerMinute, 60_000, now);
   const failedLookups = new WindowCounter(limits.failedLookupsPerMinute, 60_000, now);
+  const reservedNames = new WindowCounter(limits.reservedNamesPerHour, 60 * 60_000, now);
   const feedbackSent = new WindowCounter(limits.feedbackPerWindow, limits.feedbackWindowMs, now);
   // The feedback that each address sent in the last window, as a hash of what was kept and when,
   // so that the same feedback sent again, as when the answer to the first was lost on the way
@@ -354,11 +363,29 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (!room) {
       if (auth.roomId !== undefined) socket.emit('room:closed', { reason: 'expired' });
     } else if (auth.watch === undefined) {
-      const member = room.memberByKey(conn.key);
-      if (member) enter(socket, room, member);
+      const member = room.memberByKey(conn.key) ?? adoptGuest(room, conn);
+      if (member) {
+        enter(socket, room, member);
+        if (room.rev !== sent.get(room)) broadcast(room);
+      }
     } else if (auth.roomId !== undefined) {
       watch(socket, room);
     }
+  }
+
+  // The seat that a browser took as a guest becomes its account's, when the browser has logged in
+  // or registered since: the player comes back to their seat, team and role, rather than find the
+  // room's name theirs and the seat taken by themselves. The name becomes the username, unless
+  // someone else in the room has it. Only a guest's seat is adopted, and only while the account has
+  // no seat of its own here. Returns the member, or undefined when there was nothing to adopt.
+  function adoptGuest(room: Room, conn: Connection): Member | undefined {
+    if (!accounts || !conn.account || conn.guestKey === conn.key) return undefined;
+    const guest = room.memberByKey(conn.guestKey);
+    if (!guest || guest.account) return undefined;
+    const account = accounts.store.byId(conn.account.id);
+    if (!account) return undefined;
+    room.adopt(guest.id, conn.key, account.username, { id: account.id, avatar: avatarUrl(account) });
+    return guest;
   }
 
   function membership(socket: Socket): { room: Room; member: Member } | null {
@@ -498,8 +525,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       accounts && fromThisSite(socket.handshake.headers)
         ? accounts.login(readLoginCookie(socket.handshake.headers, options.cookieSecure ?? true))
         : null;
+    const guestKey = memberKey(issued ?? (auth.token as string));
     const conn: Connection = {
-      key: login ? accountKey(login.account.id) : memberKey(issued ?? (auth.token as string)),
+      key: login ? accountKey(login.account.id) : guestKey,
+      guestKey,
       account: login && { id: login.account.id, session: hex(login.hash) },
       ip: clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy),
       country: clientCountry(socket.handshake.headers, options.trustProxy),
@@ -515,8 +544,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     safely('handshake', () => comeBack(socket, auth));
 
     // The name that someone who comes into a room has there: their username, when they are logged
-    // in, or else the nickname they gave, which may not be anyone's username. The account is read
-    // again each time, since it may have been renamed since the connection was made.
+    // in, or else the nickname they gave, which may not be anyone's username, nor one of the names
+    // that nobody may register. The account is read again each time, since it may have been renamed
+    // since the connection was made.
     function newcomer(
       nickname: string,
     ): { ok: true; name: string; account: MemberAccount | null } | ReturnType<typeof fail> {
@@ -526,8 +556,21 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         return { ok: true, name: account.username, account: { id: account.id, avatar: avatarUrl(account) } };
       }
       if (cleanName(nickname) === null) return fail('name_invalid');
-      if (accounts?.reserved(nickname)) return fail('name_reserved');
-      return { ok: true, name: nickname, account: null };
+      return nameFree(nickname) ?? { ok: true, name: nickname, account: null };
+    }
+
+    // Why a guest may not have a nickname, or null when they may. Hearing that a name is someone's
+    // username says that the account exists, as registering the name would, so an address may hear
+    // it only so often; past that, every nickname it gives is refused for the rest of the hour,
+    // since being let in would say as much (docs/architecture.md). The reserved names are public,
+    // and say nothing.
+    function nameFree(nickname: string): ReturnType<typeof fail> | null {
+      if (isReservedName(nickname)) return fail('name_reserved');
+      if (!accounts) return null;
+      if (!reservedNames.allowed(conn.ip)) return fail('rate_limited');
+      if (!accounts.reserved(nickname)) return null;
+      reservedNames.add(conn.ip);
+      return fail('name_reserved');
     }
 
     const handlers: Handlers = new Map();
@@ -595,9 +638,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'room:join', ({ code, name, roomId, play }) => {
       const room = lookup(conn, code, roomId ?? undefined);
       if (typeof room === 'string') return fail(room);
-      const member = room.memberByKey(conn.key);
+      const member = room.memberByKey(conn.key) ?? adoptGuest(room, conn);
       if (member) {
         enter(socket, room, member);
+        if (room.rev !== sent.get(room)) broadcast(room);
         return ok({ code: room.code, roomId: room.id });
       }
       // Whatever keeps a newcomer out comes before the question for a name: nobody should fill
@@ -635,7 +679,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'room:rename', ({ name }) => {
       const found = membership(socket);
       if (!found) return fail('not_member');
-      if (!found.member.account && accounts?.reserved(name)) return fail('name_reserved');
+      if (!found.member.account && cleanName(name) !== null) {
+        const refusal = nameFree(name);
+        if (refusal) return refusal;
+      }
       return changed(found.room, found.room.rename(found.member.id, name));
     });
 
@@ -748,23 +795,47 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         const session: Session = { version, account: { username: account.username, avatar } };
         for (const socket of connectionsOf(({ id }) => id === accountId)) socket.emit('session', session);
       },
-      // An account that is gone leaves every room it was in, as if it had left.
+      // An account that is gone leaves every room it was in, as if it had left. Leaving asks the
+      // game module, and what one room's module throws must not keep the account in the others.
       accountDeleted(accountId) {
         const key = accountKey(accountId);
         for (const room of rooms.all()) {
           const member = room.memberByKey(key);
           if (!member) continue;
-          closeFor(room.drop(member.id), 'left');
-          if (room.members.size === 0) shut(room, 'expired', 'empty');
-          else broadcast(room);
+          safely('account_deleted', () => {
+            closeFor(room.drop(member.id), 'left');
+            if (room.members.size === 0) shut(room, 'expired', 'empty');
+            else broadcast(room);
+          });
         }
       },
     };
   }
 
+  // What was changed on an account from outside the server, such as an avatar that the operator
+  // took down (admin.ts), reaches the rooms by the next sweep: every member with an account is read
+  // again, and a room that looks different for it is sent to everyone in it. A deleted account can
+  // only have left through the hook above, so one that is gone is left alone here.
+  function refreshAccounts(): void {
+    if (!accounts) return;
+    const read = new Map<number, ReturnType<typeof accounts.store.byId>>();
+    for (const room of rooms.all()) {
+      let differs = false;
+      for (const member of room.members.values()) {
+        if (!member.account) continue;
+        const { id } = member.account;
+        if (!read.has(id)) read.set(id, accounts.store.byId(id));
+        const account = read.get(id);
+        if (account && room.updateAccount(member.id, account.username, avatarUrl(account))) differs = true;
+      }
+      if (differs) broadcast(room);
+    }
+  }
+
   return {
     broadcast,
     sweep() {
+      safely('accounts', refreshAccounts);
       safely('sweep', () => {
         const result = rooms.sweep();
         for (const { room, error } of result.failed) report(error, 'sweep', { code: room.code });

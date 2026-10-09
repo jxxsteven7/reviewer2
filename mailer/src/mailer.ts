@@ -38,8 +38,11 @@ export function createMailer({ quota, transport, baseUrl, log, readMs = 2_000, m
     return { ok: true };
   }
 
+  // One request on one connection: what comes after its line is not read, so that the same request
+  // can't be handled twice, as it would be if the line were found again in what came after it.
   function serve(socket: Socket): void {
     let received = '';
+    let read = false;
     let answered = false;
     const answer = (reply: MailReply) => {
       if (answered) return;
@@ -50,10 +53,11 @@ export function createMailer({ quota, transport, baseUrl, log, readMs = 2_000, m
     socket.setTimeout(readMs, () => socket.destroy());
     socket.on('error', () => socket.destroy());
     socket.on('data', (chunk: string) => {
-      if (answered) return;
+      if (read) return;
       received += chunk;
       const end = received.indexOf('\n');
       if (end === -1 && received.length <= maxLine) return;
+      read = true;
       if (end === -1 || end > maxLine) {
         answer({ ok: false, error: 'bad_request' });
         return;

@@ -152,4 +152,18 @@ describe('rate limits', () => {
     expect(counter.allowed('a')).toBe(true);
     counter.prune();
   });
+
+  test('a window counter takes one in one step, and gives it back', () => {
+    let time = 0;
+    const counter = new WindowCounter(2, 1000, () => time);
+    expect([counter.take('a'), counter.take('a'), counter.take('a')]).toEqual([true, true, false]);
+    counter.refund('a');
+    expect(counter.take('a')).toBe(true);
+    // Nothing is owed for a key that has nothing against it, nor once the window is over.
+    counter.refund('b');
+    expect(counter.allowed('b')).toBe(true);
+    time += 1000;
+    counter.refund('a');
+    expect([counter.take('a'), counter.take('a'), counter.take('a')]).toEqual([true, true, false]);
+  });
 });

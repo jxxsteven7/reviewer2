@@ -94,7 +94,8 @@ export async function main({
   // kept for 90 days or an account, but the WAL beside it still holds the pages as they were
   // before, until a checkpoint writes them back and a truncation drops them. That can't be done
   // while another connection is in the middle of the database, so it is tried again every hour
-  // until it is, with the contacts, and the log says each time whether it was.
+  // until it is, with the contacts, and the log says each time whether it was: `contacts_cleared`
+  // says so for the hour that cleared contacts, and `wal_truncated` for every try after that.
   let walHoldsDeleted = false;
   const dropFromWal = (): boolean => {
     walHoldsDeleted = !truncateWal(db);
@@ -102,8 +103,8 @@ export async function main({
   };
   const clearContacts = () => {
     const count = feedback.clearContacts();
-    if (count === 0 && !walHoldsDeleted) return;
-    log('contacts_cleared', { count, walTruncated: dropFromWal() });
+    if (count > 0) log('contacts_cleared', { count, walTruncated: dropFromWal() });
+    else if (walHoldsDeleted) log('wal_truncated', { ok: dropFromWal() });
   };
 
   const { accountsPerHour } = config;
@@ -126,6 +127,9 @@ export async function main({
   });
   const unused = accounts.clearAvatars();
   if (unused > 0) log('avatars_cleared', { count: unused });
+  // A server secret other than the one before unbinds every address (docs/architecture.md).
+  const unbound = accounts.adoptFingerprintKey();
+  if (unbound) log('addresses_unbound', { count: unbound });
 
   let server: AppServer;
   try {

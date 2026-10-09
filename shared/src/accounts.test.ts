@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   checkPassword,
   checkUsername,
+  isReservedName,
   looksLikeEmail,
   MAX_PASSWORD_INPUT,
   normalizePassword,
@@ -58,6 +59,9 @@ describe('a username', () => {
     }
     expect(checkUsername('Reviewer 3').problem).toBeNull();
     expect(checkUsername('administrators').problem).toBeNull();
+    // A guest's nickname may not be one either.
+    expect(isReservedName('Reviewer 2')).toBe(true);
+    expect(isReservedName('Reviewer 3')).toBe(false);
   });
 });
 

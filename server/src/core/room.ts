@@ -308,12 +308,32 @@ export class Room {
   updateAccount(id: string, username: string, avatar: string | null): boolean {
     const member = this.members.get(id);
     if (!member?.account) return false;
-    const name = cleanName(username);
-    const renamed = name !== null && name !== member.name && !this.#nameTaken(name, id);
+    const renamed = this.#takeUsername(member, username);
     if (!renamed && member.account.avatar === avatar) return false;
-    if (renamed) member.name = name;
     member.account.avatar = avatar;
     this.changed();
+    return true;
+  }
+
+  // A guest's seat becomes an account's: the member logged in or registered while they were in the
+  // room, and is found by the account's key from now on. The name becomes the username, as for
+  // updateAccount(). False when the member isn't a guest here.
+  adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
+    const member = this.members.get(id);
+    if (!member || member.account) return false;
+    member.key = key;
+    member.account = { ...account };
+    this.#takeUsername(member, username);
+    this.changed();
+    return true;
+  }
+
+  // Gives a member their username as the name in the room, unless someone else here has it, and
+  // says whether the name changed.
+  #takeUsername(member: Member, username: string): boolean {
+    const name = cleanName(username);
+    if (name === null || name === member.name || this.#nameTaken(name, member.id)) return false;
+    member.name = name;
     return true;
   }
 

@@ -53,6 +53,7 @@ export class AccountStore {
   readonly #rename: StatementSync;
   readonly #password: StatementSync;
   readonly #email: StatementSync;
+  readonly #unbindAll: StatementSync;
   readonly #avatar: StatementSync;
   readonly #avatarUsers: StatementSync;
   readonly #avatars: StatementSync;
@@ -73,6 +74,7 @@ export class AccountStore {
     this.#rename = db.prepare('UPDATE accounts SET username = ?, username_key = ? WHERE id = ?');
     this.#password = db.prepare('UPDATE accounts SET password = ? WHERE id = ?');
     this.#email = db.prepare('UPDATE accounts SET email_fp = ? WHERE id = ?');
+    this.#unbindAll = db.prepare('UPDATE accounts SET email_fp = NULL WHERE email_fp IS NOT NULL');
     this.#avatar = db.prepare('UPDATE accounts SET avatar = ? WHERE id = ?');
     this.#avatarUsers = db.prepare('SELECT count(*) AS count FROM accounts WHERE avatar = ?');
     this.#avatars = db.prepare('SELECT DISTINCT avatar FROM accounts WHERE avatar IS NOT NULL');
@@ -129,6 +131,11 @@ export class AccountStore {
       if (isUniqueFailure(error)) return false;
       throw error;
     }
+  }
+
+  // Unbinds every address, and says how many there were.
+  unbindAll(): number {
+    return Number(this.#unbindAll.run().changes);
   }
 
   // Sets the avatar's file name, or null for the default avatar, and returns the one it had.

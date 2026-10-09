@@ -106,7 +106,7 @@ DATA_DIR=data node server/dist/admin.cjs avatar remove <username> --ban    # and
 DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # uploads again
 ```
 
-It runs beside the server, which goes on as it is. The rooms show the default avatar from then on, but browsers and Cloudflare may keep the picture for as long as they had cached it, which is up to a year; purge its address, which the command prints, from Cloudflare's cache.
+It runs beside the server, which goes on as it is, and reads the accounts of the players in its rooms again at every sweep: within a minute, the rooms show the default avatar. Browsers and Cloudflare may keep the picture for as long as they had cached it, which is up to a year; purge its address, which the command prints, from Cloudflare's cache.
 
 ## Testing on a phone
 

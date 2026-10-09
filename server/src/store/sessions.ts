@@ -105,6 +105,7 @@ export class MailTokenStore {
   readonly #find: StatementSync;
   readonly #delete: StatementSync;
   readonly #deleteForAccount: StatementSync;
+  readonly #deleteAll: StatementSync;
   readonly #pending: StatementSync;
   readonly #prune: StatementSync;
 
@@ -121,6 +122,7 @@ export class MailTokenStore {
     );
     this.#delete = db.prepare('DELETE FROM email_tokens WHERE token_hash = ?');
     this.#deleteForAccount = db.prepare('DELETE FROM email_tokens WHERE account_id = ? AND purpose = ?');
+    this.#deleteAll = db.prepare('DELETE FROM email_tokens WHERE purpose = ?');
     this.#pending = db.prepare(
       "SELECT 1 FROM email_tokens WHERE account_id = ? AND purpose = 'bind' AND expires_at > ? LIMIT 1",
     );
@@ -145,6 +147,11 @@ export class MailTokenStore {
 
   deleteForAccount(accountId: number, purpose: MailPurpose): number {
     return Number(this.#deleteForAccount.run(accountId, purpose).changes);
+  }
+
+  // Deletes every link of a purpose, and says how many there were.
+  deleteAll(purpose: MailPurpose): number {
+    return Number(this.#deleteAll.run(purpose).changes);
   }
 
   // Whether the account has an address waiting for its confirmation link to be opened.

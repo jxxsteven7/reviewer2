@@ -1,6 +1,7 @@
 import type { RecordsView } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import { Browser, createRoom, startServer, TestClient, until, type TestServer } from './helpers';
+import { jpeg } from './images';
 
 // Accounts in rooms: who a connection is, the name and seat of a player with an account, the
 // nicknames that guests can't take, what happens to connections when a login ends or the account
@@ -140,12 +141,94 @@ describe('a guest', () => {
     expect(await joiner.send('room:rename', { name: 'ann lee' })).toEqual({ ok: false, error: 'name_reserved' });
   });
 
+  test('may not take a reserved name, and hears only so often that a name is registered', async () => {
+    server = await startServer({ socketLimits: { reservedNamesPerHour: 2 } });
+    await loggedIn('Ann');
+    const visitor = await guest();
+    const create = (name: string) =>
+      visitor.send('room:create', { game: 'test', language: 'en', fields: ['general'], name });
+    // The reserved names are nobody's, and are refused without count.
+    for (const name of ['Admin', 'reviewer 2', '\u{5b98}\u{65b9}']) {
+      expect(await create(name), name).toEqual({ ok: false, error: 'name_reserved' });
+    }
+    expect(await create('ann')).toEqual({ ok: false, error: 'name_reserved' });
+    expect(await create('ANN')).toEqual({ ok: false, error: 'name_reserved' });
+    // Past the limit, every name is refused, so that being let in says nothing either.
+    expect(await create('ann')).toEqual({ ok: false, error: 'rate_limited' });
+    expect(await create('Bob')).toEqual({ ok: false, error: 'rate_limited' });
+    server.advance(60 * 60_000);
+    const reply = await create('Bob');
+    expect(reply).toMatchObject({ ok: true });
+    // Nor may a guest rename themselves to one.
+    await visitor.waitFor((state) => state.code === (reply as { code?: string }).code);
+    expect(await visitor.send('room:rename', { name: 'Support' })).toEqual({ ok: false, error: 'name_reserved' });
+    expect(await visitor.send('room:rename', { name: 'Ann' })).toEqual({ ok: false, error: 'name_reserved' });
+  });
+
   test('keeps a nickname that nobody has registered, and a guest may take a name that is free again', async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     await ann.request('/api/account/username', { username: 'Annabel' });
     const { chair } = await createRoom(server.url, 'Ann');
     expect(names(chair)).toEqual(['Ann']);
+  });
+});
+
+describe('a guest who logs in or registers', () => {
+  test("comes back to the seat they took as a guest, which becomes the account's", async () => {
+    server = await startServer();
+    const { chair, code } = await createRoom(server.url, 'Chair');
+    const asGuest = await guest();
+    await asGuest.send('room:join', { code, name: 'Annie', play: true });
+    const { players } = await chair.waitFor((state) => state.players.length === 2);
+    const seat = players.find(({ name }) => name === 'Annie')?.id;
+    const { token } = asGuest;
+    asGuest.close();
+    // Annie registers as Ann on the home page, and opens the room again, with the token she had.
+    const ann = await loggedIn('Ann');
+    const back = track(await ann.connect({ token, code }));
+    const state = await back.waitFor((view) => view.players.some(({ name, online }) => name === 'Ann' && online));
+    expect(state.me).toBe(seat);
+    await chair.waitFor((view) => view.players.some(({ name }) => name === 'Ann'));
+    expect(names(chair)).toEqual(['Chair', 'Ann']);
+    // The seat is the account's now: another device of the account shares it, without the token.
+    const other = track(await ann.connect());
+    expect(await other.send('room:join', { code })).toMatchObject({ ok: true });
+    await other.waitFor((view) => view.me === seat);
+  });
+
+  test('keeps the name they had when someone in the room has the username', async () => {
+    server = await startServer();
+    const { chair, code } = await createRoom(server.url, 'Ann');
+    const asGuest = await guest();
+    await asGuest.send('room:join', { code, name: 'Annie', play: true });
+    await chair.waitFor((state) => state.players.length === 2);
+    const { token } = asGuest;
+    asGuest.close();
+    // The guest registers "Ann", which a guest in the room is called, and asks to join again, as the
+    // page does when the room is opened on a connection that is up already.
+    const ann = await loggedIn('Ann');
+    const back = track(await ann.connect({ token }));
+    expect(await back.send('room:join', { code })).toMatchObject({ ok: true });
+    await back.waitFor((view) => view.players.length === 2);
+    expect(names(back)).toEqual(['Ann', 'Annie']);
+    expect(back.state?.players.find(({ id }) => id === back.me)?.name).toBe('Annie');
+  });
+});
+
+describe('an avatar that the operator took down', () => {
+  test('is gone from the rooms by the next sweep', async () => {
+    server = await startServer();
+    const ann = await loggedIn('Ann');
+    const avatar = (await ann.upload(jpeg())).body.avatar as string;
+    const { chair } = await roomOf(ann, { play: true });
+    expect(chair.state?.players[0]?.avatar).toBe(avatar);
+    // The operator's command runs in another process, on the database alone (admin.ts).
+    const account = server.accounts.store.byKey('ann');
+    if (!account) throw new Error('no account');
+    server.accounts.store.setAvatar(account.id, null);
+    server.app.sockets.sweep();
+    await chair.waitFor((state) => state.players[0]?.avatar === undefined, 'the default avatar');
   });
 });
 
@@ -217,7 +300,7 @@ describe('an account that changes', () => {
     expect(names(visitor)).toEqual(['Annabel', 'Cat']);
   });
 
-  test('that is deleted leaves every room it was in', async () => {
+  test('that is deleted leaves every room it was in, whatever a game makes of that', async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { code } = await createRoom(server.url, 'Cat');
@@ -225,9 +308,19 @@ describe('an account that changes', () => {
     await client.send('room:join', { code, play: true });
     const cat = server.app.rooms.find(code);
     await until(() => cat?.members.size === 2, 'Ann to join');
-    await ann.request('/api/account/delete', { password: 'correct horse' });
+    // In another room, the game lets nobody leave.
+    const { chair: dee, code: other } = await createRoom(server.url, 'Dee');
+    const second = track(await ann.connect());
+    await second.send('room:join', { code: other, play: true });
+    await dee.waitFor((state) => state.players.length === 2);
+    await dee.send('test:break', 'leave');
+    expect((await ann.request('/api/account/delete', { password: 'correct horse' })).status).toBe(200);
     await until(() => cat?.members.size === 1, 'Ann to leave');
     expect([...(cat?.members.values() ?? [])].map(({ name }) => name)).toEqual(['Cat']);
+    expect(server.logs.filter(({ event }) => event === 'error').map(({ fields }) => fields?.where)).toEqual([
+      'account_deleted',
+    ]);
+    expect(server.logs.some(({ event }) => event === 'account_deleted')).toBe(true);
   });
 });
 

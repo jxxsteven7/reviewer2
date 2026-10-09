@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from 'vitest';
+import { fingerprintKey } from '../src/accounts/email';
+import { Accounts } from '../src/accounts/service';
 import { Browser, FakeMail, startServer, until, type TestServer } from './helpers';
 
 // Email for accounts: binding an address with a link that confirms it, unbinding it, and resetting
@@ -97,6 +99,17 @@ describe('binding an address', () => {
     expect(await bind(bob, 'ANN@example.com')).toMatchObject({ status: 200, body: { ok: true } });
     expect(await bob.account()).toMatchObject({ email: 'pending' });
     expect(mail.sent).toHaveLength(sent);
+  });
+
+  test('again, with the address the account has, mails it again', async () => {
+    await start();
+    const ann = await bound('Ann', 'ann@example.com');
+    const before = mail.sent.length;
+    expect((await bind(ann, 'Ann@Example.com')).status).toBe(200);
+    expect(mail.sent).toHaveLength(before + 1);
+    expect(mail.sent.at(-1)).toMatchObject({ kind: 'bind', to: 'ann@example.com' });
+    expect((await confirm(mail.last('bind'))).status).toBe(200);
+    expect(await ann.account()).toMatchObject({ email: 'bound' });
   });
 
   test('that another account bound in the meantime can not be confirmed', async () => {
@@ -291,6 +304,45 @@ describe('the links that are still out', () => {
     const lastReset = await reset();
     await owner.request('/api/account/email/remove', { password: 'battery staple' });
     expect((await use(lastReset)).body.error).toBe('link_invalid');
+  });
+});
+
+describe('the links that reset the password', () => {
+  test('are no use once another address has been bound', async () => {
+    await start();
+    const ann = await bound('Ann', 'old@example.com');
+    const stranger = new Browser(server.url);
+    await forgot(stranger, 'old@example.com');
+    await until(() => mail.sent.some(({ kind }) => kind === 'reset'), 'the reset mail');
+    const link = mail.last('reset');
+    await bind(ann, 'new@example.com');
+    expect((await confirm(mail.last('bind'))).status).toBe(200);
+    const used = await stranger.request('/api/password/reset', { token: link, password: 'battery staple' });
+    expect(used.body.error).toBe('link_invalid');
+  });
+});
+
+describe('a server secret other than the one before', () => {
+  test('unbinds every address, and uses up the links that were to bind one', async () => {
+    await start();
+    const ann = await bound('Ann', 'ann@example.com');
+    const bob = await account('Bob');
+    await bind(bob, 'bob@example.com');
+    const link = mail.last('bind');
+    // The server starts again with another secret.
+    const restarted = new Accounts({
+      db: server.db,
+      now: () => 0,
+      mail,
+      fingerprintKey: fingerprintKey('another-secret-'.repeat(3)),
+    });
+    expect(restarted.adoptFingerprintKey()).toBe(1);
+    expect(await ann.account()).toMatchObject({ email: 'none' });
+    expect(await bob.account()).toMatchObject({ email: 'none' });
+    expect((await confirm(link)).body.error).toBe('link_invalid');
+    // The same secret again changes nothing, and a server without one touches nothing.
+    expect(restarted.adoptFingerprintKey()).toBe(0);
+    expect(new Accounts({ db: server.db, now: () => 0 }).adoptFingerprintKey()).toBeNull();
   });
 });
 

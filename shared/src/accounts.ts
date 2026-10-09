@@ -186,13 +186,17 @@ function reservedKey(name: string): string {
   return usernameKey(name).replace(/[\s._\-\u{b7}]/gu, '');
 }
 
+// Whether a name is one of the reserved names. A guest may not take one as a nickname either:
+// they are reserved so that nobody can pass for the people who run the game.
+export const isReservedName = (name: string): boolean => RESERVED.has(reservedKey(name));
+
 // A username as it will be kept and shown, or why it can't be one.
 export function checkUsername(raw: string): UsernameCheck {
   const name = typeof raw === 'string' ? cleanName(raw) : null;
   if (name === null) return { username: null, problem: 'username_invalid' };
   if (textLength(name) < MIN_USERNAME_LENGTH) return { username: null, problem: 'username_short' };
   if (mixesScripts(name)) return { username: null, problem: 'username_mixed' };
-  if (RESERVED.has(reservedKey(name))) return { username: null, problem: 'username_reserved' };
+  if (isReservedName(name)) return { username: null, problem: 'username_reserved' };
   return { username: name, problem: null };
 }
 

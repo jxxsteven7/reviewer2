@@ -10,8 +10,11 @@ export interface AccountLimits {
   registrationsPerHour: number;
   failedRegistrationsPerHour: number;
   // Wrong passwords, at a login or where an action asks for the password: per address and minute,
-  // and per name in 15 minutes and in a day. They are counted by the key of the name typed,
-  // whether or not an account has it, so that being refused tells nobody whether it does.
+  // and per name in 15 minutes and in a day. At a login they are counted by the key of the name
+  // typed, whether or not an account has it, so that being refused tells nobody whether it does.
+  // Where an action of an account that is logged in asks for the password, they are counted by
+  // the account instead (confirmKey), so that whoever types wrong passwords at the login page
+  // doesn't keep the owner from changing theirs.
   loginFailuresPerMinute: number;
   loginFailuresPer15Minutes: number;
   loginFailuresPerDay: number;
@@ -39,6 +42,10 @@ export const DEFAULT_ACCOUNT_LIMITS: Readonly<AccountLimits> = Object.freeze({
   resetsPerHour: 3,
   avatarsPerDay: 10,
 });
+
+// The key that an account's wrong passwords are counted under where an action asks for the
+// password. A username's key has no line break (cleanName folds whitespace), so no name is this.
+export const confirmKey = (accountId: number): string => `account\n${accountId}`;
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -69,25 +76,36 @@ export class AccountCounters {
     this.avatars = new WindowCounter(limits.avatarsPerDay, DAY, now);
   }
 
-  // Whether another password may be tried for this name from this address.
-  mayTryPassword(ip: string, nameKey: string): boolean {
-    return (
-      this.failuresByAddress.allowed(ip) &&
-      this.failuresByName.allowed(nameKey) &&
-      this.dailyFailuresByName.allowed(nameKey)
-    );
-  }
-
-  wrongPassword(ip: string, nameKey: string): void {
+  // Takes one try at a password for this key from this address, or refuses it. The try counts as
+  // a wrong password from here on, until rightPassword() says otherwise: the hash takes a while,
+  // and tries that arrive together must not all pass the check before any is counted.
+  tryPassword(ip: string, key: string): boolean {
+    if (
+      !this.failuresByAddress.allowed(ip) ||
+      !this.failuresByName.allowed(key) ||
+      !this.dailyFailuresByName.allowed(key)
+    ) {
+      return false;
+    }
     this.failuresByAddress.add(ip);
-    this.failuresByName.add(nameKey);
-    this.dailyFailuresByName.add(nameKey);
+    this.failuresByName.add(key);
+    this.dailyFailuresByName.add(key);
+    return true;
   }
 
-  // A password that was reset clears what its name had against it.
-  forgive(nameKey: string): void {
-    this.failuresByName.forget(nameKey);
-    this.dailyFailuresByName.forget(nameKey);
+  // The password was right after all: the try no longer counts.
+  rightPassword(ip: string, key: string): void {
+    this.failuresByAddress.refund(ip);
+    this.failuresByName.refund(key);
+    this.dailyFailuresByName.refund(key);
+  }
+
+  // A password that was reset clears what its name, and the account, had against them.
+  forgive(nameKey: string, accountId: number): void {
+    for (const key of [nameKey, confirmKey(accountId)]) {
+      this.failuresByName.forget(key);
+      this.dailyFailuresByName.forget(key);
+    }
   }
 
   prune(): void {

@@ -52,6 +52,21 @@ export class WindowCounter {
     else this.#windows.set(key, { start: this.now(), count: 1 });
   }
 
+  // Counts one against the key if it is still under its limit, and says whether it was. Checking
+  // and counting in one step is for what awaits between the two, such as hashing a password:
+  // requests that arrive together would otherwise all pass the check before any is counted.
+  take(key: string): boolean {
+    if (!this.allowed(key)) return false;
+    this.add(key);
+    return true;
+  }
+
+  // Gives back one that was taken, for an attempt that came to nothing.
+  refund(key: string): void {
+    const window = this.#current(key);
+    if (window && window.count > 0) window.count -= 1;
+  }
+
   // Starts the key's count again.
   forget(key: string): void {
     this.#windows.delete(key);
