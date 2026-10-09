@@ -23,6 +23,8 @@ export interface AccountLimits {
   bindsPerDay: number;
   mailsPerHour: number;
   resetsPerHour: number;
+  // Per account and day: avatars uploaded.
+  avatarsPerDay: number;
 }
 
 export const DEFAULT_ACCOUNT_LIMITS: Readonly<AccountLimits> = Object.freeze({
@@ -35,6 +37,7 @@ export const DEFAULT_ACCOUNT_LIMITS: Readonly<AccountLimits> = Object.freeze({
   bindsPerDay: 3,
   mailsPerHour: 10,
   resetsPerHour: 3,
+  avatarsPerDay: 10,
 });
 
 const MINUTE = 60_000;
@@ -51,6 +54,7 @@ export class AccountCounters {
   readonly binds: WindowCounter;
   readonly mails: WindowCounter;
   readonly resets: WindowCounter;
+  readonly avatars: WindowCounter;
 
   constructor(limits: AccountLimits, now: () => number) {
     this.registrations = new WindowCounter(limits.registrationsPerHour, HOUR, now);
@@ -62,6 +66,7 @@ export class AccountCounters {
     this.binds = new WindowCounter(limits.bindsPerDay, DAY, now);
     this.mails = new WindowCounter(limits.mailsPerHour, HOUR, now);
     this.resets = new WindowCounter(limits.resetsPerHour, HOUR, now);
+    this.avatars = new WindowCounter(limits.avatarsPerDay, DAY, now);
   }
 
   // Whether another password may be tried for this name from this address.

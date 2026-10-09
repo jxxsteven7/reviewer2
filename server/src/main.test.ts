@@ -138,6 +138,16 @@ describe('starting', () => {
     expect(events()).not.toContain('database_migrated');
   });
 
+  test('with DATA_DIR keeps avatars beside the database, and deletes those that no account shows', async () => {
+    const data = join(dir, 'data');
+    mkdirSync(join(data, 'avatars'), { recursive: true });
+    const unused = `${'a'.repeat(64)}.jpg`;
+    writeFileSync(join(data, 'avatars', unused), 'nobody shows this');
+    await start({ DATA_DIR: data });
+    expect(logged('avatars_cleared')).toEqual({ count: 1 });
+    expect(readdirSync(join(data, 'avatars'))).toEqual([]);
+  });
+
   test('with DATA_DIR takes a snapshot on start and every hour', async () => {
     const data = join(dir, 'data');
     mkdirSync(data);

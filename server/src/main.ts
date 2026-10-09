@@ -1,5 +1,6 @@
 import { createServer, type Server as HttpServer } from 'node:http';
-import { basename } from 'node:path';
+import { basename, join } from 'node:path';
+import { AVATAR_DIR, DirectoryAvatars, MemoryAvatars } from './accounts/avatars';
 import { fingerprintKey } from './accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
 import { socketMail } from './accounts/mail';
@@ -120,7 +121,11 @@ export async function main({
     },
     fingerprintKey: config.secret === null ? null : fingerprintKey(config.secret),
     mail: config.mailerSocket === null ? null : socketMail(config.mailerSocket),
+    // Avatars are files beside the database, in avatars/, or in memory with it.
+    avatars: config.dataDir === null ? new MemoryAvatars() : new DirectoryAvatars(join(config.dataDir, AVATAR_DIR)),
   });
+  const unused = accounts.clearAvatars();
+  if (unused > 0) log('avatars_cleared', { count: unused });
 
   let server: AppServer;
   try {

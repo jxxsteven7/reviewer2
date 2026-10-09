@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ACCOUNT_API, type AccountState } from '@reviewer2/shared';
+import { ACCOUNT_API, AVATAR_PATH, AVATAR_TYPES, MAX_AVATAR_BYTES, type AccountState } from '@reviewer2/shared';
 import { ACCOUNT_REQUESTS } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
+import { methodAllowed } from '../http';
 import { clientIp } from '../core/clientIp';
+import { AVATAR_CONTENT_TYPES, AVATAR_FILE } from './avatars';
 import { clearedCookie, fromThisSite, loginCookie, readLoginCookie } from './cookies';
 import type { AccountFailure, AccountResult, Accounts, Login } from './service';
 
@@ -72,8 +74,9 @@ interface Request<Body> {
 
 type Route = {
   method: 'GET' | 'POST';
-  // The schema of a JSON body; none for GET.
+  // The schema of a JSON body; none for GET, and none for an image, which goes as it is.
   schema?: z.ZodType;
+  image?: boolean;
   // Whether the request needs a login.
   login?: boolean;
   handle(request: Request<never>): Answer | Promise<Answer>;
@@ -123,6 +126,20 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
       ({ login, body }) => fromResult(accounts.rename(login as Login, body.username)),
       true,
     ),
+    [ACCOUNT_API.avatar]: {
+      method: 'POST',
+      image: true,
+      login: true,
+      handle: ({ login, body }: Request<Buffer>) => {
+        const result = accounts.setAvatar(login as Login, body);
+        return result.ok ? ok({ avatar: result.avatar }) : failure(result.error);
+      },
+    } as Route,
+    [ACCOUNT_API.avatarRemove]: post(
+      ACCOUNT_REQUESTS.avatarRemove,
+      ({ login }) => fromResult(accounts.removeAvatar(login as Login)),
+      true,
+    ),
     [ACCOUNT_API.password]: post(
       ACCOUNT_REQUESTS.password,
       async ({ ip, login, body }) => {
@@ -167,8 +184,12 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
     ),
   };
 
-  // Answers a request under /api, and says whether it was one.
+  // Answers a request under /api, or for an avatar, and says whether it was one.
   return function handle(req: IncomingMessage, res: ServerResponse, path: string): boolean {
+    if (path.startsWith(AVATAR_PATH)) {
+      serveAvatar(req, res, path.slice(AVATAR_PATH.length));
+      return true;
+    }
     if (!path.startsWith('/api/')) return false;
     void respond(req, res, path).catch((error: unknown) => {
       log('error', { where: 'account', message: error instanceof Error ? error.message : String(error) });
@@ -196,13 +217,19 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
       if (!fromThisSite(req.headers)) return send(res, failure('bad_origin'));
       if (!accounts.counters.requests.allowed(ip)) return send(res, failure('rate_limited'));
       accounts.counters.requests.add(ip);
-      if (!isJson(req)) return send(res, { status: 415, body: { ok: false, error: 'bad_request' } });
-      const raw = await readBody(req, MAX_JSON_BODY);
-      if (raw === 'too_large') return tooLarge(res);
+      if (!(route.image ? isImage(req) : isJson(req))) {
+        return send(res, { status: 415, body: { ok: false, error: 'bad_request' } });
+      }
+      const raw = await readBody(req, route.image ? MAX_AVATAR_BYTES : MAX_JSON_BODY);
+      if (raw === 'too_large') return tooLarge(res, route.image ? 'avatar_too_large' : 'bad_request');
       if (raw === 'unfinished') return send(res, failure('bad_request'));
-      const parsed = route.schema?.safeParse(parseJson(raw));
-      if (!parsed?.success) return send(res, failure('bad_request'));
-      body = parsed.data;
+      if (route.image) {
+        body = raw;
+      } else {
+        const parsed = route.schema?.safeParse(parseJson(raw));
+        if (!parsed?.success) return send(res, failure('bad_request'));
+        body = parsed.data;
+      }
     }
     const secret = readLoginCookie(req.headers, secureCookies);
     const login = accounts.login(secret);
@@ -224,14 +251,41 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
   }
 
   // A body that is too large is not read to its end: the connection closes once the answer is out.
-  function tooLarge(res: ServerResponse): void {
+  function tooLarge(res: ServerResponse, error: AccountFailure): void {
     res.setHeader('Connection', 'close');
-    send(res, { status: 413, body: { ok: false, error: 'bad_request' } });
+    send(res, { status: 413, body: { ok: false, error } });
     res.once('finish', () => res.req.destroy());
+  }
+
+  // An avatar, by the name that the account's summary and the rooms give (avatars.ts). The name
+  // changes with the picture, so a browser may keep it for good. It is served as the image that it
+  // is and nothing else: under its own type, which the browser must not second-guess, and with a
+  // Content Security Policy that runs nothing, should a browser show it as a page.
+  function serveAvatar(req: IncomingMessage, res: ServerResponse, name: string): void {
+    if (!methodAllowed(req, res)) return;
+    const file = AVATAR_FILE.test(name) ? accounts.avatars.read(name) : null;
+    if (!file) {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end('Not found\n');
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader('Content-Type', AVATAR_CONTENT_TYPES[name.slice(name.lastIndexOf('.') + 1)] as string);
+    res.setHeader('Content-Length', file.length);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.end(req.method === 'HEAD' ? undefined : file);
   }
 }
 
 const isJson = (req: IncomingMessage) => /^application\/json\s*(;|$)/i.test(req.headers['content-type'] ?? '');
+const isImage = (req: IncomingMessage) =>
+  (AVATAR_TYPES as readonly string[]).includes(
+    (req.headers['content-type'] ?? '').split(';')[0]?.trim().toLowerCase() ?? '',
+  );
 
 function parseJson(raw: Buffer): unknown {
   try {

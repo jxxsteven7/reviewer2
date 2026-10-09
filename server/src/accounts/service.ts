@@ -16,6 +16,7 @@ import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { RecordStore, TitleStore, type NewRecord } from '../store/records';
 import { MailTokenStore, SessionStore, type SessionLimits } from '../store/sessions';
+import { inspectAvatar, MAX_AVATAR_STORAGE, MemoryAvatars, type AvatarFiles } from './avatars';
 import { fingerprint, normalizeEmail } from './email';
 import { AccountCounters, DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from './limits';
 import type { MailChannel } from './mail';
@@ -77,6 +78,10 @@ export interface AccountsOptions {
   // accounts have no email: no address can be bound, and no password reset.
   fingerprintKey?: Buffer | null;
   mail?: MailChannel | null;
+  // Where the avatars are kept, in memory unless the server has a data directory, and how much
+  // room they may take together.
+  avatars?: AvatarFiles;
+  maxAvatarBytes?: number;
 }
 
 export class Accounts {
@@ -95,6 +100,10 @@ export class Accounts {
   readonly #deleted: () => void;
   readonly #fingerprintKey: Buffer | null;
   readonly #mail: MailChannel | null;
+  readonly avatars: AvatarFiles;
+  readonly #maxAvatarBytes: number;
+  // Whether the log has been told that the avatars take all the room they may.
+  #avatarsFullLogged = false;
   // Whether the log has been told that the database is full. Once is enough until it isn't.
   #fullLogged = false;
 
@@ -106,6 +115,8 @@ export class Accounts {
     this.#deleted = options.deleted ?? (() => {});
     this.#fingerprintKey = options.fingerprintKey ?? null;
     this.#mail = options.mail ?? null;
+    this.avatars = options.avatars ?? new MemoryAvatars();
+    this.#maxAvatarBytes = options.maxAvatarBytes ?? MAX_AVATAR_STORAGE;
     this.store = new AccountStore(options.db, clock);
     this.sessions = new SessionStore(options.db, clock, options.sessionLimits);
     this.mailTokens = new MailTokenStore(options.db, clock);
@@ -266,9 +277,68 @@ export class Accounts {
     if (!removed) return refuse('not_logged_in');
     this.hooks.sessionsEnded(removed.ended);
     this.hooks.accountDeleted(id);
+    this.#release(removed.account.avatar);
     this.#log('account_deleted', { id });
     this.#deleted();
     return { ok: true, avatar: removed.account.avatar };
+  }
+
+  // Takes an avatar that the browser cropped and encoded, if it is one (avatars.ts), and makes it the
+  // account's, in its rooms too. The one it had goes, unless another account shows the same.
+  setAvatar(login: Login, bytes: Buffer): AccountResult<{ avatar: string }> {
+    const { account } = login;
+    if (account.avatarBanned) return refuse('avatar_banned');
+    const key = String(account.id);
+    if (!this.counters.avatars.allowed(key)) return refuse('avatar_limited');
+    const kind = inspectAvatar(bytes);
+    if (kind === null) return refuse('avatar_invalid');
+    if (this.avatars.bytes() + bytes.length > this.#maxAvatarBytes) {
+      if (!this.#avatarsFullLogged) this.#log('avatars_full', { limit: this.#maxAvatarBytes });
+      this.#avatarsFullLogged = true;
+      return refuse('avatars_full');
+    }
+    this.#avatarsFullLogged = false;
+    this.counters.avatars.add(key);
+    const file = this.avatars.save(bytes, kind);
+    if (!this.store.byId(account.id)) {
+      this.#release(file);
+      return refuse('not_logged_in');
+    }
+    const previous = this.store.setAvatar(account.id, file);
+    if (previous !== file) this.#release(previous);
+    this.hooks.accountChanged(account.id);
+    return { ok: true, avatar: `${AVATAR_PATH}${file}` };
+  }
+
+  // Back to the default avatar.
+  removeAvatar(login: Login): AccountResult {
+    this.#release(this.store.setAvatar(login.account.id, null));
+    this.hooks.accountChanged(login.account.id);
+    return { ok: true };
+  }
+
+  // The operator takes an account's avatar down, as for a picture that breaks the rules, and may bar
+  // the account from uploading another (admin.ts). Returns the file that went, if there was one.
+  takeDownAvatar(accountId: number, ban: boolean): string | null {
+    const previous = this.store.setAvatar(accountId, null);
+    if (ban) this.store.setAvatarBanned(accountId, true);
+    this.#release(previous);
+    this.hooks.accountChanged(accountId);
+    return previous;
+  }
+
+  // Deletes the files that no account shows, as one left behind when the server stopped between
+  // keeping a file and naming it in the database, and says how many.
+  clearAvatars(): number {
+    const shown = this.store.avatarFiles();
+    const unused = this.avatars.names().filter((name) => !shown.has(name));
+    for (const name of unused) this.avatars.remove(name);
+    return unused.length;
+  }
+
+  // Deletes an avatar's file once no account shows it.
+  #release(file: string | null): void {
+    if (file !== null && this.store.avatarUsers(file) === 0) this.avatars.remove(file);
   }
 
   // Whether accounts have email on this server.

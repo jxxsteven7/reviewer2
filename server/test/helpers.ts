@@ -87,6 +87,8 @@ export async function startServer(
     clock?: () => number;
     // A mailer, which gives accounts email, with the server secret of the tests.
     mail?: MailChannel;
+    // How much room all avatars may take.
+    maxAvatarBytes?: number;
     rng?: Rng;
   } = {},
 ): Promise<TestServer> {
@@ -114,6 +116,7 @@ export async function startServer(
     limits: { ...DEFAULT_ACCOUNT_LIMITS, ...options.accountLimits },
     hasher: options.hasher ?? fastHasher(),
     ...(options.mail && { mail: options.mail, fingerprintKey: fingerprintKey(TEST_SECRET) }),
+    ...(options.maxAvatarBytes !== undefined && { maxAvatarBytes: options.maxAvatarBytes }),
   });
   const socketLimits = { ...DEFAULT_SOCKET_LIMITS, ...options.socketLimits };
   if (options.roomsPerMinute !== undefined) socketLimits.roomsPerMinute = options.roomsPerMinute;
@@ -321,10 +324,11 @@ export class Browser {
         ...headers,
       }).filter(([, value]) => value !== ''),
     );
+    const payload = typeof body === 'string' || body instanceof Uint8Array ? body : JSON.stringify(body);
     const response = await fetch(`${this.url}${path}`, {
       method,
       headers: sent,
-      ...(body === undefined ? {} : { body: typeof body === 'string' ? body : JSON.stringify(body) }),
+      ...(body === undefined ? {} : { body: payload }),
     });
     const cookie = response.headers.get('set-cookie') ?? undefined;
     if (cookie !== undefined) {
@@ -333,6 +337,11 @@ export class Browser {
     }
     const text = await response.text();
     return { status: response.status, body: (text ? JSON.parse(text) : {}) as ApiResponse['body'], cookie };
+  }
+
+  // Uploads an avatar, as the page does: the bytes as they are, with their type.
+  upload(bytes: Buffer, type = 'image/jpeg', headers: Record<string, string> = {}) {
+    return this.request('/api/account/avatar', bytes, { 'content-type': type, ...headers });
   }
 
   register(username: string, password = 'correct horse') {
