@@ -47,7 +47,7 @@ When a new game needs more information about each term, add an optional field to
 
 ### Forms
 
-Some forms of a term give it away as surely as the term itself, so a game that checks clues can refuse them too. Team word guessing does so under its strict clue rule, which `feat/game-rules` adds; until that merges, the server ignores `forms`. The field lists the forms that a game can't work out on its own:
+Some forms of a term give it away as surely as the term itself, so a game that checks clues can refuse them too. The field lists the forms that a game can't work out on its own:
 
 - inflections and derived words, other than a plain plural in -s or -es: "modeling" and "modelled" for "Model", "simulate" for "Simulation", "matrices" for "Matrix", "mitochondrion" for "Mitochondria";
 - other spellings: "tumour" for "Tumor", "generalisation" for "Generalization";
@@ -81,7 +81,7 @@ These apply to every game:
 
 | Game | Fields it uses | What makes a term work well in it |
 |---|---|---|
-| Team word guessing (`keywords`) | `zh`, `en`, `forms` | Terms with several meanings, or that invite associations across concepts, such as "attention", "convergence", "baseline" or "generalization". A captain has to link several of them with a single clue, so terms that are too obscure don't work. A board needs 25 different words in the room's language, and short terms fit the cards best: up to 5 Chinese characters or 14 letters. A card also carries the term in the other language, and a captain may not give it as a clue, so the two must really mean the same thing. Under the strict clue rule, which `feat/game-rules` adds, a captain may not give one of a card's `forms` either. |
+| Team word guessing (`keywords`) | `zh`, `en`, `forms` | Terms with several meanings, or that invite associations across concepts, such as "attention", "convergence", "baseline" or "generalization". A captain has to link several of them with a single clue, so terms that are too obscure don't work. A board needs 25 different words in the room's language, and short terms fit the cards best: up to 5 Chinese characters or 14 letters. A card also carries the term in the other language, and a captain may not give it as a clue, so the two must really mean the same thing. Under the strict clue rule, a captain may not give one of a card's `forms` either. |
 
 Add a row when a new game starts using the library.
 
