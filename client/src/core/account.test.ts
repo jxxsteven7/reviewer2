@@ -1,18 +1,25 @@
 import { ACCOUNT_API } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { account, loadAccount, logIn, request } from './account';
+import { account, changeLogin, loadAccount, logIn, request } from './account';
+import { connection, reconnect } from './socket';
 
+// What the module listens for on the connection, by event.
+const listeners = vi.hoisted(() => new Map<string, (...args: unknown[]) => void>());
 vi.mock('./socket', () => ({
   connection: { connected: false, everConnected: false },
   reconnect: vi.fn(),
-  socket: { on: vi.fn() },
+  socket: { on: (event: string, handler: (...args: unknown[]) => void) => listeners.set(event, handler) },
 }));
+
+const settled = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const fetchMock = vi.fn<typeof fetch>();
 
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset();
+  vi.mocked(reconnect).mockClear();
+  connection.everConnected = false;
   Object.assign(account, { loaded: false, summary: null, mail: false });
 });
 
@@ -89,5 +96,42 @@ describe('the account', () => {
       ok: false,
       error: 'cookies_blocked',
     });
+
+    // Only the server can say that the cookie was lost. When the question went unanswered, the
+    // login stands as the server granted it.
+    Object.assign(account, { loaded: false, summary: null });
+    fetchMock.mockResolvedValueOnce(json({ ok: true })).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    expect(await logIn(ACCOUNT_API.login, { username: 'Ann', password: 'x' })).toEqual({ ok: true });
+    expect(account.summary).toBeNull();
+  });
+
+  test('waits for the answer to a request that changes who it is, rather than act on account:ended', async () => {
+    const on = Object.fromEntries(listeners);
+    connection.everConnected = true;
+    let answer!: (response: Response) => void;
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    const changing = changeLogin(ACCOUNT_API.password, { current: 'x', password: 'y' });
+    await settled();
+    // The server ends the login that the request came with, and closes the connection, before its
+    // answer sets the new cookie. The page neither asks who it is nor connects again yet.
+    on['account:ended']?.();
+    on['disconnect']?.('io server disconnect');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(reconnect).not.toHaveBeenCalled();
+    // With the answer, it does both.
+    fetchMock.mockResolvedValueOnce(json({ ok: true, account: summary, mail: false }));
+    answer(json({ ok: true }));
+    expect(await changing).toEqual({ reply: { ok: true }, answered: true });
+    expect(account.summary).toEqual(summary);
+    expect(reconnect).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(ACCOUNT_API.account);
+
+    // Without such a request out, the word is acted on at once.
+    fetchMock.mockResolvedValueOnce(json({ ok: true, account: null, mail: false }));
+    on['account:ended']?.();
+    on['disconnect']?.('io server disconnect');
+    expect(reconnect).toHaveBeenCalledTimes(2);
+    await settled();
+    expect(account.summary).toBeNull();
   });
 });

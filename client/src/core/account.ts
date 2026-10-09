@@ -43,34 +43,72 @@ export async function request<Data extends object = object>(path: string, body?:
   }
 }
 
-// Asks the server who this browser is.
-export async function loadAccount(): Promise<void> {
+// Asks the server who this browser is, and says whether it answered. When it didn't, the page keeps
+// what it last knew.
+export async function loadAccount(): Promise<boolean> {
   const reply = await request<AccountState>(ACCOUNT_API.account);
   if (reply.ok) Object.assign(account, { summary: reply.account, mail: reply.mail });
   account.loaded = true;
+  return reply.ok;
 }
 
 // After a login, a logout or anything else that changes who this browser is: the page learns it,
-// and its connection is made again, so that the server knows it there too.
-export async function loggedInOrOut(): Promise<void> {
-  await loadAccount();
+// and its connection is made again, so that the server knows it there too. Says whether the server
+// answered the question.
+export async function loggedInOrOut(): Promise<boolean> {
+  const answered = await loadAccount();
   if (connection.everConnected) reconnect();
+  return answered;
+}
+
+// A request that changes who this browser is: a login or a registration, a password change or
+// reset, a logout, or the deletion of the account. The server ends the login that the browser had,
+// and tells the browser's connections so (account:ended, below) before its answer sets or clears
+// the cookie. The page must not act on that word before the answer has come: asking who it is, or
+// connecting again, with the cookie as it was would make the browser a guest, and the answer to
+// that question might even arrive after the one that set the new cookie. So while such a request
+// is out, the word is kept, and the page learns who it is from the answer.
+let changing = 0;
+let endedMeanwhile = false;
+
+export async function changeLogin<Data extends object = object>(
+  path: string,
+  body: object,
+): Promise<{ reply: Ack<Data>; answered: boolean }> {
+  changing += 1;
+  let reply: Ack<Data>;
+  try {
+    reply = await request<Data>(path, body);
+  } finally {
+    changing -= 1;
+  }
+  let answered = false;
+  if (reply.ok || endedMeanwhile) {
+    endedMeanwhile = false;
+    answered = await loggedInOrOut();
+  }
+  return { reply, answered };
 }
 
 // Logs in or registers, and makes sure that the browser kept the cookie: one that refuses cookies,
-// as some private modes do, can't stay logged in.
+// as some private modes do, can't stay logged in. Only the server can say so; when it didn't answer
+// the question, the login stands as the server granted it.
 export async function logIn(path: string, body: object): Promise<Ack> {
-  const reply = await request(path, body);
+  const { reply, answered } = await changeLogin(path, body);
   if (!reply.ok) return reply;
-  await loggedInOrOut();
-  return account.summary ? reply : { ok: false, error: 'cookies_blocked' };
+  return answered && !account.summary ? { ok: false, error: 'cookies_blocked' } : reply;
 }
 
 // A connection whose login ended, as when the password was changed or reset, is told so and closed
 // by the server. It comes back as whoever the browser is now: a guest, or the same account with
-// the new login of the browser that changed the password, which the page asks the server about.
+// the new login of the browser that changed the password, which the page asks the server about,
+// unless the page itself asked for the change, and waits for the answer instead (changeLogin).
 let endedHere = false;
 socket.on('account:ended', () => {
+  if (changing > 0) {
+    endedMeanwhile = true;
+    return;
+  }
   endedHere = true;
   void loadAccount();
 });

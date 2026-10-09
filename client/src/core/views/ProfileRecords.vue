@@ -3,16 +3,30 @@ import { ACCOUNT_API, type RecordsView } from '@reviewer2/shared';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { request } from '../account';
+import UiButton from '../components/UiButton.vue';
+import { errorKey } from '../errors';
+import { useBusy } from '../useBusy';
 
 // The account's record: how many games it has finished in a seat and won, and the last 20, each
-// with its game, its date, the group and the role, and the decision letter that the group got.
+// with its game, its date, the group and the role, and the decision letter that the group got. A
+// record that can't be fetched says so, with a way to try again.
 const { t, te, locale } = useI18n();
 const records = ref<RecordsView | null>(null);
+const failed = ref<string | undefined>();
+const { busy, run } = useBusy();
 
-onMounted(async () => {
-  const reply = await request<{ records: RecordsView }>(ACCOUNT_API.records);
-  if (reply.ok) records.value = reply.records;
-});
+async function load(): Promise<void> {
+  const reply = await run(() => request<{ records: RecordsView }>(ACCOUNT_API.records));
+  if (!reply) return;
+  if (reply.ok) {
+    records.value = reply.records;
+    failed.value = undefined;
+  } else {
+    failed.value = t(errorKey(reply.error));
+  }
+}
+
+onMounted(load);
 
 // A game's own words, where the locale files have them, and the stored word where they don't, as
 // for a game that came later than this page.
@@ -50,6 +64,10 @@ function date(iso: string): string {
       </ol>
     </template>
   </div>
+  <div v-else-if="failed" class="records">
+    <p class="problem" role="alert">{{ failed }}</p>
+    <UiButton size="small" :disabled="busy" @click="load">{{ t('account.profile.recordsAgain') }}</UiButton>
+  </div>
 </template>
 
 <style scoped>
@@ -61,6 +79,11 @@ function date(iso: string): string {
 
 .summary {
   font-variant-numeric: tabular-nums;
+}
+
+.problem {
+  color: var(--red);
+  font-size: var(--text-sm);
 }
 
 .note {

@@ -138,6 +138,56 @@ test('a new name and avatar show in the room, and a guest can not take a registe
   await expect(ann.locator('.room-footer').getByRole('button', { name: text.room.rename })).toHaveCount(0);
 });
 
+test('a guest who registers in the middle of a game keeps their seat, as the account', async ({ browser }) => {
+  const text = TEXT.en;
+  const chair = await newPlayer(browser);
+  const url = await createRoom(chair, 'en', 'Chair');
+  const player = await newPlayer(browser);
+  const name = own('Ann');
+  await joinByLink(player, url, name, 'en');
+  await expect(chair.locator('.lobby')).toContainText(name);
+  // Ann registers her nickname on the account page, and opens the room again: the seat she took as
+  // a guest is hers, as the account.
+  await register(player, name);
+  await player.goto(url);
+  await expect(player.locator('.lobby')).toBeVisible();
+  await expect(player.locator('.name-form')).toHaveCount(0);
+  await expect(player.locator('.room-footer .who')).toContainText(name);
+  await expect(chair.locator('.lobby .player', { hasText: name })).toHaveCount(1);
+  // A player with an account renames on the account page, not in the room.
+  await expect(player.locator('.room-footer').getByRole('button', { name: text.room.rename })).toHaveCount(0);
+});
+
+test('a password change keeps the browser logged in, on the page and on its connection', async ({ browser }) => {
+  const text = TEXT.en;
+  const name = own('Ann');
+  const page = await newPlayer(browser);
+  await register(page, name);
+  const url = await createRoom(page, 'en', '');
+  // To the account page from the home page, without loading the page again: the connection, which
+  // the server closes with the login, is the one the page keeps using.
+  await page.goBack();
+  await page.waitForURL(/\/$/);
+  await page.locator('.avatar-link').click();
+  await page.waitForURL(/\/account$/);
+  await page.getByRole('button', { name: text.account.profile.changePassword, exact: true }).click();
+  await page.getByLabel(text.account.profile.currentPassword).fill('correct horse');
+  await page.getByLabel(text.account.profile.newPassword).fill('battery staple');
+  await page
+    .locator('[role=dialog]')
+    .getByRole('button', { name: text.account.profile.passwordSubmit, exact: true })
+    .click();
+  await expect(page.getByText(text.account.profile.passwordChanged)).toBeVisible();
+  await expect(page.locator('.profile .name')).toHaveText(name);
+  // Still logged in, with the new password, in the room as before and after a reload.
+  await page.goto(url);
+  await expect(page.locator('.room-footer .who')).toContainText(name);
+  await page.reload();
+  await expect(page.locator('.room-footer .who')).toContainText(name);
+  await page.goto('/account');
+  await expect(page.locator('.profile .name')).toHaveText(name);
+});
+
 test('an address is bound with the link in a mail, and resets a forgotten password', async ({ browser }) => {
   const text = TEXT.en;
   const name = own('Ann ');

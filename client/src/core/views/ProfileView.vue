@@ -10,7 +10,7 @@ import {
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { loadAccount, loggedInOrOut, request } from '../account';
+import { changeLogin, loadAccount, request } from '../account';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
@@ -71,26 +71,37 @@ async function rename() {
   await loadAccount();
 }
 
+// Sends a change of who the browser is, which ends the login it had (account.ts), and shows what
+// the server had against it.
+async function changeWho(path: string, body: object): Promise<boolean> {
+  const result = await run(() => changeLogin(path, body));
+  if (!result) return false;
+  if (!result.reply.ok) {
+    refused.value = t(errorKey(result.reply.error));
+    return false;
+  }
+  return true;
+}
+
 async function changePassword() {
-  if (!(await change(ACCOUNT_API.password, { current: current.value, password: password.value }))) return;
+  if (!(await changeWho(ACCOUNT_API.password, { current: current.value, password: password.value }))) return;
   editing.value = null;
   toast('account.profile.passwordChanged', {}, 6000);
 }
 
 async function remove() {
-  if (!(await change(ACCOUNT_API.remove, { password: current.value }))) return;
+  if (!(await changeWho(ACCOUNT_API.remove, { password: current.value }))) return;
   editing.value = null;
-  await loggedInOrOut();
   await router.push('/');
 }
 
 async function logOut() {
-  const reply = await run(() => request(ACCOUNT_API.logout, {}));
-  if (reply && !reply.ok) {
-    toastError(reply.error);
+  const result = await run(() => changeLogin(ACCOUNT_API.logout, {}));
+  if (!result) return;
+  if (!result.reply.ok) {
+    toastError(result.reply.error);
     return;
   }
-  await loggedInOrOut();
   await router.push('/');
 }
 </script>
