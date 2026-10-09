@@ -433,6 +433,27 @@ describe('ClockBar', () => {
     expect(wrapper.get('.seconds').text()).toBe('0:29');
   });
 
+  // A page with a clock has nothing to draw between two seconds, so the clock wakes up only when
+  // the seconds shown change.
+  test('wakes up once a second, when the seconds change, and no more once it is at zero', async () => {
+    const wrapper = mount(ClockBar, { props: { clock: { left: 2_300, total: 60_000 } }, global: global() });
+    expect(wrapper.get('.seconds').text()).toBe('0:03');
+    const waits: number[] = [];
+    for (let i = 0; i < 10 && vi.getTimerCount() > 0; i += 1) {
+      const before = performance.now();
+      vi.advanceTimersToNextTimer();
+      waits.push(performance.now() - before);
+    }
+    await flushPromises();
+    expect(waits).toEqual([300, 1_000, 1_000]);
+    expect(wrapper.get('.seconds').text()).toBe('0:00');
+
+    const running = mount(ClockBar, { props: { clock: { left: 30_000, total: 60_000 } }, global: global() });
+    expect(vi.getTimerCount()).toBe(1);
+    running.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   test('shows minutes and seconds', () => {
     const wrapper = mount(ClockBar, { props: { clock: { left: 600_000, total: 600_000 } }, global: global() });
     expect(wrapper.get('.seconds').text()).toBe('10:00');

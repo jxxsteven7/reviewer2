@@ -12,22 +12,33 @@ const props = defineProps<{ clock: NonNullable<KeywordsView['clock']> }>();
 const { t } = useI18n();
 
 const URGENT_MS = 10_000;
-// Often enough for the seconds to change on time.
-const TICK_MS = 250;
 
-// When the phase ends, by this page's own clock, and what that clock says now.
+// When the phase ends, by this page's own clock, and what that clock says now. The clock moves on
+// only when the seconds shown change, and the bar steps down with them rather than gliding: a bar
+// that glides has the browser draw it again on every frame for as long as the phase lasts, on
+// every page in the room.
 const ends = ref(0);
 const now = ref(performance.now());
+let timer: ReturnType<typeof setTimeout> | undefined;
+
+// The seconds shown change when the time left falls to the next whole second. A timer that reads
+// the clock a moment early sees a sliver of a second left and wakes up again right away.
+function tick(): void {
+  now.value = performance.now();
+  clearTimeout(timer);
+  const left = ends.value - now.value;
+  timer = left > 0 ? setTimeout(tick, left % 1000 || 1000) : undefined;
+}
+
 watch(
   () => props.clock,
   (clock) => {
-    now.value = performance.now();
-    ends.value = now.value + clock.left;
+    ends.value = performance.now() + clock.left;
+    tick();
   },
   { immediate: true },
 );
-const timer = setInterval(() => (now.value = performance.now()), TICK_MS);
-onUnmounted(() => clearInterval(timer));
+onUnmounted(() => clearTimeout(timer));
 
 const left = computed(() => Math.max(0, ends.value - now.value));
 const seconds = computed(() => Math.ceil(left.value / 1000));
@@ -64,7 +75,6 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
   height: 100%;
   background: var(--ink-2);
   transform-origin: left;
-  transition: transform 250ms linear;
 }
 
 .seconds {
@@ -81,11 +91,5 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
 .urgent .seconds {
   color: var(--red);
   font-weight: 600;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fill {
-    transition: none;
-  }
 }
 </style>
