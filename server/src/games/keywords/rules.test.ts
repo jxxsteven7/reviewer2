@@ -162,9 +162,9 @@ describe('revealing a card', () => {
     state = revealAll(state, [2]);
     expect(state).toMatchObject({ team: 'blue', turn: 2, phase: 'clue', clue: null, guessesMade: 0 });
     expect(state.history[0]?.guesses).toEqual([
-      { card: 0, color: 'red' },
-      { card: 1, color: 'red' },
-      { card: 2, color: 'red' },
+      { card: 0, color: 'red', player: 'red-guesser' },
+      { card: 1, color: 'red', player: 'red-guesser' },
+      { card: 2, color: 'red', player: 'red-guesser' },
     ]);
   });
 
@@ -181,8 +181,8 @@ describe('revealing a card', () => {
         word: 'Gradient',
         count: 2,
         guesses: [
-          { card: 0, color: 'red' },
-          { card: 17, color: 'neutral' },
+          { card: 0, color: 'red', player: 'red-guesser' },
+          { card: 17, color: 'neutral', player: 'red-guesser' },
         ],
       },
       {
@@ -191,11 +191,17 @@ describe('revealing a card', () => {
         word: 'Loss',
         count: 1,
         guesses: [
-          { card: 9, color: 'blue' },
-          { card: 10, color: 'blue' },
+          { card: 9, color: 'blue', player: 'blue-guesser' },
+          { card: 10, color: 'blue', player: 'blue-guesser' },
         ],
       },
-      { turn: 3, team: 'red', word: 'Epoch', count: 'unlimited', guesses: [{ card: 1, color: 'red' }] },
+      {
+        turn: 3,
+        team: 'red',
+        word: 'Epoch',
+        count: 'unlimited',
+        guesses: [{ card: 1, color: 'red', player: 'red-guesser' }],
+      },
     ]);
   });
 
@@ -210,7 +216,7 @@ describe('revealing a card', () => {
   test('of an irrelevant paper ends the turn', () => {
     const state = revealAll(clued(3), [0, 17]);
     expect(state).toMatchObject({ team: 'blue', turn: 2, phase: 'clue' });
-    expect(state.history[0]?.guesses.at(-1)).toEqual({ card: 17, color: 'neutral' });
+    expect(state.history[0]?.guesses.at(-1)).toEqual({ card: 17, color: 'neutral', player: 'red-guesser' });
   });
 
   test("of the other team's ends the turn and counts for them", () => {

@@ -4,6 +4,7 @@ import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
+import { MATCH_GAMES, MATCH_GROUPINGS, MATCH_TEAMS } from './match';
 import { EMOTES, MAX_NAME_INPUT } from './protocol';
 
 // The schemas that the server checks every message against (docs/architecture.md). Only the
@@ -27,6 +28,14 @@ const play = z.boolean().optional();
 const none = z.object({});
 // A game's settings, which its module checks (GameModule.configure on the server).
 const settings = z.unknown();
+// The rules of a match (match.ts), which are the room's and not a game's, so they are checked here
+// in full.
+const match = z.object({
+  games: z.number().int().min(MATCH_GAMES.min).max(MATCH_GAMES.max),
+  teams: z.enum(MATCH_TEAMS),
+  grouping: z.enum(MATCH_GROUPINGS),
+});
+const matchId = z.string().max(64);
 
 export const ROOM_MESSAGES = {
   'sys:ping': none,
@@ -43,7 +52,8 @@ export const ROOM_MESSAGES = {
     page: z.enum(FEEDBACK_PAGES),
   }),
   // A room starts with its game's default settings when `settings` is left out. A creator who is
-  // logged in has their username as the name, and needs to give none.
+  // logged in has their username as the name, and needs to give none. With `match`, the room plays
+  // a match by those rules.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
@@ -51,6 +61,7 @@ export const ROOM_MESSAGES = {
     settings: settings.optional(),
     name: name.optional(),
     play,
+    match: match.optional(),
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out
@@ -68,6 +79,10 @@ export const ROOM_MESSAGES = {
   'room:start': z.object({ round: z.number().int().min(0) }),
   'room:end': z.object({ gameId }),
   'room:again': z.object({ gameId }),
+  // A match's messages name it, as those about a game name the game: the chair ends one early, and,
+  // once it is over, starts another, by `match`, or makes the room an ordinary one again, by null.
+  'room:matchEnd': z.object({ matchId }),
+  'room:matchNext': z.object({ matchId, match: match.nullable() }),
   'room:shuffle': none,
   'room:spectate': z.object({ playerId }),
   'room:remove': z.object({ playerId }),

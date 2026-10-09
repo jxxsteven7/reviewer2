@@ -211,6 +211,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       log('game_ended', { code: room.code });
       safely('records', () => keepRecords(room));
     }
+    const { match } = room;
+    if (match?.final && match.status === 'over' && matchLogged.get(room) !== match.id) {
+      matchLogged.set(room, match.id);
+      log('match_ended', { code: room.code, games: match.played });
+      safely('records', () => keepMatchRecords(room));
+    }
     sent.set(room, room.rev);
     const view = room.views();
     for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id }, view);
@@ -227,6 +233,32 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     for (const { playerId, ...result } of results) {
       const account = room.members.get(playerId)?.account;
       if (account) accounts.record(account.id, { game: room.game.id, gameId: room.gameId as string, ...result });
+    }
+  }
+
+  // The last match of each room whose end has been logged and recorded.
+  const matchLogged = new WeakMap<Room, string>();
+
+  // Keeps a match that has run its course on the record of every ranked player with an account,
+  // with the title that it awarded them, if any. A match that the chair ended early has no
+  // ranking to keep. The database keeps a match once for each account, and a title once for each
+  // match, however often this runs.
+  function keepMatchRecords(room: Room): void {
+    const { match } = room;
+    if (!accounts || !match?.final || match.status !== 'over') return;
+    const players = match.final.size;
+    for (const [key, { rank, total, title }] of match.final) {
+      const account = room.memberByKey(key)?.account;
+      if (!account) continue;
+      accounts.recordMatch(account.id, {
+        game: room.game.id,
+        matchId: match.id,
+        games: match.played,
+        rank,
+        players,
+        score: total,
+        title,
+      });
     }
   }
 
@@ -615,7 +647,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok();
     });
 
-    on(handlers, 'room:create', ({ game, language, fields, settings, name: nickname, play }) => {
+    on(handlers, 'room:create', ({ game, language, fields, settings, name: nickname, play, match }) => {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
@@ -627,10 +659,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // can ask for. The chair's messages that do the same need a room first; this one is open
       // to anyone, and must not be free to whoever asks for rooms that can't be.
       creations.add(conn.ip);
-      const created = rooms.create({ game: module, language, fields, settings, key: conn.key, name, play, account });
+      const created = rooms.create({
+        game: module,
+        language,
+        fields,
+        settings,
+        key: conn.key,
+        name,
+        play,
+        account,
+        ...(match ? { match } : {}),
+      });
       if (!created.ok) return created;
       const { room, member } = created;
-      log('room_created', { code: room.code, game, language, fields: room.fields });
+      log('room_created', { code: room.code, game, language, fields: room.fields, match: match?.games ?? null });
       enter(socket, room, member);
       return ok({ code: room.code, roomId: room.id });
     });
@@ -712,6 +754,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'room:end', ({ gameId }) => asChair(socket, (room) => changed(room, room.withdraw(gameId))));
     on(handlers, 'room:again', ({ gameId }) => asChair(socket, (room) => changed(room, room.again(gameId))));
+    on(handlers, 'room:matchEnd', ({ matchId }) => asChair(socket, (room) => changed(room, room.endMatch(matchId))));
+    on(handlers, 'room:matchNext', ({ matchId, match }) =>
+      asChair(socket, (room) => changed(room, room.nextMatch(matchId, match))),
+    );
     on(handlers, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
     on(handlers, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));
     on(handlers, 'room:chair', ({ playerId }) => asChair(socket, (room) => changed(room, room.handOver(playerId))));

@@ -14,7 +14,7 @@ import {
 import type { DatabaseSync } from 'node:sqlite';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
-import { RecordStore, TitleStore, type NewRecord } from '../store/records';
+import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from '../store/records';
 import { MailTokenStore, SessionStore, type SessionLimits } from '../store/sessions';
 import { SettingStore } from '../store/settings';
 import { inspectAvatar, MAX_AVATAR_STORAGE, MemoryAvatars, type AvatarFiles } from './avatars';
@@ -550,6 +550,18 @@ export class Accounts {
   record(accountId: number, record: NewRecord): boolean {
     if (this.#full()) return false;
     return this.store.byId(accountId) !== undefined && this.records.add(accountId, record);
+  }
+
+  // Keeps a match that has run its course on an account's record, with the title that it awarded,
+  // in one transaction, unless the database is full. A match is kept, and its title awarded, once
+  // for each account, however often this is called. Says whether the match was new.
+  recordMatch(accountId: number, record: NewMatchRecord): boolean {
+    if (this.#full() || this.store.byId(accountId) === undefined) return false;
+    return this.store.transaction(() => {
+      const added = this.records.addMatch(accountId, record);
+      if (record.title) this.titles.award(accountId, record.title, record.matchId);
+      return added;
+    });
   }
 
   // Checks the password of the account that is logged in, for an action that asks for it. A wrong

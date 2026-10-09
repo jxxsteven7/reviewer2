@@ -66,6 +66,7 @@ describe('a database in DATA_DIR', () => {
       'email_tokens',
       'feedback',
       'game_records',
+      'match_records',
       'sessions',
       'settings',
       'sqlite_sequence',
@@ -139,6 +140,27 @@ describe('a database in DATA_DIR', () => {
     snapshot.close();
   });
 
+  test('of the second release gets the records of matches, which go with the account', async () => {
+    const second = await open(dir, MIGRATIONS.slice(0, 2));
+    second.db.exec(
+      "INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now')",
+    );
+    second.db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', NULL, 'now')");
+    second.db.close();
+
+    const { db } = await open(dir);
+    expect(schemaVersion(db)).toBe(3);
+    db.exec("INSERT INTO match_records VALUES (NULL, 1, 'keywords', 'm', 'now', 3, 1, 4, 9, 'best_paper')");
+    db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', 'm', 'now')");
+    // A match awards a title once; titles without a match are left alone.
+    expect(() => db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', 'm', 'now')")).toThrow(/UNIQUE/);
+    db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', NULL, 'now')");
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    for (const table of ['match_records', 'titles']) {
+      expect(db.prepare(`SELECT count(*) AS count FROM ${table}`).get(), table).toEqual({ count: 0 });
+    }
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(
@@ -146,7 +168,7 @@ describe('a database in DATA_DIR', () => {
     );
     first.db.close();
 
-    const migrated = await open(dir);
+    const migrated = await open(dir, MIGRATIONS.slice(0, 2));
     expect(migrated).toMatchObject({ schema: 2, migratedFrom: 1 });
     expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v2.db'));
     expect(migrated.db.prepare('SELECT id, text, contact FROM feedback').all()).toEqual([
@@ -301,6 +323,7 @@ describe('a database in memory', () => {
       'email_tokens',
       'feedback',
       'game_records',
+      'match_records',
       'sessions',
       'settings',
       'sqlite_sequence',

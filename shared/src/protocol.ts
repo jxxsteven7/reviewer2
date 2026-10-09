@@ -42,6 +42,9 @@ export const ROOM_ERRORS = [
   'cannot_start',
   'stale',
   'emote_cooldown',
+  'bad_match',
+  'match_over',
+  'match_locked',
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 
