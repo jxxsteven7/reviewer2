@@ -168,9 +168,8 @@ export const FALLBACK_WORDS = 500;
 // `wordKey` of every word drawn since the room last started over, in the order of their last
 // draw, so that its last `count` keys are the words of the last game. When fewer than `count`
 // unused words are left, all of them that fit are drawn, and the rest come from the used ones, at
-// random, but from the last game only when no other used word is left. Once every word of the
-// pool has been drawn, the room starts over, remembering only the words of this draw. Returns
-// null when even the whole pool is too small.
+// random, but from the last game only when no other used word is left; the room then starts over,
+// remembering only the words of this draw. Returns null when even the whole pool is too small.
 //
 // With `clash`, the draw keeps apart the words that clash, as far as it can. The words are taken
 // in a random order, unused ones first, and each is kept unless it clashes with one kept already.
@@ -182,8 +181,9 @@ export const FALLBACK_WORDS = 500;
 // short, the draw is made again word by word from the first FALLBACK_WORDS words of that order,
 // each time with the word that clashes least with those taken (fewestClashes()). Then a few
 // clashes may remain, and `clashes` says how many pairs of the words drawn clash; it is 0
-// otherwise. When clashes leave out some unused words, the draw takes used ones in their place,
-// but the words left out stay unused, so they come first next time.
+// otherwise. When clashes leave out some unused words, the draw takes used ones in their place.
+// While `count` or more unused words were left, the words left out stay unused and come first
+// next time; otherwise the room starts over as usual, and they are unused again like the rest.
 export function drawWords(
   pool: readonly BoardWord[],
   count: number,
@@ -215,7 +215,11 @@ export function drawWords(
   // Shuffled once more, so that the order doesn't tell the new words from the repeated ones.
   const words = shuffle(picked, rng);
   const keys = new Set(words.map(keyOf));
-  const startOver = fresh.every((word) => picked.includes(word));
+  // Fewer unused words than the draw needs were left: the room starts over. It doesn't when the
+  // draw took used words only because clashes left unused ones out, which then come first next
+  // time; the room would otherwise play board after board of mostly used words when the last
+  // unused ones clash with each other.
+  const startOver = fresh.length < count;
   const before = startOver ? [] : [...used].filter((key) => !keys.has(key));
   return { words, used: new Set([...before, ...keys]), clashes };
 }

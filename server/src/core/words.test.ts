@@ -340,7 +340,7 @@ describe('drawing words that clash', () => {
     expect(plain?.used.size).toBe(55);
   });
 
-  test('keeps the words that clashes left out ahead of a new cycle, however few were left', () => {
+  test('starts over once fewer unused words than a board needs were left, whatever clashes left out', () => {
     const pool = numbered(60);
     const keys = (words: readonly BoardWord[]) => words.map(({ word }) => wordKey(word));
     // Only 20 words are unused, fewer than a board needs, and each of 40 to 44 clashes with the
@@ -356,15 +356,32 @@ describe('drawing words that clash', () => {
       const unused = drawn.filter((word) => number(word) >= 40);
       expect(unused).toHaveLength(15);
       expect(pairs(drawn, clash)).toBe(0);
-      // The five words left out have never been played, so the room doesn't start over yet.
-      expect(draw?.used).toEqual(new Set([...used, ...keys(unused)]));
-      // The next board takes all five, and none of this board's words, and then the room starts over.
+      // The room starts over, remembering this board only: the five words left out are unused
+      // again, like all the others, rather than played one at a time on boards of used words.
+      expect(draw?.used).toEqual(new Set(keys(drawn)));
       const next = drawWords(pool, 25, draw?.used ?? new Set(), seededRng(seed), clash);
-      const left = pool.slice(40).filter((word) => !unused.includes(word));
-      expect(left).toHaveLength(5);
-      expect(left.every((word) => next?.words.includes(word))).toBe(true);
       expect(next?.words.some((word) => drawn.includes(word))).toBe(false);
-      expect(next?.used).toEqual(new Set(keys(next?.words ?? [])));
+      expect(next?.used.size).toBe(50);
+    }
+  });
+
+  test('plays at most one board of mostly used words at the end of a cycle', () => {
+    // Words 0 to 2 clash with each other, as a chain of words does, and the rest with none. When
+    // two of them are among the last unused words, a board can take only one of them, and the
+    // room must not go on to a board of used words and the other, but start over. So over many
+    // cycles, no two boards in a row hold fewer unused words than a board needs.
+    const pool = numbered(52);
+    const clash = (a: BoardWord, b: BoardWord) => number(a) <= 2 && number(b) <= 2;
+    let used: ReadonlySet<string> = new Set();
+    let mixed = false;
+    for (let game = 0; game < 200; game += 1) {
+      const before = used;
+      const draw = drawWords(pool, 25, used, seededRng(game), clash);
+      expect(draw?.clashes).toBe(0);
+      const fresh = (draw?.words ?? []).filter(({ word }) => !before.has(wordKey(word))).length;
+      if (fresh < 25) expect(mixed, `games ${game - 1} and ${game}`).toBe(false);
+      mixed = fresh < 25;
+      used = draw?.used ?? new Set();
     }
   });
 
