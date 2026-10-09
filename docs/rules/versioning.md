@@ -18,7 +18,7 @@ The commit on `main` is titled `vX.Y.Z <type>: <summary> (#N)`, for example `v0.
 
 1. Title your PR `<type>: <summary>`, like a commit subject. You don't need to work out the version.
 2. The `Commits and version` check works out the next version and puts it in front of the title, for example `v0.0.7 fix: …`. It does this again whenever the PR is edited or updated. After every merge to `main`, CI also updates the titles of all open PRs, because each merge moves the next number on.
-3. The maintainer merges with **Squash and merge**. The merge commit's title must be the PR title, version included. With the repository set up as described in the [maintainer guide](../maintainers.md), GitHub fills it in that way.
+3. A repository admin merges with **Squash and merge**. The merge commit's title must be the PR title, version included. With the repository set up as described in the [maintainer guide](../maintainers.md), GitHub fills it in that way.
 
 The previous version is the highest `vX.Y.Z` in the titles of the commits on `main` or in the `vX.Y.Z` tags. When there is no version yet, it counts as `v0.0.0`.
 

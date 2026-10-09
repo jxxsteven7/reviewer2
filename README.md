@@ -30,7 +30,7 @@ The game is called **Double Blind** for now. In the code, its module is called `
 
 🚧 In early development. The first game is online at <https://playreviewer2.com>, and you can run your own copy as well (see [Running locally](#running-locally)).
 
-It has creating and joining rooms, to play or to watch, choosing teams and roles, separate captain and guesser views, a view for a projector, settings for the rules and the time limits, a word library of ten fields from which the room's creator picks, real-time sync, automatic reconnection, quick reactions, decision letters at the end, "play again", feedback from players and optional accounts.
+It has rooms that you create and join as a player or a spectator, a choice of team and role, separate captain and guesser views, a view for a projector, settings for the rules and the time limits, a word library of ten fields from which the room's creator picks, real-time sync, automatic reconnection, a bilingual interface, quick reactions, a chat for each group's guessers, decision letters at the end, "play again", feedback from players and optional accounts.
 
 ## Tech stack
 
@@ -59,7 +59,7 @@ It has creating and joining rooms, to play or to watch, choosing teams and roles
 | `words/` | Word lists, one JSON file per field |
 | `docs/` | Documentation and project rules |
 | `e2e/` | End-to-end tests with Playwright |
-| `scripts/` | Repository scripts, such as the checks of commits, the forbidden name, word lists and the README sync |
+| `scripts/` | Repository scripts, such as the checks for commit messages, the forbidden name, word lists and README sync |
 
 ## Running locally
 

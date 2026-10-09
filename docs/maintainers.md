@@ -19,6 +19,7 @@ Settings and tasks for the people who maintain the repository. This file records
     - Require review from Code Owners
     - Require approval of the most recent reviewable push
     - Require conversation resolution before merging
+    - Allowed merge methods: **Squash** only
   - Require status checks to pass, with these checks. GitHub only lists a check after it has run at least once.
     - `Commits and version`, `Script tests` and `Forbidden name`, from `.github/workflows/conventions.yml`
     - `README sync`, from `.github/workflows/docs.yml`
@@ -56,7 +57,7 @@ A maintainer is anyone with the **Admin** or **Maintain** role on the repository
 
 ## Notes
 
-- On GitHub Free, rulesets are **not enforced on private repositories**. Enforcement needs GitHub Pro or Team, or starts once the repository is public. Until then, only the local hooks and everyone's discipline protect `main`.
+- Rulesets are enforced on this repository while it is private: with `only-admins-merge` active, every open PR is blocked from merging until an admin bypasses it.
 - GitHub doesn't let you approve your own PR. While there is only one maintainer, the review settings above would make the maintainer's own PRs impossible to merge. During that period, set Required approvals to 0, and turn off Require review from Code Owners and Require approval of the most recent reviewable push. The last one needs approval from someone other than the person who pushed, whatever the number of required approvals. Keep Require a pull request so that every change still goes through a PR. The maintainer reviews each PR and leaves a record of the review on it. Switch the settings back as soon as there is a second maintainer.
 - `.github/CODEOWNERS` decides who is asked to review by default. As the team grows, assign owners per directory, for example `words/` to whoever looks after the word lists.
 - Local hooks can't check the commit that GitHub creates when merging. Before merging, make sure the merge form shows the PR title, version included. After the merge, the `Landed commits and release` job on `main` checks the commit and fails if its title is wrong.

@@ -39,7 +39,7 @@ First check that the change is right, then that it is good:
 
 1. **Correctness.** Is the logic right? Are edge cases handled, such as dropped connections, repeated clicks and two players acting at once? Do the tests cover it?
 2. **Hard constraints.** Go through [constraints.md](constraints.md) item by item.
-3. **Changes to the rules and their checks.** CI runs the checks as the PR has them, so a PR that changes `.github/`, `.githooks/`, `scripts/`, `.claude/`, `AGENTS.md`, `CLAUDE.md` or `docs/rules/` can also loosen the checks it has to pass. Read such changes line by line, and make sure the PR says why it needs them.
+3. **Changes to the rules and their checks.** CI runs the checks as the PR has them, so a PR that changes `.github/`, `.githooks/`, `scripts/`, `.claude/`, `AGENTS.md`, `CLAUDE.md` or `docs/rules/` can also loosen the checks it has to pass. The same goes for the files that define what those checks run, such as the scripts in `package.json` and the lint, type and test configurations. Read such changes line by line, and make sure the PR says why it needs them.
 4. **Readability.** Names are clear, the code matches its surroundings, and there is no unnecessary complexity.
 5. **Scope.** The PR does what it says and nothing unrelated.
 6. **Language.** Code, comments, docs and the PR title are in clear, correct English. If one README changed, the other matches. See [language.md](language.md).
