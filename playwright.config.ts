@@ -44,6 +44,8 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
+  // CI runs each project in a job of its own, from the matrix in .github/workflows/ci.yml. When
+  // you add, rename or remove a project, change the matrix too.
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'phone-chromium', use: { ...devices['Pixel 7'] } },

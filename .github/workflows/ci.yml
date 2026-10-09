@@ -55,18 +55,20 @@ jobs:
       - run: node scripts/check-words.mjs
 
   e2e-browser:
-    # Real browsers against the production build; see playwright.config.ts. One job per browser
-    # project, side by side, each with only the browser it runs: the WebKit one is the slowest, at
-    # about 5 minutes when all goes well, against 8 to 10 for all three in one job.
+    # Real browsers against the production build. One job per browser project, side by side,
+    # each with only the browser it runs: the WebKit one is the slowest, at about 5 minutes when
+    # all goes well, against 8 to 10 for every project in one job.
     name: End-to-end on ${{ matrix.project }}
     runs-on: ubuntu-latest
     # A browser install or a server that hangs must not hold the check for the six hours that
     # GitHub allows a job. Two full games that each time out twice take about 12 minutes.
     timeout-minutes: 20
     strategy:
-      # A failure in one browser says nothing about the other two.
+      # A failure in one browser says nothing about the others.
       fail-fast: false
       matrix:
+        # One entry per project in playwright.config.ts, with the browser it runs on. A project
+        # that is missing here is not tested in CI, so keep the two lists the same.
         include:
           - project: desktop-chromium
             browser: chromium
@@ -96,9 +98,11 @@ jobs:
 
   e2e:
     # The required status check for the browser jobs above: one name, whatever their number.
+    # `always()`, not `!cancelled()`: a skipped required check counts as passed, so this job must
+    # run and fail when the run is cancelled.
     name: End-to-end
     needs: e2e-browser
-    if: ${{ !cancelled() }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - run: test "${{ needs.e2e-browser.result }}" = success
