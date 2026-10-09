@@ -72,8 +72,13 @@ async function join() {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-4);
-  max-width: 22rem;
-  padding: var(--space-6) 0;
+  max-width: 26rem;
+  margin: var(--space-5) 0;
+  padding: var(--space-5) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 .name-form > :deep(.field) {
@@ -92,7 +97,8 @@ h1 {
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 </style>

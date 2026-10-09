@@ -56,14 +56,20 @@ function pass() {
   font-size: var(--text-sm);
 }
 
+/* Both buttons on one row, so that the bar stays low on a phone: the reveal button takes the
+   room and wraps a long word, and "End the turn" keeps its width. */
 .buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .buttons > :first-child {
-  flex: 1 1 12rem;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.buttons > :last-child {
+  flex: 0 1 auto;
 }
 
 .confirm {

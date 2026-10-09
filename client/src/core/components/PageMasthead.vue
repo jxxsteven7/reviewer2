@@ -15,15 +15,16 @@ import SiteWordmark from './SiteWordmark.vue';
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: 56px;
+  min-height: 64px;
   padding-top: env(safe-area-inset-top);
-  border-bottom: 1px solid var(--ink);
 }
 
 .end {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  justify-content: flex-end;
+  gap: var(--space-2);
   min-width: 0;
 }
 </style>

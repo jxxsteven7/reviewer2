@@ -5,8 +5,9 @@ import { useI18n } from 'vue-i18n';
 import ClockBar from './ClockBar.vue';
 
 // Whose turn it is, in which phase, with the current clue, how much time the phase has left and
-// how many cards each group still has to find. A bar in the current group's color runs down its
-// left edge. Under the free guess rule, a clue's number sets no limit, so there is none to show.
+// how many cards each group still has to find, on one sticker above the board. The phase is set
+// in the display fonts, in the current group's color. Under the free guess rule, a clue's number
+// sets no limit, so there is none to show.
 const props = defineProps<{ game: KeywordsView; guessRule: GuessRule }>();
 const { t } = useI18n();
 
@@ -14,31 +15,31 @@ const group = computed(() => t(`lobby.group.${props.game.team}`));
 const phase = computed(() => t(`game.phase.${props.game.phase}`, { group: group.value }));
 const count = computed(() => {
   const value = props.game.clue?.count;
-  return value === 'unlimited' ? '\u221e' : String(value ?? '');
+  return value === 'unlimited' ? '∞' : String(value ?? '');
 });
 </script>
 
 <template>
   <section class="strip" :class="game.phase === 'over' ? 'over' : game.team" aria-live="polite">
     <p class="line">
-      <span class="turn">{{ t('game.turn', { turn: game.turn }) }}</span>
-      <span class="phase">{{ phase }}</span>
+      <span class="phase display">{{ phase }}</span>
+      <span class="turn num">{{ t('game.turn', { turn: game.turn }) }}</span>
     </p>
     <p v-if="game.clue" class="clue">
       <span class="label">{{ t('game.clue') }}</span>
       <span class="word">{{ game.clue.word }}</span>
-      <span class="count mono">{{ count }}</span>
-      <span v-if="guessRule === 'standard'" class="left">
+      <span class="count num">{{ count }}</span>
+      <span v-if="guessRule === 'standard'" class="left num">
         {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
       </span>
     </p>
     <ClockBar v-if="game.clock" :clock="game.clock" />
     <p class="scores">
-      <span class="score red">
+      <span class="score red num">
         <span class="name">{{ t('lobby.group.red') }}</span>
         <span>{{ t('game.remaining', { count: game.remaining.red }) }}</span>
       </span>
-      <span class="score blue">
+      <span class="score blue num">
         <span class="name">{{ t('lobby.group.blue') }}</span>
         <span>{{ t('game.remaining', { count: game.remaining.blue }) }}</span>
       </span>
@@ -50,87 +51,109 @@ const count = computed(() => {
 .strip {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  margin: var(--space-4) 0 var(--space-3);
-  padding: var(--space-1) 0 var(--space-1) var(--space-3);
-  border-left: 4px solid var(--rule);
-}
-
-.strip.red {
-  border-left-color: var(--red);
-}
-
-.strip.blue {
-  border-left-color: var(--blue);
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 .line {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-2);
-}
-
-.turn {
-  color: var(--ink-3);
-  font-size: var(--text-sm);
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
 }
 
 .phase {
-  font-weight: 600;
+  font-size: var(--text-2xl);
+}
+
+.strip.red .phase {
+  color: var(--red-deep);
+}
+
+.strip.blue .phase {
+  color: var(--blue-deep);
+}
+
+.turn {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .clue {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
 }
 
 .clue .label {
-  color: var(--ink-3);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
+/* The clue on its own yellow sticker, with its number on an ink disc beside it. */
 .clue .word {
-  font-family: var(--font-serif);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--bg);
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: var(--weight-black);
 }
 
 .clue .count {
-  font-size: var(--text-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-display);
 }
 
 .clue .left {
-  color: var(--ink-2);
+  margin-left: auto;
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .scores {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
-  font-size: var(--text-sm);
+  gap: var(--space-2);
 }
 
 .score {
-  display: inline-flex;
-  gap: var(--space-1);
-  color: var(--ink-2);
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-card);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-black);
 }
 
-.score .name {
-  font-weight: 600;
+.score.red {
+  background: var(--red);
+  color: var(--on-red);
 }
 
-.score.red .name {
-  color: var(--red);
-}
-
-.score.blue .name {
-  color: var(--blue);
+.score.blue {
+  background: var(--blue);
+  color: var(--on-blue);
 }
 </style>

@@ -16,9 +16,9 @@ function choose(language: Language) {
 
 <template>
   <main class="gate">
-    <p class="title">{{ t('app.name') }}</p>
+    <p class="title num"><span class="tile" aria-hidden="true"></span>{{ t('app.name') }}</p>
     <p class="tagline">
-      <span v-for="language in LANGUAGES" :key="language" :lang="HTML_LANG[language]">
+      <span v-for="language in LANGUAGES" :key="language" :lang="HTML_LANG[language]" class="display">
         {{ t('app.tagline', {}, { locale: language }) }}
       </span>
     </p>
@@ -48,7 +48,7 @@ function choose(language: Language) {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: var(--space-5);
+  gap: var(--space-6);
   max-width: 28rem;
   min-height: 100vh;
   min-height: 100dvh;
@@ -58,11 +58,28 @@ function choose(language: Language) {
 }
 
 .title {
-  font-family: var(--font-serif);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
   font-size: var(--text-3xl);
-  font-weight: 600;
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.08em;
+  font-weight: var(--weight-display);
+}
+
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--text-xl);
+}
+
+.tile::before {
+  content: 'R2';
 }
 
 .tagline,
@@ -70,50 +87,54 @@ function choose(language: Language) {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  color: var(--ink-2);
+}
+
+.tagline {
+  font-size: var(--text-xl);
 }
 
 .prompt {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .choices {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--ink);
+  gap: var(--space-4);
 }
 
 .choice {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-4) var(--space-2);
-  border: 0;
-  background: none;
+  padding: var(--space-4) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
   text-align: center;
   cursor: pointer;
+  transition:
+    transform var(--motion),
+    box-shadow var(--motion);
 }
 
-.choice + .choice {
-  border-top: 1px solid var(--rule);
+.choice:active {
+  transform: translate(var(--shift-2), var(--shift-2));
+  box-shadow: none;
 }
 
 .name {
-  font-family: var(--font-serif);
-  font-size: var(--text-xl);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
 }
 
 .description {
   color: var(--ink-2);
   font-size: var(--text-sm);
-}
-
-@media (hover: hover) {
-  .choice:hover {
-    background: var(--paper-2);
-  }
 }
 </style>

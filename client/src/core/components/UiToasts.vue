@@ -39,17 +39,20 @@ const { t } = useI18n();
 }
 
 .toasts.under-banner {
-  top: calc(var(--toasts-top) + 2.5rem);
+  top: calc(var(--toasts-top) + 2.75rem);
 }
 
 .toast {
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--ink);
+  border: var(--line) solid var(--ink);
   border-radius: var(--radius-control);
   background: var(--ink);
-  color: var(--paper);
+  box-shadow: var(--shadow-1);
+  color: var(--on-ink);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   text-align: left;
+  cursor: pointer;
   pointer-events: auto;
 }
 </style>

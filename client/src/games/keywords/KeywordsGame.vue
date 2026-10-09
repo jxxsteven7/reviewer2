@@ -16,6 +16,7 @@ import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
 import { act } from '../../core/socket';
 import { useBusy } from '../../core/useBusy';
+import { useMediaQuery } from '../../core/useMediaQuery';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
@@ -26,15 +27,16 @@ import KeywordsBoard from './KeywordsBoard.vue';
 import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import TurnStrip from './TurnStrip.vue';
-import { useKeywords } from './useKeywords';
+import { useKeywords, type Chooser } from './useKeywords';
 
 // A game in progress, and its result. The banner that says what is going on for the viewer, the
-// turn strip, the board and what the viewer can do now come first; the groups and the clue log
-// follow, or sit beside the board on wide screens.
+// turn strip, the board and what the viewer can do now come first. On a wide screen the groups
+// stand on the left of the board and the clue log on its right; on a phone they open as sheets
+// from the two buttons in the bar at the bottom, so that the board comes first.
 //
-// In a match, its table sits beside the board while the game is on. Once the game has ended, the
-// table follows the letters, with where each player's points came from, or the final ranking does
-// when the match is over.
+// In a match, its table sits beside the board while the game is on, above the groups on a wide
+// screen. Once the game has ended, the table follows the letters, with where each player's
+// points came from, or the final ranking does when the match is over.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -55,6 +57,11 @@ function describe(detail: unknown): string {
 }
 const { busy, run } = useBusy();
 
+// The width from which the groups and the clue log stand beside the board; the same as in the
+// style below.
+const wide = useMediaQuery('(min-width: 64rem)');
+const panel = ref<'groups' | 'log' | null>(null);
+
 const game = computed(() => data.value.game as KeywordsView);
 const moment = computed(() => ({ gameId: game.value.gameId, turn: game.value.turn }));
 const myTurn = computed(() => mySeat.value?.team === game.value.team);
@@ -63,17 +70,17 @@ const canGuess = computed(() => game.value.phase === 'guess' && myTurn.value && 
 const group = computed(() => t(`lobby.group.${game.value.team}`));
 
 // The choices of cards come from the server, which shows them to the group whose turn it is:
-// the viewer's own choice is outlined, and the others' names run along the bottom of a card. A
+// the viewer's own choice is marked, and the others' avatars hang on the corner of a card. A
 // reveal, or the end of the turn, clears them all. A choice whose player has just left the room
 // is left out rather than shown without a name.
 const selections = computed(() => game.value.selections ?? []);
 const selected = computed(() => selections.value.find((choice) => choice.player === room.value.me)?.card ?? null);
-const nameOf = (id: string) => room.value.players.find((player) => player.id === id)?.name;
+const playerOf = (id: string): Chooser | undefined => room.value.players.find((player) => player.id === id);
 const choosers = computed(() =>
   game.value.cards.map((_, index) =>
     selections.value
       .filter((choice) => choice.card === index && choice.player !== room.value.me)
-      .flatMap((choice) => nameOf(choice.player) ?? []),
+      .flatMap((choice) => playerOf(choice.player) ?? []),
   ),
 );
 
@@ -123,6 +130,19 @@ const whoAmI = computed(() => {
   if (!seat || seat.role === 'spectator') return t('game.you.spectator');
   return t(`game.you.${seat.role}`, { group: t(`lobby.group.${seat.team}`) });
 });
+
+// What the others in the group have chosen, as a sentence after the viewer's seat: the same
+// choices that hang on the cards, which the server sends to the group alone.
+const chosenByOthers = computed(() =>
+  selections.value
+    .filter((choice) => choice.player !== room.value.me)
+    .flatMap((choice) => {
+      const player = playerOf(choice.player);
+      const card = game.value.cards[choice.card];
+      return player && card ? [t('game.choice', { name: player.name, word: card.word })] : [];
+    })
+    .join(t('game.choiceJoin')),
+);
 </script>
 
 <template>
@@ -160,10 +180,13 @@ const whoAmI = computed(() => {
         <!-- The bar stays within reach at the bottom of a phone's screen while the game is on. -->
         <div class="actions" :class="{ sticky: !game.result }">
           <div class="who-row">
-            <p class="who">
-              {{ whoAmI }}
-              <template v-if="data.joinsNext"> &middot; {{ t('match.joinsNext') }}</template>
-            </p>
+            <div class="me">
+              <p class="who">
+                {{ whoAmI }}
+                <template v-if="data.joinsNext"> &middot; {{ t('match.joinsNext') }}</template>
+              </p>
+              <p v-if="chosenByOthers" class="choices">{{ chosenByOthers }}</p>
+            </div>
             <GroupChat :room="room" />
           </div>
           <CluePanel
@@ -178,6 +201,10 @@ const whoAmI = computed(() => {
           <p v-else-if="!game.result" class="status">
             {{ game.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group }) }}
           </p>
+          <div v-if="!wide" class="panels">
+            <UiButton class="open-groups" size="small" @click="panel = 'groups'">{{ t('game.groups') }}</UiButton>
+            <UiButton class="open-log" size="small" @click="panel = 'log'">{{ t('game.log') }}</UiButton>
+          </div>
         </div>
         <p v-if="!game.result" class="note">{{ t('game.keyNote') }}</p>
       </div>
@@ -186,8 +213,8 @@ const whoAmI = computed(() => {
         <MatchTable v-if="match && !game.result" :room="room">
           <p class="scoring">{{ t('game.scoring') }}</p>
         </MatchTable>
-        <GameRosters :room="room" />
-        <ClueLog :game="game" />
+        <GameRosters v-if="wide" :room="room" />
+        <ClueLog v-if="wide" :game="game" />
         <div class="tools">
           <RulesSheet :settings="data.settings" :language="room.language" />
           <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
@@ -196,6 +223,14 @@ const whoAmI = computed(() => {
         </div>
       </aside>
     </div>
+
+    <!-- On a phone, the groups and the clue log are sheets, whose title says what they are. -->
+    <UiSheet v-if="!wide" :open="panel === 'groups'" :title="t('game.groups')" @close="panel = null">
+      <GameRosters :room="room" class="in-sheet" />
+    </UiSheet>
+    <UiSheet v-if="!wide" :open="panel === 'log'" :title="t('game.log')" @close="panel = null">
+      <ClueLog :game="game" class="in-sheet" />
+    </UiSheet>
 
     <UiSheet :open="ending" :title="t('game.end')" @close="ending = false">
       <div class="confirm">
@@ -211,16 +246,27 @@ const whoAmI = computed(() => {
 .layout {
   display: grid;
   gap: var(--space-4);
+  margin-top: var(--space-3);
 }
 
+.main {
+  min-width: 0;
+}
+
+/* The bar is kept low, so that it covers as little of the board as it can on a phone: the seat
+   line on one row, the chat and the panel buttons on the next, and then what the viewer can do.
+   The rows are drawn from the elements as they are, through display: contents. */
 .actions {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-areas:
+    'me me me .'
+    'chat groups log .'
+    'panel panel panel panel';
+  grid-template-columns: auto auto auto minmax(0, 1fr);
   gap: var(--space-2);
   margin-top: var(--space-3);
-  padding: var(--space-3) 0 max(var(--space-3), env(safe-area-inset-bottom));
-  border-top: 1px solid var(--ink);
-  background: var(--paper);
+  padding: var(--space-2) 0 max(var(--space-2), env(safe-area-inset-bottom));
+  background: var(--bg);
 }
 
 .actions.sticky {
@@ -229,39 +275,77 @@ const whoAmI = computed(() => {
   z-index: 5;
 }
 
-.who-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+.who-row,
+.panels {
+  display: contents;
+}
+
+.me {
+  grid-area: me;
+}
+
+.who-row > :deep(.button) {
+  grid-area: chat;
+}
+
+.open-groups {
+  grid-area: groups;
+}
+
+.open-log {
+  grid-area: log;
+}
+
+.actions > :deep(.clue-panel),
+.actions > :deep(.guess-bar),
+.status {
+  grid-area: panel;
 }
 
 .who {
-  color: var(--ink-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.choices {
   font-size: var(--text-sm);
 }
 
 .status {
-  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
 .note {
   margin-top: var(--space-2);
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-xs);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Inside a sheet, the sheet's frame and title do: it says "Groups" or "Clue log" already. */
+.in-sheet.in-sheet {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.in-sheet :deep(.section-title) {
+  display: none;
 }
 
 .tools {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--rule);
 }
 
 .scoring {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-xs);
 }
 
@@ -275,15 +359,48 @@ const whoAmI = computed(() => {
   gap: var(--space-3);
 }
 
-@media (min-width: 60rem) {
+/* Three columns: the groups, with a match's table above them, the board, and the clue log with
+   the tools under it. The rows have no gap of their own, so that an empty table row takes no
+   room; the items keep their distance with margins. */
+@media (min-width: 64rem) {
   .layout {
-    grid-template-columns: minmax(0, 46rem) minmax(16rem, 1fr);
+    grid-template-areas:
+      'table main log'
+      'groups main log'
+      'groups main tools';
+    grid-template-columns: 16rem minmax(0, 1fr) 18rem;
+    grid-template-rows: auto auto 1fr;
+    gap: 0 var(--space-5);
     align-items: start;
   }
 
-  .side > :deep(:first-child) {
-    border-top: 0;
-    padding-top: 0;
+  .side > :deep(.match-table) {
+    grid-area: table;
+    margin-bottom: var(--space-5);
+  }
+
+  .side > :deep(.clue-log) {
+    margin-bottom: var(--space-5);
+  }
+
+  .main {
+    grid-area: main;
+  }
+
+  .side {
+    display: contents;
+  }
+
+  .side > :deep(.rosters) {
+    grid-area: groups;
+  }
+
+  .side > :deep(.clue-log) {
+    grid-area: log;
+  }
+
+  .tools {
+    grid-area: tools;
   }
 }
 </style>

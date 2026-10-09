@@ -83,7 +83,7 @@ function failed(code: string) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .file {

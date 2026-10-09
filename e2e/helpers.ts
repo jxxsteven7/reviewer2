@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { test as base, expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import {
   checkClue,
   type CardColor,
@@ -431,6 +431,40 @@ export async function seatTable(
     public: [bob, dan, eve, screen].map(snapshotsOf),
     everyone: [ann, bob, cat, dan, eve, screen].map(snapshotsOf),
   };
+}
+
+// The room menu, behind the "Room" button in the masthead: the player's name and avatar, and
+// the ways to rename, leave and close the room. Opens it and returns it.
+export async function roomMenu(page: Page): Promise<Locator> {
+  await page.locator('.masthead .room-button').click();
+  const menu = page.locator('[role=dialog]:has(.room-menu)');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+// On a phone, the groups and the clue log are sheets that open from the bar at the bottom of
+// the game; on a wide screen they stand beside the board. Opens them where they need opening,
+// and returns them. A sheet that is open covers the rest of the page, so a test closes it, with
+// closeSheet, before it taps anything else on that page.
+export async function openGroups(page: Page): Promise<Locator> {
+  const button = page.locator('.open-groups');
+  if (await button.count()) await button.click();
+  const rosters = page.locator('.rosters');
+  await expect(rosters).toBeVisible();
+  return rosters;
+}
+
+export async function openLog(page: Page): Promise<Locator> {
+  const button = page.locator('.open-log');
+  if (await button.count()) await button.click();
+  const log = page.locator('.clue-log');
+  await expect(log).toBeVisible();
+  return log;
+}
+
+// Closes the sheet on top, if there is one, as Escape does.
+export async function closeSheet(page: Page): Promise<void> {
+  if (await page.locator('[role=dialog]').count()) await page.keyboard.press('Escape');
 }
 
 // The group whose turn it is, from the color of the turn strip.

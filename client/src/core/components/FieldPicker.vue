@@ -37,13 +37,12 @@ function toggle(id: string, on: boolean) {
 
 <style scoped>
 .fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-li + li {
-  border-top: 1px solid var(--rule);
 }
 
 label {
@@ -51,17 +50,34 @@ label {
   align-items: center;
   gap: var(--space-3);
   min-height: 48px;
+  padding: var(--space-1) var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
+label:has(input:checked) {
+  background: var(--bg);
+}
+
+label:has(input:focus-visible) {
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
+}
+
 label.disabled {
-  color: var(--ink-3);
+  border-color: var(--neutral);
+  background: var(--paper-2);
+  color: var(--ink-2);
   cursor: not-allowed;
 }
 
 input {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
   accent-color: var(--ink);
 }
 
@@ -70,7 +86,9 @@ input {
 }
 
 .count {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-text);
+  text-align: right;
 }
 </style>

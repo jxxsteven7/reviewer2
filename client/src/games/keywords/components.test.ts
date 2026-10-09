@@ -348,7 +348,7 @@ describe('KeywordsCard', () => {
 
   test('shows who in the group has chosen it, also to screen readers', () => {
     const wrapper = mount(KeywordsCard, {
-      props: { card, index: 3, selectable: true, selected: false, choosers: ['Ann', 'Cat'] },
+      props: { card, index: 3, selectable: true, selected: false, choosers: [{ name: 'Ann' }, { name: 'Cat' }] },
       global: global(),
     });
     expect(wrapper.get('.choosers').text()).toBe('Ann and Cat');
@@ -512,7 +512,7 @@ describe('TurnStrip', () => {
 
   test('shows how many guesses are left under the standard rule only', () => {
     const standard = mount(TurnStrip, { props: { game, guessRule: 'standard' }, global: global() });
-    expect(standard.get('.left').text()).toBe('Guesses left: 3');
+    expect(standard.get('.left').text()).toBe('3 more to reveal');
     const free = mount(TurnStrip, {
       props: { game: { ...game, guessesLeft: null }, guessRule: 'free' },
       global: global(),

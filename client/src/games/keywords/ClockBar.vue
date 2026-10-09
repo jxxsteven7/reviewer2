@@ -51,7 +51,7 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
     <div class="track" aria-hidden="true">
       <div class="fill" :style="{ transform: `scaleX(${share})` }"></div>
     </div>
-    <span class="seconds mono" aria-hidden="true">{{ shown }}</span>
+    <span class="seconds num" aria-hidden="true">{{ shown }}</span>
   </div>
 </template>
 
@@ -59,29 +59,35 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
 .clock {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .track {
   flex: 1;
-  height: 6px;
+  height: 12px;
   overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
   background: var(--paper-2);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-card);
 }
 
 .fill {
   height: 100%;
-  background: var(--ink-2);
+  background: var(--ink);
   transform-origin: left;
 }
 
+/* The seconds on an ink pill, as a clock on a wall. */
 .seconds {
-  min-width: 3.5em;
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-  text-align: right;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-display);
 }
 
 .urgent .fill {
@@ -89,7 +95,7 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
 }
 
 .urgent .seconds {
-  color: var(--red);
-  font-weight: 600;
+  background: var(--red);
+  color: var(--on-red);
 }
 </style>

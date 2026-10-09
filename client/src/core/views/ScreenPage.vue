@@ -43,7 +43,19 @@ const soundLocked = computed(() => !muted.value && !unlocked.value);
 }
 
 .sound-hint {
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+/* On a narrow screen the masthead has room for the room's number and menu beside the tile, but
+   not for the name. */
+@media (max-width: 39.99rem) {
+  .screen-page :deep(.wordmark .name) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 </style>

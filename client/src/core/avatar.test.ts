@@ -18,19 +18,23 @@ describe('the default avatar', () => {
     expect(colors.size).toBeGreaterThan(3);
   });
 
-  test('has colors that white text reads well on, at 4.5:1 or more', () => {
+  test('has colors that the ink initial reads well on, at 4.5:1 or more', () => {
     const channel = (value: number) => {
       const c = value / 255;
       return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
     };
-    for (const color of AVATAR_COLORS) {
+    const luminance = (color: string) => {
       const [r, g, b] = [1, 3, 5].map((at) => channel(parseInt(color.slice(at, at + 2), 16))) as [
         number,
         number,
         number,
       ];
-      const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-      expect(1.05 / (luminance + 0.05), color).toBeGreaterThanOrEqual(4.5);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    // The ink of the interface, --ink in client/src/styles/tokens.css.
+    const ink = luminance('#1a1a2e');
+    for (const color of AVATAR_COLORS) {
+      expect((luminance(color) + 0.05) / (ink + 0.05), color).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

@@ -32,7 +32,7 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
   <div class="field" :class="{ invalid: error }">
     <label :for="id" class="label">{{ label }}</label>
     <div class="control">
-      <span v-if="prefix" class="prefix" aria-hidden="true">{{ prefix }}</span>
+      <span v-if="prefix" class="prefix num" aria-hidden="true">{{ prefix }}</span>
       <textarea
         v-if="multiline"
         :id="id"
@@ -74,64 +74,76 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .label {
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .control {
   display: flex;
   align-items: stretch;
-  border: 1px solid var(--ink-3);
+  border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-control);
   background: var(--paper);
 }
 
 .control:focus-within {
-  border-color: var(--ink);
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 .invalid .control {
-  border-color: var(--red);
+  border-color: var(--red-deep);
 }
 
 .prefix {
   display: flex;
   align-items: center;
-  padding-left: var(--space-3);
-  color: var(--ink-3);
-  font-family: var(--font-mono);
+  padding-left: var(--space-4);
+  color: var(--ink-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-display);
+  letter-spacing: 0.08em;
 }
 
 input,
 textarea {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
-  padding: 0 var(--space-3);
+  min-height: 50px;
+  padding: 0 var(--space-4);
   border: 0;
+  border-radius: inherit;
   background: none;
   color: var(--ink);
-  /* 16px keeps iOS from zooming in on focus */
+  /* 16px keeps iOS from zooming in */
   font: inherit;
   font-size: max(16px, var(--text-md));
+  font-weight: var(--weight-bold);
   outline: none;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-2);
+  font-weight: var(--weight-text);
+  opacity: 0.7;
+}
+
 textarea {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   line-height: 1.45;
   resize: vertical;
 }
 
 .prefix + input {
   padding-left: var(--space-1);
-  font-family: var(--font-mono);
+  font-family: var(--font-number);
+  font-size: max(16px, var(--text-lg));
+  font-weight: var(--weight-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -139,20 +151,22 @@ textarea {
 .show {
   flex: none;
   min-width: 44px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-4);
   border: 0;
   background: none;
   color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
 .note {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
 .note.error {
-  color: var(--red);
+  color: var(--red-deep);
+  font-weight: var(--weight-bold);
 }
 </style>

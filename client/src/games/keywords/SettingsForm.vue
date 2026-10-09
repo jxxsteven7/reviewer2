@@ -157,8 +157,8 @@ fieldset {
 legend {
   margin-bottom: var(--space-2);
   padding: 0;
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .options {
@@ -172,28 +172,30 @@ legend {
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--ink-3);
-  border-radius: var(--radius-control);
+  padding: 0 var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
 .options label.chosen {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  background: var(--bg);
 }
 
 .options label:focus-within {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 .options input {
+  margin: 0;
   accent-color: var(--ink);
 }
 
 .hint {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 

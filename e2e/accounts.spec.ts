@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import {
+  closeSheet,
   createRoom,
   expect,
   gameOf,
@@ -7,8 +8,10 @@ import {
   logIn,
   mailedLink,
   newPlayer,
+  openGroups,
   playToTheEnd,
   register,
+  roomMenu,
   seatTable,
   snapshotsOf,
   TEXT,
@@ -57,8 +60,9 @@ test('players with accounts play a whole game with guests, and find it on their 
   });
   const ann = table.captains.red;
   // Their names in the room are their usernames, with the default avatar, which is the initial.
-  await expect(ann.locator('.room-footer .who')).toContainText(usernames.Ann as string);
-  await expect(table.spectator.locator('.lobby, .keywords-game').first()).toContainText(usernames.Dan as string);
+  await expect((await roomMenu(ann)).locator('.who')).toContainText(usernames.Ann as string);
+  await closeSheet(ann);
+  await expect(await openGroups(table.spectator)).toContainText(usernames.Dan as string);
 
   await playToTheEnd(table);
   // Nobody's snapshots say more about a player than the name, whether they are online and the
@@ -133,9 +137,10 @@ test('a new name and avatar show in the room, and a guest can not take a registe
   expect((await response.body()).length).toBeLessThanOrEqual(64 * 1024);
 
   await ann.goto(url);
-  await expect(ann.locator('.room-footer .who img')).toHaveAttribute('src', avatar as string);
+  const menu = await roomMenu(ann);
+  await expect(menu.locator('.who img')).toHaveAttribute('src', avatar as string);
   // A player with an account renames on the account page, not in the room.
-  await expect(ann.locator('.room-footer').getByRole('button', { name: text.room.rename })).toHaveCount(0);
+  await expect(menu.getByRole('button', { name: text.room.rename })).toHaveCount(0);
 });
 
 test('a guest who registers in the middle of a game keeps their seat, as the account', async ({ browser }) => {
@@ -152,10 +157,11 @@ test('a guest who registers in the middle of a game keeps their seat, as the acc
   await player.goto(url);
   await expect(player.locator('.lobby')).toBeVisible();
   await expect(player.locator('.name-form')).toHaveCount(0);
-  await expect(player.locator('.room-footer .who')).toContainText(name);
+  const menu = await roomMenu(player);
+  await expect(menu.locator('.who')).toContainText(name);
   await expect(chair.locator('.lobby .player', { hasText: name })).toHaveCount(1);
   // A player with an account renames on the account page, not in the room.
-  await expect(player.locator('.room-footer').getByRole('button', { name: text.room.rename })).toHaveCount(0);
+  await expect(menu.getByRole('button', { name: text.room.rename })).toHaveCount(0);
 });
 
 test('a password change keeps the browser logged in, on the page and on its connection', async ({ browser }) => {
@@ -181,9 +187,9 @@ test('a password change keeps the browser logged in, on the page and on its conn
   await expect(page.locator('.profile .name')).toHaveText(name);
   // Still logged in, with the new password, in the room as before and after a reload.
   await page.goto(url);
-  await expect(page.locator('.room-footer .who')).toContainText(name);
+  await expect((await roomMenu(page)).locator('.who')).toContainText(name);
   await page.reload();
-  await expect(page.locator('.room-footer .who')).toContainText(name);
+  await expect((await roomMenu(page)).locator('.who')).toContainText(name);
   await page.goto('/account');
   await expect(page.locator('.profile .name')).toHaveText(name);
 });

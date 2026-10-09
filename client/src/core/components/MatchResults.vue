@@ -49,7 +49,7 @@ async function next(nextRules: MatchRules | null) {
         :key="line.playerId ?? `left-${index}`"
         :class="[line.title, { me: line.playerId !== null && line.playerId === room.me, left: line.left }]"
       >
-        <span class="rank">{{ line.rank ?? '\u2013' }}</span>
+        <span class="rank num">{{ line.rank ?? '\u2013' }}</span>
         <PlayerAvatar :name="line.name" :avatar="line.avatar" :size="line.title ? 'medium' : 'small'" />
         <span class="who">
           <span class="name">
@@ -59,7 +59,7 @@ async function next(nextRules: MatchRules | null) {
           <span v-if="line.title" class="title">{{ t(`match.titleNames.${line.title}`) }}</span>
           <span v-if="line.title === 'black_hole'" class="line">{{ t('match.blackHoleLine') }}</span>
         </span>
-        <span class="total">{{ points(line.total) }}</span>
+        <span class="total num">{{ points(line.total) }}</span>
       </li>
     </ol>
 
@@ -87,40 +87,54 @@ async function next(nextRules: MatchRules | null) {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  margin: var(--space-4) 0;
-  padding: var(--space-4);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-card);
+  margin: var(--space-3) 0;
+  padding: var(--space-5) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-hero);
+  background: var(--paper);
+  box-shadow: var(--shadow-3);
 }
 
 .heading {
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
 }
 
 .note,
 .wait {
   color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .ranking {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* Each player on a block; the first and the last, who get the titles, on the table's yellow. */
 .ranking li {
   display: grid;
   grid-template-columns: 2rem auto 1fr auto;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--rule);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
+}
+
+.ranking .best_paper,
+.ranking .black_hole {
+  background: var(--bg);
 }
 
 .rank {
-  color: var(--ink-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-display);
   text-align: right;
 }
 
@@ -131,47 +145,51 @@ async function next(nextRules: MatchRules | null) {
 }
 
 .name {
+  font-weight: var(--weight-bold);
   overflow-wrap: anywhere;
 }
 
 .me .name {
-  font-weight: 600;
+  font-weight: var(--weight-black);
 }
 
 .left {
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .mark {
-  color: var(--ink-3);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
   font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1.6;
 }
 
 .title {
-  font-family: var(--font-serif);
-  font-size: var(--text-lg);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
 }
 
 .best_paper .title {
-  color: var(--blue);
+  color: var(--blue-deep);
 }
 
 .black_hole .title {
-  color: var(--red);
+  color: var(--red-deep);
 }
 
 .line {
   color: var(--ink-2);
-  font-family: var(--font-serif);
-}
-
-.line:lang(en) {
-  font-style: italic;
+  font-size: var(--text-sm);
 }
 
 .total {
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-display);
 }
 
 .actions {

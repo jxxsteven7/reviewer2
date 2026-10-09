@@ -270,14 +270,28 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 <style scoped>
 .lobby-head {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-5) 0 var(--space-4);
+  padding: var(--space-4) 0;
+}
+
+.lobby-head .kicker {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
+}
+
+.sections {
+  display: grid;
+  gap: var(--space-4);
 }
 
 .groups {
   display: grid;
-  gap: 0 var(--space-6);
+  gap: var(--space-4);
 }
 
 .group,
@@ -286,26 +300,24 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 .rules,
 .desk,
 .waiting {
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--rule);
+  padding: var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
-.group {
-  padding-left: var(--space-3);
-  border-left: 3px solid var(--rule);
+.group.red .section-title {
+  color: var(--red-deep);
 }
 
-.group.red {
-  border-left-color: var(--red);
-}
-
-.group.blue {
-  border-left-color: var(--blue);
+.group.blue .section-title {
+  color: var(--blue-deep);
 }
 
 dl {
   display: grid;
-  grid-template-columns: 5.5rem 1fr;
+  grid-template-columns: 4rem minmax(0, 1fr);
   gap: var(--space-3) var(--space-3);
   margin: var(--space-3) 0 0;
 }
@@ -313,10 +325,11 @@ dl {
 /* Lined up with the middle of the 44 px row that a name or a button makes. */
 dt {
   padding-top: 11px;
-  color: var(--ink-3);
-  font-size: var(--text-sm);
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 dd {
@@ -350,7 +363,8 @@ dd {
 }
 
 .vacant {
-  color: var(--ink-3);
+  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
 dd .vacant {
@@ -369,22 +383,20 @@ dd .vacant {
   align-items: center;
   gap: 0 var(--space-3);
   margin: var(--space-3) 0 0;
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .footnote {
-  padding: var(--space-3) 0;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
 .label {
   margin-top: var(--space-3);
-  color: var(--ink-2);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--weight-black);
 }
 
 .hint {
@@ -412,12 +424,13 @@ dd .vacant {
   margin: var(--space-3) 0;
   padding: 0;
   list-style: none;
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .problems .ready {
-  color: var(--ink-2);
+  color: var(--ink);
 }
 
 .shuffle-hint {
@@ -431,17 +444,64 @@ dd .vacant {
 }
 
 .waiting p {
-  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 40rem) {
   .groups {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-/* Chinese has no true italics, and slanted characters look broken. */
-.vacant:lang(en) {
-  font-style: italic;
+/* Two columns: a match's table, the groups (or the pool) and the spectators on the left, the
+   desk, or the rules, on the right. The rows have no gap of their own, so that an empty table
+   row takes no room; the items keep their distance with margins. */
+@media (min-width: 64rem) {
+  .sections {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto 1fr;
+    gap: 0 var(--space-5);
+    align-items: start;
+  }
+
+  .sections > * {
+    margin-bottom: var(--space-4);
+  }
+
+  .sections > :deep(.match-table) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .groups,
+  .pool {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .spectators {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .footnote {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .rules {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+
+  .waiting {
+    grid-column: 2;
+    grid-row: 4 / span 2;
+  }
+
+  .desk {
+    grid-column: 2;
+    grid-row: 1 / span 5;
+  }
 }
 </style>

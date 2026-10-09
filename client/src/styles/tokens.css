@@ -1,36 +1,51 @@
-/* Design tokens: the colors, fonts, sizes, spacing and corners that every style takes its values
-   from. The interface looks like a typeset paper: white paper, black ink, hairline rules and
-   serif headings. There is only a light theme for now: a dark one would redefine these values
-   and nothing else. docs/design.md explains the choices. */
+/* Design tokens: every color, font, size, corner, border and shadow that the styles take their
+   values from. The interface looks like a party game: a yellow table, white stickers with a thick
+   ink outline and a hard shadow, and big round corners. Components never write a value of their
+   own; they only use these variables, so that another look, or a dark one, is another block that
+   redefines them and nothing else. docs/design.md explains the choices and the contrast of each
+   pair of colors. */
 :root {
-  /* The page and its quiet areas; text, secondary text and captions; hairlines; focus rings. */
+  /* The table, the stickers on it and their quiet areas; the ink, and the text on ink. */
+  --bg: #ffd23f;
   --paper: #ffffff;
-  --paper-2: #f5f6f8;
-  --ink: #15171c;
-  --ink-2: #4b505b;
-  --ink-3: #656b78;
-  --rule: #d9dce2;
-  --focus: #1f4f8f;
+  --paper-2: #f4efe6;
+  --ink: #1a1a2e;
+  --ink-2: #4b4b60;
+  --on-ink: #ffd23f;
+  --focus: #2d5bff;
 
-  /* The two groups, in carmine and Prussian blue, the inks of academic printing, and the cards
-     of neither group, each with a tint for backgrounds. Then Reviewer 2's card and its stamp. */
-  --red: #b42318;
-  --red-tint: #fbeae8;
-  --blue: #1f4f8f;
-  --blue-tint: #e7edf6;
-  --neutral: #c8ccd3;
-  --neutral-tint: #f0f1f3;
-  --r2: #15171c;
-  --stamp: #d9442b;
+  /* The two groups: a surface color, with the text that reads on it, a tint for backgrounds and
+     a deep shade for text on white or yellow. Then the cards of neither group, and Reviewer 2's
+     card with its stamp. */
+  --red: #f2543d;
+  --on-red: #1a1a2e;
+  --red-tint: #ffd6cf;
+  --red-deep: #b02a1a;
+  --blue: #2d5bff;
+  --on-blue: #ffffff;
+  --blue-tint: #d5dfff;
+  --blue-deep: #1f44d6;
+  --neutral: #bdb6a8;
+  --on-neutral: #1a1a2e;
+  --neutral-tint: #f4efe6;
+  --r2: #1a1a2e;
+  --on-r2: #ffd23f;
+  --stamp: #ffd23f;
 
-  /* Source Serif 4 is the only web font. Chinese text uses the system's fonts, because a Chinese
-     web font weighs megabytes. */
-  --font-serif:
-    'Source Serif 4 Variable', 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC', Georgia, serif;
+  /* Baloo 2 sets Latin letters and digits, ZCOOL KuaiLe sets Chinese headings, and Noto Sans SC
+     sets everything else. All three come from npm and are served by our own server, in slices
+     that browsers download only as they need them (docs/design.md). */
+  --font-display:
+    'Baloo 2 Variable', 'ZCOOL KuaiLe', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC',
+    system-ui, sans-serif;
+  --font-number: 'Baloo 2 Variable', 'Noto Sans SC Variable', system-ui, sans-serif;
   --font-sans:
-    system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC',
-    'Noto Sans SC', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    'Noto Sans SC Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui,
+    sans-serif;
+  --weight-text: 500;
+  --weight-bold: 700;
+  --weight-black: 900;
+  --weight-display: 800;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -39,6 +54,7 @@
   --text-xl: 1.375rem;
   --text-2xl: 1.75rem;
   --text-3xl: 2.25rem;
+  --text-4xl: 2.875rem;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -48,8 +64,27 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* Corners are nearly square: nothing is more rounded than a control. */
-  --radius-card: 2px;
-  --radius-control: 4px;
-  --measure: 40rem;
+  /* Outlines, corners and the hard shadows. A pressed sticker moves by its shadow's offset and
+     loses the shadow, so each shadow has a shift to match. */
+  --line: 2.5px;
+  --line-strong: 3px;
+  --radius-control: 14px;
+  --radius-card: 12px;
+  --radius-panel: 20px;
+  --radius-hero: 22px;
+  --radius-pill: 999px;
+  --shadow-1: 3px 3px 0 var(--ink);
+  --shadow-2: 5px 5px 0 var(--ink);
+  --shadow-3: 6px 6px 0 var(--ink);
+  --shift-1: 3px;
+  --shift-2: 5px;
+  --shift-3: 6px;
+  --scrim: rgb(26 26 46 / 45%);
+
+  /* How wide a page gets: forms, the home page, and rooms. */
+  --page-narrow: 40rem;
+  --page: 64rem;
+  --page-wide: 80rem;
+
+  --motion: 160ms;
 }

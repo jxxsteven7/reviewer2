@@ -150,10 +150,10 @@ function submit() {
 
 legend {
   width: 100%;
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
   padding: 0;
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .kind {
@@ -161,21 +161,21 @@ legend {
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--ink-3);
-  border-radius: var(--radius-control);
+  padding: 0 var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
 .kind:has(input:checked) {
-  border-color: var(--ink);
-  background: var(--paper-2);
-  font-weight: 500;
+  background: var(--bg);
 }
 
 .kind:has(input:focus-visible) {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 .kind input {
@@ -184,7 +184,8 @@ legend {
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 </style>

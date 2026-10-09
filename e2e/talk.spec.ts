@@ -1,12 +1,14 @@
 import type { Browser, Page } from '@playwright/test';
 import { otherTeam } from '@reviewer2/shared';
 import {
+  closeSheet,
   expectOwnGroupOnly,
   giveClue,
   interpolate,
   joinByLink,
   keyCard,
   newPlayer,
+  openGroups,
   playFor,
   seatTable,
   snapshotsOf,
@@ -31,7 +33,9 @@ async function groupOfTwo(browser: Browser) {
   const fay = await newPlayer(browser);
   const fayStates = snapshotsOf(fay);
   await joinByLink(fay, table.url, 'Fay', 'en', { watch: true });
+  await openGroups(fay);
   await fay.getByRole('button', playFor(team)).click();
+  await closeSheet(fay);
   await expect(fay.locator('.actions .who')).toHaveText(
     interpolate(text.game.you.guesser, { group: text.lobby.group[team] }),
   );

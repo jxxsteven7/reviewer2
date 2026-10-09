@@ -27,19 +27,18 @@ onMounted(loadAccount);
 
 <style scoped>
 main {
-  padding: var(--space-4) 0 var(--space-7);
+  padding: var(--space-3) 0 var(--space-7);
 }
 
 .back {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
 .loading {
   margin-top: var(--space-5);
-  color: var(--ink-3);
+  font-weight: var(--weight-bold);
 }
 </style>

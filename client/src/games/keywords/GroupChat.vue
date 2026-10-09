@@ -105,7 +105,7 @@ async function say() {
       @click="open = true"
     >
       {{ t('game.chat.open') }}
-      <span v-if="fresh" class="badge mono" aria-hidden="true">{{ fresh }}</span>
+      <span v-if="fresh" class="badge num" aria-hidden="true">{{ fresh }}</span>
     </UiButton>
 
     <UiSheet :open="open" :title="t('game.chat.title', { group })" @close="open = false">
@@ -148,7 +148,7 @@ async function say() {
               {{ t('game.chat.send') }}
             </UiButton>
           </div>
-          <p id="chat-hint" class="hint mono" :class="{ problem: tooLong }">
+          <p id="chat-hint" class="hint num" :class="{ problem: tooLong }">
             {{ tooLong ? t('errors.chat_too_long') : t('game.chat.count', { count: length, max: MAX_CHAT_LENGTH }) }}
           </p>
         </form>
@@ -160,13 +160,14 @@ async function say() {
 
 <style scoped>
 .badge {
-  min-width: 1.5em;
+  min-width: 1.6em;
   padding: 0 var(--space-1);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-pill);
   background: var(--ink);
-  color: var(--paper);
+  color: var(--on-ink);
   font-size: var(--text-xs);
-  line-height: 1.5;
+  font-weight: var(--weight-display);
+  line-height: 1.6;
   text-align: center;
 }
 
@@ -192,33 +193,38 @@ async function say() {
 .turn {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .turn-title {
-  color: var(--ink-3);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-variant-caps: all-small-caps;
-  font-weight: 400;
-  letter-spacing: 0.06em;
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
+/* Each message on a block; the viewer's own take the table's yellow. */
 .message {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
   overflow-wrap: anywhere;
+}
+
+.message.own {
+  background: var(--bg);
 }
 
 .message :deep(.avatar) {
   margin-right: var(--space-1);
-  vertical-align: -0.4em;
+  vertical-align: -0.45em;
 }
 
 .name {
   margin-right: var(--space-2);
-  font-weight: 600;
-}
-
-.own .name {
-  color: var(--ink-2);
+  font-weight: var(--weight-black);
 }
 
 .empty,
@@ -231,12 +237,11 @@ async function say() {
   flex-direction: column;
   gap: var(--space-1);
   padding-top: var(--space-3);
-  border-top: 1px solid var(--rule);
 }
 
 .label {
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .row {
@@ -247,34 +252,36 @@ async function say() {
 input {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--ink-3);
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-control);
   background: var(--paper);
   color: var(--ink);
   font: inherit;
   font-size: 16px;
+  font-weight: var(--weight-bold);
 }
 
 input:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 input[aria-invalid='true'] {
-  border-color: var(--red);
+  border-color: var(--red-deep);
 }
 
 .hint {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-xs);
   text-align: right;
 }
 
 .hint.problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-family: inherit;
+  font-weight: var(--weight-bold);
   text-align: left;
 }
 </style>

@@ -1,4 +1,4 @@
-import { createRoom, joinByLink, newPlayer, seatTable, TEXT, expect, test } from './helpers';
+import { closeSheet, createRoom, joinByLink, newPlayer, roomMenu, seatTable, TEXT, expect, test } from './helpers';
 
 // The chair closes the room for everyone (docs/architecture.md). Every page that is open hears at
 // once, a page that was offline hears when it comes back, and the number leads nowhere.
@@ -15,15 +15,16 @@ test('the chair closes the room in the middle of a game, and every page is told'
 
   // Only the chair is offered the button.
   for (const page of others.slice(0, 3)) {
-    await expect(page.getByRole('button', { name: TEXT.en.room.closeRoom })).toHaveCount(0);
+    await expect((await roomMenu(page)).getByRole('button', { name: TEXT.en.room.closeRoom })).toHaveCount(0);
+    await closeSheet(page);
   }
   // A reaction sent just before the room closes doesn't outlive it.
   const eve = table.spectator;
   await eve.locator('.role-banner').getByRole('button', { name: TEXT.en.emotes.open }).click();
   await eve.locator('[role=dialog]').getByRole('button', { name: TEXT.en.emotes.phrases.deadline }).click();
   for (const page of others) await expect(page.locator('.bubble')).toHaveCount(1);
-  await ann.getByRole('button', { name: TEXT.en.room.closeRoom }).click();
-  const sheet = ann.locator('[role=dialog]');
+  await (await roomMenu(ann)).getByRole('button', { name: TEXT.en.room.closeRoom }).click();
+  const sheet = ann.getByRole('dialog', { name: TEXT.en.room.closeRoom });
   await expect(sheet).toContainText(TEXT.en.room.closeConfirmGame);
   await sheet.getByRole('button', { name: TEXT.en.room.closeRoom }).click();
   await ann.waitForURL(/\/$/);
@@ -56,16 +57,18 @@ test("the chair's leave sheet offers to close the room instead", async ({ browse
   await joinByLink(bob, url, 'Bob', 'en');
 
   // Bob isn't the chair: his sheet only lets him leave.
-  await bob.getByRole('button', { name: TEXT.en.room.leave }).click();
-  await expect(bob.locator('[role=dialog]').getByRole('button', { name: TEXT.en.room.closeInstead })).toHaveCount(0);
-  await bob.locator('[role=dialog]').getByRole('button', { name: TEXT.en.lobby.manage.cancel }).click();
+  await (await roomMenu(bob)).getByRole('button', { name: TEXT.en.room.leave }).click();
+  const leaving = bob.getByRole('dialog', { name: TEXT.en.room.leave });
+  await expect(leaving.getByRole('button', { name: TEXT.en.room.closeInstead })).toHaveCount(0);
+  await leaving.getByRole('button', { name: TEXT.en.lobby.manage.cancel }).click();
 
-  await ann.getByRole('button', { name: TEXT.en.room.leave }).click();
-  const sheet = ann.locator('[role=dialog]');
+  await (await roomMenu(ann)).getByRole('button', { name: TEXT.en.room.leave }).click();
+  const sheet = ann.getByRole('dialog', { name: TEXT.en.room.leave });
   await expect(sheet).toContainText('Bob will chair the room');
   await sheet.getByRole('button', { name: TEXT.en.room.closeInstead }).click();
-  await expect(sheet).toContainText(TEXT.en.room.closeConfirm);
-  await sheet.getByRole('button', { name: TEXT.en.room.closeRoom }).click();
+  const closing = ann.getByRole('dialog', { name: TEXT.en.room.closeRoom });
+  await expect(closing).toContainText(TEXT.en.room.closeConfirm);
+  await closing.getByRole('button', { name: TEXT.en.room.closeRoom }).click();
   await ann.waitForURL(/\/$/);
   await expect(bob.getByText(TEXT.en.room.closed.closed)).toBeVisible();
 });

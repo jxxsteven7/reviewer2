@@ -53,14 +53,14 @@ async function copy() {
       <div class="qr">
         <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
         <p class="hint">{{ t('room.qrHint', { code: number }) }}</p>
-        <p class="link mono">{{ link }}</p>
+        <p class="link">{{ link }}</p>
         <p class="hint">{{ t('room.screenHint') }}</p>
       </div>
     </UiSheet>
 
     <UiSheet :open="showLink" :title="t('room.copyLink')" @close="showLink = false">
       <p class="hint">{{ t('room.selectLink') }}</p>
-      <input ref="linkInput" class="manual mono" :value="link" readonly @focus="linkInput?.select()" />
+      <input ref="linkInput" class="manual" :value="link" readonly @focus="linkInput?.select()" />
     </UiSheet>
   </div>
 </template>
@@ -77,7 +77,7 @@ async function copy() {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 var(--space-1);
+  padding: 0 var(--space-2);
   font-size: var(--text-sm);
 }
 
@@ -96,16 +96,18 @@ async function copy() {
 
 .link {
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   word-break: break-all;
 }
 
 .manual {
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   margin-top: var(--space-3);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--ink);
+  padding: 0 var(--space-4);
+  border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-control);
+  font: inherit;
   font-size: 16px;
 }
 </style>

@@ -16,11 +16,11 @@ const word = (index: number) => props.game.cards[index]?.word ?? '';
     <h2 class="section-title">{{ t('game.log') }}</h2>
     <ol v-if="game.history.length" reversed>
       <li v-for="record in [...game.history].reverse()" :key="record.turn" :class="record.team">
-        <span class="turn mono">[{{ record.turn }}]</span>
+        <span class="turn num">[{{ record.turn }}]</span>
         <span v-if="record.word === null" class="clue missing">{{ t('game.noClueInTime') }}</span>
         <span v-else class="clue">
           <span class="word">{{ record.word }}</span>
-          <span class="count mono">{{ record.count === 'unlimited' ? INFINITY : record.count }}</span>
+          <span class="count num">{{ record.count === 'unlimited' ? INFINITY : record.count }}</span>
         </span>
         <span v-if="record.guesses.length" class="guesses">
           <span v-for="guess in record.guesses" :key="guess.card" class="guess" :class="guess.color">
@@ -38,69 +38,82 @@ const word = (index: number) => props.game.cards[index]?.word ?? '';
 
 <style scoped>
 .clue-log {
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 ol {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin: var(--space-3) 0 0;
+  gap: var(--space-2);
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* Each clue on a block in its group's tint. */
 li {
   display: grid;
-  grid-template-columns: 2.5rem 1fr;
+  grid-template-columns: auto 1fr;
   gap: var(--space-1) var(--space-2);
-  padding-left: var(--space-2);
-  border-left: 3px solid var(--rule);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
 }
 
 li.red {
-  border-left-color: var(--red);
+  background: var(--red-tint);
 }
 
 li.blue {
-  border-left-color: var(--blue);
+  background: var(--blue-tint);
 }
 
 .turn {
-  color: var(--ink-3);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .clue {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
 }
 
 .word {
-  font-family: var(--font-serif);
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-black);
 }
 
 .count {
-  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-weight: var(--weight-display);
 }
 
 .missing,
 .timed-out {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .timed-out {
   grid-column: 2;
-}
-
-/* Chinese has no true italics, and slanted characters look broken. */
-.missing:lang(en),
-.timed-out:lang(en) {
-  font-style: italic;
 }
 
 .guesses {
@@ -108,8 +121,8 @@ li.blue {
   flex-wrap: wrap;
   grid-column: 2;
   gap: var(--space-1) var(--space-3);
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .guess {
@@ -119,29 +132,26 @@ li.blue {
 }
 
 .swatch {
-  width: 10px;
-  height: 10px;
-  border: 1px solid var(--ink-3);
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
 }
 
 /* The swatch takes the card's color, never the group's, which the li carries too. */
 .guess.red .swatch {
-  border-color: var(--red);
   background: var(--red);
 }
 
 .guess.blue .swatch {
-  border-color: var(--blue);
   background: var(--blue);
 }
 
 .guess.neutral .swatch {
-  border-color: var(--neutral);
   background: var(--neutral);
 }
 
 .guess.reviewer2 .swatch {
-  border-color: var(--r2);
   background: var(--r2);
 }
 
@@ -155,7 +165,6 @@ li.blue {
 }
 
 .empty {
-  margin-top: var(--space-2);
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 </style>

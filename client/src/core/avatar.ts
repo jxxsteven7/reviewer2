@@ -4,9 +4,9 @@ import { AVATAR_SIZE, AVATAR_TARGET_BYTES, MAX_AVATAR_BYTES, usernameKey } from 
 // guest, gets a default one, drawn here from the name: its first character on a color that the
 // name chooses, the same color for the same name everywhere, in any case or width.
 
-// Dark enough for white text on each of them, at a contrast of at least 4.5:1, and none of them
-// the reds and blues that stand for the groups.
-export const AVATAR_COLORS = ['#2f6b3a', '#6b3fa0', '#8a4b00', '#0f6870', '#a2305e', '#4b505b', '#5a5a14', '#3b4a9a'];
+// Bright, so that the ink initial reads on each of them at a contrast of at least 4.5:1 (the
+// test checks it), and none of them the red, the blue or the yellow that the interface uses.
+export const AVATAR_COLORS = ['#f5a524', '#5fd3a0', '#f78fb3', '#7cc8f5', '#b8e05a', '#c9a6f5', '#ffa07a', '#5fd3e0'];
 
 const segmenter =
   typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;

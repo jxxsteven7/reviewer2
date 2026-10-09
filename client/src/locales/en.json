@@ -6,39 +6,38 @@
   "language": {
     "label": "Language",
     "zh": "中文",
-    "en": "English"
+    "en": "English",
+    "short": {
+      "zh": "中文",
+      "en": "EN"
+    }
   },
   "gate": {
     "title": "Choose a language",
     "description": "The interface and the words on the cards will be in English."
   },
   "home": {
-    "intro": "Online party games about academic life, played in the browser. Everyone joins the same room from their own phone or laptop: pick a nickname and you're in. An account is optional.",
-    "contents": "Contents",
-    "players": "4 to 30 players",
+    "intro": "Everyone joins the same room from their own phone. Pick a nickname and you're in.",
+    "players": "4–30 players",
     "newRoom": "New room",
     "forthcoming": "Forthcoming",
     "games": {
       "keywords": {
         "name": "Double Blind",
-        "summary": "Two research groups race to find their keywords from short clues. Reveal Reviewer 2, and your paper is rejected."
+        "summary": "Two research groups race to find all their keywords first. Reveal Reviewer 2, and your paper is rejected on the spot."
       },
       "impostor": {
-        "name": "Spot the Impostor",
-        "summary": "Everyone gets the same term except one, who gets a close cousin."
+        "name": "Spot the Impostor"
       },
       "titles": {
-        "name": "Real or Fake",
-        "summary": "Tell real paper titles from invented ones."
+        "name": "Real or Fake"
       },
       "abstracts": {
-        "name": "Bluff the Abstract",
-        "summary": "Write a convincing abstract for a paper nobody has read."
+        "name": "Bluff the Abstract"
       }
     },
     "join": {
-      "title": "Join a room",
-      "label": "Manuscript number",
+      "label": "Got a manuscript number? Join right in.",
       "placeholder": "K7QX",
       "submit": "Join",
       "invalid": "Enter the 4 characters after R2-."
@@ -107,7 +106,8 @@
     "closeInstead": "Close the room for everyone",
     "closeRoom": "Close the room",
     "closeConfirm": "Close this room for everyone? Everyone in it, big screens included, is told that it has closed, and its number stops working.",
-    "closeConfirmGame": "Close this room for everyone? The game in progress ends without a winner. Everyone in it, big screens included, is told that the room has closed, and its number stops working."
+    "closeConfirmGame": "Close this room for everyone? The game in progress ends without a winner. Everyone in it, big screens included, is told that the room has closed, and its number stops working.",
+    "menu": "Room"
   },
   "lobby": {
     "kicker": "Waiting room",
@@ -216,15 +216,15 @@
   "game": {
     "turn": "Turn {turn}",
     "phase": {
-      "clue": "{group}: the PI is thinking of a clue",
+      "clue": "{group} is giving a clue",
       "guess": "{group} is guessing",
       "over": "The game is over"
     },
     "clue": "Clue",
-    "guessesLeft": "Guesses left: {count}",
+    "guessesLeft": "{count} more to reveal",
     "noLimit": "No limit on guesses",
     "clock": "{seconds} seconds left",
-    "remaining": "{count} to find",
+    "remaining": "{count}",
     "card": {
       "red": "Red",
       "blue": "Blue",
@@ -362,7 +362,9 @@
       "won": "won",
       "wrong": "other group's card ×{count}",
       "reviewer2": "Reviewer 2"
-    }
+    },
+    "choice": "{name} chose “{word}”",
+    "choiceJoin": ", "
   },
   "settings": {
     "title": "Rules of this room",

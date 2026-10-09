@@ -106,7 +106,7 @@ function give() {
         :key="String(option)"
         type="button"
         role="radio"
-        class="count mono"
+        class="count num"
         :class="{ chosen: count === option }"
         :aria-checked="count === option"
         :aria-label="option === 'unlimited' ? t('game.unlimited') : String(option)"
@@ -129,26 +129,35 @@ function give() {
 }
 
 .label {
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .word {
-  min-height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--ink);
+  min-height: 50px;
+  padding: 0 var(--space-4);
+  border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-control);
-  font-family: var(--font-serif);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
   font-size: max(16px, var(--text-lg));
+  font-weight: var(--weight-black);
+}
+
+.word:focus-visible {
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 .word[aria-invalid='true'] {
-  border-color: var(--red);
+  border-color: var(--red-deep);
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .warning {
@@ -157,33 +166,45 @@ function give() {
 }
 
 .limit {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-xs);
 }
 
+/* The numbers on offer, as round stickers. */
 .counts {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 .count {
   flex: 1 1 0;
   min-width: 0;
-  max-width: 44px;
-  min-height: 40px;
+  max-width: 48px;
+  min-height: 44px;
   padding: 0;
-  border: 1px solid var(--ink-3);
-  border-radius: var(--radius-control);
+  border: var(--line) solid var(--ink);
+  border-radius: 50%;
   background: var(--paper);
-  font-size: var(--text-md);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-display);
   cursor: pointer;
+  transition:
+    transform var(--motion),
+    box-shadow var(--motion);
+}
+
+.count:active,
+.count.chosen {
+  transform: translate(var(--shift-1), var(--shift-1));
+  box-shadow: none;
 }
 
 .count.chosen {
-  border-color: var(--ink);
   background: var(--ink);
-  color: var(--paper);
+  color: var(--on-ink);
 }
 
 .clue-panel > :deep(button[type='submit']) {

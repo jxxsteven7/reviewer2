@@ -83,7 +83,7 @@ const letters = computed(() => {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  margin: var(--space-4) 0;
+  margin: var(--space-3) 0;
 }
 
 .letters {
@@ -97,17 +97,28 @@ const letters = computed(() => {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-card);
+  padding: var(--space-5) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
-.letter.red {
-  border-left: 4px solid var(--red);
+.kicker {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--paper-2);
+  font-size: var(--text-xs);
 }
 
-.letter.blue {
-  border-left: 4px solid var(--blue);
+.red .kicker {
+  background: var(--red-tint);
+  color: var(--red-deep);
+}
+
+.blue .kicker {
+  background: var(--blue-tint);
+  color: var(--blue-deep);
 }
 
 .verdict {
@@ -115,11 +126,11 @@ const letters = computed(() => {
 }
 
 .red .verdict {
-  color: var(--red);
+  color: var(--red-deep);
 }
 
 .blue .verdict {
-  color: var(--blue);
+  color: var(--blue-deep);
 }
 
 .withdrawn .verdict {
@@ -128,28 +139,24 @@ const letters = computed(() => {
 
 .body {
   max-width: 34rem;
-  font-family: var(--font-serif);
   font-size: var(--text-lg);
+  line-height: 1.6;
 }
 
 .signature {
   align-self: flex-end;
-  color: var(--ink-2);
-  font-family: var(--font-serif);
-}
-
-.signature:lang(en) {
-  font-style: italic;
+  font-weight: var(--weight-bold);
 }
 
 .wait {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .compact .letter {
   gap: var(--space-1);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
 }
 
 .compact .verdict {

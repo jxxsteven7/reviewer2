@@ -64,7 +64,7 @@ const sections = computed(() => [
 }
 
 .rules .section-title {
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
 }
 
 .rules p {
