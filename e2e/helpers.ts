@@ -326,14 +326,25 @@ export async function joinByLink(
   await expect(page.locator('.lobby, .keywords-game').first()).toBeVisible();
 }
 
-// A player in the waiting room takes a seat. Whoever came to play has been given a student's seat
-// in one of the groups already, and the page offers no button for the seat a player is in.
+// A player in the waiting room takes a seat, and the page's snapshots confirm it. While the others
+// take their seats at the same time, the groups' lists grow and shrink, and a button can move out
+// from under a click that was aimed while it stood still; such a click is made again. Whoever came
+// to play has been given a student's seat in one of the groups already, which may be the seat
+// asked for, and the page offers no button for the seat a player is in.
 export async function sit(page: Page, team: Team, role: 'captain' | 'guesser', language: Language): Promise<void> {
   const text = TEXT[language];
   const label = role === 'captain' ? text.lobby.takeCaptain : text.lobby.joinAsGuesser;
   const button = page.locator(`.group.${team}`).getByRole('button', { name: label });
-  if (role === 'guesser' && (await button.count()) === 0) return;
-  await button.click();
+  const seated = () => {
+    const state = snapshotsOf(page).at(-1);
+    const seat = state?.me ? (state.data as KeywordsRoomData).seats[state.me] : undefined;
+    return seat?.team === team && seat.role === role;
+  };
+  await expect(async () => {
+    if (seated()) return;
+    await button.click({ timeout: 2_000 });
+    await expect.poll(seated, { timeout: 2_000 }).toBe(true);
+  }).toPass();
 }
 
 export interface Table {
