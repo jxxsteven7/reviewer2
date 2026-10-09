@@ -1,5 +1,6 @@
 import type { FeedbackKind, FeedbackPage, Language } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
+import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 
 // Feedback from players, kept for the author to read on the status page (docs/architecture.md).
 // What is kept is what the player wrote and what came along by itself, and nothing that says who
@@ -9,9 +10,12 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 const DAY_MS = 24 * 60 * 60_000;
 
 export interface FeedbackLimits {
-  // Past either of these, no more feedback is taken, so that it can't fill the disk.
+  // Past any of these, no more feedback is taken, so that it can't fill the disk: as many as
+  // `maxEntries`, more than `maxBytes` of feedback, counting what each piece holds, and a whole
+  // database larger than `maxDatabaseBytes`, which accounts share with it.
   maxEntries: number;
   maxBytes: number;
+  maxDatabaseBytes: number;
   // How long a contact is kept.
   contactMs: number;
 }
@@ -19,6 +23,7 @@ export interface FeedbackLimits {
 export const DEFAULT_FEEDBACK_LIMITS: FeedbackLimits = {
   maxEntries: 10_000,
   maxBytes: 50 * 2 ** 20,
+  maxDatabaseBytes: MAX_DATABASE_BYTES,
   contactMs: 90 * DAY_MS,
 };
 
@@ -52,7 +57,7 @@ export class FeedbackStore {
   readonly #clear: StatementSync;
 
   constructor(
-    db: DatabaseSync,
+    private readonly db: DatabaseSync,
     private readonly now: () => number = () => Date.now(),
     readonly limits: FeedbackLimits = DEFAULT_FEEDBACK_LIMITS,
   ) {
@@ -61,16 +66,22 @@ export class FeedbackStore {
         'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     );
     this.#count = db.prepare('SELECT count(*) AS count FROM feedback');
-    this.#size = db.prepare('SELECT page_count * page_size AS bytes FROM pragma_page_count(), pragma_page_size()');
+    // What the feedback holds, in bytes of UTF-8, which is what it takes in the file, give or take
+    // the pages around it.
+    this.#size = db.prepare(
+      'SELECT coalesce(sum(length(CAST(text AS BLOB)) + coalesce(length(CAST(contact AS BLOB)), 0) + ' +
+        'coalesce(length(CAST(user_agent AS BLOB)), 0) + length(version)), 0) AS bytes FROM feedback',
+    );
     this.#latest = db.prepare(`SELECT ${COLUMNS} FROM feedback WHERE id < ? ORDER BY id DESC LIMIT ?`);
     this.#clear = db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?');
   }
 
-  // Why no more feedback can be taken, or null while it can. The size is the whole database's.
-  full(): 'entries' | 'size' | null {
+  // Why no more feedback can be taken, or null while it can.
+  full(): 'entries' | 'size' | 'database' | null {
     if (this.count() >= this.limits.maxEntries) return 'entries';
     const { bytes } = this.#size.get() as { bytes: number };
-    return bytes > this.limits.maxBytes ? 'size' : null;
+    if (bytes > this.limits.maxBytes) return 'size';
+    return databaseBytes(this.db) > this.limits.maxDatabaseBytes ? 'database' : null;
   }
 
   // Keeps the feedback and returns its id.

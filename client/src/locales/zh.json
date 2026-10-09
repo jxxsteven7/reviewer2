@@ -380,6 +380,8 @@
     "name_required": "请输入昵称。",
     "name_invalid": "昵称需要 1 到 16 个可见字符。",
     "name_taken": "房间里已经有人用了这个昵称。",
+    "name_reserved": "这个名字已经被注册了。换一个名字，或者登录。",
+    "account_name": "你在房间里的名字就是用户名，请到个人页修改。",
     "removed_recently": "你刚被移出这个房间，两分钟后才能回来。",
     "not_member": "你不在这个房间里。",
     "not_chair": "只有主持可以这样做。",

@@ -1,23 +1,14 @@
-import { otherTeam, type GameResult, type Team } from '@reviewer2/shared';
+import type { GameResult, Team, Verdict } from '@reviewer2/shared';
 
-// The decision letters at the end of a game (DecisionLetter.vue), one for each group. The winner
-// is accepted, and the more cards the other group still had to find, the better the slot: an oral
-// with 4 or more, a spotlight with 2 or 3, a poster with 1. The loser is desk rejected for
-// revealing Reviewer 2, and rejected when the other group found all its cards first. A game that
-// the chair withdrew is withdrawn for everyone.
-export type Verdict = 'oral' | 'spotlight' | 'poster' | 'deskReject' | 'reject' | 'withdrawn';
+// The decision letters at the end of a game (DecisionLetter.vue), one for each group. Which
+// verdict a group gets is shared with the server, which keeps it on each player's record
+// (shared/src/games/keywords/letters.ts); which letter of that verdict the group reads is the
+// client's alone.
+export { verdictFor, type Verdict } from '@reviewer2/shared';
 
 // How many letters each verdict has to choose from, under game.letter.bodies in the locale files,
 // numbered from 1.
 export const LETTERS_PER_VERDICT = 3;
-
-export function verdictFor(result: GameResult, remaining: Record<Team, number>, team: Team): Verdict {
-  if (result.reason === 'withdrawn' || result.winner === null) return 'withdrawn';
-  if (result.winner !== team) return result.reason === 'reviewer2' ? 'deskReject' : 'reject';
-  const left = remaining[otherTeam(team)];
-  if (left >= 4) return 'oral';
-  return left >= 2 ? 'spotlight' : 'poster';
-}
 
 // Where a group's letters are, under game.letter.bodies in the locale files. The loser's and a
 // withdrawn game's go by the verdict alone. The winner's also go by how the game ended: a group

@@ -380,6 +380,8 @@
     "name_required": "Enter a name.",
     "name_invalid": "Use 1 to 16 visible characters.",
     "name_taken": "Someone in the room already has that name.",
+    "name_reserved": "That name belongs to an account. Choose another, or log in.",
+    "account_name": "Your name in rooms is your username. Change it on your account page.",
     "removed_recently": "You were removed from this room. You can come back in two minutes.",
     "not_member": "You're not in this room.",
     "not_chair": "Only the chair can do that.",

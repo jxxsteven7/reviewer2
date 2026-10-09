@@ -477,7 +477,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       bucket: new TokenBucket(limits.messagesPerSecond, limits.messageBurst, now),
     };
     socket.data = conn;
-    const session: Session = issued === null ? { version } : { token: issued, version };
+    const session: Session = issued === null ? { version, account: null } : { token: issued, version, account: null };
     socket.emit('session', session);
 
     safely('handshake', () => comeBack(socket, auth));

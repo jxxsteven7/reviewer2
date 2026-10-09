@@ -123,6 +123,22 @@ function configure(db: DatabaseSync): string {
   return journal;
 }
 
+// The largest the database may grow (docs/architecture.md). Past it, the server keeps nothing new:
+// no feedback, no new accounts and no records of games, so that nothing can fill the disk. What
+// is there already goes on working.
+export const MAX_DATABASE_BYTES = 2 ** 30;
+
+// The size of the database file, in bytes, as SQLite counts its pages. A database in memory has
+// one too.
+export function databaseBytes(db: DatabaseSync): number {
+  const { bytes } = db
+    .prepare('SELECT page_count * page_size AS bytes FROM pragma_page_count(), pragma_page_size()')
+    .get() as {
+    bytes: number;
+  };
+  return bytes;
+}
+
 export function schemaVersion(db: DatabaseSync): number {
   return (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
 }

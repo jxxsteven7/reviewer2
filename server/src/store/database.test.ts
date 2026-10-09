@@ -61,7 +61,15 @@ describe('a database in DATA_DIR', () => {
       beforeMigration: null,
     });
     // sqlite_sequence is SQLite's own, for the ids that are never given out twice.
-    expect(tables(database.db)).toEqual(['feedback', 'sqlite_sequence']);
+    expect(tables(database.db)).toEqual([
+      'accounts',
+      'email_tokens',
+      'feedback',
+      'game_records',
+      'sessions',
+      'sqlite_sequence',
+      'titles',
+    ]);
     expect(schemaVersion(database.db)).toBe(MIGRATIONS.length);
     expect(pragma(database.db, 'busy_timeout')).toBe(BUSY_TIMEOUT_MS);
     expect(pragma(database.db, 'foreign_keys')).toBe(1);
@@ -128,6 +136,36 @@ describe('a database in DATA_DIR', () => {
     expect(schemaVersion(snapshot)).toBe(1);
     expect(snapshot.prepare('SELECT * FROM a').all()).toEqual([{ x: 1 }]);
     snapshot.close();
+  });
+
+  test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
+    const first = await open(dir, MIGRATIONS.slice(0, 1));
+    first.db.exec(
+      "INSERT INTO feedback VALUES (7, 'now', 'bug', 'Keep me', 'me@example.com', 'v1', 'zh', 'room', 'UA')",
+    );
+    first.db.close();
+
+    const migrated = await open(dir);
+    expect(migrated).toMatchObject({ schema: 2, migratedFrom: 1 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v2.db'));
+    expect(migrated.db.prepare('SELECT id, text, contact FROM feedback').all()).toEqual([
+      { id: 7, text: 'Keep me', contact: 'me@example.com' },
+    ]);
+    expect(tables(migrated.db)).toEqual(expect.arrayContaining(['accounts', 'sessions', 'game_records', 'titles']));
+    expect(migrated.db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    // Everything of an account goes with it.
+    const { db } = migrated;
+    db.exec(
+      "INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now')",
+    );
+    db.exec("INSERT INTO sessions VALUES (x'01', 1, 'now', 'now')");
+    db.exec("INSERT INTO email_tokens VALUES (x'02', 1, 'reset', NULL, 'later')");
+    db.exec("INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral')");
+    db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', NULL, 'now')");
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    for (const table of ['sessions', 'email_tokens', 'game_records', 'titles']) {
+      expect(db.prepare(`SELECT count(*) AS count FROM ${table}`).get(), table).toEqual({ count: 0 });
+    }
   });
 
   test('is left as it was when a migration fails', async () => {
@@ -257,7 +295,15 @@ describe('a database in memory', () => {
       schema: MIGRATIONS.length,
       beforeMigration: null,
     });
-    expect(tables(database.db)).toEqual(['feedback', 'sqlite_sequence']);
+    expect(tables(database.db)).toEqual([
+      'accounts',
+      'email_tokens',
+      'feedback',
+      'game_records',
+      'sessions',
+      'sqlite_sequence',
+      'titles',
+    ]);
     expect(readdirSync(dir)).toEqual([]);
     expect(truncateWal(database.db)).toBe(true);
   });
