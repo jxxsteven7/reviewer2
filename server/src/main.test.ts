@@ -86,6 +86,13 @@ describe('starting', () => {
     expect(exits).toEqual([]);
   });
 
+  test('says when the limit on new accounts is raised, and when the login cookie is not Secure', async () => {
+    await start({ ACCOUNTS_PER_HOUR: '100', COOKIE_SECURE: '0' });
+    expect(logged('accounts_per_hour_raised')).toEqual({ accountsPerHour: 100, default: 5 });
+    expect(logged('cookies_not_secure')).toEqual({ hint: 'only for plain HTTP, as in development' });
+    expect(logged('listening')).toMatchObject({ accountsPerHour: 100, cookieSecure: false });
+  });
+
   test('with DATA_DIR keeps the database there, from one start to the next', async () => {
     const data = join(dir, 'data');
     mkdirSync(data);

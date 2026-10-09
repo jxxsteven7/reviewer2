@@ -1,5 +1,7 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { basename } from 'node:path';
+import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
+import { Accounts } from './accounts/service';
 import { loadConfig } from './config';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
 import { loadWordLibrary } from './core/words';
@@ -36,6 +38,7 @@ export interface MainOptions {
 export interface Running {
   server: AppServer;
   feedback: FeedbackStore;
+  accounts: Accounts;
   // Stops the server, closes the database and ends the process: with 0 when all of that went
   // well, and with 1 when it failed or took too long.
   stop(signal: string): Promise<void>;
@@ -84,29 +87,47 @@ export async function main({
   const feedback = new FeedbackStore(db);
   const snapshots = database.snapshots === null ? null : new Snapshots(db, database.snapshots, log);
 
-  // Clears the contacts that have been kept for 90 days. Secure delete overwrites them in the
-  // database file, but the WAL beside it still holds the pages as they were before, until a
-  // checkpoint writes them back and a truncation drops them. That can't be done while another
-  // connection is in the middle of the database, so it is tried again every hour until it is,
-  // and the log says each time whether it was.
-  let walHoldsContacts = false;
+  // Secure delete overwrites what is deleted in the database file, such as a contact that has been
+  // kept for 90 days or an account, but the WAL beside it still holds the pages as they were
+  // before, until a checkpoint writes them back and a truncation drops them. That can't be done
+  // while another connection is in the middle of the database, so it is tried again every hour
+  // until it is, with the contacts, and the log says each time whether it was.
+  let walHoldsDeleted = false;
+  const dropFromWal = (): boolean => {
+    walHoldsDeleted = !truncateWal(db);
+    return !walHoldsDeleted;
+  };
   const clearContacts = () => {
     const count = feedback.clearContacts();
-    if (count > 0) walHoldsContacts = true;
-    if (!walHoldsContacts) return;
-    const walTruncated = truncateWal(db);
-    if (walTruncated) walHoldsContacts = false;
-    log('contacts_cleared', { count, walTruncated });
+    if (count === 0 && !walHoldsDeleted) return;
+    log('contacts_cleared', { count, walTruncated: dropFromWal() });
   };
+
+  const { accountsPerHour } = config;
+  if (accountsPerHour > DEFAULT_ACCOUNT_LIMITS.registrationsPerHour) {
+    log('accounts_per_hour_raised', { accountsPerHour, default: DEFAULT_ACCOUNT_LIMITS.registrationsPerHour });
+  }
+  const accounts = new Accounts({
+    db,
+    now: () => performance.now(),
+    log,
+    limits: { ...DEFAULT_ACCOUNT_LIMITS, registrationsPerHour: accountsPerHour },
+    deleted: () => {
+      walHoldsDeleted = true;
+      dropFromWal();
+    },
+  });
 
   let server: AppServer;
   try {
     clearContacts();
+    accounts.prune();
     server = createAppServer({
       ...config,
       words,
       games: [keywordsGame],
       feedback,
+      accounts,
       socketLimits: {
         ...DEFAULT_SOCKET_LIMITS,
         roomsPerMinute: config.roomsPerMinute,
@@ -137,6 +158,8 @@ export async function main({
         trustProxy: config.trustProxy,
         roomsPerMinute: config.roomsPerMinute,
         feedbackPer10Minutes: config.feedbackPerWindow,
+        accountsPerHour,
+        cookieSecure: config.cookieSecure,
       });
       resolve(true);
     });
@@ -149,15 +172,21 @@ export async function main({
   }
 
   const timers = [
-    // Closes idle rooms, drops long-gone players from waiting rooms and passes on absent chairs.
-    setInterval(() => server.sockets.sweep(), 60_000),
-    // Every hour, the contacts that have been kept for 90 days are cleared, and then a snapshot
-    // is taken, so that no new snapshot has them. Neither may end the process when it fails.
+    // Closes idle rooms, drops long-gone players from waiting rooms and passes on absent chairs,
+    // and forgets the counts of the limits whose time has run out.
+    setInterval(() => {
+      server.sockets.sweep();
+      accounts.counters.prune();
+    }, 60_000),
+    // Every hour, the contacts that have been kept for 90 days are cleared, the logins and the
+    // links in mails that have ended are deleted, and then a snapshot is taken, so that no new
+    // snapshot has them. None of it may end the process when it fails.
     setInterval(() => {
       try {
         clearContacts();
+        accounts.prune();
       } catch (error) {
-        log('error', { where: 'contacts', message: describe(error) });
+        log('error', { where: 'housekeeping', message: describe(error) });
       }
       void snapshots?.take();
     }, housekeepingMs),
@@ -174,7 +203,7 @@ export async function main({
 
   let status: HttpServer | null = null;
   if (statusPort !== null && history !== null) {
-    const page = createServer(createStatusHandler(server.stats, history, feedback, log));
+    const page = createServer(createStatusHandler(server.stats, history, feedback, log, () => accounts.store.count()));
     status = page;
     // The page is the operator's alone. A port that can't be opened, because something else has
     // it, is logged, and the game goes on without the page: the listen error would otherwise end
@@ -230,5 +259,5 @@ export async function main({
   if (signals) {
     for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => void stop(signal));
   }
-  return { server, feedback, stop };
+  return { server, feedback, accounts, stop };
 }

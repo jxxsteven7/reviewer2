@@ -2,6 +2,9 @@ import type { AddressInfo } from 'node:net';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Ack, ClosedReason, EmoteEvent, RoomView, Session } from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
+import { DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from '../src/accounts/limits';
+import { PasswordHasher } from '../src/accounts/passwords';
+import { Accounts } from '../src/accounts/service';
 import type { GameModule } from '../src/core/game';
 import { seededRng, type Rng } from '../src/core/random';
 import type { RoomLimits } from '../src/core/rooms';
@@ -26,8 +29,13 @@ const list = (id: string, count: number): WordListData => ({
 
 export const testWords = () => new WordLibrary([list('general', 40), list('tiny', 2)]);
 
+// Hashes that take a millisecond, rather than a tenth of a second, so that tests can make many.
+export const fastHasher = (concurrency = 2, queue = 32) =>
+  new PasswordHasher({ log2N: 10, r: 8, p: 1 }, concurrency, queue);
+
 export interface TestServer {
   app: AppServer;
+  accounts: Accounts;
   // The feedback that the server keeps, in a database in memory, on the system's clock.
   feedback: FeedbackStore;
   db: DatabaseSync;
@@ -50,6 +58,11 @@ export async function startServer(
     roomsPerMinute?: number;
     socketLimits?: Partial<SocketLimits>;
     feedbackLimits?: Partial<FeedbackLimits>;
+    accountLimits?: Partial<AccountLimits>;
+    hasher?: PasswordHasher;
+    cookieSecure?: boolean;
+    // The system's clock for what accounts keep, such as how old a login is.
+    clock?: () => number;
     rng?: Rng;
   } = {},
 ): Promise<TestServer> {
@@ -69,6 +82,14 @@ export async function startServer(
   };
   const { db } = await openDatabase(null);
   const feedback = new FeedbackStore(db, undefined, { ...DEFAULT_FEEDBACK_LIMITS, ...options.feedbackLimits });
+  const accounts = new Accounts({
+    db,
+    now,
+    ...(options.clock && { clock: options.clock }),
+    log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
+    limits: { ...DEFAULT_ACCOUNT_LIMITS, ...options.accountLimits },
+    hasher: options.hasher ?? fastHasher(),
+  });
   const socketLimits = { ...DEFAULT_SOCKET_LIMITS, ...options.socketLimits };
   if (options.roomsPerMinute !== undefined) socketLimits.roomsPerMinute = options.roomsPerMinute;
   let app: AppServer;
@@ -82,7 +103,9 @@ export async function startServer(
       now,
       timers,
       trustProxy: options.trustProxy ?? false,
+      cookieSecure: options.cookieSecure ?? false,
       feedback,
+      accounts,
       socketLimits,
       ...(options.limits ? { limits: options.limits } : {}),
       log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
@@ -95,6 +118,7 @@ export async function startServer(
   const { port } = app.http.address() as AddressInfo;
   return {
     app,
+    accounts,
     feedback,
     db,
     url: `http://127.0.0.1:${port}`,
@@ -219,4 +243,70 @@ export async function joinRoom(url: string, code: string, name: string, payload:
   if (!reply.ok) throw new Error(`could not join: ${reply.error}`);
   await client.waitFor((state) => state.code === code);
   return client;
+}
+
+export interface ApiResponse {
+  status: number;
+  body: Reply & Record<string, unknown>;
+  // The Set-Cookie header, if there was one.
+  cookie: string | undefined;
+}
+
+// A browser's side of the account API: requests that come from the page, as a browser sends them,
+// with the login cookie that the last answer set. `headers` replace or add to what a browser
+// would send, and leave out what they give as ''.
+export class Browser {
+  cookie = '';
+
+  constructor(
+    readonly url: string,
+    readonly ip?: string,
+  ) {}
+
+  // The secret in the login cookie, as the server set it.
+  get secret(): string {
+    return this.cookie.split('=')[1] ?? '';
+  }
+
+  async request(
+    path: string,
+    body?: unknown,
+    headers: Record<string, string> = {},
+    method = body === undefined ? 'GET' : 'POST',
+  ): Promise<ApiResponse> {
+    const host = new URL(this.url).host;
+    // A header given as '' is left out.
+    const sent = Object.fromEntries(
+      Object.entries({
+        ...(method === 'POST' ? { origin: `http://${host}`, 'content-type': 'application/json' } : {}),
+        ...(this.cookie ? { cookie: this.cookie } : {}),
+        ...(this.ip ? { 'x-forwarded-for': this.ip } : {}),
+        ...headers,
+      }).filter(([, value]) => value !== ''),
+    );
+    const response = await fetch(`${this.url}${path}`, {
+      method,
+      headers: sent,
+      ...(body === undefined ? {} : { body: typeof body === 'string' ? body : JSON.stringify(body) }),
+    });
+    const cookie = response.headers.get('set-cookie') ?? undefined;
+    if (cookie !== undefined) {
+      const [pair = ''] = cookie.split(';');
+      this.cookie = cookie.includes('Max-Age=0') ? '' : pair;
+    }
+    const text = await response.text();
+    return { status: response.status, body: (text ? JSON.parse(text) : {}) as ApiResponse['body'], cookie };
+  }
+
+  register(username: string, password = 'correct horse') {
+    return this.request('/api/register', { username, password });
+  }
+
+  logIn(username: string, password = 'correct horse') {
+    return this.request('/api/login', { username, password });
+  }
+
+  async account() {
+    return (await this.request('/api/account')).body.account as Record<string, unknown> | null;
+  }
 }

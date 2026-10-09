@@ -1,4 +1,5 @@
 import { join, resolve } from 'node:path';
+import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
 
 // Settings come from environment variables; docs/development.md lists them.
@@ -8,8 +9,12 @@ export interface Config {
   publicDir: string;
   wordsDir: string;
   trustProxy: boolean;
+  // Whether the login cookie is Secure: on unless the server is served over plain HTTP.
+  cookieSecure: boolean;
   roomsPerMinute: number;
   feedbackPerWindow: number;
+  // How many accounts one address may create in an hour (docs/architecture.md).
+  accountsPerHour: number;
   // Where the database and its snapshots are kept, or null for a database in memory, which is
   // lost when the server stops (docs/architecture.md).
   dataDir: string | null;
@@ -45,9 +50,10 @@ function wholeNumber<Fallback extends number | null>(
 // A switch is on or off and nothing else. A value that is neither stops the server, as a bad PORT
 // does: TRUST_PROXY=yes that quietly meant "off" would leave every player behind a reverse proxy
 // sharing the limits of one address.
-function flag(name: string, value: string | undefined): boolean {
+function flag(name: string, value: string | undefined, fallback = false): boolean {
   const text = (value ?? '').trim().toLowerCase();
-  if (['', '0', 'false', 'no', 'off'].includes(text)) return false;
+  if (text === '') return fallback;
+  if (['0', 'false', 'no', 'off'].includes(text)) return false;
   if (['1', 'true', 'yes', 'on'].includes(text)) return true;
   throw new Error(`${name} must be 1 or 0, not "${value}"`);
 }
@@ -64,6 +70,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     wordsDir: env.WORDS_DIR || join(root, 'words'),
     // Only behind a reverse proxy that sets X-Forwarded-For; see core/clientIp.ts.
     trustProxy: flag('TRUST_PROXY', env.TRUST_PROXY),
+    // Off only where the game is served over plain HTTP, as in development: a browser drops a
+    // Secure cookie that comes over HTTP from anywhere but localhost.
+    cookieSecure: flag('COOKIE_SECURE', env.COOKIE_SECURE, true),
     // How many times a minute one address may try to create a room (docs/architecture.md).
     roomsPerMinute: wholeNumber('ROOMS_PER_MINUTE', env.ROOMS_PER_MINUTE, DEFAULT_SOCKET_LIMITS.roomsPerMinute),
     // How much feedback one address may send in 10 minutes, which is the window of the default.
@@ -71,6 +80,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       'FEEDBACK_PER_10_MINUTES',
       env.FEEDBACK_PER_10_MINUTES,
       DEFAULT_SOCKET_LIMITS.feedbackPerWindow,
+    ),
+    accountsPerHour: wholeNumber(
+      'ACCOUNTS_PER_HOUR',
+      env.ACCOUNTS_PER_HOUR,
+      DEFAULT_ACCOUNT_LIMITS.registrationsPerHour,
     ),
     // A relative path is taken from the repository's root, as the defaults above are, wherever the
     // server is started from: `npm run dev` starts it in server/.

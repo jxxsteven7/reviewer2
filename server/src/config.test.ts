@@ -109,6 +109,39 @@ describe('FEEDBACK_PER_10_MINUTES', () => {
   });
 });
 
+describe('ACCOUNTS_PER_HOUR', () => {
+  test('defaults to 5', () => {
+    expect(loadConfig({}).accountsPerHour).toBe(5);
+    expect(loadConfig({ ACCOUNTS_PER_HOUR: ' ' }).accountsPerHour).toBe(5);
+  });
+
+  test('is a whole number from 1 up', () => {
+    expect(loadConfig({ ACCOUNTS_PER_HOUR: '1000' }).accountsPerHour).toBe(1000);
+    for (const value of ['0', '-1', '1.5', 'five']) {
+      expect(() => loadConfig({ ACCOUNTS_PER_HOUR: value })).toThrow(
+        `ACCOUNTS_PER_HOUR must be a whole number from 1 up, not "${value}"`,
+      );
+    }
+  });
+});
+
+describe('COOKIE_SECURE', () => {
+  test('is on unless it is switched off', () => {
+    for (const COOKIE_SECURE of [undefined, '', ' ', '1', 'true', 'yes', 'on']) {
+      expect(loadConfig({ COOKIE_SECURE }).cookieSecure, String(COOKIE_SECURE)).toBe(true);
+    }
+    for (const COOKIE_SECURE of ['0', 'false', 'no', 'OFF']) {
+      expect(loadConfig({ COOKIE_SECURE }).cookieSecure, COOKIE_SECURE).toBe(false);
+    }
+  });
+
+  test('anything else stops the server', () => {
+    for (const COOKIE_SECURE of ['2', 'secure', 'https']) {
+      expect(() => loadConfig({ COOKIE_SECURE }), COOKIE_SECURE).toThrow(/COOKIE_SECURE/);
+    }
+  });
+});
+
 describe('DATA_DIR', () => {
   test('keeps the database in memory when it is unset, empty or blank', () => {
     for (const DATA_DIR of [undefined, '', '  ']) {

@@ -1,5 +1,7 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
+import { createAccountApi } from './accounts/http';
+import type { Accounts } from './accounts/service';
 import type { Config } from './config';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
@@ -37,10 +39,14 @@ export interface AppServer {
 // The settings that the server is started with (main.ts), named as in the Config so that one
 // spread passes them on, and the parts that tests replace. The database that the feedback is kept
 // in belongs to whoever opened it, who also closes it (main.ts).
-export interface AppOptions extends Pick<Config, 'publicDir' | 'version'>, Partial<Pick<Config, 'trustProxy'>> {
+export interface AppOptions
+  extends Pick<Config, 'publicDir' | 'version'>, Partial<Pick<Config, 'trustProxy' | 'cookieSecure'>> {
   words: WordLibrary;
   games: GameModule[];
   feedback: FeedbackStore;
+  // Accounts, which keep their data in the same database. Without them, the server has no
+  // account API and every player is a guest.
+  accounts?: Accounts;
   rng?: Rng;
   now?: () => number;
   // The timers for the games' deadlines, which go by `now`.
@@ -69,7 +75,18 @@ export function createAppServer(options: AppOptions): AppServer {
   if (feedbackPerWindow > DEFAULT_SOCKET_LIMITS.feedbackPerWindow) {
     log('feedback_limit_raised', { feedbackPerWindow, default: DEFAULT_SOCKET_LIMITS.feedbackPerWindow });
   }
-  const http = createServer(createRequestHandler({ publicDir: options.publicDir, version: options.version }));
+  const trustProxy = options.trustProxy ?? false;
+  const cookieSecure = options.cookieSecure ?? true;
+  const { accounts } = options;
+  // A login cookie without Secure goes over plain HTTP, where anyone on the way can read it.
+  if (accounts && !cookieSecure) log('cookies_not_secure', { hint: 'only for plain HTTP, as in development' });
+  const http = createServer(
+    createRequestHandler({
+      publicDir: options.publicDir,
+      version: options.version,
+      ...(accounts && { accounts: createAccountApi({ accounts, secureCookies: cookieSecure, trustProxy, log }) }),
+    }),
+  );
   const io = new Server(http, {
     serveClient: false, // don't offer Socket.IO's client script: the front end loads only its own bundle
     // Notice dead connections sooner than the defaults of 25 s + 20 s: phones drop them whenever
@@ -92,7 +109,7 @@ export function createAppServer(options: AppOptions): AppServer {
     now,
     timers: options.timers ?? realTimers,
     version: options.version,
-    trustProxy: options.trustProxy ?? false,
+    trustProxy,
     limits: socketLimits,
     feedback: options.feedback,
     log,

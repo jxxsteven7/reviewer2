@@ -52,6 +52,11 @@ export class WindowCounter {
     else this.#windows.set(key, { start: this.now(), count: 1 });
   }
 
+  // Starts the key's count again.
+  forget(key: string): void {
+    this.#windows.delete(key);
+  }
+
   // Forget the windows that have run out, so the map doesn't grow forever.
   prune(): void {
     for (const key of [...this.#windows.keys()]) this.#current(key);

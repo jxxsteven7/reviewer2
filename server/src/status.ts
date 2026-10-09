@@ -45,6 +45,8 @@ export function createStatusHandler(
   history: History,
   feedback: FeedbackStore,
   log: Log,
+  // How many accounts there are.
+  accounts: () => number = () => 0,
 ): RequestListener {
   return (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -56,7 +58,7 @@ export function createStatusHandler(
         const path = pathOf(target);
         if (path === '/') {
           res.setHeader('Content-Security-Policy', CSP);
-          const page = renderStatusPage(stats(), history.samples(), history.now(), feedback.count());
+          const page = renderStatusPage(stats(), history.samples(), history.now(), feedback.count(), accounts());
           send(res, 200, 'text/html; charset=utf-8', page);
         } else if (path === FEEDBACK_PATH) {
           res.setHeader('Content-Security-Policy', CSP);

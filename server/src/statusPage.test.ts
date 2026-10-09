@@ -32,10 +32,11 @@ const text = (html: string) =>
 
 describe('the status page', () => {
   test('shows the counts, the countries and the memory against its limit', () => {
-    const page = text(renderStatusPage(stats(), [], NOW));
+    const page = text(renderStatusPage(stats(), [], NOW, 0, 42));
     expect(page).toContain('Version v0.0.14 &middot; up 3h 12m');
     expect(page).toContain('Online 17');
     expect(page).toContain('Offline 4');
+    expect(page).toContain('Accounts 42 registered');
     expect(page).toContain('Waiting 2 Playing 3 Game over 1');
     expect(page).toContain('WebSocket 15 Long-polling 3');
     expect(page).toContain('Singapore 9 38 ms');
