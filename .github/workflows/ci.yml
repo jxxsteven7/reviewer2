@@ -1,7 +1,8 @@
 # Lints, type-checks and tests the app, checks the word lists, plays it end to end in real
-# browsers, and builds it and checks that the build serves it. Each job's name is
-# a required status check; see docs/maintainers.md. There are no `paths:` filters on purpose:
-# a required check that a filter skips stays pending and blocks the merge.
+# browsers, and builds it and checks that the build serves it. Each job's name is a required
+# status check, except the browser jobs, which report through `End-to-end`; see
+# docs/maintainers.md. There are no `paths:` filters on purpose: a required check that a filter
+# skips stays pending and blocks the merge.
 
 name: CI
 
@@ -53,13 +54,26 @@ jobs:
           node-version: 24
       - run: node scripts/check-words.mjs
 
-  e2e:
-    # Real browsers against the production build; see playwright.config.ts.
-    name: End-to-end
+  e2e-browser:
+    # Real browsers against the production build; see playwright.config.ts. One job per browser
+    # project, side by side, each with only the browser it runs: the WebKit one is the slowest, at
+    # about 5 minutes when all goes well, against 8 to 10 for all three in one job.
+    name: End-to-end on ${{ matrix.project }}
     runs-on: ubuntu-latest
-    # About 11 minutes when all goes well. A browser install or a server that hangs must not
-    # hold the check for the six hours that GitHub allows a job.
-    timeout-minutes: 25
+    # A browser install or a server that hangs must not hold the check for the six hours that
+    # GitHub allows a job. Two full games that each time out twice take about 12 minutes.
+    timeout-minutes: 20
+    strategy:
+      # A failure in one browser says nothing about the other two.
+      fail-fast: false
+      matrix:
+        include:
+          - project: desktop-chromium
+            browser: chromium
+          - project: phone-chromium
+            browser: chromium
+          - project: iphone-webkit
+            browser: webkit
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -67,18 +81,27 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run build
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --project=${{ matrix.project }}
       - name: Keep the report
         # Also of a run that passed: a test that failed once and passed on its retry is in it,
         # with the trace of the attempt that failed.
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: playwright-report/
           retention-days: 7
+
+  e2e:
+    # The required status check for the browser jobs above: one name, whatever their number.
+    name: End-to-end
+    needs: e2e-browser
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.e2e-browser.result }}" = success
 
   build:
     name: Build

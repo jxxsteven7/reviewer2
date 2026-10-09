@@ -22,7 +22,7 @@ Settings and tasks for the people who maintain the repository. This file records
   - Require status checks to pass, with these checks. GitHub only lists a check after it has run at least once.
     - `Commits and version`, `Script tests` and `Forbidden name`, from `.github/workflows/conventions.yml`
     - `README sync`, from `.github/workflows/docs.yml`
-    - `Lint and types`, `Tests`, `Word lists`, `End-to-end` and `Build`, from `.github/workflows/ci.yml`
+    - `Lint and types`, `Tests`, `Word lists`, `End-to-end` and `Build`, from `.github/workflows/ci.yml`. `End-to-end` sums up the three `End-to-end on …` jobs, one per browser, which are not required on their own
   - Require branches to be up to date before merging. This one matters for versioning: once another PR has merged, a PR's `Commits and version` result is older than `main`, and without this rule two PRs could land with the same version. Updating the branch runs the check again, and the check retitles the PR to the version that is now next.
 
 ## Maintainers
