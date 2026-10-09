@@ -58,6 +58,22 @@ async function start(env: Record<string, string> = {}, options: MainOptions = {}
 const events = () => logs.map(({ event }) => event);
 const logged = (event: string) => logs.find((entry) => entry.event === event)?.fields;
 
+// The names of the files under `data` that hold `text`, the database's own files and the snapshots
+// alike. A snapshot is written through temporary files that are gone again a moment later, so one
+// that was listed but can't be read any more holds nothing.
+const filesHolding = (data: string, text: string): string[] =>
+  readdirSync(data, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .filter((entry) => {
+      try {
+        return readFileSync(join(entry.parentPath, entry.name)).includes(text);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+        throw error;
+      }
+    })
+    .map((entry) => entry.name);
+
 describe('starting', () => {
   test('without DATA_DIR keeps the database in memory, and says so', async () => {
     const started = await start();
@@ -122,11 +138,7 @@ describe('starting', () => {
       "INSERT INTO feedback (created_at, kind, text, contact, version, language, page) VALUES (?, 'idea', 'Old', ?, 'v1', 'en', 'home')",
     ).run(old, contact);
     db.close();
-    const holds = () =>
-      readdirSync(data, { recursive: true, withFileTypes: true })
-        .filter((entry) => entry.isFile())
-        .filter((entry) => readFileSync(join(entry.parentPath, entry.name)).includes(contact))
-        .map((entry) => entry.name);
+    const holds = () => filesHolding(data, contact);
     expect(holds()).toEqual([DATABASE_FILE]);
 
     const started = (await start({ DATA_DIR: data })) as Running;
@@ -153,11 +165,7 @@ describe('starting', () => {
     reader.prepare('SELECT count(*) FROM feedback').get();
     // Until the WAL is written back into the database file, the file still has the page as it
     // was, contact and all; the WAL has the page as it is now.
-    const holds = () =>
-      readdirSync(data, { recursive: true, withFileTypes: true })
-        .filter((entry) => entry.isFile())
-        .filter((entry) => readFileSync(join(entry.parentPath, entry.name)).includes(contact))
-        .map((entry) => entry.name);
+    const holds = () => filesHolding(data, contact);
 
     const started = performance.now();
     await start({ DATA_DIR: data }, { housekeepingMs: 50 });
