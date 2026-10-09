@@ -16,6 +16,7 @@
   },
   "scripts": {
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:mailer": "npm run dev -w mailer",
     "build": "npm run build -w client && npm run build -w server && npm run build -w mailer",
     "start": "node server/dist/index.cjs",
     "test": "node --test scripts/*.test.mjs && vitest run",

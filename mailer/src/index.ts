@@ -1,5 +1,5 @@
-import { appendFileSync, chmodSync, lstatSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
+import { appendFileSync, chmodSync, lstatSync, mkdirSync, unlinkSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { loadConfig } from './config';
 import { createMailer } from './mailer';
 import { Quota } from './quota';
@@ -32,6 +32,7 @@ try {
     server.listen({ fd: 3 }, listening);
   } else {
     const path = config.socket as string;
+    mkdirSync(dirname(path), { recursive: true });
     // A socket that a mailer before this one left behind.
     try {
       if (lstatSync(path).isSocket()) unlinkSync(path);

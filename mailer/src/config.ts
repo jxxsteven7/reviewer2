@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // The mailer's settings, from environment variables (docs/development.md). A setting that is wrong
 // stops it, as one does the game server.
@@ -19,6 +20,11 @@ export interface MailerConfig {
 }
 
 export const DEFAULT_BASE_URL = 'https://playreviewer2.com';
+
+// The repository's root, two levels up from mailer/src and mailer/dist. A relative path is taken
+// from there, as the game server takes its own, so that one MAILER_SOCKET in .env does for both.
+const root = resolve(import.meta.dirname, '..', '..');
+const path = (value: string | undefined): string | null => (value?.trim() ? resolve(root, value.trim()) : null);
 
 // The longest path that a Unix socket can have on Linux. A longer one would be cut short without a
 // word, and the socket made somewhere else.
@@ -53,13 +59,13 @@ export function loadConfig(env: NodeJS.ProcessEnv, pid: number): MailerConfig {
   const apiKey = secret(env);
   if (transport === 'resend' && apiKey === null) throw new Error('set RESEND_API_KEY or RESEND_API_KEY_FILE');
   const activated = env.LISTEN_FDS === '1' && env.LISTEN_PID === String(pid);
-  const socket = env.MAILER_SOCKET?.trim() || null;
+  const socket = path(env.MAILER_SOCKET);
   if (!activated && socket === null) throw new Error('set MAILER_SOCKET, or start the mailer from its systemd socket');
   if (socket !== null && Buffer.byteLength(socket) > MAX_SOCKET_PATH) {
     throw new Error(`MAILER_SOCKET must be at most ${MAX_SOCKET_PATH} bytes long, which is all a socket's path can be`);
   }
   // systemd names the state directory in STATE_DIRECTORY, several of them separated by colons.
-  const stateDir = env.STATE_DIRECTORY?.split(':')[0] || env.MAILER_STATE_DIR?.trim() || null;
+  const stateDir = env.STATE_DIRECTORY?.split(':')[0] || path(env.MAILER_STATE_DIR);
   if (transport === 'resend' && stateDir === null) {
     throw new Error('set STATE_DIRECTORY or MAILER_STATE_DIR, so that the daily limit lasts through a restart');
   }
@@ -70,6 +76,6 @@ export function loadConfig(env: NodeJS.ProcessEnv, pid: number): MailerConfig {
     activated,
     socket,
     stateDir,
-    printFile: env.MAILER_PRINT_FILE?.trim() || null,
+    printFile: path(env.MAILER_PRINT_FILE),
   };
 }

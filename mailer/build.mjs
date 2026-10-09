@@ -12,5 +12,6 @@ await build({
   target: 'node22',
   format: 'cjs',
   sourcemap: true,
+  define: { 'import.meta.dirname': '__dirname' },
   logLevel: 'info',
 });

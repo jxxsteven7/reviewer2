@@ -5,7 +5,7 @@
   "description": "Sends the mails of accounts for the game server, which can't reach the internet",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx --env-file-if-exists=../.env src/index.ts",
     "build": "node build.mjs"
   },
   "devDependencies": {

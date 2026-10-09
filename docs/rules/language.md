@@ -15,6 +15,7 @@ Write plain, correct English: complete sentences, consistent terms, and no lefto
 
 - `README.zh-CN.md` is the Chinese translation of `README.md`. The two must stay in sync, as described below. The language switcher at the top of `README.md` names the Chinese version in Chinese.
 - UI text lives in the locale files, and the Chinese locale (`zh.json`) is in Chinese. UI text is never hard-coded in components; see [constraints.md](constraints.md).
+- The mails that the mailer writes have their text in `mailer/src/locales/`, in Chinese and in English, as the interface's is.
 - Word lists under `words/`, and examples of word-list data in the docs, contain Chinese terms in their `zh` fields.
 - Issue threads and review comments may be in English or Chinese, whichever works for the people involved. Anything that lands in the repository is in English.
 

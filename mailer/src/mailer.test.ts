@@ -273,6 +273,13 @@ describe('the settings', () => {
     ).toThrow(/over https/);
   });
 
+  test('take a relative path from the repository root, as the game server does', () => {
+    const root = join(import.meta.dirname, '..', '..');
+    expect(
+      loadConfig({ MAILER_TRANSPORT: 'print', MAILER_SOCKET: 'data/mailer.sock', MAILER_PRINT_FILE: 'data/mails' }, 1),
+    ).toMatchObject({ socket: join(root, 'data', 'mailer.sock'), printFile: join(root, 'data', 'mails') });
+  });
+
   test('take the socket that systemd hands over, when it is for this process', () => {
     const env = { MAILER_TRANSPORT: 'print', LISTEN_FDS: '1', LISTEN_PID: '42' };
     expect(loadConfig(env, 42)).toMatchObject({ activated: true, socket: null, transport: 'print', apiKey: null });

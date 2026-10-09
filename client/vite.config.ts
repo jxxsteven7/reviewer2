@@ -61,6 +61,10 @@ export default defineConfig({
     proxy: {
       '/socket.io': { target: 'http://127.0.0.1:3000', ws: true },
       '/healthz': { target: 'http://127.0.0.1:3000' },
+      // The account API and the avatars. The Host header stays the page's, which the API's check of
+      // where a request comes from compares with its Origin.
+      '/api': { target: 'http://127.0.0.1:3000' },
+      '/avatars': { target: 'http://127.0.0.1:3000' },
     },
   },
   build: {

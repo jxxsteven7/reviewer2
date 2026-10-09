@@ -6,7 +6,7 @@ Follow these in every line of code. Reviewers check them item by item.
 
 - Don't use any Google services, such as Firebase, Google Fonts, Google Analytics, Google Sign-In or reCAPTCHA.
 - Don't load anything from public CDNs such as unpkg, jsDelivr or cdnjs. Bundle fonts, scripts and icons into the project and serve them from our own server.
-- Keep the architecture simple: one Node process serves both the static front end and WebSocket, on one domain and one port. The status page for the operator is the one exception: the same process may serve it on a second port that only the server's own machine can reach, and nothing that players use goes there; see [../architecture.md](../architecture.md#status).
+- Keep the architecture simple: one Node process serves both the static front end and WebSocket, on one domain and one port. The status page for the operator is the one exception: the same process may serve it on a second port that only the server's own machine can reach, and nothing that players use goes there; see [../architecture.md](../architecture.md#status). The mailer is a program of its own, but it serves nothing to players: only the game server talks to it, over a Unix socket; see [../architecture.md](../architecture.md#mail).
 - Before adding an external dependency or third-party service, confirm that it is available and reliable in mainland China.
 
 ## Intellectual property
