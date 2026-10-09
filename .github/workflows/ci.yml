@@ -56,7 +56,7 @@ jobs:
 
   e2e-browser:
     # Real browsers against the production build. One job per browser project, side by side,
-    # each with only the browser it runs: the WebKit one is the slowest, at about 5 minutes when
+    # each with only the browser it runs: the WebKit one is the slowest, at about 6 minutes when
     # all goes well, against 8 to 10 for every project in one job.
     name: End-to-end on ${{ matrix.project }}
     runs-on: ubuntu-latest
