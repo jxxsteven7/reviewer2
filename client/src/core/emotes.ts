@@ -10,6 +10,7 @@ import { playSound } from './sound';
 export interface Bubble {
   id: number;
   name: string;
+  avatar?: string | undefined;
   emote: Emote;
 }
 
@@ -33,7 +34,7 @@ socket.on('room:emote', ({ roomId, playerId, emote }: EmoteEvent) => {
   if (!sender || !EMOTES.includes(emote)) return;
   const id = nextId;
   nextId += 1;
-  bubbles.push({ id, name: sender.name, emote });
+  bubbles.push({ id, name: sender.name, avatar: sender.avatar, emote });
   if (bubbles.length > MOST_BUBBLES) bubbles.splice(0, bubbles.length - MOST_BUBBLES);
   setTimeout(() => pop(id), SHOWN_MS);
   playSound(emote);

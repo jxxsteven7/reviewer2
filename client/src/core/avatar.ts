@@ -1,0 +1,50 @@
+import { AVATAR_SIZE, AVATAR_TARGET_BYTES, MAX_AVATAR_BYTES, usernameKey } from '@reviewer2/shared';
+
+// Avatars on the page (docs/design.md): always a circle. A player who uploaded none, and every
+// guest, gets a default one, drawn here from the name: its first character on a color that the
+// name chooses, the same color for the same name everywhere, in any case or width.
+
+// Dark enough for white text on each of them, at a contrast of at least 4.5:1, and none of them
+// the reds and blues that stand for the groups.
+export const AVATAR_COLORS = ['#2f6b3a', '#6b3fa0', '#8a4b00', '#0f6870', '#a2305e', '#4b505b', '#5a5a14', '#3b4a9a'];
+
+const segmenter =
+  typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+
+// The first character of a name, as a reader sees it, in capitals where the script has them.
+export function initialOf(name: string): string {
+  const first = segmenter ? segmenter.segment(name)[Symbol.iterator]().next().value?.segment : [...name][0];
+  return (first ?? '?').toLocaleUpperCase();
+}
+
+// FNV-1a over the key of the name, so that "Ann" and "ANN" get the same color.
+export function colorOf(name: string): string {
+  const key = usernameKey(name);
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < key.length; i += 1) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return AVATAR_COLORS[(hash >>> 0) % AVATAR_COLORS.length] as string;
+}
+
+const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
+  new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+
+// Encodes the cropped picture for upload: WebP, or JPEG where the browser can't write WebP, as
+// Safari can't, at lower and lower quality until it fits in AVATAR_TARGET_BYTES, but no lower than
+// 0.5. Encoding afresh leaves out everything else that the photo held, such as where it was taken.
+// Null when it can't be made small enough for the server.
+export async function encodeAvatar(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  if (canvas.width !== AVATAR_SIZE || canvas.height !== AVATAR_SIZE) return null;
+  let blob = await toBlob(canvas, 'image/webp', 0.8);
+  const webp = blob?.type === 'image/webp';
+  const type = webp ? 'image/webp' : 'image/jpeg';
+  let quality = webp ? 0.8 : 0.85;
+  if (!webp) blob = await toBlob(canvas, type, quality);
+  while (blob && blob.size > AVATAR_TARGET_BYTES && quality > 0.5) {
+    quality = Math.max(0.5, Math.round((quality - 0.1) * 100) / 100);
+    blob = await toBlob(canvas, type, quality);
+  }
+  return blob && blob.type === type && blob.size <= MAX_AVATAR_BYTES ? blob : null;
+}

@@ -604,7 +604,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // in the form only to hear that the room is full or that they were removed.
       const refusal = room.refusal(conn.key);
       if (refusal) return fail(refusal);
-      if (name === undefined && !conn.account) return { ...fail('name_required'), language: room.language };
+      // A newcomer says who they are and whether they have come to play: a guest with a name and a
+      // choice, and a player with an account, whose name is the username, with the choice alone.
+      if (name === undefined && (!conn.account || play === undefined)) {
+        return { ...fail('name_required'), language: room.language };
+      }
       const as = newcomer(name ?? '');
       if (!as.ok) return as;
       const joined = room.join(conn.key, as.name, play, as.account);

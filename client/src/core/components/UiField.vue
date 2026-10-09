@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { useId } from 'vue';
+import { computed, ref, useId } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 // A labelled text input, with an optional hint and error below it. With `multiline`, it is a text
-// area of `rows` lines, which the player can make taller.
-defineProps<{
+// area of `rows` lines, which the player can make taller. A password field has a button that
+// shows what is typed, for typing a long password on a phone.
+const props = defineProps<{
   label: string;
   hint?: string | undefined;
   error?: string | undefined;
@@ -17,9 +19,13 @@ defineProps<{
   prefix?: string;
   multiline?: boolean;
   rows?: number;
+  type?: 'text' | 'password' | 'email';
 }>();
 const model = defineModel<string>({ required: true });
 const id = useId();
+const { t } = useI18n();
+const shown = ref(false);
+const inputType = computed(() => (props.type === 'password' && shown.value ? 'text' : (props.type ?? 'text')));
 </script>
 
 <template>
@@ -45,6 +51,7 @@ const id = useId();
         v-else
         :id="id"
         v-model="model"
+        :type="inputType"
         :placeholder="placeholder"
         :maxlength="maxlength"
         :autocomplete="autocomplete ?? 'off'"
@@ -55,6 +62,9 @@ const id = useId();
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="error || hint ? `${id}-note` : undefined"
       />
+      <button v-if="type === 'password'" type="button" class="show" :aria-pressed="shown" @click="shown = !shown">
+        {{ t(shown ? 'account.hidePassword' : 'account.showPassword') }}
+      </button>
     </div>
     <p v-if="error || hint" :id="`${id}-note`" class="note" :class="{ error }">{{ error || hint }}</p>
   </div>
@@ -124,6 +134,17 @@ textarea {
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.show {
+  flex: none;
+  min-width: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
 }
 
 .note {

@@ -95,7 +95,7 @@ describe('an avatar', () => {
     const { code } = await createRoom(server.url, 'Cat');
     const own = await ann.connect();
     clients.push(own);
-    await own.send('room:join', { code });
+    await own.send('room:join', { code, play: true });
     const cat = server.app.rooms.find(code);
     await until(() => cat?.members.size === 2, 'Ann to join');
     const watcher = await TestClient.connect(server.url);

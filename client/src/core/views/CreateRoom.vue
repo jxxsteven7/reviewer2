@@ -4,9 +4,11 @@ import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { games } from '../../games';
+import { account } from '../account';
 import FieldPicker from '../components/FieldPicker.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PlayChoice from '../components/PlayChoice.vue';
+import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
@@ -19,7 +21,8 @@ import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
 // lists, the game's own settings, the creator's nickname, and whether they play or only watch.
-// The creator becomes the chair either way.
+// The creator becomes the chair either way. A creator who is logged in has their username, and is
+// asked for no nickname.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
@@ -52,12 +55,14 @@ watch(usable, (lists) => {
 const needsField = computed(() => usable.value.length > 0 && !chosen.value.length);
 const id = useId();
 // Whether the form will do. create() checks it too, since a form can be submitted without its
-// button.
-const ready = computed(() => chosen.value.length > 0 && !!clean.value && settingsValid.value);
+// button. A creator who is logged in needs no nickname: theirs is the username.
+const ready = computed(
+  () => chosen.value.length > 0 && (!!clean.value || account.summary !== null) && settingsValid.value,
+);
 
 onMounted(loadFields);
 
-const NAME_ERRORS = ['name_required', 'name_invalid', 'name_taken'];
+const NAME_ERRORS = ['name_required', 'name_invalid', 'name_taken', 'name_reserved'];
 
 async function create() {
   if (!ready.value) return;
@@ -68,17 +73,17 @@ async function create() {
       language: currentLanguage(),
       fields: chosen.value,
       ...(settings.value ? { settings: settings.value } : {}),
-      name: name.value,
+      ...(account.summary ? {} : { name: name.value }),
       play: play.value,
     }),
   );
   if (!reply) return;
   if (!reply.ok) {
-    if (NAME_ERRORS.includes(reply.error)) refuse(reply.error);
+    if (NAME_ERRORS.includes(reply.error) && !account.summary) refuse(reply.error);
     else formError.value = t(errorKey(reply.error));
     return;
   }
-  storeName(clean.value ?? name.value.trim());
+  if (!account.summary) storeName(clean.value ?? name.value.trim());
   await router.push(`/room/${reply.code}`);
 }
 </script>
@@ -115,7 +120,14 @@ async function create() {
     </section>
 
     <section class="step">
+      <i18n-t v-if="account.summary" keypath="account.as" tag="p" class="as" scope="global">
+        <template #name>
+          <PlayerAvatar :name="account.summary.username" :avatar="account.summary.avatar" />
+          <strong>{{ account.summary.username }}</strong>
+        </template>
+      </i18n-t>
       <UiField
+        v-else
         v-model="name"
         :label="t('create.name')"
         :maxlength="MAX_NAME_INPUT"
@@ -162,6 +174,17 @@ h3 {
 .hint {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+.as {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.as :deep(.avatar) {
+  margin-right: calc(var(--space-2) * -0.5);
 }
 
 .problem {

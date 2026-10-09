@@ -69,7 +69,9 @@ describe('a player with an account', () => {
     // Without a name at all, too, and the guest who joins sees it.
     const bob = await loggedIn('Bob');
     const visitor = track(await bob.connect());
-    expect(await visitor.send('room:join', { code })).toMatchObject({ ok: true });
+    // Asked whether they have come to play, as a guest is asked for a name too.
+    expect(await visitor.send('room:join', { code })).toEqual({ ok: false, error: 'name_required', language: 'en' });
+    expect(await visitor.send('room:join', { code, play: false })).toMatchObject({ ok: true });
     await visitor.waitFor((state) => state.players.length === 2);
     expect(names(visitor)).toEqual(['Ann', 'Bob']);
     // Nothing in the room says who has an account, apart from an avatar.
@@ -92,6 +94,7 @@ describe('a player with an account', () => {
     await laptop.logIn('Ann');
     const { chair, code, roomId } = await roomOf(phone, { play: true });
     const other = track(await laptop.connect());
+    // The account is in the room already, so it needs to say nothing more.
     expect(await other.send('room:join', { code })).toMatchObject({ ok: true });
     const state = await other.waitFor((view) => view.code === code);
     expect(state.me).toBe(chair.me);
@@ -113,7 +116,7 @@ describe('a player with an account', () => {
     const { code } = await createRoom(server.url, 'Ann');
     const ann = await loggedIn('Ann');
     const client = track(await ann.connect());
-    expect(await client.send('room:join', { code })).toEqual({ ok: false, error: 'name_taken' });
+    expect(await client.send('room:join', { code, play: true })).toEqual({ ok: false, error: 'name_taken' });
   });
 });
 
@@ -211,7 +214,7 @@ describe('an account that changes', () => {
     const ann = await loggedIn('Ann');
     const { code } = await createRoom(server.url, 'Cat');
     const client = track(await ann.connect());
-    await client.send('room:join', { code });
+    await client.send('room:join', { code, play: true });
     const cat = server.app.rooms.find(code);
     await until(() => cat?.members.size === 2, 'Ann to join');
     await ann.request('/api/account/delete', { password: 'correct horse' });

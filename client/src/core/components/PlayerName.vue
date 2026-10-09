@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { PlayerView } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
+import PlayerAvatar from './PlayerAvatar.vue';
 
-// A player's name with their online status, and marks for "you" and the chair. For the chair,
-// other players' names are buttons that open the chair's actions.
+// A player's avatar and name with their online status, and marks for "you" and the chair. For the
+// chair, other players' names are buttons that open the chair's actions.
 defineProps<{ player: PlayerView; me: boolean; chair: boolean; manageable: boolean }>();
 const emit = defineEmits<{ manage: [player: PlayerView] }>();
 const { t } = useI18n();
@@ -18,6 +19,7 @@ const { t } = useI18n();
     @click="manageable && emit('manage', player)"
   >
     <span class="dot" :class="{ on: player.online }" aria-hidden="true"></span>
+    <PlayerAvatar :name="player.name" :avatar="player.avatar" :class="{ away: !player.online }" />
     <span class="name">{{ player.name }}</span>
     <span v-if="me" class="mark">{{ t('room.you') }}</span>
     <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
@@ -66,6 +68,10 @@ const { t } = useI18n();
 
 .offline .name {
   color: var(--ink-3);
+}
+
+.away {
+  opacity: 0.55;
 }
 
 .mark {

@@ -3,6 +3,8 @@ import { MAX_NAME_INPUT, nextChair, type Ack, type PlayerView, type RoomView } f
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { account } from '../account';
+import PlayerAvatar from '../components/PlayerAvatar.vue';
 import SendFeedback from '../components/SendFeedback.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
@@ -16,7 +18,8 @@ import { useNameField } from '../useNameField';
 
 // Footnotes of the room page: who you are, ways to rename yourself or leave, and the way to send
 // the author feedback. The chair can also close the room for everyone, in the waiting room, during
-// a game and after it.
+// a game and after it. A player who is logged in is called by their username, which changes on
+// the account page, not here.
 const props = defineProps<{ room: RoomView; me: PlayerView }>();
 const { t } = useI18n();
 const router = useRouter();
@@ -78,8 +81,10 @@ function closeInstead() {
 
 <template>
   <footer class="room-footer">
-    <span class="who">{{ me.name }}</span>
-    <UiButton variant="quiet" size="small" @click="startRenaming">{{ t('room.rename') }}</UiButton>
+    <span class="who"><PlayerAvatar :name="me.name" :avatar="me.avatar" />{{ me.name }}</span>
+    <UiButton v-if="!account.summary" variant="quiet" size="small" @click="startRenaming">
+      {{ t('room.rename') }}
+    </UiButton>
     <UiButton variant="quiet" size="small" @click="leaving = true">{{ t('room.leave') }}</UiButton>
     <UiButton v-if="isChair" variant="quiet" size="small" @click="closing = true">{{ t('room.closeRoom') }}</UiButton>
     <SendFeedback page="room" />
@@ -130,6 +135,9 @@ function closeInstead() {
 }
 
 .who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-right: auto;
   color: var(--ink-2);
 }

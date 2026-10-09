@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { bubbles } from '../emotes';
+import PlayerAvatar from './PlayerAvatar.vue';
 
-// The quick reactions as they arrive, "Name: phrase", at the top of the page for a few seconds,
-// over the masthead rather than the banner below it, which says whose move it is. They let every
-// tap through to the page underneath. `large` is for a big screen across a room.
+// The quick reactions as they arrive, "Name: phrase", with the sender's avatar, at the top of the
+// page for a few seconds, over the masthead rather than the banner below it, which says whose move
+// it is. They let every tap through to the page underneath. `large` is for a big screen across a
+// room.
 defineProps<{ large?: boolean }>();
 </script>
 
@@ -11,6 +13,7 @@ defineProps<{ large?: boolean }>();
   <TransitionGroup tag="div" name="bubble" class="bubbles" :class="{ large }" aria-live="polite">
     <i18n-t v-for="bubble in bubbles" :key="bubble.id" keypath="emotes.bubble" tag="p" class="bubble" scope="global">
       <template #name>
+        <PlayerAvatar :name="bubble.name" :avatar="bubble.avatar" />
         <strong>{{ bubble.name }}</strong>
       </template>
       <template #phrase>{{ $t(`emotes.phrases.${bubble.emote}`) }}</template>
@@ -42,6 +45,11 @@ defineProps<{ large?: boolean }>();
   background: var(--paper);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
+}
+
+.bubble :deep(.avatar) {
+  margin-right: var(--space-1);
+  vertical-align: -0.4em;
 }
 
 .large {
