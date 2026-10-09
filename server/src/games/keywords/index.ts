@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   defaultSettings,
+  otherTeam,
   sameSettings,
   settingsProblems,
   SPECTATOR,
@@ -52,6 +53,7 @@ import {
   startGame,
   startProblems,
   type GameStage,
+  type Member,
   type Seating,
   type SeatRequest,
 } from './seats';
@@ -101,24 +103,19 @@ function stageOf(data: KeywordsData): GameStage {
 // Whoever leaves their seat takes their choice of a card with them (rules.ts); whoever asks for
 // the seat they are in changes nothing.
 //
-// A match adds two rules. While one of its games is on, only those who have played for a group in
-// it may sit in one: anyone else plays from the next game. And once its groups are fixed, everyone
-// who has played for one sits in it, unless the other group has too few players left to play at
-// all, which they may then join for the rest of the match. Whoever was to play from the next game
-// and asks to watch changes their mind.
+// A match adds its own rules (matchRefusal). While one of its games is on, only those who have
+// played for a group in it may sit in one: anyone else plays from the next game. Once its groups
+// are fixed, everyone who has played for one sits in it alone, and a newcomer joins the group with
+// fewer players. Whoever was to play from the next game and asks to watch changes their mind.
 function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: SeatRequest): GameUpdate<KeywordsData> {
-  const key = ctx.keyOf(playerId);
-  const refusal = data.match && matchRefusal(data, data.match, key, wanted);
+  const member = { id: playerId, key: ctx.keyOf(playerId) };
+  const refusal = data.match && matchRefusal(data, data.match, member, wanted);
   if (refusal) return { ok: false, error: refusal };
-  const change = changeSeat(data.seating, { id: playerId, key }, wanted, stageOf(data));
+  const change = changeSeat(data.seating, member, wanted, stageOf(data));
   if (!change.ok) return change;
   let { match } = data;
-  if (match?.waiting.has(key) && wanted.role === 'spectator') {
-    match = { ...match, waiting: new Set([...match.waiting].filter((other) => other !== key)) };
-  }
-  const locked = match?.locked.get(key);
-  if (match && wanted.team !== null && locked !== undefined && locked !== wanted.team) {
-    match = { ...match, locked: new Map(match.locked).set(key, wanted.team) };
+  if (match?.waiting.has(member.key) && wanted.role === 'spectator') {
+    match = { ...match, waiting: new Set([...match.waiting].filter((other) => other !== member.key)) };
   }
   if (change.seating === data.seating && match === data.match) return { ok: true, data };
   return {
@@ -127,19 +124,25 @@ function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: Sea
   };
 }
 
-function matchRefusal(data: KeywordsData, match: MatchSeating, key: string, wanted: SeatRequest) {
+function matchRefusal(data: KeywordsData, match: MatchSeating, member: Member, wanted: SeatRequest) {
   if (wanted.team === null) return null;
   const stage = stageOf(data);
-  if (stage === 'on' && !data.seating.sides.has(key)) return 'between_games';
-  const team = match.locked.get(key);
-  const switching = stage !== 'on' && lineupOf(match) === 'fixed' && team !== undefined && team !== wanted.team;
-  if (switching && !tooFew(data.seating, wanted.team)) return 'other_team';
-  return null;
+  if (stage === 'on') return data.seating.sides.has(member.key) ? null : 'between_games';
+  if (lineupOf(match) !== 'fixed') return null;
+  const team = match.locked.get(member.key);
+  if (team !== undefined) return team === wanted.team ? null : 'other_team';
+  return biggerGroup(data.seating, member.id, wanted.team) ? 'bigger_group' : null;
 }
 
-// Whether a group has too few players in its seats to play a game: it needs a PI and a student.
-const tooFew = (seating: Seating, team: Team) =>
-  [...seating.seats.values()].filter((seat) => seat.team === team).length < 2;
+// Whether a group has more players in its seats than the other, not counting the player who asks,
+// who may sit in one of them already. A newcomer to a match whose groups are fixed joins the group
+// with fewer players, or either when both have as many, so that the groups stay as even as they can
+// be; the chair's shuffle has nothing to do there.
+function biggerGroup(seating: Seating, playerId: string, team: Team): boolean {
+  const size = (group: Team) =>
+    [...seating.seats].filter(([id, seat]) => id !== playerId && seat.team === group).length;
+  return size(team) > size(otherTeam(team));
+}
 
 // An action on the game, which the rules judge for the player in the seat they are in right
 // now. Once a game has ended, its actions still reach the rules, which answer stale or game_over
@@ -269,11 +272,13 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { ...data, seating: next, game: null, match };
   },
 
-  rekey: (data, from, to) => ({
-    ...data,
-    seating: rekeySeating(data.seating, from, to),
-    match: data.match && rekeyMatch(data.match, from, to),
-  }),
+  // The seat stands, and in a match whose groups are fixed, so does its group (match.ts).
+  rekey(data, playerId, from, to) {
+    const seating = rekeySeating(data.seating, from, to);
+    if (!data.match) return { ...data, seating };
+    const team = seating.sides.get(to) ?? seatOf(seating, playerId).team ?? undefined;
+    return { ...data, seating, match: rekeyMatch(data.match, from, to, team) };
+  },
 
   match: {
     setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules) }),

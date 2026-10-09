@@ -17,6 +17,7 @@ import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
+import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
@@ -708,6 +709,33 @@ describe('SettingsForm', () => {
     const wrapper = form();
     await wrapper.setProps({ modelValue: { ...defaultSettings('en'), guessTime: 45 } });
     expect((boxes(wrapper)[3]?.element as HTMLInputElement).value).toBe('45');
+  });
+});
+
+describe('GameRosters', () => {
+  test('lets whoever plays from the next game of a match change their mind and just watch', async () => {
+    const view = room('eve');
+    const data = view.data as KeywordsRoomData;
+    const match: RoomView['match'] = {
+      id: 'm1',
+      rules: { games: 3, teams: 'fixed', grouping: 'choose' },
+      played: 1,
+      status: 'on',
+      game: 2,
+      standings: [],
+    };
+    const wrapper = mount(GameRosters, {
+      props: { room: { ...view, match, data: { ...data, joinsNext: true } } },
+      global: global(),
+    });
+    // Eve plays from the next game, so no group is hers to join now, but she may stay a spectator.
+    expect(wrapper.text()).not.toContain('Play for the');
+    await wrapper.get('.own button').trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:seat', { team: null, role: 'spectator' });
+    // A spectator of an ordinary game is offered the groups, and has no mind to change.
+    const ordinary = mount(GameRosters, { props: { room: view }, global: global() });
+    expect(ordinary.text()).toContain('Play for the');
+    expect(ordinary.find('.own button').exists()).toBe(false);
   });
 });
 

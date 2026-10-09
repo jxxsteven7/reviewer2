@@ -124,6 +124,7 @@ describe('the ranking of a match', () => {
       global: global(),
     });
     expect(wrapper.get('h2').text()).toBe('Final ranking');
+    expect(wrapper.text()).toContain('Games played: 3 of 3');
     const items = wrapper.findAll('li');
     expect(items.map((item) => item.get('.rank').text())).toEqual(['1', '1', '3', '4', '\u2013']);
     expect(items.at(0)?.text()).toContain('Best Paper Award');
@@ -149,8 +150,15 @@ describe('the ranking of a match', () => {
       global: global(),
     });
     expect(wrapper.get('h2').text()).toBe('The match was ended early');
+    expect(wrapper.text()).toContain('Games played: 1 of 3');
     expect(wrapper.text()).toContain('no titles were awarded');
     expect(wrapper.find('.title').exists()).toBe(false);
+    // Also before any game was scored.
+    const early = mount(MatchResults, {
+      props: { room: room({ standings: [], status: 'stopped', played: 0 }) },
+      global: global(),
+    });
+    expect(early.text()).toContain('Games played: 0 of 3');
   });
 
   test('lets the chair start another match with rules they may change, or go back to an ordinary room', async () => {

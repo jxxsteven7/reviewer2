@@ -146,15 +146,6 @@ export function arrangeFixed(
   return { ...seating, seats };
 }
 
-// Moves whatever is kept by one member key to another, unless the other has something already.
-function moved<Value>(map: ReadonlyMap<string, Value>, from: string, to: string): ReadonlyMap<string, Value> {
-  if (!map.has(from) || map.has(to)) return map;
-  const next = new Map(map);
-  next.set(to, next.get(from) as Value);
-  next.delete(from);
-  return next;
-}
-
 function movedSet(set: ReadonlySet<string>, from: string, to: string): ReadonlySet<string> {
   if (!set.has(from)) return set;
   return new Set([...set].map((key) => (key === from ? to : key)));
@@ -173,9 +164,20 @@ export function rekeySeating(seating: Seating, from: string, to: string): Seatin
   return { seats: seating.seats, keyViewers: movedSet(seating.keyViewers, from, to), sides };
 }
 
-export const rekeyMatch = (match: MatchSeating, from: string, to: string): MatchSeating => ({
-  rules: match.rules,
-  locked: moved(match.locked, from, to),
-  captained: moved(match.captained, from, to),
-  waiting: movedSet(match.waiting, from, to),
-});
+// What the match remembers of a guest, it remembers of their account from now on, added to what it
+// knew of the account already: the games as a PI, and whether they play from the next game. With
+// fixed groups, the account plays for `team`, the group of the seat that the guest has now, if any,
+// or else for the guest's group, or else for its own: an account that played for the other group
+// earlier in the match and left plays on for the group it sits in, since the seat stands.
+export function rekeyMatch(match: MatchSeating, from: string, to: string, team: Team | undefined): MatchSeating {
+  const locked = new Map(match.locked);
+  const group = team ?? locked.get(from) ?? locked.get(to);
+  const fixed = locked.has(from) || locked.has(to);
+  locked.delete(from);
+  if (fixed && group !== undefined) locked.set(to, group);
+  const captained = new Map(match.captained);
+  const times = (captained.get(from) ?? 0) + (captained.get(to) ?? 0);
+  captained.delete(from);
+  if (times > 0) captained.set(to, times);
+  return { rules: match.rules, locked, captained, waiting: movedSet(match.waiting, from, to) };
+}

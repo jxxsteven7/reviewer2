@@ -111,10 +111,11 @@ export interface GameModule<Data = unknown, View = unknown> {
   // with accounts, or null when the game counts for no record, as one that the chair withdrew.
   // Whoever only watched takes no part. The room asks once, when the game has ended.
   results?(data: Data, ctx: GameContext): PlayerResult[] | null;
-  // A guest's seat has become an account's (docs/architecture.md#accounts): whatever the game
-  // remembers by the old member key, it remembers by the new one, unless it has something by the
-  // new one already.
-  rekey?(data: Data, from: string, to: string): Data;
+  // A guest's seat has become an account's (docs/architecture.md#accounts): the member `playerId`
+  // is known by the member key `to` instead of `from` from now on, and whatever the game remembers
+  // by the old key, it remembers by the new one. The seat stands, and what the game knows of the
+  // two keys goes together under the new one.
+  rekey?(data: Data, playerId: string, from: string, to: string): Data;
   // A game that can be played as a match.
   match?: MatchHooks<Data>;
   // The game's part of the room view, as a function of the viewer. The only way a game's data

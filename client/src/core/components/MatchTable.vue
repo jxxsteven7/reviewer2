@@ -2,6 +2,7 @@
 import type { MatchView, RoomView } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { points, signedPoints } from '../points';
 import { act } from '../socket';
 import { useBusy } from '../useBusy';
 import PlayerAvatar from './PlayerAvatar.vue';
@@ -24,14 +25,6 @@ const isChair = computed(() => props.room.me !== null && props.room.chairId === 
 // In the waiting room the points are those of the last game; otherwise of the game on or just
 // ended.
 const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastDelta') : t('match.delta')));
-
-// A score with its sign, with a real minus sign, or a dash for none.
-const signed = (points: number | null) => {
-  if (points === null) return '\u2013';
-  if (points > 0) return `+${points}`;
-  return points < 0 ? `\u2212${-points}` : '0';
-};
-const total = (points: number) => (points < 0 ? `\u2212${-points}` : String(points));
 
 const ending = ref(false);
 async function end() {
@@ -72,12 +65,12 @@ async function end() {
             </span>
             <span v-if="describe && line.detail !== undefined" class="detail">{{ describe(line.detail) }}</span>
           </td>
-          <td class="number total">{{ total(line.total) }}</td>
+          <td class="number total">{{ points(line.total) }}</td>
           <td
             class="number delta"
             :class="{ up: line.delta !== null && line.delta > 0, down: line.delta !== null && line.delta < 0 }"
           >
-            {{ signed(line.delta) }}
+            {{ signedPoints(line.delta) }}
           </td>
         </tr>
       </tbody>

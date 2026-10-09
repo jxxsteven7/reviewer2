@@ -329,7 +329,7 @@ export class Room {
   adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
     const member = this.members.get(id);
     if (!member || member.account) return false;
-    if (this.game.rekey) this.data = this.game.rekey(this.data, member.key, key);
+    if (this.game.rekey) this.data = this.game.rekey(this.data, id, member.key, key);
     this.match?.rekey(member.key, key);
     member.key = key;
     member.account = { ...account };

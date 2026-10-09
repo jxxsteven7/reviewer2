@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   BOARD_SIZE,
+  otherTeam,
   SPECTATOR,
   sameSettings,
   type KeywordsSettings,
@@ -49,10 +50,16 @@ const pool = computed(() =>
 );
 // A player who joins the pool sits in the smaller group, which only matters until the draw.
 const joinPool = () => sit(seatedIn('red') <= seatedIn('blue') ? 'red' : 'blue', 'guesser');
-// With fixed groups, a player may sit in their own group only, unless the other one has too few
-// players left to play, as the server allows.
-const seatedIn = (team: Team) => Object.values(data.value.seats).filter((seat) => seat.team === team).length;
-const mayTake = (team: Team) => mySide.value === null || mySide.value === team || seatedIn(team) < 2;
+// How many others sit in a group. With fixed groups, a player is offered the seats of their own
+// group alone, and a newcomer, who has none yet, those of the group with fewer players, or of
+// either when both have as many; the server holds to the same rule.
+const seatedIn = (team: Team) =>
+  Object.entries(data.value.seats).filter(([id, seat]) => id !== room.value.me && seat.team === team).length;
+function mayTake(team: Team): boolean {
+  if (lineup.value !== 'fixed') return true;
+  if (mySide.value !== null) return mySide.value === team;
+  return seatedIn(team) <= seatedIn(otherTeam(team));
+}
 const problemText = (item: StartProblem) =>
   item.problem === 'needs_players'
     ? t('lobby.problems.needs_players', { missing: item.missing })

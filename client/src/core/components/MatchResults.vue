@@ -2,6 +2,7 @@
 import type { MatchRules, MatchView, RoomView } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { points } from '../points';
 import { act } from '../socket';
 import { useBusy } from '../useBusy';
 import MatchForm from './MatchForm.vue';
@@ -19,7 +20,6 @@ const { busy, run } = useBusy();
 
 const match = computed(() => props.room.match as MatchView);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
-const total = (points: number) => (points < 0 ? `\u2212${-points}` : String(points));
 
 const choosing = ref(false);
 const rules = ref<MatchRules>({ ...match.value.rules });
@@ -40,7 +40,7 @@ async function next(nextRules: MatchRules | null) {
   <section class="match-results">
     <h2 class="heading">{{ match.status === 'over' ? t('match.over') : t('match.stopped') }}</h2>
     <p class="note">
-      {{ t('match.progress', { game: match.played, games: match.rules.games }) }}
+      {{ t('match.gamesPlayed', { played: match.played, games: match.rules.games }) }}
       <template v-if="match.status === 'stopped'"> &middot; {{ t('match.stoppedNote') }}</template>
     </p>
     <ol class="ranking">
@@ -59,7 +59,7 @@ async function next(nextRules: MatchRules | null) {
           <span v-if="line.title" class="title">{{ t(`match.titleNames.${line.title}`) }}</span>
           <span v-if="line.title === 'black_hole'" class="line">{{ t('match.blackHoleLine') }}</span>
         </span>
-        <span class="total">{{ total(line.total) }}</span>
+        <span class="total">{{ points(line.total) }}</span>
       </li>
     </ol>
 

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { seededRng, type Rng } from '../../core/random';
 import { keywordsGame, type KeywordsData } from './index';
-import { arrangeFixed, lineupOf, newMatchSeating, scoreGame, type MatchSeating } from './match';
+import { arrangeFixed, lineupOf, newMatchSeating, rekeyMatch, scoreGame, type MatchSeating } from './match';
 import { captainOf, seatOf, type Seating } from './seats';
 import type { KeywordsState } from './state';
 import { gameState } from './testing';
@@ -300,7 +300,7 @@ describe('a match of the game', () => {
   test("remembers a guest's group and PI turns under their account", () => {
     const first = start(withMatch({ teams: 'fixed', grouping: 'choose' }, chosen));
     const next = keywordsGame.again(end(first, 'red'), context(ids));
-    const moved = keywordsGame.rekey?.(next, 'key-bob', 'key-account');
+    const moved = keywordsGame.rekey?.(next, 'bob', 'key-bob', 'key-account');
     expect(moved?.match?.locked.get('key-account')).toBe('red');
     expect(moved?.match?.locked.has('key-bob')).toBe(false);
   });
@@ -345,15 +345,89 @@ describe('fixed groups', () => {
     expect(keywordsGame.views(data, context(ids, { phase: 'playing' }))({ playerId: 'ann' }).side).toBeNull();
   });
 
-  test('let a player join the other group when it has too few players left to play, for good', () => {
+  test('keep a player in their group, also when the other has too few players left to play', () => {
     let data = afterFirstGame();
     const seat = (id: string, wanted: Seat) => keywordsGame.handle(data, context(ids), id, 'keywords:seat', wanted);
     expect(seat('bob', blue)).toEqual({ ok: false, error: 'other_team' });
-    // Both of blue's players leave.
+    // Both of blue's players leave: the groups stay as they are, and the chair ends the match early
+    // or waits for newcomers.
     data = keywordsGame.leave(keywordsGame.leave(data, 'cat'), 'dee');
-    const moved = seat('bob', bluePI);
+    expect(seat('bob', bluePI)).toEqual({ ok: false, error: 'other_team' });
+    expect(data.match?.locked.get(keyOf('bob'))).toBe('red');
+    expect(keywordsGame.views(data, context(ids))({ playerId: 'bob' }).side).toBe('red');
+  });
+
+  test('send a newcomer to the group with fewer players, and keep them out of the bigger one', () => {
+    const all = [...ids, 'eve'];
+    const seat = (data: KeywordsData, wanted: Seat) =>
+      keywordsGame.handle(data, context(all), 'eve', 'keywords:seat', wanted);
+    // Two against one, once Dee has left: Eve goes to blue, and red is closed to her.
+    let data = keywordsGame.join(keywordsGame.leave(afterFirstGame(), 'dee'), context(all), 'eve', true);
+    expect(seatOf(data.seating, 'eve')).toEqual(blue);
+    expect(seat(data, red)).toEqual({ ok: false, error: 'bigger_group' });
+    expect(seat(data, bluePI).ok).toBe(true);
+    // Two against two: she may sit in either group, and move to the other, which has as many
+    // without her.
+    data = keywordsGame.join(afterFirstGame(), context(all), 'eve', true);
+    const team = seatOf(data.seating, 'eve').team as Team;
+    const other = team === 'red' ? blue : red;
+    const moved = seat(data, other);
     if (!moved.ok) throw new Error(moved.error);
-    expect(moved.data.match?.locked.get(keyOf('bob'))).toBe('blue');
-    expect(keywordsGame.views(moved.data, context(ids))({ playerId: 'bob' }).side).toBe('blue');
+    expect(seatOf(moved.data.seating, 'eve')).toEqual(other);
+    expect(seat(moved.data, { team, role: 'guesser' }).ok).toBe(true);
+  });
+
+  test("fix a guest's account to the group of the seat the guest took, when it played for the other", () => {
+    // Bob's account played the first game for red and left, and so did both of blue. Bob comes back
+    // as a guest, is seated in blue, which is the smaller group now, and logs in: the seat stands.
+    let data = afterFirstGame();
+    for (const id of ['bob', 'cat', 'dee']) data = keywordsGame.leave(data, id);
+    const back = context(['ann', 'eve']);
+    data = keywordsGame.join(data, back, 'eve', true);
+    expect(seatOf(data.seating, 'eve')).toEqual(blue);
+    data = keywordsGame.rekey?.(data, 'eve', 'key-eve', 'key-bob') as KeywordsData;
+    expect(data.match?.locked.get('key-bob')).toBe('blue');
+    expect(data.match?.locked.has('key-eve')).toBe(false);
+    const adopted = { ...back, keyOf: (id: string) => (id === 'eve' ? 'key-bob' : keyOf(id)) };
+    expect(keywordsGame.views(data, adopted)({ playerId: 'eve' }).side).toBe('blue');
+    expect(keywordsGame.handle(data, adopted, 'eve', 'keywords:seat', red)).toEqual({
+      ok: false,
+      error: 'other_team',
+    });
+    expect(keywordsGame.handle(data, adopted, 'eve', 'keywords:seat', bluePI).ok).toBe(true);
+  });
+});
+
+describe('rekeying a match', () => {
+  const rules: MatchRules = { games: 3, teams: 'fixed', grouping: 'choose' };
+  const remembered = (
+    locked: Record<string, Team>,
+    captained: Record<string, number> = {},
+    waiting: string[] = [],
+  ): MatchSeating => ({
+    ...newMatchSeating(rules),
+    locked: new Map(Object.entries(locked)),
+    captained: new Map(Object.entries(captained)),
+    waiting: new Set(waiting),
+  });
+
+  test("adds what the match knew of the guest to the account's own, under the account's key alone", () => {
+    const moved = rekeyMatch(
+      remembered({ guest: 'blue', account: 'red' }, { guest: 1, account: 2 }, ['guest']),
+      'guest',
+      'account',
+      'blue',
+    );
+    expect(moved.locked).toEqual(new Map([['account', 'blue']]));
+    expect(moved.captained).toEqual(new Map([['account', 3]]));
+    expect(moved.waiting).toEqual(new Set(['account']));
+  });
+
+  test("fixes the account to the seat's group, else to the guest's, else to its own, and only once fixed", () => {
+    const locked = (match: MatchSeating, team: Team | undefined) => rekeyMatch(match, 'guest', 'account', team).locked;
+    expect(locked(remembered({ account: 'red' }), 'blue')).toEqual(new Map([['account', 'blue']]));
+    expect(locked(remembered({ guest: 'blue', account: 'red' }), undefined)).toEqual(new Map([['account', 'blue']]));
+    expect(locked(remembered({ account: 'red' }), undefined)).toEqual(new Map([['account', 'red']]));
+    expect(locked(remembered({}), 'blue').size).toBe(0);
   });
 });

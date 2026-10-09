@@ -208,6 +208,21 @@ describe('the table of a match', () => {
     ]);
   });
 
+  test("keeps the places and totals of the end when a guest's line joins an account's afterwards", () => {
+    const match = new Match(RULES);
+    match.score('g1', scores({ ann: 6, account: 3 }), presentOnly('ann', 'account'));
+    // The account left, and the same person played the last game as a guest, then logged in.
+    match.score('g2', scores({ ann: 0, guest: 3, cat: -3 }), presentOnly('ann', 'guest', 'cat'));
+    match.rekey('guest', 'account');
+    const view = match.view('ended', 'g2', null, presentOnly('ann', 'account', 'cat'));
+    expect(view.status).toBe('over');
+    expect(view.standings.map(({ name, rank, total, title }) => ({ name, rank, total, title }))).toEqual([
+      { name: 'ann', rank: 1, total: 6, title: 'best_paper' },
+      { name: 'account', rank: 2, total: 3, title: undefined },
+      { name: 'cat', rank: 3, total: -3, title: 'black_hole' },
+    ]);
+  });
+
   test('lists the ranked by their place at the end, before those who came back unranked', () => {
     const match = new Match({ ...RULES, games: 1 });
     match.enter('bob', 'bob', null);

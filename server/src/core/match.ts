@@ -134,7 +134,8 @@ export class Match {
 
   // A guest's seat became an account's: the guest's line becomes the account's. They are the same
   // person, so when the account has a line of its own already, from before it left the room, the
-  // two are added up.
+  // two are added up. The places at the end stay as they were: the guest's goes to the account,
+  // and the view shows the total that it was given for.
   rekey(from: string, to: string): void {
     const entry = this.#entries.get(from);
     if (!entry) return;
@@ -175,7 +176,9 @@ export class Match {
         playerId: member?.id ?? null,
         name: member?.name ?? entry.name,
         ...(avatar ? { avatar } : {}),
-        total: entry.total,
+        // Once the match is over, the total is the one the player was ranked with: a guest's line
+        // that joins an account's afterwards (rekey) changes the account's total, not the ranking.
+        total: placing?.total ?? entry.total,
         delta: current?.points ?? last?.points ?? null,
         ...(current || last ? { detail: structuredClone(current?.detail ?? last?.detail) } : {}),
         games: entry.games,

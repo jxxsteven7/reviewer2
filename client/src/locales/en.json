@@ -181,6 +181,7 @@
       "choose": "Everyone picks a group and a seat in the waiting room."
     },
     "progress": "Game {game} of {games}",
+    "gamesPlayed": "Games played: {played} of {games}",
     "table": "Scores",
     "rank": "Place",
     "player": "Player",
@@ -484,6 +485,7 @@
     "other_team": "You play for the other group in this game. You can change groups in the next one.",
     "bad_seat": "That seat doesn't exist.",
     "between_games": "You can play from the next game.",
+    "bigger_group": "In this match, whoever hasn't played yet joins the group with fewer players.",
     "offline": "You're offline. Waiting for the connection...",
     "timeout": "The server didn't answer. Please try again.",
     "unknown": "Something went wrong.",
@@ -646,11 +648,10 @@
       "recent": "The last 20 games",
       "recordsAgain": "Try again",
       "recordLine": "{side}, {role}",
-      "matches": "Matches",
       "matchSummary": "Matches finished: {played}",
       "recentMatches": "The last 20 matches",
-      "matchLine": "Place {rank} of {players} · {score} points",
-      "matchGames": "{games} games",
+      "matchLine": "Place {rank} of {players} · Total: {score}",
+      "matchGames": "{games}-game match",
       "roles": {
         "captain": "PI",
         "guesser": "Student"

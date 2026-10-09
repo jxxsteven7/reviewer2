@@ -190,14 +190,43 @@ describe('KeywordsLobby in a match', () => {
     });
     const blue = lobby.findAll('.group')[1];
     expect(blue?.text()).not.toContain('Join as a student');
-    // A group with too few players left to play may be joined.
+    // Also when the other group has too few players left to play.
     const seats = { ann: { team: 'red', role: 'captain' }, bob: { team: 'red', role: 'guesser' } } as const;
     const short = mount(KeywordsLobby, {
       props: { room: inMatch('bob', { lineup: 'fixed', side: 'red', seats }, 1) },
       global: global(),
     });
-    expect(short.findAll('.group')[1]?.text()).toContain('Join as a student');
+    expect(short.findAll('.group')[1]?.findAll('button')).toHaveLength(0);
     expect(lobby.text()).toContain('The groups stay the same for the whole match');
+  });
+
+  test('offers a newcomer the seats of the group with fewer players, when the groups are fixed', () => {
+    // Eve hasn't played yet, and sits in blue, the smaller group: red is closed to her, and blue's
+    // empty PI seat is hers to take.
+    const seats = {
+      ann: { team: 'red', role: 'captain' },
+      bob: { team: 'red', role: 'guesser' },
+      cat: { team: 'blue', role: 'guesser' },
+      eve: { team: 'blue', role: 'guesser' },
+    } as const;
+    const uneven = mount(KeywordsLobby, {
+      props: { room: inMatch('eve', { lineup: 'fixed', side: null, seats }, 1) },
+      global: global(),
+    });
+    expect(uneven.findAll('.group')[0]?.findAll('button')).toHaveLength(0);
+    expect(uneven.findAll('.group')[1]?.text()).toContain('Be the PI');
+    // With as many in each group without her, she may join either.
+    const even = mount(KeywordsLobby, {
+      props: {
+        room: inMatch(
+          'eve',
+          { lineup: 'fixed', side: null, seats: { ...seats, dan: { team: 'blue', role: 'guesser' } } },
+          1,
+        ),
+      },
+      global: global(),
+    });
+    expect(even.findAll('.group')[0]?.text()).toContain('Join as a student');
   });
 
   test('keeps the word lists and the settings as they are once a game has counted', async () => {

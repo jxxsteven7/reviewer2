@@ -360,7 +360,8 @@ describe('a match', () => {
       error: 'other_team',
     });
 
-    // Eve hasn't played for a group yet, so she may choose one.
+    // Eve hasn't played for a group yet, and both groups have as many players without her, so she
+    // may choose either.
     await expectOk(eve.send('keywords:seat', { team: 'blue', role: 'guesser' }));
 
     // Dan leaves for good: he is listed, but not ranked, and Eve, who plays the last game, is. If

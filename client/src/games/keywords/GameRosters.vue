@@ -11,7 +11,8 @@ import { useKeywords } from './useKeywords';
 // Who plays where during a game, and the seat changes the rules allow: latecomers can play for
 // a group, students can step out to watch, and anyone can take over an empty PI seat, after a
 // warning that they will see the key. Whoever has sat in a group in this game belongs to it until
-// the next one, so they are offered seats in that group only.
+// the next one, so they are offered seats in that group only. In a match, a latecomer plays from
+// the next game instead, and may change their mind and just watch until the waiting room opens.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const { data, mySeat, mySide, isChair, isKeyViewer, groups, spectators, sit } = useKeywords(toRef(props, 'room'));
@@ -91,8 +92,8 @@ async function takeOver() {
         />
       </span>
     </p>
-    <div v-if="playing" class="own">
-      <UiButton v-if="mySeat?.role === 'guesser'" size="small" @click="sit(null, 'spectator')">
+    <div v-if="playing || data.joinsNext" class="own">
+      <UiButton v-if="mySeat?.role === 'guesser' || data.joinsNext" size="small" @click="sit(null, 'spectator')">
         {{ t('game.watch') }}
       </UiButton>
       <UiButton v-if="mySeat?.role === 'captain'" size="small" @click="sit(null, 'spectator')">

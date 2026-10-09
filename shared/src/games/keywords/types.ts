@@ -148,8 +148,16 @@ export type KeywordsError = (typeof KEYWORDS_ERRORS)[number];
 
 // Why a seat can't be taken.
 // `between_games`: in a match, only those who have played for a group in the game being played
-// may sit in one until it ends; anyone else joins from the next game.
-export const SEAT_ERRORS = ['seat_taken', 'key_viewer', 'other_team', 'bad_seat', 'between_games'] as const;
+// may sit in one until it ends; anyone else joins from the next game. `bigger_group`: in a match
+// whose groups are fixed, a newcomer joins the group with fewer players.
+export const SEAT_ERRORS = [
+  'seat_taken',
+  'key_viewer',
+  'other_team',
+  'bad_seat',
+  'between_games',
+  'bigger_group',
+] as const;
 export type SeatError = (typeof SEAT_ERRORS)[number];
 
 // What keeps a game from starting, for each team, or, when the server draws the groups at the

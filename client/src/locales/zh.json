@@ -165,7 +165,7 @@
       "switch": "允许换队"
     },
     "teamsHint": {
-      "fixed": "整场比赛每人都在同一组，PI 每局轮换。",
+      "fixed": "整场比赛每人都在同一组，导师每局轮换。",
       "switch": "每局结束后重新分组。"
     },
     "grouping": {
@@ -177,10 +177,11 @@
       "choose": "大家自己选"
     },
     "groupingHint": {
-      "random": "开局时随机分组，并选出两组的 PI。",
+      "random": "开局时随机分组，并选出两组的导师。",
       "choose": "大家在大厅里自己选组和位置。"
     },
     "progress": "第 {game} / {games} 局",
+    "gamesPlayed": "已打完 {played} / {games} 局",
     "table": "总分表",
     "rank": "名次",
     "player": "玩家",
@@ -207,9 +208,9 @@
     "waitAgain": "等主持人决定接下来做什么。",
     "joinsNext": "你从下一局开始参加。",
     "drawn": "参加的人",
-    "drawnNote": "开局时随机分组，并选出两组的 PI。",
+    "drawnNote": "开局时随机分组，并选出两组的导师。",
     "play": "参加",
-    "fixedNote": "整场比赛队伍不变，PI 每局轮换。",
+    "fixedNote": "整场比赛队伍不变，导师每局轮换。",
     "locked": "比赛结束之前，词库和规则都不能改。"
   },
   "game": {
@@ -484,6 +485,7 @@
     "other_team": "这一局你属于另一组，下一局才能换组。",
     "bad_seat": "没有这个座位。",
     "between_games": "下一局才能加入。",
+    "bigger_group": "这场比赛里，还没打过的人进人少的一组。",
     "offline": "你已离线，正在等待连接……",
     "timeout": "服务器没有回应，请再试一次。",
     "unknown": "出错了。",
@@ -646,7 +648,6 @@
       "recent": "最近 20 局",
       "recordsAgain": "重试",
       "recordLine": "{side}，{role}",
-      "matches": "比赛",
       "matchSummary": "打完的比赛：{played} 场",
       "recentMatches": "最近 20 场比赛",
       "matchLine": "{players} 人中第 {rank} 名 · {score} 分",
