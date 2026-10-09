@@ -16,11 +16,26 @@ import type { WordLibrary } from './words';
 // module. Every handler runs from start to finish without awaiting anything, so two messages can
 // never interleave.
 
+// Starts and stops the timers for the games' deadlines. The server uses setTimeout; the tests
+// put in timers that run on their own clock.
+export interface Timers {
+  // Runs `run` once, `ms` milliseconds from now, and returns what stops it.
+  start(run: () => void, ms: number): unknown;
+  stop(timer: unknown): void;
+}
+
+export const realTimers: Timers = {
+  // A timer that is all that is left doesn't keep the process alive.
+  start: (run, ms) => setTimeout(run, ms).unref(),
+  stop: (timer) => clearTimeout(timer as NodeJS.Timeout),
+};
+
 export interface SocketOptions {
   rooms: Rooms;
   words: WordLibrary;
   games: ReadonlyMap<string, GameModule>;
   now: () => number;
+  timers: Timers;
   version: string;
   trustProxy: boolean;
   roomsPerMinute: number;
@@ -70,7 +85,7 @@ export interface RoomSockets {
 }
 
 export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
-  const { rooms, words, games, now, version, log } = options;
+  const { rooms, words, games, now, timers, version, log } = options;
   for (const id of games.keys()) {
     if (OWN_PREFIXES.has(id)) throw new Error(`a game can't be named "${id}", which is a prefix of the room messages`);
   }
@@ -126,7 +141,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // Sends everyone in a room its new state. Every change to a room ends here, so this is also
   // where the end of a game is logged, however it came about: by one of the game's messages, by
-  // the chair's withdrawal, or because someone left.
+  // the chair's withdrawal, or because someone left. And it is where the timer for the game's next
+  // deadline is set, since only a change can move it.
   function broadcast(room: Room): void {
     if (room.phase === 'ended' && room.gameId !== null && endLogged.get(room) !== room.gameId) {
       endLogged.set(room, room.gameId);
@@ -136,12 +152,46 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const view = room.views();
     for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id }, view);
     send(room, room.screens, { screen: true }, view);
+    safely('deadline', () => schedule(room));
+  }
+
+  // The timer of each room whose game has a deadline, with the deadline it is for.
+  const deadlines = new Map<Room, { at: number; timer: unknown }>();
+
+  // Sets the timer for the room's next deadline, if it has one and it isn't set already. When a
+  // game ends, is withdrawn or goes back to the waiting room, its deadline goes, and so does the
+  // timer.
+  function schedule(room: Room): void {
+    const at = isOpen(room) ? room.deadline() : null;
+    const set = deadlines.get(room);
+    if (set?.at === at) return;
+    unschedule(room);
+    if (at === null) return;
+    deadlines.set(room, { at, timer: timers.start(() => fire(room), Math.max(0, at - now())) });
+  }
+
+  function unschedule(room: Room): void {
+    const set = deadlines.get(room);
+    if (set) timers.stop(set.timer);
+    deadlines.delete(room);
+  }
+
+  // The deadline has come. A timer may fire a moment early, by the room's clock, and then the game
+  // has nothing due yet: the timer is set again.
+  function fire(room: Room): void {
+    deadlines.delete(room);
+    safely('deadline', () => {
+      if (!isOpen(room)) return;
+      if (room.expire()) broadcast(room);
+      else schedule(room);
+    });
   }
 
   // Closes a room, tells whoever is still connected to it, and logs it. `why` is for the log:
   // "empty", "idle", "stale" or "restart".
   function shut(room: Room, reason: ClosedReason, why: string): void {
     closeFor(rooms.close(room), reason);
+    unschedule(room);
     log('room_closed', { code: room.code, why });
   }
 
@@ -330,11 +380,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // The answer to a message that was to change a room, after telling everyone when it did. A
   // message that was granted but changed nothing, such as asking for the seat one is in, bumps
-  // no rev, and then nobody is sent a snapshot that would only repeat the last one.
+  // no rev, and then nobody is sent a snapshot that would only repeat the last one. A refused game
+  // message may still find the room changed: the turn whose time had run out, which it was
+  // meant for, ended just before it.
   function changed(room: Room, result: Ack): Reply {
-    if (!result.ok) return result;
     if (room.rev !== sent.get(room)) broadcast(room);
-    return ok();
+    return result.ok ? ok() : result;
   }
 
   // Times Engine.IO's heartbeat, which costs nothing extra: the server pings every connection every
@@ -391,7 +442,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
 
-    on(handlers, 'room:create', ({ game, language, fields, name }) => {
+    on(handlers, 'room:create', ({ game, language, fields, settings, name }) => {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
@@ -401,7 +452,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // can ask for. The chair's messages that do the same need a room first; this one is open
       // to anyone, and must not be free to whoever asks for rooms that can't be.
       creations.add(conn.ip);
-      const created = rooms.create({ game: module, language, fields, key: conn.key, name });
+      const created = rooms.create({ game: module, language, fields, settings, key: conn.key, name });
       if (!created.ok) return created;
       const { room, member } = created;
       log('room_created', { code: room.code, game, language, fields: room.fields });
@@ -449,7 +500,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return changed(found.room, found.room.rename(found.member.id, name));
     });
 
-    on(handlers, 'room:settings', ({ fields }) => asChair(socket, (room) => changed(room, room.setFields(fields))));
+    on(handlers, 'room:settings', (changes) => asChair(socket, (room) => changed(room, room.setSettings(changes))));
 
     on(handlers, 'room:start', ({ round }) =>
       asChair(socket, (room) => {
@@ -506,6 +557,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         for (const { room, error } of result.failed) report(error, 'sweep', { code: room.code });
         for (const { room, sockets, why } of result.closed) {
           closeFor(sockets, 'expired');
+          unschedule(room);
           log('room_closed', { code: room.code, why });
         }
         for (const room of result.changed) broadcast(room);

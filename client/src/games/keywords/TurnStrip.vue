@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { KeywordsView } from '@reviewer2/shared';
+import type { GuessRule, KeywordsView } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ClockBar from './ClockBar.vue';
 
-// Whose turn it is, in which phase, with the current clue and how many cards each group still
-// has to find. A bar in the current group's color runs down its left edge.
-const props = defineProps<{ game: KeywordsView }>();
+// Whose turn it is, in which phase, with the current clue, how much time the phase has left and
+// how many cards each group still has to find. A bar in the current group's color runs down its
+// left edge. Under the free guess rule, a clue's number sets no limit, so there is none to show.
+const props = defineProps<{ game: KeywordsView; guessRule: GuessRule }>();
 const { t } = useI18n();
 
 const group = computed(() => t(`lobby.group.${props.game.team}`));
@@ -26,10 +28,11 @@ const count = computed(() => {
       <span class="label">{{ t('game.clue') }}</span>
       <span class="word">{{ game.clue.word }}</span>
       <span class="count mono">{{ count }}</span>
-      <span class="left">
+      <span v-if="guessRule === 'standard'" class="left">
         {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
       </span>
     </p>
+    <ClockBar v-if="game.clock" :clock="game.clock" />
     <p class="scores">
       <span class="score red">
         <span class="name">{{ t('lobby.group.red') }}</span>

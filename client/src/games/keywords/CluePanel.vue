@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import {
   checkClue,
+  clueCounts,
+  clueOptions,
   MAX_CLUE_INPUT,
-  MAX_CLUE_NUMBER,
   type ClueCount,
   type ClueMatch,
+  type ClueMatchKind,
+  type KeywordsSettings,
   type KeywordsView,
+  type Language,
 } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -13,37 +17,62 @@ import UiButton from '../../core/components/UiButton.vue';
 import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
 
-// The PI's clue: one word and a number. The same check that the server runs shows problems
-// while the PI types, and warns about words that may be forms of a word on the board. The panel
-// is mounted for one clue: it goes away once the clue is given. `busy` holds the button while a
-// clue is on its way.
-const props = withDefaults(defineProps<{ game: KeywordsView; busy?: boolean }>(), { busy: false });
+// The PI's clue: a word, or as many words as the room allows, and a number. The same check that
+// the server runs shows problems while the PI types, and warns about clues that come close to a
+// word on the board. The numbers on offer are the ones that the room's guess rule allows. The
+// panel is mounted for one clue: it goes away once the clue is given. `busy` holds the button
+// while a clue is on its way.
+const props = withDefaults(
+  defineProps<{ game: KeywordsView; settings: KeywordsSettings; language: Language; busy?: boolean }>(),
+  { busy: false },
+);
 const emit = defineEmits<{ give: [word: string, count: ClueCount] }>();
 const { t, locale } = useI18n();
 
 const word = ref('');
 const count = ref<ClueCount>(1);
 const INFINITY = '\u221e';
-const counts: ClueCount[] = [...Array.from({ length: MAX_CLUE_NUMBER + 1 }, (_, i) => i), 'unlimited'];
+const counts = computed(() => clueCounts(props.settings.guessRule, props.game.remaining[props.game.team]));
 
-const check = computed(() => checkClue(word.value, props.game.cards));
+const check = computed(() => checkClue(word.value, props.game.cards, clueOptions(props.settings, props.language)));
 
 // A card the clue runs into, named by its word in quotation marks, with the translation after
 // it in brackets when that is what the clue matched: the Chinese word for "journal", and then
-// "(Journal)", when "journals" is typed in a Chinese room.
+// "(Journal)", when "journals" is typed in a Chinese room, and the same for a form that the word
+// lists give, such as "(Computer vision)" after the card "CV" when "vision" is typed.
 function nameOf({ card, text }: ClueMatch): string {
   const shown = props.game.cards[card]?.word ?? text;
   return shown === text ? `\u201c${shown}\u201d` : `\u201c${shown}\u201d (${text})`;
 }
 
+// What the panel says about a card, by the kind of match: for a conflict, which refuses the clue,
+// and for a warning. The rest of the kinds say what 'same' and 'similar' say.
+const PROBLEMS: Partial<Record<ClueMatchKind, string>> = {
+  form: 'game.formOnBoard',
+  character: 'game.characterOnBoard',
+};
+const WARNINGS: Partial<Record<ClueMatchKind, string>> = {
+  form: 'game.formWarning',
+  character: 'game.characterWarning',
+  inside: 'game.insideWarning',
+};
+const warningOf = (match: ClueMatch) => WARNINGS[match.kind] ?? 'game.similar';
+
 const problem = computed(() => {
   const { problem, conflict } = check.value;
   if (!problem || problem === 'clue_empty') return '';
-  return conflict ? t('game.onBoard', { word: nameOf(conflict) }) : t(errorKey(problem));
+  // The room's limit on the length of a clue shows below the input all the time.
+  return conflict ? t(PROBLEMS[conflict.kind] ?? 'game.onBoard', { word: nameOf(conflict) }) : t(errorKey(problem));
 });
-const warning = computed(() => {
-  if (check.value.problem || check.value.similar.length === 0) return '';
-  return t('game.similar', { words: formatList(locale.value, check.value.similar.map(nameOf)) });
+
+// One line for each kind of warning, naming the cards of that kind.
+const warnings = computed(() => {
+  if (check.value.problem) return [];
+  const keys = [...new Set(check.value.similar.map(warningOf))];
+  return keys.map((key) => {
+    const cards = check.value.similar.filter((match) => warningOf(match) === key);
+    return t(key, { words: formatList(locale.value, cards.map(nameOf)) });
+  });
 });
 
 function give() {
@@ -64,10 +93,12 @@ function give() {
       autocapitalize="off"
       spellcheck="false"
       enterkeyhint="send"
+      aria-describedby="clue-limit"
       :aria-invalid="problem ? 'true' : undefined"
     />
     <p v-if="problem" class="problem">{{ problem }}</p>
-    <p v-else-if="warning" class="warning">{{ warning }}</p>
+    <p v-for="warning in warnings" v-else :key="warning" class="warning">{{ warning }}</p>
+    <p id="clue-limit" class="limit">{{ t(`game.clueLimit.${language}`, { count: settings.clueLength }) }}</p>
     <p class="label">{{ t('game.clueNumber') }}</p>
     <div class="counts" role="radiogroup" :aria-label="t('game.clueNumber')">
       <button
@@ -123,6 +154,11 @@ function give() {
 .warning {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+.limit {
+  color: var(--ink-3);
+  font-size: var(--text-xs);
 }
 
 .counts {

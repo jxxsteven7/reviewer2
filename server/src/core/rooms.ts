@@ -54,7 +54,8 @@ export class Rooms {
   }
 
   // A new room with its creator in it, who chairs it, or why there can't be one: the server is
-  // full, the fields won't do, or the name won't. `key` is the creator's member key.
+  // full, or the fields, the game's settings or the name won't do. `key` is the creator's member
+  // key. Without settings, the room has the game's defaults.
   //
   // The room is listed only once its creator has joined it. A game module that throws there
   // leaves no room behind: one without a member would belong to whoever found its code first.
@@ -62,6 +63,7 @@ export class Rooms {
     game: GameModule;
     language: Language;
     fields: readonly string[];
+    settings?: unknown;
     key: string;
     name: string;
   }): Ack<{ room: Room; member: Member }> {
@@ -80,6 +82,10 @@ export class Rooms {
       rng: this.rng,
       now: this.now,
     });
+    if (options.settings !== undefined) {
+      const configured = room.setSettings({ settings: options.settings });
+      if (!configured.ok) return configured;
+    }
     const joined = room.join(key, name);
     if (!joined.ok) return joined;
     this.#rooms.set(code, room);

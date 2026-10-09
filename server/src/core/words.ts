@@ -10,7 +10,7 @@ import { shuffle, type Rng } from './random';
 export interface WordListData {
   id: string;
   name: Record<Language, string>;
-  terms: { id: string; zh?: string; en?: string }[];
+  terms: { id: string; zh?: string; en?: string; forms?: Partial<Record<Language, string[]>> }[];
 }
 
 interface Field {
@@ -25,6 +25,8 @@ interface Entry {
   key: string;
   word: string;
   translations: string[];
+  // The other forms of the term that the list gives, in all its languages at once.
+  forms: string[];
 }
 
 // Hears of everything that the library leaves out, so that the server can log it: a file, or one
@@ -61,8 +63,8 @@ export class WordLibrary {
   }
 
   // Every word of the chosen fields in one language, once each, with the same term in the other
-  // languages. The game refuses those translations as clues. A word that two fields share brings
-  // the translations of both.
+  // languages and the other forms of the term. The game holds a clue against both. A word that two
+  // fields share brings the translations and the forms of both.
   //
   // Throws for a field that the library doesn't have, rather than hand back a smaller pool that
   // nothing explains: check what a player chose with has() first.
@@ -71,10 +73,14 @@ export class WordLibrary {
     for (const id of fieldIds) {
       const field = this.#fields.get(id);
       if (!field) throw new Error(`no word list has the id "${id}"`);
-      for (const { key, word, translations } of field.words[language]) collect(pool, key, word, translations);
+      for (const entry of field.words[language]) collect(pool, entry);
     }
-    return [...pool.values()].map(({ key, word, translations }) => {
-      const boardWord: BoardWord = translations.length ? { word, translations } : { word };
+    return [...pool.values()].map(({ key, word, translations, forms }) => {
+      const boardWord: BoardWord = {
+        word,
+        ...(translations.length ? { translations } : {}),
+        ...(forms.length ? { forms } : {}),
+      };
       keys.set(boardWord, key);
       return boardWord;
     });
@@ -90,12 +96,20 @@ const keyOf = (word: BoardWord): string => keys.get(word) ?? wordKey(word.word);
 type Collected = Map<string, Entry>;
 
 // Adds a word to those collected so far. A word that is there already keeps its spelling and
-// gains the translations that it doesn't have yet.
-function collect(words: Collected, key: string, word: string, translations: readonly string[]): void {
-  const entry = words.get(key) ?? { key, word, translations: [] };
+// gains the translations and the forms that it doesn't have yet. Two forms are the same when their
+// `wordKey` is.
+function collect(words: Collected, { key, word, translations, forms }: Entry): void {
+  const entry = words.get(key) ?? { key, word, translations: [], forms: [] };
   words.set(key, entry);
   for (const translation of translations) {
     if (!entry.translations.includes(translation)) entry.translations.push(translation);
+  }
+  const known = new Set(entry.forms.map(wordKey));
+  for (const form of forms) {
+    const formKey = wordKey(form);
+    if (known.has(formKey)) continue;
+    known.add(formKey);
+    entry.forms.push(form);
   }
 }
 
@@ -121,11 +135,20 @@ function unique(list: WordListData, skip: Skip): Record<Language, Entry[]> {
       skip(file, `"${language}" ${quote(word)} has no letters or digits`, term.id);
       return [];
     });
+    // The forms of both languages go with the term in each: a clue in either language may be one.
+    // A form without a letter or a digit could never match a clue.
+    const forms = LANGUAGES.flatMap((language) =>
+      (term.forms?.[language] ?? []).filter((form) => {
+        if (wordKey(form)) return true;
+        skip(file, `the "${language}" form ${quote(form)} has no letters or digits`, term.id);
+        return false;
+      }),
+    );
     for (const { language, word, key } of texts) {
       const same = words[language].get(key);
       if (same) skip(file, `"${language}" ${quote(word)} is the same word as ${quote(same.word)}`, term.id);
       const translations = texts.filter((other) => other.language !== language).map((other) => other.word);
-      collect(words[language], key, word, translations);
+      collect(words[language], { key, word, translations, forms });
     }
   }
   return Object.fromEntries(LANGUAGES.map((language) => [language, [...words[language].values()]])) as Record<
@@ -206,7 +229,7 @@ export function loadWordLibrary(dir: string, skip: Skip = () => {}): WordLibrary
 // nothing. Whatever it leaves out, it reports with the term's id, or with the term's place in the
 // list when it has no id.
 function readTerm(value: unknown, index: number, skip: (reason: string, term: string) => void): WordListData['terms'] {
-  const term = value as Partial<Record<'id' | Language, unknown>> | null;
+  const term = value as Partial<Record<'id' | 'forms' | Language, unknown>> | null;
   if (!term || typeof term !== 'object' || !isText(term.id)) {
     skip('not a term with an "id"', `terms[${index}]`);
     return [];
@@ -219,5 +242,32 @@ function readTerm(value: unknown, index: number, skip: (reason: string, term: st
     else skip(`"${language}" is not text`, term.id);
   }
   if (given.length === 0) skip('has neither "zh" nor "en"', term.id);
-  return Object.keys(texts).length > 0 ? [{ id: term.id, ...texts }] : [];
+  if (Object.keys(texts).length === 0) return [];
+  const { id } = term;
+  const forms = term.forms === undefined ? undefined : readForms(term.forms, (reason) => skip(reason, id));
+  return [{ id, ...texts, ...(forms ? { forms } : {}) }];
+}
+
+// The forms of a term, `{ "zh": [...], "en": [...] }`, with what isn't text left out and
+// reported. A term whose forms aren't in that shape at all keeps its words, without forms.
+function readForms(value: unknown, skip: (reason: string) => void): Partial<Record<Language, string[]>> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    skip('"forms" is not an object');
+    return undefined;
+  }
+  const forms: Partial<Record<Language, string[]>> = {};
+  for (const language of LANGUAGES) {
+    const list = (value as Partial<Record<Language, unknown>>)[language];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) {
+      skip(`"forms.${language}" is not a list`);
+      continue;
+    }
+    forms[language] = list.filter((form: unknown, index) => {
+      if (isText(form)) return true;
+      skip(`"forms.${language}[${index}]" is not text`);
+      return false;
+    });
+  }
+  return forms;
 }

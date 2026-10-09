@@ -1,4 +1,5 @@
 import {
+  defaultSettings,
   MAX_CHAT_INPUT,
   MAX_CHAT_LENGTH,
   MAX_CLUE_INPUT,
@@ -6,6 +7,7 @@ import {
   SPECTATOR,
   TEAMS,
   type KeywordsRoomData,
+  type KeywordsSettings,
   type KeywordsView,
   type RoomView,
   type Team,
@@ -69,8 +71,11 @@ interface Table {
 
 // Ann chairs and captains red, Bob guesses for red, Cat captains blue, Dan guesses for blue, Eve
 // watches, and a screen shows the room.
-async function seatTable(start = true): Promise<Table> {
-  const { chair: ann, code } = await createRoom(server.url, 'Ann', { game: 'keywords' });
+async function seatTable(start = true, settings?: Partial<KeywordsSettings>): Promise<Table> {
+  const { chair: ann, code } = await createRoom(server.url, 'Ann', {
+    game: 'keywords',
+    ...(settings ? { settings: { ...defaultSettings('en'), ...settings } } : {}),
+  });
   const [bob, cat, dan, eve] = await Promise.all([
     joinRoom(server.url, code, 'Bob'),
     joinRoom(server.url, code, 'Cat'),
@@ -147,17 +152,20 @@ function expectGroupsApart(table: Table) {
   expectOwnGroupOnly(table.screen, null);
 }
 
+const context = (): GameContext => ({
+  phase: 'playing',
+  language: 'en',
+  rng: seededRng(1),
+  now: () => 0,
+  keyOf: (id) => id,
+  isOnline: () => true,
+  playerIds: () => ['ann', 'bob', 'cat'],
+});
+
 describe('the view', () => {
   test("shares nothing with the room's own state, and is built once for each seat", () => {
-    const ctx: GameContext = {
-      phase: 'playing',
-      language: 'en',
-      rng: seededRng(1),
-      keyOf: (id) => id,
-      isOnline: () => true,
-      playerIds: () => ['ann', 'bob', 'cat'],
-    };
-    let data = keywordsGame.create();
+    const ctx = context();
+    let data = keywordsGame.create('en');
     for (const [id, seat] of [
       ['ann', { team: 'red', role: 'captain' }],
       ['bob', { team: 'red', role: 'guesser' }],
@@ -386,6 +394,138 @@ describe('a game over sockets', () => {
       error: 'no_such_card',
     });
     expect(await send(table.guessers[team], 'flip', now)).toEqual({ ok: false, error: 'bad_request' });
+  });
+});
+
+describe('the settings', () => {
+  test('come with the room, everyone sees them, and the chair changes them in the waiting room', async () => {
+    const table = await seatTable(false, { guessRule: 'standard', clueLength: 2, guessTime: 0 });
+    const expected = { ...defaultSettings('en'), guessRule: 'standard', clueLength: 2, guessTime: 0 };
+    for (const client of table.everyone) expect(data(client).settings).toEqual(expected);
+    const ann = table.captains.red;
+    const loose = { ...expected, clueRule: 'loose' };
+    await expectOk(ann.send('room:settings', { settings: loose }));
+    await table.screen.waitFor((state) => (state.data as KeywordsRoomData).settings.clueRule === 'loose');
+    await expectOk(ann.send('room:start', { round: 0 }));
+    expect(await ann.send('room:settings', { settings: expected })).toEqual({ ok: false, error: 'wrong_phase' });
+  });
+
+  test('must be whole and suit the language of the room', async () => {
+    const { chair } = await createRoom(server.url, 'Ann', { game: 'keywords' });
+    clients.push(chair);
+    const english = defaultSettings('en');
+    for (const settings of [
+      { ...english, clueLength: 4 },
+      { ...english, clueTime: 5 },
+      { ...english, guessTime: 30.5 },
+      { ...english, guessRule: 'fast' },
+      { ...english, guessTime: '90' },
+      { guessRule: 'free' },
+      'free',
+      null,
+    ]) {
+      expect(await chair.send('room:settings', { settings }), JSON.stringify(settings)).toEqual({
+        ok: false,
+        error: 'bad_settings',
+      });
+    }
+    // A Chinese room counts characters, up to 10.
+    const ctx = { ...context(), phase: 'lobby' as const, language: 'zh' as const };
+    const configure = (clueLength: number) =>
+      keywordsGame.configure(keywordsGame.create('zh'), ctx, { ...defaultSettings('zh'), clueLength });
+    expect(configure(11)).toEqual({ ok: false, error: 'bad_settings' });
+    expect(configure(10)).toMatchObject({ ok: true, data: { settings: { clueLength: 10 } } });
+  });
+
+  test('of the clue reach the clue check: an English room may allow clues of several words', async () => {
+    const table = await seatTable(true, { clueLength: 2 });
+    const team = board(table.captains.red).team;
+    const captain = table.captains[team];
+    const now = moment(board(captain));
+    expect(await captain.send('keywords:clue', { ...now, word: 'one two three', count: 1 })).toEqual({
+      ok: false,
+      error: 'clue_too_many_words',
+    });
+    await expectOk(captain.send('keywords:clue', { ...now, word: 'gentle   nudge', count: 1 }));
+    expect(board(captain).clue).toEqual({ word: 'gentle nudge', count: 1 });
+  });
+
+  test('of the free guess rule take a number from 1 to the cards the group has left', async () => {
+    const table = await seatTable();
+    const team = board(table.captains.red).team;
+    const captain = table.captains[team];
+    const now = moment(board(captain));
+    for (const count of [0, 10, 'unlimited']) {
+      expect(await captain.send('keywords:clue', { ...now, word: 'Hint', count }), String(count)).toEqual({
+        ok: false,
+        error: 'bad_count',
+      });
+    }
+    await expectOk(captain.send('keywords:clue', { ...now, word: 'Hint', count: 9 }));
+    expect(board(captain).guessesLeft).toBeNull();
+  });
+});
+
+describe('the time limits', () => {
+  test('are kept by the server, which ends a turn whose time has run out', async () => {
+    const table = await seatTable(true, { firstClueTime: 30, clueTime: 10, guessTime: 20 });
+    const ann = table.captains.red;
+    const first = board(ann).team;
+    expect(board(ann).clock).toEqual({ left: 30_000, total: 30_000 });
+    server.advance(12_000);
+    // A new snapshot says how much time is left when it is sent.
+    await expectOk(table.guessers.red.send('keywords:say', { gameId: board(ann).gameId, text: 'Hurry' }));
+    await ann.waitFor((state) => ((state.data as KeywordsRoomData).game?.chat?.length ?? 0) > 0, 'the message');
+    expect(board(ann).clock).toEqual({ left: 18_000, total: 30_000 });
+
+    // The first PI says nothing in time: the turn goes to the other group, with no clue on record.
+    server.advance(18_000);
+    await settle(table);
+    expect(board(table.spectator)).toMatchObject({ turn: 2, team: otherTeam(first), phase: 'clue' });
+    expect(board(table.spectator).clock).toEqual({ left: 10_000, total: 10_000 });
+    expect(board(table.spectator).history).toEqual([
+      { turn: 1, team: first, word: null, count: null, guesses: [], timedOut: true },
+    ]);
+
+    // The second group's students run out of time without revealing anything.
+    const second = otherTeam(first);
+    await expectOk(table.captains[second].send('keywords:clue', { ...moment(board(ann)), word: 'Hint', count: 1 }));
+    await settle(table);
+    expect(board(table.spectator).clock).toEqual({ left: 20_000, total: 20_000 });
+    const guesser = table.guessers[second];
+    const late = moment(board(guesser));
+    // Their reveal arrives just after the time is up, before the timer has fired: it is stale.
+    server.advance(20_000, false);
+    expect(await guesser.send('keywords:reveal', { ...late, card: 0 })).toEqual({ ok: false, error: 'stale' });
+    await settle(table);
+    expect(board(table.spectator)).toMatchObject({ turn: 3, team: first, phase: 'clue', guessesMade: 0 });
+    expect(board(table.spectator).history[1]).toEqual({
+      turn: 2,
+      team: second,
+      word: 'Hint',
+      count: 1,
+      guesses: [],
+      timedOut: true,
+    });
+    // The timer that was set for that turn is gone; the next turn has its own.
+    expect(server.timers()).toBe(1);
+  });
+
+  test('stop when the game ends or the chair withdraws it', async () => {
+    const table = await seatTable();
+    const ann = table.captains.red;
+    expect(server.timers()).toBe(1);
+    await expectOk(ann.send('room:end', { gameId: board(ann).gameId }));
+    expect(server.timers()).toBe(0);
+    expect(board(ann).clock).toBeNull();
+    server.advance(10 * 60_000);
+    expect(board(ann).history).toEqual([]);
+  });
+
+  test('can be turned off', async () => {
+    const table = await seatTable(true, { firstClueTime: 0, clueTime: 0, guessTime: 0 });
+    expect(board(table.spectator).clock).toBeNull();
+    expect(server.timers()).toBe(0);
   });
 });
 

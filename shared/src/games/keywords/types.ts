@@ -1,3 +1,5 @@
+import type { KeywordsSettings } from './settings';
+
 // Types for the team word guessing game, whose module is called `keywords`. The rules are in
 // docs/games/keywords.md; the server holds the full state, and these are the shapes that both
 // sides agree on.
@@ -27,13 +29,10 @@ export const BOARD_SIZE = 25;
 // How many cards of each kind a board has. The team that starts gets the extra card.
 export const CARD_COUNTS = { starting: 9, second: 8, neutral: 7, reviewer2: 1 } as const;
 
-// The number that comes with a clue. 1 to 9 allow that many guesses plus one; 0 and
-// 'unlimited' allow any number of guesses, as in the standard rules.
+// The number that comes with a clue. Which numbers a room allows, and what they mean, depends on
+// its guess rule (clueCounts() in settings.ts).
 export type ClueCount = number | 'unlimited';
 export const MAX_CLUE_NUMBER = 9;
-
-export const isClueCount = (value: unknown): value is ClueCount =>
-  value === 'unlimited' || (Number.isInteger(value) && (value as number) >= 0 && (value as number) <= MAX_CLUE_NUMBER);
 
 // 'clue': the current team's captain is thinking; 'guess': the guessers are revealing cards;
 // 'over': the game has ended.
@@ -47,28 +46,37 @@ export interface GameResult {
 }
 
 // A term for a card: the word in the room's language and, when the word library has them, the
-// same term in its other languages. A clue must not repeat any of these (see clue.ts).
+// same term in its other languages, and the other forms of the term that the library lists in
+// any language, such as "dataset" for "Data". The clue check holds a clue against all of these
+// (see clue.ts).
 export interface BoardWord {
   word: string;
   translations?: readonly string[];
+  forms?: readonly string[];
 }
 
 // What a player sees of a card. `color` is there only when the player may know it: the card has
 // been revealed, the player is a captain, or the game is over. Otherwise the key is absent.
-// `translations` is there when the card has any, for the clue check on the captain's screen.
+// `translations` and `forms` are there when the card has any, for the clue check on the
+// captain's screen. They are no secret.
 export interface CardView {
   word: string;
   revealed: boolean;
   color?: CardColor;
   translations?: string[];
+  forms?: string[];
 }
 
+// A turn in the record of the game. A captain who ran out of time gave no clue, and then `word`
+// and `count` are null. `timedOut` marks a turn that ended because its time ran out, before the
+// clue or during the guesses.
 export interface ClueRecord {
   turn: number;
   team: Team;
-  word: string;
-  count: ClueCount;
+  word: string | null;
+  count: ClueCount | null;
   guesses: { card: number; color: CardColor }[];
+  timedOut?: true;
 }
 
 // A card that a guesser has chosen but not revealed yet, for the rest of their group to see.
@@ -97,8 +105,13 @@ export interface KeywordsView {
   clue: { word: string; count: ClueCount } | null;
   guessesMade: number;
   // How many more cards the guessers may reveal this turn, or null when there is no limit or no
-  // clue yet.
+  // clue yet. Under the free rule there is never a limit.
   guessesLeft: number | null;
+  // How long the current phase has left before the server ends it, and how long it was given, in
+  // milliseconds, as the server counted when it sent the view. Null when the phase has no time
+  // limit, and once the game is over. A client draws its countdown from this, counting from when
+  // the view arrived, and leaves ending the phase to the server.
+  clock: { left: number; total: number } | null;
   history: ClueRecord[];
   result: GameResult | null;
   // The cards that the guessers of the team whose turn it is have chosen. Only that team's
@@ -123,6 +136,7 @@ export const KEYWORDS_ERRORS = [
   'must_guess_first',
   'clue_empty',
   'clue_not_one_word',
+  'clue_too_many_words',
   'clue_too_long',
   'clue_on_board',
   'bad_count',
@@ -141,6 +155,9 @@ export type StartProblem = { problem: (typeof START_PROBLEMS)[number]; team: Tea
 
 // The game's part of the room view (RoomView.data).
 export interface KeywordsRoomData {
+  // The room's settings, which everyone sees. A game plays with those that the room had when it
+  // started, and they can't change until the room is back in the waiting room.
+  settings: KeywordsSettings;
   // Where every member of the room sits.
   seats: Record<string, Seat>;
   // The members who have seen the key during the current game, and so can't be guessers in it.

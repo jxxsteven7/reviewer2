@@ -160,6 +160,38 @@ describe('the word library', () => {
     const library = new WordLibrary([field('a', zh(1)), field('b', zh(2)), field('c', zh(1))]);
     expect(library.pool(['a', 'b', 'c'], 'en')).toEqual([{ word: 'Model', translations: [zh(1), zh(2)] }]);
   });
+
+  test('gives a word the forms of its term in every language, once each, in either language', () => {
+    const library = new WordLibrary([
+      {
+        id: 'a',
+        name: { zh: 'a', en: 'a' },
+        terms: [
+          { id: 'data', zh: zh(1), en: 'Data', forms: { zh: [zh(9)], en: ['dataset', 'Data-set', 'database'] } },
+          { id: 'plain', zh: zh(2), en: 'Plain' },
+        ],
+      },
+    ]);
+    expect(library.pool(['a'], 'en')).toEqual([
+      { word: 'Data', translations: [zh(1)], forms: [zh(9), 'dataset', 'database'] },
+      { word: 'Plain', translations: [zh(2)] },
+    ]);
+    expect(library.pool(['a'], 'zh')[0]).toEqual({
+      word: zh(1),
+      translations: ['Data'],
+      forms: [zh(9), 'dataset', 'database'],
+    });
+  });
+
+  test('gives a word that two fields share the forms of both', () => {
+    const field = (id: string, forms: string[]): WordListData => ({
+      id,
+      name: { zh: id, en: id },
+      terms: [{ id: 'model', en: 'Model', forms: { en: forms } }],
+    });
+    const library = new WordLibrary([field('a', ['modeling']), field('b', ['Modeling', 'modelled'])]);
+    expect(library.pool(['a', 'b'], 'en')).toEqual([{ word: 'Model', forms: ['modeling', 'modelled'] }]);
+  });
 });
 
 describe('drawing words', () => {
@@ -292,6 +324,40 @@ describe('loading word lists', () => {
       ]);
       expect(library.pool(['odd'], 'en')).toEqual([{ word: 'Fine', translations: [zh(1), zh(3)] }]);
       expect(library.fields()[0]?.counts).toEqual({ zh: 3, en: 1 });
+    } finally {
+      rmSync(lists, { recursive: true, force: true });
+    }
+  });
+
+  test("reads the forms of a term, and skips the ones that it can't use", () => {
+    const terms = [
+      { id: 'fine', en: 'Fine', forms: { en: ['finest'], zh: [zh(1)], fr: ['fin'] } },
+      { id: 'listless', en: 'Listless', forms: ['listlessly'] },
+      { id: 'odd', en: 'Odd', forms: { en: 'oddly', zh: [zh(2), 3, '  '] } },
+      { id: 'marks', en: 'Marks', forms: { en: ['?!', 'marked'] } },
+      { id: 'nothing', en: 'Nothing', forms: null },
+    ];
+    const lists = mkdtempSync(join(tmpdir(), 'reviewer2-forms-'));
+    try {
+      writeFileSync(join(lists, 'forms.json'), JSON.stringify({ ...list('forms', 0), terms }));
+      const skipped: unknown[][] = [];
+      const library = loadWordLibrary(lists, (...report) => skipped.push(report));
+      expect(skipped).toEqual([
+        ['forms.json', '"forms" is not an object', 'listless'],
+        ['forms.json', '"forms.zh[1]" is not text', 'odd'],
+        ['forms.json', '"forms.zh[2]" is not text', 'odd'],
+        ['forms.json', '"forms.en" is not a list', 'odd'],
+        ['forms.json', '"forms" is not an object', 'nothing'],
+        ['forms.json', 'the "en" form "?!" has no letters or digits', 'marks'],
+      ]);
+      // The words stay, with the forms that are fine.
+      expect(library.pool(['forms'], 'en')).toEqual([
+        { word: 'Fine', forms: [zh(1), 'finest'] },
+        { word: 'Listless' },
+        { word: 'Odd', forms: [zh(2)] },
+        { word: 'Marks', forms: ['marked'] },
+        { word: 'Nothing' },
+      ]);
     } finally {
       rmSync(lists, { recursive: true, force: true });
     }

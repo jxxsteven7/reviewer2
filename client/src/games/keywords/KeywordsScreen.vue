@@ -51,7 +51,7 @@ const game = computed(() => data.value.game as KeywordsView | null);
   <section v-else class="screen-game">
     <div class="main" :class="{ over: game.result }">
       <DecisionLetter v-if="game.result" :result="game.result" :is-chair="false" />
-      <TurnStrip v-else :game="game" />
+      <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
       <KeywordsBoard :cards="game.cards" :selectable="false" :selected="null" :lang="HTML_LANG[room.language]" large />
     </div>
     <aside class="side">

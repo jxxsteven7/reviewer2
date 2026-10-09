@@ -99,7 +99,7 @@ const whoAmI = computed(() => {
 <template>
   <section class="keywords-game">
     <DecisionLetter v-if="game.result" :result="game.result" :is-chair="isChair" :busy="busy" @again="again" />
-    <TurnStrip v-else :game="game" />
+    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
 
     <div class="layout">
       <div class="main">
@@ -117,7 +117,14 @@ const whoAmI = computed(() => {
             <p class="who">{{ whoAmI }}</p>
             <GroupChat :room="room" />
           </div>
-          <CluePanel v-if="canClue" :game="game" :busy="busy" @give="giveClue" />
+          <CluePanel
+            v-if="canClue"
+            :game="game"
+            :settings="data.settings"
+            :language="room.language"
+            :busy="busy"
+            @give="giveClue"
+          />
           <GuessBar v-else-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />
           <p v-else-if="!game.result" class="status">
             {{ game.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group }) }}
@@ -130,7 +137,7 @@ const whoAmI = computed(() => {
         <GameRosters :room="room" />
         <ClueLog :game="game" />
         <div class="tools">
-          <RulesSheet />
+          <RulesSheet :settings="data.settings" :language="room.language" />
           <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
             {{ t('game.end') }}
           </UiButton>

@@ -12,7 +12,7 @@
 
 ### The first game: team word guessing
 
-Two research groups, Red and Blue, face off over 25 academic terms. Each group's captain knows which cards belong to their group, but may give only **one word and one number** as a clue. The rest of the group then flips cards based on the clue. Flip an irrelevant paper or one of the other group's cards and your turn ends. Flip **Reviewer 2** and your paper is rejected on the spot: your group loses. That card gave the project its name.
+Two research groups, Red and Blue, face off over 25 academic terms. Each group's captain knows which cards belong to their group, but may give only **a short clue and a number**. The rest of the group then flips cards based on the clue. Flip an irrelevant paper or one of the other group's cards and your turn ends. Flip **Reviewer 2** and your paper is rejected on the spot: your group loses. That card gave the project its name.
 
 The game is called **Double Blind** for now. In the code, its module is called `keywords`, and [docs/games/keywords.md](docs/games/keywords.md) has the full rules.
 

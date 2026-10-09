@@ -1,10 +1,21 @@
-import { BOARD_SIZE, SPECTATOR, type KeywordsRoomData, type KeywordsView, type Seat } from '@reviewer2/shared';
-import { KEYWORDS_MESSAGES, type KeywordsMessage } from '@reviewer2/shared/schemas';
+import {
+  BOARD_SIZE,
+  defaultSettings,
+  sameSettings,
+  settingsProblems,
+  SPECTATOR,
+  type KeywordsRoomData,
+  type KeywordsSettings,
+  type KeywordsView,
+  type Seat,
+} from '@reviewer2/shared';
+import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
 import type { GameContext, GameModule, GameUpdate } from '../../core/game';
 import {
   dropSelection,
+  expire,
   giveClue,
   newGame,
   pass,
@@ -34,6 +45,8 @@ import { viewFor } from './view';
 // a room. docs/games/keywords.md describes the game.
 
 export interface KeywordsData {
+  // The room's settings. A game takes them along when it starts.
+  settings: KeywordsSettings;
   seating: Seating;
   game: KeywordsState | null;
 }
@@ -62,7 +75,7 @@ function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: Sea
   const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, wanted, inGame(data));
   if (!change.ok) return change;
   if (change.seating === data.seating) return { ok: true, data };
-  return { ok: true, data: { seating: change.seating, game: withoutSelection(data.game, playerId) } };
+  return { ok: true, data: { ...data, seating: change.seating, game: withoutSelection(data.game, playerId) } };
 }
 
 // An action on the game, which the rules judge for the player in the seat they are in right
@@ -88,11 +101,14 @@ type Action<M extends KeywordsMessage> = (
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
-  'keywords:clue': (data, _ctx, playerId, clue) => act(data, playerId, (game, actor) => giveClue(game, actor, clue)),
+  'keywords:clue': (data, ctx, playerId, clue) =>
+    act(data, playerId, (game, actor) => giveClue(game, actor, clue, ctx.now())),
   'keywords:select': (data, _ctx, playerId, choice) =>
     act(data, playerId, (game, actor) => select(game, actor, choice)),
-  'keywords:reveal': (data, _ctx, playerId, guess) => act(data, playerId, (game, actor) => reveal(game, actor, guess)),
-  'keywords:pass': (data, _ctx, playerId, moment) => act(data, playerId, (game, actor) => pass(game, actor, moment)),
+  'keywords:reveal': (data, ctx, playerId, guess) =>
+    act(data, playerId, (game, actor) => reveal(game, actor, guess, ctx.now())),
+  'keywords:pass': (data, ctx, playerId, moment) =>
+    act(data, playerId, (game, actor) => pass(game, actor, moment, ctx.now())),
   'keywords:say': (data, _ctx, playerId, line) => act(data, playerId, (game, actor) => say(game, actor, line)),
 };
 
@@ -100,7 +116,17 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
   wordsNeeded: BOARD_SIZE,
 
-  create: () => ({ seating: emptySeating(), game: null }),
+  create: (language) => ({ settings: defaultSettings(language), seating: emptySeating(), game: null }),
+
+  // The settings come whole, and must suit the room's language: a Chinese room counts the clue's
+  // characters, an English room its words.
+  configure(data, ctx, settings) {
+    const parsed = KEYWORDS_SETTINGS.safeParse(settings);
+    if (!parsed.success || Object.keys(settingsProblems(parsed.data, ctx.language)).length > 0) {
+      return fail('bad_settings');
+    }
+    return { ok: true, data: sameSettings(parsed.data, data.settings) ? data : { ...data, settings: parsed.data } };
+  },
 
   // Newcomers are spectators until they take a seat.
   join: (data) => data,
@@ -108,6 +134,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // A captain who leaves frees the seat; the key viewers remember them anyway, and the groups
   // remember whom each player has played for.
   leave: (data, playerId) => ({
+    ...data,
     seating: removeSeat(data.seating, playerId),
     game: withoutSelection(data.game, playerId),
   }),
@@ -122,15 +149,25 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   canStart: (data, ctx) => startProblems(data.seating, online(ctx)).length === 0,
 
   start: (data, ctx, words, gameId) => ({
+    ...data,
     seating: startGame(data.seating, ctx.keyOf),
-    game: newGame(words, ctx.rng, gameId),
+    game: newGame(words, ctx.rng, { gameId, settings: data.settings, language: ctx.language }, ctx.now()),
   }),
+
+  // A game that is over has no clock.
+  deadline: (data) => data.game?.clock?.ends ?? null,
+
+  tick(data, ctx) {
+    if (!data.game) return data;
+    const game = expire(data.game, ctx.now());
+    return game === data.game ? data : { ...data, game };
+  },
 
   isOver: (data) => data.game?.phase === 'over',
 
   withdraw: (data, gameId) => (data.game ? fromOutcome(data, withdraw(data.game, { gameId })) : fail('stale')),
 
-  again: (data) => ({ seating: endGame(data.seating), game: null }),
+  again: (data) => ({ ...data, seating: endGame(data.seating), game: null }),
 
   handle(data, ctx, playerId, type, payload) {
     if (!Object.hasOwn(KEYWORDS_MESSAGES, type)) return fail('bad_request');
@@ -147,7 +184,9 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     // The seats are copied, so that a snapshot shares nothing with the room's own state.
     const seats: Record<string, Seat> = {};
     for (const id of members) seats[id] = { ...seatOf(data.seating, id) };
+    const at = ctx.now();
     const shared = {
+      settings: { ...data.settings },
       seats,
       keyViewers: members.filter((id) => data.seating.keyViewers.has(ctx.keyOf(id))),
       startProblems: ctx.phase === 'lobby' ? startProblems(data.seating, online(ctx)) : [],
@@ -160,7 +199,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       const seat = ('playerId' in viewer && seats[viewer.playerId]) || SPECTATOR;
       const key = `${seat.team}:${seat.role}`;
       let game = boards.get(key);
-      if (game === undefined) boards.set(key, (game = data.game && viewFor(data.game, seat)));
+      if (game === undefined) boards.set(key, (game = data.game && viewFor(data.game, seat, at)));
       return {
         ...shared,
         side: ('playerId' in viewer && data.seating.sides.get(ctx.keyOf(viewer.playerId))) || null,

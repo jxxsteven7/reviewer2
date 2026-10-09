@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BOARD_SIZE, type PlayerView, type RoomView } from '@reviewer2/shared';
+import { BOARD_SIZE, sameSettings, type KeywordsSettings, type PlayerView, type RoomView } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FieldPicker from '../../core/components/FieldPicker.vue';
@@ -9,10 +9,13 @@ import ShareTools from '../../core/components/ShareTools.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { fields, loadFields } from '../../core/fields';
 import { act } from '../../core/socket';
+import SettingsForm from './SettingsForm.vue';
+import SettingsSummary from './SettingsSummary.vue';
 import { useKeywords } from './useKeywords';
 
 // The waiting room: the two groups with their PI and students, the spectators and the screens,
-// and the chair's desk with the word lists, the shuffle and the start button.
+// the room's settings, and the chair's desk with the word lists, the settings, the shuffle and
+// the start button.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -28,6 +31,33 @@ const chosenFields = ref<string[]>([...props.room.fields]);
 const fieldsChanged = computed(() => [...chosenFields.value].sort().join() !== roomFields.value);
 
 watch(roomFields, () => (chosenFields.value = [...props.room.fields]));
+
+// The chair's settings, kept the same way until they are saved with the word lists.
+const roomSettings = computed(() => data.value.settings);
+const chosenSettings = ref<KeywordsSettings>({ ...roomSettings.value });
+const settingsValid = ref(true);
+const settingsChanged = computed(() => !sameSettings(chosenSettings.value, roomSettings.value));
+
+watch(roomSettings, (settings, before) => {
+  if (!sameSettings(settings, before)) chosenSettings.value = { ...settings };
+});
+
+const unsaved = computed(() => fieldsChanged.value || settingsChanged.value);
+const savable = computed(() => chosenFields.value.length > 0 && settingsValid.value);
+const save = () => act('room:settings', { fields: chosenFields.value, settings: chosenSettings.value });
+
+// The game starts with the word lists and the settings that the chair sees at the desk, so what
+// they have changed there is saved first. A change that the server refuses stops the start.
+const starting = ref(false);
+async function start() {
+  starting.value = true;
+  try {
+    if (unsaved.value && !(await save()).ok) return;
+    await act('room:start', { round: props.room.round });
+  } finally {
+    starting.value = false;
+  }
+}
 
 // Only the chair's desk shows the word lists, so only the chair asks for them.
 watch(isChair, (chair) => chair && loadFields(), { immediate: true });
@@ -118,19 +148,22 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 
       <p class="footnote">{{ t('lobby.captainNote') }}</p>
 
+      <section v-if="!isChair" class="rules">
+        <h2 class="section-title">{{ t('settings.title') }}</h2>
+        <SettingsSummary :settings="data.settings" :language="room.language" />
+      </section>
+
       <section v-if="isChair" class="desk">
         <h2 class="section-title">{{ t('lobby.desk') }}</h2>
         <h3 class="label">{{ t('lobby.fields') }}</h3>
         <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
         <FieldPicker v-else v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
-        <UiButton
-          v-if="fieldsChanged"
-          size="small"
-          :disabled="!chosenFields.length"
-          @click="act('room:settings', { fields: chosenFields })"
-        >
-          {{ t('lobby.saveFields') }}
-        </UiButton>
+        <h3 class="label">{{ t('settings.title') }}</h3>
+        <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
+        <div v-if="unsaved" class="save">
+          <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
+          <p class="hint">{{ t('lobby.saveHint') }}</p>
+        </div>
         <ul class="problems">
           <li v-for="item in problems" :key="`${item.problem}-${item.team}`">
             {{ t(`lobby.problems.${item.problem}`, { group: t(`lobby.group.${item.team}`) }) }}
@@ -139,7 +172,11 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
         </ul>
         <div class="desk-actions">
           <UiButton @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
-          <UiButton variant="primary" :disabled="problems.length > 0" @click="act('room:start', { round: room.round })">
+          <UiButton
+            variant="primary"
+            :disabled="problems.length > 0 || starting || (unsaved && !savable)"
+            @click="start"
+          >
             {{ t('lobby.start') }}
           </UiButton>
         </div>
@@ -173,6 +210,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
 
 .group,
 .spectators,
+.rules,
 .desk,
 .waiting {
   padding: var(--space-4) 0;
@@ -279,6 +317,22 @@ dd .vacant {
 .hint {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+.rules .section-title {
+  margin-bottom: var(--space-3);
+}
+
+.desk .label + .settings-form {
+  margin-top: var(--space-2);
+}
+
+.save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .problems {

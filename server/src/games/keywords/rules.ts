@@ -3,18 +3,21 @@ import {
   checkChat,
   checkClue,
   cleanClue,
-  isClueCount,
+  clueCounts,
+  clueOptions,
   otherTeam,
   TEAMS,
   type BoardWord,
   type ClueCount,
   type KeywordsError,
+  type KeywordsSettings,
+  type Language,
   type Role,
   type Team,
 } from '@reviewer2/shared';
 import type { Rng } from '../../core/random';
 import { deal } from './deal';
-import { guessesLeft, remaining, type KeywordsState } from './state';
+import { guessesLeft, remaining, type Clock, type KeywordsState } from './state';
 
 // The rules of the game as pure functions: each takes a state and returns the next one, or the
 // reason it refuses. docs/games/keywords.md describes them.
@@ -22,6 +25,9 @@ import { guessesLeft, remaining, type KeywordsState } from './state';
 // Every check runs in the same order: is the action for this game and this turn, is it this
 // player's to make, is it the right moment, and only then is its content valid. So the answer
 // never depends on the color of a card that the player can't see.
+//
+// The functions that can start a phase take `at`, the time on the room's clock (GameContext.now),
+// from which the phase's time limit counts.
 
 // Who acts: a player, and where they sit.
 export interface Actor {
@@ -42,15 +48,27 @@ export type Outcome = { ok: true; state: KeywordsState } | { ok: false; error: K
 const ok = (state: KeywordsState): Outcome => ({ ok: true, state });
 const refuse = (error: KeywordsError): Outcome => ({ ok: false, error });
 
-export function newGame(words: readonly (string | BoardWord)[], rng: Rng, gameId: string): KeywordsState {
+// A new game: its ID, and the room's settings and language, which hold for the whole game.
+export interface Setup {
+  gameId: string;
+  settings: KeywordsSettings;
+  language: Language;
+}
+
+// The clock of a phase that starts at `at` and is given this many seconds, or none for 0.
+const clockFor = (seconds: number, at: number): Clock | null =>
+  seconds > 0 ? { ends: at + seconds * 1000, length: seconds * 1000 } : null;
+
+export function newGame(words: readonly (string | BoardWord)[], rng: Rng, setup: Setup, at: number): KeywordsState {
   const { cards, startingTeam } = deal(words, rng);
   return {
-    gameId,
+    ...setup,
     cards,
     startingTeam,
     turn: 1,
     team: startingTeam,
     phase: 'clue',
+    clock: clockFor(setup.settings.firstClueTime, at),
     clue: null,
     guessesMade: 0,
     history: [],
@@ -73,12 +91,13 @@ function refusal(
   return null;
 }
 
-function endTurn(state: KeywordsState): KeywordsState {
+function endTurn(state: KeywordsState, at: number): KeywordsState {
   return {
     ...state,
     team: otherTeam(state.team),
     turn: state.turn + 1,
     phase: 'clue',
+    clock: clockFor(state.settings.clueTime, at),
     clue: null,
     guessesMade: 0,
     selections: [],
@@ -86,26 +105,31 @@ function endTurn(state: KeywordsState): KeywordsState {
 }
 
 function finish(state: KeywordsState, winner: Team | null, reason: 'found' | 'reviewer2' | 'withdrawn'): KeywordsState {
-  return { ...state, phase: 'over', clue: null, selections: [], result: { winner, reason } };
+  return { ...state, phase: 'over', clock: null, clue: null, selections: [], result: { winner, reason } };
 }
 
-// The current team's captain gives a clue: one word and a number.
+// The current team's captain gives a clue: up to as many words as the room allows, and a number
+// that the room's guess rule allows.
 export function giveClue(
   state: KeywordsState,
   actor: Actor,
   action: Moment & { word: string; count: ClueCount },
+  at: number,
 ): Outcome {
   const denied = refusal(state, action, actor, 'captain');
   if (denied) return refuse(denied);
   if (state.phase !== 'clue') return refuse('wrong_phase');
-  if (!isClueCount(action.count)) return refuse('bad_count');
-  const { problem } = checkClue(action.word, state.cards);
+  if (!clueCounts(state.settings.guessRule, remaining(state.cards, state.team)).includes(action.count)) {
+    return refuse('bad_count');
+  }
+  const { problem } = checkClue(action.word, state.cards, clueOptions(state.settings, state.language));
   if (problem) return refuse(problem);
 
   const word = cleanClue(action.word);
   return ok({
     ...state,
     phase: 'guess',
+    clock: clockFor(state.settings.guessTime, at),
     clue: { word, count: action.count },
     guessesMade: 0,
     history: [...state.history, { turn: state.turn, team: state.team, word, count: action.count, guesses: [] }],
@@ -138,7 +162,7 @@ export function dropSelection(state: KeywordsState, playerId: string): KeywordsS
 
 // One of the current team's guessers reveals a card. The board has changed then, so everyone's
 // choice is cleared, and the guessers choose again if their turn goes on.
-export function reveal(state: KeywordsState, actor: Actor, action: Moment & { card: number }): Outcome {
+export function reveal(state: KeywordsState, actor: Actor, action: Moment & { card: number }, at: number): Outcome {
   const denied = refusal(state, action, actor, 'guesser');
   if (denied) return refuse(denied);
   if (state.phase !== 'guess') return refuse('wrong_phase');
@@ -160,17 +184,36 @@ export function reveal(state: KeywordsState, actor: Actor, action: Moment & { ca
   for (const team of TEAMS) {
     if (remaining(cards, team) === 0) return ok(finish(next, team, 'found'));
   }
-  if (target.color !== state.team) return ok(endTurn(next));
-  return ok(guessesLeft(next) === 0 ? endTurn(next) : next);
+  if (target.color !== state.team) return ok(endTurn(next, at));
+  return ok(guessesLeft(next) === 0 ? endTurn(next, at) : next);
 }
 
 // The current team's guessers end their turn, which they may do once they have revealed a card.
-export function pass(state: KeywordsState, actor: Actor, action: Moment): Outcome {
+export function pass(state: KeywordsState, actor: Actor, action: Moment, at: number): Outcome {
   const denied = refusal(state, action, actor, 'guesser');
   if (denied) return refuse(denied);
   if (state.phase !== 'guess') return refuse('wrong_phase');
   if (state.guessesMade === 0) return refuse('must_guess_first');
-  return ok(endTurn(state));
+  return ok(endTurn(state, at));
+}
+
+// Ends the phase whose time has run out by `at`, and gives the state back as it is when none has.
+// A captain who gave no clue in time loses the turn, which the record notes as a turn without a
+// clue. Guessers who run out of time end their turn, whether or not they have revealed a card,
+// and the record notes that on the turn's clue. Either way the other group's turn begins, and its
+// time counts from now. An action meant for the turn that ended is stale from then on.
+export function expire(state: KeywordsState, at: number): KeywordsState {
+  if (state.phase === 'over' || !state.clock || at < state.clock.ends) return state;
+  const history =
+    state.phase === 'clue'
+      ? [
+          ...state.history,
+          { turn: state.turn, team: state.team, word: null, count: null, guesses: [], timedOut: true as const },
+        ]
+      : state.history.map((record, index) =>
+          index === state.history.length - 1 ? { ...record, timedOut: true as const } : record,
+        );
+  return endTurn({ ...state, history }, at);
 }
 
 // A guesser writes to their group, in either team's turn. Captains can't write: the clue is all

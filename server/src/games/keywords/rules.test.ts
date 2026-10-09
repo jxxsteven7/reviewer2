@@ -1,22 +1,25 @@
-import { CHAT_KEPT, MAX_CHAT_LENGTH } from '@reviewer2/shared';
+import { CHAT_KEPT, MAX_CHAT_LENGTH, otherTeam, type ClueCount } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
-import { dropSelection, giveClue, newGame, pass, reveal, say, select, withdraw } from './rules';
+import { dropSelection, expire, giveClue, newGame, pass, reveal, say, select, withdraw } from './rules';
 import { guessesLeft, remaining, type KeywordsState } from './state';
-import { accepted, captain, gameState, guesser, now, refused, spectator } from './testing';
+import { accepted, captain, gameState, guesser, now, refused, setup, spectator, STANDARD } from './testing';
 
 const WORDS = Array.from({ length: 25 }, (_, i) => `Term${i}`);
 
 // Red's captain gives a clue on the default board, where red has cards 0-8.
 const clued = (count: number | 'unlimited' = 2, state = gameState()) =>
-  accepted(giveClue(state, captain('red'), { ...now(state), word: 'Gradient', count }));
+  accepted(giveClue(state, captain('red'), { ...now(state), word: 'Gradient', count }, 0));
 
 const revealAll = (state: KeywordsState, cards: number[]) =>
-  cards.reduce((current, card) => accepted(reveal(current, guesser(current.team), { ...now(current), card })), state);
+  cards.reduce(
+    (current, card) => accepted(reveal(current, guesser(current.team), { ...now(current), card }, 0)),
+    state,
+  );
 
 describe('a new game', () => {
   test('starts with the starting team giving a clue', () => {
-    const state = newGame(WORDS, seededRng(7), 'g');
+    const state = newGame(WORDS, seededRng(7), setup('g'), 0);
     expect(state).toMatchObject({ gameId: 'g', turn: 1, phase: 'clue', team: state.startingTeam, guessesMade: 0 });
     expect(state.cards).toHaveLength(25);
     expect(remaining(state.cards, state.startingTeam)).toBe(9);
@@ -38,16 +41,19 @@ describe('giving a clue', () => {
 
   test("keeps the captain's spelling, without stray spaces", () => {
     const state = gameState();
-    const next = accepted(giveClue(state, captain('red'), { ...now(state), word: '  Self-Attention ', count: 1 }));
+    const next = accepted(giveClue(state, captain('red'), { ...now(state), word: '  Self-Attention ', count: 1 }, 0));
     expect(next.clue?.word).toBe('Self-Attention');
     expect(next.history[0]?.word).toBe('Self-Attention');
-    const pasted = accepted(giveClue(state, captain('red'), { ...now(state), word: 'Gra\u00addi\u00adent', count: 1 }));
+    const pasted = accepted(
+      giveClue(state, captain('red'), { ...now(state), word: 'Gra\u00addi\u00adent', count: 1 }, 0),
+    );
     expect(pasted.clue?.word).toBe('Gradient');
   });
 
   test('records the clue as it was typed, without invisible characters', () => {
     const state = gameState();
-    const typed = (word: string) => accepted(giveClue(state, captain('red'), { ...now(state), word, count: 1 })).clue;
+    const typed = (word: string) =>
+      accepted(giveClue(state, captain('red'), { ...now(state), word, count: 1 }, 0)).clue;
     // A superscript two and full-width letters stay what they are, although the check folds them.
     expect(typed('R\u00b2')?.word).toBe('R\u00b2');
     expect(typed('\uff27\uff30\uff35')?.word).toBe('\uff27\uff30\uff35');
@@ -58,45 +64,46 @@ describe('giving a clue', () => {
   test("is only for the current team's captain", () => {
     const state = gameState();
     const clue = { ...now(state), word: 'Gradient', count: 1 };
-    expect(refused(giveClue(state, captain('blue'), clue))).toBe('not_your_turn');
-    expect(refused(giveClue(state, guesser('red'), clue))).toBe('not_captain');
-    expect(refused(giveClue(state, spectator, clue))).toBe('not_your_turn');
+    expect(refused(giveClue(state, captain('blue'), clue, 0))).toBe('not_your_turn');
+    expect(refused(giveClue(state, guesser('red'), clue, 0))).toBe('not_captain');
+    expect(refused(giveClue(state, spectator, clue, 0))).toBe('not_your_turn');
   });
 
   test('is refused for another game or another turn', () => {
     const state = gameState();
-    expect(refused(giveClue(state, captain('red'), { gameId: 'other', turn: 1, word: 'Gradient', count: 1 }))).toBe(
+    expect(refused(giveClue(state, captain('red'), { gameId: 'other', turn: 1, word: 'Gradient', count: 1 }, 0))).toBe(
       'stale',
     );
-    expect(refused(giveClue(state, captain('red'), { gameId: 'game-1', turn: 2, word: 'Gradient', count: 1 }))).toBe(
+    expect(refused(giveClue(state, captain('red'), { gameId: 'game-1', turn: 2, word: 'Gradient', count: 1 }, 0))).toBe(
       'stale',
     );
   });
 
   test('is refused while the guessers are guessing, and after the game', () => {
     const guessing = clued();
-    expect(refused(giveClue(guessing, captain('red'), { ...now(guessing), word: 'Loss', count: 1 }))).toBe(
+    expect(refused(giveClue(guessing, captain('red'), { ...now(guessing), word: 'Loss', count: 1 }, 0))).toBe(
       'wrong_phase',
     );
     const over = accepted(withdraw(gameState(), now(gameState())));
-    expect(refused(giveClue(over, captain('red'), { ...now(over), word: 'Loss', count: 1 }))).toBe('game_over');
+    expect(refused(giveClue(over, captain('red'), { ...now(over), word: 'Loss', count: 1 }, 0))).toBe('game_over');
   });
 
   test('needs a number from 0 to 9, or unlimited', () => {
     const state = gameState();
     for (const count of [-1, 10, 1.5, Number.NaN]) {
-      expect(refused(giveClue(state, captain('red'), { ...now(state), word: 'Gradient', count })), String(count)).toBe(
-        'bad_count',
-      );
+      expect(
+        refused(giveClue(state, captain('red'), { ...now(state), word: 'Gradient', count }, 0)),
+        String(count),
+      ).toBe('bad_count');
     }
     for (const count of [0, 1, 9, 'unlimited'] as const) {
-      expect(refused(giveClue(state, captain('red'), { ...now(state), word: 'Gradient', count }))).toBeNull();
+      expect(refused(giveClue(state, captain('red'), { ...now(state), word: 'Gradient', count }, 0))).toBeNull();
     }
   });
 
   test('refuses a clue that breaks the clue rules', () => {
     const state = gameState();
-    const word = (clue: string) => refused(giveClue(state, captain('red'), { ...now(state), word: clue, count: 1 }));
+    const word = (clue: string) => refused(giveClue(state, captain('red'), { ...now(state), word: clue, count: 1 }, 0));
     expect(word('')).toBe('clue_empty');
     expect(word('two words')).toBe('clue_not_one_word');
     expect(word('x'.repeat(30))).toBe('clue_too_long');
@@ -109,8 +116,8 @@ describe('giving a clue', () => {
     const cards = state.cards.map((card, i) => (i === 3 ? { ...card, translations: ['Entropie'] } : card));
     const translated = { ...state, cards };
     const clue = { ...now(state), word: 'entropie', count: 1 };
-    expect(refused(giveClue(translated, captain('red'), clue))).toBe('clue_on_board');
-    expect(refused(giveClue(state, captain('red'), clue))).toBeNull();
+    expect(refused(giveClue(translated, captain('red'), clue, 0))).toBe('clue_on_board');
+    expect(refused(giveClue(state, captain('red'), clue, 0))).toBeNull();
   });
 
   test('may repeat a word that has been covered', () => {
@@ -118,30 +125,32 @@ describe('giving a clue', () => {
     const entropy = (revealed: boolean) =>
       state.cards.map((card, i) => (i === 3 ? { ...card, word: 'Entropy', revealed } : card));
     const open = { ...state, cards: entropy(false) };
-    expect(refused(giveClue(open, captain('red'), { ...now(open), word: 'entropy', count: 1 }))).toBe('clue_on_board');
+    expect(refused(giveClue(open, captain('red'), { ...now(open), word: 'entropy', count: 1 }, 0))).toBe(
+      'clue_on_board',
+    );
     const covered = { ...state, cards: entropy(true) };
-    expect(refused(giveClue(covered, captain('red'), { ...now(covered), word: 'entropy', count: 1 }))).toBeNull();
+    expect(refused(giveClue(covered, captain('red'), { ...now(covered), word: 'entropy', count: 1 }, 0))).toBeNull();
   });
 });
 
 describe('revealing a card', () => {
   test("is only for the current team's guessers, after the clue", () => {
     const before = gameState();
-    expect(refused(reveal(before, guesser('red'), { ...now(before), card: 0 }))).toBe('wrong_phase');
+    expect(refused(reveal(before, guesser('red'), { ...now(before), card: 0 }, 0))).toBe('wrong_phase');
     const state = clued();
-    expect(refused(reveal(state, guesser('blue'), { ...now(state), card: 0 }))).toBe('not_your_turn');
-    expect(refused(reveal(state, captain('red'), { ...now(state), card: 0 }))).toBe('not_guesser');
-    expect(refused(reveal(state, spectator, { ...now(state), card: 0 }))).toBe('not_your_turn');
-    expect(refused(reveal(state, guesser('red'), { gameId: 'game-1', turn: 2, card: 0 }))).toBe('stale');
+    expect(refused(reveal(state, guesser('blue'), { ...now(state), card: 0 }, 0))).toBe('not_your_turn');
+    expect(refused(reveal(state, captain('red'), { ...now(state), card: 0 }, 0))).toBe('not_guesser');
+    expect(refused(reveal(state, spectator, { ...now(state), card: 0 }, 0))).toBe('not_your_turn');
+    expect(refused(reveal(state, guesser('red'), { gameId: 'game-1', turn: 2, card: 0 }, 0))).toBe('stale');
   });
 
   test('needs a card that exists and has not been revealed', () => {
     const state = clued();
     for (const card of [-1, 25, 1.5]) {
-      expect(refused(reveal(state, guesser('red'), { ...now(state), card })), String(card)).toBe('no_such_card');
+      expect(refused(reveal(state, guesser('red'), { ...now(state), card }, 0)), String(card)).toBe('no_such_card');
     }
-    const once = accepted(reveal(state, guesser('red'), { ...now(state), card: 0 }));
-    expect(refused(reveal(once, guesser('red'), { ...now(once), card: 0 }))).toBe('card_revealed');
+    const once = accepted(reveal(state, guesser('red'), { ...now(state), card: 0 }, 0));
+    expect(refused(reveal(once, guesser('red'), { ...now(once), card: 0 }, 0))).toBe('card_revealed');
   });
 
   test("of the team's own lets it go on, up to the number plus one", () => {
@@ -161,9 +170,9 @@ describe('revealing a card', () => {
 
   test('is recorded under the clue of its own turn', () => {
     let state = revealAll(clued(2), [0, 17]);
-    state = accepted(giveClue(state, captain('blue'), { ...now(state), word: 'Loss', count: 1 }));
+    state = accepted(giveClue(state, captain('blue'), { ...now(state), word: 'Loss', count: 1 }, 0));
     state = revealAll(state, [9, 10]);
-    state = accepted(giveClue(state, captain('red'), { ...now(state), word: 'Epoch', count: 'unlimited' }));
+    state = accepted(giveClue(state, captain('red'), { ...now(state), word: 'Epoch', count: 'unlimited' }, 0));
     state = revealAll(state, [1]);
     expect(state.history).toEqual([
       {
@@ -289,7 +298,7 @@ describe('choosing a card', () => {
     };
     state = revealAll(choose(state), [0]);
     expect(state).toMatchObject({ phase: 'guess', selections: [] });
-    expect(accepted(pass(choose(state), ann, now(state)))).toMatchObject({ phase: 'clue', selections: [] });
+    expect(accepted(pass(choose(state), ann, now(state), 0))).toMatchObject({ phase: 'clue', selections: [] });
     expect(revealAll(choose(state), [17])).toMatchObject({ phase: 'clue', selections: [] });
     expect(revealAll(choose(state), [24])).toMatchObject({ phase: 'over', selections: [] });
     expect(accepted(withdraw(choose(state), now(state)))).toMatchObject({ phase: 'over', selections: [] });
@@ -370,30 +379,34 @@ describe('the group chat', () => {
     let state = accepted(said(gameState()));
     state = revealAll(clued(1, state), [17]);
     expect(state.chat.red).toHaveLength(1);
-    expect(newGame(WORDS, seededRng(1), 'next').chat).toEqual({ red: [], blue: [] });
+    expect(newGame(WORDS, seededRng(1), setup('next'), 0).chat).toEqual({ red: [], blue: [] });
   });
 });
 
 describe('passing', () => {
   test('needs at least one guess first', () => {
     const state = clued();
-    expect(refused(pass(state, guesser('red'), now(state)))).toBe('must_guess_first');
+    expect(refused(pass(state, guesser('red'), now(state), 0))).toBe('must_guess_first');
     const after = revealAll(state, [0]);
-    expect(accepted(pass(after, guesser('red'), now(after)))).toMatchObject({ team: 'blue', turn: 2, phase: 'clue' });
+    expect(accepted(pass(after, guesser('red'), now(after), 0))).toMatchObject({
+      team: 'blue',
+      turn: 2,
+      phase: 'clue',
+    });
   });
 
   test("is only for the current team's guessers", () => {
     const state = revealAll(clued(), [0]);
-    expect(refused(pass(state, captain('red'), now(state)))).toBe('not_guesser');
-    expect(refused(pass(state, guesser('blue'), now(state)))).toBe('not_your_turn');
-    expect(refused(pass(gameState(), guesser('red'), now(gameState())))).toBe('wrong_phase');
+    expect(refused(pass(state, captain('red'), now(state), 0))).toBe('not_guesser');
+    expect(refused(pass(state, guesser('blue'), now(state), 0))).toBe('not_your_turn');
+    expect(refused(pass(gameState(), guesser('red'), now(gameState()), 0))).toBe('wrong_phase');
   });
 
   test('from an earlier turn is stale', () => {
     const state = revealAll(clued(), [0]);
     const moment = now(state);
-    const next = accepted(pass(state, guesser('red'), moment));
-    expect(refused(pass(next, guesser('red'), moment))).toBe('stale');
+    const next = accepted(pass(state, guesser('red'), moment, 0));
+    expect(refused(pass(next, guesser('red'), moment, 0))).toBe('stale');
   });
 });
 
@@ -418,5 +431,118 @@ describe('withdrawing', () => {
     const next = gameState({ gameId: 'game-2' });
     expect(refused(withdraw(next, { gameId: 'game-1' }))).toBe('stale');
     expect(refused(withdraw(revealAll(clued(), [24]), { gameId: 'game-0' }))).toBe('stale');
+  });
+});
+
+describe('the free guess rule', () => {
+  const free = (overrides: Partial<KeywordsState> = {}) =>
+    gameState({ settings: { ...STANDARD, guessRule: 'free' }, ...overrides });
+
+  test('takes a number from 1 to the cards the group has left, and nothing else', () => {
+    const state = free();
+    const count = (value: ClueCount) =>
+      refused(giveClue(state, captain('red'), { ...now(state), word: 'Gradient', count: value }, 0));
+    for (const value of [1, 5, 9] as const) expect(count(value), String(value)).toBeNull();
+    for (const value of [0, 10, 1.5, 'unlimited'] as const) expect(count(value), String(value)).toBe('bad_count');
+    // With three red cards left, 3 is the most.
+    const fewer = free({ cards: state.cards.map((card, i) => ({ ...card, revealed: i < 6 })) });
+    const late = (value: number) =>
+      refused(giveClue(fewer, captain('red'), { ...now(fewer), word: 'Gradient', count: value }, 0));
+    expect(late(3)).toBeNull();
+    expect(late(4)).toBe('bad_count');
+  });
+
+  test('lets the group go on for as long as it finds its own cards, whatever the number', () => {
+    let state = clued(1, free());
+    expect(guessesLeft(state)).toBeNull();
+    state = revealAll(state, [0, 1, 2, 3, 4]);
+    expect(state).toMatchObject({ team: 'red', phase: 'guess', guessesMade: 5 });
+    expect(guessesLeft(state)).toBeNull();
+    expect(revealAll(state, [17])).toMatchObject({ team: 'blue', phase: 'clue' });
+    expect(revealAll(state, [9])).toMatchObject({ team: 'blue', phase: 'clue' });
+    expect(revealAll(state, [24]).result).toEqual({ winner: 'blue', reason: 'reviewer2' });
+    expect(revealAll(state, [5, 6, 7, 8]).result).toEqual({ winner: 'red', reason: 'found' });
+  });
+
+  test('still needs a card revealed before the group may end its turn', () => {
+    const state = clued(2, free());
+    expect(refused(pass(state, guesser('red'), now(state), 0))).toBe('must_guess_first');
+    const after = revealAll(state, [0]);
+    expect(accepted(pass(after, guesser('red'), now(after), 0))).toMatchObject({ team: 'blue', phase: 'clue' });
+  });
+});
+
+describe('the clock', () => {
+  const TIMED = { ...STANDARD, firstClueTime: 90, clueTime: 60, guessTime: 30 };
+  const timed = (at = 1000) => newGame(WORDS, seededRng(3), setup('timed', TIMED), at);
+  const team = (state: KeywordsState) => state.team;
+  const clue = (state: KeywordsState, at: number) =>
+    accepted(giveClue(state, captain(team(state)), { ...now(state), word: 'Gradient', count: 'unlimited' }, at));
+
+  test('gives the first clue of a game its own time, and every later clue and guess phase theirs', () => {
+    let state = timed(1000);
+    expect(state.clock).toEqual({ ends: 91_000, length: 90_000 });
+    state = clue(state, 5000);
+    expect(state.clock).toEqual({ ends: 35_000, length: 30_000 });
+    const own = state.cards.findIndex((card) => card.color === state.team);
+    state = accepted(reveal(state, guesser(state.team), { ...now(state), card: own }, 6000));
+    // Revealing a card of one's own doesn't give the group more time.
+    expect(state.clock).toEqual({ ends: 35_000, length: 30_000 });
+    state = accepted(pass(state, guesser(state.team), now(state), 7000));
+    expect(state.clock).toEqual({ ends: 67_000, length: 60_000 });
+  });
+
+  test('has no time limit where the settings say 0', () => {
+    const state = newGame(WORDS, seededRng(3), setup('untimed', { ...TIMED, firstClueTime: 0, guessTime: 0 }), 0);
+    expect(state.clock).toBeNull();
+    const guessing = clue(state, 10);
+    expect(guessing.clock).toBeNull();
+    expect(expire(guessing, Number.MAX_SAFE_INTEGER)).toBe(guessing);
+  });
+
+  test('stops when the game ends', () => {
+    const state = timed();
+    expect(accepted(withdraw(state, now(state))).clock).toBeNull();
+    const guessing = clue(state, 2000);
+    const r2 = guessing.cards.findIndex((card) => card.color === 'reviewer2');
+    expect(accepted(reveal(guessing, guesser(guessing.team), { ...now(guessing), card: r2 }, 3000)).clock).toBeNull();
+  });
+
+  test('changes nothing before its time', () => {
+    const state = timed(1000);
+    expect(expire(state, 90_999)).toBe(state);
+  });
+
+  test('ends a clue phase whose time has run out, with a turn without a clue on record', () => {
+    const state = timed(1000);
+    const next = expire(state, 91_000);
+    expect(next).toMatchObject({ turn: 2, team: otherTeam(state.team), phase: 'clue', clue: null });
+    expect(next.clock).toEqual({ ends: 151_000, length: 60_000 });
+    expect(next.history).toEqual([{ turn: 1, team: state.team, word: null, count: null, guesses: [], timedOut: true }]);
+  });
+
+  test('ends a guess phase whose time has run out, also when nothing was revealed', () => {
+    let state = clue(timed(), 2000);
+    const choice = state.cards.findIndex((card) => card.color === state.team);
+    state = accepted(select(state, guesser(state.team), { ...now(state), card: choice }));
+    const next = expire(state, 32_000);
+    expect(next).toMatchObject({ turn: 2, team: otherTeam(state.team), phase: 'clue', guessesMade: 0, selections: [] });
+    expect(next.history).toEqual([
+      { turn: 1, team: state.team, word: 'Gradient', count: 'unlimited', guesses: [], timedOut: true },
+    ]);
+  });
+
+  test('makes an action meant for the turn that ran out stale', () => {
+    const state = clue(timed(), 2000);
+    const moment = now(state);
+    const next = expire(state, 40_000);
+    const own = state.cards.findIndex((card) => card.color === state.team);
+    expect(refused(reveal(next, guesser(state.team), { ...moment, card: own }, 40_000))).toBe('stale');
+    expect(refused(pass(next, guesser(state.team), moment, 40_000))).toBe('stale');
+  });
+
+  test('is left alone once the game is over', () => {
+    const over = accepted(withdraw(timed(), { gameId: 'timed' }));
+    expect(expire(over, Number.MAX_SAFE_INTEGER)).toBe(over);
   });
 });
