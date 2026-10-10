@@ -97,10 +97,10 @@ Open `http://<your computer's address>:3000` on a phone on the same Wi-Fi, or in
 
 ## Running in production
 
-The build needs only Node. Build it with its version, from the last commit's title on `main`:
+The build needs only Node. Build it with its version, the latest one in the commit titles on `main`, since a change to the [docs for people](rules/versioning.md#docs-for-people) alone lands without one:
 
 ```bash
-APP_VERSION="$(git log -1 --format=%s | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+' || git rev-parse --short HEAD)" npm run build
+APP_VERSION="$(git log --first-parent --format=%s | awk '!v && /^v[0-9]+\.[0-9]+\.[0-9]+ / { v = $1 } END { if (!v) exit 1; print v }' || git rev-parse --short HEAD)" npm run build
 ```
 
 Copy `server/dist/`, `client/dist/`, `mailer/dist/` and `words/` in the same layout and run `node server/dist/index.cjs`. What the code expects of any deployment:

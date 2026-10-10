@@ -79,10 +79,10 @@ A local copy needs no key for any outside service. For email, copy `.env.example
 The rules are in **[CONTRIBUTING.md](CONTRIBUTING.md)**; in short:
 
 1. `main` is protected: every change is a pull request from a branch of your own, or from a fork.
-2. Someone other than the author reviews every PR; a collaborator merges it once approved and green.
+2. Someone other than the author reviews every PR, except a maintainer's own PR for the [docs for people](docs/rules/versioning.md#docs-for-people); a collaborator merges it once approved and green.
 3. No AI or agent attribution in commits.
 4. The repository is in English; this README is the only translated file.
-5. Every PR is squash-merged as one versioned commit; see [docs/rules/versioning.md](docs/rules/versioning.md).
+5. Every PR is squash-merged as one commit, with a version unless it changes only docs for people; see [docs/rules/versioning.md](docs/rules/versioning.md).
 
 AI assistants read `AGENTS.md`.
 

@@ -79,10 +79,10 @@ npm run dev   # front end on http://localhost:5173, server on port 3000
 规则见 **[CONTRIBUTING.md](CONTRIBUTING.md)**（英文），简单说：
 
 1. `main` 受保护：所有改动都从自己的分支或 fork 发 Pull Request。
-2. 每个 PR 都要作者以外的人 review，通过且 CI 绿了之后由协作者合并。
+2. 每个 PR 都要作者以外的人 review（维护者自己只改[给人读的文档](docs/rules/versioning.md#docs-for-people)的 PR 除外），通过且 CI 绿了之后由协作者合并。
 3. 提交里不出现 AI 或 agent 署名。
 4. 仓库内容使用英文；这份 README 是唯一的翻译文件。
-5. 每个 PR squash 合并成一个带版本号的提交，见 [docs/rules/versioning.md](docs/rules/versioning.md)。
+5. 每个 PR squash 合并成一个提交；除了只改给人读的文档的 PR，都带版本号，见 [docs/rules/versioning.md](docs/rules/versioning.md)。
 
 AI 助手读 `AGENTS.md`。
 
@@ -96,4 +96,4 @@ AI 助手读 `AGENTS.md`。
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: 17e89d682e8c8d11aae30f23750fb11a0afebbe508421c3c0fe63d7f34dec416 -->
+<!-- readme-sync: 796d461c9696de03be6382c68e5c8a46ecc70dad1b533842607f3fd0f759073c -->

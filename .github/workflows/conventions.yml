@@ -6,8 +6,8 @@
 # On a pull request: every commit in it, plus the PR title and body. The title becomes the squash
 # commit on main, so it must carry the next version. The job fills the version in when it is
 # missing or stale, and only keeps a minor or major version that a maintainer chose. A PR that
-# changes only docs for people takes no version (docs/rules/versioning.md), and loses one it has. GitHub
-# doesn't allow retitling a PR from a fork, so there the job fails and prints the title to use.
+# changes only docs for people takes no version (docs/rules/versioning.md), and loses one it has.
+# The job can't retitle a PR from a fork, so there it fails and prints the title to use.
 # On a push to main: the commits that just landed. Every new minor or major version on main gets
 # a tag and a GitHub Release, including one that an earlier run missed. Then the open PRs get
 # their versions refreshed, because every merge moves the next number on.

@@ -1,6 +1,6 @@
 # Versioning
 
-Every PR is squash-merged, so it lands on `main` as one commit, titled `vX.Y.Z <type>: <summary> (#N)`, for example `v0.0.7 fix: keep players in their team (#12)`. GitHub adds the ` (#N)`. The whole title must fit in 72 characters, so keep PR titles to about 64.
+Every PR is squash-merged, so it lands on `main` as one commit, titled `vX.Y.Z <type>: <summary> (#N)` (with no version for [docs for people](#docs-for-people) alone), for example `v0.0.7 fix: keep players in their team (#12)`. GitHub adds the ` (#N)`. The whole title must fit in 72 characters, so keep PR titles to about 64.
 
 | Part | Who changes it |
 |---|---|
@@ -22,7 +22,7 @@ A PR that changes only the docs written for people to read lands without a versi
 
 ## Minor and major versions
 
-Only maintainers decide these: someone with the Admin or Maintain role edits the PR title to `vX.(Y+1).0` or `v(X+1).0.0` in place of the patch version. CI keeps it if a maintainer set it, and otherwise puts the patch version back with a warning. If another PR takes the number first, CI moves the title on.
+Only maintainers decide these: someone with the Admin or Maintain role edits the PR title to `vX.(Y+1).0` or `v(X+1).0.0` in place of the patch version. CI keeps it if a maintainer set it, and otherwise puts the patch version back with a warning. On a PR for the docs for people alone, CI takes it out like any other version. If another PR takes the number first, CI moves the title on.
 
 Merging such a PR makes CI tag the commit `vX.Y.0` and publish a GitHub Release; if that run fails, the next run on `main` catches up. Patch versions get no tag or release. Once the root `package.json` exists, its `version` holds the minor line, `X.Y.0`: a minor or major PR updates it, patch PRs leave it alone, and CI checks this.
 

@@ -424,6 +424,36 @@ describe('in a git repository', () => {
     change('docs/rules/git.md', 'docs: change a rule (#5)');
     assert.equal(cli('head').status, 1);
     assert.equal(cli('next', '--base', 'main').stdout.trim(), 'v0.0.4');
+
+    // A rule moved out of docs/rules/ counts at both of its paths, so it still takes a version.
+    git('switch', '-q', '-c', 'docs/move');
+    git('mv', 'docs/rules/git.md', 'docs/git.md');
+    commit('docs: move a rule');
+    const moved = (...args) => cli('pr-title', '--base', 'main', '--head', 'docs/move', ...args);
+    assert.equal(moved('--fix', '--', 'docs: move a rule').stdout.trim(), 'v0.0.4 docs: move a rule');
+    git('switch', '-q', 'main');
+    git('mv', 'docs/rules/git.md', 'docs/git.md');
+    commit('docs: move a rule (#6)');
+    assert.match(cli('head').stdout, /must start with "vX\.Y\.Z "/);
+  });
+
+  test('msg on main asks for the next version, or none for the docs for people alone', () => {
+    const { directory, git, commit, cli } = makeRepo();
+    commit('v0.0.1 docs: add rules (#1)');
+    const file = join(directory, 'message.txt');
+    const stage = (path) => {
+      writeFileSync(join(directory, path), 'text\n');
+      git('add', path);
+    };
+    stage('README.md');
+    writeFileSync(file, 'docs: fix a typo\n');
+    assert.equal(cli('msg', file).status, 0);
+    writeFileSync(file, 'v0.0.2 docs: fix a typo\n');
+    assert.match(cli('msg', file).stdout, /carries no version/);
+    stage('server.js');
+    assert.equal(cli('msg', file).status, 0);
+    writeFileSync(file, 'docs: fix a typo\n');
+    assert.match(cli('msg', file).stdout, /must start with "vX\.Y\.Z "/);
   });
 
   test('msg forbids a version on a branch commit', () => {

@@ -18,8 +18,8 @@
 //       the pull request title, which becomes the squash commit, and the PR body;
 //       with --fix, print the title with the right version instead of checking it, and with
 //       --fix --patch, print it with the next patch version even if it asks for a minor or
-//       major one; with --head, the PR's head commit, a PR that changes only docs for people
-//       takes no version
+//       major one. --head <ref> names the PR's head commit: if the PR changes only docs for
+//       people, its title takes no version, and --fix takes any version out
 //   node scripts/check-commits.mjs head [--base <ref>]
 //       the commits that landed on main since <ref> (default HEAD^)
 //   node scripts/check-commits.mjs next [--base <ref>] [--minor | --major]
@@ -174,7 +174,8 @@ const isSuccessor = (version, previous) =>
 export const isUnversioned = (files) => files.length > 0 && files.every((file) => UNVERSIONED_RE.test(file));
 
 // Subject rules. `version` is 'required', 'forbidden', 'optional' or 'none': 'forbidden' for a
-// branch commit, 'none' for a pull request, or its squash commit, that changes only docs for people.
+// branch commit, and 'none' for a pull request, or its squash commit, that changes only docs
+// for people.
 export function checkSubject(subject, where, { version: versionRule }) {
   const problems = [];
   const add = (rule, detail) => problems.push(problem(where, rule, detail));
@@ -246,8 +247,8 @@ function checkBodyEnglish(lines, where) {
 }
 
 // Subject, structure, language, attribution and name rules for one cleaned message. A message
-// whose version is 'required' is a squash commit on main, which carries only the pull request
-// title, so the body rules for branch commits do not apply to it.
+// whose version is 'required' or 'none' is a squash commit on main, which carries only the pull
+// request title, so the body rules for branch commits do not apply to it.
 export function checkMessage(message, where, { version, allowFixup = false, spellings }) {
   const lines = message.split('\n');
   let subject = lines[0] ?? '';
@@ -419,10 +420,10 @@ function commits(revRange, { firstParent = false } = {}) {
     });
 }
 
-// The files that a diff between `revs` changes, as `git diff` takes them. A moved file counts at
-// both of its paths.
-function changedFiles(...revs) {
-  return git('diff', '--no-renames', '--name-only', ...revs)
+// The files that `git diff` with these arguments changes: between two commits, in a range, or
+// with --cached, in the index. A moved file counts at both of its paths.
+function changedFiles(...args) {
+  return git('diff', '--no-renames', '--name-only', ...args)
     .split('\n')
     .filter(Boolean);
 }
@@ -456,10 +457,11 @@ function modeMsg(file) {
     };
   }
   // The pre-commit hook blocks commits on main, so this is a deliberate recovery commit. Like a
-  // squash merge, it must carry the next version.
-  const problems = checkMessage(message, where, { version: 'required' });
+  // squash merge, it carries the next version, or none if it changes only docs for people.
+  const unversioned = isUnversioned(changedFiles('--cached'));
+  const problems = checkMessage(message, where, { version: unversioned ? 'none' : 'required' });
   const [version] = splitVersion(firstLine(message));
-  if (version && gitOk('rev-parse', '-q', '--verify', 'HEAD')) {
+  if (version && !unversioned && gitOk('rev-parse', '-q', '--verify', 'HEAD')) {
     const [headVersion] = splitVersion(git('log', '-1', '--format=%s', 'HEAD').trim());
     if (!sameVersion(version, headVersion)) {
       // An equal version means `git commit --amend`.
@@ -467,7 +469,10 @@ function modeMsg(file) {
     }
     problems.push(...checkPackageJson(version, rootPackageJson(), where));
   }
-  return { problems, note: 'main: the subject must carry the next version' };
+  const note = unversioned
+    ? 'main: a change to the docs for people alone carries no version'
+    : 'main: the subject must carry the next version';
+  return { problems, note };
 }
 
 function modeRange(revRange) {
@@ -492,7 +497,7 @@ function modePrTitle(title, options) {
   if (!options.base) throw new UsageError('pr-title needs --base <ref>');
   if (options.patch && !options.fix) throw new UsageError('--patch goes with --fix');
   const previous = previousVersion(options.base);
-  // With --head, the pull request's changes since it left the base decide whether it takes a version.
+  // With --head, the PR's changes since it left the base decide whether it takes a version.
   const unversioned = options.head ? isUnversioned(changedFiles(`${options.base}...${options.head}`)) : false;
   if (options.fix) {
     console.log(fixedTitle(title, previous, { patchOnly: options.patch, unversioned }));
