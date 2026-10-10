@@ -145,7 +145,7 @@ describe('the reports', () => {
     expect(html).toContain('<title>Reviewer 2 reports</title>');
     expect(html).not.toContain('http-equiv="refresh"');
     expect(text(html)).toContain(
-      '#1 &middot; 2026-10-09 13:05 UTC &middot; room K7QX Bob (account Bob) Reported by Ann No note',
+      '#1 &middot; 2026-10-09 13:05 UTC &middot; room R2-K7QX Bob (account Bob) Reported by Ann No note',
     );
   });
 

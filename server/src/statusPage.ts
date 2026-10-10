@@ -1,4 +1,4 @@
-import { FEEDBACK_KINDS, type FeedbackKind } from '@reviewer2/shared';
+import { FEEDBACK_KINDS, formatCode, type FeedbackKind } from '@reviewer2/shared';
 import { UNKNOWN_COUNTRY } from './core/clientIp';
 import { megabytes, type Sample, type Stats } from './stats';
 import type { Feedback, Report } from './store/feedback';
@@ -242,15 +242,16 @@ function feedbackList(listing: FeedbackListing): string {
 export const REPORTS_PATH = '/reports';
 
 // A report of a player (docs/architecture.md#public-rooms): who reported whom, by username, the
-// name the player reported had in the room, with their account if they had one, the room, and the
-// note. An account that is gone is said to be; one the operator has barred is marked.
+// name the player reported had in the room, with their account if they had one, the room, by its
+// number as players see it, and the note. An account that is gone is said to be; one the operator
+// has barred is marked.
 function report({ id, createdAt, reporter, reported, reportedBarred, reportedName, roomCode, text }: Report): string {
   const account =
     reported === null
       ? 'no account'
       : `account ${escape(reported)}${reportedBarred ? ' &middot; <strong>barred from public rooms</strong>' : ''}`;
   return (
-    `<article><p>#${id} &middot; ${escape(when(createdAt))} &middot; room ${escape(roomCode)}</p>` +
+    `<article><p>#${id} &middot; ${escape(when(createdAt))} &middot; room ${escape(formatCode(roomCode))}</p>` +
     `<p class="text">${escape(reportedName)} (${account})</p>` +
     `<p>Reported by ${reporter === null ? 'a deleted account' : escape(reporter)}</p>` +
     (text === null ? '<p>No note</p>' : `<p class="text">${escape(text)}</p>`) +
