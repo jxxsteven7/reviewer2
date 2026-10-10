@@ -528,6 +528,7 @@
     "tip": "Buy the author a cola",
     "tipCode": "The author's WeChat reward code",
     "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
+    "sponsor": "No WeChat? Sponsor the author on GitHub",
     "version": "Version {version}"
   },
   "feedback": {
