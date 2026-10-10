@@ -102,8 +102,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Decide whether the browsers are needed
-        # A PR that changes only docs, licenses and the files under .github that are not
-        # workflows gets the job without the browsers. Pushes to main always run them.
+        # A PR that changes only docs gets the job without the browsers: Markdown files, docs/,
+        # license files and the files at the top of .github, such as CODEOWNERS, which leaves out
+        # the workflows. Pushes to main always run the browsers.
         id: need
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
@@ -116,7 +117,7 @@ jobs:
             files=$(git diff --no-renames --name-only "$BASE" HEAD)
             # The files that are not docs. grep exits with 1 when there are none, and with 2 on an
             # error, which stops the job too.
-            code=$(grep -vE '(^|/)[^/]+\.md$|^docs/|^LICENSE$|^words/LICENSE$|^\.github/(FUNDING\.yml|ISSUE_TEMPLATE/)' <<< "$files" || [ $? = 1 ])
+            code=$(grep -vE '(^|/)[^/]+\.md$|^docs/|(^|/)LICENSE[^/]*$|^\.github/[^/]+$' <<< "$files" || [ $? = 1 ])
             if [ -z "$code" ]; then
               echo "Only docs changed, so the browsers stay closed."
               browsers=false
