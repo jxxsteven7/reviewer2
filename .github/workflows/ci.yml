@@ -73,7 +73,8 @@ jobs:
   e2e-browser:
     # Real browsers against the production build. One job per browser project, side by side,
     # each with only the browser it runs. WebKit is the slowest, so its tests are split over two
-    # jobs; Playwright's --shard deals the test files out between them.
+    # jobs. Playwright's --shard deals the test files out between them by their number of tests,
+    # not by how long they take, so one part can take much longer than the other.
     name: End-to-end on ${{ matrix.project }}${{ matrix.shards && format(', part {0} of {1}', matrix.shard, matrix.shards) || '' }}
     runs-on: ubuntu-latest
     # A browser install or a server that hangs must not hold the check for the six hours that
