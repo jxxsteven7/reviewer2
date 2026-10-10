@@ -81,9 +81,27 @@ These apply to every game:
 
 | Game | Fields it uses | What makes a term work well in it |
 |---|---|---|
-| Team word guessing (`keywords`) | `zh`, `en`, `forms` | Terms with several meanings, or that invite associations across concepts, such as "attention", "convergence", "baseline" or "generalization". A captain has to link several of them with a single clue, so terms that are too obscure don't work. A board needs 25 different words in the room's language, and short terms fit the cards best: up to 5 Chinese characters or 14 letters. A card also carries the term in the other language, and a captain may not give it as a clue, so the two must really mean the same thing. Under the strict clue rule, a captain may not give one of a card's `forms` either. |
+| Team word guessing (`keywords`) | `zh`, `en`, `forms` | Terms with several meanings, or that invite associations across concepts, such as "attention", "convergence", "baseline" or "generalization". A captain has to link several of them with a single clue, so terms that are too obscure don't work. A board needs 25 different words in the room's language, and short terms fit the cards best: up to 5 Chinese characters or 14 letters. A card also carries the term in the other language, and a captain may not give it as a clue, so the two must really mean the same thing. Under the strict clue rule, a captain may not give one of a card's `forms` either. Two terms of which one gives the other away never share a board (see [Terms that give each other away](#terms-that-give-each-other-away)). |
 
 Add a row when a new game starts using the library.
+
+### Terms that give each other away
+
+Some terms repeat others: "Gene" and "Gene editing", "DNA" and "Junk DNA", "化石" and "活化石". On one board, a clue for one would point at the other as well, and the guessers couldn't tell which was meant. So the team word guessing game never deals two such terms together.
+
+Two terms clash when one of them lies inside the other:
+
+- one is the other or a plain plural of it: "Model" and "Models";
+- every part of one is a part of the other, the same or a plain plural: "Model" and "Mixture models", "Gene editing" and "Gene editing tool";
+- a run of Chinese characters in one lies inside a run in the other, even a single character: "基因" and "基因编辑", "电" and "电场";
+- one is the other's term in the other language;
+- every part of one is a part of one of the other's `forms`, in either language: "Unit" and "GPU" with the form "graphics processing unit".
+
+Here a letter that stands alone and a number are parts too, though a clue could never repeat them: "Test" lies inside "t-test", but "t-test" doesn't lie inside "Turing test", nor "GPT-3" inside "GPT-4", "Series A" inside "Time series" or "K线" inside "曲线". Small words such as "of" and "to" don't count: "Rate of return" lies inside "Return rate".
+
+A part in common is not enough: "Data science" and "Data cleaning", "Test set" and "Training set", or "Learning rate" and "Win rate" can share a board, and so can "Digital human" and "RLHF" with the form "reinforcement learning from human feedback". Neither is a Chinese character in common: "数学" and "化学" can share a board. Nor is a near miss that only brings a warning when it is a clue, such as "Model" and "Modeling", or "Data" and "Datacenter". The comparison is in the room's language, so a pair may clash in one language and not in the other.
+
+Clashing terms are fine in a list: the game only keeps them apart, and each list has far more terms than a board needs. But a list must keep 25 terms in each language that it is played in of which no two clash, and a term that clashes with many others, such as a one-character Chinese term that many others contain, makes the list play the same terms more often. `node scripts/check-words.mjs` lists the pairs, as described below.
 
 ## Contributing
 
@@ -97,7 +115,9 @@ Add a row when a new game starts using the library.
     - a term or a form with spaces at its ends or two spaces in a row, with a tab, a line break or any other space than a plain one, or with a character that shows nothing, such as a zero-width space;
     - a form that is the term itself, in either language, its plain plural or its singular, and a form that repeats another form of the term or is its plain plural;
     - a list that doesn't have 25 different terms in either language, because a board needs 25;
-    - a word that two lists translate differently, or spell their translations differently. This compares the lists that it checks, which are all of them unless you name some.
+    - a word that two lists translate differently, or spell their translations differently. This compares the lists that it checks, which are all of them unless you name some;
+    - a list in which it can't find 25 terms of a language, among those that it has 25 of, of which no two clash, because the game could then only deal boards with terms that give each other away. See [Terms that give each other away](#terms-that-give-each-other-away). To fix it, take out some of the terms that clash with many others, or add terms that clash with none.
   - It **warns** about a language that has some terms but fewer than 25, which players can't pick for this field until it has more. It also warns about terms longer than 5 Chinese characters or 14 letters, which may not fit on a card on a phone. As on a card, a Chinese term without Chinese characters, such as "GitHub", is measured in letters. Finally, it warns about terms that are also the game's own names for its roles and cards, such as "PI" or "Reviewer 2", because players may mix them up. Another spelling or a plain plural of such a name counts too, such as "Reviewer-2" or "Students". Warnings don't fail the check.
-  - On GitHub Actions, it attaches each problem and warning to the line of the term in the pull request.
+  - Before all of that, it lists, as information, the terms that clash in each language, each pair once, under the term that comes first: `check-words: info: biology.json: terms[1] (gene): "en" "Gene" can't share a board with "Gene editing", "Gene pool"`. These need no fixing; they show which terms the game keeps apart.
+  - On GitHub Actions, it attaches each problem and warning to the line of the term in the pull request. The information stays in the log only.
 - Word lists are reviewed like everything else. Reviewers check that the terms are accurate and well known, and that the Chinese and English match.

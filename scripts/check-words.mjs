@@ -5,7 +5,8 @@
 //   node scripts/check-words.mjs              every words/*.json
 //   node scripts/check-words.mjs <file>...    only these files
 //
-// Problems fail the check. Warnings point at terms that may not play well, and don't.
+// Problems fail the check. Warnings point at terms that may not play well, and don't. Information
+// lists the terms that the game keeps off the same board, and needs no fixing.
 //
 // Exit codes: 0 pass (perhaps with warnings), 1 problems found, 2 usage or environment error.
 
@@ -122,12 +123,128 @@ function spacing(text) {
   return null;
 }
 
+// Terms that must not share a board, because one of them lies inside the other: "Gene" and "Gene
+// editing", or "Unit" and "GPU" with the form "graphics processing unit". The server deals no two
+// such terms together, and a list must still have 25 terms of which no two clash, or the server
+// would have to.
+//
+// This must stay the same as cardsClash() in shared/src/games/keywords/clue.ts, with which the
+// server draws the words for a board. This script can't import it, so a test in
+// server/src/core/words.test.ts compares the two on every list. A term lies inside another when
+// it is that term or a plain plural of it, when each of its pieces is a piece of that term or of
+// one of its forms, or when it is that term's translation. The pieces are the parts that the
+// strict clue rule counts, and also each letter that stands alone and each run of digits, so that
+// "t-test" and "Turing test" don't clash. Two terms that only share a part, or a Chinese character,
+// don't clash either.
+
+const CLUE_SPACES = /\s+/gu;
+// The pieces of a word: runs of Latin letters, runs of Chinese characters, runs of digits and runs
+// of other letters, as PIECE in clue.ts.
+const PIECE = /\p{Script=Latin}+|\p{Script=Han}+|\p{N}+|[^\P{L}\p{Script=Latin}\p{Script=Han}]+/gu;
+const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
+
+// A text as a clue is checked: normalizeClue() in clue.ts.
+const normalizeClue = (text) =>
+  text.normalize('NFKC').replace(INVISIBLE, '').trim().replace(CLUE_SPACES, ' ').toLowerCase();
+
+// wordOf() in clue.ts, as far as the clash check needs it: the key of a text and its pieces, which
+// are every run of letters or digits but the small words, such as "of" and "to". A letter alone
+// counts, even an "a".
+function wordOf(text) {
+  const folded = toSimplified(normalizeClue(text).normalize('NFD').replace(MARKS, ''));
+  return {
+    key: folded.replace(NOT_LETTER_OR_DIGIT, ''),
+    pieces: (folded.match(PIECE) ?? []).filter((piece) => piece.length === 1 || !SMALL_WORDS.has(piece)),
+  };
+}
+
+// liesInside() in clue.ts: the first word is the second or a plain plural of it, or each of its
+// pieces is a piece of the second, the same or a plain plural, or, for a run of Chinese
+// characters, lies inside one of the second's runs.
+function liesInside(inner, outer) {
+  if (sameOrPlural(inner.key, outer.key)) return true;
+  return (
+    inner.pieces.length > 0 &&
+    inner.pieces.every((piece) =>
+      outer.pieces.some((other) =>
+        HAN.test(piece) && HAN.test(other) ? other.includes(piece) : sameOrPlural(piece, other),
+      ),
+    )
+  );
+}
+
+// A term as the clash check sees it: its word with its pieces, the keys of its translations and
+// its forms. `forms` holds the forms of both languages.
+export function clashEntry(word, translations = [], forms = []) {
+  return {
+    word: wordOf(word),
+    translations: translations.map(wordKey).filter((key) => key !== ''),
+    forms: forms.map(wordOf).filter((form) => form.key !== ''),
+  };
+}
+
+const givesAway = (word, card) =>
+  liesInside(word.word, card.word) ||
+  card.translations.some((key) => sameOrPlural(word.word.key, key)) ||
+  card.forms.some((form) => liesInside(word.word, form));
+
+export const clash = (a, b) => givesAway(a, b) || givesAway(b, a);
+
+// How many of the entries can share a board, up to `enough`: the entries are taken one at a time,
+// each time one that clashes with none of those taken, and of those the one that clashes with the
+// fewest of the others still open, which shuts out the fewest. This may find fewer than the most
+// there are, but on a list in which it does, a board would be hard to deal anyway.
+export function compatible(entries, clashes, enough) {
+  const neighbors = entries.map(() => new Set());
+  for (const [a, b] of clashes) {
+    neighbors[a].add(b);
+    neighbors[b].add(a);
+  }
+  const open = new Set(entries.keys());
+  const close = (index) => {
+    open.delete(index);
+    for (const other of neighbors[index]) neighbors[other].delete(index);
+  };
+  let taken = 0;
+  while (taken < enough && open.size > 0) {
+    const next = [...open].reduce((best, index) => (neighbors[index].size < neighbors[best].size ? index : best));
+    for (const other of [...neighbors[next]]) close(other);
+    close(next);
+    taken += 1;
+  }
+  return taken;
+}
+
+// The pairs of terms of a list that clash, in one language, as indexes into `entries`, and the
+// entries: each term that is a word in that language, once, with its translation and its forms.
+// `texts` maps each key to the first term that has it, as checkWordList() finds them.
+function clashesIn(terms, language, texts) {
+  const other = LANGUAGES.find((each) => each !== language);
+  const entries = [...texts.values()].map(({ index, text }) => {
+    const term = terms[index];
+    const forms =
+      term.forms && typeof term.forms === 'object' && !Array.isArray(term.forms)
+        ? LANGUAGES.flatMap((each) => (Array.isArray(term.forms[each]) ? term.forms[each].filter(isText) : []))
+        : [];
+    return { index, text, entry: clashEntry(text, isText(term[other]) ? [term[other]] : [], forms) };
+  });
+  const pairs = [];
+  for (let a = 0; a < entries.length; a += 1) {
+    for (let b = a + 1; b < entries.length; b += 1) {
+      if (clash(entries[a].entry, entries[b].entry)) pairs.push([a, b]);
+    }
+  }
+  return { entries, pairs };
+}
+
 // Problems and warnings for one parsed list. `file` is its file name, such as "ml.json".
 export function checkWordList(data, file) {
   const problems = [];
   const warnings = [];
+  // What players might like to know and doesn't need fixing: the terms that can't share a board.
+  const infos = [];
   const counts = Object.fromEntries(LANGUAGES.map((language) => [language, 0]));
-  const result = () => ({ problems, warnings, counts });
+  const result = () => ({ problems, warnings, infos, counts });
 
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     problems.push(`${file}: the file must hold one JSON object`);
@@ -243,6 +360,27 @@ export function checkWordList(data, file) {
   const playable = LANGUAGES.filter((language) => counts[language] >= MIN_TERMS);
   if (playable.length === 0) {
     problems.push(`${file}: needs at least ${MIN_TERMS} different terms in Chinese or in English to be playable`);
+  }
+  for (const language of LANGUAGES) {
+    if (counts[language] === 0) continue;
+    const { entries, pairs } = clashesIn(data.terms, language, texts[language]);
+    // Each pair once, under the term that comes first.
+    const later = new Map();
+    for (const [a, b] of pairs) later.set(a, [...(later.get(a) ?? []), describe(entries[b].text)]);
+    for (const [at, others] of later) {
+      const { index, text } = entries[at];
+      const { id } = data.terms[index];
+      infos.push(
+        `${file}: terms[${index}]${isText(id) ? ` (${id})` : ''}: "${language}" ${describe(text)} can't share a board with ${others.join(', ')}`,
+      );
+    }
+    if (counts[language] < MIN_TERMS) continue;
+    const found = compatible(entries, pairs, MIN_TERMS);
+    if (found < MIN_TERMS) {
+      problems.push(
+        `${file}: no ${MIN_TERMS} of its "${language}" terms could be found of which none repeats another, only ${found}, so a board would have to hold terms that give each other away`,
+      );
+    }
   }
   for (const language of LANGUAGES) {
     if (counts[language] > 0 && counts[language] < MIN_TERMS) {
@@ -448,6 +586,12 @@ export function main(argv, wordsDir = join(root, 'words')) {
   checkAcrossLists(parsed.map(({ path, result }) => ({ file: basename(path), data: result.data }))).forEach(
     (problems, index) => parsed[index].result.problems.push(...problems),
   );
+
+  // The information comes first, so that the problems and warnings end the output. It is no
+  // annotation: there is a lot of it, and none of it needs fixing.
+  for (const { result } of checked) {
+    for (const message of result.infos ?? []) console.log(`check-words: info: ${message}`);
+  }
 
   let problems = 0;
   // On GitHub Actions the workflow command is the line in the log, so each is printed once.

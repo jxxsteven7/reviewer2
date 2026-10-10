@@ -15,6 +15,7 @@ import {
   annotation,
   checkAcrossLists,
   checkWordList,
+  compatible,
   HAN,
   lineOf,
   main,
@@ -267,6 +268,108 @@ describe('a term', () => {
   });
 });
 
+describe('terms that give each other away', () => {
+  const GENE = '\u57fa\u56e0';
+  const GENE_EDITING = '\u57fa\u56e0\u7f16\u8f91';
+  const MATH = '\u6570\u5b66';
+  const CHEMISTRY = '\u5316\u5b66';
+  const withTerms = (...extra) =>
+    check(list({ terms: [...terms(MIN_TERMS), ...extra.map((term, i) => ({ id: `extra-${i}`, ...term }))] }));
+
+  test('are listed as information, once for each pair, and pass', () => {
+    const result = withTerms({ en: 'Gene', zh: GENE }, { en: 'Gene editing', zh: GENE_EDITING });
+    assert.deepEqual(result.problems, []);
+    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.infos, [
+      `ml.json: terms[25] (extra-0): "zh" "${GENE}" can't share a board with "${GENE_EDITING}"`,
+      `ml.json: terms[25] (extra-0): "en" "Gene" can't share a board with "Gene editing"`,
+    ]);
+    assert.deepEqual(check(list()).infos, []);
+  });
+
+  test('are found when one term lies inside the other', () => {
+    const clashes = (...extra) => withTerms(...extra).infos.length > 0;
+    // A plural, a part of several words, and a form, which counts in either language.
+    assert.ok(clashes({ en: 'Model' }, { en: 'Mixture models' }));
+    assert.ok(clashes({ en: 'Unit' }, { en: 'GPU', forms: { en: ['graphics processing unit'] } }));
+    assert.ok(clashes({ zh: 'Unit' }, { zh: 'GPU', forms: { en: ['graphics processing unit'] } }));
+    // The other term's translation.
+    assert.ok(clashes({ zh: 'Transformer' }, { zh: '\u53d8\u6362\u5668', en: 'Transformer' }));
+    // A part in common is not enough, nor a Chinese character, nor a near miss that only brings
+    // a warning when it is a clue.
+    assert.ok(!clashes({ en: 'Data science' }, { en: 'Data cleaning' }));
+    assert.ok(!clashes({ zh: MATH }, { zh: CHEMISTRY }));
+    assert.ok(!clashes({ en: 'Model' }, { en: 'Modeling' }));
+    assert.ok(!clashes({ en: 'Data' }, { en: 'Datacenter' }));
+    // A letter alone and digits count: "Test" lies inside "t-test", but "t-test" doesn't lie
+    // inside "Turing test".
+    assert.ok(clashes({ en: 'Test' }, { en: 't-test' }));
+    assert.ok(!clashes({ en: 't-test' }, { en: 'Turing test' }));
+    assert.ok(!clashes({ en: 'Term 1' }, { en: 'Term 2' }));
+  });
+
+  test('name a term without an id by its place alone', () => {
+    const { infos } = withTerms({ en: 'Gene' }, { en: 'Gene pool' });
+    assert.ok(has(infos, /terms\[25\] \(extra-0\): "en" "Gene"/));
+    const unnamed = check(list({ terms: [...terms(MIN_TERMS), { en: 'Gene' }, { id: 'pool', en: 'Gene pool' }] }));
+    assert.ok(has(unnamed.infos, /^ml\.json: terms\[25\]: "en" "Gene" can't share a board with "Gene pool"$/));
+  });
+
+  test('fail a list that has no 25 terms of which none repeats another', () => {
+    // Each Chinese term is the one before it with a character added, so every one lies inside every
+    // later one.
+    const nested = (i) => `\u8bcd${Array.from({ length: i }, (_, j) => String.fromCharCode(0x4e00 + j)).join('')}`;
+    const repetitive = terms(MIN_TERMS + 5, (i) => ({ id: `term-${i}`, en: `Term ${i}`, zh: nested(i) }));
+    const { problems, counts } = check(list({ terms: repetitive }));
+    assert.deepEqual(counts, { zh: MIN_TERMS + 5, en: MIN_TERMS + 5 });
+    assert.deepEqual(problems, [
+      'ml.json: no 25 of its "zh" terms could be found of which none repeats another, only 1, so a board would have to hold terms that give each other away',
+    ]);
+  });
+
+  test('pass a list that has 25 terms of which none repeats another, however they lie', () => {
+    // "Gene editing" clashes with both "Gene" and "Editing", which leave it out together.
+    const tight = [
+      ...terms(MIN_TERMS - 2),
+      { id: 'a', en: 'Gene editing' },
+      { id: 'b', en: 'Gene' },
+      { id: 'c', en: 'Editing' },
+    ];
+    assert.deepEqual(check(list({ terms: tight })).problems, []);
+    const short = [
+      ...terms(MIN_TERMS - 2),
+      { id: 'a', en: 'Gene editing' },
+      { id: 'b', en: 'Gene' },
+      { id: 'c', en: 'Gene editing tool' },
+    ];
+    assert.ok(has(check(list({ terms: short })).problems, /no 25 of its "en" terms .* only 24/));
+  });
+
+  test('are counted as they stand once some terms are taken', () => {
+    // Term 5 clashes with nothing, and term 1 only with term 2. Once term 2 is out, terms 3 and 4
+    // clash only with term 0, and taking both of them, rather than term 0, makes four.
+    const pairs = [
+      [0, 3],
+      [0, 4],
+      [1, 2],
+      [2, 3],
+      [2, 4],
+    ];
+    assert.equal(compatible(Array(6).fill(null), pairs, MIN_TERMS), 4);
+    assert.equal(compatible(Array(6).fill(null), pairs, 3), 3);
+    assert.equal(compatible(Array(6).fill(null), [], MIN_TERMS), 6);
+  });
+
+  test('only count in a language that a board can be dealt in', () => {
+    const few = terms(MIN_TERMS, (i) => ({ id: `term-${i}`, en: `Term ${i}`, ...(i < 3 ? { zh: GENE } : {}) }));
+    few[1].zh = GENE_EDITING;
+    few[2].zh = MATH;
+    const { problems, infos } = check(list({ terms: few }));
+    assert.deepEqual(problems, []);
+    assert.ok(has(infos, /"zh" .* can't share a board with/));
+  });
+});
+
 describe('lists together', () => {
   const field = (id, extra) => ({ file: `${id}.json`, data: list({ id, terms: [...terms(MIN_TERMS), ...extra] }) });
 
@@ -414,6 +517,25 @@ describe('command line', () => {
     assert.ok(has(lines, /^::error title=check-words::broken\.json: not valid JSON/));
     assert.ok(has(lines, /^::warning title=check-words::long\.json: .*"100%25 Reproducible" is longer than 14/));
     assert.ok(has(lines, /^check-words: OK long\.json/));
+
+    // Information is no annotation: there is a lot of it, and nothing to fix.
+    const clashing = join(dir, 'clashing.json');
+    writeFileSync(
+      clashing,
+      JSON.stringify(
+        list({ id: 'clashing', terms: [...terms(MIN_TERMS), { id: 'x', en: 'Gene' }, { id: 'y', en: 'Gene pool' }] }),
+      ),
+    );
+    const informed = runWith({ GITHUB_ACTIONS: 'true' }, clashing);
+    assert.equal(informed.status, 0);
+    assert.match(
+      informed.stdout,
+      /^check-words: info: clashing\.json: terms\[25\] \(x\): "en" "Gene" can't share a board with "Gene pool"$/m,
+    );
+    assert.match(informed.stdout, /^check-words: OK clashing\.json/m);
+    // First, so that problems and warnings end the output.
+    assert.ok(informed.stdout.indexOf('info:') < informed.stdout.indexOf('OK clashing.json'));
+    assert.doesNotMatch(informed.stdout, /^::/m);
 
     const plain = run(bad, long).stdout.split('\n');
     assert.ok(has(plain, /^check-words: broken\.json: not valid JSON/));
