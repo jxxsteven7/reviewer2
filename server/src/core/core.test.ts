@@ -1,4 +1,4 @@
-import { CODE_ALPHABET } from '@reviewer2/shared';
+import { CODE_ALPHABET, MAX_SCREENS } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { fakeGame } from '../../test/fakeGame';
 import { testWords } from '../../test/helpers';
@@ -169,21 +169,37 @@ describe('rate limits', () => {
   });
 });
 
-describe('removals', () => {
-  function roomOf(listed: boolean, clock: { now: number } = { now: 0 }) {
-    const rooms = new Rooms(testWords(), seededRng(3), () => clock.now);
-    const created = rooms.create({
-      game: fakeGame,
-      language: 'en',
-      fields: ['general'],
-      key: 'chair',
-      name: 'Ann',
-      public: listed,
-    });
-    if (!created.ok) throw new Error(created.error);
-    return created.room;
-  }
+// A room with its chair, public or private, on a clock that a test moves.
+function roomOf(listed: boolean, clock: { now: number } = { now: 0 }) {
+  const rooms = new Rooms(testWords(), seededRng(3), () => clock.now);
+  const created = rooms.create({
+    game: fakeGame,
+    language: 'en',
+    fields: ['general'],
+    key: 'chair',
+    name: 'Ann',
+    public: listed,
+  });
+  if (!created.ok) throw new Error(created.error);
+  return created.room;
+}
 
+describe('screens', () => {
+  test('fill a room at five, but in a public room a key that has one only takes its place', () => {
+    for (const listed of [false, true]) {
+      const room = roomOf(listed);
+      for (let i = 0; i < MAX_SCREENS; i += 1) expect(room.addScreen(`screen-${i}`, `key-${i}`)).toEqual([]);
+      expect(room.screensFull('another')).toBe(true);
+      expect(room.screensFull('key-0')).toBe(!listed);
+    }
+    const room = roomOf(true);
+    expect(room.addScreen('screen-0', 'key-0')).toEqual([]);
+    expect(room.addScreen('screen-1', 'key-0')).toEqual(['screen-0']);
+    expect([...room.screens]).toEqual([['screen-1', 'key-0']]);
+  });
+});
+
+describe('removals', () => {
   // A newcomer, connected from the browser with the key `browser-<i>`, whom the chair removes.
   function removeNewcomer(room: Room, i: number) {
     const joined = room.join(`seat-${i}`, `Guest ${i}`);
@@ -213,10 +229,10 @@ describe('removals', () => {
     expect(unlisted.join('seat-1', 'Guest 1')).toMatchObject({ ok: true });
     clock.now += 24 * 60 * 60_000;
     listed.forgetOldRemovals();
-    expect(listed.refusal('nobody', 'browser-1')).toBe('removed');
+    expect(listed.removal('nobody', 'browser-1')).toBe('removed');
     // A removal for good outweighs one that is still running, for a browser that had both.
     expect(removeNewcomer(listed, 2)).toMatchObject({ reason: 'removed_recently' });
-    expect(listed.refusal('seat-2', 'browser-1')).toBe('removed');
+    expect(listed.removal('seat-2', 'browser-1')).toBe('removed');
   });
 
   test('are remembered up to a limit, with every key of each, the earliest forgotten first', () => {
@@ -232,7 +248,7 @@ describe('removals', () => {
     expect(room.removal('browser-0')).toBeNull();
     expect(room.removal('seat-1', 'browser-1')).toBe('removed');
     expect(room.removal(`browser-${MAX_REMOVED / 2}`)).toBe('removed');
-    expect(room.refusal('nobody', `browser-${MAX_REMOVED}`)).toBe('removed');
+    expect(room.removal('nobody', `browser-${MAX_REMOVED}`)).toBe('removed');
     expect(room.members.size).toBe(1);
   });
 

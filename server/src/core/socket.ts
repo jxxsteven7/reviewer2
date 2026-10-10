@@ -352,8 +352,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (refusal) return refusal;
       if (room.public && !kept && !room.memberByKey(conn.key)) return fail('not_member');
       const key = kept ?? conn.key;
-      const replaced = room.screensOf(key);
-      if (room.screensFull() && !(room.public && replaced.length > 0)) return fail('screens_full');
+      if (room.screensFull(key)) return fail('screens_full');
       release(socket);
       closeFor(room.addScreen(socket.id, key), 'left');
       Object.assign(conn, { room, screen: true });

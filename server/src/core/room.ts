@@ -208,17 +208,16 @@ export class Room {
     return count;
   }
 
-  // Why nobody new can come in with any of these keys, whatever they call themselves: the chair
-  // removed them, or the room is full. A newcomer hears this before being asked for a name, rather
-  // than after having typed one. A browser has a key as a guest and, logged in, its account's, and
-  // whoever was removed by either stays out.
-  refusal(...keys: string[]): 'removed' | 'removed_recently' | 'room_full' | null {
-    return this.removal(...keys) ?? (this.full() ? 'room_full' : null);
+  // Why nobody new can come in with this key for now, whatever they call themselves: the chair
+  // removed them, or the room is full.
+  refusal(key: string): 'removed' | 'removed_recently' | 'room_full' | null {
+    return this.removal(key) ?? (this.full() ? 'room_full' : null);
   }
 
   // Whether the chair removed whoever has any of these keys: `removed` for good, from a room that
   // was public at the time, `removed_recently` while the wait after a removal from a private room
-  // lasts, or null.
+  // lasts, or null. A browser has a key as a guest and, logged in, its account's, and whoever was
+  // removed by either stays out (socket.ts).
   removal(...keys: string[]): 'removed' | 'removed_recently' | null {
     const found = keys.map((key) => this.#removed.get(key));
     if (found.some((removal) => removal?.forGood)) return 'removed';
@@ -292,8 +291,14 @@ export class Room {
     return this.members.size >= MAX_PLAYERS;
   }
 
-  screensFull(): boolean {
-    return this.screens.size >= MAX_SCREENS;
+  // Whether a new screen with this key finds no room. In a public room a key has one screen at
+  // most, so that nobody fills all five: a new one takes the place of those the key had.
+  screensFull(key: string): boolean {
+    return this.screens.size - this.#replacedBy(key).length >= MAX_SCREENS;
+  }
+
+  #replacedBy(key: string): string[] {
+    return this.public ? this.screensOf(key) : [];
   }
 
   // The connections of the screens that a key has up.
@@ -307,12 +312,11 @@ export class Room {
     return this.#keptScreens.has(key);
   }
 
-  // A screen, by the key of the connection that puts it up. In a public room a key has one screen
-  // at most, so that nobody fills all five: a new one takes the place of those the key had, which
-  // are returned for the socket layer to close. That is also how a screen that comes back before
-  // its old connection was found to be gone takes its own place.
+  // A screen, by the key of the connection that puts it up, in place of those it replaces (see
+  // screensFull()), which are returned for the socket layer to close. That is also how a screen
+  // that comes back before its old connection was found to be gone takes its own place.
   addScreen(socketId: string, key: string): string[] {
-    const replaced = this.public ? this.screensOf(key) : [];
+    const replaced = this.#replacedBy(key);
     for (const id of replaced) this.screens.delete(id);
     this.screens.set(socketId, key);
     this.lastSeen = this.#now();
