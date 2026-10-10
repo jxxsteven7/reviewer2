@@ -1,4 +1,6 @@
+import { isReservedName } from './accounts';
 import type { Language } from './language';
+import { cleanName } from './names';
 import { dropHidden, showsSomething, textLength, trimMarks, trimStrays } from './text';
 
 // Feedback from players to the author (docs/architecture.md). The client runs these rules while a
@@ -30,17 +32,21 @@ export const FEEDBACK_ERRORS = [
   'feedback_empty',
   'feedback_too_long',
   'contact_too_long',
+  'credit_invalid',
+  'credit_reserved',
   'feedback_limited',
   'feedback_full',
 ] as const;
 export type FeedbackError = (typeof FEEDBACK_ERRORS)[number];
 
 // What the client sends with meta:feedback: what the player wrote, and what comes along by itself.
-// `version` is the build of the page, which may be older than the server's.
+// `credit` is the name to list in the acknowledgments should the feedback be adopted
+// (acknowledgments.ts). `version` is the build of the page, which may be older than the server's.
 export interface FeedbackMessage {
   kind: FeedbackKind;
   text: string;
   contact?: string;
+  credit?: string;
   version: string;
   language: Language;
   page: FeedbackPage;
@@ -98,4 +104,22 @@ export function checkContact(text: string | undefined): ContactCheck {
   if (!showsSomething(cleaned)) return { contact: null, problem: null };
   if (textLength(cleaned) > MAX_CONTACT_LENGTH) return { contact: cleaned, problem: 'contact_too_long' };
   return { contact: cleaned, problem: null };
+}
+
+export interface CreditCheck {
+  // The name as it is kept and shown, or null when none was given.
+  credit: string | null;
+  problem: 'credit_invalid' | 'credit_reserved' | null;
+}
+
+// The name for the acknowledgments is optional, and follows the rules of a nickname (names.ts):
+// it is shown beside other names, so it is refused, not cleaned, when it holds something hidden or
+// is longer than 16 characters, and it may not be a reserved name (accounts.ts), which nobody may
+// pass for. One that shows nothing is none.
+export function checkCredit(text: string | undefined): CreditCheck {
+  if (typeof text !== 'string' || !showsSomething(text)) return { credit: null, problem: null };
+  const credit = cleanName(text);
+  if (credit === null) return { credit: null, problem: 'credit_invalid' };
+  if (isReservedName(credit)) return { credit: null, problem: 'credit_reserved' };
+  return { credit, problem: null };
 }

@@ -126,4 +126,30 @@ export const MIGRATIONS: readonly string[] = [
 
   CREATE UNIQUE INDEX titles_match ON titles (account_id, title, match_id) WHERE match_id IS NOT NULL;
   `,
+  // 4: acknowledgments (docs/architecture.md#acknowledgments).
+  //
+  // - feedback gets the name that the player wants to be thanked by, if they gave one, and the
+  //   account they were logged in to when they did, which the operator links the acknowledgment to
+  //   unless they decide otherwise. The account goes from the feedback when it is deleted.
+  // - acknowledgments: the list itself. Each row is the name, what it is for, when it was given, the
+  //   feedback it came from, if any, and the account it is linked to, if any. The name stays when
+  //   the account is deleted: it is the public name its owner gave, not the account. The feedback's
+  //   number is kept as a number and not as a foreign key, so that the operator may delete feedback
+  //   with sqlite3, which runs with foreign keys off, without leaving a row that the next migration
+  //   refuses. A piece of feedback is adopted once.
+  `
+  ALTER TABLE feedback ADD COLUMN credit TEXT;
+  ALTER TABLE feedback ADD COLUMN account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL;
+  CREATE INDEX feedback_account ON feedback (account_id) WHERE account_id IS NOT NULL;
+
+  CREATE TABLE acknowledgments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('feedback', 'words', 'playtesting')),
+    credited_at TEXT NOT NULL,
+    feedback_id INTEGER UNIQUE,
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL
+  ) STRICT;
+  CREATE INDEX acknowledgments_account ON acknowledgments (account_id) WHERE account_id IS NOT NULL;
+  `,
 ];

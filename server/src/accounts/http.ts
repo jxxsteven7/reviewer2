@@ -111,6 +111,11 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
       login: true,
       handle: ({ login }) => ok({ records: accounts.recordsOf(login as Login) }),
     },
+    // The acknowledgments are everyone's to read: names, kinds and dates, and nothing else of them.
+    [ACCOUNT_API.acknowledgments]: {
+      method: 'GET',
+      handle: () => ok({ acknowledgments: accounts.acknowledgments.list() }),
+    },
     [ACCOUNT_API.register]: post(ACCOUNT_REQUESTS.register, async ({ ip, login, body }) => {
       const result = await accounts.register(ip, body.username, body.password);
       if (!result.ok) return failure(result.error);

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   checkContact,
+  checkCredit,
   checkFeedback,
   cleanFeedback,
   MAX_CONTACT_INPUT,
@@ -92,5 +93,32 @@ describe('the contact', () => {
 
   test('that is not text is none', () => {
     expect(checkContact(7 as unknown as string)).toEqual({ contact: null, problem: null });
+  });
+});
+
+describe('the name for the acknowledgments', () => {
+  test('is optional, and one that shows nothing is none', () => {
+    for (const text of [undefined, '', '  ', ZERO_WIDTH_SPACE, '\n']) {
+      expect(checkCredit(text), JSON.stringify(text)).toEqual({ credit: null, problem: null });
+    }
+  });
+
+  test('follows the rules of a nickname: cleaned of spaces, refused when hidden or too long', () => {
+    expect(checkCredit('  Ann   Lee ')).toEqual({ credit: 'Ann Lee', problem: null });
+    expect(checkCredit('octocat')).toEqual({ credit: 'octocat', problem: null });
+    expect(checkCredit(HELLO)).toEqual({ credit: HELLO, problem: null });
+    for (const text of [`Ann${ZERO_WIDTH_SPACE}Lee`, 'x'.repeat(17), `e${ACUTE.repeat(9)}`]) {
+      expect(checkCredit(text), JSON.stringify(text)).toEqual({ credit: null, problem: 'credit_invalid' });
+    }
+  });
+
+  test('may not be a reserved name, as a nickname may not', () => {
+    for (const text of ['admin', ' Reviewer 2 ', 'REVIEWER_2', '\u7ba1\u7406\u5458']) {
+      expect(checkCredit(text), JSON.stringify(text)).toEqual({ credit: null, problem: 'credit_reserved' });
+    }
+  });
+
+  test('that is not text is none', () => {
+    expect(checkCredit(7 as unknown as string)).toEqual({ credit: null, problem: null });
   });
 });

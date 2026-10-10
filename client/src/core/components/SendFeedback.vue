@@ -1,11 +1,13 @@
 <script lang="ts">
 import {
   checkContact,
+  checkCredit,
   checkFeedback,
   FEEDBACK_KINDS,
   MAX_CONTACT_INPUT,
   MAX_FEEDBACK_INPUT,
   MAX_FEEDBACK_LENGTH,
+  MAX_NAME_INPUT,
   textLength,
   type FeedbackKind,
   type FeedbackMessage,
@@ -23,16 +25,18 @@ import UiField from './UiField.vue';
 import UiSheet from './UiSheet.vue';
 
 // "Send feedback", for the footer of the home page and of a room, and its panel
-// (docs/architecture.md). The text and the contact are checked by the rules that the server
-// applies (shared/src/feedback.ts), and go as those rules clean them: what the player pasted may
-// hold characters that JSON writes out at six bytes each, and the message has to stay under the
-// server's 16 KB. Along with them go the build of this page, the language it is shown in and
-// whether it is the home page or a room, but never the room's code. With a bug, the server also
-// keeps the browser's user agent, which it reads from the connection, and the panel says so.
+// (docs/architecture.md). The text, the contact and the name for the acknowledgments are checked
+// by the rules that the server applies (shared/src/feedback.ts), and go as those rules clean them:
+// what the player pasted may hold characters that JSON writes out at six bytes each, and the
+// message has to stay under the server's 16 KB. Along with them go the build of this page, the
+// language it is shown in and whether it is the home page or a room, but never the room's code.
+// With a bug, the server also keeps the browser's user agent, which it reads from the connection,
+// and the panel says so. With a name, it keeps the account the player is logged in to, and the
+// panel says that too.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.
-const draft = reactive({ kind: 'idea' as FeedbackKind, text: '', contact: '' });
+const draft = reactive({ kind: 'idea' as FeedbackKind, text: '', contact: '', credit: '' });
 </script>
 
 <script setup lang="ts">
@@ -40,14 +44,15 @@ const props = defineProps<{ page: FeedbackPage }>();
 const { t } = useI18n();
 const name = useId();
 const open = ref(false);
-const { kind, text, contact } = toRefs(draft);
+const { kind, text, contact, credit } = toRefs(draft);
 // What the server had against what was sent, until something is changed.
 const refused = ref<string | undefined>();
 const { busy, run } = useBusy();
 
 const checked = computed(() => checkFeedback(text.value));
 const checkedContact = computed(() => checkContact(contact.value));
-watch([kind, text, contact], () => (refused.value = undefined));
+const checkedCredit = computed(() => checkCredit(credit.value));
+watch([kind, text, contact, credit], () => (refused.value = undefined));
 
 const count = computed(() => t('feedback.count', { count: textLength(checked.value.text), max: MAX_FEEDBACK_LENGTH }));
 const textProblem = computed(() =>
@@ -56,7 +61,12 @@ const textProblem = computed(() =>
 const contactProblem = computed(() =>
   checkedContact.value.problem ? t(errorKey(checkedContact.value.problem)) : undefined,
 );
-const ready = computed(() => checked.value.problem === null && checkedContact.value.problem === null);
+const creditProblem = computed(() =>
+  checkedCredit.value.problem ? t(errorKey(checkedCredit.value.problem)) : undefined,
+);
+const ready = computed(
+  () => checked.value.problem === null && checkedContact.value.problem === null && checkedCredit.value.problem === null,
+);
 
 // The home page may have no connection yet. It is made when the panel opens, so that it is there
 // by the time the player has written something.
@@ -71,6 +81,7 @@ function submit() {
       kind: kind.value,
       text: checked.value.text,
       ...(checkedContact.value.contact === null ? {} : { contact: checkedContact.value.contact }),
+      ...(checkedCredit.value.credit === null ? {} : { credit: checkedCredit.value.credit }),
       // The schema takes 64 characters; a build is named by its commit.
       version: __APP_VERSION__.slice(0, 64),
       language: currentLanguage(),
@@ -84,6 +95,7 @@ function submit() {
     kind.value = 'idea';
     text.value = '';
     contact.value = '';
+    credit.value = '';
     open.value = false;
     toast('feedback.sent');
   });
@@ -122,6 +134,14 @@ function submit() {
         :hint="t('feedback.contactHint')"
         :maxlength="MAX_CONTACT_INPUT"
         :error="contactProblem"
+        enterkeyhint="next"
+      />
+      <UiField
+        v-model="credit"
+        :label="t('feedback.credit')"
+        :hint="t('feedback.creditHint')"
+        :maxlength="MAX_NAME_INPUT"
+        :error="creditProblem"
         enterkeyhint="send"
       />
       <p v-if="kind === 'bug'" class="note">{{ t('feedback.bugNote') }}</p>

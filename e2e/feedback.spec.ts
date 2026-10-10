@@ -33,14 +33,23 @@ test('a bug report goes from the home page to the server, which logs its number 
     .getByLabel(text.feedback.text)
     .fill(`Lock the phone in a game,\nand the board is gone when it comes back. (${testInfo.project.name})`);
   await sheet.getByLabel(text.feedback.contact).fill('reviewer@example.com');
+  // A name for the acknowledgments that can't be a nickname holds the report back.
+  const credit = sheet.getByLabel(text.feedback.credit);
+  await credit.fill('x'.repeat(17));
+  await expect(sheet).toContainText(text.errors.credit_invalid);
+  await expect(send).toBeDisabled();
+  await credit.fill('Reviewer 1');
   await send.click();
 
   await expect(page.getByText(text.feedback.sent)).toBeVisible();
   await expect(sheet).toBeHidden();
-  await expect.poll(() => logged().filter(({ event }) => event === 'feedback_received')).toHaveLength(before + 1);
-  const received = logged()
-    .filter(({ event }) => event === 'feedback_received')
-    .at(-1);
+  // Other tests may send feedback meanwhile, so the report is found among what came since, by its kind.
+  const since = () =>
+    logged()
+      .filter(({ event }) => event === 'feedback_received')
+      .slice(before);
+  await expect.poll(() => since().some(({ kind }) => kind === 'bug')).toBe(true);
+  const received = since().find(({ kind }) => kind === 'bug');
   expect(received).toEqual({
     time: expect.any(String),
     event: 'feedback_received',
@@ -51,4 +60,5 @@ test('a bug report goes from the home page to the server, which logs its number 
   const log = readFileSync(process.env.E2E_SERVER_LOG as string, 'utf8');
   expect(log).not.toContain('Lock the phone');
   expect(log).not.toContain('reviewer@example.com');
+  expect(log).not.toContain('Reviewer 1');
 });

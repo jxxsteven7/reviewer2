@@ -35,8 +35,9 @@ describe('the feedback panel', () => {
   test('connects when it opens, and says who reads it', async () => {
     const wrapper = await opened();
     expect(socket.connect).toHaveBeenCalledOnce();
-    expect(wrapper.text()).toContain('Only the author can read this.');
+    expect(wrapper.text()).toContain('Only the author can read your feedback.');
     expect(wrapper.text()).toContain('Your contact details are used only to reply to you.');
+    expect(wrapper.text()).toContain('The name is made public only if your suggestion is adopted.');
   });
 
   test('sends what was written with the page it came from, and says thank you', async () => {
@@ -46,6 +47,7 @@ describe('the feedback panel', () => {
     await wrapper.get('textarea').setValue('  More terms from biology, please.  ');
     expect(wrapper.text()).toContain('32 / 1000');
     await wrapper.get('input:not([type="radio"])').setValue(' me@example.com ');
+    await wrapper.findAll('input:not([type="radio"])')[1]?.setValue('  Ann   L ');
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
@@ -54,6 +56,7 @@ describe('the feedback panel', () => {
       kind: 'words',
       text: 'More terms from biology, please.',
       contact: 'me@example.com',
+      credit: 'Ann L',
       version: 'dev',
       language: 'en',
       page: 'room',
@@ -69,26 +72,31 @@ describe('the feedback panel', () => {
     const wrapper = await opened('room');
     await wrapper.get('input[value="bug"]').setValue(true);
     await wrapper.get('textarea').setValue('The clock stops when');
+    await wrapper.findAll('input:not([type="radio"])')[1]?.setValue('Ann L');
     // Closed, and the whole thing unmounted, as when the room menu that holds it closes.
     wrapper.unmount();
     const again = await opened('room');
     expect((again.get('textarea').element as HTMLTextAreaElement).value).toBe('The clock stops when');
     expect((again.get('input[value="bug"]').element as HTMLInputElement).checked).toBe(true);
+    expect((again.findAll('input:not([type="radio"])')[1]?.element as HTMLInputElement).value).toBe('Ann L');
     // Sent, it is gone.
     await again.get('form').trigger('submit');
     await flushPromises();
     await again.get('button').trigger('click');
     expect((again.get('textarea').element as HTMLTextAreaElement).value).toBe('');
     expect((again.get('input[value="idea"]').element as HTMLInputElement).checked).toBe(true);
+    expect((again.findAll('input:not([type="radio"])')[1]?.element as HTMLInputElement).value).toBe('');
   });
 
-  test('leaves out a contact that shows nothing', async () => {
+  test('leaves out a contact or a name that shows nothing', async () => {
     const wrapper = await opened();
     await wrapper.get('textarea').setValue('Hi');
     await wrapper.get('input:not([type="radio"])').setValue('   ');
+    await wrapper.findAll('input:not([type="radio"])')[1]?.setValue(' \u200b ');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('contact');
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('credit');
   });
 
   test('says that a bug report takes the browser along, and only then', async () => {
@@ -108,6 +116,10 @@ describe('the feedback panel', () => {
     await wrapper.get('textarea').setValue('Fine');
     await wrapper.get('input:not([type="radio"])').setValue('x'.repeat(101));
     expect(wrapper.text()).toContain('Use at most 100 characters for the contact.');
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    await wrapper.get('input:not([type="radio"])').setValue('me@example.com');
+    await wrapper.findAll('input:not([type="radio"])')[1]?.setValue('x'.repeat(17));
+    expect(wrapper.text()).toContain('Use 1 to 16 visible characters for the name.');
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
   });
 

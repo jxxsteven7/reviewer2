@@ -39,7 +39,7 @@ describe('NameForm', () => {
   });
 
   test('shows a player who is logged in what the server had against joining, below the form', async () => {
-    signedIn.account.summary = { username: 'Ann', avatar: null, email: 'none', titles: [] };
+    signedIn.account.summary = { username: 'Ann', avatar: null, email: 'none', titles: [], acknowledgments: [] };
     room.submitName.mockResolvedValue({ ok: false, error: 'name_taken' });
     const wrapper = mount(NameForm, { props: { code: 'ABCD' }, global: { plugins: [i18n] } });
     // There is no field for a name: the username is the name.

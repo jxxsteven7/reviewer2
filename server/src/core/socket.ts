@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   checkContact,
+  checkCredit,
   checkFeedback,
   cleanName,
   isReservedName,
@@ -146,9 +147,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // so that the same feedback sent again, as when the answer to the first was lost on the way
   // and the player pressed Send once more, is kept once (docs/architecture.md).
   const feedbackSeen = new Map<string, number>();
-  const feedbackKey = (ip: string, kind: string, text: string, contact: string | null) =>
+  const feedbackKey = (ip: string, kind: string, text: string, contact: string | null, credit: string | null) =>
     `${ip}\n${createHash('sha256')
-      .update(JSON.stringify([kind, text, contact]))
+      .update(JSON.stringify([kind, text, contact, credit]))
       .digest('base64')}`;
   // Whether the log has been told that no more feedback is taken. Once is enough until feedback
   // is taken again, which takes the operator's doing.
@@ -606,16 +607,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     // Feedback for the author, which the status page shows. What is kept is what the player wrote
     // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
-    // who they are. The log gets its number and kind, and never its text or contact. Only what
-    // was kept counts against the address, so that a player who is told to shorten their text
-    // doesn't lose a turn for it, and feedback that the address sent once already in the window
-    // is answered as it was the first time, without being kept or counted again.
-    on(handlers, 'meta:feedback', ({ kind, text, contact, version: pageVersion, language, page }) => {
+    // who they are, unless they left a name for the acknowledgments: then the account they are
+    // logged in to, if any, is kept with it, so that the acknowledgment can be linked to it. The
+    // log gets its number and kind, and never its text, contact or name. Only what was kept counts
+    // against the address, so that a player who is told to shorten their text doesn't lose a turn
+    // for it, and feedback that the address sent once already in the window is answered as it was
+    // the first time, without being kept or counted again.
+    on(handlers, 'meta:feedback', ({ kind, text, contact, credit, version: pageVersion, language, page }) => {
       const checked = checkFeedback(text);
       if (checked.problem) return fail(checked.problem);
       const given = checkContact(contact);
       if (given.problem) return fail(given.problem);
-      const key = feedbackKey(conn.ip, kind, checked.text, given.contact);
+      const named = checkCredit(credit);
+      if (named.problem) return fail(named.problem);
+      const key = feedbackKey(conn.ip, kind, checked.text, given.contact, named.credit);
       if (feedbackSeen.has(key)) return ok();
       if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
       const full = feedback.full();
@@ -625,10 +630,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         return fail('feedback_full');
       }
       const userAgent = socket.handshake.headers['user-agent'];
+      // An account that has been deleted since the handshake is nobody's.
+      const account = named.credit !== null && conn.account ? accounts?.store.byId(conn.account.id) : undefined;
       const id = feedback.add({
         kind,
         text: checked.text,
         contact: given.contact,
+        credit: named.credit,
+        accountId: account?.id ?? null,
         version: pageVersion,
         language,
         page,

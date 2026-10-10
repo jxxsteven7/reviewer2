@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import {
   ACCOUNT_ERRORS,
+  ACKNOWLEDGMENT_KINDS,
   EMAIL_STATES,
   FEEDBACK_ERRORS,
   FEEDBACK_KINDS,
@@ -71,8 +72,9 @@ describe('locale files', () => {
     for (const title of TITLES) expect(en.has(`account.profile.titleNames.${title}`), title).toBe(true);
   });
 
-  test('name every kind of feedback', () => {
+  test('name every kind of feedback, and every kind of acknowledgment', () => {
     for (const kind of FEEDBACK_KINDS) expect(en.has(`feedback.kinds.${kind}`), kind).toBe(true);
+    for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`acknowledgments.kinds.${kind}`), kind).toBe(true);
   });
 
   test('say what keeps a game from starting', () => {

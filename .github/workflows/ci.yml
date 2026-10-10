@@ -255,4 +255,5 @@ jobs:
           status=0
           node "$app/server/dist/admin.cjs" > "$RUNNER_TEMP/admin.log" 2>&1 || status=$?
           test "$status" -eq 2
-          grep -q '^usage: admin.cjs avatar remove' "$RUNNER_TEMP/admin.log"
+          grep -q '^usage: admin.cjs <command>, one of$' "$RUNNER_TEMP/admin.log"
+          grep -q '^  avatar remove <username> \[--ban\]$' "$RUNNER_TEMP/admin.log"

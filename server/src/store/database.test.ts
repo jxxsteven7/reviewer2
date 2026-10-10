@@ -63,6 +63,7 @@ describe('a database in DATA_DIR', () => {
     // sqlite_sequence is SQLite's own, for the ids that are never given out twice.
     expect(tables(database.db)).toEqual([
       'accounts',
+      'acknowledgments',
       'email_tokens',
       'feedback',
       'game_records',
@@ -108,7 +109,9 @@ describe('a database in DATA_DIR', () => {
 
   test('keeps its data, and is left alone when it is up to date', async () => {
     const first = await open(dir);
-    first.db.exec("INSERT INTO feedback VALUES (1, 'now', 'idea', 'Keep me', NULL, 'v1', 'en', 'home', NULL)");
+    first.db.exec(
+      "INSERT INTO feedback VALUES (1, 'now', 'idea', 'Keep me', NULL, 'v1', 'en', 'home', NULL, NULL, NULL)",
+    );
     first.db.close();
 
     const again = await open(dir);
@@ -148,7 +151,7 @@ describe('a database in DATA_DIR', () => {
     second.db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', NULL, 'now')");
     second.db.close();
 
-    const { db } = await open(dir);
+    const { db } = await open(dir, MIGRATIONS.slice(0, 3));
     expect(schemaVersion(db)).toBe(3);
     db.exec("INSERT INTO match_records VALUES (NULL, 1, 'keywords', 'm', 'now', 3, 1, 4, 9, 'best_paper')");
     db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', 'm', 'now')");
@@ -159,6 +162,68 @@ describe('a database in DATA_DIR', () => {
     for (const table of ['match_records', 'titles']) {
       expect(db.prepare(`SELECT count(*) AS count FROM ${table}`).get(), table).toEqual({ count: 0 });
     }
+  });
+
+  test('of the third release keeps its feedback and accounts when it gets the acknowledgments', async () => {
+    const third = await open(dir, MIGRATIONS.slice(0, 3));
+    third.db.exec(
+      "INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now')",
+    );
+    third.db.exec(
+      "INSERT INTO feedback VALUES (7, 'now', 'idea', 'Keep me', 'me@example.com', 'v1', 'zh', 'room', NULL)",
+    );
+    third.db.exec("INSERT INTO titles VALUES (NULL, 1, 'best_paper', 'm', 'now')");
+    third.db.exec("INSERT INTO match_records VALUES (NULL, 1, 'keywords', 'm', 'now', 3, 1, 4, 9, 'best_paper')");
+    third.db.close();
+
+    const migrated = await open(dir);
+    expect(migrated).toMatchObject({ schema: 4, migratedFrom: 3 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v4.db'));
+    const { db } = migrated;
+    // The feedback that was there has no name and no account.
+    expect(db.prepare('SELECT * FROM feedback').all()).toEqual([
+      {
+        id: 7,
+        created_at: 'now',
+        kind: 'idea',
+        text: 'Keep me',
+        contact: 'me@example.com',
+        version: 'v1',
+        language: 'zh',
+        page: 'room',
+        user_agent: null,
+        credit: null,
+        account_id: null,
+      },
+    ]);
+    expect(db.prepare('SELECT username FROM accounts').all()).toEqual([{ username: 'Ann' }]);
+    expect(db.prepare('SELECT count(*) AS n FROM titles').get()).toEqual({ n: 1 });
+    expect(db.prepare('SELECT count(*) AS n FROM match_records').get()).toEqual({ n: 1 });
+
+    // New feedback may name its account, and an acknowledgment its feedback and its account. A piece
+    // of feedback is adopted once, and an acknowledgment is of one of the three kinds.
+    db.exec("UPDATE feedback SET credit = 'Ann L', account_id = 1 WHERE id = 7");
+    db.exec("INSERT INTO acknowledgments VALUES (NULL, 'Ann L', 'feedback', 'now', 7, 1)");
+    db.exec("INSERT INTO acknowledgments VALUES (NULL, 'Bob', 'playtesting', 'now', NULL, NULL)");
+    expect(() => db.exec("INSERT INTO acknowledgments VALUES (NULL, 'Again', 'feedback', 'now', 7, NULL)")).toThrow(
+      /UNIQUE/,
+    );
+    expect(() => db.exec("INSERT INTO acknowledgments VALUES (NULL, 'Cat', 'praise', 'now', NULL, NULL)")).toThrow(
+      /CHECK/,
+    );
+    expect(() => db.exec("INSERT INTO acknowledgments VALUES (NULL, 'Dan', 'words', 'now', NULL, 9)")).toThrow(
+      /FOREIGN KEY/,
+    );
+    // The account goes from the feedback and the acknowledgment when it is deleted, and the name
+    // stays. The feedback may go, by the operator's hand, and the acknowledgment keeps its number.
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT account_id FROM feedback WHERE id = 7').get()).toEqual({ account_id: null });
+    expect(db.prepare('SELECT name, account_id, feedback_id FROM acknowledgments ORDER BY id').all()).toEqual([
+      { name: 'Ann L', account_id: null, feedback_id: 7 },
+      { name: 'Bob', account_id: null, feedback_id: null },
+    ]);
+    db.exec('DELETE FROM feedback WHERE id = 7');
+    expect(db.prepare('SELECT count(*) AS n FROM acknowledgments WHERE feedback_id = 7').get()).toEqual({ n: 1 });
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
@@ -320,6 +385,7 @@ describe('a database in memory', () => {
     });
     expect(tables(database.db)).toEqual([
       'accounts',
+      'acknowledgments',
       'email_tokens',
       'feedback',
       'game_records',

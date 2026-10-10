@@ -13,6 +13,7 @@ import {
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { AccountStore, type Account } from '../store/accounts';
+import { AcknowledgmentStore } from '../store/acknowledgments';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from '../store/records';
 import { MailTokenStore, SessionStore, type SessionLimits } from '../store/sessions';
@@ -94,6 +95,8 @@ export class Accounts {
   readonly mailTokens: MailTokenStore;
   readonly records: RecordStore;
   readonly titles: TitleStore;
+  // The acknowledgments, which the operator writes (admin.ts) and an account's page counts.
+  readonly acknowledgments: AcknowledgmentStore;
   readonly settings: SettingStore;
   readonly counters: AccountCounters;
   readonly hasher: PasswordHasher;
@@ -127,6 +130,7 @@ export class Accounts {
     this.mailTokens = new MailTokenStore(options.db, clock);
     this.records = new RecordStore(options.db, clock);
     this.titles = new TitleStore(options.db, clock);
+    this.acknowledgments = new AcknowledgmentStore(options.db, clock);
     this.settings = new SettingStore(options.db);
     this.counters = new AccountCounters(options.limits ?? DEFAULT_ACCOUNT_LIMITS, options.now);
     this.hasher = options.hasher ?? new PasswordHasher();
@@ -151,6 +155,7 @@ export class Accounts {
       avatar: avatarUrl(account),
       email,
       titles: this.titles.counts(account.id),
+      acknowledgments: this.acknowledgments.counts(account.id),
     };
   }
 

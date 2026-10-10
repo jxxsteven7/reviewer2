@@ -1,3 +1,4 @@
+import type { AcknowledgmentCount } from './acknowledgments';
 import { cleanName } from './names';
 import { SILENT, textLength } from './text';
 
@@ -34,6 +35,8 @@ export const AVATAR_PATH = '/avatars/';
 export const ACCOUNT_API = {
   account: '/api/account',
   records: '/api/account/records',
+  // The acknowledgments, which everyone may read (acknowledgments.ts).
+  acknowledgments: '/api/acknowledgments',
   register: '/api/register',
   login: '/api/login',
   logout: '/api/logout',
@@ -95,12 +98,14 @@ export interface TitleCount {
 }
 
 // What the owner of an account sees of it. `avatar` is the address of the uploaded avatar, or
-// null for the default one, which the client draws from the username.
+// null for the default one, which the client draws from the username. `acknowledgments` is how
+// often the account is thanked for each kind of help (acknowledgments.ts).
 export interface AccountSummary {
   username: string;
   avatar: string | null;
   email: EmailState;
   titles: TitleCount[];
+  acknowledgments: AcknowledgmentCount[];
 }
 
 // The answer to GET /api/account: the account that the browser is logged in to, if any, and

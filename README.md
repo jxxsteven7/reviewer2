@@ -86,6 +86,8 @@ The rules are in **[CONTRIBUTING.md](CONTRIBUTING.md)**; in short:
 
 AI assistants read `AGENTS.md`.
 
+Players whose suggestions are adopted, who add words or who test early versions are thanked by name in [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) and at the foot of the home page.
+
 ### Contributing words
 
 One JSON file per field in `words/`, shared by all games. A good term is short and known to everyone in its field, and all terms are original. See [words/README.md](words/README.md).

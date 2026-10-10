@@ -129,6 +129,11 @@ describe('the feedback', () => {
     kind: 'idea',
     text: 'More fields, please.',
     contact: null,
+    credit: null,
+    accountId: null,
+    username: null,
+    acknowledgmentId: null,
+    nameTakenBy: null,
     version: 'v0.0.15',
     language: 'en',
     page: 'home',
@@ -171,15 +176,52 @@ describe('the feedback', () => {
     expect(shown).toContain('2 in all, newest first');
     expect(shown).toContain(
       '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; Chinese &middot; from the room ' +
-        'Line one Line two Contact: wechat: r2 Browser: Mozilla/5.0',
+        'Line one Line two Contact: wechat: r2 No name for the acknowledgments Browser: Mozilla/5.0',
     );
     expect(shown).toContain(
       '#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; English &middot; ' +
-        'from the home page More fields, please. No contact',
+        'from the home page More fields, please. No contact No name for the acknowledgments',
     );
     expect(shown.indexOf('#2')).toBeLessThan(shown.indexOf('#1'));
     // The text keeps its line breaks, which the page shows as they are.
     expect(html).toContain('<p class="text">Line one\nLine two</p>');
+  });
+
+  test('shows the name for the acknowledgments, with its account and whether it was adopted', () => {
+    const shown = text(
+      page({
+        total: 3,
+        entries: [
+          feedback(3, { credit: 'Ann L', username: 'Ann', acknowledgmentId: 1 }),
+          feedback(2, { credit: 'Bob', username: null }),
+          feedback(1),
+        ],
+      }),
+    );
+    expect(shown).toContain('#3 &middot; Idea &middot; 2026-10-09 13:05 UTC');
+    expect(shown).toContain('from the home page &middot; adopted as acknowledgment #1 More fields, please.');
+    expect(shown).toContain('No contact Name for the acknowledgments: Ann L &middot; account Ann');
+    expect(shown).toContain('#2 &middot; Idea');
+    expect(shown).toContain('No contact Name for the acknowledgments: Bob #1');
+    expect(shown).not.toContain('Bob &middot; account');
+    expect(shown.match(/adopted as acknowledgment/g)).toHaveLength(1);
+    expect(shown).not.toContain('also the username');
+  });
+
+  test("points out a name that is another account's username, in bold", () => {
+    const html = page({
+      total: 2,
+      entries: [
+        feedback(2, { credit: 'cat', username: 'Bob', nameTakenBy: 'Cat' }),
+        feedback(1, { credit: 'Cat', nameTakenBy: 'Cat' }),
+      ],
+    });
+    expect(text(html)).toContain(
+      "Name for the acknowledgments: cat &middot; account Bob &middot; also the username of the account Cat, which didn't send it",
+    );
+    expect(html).toContain(
+      "Name for the acknowledgments: Cat &middot; <strong>also the username of the account Cat, which didn't send it</strong>",
+    );
   });
 
   test('escapes everything that came from outside', () => {
@@ -190,13 +232,22 @@ describe('the feedback', () => {
           kind: 'bug',
           text: '<script>alert("text")</script><img src=x onerror=alert(1)>',
           contact: "<a href='javascript:alert(1)'>me</a>",
+          credit: '<i>Ann</i>',
+          username: '<u>ann</u>',
+          nameTakenBy: '<s>Ann</s>',
           version: '<b>v1</b>',
           userAgent: '</p><script>alert("agent")</script>',
         }),
       ],
     });
     // The one link on the page is the page's own.
-    expect(html.replace('<a href="/">Status</a>', '')).not.toMatch(/<script|<img|<a |<b>|onerror=alert\(1\)>/);
+    expect(html.replace('<a href="/">Status</a>', '')).not.toMatch(
+      /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
+    );
+    expect(html).toContain(
+      'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
+    );
+    expect(html).toContain('also the username of the account &#60;s&#62;Ann&#60;/s&#62;,');
     expect(html).toContain(
       '&#60;script&#62;alert(&#34;text&#34;)&#60;/script&#62;&#60;img src=x onerror=alert(1)&#62;',
     );

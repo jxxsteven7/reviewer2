@@ -4,19 +4,31 @@
 // here has its default. Its log goes to a file, which helpers.ts reads after each test to fail the
 // test on an error the server reported.
 import { spawn } from 'node:child_process';
-import { createWriteStream, existsSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 
 const root = join(import.meta.dirname, '..');
 const port = process.env.E2E_PORT;
 const log = process.env.E2E_SERVER_LOG;
 const mails = process.env.E2E_MAIL_LOG;
-if (!port || !log || !mails) {
-  throw new Error('E2E_PORT, E2E_SERVER_LOG and E2E_MAIL_LOG must be set; playwright.config.ts sets them');
+const data = process.env.E2E_DATA_DIR;
+if (!port || !log || !mails || !data) {
+  throw new Error(
+    'E2E_PORT, E2E_SERVER_LOG, E2E_MAIL_LOG and E2E_DATA_DIR must be set; playwright.config.ts sets them',
+  );
 }
 
 mkdirSync(dirname(log), { recursive: true });
 const file = createWriteStream(log);
+// The server's data, so that the operator's command (server/dist/admin.cjs) can run on it in a
+// test. A run starts with none, so the directory goes first, which is why it may only be one
+// under test-results: a data directory that the shell named would go with it.
+const results = join(root, 'test-results');
+if (!resolve(data).startsWith(results + sep)) {
+  throw new Error(`E2E_DATA_DIR must be a directory under ${results}, not ${data}`);
+}
+rmSync(data, { recursive: true, force: true });
+mkdirSync(data, { recursive: true });
 
 // The mailer, which writes the mails out to a file that helpers.ts reads the links from, rather
 // than send them. Its socket is beside the logs, whose directory has a short enough path for one.
@@ -43,6 +55,7 @@ const server = spawn(process.execPath, [join(root, 'server', 'dist', 'index.cjs'
     PORT: port,
     PUBLIC_DIR: join(root, 'client', 'dist'),
     WORDS_DIR: join(root, 'words'),
+    DATA_DIR: data,
     TRUST_PROXY: '0',
     // Every test makes a room from the same address, and every browser sends its feedback and
     // registers its accounts from it.
