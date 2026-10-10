@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { otherTeam, type KeywordsView, type Team } from '@reviewer2/shared';
+import { otherTeam, type KeywordsView, type MatchView, type Team } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
@@ -9,10 +9,19 @@ import { letterNumber, lettersFor, verdictFor } from './letters';
 // (letters.ts). A player reads their own group's letter; a spectator and a screen read both, the
 // winner's first. A withdrawn game has one letter for everyone. `side` is the group the viewer
 // plays for, if any. `busy` holds "Play again" while a press of it is on its way, and `compact`
-// makes the letters smaller for a big screen, where they sit above the board.
+// makes the letters smaller for a big screen, where they sit above the board. In a match, "Play
+// again" is the way to its next game, and a match that is over has none: its ranking, below the
+// letters, says what comes next.
 const props = withDefaults(
-  defineProps<{ game: KeywordsView; side: Team | null; isChair: boolean; busy?: boolean; compact?: boolean }>(),
-  { busy: false, compact: false },
+  defineProps<{
+    game: KeywordsView;
+    side: Team | null;
+    isChair: boolean;
+    busy?: boolean;
+    compact?: boolean;
+    match?: MatchView | null;
+  }>(),
+  { busy: false, compact: false, match: null },
 );
 const emit = defineEmits<{ again: [] }>();
 const { t } = useI18n();
@@ -53,10 +62,18 @@ const letters = computed(() => {
         <p class="signature">{{ t('game.letter.signature') }}</p>
       </article>
     </div>
-    <UiButton v-if="isChair" variant="primary" :disabled="busy" @click="emit('again')">
-      {{ t('game.letter.again') }}
-    </UiButton>
-    <p v-else class="wait">{{ t('game.letter.waitAgain') }}</p>
+    <template v-if="!match">
+      <UiButton v-if="isChair" variant="primary" :disabled="busy" @click="emit('again')">
+        {{ t('game.letter.again') }}
+      </UiButton>
+      <p v-else class="wait">{{ t('game.letter.waitAgain') }}</p>
+    </template>
+    <template v-else-if="match.status === 'on'">
+      <UiButton v-if="isChair" variant="primary" :disabled="busy" @click="emit('again')">
+        {{ t('match.next') }}
+      </UiButton>
+      <p v-else class="wait">{{ t('match.waitNext') }}</p>
+    </template>
   </section>
 </template>
 

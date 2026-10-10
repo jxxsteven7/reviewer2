@@ -1,4 +1,4 @@
-import { parseCode, type Ack, type Language } from '@reviewer2/shared';
+import { parseCode, type Ack, type Language, type MatchRules } from '@reviewer2/shared';
 import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule } from './game';
@@ -56,7 +56,7 @@ export class Rooms {
   // A new room with its creator in it, who chairs it, or why there can't be one: the server is
   // full, or the fields, the game's settings or the name won't do. `key` is the creator's member
   // key, and `play` says whether they have come to play or only to watch. Without settings, the
-  // room has the game's defaults.
+  // room has the game's defaults. With `match`, the room plays a match by those rules.
   //
   // The room is listed only once its creator has joined it. A game module that throws there
   // leaves no room behind: one without a member would belong to whoever found its code first.
@@ -69,6 +69,7 @@ export class Rooms {
     name: string;
     play?: boolean;
     account?: MemberAccount | null;
+    match?: MatchRules;
   }): Ack<{ room: Room; member: Member }> {
     const { game, language, key, name, play = false, account = null } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
@@ -88,6 +89,11 @@ export class Rooms {
     if (options.settings !== undefined) {
       const configured = room.setSettings({ settings: options.settings });
       if (!configured.ok) return configured;
+    }
+    // The match comes before the creator, so that the game seats them by its rules.
+    if (options.match !== undefined) {
+      const started = room.startMatch(options.match);
+      if (!started.ok) return started;
     }
     const joined = room.join(key, name, play, account);
     if (!joined.ok) return joined;

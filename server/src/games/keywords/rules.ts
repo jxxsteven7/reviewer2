@@ -173,7 +173,7 @@ export function reveal(state: KeywordsState, actor: Actor, action: Moment & { ca
   const cards = state.cards.map((card, index) => (index === action.card ? { ...card, revealed: true } : card));
   const history = state.history.map((record, index) =>
     index === state.history.length - 1
-      ? { ...record, guesses: [...record.guesses, { card: action.card, color: target.color }] }
+      ? { ...record, guesses: [...record.guesses, { card: action.card, color: target.color, player: actor.id }] }
       : record,
   );
   const next: KeywordsState = { ...state, cards, history, guessesMade: state.guessesMade + 1, selections: [] };

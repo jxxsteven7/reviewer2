@@ -140,7 +140,8 @@
     "problems": {
       "needs_captain": "The {group} needs a PI.",
       "captain_offline": "The PI of the {group} is offline.",
-      "needs_guesser": "The {group} needs at least one student who is online."
+      "needs_guesser": "The {group} needs at least one student who is online.",
+      "needs_players": "At least 4 players must be online to start: {missing} more."
     },
     "manage": {
       "spectate": "Move to the spectators",
@@ -148,6 +149,69 @@
       "chair": "Make chair",
       "cancel": "Cancel"
     }
+  },
+  "match": {
+    "kind": "Kind of room",
+    "ordinary": "Ordinary room",
+    "ordinaryHint": "Play one game after another, for as long as you like.",
+    "match": "Match",
+    "matchHint": "Play a set number of games, score every player, and rank them all at the end.",
+    "games": "Games in the match",
+    "gamesRange": "{min} to {max}",
+    "gamesProblem": "A whole number from {min} to {max}.",
+    "teams": "Groups",
+    "teamsChoice": {
+      "fixed": "Stay the same",
+      "switch": "May change"
+    },
+    "teamsHint": {
+      "fixed": "Everyone plays the whole match in the same group, and the PI changes from game to game.",
+      "switch": "The groups are made again after every game."
+    },
+    "grouping": {
+      "fixed": "Groups for the first game",
+      "switch": "After every game"
+    },
+    "groupingChoice": {
+      "random": "Drawn at random",
+      "choose": "Chosen by the players"
+    },
+    "groupingHint": {
+      "random": "The groups and their PIs are drawn when the game starts.",
+      "choose": "Everyone picks a group and a seat in the waiting room."
+    },
+    "progress": "Game {game} of {games}",
+    "gamesPlayed": "Games played: {played} of {games}",
+    "table": "Scores",
+    "rank": "Place",
+    "player": "Player",
+    "total": "Total",
+    "delta": "This game",
+    "lastDelta": "Last game",
+    "left": "left",
+    "none": "Everyone who plays is listed here once the game starts.",
+    "end": "End the match",
+    "endConfirm": "The match ends now, with the scores as they stand, and nobody is awarded a title. A game in progress is withdrawn.",
+    "next": "Next game",
+    "waitNext": "Waiting for the chair to go on to the next game.",
+    "over": "Final ranking",
+    "stopped": "The match was ended early",
+    "stoppedNote": "It ended before its last game, so no titles were awarded.",
+    "titleNames": {
+      "best_paper": "Best Paper Award",
+      "black_hole": "Game black hole"
+    },
+    "blackHoleLine": "Playing like that, your paper is probably getting rejected!",
+    "again": "Another match",
+    "againSubmit": "Start the match",
+    "ordinaryRoom": "Back to an ordinary room",
+    "waitAgain": "Waiting for the chair to decide what comes next.",
+    "joinsNext": "You play from the next game.",
+    "drawn": "Players",
+    "drawnNote": "The groups and their PIs are drawn at random when the game starts.",
+    "play": "Play",
+    "fixedNote": "The groups stay the same for the whole match, and the PI changes from game to game.",
+    "locked": "The word lists and the rules stay as they are until the match is over."
   },
   "game": {
     "turn": "Turn {turn}",
@@ -291,6 +355,13 @@
       "over": "The game is over, so nobody can write any more.",
       "you": "You",
       "someone": "A player who left"
+    },
+    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing the other group's card, −1; revealing Reviewer 2, −3.",
+    "scoreDetail": {
+      "found": "found {count}",
+      "won": "won",
+      "wrong": "other group's card ×{count}",
+      "reviewer2": "Reviewer 2"
     }
   },
   "settings": {
@@ -391,6 +462,9 @@
     "cannot_start": "The game can't start yet.",
     "stale": "That turn or that game is already over.",
     "emote_cooldown": "Wait a moment before you send another reaction.",
+    "bad_match": "This game can't be played as a match.",
+    "match_over": "The match is over.",
+    "match_locked": "The word lists and the rules can't change in the middle of a match.",
     "game_over": "The game is over.",
     "not_your_turn": "It's not your group's turn.",
     "not_captain": "Only the PI can give the clue.",
@@ -410,6 +484,8 @@
     "key_viewer": "You have seen the key in this game, so you can't be a student until the next one.",
     "other_team": "You play for the other group in this game. You can change groups in the next one.",
     "bad_seat": "That seat doesn't exist.",
+    "between_games": "You can play from the next game.",
+    "bigger_group": "In this match, whoever hasn't played yet joins the group with fewer players.",
     "offline": "You're offline. Waiting for the connection...",
     "timeout": "The server didn't answer. Please try again.",
     "unknown": "Something went wrong.",
@@ -572,6 +648,10 @@
       "recent": "The last 20 games",
       "recordsAgain": "Try again",
       "recordLine": "{side}, {role}",
+      "matchSummary": "Matches finished: {played}",
+      "recentMatches": "The last 20 matches",
+      "matchLine": "Place {rank} of {players} · Total: {score}",
+      "matchGames": "{games}-game match",
       "roles": {
         "captain": "PI",
         "guesser": "Student"

@@ -22,6 +22,7 @@ function ended(result: GameResult | null, found = 0): KeywordsData {
     settings: STANDARD,
     seating: { seats: new Map(Object.entries(seats)), keyViewers: new Set(), sides: new Map() },
     game: { ...game, cards },
+    match: null,
   };
 }
 

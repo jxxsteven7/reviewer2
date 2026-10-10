@@ -102,6 +102,53 @@ describe('the room setup', () => {
     expect(payload).not.toHaveProperty('name');
   });
 
+  test('creates an ordinary room unless a match is chosen', async () => {
+    const wrapper = await opened();
+    await box(wrapper, 0).setValue(true);
+    expect(wrapper.find('.match-form').exists()).toBe(false);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('match');
+  });
+
+  test('creates a match with the rules that were chosen, three games by default', async () => {
+    const wrapper = await opened();
+    await box(wrapper, 0).setValue(true);
+    await wrapper.findAll<HTMLInputElement>('.kind input').at(1)!.setValue(true);
+    const form = wrapper.get('.match-form');
+    expect(form.get<HTMLInputElement>('input[inputmode="numeric"]').element.value).toBe('3');
+    expect(form.text()).toContain('Groups for the first game');
+    // Groups that may change are made again after every game.
+    await form.findAll<HTMLInputElement>('input[type="radio"]').at(1)!.setValue(true);
+    expect(form.text()).toContain('After every game');
+    await form.findAll<HTMLInputElement>('input[type="radio"]').at(3)!.setValue(true);
+    await form.get('input[inputmode="numeric"]').setValue('5');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send).toHaveBeenCalledWith(
+      'room:create',
+      expect.objectContaining({ match: { games: 5, teams: 'switch', grouping: 'choose' } }),
+    );
+  });
+
+  test('creates no match with a number of games that will not do', async () => {
+    const wrapper = await opened();
+    await box(wrapper, 0).setValue(true);
+    await wrapper.findAll<HTMLInputElement>('.kind input').at(1)!.setValue(true);
+    for (const games of ['0', '11', '2.5', 'three']) {
+      await wrapper.get('.match-form input[inputmode="numeric"]').setValue(games);
+      expect(wrapper.text(), games).toContain('A whole number from 1 to 10.');
+      expect(submit(wrapper).attributes('disabled'), games).toBeDefined();
+    }
+    // Full-width digits from a Chinese keyboard are numbers too.
+    await wrapper.get('.match-form input[inputmode="numeric"]').setValue('\uff11\uff10');
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    // An ordinary room doesn't mind what the match form says.
+    await wrapper.get('.match-form input[inputmode="numeric"]').setValue('0');
+    await wrapper.findAll<HTMLInputElement>('.kind input').at(0)!.setValue(true);
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+  });
+
   test('keeps only the lists that are still usable when the language changes, and adds none', async () => {
     const wrapper = await opened();
     await box(wrapper, 0).setValue(true);

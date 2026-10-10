@@ -3,10 +3,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
-import { RecordStore, TitleStore, type NewRecord } from './records';
+import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from './records';
 import { DEFAULT_SESSION_LIMITS, MailTokenStore, SessionStore } from './sessions';
 
 const DAY = 24 * 60 * 60_000;
+const NO_MATCHES = { played: 0, recent: [] };
 const START = Date.UTC(2026, 9, 9, 12);
 
 let db: DatabaseSync;
@@ -266,8 +267,9 @@ describe('the record of games', () => {
           verdict: 'oral',
         },
       ],
+      matches: NO_MATCHES,
     });
-    expect(records.view(account('Cat').id)).toEqual({ games: 0, wins: 0, recent: [] });
+    expect(records.view(account('Cat').id)).toEqual({ games: 0, wins: 0, recent: [], matches: NO_MATCHES });
   });
 
   test('lists the latest 20 games and counts them all', () => {
@@ -285,13 +287,73 @@ describe('titles', () => {
     const titles = new TitleStore(db, () => now);
     const ann = account();
     expect(titles.counts(ann.id)).toEqual([]);
-    titles.award(ann.id, 'best_paper', 'm1');
-    titles.award(ann.id, 'best_paper', 'm2');
-    titles.award(ann.id, 'black_hole');
+    expect(titles.award(ann.id, 'best_paper', 'm1')).toBe(true);
+    expect(titles.award(ann.id, 'best_paper', 'm2')).toBe(true);
+    expect(titles.award(ann.id, 'black_hole')).toBe(true);
     expect(titles.counts(ann.id)).toEqual([
       { title: 'best_paper', count: 2 },
       { title: 'black_hole', count: 1 },
     ]);
     expect(() => titles.award(ann.id, 'worst_paper' as 'best_paper')).toThrow(/CHECK constraint/);
+  });
+
+  test('are awarded once for each match, however often its end is reported', () => {
+    const titles = new TitleStore(db, () => now);
+    const ann = account();
+    expect(titles.award(ann.id, 'best_paper', 'm1')).toBe(true);
+    expect(titles.award(ann.id, 'best_paper', 'm1')).toBe(false);
+    expect(titles.award(account('Bob').id, 'best_paper', 'm1')).toBe(true);
+    expect(titles.counts(ann.id)).toEqual([{ title: 'best_paper', count: 1 }]);
+  });
+});
+
+describe('the record of matches', () => {
+  const match = (overrides: Partial<NewMatchRecord> = {}): NewMatchRecord => ({
+    game: 'keywords',
+    matchId: 'm1',
+    games: 3,
+    rank: 1,
+    players: 4,
+    score: 12,
+    title: 'best_paper',
+    ...overrides,
+  });
+
+  test('keeps each match once, the latest first, and counts them all', () => {
+    const records = new RecordStore(db, () => now);
+    const ann = account();
+    expect(records.addMatch(ann.id, match())).toBe(true);
+    expect(records.addMatch(ann.id, match({ rank: 2 }))).toBe(false);
+    now += 60_000;
+    records.addMatch(ann.id, match({ matchId: 'm2', rank: 4, score: -2, title: 'black_hole' }));
+    records.addMatch(account('Bob').id, match());
+    expect(records.view(ann.id).matches).toEqual({
+      played: 2,
+      recent: [
+        {
+          game: 'keywords',
+          endedAt: '2026-10-09T12:01:00.000Z',
+          games: 3,
+          rank: 4,
+          players: 4,
+          score: -2,
+          title: 'black_hole',
+        },
+        {
+          game: 'keywords',
+          endedAt: '2026-10-09T12:00:00.000Z',
+          games: 3,
+          rank: 1,
+          players: 4,
+          score: 12,
+          title: 'best_paper',
+        },
+      ],
+    });
+  });
+
+  test("refuses a title that isn't one", () => {
+    const records = new RecordStore(db, () => now);
+    expect(() => records.addMatch(account().id, match({ title: 'worst_paper' as 'best_paper' }))).toThrow(/CHECK/);
   });
 });

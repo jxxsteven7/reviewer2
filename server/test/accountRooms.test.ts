@@ -3,6 +3,8 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { Browser, createRoom, startServer, TestClient, until, type TestServer } from './helpers';
 import { jpeg } from './images';
 
+const NO_MATCHES = { played: 0, recent: [] };
+
 // Accounts in rooms: who a connection is, the name and seat of a player with an account, the
 // nicknames that guests can't take, what happens to connections when a login ends or the account
 // changes, and the record of the games that players with accounts finish.
@@ -361,10 +363,10 @@ describe('the record of games', () => {
       won: true,
       verdict: 'pressed 1',
     };
-    expect(await records(ann)).toEqual({ games: 1, wins: 1, recent: [record] });
-    expect(await records(bob)).toEqual({ games: 1, wins: 1, recent: [record] });
+    expect(await records(ann)).toEqual({ games: 1, wins: 1, recent: [record], matches: NO_MATCHES });
+    expect(await records(bob)).toEqual({ games: 1, wins: 1, recent: [record], matches: NO_MATCHES });
     // Dee only watched.
-    expect(await records(watcher)).toEqual({ games: 0, wins: 0, recent: [] });
+    expect(await records(watcher)).toEqual({ games: 0, wins: 0, recent: [], matches: NO_MATCHES });
     // Only accounts have records.
     expect(server.db.prepare('SELECT count(*) AS count FROM game_records').get()).toEqual({ count: 2 });
 
@@ -382,6 +384,6 @@ describe('the record of games', () => {
   test('keeps nothing of a game that the chair withdrew', async () => {
     server = await startServer();
     const { ann } = await playedGame('room:end');
-    expect(await records(ann)).toEqual({ games: 0, wins: 0, recent: [] });
+    expect(await records(ann)).toEqual({ games: 0, wins: 0, recent: [], matches: NO_MATCHES });
   });
 });

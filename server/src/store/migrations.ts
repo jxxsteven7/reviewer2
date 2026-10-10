@@ -101,4 +101,29 @@ export const MIGRATIONS: readonly string[] = [
     value TEXT NOT NULL
   ) STRICT;
   `,
+  // 3: matches (docs/architecture.md#matches).
+  //
+  // - match_records: one row for each match that a player with an account finished ranked: how
+  //   many games it had, the place they finished in among how many ranked players, their total and
+  //   their title. A match is recorded once for each account.
+  // - titles_match: a match awards an account a title once, however often its end is reported.
+  //   Titles from before matches had IDs, if any, stay as they are.
+  `
+  CREATE TABLE match_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    game TEXT NOT NULL,
+    match_id TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    games INTEGER NOT NULL,
+    rank INTEGER NOT NULL,
+    players INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    title TEXT CHECK (title IN ('best_paper', 'black_hole')),
+    UNIQUE (account_id, match_id)
+  ) STRICT;
+  CREATE INDEX match_records_recent ON match_records (account_id, id DESC);
+
+  CREATE UNIQUE INDEX titles_match ON titles (account_id, title, match_id) WHERE match_id IS NOT NULL;
+  `,
 ];

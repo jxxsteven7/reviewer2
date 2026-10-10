@@ -69,13 +69,14 @@ export interface CardView {
 
 // A turn in the record of the game. A captain who ran out of time gave no clue, and then `word`
 // and `count` are null. `timedOut` marks a turn that ended because its time ran out, before the
-// clue or during the guesses.
+// clue or during the guesses. Each guess names the player who revealed the card, by player ID,
+// which a match scores.
 export interface ClueRecord {
   turn: number;
   team: Team;
   word: string | null;
   count: ClueCount | null;
-  guesses: { card: number; color: CardColor }[];
+  guesses: { card: number; color: CardColor; player: string }[];
   timedOut?: true;
 }
 
@@ -146,12 +147,31 @@ export const KEYWORDS_ERRORS = [
 export type KeywordsError = (typeof KEYWORDS_ERRORS)[number];
 
 // Why a seat can't be taken.
-export const SEAT_ERRORS = ['seat_taken', 'key_viewer', 'other_team', 'bad_seat'] as const;
+// `between_games`: in a match, only those who have played for a group in the game being played
+// may sit in one until it ends; anyone else joins from the next game. `bigger_group`: in a match
+// whose groups are fixed, a newcomer joins the group with fewer players.
+export const SEAT_ERRORS = [
+  'seat_taken',
+  'key_viewer',
+  'other_team',
+  'bad_seat',
+  'between_games',
+  'bigger_group',
+] as const;
 export type SeatError = (typeof SEAT_ERRORS)[number];
 
-// What keeps a game from starting, for each team.
+// What keeps a game from starting, for each team, or, when the server draws the groups at the
+// start of a match's game, how many more players need to be online in a seat.
 export const START_PROBLEMS = ['needs_captain', 'captain_offline', 'needs_guesser'] as const;
-export type StartProblem = { problem: (typeof START_PROBLEMS)[number]; team: Team };
+export type StartProblem =
+  { problem: (typeof START_PROBLEMS)[number]; team: Team } | { problem: 'needs_players'; missing: number };
+
+// How the waiting room seats the players. 'free': everyone chooses a group and a role, as in a
+// room that isn't a match. 'draw': the players only say that they play, and the server draws the
+// groups and their PIs when the game starts. 'fixed': in a match whose groups don't change, after
+// its first game, everyone plays for their group again, and the PI's seat goes round.
+export const LINEUPS = ['free', 'draw', 'fixed'] as const;
+export type Lineup = (typeof LINEUPS)[number];
 
 // The game's part of the room view (RoomView.data).
 export interface KeywordsRoomData {
@@ -162,9 +182,14 @@ export interface KeywordsRoomData {
   seats: Record<string, Seat>;
   // The members who have seen the key during the current game, and so can't be guessers in it.
   keyViewers: string[];
-  // The group that the viewer plays for in the current game, so that the interface offers only
-  // the seats they may take. Null for a screen and for anyone who hasn't sat in a group yet.
+  // The group that the viewer plays for in the current game, or in a match whose groups don't
+  // change, so that the interface offers only the seats they may take. Null for a screen and for
+  // anyone who hasn't sat in a group yet.
   side: Team | null;
+  // How the waiting room seats the players.
+  lineup: Lineup;
+  // Whether the viewer came to play while a game of the match was on, and so plays from the next.
+  joinsNext: boolean;
   // What still keeps the game from starting; empty outside the waiting room.
   startProblems: StartProblem[];
   game: KeywordsView | null;

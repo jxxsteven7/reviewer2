@@ -7,12 +7,14 @@ import {
   sameName,
   type Ack,
   type Language,
+  type MatchRules,
   type RoomPhase,
   type RoomView,
 } from '@reviewer2/shared';
 import { done, fail, refusalOf } from './answers';
 import type { GameContext, GameModule, PlayerResult, Viewer } from './game';
 import { newPlayerId } from './identity';
+import { Match, type Present } from './match';
 import { randomId, type Rng } from './random';
 import { drawWords, type WordLibrary } from './words';
 
@@ -89,6 +91,8 @@ export class Room {
   gameId: string | null = null;
   // How many games have been started here.
   round = 0;
+  // The match that the room is playing, or null for a room that isn't a match.
+  match: Match | null = null;
   lastActivity: number;
   // When a connection last came to the room or went. The sweep keeps this at the present while
   // anyone is connected, so it tells for how long nobody has been.
@@ -102,6 +106,9 @@ export class Room {
   // When each member last sent a quick reaction, by member key, so that neither another tab nor
   // leaving and coming back starts the wait again.
   readonly #emoted = new Map<string, number>();
+  // The member keys of those who left during the current game, by player ID, so that the game can
+  // still tell whose was a move they made before they left, as a match's score needs to.
+  readonly #gone = new Map<string, string>();
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
   readonly #words: WordLibrary;
@@ -131,7 +138,7 @@ export class Room {
       language: this.language,
       rng: this.#rng,
       now: this.#now,
-      keyOf: (id) => this.members.get(id)?.key ?? id,
+      keyOf: (id) => this.members.get(id)?.key ?? this.#gone.get(id) ?? id,
       isOnline: (id) => this.isOnline(id),
       playerIds: () => [...this.members.keys()],
     };
@@ -260,6 +267,7 @@ export class Room {
     if (!member) return [];
     const data = this.game.leave(this.data, id);
     const over = this.#endsWith(data);
+    if (this.phase !== 'lobby') this.#gone.set(id, member.key);
     this.members.delete(id);
     this.#take(data, over);
     if (this.chairId === id) this.chairId = this.#nextChair();
@@ -321,6 +329,8 @@ export class Room {
   adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
     const member = this.members.get(id);
     if (!member || member.account) return false;
+    if (this.game.rekey) this.data = this.game.rekey(this.data, id, member.key, key);
+    this.match?.rekey(member.key, key);
     member.key = key;
     member.account = { ...account };
     this.#takeUsername(member, username);
@@ -343,6 +353,8 @@ export class Room {
   // change together or neither does: one that won't do refuses the other with it.
   setSettings(changes: { fields?: readonly string[]; settings?: unknown }): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
+    // A match plays all its games by the same settings, once one of them has counted.
+    if (this.match?.status === 'on' && this.match.played > 0) return fail('match_locked');
     let fields = this.fields;
     if (changes.fields !== undefined) {
       const chosen = chooseFields(this.#words, changes.fields, this.language, this.game.wordsNeeded);
@@ -370,6 +382,7 @@ export class Room {
   start(round: number): Ack {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
+    if (this.match && this.match.status !== 'on') return fail('match_over');
     if (!this.game.canStart(this.data, this.context)) return fail('cannot_start');
     const pool = this.#words.pool(this.fields, this.language);
     const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng);
@@ -381,6 +394,14 @@ export class Room {
     this.gameId = gameId;
     this.round += 1;
     this.phase = 'playing';
+    this.#gone.clear();
+    // Whoever plays in a match's game is in its table from the start, with no points if new.
+    if (this.match && this.game.match) {
+      for (const id of this.game.match.lineup(this.data)) {
+        const member = this.members.get(id);
+        if (member) this.match.enter(member.key, member.name, member.account?.avatar ?? null);
+      }
+    }
     this.changed();
     return done;
   }
@@ -402,20 +423,91 @@ export class Room {
 
   // Back to the waiting room after the game that the message names. A late one must not clear
   // away the result of a later game.
+  //
+  // In a match, this is the way to its next game, and a match that is over has none: the chair
+  // starts another one or makes the room an ordinary one again (nextMatch).
   again(gameId: string): Ack {
     if (gameId !== this.gameId) return fail('stale');
     if (this.phase !== 'ended') return fail('wrong_phase');
-    this.data = this.game.again(this.data);
-    this.gameId = null;
-    this.phase = 'lobby';
-    this.#lobbySince = this.#now();
+    if (this.match && this.match.status !== 'on') return fail('match_over');
+    this.data = this.game.again(this.data, this.context);
+    this.#toLobby();
     this.changed();
     return done;
   }
 
+  #toLobby(): void {
+    this.gameId = null;
+    this.phase = 'lobby';
+    this.#lobbySince = this.#now();
+    this.#gone.clear();
+  }
+
+  // --- matches ----------------------------------------------------------------------------
+
+  // The room plays a match by these rules from now on. Only a game that can be played as a match
+  // can, and only in the waiting room.
+  startMatch(rules: MatchRules): Ack {
+    if (!this.game.match) return fail('bad_match');
+    if (this.phase !== 'lobby') return fail('wrong_phase');
+    this.data = this.game.match.setup(this.data, this.context, rules);
+    this.match = new Match(rules);
+    this.changed();
+    return done;
+  }
+
+  // The chair ends the match early. A game in progress is withdrawn, and counts for nothing. The
+  // players are ranked as they stand, but nobody is awarded a title (docs/architecture.md#matches).
+  endMatch(matchId: string): Ack {
+    if (!this.match || this.match.id !== matchId) return fail('stale');
+    if (this.match.status !== 'on') return fail('match_over');
+    if (this.phase === 'playing' && this.gameId !== null) {
+      const result = this.game.withdraw(this.data, this.gameId);
+      if (!result.ok) return refusalOf(result);
+      this.data = result.data;
+      this.phase = 'ended';
+    }
+    this.match.finish('stopped', this.#present);
+    this.changed();
+    return done;
+  }
+
+  // After a match, the chair starts another one, by `rules`, or makes the room an ordinary one
+  // again, by null. Either takes the room back to the waiting room.
+  nextMatch(matchId: string, rules: MatchRules | null): Ack {
+    if (!this.match || this.match.id !== matchId) return fail('stale');
+    if (this.match.status === 'on') return fail('wrong_phase');
+    const hooks = this.game.match;
+    if (!hooks) return fail('bad_match');
+    const ended = this.phase === 'ended';
+    const data = hooks.setup(ended ? this.game.again(this.data, this.context) : this.data, this.context, rules);
+    this.data = data;
+    if (ended) this.#toLobby();
+    this.match = rules && new Match(rules);
+    this.changed();
+    return done;
+  }
+
+  // Who has a member key in the room now, for the match.
+  #present: Present = (key) => {
+    const member = this.memberByKey(key);
+    return member ? { id: member.id, name: member.name, avatar: member.account?.avatar ?? null } : null;
+  };
+
+  // A game of a match has ended by itself: the match adds up its score. A game that the chair
+  // withdrew ends without this, and counts for nothing.
+  #scoreGame(): void {
+    if (!this.match || this.match.status !== 'on' || !this.game.match || this.gameId === null) return;
+    const scores = this.game.match.score(this.data, this.context);
+    if (scores) this.match.score(this.gameId, scores, this.#present);
+  }
+
+  // A game may have nothing to shuffle, as a match's game whose groups are drawn when it starts.
   shuffle(): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
-    this.data = this.game.shuffle(this.data, this.context);
+    const data = this.game.shuffle(this.data, this.context);
+    if (data === this.data) return done;
+    this.data = data;
     this.changed();
     return done;
   }
@@ -468,7 +560,9 @@ export class Room {
   // Takes the game's new data, and the end of the game if the data brought it.
   #take(data: unknown, over: boolean): void {
     this.data = data;
-    if (over) this.phase = 'ended';
+    if (!over) return;
+    this.phase = 'ended';
+    this.#scoreGame();
   }
 
   // Takes what a module answered to a message or to the chair's bench. A module that gives back
@@ -552,6 +646,8 @@ export class Room {
   views(): (viewer: Viewer) => RoomView {
     const context = this.context;
     let game: ((viewer: Viewer) => unknown) | undefined;
+    // Undefined until the first viewer asks; null for a room that isn't a match.
+    let match: RoomView['match'] | undefined;
     const shared = {
       roomId: this.id,
       code: this.code,
@@ -571,9 +667,17 @@ export class Room {
       })),
       screens: this.screens.size,
     };
+    // The match is the same for everyone, and is built when the first viewer asks, as the game's
+    // part is, since it asks the game for the scores of a game in progress.
+    const matchView = (): RoomView['match'] => {
+      if (!this.match) return null;
+      const live = this.phase === 'playing' ? (this.game.match?.score(this.data, context) ?? null) : null;
+      return this.match.view(this.phase, this.gameId, live, this.#present);
+    };
     return (viewer) => ({
       ...shared,
       me: 'playerId' in viewer ? viewer.playerId : null,
+      match: match === undefined ? (match = matchView()) : match,
       data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }
