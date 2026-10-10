@@ -37,7 +37,7 @@ const picture = computed(() => (props.avatar && !failed.value ? props.avatar : n
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 2px solid var(--ink);
+  border: var(--line-thin) solid var(--ink);
   border-radius: 50%;
   background: var(--paper-2);
   color: var(--ink);

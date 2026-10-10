@@ -346,12 +346,13 @@ describe('DecisionLetter', () => {
 describe('KeywordsCard', () => {
   const card = { word: 'Baseline', revealed: false };
 
-  test('shows who in the group has chosen it, also to screen readers', () => {
+  test('shows who in the group has chosen it, as avatars, and names them to screen readers', () => {
     const wrapper = mount(KeywordsCard, {
       props: { card, index: 3, selectable: true, selected: false, choosers: [{ name: 'Ann' }, { name: 'Cat' }] },
       global: global(),
     });
-    expect(wrapper.get('.choosers').text()).toBe('Ann and Cat');
+    expect(wrapper.get('.choosers').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.findAll('.choosers .avatar')).toHaveLength(2);
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann and Cat');
   });
 

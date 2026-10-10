@@ -46,7 +46,7 @@ const { t } = useI18n();
 /* A name the chair can act on is a small sticker of its own. */
 .manageable {
   padding: 0 var(--space-3) 0 var(--space-1);
-  border: 2px solid var(--ink);
+  border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
   cursor: pointer;
@@ -60,7 +60,7 @@ const { t } = useI18n();
   flex: none;
   width: 10px;
   height: 10px;
-  border: 2px solid var(--ink);
+  border: var(--line-thin) solid var(--ink);
   border-radius: 50%;
   background: var(--paper);
 }

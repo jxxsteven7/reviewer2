@@ -66,7 +66,7 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
   flex: 1;
   height: 12px;
   overflow: hidden;
-  border: 2px solid var(--ink);
+  border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper-2);
 }

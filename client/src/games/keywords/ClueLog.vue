@@ -134,8 +134,8 @@ li.blue {
 .swatch {
   width: 12px;
   height: 12px;
-  border: 2px solid var(--ink);
-  border-radius: 3px;
+  border: var(--line-thin) solid var(--ink);
+  border-radius: var(--radius-small);
 }
 
 /* The swatch takes the card's color, never the group's, which the li carries too. */

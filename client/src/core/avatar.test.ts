@@ -1,6 +1,11 @@
 import { AVATAR_SIZE, AVATAR_TARGET_BYTES, MAX_AVATAR_BYTES } from '@reviewer2/shared';
+import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { AVATAR_COLORS, colorOf, encodeAvatar, initialOf } from './avatar';
+
+// The tokens of the default avatars and of the ink, read from the stylesheet.
+const tokens = readFileSync(new URL('../styles/tokens.css', import.meta.url), 'utf8');
+const token = (name: string) => tokens.match(new RegExp(`--${name}: (#[0-9a-f]{6});`))?.[1];
 
 describe('the default avatar', () => {
   test('shows the first character of the name, as a reader sees it', () => {
@@ -13,12 +18,12 @@ describe('the default avatar', () => {
   test('has the same color for the same name, in any case or width', () => {
     expect(colorOf('Ann')).toBe(colorOf('ANN'));
     expect(colorOf('Ann')).toBe(colorOf('\u{ff21}nn'));
-    expect(AVATAR_COLORS).toContain(colorOf('Ann'));
+    expect(colorOf('Ann')).toMatch(/^var\(--avatar-[1-8]\)$/);
     const colors = new Set(['Ann', 'Bob', 'Cat', 'Dee', 'Eve', 'Fay', 'Gus', 'Hal', 'Ida', 'Jo'].map(colorOf));
     expect(colors.size).toBeGreaterThan(3);
   });
 
-  test('has colors that the ink initial reads well on, at 4.5:1 or more', () => {
+  test('has eight colors in the tokens, which the ink initial reads well on, at 4.5:1 or more', () => {
     const channel = (value: number) => {
       const c = value / 255;
       return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
@@ -31,11 +36,13 @@ describe('the default avatar', () => {
       ];
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
-    // The ink of the interface, --ink in client/src/styles/tokens.css.
-    const ink = luminance('#1a1a2e');
-    for (const color of AVATAR_COLORS) {
-      expect((luminance(color) + 0.05) / (ink + 0.05), color).toBeGreaterThanOrEqual(4.5);
+    const ink = luminance(token('ink') ?? '');
+    for (let n = 1; n <= AVATAR_COLORS; n += 1) {
+      const color = token(`avatar-${n}`);
+      expect(color, `--avatar-${n}`).toBeDefined();
+      expect((luminance(color ?? '') + 0.05) / (ink + 0.05), color).toBeGreaterThanOrEqual(4.5);
     }
+    expect(token(`avatar-${AVATAR_COLORS + 1}`)).toBeUndefined();
   });
 });
 

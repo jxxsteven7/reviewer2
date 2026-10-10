@@ -44,6 +44,9 @@ async function groupOfTwo(browser: Browser) {
   return { table, team, other, fay, fayStates, student, name, states: [...table.everyone, fayStates] };
 }
 
+// The choosers of a card hang on it as avatars, and the card's accessible name says who they are.
+const chosenBy = (names: string) => new RegExp(`, chosen by ${names}$`);
+
 test("a group's students see each other's choices, and nobody else does", async ({ browser }) => {
   const { table, team, other, fay, student, name, states } = await groupOfTwo(browser);
   const captain = table.captains[team];
@@ -56,17 +59,17 @@ test("a group's students see each other's choices, and nobody else does", async 
 
   await card(student, own).click();
   await expect(card(student, own)).toHaveClass(/selected/);
-  await expect(card(fay, own).locator('.choosers')).toHaveText(name);
-  await expect(card(captain, own).locator('.choosers')).toHaveText(name);
+  await expect(card(fay, own)).toHaveAttribute('aria-label', chosenBy(name));
+  await expect(card(captain, own)).toHaveAttribute('aria-label', chosenBy(name));
 
   // Fay chooses another card, takes the choice back, and joins the first one.
   await card(fay, another).click();
-  await expect(card(student, another).locator('.choosers')).toHaveText('Fay');
+  await expect(card(student, another)).toHaveAttribute('aria-label', chosenBy('Fay'));
   await card(fay, another).click();
   await expect(card(student, another).locator('.choosers')).toHaveCount(0);
   await card(fay, own).click();
-  await expect(card(student, own).locator('.choosers')).toHaveText('Fay');
-  await expect(card(captain, own).locator('.choosers')).toHaveText(`${name} and Fay`);
+  await expect(card(student, own)).toHaveAttribute('aria-label', chosenBy('Fay'));
+  await expect(card(captain, own)).toHaveAttribute('aria-label', chosenBy(`${name} and Fay`));
   for (const page of [table.captains[other], table.guessers[other], table.spectator, table.screen]) {
     await expect(page.locator('.board .choosers')).toHaveCount(0);
   }

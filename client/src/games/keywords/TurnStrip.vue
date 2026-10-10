@@ -15,7 +15,7 @@ const group = computed(() => t(`lobby.group.${props.game.team}`));
 const phase = computed(() => t(`game.phase.${props.game.phase}`, { group: group.value }));
 const count = computed(() => {
   const value = props.game.clue?.count;
-  return value === 'unlimited' ? '∞' : String(value ?? '');
+  return value === 'unlimited' ? '\u221e' : String(value ?? '');
 });
 </script>
 

@@ -58,9 +58,14 @@ function describe(detail: unknown): string {
 const { busy, run } = useBusy();
 
 // The width from which the groups and the clue log stand beside the board; the same as in the
-// style below.
+// style below. A sheet that is open when the screen gets wide, as when a tablet turns, closes:
+// the columns show the same thing, and it must not lie over the page when the screen narrows
+// again.
 const wide = useMediaQuery('(min-width: 64rem)');
 const panel = ref<'groups' | 'log' | null>(null);
+watch(wide, () => {
+  panel.value = null;
+});
 
 const game = computed(() => data.value.game as KeywordsView);
 const moment = computed(() => ({ gameId: game.value.gameId, turn: game.value.turn }));
@@ -273,6 +278,16 @@ const chosenByOthers = computed(() =>
   position: sticky;
   bottom: 0;
   z-index: 5;
+}
+
+/* While the bar is stuck to the bottom, whatever the page scrolls or focuses into view stays
+   above it: the padding is the height the bar takes on a phone on a student's turn. And the
+   page doesn't anchor its scroll position: with the bar stuck, WebKit's scroll anchoring jumps
+   the page to its end while a font slice arrives or the bar changes, taking the card from under
+   a tap that is on its way. The page is what scrolls, so the rules go on the root. */
+:global(html:has(.actions.sticky)) {
+  overflow-anchor: none;
+  scroll-padding-bottom: 200px;
 }
 
 .who-row,

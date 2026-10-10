@@ -516,12 +516,25 @@ export async function keyCard(captain: Page, color: CardColor): Promise<number> 
   return index;
 }
 
+// A guesser chooses a card: taps it, and checks that the page took the choice, so that a tap the
+// page lost fails here, in seconds, and not on a button that never enables. The tap waits for the
+// fonts: the Chinese fonts come in slices that a new word on the page can still be fetching, and
+// when a slice arrives the text above the board can change its lines, which moves the board under
+// a tap that is on its way.
+export async function chooseCard(guesser: Page, index: number): Promise<Locator> {
+  await guesser.evaluate(() => document.fonts.ready);
+  const card = guesser.locator('.board .card').nth(index);
+  await card.click();
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
+  return card;
+}
+
 // A guesser chooses a card and confirms it.
 export async function reveal(guesser: Page, index: number): Promise<void> {
   await expect(guesser.locator('.guess-bar')).toBeVisible();
-  await guesser.locator('.board .card').nth(index).click();
+  const card = await chooseCard(guesser, index);
   await guesser.locator('.guess-bar button.primary').click();
-  await expect(guesser.locator('.board .card').nth(index)).toHaveClass(/revealed/);
+  await expect(card).toHaveClass(/revealed/);
 }
 
 // A group's student reveals a card of this color, usually one of the group's own, which the PI's

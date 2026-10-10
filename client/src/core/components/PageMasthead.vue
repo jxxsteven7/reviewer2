@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import SiteWordmark from './SiteWordmark.vue';
+
+// The header of a page: the wordmark, and what the page puts at the other end. A room's
+// masthead is `compact`: on a narrow screen its wordmark is the tile alone.
+withDefaults(defineProps<{ compact?: boolean }>(), { compact: false });
 </script>
 
 <template>
   <header class="masthead">
-    <SiteWordmark />
+    <SiteWordmark :compact="compact" />
     <div class="end"><slot /></div>
   </header>
 </template>

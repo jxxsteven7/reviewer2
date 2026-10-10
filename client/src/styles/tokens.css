@@ -32,6 +32,18 @@
   --on-r2: #ffd23f;
   --stamp: #ffd23f;
 
+  /* The default avatars, one color per name: bright, so that the ink initial reads on each of
+     them at 4.5:1 or more (client/src/core/avatar.test.ts checks it), and none of them the red,
+     the blue or the yellow of the interface. avatar.ts counts on there being eight. */
+  --avatar-1: #f5a524;
+  --avatar-2: #5fd3a0;
+  --avatar-3: #f78fb3;
+  --avatar-4: #7cc8f5;
+  --avatar-5: #b8e05a;
+  --avatar-6: #c9a6f5;
+  --avatar-7: #ffa07a;
+  --avatar-8: #5fd3e0;
+
   /* Baloo 2 sets Latin letters and digits, ZCOOL KuaiLe sets Chinese headings, and Noto Sans SC
      sets everything else. All three come from npm and are served by our own server, in slices
      that browsers download only as they need them (docs/design.md). */
@@ -64,10 +76,13 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* Outlines, corners and the hard shadows. A pressed sticker moves by its shadow's offset and
-     loses the shadow, so each shadow has a shift to match. */
+  /* Outlines, corners and the hard shadows. The thin outline is for the small things: avatars,
+     dots, swatches, the clock's track and the stamp. A pressed sticker moves by its shadow's
+     offset and loses the shadow, so each shadow has a shift to match. */
+  --line-thin: 2px;
   --line: 2.5px;
   --line-strong: 3px;
+  --radius-small: 4px;
   --radius-control: 14px;
   --radius-card: 12px;
   --radius-panel: 20px;

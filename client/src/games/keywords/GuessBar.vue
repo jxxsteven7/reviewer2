@@ -25,7 +25,9 @@ function pass() {
 
 <template>
   <div class="guess-bar">
-    <p v-if="!chosen" class="hint">{{ t('game.pick') }}</p>
+    <!-- The hint keeps its room once a card is chosen, so that the bar, and the page under it,
+         don't move under the finger that chose it. -->
+    <p class="hint" :class="{ hidden: chosen }" :aria-hidden="chosen ? 'true' : undefined">{{ t('game.pick') }}</p>
     <div class="buttons">
       <UiButton variant="primary" :disabled="!chosen || busy" @click="selected !== null && emit('reveal', selected)">
         {{ chosen ? t('game.reveal', { word: chosen.word }) : t('game.revealChoose') }}
@@ -54,6 +56,10 @@ function pass() {
   min-height: 1.2em;
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+.hint.hidden {
+  visibility: hidden;
 }
 
 /* Both buttons on one row, so that the bar stays low on a phone: the reveal button takes the

@@ -16,9 +16,10 @@ import LanguageGate from './LanguageGate.vue';
 
 // The home page: the tagline, the first game on a big sticker with the games to come below it,
 // the way into a room, and footnotes, which name the author, offer a way to buy them a cola and
-// the way to send them feedback. On a wide screen the games stand on the right, beside the rest. The WeChat reward code is bundled with the page, as is everything it
-// shows, and kept as the author gave it but for its metadata: WeChat reads it when a player
-// presses and holds it, which a smaller or recompressed copy could spoil.
+// the way to send them feedback. On a wide screen the games stand on the right, beside the rest.
+// The WeChat reward code is bundled with the page, as is everything it shows, and kept as the
+// author gave it but for its metadata: WeChat reads it when a player presses and holds it, which
+// a smaller or recompressed copy could spoil.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const chosen = ref(storedLanguage() !== null);

@@ -11,7 +11,7 @@ import type { Chooser } from './useKeywords';
 // the table. A card whose color the viewer may know without its being revealed (a PI's key, or
 // the end of the game) is tinted. Every color also comes with a short text label, so that color
 // is never the only signal. The others in the group who have chosen the card hang their avatars
-// on its corner, with their names for assistive technology. On a big screen the cards are
+// on its corner; the card's accessible name says who they are. On a big screen the cards are
 // `large`, with bigger type.
 const props = withDefaults(
   defineProps<{
@@ -79,7 +79,6 @@ const ariaLabel = computed(() =>
     }}</span>
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar v-for="chooser in choosers" :key="chooser.name" :name="chooser.name" :avatar="chooser.avatar" />
-      <span class="sr-only">{{ chosenBy }}</span>
     </span>
   </button>
 </template>
@@ -189,6 +188,8 @@ const ariaLabel = computed(() =>
   }
 }
 
+/* The label is small, so it is set in the full color of the type: dimmed, it would fall under
+   4.5:1 on a revealed red or blue card. */
 .tag {
   position: absolute;
   top: 3px;
@@ -198,7 +199,6 @@ const ariaLabel = computed(() =>
   letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
-  opacity: 0.8;
 }
 
 /* Room for the label in the corner. */
@@ -285,8 +285,8 @@ const ariaLabel = computed(() =>
 .stamp {
   margin-top: 2px;
   padding: 0 5px;
-  border: 2px solid var(--stamp);
-  border-radius: 4px;
+  border: var(--line-thin) solid var(--stamp);
+  border-radius: var(--radius-small);
   color: var(--stamp);
   font-size: 11px;
   font-size: clamp(11px, 2.8cqi, 18px);

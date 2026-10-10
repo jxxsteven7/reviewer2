@@ -1,3 +1,9 @@
+<script lang="ts">
+// The sheets that are open on the page, the one on top last. Shared by every sheet, which is why
+// it lives outside the setup: each instance has its own copy of what is declared there.
+const openSheets: symbol[] = [];
+</script>
+
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -17,8 +23,6 @@ let returnFocus: HTMLElement | null = null;
 
 const FOCUSABLE = 'input, textarea, button, [href], [tabindex]:not([tabindex="-1"])';
 
-// The sheets that are open, the one on top last.
-const openSheets: symbol[] = [];
 const me = Symbol('sheet');
 function leave() {
   const at = openSheets.indexOf(me);
@@ -53,21 +57,24 @@ function onKey(event: KeyboardEvent) {
   }
 }
 
+// Immediate, so that a sheet that is created open, by a parent that renders it only at some
+// widths, takes the keys and the focus like one that opens later.
 watch(
   () => props.open,
-  async (open) => {
+  async (open, was) => {
     if (open) {
       returnFocus = document.activeElement as HTMLElement | null;
       openSheets.push(me);
       document.addEventListener('keydown', onKey);
       await nextTick();
       (panel.value?.querySelector<HTMLElement>('input') ?? panel.value)?.focus();
-    } else {
+    } else if (was) {
       leave();
       document.removeEventListener('keydown', onKey);
       returnFocus?.focus?.();
     }
   },
+  { immediate: true },
 );
 
 onBeforeUnmount(() => {

@@ -5,14 +5,15 @@ import { useI18n } from 'vue-i18n';
 import { HTML_LANG, setLanguage } from '../i18n';
 
 // One button that switches to the other language, and shows that language's short name in that
-// language: "EN" on the Chinese interface, "中文" on the English one.
+// language: "EN" on the Chinese interface, "中文" on the English one. Its accessible name is the
+// language's full name, so that a screen reader says what the button leads to.
 const { t, locale } = useI18n();
 const other = computed<Language>(() => LANGUAGES.find((language) => language !== locale.value) ?? 'en');
 </script>
 
 <template>
   <div class="language-switch" role="group" :aria-label="t('language.label')">
-    <button type="button" :lang="HTML_LANG[other]" @click="setLanguage(other)">
+    <button type="button" :lang="HTML_LANG[other]" :aria-label="t(`language.${other}`)" @click="setLanguage(other)">
       {{ t(`language.short.${other}`) }}
     </button>
   </div>

@@ -2,6 +2,7 @@
 import { LANGUAGES, type Language } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import { HTML_LANG, setLanguage } from '../i18n';
+import SiteWordmark from '../components/SiteWordmark.vue';
 
 // The first visit to the home page starts with the choice of language, because it decides the
 // words as well as the interface. Each option speaks its own language.
@@ -16,7 +17,7 @@ function choose(language: Language) {
 
 <template>
   <main class="gate">
-    <p class="title num"><span class="tile" aria-hidden="true"></span>{{ t('app.name') }}</p>
+    <SiteWordmark class="title" size="large" :link="false" />
     <p class="tagline">
       <span v-for="language in LANGUAGES" :key="language" :lang="HTML_LANG[language]" class="display">
         {{ t('app.tagline', {}, { locale: language }) }}
@@ -57,29 +58,9 @@ function choose(language: Language) {
   text-align: center;
 }
 
+/* Centered, as the rest; the wordmark itself is a row. */
 .title {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-display);
-}
-
-.tile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-control);
-  background: var(--ink);
-  color: var(--on-ink);
-  font-size: var(--text-xl);
-}
-
-.tile::before {
-  content: 'R2';
+  align-self: center;
 }
 
 .tagline,

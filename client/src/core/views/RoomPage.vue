@@ -21,7 +21,7 @@ const me = computed(() => room.value?.players.find((player) => player.id === roo
   <ConnectionBanner />
   <EmoteBubbles />
   <div class="page room-page">
-    <PageMasthead>
+    <PageMasthead compact>
       <ManuscriptId v-if="room" :code="room.code" />
       <RoomMenu v-if="entry.status === 'in' && room && me" :room="room" :me="me" />
     </PageMasthead>
@@ -47,17 +47,5 @@ const me = computed(() => room.value?.players.find((player) => player.id === roo
 
 main {
   flex: 1;
-}
-/* On a narrow screen the masthead has room for the room's number and menu beside the tile, but
-   not for the name. */
-@media (max-width: 39.99rem) {
-  .room-page :deep(.wordmark .name) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
 }
 </style>

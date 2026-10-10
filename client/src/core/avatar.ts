@@ -4,9 +4,9 @@ import { AVATAR_SIZE, AVATAR_TARGET_BYTES, MAX_AVATAR_BYTES, usernameKey } from 
 // guest, gets a default one, drawn here from the name: its first character on a color that the
 // name chooses, the same color for the same name everywhere, in any case or width.
 
-// Bright, so that the ink initial reads on each of them at a contrast of at least 4.5:1 (the
-// test checks it), and none of them the red, the blue or the yellow that the interface uses.
-export const AVATAR_COLORS = ['#f5a524', '#5fd3a0', '#f78fb3', '#7cc8f5', '#b8e05a', '#c9a6f5', '#ffa07a', '#5fd3e0'];
+// The colors are the tokens --avatar-1 to --avatar-8 in client/src/styles/tokens.css, so that
+// another look can change them with the rest; this is how many there are.
+export const AVATAR_COLORS = 8;
 
 const segmenter =
   typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
@@ -17,7 +17,8 @@ export function initialOf(name: string): string {
   return (first ?? '?').toLocaleUpperCase();
 }
 
-// FNV-1a over the key of the name, so that "Ann" and "ANN" get the same color.
+// The color of the name's default avatar, as a CSS value. FNV-1a over the key of the name, so
+// that "Ann" and "ANN" get the same color.
 export function colorOf(name: string): string {
   const key = usernameKey(name);
   let hash = 0x811c9dc5;
@@ -25,7 +26,7 @@ export function colorOf(name: string): string {
     hash ^= key.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193);
   }
-  return AVATAR_COLORS[(hash >>> 0) % AVATAR_COLORS.length] as string;
+  return `var(--avatar-${((hash >>> 0) % AVATAR_COLORS) + 1})`;
 }
 
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
