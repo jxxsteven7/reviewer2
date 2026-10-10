@@ -81,4 +81,4 @@ One JSON file per field in `words/`, shared by all games. A good term is short a
 
 ## License
 
-License files come before the repository goes public: MIT for the code, CC BY-SA 4.0 for the word lists.
+The code is under the [MIT License](LICENSE). The word lists in `words/` are under [CC BY-SA 4.0](words/LICENSE).

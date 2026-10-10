@@ -81,6 +81,6 @@ AI 助手读 `AGENTS.md`。
 
 ## 协议
 
-仓库公开前会补上协议文件：代码 MIT，词库 CC BY-SA 4.0。
+代码使用 [MIT 协议](LICENSE)，`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: dac4bd98a4f5088fa4081612301183614cc80915400369f44f495d8a7793751b -->
+<!-- readme-sync: eb8f1dcf8e1d74cfc0a7392ea029bda55dbe348251489dee850f9a32dc32182d -->
