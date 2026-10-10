@@ -44,13 +44,17 @@ afterEach(async () => {
   await server.close();
 });
 
+// Sixty words of which no two clash, so that the room deals its boards the usual way. Each is a
+// phrase such as "general wab", whose first word a clue may not repeat; the second word tells
+// them apart, with three letters so that it counts as a part and is never a plural of another.
 function bigLibrary(): WordLibrary {
-  const general = testWords().pool(['general'], 'en');
+  const tag = (i: number) =>
+    `w${String.fromCharCode(0x61 + Math.floor(i / 26))}${String.fromCharCode(0x61 + (i % 26))}`;
   return new WordLibrary([
     {
       id: 'general',
       name: { zh: 'G', en: 'G' },
-      terms: Array.from({ length: 60 }, (_, i) => ({ id: `w${i}`, en: general[i]?.word ?? `extra word ${i}` })),
+      terms: Array.from({ length: 60 }, (_, i) => ({ id: `w${i}`, en: `general ${tag(i)}` })),
     },
   ]);
 }
@@ -244,6 +248,44 @@ describe('seats and starting', () => {
     expect(data(ann).startProblems).toEqual([]);
   });
 
+  test('deals no two words of which one gives the other away', async () => {
+    await server.close();
+    // "Gene editing" repeats both "Gene" and "Editing", which a board of these 26 words needs.
+    const others = Array.from({ length: 23 }, (_, i) => `Word${String.fromCharCode(0x61 + i)}`);
+    const words = ['Gene editing', 'Gene', 'Editing', ...others];
+    server = await startServer({
+      games: [keywordsGame],
+      words: new WordLibrary([
+        { id: 'general', name: { zh: 'G', en: 'G' }, terms: words.map((en, i) => ({ id: `w${i}`, en })) },
+      ]),
+    });
+    const table = await seatTable();
+    expect(new Set(board(table.spectator).cards.map((card) => card.word))).toEqual(new Set(words.slice(1)));
+    expect(server.logs.map((entry) => entry.event)).not.toContain('words_clashed');
+  });
+
+  test('logs a board on which the draw found no way to keep such words apart', async () => {
+    await server.close();
+    // Each phrase is the one before it with a word added, "general", "general wa", "general wa wb"
+    // and so on, so that every one lies inside every later one.
+    const chain = (i: number) =>
+      ['general', ...Array.from({ length: i }, (_, j) => `w${String.fromCharCode(0x61 + j)}`)].join(' ');
+    server = await startServer({
+      games: [keywordsGame],
+      words: new WordLibrary([
+        {
+          id: 'general',
+          name: { zh: 'G', en: 'G' },
+          terms: Array.from({ length: 26 }, (_, i) => ({ id: `w${i}`, en: chain(i) })),
+        },
+      ]),
+    });
+    const table = await seatTable();
+    expect(server.logs.filter((entry) => entry.event === 'words_clashed')).toEqual([
+      { event: 'words_clashed', fields: { code: table.code, language: 'en', fields: ['general'], clashes: 300 } },
+    ]);
+  });
+
   test('a captain seat holds one player, and seats must make sense', async () => {
     const table = await seatTable(false);
     expect(await table.spectator.send('keywords:seat', { team: 'red', role: 'captain' })).toEqual({
@@ -384,7 +426,7 @@ describe('a game over sockets', () => {
       ok: false,
       error: 'clue_not_one_word',
     });
-    // The test words are phrases such as "general word 3", and a clue may not repeat part of one.
+    // The test words are phrases such as "general wab", and a clue may not repeat part of one.
     const onBoard = board(table.captains[team]).cards[3]?.word.split(' ')[0];
     expect(await send(table.captains[team], 'clue', { ...now, word: onBoard, count: 1 })).toEqual({
       ok: false,

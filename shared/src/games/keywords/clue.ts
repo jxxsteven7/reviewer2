@@ -85,6 +85,8 @@ const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 // The parts of a word: runs of Latin letters, runs of Chinese characters and runs of other
 // letters. Spaces, hyphens, apostrophes, digits and anything else come between them.
 const PART = /\p{Script=Latin}+|\p{Script=Han}+|[^\P{L}\p{Script=Latin}\p{Script=Han}]+/gu;
+// The pieces of a word: its parts and its runs of digits.
+const PIECE = /\p{Script=Latin}+|\p{Script=Han}+|\p{N}+|[^\P{L}\p{Script=Latin}\p{Script=Han}]+/gu;
 const NOT_LETTER_OR_DIGIT = /[^\p{L}\p{N}]+/gu;
 // Small words that hold a compound together without being what it is about. "State-of-the-art"
 // doesn't repeat "out-of-distribution".
@@ -114,6 +116,11 @@ interface Word {
   // or more letters that aren't small words. One letter alone, such as the "s" of "Master's" or
   // the "u" of "U-Net", is not a word that a clue could repeat.
   parts: string[];
+  // Everything that tells the word from another: its parts, and also each letter that stands
+  // alone and each run of digits, which no clue could repeat but which tell "t-test" from "Turing
+  // test", "Series A" from "Time series" and "GPT-3" from "GPT-4". Only the small words are left
+  // out. Where one word lies inside another is decided by these (liesInside()).
+  pieces: string[];
   // Its Chinese characters, in their simplified forms.
   han: Set<string>;
 }
@@ -123,6 +130,7 @@ function wordOf(text: string): Word {
   return {
     key: folded.replace(NOT_LETTER_OR_DIGIT, ''),
     parts: (folded.match(PART) ?? []).filter((part) => HAN.test(part) || (part.length > 1 && !SMALL_WORDS.has(part))),
+    pieces: (folded.match(PIECE) ?? []).filter((piece) => piece.length === 1 || !SMALL_WORDS.has(piece)),
     han: new Set([...folded].filter((char) => HAN.test(char))),
   };
 }
@@ -305,4 +313,72 @@ export function checkClue(
     null,
     verdicts.flatMap((found) => (found ? (found.strict ?? found.warned ?? []) : [])),
   );
+}
+
+// What keeping two cards off one board needs of a card, worked out once for each card: its word,
+// with its pieces, the keys of its translations, and its forms.
+interface Dealt {
+  word: Word;
+  translations: string[];
+  forms: Word[];
+}
+
+const dealt = new WeakMap<object, Dealt>();
+
+function dealtOf(card: BoardText): Dealt {
+  let found = dealt.get(card);
+  if (!found) {
+    found = {
+      word: wordOf(card.word),
+      translations: (card.translations ?? []).map(wordKey).filter((key) => key !== ''),
+      forms: (card.forms ?? []).map(wordOf).filter((form) => form.key !== ''),
+    };
+    dealt.set(card, found);
+  }
+  return found;
+}
+
+// The first word lies inside the second: it is the second or a plain plural of it, or each of
+// its pieces is a piece of the second, the same or a plain plural, or, for a run of Chinese
+// characters, lies inside one of the second's runs. The pieces are the parts that a clue could
+// repeat and also the letters that stand alone and the digits (wordOf()): "Test" lies inside
+// "t-test", but "t-test" doesn't lie inside "Turing test", and "R squared" in Chinese, "R" and the
+// characters for "square", doesn't lie inside "square root".
+function liesInside(inner: Word, outer: Word): boolean {
+  if (sameOrPlural(inner.key, outer.key)) return true;
+  return (
+    inner.pieces.length > 0 &&
+    inner.pieces.every((piece) =>
+      outer.pieces.some((other) =>
+        HAN.test(piece) && HAN.test(other) ? other.includes(piece) : sameOrPlural(piece, other),
+      ),
+    )
+  );
+}
+
+// The card's word gives the other card away: it lies inside the other's word or inside one of
+// the other's forms, or it is the other's term in another language, or a plain plural of that.
+const givesAway = (word: Dealt, card: Dealt): boolean =>
+  liesInside(word.word, card.word) ||
+  card.translations.some((key) => sameOrPlural(word.word.key, key)) ||
+  card.forms.some((form) => liesInside(word.word, form));
+
+// The words of a card, as the word library gives them: what cardsClash() compares.
+export type BoardText = Pick<ClueCard, 'word' | 'translations' | 'forms'>;
+
+// Whether two words must not share a board, because one of them lies inside the other: "Gene" and
+// "Gene editing", the Chinese words for "fossil" and "living fossil", or "Unit" and "GPU" with the
+// form "graphics processing unit". Hinting at one would hint at the other, and guessers couldn't
+// tell which was meant. A word lies inside another when it is that word or a plain plural of it,
+// when each of its pieces is a piece of that word or of one of its forms (liesInside()), or when
+// it is that word's term in another language. The pieces are the parts that the strict clue rule
+// counts, and also each letter that stands alone and each run of digits, so that "t-test" and
+// "Turing test" or "GPT-3" and "GPT-4" can share a board. So can two words that only share a part,
+// such as "Data science" and "Data cleaning", or a Chinese character, and two words whose forms
+// share a part. What it works out about a card is kept with the card object, so pass the same
+// objects again. scripts/check-words.mjs has a copy of this, which a test holds to it.
+export function cardsClash(a: BoardText, b: BoardText): boolean {
+  const first = dealtOf(a);
+  const second = dealtOf(b);
+  return givesAway(first, second) || givesAway(second, first);
 }

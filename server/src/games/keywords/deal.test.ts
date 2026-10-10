@@ -1,5 +1,9 @@
+import { join } from 'node:path';
+import { BOARD_SIZE, cardsClash, LANGUAGES } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
+import { drawWords, loadWordLibrary } from '../../core/words';
+import { keywordsGame } from '.';
 import { deal } from './deal';
 import { remaining } from './state';
 
@@ -74,6 +78,44 @@ describe('dealing', () => {
       const index = Number(card.word.slice(4));
       if (index % 2 === 0) expect(card.translations).toEqual([`Other${index}`]);
       else expect('translations' in card).toBe(false);
+    }
+  });
+});
+
+// The room draws the words (drawWords() in core/words.ts), with the game's own rule for words that
+// can't share a board.
+describe('dealing from the word library', () => {
+  const library = loadWordLibrary(join(import.meta.dirname, '..', '..', '..', '..', 'words'));
+  const fields = library.fields().map(({ id }) => id);
+
+  test('lets the room keep apart the words that give each other away', () => {
+    expect(keywordsGame.wordsClash).toBe(cardsClash);
+  });
+
+  test('puts no two words on a board of which one repeats the other, for every list and some mixes', () => {
+    const mixes = [
+      ...fields.map((id) => [id]),
+      fields,
+      ['biology', 'medicine', 'chemistry'],
+      ['ml', 'cs', 'math'],
+      ['physics', 'general'],
+    ];
+    for (const language of LANGUAGES) {
+      for (const mix of mixes) {
+        const pool = library.pool(mix, language);
+        let used: ReadonlySet<string> = new Set();
+        // Enough games for a room to go through the whole pool of a list more than once.
+        for (let seed = 0; seed < 30; seed += 1) {
+          const draw = drawWords(pool, BOARD_SIZE, used, seededRng(seed), cardsClash);
+          expect(draw?.clashes, `${mix.join('+')} in ${language}`).toBe(0);
+          const { cards } = deal(draw?.words ?? [], seededRng(seed));
+          const clashing = cards.flatMap((a, i) =>
+            cards.slice(i + 1).flatMap((b) => (cardsClash(a, b) ? [`${a.word} and ${b.word}`] : [])),
+          );
+          expect(clashing, `${mix.join('+')} in ${language}, game ${seed}`).toEqual([]);
+          used = draw?.used ?? new Set();
+        }
+      }
     }
   });
 });

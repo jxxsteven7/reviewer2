@@ -157,27 +157,119 @@ function unique(list: WordListData, skip: Skip): Record<Language, Entry[]> {
   >;
 }
 
+// Whether two words must not share a game, as a game module says (GameModule.wordsClash).
+export type Clash = (a: BoardWord, b: BoardWord) => boolean;
+
+// How many words the fallback of drawWords() looks at, at most: it compares every two of them, and
+// 500 words make 124,750 pairs, which take a small fraction of a second.
+export const FALLBACK_WORDS = 500;
+
 // Draws `count` words from the pool, preferring words this room hasn't used yet. `used` holds the
-// `wordKey` of every word drawn so far. When fewer than `count` unused words are left, all of
-// them are drawn and the rest come from the used ones; the room then starts over, remembering
-// only the words of this draw. Returns null when even the whole pool is too small.
+// `wordKey` of every word drawn since the room last started over, in the order of their last
+// draw, so that its last `count` keys are the words of the last game. When fewer than `count`
+// unused words are left, all of them that fit are drawn, and the rest come from the used ones, at
+// random, but from the last game only when no other used word is left; the room then starts over,
+// remembering only the words of this draw. Returns null when even the whole pool is too small.
+//
+// With `clash`, the draw keeps apart the words that clash, as far as it can. The words are taken
+// in a random order, unused ones first, and each is kept unless it clashes with one kept already.
+// That is one pass over the pool, so it always ends. A word that clashes with none is always
+// kept, so the pass fills the draw whenever the pool has `count` such words; in every list of the
+// library, at least two thirds of the words clash with none. A word that clashes with at most d
+// others keeps at most d of them out, so the pass also fills the draw whenever the pool has at
+// least `count` * (d + 1) words, which the whole library does. Should the pass still come out
+// short, the draw is made again word by word from the first FALLBACK_WORDS words of that order,
+// each time with the word that clashes least with those taken (fewestClashes()). Then a few
+// clashes may remain, and `clashes` says how many pairs of the words drawn clash; it is 0
+// otherwise. When clashes leave out some unused words, the draw takes used ones in their place.
+// While `count` or more unused words were left, the words left out stay unused and come first
+// next time; otherwise the room starts over as usual, and they are unused again like the rest.
 export function drawWords(
   pool: readonly BoardWord[],
   count: number,
   used: ReadonlySet<string>,
   rng: Rng,
-): { words: BoardWord[]; used: Set<string> } | null {
+  clash?: Clash,
+): { words: BoardWord[]; used: Set<string>; clashes: number } | null {
   if (pool.length < count) return null;
   const isUsed = (word: BoardWord) => used.has(keyOf(word));
+  // The words of the last game, which `used` holds last: they come after every other used word.
+  const recent = new Set([...used].slice(-count));
+  const isRecent = (word: BoardWord) => recent.has(keyOf(word));
   const fresh = pool.filter((word) => !isUsed(word));
-  if (fresh.length >= count) {
-    const words = shuffle(fresh, rng).slice(0, count);
-    return { words, used: new Set([...used, ...words.map(keyOf)]) };
+  const older = pool.filter((word) => isUsed(word) && !isRecent(word));
+  const order = [...shuffle(fresh, rng), ...shuffle(older, rng), ...shuffle(pool.filter(isRecent), rng)];
+  let picked: BoardWord[] = [];
+  let clashes = 0;
+  if (!clash) {
+    picked = order.slice(0, count);
+  } else {
+    for (const word of order) {
+      if (picked.length === count) break;
+      if (!picked.some((other) => clash(word, other))) picked.push(word);
+    }
+    if (picked.length < count) {
+      ({ words: picked, clashes } = fewestClashes(order.slice(0, Math.max(count, FALLBACK_WORDS)), count, clash));
+    }
   }
-  const again = shuffle(pool.filter(isUsed), rng).slice(0, count - fresh.length);
   // Shuffled once more, so that the order doesn't tell the new words from the repeated ones.
-  const words = shuffle([...fresh, ...again], rng);
-  return { words, used: new Set(words.map(keyOf)) };
+  const words = shuffle(picked, rng);
+  const keys = new Set(words.map(keyOf));
+  // Fewer unused words than the draw needs were left: the room starts over. It doesn't when the
+  // draw took used words only because clashes left unused ones out, which then come first next
+  // time; the room would otherwise play board after board of mostly used words when the last
+  // unused ones clash with each other.
+  const startOver = fresh.length < count;
+  const before = startOver ? [] : [...used].filter((key) => !keys.has(key));
+  return { words, used: new Set([...before, ...keys]), clashes };
+}
+
+// Draws `count` of the words, one at a time: each time the word that clashes with the fewest
+// words drawn so far, then the one that clashes with the fewest of the words that are still open,
+// which clash with none drawn, so that it shuts out the fewest of them, and then the one that
+// comes first. It compares every two words once, so it is given only a limited number of them.
+function fewestClashes(
+  words: readonly BoardWord[],
+  count: number,
+  clash: Clash,
+): { words: BoardWord[]; clashes: number } {
+  const clashing: number[][] = words.map(() => []);
+  for (let i = 0; i < words.length; i += 1) {
+    for (let j = i + 1; j < words.length; j += 1) {
+      if (clash(words[i] as BoardWord, words[j] as BoardWord)) {
+        clashing[i]?.push(j);
+        clashing[j]?.push(i);
+      }
+    }
+  }
+  // For each word: whether it is drawn, how many of the words drawn it clashes with, and how many
+  // open words it clashes with, which are the words not drawn that clash with none drawn.
+  const drawn: boolean[] = words.map(() => false);
+  const withDrawn: number[] = words.map(() => 0);
+  const withOpen: number[] = clashing.map((others) => others.length);
+  const close = (index: number) => {
+    for (const other of clashing[index] ?? []) withOpen[other] = (withOpen[other] ?? 0) - 1;
+  };
+  const compare = (a: number, b: number) =>
+    (withDrawn[a] ?? 0) - (withDrawn[b] ?? 0) || (withOpen[a] ?? 0) - (withOpen[b] ?? 0);
+  const picked: BoardWord[] = [];
+  let clashes = 0;
+  while (picked.length < count) {
+    let best = -1;
+    for (let index = 0; index < words.length; index += 1) {
+      if (!drawn[index] && (best < 0 || compare(index, best) < 0)) best = index;
+    }
+    clashes += withDrawn[best] ?? 0;
+    if (withDrawn[best] === 0) close(best);
+    drawn[best] = true;
+    picked.push(words[best] as BoardWord);
+    for (const other of clashing[best] ?? []) {
+      if (drawn[other]) continue;
+      if (withDrawn[other] === 0) close(other);
+      withDrawn[other] = (withDrawn[other] ?? 0) + 1;
+    }
+  }
+  return { words: picked, clashes };
 }
 
 const isText = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';

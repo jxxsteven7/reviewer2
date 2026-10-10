@@ -1,5 +1,14 @@
 import { describe, expect, test, vi } from 'vitest';
-import { checkClue, cleanClue, MAX_CLUE_INPUT, normalizeClue, wordKey, type ClueOptions } from './clue';
+import {
+  cardsClash,
+  checkClue,
+  cleanClue,
+  MAX_CLUE_INPUT,
+  normalizeClue,
+  wordKey,
+  type BoardText,
+  type ClueOptions,
+} from './clue';
 
 // The fixtures that stand for Chinese words are written as \u escapes, because everything in
 // the repository is in English (docs/rules/language.md). So are invisible characters and
@@ -535,5 +544,121 @@ describe('the strict and the loose clue rules', () => {
   test('gives each card one warning, the strongest', () => {
     const cards = [card('Data', { forms: ['datacenter'] }), card('Model')];
     expect(loose('datacenter', cards).similar).toEqual([{ card: 0, text: 'datacenter', kind: 'form' }]);
+  });
+});
+
+describe('words that clash on a board', () => {
+  const GENE = '\u57fa\u56e0'; // "gene"
+  const GENE_EDITING = '\u57fa\u56e0\u7f16\u8f91'; // "gene editing"
+  const FOSSIL = '\u5316\u77f3'; // "fossil"
+  const LIVING_FOSSIL = '\u6d3b\u5316\u77f3'; // "living fossil"
+  const MATH = '\u6570\u5b66'; // "mathematics"
+  const CHEMISTRY = '\u5316\u5b66'; // "chemistry": shares a character with MATH
+  const GPU_ZH = '\u56fe\u5f62\u5904\u7406\u5668'; // "graphics processing unit"
+  const PROCESSOR = '\u5904\u7406\u5668'; // "processor": the end of GPU_ZH
+  const ELECTRICITY = '\u7535'; // "electricity", one character
+  const ELECTRIC_FIELD = '\u7535\u573a'; // "electric field"
+  const SQUARE = '\u5e73\u65b9'; // "square", as in "R squared" and "square root"
+  const LINE = '\u7ebf'; // "line", as in "candlestick chart" ("K" and LINE) and "curve"
+
+  // Fresh objects each time, so that nothing is remembered from one call to the next.
+  const clash = (a: string | BoardText, b: string | BoardText) => {
+    const card = (word: string | BoardText): BoardText => (typeof word === 'string' ? { word } : { ...word });
+    const one = cardsClash(card(a), card(b));
+    expect(cardsClash(card(b), card(a)), 'the other way around').toBe(one);
+    return one;
+  };
+
+  test('when one contains the other as a whole word or a part', () => {
+    expect(clash('Gene', 'Gene editing')).toBe(true);
+    expect(clash('Neuron', 'Mirror neuron')).toBe(true);
+    expect(clash('DNA', 'Junk DNA')).toBe(true);
+    expect(clash('Attention', 'Self-attention')).toBe(true);
+    expect(clash('Review', 'Peer review')).toBe(true);
+    expect(clash('Gene editing', 'Gene editing tool')).toBe(true);
+    // Two spellings of one word.
+    expect(clash('Co-author', 'coauthor')).toBe(true);
+    // A letter alone and digits count as pieces of the word that holds them.
+    expect(clash('Test', 't-test')).toBe(true);
+    expect(clash('Ray', 'X-ray')).toBe(true);
+    expect(clash('3D', '3D printing')).toBe(true);
+    expect(clash("Master's", "Master's degree")).toBe(true);
+    expect(clash(SQUARE, `R${SQUARE}`)).toBe(true);
+  });
+
+  test('when one is a plain plural of the other or of its part', () => {
+    expect(clash('Model', 'Models')).toBe(true);
+    expect(clash('Model', 'Mixture models')).toBe(true);
+    expect(clash('Matrix', 'Matrixes')).toBe(true);
+  });
+
+  test('when a run of Chinese characters contains the other', () => {
+    expect(clash(GENE, GENE_EDITING)).toBe(true);
+    expect(clash(FOSSIL, LIVING_FOSSIL)).toBe(true);
+    expect(clash(GENE_EDITING, `GPU ${GENE_EDITING}`)).toBe(true);
+    // One character inside a word is enough.
+    expect(clash(ELECTRICITY, ELECTRIC_FIELD)).toBe(true);
+    // Traditional and simplified characters are the same.
+    expect(clash(REVIEWER_TRADITIONAL, `${REVIEWER}2`)).toBe(true);
+  });
+
+  test("when one repeats the other's form, in either language", () => {
+    const gpu = { word: 'GPU', forms: ['graphics processing unit', GPU_ZH] };
+    expect(clash('Unit', gpu)).toBe(true);
+    expect(clash('Processing unit', gpu)).toBe(true);
+    expect(clash(PROCESSOR, gpu)).toBe(true);
+    expect(clash({ word: 'Data', forms: ['dataset'] }, 'Dataset')).toBe(true);
+    expect(clash('Unit', 'GPU')).toBe(false);
+  });
+
+  test("when one is the other's term in another language", () => {
+    expect(clash('Transformer', { word: '\u53d8\u6362\u5668', translations: ['Transformer'] })).toBe(true);
+    expect(clash('Transformers', { word: '\u53d8\u6362\u5668', translations: ['Transformer'] })).toBe(true);
+  });
+
+  test('not for a part or a Chinese character in common, or for what only brings a warning', () => {
+    // Neither lies inside the other.
+    expect(clash('Data science', 'Data cleaning')).toBe(false);
+    expect(clash('Test set', 'Training set')).toBe(false);
+    expect(clash('Learning rate', 'Win rate')).toBe(false);
+    expect(clash(`GPU ${GENE}`, GENE_EDITING)).toBe(false);
+    // A letter alone or digits tell the words apart, even an "a".
+    expect(clash('t-test', 'Turing test')).toBe(false);
+    expect(clash('t-test', 'A/B test')).toBe(false);
+    expect(clash('X-ray', 'Gamma ray')).toBe(false);
+    expect(clash('Series A', 'Time series')).toBe(false);
+    expect(clash('Vitamin C', 'Vitamin D')).toBe(false);
+    expect(clash('GPT-3', 'GPT-4')).toBe(false);
+    expect(clash('Type I error', 'Type II error')).toBe(false);
+    expect(clash(`R${SQUARE}`, `${SQUARE}\u6839`)).toBe(false);
+    expect(clash(`K${LINE}`, `\u66f2${LINE}`)).toBe(false);
+    expect(clash('Graphics processing unit cluster', { word: 'GPU', forms: ['graphics processing unit'] })).toBe(false);
+    // A part in common through a form, or between forms, is no clash either.
+    const rlhf = { word: 'RLHF', forms: ['reinforcement learning from human feedback'] };
+    expect(clash('Digital human', rlhf)).toBe(false);
+    expect(clash({ word: 'Data', forms: ['dataset'] }, { word: 'Set', forms: ['dataset'] })).toBe(false);
+    expect(clash(MATH, CHEMISTRY)).toBe(false);
+    expect(clash(REVIEWER, MANUSCRIPT)).toBe(false);
+    expect(clash(DATA, NUMBER)).toBe(false);
+    // Another ending, a word inside another, a translation's part, and a small word.
+    expect(clash('Model', 'Modeling')).toBe(false);
+    expect(clash('Data', 'Datacenter')).toBe(false);
+    expect(clash('AI', 'Email')).toBe(false);
+    expect(clash('Attention', { word: '\u6ce8\u610f\u529b\u673a\u5236', translations: ['Attention mechanism'] })).toBe(
+      false,
+    );
+    expect(clash('State of the art', 'Out of distribution')).toBe(false);
+    expect(clash("Occam's razor", "Master's")).toBe(false);
+    expect(clash('Gene', 'Genome')).toBe(false);
+  });
+
+  test('gives the same answer again for cards that it has seen', () => {
+    const gene = { word: 'Gene' };
+    const editing = { word: 'Gene editing' };
+    const pool = { word: 'Pool' };
+    expect(cardsClash(gene, editing)).toBe(true);
+    expect(cardsClash(editing, gene)).toBe(true);
+    expect(cardsClash(gene, pool)).toBe(false);
+    expect(cardsClash(pool, gene)).toBe(false);
   });
 });
