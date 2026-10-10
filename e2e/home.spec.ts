@@ -1,10 +1,13 @@
 import { createRoom, interpolate, newPlayer, TEXT, expect, test } from './helpers';
 
 // The home page names the author and the build's version, and offers the reward code, which is
-// served from our own server as it was given, and which the rooms never show.
+// served from our own server as it was given, and which the rooms never show, and for players
+// without WeChat a link to GitHub Sponsors.
 
 for (const language of ['en', 'zh'] as const) {
-  test(`the home page names the author and the version, and offers a cola, in ${language}`, async ({ browser }) => {
+  test(`the home page names the author and the version, and offers a cola or GitHub Sponsors, in ${language}`, async ({
+    browser,
+  }) => {
     const text = TEXT[language];
     const page = await newPlayer(browser, language);
     // Creating a room goes through the home page, and the room has no reward code.
@@ -35,5 +38,10 @@ for (const language of ['en', 'zh'] as const) {
     const response = await page.request.get(src.toString());
     expect(response.headers()['content-type']).toBe('image/jpeg');
     expect((await response.body()).length).toBe(98_899);
+    // Players without WeChat are sent to GitHub Sponsors, in a new tab.
+    const sponsor = sheet.getByRole('link', { name: text.footer.sponsor });
+    await expect(sponsor).toHaveAttribute('href', 'https://github.com/sponsors/jxxsteven7');
+    await expect(sponsor).toHaveAttribute('target', '_blank');
+    await expect(sponsor).toHaveAttribute('rel', 'noopener noreferrer');
   });
 }

@@ -528,6 +528,7 @@
     "tip": "给作者点一杯可乐",
     "tipCode": "作者的微信赞赏码",
     "tipHint": "在微信里长按识别，或用微信扫一扫。",
+    "sponsor": "没有微信？在 GitHub 上赞助",
     "version": "版本 {version}"
   },
   "feedback": {
