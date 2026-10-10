@@ -106,6 +106,71 @@ describe('an account', () => {
   });
 });
 
+describe('the statistics of the accounts', () => {
+  test('count the accounts created lately, by day, and the ones active lately', () => {
+    const sessions = new SessionStore(db, () => now);
+    const records = new RecordStore(db, () => now);
+    now = START - 40 * DAY;
+    const ann = account('Ann');
+    now = START - 10 * DAY;
+    const bob = account('Bob');
+    sessions.create(hash('b1'), bob.id);
+    now = START - 2 * DAY;
+    records.add(ann.id, {
+      game: 'keywords',
+      gameId: 'g1',
+      side: 'red',
+      role: 'captain',
+      winner: 'red',
+      won: true,
+      verdict: 'oral',
+    });
+    records.addMatch(ann.id, {
+      game: 'keywords',
+      matchId: 'm1',
+      games: 3,
+      rank: 1,
+      players: 4,
+      score: 12,
+      title: null,
+    });
+    now = START;
+    account('Cy');
+
+    expect(accounts.createdWithin(7)).toBe(1);
+    expect(accounts.createdWithin(30)).toBe(2);
+    const days = accounts.createdByDay(30);
+    expect(days).toHaveLength(30);
+    expect(days[0]).toEqual({ day: '2026-09-10', count: 0 });
+    expect(days.filter(({ count }) => count > 0)).toEqual([
+      { day: '2026-09-29', count: 1 },
+      { day: '2026-10-09', count: 1 },
+    ]);
+    // Ann played a game 2 days ago; Bob logged in 10 days ago; Cy only registered.
+    expect(accounts.activeWithin(7)).toBe(1);
+    expect(accounts.activeWithin(30)).toBe(2);
+    expect(accounts.list()).toEqual([
+      { username: 'Ann', createdAt: '2026-08-30T12:00:00.000Z', games: 1, matches: 1 },
+      { username: 'Bob', createdAt: '2026-09-29T12:00:00.000Z', games: 0, matches: 0 },
+      { username: 'Cy', createdAt: '2026-10-09T12:00:00.000Z', games: 0, matches: 0 },
+    ]);
+  });
+
+  test('count a day in UTC, and an account once however often it was active', () => {
+    const sessions = new SessionStore(db, () => now);
+    now = Date.UTC(2026, 9, 9, 23, 30);
+    const ann = account('Ann');
+    sessions.create(hash('a1'), ann.id);
+    sessions.create(hash('a2'), ann.id);
+    now = Date.UTC(2026, 9, 10, 0, 30);
+    expect(accounts.createdByDay(2)).toEqual([
+      { day: '2026-10-09', count: 1 },
+      { day: '2026-10-10', count: 0 },
+    ]);
+    expect(accounts.activeWithin(7)).toBe(1);
+  });
+});
+
 describe('a login', () => {
   const sessions = () => new SessionStore(db, () => now);
 

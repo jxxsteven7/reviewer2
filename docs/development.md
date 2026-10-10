@@ -72,7 +72,10 @@ The operator takes an avatar down with the command the build makes, beside the r
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username>          # back to the default avatar
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username> --ban    # and no more uploads
 DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # uploads again
+DATA_DIR=data node server/dist/admin.cjs accounts [--json]                 # statistics of the accounts
 ```
+
+`accounts` prints the number of accounts, the new ones on each of the last 30 days, the active ones in the last 7 and 30 days, and every username with its registration date, games and matches. It never prints password hashes, email fingerprints, tokens or addresses.
 
 ## Testing on a phone
 

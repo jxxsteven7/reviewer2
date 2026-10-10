@@ -1,7 +1,13 @@
 import type { RequestListener } from 'node:http';
 import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
-import { FEEDBACK_PATH, renderFeedbackPage, renderStatusPage, type FeedbackListing } from './statusPage';
+import {
+  FEEDBACK_PATH,
+  renderFeedbackPage,
+  renderStatusPage,
+  type AccountCounts,
+  type FeedbackListing,
+} from './statusPage';
 import type { FeedbackStore } from './store/feedback';
 
 // The status page for the operator (docs/architecture.md). It has a port of its own, STATUS_PORT,
@@ -45,8 +51,8 @@ export function createStatusHandler(
   history: History,
   feedback: FeedbackStore,
   log: Log,
-  // How many accounts there are.
-  accounts: () => number = () => 0,
+  // How many accounts there are, and how many are new.
+  accounts: () => AccountCounts = () => ({ total: 0, recent: 0 }),
 ): RequestListener {
   return (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

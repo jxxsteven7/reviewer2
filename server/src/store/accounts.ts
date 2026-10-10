@@ -38,6 +38,18 @@ const COLUMNS =
 const toAccount = (row: Row | undefined): Account | undefined =>
   row && { ...row, avatarBanned: row.avatarBanned === 1 };
 
+// What the operator's statistics (admin.ts) say of one account: nothing that could be used to log
+// in or to reach the player.
+export interface AccountListing {
+  username: string;
+  createdAt: string;
+  // How many games the account has finished, and how many matches.
+  games: number;
+  matches: number;
+}
+
+const DAY_MS = 24 * 60 * 60_000;
+
 // SQLite's extended result code for a UNIQUE constraint that a write would break.
 const UNIQUE_FAILED = 2067;
 
@@ -60,6 +72,10 @@ export class AccountStore {
   readonly #ban: StatementSync;
   readonly #delete: StatementSync;
   readonly #count: StatementSync;
+  readonly #createdSince: StatementSync;
+  readonly #createdByDay: StatementSync;
+  readonly #activeSince: StatementSync;
+  readonly #list: StatementSync;
 
   constructor(
     private readonly db: DatabaseSync,
@@ -81,6 +97,24 @@ export class AccountStore {
     this.#ban = db.prepare('UPDATE accounts SET avatar_banned = ? WHERE id = ?');
     this.#delete = db.prepare(`DELETE FROM accounts WHERE id = ? RETURNING ${COLUMNS}`);
     this.#count = db.prepare('SELECT count(*) AS count FROM accounts');
+    // The statistics for the operator. An account was active when a browser logged in on it was
+    // used (sessions.ts) or when it finished a game (records.ts), which are the times there are.
+    this.#createdSince = db.prepare('SELECT count(*) AS count FROM accounts WHERE created_at >= ?');
+    this.#createdByDay = db.prepare(
+      'SELECT substr(created_at, 1, 10) AS day, count(*) AS count FROM accounts WHERE created_at >= ? ' +
+        'GROUP BY day ORDER BY day',
+    );
+    this.#activeSince = db.prepare(
+      'SELECT count(*) AS count FROM accounts WHERE ' +
+        'EXISTS (SELECT 1 FROM sessions WHERE account_id = accounts.id AND used_at >= ?) OR ' +
+        'EXISTS (SELECT 1 FROM game_records WHERE account_id = accounts.id AND ended_at >= ?)',
+    );
+    this.#list = db.prepare(
+      'SELECT username, created_at AS createdAt, ' +
+        '(SELECT count(*) FROM game_records WHERE account_id = accounts.id) AS games, ' +
+        '(SELECT count(*) FROM match_records WHERE account_id = accounts.id) AS matches ' +
+        'FROM accounts ORDER BY id',
+    );
   }
 
   // A new account, or null when another has the same key already.
@@ -167,6 +201,44 @@ export class AccountStore {
 
   count(): number {
     return (this.#count.get() as { count: number }).count;
+  }
+
+  // How many accounts were created in the last `days` days.
+  createdWithin(days: number): number {
+    return (this.#createdSince.get(this.#since(days)) as { count: number }).count;
+  }
+
+  // How many accounts were created on each of the last `days` days, in UTC, oldest first, today
+  // included. A day with none is in the list as 0.
+  createdByDay(days: number): { day: string; count: number }[] {
+    const dayAgo = (ago: number) => new Date(this.now() - ago * DAY_MS).toISOString().slice(0, 10);
+    const counts = new Map(
+      (this.#createdByDay.all(dayAgo(days - 1)) as { day: string; count: number }[]).map(({ day, count }) => [
+        day,
+        count,
+      ]),
+    );
+    return Array.from({ length: days }, (_, index) => dayAgo(days - 1 - index)).map((day) => ({
+      day,
+      count: counts.get(day) ?? 0,
+    }));
+  }
+
+  // How many accounts were active in the last `days` days: a browser logged in on them was used,
+  // or they finished a game. A login that hasn't been used for 30 days is deleted (sessions.ts),
+  // so `days` is at most 30.
+  activeWithin(days: number): number {
+    const since = this.#since(days);
+    return (this.#activeSince.get(since, since) as { count: number }).count;
+  }
+
+  // Every account, oldest first, as the operator's statistics list them.
+  list(): AccountListing[] {
+    return this.#list.all() as unknown as AccountListing[];
+  }
+
+  #since(days: number): string {
+    return new Date(this.now() - days * DAY_MS).toISOString();
   }
 
   // Runs `write` in one transaction: all of it happens, or none of it does.
