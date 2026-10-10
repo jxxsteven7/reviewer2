@@ -218,7 +218,9 @@ export async function main({
 
   let status: HttpServer | null = null;
   if (statusPort !== null && history !== null) {
-    const page = createServer(createStatusHandler(server.stats, history, feedback, log, () => accounts.store.count()));
+    const page = createServer(
+      createStatusHandler(server.stats, history, feedback, log, () => accounts.store.counts(7)),
+    );
     status = page;
     // The page is the operator's alone. A port that can't be opened, because something else has
     // it, is logged, and the game goes on without the page: the listen error would otherwise end

@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { addAccounts } from '../../test/statistics';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
 import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from './records';
@@ -103,6 +107,97 @@ describe('an account', () => {
     expect(accounts.byId(ann.id)?.password).toBe('scrypt$hash');
     accounts.transaction(() => accounts.setPassword(ann.id, 'new'));
     expect(accounts.byId(ann.id)?.password).toBe('new');
+  });
+});
+
+describe('the statistics of the accounts', () => {
+  test('count the accounts created lately, by day, and the ones active lately', () => {
+    addAccounts(db, START);
+    expect(accounts.counts(7)).toEqual({ total: 3, recent: 1 });
+    expect(accounts.counts(30)).toEqual({ total: 3, recent: 2 });
+    const days = accounts.createdByDay(30);
+    expect(days).toHaveLength(30);
+    expect(days[0]).toEqual({ day: '2026-09-10', count: 0 });
+    expect(days.filter(({ count }) => count > 0)).toEqual([
+      { day: '2026-09-29', count: 1 },
+      { day: '2026-10-09', count: 1 },
+    ]);
+    // Ann played a game 2 days ago; Bob logged in 10 days ago; Cy only registered.
+    expect(accounts.activeWithin(7)).toBe(1);
+    expect(accounts.activeWithin(30)).toBe(2);
+    expect(accounts.list()).toEqual([
+      { username: 'Ann', createdAt: '2026-08-30T12:00:00.000Z', games: 1, matches: 1 },
+      { username: 'Bob', createdAt: '2026-09-29T12:00:00.000Z', games: 0, matches: 0 },
+      { username: 'Cy', createdAt: '2026-10-09T12:00:00.000Z', games: 0, matches: 0 },
+    ]);
+  });
+
+  test('count 0 when there are no accounts', () => {
+    expect(accounts.counts(7)).toEqual({ total: 0, recent: 0 });
+  });
+
+  test('refuse a window of activity longer than logins are kept', () => {
+    addAccounts(db, START);
+    expect(accounts.activeWithin(30)).toBe(2);
+    expect(() => accounts.activeWithin(31)).toThrow(RangeError);
+  });
+
+  test('count a day in UTC, and an account once however often it was active', () => {
+    const sessions = new SessionStore(db, () => now);
+    now = Date.UTC(2026, 9, 9, 23, 30);
+    const ann = account('Ann');
+    sessions.create(hash('a1'), ann.id);
+    sessions.create(hash('a2'), ann.id);
+    now = Date.UTC(2026, 9, 10, 0, 30);
+    expect(accounts.createdByDay(2)).toEqual([
+      { day: '2026-10-09', count: 1 },
+      { day: '2026-10-10', count: 0 },
+    ]);
+    expect(accounts.activeWithin(7)).toBe(1);
+  });
+
+  test("don't count a login that has ended", () => {
+    const sessions = new SessionStore(db, () => now);
+    const ann = account('Ann');
+    sessions.create(hash('a1'), ann.id);
+    expect(accounts.activeWithin(7)).toBe(1);
+    // Logging out deletes the login with the time it was used.
+    sessions.delete(hash('a1'));
+    expect(accounts.activeWithin(7)).toBe(0);
+  });
+
+  test('read the clock once, so that the days agree with the cutoff across midnight', () => {
+    now = Date.UTC(2026, 9, 8, 23);
+    account('Ann');
+    // A clock that passes midnight between one reading and the next.
+    let readings = 0;
+    const store = new AccountStore(db, () => Date.UTC(2026, 9, 9, 23, 59, 59, 999) + readings++);
+    expect(store.createdByDay(2)).toEqual([
+      { day: '2026-10-08', count: 1 },
+      { day: '2026-10-09', count: 0 },
+    ]);
+  });
+
+  test('are read on one snapshot while another connection writes', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'reviewer2-accounts-'));
+    const reader = await openDatabase(dir);
+    const writer = await openDatabase(dir);
+    try {
+      const read = new AccountStore(reader.db);
+      const write = new AccountStore(writer.db);
+      write.create('Ann', 'ann', 'hash');
+      const counts = read.snapshot(() => {
+        const before = read.count();
+        write.create('Bob', 'bob', 'hash');
+        return [before, read.count()];
+      });
+      expect(counts).toEqual([1, 1]);
+      expect(read.count()).toBe(2);
+    } finally {
+      reader.db.close();
+      writer.db.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

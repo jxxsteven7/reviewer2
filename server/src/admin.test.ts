@@ -1,12 +1,13 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { jpeg } from '../test/images';
+import { addAccounts } from '../test/statistics';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { admin } from './admin';
-import { openDatabase, type Database } from './store/database';
+import { DATABASE_FILE, openDatabase, type Database } from './store/database';
 
 // The operator's commands, on a data directory as the server leaves it.
 
@@ -23,7 +24,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  database.db.close();
+  vi.useRealTimers();
+  if (database.db.isOpen) database.db.close();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -72,5 +74,75 @@ describe('avatar remove', () => {
     for (const args of [[], ['avatar'], ['avatar', 'delete', 'Ann'], ['avatar', 'allow', 'Ann', '--ban']]) {
       expect(run(...args), args.join(' ')).toBe(2);
     }
+  });
+});
+
+describe('accounts', () => {
+  const DAY = 24 * 60 * 60_000;
+  const NOW = Date.UTC(2026, 10, 1, 9);
+
+  test('prints the counts, the days and the usernames, and nothing that identifies a player', () => {
+    vi.useFakeTimers({ now: NOW });
+    addAccounts(database.db, NOW);
+    expect(run('accounts')).toBe(0);
+    expect(printed[0]).toBe(
+      '3 accounts, 1 active in the last 7 days and 2 in the last 30, by a login used or a game finished',
+    );
+    expect(printed[2]).toBe('New accounts by day, UTC, last 30 days');
+    expect(printed.slice(3, 33)).toHaveLength(30);
+    expect(printed[3]).toBe('2026-10-03  0');
+    expect(printed[22]).toBe('2026-10-22  1');
+    expect(printed[32]).toBe('2026-11-01  1');
+    expect(printed.slice(34)).toEqual([
+      'Registered  Games  Matches  Username',
+      '2026-09-22      1        1  Ann',
+      '2026-10-22      0        0  Bob',
+      '2026-11-01      0        0  Cy',
+    ]);
+    expect(printed.join('\n')).not.toMatch(/hash|email|token|@/);
+  });
+
+  test('with --json prints the same as JSON', () => {
+    vi.useFakeTimers({ now: NOW });
+    addAccounts(database.db, NOW);
+    expect(run('accounts', '--json')).toBe(0);
+    const json = JSON.parse(printed.join('\n'));
+    expect(json).toMatchObject({ total: 3, active: { last7Days: 1, last30Days: 2 } });
+    expect(json.createdByDay).toHaveLength(30);
+    expect(json.createdByDay[0]).toEqual({ day: '2026-10-03', count: 0 });
+    expect(json.createdByDay[29]).toEqual({ day: '2026-11-01', count: 1 });
+    expect(json.accounts).toEqual([
+      { username: 'Ann', createdAt: '2026-09-22T09:00:00.000Z', games: 1, matches: 1 },
+      { username: 'Bob', createdAt: '2026-10-22T09:00:00.000Z', games: 0, matches: 0 },
+      { username: 'Cy', createdAt: '2026-11-01T09:00:00.000Z', games: 0, matches: 0 },
+    ]);
+    expect(Object.keys(json.accounts[0])).toEqual(['username', 'createdAt', 'games', 'matches']);
+  });
+
+  test('takes no other flag', () => {
+    expect(run('accounts', '--all')).toBe(2);
+    expect(run('accounts', '--json', 'Ann')).toBe(2);
+  });
+
+  test('cuts every count off at the same moment, however long it takes', () => {
+    vi.useFakeTimers({ now: NOW });
+    addAccounts(database.db, NOW);
+    expect(run('accounts', '--json')).toBe(0);
+    const steady = printed.splice(0);
+    // A clock that moves on by a day at every reading.
+    let readings = 0;
+    vi.spyOn(Date, 'now').mockImplementation(() => NOW + readings++ * DAY);
+    expect(run('accounts', '--json')).toBe(0);
+    expect(printed).toEqual(steady);
+  });
+
+  test('works on a database that no server has open, and leaves no WAL behind', () => {
+    vi.useFakeTimers({ now: NOW });
+    addAccounts(database.db, NOW);
+    database.db.close();
+    expect(readdirSync(dir)).not.toContain(`${DATABASE_FILE}-wal`);
+    expect(run('accounts')).toBe(0);
+    expect(printed[0]).toMatch(/^3 accounts, /);
+    expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
   });
 });

@@ -1,4 +1,5 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
+import { DEFAULT_SESSION_LIMITS } from './sessions';
 
 // The accounts table (migration 2, docs/architecture.md). This module only reads and writes rows:
 // the rules for usernames and passwords are in shared/src/accounts.ts and server/src/accounts/,
@@ -38,6 +39,21 @@ const COLUMNS =
 const toAccount = (row: Row | undefined): Account | undefined =>
   row && { ...row, avatarBanned: row.avatarBanned === 1 };
 
+// What the operator's statistics (admin.ts) say of one account: nothing that could be used to log
+// in or to reach the player.
+export interface AccountListing {
+  username: string;
+  createdAt: string;
+  // How many games the account has finished, and how many matches.
+  games: number;
+  matches: number;
+}
+
+const DAY_MS = 24 * 60 * 60_000;
+
+// How many days back activity is known: a login unused for longer is deleted (sessions.ts).
+const ACTIVE_DAYS = DEFAULT_SESSION_LIMITS.idleMs / DAY_MS;
+
 // SQLite's extended result code for a UNIQUE constraint that a write would break.
 const UNIQUE_FAILED = 2067;
 
@@ -60,6 +76,10 @@ export class AccountStore {
   readonly #ban: StatementSync;
   readonly #delete: StatementSync;
   readonly #count: StatementSync;
+  readonly #counts: StatementSync;
+  readonly #createdByDay: StatementSync;
+  readonly #activeSince: StatementSync;
+  readonly #list: StatementSync;
 
   constructor(
     private readonly db: DatabaseSync,
@@ -81,6 +101,25 @@ export class AccountStore {
     this.#ban = db.prepare('UPDATE accounts SET avatar_banned = ? WHERE id = ?');
     this.#delete = db.prepare(`DELETE FROM accounts WHERE id = ? RETURNING ${COLUMNS}`);
     this.#count = db.prepare('SELECT count(*) AS count FROM accounts');
+    // The statistics for the operator (admin.ts) and the status page.
+    this.#counts = db.prepare(
+      'SELECT count(*) AS total, count(*) FILTER (WHERE created_at >= ?) AS recent FROM accounts',
+    );
+    this.#createdByDay = db.prepare(
+      'SELECT substr(created_at, 1, 10) AS day, count(*) AS count FROM accounts WHERE created_at >= ? ' +
+        'GROUP BY day ORDER BY day',
+    );
+    this.#activeSince = db.prepare(
+      'SELECT count(*) AS count FROM accounts WHERE ' +
+        'EXISTS (SELECT 1 FROM sessions WHERE account_id = accounts.id AND used_at >= ?) OR ' +
+        'EXISTS (SELECT 1 FROM game_records WHERE account_id = accounts.id AND ended_at >= ?)',
+    );
+    this.#list = db.prepare(
+      'SELECT username, created_at AS createdAt, ' +
+        '(SELECT count(*) FROM game_records WHERE account_id = accounts.id) AS games, ' +
+        '(SELECT count(*) FROM match_records WHERE account_id = accounts.id) AS matches ' +
+        'FROM accounts ORDER BY id',
+    );
   }
 
   // A new account, or null when another has the same key already.
@@ -169,11 +208,65 @@ export class AccountStore {
     return (this.#count.get() as { count: number }).count;
   }
 
+  // How many accounts there are, and how many of them were created in the last `days` days, read
+  // in one statement so that the two agree.
+  counts(days: number): { total: number; recent: number } {
+    return this.#counts.get(this.#since(days)) as { total: number; recent: number };
+  }
+
+  // How many accounts were created on each of the last `days` days, in UTC, oldest first, today
+  // included. A day with none is in the list as 0.
+  createdByDay(days: number): { day: string; count: number }[] {
+    // The clock is read once, so that the days and the query's cutoff agree even across midnight.
+    const now = this.now();
+    const dayAgo = (ago: number) => new Date(now - ago * DAY_MS).toISOString().slice(0, 10);
+    const counts = new Map(
+      (this.#createdByDay.all(dayAgo(days - 1)) as { day: string; count: number }[]).map(({ day, count }) => [
+        day,
+        count,
+      ]),
+    );
+    return Array.from({ length: days }, (_, index) => dayAgo(days - 1 - index)).map((day) => ({
+      day,
+      count: counts.get(day) ?? 0,
+    }));
+  }
+
+  // How many accounts were active in the last `days` days: a browser logged in on them was used,
+  // or they finished a game. A login that has ended, by logging out, by a password change or by
+  // being one too many, is deleted with the time it was last used, so an account that logged in
+  // and out again without finishing a game isn't counted. Unused logins are deleted after
+  // ACTIVE_DAYS, so a longer window would miss accounts, and asking for one throws.
+  activeWithin(days: number): number {
+    if (days > ACTIVE_DAYS) throw new RangeError(`activity is known for ${ACTIVE_DAYS} days, not ${days}`);
+    const since = this.#since(days);
+    return (this.#activeSince.get(since, since) as { count: number }).count;
+  }
+
+  // Every account, oldest first, as the operator's statistics list them.
+  list(): AccountListing[] {
+    return this.#list.all() as unknown as AccountListing[];
+  }
+
+  #since(days: number): string {
+    return new Date(this.now() - days * DAY_MS).toISOString();
+  }
+
   // Runs `write` in one transaction: all of it happens, or none of it does.
   transaction<T>(write: () => T): T {
-    this.db.exec('BEGIN IMMEDIATE');
+    return this.#run('BEGIN IMMEDIATE', write);
+  }
+
+  // Runs `read` on one snapshot of the database, so that what it reads agrees with itself while
+  // the server writes. It works on a connection that is read-only.
+  snapshot<T>(read: () => T): T {
+    return this.#run('BEGIN', read);
+  }
+
+  #run<T>(begin: string, work: () => T): T {
+    this.db.exec(begin);
     try {
-      const result = write();
+      const result = work();
       this.db.exec('COMMIT');
       return result;
     } catch (error) {

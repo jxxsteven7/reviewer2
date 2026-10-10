@@ -5,6 +5,7 @@ import { cleanName, usernameKey } from '@reviewer2/shared';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { loadConfig } from './config';
+import { AccountStore } from './store/accounts';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
 import { MIGRATIONS } from './store/migrations';
 
@@ -12,24 +13,68 @@ import { MIGRATIONS } from './store/migrations';
 //
 //   node server/dist/admin.cjs avatar remove <username> [--ban]
 //   node server/dist/admin.cjs avatar allow <username>
+//   node server/dist/admin.cjs accounts [--json]
 //
 // adminCli.ts runs this, as index.ts runs main.ts.
 //
 // `avatar remove` takes an account's avatar down, as for a picture that breaks the rules, and with
-// --ban bars the account from uploading another; `avatar allow` lifts that. DATA_DIR names the
-// server's data, as it does for the server. The database is opened as it is, never migrated, and
-// the server may go on running meanwhile.
+// --ban bars the account from uploading another; `avatar allow` lifts that. `accounts` prints
+// statistics of the accounts, counted as AccountStore says (store/accounts.ts), and never what the
+// database keeps in place of passwords, email addresses and logins. DATA_DIR names the server's
+// data, as it does for the server. The database is opened as it is, never migrated, and the
+// server may go on running meanwhile.
 
-const USAGE = 'usage: admin.cjs avatar remove <username> [--ban] | admin.cjs avatar allow <username>';
+const USAGE =
+  'usage: admin.cjs avatar remove <username> [--ban] | admin.cjs avatar allow <username> | admin.cjs accounts [--json]';
+
+// The statistics, in the order that `--json` prints them. They are read on one snapshot, so that
+// the counts agree with the list while the server writes, and on a clock that admin() reads once,
+// so that every count is cut off at the same moment.
+function accountStats(store: AccountStore) {
+  return store.snapshot(() => ({
+    total: store.count(),
+    active: { last7Days: store.activeWithin(7), last30Days: store.activeWithin(30) },
+    createdByDay: store.createdByDay(30),
+    accounts: store.list(),
+  }));
+}
+
+// The statistics as text: the counts, the days, and the accounts in a table with the username
+// last, so that the columns line up whatever the username is made of.
+function printAccountStats(store: AccountStore, print: (line: string) => void): void {
+  const { total, active, createdByDay, accounts } = accountStats(store);
+  print(
+    `${total} accounts, ${active.last7Days} active in the last 7 days and ${active.last30Days} in the last 30, ` +
+      'by a login used or a game finished',
+  );
+  print('');
+  print('New accounts by day, UTC, last 30 days');
+  for (const { day, count } of createdByDay) print(`${day}  ${count}`);
+  print('');
+  print('Registered  Games  Matches  Username');
+  for (const { username, createdAt, games, matches } of accounts) {
+    print(`${createdAt.slice(0, 10)}  ${String(games).padStart(5)}  ${String(matches).padStart(7)}  ${username}`);
+  }
+}
+
+// What the arguments ask for, or null when they aren't a command.
+type Command = { kind: 'accounts'; json: boolean } | { kind: 'remove' | 'allow'; name: string; ban: boolean };
+
+function parse(args: readonly string[]): Command | null {
+  const [group, command, name, ...flags] = args;
+  if (group === 'accounts') {
+    if (args.length > 2 || (command !== undefined && command !== '--json')) return null;
+    return { kind: 'accounts', json: command === '--json' };
+  }
+  const ban = flags.includes('--ban');
+  if (group !== 'avatar' || (command !== 'remove' && command !== 'allow') || !name) return null;
+  if (flags.some((flag) => flag !== '--ban') || (ban && command !== 'remove')) return null;
+  return { kind: command, name, ban };
+}
 
 export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: (line: string) => void): number {
-  const [group, command, name, ...flags] = args;
-  const ban = flags.includes('--ban');
-  if (group !== 'avatar' || !['remove', 'allow'].includes(command ?? '') || !name) {
-    print(USAGE);
-    return 2;
-  }
-  if (flags.some((flag) => flag !== '--ban') || (ban && command !== 'remove')) {
+  const command = parse(args);
+  if (command === null) {
     print(USAGE);
     return 2;
   }
@@ -47,10 +92,23 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: (l
   const db = new DatabaseSync(file);
   try {
     db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON`);
+    // `accounts` only reads, and the connection says so, so that it can't write by mistake. It
+    // isn't opened read-only: that would leave the WAL's two files behind on a database that no
+    // server has open, owned by whoever ran the command, and the server might not be able to
+    // write them.
+    if (command.kind === 'accounts') db.exec('PRAGMA query_only = ON');
     if (schemaVersion(db) !== MIGRATIONS.length) {
       print(`The database is at schema version ${schemaVersion(db)}, and this build knows ${MIGRATIONS.length}.`);
       return 1;
     }
+    if (command.kind === 'accounts') {
+      const now = Date.now();
+      const store = new AccountStore(db, () => now);
+      if (command.json) print(JSON.stringify(accountStats(store), null, 2));
+      else printAccountStats(store, print);
+      return 0;
+    }
+    const { name, ban } = command;
     const accounts = new Accounts({
       db,
       now: () => performance.now(),
@@ -61,7 +119,7 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: (l
       print(`No account is called ${name}.`);
       return 1;
     }
-    if (command === 'allow') {
+    if (command.kind === 'allow') {
       accounts.store.setAvatarBanned(account.id, false);
       print(`${account.username} may upload an avatar again.`);
       return 0;
