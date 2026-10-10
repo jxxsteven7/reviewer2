@@ -1,40 +1,20 @@
 # Language
 
-Reviewer 2 is built by a Chinese-speaking team for players around the world. Everything in the repository is written in clear, standard English so that anyone can read it. There are a few deliberate exceptions.
-
-## Use English for
-
-- Code: identifiers, comments, log messages and error messages.
-- Commit messages, branch names, PR titles and PR descriptions.
-- Documentation and rules: `README.md`, `CONTRIBUTING.md`, `AGENTS.md` and everything under `docs/`.
-- Configuration and scripts, including comments and messages in git hooks and CI workflows.
-
-Write plain, correct English: complete sentences, consistent terms, and no leftovers from machine translation. Reviewers flag unclear or ungrammatical English the same way they flag unclear code.
+Reviewer 2 is built by a Chinese-speaking team for players around the world, so everything in the repository is in clear, standard English: code, identifiers, comments, log and error messages, commit messages, branch names, PRs, docs, rules, configuration, scripts, hooks and CI workflows. Write complete sentences, use consistent terms, and leave no traces of machine translation. Reviewers flag unclear English as they flag unclear code.
 
 ## Exceptions
 
-- `README.zh-CN.md` is the Chinese translation of `README.md`. The two must stay in sync, as described below. The language switcher at the top of `README.md` names the Chinese version in Chinese.
-- UI text lives in the locale files, and the Chinese locale (`zh.json`) is in Chinese. UI text is never hard-coded in components; see [constraints.md](constraints.md).
-- The mails that the mailer writes have their text in `mailer/src/locales/`, in Chinese and in English, as the interface's is.
-- Word lists under `words/`, and examples of word-list data in the docs, contain Chinese terms in their `zh` fields.
-- Issue threads and review comments may be in English or Chinese, whichever works for the people involved. Anything that lands in the repository is in English.
+- `README.zh-CN.md` is the Chinese translation of `README.md`; see below. The language switcher at the top of `README.md` names it in Chinese.
+- UI text lives in the locale files, and `zh.json` is in Chinese. It is never hard-coded in components ([constraints.md](constraints.md)). The mailer's mails are in `mailer/src/locales/`, in both languages too.
+- Word lists under `words/`, and examples of them in the docs, have Chinese terms in their `zh` fields.
+- Issues and review comments may be in English or Chinese. Anything that lands in the repository is in English.
 
 ## Keeping the two READMEs in sync
 
-`README.md` and `README.zh-CN.md` must say the same thing. When you change one, change the other in the same PR.
-
-CI runs `node scripts/check-readme-sync.mjs`, which checks that:
-
-- both files have the same headings at the same levels, in the same order;
-- fenced code blocks are identical, so code blocks must not contain prose, and any comments in them are in English;
-- both files link to the same targets;
-- tables have the same number of rows and columns;
-- the sync stamp at the bottom of `README.zh-CN.md` matches the current content of both files.
-
-Any change to either file changes the stamp, so CI fails until the stamp is recorded again. After you have brought both files in line, run:
+The two READMEs say the same thing. When you change one, change the other in the same PR. CI runs `node scripts/check-readme-sync.mjs`, which checks that both have the same headings at the same levels in the same order, identical fenced code blocks (so code blocks hold no prose, and their comments are in English), the same link targets, tables of the same shape, and that the sync stamp at the bottom of `README.zh-CN.md` matches both files. Any change moves the stamp, so once the two files match, run:
 
 ```bash
 node scripts/check-readme-sync.mjs --update
 ```
 
-This checks the structure and records a new stamp. Run it only once the two files really match. The script can't judge the translation itself, so reviewers check that.
+The script can't judge the translation; reviewers do.

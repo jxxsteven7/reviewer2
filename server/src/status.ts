@@ -6,10 +6,10 @@ import type { FeedbackStore } from './store/feedback';
 
 // The status page for the operator (docs/architecture.md). It has a port of its own, STATUS_PORT,
 // which listens on 127.0.0.1 whatever HOST says, so only the server's own machine can reach it:
-// the tunnel and any reverse proxy lead to the game's port alone. That is why it needs no
-// password. `/` is the page and `/status.json` the same numbers for scripts. `/feedback` is the
-// feedback that players sent, a page of it at a time: `/feedback?before=<id>` shows what came
-// before that one. All of it is read-only.
+// whatever stands in front of the server, such as a reverse proxy, leads to the game's port
+// alone. That is why it needs no password. `/` is the page and `/status.json` the same numbers
+// for scripts. `/feedback` is the feedback that players sent, a page of it at a time:
+// `/feedback?before=<id>` shows what came before that one. All of it is read-only.
 
 export const STATUS_HOST = '127.0.0.1';
 
