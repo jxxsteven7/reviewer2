@@ -559,7 +559,7 @@ export class Accounts {
     if (this.#full() || this.store.byId(accountId) === undefined) return false;
     return this.store.transaction(() => {
       const added = this.records.addMatch(accountId, record);
-      if (record.title) this.titles.award(accountId, record.title, record.matchId);
+      if (added && record.title) this.titles.award(accountId, record.title, record.matchId);
       return added;
     });
   }
