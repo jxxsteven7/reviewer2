@@ -32,9 +32,9 @@ What we promise players:
 
 - **No account needed.** A nickname is enough to play.
 - **Passwords** are kept only as a one-way hash. Nobody, the operator included, can read them.
-- **Email addresses are never stored.** An address bound to an account is kept only as a keyed fingerprint, used to check it and to send a password reset.
+- **An account's email address is never stored.** The server keeps only a keyed fingerprint of it, to check the address and to mail a password reset.
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
-- **Feedback** is read only by the author; a contact left with it is deleted after 90 days.
+- **Feedback** is read only by the project's operator. A contact left with it is kept as written and deleted after 90 days.
 - **Deleting an account** deletes everything of it; backups keep it only until they expire.
 
 ## Status
@@ -72,7 +72,7 @@ npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-The other commands, testing on a phone and the environment variables are in [docs/development.md](docs/development.md).
+A local copy needs no key for any outside service. For email, copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`: the mails are printed, not sent. The other commands, testing on a phone and the environment variables are in [docs/development.md](docs/development.md).
 
 ## Contributing
 
@@ -92,4 +92,4 @@ One JSON file per field in `words/`, shared by all games. A good term is short a
 
 ## License
 
-The code is under the [MIT License](LICENSE). The word lists in `words/` are under [CC BY-SA 4.0](words/LICENSE).
+The code is under the [MIT License](LICENSE), except `shared/src/han-variants.ts`, which is built from the data of OpenCC and stays under the [Apache License 2.0](shared/LICENSE-OpenCC). The word lists in `words/` are under [CC BY-SA 4.0](words/LICENSE).

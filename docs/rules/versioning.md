@@ -14,7 +14,7 @@ Every PR is squash-merged, so it lands on `main` as one commit, titled `vX.Y.Z <
 2. The `Commits and version` check puts the next version in front of the title, again whenever the PR changes, and for every open PR after each merge to `main`. The previous version is the highest `vX.Y.Z` among the commit titles on `main` and the tags, or `v0.0.0`.
 3. A collaborator merges with **Squash and merge**, with the PR title, version included, as the commit title; the repository settings ([../maintainers.md](../maintainers.md)) fill it in that way.
 
-For a PR from a fork, which CI can't retitle, the check prints the title it needs and a maintainer edits it in.
+For a PR from a fork, which CI can't retitle, the check fails and prints the title it needs; a maintainer edits it in, and the check passes on its next run.
 
 ## Minor and major versions
 

@@ -4,7 +4,7 @@ How the app is put together. The constraints are in [rules/constraints.md](rules
 
 ## One process, one port
 
-One Node process serves everything on one port: the built front end, `/healthz`, the account API under `/api/`, avatars under `/avatars/` and Socket.IO under `/socket.io/`. Rooms live in memory and end with the process; feedback and accounts are in a SQLite database, avatars as files beside it ([Data](#data)). The only other things, serving no player, are the operator's status page, on a second port reachable only locally ([Status](#status)), and the mailer, which the game server, which needs no internet, asks over a Unix socket to send mails ([Mail](#mail)).
+One Node process serves everything on one port: the built front end, `/healthz`, the account API under `/api/`, avatars under `/avatars/` and Socket.IO under `/socket.io/`. Rooms live in memory and end with the process; feedback and accounts are in a SQLite database, avatars as files beside it ([Data](#data)). The only other things, serving no player, are the operator's status page, on a second port reachable only locally ([Status](#status)), and the mailer, a program of its own that alone holds the mail service's key and talks to the internet; the game server asks it over a Unix socket to send a mail, and needs no internet itself ([Mail](#mail)).
 
 | Layer | Where | What it does |
 |---|---|---|
@@ -151,7 +151,7 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 - **Who has an account:** answers that reveal a taken name are limited, and `login_failed` is the same for a wrong name or password.
 - **Stolen logins and other sites:** a random secret, kept hashed, only in a hardened cookie, HTTPS only; `Origin` and `Sec-Fetch-Site` checks, no CORS, no framing; password change, binding and deletion ask for the password.
 - **Links and mail:** 256 random bits after `#`, kept as hashes, short-lived, used once; two fixed mails from a mailer that alone holds the key.
-- **A leaked database** holds only usernames, hashes and keyed HMACs; no addresses, IP addresses or user agents.
+- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records and titles, and the feedback, with the contacts of the last 90 days and the user agents of bug reports; no IP addresses.
 
 ## Logging
 

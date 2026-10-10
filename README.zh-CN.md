@@ -32,9 +32,9 @@
 
 - **不用注册。** 输入昵称就能玩。
 - **密码**只存单向哈希，谁都读不出原文，运营者也不行。
-- **邮箱从不保存。** 绑定的邮箱只存一个加密指纹，用来核对和发送找回密码的邮件。
+- **账号的邮箱从不保存。** 服务器只存它的一个带密钥的指纹，用来核对邮箱和发送找回密码的邮件。
 - **日志里没有 IP 地址和名字。** 统计只有数字：人数、房间数和国家。
-- **建议**只有作者能看到；留下的联系方式 90 天后删除。
+- **建议**只有项目的运营者能看到。留下的联系方式按原样保存，90 天后删除。
 - **注销账号**会删掉它的全部数据；备份里的副本到期后也会消失。
 
 ## 当前状态
@@ -72,7 +72,7 @@ npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-其他命令、在手机上测试和环境变量见 [docs/development.md](docs/development.md)。
+本地运行不需要任何外部服务的密钥。要试邮件功能，把 `.env.example` 复制成 `.env`，再在 `npm run dev` 旁边运行 `npm run dev:mailer`：邮件只会打印出来，不会发送。其他命令、在手机上测试和环境变量见 [docs/development.md](docs/development.md)。
 
 ## 参与贡献
 
@@ -92,6 +92,6 @@ AI 助手读 `AGENTS.md`。
 
 ## 协议
 
-代码使用 [MIT 协议](LICENSE)，`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
+代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: 0517eec71d20cebc6a03825b58f767f053acf892be7ba5c84cc6ac9c4a775cc6 -->
+<!-- readme-sync: 5e10cccb38f054e633e274341108d3bbb5ef91912e95a46e285eadfb343b95f7 -->

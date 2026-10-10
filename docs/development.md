@@ -58,7 +58,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `MAILER_SOCKET` [off] | The mailer's Unix socket, at most 107 bytes. Without it, no email |
 | `APP_VERSION` [`dev`] | Build time: the version `/healthz` and the footer report |
 
-The mailer reads `MAILER_TRANSPORT` (`resend`, or `print` to write mails out as JSON), `RESEND_API_KEY` or `RESEND_API_KEY_FILE`, `MAILER_BASE_URL` (where the links lead), `MAILER_SOCKET` (unless systemd's socket activation hands one over), `STATE_DIRECTORY` or `MAILER_STATE_DIR` (the daily count of mails) and `MAILER_PRINT_FILE`.
+The mailer reads `MAILER_TRANSPORT` [`resend`] (`print` writes the mails out as JSON instead of sending them), `RESEND_API_KEY` or `RESEND_API_KEY_FILE` (required with `resend`), `MAILER_BASE_URL` [`https://playreviewer2.com`] (where the links lead; HTTPS with `resend`), `MAILER_SOCKET` (required, unless systemd's socket activation hands a socket over), `STATE_DIRECTORY` or `MAILER_STATE_DIR` (where the daily count of mails is kept; required with `resend`) and `MAILER_PRINT_FILE` [off] (a file that `print` writes the mails to as well).
 
 Never commit passwords, keys or tokens; `.env` is ignored by git.
 
@@ -78,10 +78,10 @@ DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # upl
 
 ```bash
 npm run build
-HOST=0.0.0.0 npm start
+HOST=0.0.0.0 COOKIE_SECURE=0 npm start
 ```
 
-Open `http://<your computer's address>:3000` on a phone on the same Wi-Fi, or in WeChat to try its browser.
+Open `http://<your computer's address>:3000` on a phone on the same Wi-Fi, or in WeChat to try its browser. `npm start` doesn't read `.env`, and without `COOKIE_SECURE=0` the phone's browser drops the login cookie, which is `Secure`, over plain HTTP, so logging in wouldn't stick.
 
 ## Running in production
 
@@ -95,7 +95,7 @@ Copy `server/dist/`, `client/dist/`, `mailer/dist/` and `words/` in the same lay
 
 - **`DATA_DIR`** set to a writable directory, and in your backups.
 - **A restart after replacing the build**.
-- **Behind a reverse proxy**, the `Host` header and the WebSocket upgrade passed through, `TRUST_PROXY=1`, and the player's address in `X-Forwarded-For`, or all players share one address's limits. A proxy other than Cloudflare drops the `CF-IPCountry` header.
+- **Behind a reverse proxy**, the `Host` header and the WebSocket upgrade passed through, `TRUST_PROXY=1`, and the player's address in `X-Forwarded-For`, or all players share one address's limits. Any proxy other than Cloudflare must drop the `CF-IPCountry` header, or a client can choose the country it is counted under.
 - **For accounts**, HTTPS only, HTTP redirected, HSTS on, and `COOKIE_SECURE` on.
 - **For email**, the secret from a file only the service reads (`SERVER_SECRET_FILE`), and the mailer as a service of its own on `MAILER_SOCKET`. Only the mailer needs the internet, Resend's key and a state directory.
 - **The status page** is `http://127.0.0.1:<STATUS_PORT>` on the server's own machine.

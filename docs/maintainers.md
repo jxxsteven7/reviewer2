@@ -26,5 +26,5 @@ A maintainer has the **Admin** or **Maintain** role; CI uses it to decide who ma
 ## Notes
 
 - Rulesets are enforced on this private repository.
-- GitHub doesn't let you approve your own PR, so while there is one maintainer: required approvals 0, Require review from Code Owners and Require approval of the most recent reviewable push off, Require a pull request kept, and a review left on each PR. Switch back with a second maintainer.
+- GitHub doesn't let you approve your own PR, so while there is one maintainer: required approvals 0, Require review from Code Owners and Require approval of the most recent reviewable push off, Require a pull request kept, and a review left on each PR. Switch back with a second maintainer. Until then, GitHub doesn't enforce the approval: a collaborator with the Write role merges only a PR that someone else has approved.
 - Local hooks can't check GitHub's merge commit: the merge form must show the PR title, version included, or the `Landed commits and release` job on `main` fails.

@@ -8,6 +8,7 @@ Members work on a branch of their own, in a git worktree beside the main checkou
 
 ```bash
 npm install                                   # also turns on the git hooks
+git fetch origin
 git worktree add ../feat-keywords-rules -b feat/keywords-rules origin/main
 cd ../feat-keywords-rules && npm install
 git push -u origin feat/keywords-rules
@@ -28,7 +29,7 @@ A review worktree (`git worktree add --detach ../review-pr origin/main`) checks 
 
 ## Stacked pull requests
 
-A change too large for one PR becomes a chain of branches, one PR each, the bottom PR targeting `main`, the others the branch below. In their shared worktree, `git switch -c feat/keywords-online` starts the next branch where the last ends. Rebase from the top branch with `--update-refs`, which moves every branch along, then force-push the moved branches:
+A change too large for one PR becomes a chain of branches, one PR each, the bottom PR targeting `main`, the others the branch below. In their shared worktree, `git switch -c feat/keywords-online` starts the next branch where the last ends. Rebase from the top branch with `--update-refs` (Git 2.38 or later), which moves every branch along, then force-push the moved branches:
 
 ```bash
 git rebase --update-refs feat/keywords-rules                      # after changing a lower branch

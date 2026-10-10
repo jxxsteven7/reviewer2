@@ -16,7 +16,7 @@
 
 - [ ] No AI coding assistant was used
 - [ ] An AI coding assistant generated these parts:
-- [ ] I have read, understood and run every AI-generated line
+- [ ] If AI was used: I have read, understood and run every AI-generated line
 
 ## Checklist
 

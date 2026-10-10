@@ -5,7 +5,7 @@
 
 ## Context
 
-Players asked for a record of their games and a name of their own. Accounts stay optional, and the game server needs no internet, so it can't send mail itself. An account is a username and a password, an avatar, and an optional email address only for resetting a password, never kept.
+Players asked for a record of their games and a name of their own. Accounts stay optional. The game server should run without internet access and never hold the mail service's key, so a program of its own, the mailer, sends the mails. An account is a username and a password, an avatar, and an optional email address only for resetting a password, never kept.
 
 ## Decision
 
