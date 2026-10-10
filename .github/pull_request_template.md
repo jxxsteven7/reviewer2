@@ -20,7 +20,7 @@
 
 ## Checklist
 
-- [ ] Based on the latest `main`, and does one thing
+- [ ] Based on the latest `main`, and does one thing (or bundles small changes a maintainer agreed to)
 - [ ] Title `<type>: <summary>` in English, with no AI attribution (CI adds the version)
 - [ ] Everything in English; if one README changed, the other matches
 - [ ] All UI text in the locale files, in both languages

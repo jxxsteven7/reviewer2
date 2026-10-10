@@ -69,7 +69,8 @@ every reconnect. Look them up by their player token instead.
 ## Pull requests
 
 - Title `<type>: <summary>`; CI puts the version in front, and the title becomes the commit on `main`.
-- One thing per PR, on the latest `main` (in a stack, the branch below), with no conflicts, and the template filled in and kept current.
+- One thing per PR. A few small changes may share one branch, worktree and PR when a maintainer agrees; the description lists each.
+- Based on the latest `main` (in a stack, the branch below), with no conflicts, and the template filled in and kept current.
 - Tests pass; new game rules come with unit tests. UI changes are checked at phone width, in both languages, with screenshots.
 - The template's "AI assistance" section says which parts an assistant generated; it is for reviewers, not attribution.
 - Draft PRs are welcome; see [review.md](review.md).
