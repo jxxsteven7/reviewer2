@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { parseAcknowledgments, REPOSITORY_URL } from '@reviewer2/shared';
+import { contributionPieces, parseAcknowledgments, REPOSITORY_URL } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import source from '../../../../ACKNOWLEDGMENTS.md?raw';
 
@@ -11,10 +11,6 @@ import source from '../../../../ACKNOWLEDGMENTS.md?raw';
 // merged (shared/src/acknowledgments.ts); an entry that broke them would be left out.
 const { t } = useI18n();
 const { sections } = parseAcknowledgments(source);
-
-// What someone did, in pieces of text and numbers of issues.
-const pieces = (contribution: string) =>
-  contribution.split(/#(\d+)/).map((text, index) => ({ text, issue: index % 2 === 1 }));
 </script>
 
 <template>
@@ -38,7 +34,7 @@ const pieces = (contribution: string) =>
             <span v-else class="name">{{ entry.name ?? t('acknowledgments.anonymous') }}</span>
             <span class="dash"> &mdash; </span>
             <span class="what">
-              <template v-for="(piece, at) in pieces(entry.contribution)" :key="at">
+              <template v-for="(piece, at) in contributionPieces(entry.contribution)" :key="at">
                 <a
                   v-if="piece.issue"
                   :href="`${REPOSITORY_URL}/issues/${piece.text}`"

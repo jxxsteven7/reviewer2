@@ -170,10 +170,37 @@ describe('the link for the acknowledgments', () => {
     }
   });
 
-  test('is 200 characters at most', () => {
+  test('keeps ( ) and \\ percent-encoded, as Markdown would read them, and takes no character reference', () => {
+    expect(checkLink('https://en.wikipedia.org/wiki/Ann_(dev)', 'Ann')).toEqual({
+      link: 'https://en.wikipedia.org/wiki/Ann_%28dev%29',
+      problem: null,
+    });
+    expect(checkLink('https://ann.example/a)b\\', 'Ann')).toEqual({
+      link: 'https://ann.example/a%29b%5C',
+      problem: null,
+    });
+    expect(checkLink('https://ann.example/%28x%29', 'Ann')).toEqual({
+      link: 'https://ann.example/%28x%29',
+      problem: null,
+    });
+    expect(checkLink('https://ann.example/?a=1&b=2', 'Ann')).toEqual({
+      link: 'https://ann.example/?a=1&b=2',
+      problem: null,
+    });
+    for (const text of [
+      'https://ann.example/?a=1&amp;b=2',
+      'https://ann.example/&#40;',
+      'https://ann.example/&#x28;',
+    ]) {
+      expect(checkLink(text, 'Ann'), text).toEqual({ link: null, problem: 'credit_link_invalid' });
+    }
+  });
+
+  test('is 200 characters at most, as it is kept', () => {
     const longest = `https://ann.example/${'x'.repeat(MAX_LINK_LENGTH - 20)}`;
     expect(checkLink(longest, 'Ann')).toEqual({ link: longest, problem: null });
     expect(checkLink(`${longest}x`, 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
+    expect(checkLink(`${longest.slice(0, -2)}()`, 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
     expect(checkLink(' '.repeat(MAX_LINK_INPUT + 1), 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
   });
 

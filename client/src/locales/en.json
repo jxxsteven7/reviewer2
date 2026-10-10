@@ -499,7 +499,7 @@
     "credit_link_invalid": "Use a web address that starts with https://, not an email address.",
     "credit_link_too_long": "Use at most 200 characters for the link.",
     "feedback_limited": "At most 3 pieces of feedback can come from one network in 10 minutes. Please try again later.",
-    "feedback_full": "The server isn't taking feedback right now. Please try again another day.",
+    "feedback_full": "The server has no room for more feedback at the moment. Sorry!",
     "bad_origin": "This page can't do that. Reload it and try again.",
     "not_logged_in": "You aren't logged in.",
     "username_invalid": "That can't be a username.",
@@ -683,7 +683,7 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent stays, no longer linked to the account. This can't be undone.",
+      "deleteWarning": "Your account, its record, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, and acknowledgments counted for the account, stay, no longer linked to it. This can't be undone.",
       "deleteSubmit": "Delete for good"
     },
     "avatar": {

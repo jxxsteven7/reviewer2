@@ -50,7 +50,7 @@ describe('feedback', () => {
       credit: null,
       link: null,
       accountId: null,
-      publicIssue: false,
+      publicIssue: null,
       issue: null,
       username: null,
       acknowledgmentId: null,
@@ -159,18 +159,19 @@ describe('feedback', () => {
     expect(server.feedback.count()).toBe(3);
   });
 
-  test('says whether the player agreed to a public issue, which is no unless they did', async () => {
+  test('says whether the player agreed to a public issue, or that the page did not ask', async () => {
     server = await startServer();
     const client = await connect();
     expect(await client.send('meta:feedback', message({ publicIssue: true }))).toEqual({ ok: true });
     expect(await client.send('meta:feedback', message({ text: 'Private', publicIssue: false }))).toEqual({ ok: true });
+    // A page from before players were asked.
     expect(await client.send('meta:feedback', message({ text: 'Not asked' }))).toEqual({ ok: true });
     expect(await client.send('meta:feedback', message({ text: 'Odd', publicIssue: 'yes' }))).toEqual({
       ok: false,
       error: 'bad_request',
     });
     expect(server.feedback.latest(10).map(({ text, publicIssue }) => [text, publicIssue])).toEqual([
-      ['Not asked', false],
+      ['Not asked', null],
       ['Private', false],
       ['A timer for the clues, please.', true],
     ]);

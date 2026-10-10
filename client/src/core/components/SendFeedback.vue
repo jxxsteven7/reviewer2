@@ -166,7 +166,7 @@ function submit() {
         :hint="t('feedback.creditHint')"
         :maxlength="MAX_NAME_INPUT"
         :error="creditProblem"
-        enterkeyhint="send"
+        enterkeyhint="next"
       />
       <UiField
         v-if="named"

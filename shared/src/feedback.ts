@@ -145,16 +145,24 @@ export interface LinkCheck {
 // operator could take for others; a browser copies a link with its path already percent-encoded.
 const LINK =
   /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z](?:[a-z0-9-]*[a-z0-9])?(?::\d{1,5})?(?:[/?#][!-~]*)?$/i;
+// An HTML character reference, such as &amp;, which Markdown would turn into the character, so
+// that ACKNOWLEDGMENTS.md on GitHub and the home page would link to different addresses.
+const REFERENCE = /&#?\w+;/;
+// What Markdown reads as markup in a link, which is kept percent-encoded; a browser reads it the
+// same, and a link with a parenthesis, as Wikipedia's, is common enough not to be refused.
+const LINK_MARKUP = /[()\\]/g;
 
 // The link that may go with the name for the acknowledgments, to a page about the player, such as
 // a homepage or a profile on GitHub, ORCID or Google Scholar. It goes with a name only, and is
-// dropped without one. ACKNOWLEDGMENTS.md takes links by the same rules (acknowledgments.ts).
+// dropped without one. ACKNOWLEDGMENTS.md takes links by the same rules, as they are kept here
+// (acknowledgments.ts).
 export function checkLink(text: string | undefined, credit: string | null): LinkCheck {
   if (typeof text !== 'string' || credit === null) return { link: null, problem: null };
   if (text.length > MAX_LINK_INPUT) return { link: null, problem: 'credit_link_too_long' };
-  const link = text.trim();
-  if (link === '') return { link: null, problem: null };
+  const typed = text.trim();
+  if (typed === '') return { link: null, problem: null };
+  if (!LINK.test(typed) || REFERENCE.test(typed)) return { link: null, problem: 'credit_link_invalid' };
+  const link = typed.replace(LINK_MARKUP, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
   if (link.length > MAX_LINK_LENGTH) return { link: null, problem: 'credit_link_too_long' };
-  if (!LINK.test(link)) return { link: null, problem: 'credit_link_invalid' };
   return { link, problem: null };
 }

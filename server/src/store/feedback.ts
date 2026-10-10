@@ -40,8 +40,9 @@ export interface NewFeedback {
   credit: string | null;
   link: string | null;
   accountId: number | null;
-  // Whether the player agreed to the feedback being published as a GitHub issue.
-  publicIssue: boolean;
+  // Whether the player agreed to the feedback being published as a GitHub issue, or null when the
+  // page didn't ask, as a page from before players were asked doesn't.
+  publicIssue: boolean | null;
   // The build of the page that sent it.
   version: string;
   language: Language;
@@ -50,12 +51,10 @@ export interface NewFeedback {
   userAgent: string | null;
 }
 
-export interface Feedback extends Omit<NewFeedback, 'publicIssue'> {
+export interface Feedback extends NewFeedback {
   id: number;
   // When the server took it, in ISO 8601 and UTC.
   createdAt: string;
-  // Null for feedback from before players were asked.
-  publicIssue: boolean | null;
   // The number of the GitHub issue that the operator published it as, if any.
   issue: number | null;
   // The username of the account, while it has one.
@@ -131,7 +130,7 @@ export class FeedbackStore {
       credit,
       link,
       accountId,
-      publicIssue ? 1 : 0,
+      publicIssue === null ? null : publicIssue ? 1 : 0,
       version,
       language,
       page,

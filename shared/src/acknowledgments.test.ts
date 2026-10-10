@@ -4,17 +4,20 @@ import {
   ACKNOWLEDGMENT_KINDS,
   acknowledgmentLine,
   ANONYMOUS,
+  contributionPieces,
   escapeName,
   MAX_CONTRIBUTION_LENGTH,
   parseAcknowledgments,
 } from './acknowledgments';
+import { checkLink } from './feedback';
 
 // The rules of ACKNOWLEDGMENTS.md. The file itself is checked against them in
 // client/src/core/acknowledgments.test.ts, beside the page that shows it.
 
 const DASH = '\u{2014}';
 const HELLO = '\u4f60\u597d'; // "hello" in Chinese, as a name
-const INTRO = '# Acknowledgments\n\nWe thank the players who helped.\n\n_No one yet._\n';
+const INTRO = '# Acknowledgments\n\nWe thank the players who helped.\n';
+const NO_ONE = `${INTRO}\n_No one yet._\n`;
 const parse = (...lines: string[]) => parseAcknowledgments(lines.join('\n'));
 
 describe('the acknowledgments', () => {
@@ -52,8 +55,15 @@ describe('the acknowledgments', () => {
       ],
       problems: [],
     });
-    expect(parseAcknowledgments(INTRO)).toEqual({ sections: [], problems: [] });
+    expect(parseAcknowledgments(NO_ONE)).toEqual({ sections: [], problems: [] });
     expect(parseAcknowledgments(`## Data\r\n\r\n- Cy ${DASH} added words\r\n`).sections).toHaveLength(1);
+  });
+
+  test('say no one yet only while nobody is listed', () => {
+    expect(parse(NO_ONE, '## Data', '', `- Cy ${DASH} added words`).problems).toEqual([
+      { line: 5, message: 'Take "No one yet" out once someone is listed.' },
+    ]);
+    expect(parse(NO_ONE, '## Data').problems.map(({ line }) => line)).toEqual([5, 7]);
   });
 
   test('have the headings of a paper, one for each kind', () => {
@@ -120,8 +130,42 @@ describe('the acknowledgments', () => {
     );
     expect(problems[4]?.message).toBe(
       '"http://ann.example" can\'t be a link for the acknowledgments: it must start with https://, hold no email ' +
-        'address and have at most 200 characters.',
+        'address or &...; reference, have at most 200 characters, and have ( ) and \\ percent-encoded, as the ' +
+        'commands print it.',
     );
+    expect(problems[8]?.message).toBe(
+      'A name with a link is "[<name>](https://<link>)", with no space, ( or ) in the link and nothing after it.',
+    );
+  });
+
+  test('take every link the feedback takes, as it is kept, so that GitHub and the page link alike', () => {
+    for (const typed of [
+      'https://ann.example',
+      'https://scholar.google.com/citations?user=AbCdEfGhIjK&hl=en',
+      'https://en.wikipedia.org/wiki/Ann_(dev)',
+      'https://ann.example/a)b\\c',
+      'HTTPS://Ann.Example:8443/a/b%20c#top',
+    ]) {
+      const { link } = checkLink(typed, 'Ann');
+      if (link === null) throw new Error(`${typed} was refused`);
+      const line = acknowledgmentLine({ name: 'Ann', link, contribution: 'tested' });
+      expect(parse('## Data', line), line).toEqual({
+        sections: [{ kind: 'words', entries: [{ name: 'Ann', link, contribution: 'tested' }] }],
+        problems: [],
+      });
+    }
+    // In the file, a link is as the feedback keeps it, and not as it might be typed.
+    for (const link of [
+      'https://a.example/x\\',
+      'https://a.example/?q=a&amp;b',
+      'https://a.example/(x)',
+      'https://a.example/ x',
+      'https://a.example/x)',
+    ]) {
+      const problems = parse('## Data', `- [Ann](${link}) ${DASH} tested`).problems;
+      expect(problems, link).toHaveLength(1);
+      expect(problems[0]?.message, link).toMatch(/can't be a link|A name with a link/);
+    }
   });
 
   test('say what someone did in English, as plain text', () => {
@@ -133,23 +177,59 @@ describe('the acknowledgments', () => {
       `- Ann ${DASH} added **many** words`,
       `- Ann ${DASH} added [words](https://x.co)`,
       `- Ann ${DASH} added <b>words</b>`,
+      `- Ann ${DASH} fixed &lt;b&gt; tags`,
+      `- Ann ${DASH} added words :tada:`,
+      `- Ann ${DASH} added words, see https://x.co`,
+      `- Ann ${DASH} added words, see www.x.co`,
+      `- Ann ${DASH} added words with @octocat`,
+      `- Ann ${DASH} ported the bot to C#10`,
+      `- Ann ${DASH} reported a bug (#0)`,
       `- Ann ${DASH} ${'x'.repeat(MAX_CONTRIBUTION_LENGTH + 1)}`,
       `- Ann ${DASH} ${'x'.repeat(MAX_CONTRIBUTION_LENGTH)}`,
+      `- Ann ${DASH} reported a bug (#7), and #12, #13`,
     ).problems;
+    const markdown =
+      'Leave Markdown out of what they did: no \\ ` * _ [ ] < > ~ @, &...; references, :emoji: codes or web addresses.';
+    const issue = 'Name an issue or pull request as #12, after a space or a bracket.';
     expect(problems.map(({ line, message }) => [line, message])).toEqual([
       [2, 'Say what they did in English, in printable ASCII, with no spaces at the ends.'],
       [3, 'Say what they did in English, in printable ASCII, with no spaces at the ends.'],
       [4, 'Say what they did in English, in printable ASCII, with no spaces at the ends.'],
-      [5, 'Leave Markdown out of what they did: no \\ ` * _ [ ] < > ~.'],
-      [6, 'Leave Markdown out of what they did: no \\ ` * _ [ ] < > ~.'],
-      [7, 'Leave Markdown out of what they did: no \\ ` * _ [ ] < > ~.'],
-      [8, 'Say what they did in at most 200 characters.'],
+      [5, markdown],
+      [6, markdown],
+      [7, markdown],
+      [8, markdown],
+      [9, markdown],
+      [10, markdown],
+      [11, markdown],
+      [12, markdown],
+      [13, issue],
+      [14, issue],
+      [15, 'Say what they did in at most 200 characters.'],
     ]);
+  });
+
+  test('come in pieces for the home page, with the numbers of issues apart', () => {
+    const text = (piece: string) => ({ text: piece, issue: false });
+    expect(contributionPieces('reported a bug (#7), and #12, #13')).toEqual([
+      text('reported a bug '),
+      text('('),
+      { text: '7', issue: true },
+      text('), and'),
+      text(' '),
+      { text: '12', issue: true },
+      text(','),
+      text(' '),
+      { text: '13', issue: true },
+      text(''),
+    ]);
+    expect(contributionPieces('#7 again')).toEqual([text(''), text(''), { text: '7', issue: true }, text(' again')]);
+    for (const piece of ['added words', 'C#10', '#0', '#7a']) expect(contributionPieces(piece)).toEqual([text(piece)]);
   });
 
   test('hold nothing but sections of entries and blank lines after the introduction', () => {
     const { sections, problems } = parse(
-      INTRO,
+      NO_ONE,
       '## Thanks',
       '## Data',
       'Some prose.',
@@ -163,8 +243,9 @@ describe('the acknowledgments', () => {
       '## Helpful discussions',
       `- ${'x'.repeat(17)} ${DASH} tested`,
     );
-    const at = INTRO.split('\n').length;
+    const at = NO_ONE.split('\n').length;
     expect(problems).toEqual([
+      { line: 5, message: 'Take "No one yet" out once someone is listed.' },
       {
         line: at + 1,
         message: 'A section\'s heading is one of "## Helpful discussions", "## Data", "## Pilot study".',

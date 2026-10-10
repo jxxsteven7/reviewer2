@@ -129,11 +129,12 @@ export const MIGRATIONS: readonly string[] = [
   // 4: acknowledgments (docs/architecture.md#acknowledgments).
   //
   // - feedback gets the name that the player wants to be thanked by, if they gave one, and the
-  //   account they were logged in to when they did, which the operator links the acknowledgment to
-  //   unless they decide otherwise. The account goes from the feedback when it is deleted.
-  // - acknowledgments: the list itself. Each row is the name, what it is for, when it was given, the
-  //   feedback it came from, if any, and the account it is linked to, if any. The name stays when
-  //   the account is deleted: it is the public name its owner gave, not the account. The feedback's
+  //   account they were logged in to when they did, which the acknowledgment is counted for. The
+  //   account goes from the feedback when it is deleted.
+  // - acknowledgments: whom the operator thanked; the public list is ACKNOWLEDGMENTS.md. Each row is
+  //   the name, what it is for, when it was given, the feedback it came from, if any, and the
+  //   account it is counted for, if any. The name stays when the account is deleted: it is the
+  //   public name its owner gave, not the account. The feedback's
   //   number is kept as a number and not as a foreign key, so that a row of feedback deleted by hand
   //   with sqlite3, which runs with foreign keys off, wouldn't leave a row that the next migration
   //   refuses. A piece of feedback is adopted once.

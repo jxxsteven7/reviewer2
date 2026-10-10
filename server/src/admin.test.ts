@@ -297,6 +297,11 @@ describe('feedback issue', () => {
       'Feedback #1 is issue #43, https://github.com/jxxsteven7/reviewer2/issues/43, no longer #42.',
     );
 
+    // Recorded after the feedback was adopted, the number is for the operator to add to the entry.
+    expect(run('feedback', 'adopt', '1')).toBe(0);
+    expect(run('feedback', 'issue', '1', '43')).toBe(0);
+    expect(printed.at(-1)).toBe('Put (#43) at the end of its entry in ACKNOWLEDGMENTS.md.');
+
     expect(run('feedback', 'issue', '2', '44')).toBe(1);
     expect(printed.at(-1)).toBe("The player didn't agree to feedback #2 being published as an issue.");
     expect(store.byId(2)?.issue).toBeNull();

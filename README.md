@@ -35,7 +35,7 @@ What we promise players:
 - **An account's email address is never stored.** The server keeps only a keyed fingerprint of it, to check the address and to mail a password reset.
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
 - **Feedback** is read only by the project's operator, unless you agree to its becoming a GitHub issue, which shows its text and the name you left, never your contact. A contact is kept as written and deleted after 90 days. The feedback itself is kept for good, as the project's archive of suggestions.
-- **Deleting an account** deletes everything of it, except that feedback sent from it stays, no longer linked to it; backups keep the rest only until they expire.
+- **Deleting an account** deletes everything of it, except that feedback sent from it, and acknowledgments counted for it, stay, no longer linked to it; backups keep the rest only until they expire.
 
 ## Status
 

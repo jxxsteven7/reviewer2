@@ -282,6 +282,8 @@ const COMMANDS: Record<string, Command> = {
         `Feedback #${found.id} is issue #${issue}, ${REPOSITORY_URL}/issues/${issue}` +
           (found.issue === null || found.issue === issue ? '.' : `, no longer #${found.issue}.`),
       );
+      // Adopted first, the feedback had its entry printed without the number.
+      if (found.acknowledgmentId !== null) print(`Put (#${issue}) at the end of its entry in ACKNOWLEDGMENTS.md.`);
       return 0;
     },
   },

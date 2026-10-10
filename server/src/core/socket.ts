@@ -151,7 +151,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const feedbackKey = (ip: string, kept: readonly unknown[]) =>
     `${ip}\n${createHash('sha256').update(JSON.stringify(kept)).digest('base64')}`;
   // Whether the log has been told that no more feedback is taken. Once is enough until feedback
-  // is taken again, which takes the operator's doing.
+  // is taken again, which takes a release that raises the limits (store/feedback.ts), since
+  // nothing is deleted to make room.
   let feedbackFullLogged = false;
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
@@ -622,7 +623,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (named.problem) return fail(named.problem);
       const linked = checkLink(link, named.credit);
       if (linked.problem) return fail(linked.problem);
-      const publicIssue = message.publicIssue === true;
+      // A page from before players were asked about a public issue sends no answer.
+      const publicIssue = message.publicIssue ?? null;
       const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, linked.link, publicIssue]);
       if (feedbackSeen.has(key)) return ok();
       if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');

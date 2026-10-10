@@ -101,17 +101,19 @@ describe('the feedback', () => {
     const feedback = store();
     feedback.add(entry());
     feedback.add(entry({ publicIssue: true }));
-    // Feedback from before players were asked.
+    // Feedback from before players were asked, and from a page that didn't ask.
     db.exec(
       "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'idea', 'Old', 'v1', 'en', 'home')",
     );
+    feedback.add(entry({ publicIssue: null }));
     expect(feedback.latest(10).map(({ publicIssue, issue }) => [publicIssue, issue])).toEqual([
+      [null, null],
       [null, null],
       [true, null],
       [false, null],
     ]);
     expect(feedback.setIssue(2, 42)).toBe(true);
-    expect(feedback.setIssue(4, 42)).toBe(false);
+    expect(feedback.setIssue(5, 42)).toBe(false);
     expect(feedback.byId(2)).toMatchObject({ publicIssue: true, issue: 42, text: 'More fields, please.' });
     expect(() => feedback.setIssue(2, 0)).toThrow(/CHECK constraint/);
   });

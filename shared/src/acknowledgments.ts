@@ -64,9 +64,15 @@ const SEPARATOR = ' \u{2014} ';
 const HEADING = /^## (.*)$/;
 // [name](link), where the name may hold escaped brackets.
 const LINKED = /^\[((?:\\.|[^\\\]])+)\]\(([^\s()]+)\)$/;
-// Characters that Markdown could read as markup in what someone did, which the home page shows as
-// plain text.
-const MARKUP = /[\\`*_[\]<>~]/;
+// What GitHub would not show as it is written in what someone did, which the home page shows as
+// plain text: Markdown's characters, an @mention, an HTML character reference such as &lt;, an
+// emoji code such as :tada:, and a web address, which it would link.
+const MARKUP = /[\\`*_[\]<>~@]|&#?\w+;|:[\w+-]+:|https?:\/\/|www\./i;
+// An issue or pull request named by its number, #12, which the home page links: after a space, a
+// bracket or the start, so not inside a word such as C#10, and with no 0 in front.
+const ISSUE = /(^|\W)#([1-9]\d*)(?!\w)/;
+// What an introduction says while nobody is listed, which goes with the first entry.
+const NO_ONE = /no one yet/i;
 
 // An entry as ACKNOWLEDGMENTS.md has it, one line.
 export function acknowledgmentLine({ name, link, contribution }: Acknowledgment): string {
@@ -74,11 +80,22 @@ export function acknowledgmentLine({ name, link, contribution }: Acknowledgment)
   return `- ${who}${SEPARATOR}${contribution}`;
 }
 
+// What someone did, in pieces of text and numbers of issues, as the home page shows it. The
+// pieces are what split() gives with the two groups of ISSUE: the text before, what came before
+// the #, and the number.
+export const contributionPieces = (contribution: string): { text: string; issue: boolean }[] =>
+  contribution.split(ISSUE).map((text, index) => ({ text, issue: index % 3 === 2 }));
+
 function checkContribution(contribution: string): string | null {
   if (!/^[ -~]+$/.test(contribution) || contribution.trim() !== contribution) {
     return 'Say what they did in English, in printable ASCII, with no spaces at the ends.';
   }
-  if (MARKUP.test(contribution)) return 'Leave Markdown out of what they did: no \\ ` * _ [ ] < > ~.';
+  if (MARKUP.test(contribution)) {
+    return 'Leave Markdown out of what they did: no \\ ` * _ [ ] < > ~ @, &...; references, :emoji: codes or web addresses.';
+  }
+  if (contributionPieces(contribution).some(({ text, issue }) => !issue && text.includes('#'))) {
+    return 'Name an issue or pull request as #12, after a space or a bracket.';
+  }
   if (contribution.length > MAX_CONTRIBUTION_LENGTH) {
     return `Say what they did in at most ${MAX_CONTRIBUTION_LENGTH} characters.`;
   }
@@ -96,6 +113,9 @@ function parseEntry(text: string): Acknowledgment | string {
   if (wrong) return wrong;
   if (who === ANONYMOUS) return { name: null, link: null, contribution };
   const linked = LINKED.exec(who);
+  if (who.startsWith('[') && !linked) {
+    return 'A name with a link is "[<name>](https://<link>)", with no space, ( or ) in the link and nothing after it.';
+  }
   const written = linked ? (linked[1] as string) : who;
   const name = unescapeName(written);
   if (escapeName(name) !== written) {
@@ -106,16 +126,19 @@ function parseEntry(text: string): Acknowledgment | string {
     return `"${name}" can't be a name for the acknowledgments: it needs 1 to ${MAX_NAME_LENGTH} visible characters, as a nickname does, and mustn't be a reserved name.`;
   }
   const link = linked ? (linked[2] as string) : null;
-  if (link !== null && checkLink(link, name).problem !== null) {
-    return `"${link}" can't be a link for the acknowledgments: it must start with https://, hold no email address and have at most ${MAX_LINK_LENGTH} characters.`;
+  // The link is kept as the feedback keeps it, so that GitHub and the home page link to the same
+  // address.
+  if (link !== null && checkLink(link, name).link !== link) {
+    return `"${link}" can't be a link for the acknowledgments: it must start with https://, hold no email address or &...; reference, have at most ${MAX_LINK_LENGTH} characters, and have ( ) and \\ percent-encoded, as the commands print it.`;
   }
   return { name, link, contribution };
 }
 
 // ACKNOWLEDGMENTS.md as the home page shows it, and what in it breaks the rules. Anything goes
-// before the first section, which is the introduction. A section starts with one of the headings,
-// each at most once, and holds one entry or more, each on a line of its own, and blank lines. An
-// entry that breaks the rules is left out of the sections, and so is a section that has none.
+// before the first section, which is the introduction, except "No one yet" once there is a
+// section. A section starts with one of the headings, each at most once, and holds one entry or
+// more, each on a line of its own, and blank lines. An entry that breaks the rules is left out of
+// the sections, and so is a section that has none.
 export function parseAcknowledgments(text: string): {
   sections: AcknowledgmentSection[];
   problems: AcknowledgmentProblem[];
@@ -125,8 +148,11 @@ export function parseAcknowledgments(text: string): {
   // Each section with the line of its heading and the number of entries written in it.
   const sections: (AcknowledgmentSection & { line: number; written: number })[] = [];
   const problems: AcknowledgmentProblem[] = [];
+  // The lines of the introduction that say that nobody is listed.
+  const noOne: number[] = [];
   text.split(/\r?\n/).forEach((line, index) => {
     const problem = (message: string) => problems.push({ line: index + 1, message });
+    if (sections.length === 0 && NO_ONE.test(line)) noOne.push(index + 1);
     const heading = HEADING.exec(line);
     if (heading) {
       const kind = kinds.get(heading[1] as string);
@@ -148,6 +174,9 @@ export function parseAcknowledgments(text: string): {
   });
   for (const { line, written } of sections) {
     if (written === 0) problems.push({ line, message: 'A section holds one entry or more.' });
+  }
+  if (sections.length > 0) {
+    for (const line of noOne) problems.push({ line, message: 'Take "No one yet" out once someone is listed.' });
   }
   problems.sort((a, b) => a.line - b.line);
   return {
