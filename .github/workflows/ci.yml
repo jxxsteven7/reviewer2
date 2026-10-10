@@ -84,8 +84,9 @@ jobs:
       # A failure in one browser says nothing about the others.
       fail-fast: false
       matrix:
-        # One entry per project in playwright.config.ts, with the browser it runs on. A project
-        # that is missing here is not tested in CI, so keep the two lists the same.
+        # One entry per project in playwright.config.ts, with the browser it runs on; a project
+        # split into parts has one entry per part, with its shard and the number of shards. A
+        # project that is missing here is not tested in CI, so keep the two lists the same.
         include:
           - project: desktop-chromium
             browser: chromium
