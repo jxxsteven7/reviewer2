@@ -412,6 +412,30 @@ describe('a removed player', () => {
     expect(await asRob.send('room:join', { code, play: true })).toEqual({ ok: false, error: 'removed' });
   });
 
+  test('loses the screen their browser put up as a guest, also after logging in there', async () => {
+    server = await startServer();
+    const { chair, code } = await createRoom(server.url, 'Ann');
+    track(chair);
+    // A guest's browser takes a seat and puts up a screen, and then registers. The seat becomes the
+    // account's when its page comes back; the screen, which hasn't reconnected, has the guest's key.
+    const browser = new Browser(server.url);
+    const seat = track(await browser.connect());
+    expect(await seat.send('room:join', { code, name: 'Gus', play: true })).toMatchObject({ ok: true });
+    const screen = track(await browser.connect({ token: seat.token }));
+    expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
+    expect((await browser.register('Gus')).body).toMatchObject({ ok: true });
+    seat.close();
+    const back = track(await browser.connect({ token: seat.token }));
+    expect(await back.send('room:join', { code, play: true })).toMatchObject({ ok: true });
+    const state = await chair.waitFor(
+      ({ players, screens }) => screens === 1 && players.some(({ name, online }) => name === 'Gus' && online),
+    );
+    const gus = state.players.find(({ name }) => name === 'Gus')?.id;
+    expect(await chair.send('room:remove', { playerId: gus })).toEqual({ ok: true });
+    await until(() => back.closed.includes('removed_recently') && screen.closed.includes('removed_recently'), 'both');
+    await chair.waitFor((now) => now.screens === 0 && now.players.length === 1);
+  });
+
   test('without an account waits by their token, also after logging in on that browser', async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');

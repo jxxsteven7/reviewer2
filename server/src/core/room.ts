@@ -628,9 +628,9 @@ export class Room {
   // Removes a member, who then stays out, by their member key and by the keys that their browsers
   // have as guests, so that a player who is logged in can't come back as a guest. Whether the room
   // is public now decides for how long: for good, or for REMOVED_FOR_MS, whatever the room becomes
-  // later. Returns the connections they still had, their member key and what they hear: what
-  // room:join would answer them.
-  remove(id: string): Ack<{ sockets: string[]; key: string; reason: 'removed' | 'removed_recently' }> {
+  // later. Returns the connections they still had, every key they stay out by and what they hear:
+  // what room:join would answer them.
+  remove(id: string): Ack<{ sockets: string[]; keys: string[]; reason: 'removed' | 'removed_recently' }> {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');
     const sockets = this.drop(id);
@@ -644,7 +644,7 @@ export class Room {
     for (const key of removal.keys) this.#removed.set(key, removal);
     this.forgetOldRemovals();
     while (this.#removals.size > MAX_REMOVED) this.#forget(this.#removals.values().next().value as Removal);
-    return { ok: true, sockets, key: member.key, reason: this.public ? 'removed' : 'removed_recently' };
+    return { ok: true, sockets, keys: removal.keys, reason: this.public ? 'removed' : 'removed_recently' };
   }
 
   // The chair goes to someone who is there to take it. Handed to a member who has been offline

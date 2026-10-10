@@ -904,9 +904,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (playerId === chair.id) return fail('bad_request'); // the chair leaves instead
         const removed = room.remove(playerId);
         if (!removed.ok) return removed;
-        // A screen that the same browser had put up goes with the seat. Whoever was removed
-        // can't put up a new one for now, and must not keep an old one either.
-        const screens = room.screensOf(removed.key);
+        // The screens put up by any key the player stays out by go with the seat, such as one that
+        // their browser put up as a guest before logging in. Whoever was removed can't put up a new
+        // one for now, and must not keep an old one either.
+        const screens = removed.keys.flatMap((key) => room.screensOf(key));
         for (const id of screens) room.detach(id);
         closeFor([...removed.sockets, ...screens], removed.reason);
         broadcast(room);
