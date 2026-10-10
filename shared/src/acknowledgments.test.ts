@@ -59,6 +59,47 @@ describe('the acknowledgments', () => {
     expect(parseAcknowledgments(`## Data\r\n\r\n- Cy ${DASH} added words\r\n`).sections).toHaveLength(1);
   });
 
+  test('go under a heading, and never in the introduction, which the home page leaves out', () => {
+    const entry = `- [Alice](https://alice.example) ${DASH} suggested public rooms (#40)`;
+    const misplaced = {
+      line: 5,
+      message: 'An entry goes under one of the headings, "## Helpful discussions", "## Data", "## Pilot study".',
+    };
+    // The first entry in place of "No one yet", without its heading, and one added after it.
+    expect(parseAcknowledgments(NO_ONE.replace('_No one yet._', entry))).toEqual({
+      sections: [],
+      problems: [misplaced],
+    });
+    expect(parse(NO_ONE, entry).problems).toEqual([{ ...misplaced, line: 7 }]);
+    expect(parse(INTRO, entry, '## Data', entry).problems).toEqual([misplaced]);
+    expect(
+      parseAcknowledgments(NO_ONE.replace('_No one yet._', `## Helpful discussions\n\n${entry}`)).problems,
+    ).toEqual([]);
+  });
+
+  test('leave out what comes under a heading that breaks the rules, until the next one', () => {
+    const { sections, problems } = parse(
+      '## Data',
+      `- Ann ${DASH} added words`,
+      '## Pilot study',
+      `- Bob ${DASH} tested`,
+      '## Data',
+      `- Cy ${DASH} added more words`,
+      '## Thanks',
+      `- Dan ${DASH} tested`,
+      `- Dr. Eve ${DASH} tested`,
+      '## Helpful discussions',
+      `- Fay ${DASH} suggested a timer`,
+    );
+    expect(sections.map(({ kind, entries }) => [kind, entries.map(({ name }) => name)])).toEqual([
+      ['words', ['Ann']],
+      ['playtesting', ['Bob']],
+      ['feedback', ['Fay']],
+    ]);
+    // The entries under it are checked all the same.
+    expect(problems.map(({ line }) => line)).toEqual([5, 7, 9]);
+  });
+
   test('say no one yet only while nobody is listed', () => {
     expect(parse(NO_ONE, '## Data', '', `- Cy ${DASH} added words`).problems).toEqual([
       { line: 5, message: 'Take "No one yet" out once someone is listed.' },
@@ -130,7 +171,7 @@ describe('the acknowledgments', () => {
     );
     expect(problems[4]?.message).toBe(
       '"http://ann.example" can\'t be a link for the acknowledgments: it must start with https://, hold no email ' +
-        'address or &...; reference, have at most 200 characters, and have ( ) and \\ percent-encoded, as the ' +
+        'address, &...; reference or \\, have at most 200 characters, and have ( ) percent-encoded, as the ' +
         'commands print it.',
     );
     expect(problems[8]?.message).toBe(
@@ -143,7 +184,7 @@ describe('the acknowledgments', () => {
       'https://ann.example',
       'https://scholar.google.com/citations?user=AbCdEfGhIjK&hl=en',
       'https://en.wikipedia.org/wiki/Ann_(dev)',
-      'https://ann.example/a)b\\c',
+      'https://ann.example/a)b(c',
       'HTTPS://Ann.Example:8443/a/b%20c#top',
     ]) {
       const { link } = checkLink(typed, 'Ann');
@@ -184,6 +225,7 @@ describe('the acknowledgments', () => {
       `- Ann ${DASH} added words with @octocat`,
       `- Ann ${DASH} ported the bot to C#10`,
       `- Ann ${DASH} reported a bug (#0)`,
+      `- Ann ${DASH} fixed the docs/#12 link and "#13"`,
       `- Ann ${DASH} ${'x'.repeat(MAX_CONTRIBUTION_LENGTH + 1)}`,
       `- Ann ${DASH} ${'x'.repeat(MAX_CONTRIBUTION_LENGTH)}`,
       `- Ann ${DASH} reported a bug (#7), and #12, #13`,
@@ -205,7 +247,8 @@ describe('the acknowledgments', () => {
       [12, markdown],
       [13, issue],
       [14, issue],
-      [15, 'Say what they did in at most 200 characters.'],
+      [15, issue],
+      [16, 'Say what they did in at most 200 characters.'],
     ]);
   });
 
@@ -224,7 +267,9 @@ describe('the acknowledgments', () => {
       text(''),
     ]);
     expect(contributionPieces('#7 again')).toEqual([text(''), text(''), { text: '7', issue: true }, text(' again')]);
-    for (const piece of ['added words', 'C#10', '#0', '#7a']) expect(contributionPieces(piece)).toEqual([text(piece)]);
+    for (const piece of ['added words', 'C#10', '#0', '#7a', 'a/#12', 'b-#13', 'c.#14', '"#15"']) {
+      expect(contributionPieces(piece)).toEqual([text(piece)]);
+    }
   });
 
   test('hold nothing but sections of entries and blank lines after the introduction', () => {

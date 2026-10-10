@@ -199,8 +199,12 @@ describe('the feedback panel', () => {
     await credit(wrapper)?.setValue('x'.repeat(17));
     expect(wrapper.text()).toContain('Use 1 to 16 visible characters for the name.');
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
-    await credit(wrapper)?.setValue('Ann');
+    // Beside a name that is refused, a wrong link is pointed out at once too.
     await link(wrapper)?.setValue('ann@example.com');
+    expect(wrapper.text()).toContain('Use 1 to 16 visible characters for the name.');
+    expect(wrapper.text()).toContain('Use a web address that starts with https://, not an email address.');
+    await credit(wrapper)?.setValue('Ann');
+    expect(wrapper.text()).not.toContain('Use 1 to 16 visible characters for the name.');
     expect(wrapper.text()).toContain('Use a web address that starts with https://, not an email address.');
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
     await link(wrapper)?.setValue(`https://ann.example/${'x'.repeat(200)}`);

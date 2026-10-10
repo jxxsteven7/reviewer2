@@ -10,6 +10,7 @@ import {
   MAX_NAME_LENGTH,
   REPOSITORY_URL,
   usernameKey,
+  type Acknowledgment,
   type AcknowledgmentKind,
 } from '@reviewer2/shared';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
@@ -116,7 +117,7 @@ function feedbackNumbered({ feedback }: Data, word: string, print: Print) {
 
 // The entry for ACKNOWLEDGMENTS.md, under the heading of its kind, for the operator to say what
 // the player did and to add it to the file.
-function printEntry(print: Print, kind: AcknowledgmentKind, entry: Parameters<typeof acknowledgmentLine>[0]) {
+function printEntry(print: Print, kind: AcknowledgmentKind, entry: Acknowledgment) {
   print(`For ACKNOWLEDGMENTS.md, under "## ${ACKNOWLEDGMENT_HEADINGS[kind]}", once you say what they did in English:`);
   print(acknowledgmentLine(entry));
 }
@@ -282,8 +283,15 @@ const COMMANDS: Record<string, Command> = {
         `Feedback #${found.id} is issue #${issue}, ${REPOSITORY_URL}/issues/${issue}` +
           (found.issue === null || found.issue === issue ? '.' : `, no longer #${found.issue}.`),
       );
-      // Adopted first, the feedback had its entry printed without the number.
-      if (found.acknowledgmentId !== null) print(`Put (#${issue}) at the end of its entry in ACKNOWLEDGMENTS.md.`);
+      // Adopted already, the feedback had its entry printed with the number recorded then, if any,
+      // and the operator puts the entry right.
+      if (found.acknowledgmentId !== null && found.issue !== issue) {
+        print(
+          found.issue === null
+            ? `Put (#${issue}) at the end of its entry in ACKNOWLEDGMENTS.md.`
+            : `Replace (#${found.issue}) with (#${issue}) in its entry in ACKNOWLEDGMENTS.md.`,
+        );
+      }
       return 0;
     },
   },

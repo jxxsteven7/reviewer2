@@ -151,8 +151,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const feedbackKey = (ip: string, kept: readonly unknown[]) =>
     `${ip}\n${createHash('sha256').update(JSON.stringify(kept)).digest('base64')}`;
   // Whether the log has been told that no more feedback is taken. Once is enough until feedback
-  // is taken again, which takes a release that raises the limits (store/feedback.ts), since
-  // nothing is deleted to make room.
+  // is taken again, which takes a higher MAX_FEEDBACK (config.ts) and a restart, since nothing is
+  // deleted to make room.
   let feedbackFullLogged = false;
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;

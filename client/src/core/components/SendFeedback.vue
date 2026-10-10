@@ -65,9 +65,11 @@ const { busy, run } = useBusy();
 const checked = computed(() => checkFeedback(text.value));
 const checkedContact = computed(() => checkContact(contact.value));
 const checkedCredit = computed(() => checkCredit(credit.value));
-const checkedLink = computed(() => checkLink(link.value, checkedCredit.value.credit));
 // Whether anything is typed as the name, even a name that the rules refuse.
 const named = computed(() => checkedCredit.value.credit !== null || checkedCredit.value.problem !== null);
+// The link is checked as soon as it shows, even beside a name that the rules refuse, so that the
+// panel says what is wrong with both at once; nothing is sent until the name is right.
+const checkedLink = computed(() => checkLink(link.value, named.value ? (checkedCredit.value.credit ?? '') : null));
 watch([kind, text, contact, credit, link, publicIssue], () => (refused.value = undefined));
 
 const count = computed(() => t('feedback.count', { count: textLength(checked.value.text), max: MAX_FEEDBACK_LENGTH }));

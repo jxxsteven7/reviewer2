@@ -134,10 +134,10 @@ export const MIGRATIONS: readonly string[] = [
   // - acknowledgments: whom the operator thanked; the public list is ACKNOWLEDGMENTS.md. Each row is
   //   the name, what it is for, when it was given, the feedback it came from, if any, and the
   //   account it is counted for, if any. The name stays when the account is deleted: it is the
-  //   public name its owner gave, not the account. The feedback's
-  //   number is kept as a number and not as a foreign key, so that a row of feedback deleted by hand
-  //   with sqlite3, which runs with foreign keys off, wouldn't leave a row that the next migration
-  //   refuses. A piece of feedback is adopted once.
+  //   public name its owner gave, not the account. The feedback's number is kept as a number and
+  //   not as a foreign key, so that a row of feedback deleted by hand with sqlite3, which runs with
+  //   foreign keys off, wouldn't leave a row that the next migration refuses. A piece of feedback is
+  //   adopted once.
   `
   ALTER TABLE feedback ADD COLUMN credit TEXT;
   ALTER TABLE feedback ADD COLUMN account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL;
@@ -153,9 +153,9 @@ export const MIGRATIONS: readonly string[] = [
   ) STRICT;
   CREATE INDEX acknowledgments_account ON acknowledgments (account_id) WHERE account_id IS NOT NULL;
   `,
-  // 5: the feedback table rebuilt, once, while the project's table was still empty, so that its kind
-  // is no longer fixed by a CHECK: the kinds are in shared/src/feedback.ts alone, and a new one is a
-  // change to the code. It is done as SQLite's guide to changing a table says, with foreign keys off
+  // 5: the feedback table rebuilt, once, so that its kind is no longer fixed by a CHECK: the kinds
+  // are in shared/src/feedback.ts alone, and a new one is a change to the code. Every row is kept as
+  // it was. It is done as SQLite's guide to changing a table says, with foreign keys off
   // (migrate() in database.ts): a new table, every row copied with its id, the count that
   // AUTOINCREMENT goes on from carried over, the old table dropped, the new one renamed and the
   // indexes made again. The archive's guard (archive.test.ts) allows this here alone; any other

@@ -162,7 +162,7 @@ export class FeedbackStore {
     return this.#latest.all(before, kind, limit).map((row) => this.#fromRow(row));
   }
 
-  // How much feedback there is of each kind there is any of. The table takes any kind and the
+  // How much feedback there is of each kind that has any. The table takes any kind and the
   // server only those it knows (shared/src/feedback.ts), so a server that was rolled back from a
   // later one may find others, which are counted too.
   kinds(): Record<string, number> {

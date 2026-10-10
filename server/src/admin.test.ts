@@ -315,11 +315,6 @@ describe('feedback issue', () => {
       'Feedback #1 is issue #43, https://github.com/jxxsteven7/reviewer2/issues/43, no longer #42.',
     );
 
-    // Recorded after the feedback was adopted, the number is for the operator to add to the entry.
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(run('feedback', 'issue', '1', '43')).toBe(0);
-    expect(printed.at(-1)).toBe('Put (#43) at the end of its entry in ACKNOWLEDGMENTS.md.');
-
     expect(run('feedback', 'issue', '2', '44')).toBe(1);
     expect(printed.at(-1)).toBe("The player didn't agree to feedback #2 being published as an issue.");
     expect(store.byId(2)?.issue).toBeNull();
@@ -330,6 +325,30 @@ describe('feedback issue', () => {
     expect(run('feedback', 'issue', '3', '1')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #3.');
     expect(store.byId(1)?.issue).toBe(43);
+  });
+
+  test('says how to put the entry right once the feedback is adopted', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Ann', publicIssue: true }));
+    store.add(feedback({ credit: 'Bob', publicIssue: true }));
+
+    // Adopted first, the entry was printed without a number, for the operator to add it.
+    expect(run('feedback', 'adopt', '1')).toBe(0);
+    expect(printed.at(-1)).toBe('- Ann \u{2014} <what they did>');
+    expect(run('feedback', 'issue', '1', '42')).toBe(0);
+    expect(printed.at(-1)).toBe('Put (#42) at the end of its entry in ACKNOWLEDGMENTS.md.');
+
+    // Recorded first, the entry was printed with the number; a new one replaces it.
+    expect(run('feedback', 'issue', '2', '43')).toBe(0);
+    expect(run('feedback', 'adopt', '2')).toBe(0);
+    expect(printed.at(-1)).toBe('- Bob \u{2014} <what they did> (#43)');
+    expect(run('feedback', 'issue', '2', '43')).toBe(0);
+    expect(printed.at(-1)).toBe('Feedback #2 is issue #43, https://github.com/jxxsteven7/reviewer2/issues/43.');
+    expect(run('feedback', 'issue', '2', '44')).toBe(0);
+    expect(printed.slice(-2)).toEqual([
+      'Feedback #2 is issue #44, https://github.com/jxxsteven7/reviewer2/issues/44, no longer #43.',
+      'Replace (#43) with (#44) in its entry in ACKNOWLEDGMENTS.md.',
+    ]);
   });
 });
 

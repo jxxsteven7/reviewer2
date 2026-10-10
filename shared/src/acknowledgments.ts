@@ -69,8 +69,9 @@ const LINKED = /^\[((?:\\.|[^\\\]])+)\]\(([^\s()]+)\)$/;
 // emoji code such as :tada:, and a web address, which it would link.
 const MARKUP = /[\\`*_[\]<>~@]|&#?\w+;|:[\w+-]+:|https?:\/\/|www\./i;
 // An issue or pull request named by its number, #12, which the home page links: after a space, a
-// bracket or the start, so not inside a word such as C#10, and with no 0 in front.
-const ISSUE = /(^|\W)#([1-9]\d*)(?!\w)/;
+// bracket, (, or the start, so not inside a word such as C#10 or a path such as a/#12, and with no
+// 0 in front.
+const ISSUE = /(^|[ (])#([1-9]\d*)(?!\w)/;
 // What an introduction says while nobody is listed, which goes with the first entry.
 const NO_ONE = /no one yet/i;
 
@@ -129,16 +130,17 @@ function parseEntry(text: string): Acknowledgment | string {
   // The link is kept as the feedback keeps it, so that GitHub and the home page link to the same
   // address.
   if (link !== null && checkLink(link, name).link !== link) {
-    return `"${link}" can't be a link for the acknowledgments: it must start with https://, hold no email address or &...; reference, have at most ${MAX_LINK_LENGTH} characters, and have ( ) and \\ percent-encoded, as the commands print it.`;
+    return `"${link}" can't be a link for the acknowledgments: it must start with https://, hold no email address, &...; reference or \\, have at most ${MAX_LINK_LENGTH} characters, and have ( ) percent-encoded, as the commands print it.`;
   }
   return { name, link, contribution };
 }
 
 // ACKNOWLEDGMENTS.md as the home page shows it, and what in it breaks the rules. Anything goes
-// before the first section, which is the introduction, except "No one yet" once there is a
-// section. A section starts with one of the headings, each at most once, and holds one entry or
-// more, each on a line of its own, and blank lines. An entry that breaks the rules is left out of
-// the sections, and so is a section that has none.
+// before the first heading, which is the introduction, except an entry, which GitHub would show
+// and the home page wouldn't, and "No one yet" once there is a section. A section starts with one
+// of the headings, each at most once, and holds one entry or more, each on a line of its own, and
+// blank lines. An entry that breaks the rules is left out of the sections, and so are the entries
+// under a heading that breaks them, and a section that has none.
 export function parseAcknowledgments(text: string): {
   sections: AcknowledgmentSection[];
   problems: AcknowledgmentProblem[];
@@ -148,29 +150,37 @@ export function parseAcknowledgments(text: string): {
   // Each section with the line of its heading and the number of entries written in it.
   const sections: (AcknowledgmentSection & { line: number; written: number })[] = [];
   const problems: AcknowledgmentProblem[] = [];
+  // Whether no heading has come yet, and the section that the lines go in, if any.
+  let introduction = true;
+  let section: (typeof sections)[number] | undefined;
   // The lines of the introduction that say that nobody is listed.
   const noOne: number[] = [];
   text.split(/\r?\n/).forEach((line, index) => {
     const problem = (message: string) => problems.push({ line: index + 1, message });
-    if (sections.length === 0 && NO_ONE.test(line)) noOne.push(index + 1);
     const heading = HEADING.exec(line);
     if (heading) {
+      introduction = false;
       const kind = kinds.get(heading[1] as string);
+      section = undefined;
       if (kind === undefined) problem(`A section's heading is one of ${headings}.`);
-      else if (sections.some((section) => section.kind === kind)) problem(`"${line}" comes once only.`);
-      else sections.push({ kind, entries: [], line: index + 1, written: 0 });
+      else if (sections.some((other) => other.kind === kind)) problem(`"${line}" comes once only.`);
+      else sections.push((section = { kind, entries: [], line: index + 1, written: 0 }));
       return;
     }
-    const section = sections.at(-1);
-    if (!section || line === '') return;
+    if (introduction) {
+      if (NO_ONE.test(line)) noOne.push(index + 1);
+      if (line.startsWith('- ')) problem(`An entry goes under one of the headings, ${headings}.`);
+      return;
+    }
+    if (line === '') return;
     if (!line.startsWith('- ')) {
       problem(`A section holds entries, "- <name>${SEPARATOR}<what they did>", and blank lines.`);
       return;
     }
-    section.written += 1;
+    if (section) section.written += 1;
     const entry = parseEntry(line.slice(2));
     if (typeof entry === 'string') problem(entry);
-    else section.entries.push(entry);
+    else section?.entries.push(entry);
   });
   for (const { line, written } of sections) {
     if (written === 0) problems.push({ line, message: 'A section holds one entry or more.' });

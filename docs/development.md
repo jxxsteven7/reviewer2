@@ -94,7 +94,7 @@ Feedback and acknowledgments are archives, so no command deletes or changes them
 - An anonymous player — reported the reconnect bug (#42)
 ```
 
-A name follows the nickname rules, with every ASCII punctuation character escaped (`Dr\. Who`), as the commands print it; a link starts with `https://`, with `(`, `)` and `\` percent-encoded, as they print it too. What they did is English in printable ASCII, without Markdown, emoji codes or web addresses; `#40`, after a space or a bracket, becomes a link on the home page. The first entry replaces `_No one yet._`. `npm test` checks the file and names each line that breaks the rules.
+A name follows the nickname rules, with every ASCII punctuation character escaped (`Dr\. Who`), as the commands print it; a link starts with `https://`, with `(` and `)` percent-encoded, as they print it too, and holds no `\`. What they did is English in printable ASCII, without Markdown, emoji codes or web addresses; `#40`, after a space or a bracket, becomes a link on the home page. The first entry, under its heading, replaces `_No one yet._`. `npm test` checks the file and names each line that breaks the rules.
 
 ## Testing on a phone
 

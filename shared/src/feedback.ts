@@ -145,14 +145,16 @@ export interface LinkCheck {
 // printable ASCII. No user name may come before the host, so email addresses are refused, whether
 // as mailto: or as https://name@host, and so are hosts in other scripts than Latin, which the
 // operator could take for others; a browser copies a link with its path already percent-encoded.
+// Nor may it hold a backslash, which a browser reads as / in a path, so that the link would lead
+// elsewhere than it says, and which a browser never copies there.
 const LINK =
-  /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z](?:[a-z0-9-]*[a-z0-9])?(?::\d{1,5})?(?:[/?#][!-~]*)?$/i;
+  /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z](?:[a-z0-9-]*[a-z0-9])?(?::\d{1,5})?(?:[/?#][!-[\]-~]*)?$/i;
 // An HTML character reference, such as &amp;, which Markdown would turn into the character, so
 // that ACKNOWLEDGMENTS.md on GitHub and the home page would link to different addresses.
 const REFERENCE = /&#?\w+;/;
 // What Markdown reads as markup in a link, which is kept percent-encoded; a browser reads it the
 // same, and a link with a parenthesis, as Wikipedia's, is common enough not to be refused.
-const LINK_MARKUP = /[()\\]/g;
+const LINK_MARKUP = /[()]/g;
 
 // The link that may go with the name for the acknowledgments, to a page about the player, such as
 // a homepage or a profile on GitHub, ORCID or Google Scholar. It goes with a name only, and is

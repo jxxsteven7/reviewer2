@@ -170,13 +170,13 @@ describe('the link for the acknowledgments', () => {
     }
   });
 
-  test('keeps ( ) and \\ percent-encoded, as Markdown would read them, and takes no character reference', () => {
+  test('keeps ( ) percent-encoded, as Markdown would read them, and takes no backslash or character reference', () => {
     expect(checkLink('https://en.wikipedia.org/wiki/Ann_(dev)', 'Ann')).toEqual({
       link: 'https://en.wikipedia.org/wiki/Ann_%28dev%29',
       problem: null,
     });
-    expect(checkLink('https://ann.example/a)b\\', 'Ann')).toEqual({
-      link: 'https://ann.example/a%29b%5C',
+    expect(checkLink('https://ann.example/a)b', 'Ann')).toEqual({
+      link: 'https://ann.example/a%29b',
       problem: null,
     });
     expect(checkLink('https://ann.example/%28x%29', 'Ann')).toEqual({
@@ -191,6 +191,9 @@ describe('the link for the acknowledgments', () => {
       'https://ann.example/?a=1&amp;b=2',
       'https://ann.example/&#40;',
       'https://ann.example/&#x28;',
+      // A browser would go to /users/ann.
+      'https://ann.example/users\\ann',
+      'https://ann.example/?q=a\\b',
     ]) {
       expect(checkLink(text, 'Ann'), text).toEqual({ link: null, problem: 'credit_link_invalid' });
     }
