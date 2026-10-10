@@ -17,7 +17,7 @@ A maintainer has the **Admin** or **Maintain** role; CI uses it to decide who ma
 
 ## Repository settings
 
-- **General → Pull Requests**: only **Allow squash merging**, with the default commit message **Pull request title**; **Automatically delete head branches** on.
+- **General → Pull Requests**: only **Allow squash merging**, with the default commit message **Pull request title**; **Allow auto-merge** and **Automatically delete head branches** on.
 - **Actions → General → Fork pull request workflows**: "Require approval for all external contributors". A PR from a fork runs CI once a collaborator approves the run, also while the repository is private.
 - **Code security → Private vulnerability reporting**: on, once the repository is public.
 - `.github/CODEOWNERS` names the default reviewers.
@@ -26,5 +26,5 @@ A maintainer has the **Admin** or **Maintain** role; CI uses it to decide who ma
 ## Notes
 
 - Rulesets are enforced on this private repository.
-- GitHub doesn't let you approve your own PR, so while there is one maintainer: required approvals 0, Require review from Code Owners and Require approval of the most recent reviewable push off, Require a pull request kept, and a review left on each PR. Switch back with a second maintainer. Until then, GitHub doesn't enforce the approval: a collaborator with the Write role merges only a PR that someone else has approved.
-- Local hooks can't check GitHub's merge commit: the merge form must show the PR title, version included, or the `Landed commits and release` job on `main` fails.
+- GitHub doesn't let you approve your own PR, so while there is one maintainer: required approvals 0, Require review from Code Owners and Require approval of the most recent reviewable push off, Require a pull request kept, and a review left on each PR. Switch back with a second maintainer. Until then, GitHub doesn't enforce the approval: a collaborator with the Write role merges only a PR that someone else has approved. The exception is a maintainer's own PR that changes only [docs for people](rules/versioning.md#docs-for-people): it needs the checks alone, and **Enable auto-merge** merges it once they pass.
+- Local hooks can't check GitHub's merge commit: the merge form must show the PR title, with its version if it has one, or the `Landed commits and release` job on `main` fails.

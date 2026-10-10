@@ -33,6 +33,6 @@ These two sections are adapted from Google's [The Standard of Code Review](https
 4. **Readability:** clear names, consistent with its surroundings, no needless complexity.
 5. **Scope:** the PR does what it says and nothing else.
 6. **Language:** clear, correct English everywhere; if one README changed, the other matches ([language.md](language.md)).
-7. **PR title:** `vX.Y.Z <type>: <summary>`, with CI's version or a maintainer's, and no AI attribution.
+7. **PR title:** `vX.Y.Z <type>: <summary>`, with CI's version or a maintainer's (none for [docs for people](versioning.md#docs-for-people) alone), and no AI attribution.
 
 State required changes directly; prefix optional ones `nit:`. **Don't be Reviewer 2:** be specific, actionable, and about the code, not the person.

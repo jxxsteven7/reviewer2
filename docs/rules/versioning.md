@@ -4,7 +4,7 @@ Every PR is squash-merged, so it lands on `main` as one commit, titled `vX.Y.Z <
 
 | Part | Who changes it |
 |---|---|
-| `Z`, patch | CI: every merged PR adds one |
+| `Z`, patch | CI: every merged PR adds one, except one that changes only [docs for people](#docs-for-people) |
 | `Y`, minor | A maintainer, for a release with new features |
 | `X`, major | A maintainer, for a milestone such as the first public release |
 
@@ -15,6 +15,10 @@ Every PR is squash-merged, so it lands on `main` as one commit, titled `vX.Y.Z <
 3. A collaborator merges with **Squash and merge**, with the PR title, version included, as the commit title; the repository settings ([../maintainers.md](../maintainers.md)) fill it in that way.
 
 For a PR from a fork, which CI can't retitle, the check fails and prints the title it needs; a maintainer edits it in, and the check passes on its next run.
+
+## Docs for people
+
+A PR that changes only the docs written for people to read lands without a version: `ACKNOWLEDGMENTS.md`, the two READMEs, `CONTRIBUTING.md`, and `docs/` apart from `docs/rules/`. Its title is `<type>: <summary>`, CI takes any version out of it, and its commit on `main` has none. A change to the rules (`docs/rules/`, `AGENTS.md`, `CLAUDE.md`, `words/README.md`), a license, or anything else takes a version as before. `UNVERSIONED_RE` in `scripts/check-commits.mjs` holds the list.
 
 ## Minor and major versions
 

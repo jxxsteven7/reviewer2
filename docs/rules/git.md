@@ -1,6 +1,6 @@
 # Branches, commits and pull requests
 
-`main` is protected: nobody commits, pushes, force-pushes or deletes it. Every change arrives through a pull request, squash-merged as one commit titled `vX.Y.Z <type>: <summary>` ([versioning.md](versioning.md)).
+`main` is protected: nobody commits, pushes, force-pushes or deletes it. Every change arrives through a pull request, squash-merged as one commit titled `vX.Y.Z <type>: <summary>`, or with no version for [docs for people](versioning.md#docs-for-people) alone ([versioning.md](versioning.md)).
 
 ## Worktrees
 

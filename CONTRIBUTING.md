@@ -9,7 +9,7 @@ These rules apply to everyone: project members, outside contributors and AI codi
 3. **All code is reviewed.** Someone other than the author approves every PR, docs included; a collaborator merges it once CI passes.
 4. **No AI or agent attribution** in commits, PR titles or PR descriptions. The committer is responsible for the content.
 5. **Everything in the repository is in English.** The only translated file is `README.zh-CN.md`, which CI keeps in sync with `README.md`.
-6. **Every PR is squash-merged and versioned**, as one commit titled `vX.Y.Z <type>: <summary>`. CI adds the patch version; maintainers decide minor and major ones.
+6. **Every PR is squash-merged and versioned**, as one commit titled `vX.Y.Z <type>: <summary>`. CI adds the patch version; maintainers decide minor and major ones. A PR that changes only [docs for people](docs/rules/versioning.md#docs-for-people) has no version.
 
 ## Rule files
 

@@ -5,7 +5,8 @@
 #
 # On a pull request: every commit in it, plus the PR title and body. The title becomes the squash
 # commit on main, so it must carry the next version. The job fills the version in when it is
-# missing or stale, and only keeps a minor or major version that a maintainer chose. GitHub
+# missing or stale, and only keeps a minor or major version that a maintainer chose. A PR that
+# changes only docs for people takes no version (docs/rules/versioning.md), and loses one it has. GitHub
 # doesn't allow retitling a PR from a fork, so there the job fails and prints the title to use.
 # On a push to main: the commits that just landed. Every new minor or major version on main gets
 # a tag and a GitHub Release, including one that an earlier run missed. Then the open PRs get
@@ -64,7 +65,7 @@ jobs:
         run: node scripts/check-commits.mjs range "origin/$BASE_REF..$HEAD_SHA"
       - name: Pull request title and body
         run: |
-          title="$(node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" --fix -- "$PR_TITLE")"
+          title="$(node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" --head "$HEAD_SHA" --fix -- "$PR_TITLE")"
 
           # Only maintainers choose a minor or major version (docs/rules/versioning.md). Check
           # who put it in: the person who opened the PR, or who edited the title to a different
@@ -77,7 +78,7 @@ jobs:
             version_set=true
           fi
           if [ "$version_set" = true ]; then
-            patch="$(node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" --fix --patch -- "$PR_TITLE")"
+            patch="$(node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" --head "$HEAD_SHA" --fix --patch -- "$PR_TITLE")"
             if [ "$title" != "$patch" ]; then
               role="$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$ACTOR/permission" --jq .role_name || echo none)"
               case "$role" in
@@ -101,7 +102,7 @@ jobs:
             fi
           fi
           printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
-          node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" \
+          node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" --head "$HEAD_SHA" \
             --head-ref "$HEAD_REF" --body-file "$RUNNER_TEMP/pr-body.md" -- "$title"
 
   scripts:
@@ -172,7 +173,9 @@ jobs:
             --jq '.[] | "\(.number)\t\(.title)"' > "$RUNNER_TEMP/open-prs.tsv"
           failed=0
           while IFS=$'\t' read -r number title; do
-            if ! fixed="$(node scripts/check-commits.mjs pr-title --base origin/main --fix -- "$title")"; then
+            # The PR's head, from a fork too, decides whether it takes a version at all.
+            if ! git fetch -q --no-tags origin "+refs/pull/$number/head:refs/pr/$number" ||
+              ! fixed="$(node scripts/check-commits.mjs pr-title --base origin/main --head "refs/pr/$number" --fix -- "$title")"; then
               echo "::warning title=Refresh::Could not work out the version for #$number: $title"
               failed=$((failed + 1))
             elif [ "$fixed" != "$title" ]; then
