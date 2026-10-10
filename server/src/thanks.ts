@@ -14,10 +14,12 @@ import {
 //
 // The build bundles the lists as the repository has them (build.mjs). With CONTENT_DIR, the server
 // shows the copies in that directory instead, as they change there, without a new build or a
-// restart. Each request looks at the file's modification time and size, and the file is only read
-// and checked again when they have changed. A file that is missing, larger than MAX_LIST_BYTES,
-// not UTF-8, or that breaks the rules, which the same parser checks as in CI, leaves the bundled
-// copy in use, and the log says why, once until something changes. The directory is only read.
+// restart. Each request looks at the file's modification time, size and inode, and the file is
+// only read and checked again when one of them has changed, or when it couldn't be opened or read
+// the last time, such as for its permissions, which change none of them. A file that is missing,
+// larger than MAX_LIST_BYTES, not UTF-8, or that breaks the rules, which the same parser checks as
+// in CI, leaves the bundled copy in use, and the log says why, once until something changes. The
+// directory is only read.
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
@@ -41,20 +43,22 @@ function bundled(): Record<ListName, string> {
   };
 }
 
-const answer = (sections: unknown) => JSON.stringify({ ok: true, sections });
+const toAnswer = (sections: unknown) => JSON.stringify({ ok: true, sections });
 
-const describe = (error: unknown) =>
+const errorReason = (error: unknown) =>
   (error as NodeJS.ErrnoException).code ?? (error instanceof Error ? error.message : String(error));
 
 // A list's text from the file, or why it can't be used. The file is opened without waiting, so
 // that a FIFO in its place can't hold the server up, and is read only if it is a regular file, and
-// to one byte past the most a list may have, in case it grew since.
-function readList(path: string): { text: string } | { reason: string } {
+// to one byte past the most a list may have, in case it grew since. `retry` marks an error in
+// opening or reading it, such as EACCES or EMFILE, which may be gone by the next request although
+// the file is the same.
+function readList(path: string): { text: string } | { reason: string; retry?: true } {
   let fd: number;
   try {
     fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
   } catch (error) {
-    return { reason: describe(error) };
+    return { reason: errorReason(error), retry: true };
   }
   try {
     if (!fstatSync(fd).isFile()) return { reason: 'not a file' };
@@ -72,7 +76,7 @@ function readList(path: string): { text: string } | { reason: string } {
       return { reason: 'not UTF-8' };
     }
   } catch (error) {
-    return { reason: describe(error) };
+    return { reason: errorReason(error), retry: true };
   } finally {
     closeSync(fd);
   }
@@ -81,7 +85,7 @@ function readList(path: string): { text: string } | { reason: string } {
 export class ThanksLists {
   // Each list's answer from the bundled copy.
   private readonly bundled: Record<ListName, string>;
-  // Each list's answer from the file in the directory, with the time and size it was read at.
+  // Each list's answer from the file in the directory, with the file's time, size and inode.
   private readonly read = new Map<ListName, { version: string; answer: string }>();
   // What the log last said about each list's file, so that it says it once.
   private readonly said = new Map<ListName, string>();
@@ -92,8 +96,8 @@ export class ThanksLists {
     lists: Record<ListName, string> = bundled(),
   ) {
     this.bundled = {
-      acknowledgments: answer(PARSERS.acknowledgments(lists.acknowledgments).sections),
-      sponsors: answer(PARSERS.sponsors(lists.sponsors).sections),
+      acknowledgments: toAnswer(PARSERS.acknowledgments(lists.acknowledgments).sections),
+      sponsors: toAnswer(PARSERS.sponsors(lists.sponsors).sections),
     };
   }
 
@@ -108,21 +112,23 @@ export class ThanksLists {
       version = `${mtimeMs} ${size} ${ino}`;
     } catch (error) {
       this.read.delete(name);
-      return this.skip(name, path, { reason: describe(error) });
+      return this.skip(name, path, { reason: errorReason(error) });
     }
     const known = this.read.get(name);
     if (known?.version === version) return known.answer;
     const list = readList(path);
     let result: string;
     if ('reason' in list) {
-      result = this.skip(name, path, list);
+      result = this.skip(name, path, { reason: list.reason });
+      // Not kept, so that the next request tries the file again.
+      if (list.retry) return result;
     } else {
       const { sections, problems } = PARSERS[name](list.text);
       if (problems.length > 0) {
         const [{ line, message }] = problems as [ListProblem];
         result = this.skip(name, path, { reason: 'breaks the rules', problems: problems.length, line, message });
       } else {
-        result = answer(sections);
+        result = toAnswer(sections);
         const entries = sections.reduce((count, { entries }) => count + entries.length, 0);
         this.say(name, `read ${version}`, 'thanks_list_read', { file: path, entries });
       }

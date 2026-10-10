@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parseAcknowledgments } from '@reviewer2/shared';
 import { afterEach, expect, test } from 'vitest';
 import { Browser, startServer, type TestServer } from './helpers';
 
@@ -29,8 +32,8 @@ test('an account sees how often it is thanked, and nobody gets the table', async
   });
   expect(await guest.account()).toBeNull();
   // The list for the home page is the file's, beside the account API, and never the table's.
+  const file = readFileSync(join(import.meta.dirname, '..', '..', 'ACKNOWLEDGMENTS.md'), 'utf8');
   const list = await guest.request('/api/acknowledgments');
   expect(list.status).toBe(200);
-  expect(list.body).toMatchObject({ ok: true });
-  expect(JSON.stringify(list.body)).not.toMatch(/Ann L|Bob/);
+  expect(list.body).toEqual({ ok: true, sections: parseAcknowledgments(file).sections });
 });

@@ -31,7 +31,10 @@ const API = 'https://api.github.com/graphql';
 export const START = '<!-- start of GitHub Sponsors, which .github/workflows/sponsors.yml writes -->';
 export const END = '<!-- end of GitHub Sponsors -->';
 const HEADING = '## GitHub Sponsors';
+// What the introduction says while nobody is listed. The rules take any line of it with these
+// words for that (shared/src/lists.ts), and so does this script, whatever the maintainers made of it.
 const NO_ONE = '_No one yet._';
+const SAYS_NO_ONE = /no one yet/i;
 const USERNAME = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
 // A hundred pages of a hundred sponsors each; more would be a loop.
 const MAX_PAGES = 100;
@@ -99,9 +102,9 @@ export async function fetchSponsors(token, request = fetch) {
 }
 
 // SPONSORS.md with these sponsors between the lines that mark them: under their heading, or
-// nothing when there are none. "No one yet" goes from the introduction once anyone is listed, here
-// or by hand after the lines, and comes back at its end when nobody is. Throws when the file
-// doesn't have the two lines, once each and in order.
+// nothing when there are none. "No one yet", in whatever words, goes from the introduction once
+// anyone is listed, here or by hand after the lines, and comes back at its end when nobody is and
+// it isn't there. Throws when the file doesn't have the two lines, once each and in order.
 export function writeSponsors(text, usernames) {
   const lines = text.split(/\r?\n/);
   const start = lines.indexOf(START);
@@ -114,11 +117,11 @@ export function writeSponsors(text, usernames) {
   const after = lines.slice(end + 1);
   let before = lines.slice(0, start);
   const listed = usernames.length > 0 || after.some((line) => line.startsWith('- '));
-  const noOne = before.indexOf(NO_ONE);
-  if (listed && noOne >= 0) {
-    // With the blank line that set it apart.
-    before = before.filter((_, index) => index !== noOne && !(index === noOne + 1 && before[index] === ''));
-  } else if (!listed && noOne < 0) {
+  const saysNoOne = (line) => SAYS_NO_ONE.test(line ?? '');
+  if (listed) {
+    // Each line that says so, with the blank line that set it apart.
+    before = before.filter((line, index, all) => !saysNoOne(line) && !(line === '' && saysNoOne(all[index - 1])));
+  } else if (!before.some(saysNoOne)) {
     if (before.at(-1) !== '') before.push('');
     before.push(NO_ONE, '');
   }

@@ -44,7 +44,15 @@ describe('the lists in the repository', () => {
     expect([START, END]).toEqual([SPONSORS_START, SPONSORS_END]);
     const file = readFileSync(join(root, LIST_FILES.sponsors), 'utf8');
     const others = `${file}\n## Other ways\n\n- Ann\n`;
-    for (const text of [file, others, writeSponsors(file, ['octocat']), writeSponsors(others, ['octocat'])]) {
+    // "No one yet" in other words, which the rules take for it too.
+    const reworded = ['_No one yet_', 'No one yet.'].map((noOne) => file.replace('_No one yet._', noOne));
+    for (const text of [
+      file,
+      ...reworded,
+      others,
+      writeSponsors(file, ['octocat']),
+      writeSponsors(others, ['octocat']),
+    ]) {
       for (const usernames of [[], ['octocat'], ['octocat', 'Mona-Lisa-2', 'x'.repeat(39)]]) {
         const written = writeSponsors(text, usernames);
         const { sections, problems } = parseSponsors(written);
@@ -171,6 +179,21 @@ describe('the lists of thanks', () => {
     rmSync(file());
     expect(sections(lists.answer('sponsors'))).toEqual(bundledSponsors);
     expect(logs.slice(6).map(({ event }) => event)).toEqual(['thanks_list_read', 'thanks_list_skipped']);
+  });
+
+  test('try a file again that could not be opened, although its time, size and inode stay the same', () => {
+    // Root opens a file whatever its permissions.
+    if (process.getuid?.() === 0) return;
+    write(NEWER);
+    chmodSync(file(), 0o000);
+    expect(sections(lists.answer('sponsors'))).toEqual(bundledSponsors);
+    expect(sections(lists.answer('sponsors'))).toEqual(bundledSponsors);
+    chmodSync(file(), 0o644);
+    expect(sections(lists.answer('sponsors'))).toEqual(newerSponsors);
+    expect(logs).toEqual([
+      { event: 'thanks_list_skipped', fields: { file: file(), reason: 'EACCES', shown: 'bundled' } },
+      { event: 'thanks_list_read', fields: { file: file(), entries: 1 } },
+    ]);
   });
 
   test('are never held up by a FIFO in place of a file', () => {

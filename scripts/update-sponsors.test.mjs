@@ -137,6 +137,14 @@ describe('SPONSORS.md', () => {
     );
   });
 
+  test('knows "No one yet" in other words, as the rules do', () => {
+    for (const noOne of ['_No one yet_', 'No one yet.', '*No one yet, but see below.*']) {
+      const empty = EMPTY.replace('_No one yet._', noOne);
+      assert.equal(writeSponsors(empty, []), empty);
+      assert.equal(writeSponsors(empty, ['ann']), writeSponsors(EMPTY, ['ann']));
+    }
+  });
+
   test('must have the lines that mark the sponsors, once each and in order', () => {
     for (const text of [file(...INTRO), file(...INTRO, END, START), file(...INTRO, START, END, START, END)]) {
       assert.throws(() => writeSponsors(text, ['ann']), { message: /^SPONSORS\.md must have the line/ });

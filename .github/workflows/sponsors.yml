@@ -3,7 +3,8 @@
 # (scripts/update-sponsors.mjs). When the list changed, the change goes from the latest main to the
 # branch docs/update-sponsors, in a PR that this opens or updates and sets to merge once CI passes;
 # it changes only docs for people, so it lands without a version (docs/rules/versioning.md). When
-# nothing changed, a PR that is still open is closed, so that an old list never lands.
+# nothing changed, a PR that is still open is closed, so that an old list never lands. Only a PR
+# from this repository's own branch counts: one from a fork's branch of the same name is left alone.
 #
 # It runs with the repository secret SPONSOR_TOKEN, a token of the maintainer's
 # (docs/maintainers.md), and without it does nothing but say so. The token pushes and opens the PR,
@@ -70,7 +71,10 @@ jobs:
           GIT_COMMITTER_NAME: Jiaxiao Shi
           GIT_COMMITTER_EMAIL: 103045575+jxxsteven7@users.noreply.github.com
         run: |
-          open="$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')"
+          # The open PR from this repository's own branch. A PR from a fork may come from a branch of
+          # the same name, and is never closed or set to merge here.
+          open="$(gh pr list --head "$BRANCH" --base main --state open --json number,isCrossRepository \
+            --jq 'map(select(.isCrossRepository | not)) | .[0].number // empty')"
           if git diff --quiet -- SPONSORS.md; then
             echo "SPONSORS.md on main is up to date."
             if [ -n "$open" ]; then
@@ -82,7 +86,8 @@ jobs:
           git commit --quiet --message "$TITLE" -- SPONSORS.md
           git push --force origin "HEAD:refs/heads/$BRANCH"
           if [ -z "$open" ]; then
-            gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file - <<'BODY'
+            # gh prints the new PR's address, which the commands below take as well as its number.
+            open="$(gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file - <<'BODY'
           ## What
 
           The daily update of `SPONSORS.md` from GitHub Sponsors, made by `.github/workflows/sponsors.yml`: the public sponsors, by username, the oldest first.
@@ -91,7 +96,7 @@ jobs:
 
           The list on GitHub and on the home page thanks the sponsors. It changes only docs for people, so it lands without a version once CI passes.
           BODY
-            open="$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number')"
+            )"
           fi
           # A push by someone with write access leaves auto-merge on, so it is turned on once.
           if [ "$(gh pr view "$open" --json autoMergeRequest --jq '.autoMergeRequest != null')" != true ]; then

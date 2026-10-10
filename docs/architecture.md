@@ -124,7 +124,7 @@ The `acknowledgments` table, migration 4, only records whom the operator thanked
 
 ## Lists of thanks
 
-The home page folds the acknowledgments and the sponsors until a player opens one, and only then asks `GET /api/acknowledgments` or `GET /api/sponsors` for its sections. The build bundles both files into the server. With `CONTENT_DIR`, the server shows the copies in that directory instead, so a list changes without a new build or a restart: each request compares the file's modification time and size with those of the copy read last, and only a change makes it read the file again. A file that is missing, over 64 KiB, not UTF-8 or against the rules leaves the bundled copy in use, and the log says why with `thanks_list_skipped`, once for each new reason. The server never writes to the directory. One parser checks both files, on the server and in CI (`server/src/thanks.test.ts`), by the rules in `shared/src/lists.ts` and those of each list. Names are plain text; links, only `https://`, open in a new tab with `rel="nofollow ugc noopener"`.
+The home page folds the acknowledgments and the sponsors until a player opens one, and only then asks `GET /api/acknowledgments` or `GET /api/sponsors` for its sections. The build bundles both files into the server. With `CONTENT_DIR`, the server shows the copies in that directory instead, so a list changes without a new build or a restart: each request compares the file's modification time, size and inode with those of the copy read last, and the server reads the file again only when they differ, or when it couldn't open or read it the last time, such as for its permissions. A file that is missing, over 64 KiB, not UTF-8 or against the rules leaves the bundled copy in use, and the log says why with `thanks_list_skipped`, once for each new reason. The server never writes to the directory. One parser checks both files, on the server and in CI (`server/src/thanks.test.ts`), by the rules in `shared/src/lists.ts` and those of each list. Names are plain text; links, only `https://`, open in a new tab with `rel="nofollow ugc noopener"`.
 
 ## Accounts
 
@@ -181,7 +181,7 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 
 ## Logging
 
-One JSON object per line on stdout, never a token: rooms created and closed (`empty`, `idle`, `stale`, `chair`, `restart`), games started and ended, errors, the `stats` line, and named events such as `listening`, `startup_failed`, `database_opened`, `snapshot_failed`, `storage_full`, `feedback_received`, `report_received`, `account_created`, `mail_not_sent`, `words_clashed`, `match_ended` and `thanks_list_skipped`; Node's warnings come as `warning` lines, so every line is JSON.
+One JSON object per line on stdout, never a token: rooms created and closed (`empty`, `idle`, `stale`, `chair`, `restart`), games started and ended, errors, the `stats` line, and named events such as `listening`, `startup_failed`, `database_opened`, `snapshot_failed`, `storage_full`, `feedback_received`, `report_received`, `account_created`, `mail_not_sent`, `words_clashed`, `match_ended`, `thanks_list_read` and `thanks_list_skipped`; Node's warnings come as `warning` lines, so every line is JSON.
 
 ## Status
 
