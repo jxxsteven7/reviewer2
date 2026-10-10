@@ -1,9 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request, type IncomingHttpHeaders } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { brotliCompressSync, brotliDecompressSync, gunzipSync, gzipSync } from 'node:zlib';
+import { LIST_API, parseAcknowledgments, parseSponsors } from '@reviewer2/shared';
 import { io as connect } from 'socket.io-client';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { WordLibrary } from '../src/core/words';
@@ -153,6 +154,32 @@ describe('with a built front end', () => {
     expect(head.status).toBe(200);
     expect(head.headers['content-type']).toMatch(/^text\/html/);
     expect(head.body.length).toBe(0);
+  });
+
+  test('the lists of thanks are answered in JSON, as the repository has them unless CONTENT_DIR is set', async () => {
+    const root = join(import.meta.dirname, '..', '..');
+    const lists = [
+      {
+        path: LIST_API.acknowledgments,
+        parsed: parseAcknowledgments(readFileSync(join(root, 'ACKNOWLEDGMENTS.md'), 'utf8')),
+      },
+      { path: LIST_API.sponsors, parsed: parseSponsors(readFileSync(join(root, 'SPONSORS.md'), 'utf8')) },
+    ];
+    for (const { path, parsed } of lists) {
+      for (const target of [path, `${path}?again=1`]) {
+        const response = await fetch(`${base}${target}`);
+        expect(response.status, target).toBe(200);
+        expect(response.headers.get('content-type'), target).toBe('application/json');
+        expect(response.headers.get('cache-control'), target).toBe('no-store');
+        expect(await response.json(), target).toEqual({ ok: true, sections: parsed.sections });
+      }
+      const head = await get(base, path, {}, 'HEAD');
+      expect(head.status, path).toBe(200);
+      expect(head.body.length, path).toBe(0);
+      const post = await get(base, path, {}, 'POST');
+      expect(post.status, path).toBe(405);
+      expect(post.headers.allow, path).toBe('GET, HEAD');
+    }
   });
 
   test('every response carries the security headers', async () => {

@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createServer, type Server } from 'node:net';
+import { createServer, type AddressInfo, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { LIST_API, SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { until } from '../test/helpers';
 import { main, type MainOptions, type Running } from './main';
@@ -97,6 +98,26 @@ describe('starting', () => {
     const started = (await start({ MAX_FEEDBACK: '25000' })) as Running;
     expect(started.feedback.limits).toMatchObject({ maxEntries: 25_000, maxBytes: 125 * 2 ** 20 });
     expect(logged('listening')).toMatchObject({ maxFeedback: 25_000 });
+  });
+
+  test('with CONTENT_DIR shows the lists of thanks there, and says at once which it can use', async () => {
+    const content = join(dir, 'content');
+    mkdirSync(content);
+    const github = '## GitHub Sponsors\n\n- [octocat](https://github.com/octocat)';
+    writeFileSync(join(content, 'SPONSORS.md'), `# Sponsors\n\n${SPONSORS_START}\n${github}\n${SPONSORS_END}\n`);
+    const started = (await start({ CONTENT_DIR: content })) as Running;
+    expect(logs.filter(({ event }) => event.startsWith('thanks_list_'))).toEqual([
+      {
+        event: 'thanks_list_skipped',
+        fields: { file: join(content, 'ACKNOWLEDGMENTS.md'), reason: 'ENOENT', shown: 'bundled' },
+      },
+      { event: 'thanks_list_read', fields: { file: join(content, 'SPONSORS.md'), entries: 1 } },
+    ]);
+    const { port } = started.server.http.address() as AddressInfo;
+    expect(await (await fetch(`http://127.0.0.1:${port}${LIST_API.sponsors}`)).json()).toEqual({
+      ok: true,
+      sections: [{ kind: 'github', entries: [{ name: 'octocat', link: 'https://github.com/octocat' }] }],
+    });
   });
 
   test('gives accounts email with both the server secret and the mailer', async () => {

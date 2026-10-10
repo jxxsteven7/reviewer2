@@ -12,23 +12,30 @@ const port = process.env.E2E_PORT;
 const log = process.env.E2E_SERVER_LOG;
 const mails = process.env.E2E_MAIL_LOG;
 const data = process.env.E2E_DATA_DIR;
-if (!port || !log || !mails || !data) {
+const content = process.env.E2E_CONTENT_DIR;
+if (!port || !log || !mails || !data || !content) {
   throw new Error(
-    'E2E_PORT, E2E_SERVER_LOG, E2E_MAIL_LOG and E2E_DATA_DIR must be set; playwright.config.ts sets them',
+    'E2E_PORT, E2E_SERVER_LOG, E2E_MAIL_LOG, E2E_DATA_DIR and E2E_CONTENT_DIR must be set; playwright.config.ts sets them',
   );
 }
 
 mkdirSync(dirname(log), { recursive: true });
 const file = createWriteStream(log);
 // The server's data, so that the operator's command (server/dist/admin.cjs) can run on it in a
-// test. A run starts with none, so the directory goes first, which is why it may only be one
-// under test-results: a data directory that the shell named would go with it.
+// test, and the directory of the lists of thanks, which a test writes to. A run starts with
+// neither, so the directories go first, which is why they may only be ones under test-results: a
+// directory that the shell named would go with them.
 const results = join(root, 'test-results');
-if (!resolve(data).startsWith(results + sep)) {
-  throw new Error(`E2E_DATA_DIR must be a directory under ${results}, not ${data}`);
+for (const [name, dir] of [
+  ['E2E_DATA_DIR', data],
+  ['E2E_CONTENT_DIR', content],
+]) {
+  if (!resolve(dir).startsWith(results + sep)) {
+    throw new Error(`${name} must be a directory under ${results}, not ${dir}`);
+  }
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
 }
-rmSync(data, { recursive: true, force: true });
-mkdirSync(data, { recursive: true });
 
 // The mailer, which writes the mails out to a file that helpers.ts reads the links from, rather
 // than send them. Its socket is beside the logs, whose directory has a short enough path for one.
@@ -56,6 +63,8 @@ const server = spawn(process.execPath, [join(root, 'server', 'dist', 'index.cjs'
     PUBLIC_DIR: join(root, 'client', 'dist'),
     WORDS_DIR: join(root, 'words'),
     DATA_DIR: data,
+    // Empty until a test writes a list there, so the server shows the ones the build bundled.
+    CONTENT_DIR: content,
     TRUST_PROXY: '0',
     // Every test makes a room from the same address, and every browser sends its feedback and
     // registers its accounts from it.

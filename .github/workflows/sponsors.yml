@@ -1,0 +1,99 @@
+# Brings SPONSORS.md up to date with GitHub Sponsors once a day, and when started by hand: the
+# public sponsors, the ones whose sponsorship ended too, the oldest first
+# (scripts/update-sponsors.mjs). When the list changed, the change goes from the latest main to the
+# branch docs/update-sponsors, in a PR that this opens or updates and sets to merge once CI passes;
+# it changes only docs for people, so it lands without a version (docs/rules/versioning.md). When
+# nothing changed, a PR that is still open is closed, so that an old list never lands.
+#
+# It runs with the repository secret SPONSOR_TOKEN, a token of the maintainer's
+# (docs/maintainers.md), and without it does nothing but say so. The token pushes and opens the PR,
+# so that CI runs on it, which it doesn't for GITHUB_TOKEN, and the commit is the maintainer's
+# own, so that the squash merge credits nobody else. No code runs with the token but the
+# repository's own from main and the two actions below: nothing from npm, and nothing from a pull
+# request.
+
+name: Sponsors
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+# GITHUB_TOKEN gets nothing: the token does all of it.
+permissions: {}
+
+concurrency:
+  group: sponsors
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update the sponsors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Look for the token
+        id: token
+        env:
+          SPONSOR_TOKEN: ${{ secrets.SPONSOR_TOKEN }}
+        run: |
+          if [ -n "$SPONSOR_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Sponsors::There is no SPONSOR_TOKEN secret, so the list stays as it is. docs/maintainers.md says how to make one."
+          fi
+      - uses: actions/checkout@v5
+        if: steps.token.outputs.present == 'true'
+        with:
+          ref: main
+          token: ${{ secrets.SPONSOR_TOKEN }}
+      - uses: actions/setup-node@v5
+        if: steps.token.outputs.present == 'true'
+        with:
+          node-version: 24
+      - name: Ask GitHub for the sponsors
+        # Fails, with GitHub's reason, when GitHub doesn't give them, such as for a token that has
+        # expired or lacks a permission.
+        if: steps.token.outputs.present == 'true'
+        env:
+          SPONSOR_TOKEN: ${{ secrets.SPONSOR_TOKEN }}
+        run: node scripts/update-sponsors.mjs
+      - name: Propose the change, or withdraw one that is no longer needed
+        if: steps.token.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SPONSOR_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: docs/update-sponsors
+          TITLE: 'docs: update the list of sponsors'
+          GIT_AUTHOR_NAME: Jiaxiao Shi
+          GIT_AUTHOR_EMAIL: 103045575+jxxsteven7@users.noreply.github.com
+          GIT_COMMITTER_NAME: Jiaxiao Shi
+          GIT_COMMITTER_EMAIL: 103045575+jxxsteven7@users.noreply.github.com
+        run: |
+          open="$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')"
+          if git diff --quiet -- SPONSORS.md; then
+            echo "SPONSORS.md on main is up to date."
+            if [ -n "$open" ]; then
+              gh pr close "$open" --delete-branch --comment "SPONSORS.md on main is up to date, so this change is no longer needed."
+            fi
+            exit 0
+          fi
+          git switch --create "$BRANCH"
+          git commit --quiet --message "$TITLE" -- SPONSORS.md
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+          if [ -z "$open" ]; then
+            gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file - <<'BODY'
+          ## What
+
+          The daily update of `SPONSORS.md` from GitHub Sponsors, made by `.github/workflows/sponsors.yml`: the public sponsors, by username, the oldest first.
+
+          ## Why
+
+          The list on GitHub and on the home page thanks the sponsors. It changes only docs for people, so it lands without a version once CI passes.
+          BODY
+            open="$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number')"
+          fi
+          # A push by someone with write access leaves auto-merge on, so it is turned on once.
+          if [ "$(gh pr view "$open" --json autoMergeRequest --jq '.autoMergeRequest != null')" != true ]; then
+            gh pr merge "$open" --auto --squash
+          fi

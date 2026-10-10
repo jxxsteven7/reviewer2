@@ -615,6 +615,22 @@
     "anonymous": "一位匿名玩家",
     "none": "还没有人。来做第一个吧！"
   },
+  "sponsors": {
+    "title": "赞助者",
+    "intro": "感谢赞助 Reviewer 2 的朋友：在 GitHub 上赞助的，只要赞助是公开的，就按 GitHub 用户名列出；用微信赞赏等其他方式赞助的，本人愿意留名时按自己选的名字列出。不显示金额。",
+    "kinds": {
+      "github": "GitHub Sponsors",
+      "other": "其他方式"
+    },
+    "none": "还没有赞助者。来做第一个吧：{github}，或者{wechat}！",
+    "github": "在 GitHub Sponsors 上赞助",
+    "wechat": "用微信赞赏"
+  },
+  "thanks": {
+    "loading": "正在加载名单…",
+    "failed": "名单没能加载。",
+    "retry": "再试一次"
+  },
   "notFound": {
     "title": "页面不存在",
     "body": "这个页面不存在，或者链接不完整。",

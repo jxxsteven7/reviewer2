@@ -1,18 +1,25 @@
 import { existsSync } from 'node:fs';
 import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http';
+import { LIST_API, type ListName } from '@reviewer2/shared';
 import sirv from 'sirv';
+import type { ThanksLists } from './thanks';
 
 // HTTP for everything that isn't Socket.IO: the built front end, with the SPA fallback to
-// index.html for routes such as /room/K7QX, /healthz, and the account API under /api with the
-// avatars under /avatars (accounts/http.ts). docs/architecture.md describes what it answers and
-// why; the reasons for each header are also beside the code that sets it.
+// index.html for routes such as /room/K7QX, /healthz, the lists of thanks for the home page
+// (thanks.ts), and the account API under /api with the avatars under /avatars
+// (accounts/http.ts). docs/architecture.md describes what it answers and why; the reasons for each
+// header are also beside the code that sets it.
 
 export interface HttpOptions {
   publicDir: string;
   version: string;
+  lists: ThanksLists;
   // Answers the paths that it knows, the account API's, and says whether it did.
   accounts?: (req: IncomingMessage, res: ServerResponse, path: string) => boolean;
+  log?: (event: string, fields?: Record<string, unknown>) => void;
 }
+
+const LISTS = new Map<string, ListName>(Object.entries(LIST_API).map(([name, path]) => [path, name as ListName]));
 
 // A Host header we're willing to repeat in the CSP: a host name or IP address and a port.
 const HOST = /^[a-z0-9.-]+(:\d{1,5})?$/i;
@@ -71,7 +78,7 @@ export function pathOf(target: string): string {
 
 const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
 
-export function createRequestHandler({ publicDir, version, accounts }: HttpOptions): RequestListener {
+export function createRequestHandler({ publicDir, version, lists, accounts, log }: HttpOptions): RequestListener {
   const startedAt = Date.now();
   // sirv lists the files when it starts, so it only serves the front end that was built then.
   // A new build needs a restart: until then, a new index.html would name assets sirv doesn't know.
@@ -80,6 +87,18 @@ export function createRequestHandler({ publicDir, version, accounts }: HttpOptio
   return (req, res) => {
     setSecurityHeaders(req, res);
     const path = pathOf(req.url ?? '/');
+    const list = LISTS.get(path);
+    if (list !== undefined) {
+      if (!methodAllowed(req, res)) return;
+      // An error here would end the process, since nothing else catches it.
+      try {
+        send(res, 200, 'application/json', lists.answer(list));
+      } catch (error) {
+        log?.('error', { where: 'lists', message: error instanceof Error ? error.message : String(error) });
+        send(res, 500, 'application/json', JSON.stringify({ ok: false, error: 'internal' }));
+      }
+      return;
+    }
     if (accounts?.(req, res, path)) return;
     // Socket.IO's own requests, POSTs included, never reach this handler.
     if (!methodAllowed(req, res)) return;

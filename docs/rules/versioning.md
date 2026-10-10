@@ -18,7 +18,7 @@ For a PR from a fork, which CI can't retitle, the check fails and prints the tit
 
 ## Docs for people
 
-A PR that changes only the docs written for people to read lands without a version: `ACKNOWLEDGMENTS.md`, the two READMEs, `CONTRIBUTING.md`, and `docs/` apart from `docs/rules/`. Its title is `<type>: <summary>`, CI takes any version out of it, and its commit on `main` has none. A change to the rules (`docs/rules/`, `AGENTS.md`, `CLAUDE.md`, `words/README.md`), a license, or anything else takes a version as before. `UNVERSIONED_RE` in `scripts/check-commits.mjs` holds the list.
+A PR that changes only the docs written for people to read lands without a version: `ACKNOWLEDGMENTS.md`, `SPONSORS.md`, the two READMEs, `CONTRIBUTING.md`, and `docs/` apart from `docs/rules/`. Its title is `<type>: <summary>`, CI takes any version out of it, and its commit on `main` has none. A change to the rules (`docs/rules/`, `AGENTS.md`, `CLAUDE.md`, `words/README.md`), a license, or anything else takes a version as before. `UNVERSIONED_RE` in `scripts/check-commits.mjs` holds the list.
 
 ## Minor and major versions
 

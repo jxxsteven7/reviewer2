@@ -2,8 +2,8 @@ import { afterEach, expect, test } from 'vitest';
 import { Browser, startServer, type TestServer } from './helpers';
 
 // The acknowledgments over HTTP: an account's summary counts the ones counted for it, and nothing
-// else of them is served. The public list is ACKNOWLEDGMENTS.md, which the build bundles for the
-// home page.
+// else of the table is served. The public list is ACKNOWLEDGMENTS.md, which the server reads for the
+// home page (thanks.ts).
 
 let server: TestServer;
 
@@ -28,5 +28,9 @@ test('an account sees how often it is thanked, and nobody gets the table', async
     ],
   });
   expect(await guest.account()).toBeNull();
-  expect((await guest.request('/api/acknowledgments')).status).toBe(404);
+  // The list for the home page is the file's, beside the account API, and never the table's.
+  const list = await guest.request('/api/acknowledgments');
+  expect(list.status).toBe(200);
+  expect(list.body).toMatchObject({ ok: true });
+  expect(JSON.stringify(list.body)).not.toMatch(/Ann L|Bob/);
 });

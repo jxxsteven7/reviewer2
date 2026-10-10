@@ -1,6 +1,6 @@
 # Maintainer guide
 
-How `main` is protected on GitHub.
+How `main` is protected on GitHub, and the token that keeps the sponsors up to date.
 
 ## Branch protection
 
@@ -22,6 +22,16 @@ A maintainer has the **Admin** or **Maintain** role; CI uses it to decide who ma
 - **Code security → Private vulnerability reporting**: on, once the repository is public.
 - `.github/CODEOWNERS` names the default reviewers.
 - Default workflow permissions stay read-only; the Conventions workflow asks for its own.
+
+## Sponsors
+
+The Sponsors workflow (`.github/workflows/sponsors.yml`) needs the repository secret `SPONSOR_TOKEN`: a fine-grained personal access token of the sponsored maintainer.
+
+1. **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**: owner the maintainer, an expiry date, **Only select repositories** with this one, and the repository permissions **Contents** and **Pull requests**, both **Read and write**. No account permissions.
+2. In this repository, **Settings → Secrets and variables → Actions → New repository secret** `SPONSOR_TOKEN`.
+3. **Actions → Sponsors → Run workflow** once to try it.
+
+The token reads the sponsors of its owner without an account permission because the query asks only for their usernames, and leaves the filtering and sorting to `includePrivate: false` and `orderBy`; a sponsorship's privacy, start or status would need the profile permission (`read:user` on a classic token). Pushing the branch and opening the PR as the maintainer makes CI run on it, which GITHUB_TOKEN's wouldn't, and keeps everyone else out of the commit; auto-merge needs **Allow auto-merge**. When the token expires or loses a permission, the run fails with GitHub's reason: make a new one and replace the secret.
 
 ## Notes
 

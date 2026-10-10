@@ -55,10 +55,11 @@ const TYPE_RE = new RegExp(`^(${TYPES.join('|')}): `);
 const BRANCH_RE = new RegExp(`^(${BRANCH_TYPES.join('|')})/[a-z0-9]+(-[a-z0-9]+)*$`);
 const VERSION_PREFIX_RE = /^v(\d+)\.(\d+)\.(\d+) (?=\S)/;
 const TAG_RE = /^v(\d+)\.(\d+)\.(\d+)$/;
-// The docs written for people to read: ACKNOWLEDGMENTS.md, the READMEs, CONTRIBUTING.md and
-// docs/ apart from docs/rules/. A pull request that changes nothing else lands without a version.
-// The rules, the licenses and everything else take one.
-const UNVERSIONED_RE = /^(?:ACKNOWLEDGMENTS\.md|README\.md|README\.zh-CN\.md|CONTRIBUTING\.md|docs\/(?!rules\/).+)$/;
+// The docs written for people to read: ACKNOWLEDGMENTS.md, SPONSORS.md, the READMEs,
+// CONTRIBUTING.md and docs/ apart from docs/rules/. A pull request that changes nothing else lands
+// without a version. The rules, the licenses and everything else take one.
+const UNVERSIONED_RE =
+  /^(?:ACKNOWLEDGMENTS\.md|SPONSORS\.md|README\.md|README\.zh-CN\.md|CONTRIBUTING\.md|docs\/(?!rules\/).+)$/;
 // A fixup of a fixup commit stacks the prefixes: "fixup! fixup! <subject>".
 const FIXUP_RE = /^((fixup|squash|amend)! )+/;
 const PRINTABLE_ASCII_RE = /^[\x20-\x7e]+$/;

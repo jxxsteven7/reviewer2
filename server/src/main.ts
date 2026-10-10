@@ -16,6 +16,7 @@ import { createStatusHandler, STATUS_HOST } from './status';
 import { openDatabase, truncateWal } from './store/database';
 import { FeedbackStore, feedbackLimits } from './store/feedback';
 import { SNAPSHOT_MS, Snapshots } from './store/snapshots';
+import { ThanksLists } from './thanks';
 
 // Starts the server and stops it (docs/architecture.md): the settings, the word library, the
 // database, the game's port, the timers and the status page, and on SIGTERM or SIGINT all of it
@@ -131,6 +132,12 @@ export async function main({
   const unbound = accounts.adoptFingerprintKey();
   if (unbound) log('addresses_unbound', { count: unbound });
 
+  // The lists of thanks, read once now, so that the log says at the start whether CONTENT_DIR has
+  // copies that can be used.
+  const lists = new ThanksLists(config.contentDir, log);
+  lists.answer('acknowledgments');
+  lists.answer('sponsors');
+
   let server: AppServer;
   try {
     clearContacts();
@@ -141,6 +148,7 @@ export async function main({
       games: [keywordsGame],
       feedback,
       accounts,
+      lists,
       socketLimits: {
         ...DEFAULT_SOCKET_LIMITS,
         roomsPerMinute: config.roomsPerMinute,

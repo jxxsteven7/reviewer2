@@ -4,7 +4,7 @@ How the app is put together. The constraints are in [rules/constraints.md](rules
 
 ## One process, one port
 
-One Node process serves everything on one port: the built front end, `/healthz`, the account API under `/api/`, avatars under `/avatars/` and Socket.IO under `/socket.io/`. Rooms live in memory and end with the process; feedback and accounts are in a SQLite database, avatars as files beside it ([Data](#data)). The only other things, serving no player, are the operator's status page, on a second port reachable only locally ([Status](#status)), and the mailer, a program of its own that alone holds the mail service's key and talks to the internet; the game server asks it over a Unix socket to send a mail, and needs no internet itself ([Mail](#mail)).
+One Node process serves everything on one port: the built front end, `/healthz`, the lists of thanks and the account API under `/api/`, avatars under `/avatars/` and Socket.IO under `/socket.io/`. Rooms live in memory and end with the process; feedback and accounts are in a SQLite database, avatars as files beside it ([Data](#data)). The only other things, serving no player, are the operator's status page, on a second port reachable only locally ([Status](#status)), and the mailer, a program of its own that alone holds the mail service's key and talks to the internet; the game server asks it over a Unix socket to send a mail, and needs no internet itself ([Mail](#mail)).
 
 | Layer | Where | What it does |
 |---|---|---|
@@ -114,9 +114,17 @@ Players send it from the foot of the home page or a room; the status page shows 
 
 ## Acknowledgments
 
-The players who helped are thanked as a paper thanks people, in one list: `ACKNOWLEDGMENTS.md`, which maintainers write by hand and the home page shows, folded until opened, as the build bundles it. Its sections are Helpful discussions (suggestions, new games and bug reports), Data (word lists) and Pilot study (playtesting), whose headings the page shows in its language. An entry is a name, which follows the nickname rules, perhaps with an `https://` link, or `An anonymous player`; then ` — ` and what they did, in plain English, where `#12` links to that issue or pull request ([format](development.md#acknowledgments)). `parseAcknowledgments()` in `shared/src/acknowledgments.ts` reads the file for the page and for the test that fails CI on a line that breaks the rules. Links get `rel="nofollow ugc noopener"`.
+The players who helped are thanked as a paper thanks people, in one list: `ACKNOWLEDGMENTS.md`, which maintainers write by hand and the home page shows ([Lists of thanks](#lists-of-thanks)). Its sections are Helpful discussions (suggestions, new games and bug reports), Data (word lists) and Pilot study (playtesting), whose headings the page shows in its language. An entry is a name, which follows the nickname rules, perhaps with an `https://` link, or `An anonymous player`; then ` — ` and what they did, in plain English, where `#12` links to that issue or pull request ([format](development.md#acknowledgments)). `shared/src/acknowledgments.ts` has the rules.
 
 The `acknowledgments` table, migration 4, only records whom the operator thanked with `admin.cjs`: `feedback adopt`, for feedback with or without a name, and `acknowledgments add`, by hand, such as for a playtester. Both print the entry for the file. A row counts for an account only when the player left a name while logged in, or the operator named the account, and the account's page shows how often it is thanked for each kind. Which account goes with which entry stays in the database, never in the file or the API. Like the feedback, the table is an archive: no command deletes or changes a row, and deleting an account only unlinks its rows.
+
+## Sponsors
+
+`SPONSORS.md` thanks the sponsors by name alone: no amounts, tiers, or whether they give monthly. Every day, `.github/workflows/sponsors.yml` asks GitHub for the maintainer's public sponsors, ended ones too, the oldest first, and writes their usernames, linked to their profiles, between the two lines that mark the section `GitHub Sponsors` (`scripts/update-sponsors.mjs`); a sponsor who makes their sponsorship private drops off at the next run. A change goes to a PR of the maintainer's own, which merges without a version once CI passes. Maintainers add those who sponsor in other ways, such as a WeChat tip, under `Other ways`, and only if they ask, by a name that follows the nickname rules, perhaps with an `https://` link ([format](development.md#sponsors)). `shared/src/sponsors.ts` has the rules.
+
+## Lists of thanks
+
+The home page folds the acknowledgments and the sponsors until a player opens one, and only then asks `GET /api/acknowledgments` or `GET /api/sponsors` for its sections. The build bundles both files into the server. With `CONTENT_DIR`, the server shows the copies in that directory instead, so a list changes without a new build or a restart: each request compares the file's modification time and size with those of the copy read last, and only a change makes it read the file again. A file that is missing, over 64 KiB, not UTF-8 or against the rules leaves the bundled copy in use, and the log says why with `thanks_list_skipped`, once for each new reason. The server never writes to the directory. One parser checks both files, on the server and in CI (`server/src/thanks.test.ts`), by the rules in `shared/src/lists.ts` and those of each list. Names are plain text; links, only `https://`, open in a new tab with `rel="nofollow ugc noopener"`.
 
 ## Accounts
 
@@ -173,7 +181,7 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 
 ## Logging
 
-One JSON object per line on stdout, never a token: rooms created and closed (`empty`, `idle`, `stale`, `chair`, `restart`), games started and ended, errors, the `stats` line, and named events such as `listening`, `startup_failed`, `database_opened`, `snapshot_failed`, `storage_full`, `feedback_received`, `report_received`, `account_created`, `mail_not_sent`, `words_clashed` and `match_ended`; Node's warnings come as `warning` lines, so every line is JSON.
+One JSON object per line on stdout, never a token: rooms created and closed (`empty`, `idle`, `stale`, `chair`, `restart`), games started and ended, errors, the `stats` line, and named events such as `listening`, `startup_failed`, `database_opened`, `snapshot_failed`, `storage_full`, `feedback_received`, `report_received`, `account_created`, `mail_not_sent`, `words_clashed`, `match_ended` and `thanks_list_skipped`; Node's warnings come as `warning` lines, so every line is JSON.
 
 ## Status
 
