@@ -120,7 +120,7 @@ jobs:
             # error, which stops the job too.
             code=$(grep -vE '(^|/)[^/]+\.md$|^docs/|(^|/)LICENSE[^/]*$|^\.github/[^/]+$' <<< "$files" || [ $? = 1 ])
             if [ -z "$code" ]; then
-              echo "Only docs changed, so the browsers stay closed."
+              echo "Only docs changed, so the browser tests are skipped."
               browsers=false
             fi
           fi
