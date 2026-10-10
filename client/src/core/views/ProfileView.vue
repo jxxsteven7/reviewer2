@@ -21,7 +21,7 @@ import ProfileAvatar from './ProfileAvatar.vue';
 import ProfileEmail from './ProfileEmail.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's own page: its avatar and username, its titles and the acknowledgments linked to
+// The account's own page: its avatar and username, its titles and the acknowledgments counted for
 // it, its email address, its password, its record, and the ways to log out and to delete it.
 const props = defineProps<{ summary: AccountSummary }>();
 const { t } = useI18n();

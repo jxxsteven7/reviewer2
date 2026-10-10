@@ -93,6 +93,12 @@ describe('starting', () => {
     expect(logged('listening')).toMatchObject({ accountsPerHour: 100, cookieSecure: false, mail: false });
   });
 
+  test('keeps as much feedback as MAX_FEEDBACK says', async () => {
+    const started = (await start({ MAX_FEEDBACK: '25000' })) as Running;
+    expect(started.feedback.limits).toMatchObject({ maxEntries: 25_000, maxBytes: 125 * 2 ** 20 });
+    expect(logged('listening')).toMatchObject({ maxFeedback: 25_000 });
+  });
+
   test('gives accounts email with both the server secret and the mailer', async () => {
     const started = (await start({
       SERVER_SECRET: 's'.repeat(44),
@@ -115,15 +121,17 @@ describe('starting', () => {
       storage: 'file',
       file: join(data, DATABASE_FILE),
       journal: 'wal',
-      schema: 4,
+      schema: 5,
     });
-    expect(logged('database_migrated')).toEqual({ from: 0, to: 4, snapshot: null });
+    expect(logged('database_migrated')).toEqual({ from: 0, to: 5, snapshot: null });
     first.feedback.add({
       kind: 'idea',
       text: 'Kept',
       contact: null,
       credit: null,
+      link: null,
       accountId: null,
+      publicIssue: false,
       version: 'test',
       language: 'en',
       page: 'home',
@@ -258,7 +266,9 @@ describe('starting', () => {
       text: '<script>alert(1)</script>',
       contact: null,
       credit: null,
+      link: null,
       accountId: null,
+      publicIssue: false,
       version: 'test',
       language: 'zh',
       page: 'room',

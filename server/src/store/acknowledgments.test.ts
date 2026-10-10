@@ -29,15 +29,11 @@ const entry = (changes = {}) => ({
 });
 
 describe('the acknowledgments', () => {
-  test('are listed for everyone by name, kind and day, the oldest first, and in full for the operator', () => {
+  test('are kept with the day they were given, and listed in full for the operator', () => {
     const ann = accounts.create('Ann', 'ann', 'h');
     expect(store.add(entry({ feedbackId: 7, accountId: ann?.id }))).toBe(1);
     now += 36 * 60 * 60_000;
-    expect(store.add(entry({ name: 'Bob', kind: 'playtesting' }))).toBe(2);
-    expect(store.list()).toEqual([
-      { name: 'Ann L', kind: 'feedback', date: '2026-10-10' },
-      { name: 'Bob', kind: 'playtesting', date: '2026-10-12' },
-    ]);
+    expect(store.add(entry({ name: '', feedbackId: 8 }))).toBe(2);
     expect(store.all()).toEqual([
       {
         id: 1,
@@ -48,18 +44,17 @@ describe('the acknowledgments', () => {
         accountId: 1,
         username: 'Ann',
       },
+      // Feedback that came without a name.
       {
         id: 2,
-        name: 'Bob',
-        kind: 'playtesting',
+        name: '',
+        kind: 'feedback',
         creditedAt: '2026-10-12T00:00:00.000Z',
-        feedbackId: null,
+        feedbackId: 8,
         accountId: null,
         username: null,
       },
     ]);
-    expect(store.byId(2)).toMatchObject({ name: 'Bob' });
-    expect(store.byId(3)).toBeUndefined();
   });
 
   test('adopt a piece of feedback once', () => {
@@ -69,39 +64,36 @@ describe('the acknowledgments', () => {
     expect(store.add(entry())).toBe(3);
   });
 
-  test('are linked to an account and unlinked, counted on it by kind, and removed', () => {
+  test('are counted on their account by kind, until the account is deleted', () => {
     const ann = accounts.create('Ann', 'ann', 'h');
-    if (!ann) throw new Error('no account');
-    store.add(entry());
-    store.add(entry({ kind: 'words' }));
-    store.add(entry({ kind: 'words' }));
-    store.add(entry({ kind: 'playtesting' }));
+    const bob = accounts.create('Bob', 'bob', 'h');
+    if (!ann || !bob) throw new Error('no account');
     expect(store.counts(ann.id)).toEqual([]);
-    for (const id of [1, 2, 3, 4]) expect(store.setAccount(id, ann.id)).toBe(true);
-    expect(store.setAccount(5, ann.id)).toBe(false);
+    store.add(entry({ kind: 'playtesting', accountId: ann.id }));
+    store.add(entry({ kind: 'words', accountId: ann.id }));
+    store.add(entry({ kind: 'words', accountId: ann.id }));
+    store.add(entry({ accountId: ann.id }));
+    store.add(entry({ accountId: bob.id }));
+    store.add(entry());
     // In the order of the kinds, not of the alphabet.
     expect(store.counts(ann.id)).toEqual([
       { kind: 'feedback', count: 1 },
       { kind: 'words', count: 2 },
       { kind: 'playtesting', count: 1 },
     ]);
-    expect(store.setAccount(2, null)).toBe(true);
-    expect(store.remove(4)).toBe(true);
-    expect(store.remove(4)).toBe(false);
-    expect(store.counts(ann.id)).toEqual([
-      { kind: 'feedback', count: 1 },
-      { kind: 'words', count: 1 },
-    ]);
-    expect(store.list()).toHaveLength(3);
     // A deleted account takes nothing with it but the link.
     accounts.delete(ann.id);
-    expect(store.list().map(({ name }) => name)).toEqual(['Ann L', 'Ann L', 'Ann L']);
-    expect(store.all().every(({ accountId, username }) => accountId === null && username === null)).toBe(true);
+    expect(store.all()).toHaveLength(6);
+    expect(store.all().filter(({ accountId }) => accountId !== null)).toEqual([
+      expect.objectContaining({ id: 5, accountId: bob.id, username: 'Bob' }),
+    ]);
+    expect(store.all().map(({ name }) => name)).toEqual(Array(6).fill('Ann L'));
   });
 
-  test('thank ideas and bugs as feedback, and the word lists as words', () => {
+  test('thank ideas, new games and bugs as feedback, and the word lists as words', () => {
     expect(kindOfFeedback('idea')).toBe('feedback');
     expect(kindOfFeedback('bug')).toBe('feedback');
+    expect(kindOfFeedback('game')).toBe('feedback');
     expect(kindOfFeedback('words')).toBe('words');
   });
 });

@@ -44,7 +44,7 @@ Everything after the page load goes over Socket.IO, except the account API ([Acc
 
 | Message | Payload | Who and errors |
 |---|---|---|
-| `meta:feedback` | `kind`, `text`, `contact`?, `version`, `language`, `page` | Anyone ([Feedback](#feedback)) |
+| `meta:feedback` | `kind`, `text`, `contact`?, `credit`?, `link`?, `publicIssue`?, `version`, `language`, `page` | Anyone ([Feedback](#feedback)) |
 | `room:create` | `game`, `language`, `fields`, `settings`?, `name` (guests), `play`, `match`? | Anyone; `bad_settings`, `bad_match` |
 | `room:join` | `code`; `name`, `play` (newcomers); `roomId` (returning) | Anyone; `removed_recently`, `room_full`, `name_required` |
 | `room:watch` | `code`, `roomId` (returning screen) | A screen |
@@ -93,16 +93,20 @@ Files under `/assets/` carry a content hash and are cached for good; everything 
 - **SQLite** through `node:sqlite`, synchronous; WAL mode, a 5-second wait on a lock, secure delete.
 - **Migrations:** `PRAGMA user_version` and `server/src/store/migrations.ts`, run on start in one transaction, after a snapshot.
 - **Snapshots** every hour into `snapshots/`, the last three kept.
-- **The disk.** Feedback stops at 10,000 pieces or 50 MB. Past 1 GB nothing new is kept (`storage_full`). Avatars up to 2 GB.
+- **The disk.** Feedback stops at 10,000 pieces or 50 MB, which `MAX_FEEDBACK` raises together; nothing is deleted to make room, spam included ([Feedback](#feedback)). Past 1 GB nothing new is kept (`storage_full`). Avatars up to 2 GB.
 - **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback and its acknowledgments stay, no longer linked to it.
 
 ## Feedback
 
-Players send it from the foot of the home page or a room; the status page shows it. The rules are in `shared/src/feedback.ts`, run on both sides. **Kept:** text, contact, kind, version, language, page, time, for a bug only the user agent, and with a name for the acknowledgments the account it was given from ([Acknowledgments](#acknowledgments)). **Not kept:** address, nickname, token, member key, room code. When full, players are told (`feedback_full`). **Contacts are cleared after 90 days** (`contacts_cleared`).
+Players send it from the foot of the home page or a room; the status page shows it. The rules are in `shared/src/feedback.ts`, run on both sides. **Kept:** text, contact, kind (a suggestion, a new game, a bug or the word lists), version, language, page, time, for a bug only the user agent, whether the player agreed to a public GitHub issue (no unless ticked), and with a name for the acknowledgments its `https://` link and the account it was given from ([Acknowledgments](#acknowledgments)). **Not kept:** address, nickname, token, member key, room code. When full, players are told (`feedback_full`).
+
+**An archive.** The feedback is the project's archive of suggestions, kept for good: no code deletes a row or changes what a player sent, and `server/src/store/archive.test.ts` fails if any is added. The only changes are what players were promised and the operator's notes: **contacts are cleared after 90 days** (`contacts_cleared`), deleting an account unlinks its feedback, and `feedback issue` records the GitHub issue that feedback became, which only feedback whose player agreed may become, with its text and name and never its contact. The table was rebuilt once, in migration 5, every row copied with its id, so that its kinds are checked in `shared/src/feedback.ts` alone and a new kind needs no migration; since then, migrations only add to it.
 
 ## Acknowledgments
 
-The players who helped are thanked by name, as a paper thanks them: at the foot of the home page, folded until opened, and in `ACKNOWLEDGMENTS.md`. The operator writes the list with `admin.cjs` ([development.md](development.md#accounts-and-email)), by adopting feedback that came with a name or by adding someone by hand, such as a playtester; feedback without a name stays anonymous. An entry is a name, which follows the nickname rules, what it is for (ideas and bug reports, word lists or playtesting) and the day; nothing of the feedback, the contact or the account is public. An entry may be linked to an account, by default the one the feedback came from, and the account's page counts them; deleting the account unlinks its entries and keeps their names. The `acknowledgments` table, migration 4, holds the list, and `GET /api/acknowledgments` gives everyone the names, kinds and days.
+The players who helped are thanked as a paper thanks people, in one list: `ACKNOWLEDGMENTS.md`, which maintainers write by hand and the home page shows, folded until opened, as the build bundles it. Its sections are Helpful discussions (suggestions, new games and bug reports), Data (word lists) and Pilot study (playtesting), whose headings the page shows in its language. An entry is a name, which follows the nickname rules, perhaps with an `https://` link, or `An anonymous player`; then ` — ` and what they did, in plain English, where `#12` links to that issue or pull request ([format](development.md#acknowledgments)). `parseAcknowledgments()` in `shared/src/acknowledgments.ts` reads the file for the page and for the test that fails CI on a line that breaks the rules. Links get `rel="nofollow ugc noopener"`.
+
+The `acknowledgments` table, migration 4, only records whom the operator thanked with `admin.cjs`: `feedback adopt`, for feedback with or without a name, and `acknowledgments add`, by hand, such as for a playtester. Both print the entry for the file. A row counts for an account only when the player left a name while logged in, or the operator named the account, and the account's page shows how often it is thanked for each kind. Which account goes with which entry stays in the database, never in the file or the API. Like the feedback, the table is an archive: no command deletes or changes a row, and deleting an account only unlinks its rows.
 
 ## Accounts
 
@@ -122,7 +126,6 @@ Optional: a username and a password, with an avatar, a record of games, titles, 
 |---|---|
 | `GET /api/account` | The account, or null |
 | `GET /api/account/records` | The record (login) |
-| `GET /api/acknowledgments` | The acknowledgments: name, kind and day of each |
 | `POST /api/register` | `username`, `password`; logs in |
 | `POST /api/login`, `/api/logout` | |
 | `POST /api/account/username` | Renames (login) |
@@ -164,4 +167,4 @@ One JSON object per line on stdout, never a token: rooms created and closed (`em
 
 ## Status
 
-`server/src/stats.ts` counts for both the log and the page: no addresses, tokens, names or room codes. The `stats` line, every 5 minutes: rooms, members, connections by transport and country, memory. The status page, with `STATUS_PORT`, listens on `127.0.0.1` only and answers only a `Host` of `localhost` or `127.0.0.1`, which is why it needs no password. `/` is the page, `/status.json` the numbers, `/feedback` what players sent, each with its name for the acknowledgments, its account, whether it was adopted and whether the name is another account's username; of accounts, the page shows only how many there are and how many are new in the last 7 days; no script, nothing written, English only. Countries come from Cloudflare's `CF-IPCountry` header, read only with `TRUST_PROXY` on; any other proxy must drop it ([development.md](development.md#running-in-production)).
+`server/src/stats.ts` counts for both the log and the page: no addresses, tokens, names or room codes. The `stats` line, every 5 minutes: rooms, members, connections by transport and country, memory. The status page, with `STATUS_PORT`, listens on `127.0.0.1` only and answers only a `Host` of `localhost` or `127.0.0.1`, which is why it needs no password. `/` is the page, `/status.json` the numbers, `/feedback` what players sent, of every kind or of one, each with its name for the acknowledgments, its link, its account, whether it was adopted, whether the name is another account's username and whether it may be, or was, published as an issue; of accounts, the page shows only how many there are and how many are new in the last 7 days; no script, nothing written, English only. Countries come from Cloudflare's `CF-IPCountry` header, read only with `TRUST_PROXY` on; any other proxy must drop it ([development.md](development.md#running-in-production)).

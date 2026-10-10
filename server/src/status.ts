@@ -1,3 +1,4 @@
+import { FEEDBACK_KINDS, type FeedbackKind } from '@reviewer2/shared';
 import type { RequestListener } from 'node:http';
 import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
@@ -15,7 +16,8 @@ import type { FeedbackStore } from './store/feedback';
 // whatever stands in front of the server, such as a reverse proxy, leads to the game's port
 // alone. That is why it needs no password. `/` is the page and `/status.json` the same numbers
 // for scripts. `/feedback` is the feedback that players sent, a page of it at a time:
-// `/feedback?before=<id>` shows what came before that one. All of it is read-only.
+// `/feedback?before=<id>` shows what came before that one, and `/feedback?kind=<kind>` only the
+// feedback of one kind. All of it is read-only.
 
 export const STATUS_HOST = '127.0.0.1';
 
@@ -32,14 +34,19 @@ type Log = (event: string, fields?: Record<string, unknown>) => void;
 // How much feedback the feedback page shows at a time.
 export const FEEDBACK_SHOWN = 50;
 
-// The feedback for the page, before the id in the query when it has one, and whether there is
-// more before that. A query that isn't a number is taken for none.
+// The feedback for the page, before the id in the query when it has one and of the kind in it
+// when it has one, and whether there is more before that. A query that isn't a number, or a kind
+// that the server doesn't know, is taken for none.
 function feedbackListing(feedback: FeedbackStore, target: string): FeedbackListing {
   const query = new URLSearchParams(target.slice(pathOf(target).length));
   const before = /^\d{1,15}$/.test(query.get('before') ?? '') ? Number(query.get('before')) : undefined;
-  const entries = feedback.latest(FEEDBACK_SHOWN + 1, before);
+  const asked = query.get('kind') ?? '';
+  const kind = (FEEDBACK_KINDS as readonly string[]).includes(asked) ? (asked as FeedbackKind) : null;
+  const entries = feedback.latest(FEEDBACK_SHOWN + 1, before, kind);
   return {
     total: feedback.count(),
+    kinds: feedback.kinds(),
+    kind,
     entries: entries.slice(0, FEEDBACK_SHOWN),
     paged: before !== undefined,
     older: entries.length > FEEDBACK_SHOWN,

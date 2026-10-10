@@ -40,14 +40,16 @@ const matchId = z.string().max(64);
 export const ROOM_MESSAGES = {
   'sys:ping': none,
   'meta:fields': none,
-  // Feedback for the author. Its text, contact and credit are for the rules in feedback.ts to
-  // judge, which refuse a long text before looking at it, so that it gets feedback_too_long and
+  // Feedback for the author. Its text, contact, credit and link are for the rules in feedback.ts
+  // to judge, which refuse a long text before looking at it, so that it gets feedback_too_long and
   // not bad_request. The server takes no message of more than 16 KB at all (server.ts).
   'meta:feedback': z.object({
     kind: z.enum(FEEDBACK_KINDS),
     text: z.string(),
     contact: z.string().optional(),
     credit: z.string().optional(),
+    link: z.string().optional(),
+    publicIssue: z.boolean().optional(),
     version: z.string().max(64),
     language: z.enum(LANGUAGES),
     page: z.enum(FEEDBACK_PAGES),

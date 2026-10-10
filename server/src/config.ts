@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { MIN_SECRET_LENGTH } from './accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
+import { DEFAULT_FEEDBACK_LIMITS } from './store/feedback';
 
 // Settings come from environment variables; docs/development.md lists them.
 export interface Config {
@@ -15,6 +16,9 @@ export interface Config {
   cookieSecure: boolean;
   roomsPerMinute: number;
   feedbackPerWindow: number;
+  // How many pieces of feedback the server keeps, with room for them, before it takes no more
+  // (feedbackLimits() in store/feedback.ts).
+  maxFeedback: number;
   // How many accounts one address may create in an hour (docs/architecture.md).
   accountsPerHour: number;
   // Where the database and its snapshots are kept, or null for a database in memory, which is
@@ -111,6 +115,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       env.FEEDBACK_PER_10_MINUTES,
       DEFAULT_SOCKET_LIMITS.feedbackPerWindow,
     ),
+    // Feedback is never deleted, so this is what to raise once the server is full of it.
+    maxFeedback: wholeNumber('MAX_FEEDBACK', env.MAX_FEEDBACK, DEFAULT_FEEDBACK_LIMITS.maxEntries),
     accountsPerHour: wholeNumber(
       'ACCOUNTS_PER_HOUR',
       env.ACCOUNTS_PER_HOUR,

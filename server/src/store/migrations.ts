@@ -4,10 +4,10 @@
 // schema is a new migration at the end.
 
 export const MIGRATIONS: readonly string[] = [
-  // 1: feedback from players. The server never deletes a row, but the operator may, to make room
-  // (docs/architecture.md); AUTOINCREMENT keeps a deleted id from being given out again, so that
-  // an id in the log names one piece of feedback for good. The contact is cleared 90 days after
-  // the feedback came, which the partial index finds quickly.
+  // 1: feedback from players. It is an archive, and nothing deletes a row (docs/architecture.md);
+  // AUTOINCREMENT would keep a deleted id from being given out again anyway, so that an id in the
+  // log names one piece of feedback for good. The contact is cleared 90 days after the feedback
+  // came, which the partial index finds quickly.
   `
   CREATE TABLE feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,14 +129,15 @@ export const MIGRATIONS: readonly string[] = [
   // 4: acknowledgments (docs/architecture.md#acknowledgments).
   //
   // - feedback gets the name that the player wants to be thanked by, if they gave one, and the
-  //   account they were logged in to when they did, which the operator links the acknowledgment to
-  //   unless they decide otherwise. The account goes from the feedback when it is deleted.
-  // - acknowledgments: the list itself. Each row is the name, what it is for, when it was given, the
-  //   feedback it came from, if any, and the account it is linked to, if any. The name stays when
-  //   the account is deleted: it is the public name its owner gave, not the account. The feedback's
-  //   number is kept as a number and not as a foreign key, so that the operator may delete feedback
-  //   with sqlite3, which runs with foreign keys off, without leaving a row that the next migration
-  //   refuses. A piece of feedback is adopted once.
+  //   account they were logged in to when they did, which the acknowledgment is counted for. The
+  //   account goes from the feedback when it is deleted.
+  // - acknowledgments: whom the operator thanked; the public list is ACKNOWLEDGMENTS.md. Each row is
+  //   the name, what it is for, when it was given, the feedback it came from, if any, and the
+  //   account it is counted for, if any. The name stays when the account is deleted: it is the
+  //   public name its owner gave, not the account. The feedback's number is kept as a number and
+  //   not as a foreign key, so that a row of feedback deleted by hand with sqlite3, which runs with
+  //   foreign keys off, wouldn't leave a row that the next migration refuses. A piece of feedback is
+  //   adopted once.
   `
   ALTER TABLE feedback ADD COLUMN credit TEXT;
   ALTER TABLE feedback ADD COLUMN account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL;
@@ -151,5 +152,41 @@ export const MIGRATIONS: readonly string[] = [
     account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL
   ) STRICT;
   CREATE INDEX acknowledgments_account ON acknowledgments (account_id) WHERE account_id IS NOT NULL;
+  `,
+  // 5: the feedback table rebuilt, once, so that its kind is no longer fixed by a CHECK: the kinds
+  // are in shared/src/feedback.ts alone, and a new one is a change to the code. Every row is kept as
+  // it was. It is done as SQLite's guide to changing a table says, with foreign keys off
+  // (migrate() in database.ts): a new table, every row copied with its id, the count that
+  // AUTOINCREMENT goes on from carried over, the old table dropped, the new one renamed and the
+  // indexes made again. The archive's guard (archive.test.ts) allows this here alone; any other
+  // migration only adds to the table. The new table has the columns of the old one, and three more:
+  // the link that the player gave with their name, whether they agreed to the feedback being
+  // published as a GitHub issue, which is NULL for feedback from before they were asked, and the
+  // number of that issue, once the operator has published it.
+  `
+  CREATE TABLE new_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    contact TEXT,
+    version TEXT NOT NULL,
+    language TEXT NOT NULL CHECK (language IN ('zh', 'en')),
+    page TEXT NOT NULL CHECK (page IN ('home', 'room')),
+    user_agent TEXT,
+    credit TEXT,
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    link TEXT,
+    public_issue INTEGER CHECK (public_issue IN (0, 1)),
+    issue INTEGER CHECK (issue > 0)
+  ) STRICT;
+  INSERT INTO new_feedback (id, created_at, kind, text, contact, version, language, page, user_agent, credit, account_id)
+    SELECT id, created_at, kind, text, contact, version, language, page, user_agent, credit, account_id FROM feedback;
+  DELETE FROM sqlite_sequence WHERE name = 'new_feedback';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_feedback', seq FROM sqlite_sequence WHERE name = 'feedback';
+  DROP TABLE feedback;
+  ALTER TABLE new_feedback RENAME TO feedback;
+  CREATE INDEX feedback_contact_expiry ON feedback (created_at) WHERE contact IS NOT NULL;
+  CREATE INDEX feedback_account ON feedback (account_id) WHERE account_id IS NOT NULL;
   `,
 ];

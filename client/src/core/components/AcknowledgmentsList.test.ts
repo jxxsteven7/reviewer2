@@ -1,72 +1,90 @@
 // @vitest-environment happy-dom
-import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { mount } from '@vue/test-utils';
+import { describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
-import AcknowledgmentsList from './AcknowledgmentsList.vue';
 
-const api = vi.hoisted(() => ({
-  request: vi.fn<(path: string) => Promise<{ ok: true; acknowledgments: object[] } | { ok: false; error: string }>>(),
-}));
-vi.mock('../account', () => api);
+// The list is ACKNOWLEDGMENTS.md as the build bundles it; here, a file made up for the tests.
+const file = vi.hoisted(() => ({ default: '' }));
+vi.mock('../../../../ACKNOWLEDGMENTS.md?raw', () => file);
 
-const LIST = [
-  { name: 'Ann L', kind: 'feedback', date: '2026-10-10' },
-  { name: 'Bob', kind: 'playtesting', date: '2026-10-12' },
-  { name: 'octocat', kind: 'feedback', date: '2026-10-11' },
-];
+const DASH = '\u{2014}';
+const FILE = [
+  '# Acknowledgments',
+  '',
+  'We thank the players who helped.',
+  '',
+  '## Pilot study',
+  '',
+  `- Bob ${DASH} played the first games`,
+  '',
+  '## Helpful discussions',
+  '',
+  `- [Ann L](https://ann.example/) ${DASH} suggested public rooms (#40)`,
+  `- An anonymous player ${DASH} reported the reconnect bug (#42, #43)`,
+  `- Dr\\. Who ${DASH} found a typo`,
+  `- Dr. Who ${DASH} breaks the rules, and is left out`,
+].join('\n');
 
 const i18n = (locale: 'en' | 'zh' = 'en') => createI18n({ legacy: false, locale, messages: { en, zh } });
 
-beforeEach(() => {
-  api.request.mockReset();
-  api.request.mockResolvedValue({ ok: true, acknowledgments: LIST });
-});
-
-// Opens the fold, as a tap on its summary does.
-async function open(locale: 'en' | 'zh' = 'en') {
-  const wrapper = mount(AcknowledgmentsList, { global: { plugins: [i18n(locale)] } });
-  (wrapper.get('details').element as HTMLDetailsElement).open = true;
-  await wrapper.get('details').trigger('toggle');
-  await flushPromises();
-  return wrapper;
+async function mounted(source: string, locale: 'en' | 'zh' = 'en') {
+  file.default = source;
+  vi.resetModules();
+  const { default: List } = await import('./AcknowledgmentsList.vue');
+  return mount(List, { global: { plugins: [i18n(locale)] } });
 }
 
 describe('the acknowledgments', () => {
-  test('are fetched when the fold is opened, once, and grouped by kind in the order of the kinds', async () => {
-    const closed = mount(AcknowledgmentsList, { global: { plugins: [i18n()] } });
-    expect(closed.find('li').exists()).toBe(false);
-    expect(api.request).not.toHaveBeenCalled();
-    const wrapper = await open();
-    expect(api.request).toHaveBeenCalledWith('/api/acknowledgments');
+  test('show the sections of the file, in its order, under the headings of the interface', async () => {
+    const wrapper = await mounted(FILE);
     const groups = wrapper.findAll('section');
-    expect(groups.map((group) => group.get('h3').text())).toEqual(['Ideas and bug reports', 'Playtesting']);
-    expect(groups[0]?.findAll('li').map((item) => item.text())).toEqual(['Ann LOct 10, 2026', 'octocatOct 11, 2026']);
-    expect(groups[1]?.findAll('li').map((item) => item.text())).toEqual(['BobOct 12, 2026']);
-    await wrapper.get('details').trigger('toggle');
-    expect(api.request).toHaveBeenCalledOnce();
+    expect(groups.map((group) => group.get('h3').text())).toEqual(['Pilot study', 'Helpful discussions']);
+    expect(groups[0]?.findAll('li').map((item) => item.text())).toEqual(['Bob \u{2014} played the first games']);
+    expect(groups[1]?.findAll('li').map((item) => item.text())).toEqual([
+      'Ann L \u{2014} suggested public rooms (#40)',
+      'An anonymous player \u{2014} reported the reconnect bug (#42, #43)',
+      'Dr. Who \u{2014} found a typo',
+    ]);
   });
 
-  test('write the day in the language of the page', async () => {
-    const wrapper = await open('zh');
+  test("link a name to its player's page, as the site's own links are not, and numbers to the repository", async () => {
+    const wrapper = await mounted(FILE);
+    const ann = wrapper.get('a.name');
+    expect(ann.text()).toBe('Ann L');
+    expect(ann.attributes()).toMatchObject({
+      href: 'https://ann.example/',
+      target: '_blank',
+      rel: 'nofollow ugc noopener',
+    });
+    expect(wrapper.findAll('a.name')).toHaveLength(1);
+    const issues = wrapper.findAll('.what a');
+    expect(issues.map((link) => [link.text(), link.attributes('href')])).toEqual([
+      ['#40', 'https://github.com/jxxsteven7/reviewer2/issues/40'],
+      ['#42', 'https://github.com/jxxsteven7/reviewer2/issues/42'],
+      ['#43', 'https://github.com/jxxsteven7/reviewer2/issues/43'],
+    ]);
+  });
+
+  test('call the sections and an anonymous player in the language of the page, and leave the rest in English', async () => {
+    const wrapper = await mounted(FILE, 'zh');
     // "Acknowledgments" in Chinese.
     expect(wrapper.get('summary').text()).toBe('\u81f4\u8c22');
-    expect(wrapper.get('li').text()).toContain('2026');
-    expect(wrapper.get('li').text()).not.toContain('Oct');
+    // "Pilot study" and "Helpful discussions".
+    expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual([
+      '\u9884\u5b9e\u9a8c',
+      '\u6709\u76ca\u7684\u8ba8\u8bba',
+    ]);
+    // "An anonymous player".
+    expect(wrapper.findAll('li')[2]?.text()).toBe(
+      '\u4e00\u4f4d\u533f\u540d\u73a9\u5bb6 \u{2014} reported the reconnect bug (#42, #43)',
+    );
   });
 
-  test('say so when there is nobody yet, and when the list could not be fetched', async () => {
-    api.request.mockResolvedValue({ ok: true, acknowledgments: [] });
-    expect((await open()).text()).toContain('No one yet.');
-
-    api.request.mockResolvedValue({ ok: false, error: 'offline' });
-    const wrapper = await open();
-    expect(wrapper.get('[role="alert"]').text()).toBe("You're offline. Waiting for the connection...");
-    // Opening the fold again tries again.
-    api.request.mockResolvedValue({ ok: true, acknowledgments: LIST });
-    await wrapper.get('details').trigger('toggle');
-    await flushPromises();
-    expect(wrapper.findAll('li')).toHaveLength(3);
+  test('say so when there is nobody yet', async () => {
+    const wrapper = await mounted('# Acknowledgments\n\n_No one yet._\n');
+    expect(wrapper.text()).toContain('No one yet. Be the first!');
+    expect(wrapper.find('section').exists()).toBe(false);
   });
 });
