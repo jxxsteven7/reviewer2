@@ -23,8 +23,19 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 - Mobile-first; works in WeChat's browser
 - Reconnects after a locked screen to the same seat
 - Server-authoritative: guessers can't see unrevealed colors, even with developer tools
-- Optional accounts: an avatar, a record of games, and an email address only for resetting a password, never stored
+- Optional accounts: an avatar and a record of games; see [Privacy](#privacy)
 - Matches: several scored games in a row, with titles
+
+## Privacy
+
+What we promise players:
+
+- **No account needed.** A nickname is enough to play.
+- **Passwords** are kept only as a one-way hash. Nobody, the operator included, can read them.
+- **Email addresses are never stored.** An address bound to an account is kept only as a keyed fingerprint, used to check it and to send a password reset.
+- **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
+- **Feedback** is read only by the author; a contact left with it is deleted after 90 days.
+- **Deleting an account** deletes everything of it; backups keep it only until they expire.
 
 ## Status
 
