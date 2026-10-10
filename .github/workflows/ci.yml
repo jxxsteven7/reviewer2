@@ -2,7 +2,8 @@
 # allows, checks the word lists, plays it end to end in real browsers, and builds it and checks
 # that the build serves it. Each job's name is a required status check, except the browser jobs,
 # which report through `End-to-end`; see docs/maintainers.md. There are no `paths:` filters on
-# purpose: a required check that a filter skips stays pending and blocks the merge.
+# purpose: a required check that a filter skips stays pending and blocks the merge. A PR that
+# changes only docs skips the browsers inside their jobs instead, which still pass.
 
 name: CI
 
@@ -71,9 +72,9 @@ jobs:
 
   e2e-browser:
     # Real browsers against the production build. One job per browser project, side by side,
-    # each with only the browser it runs: the WebKit one is the slowest, at about 6 minutes when
-    # all goes well, against 8 to 10 for every project in one job.
-    name: End-to-end on ${{ matrix.project }}
+    # each with only the browser it runs. WebKit is the slowest, so its tests are split over two
+    # jobs; Playwright's --shard deals the test files out between them.
+    name: End-to-end on ${{ matrix.project }}${{ matrix.shards && format(', part {0} of {1}', matrix.shard, matrix.shards) || '' }}
     runs-on: ubuntu-latest
     # A browser install or a server that hangs must not hold the check for the six hours that
     # GitHub allows a job. Two full games that each time out twice take about 12 minutes.
@@ -91,23 +92,64 @@ jobs:
             browser: chromium
           - project: iphone-webkit
             browser: webkit
+            shard: 1
+            shards: 2
+          - project: iphone-webkit
+            browser: webkit
+            shard: 2
+            shards: 2
     steps:
       - uses: actions/checkout@v5
+      - name: Decide whether the browsers are needed
+        # A PR that changes only docs, licenses and the files under .github that are not
+        # workflows gets the job without the browsers. Pushes to main always run them.
+        id: need
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          browsers=true
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            git fetch --no-tags --depth=1 origin "$BASE"
+            if ! git diff --name-only "$BASE" HEAD | grep -qvE '(^|/)[^/]+\.md$|^docs/|^LICENSE$|^words/LICENSE$|^\.github/(FUNDING\.yml|ISSUE_TEMPLATE/)'; then
+              echo "Only docs changed, so the browsers stay closed."
+              browsers=false
+            fi
+          fi
+          echo "browsers=$browsers" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v5
+        if: steps.need.outputs.browsers == 'true'
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+        if: steps.need.outputs.browsers == 'true'
+      - name: Read Playwright's version
+        if: steps.need.outputs.browsers == 'true'
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Keep the browser between runs
+        # The download is the slow part of the install; the system packages still come from apt.
+        if: steps.need.outputs.browsers == 'true'
+        id: browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
       - run: npx playwright install --with-deps ${{ matrix.browser }}
+        if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit != 'true'
+      - run: npx playwright install-deps ${{ matrix.browser }}
+        if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit == 'true'
       - run: npm run build
-      - run: npm run test:e2e -- --project=${{ matrix.project }}
+        if: steps.need.outputs.browsers == 'true'
+      - run: npm run test:e2e -- --project=${{ matrix.project }} ${{ matrix.shards && format('--shard={0}/{1}', matrix.shard, matrix.shards) || '' }}
+        if: steps.need.outputs.browsers == 'true'
       - name: Keep the report
         # Also of a run that passed: a test that failed once and passed on its retry is in it,
         # with the trace of the attempt that failed.
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.need.outputs.browsers == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.project }}
+          name: playwright-report-${{ matrix.project }}${{ matrix.shards && format('-{0}of{1}', matrix.shard, matrix.shards) || '' }}
           path: playwright-report/
           retention-days: 7
 
