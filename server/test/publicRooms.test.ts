@@ -140,6 +140,26 @@ describe('a public room', () => {
     expect(await another.send('room:watch', { code })).toEqual({ ok: false, error: 'account_required' });
   });
 
+  test('is joined whatever wrong codes the address has sent, since the list gives anyone its code', async () => {
+    server = await startServer({ socketLimits: { failedLookupsPerMinute: 2 } });
+    const ann = await loggedIn('Ann');
+    const { code } = await publicRoom(ann);
+    const { chair: other, code: privateCode } = await createRoom(server.url, 'Guest');
+    track(other);
+    // Someone at the same address, as every client here is, has used up the wrong codes of a minute.
+    const guesser = track(await TestClient.connect(server.url));
+    for (let i = 0; i < 2; i += 1) {
+      expect(await guesser.send('room:join', { code: 'ZZZZ' })).toEqual({ ok: false, error: 'room_not_found' });
+    }
+    expect(await guesser.send('room:join', { code: privateCode, name: 'Gus' })).toEqual({
+      ok: false,
+      error: 'rate_limited',
+    });
+    const bob = track(await (await loggedIn('Bob')).connect());
+    expect(await bob.send('room:join', { code, play: true })).toMatchObject({ ok: true });
+    expect(await guesser.send('room:watch', { code })).toEqual({ ok: false, error: 'account_required' });
+  });
+
   test('keeps a screen that was up when it was listed also once its browser has logged in', async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');

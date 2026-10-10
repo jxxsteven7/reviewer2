@@ -85,7 +85,7 @@ A match plays a set number of games, scores every player in each, and ranks them
 ## Limits and housekeeping
 
 - **Rate:** about 10 messages a second per connection, bursts of 20; a message is at most 16 KB.
-- **Per address:** 5 rooms a minute (`ROOMS_PER_MINUTE`), 20 codes a minute that belong to no room, 3 pieces of feedback every 10 minutes (`FEEDBACK_PER_10_MINUTES`). Behind a reverse proxy, `TRUST_PROXY` takes the address from `X-Forwarded-For`. **Per account:** 5 reports an hour.
+- **Per address:** 5 rooms a minute (`ROOMS_PER_MINUTE`), 20 codes a minute that belong to no room (past them, only rooms the player is in and public rooms are found), 3 pieces of feedback every 10 minutes (`FEEDBACK_PER_10_MINUTES`). Behind a reverse proxy, `TRUST_PROXY` takes the address from `X-Forwarded-For`. **Per account:** 5 reports an hour.
 - **In one place:** `SocketLimits` in `server/src/core/socket.ts`, `RoomLimits` in `server/src/core/rooms.ts`. 30 players per room, 2000 rooms per server.
 - **The sweep,** once a minute, closes rooms with nobody online for 30 minutes or nothing happening for 6 hours, and drops members offline for 10 minutes from waiting rooms.
 - **Stopping:** every connection hears `room:closed` with `restart`, then the database closes; after 5 seconds the process ends anyway (`stop_timed_out`). A wrong setting, library or database stops the server before it listens (`startup_failed`, `listen_failed`).

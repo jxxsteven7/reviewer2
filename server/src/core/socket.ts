@@ -374,11 +374,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   //
   // - whoever is in it already, by their token or on this very connection;
   // - whoever gives its room ID. That takes having been sent it, and a wrong one finds nothing
-  //   whatever the code, so such a lookup tells nobody anything about codes.
+  //   whatever the code, so such a lookup tells nobody anything about codes;
+  // - whoever comes to a public room, whose code the list gives to anyone (meta:rooms).
   function lookup(conn: Connection, code: string, roomId?: string): Room | 'room_not_found' | 'rate_limited' {
     const room = rooms.find(code);
     if (roomId !== undefined) return room?.id === roomId ? room : 'room_not_found';
-    if (room && (conn.room === room || room.memberByKey(conn.key))) return room;
+    if (room && (conn.room === room || room.memberByKey(conn.key) || room.public)) return room;
     if (!failedLookups.allowed(conn.ip)) return 'rate_limited';
     if (room) return room;
     failedLookups.add(conn.ip);
