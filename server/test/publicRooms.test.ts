@@ -140,6 +140,25 @@ describe('a public room', () => {
     expect(await another.send('room:watch', { code })).toEqual({ ok: false, error: 'account_required' });
   });
 
+  test('keeps a screen that was up when it was listed also once its browser has logged in', async () => {
+    server = await startServer();
+    const ann = await loggedIn('Ann');
+    const { chair, code, roomId } = await publicRoom(ann, { public: false });
+    const browser = new Browser(server.url);
+    const projector = track(await browser.connect());
+    expect(await projector.send('room:watch', { code })).toMatchObject({ ok: true });
+    expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
+    await projector.waitFor((state) => state.public);
+    // Someone logs in on the projector's computer, with an account that has no seat in the room,
+    // and the screen comes back before its old connection was found to be gone.
+    expect((await browser.register('Projector')).body).toMatchObject({ ok: true });
+    const back = track(await browser.connect({ token: projector.token, watch: code, roomId }));
+    await back.waitFor((state) => state.code === code && state.me === null);
+    expect(await back.send('room:watch', { code, roomId })).toMatchObject({ ok: true });
+    await until(() => projector.closed.includes('left'), 'the old connection hears');
+    expect(server.app.rooms.find(code)?.screens.size).toBe(1);
+  });
+
   test('is closed to an account the operator has barred, who may still play in private rooms', async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');

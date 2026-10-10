@@ -342,17 +342,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // screen is a member's: it takes an account that has a seat here, so that the chair can remove
   // whoever put it up, and their screens with them, and an account has one screen there, which a
   // new one replaces (Room.addScreen), so that nobody fills all five. The screens that were up
-  // when the room was listed stay, as the guests who were there do.
+  // when the room was listed stay, as the guests who were there do. Such a screen is known by the
+  // key it had then, which stays the browser's key as a guest after the browser has logged in.
   function watch(socket: Socket, room: Room): Reply {
     const conn = connection(socket);
     if (conn.room !== room || !conn.screen) {
-      const refusal = room.screenKept(conn.key) ? removalOf(room, conn) : admission(room, conn);
+      const kept = [conn.key, conn.guestKey].find((key) => room.screenKept(key));
+      const refusal = kept ? removalOf(room, conn) : admission(room, conn);
       if (refusal) return refusal;
-      if (room.public && !room.screenKept(conn.key) && !room.memberByKey(conn.key)) return fail('not_member');
-      const replaced = room.screensOf(conn.key);
+      if (room.public && !kept && !room.memberByKey(conn.key)) return fail('not_member');
+      const key = kept ?? conn.key;
+      const replaced = room.screensOf(key);
       if (room.screensFull() && !(room.public && replaced.length > 0)) return fail('screens_full');
       release(socket);
-      closeFor(room.addScreen(socket.id, conn.key), 'left');
+      closeFor(room.addScreen(socket.id, key), 'left');
       Object.assign(conn, { room, screen: true });
       // Everyone sees how many screens there are, and this one gets its first view.
       broadcast(room);
