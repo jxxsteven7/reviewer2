@@ -130,18 +130,21 @@ jobs:
           cache: npm
       - run: npm ci
         if: steps.need.outputs.browsers == 'true'
-      - name: Read Playwright's version
+      - name: Read Playwright's version and the runner's system
         if: steps.need.outputs.browsers == 'true'
         id: playwright
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "system=$(. /etc/os-release && echo "$ID-$VERSION_ID")" >> "$GITHUB_OUTPUT"
       - name: Keep the browser between runs
         # The download is the slow part of the install; the system packages still come from apt.
+        # Playwright builds its browsers for each system, so a new runner image needs its own.
         if: steps.need.outputs.browsers == 'true'
         id: browser
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+          key: playwright-${{ steps.playwright.outputs.system }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
       - run: npx playwright install --with-deps ${{ matrix.browser }}
         if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit != 'true'
       - run: npx playwright install-deps ${{ matrix.browser }}
