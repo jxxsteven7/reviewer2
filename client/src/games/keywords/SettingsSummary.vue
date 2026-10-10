@@ -29,18 +29,19 @@ const time = (seconds: number) => (seconds === 0 ? t('settings.noLimit') : t('se
 .settings-summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-1) var(--space-4);
+  gap: var(--space-2) var(--space-4);
   margin: 0;
   font-size: var(--text-sm);
 }
 
 dt {
-  color: var(--ink-3);
+  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
 dd {
   margin: 0;
-  color: var(--ink);
+  font-weight: var(--weight-black);
   text-align: right;
 }
 </style>

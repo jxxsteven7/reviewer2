@@ -19,8 +19,8 @@ const qr = computed(() => {
 
 <template>
   <svg class="qr" :viewBox="`0 0 ${qr.size} ${qr.size}`" role="img" :aria-label="label" shape-rendering="crispEdges">
-    <rect :width="qr.size" :height="qr.size" fill="#fff" />
-    <path :d="qr.path" fill="#15171c" />
+    <rect :width="qr.size" :height="qr.size" class="light" />
+    <path :d="qr.path" class="dark" />
   </svg>
 </template>
 
@@ -30,5 +30,16 @@ const qr = computed(() => {
   width: 100%;
   max-width: 16rem;
   height: auto;
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+}
+
+.light {
+  fill: var(--paper);
+}
+
+.dark {
+  fill: var(--ink);
 }
 </style>

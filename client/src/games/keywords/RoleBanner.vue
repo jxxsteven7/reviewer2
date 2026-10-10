@@ -49,10 +49,14 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-top: var(--space-4);
-  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
-  border-left: 4px solid var(--ink-3);
-  background: var(--paper-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--neutral-tint);
+  transition:
+    background-color var(--motion),
+    color var(--motion);
 }
 
 .text {
@@ -61,49 +65,52 @@ onBeforeUnmount(() => {
 }
 
 .who {
-  font-weight: 600;
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .line {
-  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
 .red {
-  border-left-color: var(--red);
   background: var(--red-tint);
 }
 
 .red .who {
-  color: var(--red);
+  color: var(--red-deep);
 }
 
 .blue {
-  border-left-color: var(--blue);
   background: var(--blue-tint);
 }
 
 .blue .who {
-  color: var(--blue);
+  color: var(--blue-deep);
 }
 
-/* The viewer's move: the group's full color, with the line in bold. */
+/* The viewer's move: the group's full color, with the line in the display fonts. */
 .urgent.red {
   background: var(--red);
+  color: var(--on-red);
 }
 
 .urgent.blue {
   background: var(--blue);
+  color: var(--on-blue);
 }
 
 .urgent .who,
 .urgent .line {
-  color: var(--paper);
+  color: inherit;
 }
 
 .urgent .line {
-  font-size: var(--text-lg);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
 }
 </style>

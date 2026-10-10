@@ -184,6 +184,8 @@ onBeforeUnmount(() => {
   width: min(100%, 18rem);
   aspect-ratio: 1;
   overflow: hidden;
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
   background: var(--paper-2);
   cursor: grab;
   touch-action: none;
@@ -200,7 +202,7 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  box-shadow: 0 0 0 100vmax rgb(21 23 28 / 55%);
+  box-shadow: 0 0 0 100vmax var(--scrim);
   pointer-events: none;
 }
 
@@ -209,8 +211,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-3);
   width: min(100%, 18rem);
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .zoom input {
@@ -220,7 +222,7 @@ onBeforeUnmount(() => {
 }
 
 .hint {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
   text-align: center;
 }

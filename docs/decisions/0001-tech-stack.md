@@ -20,7 +20,7 @@ The brief fixed TypeScript on both sides, a Vue front end, a Node server with So
 | Tests | Vitest 5; Playwright end to end |
 | Lint and format | ESLint 10 with typescript-eslint, eslint-plugin-vue and vue-i18n's `no-raw-text`; Prettier |
 | Builds | Vite, text files compressed ahead of time; esbuild bundles the server into one CommonJS file |
-| Fonts | Source Serif 4 from `@fontsource-variable`, self-served; interface text in system fonts |
+| Fonts | Source Serif 4 from `@fontsource-variable`, self-served; interface text in system fonts. Superseded on 2026-10-10 by the three fonts of the party look, served the same way in slices by character range; see [../design.md](../design.md) |
 | Deployment | The build, run with Node; no container image |
 
 ## Why
@@ -30,7 +30,7 @@ The brief fixed TypeScript on both sides, a Vue front end, a Node server with So
 - **Compiled i18n messages:** the message compiler needs `eval`, which the Content Security Policy forbids.
 - **No Express:** a few HTTP routes besides Socket.IO don't need it.
 - **One CommonJS bundle:** production needs no `node_modules`; CommonJS because socket.io's dependencies `require()` Node's built-ins.
-- **One web font:** every byte counts on a slow link into mainland China, and a Chinese web font weighs megabytes.
+- **One web font:** every byte counts on a slow link into mainland China, and a Chinese web font weighs megabytes. Since the party look, the Chinese fonts come sliced, and a page downloads only the slices it uses.
 - **No container image:** the build needs only Node, and Docker Hub is hard to reach from mainland China.
 - **Compression at build time:** sirv sends files as they are; gzip and Brotli copies cut the script to a third.
 

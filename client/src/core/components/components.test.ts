@@ -1,11 +1,13 @@
 // @vitest-environment happy-dom
 import { mount } from '@vue/test-utils';
 import { describe, expect, test } from 'vitest';
+import { h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import FieldPicker from './FieldPicker.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
+import UiSheet from './UiSheet.vue';
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
 const global = () => ({ plugins: [i18n()] });
@@ -72,5 +74,58 @@ describe('PlayerAvatar', () => {
     expect(fallback.get('.initial').attributes('data-initial')).toBe('B');
     expect(fallback.attributes('style')).toContain('background');
     expect(fallback.attributes('aria-hidden')).toBe('true');
+  });
+});
+
+describe('UiSheet', () => {
+  // A sheet on the page's body, with three buttons in it, named by a prefix.
+  function sheet(title: string, open = false) {
+    const buttons = [1, 2, 3].map((n) => h('button', { id: `${title}${n}` }, String(n)));
+    return mount(UiSheet, {
+      props: { open, title },
+      slots: { default: () => buttons },
+      global: global(),
+      attachTo: document.body,
+    });
+  }
+  const press = (key: string, shiftKey = false) =>
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, cancelable: true }));
+  const focus = (id: string) => document.getElementById(id)?.focus();
+  const active = () => document.activeElement?.id || document.activeElement?.className;
+
+  test('leaves the keys to the sheet on top when one lies over another', async () => {
+    const under = sheet('a');
+    const over = sheet('b');
+    await under.setProps({ open: true });
+    await over.setProps({ open: true });
+    await nextTick();
+    // Escape closes the one on top only.
+    press('Escape');
+    expect(under.emitted('close')).toBeUndefined();
+    expect(over.emitted('close')).toHaveLength(1);
+    // Tab moves on inside the one on top, and wraps at its ends; the one below stays out of it.
+    focus('b1');
+    press('Tab');
+    expect(active()).toBe('b1');
+    focus('b3');
+    press('Tab');
+    expect(active()).toBe('close');
+    press('Tab', true);
+    expect(active()).toBe('b3');
+    // Once the one on top has gone, the one below takes the keys again.
+    await over.setProps({ open: false });
+    press('Escape');
+    expect(under.emitted('close')).toHaveLength(1);
+    under.unmount();
+    over.unmount();
+  });
+
+  test('takes the keys and the focus when it is created open', async () => {
+    const wrapper = sheet('c', true);
+    await nextTick();
+    expect(document.activeElement?.closest('[role=dialog]')).not.toBeNull();
+    press('Escape');
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    wrapper.unmount();
   });
 });

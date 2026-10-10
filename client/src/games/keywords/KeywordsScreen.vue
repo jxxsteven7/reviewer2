@@ -29,7 +29,7 @@ const game = computed(() => data.value.game as KeywordsView | null);
   <section v-if="room.phase === 'lobby' || !game" class="screen">
     <div class="join">
       <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
-      <p class="code mono">{{ number }}</p>
+      <p class="code num">{{ number }}</p>
       <p class="hint">{{ t('room.qrHint', { code: number }) }}</p>
     </div>
     <div class="people">
@@ -71,7 +71,7 @@ const game = computed(() => data.value.game as KeywordsView | null);
     <aside class="side">
       <div class="join small">
         <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
-        <p class="mono">{{ number }}</p>
+        <p class="code num">{{ number }}</p>
       </div>
       <template v-if="room.match">
         <MatchResults v-if="room.match.status !== 'on'" :room="room" />
@@ -85,8 +85,8 @@ const game = computed(() => data.value.game as KeywordsView | null);
 <style scoped>
 .screen {
   display: grid;
-  gap: var(--space-7);
-  padding: var(--space-6) 0;
+  gap: var(--space-6);
+  padding: var(--space-5) 0;
 }
 
 .join {
@@ -94,6 +94,11 @@ const game = computed(() => data.value.game as KeywordsView | null);
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
   text-align: center;
 }
 
@@ -101,43 +106,64 @@ const game = computed(() => data.value.game as KeywordsView | null);
   max-width: 20rem;
 }
 
+.join.small {
+  padding: var(--space-4);
+}
+
 .join.small :deep(.qr) {
-  max-width: 9rem;
+  max-width: 10rem;
 }
 
 .code {
   font-size: var(--text-3xl);
+  font-weight: var(--weight-display);
   letter-spacing: 0.06em;
 }
 
 .hint {
-  color: var(--ink-2);
+  font-weight: var(--weight-bold);
+}
+
+.people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.people .kicker {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
 }
 
 .group {
-  margin-top: var(--space-4);
-  padding-left: var(--space-3);
-  border-left: 3px solid var(--rule);
-}
-
-.group.red {
-  border-left-color: var(--red);
-}
-
-.group.blue {
-  border-left-color: var(--blue);
+  padding: var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 h2 {
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
+}
+
+.group.red h2 {
+  color: var(--red-deep);
+}
+
+.group.blue h2 {
+  color: var(--blue-deep);
 }
 
 .role {
   margin-top: var(--space-2);
-  color: var(--ink-3);
-  font-size: var(--text-sm);
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 ul {
@@ -147,11 +173,8 @@ ul {
 }
 
 .vacant {
-  color: var(--ink-3);
-}
-
-.vacant:lang(en) {
-  font-style: italic;
+  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
 .screen-game {
@@ -160,22 +183,28 @@ ul {
   padding-bottom: var(--space-5);
 }
 
-/* The whole board fits on the screen: five rows of cards that are 4/5 as tall as they are wide,
+/* The whole board fits on the screen: five rows of cards that are 6/7 as tall as they are wide,
    under the masthead and the turn strip. At the end, the two decision letters take the strip's
    place, side by side above the board and the clue log, and the board makes room for them. */
 .screen-game .main {
-  width: min(100%, calc((100vh - 15rem) * 1.25));
-  width: min(100%, calc((100dvh - 15rem) * 1.25));
+  width: min(100%, calc((100vh - 18rem) * 1.15));
+  width: min(100%, calc((100dvh - 18rem) * 1.15));
 }
 
 .screen-game .main.over {
-  width: min(100%, calc((100vh - 28rem) * 1.25));
-  width: min(100%, calc((100dvh - 28rem) * 1.25));
+  width: min(100%, calc((100vh - 30rem) * 1.15));
+  width: min(100%, calc((100dvh - 30rem) * 1.15));
 }
 
 .letters-row {
   grid-column: 1 / -1;
   margin-bottom: 0;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 @media (min-width: 60rem) {
@@ -185,7 +214,7 @@ ul {
   }
 
   .screen-game {
-    grid-template-columns: minmax(0, 1fr) 18rem;
+    grid-template-columns: minmax(0, 1fr) 20rem;
     align-items: start;
   }
 }

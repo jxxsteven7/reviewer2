@@ -23,14 +23,13 @@ const { t } = useI18n();
 
 <style scoped>
 main {
-  padding: var(--space-4) 0 var(--space-7);
+  padding: var(--space-3) 0 var(--space-7);
 }
 
 .back {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -38,21 +37,23 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 24rem;
-  padding-top: var(--space-3);
+  max-width: 26rem;
+  margin-top: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 h1 {
   font-size: var(--text-2xl);
 }
 
-.content :deep(.intro) {
-  color: var(--ink-2);
-}
-
 .content :deep(.problem) {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .content :deep(.form) {

@@ -113,7 +113,7 @@ async function logOut() {
     <ProfileAvatar :summary="summary" />
 
     <section class="part" aria-labelledby="profile-username">
-      <h2 id="profile-username" class="kicker">{{ t('account.profile.username') }}</h2>
+      <h2 id="profile-username">{{ t('account.profile.username') }}</h2>
       <form v-if="editing === 'username'" class="inline-form" @submit.prevent="rename">
         <UiField
           v-model="username"
@@ -140,7 +140,7 @@ async function logOut() {
     </section>
 
     <section v-if="summary.titles.length" class="part" aria-labelledby="profile-titles">
-      <h2 id="profile-titles" class="kicker">{{ t('account.profile.titles') }}</h2>
+      <h2 id="profile-titles">{{ t('account.profile.titles') }}</h2>
       <ul class="titles">
         <li v-for="{ title, count } in summary.titles" :key="title">
           {{
@@ -153,19 +153,19 @@ async function logOut() {
     </section>
 
     <section class="part" aria-labelledby="profile-email">
-      <h2 id="profile-email" class="kicker">{{ t('account.profile.email') }}</h2>
+      <h2 id="profile-email">{{ t('account.profile.email') }}</h2>
       <ProfileEmail :summary="summary" />
     </section>
 
     <section class="part" aria-labelledby="profile-password">
-      <h2 id="profile-password" class="kicker">{{ t('account.profile.password') }}</h2>
+      <h2 id="profile-password">{{ t('account.profile.password') }}</h2>
       <div>
         <UiButton size="small" @click="editing = 'password'">{{ t('account.profile.changePassword') }}</UiButton>
       </div>
     </section>
 
     <section class="part" aria-labelledby="profile-record">
-      <h2 id="profile-record" class="kicker">{{ t('account.profile.record') }}</h2>
+      <h2 id="profile-record">{{ t('account.profile.record') }}</h2>
       <ProfileRecords />
     </section>
 
@@ -224,9 +224,9 @@ async function logOut() {
 .profile {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  max-width: 32rem;
-  padding-top: var(--space-3);
+  gap: var(--space-4);
+  max-width: 34rem;
+  margin-top: var(--space-3);
 }
 
 h1 {
@@ -236,9 +236,16 @@ h1 {
 .part {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--rule);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
+}
+
+.part h2 {
+  font-size: var(--text-xl);
 }
 
 .line {
@@ -249,9 +256,8 @@ h1 {
 }
 
 .name {
-  font-family: var(--font-serif);
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: var(--weight-black);
   overflow-wrap: anywhere;
 }
 
@@ -269,18 +275,35 @@ h1 {
 }
 
 .titles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   margin: 0;
-  padding-left: var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.titles li {
+  padding: var(--space-1) var(--space-3);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  font-weight: var(--weight-bold);
 }
 
 .leave {
   flex-direction: row;
   flex-wrap: wrap;
   gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 </style>

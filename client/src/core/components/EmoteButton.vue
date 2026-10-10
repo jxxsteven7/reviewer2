@@ -76,7 +76,7 @@ function send(emote: Emote) {
 
 .phrase {
   justify-content: flex-start;
-  min-height: 48px;
+  min-height: 52px;
   text-align: left;
 }
 </style>

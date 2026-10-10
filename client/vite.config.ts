@@ -69,5 +69,8 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    // Nothing is inlined as a data: URL, which the Content Security Policy refuses: the fonts come
+    // in slices, and the smallest of them would otherwise be written into the stylesheet.
+    assetsInlineLimit: 0,
   },
 });

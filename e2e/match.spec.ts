@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { KeywordsRoomData, MatchRules, Seat, Team } from '@reviewer2/shared';
 import {
+  chooseCard,
   createRoom,
   expect,
   giveClue,
@@ -70,10 +71,7 @@ async function playQuickly(pages: Page[], language: Language, favoured: Page): P
   const captain = seated(pages, team, 'captain');
   await giveClue(captain, 'Hint', 1, language);
   const guesser = seated(pages, team, 'guesser');
-  await guesser
-    .locator('.board .card')
-    .nth(await keyCard(captain, 'reviewer2'))
-    .click();
+  await chooseCard(guesser, await keyCard(captain, 'reviewer2'));
   await guesser.locator('.guess-bar button.primary').click();
   for (const page of pages) await expect(page.locator('.letter').first()).toBeVisible();
 }

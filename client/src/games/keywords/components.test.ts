@@ -346,12 +346,13 @@ describe('DecisionLetter', () => {
 describe('KeywordsCard', () => {
   const card = { word: 'Baseline', revealed: false };
 
-  test('shows who in the group has chosen it, also to screen readers', () => {
+  test('shows who in the group has chosen it, as avatars, and names them to screen readers', () => {
     const wrapper = mount(KeywordsCard, {
-      props: { card, index: 3, selectable: true, selected: false, choosers: ['Ann', 'Cat'] },
+      props: { card, index: 3, selectable: true, selected: false, choosers: [{ name: 'Ann' }, { name: 'Cat' }] },
       global: global(),
     });
-    expect(wrapper.get('.choosers').text()).toBe('Ann and Cat');
+    expect(wrapper.get('.choosers').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.findAll('.choosers .avatar')).toHaveLength(2);
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann and Cat');
   });
 
@@ -512,7 +513,7 @@ describe('TurnStrip', () => {
 
   test('shows how many guesses are left under the standard rule only', () => {
     const standard = mount(TurnStrip, { props: { game, guessRule: 'standard' }, global: global() });
-    expect(standard.get('.left').text()).toBe('Guesses left: 3');
+    expect(standard.get('.left').text()).toBe('3 more to reveal');
     const free = mount(TurnStrip, {
       props: { game: { ...game, guessesLeft: null }, guessRule: 'free' },
       global: global(),

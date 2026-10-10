@@ -44,20 +44,23 @@ const message = computed<{ title?: string; body: string } | null>(() => {
 .notice {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-7) 0;
+  max-width: var(--page-narrow);
+  margin: var(--space-6) 0;
+  padding: var(--space-5);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 h1 {
   font-size: var(--text-2xl);
 }
 
-p {
-  color: var(--ink-2);
-}
-
 .loading {
   padding: var(--space-7) 0;
-  color: var(--ink-3);
+  font-weight: var(--weight-bold);
 }
 </style>

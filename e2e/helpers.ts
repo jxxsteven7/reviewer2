@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { test as base, expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import {
   checkClue,
   type CardColor,
@@ -433,6 +433,40 @@ export async function seatTable(
   };
 }
 
+// The room menu, behind the "Room" button in the masthead: the player's name and avatar, and
+// the ways to rename, leave and close the room. Opens it and returns it.
+export async function roomMenu(page: Page): Promise<Locator> {
+  await page.locator('.masthead .room-button').click();
+  const menu = page.locator('[role=dialog]:has(.room-menu)');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+// On a phone, the groups and the clue log are sheets that open from the bar at the bottom of
+// the game; on a wide screen they stand beside the board. Opens them where they need opening,
+// and returns them. A sheet that is open covers the rest of the page, so a test closes it, with
+// closeSheet, before it taps anything else on that page.
+export async function openGroups(page: Page): Promise<Locator> {
+  const button = page.locator('.open-groups');
+  if (await button.count()) await button.click();
+  const rosters = page.locator('.rosters');
+  await expect(rosters).toBeVisible();
+  return rosters;
+}
+
+export async function openLog(page: Page): Promise<Locator> {
+  const button = page.locator('.open-log');
+  if (await button.count()) await button.click();
+  const log = page.locator('.clue-log');
+  await expect(log).toBeVisible();
+  return log;
+}
+
+// Closes the sheet on top, if there is one, as Escape does.
+export async function closeSheet(page: Page): Promise<void> {
+  if (await page.locator('[role=dialog]').count()) await page.keyboard.press('Escape');
+}
+
 // The group whose turn it is, from the color of the turn strip.
 export async function teamOnTurn(page: Page): Promise<Team> {
   const strip = page.locator('.strip');
@@ -482,12 +516,25 @@ export async function keyCard(captain: Page, color: CardColor): Promise<number> 
   return index;
 }
 
+// A guesser chooses a card: taps it, and checks that the page took the choice, so that a tap the
+// page lost fails here, in seconds, and not on a button that never enables. The tap waits for the
+// fonts: the Chinese fonts come in slices that a new word on the page can still be fetching, and
+// when a slice arrives the text above the board can change its lines, which moves the board under
+// a tap that is on its way.
+export async function chooseCard(guesser: Page, index: number): Promise<Locator> {
+  await guesser.evaluate(() => document.fonts.ready);
+  const card = guesser.locator('.board .card').nth(index);
+  await card.click();
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
+  return card;
+}
+
 // A guesser chooses a card and confirms it.
 export async function reveal(guesser: Page, index: number): Promise<void> {
   await expect(guesser.locator('.guess-bar')).toBeVisible();
-  await guesser.locator('.board .card').nth(index).click();
+  const card = await chooseCard(guesser, index);
   await guesser.locator('.guess-bar button.primary').click();
-  await expect(guesser.locator('.board .card').nth(index)).toHaveClass(/revealed/);
+  await expect(card).toHaveClass(/revealed/);
 }
 
 // A group's student reveals a card of this color, usually one of the group's own, which the PI's

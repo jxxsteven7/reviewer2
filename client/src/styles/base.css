@@ -13,21 +13,25 @@ body {
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--paper);
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: var(--text-md);
+  font-weight: var(--weight-text);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Headings are set in the display fonts: Baloo 2 for Latin letters and digits, ZCOOL KuaiLe for
+   Chinese. ZCOOL KuaiLe comes in one weight, so the browser must not smear a bold out of it. */
 h1,
 h2,
 h3 {
   margin: 0;
-  font-family: var(--font-serif);
-  font-weight: 600;
-  line-height: 1.2;
+  font-family: var(--font-display);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
+  line-height: 1.15;
 }
 
 p {
@@ -36,8 +40,9 @@ p {
 
 a {
   color: inherit;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.18em;
+  font-weight: var(--weight-bold);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
 }
 
 button {
@@ -45,20 +50,14 @@ button {
   color: inherit;
 }
 
-hr {
-  margin: var(--space-6) 0;
-  border: 0;
-  border-top: 1px solid var(--rule);
-}
-
 :focus-visible {
-  outline: 2px solid var(--focus);
+  outline: var(--line-strong) solid var(--focus);
   outline-offset: 2px;
 }
 
 .page {
   width: 100%;
-  max-width: var(--measure);
+  max-width: var(--page);
   margin: 0 auto;
   padding: 0 var(--space-4);
 }
@@ -69,38 +68,47 @@ hr {
   }
 }
 
-.kicker {
-  color: var(--red);
-  font-size: var(--text-sm);
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
-}
-
-.mono {
-  font-family: var(--font-mono);
+/* Numbers, room codes and clocks: Baloo 2, with every digit the same width. */
+.num {
+  font-family: var(--font-number);
   font-variant-numeric: tabular-nums;
 }
 
-/* Sections are numbered like those of a paper: section 1, section 2, and so on. */
-.sections {
-  counter-reset: section;
+/* A sentence in the display fonts, such as "Red group is guessing". */
+.display {
+  font-family: var(--font-display);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
+  line-height: 1.15;
 }
 
+/* The title of a section, and the small heading over a list or a form. */
 .section-title {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
 }
 
-.sections .section-title::before {
-  margin-right: 0.5em;
-  color: var(--ink-3);
-  font-weight: 400;
-  content: '\00a7' counter(section);
-  counter-increment: section;
+.kicker {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-black);
 }
 
-.small-caps {
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+/* A white sticker: the panels that hold a page's content. */
+.panel {
+  padding: var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
+}
+
+/* Text for screen readers only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

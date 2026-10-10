@@ -8,6 +8,7 @@ import {
   interpolate,
   joinByLink,
   newPlayer,
+  openLog,
   revealByKey,
   seatTable,
   setSetting,
@@ -96,7 +97,7 @@ test('the server ends a turn whose time has run out', async ({ browser }) => {
   await expect(table.spectator.locator('.strip')).toHaveClass(new RegExp(`\\b${otherTeam(team)}\\b`), {
     timeout: 20_000,
   });
-  await expect(table.spectator.locator('.clue-log')).toContainText(TEXT.en.game.noClueInTime);
+  await expect(await openLog(table.spectator)).toContainText(TEXT.en.game.noClueInTime);
   // The next clue has the default time, 60 seconds.
   await expect(table.spectator.locator('.strip .clock')).not.toHaveClass(/urgent/);
 });

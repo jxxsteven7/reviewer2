@@ -23,7 +23,7 @@ const soundLocked = computed(() => !muted.value && !unlocked.value);
   <ConnectionBanner />
   <EmoteBubbles large />
   <div class="screen-page">
-    <PageMasthead>
+    <PageMasthead compact>
       <p v-if="room && soundLocked" class="sound-hint">{{ t('emotes.locked') }}</p>
       <SoundToggle v-if="room" />
       <ManuscriptId v-if="room" :code="room.code" />
@@ -43,7 +43,7 @@ const soundLocked = computed(() => !muted.value && !unlocked.value);
 }
 
 .sound-hint {
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 </style>

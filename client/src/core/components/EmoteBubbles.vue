@@ -39,17 +39,19 @@ defineProps<{ large?: boolean }>();
 
 .bubble {
   max-width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--ink);
+  padding: var(--space-2) var(--space-4);
+  border: var(--line) solid var(--ink);
   border-radius: var(--radius-control);
   background: var(--paper);
+  box-shadow: var(--shadow-1);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   overflow-wrap: anywhere;
 }
 
 .bubble :deep(.avatar) {
   margin-right: var(--space-1);
-  vertical-align: -0.4em;
+  vertical-align: -0.45em;
 }
 
 .large {
@@ -57,17 +59,23 @@ defineProps<{ large?: boolean }>();
 }
 
 .large .bubble {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-width: var(--line-strong);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-2);
   font-size: var(--text-xl);
 }
 
 .bubble-enter-active,
 .bubble-leave-active {
-  transition: opacity 0.2s;
+  transition:
+    opacity var(--motion),
+    transform var(--motion);
 }
 
 .bubble-enter-from,
 .bubble-leave-to {
   opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

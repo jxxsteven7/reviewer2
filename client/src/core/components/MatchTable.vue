@@ -55,7 +55,7 @@ async function end() {
           :key="line.playerId ?? `left-${index}`"
           :class="{ me: line.playerId !== null && line.playerId === room.me, left: line.left }"
         >
-          <td class="rank">{{ line.rank ?? '\u2013' }}</td>
+          <td class="rank num">{{ line.rank ?? '\u2013' }}</td>
           <td class="who">
             <span class="name-line">
               <PlayerAvatar :name="line.name" :avatar="line.avatar" />
@@ -65,9 +65,9 @@ async function end() {
             </span>
             <span v-if="describe && line.detail !== undefined" class="detail">{{ describe(line.detail) }}</span>
           </td>
-          <td class="number total">{{ points(line.total) }}</td>
+          <td class="number total num">{{ points(line.total) }}</td>
           <td
-            class="number delta"
+            class="number delta num"
             :class="{ up: line.delta !== null && line.delta > 0, down: line.delta !== null && line.delta < 0 }"
           >
             {{ signedPoints(line.delta) }}
@@ -102,8 +102,11 @@ async function end() {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--rule);
+  padding: var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 header {
@@ -116,48 +119,62 @@ header {
 }
 
 .progress {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.none {
   color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
-.none {
-  color: var(--ink-3);
-  font-size: var(--text-sm);
-}
-
+/* Each player on a block of their own; the viewer's own takes the table's yellow. */
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0 var(--space-1);
   font-size: var(--text-sm);
 }
 
 th {
-  padding: var(--space-1) var(--space-2) var(--space-1) 0;
-  border-bottom: 1px solid var(--ink);
-  color: var(--ink-3);
-  font-weight: 400;
+  padding: 0 var(--space-2) var(--space-1) 0;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
   text-align: left;
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 td {
   padding: var(--space-1) var(--space-2) var(--space-1) 0;
-  border-bottom: 1px solid var(--rule);
+  background: var(--paper-2);
   vertical-align: middle;
+}
+
+td:first-child {
+  padding-left: var(--space-2);
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
 }
 
 th:last-child,
 td:last-child {
-  padding-right: 0;
+  padding-right: var(--space-2);
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+}
+
+.me td {
+  background: var(--bg);
 }
 
 .rank {
   width: 2.5rem;
+  font-weight: var(--weight-display);
 }
 
 .number {
   width: 3.5rem;
+  font-weight: var(--weight-display);
   text-align: right;
 }
 
@@ -167,10 +184,12 @@ td:last-child {
 
 .name-line {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 2px var(--space-2);
   min-height: 36px;
   min-width: 0;
+  font-weight: var(--weight-bold);
 }
 
 .name {
@@ -178,35 +197,40 @@ td:last-child {
 }
 
 .mark {
-  color: var(--ink-3);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
   font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1.6;
 }
 
 .detail {
   display: block;
   padding-bottom: var(--space-1);
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-xs);
 }
 
 .me .name {
-  font-weight: 600;
+  font-weight: var(--weight-black);
 }
 
 .left {
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .total {
-  font-weight: 600;
+  font-size: var(--text-md);
 }
 
 .delta.up {
-  color: var(--blue);
+  color: var(--blue-deep);
 }
 
 .delta.down {
-  color: var(--red);
+  color: var(--red-deep);
 }
 
 .end {

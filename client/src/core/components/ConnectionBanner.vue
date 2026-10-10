@@ -18,8 +18,9 @@ const { t } = useI18n();
   z-index: 10;
   padding: var(--space-2) var(--space-4);
   background: var(--ink);
-  color: var(--paper);
+  color: var(--on-ink);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   text-align: center;
 }
 </style>

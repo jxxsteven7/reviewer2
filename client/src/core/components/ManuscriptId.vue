@@ -2,6 +2,7 @@
 import { formatCode } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 
+// The room's number, as a pill: "Manuscript R2-K7QX".
 defineProps<{ code: string }>();
 const { t } = useI18n();
 </script>
@@ -9,28 +10,31 @@ const { t } = useI18n();
 <template>
   <span class="manuscript">
     <span class="label">{{ t('room.manuscript') }}</span>
-    <span class="code">{{ formatCode(code) }}</span>
+    <span class="code num">{{ formatCode(code) }}</span>
   </span>
 </template>
 
 <style scoped>
 .manuscript {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
   white-space: nowrap;
 }
 
 .label {
-  color: var(--ink-3);
-  font-size: var(--text-xs);
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .code {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  letter-spacing: 0.04em;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-display);
+  letter-spacing: 0.06em;
 }
 </style>

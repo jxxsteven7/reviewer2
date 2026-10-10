@@ -65,6 +65,23 @@ describe('the feedback panel', () => {
     expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('');
   });
 
+  test('keeps what was written while the panel is closed, even once the button is gone', async () => {
+    const wrapper = await opened('room');
+    await wrapper.get('input[value="bug"]').setValue(true);
+    await wrapper.get('textarea').setValue('The clock stops when');
+    // Closed, and the whole thing unmounted, as when the room menu that holds it closes.
+    wrapper.unmount();
+    const again = await opened('room');
+    expect((again.get('textarea').element as HTMLTextAreaElement).value).toBe('The clock stops when');
+    expect((again.get('input[value="bug"]').element as HTMLInputElement).checked).toBe(true);
+    // Sent, it is gone.
+    await again.get('form').trigger('submit');
+    await flushPromises();
+    await again.get('button').trigger('click');
+    expect((again.get('textarea').element as HTMLTextAreaElement).value).toBe('');
+    expect((again.get('input[value="idea"]').element as HTMLInputElement).checked).toBe(true);
+  });
+
   test('leaves out a contact that shows nothing', async () => {
     const wrapper = await opened();
     await wrapper.get('textarea').setValue('Hi');

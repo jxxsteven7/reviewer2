@@ -104,27 +104,30 @@ function date(iso: string): string {
 }
 
 .summary {
-  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .note {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
 h3 {
-  color: var(--ink-2);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--weight-black);
 }
 
 .list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -134,30 +137,34 @@ h3 {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0 var(--space-3);
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--rule);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
   font-size: var(--text-sm);
+}
+
+.record.won {
+  background: var(--bg);
 }
 
 .when,
 .part {
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .game {
   grid-column: 1;
-  font-weight: 500;
+  font-weight: var(--weight-bold);
 }
 
 .verdict {
   grid-row: 1 / span 2;
   grid-column: 2;
   align-self: center;
-  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
 .won .verdict {
-  color: var(--ink);
-  font-weight: 600;
+  font-weight: var(--weight-black);
 }
 </style>

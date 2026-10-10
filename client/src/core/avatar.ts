@@ -4,9 +4,9 @@ import { AVATAR_SIZE, AVATAR_TARGET_BYTES, MAX_AVATAR_BYTES, usernameKey } from 
 // guest, gets a default one, drawn here from the name: its first character on a color that the
 // name chooses, the same color for the same name everywhere, in any case or width.
 
-// Dark enough for white text on each of them, at a contrast of at least 4.5:1, and none of them
-// the reds and blues that stand for the groups.
-export const AVATAR_COLORS = ['#2f6b3a', '#6b3fa0', '#8a4b00', '#0f6870', '#a2305e', '#4b505b', '#5a5a14', '#3b4a9a'];
+// The colors are the tokens --avatar-1 to --avatar-8 in client/src/styles/tokens.css, so that
+// another look can change them with the rest; this is how many there are.
+export const AVATAR_COLORS = 8;
 
 const segmenter =
   typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
@@ -17,7 +17,8 @@ export function initialOf(name: string): string {
   return (first ?? '?').toLocaleUpperCase();
 }
 
-// FNV-1a over the key of the name, so that "Ann" and "ANN" get the same color.
+// The color of the name's default avatar, as a CSS value. FNV-1a over the key of the name, so
+// that "Ann" and "ANN" get the same color.
 export function colorOf(name: string): string {
   const key = usernameKey(name);
   let hash = 0x811c9dc5;
@@ -25,7 +26,7 @@ export function colorOf(name: string): string {
     hash ^= key.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193);
   }
-  return AVATAR_COLORS[(hash >>> 0) % AVATAR_COLORS.length] as string;
+  return `var(--avatar-${((hash >>> 0) % AVATAR_COLORS) + 1})`;
 }
 
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>

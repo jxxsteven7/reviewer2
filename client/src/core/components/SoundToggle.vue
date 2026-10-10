@@ -19,14 +19,14 @@ const { t } = useI18n();
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
 input {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   margin: 0;
   accent-color: var(--ink);
 }

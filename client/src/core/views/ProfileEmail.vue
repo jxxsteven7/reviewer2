@@ -129,10 +129,6 @@ async function unbind() {
   gap: var(--space-2);
 }
 
-.state {
-  color: var(--ink-2);
-}
-
 .buttons {
   display: flex;
   flex-wrap: wrap;
@@ -140,7 +136,7 @@ async function unbind() {
 }
 
 .note {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -151,7 +147,8 @@ async function unbind() {
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 </style>

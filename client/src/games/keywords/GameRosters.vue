@@ -117,29 +117,41 @@ async function takeOver() {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--rule);
+  padding: var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 .group {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-1);
-  padding-left: var(--space-3);
-  border-left: 3px solid var(--rule);
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
 }
 
 .group.red {
-  border-left-color: var(--red);
+  background: var(--red-tint);
 }
 
 .group.blue {
-  border-left-color: var(--blue);
+  background: var(--blue-tint);
 }
 
 h3 {
-  font-size: var(--text-md);
+  font-size: var(--text-xl);
+}
+
+.group.red h3 {
+  color: var(--red-deep);
+}
+
+.group.blue h3 {
+  color: var(--blue-deep);
 }
 
 .line {
@@ -151,10 +163,11 @@ h3 {
 
 .role {
   width: 4.5rem;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-xs);
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .names {
@@ -164,11 +177,8 @@ h3 {
 }
 
 .vacant {
-  color: var(--ink-3);
-}
-
-.vacant:lang(en) {
-  font-style: italic;
+  color: var(--ink-2);
+  font-weight: var(--weight-bold);
 }
 
 .own {

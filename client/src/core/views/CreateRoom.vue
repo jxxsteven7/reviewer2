@@ -182,22 +182,24 @@ async function create() {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  padding: var(--space-4) 0 var(--space-2);
+  padding-top: var(--space-2);
 }
 
 .step {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.step > :deep(.field),
+.step > :deep(.fields),
+.step > :deep(.settings-form) {
+  align-self: stretch;
 }
 
 h3 {
-  color: var(--ink-2);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.06em;
+  font-size: var(--text-xl);
 }
 
 .hint {
@@ -217,6 +219,10 @@ h3 {
 }
 
 .kind {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-self: stretch;
   margin: 0;
   padding: 0;
   border: 0;
@@ -227,34 +233,46 @@ h3 {
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 0 var(--space-3);
-  min-height: 48px;
-  padding: var(--space-2) 0;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--paper);
   cursor: pointer;
 }
 
-.kind label + label {
-  border-top: 1px solid var(--rule);
+.kind label:has(input:checked) {
+  background: var(--bg);
+}
+
+.kind label:has(input:focus-visible) {
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 .kind input {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   margin: 0;
   accent-color: var(--ink);
 }
 
-.kind .hint {
-  grid-column: 2;
-  color: var(--ink-3);
+.kind .option {
+  font-weight: var(--weight-black);
 }
 
-.kind + .match-form {
-  margin-top: var(--space-3);
+.kind .hint {
+  grid-column: 2;
+}
+
+.step > :deep(.match-form) {
+  align-self: stretch;
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .actions {

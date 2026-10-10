@@ -19,7 +19,7 @@ const { t } = useI18n();
     >
       <PlayerAvatar :name="account.summary.username" :avatar="account.summary.avatar" size="medium" />
     </RouterLink>
-    <RouterLink v-else to="/account" class="entry">{{ t('account.entry') }}</RouterLink>
+    <RouterLink v-else to="/account" class="entry pill">{{ t('account.entry') }}</RouterLink>
   </template>
 </template>
 
@@ -28,9 +28,17 @@ const { t } = useI18n();
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--ink-2);
+  color: var(--ink);
   font-size: var(--text-sm);
+  text-decoration: none;
   white-space: nowrap;
+}
+
+.pill {
+  padding: 0 var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
 }
 
 .avatar-link {

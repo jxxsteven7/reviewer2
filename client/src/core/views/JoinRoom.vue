@@ -34,23 +34,22 @@ function join() {
       enterkeyhint="go"
       :error="error"
     />
-    <UiButton type="submit">{{ t('home.join.submit') }}</UiButton>
+    <UiButton variant="blue" type="submit">{{ t('home.join.submit') }}</UiButton>
   </form>
 </template>
 
 <style scoped>
 .join {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: var(--space-3);
+  max-width: 24rem;
 }
 
-.join > :first-child {
-  flex: 1;
-  max-width: 14rem;
-}
-
+/* Level with the box, below the field's label. */
 .join > button {
-  margin-top: calc(var(--text-sm) * 1.55 + var(--space-1));
+  min-height: 56px;
+  margin-top: calc(var(--text-sm) * 1.55 + var(--space-2));
 }
 </style>

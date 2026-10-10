@@ -6,7 +6,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <main class="not-found">
+  <main class="not-found page">
     <h1>{{ t('notFound.title') }}</h1>
     <p>{{ t('notFound.body') }}</p>
     <RouterLink to="/">{{ t('notFound.home') }}</RouterLink>
@@ -17,9 +17,18 @@ const { t } = useI18n();
 .not-found {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-3);
-  max-width: var(--measure);
-  margin: 0 auto;
-  padding: var(--space-7) var(--space-4);
+  max-width: var(--page-narrow);
+  margin: var(--space-7) auto;
+  padding: var(--space-5);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
+}
+
+h1 {
+  font-size: var(--text-2xl);
 }
 </style>

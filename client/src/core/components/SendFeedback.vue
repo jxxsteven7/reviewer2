@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts">
 import {
   checkContact,
   checkFeedback,
@@ -11,7 +11,7 @@ import {
   type FeedbackMessage,
   type FeedbackPage,
 } from '@reviewer2/shared';
-import { computed, ref, useId, watch } from 'vue';
+import { computed, reactive, ref, toRefs, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { errorKey } from '../errors';
 import { currentLanguage } from '../i18n';
@@ -29,13 +29,18 @@ import UiSheet from './UiSheet.vue';
 // server's 16 KB. Along with them go the build of this page, the language it is shown in and
 // whether it is the home page or a room, but never the room's code. With a bug, the server also
 // keeps the browser's user agent, which it reads from the connection, and the panel says so.
+//
+// What is being written is kept outside the component, so that it survives the panel's closing
+// and the component's going with it, as it does when the room menu that holds it closes.
+const draft = reactive({ kind: 'idea' as FeedbackKind, text: '', contact: '' });
+</script>
+
+<script setup lang="ts">
 const props = defineProps<{ page: FeedbackPage }>();
 const { t } = useI18n();
 const name = useId();
 const open = ref(false);
-const kind = ref<FeedbackKind>('idea');
-const text = ref('');
-const contact = ref('');
+const { kind, text, contact } = toRefs(draft);
 // What the server had against what was sent, until something is changed.
 const refused = ref<string | undefined>();
 const { busy, run } = useBusy();
@@ -150,10 +155,10 @@ function submit() {
 
 legend {
   width: 100%;
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
   padding: 0;
-  color: var(--ink-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .kind {
@@ -161,21 +166,21 @@ legend {
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--ink-3);
-  border-radius: var(--radius-control);
+  padding: 0 var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
 .kind:has(input:checked) {
-  border-color: var(--ink);
-  background: var(--paper-2);
-  font-weight: 500;
+  background: var(--bg);
 }
 
 .kind:has(input:focus-visible) {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 .kind input {
@@ -184,7 +189,8 @@ legend {
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 </style>

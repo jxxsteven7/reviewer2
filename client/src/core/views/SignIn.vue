@@ -98,38 +98,39 @@ async function submit() {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 24rem;
-  padding-top: var(--space-3);
+  max-width: 26rem;
+  margin-top: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
 }
 
 h1 {
   font-size: var(--text-2xl);
 }
 
-.intro {
-  color: var(--ink-2);
-}
-
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--rule);
+  gap: var(--space-2);
 }
 
 .tab {
+  flex: 1;
   min-height: 44px;
-  margin-bottom: -1px;
-  padding: 0 var(--space-4);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--ink-2);
+  padding: 0 var(--space-3);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
 .tab[aria-pressed='true'] {
-  border-bottom-color: var(--ink);
-  color: var(--ink);
-  font-weight: 600;
+  background: var(--ink);
+  color: var(--on-ink);
 }
 
 .form {
@@ -139,12 +140,13 @@ h1 {
 }
 
 .problem {
-  color: var(--red);
+  color: var(--red-deep);
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .note {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 
@@ -156,7 +158,6 @@ h1 {
 }
 
 .forgot {
-  color: var(--ink-2);
   font-size: var(--text-sm);
 }
 </style>
