@@ -79,6 +79,11 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <img :src="tipCode" :alt="t('footer.tipCode')" width="1152" height="1152" />
         <figcaption>{{ t('footer.tipHint') }}</figcaption>
       </figure>
+      <p class="sponsor">
+        <a href="https://github.com/sponsors/jxxsteven7" target="_blank" rel="noopener noreferrer">{{
+          t('footer.sponsor')
+        }}</a>
+      </p>
     </UiSheet>
   </div>
 </template>
@@ -247,10 +252,15 @@ ol {
   border-radius: var(--radius-panel);
 }
 
-.tip figcaption {
+.tip figcaption,
+.sponsor {
   color: var(--ink-2);
   font-size: var(--text-sm);
   text-align: center;
+}
+
+.sponsor {
+  margin-top: var(--space-3);
 }
 
 @media (min-width: 40rem) {

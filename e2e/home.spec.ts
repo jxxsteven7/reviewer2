@@ -35,5 +35,10 @@ for (const language of ['en', 'zh'] as const) {
     const response = await page.request.get(src.toString());
     expect(response.headers()['content-type']).toBe('image/jpeg');
     expect((await response.body()).length).toBe(98_899);
+    // Players without WeChat are sent to GitHub Sponsors, in a new tab.
+    const sponsor = sheet.getByRole('link', { name: text.footer.sponsor });
+    await expect(sponsor).toHaveAttribute('href', 'https://github.com/sponsors/jxxsteven7');
+    await expect(sponsor).toHaveAttribute('target', '_blank');
+    await expect(sponsor).toHaveAttribute('rel', 'noopener noreferrer');
   });
 }
