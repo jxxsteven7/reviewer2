@@ -971,9 +971,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // What was changed on an account from outside the server, such as an avatar that the operator
   // took down (admin.ts), reaches the rooms by the next sweep: every member with an account is read
   // again, and a room that looks different for it is sent to everyone in it. A public room whose
-  // chair the operator has barred meanwhile goes off the list, since the chair could no longer put
-  // it there; whoever is in it stays, as when the chair takes it off. A deleted account can only
-  // have left through the hook above, so one that is gone is left alone here.
+  // chair could no longer put it on the list goes off it: the operator has barred the chair's
+  // account meanwhile, or the chair has passed to a guest who was there before the room was listed.
+  // Whoever is in it stays, as when the chair takes it off. A deleted account can only have left
+  // through the hook above, so one that is gone is left alone here.
   function refreshAccounts(): void {
     if (!accounts) return;
     const read = new Map<number, ReturnType<typeof accounts.store.byId>>();
@@ -987,7 +988,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (account && room.updateAccount(member.id, account.username, avatarUrl(account))) differs = true;
       }
       const chair = room.chairId === null ? undefined : room.members.get(room.chairId);
-      if (room.public && chair?.account && read.get(chair.account.id)?.publicBarred && room.unlist()) {
+      const account = chair?.account ? read.get(chair.account.id) : undefined;
+      if (room.public && chair && (!account || account.publicBarred) && room.unlist()) {
         log('room_unlisted', { code: room.code });
         differs = true;
       }

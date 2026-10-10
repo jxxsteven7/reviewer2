@@ -197,6 +197,29 @@ describe('a public room', () => {
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: false, error: 'public_barred' });
   });
 
+  test('goes off the list by the next sweep when the chair passes to a guest', async () => {
+    server = await startServer();
+    const ann = await loggedIn('Ann');
+    const { chair, code } = await publicRoom(ann, { public: false });
+    const guest = track(await joinRoom(server.url, code, 'Guest', { play: true }));
+    expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
+    await guest.waitFor((state) => state.public);
+    // A guest who isn't the chair changes nothing.
+    server.app.sockets.sweep();
+    const visitor = track(await TestClient.connect(server.url));
+    expect(await listed(visitor)).toHaveLength(1);
+    // The chair leaves, and the guest takes over: the room goes off the list, with the guest still in
+    // it, and the guest can't put it back.
+    expect(await chair.send('room:leave')).toEqual({ ok: true });
+    await guest.waitFor((state) => state.chairId === state.me);
+    server.app.sockets.sweep();
+    await guest.waitFor((state) => !state.public);
+    expect(guest.state?.players).toHaveLength(1);
+    expect(await listed(visitor)).toEqual([]);
+    expect(server.logs.find(({ event }) => event === 'room_unlisted')?.fields).toEqual({ code });
+    expect(await guest.send('room:public', { public: true })).toEqual({ ok: false, error: 'account_required' });
+  });
+
   test('lists only rooms with room for someone, waiting rooms first, and says when a game is on', async () => {
     server = await startServer({ roomsPerMinute: 10 });
     const ann = await loggedIn('Ann');
