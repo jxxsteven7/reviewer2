@@ -27,7 +27,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.useRealTimers();
-  database.db.close();
+  if (database.db.isOpen) database.db.close();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -163,5 +163,13 @@ describe('accounts', () => {
   test('takes no other flag', () => {
     expect(run('accounts', '--all')).toBe(2);
     expect(run('accounts', '--json', 'Ann')).toBe(2);
+  });
+
+  test('works on a database that no server has open', () => {
+    vi.useFakeTimers({ now: NOW });
+    some();
+    database.db.close();
+    expect(run('accounts')).toBe(0);
+    expect(printed[0]).toMatch(/^3 accounts, /);
   });
 });

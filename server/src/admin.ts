@@ -23,20 +23,24 @@ import { MIGRATIONS } from './store/migrations';
 // days, how many were active in the last 7 and 30 days, and every username with when it
 // registered and how many games and matches it has finished. It prints no hashes, fingerprints
 // or tokens: what the database keeps in place of passwords, email addresses and logins
-// (store/migrations.ts) stays there. DATA_DIR names the server's data, as it does for the server.
-// The database is opened as it is, never migrated, and the server may go on running meanwhile.
+// (store/migrations.ts) stays there. An account counts as active when a login on it was used or
+// it finished a game; a login that has ended is gone with its time, so an account that only
+// logged in and out again counts by its games alone. DATA_DIR names the server's data, as it
+// does for the server. The database is opened as it is, never migrated, and the server may go on
+// running meanwhile.
 
 const USAGE =
   'usage: admin.cjs avatar remove <username> [--ban] | admin.cjs avatar allow <username> | admin.cjs accounts [--json]';
 
-// The statistics, in the order that `--json` prints them.
+// The statistics, in the order that `--json` prints them. They are read on one snapshot, so that
+// the counts agree with the list while the server writes.
 function accountStats(store: AccountStore) {
-  return {
+  return store.snapshot(() => ({
     total: store.count(),
     active: { last7Days: store.activeWithin(7), last30Days: store.activeWithin(30) },
     createdByDay: store.createdByDay(30),
     accounts: store.list(),
-  };
+  }));
 }
 
 // The statistics as text: the counts, the days, and the accounts in a table with the username
@@ -89,7 +93,8 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: (l
     print(`There is no database in ${dataDir}.`);
     return 1;
   }
-  const db = new DatabaseSync(file);
+  // `accounts` only reads, and the connection says so, so that it can't write by mistake.
+  const db = new DatabaseSync(file, { readOnly: command.kind === 'accounts' });
   try {
     db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON`);
     if (schemaVersion(db) !== MIGRATIONS.length) {

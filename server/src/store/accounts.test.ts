@@ -1,4 +1,7 @@
 import { createHash } from 'node:crypto';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
@@ -168,6 +171,50 @@ describe('the statistics of the accounts', () => {
       { day: '2026-10-10', count: 0 },
     ]);
     expect(accounts.activeWithin(7)).toBe(1);
+  });
+
+  test("don't count a login that has ended", () => {
+    const sessions = new SessionStore(db, () => now);
+    const ann = account('Ann');
+    sessions.create(hash('a1'), ann.id);
+    expect(accounts.activeWithin(7)).toBe(1);
+    // Logging out deletes the login with the time it was used.
+    sessions.delete(hash('a1'));
+    expect(accounts.activeWithin(7)).toBe(0);
+  });
+
+  test('read the clock once, so that the days agree with the cutoff across midnight', () => {
+    now = Date.UTC(2026, 9, 8, 23);
+    account('Ann');
+    // A clock that passes midnight between one reading and the next.
+    let readings = 0;
+    const store = new AccountStore(db, () => Date.UTC(2026, 9, 9, 23, 59, 59, 999) + readings++);
+    expect(store.createdByDay(2)).toEqual([
+      { day: '2026-10-08', count: 1 },
+      { day: '2026-10-09', count: 0 },
+    ]);
+  });
+
+  test('are read on one snapshot while another connection writes', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'reviewer2-accounts-'));
+    const reader = await openDatabase(dir);
+    const writer = await openDatabase(dir);
+    try {
+      const read = new AccountStore(reader.db);
+      const write = new AccountStore(writer.db);
+      write.create('Ann', 'ann', 'hash');
+      const counts = read.snapshot(() => {
+        const before = read.count();
+        write.create('Bob', 'bob', 'hash');
+        return [before, read.count()];
+      });
+      expect(counts).toEqual([1, 1]);
+      expect(read.count()).toBe(2);
+    } finally {
+      reader.db.close();
+      writer.db.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

@@ -211,7 +211,9 @@ export class AccountStore {
   // How many accounts were created on each of the last `days` days, in UTC, oldest first, today
   // included. A day with none is in the list as 0.
   createdByDay(days: number): { day: string; count: number }[] {
-    const dayAgo = (ago: number) => new Date(this.now() - ago * DAY_MS).toISOString().slice(0, 10);
+    // The clock is read once, so that the days and the query's cutoff agree even across midnight.
+    const now = this.now();
+    const dayAgo = (ago: number) => new Date(now - ago * DAY_MS).toISOString().slice(0, 10);
     const counts = new Map(
       (this.#createdByDay.all(dayAgo(days - 1)) as { day: string; count: number }[]).map(({ day, count }) => [
         day,
@@ -225,8 +227,10 @@ export class AccountStore {
   }
 
   // How many accounts were active in the last `days` days: a browser logged in on them was used,
-  // or they finished a game. A login that hasn't been used for 30 days is deleted (sessions.ts),
-  // so `days` is at most 30.
+  // or they finished a game. A login that has ended, by logging out, by a password change or by
+  // being one too many, is deleted with the time it was last used, so an account that logged in
+  // and out again without finishing a game isn't counted. A login that hasn't been used for 30
+  // days is deleted too (sessions.ts), so `days` is at most 30.
   activeWithin(days: number): number {
     const since = this.#since(days);
     return (this.#activeSince.get(since, since) as { count: number }).count;
@@ -243,9 +247,19 @@ export class AccountStore {
 
   // Runs `write` in one transaction: all of it happens, or none of it does.
   transaction<T>(write: () => T): T {
-    this.db.exec('BEGIN IMMEDIATE');
+    return this.#run('BEGIN IMMEDIATE', write);
+  }
+
+  // Runs `read` on one snapshot of the database, so that what it reads agrees with itself while
+  // the server writes. It works on a connection that is read-only.
+  snapshot<T>(read: () => T): T {
+    return this.#run('BEGIN', read);
+  }
+
+  #run<T>(begin: string, work: () => T): T {
+    this.db.exec(begin);
     try {
-      const result = write();
+      const result = work();
       this.db.exec('COMMIT');
       return result;
     } catch (error) {
