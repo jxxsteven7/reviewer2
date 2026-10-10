@@ -4,7 +4,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { i18n, setLanguage } from '../i18n';
 import HomeView from './HomeView.vue';
 
-vi.mock('../socket', () => ({ connect: vi.fn(), send: vi.fn() }));
+vi.mock('../socket', () => ({
+  connect: vi.fn(),
+  send: vi.fn(),
+  onceConnected: vi.fn(),
+  socket: { connected: false, once: vi.fn(), off: vi.fn() },
+}));
 vi.mock('../fields', () => ({ fields: { value: null }, loadFields: vi.fn() }));
 vi.mock('../../games', () => ({ games: {} }));
 vi.mock('../account', () => ({ account: { loaded: true, summary: null, mail: false } }));

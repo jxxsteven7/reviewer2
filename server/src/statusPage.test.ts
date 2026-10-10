@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { Sample, Stats } from './stats';
-import { duration, renderFeedbackPage, renderStatusPage, type FeedbackListing } from './statusPage';
-import type { Feedback } from './store/feedback';
+import { duration, renderFeedbackPage, renderReportsPage, renderStatusPage, type FeedbackListing } from './statusPage';
+import type { Feedback, Report } from './store/feedback';
 
 const MB = 2 ** 20;
 const NOW = Date.UTC(2026, 9, 8, 12);
@@ -122,6 +122,57 @@ describe('the chart', () => {
   });
 });
 
+describe('the reports', () => {
+  const report = (id: number, changes: Partial<Report> = {}): Report => ({
+    id,
+    createdAt: '2026-10-09T13:05:00.000Z',
+    reporter: 'Ann',
+    reported: 'Bob',
+    reportedId: 2,
+    reportedBarred: false,
+    reportedName: 'Bob',
+    roomCode: 'K7QX',
+    text: null,
+    ...changes,
+  });
+
+  test('have a page of their own, which the status page counts and links to', () => {
+    expect(text(renderStatusPage(stats(), [], NOW))).toContain('Reports None yet.');
+    expect(renderStatusPage(stats(), [], NOW, 0, { total: 0, recent: 0 }, 3)).toContain(
+      '<p>3 in all &middot; <a href="/reports">Read them</a></p>',
+    );
+    const html = renderReportsPage({ total: 1, entries: [report(1)], paged: false, older: false });
+    expect(html).toContain('<title>Reviewer 2 reports</title>');
+    expect(html).not.toContain('http-equiv="refresh"');
+    expect(text(html)).toContain(
+      '#1 &middot; 2026-10-09 13:05 UTC &middot; room K7QX Bob (account Bob) Reported by Ann No note',
+    );
+  });
+
+  test('escape what players wrote, and say what became of the accounts', () => {
+    const html = renderReportsPage({
+      total: 2,
+      entries: [
+        report(2, {
+          reporter: null,
+          reported: null,
+          reportedId: null,
+          reportedName: '<i>Guest</i>',
+          text: '<script>x</script>',
+        }),
+        report(1, { reported: '<b>Bob</b>', reporter: '<u>Ann</u>', reportedBarred: true }),
+      ],
+      paged: false,
+      older: false,
+    });
+    expect(html).not.toMatch(/<script>|<i>|<b>|<u>/);
+    expect(html).toContain('<p class="text">&#60;i&#62;Guest&#60;/i&#62; (no account)</p>');
+    expect(html).toContain('<p>Reported by a deleted account</p>');
+    expect(html).toContain('<p class="text">&#60;script&#62;x&#60;/script&#62;</p>');
+    expect(html).toContain('account &#60;b&#62;Bob&#60;/b&#62; &middot; <strong>barred from public rooms</strong>');
+  });
+});
+
 describe('the feedback', () => {
   const feedback = (id: number, changes: Partial<Feedback> = {}): Feedback => ({
     id,
@@ -159,7 +210,7 @@ describe('the feedback', () => {
     expect(html).toContain('<title>Reviewer 2 feedback</title>');
     expect(html).not.toContain('http-equiv="refresh"');
     expect(html).toContain('<a href="/">Status</a>');
-    expect(text(html)).toContain('Feedback 0 in all, newest first &middot; Status None yet.');
+    expect(text(html)).toContain('Feedback 0 in all, newest first &middot; Status &middot; Reports None yet.');
   });
 
   test('shows each one with what came along, the newest first', () => {
@@ -268,9 +319,12 @@ describe('the feedback', () => {
       ],
     });
     // The only links on the page are the page's own.
-    expect(html.replace('<a href="/">Status</a>', '').replace(/<p class="kinds">.*?<\/p>/, '')).not.toMatch(
-      /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
-    );
+    expect(
+      html
+        .replace('<a href="/">Status</a>', '')
+        .replace('<a href="/reports">Reports</a>', '')
+        .replace(/<p class="kinds">.*?<\/p>/, ''),
+    ).not.toMatch(/<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/);
     expect(html).toContain(
       'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; link https://x.co/&#34;&#62;&#60;script&#62;' +
         'alert(1)&#60;/script&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',

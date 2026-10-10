@@ -8,6 +8,7 @@ import {
   type Ack,
   type Language,
   type MatchRules,
+  type PublicRoom,
   type RoomPhase,
   type RoomView,
 } from '@reviewer2/shared';
@@ -39,12 +40,36 @@ export interface Member {
   // The account, for a member who is logged in, whose name is then the username.
   account: MemberAccount | null;
   sockets: Set<string>;
+  // The keys that the member's browsers have as guests, the last MAX_BROWSERS of them, whether or
+  // not they are connected now: whoever the chair removes stays out by these too (remove()).
+  browsers: Set<string>;
   offlineSince: number | null;
 }
 
-// How long someone the chair removed must wait before they may come back, and how long nobody
-// else may take their name.
+// How many browsers a member is remembered from. A player plays from a phone and a laptop, not
+// from dozens of browsers; a limit keeps a member who comes with a new token every time from
+// growing the room, and from filling the removals with keys.
+export const MAX_BROWSERS = 10;
+
+// Someone the chair removes from a private room must wait this long before they may come back;
+// from a public room, whose code anyone can read off the list, they stay out for as long as the
+// room lasts. Either way, nobody else may take their name for this long, so that they don't seem
+// to have come straight back.
 export const REMOVED_FOR_MS = 2 * 60_000;
+// How many removals a room remembers. Only the chair adds to them, so the limit is for a chair who
+// removes newcomer after newcomer, which would otherwise grow the room for as long as it lasts;
+// past it, the earliest removal is forgotten.
+export const MAX_REMOVED = 200;
+
+// One removal: the name the member had, until when they must wait and their name is held, whether
+// they stay out for good, as from a room that was public when they were removed, and every key
+// they stay out by.
+interface Removal {
+  name: string;
+  until: number;
+  forGood: boolean;
+  keys: string[];
+}
 
 export interface RoomOptions {
   code: string;
@@ -52,6 +77,8 @@ export interface RoomOptions {
   language: Language;
   // As chooseFields() returned them.
   fields: string[];
+  // Listed on the home page for anyone with an account to join (docs/architecture.md#public-rooms).
+  public?: boolean;
   words: WordLibrary;
   rng: Rng;
   now: () => number;
@@ -83,6 +110,7 @@ export class Room {
   readonly language: Language;
   readonly createdAt: number;
   fields: string[];
+  public: boolean;
   phase: RoomPhase = 'lobby';
   rev = 0;
   chairId: string | null = null;
@@ -100,9 +128,17 @@ export class Room {
   // By player ID, in the order in which they joined. Whatever goes by "who joined first", such as
   // the next chair, reads this order, and so does the list that players see.
   readonly members = new Map<string, Member>();
-  readonly screens = new Set<string>();
-  // Whom the chair has removed, by member key: until when they must wait, and the name they had.
-  readonly #removed = new Map<string, { until: number; name: string }>();
+  // By connection, the key of the connection that put the screen up.
+  readonly screens = new Map<string, string>();
+  // The keys of the screens that were up when the room was listed. They stay, as the guests who
+  // were there do, when a screen in a public room takes an account with a seat (socket.ts).
+  readonly #keptScreens = new Set<string>();
+  // The chair's removals, the earliest first, up to MAX_REMOVED, and the same by every key the
+  // removed stay out by. A key removed again goes to the later removal.
+  readonly #removals = new Set<Removal>();
+  readonly #removed = new Map<string, Removal>();
+  // Who has reported whom here, as "reporter\nreported" by member key: each pair once per room.
+  readonly #reported = new Set<string>();
   // When each member last sent a quick reaction, by member key, so that neither another tab nor
   // leaving and coming back starts the wait again.
   readonly #emoted = new Map<string, number>();
@@ -122,6 +158,7 @@ export class Room {
     this.game = options.game;
     this.language = options.language;
     this.fields = [...options.fields];
+    this.public = options.public ?? false;
     this.#words = options.words;
     this.#rng = options.rng;
     this.#now = options.now;
@@ -170,17 +207,21 @@ export class Room {
     return count;
   }
 
-  // Why nobody new can come in with this key for now, whatever they call themselves. A newcomer
-  // hears this before being asked for a name, rather than after having typed one.
-  refusal(key: string): 'removed_recently' | 'room_full' | null {
-    if (this.removedRecently(key)) return 'removed_recently';
-    return this.members.size >= MAX_PLAYERS ? 'room_full' : null;
+  // Why nobody new can come in with any of these keys, whatever they call themselves: the chair
+  // removed them, or the room is full. A newcomer hears this before being asked for a name, rather
+  // than after having typed one. A browser has a key as a guest and, logged in, its account's, and
+  // whoever was removed by either stays out.
+  refusal(...keys: string[]): 'removed' | 'removed_recently' | 'room_full' | null {
+    return this.removal(...keys) ?? (this.full() ? 'room_full' : null);
   }
 
-  // Whether the chair removed whoever has this key so recently that they must still wait.
-  removedRecently(key: string): boolean {
-    const removed = this.#removed.get(key);
-    return removed !== undefined && removed.until > this.#now();
+  // Whether the chair removed whoever has any of these keys: `removed` for good, from a room that
+  // was public at the time, `removed_recently` while the wait after a removal from a private room
+  // lasts, or null.
+  removal(...keys: string[]): 'removed' | 'removed_recently' | null {
+    const found = keys.map((key) => this.#removed.get(key));
+    if (found.some((removal) => removal?.forGood)) return 'removed';
+    return found.some((removal) => removal && removal.until > this.#now()) ? 'removed_recently' : null;
   }
 
   // A new member, who has come to play or only to watch. The first one chairs the room. A member
@@ -198,6 +239,7 @@ export class Room {
       name,
       account: account && { ...account },
       sockets: new Set(),
+      browsers: new Set(),
       offlineSince: null,
     };
     // The newcomer becomes a member only once the module has taken them, so the context learns
@@ -212,12 +254,15 @@ export class Room {
     return { ok: true, member };
   }
 
-  // A member's connection. Returns whether the room looks any different with it, which it does
-  // only when it is the member's first: they come online. Another tab of someone who is online
-  // is news to nobody.
-  attach(member: Member, socketId: string): boolean {
+  // A member's connection, from a browser whose key as a guest is `browserKey`. Returns whether
+  // the room looks any different with it, which it does only when it is the member's first: they
+  // come online. Another tab of someone who is online is news to nobody.
+  attach(member: Member, socketId: string, browserKey = member.key): boolean {
     const first = member.sockets.size === 0;
     member.sockets.add(socketId);
+    member.browsers.delete(browserKey);
+    member.browsers.add(browserKey);
+    if (member.browsers.size > MAX_BROWSERS) member.browsers.delete(member.browsers.values().next().value as string);
     member.offlineSince = null;
     this.lastSeen = this.#now();
     if (first) this.changed();
@@ -242,19 +287,41 @@ export class Room {
     return true;
   }
 
+  full(): boolean {
+    return this.members.size >= MAX_PLAYERS;
+  }
+
   screensFull(): boolean {
     return this.screens.size >= MAX_SCREENS;
   }
 
-  addScreen(socketId: string): void {
-    this.screens.add(socketId);
+  // The connections of the screens that a key has up.
+  screensOf(key: string): string[] {
+    return [...this.screens].filter(([, by]) => by === key).map(([id]) => id);
+  }
+
+  // Whether a screen with this key may be in the room although it is public, as the screens that
+  // were up when it was listed may.
+  screenKept(key: string): boolean {
+    return this.#keptScreens.has(key);
+  }
+
+  // A screen, by the key of the connection that puts it up. In a public room a key has one screen
+  // at most, so that nobody fills all five: a new one takes the place of those the key had, which
+  // are returned for the socket layer to close. That is also how a screen that comes back before
+  // its old connection was found to be gone takes its own place.
+  addScreen(socketId: string, key: string): string[] {
+    const replaced = this.public ? this.screensOf(key) : [];
+    for (const id of replaced) this.screens.delete(id);
+    this.screens.set(socketId, key);
     this.lastSeen = this.#now();
     this.changed();
+    return replaced;
   }
 
   // The chair sends every screen away. Returns their connections.
   dismissScreens(): string[] {
-    const screens = [...this.screens];
+    const screens = [...this.screens.keys()];
     this.screens.clear();
     if (screens.length > 0) this.changed();
     return screens;
@@ -293,7 +360,7 @@ export class Room {
 
   // Every connection in the room: the members' and the screens'.
   connections(): string[] {
-    return [...this.screens, ...[...this.members.values()].flatMap((member) => [...member.sockets])];
+    return [...this.screens.keys(), ...[...this.members.values()].flatMap((member) => [...member.sockets])];
   }
 
   // A member with an account is called by its username, which changes on the account's page.
@@ -347,7 +414,44 @@ export class Room {
     return true;
   }
 
+  // Whether a member's report of another has been kept here already. The room only keeps who has
+  // reported whom (docs/architecture.md#public-rooms), so that the same report isn't kept twice.
+  reported(reporterKey: string, reportedKey: string): boolean {
+    return this.#reported.has(`${reporterKey}\n${reportedKey}`);
+  }
+
+  // A member's report of another was kept.
+  report(reporterKey: string, reportedKey: string): void {
+    this.#reported.add(`${reporterKey}\n${reportedKey}`);
+  }
+
   // --- the chair's controls ---------------------------------------------------------------
+
+  // The chair lists the room on the home page, or takes it off, in the waiting room.
+  setPublic(value: boolean): Ack {
+    if (this.phase !== 'lobby') return fail('wrong_phase');
+    if (value) this.#list();
+    else this.unlist();
+    return done;
+  }
+
+  // Lists the room. The screens that are up stay, as the guests who are there do, now that a
+  // screen takes an account with a seat (socket.ts).
+  #list(): void {
+    if (this.public) return;
+    this.public = true;
+    for (const key of this.screens.values()) this.#keptScreens.add(key);
+    this.changed();
+  }
+
+  // The room goes off the list whatever the phase, as when the operator has barred the chair from
+  // public rooms (socket.ts). Returns whether it was listed.
+  unlist(): boolean {
+    if (!this.public) return false;
+    this.public = false;
+    this.changed();
+    return true;
+  }
 
   // The chair changes the fields, the game's own settings, or both, in the waiting room. Both
   // change together or neither does: one that won't do refuses the other with it.
@@ -521,14 +625,26 @@ export class Room {
     return done;
   }
 
-  // Removes a member, who then has to wait before coming back. Returns the connections they
-  // still had and their member key.
-  remove(id: string): Ack<{ sockets: string[]; key: string }> {
+  // Removes a member, who then stays out, by their member key and by the keys that their browsers
+  // have as guests, so that a player who is logged in can't come back as a guest. Whether the room
+  // is public now decides for how long: for good, or for REMOVED_FOR_MS, whatever the room becomes
+  // later. Returns the connections they still had, their member key and what they hear: what
+  // room:join would answer them.
+  remove(id: string): Ack<{ sockets: string[]; key: string; reason: 'removed' | 'removed_recently' }> {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');
     const sockets = this.drop(id);
-    this.#removed.set(member.key, { until: this.#now() + REMOVED_FOR_MS, name: member.name });
-    return { ok: true, sockets, key: member.key };
+    const removal: Removal = {
+      name: member.name,
+      until: this.#now() + REMOVED_FOR_MS,
+      forGood: this.public,
+      keys: [...new Set([member.key, ...member.browsers])],
+    };
+    this.#removals.add(removal);
+    for (const key of removal.keys) this.#removed.set(key, removal);
+    this.forgetOldRemovals();
+    while (this.#removals.size > MAX_REMOVED) this.#forget(this.#removals.values().next().value as Removal);
+    return { ok: true, sockets, key: member.key, reason: this.public ? 'removed' : 'removed_recently' };
   }
 
   // The chair goes to someone who is there to take it. Handed to a member who has been offline
@@ -628,8 +744,17 @@ export class Room {
       .map((member) => member.id);
   }
 
+  // Forgets the removals from a private room whose wait is over. Those for good stay.
   forgetOldRemovals(): void {
-    for (const [key, { until }] of this.#removed) if (until <= this.#now()) this.#removed.delete(key);
+    for (const removal of this.#removals) {
+      if (!removal.forGood && removal.until <= this.#now()) this.#forget(removal);
+    }
+  }
+
+  // Forgets a removal, with its keys, unless a later removal has them.
+  #forget(removal: Removal): void {
+    this.#removals.delete(removal);
+    for (const key of removal.keys) if (this.#removed.get(key) === removal) this.#removed.delete(key);
   }
 
   forgetOldEmotes(): void {
@@ -640,6 +765,19 @@ export class Room {
   }
 
   // --- what people see --------------------------------------------------------------------
+
+  // The room as the home page lists it (docs/architecture.md#public-rooms): nothing of who is in
+  // it but how many, and whether a game is on.
+  listing(): PublicRoom {
+    return {
+      code: this.code,
+      game: this.game.id,
+      language: this.language,
+      fields: [...this.fields],
+      players: this.members.size,
+      playing: this.phase === 'playing',
+    };
+  }
 
   // The room as it is now, for any number of viewers. Most of a view is the same for everyone, so
   // that part is put together once; the function that this returns adds what one viewer sees,
@@ -658,6 +796,7 @@ export class Room {
       game: this.game.id,
       language: this.language,
       fields: [...this.fields],
+      public: this.public,
       phase: this.phase,
       round: this.round,
       gameId: this.gameId,
@@ -690,11 +829,11 @@ export class Room {
   }
 
   // A name is taken by a member who has it, and for a while by a member who was removed with it.
-  // The wait after a removal goes by the browser's token, which is all the server knows a player
-  // by, so another browser gets around it. It should at least not come back as the same person.
+  // A removal goes by the member key, which another browser gets around; it should at least not
+  // come back as the same person.
   #nameTaken(name: string, except?: string): boolean {
     for (const member of this.members.values()) if (member.id !== except && sameName(member.name, name)) return true;
-    for (const removed of this.#removed.values()) {
+    for (const removed of this.#removals) {
       if (removed.until > this.#now() && sameName(removed.name, name)) return true;
     }
     return false;

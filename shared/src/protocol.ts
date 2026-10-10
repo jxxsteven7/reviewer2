@@ -33,6 +33,9 @@ export const ROOM_ERRORS = [
   'name_taken',
   'name_reserved',
   'account_name',
+  'account_required',
+  'public_barred',
+  'removed',
   'removed_recently',
   'not_member',
   'not_chair',
@@ -54,6 +57,17 @@ export interface FieldInfo {
   id: string;
   name: Record<Language, string>;
   counts: Record<Language, number>;
+}
+
+// A public room as the list on the home page shows it (meta:rooms): nothing about who is in it but
+// how many, and whether a game is on.
+export interface PublicRoom {
+  code: string;
+  game: string;
+  language: Language;
+  fields: string[];
+  players: number;
+  playing: boolean;
 }
 
 // What the server answers a message with: that it did what was asked, with whatever it has to
@@ -98,6 +112,8 @@ export interface EmoteEvent {
   emote: Emote;
 }
 
-// Why the server closed a room for someone: they were removed, the room expired, they left it
-// from another tab, the chair closed it for everyone, or the server is restarting.
-export type ClosedReason = 'removed' | 'expired' | 'left' | 'closed' | 'restart';
+// Why the server closed a room for someone: they were removed, for good from a public room or for
+// a while from a private one, as room:join would then answer them; the chair sent the screens
+// away; the room expired; they left it from another tab; the chair closed it for everyone; or the
+// server is restarting.
+export type ClosedReason = 'removed' | 'removed_recently' | 'dismissed' | 'expired' | 'left' | 'closed' | 'restart';

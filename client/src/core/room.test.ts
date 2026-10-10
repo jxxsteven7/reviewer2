@@ -33,6 +33,7 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
   game: 'keywords',
   language: 'en',
   fields: ['general'],
+  public: false,
   phase: 'lobby',
   round: 0,
   gameId: null,
@@ -80,6 +81,18 @@ describe('the room page', () => {
     await submitName('Ann', false);
     expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', name: 'Ann', play: false });
     expect(entry.status).toBe('needs_name');
+  });
+
+  test('takes a newcomer off the name form when the room has come to take accounts only', async () => {
+    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+    openRoom('K7QX');
+    await flushPromises();
+    expect(entry.status).toBe('needs_name');
+    // The chair listed the room meanwhile: the notice shows the way to log in and come back.
+    mock.send.mockResolvedValueOnce(fail('account_required'));
+    await submitName('Ann', true);
+    expect(entry.status).toBe('failed');
+    expect(entry.error).toBe('account_required');
   });
 
   test('ignores the snapshots and the closing of a room the page has left', async () => {

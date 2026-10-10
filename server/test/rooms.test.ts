@@ -646,7 +646,7 @@ describe("the chair's controls", () => {
     const bob = await join(code, 'Bob');
     expect(await chair.send('room:remove', { playerId: chair.me })).toEqual({ ok: false, error: 'bad_request' });
     expect(await chair.send('room:remove', { playerId: bob.me })).toEqual({ ok: true });
-    await until(() => bob.closed.includes('removed'), 'Bob hears');
+    await until(() => bob.closed.includes('removed_recently'), 'Bob hears');
     await chair.waitFor((state) => state.players.length === 1);
     expect(await bob.send('room:join', { code, name: 'Bob' })).toEqual({ ok: false, error: 'removed_recently' });
     // Another browser has another token, which the wait can't know. It doesn't get Bob's name.
@@ -1088,7 +1088,7 @@ describe('screens', () => {
     expect(await projector.send('room:watch', { code })).toEqual({ ok: false, error: 'screens_full' });
 
     expect(await chair.send('room:dismiss')).toEqual({ ok: true });
-    await until(() => taken.every((screen) => screen.closed.includes('removed')), 'the screens hear');
+    await until(() => taken.every((screen) => screen.closed.includes('dismissed')), 'the screens hear');
     await chair.waitFor((state) => state.screens === 0, 'the chair sees none');
     expect(await taken[0]?.send('test:press')).toEqual({ ok: false, error: 'not_member' });
     expect(await projector.send('room:watch', { code })).toMatchObject({ ok: true });
@@ -1106,7 +1106,7 @@ describe('screens', () => {
     expect(await bobsScreen.send('room:watch', { code })).toMatchObject({ ok: true });
     expect(await projector.send('room:watch', { code })).toMatchObject({ ok: true });
     await chair.send('room:remove', { playerId: bob.me });
-    await until(() => bobsScreen.closed.includes('removed'), "Bob's screen hears");
+    await until(() => bobsScreen.closed.includes('removed_recently'), "Bob's screen hears");
     await chair.waitFor((state) => state.screens === 1 && state.players.length === 1);
     expect(projector.closed).toEqual([]);
     projector.close();

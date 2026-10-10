@@ -4,7 +4,8 @@ import { useI18n } from 'vue-i18n';
 import PlayerAvatar from './PlayerAvatar.vue';
 
 // A player's avatar and name with their online status, and marks for "you" and the chair. For the
-// chair, other players' names are buttons that open the chair's actions.
+// chair, and in a public room for anyone who may report a player, other players' names are
+// buttons that open the player menu.
 defineProps<{ player: PlayerView; me: boolean; chair: boolean; manageable: boolean }>();
 const emit = defineEmits<{ manage: [player: PlayerView] }>();
 const { t } = useI18n();
@@ -43,7 +44,7 @@ const { t } = useI18n();
   text-align: left;
 }
 
-/* A name the chair can act on is a small sticker of its own. */
+/* A name that can be acted on is a small sticker of its own. */
 .manageable {
   padding: 0 var(--space-3) 0 var(--space-1);
   border: var(--line-thin) solid var(--ink);

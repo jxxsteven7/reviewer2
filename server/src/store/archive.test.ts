@@ -6,11 +6,12 @@ import { AcknowledgmentStore } from './acknowledgments';
 import { FeedbackStore } from './feedback';
 import { MIGRATIONS } from './migrations';
 
-// The feedback and the acknowledgments are archives (docs/architecture.md#feedback): no row is
-// ever deleted, and what a player sent and whom an acknowledgment is for are never changed. The
-// only changes are the ones that the players were promised and the operator's notes: a contact
-// is cleared after 90 days, the GitHub issue that feedback became is recorded, and a deleted
-// account is unlinked from both, which its foreign keys do. These tests fail when code that
+// The feedback, the acknowledgments and the reports of players are archives
+// (docs/architecture.md#feedback): no row is ever deleted, and what a player sent, whom an
+// acknowledgment is for and whom a report is about are never changed. The only changes are the
+// ones that the players were promised and the operator's notes: a contact is cleared after 90
+// days, the GitHub issue that feedback became is recorded, and a deleted account is unlinked from
+// all three, which its foreign keys do. These tests fail when code that
 // breaks that is added; change them only with a maintainer's agreement.
 
 const SOURCE = join(import.meta.dirname, '..');
@@ -71,14 +72,14 @@ function strings(code: string): string[] {
 
 // A name as SQLite takes it: bare, or in double quotes, backticks or brackets.
 const named = (names: string) => `(?:${names}|"(?:${names})"|\`(?:${names})\`|\\[(?:${names})\\])`;
-// SQL on either table that could delete or rewrite a row, as far as the statement goes: to its
+// SQL on any of the tables that could delete or rewrite a row, as far as the statement goes: to its
 // semicolon, in a migration of several, or to the end of its string. INSERT is looked at too, in
 // case it updates or replaces on a conflict, and so is a table renamed to take the place of either.
 // The table may be named with main. and in quotes.
 const SQL = new RegExp(
   '\\b(?:DELETE\\s+FROM|UPDATE(?:\\s+OR\\s+\\w+)?|REPLACE\\s+INTO|INSERT\\s+(?:OR\\s+\\w+\\s+)?INTO|' +
     'DROP\\s+TABLE(?:\\s+IF\\s+EXISTS)?|ALTER\\s+TABLE|ALTER\\s+TABLE\\s+\\S+\\s+RENAME\\s+TO)\\s+' +
-    `(?:${named('main')}\\s*\\.\\s*)?${named('feedback|acknowledgments')}(?![\\w$])[^;]*`,
+    `(?:${named('main')}\\s*\\.\\s*)?${named('feedback|acknowledgments|reports')}(?![\\w$])[^;]*`,
   'gi',
 );
 
@@ -216,6 +217,8 @@ describe('the archive', () => {
       'DELETE FROM main . feedback',
       'DROP TABLE acknowledgments',
       'DROP TABLE IF EXISTS feedback',
+      'DELETE FROM reports WHERE created_at < ?',
+      'UPDATE reports SET text = NULL',
       'UPDATE OR IGNORE feedback SET text = ?',
       'ALTER TABLE feedback RENAME TO old_feedback',
       'ALTER TABLE new_feedback RENAME TO feedback',
@@ -231,6 +234,7 @@ describe('the archive', () => {
       "db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL ' + 'AND created_at < ?')",
       "db.prepare('UPDATE accounts SET username = ? WHERE id = ?')",
       "db.prepare('DELETE FROM feedback_drafts')",
+      "db.prepare('INSERT INTO reports (created_at, reporter_id) VALUES (?, ?)')",
       "db.prepare('SELECT * FROM feedback')",
       '// DELETE FROM feedback, in a comment, which never runs',
     ]) {

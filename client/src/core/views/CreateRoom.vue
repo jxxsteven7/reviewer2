@@ -22,9 +22,9 @@ import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
 // lists, the game's own settings, whether it is an ordinary room or a match, and the match's
-// rules, the creator's nickname, and whether they play or only watch.
-// The creator becomes the chair either way. A creator who is logged in has their username, and is
-// asked for no nickname.
+// rules, whether the room is private or listed on the home page, the creator's nickname, and
+// whether they play or only watch. The creator becomes the chair either way. A creator who is
+// logged in has their username, and is asked for no nickname; only they may list the room.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
@@ -49,6 +49,9 @@ const isMatch = ref(false);
 const match = ref<MatchRules>(defaultMatchRules());
 const matchValid = ref(true);
 const group = useId();
+// Private, as rooms always were, or public (docs/architecture.md#public-rooms).
+const isPublic = ref(false);
+const visibility = useId();
 
 // The creator chooses the lists: none is chosen to begin with. When a change of language leaves
 // a chosen list without enough words, it drops out, and nothing is chosen in its place.
@@ -85,6 +88,7 @@ async function create() {
       fields: chosen.value,
       ...(settings.value ? { settings: settings.value } : {}),
       ...(isMatch.value ? { match: match.value } : {}),
+      ...(isPublic.value ? { public: true } : {}),
       ...(account.summary ? {} : { name: name.value }),
       play: play.value,
     }),
@@ -146,6 +150,22 @@ async function create() {
         </label>
       </fieldset>
       <MatchForm v-if="isMatch" v-model="match" v-model:valid="matchValid" />
+    </section>
+
+    <section class="step">
+      <h3 :id="`${visibility}-label`">{{ t('create.visibility') }}</h3>
+      <fieldset class="kind" :aria-labelledby="`${visibility}-label`">
+        <label>
+          <input v-model="isPublic" type="radio" :name="visibility" :value="false" />
+          <span class="option">{{ t('create.private') }}</span>
+          <span class="hint">{{ t('create.privateHint') }}</span>
+        </label>
+        <label>
+          <input v-model="isPublic" type="radio" :name="visibility" :value="true" :disabled="!account.summary" />
+          <span class="option">{{ t('create.public') }}</span>
+          <span class="hint">{{ t(account.summary ? 'create.publicHint' : 'create.publicNeedsAccount') }}</span>
+        </label>
+      </fieldset>
     </section>
 
     <section class="step">
@@ -243,6 +263,11 @@ h3 {
 
 .kind label:has(input:checked) {
   background: var(--bg);
+}
+
+.kind label:has(input:disabled) {
+  color: var(--ink-2);
+  cursor: default;
 }
 
 .kind label:has(input:focus-visible) {

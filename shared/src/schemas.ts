@@ -40,6 +40,7 @@ const matchId = z.string().max(64);
 export const ROOM_MESSAGES = {
   'sys:ping': none,
   'meta:fields': none,
+  'meta:rooms': none,
   // Feedback for the author. Its text, contact, credit and link are for the rules in feedback.ts
   // to judge, which refuse a long text before looking at it, so that it gets feedback_too_long and
   // not bad_request. The server takes no message of more than 16 KB at all (server.ts).
@@ -56,7 +57,7 @@ export const ROOM_MESSAGES = {
   }),
   // A room starts with its game's default settings when `settings` is left out. A creator who is
   // logged in has their username as the name, and needs to give none. With `match`, the room plays
-  // a match by those rules.
+  // a match by those rules; with `public`, it is listed for anyone with an account to join.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
@@ -65,6 +66,7 @@ export const ROOM_MESSAGES = {
     name: name.optional(),
     play,
     match: match.optional(),
+    public: z.boolean().optional(),
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out
@@ -74,8 +76,11 @@ export const ROOM_MESSAGES = {
   'room:leave': none,
   'room:rename': z.object({ name }),
   'room:emote': z.object({ emote: z.enum(EMOTES) }),
+  // A member reports another to the operator, with a note that the rules in feedback.ts judge.
+  'room:report': z.object({ playerId, text: z.string().optional() }),
   // The chair's controls. The settings change the word lists, the game's own settings, or both.
   'room:settings': z.object({ fields: fields.optional(), settings: settings.optional() }),
+  'room:public': z.object({ public: z.boolean() }),
   // The chair's messages about a game say which game they mean, so that one that comes late or
   // twice can't land in another: a start gives how many games the room has started so far, and a
   // withdrawal and "play again" give the game's ID.

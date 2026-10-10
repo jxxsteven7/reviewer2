@@ -1,4 +1,4 @@
-import { parseCode, type Ack, type Language, type MatchRules } from '@reviewer2/shared';
+import { parseCode, type Ack, type Language, type MatchRules, type PublicRoom } from '@reviewer2/shared';
 import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule } from './game';
@@ -19,6 +19,8 @@ export interface RoomLimits {
   lobbyOfflineMs: number;
   // The chair passes to someone else after being offline for this long.
   chairAwayMs: number;
+  // How many public rooms the home page lists at most.
+  maxListed: number;
 }
 
 export const DEFAULT_LIMITS: RoomLimits = {
@@ -27,6 +29,7 @@ export const DEFAULT_LIMITS: RoomLimits = {
   staleMs: 6 * 60 * 60_000,
   lobbyOfflineMs: 10 * 60_000,
   chairAwayMs: 3 * 60_000,
+  maxListed: 50,
 };
 
 export interface SweepResult {
@@ -56,7 +59,8 @@ export class Rooms {
   // A new room with its creator in it, who chairs it, or why there can't be one: the server is
   // full, or the fields, the game's settings or the name won't do. `key` is the creator's member
   // key, and `play` says whether they have come to play or only to watch. Without settings, the
-  // room has the game's defaults. With `match`, the room plays a match by those rules.
+  // room has the game's defaults. With `match`, the room plays a match by those rules; with
+  // `public`, it is listed on the home page.
   //
   // The room is listed only once its creator has joined it. A game module that throws there
   // leaves no room behind: one without a member would belong to whoever found its code first.
@@ -70,6 +74,7 @@ export class Rooms {
     play?: boolean;
     account?: MemberAccount | null;
     match?: MatchRules;
+    public?: boolean;
   }): Ack<{ room: Room; member: Member }> {
     const { game, language, key, name, play = false, account = null } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
@@ -82,6 +87,7 @@ export class Rooms {
       game,
       language,
       fields: chosen.fields,
+      public: options.public ?? false,
       words: this.words,
       rng: this.rng,
       now: this.now,
@@ -109,6 +115,19 @@ export class Rooms {
 
   all(): Room[] {
     return [...this.#rooms.values()];
+  }
+
+  // The public rooms that have room for someone, and someone in them, as the home page lists
+  // them: a room where nobody is online, which the sweep closes in time, would take newcomers
+  // nowhere. Waiting rooms first, and the older before the newer, so that a room fills before the
+  // next one does. Only the first `maxListed`: a list that long is more than anyone reads, and
+  // the answer costs the same whoever asks.
+  listed(): PublicRoom[] {
+    return this.all()
+      .filter((room) => room.public && !room.full() && room.onlineCount() > 0)
+      .sort((a, b) => Number(a.phase === 'playing') - Number(b.phase === 'playing') || a.createdAt - b.createdAt)
+      .slice(0, this.limits.maxListed)
+      .map((room) => room.listing());
   }
 
   // Closes a room and returns the connections that were still in it. Closing a room a second

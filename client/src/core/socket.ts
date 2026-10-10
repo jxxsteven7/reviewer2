@@ -47,6 +47,18 @@ export function connect(): void {
   if (!socket.connected && !socket.active) socket.connect();
 }
 
+// Runs something once there is a connection: now, if there is one, or else when the next one
+// comes, which is asked for. Returns a way to call it off, for a page that goes away first.
+export function onceConnected(run: () => void): () => void {
+  if (socket.connected) {
+    run();
+    return () => {};
+  }
+  socket.once('connect', run);
+  connect();
+  return () => socket.off('connect', run);
+}
+
 // Makes a fresh connection now. A connection that Socket.IO is waiting to retry would otherwise
 // keep waiting: connect() alone does nothing while a retry is pending, and the pauses between
 // retries grow to several seconds. Closing first drops the pending retry.

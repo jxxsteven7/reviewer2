@@ -133,11 +133,11 @@ describe('accounts', () => {
     expect(json.createdByDay[0]).toEqual({ day: '2026-10-03', count: 0 });
     expect(json.createdByDay[29]).toEqual({ day: '2026-11-01', count: 1 });
     expect(json.accounts).toEqual([
-      { username: 'Ann', createdAt: '2026-09-22T09:00:00.000Z', games: 1, matches: 1 },
-      { username: 'Bob', createdAt: '2026-10-22T09:00:00.000Z', games: 0, matches: 0 },
-      { username: 'Cy', createdAt: '2026-11-01T09:00:00.000Z', games: 0, matches: 0 },
+      { username: 'Ann', createdAt: '2026-09-22T09:00:00.000Z', games: 1, matches: 1, barred: false },
+      { username: 'Bob', createdAt: '2026-10-22T09:00:00.000Z', games: 0, matches: 0, barred: false },
+      { username: 'Cy', createdAt: '2026-11-01T09:00:00.000Z', games: 0, matches: 0, barred: false },
     ]);
-    expect(Object.keys(json.accounts[0])).toEqual(['username', 'createdAt', 'games', 'matches']);
+    expect(Object.keys(json.accounts[0])).toEqual(['username', 'createdAt', 'games', 'matches', 'barred']);
   });
 
   test('takes no other flag', () => {
@@ -181,6 +181,55 @@ const feedback = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
   page: 'home',
   userAgent: null,
   ...changes,
+});
+
+describe('accounts bar', () => {
+  test('keeps an account out of public rooms, until accounts unbar', () => {
+    accounts.store.create('Ann Lee', 'ann lee', 'hash');
+    expect(run('accounts', 'bar', 'ANN LEE')).toBe(0);
+    expect(printed).toEqual(['Ann Lee may not create or join public rooms. Private rooms are still open to them.']);
+    expect(accounts.store.byKey('ann lee')).toMatchObject({ publicBarred: true });
+    expect(run('accounts')).toBe(0);
+    expect(printed.at(-1)).toMatch(/ {2}Ann Lee {2}\(barred from public rooms\)$/);
+    expect(run('accounts', 'unbar', 'Ann Lee')).toBe(0);
+    expect(printed.at(-1)).toBe('Ann Lee may create and join public rooms again.');
+    expect(accounts.store.byKey('ann lee')).toMatchObject({ publicBarred: false });
+    expect(run('accounts', 'bar', 'Bob')).toBe(1);
+    expect(printed.at(-1)).toBe('No account is called Bob.');
+    expect(run('accounts', 'bar')).toBe(2);
+  });
+});
+
+describe('reports list', () => {
+  test('prints the latest reports, with whom they name and the note on one line', () => {
+    vi.useFakeTimers({ now: Date.UTC(2026, 10, 1, 9) });
+    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    const bob = accounts.store.create('Bob', 'bob', 'hash');
+    if (!ann || !bob) throw new Error('no account');
+    expect(run('reports', 'list')).toBe(0);
+    expect(printed).toEqual(['No reports yet.']);
+    const store = new FeedbackStore(database.db);
+    store.report({
+      reporterId: ann.id,
+      reportedId: bob.id,
+      reportedName: 'Bob',
+      roomCode: 'K7QX',
+      text: 'Rude\nclues',
+    });
+    printed = [];
+    expect(run('reports', 'list')).toBe(0);
+    expect(printed).toEqual(['1 report:', '#1  2026-11-01  Ann reported Bob (account Bob) in R2-K7QX: Rude / clues']);
+    store.report({ reporterId: bob.id, reportedId: null, reportedName: 'Guest', roomCode: 'K7QX', text: null });
+    accounts.store.setPublicBarred(bob.id, true);
+    accounts.store.delete(ann.id);
+    printed = [];
+    expect(run('reports', 'list')).toBe(0);
+    expect(printed).toEqual([
+      '2 reports in all, the latest 2 first:',
+      '#2  2026-11-01  Bob reported Guest in R2-K7QX',
+      '#1  2026-11-01  (deleted account) reported Bob (account Bob, barred) in R2-K7QX: Rude / clues',
+    ]);
+  });
 });
 
 // The entry that a command printed for ACKNOWLEDGMENTS.md, as the file's rules read it once the

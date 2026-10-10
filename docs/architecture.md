@@ -22,9 +22,13 @@ One Node process serves everything on one port: the built front end, `/healthz`,
 - **Codes:** four characters of Crockford's base32, shown as `R2-K7QX`, linked as `/room/K7QX`; `parseCode()` in `shared/src/codes.ts` reads them. Codes are reused, so every snapshot carries a random `roomId`.
 - **Phases:** `lobby`, `playing`, `ended`, back to `lobby`. Each game has a random `gameId`. A room can be a [match](#matches).
 - **The chair** is the first member and alone changes settings, starts and ends games and matches, shuffles, benches, removes, hands the chair on, or closes the room. When the chair leaves, or is offline for 3 minutes, the earliest-joined online member takes over.
-- **Playing or watching.** A newcomer sends `play: true` to play; the game decides what that means ([seats](games/keywords.md#seats)). A returning member keeps their seat; a removed one stays out for 2 minutes.
+- **Playing or watching.** A newcomer sends `play: true` to play; the game decides what that means ([seats](games/keywords.md#seats)). A returning member keeps their seat. A removed one stays out by their member key, which is the account's for a player who is logged in and the browser's otherwise, and by the keys of the browsers they were connected from: for as long as the room lasts (`removed`) if it was public when they were removed, and for 2 minutes (`removed_recently`) if it was private, whatever it becomes later. A room remembers its last 200 removals.
 - **Revisions.** Every change bumps `rev`.
-- **Screens,** such as a projector, watch without a token or seat, through `room:watch`, with a spectator's view; up to 5 per room.
+- **Screens,** such as a projector, watch without a token or seat, through `room:watch`, with a spectator's view; up to 5 per room. In a public room a screen takes an account with a seat there, one screen each ([Public rooms](#public-rooms)).
+
+## Public rooms
+
+A room is private, as rooms always were, unless its creator makes it public, or the chair does in the waiting room with `room:public`. A public room is listed on the home page (`meta:rooms`): code, game, language, fields, how many members it has and whether a game is on; full rooms and rooms where nobody is online are left out, and the list stops at 50 rooms, waiting rooms first and older rooms before newer ones. The list is for everyone, but creating a public room, listing one and joining one, by the list, the code or the link alike, take an account (`account_required`), so that a player can be reported and can't start over under a new nickname. A screen in a public room takes an account with a seat there (`not_member`), so that the chair can remove whoever put it up, and one account has one screen, which a new one replaces, so that nobody fills all five. The guests and screens already in a room stay when it is listed. A member with an account may report another member of a public room with `room:report`, with a note; the `reports` table (migration 6) keeps who reported whom, the name the player had, the room's code and the note, which the status page and `admin.cjs reports list` show. Reports are an archive, as the feedback is ([Feedback](#feedback)): no code deletes or changes one, and deleting an account only unlinks it. The operator bars an account from public rooms with `admin.cjs accounts bar` (`public_barred`); private rooms stay open to it, and a public room it chairs goes off the list by the next sweep, with everyone in it staying.
 
 ## Players and identity
 
@@ -40,17 +44,20 @@ Everything after the page load goes over Socket.IO, except the account API ([Acc
 - **Validation:** every payload against a zod schema from `shared/src/schemas.ts`, which the client never imports (ESLint refuses it): zod probes `new Function`, which the Content Security Policy forbids.
 - **In order:** one connection's messages run in arrival order, and handlers never await between reading a room and writing it.
 - **Snapshots.** After every visible change, each connection gets its own complete `room:state`; the client keeps the highest `rev` for its `roomId`.
-- **Closing.** `room:closed` says why a room is gone: `removed`, `expired`, `left`, `closed` or `restart`.
+- **Closing.** `room:closed` says why a room is gone: `removed` or `removed_recently`, as `room:join` would then answer, `dismissed` (a screen the chair sent away), `expired`, `left`, `closed` or `restart`.
 
 | Message | Payload | Who and errors |
 |---|---|---|
 | `meta:feedback` | `kind`, `text`, `contact`?, `credit`?, `link`?, `publicIssue`?, `version`, `language`, `page` | Anyone ([Feedback](#feedback)) |
-| `room:create` | `game`, `language`, `fields`, `settings`?, `name` (guests), `play`, `match`? | Anyone; `bad_settings`, `bad_match` |
-| `room:join` | `code`; `name`, `play` (newcomers); `roomId` (returning) | Anyone; `removed_recently`, `room_full`, `name_required` |
-| `room:watch` | `code`, `roomId` (returning screen) | A screen |
+| `meta:rooms` | | Anyone; the public rooms ([Public rooms](#public-rooms)) |
+| `room:create` | `game`, `language`, `fields`, `settings`?, `name` (guests), `play`, `match`?, `public`? | Anyone; `bad_settings`, `bad_match`, `account_required`, `public_barred` |
+| `room:join` | `code`; `name`, `play` (newcomers); `roomId` (returning) | Anyone; `removed`, `removed_recently`, `room_full`, `account_required`, `public_barred`, `name_required` |
+| `room:watch` | `code`, `roomId` (returning screen) | A screen; `removed`, `removed_recently`, `screens_full`; in a public room `account_required`, `public_barred`, `not_member` |
 | `room:leave`, `room:rename` | `name` | Members; `account_name` for accounts |
 | `room:emote` | `emote`: `waiting`, `deadline`, `reviewer2` | Members; one every 10 seconds, else `emote_cooldown` with `waitMs`; in no snapshot |
+| `room:report` | `playerId`, `text`? | Members with accounts, in a public room; `not_public`, `report_too_long`, `report_limited`, `report_full` |
 | `room:settings` | `fields`, `settings` | The chair, in the waiting room; both or neither; `match_locked` |
+| `room:public` | `public` | The chair, in the waiting room; `account_required`, `public_barred` |
 | `room:start` | `round` | The chair; `stale` |
 | `room:end`, `room:again` | `gameId` | The chair; `stale`; `match_over` after a match's last game |
 | `room:matchEnd`; `room:matchNext` | `matchId`; and `match` (rules or null) | The chair; ends a match early; starts another or an ordinary room. `stale`, `match_over`, `wrong_phase`, `bad_match` |
@@ -78,7 +85,7 @@ A match plays a set number of games, scores every player in each, and ranks them
 ## Limits and housekeeping
 
 - **Rate:** about 10 messages a second per connection, bursts of 20; a message is at most 16 KB.
-- **Per address:** 5 rooms a minute (`ROOMS_PER_MINUTE`), 20 codes a minute that belong to no room, 3 pieces of feedback every 10 minutes (`FEEDBACK_PER_10_MINUTES`). Behind a reverse proxy, `TRUST_PROXY` takes the address from `X-Forwarded-For`.
+- **Per address:** 5 rooms a minute (`ROOMS_PER_MINUTE`), 20 codes a minute that belong to no room, 3 pieces of feedback every 10 minutes (`FEEDBACK_PER_10_MINUTES`). Behind a reverse proxy, `TRUST_PROXY` takes the address from `X-Forwarded-For`. **Per account:** 5 reports an hour.
 - **In one place:** `SocketLimits` in `server/src/core/socket.ts`, `RoomLimits` in `server/src/core/rooms.ts`. 30 players per room, 2000 rooms per server.
 - **The sweep,** once a minute, closes rooms with nobody online for 30 minutes or nothing happening for 6 hours, and drops members offline for 10 minutes from waiting rooms.
 - **Stopping:** every connection hears `room:closed` with `restart`, then the database closes; after 5 seconds the process ends anyway (`stop_timed_out`). A wrong setting, library or database stops the server before it listens (`startup_failed`, `listen_failed`).
@@ -94,13 +101,13 @@ Files under `/assets/` carry a content hash and are cached for good; everything 
 - **Migrations:** `PRAGMA user_version` and `server/src/store/migrations.ts`, run on start in one transaction, after a snapshot.
 - **Snapshots** every hour into `snapshots/`, the last three kept.
 - **The disk.** Feedback stops at 10,000 pieces or 50 MB, which `MAX_FEEDBACK` raises together; nothing is deleted to make room, spam included ([Feedback](#feedback)). Past 1 GB nothing new is kept (`storage_full`). Avatars up to 2 GB.
-- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback and its acknowledgments stay, no longer linked to it.
+- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback, its acknowledgments and the reports it sent or got stay, no longer linked to it.
 
 ## Feedback
 
 Players send it from the foot of the home page or a room; the status page shows it. The rules are in `shared/src/feedback.ts`, run on both sides. **Kept:** text, contact, kind (a suggestion, a new game, a bug or the word lists), version, language, page, time, for a bug only the user agent, whether the player agreed to a public GitHub issue (no unless ticked), and with a name for the acknowledgments its `https://` link and the account it was given from ([Acknowledgments](#acknowledgments)). **Not kept:** address, nickname, token, member key, room code. When full, players are told (`feedback_full`).
 
-**An archive.** The feedback is the project's archive of suggestions, kept for good: no code deletes a row or changes what a player sent, and `server/src/store/archive.test.ts` fails if any is added. The only changes are what players were promised and the operator's notes: **contacts are cleared after 90 days** (`contacts_cleared`), deleting an account unlinks its feedback, and `feedback issue` records the GitHub issue that feedback became, which only feedback whose player agreed may become, with its text and name and never its contact. The table was rebuilt once, in migration 5, every row copied with its id, so that its kinds are checked in `shared/src/feedback.ts` alone and a new kind needs no migration; since then, migrations only add to it.
+**An archive.** The feedback is the project's archive of suggestions, kept for good: no code deletes a row or changes what a player sent, and `server/src/store/archive.test.ts` fails if any is added. The only changes are what players were promised and the operator's notes: **contacts are cleared after 90 days** (`contacts_cleared`), deleting an account unlinks its feedback, and `feedback issue` records the GitHub issue that feedback became, which only feedback whose player agreed may become, with its text and name and never its contact. The table was rebuilt once, in migration 5, every row copied with its id, so that its kinds are checked in `shared/src/feedback.ts` alone and a new kind needs no migration; since then, migrations only add to it. The reports of players are an archive by the same rules ([Public rooms](#public-rooms)).
 
 ## Acknowledgments
 
@@ -159,12 +166,12 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 - **Who has an account:** answers that reveal a taken name are limited, and `login_failed` is the same for a wrong name or password.
 - **Stolen logins and other sites:** a random secret, kept hashed, only in a hardened cookie, HTTPS only; `Origin` and `Sec-Fetch-Site` checks, no CORS, no framing; password change, binding and deletion ask for the password.
 - **Links and mail:** 256 random bits after `#`, kept as hashes, short-lived, used once; two fixed mails from a mailer that alone holds the key.
-- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records and titles, and the feedback, with the contacts of the last 90 days and the user agents of bug reports; no IP addresses.
+- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records and titles, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
 
 ## Logging
 
-One JSON object per line on stdout, never a token: rooms created and closed (`empty`, `idle`, `stale`, `chair`, `restart`), games started and ended, errors, the `stats` line, and named events such as `listening`, `startup_failed`, `database_opened`, `snapshot_failed`, `storage_full`, `feedback_received`, `account_created`, `mail_not_sent`, `words_clashed` and `match_ended`; Node's warnings come as `warning` lines, so every line is JSON.
+One JSON object per line on stdout, never a token: rooms created and closed (`empty`, `idle`, `stale`, `chair`, `restart`), games started and ended, errors, the `stats` line, and named events such as `listening`, `startup_failed`, `database_opened`, `snapshot_failed`, `storage_full`, `feedback_received`, `report_received`, `account_created`, `mail_not_sent`, `words_clashed` and `match_ended`; Node's warnings come as `warning` lines, so every line is JSON.
 
 ## Status
 
-`server/src/stats.ts` counts for both the log and the page: no addresses, tokens, names or room codes. The `stats` line, every 5 minutes: rooms, members, connections by transport and country, memory. The status page, with `STATUS_PORT`, listens on `127.0.0.1` only and answers only a `Host` of `localhost` or `127.0.0.1`, which is why it needs no password. `/` is the page, `/status.json` the numbers, `/feedback` what players sent, of every kind or of one, each with its name for the acknowledgments, its link, its account, whether it was adopted, whether the name is another account's username and whether it may be, or was, published as an issue; of accounts, the page shows only how many there are and how many are new in the last 7 days; no script, nothing written, English only. Countries come from Cloudflare's `CF-IPCountry` header, read only with `TRUST_PROXY` on; any other proxy must drop it ([development.md](development.md#running-in-production)).
+`server/src/stats.ts` counts for both the log and the page: no addresses, tokens, names or room codes. The `stats` line, every 5 minutes: rooms, members, connections by transport and country, memory. The status page, with `STATUS_PORT`, listens on `127.0.0.1` only and answers only a `Host` of `localhost` or `127.0.0.1`, which is why it needs no password. `/` is the page, `/status.json` the numbers, `/feedback` what players sent, of every kind or of one, each with its name for the acknowledgments, its link, its account, whether it was adopted, whether the name is another account's username and whether it may be, or was, published as an issue, `/reports` their reports of each other ([Public rooms](#public-rooms)); of accounts, the page shows only how many there are and how many are new in the last 7 days; no script, nothing written, English only. Countries come from Cloudflare's `CF-IPCountry` header, read only with `TRUST_PROXY` on; any other proxy must drop it ([development.md](development.md#running-in-production)).

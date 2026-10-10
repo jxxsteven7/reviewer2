@@ -2,7 +2,7 @@
 import { ACCOUNT_API, checkPassword, checkUsername, MAX_NAME_INPUT, MAX_PASSWORD_INPUT } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { account, logIn } from '../account';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
@@ -11,9 +11,16 @@ import { useBusy } from '../useBusy';
 
 // Logging in, or registering an account, which only needs a username and a password. Both forms
 // say what is wrong with what is typed before it is sent, by the rules that the server applies
-// (shared/src/accounts.ts), and what the server refused after. Registering logs the browser in.
+// (shared/src/accounts.ts), and what the server refused after. Registering logs the browser in,
+// and leads back to the room, or the screen of one, that sent the player here, if one did, or
+// else to the home page.
 const { t } = useI18n();
 const router = useRouter();
+const route = useRoute();
+const next = computed(() => {
+  const { next: wanted } = route.query;
+  return typeof wanted === 'string' && /^\/room\/[A-Za-z0-9]+(\/screen)?$/.test(wanted) ? wanted : '/';
+});
 const mode = ref<'login' | 'register'>('login');
 const username = ref('');
 const password = ref('');
@@ -44,7 +51,7 @@ async function submit() {
     refused.value = t(errorKey(reply.error));
     return;
   }
-  await router.push('/');
+  await router.push(next.value);
 }
 </script>
 

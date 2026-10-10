@@ -1,6 +1,6 @@
 import type { FieldInfo } from '@reviewer2/shared';
 import { shallowRef } from 'vue';
-import { connect, send, socket } from './socket';
+import { onceConnected, send } from './socket';
 
 // The word lists on the server, with how many terms each has in each language, for setting up a
 // room and for the chair's desk. They don't change while the server runs, so they are asked for
@@ -16,11 +16,7 @@ let asking = false;
 export function loadFields(): void {
   if (fields.value || asking) return;
   asking = true;
-  if (socket.connected) void ask();
-  else {
-    socket.once('connect', () => void ask());
-    connect();
-  }
+  onceConnected(() => void ask());
 }
 
 async function ask(): Promise<void> {
@@ -29,7 +25,7 @@ async function ask(): Promise<void> {
     fields.value = reply.fields;
     asking = false;
   } else if (reply.error === 'offline') {
-    socket.once('connect', () => void ask());
+    onceConnected(() => void ask());
   } else {
     setTimeout(() => void ask(), RETRY_MS);
   }

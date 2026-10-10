@@ -234,7 +234,7 @@ describe('the status server', () => {
     ).toEqual({ ok: true });
     await startStatus();
 
-    for (const path of ['/', '/feedback', '/status.json']) {
+    for (const path of ['/', '/feedback', '/reports', '/status.json']) {
       const { body } = await get(base, path);
       for (const secret of [
         roomId,
@@ -251,6 +251,41 @@ describe('the status server', () => {
       expect(body, path).not.toMatch(new RegExp(`\\b${code}\\b`));
     }
     expect(JSON.parse((await get(base, '/status.json')).body).connections).toEqual({ websocket: 3, polling: 0 });
+  });
+
+  test('shows the reports a page at a time, with the way to bar an account', async () => {
+    server = await startServer();
+    const ann = server.accounts.store.create('Ann', 'ann', 'h');
+    const bob = server.accounts.store.create('Bob', 'bob', 'h');
+    if (!ann || !bob) throw new Error('no account');
+    const total = FEEDBACK_SHOWN + 2;
+    for (let i = 1; i <= total; i += 1) {
+      server.feedback.report({
+        reporterId: ann.id,
+        reportedId: bob.id,
+        reportedName: 'Bob',
+        roomCode: 'K7QX',
+        text: `Number ${i}`,
+      });
+    }
+    server.accounts.store.setPublicBarred(bob.id, true);
+    await startStatus();
+    const shown = (body: string) =>
+      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
+
+    const status = await get(base, '/');
+    expect(status.body).toContain(`<p>${total} in all &middot; <a href="/reports">Read them</a></p>`);
+    const latest = await get(base, '/reports');
+    expect(latest.status).toBe(200);
+    expect(latest.body).toContain('<title>Reviewer 2 reports</title>');
+    expect(latest.body).toContain('admin.cjs accounts bar &lt;username&gt;');
+    expect(latest.body).toContain(
+      '<p class="text">Bob (account Bob &middot; <strong>barred from public rooms</strong>)</p>',
+    );
+    expect(latest.body).toContain('<p>Reported by Ann</p>');
+    expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
+    expect(latest.body).toContain('<p class="more"><a href="/reports?before=3">Older</a></p>');
+    expect(shown((await get(base, '/reports?before=3')).body)).toEqual([2, 1]);
   });
 
   test('shows the feedback a page at a time, back from the latest', async () => {

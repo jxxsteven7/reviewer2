@@ -4,6 +4,7 @@ import {
   checkCredit,
   checkFeedback,
   checkLink,
+  checkReport,
   cleanName,
   isReservedName,
   type Ack,
@@ -17,7 +18,7 @@ import type { z } from 'zod';
 import { fromThisSite, readLoginCookie } from '../accounts/cookies';
 import { avatarUrl, type Accounts } from '../accounts/service';
 import type { FeedbackStore } from '../store/feedback';
-import { fail } from './answers';
+import { fail, type Refusal } from './answers';
 import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
 import { accountKey, isToken, memberKey, newToken } from './identity';
@@ -76,6 +77,8 @@ export interface SocketLimits {
   // Per address: how much feedback it may send in each window of `feedbackWindowMs`.
   feedbackPerWindow: number;
   feedbackWindowMs: number;
+  // Per account and hour: reports of other players.
+  reportsPerHour: number;
 }
 
 // The limits unless something says otherwise. ROOMS_PER_MINUTE can change `roomsPerMinute`
@@ -88,6 +91,7 @@ export const DEFAULT_SOCKET_LIMITS: Readonly<SocketLimits> = Object.freeze({
   reservedNamesPerHour: 30,
   feedbackPerWindow: 3,
   feedbackWindowMs: 10 * 60_000,
+  reportsPerHour: 5,
 });
 
 // The longest user agent that is kept with a bug report. Real ones are a few hundred characters.
@@ -144,6 +148,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const failedLookups = new WindowCounter(limits.failedLookupsPerMinute, 60_000, now);
   const reservedNames = new WindowCounter(limits.reservedNamesPerHour, 60 * 60_000, now);
   const feedbackSent = new WindowCounter(limits.feedbackPerWindow, limits.feedbackWindowMs, now);
+  const reportsSent = new WindowCounter(limits.reportsPerHour, 60 * 60_000, now);
   // The feedback that each address sent in the last window, as a hash of what was kept and when,
   // so that the same feedback sent again, as when the answer to the first was lost on the way
   // and the player pressed Send once more, is kept once (docs/architecture.md).
@@ -221,7 +226,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     sent.set(room, room.rev);
     const view = room.views();
     for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id }, view);
-    send(room, room.screens, { screen: true }, view);
+    send(room, room.screens.keys(), { screen: true }, view);
     safely('deadline', () => schedule(room));
   }
 
@@ -327,20 +332,27 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (conn.room === room && !conn.screen && member.sockets.has(socket.id)) return;
     release(socket);
     Object.assign(conn, { room, screen: false });
-    if (room.attach(member, socket.id)) broadcast(room);
+    if (room.attach(member, socket.id, conn.guestKey)) broadcast(room);
     else send(room, [socket.id], { playerId: member.id });
   }
 
-  // Makes a connection a screen that shows a room without playing in it.
+  // Makes a connection a screen that shows a room without playing in it. A screen shows what a
+  // spectator sees. Whoever the chair removed can't put one up in place of the seat they lost, at
+  // least not from the same browser. In a public room, whose code anyone can read off the list, a
+  // screen is a member's: it takes an account that has a seat here, so that the chair can remove
+  // whoever put it up, and their screens with them, and an account has one screen there, which a
+  // new one replaces (Room.addScreen), so that nobody fills all five. The screens that were up
+  // when the room was listed stay, as the guests who were there do.
   function watch(socket: Socket, room: Room): Reply {
     const conn = connection(socket);
     if (conn.room !== room || !conn.screen) {
-      // A screen shows what a spectator sees. Whoever the chair has just removed can't put one
-      // up in place of the seat they lost, at least not from the same browser.
-      if (room.removedRecently(conn.key)) return fail('removed_recently');
-      if (room.screensFull()) return fail('screens_full');
+      const refusal = room.screenKept(conn.key) ? removalOf(room, conn) : admission(room, conn);
+      if (refusal) return refusal;
+      if (room.public && !room.screenKept(conn.key) && !room.memberByKey(conn.key)) return fail('not_member');
+      const replaced = room.screensOf(conn.key);
+      if (room.screensFull() && !(room.public && replaced.length > 0)) return fail('screens_full');
       release(socket);
-      room.addScreen(socket.id);
+      closeFor(room.addScreen(socket.id, conn.key), 'left');
       Object.assign(conn, { room, screen: true });
       // Everyone sees how many screens there are, and this one gets its first view.
       broadcast(room);
@@ -409,10 +421,36 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (!accounts || !conn.account || conn.guestKey === conn.key) return undefined;
     const guest = room.memberByKey(conn.guestKey);
     if (!guest || guest.account) return undefined;
+    // An account the chair removed, or one that may not be in a public room, gets no seat this
+    // way either; room:join tells it why.
+    if (admission(room, conn)) return undefined;
     const account = accounts.store.byId(conn.account.id);
     if (!account) return undefined;
     room.adopt(guest.id, conn.key, account.username, { id: account.id, avatar: avatarUrl(account) });
     return guest;
+  }
+
+  // Why a connection may not come into a room anew, as a member or as a screen, before anything
+  // else is asked of it: the chair removed it, by either of its keys, or the room is public and
+  // it has no account that may be in one. Null when it may. Every way in but a member's return
+  // to their seat goes through here, so that the rule is the same for all of them.
+  function admission(room: Room, conn: Connection): Refusal | null {
+    return removalOf(room, conn) ?? (room.public ? publicRefusal(conn) : null);
+  }
+
+  // The chair's removal of whoever has either of the connection's keys, as a refusal.
+  function removalOf(room: Room, conn: Connection): Refusal | null {
+    const removal = room.removal(conn.key, conn.guestKey);
+    return removal ? fail(removal) : null;
+  }
+
+  // Why a connection may not create or join a public room, make its room one, or put up a screen
+  // in one: it has no account, or the operator has barred its account from public rooms. Null
+  // when it may.
+  function publicRefusal(conn: Connection): Refusal | null {
+    const account = conn.account && accounts?.store.byId(conn.account.id);
+    if (!account) return fail('account_required');
+    return account.publicBarred ? fail('public_barred') : null;
   }
 
   function membership(socket: Socket): { room: Room; member: Member } | null {
@@ -604,6 +642,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'sys:ping', () => ok());
 
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
+    on(handlers, 'meta:rooms', () => ok({ rooms: rooms.listed() }));
 
     // Feedback for the author, which the status page shows. What is kept is what the player wrote
     // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
@@ -657,10 +696,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok();
     });
 
-    on(handlers, 'room:create', ({ game, language, fields, settings, name: nickname, play, match }) => {
+    on(handlers, 'room:create', ({ game, language, fields, settings, name: nickname, play, match, public: listed }) => {
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
+      const refusal = listed ? publicRefusal(conn) : null;
+      if (refusal) return refusal;
       const as = newcomer(nickname ?? '');
       if (!as.ok) return as;
       const { name, account } = as;
@@ -679,10 +720,18 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         play,
         account,
         ...(match ? { match } : {}),
+        public: listed ?? false,
       });
       if (!created.ok) return created;
       const { room, member } = created;
-      log('room_created', { code: room.code, game, language, fields: room.fields, match: match?.games ?? null });
+      log('room_created', {
+        code: room.code,
+        game,
+        language,
+        fields: room.fields,
+        match: match?.games ?? null,
+        public: room.public,
+      });
       enter(socket, room, member);
       return ok({ code: room.code, roomId: room.id });
     });
@@ -697,9 +746,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         return ok({ code: room.code, roomId: room.id });
       }
       // Whatever keeps a newcomer out comes before the question for a name: nobody should fill
-      // in the form only to hear that the room is full or that they were removed.
-      const refusal = room.refusal(conn.key);
-      if (refusal) return fail(refusal);
+      // in the form only to hear that they were removed, that a public room takes only players
+      // with accounts, or that the room is full.
+      const refusal = admission(room, conn) ?? (room.full() ? fail('room_full') : null);
+      if (refusal) return refusal;
       // A newcomer says who they are and whether they have come to play: a guest with a name and a
       // choice, and a player with an account, whose name is the username, with the choice alone.
       if (name === undefined && (!conn.account || play === undefined)) {
@@ -754,6 +804,50 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'room:settings', (changes) => asChair(socket, (room) => changed(room, room.setSettings(changes))));
 
+    // Listing the room takes an account that may be in public rooms; taking it off the list
+    // takes none, so that a chair whose account was barred meanwhile can still do that.
+    on(handlers, 'room:public', ({ public: listed }) =>
+      asChair(socket, (room) => {
+        const refusal = listed ? publicRefusal(conn) : null;
+        return refusal ?? changed(room, room.setPublic(listed));
+      }),
+    );
+
+    // A member with an account reports another member of a public room to the operator
+    // (docs/architecture.md#public-rooms). The report says who reported whom, in which room, and
+    // what they wrote; the same pair is kept once per room, and answered as the first time was
+    // whenever it is sent again, before the limit is looked at, as when the answer to the first
+    // was lost on the way. An account may send only so many an hour. Whether the database could
+    // take it is the sender's to hear, as with feedback, and only a report that was kept counts,
+    // so that one the database couldn't take can be sent again.
+    on(handlers, 'room:report', ({ playerId, text }) => {
+      const found = membership(socket);
+      if (!found) return fail('not_member');
+      const { room, member } = found;
+      if (!room.public || !accounts) return fail('not_public');
+      if (!member.account) return fail('account_required');
+      const reported = room.members.get(playerId);
+      if (!reported) return fail('no_such_player');
+      if (reported.id === member.id) return fail('bad_request');
+      const note = checkReport(text);
+      if (note.problem) return fail(note.problem);
+      if (room.reported(member.key, reported.key)) return ok();
+      const key = String(member.account.id);
+      if (!reportsSent.allowed(key)) return fail('report_limited');
+      const id = feedback.report({
+        reporterId: member.account.id,
+        reportedId: reported.account?.id ?? null,
+        reportedName: reported.name,
+        roomCode: room.code,
+        text: note.text,
+      });
+      if (id === null) return fail('report_full');
+      room.report(member.key, reported.key);
+      reportsSent.add(key);
+      log('report_received', { id, code: room.code });
+      return ok();
+    });
+
     on(handlers, 'room:start', ({ round }) =>
       asChair(socket, (room) => {
         const result = room.start(round);
@@ -785,7 +879,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // those that belong there come back by themselves.
     on(handlers, 'room:dismiss', () =>
       asChair(socket, (room) => {
-        closeFor(room.dismissScreens(), 'removed');
+        closeFor(room.dismissScreens(), 'dismissed');
         broadcast(room);
         return ok();
       }),
@@ -812,12 +906,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (!removed.ok) return removed;
         // A screen that the same browser had put up goes with the seat. Whoever was removed
         // can't put up a new one for now, and must not keep an old one either.
-        const screens = [...room.screens].filter((id) => {
-          const screen = io.sockets.sockets.get(id);
-          return screen !== undefined && connection(screen).key === removed.key;
-        });
+        const screens = room.screensOf(removed.key);
         for (const id of screens) room.detach(id);
-        closeFor([...removed.sockets, ...screens], 'removed');
+        closeFor([...removed.sockets, ...screens], removed.reason);
         broadcast(room);
         return ok();
       }),
@@ -879,8 +970,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // What was changed on an account from outside the server, such as an avatar that the operator
   // took down (admin.ts), reaches the rooms by the next sweep: every member with an account is read
-  // again, and a room that looks different for it is sent to everyone in it. A deleted account can
-  // only have left through the hook above, so one that is gone is left alone here.
+  // again, and a room that looks different for it is sent to everyone in it. A public room whose
+  // chair the operator has barred meanwhile goes off the list, since the chair could no longer put
+  // it there; whoever is in it stays, as when the chair takes it off. A deleted account can only
+  // have left through the hook above, so one that is gone is left alone here.
   function refreshAccounts(): void {
     if (!accounts) return;
     const read = new Map<number, ReturnType<typeof accounts.store.byId>>();
@@ -892,6 +985,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (!read.has(id)) read.set(id, accounts.store.byId(id));
         const account = read.get(id);
         if (account && room.updateAccount(member.id, account.username, avatarUrl(account))) differs = true;
+      }
+      const chair = room.chairId === null ? undefined : room.members.get(room.chairId);
+      if (room.public && chair?.account && read.get(chair.account.id)?.publicBarred && room.unlist()) {
+        log('room_unlisted', { code: room.code });
+        differs = true;
       }
       if (differs) broadcast(room);
     }
@@ -913,6 +1011,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         creations.prune();
         failedLookups.prune();
         feedbackSent.prune();
+        reportsSent.prune();
         for (const [key, time] of feedbackSeen) {
           if (now() - time >= limits.feedbackWindowMs) feedbackSeen.delete(key);
         }

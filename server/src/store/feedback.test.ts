@@ -244,3 +244,64 @@ describe('a contact', () => {
     expect(DEFAULT_FEEDBACK_LIMITS.contactMs).toBe(90 * DAY);
   });
 });
+
+describe('a report', () => {
+  test('is kept with who reported whom, read back newest first, and stays when an account goes', () => {
+    const feedback = store();
+    const accounts = new AccountStore(db);
+    const ann = accounts.create('Ann', 'ann', 'h');
+    const bob = accounts.create('Bob', 'bob', 'h');
+    if (!ann || !bob) throw new Error('no account');
+    expect(
+      feedback.report({ reporterId: ann.id, reportedId: bob.id, reportedName: 'Bob', roomCode: 'K7QX', text: 'Rude' }),
+    ).toBe(1);
+    now += 60_000;
+    expect(
+      feedback.report({ reporterId: bob.id, reportedId: null, reportedName: 'Guest', roomCode: 'K7QX', text: null }),
+    ).toBe(2);
+    expect(feedback.reportCount()).toBe(2);
+    accounts.setPublicBarred(bob.id, true);
+    expect(feedback.reports(10)).toEqual([
+      {
+        id: 2,
+        createdAt: '2026-10-09T12:01:00.000Z',
+        reporter: 'Bob',
+        reported: null,
+        reportedId: null,
+        reportedBarred: false,
+        reportedName: 'Guest',
+        roomCode: 'K7QX',
+        text: null,
+      },
+      {
+        id: 1,
+        createdAt: '2026-10-09T12:00:00.000Z',
+        reporter: 'Ann',
+        reported: 'Bob',
+        reportedId: 2,
+        reportedBarred: true,
+        reportedName: 'Bob',
+        roomCode: 'K7QX',
+        text: 'Rude',
+      },
+    ]);
+    expect(feedback.reports(10, 2).map(({ id }) => id)).toEqual([1]);
+    accounts.delete(bob.id);
+    expect(feedback.reports(10)).toMatchObject([
+      { id: 2, reporter: null },
+      { id: 1, reported: null, reportedId: null, reportedBarred: false, reportedName: 'Bob' },
+    ]);
+    // Reports count for nothing against the limits of feedback.
+    expect(feedback.full()).toBeNull();
+  });
+
+  test('is refused when the database is too large', () => {
+    const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxDatabaseBytes: 1 });
+    const ann = new AccountStore(db).create('Ann', 'ann', 'h');
+    if (!ann) throw new Error('no account');
+    expect(
+      feedback.report({ reporterId: ann.id, reportedId: null, reportedName: 'X', roomCode: 'K7QX', text: null }),
+    ).toBeNull();
+    expect(feedback.reportCount()).toBe(0);
+  });
+});

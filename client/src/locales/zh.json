@@ -41,6 +41,19 @@
       "placeholder": "K7QX",
       "submit": "加入",
       "invalid": "请输入 R2- 后面的 4 个字符。"
+    },
+    "publicRooms": {
+      "title": "公开房间",
+      "open": "找个公开房间",
+      "intro": "有账号就能加入的房间。满员的房间不显示。",
+      "loginHint": "登录或注册后才能加入。",
+      "loading": "正在查找房间……",
+      "none": "现在没有公开房间。新建一个并设为公开吧！",
+      "players": "人数：{count}",
+      "waiting": "等人中",
+      "playing": "已开局",
+      "join": "加入",
+      "refresh": "刷新"
     }
   },
   "create": {
@@ -52,6 +65,12 @@
     "noFields": "这种语言暂时还没有可用的词库。",
     "chooseField": "先选至少一个词库，才能创建房间。",
     "settings": "规则",
+    "visibility": "谁能加入",
+    "private": "私密",
+    "privateHint": "只有拿到房间号或链接的人。",
+    "public": "公开",
+    "publicHint": "显示在首页列表里，有账号的人都能加入。",
+    "publicNeedsAccount": "登录或注册后才能创建公开房间。",
     "loadingFields": "正在加载词库……",
     "name": "你的昵称",
     "submit": "创建房间",
@@ -86,7 +105,8 @@
       "body": "这个房间不存在，或者已经关闭。"
     },
     "closed": {
-      "removed": "主持已将你移出这个房间。",
+      "removed": "主持已将你移出这个房间，不能再回来。",
+      "removed_recently": "主持已将你移出这个房间，两分钟后才能回来。",
       "expired": "这个房间已经关闭。",
       "left": "你已在另一个标签页里离开了这个房间。",
       "closed": "主持关闭了这个房间。",
@@ -107,7 +127,15 @@
     "closeRoom": "关闭房间",
     "closeConfirm": "确定为所有人关闭这个房间吗？房间里的每个人和每块投屏都会收到房间已关闭的通知，房间号随即失效。",
     "closeConfirmGame": "确定为所有人关闭这个房间吗？正在进行的这一局会直接结束，不分胜负。房间里的每个人和每块投屏都会收到房间已关闭的通知，房间号随即失效。",
-    "menu": "房间"
+    "menu": "房间",
+    "public": "公开",
+    "listed": "公开房间：显示在首页，有账号的人都能加入。",
+    "unlisted": "私密房间：只能凭房间号或链接加入。",
+    "makePublic": "设为公开",
+    "makePrivate": "设为私密",
+    "publicHint": "有账号的人都能在首页找到并加入公开房间。已在房间里的游客不受影响。",
+    "publicNeedsAccount": "登录或注册后才能把房间设为公开。",
+    "signIn": "登录或注册"
   },
   "lobby": {
     "kicker": "等待区",
@@ -146,6 +174,14 @@
     "manage": {
       "spectate": "改为旁听",
       "remove": "移出房间",
+      "removeConfirm": "确定把 {name} 移出房间吗？被移出后不能再回到这个房间。",
+      "removeConfirmPrivate": "确定把 {name} 移出房间吗？两分钟后对方才能回来。",
+      "report": "举报给运营者",
+      "reportTitle": "举报 {name}",
+      "reportIntro": "运营者会看到举报，包括你的用户名、对方的用户名和房间号，并可能禁止对方进入公开房间。",
+      "reportNote": "发生了什么（选填）",
+      "reportSubmit": "发送举报",
+      "reportSent": "谢谢，举报已发送。",
       "chair": "设为主持",
       "cancel": "取消"
     }
@@ -455,6 +491,9 @@
     "name_taken": "房间里已经有人用了这个昵称。",
     "name_reserved": "这个名字已经被注册，或者是保留的名字。换一个名字，或者登录。",
     "account_name": "你在房间里的名字就是用户名，请到个人页修改。",
+    "account_required": "公开房间需要账号，请登录或注册。",
+    "public_barred": "你的账号不能进入公开房间。",
+    "removed": "主持已将你移出这个房间，不能再回来。",
     "removed_recently": "你刚被移出这个房间，两分钟后才能回来。",
     "not_member": "你不在这个房间里。",
     "not_chair": "只有主持可以这样做。",
@@ -500,6 +539,10 @@
     "credit_link_too_long": "链接最多 200 个字符。",
     "feedback_limited": "同一个网络 10 分钟内最多发 3 条反馈，请稍后再试。",
     "feedback_full": "服务器暂时没有空间接收新的反馈，抱歉。",
+    "report_too_long": "最多 300 字。",
+    "report_limited": "一小时内最多举报 5 次，请稍后再试。",
+    "report_full": "服务器暂时没有空间接收新的举报，抱歉。",
+    "not_public": "只能举报公开房间里的玩家。",
     "bad_origin": "这个页面不能这样操作，请刷新后再试。",
     "not_logged_in": "你还没有登录。",
     "username_invalid": "这不能作为用户名。",

@@ -7,6 +7,7 @@ import {
   acknowledgmentLine,
   checkCredit,
   cleanName,
+  formatCode,
   MAX_NAME_LENGTH,
   REPOSITORY_URL,
   usernameKey,
@@ -19,7 +20,7 @@ import { loadConfig } from './config';
 import { AcknowledgmentStore, kindOfFeedback, type AcknowledgmentEntry } from './store/acknowledgments';
 import { AccountStore } from './store/accounts';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
-import { FeedbackStore } from './store/feedback';
+import { FeedbackStore, type Report } from './store/feedback';
 import { MIGRATIONS } from './store/migrations';
 
 // The operator's commands (docs/development.md), which run beside the server on its data:
@@ -27,8 +28,11 @@ import { MIGRATIONS } from './store/migrations';
 //   node server/dist/admin.cjs avatar remove <username> [--ban]
 //   node server/dist/admin.cjs avatar allow <username>
 //   node server/dist/admin.cjs accounts [--json]
+//   node server/dist/admin.cjs accounts bar <username>
+//   node server/dist/admin.cjs accounts unbar <username>
 //   node server/dist/admin.cjs feedback adopt <id>
 //   node server/dist/admin.cjs feedback issue <id> <number>
+//   node server/dist/admin.cjs reports list
 //   node server/dist/admin.cjs acknowledgments list
 //   node server/dist/admin.cjs acknowledgments add <name> --kind <kind> [--account <username>]
 //
@@ -41,20 +45,26 @@ import { MIGRATIONS } from './store/migrations';
 // thanks someone by hand, such as a playtester. Both print the entry for ACKNOWLEDGMENTS.md, the
 // public list, which the operator completes and adds to the file. `feedback issue` records the
 // GitHub issue that feedback was published as, which only feedback whose player agreed may be.
-// `list` shows the acknowledgments. Nothing deletes feedback or acknowledgments, or changes who an
-// acknowledgment is for or counted for: both are archives (docs/architecture.md#feedback).
-// `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
-// and never what the database keeps in place of passwords, email addresses and logins. `accounts`
-// and `list` only read. DATA_DIR names the server's data, as it does for the server. The database
-// is opened as it is, never migrated, and the server may go on running meanwhile.
+// `list` shows the acknowledgments. Nothing deletes feedback, acknowledgments or reports, or
+// changes who an acknowledgment is for or counted for: all three are archives
+// (docs/architecture.md#feedback). `accounts` prints statistics of the accounts, counted as
+// AccountStore says (store/accounts.ts), and never what the database keeps in place of passwords,
+// email addresses and logins; `accounts bar` keeps an account out of public rooms, as for a player
+// others reported, and `accounts unbar` lets it back in. `reports list` shows the latest reports
+// that players sent of each other. `accounts`, `list` and `reports list` only read. DATA_DIR names
+// the server's data, as it does for the server. The database is opened as it is, never migrated,
+// and the server may go on running meanwhile.
 
 const USAGE = [
   'usage: admin.cjs <command>, one of',
   '  avatar remove <username> [--ban]',
   '  avatar allow <username>',
   '  accounts [--json]',
+  '  accounts bar <username>',
+  '  accounts unbar <username>',
   '  feedback adopt <id>',
   '  feedback issue <id> <number>',
+  '  reports list',
   '  acknowledgments list',
   `  acknowledgments add <name> --kind ${ACKNOWLEDGMENT_KINDS.join('|')} [--account <username>]`,
 ].join('\n');
@@ -172,9 +182,35 @@ function printAccountStats(store: AccountStore, print: Print): void {
   for (const { day, count } of createdByDay) print(`${day}  ${count}`);
   print('');
   print('Registered  Games  Matches  Username');
-  for (const { username, createdAt, games, matches } of accounts) {
-    print(`${createdAt.slice(0, 10)}  ${String(games).padStart(5)}  ${String(matches).padStart(7)}  ${username}`);
+  for (const { username, createdAt, games, matches, barred } of accounts) {
+    print(
+      `${createdAt.slice(0, 10)}  ${String(games).padStart(5)}  ${String(matches).padStart(7)}  ${username}` +
+        (barred ? '  (barred from public rooms)' : ''),
+    );
   }
+}
+
+// How many reports `reports list` shows, the latest.
+const REPORTS_SHOWN = 100;
+
+// One report as the operator reads it: the id, the date, who reported whom, in which room, and the
+// note. The player reported is named as they were in the room, with their account, if they had one.
+function reportLine({
+  id,
+  createdAt,
+  reporter,
+  reported,
+  reportedBarred,
+  reportedName,
+  roomCode,
+  text,
+}: Report): string {
+  const who =
+    reported === null ? reportedName : `${reportedName} (account ${reported}${reportedBarred ? ', barred' : ''})`;
+  return (
+    `#${id}  ${createdAt.slice(0, 10)}  ${reporter ?? '(deleted account)'} reported ${who} in ${formatCode(roomCode)}` +
+    (text === null ? '' : `: ${text.replace(/\n/g, ' / ')}`)
+  );
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -187,6 +223,44 @@ const COMMANDS: Record<string, Command> = {
       const store = new AccountStore(db, () => now);
       if (json) print(JSON.stringify(accountStats(store), null, 2));
       else printAccountStats(store, print);
+      return 0;
+    },
+  },
+  'accounts bar': {
+    words: 1,
+    flags: [],
+    run(data, [name], _flags, print) {
+      const account = accountNamed(data, name as string, print);
+      if (!account) return 1;
+      data.accounts.store.setPublicBarred(account.id, true);
+      print(`${account.username} may not create or join public rooms. Private rooms are still open to them.`);
+      return 0;
+    },
+  },
+  'accounts unbar': {
+    words: 1,
+    flags: [],
+    run(data, [name], _flags, print) {
+      const account = accountNamed(data, name as string, print);
+      if (!account) return 1;
+      data.accounts.store.setPublicBarred(account.id, false);
+      print(`${account.username} may create and join public rooms again.`);
+      return 0;
+    },
+  },
+  'reports list': {
+    words: 0,
+    flags: [],
+    readOnly: true,
+    run({ feedback }, _words, _flags, print) {
+      const reports = feedback.reports(REPORTS_SHOWN);
+      const total = feedback.reportCount();
+      if (total === 0) {
+        print('No reports yet.');
+        return 0;
+      }
+      print(total === 1 ? '1 report:' : `${total} reports in all, the latest ${Math.min(total, REPORTS_SHOWN)} first:`);
+      for (const report of reports) print(reportLine(report));
       return 0;
     },
   },

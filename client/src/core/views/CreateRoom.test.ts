@@ -102,6 +102,27 @@ describe('the room setup', () => {
     expect(payload).not.toHaveProperty('name');
   });
 
+  test('creates a private room unless a public one is chosen, which takes an account', async () => {
+    const wrapper = await opened();
+    await box(wrapper, 0).setValue(true);
+    const choice = () => wrapper.findAll<HTMLInputElement>('input[type="radio"]').slice(2, 4);
+    // A guest can't choose public, and is told why.
+    expect(choice()[1]?.attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).toContain('Log in or register to create a public room.');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('public');
+
+    signedIn.account.summary = { username: 'Ann', avatar: null };
+    await flushPromises();
+    expect(choice()[1]?.attributes('disabled')).toBeUndefined();
+    expect(wrapper.text()).toContain('Listed on the home page, for anyone with an account to join.');
+    await choice()[1]?.setValue(true);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[1]?.[1]).toMatchObject({ public: true });
+  });
+
   test('creates an ordinary room unless a match is chosen', async () => {
     const wrapper = await opened();
     await box(wrapper, 0).setValue(true);
