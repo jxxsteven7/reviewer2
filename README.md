@@ -34,8 +34,8 @@ What we promise players:
 - **Passwords** are kept only as a one-way hash. Nobody, the operator included, can read them.
 - **An account's email address is never stored.** The server keeps only a keyed fingerprint of it, to check the address and to mail a password reset.
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
-- **Feedback** is read only by the project's operator. A contact left with it is kept as written and deleted after 90 days.
-- **Deleting an account** deletes everything of it; backups keep it only until they expire.
+- **Feedback** is read only by the project's operator, unless you agree to its becoming a GitHub issue, which shows its text and the name you left, never your contact. A contact is kept as written and deleted after 90 days. The feedback itself is kept for good, as the project's archive of suggestions.
+- **Deleting an account** deletes everything of it, except that feedback sent from it, and acknowledgments counted for it, stay, no longer linked to it; backups keep the rest only until they expire.
 
 ## Status
 
@@ -86,7 +86,7 @@ The rules are in **[CONTRIBUTING.md](CONTRIBUTING.md)**; in short:
 
 AI assistants read `AGENTS.md`.
 
-Players whose suggestions are adopted, who add words or who test early versions are thanked by name in [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) and at the foot of the home page.
+Players whose suggestions are adopted, who add words or who test early versions are thanked, by name or anonymously, in [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) and at the foot of the home page.
 
 ### Contributing words
 

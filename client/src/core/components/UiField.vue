@@ -12,7 +12,7 @@ const props = defineProps<{
   placeholder?: string;
   maxlength?: number;
   autocomplete?: string;
-  inputmode?: 'text' | 'search' | 'numeric' | 'none';
+  inputmode?: 'text' | 'search' | 'numeric' | 'url' | 'none';
   enterkeyhint?: 'done' | 'go' | 'send' | 'next' | 'search';
   autocapitalize?: 'off' | 'characters' | 'words' | 'sentences';
   spellcheck?: boolean;

@@ -1,4 +1,10 @@
-import { MAX_CONTACT_LENGTH, MAX_FEEDBACK_INPUT, MAX_FEEDBACK_LENGTH, MAX_NAME_LENGTH } from '@reviewer2/shared';
+import {
+  MAX_CONTACT_LENGTH,
+  MAX_FEEDBACK_INPUT,
+  MAX_FEEDBACK_LENGTH,
+  MAX_LINK_LENGTH,
+  MAX_NAME_LENGTH,
+} from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import { DEFAULT_SOCKET_LIMITS } from '../src/core/socket';
 import { Browser, createRoom, startServer, TestClient, type TestServer } from './helpers';
@@ -40,7 +46,16 @@ describe('feedback', () => {
       ok: true,
     });
     expect(await client.send('meta:feedback', message({ language: 'zh', page: 'room' }))).toEqual({ ok: true });
-    const nobody = { credit: null, accountId: null, username: null, acknowledgmentId: null, nameTakenBy: null };
+    const nobody = {
+      credit: null,
+      link: null,
+      accountId: null,
+      publicIssue: null,
+      issue: null,
+      username: null,
+      acknowledgmentId: null,
+      nameTakenBy: null,
+    };
     expect(server.feedback.latest(10)).toEqual([
       {
         id: 2,
@@ -114,6 +129,54 @@ describe('feedback', () => {
     expect(server.feedback.count()).toBe(3);
   });
 
+  test('keeps the link that came with a name, and drops one that came without', async () => {
+    server = await startServer();
+    const client = await connect();
+    const link = ' https://orcid.org/0000-0002-1825-0097 ';
+    expect(await client.send('meta:feedback', message({ credit: 'Ann L', link }))).toEqual({ ok: true });
+    expect(await client.send('meta:feedback', message({ text: 'No name', link }))).toEqual({ ok: true });
+    expect(server.feedback.latest(10).map(({ credit, link: kept }) => [credit, kept])).toEqual([
+      [null, null],
+      ['Ann L', 'https://orcid.org/0000-0002-1825-0097'],
+    ]);
+    // The same text with another link is other feedback.
+    const again = message({ credit: 'Ann L', link: 'https://ann.example' });
+    expect(await client.send('meta:feedback', again)).toEqual({ ok: true });
+    expect(server.feedback.count()).toBe(3);
+    expect(JSON.stringify(server.logs)).not.toContain('orcid');
+    // A link that isn't a web page of https, or is an email address, is refused, and nothing is kept.
+    for (const refused of ['http://ann.example', 'mailto:ann@example.com', 'https://ann@example.com', 'ann.example']) {
+      expect(await client.send('meta:feedback', message({ text: 'Refused', credit: 'Ann L', link: refused }))).toEqual({
+        ok: false,
+        error: 'credit_link_invalid',
+      });
+    }
+    const long = `https://ann.example/${'x'.repeat(MAX_LINK_LENGTH)}`;
+    expect(await client.send('meta:feedback', message({ text: 'Refused', credit: 'Ann L', link: long }))).toEqual({
+      ok: false,
+      error: 'credit_link_too_long',
+    });
+    expect(server.feedback.count()).toBe(3);
+  });
+
+  test('says whether the player agreed to a public issue, or that the page did not ask', async () => {
+    server = await startServer();
+    const client = await connect();
+    expect(await client.send('meta:feedback', message({ publicIssue: true }))).toEqual({ ok: true });
+    expect(await client.send('meta:feedback', message({ text: 'Private', publicIssue: false }))).toEqual({ ok: true });
+    // A page from before players were asked.
+    expect(await client.send('meta:feedback', message({ text: 'Not asked' }))).toEqual({ ok: true });
+    expect(await client.send('meta:feedback', message({ text: 'Odd', publicIssue: 'yes' }))).toEqual({
+      ok: false,
+      error: 'bad_request',
+    });
+    expect(server.feedback.latest(10).map(({ text, publicIssue }) => [text, publicIssue])).toEqual([
+      ['Not asked', null],
+      ['Private', false],
+      ['A timer for the clues, please.', true],
+    ]);
+  });
+
   test('keeps nothing that says who sent it, even from someone in a room', async () => {
     server = await startServer({ trustProxy: true });
     const { chair, code, roomId } = await createRoom(server.url, 'Zelda');
@@ -136,10 +199,36 @@ describe('feedback', () => {
   test('of another kind than a bug is kept without the user agent', async () => {
     server = await startServer();
     const client = await connect();
-    for (const kind of ['idea', 'words']) {
+    for (const kind of ['idea', 'game', 'words']) {
       expect(await client.send('meta:feedback', message({ kind }))).toEqual({ ok: true });
     }
-    expect(server.feedback.latest(10).map(({ userAgent }) => userAgent)).toEqual([null, null]);
+    expect(server.feedback.latest(10).map(({ userAgent }) => userAgent)).toEqual([null, null, null]);
+  });
+
+  test('suggesting a new game is kept with its name, its link and the public issue, as any other', async () => {
+    server = await startServer({ socketLimits: { ...DEFAULT_SOCKET_LIMITS, feedbackPerWindow: 10 } });
+    const client = await connect();
+    const game = message({
+      kind: 'game',
+      text: 'A game where the reviewers bid on papers.',
+      credit: 'Ann',
+      link: 'https://ann.example/',
+      publicIssue: true,
+    });
+    expect(await client.send('meta:feedback', game)).toEqual({ ok: true });
+    // A page from before the new game, which sends the kinds it knows and asks nothing more.
+    for (const kind of ['idea', 'bug', 'words']) {
+      expect(await client.send('meta:feedback', message({ kind, text: `Old ${kind}` }))).toEqual({ ok: true });
+    }
+    expect(
+      server.feedback.latest(10).map(({ kind, credit, link, publicIssue }) => [kind, credit, link, publicIssue]),
+    ).toEqual([
+      ['words', null, null, null],
+      ['bug', null, null, null],
+      ['idea', null, null, null],
+      ['game', 'Ann', 'https://ann.example/', true],
+    ]);
+    expect(server.feedback.kinds()).toEqual({ game: 1, idea: 1, bug: 1, words: 1 });
   });
 
   test('keeps a long user agent only so far', async () => {
@@ -171,6 +260,9 @@ describe('feedback', () => {
     const bad = [
       {},
       message({ kind: 'praise' }),
+      message({ kind: 'GAME' }),
+      message({ kind: '' }),
+      message({ kind: null }),
       message({ language: 'fr' }),
       message({ page: 'lobby' }),
       message({ text: 42 }),

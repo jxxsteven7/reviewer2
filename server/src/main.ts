@@ -14,7 +14,7 @@ import { createAppServer, type AppServer } from './server';
 import { History, watchStats } from './stats';
 import { createStatusHandler, STATUS_HOST } from './status';
 import { openDatabase, truncateWal } from './store/database';
-import { FeedbackStore } from './store/feedback';
+import { FeedbackStore, feedbackLimits } from './store/feedback';
 import { SNAPSHOT_MS, Snapshots } from './store/snapshots';
 
 // Starts the server and stops it (docs/architecture.md): the settings, the word library, the
@@ -87,7 +87,7 @@ export async function main({
       log('database_migrated', { from: database.migratedFrom, to: database.schema, snapshot });
     }
   }
-  const feedback = new FeedbackStore(db);
+  const feedback = new FeedbackStore(db, undefined, feedbackLimits(config.maxFeedback));
   const snapshots = database.snapshots === null ? null : new Snapshots(db, database.snapshots, log);
 
   // Secure delete overwrites what is deleted in the database file, such as a contact that has been
@@ -171,6 +171,7 @@ export async function main({
         trustProxy: config.trustProxy,
         roomsPerMinute: config.roomsPerMinute,
         feedbackPer10Minutes: config.feedbackPerWindow,
+        maxFeedback: config.maxFeedback,
         accountsPerHour,
         cookieSecure: config.cookieSecure,
         // Email for accounts needs both the server's secret and the mailer.

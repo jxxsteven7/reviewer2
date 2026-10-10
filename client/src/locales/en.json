@@ -496,8 +496,10 @@
     "contact_too_long": "Use at most 100 characters for the contact.",
     "credit_invalid": "Use 1 to 16 visible characters for the name.",
     "credit_reserved": "That name is reserved. Choose another.",
+    "credit_link_invalid": "Use a web address that starts with https://, not an email address.",
+    "credit_link_too_long": "Use at most 200 characters for the link.",
     "feedback_limited": "At most 3 pieces of feedback can come from one network in 10 minutes. Please try again later.",
-    "feedback_full": "The server isn't taking feedback right now. Please try again another day.",
+    "feedback_full": "The server has no room for more feedback at the moment. Sorry!",
     "bad_origin": "This page can't do that. Reload it and try again.",
     "not_logged_in": "You aren't logged in.",
     "username_invalid": "That can't be a username.",
@@ -536,10 +538,11 @@
   "feedback": {
     "open": "Send feedback",
     "title": "Send feedback",
-    "privacy": "Only the author can read your feedback. Your contact details are used only to reply to you. The name is made public only if your suggestion is adopted.",
+    "privacy": "Only the author can read your feedback, unless you agree below to make it a GitHub issue. Your contact details are used only to reply to you, and are deleted after 90 days. The feedback itself is kept as the project's archive of suggestions.",
     "kind": "About",
     "kinds": {
       "idea": "A suggestion",
+      "game": "A new game",
       "bug": "A bug",
       "words": "The word lists"
     },
@@ -548,20 +551,25 @@
     "contact": "Contact (optional)",
     "contactHint": "An email address, a WeChat ID or anything else to reach you by.",
     "credit": "Name for the acknowledgments (optional)",
-    "creditHint": "If your suggestion is adopted, this name is listed publicly in the acknowledgments, on the home page and in the project's repository on GitHub, whose history keeps it even if it is removed later. Any name will do, such as your GitHub username. If you are logged in, your account page shows the acknowledgment too.",
+    "creditHint": "Leave it empty to stay anonymous. If your suggestion is adopted, this name is listed publicly in the acknowledgments, on the home page and in the project's repository on GitHub, whose history keeps it even if it is removed later. Any name will do, such as your GitHub username. If you are logged in, your account page counts the acknowledgment too.",
+    "link": "Link for your name (optional)",
+    "linkHint": "A page about you, such as your homepage or your profile on GitHub, ORCID or Google Scholar, linked from your name in the acknowledgments. It starts with https://; no email addresses.",
+    "publicIssue": "You may publish this as a GitHub issue",
+    "publicIssueHint": "Only the text is published, with your name if you left one; your contact details never are.",
+    "gameNote": "Which game should we make next? Say how a round goes and what makes it fun.",
     "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model.",
     "submit": "Send",
     "sent": "Thank you! Your feedback has been sent."
   },
   "acknowledgments": {
     "title": "Acknowledgments",
-    "intro": "Thanks to the players whose suggestions were adopted, who added words, and who tested early versions. Leave a name with your feedback to be listed.",
+    "intro": "We thank the players whose suggestions were adopted, who added words, and who tested early versions. Leave a name with your feedback to be thanked by it; without one, you are thanked anonymously.",
     "kinds": {
-      "feedback": "Ideas and bug reports",
-      "words": "Word lists",
-      "playtesting": "Playtesting"
+      "feedback": "Helpful discussions",
+      "words": "Data",
+      "playtesting": "Pilot study"
     },
-    "loading": "Loading...",
+    "anonymous": "An anonymous player",
     "none": "No one yet. Be the first!"
   },
   "notFound": {
@@ -677,7 +685,7 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its titles and its avatar are deleted for good, and the username is free for anyone to take. This can't be undone.",
+      "deleteWarning": "Your account, its record, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, and acknowledgments counted for the account, stay, no longer linked to it. This can't be undone.",
       "deleteSubmit": "Delete for good"
     },
     "avatar": {

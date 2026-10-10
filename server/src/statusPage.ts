@@ -1,3 +1,4 @@
+import { FEEDBACK_KINDS, type FeedbackKind } from '@reviewer2/shared';
 import { UNKNOWN_COUNTRY } from './core/clientIp';
 import { megabytes, type Sample, type Stats } from './stats';
 import type { Feedback } from './store/feedback';
@@ -49,6 +50,9 @@ article { background: var(--tile); border: 1px solid var(--line); border-radius:
 article p { font-size: 0.85rem; overflow-wrap: anywhere; }
 article .text { margin: 6px 0; color: var(--fg); font-size: 1rem; white-space: pre-wrap; }
 .more { margin-top: 12px; }
+.kinds { margin-top: 8px; }
+.kinds a, .kinds strong { white-space: nowrap; }
+.kinds strong { color: var(--fg); }
 a { color: var(--players); }
 `;
 
@@ -126,9 +130,12 @@ function chart(samples: readonly Sample[], now: number): string {
 }
 
 // One page of the feedback that players sent (store/feedback.ts), newest first: the latest, or
-// those before an id that the operator paged back to.
+// those before an id that the operator paged back to, of every kind or of one.
 export interface FeedbackListing {
   total: number;
+  // How much there is of each kind, and the kind that the page shows, or null for every kind.
+  kinds: Record<string, number>;
+  kind: FeedbackKind | null;
   entries: readonly Feedback[];
   // Whether the page was paged back from the latest.
   paged: boolean;
@@ -136,32 +143,41 @@ export interface FeedbackListing {
   older: boolean;
 }
 
-const KINDS: Record<Feedback['kind'], string> = { idea: 'Idea', bug: 'Bug', words: 'Word lists' };
+const KINDS: Record<FeedbackKind, string> = { idea: 'Idea', game: 'New game', bug: 'Bug', words: 'Word lists' };
 const LANGUAGES: Record<Feedback['language'], string> = { zh: 'Chinese', en: 'English' };
 const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room' };
 
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
 
-// Players wrote the text, the contact and the name, and the page sent the version, so all of it is
-// escaped like anything else that comes from outside. The text keeps its line breaks. The name for
-// the acknowledgments comes with the account it was given from, for the operator to link, with
-// the acknowledgment once the feedback has been adopted (admin.ts), and, in bold, with another
-// account whose username it is, which may be someone passing for that account's owner.
+// Players wrote the text, the contact, the name and the link, and the page sent the version, so all
+// of it is escaped like anything else that comes from outside, and the link is shown, not linked.
+// The text keeps its line breaks. The name for the acknowledgments comes with its link, the account
+// it was given from, the acknowledgment once the feedback has been adopted (admin.ts), and, in
+// bold, with another account whose username it is, which may be someone passing for that
+// account's owner. Whether the player agreed to a public issue says whether the operator may
+// publish the feedback as one; older feedback, from before players were asked, may not be. A kind
+// that this server doesn't know, from a later one that it was rolled back from, shows as it is.
 function entry(feedback: Feedback): string {
   const facts = [
     `#${feedback.id}`,
-    KINDS[feedback.kind],
+    (KINDS as Partial<Record<string, string>>)[feedback.kind] ?? escape(feedback.kind),
     escape(when(feedback.createdAt)),
     `version ${escape(feedback.version)}`,
     LANGUAGES[feedback.language],
     `from the ${PAGES[feedback.page]}`,
     ...(feedback.acknowledgmentId === null ? [] : [`adopted as acknowledgment #${feedback.acknowledgmentId}`]),
+    feedback.issue === null
+      ? feedback.publicIssue
+        ? '<strong>may be published as an issue</strong>'
+        : 'not to be published'
+      : `published as issue #${feedback.issue}`,
   ];
   const credit =
     feedback.credit === null
       ? 'No name for the acknowledgments'
       : `Name for the acknowledgments: ${escape(feedback.credit)}` +
+        (feedback.link === null ? '' : ` &middot; link ${escape(feedback.link)}`) +
         (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
         (feedback.nameTakenBy === null
           ? ''
@@ -179,14 +195,38 @@ function entry(feedback: Feedback): string {
 
 export const FEEDBACK_PATH = '/feedback';
 
-// The feedback page: the entries of one page, and the way to the latest and to the older ones.
-function feedbackList({ total, entries, paged, older }: FeedbackListing): string {
+// The address of the feedback of a kind, or of every kind, from before an id when one is given.
+function feedbackHref(kind: FeedbackKind | null, before?: number): string {
+  const query = [...(kind === null ? [] : [`kind=${kind}`]), ...(before === undefined ? [] : [`before=${before}`])];
+  return query.length === 0 ? FEEDBACK_PATH : `${FEEDBACK_PATH}?${query.join('&amp;')}`;
+}
+
+// The kinds to choose from, each with how much there is of it, the one shown in bold.
+function kindChoices({ total, kinds, kind: shown }: FeedbackListing): string {
+  const choice = (kind: FeedbackKind | null, label: string, count: number) =>
+    kind === shown ? `<strong>${label} (${count})</strong>` : `<a href="${feedbackHref(kind)}">${label} (${count})</a>`;
+  const choices = [
+    choice(null, 'All', total),
+    ...FEEDBACK_KINDS.map((kind) => choice(kind, KINDS[kind], kinds[kind] ?? 0)),
+  ];
+  return `<p class="kinds">${choices.join(' &middot; ')}</p>`;
+}
+
+// The feedback page: the kinds, the entries of one page, and the way to the latest and to the
+// older ones.
+function feedbackList(listing: FeedbackListing): string {
+  const { total, kind, entries, paged, older } = listing;
   if (total === 0) return '<p>None yet.</p>';
   const links = [
-    ...(paged ? [`<a href="${FEEDBACK_PATH}">Latest</a>`] : []),
-    ...(older ? [`<a href="${FEEDBACK_PATH}?before=${(entries.at(-1) as Feedback).id}">Older</a>`] : []),
+    ...(paged ? [`<a href="${feedbackHref(kind)}">Latest</a>`] : []),
+    ...(older ? [`<a href="${feedbackHref(kind, (entries.at(-1) as Feedback).id)}">Older</a>`] : []),
   ];
-  return entries.map(entry).join('') + (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '');
+  return (
+    kindChoices(listing) +
+    (kind !== null && entries.length === 0 && !paged ? '<p>None of this kind yet.</p>' : '') +
+    entries.map(entry).join('') +
+    (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '')
+  );
 }
 
 // One document, as both pages are built. The status page reloads itself; the feedback page

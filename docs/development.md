@@ -51,6 +51,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `WORDS_DIR` [`words`] | The word lists |
 | `DATA_DIR` [off] | An existing directory for the database, snapshots and avatars ([architecture.md](architecture.md#data)); unset, data is lost at every stop |
 | `ROOMS_PER_MINUTE` [5], `FEEDBACK_PER_10_MINUTES` [3], `ACCOUNTS_PER_HOUR` [5] | Limits per address; raise them where many people share one |
+| `MAX_FEEDBACK` [10000] | How many pieces of feedback the server keeps, with 5 KB for each on average, before it takes no more; none is ever deleted, so raise it when the server is full |
 | `STATUS_PORT` [off] | The operator's status page, on `127.0.0.1` only ([architecture.md](architecture.md#status)) |
 | `TRUST_PROXY` [off] | `1` behind a reverse proxy that sets `X-Forwarded-For`, and only there |
 | `COOKIE_SECURE` [on] | `0` only over plain HTTP, as in development |
@@ -73,18 +74,27 @@ DATA_DIR=data node server/dist/admin.cjs avatar remove <username>          # bac
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username> --ban    # and no more uploads
 DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # uploads again
 DATA_DIR=data node server/dist/admin.cjs accounts [--json]                 # statistics of the accounts
-DATA_DIR=data node server/dist/admin.cjs feedback adopt <id>               # thank the player by the name they left
+DATA_DIR=data node server/dist/admin.cjs feedback adopt <id>               # thank its player; prints the entry
+DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>      # the GitHub issue it was published as
 DATA_DIR=data node server/dist/admin.cjs acknowledgments list
-DATA_DIR=data node server/dist/admin.cjs acknowledgments markdown          # the list as ACKNOWLEDGMENTS.md has it
 DATA_DIR=data node server/dist/admin.cjs acknowledgments add <name> --kind feedback|words|playtesting [--account <username>]
-DATA_DIR=data node server/dist/admin.cjs acknowledgments link <id> <username>
-DATA_DIR=data node server/dist/admin.cjs acknowledgments unlink <id>
-DATA_DIR=data node server/dist/admin.cjs acknowledgments remove <id>
 ```
 
 `accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address.
 
-`feedback adopt` thanks the player by the name they left with the feedback, linked to the account they were logged in to, refuses feedback that came without a name, and says when the name is another account's username; `acknowledgments add` thanks someone by hand ([architecture.md](architecture.md#acknowledgments)). To update `ACKNOWLEDGMENTS.md`, paste the output of `acknowledgments markdown` under its introduction and open a PR.
+Feedback and acknowledgments are archives, so no command deletes or changes them ([architecture.md](architecture.md#feedback)). `feedback adopt` records that feedback was adopted, counted for the account of a player who left a name while logged in, and says when the name is another account's username; `acknowledgments add` thanks someone by hand. `feedback issue` takes only feedback whose player agreed to a public issue, which shows its text and name and never its contact.
+
+## Acknowledgments
+
+`ACKNOWLEDGMENTS.md` is the list of thanks, which the home page shows as the build bundles it. `feedback adopt` and `acknowledgments add` print an entry for it and the section to put it in: replace `<what they did>` with a few words, add the line and open a PR. The sections are `## Helpful discussions`, `## Data` and `## Pilot study`, after the introduction; an entry is one line:
+
+```markdown
+- [Alice](https://alice.example) — suggested public rooms (#40)
+- Bob — added the physics word list (#41)
+- An anonymous player — reported the reconnect bug (#42)
+```
+
+A name follows the nickname rules, with every ASCII punctuation character escaped (`Dr\. Who`), as the commands print it; a link starts with `https://`, with `(` and `)` percent-encoded, as they print it too, and holds no `\`. What they did is English in printable ASCII, without Markdown, emoji codes or web addresses; `#40`, after a space or a bracket, becomes a link on the home page. The first entry, under its heading, replaces `_No one yet._`. `npm test` checks the file and names each line that breaks the rules.
 
 ## Testing on a phone
 

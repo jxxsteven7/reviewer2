@@ -130,7 +130,10 @@ describe('the feedback', () => {
     text: 'More fields, please.',
     contact: null,
     credit: null,
+    link: null,
     accountId: null,
+    publicIssue: false,
+    issue: null,
     username: null,
     acknowledgmentId: null,
     nameTakenBy: null,
@@ -141,7 +144,7 @@ describe('the feedback', () => {
     ...changes,
   });
   const page = (changes: Partial<FeedbackListing> = {}) =>
-    renderFeedbackPage({ total: 0, entries: [], paged: false, older: false, ...changes });
+    renderFeedbackPage({ total: 0, kinds: {}, kind: null, entries: [], paged: false, older: false, ...changes });
 
   test('has a page of its own, which the status page counts and links to', () => {
     const status = renderStatusPage(stats(), [], NOW);
@@ -176,11 +179,12 @@ describe('the feedback', () => {
     expect(shown).toContain('2 in all, newest first');
     expect(shown).toContain(
       '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; Chinese &middot; from the room ' +
-        'Line one Line two Contact: wechat: r2 No name for the acknowledgments Browser: Mozilla/5.0',
+        '&middot; not to be published Line one Line two Contact: wechat: r2 No name for the acknowledgments ' +
+        'Browser: Mozilla/5.0',
     );
     expect(shown).toContain(
       '#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; English &middot; ' +
-        'from the home page More fields, please. No contact No name for the acknowledgments',
+        'from the home page &middot; not to be published More fields, please. No contact No name for the acknowledgments',
     );
     expect(shown.indexOf('#2')).toBeLessThan(shown.indexOf('#1'));
     // The text keeps its line breaks, which the page shows as they are.
@@ -199,13 +203,35 @@ describe('the feedback', () => {
       }),
     );
     expect(shown).toContain('#3 &middot; Idea &middot; 2026-10-09 13:05 UTC');
-    expect(shown).toContain('from the home page &middot; adopted as acknowledgment #1 More fields, please.');
+    expect(shown).toContain(
+      'from the home page &middot; adopted as acknowledgment #1 &middot; not to be published More fields, please.',
+    );
     expect(shown).toContain('No contact Name for the acknowledgments: Ann L &middot; account Ann');
     expect(shown).toContain('#2 &middot; Idea');
     expect(shown).toContain('No contact Name for the acknowledgments: Bob #1');
     expect(shown).not.toContain('Bob &middot; account');
     expect(shown.match(/adopted as acknowledgment/g)).toHaveLength(1);
     expect(shown).not.toContain('also the username');
+  });
+
+  test('shows the link that came with the name, and whether it may be or was published as an issue', () => {
+    const html = page({
+      total: 3,
+      entries: [
+        feedback(3, { credit: 'Ann L', link: 'https://ann.example/', publicIssue: true, issue: 42 }),
+        feedback(2, { publicIssue: true }),
+        feedback(1, { publicIssue: null }),
+      ],
+    });
+    const shown = text(html);
+    expect(shown).toContain('from the home page &middot; published as issue #42 More fields');
+    expect(shown).toContain('Name for the acknowledgments: Ann L &middot; link https://ann.example/');
+    expect(html).toContain('from the home page &middot; <strong>may be published as an issue</strong>');
+    // Feedback from before players were asked may not be.
+    expect(shown).toContain('#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15');
+    expect(shown.match(/not to be published/g)).toHaveLength(1);
+    // The link is shown, not linked.
+    expect(html).not.toContain('href="https://ann.example/"');
   });
 
   test("points out a name that is another account's username, in bold", () => {
@@ -229,10 +255,11 @@ describe('the feedback', () => {
       total: 1,
       entries: [
         feedback(1, {
-          kind: 'bug',
+          kind: '<i>later</i>' as Feedback['kind'],
           text: '<script>alert("text")</script><img src=x onerror=alert(1)>',
           contact: "<a href='javascript:alert(1)'>me</a>",
           credit: '<i>Ann</i>',
+          link: 'https://x.co/"><script>alert(1)</script>',
           username: '<u>ann</u>',
           nameTakenBy: '<s>Ann</s>',
           version: '<b>v1</b>',
@@ -240,20 +267,50 @@ describe('the feedback', () => {
         }),
       ],
     });
-    // The one link on the page is the page's own.
-    expect(html.replace('<a href="/">Status</a>', '')).not.toMatch(
+    // The only links on the page are the page's own.
+    expect(html.replace('<a href="/">Status</a>', '').replace(/<p class="kinds">.*?<\/p>/, '')).not.toMatch(
       /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
     );
     expect(html).toContain(
-      'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
+      'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; link https://x.co/&#34;&#62;&#60;script&#62;' +
+        'alert(1)&#60;/script&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
     );
     expect(html).toContain('also the username of the account &#60;s&#62;Ann&#60;/s&#62;,');
     expect(html).toContain(
       '&#60;script&#62;alert(&#34;text&#34;)&#60;/script&#62;&#60;img src=x onerror=alert(1)&#62;',
     );
     expect(html).toContain('&#60;a href=&#39;javascript:alert(1)&#39;&#62;me&#60;/a&#62;');
+    expect(html).toContain('#1 &middot; &#60;i&#62;later&#60;/i&#62; &middot;');
     expect(html).toContain('version &#60;b&#62;v1&#60;/b&#62;');
     expect(html).toContain('Browser: &#60;/p&#62;&#60;script&#62;');
+  });
+
+  test('shows each kind with how much there is of it, and the feedback of one kind', () => {
+    const kinds = { idea: 1, game: 2, later: 1 };
+    const all = page({
+      total: 4,
+      kinds,
+      entries: [feedback(4, { kind: 'game' }), feedback(3, { kind: 'later' as Feedback['kind'] }), feedback(2)],
+    });
+    expect(all).toContain(
+      '<p class="kinds"><strong>All (4)</strong> &middot; <a href="/feedback?kind=idea">Idea (1)</a> &middot; ' +
+        '<a href="/feedback?kind=game">New game (2)</a> &middot; <a href="/feedback?kind=bug">Bug (0)</a> &middot; ' +
+        '<a href="/feedback?kind=words">Word lists (0)</a></p>',
+    );
+    expect(text(all)).toContain('#4 &middot; New game &middot; 2026-10-09');
+    // A kind from a later server, which this one was rolled back from, shows as it is.
+    expect(text(all)).toContain('#3 &middot; later &middot; 2026-10-09');
+
+    const games = page({ total: 4, kinds, kind: 'game', entries: [feedback(4, { kind: 'game' })] });
+    expect(games).toContain(
+      '<p class="kinds"><a href="/feedback">All (4)</a> &middot; <a href="/feedback?kind=idea">Idea (1)</a> &middot; ' +
+        '<strong>New game (2)</strong> &middot;',
+    );
+    expect(games).not.toContain('None of this kind yet.');
+    expect(page({ total: 4, kinds, kind: 'bug' })).toContain('<strong>Bug (0)</strong>');
+    expect(page({ total: 4, kinds, kind: 'bug' })).toContain('<p>None of this kind yet.</p>');
+    // Nothing to choose from while there is no feedback at all.
+    expect(page()).not.toContain('class="kinds"');
   });
 
   test('links to older feedback, and back to the latest', () => {
@@ -265,6 +322,11 @@ describe('the feedback', () => {
       '<p class="more"><a href="/feedback">Latest</a> &middot; <a href="/feedback?before=59">Older</a></p>',
     );
     expect(page({ total: 2, entries })).not.toContain('class="more"');
+    // Of one kind, the links keep to it.
+    expect(page({ total: 99, kind: 'game', entries, paged: true, older: true })).toContain(
+      '<p class="more"><a href="/feedback?kind=game">Latest</a> &middot; ' +
+        '<a href="/feedback?kind=game&amp;before=59">Older</a></p>',
+    );
   });
 });
 

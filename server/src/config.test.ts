@@ -111,6 +111,22 @@ describe('FEEDBACK_PER_10_MINUTES', () => {
   });
 });
 
+describe('MAX_FEEDBACK', () => {
+  test('defaults to 10,000', () => {
+    expect(loadConfig({}).maxFeedback).toBe(10_000);
+    expect(loadConfig({ MAX_FEEDBACK: ' ' }).maxFeedback).toBe(10_000);
+  });
+
+  test('is a whole number from 1 up', () => {
+    expect(loadConfig({ MAX_FEEDBACK: '50000' }).maxFeedback).toBe(50_000);
+    for (const value of ['0', '-1', '1.5', '1e5', 'many']) {
+      expect(() => loadConfig({ MAX_FEEDBACK: value })).toThrow(
+        `MAX_FEEDBACK must be a whole number from 1 up, not "${value}"`,
+      );
+    }
+  });
+});
+
 describe('ACCOUNTS_PER_HOUR', () => {
   test('defaults to 5', () => {
     expect(loadConfig({}).accountsPerHour).toBe(5);
