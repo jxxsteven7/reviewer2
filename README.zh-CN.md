@@ -34,8 +34,8 @@
 - **密码**只存单向哈希，谁都读不出原文，运营者也不行。
 - **账号的邮箱从不保存。** 服务器只存它的一个带密钥的指纹，用来核对邮箱和发送找回密码的邮件。
 - **日志里没有 IP 地址和名字。** 统计只有数字：人数、房间数和国家。
-- **建议**只有项目的运营者能看到。留下的联系方式按原样保存，90 天后删除。
-- **注销账号**会删掉它的全部数据；备份里的副本到期后也会消失。
+- **建议**只有项目的运营者能看到，除非你同意把它公开成 GitHub issue：issue 里只有建议内容和你留的署名，不会有联系方式。联系方式按原样保存，90 天后删除。建议本身作为项目的建议存档永久保留。
+- **注销账号**会删掉它的全部数据，只有用它提过的建议会保留，但不再和账号关联；备份里的副本到期后也会消失。
 
 ## 当前状态
 
@@ -86,7 +86,7 @@ npm run dev   # front end on http://localhost:5173, server on port 3000
 
 AI 助手读 `AGENTS.md`。
 
-建议被采纳、贡献了词库或参与早期测试的玩家，会署名列在 [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) 和首页最下方的致谢名单里。
+建议被采纳、贡献了词库或参与早期测试的玩家，会署名或以匿名方式列在 [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) 和首页最下方的致谢名单里。
 
 ### 贡献词库
 
@@ -96,4 +96,4 @@ AI 助手读 `AGENTS.md`。
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: 17e89d682e8c8d11aae30f23750fb11a0afebbe508421c3c0fe63d7f34dec416 -->
+<!-- readme-sync: 48cd948dd0504d10f29af3d20b692d6713920313bddffdfc43a310abd0f7a441 -->

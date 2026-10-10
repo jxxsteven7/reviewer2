@@ -110,7 +110,7 @@ describe('a database in DATA_DIR', () => {
   test('keeps its data, and is left alone when it is up to date', async () => {
     const first = await open(dir);
     first.db.exec(
-      "INSERT INTO feedback VALUES (1, 'now', 'idea', 'Keep me', NULL, 'v1', 'en', 'home', NULL, NULL, NULL)",
+      "INSERT INTO feedback (id, created_at, kind, text, version, language, page) VALUES (1, 'now', 'idea', 'Keep me', 'v1', 'en', 'home')",
     );
     first.db.close();
 
@@ -176,7 +176,7 @@ describe('a database in DATA_DIR', () => {
     third.db.exec("INSERT INTO match_records VALUES (NULL, 1, 'keywords', 'm', 'now', 3, 1, 4, 9, 'best_paper')");
     third.db.close();
 
-    const migrated = await open(dir);
+    const migrated = await open(dir, MIGRATIONS.slice(0, 4));
     expect(migrated).toMatchObject({ schema: 4, migratedFrom: 3 });
     expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v4.db'));
     const { db } = migrated;
@@ -215,7 +215,7 @@ describe('a database in DATA_DIR', () => {
       /FOREIGN KEY/,
     );
     // The account goes from the feedback and the acknowledgment when it is deleted, and the name
-    // stays. The feedback may go, by the operator's hand, and the acknowledgment keeps its number.
+    // stays. Feedback deleted by hand with sqlite3 would leave the acknowledgment its number.
     db.exec('DELETE FROM accounts WHERE id = 1');
     expect(db.prepare('SELECT account_id FROM feedback WHERE id = 7').get()).toEqual({ account_id: null });
     expect(db.prepare('SELECT name, account_id, feedback_id FROM acknowledgments ORDER BY id').all()).toEqual([
@@ -224,6 +224,47 @@ describe('a database in DATA_DIR', () => {
     ]);
     db.exec('DELETE FROM feedback WHERE id = 7');
     expect(db.prepare('SELECT count(*) AS n FROM acknowledgments WHERE feedback_id = 7').get()).toEqual({ n: 1 });
+  });
+
+  test('of the fourth release keeps its feedback and acknowledgments when feedback gets links and issues', async () => {
+    const fourth = await open(dir, MIGRATIONS.slice(0, 4));
+    fourth.db.exec(
+      "INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now')",
+    );
+    fourth.db.exec(
+      "INSERT INTO feedback VALUES (7, 'now', 'idea', 'Keep me', 'me@example.com', 'v1', 'zh', 'room', NULL, 'Ann L', 1)",
+    );
+    fourth.db.exec("INSERT INTO acknowledgments VALUES (NULL, 'Ann L', 'feedback', 'now', 7, 1)");
+    fourth.db.close();
+
+    const migrated = await open(dir);
+    expect(migrated).toMatchObject({ schema: 5, migratedFrom: 4 });
+    const { db } = migrated;
+    // The feedback that was there has no link, wasn't asked about an issue, and has none.
+    expect(db.prepare('SELECT * FROM feedback').all()).toEqual([
+      {
+        id: 7,
+        created_at: 'now',
+        kind: 'idea',
+        text: 'Keep me',
+        contact: 'me@example.com',
+        version: 'v1',
+        language: 'zh',
+        page: 'room',
+        user_agent: null,
+        credit: 'Ann L',
+        account_id: 1,
+        link: null,
+        public_issue: null,
+        issue: null,
+      },
+    ]);
+    expect(db.prepare('SELECT name, feedback_id, account_id FROM acknowledgments').all()).toEqual([
+      { name: 'Ann L', feedback_id: 7, account_id: 1 },
+    ]);
+    db.exec("UPDATE feedback SET link = 'https://ann.example/', public_issue = 1, issue = 40 WHERE id = 7");
+    expect(() => db.exec('UPDATE feedback SET public_issue = 2 WHERE id = 7')).toThrow(/CHECK/);
+    expect(() => db.exec('UPDATE feedback SET issue = 0 WHERE id = 7')).toThrow(/CHECK/);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {

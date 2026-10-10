@@ -3,9 +3,12 @@ import {
   checkContact,
   checkCredit,
   checkFeedback,
+  checkLink,
   cleanFeedback,
   MAX_CONTACT_INPUT,
   MAX_CONTACT_LENGTH,
+  MAX_LINK_INPUT,
+  MAX_LINK_LENGTH,
   MAX_FEEDBACK_INPUT,
   MAX_FEEDBACK_LENGTH,
 } from './feedback';
@@ -120,5 +123,61 @@ describe('the name for the acknowledgments', () => {
 
   test('that is not text is none', () => {
     expect(checkCredit(7 as unknown as string)).toEqual({ credit: null, problem: null });
+  });
+});
+
+describe('the link for the acknowledgments', () => {
+  test('is optional, and goes with a name only', () => {
+    for (const text of [undefined, '', '  ']) {
+      expect(checkLink(text, 'Ann'), JSON.stringify(text)).toEqual({ link: null, problem: null });
+    }
+    expect(checkLink('https://ann.example', null)).toEqual({ link: null, problem: null });
+    expect(checkLink('not a link at all', null)).toEqual({ link: null, problem: null });
+  });
+
+  test('is a web page of https, such as a homepage or a profile, kept as it was given', () => {
+    for (const link of [
+      'https://ann.example',
+      'https://github.com/octocat',
+      'https://orcid.org/0000-0002-1825-0097',
+      'https://scholar.google.com/citations?user=AbCdEfGhIjK&hl=en',
+      'HTTPS://Ann.Example:8443/a/b%20c#top',
+      'https://xn--fiqs8s.example/',
+    ]) {
+      expect(checkLink(` ${link}\n`, 'Ann'), link).toEqual({ link, problem: null });
+    }
+  });
+
+  test('is refused when it is no web page of https, or is an email address', () => {
+    for (const text of [
+      'http://ann.example',
+      'ann.example',
+      'ftp://ann.example',
+      'javascript:alert(1)',
+      'mailto:ann@example.com',
+      'ann@example.com',
+      'https://ann@example.com',
+      'https://ann:secret@example.com/',
+      'https://localhost/',
+      'https://192.168.0.1/',
+      'https://-ann.example/',
+      'https://ann.example/a b',
+      `https://${HELLO}.example/`,
+      `https://ann.example/${HELLO}`,
+      'https://',
+    ]) {
+      expect(checkLink(text, 'Ann'), JSON.stringify(text)).toEqual({ link: null, problem: 'credit_link_invalid' });
+    }
+  });
+
+  test('is 200 characters at most', () => {
+    const longest = `https://ann.example/${'x'.repeat(MAX_LINK_LENGTH - 20)}`;
+    expect(checkLink(longest, 'Ann')).toEqual({ link: longest, problem: null });
+    expect(checkLink(`${longest}x`, 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
+    expect(checkLink(' '.repeat(MAX_LINK_INPUT + 1), 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
+  });
+
+  test('that is not text is none', () => {
+    expect(checkLink(7 as unknown as string, 'Ann')).toEqual({ link: null, problem: null });
   });
 });

@@ -35,8 +35,6 @@ export const AVATAR_PATH = '/avatars/';
 export const ACCOUNT_API = {
   account: '/api/account',
   records: '/api/account/records',
-  // The acknowledgments, which everyone may read (acknowledgments.ts).
-  acknowledgments: '/api/acknowledgments',
   register: '/api/register',
   login: '/api/login',
   logout: '/api/logout',

@@ -3,10 +3,12 @@ import {
   checkContact,
   checkCredit,
   checkFeedback,
+  checkLink,
   FEEDBACK_KINDS,
   MAX_CONTACT_INPUT,
   MAX_FEEDBACK_INPUT,
   MAX_FEEDBACK_LENGTH,
+  MAX_LINK_INPUT,
   MAX_NAME_INPUT,
   textLength,
   type FeedbackKind,
@@ -25,26 +27,36 @@ import UiField from './UiField.vue';
 import UiSheet from './UiSheet.vue';
 
 // "Send feedback", for the footer of the home page and of a room, and its panel
-// (docs/architecture.md). The text, the contact and the name for the acknowledgments are checked
-// by the rules that the server applies (shared/src/feedback.ts), and go as those rules clean them:
-// what the player pasted may hold characters that JSON writes out at six bytes each, and the
-// message has to stay under the server's 16 KB. Along with them go the build of this page, the
-// language it is shown in and whether it is the home page or a room, but never the room's code.
-// With a bug, the server also keeps the browser's user agent, which it reads from the connection,
-// and the panel says so. With a name, it keeps the account the player is logged in to, and the
-// panel says that too.
+// (docs/architecture.md). The text, the contact, the name for the acknowledgments and its link are
+// checked by the rules that the server applies (shared/src/feedback.ts), and go as those rules
+// clean them: what the player pasted may hold characters that JSON writes out at six bytes each,
+// and the message has to stay under the server's 16 KB. The field for the link shows once a name
+// is typed, since a link goes with a name only. The player may agree to the feedback being
+// published as a GitHub issue, which is off until they tick it. Along with them go the build of
+// this page, the language it is shown in and whether it is the home page or a room, but never the
+// room's code. With a bug, the server also keeps the browser's user agent, which it reads from the
+// connection, and the panel says so. With a name, it keeps the account the player is logged in to,
+// and the panel says that too.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.
-const draft = reactive({ kind: 'idea' as FeedbackKind, text: '', contact: '', credit: '' });
+const draft = reactive({
+  kind: 'idea' as FeedbackKind,
+  text: '',
+  contact: '',
+  credit: '',
+  link: '',
+  publicIssue: false,
+});
 </script>
 
 <script setup lang="ts">
 const props = defineProps<{ page: FeedbackPage }>();
 const { t } = useI18n();
 const name = useId();
+const issueNote = useId();
 const open = ref(false);
-const { kind, text, contact, credit } = toRefs(draft);
+const { kind, text, contact, credit, link, publicIssue } = toRefs(draft);
 // What the server had against what was sent, until something is changed.
 const refused = ref<string | undefined>();
 const { busy, run } = useBusy();
@@ -52,7 +64,10 @@ const { busy, run } = useBusy();
 const checked = computed(() => checkFeedback(text.value));
 const checkedContact = computed(() => checkContact(contact.value));
 const checkedCredit = computed(() => checkCredit(credit.value));
-watch([kind, text, contact, credit], () => (refused.value = undefined));
+const checkedLink = computed(() => checkLink(link.value, checkedCredit.value.credit));
+// Whether anything is typed as the name, even a name that the rules refuse.
+const named = computed(() => checkedCredit.value.credit !== null || checkedCredit.value.problem !== null);
+watch([kind, text, contact, credit, link, publicIssue], () => (refused.value = undefined));
 
 const count = computed(() => t('feedback.count', { count: textLength(checked.value.text), max: MAX_FEEDBACK_LENGTH }));
 const textProblem = computed(() =>
@@ -64,8 +79,13 @@ const contactProblem = computed(() =>
 const creditProblem = computed(() =>
   checkedCredit.value.problem ? t(errorKey(checkedCredit.value.problem)) : undefined,
 );
+const linkProblem = computed(() => (checkedLink.value.problem ? t(errorKey(checkedLink.value.problem)) : undefined));
 const ready = computed(
-  () => checked.value.problem === null && checkedContact.value.problem === null && checkedCredit.value.problem === null,
+  () =>
+    checked.value.problem === null &&
+    checkedContact.value.problem === null &&
+    checkedCredit.value.problem === null &&
+    checkedLink.value.problem === null,
 );
 
 // The home page may have no connection yet. It is made when the panel opens, so that it is there
@@ -82,6 +102,8 @@ function submit() {
       text: checked.value.text,
       ...(checkedContact.value.contact === null ? {} : { contact: checkedContact.value.contact }),
       ...(checkedCredit.value.credit === null ? {} : { credit: checkedCredit.value.credit }),
+      ...(checkedLink.value.link === null ? {} : { link: checkedLink.value.link }),
+      publicIssue: publicIssue.value,
       // The schema takes 64 characters; a build is named by its commit.
       version: __APP_VERSION__.slice(0, 64),
       language: currentLanguage(),
@@ -96,6 +118,8 @@ function submit() {
     text.value = '';
     contact.value = '';
     credit.value = '';
+    link.value = '';
+    publicIssue.value = false;
     open.value = false;
     toast('feedback.sent');
   });
@@ -144,6 +168,23 @@ function submit() {
         :error="creditProblem"
         enterkeyhint="send"
       />
+      <UiField
+        v-if="named"
+        v-model="link"
+        :label="t('feedback.link')"
+        :hint="t('feedback.linkHint')"
+        :maxlength="MAX_LINK_INPUT"
+        :error="linkProblem"
+        inputmode="url"
+        enterkeyhint="send"
+      />
+      <div class="consent">
+        <label>
+          <input v-model="publicIssue" type="checkbox" :aria-describedby="issueNote" />
+          <span>{{ t('feedback.publicIssue') }}</span>
+        </label>
+        <p :id="issueNote" class="note">{{ t('feedback.publicIssueHint') }}</p>
+      </div>
       <p v-if="kind === 'bug'" class="note">{{ t('feedback.bugNote') }}</p>
 
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>
@@ -204,6 +245,30 @@ legend {
 }
 
 .kind input {
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.consent label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.consent input {
+  flex: none;
+  width: 20px;
+  height: 20px;
   margin: 0;
   accent-color: var(--ink);
 }

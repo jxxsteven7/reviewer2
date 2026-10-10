@@ -1,14 +1,13 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { usernameKey } from '@reviewer2/shared';
+import { ACKNOWLEDGMENT_HEADINGS, parseAcknowledgments, usernameKey } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { jpeg } from '../test/images';
 import { addAccounts } from '../test/statistics';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
-import { admin, KIND_NAMES, markdown } from './admin';
-import type { AcknowledgmentEntry } from './store/acknowledgments';
+import { admin } from './admin';
 import { DATABASE_FILE, openDatabase, type Database } from './store/database';
 import { FeedbackStore, type NewFeedback } from './store/feedback';
 
@@ -85,7 +84,13 @@ describe('avatar remove', () => {
       ['acknowledgments', 'add', 'Ann', '--kind'],
       ['acknowledgments', 'add', 'Ann', '--kind', 'words', '--ban'],
       ['acknowledgments', 'list', '1'],
-      ['acknowledgments', 'link', '1'],
+      ['feedback', 'issue', '1'],
+      // The acknowledgments are an archive, which no command changes.
+      ['feedback', 'delete', '1'],
+      ['acknowledgments', 'remove', '1'],
+      ['acknowledgments', 'link', '1', 'Ann'],
+      ['acknowledgments', 'unlink', '1'],
+      ['acknowledgments', 'markdown'],
     ]) {
       expect(run(...args), args.join(' ')).toBe(2);
       expect(printed.at(-1)).toMatch(/^usage: /);
@@ -168,7 +173,9 @@ const feedback = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
   text: 'A timer, please.',
   contact: null,
   credit: null,
+  link: null,
   accountId: null,
+  publicIssue: false,
   version: 'v1',
   language: 'en',
   page: 'home',
@@ -176,62 +183,148 @@ const feedback = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
   ...changes,
 });
 
+// The entry that a command printed for ACKNOWLEDGMENTS.md, as the file's rules read it once the
+// operator has said what the player did.
+function printedEntry(heading: string) {
+  const line = (printed.at(-1) as string).replace('<what they did>', 'suggested a timer');
+  return parseAcknowledgments(`## ${heading}\n\n${line}\n`);
+}
+
 describe('feedback adopt', () => {
-  test('thanks the player by the name they left, linked to the account they were logged in to', () => {
+  test('records the adoption, counted for the account of a player who left a name, and prints the entry', () => {
     const ann = accounts.store.create('Ann', 'ann', 'hash');
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ credit: 'Ann L', accountId: ann?.id }));
+    store.add(feedback({ credit: 'Ann L.', link: 'https://ann.example/', accountId: ann?.id }));
     store.add(feedback({ kind: 'words', credit: 'octocat' }));
     store.add(feedback({ kind: 'bug' }));
     expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed.at(-1)).toBe(
-      'Adopted feedback #1 as acknowledgment #1: Ann L for Ideas and bug reports, linked to the account Ann.',
-    );
+    expect(printed).toEqual([
+      'Adopted feedback #1 as acknowledgment #1, for Helpful discussions, counted for the account Ann.',
+      'For ACKNOWLEDGMENTS.md, under "## Helpful discussions", once you say what they did in English:',
+      '- [Ann L\\.](https://ann.example/) \u{2014} <what they did>',
+    ]);
+    expect(printedEntry('Helpful discussions')).toEqual({
+      sections: [
+        {
+          kind: 'feedback',
+          entries: [{ name: 'Ann L.', link: 'https://ann.example/', contribution: 'suggested a timer' }],
+        },
+      ],
+      problems: [],
+    });
     expect(run('feedback', 'adopt', '2')).toBe(0);
-    expect(printed.at(-1)).toBe(
-      'Adopted feedback #2 as acknowledgment #2: octocat for Word lists, linked to no account.',
-    );
+    expect(printed.slice(-3)).toEqual([
+      'Adopted feedback #2 as acknowledgment #2, for Data, counted for no account.',
+      'For ACKNOWLEDGMENTS.md, under "## Data", once you say what they did in English:',
+      '- octocat \u{2014} <what they did>',
+    ]);
+    // Feedback without a name is adopted too, and its player stays anonymous.
+    expect(run('feedback', 'adopt', '3')).toBe(0);
+    expect(printed.slice(-3)).toEqual([
+      'Adopted feedback #3 as acknowledgment #3, for Helpful discussions, from a player who left no name.',
+      'For ACKNOWLEDGMENTS.md, under "## Helpful discussions", once you say what they did in English:',
+      '- An anonymous player \u{2014} <what they did>',
+    ]);
+    expect(printedEntry('Helpful discussions').sections[0]?.entries).toEqual([
+      { name: null, link: null, contribution: 'suggested a timer' },
+    ]);
     expect(accounts.acknowledgments.all()).toEqual([
-      expect.objectContaining({ id: 1, name: 'Ann L', kind: 'feedback', feedbackId: 1, accountId: 1, username: 'Ann' }),
+      expect.objectContaining({
+        id: 1,
+        name: 'Ann L.',
+        kind: 'feedback',
+        feedbackId: 1,
+        accountId: 1,
+        username: 'Ann',
+      }),
       expect.objectContaining({ id: 2, name: 'octocat', kind: 'words', feedbackId: 2, accountId: null }),
+      expect.objectContaining({ id: 3, name: '', kind: 'feedback', feedbackId: 3, accountId: null }),
     ]);
     expect(accounts.summary(ann as NonNullable<typeof ann>).acknowledgments).toEqual([{ kind: 'feedback', count: 1 }]);
     expect(store.byId(1)?.acknowledgmentId).toBe(1);
 
-    // Only once, only with a name, and only feedback that is there.
+    // Only once, and only feedback that is there.
     expect(run('feedback', 'adopt', '1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 was adopted already, as acknowledgment #1.');
-    expect(run('feedback', 'adopt', '3')).toBe(1);
-    expect(printed.at(-1)).toBe('Feedback #3 came without a name for the acknowledgments: the player stays anonymous.');
     expect(run('feedback', 'adopt', '4')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #4.');
     expect(run('feedback', 'adopt', 'x')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #x.');
-    expect(accounts.acknowledgments.all()).toHaveLength(2);
+    expect(accounts.acknowledgments.all()).toHaveLength(3);
+  });
+
+  test('counts no account for feedback without a name, even from a player who was logged in', () => {
+    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    if (!ann) throw new Error('no account');
+    // The server keeps no account for feedback without a name, but an older row might have one.
+    new FeedbackStore(database.db).add(feedback({ accountId: ann.id }));
+    expect(run('feedback', 'adopt', '1')).toBe(0);
+    expect(accounts.acknowledgments.all()[0]).toMatchObject({ name: '', accountId: null });
+    expect(accounts.summary(ann).acknowledgments).toEqual([]);
+  });
+
+  test('puts the number of its issue in the entry', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Bob', publicIssue: true }));
+    store.setIssue(1, 42);
+    expect(run('feedback', 'adopt', '1')).toBe(0);
+    expect(printed.at(-1)).toBe('- Bob \u{2014} <what they did> (#42)');
   });
 
   test("says when the name is another account's username, which may be someone passing for its owner", () => {
     accounts.store.create('Cat', 'cat', 'hash');
     new FeedbackStore(database.db).add(feedback({ credit: 'CAT' }));
     expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed).toEqual([
-      'Adopted feedback #1 as acknowledgment #1: CAT for Ideas and bug reports, linked to no account.',
-      "CAT is also the username of the account Cat, which didn't send the feedback. If they aren't the same " +
-        'person, take it out with: acknowledgments remove 1',
+    expect(printed.slice(0, 2)).toEqual([
+      'Adopted feedback #1 as acknowledgment #1, for Helpful discussions, counted for no account.',
+      "CAT is also the username of the account Cat, which didn't send the feedback. Make sure that they are " +
+        'the same person before you list the name.',
     ]);
   });
 });
 
+describe('feedback issue', () => {
+  test('records the issue that feedback was published as, if its player agreed', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ publicIssue: true }));
+    store.add(feedback());
+    expect(run('feedback', 'issue', '1', '42')).toBe(0);
+    expect(printed.at(-1)).toBe('Feedback #1 is issue #42, https://github.com/jxxsteven7/reviewer2/issues/42.');
+    expect(store.byId(1)).toMatchObject({ issue: 42, text: 'A timer, please.' });
+    // A mistake can be put right, and the command says what it replaced.
+    expect(run('feedback', 'issue', '1', '43')).toBe(0);
+    expect(printed.at(-1)).toBe(
+      'Feedback #1 is issue #43, https://github.com/jxxsteven7/reviewer2/issues/43, no longer #42.',
+    );
+
+    expect(run('feedback', 'issue', '2', '44')).toBe(1);
+    expect(printed.at(-1)).toBe("The player didn't agree to feedback #2 being published as an issue.");
+    expect(store.byId(2)?.issue).toBeNull();
+    for (const number of ['0', '-1', '4.5', 'x']) {
+      expect(run('feedback', 'issue', '1', number)).toBe(1);
+      expect(printed.at(-1)).toBe(`${number} is not the number of an issue.`);
+    }
+    expect(run('feedback', 'issue', '3', '1')).toBe(1);
+    expect(printed.at(-1)).toBe('There is no feedback #3.');
+    expect(store.byId(1)?.issue).toBe(43);
+  });
+});
+
 describe('acknowledgments', () => {
-  test('are added by hand, linked and unlinked, listed, and removed', () => {
+  test('are added by hand, with the entry for ACKNOWLEDGMENTS.md, and listed', () => {
     accounts.store.create('Bob', 'bob', 'hash');
     expect(run('acknowledgments', 'list')).toBe(0);
     expect(printed.at(-1)).toBe('No acknowledgments yet.');
 
     expect(run('acknowledgments', 'add', ' Bob  B ', '--kind', 'playtesting', '--account', 'bob')).toBe(0);
-    expect(printed.at(-1)).toBe('Added acknowledgment #1: Bob B for Playtesting, linked to the account Bob.');
+    expect(printed.slice(-3)).toEqual([
+      'Added acknowledgment #1: Bob B, for Pilot study, counted for the account Bob.',
+      'For ACKNOWLEDGMENTS.md, under "## Pilot study", once you say what they did in English:',
+      '- Bob B \u{2014} <what they did>',
+    ]);
+    expect(printedEntry('Pilot study').problems).toEqual([]);
     expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words')).toBe(0);
-    expect(printed.at(-1)).toBe('Added acknowledgment #2: Cat for Word lists, linked to no account.');
+    expect(printed.at(-3)).toBe('Added acknowledgment #2: Cat, for Data, counted for no account.');
     expect(run('acknowledgments', 'add', 'x'.repeat(17), '--kind', 'words')).toBe(1);
     expect(printed.at(-1)).toBe('The name must have 1 to 16 visible characters, as a nickname does.');
     expect(run('acknowledgments', 'add', ' ', '--kind', 'words')).toBe(1);
@@ -244,28 +337,13 @@ describe('acknowledgments', () => {
     expect(printed.at(-1)).toBe('No account is called Nobody.');
     expect(accounts.acknowledgments.all()).toHaveLength(2);
 
-    expect(run('acknowledgments', 'link', '2', 'BOB')).toBe(0);
-    expect(printed.at(-1)).toBe('Linked acknowledgment #2, Cat for Word lists, to the account Bob.');
     expect(run('acknowledgments', 'list')).toBe(0);
     expect(printed.at(-1)).toBe(
       [
         `#1  ${new Date().toISOString().slice(0, 10)}  playtesting  -  Bob B  (account Bob)`,
-        `#2  ${new Date().toISOString().slice(0, 10)}  words        -  Cat  (account Bob)`,
+        `#2  ${new Date().toISOString().slice(0, 10)}  words        -  Cat`,
       ].join('\n'),
     );
-    expect(run('acknowledgments', 'unlink', '2')).toBe(0);
-    expect(printed.at(-1)).toBe('Unlinked acknowledgment #2, Cat for Word lists, from the account Bob.');
-    expect(run('acknowledgments', 'unlink', '2')).toBe(0);
-    expect(printed.at(-1)).toBe('acknowledgment #2, Cat for Word lists, was linked to no account.');
-    expect(run('acknowledgments', 'link', '3', 'Bob')).toBe(1);
-    expect(printed.at(-1)).toBe('There is no acknowledgment #3.');
-    expect(run('acknowledgments', 'link', '1', 'Nobody')).toBe(1);
-    expect(printed.at(-1)).toBe('No account is called Nobody.');
-
-    expect(run('acknowledgments', 'remove', '1')).toBe(0);
-    expect(printed.at(-1)).toBe('Removed acknowledgment #1, Bob B for Playtesting.');
-    expect(run('acknowledgments', 'remove', '1')).toBe(1);
-    expect(accounts.acknowledgments.list()).toEqual([{ kind: 'words', name: 'Cat', date: expect.any(String) }]);
   });
 
   test('are listed in columns that line up whatever the names are made of', () => {
@@ -276,6 +354,7 @@ describe('acknowledgments', () => {
     expect(run('feedback', 'adopt', '12')).toBe(0);
     expect(run('acknowledgments', 'add', '\u5f20\u4e09\u4e30', '--kind', 'words', '--account', '\u5f20\u4e09')).toBe(0);
     expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting')).toBe(0);
+    expect(run('feedback', 'adopt', '1')).toBe(0);
     expect(run('acknowledgments', 'list')).toBe(0);
     // A terminal shows a Chinese character two columns wide, so the names and the usernames come
     // after the columns.
@@ -284,82 +363,32 @@ describe('acknowledgments', () => {
       `#1  ${day}  feedback     feedback #12  \u674e\u56db`,
       `#2  ${day}  words        -             \u5f20\u4e09\u4e30  (account \u5f20\u4e09)`,
       `#3  ${day}  playtesting  -             Bob`,
+      `#4  ${day}  feedback     feedback #1   (anonymous)`,
     ]);
   });
 
-  test('are listed and written out on a database that no server has open, leaving nothing behind', () => {
+  test('are listed on a database that no server has open, leaving nothing behind', () => {
     expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words')).toBe(0);
     database.db.close();
     rmSync(join(dir, AVATAR_DIR), { recursive: true });
     expect(run('acknowledgments', 'list')).toBe(0);
-    expect(run('acknowledgments', 'markdown')).toBe(0);
-    expect(printed.at(-1)).toBe('## Word lists\n\n- Cat, ' + new Date().toISOString().slice(0, 10));
-    // They only read: neither the WAL's files nor the avatars' directory are left behind.
+    expect(printed.at(-1)).toMatch(/^#1 .* Cat$/);
+    // It only reads: neither the WAL's files nor the avatars' directory are left behind.
     expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
     expect(existsSync(join(dir, AVATAR_DIR))).toBe(false);
   });
 
-  test('take a name that begins with --, as a nickname may', () => {
+  test('take a name that begins with --, as a nickname may, and print it escaped', () => {
     expect(run('acknowledgments', 'add', '--Ann', '--kind', 'words')).toBe(0);
-    expect(printed.at(-1)).toBe('Added acknowledgment #1: --Ann for Word lists, linked to no account.');
+    expect(printed.at(-3)).toBe('Added acknowledgment #1: --Ann, for Data, counted for no account.');
+    expect(printed.at(-1)).toBe('- \\-\\-Ann \u{2014} <what they did>');
+    expect(printedEntry('Data').sections[0]?.entries[0]?.name).toBe('--Ann');
   });
 
   test('call the kinds as the interface does', () => {
     const en = JSON.parse(readFileSync(new URL('../../client/src/locales/en.json', import.meta.url), 'utf8')) as {
       acknowledgments: { kinds: Record<string, string> };
     };
-    expect(KIND_NAMES).toEqual(en.acknowledgments.kinds);
-  });
-
-  test('are written out as ACKNOWLEDGMENTS.md has them', () => {
-    expect(run('acknowledgments', 'markdown')).toBe(0);
-    expect(printed.at(-1)).toBe('_No one yet._');
-    const entry = (changes: Partial<AcknowledgmentEntry>): AcknowledgmentEntry => ({
-      id: 1,
-      name: 'Ann L',
-      kind: 'feedback',
-      creditedAt: '2026-10-10T12:00:00.000Z',
-      feedbackId: null,
-      accountId: null,
-      username: null,
-      ...changes,
-    });
-    expect(
-      markdown([
-        entry({ kind: 'playtesting', name: 'Bob' }),
-        entry({ name: 'Ann L' }),
-        entry({ name: 'octocat', creditedAt: '2026-10-12T00:00:00.000Z' }),
-      ]),
-    ).toBe(
-      [
-        '## Ideas and bug reports',
-        '',
-        '- Ann L, 2026-10-10',
-        '- octocat, 2026-10-12',
-        '',
-        '## Playtesting',
-        '',
-        '- Bob, 2026-10-10',
-      ].join('\n'),
-    );
-  });
-
-  test('are written out as the names they are, not as links, headings or tags', () => {
-    const entries = ['[a](http://x.co)', '# Big', '<b>x</b>', '**Ann** _L_', 'Ann-Lee'].map((name, id) => ({
-      id,
-      name,
-      kind: 'words' as const,
-      creditedAt: '2026-10-10T12:00:00.000Z',
-      feedbackId: null,
-      accountId: null,
-      username: null,
-    }));
-    expect(markdown(entries).split('\n').slice(2)).toEqual([
-      '- \\[a\\]\\(http\\:\\/\\/x\\.co\\), 2026-10-10',
-      '- \\# Big, 2026-10-10',
-      '- \\<b\\>x\\<\\/b\\>, 2026-10-10',
-      '- \\*\\*Ann\\*\\* \\_L\\_, 2026-10-10',
-      '- Ann\\-Lee, 2026-10-10',
-    ]);
+    expect(ACKNOWLEDGMENT_HEADINGS).toEqual(en.acknowledgments.kinds);
   });
 });

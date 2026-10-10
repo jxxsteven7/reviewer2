@@ -143,11 +143,13 @@ const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
 
-// Players wrote the text, the contact and the name, and the page sent the version, so all of it is
-// escaped like anything else that comes from outside. The text keeps its line breaks. The name for
-// the acknowledgments comes with the account it was given from, for the operator to link, with
-// the acknowledgment once the feedback has been adopted (admin.ts), and, in bold, with another
-// account whose username it is, which may be someone passing for that account's owner.
+// Players wrote the text, the contact, the name and the link, and the page sent the version, so all
+// of it is escaped like anything else that comes from outside, and the link is shown, not linked.
+// The text keeps its line breaks. The name for the acknowledgments comes with its link, the account
+// it was given from, the acknowledgment once the feedback has been adopted (admin.ts), and, in
+// bold, with another account whose username it is, which may be someone passing for that
+// account's owner. Whether the player agreed to a public issue says whether the operator may
+// publish the feedback as one; older feedback, from before players were asked, may not be.
 function entry(feedback: Feedback): string {
   const facts = [
     `#${feedback.id}`,
@@ -157,11 +159,17 @@ function entry(feedback: Feedback): string {
     LANGUAGES[feedback.language],
     `from the ${PAGES[feedback.page]}`,
     ...(feedback.acknowledgmentId === null ? [] : [`adopted as acknowledgment #${feedback.acknowledgmentId}`]),
+    feedback.issue === null
+      ? feedback.publicIssue
+        ? '<strong>may be published as an issue</strong>'
+        : 'not to be published'
+      : `published as issue #${feedback.issue}`,
   ];
   const credit =
     feedback.credit === null
       ? 'No name for the acknowledgments'
       : `Name for the acknowledgments: ${escape(feedback.credit)}` +
+        (feedback.link === null ? '' : ` &middot; link ${escape(feedback.link)}`) +
         (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
         (feedback.nameTakenBy === null
           ? ''

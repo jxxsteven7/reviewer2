@@ -130,7 +130,10 @@ describe('the feedback', () => {
     text: 'More fields, please.',
     contact: null,
     credit: null,
+    link: null,
     accountId: null,
+    publicIssue: false,
+    issue: null,
     username: null,
     acknowledgmentId: null,
     nameTakenBy: null,
@@ -176,11 +179,12 @@ describe('the feedback', () => {
     expect(shown).toContain('2 in all, newest first');
     expect(shown).toContain(
       '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; Chinese &middot; from the room ' +
-        'Line one Line two Contact: wechat: r2 No name for the acknowledgments Browser: Mozilla/5.0',
+        '&middot; not to be published Line one Line two Contact: wechat: r2 No name for the acknowledgments ' +
+        'Browser: Mozilla/5.0',
     );
     expect(shown).toContain(
       '#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; English &middot; ' +
-        'from the home page More fields, please. No contact No name for the acknowledgments',
+        'from the home page &middot; not to be published More fields, please. No contact No name for the acknowledgments',
     );
     expect(shown.indexOf('#2')).toBeLessThan(shown.indexOf('#1'));
     // The text keeps its line breaks, which the page shows as they are.
@@ -199,13 +203,35 @@ describe('the feedback', () => {
       }),
     );
     expect(shown).toContain('#3 &middot; Idea &middot; 2026-10-09 13:05 UTC');
-    expect(shown).toContain('from the home page &middot; adopted as acknowledgment #1 More fields, please.');
+    expect(shown).toContain(
+      'from the home page &middot; adopted as acknowledgment #1 &middot; not to be published More fields, please.',
+    );
     expect(shown).toContain('No contact Name for the acknowledgments: Ann L &middot; account Ann');
     expect(shown).toContain('#2 &middot; Idea');
     expect(shown).toContain('No contact Name for the acknowledgments: Bob #1');
     expect(shown).not.toContain('Bob &middot; account');
     expect(shown.match(/adopted as acknowledgment/g)).toHaveLength(1);
     expect(shown).not.toContain('also the username');
+  });
+
+  test('shows the link that came with the name, and whether it may be or was published as an issue', () => {
+    const html = page({
+      total: 3,
+      entries: [
+        feedback(3, { credit: 'Ann L', link: 'https://ann.example/', publicIssue: true, issue: 42 }),
+        feedback(2, { publicIssue: true }),
+        feedback(1, { publicIssue: null }),
+      ],
+    });
+    const shown = text(html);
+    expect(shown).toContain('from the home page &middot; published as issue #42 More fields');
+    expect(shown).toContain('Name for the acknowledgments: Ann L &middot; link https://ann.example/');
+    expect(html).toContain('from the home page &middot; <strong>may be published as an issue</strong>');
+    // Feedback from before players were asked may not be.
+    expect(shown).toContain('#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15');
+    expect(shown.match(/not to be published/g)).toHaveLength(1);
+    // The link is shown, not linked.
+    expect(html).not.toContain('href="https://ann.example/"');
   });
 
   test("points out a name that is another account's username, in bold", () => {
@@ -233,6 +259,7 @@ describe('the feedback', () => {
           text: '<script>alert("text")</script><img src=x onerror=alert(1)>',
           contact: "<a href='javascript:alert(1)'>me</a>",
           credit: '<i>Ann</i>',
+          link: 'https://x.co/"><script>alert(1)</script>',
           username: '<u>ann</u>',
           nameTakenBy: '<s>Ann</s>',
           version: '<b>v1</b>',
@@ -245,7 +272,8 @@ describe('the feedback', () => {
       /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
     );
     expect(html).toContain(
-      'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
+      'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; link https://x.co/&#34;&#62;&#60;script&#62;' +
+        'alert(1)&#60;/script&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
     );
     expect(html).toContain('also the username of the account &#60;s&#62;Ann&#60;/s&#62;,');
     expect(html).toContain(

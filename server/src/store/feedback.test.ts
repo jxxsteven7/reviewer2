@@ -26,7 +26,9 @@ const entry = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
   text: 'More fields, please.',
   contact: null,
   credit: null,
+  link: null,
   accountId: null,
+  publicIssue: false,
   version: 'v0.0.15',
   language: 'en',
   page: 'home',
@@ -42,7 +44,7 @@ describe('the feedback', () => {
     const bug = entry({ kind: 'bug', text: 'Line one\nLine two', userAgent: 'Mozilla/5.0', page: 'room' });
     expect(feedback.add({ ...bug, contact: 'wechat: r2', language: 'zh' })).toBe(2);
     expect(feedback.count()).toBe(2);
-    const alone = { username: null, acknowledgmentId: null, nameTakenBy: null };
+    const alone = { issue: null, username: null, acknowledgmentId: null, nameTakenBy: null };
     expect(feedback.latest(10)).toEqual([
       { id: 2, createdAt: '2026-10-09T12:01:00.000Z', ...bug, contact: 'wechat: r2', language: 'zh', ...alone },
       { id: 1, createdAt: '2026-10-09T12:00:00.000Z', ...entry(), ...alone },
@@ -51,12 +53,18 @@ describe('the feedback', () => {
     expect(feedback.byId(3)).toBeUndefined();
   });
 
-  test('comes with the name for the acknowledgments, its account while there is one, and its adoption', () => {
+  test('comes with the name for the acknowledgments, its link, its account while there is one, and its adoption', () => {
     const feedback = store();
     const ann = new AccountStore(db).create('Ann', 'ann', 'h');
     if (!ann) throw new Error('no account');
-    feedback.add(entry({ credit: 'Ann L', accountId: ann.id }));
-    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: 1, username: 'Ann', acknowledgmentId: null });
+    feedback.add(entry({ credit: 'Ann L', link: 'https://ann.example/', accountId: ann.id }));
+    expect(feedback.byId(1)).toMatchObject({
+      credit: 'Ann L',
+      link: 'https://ann.example/',
+      accountId: 1,
+      username: 'Ann',
+      acknowledgmentId: null,
+    });
     new AcknowledgmentStore(db).add({ name: 'Ann L', kind: 'feedback', feedbackId: 1, accountId: ann.id });
     expect(feedback.byId(1)).toMatchObject({ acknowledgmentId: 1 });
     new AccountStore(db).delete(ann.id);
@@ -89,7 +97,26 @@ describe('the feedback', () => {
     expect(taken().every(([, name]) => name === null)).toBe(true);
   });
 
-  test('never gets an id that another had, even after the operator deleted the newest', () => {
+  test('says whether the player agreed to a public issue, and remembers the issue it was published as', () => {
+    const feedback = store();
+    feedback.add(entry());
+    feedback.add(entry({ publicIssue: true }));
+    // Feedback from before players were asked.
+    db.exec(
+      "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'idea', 'Old', 'v1', 'en', 'home')",
+    );
+    expect(feedback.latest(10).map(({ publicIssue, issue }) => [publicIssue, issue])).toEqual([
+      [null, null],
+      [true, null],
+      [false, null],
+    ]);
+    expect(feedback.setIssue(2, 42)).toBe(true);
+    expect(feedback.setIssue(4, 42)).toBe(false);
+    expect(feedback.byId(2)).toMatchObject({ publicIssue: true, issue: 42, text: 'More fields, please.' });
+    expect(() => feedback.setIssue(2, 0)).toThrow(/CHECK constraint/);
+  });
+
+  test('never gets an id that another had, even if a row were deleted by hand', () => {
     const feedback = store();
     for (let i = 0; i < 3; i += 1) feedback.add(entry());
     db.exec('DELETE FROM feedback WHERE id = 3');
@@ -127,9 +154,14 @@ describe('no more feedback is taken', () => {
   test('once the feedback holds more than the limit', () => {
     const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxBytes: 20_000 });
     expect(feedback.full()).toBeNull();
-    // A Chinese character takes three bytes, so each of these holds 3,123 with its contact, its
-    // name and its version.
-    const large = entry({ text: '\u{8bcd}'.repeat(1000), contact: 'x'.repeat(100), credit: 'y'.repeat(16) });
+    // A Chinese character takes three bytes, so each of these holds 3,323 with its contact, its
+    // name, its link and its version.
+    const large = entry({
+      text: '\u{8bcd}'.repeat(1000),
+      contact: 'x'.repeat(100),
+      credit: 'y'.repeat(16),
+      link: `https://${'z'.repeat(189)}.cn`,
+    });
     for (let i = 0; i < 6; i += 1) feedback.add(large);
     expect(feedback.full()).toBeNull();
     feedback.add(large);

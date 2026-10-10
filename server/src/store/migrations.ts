@@ -4,10 +4,10 @@
 // schema is a new migration at the end.
 
 export const MIGRATIONS: readonly string[] = [
-  // 1: feedback from players. The server never deletes a row, but the operator may, to make room
-  // (docs/architecture.md); AUTOINCREMENT keeps a deleted id from being given out again, so that
-  // an id in the log names one piece of feedback for good. The contact is cleared 90 days after
-  // the feedback came, which the partial index finds quickly.
+  // 1: feedback from players. It is an archive, and nothing deletes a row (docs/architecture.md);
+  // AUTOINCREMENT would keep a deleted id from being given out again anyway, so that an id in the
+  // log names one piece of feedback for good. The contact is cleared 90 days after the feedback
+  // came, which the partial index finds quickly.
   `
   CREATE TABLE feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,8 +134,8 @@ export const MIGRATIONS: readonly string[] = [
   // - acknowledgments: the list itself. Each row is the name, what it is for, when it was given, the
   //   feedback it came from, if any, and the account it is linked to, if any. The name stays when
   //   the account is deleted: it is the public name its owner gave, not the account. The feedback's
-  //   number is kept as a number and not as a foreign key, so that the operator may delete feedback
-  //   with sqlite3, which runs with foreign keys off, without leaving a row that the next migration
+  //   number is kept as a number and not as a foreign key, so that a row of feedback deleted by hand
+  //   with sqlite3, which runs with foreign keys off, wouldn't leave a row that the next migration
   //   refuses. A piece of feedback is adopted once.
   `
   ALTER TABLE feedback ADD COLUMN credit TEXT;
@@ -151,5 +151,14 @@ export const MIGRATIONS: readonly string[] = [
     account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL
   ) STRICT;
   CREATE INDEX acknowledgments_account ON acknowledgments (account_id) WHERE account_id IS NOT NULL;
+  `,
+  // 5: more of the feedback (docs/architecture.md#feedback). It gets the link that the player gave
+  // with their name, whether they agreed to it being published as a GitHub issue, which is NULL for
+  // feedback from before they were asked, and the number of that issue, once the operator has
+  // published it. The rows that are there keep everything they have.
+  `
+  ALTER TABLE feedback ADD COLUMN link TEXT;
+  ALTER TABLE feedback ADD COLUMN public_issue INTEGER CHECK (public_issue IN (0, 1));
+  ALTER TABLE feedback ADD COLUMN issue INTEGER CHECK (issue > 0);
   `,
 ];

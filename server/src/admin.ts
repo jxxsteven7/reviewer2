@@ -2,10 +2,13 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {
+  ACKNOWLEDGMENT_HEADINGS,
   ACKNOWLEDGMENT_KINDS,
+  acknowledgmentLine,
   checkCredit,
   cleanName,
   MAX_NAME_LENGTH,
+  REPOSITORY_URL,
   usernameKey,
   type AcknowledgmentKind,
 } from '@reviewer2/shared';
@@ -24,26 +27,25 @@ import { MIGRATIONS } from './store/migrations';
 //   node server/dist/admin.cjs avatar allow <username>
 //   node server/dist/admin.cjs accounts [--json]
 //   node server/dist/admin.cjs feedback adopt <id>
+//   node server/dist/admin.cjs feedback issue <id> <number>
 //   node server/dist/admin.cjs acknowledgments list
-//   node server/dist/admin.cjs acknowledgments markdown
 //   node server/dist/admin.cjs acknowledgments add <name> --kind <kind> [--account <username>]
-//   node server/dist/admin.cjs acknowledgments link <id> <username>
-//   node server/dist/admin.cjs acknowledgments unlink <id>
-//   node server/dist/admin.cjs acknowledgments remove <id>
 //
 // adminCli.ts runs this, as index.ts runs main.ts.
 //
 // `avatar remove` takes an account's avatar down, as for a picture that breaks the rules, and with
-// --ban bars the account from uploading another; `avatar allow` lifts that. `feedback adopt` puts
-// the player who sent the feedback into the acknowledgments, by the name they left with it, linked
-// to the account they were logged in to, and says so when the name is another account's username;
-// `acknowledgments add` thanks someone by hand, such as a playtester; `link` and `unlink` change
-// the account an acknowledgment is linked to, and `remove` takes one out. `list` shows them all,
-// and `markdown` writes them as ACKNOWLEDGMENTS.md has them. `accounts` prints statistics of the
-// accounts, counted as AccountStore says (store/accounts.ts), and never what the database keeps in
-// place of passwords, email addresses and logins. `accounts`, `list` and `markdown` only read.
-// DATA_DIR names the server's data, as it does for the server. The database is opened as it is,
-// never migrated, and the server may go on running meanwhile.
+// --ban bars the account from uploading another; `avatar allow` lifts that. `feedback adopt`
+// records that the feedback was adopted, counted for the account the player was logged in to if
+// they left a name, and says when the name is another account's username; `acknowledgments add`
+// thanks someone by hand, such as a playtester. Both print the entry for ACKNOWLEDGMENTS.md, the
+// public list, which the operator completes and adds to the file. `feedback issue` records the
+// GitHub issue that feedback was published as, which only feedback whose player agreed may be.
+// `list` shows the acknowledgments. Nothing deletes feedback or acknowledgments, or changes who an
+// acknowledgment is for or counted for: both are archives (docs/architecture.md#feedback).
+// `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
+// and never what the database keeps in place of passwords, email addresses and logins. `accounts`
+// and `list` only read. DATA_DIR names the server's data, as it does for the server. The database
+// is opened as it is, never migrated, and the server may go on running meanwhile.
 
 const USAGE = [
   'usage: admin.cjs <command>, one of',
@@ -51,20 +53,10 @@ const USAGE = [
   '  avatar allow <username>',
   '  accounts [--json]',
   '  feedback adopt <id>',
+  '  feedback issue <id> <number>',
   '  acknowledgments list',
-  '  acknowledgments markdown',
   `  acknowledgments add <name> --kind ${ACKNOWLEDGMENT_KINDS.join('|')} [--account <username>]`,
-  '  acknowledgments link <id> <username>',
-  '  acknowledgments unlink <id>',
-  '  acknowledgments remove <id>',
 ].join('\n');
-
-// What each kind is called where the operator reads it, and in ACKNOWLEDGMENTS.md.
-export const KIND_NAMES: Record<AcknowledgmentKind, string> = {
-  feedback: 'Ideas and bug reports',
-  words: 'Word lists',
-  playtesting: 'Playtesting',
-};
 
 type Flags = { ban?: true; json?: true; kind?: string; account?: string };
 
@@ -106,8 +98,8 @@ interface Command {
   run(data: Data, words: string[], flags: Flags, print: Print): number;
 }
 
-// An acknowledgment's id as typed, or null.
-const idOf = (word: string): number | null => (/^\d{1,15}$/.test(word) ? Number(word) : null);
+// A number as typed, from 1, or null.
+const numberOf = (word: string): number | null => (/^[1-9]\d{0,14}$/.test(word) ? Number(word) : null);
 
 function accountNamed({ accounts }: Data, name: string, print: Print) {
   const account = accounts.store.byKey(usernameKey(cleanName(name) ?? name));
@@ -115,18 +107,26 @@ function accountNamed({ accounts }: Data, name: string, print: Print) {
   return account;
 }
 
-function acknowledgment({ acknowledgments }: Data, word: string, print: Print) {
-  const id = idOf(word);
-  const entry = id === null ? undefined : acknowledgments.byId(id);
-  if (!entry) print(`There is no acknowledgment #${word}.`);
-  return entry;
+function feedbackNumbered({ feedback }: Data, word: string, print: Print) {
+  const id = numberOf(word);
+  const found = id === null ? undefined : feedback.byId(id);
+  if (!found) print(`There is no feedback #${word}.`);
+  return found;
 }
 
-const describe = ({ id, name, kind }: AcknowledgmentEntry) => `acknowledgment #${id}, ${name} for ${KIND_NAMES[kind]}`;
+// The entry for ACKNOWLEDGMENTS.md, under the heading of its kind, for the operator to say what
+// the player did and to add it to the file.
+function printEntry(print: Print, kind: AcknowledgmentKind, entry: Parameters<typeof acknowledgmentLine>[0]) {
+  print(`For ACKNOWLEDGMENTS.md, under "## ${ACKNOWLEDGMENT_HEADINGS[kind]}", once you say what they did in English:`);
+  print(acknowledgmentLine(entry));
+}
+
+const counted = (username: string | null | undefined) =>
+  username ? `counted for the account ${username}` : 'counted for no account';
 
 // The list as the operator reads it, one line each: the id, the date, the kind and the feedback it
-// came from in columns, then the name and the account it is linked to. Those two come last, as the
-// username does in `accounts`, so that the columns line up whatever the names are made of: a
+// came from in columns, then the name and the account it is counted for. Those two come last, as
+// the username does in `accounts`, so that the columns line up whatever the names are made of: a
 // terminal shows a Chinese character two columns wide.
 function listing(entries: readonly AcknowledgmentEntry[]): string {
   const rows = entries.map(({ id, creditedAt, kind, feedbackId }) => [
@@ -140,29 +140,10 @@ function listing(entries: readonly AcknowledgmentEntry[]): string {
     .map(({ name, username }, index) =>
       [
         ...(rows[index] as string[]).map((cell, column) => cell.padEnd(widths[column] as number)),
-        username === null ? name : `${name}  (account ${username})`,
+        (name === '' ? '(anonymous)' : name) + (username === null ? '' : `  (account ${username})`),
       ].join('  '),
     )
     .join('\n');
-}
-
-// A name as Markdown shows it, and nothing more: every ASCII punctuation character is escaped,
-// so that a player's name can't make a link, a heading or an HTML tag of itself when the file
-// is rendered.
-const literal = (name: string) => name.replace(/[!-/:-@[-`{-~]/g, '\\$&');
-
-// The list as ACKNOWLEDGMENTS.md has it: a section for each kind that has anyone in it.
-export function markdown(entries: readonly AcknowledgmentEntry[]): string {
-  const sections = ACKNOWLEDGMENT_KINDS.flatMap((kind) => {
-    const names = entries.filter((entry) => entry.kind === kind);
-    if (names.length === 0) return [];
-    return [
-      `## ${KIND_NAMES[kind]}\n\n${names
-        .map(({ name, creditedAt }) => `- ${literal(name)}, ${creditedAt.slice(0, 10)}`)
-        .join('\n')}`,
-    ];
-  });
-  return sections.length === 0 ? '_No one yet._' : sections.join('\n\n');
 }
 
 // The statistics, in the order that `--json` prints them. They are read on one snapshot, so that
@@ -239,44 +220,68 @@ const COMMANDS: Record<string, Command> = {
   'feedback adopt': {
     words: 1,
     flags: [],
-    run({ acknowledgments, feedback }, [word], _flags, print) {
-      const id = idOf(word as string);
-      const found = id === null ? undefined : feedback.byId(id);
-      if (!found) {
-        print(`There is no feedback #${word}.`);
-        return 1;
-      }
+    run(data, [word], _flags, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
       if (found.acknowledgmentId !== null) {
-        print(`Feedback #${id} was adopted already, as acknowledgment #${found.acknowledgmentId}.`);
-        return 1;
-      }
-      if (found.credit === null) {
-        print(`Feedback #${id} came without a name for the acknowledgments: the player stays anonymous.`);
+        print(`Feedback #${found.id} was adopted already, as acknowledgment #${found.acknowledgmentId}.`);
         return 1;
       }
       const kind = kindOfFeedback(found.kind);
-      const made = acknowledgments.add({
-        name: found.credit,
+      // Only a player who left a name is counted, for the account they were logged in to.
+      const named = found.credit !== null;
+      const made = data.acknowledgments.add({
+        name: found.credit ?? '',
         kind,
         feedbackId: found.id,
-        accountId: found.accountId,
+        accountId: named ? found.accountId : null,
       });
       // The feedback was read a moment ago, so it has been adopted since only if someone else is
       // running this command at the same time.
       if (made === null) {
-        print(`Feedback #${id} was adopted already.`);
+        print(`Feedback #${found.id} was adopted already.`);
         return 1;
       }
-      const linked = found.username === null ? 'linked to no account' : `linked to the account ${found.username}`;
-      print(`Adopted feedback #${id} as acknowledgment #${made}: ${found.credit} for ${KIND_NAMES[kind]}, ${linked}.`);
+      print(
+        `Adopted feedback #${found.id} as acknowledgment #${made}, for ${ACKNOWLEDGMENT_HEADINGS[kind]}, ` +
+          (named ? `${counted(found.username)}.` : 'from a player who left no name.'),
+      );
       // The name may be anyone's, but one that is another account's username may be someone passing
       // for its owner, which the status page points out too.
       if (found.nameTakenBy !== null) {
         print(
-          `${found.credit} is also the username of the account ${found.nameTakenBy}, which didn't send the feedback. ` +
-            `If they aren't the same person, take it out with: acknowledgments remove ${made}`,
+          `${found.credit} is also the username of the account ${found.nameTakenBy}, which didn't send the ` +
+            'feedback. Make sure that they are the same person before you list the name.',
         );
       }
+      printEntry(print, kind, {
+        name: found.credit,
+        link: found.link,
+        contribution: `<what they did>${found.issue === null ? '' : ` (#${found.issue})`}`,
+      });
+      return 0;
+    },
+  },
+  'feedback issue': {
+    words: 2,
+    flags: [],
+    run(data, [word, numberWord], _flags, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
+      const issue = numberOf(numberWord as string);
+      if (issue === null) {
+        print(`${numberWord} is not the number of an issue.`);
+        return 1;
+      }
+      if (found.publicIssue !== true) {
+        print(`The player didn't agree to feedback #${found.id} being published as an issue.`);
+        return 1;
+      }
+      data.feedback.setIssue(found.id, issue);
+      print(
+        `Feedback #${found.id} is issue #${issue}, ${REPOSITORY_URL}/issues/${issue}` +
+          (found.issue === null || found.issue === issue ? '.' : `, no longer #${found.issue}.`),
+      );
       return 0;
     },
   },
@@ -287,15 +292,6 @@ const COMMANDS: Record<string, Command> = {
     run({ acknowledgments }, _words, _flags, print) {
       const entries = acknowledgments.all();
       print(entries.length === 0 ? 'No acknowledgments yet.' : listing(entries));
-      return 0;
-    },
-  },
-  'acknowledgments markdown': {
-    words: 0,
-    flags: [],
-    readOnly: true,
-    run({ acknowledgments }, _words, _flags, print) {
-      print(markdown(acknowledgments.all()));
       return 0;
     },
   },
@@ -319,55 +315,10 @@ const COMMANDS: Record<string, Command> = {
       }
       const account = username === undefined ? null : accountNamed(data, username, print);
       if (account === undefined) return 1;
-      const id = data.acknowledgments.add({
-        name,
-        kind: kind as AcknowledgmentKind,
-        feedbackId: null,
-        accountId: account?.id ?? null,
-      });
-      print(
-        `Added acknowledgment #${id}: ${name} for ${KIND_NAMES[kind as AcknowledgmentKind]}, ` +
-          (account ? `linked to the account ${account.username}.` : 'linked to no account.'),
-      );
-      return 0;
-    },
-  },
-  'acknowledgments link': {
-    words: 2,
-    flags: [],
-    run(data, [word, username], _flags, print) {
-      const entry = acknowledgment(data, word as string, print);
-      if (!entry) return 1;
-      const account = accountNamed(data, username as string, print);
-      if (!account) return 1;
-      data.acknowledgments.setAccount(entry.id, account.id);
-      print(`Linked ${describe(entry)}, to the account ${account.username}.`);
-      return 0;
-    },
-  },
-  'acknowledgments unlink': {
-    words: 1,
-    flags: [],
-    run(data, [word], _flags, print) {
-      const entry = acknowledgment(data, word as string, print);
-      if (!entry) return 1;
-      data.acknowledgments.setAccount(entry.id, null);
-      print(
-        entry.username === null
-          ? `${describe(entry)}, was linked to no account.`
-          : `Unlinked ${describe(entry)}, from the account ${entry.username}.`,
-      );
-      return 0;
-    },
-  },
-  'acknowledgments remove': {
-    words: 1,
-    flags: [],
-    run(data, [word], _flags, print) {
-      const entry = acknowledgment(data, word as string, print);
-      if (!entry) return 1;
-      data.acknowledgments.remove(entry.id);
-      print(`Removed ${describe(entry)}.`);
+      const as = kind as AcknowledgmentKind;
+      const id = data.acknowledgments.add({ name, kind: as, feedbackId: null, accountId: account?.id ?? null });
+      print(`Added acknowledgment #${id}: ${name}, for ${ACKNOWLEDGMENT_HEADINGS[as]}, ${counted(account?.username)}.`);
+      printEntry(print, as, { name, link: null, contribution: '<what they did>' });
       return 0;
     },
   },

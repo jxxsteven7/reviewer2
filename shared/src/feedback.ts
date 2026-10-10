@@ -24,6 +24,9 @@ export const MAX_FEEDBACK_LENGTH = 1000;
 export const MAX_FEEDBACK_INPUT = 4000;
 export const MAX_CONTACT_LENGTH = 100;
 export const MAX_CONTACT_INPUT = 400;
+// The longest link for the acknowledgments as it is kept, and the longest that is looked at.
+export const MAX_LINK_LENGTH = 200;
+export const MAX_LINK_INPUT = 400;
 
 // What the server may answer meta:feedback with besides the codes that every message can get.
 // `feedback_limited` is the limit per address; `feedback_full` means that the server takes no more
@@ -34,6 +37,8 @@ export const FEEDBACK_ERRORS = [
   'contact_too_long',
   'credit_invalid',
   'credit_reserved',
+  'credit_link_invalid',
+  'credit_link_too_long',
   'feedback_limited',
   'feedback_full',
 ] as const;
@@ -41,12 +46,16 @@ export type FeedbackError = (typeof FEEDBACK_ERRORS)[number];
 
 // What the client sends with meta:feedback: what the player wrote, and what comes along by itself.
 // `credit` is the name to list in the acknowledgments should the feedback be adopted
-// (acknowledgments.ts). `version` is the build of the page, which may be older than the server's.
+// (acknowledgments.ts), and `link` a page about them that goes with it. `publicIssue` says that the
+// player agrees to the feedback being published as a GitHub issue, with the name if there is one
+// and never the contact. `version` is the build of the page, which may be older than the server's.
 export interface FeedbackMessage {
   kind: FeedbackKind;
   text: string;
   contact?: string;
   credit?: string;
+  link?: string;
+  publicIssue?: boolean;
   version: string;
   language: Language;
   page: FeedbackPage;
@@ -122,4 +131,30 @@ export function checkCredit(text: string | undefined): CreditCheck {
   if (credit === null) return { credit: null, problem: 'credit_invalid' };
   if (isReservedName(credit)) return { credit: null, problem: 'credit_reserved' };
   return { credit, problem: null };
+}
+
+export interface LinkCheck {
+  // The link as it is kept, or null when there is none.
+  link: string | null;
+  problem: 'credit_link_invalid' | 'credit_link_too_long' | null;
+}
+
+// A web address of https: a host name with a dot in it, a port perhaps, and then nothing but
+// printable ASCII. No user name may come before the host, so email addresses are refused, whether
+// as mailto: or as https://name@host, and so are hosts in other scripts than Latin, which the
+// operator could take for others; a browser copies a link with its path already percent-encoded.
+const LINK =
+  /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z](?:[a-z0-9-]*[a-z0-9])?(?::\d{1,5})?(?:[/?#][!-~]*)?$/i;
+
+// The link that may go with the name for the acknowledgments, to a page about the player, such as
+// a homepage or a profile on GitHub, ORCID or Google Scholar. It goes with a name only, and is
+// dropped without one. ACKNOWLEDGMENTS.md takes links by the same rules (acknowledgments.ts).
+export function checkLink(text: string | undefined, credit: string | null): LinkCheck {
+  if (typeof text !== 'string' || credit === null) return { link: null, problem: null };
+  if (text.length > MAX_LINK_INPUT) return { link: null, problem: 'credit_link_too_long' };
+  const link = text.trim();
+  if (link === '') return { link: null, problem: null };
+  if (link.length > MAX_LINK_LENGTH) return { link: null, problem: 'credit_link_too_long' };
+  if (!LINK.test(link)) return { link: null, problem: 'credit_link_invalid' };
+  return { link, problem: null };
 }

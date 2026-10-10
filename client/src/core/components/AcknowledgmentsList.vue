@@ -1,65 +1,54 @@
 <script setup lang="ts">
-import { ACCOUNT_API, ACKNOWLEDGMENT_KINDS, type Acknowledgment } from '@reviewer2/shared';
-import { computed, ref } from 'vue';
+import { parseAcknowledgments, REPOSITORY_URL } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
-import { request } from '../account';
-import { errorKey } from '../errors';
+import source from '../../../../ACKNOWLEDGMENTS.md?raw';
 
-// The acknowledgments at the foot of the home page (docs/architecture.md#acknowledgments): the
-// players whose suggestions were adopted, who added words or who tested, by the names they gave,
-// in groups by what they did and with the day. The list is folded until it is opened, and fetched
-// then; one that couldn't be fetched is fetched again the next time it is opened.
-const { t, locale } = useI18n();
-const entries = ref<Acknowledgment[] | null>(null);
-const failed = ref<string | undefined>();
-let loading = false;
+// The acknowledgments at the foot of the home page (docs/architecture.md#acknowledgments), folded
+// until they are opened: ACKNOWLEDGMENTS.md, which the build bundles, in its sections, under
+// headings in the page's language. The entries stay in English, as the file has them. A name
+// links to the page its player gave, which is theirs and not the site's, and a number such as
+// #12 to that issue or pull request in the repository. The file's rules are checked before it is
+// merged (shared/src/acknowledgments.ts); an entry that broke them would be left out.
+const { t } = useI18n();
+const { sections } = parseAcknowledgments(source);
 
-async function load(): Promise<void> {
-  if (entries.value || loading) return;
-  loading = true;
-  failed.value = undefined;
-  const reply = await request<{ acknowledgments: Acknowledgment[] }>(ACCOUNT_API.acknowledgments);
-  loading = false;
-  if (reply.ok) entries.value = reply.acknowledgments;
-  else failed.value = t(errorKey(reply.error));
-}
-
-function toggled(event: Event) {
-  if ((event.target as HTMLDetailsElement).open) void load();
-}
-
-const groups = computed(() =>
-  ACKNOWLEDGMENT_KINDS.map((kind) => ({
-    kind,
-    entries: (entries.value ?? []).filter((entry) => entry.kind === kind),
-  })).filter((group) => group.entries.length > 0),
-);
-
-// A day, as the page's language writes it. It is a day and not a moment, so it is read in UTC,
-// where the server wrote it, rather than shift by the browser's time zone.
-function day(date: string): string {
-  try {
-    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(date));
-  } catch {
-    return date;
-  }
-}
+// What someone did, in pieces of text and numbers of issues.
+const pieces = (contribution: string) =>
+  contribution.split(/#(\d+)/).map((text, index) => ({ text, issue: index % 2 === 1 }));
 </script>
 
 <template>
-  <details class="acknowledgments" @toggle="toggled">
+  <details class="acknowledgments">
     <summary>{{ t('acknowledgments.title') }}</summary>
     <div class="panel list">
       <p class="intro">{{ t('acknowledgments.intro') }}</p>
-      <p v-if="failed" class="problem" role="alert">{{ failed }}</p>
-      <p v-else-if="!entries" class="note">{{ t('acknowledgments.loading') }}</p>
-      <p v-else-if="entries.length === 0" class="note">{{ t('acknowledgments.none') }}</p>
-      <section v-for="group in groups" :key="group.kind" class="group">
-        <h3>{{ t(`acknowledgments.kinds.${group.kind}`) }}</h3>
+      <p v-if="sections.length === 0" class="note">{{ t('acknowledgments.none') }}</p>
+      <section v-for="section in sections" :key="section.kind" class="group">
+        <h3>{{ t(`acknowledgments.kinds.${section.kind}`) }}</h3>
         <ul>
-          <li v-for="(entry, index) in group.entries" :key="index">
-            <span class="name">{{ entry.name }}</span>
-            <span class="day num">{{ day(entry.date) }}</span>
+          <li v-for="(entry, index) in section.entries" :key="index">
+            <a
+              v-if="entry.name !== null && entry.link !== null"
+              class="name"
+              :href="entry.link"
+              target="_blank"
+              rel="nofollow ugc noopener"
+              >{{ entry.name }}</a
+            >
+            <span v-else class="name">{{ entry.name ?? t('acknowledgments.anonymous') }}</span>
+            <span class="dash"> &mdash; </span>
+            <span class="what">
+              <template v-for="(piece, at) in pieces(entry.contribution)" :key="at">
+                <a
+                  v-if="piece.issue"
+                  :href="`${REPOSITORY_URL}/issues/${piece.text}`"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >#{{ piece.text }}</a
+                >
+                <template v-else>{{ piece.text }}</template>
+              </template>
+            </span>
           </li>
         </ul>
       </section>
@@ -112,11 +101,6 @@ summary::before {
   color: var(--ink-2);
 }
 
-.problem {
-  color: var(--red-deep);
-  font-weight: var(--weight-bold);
-}
-
 .group {
   display: flex;
   flex-direction: column;
@@ -139,21 +123,23 @@ ul {
 }
 
 li {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-card);
   background: var(--paper-2);
-}
-
-.name {
-  font-weight: var(--weight-bold);
   overflow-wrap: anywhere;
 }
 
-.day {
-  flex: none;
+.name {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.dash,
+.what {
   color: var(--ink-2);
+}
+
+.what a {
+  color: inherit;
 }
 </style>
