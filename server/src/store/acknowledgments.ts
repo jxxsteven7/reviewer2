@@ -31,7 +31,8 @@ export interface AcknowledgmentEntry extends NewAcknowledgment {
   username: string | null;
 }
 
-// What feedback of each kind is thanked for.
+// What feedback of each kind is thanked for: the word lists, or a helpful discussion, as an idea, a
+// new game and a bug are.
 export const kindOfFeedback = (kind: FeedbackKind): AcknowledgmentKind => (kind === 'words' ? 'words' : 'feedback');
 
 // The clock is the system's, in milliseconds since 1970, for the day it was given.

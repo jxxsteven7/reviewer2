@@ -144,7 +144,7 @@ describe('the feedback', () => {
     ...changes,
   });
   const page = (changes: Partial<FeedbackListing> = {}) =>
-    renderFeedbackPage({ total: 0, entries: [], paged: false, older: false, ...changes });
+    renderFeedbackPage({ total: 0, kinds: {}, kind: null, entries: [], paged: false, older: false, ...changes });
 
   test('has a page of its own, which the status page counts and links to', () => {
     const status = renderStatusPage(stats(), [], NOW);
@@ -255,7 +255,7 @@ describe('the feedback', () => {
       total: 1,
       entries: [
         feedback(1, {
-          kind: 'bug',
+          kind: '<i>later</i>' as Feedback['kind'],
           text: '<script>alert("text")</script><img src=x onerror=alert(1)>',
           contact: "<a href='javascript:alert(1)'>me</a>",
           credit: '<i>Ann</i>',
@@ -267,8 +267,8 @@ describe('the feedback', () => {
         }),
       ],
     });
-    // The one link on the page is the page's own.
-    expect(html.replace('<a href="/">Status</a>', '')).not.toMatch(
+    // The only links on the page are the page's own.
+    expect(html.replace('<a href="/">Status</a>', '').replace(/<p class="kinds">.*?<\/p>/, '')).not.toMatch(
       /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
     );
     expect(html).toContain(
@@ -280,8 +280,37 @@ describe('the feedback', () => {
       '&#60;script&#62;alert(&#34;text&#34;)&#60;/script&#62;&#60;img src=x onerror=alert(1)&#62;',
     );
     expect(html).toContain('&#60;a href=&#39;javascript:alert(1)&#39;&#62;me&#60;/a&#62;');
+    expect(html).toContain('#1 &middot; &#60;i&#62;later&#60;/i&#62; &middot;');
     expect(html).toContain('version &#60;b&#62;v1&#60;/b&#62;');
     expect(html).toContain('Browser: &#60;/p&#62;&#60;script&#62;');
+  });
+
+  test('shows each kind with how much there is of it, and the feedback of one kind', () => {
+    const kinds = { idea: 1, game: 2, later: 1 };
+    const all = page({
+      total: 4,
+      kinds,
+      entries: [feedback(4, { kind: 'game' }), feedback(3, { kind: 'later' as Feedback['kind'] }), feedback(2)],
+    });
+    expect(all).toContain(
+      '<p class="kinds"><strong>All (4)</strong> &middot; <a href="/feedback?kind=idea">Idea (1)</a> &middot; ' +
+        '<a href="/feedback?kind=game">New game (2)</a> &middot; <a href="/feedback?kind=bug">Bug (0)</a> &middot; ' +
+        '<a href="/feedback?kind=words">Word lists (0)</a></p>',
+    );
+    expect(text(all)).toContain('#4 &middot; New game &middot; 2026-10-09');
+    // A kind from a later server, which this one was rolled back from, shows as it is.
+    expect(text(all)).toContain('#3 &middot; later &middot; 2026-10-09');
+
+    const games = page({ total: 4, kinds, kind: 'game', entries: [feedback(4, { kind: 'game' })] });
+    expect(games).toContain(
+      '<p class="kinds"><a href="/feedback">All (4)</a> &middot; <a href="/feedback?kind=idea">Idea (1)</a> &middot; ' +
+        '<strong>New game (2)</strong> &middot;',
+    );
+    expect(games).not.toContain('None of this kind yet.');
+    expect(page({ total: 4, kinds, kind: 'bug' })).toContain('<strong>Bug (0)</strong>');
+    expect(page({ total: 4, kinds, kind: 'bug' })).toContain('<p>None of this kind yet.</p>');
+    // Nothing to choose from while there is no feedback at all.
+    expect(page()).not.toContain('class="kinds"');
   });
 
   test('links to older feedback, and back to the latest', () => {
@@ -293,6 +322,11 @@ describe('the feedback', () => {
       '<p class="more"><a href="/feedback">Latest</a> &middot; <a href="/feedback?before=59">Older</a></p>',
     );
     expect(page({ total: 2, entries })).not.toContain('class="more"');
+    // Of one kind, the links keep to it.
+    expect(page({ total: 99, kind: 'game', entries, paged: true, older: true })).toContain(
+      '<p class="more"><a href="/feedback?kind=game">Latest</a> &middot; ' +
+        '<a href="/feedback?kind=game&amp;before=59">Older</a></p>',
+    );
   });
 });
 

@@ -93,6 +93,12 @@ describe('starting', () => {
     expect(logged('listening')).toMatchObject({ accountsPerHour: 100, cookieSecure: false, mail: false });
   });
 
+  test('keeps as much feedback as MAX_FEEDBACK says', async () => {
+    const started = (await start({ MAX_FEEDBACK: '25000' })) as Running;
+    expect(started.feedback.limits).toMatchObject({ maxEntries: 25_000, maxBytes: 125 * 2 ** 20 });
+    expect(logged('listening')).toMatchObject({ maxFeedback: 25_000 });
+  });
+
   test('gives accounts email with both the server secret and the mailer', async () => {
     const started = (await start({
       SERVER_SECRET: 's'.repeat(44),

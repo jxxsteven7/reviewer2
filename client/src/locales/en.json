@@ -542,6 +542,7 @@
     "kind": "About",
     "kinds": {
       "idea": "A suggestion",
+      "game": "A new game",
       "bug": "A bug",
       "words": "The word lists"
     },
@@ -555,6 +556,7 @@
     "linkHint": "A page about you, such as your homepage or your profile on GitHub, ORCID or Google Scholar, linked from your name in the acknowledgments. It starts with https://; no email addresses.",
     "publicIssue": "You may publish this as a GitHub issue",
     "publicIssueHint": "Only the text is published, with your name if you left one; your contact details never are.",
+    "gameNote": "Which game should we make next? Say how a round goes and what makes it fun.",
     "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model.",
     "submit": "Send",
     "sent": "Thank you! Your feedback has been sent."

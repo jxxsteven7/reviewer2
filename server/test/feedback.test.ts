@@ -199,10 +199,36 @@ describe('feedback', () => {
   test('of another kind than a bug is kept without the user agent', async () => {
     server = await startServer();
     const client = await connect();
-    for (const kind of ['idea', 'words']) {
+    for (const kind of ['idea', 'game', 'words']) {
       expect(await client.send('meta:feedback', message({ kind }))).toEqual({ ok: true });
     }
-    expect(server.feedback.latest(10).map(({ userAgent }) => userAgent)).toEqual([null, null]);
+    expect(server.feedback.latest(10).map(({ userAgent }) => userAgent)).toEqual([null, null, null]);
+  });
+
+  test('suggesting a new game is kept with its name, its link and the public issue, as any other', async () => {
+    server = await startServer({ socketLimits: { ...DEFAULT_SOCKET_LIMITS, feedbackPerWindow: 10 } });
+    const client = await connect();
+    const game = message({
+      kind: 'game',
+      text: 'A game where the reviewers bid on papers.',
+      credit: 'Ann',
+      link: 'https://ann.example/',
+      publicIssue: true,
+    });
+    expect(await client.send('meta:feedback', game)).toEqual({ ok: true });
+    // A page from before the new game, which sends the kinds it knows and asks nothing more.
+    for (const kind of ['idea', 'bug', 'words']) {
+      expect(await client.send('meta:feedback', message({ kind, text: `Old ${kind}` }))).toEqual({ ok: true });
+    }
+    expect(
+      server.feedback.latest(10).map(({ kind, credit, link, publicIssue }) => [kind, credit, link, publicIssue]),
+    ).toEqual([
+      ['words', null, null, null],
+      ['bug', null, null, null],
+      ['idea', null, null, null],
+      ['game', 'Ann', 'https://ann.example/', true],
+    ]);
+    expect(server.feedback.kinds()).toEqual({ game: 1, idea: 1, bug: 1, words: 1 });
   });
 
   test('keeps a long user agent only so far', async () => {
@@ -234,6 +260,9 @@ describe('feedback', () => {
     const bad = [
       {},
       message({ kind: 'praise' }),
+      message({ kind: 'GAME' }),
+      message({ kind: '' }),
+      message({ kind: null }),
       message({ language: 'fr' }),
       message({ page: 'lobby' }),
       message({ text: 42 }),

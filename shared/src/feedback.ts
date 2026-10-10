@@ -7,8 +7,10 @@ import { dropHidden, showsSomething, textLength, trimMarks, trimStrays } from '.
 // player types, and the server runs them again before it keeps what was sent. What shows and what
 // doesn't is decided in text.ts, which nicknames and the chat share.
 
-// What the feedback is about: an idea, a bug, or the word lists.
-export const FEEDBACK_KINDS = ['idea', 'bug', 'words'] as const;
+// What the feedback is about: an idea, a game for the project to make next, a bug, or the word
+// lists. The database doesn't fix them (store/migrations.ts on the server), so a kind is added here
+// and in the locale files alone, and the schema refuses any other.
+export const FEEDBACK_KINDS = ['idea', 'game', 'bug', 'words'] as const;
 export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
 
 // The page it was sent from. A room's code is never sent along.

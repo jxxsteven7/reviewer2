@@ -542,6 +542,7 @@
     "kind": "类型",
     "kinds": {
       "idea": "建议",
+      "game": "新游戏",
       "bug": "Bug",
       "words": "词库"
     },
@@ -555,6 +556,7 @@
     "linkHint": "介绍你的页面，比如个人主页，或者 GitHub、ORCID、Google Scholar 主页，致谢名单里点你的名字就会打开它。要以 https:// 开头，不收邮箱。",
     "publicIssue": "同意把这条建议公开成 GitHub issue",
     "publicIssueHint": "只公开建议内容，填了署名的话也公开署名；联系方式不会公开。",
+    "gameNote": "希望我们下一个做什么游戏？说说一局怎么玩、好玩在哪里。",
     "bugNote": "报告 bug 时会附带浏览器的 User-Agent，方便查找问题：里面有浏览器和系统的名称、版本，有的手机还有型号。",
     "submit": "发送",
     "sent": "谢谢！反馈已经发出。"

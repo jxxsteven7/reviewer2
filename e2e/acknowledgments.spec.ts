@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { parseAcknowledgments } from '@reviewer2/shared';
 import { expect, newPlayer, register, TEXT, test } from './helpers';
 
-// The acknowledgments end to end: a player with an account sends a suggestion with a name, a link
+// The acknowledgments end to end: a player with an account suggests a new game with a name, a link
 // and leave to publish it, the operator adopts it with the command, which prints its entry for
 // ACKNOWLEDGMENTS.md, and the account's page counts it; the home page shows ACKNOWLEDGMENTS.md and
 // nothing of the database. The command runs on the server's data directory, which e2e/server.mjs
@@ -23,11 +23,12 @@ const admin = (...args: string[]): string =>
   }).stdout.trim();
 
 // The feedback that came with this name, as the status page would show it.
-function feedbackWith(credit: string): { id: number; link: string | null; public_issue: number } {
+function feedbackWith(credit: string): { id: number; kind: string; link: string | null; public_issue: number } {
   const db = new DatabaseSync(join(dataDir, 'reviewer2.db'), { readOnly: true });
   try {
-    return db.prepare('SELECT id, link, public_issue FROM feedback WHERE credit = ?').get(credit) as {
+    return db.prepare('SELECT id, kind, link, public_issue FROM feedback WHERE credit = ?').get(credit) as {
       id: number;
+      kind: string;
       link: string | null;
       public_issue: number;
     };
@@ -51,7 +52,10 @@ test("a suggestion that is adopted is counted on its author's account page, and 
   await expect(sheet).toContainText(text.feedback.privacy);
   // The field says where the name goes public: the home page and the repository.
   await expect(sheet).toContainText(text.feedback.creditHint);
-  await sheet.getByLabel(text.feedback.text).fill('Let the PI pass the clue to a student.');
+  await expect(sheet).not.toContainText(text.feedback.gameNote);
+  await sheet.getByLabel(text.feedback.kinds.game).check();
+  await expect(sheet).toContainText(text.feedback.gameNote);
+  await sheet.getByLabel(text.feedback.text).fill('A game where the reviewers bid on papers.');
   // The link goes with a name, and its field shows once there is one.
   await expect(sheet.getByLabel(text.feedback.link)).toHaveCount(0);
   await sheet.getByLabel(text.feedback.credit).fill(credit);
@@ -66,7 +70,7 @@ test("a suggestion that is adopted is counted on its author's account page, and 
   await expect(sheet).toBeHidden();
 
   const sent = feedbackWith(credit);
-  expect(sent).toMatchObject({ link: 'https://ann.example/', public_issue: 1 });
+  expect(sent).toMatchObject({ kind: 'game', link: 'https://ann.example/', public_issue: 1 });
   // The operator publishes it as an issue, adopts it, and gets the entry for ACKNOWLEDGMENTS.md.
   expect(admin('feedback', 'issue', String(sent.id), '7')).toContain(`Feedback #${sent.id} is issue #7`);
   const adopted = admin('feedback', 'adopt', String(sent.id));
@@ -85,7 +89,7 @@ test("a suggestion that is adopted is counted on its author's account page, and 
   const fold = page.locator('details.acknowledgments');
   await expect(fold).toContainText(text.acknowledgments.intro);
   await expect(fold).not.toContainText(credit);
-  await expect(fold).not.toContainText('pass the clue');
+  await expect(fold).not.toContainText('bid on papers');
 });
 
 test('the home page shows ACKNOWLEDGMENTS.md, under headings in its own language', async ({ browser }) => {

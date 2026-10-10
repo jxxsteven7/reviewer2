@@ -300,6 +300,42 @@ describe('the status server', () => {
     }
   });
 
+  test('shows the feedback of one kind, a page at a time', async () => {
+    server = await startServer();
+    const kinds = ['game', 'idea', 'game', 'bug', 'game'] as const;
+    for (const [i, kind] of kinds.entries()) {
+      server.feedback.add({
+        kind,
+        text: `Number ${i + 1}`,
+        contact: null,
+        credit: null,
+        link: null,
+        accountId: null,
+        publicIssue: null,
+        version: 'test',
+        language: 'en',
+        page: 'home',
+        userAgent: null,
+      });
+    }
+    await startStatus();
+    const shown = (body: string) =>
+      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
+
+    const games = (await get(base, '/feedback?kind=game')).body;
+    expect(shown(games)).toEqual([5, 3, 1]);
+    expect(games).toContain('5 in all, newest first');
+    expect(games).toContain('<strong>New game (3)</strong>');
+    expect(games).toContain('<a href="/feedback?kind=idea">Idea (1)</a>');
+    expect(games).toContain('<a href="/feedback?kind=words">Word lists (0)</a>');
+    expect(shown((await get(base, '/feedback?kind=game&before=5')).body)).toEqual([3, 1]);
+    expect(shown((await get(base, '/feedback?kind=words')).body)).toEqual([]);
+    // A kind that the server doesn't know is taken for none.
+    for (const query of ['?kind=other', '?kind=', '?kind=GAME']) {
+      expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual([5, 4, 3, 2, 1]);
+    }
+  });
+
   test('answers only to the names of this machine, to keep a page elsewhere from reading it', async () => {
     server = await startServer();
     await startStatus();

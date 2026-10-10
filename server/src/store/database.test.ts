@@ -226,45 +226,74 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT count(*) AS n FROM acknowledgments WHERE feedback_id = 7').get()).toEqual({ n: 1 });
   });
 
-  test('of the fourth release keeps its feedback and acknowledgments when feedback gets links and issues', async () => {
+  test('of the fourth release has its feedback rebuilt, every row as it was, with links and issues', async () => {
     const fourth = await open(dir, MIGRATIONS.slice(0, 4));
-    fourth.db.exec(
-      "INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now')",
-    );
-    fourth.db.exec(
-      "INSERT INTO feedback VALUES (7, 'now', 'idea', 'Keep me', 'me@example.com', 'v1', 'zh', 'room', NULL, 'Ann L', 1)",
-    );
-    fourth.db.exec("INSERT INTO acknowledgments VALUES (NULL, 'Ann L', 'feedback', 'now', 7, 1)");
+    fourth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO feedback VALUES (3, '2026-10-01T08:00:00.000Z', 'bug', 'Line one\nLine two', NULL, 'v0.0.20', 'en', 'room', 'UA', NULL, NULL);
+      INSERT INTO feedback VALUES (7, '2026-10-02T09:00:00.000Z', 'idea', 'Keep me', 'me@example.com', 'v1', 'zh', 'room', NULL, 'Ann L', 1);
+      INSERT INTO feedback VALUES (12, '2026-10-03T10:00:00.000Z', 'words', '\u{8bcd}\u{5e93}', 'wechat: r2', 'v2', 'zh', 'home', NULL, 'Bob', NULL);
+      INSERT INTO acknowledgments VALUES (NULL, 'Ann L', 'feedback', 'now', 7, 1);
+    `);
+    // Ids up to 20 were given out once, as by rows that were deleted by hand.
+    fourth.db.exec("UPDATE sqlite_sequence SET seq = 20 WHERE name = 'feedback'");
+    const before = fourth.db.prepare('SELECT * FROM feedback ORDER BY id').all();
     fourth.db.close();
 
     const migrated = await open(dir);
     expect(migrated).toMatchObject({ schema: 5, migratedFrom: 4 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v5.db'));
     const { db } = migrated;
-    // The feedback that was there has no link, wasn't asked about an issue, and has none.
-    expect(db.prepare('SELECT * FROM feedback').all()).toEqual([
-      {
-        id: 7,
-        created_at: 'now',
-        kind: 'idea',
-        text: 'Keep me',
-        contact: 'me@example.com',
-        version: 'v1',
-        language: 'zh',
-        page: 'room',
-        user_agent: null,
-        credit: 'Ann L',
-        account_id: 1,
-        link: null,
-        public_issue: null,
-        issue: null,
-      },
-    ]);
+    // Every row is as it was, with its id, and has no link, wasn't asked about an issue, and has none.
+    expect(before.map((row) => row.id)).toEqual([3, 7, 12]);
+    expect(db.prepare('SELECT * FROM feedback ORDER BY id').all()).toEqual(
+      before.map((row) => ({ ...row, link: null, public_issue: null, issue: null })),
+    );
     expect(db.prepare('SELECT name, feedback_id, account_id FROM acknowledgments').all()).toEqual([
       { name: 'Ann L', feedback_id: 7, account_id: 1 },
     ]);
+    // The table is in its place, with its indexes, and the next id goes on from the old count.
+    expect(tables(db)).not.toContain('new_feedback');
+    expect(
+      db.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'feedback' ORDER BY name").all(),
+    ).toEqual([{ name: 'feedback_account' }, { name: 'feedback_contact_expiry' }]);
+    expect(db.prepare("SELECT name, seq FROM sqlite_sequence WHERE name LIKE '%feedback'").all()).toEqual([
+      { name: 'feedback', seq: 20 },
+    ]);
+    const add = (kind: string, language = 'en') =>
+      db
+        .prepare('INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES (?, ?, ?, ?, ?, ?)')
+        .run('now', kind, 'New', 'v3', language, 'home').lastInsertRowid;
+    expect(add('game')).toBe(21);
+
+    // The kind is the code's to check, and the rest is checked as before.
+    expect(add('later')).toBe(22);
+    expect(() => add('idea', 'fr')).toThrow(/CHECK/);
+    expect(() =>
+      db.exec(
+        "INSERT INTO feedback (created_at, text, version, language, page) VALUES ('now', 'x', 'v3', 'en', 'home')",
+      ),
+    ).toThrow(/NOT NULL/);
     db.exec("UPDATE feedback SET link = 'https://ann.example/', public_issue = 1, issue = 40 WHERE id = 7");
     expect(() => db.exec('UPDATE feedback SET public_issue = 2 WHERE id = 7')).toThrow(/CHECK/);
     expect(() => db.exec('UPDATE feedback SET issue = 0 WHERE id = 7')).toThrow(/CHECK/);
+    expect(() => db.exec('UPDATE feedback SET account_id = 9 WHERE id = 7')).toThrow(/FOREIGN KEY/);
+    // The account still goes from its feedback when it is deleted.
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT credit, account_id FROM feedback WHERE id = 7').get()).toEqual({
+      credit: 'Ann L',
+      account_id: null,
+    });
+  });
+
+  test('of the fourth release with no feedback at all gets the rebuilt table, which starts from 1', async () => {
+    (await open(dir, MIGRATIONS.slice(0, 4))).db.close();
+    const { db } = await open(dir);
+    expect(db.prepare('SELECT count(*) AS n FROM feedback').get()).toEqual({ n: 0 });
+    db.exec(
+      "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'game', 'New', 'v3', 'en', 'home')",
+    );
+    expect(db.prepare('SELECT id, kind FROM feedback').all()).toEqual([{ id: 1, kind: 'game' }]);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {

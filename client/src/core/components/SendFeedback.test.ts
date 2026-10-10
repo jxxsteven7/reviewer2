@@ -158,6 +158,32 @@ describe('the feedback panel', () => {
     expect(wrapper.text()).toContain("your browser's user agent is sent along");
   });
 
+  test('offers a new game as a kind, says what to write about it, and sends it with a name and a public issue', async () => {
+    const wrapper = await opened();
+    expect(wrapper.findAll('input[type="radio"]').map((input) => input.attributes('value'))).toEqual([
+      'idea',
+      'game',
+      'bug',
+      'words',
+    ]);
+    expect(wrapper.text()).toContain('A new game');
+    expect(wrapper.text()).not.toContain('Which game should we make next?');
+    await wrapper.get('input[value="game"]').setValue(true);
+    expect(wrapper.text()).toContain('Which game should we make next?');
+    await wrapper.get('textarea').setValue('A game of peer review where the reviewers bid on papers.');
+    await credit(wrapper)?.setValue('Ann');
+    await link(wrapper)?.setValue('https://ann.example/');
+    await consent(wrapper).setValue(true);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({
+      kind: 'game',
+      credit: 'Ann',
+      link: 'https://ann.example/',
+      publicIssue: true,
+    });
+  });
+
   test("won't send what the server would refuse", async () => {
     const wrapper = await opened();
     await wrapper.get('textarea').setValue(' \n ');

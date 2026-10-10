@@ -31,6 +31,15 @@ export const DEFAULT_FEEDBACK_LIMITS: FeedbackLimits = {
   contactMs: 90 * DAY_MS,
 };
 
+// The limits for as many pieces of feedback as `maxEntries`, which MAX_FEEDBACK sets (config.ts):
+// the room for them grows with them, 5 KB a piece on average, so that a server that is full can be
+// given more room with one setting. Nothing is ever deleted to make room.
+export const feedbackLimits = (maxEntries: number): FeedbackLimits => ({
+  ...DEFAULT_FEEDBACK_LIMITS,
+  maxEntries,
+  maxBytes: Math.round((DEFAULT_FEEDBACK_LIMITS.maxBytes / DEFAULT_FEEDBACK_LIMITS.maxEntries) * maxEntries),
+});
+
 export interface NewFeedback {
   kind: FeedbackKind;
   text: string;
@@ -81,6 +90,7 @@ export class FeedbackStore {
   readonly #count: StatementSync;
   readonly #size: StatementSync;
   readonly #latest: StatementSync;
+  readonly #kinds: StatementSync;
   readonly #byId: StatementSync;
   readonly #account: StatementSync;
   readonly #clear: StatementSync;
@@ -103,7 +113,10 @@ export class FeedbackStore {
         'coalesce(length(CAST(credit AS BLOB)), 0) + coalesce(length(CAST(link AS BLOB)), 0) + ' +
         'coalesce(length(CAST(user_agent AS BLOB)), 0) + length(version)), 0) AS bytes FROM feedback',
     );
-    this.#latest = db.prepare(`SELECT ${COLUMNS} ${FROM} WHERE f.id < ? ORDER BY f.id DESC LIMIT ?`);
+    this.#latest = db.prepare(
+      `SELECT ${COLUMNS} ${FROM} WHERE f.id < ? AND f.kind = coalesce(?, f.kind) ORDER BY f.id DESC LIMIT ?`,
+    );
+    this.#kinds = db.prepare('SELECT kind, count(*) AS count FROM feedback GROUP BY kind');
     this.#byId = db.prepare(`SELECT ${COLUMNS} ${FROM} WHERE f.id = ?`);
     this.#account = db.prepare('SELECT id, username FROM accounts WHERE username_key = ?');
     this.#clear = db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?');
@@ -143,9 +156,18 @@ export class FeedbackStore {
     return (this.#count.get() as { count: number }).count;
   }
 
-  // The latest feedback first, up to `limit` of it, from before the id `before` when it is given.
-  latest(limit: number, before = Number.MAX_SAFE_INTEGER): Feedback[] {
-    return this.#latest.all(before, limit).map((row) => this.#fromRow(row));
+  // The latest feedback first, up to `limit` of it, from before the id `before` when it is given,
+  // and of one kind when `kind` is.
+  latest(limit: number, before = Number.MAX_SAFE_INTEGER, kind: FeedbackKind | null = null): Feedback[] {
+    return this.#latest.all(before, kind, limit).map((row) => this.#fromRow(row));
+  }
+
+  // How much feedback there is of each kind there is any of. The table takes any kind and the
+  // server only those it knows (shared/src/feedback.ts), so a server that was rolled back from a
+  // later one may find others, which are counted too.
+  kinds(): Record<string, number> {
+    const rows = this.#kinds.all() as { kind: string; count: number }[];
+    return Object.fromEntries(rows.map(({ kind, count }) => [kind, count]));
   }
 
   byId(id: number): Feedback | undefined {

@@ -7,7 +7,7 @@ import { MAX_NAME_LENGTH } from './protocol';
 // server's acknowledgments table records whom the operator thanked, which an account's page
 // counts and which nobody else sees.
 
-// What someone is thanked for: ideas and bug reports, the word lists, or playtesting.
+// What someone is thanked for: ideas, new games and bug reports, the word lists, or playtesting.
 export const ACKNOWLEDGMENT_KINDS = ['feedback', 'words', 'playtesting'] as const;
 export type AcknowledgmentKind = (typeof ACKNOWLEDGMENT_KINDS)[number];
 

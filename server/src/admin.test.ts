@@ -263,6 +263,24 @@ describe('feedback adopt', () => {
     expect(accounts.summary(ann).acknowledgments).toEqual([]);
   });
 
+  test('thanks a new game that was suggested in the helpful discussions, with its issue', () => {
+    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    const store = new FeedbackStore(database.db);
+    store.add(
+      feedback({ kind: 'game', credit: 'Ann', link: 'https://ann.example/', publicIssue: true, accountId: ann?.id }),
+    );
+    expect(run('feedback', 'issue', '1', '43')).toBe(0);
+    expect(run('feedback', 'adopt', '1')).toBe(0);
+    expect(printed.slice(-3)).toEqual([
+      'Adopted feedback #1 as acknowledgment #1, for Helpful discussions, counted for the account Ann.',
+      'For ACKNOWLEDGMENTS.md, under "## Helpful discussions", once you say what they did in English:',
+      '- [Ann](https://ann.example/) \u{2014} <what they did> (#43)',
+    ]);
+    expect(accounts.acknowledgments.all()).toEqual([
+      expect.objectContaining({ name: 'Ann', kind: 'feedback', feedbackId: 1, accountId: ann?.id }),
+    ]);
+  });
+
   test('puts the number of its issue in the entry', () => {
     const store = new FeedbackStore(database.db);
     store.add(feedback({ credit: 'Bob', publicIssue: true }));

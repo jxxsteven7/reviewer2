@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
 import { AcknowledgmentStore } from './acknowledgments';
 import { openDatabase } from './database';
-import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, type NewFeedback } from './feedback';
+import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, feedbackLimits, type NewFeedback } from './feedback';
 
 const DAY = 24 * 60 * 60_000;
 const START = Date.UTC(2026, 9, 9, 12);
@@ -135,12 +135,34 @@ describe('the feedback', () => {
     expect(feedback.latest(2, 1)).toEqual([]);
   });
 
-  test('of a kind, a language or a page that does not exist is refused by the database too', () => {
+  test('is read of one kind, and counted by kind', () => {
     const feedback = store();
-    expect(() => feedback.add(entry({ kind: 'praise' as NewFeedback['kind'] }))).toThrow(/CHECK constraint/);
+    for (const kind of ['game', 'idea', 'game', 'bug', 'game'] as const) feedback.add(entry({ kind }));
+    expect(feedback.latest(10, undefined, 'game').map(({ id, kind }) => [id, kind])).toEqual([
+      [5, 'game'],
+      [3, 'game'],
+      [1, 'game'],
+    ]);
+    expect(feedback.latest(1, 5, 'game').map(({ id }) => id)).toEqual([3]);
+    expect(feedback.latest(10, undefined, 'words')).toEqual([]);
+    expect(feedback.latest(10).map(({ id }) => id)).toEqual([5, 4, 3, 2, 1]);
+    expect(feedback.kinds()).toEqual({ game: 3, idea: 1, bug: 1 });
+  });
+
+  test('of a language or a page that does not exist is refused by the database too', () => {
+    const feedback = store();
     expect(() => feedback.add(entry({ language: 'fr' as NewFeedback['language'] }))).toThrow(/CHECK constraint/);
     expect(() => feedback.add(entry({ page: 'lobby' as NewFeedback['page'] }))).toThrow(/CHECK constraint/);
     expect(feedback.count()).toBe(0);
+  });
+
+  test('of any kind is kept by the database, which leaves the kinds to the code', () => {
+    // The server takes only the kinds in shared/src/feedback.ts; one that a later server added is
+    // kept, and read back by a server rolled back from it.
+    const feedback = store();
+    feedback.add(entry({ kind: 'game' }));
+    feedback.add(entry({ kind: 'later' as NewFeedback['kind'] }));
+    expect(feedback.latest(10).map(({ kind }) => kind)).toEqual(['later', 'game']);
   });
 });
 
@@ -186,6 +208,12 @@ describe('no more feedback is taken', () => {
       maxBytes: 50 * 2 ** 20,
       maxDatabaseBytes: 2 ** 30,
     });
+  });
+
+  test('later when MAX_FEEDBACK is raised, with room for the feedback that grows with it', () => {
+    expect(feedbackLimits(10_000)).toEqual(DEFAULT_FEEDBACK_LIMITS);
+    expect(feedbackLimits(30_000)).toEqual({ ...DEFAULT_FEEDBACK_LIMITS, maxEntries: 30_000, maxBytes: 150 * 2 ** 20 });
+    expect(feedbackLimits(1)).toMatchObject({ maxEntries: 1, maxBytes: 5243, maxDatabaseBytes: 2 ** 30 });
   });
 });
 

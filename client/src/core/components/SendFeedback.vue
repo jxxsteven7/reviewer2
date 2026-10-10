@@ -36,7 +36,8 @@ import UiSheet from './UiSheet.vue';
 // this page, the language it is shown in and whether it is the home page or a room, but never the
 // room's code. With a bug, the server also keeps the browser's user agent, which it reads from the
 // connection, and the panel says so. With a name, it keeps the account the player is logged in to,
-// and the panel says that too.
+// and the panel says that too. A new game, which the player suggests the project make next, gets a
+// word on what to write.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.
@@ -141,6 +142,7 @@ function submit() {
         </label>
       </fieldset>
 
+      <p v-if="kind === 'game'" class="note">{{ t('feedback.gameNote') }}</p>
       <UiField
         v-model="text"
         multiline

@@ -90,9 +90,10 @@ describe('the acknowledgments', () => {
     expect(store.all().map(({ name }) => name)).toEqual(Array(6).fill('Ann L'));
   });
 
-  test('thank ideas and bugs as feedback, and the word lists as words', () => {
+  test('thank ideas, new games and bugs as feedback, and the word lists as words', () => {
     expect(kindOfFeedback('idea')).toBe('feedback');
     expect(kindOfFeedback('bug')).toBe('feedback');
+    expect(kindOfFeedback('game')).toBe('feedback');
     expect(kindOfFeedback('words')).toBe('words');
   });
 });
