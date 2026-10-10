@@ -248,7 +248,7 @@ describe('starting', () => {
     expect(existsSync(join(dir, 'missing'))).toBe(false);
   });
 
-  test('serves the feedback on the status page', async () => {
+  test('serves the feedback and the number of accounts on the status page', async () => {
     const statusPort = await freePort();
     const started = (await start({ STATUS_PORT: String(statusPort) })) as Running;
     started.feedback.add({
@@ -260,9 +260,12 @@ describe('starting', () => {
       page: 'room',
       userAgent: 'Agent',
     });
+    started.accounts.store.create('Ann', 'ann', 'scrypt$hash');
     await until(() => events().includes('status_listening'), 'the status page');
     const status = await (await fetch(`http://127.0.0.1:${statusPort}/`)).text();
     expect(status).toContain('<p>1 in all &middot; <a href="/feedback">Read it</a></p>');
+    expect(status).toContain('<dt>Accounts</dt><dd>1<small>registered</small></dd>');
+    expect(status).toContain('<dt>New accounts</dt><dd>1<small>in the last 7 days</small></dd>');
     const page = await (await fetch(`http://127.0.0.1:${statusPort}/feedback`)).text();
     expect(page).toContain('1 in all, newest first');
     expect(page).toContain('&#60;script&#62;alert(1)&#60;/script&#62;');

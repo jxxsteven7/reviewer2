@@ -75,7 +75,7 @@ DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # upl
 DATA_DIR=data node server/dist/admin.cjs accounts [--json]                 # statistics of the accounts
 ```
 
-`accounts` prints the number of accounts, the new ones on each of the last 30 days, the active ones in the last 7 and 30 days, and every username with its registration date, games and matches. An account is active when one of its logins was used or it finished a game; a login that has ended takes its time with it, so an account that only logged in and out counts by its games alone. It never prints password hashes, email fingerprints, tokens or addresses.
+`accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address.
 
 ## Testing on a phone
 

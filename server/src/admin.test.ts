@@ -3,13 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { jpeg } from '../test/images';
+import { addAccounts } from '../test/statistics';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { admin } from './admin';
-import { AccountStore } from './store/accounts';
-import { openDatabase, type Database } from './store/database';
-import { RecordStore } from './store/records';
-import { SessionStore } from './store/sessions';
+import { DATABASE_FILE, openDatabase, type Database } from './store/database';
 
 // The operator's commands, on a data directory as the server leaves it.
 
@@ -83,48 +81,9 @@ describe('accounts', () => {
   const DAY = 24 * 60 * 60_000;
   const NOW = Date.UTC(2026, 10, 1, 9);
 
-  // Ann registered 40 days ago and played a game 2 days ago; Bob registered 10 days ago and logged
-  // in then; Cy registered today and has done nothing yet.
-  function some(): void {
-    let now = NOW - 40 * DAY;
-    const store = new AccountStore(database.db, () => now);
-    const sessions = new SessionStore(database.db, () => now);
-    const records = new RecordStore(database.db, () => now);
-    const create = (name: string) => {
-      const account = store.create(name, name.toLowerCase(), 'hash');
-      if (!account) throw new Error('no account');
-      return account;
-    };
-    const ann = create('Ann');
-    now = NOW - 10 * DAY;
-    const bob = create('Bob');
-    sessions.create(new Uint8Array(32), bob.id);
-    now = NOW - 2 * DAY;
-    records.add(ann.id, {
-      game: 'keywords',
-      gameId: 'g1',
-      side: 'red',
-      role: 'captain',
-      winner: 'red',
-      won: true,
-      verdict: 'oral',
-    });
-    records.addMatch(ann.id, {
-      game: 'keywords',
-      matchId: 'm1',
-      games: 3,
-      rank: 1,
-      players: 4,
-      score: 12,
-      title: null,
-    });
-    now = NOW;
-    create('Cy');
-  }
-
   test('prints the counts, the days and the usernames, and nothing that identifies a player', () => {
     vi.useFakeTimers({ now: NOW });
-    some();
+    addAccounts(database.db, NOW);
     expect(run('accounts')).toBe(0);
     expect(printed[0]).toBe(
       '3 accounts, 1 active in the last 7 days and 2 in the last 30, by a login used or a game finished',
@@ -145,7 +104,7 @@ describe('accounts', () => {
 
   test('with --json prints the same as JSON', () => {
     vi.useFakeTimers({ now: NOW });
-    some();
+    addAccounts(database.db, NOW);
     expect(run('accounts', '--json')).toBe(0);
     const json = JSON.parse(printed.join('\n'));
     expect(json).toMatchObject({ total: 3, active: { last7Days: 1, last30Days: 2 } });
@@ -165,11 +124,25 @@ describe('accounts', () => {
     expect(run('accounts', '--json', 'Ann')).toBe(2);
   });
 
-  test('works on a database that no server has open', () => {
+  test('cuts every count off at the same moment, however long it takes', () => {
     vi.useFakeTimers({ now: NOW });
-    some();
+    addAccounts(database.db, NOW);
+    expect(run('accounts', '--json')).toBe(0);
+    const steady = printed.splice(0);
+    // A clock that moves on by a day at every reading.
+    let readings = 0;
+    vi.spyOn(Date, 'now').mockImplementation(() => NOW + readings++ * DAY);
+    expect(run('accounts', '--json')).toBe(0);
+    expect(printed).toEqual(steady);
+  });
+
+  test('works on a database that no server has open, and leaves no WAL behind', () => {
+    vi.useFakeTimers({ now: NOW });
+    addAccounts(database.db, NOW);
     database.db.close();
+    expect(readdirSync(dir)).not.toContain(`${DATABASE_FILE}-wal`);
     expect(run('accounts')).toBe(0);
     expect(printed[0]).toMatch(/^3 accounts, /);
+    expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
   });
 });

@@ -1,4 +1,5 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
+import { DEFAULT_SESSION_LIMITS } from './sessions';
 
 // The accounts table (migration 2, docs/architecture.md). This module only reads and writes rows:
 // the rules for usernames and passwords are in shared/src/accounts.ts and server/src/accounts/,
@@ -50,6 +51,9 @@ export interface AccountListing {
 
 const DAY_MS = 24 * 60 * 60_000;
 
+// How many days back activity is known: a login unused for longer is deleted (sessions.ts).
+const ACTIVE_DAYS = DEFAULT_SESSION_LIMITS.idleMs / DAY_MS;
+
 // SQLite's extended result code for a UNIQUE constraint that a write would break.
 const UNIQUE_FAILED = 2067;
 
@@ -72,7 +76,7 @@ export class AccountStore {
   readonly #ban: StatementSync;
   readonly #delete: StatementSync;
   readonly #count: StatementSync;
-  readonly #createdSince: StatementSync;
+  readonly #counts: StatementSync;
   readonly #createdByDay: StatementSync;
   readonly #activeSince: StatementSync;
   readonly #list: StatementSync;
@@ -97,9 +101,10 @@ export class AccountStore {
     this.#ban = db.prepare('UPDATE accounts SET avatar_banned = ? WHERE id = ?');
     this.#delete = db.prepare(`DELETE FROM accounts WHERE id = ? RETURNING ${COLUMNS}`);
     this.#count = db.prepare('SELECT count(*) AS count FROM accounts');
-    // The statistics for the operator. An account was active when a browser logged in on it was
-    // used (sessions.ts) or when it finished a game (records.ts), which are the times there are.
-    this.#createdSince = db.prepare('SELECT count(*) AS count FROM accounts WHERE created_at >= ?');
+    // The statistics for the operator (admin.ts) and the status page.
+    this.#counts = db.prepare(
+      'SELECT count(*) AS total, count(*) FILTER (WHERE created_at >= ?) AS recent FROM accounts',
+    );
     this.#createdByDay = db.prepare(
       'SELECT substr(created_at, 1, 10) AS day, count(*) AS count FROM accounts WHERE created_at >= ? ' +
         'GROUP BY day ORDER BY day',
@@ -203,9 +208,10 @@ export class AccountStore {
     return (this.#count.get() as { count: number }).count;
   }
 
-  // How many accounts were created in the last `days` days.
-  createdWithin(days: number): number {
-    return (this.#createdSince.get(this.#since(days)) as { count: number }).count;
+  // How many accounts there are, and how many of them were created in the last `days` days, read
+  // in one statement so that the two agree.
+  counts(days: number): { total: number; recent: number } {
+    return this.#counts.get(this.#since(days)) as { total: number; recent: number };
   }
 
   // How many accounts were created on each of the last `days` days, in UTC, oldest first, today
@@ -229,9 +235,10 @@ export class AccountStore {
   // How many accounts were active in the last `days` days: a browser logged in on them was used,
   // or they finished a game. A login that has ended, by logging out, by a password change or by
   // being one too many, is deleted with the time it was last used, so an account that logged in
-  // and out again without finishing a game isn't counted. A login that hasn't been used for 30
-  // days is deleted too (sessions.ts), so `days` is at most 30.
+  // and out again without finishing a game isn't counted. Unused logins are deleted after
+  // ACTIVE_DAYS, so a longer window would miss accounts, and asking for one throws.
   activeWithin(days: number): number {
+    if (days > ACTIVE_DAYS) throw new RangeError(`activity is known for ${ACTIVE_DAYS} days, not ${days}`);
     const since = this.#since(days);
     return (this.#activeSince.get(since, since) as { count: number }).count;
   }

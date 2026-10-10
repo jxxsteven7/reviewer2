@@ -19,21 +19,17 @@ import { MIGRATIONS } from './store/migrations';
 //
 // `avatar remove` takes an account's avatar down, as for a picture that breaks the rules, and with
 // --ban bars the account from uploading another; `avatar allow` lifts that. `accounts` prints
-// statistics of the accounts: how many there are, how many were created on each of the last 30
-// days, how many were active in the last 7 and 30 days, and every username with when it
-// registered and how many games and matches it has finished. It prints no hashes, fingerprints
-// or tokens: what the database keeps in place of passwords, email addresses and logins
-// (store/migrations.ts) stays there. An account counts as active when a login on it was used or
-// it finished a game; a login that has ended is gone with its time, so an account that only
-// logged in and out again counts by its games alone. DATA_DIR names the server's data, as it
-// does for the server. The database is opened as it is, never migrated, and the server may go on
-// running meanwhile.
+// statistics of the accounts, counted as AccountStore says (store/accounts.ts), and never what the
+// database keeps in place of passwords, email addresses and logins. DATA_DIR names the server's
+// data, as it does for the server. The database is opened as it is, never migrated, and the
+// server may go on running meanwhile.
 
 const USAGE =
   'usage: admin.cjs avatar remove <username> [--ban] | admin.cjs avatar allow <username> | admin.cjs accounts [--json]';
 
 // The statistics, in the order that `--json` prints them. They are read on one snapshot, so that
-// the counts agree with the list while the server writes.
+// the counts agree with the list while the server writes, and on a clock that admin() reads once,
+// so that every count is cut off at the same moment.
 function accountStats(store: AccountStore) {
   return store.snapshot(() => ({
     total: store.count(),
@@ -93,17 +89,23 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: (l
     print(`There is no database in ${dataDir}.`);
     return 1;
   }
-  // `accounts` only reads, and the connection says so, so that it can't write by mistake.
-  const db = new DatabaseSync(file, { readOnly: command.kind === 'accounts' });
+  const db = new DatabaseSync(file);
   try {
     db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}; PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON`);
+    // `accounts` only reads, and the connection says so, so that it can't write by mistake. It
+    // isn't opened read-only: that would leave the WAL's two files behind on a database that no
+    // server has open, owned by whoever ran the command, and the server might not be able to
+    // write them.
+    if (command.kind === 'accounts') db.exec('PRAGMA query_only = ON');
     if (schemaVersion(db) !== MIGRATIONS.length) {
       print(`The database is at schema version ${schemaVersion(db)}, and this build knows ${MIGRATIONS.length}.`);
       return 1;
     }
     if (command.kind === 'accounts') {
-      if (command.json) print(JSON.stringify(accountStats(new AccountStore(db)), null, 2));
-      else printAccountStats(new AccountStore(db), print);
+      const now = Date.now();
+      const store = new AccountStore(db, () => now);
+      if (command.json) print(JSON.stringify(accountStats(store), null, 2));
+      else printAccountStats(store, print);
       return 0;
     }
     const { name, ban } = command;

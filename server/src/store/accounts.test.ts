@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { addAccounts } from '../../test/statistics';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
 import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from './records';
@@ -111,37 +112,9 @@ describe('an account', () => {
 
 describe('the statistics of the accounts', () => {
   test('count the accounts created lately, by day, and the ones active lately', () => {
-    const sessions = new SessionStore(db, () => now);
-    const records = new RecordStore(db, () => now);
-    now = START - 40 * DAY;
-    const ann = account('Ann');
-    now = START - 10 * DAY;
-    const bob = account('Bob');
-    sessions.create(hash('b1'), bob.id);
-    now = START - 2 * DAY;
-    records.add(ann.id, {
-      game: 'keywords',
-      gameId: 'g1',
-      side: 'red',
-      role: 'captain',
-      winner: 'red',
-      won: true,
-      verdict: 'oral',
-    });
-    records.addMatch(ann.id, {
-      game: 'keywords',
-      matchId: 'm1',
-      games: 3,
-      rank: 1,
-      players: 4,
-      score: 12,
-      title: null,
-    });
-    now = START;
-    account('Cy');
-
-    expect(accounts.createdWithin(7)).toBe(1);
-    expect(accounts.createdWithin(30)).toBe(2);
+    addAccounts(db, START);
+    expect(accounts.counts(7)).toEqual({ total: 3, recent: 1 });
+    expect(accounts.counts(30)).toEqual({ total: 3, recent: 2 });
     const days = accounts.createdByDay(30);
     expect(days).toHaveLength(30);
     expect(days[0]).toEqual({ day: '2026-09-10', count: 0 });
@@ -157,6 +130,16 @@ describe('the statistics of the accounts', () => {
       { username: 'Bob', createdAt: '2026-09-29T12:00:00.000Z', games: 0, matches: 0 },
       { username: 'Cy', createdAt: '2026-10-09T12:00:00.000Z', games: 0, matches: 0 },
     ]);
+  });
+
+  test('count 0 when there are no accounts', () => {
+    expect(accounts.counts(7)).toEqual({ total: 0, recent: 0 });
+  });
+
+  test('refuse a window of activity longer than logins are kept', () => {
+    addAccounts(db, START);
+    expect(accounts.activeWithin(30)).toBe(2);
+    expect(() => accounts.activeWithin(31)).toThrow(RangeError);
   });
 
   test('count a day in UTC, and an account once however often it was active', () => {
