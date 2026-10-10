@@ -494,6 +494,8 @@
     "feedback_empty": "先写点内容吧。",
     "feedback_too_long": "最多 1000 个字。",
     "contact_too_long": "联系方式最多 100 个字。",
+    "credit_invalid": "署名需要 1 到 16 个可见字符。",
+    "credit_reserved": "这个名字是保留的，请换一个。",
     "feedback_limited": "同一个网络 10 分钟内最多发 3 条反馈，请稍后再试。",
     "feedback_full": "服务器暂时不收新的反馈，请改天再试。",
     "bad_origin": "这个页面不能这样操作，请刷新后再试。",
@@ -534,7 +536,7 @@
   "feedback": {
     "open": "提建议",
     "title": "提建议",
-    "privacy": "只有作者能看到；联系方式只用来回复你。",
+    "privacy": "建议只有作者能看到；联系方式只用来回复你；署名只在建议被采纳后公开。",
     "kind": "类型",
     "kinds": {
       "idea": "建议",
@@ -545,9 +547,22 @@
     "count": "{count} / {max}",
     "contact": "联系方式（选填）",
     "contactHint": "邮箱、微信号或别的能联系到你的方式。",
+    "credit": "致谢时显示的名字（选填）",
+    "creditHint": "建议被采纳后，这个名字会公开列在首页和 GitHub 项目仓库的致谢名单里；即使以后删掉，仓库的历史记录里也还会有。任意名字都可以，比如 GitHub 用户名。登录状态下提的建议，被采纳后也会显示在你的账号页。",
     "bugNote": "报告 bug 时会附带浏览器的 User-Agent，方便查找问题：里面有浏览器和系统的名称、版本，有的手机还有型号。",
     "submit": "发送",
     "sent": "谢谢！反馈已经发出。"
+  },
+  "acknowledgments": {
+    "title": "致谢",
+    "intro": "感谢提出被采纳建议、贡献词库和参与测试的玩家。提建议时留下署名，被采纳后就会列在这里。",
+    "kinds": {
+      "feedback": "建议和 Bug",
+      "words": "词库",
+      "playtesting": "测试"
+    },
+    "loading": "加载中……",
+    "none": "还没有人。来做第一个吧！"
   },
   "notFound": {
     "title": "页面不存在",
@@ -645,6 +660,7 @@
         "black_hole": "游戏黑洞"
       },
       "titleCount": "{title} ×{count}",
+      "acknowledged": "致谢：{kind}",
       "record": "战绩",
       "recordSummary": "总局数：{games} · 胜场：{wins}",
       "noRecords": "还没有战绩。登录后在座位上打完的每一局都会记在这里。",

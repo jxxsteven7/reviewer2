@@ -1,4 +1,5 @@
 export * from './accounts';
+export * from './acknowledgments';
 export * from './codes';
 export * from './feedback';
 export { hasHan } from './han';

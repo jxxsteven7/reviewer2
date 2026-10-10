@@ -94,15 +94,19 @@ Files under `/assets/` carry a content hash and are cached for good; everything 
 - **Migrations:** `PRAGMA user_version` and `server/src/store/migrations.ts`, run on start in one transaction, after a snapshot.
 - **Snapshots** every hour into `snapshots/`, the last three kept.
 - **The disk.** Feedback stops at 10,000 pieces or 50 MB. Past 1 GB nothing new is kept (`storage_full`). Avatars up to 2 GB.
-- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it.
+- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback and its acknowledgments stay, no longer linked to it.
 
 ## Feedback
 
-Players send it from the foot of the home page or a room; the status page shows it. The rules are in `shared/src/feedback.ts`, run on both sides. **Kept:** text, contact, kind, version, language, page, time, and for a bug only the user agent. **Not kept:** address, nickname, token, member key, room code. When full, players are told (`feedback_full`). **Contacts are cleared after 90 days** (`contacts_cleared`).
+Players send it from the foot of the home page or a room; the status page shows it. The rules are in `shared/src/feedback.ts`, run on both sides. **Kept:** text, contact, kind, version, language, page, time, for a bug only the user agent, and with a name for the acknowledgments the account it was given from ([Acknowledgments](#acknowledgments)). **Not kept:** address, nickname, token, member key, room code. When full, players are told (`feedback_full`). **Contacts are cleared after 90 days** (`contacts_cleared`).
+
+## Acknowledgments
+
+The players who helped are thanked by name, as a paper thanks them: at the foot of the home page, folded until opened, and in `ACKNOWLEDGMENTS.md`. The operator writes the list with `admin.cjs` ([development.md](development.md#accounts-and-email)), by adopting feedback that came with a name or by adding someone by hand, such as a playtester; feedback without a name stays anonymous. An entry is a name, which follows the nickname rules, what it is for (ideas and bug reports, word lists or playtesting) and the day; nothing of the feedback, the contact or the account is public. An entry may be linked to an account, by default the one the feedback came from, and the account's page counts them; deleting the account unlinks its entries and keeps their names. The `acknowledgments` table, migration 4, holds the list, and `GET /api/acknowledgments` gives everyone the names, kinds and days.
 
 ## Accounts
 
-Optional: a username and a password, with an avatar, a record of games, titles, and, if wanted, an email address for resetting a forgotten password, which itself is never kept.
+Optional: a username and a password, with an avatar, a record of games, titles, acknowledgments, and, if wanted, an email address for resetting a forgotten password, which itself is never kept.
 
 - **Usernames** follow the nickname rules, with at least 2 characters and no reserved names; `usernameKey()` in `shared/src/accounts.ts` compares them.
 - **Passwords:** 8 to 128 characters after NFKC, as scrypt hashes, N = 2^15, r = 8, p = 3 (`server/src/accounts/passwords.ts`). Two hashes at a time, then `busy`.
@@ -118,6 +122,7 @@ Optional: a username and a password, with an avatar, a record of games, titles, 
 |---|---|
 | `GET /api/account` | The account, or null |
 | `GET /api/account/records` | The record (login) |
+| `GET /api/acknowledgments` | The acknowledgments: name, kind and day of each |
 | `POST /api/register` | `username`, `password`; logs in |
 | `POST /api/login`, `/api/logout` | |
 | `POST /api/account/username` | Renames (login) |
@@ -159,4 +164,4 @@ One JSON object per line on stdout, never a token: rooms created and closed (`em
 
 ## Status
 
-`server/src/stats.ts` counts for both the log and the page: no addresses, tokens, names or room codes. The `stats` line, every 5 minutes: rooms, members, connections by transport and country, memory. The status page, with `STATUS_PORT`, listens on `127.0.0.1` only and answers only a `Host` of `localhost` or `127.0.0.1`, which is why it needs no password. `/` is the page, `/status.json` the numbers, `/feedback` what players sent; of accounts, the page shows only how many there are and how many are new in the last 7 days; no script, nothing written, English only. Countries come from Cloudflare's `CF-IPCountry` header, read only with `TRUST_PROXY` on; any other proxy must drop it ([development.md](development.md#running-in-production)).
+`server/src/stats.ts` counts for both the log and the page: no addresses, tokens, names or room codes. The `stats` line, every 5 minutes: rooms, members, connections by transport and country, memory. The status page, with `STATUS_PORT`, listens on `127.0.0.1` only and answers only a `Host` of `localhost` or `127.0.0.1`, which is why it needs no password. `/` is the page, `/status.json` the numbers, `/feedback` what players sent, each with its name for the acknowledgments, its account, whether it was adopted and whether the name is another account's username; of accounts, the page shows only how many there are and how many are new in the last 7 days; no script, nothing written, English only. Countries come from Cloudflare's `CF-IPCountry` header, read only with `TRUST_PROXY` on; any other proxy must drop it ([development.md](development.md#running-in-production)).

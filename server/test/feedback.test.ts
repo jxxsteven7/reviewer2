@@ -1,7 +1,7 @@
-import { MAX_CONTACT_LENGTH, MAX_FEEDBACK_INPUT, MAX_FEEDBACK_LENGTH } from '@reviewer2/shared';
+import { MAX_CONTACT_LENGTH, MAX_FEEDBACK_INPUT, MAX_FEEDBACK_LENGTH, MAX_NAME_LENGTH } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import { DEFAULT_SOCKET_LIMITS } from '../src/core/socket';
-import { createRoom, startServer, TestClient, type TestServer } from './helpers';
+import { Browser, createRoom, startServer, TestClient, type TestServer } from './helpers';
 
 // Feedback over Socket.IO: what is kept of it, what is refused, how much one address may send,
 // and what the log says about it.
@@ -40,6 +40,7 @@ describe('feedback', () => {
       ok: true,
     });
     expect(await client.send('meta:feedback', message({ language: 'zh', page: 'room' }))).toEqual({ ok: true });
+    const nobody = { credit: null, accountId: null, username: null, acknowledgmentId: null, nameTakenBy: null };
     expect(server.feedback.latest(10)).toEqual([
       {
         id: 2,
@@ -51,6 +52,7 @@ describe('feedback', () => {
         language: 'zh',
         page: 'room',
         userAgent: null,
+        ...nobody,
       },
       {
         id: 1,
@@ -62,6 +64,7 @@ describe('feedback', () => {
         language: 'en',
         page: 'home',
         userAgent: AGENT,
+        ...nobody,
       },
     ]);
     const logged = server.logs.filter(({ event }) => event.startsWith('feedback'));
@@ -73,6 +76,42 @@ describe('feedback', () => {
     for (const secret of ['Lock the phone', 'me@example.com', 'iPhone', '127.0.0.1']) {
       expect(log, secret).not.toContain(secret);
     }
+  });
+
+  test('keeps the name for the acknowledgments, and with it the account that gave it', async () => {
+    server = await startServer();
+    const ann = new Browser(server.url);
+    await ann.register('Ann');
+    const loggedIn = await ann.connect();
+    const guest = await connect();
+    clients.push(loggedIn);
+    expect(await loggedIn.send('meta:feedback', message({ credit: '  Ann   L ' }))).toEqual({ ok: true });
+    expect(await guest.send('meta:feedback', message({ text: 'As a guest', credit: 'octocat' }))).toEqual({ ok: true });
+    // Without a name, a player stays anonymous, logged in or not.
+    expect(await loggedIn.send('meta:feedback', message({ text: 'Anonymous', credit: ' \u200b' }))).toEqual({
+      ok: true,
+    });
+    expect(
+      server.feedback.latest(10).map(({ text, credit, accountId, username }) => [text, credit, accountId, username]),
+    ).toEqual([
+      ['Anonymous', null, null, null],
+      ['As a guest', 'octocat', null, null],
+      ['A timer for the clues, please.', 'Ann L', 1, 'Ann'],
+    ]);
+    // The log has the name no more than the text.
+    expect(JSON.stringify(server.logs)).not.toContain('Ann L');
+    // A name that can't be a nickname is refused, and nothing is kept.
+    for (const credit of ['x'.repeat(MAX_NAME_LENGTH + 1), 'Ann\u200bL']) {
+      expect(await guest.send('meta:feedback', message({ text: 'Refused', credit }))).toEqual({
+        ok: false,
+        error: 'credit_invalid',
+      });
+    }
+    expect(await guest.send('meta:feedback', message({ text: 'Refused', credit: 'Reviewer 2' }))).toEqual({
+      ok: false,
+      error: 'credit_reserved',
+    });
+    expect(server.feedback.count()).toBe(3);
   });
 
   test('keeps nothing that says who sent it, even from someone in a room', async () => {
@@ -136,6 +175,7 @@ describe('feedback', () => {
       message({ page: 'lobby' }),
       message({ text: 42 }),
       message({ contact: ['me'] }),
+      message({ credit: 7 }),
       message({ version: 'v'.repeat(65) }),
     ];
     for (const payload of bad) {
@@ -216,18 +256,21 @@ describe('the limit on feedback', () => {
     expect(await client.send('meta:feedback', sent)).toEqual({ ok: true });
     expect(server.feedback.count()).toBe(3);
 
-    // Another address, or another kind or contact, is other feedback.
+    // Another address, or another kind, contact or name, is other feedback.
     const other = await connect({ 'x-forwarded-for': '198.51.100.7' });
     expect(await other.send('meta:feedback', sent)).toEqual({ ok: true });
     expect(await other.send('meta:feedback', { ...sent, kind: 'idea' })).toEqual({ ok: true });
     expect(await other.send('meta:feedback', { ...sent, contact: 'other@example.com' })).toEqual({ ok: true });
-    expect(server.feedback.count()).toBe(6);
+    const third = await connect({ 'x-forwarded-for': '198.51.100.8' });
+    expect(await third.send('meta:feedback', sent)).toEqual({ ok: true });
+    expect(await third.send('meta:feedback', { ...sent, credit: 'Ann L' })).toEqual({ ok: true });
+    expect(server.feedback.count()).toBe(8);
 
     // After the window, the same feedback is new again.
     server.advance(DEFAULT_SOCKET_LIMITS.feedbackWindowMs);
     server.app.sockets.sweep();
     expect(await client.send('meta:feedback', sent)).toEqual({ ok: true });
-    expect(server.feedback.count()).toBe(7);
+    expect(server.feedback.count()).toBe(9);
   });
 
   test('is a whole number from 1 up, like every limit of the sockets', async () => {

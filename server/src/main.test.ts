@@ -115,13 +115,15 @@ describe('starting', () => {
       storage: 'file',
       file: join(data, DATABASE_FILE),
       journal: 'wal',
-      schema: 3,
+      schema: 4,
     });
-    expect(logged('database_migrated')).toEqual({ from: 0, to: 3, snapshot: null });
+    expect(logged('database_migrated')).toEqual({ from: 0, to: 4, snapshot: null });
     first.feedback.add({
       kind: 'idea',
       text: 'Kept',
       contact: null,
+      credit: null,
+      accountId: null,
       version: 'test',
       language: 'en',
       page: 'home',
@@ -255,6 +257,8 @@ describe('starting', () => {
       kind: 'bug',
       text: '<script>alert(1)</script>',
       contact: null,
+      credit: null,
+      accountId: null,
       version: 'test',
       language: 'zh',
       page: 'room',

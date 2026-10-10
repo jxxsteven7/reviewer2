@@ -261,6 +261,8 @@ describe('the status server', () => {
         kind: 'idea',
         text: `Number ${i}`,
         contact: null,
+        credit: null,
+        accountId: null,
         version: 'test',
         language: 'en',
         page: 'home',

@@ -30,7 +30,7 @@ afterEach(() => {
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-const summary = { username: 'Ann', avatar: null, email: 'none', titles: [] };
+const summary = { username: 'Ann', avatar: null, email: 'none', titles: [], acknowledgments: [] };
 
 describe('a request to the account API', () => {
   test('sends JSON from the page, with its cookies, and reads the answer', async () => {

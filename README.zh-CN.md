@@ -86,6 +86,8 @@ npm run dev   # front end on http://localhost:5173, server on port 3000
 
 AI 助手读 `AGENTS.md`。
 
+建议被采纳、贡献了词库或参与早期测试的玩家，会署名列在 [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) 和首页最下方的致谢名单里。
+
 ### 贡献词库
 
 `words/` 下每个领域一个 JSON 文件，所有游戏共用。好的词条要短、领域内人人都认识，而且全部原创。见 [words/README.md](words/README.md)。
@@ -94,4 +96,4 @@ AI 助手读 `AGENTS.md`。
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: 5e10cccb38f054e633e274341108d3bbb5ef91912e95a46e285eadfb343b95f7 -->
+<!-- readme-sync: 17e89d682e8c8d11aae30f23750fb11a0afebbe508421c3c0fe63d7f34dec416 -->

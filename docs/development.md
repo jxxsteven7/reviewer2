@@ -66,16 +66,25 @@ Never commit passwords, keys or tokens; `.env` is ignored by git.
 
 Accounts need no setting. Email needs the secret and the mailer: copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`; the mails appear in the mailer's output.
 
-The operator takes an avatar down with the command the build makes, beside the running server:
+The operator's commands, which the build makes, run beside the running server:
 
 ```bash
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username>          # back to the default avatar
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username> --ban    # and no more uploads
 DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # uploads again
 DATA_DIR=data node server/dist/admin.cjs accounts [--json]                 # statistics of the accounts
+DATA_DIR=data node server/dist/admin.cjs feedback adopt <id>               # thank the player by the name they left
+DATA_DIR=data node server/dist/admin.cjs acknowledgments list
+DATA_DIR=data node server/dist/admin.cjs acknowledgments markdown          # the list as ACKNOWLEDGMENTS.md has it
+DATA_DIR=data node server/dist/admin.cjs acknowledgments add <name> --kind feedback|words|playtesting [--account <username>]
+DATA_DIR=data node server/dist/admin.cjs acknowledgments link <id> <username>
+DATA_DIR=data node server/dist/admin.cjs acknowledgments unlink <id>
+DATA_DIR=data node server/dist/admin.cjs acknowledgments remove <id>
 ```
 
 `accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address.
+
+`feedback adopt` thanks the player by the name they left with the feedback, linked to the account they were logged in to, refuses feedback that came without a name, and says when the name is another account's username; `acknowledgments add` thanks someone by hand ([architecture.md](architecture.md#acknowledgments)). To update `ACKNOWLEDGMENTS.md`, paste the output of `acknowledgments markdown` under its introduction and open a PR.
 
 ## Testing on a phone
 

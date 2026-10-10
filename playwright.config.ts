@@ -34,6 +34,8 @@ process.env.E2E_SERVER_LOG ||= join(import.meta.dirname, 'test-results', `server
 // The mails that the mailer writes out instead of sending them, which helpers.ts reads the links
 // in mails from.
 process.env.E2E_MAIL_LOG ||= join(import.meta.dirname, 'test-results', `mails-${PORT}.jsonl`);
+// The server's data directory, on which a test runs the operator's command.
+process.env.E2E_DATA_DIR ||= join(import.meta.dirname, 'test-results', `data-${PORT}`);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -59,6 +61,11 @@ export default defineConfig({
     command: 'node e2e/server.mjs',
     url: `http://127.0.0.1:${PORT}/healthz`,
     reuseExistingServer: false,
-    env: { E2E_PORT: String(PORT), E2E_SERVER_LOG: process.env.E2E_SERVER_LOG, E2E_MAIL_LOG: process.env.E2E_MAIL_LOG },
+    env: {
+      E2E_PORT: String(PORT),
+      E2E_SERVER_LOG: process.env.E2E_SERVER_LOG,
+      E2E_MAIL_LOG: process.env.E2E_MAIL_LOG,
+      E2E_DATA_DIR: process.env.E2E_DATA_DIR,
+    },
   },
 });

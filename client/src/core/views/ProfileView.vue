@@ -21,8 +21,8 @@ import ProfileAvatar from './ProfileAvatar.vue';
 import ProfileEmail from './ProfileEmail.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's own page: its avatar and username, its titles, its email address, its password,
-// its record, and the ways to log out and to delete it.
+// The account's own page: its avatar and username, its titles and the acknowledgments linked to
+// it, its email address, its password, its record, and the ways to log out and to delete it.
 const props = defineProps<{ summary: AccountSummary }>();
 const { t } = useI18n();
 const router = useRouter();
@@ -53,6 +53,10 @@ const passwordProblem = computed(() => {
   const problem = checkPassword(password.value);
   return problem ? t(errorKey(problem)) : undefined;
 });
+
+// A title or an acknowledgment, with how often it was awarded when that is more than once.
+const counted = (label: string, count: number) =>
+  count > 1 ? t('account.profile.titleCount', { title: label, count }) : label;
 
 // Sends a change, and shows what the server had against it.
 async function change(path: string, body: object): Promise<boolean> {
@@ -139,15 +143,18 @@ async function logOut() {
       </div>
     </section>
 
-    <section v-if="summary.titles.length" class="part" aria-labelledby="profile-titles">
+    <section
+      v-if="summary.titles.length || summary.acknowledgments.length"
+      class="part"
+      aria-labelledby="profile-titles"
+    >
       <h2 id="profile-titles">{{ t('account.profile.titles') }}</h2>
       <ul class="titles">
         <li v-for="{ title, count } in summary.titles" :key="title">
-          {{
-            count > 1
-              ? t('account.profile.titleCount', { title: t(`account.profile.titleNames.${title}`), count })
-              : t(`account.profile.titleNames.${title}`)
-          }}
+          {{ counted(t(`account.profile.titleNames.${title}`), count) }}
+        </li>
+        <li v-for="{ kind, count } in summary.acknowledgments" :key="kind">
+          {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
         </li>
       </ul>
     </section>

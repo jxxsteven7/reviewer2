@@ -89,7 +89,7 @@ describe('the room setup', () => {
   });
 
   test('asks a player who is logged in for no nickname, and sends none', async () => {
-    signedIn.account.summary = { username: 'Ann Lee', avatar: null, email: 'none', titles: [] };
+    signedIn.account.summary = { username: 'Ann Lee', avatar: null, email: 'none', titles: [], acknowledgments: [] };
     const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
     expect(wrapper.find('input[autocomplete="nickname"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('As Ann Lee');

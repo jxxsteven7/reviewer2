@@ -143,8 +143,11 @@ const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
 
-// Players wrote the text and the contact, and the page sent the version, so all of it is escaped
-// like anything else that comes from outside. The text keeps its line breaks.
+// Players wrote the text, the contact and the name, and the page sent the version, so all of it is
+// escaped like anything else that comes from outside. The text keeps its line breaks. The name for
+// the acknowledgments comes with the account it was given from, for the operator to link, with
+// the acknowledgment once the feedback has been adopted (admin.ts), and, in bold, with another
+// account whose username it is, which may be someone passing for that account's owner.
 function entry(feedback: Feedback): string {
   const facts = [
     `#${feedback.id}`,
@@ -153,11 +156,22 @@ function entry(feedback: Feedback): string {
     `version ${escape(feedback.version)}`,
     LANGUAGES[feedback.language],
     `from the ${PAGES[feedback.page]}`,
+    ...(feedback.acknowledgmentId === null ? [] : [`adopted as acknowledgment #${feedback.acknowledgmentId}`]),
   ];
+  const credit =
+    feedback.credit === null
+      ? 'No name for the acknowledgments'
+      : `Name for the acknowledgments: ${escape(feedback.credit)}` +
+        (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
+        (feedback.nameTakenBy === null
+          ? ''
+          : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
+            "which didn't send it</strong>");
   return (
     `<article><p>${facts.join(' &middot; ')}</p>` +
     `<p class="text">${escape(feedback.text)}</p>` +
     `<p>${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
+    `<p>${credit}</p>` +
     (feedback.userAgent === null ? '' : `<p>Browser: ${escape(feedback.userAgent)}</p>`) +
     '</article>'
   );

@@ -1,5 +1,8 @@
+import { usernameKey } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { AccountStore } from './accounts';
+import { AcknowledgmentStore } from './acknowledgments';
 import { openDatabase } from './database';
 import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, type NewFeedback } from './feedback';
 
@@ -22,6 +25,8 @@ const entry = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
   kind: 'idea',
   text: 'More fields, please.',
   contact: null,
+  credit: null,
+  accountId: null,
   version: 'v0.0.15',
   language: 'en',
   page: 'home',
@@ -37,10 +42,51 @@ describe('the feedback', () => {
     const bug = entry({ kind: 'bug', text: 'Line one\nLine two', userAgent: 'Mozilla/5.0', page: 'room' });
     expect(feedback.add({ ...bug, contact: 'wechat: r2', language: 'zh' })).toBe(2);
     expect(feedback.count()).toBe(2);
+    const alone = { username: null, acknowledgmentId: null, nameTakenBy: null };
     expect(feedback.latest(10)).toEqual([
-      { id: 2, createdAt: '2026-10-09T12:01:00.000Z', ...bug, contact: 'wechat: r2', language: 'zh' },
-      { id: 1, createdAt: '2026-10-09T12:00:00.000Z', ...entry() },
+      { id: 2, createdAt: '2026-10-09T12:01:00.000Z', ...bug, contact: 'wechat: r2', language: 'zh', ...alone },
+      { id: 1, createdAt: '2026-10-09T12:00:00.000Z', ...entry(), ...alone },
     ]);
+    expect(feedback.byId(1)).toEqual({ id: 1, createdAt: '2026-10-09T12:00:00.000Z', ...entry(), ...alone });
+    expect(feedback.byId(3)).toBeUndefined();
+  });
+
+  test('comes with the name for the acknowledgments, its account while there is one, and its adoption', () => {
+    const feedback = store();
+    const ann = new AccountStore(db).create('Ann', 'ann', 'h');
+    if (!ann) throw new Error('no account');
+    feedback.add(entry({ credit: 'Ann L', accountId: ann.id }));
+    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: 1, username: 'Ann', acknowledgmentId: null });
+    new AcknowledgmentStore(db).add({ name: 'Ann L', kind: 'feedback', feedbackId: 1, accountId: ann.id });
+    expect(feedback.byId(1)).toMatchObject({ acknowledgmentId: 1 });
+    new AccountStore(db).delete(ann.id);
+    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: null, username: null, acknowledgmentId: 1 });
+  });
+
+  test("says when its name is another account's username, however the name is written", () => {
+    const feedback = store();
+    const accounts = new AccountStore(db);
+    const cat = accounts.create('Cat', usernameKey('Cat'), 'h');
+    const bob = accounts.create('Bob', usernameKey('Bob'), 'h');
+    if (!cat || !bob) throw new Error('no account');
+    feedback.add(entry({ credit: 'CAT' }));
+    feedback.add(entry({ credit: 'cat', accountId: bob.id }));
+    // The account's own username, and a name that is nobody's.
+    feedback.add(entry({ credit: 'Cat', accountId: cat.id }));
+    feedback.add(entry({ credit: 'Dan' }));
+    feedback.add(entry());
+    const taken = () => feedback.latest(10).map(({ id, nameTakenBy }) => [id, nameTakenBy]);
+    expect(taken()).toEqual([
+      [5, null],
+      [4, null],
+      [3, null],
+      [2, 'Cat'],
+      [1, 'Cat'],
+    ]);
+    expect(feedback.byId(1)).toMatchObject({ credit: 'CAT', nameTakenBy: 'Cat' });
+    // An account that is gone has no username to take.
+    accounts.delete(cat.id);
+    expect(taken().every(([, name]) => name === null)).toBe(true);
   });
 
   test('never gets an id that another had, even after the operator deleted the newest', () => {
@@ -81,9 +127,9 @@ describe('no more feedback is taken', () => {
   test('once the feedback holds more than the limit', () => {
     const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxBytes: 20_000 });
     expect(feedback.full()).toBeNull();
-    // A Chinese character takes three bytes, so each of these holds 3,107 with its contact and
-    // version.
-    const large = entry({ text: '\u{8bcd}'.repeat(1000), contact: 'x'.repeat(100) });
+    // A Chinese character takes three bytes, so each of these holds 3,123 with its contact, its
+    // name and its version.
+    const large = entry({ text: '\u{8bcd}'.repeat(1000), contact: 'x'.repeat(100), credit: 'y'.repeat(16) });
     for (let i = 0; i < 6; i += 1) feedback.add(large);
     expect(feedback.full()).toBeNull();
     feedback.add(large);
