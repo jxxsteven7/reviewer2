@@ -111,8 +111,13 @@ jobs:
           browsers=true
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
             git fetch --no-tags --depth=1 origin "$BASE"
-            # --no-renames lists a moved file under its old path as well as its new one.
-            if ! git diff --no-renames --name-only "$BASE" HEAD | grep -qvE '(^|/)[^/]+\.md$|^docs/|^LICENSE$|^words/LICENSE$|^\.github/(FUNDING\.yml|ISSUE_TEMPLATE/)'; then
+            # Outside any condition, so that an error in git stops the job instead of skipping the
+            # browsers. --no-renames lists a moved file under its old path as well as its new one.
+            files=$(git diff --no-renames --name-only "$BASE" HEAD)
+            # The files that are not docs. grep exits with 1 when there are none, and with 2 on an
+            # error, which stops the job too.
+            code=$(grep -vE '(^|/)[^/]+\.md$|^docs/|^LICENSE$|^words/LICENSE$|^\.github/(FUNDING\.yml|ISSUE_TEMPLATE/)' <<< "$files" || [ $? = 1 ])
+            if [ -z "$code" ]; then
               echo "Only docs changed, so the browsers stay closed."
               browsers=false
             fi
