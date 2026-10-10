@@ -24,7 +24,7 @@ describe('the tip sheet', () => {
       global: { plugins: [i18n], stubs: ['AccountEntry', 'CreateRoom', 'JoinRoom', 'SendFeedback', 'PageMasthead'] },
     });
     await wrapper.get('footer button').trigger('click');
-    const link = document.querySelector<HTMLAnchorElement>('[role=dialog] a');
+    const link = document.querySelector<HTMLAnchorElement>('[role=dialog] .sponsor a');
     expect(link?.textContent).toBe('No WeChat? Sponsor the author on GitHub');
     expect(link?.getAttribute('href')).toBe('https://github.com/sponsors/jxxsteven7');
     expect(link?.getAttribute('target')).toBe('_blank');

@@ -1,10 +1,13 @@
 import { createRoom, interpolate, newPlayer, TEXT, expect, test } from './helpers';
 
 // The home page names the author and the build's version, and offers the reward code, which is
-// served from our own server as it was given, and which the rooms never show.
+// served from our own server as it was given, and which the rooms never show, and for players
+// without WeChat a link to GitHub Sponsors.
 
 for (const language of ['en', 'zh'] as const) {
-  test(`the home page names the author and the version, and offers a cola, in ${language}`, async ({ browser }) => {
+  test(`the home page names the author and the version, and offers a cola or GitHub Sponsors, in ${language}`, async ({
+    browser,
+  }) => {
     const text = TEXT[language];
     const page = await newPlayer(browser, language);
     // Creating a room goes through the home page, and the room has no reward code.
