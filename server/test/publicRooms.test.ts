@@ -578,6 +578,16 @@ describe('a report', () => {
     expect(server.feedback.reports(10)[0]).toMatchObject({ reported: null, reportedId: null, reportedName: 'Guest' });
     // A guest has no account to report from.
     expect(await guest.send('room:report', { playerId: chair.me })).toEqual({ ok: false, error: 'account_required' });
+    // The guest registers, and their seat becomes the account's: the same report isn't kept again.
+    const browser = new Browser(server.url);
+    expect((await browser.register('Gus')).body).toMatchObject({ ok: true });
+    guest.close();
+    track(await browser.connect({ token: guest.token, code }));
+    await chair.waitFor(({ players }) =>
+      players.some(({ id, name, online }) => id === guest.me && name === 'Gus' && online),
+    );
+    expect(await chair.send('room:report', { playerId: guest.me })).toEqual({ ok: true });
+    expect(server.feedback.reportCount()).toBe(1);
   });
 
   test('is for members with accounts, about others in a public room, and is checked', async () => {

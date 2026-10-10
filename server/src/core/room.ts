@@ -137,8 +137,9 @@ export class Room {
   // removed stay out by. A key removed again goes to the later removal.
   readonly #removals = new Set<Removal>();
   readonly #removed = new Map<string, Removal>();
-  // Who has reported whom here, as "reporter\nreported" by member key: each pair once per room.
-  readonly #reported = new Set<string>();
+  // Who has reported whom here: by the member key of the one reported, the keys of those who
+  // reported them. Each pair is kept once per room.
+  readonly #reported = new Map<string, Set<string>>();
   // When each member last sent a quick reaction, by member key, so that neither another tab nor
   // leaving and coming back starts the wait again.
   readonly #emoted = new Map<string, number>();
@@ -398,6 +399,10 @@ export class Room {
     if (!member || member.account) return false;
     if (this.game.rekey) this.data = this.game.rekey(this.data, id, member.key, key);
     this.match?.rekey(member.key, key);
+    // Whoever reported the guest has reported the same player, whom they don't report anew.
+    const reporters = this.#reported.get(member.key);
+    this.#reported.delete(member.key);
+    if (reporters) this.#reported.set(key, new Set([...(this.#reported.get(key) ?? []), ...reporters]));
     member.key = key;
     member.account = { ...account };
     this.#takeUsername(member, username);
@@ -417,12 +422,13 @@ export class Room {
   // Whether a member's report of another has been kept here already. The room only keeps who has
   // reported whom (docs/architecture.md#public-rooms), so that the same report isn't kept twice.
   reported(reporterKey: string, reportedKey: string): boolean {
-    return this.#reported.has(`${reporterKey}\n${reportedKey}`);
+    return this.#reported.get(reportedKey)?.has(reporterKey) ?? false;
   }
 
   // A member's report of another was kept.
   report(reporterKey: string, reportedKey: string): void {
-    this.#reported.add(`${reporterKey}\n${reportedKey}`);
+    const by = this.#reported.get(reportedKey) ?? new Set<string>();
+    this.#reported.set(reportedKey, by.add(reporterKey));
   }
 
   // --- the chair's controls ---------------------------------------------------------------
