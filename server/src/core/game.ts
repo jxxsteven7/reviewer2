@@ -1,4 +1,4 @@
-import type { Ack, BoardWord, Language, RoomPhase } from '@reviewer2/shared';
+import type { Ack, BoardWord, Language, MatchRules, RoomPhase } from '@reviewer2/shared';
 import type { Rng } from './random';
 
 // What the shared layer needs from a game (docs/architecture.md). The shared layer runs rooms,
@@ -12,7 +12,8 @@ export interface GameContext {
   // The room's clock, in milliseconds. It only runs forward, and only differences between its
   // readings mean anything.
   now(): number;
-  // A player's member key, which stays the same when they leave and come back.
+  // A player's member key, which stays the same when they leave and come back. The room also
+  // knows the keys of those who have left during the current game.
   keyOf(playerId: string): string;
   isOnline(playerId: string): boolean;
   // Everyone in the room, in the order they joined.
@@ -36,6 +37,29 @@ export interface PlayerResult {
   winner: string;
   won: boolean;
   verdict: string;
+}
+
+// One player's points in a game of a match, by member key, with the game's own detail of where
+// they came from, which the match's table shows.
+export interface MatchScore {
+  key: string;
+  points: number;
+  detail: unknown;
+}
+
+// What a game needs to be played as a match (docs/architecture.md#matches). The room keeps the
+// match: the number of games, the totals and the ranking. The game decides how its players are
+// grouped from one game to the next, and how each of them scores.
+export interface MatchHooks<Data> {
+  // A match begins with these rules, or the room stops being one, with null. The game forgets
+  // whatever it remembered of an earlier match.
+  setup(data: Data, ctx: GameContext, rules: MatchRules | null): Data;
+  // Each player's points in the current game as they stand, the game's end included once it has
+  // ended, or null for a game that counts for nothing, as one that the chair withdrew. Everyone
+  // who played for a side is in it, also with no points.
+  score(data: Data, ctx: GameContext): MatchScore[] | null;
+  // The players who play in the game, by player ID, which the match lists from its start.
+  lineup(data: Data): string[];
 }
 
 export interface GameModule<Data = unknown, View = unknown> {
@@ -77,8 +101,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // refuses one for another game or one that comes after it has ended. The room passes that
   // refusal on as it is, so the chair reads the game's own codes, such as game_over.
   withdraw(data: Data, gameId: string): GameUpdate<Data>;
-  // Back to the waiting room after a game, with everyone in their seats.
-  again(data: Data): Data;
+  // Back to the waiting room after a game, with everyone in their seats, or, in a match, seated for
+  // its next game as its rules say.
+  again(data: Data, ctx: GameContext): Data;
   // The game's own messages, such as "keywords:reveal". Must not await anything, so that no
   // other message can run between reading the data and writing it.
   handle(data: Data, ctx: GameContext, playerId: string, type: string, payload: unknown): GameUpdate<Data>;
@@ -86,6 +111,13 @@ export interface GameModule<Data = unknown, View = unknown> {
   // with accounts, or null when the game counts for no record, as one that the chair withdrew.
   // Whoever only watched takes no part. The room asks once, when the game has ended.
   results?(data: Data, ctx: GameContext): PlayerResult[] | null;
+  // A guest's seat has become an account's (docs/architecture.md#accounts): the member `playerId`
+  // is known by the member key `to` instead of `from` from now on, and whatever the game remembers
+  // by the old key, it remembers by the new one. The seat stands, and what the game knows of the
+  // two keys goes together under the new one.
+  rekey?(data: Data, playerId: string, from: string, to: string): Data;
+  // A game that can be played as a match.
+  match?: MatchHooks<Data>;
   // The game's part of the room view, as a function of the viewer. The only way a game's data
   // leaves the server. The room asks once for a snapshot and calls the function for each member
   // and for the screens, so a module builds what everyone sees once, and filters it for each.

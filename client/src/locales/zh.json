@@ -140,7 +140,8 @@
     "problems": {
       "needs_captain": "{group}还需要一位导师。",
       "captain_offline": "{group}的导师不在线。",
-      "needs_guesser": "{group}还需要至少一名在线的学生。"
+      "needs_guesser": "{group}还需要至少一名在线的学生。",
+      "needs_players": "至少要有 4 位在线玩家才能开局，还差 {missing} 位。"
     },
     "manage": {
       "spectate": "改为旁听",
@@ -148,6 +149,69 @@
       "chair": "设为主持",
       "cancel": "取消"
     }
+  },
+  "match": {
+    "kind": "房间类型",
+    "ordinary": "普通房间",
+    "ordinaryHint": "一局接一局，想打几局打几局。",
+    "match": "比赛",
+    "matchHint": "打满定好的局数，每人计分，最后排名。",
+    "games": "局数",
+    "gamesRange": "{min} 到 {max} 局",
+    "gamesProblem": "请填 {min} 到 {max} 之间的整数。",
+    "teams": "分组",
+    "teamsChoice": {
+      "fixed": "不许换队",
+      "switch": "允许换队"
+    },
+    "teamsHint": {
+      "fixed": "整场比赛每人都在同一组，导师每局轮换。",
+      "switch": "每局结束后重新分组。"
+    },
+    "grouping": {
+      "fixed": "第一局怎么分组",
+      "switch": "每局之后怎么分组"
+    },
+    "groupingChoice": {
+      "random": "随机分组",
+      "choose": "大家自己选"
+    },
+    "groupingHint": {
+      "random": "开局时随机分组，并选出两组的导师。",
+      "choose": "大家在大厅里自己选组和位置。"
+    },
+    "progress": "第 {game} / {games} 局",
+    "gamesPlayed": "已打完 {played} / {games} 局",
+    "table": "总分表",
+    "rank": "名次",
+    "player": "玩家",
+    "total": "总分",
+    "delta": "本局",
+    "lastDelta": "上一局",
+    "left": "已离开",
+    "none": "开局后，参加的人都会列在这里。",
+    "end": "提前结束比赛",
+    "endConfirm": "比赛现在结束，按目前的分数排名，不发称号。正在进行的一局会中止。",
+    "next": "下一局",
+    "waitNext": "等主持人开始下一局。",
+    "over": "最终排名",
+    "stopped": "比赛提前结束了",
+    "stoppedNote": "比赛没有打完，不发称号。",
+    "titleNames": {
+      "best_paper": "Best Paper Award",
+      "black_hole": "游戏黑洞"
+    },
+    "blackHoleLine": "你这么菜，多半会被拒稿吧！",
+    "again": "再开一场",
+    "againSubmit": "开始比赛",
+    "ordinaryRoom": "回到普通房间",
+    "waitAgain": "等主持人决定接下来做什么。",
+    "joinsNext": "你从下一局开始参加。",
+    "drawn": "参加的人",
+    "drawnNote": "开局时随机分组，并选出两组的导师。",
+    "play": "参加",
+    "fixedNote": "整场比赛队伍不变，导师每局轮换。",
+    "locked": "比赛结束之前，词库和规则都不能改。"
   },
   "game": {
     "turn": "第 {turn} 回合",
@@ -291,6 +355,13 @@
       "over": "本局已经结束，不能再发言了。",
       "you": "我",
       "someone": "已离开的玩家"
+    },
+    "scoring": "比赛计分：本组找到一张本组的牌，组里每人 +1；获胜，每人再 +3；翻到对方的牌 −1；翻到 Reviewer 2 −3。",
+    "scoreDetail": {
+      "found": "找到 {count} 张",
+      "won": "获胜",
+      "wrong": "翻到对方的牌 ×{count}",
+      "reviewer2": "翻到 Reviewer 2"
     }
   },
   "settings": {
@@ -391,6 +462,9 @@
     "cannot_start": "游戏还不能开始。",
     "stale": "那个回合或那一局已经结束了。",
     "emote_cooldown": "稍等一下，再发下一条表情。",
+    "bad_match": "这个游戏不能打比赛。",
+    "match_over": "比赛已经结束了。",
+    "match_locked": "比赛进行中不能改词库和规则。",
     "game_over": "游戏已经结束了。",
     "not_your_turn": "现在不是你们组的回合。",
     "not_captain": "只有导师可以给提示。",
@@ -410,6 +484,8 @@
     "key_viewer": "你在这一局里看过答案，下一局才能当学生。",
     "other_team": "这一局你属于另一组，下一局才能换组。",
     "bad_seat": "没有这个座位。",
+    "between_games": "下一局才能加入。",
+    "bigger_group": "这场比赛里，还没打过的人进人少的一组。",
     "offline": "你已离线，正在等待连接……",
     "timeout": "服务器没有回应，请再试一次。",
     "unknown": "出错了。",
@@ -572,6 +648,10 @@
       "recent": "最近 20 局",
       "recordsAgain": "重试",
       "recordLine": "{side}，{role}",
+      "matchSummary": "打完的比赛：{played} 场",
+      "recentMatches": "最近 20 场比赛",
+      "matchLine": "{players} 人中第 {rank} 名 · {score} 分",
+      "matchGames": "{games} 局",
       "roles": {
         "captain": "导师",
         "guesser": "学生"

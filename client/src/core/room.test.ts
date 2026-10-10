@@ -40,6 +40,7 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
   players: [{ id: 'ann', name: 'Ann', online: true }],
   screens: 0,
   me,
+  match: null,
   data: {},
 });
 

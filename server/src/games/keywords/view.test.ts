@@ -82,7 +82,13 @@ describe('what each player sees of the cards', () => {
       expect(view.clue).toEqual({ word: 'Gradient', count: 2 });
       expect(view.remaining).toEqual({ red: 8, blue: 8 });
       expect(view.history).toEqual([
-        { turn: 1, team: 'red', word: 'Gradient', count: 2, guesses: [{ card: 0, color: 'red' }] },
+        {
+          turn: 1,
+          team: 'red',
+          word: 'Gradient',
+          count: 2,
+          guesses: [{ card: 0, color: 'red', player: 'red-guesser' }],
+        },
       ]);
       expect(view.clock).toBeNull();
     }
@@ -149,7 +155,7 @@ describe('a view', () => {
   test('is a copy that cannot change the game', () => {
     const state: KeywordsState = talking();
     const view = viewFor(state, redCaptain, 0);
-    view.history[0]?.guesses.push({ card: 5, color: 'red' });
+    view.history[0]?.guesses.push({ card: 5, color: 'red', player: 'bob' });
     if (view.clue) view.clue.word = 'changed';
     view.selections?.pop();
     if (view.selections?.[0]) view.selections[0].card = 24;

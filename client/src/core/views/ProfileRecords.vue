@@ -5,11 +5,13 @@ import { useI18n } from 'vue-i18n';
 import { request } from '../account';
 import UiButton from '../components/UiButton.vue';
 import { errorKey } from '../errors';
+import { points } from '../points';
 import { useBusy } from '../useBusy';
 
 // The account's record: how many games it has finished in a seat and won, and the last 20, each
-// with its game, its date, the group and the role, and the decision letter that the group got. A
-// record that can't be fetched says so, with a way to try again.
+// with its game, its date, the group and the role, and the decision letter that the group got;
+// then how many matches it finished, and the last 20 of them, each with its place, its total and
+// its title. A record that can't be fetched says so, with a way to try again.
 const { t, te, locale } = useI18n();
 const records = ref<RecordsView | null>(null);
 const failed = ref<string | undefined>();
@@ -60,6 +62,30 @@ function date(iso: string): string {
             }}
           </span>
           <span class="verdict">{{ label(`game.letter.verdicts.${record.verdict}`, record.verdict) }}</span>
+        </li>
+      </ol>
+    </template>
+    <template v-if="records.matches.played > 0">
+      <p class="summary">{{ t('account.profile.matchSummary', { played: records.matches.played }) }}</p>
+      <h3>{{ t('account.profile.recentMatches') }}</h3>
+      <ol class="list">
+        <li
+          v-for="(match, index) in records.matches.recent"
+          :key="`match-${index}`"
+          class="record match"
+          :class="{ won: match.title === 'best_paper' }"
+        >
+          <span class="when">{{ date(match.endedAt) }}</span>
+          <span class="game">
+            {{ label(`home.games.${match.game}.name`, match.game) }} &middot;
+            {{ t('account.profile.matchGames', { games: match.games }) }}
+          </span>
+          <span class="part">
+            {{
+              t('account.profile.matchLine', { rank: match.rank, players: match.players, score: points(match.score) })
+            }}
+          </span>
+          <span v-if="match.title" class="verdict">{{ t(`match.titleNames.${match.title}`) }}</span>
         </li>
       </ol>
     </template>

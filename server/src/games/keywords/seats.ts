@@ -64,17 +64,19 @@ function seatLike(wanted: SeatRequest): Seat | null {
 }
 
 // Seats a newcomer who has come to play as a guesser. Whoever has played for a group in the
-// current game goes back to it. Anyone else goes to the group with fewer players in it, its
-// captain and those who are offline included, or to either at random when both have as many. The
-// rules of changeSeat() hold as for any other seat, so a newcomer who has seen the key in this
-// game stays a spectator. Captains are never given out here: the chair's shuffle picks them.
-export function autoSeat(seating: Seating, member: Member, rng: Rng, stage: GameStage): Seating {
-  const team = seating.sides.get(member.key) ?? smallerTeam(seating, rng);
+// current game goes back to it, and so does whoever plays for a group in a match whose groups
+// don't change, which the caller names as `preferred`. Anyone else goes to the group with fewer
+// players in it, its captain and those who are offline included, or to either at random when both
+// have as many. The rules of changeSeat() hold as for any other seat, so a newcomer who has seen
+// the key in this game stays a spectator. Captains are never given out here: the chair's shuffle
+// picks them.
+export function autoSeat(seating: Seating, member: Member, rng: Rng, stage: GameStage, preferred?: Team): Seating {
+  const team = seating.sides.get(member.key) ?? preferred ?? smallerTeam(seating, rng);
   const change = changeSeat(seating, member, { team, role: 'guesser' }, stage);
   return change.ok ? change.seating : seating;
 }
 
-function smallerTeam(seating: Seating, rng: Rng): Team {
+export function smallerTeam(seating: Seating, rng: Rng): Team {
   const size = (team: Team) => [...seating.seats.values()].filter((seat) => seat.team === team).length;
   const red = size('red');
   const blue = size('blue');

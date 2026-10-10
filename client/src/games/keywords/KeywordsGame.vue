@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { SPECTATOR, type ClueCount, type KeywordsView, type RoomView } from '@reviewer2/shared';
+import {
+  SPECTATOR,
+  type ClueCount,
+  type KeywordsScoreDetail,
+  type KeywordsView,
+  type RoomView,
+} from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import EmoteButton from '../../core/components/EmoteButton.vue';
+import MatchResults from '../../core/components/MatchResults.vue';
+import MatchTable from '../../core/components/MatchTable.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
@@ -23,10 +31,28 @@ import { useKeywords } from './useKeywords';
 // A game in progress, and its result. The banner that says what is going on for the viewer, the
 // turn strip, the board and what the viewer can do now come first; the groups and the clue log
 // follow, or sit beside the board on wide screens.
+//
+// In a match, its table sits beside the board while the game is on. Once the game has ended, the
+// table follows the letters, with where each player's points came from, or the final ranking does
+// when the match is over.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
 const { data, mySeat, mySide, isChair } = useKeywords(room);
+const match = computed(() => room.value.match);
+
+// Where a player's points in a game came from, in a few words.
+function describe(detail: unknown): string {
+  const { found, won, wrong, reviewer2 } = detail as KeywordsScoreDetail;
+  return [
+    found > 0 ? t('game.scoreDetail.found', { count: found }) : null,
+    won ? t('game.scoreDetail.won') : null,
+    wrong > 0 ? t('game.scoreDetail.wrong', { count: wrong }) : null,
+    reviewer2 > 0 ? t('game.scoreDetail.reviewer2') : null,
+  ]
+    .filter((part) => part !== null)
+    .join(' \u00b7 ');
+}
 const { busy, run } = useBusy();
 
 const game = computed(() => data.value.game as KeywordsView);
@@ -104,8 +130,22 @@ const whoAmI = computed(() => {
     <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game">
       <EmoteButton />
     </RoleBanner>
-    <DecisionLetter v-if="game.result" :game="game" :side="mySide" :is-chair="isChair" :busy="busy" @again="again" />
+    <DecisionLetter
+      v-if="game.result"
+      :game="game"
+      :side="mySide"
+      :is-chair="isChair"
+      :busy="busy"
+      :match="match"
+      @again="again"
+    />
     <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
+    <template v-if="game.result && match">
+      <MatchResults v-if="match.status !== 'on'" :room="room" />
+      <MatchTable v-else :room="room" :describe="describe" class="between">
+        <p class="scoring">{{ t('game.scoring') }}</p>
+      </MatchTable>
+    </template>
 
     <div class="layout">
       <div class="main">
@@ -120,7 +160,10 @@ const whoAmI = computed(() => {
         <!-- The bar stays within reach at the bottom of a phone's screen while the game is on. -->
         <div class="actions" :class="{ sticky: !game.result }">
           <div class="who-row">
-            <p class="who">{{ whoAmI }}</p>
+            <p class="who">
+              {{ whoAmI }}
+              <template v-if="data.joinsNext"> &middot; {{ t('match.joinsNext') }}</template>
+            </p>
             <GroupChat :room="room" />
           </div>
           <CluePanel
@@ -140,6 +183,9 @@ const whoAmI = computed(() => {
       </div>
 
       <aside class="side sections">
+        <MatchTable v-if="match && !game.result" :room="room">
+          <p class="scoring">{{ t('game.scoring') }}</p>
+        </MatchTable>
         <GameRosters :room="room" />
         <ClueLog :game="game" />
         <div class="tools">
@@ -214,6 +260,15 @@ const whoAmI = computed(() => {
   border-top: 1px solid var(--rule);
 }
 
+.scoring {
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+
+.between {
+  margin-bottom: var(--space-4);
+}
+
 .confirm {
   display: flex;
   flex-direction: column;
@@ -226,7 +281,7 @@ const whoAmI = computed(() => {
     align-items: start;
   }
 
-  .side :deep(.rosters) {
+  .side > :deep(:first-child) {
     border-top: 0;
     padding-top: 0;
   }

@@ -1,4 +1,5 @@
 import type { Language } from './language';
+import type { MatchView } from './match';
 
 // What every member of a room sees of it. The game's own part, such as seats and the board, is
 // in `data`; the server builds it for each viewer separately (docs/architecture.md).
@@ -45,6 +46,9 @@ export interface RoomView<Game = unknown> {
   screens: number;
   // The viewer's own player ID, or null for a screen, which watches without playing.
   me: string | null;
+  // The match that the room is playing, or null for a room that isn't a match. Everyone sees the
+  // same scores.
+  match: MatchView | null;
   // The game's own part of the view, built for this viewer alone.
   data: Game;
 }

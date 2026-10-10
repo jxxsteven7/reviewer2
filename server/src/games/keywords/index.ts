@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   defaultSettings,
+  otherTeam,
   sameSettings,
   settingsProblems,
   SPECTATOR,
@@ -30,6 +31,18 @@ import {
   type Outcome,
 } from './rules';
 import {
+  afterScoredGame,
+  arrangeFixed,
+  counts,
+  drawProblems,
+  lineupOf,
+  newMatchSeating,
+  rekeyMatch,
+  rekeySeating,
+  scoreGame,
+  type MatchSeating,
+} from './match';
+import {
   autoSeat,
   changeSeat,
   emptySeating,
@@ -40,6 +53,7 @@ import {
   startGame,
   startProblems,
   type GameStage,
+  type Member,
   type Seating,
   type SeatRequest,
 } from './seats';
@@ -54,9 +68,18 @@ export interface KeywordsData {
   settings: KeywordsSettings;
   seating: Seating;
   game: KeywordsState | null;
+  // The game's part of the match that the room plays, if it plays one (match.ts).
+  match: MatchSeating | null;
 }
 
 const online = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.isOnline(id)));
+
+const membersOf = (ctx: GameContext) => ctx.playerIds().map((id) => ({ id, key: ctx.keyOf(id) }));
+
+// What keeps the next game from starting: with groups that the server draws, too few players;
+// otherwise a missing PI or student in a group.
+const problemsOf = (data: KeywordsData, ctx: GameContext) =>
+  lineupOf(data.match) === 'draw' ? drawProblems(data.seating, online(ctx)) : startProblems(data.seating, online(ctx));
 
 // The rules give the state back as it is when an action changed nothing, and then so does the
 // module: the room sends no snapshot for that.
@@ -79,11 +102,46 @@ function stageOf(data: KeywordsData): GameStage {
 // Moves a player to the seat they ask for, or to the spectators when the chair benches them.
 // Whoever leaves their seat takes their choice of a card with them (rules.ts); whoever asks for
 // the seat they are in changes nothing.
+//
+// A match adds its own rules (matchRefusal). While one of its games is on, only those who have
+// played for a group in it may sit in one: anyone else plays from the next game. Once its groups
+// are fixed, everyone who has played for one sits in it alone, and a newcomer joins the group with
+// fewer players. Whoever was to play from the next game and asks to watch changes their mind.
 function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: SeatRequest): GameUpdate<KeywordsData> {
-  const change = changeSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, wanted, stageOf(data));
+  const member = { id: playerId, key: ctx.keyOf(playerId) };
+  const refusal = data.match && matchRefusal(data, data.match, member, wanted);
+  if (refusal) return { ok: false, error: refusal };
+  const change = changeSeat(data.seating, member, wanted, stageOf(data));
   if (!change.ok) return change;
-  if (change.seating === data.seating) return { ok: true, data };
-  return { ok: true, data: { ...data, seating: change.seating, game: withoutSelection(data.game, playerId) } };
+  let { match } = data;
+  if (match?.waiting.has(member.key) && wanted.role === 'spectator') {
+    match = { ...match, waiting: new Set([...match.waiting].filter((other) => other !== member.key)) };
+  }
+  if (change.seating === data.seating && match === data.match) return { ok: true, data };
+  return {
+    ok: true,
+    data: { ...data, seating: change.seating, game: withoutSelection(data.game, playerId), match },
+  };
+}
+
+function matchRefusal(data: KeywordsData, match: MatchSeating, member: Member, wanted: SeatRequest) {
+  if (wanted.team === null) return null;
+  const stage = stageOf(data);
+  if (stage === 'on') return data.seating.sides.has(member.key) ? null : 'between_games';
+  if (lineupOf(match) !== 'fixed') return null;
+  const team = match.locked.get(member.key);
+  if (team !== undefined) return team === wanted.team ? null : 'other_team';
+  return biggerGroup(data.seating, member.id, wanted.team) ? 'bigger_group' : null;
+}
+
+// Whether a group has more players in its seats than the other, not counting the player who asks,
+// who may sit in one of them already. A newcomer to a match whose groups are fixed joins the group
+// with fewer players, or either when both have as many, so that the groups stay as even as they can
+// be; the chair's shuffle has nothing to do there.
+function biggerGroup(seating: Seating, playerId: string, team: Team): boolean {
+  const size = (group: Team) =>
+    [...seating.seats].filter(([id, seat]) => id !== playerId && seat.team === group).length;
+  return size(team) > size(otherTeam(team));
 }
 
 // An action on the game, which the rules judge for the player in the seat they are in right
@@ -124,7 +182,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
   wordsNeeded: BOARD_SIZE,
 
-  create: (language) => ({ settings: defaultSettings(language), seating: emptySeating(), game: null }),
+  create: (language) => ({ settings: defaultSettings(language), seating: emptySeating(), game: null, match: null }),
 
   // The settings come whole, and must suit the room's language: a Chinese room counts the clue's
   // characters, an English room its words.
@@ -138,9 +196,17 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   // A newcomer who has come to play becomes a guesser in a group (seats.ts); anyone else watches
   // until they take a seat.
+  // In a match, a newcomer who comes while a game is on watches it, and plays from the next one; with
+  // fixed groups, whoever has played for a group goes back to it.
   join(data, ctx, playerId, play) {
     if (!play) return data;
-    const seating = autoSeat(data.seating, { id: playerId, key: ctx.keyOf(playerId) }, ctx.rng, stageOf(data));
+    const member = { id: playerId, key: ctx.keyOf(playerId) };
+    const { match } = data;
+    if (match && stageOf(data) === 'on' && !data.seating.sides.has(member.key)) {
+      return { ...data, match: { ...match, waiting: new Set(match.waiting).add(member.key) } };
+    }
+    const preferred = match?.locked.get(member.key);
+    const seating = autoSeat(data.seating, member, ctx.rng, stageOf(data), preferred);
     return seating === data.seating ? data : { ...data, seating };
   },
 
@@ -157,15 +223,23 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return seated.ok ? seated.data : data;
   },
 
-  shuffle: (data, ctx) => ({ ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) }),
+  // A match whose groups are fixed, or drawn when its game starts, has nothing for the chair to
+  // shuffle.
+  shuffle: (data, ctx) =>
+    lineupOf(data.match) === 'free' ? { ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) } : data,
 
-  canStart: (data, ctx) => startProblems(data.seating, online(ctx)).length === 0,
+  canStart: (data, ctx) => problemsOf(data, ctx).length === 0,
 
-  start: (data, ctx, words, gameId) => ({
-    ...data,
-    seating: startGame(data.seating, ctx.keyOf),
-    game: newGame(words, ctx.rng, { gameId, settings: data.settings, language: ctx.language }, ctx.now()),
-  }),
+  // A match's game whose groups are drawn deals everyone who plays into the groups as the chair's
+  // shuffle does, and starts with those groups.
+  start(data, ctx, words, gameId) {
+    const seating = lineupOf(data.match) === 'draw' ? shuffleGroups(data.seating, ctx.rng, online(ctx)) : data.seating;
+    return {
+      ...data,
+      seating: startGame(seating, ctx.keyOf),
+      game: newGame(words, ctx.rng, { gameId, settings: data.settings, language: ctx.language }, ctx.now()),
+    };
+  },
 
   // A game that is over has no clock.
   deadline: (data) => data.game?.clock?.ends ?? null,
@@ -180,7 +254,37 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   withdraw: (data, gameId) => (data.game ? fromOutcome(data, withdraw(data.game, { gameId })) : fail('stale')),
 
-  again: (data) => ({ ...data, seating: endGame(data.seating), game: null }),
+  // In a match, a scored game counts for the PIs' turns and fixes the groups, if they are to be
+  // fixed; then whoever came to play during the game sits down, and with fixed groups, everyone is
+  // seated in their group with the next PI (match.ts).
+  again(data, ctx) {
+    const seating = endGame(data.seating);
+    if (!data.match) return { ...data, seating, game: null };
+    const scored = data.game !== null && counts(data.game);
+    let match = scored ? afterScoredGame(data.match, data.seating) : data.match;
+    const members = membersOf(ctx);
+    let next = seating;
+    for (const member of members) {
+      if (match.waiting.has(member.key)) next = autoSeat(next, member, ctx.rng, 'none', match.locked.get(member.key));
+    }
+    match = { ...match, waiting: new Set() };
+    if (scored && lineupOf(match) === 'fixed') next = arrangeFixed(next, members, match, online(ctx), ctx.rng);
+    return { ...data, seating: next, game: null, match };
+  },
+
+  // The seat stands, and in a match whose groups are fixed, so does its group (match.ts).
+  rekey(data, playerId, from, to) {
+    const seating = rekeySeating(data.seating, from, to);
+    if (!data.match) return { ...data, seating };
+    const team = seating.sides.get(to) ?? seatOf(seating, playerId).team ?? undefined;
+    return { ...data, seating, match: rekeyMatch(data.match, from, to, team) };
+  },
+
+  match: {
+    setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules) }),
+    score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating.sides, ctx.keyOf) : null),
+    lineup: (data) => [...data.seating.seats].filter(([, seat]) => seat.team !== null).map(([id]) => id),
+  },
 
   handle(data, ctx, playerId, type, payload) {
     if (!Object.hasOwn(KEYWORDS_MESSAGES, type)) return fail('bad_request');
@@ -229,7 +333,8 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       settings: { ...data.settings },
       seats,
       keyViewers: members.filter((id) => data.seating.keyViewers.has(ctx.keyOf(id))),
-      startProblems: ctx.phase === 'lobby' ? startProblems(data.seating, online(ctx)) : [],
+      startProblems: ctx.phase === 'lobby' ? problemsOf(data, ctx) : [],
+      lineup: lineupOf(data.match),
     };
     // What a viewer sees of the game depends on the seat they are in right now (view.ts): a
     // captain who has stepped down to watch gets a spectator's view, and a screen always does.
@@ -237,12 +342,17 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     const boards = new Map<string, KeywordsView | null>();
     return (viewer) => {
       const seat = ('playerId' in viewer && seats[viewer.playerId]) || SPECTATOR;
-      const key = `${seat.team}:${seat.role}`;
-      let game = boards.get(key);
-      if (game === undefined) boards.set(key, (game = data.game && viewFor(data.game, seat, at)));
+      const board = `${seat.team}:${seat.role}`;
+      let game = boards.get(board);
+      if (game === undefined) boards.set(board, (game = data.game && viewFor(data.game, seat, at)));
+      const key = 'playerId' in viewer ? ctx.keyOf(viewer.playerId) : null;
+      // In the waiting room of a match whose groups are fixed, the group is the one the player is
+      // fixed to; during and after a game, the one they played for in it, if any.
+      const fixed = stageOf(data) === 'none' && key !== null ? data.match?.locked.get(key) : undefined;
       return {
         ...shared,
-        side: ('playerId' in viewer && data.seating.sides.get(ctx.keyOf(viewer.playerId))) || null,
+        side: (key !== null && (data.seating.sides.get(key) ?? fixed)) || null,
+        joinsNext: key !== null && (data.match?.waiting.has(key) ?? false),
         game,
       };
     };

@@ -122,11 +122,25 @@ export interface GameRecord {
   verdict: string;
 }
 
+// A match on an account's record: when it ended, how many games it had, the place the player
+// finished in among how many ranked players, their total, and the title they were awarded, if any.
+export interface MatchRecord {
+  game: string;
+  endedAt: string;
+  games: number;
+  rank: number;
+  players: number;
+  score: number;
+  title: Title | null;
+}
+
 export interface RecordsView {
   games: number;
   wins: number;
   // The latest first.
   recent: GameRecord[];
+  // The matches that the account finished, and the latest of them, the latest first.
+  matches: { played: number; recent: MatchRecord[] };
 }
 
 // How many games the record page lists.

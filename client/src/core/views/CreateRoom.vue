@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MAX_NAME_INPUT, type Language } from '@reviewer2/shared';
+import { defaultMatchRules, MAX_NAME_INPUT, type Language, type MatchRules } from '@reviewer2/shared';
 import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -7,6 +7,7 @@ import { games } from '../../games';
 import { account } from '../account';
 import FieldPicker from '../components/FieldPicker.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
+import MatchForm from '../components/MatchForm.vue';
 import PlayChoice from '../components/PlayChoice.vue';
 import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
@@ -20,7 +21,8 @@ import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
-// lists, the game's own settings, the creator's nickname, and whether they play or only watch.
+// lists, the game's own settings, whether it is an ordinary room or a match, and the match's
+// rules, the creator's nickname, and whether they play or only watch.
 // The creator becomes the chair either way. A creator who is logged in has their username, and is
 // asked for no nickname.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
@@ -42,6 +44,11 @@ const usable = computed(() =>
 const screens = computed(() => games[props.game]);
 const settings = ref<object | undefined>(screens.value?.defaultSettings(language.value));
 const settingsValid = ref(true);
+// An ordinary room, or a match by these rules.
+const isMatch = ref(false);
+const match = ref<MatchRules>(defaultMatchRules());
+const matchValid = ref(true);
+const group = useId();
 
 // The creator chooses the lists: none is chosen to begin with. When a change of language leaves
 // a chosen list without enough words, it drops out, and nothing is chosen in its place.
@@ -57,7 +64,11 @@ const id = useId();
 // Whether the form will do. create() checks it too, since a form can be submitted without its
 // button. A creator who is logged in needs no nickname: theirs is the username.
 const ready = computed(
-  () => chosen.value.length > 0 && (!!clean.value || account.summary !== null) && settingsValid.value,
+  () =>
+    chosen.value.length > 0 &&
+    (!!clean.value || account.summary !== null) &&
+    settingsValid.value &&
+    (!isMatch.value || matchValid.value),
 );
 
 onMounted(loadFields);
@@ -73,6 +84,7 @@ async function create() {
       language: currentLanguage(),
       fields: chosen.value,
       ...(settings.value ? { settings: settings.value } : {}),
+      ...(isMatch.value ? { match: match.value } : {}),
       ...(account.summary ? {} : { name: name.value }),
       play: play.value,
     }),
@@ -117,6 +129,23 @@ async function create() {
     <section v-if="screens && settings" class="step">
       <h3>{{ t('create.settings') }}</h3>
       <component :is="screens.Settings" v-model="settings" v-model:valid="settingsValid" :language="language" />
+    </section>
+
+    <section class="step">
+      <h3 :id="`${group}-kind`">{{ t('match.kind') }}</h3>
+      <fieldset class="kind" :aria-labelledby="`${group}-kind`">
+        <label>
+          <input v-model="isMatch" type="radio" :name="group" :value="false" />
+          <span class="option">{{ t('match.ordinary') }}</span>
+          <span class="hint">{{ t('match.ordinaryHint') }}</span>
+        </label>
+        <label>
+          <input v-model="isMatch" type="radio" :name="group" :value="true" />
+          <span class="option">{{ t('match.match') }}</span>
+          <span class="hint">{{ t('match.matchHint') }}</span>
+        </label>
+      </fieldset>
+      <MatchForm v-if="isMatch" v-model="match" v-model:valid="matchValid" />
     </section>
 
     <section class="step">
@@ -185,6 +214,42 @@ h3 {
 
 .as :deep(.avatar) {
   margin-right: calc(var(--space-2) * -0.5);
+}
+
+.kind {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.kind label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 var(--space-3);
+  min-height: 48px;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+.kind label + label {
+  border-top: 1px solid var(--rule);
+}
+
+.kind input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.kind .hint {
+  grid-column: 2;
+  color: var(--ink-3);
+}
+
+.kind + .match-form {
+  margin-top: var(--space-3);
 }
 
 .problem {
