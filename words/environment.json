@@ -1199,7 +1199,7 @@
       "id": "esg",
       "zh": "ESG",
       "en": "ESG",
-      "forms": { "en": ["environmental, social and governance"] }
+      "forms": { "zh": ["环境、社会和治理"], "en": ["environmental, social and governance"] }
     },
     {
       "id": "eia",

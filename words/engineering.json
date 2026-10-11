@@ -267,7 +267,7 @@
       "id": "mosfet",
       "zh": "MOSFET",
       "en": "MOSFET",
-      "forms": { "zh": ["MOS管"], "en": ["metal-oxide-semiconductor field-effect transistor"] }
+      "forms": { "zh": ["金属氧化物半导体场效应晶体管"], "en": ["metal-oxide-semiconductor field-effect transistor"] }
     },
     {
       "id": "optocoupler",
@@ -397,7 +397,7 @@
       "id": "pid",
       "zh": "PID",
       "en": "PID",
-      "forms": { "en": ["proportional-integral-derivative"] }
+      "forms": { "zh": ["比例积分微分"], "en": ["proportional-integral-derivative"] }
     },
     {
       "id": "plc",
