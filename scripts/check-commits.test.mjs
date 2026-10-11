@@ -80,6 +80,7 @@ describe('versions', () => {
 
   test('isUnversioned holds for the docs for people alone', () => {
     assert.ok(isUnversioned(['ACKNOWLEDGMENTS.md']));
+    assert.ok(isUnversioned(['SPONSORS.md']));
     assert.ok(isUnversioned(['README.md', 'README.zh-CN.md', 'CONTRIBUTING.md']));
     assert.ok(isUnversioned(['docs/architecture.md', 'docs/decisions/0002-accounts.md', 'docs/maintainers.md']));
     assert.ok(!isUnversioned([]));
@@ -91,6 +92,8 @@ describe('versions', () => {
     assert.ok(!isUnversioned(['.github/CODEOWNERS']));
     assert.ok(!isUnversioned(['client/README.md']));
     assert.ok(!isUnversioned(['ACKNOWLEDGMENTS.md', 'client/src/App.vue']));
+    assert.ok(!isUnversioned(['SPONSORS.md', '.github/workflows/sponsors.yml']));
+    assert.ok(!isUnversioned(['client/SPONSORS.md']));
   });
 });
 

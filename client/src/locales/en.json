@@ -615,6 +615,22 @@
     "anonymous": "An anonymous player",
     "none": "No one yet. Be the first!"
   },
+  "sponsors": {
+    "title": "Sponsors",
+    "intro": "We thank the people who sponsor Reviewer 2: on GitHub, by their username for as long as their sponsorship is public, and in other ways, such as a WeChat tip, by the name they choose if they ask to be listed. No amounts are shown.",
+    "kinds": {
+      "github": "GitHub Sponsors",
+      "other": "Other ways"
+    },
+    "none": "No sponsors yet. Be the first, on {github} or with {wechat}!",
+    "github": "GitHub Sponsors",
+    "wechat": "a WeChat tip"
+  },
+  "thanks": {
+    "loading": "Loading the list…",
+    "failed": "The list couldn't be loaded.",
+    "retry": "Try again"
+  },
   "notFound": {
     "title": "Page not found",
     "body": "This page doesn't exist, or the link is incomplete.",

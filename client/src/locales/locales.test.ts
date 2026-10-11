@@ -9,6 +9,7 @@ import {
   REPORT_ERRORS,
   ROOM_ERRORS,
   SEAT_ERRORS,
+  SPONSOR_KINDS,
   START_PROBLEMS,
   TITLES,
 } from '@reviewer2/shared';
@@ -74,9 +75,10 @@ describe('locale files', () => {
     for (const title of TITLES) expect(en.has(`account.profile.titleNames.${title}`), title).toBe(true);
   });
 
-  test('name every kind of feedback, and every kind of acknowledgment', () => {
+  test('name every kind of feedback, of acknowledgment and of sponsor', () => {
     for (const kind of FEEDBACK_KINDS) expect(en.has(`feedback.kinds.${kind}`), kind).toBe(true);
     for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`acknowledgments.kinds.${kind}`), kind).toBe(true);
+    for (const kind of SPONSOR_KINDS) expect(en.has(`sponsors.kinds.${kind}`), kind).toBe(true);
   });
 
   test('say what keeps a game from starting', () => {

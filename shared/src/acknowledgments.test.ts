@@ -5,14 +5,14 @@ import {
   acknowledgmentLine,
   ANONYMOUS,
   contributionPieces,
-  escapeName,
   MAX_CONTRIBUTION_LENGTH,
   parseAcknowledgments,
 } from './acknowledgments';
 import { checkLink } from './feedback';
+import { escapeName } from './lists';
 
 // The rules of ACKNOWLEDGMENTS.md. The file itself is checked against them in
-// client/src/core/acknowledgments.test.ts, beside the page that shows it.
+// server/src/thanks.test.ts, beside the code that reads it.
 
 const DASH = '\u{2014}';
 const HELLO = '\u4f60\u597d'; // "hello" in Chinese, as a name

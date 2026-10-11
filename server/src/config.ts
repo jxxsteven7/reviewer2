@@ -24,6 +24,9 @@ export interface Config {
   // Where the database and its snapshots are kept, or null for a database in memory, which is
   // lost when the server stops (docs/architecture.md).
   dataDir: string | null;
+  // A directory to read newer copies of ACKNOWLEDGMENTS.md and SPONSORS.md from, or null for the
+  // ones the build bundled (thanks.ts).
+  contentDir: string | null;
   // The port of the status page, or null when it is off (docs/architecture.md).
   statusPort: number | null;
   // The server's secret, which email fingerprints are made with, and the mailer's socket. Without
@@ -125,6 +128,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // A relative path is taken from the repository's root, as the defaults above are, wherever the
     // server is started from: `npm run dev` starts it in server/.
     dataDir: env.DATA_DIR?.trim() ? resolve(root, env.DATA_DIR.trim()) : null,
+    contentDir: env.CONTENT_DIR?.trim() ? resolve(root, env.CONTENT_DIR.trim()) : null,
     statusPort,
     secret: serverSecret(env),
     mailerSocket: mailerSocket(env.MAILER_SOCKET),

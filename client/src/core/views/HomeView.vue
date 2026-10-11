@@ -8,6 +8,7 @@ import AcknowledgmentsList from '../components/AcknowledgmentsList.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import SendFeedback from '../components/SendFeedback.vue';
+import SponsorsList from '../components/SponsorsList.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { storedLanguage } from '../i18n';
@@ -19,10 +20,10 @@ import PublicRooms from './PublicRooms.vue';
 // The home page: the tagline, the first game on a big sticker with the games to come below it,
 // the ways into a room, by its number or from the list of public rooms, and footnotes, which name
 // the author, offer a way to buy them a cola, the way to send them feedback and, folded, the
-// acknowledgments. On a wide screen the games stand on the right, beside the rest. The WeChat
-// reward code is bundled with the page, as is everything it shows, and kept as the author gave it
-// but for its metadata: WeChat reads it when a player presses and holds it, which a smaller or
-// recompressed copy could spoil.
+// acknowledgments and the sponsors. On a wide screen the games stand on the right, beside the rest.
+// The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
+// gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
+// or recompressed copy could spoil.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const chosen = ref(storedLanguage() !== null);
@@ -77,6 +78,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
       <p class="num">{{ t('footer.version', { version }) }}</p>
       <SendFeedback page="home" />
       <AcknowledgmentsList />
+      <SponsorsList @tip="tipping = true" />
     </footer>
 
     <UiSheet :open="tipping" :title="t('footer.tip')" @close="tipping = false">
@@ -243,10 +245,10 @@ ol {
   gap: 0 var(--space-2);
 }
 
-/* The feedback button and the fold of the acknowledgments line up with the footnotes around them;
-   the list that the fold opens keeps to the column. */
+/* The feedback button and the folds of the lists of thanks line up with the footnotes around them;
+   the list that a fold opens keeps to the column. */
 .footnotes > :deep(.button),
-.footnotes > :deep(.acknowledgments > summary) {
+.footnotes > :deep(.fold > summary) {
   margin-left: calc(-1 * var(--space-2));
 }
 

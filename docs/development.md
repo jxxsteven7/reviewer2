@@ -50,6 +50,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `PUBLIC_DIR` [`client/dist`] | The built front end |
 | `WORDS_DIR` [`words`] | The word lists |
 | `DATA_DIR` [off] | An existing directory for the database, snapshots and avatars ([architecture.md](architecture.md#data)); unset, data is lost at every stop |
+| `CONTENT_DIR` [off] | A directory with newer copies of `ACKNOWLEDGMENTS.md` and `SPONSORS.md`, which the home page shows without a new build or a restart; a file there that is missing or can't be used leaves the one the build bundled ([architecture.md](architecture.md#lists-of-thanks)) |
 | `ROOMS_PER_MINUTE` [5], `FEEDBACK_PER_10_MINUTES` [3], `ACCOUNTS_PER_HOUR` [5] | Limits per address; raise them where many people share one |
 | `MAX_FEEDBACK` [10000] | How many pieces of feedback the server keeps, with 5 KB for each on average, before it takes no more; none is ever deleted, so raise it when the server is full |
 | `STATUS_PORT` [off] | The operator's status page, on `127.0.0.1` only ([architecture.md](architecture.md#status)) |
@@ -89,7 +90,7 @@ Feedback and acknowledgments are archives, so no command deletes or changes them
 
 ## Acknowledgments
 
-`ACKNOWLEDGMENTS.md` is the list of thanks, which the home page shows as the build bundles it. `feedback adopt` and `acknowledgments add` print an entry for it and the section to put it in: replace `<what they did>` with a few words, add the line and open a PR. The sections are `## Helpful discussions`, `## Data` and `## Pilot study`, after the introduction; an entry is one line:
+`ACKNOWLEDGMENTS.md` is the list of thanks, which the home page shows ([architecture.md](architecture.md#lists-of-thanks)). `feedback adopt` and `acknowledgments add` print an entry for it and the section to put it in: replace `<what they did>` with a few words, add the line and open a PR. The sections are `## Helpful discussions`, `## Data` and `## Pilot study`, after the introduction; an entry is one line:
 
 ```markdown
 - [Alice](https://alice.example) — suggested public rooms (#40)
@@ -98,6 +99,19 @@ Feedback and acknowledgments are archives, so no command deletes or changes them
 ```
 
 A name follows the nickname rules, with every ASCII punctuation character escaped (`Dr\. Who`), as the commands print it; a link starts with `https://`, with `(` and `)` percent-encoded, as they print it too, and holds no `\`. What they did is English in printable ASCII, without Markdown, emoji codes or web addresses; `#40`, after a space or a bracket, becomes a link on the home page. The first entry, under its heading, replaces `_No one yet._`. `npm test` checks the file and names each line that breaks the rules.
+
+## Sponsors
+
+`SPONSORS.md` has two sections after the introduction. `.github/workflows/sponsors.yml` writes `## GitHub Sponsors` every day, between the lines `<!-- start of GitHub Sponsors, ... -->` and `<!-- end of GitHub Sponsors -->`, and takes out `_No one yet._` or puts it back; leave all of that to it. Below those lines, add those who sponsor in other ways and ask to be named, by the rules of a name in the acknowledgments:
+
+```markdown
+## Other ways
+
+- [Alice](https://alice.example)
+- Bob
+```
+
+The workflow needs the repository secret `SPONSOR_TOKEN` ([maintainers.md](maintainers.md#sponsors)); without it, it does nothing. It also runs from the Actions tab, and `SPONSOR_TOKEN=<token> node scripts/update-sponsors.mjs` brings the file up to date locally. `npm test` checks the file as it checks the acknowledgments.
 
 ## Testing on a phone
 

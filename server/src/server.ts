@@ -19,6 +19,7 @@ import { createRequestHandler } from './http';
 import { log as defaultLog } from './log';
 import { collectStats, type Stats } from './stats';
 import type { FeedbackStore } from './store/feedback';
+import { ThanksLists } from './thanks';
 
 // One HTTP server on one port for both the front end and Socket.IO (docs/rules/constraints.md),
 // put together as docs/architecture.md describes: the HTTP handler for everything that isn't
@@ -47,6 +48,8 @@ export interface AppOptions
   // Accounts, which keep their data in the same database. Without them, the server has no
   // account API and every player is a guest.
   accounts?: Accounts;
+  // The lists of thanks for the home page; by default, the ones the build bundled.
+  lists?: ThanksLists;
   rng?: Rng;
   now?: () => number;
   // The timers for the games' deadlines, which go by `now`.
@@ -84,6 +87,8 @@ export function createAppServer(options: AppOptions): AppServer {
     createRequestHandler({
       publicDir: options.publicDir,
       version: options.version,
+      lists: options.lists ?? new ThanksLists(null, log),
+      log,
       ...(accounts && { accounts: createAccountApi({ accounts, secureCookies: cookieSecure, trustProxy, log }) }),
     }),
   );

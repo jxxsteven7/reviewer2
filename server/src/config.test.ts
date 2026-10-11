@@ -210,3 +210,16 @@ describe('DATA_DIR', () => {
     expect(loadConfig({ DATA_DIR: 'data' }).dataDir).toBe(join(root, 'data'));
   });
 });
+
+describe('CONTENT_DIR', () => {
+  test('leaves the lists of thanks as the build bundled them when it is unset, empty or blank', () => {
+    for (const CONTENT_DIR of [undefined, '', '  ']) {
+      expect(loadConfig({ CONTENT_DIR }).contentDir, JSON.stringify(CONTENT_DIR)).toBeNull();
+    }
+  });
+
+  test('is a directory, taken from the repository root when it is relative', () => {
+    expect(loadConfig({ CONTENT_DIR: ' /srv/lists/ ' }).contentDir).toBe('/srv/lists');
+    expect(loadConfig({ CONTENT_DIR: 'lists' }).contentDir).toBe(join(root, 'lists'));
+  });
+});

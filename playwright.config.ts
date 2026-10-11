@@ -36,6 +36,9 @@ process.env.E2E_SERVER_LOG ||= join(import.meta.dirname, 'test-results', `server
 process.env.E2E_MAIL_LOG ||= join(import.meta.dirname, 'test-results', `mails-${PORT}.jsonl`);
 // The server's data directory, on which a test runs the operator's command.
 process.env.E2E_DATA_DIR ||= join(import.meta.dirname, 'test-results', `data-${PORT}`);
+// The directory that the server reads newer lists of thanks from (CONTENT_DIR), where a test writes
+// them.
+process.env.E2E_CONTENT_DIR ||= join(import.meta.dirname, 'test-results', `content-${PORT}`);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -66,6 +69,7 @@ export default defineConfig({
       E2E_SERVER_LOG: process.env.E2E_SERVER_LOG,
       E2E_MAIL_LOG: process.env.E2E_MAIL_LOG,
       E2E_DATA_DIR: process.env.E2E_DATA_DIR,
+      E2E_CONTENT_DIR: process.env.E2E_CONTENT_DIR,
     },
   },
 });
