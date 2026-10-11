@@ -737,39 +737,44 @@ describe('the word list check', async () => {
     expect(clashes).toBeLessThan(words.length * (words.length - 1) - 200);
   });
 
-  test('finds the same words that clash as the game in every list of the library', () => {
-    const dir = join(import.meta.dirname, '..', '..', '..', 'words');
-    const library = loadWordLibrary(dir);
-    const files = readdirSync(dir).filter((file) => file.endsWith('.json'));
+  // One test for each list of the library, since comparing every pair of terms takes a while,
+  // and a test for the whole library would take longer with every list that it gains.
+  const dir = join(import.meta.dirname, '..', '..', '..', 'words');
+  const files = readdirSync(dir).filter((file) => file.endsWith('.json'));
+  let library: WordLibrary | undefined;
+
+  test('finds the lists of the library', () => {
     expect(files.length).toBeGreaterThan(0);
+  });
+
+  test.each(files)('finds the same words that clash as the game in %s', (file) => {
+    library ??= loadWordLibrary(dir);
     const pairKey = (a: string, b: string) => [wordKey(a), wordKey(b)].sort().join(' | ');
-    for (const file of files) {
-      const data = JSON.parse(readFileSync(join(dir, file), 'utf8')) as WordListData;
-      for (const language of LANGUAGES) {
-        const other = LANGUAGES.find((each) => each !== language) as Language;
-        const terms = data.terms.filter((term) => term[language]);
-        const entries = terms.map((term) =>
-          check.clashEntry(
-            term[language] as string,
-            term[other] ? [term[other]] : [],
-            LANGUAGES.flatMap((each) => term.forms?.[each] ?? []),
-          ),
-        );
-        const script = new Set<string>();
-        entries.forEach((a, i) =>
-          entries.forEach((b, j) => {
-            if (i < j && check.clash(a, b)) script.add(pairKey(terms[i]?.[language] ?? '', terms[j]?.[language] ?? ''));
-          }),
-        );
-        const pool = library.pool([data.id], language);
-        const game = new Set<string>();
-        pool.forEach((a, i) =>
-          pool.forEach((b, j) => {
-            if (i < j && cardsClash(a, b)) game.add(pairKey(a.word, b.word));
-          }),
-        );
-        expect(script, `${file} in ${language}`).toEqual(game);
-      }
+    const data = JSON.parse(readFileSync(join(dir, file), 'utf8')) as WordListData;
+    for (const language of LANGUAGES) {
+      const other = LANGUAGES.find((each) => each !== language) as Language;
+      const terms = data.terms.filter((term) => term[language]);
+      const entries = terms.map((term) =>
+        check.clashEntry(
+          term[language] as string,
+          term[other] ? [term[other]] : [],
+          LANGUAGES.flatMap((each) => term.forms?.[each] ?? []),
+        ),
+      );
+      const script = new Set<string>();
+      entries.forEach((a, i) =>
+        entries.forEach((b, j) => {
+          if (i < j && check.clash(a, b)) script.add(pairKey(terms[i]?.[language] ?? '', terms[j]?.[language] ?? ''));
+        }),
+      );
+      const pool = library.pool([data.id], language);
+      const game = new Set<string>();
+      pool.forEach((a, i) =>
+        pool.forEach((b, j) => {
+          if (i < j && cardsClash(a, b)) game.add(pairKey(a.word, b.word));
+        }),
+      );
+      expect(script, `${file} in ${language}`).toEqual(game);
     }
   });
 });

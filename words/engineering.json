@@ -1,0 +1,1397 @@
+{
+  "id": "engineering",
+  "name": {
+    "zh": "工程",
+    "en": "Engineering"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "engineer",
+      "zh": "工程师",
+      "en": "Engineer",
+      "forms": { "en": ["engineering"] }
+    },
+    {
+      "id": "electrician",
+      "zh": "电工",
+      "en": "Electrician"
+    },
+    {
+      "id": "inductance",
+      "zh": "电感",
+      "en": "Inductance",
+      "forms": { "en": ["inductor", "inductive"] }
+    },
+    {
+      "id": "resistor",
+      "zh": "电阻器",
+      "en": "Resistor"
+    },
+    {
+      "id": "potentiometer",
+      "zh": "电位器",
+      "en": "Potentiometer"
+    },
+    {
+      "id": "relay",
+      "zh": "继电器",
+      "en": "Relay"
+    },
+    {
+      "id": "amplifier",
+      "zh": "放大器",
+      "en": "Amplifier",
+      "forms": { "en": ["amplify", "amplification"] }
+    },
+    {
+      "id": "op-amp",
+      "zh": "运算放大器",
+      "en": "Op amp",
+      "forms": { "zh": ["运放"], "en": ["operational amplifier"] }
+    },
+    {
+      "id": "rectifier",
+      "zh": "整流器",
+      "en": "Rectifier",
+      "forms": { "en": ["rectify", "rectification"] }
+    },
+    {
+      "id": "inverter",
+      "zh": "逆变器",
+      "en": "Inverter"
+    },
+    {
+      "id": "power-supply",
+      "zh": "电源",
+      "en": "Power supply"
+    },
+    {
+      "id": "ac",
+      "zh": "交流电",
+      "en": "AC",
+      "forms": { "en": ["alternating current"] }
+    },
+    {
+      "id": "dc",
+      "zh": "直流电",
+      "en": "DC",
+      "forms": { "en": ["direct current"] }
+    },
+    {
+      "id": "grounding",
+      "zh": "接地",
+      "en": "Grounding"
+    },
+    {
+      "id": "power-grid",
+      "zh": "电网",
+      "en": "Power grid"
+    },
+    {
+      "id": "smart-grid",
+      "zh": "智能电网",
+      "en": "Smart grid"
+    },
+    {
+      "id": "substation",
+      "zh": "变电站",
+      "en": "Substation"
+    },
+    {
+      "id": "power-line",
+      "zh": "输电线",
+      "en": "Power line"
+    },
+    {
+      "id": "high-voltage",
+      "zh": "高压",
+      "en": "High voltage"
+    },
+    {
+      "id": "blackout",
+      "zh": "停电",
+      "en": "Blackout"
+    },
+    {
+      "id": "surge",
+      "zh": "浪涌",
+      "en": "Surge"
+    },
+    {
+      "id": "kilowatt-hour",
+      "zh": "千瓦时",
+      "en": "Kilowatt-hour",
+      "forms": { "en": ["kWh"] }
+    },
+    {
+      "id": "power-factor",
+      "zh": "功率因数",
+      "en": "Power factor"
+    },
+    {
+      "id": "electric-arc",
+      "zh": "电弧",
+      "en": "Electric arc"
+    },
+    {
+      "id": "spark",
+      "zh": "电火花",
+      "en": "Spark"
+    },
+    {
+      "id": "plug",
+      "zh": "插头",
+      "en": "Plug"
+    },
+    {
+      "id": "wire",
+      "zh": "导线",
+      "en": "Wire",
+      "forms": { "en": ["wiring"] }
+    },
+    {
+      "id": "cable",
+      "zh": "电缆",
+      "en": "Cable"
+    },
+    {
+      "id": "charging",
+      "zh": "充电",
+      "en": "Charging"
+    },
+    {
+      "id": "welding",
+      "zh": "焊接",
+      "en": "Welding",
+      "forms": { "en": ["weld", "welder"] }
+    },
+    {
+      "id": "soldering-iron",
+      "zh": "电烙铁",
+      "en": "Soldering iron"
+    },
+    {
+      "id": "breadboard",
+      "zh": "面包板",
+      "en": "Breadboard"
+    },
+    {
+      "id": "pcb",
+      "zh": "PCB",
+      "en": "PCB",
+      "forms": { "zh": ["印制电路板"], "en": ["printed circuit board"] }
+    },
+    {
+      "id": "mcu",
+      "zh": "单片机",
+      "en": "MCU",
+      "forms": { "en": ["microcontroller"] }
+    },
+    {
+      "id": "fpga",
+      "zh": "FPGA",
+      "en": "FPGA",
+      "forms": { "zh": ["现场可编程门阵列"], "en": ["field-programmable gate array"] }
+    },
+    {
+      "id": "embedded",
+      "zh": "嵌入式",
+      "en": "Embedded"
+    },
+    {
+      "id": "raspberry-pi",
+      "zh": "树莓派",
+      "en": "Raspberry Pi"
+    },
+    {
+      "id": "arduino",
+      "zh": "Arduino",
+      "en": "Arduino"
+    },
+    {
+      "id": "mems",
+      "zh": "MEMS",
+      "en": "MEMS",
+      "forms": { "zh": ["微机电系统"], "en": ["microelectromechanical systems"] }
+    },
+    {
+      "id": "rfid",
+      "zh": "RFID",
+      "en": "RFID",
+      "forms": { "zh": ["射频识别"], "en": ["radio-frequency identification"] }
+    },
+    {
+      "id": "oled",
+      "zh": "OLED",
+      "en": "OLED",
+      "forms": { "zh": ["有机发光二极管"], "en": ["organic light-emitting diode"] }
+    },
+    {
+      "id": "thermistor",
+      "zh": "热敏电阻",
+      "en": "Thermistor"
+    },
+    {
+      "id": "accelerometer",
+      "zh": "加速度计",
+      "en": "Accelerometer"
+    },
+    {
+      "id": "microphone",
+      "zh": "麦克风",
+      "en": "Microphone",
+      "forms": { "en": ["mic"] }
+    },
+    {
+      "id": "loudspeaker",
+      "zh": "扬声器",
+      "en": "Loudspeaker"
+    },
+    {
+      "id": "remote-control",
+      "zh": "遥控器",
+      "en": "Remote control"
+    },
+    {
+      "id": "waveguide",
+      "zh": "波导",
+      "en": "Waveguide"
+    },
+    {
+      "id": "thyristor",
+      "zh": "晶闸管",
+      "en": "Thyristor"
+    },
+    {
+      "id": "mosfet",
+      "zh": "MOSFET",
+      "en": "MOSFET",
+      "forms": { "zh": ["金属氧化物半导体场效应晶体管"], "en": ["metal-oxide-semiconductor field-effect transistor"] }
+    },
+    {
+      "id": "optocoupler",
+      "zh": "光耦",
+      "en": "Optocoupler"
+    },
+    {
+      "id": "buzzer",
+      "zh": "蜂鸣器",
+      "en": "Buzzer"
+    },
+    {
+      "id": "solenoid",
+      "zh": "螺线管",
+      "en": "Solenoid"
+    },
+    {
+      "id": "coil",
+      "zh": "线圈",
+      "en": "Coil"
+    },
+    {
+      "id": "ups",
+      "zh": "UPS",
+      "en": "UPS",
+      "forms": { "zh": ["不间断电源"], "en": ["uninterruptible power supply"] }
+    },
+    {
+      "id": "vacuum-tube",
+      "zh": "电子管",
+      "en": "Vacuum tube"
+    },
+    {
+      "id": "tape-out",
+      "zh": "流片",
+      "en": "Tape-out"
+    },
+    {
+      "id": "base-station",
+      "zh": "基站",
+      "en": "Base station"
+    },
+    {
+      "id": "telegraph",
+      "zh": "电报",
+      "en": "Telegraph"
+    },
+    {
+      "id": "morse-code",
+      "zh": "摩尔斯电码",
+      "en": "Morse code"
+    },
+    {
+      "id": "walkie-talkie",
+      "zh": "对讲机",
+      "en": "Walkie-talkie"
+    },
+    {
+      "id": "crosstalk",
+      "zh": "串扰",
+      "en": "Crosstalk"
+    },
+    {
+      "id": "shielding",
+      "zh": "屏蔽",
+      "en": "Shielding",
+      "forms": { "en": ["shield"] }
+    },
+    {
+      "id": "sampling",
+      "zh": "采样",
+      "en": "Sampling"
+    },
+    {
+      "id": "analog-signal",
+      "zh": "模拟信号",
+      "en": "Analog signal"
+    },
+    {
+      "id": "modulation",
+      "zh": "调制",
+      "en": "Modulation",
+      "forms": { "en": ["modulate", "modulator"] }
+    },
+    {
+      "id": "carrier-wave",
+      "zh": "载波",
+      "en": "Carrier wave"
+    },
+    {
+      "id": "snr",
+      "zh": "信噪比",
+      "en": "SNR",
+      "forms": { "en": ["signal-to-noise ratio"] }
+    },
+    {
+      "id": "gain",
+      "zh": "增益",
+      "en": "Gain"
+    },
+    {
+      "id": "feedback",
+      "zh": "反馈",
+      "en": "Feedback"
+    },
+    {
+      "id": "closed-loop",
+      "zh": "闭环",
+      "en": "Closed loop"
+    },
+    {
+      "id": "open-loop",
+      "zh": "开环",
+      "en": "Open loop"
+    },
+    {
+      "id": "controller",
+      "zh": "控制器",
+      "en": "Controller"
+    },
+    {
+      "id": "actuator",
+      "zh": "执行器",
+      "en": "Actuator"
+    },
+    {
+      "id": "pid",
+      "zh": "PID",
+      "en": "PID",
+      "forms": { "zh": ["比例积分微分"], "en": ["proportional-integral-derivative"] }
+    },
+    {
+      "id": "plc",
+      "zh": "PLC",
+      "en": "PLC",
+      "forms": { "zh": ["可编程逻辑控制器"], "en": ["programmable logic controller"] }
+    },
+    {
+      "id": "overshoot",
+      "zh": "超调",
+      "en": "Overshoot"
+    },
+    {
+      "id": "step-response",
+      "zh": "阶跃响应",
+      "en": "Step response"
+    },
+    {
+      "id": "kalman-filter",
+      "zh": "卡尔曼滤波",
+      "en": "Kalman filter"
+    },
+    {
+      "id": "state-space",
+      "zh": "状态空间",
+      "en": "State space"
+    },
+    {
+      "id": "bode-plot",
+      "zh": "伯德图",
+      "en": "Bode plot"
+    },
+    {
+      "id": "root-locus",
+      "zh": "根轨迹",
+      "en": "Root locus"
+    },
+    {
+      "id": "nyquist-plot",
+      "zh": "奈奎斯特图",
+      "en": "Nyquist plot"
+    },
+    {
+      "id": "thermostat",
+      "zh": "恒温器",
+      "en": "Thermostat"
+    },
+    {
+      "id": "governor",
+      "zh": "调速器",
+      "en": "Governor"
+    },
+    {
+      "id": "watchdog",
+      "zh": "看门狗",
+      "en": "Watchdog"
+    },
+    {
+      "id": "reliability",
+      "zh": "可靠性",
+      "en": "Reliability",
+      "forms": { "en": ["reliable"] }
+    },
+    {
+      "id": "failure",
+      "zh": "失效",
+      "en": "Failure"
+    },
+    {
+      "id": "mechatronics",
+      "zh": "机电一体化",
+      "en": "Mechatronics"
+    },
+    {
+      "id": "schematic",
+      "zh": "原理图",
+      "en": "Schematic"
+    },
+    {
+      "id": "maintenance",
+      "zh": "维修",
+      "en": "Maintenance",
+      "forms": { "en": ["maintain"] }
+    },
+    {
+      "id": "teardown",
+      "zh": "拆解",
+      "en": "Teardown"
+    },
+    {
+      "id": "manual",
+      "zh": "说明书",
+      "en": "Manual"
+    },
+    {
+      "id": "gear",
+      "zh": "齿轮",
+      "en": "Gear"
+    },
+    {
+      "id": "bearing",
+      "zh": "轴承",
+      "en": "Bearing"
+    },
+    {
+      "id": "crankshaft",
+      "zh": "曲轴",
+      "en": "Crankshaft"
+    },
+    {
+      "id": "piston",
+      "zh": "活塞",
+      "en": "Piston"
+    },
+    {
+      "id": "cam",
+      "zh": "凸轮",
+      "en": "Cam"
+    },
+    {
+      "id": "connecting-rod",
+      "zh": "连杆",
+      "en": "Connecting rod"
+    },
+    {
+      "id": "coupling",
+      "zh": "联轴器",
+      "en": "Coupling"
+    },
+    {
+      "id": "clutch",
+      "zh": "离合器",
+      "en": "Clutch"
+    },
+    {
+      "id": "gearbox",
+      "zh": "变速箱",
+      "en": "Gearbox"
+    },
+    {
+      "id": "drive-shaft",
+      "zh": "传动轴",
+      "en": "Drive shaft"
+    },
+    {
+      "id": "conveyor-belt",
+      "zh": "传送带",
+      "en": "Conveyor belt"
+    },
+    {
+      "id": "chain",
+      "zh": "链条",
+      "en": "Chain"
+    },
+    {
+      "id": "screw",
+      "zh": "螺丝",
+      "en": "Screw"
+    },
+    {
+      "id": "bolt",
+      "zh": "螺栓",
+      "en": "Bolt"
+    },
+    {
+      "id": "nut",
+      "zh": "螺母",
+      "en": "Nut"
+    },
+    {
+      "id": "washer",
+      "zh": "垫圈",
+      "en": "Washer"
+    },
+    {
+      "id": "rivet",
+      "zh": "铆钉",
+      "en": "Rivet"
+    },
+    {
+      "id": "screwdriver",
+      "zh": "螺丝刀",
+      "en": "Screwdriver"
+    },
+    {
+      "id": "wrench",
+      "zh": "扳手",
+      "en": "Wrench"
+    },
+    {
+      "id": "pliers",
+      "zh": "钳子",
+      "en": "Pliers"
+    },
+    {
+      "id": "jack",
+      "zh": "千斤顶",
+      "en": "Jack"
+    },
+    {
+      "id": "ratchet",
+      "zh": "棘轮",
+      "en": "Ratchet"
+    },
+    {
+      "id": "flywheel",
+      "zh": "飞轮",
+      "en": "Flywheel"
+    },
+    {
+      "id": "mainspring",
+      "zh": "发条",
+      "en": "Mainspring"
+    },
+    {
+      "id": "valve",
+      "zh": "阀门",
+      "en": "Valve"
+    },
+    {
+      "id": "pump",
+      "zh": "泵",
+      "en": "Pump"
+    },
+    {
+      "id": "compressor",
+      "zh": "压缩机",
+      "en": "Compressor"
+    },
+    {
+      "id": "turbine",
+      "zh": "涡轮机",
+      "en": "Turbine"
+    },
+    {
+      "id": "turbocharger",
+      "zh": "涡轮增压",
+      "en": "Turbocharger",
+      "forms": { "en": ["turbo"] }
+    },
+    {
+      "id": "engine",
+      "zh": "发动机",
+      "en": "Engine"
+    },
+    {
+      "id": "steam-engine",
+      "zh": "蒸汽机",
+      "en": "Steam engine"
+    },
+    {
+      "id": "diesel-engine",
+      "zh": "柴油机",
+      "en": "Diesel engine"
+    },
+    {
+      "id": "jet-engine",
+      "zh": "喷气发动机",
+      "en": "Jet engine"
+    },
+    {
+      "id": "spark-plug",
+      "zh": "火花塞",
+      "en": "Spark plug"
+    },
+    {
+      "id": "carburetor",
+      "zh": "化油器",
+      "en": "Carburetor",
+      "forms": { "en": ["carburettor"] }
+    },
+    {
+      "id": "radiator",
+      "zh": "散热器",
+      "en": "Radiator"
+    },
+    {
+      "id": "horsepower",
+      "zh": "马力",
+      "en": "Horsepower",
+      "forms": { "en": ["hp"] }
+    },
+    {
+      "id": "rpm",
+      "zh": "转速",
+      "en": "RPM",
+      "forms": { "en": ["revolutions per minute"] }
+    },
+    {
+      "id": "hydraulics",
+      "zh": "液压",
+      "en": "Hydraulics"
+    },
+    {
+      "id": "pneumatics",
+      "zh": "气动",
+      "en": "Pneumatics"
+    },
+    {
+      "id": "lubrication",
+      "zh": "润滑",
+      "en": "Lubrication",
+      "forms": { "en": ["lubricant", "lubricate"] }
+    },
+    {
+      "id": "o-ring",
+      "zh": "O形圈",
+      "en": "O-ring"
+    },
+    {
+      "id": "wear",
+      "zh": "磨损",
+      "en": "Wear"
+    },
+    {
+      "id": "kinematics",
+      "zh": "运动学",
+      "en": "Kinematics"
+    },
+    {
+      "id": "boiler",
+      "zh": "锅炉",
+      "en": "Boiler"
+    },
+    {
+      "id": "heat-exchanger",
+      "zh": "换热器",
+      "en": "Heat exchanger"
+    },
+    {
+      "id": "cooling-tower",
+      "zh": "冷却塔",
+      "en": "Cooling tower"
+    },
+    {
+      "id": "refrigeration",
+      "zh": "制冷",
+      "en": "Refrigeration",
+      "forms": { "en": ["refrigerant"] }
+    },
+    {
+      "id": "hvac",
+      "zh": "暖通",
+      "en": "HVAC",
+      "forms": { "en": ["heating, ventilation, and air conditioning"] }
+    },
+    {
+      "id": "ventilation",
+      "zh": "通风",
+      "en": "Ventilation",
+      "forms": { "en": ["ventilate"] }
+    },
+    {
+      "id": "heat-transfer",
+      "zh": "传热",
+      "en": "Heat transfer"
+    },
+    {
+      "id": "aerodynamics",
+      "zh": "空气动力学",
+      "en": "Aerodynamics"
+    },
+    {
+      "id": "nozzle",
+      "zh": "喷嘴",
+      "en": "Nozzle"
+    },
+    {
+      "id": "flange",
+      "zh": "法兰",
+      "en": "Flange"
+    },
+    {
+      "id": "fastener",
+      "zh": "紧固件",
+      "en": "Fastener"
+    },
+    {
+      "id": "shaft",
+      "zh": "轴",
+      "en": "Shaft"
+    },
+    {
+      "id": "planetary-gear",
+      "zh": "行星齿轮",
+      "en": "Planetary gear"
+    },
+    {
+      "id": "fixture",
+      "zh": "夹具",
+      "en": "Fixture"
+    },
+    {
+      "id": "vise",
+      "zh": "台钳",
+      "en": "Vise"
+    },
+    {
+      "id": "saw",
+      "zh": "锯子",
+      "en": "Saw"
+    },
+    {
+      "id": "sandpaper",
+      "zh": "砂纸",
+      "en": "Sandpaper"
+    },
+    {
+      "id": "tape-measure",
+      "zh": "卷尺",
+      "en": "Tape measure"
+    },
+    {
+      "id": "spirit-level",
+      "zh": "水平仪",
+      "en": "Spirit level"
+    },
+    {
+      "id": "power-drill",
+      "zh": "电钻",
+      "en": "Power drill"
+    },
+    {
+      "id": "stress",
+      "zh": "应力",
+      "en": "Stress"
+    },
+    {
+      "id": "strain",
+      "zh": "应变",
+      "en": "Strain"
+    },
+    {
+      "id": "shear",
+      "zh": "剪切",
+      "en": "Shear"
+    },
+    {
+      "id": "torsion",
+      "zh": "扭转",
+      "en": "Torsion",
+      "forms": { "en": ["torsional"] }
+    },
+    {
+      "id": "bending-moment",
+      "zh": "弯矩",
+      "en": "Bending moment"
+    },
+    {
+      "id": "buckling",
+      "zh": "屈曲",
+      "en": "Buckling"
+    },
+    {
+      "id": "stiffness",
+      "zh": "刚度",
+      "en": "Stiffness",
+      "forms": { "en": ["stiff"] }
+    },
+    {
+      "id": "strength",
+      "zh": "强度",
+      "en": "Strength"
+    },
+    {
+      "id": "safety-factor",
+      "zh": "安全系数",
+      "en": "Safety factor"
+    },
+    {
+      "id": "load",
+      "zh": "载荷",
+      "en": "Load"
+    },
+    {
+      "id": "finite-element",
+      "zh": "有限元",
+      "en": "Finite element",
+      "forms": { "en": ["FEM"] }
+    },
+    {
+      "id": "factory",
+      "zh": "工厂",
+      "en": "Factory"
+    },
+    {
+      "id": "assembly-line",
+      "zh": "装配线",
+      "en": "Assembly line"
+    },
+    {
+      "id": "just-in-time",
+      "zh": "准时制",
+      "en": "Just-in-time",
+      "forms": { "en": ["JIT"] }
+    },
+    {
+      "id": "industry-40",
+      "zh": "工业4.0",
+      "en": "Industry 4.0"
+    },
+    {
+      "id": "machine-tool",
+      "zh": "机床",
+      "en": "Machine tool"
+    },
+    {
+      "id": "lathe",
+      "zh": "车床",
+      "en": "Lathe"
+    },
+    {
+      "id": "cnc",
+      "zh": "数控",
+      "en": "CNC",
+      "forms": { "en": ["computer numerical control"] }
+    },
+    {
+      "id": "drill-bit",
+      "zh": "钻头",
+      "en": "Drill bit"
+    },
+    {
+      "id": "mold",
+      "zh": "模具",
+      "en": "Mold",
+      "forms": { "en": ["mould"] }
+    },
+    {
+      "id": "casting",
+      "zh": "铸造",
+      "en": "Casting"
+    },
+    {
+      "id": "forging",
+      "zh": "锻造",
+      "en": "Forging",
+      "forms": { "en": ["forge"] }
+    },
+    {
+      "id": "stamping",
+      "zh": "冲压",
+      "en": "Stamping"
+    },
+    {
+      "id": "machining",
+      "zh": "机械加工",
+      "en": "Machining"
+    },
+    {
+      "id": "extrusion",
+      "zh": "挤出",
+      "en": "Extrusion",
+      "forms": { "en": ["extrude"] }
+    },
+    {
+      "id": "laser-cutting",
+      "zh": "激光切割",
+      "en": "Laser cutting"
+    },
+    {
+      "id": "grinding",
+      "zh": "磨削",
+      "en": "Grinding",
+      "forms": { "en": ["grind"] }
+    },
+    {
+      "id": "heat-treatment",
+      "zh": "热处理",
+      "en": "Heat treatment"
+    },
+    {
+      "id": "caliper",
+      "zh": "卡尺",
+      "en": "Caliper",
+      "forms": { "en": ["calliper"] }
+    },
+    {
+      "id": "micrometer",
+      "zh": "千分尺",
+      "en": "Micrometer"
+    },
+    {
+      "id": "blueprint",
+      "zh": "蓝图",
+      "en": "Blueprint"
+    },
+    {
+      "id": "cad",
+      "zh": "CAD",
+      "en": "CAD",
+      "forms": { "zh": ["计算机辅助设计"], "en": ["computer-aided design"] }
+    },
+    {
+      "id": "specification",
+      "zh": "规格",
+      "en": "Specification",
+      "forms": { "en": ["spec"] }
+    },
+    {
+      "id": "bridge",
+      "zh": "桥梁",
+      "en": "Bridge"
+    },
+    {
+      "id": "arch-bridge",
+      "zh": "拱桥",
+      "en": "Arch bridge"
+    },
+    {
+      "id": "beam",
+      "zh": "梁",
+      "en": "Beam"
+    },
+    {
+      "id": "truss",
+      "zh": "桁架",
+      "en": "Truss"
+    },
+    {
+      "id": "foundation",
+      "zh": "基础",
+      "en": "Foundation"
+    },
+    {
+      "id": "pile",
+      "zh": "桩",
+      "en": "Pile"
+    },
+    {
+      "id": "rebar",
+      "zh": "钢筋",
+      "en": "Rebar"
+    },
+    {
+      "id": "scaffolding",
+      "zh": "脚手架",
+      "en": "Scaffolding",
+      "forms": { "en": ["scaffold"] }
+    },
+    {
+      "id": "crane",
+      "zh": "起重机",
+      "en": "Crane"
+    },
+    {
+      "id": "excavator",
+      "zh": "挖掘机",
+      "en": "Excavator"
+    },
+    {
+      "id": "bulldozer",
+      "zh": "推土机",
+      "en": "Bulldozer"
+    },
+    {
+      "id": "road-roller",
+      "zh": "压路机",
+      "en": "Road roller"
+    },
+    {
+      "id": "hard-hat",
+      "zh": "安全帽",
+      "en": "Hard hat"
+    },
+    {
+      "id": "contractor",
+      "zh": "承包商",
+      "en": "Contractor"
+    },
+    {
+      "id": "tunnel",
+      "zh": "隧道",
+      "en": "Tunnel"
+    },
+    {
+      "id": "dam",
+      "zh": "大坝",
+      "en": "Dam"
+    },
+    {
+      "id": "levee",
+      "zh": "堤防",
+      "en": "Levee"
+    },
+    {
+      "id": "floodgate",
+      "zh": "水闸",
+      "en": "Floodgate"
+    },
+    {
+      "id": "aqueduct",
+      "zh": "渡槽",
+      "en": "Aqueduct"
+    },
+    {
+      "id": "sewer",
+      "zh": "下水道",
+      "en": "Sewer",
+      "forms": { "en": ["sewage", "sewerage"] }
+    },
+    {
+      "id": "drainage",
+      "zh": "排水",
+      "en": "Drainage",
+      "forms": { "en": ["drain"] }
+    },
+    {
+      "id": "highway",
+      "zh": "公路",
+      "en": "Highway"
+    },
+    {
+      "id": "viaduct",
+      "zh": "高架桥",
+      "en": "Viaduct"
+    },
+    {
+      "id": "interchange",
+      "zh": "立交桥",
+      "en": "Interchange"
+    },
+    {
+      "id": "subway",
+      "zh": "地铁",
+      "en": "Subway"
+    },
+    {
+      "id": "track-gauge",
+      "zh": "轨距",
+      "en": "Track gauge"
+    },
+    {
+      "id": "traffic-light",
+      "zh": "红绿灯",
+      "en": "Traffic light"
+    },
+    {
+      "id": "roundabout",
+      "zh": "环岛",
+      "en": "Roundabout"
+    },
+    {
+      "id": "toll-booth",
+      "zh": "收费站",
+      "en": "Toll booth"
+    },
+    {
+      "id": "skyscraper",
+      "zh": "摩天大楼",
+      "en": "Skyscraper"
+    },
+    {
+      "id": "damper",
+      "zh": "阻尼器",
+      "en": "Damper"
+    },
+    {
+      "id": "wind-tunnel",
+      "zh": "风洞",
+      "en": "Wind tunnel"
+    },
+    {
+      "id": "asphalt",
+      "zh": "沥青",
+      "en": "Asphalt"
+    },
+    {
+      "id": "brick",
+      "zh": "砖",
+      "en": "Brick"
+    },
+    {
+      "id": "dujiangyan",
+      "zh": "都江堰",
+      "en": "Dujiangyan"
+    },
+    {
+      "id": "cantilever",
+      "zh": "悬臂",
+      "en": "Cantilever"
+    },
+    {
+      "id": "retaining-wall",
+      "zh": "挡土墙",
+      "en": "Retaining wall"
+    },
+    {
+      "id": "waterproofing",
+      "zh": "防水",
+      "en": "Waterproofing",
+      "forms": { "en": ["waterproof"] }
+    },
+    {
+      "id": "culvert",
+      "zh": "涵洞",
+      "en": "Culvert"
+    },
+    {
+      "id": "water-tower",
+      "zh": "水塔",
+      "en": "Water tower"
+    },
+    {
+      "id": "roadbed",
+      "zh": "路基",
+      "en": "Roadbed"
+    },
+    {
+      "id": "zebra-crossing",
+      "zh": "斑马线",
+      "en": "Zebra crossing"
+    },
+    {
+      "id": "footbridge",
+      "zh": "人行天桥",
+      "en": "Footbridge"
+    },
+    {
+      "id": "ramp",
+      "zh": "匝道",
+      "en": "Ramp"
+    },
+    {
+      "id": "lane",
+      "zh": "车道",
+      "en": "Lane"
+    },
+    {
+      "id": "speed-limit",
+      "zh": "限速",
+      "en": "Speed limit"
+    },
+    {
+      "id": "traffic-jam",
+      "zh": "堵车",
+      "en": "Traffic jam"
+    },
+    {
+      "id": "aviation",
+      "zh": "航空",
+      "en": "Aviation"
+    },
+    {
+      "id": "aerospace",
+      "zh": "航空航天",
+      "en": "Aerospace"
+    },
+    {
+      "id": "wing",
+      "zh": "机翼",
+      "en": "Wing"
+    },
+    {
+      "id": "lift",
+      "zh": "升力",
+      "en": "Lift"
+    },
+    {
+      "id": "drag",
+      "zh": "阻力",
+      "en": "Drag"
+    },
+    {
+      "id": "propeller",
+      "zh": "螺旋桨",
+      "en": "Propeller"
+    },
+    {
+      "id": "helicopter",
+      "zh": "直升机",
+      "en": "Helicopter"
+    },
+    {
+      "id": "chassis",
+      "zh": "底盘",
+      "en": "Chassis"
+    },
+    {
+      "id": "suspension",
+      "zh": "悬架",
+      "en": "Suspension"
+    },
+    {
+      "id": "brake",
+      "zh": "刹车",
+      "en": "Brake",
+      "forms": { "en": ["braking"] }
+    },
+    {
+      "id": "steering-wheel",
+      "zh": "方向盘",
+      "en": "Steering wheel"
+    },
+    {
+      "id": "tire",
+      "zh": "轮胎",
+      "en": "Tire",
+      "forms": { "en": ["tyre"] }
+    },
+    {
+      "id": "airbag",
+      "zh": "安全气囊",
+      "en": "Airbag"
+    },
+    {
+      "id": "seat-belt",
+      "zh": "安全带",
+      "en": "Seat belt"
+    },
+    {
+      "id": "hybrid",
+      "zh": "混合动力",
+      "en": "Hybrid"
+    },
+    {
+      "id": "crash-test",
+      "zh": "碰撞测试",
+      "en": "Crash test"
+    },
+    {
+      "id": "odometer",
+      "zh": "里程表",
+      "en": "Odometer"
+    },
+    {
+      "id": "dashboard",
+      "zh": "仪表盘",
+      "en": "Dashboard"
+    },
+    {
+      "id": "hull",
+      "zh": "船体",
+      "en": "Hull"
+    },
+    {
+      "id": "keel",
+      "zh": "龙骨",
+      "en": "Keel"
+    },
+    {
+      "id": "submarine",
+      "zh": "潜艇",
+      "en": "Submarine"
+    },
+    {
+      "id": "throttle",
+      "zh": "油门",
+      "en": "Throttle"
+    },
+    {
+      "id": "turbofan",
+      "zh": "涡扇",
+      "en": "Turbofan"
+    },
+    {
+      "id": "landing-gear",
+      "zh": "起落架",
+      "en": "Landing gear"
+    },
+    {
+      "id": "fuselage",
+      "zh": "机身",
+      "en": "Fuselage"
+    },
+    {
+      "id": "cockpit",
+      "zh": "驾驶舱",
+      "en": "Cockpit"
+    },
+    {
+      "id": "rudder",
+      "zh": "舵",
+      "en": "Rudder"
+    },
+    {
+      "id": "flap",
+      "zh": "襟翼",
+      "en": "Flap"
+    },
+    {
+      "id": "stall",
+      "zh": "失速",
+      "en": "Stall"
+    },
+    {
+      "id": "sound-barrier",
+      "zh": "音障",
+      "en": "Sound barrier"
+    },
+    {
+      "id": "anchor",
+      "zh": "锚",
+      "en": "Anchor"
+    }
+  ]
+}
