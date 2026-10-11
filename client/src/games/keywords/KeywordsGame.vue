@@ -14,9 +14,10 @@ import MatchTable from '../../core/components/MatchTable.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
-import { act } from '../../core/socket';
+import { act, reconnecting } from '../../core/socket';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
+import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
@@ -30,9 +31,9 @@ import TurnStrip from './TurnStrip.vue';
 import { useKeywords, type Chooser } from './useKeywords';
 
 // A game in progress, and its result. The banner that says what is going on for the viewer, the
-// turn strip, the board and what the viewer can do now come first. On a wide screen the groups
-// stand on the left of the board and the clue log on its right; on a phone they open as sheets
-// from the two buttons in the bar at the bottom, so that the board comes first.
+// turn strip, the clock, the board and what the viewer can do now come first. On a wide screen the
+// groups stand on the left of the board and the clue log on its right; on a phone they open as
+// sheets from the two buttons in the bar under the board, so that the board comes first.
 //
 // In a match, its table sits beside the board while the game is on, above the groups on a wide
 // screen. Once the game has ended, the table follows the letters, with where each player's
@@ -164,7 +165,13 @@ const chosenByOthers = computed(() =>
       :match="match"
       @again="again"
     />
-    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" />
+    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" clock-apart />
+    <ClockBar
+      v-if="!game.result && game.clock"
+      :clock="game.clock"
+      class="sticky-clock"
+      :class="{ 'below-banner': reconnecting }"
+    />
     <template v-if="game.result && match">
       <MatchResults v-if="match.status !== 'on'" :room="room" />
       <MatchTable v-else :room="room" :describe="describe" class="between">
@@ -182,8 +189,7 @@ const chosenByOthers = computed(() =>
           :lang="HTML_LANG[room.language]"
           @select="choose"
         />
-        <!-- The bar stays within reach at the bottom of a phone's screen while the game is on. -->
-        <div class="actions" :class="{ sticky: !game.result }">
+        <div class="actions">
           <div class="who-row">
             <div class="me">
               <p class="who">
@@ -258,9 +264,44 @@ const chosenByOthers = computed(() =>
   min-width: 0;
 }
 
-/* The bar is kept low, so that it covers as little of the board as it can on a phone: the seat
-   line on one row, the chat and the panel buttons on the next, and then what the viewer can do.
-   The rows are drawn from the elements as they are, through display: contents. */
+/* The clock stays at the top of the screen while the page scrolls, and under the banner while the
+   page reconnects. It is kept thin, and its background reaches the edges of the screen, so that
+   no card shows through it beside the column. */
+.sticky-clock {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-top: var(--space-2);
+  padding: var(--space-1) 0;
+  background: var(--bg);
+  box-shadow: 0 0 0 100vmax var(--bg);
+  clip-path: inset(0 -100vmax);
+}
+
+.sticky-clock :deep(.seconds) {
+  min-height: 32px;
+}
+
+.sticky-clock.below-banner {
+  top: var(--banner-height);
+}
+
+/* During a game the page doesn't anchor its scroll position: when something above the board
+   changes, such as the clue that appears in the turn strip, WebKit's scroll anchoring moves the
+   page a moment later, taking the card from under a tap that is on its way. Whatever the page
+   scrolls or focuses into view, such as a card reached with the keyboard, stays below the clock
+   and the banner. The page is what scrolls, so the rules go on the root. */
+:global(html:has(.keywords-game)) {
+  overflow-anchor: none;
+}
+
+:global(html:has(.sticky-clock)) {
+  scroll-padding-top: calc(var(--banner-height) + 3rem);
+}
+
+/* The bar under the board: the seat line on one row, the chat and the panel buttons on the next,
+   and then what the viewer can do. The rows are drawn from the elements as they are, through
+   display: contents. */
 .actions {
   display: grid;
   grid-template-areas:
@@ -270,24 +311,7 @@ const chosenByOthers = computed(() =>
   grid-template-columns: auto auto auto minmax(0, 1fr);
   gap: var(--space-2);
   margin-top: var(--space-3);
-  padding: var(--space-2) 0 max(var(--space-2), env(safe-area-inset-bottom));
-  background: var(--bg);
-}
-
-.actions.sticky {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-}
-
-/* While the bar is stuck to the bottom, whatever the page scrolls or focuses into view stays
-   above it: the padding is the height the bar takes on a phone on a student's turn. And the
-   page doesn't anchor its scroll position: with the bar stuck, WebKit's scroll anchoring jumps
-   the page to its end while a font slice arrives or the bar changes, taking the card from under
-   a tap that is on its way. The page is what scrolls, so the rules go on the root. */
-:global(html:has(.actions.sticky)) {
-  overflow-anchor: none;
-  scroll-padding-bottom: 200px;
+  padding: var(--space-2) 0;
 }
 
 .who-row,

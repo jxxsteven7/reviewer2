@@ -53,6 +53,7 @@ Everything after the page load goes over Socket.IO, except the account API ([Acc
 |---|---|---|
 | `meta:feedback` | `kind`, `text`, `contact`?, `credit`?, `link`?, `publicIssue`?, `version`, `language`, `page` | Anyone ([Feedback](#feedback)) |
 | `meta:rooms` | | Anyone; the public rooms ([Public rooms](#public-rooms)) |
+| `meta:seats` | | Anyone; the rooms where they have a seat ([reconnecting](#the-handshake-and-reconnecting)) |
 | `room:create` | `game`, `language`, `fields`, `settings`?, `name` (guests), `play`, `match`?, `public`? | Anyone; `bad_settings`, `bad_match`, `account_required`, `public_barred` |
 | `room:join` | `code`; `name`, `play` (newcomers); `roomId` (returning) | Anyone; `removed`, `removed_recently`, `room_full`, `account_required`, `public_barred`, `name_required` |
 | `room:watch` | `code`, `roomId` (returning screen) | A screen; `removed`, `removed_recently`, `screens_full`; in a public room `account_required`, `public_barred`, `not_member` |
@@ -70,6 +71,8 @@ Everything after the page load goes over Socket.IO, except the account API ([Acc
 ## The handshake and reconnecting
 
 The handshake carries `{ token, code, roomId }` (a screen `{ watch: code, roomId }`), and a member's connection is put back into its room before any message runs. It only brings back: its one answer is `room:closed` with `expired` for a `roomId` the code no longer has, so the client always follows it with `room:join` or `room:watch`.
+
+The home page asks `meta:seats` once connected, after every reconnect and when it hears `room:closed` (a connection that came from a room's page is still in it), and offers a way back to each room where the connection still has a member's seat, never taking the player there by itself. Seats are found by the connection's key, its account's on every device, or by the guest seat its account would adopt; the answer gives each room's code, game and whether a game is on (`playing` until the room is back in the waiting room), at most 5, the newest first. It looks up no code, so it doesn't count against an address's codes.
 
 ## Games
 

@@ -70,6 +70,15 @@ export interface PublicRoom {
   playing: boolean;
 }
 
+// A room where the connection still has a seat, as the home page offers the way back to it
+// (meta:seats): nothing about anyone else, and `playing` from the start of a game until the room
+// is back in the waiting room, while the seat is kept however long its player is away.
+export interface SeatedRoom {
+  code: string;
+  game: string;
+  playing: boolean;
+}
+
 // What the server answers a message with: that it did what was asked, with whatever it has to
 // say about it, or that it didn't, with an error code. `language` comes with name_required alone:
 // it is the room's language, for the form that asks a newcomer for a name. `waitMs` comes with

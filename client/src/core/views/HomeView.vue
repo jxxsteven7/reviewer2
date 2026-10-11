@@ -12,15 +12,17 @@ import SponsorsList from '../components/SponsorsList.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { storedLanguage } from '../i18n';
+import BackToRoom from './BackToRoom.vue';
 import CreateRoom from './CreateRoom.vue';
 import JoinRoom from './JoinRoom.vue';
 import LanguageGate from './LanguageGate.vue';
 import PublicRooms from './PublicRooms.vue';
 
-// The home page: the tagline, the first game on a big sticker with the games to come below it,
-// the ways into a room, by its number or from the list of public rooms, and footnotes, which name
-// the author, offer a way to buy them a cola, the way to send them feedback and, folded, the
-// acknowledgments and the sponsors. On a wide screen the games stand on the right, beside the rest.
+// The home page: the way back to any room where the player still has a seat, the tagline, the
+// first game on a big sticker with the games to come below it, the ways into a room, by its number
+// or from the list of public rooms, and footnotes, which name the author, offer a way to buy them a
+// cola, the way to send them feedback and, folded, the acknowledgments and the sponsors. On a wide
+// screen the games stand on the right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil.
@@ -37,6 +39,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
   <LanguageGate v-if="!chosen" @chosen="chosen = true" />
   <div v-else class="page home">
     <PageMasthead><AccountEntry /><LanguageSwitch /></PageMasthead>
+    <BackToRoom />
 
     <main>
       <h1>{{ t('app.tagline') }}</h1>

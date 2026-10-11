@@ -442,8 +442,8 @@ export async function roomMenu(page: Page): Promise<Locator> {
   return menu;
 }
 
-// On a phone, the groups and the clue log are sheets that open from the bar at the bottom of
-// the game; on a wide screen they stand beside the board. Opens them where they need opening,
+// On a phone, the groups and the clue log are sheets that open from the bar under the board; on
+// a wide screen they stand beside the board. Opens them where they need opening,
 // and returns them. A sheet that is open covers the rest of the page, so a test closes it, with
 // closeSheet, before it taps anything else on that page.
 export async function openGroups(page: Page): Promise<Locator> {

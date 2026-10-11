@@ -91,7 +91,7 @@ test('the server ends a turn whose time has run out', async ({ browser }) => {
   const team = await teamOnTurn(table.captains.red);
   // Ten seconds are the last ten, so the bar is red from the start.
   for (const page of [table.captains[team], table.guessers.blue, table.screen]) {
-    await expect(page.locator('.strip .clock.urgent')).toBeVisible();
+    await expect(page.locator('.clock.urgent')).toBeVisible();
   }
   // The PI gives no clue, and the turn passes to the other group with a note in the log.
   await expect(table.spectator.locator('.strip')).toHaveClass(new RegExp(`\\b${otherTeam(team)}\\b`), {
@@ -99,7 +99,32 @@ test('the server ends a turn whose time has run out', async ({ browser }) => {
   });
   await expect(await openLog(table.spectator)).toContainText(TEXT.en.game.noClueInTime);
   // The next clue has the default time, 60 seconds.
-  await expect(table.spectator.locator('.strip .clock')).not.toHaveClass(/urgent/);
+  await expect(table.spectator.locator('.clock')).not.toHaveClass(/urgent/);
+});
+
+test('the clock stays at the top of the screen as the page scrolls, under the reconnecting banner', async ({
+  browser,
+}) => {
+  const table = await seatTable(browser, 'en');
+  const page = table.spectator;
+  // A phone's screen with the keyboard up, which leaves the board more than a screen to scroll.
+  await page.setViewportSize({ width: 390, height: 420 });
+  const clock = page.locator('.clock');
+  const top = async (locator: typeof clock) => Math.round((await locator.boundingBox())?.y ?? -1);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
+  await expect.poll(() => top(clock)).toBe(0);
+  // The page finds its connection gone as soon as it looks, as when the phone comes back online.
+  await page.context().setOffline(true);
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  const banner = page.locator('.banner');
+  await expect(banner).toHaveText(TEXT.en.room.reconnecting, { timeout: 10_000 });
+  expect(await top(banner)).toBe(0);
+  const height = Math.round((await banner.boundingBox())?.height ?? 0);
+  await expect.poll(() => top(clock)).toBe(height);
+  await page.context().setOffline(false);
+  await expect(banner).toHaveCount(0, { timeout: 15_000 });
+  await expect.poll(() => top(clock)).toBe(0);
 });
 
 test('a clue that repeats a word on the board is refused while the PI types, naming the card', async ({ browser }) => {

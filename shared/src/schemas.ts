@@ -41,6 +41,7 @@ export const ROOM_MESSAGES = {
   'sys:ping': none,
   'meta:fields': none,
   'meta:rooms': none,
+  'meta:seats': none,
   // Feedback for the author. Its text, contact, credit and link are for the rules in feedback.ts
   // to judge, which refuse a long text before looking at it, so that it gets feedback_too_long and
   // not bad_request. The server takes no message of more than 16 KB at all (server.ts).

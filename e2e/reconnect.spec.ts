@@ -1,4 +1,16 @@
-import { gameOf, giveClue, revealByKey, seatTable, snapshotsOf, teamOnTurn, TEXT, expect, test } from './helpers';
+import { formatCode } from '@reviewer2/shared';
+import {
+  gameOf,
+  giveClue,
+  interpolate,
+  revealByKey,
+  seatTable,
+  snapshotsOf,
+  teamOnTurn,
+  TEXT,
+  expect,
+  test,
+} from './helpers';
 
 // After a refresh, a locked screen, a lost network or a visit to the home page, players come back
 // to their room, group and role (docs/rules/constraints.md).
@@ -31,6 +43,29 @@ test('a player who goes to the home page and back is in their seat at once', asy
   await expect(guesser.locator('.strip .clue .word')).toHaveText(clue, { timeout: 2_000 });
   await expect(guesser.locator('.loading, .banner, form.name-form')).toHaveCount(0);
   expect(received.length, 'snapshots received on the way back').toBe(before);
+  await revealByKey(table, team);
+});
+
+// The home page, opened anew, knows nothing of the room until the server names it (meta:seats).
+test('a player who opens the home page anew is offered the way back to their seat', async ({ browser }) => {
+  const table = await seatTable(browser, 'en');
+  const team = await teamOnTurn(table.captains.red);
+  const guesser = table.guessers[team];
+  const code = new URL(table.url).pathname.split('/').at(-1) ?? '';
+  await guesser.goto('/');
+  // Whoever came in by the room's link chooses a language first.
+  await guesser.getByRole('button', { name: new RegExp(`^${TEXT.en.language.en}`) }).click();
+  const seat = guesser.locator('.seat');
+  await expect(seat).toContainText(interpolate(TEXT.en.home.seats.playing, { code: formatCode(code) }));
+  // Nobody is taken back without asking.
+  expect(new URL(guesser.url()).pathname).toBe('/');
+  await seat.getByRole('link', { name: TEXT.en.home.seats.back }).click();
+  await expect(guesser).toHaveURL(new RegExp(`/room/${code}$`));
+  await expect(guesser.locator('.actions .who')).toHaveText(
+    interpolate(TEXT.en.game.you.guesser, { group: TEXT.en.lobby.group[team] }),
+  );
+  await expect(guesser.locator('form.name-form')).toHaveCount(0);
+  await giveClue(table.captains[team], 'Hint', 2, 'en');
   await revealByKey(table, team);
 });
 

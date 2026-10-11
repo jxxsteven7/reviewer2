@@ -26,7 +26,10 @@ describe('the tip sheet', () => {
   test('links GitHub Sponsors for players without WeChat', async () => {
     const wrapper = mount(HomeView, {
       attachTo: document.body,
-      global: { plugins: [i18n], stubs: ['AccountEntry', 'CreateRoom', 'JoinRoom', 'SendFeedback', 'PageMasthead'] },
+      global: {
+        plugins: [i18n],
+        stubs: ['AccountEntry', 'BackToRoom', 'CreateRoom', 'JoinRoom', 'SendFeedback', 'PageMasthead'],
+      },
     });
     await wrapper.get('footer button').trigger('click');
     const link = document.querySelector<HTMLAnchorElement>('[role=dialog] .sponsor a');

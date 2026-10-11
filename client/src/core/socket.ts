@@ -1,6 +1,6 @@
 import type { Ack, Handshake, Session } from '@reviewer2/shared';
 import { io } from 'socket.io-client';
-import { reactive } from 'vue';
+import { computed, reactive } from 'vue';
 import { storedToken, storeToken } from './session';
 import { toastError } from './toast';
 
@@ -22,6 +22,11 @@ export const socket = io({
 });
 
 export const connection = reactive({ connected: false, everConnected: false });
+
+// Whether the page has lost its connection and is getting it back. A room's page then shows the
+// "Reconnecting..." banner (ConnectionBanner), and what sticks to the top of the screen keeps
+// below it: the short messages, and a game's clock.
+export const reconnecting = computed(() => connection.everConnected && !connection.connected);
 
 socket.on('connect', () => {
   connection.connected = true;

@@ -44,7 +44,7 @@ Turns are numbered from 1; the starting group plays the odd ones.
 
 ## The clue
 
-The captain's screen runs the check while typing, and the server again. A clue is made of **words**: letters, digits, hyphens and apostrophes, each with a letter or digit; "Self-attention" is one word. An **English room** allows up to the clue length in words, each up to 24 characters. A **Chinese room** allows one word of up to the clue length in Chinese characters; abbreviations such as GPU are fine. Errors: `clue_too_many_words`, `clue_not_one_word`, `clue_too_long`. The clue is checked against every word still on the board, whatever its color.
+The captain's screen runs the check while typing, and the server again. A clue is made of **words**: letters, digits, hyphens and apostrophes, each with a letter or digit; "Self-attention" is one word. An **English room** allows up to the clue length in words, each up to 24 characters. A **Chinese room** allows one word, without spaces, of up to the clue length in Chinese characters; an English word or abbreviation such as GPU is fine, but not a card's English term. Errors: `clue_too_many_words`, `clue_not_one_word`, `clue_too_long`. The clue is checked against every word still on the board, whatever its color.
 
 **Refused under either rule** (`clue_on_board`), after NFKC, trimming, lowercasing, dropping accents and folding traditional to simplified Chinese:
 
