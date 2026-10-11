@@ -372,6 +372,12 @@
       "en": "Principal"
     },
     {
+      "id": "contract",
+      "zh": "合同",
+      "en": "Contract",
+      "forms": { "en": ["contractual"] }
+    },
+    {
       "id": "offer",
       "zh": "要约",
       "en": "Offer"
@@ -678,6 +684,24 @@
       "zh": "童工",
       "en": "Child labor",
       "forms": { "en": ["child labour"] }
+    },
+    {
+      "id": "patent",
+      "zh": "专利",
+      "en": "Patent",
+      "forms": { "en": ["patented"] }
+    },
+    {
+      "id": "copyright",
+      "zh": "版权",
+      "en": "Copyright",
+      "forms": { "en": ["copyrighted"] }
+    },
+    {
+      "id": "trademark",
+      "zh": "商标",
+      "en": "Trademark",
+      "forms": { "en": ["trademarked"] }
     },
     {
       "id": "trade-secret",
@@ -1073,6 +1097,11 @@
       "forms": { "en": ["recuse"] }
     },
     {
+      "id": "evidence",
+      "zh": "证据",
+      "en": "Evidence"
+    },
+    {
       "id": "testimony",
       "zh": "证词",
       "en": "Testimony",
@@ -1093,6 +1122,17 @@
       "id": "trial",
       "zh": "庭审",
       "en": "Trial"
+    },
+    {
+      "id": "jury",
+      "zh": "陪审团",
+      "en": "Jury",
+      "forms": { "en": ["juror"] }
+    },
+    {
+      "id": "verdict",
+      "zh": "判决",
+      "en": "Verdict"
     },
     {
       "id": "guilty-plea",

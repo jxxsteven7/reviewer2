@@ -262,6 +262,12 @@
       "en": "Epicycle"
     },
     {
+      "id": "orbit",
+      "zh": "轨道",
+      "en": "Orbit",
+      "forms": { "en": ["orbital"] }
+    },
+    {
       "id": "perihelion",
       "zh": "近日点",
       "en": "Perihelion"
@@ -472,6 +478,12 @@
       "en": "Almanac"
     },
     {
+      "id": "moon",
+      "zh": "月球",
+      "en": "Moon",
+      "forms": { "en": ["lunar"] }
+    },
+    {
       "id": "lunar-phase",
       "zh": "月相",
       "en": "Lunar phase"
@@ -500,6 +512,17 @@
       "id": "lunar-eclipse",
       "zh": "月食",
       "en": "Lunar eclipse"
+    },
+    {
+      "id": "solar-eclipse",
+      "zh": "日食",
+      "en": "Solar eclipse"
+    },
+    {
+      "id": "sun",
+      "zh": "太阳",
+      "en": "Sun",
+      "forms": { "en": ["solar"] }
     },
     {
       "id": "photosphere",
@@ -588,6 +611,11 @@
       "id": "red-dwarf",
       "zh": "红矮星",
       "en": "Red dwarf"
+    },
+    {
+      "id": "white-dwarf",
+      "zh": "白矮星",
+      "en": "White dwarf"
     },
     {
       "id": "supergiant",
@@ -704,6 +732,12 @@
       "id": "black-dwarf",
       "zh": "黑矮星",
       "en": "Black dwarf"
+    },
+    {
+      "id": "nebula",
+      "zh": "星云",
+      "en": "Nebula",
+      "forms": { "en": ["nebulae"] }
     },
     {
       "id": "dark-nebula",

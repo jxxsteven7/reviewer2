@@ -7,6 +7,27 @@
   "contributors": ["jxxsteven7"],
   "terms": [
     {
+      "id": "ecology",
+      "zh": "生态学",
+      "en": "Ecology",
+      "forms": { "en": ["ecological", "ecologist"] }
+    },
+    {
+      "id": "ecosystem",
+      "zh": "生态系统",
+      "en": "Ecosystem"
+    },
+    {
+      "id": "biodiversity",
+      "zh": "生物多样性",
+      "en": "Biodiversity"
+    },
+    {
+      "id": "habitat",
+      "zh": "栖息地",
+      "en": "Habitat"
+    },
+    {
       "id": "community",
       "zh": "群落",
       "en": "Community"
@@ -118,6 +139,12 @@
       "id": "endangered",
       "zh": "濒危",
       "en": "Endangered"
+    },
+    {
+      "id": "extinction",
+      "zh": "灭绝",
+      "en": "Extinction",
+      "forms": { "en": ["extinct"] }
     },
     {
       "id": "red-list",
@@ -644,6 +671,11 @@
       "en": "Dead zone"
     },
     {
+      "id": "acid-rain",
+      "zh": "酸雨",
+      "en": "Acid rain"
+    },
+    {
       "id": "acidification",
       "zh": "酸化",
       "en": "Acidification",
@@ -1130,6 +1162,11 @@
       "id": "kyoto-protocol",
       "zh": "京都议定书",
       "en": "Kyoto Protocol"
+    },
+    {
+      "id": "greenhouse-gas",
+      "zh": "温室气体",
+      "en": "Greenhouse gas"
     },
     {
       "id": "emissions",
