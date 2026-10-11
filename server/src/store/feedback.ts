@@ -10,6 +10,10 @@ import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 // sent (archive.test.ts). A player who wants to be thanked for feedback that is adopted leaves a
 // name for it, perhaps with a link, and then, if they were logged in, the feedback remembers their
 // account (docs/architecture.md#acknowledgments).
+//
+// Reports of players are kept here too, in a table of their own (migration 6), and are an archive
+// as the feedback is. Unlike feedback, a report says who sent it, about whom, and in which room,
+// since that is what it is for.
 
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -76,6 +80,25 @@ export interface Feedback extends NewFeedback {
   nameTakenBy: string | null;
 }
 
+export interface NewReport {
+  reporterId: number;
+  // The account of the player reported, if they had one, and the name they had in the room.
+  reportedId: number | null;
+  reportedName: string;
+  roomCode: string;
+  text: string | null;
+}
+
+export interface Report extends Omit<NewReport, 'reporterId'> {
+  id: number;
+  createdAt: string;
+  // The accounts' usernames, while they have them, and whether the operator has barred the account
+  // reported from public rooms.
+  reporter: string | null;
+  reported: string | null;
+  reportedBarred: boolean;
+}
+
 const COLUMNS =
   'f.id, f.created_at AS createdAt, f.kind, f.text, f.contact, f.credit, f.link, f.account_id AS accountId, ' +
   'f.public_issue AS publicIssue, f.issue, f.version, f.language, f.page, f.user_agent AS userAgent, a.username, ' +
@@ -95,6 +118,9 @@ export class FeedbackStore {
   readonly #account: StatementSync;
   readonly #clear: StatementSync;
   readonly #setIssue: StatementSync;
+  readonly #report: StatementSync;
+  readonly #reports: StatementSync;
+  readonly #reportCount: StatementSync;
 
   constructor(
     private readonly db: DatabaseSync,
@@ -121,6 +147,17 @@ export class FeedbackStore {
     this.#account = db.prepare('SELECT id, username FROM accounts WHERE username_key = ?');
     this.#clear = db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?');
     this.#setIssue = db.prepare('UPDATE feedback SET issue = ? WHERE id = ?');
+    this.#report = db.prepare(
+      'INSERT INTO reports (created_at, reporter_id, reported_id, reported_name, room_code, text) ' +
+        'VALUES (?, ?, ?, ?, ?, ?)',
+    );
+    this.#reports = db.prepare(
+      'SELECT r.id, r.created_at AS createdAt, r.reported_id AS reportedId, r.reported_name AS reportedName, ' +
+        'r.room_code AS roomCode, r.text, a.username AS reporter, b.username AS reported, ' +
+        'coalesce(b.public_barred, 0) AS reportedBarred FROM reports r LEFT JOIN accounts a ON a.id = r.reporter_id ' +
+        'LEFT JOIN accounts b ON b.id = r.reported_id WHERE r.id < ? ORDER BY r.id DESC LIMIT ?',
+    );
+    this.#reportCount = db.prepare('SELECT count(*) AS count FROM reports');
   }
 
   // Why no more feedback can be taken, or null while it can.
@@ -190,6 +227,27 @@ export class FeedbackStore {
   // Records the GitHub issue that the feedback was published as. Says whether there is such feedback.
   setIssue(id: number, issue: number): boolean {
     return Number(this.#setIssue.run(issue, id).changes) > 0;
+  }
+
+  // Keeps a report and returns its id, or null when the database is too large to take it. Reports
+  // are few and small, so only the whole database's size stops them, not the limits of feedback.
+  report(report: NewReport): number | null {
+    if (databaseBytes(this.db) > this.limits.maxDatabaseBytes) return null;
+    const { reporterId, reportedId, reportedName, roomCode, text } = report;
+    const createdAt = new Date(this.now()).toISOString();
+    return Number(this.#report.run(createdAt, reporterId, reportedId, reportedName, roomCode, text).lastInsertRowid);
+  }
+
+  // The latest reports first, as latest() gives feedback.
+  reports(limit: number, before = Number.MAX_SAFE_INTEGER): Report[] {
+    const rows = this.#reports.all(before, limit) as unknown as (Omit<Report, 'reportedBarred'> & {
+      reportedBarred: number;
+    })[];
+    return rows.map((row) => ({ ...row, reportedBarred: row.reportedBarred === 1 }));
+  }
+
+  reportCount(): number {
+    return (this.#reportCount.get() as { count: number }).count;
   }
 
   // Clears the contacts that have been kept for 90 days, and says how many it cleared.

@@ -74,13 +74,16 @@ DATA_DIR=data node server/dist/admin.cjs avatar remove <username>          # bac
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username> --ban    # and no more uploads
 DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # uploads again
 DATA_DIR=data node server/dist/admin.cjs accounts [--json]                 # statistics of the accounts
+DATA_DIR=data node server/dist/admin.cjs accounts bar <username>           # no public rooms for this account
+DATA_DIR=data node server/dist/admin.cjs accounts unbar <username>         # public rooms again
 DATA_DIR=data node server/dist/admin.cjs feedback adopt <id>               # thank its player; prints the entry
 DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>      # the GitHub issue it was published as
+DATA_DIR=data node server/dist/admin.cjs reports list                      # the latest reports of players
 DATA_DIR=data node server/dist/admin.cjs acknowledgments list
 DATA_DIR=data node server/dist/admin.cjs acknowledgments add <name> --kind feedback|words|playtesting [--account <username>]
 ```
 
-`accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address.
+`accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address. `accounts bar` keeps an account out of public rooms, as for a player others reported ([architecture.md](architecture.md#public-rooms)); `reports list` shows who reported whom.
 
 Feedback and acknowledgments are archives, so no command deletes or changes them ([architecture.md](architecture.md#feedback)). `feedback adopt` records that feedback was adopted, counted for the account of a player who left a name while logged in, and says when the name is another account's username; `acknowledgments add` thanks someone by hand. `feedback issue` takes only feedback whose player agreed to a public issue, which shows its text and name and never its contact.
 

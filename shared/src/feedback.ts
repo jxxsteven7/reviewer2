@@ -29,6 +29,9 @@ export const MAX_CONTACT_INPUT = 400;
 // The longest link for the acknowledgments as it is kept, and the longest that is looked at.
 export const MAX_LINK_LENGTH = 200;
 export const MAX_LINK_INPUT = 400;
+// The note that may come with a report of a player (room:report), and the longest that is looked at.
+export const MAX_REPORT_LENGTH = 300;
+export const MAX_REPORT_INPUT = 1200;
 
 // What the server may answer meta:feedback with besides the codes that every message can get.
 // `feedback_limited` is the limit per address; `feedback_full` means that the server takes no more
@@ -45,6 +48,11 @@ export const FEEDBACK_ERRORS = [
   'feedback_full',
 ] as const;
 export type FeedbackError = (typeof FEEDBACK_ERRORS)[number];
+
+// What the server may answer room:report with: the room isn't public, the note is too long, the
+// account has sent its reports for the hour, or the server takes no more for now.
+export const REPORT_ERRORS = ['not_public', 'report_too_long', 'report_limited', 'report_full'] as const;
+export type ReportError = (typeof REPORT_ERRORS)[number];
 
 // What the client sends with meta:feedback: what the player wrote, and what comes along by itself.
 // `credit` is the name to list in the acknowledgments should the feedback be adopted
@@ -169,4 +177,14 @@ export function checkLink(text: string | undefined, credit: string | null): Link
   const link = typed.replace(LINK_MARKUP, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
   if (link.length > MAX_LINK_LENGTH) return { link: null, problem: 'credit_link_too_long' };
   return { link, problem: null };
+}
+
+// The note that may come with a report, cleaned as feedback is, or null when it shows nothing.
+export function checkReport(text: string | undefined): { text: string | null; problem: 'report_too_long' | null } {
+  if (typeof text !== 'string') return { text: null, problem: null };
+  if (text.length > MAX_REPORT_INPUT) return { text: null, problem: 'report_too_long' };
+  const cleaned = cleanFeedback(text);
+  if (!showsSomething(cleaned)) return { text: null, problem: null };
+  if (textLength(cleaned) > MAX_REPORT_LENGTH) return { text: cleaned, problem: 'report_too_long' };
+  return { text: cleaned, problem: null };
 }

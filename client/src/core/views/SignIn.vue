@@ -12,6 +12,8 @@ import { useBusy } from '../useBusy';
 // Logging in, or registering an account, which only needs a username and a password. Both forms
 // say what is wrong with what is typed before it is sent, by the rules that the server applies
 // (shared/src/accounts.ts), and what the server refused after. Registering logs the browser in.
+// Both lead to `next`, the room that sent the player here (AccountPage), or else home.
+const props = defineProps<{ next?: string | undefined }>();
 const { t } = useI18n();
 const router = useRouter();
 const mode = ref<'login' | 'register'>('login');
@@ -44,7 +46,7 @@ async function submit() {
     refused.value = t(errorKey(reply.error));
     return;
   }
-  await router.push('/');
+  await router.push(props.next ?? '/');
 }
 </script>
 

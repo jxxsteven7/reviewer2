@@ -6,6 +6,7 @@ import {
   FEEDBACK_ERRORS,
   FEEDBACK_KINDS,
   KEYWORDS_ERRORS,
+  REPORT_ERRORS,
   ROOM_ERRORS,
   SEAT_ERRORS,
   START_PROBLEMS,
@@ -58,6 +59,7 @@ describe('locale files', () => {
     for (const code of [
       ...ROOM_ERRORS,
       ...FEEDBACK_ERRORS,
+      ...REPORT_ERRORS,
       ...ACCOUNT_ERRORS,
       ...KEYWORDS_ERRORS,
       ...SEAT_ERRORS,

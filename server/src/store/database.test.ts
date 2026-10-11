@@ -68,6 +68,7 @@ describe('a database in DATA_DIR', () => {
       'feedback',
       'game_records',
       'match_records',
+      'reports',
       'sessions',
       'settings',
       'sqlite_sequence',
@@ -240,7 +241,7 @@ describe('a database in DATA_DIR', () => {
     const before = fourth.db.prepare('SELECT * FROM feedback ORDER BY id').all();
     fourth.db.close();
 
-    const migrated = await open(dir);
+    const migrated = await open(dir, MIGRATIONS.slice(0, 5));
     expect(migrated).toMatchObject({ schema: 5, migratedFrom: 4 });
     expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v5.db'));
     const { db } = migrated;
@@ -294,6 +295,43 @@ describe('a database in DATA_DIR', () => {
       "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'game', 'New', 'v3', 'en', 'home')",
     );
     expect(db.prepare('SELECT id, kind FROM feedback').all()).toEqual([{ id: 1, kind: 'game' }]);
+  });
+
+  test('of the fifth release keeps its accounts, feedback and acknowledgments when it gets the reports', async () => {
+    const fifth = await open(dir, MIGRATIONS.slice(0, 5));
+    fifth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
+      INSERT INTO feedback VALUES (7, 'now', 'game', 'Keep me', 'me@example.com', 'v1', 'zh', 'room', NULL, 'Ann L', 1, 'https://ann.example/', 1, 40);
+      INSERT INTO acknowledgments VALUES (NULL, 'Ann L', 'feedback', 'now', 7, 1);
+    `);
+    const feedback = fifth.db.prepare('SELECT * FROM feedback').all();
+    fifth.db.close();
+
+    const migrated = await open(dir);
+    expect(migrated).toMatchObject({ schema: 6, migratedFrom: 5 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v6.db'));
+    const { db } = migrated;
+    // The accounts that were there may enter public rooms, and everything else is as it was.
+    expect(db.prepare('SELECT username, public_barred FROM accounts ORDER BY id').all()).toEqual([
+      { username: 'Ann', public_barred: 0 },
+      { username: 'Bob', public_barred: 0 },
+    ]);
+    expect(db.prepare('SELECT * FROM feedback').all()).toEqual(feedback);
+    expect(db.prepare('SELECT name, feedback_id, account_id FROM acknowledgments').all()).toEqual([
+      { name: 'Ann L', feedback_id: 7, account_id: 1 },
+    ]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+
+    // A report names accounts that exist, and stays, unlinked, when either is deleted.
+    db.exec("INSERT INTO reports VALUES (NULL, 'now', 1, 2, 'Bob', 'K7QX', 'Rude')");
+    expect(() => db.exec("INSERT INTO reports VALUES (NULL, 'now', 1, 9, 'Nobody', 'K7QX', NULL)")).toThrow(
+      /FOREIGN KEY/,
+    );
+    expect(() => db.exec('UPDATE accounts SET public_barred = 2 WHERE id = 2')).toThrow(/CHECK/);
+    db.exec('DELETE FROM accounts WHERE id = 2');
+    expect(db.prepare('SELECT reporter_id, reported_id, reported_name FROM reports').all()).toEqual([
+      { reporter_id: 1, reported_id: null, reported_name: 'Bob' },
+    ]);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
@@ -460,6 +498,7 @@ describe('a database in memory', () => {
       'feedback',
       'game_records',
       'match_records',
+      'reports',
       'sessions',
       'settings',
       'sqlite_sequence',

@@ -189,4 +189,27 @@ export const MIGRATIONS: readonly string[] = [
   CREATE INDEX feedback_contact_expiry ON feedback (created_at) WHERE contact IS NOT NULL;
   CREATE INDEX feedback_account ON feedback (account_id) WHERE account_id IS NOT NULL;
   `,
+  // 6: public rooms (docs/architecture.md#public-rooms).
+  //
+  // - accounts get whether the operator has barred them from public rooms.
+  // - reports: what players reported of each other, for the operator, beside the feedback. Each row
+  //   is when, the account that reported, the account reported, if the player had one, the name the
+  //   player had in the room, the room's code and the note, if any. Reports are an archive, as the
+  //   feedback is (archive.test.ts): no row is deleted or changed, and a deleted account is only
+  //   unlinked from them.
+  `
+  ALTER TABLE accounts ADD COLUMN public_barred INTEGER NOT NULL DEFAULT 0 CHECK (public_barred IN (0, 1));
+
+  CREATE TABLE reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    reporter_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    reported_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    reported_name TEXT NOT NULL,
+    room_code TEXT NOT NULL,
+    text TEXT
+  ) STRICT;
+  CREATE INDEX reports_reporter ON reports (reporter_id) WHERE reporter_id IS NOT NULL;
+  CREATE INDEX reports_reported ON reports (reported_id) WHERE reported_id IS NOT NULL;
+  `,
 ];

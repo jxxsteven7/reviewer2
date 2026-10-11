@@ -33,7 +33,11 @@ const send = vi.hoisted(() =>
 vi.mock('../../core/socket', () => ({
   send,
   act: (event: string, payload: object = {}) => send(event, payload),
-  connect: vi.fn(),
+  // The page is connected already.
+  onceConnected: (run: () => void) => {
+    run();
+    return () => {};
+  },
   socket: { connected: true, on: vi.fn(), once: vi.fn() },
 }));
 
@@ -89,6 +93,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     game: 'keywords',
     language: 'en',
     fields: ['general'],
+    public: false,
     phase: 'playing',
     round: 1,
     gameId: 'g1',

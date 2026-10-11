@@ -1,4 +1,4 @@
-import { CODE_ALPHABET } from '@reviewer2/shared';
+import { CODE_ALPHABET, MAX_SCREENS } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { fakeGame } from '../../test/fakeGame';
 import { testWords } from '../../test/helpers';
@@ -7,6 +7,7 @@ import { newCode } from './codes';
 import { isToken, memberKey, newToken } from './identity';
 import { seededRng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
+import { MAX_BROWSERS, MAX_REMOVED, REMOVED_FOR_MS, type Room } from './room';
 import { Rooms } from './rooms';
 
 describe('room codes', () => {
@@ -165,5 +166,132 @@ describe('rate limits', () => {
     time += 1000;
     counter.refund('a');
     expect([counter.take('a'), counter.take('a'), counter.take('a')]).toEqual([true, true, false]);
+  });
+});
+
+// A room with its chair, public or private, on a clock that a test moves.
+function roomOf(listed: boolean, clock: { now: number } = { now: 0 }) {
+  const rooms = new Rooms(testWords(), seededRng(3), () => clock.now);
+  const created = rooms.create({
+    game: fakeGame,
+    language: 'en',
+    fields: ['general'],
+    key: 'chair',
+    name: 'Ann',
+    public: listed,
+  });
+  if (!created.ok) throw new Error(created.error);
+  return created.room;
+}
+
+describe('screens', () => {
+  test('fill a room at five, but in a public room a key that has one only takes its place', () => {
+    for (const listed of [false, true]) {
+      const room = roomOf(listed);
+      for (let i = 0; i < MAX_SCREENS; i += 1) expect(room.addScreen(`screen-${i}`, `key-${i}`)).toEqual([]);
+      expect(room.screensFull('another')).toBe(true);
+      expect(room.screensFull('key-0')).toBe(!listed);
+    }
+    const room = roomOf(true);
+    expect(room.addScreen('screen-0', 'key-0')).toEqual([]);
+    expect(room.addScreen('screen-1', 'key-0')).toEqual(['screen-0']);
+    expect([...room.screens]).toEqual([['screen-1', 'key-0']]);
+  });
+});
+
+describe('removals', () => {
+  // A newcomer, connected from the browser with the key `browser-<i>`, whom the chair removes.
+  function removeNewcomer(room: Room, i: number) {
+    const joined = room.join(`seat-${i}`, `Guest ${i}`);
+    if (!joined.ok) throw new Error(joined.error);
+    room.attach(joined.member, `socket-${i}`, `browser-${i}`);
+    return room.remove(joined.member.id);
+  }
+
+  test('last for good from a public room, and for two minutes from a private one, whatever it becomes', () => {
+    const clock = { now: 0 };
+    const listed = roomOf(true, clock);
+    const unlisted = roomOf(false, clock);
+    expect(removeNewcomer(listed, 1)).toMatchObject({ ok: true, reason: 'removed' });
+    expect(removeNewcomer(unlisted, 1)).toMatchObject({ ok: true, reason: 'removed_recently' });
+    // By the member key and by the browser's, as when either comes back.
+    for (const key of ['seat-1', 'browser-1']) {
+      expect(listed.refusal(key)).toBe('removed');
+      expect(unlisted.refusal(key)).toBe('removed_recently');
+    }
+    // The room changes after the removal, which stays as it was.
+    expect(listed.setPublic(false)).toEqual({ ok: true });
+    expect(unlisted.setPublic(true)).toEqual({ ok: true });
+    clock.now += REMOVED_FOR_MS - 1;
+    expect(unlisted.removal('seat-1')).toBe('removed_recently');
+    clock.now += 1;
+    expect(unlisted.removal('seat-1', 'browser-1')).toBeNull();
+    expect(unlisted.join('seat-1', 'Guest 1')).toMatchObject({ ok: true });
+    clock.now += 24 * 60 * 60_000;
+    listed.forgetOldRemovals();
+    expect(listed.removal('nobody', 'browser-1')).toBe('removed');
+    // A removal for good outweighs one that is still running, for a browser that had both.
+    expect(removeNewcomer(listed, 2)).toMatchObject({ reason: 'removed_recently' });
+    expect(listed.removal('seat-2', 'browser-1')).toBe('removed');
+  });
+
+  test('are remembered up to a limit, with every key of each, the earliest forgotten first', () => {
+    const room = roomOf(true);
+    // Each removal remembers the member's key and the key of the browser they were on, and
+    // counts once, however many keys it has.
+    for (let i = 0; i < MAX_REMOVED; i += 1) expect(removeNewcomer(room, i)).toMatchObject({ ok: true });
+    expect(room.removal('seat-0')).toBe('removed');
+    expect(room.removal('browser-0')).toBe('removed');
+    expect(removeNewcomer(room, MAX_REMOVED)).toMatchObject({ ok: true });
+    // The earliest removal goes with both of its keys.
+    expect(room.removal('seat-0')).toBeNull();
+    expect(room.removal('browser-0')).toBeNull();
+    expect(room.removal('seat-1', 'browser-1')).toBe('removed');
+    expect(room.removal(`browser-${MAX_REMOVED / 2}`)).toBe('removed');
+    expect(room.removal('nobody', `browser-${MAX_REMOVED}`)).toBe('removed');
+    expect(room.members.size).toBe(1);
+  });
+
+  test('keep a key that a later removal has when the earlier one is forgotten', () => {
+    const clock = { now: 0 };
+    const room = roomOf(false, clock);
+    // A guest on browser 7 is removed, and then, two minutes later, an account on the same browser.
+    expect(removeNewcomer(room, 7)).toMatchObject({ ok: true });
+    clock.now += REMOVED_FOR_MS;
+    const joined = room.join('account:bob', 'Bob', false, { id: 1, avatar: null });
+    if (!joined.ok) throw new Error(joined.error);
+    room.attach(joined.member, 'socket-bob', 'browser-7');
+    expect(room.remove(joined.member.id)).toMatchObject({ ok: true });
+    // The sweep forgets the guest's removal, whose wait is over; the browser stays out by Bob's.
+    room.forgetOldRemovals();
+    expect(room.removal('seat-7')).toBeNull();
+    expect(room.removal('browser-7')).toBe('removed_recently');
+    expect(room.removal('account:bob')).toBe('removed_recently');
+  });
+
+  test('keep a member out by the last few browsers they were on, with or without a connection', () => {
+    const room = roomOf(true);
+    const joined = room.join('account:bob', 'Bob', false, { id: 1, avatar: null });
+    if (!joined.ok) throw new Error(joined.error);
+    for (let i = 0; i <= MAX_BROWSERS; i += 1) {
+      room.attach(joined.member, `socket-${i}`, `browser-${i}`);
+      room.detach(`socket-${i}`);
+    }
+    expect(joined.member.browsers.size).toBe(MAX_BROWSERS);
+    expect(room.remove(joined.member.id)).toMatchObject({ ok: true, sockets: [] });
+    expect(room.removal('browser-0')).toBeNull();
+    for (let i = 1; i <= MAX_BROWSERS; i += 1) expect(room.removal(`browser-${i}`)).toBe('removed');
+  });
+
+  test('from a private room are forgotten once their wait is over, before any for good', () => {
+    const clock = { now: 0 };
+    const room = roomOf(false, clock);
+    for (let i = 0; i < MAX_REMOVED / 2; i += 1) removeNewcomer(room, i);
+    clock.now += REMOVED_FOR_MS;
+    expect(room.setPublic(true)).toEqual({ ok: true });
+    // The waits that are over make room, so none of the removals for good is forgotten.
+    for (let i = MAX_REMOVED; i < MAX_REMOVED + MAX_REMOVED / 2; i += 1) removeNewcomer(room, i);
+    expect(room.removal(`seat-${MAX_REMOVED}`, `browser-${MAX_REMOVED + MAX_REMOVED / 2 - 1}`)).toBe('removed');
+    expect(room.removal('seat-0')).toBeNull();
   });
 });

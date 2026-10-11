@@ -3,11 +3,24 @@ import type { Ack, FieldInfo } from '@reviewer2/shared';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, expect, test, vi } from 'vitest';
 
-const mock = vi.hoisted(() => ({
-  send: vi.fn<(event: string) => Promise<Ack<{ fields: FieldInfo[] }>>>(),
-  connect: vi.fn(),
-  socket: { connected: false, once: vi.fn<(event: string, handler: () => void) => void>() },
-}));
+// The socket module, with its wait for a connection as the real one has it (onceConnected).
+const mock = vi.hoisted(() => {
+  const connect = vi.fn();
+  const socket = { connected: false, once: vi.fn<(event: string, handler: () => void) => void>() };
+  return {
+    send: vi.fn<(event: string) => Promise<Ack<{ fields: FieldInfo[] }>>>(),
+    connect,
+    socket,
+    onceConnected(run: () => void) {
+      if (socket.connected) run();
+      else {
+        socket.once('connect', run);
+        connect();
+      }
+      return () => {};
+    },
+  };
+});
 vi.mock('./socket', () => mock);
 
 import { fields, loadFields } from './fields';

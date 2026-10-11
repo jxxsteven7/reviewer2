@@ -41,6 +41,19 @@
       "placeholder": "K7QX",
       "submit": "Join",
       "invalid": "Enter the 4 characters after R2-."
+    },
+    "publicRooms": {
+      "title": "Public rooms",
+      "open": "Find a public room",
+      "intro": "Rooms that anyone with an account can join. Full rooms aren't listed.",
+      "loginHint": "Log in or register to join one.",
+      "loading": "Looking for rooms...",
+      "none": "No public room is open right now. Create one and make it public!",
+      "players": "Players: {count}",
+      "waiting": "Waiting for players",
+      "playing": "Game in progress",
+      "join": "Join",
+      "refresh": "Refresh"
     }
   },
   "create": {
@@ -52,6 +65,12 @@
     "noFields": "No word lists are available in this language yet.",
     "chooseField": "Choose at least one word list to create the room.",
     "settings": "Rules",
+    "visibility": "Who can join",
+    "private": "Private",
+    "privateHint": "Only those you give the number or the link to.",
+    "public": "Public",
+    "publicHint": "Listed on the home page, for anyone with an account to join.",
+    "publicNeedsAccount": "Log in or register to create a public room.",
     "loadingFields": "Loading the word lists...",
     "name": "Your name",
     "submit": "Create the room",
@@ -86,7 +105,8 @@
       "body": "This room doesn't exist, or it has closed."
     },
     "closed": {
-      "removed": "The chair removed you from this room.",
+      "removed": "The chair removed you from this room. You can't come back to it.",
+      "removed_recently": "The chair removed you from this room. You can come back in two minutes.",
       "expired": "This room has closed.",
       "left": "You left this room in another tab.",
       "closed": "The chair closed this room.",
@@ -107,7 +127,15 @@
     "closeRoom": "Close the room",
     "closeConfirm": "Close this room for everyone? Everyone in it, big screens included, is told that it has closed, and its number stops working.",
     "closeConfirmGame": "Close this room for everyone? The game in progress ends without a winner. Everyone in it, big screens included, is told that the room has closed, and its number stops working.",
-    "menu": "Room"
+    "menu": "Room",
+    "public": "Public",
+    "listed": "Public room: listed on the home page for anyone with an account.",
+    "unlisted": "Private room: joined by number or link only.",
+    "makePublic": "Make the room public",
+    "makePrivate": "Make the room private",
+    "publicHint": "Anyone with an account can find and join a public room from the home page. Guests who are already here stay.",
+    "publicNeedsAccount": "Log in or register to make the room public.",
+    "signIn": "Log in or register"
   },
   "lobby": {
     "kicker": "Waiting room",
@@ -146,6 +174,14 @@
     "manage": {
       "spectate": "Move to the spectators",
       "remove": "Remove from the room",
+      "removeConfirm": "Remove {name} from the room? They won't be able to come back to it.",
+      "removeConfirmPrivate": "Remove {name} from the room? They can come back in two minutes.",
+      "report": "Report to the operator",
+      "reportTitle": "Report {name}",
+      "reportIntro": "The operator reads reports, with your username, the player's and this room's number, and may bar the player from public rooms.",
+      "reportNote": "What happened (optional)",
+      "reportSubmit": "Send the report",
+      "reportSent": "Thank you. The report has been sent.",
       "chair": "Make chair",
       "cancel": "Cancel"
     }
@@ -455,6 +491,9 @@
     "name_taken": "Someone in the room already has that name.",
     "name_reserved": "That name belongs to an account, or is reserved. Choose another, or log in.",
     "account_name": "Your name in rooms is your username. Change it on your account page.",
+    "account_required": "Public rooms take an account: log in or register.",
+    "public_barred": "Your account can't enter public rooms.",
+    "removed": "The chair removed you from this room, so you can't come back to it.",
     "removed_recently": "You were removed from this room. You can come back in two minutes.",
     "not_member": "You're not in this room.",
     "not_chair": "Only the chair can do that.",
@@ -500,6 +539,10 @@
     "credit_link_too_long": "Use at most 200 characters for the link.",
     "feedback_limited": "At most 3 pieces of feedback can come from one network in 10 minutes. Please try again later.",
     "feedback_full": "The server has no room for more feedback at the moment. Sorry!",
+    "report_too_long": "Use at most 300 characters.",
+    "report_limited": "You have sent 5 reports in the last hour. Please wait a while.",
+    "report_full": "The server has no room for more reports at the moment. Sorry!",
+    "not_public": "Only players in a public room can be reported.",
     "bad_origin": "This page can't do that. Reload it and try again.",
     "not_logged_in": "You aren't logged in.",
     "username_invalid": "That can't be a username.",

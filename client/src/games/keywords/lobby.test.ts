@@ -10,7 +10,11 @@ const send = vi.hoisted(() => vi.fn<(event: string, payload?: object) => Promise
 vi.mock('../../core/socket', () => ({
   send,
   act: (event: string, payload: object = {}) => send(event, payload),
-  connect: vi.fn(),
+  // The page is connected already.
+  onceConnected: (run: () => void) => {
+    run();
+    return () => {};
+  },
   socket: { connected: true, on: vi.fn(), once: vi.fn() },
 }));
 
@@ -34,6 +38,7 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   game: 'keywords',
   language: 'en',
   fields: ['general'],
+  public: false,
   phase: 'lobby',
   round: 2,
   gameId: null,

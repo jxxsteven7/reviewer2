@@ -45,6 +45,7 @@ describe('an account', () => {
       emailFp: null,
       avatar: null,
       avatarBanned: false,
+      publicBarred: false,
       createdAt: '2026-10-09T12:00:00.000Z',
     });
     expect(accounts.byKey('ann')).toEqual(ann);
@@ -125,11 +126,15 @@ describe('the statistics of the accounts', () => {
     // Ann played a game 2 days ago; Bob logged in 10 days ago; Cy only registered.
     expect(accounts.activeWithin(7)).toBe(1);
     expect(accounts.activeWithin(30)).toBe(2);
+    accounts.setPublicBarred(2, true);
     expect(accounts.list()).toEqual([
-      { username: 'Ann', createdAt: '2026-08-30T12:00:00.000Z', games: 1, matches: 1 },
-      { username: 'Bob', createdAt: '2026-09-29T12:00:00.000Z', games: 0, matches: 0 },
-      { username: 'Cy', createdAt: '2026-10-09T12:00:00.000Z', games: 0, matches: 0 },
+      { username: 'Ann', createdAt: '2026-08-30T12:00:00.000Z', games: 1, matches: 1, barred: false },
+      { username: 'Bob', createdAt: '2026-09-29T12:00:00.000Z', games: 0, matches: 0, barred: true },
+      { username: 'Cy', createdAt: '2026-10-09T12:00:00.000Z', games: 0, matches: 0, barred: false },
     ]);
+    expect(accounts.byId(2)).toMatchObject({ publicBarred: true });
+    accounts.setPublicBarred(2, false);
+    expect(accounts.byId(2)).toMatchObject({ publicBarred: false });
   });
 
   test('count 0 when there are no accounts', () => {
