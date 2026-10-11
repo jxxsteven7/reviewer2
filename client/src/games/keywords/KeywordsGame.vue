@@ -289,8 +289,15 @@ const chosenByOthers = computed(() =>
   top: var(--banner-height);
 }
 
-/* Whatever the page scrolls or focuses into view, such as a card reached with the keyboard, stays
-   below the clock and the banner. The page is what scrolls, so the rule goes on the root. */
+/* During a game the page doesn't anchor its scroll position: when something above the board
+   changes, such as the clue that appears in the turn strip, WebKit's scroll anchoring moves the
+   page a moment later, taking the card from under a tap that is on its way. Whatever the page
+   scrolls or focuses into view, such as a card reached with the keyboard, stays below the clock
+   and the banner. The page is what scrolls, so the rules go on the root. */
+:global(html:has(.keywords-game)) {
+  overflow-anchor: none;
+}
+
 :global(html:has(.sticky-clock)) {
   scroll-padding-top: calc(var(--banner-height) + 3rem);
 }
