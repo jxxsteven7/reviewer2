@@ -94,8 +94,12 @@ AI 助手读 `AGENTS.md`。
 
 `words/` 下每个领域一个 JSON 文件，所有游戏共用。好的词条要短、领域内人人都认识，而且全部原创。见 [words/README.md](words/README.md)。
 
+## 支持作者
+
+Reviewer 2 免费、无广告。如果你喜欢，可以在首页底部用微信给作者点一杯可乐，或者在 [GitHub Sponsors](https://github.com/sponsors/jxxsteven7) 上赞助作者。
+
 ## 协议
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: 126dc2f65372f83a2f7ed56422bb4c1b55d28c48d3e421ffa77bdf191f4b7ff5 -->
+<!-- readme-sync: a2ef0c25a5534942a9516d1de311e3daa5d58f7e8e9f66194b7e99f647f36f03 -->

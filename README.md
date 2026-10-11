@@ -94,6 +94,10 @@ Players whose suggestions are adopted, who add words or who test early versions 
 
 One JSON file per field in `words/`, shared by all games. A good term is short and known to everyone in its field, and all terms are original. See [words/README.md](words/README.md).
 
+## Support
+
+Reviewer 2 is free to play, with no ads. If you enjoy it, buy the author a cola with WeChat from the foot of the home page, or sponsor the author on [GitHub Sponsors](https://github.com/sponsors/jxxsteven7).
+
 ## License
 
 The code is under the [MIT License](LICENSE), except `shared/src/han-variants.ts`, which is built from the data of OpenCC and stays under the [Apache License 2.0](shared/LICENSE-OpenCC). The word lists in `words/` are under [CC BY-SA 4.0](words/LICENSE).
