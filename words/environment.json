@@ -1,0 +1,1319 @@
+{
+  "id": "environment",
+  "name": {
+    "zh": "环境与生态",
+    "en": "Environment & Ecology"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "community",
+      "zh": "群落",
+      "en": "Community"
+    },
+    {
+      "id": "biome",
+      "zh": "生物群系",
+      "en": "Biome"
+    },
+    {
+      "id": "biomass",
+      "zh": "生物量",
+      "en": "Biomass"
+    },
+    {
+      "id": "producer",
+      "zh": "生产者",
+      "en": "Producer"
+    },
+    {
+      "id": "consumer",
+      "zh": "消费者",
+      "en": "Consumer"
+    },
+    {
+      "id": "omnivore",
+      "zh": "杂食动物",
+      "en": "Omnivore",
+      "forms": { "en": ["omnivorous"] }
+    },
+    {
+      "id": "scavenger",
+      "zh": "食腐动物",
+      "en": "Scavenger",
+      "forms": { "en": ["scavenge"] }
+    },
+    {
+      "id": "apex-predator",
+      "zh": "顶级捕食者",
+      "en": "Apex predator"
+    },
+    {
+      "id": "trophic-level",
+      "zh": "营养级",
+      "en": "Trophic level"
+    },
+    {
+      "id": "food-web",
+      "zh": "食物网",
+      "en": "Food web"
+    },
+    {
+      "id": "energy-pyramid",
+      "zh": "能量金字塔",
+      "en": "Energy pyramid"
+    },
+    {
+      "id": "mutualism",
+      "zh": "互利共生",
+      "en": "Mutualism",
+      "forms": { "en": ["mutualistic"] }
+    },
+    {
+      "id": "commensalism",
+      "zh": "偏利共生",
+      "en": "Commensalism"
+    },
+    {
+      "id": "succession",
+      "zh": "演替",
+      "en": "Succession"
+    },
+    {
+      "id": "edge-effect",
+      "zh": "边缘效应",
+      "en": "Edge effect"
+    },
+    {
+      "id": "fragmentation",
+      "zh": "破碎化",
+      "en": "Fragmentation"
+    },
+    {
+      "id": "canopy",
+      "zh": "林冠",
+      "en": "Canopy"
+    },
+    {
+      "id": "phenology",
+      "zh": "物候",
+      "en": "Phenology"
+    },
+    {
+      "id": "biogeography",
+      "zh": "生物地理学",
+      "en": "Biogeography"
+    },
+    {
+      "id": "alien-species",
+      "zh": "外来物种",
+      "en": "Alien species"
+    },
+    {
+      "id": "native-species",
+      "zh": "本地种",
+      "en": "Native species"
+    },
+    {
+      "id": "endangered",
+      "zh": "濒危",
+      "en": "Endangered"
+    },
+    {
+      "id": "red-list",
+      "zh": "红色名录",
+      "en": "Red List"
+    },
+    {
+      "id": "rewilding",
+      "zh": "再野化",
+      "en": "Rewilding",
+      "forms": { "en": ["rewild"] }
+    },
+    {
+      "id": "quadrat",
+      "zh": "样方",
+      "en": "Quadrat"
+    },
+    {
+      "id": "transect",
+      "zh": "样线",
+      "en": "Transect"
+    },
+    {
+      "id": "mark-recapture",
+      "zh": "标志重捕",
+      "en": "Mark-recapture"
+    },
+    {
+      "id": "camera-trap",
+      "zh": "红外相机",
+      "en": "Camera trap"
+    },
+    {
+      "id": "radio-collar",
+      "zh": "无线电项圈",
+      "en": "Radio collar"
+    },
+    {
+      "id": "edna",
+      "zh": "环境DNA",
+      "en": "eDNA",
+      "forms": { "en": ["environmental DNA"] }
+    },
+    {
+      "id": "ecotype",
+      "zh": "生态型",
+      "en": "Ecotype"
+    },
+    {
+      "id": "prey",
+      "zh": "猎物",
+      "en": "Prey"
+    },
+    {
+      "id": "abundance",
+      "zh": "丰度",
+      "en": "Abundance",
+      "forms": { "en": ["abundant"] }
+    },
+    {
+      "id": "disturbance",
+      "zh": "干扰",
+      "en": "Disturbance",
+      "forms": { "en": ["disturb"] }
+    },
+    {
+      "id": "habitat-loss",
+      "zh": "栖息地丧失",
+      "en": "Habitat loss"
+    },
+    {
+      "id": "leaf-litter",
+      "zh": "落叶层",
+      "en": "Leaf litter"
+    },
+    {
+      "id": "mycorrhiza",
+      "zh": "菌根",
+      "en": "Mycorrhiza",
+      "forms": { "en": ["mycorrhizae", "mycorrhizal"] }
+    },
+    {
+      "id": "riparian-zone",
+      "zh": "河岸带",
+      "en": "Riparian zone"
+    },
+    {
+      "id": "tidal-flat",
+      "zh": "滩涂",
+      "en": "Tidal flat"
+    },
+    {
+      "id": "salt-marsh",
+      "zh": "盐沼",
+      "en": "Salt marsh"
+    },
+    {
+      "id": "pond",
+      "zh": "池塘",
+      "en": "Pond"
+    },
+    {
+      "id": "deep-ecology",
+      "zh": "深生态学",
+      "en": "Deep ecology"
+    },
+    {
+      "id": "energy-flow",
+      "zh": "能量流动",
+      "en": "Energy flow"
+    },
+    {
+      "id": "seed-dispersal",
+      "zh": "种子传播",
+      "en": "Seed dispersal"
+    },
+    {
+      "id": "pollinator",
+      "zh": "传粉者",
+      "en": "Pollinator"
+    },
+    {
+      "id": "vulnerable",
+      "zh": "易危",
+      "en": "Vulnerable"
+    },
+    {
+      "id": "naturalist",
+      "zh": "博物学家",
+      "en": "Naturalist"
+    },
+    {
+      "id": "marine-snow",
+      "zh": "海雪",
+      "en": "Marine snow"
+    },
+    {
+      "id": "whale-fall",
+      "zh": "鲸落",
+      "en": "Whale fall"
+    },
+    {
+      "id": "wildlife",
+      "zh": "野生动物",
+      "en": "Wildlife"
+    },
+    {
+      "id": "national-park",
+      "zh": "国家公园",
+      "en": "National park"
+    },
+    {
+      "id": "migratory-bird",
+      "zh": "候鸟",
+      "en": "Migratory bird"
+    },
+    {
+      "id": "giant-panda",
+      "zh": "大熊猫",
+      "en": "Giant panda"
+    },
+    {
+      "id": "crested-ibis",
+      "zh": "朱鹮",
+      "en": "Crested ibis"
+    },
+    {
+      "id": "snow-leopard",
+      "zh": "雪豹",
+      "en": "Snow leopard"
+    },
+    {
+      "id": "siberian-tiger",
+      "zh": "东北虎",
+      "en": "Siberian tiger"
+    },
+    {
+      "id": "polar-bear",
+      "zh": "北极熊",
+      "en": "Polar bear"
+    },
+    {
+      "id": "pangolin",
+      "zh": "穿山甲",
+      "en": "Pangolin"
+    },
+    {
+      "id": "rhino",
+      "zh": "犀牛",
+      "en": "Rhino",
+      "forms": { "en": ["rhinoceros"] }
+    },
+    {
+      "id": "baiji",
+      "zh": "白鳍豚",
+      "en": "Baiji"
+    },
+    {
+      "id": "dodo",
+      "zh": "渡渡鸟",
+      "en": "Dodo"
+    },
+    {
+      "id": "poaching",
+      "zh": "盗猎",
+      "en": "Poaching",
+      "forms": { "en": ["poacher", "poach"] }
+    },
+    {
+      "id": "ivory",
+      "zh": "象牙",
+      "en": "Ivory"
+    },
+    {
+      "id": "overfishing",
+      "zh": "过度捕捞",
+      "en": "Overfishing"
+    },
+    {
+      "id": "mangrove",
+      "zh": "红树林",
+      "en": "Mangrove"
+    },
+    {
+      "id": "seagrass",
+      "zh": "海草",
+      "en": "Seagrass"
+    },
+    {
+      "id": "seaweed",
+      "zh": "海藻",
+      "en": "Seaweed"
+    },
+    {
+      "id": "peatland",
+      "zh": "泥炭地",
+      "en": "Peatland",
+      "forms": { "en": ["peat"] }
+    },
+    {
+      "id": "moss",
+      "zh": "苔藓",
+      "en": "Moss",
+      "forms": { "en": ["mossy"] }
+    },
+    {
+      "id": "wildfire",
+      "zh": "山火",
+      "en": "Wildfire"
+    },
+    {
+      "id": "firebreak",
+      "zh": "防火带",
+      "en": "Firebreak"
+    },
+    {
+      "id": "shelterbelt",
+      "zh": "防护林",
+      "en": "Shelterbelt"
+    },
+    {
+      "id": "deforestation",
+      "zh": "森林砍伐",
+      "en": "Deforestation"
+    },
+    {
+      "id": "afforestation",
+      "zh": "植树造林",
+      "en": "Afforestation"
+    },
+    {
+      "id": "arbor-day",
+      "zh": "植树节",
+      "en": "Arbor Day"
+    },
+    {
+      "id": "earth-day",
+      "zh": "地球日",
+      "en": "Earth Day"
+    },
+    {
+      "id": "earth-hour",
+      "zh": "地球一小时",
+      "en": "Earth Hour"
+    },
+    {
+      "id": "beaver",
+      "zh": "河狸",
+      "en": "Beaver"
+    },
+    {
+      "id": "wolf",
+      "zh": "狼",
+      "en": "Wolf",
+      "forms": { "en": ["wolves"] }
+    },
+    {
+      "id": "yellowstone",
+      "zh": "黄石公园",
+      "en": "Yellowstone"
+    },
+    {
+      "id": "galapagos",
+      "zh": "加拉帕戈斯",
+      "en": "Galápagos"
+    },
+    {
+      "id": "whale",
+      "zh": "鲸鱼",
+      "en": "Whale"
+    },
+    {
+      "id": "whaling",
+      "zh": "捕鲸",
+      "en": "Whaling",
+      "forms": { "en": ["whaler"] }
+    },
+    {
+      "id": "shark-fin",
+      "zh": "鱼翅",
+      "en": "Shark fin"
+    },
+    {
+      "id": "sea-turtle",
+      "zh": "海龟",
+      "en": "Sea turtle"
+    },
+    {
+      "id": "krill",
+      "zh": "磷虾",
+      "en": "Krill"
+    },
+    {
+      "id": "penguin",
+      "zh": "企鹅",
+      "en": "Penguin"
+    },
+    {
+      "id": "termite",
+      "zh": "白蚁",
+      "en": "Termite"
+    },
+    {
+      "id": "locust",
+      "zh": "蝗虫",
+      "en": "Locust"
+    },
+    {
+      "id": "pest",
+      "zh": "害虫",
+      "en": "Pest"
+    },
+    {
+      "id": "natural-enemy",
+      "zh": "天敌",
+      "en": "Natural enemy"
+    },
+    {
+      "id": "biocontrol",
+      "zh": "生物防治",
+      "en": "Biocontrol",
+      "forms": { "en": ["biological control"] }
+    },
+    {
+      "id": "weed",
+      "zh": "杂草",
+      "en": "Weed"
+    },
+    {
+      "id": "water-hyacinth",
+      "zh": "水葫芦",
+      "en": "Water hyacinth"
+    },
+    {
+      "id": "zoo",
+      "zh": "动物园",
+      "en": "Zoo"
+    },
+    {
+      "id": "aquarium",
+      "zh": "水族馆",
+      "en": "Aquarium"
+    },
+    {
+      "id": "captivity",
+      "zh": "圈养",
+      "en": "Captivity",
+      "forms": { "en": ["captive"] }
+    },
+    {
+      "id": "reintroduction",
+      "zh": "重引入",
+      "en": "Reintroduction",
+      "forms": { "en": ["reintroduce"] }
+    },
+    {
+      "id": "bycatch",
+      "zh": "兼捕",
+      "en": "Bycatch"
+    },
+    {
+      "id": "aquaculture",
+      "zh": "水产养殖",
+      "en": "Aquaculture"
+    },
+    {
+      "id": "marine-reserve",
+      "zh": "海洋保护区",
+      "en": "Marine reserve"
+    },
+    {
+      "id": "blue-carbon",
+      "zh": "蓝碳",
+      "en": "Blue carbon"
+    },
+    {
+      "id": "logging",
+      "zh": "伐木",
+      "en": "Logging",
+      "forms": { "en": ["logger"] }
+    },
+    {
+      "id": "slash-and-burn",
+      "zh": "刀耕火种",
+      "en": "Slash-and-burn"
+    },
+    {
+      "id": "palm-oil",
+      "zh": "棕榈油",
+      "en": "Palm oil"
+    },
+    {
+      "id": "forest-cover",
+      "zh": "森林覆盖率",
+      "en": "Forest cover"
+    },
+    {
+      "id": "nature",
+      "zh": "大自然",
+      "en": "Nature"
+    },
+    {
+      "id": "wilderness",
+      "zh": "荒野",
+      "en": "Wilderness"
+    },
+    {
+      "id": "birdwatching",
+      "zh": "观鸟",
+      "en": "Birdwatching",
+      "forms": { "en": ["birdwatcher"] }
+    },
+    {
+      "id": "animal-welfare",
+      "zh": "动物福利",
+      "en": "Animal welfare"
+    },
+    {
+      "id": "primary-forest",
+      "zh": "原始林",
+      "en": "Primary forest"
+    },
+    {
+      "id": "redwood",
+      "zh": "红杉",
+      "en": "Redwood"
+    },
+    {
+      "id": "geopark",
+      "zh": "地质公园",
+      "en": "Geopark"
+    },
+    {
+      "id": "soil",
+      "zh": "土壤",
+      "en": "Soil"
+    },
+    {
+      "id": "humus",
+      "zh": "腐殖质",
+      "en": "Humus"
+    },
+    {
+      "id": "earthworm",
+      "zh": "蚯蚓",
+      "en": "Earthworm"
+    },
+    {
+      "id": "compost",
+      "zh": "堆肥",
+      "en": "Compost",
+      "forms": { "en": ["composting"] }
+    },
+    {
+      "id": "crop-rotation",
+      "zh": "轮作",
+      "en": "Crop rotation"
+    },
+    {
+      "id": "soil-erosion",
+      "zh": "土壤侵蚀",
+      "en": "Soil erosion"
+    },
+    {
+      "id": "salinization",
+      "zh": "盐碱化",
+      "en": "Salinization",
+      "forms": { "en": ["salinisation"] }
+    },
+    {
+      "id": "eutrophication",
+      "zh": "富营养化",
+      "en": "Eutrophication",
+      "forms": { "en": ["eutrophic"] }
+    },
+    {
+      "id": "algal-bloom",
+      "zh": "水华",
+      "en": "Algal bloom"
+    },
+    {
+      "id": "dead-zone",
+      "zh": "死亡区",
+      "en": "Dead zone"
+    },
+    {
+      "id": "acidification",
+      "zh": "酸化",
+      "en": "Acidification",
+      "forms": { "en": ["acidify"] }
+    },
+    {
+      "id": "wastewater",
+      "zh": "污水",
+      "en": "Wastewater"
+    },
+    {
+      "id": "drinking-water",
+      "zh": "饮用水",
+      "en": "Drinking water"
+    },
+    {
+      "id": "desalination",
+      "zh": "海水淡化",
+      "en": "Desalination"
+    },
+    {
+      "id": "sponge-city",
+      "zh": "海绵城市",
+      "en": "Sponge city"
+    },
+    {
+      "id": "water-quality",
+      "zh": "水质",
+      "en": "Water quality"
+    },
+    {
+      "id": "biochar",
+      "zh": "生物炭",
+      "en": "Biochar"
+    },
+    {
+      "id": "monoculture",
+      "zh": "单一种植",
+      "en": "Monoculture"
+    },
+    {
+      "id": "no-till",
+      "zh": "免耕",
+      "en": "No-till"
+    },
+    {
+      "id": "cover-crop",
+      "zh": "覆盖作物",
+      "en": "Cover crop"
+    },
+    {
+      "id": "green-manure",
+      "zh": "绿肥",
+      "en": "Green manure"
+    },
+    {
+      "id": "manure",
+      "zh": "粪肥",
+      "en": "Manure"
+    },
+    {
+      "id": "hydroponics",
+      "zh": "水培",
+      "en": "Hydroponics"
+    },
+    {
+      "id": "vertical-farm",
+      "zh": "垂直农场",
+      "en": "Vertical farm"
+    },
+    {
+      "id": "urban-farming",
+      "zh": "都市农业",
+      "en": "Urban farming"
+    },
+    {
+      "id": "food-security",
+      "zh": "粮食安全",
+      "en": "Food security"
+    },
+    {
+      "id": "rain-garden",
+      "zh": "雨水花园",
+      "en": "Rain garden"
+    },
+    {
+      "id": "sand-fixation",
+      "zh": "固沙",
+      "en": "Sand fixation"
+    },
+    {
+      "id": "pollution",
+      "zh": "污染",
+      "en": "Pollution",
+      "forms": { "en": ["pollute", "pollutant", "polluter"] }
+    },
+    {
+      "id": "air-quality",
+      "zh": "空气质量",
+      "en": "Air quality"
+    },
+    {
+      "id": "pm25",
+      "zh": "PM2.5",
+      "en": "PM2.5",
+      "forms": { "zh": ["细颗粒物"], "en": ["fine particulate matter"] }
+    },
+    {
+      "id": "air-purifier",
+      "zh": "空气净化器",
+      "en": "Air purifier"
+    },
+    {
+      "id": "heavy-metal",
+      "zh": "重金属",
+      "en": "Heavy metal"
+    },
+    {
+      "id": "dioxin",
+      "zh": "二噁英",
+      "en": "Dioxin"
+    },
+    {
+      "id": "ddt",
+      "zh": "DDT",
+      "en": "DDT",
+      "forms": { "zh": ["滴滴涕"] }
+    },
+    {
+      "id": "silent-spring",
+      "zh": "寂静的春天",
+      "en": "Silent Spring"
+    },
+    {
+      "id": "nuclear-waste",
+      "zh": "核废料",
+      "en": "Nuclear waste"
+    },
+    {
+      "id": "chernobyl",
+      "zh": "切尔诺贝利",
+      "en": "Chernobyl"
+    },
+    {
+      "id": "heat-island",
+      "zh": "热岛",
+      "en": "Heat island"
+    },
+    {
+      "id": "ozone-layer",
+      "zh": "臭氧层",
+      "en": "Ozone layer"
+    },
+    {
+      "id": "ozone-hole",
+      "zh": "臭氧空洞",
+      "en": "Ozone hole"
+    },
+    {
+      "id": "freon",
+      "zh": "氟利昂",
+      "en": "Freon"
+    },
+    {
+      "id": "exhaust",
+      "zh": "尾气",
+      "en": "Exhaust"
+    },
+    {
+      "id": "asbestos",
+      "zh": "石棉",
+      "en": "Asbestos"
+    },
+    {
+      "id": "oil-spill",
+      "zh": "溢油",
+      "en": "Oil spill"
+    },
+    {
+      "id": "e-waste",
+      "zh": "电子垃圾",
+      "en": "E-waste"
+    },
+    {
+      "id": "biogas",
+      "zh": "沼气",
+      "en": "Biogas"
+    },
+    {
+      "id": "sludge",
+      "zh": "污泥",
+      "en": "Sludge"
+    },
+    {
+      "id": "aqi",
+      "zh": "AQI",
+      "en": "AQI",
+      "forms": { "zh": ["空气质量指数"], "en": ["air quality index"] }
+    },
+    {
+      "id": "smokestack",
+      "zh": "烟囱",
+      "en": "Smokestack"
+    },
+    {
+      "id": "tailings",
+      "zh": "尾矿",
+      "en": "Tailings"
+    },
+    {
+      "id": "waste-sorting",
+      "zh": "垃圾分类",
+      "en": "Waste sorting"
+    },
+    {
+      "id": "recycling",
+      "zh": "回收",
+      "en": "Recycling",
+      "forms": { "en": ["recycle", "recyclable"] }
+    },
+    {
+      "id": "landfill",
+      "zh": "填埋",
+      "en": "Landfill"
+    },
+    {
+      "id": "incineration",
+      "zh": "焚烧",
+      "en": "Incineration",
+      "forms": { "en": ["incinerate", "incinerator"] }
+    },
+    {
+      "id": "food-waste",
+      "zh": "厨余垃圾",
+      "en": "Food waste"
+    },
+    {
+      "id": "zero-waste",
+      "zh": "零废弃",
+      "en": "Zero waste"
+    },
+    {
+      "id": "disposable",
+      "zh": "一次性",
+      "en": "Disposable"
+    },
+    {
+      "id": "plastic-bag",
+      "zh": "塑料袋",
+      "en": "Plastic bag"
+    },
+    {
+      "id": "straw",
+      "zh": "吸管",
+      "en": "Straw"
+    },
+    {
+      "id": "reusable-bag",
+      "zh": "环保袋",
+      "en": "Reusable bag"
+    },
+    {
+      "id": "upcycling",
+      "zh": "升级再造",
+      "en": "Upcycling",
+      "forms": { "en": ["upcycle"] }
+    },
+    {
+      "id": "bioplastic",
+      "zh": "生物塑料",
+      "en": "Bioplastic"
+    },
+    {
+      "id": "bottled-water",
+      "zh": "瓶装水",
+      "en": "Bottled water"
+    },
+    {
+      "id": "fast-fashion",
+      "zh": "快时尚",
+      "en": "Fast fashion"
+    },
+    {
+      "id": "second-hand",
+      "zh": "二手",
+      "en": "Second-hand"
+    },
+    {
+      "id": "life-cycle",
+      "zh": "生命周期",
+      "en": "Life cycle"
+    },
+    {
+      "id": "reuse",
+      "zh": "再利用",
+      "en": "Reuse"
+    },
+    {
+      "id": "paperless",
+      "zh": "无纸化",
+      "en": "Paperless"
+    },
+    {
+      "id": "overpackaging",
+      "zh": "过度包装",
+      "en": "Overpackaging"
+    },
+    {
+      "id": "plastic-ban",
+      "zh": "禁塑令",
+      "en": "Plastic ban"
+    },
+    {
+      "id": "fossil-fuel",
+      "zh": "化石燃料",
+      "en": "Fossil fuel"
+    },
+    {
+      "id": "renewables",
+      "zh": "可再生能源",
+      "en": "Renewables"
+    },
+    {
+      "id": "solar-energy",
+      "zh": "太阳能",
+      "en": "Solar energy"
+    },
+    {
+      "id": "wind-power",
+      "zh": "风电",
+      "en": "Wind power"
+    },
+    {
+      "id": "hydropower",
+      "zh": "水电",
+      "en": "Hydropower",
+      "forms": { "en": ["hydroelectric"] }
+    },
+    {
+      "id": "nuclear-power",
+      "zh": "核电",
+      "en": "Nuclear power"
+    },
+    {
+      "id": "tidal-energy",
+      "zh": "潮汐能",
+      "en": "Tidal energy"
+    },
+    {
+      "id": "biofuel",
+      "zh": "生物燃料",
+      "en": "Biofuel"
+    },
+    {
+      "id": "green-hydrogen",
+      "zh": "绿氢",
+      "en": "Green hydrogen"
+    },
+    {
+      "id": "energy-saving",
+      "zh": "节能",
+      "en": "Energy saving"
+    },
+    {
+      "id": "electric-car",
+      "zh": "电动汽车",
+      "en": "Electric car"
+    },
+    {
+      "id": "bike-sharing",
+      "zh": "共享单车",
+      "en": "Bike sharing"
+    },
+    {
+      "id": "public-transit",
+      "zh": "公共交通",
+      "en": "Public transit"
+    },
+    {
+      "id": "green-building",
+      "zh": "绿色建筑",
+      "en": "Green building"
+    },
+    {
+      "id": "green-roof",
+      "zh": "屋顶绿化",
+      "en": "Green roof"
+    },
+    {
+      "id": "passive-house",
+      "zh": "被动房",
+      "en": "Passive house"
+    },
+    {
+      "id": "solar-panel",
+      "zh": "太阳能板",
+      "en": "Solar panel"
+    },
+    {
+      "id": "wind-turbine",
+      "zh": "风力发电机",
+      "en": "Wind turbine"
+    },
+    {
+      "id": "windmill",
+      "zh": "风车",
+      "en": "Windmill"
+    },
+    {
+      "id": "pumped-storage",
+      "zh": "抽水蓄能",
+      "en": "Pumped storage"
+    },
+    {
+      "id": "energy-crisis",
+      "zh": "能源危机",
+      "en": "Energy crisis"
+    },
+    {
+      "id": "peak-oil",
+      "zh": "石油峰值",
+      "en": "Peak oil"
+    },
+    {
+      "id": "energy-mix",
+      "zh": "能源结构",
+      "en": "Energy mix"
+    },
+    {
+      "id": "carpool",
+      "zh": "拼车",
+      "en": "Carpool",
+      "forms": { "en": ["carpooling"] }
+    },
+    {
+      "id": "cycling",
+      "zh": "骑行",
+      "en": "Cycling",
+      "forms": { "en": ["cyclist"] }
+    },
+    {
+      "id": "car-free-day",
+      "zh": "无车日",
+      "en": "Car-free day"
+    },
+    {
+      "id": "clean-energy",
+      "zh": "清洁能源",
+      "en": "Clean energy"
+    },
+    {
+      "id": "climate",
+      "zh": "气候",
+      "en": "Climate",
+      "forms": { "en": ["climatic"] }
+    },
+    {
+      "id": "climate-change",
+      "zh": "气候变化",
+      "en": "Climate change"
+    },
+    {
+      "id": "global-warming",
+      "zh": "全球变暖",
+      "en": "Global warming"
+    },
+    {
+      "id": "sea-level-rise",
+      "zh": "海平面上升",
+      "en": "Sea level rise"
+    },
+    {
+      "id": "climate-model",
+      "zh": "气候模式",
+      "en": "Climate model"
+    },
+    {
+      "id": "ipcc",
+      "zh": "IPCC",
+      "en": "IPCC",
+      "forms": { "zh": ["政府间气候变化专门委员会"], "en": ["Intergovernmental Panel on Climate Change"] }
+    },
+    {
+      "id": "kyoto-protocol",
+      "zh": "京都议定书",
+      "en": "Kyoto Protocol"
+    },
+    {
+      "id": "emissions",
+      "zh": "排放",
+      "en": "Emissions",
+      "forms": { "en": ["emit"] }
+    },
+    {
+      "id": "carbon-neutral",
+      "zh": "碳中和",
+      "en": "Carbon neutral",
+      "forms": { "en": ["carbon neutrality"] }
+    },
+    {
+      "id": "carbon-peaking",
+      "zh": "碳达峰",
+      "en": "Carbon peaking"
+    },
+    {
+      "id": "carbon-sink",
+      "zh": "碳汇",
+      "en": "Carbon sink"
+    },
+    {
+      "id": "carbon-capture",
+      "zh": "碳捕集",
+      "en": "Carbon capture"
+    },
+    {
+      "id": "carbon-trading",
+      "zh": "碳交易",
+      "en": "Carbon trading"
+    },
+    {
+      "id": "carbon-tax",
+      "zh": "碳税",
+      "en": "Carbon tax"
+    },
+    {
+      "id": "geoengineering",
+      "zh": "地球工程",
+      "en": "Geoengineering"
+    },
+    {
+      "id": "carbon-budget",
+      "zh": "碳预算",
+      "en": "Carbon budget"
+    },
+    {
+      "id": "mitigation",
+      "zh": "减缓",
+      "en": "Mitigation",
+      "forms": { "en": ["mitigate"] }
+    },
+    {
+      "id": "food-miles",
+      "zh": "食物里程",
+      "en": "Food miles"
+    },
+    {
+      "id": "sustainability",
+      "zh": "可持续性",
+      "en": "Sustainability",
+      "forms": { "en": ["sustainable"] }
+    },
+    {
+      "id": "esg",
+      "zh": "ESG",
+      "en": "ESG",
+      "forms": { "en": ["environmental, social and governance"] }
+    },
+    {
+      "id": "eia",
+      "zh": "环评",
+      "en": "EIA",
+      "forms": { "zh": ["环境影响评价"], "en": ["environmental impact assessment"] }
+    },
+    {
+      "id": "green-gdp",
+      "zh": "绿色GDP",
+      "en": "Green GDP"
+    },
+    {
+      "id": "greenwashing",
+      "zh": "漂绿",
+      "en": "Greenwashing",
+      "forms": { "en": ["greenwash"] }
+    },
+    {
+      "id": "ecotourism",
+      "zh": "生态旅游",
+      "en": "Ecotourism"
+    },
+    {
+      "id": "eco-friendly",
+      "zh": "环保",
+      "en": "Eco-friendly"
+    },
+    {
+      "id": "low-carbon",
+      "zh": "低碳",
+      "en": "Low-carbon"
+    },
+    {
+      "id": "eco-label",
+      "zh": "生态标签",
+      "en": "Eco-label"
+    },
+    {
+      "id": "eco-city",
+      "zh": "生态城市",
+      "en": "Eco-city"
+    },
+    {
+      "id": "urban-forest",
+      "zh": "城市森林",
+      "en": "Urban forest"
+    },
+    {
+      "id": "greenway",
+      "zh": "绿道",
+      "en": "Greenway"
+    },
+    {
+      "id": "pocket-park",
+      "zh": "口袋公园",
+      "en": "Pocket park"
+    },
+    {
+      "id": "green-space",
+      "zh": "绿地",
+      "en": "Green space"
+    },
+    {
+      "id": "green-finance",
+      "zh": "绿色金融",
+      "en": "Green finance"
+    },
+    {
+      "id": "green-bond",
+      "zh": "绿色债券",
+      "en": "Green bond"
+    },
+    {
+      "id": "resource-curse",
+      "zh": "资源诅咒",
+      "en": "Resource curse"
+    },
+    {
+      "id": "jevons-paradox",
+      "zh": "杰文斯悖论",
+      "en": "Jevons paradox"
+    },
+    {
+      "id": "rebound-effect",
+      "zh": "回弹效应",
+      "en": "Rebound effect"
+    },
+    {
+      "id": "biosphere-2",
+      "zh": "生物圈2号",
+      "en": "Biosphere 2"
+    },
+    {
+      "id": "walden",
+      "zh": "瓦尔登湖",
+      "en": "Walden"
+    },
+    {
+      "id": "vegan",
+      "zh": "纯素",
+      "en": "Vegan",
+      "forms": { "en": ["veganism"] }
+    },
+    {
+      "id": "ecodesign",
+      "zh": "生态设计",
+      "en": "Ecodesign"
+    },
+    {
+      "id": "biomimicry",
+      "zh": "仿生",
+      "en": "Biomimicry",
+      "forms": { "en": ["biomimetic"] }
+    }
+  ]
+}
