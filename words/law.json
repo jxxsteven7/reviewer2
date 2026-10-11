@@ -1,0 +1,1361 @@
+{
+  "id": "law",
+  "name": {
+    "zh": "法学",
+    "en": "Law"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "jurisprudence",
+      "zh": "法理学",
+      "en": "Jurisprudence",
+      "forms": { "en": ["jurisprudential"] }
+    },
+    {
+      "id": "jurist",
+      "zh": "法学家",
+      "en": "Jurist"
+    },
+    {
+      "id": "law-school",
+      "zh": "法学院",
+      "en": "Law school"
+    },
+    {
+      "id": "law-review",
+      "zh": "法学期刊",
+      "en": "Law review"
+    },
+    {
+      "id": "bar-exam",
+      "zh": "法考",
+      "en": "Bar exam"
+    },
+    {
+      "id": "common-law",
+      "zh": "普通法",
+      "en": "Common law"
+    },
+    {
+      "id": "case-law",
+      "zh": "判例法",
+      "en": "Case law"
+    },
+    {
+      "id": "statute-law",
+      "zh": "成文法",
+      "en": "Statute law",
+      "forms": { "en": ["statute", "statutory"] }
+    },
+    {
+      "id": "customary-law",
+      "zh": "习惯法",
+      "en": "Customary law"
+    },
+    {
+      "id": "natural-law",
+      "zh": "自然法",
+      "en": "Natural law"
+    },
+    {
+      "id": "roman-law",
+      "zh": "罗马法",
+      "en": "Roman law"
+    },
+    {
+      "id": "civil-law",
+      "zh": "民法",
+      "en": "Civil law"
+    },
+    {
+      "id": "criminal-law",
+      "zh": "刑法",
+      "en": "Criminal law"
+    },
+    {
+      "id": "labor-law",
+      "zh": "劳动法",
+      "en": "Labor law",
+      "forms": { "en": ["labour law"] }
+    },
+    {
+      "id": "company-law",
+      "zh": "公司法",
+      "en": "Company law"
+    },
+    {
+      "id": "civil-code",
+      "zh": "民法典",
+      "en": "Civil Code"
+    },
+    {
+      "id": "codification",
+      "zh": "法典化",
+      "en": "Codification",
+      "forms": { "en": ["codify"] }
+    },
+    {
+      "id": "ordinance",
+      "zh": "条例",
+      "en": "Ordinance"
+    },
+    {
+      "id": "clause",
+      "zh": "条款",
+      "en": "Clause"
+    },
+    {
+      "id": "proviso",
+      "zh": "但书",
+      "en": "Proviso"
+    },
+    {
+      "id": "preamble",
+      "zh": "序言",
+      "en": "Preamble"
+    },
+    {
+      "id": "amendment",
+      "zh": "修正案",
+      "en": "Amendment",
+      "forms": { "en": ["amend"] }
+    },
+    {
+      "id": "legislation",
+      "zh": "立法",
+      "en": "Legislation",
+      "forms": { "en": ["legislate", "legislative", "legislature"] }
+    },
+    {
+      "id": "judiciary",
+      "zh": "司法",
+      "en": "Judiciary",
+      "forms": { "en": ["judicial"] }
+    },
+    {
+      "id": "retroactivity",
+      "zh": "溯及既往",
+      "en": "Retroactivity",
+      "forms": { "en": ["retroactive"] }
+    },
+    {
+      "id": "loophole",
+      "zh": "法律漏洞",
+      "en": "Loophole"
+    },
+    {
+      "id": "gray-area",
+      "zh": "灰色地带",
+      "en": "Gray area",
+      "forms": { "en": ["grey area"] }
+    },
+    {
+      "id": "legal-fiction",
+      "zh": "拟制",
+      "en": "Legal fiction"
+    },
+    {
+      "id": "presumption",
+      "zh": "推定",
+      "en": "Presumption",
+      "forms": { "en": ["presume"] }
+    },
+    {
+      "id": "discretion",
+      "zh": "裁量权",
+      "en": "Discretion",
+      "forms": { "en": ["discretionary"] }
+    },
+    {
+      "id": "right",
+      "zh": "权利",
+      "en": "Right"
+    },
+    {
+      "id": "obligation",
+      "zh": "义务",
+      "en": "Obligation",
+      "forms": { "en": ["obligate"] }
+    },
+    {
+      "id": "responsibility",
+      "zh": "责任",
+      "en": "Responsibility",
+      "forms": { "en": ["responsible"] }
+    },
+    {
+      "id": "equality",
+      "zh": "平等",
+      "en": "Equality",
+      "forms": { "en": ["equal"] }
+    },
+    {
+      "id": "contract-law",
+      "zh": "合同法",
+      "en": "Contract law"
+    },
+    {
+      "id": "property-law",
+      "zh": "物权法",
+      "en": "Property law"
+    },
+    {
+      "id": "tax-law",
+      "zh": "税法",
+      "en": "Tax law"
+    },
+    {
+      "id": "commercial-law",
+      "zh": "商法",
+      "en": "Commercial law"
+    },
+    {
+      "id": "maritime-law",
+      "zh": "海商法",
+      "en": "Maritime law"
+    },
+    {
+      "id": "procedural-law",
+      "zh": "程序法",
+      "en": "Procedural law"
+    },
+    {
+      "id": "provision",
+      "zh": "法条",
+      "en": "Provision"
+    },
+    {
+      "id": "legal-age",
+      "zh": "法定年龄",
+      "en": "Legal age"
+    },
+    {
+      "id": "natural-person",
+      "zh": "自然人",
+      "en": "Natural person"
+    },
+    {
+      "id": "lady-justice",
+      "zh": "正义女神",
+      "en": "Lady Justice"
+    },
+    {
+      "id": "legal-history",
+      "zh": "法律史",
+      "en": "Legal history"
+    },
+    {
+      "id": "legalism",
+      "zh": "法家",
+      "en": "Legalism",
+      "forms": { "en": ["legalist"] }
+    },
+    {
+      "id": "tang-code",
+      "zh": "唐律",
+      "en": "Tang Code"
+    },
+    {
+      "id": "magna-carta",
+      "zh": "大宪章",
+      "en": "Magna Carta"
+    },
+    {
+      "id": "charter",
+      "zh": "宪章",
+      "en": "Charter"
+    },
+    {
+      "id": "decree",
+      "zh": "法令",
+      "en": "Decree"
+    },
+    {
+      "id": "legal-tech",
+      "zh": "法律科技",
+      "en": "Legal tech"
+    },
+    {
+      "id": "legal-person",
+      "zh": "法人",
+      "en": "Legal person"
+    },
+    {
+      "id": "guardianship",
+      "zh": "监护",
+      "en": "Guardianship",
+      "forms": { "en": ["guardian"] }
+    },
+    {
+      "id": "ownership",
+      "zh": "所有权",
+      "en": "Ownership",
+      "forms": { "en": ["owner"] }
+    },
+    {
+      "id": "real-right",
+      "zh": "物权",
+      "en": "Real right"
+    },
+    {
+      "id": "usufruct",
+      "zh": "用益物权",
+      "en": "Usufruct"
+    },
+    {
+      "id": "property",
+      "zh": "财产",
+      "en": "Property"
+    },
+    {
+      "id": "real-property",
+      "zh": "不动产",
+      "en": "Real property"
+    },
+    {
+      "id": "creditor",
+      "zh": "债权人",
+      "en": "Creditor"
+    },
+    {
+      "id": "debtor",
+      "zh": "债务人",
+      "en": "Debtor"
+    },
+    {
+      "id": "guarantee",
+      "zh": "保证",
+      "en": "Guarantee",
+      "forms": { "en": ["guarantor"] }
+    },
+    {
+      "id": "pledge",
+      "zh": "质押",
+      "en": "Pledge"
+    },
+    {
+      "id": "lien",
+      "zh": "留置权",
+      "en": "Lien"
+    },
+    {
+      "id": "lease",
+      "zh": "租赁",
+      "en": "Lease",
+      "forms": { "en": ["leasing", "lessor", "lessee"] }
+    },
+    {
+      "id": "deposit",
+      "zh": "押金",
+      "en": "Deposit"
+    },
+    {
+      "id": "trust",
+      "zh": "信托",
+      "en": "Trust",
+      "forms": { "en": ["trustee"] }
+    },
+    {
+      "id": "beneficiary",
+      "zh": "受益人",
+      "en": "Beneficiary"
+    },
+    {
+      "id": "agency",
+      "zh": "代理",
+      "en": "Agency"
+    },
+    {
+      "id": "principal",
+      "zh": "委托人",
+      "en": "Principal"
+    },
+    {
+      "id": "offer",
+      "zh": "要约",
+      "en": "Offer"
+    },
+    {
+      "id": "good-faith",
+      "zh": "善意",
+      "en": "Good faith"
+    },
+    {
+      "id": "malice",
+      "zh": "恶意",
+      "en": "Malice",
+      "forms": { "en": ["malicious"] }
+    },
+    {
+      "id": "duress",
+      "zh": "胁迫",
+      "en": "Duress"
+    },
+    {
+      "id": "force-majeure",
+      "zh": "不可抗力",
+      "en": "Force majeure"
+    },
+    {
+      "id": "damages",
+      "zh": "损害赔偿",
+      "en": "Damages"
+    },
+    {
+      "id": "compensation",
+      "zh": "赔偿",
+      "en": "Compensation",
+      "forms": { "en": ["compensate"] }
+    },
+    {
+      "id": "tort",
+      "zh": "侵权",
+      "en": "Tort",
+      "forms": { "en": ["tortious"] }
+    },
+    {
+      "id": "negligence",
+      "zh": "过失",
+      "en": "Negligence",
+      "forms": { "en": ["negligent"] }
+    },
+    {
+      "id": "disclaimer",
+      "zh": "免责声明",
+      "en": "Disclaimer"
+    },
+    {
+      "id": "nda",
+      "zh": "保密协议",
+      "en": "NDA",
+      "forms": { "en": ["non-disclosure agreement"] }
+    },
+    {
+      "id": "non-compete",
+      "zh": "竞业限制",
+      "en": "Non-compete"
+    },
+    {
+      "id": "privacy-policy",
+      "zh": "隐私政策",
+      "en": "Privacy policy"
+    },
+    {
+      "id": "authorization",
+      "zh": "授权",
+      "en": "Authorization",
+      "forms": { "en": ["authorize", "authorise", "authorisation"] }
+    },
+    {
+      "id": "notarization",
+      "zh": "公证",
+      "en": "Notarization",
+      "forms": { "en": ["notary", "notarize", "notarise"] }
+    },
+    {
+      "id": "signature",
+      "zh": "签名",
+      "en": "Signature"
+    },
+    {
+      "id": "seal",
+      "zh": "印章",
+      "en": "Seal"
+    },
+    {
+      "id": "oath",
+      "zh": "宣誓",
+      "en": "Oath"
+    },
+    {
+      "id": "covenant",
+      "zh": "契约",
+      "en": "Covenant"
+    },
+    {
+      "id": "earnest-money",
+      "zh": "定金",
+      "en": "Earnest money"
+    },
+    {
+      "id": "performance",
+      "zh": "履行",
+      "en": "Performance",
+      "forms": { "en": ["perform"] }
+    },
+    {
+      "id": "rescission",
+      "zh": "解除",
+      "en": "Rescission",
+      "forms": { "en": ["rescind"] }
+    },
+    {
+      "id": "revocation",
+      "zh": "吊销",
+      "en": "Revocation",
+      "forms": { "en": ["revoke"] }
+    },
+    {
+      "id": "void",
+      "zh": "无效",
+      "en": "Void"
+    },
+    {
+      "id": "easement",
+      "zh": "地役权",
+      "en": "Easement"
+    },
+    {
+      "id": "possession",
+      "zh": "占有",
+      "en": "Possession",
+      "forms": { "en": ["possess"] }
+    },
+    {
+      "id": "lost-property",
+      "zh": "遗失物",
+      "en": "Lost property"
+    },
+    {
+      "id": "treasure-trove",
+      "zh": "埋藏物",
+      "en": "Treasure trove"
+    },
+    {
+      "id": "co-ownership",
+      "zh": "共有",
+      "en": "Co-ownership"
+    },
+    {
+      "id": "landlord",
+      "zh": "房东",
+      "en": "Landlord"
+    },
+    {
+      "id": "tenant",
+      "zh": "租客",
+      "en": "Tenant",
+      "forms": { "en": ["tenancy"] }
+    },
+    {
+      "id": "shell-company",
+      "zh": "空壳公司",
+      "en": "Shell company"
+    },
+    {
+      "id": "warranty",
+      "zh": "保修",
+      "en": "Warranty"
+    },
+    {
+      "id": "tax-avoidance",
+      "zh": "避税",
+      "en": "Tax avoidance"
+    },
+    {
+      "id": "pyramid-scheme",
+      "zh": "传销",
+      "en": "Pyramid scheme"
+    },
+    {
+      "id": "e-signature",
+      "zh": "电子签名",
+      "en": "E-signature",
+      "forms": { "en": ["electronic signature"] }
+    },
+    {
+      "id": "legal-opinion",
+      "zh": "法律意见",
+      "en": "Legal opinion"
+    },
+    {
+      "id": "legal-counsel",
+      "zh": "法律顾问",
+      "en": "Legal counsel"
+    },
+    {
+      "id": "party",
+      "zh": "当事人",
+      "en": "Party"
+    },
+    {
+      "id": "third-party",
+      "zh": "第三人",
+      "en": "Third party"
+    },
+    {
+      "id": "apology",
+      "zh": "赔礼道歉",
+      "en": "Apology",
+      "forms": { "en": ["apologize", "apologise"] }
+    },
+    {
+      "id": "marriage",
+      "zh": "婚姻",
+      "en": "Marriage",
+      "forms": { "en": ["marry", "married"] }
+    },
+    {
+      "id": "divorce",
+      "zh": "离婚",
+      "en": "Divorce",
+      "forms": { "en": ["divorced"] }
+    },
+    {
+      "id": "prenup",
+      "zh": "婚前协议",
+      "en": "Prenup",
+      "forms": { "en": ["prenuptial agreement"] }
+    },
+    {
+      "id": "custody",
+      "zh": "抚养权",
+      "en": "Custody"
+    },
+    {
+      "id": "child-support",
+      "zh": "抚养费",
+      "en": "Child support"
+    },
+    {
+      "id": "adoption",
+      "zh": "收养",
+      "en": "Adoption",
+      "forms": { "en": ["adopt", "adopted", "adoptive"] }
+    },
+    {
+      "id": "will",
+      "zh": "遗嘱",
+      "en": "Will"
+    },
+    {
+      "id": "executor",
+      "zh": "遗嘱执行人",
+      "en": "Executor"
+    },
+    {
+      "id": "gift",
+      "zh": "赠与",
+      "en": "Gift"
+    },
+    {
+      "id": "nationality",
+      "zh": "国籍",
+      "en": "Nationality"
+    },
+    {
+      "id": "bequest",
+      "zh": "遗赠",
+      "en": "Bequest",
+      "forms": { "en": ["bequeath"] }
+    },
+    {
+      "id": "intestacy",
+      "zh": "法定继承",
+      "en": "Intestacy",
+      "forms": { "en": ["intestate"] }
+    },
+    {
+      "id": "bigamy",
+      "zh": "重婚",
+      "en": "Bigamy",
+      "forms": { "en": ["bigamist"] }
+    },
+    {
+      "id": "id-card",
+      "zh": "身份证",
+      "en": "ID card",
+      "forms": { "en": ["identity card"] }
+    },
+    {
+      "id": "work-injury",
+      "zh": "工伤",
+      "en": "Work injury"
+    },
+    {
+      "id": "child-labor",
+      "zh": "童工",
+      "en": "Child labor",
+      "forms": { "en": ["child labour"] }
+    },
+    {
+      "id": "trade-secret",
+      "zh": "商业秘密",
+      "en": "Trade secret"
+    },
+    {
+      "id": "piracy",
+      "zh": "盗版",
+      "en": "Piracy",
+      "forms": { "en": ["pirate", "pirated"] }
+    },
+    {
+      "id": "knockoff",
+      "zh": "山寨",
+      "en": "Knockoff"
+    },
+    {
+      "id": "public-domain",
+      "zh": "公有领域",
+      "en": "Public domain"
+    },
+    {
+      "id": "fair-use",
+      "zh": "合理使用",
+      "en": "Fair use"
+    },
+    {
+      "id": "crime",
+      "zh": "犯罪",
+      "en": "Crime"
+    },
+    {
+      "id": "criminal",
+      "zh": "罪犯",
+      "en": "Criminal"
+    },
+    {
+      "id": "suspect",
+      "zh": "嫌疑人",
+      "en": "Suspect"
+    },
+    {
+      "id": "intent",
+      "zh": "故意",
+      "en": "Intent",
+      "forms": { "en": ["intentional"] }
+    },
+    {
+      "id": "motive",
+      "zh": "犯罪动机",
+      "en": "Motive"
+    },
+    {
+      "id": "attempt",
+      "zh": "未遂",
+      "en": "Attempt"
+    },
+    {
+      "id": "accomplice",
+      "zh": "从犯",
+      "en": "Accomplice"
+    },
+    {
+      "id": "self-defense",
+      "zh": "正当防卫",
+      "en": "Self-defense",
+      "forms": { "en": ["self-defence"] }
+    },
+    {
+      "id": "theft",
+      "zh": "盗窃",
+      "en": "Theft",
+      "forms": { "en": ["thief"] }
+    },
+    {
+      "id": "robbery",
+      "zh": "抢劫",
+      "en": "Robbery",
+      "forms": { "en": ["rob", "robber"] }
+    },
+    {
+      "id": "kidnapping",
+      "zh": "绑架",
+      "en": "Kidnapping",
+      "forms": { "en": ["kidnap", "kidnapper"] }
+    },
+    {
+      "id": "arson",
+      "zh": "纵火",
+      "en": "Arson",
+      "forms": { "en": ["arsonist"] }
+    },
+    {
+      "id": "smuggling",
+      "zh": "走私",
+      "en": "Smuggling",
+      "forms": { "en": ["smuggle", "smuggler"] }
+    },
+    {
+      "id": "bribery",
+      "zh": "贿赂",
+      "en": "Bribery",
+      "forms": { "en": ["bribe"] }
+    },
+    {
+      "id": "embezzlement",
+      "zh": "贪污",
+      "en": "Embezzlement",
+      "forms": { "en": ["embezzle"] }
+    },
+    {
+      "id": "extortion",
+      "zh": "敲诈",
+      "en": "Extortion",
+      "forms": { "en": ["extort"] }
+    },
+    {
+      "id": "defamation",
+      "zh": "诽谤",
+      "en": "Defamation",
+      "forms": { "en": ["defame", "defamatory"] }
+    },
+    {
+      "id": "perjury",
+      "zh": "伪证",
+      "en": "Perjury"
+    },
+    {
+      "id": "cybercrime",
+      "zh": "网络犯罪",
+      "en": "Cybercrime"
+    },
+    {
+      "id": "fingerprint",
+      "zh": "指纹",
+      "en": "Fingerprint"
+    },
+    {
+      "id": "felony",
+      "zh": "重罪",
+      "en": "Felony",
+      "forms": { "en": ["felon"] }
+    },
+    {
+      "id": "misdemeanor",
+      "zh": "轻罪",
+      "en": "Misdemeanor",
+      "forms": { "en": ["misdemeanour"] }
+    },
+    {
+      "id": "recidivism",
+      "zh": "累犯",
+      "en": "Recidivism",
+      "forms": { "en": ["recidivist"] }
+    },
+    {
+      "id": "stolen-goods",
+      "zh": "赃物",
+      "en": "Stolen goods"
+    },
+    {
+      "id": "murder-weapon",
+      "zh": "凶器",
+      "en": "Murder weapon"
+    },
+    {
+      "id": "crime-scene",
+      "zh": "犯罪现场",
+      "en": "Crime scene"
+    },
+    {
+      "id": "doxxing",
+      "zh": "人肉搜索",
+      "en": "Doxxing",
+      "forms": { "en": ["dox", "doxing"] }
+    },
+    {
+      "id": "cyberbullying",
+      "zh": "网络暴力",
+      "en": "Cyberbullying",
+      "forms": { "en": ["cyberbully"] }
+    },
+    {
+      "id": "cold-case",
+      "zh": "悬案",
+      "en": "Cold case"
+    },
+    {
+      "id": "narcotics",
+      "zh": "毒品",
+      "en": "Narcotics"
+    },
+    {
+      "id": "gambling",
+      "zh": "赌博",
+      "en": "Gambling",
+      "forms": { "en": ["gamble", "gambler"] }
+    },
+    {
+      "id": "drunk-driving",
+      "zh": "醉驾",
+      "en": "Drunk driving"
+    },
+    {
+      "id": "hit-and-run",
+      "zh": "肇事逃逸",
+      "en": "Hit-and-run"
+    },
+    {
+      "id": "speeding",
+      "zh": "超速",
+      "en": "Speeding"
+    },
+    {
+      "id": "ticket",
+      "zh": "罚单",
+      "en": "Ticket"
+    },
+    {
+      "id": "pickpocket",
+      "zh": "扒手",
+      "en": "Pickpocket"
+    },
+    {
+      "id": "burglary",
+      "zh": "入室盗窃",
+      "en": "Burglary",
+      "forms": { "en": ["burglar", "burgle"] }
+    },
+    {
+      "id": "telecom-fraud",
+      "zh": "电信诈骗",
+      "en": "Telecom fraud"
+    },
+    {
+      "id": "grave-robbing",
+      "zh": "盗墓",
+      "en": "Grave robbing",
+      "forms": { "en": ["grave robber"] }
+    },
+    {
+      "id": "cultural-relic",
+      "zh": "文物",
+      "en": "Cultural relic"
+    },
+    {
+      "id": "conspiracy",
+      "zh": "共谋",
+      "en": "Conspiracy",
+      "forms": { "en": ["conspire", "conspirator"] }
+    },
+    {
+      "id": "gang",
+      "zh": "团伙",
+      "en": "Gang"
+    },
+    {
+      "id": "fugitive",
+      "zh": "通缉犯",
+      "en": "Fugitive"
+    },
+    {
+      "id": "detective",
+      "zh": "侦探",
+      "en": "Detective"
+    },
+    {
+      "id": "profiling",
+      "zh": "侧写",
+      "en": "Profiling",
+      "forms": { "en": ["profiler"] }
+    },
+    {
+      "id": "autopsy",
+      "zh": "尸检",
+      "en": "Autopsy"
+    },
+    {
+      "id": "exhibit",
+      "zh": "证物",
+      "en": "Exhibit"
+    },
+    {
+      "id": "tampering",
+      "zh": "篡改",
+      "en": "Tampering",
+      "forms": { "en": ["tamper"] }
+    },
+    {
+      "id": "court",
+      "zh": "法院",
+      "en": "Court",
+      "forms": { "en": ["courtroom"] }
+    },
+    {
+      "id": "judge",
+      "zh": "法官",
+      "en": "Judge"
+    },
+    {
+      "id": "lawyer",
+      "zh": "律师",
+      "en": "Lawyer"
+    },
+    {
+      "id": "law-firm",
+      "zh": "律所",
+      "en": "Law firm"
+    },
+    {
+      "id": "partner",
+      "zh": "合伙人",
+      "en": "Partner"
+    },
+    {
+      "id": "prosecutor",
+      "zh": "检察官",
+      "en": "Prosecutor",
+      "forms": { "en": ["prosecute", "prosecution"] }
+    },
+    {
+      "id": "plaintiff",
+      "zh": "原告",
+      "en": "Plaintiff"
+    },
+    {
+      "id": "defendant",
+      "zh": "被告",
+      "en": "Defendant"
+    },
+    {
+      "id": "victim",
+      "zh": "被害人",
+      "en": "Victim"
+    },
+    {
+      "id": "witness",
+      "zh": "证人",
+      "en": "Witness"
+    },
+    {
+      "id": "bailiff",
+      "zh": "法警",
+      "en": "Bailiff"
+    },
+    {
+      "id": "court-clerk",
+      "zh": "书记员",
+      "en": "Court clerk"
+    },
+    {
+      "id": "gavel",
+      "zh": "法槌",
+      "en": "Gavel"
+    },
+    {
+      "id": "case",
+      "zh": "案件",
+      "en": "Case"
+    },
+    {
+      "id": "litigation",
+      "zh": "诉讼",
+      "en": "Litigation",
+      "forms": { "en": ["litigate", "litigant"] }
+    },
+    {
+      "id": "class-action",
+      "zh": "集体诉讼",
+      "en": "Class action"
+    },
+    {
+      "id": "jurisdiction",
+      "zh": "管辖权",
+      "en": "Jurisdiction"
+    },
+    {
+      "id": "indictment",
+      "zh": "起诉书",
+      "en": "Indictment",
+      "forms": { "en": ["indict"] }
+    },
+    {
+      "id": "subpoena",
+      "zh": "传票",
+      "en": "Subpoena"
+    },
+    {
+      "id": "recusal",
+      "zh": "回避",
+      "en": "Recusal",
+      "forms": { "en": ["recuse"] }
+    },
+    {
+      "id": "testimony",
+      "zh": "证词",
+      "en": "Testimony",
+      "forms": { "en": ["testify"] }
+    },
+    {
+      "id": "confession",
+      "zh": "口供",
+      "en": "Confession",
+      "forms": { "en": ["confess"] }
+    },
+    {
+      "id": "dossier",
+      "zh": "卷宗",
+      "en": "Dossier"
+    },
+    {
+      "id": "trial",
+      "zh": "庭审",
+      "en": "Trial"
+    },
+    {
+      "id": "guilty-plea",
+      "zh": "认罪",
+      "en": "Guilty plea"
+    },
+    {
+      "id": "plea-bargain",
+      "zh": "辩诉交易",
+      "en": "Plea bargain"
+    },
+    {
+      "id": "conviction",
+      "zh": "定罪",
+      "en": "Conviction",
+      "forms": { "en": ["convict", "convicted"] }
+    },
+    {
+      "id": "not-guilty",
+      "zh": "无罪",
+      "en": "Not guilty"
+    },
+    {
+      "id": "acquittal",
+      "zh": "无罪释放",
+      "en": "Acquittal",
+      "forms": { "en": ["acquit", "acquitted"] }
+    },
+    {
+      "id": "sentencing",
+      "zh": "量刑",
+      "en": "Sentencing"
+    },
+    {
+      "id": "judgment",
+      "zh": "判决书",
+      "en": "Judgment",
+      "forms": { "en": ["judgement"] }
+    },
+    {
+      "id": "appeal",
+      "zh": "上诉",
+      "en": "Appeal"
+    },
+    {
+      "id": "retrial",
+      "zh": "再审",
+      "en": "Retrial"
+    },
+    {
+      "id": "dismissal",
+      "zh": "驳回",
+      "en": "Dismissal",
+      "forms": { "en": ["dismiss"] }
+    },
+    {
+      "id": "injunction",
+      "zh": "禁令",
+      "en": "Injunction"
+    },
+    {
+      "id": "mediation",
+      "zh": "调解",
+      "en": "Mediation",
+      "forms": { "en": ["mediate", "mediator"] }
+    },
+    {
+      "id": "arbitration",
+      "zh": "仲裁",
+      "en": "Arbitration",
+      "forms": { "en": ["arbitrate", "arbitrator"] }
+    },
+    {
+      "id": "legal-aid",
+      "zh": "法律援助",
+      "en": "Legal aid"
+    },
+    {
+      "id": "arrest",
+      "zh": "逮捕",
+      "en": "Arrest"
+    },
+    {
+      "id": "detention",
+      "zh": "拘留",
+      "en": "Detention",
+      "forms": { "en": ["detain"] }
+    },
+    {
+      "id": "bail",
+      "zh": "保释",
+      "en": "Bail"
+    },
+    {
+      "id": "surrender",
+      "zh": "自首",
+      "en": "Surrender"
+    },
+    {
+      "id": "fine",
+      "zh": "罚款",
+      "en": "Fine"
+    },
+    {
+      "id": "probation",
+      "zh": "缓刑",
+      "en": "Probation"
+    },
+    {
+      "id": "parole",
+      "zh": "假释",
+      "en": "Parole"
+    },
+    {
+      "id": "pardon",
+      "zh": "赦免",
+      "en": "Pardon"
+    },
+    {
+      "id": "prison",
+      "zh": "监狱",
+      "en": "Prison",
+      "forms": { "en": ["prisoner"] }
+    },
+    {
+      "id": "supreme-court",
+      "zh": "最高法院",
+      "en": "Supreme Court"
+    },
+    {
+      "id": "amicus-curiae",
+      "zh": "法庭之友",
+      "en": "Amicus curiae"
+    },
+    {
+      "id": "complaint",
+      "zh": "起诉状",
+      "en": "Complaint"
+    },
+    {
+      "id": "objection",
+      "zh": "异议",
+      "en": "Objection"
+    },
+    {
+      "id": "recess",
+      "zh": "休庭",
+      "en": "Recess"
+    },
+    {
+      "id": "expert-witness",
+      "zh": "专家证人",
+      "en": "Expert witness"
+    },
+    {
+      "id": "enforcement",
+      "zh": "强制执行",
+      "en": "Enforcement",
+      "forms": { "en": ["enforce"] }
+    },
+    {
+      "id": "case-closed",
+      "zh": "结案",
+      "en": "Case closed"
+    },
+    {
+      "id": "moot-court",
+      "zh": "模拟法庭",
+      "en": "Moot court"
+    },
+    {
+      "id": "search-warrant",
+      "zh": "搜查令",
+      "en": "Search warrant"
+    },
+    {
+      "id": "police",
+      "zh": "警察",
+      "en": "Police",
+      "forms": { "en": ["policing"] }
+    },
+    {
+      "id": "handcuffs",
+      "zh": "手铐",
+      "en": "Handcuffs"
+    },
+    {
+      "id": "lie-detector",
+      "zh": "测谎仪",
+      "en": "Lie detector"
+    },
+    {
+      "id": "interrogation",
+      "zh": "审讯",
+      "en": "Interrogation",
+      "forms": { "en": ["interrogate"] }
+    },
+    {
+      "id": "informant",
+      "zh": "线人",
+      "en": "Informant"
+    },
+    {
+      "id": "undercover",
+      "zh": "卧底",
+      "en": "Undercover"
+    },
+    {
+      "id": "case-filing",
+      "zh": "立案",
+      "en": "Case filing"
+    },
+    {
+      "id": "hearing",
+      "zh": "听证会",
+      "en": "Hearing"
+    },
+    {
+      "id": "hearsay",
+      "zh": "传闻证据",
+      "en": "Hearsay"
+    },
+    {
+      "id": "witness-stand",
+      "zh": "证人席",
+      "en": "Witness stand"
+    },
+    {
+      "id": "stenographer",
+      "zh": "速记员",
+      "en": "Stenographer",
+      "forms": { "en": ["stenography"] }
+    },
+    {
+      "id": "commutation",
+      "zh": "减刑",
+      "en": "Commutation"
+    },
+    {
+      "id": "prison-guard",
+      "zh": "狱警",
+      "en": "Prison guard"
+    },
+    {
+      "id": "treaty",
+      "zh": "条约",
+      "en": "Treaty"
+    },
+    {
+      "id": "convention",
+      "zh": "公约",
+      "en": "Convention"
+    },
+    {
+      "id": "ratification",
+      "zh": "批准",
+      "en": "Ratification",
+      "forms": { "en": ["ratify"] }
+    },
+    {
+      "id": "embassy",
+      "zh": "大使馆",
+      "en": "Embassy"
+    }
+  ]
+}
