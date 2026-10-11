@@ -74,6 +74,24 @@ describe('the rooms where a connection has a seat', () => {
     expect(await seatsOf(track(await tablet.connect()))).toEqual([]);
   });
 
+  // Everyone in these tests has the same address, as the people in one lab do.
+  test('lead back to the seat the browser took as a guest, whatever codes the address got wrong', async () => {
+    server = await startServer({ socketLimits: { failedLookupsPerMinute: 2 } });
+    const { chair, code, roomId } = await createRoom(server.url, 'Dee');
+    track(chair);
+    const asGuest = track(await joinRoom(server.url, code, 'Bea', { play: true }));
+    const bea = await loggedIn('Bea');
+    const home = track(await bea.connect({ token: asGuest.token }));
+    expect(await seatsOf(home)).toEqual([{ code, game: 'test', playing: false }]);
+    const typist = track(await TestClient.connect(server.url));
+    for (const wrong of ['ZZZZ', 'ZZZZ']) {
+      expect(await typist.send('room:join', { code: wrong })).toEqual({ ok: false, error: 'room_not_found' });
+    }
+    expect(await typist.send('room:join', { code, name: 'Cat' })).toEqual({ ok: false, error: 'rate_limited' });
+    expect(await home.send('room:join', { code })).toMatchObject({ ok: true, roomId });
+    await home.waitFor((state) => state.me === asGuest.me);
+  });
+
   test('are no longer found once the player has left, was removed or was dropped', async () => {
     server = await startServer();
     const { chair, code } = await createRoom(server.url, 'Ann');

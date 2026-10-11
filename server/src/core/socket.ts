@@ -374,14 +374,17 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // proxy that isn't trusted. So the limit is only for those who could be trying codes, and
   // never for someone who has been in the room:
   //
-  // - whoever is in it already, by their token or on this very connection;
+  // - whoever is in it already, by their token or on this very connection, or by the guest seat
+  //   that their account would adopt (meta:seats offers the way back to it);
   // - whoever gives its room ID. That takes having been sent it, and a wrong one finds nothing
   //   whatever the code, so such a lookup tells nobody anything about codes;
   // - whoever comes to a public room, whose code the list gives to anyone (meta:rooms).
   function lookup(conn: Connection, code: string, roomId?: string): Room | 'room_not_found' | 'rate_limited' {
     const room = rooms.find(code);
     if (roomId !== undefined) return room?.id === roomId ? room : 'room_not_found';
-    if (room && (conn.room === room || room.memberByKey(conn.key) || room.public)) return room;
+    if (room && (conn.room === room || room.memberByKey(conn.key) || guestSeat(room, conn) || room.public)) {
+      return room;
+    }
     if (!failedLookups.allowed(conn.ip)) return 'rate_limited';
     if (room) return room;
     failedLookups.add(conn.ip);
