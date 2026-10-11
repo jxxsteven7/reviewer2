@@ -21,7 +21,7 @@
 ## Checklist
 
 - [ ] Based on the latest `main`, and does one thing (or bundles small changes a maintainer agreed to, each listed above)
-- [ ] Title `<type>: <summary>` in English, with no AI attribution (CI adds the version)
+- [ ] Title `<type>: <summary>` in English, with no AI attribution (CI adds the version, or none for docs for people alone)
 - [ ] Everything in English; if one README changed, the other matches
 - [ ] All UI text in the locale files, in both languages
 - [ ] No Google services or public CDNs; new dependencies work in mainland China

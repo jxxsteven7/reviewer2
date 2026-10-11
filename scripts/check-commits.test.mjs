@@ -21,6 +21,7 @@ import {
   cleanMessage,
   fixedTitle,
   isAgent,
+  isUnversioned,
   splitVersion,
   successors,
 } from './check-commits.mjs';
@@ -68,6 +69,28 @@ describe('versions', () => {
     assert.equal(fixedTitle('v1.0.0 feat: add rooms', [0, 1, 3], patchOnly), 'v0.1.4 feat: add rooms');
     assert.equal(fixedTitle('v0.1.4 feat: add rooms', [0, 1, 3], patchOnly), 'v0.1.4 feat: add rooms');
     assert.equal(fixedTitle('feat: add rooms', [0, 1, 3], patchOnly), 'v0.1.4 feat: add rooms');
+  });
+
+  test('fixedTitle with unversioned drops any version', () => {
+    const unversioned = { unversioned: true };
+    assert.equal(fixedTitle('docs: thank a tester', [0, 1, 3], unversioned), 'docs: thank a tester');
+    assert.equal(fixedTitle(' v0.1.4 docs: thank a tester ', [0, 1, 3], unversioned), 'docs: thank a tester');
+    assert.equal(fixedTitle('v0.2.0 docs: thank a tester', [0, 1, 3], unversioned), 'docs: thank a tester');
+  });
+
+  test('isUnversioned holds for the docs for people alone', () => {
+    assert.ok(isUnversioned(['ACKNOWLEDGMENTS.md']));
+    assert.ok(isUnversioned(['README.md', 'README.zh-CN.md', 'CONTRIBUTING.md']));
+    assert.ok(isUnversioned(['docs/architecture.md', 'docs/decisions/0002-accounts.md', 'docs/maintainers.md']));
+    assert.ok(!isUnversioned([]));
+    assert.ok(!isUnversioned(['docs/rules/git.md']));
+    assert.ok(!isUnversioned(['AGENTS.md']));
+    assert.ok(!isUnversioned(['CLAUDE.md']));
+    assert.ok(!isUnversioned(['words/README.md']));
+    assert.ok(!isUnversioned(['LICENSE']));
+    assert.ok(!isUnversioned(['.github/CODEOWNERS']));
+    assert.ok(!isUnversioned(['client/README.md']));
+    assert.ok(!isUnversioned(['ACKNOWLEDGMENTS.md', 'client/src/App.vue']));
   });
 });
 
@@ -364,6 +387,73 @@ describe('in a git repository', () => {
     assert.match(result.stdout, /must be v0\.0\.3/);
     commit('feat: add a lobby');
     assert.equal(cli('head').status, 1);
+  });
+
+  test('a pull request or landed commit that changes only docs for people takes no version', () => {
+    const { directory, git, commit, cli } = makeRepo();
+    const change = (file, subject) => {
+      mkdirSync(join(directory, file, '..'), { recursive: true });
+      writeFileSync(join(directory, file), `${subject}\n`);
+      git('add', file);
+      commit(subject);
+    };
+    change('README.md', 'v0.0.1 docs: add a readme (#1)');
+    git('switch', '-q', '-c', 'docs/thanks');
+    change('ACKNOWLEDGMENTS.md', 'docs: thank a tester');
+    change('docs/architecture.md', 'docs: describe the rooms');
+    const title = (...args) => cli('pr-title', '--base', 'main', '--head', 'docs/thanks', ...args);
+    assert.equal(title('--fix', '--', 'v0.0.2 docs: thank a tester').stdout.trim(), 'docs: thank a tester');
+    assert.equal(title('--', 'docs: thank a tester').status, 0);
+    const versioned = title('--', 'v0.0.2 docs: thank a tester');
+    assert.equal(versioned.status, 1);
+    assert.match(versioned.stdout, /carries no version/);
+    git('switch', '-q', '-c', 'docs/rules');
+    change('docs/rules/git.md', 'docs: change a rule');
+    const rule = (...args) => cli('pr-title', '--base', 'main', '--head', 'docs/rules', ...args);
+    assert.equal(rule('--fix', '--', 'docs: change a rule').stdout.trim(), 'v0.0.2 docs: change a rule');
+    assert.equal(rule('--', 'docs: change a rule').status, 1);
+
+    git('switch', '-q', 'main');
+    change('ACKNOWLEDGMENTS.md', 'docs: thank a tester (#2)');
+    assert.equal(cli('head').status, 0);
+    change('docs/design.md', 'v0.0.2 docs: describe the look (#3)');
+    assert.match(cli('head').stdout, /carries no version/);
+    // A version that landed is used up, even on a commit that shouldn't have had it.
+    change('server.js', 'v0.0.3 feat: add a server (#4)');
+    assert.equal(cli('head').status, 0);
+    change('docs/rules/git.md', 'docs: change a rule (#5)');
+    assert.equal(cli('head').status, 1);
+    assert.equal(cli('next', '--base', 'main').stdout.trim(), 'v0.0.4');
+
+    // A rule moved out of docs/rules/ counts at both of its paths, so it still takes a version.
+    git('switch', '-q', '-c', 'docs/move');
+    git('mv', 'docs/rules/git.md', 'docs/git.md');
+    commit('docs: move a rule');
+    const moved = (...args) => cli('pr-title', '--base', 'main', '--head', 'docs/move', ...args);
+    assert.equal(moved('--fix', '--', 'docs: move a rule').stdout.trim(), 'v0.0.4 docs: move a rule');
+    git('switch', '-q', 'main');
+    git('mv', 'docs/rules/git.md', 'docs/git.md');
+    commit('docs: move a rule (#6)');
+    assert.match(cli('head').stdout, /must start with "vX\.Y\.Z "/);
+  });
+
+  test('msg on main asks for the next version, or none for the docs for people alone', () => {
+    const { directory, git, commit, cli } = makeRepo();
+    commit('v0.0.1 docs: add rules (#1)');
+    const file = join(directory, 'message.txt');
+    const stage = (path) => {
+      writeFileSync(join(directory, path), 'text\n');
+      git('add', path);
+    };
+    stage('README.md');
+    writeFileSync(file, 'docs: fix a typo\n');
+    assert.equal(cli('msg', file).status, 0);
+    writeFileSync(file, 'v0.0.2 docs: fix a typo\n');
+    assert.match(cli('msg', file).stdout, /carries no version/);
+    stage('server.js');
+    assert.equal(cli('msg', file).status, 0);
+    writeFileSync(file, 'docs: fix a typo\n');
+    assert.match(cli('msg', file).stdout, /must start with "vX\.Y\.Z "/);
   });
 
   test('msg forbids a version on a branch commit', () => {

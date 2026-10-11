@@ -14,11 +14,12 @@
 //       one commit message (the commit-msg hook)
 //   node scripts/check-commits.mjs range <rev-range>
 //       every commit in a pull request
-//   node scripts/check-commits.mjs pr-title --base <ref> [--fix [--patch]] [--body-file <file>] [--head-ref <branch>] -- <title>
+//   node scripts/check-commits.mjs pr-title --base <ref> [--head <ref>] [--fix [--patch]] [--body-file <file>] [--head-ref <branch>] -- <title>
 //       the pull request title, which becomes the squash commit, and the PR body;
 //       with --fix, print the title with the right version instead of checking it, and with
 //       --fix --patch, print it with the next patch version even if it asks for a minor or
-//       major one
+//       major one. --head <ref> names the PR's head commit: if the PR changes only docs for
+//       people, its title takes no version, and --fix takes any version out
 //   node scripts/check-commits.mjs head [--base <ref>]
 //       the commits that landed on main since <ref> (default HEAD^)
 //   node scripts/check-commits.mjs next [--base <ref>] [--minor | --major]
@@ -30,7 +31,8 @@
 // Versions: the previous version on a ref is the highest "vX.Y.Z " subject prefix on its
 // first-parent history or the highest vX.Y.Z tag merged into it, whichever is greater, and
 // v0.0.0 when there is neither. After it, only the next patch (Z+1), minor (Y+1, Z=0) or
-// major (X+1, Y=Z=0) version is legal.
+// major (X+1, Y=Z=0) version is legal. A pull request that changes only docs for people
+// (UNVERSIONED_RE) takes no version, nor does its squash commit on main.
 //
 // Exit codes: 0 pass, 1 convention violated, 2 usage or environment error.
 
@@ -53,6 +55,10 @@ const TYPE_RE = new RegExp(`^(${TYPES.join('|')}): `);
 const BRANCH_RE = new RegExp(`^(${BRANCH_TYPES.join('|')})/[a-z0-9]+(-[a-z0-9]+)*$`);
 const VERSION_PREFIX_RE = /^v(\d+)\.(\d+)\.(\d+) (?=\S)/;
 const TAG_RE = /^v(\d+)\.(\d+)\.(\d+)$/;
+// The docs written for people to read: ACKNOWLEDGMENTS.md, the READMEs, CONTRIBUTING.md and
+// docs/ apart from docs/rules/. A pull request that changes nothing else lands without a version.
+// The rules, the licenses and everything else take one.
+const UNVERSIONED_RE = /^(?:ACKNOWLEDGMENTS\.md|README\.md|README\.zh-CN\.md|CONTRIBUTING\.md|docs\/(?!rules\/).+)$/;
 // A fixup of a fixup commit stacks the prefixes: "fixup! fixup! <subject>".
 const FIXUP_RE = /^((fixup|squash|amend)! )+/;
 const PRINTABLE_ASCII_RE = /^[\x20-\x7e]+$/;
@@ -164,7 +170,12 @@ export function successors([x, y, z]) {
 const isSuccessor = (version, previous) =>
   Object.values(successors(previous)).some((next) => sameVersion(next, version));
 
-// Subject rules. `version` is 'required', 'forbidden' or 'optional'.
+// Whether a change to these files lands without a version: only docs for people, and at least one.
+export const isUnversioned = (files) => files.length > 0 && files.every((file) => UNVERSIONED_RE.test(file));
+
+// Subject rules. `version` is 'required', 'forbidden', 'optional' or 'none': 'forbidden' for a
+// branch commit, and 'none' for a pull request, or its squash commit, that changes only docs
+// for people.
 export function checkSubject(subject, where, { version: versionRule }) {
   const problems = [];
   const add = (rule, detail) => problems.push(problem(where, rule, detail));
@@ -174,6 +185,9 @@ export function checkSubject(subject, where, { version: versionRule }) {
   }
   if (versionRule === 'forbidden' && version) {
     add('version', 'branch commits carry no version; the pull request title gets it');
+  }
+  if (versionRule === 'none' && version) {
+    add('version', 'a change to the docs for people alone carries no version');
   }
   if (!subject.trim()) {
     add('subject', 'the subject is empty');
@@ -233,8 +247,8 @@ function checkBodyEnglish(lines, where) {
 }
 
 // Subject, structure, language, attribution and name rules for one cleaned message. A message
-// whose version is 'required' is a squash commit on main, which carries only the pull request
-// title, so the body rules for branch commits do not apply to it.
+// whose version is 'required' or 'none' is a squash commit on main, which carries only the pull
+// request title, so the body rules for branch commits do not apply to it.
 export function checkMessage(message, where, { version, allowFixup = false, spellings }) {
   const lines = message.split('\n');
   let subject = lines[0] ?? '';
@@ -248,7 +262,9 @@ export function checkMessage(message, where, { version, allowFixup = false, spel
     problems.push(problem(where, 'blank-line', 'leave a blank line between the subject and the body'));
   }
   const [, rest] = splitVersion(subject);
-  if (version !== 'required' && rest.startsWith('revert: ') && !REVERTS_RE.test(message)) {
+  // A squash merge ('required' or 'none') has no body to keep the line in.
+  const squashed = version === 'required' || version === 'none';
+  if (!squashed && rest.startsWith('revert: ') && !REVERTS_RE.test(message)) {
     problems.push(problem(where, 'revert', 'a revert keeps the "This reverts commit <sha>." line that git writes'));
   }
   problems.push(
@@ -308,9 +324,11 @@ export function checkPackageJson(version, text, where) {
 // major version that went stale because another PR took it moves to the next one of the same
 // kind. Anything else (no version, a reused, skipped or older number) becomes the next patch.
 // With `patchOnly`, for a title that someone other than a maintainer set, a minor or major
-// version is not honored and the title gets the next patch version as well.
-export function fixedTitle(title, previous, { patchOnly = false } = {}) {
+// version is not honored and the title gets the next patch version as well. With `unversioned`,
+// for a pull request that changes only docs for people, the title loses any version.
+export function fixedTitle(title, previous, { patchOnly = false, unversioned = false } = {}) {
   const [version, rest] = splitVersion(title.trim());
+  if (unversioned) return rest;
   const next = successors(previous);
   if (version && !patchOnly) {
     if (isSuccessor(version, previous)) return title.trim();
@@ -402,6 +420,14 @@ function commits(revRange, { firstParent = false } = {}) {
     });
 }
 
+// The files that `git diff` with these arguments changes: between two commits, in a range, or
+// with --cached, in the index. A moved file counts at both of its paths.
+function changedFiles(...args) {
+  return git('diff', '--no-renames', '--name-only', ...args)
+    .split('\n')
+    .filter(Boolean);
+}
+
 function rootPackageJson() {
   const path = join(git('rev-parse', '--show-toplevel').trim(), 'package.json');
   return existsSync(path) ? readFileSync(path, 'utf8') : null;
@@ -431,10 +457,11 @@ function modeMsg(file) {
     };
   }
   // The pre-commit hook blocks commits on main, so this is a deliberate recovery commit. Like a
-  // squash merge, it must carry the next version.
-  const problems = checkMessage(message, where, { version: 'required' });
+  // squash merge, it carries the next version, or none if it changes only docs for people.
+  const unversioned = isUnversioned(changedFiles('--cached'));
+  const problems = checkMessage(message, where, { version: unversioned ? 'none' : 'required' });
   const [version] = splitVersion(firstLine(message));
-  if (version && gitOk('rev-parse', '-q', '--verify', 'HEAD')) {
+  if (version && !unversioned && gitOk('rev-parse', '-q', '--verify', 'HEAD')) {
     const [headVersion] = splitVersion(git('log', '-1', '--format=%s', 'HEAD').trim());
     if (!sameVersion(version, headVersion)) {
       // An equal version means `git commit --amend`.
@@ -442,7 +469,10 @@ function modeMsg(file) {
     }
     problems.push(...checkPackageJson(version, rootPackageJson(), where));
   }
-  return { problems, note: 'main: the subject must carry the next version' };
+  const note = unversioned
+    ? 'main: a change to the docs for people alone carries no version'
+    : 'main: the subject must carry the next version';
+  return { problems, note };
 }
 
 function modeRange(revRange) {
@@ -467,18 +497,20 @@ function modePrTitle(title, options) {
   if (!options.base) throw new UsageError('pr-title needs --base <ref>');
   if (options.patch && !options.fix) throw new UsageError('--patch goes with --fix');
   const previous = previousVersion(options.base);
+  // With --head, the PR's changes since it left the base decide whether it takes a version.
+  const unversioned = options.head ? isUnversioned(changedFiles(`${options.base}...${options.head}`)) : false;
   if (options.fix) {
-    console.log(fixedTitle(title, previous, { patchOnly: options.patch }));
+    console.log(fixedTitle(title, previous, { patchOnly: options.patch, unversioned }));
     return null;
   }
   const where = 'pr-title';
   const problems = [
-    ...checkSubject(title.trim(), where, { version: 'required' }),
+    ...checkSubject(title.trim(), where, { version: unversioned ? 'none' : 'required' }),
     ...checkAttribution(title, where),
     ...checkName(title, where),
   ];
   const [version] = splitVersion(title.trim());
-  if (version) {
+  if (version && !unversioned) {
     problems.push(...checkSuccessor(version, previous, where));
     problems.push(...checkPackageJson(version, rootPackageJson(), where));
   }
@@ -514,9 +546,10 @@ function modeHead(options) {
     const cleaned = cleanMessage(commit.message, { mode: 'verbatim' });
     const [subject, ...body] = cleaned.split('\n');
     const message = [subject.replace(PR_NUMBER_RE, ''), ...body].join('\n');
-    problems.push(...checkMessage(message, where, { version: 'required' }));
+    const unversioned = commit.parents.length > 0 && isUnversioned(changedFiles(commit.parents[0], commit.sha));
+    problems.push(...checkMessage(message, where, { version: unversioned ? 'none' : 'required' }));
     const [version] = splitVersion(subject);
-    if (version && commit.parents.length) {
+    if (version && !unversioned && commit.parents.length) {
       problems.push(...checkSuccessor(version, previousVersion(commit.parents[0]), where));
     }
     problems.push(...checkIdentity(commit, where));
@@ -567,7 +600,7 @@ class UsageError extends Error {}
 const USAGE = `Usage:
   node scripts/check-commits.mjs msg <file>
   node scripts/check-commits.mjs range <rev-range>
-  node scripts/check-commits.mjs pr-title --base <ref> [--fix [--patch]] [--body-file <file>] [--head-ref <branch>] -- <title>
+  node scripts/check-commits.mjs pr-title --base <ref> [--head <ref>] [--fix [--patch]] [--body-file <file>] [--head-ref <branch>] -- <title>
   node scripts/check-commits.mjs head [--base <ref>]
   node scripts/check-commits.mjs next [--base <ref>] [--minor | --major]
   node scripts/check-commits.mjs release [--ref <ref>]`;
@@ -578,6 +611,7 @@ const OPTIONS = {
   patch: { type: 'boolean' },
   'body-file': { type: 'string' },
   'head-ref': { type: 'string' },
+  head: { type: 'string' },
   minor: { type: 'boolean' },
   major: { type: 'boolean' },
   ref: { type: 'string' },

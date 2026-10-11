@@ -1,6 +1,6 @@
 # Branches, commits and pull requests
 
-`main` is protected: nobody commits, pushes, force-pushes or deletes it. Every change arrives through a pull request, squash-merged as one commit titled `vX.Y.Z <type>: <summary>` ([versioning.md](versioning.md)).
+`main` is protected: nobody commits, pushes, force-pushes or deletes it. Every change arrives through a pull request, squash-merged as one commit titled `vX.Y.Z <type>: <summary>`, or with no version for [docs for people](versioning.md#docs-for-people) alone ([versioning.md](versioning.md)).
 
 ## Worktrees
 
@@ -68,7 +68,7 @@ every reconnect. Look them up by their player token instead.
 
 ## Pull requests
 
-- Title `<type>: <summary>`; CI puts the version in front, and the title becomes the commit on `main`.
+- Title `<type>: <summary>`; CI puts the version in front, except for [docs for people](versioning.md#docs-for-people) alone, and the title becomes the commit on `main`.
 - One thing per PR. A few small changes may share one branch, worktree and PR when a maintainer agrees; the description lists each.
 - Based on the latest `main` (in a stack, the branch below), with no conflicts, and the template filled in and kept current.
 - Tests pass; new game rules come with unit tests. UI changes are checked at phone width, in both languages, with screenshots.

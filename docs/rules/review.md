@@ -1,12 +1,12 @@
 # Code review
 
-Someone other than the author approves every change before it is merged, whether by people or by AI, docs and word lists alike.
+Someone other than the author approves every change before it is merged, whether by people or by AI, docs and word lists alike. The one exception is a maintainer's own PR that changes only [docs for people](versioning.md#docs-for-people), which merges once the checks pass.
 
 ## Rules
 
-- At least one approval, renewed after new commits. For the interim with one maintainer, see the [maintainer guide](../maintainers.md).
+- At least one approval, renewed after new commits, except on a maintainer's own PR for the docs for people. For the interim with one maintainer, and for auto-merge, see the [maintainer guide](../maintainers.md).
 - Answer every comment, by changing or by explaining until you agree, and resolve all conversations before merging.
-- A collaborator with write access merges with **Squash and merge**, once the PR is approved and the checks pass, with the PR title, version included, as the commit title ([versioning.md](versioning.md)).
+- A collaborator with write access merges with **Squash and merge**, once the PR is approved and the checks pass, with the PR title, and its version if it has one, as the commit title ([versioning.md](versioning.md)).
 - Only maintainers set a minor or major version.
 
 ## When to approve
@@ -33,6 +33,6 @@ These two sections are adapted from Google's [The Standard of Code Review](https
 4. **Readability:** clear names, consistent with its surroundings, no needless complexity.
 5. **Scope:** the PR does what it says and nothing else.
 6. **Language:** clear, correct English everywhere; if one README changed, the other matches ([language.md](language.md)).
-7. **PR title:** `vX.Y.Z <type>: <summary>`, with CI's version or a maintainer's, and no AI attribution.
+7. **PR title:** `vX.Y.Z <type>: <summary>`, with CI's version or a maintainer's (none for [docs for people](versioning.md#docs-for-people) alone), and no AI attribution.
 
 State required changes directly; prefix optional ones `nit:`. **Don't be Reviewer 2:** be specific, actionable, and about the code, not the person.
