@@ -34,8 +34,9 @@ const send = vi.hoisted(() =>
 // The page is connected already.
 const page = vi.hoisted(() => ({ connection: { connected: true, everConnected: true } }));
 vi.mock('../../core/socket', async () => {
-  const { reactive } = await import('vue');
+  const { computed, reactive } = await import('vue');
   page.connection = reactive(page.connection);
+  const reconnecting = computed(() => page.connection.everConnected && !page.connection.connected);
   return {
     send,
     act: (event: string, payload: object = {}) => send(event, payload),
@@ -45,6 +46,7 @@ vi.mock('../../core/socket', async () => {
     },
     socket: { connected: true, on: vi.fn(), once: vi.fn() },
     connection: page.connection,
+    reconnecting,
   };
 });
 

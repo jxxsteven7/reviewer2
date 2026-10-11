@@ -14,7 +14,7 @@ import MatchTable from '../../core/components/MatchTable.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
-import { act, connection } from '../../core/socket';
+import { act, reconnecting } from '../../core/socket';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
 import ClockBar from './ClockBar.vue';
@@ -74,9 +74,6 @@ const myTurn = computed(() => mySeat.value?.team === game.value.team);
 const canClue = computed(() => game.value.phase === 'clue' && myTurn.value && mySeat.value?.role === 'captain');
 const canGuess = computed(() => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser');
 const group = computed(() => t(`lobby.group.${game.value.team}`));
-// The banner that says the page is reconnecting (ConnectionBanner) is shown, and the clock sticks
-// under it.
-const reconnecting = computed(() => connection.everConnected && !connection.connected);
 
 // The choices of cards come from the server, which shows them to the group whose turn it is:
 // the viewer's own choice is marked, and the others' avatars hang on the corner of a card. A

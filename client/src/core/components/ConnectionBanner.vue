@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { connection } from '../socket';
+import { reconnecting } from '../socket';
 
 const { t } = useI18n();
 </script>
 
 <template>
-  <p v-if="connection.everConnected && !connection.connected" class="banner" role="status">
+  <p v-if="reconnecting" class="banner" role="status">
     {{ t('room.reconnecting') }}
   </p>
 </template>
