@@ -436,6 +436,24 @@ describe('a replay', () => {
     expect((await replay(ann, gameId)).body).toEqual({ ok: true, replay: kept });
   });
 
+  test("is not kept for a room with the chair's own words, while the records are", async () => {
+    server = await startServer();
+    const ann = await loggedIn('Ann');
+    const { chair, code } = await roomOf(ann, { play: true });
+    expect(await chair.send('room:settings', { words: 'Mine' })).toEqual({ ok: true });
+    const bob = track(await TestClient.connect(server.url));
+    await bob.send('room:join', { code, name: 'Bob', play: true });
+    await chair.waitFor((state) => state.players.length === 2);
+    await chair.send('room:start', { round: 0 });
+    const { gameId } = (await chair.waitFor((state) => state.phase === 'playing')) as { gameId: string };
+    await chair.send('test:finish');
+    await chair.waitFor((state) => state.phase === 'ended');
+    await until(() => server.db.prepare('SELECT count(*) AS count FROM game_records').get()?.count === 1, 'the record');
+    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
+    expect((await records(ann)).recent[0]).toMatchObject({ gameId, replay: false });
+    expect(await replay(ann, gameId)).toMatchObject({ status: 404 });
+  });
+
   test('is not kept when nobody with an account played', async () => {
     server = await startServer();
     const { chair, code } = await createRoom(server.url, 'Ann', { play: true });

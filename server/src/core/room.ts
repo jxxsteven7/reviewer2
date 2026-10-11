@@ -751,9 +751,12 @@ export class Room {
   }
 
   // The game that has just ended, to watch again, as the game gives it, or null when there is
-  // nothing to keep (GameModule.replay).
+  // nothing to keep (GameModule.replay). A room with words of the chair's own keeps none: the
+  // words stay with the room, and a replay would carry those that were on the board
+  // (docs/games/keywords.md#custom-words).
   replay(): unknown {
-    return this.phase === 'ended' ? (this.game.replay?.(this.data, this.context) ?? null) : null;
+    if (this.phase !== 'ended' || this.customWords.length > 0) return null;
+    return this.game.replay?.(this.data, this.context) ?? null;
   }
 
   // --- the game's own time ----------------------------------------------------------------
@@ -874,9 +877,11 @@ export class Room {
       const live = this.phase === 'playing' ? (this.game.match?.score(this.data, context) ?? null) : null;
       return this.match.view(this.phase, this.gameId, live, this.#present);
     };
-    // The chair's own words go to the chair alone, who edits them: the players hear only how many
-    // there are, so that none of them knows the words before they are on the board.
-    const chair = (viewer: Viewer) => 'playerId' in viewer && viewer.playerId === this.chairId;
+    // The chair's own words go to the chair alone, and only in the waiting room, where the chair
+    // edits them: the players hear only how many there are, so that none of them knows the words
+    // before they are on the board.
+    const chair = (viewer: Viewer) =>
+      this.phase === 'lobby' && 'playerId' in viewer && viewer.playerId === this.chairId;
     return (viewer) => ({
       ...shared,
       me: 'playerId' in viewer ? viewer.playerId : null,

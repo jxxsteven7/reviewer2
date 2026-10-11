@@ -59,12 +59,14 @@ test('the chair pauses the game, which hides the board and stops the clock, and 
     error: 'paused',
   });
   expect(await tab.send('keywords:reveal', { ...moment, card: 0 })).toEqual({ ok: false, error: 'paused' });
-  // The clock stands still at what it had left.
+  // The clock stands still at what it had left, on the big screen as on the phones.
   const left = game()?.clock?.left ?? 0;
   expect(left).toBeGreaterThan(0);
   const shown = await guesser.locator('[role="timer"] .seconds').innerText();
+  const onScreen = await table.screen.locator('[role="timer"] .seconds').innerText();
   await guesser.waitForTimeout(2_000);
   await expect(guesser.locator('[role="timer"] .seconds')).toHaveText(shown);
+  await expect(table.screen.locator('[role="timer"] .seconds')).toHaveText(onScreen);
   // Only the chair has the way to resume.
   await expect(guesser.locator('.paused button')).toHaveCount(0);
 
@@ -79,7 +81,15 @@ test('the chair pauses the game, which hides the board and stops the clock, and 
   await expect(guesser.locator('[role="timer"]')).toBeVisible();
   await giveClue(table.captains[team], 'Hint', 1, 'en');
   await revealByKey(table, team);
-  // The log notes the pause and its end.
+  // Paused again after the reveal, the log notes every pause and its end under the turn, and shows
+  // the revealed card by its color alone, since there is no board to name it.
+  await ann.getByRole('button', { name: text.game.pause }).click();
+  await expect(ann.locator('.paused-title')).toHaveText(text.game.paused);
   const log = await openLog(ann);
-  await expect(log.locator('.event')).toHaveText([text.game.events.paused, text.game.events.resumed]);
+  await expect(log.locator('.event')).toHaveText([
+    text.game.events.paused,
+    text.game.events.resumed,
+    text.game.events.paused,
+  ]);
+  await expect(log.locator('.guess')).toHaveText(text.game.card[team]);
 });

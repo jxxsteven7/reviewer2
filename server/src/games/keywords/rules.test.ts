@@ -1,4 +1,4 @@
-import { CHAT_KEPT, MAX_CHAT_LENGTH, otherTeam, type ClueCount } from '@reviewer2/shared';
+import { CHAT_KEPT, EVENTS_KEPT, MAX_CHAT_LENGTH, otherTeam, type ClueCount } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
 import {
@@ -628,8 +628,20 @@ describe('a pause', () => {
     expect(refused(resume(paused, false, game(paused), 0))).toBe('not_chair');
     const over = accepted(withdraw(state, game(state)));
     expect(refused(pause(over, true, game(over), 0))).toBe('game_over');
-    // The chair may withdraw a paused game.
-    expect(accepted(withdraw(paused, game(paused))).result).toEqual({ winner: null, reason: 'withdrawn' });
+    // The chair may withdraw a paused game, which ends the pause with the game.
+    const withdrawn = accepted(withdraw(paused, game(paused)));
+    expect(withdrawn.result).toEqual({ winner: null, reason: 'withdrawn' });
+    expect(withdrawn.pause).toBeNull();
+  });
+
+  test('keeps the last events only, however often the chair pauses and resumes', () => {
+    let state = gameState();
+    for (let i = 0; i < EVENTS_KEPT; i += 1) {
+      state = accepted(pause(state, true, game(state), i));
+      state = accepted(resume(state, true, game(state), i));
+    }
+    expect(state.events).toHaveLength(EVENTS_KEPT);
+    expect(state.events.at(-1)).toEqual({ turn: 1, kind: 'resumed' });
   });
 
   test('keeps a reveal that came before it from being stale afterwards', () => {

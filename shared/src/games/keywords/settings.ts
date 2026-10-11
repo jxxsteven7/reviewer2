@@ -14,8 +14,8 @@ export const GUESS_RULES = ['free', 'standard'] as const;
 export type GuessRule = (typeof GUESS_RULES)[number];
 
 // 'strict' refuses what the word library lists as another form of a word on the board, a Chinese
-// character in common with one, and a clue with a word on the board inside it; 'loose' only
-// warns about those.
+// character in common with one, and, in a Chinese room, a clue with a word on the board inside
+// it; 'loose' only warns about those.
 export const CLUE_RULES = ['strict', 'loose'] as const;
 export type ClueRule = (typeof CLUE_RULES)[number];
 

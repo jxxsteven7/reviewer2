@@ -15,7 +15,6 @@ export function replayOf(
     startingTeam: game.startingTeam,
     cards: game.cards.map(({ word, color }) => ({ word, color: color as CardColor })),
     history: game.history,
-    events: game.events,
     result: game.result,
     players: Object.fromEntries(players.map((player) => [player.id, player.name])),
   };

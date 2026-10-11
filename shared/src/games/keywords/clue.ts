@@ -21,7 +21,9 @@ export type ClueProblem =
 //   "model", or a part or such a form of the card's term in another language. A warning.
 // - 'inside': it contains the card's word, or a part of it, of four letters or more, such as
 //   "datacenter" for "Data", without being another form of it by its ending. Refused under the
-//   strict rule; the same for the card's term in another language only brings a warning.
+//   strict rule in a Chinese room, where a Latin word on the board stands out; a warning in an
+//   English room, where "support" would give "Port" away otherwise, and for the card's term in
+//   another language.
 export type ClueMatchKind = 'same' | 'form' | 'character' | 'similar' | 'inside';
 
 // A card that the clue runs into, with the text that the clue runs into: the card's word, one
@@ -250,14 +252,15 @@ function contains(clue: Word, word: Word): boolean {
 // What the clue does to one card that is still on the board: what refuses it in any case, what
 // refuses it under the strict rule, and what only brings a warning, each the first that applies.
 // `clues` holds the whole clue and, when it has several words, each of them, so that a word of a
-// clue counts as the clue would.
+// clue counts as the clue would. `insideRefused` says whether the strict rule refuses a clue with
+// the card's word inside it, as it does in a Chinese room.
 interface Verdict {
   refused: ClueMatch | null;
   strict: ClueMatch | null;
   warned: ClueMatch | null;
 }
 
-function judge(clues: readonly Word[], card: ClueCard, index: number): Verdict {
+function judge(clues: readonly Word[], card: ClueCard, index: number, insideRefused: boolean): Verdict {
   type Test = (clue: Word, other: Word) => boolean;
   const word = wordOf(card.word);
   const translations = (card.translations ?? []).map((text) => ({ text, word: wordOf(text) }));
@@ -287,7 +290,7 @@ function judge(clues: readonly Word[], card: ClueCard, index: number): Verdict {
   // several words gives the term away word by word, and a room's clue length may never let it
   // through whole. The endings that the warnings go by are only a guess, so what they suggest
   // stays a warning; a clue that contains the word without being such a form, as "dockerfile"
-  // contains "Docker", is refused under the strict rule.
+  // contains "Docker", is refused under the strict rule where the room refuses that.
   const form = (card.forms ?? []).find((text) => {
     const other = wordOf(text);
     return other.key !== '' && clues.some((clue) => repeats(clue, other));
@@ -295,7 +298,7 @@ function judge(clues: readonly Word[], card: ClueCard, index: number): Verdict {
   const similar = ofWord(resembles, 'similar');
   const strict =
     form === undefined
-      ? (ofWord(sharesHan, 'character') ?? (similar ? null : ofWord(contains, 'inside')))
+      ? (ofWord(sharesHan, 'character') ?? (insideRefused && !similar ? ofWord(contains, 'inside') : null))
       : { card: index, text: form, kind: 'form' as const };
   const warned =
     similar ??
@@ -336,8 +339,12 @@ export function checkClue(
 
   const whole = wordOf(text);
   const clues = words.length > 1 ? [whole, ...words.map(wordOf)] : [whole];
+  // In a Chinese room the board is Chinese, so a Latin word on it, such as "Docker", stands out,
+  // and the strict rule refuses a clue that contains one. In an English room every card is Latin,
+  // and that rule would refuse "support" beside "Port", so the clue only gets a warning there.
+  const insideRefused = options.length !== null;
   // A covered word may be said again.
-  const verdicts = board.map((card, index) => (card.revealed ? null : judge(clues, card, index)));
+  const verdicts = board.map((card, index) => (card.revealed ? null : judge(clues, card, index, insideRefused)));
   const refused = verdicts.find((found) => found?.refused)?.refused;
   if (refused) return verdict('clue_on_board', refused);
   const strict = options.strict ? verdicts.find((found) => found?.strict)?.strict : undefined;

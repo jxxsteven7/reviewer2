@@ -83,11 +83,13 @@ export interface ClueRecord {
   timedOut?: true;
 }
 
-// What happened in a game besides the clues and the guesses, for the clue log and the replay:
-// the chair paused the game and resumed it, and a group asked for an extension. Each is noted
-// with the turn it came in; an extension names the group.
+// What happened in a game besides the clues and the guesses, for the clue log: the chair paused
+// the game and resumed it, and a group asked for an extension. Each is noted with the turn it
+// came in; an extension names the group. A game keeps the last EVENTS_KEPT of them, more than a
+// game has, so that no number of pauses can grow its snapshots without end.
 export const EVENT_KINDS = ['paused', 'resumed', 'extended'] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
+export const EVENTS_KEPT = 50;
 
 export interface GameEvent {
   turn: number;

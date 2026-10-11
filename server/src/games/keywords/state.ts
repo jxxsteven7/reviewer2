@@ -39,6 +39,13 @@ export interface Pause {
   left: number | null;
 }
 
+// A turn of the record as it leaves the state, in a view or a replay: a copy that shares nothing
+// with the state, its guesses included.
+export const copyRecord = (record: ClueRecord): ClueRecord => ({
+  ...record,
+  guesses: record.guesses.map((guess) => ({ ...guess })),
+});
+
 export interface KeywordsState {
   gameId: string;
   // The room's settings and language when the game started. They don't change during a game.

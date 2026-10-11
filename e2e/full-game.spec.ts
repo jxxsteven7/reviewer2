@@ -1,5 +1,16 @@
 import { otherTeam } from '@reviewer2/shared';
-import { expectNoKey, gameOf, playToTheEnd, seatTable, snapshotsOf, TEXT, expect, test } from './helpers';
+import {
+  expectNoKey,
+  gameOf,
+  interpolate,
+  playToTheEnd,
+  seatTable,
+  sideChannel,
+  snapshotsOf,
+  TEXT,
+  expect,
+  test,
+} from './helpers';
 
 // The brief's acceptance test: four players, one per browser, play a whole game, and the
 // guessers' network data never holds the colors of unrevealed cards. In both languages.
@@ -39,6 +50,22 @@ for (const language of ['en', 'zh'] as const) {
     }
     // After the end, everyone sees every color.
     await expect(table.spectator.locator('.board .card.known, .board .card.revealed')).toHaveCount(25);
+
+    // The review of the game keeps its step through the snapshots that others cause, such as a
+    // spectator's new name.
+    const ann = table.captains.red;
+    await ann.getByRole('button', { name: text.game.review }).click();
+    const replay = ann.locator('.replay');
+    await replay.getByRole('button', { name: text.replay.next }).click();
+    const history = gameOf(snapshotsOf(ann).at(-1))?.history ?? [];
+    const steps = 1 + history.reduce((count, record) => count + 1 + record.guesses.length, 0);
+    const second = interpolate(text.replay.step, { step: '2', steps: String(steps) });
+    await expect(replay.locator('.position')).toHaveText(second);
+    const before = snapshotsOf(ann).length;
+    const tab = await sideChannel(table.spectator, table.url);
+    expect(await tab.send('room:rename', { name: 'Eva' })).toMatchObject({ ok: true });
+    await expect.poll(() => snapshotsOf(ann).length).toBeGreaterThan(before);
+    await expect(replay.locator('.position')).toHaveText(second);
 
     for (const states of table.public) {
       // Recorded to the end: the last snapshot is the letter, with every turn's clue on record,

@@ -580,8 +580,8 @@ export class Accounts {
     return this.replays.add(replay, data);
   }
 
-  // The replay of a game that the account played in, or null when there is none, or the account
-  // didn't play in it, which is told apart from nothing.
+  // The replay of a game that the account played in, or null when there is none or the account
+  // didn't play in it; the two aren't told apart, so that nobody learns which games were kept.
   replayOf(login: Login, gameId: string): unknown {
     return this.replays.read(login.account.id, gameId);
   }

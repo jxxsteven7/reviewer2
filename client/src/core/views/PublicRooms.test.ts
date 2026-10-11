@@ -118,6 +118,22 @@ describe('the public rooms', () => {
     expect(wrapper.text()).toContain('Too many requests.');
   });
 
+  test('leave an answer that comes after the list was folded away alone', async () => {
+    let answer!: (reply: { ok: false; error: string }) => void;
+    socket.send.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    const wrapper = await opened();
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Hide')
+      ?.trigger('click');
+    // The connection went while the answer was on its way: nothing waits for it to come back.
+    socket.connected = false;
+    answer({ ok: false, error: 'offline' });
+    await flushPromises();
+    expect(socket.waiting).toHaveLength(0);
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['Find a public room']);
+  });
+
   test('fold back into the button, and stop waiting for a connection', async () => {
     socket.connected = false;
     const wrapper = await opened();

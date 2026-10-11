@@ -97,6 +97,14 @@ watch(roomSettings, (settings, before) => {
 const roomWords = computed(() => (props.room.customWords ?? []).join('\n'));
 const wordsText = ref(roomWords.value);
 watch(roomWords, (text) => (wordsText.value = text));
+// A public room takes no words of the chair's own (custom_words_private), and the editor goes
+// when the room is listed: so does whatever was typed in it and not saved.
+watch(
+  () => props.room.public,
+  (listed) => {
+    if (listed) wordsText.value = roomWords.value;
+  },
+);
 const words = computed(() => parseCustomWords(wordsText.value));
 const wordsChanged = computed(() => words.value.words.join('\n') !== roomWords.value);
 const wordsValid = computed(() => words.value.tooLong.length === 0 && !words.value.tooMany);
@@ -110,8 +118,14 @@ const savable = computed(
     settingsValid.value &&
     wordsValid.value,
 );
+// The words go along only when they changed, so that the server doesn't read them again for a
+// setting.
 const save = () =>
-  act('room:settings', { fields: chosenFields.value, settings: chosenSettings.value, words: wordsText.value });
+  act('room:settings', {
+    fields: chosenFields.value,
+    settings: chosenSettings.value,
+    ...(wordsChanged.value ? { words: wordsText.value } : {}),
+  });
 
 // The game starts with the word lists and the settings that the chair sees at the desk, so what
 // they have changed there is saved first. A change that the server refuses stops the start.
@@ -277,7 +291,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
             </p>
             <p v-if="words.tooMany" class="problem">{{ t('settings.customWordsTooMany') }}</p>
             <p class="hint">
-              {{ t('settings.customWordsCount', { count: words.words.length }) }} &middot;
+              {{ t('settings.customWordsCount', { count: words.words.length }, words.words.length) }} &middot;
               {{ t('settings.customWordsHint') }}
             </p>
           </template>

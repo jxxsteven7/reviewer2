@@ -1026,6 +1026,9 @@ describe('custom words', () => {
     await settle(table);
     const words = board(table.spectator).cards.map((card) => card.word);
     expect([...words].sort()).toEqual([...chinese].sort());
+    // During the game the chair, who has nothing to edit, gets the count like everyone else.
+    expect(ann.state).not.toHaveProperty('customWords');
+    expect(ann.state?.customWordCount).toBe(25);
     // Every card has its pinyin, which everyone sees, and which no clue may be.
     expect(
       board(table.spectator)
@@ -1045,6 +1048,7 @@ describe('custom words', () => {
     await expectOk(ann.send('room:again', { gameId: board(ann).gameId }));
     await expectOk(ann.send('room:settings', { words: [...chinese, 'Extra'].join('\n') }));
     await ann.waitFor((state) => state.customWordCount === 26);
+    expect(ann.state?.customWords).toHaveLength(26);
     await expectOk(ann.send('room:start', { round: ann.state?.round }));
     await settle(table);
     const next = board(table.spectator).cards.map((card) => card.word);

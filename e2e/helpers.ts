@@ -201,11 +201,14 @@ export function expectNoKey(states: RoomView[]): number {
       ).toEqual([]);
       checked += 1;
     }
+    // A paused game has no board in the snapshot at all, so a guess's card can't be checked there.
     const allowed = new Set([
       ...game.cards.flatMap((card, i) => (card.revealed ? [`data.game.cards.${i}.color`] : [])),
       ...game.history.flatMap((clue, i) =>
         clue.guesses.map((guess, j) => {
-          expect(game.cards[guess.card]?.revealed, `the card of guess ${j} of clue ${i} is revealed`).toBe(true);
+          if (!game.paused) {
+            expect(game.cards[guess.card]?.revealed, `the card of guess ${j} of clue ${i} is revealed`).toBe(true);
+          }
           return `data.game.history.${i}.guesses.${j}.color`;
         }),
       ),

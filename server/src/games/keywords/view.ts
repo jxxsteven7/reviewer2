@@ -1,5 +1,5 @@
 import type { CardView, KeywordsView, Seat } from '@reviewer2/shared';
-import { guessesLeft, remaining, type KeywordsState } from './state';
+import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state';
 
 // The only way game state leaves the server (docs/rules/constraints.md). What a viewer gets
 // depends on the seat they are in right now; a screen gets what a spectator gets.
@@ -40,7 +40,7 @@ export function viewFor(state: KeywordsState, viewer: Seat, at: number): Keyword
     guessesMade: state.guessesMade,
     guessesLeft: guessesLeft(state),
     clock: clockOf(state, at),
-    history: state.history.map((record) => ({ ...record, guesses: record.guesses.map((guess) => ({ ...guess })) })),
+    history: state.history.map(copyRecord),
     events: state.events.map((event) => ({ ...event })),
     extended: { ...state.extended },
     result: state.result && { ...state.result },

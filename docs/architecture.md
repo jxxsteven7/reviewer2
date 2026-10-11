@@ -86,7 +86,7 @@ A game implements `GameModule` (`server/src/core/game.ts`). The core owns the ro
 
 ## Replays
 
-At the end of a game that a player with an account took part in, the room asks `GameModule.replay()` for the game as something to watch again, and keeps it as JSON in the `replays` table (migration 7), once per game, up to 64 KB; a larger one is logged as `replay_too_large` and left out, and a withdrawn game has none. A replay belongs to the game, not to an account: `POST /api/account/replay` with `gameId` answers it to an account that has the game in `game_records`, and `no_replay` to anyone else. Deleting an account deletes its `game_records`, and the replay stays for the others who played in it. For the first game, a replay holds the board with every color, the clues and the guesses, who revealed each card, by player ID, and the nicknames that everyone had in the game ([games/keywords.md](games/keywords.md#replays)).
+At the end of a game that a player with an account took part in, the room asks `GameModule.replay()` for the game as something to watch again, and keeps it as JSON in the `replays` table (migration 7), once per game, up to 64 KB; a larger one is logged as `replay_too_large` and left out, and a withdrawn game has none, nor has a game of a room with the chair's own words ([custom words](games/keywords.md#custom-words)). A replay belongs to the game, not to an account: `POST /api/account/replay` with `gameId` answers it to an account that has the game in `game_records`, and `no_replay` to anyone else. Deleting an account deletes its `game_records`, and the replay stays for the others who played in it. For the first game, a replay holds the board with every color, the clues and the guesses, who revealed each card, by player ID, and the nicknames that those who revealed a card had in the game, guests included ([games/keywords.md](games/keywords.md#replays)).
 
 ## Matches
 
@@ -111,7 +111,7 @@ Files under `/assets/` carry a content hash and are cached for good; everything 
 - **Migrations:** `PRAGMA user_version` and `server/src/store/migrations.ts`, run on start in one transaction, after a snapshot.
 - **Snapshots** every hour into `snapshots/`, the last three kept.
 - **The disk.** Feedback stops at 10,000 pieces or 50 MB, which `MAX_FEEDBACK` raises together; nothing is deleted to make room, spam included ([Feedback](#feedback)). Past 1 GB nothing new is kept (`storage_full`). Avatars up to 2 GB.
-- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback, its acknowledgments and the reports it sent or got stay, no longer linked to it, and so do the replays of the games it played in, which hold the nicknames everyone had in the game and the clues, since the others played in them too ([Replays](#replays)).
+- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback, its acknowledgments and the reports it sent or got stay, no longer linked to it, and so do the replays of the games it played in, which hold the nicknames of those who revealed a card and the clues, since the others played in them too ([Replays](#replays)).
 
 ## Feedback
 
@@ -185,7 +185,7 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 - **Who has an account:** answers that reveal a taken name are limited, and `login_failed` is the same for a wrong name or password.
 - **Stolen logins and other sites:** a random secret, kept hashed, only in a hardened cookie, HTTPS only; `Origin` and `Sec-Fetch-Site` checks, no CORS, no framing; password change, binding and deletion ask for the password.
 - **Links and mail:** 256 random bits after `#`, kept as hashes, short-lived, used once; two fixed mails from a mailer that alone holds the key.
-- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records and titles, the replays of games, with the nicknames and the clues, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
+- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records and titles, the replays of games, with their boards, the clues and the nicknames of those who revealed a card, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
 
 ## Logging
 

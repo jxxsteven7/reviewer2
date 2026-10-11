@@ -13,12 +13,14 @@ import KeywordsBoard from './KeywordsBoard.vue';
 // and the account page show one the same way.
 const props = defineProps<{ replay: KeywordsReplay }>();
 const { t } = useI18n();
-const INFINITY = '∞';
+const INFINITY = '\u221e';
 
 const steps = computed(() => replaySteps(props.replay));
+// The step shown, from the start. It stays where it is when the same game comes again, as it
+// does with every snapshot while the results page is open; another game starts over.
 const at = ref(0);
 watch(
-  () => props.replay,
+  () => props.replay.gameId,
   () => (at.value = 0),
 );
 const step = computed(() => steps.value[at.value] as ReplayStep);

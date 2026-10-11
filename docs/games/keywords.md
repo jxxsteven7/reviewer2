@@ -57,9 +57,9 @@ The captain's screen runs the check while typing, and the server again. A clue i
 
 A plain plural ends in "-s", or "-es" after s, x, z, ch or sh.
 
-**Strict refuses, loose only warns:** a listed form of a card (`forms`), in any of the ways above, forms of both languages counting in either room; a Chinese character in common with a board word; and a board word or part of four Latin letters or more inside the clue ("dockerfile" beside "Docker", "Pythonic" beside "Python"), unless the clue may be another form of the word by its ending.
+**Strict refuses, loose only warns:** a listed form of a card (`forms`), in any of the ways above, forms of both languages counting in either room; a Chinese character in common with a board word; and, in a Chinese room, where a Latin word on the board stands out, a board word or part of four Latin letters or more inside the clue ("dockerfile" beside "Docker", "Pythonic" beside "Python"), unless the clue may be another form of the word by its ending.
 
-**Warned under either rule**, where the check can only guess: another ending of a board word ("-ing", "-ed", "-ion", an irregular plural); and a card's term in another language, or a part of it, inside the clue.
+**Warned under either rule**, where the check can only guess: another ending of a board word ("-ing", "-ed", "-ion", an irregular plural); in an English room, a board word or part of four letters or more inside the clue ("support" beside "Port"), which would be refused too often there; and a card's term in another language, or a part of it, inside the clue.
 
 Revealed words no longer count. The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0).
 
@@ -69,13 +69,13 @@ The server keeps the time. A captain who gives no clue in time loses the turn, r
 
 ## Pauses and extensions
 
-**The chair** may pause the game at any point while it is on (`keywords:pause`) and resume it (`keywords:resume`), whoever chairs the room by then: the room hands the chair on after 3 minutes offline. While paused, the clock stands still with the time the phase had left, and goes on from there; every action but the group chat is refused with `paused`; and **no view carries the board**: `cards` is empty for everyone, the captains and the screens included, and `paused` is true. The room's rules go on: reconnecting works as usual, and a room with nobody online for 30 minutes closes. The record notes the pause and its end in `events`, with the turn.
+**The chair** may pause the game at any point while it is on (`keywords:pause`) and resume it (`keywords:resume`), whoever chairs the room by then: the room hands the chair on after 3 minutes offline. While paused, the clock stands still with the time the phase had left, and goes on from there; every action but the group chat is refused with `paused`; and **no view carries the board**: `cards` is empty for everyone, the captains and the screens included, and `paused` is true. The room's rules go on: reconnecting works as usual, and a room with nobody online for 30 minutes closes. The record notes the pause and its end in `events`, with the turn; a game keeps the last `EVENTS_KEPT` events, 50, so that no number of pauses can grow its snapshots. The end of the game ends a pause too.
 
 **Extensions**, a setting that is off by default, let each group once a game add 30 seconds (`EXTENSION_SECONDS`) to the phase it is in, where the phase has a time limit: the captain in the clue phase, a guesser in the guess phase, with `keywords:extend`. Everyone is told, `events` notes it with the group, and `extended` says which groups have used theirs. Errors: `no_extension` (the setting is off, or the phase has no limit), `extension_used`.
 
 ## Custom words
 
-In a **private room**, the chair pastes words of their own in the waiting room (`room:settings` with `words`, the text as pasted): one per line, or separated by commas or the Chinese enumeration comma; cleaned as a clue is, the same word twice counted once; each fitting on a card, 5 Chinese characters or 14 other characters; at most 200 (`parseCustomWords()` in `shared/src/games/keywords/custom.ts`, run on both sides; the server refuses with `bad_words`). They are drawn from the same pool as the chosen fields, unused words first and kept apart as the fields' words are, and with 25 or more the chair may choose no field at all. A Chinese word gets its `pinyin`; custom words have no translations or forms. The words are the chair's alone: everyone else's view carries only `customWordCount`, and the settings summary shows the number. A room with custom words can't be made public, and a public room takes none (`custom_words_private`). They live with the room, in memory, and go when it closes.
+In a **private room**, the chair pastes words of their own in the waiting room (`room:settings` with `words`, the text as pasted): one per line, or separated by commas or the Chinese enumeration comma; cleaned as a clue is, the same word twice counted once; each fitting on a card, 5 Chinese characters or 14 other characters; at most 200 (`parseCustomWords()` in `shared/src/games/keywords/custom.ts`, run on both sides; the server refuses with `bad_words`). They are drawn from the same pool as the chosen fields, unused words first and kept apart as the fields' words are, and with 25 or more the chair may choose no field at all. A Chinese word gets its `pinyin`; custom words have no translations or forms. The words are the chair's alone: everyone else's view carries only `customWordCount`, and the settings summary shows the number. A room with custom words can't be made public, and a public room takes none (`custom_words_private`). They live with the room, in memory, and go when it closes; a room with them keeps no [replay](#replays) of its games, which would carry the words that were on the board.
 
 ## Talking it over
 
@@ -91,7 +91,7 @@ Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a gr
 
 ## Replays
 
-Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the events, the result and the names everyone had, by player ID; `replaySteps()` turns it into the steps. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none.
+Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
 
 ## What each player sees
 
@@ -136,8 +136,8 @@ Before a game action, the server ends a phase whose time has run out. Then:
 
 1. `stale`: an earlier game or turn, or no game.
 2. `game_over`.
-3. `paused`, for everything but a chat message, a resumption and a withdrawal.
-4. `not_your_turn`, `not_captain`, `not_guesser`; a chat message only needs a guesser; a pause needs the chair (`not_chair`).
+3. `paused`, for everything but a chat message and a withdrawal. A pause and a resumption need the chair first (`not_chair`), and then a game that isn't paused, or is (`paused`, `not_paused`).
+4. `not_your_turn`, `not_captain`, `not_guesser`; a chat message only needs a guesser.
 5. `wrong_phase`, such as revealing before the clue.
 6. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_many_words`, `clue_too_long`, `clue_on_board`; `no_such_card`, `card_revealed`; `must_guess_first`; `chat_empty`, `chat_too_long`; `no_extension`, `extension_used`.
 

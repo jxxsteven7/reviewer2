@@ -3,6 +3,7 @@ import { defaultSettings, type KeywordsRoomData, type RoomView } from '@reviewer
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
+import { fields } from '../../core/fields';
 import en from '../../locales/en.json';
 import KeywordsLobby from './KeywordsLobby.vue';
 
@@ -87,10 +88,10 @@ describe('KeywordsLobby', () => {
     // Another player's snapshot leaves the chair's unsaved choice alone.
     await chair.setProps({ room: { ...view('ann', 1) } });
     await chair.get('.save button').trigger('click');
+    // The words didn't change, so they don't go along.
     expect(send).toHaveBeenCalledWith('room:settings', {
       fields: ['general'],
       settings: { ...defaultSettings('en'), clueRule: 'loose' },
-      words: '',
     });
     // Once the room has the settings, there is nothing left to save.
     await chair.setProps({ room: view('ann', 1, { ...defaultSettings('en'), clueRule: 'loose' }) });
@@ -121,10 +122,7 @@ describe('KeywordsLobby', () => {
     await chair.find('.desk-actions .primary').trigger('click');
     await flushPromises();
     expect(send.mock.calls.filter(([event]) => event !== 'meta:fields')).toEqual([
-      [
-        'room:settings',
-        { fields: ['general'], settings: { ...defaultSettings('en'), guessRule: 'standard' }, words: '' },
-      ],
+      ['room:settings', { fields: ['general'], settings: { ...defaultSettings('en'), guessRule: 'standard' } }],
       ['room:start', { round: 2 }],
     ]);
   });
@@ -158,18 +156,37 @@ describe('KeywordsLobby', () => {
     expect(player.text()).not.toContain('Alpha');
   });
 
-  test('needs a word list unless the chair has 25 words of their own, and none in a public room', async () => {
+  test('needs a word list unless the chair has 25 words of their own', async () => {
+    fields.value = [{ id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 300, en: 300 } }];
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
-    const enough = Array.from({ length: 25 }, (_, i) => `Word${i}`).join('\n');
-    await chair.get('textarea').setValue(enough);
-    // The word lists aren't loaded in this test, so their boxes can't be unticked: the chair's
-    // choice is emptied as the picker would.
+    await chair.get('.fields input[type="checkbox"]').setValue(false);
+    const words = (count: number) => Array.from({ length: count }, (_, i) => `Word${i}`).join('\n');
+    await chair.get('textarea').setValue(words(24));
+    expect(chair.get('.save button').attributes('disabled')).toBeDefined();
+    await chair.get('textarea').setValue(words(25));
     expect(chair.get('.save button').attributes('disabled')).toBeUndefined();
-    const listed = mount(KeywordsLobby, { props: { room: { ...view('ann', 0), public: true } }, global: global() });
+    await chair.get('.save button').trigger('click');
+    expect(send).toHaveBeenCalledWith('room:settings', {
+      fields: [],
+      settings: defaultSettings('en'),
+      words: words(25),
+    });
+  });
+
+  test('takes no words in a public room, and drops what was typed and not saved when the room is listed', async () => {
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
-    expect(listed.find('textarea').exists()).toBe(false);
-    expect(listed.text()).toContain('Custom words are for private rooms');
+    await chair.get('textarea').setValue('Alpha\nBeta');
+    expect(chair.find('.save').exists()).toBe(true);
+    await chair.setProps({ room: { ...view('ann', 0), public: true } });
+    expect(chair.find('textarea').exists()).toBe(false);
+    expect(chair.text()).toContain('Custom words are for private rooms');
+    // Nothing is left to save, and the game starts without a word of the chair's own.
+    expect(chair.find('.save').exists()).toBe(false);
+    await chair.find('.desk-actions .primary').trigger('click');
+    await flushPromises();
+    expect(send.mock.calls.filter(([event]) => event !== 'meta:fields')).toEqual([['room:start', { round: 2 }]]);
   });
 
   test("doesn't start the game when the server refuses what the chair changed", async () => {

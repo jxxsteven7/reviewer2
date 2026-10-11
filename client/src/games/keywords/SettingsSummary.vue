@@ -29,7 +29,11 @@ const time = (seconds: number) => (seconds === 0 ? t('settings.noLimit') : t('se
     <dd>{{ t(`settings.extension.${settings.extensions ? 'on' : 'off'}`) }}</dd>
     <dt>{{ t('settings.customWords') }}</dt>
     <dd class="custom-words">
-      {{ customWords > 0 ? t('settings.customWordsCount', { count: customWords }) : t('settings.customWordsNone') }}
+      {{
+        customWords > 0
+          ? t('settings.customWordsCount', { count: customWords }, customWords)
+          : t('settings.customWordsNone')
+      }}
     </dd>
   </dl>
 </template>

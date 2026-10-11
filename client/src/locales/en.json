@@ -296,7 +296,7 @@
     "onBoard": "{word} is on the board. A clue can't be a word on the board, or part of one.",
     "formOnBoard": "{word} is on the board, and this clue repeats a form of it that the word lists give. This room's clue check doesn't allow it.",
     "characterOnBoard": "This clue has a Chinese character in common with {word}, which is on the board. This room's clue check doesn't allow it.",
-    "insideOnBoard": "This clue contains {word}, which is on the board. This room’s clue check doesn’t allow it.",
+    "insideOnBoard": "This clue contains {word}, which is on the board. This room's clue check doesn't allow it.",
     "similar": "This may be another form of a word still on the board: {words}. The rules don't allow that, but the check can't be sure, so it's your call.",
     "formWarning": "This clue repeats a form that the word lists give of a word still on the board: {words}. This room's clue check leaves it to you.",
     "characterWarning": "This clue has a Chinese character in common with a word still on the board: {words}. It's your call.",
@@ -464,11 +464,11 @@
       "loose": "Loose"
     },
     "clueHint": {
-      "strict": "Refuses the other forms of a word on the board that the word lists give, clues with a Chinese character in common with one, and clues that contain one.",
+      "strict": "Refuses the other forms of a word on the board that the word lists give, clues with a Chinese character in common with one, and, in a Chinese room, clues that contain one.",
       "loose": "Other forms of a word on the board that the word lists give, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."
     },
     "clueLength": {
-      "zh": "Chinese characters in a clue",
+      "zh": "Characters in a clue",
       "en": "Words in a clue"
     },
     "lengthRange": "From {min} to {max}.",
@@ -486,7 +486,7 @@
     "extensionsHint": "Each group may once a game ask for 30 seconds more for the phase it is in, where the phase has a time limit.",
     "customWords": "Custom words",
     "customWordsHint": "One per line, or separated by commas. Each must fit on a card, up to 5 Chinese characters or 14 letters; at most 200. They are drawn with the word lists, and the players don't see them before they are on the board. With 25 or more, every word list can be dropped. Only a private room has them.",
-    "customWordsCount": "{count} words",
+    "customWordsCount": "{count} word | {count} words",
     "customWordsNone": "none",
     "customWordsTooLong": "Too long for a card: {words}",
     "customWordsTooMany": "At most 200 words.",
@@ -721,7 +721,7 @@
     },
     "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
     "clueRule": {
-      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a Chinese character in common with one, or contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
+      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a Chinese character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
       "loose": "This room's clue check is loose: other forms of a word on the board, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."
     },
     "timeTitle": "Time",

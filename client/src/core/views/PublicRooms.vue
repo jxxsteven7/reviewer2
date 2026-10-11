@@ -28,6 +28,8 @@ async function load() {
   failed.value = null;
   rooms.value = null;
   const reply = await send<{ rooms: PublicRoom[] }>('meta:rooms');
+  // The list may have been folded away while the answer was on its way.
+  if (!open.value) return;
   if (reply.ok) rooms.value = reply.rooms;
   else {
     failed.value = reply.error;

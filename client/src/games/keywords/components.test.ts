@@ -2,6 +2,7 @@
 import {
   defaultSettings,
   type ChatMessage,
+  type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
@@ -24,6 +25,7 @@ import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
+import ReplayViewer from './ReplayViewer.vue';
 import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
@@ -508,13 +510,8 @@ describe('CluePanel', () => {
       `This clue has a Chinese character in common with a word still on the board: \u201cData\u201d (${DATA}). ` +
         "It's your call.",
     ]);
-    // A clue that contains a word on the board is refused under the strict rule, which the room
-    // has, and only warned about under the loose one.
+    // In an English room, a clue that contains a word on the board is a warning under either rule.
     await wrapper.get('input').setValue('metamodeling');
-    expect(wrapper.get('.problem').text()).toBe(
-      'This clue contains \u201cModel\u201d, which is on the board. This room\u2019s clue check doesn\u2019t allow it.',
-    );
-    await wrapper.setProps({ settings: { ...STANDARD, clueRule: 'loose' } });
     expect(wrapper.find('.problem').exists()).toBe(false);
     expect(wrapper.findAll('.warning')).toHaveLength(1);
     await wrapper.get('input').setValue('datacenter');
@@ -538,6 +535,13 @@ describe('CluePanel', () => {
     expect(chinese.find('.problem').exists()).toBe(false);
     await chinese.get('input').setValue('abcdefghi');
     expect(chinese.get('.problem').text()).toBe('That clue is too long.');
+    // In a Chinese room, a clue that contains a Latin word on the board is refused under the
+    // strict rule, which the room has.
+    await chinese.setProps({ game: { ...chinese.props('game'), cards: [{ word: 'Python', revealed: false }] } });
+    await chinese.get('input').setValue('Pythonic');
+    expect(chinese.get('.problem').text()).toBe(
+      "This clue contains “Python”, which is on the board. This room's clue check doesn't allow it.",
+    );
     await chinese.setProps({
       game: { ...chinese.props('game'), cards: [{ word: '\u57fa\u56e0', revealed: false, pinyin: 'ji yin' }] },
     });
@@ -588,6 +592,51 @@ describe('TurnStrip', () => {
       global: global(),
     });
     expect(timed.get('.clock').attributes('aria-label')).toBe('42 seconds left');
+  });
+
+  test('keeps the clock still while the game is paused, as on a big screen', async () => {
+    vi.useFakeTimers();
+    try {
+      const paused = mount(TurnStrip, {
+        props: {
+          game: { ...game, paused: true, cards: [], clock: { left: 42_000, total: 90_000 } },
+          guessRule: 'free',
+        },
+        global: global(),
+      });
+      vi.advanceTimersByTime(5_000);
+      await flushPromises();
+      expect(paused.get('.clock').attributes('aria-label')).toBe('42 seconds left');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('ReplayViewer', () => {
+  const replay: KeywordsReplay = {
+    gameId: 'g1',
+    language: 'en',
+    startingTeam: 'red',
+    cards: [
+      { word: 'Baseline', color: 'red' },
+      { word: 'Model', color: 'blue' },
+      { word: 'Journal', color: 'reviewer2' },
+    ],
+    history: [{ turn: 1, team: 'red', word: 'Science', count: 2, guesses: [{ card: 0, color: 'red', player: 'bob' }] }],
+    result: { winner: 'red', reason: 'found' },
+    players: { bob: 'Bob' },
+  };
+
+  test('keeps its step when the same game comes again, and starts over with another game', async () => {
+    const wrapper = mount(ReplayViewer, { props: { replay }, global: global() });
+    await wrapper.get('input[type="range"]').setValue('2');
+    expect(wrapper.get('.position').text()).toBe('Step 3 of 3');
+    // The results page builds the replay anew from every snapshot, as when someone's phone locks.
+    await wrapper.setProps({ replay: { ...replay, players: { ...replay.players } } });
+    expect(wrapper.get('.position').text()).toBe('Step 3 of 3');
+    await wrapper.setProps({ replay: { ...replay, gameId: 'g2' } });
+    expect(wrapper.get('.position').text()).toBe('Step 1 of 3');
   });
 });
 
@@ -817,7 +866,7 @@ describe('SettingsForm', () => {
 
   test('counts a clue in Chinese characters in a Chinese room', async () => {
     const wrapper = form('zh');
-    expect(wrapper.text()).toContain('Chinese characters in a clue');
+    expect(wrapper.text()).toContain('Characters in a clue');
     expect((boxes(wrapper)[0]?.element as HTMLInputElement).value).toBe('4');
     // Another language brings its own default length.
     await wrapper.setProps({ language: 'en' });

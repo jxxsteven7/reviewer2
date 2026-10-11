@@ -16,7 +16,7 @@ export const CARD_LETTERS = 14;
 // The longest text that is looked at, in UTF-16 units as it arrives.
 export const MAX_CUSTOM_INPUT = 10_000;
 
-const SEPARATOR = /[\n\r,，、]/;
+const SEPARATOR = /[\n\r,\uff0c\u3001]/;
 
 export const fitsCard = (word: string): boolean => textLength(word) <= (hasHan(word) ? CARD_HAN : CARD_LETTERS);
 

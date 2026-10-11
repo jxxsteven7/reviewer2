@@ -62,7 +62,7 @@ import {
   type Seating,
   type SeatRequest,
 } from './seats';
-import { remaining, type KeywordsState } from './state';
+import { copyRecord, remaining, type KeywordsState } from './state';
 import { viewFor } from './view';
 
 // The team word guessing game as a GameModule: the rules in rules.ts and seats.ts, connected to
@@ -354,8 +354,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       language: game.language,
       startingTeam: game.startingTeam,
       cards: game.cards.map(({ word, color }) => ({ word, color })),
-      history: game.history.map((record) => ({ ...record, guesses: record.guesses.map((guess) => ({ ...guess })) })),
-      events: game.events.map((event) => ({ ...event })),
+      history: game.history.map(copyRecord),
       result: { ...game.result },
       players,
     };

@@ -1,11 +1,11 @@
 import type { Language } from '../../language';
-import type { CardColor, ClueCount, ClueRecord, GameEvent, GameResult, Team } from './types';
+import type { CardColor, ClueCount, ClueRecord, GameResult, Team } from './types';
 
 // A finished game, to be replayed step by step (ReplayViewer on the client): the board as it was
 // dealt, with every color, which the end of a game shows everyone anyway, the clues and the
-// guesses as the record has them, what else happened, and the names that everyone had in the
-// game. The page builds one from the view when a game ends, for the review on the results page;
-// the server keeps one for the players with accounts (docs/architecture.md#replays).
+// guesses as the record has them, and the names of those who revealed a card. The page builds one
+// from the view when a game ends, for the review on the results page; the server keeps one for
+// the players with accounts (docs/architecture.md#replays).
 
 export interface ReplayCard {
   word: string;
@@ -18,10 +18,9 @@ export interface KeywordsReplay {
   startingTeam: Team;
   cards: ReplayCard[];
   history: ClueRecord[];
-  events: GameEvent[];
   result: GameResult;
-  // The name that each player had in the game, by player ID. A guess by a player who is missing
-  // here is shown without a name.
+  // The name that each player who revealed a card had in the game, by player ID. A guess by a
+  // player who is missing here is shown without a name.
   players: Record<string, string>;
 }
 

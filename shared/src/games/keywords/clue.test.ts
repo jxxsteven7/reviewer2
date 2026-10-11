@@ -477,6 +477,12 @@ describe('the strict and the loose clue rules', () => {
     checkClue(clue, cards, { words, length: null, strict: true });
   const loose = (clue: string, cards: ReturnType<typeof card>[], words = 1) =>
     checkClue(clue, cards, { words, length: null, strict: false });
+  // The same rules in a Chinese room, which counts characters rather than words.
+  const chinese = (strict: boolean) => (clue: string, cards: ReturnType<typeof card>[]) =>
+    checkClue(clue, cards, { words: 1, length: 10, strict });
+  const zhStrict = chinese(true);
+  const zhLoose = chinese(false);
+  const inside = (text: string) => ({ card: 0, text, kind: 'inside' });
 
   test('a form that the word library lists is refused under the strict rule and a warning under the loose one', () => {
     const data = [card('Data', { forms: ['dataset', 'database', DATASET] })];
@@ -525,12 +531,10 @@ describe('the strict and the loose clue rules', () => {
     const sota = [card('SOTA', { forms: ['state of the art'] })];
     expect(strict('of', sota)).toEqual({ problem: null, conflict: null, similar: [] });
     expect(strict('artwork', sota)).toEqual({ problem: null, conflict: null, similar: [] });
-    expect(strict('bigdataset', data).conflict).toEqual({ card: 0, text: 'Data', kind: 'inside' });
-    expect(loose('bigdataset', data)).toEqual({
-      problem: null,
-      conflict: null,
-      similar: [{ card: 0, text: 'Data', kind: 'inside' }],
-    });
+    expect(zhStrict('bigdataset', data).conflict).toEqual(inside('Data'));
+    for (const check of [strict, loose, zhLoose]) {
+      expect(check('bigdataset', data)).toEqual({ problem: null, conflict: null, similar: [inside('Data')] });
+    }
   });
 
   test('a Chinese character in common with a word on the board is refused under the strict rule only', () => {
@@ -557,46 +561,60 @@ describe('the strict and the loose clue rules', () => {
     });
   });
 
-  test('a word on the board, or a part of one, of four letters or more inside the clue is refused under the strict rule only', () => {
-    const inside = (text: string) => ({ card: 0, text, kind: 'inside' });
-    expect(strict('datacenter', [card('Data')])).toEqual({
+  test('a word on the board, or a part of one, of four letters or more inside the clue is refused under the strict rule in a Chinese room', () => {
+    expect(zhStrict('dockerfile', [card('Docker')])).toEqual({
       problem: 'clue_on_board',
-      conflict: inside('Data'),
+      conflict: inside('Docker'),
       similar: [],
     });
-    expect(loose('datacenter', [card('Data')])).toEqual({ problem: null, conflict: null, similar: [inside('Data')] });
-    expect(strict('dockerfile', [card('Docker')]).conflict).toEqual(inside('Docker'));
-    expect(strict('Pythonic', [card('Python')]).conflict).toEqual(inside('Python'));
-    expect(strict('metadata', [card('Big data')]).conflict).toEqual(inside('Big data'));
-    expect(loose('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
+    expect(zhLoose('dockerfile', [card('Docker')])).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [inside('Docker')],
+    });
+    expect(zhStrict('Pythonic', [card('Python')]).conflict).toEqual(inside('Python'));
+    expect(zhStrict('metadata', [card('Big data')]).conflict).toEqual(inside('Big data'));
+    expect(zhLoose('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
+    // Shorter words are left alone, and so are clues inside a word.
+    expect(zhStrict('email', [card('AI')]).problem).toBeNull();
+    expect(zhStrict('datum', [card('Dat')]).problem).toBeNull();
+    expect(zhStrict('data', [card('Datacenter')]).problem).toBeNull();
+  });
+
+  test('is a warning under both rules in an English room, where every card is Latin', () => {
+    // The strict rule would otherwise refuse everyday words beside short cards.
+    for (const check of [strict, loose]) {
+      expect(check('support', [card('Port')])).toEqual({ problem: null, conflict: null, similar: [inside('Port')] });
+      expect(check('general', [card('Gene')]).similar).toEqual([inside('Gene')]);
+      expect(check('datacenter', [card('Data')]).similar).toEqual([inside('Data')]);
+      expect(check('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
+    }
     // A clue of several words contains what runs across its words as well.
     expect(
-      checkClue('big data center', [card('Datacenter')], { words: 3, length: null, strict: true }).conflict,
-    ).toEqual(inside('Datacenter'));
-    // The same for a card's term in another language is a warning under both rules.
-    for (const check of [strict, loose]) {
+      checkClue('big data center', [card('Datacenter')], { words: 3, length: null, strict: true }).similar,
+    ).toEqual([inside('Datacenter')]);
+    // The same for a card's term in another language is a warning under both rules, in either room.
+    for (const check of [strict, loose, zhStrict, zhLoose]) {
       expect(check('datacenter', [card(DATA, { translations: ['Data'] })])).toEqual({
         problem: null,
         conflict: null,
         similar: [inside('Data')],
       });
     }
-    // Shorter words are left alone, and so are clues inside a word.
-    expect(strict('email', [card('AI')]).problem).toBeNull();
-    expect(strict('datum', [card('Dat')]).problem).toBeNull();
-    expect(strict('data', [card('Datacenter')]).problem).toBeNull();
   });
 
   test('what the endings suggest stays a warning under both rules, also when the clue contains the word', () => {
-    expect(strict('modeling', [card('Model')])).toEqual({
-      problem: null,
-      conflict: null,
-      similar: [{ card: 0, text: 'Model', kind: 'similar' }],
-    });
-    expect(loose('modeling', [card('Model')]).similar).toEqual([{ card: 0, text: 'Model', kind: 'similar' }]);
+    for (const check of [strict, loose, zhStrict, zhLoose]) {
+      expect(check('modeling', [card('Model')])).toEqual({
+        problem: null,
+        conflict: null,
+        similar: [{ card: 0, text: 'Model', kind: 'similar' }],
+      });
+    }
     expect(strict('tests', [card('Test')]).conflict).toEqual({ card: 0, text: 'Test', kind: 'same' });
     expect(strict('tested', [card('Test')]).problem).toBeNull();
-    expect(strict('contest', [card('Test')]).problem).toBe('clue_on_board');
+    expect(zhStrict('contest', [card('Test')]).problem).toBe('clue_on_board');
+    expect(strict('contest', [card('Test')]).similar).toEqual([inside('Test')]);
   });
 
   test('the loose rule still refuses what the rules always refuse', () => {

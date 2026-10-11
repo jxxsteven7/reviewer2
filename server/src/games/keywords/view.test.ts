@@ -189,6 +189,17 @@ describe('a paused game', () => {
     expect(viewFor(paused, redGuesser, 25_000).selections).toHaveLength(2);
   });
 
+  test('shows everyone the whole board again once the game has ended during the pause', () => {
+    const paused = accepted(pause(playing(), true, { gameId: playing().gameId }, 0));
+    const over = accepted(withdraw(paused, { gameId: paused.gameId }));
+    for (const seat of Object.values(SEATS)) {
+      const view = viewFor(over, seat, 0);
+      expect(view.paused).toBe(false);
+      expect(view.cards).toHaveLength(25);
+      expect(view.cards.every((card) => card.color !== undefined)).toBe(true);
+    }
+  });
+
   test('tells everyone whether the game is paused, and which groups have extended', () => {
     const state = {
       ...playing(),

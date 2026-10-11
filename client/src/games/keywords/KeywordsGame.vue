@@ -26,6 +26,7 @@ import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
+import PausedNotice from './PausedNotice.vue';
 import { replayOf } from './replay';
 import ReplayViewer from './ReplayViewer.vue';
 import RoleBanner from './RoleBanner.vue';
@@ -221,14 +222,12 @@ const chosenByOthers = computed(() =>
 
     <div class="layout">
       <div class="main">
-        <div v-if="paused" class="paused">
-          <p class="paused-title">{{ t('game.paused') }}</p>
-          <p class="paused-note">{{ t('game.pausedNote') }}</p>
+        <PausedNotice v-if="paused">
           <template v-if="isChair">
             <UiButton variant="primary" :disabled="busy" @click="resume">{{ t('game.resume') }}</UiButton>
             <p class="paused-note">{{ t('game.pausedResume') }}</p>
           </template>
-        </div>
+        </PausedNotice>
         <KeywordsBoard
           v-else
           :cards="game.cards"
@@ -407,33 +406,6 @@ const chosenByOthers = computed(() =>
 .actions > :deep(.extend) {
   grid-area: extend;
   justify-self: start;
-}
-
-/* In place of the board while the game is paused. */
-.paused {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  min-height: 14rem;
-  margin-top: var(--space-3);
-  padding: var(--space-5) var(--space-4);
-  border: var(--line-strong) dashed var(--ink);
-  border-radius: var(--radius-panel);
-  text-align: center;
-}
-
-.paused-title {
-  font-family: var(--font-display);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-display);
-  font-synthesis: none;
-}
-
-.paused-note {
-  color: var(--ink-2);
-  font-size: var(--text-sm);
 }
 
 .who {

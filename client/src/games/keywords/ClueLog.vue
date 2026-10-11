@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ClueRecord, GameEvent, KeywordsView } from '@reviewer2/shared';
+import { otherTeam, type ClueRecord, type GameEvent, type KeywordsView } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -29,8 +29,7 @@ const turns = computed(() => {
 });
 
 // Whose turn a turn without a clue yet is: the starting group plays the odd ones.
-const teamOf = (turn: number) =>
-  turn % 2 === 1 ? props.game.startingTeam : props.game.startingTeam === 'red' ? 'blue' : 'red';
+const teamOf = (turn: number) => (turn % 2 === 1 ? props.game.startingTeam : otherTeam(props.game.startingTeam));
 
 const eventText = (event: GameEvent) =>
   t(`game.events.${event.kind}`, { group: event.team ? t(`lobby.group.${event.team}`) : '' });

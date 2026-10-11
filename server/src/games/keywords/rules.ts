@@ -5,6 +5,7 @@ import {
   cleanClue,
   clueCounts,
   clueOptions,
+  EVENTS_KEPT,
   EXTENSION_SECONDS,
   otherTeam,
   TEAMS,
@@ -97,10 +98,11 @@ function refusal(
   return null;
 }
 
-// Notes a pause, a resumption or an extension in the turn it came in.
+// Notes a pause, a resumption or an extension in the turn it came in. Only the last EVENTS_KEPT
+// are kept, so that a chair who pauses and resumes without end can't grow every snapshot.
 const noted = (state: KeywordsState, kind: EventKind, team?: Team): KeywordsState => ({
   ...state,
-  events: [...state.events, { turn: state.turn, kind, ...(team ? { team } : {}) }],
+  events: [...state.events, { turn: state.turn, kind, ...(team ? { team } : {}) }].slice(-EVENTS_KEPT),
 });
 
 function endTurn(state: KeywordsState, at: number): KeywordsState {
@@ -116,8 +118,10 @@ function endTurn(state: KeywordsState, at: number): KeywordsState {
   };
 }
 
+// The end of the game, however it came: the clock stops, and a pause ends with the game, so that
+// everyone sees the board with every color (view.ts).
 function finish(state: KeywordsState, winner: Team | null, reason: 'found' | 'reviewer2' | 'withdrawn'): KeywordsState {
-  return { ...state, phase: 'over', clock: null, clue: null, selections: [], result: { winner, reason } };
+  return { ...state, phase: 'over', clock: null, pause: null, clue: null, selections: [], result: { winner, reason } };
 }
 
 // The current team's captain gives a clue: up to as many words as the room allows, and a number
