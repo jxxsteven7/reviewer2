@@ -1,0 +1,1309 @@
+{
+  "id": "astronomy",
+  "name": {
+    "zh": "天文与航天",
+    "en": "Astronomy & Space"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "black-hole",
+      "zh": "黑洞",
+      "en": "Black hole"
+    },
+    {
+      "id": "big-bang",
+      "zh": "大爆炸",
+      "en": "Big Bang"
+    },
+    {
+      "id": "galaxy",
+      "zh": "星系",
+      "en": "Galaxy",
+      "forms": { "en": ["galactic"] }
+    },
+    {
+      "id": "planet",
+      "zh": "行星",
+      "en": "Planet",
+      "forms": { "en": ["planetary"] }
+    },
+    {
+      "id": "comet",
+      "zh": "彗星",
+      "en": "Comet",
+      "forms": { "en": ["cometary"] }
+    },
+    {
+      "id": "asteroid",
+      "zh": "小行星",
+      "en": "Asteroid"
+    },
+    {
+      "id": "telescope",
+      "zh": "望远镜",
+      "en": "Telescope",
+      "forms": { "en": ["telescopic"] }
+    },
+    {
+      "id": "constellation",
+      "zh": "星座",
+      "en": "Constellation"
+    },
+    {
+      "id": "supernova",
+      "zh": "超新星",
+      "en": "Supernova",
+      "forms": { "en": ["supernovae"] }
+    },
+    {
+      "id": "light-year",
+      "zh": "光年",
+      "en": "Light-year"
+    },
+    {
+      "id": "mercury",
+      "zh": "水星",
+      "en": "Mercury"
+    },
+    {
+      "id": "venus",
+      "zh": "金星",
+      "en": "Venus",
+      "forms": { "en": ["Venusian"] }
+    },
+    {
+      "id": "mars",
+      "zh": "火星",
+      "en": "Mars",
+      "forms": { "en": ["Martian"] }
+    },
+    {
+      "id": "jupiter",
+      "zh": "木星",
+      "en": "Jupiter",
+      "forms": { "en": ["Jovian"] }
+    },
+    {
+      "id": "saturn",
+      "zh": "土星",
+      "en": "Saturn"
+    },
+    {
+      "id": "uranus",
+      "zh": "天王星",
+      "en": "Uranus"
+    },
+    {
+      "id": "neptune",
+      "zh": "海王星",
+      "en": "Neptune"
+    },
+    {
+      "id": "pluto",
+      "zh": "冥王星",
+      "en": "Pluto"
+    },
+    {
+      "id": "dwarf-planet",
+      "zh": "矮行星",
+      "en": "Dwarf planet"
+    },
+    {
+      "id": "io",
+      "zh": "木卫一",
+      "en": "Io"
+    },
+    {
+      "id": "europa",
+      "zh": "木卫二",
+      "en": "Europa"
+    },
+    {
+      "id": "ganymede",
+      "zh": "木卫三",
+      "en": "Ganymede"
+    },
+    {
+      "id": "titan",
+      "zh": "土卫六",
+      "en": "Titan"
+    },
+    {
+      "id": "morning-star",
+      "zh": "启明星",
+      "en": "Morning star"
+    },
+    {
+      "id": "asteroid-belt",
+      "zh": "小行星带",
+      "en": "Asteroid belt"
+    },
+    {
+      "id": "meteoroid",
+      "zh": "流星体",
+      "en": "Meteoroid"
+    },
+    {
+      "id": "meteorite",
+      "zh": "陨石",
+      "en": "Meteorite"
+    },
+    {
+      "id": "meteor-shower",
+      "zh": "流星雨",
+      "en": "Meteor shower"
+    },
+    {
+      "id": "fireball",
+      "zh": "火流星",
+      "en": "Fireball"
+    },
+    {
+      "id": "impact-crater",
+      "zh": "撞击坑",
+      "en": "Impact crater"
+    },
+    {
+      "id": "halleys-comet",
+      "zh": "哈雷彗星",
+      "en": "Halley's Comet"
+    },
+    {
+      "id": "tunguska-event",
+      "zh": "通古斯事件",
+      "en": "Tunguska event"
+    },
+    {
+      "id": "planetesimal",
+      "zh": "星子",
+      "en": "Planetesimal"
+    },
+    {
+      "id": "gas-giant",
+      "zh": "气态巨行星",
+      "en": "Gas giant"
+    },
+    {
+      "id": "ice-giant",
+      "zh": "冰巨行星",
+      "en": "Ice giant"
+    },
+    {
+      "id": "hot-jupiter",
+      "zh": "热木星",
+      "en": "Hot Jupiter"
+    },
+    {
+      "id": "super-earth",
+      "zh": "超级地球",
+      "en": "Super-Earth"
+    },
+    {
+      "id": "rogue-planet",
+      "zh": "流浪行星",
+      "en": "Rogue planet"
+    },
+    {
+      "id": "planet-nine",
+      "zh": "第九行星",
+      "en": "Planet Nine"
+    },
+    {
+      "id": "great-red-spot",
+      "zh": "大红斑",
+      "en": "Great Red Spot"
+    },
+    {
+      "id": "saturns-rings",
+      "zh": "土星环",
+      "en": "Saturn's rings"
+    },
+    {
+      "id": "olympus-mons",
+      "zh": "奥林匹斯山",
+      "en": "Olympus Mons"
+    },
+    {
+      "id": "galilean-moons",
+      "zh": "伽利略卫星",
+      "en": "Galilean moons"
+    },
+    {
+      "id": "enceladus",
+      "zh": "土卫二",
+      "en": "Enceladus"
+    },
+    {
+      "id": "triton",
+      "zh": "海卫一",
+      "en": "Triton"
+    },
+    {
+      "id": "charon",
+      "zh": "冥卫一",
+      "en": "Charon"
+    },
+    {
+      "id": "ceres",
+      "zh": "谷神星",
+      "en": "Ceres"
+    },
+    {
+      "id": "heliocentrism",
+      "zh": "日心说",
+      "en": "Heliocentrism",
+      "forms": { "en": ["heliocentric"] }
+    },
+    {
+      "id": "geocentrism",
+      "zh": "地心说",
+      "en": "Geocentrism",
+      "forms": { "en": ["geocentric"] }
+    },
+    {
+      "id": "epicycle",
+      "zh": "本轮",
+      "en": "Epicycle"
+    },
+    {
+      "id": "perihelion",
+      "zh": "近日点",
+      "en": "Perihelion"
+    },
+    {
+      "id": "aphelion",
+      "zh": "远日点",
+      "en": "Aphelion"
+    },
+    {
+      "id": "perigee",
+      "zh": "近地点",
+      "en": "Perigee"
+    },
+    {
+      "id": "apogee",
+      "zh": "远地点",
+      "en": "Apogee"
+    },
+    {
+      "id": "ecliptic",
+      "zh": "黄道",
+      "en": "Ecliptic"
+    },
+    {
+      "id": "zodiac",
+      "zh": "黄道十二宫",
+      "en": "Zodiac",
+      "forms": { "en": ["zodiacal"] }
+    },
+    {
+      "id": "declination",
+      "zh": "赤纬",
+      "en": "Declination"
+    },
+    {
+      "id": "horizon",
+      "zh": "地平线",
+      "en": "Horizon"
+    },
+    {
+      "id": "zenith",
+      "zh": "天顶",
+      "en": "Zenith"
+    },
+    {
+      "id": "nadir",
+      "zh": "天底",
+      "en": "Nadir"
+    },
+    {
+      "id": "vernal-equinox",
+      "zh": "春分",
+      "en": "Vernal equinox"
+    },
+    {
+      "id": "precession",
+      "zh": "岁差",
+      "en": "Precession"
+    },
+    {
+      "id": "nutation",
+      "zh": "章动",
+      "en": "Nutation"
+    },
+    {
+      "id": "sidereal-day",
+      "zh": "恒星日",
+      "en": "Sidereal day"
+    },
+    {
+      "id": "tidal-locking",
+      "zh": "潮汐锁定",
+      "en": "Tidal locking",
+      "forms": { "en": ["tidally locked"] }
+    },
+    {
+      "id": "tidal-force",
+      "zh": "潮汐力",
+      "en": "Tidal force"
+    },
+    {
+      "id": "roche-limit",
+      "zh": "洛希极限",
+      "en": "Roche limit"
+    },
+    {
+      "id": "lagrange-point",
+      "zh": "拉格朗日点",
+      "en": "Lagrange point"
+    },
+    {
+      "id": "gravity-assist",
+      "zh": "引力弹弓",
+      "en": "Gravity assist"
+    },
+    {
+      "id": "three-body-problem",
+      "zh": "三体问题",
+      "en": "Three-body problem"
+    },
+    {
+      "id": "eccentricity",
+      "zh": "偏心率",
+      "en": "Eccentricity",
+      "forms": { "en": ["eccentric"] }
+    },
+    {
+      "id": "inclination",
+      "zh": "轨道倾角",
+      "en": "Inclination"
+    },
+    {
+      "id": "culmination",
+      "zh": "中天",
+      "en": "Culmination"
+    },
+    {
+      "id": "aberration",
+      "zh": "光行差",
+      "en": "Aberration"
+    },
+    {
+      "id": "twinkling",
+      "zh": "闪烁",
+      "en": "Twinkling",
+      "forms": { "en": ["twinkle"] }
+    },
+    {
+      "id": "seeing",
+      "zh": "视宁度",
+      "en": "Seeing"
+    },
+    {
+      "id": "earths-axis",
+      "zh": "地轴",
+      "en": "Earth's axis"
+    },
+    {
+      "id": "sextant",
+      "zh": "六分仪",
+      "en": "Sextant"
+    },
+    {
+      "id": "opposition",
+      "zh": "冲日",
+      "en": "Opposition"
+    },
+    {
+      "id": "retrograde",
+      "zh": "逆行",
+      "en": "Retrograde"
+    },
+    {
+      "id": "lunar-mansions",
+      "zh": "二十八宿",
+      "en": "Lunar mansions"
+    },
+    {
+      "id": "leap-year",
+      "zh": "闰年",
+      "en": "Leap year"
+    },
+    {
+      "id": "leap-second",
+      "zh": "闰秒",
+      "en": "Leap second"
+    },
+    {
+      "id": "lunar-calendar",
+      "zh": "农历",
+      "en": "Lunar calendar"
+    },
+    {
+      "id": "solar-term",
+      "zh": "节气",
+      "en": "Solar term"
+    },
+    {
+      "id": "sundial",
+      "zh": "日晷",
+      "en": "Sundial"
+    },
+    {
+      "id": "astrolabe",
+      "zh": "星盘",
+      "en": "Astrolabe"
+    },
+    {
+      "id": "solar-day",
+      "zh": "太阳日",
+      "en": "Solar day"
+    },
+    {
+      "id": "tropical-year",
+      "zh": "回归年",
+      "en": "Tropical year"
+    },
+    {
+      "id": "utc",
+      "zh": "协调世界时",
+      "en": "UTC",
+      "forms": { "en": ["Coordinated Universal Time"] }
+    },
+    {
+      "id": "almanac",
+      "zh": "历书",
+      "en": "Almanac"
+    },
+    {
+      "id": "lunar-phase",
+      "zh": "月相",
+      "en": "Lunar phase"
+    },
+    {
+      "id": "new-moon",
+      "zh": "新月",
+      "en": "New moon"
+    },
+    {
+      "id": "full-moon",
+      "zh": "满月",
+      "en": "Full moon"
+    },
+    {
+      "id": "supermoon",
+      "zh": "超级月亮",
+      "en": "Supermoon"
+    },
+    {
+      "id": "blood-moon",
+      "zh": "血月",
+      "en": "Blood moon"
+    },
+    {
+      "id": "lunar-eclipse",
+      "zh": "月食",
+      "en": "Lunar eclipse"
+    },
+    {
+      "id": "photosphere",
+      "zh": "光球",
+      "en": "Photosphere"
+    },
+    {
+      "id": "chromosphere",
+      "zh": "色球",
+      "en": "Chromosphere"
+    },
+    {
+      "id": "prominence",
+      "zh": "日珥",
+      "en": "Prominence"
+    },
+    {
+      "id": "solar-cycle",
+      "zh": "太阳周期",
+      "en": "Solar cycle"
+    },
+    {
+      "id": "magnetic-storm",
+      "zh": "磁暴",
+      "en": "Magnetic storm"
+    },
+    {
+      "id": "space-weather",
+      "zh": "空间天气",
+      "en": "Space weather"
+    },
+    {
+      "id": "magnetosphere",
+      "zh": "磁层",
+      "en": "Magnetosphere"
+    },
+    {
+      "id": "van-allen-belt",
+      "zh": "范艾伦带",
+      "en": "Van Allen belt"
+    },
+    {
+      "id": "heliopause",
+      "zh": "日球层顶",
+      "en": "Heliopause"
+    },
+    {
+      "id": "solar-mass",
+      "zh": "太阳质量",
+      "en": "Solar mass"
+    },
+    {
+      "id": "luminosity",
+      "zh": "光度",
+      "en": "Luminosity",
+      "forms": { "en": ["luminous"] }
+    },
+    {
+      "id": "brightness",
+      "zh": "亮度",
+      "en": "Brightness",
+      "forms": { "en": ["bright"] }
+    },
+    {
+      "id": "h-r-diagram",
+      "zh": "赫罗图",
+      "en": "H-R diagram",
+      "forms": { "en": ["Hertzsprung-Russell diagram"] }
+    },
+    {
+      "id": "main-sequence",
+      "zh": "主序",
+      "en": "Main sequence"
+    },
+    {
+      "id": "protostar",
+      "zh": "原恒星",
+      "en": "Protostar"
+    },
+    {
+      "id": "brown-dwarf",
+      "zh": "褐矮星",
+      "en": "Brown dwarf"
+    },
+    {
+      "id": "red-dwarf",
+      "zh": "红矮星",
+      "en": "Red dwarf"
+    },
+    {
+      "id": "supergiant",
+      "zh": "超巨星",
+      "en": "Supergiant"
+    },
+    {
+      "id": "variable-star",
+      "zh": "变星",
+      "en": "Variable star"
+    },
+    {
+      "id": "cepheid",
+      "zh": "造父变星",
+      "en": "Cepheid"
+    },
+    {
+      "id": "binary-star",
+      "zh": "双星",
+      "en": "Binary star"
+    },
+    {
+      "id": "star-cluster",
+      "zh": "星团",
+      "en": "Star cluster"
+    },
+    {
+      "id": "magnetar",
+      "zh": "磁星",
+      "en": "Magnetar"
+    },
+    {
+      "id": "nova",
+      "zh": "新星",
+      "en": "Nova",
+      "forms": { "en": ["novae"] }
+    },
+    {
+      "id": "kilonova",
+      "zh": "千新星",
+      "en": "Kilonova"
+    },
+    {
+      "id": "helium-flash",
+      "zh": "氦闪",
+      "en": "Helium flash"
+    },
+    {
+      "id": "stardust",
+      "zh": "星尘",
+      "en": "Stardust"
+    },
+    {
+      "id": "polaris",
+      "zh": "北极星",
+      "en": "Polaris"
+    },
+    {
+      "id": "big-dipper",
+      "zh": "北斗七星",
+      "en": "Big Dipper"
+    },
+    {
+      "id": "orion",
+      "zh": "猎户座",
+      "en": "Orion"
+    },
+    {
+      "id": "andromeda",
+      "zh": "仙女座",
+      "en": "Andromeda"
+    },
+    {
+      "id": "sirius",
+      "zh": "天狼星",
+      "en": "Sirius"
+    },
+    {
+      "id": "vega",
+      "zh": "织女星",
+      "en": "Vega"
+    },
+    {
+      "id": "altair",
+      "zh": "牛郎星",
+      "en": "Altair"
+    },
+    {
+      "id": "betelgeuse",
+      "zh": "参宿四",
+      "en": "Betelgeuse"
+    },
+    {
+      "id": "pleiades",
+      "zh": "昴星团",
+      "en": "Pleiades"
+    },
+    {
+      "id": "crab-nebula",
+      "zh": "蟹状星云",
+      "en": "Crab Nebula"
+    },
+    {
+      "id": "spectral-type",
+      "zh": "光谱型",
+      "en": "Spectral type"
+    },
+    {
+      "id": "yellow-dwarf",
+      "zh": "黄矮星",
+      "en": "Yellow dwarf"
+    },
+    {
+      "id": "black-dwarf",
+      "zh": "黑矮星",
+      "en": "Black dwarf"
+    },
+    {
+      "id": "dark-nebula",
+      "zh": "暗星云",
+      "en": "Dark nebula"
+    },
+    {
+      "id": "star-formation",
+      "zh": "恒星形成",
+      "en": "Star formation"
+    },
+    {
+      "id": "spiral-arm",
+      "zh": "旋臂",
+      "en": "Spiral arm"
+    },
+    {
+      "id": "spiral-galaxy",
+      "zh": "旋涡星系",
+      "en": "Spiral galaxy"
+    },
+    {
+      "id": "galaxy-cluster",
+      "zh": "星系团",
+      "en": "Galaxy cluster"
+    },
+    {
+      "id": "local-group",
+      "zh": "本星系群",
+      "en": "Local Group"
+    },
+    {
+      "id": "cosmic-web",
+      "zh": "宇宙网",
+      "en": "Cosmic web"
+    },
+    {
+      "id": "cmb",
+      "zh": "CMB",
+      "en": "CMB",
+      "forms": { "zh": ["宇宙微波背景"], "en": ["cosmic microwave background"] }
+    },
+    {
+      "id": "hubbles-law",
+      "zh": "哈勃定律",
+      "en": "Hubble's law"
+    },
+    {
+      "id": "blueshift",
+      "zh": "蓝移",
+      "en": "Blueshift",
+      "forms": { "en": ["blueshifted"] }
+    },
+    {
+      "id": "spectral-line",
+      "zh": "谱线",
+      "en": "Spectral line"
+    },
+    {
+      "id": "accretion-disk",
+      "zh": "吸积盘",
+      "en": "Accretion disk",
+      "forms": { "en": ["accretion disc"] }
+    },
+    {
+      "id": "white-hole",
+      "zh": "白洞",
+      "en": "White hole"
+    },
+    {
+      "id": "gravitational-wave",
+      "zh": "引力波",
+      "en": "Gravitational wave"
+    },
+    {
+      "id": "big-crunch",
+      "zh": "大挤压",
+      "en": "Big Crunch"
+    },
+    {
+      "id": "big-rip",
+      "zh": "大撕裂",
+      "en": "Big Rip"
+    },
+    {
+      "id": "interstellar",
+      "zh": "星际",
+      "en": "Interstellar"
+    },
+    {
+      "id": "au",
+      "zh": "天文单位",
+      "en": "AU",
+      "forms": { "en": ["astronomical unit"] }
+    },
+    {
+      "id": "dwarf-galaxy",
+      "zh": "矮星系",
+      "en": "Dwarf galaxy"
+    },
+    {
+      "id": "supercluster",
+      "zh": "超星系团",
+      "en": "Supercluster"
+    },
+    {
+      "id": "cosmic-void",
+      "zh": "宇宙空洞",
+      "en": "Cosmic void"
+    },
+    {
+      "id": "galactic-halo",
+      "zh": "银晕",
+      "en": "Galactic halo"
+    },
+    {
+      "id": "cosmic-string",
+      "zh": "宇宙弦",
+      "en": "Cosmic string"
+    },
+    {
+      "id": "einstein-ring",
+      "zh": "爱因斯坦环",
+      "en": "Einstein ring"
+    },
+    {
+      "id": "hubble-tension",
+      "zh": "哈勃张力",
+      "en": "Hubble tension"
+    },
+    {
+      "id": "astrobiology",
+      "zh": "天体生物学",
+      "en": "Astrobiology",
+      "forms": { "en": ["astrobiologist"] }
+    },
+    {
+      "id": "exoplanet",
+      "zh": "系外行星",
+      "en": "Exoplanet"
+    },
+    {
+      "id": "habitable-zone",
+      "zh": "宜居带",
+      "en": "Habitable zone"
+    },
+    {
+      "id": "transit",
+      "zh": "凌日",
+      "en": "Transit"
+    },
+    {
+      "id": "occultation",
+      "zh": "掩星",
+      "en": "Occultation"
+    },
+    {
+      "id": "drake-equation",
+      "zh": "德雷克公式",
+      "en": "Drake equation"
+    },
+    {
+      "id": "great-filter",
+      "zh": "大过滤器",
+      "en": "Great Filter"
+    },
+    {
+      "id": "dark-forest",
+      "zh": "黑暗森林",
+      "en": "Dark forest"
+    },
+    {
+      "id": "alien",
+      "zh": "外星人",
+      "en": "Alien"
+    },
+    {
+      "id": "ufo",
+      "zh": "UFO",
+      "en": "UFO",
+      "forms": { "zh": ["不明飞行物"], "en": ["unidentified flying object"] }
+    },
+    {
+      "id": "golden-record",
+      "zh": "金唱片",
+      "en": "Golden Record"
+    },
+    {
+      "id": "pale-blue-dot",
+      "zh": "暗淡蓝点",
+      "en": "Pale Blue Dot"
+    },
+    {
+      "id": "earthrise",
+      "zh": "地出",
+      "en": "Earthrise"
+    },
+    {
+      "id": "blue-marble",
+      "zh": "蓝色弹珠",
+      "en": "Blue Marble"
+    },
+    {
+      "id": "arecibo",
+      "zh": "阿雷西博",
+      "en": "Arecibo"
+    },
+    {
+      "id": "astronomy",
+      "zh": "天文学",
+      "en": "Astronomy",
+      "forms": { "en": ["astronomer", "astronomical"] }
+    },
+    {
+      "id": "astrology",
+      "zh": "占星术",
+      "en": "Astrology",
+      "forms": { "en": ["astrologer", "astrological"] }
+    },
+    {
+      "id": "astrometry",
+      "zh": "天体测量",
+      "en": "Astrometry",
+      "forms": { "en": ["astrometric"] }
+    },
+    {
+      "id": "stargazing",
+      "zh": "观星",
+      "en": "Stargazing",
+      "forms": { "en": ["stargazer"] }
+    },
+    {
+      "id": "star-chart",
+      "zh": "星图",
+      "en": "Star chart"
+    },
+    {
+      "id": "star-catalog",
+      "zh": "星表",
+      "en": "Star catalog",
+      "forms": { "en": ["star catalogue"] }
+    },
+    {
+      "id": "star-trail",
+      "zh": "星轨",
+      "en": "Star trail"
+    },
+    {
+      "id": "planetarium",
+      "zh": "天文馆",
+      "en": "Planetarium"
+    },
+    {
+      "id": "refractor",
+      "zh": "折射望远镜",
+      "en": "Refractor"
+    },
+    {
+      "id": "reflector",
+      "zh": "反射望远镜",
+      "en": "Reflector"
+    },
+    {
+      "id": "binoculars",
+      "zh": "双筒望远镜",
+      "en": "Binoculars"
+    },
+    {
+      "id": "eyepiece",
+      "zh": "目镜",
+      "en": "Eyepiece"
+    },
+    {
+      "id": "objective",
+      "zh": "物镜",
+      "en": "Objective"
+    },
+    {
+      "id": "spectrograph",
+      "zh": "光谱仪",
+      "en": "Spectrograph"
+    },
+    {
+      "id": "interferometer",
+      "zh": "干涉仪",
+      "en": "Interferometer",
+      "forms": { "en": ["interferometry"] }
+    },
+    {
+      "id": "coronagraph",
+      "zh": "日冕仪",
+      "en": "Coronagraph"
+    },
+    {
+      "id": "spaceflight",
+      "zh": "航天",
+      "en": "Spaceflight"
+    },
+    {
+      "id": "outer-space",
+      "zh": "太空",
+      "en": "Outer space"
+    },
+    {
+      "id": "deep-space",
+      "zh": "深空",
+      "en": "Deep space"
+    },
+    {
+      "id": "karman-line",
+      "zh": "卡门线",
+      "en": "Kármán line"
+    },
+    {
+      "id": "astronaut",
+      "zh": "航天员",
+      "en": "Astronaut"
+    },
+    {
+      "id": "spacesuit",
+      "zh": "航天服",
+      "en": "Spacesuit"
+    },
+    {
+      "id": "spaceship",
+      "zh": "宇宙飞船",
+      "en": "Spaceship"
+    },
+    {
+      "id": "launch-vehicle",
+      "zh": "运载火箭",
+      "en": "Launch vehicle"
+    },
+    {
+      "id": "launch-pad",
+      "zh": "发射台",
+      "en": "Launch pad"
+    },
+    {
+      "id": "launch-window",
+      "zh": "发射窗口",
+      "en": "Launch window"
+    },
+    {
+      "id": "countdown",
+      "zh": "倒计时",
+      "en": "Countdown"
+    },
+    {
+      "id": "ignition",
+      "zh": "点火",
+      "en": "Ignition"
+    },
+    {
+      "id": "liftoff",
+      "zh": "升空",
+      "en": "Liftoff"
+    },
+    {
+      "id": "thrust",
+      "zh": "推力",
+      "en": "Thrust"
+    },
+    {
+      "id": "propellant",
+      "zh": "推进剂",
+      "en": "Propellant"
+    },
+    {
+      "id": "fairing",
+      "zh": "整流罩",
+      "en": "Fairing"
+    },
+    {
+      "id": "ion-thruster",
+      "zh": "离子推进器",
+      "en": "Ion thruster"
+    },
+    {
+      "id": "space-station",
+      "zh": "空间站",
+      "en": "Space station"
+    },
+    {
+      "id": "docking",
+      "zh": "对接",
+      "en": "Docking",
+      "forms": { "en": ["dock"] }
+    },
+    {
+      "id": "spacewalk",
+      "zh": "太空行走",
+      "en": "Spacewalk"
+    },
+    {
+      "id": "microgravity",
+      "zh": "微重力",
+      "en": "Microgravity"
+    },
+    {
+      "id": "reentry",
+      "zh": "再入",
+      "en": "Reentry"
+    },
+    {
+      "id": "return-capsule",
+      "zh": "返回舱",
+      "en": "Return capsule"
+    },
+    {
+      "id": "heat-shield",
+      "zh": "隔热罩",
+      "en": "Heat shield"
+    },
+    {
+      "id": "parachute",
+      "zh": "降落伞",
+      "en": "Parachute"
+    },
+    {
+      "id": "splashdown",
+      "zh": "溅落",
+      "en": "Splashdown"
+    },
+    {
+      "id": "lander",
+      "zh": "着陆器",
+      "en": "Lander"
+    },
+    {
+      "id": "rover",
+      "zh": "巡视器",
+      "en": "Rover"
+    },
+    {
+      "id": "orbiter",
+      "zh": "轨道器",
+      "en": "Orbiter"
+    },
+    {
+      "id": "space-probe",
+      "zh": "空间探测器",
+      "en": "Space probe"
+    },
+    {
+      "id": "telemetry",
+      "zh": "遥测",
+      "en": "Telemetry"
+    },
+    {
+      "id": "ground-station",
+      "zh": "地面站",
+      "en": "Ground station"
+    },
+    {
+      "id": "space-junk",
+      "zh": "太空垃圾",
+      "en": "Space junk"
+    },
+    {
+      "id": "space-shuttle",
+      "zh": "航天飞机",
+      "en": "Space shuttle"
+    },
+    {
+      "id": "space-elevator",
+      "zh": "太空电梯",
+      "en": "Space elevator"
+    },
+    {
+      "id": "space-tourism",
+      "zh": "太空旅游",
+      "en": "Space tourism"
+    },
+    {
+      "id": "terraforming",
+      "zh": "地球化",
+      "en": "Terraforming",
+      "forms": { "en": ["terraform"] }
+    },
+    {
+      "id": "space-race",
+      "zh": "太空竞赛",
+      "en": "Space race"
+    },
+    {
+      "id": "moon-landing",
+      "zh": "登月",
+      "en": "Moon landing"
+    },
+    {
+      "id": "nasa",
+      "zh": "NASA",
+      "en": "NASA",
+      "forms": { "zh": ["美国国家航空航天局"], "en": ["National Aeronautics and Space Administration"] }
+    },
+    {
+      "id": "apollo",
+      "zh": "阿波罗",
+      "en": "Apollo"
+    },
+    {
+      "id": "voyager",
+      "zh": "旅行者号",
+      "en": "Voyager"
+    },
+    {
+      "id": "new-horizons",
+      "zh": "新视野号",
+      "en": "New Horizons"
+    },
+    {
+      "id": "tiangong",
+      "zh": "天宫",
+      "en": "Tiangong"
+    },
+    {
+      "id": "shenzhou",
+      "zh": "神舟",
+      "en": "Shenzhou"
+    },
+    {
+      "id": "jade-rabbit",
+      "zh": "玉兔",
+      "en": "Jade Rabbit"
+    },
+    {
+      "id": "tianwen",
+      "zh": "天问",
+      "en": "Tianwen"
+    },
+    {
+      "id": "launch",
+      "zh": "发射",
+      "en": "Launch"
+    },
+    {
+      "id": "landing",
+      "zh": "着陆",
+      "en": "Landing"
+    },
+    {
+      "id": "cubesat",
+      "zh": "立方星",
+      "en": "CubeSat"
+    },
+    {
+      "id": "space-food",
+      "zh": "太空食品",
+      "en": "Space food"
+    },
+    {
+      "id": "space-sickness",
+      "zh": "太空病",
+      "en": "Space sickness"
+    },
+    {
+      "id": "space-colony",
+      "zh": "太空殖民地",
+      "en": "Space colony"
+    },
+    {
+      "id": "moon-base",
+      "zh": "月球基地",
+      "en": "Moon base"
+    },
+    {
+      "id": "space-mining",
+      "zh": "太空采矿",
+      "en": "Space mining"
+    },
+    {
+      "id": "perseverance",
+      "zh": "毅力号",
+      "en": "Perseverance"
+    },
+    {
+      "id": "zhurong",
+      "zh": "祝融",
+      "en": "Zhurong"
+    },
+    {
+      "id": "payload",
+      "zh": "有效载荷",
+      "en": "Payload"
+    },
+    {
+      "id": "lunar-soil",
+      "zh": "月壤",
+      "en": "Lunar soil"
+    },
+    {
+      "id": "sample-return",
+      "zh": "采样返回",
+      "en": "Sample return"
+    }
+  ]
+}
