@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**Online party games for academics.** Everyone joins a room from their own phone. A nickname is enough; an account is optional.
+**Online party games for academics.** Everyone joins a room from their own phone. A nickname is enough to join; an account, which we recommend, keeps your avatar and records.
 
 ## What it is
 
@@ -31,7 +31,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 
 What we promise players:
 
-- **No account needed.** A nickname is enough to play.
+- **An account is recommended, not required.** A nickname is enough to play; an account keeps your avatar, records and titles from game to game.
 - **Passwords** are kept only as a one-way hash. Nobody, the operator included, can read them.
 - **An account's email address is never stored.** The server keeps only a keyed fingerprint of it, to check the address and to mail a password reset.
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
