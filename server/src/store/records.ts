@@ -10,7 +10,8 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 
 // What accounts keep of the games: a row for each game that a player with an account finished in
 // a seat (migration 2), a row for each match that they finished ranked, and the titles that
-// matches award (migration 3, docs/architecture.md#matches).
+// matches award (migration 3, docs/architecture.md#matches), and the games themselves to watch
+// again (migration 7, docs/architecture.md#replays).
 
 // One player's part in one game, as the game module described it (GameModule.results()).
 export interface NewRecord {
@@ -54,9 +55,11 @@ export class RecordStore {
     this.#totals = db.prepare(
       'SELECT count(*) AS games, coalesce(sum(won), 0) AS wins FROM game_records WHERE account_id = ?',
     );
+    // With each game, whether there is a replay of it to watch.
     this.#recent = db.prepare(
-      'SELECT game, ended_at AS endedAt, side, role, winner, won, verdict FROM game_records ' +
-        'WHERE account_id = ? ORDER BY id DESC LIMIT ?',
+      'SELECT game, game_id AS gameId, ended_at AS endedAt, side, role, winner, won, verdict, ' +
+        'EXISTS (SELECT 1 FROM replays WHERE replays.game_id = game_records.game_id) AS replay ' +
+        'FROM game_records WHERE account_id = ? ORDER BY id DESC LIMIT ?',
     );
     // A match is recorded once for each account, as a game is.
     this.#insertMatch = db.prepare(
@@ -92,9 +95,11 @@ export class RecordStore {
   // matches.
   view(accountId: number, limit = RECENT_RECORDS): RecordsView {
     const { games, wins } = this.#totals.get(accountId) as { games: number; wins: number };
-    const recent = (this.#recent.all(accountId, limit) as (Omit<GameRecord, 'won'> & { won: number })[]).map((row) => ({
+    type Row = Omit<GameRecord, 'won' | 'replay'> & { won: number; replay: number };
+    const recent = (this.#recent.all(accountId, limit) as Row[]).map((row) => ({
       ...row,
       won: row.won === 1,
+      replay: row.replay === 1,
     }));
     const { played } = this.#matchCount.get(accountId) as { played: number };
     return {
@@ -136,5 +141,43 @@ export class TitleStore {
       title,
       count,
     }));
+  }
+}
+
+// A finished game to watch again, as the game module gave it (GameModule.replay()), kept as JSON
+// once for each game, however often the end of the game is reported.
+export interface NewReplay {
+  game: string;
+  gameId: string;
+  replay: unknown;
+}
+
+export class ReplayStore {
+  readonly #insert: StatementSync;
+  readonly #read: StatementSync;
+
+  constructor(
+    db: DatabaseSync,
+    private readonly now: () => number = () => Date.now(),
+  ) {
+    this.#insert = db.prepare('INSERT OR IGNORE INTO replays (game_id, game, ended_at, data) VALUES (?, ?, ?, ?)');
+    // Only an account that has the game on its record may read it.
+    this.#read = db.prepare(
+      'SELECT data FROM replays WHERE game_id = ? AND ' +
+        'EXISTS (SELECT 1 FROM game_records WHERE account_id = ? AND game_id = replays.game_id)',
+    );
+  }
+
+  // Keeps the replay, as `data`, which the caller has made into JSON of a size it allows, and
+  // says whether it was new.
+  add({ game, gameId }: NewReplay, data: string): boolean {
+    const endedAt = new Date(this.now()).toISOString();
+    return Number(this.#insert.run(gameId, game, endedAt, data).changes) > 0;
+  }
+
+  // The replay of a game, for an account that played in it, or null.
+  read(accountId: number, gameId: string): unknown {
+    const row = this.#read.get(gameId, accountId) as { data: string } | undefined;
+    return row === undefined ? null : (JSON.parse(row.data) as unknown);
   }
 }

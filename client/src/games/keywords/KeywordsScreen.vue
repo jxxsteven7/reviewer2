@@ -66,7 +66,18 @@ const game = computed(() => data.value.game as KeywordsView | null);
     />
     <div class="main" :class="{ over: game.result }">
       <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" />
-      <KeywordsBoard :cards="game.cards" :selectable="false" :selected="null" :lang="HTML_LANG[room.language]" large />
+      <div v-if="game.paused" class="paused">
+        <p class="paused-title">{{ t('game.paused') }}</p>
+        <p>{{ t('game.pausedNote') }}</p>
+      </div>
+      <KeywordsBoard
+        v-else
+        :cards="game.cards"
+        :selectable="false"
+        :selected="null"
+        :lang="HTML_LANG[room.language]"
+        large
+      />
     </div>
     <aside class="side">
       <div class="join small">
@@ -199,6 +210,28 @@ ul {
 .letters-row {
   grid-column: 1 / -1;
   margin-bottom: 0;
+}
+
+/* In place of the board while the game is paused. */
+.paused {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 16rem;
+  margin-top: var(--space-4);
+  padding: var(--space-5);
+  border: var(--line-strong) dashed var(--ink);
+  border-radius: var(--radius-panel);
+  text-align: center;
+}
+
+.paused-title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
 }
 
 .side {

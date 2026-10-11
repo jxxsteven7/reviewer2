@@ -6,7 +6,7 @@ import type { Chooser } from './useKeywords';
 
 // The 5 by 5 board. Cards can be chosen only when the viewer may reveal one. `choosers` holds,
 // for each card, the others in the group who have chosen it. A `large` board, for a big screen,
-// sets its words in bigger type.
+// sets its words in bigger type. A `marked` card is the one a replay's step is about.
 withDefaults(
   defineProps<{
     cards: CardView[];
@@ -15,8 +15,9 @@ withDefaults(
     choosers?: Chooser[][];
     lang: string;
     large?: boolean;
+    marked?: number | null;
   }>(),
-  { choosers: () => [], large: false },
+  { choosers: () => [], large: false, marked: null },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t } = useI18n();
@@ -33,6 +34,7 @@ const { t } = useI18n();
       :selected="selected === index"
       :choosers="choosers[index] ?? []"
       :large="large"
+      :marked="marked === index"
       @select="emit('select', $event)"
     />
   </div>

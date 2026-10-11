@@ -11,7 +11,8 @@ export type ClueProblem =
 // How a clue runs into a card:
 // - 'same': it repeats the card's word: the word itself, a plain plural of it or a part of it, or
 //   a run of Chinese characters that contains one of the word's or lies inside one. Or it is the
-//   card's term in another language, or a plain plural of that. Always refused.
+//   card's term in another language, or a plain plural of that, or the pinyin of the card's
+//   Chinese word. Always refused.
 // - 'form': it repeats one of the other forms of the term that the word library lists for the
 //   card, in any of the ways that 'same' repeats the card's word. Refused under the strict rule.
 // - 'character': it has a Chinese character in common with the card's word, which the strict
@@ -19,7 +20,8 @@ export type ClueProblem =
 // - 'similar': it may be another form of the card's word by its ending, such as "modeling" for
 //   "model", or a part or such a form of the card's term in another language. A warning.
 // - 'inside': it contains the card's word, or a part of it, of four letters or more, such as
-//   "datacenter" for "Data". A warning.
+//   "datacenter" for "Data", without being another form of it by its ending. Refused under the
+//   strict rule; the same for the card's term in another language only brings a warning.
 export type ClueMatchKind = 'same' | 'form' | 'character' | 'similar' | 'inside';
 
 // A card that the clue runs into, with the text that the clue runs into: the card's word, one
@@ -40,25 +42,28 @@ export interface ClueCheck {
 }
 
 // What the check needs to know about a card. The translations are the card's term in the other
-// languages of the word library, which a clue must not repeat either, and the forms are the
-// other forms of the term that the library lists, in any language.
+// languages of the word library, which a clue must not repeat either, the forms are the other
+// forms of the term that the library lists, in any language, and the pinyin is that of a Chinese
+// word, as the server works it out (BoardWord in types.ts), which a clue must not be either.
 export interface ClueCard {
   word: string;
   revealed: boolean;
   translations?: readonly string[];
   forms?: readonly string[];
+  pinyin?: string;
 }
 
-// What a room allows (clueOptions() in settings.ts): how many words a clue may have, how many
-// Chinese characters, and whether the strict clue rule holds.
+// What a room allows (clueOptions() in settings.ts): how many words a clue may have, how long it
+// may be as clueLength() counts, in a Chinese room, or null in an English room, where the words
+// are counted instead, and whether the strict clue rule holds.
 export interface ClueOptions {
   words: number;
-  han: number;
+  length: number | null;
   strict: boolean;
 }
 
-// The longest word of a clue, in the characters that it is made of, and the longest clue with
-// Chinese characters in it, in all.
+// The longest word of a clue, in the characters that it is made of, and, in an English room, the
+// longest clue with Chinese characters in it, in all.
 export const MAX_CLUE_LENGTH = 24;
 export const MAX_CLUE_HAN = 10;
 // The longest text that is looked at at all, in UTF-16 units as it arrives: more than three words
@@ -68,12 +73,14 @@ export const MAX_CLUE_INPUT = 128;
 // The shortest word or part of a card that brings a warning when a clue contains it.
 const INSIDE_LENGTH = 4;
 
-// One word, at most 10 Chinese characters, and the strict rule: what a room has unless its
+// One word, counted as in an English room, and the strict rule: what a room has unless its
 // settings say otherwise.
-export const DEFAULT_CLUE_OPTIONS: ClueOptions = { words: 1, han: MAX_CLUE_HAN, strict: true };
+export const DEFAULT_CLUE_OPTIONS: ClueOptions = { words: 1, length: null, strict: true };
 
 const LATIN = /\p{Script=Latin}/u;
 const LATIN_ONLY = /^\p{Script=Latin}+$/u;
+// A letter or a digit that isn't a Chinese character, for the length of a clue in a Chinese room.
+const OTHER_LETTER = /^(?!\p{Script=Han})[\p{L}\p{N}]$/u;
 // Characters that show nothing: zero-width spaces and joiners, variation selectors, soft hyphens
 // and blank fillers. Inside a word they would make it look like another word.
 const INVISIBLE = /\p{Default_Ignorable_Code_Point}/gu;
@@ -101,6 +108,19 @@ export const cleanClue = (text: string): string => text.replace(INVISIBLE, '').t
 // A clue as it is checked: with full-width and compatibility forms folded (NFKC), and in lower
 // case.
 export const normalizeClue = (text: string): string => cleanClue(text.normalize('NFKC')).toLowerCase();
+
+// How long a clue is in a Chinese room: its Chinese characters, and its other letters and digits
+// two to one, rounded up, as Weibo counts. "GPU" is 2, "Python" 3, "GPU" followed by two Chinese
+// characters 4. Hyphens, apostrophes and marks count for nothing.
+export function clueLength(text: string): number {
+  let han = 0;
+  let other = 0;
+  for (const char of text.normalize('NFKC')) {
+    if (HAN.test(char)) han += 1;
+    else if (OTHER_LETTER.test(char)) other += 1;
+  }
+  return han + Math.ceil(other / 2);
+}
 
 // A word as it is compared: normalized, without accents, and with traditional Chinese characters
 // turned into simplified ones.
@@ -249,23 +269,36 @@ function judge(clues: readonly Word[], card: ClueCard, index: number): Verdict {
     return found ? { card: index, text: found.text, kind } : null;
   };
 
-  // The translation itself is refused like the word. A part or a form of it only brings a
-  // warning, because the room plays in the other language.
-  const refused = ofWord(repeats, 'same') ?? ofTranslation((clue, other) => sameOrPlural(clue.key, other.key), 'same');
+  // The translation itself is refused like the word, and so is the pinyin of a Chinese word,
+  // written solid, with spaces or with hyphens, and with "v" for the umlaut as keyboards have
+  // it. A part or a form of the translation only brings a warning, because the room plays in the
+  // other language.
+  const pinyin = card.pinyin === undefined ? [] : [wordKey(card.pinyin), wordKey(card.pinyin.replace(/\u00fc/g, 'v'))];
+  const refused =
+    ofWord(repeats, 'same') ??
+    ofTranslation((clue, other) => sameOrPlural(clue.key, other.key), 'same') ??
+    (clues.some((clue) => pinyin.includes(clue.key))
+      ? { card: index, text: card.pinyin as string, kind: 'same' as const }
+      : null);
   if (refused) return { refused, strict: null, warned: null };
 
   // What the word library lists as a form of the term counts as the term under the strict rule:
   // the library knows. A clue repeats a form as it would repeat the word on the board: a form of
   // several words gives the term away word by word, and a room's clue length may never let it
-  // through whole. The endings that the warnings go by are only a guess.
+  // through whole. The endings that the warnings go by are only a guess, so what they suggest
+  // stays a warning; a clue that contains the word without being such a form, as "dockerfile"
+  // contains "Docker", is refused under the strict rule.
   const form = (card.forms ?? []).find((text) => {
     const other = wordOf(text);
     return other.key !== '' && clues.some((clue) => repeats(clue, other));
   });
+  const similar = ofWord(resembles, 'similar');
   const strict =
-    form === undefined ? ofWord(sharesHan, 'character') : { card: index, text: form, kind: 'form' as const };
+    form === undefined
+      ? (ofWord(sharesHan, 'character') ?? (similar ? null : ofWord(contains, 'inside')))
+      : { card: index, text: form, kind: 'form' as const };
   const warned =
-    ofWord(resembles, 'similar') ??
+    similar ??
     ofTranslation((clue, other) => repeats(clue, other) || resembles(clue, other), 'similar') ??
     ofTranslation(sharesHan, 'character') ??
     ofWord(contains, 'inside') ??
@@ -291,12 +324,14 @@ export function checkClue(
   const words = text.split(' ');
   if (!words.every((word) => ONE_WORD.test(word) && LETTER_OR_DIGIT.test(word))) return verdict('clue_not_one_word');
   if (words.length > options.words) return verdict(options.words === 1 ? 'clue_not_one_word' : 'clue_too_many_words');
+  // A Chinese room counts the clue's Chinese characters, and its letters and digits two to one
+  // (clueLength()); an English room counts its words, each up to MAX_CLUE_LENGTH characters, and
+  // takes a clue with Chinese characters in it of up to MAX_CLUE_HAN characters in all.
   const characters = words.flatMap((word) => [...word]);
   const han = characters.filter((char) => HAN.test(char)).length;
   const tooLong =
     words.some((word) => [...word].length > MAX_CLUE_LENGTH) ||
-    (han > 0 && characters.length > MAX_CLUE_HAN) ||
-    han > options.han;
+    (options.length === null ? han > 0 && characters.length > MAX_CLUE_HAN : clueLength(text) > options.length);
   if (tooLong) return verdict('clue_too_long');
 
   const whole = wordOf(text);

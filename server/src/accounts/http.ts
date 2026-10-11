@@ -45,6 +45,7 @@ const STATUS: Partial<Record<AccountFailure, number>> = {
   login_failed: 401,
   password_wrong: 401,
   link_invalid: 400,
+  no_replay: 404,
   username_taken: 409,
   rate_limited: 429,
   login_limited: 429,
@@ -111,6 +112,16 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
       login: true,
       handle: ({ login }) => ok({ records: accounts.recordsOf(login as Login) }),
     },
+    // A game to watch again, by its ID, for an account that played in it; for anyone else, and
+    // for a game that wasn't kept, there is no such replay.
+    [ACCOUNT_API.replay]: post(
+      ACCOUNT_REQUESTS.replay,
+      ({ login, body }) => {
+        const replay = accounts.replayOf(login as Login, body.gameId);
+        return replay === null ? failure('no_replay') : ok({ replay });
+      },
+      true,
+    ),
     [ACCOUNT_API.register]: post(ACCOUNT_REQUESTS.register, async ({ ip, login, body }) => {
       const result = await accounts.register(ip, body.username, body.password);
       if (!result.ok) return failure(result.error);

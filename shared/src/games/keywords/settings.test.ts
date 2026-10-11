@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest';
-import { MAX_CLUE_HAN } from './clue';
 import {
   clueCounts,
   clueOptions,
@@ -18,6 +17,7 @@ describe('the settings of a room', () => {
       firstClueTime: 90,
       clueTime: 60,
       guessTime: 90,
+      extensions: false,
     });
     expect(defaultSettings('zh').clueLength).toBe(4);
     expect(settingsProblems(defaultSettings('en'), 'en')).toEqual({});
@@ -69,8 +69,8 @@ describe('the settings of a room', () => {
 describe('what the settings allow', () => {
   test('a Chinese room counts the characters of a clue, and an English room its words', () => {
     const settings = { ...defaultSettings('en'), clueLength: 3, clueRule: 'loose' as const };
-    expect(clueOptions(settings, 'zh')).toEqual({ words: 1, han: 3, strict: false });
-    expect(clueOptions(settings, 'en')).toEqual({ words: 3, han: MAX_CLUE_HAN, strict: false });
+    expect(clueOptions(settings, 'zh')).toEqual({ words: 1, length: 3, strict: false });
+    expect(clueOptions(settings, 'en')).toEqual({ words: 3, length: null, strict: false });
     expect(clueOptions(defaultSettings('en'), 'en').strict).toBe(true);
   });
 

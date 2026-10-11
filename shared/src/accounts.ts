@@ -35,6 +35,7 @@ export const AVATAR_PATH = '/avatars/';
 export const ACCOUNT_API = {
   account: '/api/account',
   records: '/api/account/records',
+  replay: '/api/account/replay',
   register: '/api/register',
   login: '/api/login',
   logout: '/api/logout',
@@ -78,6 +79,7 @@ export const ACCOUNT_ERRORS = [
   'avatars_full',
   'storage_full',
   'busy',
+  'no_replay',
 ] as const;
 export type AccountError = (typeof ACCOUNT_ERRORS)[number];
 
@@ -114,10 +116,14 @@ export interface AccountState {
 }
 
 // One game on an account's record, as the game module described the player's part in it. For
-// the team word guessing game, `side` is the group and `role` is captain or guesser.
+// the team word guessing game, `side` is the group and `role` is captain or guesser. `replay`
+// says whether the server kept the game to watch again (docs/architecture.md#replays), which the
+// page asks for with the game's ID.
 export interface GameRecord {
   game: string;
+  gameId: string;
   endedAt: string;
+  replay: boolean;
   side: string;
   role: string;
   winner: string;

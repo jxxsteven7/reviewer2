@@ -3,8 +3,11 @@ import { TIME_SETTINGS, type KeywordsSettings, type Language } from '@reviewer2/
 import { useI18n } from 'vue-i18n';
 
 // The settings of a room, for everyone to read: in the waiting room for all but the chair, who
-// changes them at the desk, and in the rules during a game.
-defineProps<{ settings: KeywordsSettings; language: Language }>();
+// changes them at the desk, and in the rules during a game. The chair's own words are counted,
+// never shown: nobody knows them before they are on the board.
+withDefaults(defineProps<{ settings: KeywordsSettings; language: Language; customWords?: number }>(), {
+  customWords: 0,
+});
 const { t } = useI18n();
 
 const time = (seconds: number) => (seconds === 0 ? t('settings.noLimit') : t('settings.seconds', { count: seconds }));
@@ -22,6 +25,12 @@ const time = (seconds: number) => (seconds === 0 ? t('settings.noLimit') : t('se
       <dt>{{ t(`settings.${key}`) }}</dt>
       <dd>{{ time(settings[key]) }}</dd>
     </template>
+    <dt>{{ t('settings.extensions') }}</dt>
+    <dd>{{ t(`settings.extension.${settings.extensions ? 'on' : 'off'}`) }}</dd>
+    <dt>{{ t('settings.customWords') }}</dt>
+    <dd class="custom-words">
+      {{ customWords > 0 ? t('settings.customWordsCount', { count: customWords }) : t('settings.customWordsNone') }}
+    </dd>
   </dl>
 </template>
 

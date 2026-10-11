@@ -9,12 +9,17 @@ export interface GameContext {
   phase: RoomPhase;
   language: Language;
   rng: Rng;
+  // Who chairs the room, for what a game leaves to the chair alone, such as pausing it.
+  chairId: string | null;
   // The room's clock, in milliseconds. It only runs forward, and only differences between its
   // readings mean anything.
   now(): number;
   // A player's member key, which stays the same when they leave and come back. The room also
   // knows the keys of those who have left during the current game.
   keyOf(playerId: string): string;
+  // A player's name in the room, also of one who has left during the current game, for what a
+  // game keeps of them, such as a replay.
+  nameOf(playerId: string): string;
   isOnline(playerId: string): boolean;
   // Everyone in the room, in the order they joined.
   playerIds(): string[];
@@ -114,6 +119,11 @@ export interface GameModule<Data = unknown, View = unknown> {
   // with accounts, or null when the game counts for no record, as one that the chair withdrew.
   // Whoever only watched takes no part. The room asks once, when the game has ended.
   results?(data: Data, ctx: GameContext): PlayerResult[] | null;
+  // The game that has just ended, as something to watch again (docs/architecture.md#replays):
+  // whatever the game's own replay viewer takes, as JSON, or null when the game is nothing to
+  // keep, as one that the chair withdrew. The room asks once, when the game has ended and a
+  // player with an account took part.
+  replay?(data: Data, ctx: GameContext): unknown;
   // A guest's seat has become an account's (docs/architecture.md#accounts): the member `playerId`
   // is known by the member key `to` instead of `from` from now on, and whatever the game remembers
   // by the old key, it remembers by the new one. The seat stands, and what the game knows of the

@@ -1,5 +1,6 @@
-import type { RecordsView } from '@reviewer2/shared';
+import { MAX_REPLAY_BYTES, type RecordsView } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
+import { fakeGame } from './fakeGame';
 import { Browser, createRoom, startServer, TestClient, until, type TestServer } from './helpers';
 import { jpeg } from './images';
 
@@ -356,12 +357,14 @@ describe('the record of games', () => {
     const { ann, bob, watcher, chair } = await playedGame('test:finish');
     const record = {
       game: 'test',
+      gameId: chair.state?.gameId,
       endedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
       side: 'all',
       role: 'player',
       winner: 'all',
       won: true,
       verdict: 'pressed 1',
+      replay: true,
     };
     expect(await records(ann)).toEqual({ games: 1, wins: 1, recent: [record], matches: NO_MATCHES });
     expect(await records(bob)).toEqual({ games: 1, wins: 1, recent: [record], matches: NO_MATCHES });
@@ -385,5 +388,82 @@ describe('the record of games', () => {
     server = await startServer();
     const { ann } = await playedGame('room:end');
     expect(await records(ann)).toEqual({ games: 0, wins: 0, recent: [], matches: NO_MATCHES });
+    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
+  });
+});
+
+const records = async (browser: Browser) => (await browser.request('/api/account/records')).body.records as RecordsView;
+
+describe('a replay', () => {
+  const replay = (browser: Browser, gameId: string) => browser.request('/api/account/replay', { gameId });
+
+  test('is kept once for a finished game, for every account that played in it, and for nobody else', async () => {
+    server = await startServer();
+    const ann = await loggedIn('Ann');
+    const bob = await loggedIn('Bob');
+    const watcher = await loggedIn('Dee');
+    const { chair, code } = await roomOf(ann, { play: true });
+    const second = track(await bob.connect());
+    await second.send('room:join', { code, play: true });
+    const third = track(await watcher.connect());
+    await third.send('room:join', { code, play: false });
+    await chair.waitFor((state) => state.players.length === 3);
+    await chair.send('room:start', { round: 0 });
+    const { gameId } = (await chair.waitFor((state) => state.phase === 'playing')) as { gameId: string };
+    await chair.send('test:press');
+    await chair.send('test:finish');
+    await chair.waitFor((state) => state.phase === 'ended');
+    await until(() => server.db.prepare('SELECT count(*) AS count FROM replays').get()?.count === 1, 'the replay');
+
+    const kept = { presses: 1, words: expect.arrayContaining([expect.stringMatching(/^general word \d+$/)]) };
+    expect((await replay(ann, gameId)).body).toEqual({ ok: true, replay: kept });
+    expect((await replay(bob, gameId)).body).toEqual({ ok: true, replay: kept });
+    // Dee only watched, and a stranger never played here.
+    expect(await replay(watcher, gameId)).toMatchObject({ status: 404, body: { ok: false, error: 'no_replay' } });
+    expect(await replay(await loggedIn('Eve'), gameId)).toMatchObject({ status: 404 });
+    expect(await replay(ann, 'no-such-game')).toMatchObject({ status: 404 });
+    // A replay needs a login.
+    expect((await new Browser(server.url).request('/api/account/replay', { gameId })).status).toBe(401);
+    // The end of the game is reported once more, as when the last player leaves: still one replay.
+    await second.send('room:leave');
+    await chair.waitFor((state) => state.players.length === 2);
+    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
+
+    // Bob deletes the account: the replay stays, and Ann still reads it.
+    expect((await bob.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
+    expect(server.db.prepare('SELECT count(*) AS count FROM game_records').get()).toEqual({ count: 1 });
+    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
+    expect((await replay(ann, gameId)).body).toEqual({ ok: true, replay: kept });
+  });
+
+  test('is not kept when nobody with an account played', async () => {
+    server = await startServer();
+    const { chair, code } = await createRoom(server.url, 'Ann', { play: true });
+    track(chair);
+    const bob = track(await TestClient.connect(server.url));
+    await bob.send('room:join', { code, name: 'Bob', play: true });
+    await chair.waitFor((state) => state.players.length === 2);
+    await chair.send('room:start', { round: 0 });
+    await chair.waitFor((state) => state.phase === 'playing');
+    await chair.send('test:finish');
+    await chair.waitFor((state) => state.phase === 'ended');
+    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
+  });
+
+  test('that is too large is logged and left out, while the records are kept', async () => {
+    const big = { ...fakeGame, replay: () => ({ text: 'x'.repeat(MAX_REPLAY_BYTES) }) };
+    server = await startServer({ games: [big] });
+    const ann = await loggedIn('Ann');
+    const { chair, code } = await roomOf(ann, { play: true });
+    const cat = track(await TestClient.connect(server.url));
+    await cat.send('room:join', { code, name: 'Cat', play: true });
+    await chair.waitFor((state) => state.players.length === 2);
+    await chair.send('room:start', { round: 0 });
+    await chair.waitFor((state) => state.phase === 'playing');
+    await chair.send('test:finish');
+    await chair.waitFor((state) => state.phase === 'ended');
+    await until(() => server.logs.some(({ event }) => event === 'replay_too_large'), 'the log');
+    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
+    expect((await records(ann)).games).toBe(1);
   });
 });

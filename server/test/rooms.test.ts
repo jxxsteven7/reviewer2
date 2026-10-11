@@ -95,7 +95,8 @@ describe('creating a room', () => {
     expect(await create({ fields: ['nope'] })).toEqual({ ok: false, error: 'bad_fields' });
     expect(await create({ fields: ['tiny'] })).toEqual({ ok: false, error: 'no_words' });
     expect(await create({ language: 'fr' })).toEqual({ ok: false, error: 'bad_request' });
-    expect(await create({ fields: [] })).toEqual({ ok: false, error: 'bad_request' });
+    // No word list at all is too few words, until the chair has words of their own.
+    expect(await create({ fields: [] })).toEqual({ ok: false, error: 'no_words' });
     expect(await create({ name: '   ' })).toEqual({ ok: false, error: 'name_invalid' });
     expect(await create({ name: 'x'.repeat(17) })).toEqual({ ok: false, error: 'name_invalid' });
     expect(await create({ play: 'yes' })).toEqual({ ok: false, error: 'bad_request' });

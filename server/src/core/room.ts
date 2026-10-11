@@ -4,8 +4,11 @@ import {
   MAX_PLAYERS,
   MAX_SCREENS,
   nextChair,
+  parseCustomWords,
   sameName,
+  wordKey,
   type Ack,
+  type BoardWord,
   type Language,
   type MatchRules,
   type PublicRoom,
@@ -16,6 +19,7 @@ import { done, fail, refusalOf } from './answers';
 import type { GameContext, GameModule, PlayerResult, Viewer } from './game';
 import { newPlayerId } from './identity';
 import { Match, type Present } from './match';
+import { pinyinOf } from './pinyin';
 import { randomId, type Rng } from './random';
 import { drawWords, type WordLibrary } from './words';
 
@@ -85,19 +89,28 @@ export interface RoomOptions {
 }
 
 // The fields that a room is to play with, once each, or why it can't play with them: one of them
-// isn't in the library, or together they have too few words in the room's language. Rooms are
-// created and their fields changed only through this check, so a room that exists can always
-// deal a game.
+// isn't in the library, or together with the chair's own words they have too few words in the
+// room's language. Rooms are created and their fields changed only through this check, so a room
+// that exists can always deal a game.
 export function chooseFields(
   words: WordLibrary,
   fields: readonly string[],
   language: Language,
   needed: number,
+  custom: readonly BoardWord[] = [],
 ): Ack<{ fields: string[] }> {
   const chosen = [...new Set(fields)];
   if (!chosen.every((id) => words.has(id))) return fail('bad_fields');
-  if (words.pool(chosen, language).length < needed) return fail('no_words');
+  if (poolOf(words, chosen, language, custom).length < needed) return fail('no_words');
   return { ok: true, fields: chosen };
+}
+
+// Every word that a room's games draw from: the words of its fields and the chair's own words,
+// once each. A word of the chair's that is the same word as one of the fields' is left out.
+function poolOf(words: WordLibrary, fields: readonly string[], language: Language, custom: readonly BoardWord[]) {
+  const pool = words.pool(fields, language);
+  const keys = new Set(pool.map((word) => wordKey(word.word)));
+  return [...pool, ...custom.filter((word) => !keys.has(wordKey(word.word)))];
 }
 
 // The same fields in another order are no change.
@@ -110,6 +123,9 @@ export class Room {
   readonly language: Language;
   readonly createdAt: number;
   fields: string[];
+  // The chair's own words, which the games draw from along with the fields, each with its
+  // pinyin when it is Chinese (docs/games/keywords.md#custom-words). A private room's alone.
+  customWords: BoardWord[] = [];
   public: boolean;
   phase: RoomPhase = 'lobby';
   rev = 0;
@@ -143,9 +159,10 @@ export class Room {
   // When each member last sent a quick reaction, by member key, so that neither another tab nor
   // leaving and coming back starts the wait again.
   readonly #emoted = new Map<string, number>();
-  // The member keys of those who left during the current game, by player ID, so that the game can
-  // still tell whose was a move they made before they left, as a match's score needs to.
-  readonly #gone = new Map<string, string>();
+  // Those who left during the current game, by player ID, with the member key and the name they
+  // had, so that the game can still tell whose was a move they made before they left, as a
+  // match's score and a replay need to.
+  readonly #gone = new Map<string, { key: string; name: string }>();
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
   readonly #words: WordLibrary;
@@ -175,8 +192,10 @@ export class Room {
       phase: this.phase,
       language: this.language,
       rng: this.#rng,
+      chairId: this.chairId,
       now: this.#now,
-      keyOf: (id) => this.members.get(id)?.key ?? this.#gone.get(id) ?? id,
+      keyOf: (id) => this.members.get(id)?.key ?? this.#gone.get(id)?.key ?? id,
+      nameOf: (id) => this.members.get(id)?.name ?? this.#gone.get(id)?.name ?? '',
       isOnline: (id) => this.isOnline(id),
       playerIds: () => [...this.members.keys()],
     };
@@ -339,7 +358,7 @@ export class Room {
     if (!member) return [];
     const data = this.game.leave(this.data, id);
     const over = this.#endsWith(data);
-    if (this.phase !== 'lobby') this.#gone.set(id, member.key);
+    if (this.phase !== 'lobby') this.#gone.set(id, { key: member.key, name: member.name });
     this.members.delete(id);
     this.#take(data, over);
     if (this.chairId === id) this.chairId = this.#nextChair();
@@ -437,9 +456,11 @@ export class Room {
 
   // --- the chair's controls ---------------------------------------------------------------
 
-  // The chair lists the room on the home page, or takes it off, in the waiting room.
+  // The chair lists the room on the home page, or takes it off, in the waiting room. A room with
+  // words of the chair's own stays private: they are for a room of people who know each other.
   setPublic(value: boolean): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
+    if (value && this.customWords.length > 0) return fail('custom_words_private');
     if (value) this.#list();
     else this.unlist();
     return done;
@@ -463,15 +484,33 @@ export class Room {
     return true;
   }
 
-  // The chair changes the fields, the game's own settings, or both, in the waiting room. Both
-  // change together or neither does: one that won't do refuses the other with it.
-  setSettings(changes: { fields?: readonly string[]; settings?: unknown }): Ack {
+  // The chair changes the fields, the game's own settings, their own words, or any of them, in the
+  // waiting room. All change together or none does: one that won't do refuses the others with it.
+  // The chair's words come as the text they were pasted as, and are checked as the editor checks
+  // them (parseCustomWords); a public room takes none, since they are for a private one.
+  setSettings(changes: { fields?: readonly string[]; settings?: unknown; words?: string }): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
     // A match plays all its games by the same settings, once one of them has counted.
     if (this.match?.status === 'on' && this.match.played > 0) return fail('match_locked');
+    let custom = this.customWords;
+    if (changes.words !== undefined) {
+      const parsed = parseCustomWords(changes.words);
+      if (parsed.tooMany || parsed.tooLong.length > 0) return fail('bad_words');
+      if (this.public && parsed.words.length > 0) return fail('custom_words_private');
+      custom = parsed.words.map((word) => {
+        const pinyin = pinyinOf(word);
+        return pinyin === null ? { word } : { word, pinyin };
+      });
+    }
     let fields = this.fields;
-    if (changes.fields !== undefined) {
-      const chosen = chooseFields(this.#words, changes.fields, this.language, this.game.wordsNeeded);
+    if (changes.fields !== undefined || custom !== this.customWords) {
+      const chosen = chooseFields(
+        this.#words,
+        changes.fields ?? this.fields,
+        this.language,
+        this.game.wordsNeeded,
+        custom,
+      );
       if (!chosen.ok) return chosen;
       fields = chosen.fields;
     }
@@ -481,8 +520,10 @@ export class Room {
       if (!configured.ok) return refusalOf(configured);
       data = configured.data;
     }
-    if (data === this.data && sameFields(fields, this.fields)) return done;
+    const sameWords = custom.map(({ word }) => word).join('\n') === this.customWords.map(({ word }) => word).join('\n');
+    if (data === this.data && sameFields(fields, this.fields) && sameWords) return done;
     this.fields = fields;
+    this.customWords = custom;
     this.data = data;
     this.changed();
     return done;
@@ -500,7 +541,7 @@ export class Room {
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (this.match && this.match.status !== 'on') return fail('match_over');
     if (!this.game.canStart(this.data, this.context)) return fail('cannot_start');
-    const pool = this.#words.pool(this.fields, this.language);
+    const pool = poolOf(this.#words, this.fields, this.language, this.customWords);
     const clash = this.game.wordsClash?.bind(this.game);
     const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng, clash);
     // chooseFields() has made sure of this, and the library doesn't change while the server runs.
@@ -709,6 +750,12 @@ export class Room {
     return this.phase === 'ended' ? (this.game.results?.(this.data, this.context) ?? null) : null;
   }
 
+  // The game that has just ended, to watch again, as the game gives it, or null when there is
+  // nothing to keep (GameModule.replay).
+  replay(): unknown {
+    return this.phase === 'ended' ? (this.game.replay?.(this.data, this.context) ?? null) : null;
+  }
+
   // --- the game's own time ----------------------------------------------------------------
 
   // When the game next has something to do by itself, on the room's clock, or null for never.
@@ -807,6 +854,7 @@ export class Room {
       language: this.language,
       fields: [...this.fields],
       public: this.public,
+      customWordCount: this.customWords.length,
       phase: this.phase,
       round: this.round,
       gameId: this.gameId,
@@ -826,9 +874,13 @@ export class Room {
       const live = this.phase === 'playing' ? (this.game.match?.score(this.data, context) ?? null) : null;
       return this.match.view(this.phase, this.gameId, live, this.#present);
     };
+    // The chair's own words go to the chair alone, who edits them: the players hear only how many
+    // there are, so that none of them knows the words before they are on the board.
+    const chair = (viewer: Viewer) => 'playerId' in viewer && viewer.playerId === this.chairId;
     return (viewer) => ({
       ...shared,
       me: 'playerId' in viewer ? viewer.playerId : null,
+      ...(chair(viewer) ? { customWords: this.customWords.map(({ word }) => word) } : {}),
       match: match === undefined ? (match = matchView()) : match,
       data: (game ??= this.game.views(this.data, context))(viewer),
     });

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { LANGUAGES, wordKey, type BoardWord, type FieldInfo, type Language } from '@reviewer2/shared';
+import { pinyinOf } from './pinyin';
 import { shuffle, type Rng } from './random';
 
 // The word library: one list per academic field, from the JSON files in words/ (see
@@ -19,14 +20,15 @@ interface Field {
   words: Record<Language, Entry[]>;
 }
 
-// A word as the library keeps it: with its `wordKey`, which is worked out once, when the library
-// is built, and not again for every pool and every draw.
+// A word as the library keeps it: with its `wordKey` and, for a Chinese word, its pinyin, both
+// worked out once, when the library is built, and not again for every pool and every draw.
 interface Entry {
   key: string;
   word: string;
   translations: string[];
   // The other forms of the term that the list gives, in all its languages at once.
   forms: string[];
+  pinyin: string | null;
 }
 
 // Hears of everything that the library leaves out, so that the server can log it: a file, or one
@@ -75,11 +77,12 @@ export class WordLibrary {
       if (!field) throw new Error(`no word list has the id "${id}"`);
       for (const entry of field.words[language]) collect(pool, entry);
     }
-    return [...pool.values()].map(({ key, word, translations, forms }) => {
+    return [...pool.values()].map(({ key, word, translations, forms, pinyin }) => {
       const boardWord: BoardWord = {
         word,
         ...(translations.length ? { translations } : {}),
         ...(forms.length ? { forms } : {}),
+        ...(pinyin === null ? {} : { pinyin }),
       };
       keys.set(boardWord, key);
       return boardWord;
@@ -98,8 +101,8 @@ type Collected = Map<string, Entry>;
 // Adds a word to those collected so far. A word that is there already keeps its spelling and
 // gains the translations and the forms that it doesn't have yet. Two forms are the same when their
 // `wordKey` is.
-function collect(words: Collected, { key, word, translations, forms }: Entry): void {
-  const entry = words.get(key) ?? { key, word, translations: [], forms: [] };
+function collect(words: Collected, { key, word, translations, forms, pinyin }: Entry): void {
+  const entry = words.get(key) ?? { key, word, translations: [], forms: [], pinyin };
   words.set(key, entry);
   for (const translation of translations) {
     if (!entry.translations.includes(translation)) entry.translations.push(translation);
@@ -148,7 +151,7 @@ function unique(list: WordListData, skip: Skip): Record<Language, Entry[]> {
       const same = words[language].get(key);
       if (same) skip(file, `"${language}" ${quote(word)} is the same word as ${quote(same.word)}`, term.id);
       const translations = texts.filter((other) => other.language !== language).map((other) => other.word);
-      collect(words[language], { key, word, translations, forms });
+      collect(words[language], { key, word, translations, forms, pinyin: pinyinOf(word) });
     }
   }
   return Object.fromEntries(LANGUAGES.map((language) => [language, [...words[language].values()]])) as Record<

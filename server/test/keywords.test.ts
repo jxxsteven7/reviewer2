@@ -18,6 +18,7 @@ import { seededRng } from '../src/core/random';
 import { WordLibrary } from '../src/core/words';
 import { keywordsGame } from '../src/games/keywords';
 import {
+  Browser,
   createRoom,
   joinRoom,
   startServer,
@@ -169,8 +170,10 @@ const context = (): GameContext => ({
   phase: 'playing',
   language: 'en',
   rng: seededRng(1),
+  chairId: 'ann',
   now: () => 0,
   keyOf: (id) => id,
+  nameOf: (id) => id,
   isOnline: () => true,
   playerIds: () => ['ann', 'bob', 'cat'],
 });
@@ -471,6 +474,7 @@ describe('the settings', () => {
       { ...english, guessTime: 30.5 },
       { ...english, guessRule: 'fast' },
       { ...english, guessTime: '90' },
+      { ...english, extensions: 'yes' },
       { guessRule: 'free' },
       'free',
       null,
@@ -865,6 +869,211 @@ describe('talking it over', () => {
     expect(board(bob).chat).toEqual(ours);
     await expectOk(table.captains.red.send('room:again', { gameId }));
     await expectOk(bob.send('keywords:seat', { team: other, role: 'guesser' }));
+  });
+});
+
+describe('a pause', () => {
+  test('takes the board from everyone and stops the clock, until the chair resumes', async () => {
+    const table = await seatTable(true, { firstClueTime: 30, clueTime: 10, guessTime: 20 });
+    const ann = table.captains.red;
+    const { gameId } = board(ann);
+    server.advance(10_000);
+    // Only the chair.
+    expect(await table.guessers.red.send('keywords:pause', { gameId })).toEqual({ ok: false, error: 'not_chair' });
+    await expectOk(ann.send('keywords:pause', { gameId }));
+    await settle(table);
+    for (const client of table.everyone) {
+      expect(board(client)).toMatchObject({ paused: true, cards: [], clock: { left: 20_000, total: 30_000 } });
+      expect(JSON.stringify(client.state)).not.toMatch(/general w/);
+    }
+    expect(server.timers()).toBe(0);
+    // Nothing moves on, however long: no clue, no reveal, no turn that ends.
+    server.advance(60_000);
+    const captain = table.captains[board(ann).team];
+    const guesser = table.guessers[board(ann).team];
+    expect(await captain.send('keywords:clue', { ...moment(board(ann)), word: 'Hint', count: 1 })).toEqual({
+      ok: false,
+      error: 'paused',
+    });
+    expect(await guesser.send('keywords:extend', moment(board(ann)))).toEqual({ ok: false, error: 'paused' });
+    expect(await ann.send('keywords:pause', { gameId })).toEqual({ ok: false, error: 'paused' });
+    // The group chat goes on.
+    await expectOk(guesser.send('keywords:say', { gameId, text: 'Tea break' }));
+    await settle(table);
+    expect(board(ann).turn).toBe(1);
+    expect(board(ann).events).toEqual([{ turn: 1, kind: 'paused' }]);
+
+    await expectOk(ann.send('keywords:resume', { gameId }));
+    await settle(table);
+    for (const client of table.everyone) {
+      expect(board(client)).toMatchObject({ paused: false, clock: { left: 20_000, total: 30_000 } });
+      expect(board(client).cards).toHaveLength(25);
+    }
+    expect(server.timers()).toBe(1);
+    expect(await ann.send('keywords:resume', { gameId })).toEqual({ ok: false, error: 'not_paused' });
+    // The clock goes on from where it stopped: the turn ends 20 seconds later.
+    server.advance(19_000);
+    expect(board(table.spectator).turn).toBe(1);
+    server.advance(1_000);
+    await table.spectator.waitFor((state) => ((state.data as KeywordsRoomData).game as KeywordsView).turn === 2);
+    expect(board(table.spectator)).toMatchObject({ turn: 2, phase: 'clue' });
+    expect(board(table.spectator).events).toEqual([
+      { turn: 1, kind: 'paused' },
+      { turn: 1, kind: 'resumed' },
+    ]);
+  });
+
+  test('is resumed by whoever chairs the room after the chair has been away', async () => {
+    const table = await seatTable(true, { firstClueTime: 30, clueTime: 10, guessTime: 20 });
+    const ann = table.captains.red;
+    const { gameId } = board(ann);
+    await expectOk(ann.send('keywords:pause', { gameId }));
+    await settle(table);
+    ann.close();
+    const bob = table.guessers.red;
+    await bob.waitFor((state) => !(state.players.find((player) => player.id === ann.me)?.online ?? true));
+    expect(await bob.send('keywords:resume', { gameId })).toEqual({ ok: false, error: 'not_chair' });
+    server.advance(3 * 60_000);
+    server.app.sockets.sweep();
+    await bob.waitFor((state) => state.chairId === bob.me, 'the chair');
+    await expectOk(bob.send('keywords:resume', { gameId }));
+    await bob.waitFor((state) => !((state.data as KeywordsRoomData).game as KeywordsView).paused);
+    expect(board(bob).clock).toEqual({ left: 30_000, total: 30_000 });
+  });
+});
+
+describe('an extension', () => {
+  test('gives the phase 30 seconds more, once a game for each group, when the room allows it', async () => {
+    const table = await seatTable(true, { firstClueTime: 30, clueTime: 10, guessTime: 20, extensions: true });
+    const ann = table.captains.red;
+    const team = board(ann).team;
+    const captain = table.captains[team];
+    expect(data(ann).settings.extensions).toBe(true);
+    server.advance(5_000);
+    await expectOk(captain.send('keywords:extend', moment(board(ann))));
+    await settle(table);
+    expect(board(table.spectator).clock).toEqual({ left: 55_000, total: 60_000 });
+    expect(board(table.spectator).extended).toEqual({ red: false, blue: false, [team]: true });
+    expect(board(table.spectator).events).toEqual([{ turn: 1, kind: 'extended', team }]);
+    expect(await captain.send('keywords:extend', moment(board(ann)))).toEqual({ ok: false, error: 'extension_used' });
+    // The timer was moved along with the clock.
+    server.advance(30_000);
+    expect(board(table.spectator).turn).toBe(1);
+    server.advance(25_000);
+    await table.spectator.waitFor((state) => ((state.data as KeywordsRoomData).game as KeywordsView).turn === 2);
+  });
+
+  test('is refused where the room leaves it off', async () => {
+    const table = await seatTable(true, { firstClueTime: 30 });
+    const ann = table.captains.red;
+    const captain = table.captains[board(ann).team];
+    expect(await captain.send('keywords:extend', moment(board(ann)))).toEqual({ ok: false, error: 'no_extension' });
+  });
+});
+
+describe('custom words', () => {
+  // Twenty-five Chinese words that don't clash: a character and a number each.
+  const chinese = Array.from({ length: 25 }, (_, i) => `\u8bcd${i}`);
+
+  test("are the chair's to set in the waiting room, and the players hear only how many there are", async () => {
+    const table = await seatTable(false);
+    const ann = table.captains.red;
+    const text = 'Alpha, Beta\u3001Gamma\nalpha\n\n Delta ';
+    await expectOk(ann.send('room:settings', { words: text }));
+    await table.screen.waitFor((state) => state.customWordCount === 4, 'the count');
+    expect(ann.state?.customWords).toEqual(['Alpha', 'Beta', 'Gamma', 'Delta']);
+    for (const client of table.everyone.filter((other) => other !== ann)) {
+      expect(client.state?.customWordCount).toBe(4);
+      expect(client.state).not.toHaveProperty('customWords');
+      expect(JSON.stringify(client.state)).not.toMatch(/Alpha|Gamma/);
+    }
+    // Not for the players, and not during a game.
+    expect(await table.guessers.red.send('room:settings', { words: 'Mine' })).toEqual({
+      ok: false,
+      error: 'not_chair',
+    });
+    // Words that don't fit on a card, or too many, are refused as a whole.
+    expect(await ann.send('room:settings', { words: 'Fine\nFourteenletters' })).toEqual({
+      ok: false,
+      error: 'bad_words',
+    });
+    expect(await ann.send('room:settings', { words: `${'\u8bcd'.repeat(6)}` })).toEqual({
+      ok: false,
+      error: 'bad_words',
+    });
+    const many = Array.from({ length: 201 }, (_, i) => `w${i}`).join('\n');
+    expect(await ann.send('room:settings', { words: many })).toEqual({ ok: false, error: 'bad_words' });
+    // The same list again changes nothing; an empty text takes them away.
+    const { rev } = ann.state as { rev: number };
+    await expectOk(ann.send('room:settings', { words: text }));
+    expect(ann.state?.rev).toBe(rev);
+    await expectOk(ann.send('room:settings', { words: '' }));
+    await ann.waitFor((state) => state.customWordCount === 0);
+    expect(ann.state?.customWords).toEqual([]);
+  });
+
+  test('are dealt with the word lists, unused words first, and alone when there are enough of them', async () => {
+    const table = await seatTable(false);
+    const ann = table.captains.red;
+    // Too few words of the chair's own to drop every list.
+    expect(await ann.send('room:settings', { fields: [], words: chinese.slice(0, 24).join('\n') })).toEqual({
+      ok: false,
+      error: 'no_words',
+    });
+    await expectOk(ann.send('room:settings', { fields: [], words: chinese.join('\n') }));
+    await ann.waitFor((state) => state.fields.length === 0 && state.customWordCount === 25);
+    await expectOk(ann.send('room:start', { round: ann.state?.round }));
+    await settle(table);
+    const words = board(table.spectator).cards.map((card) => card.word);
+    expect([...words].sort()).toEqual([...chinese].sort());
+    // Every card has its pinyin, which everyone sees, and which no clue may be.
+    expect(
+      board(table.spectator)
+        .cards.map((card) => card.pinyin)
+        .every((pinyin) => /^ci \d+$/.test(pinyin ?? '')),
+    ).toBe(true);
+    const captain = table.captains[board(ann).team];
+    const index = words.indexOf('\u8bcd7');
+    expect(await captain.send('keywords:clue', { ...moment(board(ann)), word: 'ci7', count: 1 })).toEqual({
+      ok: false,
+      error: 'clue_on_board',
+    });
+    expect(index).toBeGreaterThanOrEqual(0);
+    // The next game takes the words that haven't been played yet first: the one new word is on
+    // the board, with 24 of the words played already.
+    await expectOk(ann.send('room:end', { gameId: board(ann).gameId }));
+    await expectOk(ann.send('room:again', { gameId: board(ann).gameId }));
+    await expectOk(ann.send('room:settings', { words: [...chinese, 'Extra'].join('\n') }));
+    await ann.waitFor((state) => state.customWordCount === 26);
+    await expectOk(ann.send('room:start', { round: ann.state?.round }));
+    await settle(table);
+    const next = board(table.spectator).cards.map((card) => card.word);
+    expect(next).toContain('Extra');
+    expect(next.filter((word) => chinese.includes(word))).toHaveLength(24);
+  });
+
+  test('keep a room private', async () => {
+    const ann = new Browser(server.url);
+    expect((await ann.register('Ann')).body).toEqual({ ok: true });
+    const chair = await ann.connect();
+    clients.push(chair);
+    const reply = await chair.send('room:create', {
+      game: 'keywords',
+      language: 'en',
+      fields: ['general'],
+      public: true,
+    });
+    expect(reply).toMatchObject({ ok: true });
+    await chair.waitFor((state) => state.public);
+    expect(await chair.send('room:settings', { words: 'Mine' })).toEqual({ ok: false, error: 'custom_words_private' });
+    await expectOk(chair.send('room:public', { public: false }));
+    await chair.waitFor((state) => !state.public);
+    await expectOk(chair.send('room:settings', { words: 'Mine' }));
+    await chair.waitFor((state) => state.customWordCount === 1);
+    expect(await chair.send('room:public', { public: true })).toEqual({ ok: false, error: 'custom_words_private' });
+    await expectOk(chair.send('room:settings', { words: '' }));
+    await chair.waitFor((state) => state.customWordCount === 0);
+    await expectOk(chair.send('room:public', { public: true }));
   });
 });
 

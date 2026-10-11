@@ -5,10 +5,12 @@ import {
   cleanClue,
   clueCounts,
   clueOptions,
+  EXTENSION_SECONDS,
   otherTeam,
   TEAMS,
   type BoardWord,
   type ClueCount,
+  type EventKind,
   type KeywordsError,
   type KeywordsSettings,
   type Language,
@@ -22,9 +24,9 @@ import { guessesLeft, remaining, type Clock, type KeywordsState } from './state'
 // The rules of the game as pure functions: each takes a state and returns the next one, or the
 // reason it refuses. docs/games/keywords.md describes them.
 //
-// Every check runs in the same order: is the action for this game and this turn, is it this
-// player's to make, is it the right moment, and only then is its content valid. So the answer
-// never depends on the color of a card that the player can't see.
+// Every check runs in the same order: is the action for this game and this turn, is the game
+// paused, is it this player's to make, is it the right moment, and only then is its content
+// valid. So the answer never depends on the color of a card that the player can't see.
 //
 // The functions that can start a phase take `at`, the time on the room's clock (GameContext.now),
 // from which the phase's time limit counts.
@@ -69,9 +71,12 @@ export function newGame(words: readonly (string | BoardWord)[], rng: Rng, setup:
     team: startingTeam,
     phase: 'clue',
     clock: clockFor(setup.settings.firstClueTime, at),
+    pause: null,
     clue: null,
     guessesMade: 0,
     history: [],
+    events: [],
+    extended: { red: false, blue: false },
     result: null,
     selections: [],
     chat: { red: [], blue: [] },
@@ -86,10 +91,17 @@ function refusal(
 ): KeywordsError | null {
   if (moment.gameId !== state.gameId || moment.turn !== state.turn) return 'stale';
   if (state.phase === 'over') return 'game_over';
+  if (state.pause) return 'paused';
   if (actor.team !== state.team) return 'not_your_turn';
   if (actor.role !== role) return role === 'captain' ? 'not_captain' : 'not_guesser';
   return null;
 }
+
+// Notes a pause, a resumption or an extension in the turn it came in.
+const noted = (state: KeywordsState, kind: EventKind, team?: Team): KeywordsState => ({
+  ...state,
+  events: [...state.events, { turn: state.turn, kind, ...(team ? { team } : {}) }],
+});
 
 function endTurn(state: KeywordsState, at: number): KeywordsState {
   return {
@@ -197,13 +209,14 @@ export function pass(state: KeywordsState, actor: Actor, action: Moment, at: num
   return ok(endTurn(state, at));
 }
 
-// Ends the phase whose time has run out by `at`, and gives the state back as it is when none has.
-// A captain who gave no clue in time loses the turn, which the record notes as a turn without a
-// clue. Guessers who run out of time end their turn, whether or not they have revealed a card,
-// and the record notes that on the turn's clue. Either way the other group's turn begins, and its
-// time counts from now. An action meant for the turn that ended is stale from then on.
+// Ends the phase whose time has run out by `at`, and gives the state back as it is when none has,
+// or while the game is paused, when the clock stands still. A captain who gave no clue in time
+// loses the turn, which the record notes as a turn without a clue. Guessers who run out of time
+// end their turn, whether or not they have revealed a card, and the record notes that on the
+// turn's clue. Either way the other group's turn begins, and its time counts from now. An action
+// meant for the turn that ended is stale from then on.
 export function expire(state: KeywordsState, at: number): KeywordsState {
-  if (state.phase === 'over' || !state.clock || at < state.clock.ends) return state;
+  if (state.phase === 'over' || state.pause || !state.clock || at < state.clock.ends) return state;
   const history =
     state.phase === 'clue'
       ? [
@@ -236,4 +249,40 @@ export function withdraw(state: KeywordsState, action: Pick<Moment, 'gameId'>): 
   if (action.gameId !== state.gameId) return refuse('stale');
   if (state.phase === 'over') return refuse('game_over');
   return ok(finish(state, null, 'withdrawn'));
+}
+
+// The chair pauses the game, at any point while it is on, and for as long as they like: the
+// clock stops with the time the phase has left, every action but the chat is refused, and nobody
+// gets the board (view.ts). The pause names its game, as a withdrawal does, and whatever the turn.
+export function pause(state: KeywordsState, chair: boolean, action: Pick<Moment, 'gameId'>, at: number): Outcome {
+  if (action.gameId !== state.gameId) return refuse('stale');
+  if (state.phase === 'over') return refuse('game_over');
+  if (!chair) return refuse('not_chair');
+  if (state.pause) return refuse('paused');
+  const left = state.clock ? Math.max(0, state.clock.ends - at) : null;
+  return ok(noted({ ...state, pause: { left } }, 'paused'));
+}
+
+// The chair, whoever that is by now, resumes the game: the clock goes on from where it stopped.
+export function resume(state: KeywordsState, chair: boolean, action: Pick<Moment, 'gameId'>, at: number): Outcome {
+  if (action.gameId !== state.gameId) return refuse('stale');
+  if (state.phase === 'over') return refuse('game_over');
+  if (!chair) return refuse('not_chair');
+  if (!state.pause) return refuse('not_paused');
+  const clock =
+    state.clock && state.pause.left !== null ? { ends: at + state.pause.left, length: state.clock.length } : null;
+  return ok(noted({ ...state, clock, pause: null }, 'resumed'));
+}
+
+// A group asks for its extension: EXTENSION_SECONDS more for the phase it is in, once a game, in
+// a room whose settings allow it. The captain asks in the clue phase, a guesser in the guess
+// phase. A phase without a time limit has nothing to extend.
+export function extend(state: KeywordsState, actor: Actor, action: Moment): Outcome {
+  const denied = refusal(state, action, actor, state.phase === 'clue' ? 'captain' : 'guesser');
+  if (denied) return refuse(denied);
+  if (!state.settings.extensions || !state.clock) return refuse('no_extension');
+  if (state.extended[state.team]) return refuse('extension_used');
+  const more = EXTENSION_SECONDS * 1000;
+  const clock = { ends: state.clock.ends + more, length: state.clock.length + more };
+  return ok(noted({ ...state, clock, extended: { ...state.extended, [state.team]: true } }, 'extended', state.team));
 }

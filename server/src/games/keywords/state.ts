@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   ClueCount,
   ClueRecord,
+  GameEvent,
   GameResult,
   KeywordsSettings,
   Language,
@@ -16,10 +17,11 @@ import type {
 
 export interface Card {
   word: string;
-  // The same term in the other languages of the word library, if it has any, and the other forms
-  // of the term that the library lists, in any language.
+  // The same term in the other languages of the word library, if it has any, the other forms of
+  // the term that the library lists, in any language, and the pinyin of a Chinese word.
   translations?: readonly string[];
   forms?: readonly string[];
+  pinyin?: string;
   color: CardColor;
   revealed: boolean;
 }
@@ -29,6 +31,12 @@ export interface Card {
 export interface Clock {
   ends: number;
   length: number;
+}
+
+// A pause: how much time the phase had left when the chair paused the game, in milliseconds, or
+// null for a phase without a time limit. The clock starts again from there when the game resumes.
+export interface Pause {
+  left: number | null;
 }
 
 export interface KeywordsState {
@@ -41,11 +49,17 @@ export interface KeywordsState {
   turn: number;
   team: Team; // whose turn it is
   phase: TurnPhase;
-  // Null when the phase has no time limit, and once the game is over.
+  // Null when the phase has no time limit, and once the game is over. While the game is paused,
+  // the clock stands still at `pause.left`, and `ends` means nothing.
   clock: Clock | null;
+  pause: Pause | null;
   clue: { word: string; count: ClueCount } | null;
   guessesMade: number; // in this turn
   history: ClueRecord[];
+  // The pauses and the extensions, for the clue log and the replay.
+  events: GameEvent[];
+  // Which groups have used their one extension of the game.
+  extended: Record<Team, boolean>;
   result: GameResult | null;
   // The cards that guessers of the current team have chosen in this turn, one for each of them
   // at most.

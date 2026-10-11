@@ -47,17 +47,19 @@ export interface GameResult {
 
 // A term for a card: the word in the room's language and, when the word library has them, the
 // same term in its other languages, and the other forms of the term that the library lists in
-// any language, such as "dataset" for "Data". The clue check holds a clue against all of these
-// (see clue.ts).
+// any language, such as "dataset" for "Data". A Chinese word also comes with its pinyin, which
+// the server works out, without tones and with a space between the syllables. The clue check
+// holds a clue against all of these (see clue.ts).
 export interface BoardWord {
   word: string;
   translations?: readonly string[];
   forms?: readonly string[];
+  pinyin?: string;
 }
 
 // What a player sees of a card. `color` is there only when the player may know it: the card has
 // been revealed, the player is a captain, or the game is over. Otherwise the key is absent.
-// `translations` and `forms` are there when the card has any, for the clue check on the
+// `translations`, `forms` and `pinyin` are there when the card has any, for the clue check on the
 // captain's screen. They are no secret.
 export interface CardView {
   word: string;
@@ -65,6 +67,7 @@ export interface CardView {
   color?: CardColor;
   translations?: string[];
   forms?: string[];
+  pinyin?: string;
 }
 
 // A turn in the record of the game. A captain who ran out of time gave no clue, and then `word`
@@ -78,6 +81,18 @@ export interface ClueRecord {
   count: ClueCount | null;
   guesses: { card: number; color: CardColor; player: string }[];
   timedOut?: true;
+}
+
+// What happened in a game besides the clues and the guesses, for the clue log and the replay:
+// the chair paused the game and resumed it, and a group asked for an extension. Each is noted
+// with the turn it came in; an extension names the group.
+export const EVENT_KINDS = ['paused', 'resumed', 'extended'] as const;
+export type EventKind = (typeof EVENT_KINDS)[number];
+
+export interface GameEvent {
+  turn: number;
+  kind: EventKind;
+  team?: Team;
 }
 
 // A card that a guesser has chosen but not revealed yet, for the rest of their group to see.
@@ -101,7 +116,12 @@ export interface KeywordsView {
   team: Team;
   phase: TurnPhase;
   startingTeam: Team;
+  // The board, or no cards at all while the game is paused: nobody studies the board during a
+  // break, the captains and the screens included.
   cards: CardView[];
+  // Whether the chair has paused the game. Every action but the chat is refused meanwhile, and
+  // the clock stands still at `clock.left`.
+  paused: boolean;
   remaining: Record<Team, number>;
   clue: { word: string; count: ClueCount } | null;
   guessesMade: number;
@@ -114,6 +134,9 @@ export interface KeywordsView {
   // the view arrived, and leaves ending the phase to the server.
   clock: { left: number; total: number } | null;
   history: ClueRecord[];
+  events: GameEvent[];
+  // Which groups have used their one extension of the game (docs/games/keywords.md#extensions).
+  extended: Record<Team, boolean>;
   result: GameResult | null;
   // The cards that the guessers of the team whose turn it is have chosen. Only that team's
   // captain and guessers get this; for everyone else the key is absent.
@@ -143,6 +166,11 @@ export const KEYWORDS_ERRORS = [
   'bad_count',
   'chat_empty',
   'chat_too_long',
+  'not_chair',
+  'paused',
+  'not_paused',
+  'no_extension',
+  'extension_used',
 ] as const;
 export type KeywordsError = (typeof KEYWORDS_ERRORS)[number];
 

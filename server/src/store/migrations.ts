@@ -212,4 +212,16 @@ export const MIGRATIONS: readonly string[] = [
   CREATE INDEX reports_reporter ON reports (reporter_id) WHERE reporter_id IS NOT NULL;
   CREATE INDEX reports_reported ON reports (reported_id) WHERE reported_id IS NOT NULL;
   `,
+  // 7: replays (docs/architecture.md#replays): one row for each finished game that a player with
+  // an account took part in, as the game module gave it to watch again, as JSON. It belongs to no
+  // one account, since several may have played in it: only an account with a row for the game in
+  // game_records may read it, and it stays when an account is deleted.
+  `
+  CREATE TABLE replays (
+    game_id TEXT PRIMARY KEY,
+    game TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    data TEXT NOT NULL
+  ) STRICT;
+  `,
 ];

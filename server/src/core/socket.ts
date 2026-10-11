@@ -233,16 +233,23 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     safely('deadline', () => schedule(room));
   }
 
-  // Keeps the game that has just ended on the record of every player with an account who took part
-  // in it, as the game describes their part (GameModule.results()). Whoever had left by then has no
-  // part in its end, and a game that the chair withdrew counts for nobody.
+  // What the end of a game leaves behind for the players with accounts, as the game describes
+  // their part in it (GameModule.results()): the game on each of their records, and, once any of
+  // them took part, the game itself to watch again (GameModule.replay()). Whoever had left by then
+  // has no part in its end, and a game that the chair withdrew counts for nobody. Whatever else
+  // is to be kept of a finished game goes here, after the records.
   function keepRecords(room: Room): void {
     const results = accounts && room.gameId !== null ? room.results() : null;
     if (!results || !accounts) return;
-    for (const { playerId, ...result } of results) {
+    const gameId = room.gameId as string;
+    const played = results.flatMap(({ playerId, ...result }) => {
       const account = room.members.get(playerId)?.account;
-      if (account) accounts.record(account.id, { game: room.game.id, gameId: room.gameId as string, ...result });
-    }
+      return account ? [{ account, result }] : [];
+    });
+    for (const { account, result } of played) accounts.record(account.id, { game: room.game.id, gameId, ...result });
+    if (played.length === 0) return;
+    const replay = room.replay();
+    if (replay !== null) safely('replay', () => accounts.keepReplay({ game: room.game.id, gameId, replay }));
   }
 
   // The last match of each room whose end has been logged and recorded.

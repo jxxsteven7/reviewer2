@@ -1,35 +1,64 @@
 <script setup lang="ts">
-import type { KeywordsView } from '@reviewer2/shared';
+import type { ClueRecord, GameEvent, KeywordsView } from '@reviewer2/shared';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 // Every clue so far, newest first, with the cards revealed after it, like a list of references. A
-// turn whose time ran out says so: before the clue, it has none.
+// turn whose time ran out says so: before the clue, it has none. A pause, its end and an
+// extension are noted in short under the turn they came in, which may have no clue yet. During a
+// pause there is no board, so a revealed card shows its color alone.
 const props = defineProps<{ game: KeywordsView }>();
 const { t } = useI18n();
 const INFINITY = '\u221e';
 
 const word = (index: number) => props.game.cards[index]?.word ?? '';
+
+// The turns that have a clue or an event, the latest first, each with what it has.
+const turns = computed(() => {
+  const found = new Map<number, { record: ClueRecord | null; events: GameEvent[] }>();
+  const of = (turn: number) => {
+    let entry = found.get(turn);
+    if (!entry) found.set(turn, (entry = { record: null, events: [] }));
+    return entry;
+  };
+  for (const record of props.game.history) of(record.turn).record = record;
+  for (const event of props.game.events) of(event.turn).events.push(event);
+  return [...found]
+    .sort(([a], [b]) => b - a)
+    .map(([turn, entry]) => ({ turn, ...entry, team: entry.record?.team ?? teamOf(turn) }));
+});
+
+// Whose turn a turn without a clue yet is: the starting group plays the odd ones.
+const teamOf = (turn: number) =>
+  turn % 2 === 1 ? props.game.startingTeam : props.game.startingTeam === 'red' ? 'blue' : 'red';
+
+const eventText = (event: GameEvent) =>
+  t(`game.events.${event.kind}`, { group: event.team ? t(`lobby.group.${event.team}`) : '' });
 </script>
 
 <template>
   <section class="clue-log">
     <h2 class="section-title">{{ t('game.log') }}</h2>
-    <ol v-if="game.history.length" reversed>
-      <li v-for="record in [...game.history].reverse()" :key="record.turn" :class="record.team">
-        <span class="turn num">[{{ record.turn }}]</span>
-        <span v-if="record.word === null" class="clue missing">{{ t('game.noClueInTime') }}</span>
-        <span v-else class="clue">
-          <span class="word">{{ record.word }}</span>
-          <span class="count num">{{ record.count === 'unlimited' ? INFINITY : record.count }}</span>
-        </span>
-        <span v-if="record.guesses.length" class="guesses">
-          <span v-for="guess in record.guesses" :key="guess.card" class="guess" :class="guess.color">
-            <span class="swatch" aria-hidden="true"></span>
-            {{ word(guess.card) }}
-            <span class="sr">{{ t(`game.card.${guess.color}`) }}</span>
+    <ol v-if="turns.length" reversed>
+      <li v-for="{ turn, record, events, team } in turns" :key="turn" :class="team">
+        <span class="turn num">[{{ turn }}]</span>
+        <template v-if="record">
+          <span v-if="record.word === null" class="clue missing">{{ t('game.noClueInTime') }}</span>
+          <span v-else class="clue">
+            <span class="word">{{ record.word }}</span>
+            <span class="count num">{{ record.count === 'unlimited' ? INFINITY : record.count }}</span>
           </span>
-        </span>
-        <span v-if="record.timedOut && record.word !== null" class="timed-out">{{ t('game.timeRanOut') }}</span>
+          <span v-if="record.guesses.length" class="guesses">
+            <span v-for="guess in record.guesses" :key="guess.card" class="guess" :class="guess.color">
+              <span class="swatch" aria-hidden="true"></span>
+              {{ word(guess.card) }}
+              <span class="sr">{{ t(`game.card.${guess.color}`) }}</span>
+            </span>
+          </span>
+          <span v-if="record.timedOut && record.word !== null" class="timed-out">{{ t('game.timeRanOut') }}</span>
+        </template>
+        <span v-else class="clue missing">{{ t('game.noClues') }}</span>
+        <span v-for="(event, index) in events" :key="index" class="event">{{ eventText(event) }}</span>
       </li>
     </ol>
     <p v-else class="empty">{{ t('game.noClues') }}</p>
@@ -112,8 +141,14 @@ li.blue {
   font-weight: var(--weight-bold);
 }
 
-.timed-out {
+.timed-out,
+.event {
   grid-column: 2;
+}
+
+.event {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
 }
 
 .guesses {

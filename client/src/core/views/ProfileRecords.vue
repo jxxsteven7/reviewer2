@@ -1,21 +1,38 @@
 <script setup lang="ts">
-import { ACCOUNT_API, type RecordsView } from '@reviewer2/shared';
+import { ACCOUNT_API, type GameRecord, type RecordsView } from '@reviewer2/shared';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { games } from '../../games';
 import { request } from '../account';
 import UiButton from '../components/UiButton.vue';
+import UiSheet from '../components/UiSheet.vue';
 import { errorKey } from '../errors';
 import { points } from '../points';
+import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 
 // The account's record: how many games it has finished in a seat and won, and the last 20, each
 // with its game, its date, the group and the role, and the decision letter that the group got;
 // then how many matches it finished, and the last 20 of them, each with its place, its total and
-// its title. A record that can't be fetched says so, with a way to try again.
+// its title. A record that can't be fetched says so, with a way to try again. A game that the
+// server kept to watch again opens in a sheet, in the game's own replay viewer.
 const { t, te, locale } = useI18n();
 const records = ref<RecordsView | null>(null);
 const failed = ref<string | undefined>();
 const { busy, run } = useBusy();
+
+// The replay that is open, with the game it is of.
+const replay = ref<{ game: string; data: unknown } | null>(null);
+
+async function watchAgain(record: GameRecord): Promise<void> {
+  const reply = await run(() => request<{ replay: unknown }>(ACCOUNT_API.replay, { gameId: record.gameId }));
+  if (!reply) return;
+  if (!reply.ok) {
+    toastError(reply.error);
+    return;
+  }
+  replay.value = { game: record.game, data: reply.replay };
+}
 
 async function load(): Promise<void> {
   const reply = await run(() => request<{ records: RecordsView }>(ACCOUNT_API.records));
@@ -62,6 +79,16 @@ function date(iso: string): string {
             }}
           </span>
           <span class="verdict">{{ label(`game.letter.verdicts.${record.verdict}`, record.verdict) }}</span>
+          <UiButton
+            v-if="record.replay && games[record.game]"
+            class="watch"
+            size="small"
+            variant="quiet"
+            :disabled="busy"
+            @click="watchAgain(record)"
+          >
+            {{ t('account.profile.watchAgain') }}
+          </UiButton>
         </li>
       </ol>
     </template>
@@ -94,6 +121,9 @@ function date(iso: string): string {
     <p class="problem" role="alert">{{ failed }}</p>
     <UiButton size="small" :disabled="busy" @click="load">{{ t('account.profile.recordsAgain') }}</UiButton>
   </div>
+  <UiSheet :open="replay !== null" :title="t('replay.title')" @close="replay = null">
+    <component :is="games[replay.game]?.Replay" v-if="replay" :replay="replay.data" />
+  </UiSheet>
 </template>
 
 <style scoped>
@@ -162,6 +192,12 @@ h3 {
   grid-column: 2;
   align-self: center;
   font-weight: var(--weight-bold);
+}
+
+.watch {
+  grid-column: 1;
+  justify-self: start;
+  margin: var(--space-1) 0 0 calc(-1 * var(--space-2));
 }
 
 .won .verdict {

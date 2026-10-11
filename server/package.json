@@ -9,6 +9,7 @@
     "build": "node build.mjs"
   },
   "dependencies": {
+    "pinyin-pro": "^3.29.5",
     "sirv": "^3.0.2",
     "socket.io": "^4.8.4"
   },

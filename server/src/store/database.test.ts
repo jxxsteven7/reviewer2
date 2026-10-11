@@ -68,6 +68,7 @@ describe('a database in DATA_DIR', () => {
       'feedback',
       'game_records',
       'match_records',
+      'replays',
       'reports',
       'sessions',
       'settings',
@@ -307,7 +308,7 @@ describe('a database in DATA_DIR', () => {
     const feedback = fifth.db.prepare('SELECT * FROM feedback').all();
     fifth.db.close();
 
-    const migrated = await open(dir);
+    const migrated = await open(dir, MIGRATIONS.slice(0, 6));
     expect(migrated).toMatchObject({ schema: 6, migratedFrom: 5 });
     expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v6.db'));
     const { db } = migrated;
@@ -332,6 +333,31 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT reporter_id, reported_id, reported_name FROM reports').all()).toEqual([
       { reporter_id: 1, reported_id: null, reported_name: 'Bob' },
     ]);
+  });
+
+  test('of the sixth release keeps its records when it gets the replays, which outlive the accounts', async () => {
+    const sixth = await open(dir, MIGRATIONS.slice(0, 6));
+    sixth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict)
+        VALUES (1, 'keywords', 'g1', 'now', 'red', 'captain', 'red', 1, 'oral'), (2, 'keywords', 'g1', 'now', 'blue', 'guesser', 'red', 0, 'reject');
+    `);
+    sixth.db.close();
+
+    const migrated = await open(dir);
+    expect(migrated).toMatchObject({ schema: 7, migratedFrom: 6 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v7.db'));
+    const { db } = migrated;
+    expect(db.prepare('SELECT account_id, game_id FROM game_records ORDER BY id').all()).toEqual([
+      { account_id: 1, game_id: 'g1' },
+      { account_id: 2, game_id: 'g1' },
+    ]);
+    // A replay is kept once for each game, and stays when a player who was in it is deleted.
+    db.exec("INSERT INTO replays VALUES ('g1', 'keywords', 'now', '{}')");
+    expect(() => db.exec("INSERT INTO replays VALUES ('g1', 'keywords', 'later', '{}')")).toThrow(/UNIQUE/);
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g1' }]);
+    expect(db.prepare('SELECT account_id FROM game_records').all()).toEqual([{ account_id: 2 }]);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
@@ -498,6 +524,7 @@ describe('a database in memory', () => {
       'feedback',
       'game_records',
       'match_records',
+      'replays',
       'reports',
       'sessions',
       'settings',

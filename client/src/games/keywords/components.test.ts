@@ -12,6 +12,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import { clearMemory } from '../../core/storage';
+import { toasts } from '../../core/toast';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
 import ClockBar from './ClockBar.vue';
@@ -75,12 +76,15 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     phase,
     startingTeam: 'red',
     cards: cards('Baseline', 'Model', 'Journal'),
+    paused: false,
     remaining: { red: 9, blue: 8 },
     clue: { word: 'Science', count: 2 },
     guessesMade: 0,
     guessesLeft: 3,
     clock: null,
     history: [{ turn: 2, team: 'red', word: 'Science', count: 2, guesses: [] }],
+    events: [],
+    extended: { red: false, blue: false },
     result: null,
     selections: [],
     ...(chat ? { chat } : {}),
@@ -103,6 +107,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     language: 'en',
     fields: ['general'],
     public: false,
+    customWordCount: 0,
     phase: 'playing',
     round: 1,
     gameId: 'g1',
@@ -503,7 +508,14 @@ describe('CluePanel', () => {
       `This clue has a Chinese character in common with a word still on the board: \u201cData\u201d (${DATA}). ` +
         "It's your call.",
     ]);
+    // A clue that contains a word on the board is refused under the strict rule, which the room
+    // has, and only warned about under the loose one.
     await wrapper.get('input').setValue('metamodeling');
+    expect(wrapper.get('.problem').text()).toBe(
+      'This clue contains \u201cModel\u201d, which is on the board. This room\u2019s clue check doesn\u2019t allow it.',
+    );
+    await wrapper.setProps({ settings: { ...STANDARD, clueRule: 'loose' } });
+    expect(wrapper.find('.problem').exists()).toBe(false);
     expect(wrapper.findAll('.warning')).toHaveLength(1);
     await wrapper.get('input').setValue('datacenter');
     expect(wrapper.get('.warning').text()).toContain('contains a word still on the board: \u201cData\u201d.');
@@ -519,7 +531,19 @@ describe('CluePanel', () => {
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
     const chinese = panel({ ...STANDARD, clueLength: 4 }, 'zh');
     expect(chinese.get('.limit').text()).toBe(
-      'Chinese characters in a clue: at most 4. It can also be one English word or abbreviation, such as GPU, but not the English for a word on the board.',
+      'At most 4 characters: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation is fine, but not the English for a word on the board, nor its pinyin.',
+    );
+    // Eight letters fit; nine don't. The pinyin of a card is refused.
+    await chinese.get('input').setValue('abcdefgh');
+    expect(chinese.find('.problem').exists()).toBe(false);
+    await chinese.get('input').setValue('abcdefghi');
+    expect(chinese.get('.problem').text()).toBe('That clue is too long.');
+    await chinese.setProps({
+      game: { ...chinese.props('game'), cards: [{ word: '\u57fa\u56e0', revealed: false, pinyin: 'ji yin' }] },
+    });
+    await chinese.get('input').setValue('JiYin');
+    expect(chinese.get('.problem').text()).toBe(
+      "\u201c\u57fa\u56e0\u201d (ji yin) is on the board. A clue can't be a word on the board, or part of one.",
     );
   });
 
@@ -533,7 +557,9 @@ describe('CluePanel', () => {
       },
       global: { plugins: [createI18n({ legacy: false, locale: 'zh', messages: { zh } })] },
     });
-    expect(wrapper.get('.limit').text()).toContain('GPU');
+    expect(wrapper.get('.limit').text()).toContain(
+      '\u4e24\u4e2a\u5b57\u6bcd\u6216\u6570\u5b57\u7b97\u4e00\u4e2a\u5b57',
+    );
     await wrapper.get('input').setValue('GPU');
     expect(wrapper.find('.problem').exists()).toBe(false);
     await wrapper.get('input').setValue('deep learning');
@@ -658,6 +684,40 @@ describe('ClueLog', () => {
     expect(items[1]?.text()).toContain('Time ran out');
     expect(items[0]?.text()).not.toContain('Time ran out');
   });
+
+  test('notes a pause, its end and an extension under their turns, in short', () => {
+    const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
+    const events: KeywordsView['events'] = [
+      { turn: 1, kind: 'extended', team: 'red' },
+      { turn: 2, kind: 'paused' },
+      { turn: 2, kind: 'resumed' },
+    ];
+    // Turn 1 has no clue on record: the chair paused the game before one came, say.
+    const wrapper = mount(ClueLog, { props: { game: { ...game, events } }, global: global() });
+    const items = wrapper.findAll('li');
+    expect(items).toHaveLength(2);
+    expect(items[0]?.text()).toContain('Science');
+    expect(items[0]?.findAll('.event').map((line) => line.text())).toEqual([
+      'The chair paused the game',
+      'The game went on',
+    ]);
+    expect(items[1]?.text()).toContain('[1]');
+    expect(items[1]?.findAll('.event').map((line) => line.text())).toEqual(['The Red group asked for an extension']);
+    expect(items[1]?.classes()).toContain('red');
+  });
+
+  test('shows a revealed card by its color alone while the game is paused, since there is no board', () => {
+    const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
+    const history: KeywordsView['history'] = [
+      { turn: 2, team: 'red', word: 'Science', count: 2, guesses: [{ card: 1, color: 'red', player: 'bob' }] },
+    ];
+    const wrapper = mount(ClueLog, {
+      props: { game: { ...game, history, cards: [], paused: true } },
+      global: global(),
+    });
+    expect(wrapper.get('.guess').text()).toBe('Red');
+    expect(wrapper.text()).not.toContain('Model');
+  });
 });
 
 describe('RulesSheet', () => {
@@ -676,13 +736,37 @@ describe('RulesSheet', () => {
     'The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.';
   const CLUE = 'A PI who gives no clue in time loses the turn to the other group.';
   const GUESS = 'Students whose time runs out end their turn, even if they have revealed nothing.';
+  const EXTENSION = 'Each group may once a game ask for 30 seconds more for the phase it is in.';
+  const PAUSE =
+    'The chair can pause the game at any time. The board is hidden until the chair resumes it, and the clock goes on from where it stopped.';
 
   test('tells what time does in the phases that have a limit, and nothing about the others', async () => {
-    expect(await timeLines({})).toEqual([BAR, CLUE, GUESS]);
-    expect(await timeLines({ guessTime: 0 })).toEqual([BAR, CLUE]);
-    expect(await timeLines({ firstClueTime: 0 })).toEqual([BAR, CLUE, GUESS]);
-    expect(await timeLines({ firstClueTime: 0, clueTime: 0 })).toEqual([BAR, GUESS]);
-    expect(await timeLines({ firstClueTime: 0, clueTime: 0, guessTime: 0 })).toEqual(['This room has no time limits.']);
+    expect(await timeLines({})).toEqual([BAR, CLUE, GUESS, PAUSE]);
+    expect(await timeLines({ guessTime: 0 })).toEqual([BAR, CLUE, PAUSE]);
+    expect(await timeLines({ firstClueTime: 0 })).toEqual([BAR, CLUE, GUESS, PAUSE]);
+    expect(await timeLines({ firstClueTime: 0, clueTime: 0 })).toEqual([BAR, GUESS, PAUSE]);
+    expect(await timeLines({ firstClueTime: 0, clueTime: 0, guessTime: 0 })).toEqual([
+      'This room has no time limits.',
+      PAUSE,
+    ]);
+    // Extensions only matter where there is time to extend.
+    expect(await timeLines({ extensions: true })).toEqual([BAR, CLUE, GUESS, EXTENSION, PAUSE]);
+    expect(await timeLines({ extensions: true, firstClueTime: 0, clueTime: 0, guessTime: 0 })).toEqual([
+      'This room has no time limits.',
+      PAUSE,
+    ]);
+  });
+
+  test('lists the settings, with the extensions and how many words the chair brought', async () => {
+    const wrapper = mount(RulesSheet, {
+      props: { settings: { ...STANDARD, extensions: true }, language: 'en', customWords: 12 },
+      global: global(),
+    });
+    await wrapper.get('button').trigger('click');
+    const summary = wrapper.get('.settings-summary').text();
+    expect(summary).toContain('Extensions');
+    expect(summary).toContain('On');
+    expect(summary).toContain('12 words');
   });
 });
 
@@ -847,6 +931,113 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.who-row button')).toHaveLength(1);
     expect(wrapper.find('.letter .verdict').text()).toBe('Accept (Oral)');
     expect(wrapper.text()).not.toContain('Only the PIs see the colors of hidden cards.');
+  });
+
+  test('shows a paused game without its board, and offers the chair the way to resume', async () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game = { ...(data.game as KeywordsView), paused: true, cards: [], clock: { left: 42_000, total: 90_000 } };
+    const paused = (me: string) => ({ ...view, me, data: { ...data, side: seats[me]?.team ?? null, game } });
+    const student = mount(KeywordsGame, { props: { room: paused('bob') }, global: global() });
+    expect(student.find('.board').exists()).toBe(false);
+    expect(student.get('.paused-title').text()).toBe('Paused');
+    expect(student.text()).toContain('The chair has paused the game.');
+    expect(student.find('.guess-bar').exists()).toBe(false);
+    expect(student.find('.paused button').exists()).toBe(false);
+    expect(student.get('.role-banner .line').text()).toBe('The game is paused.');
+    // The clock stands still at what the server said.
+    expect(student.get('[role="timer"]').attributes('aria-label')).toBe('42 seconds left');
+    // The chair resumes, and has nothing to pause meanwhile.
+    const chair = mount(KeywordsGame, { props: { room: paused('ann') }, global: global() });
+    expect(chair.findAll('.tools button').map((button) => button.text())).toEqual(['How to play', 'End the game']);
+    await chair.get('.paused button').trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
+    const playing = mount(KeywordsGame, { props: { room: room('ann') }, global: global() });
+    await playing
+      .findAll('.tools button')
+      .find((button) => button.text() === 'Pause the game')
+      ?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
+  });
+
+  test("offers the group's extension in its own turn, where the room allows one, and tells everyone of it", async () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game = { ...(data.game as KeywordsView), clock: { left: 20_000, total: 90_000 } };
+    const settings = { ...STANDARD, extensions: true };
+    const extend = (wrapper: ReturnType<typeof mount>) =>
+      wrapper.findAll('button').find((button) => button.text() === 'Ask for 30 seconds more');
+    // Not without the setting, and not for the other group or a spectator.
+    expect(
+      extend(mount(KeywordsGame, { props: { room: { ...view, data: { ...data, game } } }, global: global() })),
+    ).toBeUndefined();
+    const allowed = (me: string, more: Partial<KeywordsView> = {}) => ({
+      ...view,
+      me,
+      data: { ...data, settings, side: seats[me]?.team ?? null, game: { ...game, ...more } },
+    });
+    expect(extend(mount(KeywordsGame, { props: { room: allowed('eve') }, global: global() }))).toBeUndefined();
+    expect(extend(mount(KeywordsGame, { props: { room: allowed('ann') }, global: global() }))).toBeUndefined();
+    const wrapper = mount(KeywordsGame, { props: { room: allowed('bob') }, global: global() });
+    await extend(wrapper)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:extend', { gameId: 'g1', turn: 2 });
+    // Once used, it is gone, and the toast says who asked.
+    await wrapper.setProps({
+      room: allowed('bob', {
+        extended: { red: true, blue: false },
+        events: [{ turn: 2, kind: 'extended', team: 'red' }],
+      }),
+    });
+    expect(extend(wrapper)).toBeUndefined();
+    expect(toasts.map((item) => item.key)).toContain('game.extended');
+    toasts.splice(0);
+  });
+
+  test('reviews the game that has ended, step by step, from the start', async () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game: KeywordsView = {
+      ...(data.game as KeywordsView),
+      phase: 'over',
+      cards: [
+        { word: 'Baseline', revealed: true, color: 'red' },
+        { word: 'Model', revealed: false, color: 'blue' },
+        { word: 'Journal', revealed: false, color: 'reviewer2' },
+      ],
+      history: [
+        { turn: 2, team: 'red', word: 'Science', count: 2, guesses: [{ card: 0, color: 'red', player: 'bob' }] },
+      ],
+      result: { winner: 'red', reason: 'found' },
+    };
+    const wrapper = mount(KeywordsGame, { props: { room: { ...view, data: { ...data, game } } }, global: global() });
+    await wrapper
+      .findAll('.tools button')
+      .find((button) => button.text() === 'Review the game')
+      ?.trigger('click');
+    const replay = wrapper.get('.replay');
+    expect(replay.get('.position').text()).toBe('Step 1 of 3');
+    expect(replay.get('.step').text()).toBe('The start. Nothing has been revealed yet.');
+    expect(replay.findAll('.board .card.revealed')).toHaveLength(0);
+    expect(replay.findAll('.board .card.known')).toHaveLength(3);
+    await replay.get('input[type="range"]').setValue('2');
+    expect(replay.get('.position').text()).toBe('Step 3 of 3');
+    expect(replay.findAll('.step p').map((line) => line.text())).toEqual([
+      'Turn 2 \u00b7 Red group',
+      'Clue: Science 2',
+      "You revealed \u201cBaseline\u201d: right, one of the group's own".replace('You', 'Bob'),
+      'The Red group won.',
+    ]);
+    expect(
+      replay
+        .get('.board .card.marked .word')
+        .text()
+        .replace(/\u00ad/g, ''),
+    ).toBe('Baseline');
+    expect(replay.findAll('.board .card.revealed')).toHaveLength(1);
+    const buttons = replay.findAll('.controls button');
+    expect(buttons[1]?.attributes('disabled')).toBeDefined();
+    await buttons[0]?.trigger('click');
+    expect(replay.get('.position').text()).toBe('Step 2 of 3');
   });
 
   // The clock stands apart from the turn strip, where it can stay at the top of the screen, and

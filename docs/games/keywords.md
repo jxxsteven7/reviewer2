@@ -17,9 +17,9 @@ The first game. Its module is `keywords`; the name players see lives in the loca
 
 - The room's language, chosen at creation, is the cards' language.
 - To start, each group needs an online captain and guesser.
-- The server draws 25 different words with the crypto module and a random starting group: 9 cards for it, 8 for the other, 7 irrelevant papers, 1 Reviewer 2.
+- The server draws 25 different words with the crypto module and a random starting group: 9 cards for it, 8 for the other, 7 irrelevant papers, 1 Reviewer 2. The words come from the chair's fields and the chair's own words ([Custom words](#custom-words)), unused ones first.
 - No word on a board gives another away. Two words clash when one lies inside the other: it is the other or its plain plural, each of its pieces is a piece of the other or of one of its forms, or it is the other's term in another language. Pieces are the parts the strict clue rule counts ([The clue](#the-clue)) plus lone letters and numbers. "Gene" and "Gene editing" clash; "Data science" and "Data cleaning" don't. `cardsClash()` in `shared/src/games/keywords/clue.ts` decides; the draw is described in [../architecture.md](../architecture.md#games).
-- A card carries its term in the other language and its `forms`, in every view.
+- A card carries its term in the other language, its `forms` and, for a Chinese word, its `pinyin` (worked out by the server with [pinyin-pro](https://github.com/zh-lx/pinyin-pro), MIT), in every view.
 
 ## Settings
 
@@ -29,8 +29,9 @@ Set by the chair, locked during a game.
 |---|---|---|
 | Guess rule | `free` or `standard` ([Turns](#turns)) | `free` |
 | Clue rule | `strict` or `loose` ([The clue](#the-clue)) | `strict` |
-| Clue length | Chinese room: 1 to 10 characters; English room: 1 to 3 words | 4; 1 |
+| Clue length | Chinese room: 1 to 10 characters, two letters or digits counting as one; English room: 1 to 3 words | 4; 1 |
 | Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 90, 60, 90 |
+| Extensions | `true` or `false` ([Pauses and extensions](#pauses-and-extensions)) | `false` |
 
 `settingsProblems()` in `shared/src/games/keywords/settings.ts` checks them on both sides; the server refuses with `bad_settings`.
 
@@ -44,26 +45,37 @@ Turns are numbered from 1; the starting group plays the odd ones.
 
 ## The clue
 
-The captain's screen runs the check while typing, and the server again. A clue is made of **words**: letters, digits, hyphens and apostrophes, each with a letter or digit; "Self-attention" is one word. An **English room** allows up to the clue length in words, each up to 24 characters. A **Chinese room** allows one word, without spaces, of up to the clue length in Chinese characters; an English word or abbreviation such as GPU is fine, but not a card's English term. Errors: `clue_too_many_words`, `clue_not_one_word`, `clue_too_long`. The clue is checked against every word still on the board, whatever its color.
+The captain's screen runs the check while typing, and the server again. A clue is made of **words**: letters, digits, hyphens and apostrophes, each with a letter or digit; "Self-attention" is one word. An **English room** allows up to the clue length in words, each up to 24 characters, and a clue with Chinese characters in it of up to 10 characters in all. A **Chinese room** allows one word, without spaces, of up to the clue length as `clueLength()` counts: a Chinese character is one, and two letters or digits are one, rounded up, as Weibo counts, so that GPU is 2, Python 3 and Transformer 6, and the default of 4 allows 8 letters. An English word or abbreviation such as GPU is fine, but not a card's English term. Errors: `clue_too_many_words`, `clue_not_one_word`, `clue_too_long`. The clue is checked against every word still on the board, whatever its color.
 
 **Refused under either rule** (`clue_on_board`), after NFKC, trimming, lowercasing, dropping accents and folding traditional to simplified Chinese:
 
 - the same as a board word or its plain plural, counting only letters and digits: "co-author" for "coauthor";
 - a part the same as a part of a board word, or its plain plural. Parts are runs of letters between spaces, hyphens, apostrophes and digits, Latin and Chinese apart; lone letters, digits and small words of compounds ("of", "the") don't count: "self-attention" for "attention";
 - a run of Chinese characters containing or contained in a board word's; Latin parts are never searched inside words, so "email" is fine beside "AI";
-- the card's term in another language, or its plain plural.
+- the card's term in another language, or its plain plural;
+- the pinyin of a Chinese card (`pinyin`, without tones), written solid, with hyphens or, where the room takes several words, with spaces, and with "v" or "ü" alike; "jiyin" for the Chinese word for "gene". Only the whole pinyin counts: homophones are not checked.
 
 A plain plural ends in "-s", or "-es" after s, x, z, ch or sh.
 
-**Strict refuses, loose only warns:** a listed form of a card (`forms`), in any of the ways above, forms of both languages counting in either room; and a Chinese character in common with a board word.
+**Strict refuses, loose only warns:** a listed form of a card (`forms`), in any of the ways above, forms of both languages counting in either room; a Chinese character in common with a board word; and a board word or part of four Latin letters or more inside the clue ("dockerfile" beside "Docker", "Pythonic" beside "Python"), unless the clue may be another form of the word by its ending.
 
-**Warned under either rule**, where the check can only guess: another ending of a board word ("-ing", "-ed", "-ion", an irregular plural), and a board word or part of four Latin letters or more inside the clue ("datacenter" beside "Data"); the same for a card's term in another language.
+**Warned under either rule**, where the check can only guess: another ending of a board word ("-ing", "-ed", "-ion", an irregular plural); and a card's term in another language, or a part of it, inside the clue.
 
 Revealed words no longer count. The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0).
 
 ## Time limits
 
 The server keeps the time. A captain who gives no clue in time loses the turn, recorded with `word` and `count` null and `timedOut` true; guessers out of time end their turn, the clue marked `timedOut`. Time runs whether or not players are online. A timer ends the phase and sends a snapshot; an action arriving after the deadline, even before the timer fired, is `stale`. Every view carries `clock`, the time left and given, in milliseconds; the client only counts down.
+
+## Pauses and extensions
+
+**The chair** may pause the game at any point while it is on (`keywords:pause`) and resume it (`keywords:resume`), whoever chairs the room by then: the room hands the chair on after 3 minutes offline. While paused, the clock stands still with the time the phase had left, and goes on from there; every action but the group chat is refused with `paused`; and **no view carries the board**: `cards` is empty for everyone, the captains and the screens included, and `paused` is true. The room's rules go on: reconnecting works as usual, and a room with nobody online for 30 minutes closes. The record notes the pause and its end in `events`, with the turn.
+
+**Extensions**, a setting that is off by default, let each group once a game add 30 seconds (`EXTENSION_SECONDS`) to the phase it is in, where the phase has a time limit: the captain in the clue phase, a guesser in the guess phase, with `keywords:extend`. Everyone is told, `events` notes it with the group, and `extended` says which groups have used theirs. Errors: `no_extension` (the setting is off, or the phase has no limit), `extension_used`.
+
+## Custom words
+
+In a **private room**, the chair pastes words of their own in the waiting room (`room:settings` with `words`, the text as pasted): one per line, or separated by commas or the Chinese enumeration comma; cleaned as a clue is, the same word twice counted once; each fitting on a card, 5 Chinese characters or 14 other characters; at most 200 (`parseCustomWords()` in `shared/src/games/keywords/custom.ts`, run on both sides; the server refuses with `bad_words`). They are drawn from the same pool as the chosen fields, unused words first and kept apart as the fields' words are, and with 25 or more the chair may choose no field at all. A Chinese word gets its `pinyin`; custom words have no translations or forms. The words are the chair's alone: everyone else's view carries only `customWordCount`, and the settings summary shows the number. A room with custom words can't be made public, and a public room takes none (`custom_words_private`). They live with the room, in memory, and go when it closes.
 
 ## Talking it over
 
@@ -77,6 +89,10 @@ Each group has two things the other never sees.
 
 Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a group wins as soon as all its cards are revealed, whoever revealed the last. The chair may **withdraw** a game, which ends without a winner; a withdrawal names its game, so a late one can't end the next. At the end everyone sees every color.
 
+## Replays
+
+Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the events, the result and the names everyone had, by player ID; `replaySteps()` turns it into the steps. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none.
+
 ## What each player sees
 
 | Seat | Cards | Of the groups | Can do |
@@ -84,9 +100,10 @@ Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a gr
 | Captain | All words and colors | Their group's chat and choices | Give the clue |
 | Guesser | All words; revealed colors | The same | Choose, reveal, end the turn, write |
 | Spectator, screen | Like a guesser | Nothing | Watch |
-| After the game | Every color | As before | |
+| While paused | No cards at all | As before | Write to the group |
+| After the game | Every color | As before | Review the game |
 
-`view.ts` is the only way game state leaves the server, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups and no `selections` key outside the group whose turn it is.
+`view.ts` is the only way game state leaves the server, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups and no `selections` key outside the group whose turn it is. Translations, forms and pinyin go to everyone.
 
 ## Seats
 
@@ -108,8 +125,10 @@ On top of the room messages ([../architecture.md](../architecture.md#messages));
 | `keywords:reveal` | `gameId`, `turn`, `card` | The current guessers |
 | `keywords:pass` | `gameId`, `turn` | The current guessers |
 | `keywords:say` | `gameId`, `text` | Either group's guessers, in any turn |
+| `keywords:pause`, `keywords:resume` | `gameId` | The chair; `not_chair`, `paused`, `not_paused` |
+| `keywords:extend` | `gameId`, `turn` | The current captain in the clue phase, a current guesser in the guess phase; `no_extension`, `extension_used` |
 
-The settings travel in `room:create` and `room:settings` as `guessRule`, `clueRule`, `clueLength`, `firstClueTime`, `clueTime`, `guessTime` (`KEYWORDS_SETTINGS`).
+The settings travel in `room:create` and `room:settings` as `guessRule`, `clueRule`, `clueLength`, `firstClueTime`, `clueTime`, `guessTime`, `extensions` (`KEYWORDS_SETTINGS`); the chair's own words in `room:settings` as `words`.
 
 ## Order of the checks
 
@@ -117,9 +136,10 @@ Before a game action, the server ends a phase whose time has run out. Then:
 
 1. `stale`: an earlier game or turn, or no game.
 2. `game_over`.
-3. `not_your_turn`, `not_captain`, `not_guesser`; a chat message only needs a guesser.
-4. `wrong_phase`, such as revealing before the clue.
-5. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_many_words`, `clue_too_long`, `clue_on_board`; `no_such_card`, `card_revealed`; `must_guess_first`; `chat_empty`, `chat_too_long`.
+3. `paused`, for everything but a chat message, a resumption and a withdrawal.
+4. `not_your_turn`, `not_captain`, `not_guesser`; a chat message only needs a guesser; a pause needs the chair (`not_chair`).
+5. `wrong_phase`, such as revealing before the clue.
+6. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_many_words`, `clue_too_long`, `clue_on_board`; `no_such_card`, `card_revealed`; `must_guess_first`; `chat_empty`, `chat_too_long`; `no_extension`, `extension_used`.
 
 Content comes last, so nothing a player can't see changes the answer. Two reveals at once are handled one at a time; if the first ends the turn, the second is `stale`.
 

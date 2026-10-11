@@ -39,6 +39,7 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   language: 'en',
   fields: ['general'],
   public: false,
+  customWordCount: 0,
   phase: 'lobby',
   round: 2,
   gameId: null,
@@ -89,6 +90,7 @@ describe('KeywordsLobby', () => {
     expect(send).toHaveBeenCalledWith('room:settings', {
       fields: ['general'],
       settings: { ...defaultSettings('en'), clueRule: 'loose' },
+      words: '',
     });
     // Once the room has the settings, there is nothing left to save.
     await chair.setProps({ room: view('ann', 1, { ...defaultSettings('en'), clueRule: 'loose' }) });
@@ -119,9 +121,55 @@ describe('KeywordsLobby', () => {
     await chair.find('.desk-actions .primary').trigger('click');
     await flushPromises();
     expect(send.mock.calls.filter(([event]) => event !== 'meta:fields')).toEqual([
-      ['room:settings', { fields: ['general'], settings: { ...defaultSettings('en'), guessRule: 'standard' } }],
+      [
+        'room:settings',
+        { fields: ['general'], settings: { ...defaultSettings('en'), guessRule: 'standard' }, words: '' },
+      ],
       ['room:start', { round: 2 }],
     ]);
+  });
+
+  test('lets the chair paste words of their own, counted for the players, and checked as typed', async () => {
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    await flushPromises();
+    const words = chair.get('textarea');
+    await words.setValue('Alpha, Beta\nalpha\nFourteenletters');
+    expect(chair.get('.problem').text()).toBe('Too long for a card: Fourteenletters');
+    expect(chair.get('.save button').attributes('disabled')).toBeDefined();
+    await words.setValue('Alpha, Beta\nalpha');
+    expect(chair.find('.problem').exists()).toBe(false);
+    expect(chair.text()).toContain('2 words');
+    await chair.get('.save button').trigger('click');
+    expect(send).toHaveBeenCalledWith('room:settings', {
+      fields: ['general'],
+      settings: defaultSettings('en'),
+      words: 'Alpha, Beta\nalpha',
+    });
+    // The server sends the words back, one per line, and then there is nothing left to save.
+    await chair.setProps({ room: { ...view('ann', 0), customWordCount: 2, customWords: ['Alpha', 'Beta'] } });
+    expect((chair.get('textarea').element as HTMLTextAreaElement).value).toBe('Alpha\nBeta');
+    expect(chair.find('.save').exists()).toBe(false);
+    // The players hear how many there are.
+    const player = mount(KeywordsLobby, {
+      props: { room: { ...view('bob', 0), customWordCount: 2 } },
+      global: global(),
+    });
+    expect(player.get('.settings-summary').text()).toContain('2 words');
+    expect(player.text()).not.toContain('Alpha');
+  });
+
+  test('needs a word list unless the chair has 25 words of their own, and none in a public room', async () => {
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    await flushPromises();
+    const enough = Array.from({ length: 25 }, (_, i) => `Word${i}`).join('\n');
+    await chair.get('textarea').setValue(enough);
+    // The word lists aren't loaded in this test, so their boxes can't be unticked: the chair's
+    // choice is emptied as the picker would.
+    expect(chair.get('.save button').attributes('disabled')).toBeUndefined();
+    const listed = mount(KeywordsLobby, { props: { room: { ...view('ann', 0), public: true } }, global: global() });
+    await flushPromises();
+    expect(listed.find('textarea').exists()).toBe(false);
+    expect(listed.text()).toContain('Custom words are for private rooms');
   });
 
   test("doesn't start the game when the server refuses what the chair changed", async () => {

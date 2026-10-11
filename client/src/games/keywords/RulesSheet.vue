@@ -7,20 +7,24 @@ import UiSheet from '../../core/components/UiSheet.vue';
 import SettingsSummary from './SettingsSummary.vue';
 
 // "How to play", in the rules' own sections, as this room plays them: its guess rule, its clue
-// rule and its time limits, with all of its settings at the top.
-const props = defineProps<{ settings: KeywordsSettings; language: Language }>();
+// rule, its time limits and its extensions, with all of its settings at the top.
+const props = withDefaults(defineProps<{ settings: KeywordsSettings; language: Language; customWords?: number }>(), {
+  customWords: 0,
+});
 const { t } = useI18n();
 const open = ref(false);
 
 // What time does in this room: a line for the clues and one for the guesses, for the phases that
 // have a limit, or one line when none has.
 const time = computed(() => {
-  const { firstClueTime, clueTime, guessTime } = props.settings;
+  const { firstClueTime, clueTime, guessTime, extensions } = props.settings;
+  const limited = firstClueTime > 0 || clueTime > 0 || guessTime > 0;
   const lines = [
     ...(firstClueTime > 0 || clueTime > 0 ? [t('rules.timeClue')] : []),
     ...(guessTime > 0 ? [t('rules.timeGuess')] : []),
+    ...(limited && extensions ? [t('rules.extension')] : []),
   ];
-  return lines.length > 0 ? [t('rules.time'), ...lines] : [t('rules.noTime')];
+  return [...(lines.length > 0 ? [t('rules.time'), ...lines] : [t('rules.noTime')]), t('rules.pause')];
 });
 const sections = computed(() => [
   { title: t('rules.goalTitle'), text: [t('rules.goal')] },
@@ -46,7 +50,7 @@ const sections = computed(() => [
     <div class="rules sections">
       <section>
         <h3 class="section-title">{{ t('settings.title') }}</h3>
-        <SettingsSummary class="summary" :settings="settings" :language="language" />
+        <SettingsSummary class="summary" :settings="settings" :language="language" :custom-words="customWords" />
       </section>
       <section v-for="section in sections" :key="section.title">
         <h3 class="section-title">{{ section.title }}</h3>

@@ -6,6 +6,7 @@ export type BannerLine =
   | 'lobby'
   | 'lobbyChair'
   | 'over'
+  | 'paused'
   | 'yourClue'
   | 'studentsGuessing'
   | 'piThinking'
@@ -34,6 +35,7 @@ export function bannerFor(seat: Seat, game: KeywordsView | null, chair = false):
   });
   if (!game) return say(chair ? 'lobbyChair' : 'lobby');
   if (game.result || game.phase === 'over') return say('over');
+  if (game.paused) return say('paused');
   const clue = game.phase === 'clue';
   if (seat.role === 'spectator') return say(clue ? 'watchClue' : 'watchGuess', { group: game.team });
   if (seat.team !== game.team) return say(clue ? 'otherClue' : 'otherGuess');

@@ -60,8 +60,8 @@ Everything after the page load goes over Socket.IO, except the account API ([Acc
 | `room:leave`, `room:rename` | `name` | Members; `account_name` for accounts |
 | `room:emote` | `emote`: `waiting`, `deadline`, `reviewer2` | Members; one every 10 seconds, else `emote_cooldown` with `waitMs`; in no snapshot |
 | `room:report` | `playerId`, `text`? | Members with accounts, in a public room; `not_public`, `report_too_long`, `report_limited`, `report_full` |
-| `room:settings` | `fields`, `settings` | The chair, in the waiting room; both or neither; `match_locked` |
-| `room:public` | `public` | The chair, in the waiting room; `account_required`, `public_barred` |
+| `room:settings` | `fields`, `settings`, `words` | The chair, in the waiting room; all or none; `match_locked`, `bad_words`, `custom_words_private` ([custom words](games/keywords.md#custom-words)) |
+| `room:public` | `public` | The chair, in the waiting room; `account_required`, `public_barred`, `custom_words_private` |
 | `room:start` | `round` | The chair; `stale` |
 | `room:end`, `room:again` | `gameId` | The chair; `stale`; `match_over` after a match's last game |
 | `room:matchEnd`; `room:matchNext` | `matchId`; and `match` (rules or null) | The chair; ends a match early; starts another or an ordinary room. `stale`, `match_over`, `wrong_phase`, `bad_match` |
@@ -83,6 +83,10 @@ A game implements `GameModule` (`server/src/core/game.ts`). The core owns the ro
 **Time.** A module says when it next has something to do with `deadline()`. The server keeps one timer per room and calls `tick()` when it fires and before every game message, so an action for a turn whose time ran out is `stale` even before the timer fired.
 
 **Errors.** A module that throws leaves the room as it was; the message is answered `internal` and logged.
+
+## Replays
+
+At the end of a game that a player with an account took part in, the room asks `GameModule.replay()` for the game as something to watch again, and keeps it as JSON in the `replays` table (migration 7), once per game, up to 64 KB; a larger one is logged as `replay_too_large` and left out, and a withdrawn game has none. A replay belongs to the game, not to an account: `POST /api/account/replay` with `gameId` answers it to an account that has the game in `game_records`, and `no_replay` to anyone else. Deleting an account deletes its `game_records`, and the replay stays for the others who played in it. For the first game, a replay holds the board with every color, the clues and the guesses, who revealed each card, by player ID, and the nicknames that everyone had in the game ([games/keywords.md](games/keywords.md#replays)).
 
 ## Matches
 
@@ -107,7 +111,7 @@ Files under `/assets/` carry a content hash and are cached for good; everything 
 - **Migrations:** `PRAGMA user_version` and `server/src/store/migrations.ts`, run on start in one transaction, after a snapshot.
 - **Snapshots** every hour into `snapshots/`, the last three kept.
 - **The disk.** Feedback stops at 10,000 pieces or 50 MB, which `MAX_FEEDBACK` raises together; nothing is deleted to make room, spam included ([Feedback](#feedback)). Past 1 GB nothing new is kept (`storage_full`). Avatars up to 2 GB.
-- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback, its acknowledgments and the reports it sent or got stay, no longer linked to it.
+- **Deleting.** Everything of an account goes with it through foreign keys; earlier snapshots keep it. Its feedback, its acknowledgments and the reports it sent or got stay, no longer linked to it, and so do the replays of the games it played in, which hold the nicknames everyone had in the game and the clues, since the others played in them too ([Replays](#replays)).
 
 ## Feedback
 
@@ -147,6 +151,7 @@ Optional: a username and a password, with an avatar, a record of games, titles, 
 |---|---|
 | `GET /api/account` | The account, or null |
 | `GET /api/account/records` | The record (login) |
+| `POST /api/account/replay` | `gameId`; a game to watch again, for an account that played in it (login) |
 | `POST /api/register` | `username`, `password`; logs in |
 | `POST /api/login`, `/api/logout` | |
 | `POST /api/account/username` | Renames (login) |
@@ -180,7 +185,7 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 - **Who has an account:** answers that reveal a taken name are limited, and `login_failed` is the same for a wrong name or password.
 - **Stolen logins and other sites:** a random secret, kept hashed, only in a hardened cookie, HTTPS only; `Origin` and `Sec-Fetch-Site` checks, no CORS, no framing; password change, binding and deletion ask for the password.
 - **Links and mail:** 256 random bits after `#`, kept as hashes, short-lived, used once; two fixed mails from a mailer that alone holds the key.
-- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records and titles, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
+- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records and titles, the replays of games, with the nicknames and the clues, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
 
 ## Logging
 
