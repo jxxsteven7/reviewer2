@@ -5,9 +5,12 @@ import type { History, Stats } from './stats';
 import {
   FEEDBACK_PATH,
   renderFeedbackPage,
+  renderReportsPage,
   renderStatusPage,
+  REPORTS_PATH,
   type AccountCounts,
   type FeedbackListing,
+  type ReportListing,
 } from './statusPage';
 import type { FeedbackStore } from './store/feedback';
 
@@ -17,7 +20,8 @@ import type { FeedbackStore } from './store/feedback';
 // alone. That is why it needs no password. `/` is the page and `/status.json` the same numbers
 // for scripts. `/feedback` is the feedback that players sent, a page of it at a time:
 // `/feedback?before=<id>` shows what came before that one, and `/feedback?kind=<kind>` only the
-// feedback of one kind. All of it is read-only.
+// feedback of one kind. `/reports` is the reports that players sent of each other, paged the same
+// way. All of it is read-only.
 
 export const STATUS_HOST = '127.0.0.1';
 
@@ -31,15 +35,20 @@ const CSP =
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
-// How much feedback the feedback page shows at a time.
+// How much feedback, or how many reports, a page shows at a time.
 export const FEEDBACK_SHOWN = 50;
+
+// The id in the query that a page goes back from, or undefined. One that isn't a number is taken
+// for none.
+const beforeIn = (query: URLSearchParams): number | undefined =>
+  /^\d{1,15}$/.test(query.get('before') ?? '') ? Number(query.get('before')) : undefined;
 
 // The feedback for the page, before the id in the query when it has one and of the kind in it
 // when it has one, and whether there is more before that. A query that isn't a number, or a kind
 // that the server doesn't know, is taken for none.
 function feedbackListing(feedback: FeedbackStore, target: string): FeedbackListing {
   const query = new URLSearchParams(target.slice(pathOf(target).length));
-  const before = /^\d{1,15}$/.test(query.get('before') ?? '') ? Number(query.get('before')) : undefined;
+  const before = beforeIn(query);
   const asked = query.get('kind') ?? '';
   const kind = (FEEDBACK_KINDS as readonly string[]).includes(asked) ? (asked as FeedbackKind) : null;
   const entries = feedback.latest(FEEDBACK_SHOWN + 1, before, kind);
@@ -47,6 +56,18 @@ function feedbackListing(feedback: FeedbackStore, target: string): FeedbackListi
     total: feedback.count(),
     kinds: feedback.kinds(),
     kind,
+    entries: entries.slice(0, FEEDBACK_SHOWN),
+    paged: before !== undefined,
+    older: entries.length > FEEDBACK_SHOWN,
+  };
+}
+
+// The reports for the page, paged as the feedback is.
+function reportListing(feedback: FeedbackStore, target: string): ReportListing {
+  const before = beforeIn(new URLSearchParams(target.slice(pathOf(target).length)));
+  const entries = feedback.reports(FEEDBACK_SHOWN + 1, before);
+  return {
+    total: feedback.reportCount(),
     entries: entries.slice(0, FEEDBACK_SHOWN),
     paged: before !== undefined,
     older: entries.length > FEEDBACK_SHOWN,
@@ -71,11 +92,21 @@ export function createStatusHandler(
         const path = pathOf(target);
         if (path === '/') {
           res.setHeader('Content-Security-Policy', CSP);
-          const page = renderStatusPage(stats(), history.samples(), history.now(), feedback.count(), accounts());
+          const page = renderStatusPage(
+            stats(),
+            history.samples(),
+            history.now(),
+            feedback.count(),
+            accounts(),
+            feedback.reportCount(),
+          );
           send(res, 200, 'text/html; charset=utf-8', page);
         } else if (path === FEEDBACK_PATH) {
           res.setHeader('Content-Security-Policy', CSP);
           send(res, 200, 'text/html; charset=utf-8', renderFeedbackPage(feedbackListing(feedback, target)));
+        } else if (path === REPORTS_PATH) {
+          res.setHeader('Content-Security-Policy', CSP);
+          send(res, 200, 'text/html; charset=utf-8', renderReportsPage(reportListing(feedback, target)));
         } else if (path === '/status.json') {
           send(res, 200, 'application/json', JSON.stringify(stats()));
         } else {

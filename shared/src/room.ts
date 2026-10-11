@@ -32,6 +32,9 @@ export interface RoomView<Game = unknown> {
   game: string;
   language: Language;
   fields: string[];
+  // Whether the room is listed on the home page for anyone with an account to join, rather than
+  // open only to those who have its code (docs/architecture.md#public-rooms).
+  public: boolean;
   phase: RoomPhase;
   // How many games this room has started. A start gives the number it saw, so that one that
   // comes late or twice can't start a game that nobody asked for.

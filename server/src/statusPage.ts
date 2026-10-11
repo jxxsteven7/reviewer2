@@ -1,13 +1,14 @@
-import { FEEDBACK_KINDS, type FeedbackKind } from '@reviewer2/shared';
+import { FEEDBACK_KINDS, formatCode, type FeedbackKind } from '@reviewer2/shared';
 import { UNKNOWN_COUNTRY } from './core/clientIp';
 import { megabytes, type Sample, type Stats } from './stats';
-import type { Feedback } from './store/feedback';
+import type { Feedback, Report } from './store/feedback';
 
-// The status page (status.ts) as one HTML document, built on the server from the numbers, and
-// the page of the feedback that players sent. Neither has a script: the status page reloads
-// itself every 5 seconds, and its chart is inline SVG; the feedback page doesn't reload, so that
-// the operator can read a long bug report or copy a contact in peace. Both are for the operator
-// alone, so their text is in English only and not in the locale files.
+// The status page (status.ts) as one HTML document, built on the server from the numbers, the
+// page of the feedback that players sent, and the page of the reports they sent of each other.
+// None has a script: the status page reloads itself every 5 seconds, and its chart is inline SVG;
+// the other two don't reload, so that the operator can read a long bug report or copy a contact
+// in peace. All are for the operator alone, so their text is in English only and not in the
+// locale files.
 
 const STYLE = `
 :root {
@@ -143,6 +144,15 @@ export interface FeedbackListing {
   older: boolean;
 }
 
+// One page of the reports that players sent of each other (store/feedback.ts), paged as the
+// feedback is.
+export interface ReportListing {
+  total: number;
+  entries: readonly Report[];
+  paged: boolean;
+  older: boolean;
+}
+
 const KINDS: Record<FeedbackKind, string> = { idea: 'Idea', game: 'New game', bug: 'Bug', words: 'Word lists' };
 const LANGUAGES: Record<Feedback['language'], string> = { zh: 'Chinese', en: 'English' };
 const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room' };
@@ -229,6 +239,36 @@ function feedbackList(listing: FeedbackListing): string {
   );
 }
 
+export const REPORTS_PATH = '/reports';
+
+// A report of a player (docs/architecture.md#public-rooms): who reported whom, by username, the
+// name the player reported had in the room, with their account if they had one, the room, by its
+// number as players see it, and the note. An account that is gone is said to be; one the operator
+// has barred is marked.
+function report({ id, createdAt, reporter, reported, reportedBarred, reportedName, roomCode, text }: Report): string {
+  const account =
+    reported === null
+      ? 'no account'
+      : `account ${escape(reported)}${reportedBarred ? ' &middot; <strong>barred from public rooms</strong>' : ''}`;
+  return (
+    `<article><p>#${id} &middot; ${escape(when(createdAt))} &middot; room ${escape(formatCode(roomCode))}</p>` +
+    `<p class="text">${escape(reportedName)} (${account})</p>` +
+    `<p>Reported by ${reporter === null ? 'a deleted account' : escape(reporter)}</p>` +
+    (text === null ? '<p>No note</p>' : `<p class="text">${escape(text)}</p>`) +
+    '</article>'
+  );
+}
+
+// The reports page: the entries of one page, and the way to the latest and to the older ones.
+function reportList({ total, entries, paged, older }: ReportListing): string {
+  if (total === 0) return '<p>None yet.</p>';
+  const links = [
+    ...(paged ? [`<a href="${REPORTS_PATH}">Latest</a>`] : []),
+    ...(older ? [`<a href="${REPORTS_PATH}?before=${(entries.at(-1) as Report).id}">Older</a>`] : []),
+  ];
+  return entries.map(report).join('') + (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '');
+}
+
 // One document, as both pages are built. The status page reloads itself; the feedback page
 // doesn't.
 function document(title: string, body: string, reloads: boolean): string {
@@ -256,13 +296,14 @@ export interface AccountCounts {
 }
 
 // `now` is the time on the clock that the samples were taken on (History in stats.ts), and
-// `feedback` is how much feedback there is in all, which the feedback page shows.
+// `feedback` and `reports` are how many there are in all, which their pages show.
 export function renderStatusPage(
   stats: Stats,
   samples: readonly Sample[],
   now: number,
   feedback = 0,
   accounts: AccountCounts = { total: 0, recent: 0 },
+  reports = 0,
 ): string {
   const { memory } = stats;
   // The limit is the service's as a whole, with its file cache (stats.ts); this is the process's
@@ -286,6 +327,8 @@ ${countries(stats)}
 ${chart(samples, now)}
 <h2>Feedback</h2>
 <p>${feedback === 0 ? 'None yet.' : `${feedback} in all &middot; <a href="${FEEDBACK_PATH}">Read it</a>`}</p>
+<h2>Reports</h2>
+<p>${reports === 0 ? 'None yet.' : `${reports} in all &middot; <a href="${REPORTS_PATH}">Read them</a>`}</p>
 `,
     true,
   );
@@ -296,8 +339,21 @@ export function renderFeedbackPage(feedback: FeedbackListing): string {
   return document(
     'Reviewer 2 feedback',
     `<h1>Feedback</h1>
-<p>${feedback.total} in all, newest first &middot; <a href="/">Status</a></p>
+<p>${feedback.total} in all, newest first &middot; <a href="/">Status</a> &middot; <a href="${REPORTS_PATH}">Reports</a></p>
 ${feedbackList(feedback)}
+`,
+    false,
+  );
+}
+
+// The reports that players sent of each other, newest first, a page at a time.
+export function renderReportsPage(reports: ReportListing): string {
+  return document(
+    'Reviewer 2 reports',
+    `<h1>Reports</h1>
+<p>${reports.total} in all, newest first &middot; <a href="/">Status</a> &middot; <a href="${FEEDBACK_PATH}">Feedback</a></p>
+<p>Bar a reported account from public rooms with <code>admin.cjs accounts bar &lt;username&gt;</code>.</p>
+${reportList(reports)}
 `,
     false,
   );

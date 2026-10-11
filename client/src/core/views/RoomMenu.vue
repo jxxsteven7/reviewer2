@@ -11,16 +11,17 @@ import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { closeRoom, leaveRoom } from '../room';
 import { storeName } from '../session';
-import { send } from '../socket';
+import { act, send } from '../socket';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
-// The room menu, behind the "Room" button in the masthead: who you are, ways to rename yourself
-// or leave, and the way to send the author feedback. The chair can also close the room for
-// everyone, in the waiting room, during a game and after it. A player who is logged in is called
-// by their username, which changes on the account page, not here. Each action opens its own
-// sheet over the menu, as it did when they stood at the foot of the page.
+// The room menu, behind the "Room" button in the masthead: who you are, whether the room is public
+// or private, ways to rename yourself or leave, and the way to send the author feedback. The chair
+// can also list the room on the home page or take it off, in the waiting room, and close the room
+// for everyone, in the waiting room, during a game and after it. A player who is logged in is
+// called by their username, which changes on the account page, not here. Each action opens its
+// own sheet over the menu, as it did when they stood at the foot of the page.
 const props = defineProps<{ room: RoomView; me: PlayerView }>();
 const { t } = useI18n();
 const router = useRouter();
@@ -79,6 +80,10 @@ function closeInstead() {
   leaving.value = false;
   closing.value = true;
 }
+
+// Listing the room takes an account, which the menu says; the server says what else keeps the room
+// from being listed, such as that the account was barred from public rooms.
+const setPublic = (value: boolean) => act('room:public', { public: value });
 </script>
 
 <template>
@@ -90,6 +95,12 @@ function closeInstead() {
         <PlayerAvatar :name="me.name" :avatar="me.avatar" size="medium" />
         <span class="name">{{ me.name }}</span>
       </p>
+      <p class="visibility">{{ t(room.public ? 'room.listed' : 'room.unlisted') }}</p>
+      <template v-if="isChair && room.phase === 'lobby'">
+        <UiButton v-if="room.public" @click="setPublic(false)">{{ t('room.makePrivate') }}</UiButton>
+        <UiButton v-else :disabled="!account.summary" @click="setPublic(true)">{{ t('room.makePublic') }}</UiButton>
+        <p v-if="!room.public" class="hint">{{ t(account.summary ? 'room.publicHint' : 'room.publicNeedsAccount') }}</p>
+      </template>
       <UiButton v-if="!account.summary" @click="startRenaming">{{ t('room.rename') }}</UiButton>
       <UiButton @click="leaving = true">{{ t('room.leave') }}</UiButton>
       <UiButton v-if="isChair" variant="danger" @click="closing = true">{{ t('room.closeRoom') }}</UiButton>
@@ -151,6 +162,16 @@ function closeInstead() {
 
 .name {
   overflow-wrap: anywhere;
+}
+
+.visibility {
+  font-weight: var(--weight-bold);
+}
+
+.hint {
+  margin-top: calc(-1 * var(--space-2));
+  color: var(--ink-2);
+  font-size: var(--text-sm);
 }
 
 /* The feedback button sits with the others, at their width. */

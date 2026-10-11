@@ -25,6 +25,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 - Server-authoritative: guessers can't see unrevealed colors, even with developer tools
 - Optional accounts: an avatar and a record of games; see [Privacy](#privacy)
 - Matches: several scored games in a row, with titles
+- Public rooms: play with strangers, with an account, and report players who misbehave
 
 ## Privacy
 
@@ -35,7 +36,8 @@ What we promise players:
 - **An account's email address is never stored.** The server keeps only a keyed fingerprint of it, to check the address and to mail a password reset.
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
 - **Feedback** is read only by the project's operator, unless you agree to its becoming a GitHub issue, which shows its text and the name you left, never your contact. A contact is kept as written and deleted after 90 days. The feedback itself is kept for good, as the project's archive of suggestions.
-- **Deleting an account** deletes everything of it, except that feedback sent from it, and acknowledgments counted for it, stay, no longer linked to it; backups keep the rest only until they expire.
+- **Reports** of players in public rooms are read only by the operator, and kept for good, as the feedback is. A report keeps who reported whom, the name the reported player had in the room, the room's number and the note the reporter wrote.
+- **Deleting an account** deletes everything of it, except that feedback sent from it, acknowledgments counted for it, and reports it sent or got stay, no longer linked to it; backups keep the rest only until they expire.
 
 ## Status
 

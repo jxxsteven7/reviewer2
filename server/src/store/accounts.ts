@@ -18,6 +18,8 @@ export interface Account {
   avatar: string | null;
   // Whether the operator has barred the account from uploading an avatar.
   avatarBanned: boolean;
+  // Whether the operator has barred the account from public rooms (migration 6).
+  publicBarred: boolean;
   createdAt: string;
 }
 
@@ -29,15 +31,16 @@ interface Row {
   emailFp: Uint8Array | null;
   avatar: string | null;
   avatarBanned: number;
+  publicBarred: number;
   createdAt: string;
 }
 
 const COLUMNS =
   'id, username, username_key AS key, password, email_fp AS emailFp, avatar, avatar_banned AS avatarBanned, ' +
-  'created_at AS createdAt';
+  'public_barred AS publicBarred, created_at AS createdAt';
 
 const toAccount = (row: Row | undefined): Account | undefined =>
-  row && { ...row, avatarBanned: row.avatarBanned === 1 };
+  row && { ...row, avatarBanned: row.avatarBanned === 1, publicBarred: row.publicBarred === 1 };
 
 // What the operator's statistics (admin.ts) say of one account: nothing that could be used to log
 // in or to reach the player.
@@ -47,6 +50,8 @@ export interface AccountListing {
   // How many games the account has finished, and how many matches.
   games: number;
   matches: number;
+  // Whether the operator has barred it from public rooms.
+  barred: boolean;
 }
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -74,6 +79,7 @@ export class AccountStore {
   readonly #avatarUsers: StatementSync;
   readonly #avatars: StatementSync;
   readonly #ban: StatementSync;
+  readonly #bar: StatementSync;
   readonly #delete: StatementSync;
   readonly #count: StatementSync;
   readonly #counts: StatementSync;
@@ -99,6 +105,7 @@ export class AccountStore {
     this.#avatarUsers = db.prepare('SELECT count(*) AS count FROM accounts WHERE avatar = ?');
     this.#avatars = db.prepare('SELECT DISTINCT avatar FROM accounts WHERE avatar IS NOT NULL');
     this.#ban = db.prepare('UPDATE accounts SET avatar_banned = ? WHERE id = ?');
+    this.#bar = db.prepare('UPDATE accounts SET public_barred = ? WHERE id = ?');
     this.#delete = db.prepare(`DELETE FROM accounts WHERE id = ? RETURNING ${COLUMNS}`);
     this.#count = db.prepare('SELECT count(*) AS count FROM accounts');
     // The statistics for the operator (admin.ts) and the status page.
@@ -117,8 +124,8 @@ export class AccountStore {
     this.#list = db.prepare(
       'SELECT username, created_at AS createdAt, ' +
         '(SELECT count(*) FROM game_records WHERE account_id = accounts.id) AS games, ' +
-        '(SELECT count(*) FROM match_records WHERE account_id = accounts.id) AS matches ' +
-        'FROM accounts ORDER BY id',
+        '(SELECT count(*) FROM match_records WHERE account_id = accounts.id) AS matches, ' +
+        'public_barred AS barred FROM accounts ORDER BY id',
     );
   }
 
@@ -198,6 +205,10 @@ export class AccountStore {
     this.#ban.run(banned ? 1 : 0, id);
   }
 
+  setPublicBarred(id: number, barred: boolean): void {
+    this.#bar.run(barred ? 1 : 0, id);
+  }
+
   // Deletes the account and, through the foreign keys, everything that belongs to it. Returns
   // the account as it was, so that its avatar can go too.
   delete(id: number): Account | undefined {
@@ -245,7 +256,10 @@ export class AccountStore {
 
   // Every account, oldest first, as the operator's statistics list them.
   list(): AccountListing[] {
-    return this.#list.all() as unknown as AccountListing[];
+    return (this.#list.all() as unknown as (Omit<AccountListing, 'barred'> & { barred: number })[]).map((row) => ({
+      ...row,
+      barred: row.barred === 1,
+    }));
   }
 
   #since(days: number): string {

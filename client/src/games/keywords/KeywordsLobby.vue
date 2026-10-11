@@ -21,6 +21,7 @@ import ShareTools from '../../core/components/ShareTools.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { fields, loadFields } from '../../core/fields';
+import { mayManage } from '../../core/manage';
 import { act } from '../../core/socket';
 import RoleBanner from './RoleBanner.vue';
 import SettingsForm from './SettingsForm.vue';
@@ -110,7 +111,7 @@ watch(isChair, (chair) => chair && loadFields(), { immediate: true });
 const problems = computed(() => data.value.startProblems);
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
-const manageable = (player: PlayerView) => isChair.value && !isMe(player);
+const manageable = (player: PlayerView) => mayManage(props.room, player);
 </script>
 
 <template>
@@ -119,7 +120,10 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
       <EmoteButton />
     </RoleBanner>
     <header class="lobby-head">
-      <p class="kicker">{{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}</p>
+      <p class="kicker">
+        {{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}
+        <span v-if="room.public" class="public">{{ t('room.public') }}</span>
+      </p>
       <ShareTools :code="room.code" />
     </header>
 
@@ -263,7 +267,7 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
       </section>
     </div>
 
-    <PlayerMenu :player="managing" @close="managing = null" />
+    <PlayerMenu :player="managing" :room="room" @close="managing = null" />
   </section>
 </template>
 
@@ -282,6 +286,20 @@ const manageable = (player: PlayerView) => isChair.value && !isMe(player);
   font-size: var(--text-xl);
   font-weight: var(--weight-display);
   font-synthesis: none;
+}
+
+.public {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1.6;
+  vertical-align: middle;
 }
 
 .sections {

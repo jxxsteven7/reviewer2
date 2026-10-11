@@ -14,13 +14,15 @@ import { storedLanguage } from '../i18n';
 import CreateRoom from './CreateRoom.vue';
 import JoinRoom from './JoinRoom.vue';
 import LanguageGate from './LanguageGate.vue';
+import PublicRooms from './PublicRooms.vue';
 
 // The home page: the tagline, the first game on a big sticker with the games to come below it,
-// the way into a room, and footnotes, which name the author, offer a way to buy them a cola, the
-// way to send them feedback and, folded, the acknowledgments. On a wide screen the games stand on
-// the right, beside the rest. The WeChat reward code is bundled with the page, as is everything it
-// shows, and kept as the author gave it but for its metadata: WeChat reads it when a player
-// presses and holds it, which a smaller or recompressed copy could spoil.
+// the ways into a room, by its number or from the list of public rooms, and footnotes, which name
+// the author, offer a way to buy them a cola, the way to send them feedback and, folded, the
+// acknowledgments. On a wide screen the games stand on the right, beside the rest. The WeChat
+// reward code is bundled with the page, as is everything it shows, and kept as the author gave it
+// but for its metadata: WeChat reads it when a player presses and holds it, which a smaller or
+// recompressed copy could spoil.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const chosen = ref(storedLanguage() !== null);
@@ -61,8 +63,9 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         </ol>
       </section>
 
-      <section class="join">
+      <section class="ways">
         <JoinRoom />
+        <PublicRooms />
       </section>
     </main>
 
@@ -215,6 +218,14 @@ ol {
   font-weight: var(--weight-bold);
 }
 
+/* The ways into a room. Not named "join": a scoped rule reaches a child's root element, and the
+   form of JoinRoom is one. */
+.ways {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
 .footnotes {
   display: flex;
   flex-wrap: wrap;
@@ -279,7 +290,7 @@ ol {
     grid-template-areas:
       'tagline contents'
       'intro contents'
-      'join contents';
+      'ways contents';
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
     grid-template-rows: auto auto 1fr;
     gap: var(--space-5) var(--space-7);
@@ -299,8 +310,8 @@ ol {
     grid-area: contents;
   }
 
-  .join {
-    grid-area: join;
+  .ways {
+    grid-area: ways;
   }
 }
 </style>

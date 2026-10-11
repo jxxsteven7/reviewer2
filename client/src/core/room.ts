@@ -125,8 +125,12 @@ async function ask(newcomer?: Newcomer): Promise<Ack> {
       if (!newcomer) reconnect();
       break;
     default:
-      // A newcomer whose name was refused stays on the name form, which shows the reason.
-      if (!newcomer) Object.assign(entry, { status: 'failed', error: reply.error });
+      // A newcomer whose name was refused stays on the name form, which shows the reason; one
+      // whom the room, public by now, sends to log in leaves it for the notice, which has the
+      // way to the account page and back.
+      if (!newcomer || reply.error === 'account_required') {
+        Object.assign(entry, { status: 'failed', error: reply.error });
+      }
   }
   return reply;
 }
