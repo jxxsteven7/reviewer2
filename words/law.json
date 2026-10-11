@@ -1396,6 +1396,23 @@
       "id": "embassy",
       "zh": "大使馆",
       "en": "Embassy"
+    },
+    {
+      "id": "consulate",
+      "zh": "领事馆",
+      "en": "Consulate",
+      "forms": { "en": ["consular", "consul"] }
+    },
+    {
+      "id": "diplomat",
+      "zh": "外交官",
+      "en": "Diplomat",
+      "forms": { "en": ["diplomatic"] }
+    },
+    {
+      "id": "high-seas",
+      "zh": "公海",
+      "en": "High seas"
     }
   ]
 }
