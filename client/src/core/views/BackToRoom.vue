@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatCode, type SeatedRoom } from '@reviewer2/shared';
+import { formatCode, type RoomView, type SeatedRoom } from '@reviewer2/shared';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
@@ -8,6 +8,10 @@ import { connect, send, socket } from '../socket';
 // The rooms where this browser, or its account on any device, still has a seat, each with the way
 // back (meta:seats). They are asked for once the page is connected and again after every
 // reconnect, since a seat may have gone meanwhile. Nobody is taken back without asking.
+//
+// A connection that came from a room's page is still in that room, and hears of it: a snapshot
+// says whether a game is on, and when the room closes or the player is removed, which the server
+// says without naming the room, the seats are asked for again.
 const { t } = useI18n();
 const seats = ref<SeatedRoom[]>([]);
 
@@ -17,12 +21,23 @@ async function load() {
 }
 
 const ask = () => void load();
+const follow = (view: RoomView) => {
+  seats.value = seats.value.map((seat) =>
+    seat.code === view.code ? { ...seat, playing: view.phase !== 'lobby' } : seat,
+  );
+};
 onMounted(() => {
   socket.on('connect', ask);
+  socket.on('room:closed', ask);
+  socket.on('room:state', follow);
   if (socket.connected) ask();
   else connect();
 });
-onBeforeUnmount(() => socket.off('connect', ask));
+onBeforeUnmount(() => {
+  socket.off('connect', ask);
+  socket.off('room:closed', ask);
+  socket.off('room:state', follow);
+});
 </script>
 
 <template>
