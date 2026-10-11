@@ -101,5 +101,9 @@
   --page: 64rem;
   --page-wide: 80rem;
 
+  /* The height of the banner that says a page is reconnecting, which a game's clock sticks under
+     and the short messages make room for. */
+  --banner-height: 2.5rem;
+
   --motion: 160ms;
 }

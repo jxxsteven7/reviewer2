@@ -115,10 +115,10 @@ test('an empty PI seat can be taken over, and its new PI sees the key and stays 
 });
 
 // Whether the page is a phone's, where the groups and the clue log are sheets that open from the
-// bar at the bottom of the game (KeywordsGame.vue).
+// bar under the board (KeywordsGame.vue).
 const isPhone = (page: Page) => (page.viewportSize()?.width ?? 1280) < 1024;
 
-test('on a phone, the groups and the clue log open as sheets from the bar at the bottom', async ({ browser }) => {
+test('on a phone, the groups and the clue log open as sheets from the bar under the board', async ({ browser }) => {
   const table = await seatTable(browser, 'en');
   test.skip(!isPhone(table.spectator), 'on a wide screen they stand beside the board');
   const text = TEXT.en;

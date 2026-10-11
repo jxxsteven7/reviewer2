@@ -10,6 +10,7 @@ import {
   type Ack,
   type ClosedReason,
   type EmoteEvent,
+  type SeatedRoom,
   type Session,
 } from '@reviewer2/shared';
 import { HANDSHAKE, ROOM_MESSAGES, type RoomMessage } from '@reviewer2/shared/schemas';
@@ -96,6 +97,8 @@ export const DEFAULT_SOCKET_LIMITS: Readonly<SocketLimits> = Object.freeze({
 
 // The longest user agent that is kept with a bug report. Real ones are a few hundred characters.
 const MAX_USER_AGENT = 512;
+// The most rooms that meta:seats names. A player is in one room at a time, now and then two.
+const MAX_SEATED = 5;
 
 interface Connection {
   key: string;
@@ -421,16 +424,21 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // someone else in the room has it. Only a guest's seat is adopted, and only while the account has
   // no seat of its own here. Returns the member, or undefined when there was nothing to adopt.
   function adoptGuest(room: Room, conn: Connection): Member | undefined {
-    if (!accounts || !conn.account || conn.guestKey === conn.key) return undefined;
-    const guest = room.memberByKey(conn.guestKey);
-    if (!guest || guest.account) return undefined;
-    // An account the chair removed, or one that may not be in a public room, gets no seat this
-    // way either; room:join tells it why.
-    if (admission(room, conn)) return undefined;
-    const account = accounts.store.byId(conn.account.id);
-    if (!account) return undefined;
+    const guest = guestSeat(room, conn);
+    const account = guest && conn.account ? accounts?.store.byId(conn.account.id) : undefined;
+    if (!guest || !account) return undefined;
     room.adopt(guest.id, conn.key, account.username, { id: account.id, avatar: avatarUrl(account) });
     return guest;
+  }
+
+  // The seat that the browser of a logged-in connection took as a guest, if its account may have
+  // it (adoptGuest).
+  function guestSeat(room: Room, conn: Connection): Member | undefined {
+    if (!accounts || !conn.account || conn.guestKey === conn.key) return undefined;
+    const guest = room.memberByKey(conn.guestKey);
+    // An account the chair removed, or one that may not be in a public room, gets no seat this
+    // way either; room:join tells it why.
+    return guest && !guest.account && !admission(room, conn) ? guest : undefined;
   }
 
   // Why a connection may not come into a room anew, as a member or as a screen, before anything
@@ -646,6 +654,25 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
     on(handlers, 'meta:rooms', () => ok({ rooms: rooms.listed() }));
+
+    // The rooms where the connection still has a seat, the newest first, for the home page to
+    // offer the way back (docs/architecture.md): by its key, which is its account's on every
+    // device, or by the seat that its browser took as a guest before logging in. It says nothing
+    // about anyone else, and looks up no code, so it doesn't count against the codes an address
+    // may try.
+    on(handlers, 'meta:seats', () => {
+      const seated = rooms
+        .all()
+        .reverse()
+        .filter((room) => room.memberByKey(conn.key) ?? guestSeat(room, conn))
+        .slice(0, MAX_SEATED);
+      const seats: SeatedRoom[] = seated.map((room) => ({
+        code: room.code,
+        game: room.game.id,
+        playing: room.phase !== 'lobby',
+      }));
+      return ok({ seats });
+    });
 
     // Feedback for the author, which the status page shows. What is kept is what the player wrote
     // and what the page sent along, and, with a bug, the browser's user agent; nothing that says

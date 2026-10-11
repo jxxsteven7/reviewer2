@@ -7,8 +7,9 @@ import ClockBar from './ClockBar.vue';
 // Whose turn it is, in which phase, with the current clue, how much time the phase has left and
 // how many cards each group still has to find, on one sticker above the board. The phase is set
 // in the display fonts, in the current group's color. Under the free guess rule, a clue's number
-// sets no limit, so there is none to show.
-const props = defineProps<{ game: KeywordsView; guessRule: GuessRule }>();
+// sets no limit, so there is none to show. The game page shows the clock apart, under the strip,
+// where it can stay at the top of the screen (KeywordsGame).
+const props = defineProps<{ game: KeywordsView; guessRule: GuessRule; clockApart?: boolean }>();
 const { t } = useI18n();
 
 const group = computed(() => t(`lobby.group.${props.game.team}`));
@@ -33,7 +34,7 @@ const count = computed(() => {
         {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
       </span>
     </p>
-    <ClockBar v-if="game.clock" :clock="game.clock" />
+    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" />
     <p class="scores">
       <span class="score red num">
         <span class="name">{{ t('lobby.group.red') }}</span>

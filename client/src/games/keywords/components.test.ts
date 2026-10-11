@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import { clearMemory } from '../../core/storage';
 import en from '../../locales/en.json';
+import zh from '../../locales/zh.json';
 import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
@@ -30,16 +31,22 @@ import TurnStrip from './TurnStrip.vue';
 const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>(async () => ({ ok: true })),
 );
-vi.mock('../../core/socket', () => ({
-  send,
-  act: (event: string, payload: object = {}) => send(event, payload),
-  // The page is connected already.
-  onceConnected: (run: () => void) => {
-    run();
-    return () => {};
-  },
-  socket: { connected: true, on: vi.fn(), once: vi.fn() },
-}));
+// The page is connected already.
+const page = vi.hoisted(() => ({ connection: { connected: true, everConnected: true } }));
+vi.mock('../../core/socket', async () => {
+  const { reactive } = await import('vue');
+  page.connection = reactive(page.connection);
+  return {
+    send,
+    act: (event: string, payload: object = {}) => send(event, payload),
+    onceConnected: (run: () => void) => {
+      run();
+      return () => {};
+    },
+    socket: { connected: true, on: vi.fn(), once: vi.fn() },
+    connection: page.connection,
+  };
+});
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
 // The sheet is teleported to the page's body; rendering it in place keeps it inside the wrapper.
@@ -509,7 +516,26 @@ describe('CluePanel', () => {
     expect(wrapper.get('.problem').text()).toBe('That clue has more words than this room allows.');
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
     const chinese = panel({ ...STANDARD, clueLength: 4 }, 'zh');
-    expect(chinese.get('.limit').text()).toBe('Chinese characters in a clue: at most 4.');
+    expect(chinese.get('.limit').text()).toBe(
+      'Chinese characters in a clue: at most 4. It can also be one English word or abbreviation, such as GPU, but not the English for a word on the board.',
+    );
+  });
+
+  // A Chinese room's page is in Chinese, and there a clue is one word whatever the settings.
+  test('tells a Chinese room plainly that a clue has no spaces, and that English may do', async () => {
+    const wrapper = mount(CluePanel, {
+      props: {
+        game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView,
+        settings: { ...STANDARD, clueLength: 4 },
+        language: 'zh',
+      },
+      global: { plugins: [createI18n({ legacy: false, locale: 'zh', messages: { zh } })] },
+    });
+    expect(wrapper.get('.limit').text()).toContain('GPU');
+    await wrapper.get('input').setValue('GPU');
+    expect(wrapper.find('.problem').exists()).toBe(false);
+    await wrapper.get('input').setValue('deep learning');
+    expect(wrapper.get('.problem').text()).toBe('中文房间的提示只能是一个词，不能有空格或标点。');
   });
 });
 
@@ -644,7 +670,8 @@ describe('RulesSheet', () => {
     const section = wrapper.findAll('.rules section').find((found) => found.get('h3').text() === 'Time');
     return section?.findAll('p').map((line) => line.text());
   };
-  const BAR = 'The settings above say how much time each phase has, and the bar under the turn shows what is left.';
+  const BAR =
+    'The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.';
   const CLUE = 'A PI who gives no clue in time loses the turn to the other group.';
   const GUESS = 'Students whose time runs out end their turn, even if they have revealed nothing.';
 
@@ -818,6 +845,23 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.who-row button')).toHaveLength(1);
     expect(wrapper.find('.letter .verdict').text()).toBe('Accept (Oral)');
     expect(wrapper.text()).not.toContain('Only the PIs see the colors of hidden cards.');
-    expect(wrapper.find('.actions').classes()).not.toContain('sticky');
+  });
+
+  // The clock stands apart from the turn strip, where it can stay at the top of the screen, and
+  // under the banner while the page reconnects. A screen reader finds one timer.
+  test('shows one clock, under the turn strip, which moves below the reconnecting banner', async () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game = { ...(data.game as KeywordsView), clock: { left: 42_000, total: 90_000 } };
+    const wrapper = mount(KeywordsGame, { props: { room: { ...view, data: { ...data, game } } }, global: global() });
+    expect(wrapper.findAll('[role="timer"]')).toHaveLength(1);
+    expect(wrapper.find('.strip .clock').exists()).toBe(false);
+    const clock = wrapper.get('.strip + .clock');
+    expect(clock.attributes('aria-label')).toBe('42 seconds left');
+    expect(clock.classes()).not.toContain('below-banner');
+    page.connection.connected = false;
+    await flushPromises();
+    expect(clock.classes()).toContain('below-banner');
+    page.connection.connected = true;
   });
 });

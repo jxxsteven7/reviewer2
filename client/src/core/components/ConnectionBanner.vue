@@ -12,15 +12,21 @@ const { t } = useI18n();
 </template>
 
 <style scoped>
+/* One line of a fixed height, so that a game's clock can stick right under it (KeywordsGame). */
 .banner {
   position: sticky;
   top: 0;
   z-index: 10;
-  padding: var(--space-2) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--banner-height);
+  padding: 0 var(--space-4);
+  overflow: hidden;
   background: var(--ink);
   color: var(--on-ink);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
-  text-align: center;
+  white-space: nowrap;
 }
 </style>
