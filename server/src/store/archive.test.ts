@@ -7,12 +7,14 @@ import { FeedbackStore } from './feedback';
 import { MIGRATIONS } from './migrations';
 
 // The feedback, the acknowledgments and the reports of players are archives
-// (docs/architecture.md#feedback): no row is ever deleted, and what a player sent, whom an
-// acknowledgment is for and whom a report is about are never changed. The only changes are the
-// ones that the players were promised and the operator's notes: a contact is cleared after 90
-// days, the GitHub issue that feedback became is recorded, and a deleted account is unlinked from
-// all three, which its foreign keys do. These tests fail when code that
-// breaks that is added; change them only with a maintainer's agreement.
+// (docs/architecture.md#feedback): what a player sent, whom an acknowledgment is for and whom a
+// report is about are never changed, and no row of the acknowledgments or the reports is ever
+// deleted. The only changes are the ones that the players were promised and the operator's
+// notes: a contact is cleared after 90 days, what became of the feedback is recorded (the GitHub
+// issue, the pull request, closed or not, in the trash or not), and a deleted account is unlinked
+// from all three, which its foreign keys do. The one way a row of feedback goes is the purge of
+// what has been in the trash for 30 days. These tests fail when code that breaks that is added;
+// change them only with a maintainer's agreement.
 
 const SOURCE = join(import.meta.dirname, '..');
 const MIGRATIONS_FILE = join(import.meta.dirname, 'migrations.ts');
@@ -26,10 +28,28 @@ function sources(dir = SOURCE): string[] {
   });
 }
 
+// What was promised, and the operator's notes, each as it is written in store/feedback.ts, where
+// each is written once: a statement is allowed there, with the code around it, and nowhere else,
+// so that no other command can run the purge at a time of its own, or write a time of its own
+// into the trash.
+const FEEDBACK_FILE = join(import.meta.dirname, 'feedback.ts');
 const ALLOWED = [
   'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
   'UPDATE feedback SET issue = ? WHERE id = ?',
+  'UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?',
+  'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL',
+  'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
+  'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND ' +
+    'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
+  'UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL',
+  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' +
+    'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
 ];
+
+// The methods of the stores whose names say that they delete or rewrite, and the ones of the
+// feedback that may: the notes and the trash.
+const CHANGING = /delete|remove|drop|purge|erase|update|edit|set/i;
+const FEEDBACK_METHODS = ['setIssue', 'delete', 'purge'];
 
 // Migration 5 rebuilds the feedback table, once, so that its kinds are no longer fixed by a CHECK
 // (store/migrations.ts). Its statements that drop the old table and put the new one in its place
@@ -109,16 +129,14 @@ const offendingMigrations = (migrations: readonly string[]): string[] =>
   });
 
 describe('the archive', () => {
-  test('has no way to delete or rewrite a row in the stores', () => {
-    for (const store of [FeedbackStore, AcknowledgmentStore]) {
-      const methods = Object.getOwnPropertyNames(store.prototype);
-      expect(methods.filter((name) => /delete|remove|drop|purge|erase|update|edit|set(?!Issue)/i.test(name))).toEqual(
-        [],
-      );
-    }
+  test('has no way to delete or rewrite a row in the stores, but the notes on the feedback and its trash', () => {
+    const changing = (store: object) =>
+      Object.getOwnPropertyNames((store as { prototype: object }).prototype).filter((name) => CHANGING.test(name));
+    expect(changing(FeedbackStore).sort()).toEqual([...FEEDBACK_METHODS].sort());
+    expect(changing(AcknowledgmentStore)).toEqual([]);
   });
 
-  test('is changed by no SQL in the server but what was promised', () => {
+  test('is changed by no SQL in the server but what was promised, each written once, in the store', () => {
     const all = sources().flatMap((file) => strings(readFileSync(file, 'utf8')).map((sql) => ({ file, sql })));
     // The migrations are looked at one by one, below.
     const found = all
@@ -126,11 +144,19 @@ describe('the archive', () => {
       .flatMap(({ file, sql }) => offending(sql).map((statement) => `${file}: ${statement}`));
     expect(found).toEqual([]);
     expect(offendingMigrations(MIGRATIONS)).toEqual([]);
-    // The scan sees the server's SQL, the migrations and the statements written in pieces among it.
+    // The scan sees the server's SQL, the migrations and the statements written in pieces among it,
+    // and each statement allowed is in the store of the feedback, once.
     const seen = all.map(({ sql }) => sql);
-    expect(seen).toEqual(expect.arrayContaining([...MIGRATIONS, ...ALLOWED]));
+    expect(seen).toEqual(expect.arrayContaining([...MIGRATIONS]));
+    for (const statement of ALLOWED) {
+      expect(
+        all.filter(({ sql }) => sql === statement).map(({ file }) => file),
+        statement,
+      ).toEqual([FEEDBACK_FILE]);
+    }
     expect(seen.some((sql) => /^INSERT INTO feedback \(created_at, .* VALUES \(\?(, \?)+\)$/.test(sql))).toBe(true);
     expect(sources()).toContain(MIGRATIONS_FILE);
+    expect(sources()).toContain(FEEDBACK_FILE);
     expect(sources().length).toBeGreaterThan(20);
   });
 
@@ -219,6 +245,11 @@ describe('the archive', () => {
       'DROP TABLE IF EXISTS feedback',
       'DELETE FROM reports WHERE created_at < ?',
       'UPDATE reports SET text = NULL',
+      // The trash, purged without waiting, emptied by hand, or purged with what was adopted.
+      'DELETE FROM feedback WHERE deleted_at IS NOT NULL',
+      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND id = ?',
+      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+      'UPDATE feedback SET deleted_at = ? WHERE id = ?',
       'UPDATE OR IGNORE feedback SET text = ?',
       'ALTER TABLE feedback RENAME TO old_feedback',
       'ALTER TABLE new_feedback RENAME TO feedback',
@@ -232,6 +263,8 @@ describe('the archive', () => {
       "db.exec('ALTER TABLE feedback ADD COLUMN room_id INTEGER REFERENCES rooms (id) ON DELETE SET NULL')",
       "db.prepare('UPDATE feedback SET issue = ? WHERE id = ?')",
       "db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL ' + 'AND created_at < ?')",
+      "db.prepare('DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' + " +
+        "'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)')",
       "db.prepare('UPDATE accounts SET username = ? WHERE id = ?')",
       "db.prepare('DELETE FROM feedback_drafts')",
       "db.prepare('INSERT INTO reports (created_at, reporter_id) VALUES (?, ?)')",

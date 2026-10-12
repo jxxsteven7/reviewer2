@@ -347,7 +347,7 @@ describe('a database in DATA_DIR', () => {
     const reports = sixth.db.prepare('SELECT * FROM reports').all();
     sixth.db.close();
 
-    const migrated = await open(dir);
+    const migrated = await open(dir, MIGRATIONS.slice(0, 8));
     expect(migrated).toMatchObject({ schema: 8, migratedFrom: 6 });
     expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v8.db'));
     const { db } = migrated;
@@ -378,7 +378,7 @@ describe('a database in DATA_DIR', () => {
     const reports = seventh.db.prepare('SELECT * FROM reports').all();
     seventh.db.close();
 
-    const migrated = await open(dir);
+    const migrated = await open(dir, MIGRATIONS.slice(0, 8));
     expect(migrated).toMatchObject({ schema: 8, migratedFrom: 7 });
     expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v8.db'));
     const { db } = migrated;
@@ -407,6 +407,57 @@ describe('a database in DATA_DIR', () => {
     db.exec('DELETE FROM accounts WHERE id = 1');
     expect(db.prepare('SELECT count(*) AS n FROM friendships').get()).toEqual({ n: 0 });
     expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g' }]);
+  });
+
+  test('of the eighth release keeps its feedback, open and out of the trash, when it gets the notes on it', async () => {
+    const eighth = await open(dir, MIGRATIONS.slice(0, 8));
+    eighth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO feedback VALUES (3, '2026-10-01T08:00:00.000Z', 'bug', 'Line one\nLine two', NULL, 'v0.1.5', 'en', 'room', 'UA', NULL, NULL, NULL, 0, NULL);
+      INSERT INTO feedback VALUES (7, '2026-10-02T09:00:00.000Z', 'idea', 'Keep me', 'me@example.com', 'v1', 'zh', 'room', NULL, 'Ann L', 1, 'https://ann.example/', 1, 40);
+      INSERT INTO acknowledgments VALUES (NULL, 'Ann L', 'feedback', 'now', 7, 1);
+    `);
+    const before = eighth.db.prepare('SELECT * FROM feedback ORDER BY id').all();
+    const acknowledgments = eighth.db.prepare('SELECT * FROM acknowledgments').all();
+    eighth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 9));
+    expect(migrated).toMatchObject({ schema: 9, migratedFrom: 8 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v9.db'));
+    const { db } = migrated;
+    // Every row is as it was, with no pull request, not closed and not in the trash.
+    expect(before.map((row) => row.id)).toEqual([3, 7]);
+    expect(db.prepare('SELECT * FROM feedback ORDER BY id').all()).toEqual(
+      before.map((row) => ({ ...row, resolved_pr: null, resolved_at: null, closed_at: null, deleted_at: null })),
+    );
+    expect(db.prepare('SELECT * FROM acknowledgments').all()).toEqual(acknowledgments);
+    expect(
+      db.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'feedback' ORDER BY name").all(),
+    ).toEqual([{ name: 'feedback_account' }, { name: 'feedback_contact_expiry' }, { name: 'feedback_trash' }]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+
+    // The notes take their values, and a pull request has a number from 1.
+    db.exec(
+      "UPDATE feedback SET resolved_pr = 41, resolved_at = 'now', closed_at = 'now', deleted_at = 'now' WHERE id = 3",
+    );
+    expect(
+      db.prepare('SELECT resolved_pr, resolved_at, closed_at, deleted_at FROM feedback WHERE id = 3').get(),
+    ).toEqual({ resolved_pr: 41, resolved_at: 'now', closed_at: 'now', deleted_at: 'now' });
+    expect(() => db.exec('UPDATE feedback SET resolved_pr = 0 WHERE id = 7')).toThrow(/CHECK/);
+    expect(() => db.exec("UPDATE feedback SET resolved_pr = 'x' WHERE id = 7")).toThrow(/cannot store TEXT/);
+    // New feedback has none of them.
+    db.exec(
+      "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'game', 'New', 'v3', 'en', 'home')",
+    );
+    expect(db.prepare('SELECT id, resolved_pr, closed_at, deleted_at FROM feedback WHERE id > 7').all()).toEqual([
+      { id: 8, resolved_pr: null, closed_at: null, deleted_at: null },
+    ]);
+    // The account still goes from its feedback when it is deleted.
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT credit, account_id FROM feedback WHERE id = 7').get()).toEqual({
+      credit: 'Ann L',
+      account_id: null,
+    });
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {

@@ -664,7 +664,7 @@
   "feedback": {
     "open": "Send feedback",
     "title": "Send feedback",
-    "privacy": "Only the author can read your feedback, unless you agree below to make it a GitHub issue. Your contact details are used only to reply to you, and are deleted after 90 days. The feedback itself is kept as the project's archive of suggestions.",
+    "privacy": "Only the author can read your feedback, unless you agree below to make it a GitHub issue. Your contact details are used only to reply to you, and are deleted after 90 days. The feedback itself is kept as the project's archive of suggestions; only what the author discards, such as spam, is deleted 30 days after it is discarded.",
     "kind": "About",
     "kinds": {
       "idea": "A suggestion",

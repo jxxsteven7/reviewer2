@@ -1,10 +1,17 @@
-import { usernameKey } from '@reviewer2/shared';
+import { usernameKey, type FeedbackKind } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
 import { AcknowledgmentStore } from './acknowledgments';
 import { databaseBytes, openDatabase } from './database';
-import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, feedbackLimits, type NewFeedback } from './feedback';
+import {
+  DEFAULT_FEEDBACK_LIMITS,
+  FeedbackStore,
+  feedbackLimits,
+  type Feedback,
+  type FeedbackView,
+  type NewFeedback,
+} from './feedback';
 
 const DAY = 24 * 60 * 60_000;
 const START = Date.UTC(2026, 9, 9, 12);
@@ -44,7 +51,17 @@ describe('the feedback', () => {
     const bug = entry({ kind: 'bug', text: 'Line one\nLine two', userAgent: 'Mozilla/5.0', page: 'room' });
     expect(feedback.add({ ...bug, contact: 'wechat: r2', language: 'zh' })).toBe(2);
     expect(feedback.count()).toBe(2);
-    const alone = { issue: null, username: null, acknowledgmentId: null, nameTakenBy: null };
+    const alone = {
+      issue: null,
+      resolvedPr: null,
+      resolvedAt: null,
+      closedAt: null,
+      deletedAt: null,
+      status: 'new',
+      username: null,
+      acknowledgmentId: null,
+      nameTakenBy: null,
+    };
     expect(feedback.latest(10)).toEqual([
       { id: 2, createdAt: '2026-10-09T12:01:00.000Z', ...bug, contact: 'wechat: r2', language: 'zh', ...alone },
       { id: 1, createdAt: '2026-10-09T12:00:00.000Z', ...entry(), ...alone },
@@ -116,6 +133,11 @@ describe('the feedback', () => {
     expect(feedback.setIssue(5, 42)).toBe(false);
     expect(feedback.byId(2)).toMatchObject({ publicIssue: true, issue: 42, text: 'More fields, please.' });
     expect(() => feedback.setIssue(2, 0)).toThrow(/CHECK constraint/);
+    // The number can be put right, or taken out.
+    expect(feedback.setIssue(2, 43)).toBe(true);
+    expect(feedback.byId(2)).toMatchObject({ issue: 43, status: 'issue' });
+    expect(feedback.setIssue(2, null)).toBe(true);
+    expect(feedback.byId(2)).toMatchObject({ issue: null, status: 'new' });
   });
 
   test('never gets an id that another had, even if a row were deleted by hand', () => {
@@ -163,6 +185,193 @@ describe('the feedback', () => {
     feedback.add(entry({ kind: 'game' }));
     feedback.add(entry({ kind: 'later' as NewFeedback['kind'] }));
     expect(feedback.latest(10).map(({ kind }) => kind)).toEqual(['later', 'game']);
+  });
+});
+
+describe('what became of the feedback', () => {
+  // Feedback adopted by the operator, which thanks its player.
+  const adopt = (id: number) =>
+    new AcknowledgmentStore(db).add({ name: '', kind: 'feedback', feedbackId: id, accountId: null });
+
+  test('is its status, the first of the trail that holds, and the trail stays beside it', () => {
+    const feedback = store();
+    feedback.add(entry({ publicIssue: true }));
+    expect(feedback.byId(1)?.status).toBe('new');
+    expect(feedback.setIssue(1, 42)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ issue: 42, status: 'issue' });
+    now += DAY;
+    expect(feedback.resolve(1, 50)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({
+      issue: 42,
+      resolvedPr: 50,
+      resolvedAt: '2026-10-10T12:00:00.000Z',
+      status: 'resolved',
+    });
+    expect(adopt(1)).toBe(1);
+    expect(feedback.byId(1)).toMatchObject({ acknowledgmentId: 1, resolvedPr: 50, status: 'thanked' });
+    now += DAY;
+    expect(feedback.close(1)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ closedAt: '2026-10-11T12:00:00.000Z', status: 'closed' });
+    // Adopted feedback can't go to the trash; feedback that wasn't can, closed or not.
+    expect(feedback.delete(1)).toBe(false);
+    expect(feedback.byId(1)).toMatchObject({ deletedAt: null, status: 'closed' });
+    feedback.add(entry());
+    now += DAY;
+    expect(feedback.delete(2)).toBe(true);
+    expect(feedback.byId(2)).toMatchObject({ deletedAt: '2026-10-12T12:00:00.000Z', status: 'trash' });
+    // What the player sent is as it was throughout.
+    expect(feedback.byId(1)).toMatchObject({ text: 'More fields, please.', createdAt: '2026-10-09T12:00:00.000Z' });
+    expect(feedback.count()).toBe(2);
+  });
+
+  test('records the pull request, which can be changed or cleared, with the time of the note', () => {
+    const feedback = store();
+    feedback.add(entry());
+    expect(feedback.resolve(1, 50)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ resolvedPr: 50, resolvedAt: '2026-10-09T12:00:00.000Z' });
+    now += 60_000;
+    expect(feedback.resolve(1, 51)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ resolvedPr: 51, resolvedAt: '2026-10-09T12:01:00.000Z' });
+    expect(feedback.resolve(1, null)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ resolvedPr: null, resolvedAt: null, status: 'new' });
+    expect(feedback.resolve(2, 50)).toBe(false);
+    expect(() => feedback.resolve(1, 0)).toThrow(/CHECK constraint/);
+    // With no issue, or in the trash, all the same.
+    expect(feedback.delete(1)).toBe(true);
+    expect(feedback.resolve(1, 52)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ resolvedPr: 52, status: 'trash' });
+  });
+
+  test('is closed once and reopened once, and neither while it is in the trash', () => {
+    const feedback = store();
+    feedback.add(entry());
+    expect(feedback.reopen(1)).toBe(false);
+    expect(feedback.close(1)).toBe(true);
+    const closedAt = feedback.byId(1)?.closedAt;
+    now += DAY;
+    // Closing again doesn't move the time.
+    expect(feedback.close(1)).toBe(false);
+    expect(feedback.byId(1)).toMatchObject({ closedAt, status: 'closed' });
+    expect(feedback.reopen(1)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ closedAt: null, status: 'new' });
+    expect(feedback.close(1)).toBe(true);
+    expect(feedback.delete(1)).toBe(true);
+    expect(feedback.reopen(1)).toBe(false);
+    expect(feedback.close(1)).toBe(false);
+    expect(feedback.byId(1)).toMatchObject({ status: 'trash' });
+    expect(feedback.close(2)).toBe(false);
+    expect(feedback.reopen(2)).toBe(false);
+  });
+
+  test('goes to the trash once, unless it was adopted, and comes back as it was', () => {
+    const feedback = store();
+    feedback.add(entry({ publicIssue: true }));
+    feedback.add(entry({ credit: 'Ann' }));
+    feedback.setIssue(1, 42);
+    feedback.close(1);
+    expect(feedback.restore(1)).toBe(false);
+    expect(feedback.delete(1)).toBe(true);
+    expect(feedback.delete(1)).toBe(false);
+    expect(feedback.byId(1)).toMatchObject({ issue: 42, status: 'trash' });
+    // Back out of the trash, it is closed, as it was.
+    expect(feedback.restore(1)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ deletedAt: null, issue: 42, status: 'closed' });
+    expect(feedback.restore(1)).toBe(false);
+    // The acknowledgment points at the feedback it came from, so that feedback stays.
+    expect(adopt(2)).toBe(1);
+    expect(feedback.delete(2)).toBe(false);
+    expect(feedback.byId(2)).toMatchObject({ deletedAt: null, status: 'thanked' });
+    expect(feedback.delete(3)).toBe(false);
+    expect(feedback.restore(3)).toBe(false);
+  });
+
+  test('is purged 30 days after it went to the trash, and nothing else ever is', () => {
+    const feedback = store();
+    for (let i = 0; i < 4; i += 1) feedback.add(entry({ text: `Number ${i + 1}` }));
+    feedback.delete(1);
+    feedback.close(2);
+    now += DAY;
+    feedback.delete(3);
+    expect(feedback.daysLeft(feedback.byId(1) as Feedback)).toBe(29);
+    expect(feedback.daysLeft(feedback.byId(3) as Feedback)).toBe(30);
+    expect(feedback.daysLeft(feedback.byId(2) as Feedback)).toBeNull();
+
+    now = START + 30 * DAY - 1;
+    expect(feedback.daysLeft(feedback.byId(1) as Feedback)).toBe(1);
+    expect(feedback.purge()).toBe(0);
+    now = START + 30 * DAY + 1;
+    expect(feedback.daysLeft(feedback.byId(1) as Feedback)).toBe(0);
+    expect(feedback.purge()).toBe(1);
+    expect(feedback.byId(1)).toBeUndefined();
+    expect(feedback.latest(10).map(({ id, status }) => [id, status])).toEqual([
+      [4, 'new'],
+      [3, 'trash'],
+      [2, 'closed'],
+    ]);
+    expect(feedback.count()).toBe(3);
+    // Restored in time, it stays; purging twice purges nothing more.
+    expect(feedback.restore(3)).toBe(true);
+    expect(feedback.purge()).toBe(0);
+    now += DAY;
+    expect(feedback.purge()).toBe(0);
+    expect(feedback.count()).toBe(3);
+    // An id that was purged is never given out again.
+    expect(feedback.add(entry())).toBe(5);
+    expect(DEFAULT_FEEDBACK_LIMITS.trashMs).toBe(30 * DAY);
+  });
+
+  test('is never purged while an acknowledgment points at it, even if it was adopted in the trash', () => {
+    const feedback = store();
+    feedback.add(entry());
+    feedback.add(entry());
+    feedback.delete(1);
+    feedback.delete(2);
+    // admin.ts refuses to adopt feedback in the trash, but it reads before it writes, so feedback
+    // deleted in between would be adopted all the same.
+    expect(adopt(1)).toBe(1);
+    now = START + 31 * DAY;
+    expect(feedback.purge()).toBe(1);
+    expect(feedback.byId(2)).toBeUndefined();
+    expect(feedback.byId(1)).toMatchObject({ status: 'trash', acknowledgmentId: 1 });
+    expect(feedback.daysLeft(feedback.byId(1) as Feedback)).toBe(0);
+    expect(feedback.purge()).toBe(0);
+    // Restored, it is thanked, as it was.
+    expect(feedback.restore(1)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ status: 'thanked', deletedAt: null });
+    expect(feedback.count()).toBe(1);
+  });
+
+  test('is read by view, and counted by status and by kind within a view', () => {
+    const feedback = store();
+    for (const kind of ['idea', 'bug', 'idea', 'bug', 'idea', 'words'] as const) {
+      feedback.add(entry({ kind, publicIssue: true }));
+    }
+    feedback.setIssue(2, 42);
+    feedback.resolve(3, 50);
+    adopt(4);
+    feedback.close(5);
+    feedback.delete(6);
+    const ids = (view: FeedbackView, kind: FeedbackKind | null = null) =>
+      feedback.latest(10, undefined, kind, view).map(({ id }) => id);
+    expect(ids('all')).toEqual([6, 5, 4, 3, 2, 1]);
+    expect(ids('open')).toEqual([4, 3, 2, 1]);
+    expect(ids('new')).toEqual([1]);
+    expect(ids('issue')).toEqual([2]);
+    expect(ids('resolved')).toEqual([3]);
+    expect(ids('thanked')).toEqual([4]);
+    expect(ids('closed')).toEqual([5]);
+    expect(ids('trash')).toEqual([6]);
+    expect(ids('open', 'idea')).toEqual([3, 1]);
+    expect(ids('open', 'bug')).toEqual([4, 2]);
+    expect(ids('trash', 'idea')).toEqual([]);
+    expect(feedback.latest(1, 3, 'idea', 'open').map(({ id }) => id)).toEqual([1]);
+    expect(feedback.statuses()).toEqual({ new: 1, issue: 1, resolved: 1, thanked: 1, closed: 1, trash: 1 });
+    expect(feedback.statuses('idea')).toEqual({ new: 1, issue: 0, resolved: 1, thanked: 0, closed: 1, trash: 0 });
+    expect(feedback.statuses('game')).toEqual({ new: 0, issue: 0, resolved: 0, thanked: 0, closed: 0, trash: 0 });
+    expect(feedback.kinds()).toEqual({ idea: 3, bug: 2, words: 1 });
+    expect(feedback.kinds('open')).toEqual({ idea: 2, bug: 2 });
+    expect(feedback.kinds('trash')).toEqual({ words: 1 });
+    expect(feedback.kinds('new')).toEqual({ idea: 1 });
   });
 });
 

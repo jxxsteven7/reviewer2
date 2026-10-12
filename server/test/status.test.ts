@@ -1,5 +1,5 @@
 import { createServer, request, type IncomingHttpHeaders, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { createConnection, type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
 import { History } from '../src/stats';
 import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
@@ -274,15 +274,17 @@ describe('the status server', () => {
       [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
 
     const status = await get(base, '/');
-    expect(status.body).toContain(`<p>${total} in all &middot; <a href="/reports">Read them</a></p>`);
+    expect(status.body).toContain(`<p class="note">${total} in all &middot; <a href="/reports">Read them</a></p>`);
     const latest = await get(base, '/reports');
     expect(latest.status).toBe(200);
+    expect(latest.headers['cache-control']).toBe('no-store');
+    expect(latest.headers['content-security-policy']).toContain("frame-ancestors 'none'");
     expect(latest.body).toContain('<title>Reviewer 2 reports</title>');
     expect(latest.body).toContain('admin.cjs accounts bar &lt;username&gt;');
     expect(latest.body).toContain(
       '<p class="text">Bob (account Bob &middot; <strong>barred from public rooms</strong>)</p>',
     );
-    expect(latest.body).toContain('<p>Reported by Ann</p>');
+    expect(latest.body).toContain('<p class="meta">Reported by Ann</p>');
     expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
     expect(latest.body).toContain('<p class="more"><a href="/reports?before=3">Older</a></p>');
     expect(shown((await get(base, '/reports?before=3')).body)).toEqual([2, 1]);
@@ -310,16 +312,20 @@ describe('the status server', () => {
     const shown = (body: string) =>
       [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
 
-    // The status page has the count and the link, and none of the feedback.
+    // The status page has the counts and the link, and none of the feedback.
     const status = await get(base, '/');
-    expect(status.body).toContain(`<p>${total} in all &middot; <a href="/feedback">Read it</a></p>`);
+    expect(status.body).toContain(`<p class="note">${total} in all &middot; <a href="/feedback">Read it</a></p>`);
+    expect(status.body).toContain(`<a class="badge" href="/feedback">Open <b>${total}</b></a>`);
+    expect(status.body).toContain(`<a class="badge new" href="/feedback?status=new">New <b>${total}</b></a>`);
     expect(shown(status.body)).toEqual([]);
 
     const latest = await get(base, '/feedback');
     expect(latest.status).toBe(200);
     expect(latest.headers['content-type']).toBe('text/html; charset=utf-8');
     expect(latest.headers['cache-control']).toBe('no-store');
-    expect(latest.headers['content-security-policy']).toMatch(/^default-src 'none'; style-src 'unsafe-inline';/);
+    expect(latest.headers['content-security-policy']).toBe(
+      "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    );
     expect(latest.body).toContain(`${total} in all, newest first`);
     expect(latest.body).not.toContain('http-equiv="refresh"');
     expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
@@ -360,9 +366,9 @@ describe('the status server', () => {
     const games = (await get(base, '/feedback?kind=game')).body;
     expect(shown(games)).toEqual([5, 3, 1]);
     expect(games).toContain('5 in all, newest first');
-    expect(games).toContain('<strong>New game (3)</strong>');
-    expect(games).toContain('<a href="/feedback?kind=idea">Idea (1)</a>');
-    expect(games).toContain('<a href="/feedback?kind=words">Word lists (0)</a>');
+    expect(games).toContain('<strong>New game <b>3</b></strong>');
+    expect(games).toContain('<a href="/feedback?kind=idea">Idea <b>1</b></a>');
+    expect(games).toContain('<a href="/feedback?kind=words">Word lists <b>0</b></a>');
     expect(shown((await get(base, '/feedback?kind=game&before=5')).body)).toEqual([3, 1]);
     expect(shown((await get(base, '/feedback?kind=words')).body)).toEqual([]);
     // A kind that the server doesn't know is taken for none.
@@ -371,27 +377,136 @@ describe('the status server', () => {
     }
   });
 
-  test('answers only to the names of this machine, to keep a page elsewhere from reading it', async () => {
+  test('shows the open feedback unless asked for a status, with the trail of each and the trash with its days left', async () => {
+    server = await startServer();
+    for (let i = 1; i <= 6; i += 1) {
+      server.feedback.add({
+        kind: i % 2 === 0 ? 'bug' : 'idea',
+        text: `Number ${i}`,
+        contact: null,
+        credit: i === 4 ? 'Ann' : null,
+        link: null,
+        accountId: null,
+        publicIssue: true,
+        version: 'test',
+        language: 'en',
+        page: 'home',
+        userAgent: null,
+      });
+    }
+    server.feedback.setIssue(2, 42);
+    server.feedback.resolve(3, 50);
+    server.accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: 4, accountId: null });
+    server.feedback.close(5);
+    server.feedback.delete(6);
+    await startStatus();
+    const shown = (body: string) =>
+      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
+
+    const open = (await get(base, '/feedback')).body;
+    expect(shown(open)).toEqual([4, 3, 2, 1]);
+    expect(open).toContain('<strong>Open <b>4</b></strong>');
+    expect(open).toContain('<a href="/feedback?status=closed">Closed <b>1</b></a>');
+    expect(open).toContain('<a href="/feedback?status=trash">Trash <b>1</b></a>');
+    expect(open).toContain('<strong>All <b>4</b></strong><a href="/feedback?kind=idea">Idea <b>2</b></a>');
+    expect(open).toContain('<span class="badge issue">Issue #42</span>');
+    expect(open).toContain('<p class="trail">resolved by PR #50</p>');
+    expect(open).toContain('<p class="trail">thanked as acknowledgment #1</p>');
+    for (const [query, ids] of [
+      ['?status=new', [1]],
+      ['?status=issue', [2]],
+      ['?status=resolved', [3]],
+      ['?status=thanked', [4]],
+      ['?status=closed', [5]],
+      ['?status=trash', [6]],
+      ['?status=trash&kind=idea', []],
+      ['?status=open&kind=bug', [4, 2]],
+      ['?status=open&before=3', [2, 1]],
+      // A status that isn't one is taken for none.
+      ['?status=all', [4, 3, 2, 1]],
+      ['?status=', [4, 3, 2, 1]],
+      ['?status=Trash', [4, 3, 2, 1]],
+    ] as const) {
+      expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual([...ids]);
+    }
+    const trash = (await get(base, '/feedback?status=trash')).body;
+    expect(trash).toContain('<span class="badge trash">Trash</span>');
+    expect(trash).toMatch(/<p class="trail">in the trash since \d{4}-\d{2}-\d{2}, 30 days left<\/p>/);
+    expect(trash).toContain('<a href="/feedback?status=closed">Closed <b>1</b></a>');
+    expect(trash).toContain('<strong>All <b>1</b></strong>');
+    const status = (await get(base, '/')).body;
+    expect(status).toContain('<a class="badge" href="/feedback">Open <b>4</b></a>');
+    expect(status).toContain('<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>1</b></a>');
+    expect(status).toContain('<p class="note">6 in all &middot; <a href="/feedback">Read it</a></p>');
+  });
+
+  test('answers only to the names of this machine, on any port, to keep a page elsewhere from reading it', async () => {
     server = await startServer();
     await startStatus();
     const port = new URL(base).port;
-    expect((await get(base, '/', { host: `localhost:${port}` })).status).toBe(200);
-    expect((await get(base, '/status.json', { host: 'localhost' })).status).toBe(200);
-    for (const host of [`attacker.example:${port}`, 'attacker.example', `127.0.0.1.attacker.example:${port}`]) {
+    // The port may be another than the one listened on, as through a tunnel, or none.
+    for (const host of [
+      `localhost:${port}`,
+      `127.0.0.1:${port}`,
+      `[::1]:${port}`,
+      `LocalHost:${port}`,
+      `localhost:${Number(port) + 1}`,
+      'localhost:8080',
+      'localhost',
+      '127.0.0.1',
+      '[::1]',
+    ]) {
       const response = await get(base, '/status.json', { host });
-      expect(response.status, host).toBe(404);
-      expect(response.body).toBe('Not found\n');
+      expect(response.status, host).toBe(200);
+      expect(response.body).toContain('"players"');
     }
+    // A name that isn't this machine's, with or without the port, or one of them with more on it.
+    for (const host of [
+      `attacker.example:${port}`,
+      'attacker.example',
+      `127.0.0.1.attacker.example:${port}`,
+      `localhost.attacker.example:${port}`,
+      `localhost.:${port}`,
+      `localhost:${port}.`,
+      `localhost:${port}x`,
+      `127.0.0.1:${port}:1`,
+      `127.0.0.2:${port}`,
+      `::1:${port}`,
+    ]) {
+      for (const path of ['/', '/feedback', '/reports', '/status.json']) {
+        const response = await get(base, path, { host });
+        expect(response.status, `${host} ${path}`).toBe(421);
+        expect(response.body, `${host} ${path}`).toBe('');
+        expect(response.headers['content-type']).toBeUndefined();
+        expect(response.headers['cache-control']).toBe('no-store');
+      }
+    }
+    // No Host at all, which HTTP/1.0 allows.
+    const raw = await new Promise<string>((resolve, reject) => {
+      const socket = createConnection(Number(port), '127.0.0.1');
+      let data = '';
+      socket.on('data', (chunk: Buffer) => (data += chunk.toString()));
+      socket.on('end', () => resolve(data));
+      socket.on('error', reject);
+      socket.end('GET /status.json HTTP/1.0\r\n\r\n');
+    });
+    expect(raw).toMatch(/^HTTP\/1\.1 421 /);
+    expect(raw).not.toContain('"players"');
   });
 
   test('is read-only, and knows no other path', async () => {
     server = await startServer();
     await startStatus();
-    const post = await get(base, '/status.json', {}, 'POST');
-    expect(post.status).toBe(405);
-    expect(post.headers.allow).toBe('GET, HEAD');
+    for (const path of ['/status.json', '/feedback', '/feedback?status=trash', '/reports', '/']) {
+      const post = await get(base, path, { 'content-type': 'application/x-www-form-urlencoded' }, 'POST');
+      expect(post.status, path).toBe(405);
+      expect(post.headers.allow).toBe('GET, HEAD');
+    }
     for (const path of ['/status', '/status.json/', '/feedback/', '/index.html', '/healthz', '//']) {
       expect((await get(base, path)).status, path).toBe(404);
+    }
+    for (const path of ['/', '/feedback', '/reports']) {
+      expect((await get(base, path)).body, path).not.toMatch(/<form|<input|<button|<script/);
     }
   });
 

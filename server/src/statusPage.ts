@@ -1,60 +1,95 @@
 import { FEEDBACK_KINDS, formatCode, type FeedbackKind } from '@reviewer2/shared';
 import { UNKNOWN_COUNTRY } from './core/clientIp';
 import { megabytes, type Sample, type Stats } from './stats';
-import type { Feedback, Report } from './store/feedback';
+import { daysLeft, FEEDBACK_STATUSES, type Feedback, type FeedbackStatus, type Report } from './store/feedback';
 
 // The status page (status.ts) as one HTML document, built on the server from the numbers, the
 // page of the feedback that players sent, and the page of the reports they sent of each other.
-// None has a script: the status page reloads itself every 5 seconds, and its chart is inline SVG;
-// the other two don't reload, so that the operator can read a long bug report or copy a contact
-// in peace. All are for the operator alone, so their text is in English only and not in the
-// locale files.
+// None has a script, a form or anything loaded from elsewhere: the style is inline, the chart is
+// inline SVG and the type is the system's. The status page reloads itself every 5 seconds; the
+// other two don't, so that the operator can read a long bug report or copy a contact in peace.
+// All are for the operator alone, so their text is in English only and not in the locale files.
+//
+// The look is the game's, quieter (docs/design.md): its ink, paper and colors, panels with an ink
+// outline and a hard shadow, and round corners, on the quiet paper rather than the yellow table.
+// Text reads at 4.5:1 or more on whatever it is on, and what can be focused shows it.
 
 const STYLE = `
 :root {
-  color-scheme: light dark;
-  --bg: #f7f6f2; --fg: #1f1e1b; --muted: #67655e; --line: #dedcd5; --tile: #ffffff;
-  --players: #2a64c2; --rooms: #b4541f;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #171716; --fg: #ebe9e3; --muted: #a09e97; --line: #34332f; --tile: #21201e;
-    --players: #78a8f2; --rooms: #ec9360;
-  }
+  --bg: #f4efe6; --paper: #ffffff; --ink: #1a1a2e; --ink-2: #4b4b60; --line: #bdb6a8;
+  --yellow: #ffd23f; --blue: #2d5bff; --blue-tint: #d5dfff; --blue-deep: #1f44d6;
+  --red: #f2543d; --red-tint: #ffd6cf; --neutral: #bdb6a8; --mint: #5fd3a0; --focus: #2d5bff;
+  --outline: 2px; --radius: 12px; --shadow: 3px 3px 0 var(--ink);
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.4 system-ui, sans-serif; }
-main { max-width: 720px; margin: 0 auto; padding: 16px; }
-h1 { font-size: 1.3rem; margin: 0 0 4px; }
-h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 24px 0 8px; }
-p { margin: 0; color: var(--muted); }
-dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 0; }
-dl div { background: var(--tile); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-dt { color: var(--muted); font-size: 0.85rem; }
-dd { margin: 2px 0 0; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
-dd small { display: block; font-size: 0.8rem; color: var(--muted); }
-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+html { color-scheme: light; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 500 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+}
+main { max-width: 64rem; margin: 0 auto; padding: 16px 16px 48px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; margin: 8px 0 4px; }
+h1 { font-size: 1.5rem; font-weight: 800; margin: 0; }
+nav a { font-weight: 700; margin-right: 14px; }
+nav [aria-current] { text-decoration-thickness: 3px; text-underline-offset: 3px; }
+.sub { color: var(--ink-2); margin: 0 0 20px; }
+section, article {
+  background: var(--paper); border: var(--outline) solid var(--ink); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 16px 16px; margin: 0 0 20px;
+}
+h2 { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin: 0 0 10px; }
+p { margin: 0; }
+a { color: var(--blue-deep); }
+a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 0; }
+dl div { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+dt { color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
+dd { margin: 2px 0 0; font-size: 1.6rem; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+dd small { display: block; font-size: 0.8rem; font-weight: 500; color: var(--ink-2); }
+table { width: 100%; border-collapse: collapse; margin-top: 12px; font-variant-numeric: tabular-nums; }
 th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
-th { font-weight: normal; color: var(--muted); font-size: 0.85rem; }
+th { font-weight: 700; color: var(--ink-2); font-size: 0.85rem; }
 .number { text-align: right; }
-.chart { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; font-size: 0.8rem; color: var(--muted); }
-.chart svg { width: 100%; height: 160px; background: var(--tile); border: 1px solid var(--line); border-radius: 4px; }
-.y { display: flex; flex-direction: column; justify-content: space-between; text-align: right; }
+.note { color: var(--ink-2); margin-top: 8px; }
+.chart { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; font-size: 0.8rem; color: var(--ink-2); }
+.chart svg { width: 100%; height: 160px; background: var(--bg); border-radius: 8px; }
+.y { display: flex; flex-direction: column; justify-content: space-between; text-align: right; font-weight: 700; }
 .x { grid-column: 2; display: flex; justify-content: space-between; }
-polyline { fill: none; stroke-width: 2; stroke-linejoin: round; }
-.players { stroke: var(--players); background: var(--players); }
-.rooms { stroke: var(--rooms); background: var(--rooms); }
-.key { display: inline-block; width: 12px; height: 3px; margin: 0 6px 3px 0; vertical-align: middle; }
-.legend { margin-top: 8px; }
+polyline { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.players { stroke: var(--blue); background: var(--blue); }
+.rooms { stroke: var(--red); background: var(--red); }
+.key { display: inline-block; width: 14px; height: 4px; margin: 0 6px 3px 0; border-radius: 2px; vertical-align: middle; }
+.legend { margin-top: 8px; font-weight: 700; }
 .legend span + span { margin-left: 16px; }
-article { background: var(--tile); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
-article p { font-size: 0.85rem; overflow-wrap: anywhere; }
-article .text { margin: 6px 0; color: var(--fg); font-size: 1rem; white-space: pre-wrap; }
-.more { margin-top: 12px; }
-.kinds { margin-top: 8px; }
-.kinds a, .kinds strong { white-space: nowrap; }
-.kinds strong { color: var(--fg); }
-a { color: var(--players); }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.pills + .pills { margin-top: 10px; }
+.pills a, .pills strong, .badge {
+  display: inline-block; padding: 1px 10px; border: var(--outline) solid var(--ink); border-radius: 999px;
+  background: var(--paper); color: var(--ink); font-size: 0.85rem; font-weight: 700; text-decoration: none;
+  white-space: nowrap; line-height: 1.5;
+}
+.pills a:hover { background: var(--bg); }
+.pills strong { background: var(--ink); color: var(--yellow); }
+.badge.new { background: var(--yellow); }
+.badge.issue { background: var(--blue-tint); }
+.badge.resolved { background: var(--mint); }
+.badge.thanked { background: var(--ink); color: var(--yellow); }
+.badge.closed { background: var(--neutral); }
+.badge.trash { background: var(--red-tint); }
+.pills a b, .badge b { font-weight: 800; }
+.filters { margin: 0 0 16px; }
+article { padding: 12px 16px 14px; margin: 0 0 14px; }
+.head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; }
+.head span:not(.badge) { color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
+.text { margin: 8px 0; font-size: 1.05rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.trail { margin: 0 0 6px; font-weight: 700; }
+.meta { color: var(--ink-2); font-size: 0.85rem; overflow-wrap: anywhere; }
+.more { margin: 4px 0 0; font-weight: 700; }
+@media (max-width: 30rem) {
+  main { padding: 12px 12px 40px; }
+  section, article { padding: 12px 12px 14px; }
+}
 `;
 
 const regions = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -88,7 +123,7 @@ function tile(label: string, value: string | number, note = ''): string {
 }
 
 function countries(stats: Stats): string {
-  if (stats.countries.length === 0) return '<p>No connections.</p>';
+  if (stats.countries.length === 0) return '<p class="note">No connections.</p>';
   const rows = stats.countries.map(
     ({ country, connections, latency }) =>
       `<tr><td>${escape(countryName(country))}</td><td class="number">${connections}</td>` +
@@ -107,7 +142,7 @@ const HEIGHT = 160;
 
 function chart(samples: readonly Sample[], now: number): string {
   const first = samples[0];
-  if (!first) return '<p>No samples yet. The first is taken 30 seconds after the server starts.</p>';
+  if (!first) return '<p class="note">No samples yet. The first is taken 30 seconds after the server starts.</p>';
   const span = Math.max(now - first.at, 1);
   const top = Math.max(1, ...samples.map(({ players, rooms }) => Math.max(players, rooms)));
   const x = (sample: Sample) => Math.round(((sample.at - first.at) / span) * WIDTH);
@@ -130,18 +165,29 @@ function chart(samples: readonly Sample[], now: number): string {
   );
 }
 
+// What the feedback page shows: the open feedback, which is neither closed nor in the trash, or
+// the feedback of one status.
+export const FEEDBACK_VIEWS = ['open', ...FEEDBACK_STATUSES] as const;
+export type PageView = (typeof FEEDBACK_VIEWS)[number];
+
 // One page of the feedback that players sent (store/feedback.ts), newest first: the latest, or
-// those before an id that the operator paged back to, of every kind or of one.
+// those before an id that the operator paged back to, of one view and of every kind or of one.
 export interface FeedbackListing {
+  // How much feedback there is in all, the trash included.
   total: number;
-  // How much there is of each kind, and the kind that the page shows, or null for every kind.
+  // How much there is of each status, of the kind shown, and of each kind, in the view shown.
+  statuses: Record<FeedbackStatus, number>;
   kinds: Record<string, number>;
+  view: PageView;
+  // The kind that the page shows, or null for every kind.
   kind: FeedbackKind | null;
   entries: readonly Feedback[];
   // Whether the page was paged back from the latest.
   paged: boolean;
   // Whether there is older feedback than the last entry on the page.
   older: boolean;
+  // The time, in milliseconds since 1970, for how long what is in the trash has left.
+  now: number;
 }
 
 // One page of the reports that players sent of each other (store/feedback.ts), paged as the
@@ -156,32 +202,79 @@ export interface ReportListing {
 const KINDS: Record<FeedbackKind, string> = { idea: 'Idea', game: 'New game', bug: 'Bug', words: 'Word lists' };
 const LANGUAGES: Record<Feedback['language'], string> = { zh: 'Chinese', en: 'English' };
 const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room' };
+const VIEWS: Record<PageView, string> = {
+  open: 'Open',
+  new: 'New',
+  issue: 'Issue',
+  resolved: 'Resolved',
+  thanked: 'Thanked',
+  closed: 'Closed',
+  trash: 'Trash',
+};
 
-// "2026-10-09 13:05 UTC" from the ISO time that the database keeps.
+// "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
+const day = (iso: string) => iso.slice(0, 10);
+
+const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
+
+// The badge of a status: the word, and the number of the issue or the pull request with it.
+function badge(feedback: Feedback): string {
+  const { status } = feedback;
+  const label =
+    status === 'issue'
+      ? `Issue #${feedback.issue}`
+      : status === 'resolved'
+        ? `PR #${feedback.resolvedPr}`
+        : VIEWS[status];
+  return `<span class="badge ${status}">${label}</span>`;
+}
+
+// Everything that became of the feedback, in the order it happens, or '' for feedback that is
+// new. The days left in the trash count from `now`; feedback that an acknowledgment points at,
+// which only feedback adopted on its way to the trash is, is kept there instead
+// (store/feedback.ts).
+function trail(feedback: Feedback, now: number): string {
+  const steps = [
+    ...(feedback.issue === null ? [] : [`published as issue #${feedback.issue}`]),
+    ...(feedback.resolvedPr === null ? [] : [`resolved by PR #${feedback.resolvedPr}`]),
+    ...(feedback.acknowledgmentId === null ? [] : [`thanked as acknowledgment #${feedback.acknowledgmentId}`]),
+    ...(feedback.closedAt === null ? [] : [`closed ${escape(day(feedback.closedAt))}`]),
+    ...(feedback.deletedAt === null
+      ? []
+      : [
+          `in the trash since ${escape(day(feedback.deletedAt))}, ` +
+            (feedback.acknowledgmentId === null
+              ? `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`
+              : 'kept: thanked'),
+        ]),
+  ];
+  return steps.length === 0 ? '' : `<p class="trail">${steps.join(' &middot; ')}</p>`;
+}
 
 // Players wrote the text, the contact, the name and the link, and the page sent the version, so all
 // of it is escaped like anything else that comes from outside, and the link is shown, not linked.
-// The text keeps its line breaks. The name for the acknowledgments comes with its link, the account
-// it was given from, the acknowledgment once the feedback has been adopted (admin.ts), and, in
-// bold, with another account whose username it is, which may be someone passing for that
-// account's owner. Whether the player agreed to a public issue says whether the operator may
-// publish the feedback as one; older feedback, from before players were asked, may not be. A kind
-// that this server doesn't know, from a later one that it was rolled back from, shows as it is.
-function entry(feedback: Feedback): string {
-  const facts = [
+// The text keeps its line breaks. The top line is the id, the kind and the time, with the status
+// at its end; the trail, when there is one, comes after the text, and the rest below it: the
+// version, the language, the page it came from, whether the player agreed to a public issue, the
+// contact, the name for the acknowledgments with its link and the account it was given from, in
+// bold with another account whose username it is, which may be someone passing for that
+// account's owner, and for a bug the browser. Older feedback, from before players were asked
+// about an issue, may not be published. A kind that this server doesn't know, from a later one
+// that it was rolled back from, shows as it is.
+function entry(feedback: Feedback, now: number): string {
+  const head = [
     `#${feedback.id}`,
     (KINDS as Partial<Record<string, string>>)[feedback.kind] ?? escape(feedback.kind),
     escape(when(feedback.createdAt)),
+  ];
+  const facts = [
     `version ${escape(feedback.version)}`,
     LANGUAGES[feedback.language],
     `from the ${PAGES[feedback.page]}`,
-    ...(feedback.acknowledgmentId === null ? [] : [`adopted as acknowledgment #${feedback.acknowledgmentId}`]),
-    feedback.issue === null
-      ? feedback.publicIssue
-        ? '<strong>may be published as an issue</strong>'
-        : 'not to be published'
-      : `published as issue #${feedback.issue}`,
+    ...(feedback.issue !== null
+      ? []
+      : [feedback.publicIssue ? '<strong>may be published as an issue</strong>' : 'not to be published']),
   ];
   const credit =
     feedback.credit === null
@@ -194,47 +287,69 @@ function entry(feedback: Feedback): string {
           : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
             "which didn't send it</strong>");
   return (
-    `<article><p>${facts.join(' &middot; ')}</p>` +
+    `<article><p class="head"><span>${head.join(' &middot; ')}</span>${badge(feedback)}</p>` +
     `<p class="text">${escape(feedback.text)}</p>` +
-    `<p>${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
-    `<p>${credit}</p>` +
-    (feedback.userAgent === null ? '' : `<p>Browser: ${escape(feedback.userAgent)}</p>`) +
+    trail(feedback, now) +
+    `<p class="meta">${facts.join(' &middot; ')}</p>` +
+    `<p class="meta">${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
+    `<p class="meta">${credit}</p>` +
+    (feedback.userAgent === null ? '' : `<p class="meta">Browser: ${escape(feedback.userAgent)}</p>`) +
     '</article>'
   );
 }
 
 export const FEEDBACK_PATH = '/feedback';
 
-// The address of the feedback of a kind, or of every kind, from before an id when one is given.
-function feedbackHref(kind: FeedbackKind | null, before?: number): string {
-  const query = [...(kind === null ? [] : [`kind=${kind}`]), ...(before === undefined ? [] : [`before=${before}`])];
+// The address of the feedback of a view, of a kind or of every kind, from before an id when one
+// is given. The open feedback is the page's default, and goes unnamed.
+function feedbackHref(view: PageView, kind: FeedbackKind | null, before?: number): string {
+  const query = [
+    ...(view === 'open' ? [] : [`status=${view}`]),
+    ...(kind === null ? [] : [`kind=${kind}`]),
+    ...(before === undefined ? [] : [`before=${before}`]),
+  ];
   return query.length === 0 ? FEEDBACK_PATH : `${FEEDBACK_PATH}?${query.join('&amp;')}`;
 }
 
-// The kinds to choose from, each with how much there is of it, the one shown in bold.
-function kindChoices({ total, kinds, kind: shown }: FeedbackListing): string {
-  const choice = (kind: FeedbackKind | null, label: string, count: number) =>
-    kind === shown ? `<strong>${label} (${count})</strong>` : `<a href="${feedbackHref(kind)}">${label} (${count})</a>`;
-  const choices = [
-    choice(null, 'All', total),
-    ...FEEDBACK_KINDS.map((kind) => choice(kind, KINDS[kind], kinds[kind] ?? 0)),
-  ];
-  return `<p class="kinds">${choices.join(' &middot; ')}</p>`;
-}
+// A row of choices, each with how much there is of it, the one shown filled in.
+const pill = (href: string, label: string, count: number, shown: boolean) =>
+  shown ? `<strong>${label} <b>${count}</b></strong>` : `<a href="${href}">${label} <b>${count}</b></a>`;
 
-// The feedback page: the kinds, the entries of one page, and the way to the latest and to the
-// older ones.
-function feedbackList(listing: FeedbackListing): string {
-  const { total, kind, entries, paged, older } = listing;
-  if (total === 0) return '<p>None yet.</p>';
-  const links = [
-    ...(paged ? [`<a href="${feedbackHref(kind)}">Latest</a>`] : []),
-    ...(older ? [`<a href="${feedbackHref(kind, (entries.at(-1) as Feedback).id)}">Older</a>`] : []),
+// The views to choose from, of the kind shown, and then the kinds, in the view shown.
+function choices({ statuses, kinds, view, kind }: FeedbackListing): string {
+  const open = FEEDBACK_STATUSES.filter((status) => status !== 'closed' && status !== 'trash');
+  const counts: Record<PageView, number> = {
+    ...statuses,
+    open: open.reduce((sum, status) => sum + statuses[status], 0),
+  };
+  const views = FEEDBACK_VIEWS.map((choice) =>
+    pill(feedbackHref(choice, kind), VIEWS[choice], counts[choice], choice === view),
+  );
+  const all = Object.values(kinds).reduce((sum, count) => sum + count, 0);
+  const kindChoices = [
+    pill(feedbackHref(view, null), 'All', all, kind === null),
+    ...FEEDBACK_KINDS.map((choice) =>
+      pill(feedbackHref(view, choice), KINDS[choice], kinds[choice] ?? 0, choice === kind),
+    ),
   ];
   return (
-    kindChoices(listing) +
-    (kind !== null && entries.length === 0 && !paged ? '<p>None of this kind yet.</p>' : '') +
-    entries.map(entry).join('') +
+    `<div class="filters"><p class="pills">${views.join('')}</p>` + `<p class="pills">${kindChoices.join('')}</p></div>`
+  );
+}
+
+// The feedback page: the choices, the entries of one page, and the way to the latest and to the
+// older ones.
+function feedbackList(listing: FeedbackListing): string {
+  const { total, view, kind, entries, paged, older, now } = listing;
+  if (total === 0) return '<p class="note">None yet.</p>';
+  const links = [
+    ...(paged ? [`<a href="${feedbackHref(view, kind)}">Latest</a>`] : []),
+    ...(older ? [`<a href="${feedbackHref(view, kind, (entries.at(-1) as Feedback).id)}">Older</a>`] : []),
+  ];
+  return (
+    choices(listing) +
+    (entries.length === 0 && !paged ? '<p class="note">None here.</p>' : '') +
+    entries.map((feedback) => entry(feedback, now)).join('') +
     (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '')
   );
 }
@@ -251,17 +366,17 @@ function report({ id, createdAt, reporter, reported, reportedBarred, reportedNam
       ? 'no account'
       : `account ${escape(reported)}${reportedBarred ? ' &middot; <strong>barred from public rooms</strong>' : ''}`;
   return (
-    `<article><p>#${id} &middot; ${escape(when(createdAt))} &middot; room ${escape(formatCode(roomCode))}</p>` +
+    `<article><p class="head"><span>#${id} &middot; ${escape(when(createdAt))} &middot; room ${escape(formatCode(roomCode))}</span></p>` +
     `<p class="text">${escape(reportedName)} (${account})</p>` +
-    `<p>Reported by ${reporter === null ? 'a deleted account' : escape(reporter)}</p>` +
-    (text === null ? '<p>No note</p>' : `<p class="text">${escape(text)}</p>`) +
+    `<p class="meta">Reported by ${reporter === null ? 'a deleted account' : escape(reporter)}</p>` +
+    (text === null ? '<p class="meta">No note</p>' : `<p class="text">${escape(text)}</p>`) +
     '</article>'
   );
 }
 
 // The reports page: the entries of one page, and the way to the latest and to the older ones.
 function reportList({ total, entries, paged, older }: ReportListing): string {
-  if (total === 0) return '<p>None yet.</p>';
+  if (total === 0) return '<p class="note">None yet.</p>';
   const links = [
     ...(paged ? [`<a href="${REPORTS_PATH}">Latest</a>`] : []),
     ...(older ? [`<a href="${REPORTS_PATH}?before=${(entries.at(-1) as Report).id}">Older</a>`] : []),
@@ -269,19 +384,32 @@ function reportList({ total, entries, paged, older }: ReportListing): string {
   return entries.map(report).join('') + (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '');
 }
 
-// One document, as both pages are built. The status page reloads itself; the feedback page
-// doesn't.
-function document(title: string, body: string, reloads: boolean): string {
+type Page = 'status' | 'feedback' | 'reports';
+
+const NAV: [Page, string, string][] = [
+  ['status', '/', 'Status'],
+  ['feedback', FEEDBACK_PATH, 'Feedback'],
+  ['reports', REPORTS_PATH, 'Reports'],
+];
+
+// One document, as every page is built: the heading, the way to the other pages, with the page
+// itself marked, a line under it, and the body. The status page reloads itself; the others don't.
+function document(page: Page, heading: string, sub: string, body: string, reloads: boolean): string {
+  const links = NAV.map(([name, href, label]) =>
+    name === page ? `<a href="${href}" aria-current="page">${label}</a>` : `<a href="${href}">${label}</a>`,
+  );
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${reloads ? '<meta http-equiv="refresh" content="5">\n' : ''}<title>${title}</title>
+${reloads ? '<meta http-equiv="refresh" content="5">\n' : ''}<title>Reviewer 2 ${page}</title>
 <style>${STYLE}</style>
 </head>
 <body>
 <main>
+<header><h1>${heading}</h1><nav aria-label="Pages">${links.join('')}</nav></header>
+<p class="sub">${sub}</p>
 ${body}</main>
 </body>
 </html>
@@ -295,13 +423,39 @@ export interface AccountCounts {
   recent: number;
 }
 
+// What the page says of the feedback: how much there is in all, and of each status.
+export interface FeedbackCounts {
+  total: number;
+  statuses: Record<FeedbackStatus, number>;
+}
+
+export const NO_FEEDBACK: FeedbackCounts = {
+  total: 0,
+  statuses: { new: 0, issue: 0, resolved: 0, thanked: 0, closed: 0, trash: 0 },
+};
+
+// The feedback on the status page: how much there is of each status, each the way to that view,
+// and of the open feedback, the way to the page itself.
+function feedbackCounts({ total, statuses }: FeedbackCounts): string {
+  if (total === 0) return '<p class="note">None yet.</p>';
+  const open = statuses.new + statuses.issue + statuses.resolved + statuses.thanked;
+  const pills = [
+    `<a class="badge" href="${FEEDBACK_PATH}">Open <b>${open}</b></a>`,
+    ...FEEDBACK_STATUSES.map(
+      (status) =>
+        `<a class="badge ${status}" href="${feedbackHref(status, null)}">${VIEWS[status]} <b>${statuses[status]}</b></a>`,
+    ),
+  ];
+  return `<p class="pills">${pills.join('')}</p><p class="note">${total} in all &middot; <a href="${FEEDBACK_PATH}">Read it</a></p>`;
+}
+
 // `now` is the time on the clock that the samples were taken on (History in stats.ts), and
-// `feedback` and `reports` are how many there are in all, which their pages show.
+// `feedback` and `reports` are how much there is, which their pages show.
 export function renderStatusPage(
   stats: Stats,
   samples: readonly Sample[],
   now: number,
-  feedback = 0,
+  feedback: FeedbackCounts = NO_FEEDBACK,
   accounts: AccountCounts = { total: 0, recent: 0 },
   reports = 0,
 ): string {
@@ -311,37 +465,37 @@ export function renderStatusPage(
   const share =
     memory.limit === null ? '' : `${Math.round((memory.rss / memory.limit) * 100)}% of the ${mb(memory.limit)} limit`;
   return document(
+    'status',
     'Reviewer 2 status',
-    `<h1>Reviewer 2 status</h1>
-<p>Version ${escape(stats.version)} &middot; up ${duration(stats.uptime)} &middot; reloads every 5 seconds</p>
-<h2>Players</h2>
-<dl>${tile('Online', stats.players.online)}${tile('Offline', stats.players.offline, 'with a seat to come back to')}${tile('Accounts', accounts.total, 'registered')}${tile('New accounts', accounts.recent, 'in the last 7 days')}</dl>
-<h2>Rooms</h2>
-<dl>${tile('Waiting', stats.rooms.lobby)}${tile('Playing', stats.rooms.playing)}${tile('Game over', stats.rooms.ended)}</dl>
-<h2>Connections</h2>
+    `Version ${escape(stats.version)} &middot; up ${duration(stats.uptime)} &middot; reloads every 5 seconds`,
+    `<section><h2>Players</h2>
+<dl>${tile('Online', stats.players.online)}${tile('Offline', stats.players.offline, 'with a seat to come back to')}${tile('Accounts', accounts.total, 'registered')}${tile('New accounts', accounts.recent, 'in the last 7 days')}</dl></section>
+<section><h2>Rooms</h2>
+<dl>${tile('Waiting', stats.rooms.lobby)}${tile('Playing', stats.rooms.playing)}${tile('Game over', stats.rooms.ended)}</dl></section>
+<section><h2>Connections</h2>
 <dl>${tile('WebSocket', stats.connections.websocket)}${tile('Long-polling', stats.connections.polling)}</dl>
-${countries(stats)}
-<h2>Memory</h2>
-<dl>${tile('Process', mb(memory.rss), share)}${tile('JavaScript heap', mb(memory.heapUsed))}</dl>
-<h2>Last 24 hours</h2>
-${chart(samples, now)}
-<h2>Feedback</h2>
-<p>${feedback === 0 ? 'None yet.' : `${feedback} in all &middot; <a href="${FEEDBACK_PATH}">Read it</a>`}</p>
-<h2>Reports</h2>
-<p>${reports === 0 ? 'None yet.' : `${reports} in all &middot; <a href="${REPORTS_PATH}">Read them</a>`}</p>
+${countries(stats)}</section>
+<section><h2>Memory</h2>
+<dl>${tile('Process', mb(memory.rss), share)}${tile('JavaScript heap', mb(memory.heapUsed))}</dl></section>
+<section><h2>Last 24 hours</h2>
+${chart(samples, now)}</section>
+<section><h2>Feedback</h2>
+${feedbackCounts(feedback)}</section>
+<section><h2>Reports</h2>
+<p class="note">${reports === 0 ? 'None yet.' : `${reports} in all &middot; <a href="${REPORTS_PATH}">Read them</a>`}</p></section>
 `,
     true,
   );
 }
 
-// The feedback that players sent, newest first, a page at a time.
+// The feedback that players sent, newest first, a page at a time, of one view and of every kind
+// or of one.
 export function renderFeedbackPage(feedback: FeedbackListing): string {
   return document(
-    'Reviewer 2 feedback',
-    `<h1>Feedback</h1>
-<p>${feedback.total} in all, newest first &middot; <a href="/">Status</a> &middot; <a href="${REPORTS_PATH}">Reports</a></p>
-${feedbackList(feedback)}
-`,
+    'feedback',
+    'Feedback',
+    `${feedback.total} in all, newest first &middot; what became of it is changed with <code>admin.cjs feedback</code>`,
+    feedbackList(feedback),
     false,
   );
 }
@@ -349,12 +503,11 @@ ${feedbackList(feedback)}
 // The reports that players sent of each other, newest first, a page at a time.
 export function renderReportsPage(reports: ReportListing): string {
   return document(
-    'Reviewer 2 reports',
-    `<h1>Reports</h1>
-<p>${reports.total} in all, newest first &middot; <a href="/">Status</a> &middot; <a href="${FEEDBACK_PATH}">Feedback</a></p>
-<p>Bar a reported account from public rooms with <code>admin.cjs accounts bar &lt;username&gt;</code>.</p>
-${reportList(reports)}
-`,
+    'reports',
+    'Reports',
+    `${reports.total} in all, newest first &middot; bar a reported account from public rooms with ` +
+      '<code>admin.cjs accounts bar &lt;username&gt;</code>',
+    reportList(reports),
     false,
   );
 }

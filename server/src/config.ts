@@ -118,7 +118,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       env.FEEDBACK_PER_10_MINUTES,
       DEFAULT_SOCKET_LIMITS.feedbackPerWindow,
     ),
-    // Feedback is never deleted, so this is what to raise once the server is full of it.
+    // Feedback is never deleted to make room, so this is what to raise once the server is full of it.
     maxFeedback: wholeNumber('MAX_FEEDBACK', env.MAX_FEEDBACK, DEFAULT_FEEDBACK_LIMITS.maxEntries),
     accountsPerHour: wholeNumber(
       'ACCOUNTS_PER_HOUR',
