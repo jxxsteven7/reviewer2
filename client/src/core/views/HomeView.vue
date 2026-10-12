@@ -276,16 +276,23 @@ ol {
   margin-inline: var(--space-2);
 }
 
-/* The only link among the footnotes: blue, and underlined under a pointer or the keyboard. */
+/* The only link among the footnotes: blue, and underlined under a pointer or the keyboard. Its
+   focus ring sits close, clear of "By" before it; a tap on a touch screen leaves no underline. */
 .author {
   display: inline-block;
   color: var(--blue-deep);
   text-decoration: none;
 }
 
-.author:hover,
 .author:focus-visible {
+  outline-offset: 0;
   text-decoration: underline;
+}
+
+@media (hover: hover) {
+  .author:hover {
+    text-decoration: underline;
+  }
 }
 
 .tip {
