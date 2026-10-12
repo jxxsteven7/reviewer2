@@ -86,10 +86,15 @@ article { padding: 12px 16px 14px; margin: 0 0 14px; }
 .trail { margin: 0 0 6px; font-weight: 700; }
 .meta { color: var(--ink-2); font-size: 0.85rem; overflow-wrap: anywhere; }
 .more { margin: 4px 0 0; font-weight: 700; }
-details { margin: 8px 0 0; }
-summary { cursor: pointer; border-radius: 4px; color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
-summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-.command { margin: 6px 0 0; color: var(--ink-2); font-size: 0.85rem; }
+/* The summary's padding makes it 44px to tap, as the game's targets are (docs/design.md); folded,
+   the margin gives the room below back, so that the card ends as it did without it. The focus ring
+   is drawn inside that padding, off the text above and the commands below. */
+details { margin: 0 0 -12px; }
+details[open] { margin-bottom: 0; }
+summary { cursor: pointer; padding: 12px 0; border-radius: 4px; color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
+summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.command { color: var(--ink-2); font-size: 0.85rem; }
+.command + .command { margin-top: 6px; }
 .command code {
   display: inline-block; max-width: 100%; padding: 1px 8px; border-radius: 6px; background: var(--bg); color: var(--ink);
   font: 500 0.8rem/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -528,8 +533,8 @@ ${feedbackCounts(feedback)}</section>
 
 // The feedback that players sent, newest first, a page at a time, of one view and of every kind
 // or of one, each with the commands that may come next, with `adminCommand` in front: ADMIN_COMMAND,
-// or how the build is run.
-export function renderFeedbackPage(feedback: FeedbackListing, adminCommand = DEFAULT_ADMIN_COMMAND): string {
+// or how the build is run (config.ts).
+export function renderFeedbackPage(feedback: FeedbackListing, adminCommand: string): string {
   return document(
     'feedback',
     'Feedback',

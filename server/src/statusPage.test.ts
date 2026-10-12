@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { Sample, Stats } from './stats';
 import {
+  DEFAULT_ADMIN_COMMAND,
   duration,
   NO_FEEDBACK,
   renderFeedbackPage,
@@ -221,18 +222,21 @@ describe('the feedback', () => {
     ...changes,
   });
   const page = (changes: Partial<FeedbackListing> = {}) =>
-    renderFeedbackPage({
-      total: 0,
-      statuses: NO_FEEDBACK.statuses,
-      kinds: {},
-      view: 'open',
-      kind: null,
-      entries: [],
-      paged: false,
-      older: false,
-      now: NOW,
-      ...changes,
-    });
+    renderFeedbackPage(
+      {
+        total: 0,
+        statuses: NO_FEEDBACK.statuses,
+        kinds: {},
+        view: 'open',
+        kind: null,
+        entries: [],
+        paged: false,
+        older: false,
+        now: NOW,
+        ...changes,
+      },
+      DEFAULT_ADMIN_COMMAND,
+    );
   // What the page shows between the heading and the entries.
   const head = (html: string) => text(html.slice(0, html.indexOf('<article>')));
 
@@ -524,7 +528,7 @@ describe('the feedback', () => {
       older: false,
       now: NOW,
     };
-    expect(commands(renderFeedbackPage(listing))).toContain(`${RUN} close 1`);
+    expect(commands(renderFeedbackPage(listing, DEFAULT_ADMIN_COMMAND))).toContain(`${RUN} close 1`);
     expect(commands(renderFeedbackPage(listing, 'npm run admin --'))).toEqual([
       'npm run admin -- feedback resolve 1 &#60;pr&#62;',
       "npm run admin -- feedback adopt 1 can't be undone",

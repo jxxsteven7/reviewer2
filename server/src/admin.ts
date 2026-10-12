@@ -70,6 +70,10 @@ import { MIGRATIONS } from './store/migrations';
 // it does for the server. The database is opened as it is, never migrated, and the server may go
 // on running meanwhile.
 
+// The usage of `acknowledgments add` alone, which the command prints when it isn't told, one way
+// or the other, whether it counts for an account.
+const ADD_USAGE = `acknowledgments add <name> --kind ${ACKNOWLEDGMENT_KINDS.join('|')} --account <username>|--no-account`;
+
 const USAGE = [
   'usage: admin.cjs <command>, one of',
   '  avatar remove <username> [--ban]',
@@ -87,7 +91,7 @@ const USAGE = [
   '  feedback trash',
   '  reports list',
   '  acknowledgments list',
-  `  acknowledgments add <name> --kind ${ACKNOWLEDGMENT_KINDS.join('|')} --account <username>|--no-account`,
+  `  ${ADD_USAGE}`,
 ].join('\n');
 
 type Flags = { ban?: true; json?: true; noAccount?: true; kind?: string; account?: string };
@@ -622,6 +626,7 @@ const COMMANDS: Record<string, Command> = {
           'Add --account <username> or --no-account, one or the other, to say whether it counts for an ' +
             "account, so that one isn't left out by mistake.",
         );
+        print(`usage: admin.cjs ${ADD_USAGE}`);
         return 2;
       }
       const account = username === undefined ? null : accountNamed(data, username, print);

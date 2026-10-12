@@ -761,13 +761,16 @@ describe('acknowledgments', () => {
 
   test('say either which account they count for or that there is none, so that none is left out', () => {
     accounts.store.create('Bob', 'bob', 'hash');
-    const told =
+    // The reason, then the usage of this command alone.
+    const told = [
       'Add --account <username> or --no-account, one or the other, to say whether it counts for an account, ' +
-      "so that one isn't left out by mistake.";
+        "so that one isn't left out by mistake.",
+      'usage: admin.cjs acknowledgments add <name> --kind feedback|words|playtesting --account <username>|--no-account',
+    ];
     expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting')).toBe(2);
-    expect(printed.at(-1)).toBe(told);
+    expect(printed.slice(-2)).toEqual(told);
     expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting', '--account', 'bob', '--no-account')).toBe(2);
-    expect(printed.at(-1)).toBe(told);
+    expect(printed.slice(-2)).toEqual(told);
     expect(accounts.acknowledgments.all()).toEqual([]);
     expect(run('acknowledgments', 'add', 'Bob', '--no-account', '--kind', 'playtesting')).toBe(0);
     expect(printed.at(-3)).toBe('Added acknowledgment #1: Bob, for Pilot study, counted for no account.');

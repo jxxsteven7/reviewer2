@@ -3,7 +3,6 @@ import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http
 import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
 import {
-  DEFAULT_ADMIN_COMMAND,
   FEEDBACK_PATH,
   FEEDBACK_VIEWS,
   renderFeedbackPage,
@@ -103,10 +102,11 @@ export function createStatusHandler(
   history: History,
   feedback: FeedbackStore,
   log: Log,
+  // What the feedback page puts in front of the commands it shows: ADMIN_COMMAND, or how the
+  // build is run (config.ts).
+  adminCommand: string,
   // How many accounts there are, and how many are new.
   accounts: () => AccountCounts = () => ({ total: 0, recent: 0 }),
-  // What the feedback page puts in front of the commands it shows (statusPage.ts).
-  adminCommand = DEFAULT_ADMIN_COMMAND,
 ): RequestListener {
   return (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

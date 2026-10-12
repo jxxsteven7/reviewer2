@@ -54,7 +54,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `ROOMS_PER_MINUTE` [5], `FEEDBACK_PER_10_MINUTES` [3], `ACCOUNTS_PER_HOUR` [5] | Limits per address; raise them where many people share one |
 | `MAX_FEEDBACK` [10000] | How many pieces of feedback the server keeps, with 5 KB for each on average, before it takes no more; nothing is deleted to make room, so raise it when the server is full |
 | `STATUS_PORT` [off] | The operator's status page, on `127.0.0.1` only ([architecture.md](architecture.md#status)) |
-| `ADMIN_COMMAND` [`node server/dist/admin.cjs`] | What the status page puts in front of the operator's commands it shows for copying: however `admin.cjs` is run where the server is |
+| `ADMIN_COMMAND` [`node server/dist/admin.cjs`] | What the status page puts in front of the operator's commands it shows for copying: however `admin.cjs` is run where the server is, `DATA_DIR` included, such as `DATA_DIR=<dir> node <path>/admin.cjs` |
 | `TRUST_PROXY` [off] | `1` behind a reverse proxy that sets `X-Forwarded-For`, and only there |
 | `COOKIE_SECURE` [on] | `0` only over plain HTTP, as in development |
 | `SERVER_SECRET` or `SERVER_SECRET_FILE` [off] | The server's secret, 32 characters or more, or a file holding it. It fingerprints email addresses ([architecture.md](architecture.md#mail)), so never change or lose it. Without it, no email |

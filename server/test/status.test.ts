@@ -3,6 +3,7 @@ import { createConnection, type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
 import { History, type Stats } from '../src/stats';
 import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
+import { DEFAULT_ADMIN_COMMAND } from '../src/statusPage';
 import { createRoom, joinRoom, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
 
 // The numbers that the `stats` line and the status page show, counted on a real server, and the
@@ -169,11 +170,11 @@ describe('the status server', () => {
   async function startStatus({
     history = new History(),
     stats = () => server.app.stats(),
-    adminCommand,
+    adminCommand = DEFAULT_ADMIN_COMMAND,
   }: { history?: History; stats?: () => Stats; adminCommand?: string } = {}) {
     const log = (event: string, fields?: Record<string, unknown>) =>
       server.logs.push({ event, ...(fields ? { fields } : {}) });
-    const started = createServer(createStatusHandler(stats, history, server.feedback, log, undefined, adminCommand));
+    const started = createServer(createStatusHandler(stats, history, server.feedback, log, adminCommand));
     status = started;
     await new Promise<void>((resolve) => started.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(started.address() as AddressInfo).port}`;
