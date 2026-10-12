@@ -318,13 +318,15 @@ const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
 // issue, a pull request or a discussion written as #12, GH-12 or owner/repo/issues/12, with or
 // without the address of the site in front, which then shows the reference, links a commit written
 // as seven or more hexadecimal digits on their own, and shows :boom: as an emoji, in a title as
-// much as in a body. Those patterns need the name, the number, the rest of the digits or the
-// shortcode right after their first character, so a zero-width space after it, which shows
-// nothing, keeps them from matching; a backslash wouldn't, since GitHub reads the signs in the
-// text once Markdown has taken the backslash away. A slash or a colon after a digit, as in a date
-// or a time, is left alone: no reference or shortcode starts that way.
+// much as in a body; and in a body it shows $x^2$ or $$x^2$$ as a formula, in any size or color
+// that LaTeX gives it. Those patterns need the name, the number, the rest of the digits or the
+// shortcode right after their first character, and a formula needs nothing but a space or
+// punctuation before its opening $, so a zero-width space after that character, or before the $,
+// which shows nothing, keeps them from matching; a backslash wouldn't, since GitHub reads the
+// signs in the text once Markdown has taken the backslash away. A slash or a colon after a digit,
+// as in a date or a time, is left alone: no reference or shortcode starts that way.
 const ZERO_WIDTH_SPACE = '\u200b';
-const LINKED = /@(?=[a-z0-9])|(?:#|GH-|(?<!\d)\/)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|(?<!\d):(?=[\w+-]+:)/gi;
+const LINKED = /@(?=[a-z0-9])|(?:#|GH-|(?<!\d)\/)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|(?<!\d):(?=[\w+-]+:)|(?=\$)/gi;
 const unlinked = (text: string): string => text.replace(LINKED, `$&${ZERO_WIDTH_SPACE}`);
 
 // A line of the text, or the name, as the body's Markdown shows it as it is: unlinked, and then
