@@ -50,7 +50,10 @@ describe('the feedback panel', () => {
     expect(wrapper.text()).toContain(
       'Your contact details are used only to reply to you, and are deleted after 90 days.',
     );
-    expect(wrapper.text()).toContain("The feedback itself is kept as the project's archive of suggestions.");
+    expect(wrapper.text()).toContain(
+      "The feedback itself is kept as the project's archive of suggestions; only what the author discards, " +
+        'such as spam, is deleted, 30 days later.',
+    );
   });
 
   test('sends what was written with the page it came from, and says thank you', async () => {

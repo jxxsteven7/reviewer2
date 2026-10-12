@@ -81,7 +81,7 @@ polyline { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
 .filters { margin: 0 0 16px; }
 article { padding: 12px 16px 14px; margin: 0 0 14px; }
 .head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; }
-.head span { color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
+.head span:not(.badge) { color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
 .text { margin: 8px 0; font-size: 1.05rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .trail { margin: 0 0 6px; font-weight: 700; }
 .meta { color: var(--ink-2); font-size: 0.85rem; overflow-wrap: anywhere; }

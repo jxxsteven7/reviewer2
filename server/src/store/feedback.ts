@@ -143,11 +143,14 @@ const COLUMNS =
   `a.username, k.id AS acknowledgmentId, ${STATUS}`;
 const FROM =
   'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id LEFT JOIN acknowledgments k ON k.feedback_id = f.id';
-// The rows of a view, by their status: the one given, or any, and with the second parameter 1
-// only the open ones. SQLite reads `status` as the column above.
-const VIEW = "status = coalesce(?, status) AND (? = 0 OR status IN ('new', 'issue', 'resolved', 'thanked'))";
-// The kind and the status of every row, for counting.
+// Every row as Feedback, and the kind and the status of every row, for counting. Both are read as
+// subqueries, so that `status` in a WHERE clause names the column above and nothing that a table
+// joined in may come to have.
+const ROWS = `(SELECT ${COLUMNS} ${FROM})`;
 const KINDS_AND_STATUSES = `(SELECT f.kind, ${STATUS} ${FROM})`;
+// The rows of a view, by their status: the one given, or any, and with the second parameter 1
+// only the open ones.
+const VIEW = "status = coalesce(?, status) AND (? = 0 OR status IN ('new', 'issue', 'resolved', 'thanked'))";
 
 // The parameters of VIEW.
 const viewParams = (view: FeedbackView): [string | null, number] =>
@@ -194,7 +197,7 @@ export class FeedbackStore {
         'coalesce(length(CAST(user_agent AS BLOB)), 0) + length(version)), 0) AS bytes FROM feedback',
     );
     this.#latest = db.prepare(
-      `SELECT ${COLUMNS} ${FROM} WHERE f.id < ? AND f.kind = coalesce(?, f.kind) AND ${VIEW} ORDER BY f.id DESC LIMIT ?`,
+      `SELECT * FROM ${ROWS} WHERE id < ? AND kind = coalesce(?, kind) AND ${VIEW} ORDER BY id DESC LIMIT ?`,
     );
     this.#kinds = db.prepare(`SELECT kind, count(*) AS count FROM ${KINDS_AND_STATUSES} WHERE ${VIEW} GROUP BY kind`);
     this.#statuses = db.prepare(
@@ -205,7 +208,9 @@ export class FeedbackStore {
     this.#clear = db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?');
     // The operator's notes. Each statement carries its rule, so that it can't be broken by
     // mistake: a row is closed once and reopened once, never in the trash; it goes to the trash
-    // once, unless an acknowledgment points at it, and comes back once.
+    // once, unless an acknowledgment points at it, and comes back once; and the purge leaves a row
+    // that an acknowledgment points at alone, in case the feedback was adopted on its way out,
+    // which admin.ts refuses, but it reads before it writes.
     this.#setIssue = db.prepare('UPDATE feedback SET issue = ? WHERE id = ?');
     this.#resolve = db.prepare('UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?');
     this.#close = db.prepare(
@@ -219,7 +224,10 @@ export class FeedbackStore {
         'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
     );
     this.#restore = db.prepare('UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL');
-    this.#purge = db.prepare('DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ?');
+    this.#purge = db.prepare(
+      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' +
+        'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
+    );
     this.#report = db.prepare(
       'INSERT INTO reports (created_at, reporter_id, reported_id, reported_name, room_code, text) ' +
         'VALUES (?, ?, ?, ?, ?, ?)',
@@ -352,8 +360,8 @@ export class FeedbackStore {
     return Number(this.#restore.run(id).changes) > 0;
   }
 
-  // Deletes the feedback that has been in the trash for 30 days, for good, and says how much it
-  // deleted. The one way a row ever goes.
+  // Deletes the feedback that has been in the trash for 30 days, for good, unless an
+  // acknowledgment points at it, and says how much it deleted. The one way a row ever goes.
   purge(): number {
     const cutoff = new Date(this.now() - this.limits.trashMs).toISOString();
     return Number(this.#purge.run(cutoff).changes);

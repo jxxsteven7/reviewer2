@@ -52,7 +52,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `DATA_DIR` [off] | An existing directory for the database, snapshots and avatars ([architecture.md](architecture.md#data)); unset, data is lost at every stop |
 | `CONTENT_DIR` [off] | A directory with newer copies of `ACKNOWLEDGMENTS.md` and `SPONSORS.md`, which the home page shows without a new build or a restart; a file there that is missing or can't be used leaves the one the build bundled ([architecture.md](architecture.md#lists-of-thanks)) |
 | `ROOMS_PER_MINUTE` [5], `FEEDBACK_PER_10_MINUTES` [3], `ACCOUNTS_PER_HOUR` [5] | Limits per address; raise them where many people share one |
-| `MAX_FEEDBACK` [10000] | How many pieces of feedback the server keeps, with 5 KB for each on average, before it takes no more; none is ever deleted, so raise it when the server is full |
+| `MAX_FEEDBACK` [10000] | How many pieces of feedback the server keeps, with 5 KB for each on average, before it takes no more; nothing is deleted to make room, so raise it when the server is full |
 | `STATUS_PORT` [off] | The operator's status page, on `127.0.0.1` only ([architecture.md](architecture.md#status)) |
 | `TRUST_PROXY` [off] | `1` behind a reverse proxy that sets `X-Forwarded-For`, and only there |
 | `COOKIE_SECURE` [on] | `0` only over plain HTTP, as in development |

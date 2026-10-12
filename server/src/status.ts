@@ -29,18 +29,14 @@ import type { FeedbackStore } from './store/feedback';
 
 export const STATUS_HOST = '127.0.0.1';
 
-// The names of this machine, with the port that the request came in on, which is what a browser
-// on this machine sends when the operator opens the page; a port of 80 a browser leaves out. Any
+// The names of this machine, with any port or none, which is what a browser on this machine sends
+// when the operator opens the page, on whatever local port it reaches the page through. Any
 // other Host header means that a page elsewhere has pointed a name of its own at this address, to
-// read the status, and the contacts on it, through a browser on this machine (DNS rebinding).
-const OWN_NAMES = ['127.0.0.1', 'localhost', '[::1]'];
+// read the status, and the contacts on it, through a browser on this machine (DNS rebinding); the
+// name is what stops that, not the port.
+const OWN_HOST = /^(?:127\.0\.0\.1|localhost|\[::1\])(?::\d{1,5})?$/i;
 
-function ownHost(req: IncomingMessage): boolean {
-  const host = (req.headers.host ?? '').toLowerCase();
-  const port = req.socket.localPort;
-  if (port === undefined) return false;
-  return OWN_NAMES.some((name) => host === `${name}:${port}` || (port === 80 && host === name));
-}
+const ownHost = (req: IncomingMessage): boolean => OWN_HOST.test(req.headers.host ?? '');
 
 // 421 Misdirected Request, with nothing in it, for a request whose Host isn't this machine's.
 function misdirected(res: ServerResponse): void {

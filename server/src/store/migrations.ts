@@ -4,10 +4,10 @@
 // schema is a new migration at the end.
 
 export const MIGRATIONS: readonly string[] = [
-  // 1: feedback from players. It is an archive, and nothing deletes a row (docs/architecture.md);
-  // AUTOINCREMENT would keep a deleted id from being given out again anyway, so that an id in the
-  // log names one piece of feedback for good. The contact is cleared 90 days after the feedback
-  // came, which the partial index finds quickly.
+  // 1: feedback from players. It is an archive (docs/architecture.md), and nothing deleted a row
+  // until migration 9 gave it a trash; AUTOINCREMENT keeps a deleted id from being given out
+  // again, so that an id in the log names one piece of feedback for good. The contact is cleared
+  // 90 days after the feedback came, which the partial index finds quickly.
   `
   CREATE TABLE feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

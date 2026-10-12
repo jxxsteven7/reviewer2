@@ -28,7 +28,11 @@ function sources(dir = SOURCE): string[] {
   });
 }
 
-// What was promised, and the operator's notes (store/feedback.ts), each as it is written there.
+// What was promised, and the operator's notes, each as it is written in store/feedback.ts, where
+// each is written once: a statement is allowed there, with the code around it, and nowhere else,
+// so that no other command can run the purge at a time of its own, or write a time of its own
+// into the trash.
+const FEEDBACK_FILE = join(import.meta.dirname, 'feedback.ts');
 const ALLOWED = [
   'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
   'UPDATE feedback SET issue = ? WHERE id = ?',
@@ -38,7 +42,8 @@ const ALLOWED = [
   'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND ' +
     'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
   'UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL',
-  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' +
+    'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
 ];
 
 // The methods of the stores whose names say that they delete or rewrite, and the ones of the
@@ -131,7 +136,7 @@ describe('the archive', () => {
     expect(changing(AcknowledgmentStore)).toEqual([]);
   });
 
-  test('is changed by no SQL in the server but what was promised', () => {
+  test('is changed by no SQL in the server but what was promised, each written once, in the store', () => {
     const all = sources().flatMap((file) => strings(readFileSync(file, 'utf8')).map((sql) => ({ file, sql })));
     // The migrations are looked at one by one, below.
     const found = all
@@ -139,11 +144,19 @@ describe('the archive', () => {
       .flatMap(({ file, sql }) => offending(sql).map((statement) => `${file}: ${statement}`));
     expect(found).toEqual([]);
     expect(offendingMigrations(MIGRATIONS)).toEqual([]);
-    // The scan sees the server's SQL, the migrations and the statements written in pieces among it.
+    // The scan sees the server's SQL, the migrations and the statements written in pieces among it,
+    // and each statement allowed is in the store of the feedback, once.
     const seen = all.map(({ sql }) => sql);
-    expect(seen).toEqual(expect.arrayContaining([...MIGRATIONS, ...ALLOWED]));
+    expect(seen).toEqual(expect.arrayContaining([...MIGRATIONS]));
+    for (const statement of ALLOWED) {
+      expect(
+        all.filter(({ sql }) => sql === statement).map(({ file }) => file),
+        statement,
+      ).toEqual([FEEDBACK_FILE]);
+    }
     expect(seen.some((sql) => /^INSERT INTO feedback \(created_at, .* VALUES \(\?(, \?)+\)$/.test(sql))).toBe(true);
     expect(sources()).toContain(MIGRATIONS_FILE);
+    expect(sources()).toContain(FEEDBACK_FILE);
     expect(sources().length).toBeGreaterThan(20);
   });
 
@@ -232,9 +245,10 @@ describe('the archive', () => {
       'DROP TABLE IF EXISTS feedback',
       'DELETE FROM reports WHERE created_at < ?',
       'UPDATE reports SET text = NULL',
-      // The trash, purged without waiting, or emptied by hand.
+      // The trash, purged without waiting, emptied by hand, or purged with what was adopted.
       'DELETE FROM feedback WHERE deleted_at IS NOT NULL',
       'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND id = ?',
+      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ?',
       'UPDATE feedback SET deleted_at = ? WHERE id = ?',
       'UPDATE OR IGNORE feedback SET text = ?',
       'ALTER TABLE feedback RENAME TO old_feedback',
@@ -249,7 +263,8 @@ describe('the archive', () => {
       "db.exec('ALTER TABLE feedback ADD COLUMN room_id INTEGER REFERENCES rooms (id) ON DELETE SET NULL')",
       "db.prepare('UPDATE feedback SET issue = ? WHERE id = ?')",
       "db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL ' + 'AND created_at < ?')",
-      "db.prepare('DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ?')",
+      "db.prepare('DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' + " +
+        "'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)')",
       "db.prepare('UPDATE accounts SET username = ? WHERE id = ?')",
       "db.prepare('DELETE FROM feedback_drafts')",
       "db.prepare('INSERT INTO reports (created_at, reporter_id) VALUES (?, ?)')",

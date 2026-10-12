@@ -350,6 +350,18 @@ describe('feedback adopt', () => {
     expect(printed.at(-1)).toBe('- Cat \u{2014} <what they did> (#51)');
   });
 
+  test('refuses feedback in the trash, which the acknowledgment would point at on its way out', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Ann' }));
+    expect(run('feedback', 'delete', '1')).toBe(0);
+    expect(run('feedback', 'adopt', '1')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #1 is in the trash. Restore it first: feedback restore 1.');
+    expect(accounts.acknowledgments.all()).toEqual([]);
+    expect(run('feedback', 'restore', '1')).toBe(0);
+    expect(run('feedback', 'adopt', '1')).toBe(0);
+    expect(accounts.acknowledgments.all()).toHaveLength(1);
+  });
+
   test("says when the name is another account's username, which may be someone passing for its owner", () => {
     accounts.store.create('Cat', 'cat', 'hash');
     new FeedbackStore(database.db).add(feedback({ credit: 'CAT' }));
@@ -438,6 +450,69 @@ describe('feedback issue --clear', () => {
     ]);
     expect(run('feedback', 'issue', '3', '--clear')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #3.');
+  });
+
+  test('says where the feedback is when it is in the trash, like resolve', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ publicIssue: true }));
+    expect(run('feedback', 'delete', '1')).toBe(0);
+    expect(run('feedback', 'issue', '1', '42')).toBe(0);
+    expect(printed.slice(-2)).toEqual([
+      'Feedback #1 is issue #42, https://github.com/jxxsteven7/reviewer2/issues/42.',
+      'It is in the trash, by the way: feedback restore 1 brings it back.',
+    ]);
+    expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
+    expect(printed.slice(-2)).toEqual([
+      'Feedback #1 is no longer recorded as issue #42.',
+      'It is in the trash, by the way: feedback restore 1 brings it back.',
+    ]);
+    expect(run('feedback', 'resolve', '1', '50')).toBe(0);
+    expect(run('feedback', 'resolve', '1', '--clear')).toBe(0);
+    expect(printed.slice(-2)).toEqual([
+      'Feedback #1 is no longer recorded as resolved by PR #50.',
+      'It is in the trash, by the way: feedback restore 1 brings it back.',
+    ]);
+    expect(store.byId(1)).toMatchObject({ issue: null, resolvedPr: null, status: 'trash' });
+  });
+});
+
+describe('the entry of adopted feedback', () => {
+  // The entry ends in the issue's number, or the pull request's when there is no issue, and the
+  // hints follow the number as the notes change it.
+  test('is put right as the issue and the pull request come and go', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Bob', publicIssue: true }));
+    expect(run('feedback', 'resolve', '1', '50')).toBe(0);
+    expect(run('feedback', 'adopt', '1')).toBe(0);
+    expect(printed.at(-1)).toBe('- Bob \u{2014} <what they did> (#50)');
+    expect(run('feedback', 'issue', '1', '42')).toBe(0);
+    expect(printed.at(-1)).toBe('Replace (#50) with (#42) in its entry in ACKNOWLEDGMENTS.md.');
+    expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
+    expect(printed.at(-1)).toBe('Replace (#42) with (#50) in its entry in ACKNOWLEDGMENTS.md.');
+    expect(run('feedback', 'resolve', '1', '51')).toBe(0);
+    expect(printed.at(-1)).toBe('Replace (#50) with (#51) in its entry in ACKNOWLEDGMENTS.md.');
+    expect(run('feedback', 'resolve', '1', '51')).toBe(0);
+    expect(printed.at(-1)).toBe('Feedback #1 is resolved by PR #51, https://github.com/jxxsteven7/reviewer2/pull/51.');
+    expect(run('feedback', 'resolve', '1', '--clear')).toBe(0);
+    expect(printed.at(-1)).toBe('Take (#51) out of its entry in ACKNOWLEDGMENTS.md.');
+    expect(run('feedback', 'resolve', '1', '52')).toBe(0);
+    expect(printed.at(-1)).toBe('Put (#52) at the end of its entry in ACKNOWLEDGMENTS.md.');
+    expect(run('feedback', 'issue', '1', '43')).toBe(0);
+    expect(printed.at(-1)).toBe('Replace (#52) with (#43) in its entry in ACKNOWLEDGMENTS.md.');
+    // With an issue, the pull request isn't in the entry, so it can change without a word.
+    expect(run('feedback', 'resolve', '1', '53')).toBe(0);
+    expect(printed.at(-1)).toBe(
+      'Feedback #1 is resolved by PR #53, https://github.com/jxxsteven7/reviewer2/pull/53, no longer #52.',
+    );
+    expect(run('feedback', 'resolve', '1', '--clear')).toBe(0);
+    expect(printed.at(-1)).toBe('Feedback #1 is no longer recorded as resolved by PR #53.');
+    expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
+    expect(printed.at(-1)).toBe('Take (#43) out of its entry in ACKNOWLEDGMENTS.md.');
+    // Not adopted, there is no entry to put right.
+    store.add(feedback({ publicIssue: true }));
+    expect(run('feedback', 'resolve', '2', '54')).toBe(0);
+    expect(run('feedback', 'issue', '2', '44')).toBe(0);
+    expect(printed.at(-1)).toBe('Feedback #2 is issue #44, https://github.com/jxxsteven7/reviewer2/issues/44.');
   });
 });
 
@@ -567,6 +642,15 @@ describe('feedback delete, restore and trash', () => {
       expect(printed.at(-1)).toBe('There is no feedback #4.');
     }
     expect(store.count()).toBe(3);
+  });
+
+  test('cut a long text by its characters, so that an emoji stays whole', () => {
+    vi.useFakeTimers({ now: Date.UTC(2026, 10, 1, 9) });
+    const smile = String.fromCodePoint(0x1f600);
+    new FeedbackStore(database.db).add(feedback({ text: `${'x'.repeat(59)}${smile.repeat(3)}` }));
+    expect(run('feedback', 'delete', '1')).toBe(0);
+    expect(run('feedback', 'trash')).toBe(0);
+    expect(printed.at(-1)).toBe(`#1  2026-11-01  30 days left  idea  ${'x'.repeat(59)}${smile}...`);
   });
 
   test('say so on the day the next purge takes it, and list the trash on a database no server has open', () => {

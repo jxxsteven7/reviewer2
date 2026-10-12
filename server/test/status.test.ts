@@ -440,26 +440,38 @@ describe('the status server', () => {
     expect(status).toContain('<p class="note">6 in all &middot; <a href="/feedback">Read it</a></p>');
   });
 
-  test('answers only to the names of this machine with its own port, to keep a page elsewhere from reading it', async () => {
+  test('answers only to the names of this machine, on any port, to keep a page elsewhere from reading it', async () => {
     server = await startServer();
     await startStatus();
     const port = new URL(base).port;
-    for (const host of [`localhost:${port}`, `127.0.0.1:${port}`, `[::1]:${port}`, `LocalHost:${port}`]) {
+    // The port may be another than the one listened on, as through a tunnel, or none.
+    for (const host of [
+      `localhost:${port}`,
+      `127.0.0.1:${port}`,
+      `[::1]:${port}`,
+      `LocalHost:${port}`,
+      `localhost:${Number(port) + 1}`,
+      'localhost:8080',
+      'localhost',
+      '127.0.0.1',
+      '[::1]',
+    ]) {
       const response = await get(base, '/status.json', { host });
       expect(response.status, host).toBe(200);
       expect(response.body).toContain('"players"');
     }
-    // A name that isn't this machine's, with or without the port; the names without the port,
-    // which would mean port 80; and the port of another server here.
+    // A name that isn't this machine's, with or without the port, or one of them with more on it.
     for (const host of [
       `attacker.example:${port}`,
       'attacker.example',
       `127.0.0.1.attacker.example:${port}`,
       `localhost.attacker.example:${port}`,
-      'localhost',
-      '127.0.0.1',
-      `localhost:${Number(port) + 1}`,
+      `localhost.:${port}`,
       `localhost:${port}.`,
+      `localhost:${port}x`,
+      `127.0.0.1:${port}:1`,
+      `127.0.0.2:${port}`,
+      `::1:${port}`,
     ]) {
       for (const path of ['/', '/feedback', '/reports', '/status.json']) {
         const response = await get(base, path, { host });

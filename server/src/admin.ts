@@ -220,14 +220,34 @@ const daysLeftText = (days: number) => `${days} day${days === 1 ? '' : 's'} left
 // Feedback in the trash as the operator reads it, one line each: the id, the day it went in, how
 // long it has left, its kind, and the start of its text on one line.
 function trashLine(feedback: Feedback, daysLeft: number): string {
-  const line = feedback.text.replace(/\n/g, ' / ');
-  const text = line.length > 60 ? `${line.slice(0, 60)}...` : line;
+  // Cut by code points, so that an emoji isn't cut in two.
+  const chars = Array.from(feedback.text.replace(/\n/g, ' / '));
+  const text = chars.length > 60 ? `${chars.slice(0, 60).join('')}...` : chars.join('');
   return `#${feedback.id}  ${(feedback.deletedAt as string).slice(0, 10)}  ${daysLeftText(daysLeft)}  ${feedback.kind}  ${text}`;
 }
 
 // The way out of the trash, which a command that needs the feedback out of it points to.
 const inTrash = (print: Print, { id }: Feedback) =>
   print(`Feedback #${id} is in the trash. Restore it first: feedback restore ${id}.`);
+
+// A note taken on feedback in the trash, which may be a mistake, says where the feedback is.
+const trashNote = (print: Print, { id, deletedAt }: Feedback) => {
+  if (deletedAt !== null) print(`It is in the trash, by the way: feedback restore ${id} brings it back.`);
+};
+
+// The number that the entry in ACKNOWLEDGMENTS.md ends in: the issue's, or the pull request's
+// when there is no issue.
+const entryNumber = ({ issue, resolvedPr }: Pick<Feedback, 'issue' | 'resolvedPr'>) => issue ?? resolvedPr;
+
+// Adopted already, the feedback had its entry printed with the number as it was then, and the
+// operator puts the entry right when a note changes it to `after`.
+function entryHint(print: Print, found: Feedback, after: number | null): void {
+  const before = entryNumber(found);
+  if (found.acknowledgmentId === null || before === after) return;
+  if (before === null) print(`Put (#${after}) at the end of its entry in ACKNOWLEDGMENTS.md.`);
+  else if (after === null) print(`Take (#${before}) out of its entry in ACKNOWLEDGMENTS.md.`);
+  else print(`Replace (#${before}) with (#${after}) in its entry in ACKNOWLEDGMENTS.md.`);
+}
 
 // One report as the operator reads it: the id, the date, who reported whom, in which room, and the
 // note. The player reported is named as they were in the room, with their account, if they had one.
@@ -338,6 +358,12 @@ const COMMANDS: Record<string, Command> = {
         print(`Feedback #${found.id} was adopted already, as acknowledgment #${found.acknowledgmentId}.`);
         return 1;
       }
+      // The acknowledgment would point at feedback on its way out; the purge leaves such feedback
+      // alone (store/feedback.ts), but it shouldn't be made in the first place.
+      if (found.deletedAt !== null) {
+        inTrash(print, found);
+        return 1;
+      }
       const kind = kindOfFeedback(found.kind);
       // Only a player who left a name is counted, for the account they were logged in to.
       const named = found.credit !== null;
@@ -366,7 +392,7 @@ const COMMANDS: Record<string, Command> = {
         );
       }
       // The entry links the issue, or the pull request when there is no issue.
-      const number = found.issue ?? found.resolvedPr;
+      const number = entryNumber(found);
       printEntry(print, kind, {
         name: found.credit,
         link: found.link,
@@ -388,7 +414,8 @@ const COMMANDS: Record<string, Command> = {
         }
         data.feedback.setIssue(found.id, null);
         print(`Feedback #${found.id} is no longer recorded as issue #${found.issue}.`);
-        if (found.acknowledgmentId !== null) print(`Take (#${found.issue}) out of its entry in ACKNOWLEDGMENTS.md.`);
+        entryHint(print, found, found.resolvedPr);
+        trashNote(print, found);
         return 0;
       }
       const issue = numberOf(numberWord as string);
@@ -405,15 +432,8 @@ const COMMANDS: Record<string, Command> = {
         `Feedback #${found.id} is issue #${issue}, ${REPOSITORY_URL}/issues/${issue}` +
           (found.issue === null || found.issue === issue ? '.' : `, no longer #${found.issue}.`),
       );
-      // Adopted already, the feedback had its entry printed with the number recorded then, if any,
-      // and the operator puts the entry right.
-      if (found.acknowledgmentId !== null && found.issue !== issue) {
-        print(
-          found.issue === null
-            ? `Put (#${issue}) at the end of its entry in ACKNOWLEDGMENTS.md.`
-            : `Replace (#${found.issue}) with (#${issue}) in its entry in ACKNOWLEDGMENTS.md.`,
-        );
-      }
+      entryHint(print, found, issue);
+      trashNote(print, found);
       return 0;
     },
   },
@@ -430,6 +450,8 @@ const COMMANDS: Record<string, Command> = {
         }
         data.feedback.resolve(found.id, null);
         print(`Feedback #${found.id} is no longer recorded as resolved by PR #${found.resolvedPr}.`);
+        entryHint(print, found, found.issue);
+        trashNote(print, found);
         return 0;
       }
       const pr = numberOf(numberWord as string);
@@ -442,9 +464,8 @@ const COMMANDS: Record<string, Command> = {
         `Feedback #${found.id} is resolved by PR #${pr}, ${REPOSITORY_URL}/pull/${pr}` +
           (found.resolvedPr === null || found.resolvedPr === pr ? '.' : `, no longer #${found.resolvedPr}.`),
       );
-      if (found.deletedAt !== null) {
-        print(`It is in the trash, by the way: feedback restore ${found.id} brings it back.`);
-      }
+      entryHint(print, found, found.issue ?? pr);
+      trashNote(print, found);
       return 0;
     },
   },

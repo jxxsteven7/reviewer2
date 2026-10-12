@@ -320,6 +320,27 @@ describe('what became of the feedback', () => {
     expect(DEFAULT_FEEDBACK_LIMITS.trashMs).toBe(30 * DAY);
   });
 
+  test('is never purged while an acknowledgment points at it, even if it was adopted in the trash', () => {
+    const feedback = store();
+    feedback.add(entry());
+    feedback.add(entry());
+    feedback.delete(1);
+    feedback.delete(2);
+    // admin.ts refuses to adopt feedback in the trash, but it reads before it writes, so feedback
+    // deleted in between would be adopted all the same.
+    expect(adopt(1)).toBe(1);
+    now = START + 31 * DAY;
+    expect(feedback.purge()).toBe(1);
+    expect(feedback.byId(2)).toBeUndefined();
+    expect(feedback.byId(1)).toMatchObject({ status: 'trash', acknowledgmentId: 1 });
+    expect(feedback.daysLeft(feedback.byId(1) as Feedback)).toBe(0);
+    expect(feedback.purge()).toBe(0);
+    // Restored, it is thanked, as it was.
+    expect(feedback.restore(1)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ status: 'thanked', deletedAt: null });
+    expect(feedback.count()).toBe(1);
+  });
+
   test('is read by view, and counted by status and by kind within a view', () => {
     const feedback = store();
     for (const kind of ['idea', 'bug', 'idea', 'bug', 'idea', 'words'] as const) {
