@@ -31,7 +31,8 @@ for (const language of ['en', 'zh'] as const) {
     await page.getByRole('button', { name: text.footer.tip }).click();
     const sheet = page.locator('[role=dialog]');
     await expect(sheet).toContainText(text.footer.tipHint);
-    // How to ask to be on the list of sponsors, set apart below the code.
+    // How to ask to be on the list of sponsors, in a note of its own.
+    await expect(sheet.locator('.listing')).toBeVisible();
     await expect(sheet.locator('.listing')).toContainText(text.footer.listTitle);
     await expect(sheet.locator('.listing')).toContainText(text.footer.listHow);
     const code = sheet.getByRole('img', { name: text.footer.tipCode });
