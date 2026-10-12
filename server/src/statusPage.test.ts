@@ -470,6 +470,15 @@ describe('the feedback', () => {
         `${RUN} delete 7`,
       ]);
     }
+    // A kind this build doesn't know, from a later server, has no draft, which the command would
+    // refuse, but the issue can still be recorded.
+    expect(of({ publicIssue: true, kind: 'later' as Feedback['kind'] })).toEqual([
+      `${RUN} issue 7 &#60;number&#62;`,
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} adopt 7 can't be undone`,
+      `${RUN} close 7`,
+      `${RUN} delete 7`,
+    ]);
     // Published and resolved: either can be taken back, and there is nothing to draft.
     expect(of({ publicIssue: true, issue: 42, resolvedPr: 50, status: 'resolved' })).toEqual([
       `${RUN} issue 7 --clear`,

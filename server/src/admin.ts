@@ -306,18 +306,24 @@ const OPENINGS: Record<FeedbackKind, string> = {
   words: 'A suggestion for the word lists',
 };
 
-// How much of the first line of the text the title takes, in the characters that a reader sees.
+// How much of the first line of the text the title takes, in the characters that a reader sees,
+// and in code points, which GitHub counts, taking a title of at most 256: a character that a reader
+// sees may be several, so this bound leaves room for the kind and the zero-width spaces.
 const TITLE_LENGTH = 60;
+const TITLE_POINTS = 120;
 const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
 
 // The player's text and name go to GitHub as they are, and GitHub reads more in text than
-// Markdown: it mentions a user or a team written as @name, links an email address, and refers to
-// an issue or a pull request written as #12 or GH-12, which then shows the reference, in a title
-// as much as in a body. Those patterns need the name or the number right after the sign, so a
-// zero-width space after the sign, which shows nothing, keeps them from matching; a backslash
-// wouldn't, since GitHub reads the signs in the text once Markdown has taken the backslash away.
+// Markdown: it mentions a user or a team written as @name, links an email address, refers to an
+// issue or a pull request written as #12 or GH-12, which then shows the reference, links a commit
+// written as seven or more hexadecimal digits on their own, and shows :boom: as an emoji, in a
+// title as much as in a body. Those patterns need the name, the number, the rest of the digits or
+// the shortcode right after their first character, so a zero-width space after it, which shows
+// nothing, keeps them from matching; a backslash wouldn't, since GitHub reads the signs in the
+// text once Markdown has taken the backslash away.
 const ZERO_WIDTH_SPACE = '\u200b';
-const unlinked = (text: string): string => text.replace(/@(?=[a-z0-9])|(?:#|GH-)(?=\d)/gi, `$&${ZERO_WIDTH_SPACE}`);
+const LINKED = /@(?=[a-z0-9])|(?:#|GH-)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|:(?=[\w+-]+:)/gi;
+const unlinked = (text: string): string => text.replace(LINKED, `$&${ZERO_WIDTH_SPACE}`);
 
 // A line of the text, or the name, as the body's Markdown shows it as it is: unlinked, and then
 // with every ASCII punctuation character escaped, as a name is in ACKNOWLEDGMENTS.md
@@ -326,14 +332,17 @@ const unlinked = (text: string): string => text.replace(/@(?=[a-z0-9])|(?:#|GH-)
 const literal = (text: string): string => escapeName(unlinked(text));
 
 // The title: the kind, as the status page calls it, and the first line of the text, on one line
-// with its spaces collapsed, cut after TITLE_LENGTH characters with an ellipsis. The characters
-// are the ones that a reader sees, as textLength counts them (shared/src/text.ts), so that a
-// Chinese character or an emoji is never cut in two. GitHub shows a title as text, not as
-// Markdown, so nothing is escaped, but the signs are unlinked all the same.
+// with its spaces collapsed, cut after TITLE_LENGTH characters, or fewer when they are more than
+// TITLE_POINTS code points, with an ellipsis. The characters are the ones that a reader sees, as
+// textLength counts them (shared/src/text.ts), so that a Chinese character or an emoji is never
+// cut in two. GitHub shows a title as text, not as Markdown, so nothing is escaped, but the signs
+// are unlinked all the same.
 function issueTitle({ kind, text }: Feedback): string {
   const line = (text.split('\n')[0] ?? '').replace(/\s+/g, ' ').trim();
   const chars = [...graphemes.segment(line)].map(({ segment }) => segment);
-  const cut = chars.length > TITLE_LENGTH ? `${chars.slice(0, TITLE_LENGTH).join('')}\u2026` : line;
+  const kept = chars.slice(0, TITLE_LENGTH);
+  while ([...kept.join('')].length > TITLE_POINTS) kept.pop();
+  const cut = kept.length < chars.length ? `${kept.join('').trimEnd()}\u2026` : line;
   return `${KINDS[kind]}: ${unlinked(cut)}`;
 }
 

@@ -505,12 +505,19 @@ describe('feedback draft', () => {
     store.add(feedback({ text: han.repeat(61), publicIssue: true }));
     store.add(feedback({ text: `${'x'.repeat(59)}${family}${family}`, publicIssue: true }));
     store.add(feedback({ text: ' Spaced \t  out \nand more', publicIssue: true }));
+    store.add(feedback({ text: `${'x'.repeat(59)} and more`, publicIssue: true }));
+    store.add(feedback({ text: family.repeat(61), publicIssue: true }));
     expect(drafted('1').title).toBe(`Idea: ${'x'.repeat(60)}`);
     expect(drafted('2').title).toBe(`Idea: ${'x'.repeat(60)}\u2026`);
     expect(drafted('3').title).toBe(`Idea: ${han.repeat(60)}\u2026`);
     // An emoji built from several code points is one character, and stays whole.
     expect(drafted('4').title).toBe(`Idea: ${'x'.repeat(59)}${family}\u2026`);
     expect(drafted('5').title).toBe('Idea: Spaced out');
+    // No space is left before the ellipsis.
+    expect(drafted('6').title).toBe(`Idea: ${'x'.repeat(59)}\u2026`);
+    // Fewer characters when 60 would be more than 120 code points, which GitHub counts: 24 of these
+    // emoji, of five code points each.
+    expect(drafted('7').title).toBe(`Idea: ${family.repeat(24)}\u2026`);
     // The body keeps every line as it is.
     expect(drafted('1').body).toContain(`> ${'x'.repeat(60)}\n> The second line`);
   });
@@ -529,33 +536,37 @@ describe('feedback draft', () => {
       feedback({
         kind: 'bug',
         text:
-          '# Heading @octocat, see #12 and GH-13\n\n- item [x](https://e.example) ![](https://i.example/i.png) ' +
-          '<b>bold</b>\n> quoted 1. list\nwww.example.com me@example.com',
+          '# Heading @octocat, see #12, GH-13 and fbcd508 :tada:\n\n- item [x](https://e.example) ' +
+          '![](https://i.example/i.png) <b>bold</b>\n> quoted 1. list\nwww.example.com me@example.com\n' +
+          '7ccd7e7e3bd9256e1cb82d4993944a842502dc58 :+1: at 10:30, by the feedback form',
         credit: '[@bob](#1)',
         publicIssue: true,
       }),
     );
     const { title, body } = drafted('1');
     // The title is text, which GitHub doesn't render, but its signs are unlinked all the same.
-    expect(title).toBe(`Bug: # Heading @${ZWSP}octocat, see #${ZWSP}12 and GH-${ZWSP}13`);
+    expect(title).toBe(`Bug: # Heading @${ZWSP}octocat, see #${ZWSP}12, GH-${ZWSP}13 and f${ZWSP}bcd508 :${ZWSP}tada:`);
     // In the body, every ASCII punctuation character is escaped, and a zero-width space follows an
-    // @ before a name and a # or GH- before a number, so that GitHub, which reads them in the text
-    // once Markdown has taken the backslashes away, finds no mention, reference or address.
+    // @ before a name, a # or GH- before a number, the first of seven or more hexadecimal digits
+    // on their own and a : before a shortcode, so that GitHub, which reads them in the text once
+    // Markdown has taken the backslashes away, finds no mention, reference, address, commit or
+    // emoji. A time, and a word with fewer such digits in a row, are left alone.
     expect(body).toBe(
       [
         `A bug report ${AGREED}`,
         '',
-        `> \\# Heading \\@${ZWSP}octocat\\, see \\#${ZWSP}12 and GH\\-${ZWSP}13`,
+        `> \\# Heading \\@${ZWSP}octocat\\, see \\#${ZWSP}12\\, GH\\-${ZWSP}13 and f${ZWSP}bcd508 \\:${ZWSP}tada\\:`,
         '>',
         '> \\- item \\[x\\]\\(https\\:\\/\\/e\\.example\\) \\!\\[\\]\\(https\\:\\/\\/i\\.example\\/i\\.png\\) \\<b\\>bold\\<\\/b\\>',
         '> \\> quoted 1\\. list',
         `> www\\.example\\.com me\\@${ZWSP}example\\.com`,
+        `> 7${ZWSP}ccd7e7e3bd9256e1cb82d4993944a842502dc58 \\:${ZWSP}\\+1\\: at 10\\:30\\, by the feedback form`,
         '',
         `Reported by \\[\\@${ZWSP}bob\\]\\(\\#${ZWSP}1\\).`,
       ].join('\n'),
     );
-    // Nothing that GitHub links is left as it was.
-    expect(body).not.toMatch(/@[a-z0-9]|#\d|GH-\d|https?:\/\/|www\./i);
+    // Nothing that GitHub links or replaces is left as it was.
+    expect(body).not.toMatch(/@[a-z0-9]|#\d|GH-\d|https?:\/\/|www\.|fbcd508|7ccd7e7|:[\w+-]+:/i);
   });
 
   test('escapes a name as the acknowledgments do, and unlinks it', () => {

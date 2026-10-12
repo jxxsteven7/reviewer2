@@ -98,12 +98,15 @@ DATA_DIR=data node server/dist/admin.cjs acknowledgments add <name> --kind feedb
 
 The `feedback` commands are the only way to change what became of a piece of feedback; the status page shows it and changes nothing ([architecture.md](architecture.md#feedback)). `feedback adopt` records that feedback was adopted, counted for the account of a player who left a name while logged in, and says when the name is another account's username; `acknowledgments add` thanks someone by hand, counted for the account `--account` names or, with `--no-account`, for none, and takes one or the other, so that an account isn't left out by mistake. `feedback draft` writes the title and the body of the issue for feedback whose player agreed to a public issue, from a template, with its text and name and never its contact, and records nothing; `feedback issue` records the issue it became, for such feedback alone; `feedback resolve` takes any feedback. `feedback delete` puts feedback in the trash, from which the server deletes it for good after 30 days, unless `feedback restore` brings it back; feedback that was adopted can't be deleted, only closed. No command changes what a player sent, and the acknowledgments and the reports are never deleted or changed.
 
-To publish feedback as a GitHub issue, draft it, create the issue from the draft on a machine that reaches GitHub, such as with the [GitHub CLI](https://cli.github.com) in a checkout of the repository, and record the issue's number. The server itself needs no access to GitHub.
+To publish feedback as a GitHub issue, draft it, create the issue from the draft on a machine that reaches GitHub, such as with the [GitHub CLI](https://cli.github.com) and [jq](https://jqlang.org) in a checkout of the repository, and record the issue's number. The server itself needs no access to GitHub. `feedback draft` prints why there is no draft, and exits with 1, for feedback it refuses, so check its exit code before creating the issue:
 
 ```bash
-DATA_DIR=data node server/dist/admin.cjs feedback draft <id> --json > draft.json  # {"id", "kind", "title", "body"}
-gh issue create --title "$(jq -r .title draft.json)" --body "$(jq -r .body draft.json)"
-DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>             # the number in the issue's address
+if draft=$(DATA_DIR=data node server/dist/admin.cjs feedback draft <id> --json); then  # {"id", "kind", "title", "body"}
+  gh issue create --title "$(jq -r .title <<< "$draft")" --body "$(jq -r .body <<< "$draft")"
+else
+  echo "$draft"                                                               # why there is no draft
+fi
+DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>         # the number in the issue's address
 ```
 
 ## Acknowledgments
