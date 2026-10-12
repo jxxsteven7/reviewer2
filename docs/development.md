@@ -102,12 +102,12 @@ A name follows the nickname rules, with every ASCII punctuation character escape
 
 ## Sponsors
 
-`SPONSORS.md` has two sections after the introduction. `.github/workflows/sponsors.yml` writes `## GitHub Sponsors` every day, between the lines `<!-- start of GitHub Sponsors, ... -->` and `<!-- end of GitHub Sponsors -->`, and takes out `_No one yet._` or puts it back; leave all of that to it. A WeChat tipper asks to be named in the tip's message, with the name they want or the phrase that the tip sheet suggests ("list me" in English) for their WeChat name. Below those lines, add those who sponsor in other ways and ask to be named, by the rules of a name in the acknowledgments:
+`SPONSORS.md` has two sections after the introduction. `.github/workflows/sponsors.yml` writes `## GitHub Sponsors` every day, between the lines `<!-- start of GitHub Sponsors, ... -->` and `<!-- end of GitHub Sponsors -->`, and takes out `_No one yet._` or puts it back; leave all of that to it. A WeChat tipper asks to be named in the tip's message, with the name they want or the phrase that the tip sheet suggests ("list me" in English) for their WeChat name. Below those lines, add those who sponsor in other ways and ask to be named, by name alone, with no link, by the rules of a name in the acknowledgments:
 
 ```markdown
 ## Other ways
 
-- [Alice](https://alice.example)
+- Alice
 - Bob
 ```
 
