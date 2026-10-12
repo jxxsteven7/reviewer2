@@ -76,8 +76,9 @@ export interface FriendsView {
 
 // An invitation, as the server sends it to every connection of the invited account as
 // friends:invited, and again to a connection that comes while it stands. `id` goes with room:join
-// in place of the code, or with friends:ignore. `expiresInMs` is how much longer it stands, at
-// most INVITATION_MS.
+// in place of the code, or with friends:ignore, and comes back to every connection of the account
+// as friends:uninvited, `{ id }`, once the invitation has ended, however it ended. `expiresInMs` is
+// how much longer it stands, at most INVITATION_MS.
 export interface InvitationView {
   id: string;
   code: string;

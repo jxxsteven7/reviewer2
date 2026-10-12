@@ -147,13 +147,24 @@ describe('a friend request', () => {
     await person('Cat');
     const { chair: bob, code } = await roomOf(bobs);
     expect(await ann.send('room:join', { code, play: false })).toMatchObject({ ok: true });
-    const state = await ann.waitFor((view) => view.players.length === 2);
-    const bobId = state.players.find(({ name }) => name === 'Bob')?.id as string;
-    // Bob has an account, as his rank in the room says, so asking him again and again costs nothing.
-    expect(await ann.send('friends:request', { playerId: bobId })).toEqual({ ok: true, status: 'pending' });
+    const guest = track(await TestClient.connect(server.url));
+    expect(await guest.send('room:join', { code, name: 'Guest', play: false })).toMatchObject({ ok: true });
+    const state = await ann.waitFor((view) => view.players.length === 3);
+    const idOf = (name: string) => state.players.find((player) => player.name === name)?.id as string;
+    // Asking a guest, or a player who isn't there, sends nothing and costs nothing; nor does asking
+    // Bob again and again once he is a friend: he has an account, as his rank in the room says.
+    expect(await ann.send('friends:request', { playerId: idOf('Guest') })).toEqual({
+      ok: false,
+      error: 'no_such_account',
+    });
+    expect(await ann.send('friends:request', { playerId: 'nobody' })).toEqual({ ok: false, error: 'no_such_player' });
+    expect(await ann.send('friends:request', { playerId: idOf('Bob') })).toEqual({ ok: true, status: 'pending' });
     expect(await bob.send('friends:accept', { username: 'Ann' })).toEqual({ ok: true });
     for (let i = 0; i < 3; i += 1) {
-      expect(await ann.send('friends:request', { playerId: bobId })).toEqual({ ok: false, error: 'already_friends' });
+      expect(await ann.send('friends:request', { playerId: idOf('Bob') })).toEqual({
+        ok: false,
+        error: 'already_friends',
+      });
     }
     expect(await ann.send('friends:request', { username: 'Cat' })).toEqual({ ok: true, status: 'pending' });
     expect(await ann.send('friends:request', { username: 'Cat' })).toEqual({ ok: false, error: 'friend_limited' });
@@ -337,9 +348,16 @@ describe('an invitation', () => {
     await until(() => bob.invitations.length === 1 && cat.invitations.length === 1, 'the invitations');
     const bobsFirst = bob.invitations[0]?.id as string;
     const catsFirst = cat.invitations[0]?.id as string;
-    // Bob comes in with his. His next connection hears nothing of it: he is in the room, and comes
-    // back by the code, with the invitation still in hand or not, even once it would have lapsed.
+    // Bob comes in with his. Every connection of his hears that it is used up, and his next
+    // connection hears nothing of it: he is in the room, and comes back by the code, with the
+    // invitation still in hand or not, even once it would have lapsed.
+    const bobsTablet = track(await bobs.connect());
+    await until(() => bobsTablet.invitations.length === 1, "Bob's invitation on the tablet");
     expect(await bob.send('room:join', { invitation: bobsFirst, play: true })).toEqual({ ok: true, code, roomId });
+    await until(
+      () => bob.uninvited.includes(bobsFirst) && bobsTablet.uninvited.includes(bobsFirst),
+      'word that the invitation was used up',
+    );
     const phone = track(await bobs.connect());
     await phone.send('sys:ping');
     expect(phone.invitations).toEqual([]);
@@ -357,9 +375,12 @@ describe('an invitation', () => {
     await until(() => cat.invitations.length === 2 && dan.invitations.length === 1, 'the next invitations');
     const catsSecond = cat.invitations[1]?.id as string;
     expect(await dan.send('friends:ignore', { id: catsSecond })).toEqual({ ok: true });
+    await cat.send('sys:ping');
+    expect(cat.uninvited).toEqual([]);
     const tablet = track(await cats.connect());
     await until(() => tablet.invitations.length === 1, "Cat's invitation on the tablet");
     expect(await cat.send('friends:ignore', { id: catsSecond })).toEqual({ ok: true });
+    await until(() => tablet.uninvited.includes(catsSecond), 'the tablet hearing that it was ignored');
     const laptop = track(await cats.connect());
     await laptop.send('sys:ping');
     expect(laptop.invitations).toEqual([]);
@@ -418,6 +439,11 @@ describe('an invitation', () => {
       ok: false,
       error: 'invitation_expired',
     });
+    // The sweep finds the invitations that have lapsed, and every connection of the invited hears so.
+    server.app.sockets.sweep();
+    await until(() => cat.uninvited.length === 1 && phone.uninvited.length === 2, 'word of the lapsed invitations');
+    expect(cat.uninvited).toEqual([cat.invitations[0]?.id]);
+    expect(bob.uninvited).toEqual([old, fresh]);
     // Lapsed because the room closed.
     const { chair: again } = await roomOf(anns);
     server.advance(INVITE_COOLDOWN_MS);

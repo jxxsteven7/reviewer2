@@ -8,7 +8,6 @@ import {
   cleanName,
   INVITE_COOLDOWN_MS,
   isReservedName,
-  usernameKey,
   type Ack,
   type ClosedReason,
   type EmoteEvent,
@@ -173,13 +172,19 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   let feedbackFullLogged = false;
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
-  // Invitations to rooms, and how often a member may invite the same friend
-  // (docs/architecture.md#friends).
-  const invitations = new Invitations(now, isOpen, (a, b) => accounts?.friends.areFriends(a, b) ?? false);
-  const invites = new WindowCounter(1, INVITE_COOLDOWN_MS, now);
   // The connections of each account that is logged in, so that whether a friend is online, and
   // where their invitations go, costs no walk through every connection.
   const accountSockets = new Map<number, Set<string>>();
+  // Invitations to rooms, and how often a member may invite the same friend
+  // (docs/architecture.md#friends). However an invitation ends, every connection of the invited
+  // account hears so, and takes it off the page.
+  const invitations = new Invitations(
+    now,
+    isOpen,
+    (a, b) => accounts?.friends.areFriends(a, b) ?? false,
+    ({ id, inviteeId }) => tellAccount(inviteeId, 'friends:uninvited', { id }),
+  );
+  const invites = new WindowCounter(1, INVITE_COOLDOWN_MS, now);
 
   // Logs something that went wrong, whatever was thrown: a game module may throw anything.
   function report(error: unknown, where: string, fields: Record<string, unknown> = {}): void {
@@ -511,12 +516,6 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return account ? { ok: true, account } : fail('account_required');
   }
 
-  // An account by its username, as someone typed it.
-  function accountByName(username: string): Account | undefined {
-    const name = cleanName(username);
-    return name === null ? undefined : accounts?.store.byKey(usernameKey(name));
-  }
-
   const isOnline = (accountId: number) => (accountSockets.get(accountId)?.size ?? 0) > 0;
 
   // The room that an account is in, if it is online in one: the room of one of its connections,
@@ -561,13 +560,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     };
   }
 
+  // Sends every connection of an account a message.
+  function tellAccount(accountId: number, event: string, payload?: object): void {
+    const sockets = accountSockets.get(accountId);
+    if (sockets?.size) io.to([...sockets]).emit(event, ...(payload === undefined ? [] : [payload]));
+  }
+
   // Tells every connection of these accounts that their friends or requests have changed, so that a
   // page that shows them asks again.
   function tellFriends(...accountIds: number[]): void {
-    for (const id of accountIds) {
-      const sockets = accountSockets.get(id);
-      if (sockets?.size) io.to([...sockets]).emit('friends:changed');
-    }
+    for (const id of accountIds) tellAccount(id, 'friends:changed');
   }
 
   // The room that an invitation lets a connection into: the invitation's, while it stands, or else
@@ -1090,15 +1092,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
 
     // A request to be friends, to an account by its username, or to a player in the room that the
-    // connection is in, who must have an account. The day's count is taken before the name is looked
-    // up, so that trying names costs as much as asking; a player in the room is known to have an
-    // account, so asking them costs one of the day's requests only if one goes out. Both sides hear
+    // connection is in, who must have an account. By username, the day's count is taken before the
+    // name is looked up, so that trying names costs as much as asking. A player in the room is known
+    // to have an account, so asking them costs one of the day's requests only if one goes out: it is
+    // taken once the player is found, and given back if the request is refused. Both sides hear
     // that something changed.
     on(handlers, 'friends:request', ({ username, playerId }) => {
       const me = accountOf(conn);
       if (!me.ok) return me;
       const friends = (accounts as Accounts).friends;
-      if (!friends.take(me.account.id)) return fail('friend_limited');
       let target: Account | undefined;
       if (playerId !== undefined) {
         const found = membership(socket);
@@ -1107,11 +1109,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (!other) return fail('no_such_player');
         target = other.account ? accounts?.store.byId(other.account.id) : undefined;
       } else if (username !== undefined) {
-        target = accountByName(username);
+        if (!friends.take(me.account.id)) return fail('friend_limited');
+        target = (accounts as Accounts).byName(username);
       } else {
         return fail('bad_request');
       }
       if (!target) return fail('no_such_account');
+      if (playerId !== undefined && !friends.take(me.account.id)) return fail('friend_limited');
       const result = friends.request(me.account.id, target.id);
       if (!result.ok) {
         if (playerId !== undefined) friends.refund(me.account.id);
@@ -1129,7 +1133,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       ({ username }: { username: string }): Reply => {
         const me = accountOf(conn);
         if (!me.ok) return me;
-        const other = accountByName(username);
+        const other = (accounts as Accounts).byName(username);
         if (!other) return fail('no_such_request');
         const result = (accounts as Accounts).friends[answer](me.account.id, other.id);
         if (!result.ok) return result;
@@ -1149,16 +1153,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (!found) return fail('not_member');
       const me = accountOf(conn);
       if (!me.ok) return me;
-      const friend = accountByName(username);
+      const friend = (accounts as Accounts).byName(username);
       if (!friend || !(accounts as Accounts).friends.areFriends(me.account.id, friend.id)) return fail('not_friends');
       if (found.room.memberByKey(accountKey(friend.id))) return fail('friend_in_room');
       if (found.room.removal(accountKey(friend.id))) return fail('friend_removed');
       if (!isOnline(friend.id)) return fail('friend_offline');
-      const pair = `${me.account.id}\n${friend.id}`;
-      if (!invites.allowed(pair)) return fail('invite_cooldown');
-      invites.add(pair);
+      if (!invites.take(`${me.account.id}\n${friend.id}`)) return fail('invite_cooldown');
       const invitation = invitations.create(found.room, me.account.id, found.member.key, friend.id);
-      io.to([...(accountSockets.get(friend.id) ?? [])]).emit('friends:invited', invitationView(invitation));
+      tellAccount(friend.id, 'friends:invited', invitationView(invitation));
       return ok();
     });
 

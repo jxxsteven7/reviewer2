@@ -5,8 +5,9 @@ import type { Room } from './room';
 // Invitations to rooms (docs/architecture.md#friends): a member of a room invites a friend, who
 // may then come in with the invitation in place of the code, into a private room too. An invitation
 // stands for INVITATION_MS, unless the room closes, the inviter leaves it or the two part first,
-// and goes when the friend comes into the room or ignores it. It is written down nowhere: it lives
-// in memory, and ends with the server.
+// and goes when the friend comes into the room or ignores it. However it ends, `ended` hears of
+// it, so that the pages of the invited account can take it down. It is written down nowhere: it
+// lives in memory, and ends with the server.
 
 export interface Invitation {
   id: string;
@@ -30,6 +31,8 @@ export class Invitations {
     private readonly isOpen: (room: Room) => boolean,
     // Whether two accounts are friends: an invitation lasts no longer than the friendship.
     private readonly areFriends: (a: number, b: number) => boolean,
+    // Hears of every invitation that ends: used up, ignored, or found to have lapsed.
+    private readonly ended: (invitation: Invitation) => void = () => {},
   ) {}
 
   create(room: Room, inviterId: number, inviterKey: string, inviteeId: number): Invitation {
@@ -96,5 +99,6 @@ export class Invitations {
     const own = this.#byInvitee.get(invitation.inviteeId);
     own?.delete(invitation);
     if (own?.size === 0) this.#byInvitee.delete(invitation.inviteeId);
+    this.ended(invitation);
   }
 }

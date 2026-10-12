@@ -38,6 +38,10 @@ socket.on('friends:invited', (invitation: InvitationView) => {
   );
 });
 
+// An invitation has ended, however it ended: followed or ignored from another page of the
+// account's, or lapsed. One this page doesn't show is nothing to it.
+socket.on('friends:uninvited', ({ id }: { id: string }) => forget(id));
+
 // A new connection is whoever the browser is now, who may be someone else, and hears again the
 // invitations that stand for them.
 socket.on('connect', () => {

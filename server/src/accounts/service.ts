@@ -185,10 +185,15 @@ export class Accounts {
     return rankFor(this.records.points(accountId));
   }
 
-  // Whether a guest's nickname is someone's username, compared as usernames are.
+  // The account whose username this is, as someone typed it, compared as usernames are.
+  byName(username: string): Account | undefined {
+    const name = cleanName(username);
+    return name === null ? undefined : this.store.byKey(usernameKey(name));
+  }
+
+  // Whether a guest's nickname is someone's username.
   reserved(nickname: string): boolean {
-    const name = cleanName(nickname);
-    return name !== null && this.store.byKey(usernameKey(name)) !== undefined;
+    return this.byName(nickname) !== undefined;
   }
 
   async register(ip: string, rawName: string, password: string): Promise<AccountResult<{ secret: string }>> {
