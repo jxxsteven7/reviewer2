@@ -452,8 +452,9 @@ describe('the feedback', () => {
 
   test('lists the commands that may come next, by what became of it, folded under each one', () => {
     const of = (changes: Partial<Feedback>) => commands(page({ total: 1, entries: [feedback(7, changes)] }));
-    // New, and the player agreed to an issue: everything is open.
+    // New, and the player agreed to an issue: everything is open, the issue's draft first.
     expect(of({ publicIssue: true })).toEqual([
+      `${RUN} draft 7`,
       `${RUN} issue 7 &#60;number&#62;`,
       `${RUN} resolve 7 &#60;pr&#62;`,
       `${RUN} adopt 7 can't be undone`,
@@ -469,7 +470,7 @@ describe('the feedback', () => {
         `${RUN} delete 7`,
       ]);
     }
-    // Published and resolved: either can be taken back.
+    // Published and resolved: either can be taken back, and there is nothing to draft.
     expect(of({ publicIssue: true, issue: 42, resolvedPr: 50, status: 'resolved' })).toEqual([
       `${RUN} issue 7 --clear`,
       `${RUN} resolve 7 --clear`,
@@ -489,6 +490,15 @@ describe('the feedback', () => {
       `${RUN} resolve 7 &#60;pr&#62;`,
       `${RUN} reopen 7`,
     ]);
+    // Closed, with the player's agreement and no issue yet: the draft is still offered, as the
+    // issue is.
+    expect(of({ publicIssue: true, closedAt: '2026-10-06T10:00:00.000Z', status: 'closed' })).toEqual([
+      `${RUN} draft 7`,
+      `${RUN} issue 7 &#60;number&#62;`,
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} reopen 7`,
+      `${RUN} delete 7`,
+    ]);
     // In the trash, only the way out, whatever else became of it.
     expect(of({ deletedAt: '2026-10-07T09:00:00.000Z', status: 'trash' })).toEqual([`${RUN} restore 7`]);
     expect(
@@ -507,6 +517,7 @@ describe('the feedback', () => {
     const html = page({ total: 1, entries: [feedback(7, { publicIssue: true, userAgent: 'Mozilla/5.0' })] });
     expect(html).toContain(
       '<p class="meta">Browser: Mozilla/5.0</p><details><summary>Commands</summary>' +
+        `<p class="command"><code>${RUN} draft 7</code></p>` +
         `<p class="command"><code>${RUN} issue 7 &#60;number&#62;</code></p>`,
     );
     expect(html).toContain(`<p class="command"><code>${RUN} adopt 7</code> can't be undone</p>`);
