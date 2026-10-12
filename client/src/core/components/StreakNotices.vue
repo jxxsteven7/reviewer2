@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { isLanguage, numberWords, type RoomView, type StreakNotice } from '@reviewer2/shared';
+import type { RoomView, StreakNotice } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { streakLineKey } from '../streaks';
+import { useLanguage } from '../i18n';
+import { streakLineKey, streakTitle } from '../streaks';
 import PlayerAvatar from './PlayerAvatar.vue';
 
 // The streaks that the game which has just ended brought the players to
@@ -10,12 +11,15 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // card: its title, a line for the occasion, and whether it is a new record. Everyone else's winning
 // streak is a cheer to the whole room, which the screens show too; a losing streak is told to its
 // player alone, so there is none to show for anyone else. `large` is for a big screen across a room.
+//
+// A screen reader is told of them by a live region that is on the page throughout the game, out of
+// sight, since one that comes with its contents is often passed over; the notices themselves come
+// and go with the end of the game.
 const props = defineProps<{ room: RoomView; large?: boolean }>();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
-const language = computed(() => (isLanguage(locale.value) ? locale.value : 'en'));
-const title = (notice: StreakNotice) =>
-  t(`streaks.names.${notice.kind}`, { n: numberWords(notice.length, language.value) });
+const language = useLanguage();
+const title = (notice: StreakNotice) => streakTitle(t, notice.kind, notice.length, language.value);
 const line = (notice: StreakNotice) =>
   t(streakLineKey(props.room.gameId ?? '', notice.playerId, notice.kind, notice.length));
 
@@ -29,10 +33,28 @@ const cheers = computed(() =>
       return player ? [{ notice, player }] : [];
     }),
 );
+const cheerOf = ({ notice, player }: { notice: StreakNotice; player: { name: string } }) =>
+  t('streaks.broadcast', { name: player.name, title: title(notice) });
+const announcement = computed(() =>
+  [
+    ...(mine.value
+      ? [
+          t('streaks.announce', {
+            kind: t(`streaks.kinds.${mine.value.kind}`),
+            title: title(mine.value),
+            line: line(mine.value),
+          }),
+          ...(mine.value.record ? [t('streaks.record')] : []),
+        ]
+      : []),
+    ...cheers.value.map(cheerOf),
+  ].join(' '),
+);
 </script>
 
 <template>
-  <section v-if="mine || cheers.length > 0" class="streak-notices" :class="{ large }" aria-live="polite">
+  <p class="sr-only announcement" aria-live="polite">{{ announcement }}</p>
+  <section v-if="mine || cheers.length > 0" class="streak-notices" :class="{ large }">
     <article v-if="mine" class="mine" :class="mine.kind">
       <p class="kicker">{{ t(`streaks.kinds.${mine.kind}`) }}</p>
       <h2 class="title">{{ title(mine) }}</h2>
@@ -48,8 +70,10 @@ const cheers = computed(() =>
       scope="global"
     >
       <template #name>
-        <PlayerAvatar :name="player.name" :avatar="player.avatar" />
-        <strong>{{ player.name }}</strong>
+        <span class="who">
+          <PlayerAvatar :name="player.name" :avatar="player.avatar" :size="large ? 'medium' : 'small'" />
+          <strong>{{ player.name }}</strong>
+        </span>
       </template>
       <template #title>{{ title(notice) }}</template>
     </i18n-t>
@@ -130,9 +154,12 @@ const cheers = computed(() =>
   overflow-wrap: anywhere;
 }
 
-.cheer :deep(.avatar) {
-  margin-right: var(--space-1);
-  vertical-align: -0.45em;
+/* The avatar and the name, on one line and level with each other and with the words around them. */
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  vertical-align: middle;
 }
 
 .large .mine {

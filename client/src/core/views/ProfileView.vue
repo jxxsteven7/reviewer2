@@ -3,11 +3,9 @@ import {
   ACCOUNT_API,
   checkPassword,
   checkUsername,
-  isLanguage,
   MAX_NAME_INPUT,
   MAX_PASSWORD_INPUT,
   nextRank,
-  numberWords,
   rankFor,
   STREAK_KINDS,
   STREAK_MIN,
@@ -21,6 +19,8 @@ import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { errorKey } from '../errors';
+import { useLanguage } from '../i18n';
+import { streakTitle } from '../streaks';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import ProfileAvatar from './ProfileAvatar.vue';
@@ -32,7 +32,7 @@ import ProfileRecords from './ProfileRecords.vue';
 // the acknowledgments counted for it, its friends, its email address, its password, its record, and
 // the ways to log out and to delete it.
 const props = defineProps<{ summary: AccountSummary }>();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const router = useRouter();
 const { busy, run } = useBusy();
 
@@ -72,13 +72,11 @@ const next = computed(() => nextRank(props.summary.points));
 
 // The streak titles (shared/src/streaks.ts): the longest run of wins and of losses, from three games
 // on, with the number in the words of the language.
-const language = computed(() => (isLanguage(locale.value) ? locale.value : 'en'));
+const language = useLanguage();
 const streakTitles = computed(() =>
   STREAK_KINDS.flatMap((kind) => {
     const length = props.summary.streaks[kind];
-    return length >= STREAK_MIN
-      ? [{ kind, title: t(`streaks.names.${kind}`, { n: numberWords(length, language.value) }) }]
-      : [];
+    return length >= STREAK_MIN ? [{ kind, title: streakTitle(t, kind, length, language.value) }] : [];
   }),
 );
 

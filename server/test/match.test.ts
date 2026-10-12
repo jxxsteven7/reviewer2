@@ -110,6 +110,17 @@ describe('a match', () => {
   test('is played game by game, scores everyone and ranks them at the end, with titles', async () => {
     server = await startServer({ games: [keywordsGame] });
     const accounts = { Ann: await loggedIn('Ann'), Bob: await loggedIn('Bob') };
+    // Ann won a game of another kind before the match, for her streaks.
+    server.accounts.records.add(1, {
+      game: 'test',
+      gameId: 'earlier',
+      side: 'red',
+      role: 'guesser',
+      winner: 'red',
+      won: true,
+      verdict: 'v',
+      points: 0,
+    });
     const { players, everyone } = await matchRoom({}, accounts);
     const ann = players.Ann;
     expect(matchOf(ann)).toMatchObject({ played: 0, status: 'on', game: 1, rules: RULES, standings: [] });
@@ -182,6 +193,18 @@ describe('a match', () => {
       const summary = await accounts[name].account();
       expect(summary?.titles).toEqual(standing?.title ? [{ title: standing.title, count: 1 }] : []);
     }
+    // The match's games go on the players' streaks one by one, in a row with the games before the
+    // match (docs/architecture.md#streaks): Ann's streaks are what her record, the game she won
+    // before the match and the two of the match, adds up to, whichever way each game went.
+    const annsRecord = (await records(accounts.Ann)).recent.map(({ won }) => won).reverse();
+    expect(annsRecord).toHaveLength(3);
+    const streaks = { wins: 0, losses: 0 };
+    let run = { won: true, length: 0 };
+    for (const won of annsRecord) {
+      run = run.won === won ? { won, length: run.length + 1 } : { won, length: 1 };
+      streaks[won ? 'wins' : 'losses'] = Math.max(streaks[won ? 'wins' : 'losses'], run.length);
+    }
+    expect(server.accounts.records.streaks(1)).toEqual(streaks);
     const count = (table: string) => (server.db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n;
     expect(count('match_records')).toBe(2);
     const titles = count('titles');

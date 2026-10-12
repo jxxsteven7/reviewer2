@@ -665,7 +665,7 @@
     "tipCode": "The author's WeChat reward code",
     "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
     "listTitle": "Want to be on the list of sponsors?",
-    "listHow": "When you tip, write the name you want in the message, or write \"list me\" to be listed by your WeChat name. Otherwise you stay off the list, and the list never shows amounts.",
+    "listHow": "When you tip, write the name you want in the message, or write \"list\u00a0me\" to be listed by your WeChat name. Otherwise you stay off the list, and the list never shows amounts.",
     "sponsor": "No WeChat? Sponsor the author on GitHub",
     "version": "Version {version}"
   },
@@ -920,7 +920,7 @@
     },
     "points": "Points: {points}",
     "next": "{points} more to {rank}.",
-    "top": "Reviewer 2: the highest rank there is.",
+    "top": "The highest rank there is.",
     "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game."
   },
   "streaks": {
@@ -933,6 +933,7 @@
       "losses": "{n} Submissions, {n} Rejections"
     },
     "record": "A new personal record!",
+    "announce": "{kind}: {title}. {line}",
     "broadcast": "{name} is on a hot streak: {title}!",
     "lines": {
       "wins": {
@@ -943,7 +944,7 @@
         },
         "mid": {
           "1": "Acceptances by the armful. The reviewers know you by name now.",
-          "2": "That's not a submission record, that's a hit rate.",
+          "2": "At this rate, the reviewers will start citing you.",
           "3": "A few more and they'll make you Reviewer 2."
         },
         "high": {
@@ -961,7 +962,7 @@
         "mid": {
           "1": "Those rejection letters would make a decent book by now.",
           "2": "The reviewers: \"You again?\"",
-          "3": "At this rejection rate, you belong in the related work."
+          "3": "At this rate, your rejections deserve a literature review of their own."
         },
         "high": {
           "1": "Perseverance is a scientific virtue. So is a new method.",

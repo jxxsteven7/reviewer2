@@ -57,6 +57,11 @@ describe('StreakNotices', () => {
     expect(lines('en', 'wins', 'low')).toContain(mine.find('.line').text());
     expect(mine.find('.record').text()).toBe('A new personal record!');
     expect(wrapper.findAll('.cheer')).toHaveLength(0);
+    // What a screen reader is told, from the live region that is on the page before the notices.
+    expect(wrapper.find('.announcement').attributes('aria-live')).toBe('polite');
+    expect(wrapper.find('.announcement').text()).toBe(
+      `Winning streak: Four Submissions, Four Acceptances. ${mine.find('.line').text()} A new personal record!`,
+    );
 
     const lost = mountFor('ann', [{ playerId: 'ann', kind: 'losses', length: 11, record: false }]);
     expect(lost.find('.mine').classes()).toContain('losses');
@@ -76,10 +81,13 @@ describe('StreakNotices', () => {
     expect(cheers.map((cheer) => cheer.text())).toEqual([
       'Bob is on a hot streak: Three Submissions, Three Acceptances!',
     ]);
-    expect(cheers[0]?.find('.avatar').exists()).toBe(true);
-    const screen = mountFor(null, streaks);
-    expect(screen.classes()).toContain('large');
-    expect(screen.findAll('.cheer')).toHaveLength(1);
+    expect(cheers[0]?.find('.who .avatar').classes()).toContain('small');
+    expect(page.find('.announcement').text()).toBe('Bob is on a hot streak: Three Submissions, Three Acceptances!');
+    // The screen's cheers are bigger, with a bigger avatar.
+    const notices = mountFor(null, streaks).find('.streak-notices');
+    expect(notices.classes()).toContain('large');
+    expect(notices.findAll('.cheer')).toHaveLength(1);
+    expect(notices.find('.who .avatar').classes()).toContain('medium');
   });
 
   test('write the number in Chinese characters in Chinese', () => {
@@ -88,7 +96,9 @@ describe('StreakNotices', () => {
     expect(wrapper.find('.record').text()).toBe(text('zh').streaks.record);
   });
 
-  test('are nothing when there is nothing to tell', () => {
-    expect(mountFor('ann', []).find('.streak-notices').exists()).toBe(false);
+  test('are nothing when there is nothing to tell, but the live region is there for when there is', () => {
+    const wrapper = mountFor('ann', []);
+    expect(wrapper.find('.streak-notices').exists()).toBe(false);
+    expect(wrapper.find('.announcement').text()).toBe('');
   });
 });

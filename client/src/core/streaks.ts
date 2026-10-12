@@ -1,4 +1,5 @@
-import type { StreakKind } from '@reviewer2/shared';
+import { numberWords, type Language, type StreakKind } from '@reviewer2/shared';
+import { fnv1a } from './hash';
 
 // The streaks as the pages show them (docs/architecture.md#streaks): the account page as titles,
 // and the end of a game as a notice to the player, with a line for the occasion under
@@ -21,16 +22,18 @@ export function streakTier(length: number): StreakTier {
 
 // Which of its tier's lines a streak gets, from 1. It comes from the game, the player and the
 // streak, so that the player reads the same line on every page and after every refresh, and the
-// next game draws again. The hash is FNV-1a, as the decision letters use it.
+// next game draws again, as the decision letters do.
 export function streakLineNumber(gameId: string, playerId: string, kind: StreakKind, length: number): number {
-  const key = `${gameId}:${playerId}:${kind}:${length}`;
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < key.length; i += 1) {
-    hash ^= key.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return ((hash >>> 0) % LINES_PER_TIER) + 1;
+  return (fnv1a(`${gameId}:${playerId}:${kind}:${length}`) % LINES_PER_TIER) + 1;
 }
+
+// A component's translator, as far as the title needs it.
+type Translate = (key: string, named: Record<string, string>) => string;
+
+// The title of a streak, with its number in the words of the language: "Three Submissions, Three
+// Acceptances". The account page and the notices at the end of a game both name streaks with it.
+export const streakTitle = (t: Translate, kind: StreakKind, length: number, language: Language): string =>
+  t(`streaks.names.${kind}`, { n: numberWords(length, language) });
 
 // The key of the line in the locale files.
 export const streakLineKey = (gameId: string, playerId: string, kind: StreakKind, length: number): string =>

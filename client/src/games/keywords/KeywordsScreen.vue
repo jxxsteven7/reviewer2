@@ -67,7 +67,7 @@ const game = computed(() => data.value.game as KeywordsView | null);
       :match="room.match"
       compact
     />
-    <StreakNotices v-if="game.result" class="letters-row" :room="room" large />
+    <StreakNotices :room="room" large />
     <div class="main" :class="{ over: game.result }">
       <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" />
       <PausedNotice v-if="game.paused" large />
@@ -208,7 +208,8 @@ ul {
   width: min(100%, calc((100dvh - 30rem) * 1.15));
 }
 
-.letters-row {
+.letters-row,
+.screen-game :deep(.streak-notices) {
   grid-column: 1 / -1;
   margin-bottom: 0;
 }

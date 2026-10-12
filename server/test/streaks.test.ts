@@ -128,4 +128,40 @@ describe('streaks', () => {
     for (const client of everyone) await client.waitFor((state) => state.phase === 'lobby', 'the waiting room');
     for (const client of everyone) expect(client.state?.streaks).toEqual([]);
   });
+
+  test('are neither broken nor lengthened by a game that the chair withdrew', async () => {
+    server = await startServer();
+    const browser = new Browser(server.url);
+    expect((await browser.register('Ann')).body).toEqual({ ok: true });
+    const ann = track(await browser.connect());
+    const reply = await ann.send('room:create', { game: 'test', language: 'en', fields: ['general'], play: true });
+    if (!reply.ok) throw new Error(reply.error);
+    await ann.waitFor((state) => state.code === reply.code);
+    const bob = track(await TestClient.connect(server.url));
+    expect(await bob.send('room:join', { code: reply.code, name: 'Bob', play: true })).toMatchObject({ ok: true });
+    await ann.waitFor((state) => state.players.length === 2);
+    // A game, finished (which Ann wins, as the test game is won by everyone who plays; Bob is a
+    // guest, with no record) or withdrawn, and the streaks that the snapshot ending it tells of.
+    const game = async (end: 'test:finish' | 'room:end') => {
+      expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: true });
+      const { gameId } = await ann.waitFor((state) => state.phase === 'playing', 'the game');
+      expect(await ann.send(end, end === 'room:end' ? { gameId } : {})).toEqual({ ok: true });
+      const { streaks } = await ann.waitFor((state) => state.phase === 'ended', 'the end');
+      expect(await ann.send('room:again', { gameId })).toEqual({ ok: true });
+      await ann.waitFor((state) => state.phase === 'lobby', 'the waiting room');
+      return streaks;
+    };
+    const { records } = server.accounts;
+    // Two wins are nobody's business yet.
+    expect(await game('test:finish')).toEqual([]);
+    expect(await game('test:finish')).toEqual([]);
+    expect(records.streaks(1)).toEqual({ wins: 2, losses: 0 });
+    // A withdrawn game counts for nothing: it tells of no streak and leaves the record as it was.
+    expect(await game('room:end')).toEqual([]);
+    expect(records.streaks(1)).toEqual({ wins: 2, losses: 0 });
+    expect(records.view(1).games).toBe(2);
+    // The next win makes three, as if the withdrawn game had never been.
+    expect(await game('test:finish')).toEqual([{ playerId: ann.me, kind: 'wins', length: STREAK_MIN, record: true }]);
+    expect(records.streaks(1)).toEqual({ wins: STREAK_MIN, losses: 0 });
+  });
 });
