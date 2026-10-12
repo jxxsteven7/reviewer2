@@ -196,22 +196,22 @@ export class Accounts {
 
   // The public profile of the account with this handle, as the viewer sees it
   // (docs/architecture.md#public-profiles), or null when no account has the handle. The record and
-  // the acknowledgments are there only if the owner shows them.
+  // the acknowledgments are there only if the owner shows them, and are only read then. Of the time
+  // of registration, only the day goes out: anyone with the handle may ask.
   profileOf(handle: string, viewer: Account | null): ProfileView | null {
     const account = this.store.byHandle(handle);
     if (!account) return null;
-    const { games, wins, matches } = this.records.view(account.id, 0);
     return {
       id: account.id,
       handle: account.handle,
       username: account.username,
       avatar: avatarUrl(account),
       rank: this.rankOf(account.id),
-      createdAt: account.createdAt,
+      createdAt: account.createdAt.slice(0, 10),
       titles: this.titles.counts(account.id),
       link: account.profile.link,
       bio: account.profile.bio,
-      record: account.profile.showRecord ? { games, wins, matches: matches.played } : null,
+      record: account.profile.showRecord ? this.records.counts(account.id) : null,
       acknowledgments: account.profile.showThanks ? this.acknowledgments.counts(account.id) : null,
       likes: this.likes.count(account.id),
       liked: viewer !== null && this.likes.has(account.id, viewer.id),

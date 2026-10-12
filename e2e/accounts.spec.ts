@@ -81,9 +81,9 @@ test('players with accounts play a whole game with guests, and find it on their 
   for (const states of table.everyone) {
     for (const state of states) {
       for (const player of state.players) {
-        expect(Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar', 'rank', 'handle'].includes(key))).toEqual(
-          [],
-        );
+        expect(
+          Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar', 'rank', 'handle'].includes(key)),
+        ).toEqual([]);
       }
     }
   }

@@ -15,10 +15,10 @@ import { useFriendsList } from '../useFriendsList';
 
 // The account's friends (docs/architecture.md#friends): the way to ask someone by their username,
 // the requests waiting for an answer each way, and the friends, each with whether they are online
-// and where. Every name leads to that account's public page. A friend in a public room can be joined from here; one in a private room only by
-// their invitation. A change made here comes back as the word that the server sends both sides,
-// on which the list is asked for again (useFriendsList); after a refusal it is asked for here,
-// since the list may have been out of date.
+// and where. Every name leads to that account's public page. A friend in a public room can be
+// joined from here; one in a private room only by their invitation. A change made here comes back
+// as the word that the server sends both sides, on which the list is asked for again
+// (useFriendsList); after a refusal it is asked for here, since the list may have been out of date.
 const { t } = useI18n();
 const { view, failed, load } = useFriendsList();
 const username = ref('');
@@ -232,9 +232,14 @@ h3 {
   min-width: 0;
 }
 
+/* The name is a link on one line of text. Padding that the margins take back makes it 44px tall
+   to tap, as the buttons beside it are, without moving anything. */
 .name {
+  position: relative;
   flex: 1;
   min-width: 0;
+  margin: -10px 0;
+  padding: 10px 0;
   overflow: hidden;
   color: var(--ink);
   font-weight: var(--weight-bold);

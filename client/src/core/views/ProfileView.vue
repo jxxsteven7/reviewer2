@@ -13,10 +13,12 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { changeLogin, loadAccount, request } from '../account';
+import PlayerNumber from '../components/PlayerNumber.vue';
+import TitlePills from '../components/TitlePills.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
-import PlayerNumber from '../components/PlayerNumber.vue';
 import UiSheet from '../components/UiSheet.vue';
+import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
@@ -60,18 +62,8 @@ const passwordProblem = computed(() => {
   return problem ? t(errorKey(problem)) : undefined;
 });
 
-// A title or an acknowledgment, with how often it was awarded when that is more than once.
-const counted = (label: string, count: number) =>
-  count > 1 ? t('account.profile.titleCount', { title: label, count }) : label;
-
-// The day the account registered, as the page's language writes it, or the ISO date if the browser can't.
-const since = computed(() => {
-  try {
-    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(props.summary.createdAt));
-  } catch {
-    return props.summary.createdAt.slice(0, 10);
-  }
-});
+// The day the account registered, as its public page shows it too.
+const since = computed(() => formatDay(props.summary.createdAt, locale.value));
 
 // The rank that the account's points hold, and the next one (shared/src/ranks.ts).
 const rank = computed(() => rankFor(props.summary.points));
@@ -184,14 +176,7 @@ async function logOut() {
       aria-labelledby="profile-titles"
     >
       <h2 id="profile-titles">{{ t('account.profile.titles') }}</h2>
-      <ul class="titles">
-        <li v-for="{ title, count } in summary.titles" :key="title">
-          {{ counted(t(`account.profile.titleNames.${title}`), count) }}
-        </li>
-        <li v-for="{ kind, count } in summary.acknowledgments" :key="kind">
-          {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
-        </li>
-      </ul>
+      <TitlePills :titles="summary.titles" :acknowledgments="summary.acknowledgments" />
     </section>
 
     <section class="part" aria-labelledby="profile-public">
@@ -202,9 +187,9 @@ async function logOut() {
     <section class="part" aria-labelledby="profile-friends">
       <h2 id="profile-friends">
         {{ t('friends.title') }}
-        <span v-if="summary.requests > 0" class="badge num">{{ summary.requests }}</span>
+        <span v-if="summary.requests > 0" class="badge num" aria-hidden="true">{{ summary.requests }}</span>
         <span v-if="summary.requests > 0" class="sr-only">{{
-          t('friends.requestsWaiting', { count: summary.requests })
+          t('friends.requestsWaiting', { count: summary.requests }, summary.requests)
         }}</span>
       </h2>
       <ProfileFriends />
@@ -348,7 +333,7 @@ h1 {
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--red);
-  color: #fff;
+  color: var(--on-red);
   font-size: var(--text-sm);
   font-weight: var(--weight-black);
   line-height: 1;
@@ -366,23 +351,6 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-}
-
-.titles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.titles li {
-  padding: var(--space-1) var(--space-3);
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius-pill);
-  background: var(--bg);
-  font-weight: var(--weight-bold);
 }
 
 .leave {

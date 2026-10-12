@@ -18,7 +18,11 @@ const { t } = useI18n();
       class="entry avatar-link"
       :aria-label="
         account.summary.requests > 0
-          ? t('account.entryRequests', { name: account.summary.username, count: account.summary.requests })
+          ? t(
+              'account.entryRequests',
+              { name: account.summary.username, count: account.summary.requests },
+              account.summary.requests,
+            )
           : t('account.entryLabel', { name: account.summary.username })
       "
     >
@@ -68,7 +72,7 @@ const { t } = useI18n();
   border: var(--line-thin) solid var(--paper);
   border-radius: var(--radius-pill);
   background: var(--red);
-  color: #fff;
+  color: var(--on-red);
   font-size: var(--text-xs);
   font-weight: var(--weight-black);
   line-height: 1;

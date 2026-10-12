@@ -4,17 +4,20 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { account, request } from '../account';
+import { formatDay } from '../dates';
 import { errorKey } from '../errors';
-import { connect, onceConnected, send, socket } from '../socket';
-import { toast, toastError } from '../toast';
+import { requestFriend } from '../friends';
+import { connect } from '../socket';
+import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
+import TitlePills from './TitlePills.vue';
 import UiButton from './UiButton.vue';
 
 // A public profile (docs/architecture.md#public-profiles), by the handle of its account, on its
 // own page and in the sheet that a room's player menu opens: the avatar, the username, the rank,
-// the number and the date of registration, the titles, and what the owner chose to put there: a
+// the number and the day of registration, the titles, and what the owner chose to put there: a
 // link, a line about themselves, the record and the acknowledgments. The bio is shown as the text
 // it is, never as markup, and the link as the address it is, which opens in a new tab and which
 // search engines are told not to follow. Anyone may look; an account that isn't the owner may
@@ -25,17 +28,25 @@ const profile = ref<ProfileView | null>(null);
 const failed = ref<string | undefined>();
 const { busy, run } = useBusy();
 
+// Reads the profile. One that is up stays up when it can't be read again, as after a like on a
+// poor connection: the reader is told why, and keeps what they had.
 async function load(): Promise<void> {
-  failed.value = undefined;
   const reply = await request<{ profile: ProfileView }>(`${ACCOUNT_API.profiles}${props.handle}`);
-  if (reply.ok) profile.value = reply.profile;
-  else failed.value = reply.error;
+  if (reply.ok) {
+    profile.value = reply.profile;
+    failed.value = undefined;
+  } else if (profile.value === null) {
+    failed.value = reply.error;
+  } else {
+    toastError(reply.error);
+  }
 }
 
 watch(
   () => props.handle,
   () => {
     profile.value = null;
+    failed.value = undefined;
     void load();
   },
   { immediate: true },
@@ -51,59 +62,28 @@ watch(
 
 const viewer = computed(() => account.summary);
 const canAct = computed(() => viewer.value !== null && profile.value !== null && !profile.value.mine);
+const since = computed(() => (profile.value ? formatDay(profile.value.createdAt, locale.value) : ''));
 
-// A date as the page's language writes it, or the ISO date if the browser can't.
-function date(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(iso));
-  } catch {
-    return iso.slice(0, 10);
-  }
-}
-
+// Likes the profile, or takes the like back. The count and the viewer's like then come from the
+// server, which keeps them, and the button waits for them: a second tap meanwhile would send the
+// same thing again.
 async function toggleLike(): Promise<void> {
   const current = profile.value;
   if (!current) return;
-  const path = current.liked ? ACCOUNT_API.unlike : ACCOUNT_API.like;
-  const reply = await run(() => request(path, { handle: current.handle }));
-  if (!reply) return;
-  if (!reply.ok) {
-    toastError(reply.error);
-    return;
-  }
-  await load();
-}
-
-// The page may have no connection yet: the friends messages go over one.
-function whenConnected(ms = 5000): Promise<boolean> {
-  if (socket.connected) return Promise.resolve(true);
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      off();
-      resolve(false);
-    }, ms);
-    const off = onceConnected(() => {
-      clearTimeout(timer);
-      resolve(true);
-    });
+  await run(async () => {
+    const reply = await request(current.liked ? ACCOUNT_API.unlike : ACCOUNT_API.like, { handle: current.handle });
+    if (!reply.ok) {
+      toastError(reply.error);
+      return;
+    }
+    await load();
   });
 }
 
 async function befriend(): Promise<void> {
   const current = profile.value;
   if (!current) return;
-  await run(async () => {
-    if (!(await whenConnected())) {
-      toastError('offline');
-      return;
-    }
-    const reply = await send<{ status: 'pending' | 'accepted' }>('friends:request', { username: current.username });
-    if (!reply.ok) {
-      toastError(reply.error);
-      return;
-    }
-    toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
-  });
+  await run(() => requestFriend({ username: current.username }));
 }
 
 // A connection is asked for early, so that the first tap on "Add friend" doesn't wait for one.
@@ -127,19 +107,15 @@ watch(
           <span class="name">{{ profile.username }}</span>
           <span class="rank">{{ t(`ranks.names.${profile.rank}`) }}</span>
           <PlayerNumber :id="profile.id" />
-          <span class="since">{{ t('playerPage.since', { date: date(profile.createdAt) }) }}</span>
+          <span class="since">{{ t('playerPage.since', { date: since }) }}</span>
         </div>
       </div>
 
-      <ul v-if="profile.titles.length" class="titles">
-        <li v-for="{ title, count } in profile.titles" :key="title">
-          {{
-            count > 1
-              ? t('account.profile.titleCount', { title: t(`account.profile.titleNames.${title}`), count })
-              : t(`account.profile.titleNames.${title}`)
-          }}
-        </li>
-      </ul>
+      <TitlePills
+        v-if="profile.titles.length || profile.acknowledgments?.length"
+        :titles="profile.titles"
+        :acknowledgments="profile.acknowledgments"
+      />
 
       <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
       <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">{{
@@ -147,18 +123,6 @@ watch(
       }}</a>
 
       <p v-if="profile.record" class="meta">{{ t('playerPage.record', profile.record) }}</p>
-      <ul v-if="profile.acknowledgments?.length" class="titles">
-        <li v-for="{ kind, count } in profile.acknowledgments" :key="kind">
-          {{
-            count > 1
-              ? t('account.profile.titleCount', {
-                  title: t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }),
-                  count,
-                })
-              : t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) })
-          }}
-        </li>
-      </ul>
 
       <div class="actions">
         <span class="likes num">{{ t('playerPage.likes', { count: profile.likes }) }}</span>
@@ -227,32 +191,19 @@ watch(
   font-size: var(--text-sm);
 }
 
-.titles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.titles li {
-  padding: var(--space-1) var(--space-3);
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius-pill);
-  background: var(--bg);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-}
-
 .bio {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
+/* The link is one line of small text. Padding that the margins take back makes it 44px tall to
+   tap, as the buttons are, without moving anything. */
 .link {
+  position: relative;
   align-self: flex-start;
   max-width: 100%;
+  margin: -11px 0;
+  padding: 11px 0;
   overflow: hidden;
   color: var(--ink);
   font-size: var(--text-sm);
@@ -272,6 +223,9 @@ watch(
 }
 
 .edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--ink);
   font-size: var(--text-sm);
 }

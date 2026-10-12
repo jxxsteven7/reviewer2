@@ -217,7 +217,8 @@ function printAccountStats(store: AccountStore, print: Print): void {
   print('New accounts by day, UTC, last 30 days');
   for (const { day, count } of createdByDay) print(`${day}  ${count}`);
   print('');
-  const width = Math.max(2, ...accounts.map(({ id }) => String(id).length + 1));
+  // The accounts come by id, so the last has the widest number; the heading needs two columns.
+  const width = Math.max(2, String(accounts.at(-1)?.id ?? 0).length + 1);
   print(`${'Id'.padStart(width)}  Registered  Games  Matches  Username`);
   for (const { id, username, createdAt, games, matches, barred } of accounts) {
     print(

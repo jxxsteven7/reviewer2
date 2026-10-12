@@ -1,11 +1,31 @@
 import type { InvitationView } from '@reviewer2/shared';
 import { reactive, ref } from 'vue';
 import { account, loadAccount } from './account';
-import { send, socket } from './socket';
+import { send, socket, whenConnected } from './socket';
+import { toast, toastError } from './toast';
 
 // What this browser hears of its account's friends (docs/architecture.md#friends): the invitations
 // to rooms, which show on whatever page is open until they are followed, ignored or lapse, and the
-// word that the friends or the requests changed, on which a page that shows them asks again.
+// word that the friends or the requests changed, on which a page that shows them asks again; and
+// the way to ask someone to be friends, from wherever a page offers it.
+
+// Asks an account to be friends, by their username or by their seat in the room, and tells the
+// player how it went: friends at once, when the other side had asked already, or a request sent,
+// which the other side answers on their account page. The page may have no connection yet, and
+// the message goes over one. Says whether the request went through.
+export async function requestFriend(who: { username: string } | { playerId: string }): Promise<boolean> {
+  if (!(await whenConnected())) {
+    toastError('offline');
+    return false;
+  }
+  const reply = await send<{ status: 'pending' | 'accepted' }>('friends:request', who);
+  if (!reply.ok) {
+    toastError(reply.error);
+    return false;
+  }
+  toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
+  return true;
+}
 
 export const invitations = reactive<InvitationView[]>([]);
 const timers = new Map<string, ReturnType<typeof setTimeout>>();

@@ -48,6 +48,8 @@ describe('a public profile', () => {
           username: 'Ann',
           avatar: null,
           rank: 'undergraduate',
+          // The day of registration, never the time.
+          createdAt: expect.stringMatching(/^\d{4}-\d\d-\d\d$/),
           titles: [],
           link: null,
           bio: null,
@@ -62,7 +64,7 @@ describe('a public profile', () => {
     expect((await profileOf(ann.browser, ann.handle)).profile).toMatchObject({ mine: true, liked: false });
     // Nothing of the owner's own page is in it.
     const shown = JSON.stringify((await profileOf(guest, ann.handle)).profile);
-    expect(shown).not.toMatch(/email|points|password|requests/);
+    expect(shown).not.toMatch(/email|points|password|requests|T\d\d:\d\d/);
     for (const wrong of ['000000000000', 'nothing', 'ABCDEF123456', '']) {
       expect(await guest.request(`/api/profile/${wrong}`), wrong).toMatchObject({
         status: 404,

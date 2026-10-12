@@ -763,7 +763,7 @@
   "account": {
     "entry": "登录 / 注册",
     "entryLabel": "你的账号：{name}",
-    "entryRequests": "你的账号：{name}，{count} 个好友请求等你处理",
+    "entryRequests": "你的账号：{name}，{count} 个好友请求等你处理 | 你的账号：{name}，{count} 个好友请求等你处理",
     "back": "回到目录",
     "loading": "加载中…",
     "cancel": "取消",
@@ -824,10 +824,11 @@
       "acknowledged": "致谢：{kind}",
       "public": {
         "title": "公开主页",
-        "intro": "任何人都能打开你的主页，看到用户名、头像、学术头衔、称号和玩家编号。其余的由你决定。",
+        "intro": "任何人都能打开你的主页，看到用户名、头像、学术头衔、称号、玩家编号、注册日期和点赞数。其余的由你决定。",
         "view": "打开我的主页",
         "link": "公开链接",
         "linkHint": "介绍你自己的网页，以 https:// 开头：个人主页、GitHub、ORCID 等。按原样显示网址。",
+        "linkPlaceholder": "https://",
         "bio": "一句简介",
         "bioCount": "{count}/{max} 个字符，按纯文本显示。",
         "showRecord": "公开战绩：局数、胜场和比赛场数",
@@ -918,7 +919,7 @@
     "invitationJoin": "加入",
     "invitationIgnore": "忽略",
     "addFromRoom": "加为好友",
-    "requestsWaiting": "{count} 个请求等你处理。"
+    "requestsWaiting": "{count} 个请求等你处理。 | {count} 个请求等你处理。"
   },
   "ranks": {
     "title": "学术头衔",

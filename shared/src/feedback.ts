@@ -187,6 +187,7 @@ export function checkLink(text: string | undefined, credit: string | null): Link
   return { link, problem: null };
 }
 
+// The note that may come with a report, cleaned as feedback is, or null when it shows nothing.
 export function checkReport(text: string | undefined): { text: string | null; problem: 'report_too_long' | null } {
   if (typeof text !== 'string') return { text: null, problem: null };
   if (text.length > MAX_REPORT_INPUT) return { text: null, problem: 'report_too_long' };

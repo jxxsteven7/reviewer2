@@ -10,9 +10,10 @@ import {
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { errorKey } from '../errors';
+import { requestFriend } from '../friends';
 import { mayBefriend, mayReport, mayView } from '../manage';
 import { act, send } from '../socket';
-import { toast, toastError } from '../toast';
+import { toast } from '../toast';
 import { useBusy } from '../useBusy';
 import ProfileCard from './ProfileCard.vue';
 import UiButton from './UiButton.vue';
@@ -66,19 +67,12 @@ async function manage(message: 'room:spectate' | 'room:remove' | 'room:chair') {
   emit('close');
 }
 
-// A request to be friends, which the other side answers on their account page; one to someone who
-// has asked already makes friends at once.
+// A request to be friends, by the player's seat (friends.ts), which the other side answers on
+// their account page.
 async function befriend() {
   const player = props.player;
   if (!player) return;
-  const reply = await run(() => send<{ status: 'pending' | 'accepted' }>('friends:request', { playerId: player.id }));
-  if (!reply) return;
-  if (!reply.ok) {
-    toastError(reply.error);
-    return;
-  }
-  toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
-  emit('close');
+  if (await run(() => requestFriend({ playerId: player.id }))) emit('close');
 }
 
 async function report() {

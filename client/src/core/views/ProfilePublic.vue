@@ -19,8 +19,8 @@ import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
-import { send } from '../socket';
-import { toast, toastError } from '../toast';
+import { friendsVersion, requestFriend } from '../friends';
+import { toast } from '../toast';
 import { useBusy } from '../useBusy';
 
 // The account's public page, as its owner sets it up (docs/architecture.md#public-profiles): the
@@ -39,14 +39,17 @@ const refused = ref<string | undefined>();
 const likers = ref<LikerView[] | null>(null);
 const likersFailed = ref<string | undefined>();
 
-// The form shows the profile as the server last said, until the owner edits it.
+// The form shows the profile as the server last said, until the owner edits it. It follows the
+// values that are kept, not the summary, which is asked for again whenever the friends change
+// (friends.ts): what the owner has typed must not go when a request comes in.
+const kept = () => props.summary.profile;
 watch(
-  () => props.summary.profile,
-  (profile) => {
-    link.value = profile.link ?? '';
-    bio.value = profile.bio ?? '';
-    showRecord.value = profile.showRecord;
-    showThanks.value = profile.showThanks;
+  [() => kept().link ?? '', () => kept().bio ?? '', () => kept().showRecord, () => kept().showThanks],
+  ([keptLink, keptBio, keptRecord, keptThanks]) => {
+    link.value = keptLink;
+    bio.value = keptBio;
+    showRecord.value = keptRecord;
+    showThanks.value = keptThanks;
   },
   { immediate: true },
 );
@@ -99,22 +102,13 @@ async function loadLikers(): Promise<void> {
 }
 
 onMounted(loadLikers);
-// A new like changes the count on the summary, on which the list is asked for again.
-watch(
-  () => props.summary.likes,
-  () => void loadLikers(),
-);
+// A new like changes the count on the summary, on which the list is asked for again; so does a
+// change among the friends, since the list says who is one.
+watch(() => props.summary.likes, loadLikers);
+watch(friendsVersion, loadLikers);
 
 async function befriend(liker: LikerView): Promise<void> {
-  const reply = await run(() =>
-    send<{ status: 'pending' | 'accepted' }>('friends:request', { username: liker.username }),
-  );
-  if (!reply) return;
-  if (!reply.ok) {
-    toastError(reply.error);
-    return;
-  }
-  toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
+  await run(() => requestFriend({ username: liker.username }));
 }
 </script>
 
@@ -124,15 +118,17 @@ async function befriend(liker: LikerView): Promise<void> {
     <RouterLink :to="page" class="view">{{ t('account.profile.public.view') }}</RouterLink>
     <p v-if="summary.profile.banned" class="problem">{{ t('account.profile.public.banned') }}</p>
     <form class="form" @submit.prevent="save">
+      <!-- A barred account may still choose what else it shows, so only these two are disabled. -->
       <UiField
         v-model="link"
         :label="t('account.profile.public.link')"
         :maxlength="MAX_LINK_INPUT"
         :hint="t('account.profile.public.linkHint')"
         :error="linkProblem"
+        :disabled="summary.profile.banned"
         inputmode="url"
         autocomplete="url"
-        :placeholder="'https://'"
+        :placeholder="t('account.profile.public.linkPlaceholder')"
       />
       <UiField
         v-model="bio"
@@ -140,6 +136,7 @@ async function befriend(liker: LikerView): Promise<void> {
         :maxlength="MAX_BIO_INPUT"
         :hint="bioCount"
         :error="bioProblem"
+        :disabled="summary.profile.banned"
         enterkeyhint="done"
       />
       <label class="check">
@@ -196,7 +193,10 @@ async function befriend(liker: LikerView): Promise<void> {
 }
 
 .view {
+  display: inline-flex;
+  align-items: center;
   align-self: flex-start;
+  min-height: 44px;
   color: var(--ink);
   font-weight: var(--weight-bold);
 }
@@ -249,9 +249,14 @@ h3 {
   background: var(--paper-2);
 }
 
+/* The name is a link on one line of text. Padding that the margins take back makes it 44px tall
+   to tap, as the button beside it is, without moving anything. */
 .name {
+  position: relative;
   flex: 1;
   min-width: 0;
+  margin: -10px 0;
+  padding: 10px 0;
   overflow: hidden;
   color: var(--ink);
   font-weight: var(--weight-bold);

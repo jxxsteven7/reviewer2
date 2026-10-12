@@ -1,0 +1,130 @@
+// @vitest-environment happy-dom
+import type { AccountSummary } from '@reviewer2/shared';
+import { flushPromises, mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { createI18n } from 'vue-i18n';
+import en from '../../locales/en.json';
+import { friendsVersion } from '../friends';
+import ProfilePublic from './ProfilePublic.vue';
+
+// The requests the section makes, and the connection, which the friends module listens on.
+const signedIn = vi.hoisted(() => ({
+  account: { loaded: true, summary: null as object | null, mail: false },
+  request: vi.fn<(path: string, body?: object) => Promise<object>>(),
+  loadAccount: vi.fn(async () => true),
+}));
+vi.mock('../account', () => signedIn);
+const socket = vi.hoisted(() => ({
+  send: vi.fn(),
+  connect: vi.fn(),
+  onceConnected: vi.fn(),
+  whenConnected: vi.fn(async () => true),
+  socket: { connected: true, on: vi.fn() },
+}));
+vi.mock('../socket', () => socket);
+const toasts = vi.hoisted(() => ({ toast: vi.fn(), toastError: vi.fn() }));
+vi.mock('../toast', () => toasts);
+
+const global = () => ({
+  plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })],
+  stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } },
+});
+
+const summary = (
+  changes: Partial<AccountSummary> = {},
+  profile: Partial<AccountSummary['profile']> = {},
+): AccountSummary => ({
+  id: 1,
+  handle: 'a1b2c3d4e5f6',
+  username: 'Ann',
+  avatar: null,
+  createdAt: '2026-10-01T00:00:00.000Z',
+  email: 'none',
+  points: 0,
+  titles: [],
+  acknowledgments: [],
+  profile: { link: null, bio: 'Hi', showRecord: false, showThanks: false, banned: false, ...profile },
+  likes: 1,
+  requests: 0,
+  ...changes,
+});
+const liker = (friend: boolean) => ({ handle: 'f6e5d4c3b2a1', username: 'Bob', avatar: null, friend });
+
+describe('ProfilePublic', () => {
+  beforeEach(() => {
+    signedIn.request.mockReset();
+    signedIn.request.mockResolvedValue({ ok: true, likers: [liker(false)] });
+    socket.send.mockReset();
+    toasts.toast.mockReset();
+    toasts.toastError.mockReset();
+  });
+
+  test('keeps what the owner has typed when the summary is asked for again, and shows what was saved', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    const bio = wrapper.get('input[enterkeyhint="done"]');
+    expect((bio.element as HTMLInputElement).value).toBe('Hi');
+    await bio.setValue('Typed, not saved');
+    // A friend request comes in: the summary is a new object with the same profile.
+    await wrapper.setProps({ summary: summary({ requests: 1 }) });
+    expect((bio.element as HTMLInputElement).value).toBe('Typed, not saved');
+    // The profile as the server keeps it changed, as after a save: the form follows.
+    await wrapper.setProps({ summary: summary({}, { bio: 'Saved', showRecord: true }) });
+    expect((bio.element as HTMLInputElement).value).toBe('Saved');
+    expect((wrapper.findAll('input[type=checkbox]')[0]?.element as HTMLInputElement).checked).toBe(true);
+    wrapper.unmount();
+  });
+
+  test('sends the link, the line and the choices, and asks for the summary again', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    await wrapper.get('input[inputmode="url"]').setValue('https://ann.example/');
+    await wrapper.findAll('input[type=checkbox]')[1]?.setValue(true);
+    signedIn.request.mockResolvedValueOnce({ ok: true });
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledWith('/api/account/profile', {
+      link: 'https://ann.example/',
+      bio: 'Hi',
+      showRecord: false,
+      showThanks: true,
+    });
+    expect(signedIn.loadAccount).toHaveBeenCalled();
+    expect(toasts.toast).toHaveBeenCalledWith('account.profile.public.saved');
+    wrapper.unmount();
+  });
+
+  test('takes no link or line from an account the operator has barred, which still chooses what it shows', async () => {
+    const wrapper = mount(ProfilePublic, {
+      props: { summary: summary({}, { banned: true, bio: null }) },
+      global: global(),
+    });
+    await flushPromises();
+    expect(wrapper.text()).toContain('The operator has cleared the link and the line');
+    expect(wrapper.get('input[inputmode="url"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('input[enterkeyhint="done"]').attributes('disabled')).toBeDefined();
+    for (const box of wrapper.findAll('input[type=checkbox]')) expect(box.attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  test('lists who liked the page, asks them to be friends, and asks again when the friends change', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledWith('/api/account/likers');
+    const line = wrapper.get('.likers .line');
+    expect(line.text()).toContain('Bob');
+    expect(line.find('a').attributes('href')).toBe('/p/f6e5d4c3b2a1');
+    socket.send.mockResolvedValueOnce({ ok: true, status: 'pending' });
+    await line.get('button').trigger('click');
+    await flushPromises();
+    expect(socket.send).toHaveBeenCalledWith('friends:request', { username: 'Bob' });
+    expect(toasts.toast).toHaveBeenCalledWith('friends.requestSent');
+    // Bob accepts: the server says the friends changed, and the list says he is one.
+    signedIn.request.mockResolvedValueOnce({ ok: true, likers: [liker(true)] });
+    friendsVersion.value += 1;
+    await flushPromises();
+    expect(wrapper.get('.likers .line').text()).toContain('Friend');
+    expect(wrapper.get('.likers .line').find('button').exists()).toBe(false);
+    wrapper.unmount();
+  });
+});

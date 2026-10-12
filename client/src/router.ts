@@ -1,3 +1,4 @@
+import { PROFILE_PATH } from '@reviewer2/shared';
 import { createRouter, createWebHistory } from 'vue-router';
 import AccountPage from './core/views/AccountPage.vue';
 import ConfirmEmail from './core/views/ConfirmEmail.vue';
@@ -21,7 +22,7 @@ export const router = createRouter({
     { path: '/account/reset', name: 'reset', component: ResetPassword },
     { path: '/account/confirm', name: 'confirm', component: ConfirmEmail },
     // A player's public page (docs/architecture.md#public-profiles).
-    { path: '/p/:handle', name: 'profile', component: ProfilePage, props: true },
+    { path: `${PROFILE_PATH}:handle`, name: 'profile', component: ProfilePage, props: true },
     { path: '/room/:code', name: 'room', component: RoomPage, props: true },
     { path: '/room/:code/screen', name: 'screen', component: ScreenPage, props: true },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound },

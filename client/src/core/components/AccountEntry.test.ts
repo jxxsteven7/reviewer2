@@ -38,9 +38,18 @@ describe('AccountEntry', () => {
     signedIn.account.summary = { username: 'Ann', avatar: null, requests: 3 };
     const waiting = mount(AccountEntry, { global: global() });
     expect(waiting.find('.badge').text()).toBe('3');
+    expect(waiting.find('.badge').attributes('aria-hidden')).toBe('true');
     expect(waiting.find('a').attributes('aria-label')).toBe(
       'Your account: Ann. 3 friend requests are waiting for your answer.',
     );
     waiting.unmount();
+
+    signedIn.account.summary = { username: 'Ann', avatar: null, requests: 1 };
+    const one = mount(AccountEntry, { global: global() });
+    expect(one.find('.badge').text()).toBe('1');
+    expect(one.find('a').attributes('aria-label')).toBe(
+      'Your account: Ann. 1 friend request is waiting for your answer.',
+    );
+    one.unmount();
   });
 });

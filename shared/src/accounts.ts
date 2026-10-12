@@ -159,10 +159,11 @@ export interface AccountSummary {
 }
 
 // A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's
-// number, username, avatar, rank, when it registered and its titles; the link and the bio its owner
-// wrote, if any; its record and its acknowledgments, if its owner shows them, else null; and how
-// many accounts like it. `liked` says whether the viewer likes it, and `mine` whether the viewer
-// is its owner; both are false for a guest.
+// number, username, avatar, rank, the day it registered (`createdAt`, as YYYY-MM-DD in UTC, and
+// never the time) and its titles; the link and the bio its owner wrote, if any; its record and its
+// acknowledgments, if its owner shows them, else null; and how many accounts like it. `liked` says
+// whether the viewer likes it, and `mine` whether the viewer is its owner; both are false for a
+// guest.
 export interface ProfileView {
   id: number;
   handle: string;

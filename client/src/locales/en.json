@@ -763,7 +763,7 @@
   "account": {
     "entry": "Log in / Register",
     "entryLabel": "Your account: {name}",
-    "entryRequests": "Your account: {name}. {count} friend requests are waiting for your answer.",
+    "entryRequests": "Your account: {name}. {count} friend request is waiting for your answer. | Your account: {name}. {count} friend requests are waiting for your answer.",
     "back": "Back to the contents",
     "loading": "Loading…",
     "cancel": "Cancel",
@@ -824,10 +824,11 @@
       "acknowledged": "Acknowledged: {kind}",
       "public": {
         "title": "Public page",
-        "intro": "Anyone can open your page and see your username, avatar, rank, titles and player number. What else is there is up to you.",
+        "intro": "Anyone can open your page and see your username, avatar, rank, titles, player number, the day you registered and how many accounts like it. What else is there is up to you.",
         "view": "Open my page",
         "link": "Link",
         "linkHint": "A page of yours, starting with https://: a homepage, GitHub, ORCID… Shown as the address it is.",
+        "linkPlaceholder": "https://",
         "bio": "One line about you",
         "bioCount": "{count}/{max} characters. Shown as plain text.",
         "showRecord": "Show my record: games, wins and matches",
@@ -918,7 +919,7 @@
     "invitationJoin": "Join",
     "invitationIgnore": "Ignore",
     "addFromRoom": "Add friend",
-    "requestsWaiting": "{count} requests are waiting for your answer."
+    "requestsWaiting": "{count} request is waiting for your answer. | {count} requests are waiting for your answer."
   },
   "ranks": {
     "title": "Academic rank",

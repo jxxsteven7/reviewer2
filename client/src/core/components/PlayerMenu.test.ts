@@ -14,12 +14,14 @@ vi.mock('../socket', () => ({
   act: (event: string, payload: object = {}) => send(event, payload),
   connect: vi.fn(),
   onceConnected: vi.fn(),
-  socket: { connected: false },
+  whenConnected: vi.fn(async () => true),
+  socket: { connected: false, on: vi.fn() },
 }));
 // Who the browser is, and the request that the player's page in the sheet makes for the profile.
 const signedIn = vi.hoisted(() => ({
   account: { loaded: true, summary: null as object | null, mail: false },
   request: vi.fn<(path: string, body?: object) => Promise<object>>(),
+  loadAccount: vi.fn(),
 }));
 vi.mock('../account', () => signedIn);
 

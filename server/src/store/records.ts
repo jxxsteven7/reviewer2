@@ -102,22 +102,29 @@ export class RecordStore {
     );
   }
 
+  // How many games the account has played and won, and how many matches: the counts alone, as a
+  // public profile shows them (docs/architecture.md#public-profiles).
+  counts(accountId: number): { games: number; wins: number; matches: number } {
+    const { games, wins } = this.#totals.get(accountId) as { games: number; wins: number };
+    const { played } = this.#matchCount.get(accountId) as { played: number };
+    return { games, wins, matches: played };
+  }
+
   // How many games the account has played and won, and the latest of them, and the same of its
   // matches.
   view(accountId: number, limit = RECENT_RECORDS): RecordsView {
-    const { games, wins } = this.#totals.get(accountId) as { games: number; wins: number };
+    const { games, wins, matches } = this.counts(accountId);
     type Row = Omit<GameRecord, 'won' | 'replay'> & { won: number; replay: number };
     const recent = (this.#recent.all(accountId, limit) as Row[]).map((row) => ({
       ...row,
       won: row.won === 1,
       replay: row.replay === 1,
     }));
-    const { played } = this.#matchCount.get(accountId) as { played: number };
     return {
       games,
       wins,
       recent,
-      matches: { played, recent: this.#recentMatches.all(accountId, limit) as unknown as MatchRecord[] },
+      matches: { played: matches, recent: this.#recentMatches.all(accountId, limit) as unknown as MatchRecord[] },
     };
   }
 }
