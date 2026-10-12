@@ -32,7 +32,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 What we promise players:
 
 - **An account is recommended, not required.** A nickname is enough to play; an account keeps your avatar, records, rank and titles from game to game.
-- **Friends** are the only ones who see whether you are online and which public room you are in, and they see no more. Nobody else gets this, through any part of the game.
+- **Only your friends** see whether you are online and whether you are in a room, and the room's code only when it is public. The players in a room see who is in it with them, as always; nobody else learns any of this.
 - **Passwords** are kept only as a one-way hash. Nobody, the operator included, can read them.
 - **An account's email address is never stored.** The server keeps only a keyed fingerprint of it, to check the address and to mail a password reset.
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
