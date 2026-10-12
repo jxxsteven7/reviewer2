@@ -24,6 +24,7 @@ vi.mock('../account', async () => {
 });
 const socket = vi.hoisted(() => ({ connection: { connected: true, everConnected: true }, reconnect: vi.fn() }));
 vi.mock('../socket', () => socket);
+vi.mock('../../games', () => ({ games: {} }));
 
 beforeEach(() => {
   setLanguage('en', { remember: false });

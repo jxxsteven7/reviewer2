@@ -7,8 +7,11 @@ import { useI18n } from 'vue-i18n';
 // server keeps the time and ends the phase (docs/games/keywords.md): every snapshot says how much
 // time was left when it was sent, and the bar counts down from there, from when the snapshot
 // arrived, until the next one sets it right again. It never ends anything itself, and stops at
-// zero to wait for the server. The last 10 seconds are red.
-const props = defineProps<{ clock: NonNullable<KeywordsView['clock']> }>();
+// zero to wait for the server. The last 10 seconds are red. A `frozen` clock, during a pause,
+// stands still at what the server said.
+const props = withDefaults(defineProps<{ clock: NonNullable<KeywordsView['clock']>; frozen?: boolean }>(), {
+  frozen: false,
+});
 const { t } = useI18n();
 
 const URGENT_MS = 10_000;
@@ -32,8 +35,13 @@ function tick(): void {
 }
 
 watch(
-  () => props.clock,
-  (clock) => {
+  [() => props.clock, () => props.frozen],
+  ([clock, frozen]) => {
+    clearTimeout(timer);
+    if (frozen) {
+      left.value = clock.left;
+      return;
+    }
     ends = performance.now() + clock.left;
     tick();
   },

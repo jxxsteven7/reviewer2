@@ -116,6 +116,9 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
           won: true,
           verdict: `pressed ${data.presses}`,
         })),
+  // A finished game, to watch again: what was pressed, and the words, which no one but the
+  // players should read back from the database.
+  replay: (data) => (data.withdrawn ? null : { presses: data.presses, words: data.words }),
   again: (data) => ({ ...data, words: [], gameId: null, over: false, alarm: null }),
   handle(data, ctx, _playerId, type, payload) {
     if (type === 'test:break') {

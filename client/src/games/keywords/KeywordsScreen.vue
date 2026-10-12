@@ -11,6 +11,7 @@ import { roomLink } from '../../core/room';
 import ClueLog from './ClueLog.vue';
 import DecisionLetter from './DecisionLetter.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
+import PausedNotice from './PausedNotice.vue';
 import TurnStrip from './TurnStrip.vue';
 import { useKeywords } from './useKeywords';
 
@@ -66,7 +67,15 @@ const game = computed(() => data.value.game as KeywordsView | null);
     />
     <div class="main" :class="{ over: game.result }">
       <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" />
-      <KeywordsBoard :cards="game.cards" :selectable="false" :selected="null" :lang="HTML_LANG[room.language]" large />
+      <PausedNotice v-if="game.paused" large />
+      <KeywordsBoard
+        v-else
+        :cards="game.cards"
+        :selectable="false"
+        :selected="null"
+        :lang="HTML_LANG[room.language]"
+        large
+      />
     </div>
     <aside class="side">
       <div class="join small">

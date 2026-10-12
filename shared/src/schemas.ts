@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { MAX_EMAIL_LENGTH } from './accounts';
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
+import { MAX_CUSTOM_INPUT } from './games/keywords/custom';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
@@ -21,7 +22,9 @@ const name = z.string().max(MAX_NAME_INPUT);
 const playerId = z.string().max(32);
 const gameId = z.string().max(64);
 const roomId = z.string().max(64);
-const fields = z.array(z.string().max(64)).min(1).max(20);
+// A room may have no word list at all when the chair's own words are enough for a game
+// (docs/games/keywords.md#custom-words); the room says no_words when they aren't.
+const fields = z.array(z.string().max(64)).max(20);
 // Whether a newcomer has come to play rather than to watch. The game seats a player; whoever
 // leaves the field out watches, as everyone did before there was a choice.
 const play = z.boolean().optional();
@@ -79,8 +82,14 @@ export const ROOM_MESSAGES = {
   'room:emote': z.object({ emote: z.enum(EMOTES) }),
   // A member reports another to the operator, with a note that the rules in feedback.ts judge.
   'room:report': z.object({ playerId, text: z.string().optional() }),
-  // The chair's controls. The settings change the word lists, the game's own settings, or both.
-  'room:settings': z.object({ fields: fields.optional(), settings: settings.optional() }),
+  // The chair's controls. The settings change the word lists, the game's own settings, the
+  // chair's own words, as the text they were pasted as (parseCustomWords in custom.ts), or any
+  // of them.
+  'room:settings': z.object({
+    fields: fields.optional(),
+    settings: settings.optional(),
+    words: z.string().max(MAX_CUSTOM_INPUT).optional(),
+  }),
   'room:public': z.object({ public: z.boolean() }),
   // The chair's messages about a game say which game they mean, so that one that comes late or
   // twice can't land in another: a start gives how many games the room has started so far, and a
@@ -121,6 +130,11 @@ export const KEYWORDS_MESSAGES = {
   // A guesser writes one line to their group. It names the game but not the turn: a message is
   // welcome in whatever turn it arrives.
   'keywords:say': z.object({ gameId, text: z.string() }),
+  // The chair pauses the game and resumes it, in whatever turn.
+  'keywords:pause': z.object({ gameId }),
+  'keywords:resume': z.object({ gameId }),
+  // A group asks for its extension of the phase it is in.
+  'keywords:extend': z.object(moment),
 } as const;
 
 export type KeywordsMessage = keyof typeof KEYWORDS_MESSAGES;
@@ -135,6 +149,7 @@ export const KEYWORDS_SETTINGS = z.object({
   firstClueTime: z.number(),
   clueTime: z.number(),
   guessTime: z.number(),
+  extensions: z.boolean(),
 });
 
 // The handshake (`Handshake` in protocol.ts). A field that isn't what it should be counts as
@@ -166,4 +181,5 @@ export const ACCOUNT_REQUESTS = {
   forgot: z.object({ email, language: z.enum(LANGUAGES) }),
   reset: z.object({ token: linkToken, password }),
   remove: z.object({ password }),
+  replay: z.object({ gameId }),
 } as const;

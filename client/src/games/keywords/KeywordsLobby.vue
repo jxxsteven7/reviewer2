@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import {
   BOARD_SIZE,
+  MAX_CUSTOM_INPUT,
   otherTeam,
+  parseCustomWords,
   SPECTATOR,
   sameSettings,
   type KeywordsSettings,
@@ -21,6 +23,8 @@ import ShareTools from '../../core/components/ShareTools.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { fields, loadFields } from '../../core/fields';
+import { errorKey } from '../../core/errors';
+import { formatList } from '../../core/i18n';
 import { mayManage } from '../../core/manage';
 import { act } from '../../core/socket';
 import RoleBanner from './RoleBanner.vue';
@@ -30,14 +34,14 @@ import { useKeywords } from './useKeywords';
 
 // The waiting room: the banner that says where the viewer sits, the two groups with their PI and
 // students, the spectators and the screens, the room's settings, and the chair's desk with the
-// word lists, the settings, the shuffle and the start button.
+// word lists, the chair's own words, the settings, the shuffle and the start button.
 //
 // In a match, the match's table comes first, or its final ranking once it is over. When the server
 // draws the groups as the game starts, the players are one list rather than two groups; when the
 // groups are fixed, everyone is offered the seats of their own group only. The word lists and the
 // settings stay as they are once a game of the match has counted.
 const props = defineProps<{ room: RoomView }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const room = toRef(props, 'room');
 const { data, mySeat, mySide, isChair, groups, spectators, sit } = useKeywords(room);
 
@@ -88,9 +92,40 @@ watch(roomSettings, (settings, before) => {
   if (!sameSettings(settings, before)) chosenSettings.value = { ...settings };
 });
 
-const unsaved = computed(() => !locked.value && (fieldsChanged.value || settingsChanged.value));
-const savable = computed(() => chosenFields.value.length > 0 && settingsValid.value);
-const save = () => act('room:settings', { fields: chosenFields.value, settings: chosenSettings.value });
+// The chair's own words, as the text they are typed as, kept the same way (docs/games/
+// keywords.md#custom-words). The server sends the chair the words it has, one per line.
+const roomWords = computed(() => (props.room.customWords ?? []).join('\n'));
+const wordsText = ref(roomWords.value);
+watch(roomWords, (text) => (wordsText.value = text));
+// A public room takes no words of the chair's own (custom_words_private), and the editor goes
+// when the room is listed: so does whatever was typed in it and not saved.
+watch(
+  () => props.room.public,
+  (listed) => {
+    if (listed) wordsText.value = roomWords.value;
+  },
+);
+const words = computed(() => parseCustomWords(wordsText.value));
+const wordsChanged = computed(() => words.value.words.join('\n') !== roomWords.value);
+const wordsValid = computed(() => words.value.tooLong.length === 0 && !words.value.tooMany);
+const tooLong = computed(() => formatList(locale.value, words.value.tooLong));
+
+const unsaved = computed(() => !locked.value && (fieldsChanged.value || settingsChanged.value || wordsChanged.value));
+// With enough words of the chair's own, the room needs no word list at all.
+const savable = computed(
+  () =>
+    (chosenFields.value.length > 0 || words.value.words.length >= BOARD_SIZE) &&
+    settingsValid.value &&
+    wordsValid.value,
+);
+// The words go along only when they changed, so that the server doesn't read them again for a
+// setting.
+const save = () =>
+  act('room:settings', {
+    fields: chosenFields.value,
+    settings: chosenSettings.value,
+    ...(wordsChanged.value ? { words: wordsText.value } : {}),
+  });
 
 // The game starts with the word lists and the settings that the chair sees at the desk, so what
 // they have changed there is saved first. A change that the server refuses stops the start.
@@ -226,7 +261,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
 
       <section v-if="!isChair || locked" class="rules">
         <h2 class="section-title">{{ t('settings.title') }}</h2>
-        <SettingsSummary :settings="data.settings" :language="room.language" />
+        <SettingsSummary :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
       </section>
 
       <section v-if="isChair && !finished" class="desk">
@@ -236,6 +271,30 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
           <h3 class="label">{{ t('lobby.fields') }}</h3>
           <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
           <FieldPicker v-else v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
+          <h3 class="label">
+            <label for="custom-words">{{ t('settings.customWords') }}</label>
+          </h3>
+          <p v-if="room.public" class="hint">{{ t(errorKey('custom_words_private')) }}</p>
+          <template v-else>
+            <textarea
+              id="custom-words"
+              v-model="wordsText"
+              class="words"
+              rows="4"
+              :maxlength="MAX_CUSTOM_INPUT"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            ></textarea>
+            <p v-if="words.tooLong.length" class="problem">
+              {{ t('settings.customWordsTooLong', { words: tooLong }) }}
+            </p>
+            <p v-if="words.tooMany" class="problem">{{ t('settings.customWordsTooMany') }}</p>
+            <p class="hint">
+              {{ t('settings.customWordsCount', { count: words.words.length }, words.words.length) }} &middot;
+              {{ t('settings.customWordsHint') }}
+            </p>
+          </template>
           <h3 class="label">{{ t('settings.title') }}</h3>
           <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
         </template>
@@ -428,6 +487,30 @@ dd .vacant {
 
 .desk .label + .settings-form {
   margin-top: var(--space-2);
+}
+
+.words {
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: max(16px, var(--text-md));
+  resize: vertical;
+}
+
+.words:focus-visible {
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
+}
+
+.problem {
+  color: var(--red-deep);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .save {

@@ -52,6 +52,12 @@ beforeEach(() => {
   socket.waiting = [];
 });
 
+const refresh = (wrapper: Awaited<ReturnType<typeof opened>>) =>
+  wrapper
+    .findAll('button')
+    .find((button) => button.text() === 'Refresh')
+    ?.trigger('click');
+
 const opened = async () => {
   const wrapper = mount(PublicRooms, {
     global: { plugins: [i18n], stubs: { RouterLink: { template: '<a><slot /></a>' } } },
@@ -85,7 +91,7 @@ describe('the public rooms', () => {
     const wrapper = await opened();
     expect(wrapper.text()).toContain('No public room is open right now.');
     socket.send.mockResolvedValue({ ok: true, rooms: ROOMS });
-    await wrapper.get('button').trigger('click');
+    await refresh(wrapper);
     await flushPromises();
     expect(socket.send).toHaveBeenCalledTimes(2);
     expect(wrapper.findAll('.room')).toHaveLength(2);
@@ -107,8 +113,43 @@ describe('the public rooms', () => {
     await flushPromises();
     expect(wrapper.findAll('.room')).toHaveLength(2);
     socket.send.mockResolvedValue({ ok: false, error: 'rate_limited' });
-    await wrapper.get('button').trigger('click');
+    await refresh(wrapper);
     await flushPromises();
     expect(wrapper.text()).toContain('Too many requests.');
+  });
+
+  test('leave an answer that comes after the list was folded away alone', async () => {
+    let answer!: (reply: { ok: false; error: string }) => void;
+    socket.send.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    const wrapper = await opened();
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Hide')
+      ?.trigger('click');
+    // The connection went while the answer was on its way: nothing waits for it to come back.
+    socket.connected = false;
+    answer({ ok: false, error: 'offline' });
+    await flushPromises();
+    expect(socket.waiting).toHaveLength(0);
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['Find a public room']);
+  });
+
+  test('fold back into the button, and stop waiting for a connection', async () => {
+    socket.connected = false;
+    const wrapper = await opened();
+    expect(socket.waiting).toHaveLength(1);
+    expect(wrapper.find('.room').exists()).toBe(false);
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Hide')
+      ?.trigger('click');
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['Find a public room']);
+    expect(wrapper.find('h2').exists()).toBe(false);
+    expect(socket.waiting).toHaveLength(0);
+    // Opened again, the list is asked for anew.
+    socket.connected = true;
+    await wrapper.get('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.findAll('.room')).toHaveLength(2);
   });
 });

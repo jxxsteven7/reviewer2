@@ -13,8 +13,8 @@ import type { Card } from './state';
 
 // Lays out a board: the 25 words in random places, a random team to start, and the colors
 // shuffled independently of the words. The starting team gets 9 cards and the other team 8;
-// 7 cards are irrelevant papers and 1 is Reviewer 2. A word may come with its translations and
-// its forms, which stay with its card.
+// 7 cards are irrelevant papers and 1 is Reviewer 2. A word may come with its translations, its
+// forms and its pinyin, which stay with its card.
 export function deal(words: readonly (string | BoardWord)[], rng: Rng): { cards: Card[]; startingTeam: Team } {
   const terms = words.map((word): BoardWord => (typeof word === 'string' ? { word } : word));
   // Two spellings of one word, such as "Coauthor" and "co-author", are one word: the clue check
@@ -34,10 +34,11 @@ export function deal(words: readonly (string | BoardWord)[], rng: Rng): { cards:
   const shuffled = shuffle(colors, rng);
   return {
     startingTeam,
-    cards: places.map(({ word, translations, forms }, index) => ({
+    cards: places.map(({ word, translations, forms, pinyin }, index) => ({
       word,
       ...(translations?.length ? { translations: [...translations] } : {}),
       ...(forms?.length ? { forms: [...forms] } : {}),
+      ...(pinyin ? { pinyin } : {}),
       color: shuffled[index] as CardColor,
       revealed: false,
     })),

@@ -134,6 +134,23 @@ const choose = (changes: Partial<KeywordsSettings>) => (model.value = { ...model
       </div>
       <p class="hint">{{ t('settings.timesHint') }}</p>
     </fieldset>
+
+    <fieldset>
+      <legend>{{ t('settings.extensions') }}</legend>
+      <div class="options">
+        <label v-for="on in [true, false]" :key="String(on)" :class="{ chosen: model.extensions === on }">
+          <input
+            type="radio"
+            :name="`${id}-extensions`"
+            :value="on"
+            :checked="model.extensions === on"
+            @change="choose({ extensions: on })"
+          />
+          {{ t(`settings.extension.${on ? 'on' : 'off'}`) }}
+        </label>
+      </div>
+      <p class="hint">{{ t('settings.extensionsHint') }}</p>
+    </fieldset>
   </div>
 </template>
 

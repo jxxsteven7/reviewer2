@@ -27,13 +27,16 @@
         "summary": "Two research groups race to find all their keywords first. Reveal Reviewer 2, and your paper is rejected on the spot."
       },
       "impostor": {
-        "name": "Spot the Impostor"
+        "name": "Who's Reviewer 2?",
+        "summary": "Everyone gets the same term, except one person, Reviewer 2, who gets a similar one. Find out who."
       },
       "titles": {
-        "name": "Real or Fake"
+        "name": "Real or Fake",
+        "summary": "Tell real paper titles from made-up ones."
       },
       "abstracts": {
-        "name": "Bluff the Abstract"
+        "name": "Bluff the Abstract",
+        "summary": "Write a convincing abstract for a paper nobody has read, then vote for the one that looks most real."
       }
     },
     "join": {
@@ -45,6 +48,7 @@
     "publicRooms": {
       "title": "Public rooms",
       "open": "Find a public room",
+      "hide": "Hide",
       "intro": "Rooms that anyone with an account can join. Full rooms aren't listed.",
       "loginHint": "Log in or register to join one.",
       "loading": "Looking for rooms...",
@@ -283,7 +287,7 @@
     "waitGuess": "The {group} is guessing.",
     "clueInput": "Your clue",
     "clueLimit": {
-      "zh": "Chinese characters in a clue: at most {count}. It can also be one English word or abbreviation, such as GPU, but not the English for a word on the board.",
+      "zh": "At most {count} characters: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation is fine, but not the English for a word on the board, nor its pinyin.",
       "en": "Words in a clue: at most {count}."
     },
     "clueNumber": "How many cards it points to",
@@ -292,6 +296,7 @@
     "onBoard": "{word} is on the board. A clue can't be a word on the board, or part of one.",
     "formOnBoard": "{word} is on the board, and this clue repeats a form of it that the word lists give. This room's clue check doesn't allow it.",
     "characterOnBoard": "This clue has a Chinese character in common with {word}, which is on the board. This room's clue check doesn't allow it.",
+    "insideOnBoard": "This clue contains {word}, which is on the board. This room's clue check doesn't allow it.",
     "similar": "This may be another form of a word still on the board: {words}. The rules don't allow that, but the check can't be sure, so it's your call.",
     "formWarning": "This clue repeats a form that the word lists give of a word still on the board: {words}. This room's clue check leaves it to you.",
     "characterWarning": "This clue has a Chinese character in common with a word still on the board: {words}. It's your call.",
@@ -313,6 +318,19 @@
     "stepDown": "Step down",
     "end": "End the game",
     "endConfirm": "End this game now? Nobody wins, and everyone sees the key.",
+    "pause": "Pause the game",
+    "resume": "Resume the game",
+    "paused": "Paused",
+    "pausedNote": "The chair has paused the game. The board is hidden until it resumes.",
+    "pausedResume": "Resume whenever everyone is back.",
+    "extend": "Ask for 30 seconds more",
+    "extended": "The {group} asked for an extension: 30 seconds more.",
+    "events": {
+      "paused": "The chair paused the game",
+      "resumed": "The game went on",
+      "extended": "The {group} asked for an extension"
+    },
+    "review": "Review the game",
     "keyNote": "Only the PIs see the colors of hidden cards.",
     "board": "The board",
     "letter": {
@@ -407,6 +425,28 @@
     "choice": "{name} chose “{word}”",
     "choiceJoin": ", "
   },
+  "replay": {
+    "title": "Replay",
+    "step": "Step {step} of {steps}",
+    "slider": "Step",
+    "previous": "Back",
+    "next": "Next",
+    "start": "The start. Nothing has been revealed yet.",
+    "turn": "Turn {turn} · {group}",
+    "clue": "Clue: {word} {count}",
+    "noClue": "No clue in time: the turn went to the other group.",
+    "revealed": "{name} revealed “{word}”: {outcome}",
+    "right": "right, one of the group's own",
+    "wrong": {
+      "team": "wrong, the other group's card",
+      "neutral": "wrong, an irrelevant paper",
+      "reviewer2": "Reviewer 2! The group loses at once."
+    },
+    "timedOut": "Time ran out, and the turn ended.",
+    "someone": "A player who left",
+    "won": "The {group} won.",
+    "withdrawn": "The chair withdrew the game."
+  },
   "settings": {
     "title": "Rules of this room",
     "guessRule": "Guessing",
@@ -424,11 +464,11 @@
       "loose": "Loose"
     },
     "clueHint": {
-      "strict": "Refuses the other forms of a word on the board that the word lists give, and clues with a Chinese character in common with one.",
-      "loose": "Other forms of a word on the board that the word lists give, and Chinese characters in common with one, only bring a warning, and the PI decides."
+      "strict": "Refuses the other forms of a word on the board that the word lists give, clues with a Chinese character in common with one, and, in a Chinese room, clues that contain one.",
+      "loose": "Other forms of a word on the board that the word lists give, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."
     },
     "clueLength": {
-      "zh": "Chinese characters in a clue",
+      "zh": "Characters in a clue",
       "en": "Words in a clue"
     },
     "lengthRange": "From {min} to {max}.",
@@ -438,6 +478,18 @@
     "guessTime": "Time for guessing",
     "timesHint": "0 means no limit.",
     "timeRange": "0, or from {min} to {max}.",
+    "extensions": "Extensions",
+    "extension": {
+      "on": "On",
+      "off": "Off"
+    },
+    "extensionsHint": "Each group may once a game ask for 30 seconds more for the phase it is in, where the phase has a time limit.",
+    "customWords": "Custom words",
+    "customWordsHint": "One per line, or separated by commas. Each must fit on a card, up to 5 Chinese characters or 14 letters; at most 200. They are drawn with the word lists, and the players don't see them before they are on the board. With 25 or more, every word list can be dropped. Only a private room has them.",
+    "customWordsCount": "{count} word | {count} words",
+    "customWordsNone": "none",
+    "customWordsTooLong": "Too long for a card: {words}",
+    "customWordsTooMany": "At most 200 words.",
     "notWhole": "Enter a whole number.",
     "upTo": "up to {count}",
     "seconds": "{count} s",
@@ -454,6 +506,7 @@
       "lobby": "Waiting for the chair to start the game.",
       "lobbyChair": "Start the game below once both groups are ready.",
       "over": "The game is over.",
+      "paused": "The game is paused.",
       "yourClue": "Your turn to give a clue!",
       "studentsGuessing": "Your students are guessing. All you can do is watch.",
       "piThinking": "Your PI is thinking of a clue.",
@@ -487,6 +540,8 @@
     "bad_fields": "Choose word lists that exist.",
     "bad_settings": "Those settings won't do. Check the numbers.",
     "no_words": "These word lists don't have enough terms in this language.",
+    "bad_words": "Some custom words don't fit on a card, or there are more than 200.",
+    "custom_words_private": "Custom words are for private rooms: a public room plays with the word lists alone, so that nobody can slip strangers unsuitable words.",
     "too_many_rooms": "The server is full. Please try again later.",
     "room_not_found": "No room has that number.",
     "room_full": "This room is full.",
@@ -526,6 +581,10 @@
     "bad_count": "That number isn't allowed under this room's rules.",
     "chat_empty": "Write a message first.",
     "chat_too_long": "That message is too long.",
+    "paused": "The game is paused.",
+    "not_paused": "The game isn't paused.",
+    "no_extension": "This room has no extensions, or this phase has no time limit.",
+    "extension_used": "Your group has used its extension for this game.",
     "seat_taken": "Someone already has that seat.",
     "key_viewer": "You have seen the key in this game, so you can't be a student until the next one.",
     "other_team": "You play for the other group in this game. You can change groups in the next one.",
@@ -572,6 +631,7 @@
     "avatars_full": "No more avatars can be uploaded for now.",
     "storage_full": "The server can't take that for now.",
     "busy": "The server is busy. Try again in a moment.",
+    "no_replay": "There is no replay of this game for you to watch.",
     "cookies_blocked": "Your browser didn't keep the login. Allow cookies for this site, or leave private browsing.",
     "avatar_unreadable": "That picture can't be read. Choose another."
   },
@@ -656,18 +716,20 @@
     "reveal": "One of your group's cards: go on. An irrelevant paper or a card of the other group: your turn ends, and the other group's card counts for them. Reviewer 2: your paper is rejected, and your group loses at once.",
     "clueTitle": "Clues",
     "clue": {
-      "zh": "A clue is one word, with at most one Chinese character. It can also be one English word or abbreviation, such as GPU, but not the English for a word on the board. | A clue is one word, with at most {count} Chinese characters. It can also be one English word or abbreviation, such as GPU, but not the English for a word on the board.",
+      "zh": "A clue is one word of at most one character: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation such as GPU is fine, but not the English for a word on the board, nor its pinyin. | A clue is one word of at most {count} characters: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation such as GPU is fine, but not the English for a word on the board, nor its pinyin.",
       "en": "A clue is one word. | A clue has at most {count} words."
     },
     "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
     "clueRule": {
-      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, or have a Chinese character in common with one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
-      "loose": "This room's clue check is loose: other forms of a word on the board, and Chinese characters in common with one, only bring a warning, and the PI decides."
+      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a Chinese character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
+      "loose": "This room's clue check is loose: other forms of a word on the board, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."
     },
     "timeTitle": "Time",
     "time": "The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.",
     "timeClue": "A PI who gives no clue in time loses the turn to the other group.",
     "timeGuess": "Students whose time runs out end their turn, even if they have revealed nothing.",
+    "extension": "Each group may once a game ask for 30 seconds more for the phase it is in.",
+    "pause": "The chair can pause the game at any time. The board is hidden until the chair resumes it, and the clock goes on from where it stopped.",
     "noTime": "This room has no time limits.",
     "endTitle": "The end",
     "end": "A group wins as soon as all its cards are revealed, even when the other group revealed the last one."
@@ -739,6 +801,7 @@
       "recent": "The last 20 games",
       "recordsAgain": "Try again",
       "recordLine": "{side}, {role}",
+      "watchAgain": "Watch again",
       "matchSummary": "Matches finished: {played}",
       "recentMatches": "The last 20 matches",
       "matchLine": "Place {rank} of {players} · Total: {score}",
@@ -749,7 +812,7 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, and acknowledgments counted for the account, stay, no longer linked to it. This can't be undone.",
+      "deleteWarning": "Your account, its record, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, acknowledgments counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it. This can't be undone.",
       "deleteSubmit": "Delete for good"
     },
     "avatar": {

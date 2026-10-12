@@ -9,6 +9,8 @@ import { drawWords, FALLBACK_WORDS, loadWordLibrary, WordLibrary, type Clash, ty
 
 // Chinese test words are written as \u escapes (docs/rules/language.md).
 const zh = (i: number) => `\u8bcd${i}`;
+// A Chinese word of a pool comes with its pinyin, as the library works it out.
+const py = (i: number) => `ci ${i}`;
 const REVIEWER = '\u5ba1\u7a3f\u4eba';
 const REVIEWER_TRADITIONAL = '\u5be9\u7a3f\u4eba';
 
@@ -74,9 +76,9 @@ describe('the word library', () => {
       { word: 'Other' },
     ]);
     expect(library.pool(['a'], 'zh')).toEqual([
-      { word: zh(0), translations: ['Term 0'] },
-      { word: zh(1), translations: ['Term 1'] },
-      { word: zh(2), translations: ['Term 2'] },
+      { word: zh(0), translations: ['Term 0'], pinyin: py(0) },
+      { word: zh(1), translations: ['Term 1'], pinyin: py(1) },
+      { word: zh(2), translations: ['Term 2'], pinyin: py(2) },
     ]);
     expect(library.pool([], 'zh')).toEqual([]);
   });
@@ -116,8 +118,8 @@ describe('the word library', () => {
     ]);
     expect(library.pool(['a'], 'en')).toEqual([{ word: 'Co-author', translations: [zh(1), zh(2)] }]);
     expect(library.pool(['a'], 'zh')).toEqual([
-      { word: zh(1), translations: ['Co-author', 'CO AUTHOR'] },
-      { word: zh(2), translations: ['coauthor'] },
+      { word: zh(1), translations: ['Co-author', 'CO AUTHOR'], pinyin: py(1) },
+      { word: zh(2), translations: ['coauthor'], pinyin: py(2) },
     ]);
     expect(library.fields()[0]?.counts).toEqual({ zh: 2, en: 1 });
   });
@@ -145,9 +147,9 @@ describe('the word library', () => {
     // What has no letters or digits is no card and no translation either.
     expect(library.pool(['a'], 'en')).toEqual([{ word: 'Co-author', translations: [zh(1), zh(2)] }]);
     expect(library.pool(['a'], 'zh')).toEqual([
-      { word: zh(1), translations: ['Co-author'] },
-      { word: zh(2), translations: ['coauthor'] },
-      { word: zh(3) },
+      { word: zh(1), translations: ['Co-author'], pinyin: py(1) },
+      { word: zh(2), translations: ['coauthor'], pinyin: py(2) },
+      { word: zh(3), pinyin: py(3) },
     ]);
   });
 
@@ -180,6 +182,7 @@ describe('the word library', () => {
       word: zh(1),
       translations: ['Data'],
       forms: [zh(9), 'dataset', 'database'],
+      pinyin: py(1),
     });
   });
 

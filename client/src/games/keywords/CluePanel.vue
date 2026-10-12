@@ -50,6 +50,7 @@ function nameOf({ card, text }: ClueMatch): string {
 const PROBLEMS: Partial<Record<ClueMatchKind, string>> = {
   form: 'game.formOnBoard',
   character: 'game.characterOnBoard',
+  inside: 'game.insideOnBoard',
 };
 const WARNINGS: Partial<Record<ClueMatchKind, string>> = {
   form: 'game.formWarning',

@@ -14,6 +14,8 @@ export * from './sponsors';
 export { textLength } from './text';
 export * from './games/keywords/types';
 export * from './games/keywords/clue';
+export * from './games/keywords/custom';
+export * from './games/keywords/replay';
 export * from './games/keywords/chat';
 export * from './games/keywords/letters';
 export * from './games/keywords/settings';

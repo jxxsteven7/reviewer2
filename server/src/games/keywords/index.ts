@@ -8,6 +8,7 @@ import {
   SPECTATOR,
   TEAMS,
   verdictFor,
+  type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
@@ -21,9 +22,12 @@ import type { GameContext, GameModule, GameUpdate } from '../../core/game';
 import {
   dropSelection,
   expire,
+  extend,
   giveClue,
   newGame,
   pass,
+  pause,
+  resume,
   reveal,
   say,
   select,
@@ -58,7 +62,7 @@ import {
   type Seating,
   type SeatRequest,
 } from './seats';
-import { remaining, type KeywordsState } from './state';
+import { copyRecord, remaining, type KeywordsState } from './state';
 import { viewFor } from './view';
 
 // The team word guessing game as a GameModule: the rules in rules.ts and seats.ts, connected to
@@ -177,6 +181,14 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:pass': (data, ctx, playerId, moment) =>
     act(data, playerId, (game, actor) => pass(game, actor, moment, ctx.now())),
   'keywords:say': (data, _ctx, playerId, line) => act(data, playerId, (game, actor) => say(game, actor, line)),
+  // Only the chair pauses and resumes, whoever that is by now: the room passes the chair on after
+  // a while when the chair is offline.
+  'keywords:pause': (data, ctx, playerId, moment) =>
+    act(data, playerId, (game) => pause(game, playerId === ctx.chairId, moment, ctx.now())),
+  'keywords:resume': (data, ctx, playerId, moment) =>
+    act(data, playerId, (game) => resume(game, playerId === ctx.chairId, moment, ctx.now())),
+  'keywords:extend': (data, _ctx, playerId, moment) =>
+    act(data, playerId, (game, actor) => extend(game, actor, moment)),
 };
 
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
@@ -245,8 +257,8 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     };
   },
 
-  // A game that is over has no clock.
-  deadline: (data) => data.game?.clock?.ends ?? null,
+  // A game that is over has no clock, and a paused one has nothing due until it resumes.
+  deadline: (data) => (data.game?.pause ? null : (data.game?.clock?.ends ?? null)),
 
   tick(data, ctx) {
     if (!data.game) return data;
@@ -325,6 +337,27 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
             },
           ],
     );
+  },
+
+  // The game that has just ended, to watch again (shared/src/games/keywords/replay.ts): the whole
+  // board with its colors, the record of the clues and the guesses, and the name that everyone who
+  // revealed a card had. A withdrawn game is nothing to watch.
+  replay(data, ctx): KeywordsReplay | null {
+    const game = data.game;
+    if (!game?.result || game.result.winner === null) return null;
+    const players: Record<string, string> = {};
+    for (const record of game.history) {
+      for (const { player } of record.guesses) players[player] ??= ctx.nameOf(player);
+    }
+    return {
+      gameId: game.gameId,
+      language: game.language,
+      startingTeam: game.startingTeam,
+      cards: game.cards.map(({ word, color }) => ({ word, color })),
+      history: game.history.map(copyRecord),
+      result: { ...game.result },
+      players,
+    };
   },
 
   views(data, ctx) {

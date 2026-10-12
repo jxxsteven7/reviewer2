@@ -63,6 +63,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
               <span class="title">{{ t(`home.games.${game}.name`) }}</span>
               <span class="status">{{ t('home.forthcoming') }}</span>
             </div>
+            <p class="summary">{{ t(`home.games.${game}.summary`) }}</p>
           </li>
         </ol>
       </section>
@@ -196,12 +197,15 @@ ol {
   white-space: nowrap;
 }
 
-/* The games to come: a dashed sticker each, in a row. */
+/* The games to come: a dashed sticker each, with a line about the game. */
 .forthcoming {
-  display: inline-flex;
-  padding: var(--space-2) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
   border: var(--line) dashed var(--ink);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-panel);
 }
 
 .forthcoming .line {
@@ -213,8 +217,14 @@ ol {
 
 .forthcoming .title {
   font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-black);
+}
+
+.forthcoming .summary {
+  color: var(--ink-2);
   font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
+  line-height: 1.5;
 }
 
 .status {

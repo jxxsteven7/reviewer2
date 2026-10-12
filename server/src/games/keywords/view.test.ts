@@ -1,6 +1,6 @@
 import { SPECTATOR, type Seat } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { giveClue, reveal, say, select, withdraw } from './rules';
+import { extend, giveClue, pause, reveal, say, select, withdraw } from './rules';
 import type { KeywordsState } from './state';
 import { accepted, captain, gameState, guesser, now } from './testing';
 import { viewFor } from './view';
@@ -168,5 +168,61 @@ describe('a view', () => {
       { player: 'bob', card: 17 },
     ]);
     expect(state.chat.red).toEqual([{ id: 1, player: 'ann', turn: 1, text: 'The third one?' }]);
+  });
+});
+
+describe('a paused game', () => {
+  test('shows nobody the board, and the time the phase had left', () => {
+    const state = { ...talking(), clock: { ends: 50_000, length: 60_000 } };
+    const paused = accepted(pause(state, true, { gameId: state.gameId }, 20_000));
+    for (const seat of Object.values(SEATS)) {
+      const view = viewFor(paused, seat, 25_000);
+      expect(view.paused).toBe(true);
+      expect(view.cards).toEqual([]);
+      expect(view.clock).toEqual({ left: 30_000, total: 60_000 });
+      expect(JSON.stringify(view)).not.toMatch(/Word\d/);
+      expect(view.events).toEqual([{ turn: 1, kind: 'paused' }]);
+      expect(view.remaining).toEqual({ red: 8, blue: 8 });
+    }
+    // The chat and the choices still go to the group.
+    expect(viewFor(paused, redGuesser, 25_000).chat).toHaveLength(1);
+    expect(viewFor(paused, redGuesser, 25_000).selections).toHaveLength(2);
+  });
+
+  test('shows everyone the whole board again once the game has ended during the pause', () => {
+    const paused = accepted(pause(playing(), true, { gameId: playing().gameId }, 0));
+    const over = accepted(withdraw(paused, { gameId: paused.gameId }));
+    for (const seat of Object.values(SEATS)) {
+      const view = viewFor(over, seat, 0);
+      expect(view.paused).toBe(false);
+      expect(view.cards).toHaveLength(25);
+      expect(view.cards.every((card) => card.color !== undefined)).toBe(true);
+    }
+  });
+
+  test('tells everyone whether the game is paused, and which groups have extended', () => {
+    const state = {
+      ...playing(),
+      settings: { ...playing().settings, extensions: true },
+      clock: { ends: 9, length: 9 },
+    };
+    const view = viewFor(state, SPECTATOR, 0);
+    expect(view.paused).toBe(false);
+    expect(view.extended).toEqual({ red: false, blue: false });
+    const extended = accepted(extend(state, guesser('red'), now(state)));
+    expect(viewFor(extended, SPECTATOR, 0).extended).toEqual({ red: true, blue: false });
+    expect(viewFor(extended, SPECTATOR, 0).events).toEqual([{ turn: 1, kind: 'extended', team: 'red' }]);
+  });
+});
+
+describe("a card's pinyin", () => {
+  test('goes to everyone, as the translations do', () => {
+    const state = playing();
+    state.cards = state.cards.map((card, i) => (i === 7 ? { ...card, word: '\u57fa\u56e0', pinyin: 'ji yin' } : card));
+    for (const seat of Object.values(SEATS)) {
+      const view = viewFor(state, seat, 0);
+      expect(view.cards[7]).toMatchObject({ word: '\u57fa\u56e0', pinyin: 'ji yin' });
+      expect(view.cards[8]).not.toHaveProperty('pinyin');
+    }
   });
 });

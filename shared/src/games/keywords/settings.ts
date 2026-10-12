@@ -1,5 +1,5 @@
 import type { Language } from '../../language';
-import { MAX_CLUE_HAN, type ClueOptions } from './clue';
+import type { ClueOptions } from './clue';
 import { MAX_CLUE_NUMBER, type ClueCount } from './types';
 
 // The settings of a room of the team word guessing game (docs/games/keywords.md). The chair
@@ -13,24 +13,32 @@ import { MAX_CLUE_NUMBER, type ClueCount } from './types';
 export const GUESS_RULES = ['free', 'standard'] as const;
 export type GuessRule = (typeof GUESS_RULES)[number];
 
-// 'strict' refuses what the word library lists as another form of a word on the board, and a
-// Chinese character in common with one; 'loose' only warns about those.
+// 'strict' refuses what the word library lists as another form of a word on the board, a Chinese
+// character in common with one, and, in a Chinese room, a clue with a word on the board inside
+// it; 'loose' only warns about those.
 export const CLUE_RULES = ['strict', 'loose'] as const;
 export type ClueRule = (typeof CLUE_RULES)[number];
 
 export interface KeywordsSettings {
   guessRule: GuessRule;
   clueRule: ClueRule;
-  // How long a clue may be: Chinese characters in a Chinese room, words in an English room.
+  // How long a clue may be: in a Chinese room, Chinese characters, with two letters or digits
+  // counting as one (clueLength() in clue.ts); in an English room, words.
   clueLength: number;
   // The time for the first clue of a game, for every later clue, and for every turn's guesses,
   // in seconds. 0 means no limit.
   firstClueTime: number;
   clueTime: number;
   guessTime: number;
+  // Whether each group may once a game add EXTENSION_SECONDS to the phase it is in, where the
+  // phase has a time limit (docs/games/keywords.md#extensions).
+  extensions: boolean;
 }
 
 export const TIME_SETTINGS = ['firstClueTime', 'clueTime', 'guessTime'] as const;
+
+// How much time an extension adds to the current phase.
+export const EXTENSION_SECONDS = 30;
 
 // The clue length that a room may choose, and the one it starts with, by the room's language.
 export const CLUE_LENGTH: Record<Language, { min: number; max: number; default: number }> = {
@@ -48,6 +56,7 @@ export const defaultSettings = (language: Language): KeywordsSettings => ({
   firstClueTime: 90,
   clueTime: 60,
   guessTime: 90,
+  extensions: false,
 });
 
 // What is wrong with one setting: it isn't one of the choices, it isn't a whole number, or it is
@@ -72,18 +81,20 @@ export function settingsProblems(
     if (!isWhole(seconds)) problems[key] = 'not_whole';
     else if (seconds !== 0 && (seconds < TIME_LIMIT.min || seconds > TIME_LIMIT.max)) problems[key] = 'out_of_range';
   }
+  if (typeof settings.extensions !== 'boolean') problems.extensions = 'bad_choice';
   return problems;
 }
 
 export const sameSettings = (a: KeywordsSettings, b: KeywordsSettings): boolean =>
   (Object.keys(a) as (keyof KeywordsSettings)[]).every((key) => a[key] === b[key]);
 
-// What the clue check allows in a room with these settings. A Chinese room counts the Chinese
-// characters of a clue and takes one word; an English room counts its words.
+// What the clue check allows in a room with these settings. A Chinese room takes one word, of up
+// to the clue length in Chinese characters, two letters or digits counting as one; an English room
+// counts the words of a clue instead.
 export const clueOptions = (settings: KeywordsSettings, language: Language): ClueOptions =>
   language === 'zh'
-    ? { words: 1, han: settings.clueLength, strict: settings.clueRule === 'strict' }
-    : { words: settings.clueLength, han: MAX_CLUE_HAN, strict: settings.clueRule === 'strict' };
+    ? { words: 1, length: settings.clueLength, strict: settings.clueRule === 'strict' }
+    : { words: settings.clueLength, length: null, strict: settings.clueRule === 'strict' };
 
 // The numbers that may come with a clue. Under the free rule, the number is a hint from 1 to the
 // cards that the group still has to find. Under the standard rule, 1 to 9 allow that many guesses

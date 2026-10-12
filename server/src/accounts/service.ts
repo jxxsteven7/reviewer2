@@ -4,6 +4,7 @@ import {
   checkUsername,
   cleanName,
   MAIL_LINK_MS,
+  MAX_REPLAY_BYTES,
   usernameKey,
   type AccountError,
   type AccountSummary,
@@ -15,7 +16,14 @@ import type { DatabaseSync } from 'node:sqlite';
 import { AccountStore, type Account } from '../store/accounts';
 import { AcknowledgmentStore } from '../store/acknowledgments';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
-import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from '../store/records';
+import {
+  RecordStore,
+  ReplayStore,
+  TitleStore,
+  type NewMatchRecord,
+  type NewRecord,
+  type NewReplay,
+} from '../store/records';
 import { MailTokenStore, SessionStore, type SessionLimits } from '../store/sessions';
 import { SettingStore } from '../store/settings';
 import { inspectAvatar, MAX_AVATAR_STORAGE, MemoryAvatars, type AvatarFiles } from './avatars';
@@ -94,6 +102,7 @@ export class Accounts {
   readonly sessions: SessionStore;
   readonly mailTokens: MailTokenStore;
   readonly records: RecordStore;
+  readonly replays: ReplayStore;
   readonly titles: TitleStore;
   // The acknowledgments, which the operator writes (admin.ts) and an account's page counts.
   readonly acknowledgments: AcknowledgmentStore;
@@ -129,6 +138,7 @@ export class Accounts {
     this.sessions = new SessionStore(options.db, clock, options.sessionLimits);
     this.mailTokens = new MailTokenStore(options.db, clock);
     this.records = new RecordStore(options.db, clock);
+    this.replays = new ReplayStore(options.db, clock);
     this.titles = new TitleStore(options.db, clock);
     this.acknowledgments = new AcknowledgmentStore(options.db, clock);
     this.settings = new SettingStore(options.db);
@@ -555,6 +565,25 @@ export class Accounts {
   record(accountId: number, record: NewRecord): boolean {
     if (this.#full()) return false;
     return this.store.byId(accountId) !== undefined && this.records.add(accountId, record);
+  }
+
+  // Keeps a finished game to watch again (docs/architecture.md#replays), once for each game, unless
+  // the database is full or the replay is larger than MAX_REPLAY_BYTES as JSON, which the log
+  // says. Says whether it was kept.
+  keepReplay(replay: NewReplay): boolean {
+    if (this.#full()) return false;
+    const data = JSON.stringify(replay.replay);
+    if (Buffer.byteLength(data) > MAX_REPLAY_BYTES) {
+      this.#log('replay_too_large', { bytes: Buffer.byteLength(data), limit: MAX_REPLAY_BYTES });
+      return false;
+    }
+    return this.replays.add(replay, data);
+  }
+
+  // The replay of a game that the account played in, or null when there is none or the account
+  // didn't play in it; the two aren't told apart, so that nobody learns which games were kept.
+  replayOf(login: Login, gameId: string): unknown {
+    return this.replays.read(login.account.id, gameId);
   }
 
   // Keeps a match that has run its course on an account's record, with the title that it awarded,

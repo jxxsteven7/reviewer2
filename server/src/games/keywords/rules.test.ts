@@ -1,7 +1,20 @@
-import { CHAT_KEPT, MAX_CHAT_LENGTH, otherTeam, type ClueCount } from '@reviewer2/shared';
+import { CHAT_KEPT, EVENTS_KEPT, MAX_CHAT_LENGTH, otherTeam, type ClueCount } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
-import { dropSelection, expire, giveClue, newGame, pass, reveal, say, select, withdraw } from './rules';
+import {
+  dropSelection,
+  expire,
+  extend,
+  giveClue,
+  newGame,
+  pass,
+  pause,
+  resume,
+  reveal,
+  say,
+  select,
+  withdraw,
+} from './rules';
 import { guessesLeft, remaining, type KeywordsState } from './state';
 import { accepted, captain, gameState, guesser, now, refused, setup, spectator, STANDARD } from './testing';
 
@@ -550,5 +563,129 @@ describe('the clock', () => {
   test('is left alone once the game is over', () => {
     const over = accepted(withdraw(timed(), { gameId: 'timed' }));
     expect(expire(over, Number.MAX_SAFE_INTEGER)).toBe(over);
+  });
+});
+
+describe('a pause', () => {
+  const TIMED = { ...STANDARD, firstClueTime: 90, clueTime: 60, guessTime: 30 };
+  const timed = (at = 1000) => newGame(WORDS, seededRng(3), setup('timed', TIMED), at);
+  const game = (state: KeywordsState) => ({ gameId: state.gameId });
+  const own = (state: KeywordsState) => state.cards.findIndex((card) => card.color === state.team);
+
+  test('stops the clock with the time the phase has left, and notes itself in the log', () => {
+    const state = timed(1000);
+    const paused = accepted(pause(state, true, game(state), 31_000));
+    expect(paused.pause).toEqual({ left: 60_000 });
+    expect(paused.events).toEqual([{ turn: 1, kind: 'paused' }]);
+    // Time passes; nothing ends.
+    expect(expire(paused, 200_000)).toBe(paused);
+    const resumed = accepted(resume(paused, true, game(paused), 500_000));
+    expect(resumed.pause).toBeNull();
+    expect(resumed.clock).toEqual({ ends: 560_000, length: 90_000 });
+    expect(resumed.events).toEqual([
+      { turn: 1, kind: 'paused' },
+      { turn: 1, kind: 'resumed' },
+    ]);
+    expect(expire(resumed, 559_999)).toBe(resumed);
+    expect(expire(resumed, 560_000).turn).toBe(2);
+  });
+
+  test('leaves a phase without a time limit without one', () => {
+    const state = gameState();
+    const paused = accepted(pause(state, true, game(state), 5));
+    expect(paused.pause).toEqual({ left: null });
+    expect(accepted(resume(paused, true, game(paused), 9)).clock).toBeNull();
+  });
+
+  test('refuses every action but the chat, in the order of the checks', () => {
+    let state = clued(2);
+    state = accepted(select(state, guesser('red'), { ...now(state), card: 3 }));
+    const paused = accepted(pause(state, true, game(state), 0));
+    // The choices stay as they were.
+    expect(paused.selections).toEqual([{ player: 'red-guesser', card: 3 }]);
+    expect(refused(reveal(paused, guesser('red'), { ...now(paused), card: 0 }, 0))).toBe('paused');
+    expect(refused(select(paused, guesser('red'), { ...now(paused), card: 1 }))).toBe('paused');
+    expect(refused(select(paused, guesser('red'), { ...now(paused), card: null }))).toBe('paused');
+    expect(refused(pass(paused, guesser('red'), now(paused), 0))).toBe('paused');
+    expect(refused(giveClue(paused, captain('blue'), { ...now(paused), word: 'Loss', count: 1 }, 0))).toBe('paused');
+    expect(refused(extend(paused, guesser('red'), now(paused)))).toBe('paused');
+    // A stale action is stale first; a message to the group goes through.
+    expect(refused(reveal(paused, guesser('red'), { gameId: 'other', turn: 1, card: 0 }, 0))).toBe('stale');
+    expect(refused(say(paused, guesser('red'), { gameId: paused.gameId, text: 'Tea?' }))).toBeNull();
+    // Once resumed, the turn goes on as it was.
+    const resumed = accepted(resume(paused, true, game(paused), 0));
+    expect(resumed.selections).toEqual([{ player: 'red-guesser', card: 3 }]);
+    expect(refused(reveal(resumed, guesser('red'), { ...now(resumed), card: 0 }, 0))).toBeNull();
+  });
+
+  test('is for the chair alone, once at a time, and for a game that is on', () => {
+    const state = gameState();
+    expect(refused(pause(state, false, game(state), 0))).toBe('not_chair');
+    expect(refused(pause(state, true, { gameId: 'other' }, 0))).toBe('stale');
+    expect(refused(resume(state, true, game(state), 0))).toBe('not_paused');
+    const paused = accepted(pause(state, true, game(state), 0));
+    expect(refused(pause(paused, true, game(paused), 0))).toBe('paused');
+    expect(refused(resume(paused, false, game(paused), 0))).toBe('not_chair');
+    const over = accepted(withdraw(state, game(state)));
+    expect(refused(pause(over, true, game(over), 0))).toBe('game_over');
+    // The chair may withdraw a paused game, which ends the pause with the game.
+    const withdrawn = accepted(withdraw(paused, game(paused)));
+    expect(withdrawn.result).toEqual({ winner: null, reason: 'withdrawn' });
+    expect(withdrawn.pause).toBeNull();
+  });
+
+  test('keeps the last events only, however often the chair pauses and resumes', () => {
+    let state = gameState();
+    for (let i = 0; i < EVENTS_KEPT; i += 1) {
+      state = accepted(pause(state, true, game(state), i));
+      state = accepted(resume(state, true, game(state), i));
+    }
+    expect(state.events).toHaveLength(EVENTS_KEPT);
+    expect(state.events.at(-1)).toEqual({ turn: 1, kind: 'resumed' });
+  });
+
+  test('keeps a reveal that came before it from being stale afterwards', () => {
+    const state = timed();
+    const clue = accepted(giveClue(state, captain(state.team), { ...now(state), word: 'Gradient', count: 1 }, 2000));
+    const paused = accepted(pause(clue, true, game(clue), 10_000));
+    const resumed = accepted(resume(paused, true, game(paused), 90_000));
+    expect(refused(reveal(resumed, guesser(resumed.team), { ...now(resumed), card: own(resumed) }, 91_000))).toBeNull();
+  });
+});
+
+describe('an extension', () => {
+  const TIMED = { ...STANDARD, firstClueTime: 90, clueTime: 60, guessTime: 30, extensions: true };
+  const timed = (at = 1000) => newGame(WORDS, seededRng(3), setup('timed', TIMED), at);
+
+  test('adds 30 seconds to the phase, once for each group, and names the group in the log', () => {
+    const state = timed(1000);
+    const team = state.team;
+    const extended = accepted(extend(state, captain(team), now(state)));
+    expect(extended.clock).toEqual({ ends: 121_000, length: 120_000 });
+    expect(extended.extended).toEqual({ ...{ red: false, blue: false }, [team]: true });
+    expect(extended.events).toEqual([{ turn: 1, kind: 'extended', team }]);
+    expect(refused(extend(extended, captain(team), now(extended)))).toBe('extension_used');
+    // The other group has its own, in its turn.
+    const next = expire(extended, 121_000);
+    expect(next.turn).toBe(2);
+    expect(refused(extend(next, captain(team), now(next)))).toBe('not_your_turn');
+    expect(accepted(extend(next, captain(next.team), now(next))).clock).toEqual({ ends: 211_000, length: 90_000 });
+  });
+
+  test('is asked for by the captain in the clue phase and by a guesser in the guess phase', () => {
+    const state = timed(1000);
+    expect(refused(extend(state, guesser(state.team), now(state)))).toBe('not_captain');
+    const clued = accepted(giveClue(state, captain(state.team), { ...now(state), word: 'Gradient', count: 1 }, 2000));
+    expect(refused(extend(clued, captain(clued.team), now(clued)))).toBe('not_guesser');
+    expect(accepted(extend(clued, guesser(clued.team), now(clued))).clock).toEqual({ ends: 62_000, length: 60_000 });
+    expect(refused(extend(clued, spectator, now(clued)))).toBe('not_your_turn');
+    expect(refused(extend(clued, guesser(clued.team), { gameId: clued.gameId, turn: 9 }))).toBe('stale');
+  });
+
+  test('is refused where the settings leave it out, or the phase has no time limit', () => {
+    const off = newGame(WORDS, seededRng(3), setup('off', { ...TIMED, extensions: false }), 0);
+    expect(refused(extend(off, captain(off.team), now(off)))).toBe('no_extension');
+    const untimed = newGame(WORDS, seededRng(3), setup('untimed', { ...TIMED, firstClueTime: 0 }), 0);
+    expect(refused(extend(untimed, captain(untimed.team), now(untimed)))).toBe('no_extension');
   });
 });

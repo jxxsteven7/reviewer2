@@ -34,7 +34,7 @@ const count = computed(() => {
         {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
       </span>
     </p>
-    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" />
+    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" :frozen="game.paused" />
     <p class="scores">
       <span class="score red num">
         <span class="name">{{ t('lobby.group.red') }}</span>

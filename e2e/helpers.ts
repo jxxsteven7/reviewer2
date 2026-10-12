@@ -184,7 +184,7 @@ function colorPaths(value: unknown, path = ''): string[] {
 
 // No snapshot sent to someone outside a PI's seat before the end of a game held the color of an
 // unrevealed card: such a card has no `color` key at all, only its word and, when the word
-// library has them, its translations, which everyone may see. Nor is a color anywhere else in
+// library has them, its translations, forms and pinyin, which everyone may see. Nor is a color anywhere else in
 // the snapshot, under another name for the board or in the record of the clues, in which every
 // guess is a revealed card. Returns how many unrevealed cards it checked, so that a test can tell
 // that it looked at something.
@@ -196,16 +196,19 @@ export function expectNoKey(states: RoomView[]): number {
     for (const card of game.cards) {
       if (card.revealed) continue;
       expect(card).not.toHaveProperty('color');
-      expect(Object.keys(card).filter((key) => !['word', 'revealed', 'translations', 'forms'].includes(key))).toEqual(
-        [],
-      );
+      expect(
+        Object.keys(card).filter((key) => !['word', 'revealed', 'translations', 'forms', 'pinyin'].includes(key)),
+      ).toEqual([]);
       checked += 1;
     }
+    // A paused game has no board in the snapshot at all, so a guess's card can't be checked there.
     const allowed = new Set([
       ...game.cards.flatMap((card, i) => (card.revealed ? [`data.game.cards.${i}.color`] : [])),
       ...game.history.flatMap((clue, i) =>
         clue.guesses.map((guess, j) => {
-          expect(game.cards[guess.card]?.revealed, `the card of guess ${j} of clue ${i} is revealed`).toBe(true);
+          if (!game.paused) {
+            expect(game.cards[guess.card]?.revealed, `the card of guess ${j} of clue ${i} is revealed`).toBe(true);
+          }
           return `data.game.history.${i}.guesses.${j}.color`;
         }),
       ),

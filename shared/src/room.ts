@@ -35,6 +35,11 @@ export interface RoomView<Game = unknown> {
   // Whether the room is listed on the home page for anyone with an account to join, rather than
   // open only to those who have its code (docs/architecture.md#public-rooms).
   public: boolean;
+  // How many words of the chair's own the next games draw from along with the word lists
+  // (docs/games/keywords.md#custom-words). The words themselves go to the chair alone, who
+  // edits them; for everyone else the key is absent.
+  customWordCount: number;
+  customWords?: string[];
   phase: RoomPhase;
   // How many games this room has started. A start gives the number it saw, so that one that
   // comes late or twice can't start a game that nobody asked for.

@@ -23,8 +23,10 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     phase,
     language: 'en',
     rng,
+    chairId: null,
     now: () => 0,
     keyOf,
+    nameOf: (id) => id,
     isOnline: (id) => !offline.includes(id),
     playerIds: () => ids,
   };

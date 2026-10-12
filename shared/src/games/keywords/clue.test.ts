@@ -3,6 +3,7 @@ import {
   cardsClash,
   checkClue,
   cleanClue,
+  clueLength,
   MAX_CLUE_INPUT,
   normalizeClue,
   wordKey,
@@ -42,7 +43,7 @@ const board = (...words: string[]) => words.map((word) => ({ word, revealed: fal
 const problemOf = (clue: string, words: string[]) => checkClue(clue, board(...words)).problem;
 const similarTo = (clue: string, words: string[]) => checkClue(clue, board(...words)).similar.map(({ card }) => card);
 
-const LOOSE: ClueOptions = { words: 1, han: 10, strict: false };
+const LOOSE: ClueOptions = { words: 1, length: null, strict: false };
 
 describe('the forms of a clue', () => {
   test('normalizeClue folds width and case, trims, and drops invisible characters', () => {
@@ -365,8 +366,8 @@ describe('a clue that may be a form of a word on the board', () => {
 });
 
 describe('a clue of several words', () => {
-  const TWO: ClueOptions = { words: 2, han: 10, strict: true };
-  const THREE: ClueOptions = { words: 3, han: 10, strict: true };
+  const TWO: ClueOptions = { words: 2, length: null, strict: true };
+  const THREE: ClueOptions = { words: 3, length: null, strict: true };
 
   test('is allowed up to the number of words that the room takes', () => {
     expect(checkClue('peer review', [], TWO).problem).toBeNull();
@@ -400,17 +401,69 @@ describe('a clue of several words', () => {
   });
 });
 
-describe('the number of Chinese characters', () => {
+describe('the length of a clue in a Chinese room', () => {
+  test('counts a Chinese character as one, and two letters or digits as one', () => {
+    expect(clueLength('GPU')).toBe(2);
+    expect(clueLength('Python')).toBe(3);
+    expect(clueLength(`GPU${SPEED_UP}`)).toBe(4);
+    expect(clueLength('Transformer')).toBe(6);
+    expect(clueLength('GPT-4')).toBe(2);
+    expect(clueLength("Master's")).toBe(4);
+    expect(clueLength(ATTENTION)).toBe(3);
+    // Full-width letters are letters, and accents are nothing.
+    expect(clueLength('\uff27\uff30\uff35')).toBe(2);
+    expect(clueLength(`cafe${ACUTE}`)).toBe(2);
+  });
+
   test('is at most what the room allows', () => {
-    const four: ClueOptions = { words: 1, han: 4, strict: true };
+    const four: ClueOptions = { words: 1, length: 4, strict: true };
     expect(checkClue(NOTICE.repeat(2), [], four).problem).toBeNull();
     expect(checkClue(`${NOTICE.repeat(2)}${FORCE}`, [], four).problem).toBe('clue_too_long');
-    expect(checkClue(`GPU${SPEED_UP}`, [], { ...four, han: 2 }).problem).toBeNull();
-    expect(checkClue(`GPU${SPEED_UP}`, [], { ...four, han: 1 }).problem).toBe('clue_too_long');
-    // Latin letters don't count against it, but a clue with Chinese characters is still at most
-    // 10 characters long.
-    expect(checkClue('abcdefghi', [], { ...four, han: 1 }).problem).toBeNull();
-    expect(checkClue(`abcdefghi${FORCE}x`, [], { ...four, han: 1 }).problem).toBe('clue_too_long');
+    // The default of 4 allows 8 letters, and the most, 10, allows 20.
+    expect(checkClue('abcdefgh', [], four).problem).toBeNull();
+    expect(checkClue('abcdefghi', [], four).problem).toBe('clue_too_long');
+    expect(checkClue('a'.repeat(20), [], { ...four, length: 10 }).problem).toBeNull();
+    expect(checkClue('a'.repeat(21), [], { ...four, length: 10 }).problem).toBe('clue_too_long');
+    // Chinese characters and letters count together.
+    expect(checkClue(`GPU${SPEED_UP}`, [], four).problem).toBeNull();
+    expect(checkClue(`GPU${SPEED_UP}`, [], { ...four, length: 3 }).problem).toBe('clue_too_long');
+    expect(checkClue(`Python${SPEED_UP}`, [], { ...four, length: 5 }).problem).toBeNull();
+    expect(checkClue(`Python${SPEED_UP}`, [], four).problem).toBe('clue_too_long');
+  });
+
+  test('is counted as in an English room where the room counts words', () => {
+    // A word of up to 24 letters, and up to 10 characters in all with Chinese characters.
+    const english: ClueOptions = { words: 1, length: null, strict: true };
+    expect(checkClue('a'.repeat(24), [], english).problem).toBeNull();
+    expect(checkClue(`abcdefghi${FORCE}`, [], english).problem).toBeNull();
+    expect(checkClue(`abcdefghi${FORCE}x`, [], english).problem).toBe('clue_too_long');
+  });
+});
+
+describe('the pinyin of a Chinese word on the board', () => {
+  const gene = [{ word: '\u57fa\u56e0', revealed: false, pinyin: 'ji yin' }]; // "gene"
+  const green = [{ word: '\u7eff', revealed: false, pinyin: 'l\u00fc' }]; // "green", with an umlaut
+  const same = { card: 0, text: 'ji yin', kind: 'same' };
+
+  test('is refused written solid, with hyphens, in any case, and with spaces where the room takes them', () => {
+    expect(checkClue('jiyin', gene)).toMatchObject({ problem: 'clue_on_board', conflict: same });
+    expect(checkClue('Ji-Yin', gene)).toMatchObject({ problem: 'clue_on_board', conflict: same });
+    expect(checkClue('JIYIN', gene, LOOSE)).toMatchObject({ problem: 'clue_on_board', conflict: same });
+    expect(checkClue('ji yin', gene, { words: 2, length: null, strict: true })).toMatchObject({
+      problem: 'clue_on_board',
+      conflict: same,
+    });
+    // A Chinese room takes one word, so the pinyin with a space is not one word there.
+    expect(checkClue('ji yin', gene, { words: 1, length: 4, strict: true }).problem).toBe('clue_not_one_word');
+  });
+
+  test('is refused with the umlaut as it is or as "v", and not for a revealed card or a part', () => {
+    expect(checkClue('l\u00fc', green).problem).toBe('clue_on_board');
+    expect(checkClue('lv', green).problem).toBe('clue_on_board');
+    expect(checkClue('lu', green).problem).toBe('clue_on_board');
+    expect(checkClue('ji', gene).problem).toBeNull();
+    expect(checkClue('jiyinzu', gene).problem).toBeNull();
+    expect(checkClue('jiyin', [{ ...(gene[0] as (typeof gene)[0]), revealed: true }]).problem).toBeNull();
   });
 });
 
@@ -421,9 +474,15 @@ describe('the strict and the loose clue rules', () => {
     ...more,
   });
   const strict = (clue: string, cards: ReturnType<typeof card>[], words = 1) =>
-    checkClue(clue, cards, { words, han: 10, strict: true });
+    checkClue(clue, cards, { words, length: null, strict: true });
   const loose = (clue: string, cards: ReturnType<typeof card>[], words = 1) =>
-    checkClue(clue, cards, { words, han: 10, strict: false });
+    checkClue(clue, cards, { words, length: null, strict: false });
+  // The same rules in a Chinese room, which counts characters rather than words.
+  const chinese = (strict: boolean) => (clue: string, cards: ReturnType<typeof card>[]) =>
+    checkClue(clue, cards, { words: 1, length: 10, strict });
+  const zhStrict = chinese(true);
+  const zhLoose = chinese(false);
+  const inside = (text: string) => ({ card: 0, text, kind: 'inside' });
 
   test('a form that the word library lists is refused under the strict rule and a warning under the loose one', () => {
     const data = [card('Data', { forms: ['dataset', 'database', DATASET] })];
@@ -468,15 +527,14 @@ describe('the strict and the loose clue rules', () => {
     // By a run of Chinese characters inside a form.
     expect(strict(DATA, data).conflict).toEqual({ card: 0, text: DATASET, kind: 'form' });
     // The small words of a form are no part of it, and a Latin form is not looked for inside
-    // other words: a clue that only contains one gets the warning that the word brings, if any.
+    // other words: a clue that only contains one is judged as the word itself inside it is.
     const sota = [card('SOTA', { forms: ['state of the art'] })];
     expect(strict('of', sota)).toEqual({ problem: null, conflict: null, similar: [] });
     expect(strict('artwork', sota)).toEqual({ problem: null, conflict: null, similar: [] });
-    expect(strict('bigdataset', data)).toEqual({
-      problem: null,
-      conflict: null,
-      similar: [{ card: 0, text: 'Data', kind: 'inside' }],
-    });
+    expect(zhStrict('bigdataset', data).conflict).toEqual(inside('Data'));
+    for (const check of [strict, loose, zhLoose]) {
+      expect(check('bigdataset', data)).toEqual({ problem: null, conflict: null, similar: [inside('Data')] });
+    }
   });
 
   test('a Chinese character in common with a word on the board is refused under the strict rule only', () => {
@@ -503,27 +561,60 @@ describe('the strict and the loose clue rules', () => {
     });
   });
 
-  test('a word on the board, or a part of one, of four letters or more inside the clue is a warning', () => {
-    for (const check of [strict, loose]) {
-      expect(check('datacenter', [card('Data')]).similar).toEqual([{ card: 0, text: 'Data', kind: 'inside' }]);
-      expect(check('metadata', [card('Big data')]).similar).toEqual([{ card: 0, text: 'Big data', kind: 'inside' }]);
-      expect(check('datacenter', [card(DATA, { translations: ['Data'] })]).similar).toEqual([
-        { card: 0, text: 'Data', kind: 'inside' },
-      ]);
-    }
-    // A clue of several words contains what runs across its words as well.
-    expect(checkClue('big data center', [card('Datacenter')], { words: 3, han: 10, strict: true }).similar).toEqual([
-      { card: 0, text: 'Datacenter', kind: 'inside' },
-    ]);
+  test('a word on the board, or a part of one, of four letters or more inside the clue is refused under the strict rule in a Chinese room', () => {
+    expect(zhStrict('dockerfile', [card('Docker')])).toEqual({
+      problem: 'clue_on_board',
+      conflict: inside('Docker'),
+      similar: [],
+    });
+    expect(zhLoose('dockerfile', [card('Docker')])).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [inside('Docker')],
+    });
+    expect(zhStrict('Pythonic', [card('Python')]).conflict).toEqual(inside('Python'));
+    expect(zhStrict('metadata', [card('Big data')]).conflict).toEqual(inside('Big data'));
+    expect(zhLoose('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
     // Shorter words are left alone, and so are clues inside a word.
-    expect(strict('email', [card('AI')]).similar).toEqual([]);
-    expect(strict('datum', [card('Dat')]).similar).toEqual([]);
-    expect(strict('data', [card('Datacenter')]).similar).toEqual([]);
+    expect(zhStrict('email', [card('AI')]).problem).toBeNull();
+    expect(zhStrict('datum', [card('Dat')]).problem).toBeNull();
+    expect(zhStrict('data', [card('Datacenter')]).problem).toBeNull();
   });
 
-  test('what the endings suggest stays a warning under both rules', () => {
-    expect(strict('modeling', [card('Model')]).similar).toEqual([{ card: 0, text: 'Model', kind: 'similar' }]);
-    expect(loose('modeling', [card('Model')]).similar).toEqual([{ card: 0, text: 'Model', kind: 'similar' }]);
+  test('is a warning under both rules in an English room, where every card is Latin', () => {
+    // The strict rule would otherwise refuse everyday words beside short cards.
+    for (const check of [strict, loose]) {
+      expect(check('support', [card('Port')])).toEqual({ problem: null, conflict: null, similar: [inside('Port')] });
+      expect(check('general', [card('Gene')]).similar).toEqual([inside('Gene')]);
+      expect(check('datacenter', [card('Data')]).similar).toEqual([inside('Data')]);
+      expect(check('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
+    }
+    // A clue of several words contains what runs across its words as well.
+    expect(
+      checkClue('big data center', [card('Datacenter')], { words: 3, length: null, strict: true }).similar,
+    ).toEqual([inside('Datacenter')]);
+    // The same for a card's term in another language is a warning under both rules, in either room.
+    for (const check of [strict, loose, zhStrict, zhLoose]) {
+      expect(check('datacenter', [card(DATA, { translations: ['Data'] })])).toEqual({
+        problem: null,
+        conflict: null,
+        similar: [inside('Data')],
+      });
+    }
+  });
+
+  test('what the endings suggest stays a warning under both rules, also when the clue contains the word', () => {
+    for (const check of [strict, loose, zhStrict, zhLoose]) {
+      expect(check('modeling', [card('Model')])).toEqual({
+        problem: null,
+        conflict: null,
+        similar: [{ card: 0, text: 'Model', kind: 'similar' }],
+      });
+    }
+    expect(strict('tests', [card('Test')]).conflict).toEqual({ card: 0, text: 'Test', kind: 'same' });
+    expect(strict('tested', [card('Test')]).problem).toBeNull();
+    expect(zhStrict('contest', [card('Test')]).problem).toBe('clue_on_board');
+    expect(strict('contest', [card('Test')]).similar).toEqual([inside('Test')]);
   });
 
   test('the loose rule still refuses what the rules always refuse', () => {

@@ -22,6 +22,7 @@ const view = (me: string, isPublic: boolean): RoomView => ({
   language: 'en',
   fields: ['general'],
   public: isPublic,
+  customWordCount: 0,
   phase: 'lobby',
   round: 0,
   gameId: null,

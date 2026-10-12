@@ -28,6 +28,8 @@ async function load() {
   failed.value = null;
   rooms.value = null;
   const reply = await send<{ rooms: PublicRoom[] }>('meta:rooms');
+  // The list may have been folded away while the answer was on its way.
+  if (!open.value) return;
   if (reply.ok) rooms.value = reply.rooms;
   else {
     failed.value = reply.error;
@@ -43,6 +45,14 @@ function show() {
   waiting = onceConnected(() => void load());
 }
 
+// Back to the button, and no more waiting for a connection.
+function hide() {
+  waiting();
+  open.value = false;
+  rooms.value = null;
+  failed.value = null;
+}
+
 onBeforeUnmount(() => waiting());
 
 const listsOf = (room: PublicRoom) =>
@@ -53,7 +63,10 @@ const listsOf = (room: PublicRoom) =>
   <section class="public-rooms">
     <UiButton v-if="!open" variant="blue" @click="show">{{ t('home.publicRooms.open') }}</UiButton>
     <template v-else>
-      <h2>{{ t('home.publicRooms.title') }}</h2>
+      <div class="head">
+        <h2>{{ t('home.publicRooms.title') }}</h2>
+        <UiButton size="small" variant="quiet" @click="hide">{{ t('home.publicRooms.hide') }}</UiButton>
+      </div>
       <p class="hint">
         {{ t('home.publicRooms.intro') }}
         <RouterLink v-if="account.loaded && !account.summary" to="/account">{{
@@ -87,6 +100,14 @@ const listsOf = (room: PublicRoom) =>
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  align-self: stretch;
 }
 
 h2 {

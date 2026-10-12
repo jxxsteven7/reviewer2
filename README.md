@@ -37,7 +37,8 @@ What we promise players:
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
 - **Feedback** is read only by the project's operator, unless you agree to its becoming a GitHub issue, which shows its text and the name you left, never your contact. A contact is kept as written and deleted after 90 days. The feedback itself is kept for good, as the project's archive of suggestions.
 - **Reports** of players in public rooms are read only by the operator, and kept for good, as the feedback is. A report keeps who reported whom, the name the reported player had in the room, the room's number and the note the reporter wrote.
-- **Deleting an account** deletes everything of it, except that feedback sent from it, acknowledgments counted for it, and reports it sent or got stay, no longer linked to it; backups keep the rest only until they expire.
+- **Replays** of finished games are kept for good when a player with an account took part, for them to watch again: the board, the clues, and the nicknames of those who revealed a card, guests included. A room with the chair's own words keeps none.
+- **Deleting an account** deletes everything of it, except that feedback sent from it, acknowledgments counted for it, reports it sent or got, and replays of games it played in, which others played in too, stay, no longer linked to it; backups keep the rest only until they expire.
 
 ## Status
 

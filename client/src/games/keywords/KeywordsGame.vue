@@ -15,6 +15,7 @@ import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
 import { act, reconnecting } from '../../core/socket';
+import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
 import ClockBar from './ClockBar.vue';
@@ -25,6 +26,9 @@ import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
+import PausedNotice from './PausedNotice.vue';
+import { replayOf } from './replay';
+import ReplayViewer from './ReplayViewer.vue';
 import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import TurnStrip from './TurnStrip.vue';
@@ -34,6 +38,10 @@ import { useKeywords, type Chooser } from './useKeywords';
 // turn strip, the clock, the board and what the viewer can do now come first. On a wide screen the
 // groups stand on the left of the board and the clue log on its right; on a phone they open as
 // sheets from the two buttons in the bar under the board, so that the board comes first.
+//
+// While the chair has paused the game, a notice stands in place of the board, with the way to
+// resume for the chair, and the clock stands still. A group whose turn it is may ask for an
+// extension, where the room allows one. Once the game has ended, the review opens the replay.
 //
 // In a match, its table sits beside the board while the game is on, above the groups on a wide
 // screen. Once the game has ended, the table follows the letters, with where each player's
@@ -70,10 +78,24 @@ watch(wide, () => {
 
 const game = computed(() => data.value.game as KeywordsView);
 const moment = computed(() => ({ gameId: game.value.gameId, turn: game.value.turn }));
+const paused = computed(() => game.value.paused);
 const myTurn = computed(() => mySeat.value?.team === game.value.team);
-const canClue = computed(() => game.value.phase === 'clue' && myTurn.value && mySeat.value?.role === 'captain');
-const canGuess = computed(() => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser');
+const canClue = computed(
+  () => game.value.phase === 'clue' && myTurn.value && mySeat.value?.role === 'captain' && !paused.value,
+);
+const canGuess = computed(
+  () => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser' && !paused.value,
+);
 const group = computed(() => t(`lobby.group.${game.value.team}`));
+// Whether the viewer may ask for their group's extension now: the room allows one, the phase has
+// a time limit, it is the viewer's move, and the group hasn't had one in this game.
+const canExtend = computed(
+  () =>
+    data.value.settings.extensions &&
+    game.value.clock !== null &&
+    (canClue.value || canGuess.value) &&
+    !game.value.extended[game.value.team],
+);
 
 // The choices of cards come from the server, which shows them to the group whose turn it is:
 // the viewer's own choice is marked, and the others' avatars hang on the corner of a card. A
@@ -115,7 +137,25 @@ async function choose(card: number) {
 const giveClue = (word: string, count: ClueCount) => run(() => act('keywords:clue', { ...moment.value, word, count }));
 const reveal = (card: number) => run(() => act('keywords:reveal', { ...moment.value, card }));
 const pass = () => run(() => act('keywords:pass', moment.value));
+const extend = () => run(() => act('keywords:extend', moment.value));
+const pause = () => run(() => act('keywords:pause', { gameId: game.value.gameId }));
+const resume = () => run(() => act('keywords:resume', { gameId: game.value.gameId }));
 const again = () => run(() => act('room:again', { gameId: game.value.gameId }));
+
+// Everyone hears of an extension as it comes: the newest event, when it is one.
+watch(
+  () => game.value.events.length,
+  (count, before) => {
+    const event = game.value.events.at(-1);
+    if (count > before && event?.kind === 'extended' && event.team) {
+      toast('game.extended', { group: t(`lobby.group.${event.team}`) });
+    }
+  },
+);
+
+// The review of the game that has ended, step by step, for everyone who sees the result.
+const reviewing = ref(false);
+const replay = computed(() => replayOf(game.value, room.value.language, room.value.players));
 
 const ending = ref(false);
 async function withdraw() {
@@ -169,6 +209,7 @@ const chosenByOthers = computed(() =>
     <ClockBar
       v-if="!game.result && game.clock"
       :clock="game.clock"
+      :frozen="paused"
       class="sticky-clock"
       :class="{ 'below-banner': reconnecting }"
     />
@@ -181,7 +222,14 @@ const chosenByOthers = computed(() =>
 
     <div class="layout">
       <div class="main">
+        <PausedNotice v-if="paused">
+          <template v-if="isChair">
+            <UiButton variant="primary" :disabled="busy" @click="resume">{{ t('game.resume') }}</UiButton>
+            <p class="paused-note">{{ t('game.pausedResume') }}</p>
+          </template>
+        </PausedNotice>
         <KeywordsBoard
+          v-else
           :cards="game.cards"
           :selectable="canGuess"
           :selected="choice"
@@ -209,9 +257,12 @@ const chosenByOthers = computed(() =>
             @give="giveClue"
           />
           <GuessBar v-else-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />
-          <p v-else-if="!game.result" class="status">
+          <p v-else-if="!game.result && !paused" class="status">
             {{ game.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group }) }}
           </p>
+          <UiButton v-if="canExtend" class="extend" size="small" :disabled="busy" @click="extend">
+            {{ t('game.extend') }}
+          </UiButton>
           <div v-if="!wide" class="panels">
             <UiButton class="open-groups" size="small" @click="panel = 'groups'">{{ t('game.groups') }}</UiButton>
             <UiButton class="open-log" size="small" @click="panel = 'log'">{{ t('game.log') }}</UiButton>
@@ -227,7 +278,13 @@ const chosenByOthers = computed(() =>
         <GameRosters v-if="wide" :room="room" />
         <ClueLog v-if="wide" :game="game" />
         <div class="tools">
-          <RulesSheet :settings="data.settings" :language="room.language" />
+          <RulesSheet :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
+          <UiButton v-if="replay" class="review" variant="quiet" size="small" @click="reviewing = true">
+            {{ t('game.review') }}
+          </UiButton>
+          <UiButton v-if="isChair && !game.result && !paused" variant="quiet" size="small" @click="pause">
+            {{ t('game.pause') }}
+          </UiButton>
           <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
             {{ t('game.end') }}
           </UiButton>
@@ -241,6 +298,10 @@ const chosenByOthers = computed(() =>
     </UiSheet>
     <UiSheet v-if="!wide" :open="panel === 'log'" :title="t('game.log')" @close="panel = null">
       <ClueLog :game="game" class="in-sheet" />
+    </UiSheet>
+
+    <UiSheet :open="reviewing" :title="t('replay.title')" @close="reviewing = false">
+      <ReplayViewer v-if="replay" :replay="replay" />
     </UiSheet>
 
     <UiSheet :open="ending" :title="t('game.end')" @close="ending = false">
@@ -307,7 +368,8 @@ const chosenByOthers = computed(() =>
   grid-template-areas:
     'me me me .'
     'chat groups log .'
-    'panel panel panel panel';
+    'panel panel panel panel'
+    'extend extend extend extend';
   grid-template-columns: auto auto auto minmax(0, 1fr);
   gap: var(--space-2);
   margin-top: var(--space-3);
@@ -339,6 +401,11 @@ const chosenByOthers = computed(() =>
 .actions > :deep(.guess-bar),
 .status {
   grid-area: panel;
+}
+
+.actions > :deep(.extend) {
+  grid-area: extend;
+  justify-self: start;
 }
 
 .who {

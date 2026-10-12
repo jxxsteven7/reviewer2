@@ -12,7 +12,7 @@ import type { Chooser } from './useKeywords';
 // the end of the game) is tinted. Every color also comes with a short text label, so that color
 // is never the only signal. The others in the group who have chosen the card hang their avatars
 // on its corner; the card's accessible name says who they are. On a big screen the cards are
-// `large`, with bigger type.
+// `large`, with bigger type. A `marked` card, in a replay, is outlined.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -21,8 +21,9 @@ const props = withDefaults(
     selected: boolean;
     choosers: Chooser[];
     large?: boolean;
+    marked?: boolean;
   }>(),
-  { large: false },
+  { large: false, marked: false },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t, locale } = useI18n();
@@ -65,7 +66,7 @@ const ariaLabel = computed(() =>
   <button
     type="button"
     class="card"
-    :class="[state, card.color, size, { large, selected, selectable, chosen: choosers.length > 0 }]"
+    :class="[state, card.color, size, { large, selected, selectable, marked, chosen: choosers.length > 0 }]"
     :aria-disabled="selectable ? undefined : 'true'"
     :tabindex="selectable ? undefined : -1"
     :aria-pressed="selectable ? selected : undefined"
@@ -280,6 +281,12 @@ const ariaLabel = computed(() =>
   width: 30px;
   height: 30px;
   font-size: 0.9rem;
+}
+
+/* The card that a replay's step is about. */
+.marked {
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
 }
 
 .stamp {
