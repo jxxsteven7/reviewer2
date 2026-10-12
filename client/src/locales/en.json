@@ -526,7 +526,15 @@
     "phrases": {
       "waiting": "I could have finished a PhD by now.",
       "deadline": "The deadline is 23:59 AoE. Hurry up!",
-      "reviewer2": "Reviewer 2 is on the way."
+      "reviewer2": "Reviewer 2 is on the way.",
+      "accept": "Accept as is!",
+      "great_clue": "That clue reads better than my thesis.",
+      "p_hacking": "You got that one? Smells like p-hacking.",
+      "major_revision": "Major revision. Back to the drawing board.",
+      "resubmit": "Rejected again. Fine, we'll try another venue.",
+      "first_author": "Carry me and I'll make you first author.",
+      "coauthor": "Same coauthors on the next one?",
+      "all_nighter": "Don't leave, we're pulling an all-nighter."
     },
     "bubble": "{name}: {phrase}",
     "mute": "Mute the sounds",
@@ -657,7 +665,7 @@
     "tipCode": "The author's WeChat reward code",
     "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
     "listTitle": "Want to be on the list of sponsors?",
-    "listHow": "When you tip, write the name you want in the message, or write \"list\u00a0me\" to be listed by your WeChat name. Otherwise you stay off the list, and the list never shows amounts.",
+    "listHow": "When you tip, write the name you want in the message, or write \"list me\" to be listed by your WeChat name. Otherwise you stay off the list, and the list never shows amounts.",
     "sponsor": "No WeChat? Sponsor the author on GitHub",
     "version": "Version {version}"
   },
@@ -896,6 +904,10 @@
   "ranks": {
     "title": "Academic rank",
     "names": {
+      "kindergarten": "Kindergartner",
+      "primary": "Primary school pupil",
+      "middle_school": "Middle school student",
+      "high_school": "High school student",
       "undergraduate": "Undergraduate",
       "master": "Master's student",
       "phd": "PhD student",
@@ -903,11 +915,60 @@
       "lecturer": "Lecturer",
       "associate_professor": "Associate Professor",
       "professor": "Professor",
-      "academician": "Academician"
+      "academician": "Academician",
+      "reviewer2": "Reviewer 2"
     },
     "points": "Points: {points}",
     "next": "{points} more to {rank}.",
-    "top": "The highest rank there is.",
+    "top": "Reviewer 2: the highest rank there is.",
     "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game."
+  },
+  "streaks": {
+    "kinds": {
+      "wins": "Winning streak",
+      "losses": "Losing streak"
+    },
+    "names": {
+      "wins": "{n} Submissions, {n} Acceptances",
+      "losses": "{n} Submissions, {n} Rejections"
+    },
+    "record": "A new personal record!",
+    "broadcast": "{name} is on a hot streak: {title}!",
+    "lines": {
+      "wins": {
+        "low": {
+          "1": "The reviewers are in a good mood. Submit another one while it lasts.",
+          "2": "Accepted again. Your advisor is already drafting the group newsletter.",
+          "3": "One more line for the CV, and it isn't even Friday."
+        },
+        "mid": {
+          "1": "Acceptances by the armful. The reviewers know you by name now.",
+          "2": "That's not a submission record, that's a hit rate.",
+          "3": "A few more and they'll make you Reviewer 2."
+        },
+        "high": {
+          "1": "You don't submit papers anymore. You announce them.",
+          "2": "The reviewers just stamp it now.",
+          "3": "They should rename the conference after you."
+        }
+      },
+      "losses": {
+        "low": {
+          "1": "Rejected again. Did you read the reviews, or just the verdict?",
+          "2": "Try another venue. This one clearly can't read.",
+          "3": "Every big name has a drawer of rejections. Yours is filling up nicely."
+        },
+        "mid": {
+          "1": "Those rejection letters would make a decent book by now.",
+          "2": "The reviewers: \"You again?\"",
+          "3": "At this rejection rate, you belong in the related work."
+        },
+        "high": {
+          "1": "Perseverance is a scientific virtue. So is a new method.",
+          "2": "Collector of rejection letters, first in the field.",
+          "3": "Submit once more and the journal sends you a loyalty card."
+        }
+      }
+    }
   }
 }

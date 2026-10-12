@@ -43,6 +43,7 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
   screens: 0,
   me,
   match: null,
+  streaks: [],
   data: {},
 });
 

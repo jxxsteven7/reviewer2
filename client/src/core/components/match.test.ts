@@ -53,6 +53,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
       standings: [],
       ...match,
     },
+    streaks: [],
     data: {},
     ...overrides,
   };

@@ -80,8 +80,8 @@ describe('a player with an account', () => {
     expect(names(visitor)).toEqual(['Ann', 'Bob']);
     // Nothing in the room says who has an account, apart from an avatar and the rank.
     expect(visitor.state?.players).toEqual([
-      { id: expect.any(String), name: 'Ann', online: true, rank: 'undergraduate' },
-      { id: expect.any(String), name: 'Bob', online: true, rank: 'undergraduate' },
+      { id: expect.any(String), name: 'Ann', online: true, rank: 'kindergarten' },
+      { id: expect.any(String), name: 'Bob', online: true, rank: 'kindergarten' },
     ]);
   });
 
@@ -112,7 +112,7 @@ describe('a player with an account', () => {
     const back = track(await phone.connect({ code, roomId }));
     const again = await back.waitFor((view) => view.code === code);
     expect(again.me).toBe(state.me);
-    expect(again.players).toEqual([{ id: state.me, name: 'Ann', online: true, rank: 'undergraduate' }]);
+    expect(again.players).toEqual([{ id: state.me, name: 'Ann', online: true, rank: 'kindergarten' }]);
   });
 
   test('can not join a room where a guest already has the name', async () => {

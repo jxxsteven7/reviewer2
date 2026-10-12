@@ -6,6 +6,7 @@ import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import QrCode from '../../core/components/QrCode.vue';
+import StreakNotices from '../../core/components/StreakNotices.vue';
 import { HTML_LANG } from '../../core/i18n';
 import { roomLink } from '../../core/room';
 import ClueLog from './ClueLog.vue';
@@ -17,7 +18,8 @@ import { useKeywords } from './useKeywords';
 
 // The room on a big screen. In the waiting room: how to join, and who sits where. During the
 // game: the board as spectators see it, with the turn and the clue log. A screen never gets the
-// key, so it can stay on the wall for everyone. A match's table, or its ranking, is shown too.
+// key, so it can stay on the wall for everyone. A match's table, or its ranking, is shown too, and
+// so are the winning streaks that a game has just brought players to, for the room to cheer.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const { data, groups, spectators } = useKeywords(toRef(props, 'room'));
@@ -65,6 +67,7 @@ const game = computed(() => data.value.game as KeywordsView | null);
       :match="room.match"
       compact
     />
+    <StreakNotices v-if="game.result" class="letters-row" :room="room" large />
     <div class="main" :class="{ over: game.result }">
       <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" />
       <PausedNotice v-if="game.paused" large />

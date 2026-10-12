@@ -3,10 +3,14 @@ import {
   ACCOUNT_API,
   checkPassword,
   checkUsername,
+  isLanguage,
   MAX_NAME_INPUT,
   MAX_PASSWORD_INPUT,
   nextRank,
+  numberWords,
   rankFor,
+  STREAK_KINDS,
+  STREAK_MIN,
   type AccountSummary,
 } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
@@ -24,11 +28,11 @@ import ProfileEmail from './ProfileEmail.vue';
 import ProfileFriends from './ProfileFriends.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's own page: its avatar and username, its academic rank, its titles and the
-// acknowledgments counted for it, its friends, its email address, its password, its record, and the
-// ways to log out and to delete it.
+// The account's own page: its avatar and username, its academic rank, its titles, its streaks and
+// the acknowledgments counted for it, its friends, its email address, its password, its record, and
+// the ways to log out and to delete it.
 const props = defineProps<{ summary: AccountSummary }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const { busy, run } = useBusy();
 
@@ -65,6 +69,18 @@ const counted = (label: string, count: number) =>
 // The rank that the account's points hold, and the next one (shared/src/ranks.ts).
 const rank = computed(() => rankFor(props.summary.points));
 const next = computed(() => nextRank(props.summary.points));
+
+// The streak titles (shared/src/streaks.ts): the longest run of wins and of losses, from three games
+// on, with the number in the words of the language.
+const language = computed(() => (isLanguage(locale.value) ? locale.value : 'en'));
+const streakTitles = computed(() =>
+  STREAK_KINDS.flatMap((kind) => {
+    const length = props.summary.streaks[kind];
+    return length >= STREAK_MIN
+      ? [{ kind, title: t(`streaks.names.${kind}`, { n: numberWords(length, language.value) }) }]
+      : [];
+  }),
+);
 
 // Sends a change, and shows what the server had against it.
 async function change(path: string, body: object): Promise<boolean> {
@@ -164,7 +180,7 @@ async function logOut() {
     </section>
 
     <section
-      v-if="summary.titles.length || summary.acknowledgments.length"
+      v-if="summary.titles.length || streakTitles.length || summary.acknowledgments.length"
       class="part"
       aria-labelledby="profile-titles"
     >
@@ -173,6 +189,7 @@ async function logOut() {
         <li v-for="{ title, count } in summary.titles" :key="title">
           {{ counted(t(`account.profile.titleNames.${title}`), count) }}
         </li>
+        <li v-for="{ kind, title } in streakTitles" :key="kind" class="streak" :class="kind">{{ title }}</li>
         <li v-for="{ kind, count } in summary.acknowledgments" :key="kind">
           {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
         </li>
@@ -340,6 +357,14 @@ h1 {
   border-radius: var(--radius-pill);
   background: var(--bg);
   font-weight: var(--weight-bold);
+}
+
+.titles .streak.wins {
+  background: var(--blue-tint);
+}
+
+.titles .streak.losses {
+  background: var(--red-tint);
 }
 
 .leave {

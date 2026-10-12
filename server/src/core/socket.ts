@@ -256,10 +256,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // What the end of a game leaves behind for the players with accounts, as the game describes
   // their part in it (GameModule.results()): the game on each of their records, with the points it
-  // brought them (Room.points()), their ranks as they are now for everyone to see, and, once any of
-  // them took part, the game itself to watch again (GameModule.replay()). Whoever had left by then
-  // has no part in its end, and a game that the chair withdrew counts for nobody. Whatever else is
-  // to be kept of a finished game goes here, after the records.
+  // brought them (Room.points()), the streak it brought them to, which the room tells in the
+  // snapshot that ends the game (Room.noteStreak()), their ranks as they are now for everyone to
+  // see, and, once any of them took part, the game itself to watch again (GameModule.replay()).
+  // Whoever had left by then has no part in its end, and a game that the chair withdrew counts for
+  // nobody. Whatever else is to be kept of a finished game goes here, after the records.
   function keepRecords(room: Room): void {
     const results = accounts && room.gameId !== null ? room.results() : null;
     if (!results || !accounts) return;
@@ -271,7 +272,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
       played += 1;
-      accounts.record(account.id, { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, ...result });
+      const record = { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, ...result };
+      const streak = accounts.record(account.id, record);
+      if (streak) room.noteStreak(member.id, streak);
       room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id));
     }
     if (played === 0) return;
