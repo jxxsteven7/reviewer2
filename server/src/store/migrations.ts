@@ -249,4 +249,17 @@ export const MIGRATIONS: readonly string[] = [
   CREATE INDEX friendships_requester ON friendships (requester_id);
   CREATE INDEX friendships_addressee ON friendships (addressee_id);
   `,
+  // 9: what became of the feedback (docs/architecture.md#feedback), as the operator's notes
+  // beside the issue: the pull request that resolved it and when that was recorded, when it was
+  // closed without being adopted, and when it was put in the trash, from which it is deleted for
+  // good 30 days later, the one way a row ever goes (archive.test.ts). The partial index finds what
+  // is in the trash quickly. Every column is nullable, and the rows that were there get NULL: open,
+  // not resolved, not in the trash.
+  `
+  ALTER TABLE feedback ADD COLUMN resolved_pr INTEGER CHECK (resolved_pr > 0);
+  ALTER TABLE feedback ADD COLUMN resolved_at TEXT;
+  ALTER TABLE feedback ADD COLUMN closed_at TEXT;
+  ALTER TABLE feedback ADD COLUMN deleted_at TEXT;
+  CREATE INDEX feedback_trash ON feedback (deleted_at) WHERE deleted_at IS NOT NULL;
+  `,
 ];

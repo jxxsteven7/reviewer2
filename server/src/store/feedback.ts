@@ -6,26 +6,32 @@ import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 // What is kept is what the player wrote and what came along by itself, and nothing that says who
 // they are: no address, nickname, token or room code. The contact, which the player may leave so
 // that the author can reply, is cleared after 90 days. The feedback itself is the project's
-// archive of suggestions and stays for good: nothing here deletes it or changes what the player
-// sent (archive.test.ts). A player who wants to be thanked for feedback that is adopted leaves a
-// name for it, perhaps with a link, and then, if they were logged in, the feedback remembers their
-// account (docs/architecture.md#acknowledgments).
+// archive of suggestions: nothing here changes what the player sent, and the one way a row goes
+// is the purge of what the operator put in the trash 30 days before (archive.test.ts). Beside the
+// text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it was
+// published as, the pull request that resolved it, whether it was closed, and whether it is in
+// the trash. A player who wants to be thanked for feedback that is adopted leaves a name for it,
+// perhaps with a link, and then, if they were logged in, the feedback remembers their account
+// (docs/architecture.md#acknowledgments).
 //
 // Reports of players are kept here too, in a table of their own (migration 6), and are an archive
-// as the feedback is. Unlike feedback, a report says who sent it, about whom, and in which room,
-// since that is what it is for.
+// as the feedback was: no row is deleted or changed. Unlike feedback, a report says who sent it,
+// about whom, and in which room, since that is what it is for.
 
 const DAY_MS = 24 * 60 * 60_000;
 
 export interface FeedbackLimits {
   // Past any of these, no more feedback is taken, so that it can't fill the disk: as many as
   // `maxEntries`, more than `maxBytes` of feedback, counting what each piece holds, and a whole
-  // database larger than `maxDatabaseBytes`, which accounts share with it.
+  // database larger than `maxDatabaseBytes`, which accounts share with it. Feedback in the trash
+  // counts until it is purged.
   maxEntries: number;
   maxBytes: number;
   maxDatabaseBytes: number;
   // How long a contact is kept.
   contactMs: number;
+  // How long feedback stays in the trash before it is purged.
+  trashMs: number;
 }
 
 export const DEFAULT_FEEDBACK_LIMITS: FeedbackLimits = {
@@ -33,16 +39,33 @@ export const DEFAULT_FEEDBACK_LIMITS: FeedbackLimits = {
   maxBytes: 50 * 2 ** 20,
   maxDatabaseBytes: MAX_DATABASE_BYTES,
   contactMs: 90 * DAY_MS,
+  trashMs: 30 * DAY_MS,
 };
 
 // The limits for as many pieces of feedback as `maxEntries`, which MAX_FEEDBACK sets (config.ts):
 // the room for them grows with them, 5 KB a piece on average, so that a server that is full can be
-// given more room with one setting. Nothing is ever deleted to make room.
+// given more room with one setting. Nothing is deleted to make room.
 export const feedbackLimits = (maxEntries: number): FeedbackLimits => ({
   ...DEFAULT_FEEDBACK_LIMITS,
   maxEntries,
   maxBytes: Math.round((DEFAULT_FEEDBACK_LIMITS.maxBytes / DEFAULT_FEEDBACK_LIMITS.maxEntries) * maxEntries),
 });
+
+// What became of a piece of feedback, from the operator's notes, the first of these that holds:
+// in the trash; closed without being adopted; thanked, by the acknowledgment that adopting it
+// made; resolved, by a pull request; published as a GitHub issue; or new. The page shows the
+// status, and the whole trail beside it.
+export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'thanked', 'closed', 'trash'] as const;
+export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
+
+// What is read: the feedback of one status, the open feedback, which is neither closed nor in the
+// trash, or all of it.
+export type FeedbackView = 'all' | 'open' | FeedbackStatus;
+
+// How many days feedback that went to the trash at `deletedAt` has left before it is purged,
+// rounded up, so that the last day says 1, and 0 once the next purge takes it.
+export const daysLeft = (deletedAt: string, now: number, trashMs = DEFAULT_FEEDBACK_LIMITS.trashMs): number =>
+  Math.max(0, Math.ceil((Date.parse(deletedAt) + trashMs - now) / DAY_MS));
 
 export interface NewFeedback {
   kind: FeedbackKind;
@@ -70,6 +93,15 @@ export interface Feedback extends NewFeedback {
   createdAt: string;
   // The number of the GitHub issue that the operator published it as, if any.
   issue: number | null;
+  // The number of the pull request that resolved it, if the operator has recorded one, and when
+  // they did.
+  resolvedPr: number | null;
+  resolvedAt: string | null;
+  // When the operator closed it without adopting it, or null while it is open.
+  closedAt: string | null;
+  // When the operator put it in the trash, or null while it isn't there.
+  deletedAt: string | null;
+  status: FeedbackStatus;
   // The username of the account, while it has one.
   username: string | null;
   // The acknowledgment that adopting it made, if the operator has.
@@ -99,25 +131,47 @@ export interface Report extends Omit<NewReport, 'reporterId'> {
   reportedBarred: boolean;
 }
 
+// The status, as a column, in the order of FEEDBACK_STATUSES from the last to the first.
+const STATUS =
+  "CASE WHEN f.deleted_at IS NOT NULL THEN 'trash' WHEN f.closed_at IS NOT NULL THEN 'closed' " +
+  "WHEN k.id IS NOT NULL THEN 'thanked' WHEN f.resolved_pr IS NOT NULL THEN 'resolved' " +
+  "WHEN f.issue IS NOT NULL THEN 'issue' ELSE 'new' END AS status";
 const COLUMNS =
   'f.id, f.created_at AS createdAt, f.kind, f.text, f.contact, f.credit, f.link, f.account_id AS accountId, ' +
-  'f.public_issue AS publicIssue, f.issue, f.version, f.language, f.page, f.user_agent AS userAgent, a.username, ' +
-  'k.id AS acknowledgmentId';
+  'f.public_issue AS publicIssue, f.issue, f.resolved_pr AS resolvedPr, f.resolved_at AS resolvedAt, ' +
+  'f.closed_at AS closedAt, f.deleted_at AS deletedAt, f.version, f.language, f.page, f.user_agent AS userAgent, ' +
+  `a.username, k.id AS acknowledgmentId, ${STATUS}`;
 const FROM =
   'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id LEFT JOIN acknowledgments k ON k.feedback_id = f.id';
+// The rows of a view, by their status: the one given, or any, and with the second parameter 1
+// only the open ones. SQLite reads `status` as the column above.
+const VIEW = "status = coalesce(?, status) AND (? = 0 OR status IN ('new', 'issue', 'resolved', 'thanked'))";
+// The kind and the status of every row, for counting.
+const KINDS_AND_STATUSES = `(SELECT f.kind, ${STATUS} ${FROM})`;
+
+// The parameters of VIEW.
+const viewParams = (view: FeedbackView): [string | null, number] =>
+  view === 'all' ? [null, 0] : view === 'open' ? [null, 1] : [view, 0];
 
 // The clock is the system's, in milliseconds since 1970, because a contact is kept for 90 days
-// of the calendar, across restarts. Tests give it one of their own.
+// of the calendar, across restarts, and the trash for 30. Tests give it one of their own.
 export class FeedbackStore {
   readonly #insert: StatementSync;
   readonly #count: StatementSync;
   readonly #size: StatementSync;
   readonly #latest: StatementSync;
   readonly #kinds: StatementSync;
+  readonly #statuses: StatementSync;
   readonly #byId: StatementSync;
   readonly #account: StatementSync;
   readonly #clear: StatementSync;
   readonly #setIssue: StatementSync;
+  readonly #resolve: StatementSync;
+  readonly #close: StatementSync;
+  readonly #reopen: StatementSync;
+  readonly #delete: StatementSync;
+  readonly #restore: StatementSync;
+  readonly #purge: StatementSync;
   readonly #report: StatementSync;
   readonly #reports: StatementSync;
   readonly #reportCount: StatementSync;
@@ -140,13 +194,32 @@ export class FeedbackStore {
         'coalesce(length(CAST(user_agent AS BLOB)), 0) + length(version)), 0) AS bytes FROM feedback',
     );
     this.#latest = db.prepare(
-      `SELECT ${COLUMNS} ${FROM} WHERE f.id < ? AND f.kind = coalesce(?, f.kind) ORDER BY f.id DESC LIMIT ?`,
+      `SELECT ${COLUMNS} ${FROM} WHERE f.id < ? AND f.kind = coalesce(?, f.kind) AND ${VIEW} ORDER BY f.id DESC LIMIT ?`,
     );
-    this.#kinds = db.prepare('SELECT kind, count(*) AS count FROM feedback GROUP BY kind');
+    this.#kinds = db.prepare(`SELECT kind, count(*) AS count FROM ${KINDS_AND_STATUSES} WHERE ${VIEW} GROUP BY kind`);
+    this.#statuses = db.prepare(
+      `SELECT status, count(*) AS count FROM ${KINDS_AND_STATUSES} WHERE kind = coalesce(?, kind) GROUP BY status`,
+    );
     this.#byId = db.prepare(`SELECT ${COLUMNS} ${FROM} WHERE f.id = ?`);
     this.#account = db.prepare('SELECT id, username FROM accounts WHERE username_key = ?');
     this.#clear = db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?');
+    // The operator's notes. Each statement carries its rule, so that it can't be broken by
+    // mistake: a row is closed once and reopened once, never in the trash; it goes to the trash
+    // once, unless an acknowledgment points at it, and comes back once.
     this.#setIssue = db.prepare('UPDATE feedback SET issue = ? WHERE id = ?');
+    this.#resolve = db.prepare('UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?');
+    this.#close = db.prepare(
+      'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL',
+    );
+    this.#reopen = db.prepare(
+      'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
+    );
+    this.#delete = db.prepare(
+      'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND ' +
+        'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
+    );
+    this.#restore = db.prepare('UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL');
+    this.#purge = db.prepare('DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ?');
     this.#report = db.prepare(
       'INSERT INTO reports (created_at, reporter_id, reported_id, reported_name, room_code, text) ' +
         'VALUES (?, ?, ?, ?, ?, ?)',
@@ -189,22 +262,38 @@ export class FeedbackStore {
     return Number(lastInsertRowid);
   }
 
+  // How much feedback there is in all, the trash included.
   count(): number {
     return (this.#count.get() as { count: number }).count;
   }
 
   // The latest feedback first, up to `limit` of it, from before the id `before` when it is given,
-  // and of one kind when `kind` is.
-  latest(limit: number, before = Number.MAX_SAFE_INTEGER, kind: FeedbackKind | null = null): Feedback[] {
-    return this.#latest.all(before, kind, limit).map((row) => this.#fromRow(row));
+  // of one kind when `kind` is, and of one view when `view` is.
+  latest(
+    limit: number,
+    before = Number.MAX_SAFE_INTEGER,
+    kind: FeedbackKind | null = null,
+    view: FeedbackView = 'all',
+  ): Feedback[] {
+    return this.#latest.all(before, kind, ...viewParams(view), limit).map((row) => this.#fromRow(row));
   }
 
-  // How much feedback there is of each kind that has any. The table takes any kind and the
-  // server only those it knows (shared/src/feedback.ts), so a server that was rolled back from a
-  // later one may find others, which are counted too.
-  kinds(): Record<string, number> {
-    const rows = this.#kinds.all() as { kind: string; count: number }[];
+  // How much feedback of a view there is of each kind that has any. The table takes any kind and
+  // the server only those it knows (shared/src/feedback.ts), so a server that was rolled back from
+  // a later one may find others, which are counted too.
+  kinds(view: FeedbackView = 'all'): Record<string, number> {
+    const rows = this.#kinds.all(...viewParams(view)) as { kind: string; count: number }[];
     return Object.fromEntries(rows.map(({ kind, count }) => [kind, count]));
+  }
+
+  // How much feedback there is of each status, of one kind or of every kind, with 0 for a status
+  // that has none.
+  statuses(kind: FeedbackKind | null = null): Record<FeedbackStatus, number> {
+    const counts = Object.fromEntries(FEEDBACK_STATUSES.map((status) => [status, 0])) as Record<FeedbackStatus, number>;
+    for (const { status, count } of this.#statuses.all(kind) as { status: FeedbackStatus; count: number }[]) {
+      counts[status] = count;
+    }
+    return counts;
   }
 
   byId(id: number): Feedback | undefined {
@@ -224,9 +313,55 @@ export class FeedbackStore {
     return { ...feedback, nameTakenBy: owner && owner.id !== feedback.accountId ? owner.username : null };
   }
 
-  // Records the GitHub issue that the feedback was published as. Says whether there is such feedback.
-  setIssue(id: number, issue: number): boolean {
+  // Records the GitHub issue that the feedback was published as, or with null that it wasn't.
+  // Says whether there is such feedback. Only feedback whose player agreed may be published,
+  // which admin.ts sees to.
+  setIssue(id: number, issue: number | null): boolean {
     return Number(this.#setIssue.run(issue, id).changes) > 0;
+  }
+
+  // Records the pull request that resolved the feedback, or with null that none has. Says whether
+  // there is such feedback.
+  resolve(id: number, pr: number | null): boolean {
+    const at = pr === null ? null : new Date(this.now()).toISOString();
+    return Number(this.#resolve.run(pr, at, id).changes) > 0;
+  }
+
+  // Closes the feedback, as not adopted, and says whether it did: not when it is closed already,
+  // in the trash, or not there.
+  close(id: number): boolean {
+    return Number(this.#close.run(new Date(this.now()).toISOString(), id).changes) > 0;
+  }
+
+  // Reopens closed feedback, and says whether it did: not when it is open, in the trash, or not
+  // there.
+  reopen(id: number): boolean {
+    return Number(this.#reopen.run(id).changes) > 0;
+  }
+
+  // Puts the feedback in the trash, from which purge() deletes it after 30 days, and says whether
+  // it did: not when it is there already, not there at all, or was adopted, since the
+  // acknowledgment points at it.
+  delete(id: number): boolean {
+    return Number(this.#delete.run(new Date(this.now()).toISOString(), id).changes) > 0;
+  }
+
+  // Takes the feedback out of the trash, as it was, closed if it was closed, and says whether it
+  // did: not when it isn't there.
+  restore(id: number): boolean {
+    return Number(this.#restore.run(id).changes) > 0;
+  }
+
+  // Deletes the feedback that has been in the trash for 30 days, for good, and says how much it
+  // deleted. The one way a row ever goes.
+  purge(): number {
+    const cutoff = new Date(this.now() - this.limits.trashMs).toISOString();
+    return Number(this.#purge.run(cutoff).changes);
+  }
+
+  // How many days the feedback has left in the trash, or null when it isn't there.
+  daysLeft({ deletedAt }: Pick<Feedback, 'deletedAt'>): number | null {
+    return deletedAt === null ? null : daysLeft(deletedAt, this.now(), this.limits.trashMs);
   }
 
   // Keeps a report and returns its id, or null when the database is too large to take it. Reports

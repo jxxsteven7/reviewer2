@@ -79,6 +79,14 @@ DATA_DIR=data node server/dist/admin.cjs accounts bar <username>           # no 
 DATA_DIR=data node server/dist/admin.cjs accounts unbar <username>         # public rooms again
 DATA_DIR=data node server/dist/admin.cjs feedback adopt <id>               # thank its player; prints the entry
 DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>      # the GitHub issue it was published as
+DATA_DIR=data node server/dist/admin.cjs feedback issue <id> --clear       # take that back
+DATA_DIR=data node server/dist/admin.cjs feedback resolve <id> <pr>        # the pull request that resolved it
+DATA_DIR=data node server/dist/admin.cjs feedback resolve <id> --clear     # take that back
+DATA_DIR=data node server/dist/admin.cjs feedback close <id>               # not adopted; stays for the record
+DATA_DIR=data node server/dist/admin.cjs feedback reopen <id>
+DATA_DIR=data node server/dist/admin.cjs feedback delete <id>              # into the trash, deleted after 30 days
+DATA_DIR=data node server/dist/admin.cjs feedback restore <id>             # out of the trash
+DATA_DIR=data node server/dist/admin.cjs feedback trash                    # what is in the trash, with its days left
 DATA_DIR=data node server/dist/admin.cjs reports list                      # the latest reports of players
 DATA_DIR=data node server/dist/admin.cjs acknowledgments list
 DATA_DIR=data node server/dist/admin.cjs acknowledgments add <name> --kind feedback|words|playtesting [--account <username>]
@@ -86,7 +94,7 @@ DATA_DIR=data node server/dist/admin.cjs acknowledgments add <name> --kind feedb
 
 `accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address. `accounts bar` keeps an account out of public rooms, as for a player others reported ([architecture.md](architecture.md#public-rooms)); `reports list` shows who reported whom.
 
-Feedback and acknowledgments are archives, so no command deletes or changes them ([architecture.md](architecture.md#feedback)). `feedback adopt` records that feedback was adopted, counted for the account of a player who left a name while logged in, and says when the name is another account's username; `acknowledgments add` thanks someone by hand. `feedback issue` takes only feedback whose player agreed to a public issue, which shows its text and name and never its contact.
+The `feedback` commands are the only way to change what became of a piece of feedback; the status page shows it and changes nothing ([architecture.md](architecture.md#feedback)). `feedback adopt` records that feedback was adopted, counted for the account of a player who left a name while logged in, and says when the name is another account's username; `acknowledgments add` thanks someone by hand. `feedback issue` takes only feedback whose player agreed to a public issue, which shows its text and name and never its contact; `feedback resolve` takes any feedback. `feedback delete` puts feedback in the trash, from which the server deletes it for good after 30 days, unless `feedback restore` brings it back; feedback that was adopted can't be deleted, only closed. No command changes what a player sent, and the acknowledgments and the reports are never deleted or changed.
 
 ## Acknowledgments
 

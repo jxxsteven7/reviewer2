@@ -20,7 +20,7 @@ import { loadConfig } from './config';
 import { AcknowledgmentStore, kindOfFeedback, type AcknowledgmentEntry } from './store/acknowledgments';
 import { AccountStore } from './store/accounts';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
-import { FeedbackStore, type Report } from './store/feedback';
+import { FeedbackStore, type Feedback, type Report } from './store/feedback';
 import { MIGRATIONS } from './store/migrations';
 
 // The operator's commands (docs/development.md), which run beside the server on its data:
@@ -31,7 +31,13 @@ import { MIGRATIONS } from './store/migrations';
 //   node server/dist/admin.cjs accounts bar <username>
 //   node server/dist/admin.cjs accounts unbar <username>
 //   node server/dist/admin.cjs feedback adopt <id>
-//   node server/dist/admin.cjs feedback issue <id> <number>
+//   node server/dist/admin.cjs feedback issue <id> <number>|--clear
+//   node server/dist/admin.cjs feedback resolve <id> <pr>|--clear
+//   node server/dist/admin.cjs feedback close <id>
+//   node server/dist/admin.cjs feedback reopen <id>
+//   node server/dist/admin.cjs feedback delete <id>
+//   node server/dist/admin.cjs feedback restore <id>
+//   node server/dist/admin.cjs feedback trash
 //   node server/dist/admin.cjs reports list
 //   node server/dist/admin.cjs acknowledgments list
 //   node server/dist/admin.cjs acknowledgments add <name> --kind <kind> [--account <username>]
@@ -43,17 +49,25 @@ import { MIGRATIONS } from './store/migrations';
 // records that the feedback was adopted, counted for the account the player was logged in to if
 // they left a name, and says when the name is another account's username; `acknowledgments add`
 // thanks someone by hand, such as a playtester. Both print the entry for ACKNOWLEDGMENTS.md, the
-// public list, which the operator completes and adds to the file. `feedback issue` records the
-// GitHub issue that feedback was published as, which only feedback whose player agreed may be.
-// `list` shows the acknowledgments. Nothing deletes feedback, acknowledgments or reports, or
-// changes who an acknowledgment is for or counted for: all three are archives
-// (docs/architecture.md#feedback). `accounts` prints statistics of the accounts, counted as
-// AccountStore says (store/accounts.ts), and never what the database keeps in place of passwords,
-// email addresses and logins; `accounts bar` keeps an account out of public rooms, as for a player
-// others reported, and `accounts unbar` lets it back in. `reports list` shows the latest reports
-// that players sent of each other. `accounts`, `list` and `reports list` only read. DATA_DIR names
-// the server's data, as it does for the server. The database is opened as it is, never migrated,
-// and the server may go on running meanwhile.
+// public list, which the operator completes and adds to the file. `list` shows the
+// acknowledgments.
+//
+// The other `feedback` commands are the operator's notes on what became of the feedback, which
+// the status page shows (docs/architecture.md#feedback) and which only these commands change:
+// `issue` records the GitHub issue it was published as, which only feedback whose player agreed
+// may be; `resolve` the pull request that resolved it, for any feedback; `close` and `reopen`
+// whether it was closed without being adopted; `delete` puts it in the trash, from which `restore`
+// takes it back and the server deletes it for good after 30 days, and `trash` lists what is there.
+// Feedback that was adopted can't be deleted, since the acknowledgment points at it. Nothing
+// changes what a player sent, deletes acknowledgments or reports, or changes who an
+// acknowledgment is for or counted for: those are archives (docs/architecture.md#feedback).
+// `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
+// and never what the database keeps in place of passwords, email addresses and logins; `accounts
+// bar` keeps an account out of public rooms, as for a player others reported, and `accounts unbar`
+// lets it back in. `reports list` shows the latest reports that players sent of each other.
+// `accounts`, `list`, `trash` and `reports list` only read. DATA_DIR names the server's data, as
+// it does for the server. The database is opened as it is, never migrated, and the server may go
+// on running meanwhile.
 
 const USAGE = [
   'usage: admin.cjs <command>, one of',
@@ -63,7 +77,13 @@ const USAGE = [
   '  accounts bar <username>',
   '  accounts unbar <username>',
   '  feedback adopt <id>',
-  '  feedback issue <id> <number>',
+  '  feedback issue <id> <number>|--clear',
+  '  feedback resolve <id> <pr>|--clear',
+  '  feedback close <id>',
+  '  feedback reopen <id>',
+  '  feedback delete <id>',
+  '  feedback restore <id>',
+  '  feedback trash',
   '  reports list',
   '  acknowledgments list',
   `  acknowledgments add <name> --kind ${ACKNOWLEDGMENT_KINDS.join('|')} [--account <username>]`,
@@ -190,8 +210,24 @@ function printAccountStats(store: AccountStore, print: Print): void {
   }
 }
 
-// How many reports `reports list` shows, the latest.
+// How many reports `reports list` shows, and how much feedback `feedback trash` shows, the latest.
 const REPORTS_SHOWN = 100;
+const TRASH_SHOWN = 100;
+
+// "27 days left", "1 day left", or "0 days left" on the day the next purge takes it.
+const daysLeftText = (days: number) => `${days} day${days === 1 ? '' : 's'} left`;
+
+// Feedback in the trash as the operator reads it, one line each: the id, the day it went in, how
+// long it has left, its kind, and the start of its text on one line.
+function trashLine(feedback: Feedback, daysLeft: number): string {
+  const line = feedback.text.replace(/\n/g, ' / ');
+  const text = line.length > 60 ? `${line.slice(0, 60)}...` : line;
+  return `#${feedback.id}  ${(feedback.deletedAt as string).slice(0, 10)}  ${daysLeftText(daysLeft)}  ${feedback.kind}  ${text}`;
+}
+
+// The way out of the trash, which a command that needs the feedback out of it points to.
+const inTrash = (print: Print, { id }: Feedback) =>
+  print(`Feedback #${id} is in the trash. Restore it first: feedback restore ${id}.`);
 
 // One report as the operator reads it: the id, the date, who reported whom, in which room, and the
 // note. The player reported is named as they were in the room, with their account, if they had one.
@@ -329,10 +365,12 @@ const COMMANDS: Record<string, Command> = {
             'feedback. Make sure that they are the same person before you list the name.',
         );
       }
+      // The entry links the issue, or the pull request when there is no issue.
+      const number = found.issue ?? found.resolvedPr;
       printEntry(print, kind, {
         name: found.credit,
         link: found.link,
-        contribution: `<what they did>${found.issue === null ? '' : ` (#${found.issue})`}`,
+        contribution: `<what they did>${number === null ? '' : ` (#${number})`}`,
       });
       return 0;
     },
@@ -343,6 +381,16 @@ const COMMANDS: Record<string, Command> = {
     run(data, [word, numberWord], _flags, print) {
       const found = feedbackNumbered(data, word as string, print);
       if (!found) return 1;
+      if (numberWord === '--clear') {
+        if (found.issue === null) {
+          print(`Feedback #${found.id} has no issue recorded.`);
+          return 1;
+        }
+        data.feedback.setIssue(found.id, null);
+        print(`Feedback #${found.id} is no longer recorded as issue #${found.issue}.`);
+        if (found.acknowledgmentId !== null) print(`Take (#${found.issue}) out of its entry in ACKNOWLEDGMENTS.md.`);
+        return 0;
+      }
       const issue = numberOf(numberWord as string);
       if (issue === null) {
         print(`${numberWord} is not the number of an issue.`);
@@ -366,6 +414,141 @@ const COMMANDS: Record<string, Command> = {
             : `Replace (#${found.issue}) with (#${issue}) in its entry in ACKNOWLEDGMENTS.md.`,
         );
       }
+      return 0;
+    },
+  },
+  'feedback resolve': {
+    words: 2,
+    flags: [],
+    run(data, [word, numberWord], _flags, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
+      if (numberWord === '--clear') {
+        if (found.resolvedPr === null) {
+          print(`Feedback #${found.id} has no pull request recorded.`);
+          return 1;
+        }
+        data.feedback.resolve(found.id, null);
+        print(`Feedback #${found.id} is no longer recorded as resolved by PR #${found.resolvedPr}.`);
+        return 0;
+      }
+      const pr = numberOf(numberWord as string);
+      if (pr === null) {
+        print(`${numberWord} is not the number of a pull request.`);
+        return 1;
+      }
+      data.feedback.resolve(found.id, pr);
+      print(
+        `Feedback #${found.id} is resolved by PR #${pr}, ${REPOSITORY_URL}/pull/${pr}` +
+          (found.resolvedPr === null || found.resolvedPr === pr ? '.' : `, no longer #${found.resolvedPr}.`),
+      );
+      if (found.deletedAt !== null) {
+        print(`It is in the trash, by the way: feedback restore ${found.id} brings it back.`);
+      }
+      return 0;
+    },
+  },
+  'feedback close': {
+    words: 1,
+    flags: [],
+    run(data, [word], _flags, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
+      if (found.deletedAt !== null) {
+        inTrash(print, found);
+        return 1;
+      }
+      if (!data.feedback.close(found.id)) {
+        print(`Feedback #${found.id} is closed already.`);
+        return 1;
+      }
+      print(`Closed feedback #${found.id}. It stays, for the record; feedback reopen ${found.id} opens it again.`);
+      return 0;
+    },
+  },
+  'feedback reopen': {
+    words: 1,
+    flags: [],
+    run(data, [word], _flags, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
+      if (found.deletedAt !== null) {
+        inTrash(print, found);
+        return 1;
+      }
+      if (!data.feedback.reopen(found.id)) {
+        print(`Feedback #${found.id} is open.`);
+        return 1;
+      }
+      print(`Reopened feedback #${found.id}.`);
+      return 0;
+    },
+  },
+  'feedback delete': {
+    words: 1,
+    flags: [],
+    run(data, [word], _flags, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
+      if (found.deletedAt !== null) {
+        print(
+          `Feedback #${found.id} is in the trash already, with ${daysLeftText(data.feedback.daysLeft(found) as number)}.`,
+        );
+        return 1;
+      }
+      // The acknowledgment points at the feedback it came from, which must stay for it.
+      if (found.acknowledgmentId !== null) {
+        print(
+          `Feedback #${found.id} was adopted as acknowledgment #${found.acknowledgmentId}, which points at it, so it ` +
+            `can't be deleted. Close it instead: feedback close ${found.id}.`,
+        );
+        return 1;
+      }
+      // Read a moment ago, it has been adopted since only if someone else is running `feedback
+      // adopt` at the same time.
+      if (!data.feedback.delete(found.id)) {
+        print(`Feedback #${found.id} was adopted just now, so it stays.`);
+        return 1;
+      }
+      print(
+        `Moved feedback #${found.id} to the trash. The server deletes it for good in 30 days; ` +
+          `feedback restore ${found.id} brings it back before then.`,
+      );
+      if (found.issue !== null) print(`Issue #${found.issue} stays as it is on GitHub; close it there if need be.`);
+      return 0;
+    },
+  },
+  'feedback restore': {
+    words: 1,
+    flags: [],
+    run(data, [word], _flags, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
+      if (!data.feedback.restore(found.id)) {
+        print(`Feedback #${found.id} isn't in the trash.`);
+        return 1;
+      }
+      print(`Restored feedback #${found.id} from the trash.` + (found.closedAt === null ? '' : ' It is still closed.'));
+      return 0;
+    },
+  },
+  'feedback trash': {
+    words: 0,
+    flags: [],
+    readOnly: true,
+    run({ feedback }, _words, _flags, print) {
+      const entries = feedback.latest(TRASH_SHOWN, undefined, null, 'trash');
+      const total = feedback.statuses().trash;
+      if (total === 0) {
+        print('The trash is empty.');
+        return 0;
+      }
+      print(
+        (total === 1 ? '1 piece of feedback' : `${total} pieces of feedback`) +
+          ' in the trash, each deleted for good 30 days after it went in' +
+          (total > TRASH_SHOWN ? `, the latest ${TRASH_SHOWN} first:` : ':'),
+      );
+      for (const entry of entries) print(trashLine(entry, feedback.daysLeft(entry) as number));
       return 0;
     },
   },

@@ -142,9 +142,9 @@ describe('starting', () => {
       storage: 'file',
       file: join(data, DATABASE_FILE),
       journal: 'wal',
-      schema: 8,
+      schema: 9,
     });
-    expect(logged('database_migrated')).toEqual({ from: 0, to: 8, snapshot: null });
+    expect(logged('database_migrated')).toEqual({ from: 0, to: 9, snapshot: null });
     first.feedback.add({
       kind: 'idea',
       text: 'Kept',
@@ -207,6 +207,36 @@ describe('starting', () => {
     expect(logged('contacts_cleared')).toEqual({ count: 1, walTruncated: true });
     expect(started.feedback.latest(1)[0]).toMatchObject({ text: 'Old', contact: null });
     // The snapshot that the start takes comes after the clearing.
+    await until(() => events().includes('snapshot_saved'), 'the snapshot');
+    expect(holds()).toEqual([]);
+  });
+
+  test('purges the feedback that has been in the trash for 30 days, from the files and not only the table', async () => {
+    const data = join(dir, 'data');
+    mkdirSync(data);
+    const text = 'BUY CHEAP WATCHES at spam.example';
+    const { db } = await openDatabase(data);
+    const add = db.prepare(
+      "INSERT INTO feedback (created_at, kind, text, version, language, page, deleted_at) VALUES ('t', 'idea', ?, 'v1', 'en', 'home', ?)",
+    );
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60_000).toISOString();
+    add.run(text, daysAgo(31));
+    add.run('Still in the trash', daysAgo(29));
+    add.run('Open', null);
+    db.close();
+    const holds = () => filesHolding(data, text);
+    expect(holds()).toEqual([DATABASE_FILE]);
+
+    const started = (await start({ DATA_DIR: data })) as Running;
+    expect(logged('feedback_purged')).toEqual({ count: 1, walTruncated: true });
+    expect(events()).not.toContain('contacts_cleared');
+    expect(started.feedback.latest(10).map(({ text: kept, status }) => [kept, status])).toEqual([
+      ['Open', 'new'],
+      ['Still in the trash', 'trash'],
+    ]);
+    // The log says how much was purged, and nothing of what; the snapshot that the start takes
+    // comes after the purge.
+    expect(JSON.stringify(logs)).not.toContain('WATCHES');
     await until(() => events().includes('snapshot_saved'), 'the snapshot');
     expect(holds()).toEqual([]);
   });
@@ -298,7 +328,7 @@ describe('starting', () => {
     started.accounts.store.create('Ann', 'ann', 'scrypt$hash');
     await until(() => events().includes('status_listening'), 'the status page');
     const status = await (await fetch(`http://127.0.0.1:${statusPort}/`)).text();
-    expect(status).toContain('<p>1 in all &middot; <a href="/feedback">Read it</a></p>');
+    expect(status).toContain('<p class="note">1 in all &middot; <a href="/feedback">Read it</a></p>');
     expect(status).toContain('<dt>Accounts</dt><dd>1<small>registered</small></dd>');
     expect(status).toContain('<dt>New accounts</dt><dd>1<small>in the last 7 days</small></dd>');
     const page = await (await fetch(`http://127.0.0.1:${statusPort}/feedback`)).text();

@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import type { Sample, Stats } from './stats';
-import { duration, renderFeedbackPage, renderReportsPage, renderStatusPage, type FeedbackListing } from './statusPage';
+import {
+  duration,
+  NO_FEEDBACK,
+  renderFeedbackPage,
+  renderReportsPage,
+  renderStatusPage,
+  type FeedbackListing,
+} from './statusPage';
 import type { Feedback, Report } from './store/feedback';
 
 const MB = 2 ** 20;
@@ -30,9 +37,12 @@ const text = (html: string) =>
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ');
 
+// Nothing on the pages comes from elsewhere, runs or sends anything.
+const INERT = /<script|<form|<input|<button|<link|<iframe|\son[a-z]+=|javascript:|https?:\/\//i;
+
 describe('the status page', () => {
   test('shows the counts, the countries and the memory against its limit', () => {
-    const page = text(renderStatusPage(stats(), [], NOW, 0, { total: 42, recent: 3 }));
+    const page = text(renderStatusPage(stats(), [], NOW, NO_FEEDBACK, { total: 42, recent: 3 }));
     expect(page).toContain('Version v0.0.14 &middot; up 3h 12m');
     expect(page).toContain('Online 17');
     expect(page).toContain('Offline 4');
@@ -63,15 +73,20 @@ describe('the status page', () => {
       NOW,
     );
     expect(page).toContain('&#60;b&#62;dev&#60;/b&#62;');
-    expect(page).not.toContain('<b>');
+    expect(page).not.toContain('<b>dev');
     expect(text(page)).toContain('QQ 1 5 ms');
   });
 
-  test('reloads itself and has no script', () => {
+  test('reloads itself, has no script and nothing from elsewhere, and leads to the other pages', () => {
     const page = renderStatusPage(stats(), [], NOW);
     expect(page).toContain('<meta http-equiv="refresh" content="5">');
     expect(page).toContain('<meta name="viewport" content="width=device-width, initial-scale=1">');
-    expect(page).not.toMatch(/<script|\son[a-z]+=|javascript:|https?:\/\//i);
+    expect(page).not.toMatch(INERT);
+    expect(page).toContain('<h1>Reviewer 2 status</h1>');
+    expect(page).toContain(
+      '<nav aria-label="Pages"><a href="/" aria-current="page">Status</a><a href="/feedback">Feedback</a>' +
+        '<a href="/reports">Reports</a></nav>',
+    );
   });
 });
 
@@ -138,12 +153,18 @@ describe('the reports', () => {
 
   test('have a page of their own, which the status page counts and links to', () => {
     expect(text(renderStatusPage(stats(), [], NOW))).toContain('Reports None yet.');
-    expect(renderStatusPage(stats(), [], NOW, 0, { total: 0, recent: 0 }, 3)).toContain(
-      '<p>3 in all &middot; <a href="/reports">Read them</a></p>',
+    expect(renderStatusPage(stats(), [], NOW, NO_FEEDBACK, { total: 0, recent: 0 }, 3)).toContain(
+      '<p class="note">3 in all &middot; <a href="/reports">Read them</a></p>',
     );
     const html = renderReportsPage({ total: 1, entries: [report(1)], paged: false, older: false });
     expect(html).toContain('<title>Reviewer 2 reports</title>');
+    expect(html).toContain('<h1>Reports</h1>');
+    expect(html).toContain('<a href="/reports" aria-current="page">Reports</a>');
     expect(html).not.toContain('http-equiv="refresh"');
+    expect(html).not.toMatch(INERT);
+    expect(text(html)).toContain(
+      'bar a reported account from public rooms with admin.cjs accounts bar &lt;username&gt;',
+    );
     expect(text(html)).toContain(
       '#1 &middot; 2026-10-09 13:05 UTC &middot; room R2-K7QX Bob (account Bob) Reported by Ann No note',
     );
@@ -165,9 +186,9 @@ describe('the reports', () => {
       paged: false,
       older: false,
     });
-    expect(html).not.toMatch(/<script>|<i>|<b>|<u>/);
+    expect(html).not.toMatch(/<script>|<i>|<b>Bob|<u>/);
     expect(html).toContain('<p class="text">&#60;i&#62;Guest&#60;/i&#62; (no account)</p>');
-    expect(html).toContain('<p>Reported by a deleted account</p>');
+    expect(html).toContain('<p class="meta">Reported by a deleted account</p>');
     expect(html).toContain('<p class="text">&#60;script&#62;x&#60;/script&#62;</p>');
     expect(html).toContain('account &#60;b&#62;Bob&#60;/b&#62; &middot; <strong>barred from public rooms</strong>');
   });
@@ -185,6 +206,11 @@ describe('the feedback', () => {
     accountId: null,
     publicIssue: false,
     issue: null,
+    resolvedPr: null,
+    resolvedAt: null,
+    closedAt: null,
+    deletedAt: null,
+    status: 'new',
     username: null,
     acknowledgmentId: null,
     nameTakenBy: null,
@@ -195,25 +221,54 @@ describe('the feedback', () => {
     ...changes,
   });
   const page = (changes: Partial<FeedbackListing> = {}) =>
-    renderFeedbackPage({ total: 0, kinds: {}, kind: null, entries: [], paged: false, older: false, ...changes });
+    renderFeedbackPage({
+      total: 0,
+      statuses: NO_FEEDBACK.statuses,
+      kinds: {},
+      view: 'open',
+      kind: null,
+      entries: [],
+      paged: false,
+      older: false,
+      now: NOW,
+      ...changes,
+    });
+  // What the page shows between the heading and the entries.
+  const head = (html: string) => text(html.slice(0, html.indexOf('<article>')));
 
-  test('has a page of its own, which the status page counts and links to', () => {
+  test('has a page of its own, which the status page counts by status and links to', () => {
     const status = renderStatusPage(stats(), [], NOW);
     expect(text(status)).toContain('Feedback None yet.');
     expect(status).toContain('<meta http-equiv="refresh" content="5">');
-    const some = renderStatusPage(stats(), [], NOW, 12);
-    expect(some).toContain('<p>12 in all &middot; <a href="/feedback">Read it</a></p>');
+    const some = renderStatusPage(stats(), [], NOW, {
+      total: 12,
+      statuses: { new: 3, issue: 2, resolved: 1, thanked: 2, closed: 3, trash: 1 },
+    });
+    expect(some).toContain(
+      '<p class="pills"><a class="badge" href="/feedback">Open <b>8</b></a>' +
+        '<a class="badge new" href="/feedback?status=new">New <b>3</b></a>' +
+        '<a class="badge issue" href="/feedback?status=issue">Issue <b>2</b></a>' +
+        '<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>1</b></a>' +
+        '<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>2</b></a>' +
+        '<a class="badge closed" href="/feedback?status=closed">Closed <b>3</b></a>' +
+        '<a class="badge trash" href="/feedback?status=trash">Trash <b>1</b></a></p>' +
+        '<p class="note">12 in all &middot; <a href="/feedback">Read it</a></p>',
+    );
     expect(some).not.toContain('<article>');
 
-    // The feedback page is for reading, so it doesn't reload.
+    // The feedback page is for reading, so it doesn't reload, and nothing on it changes anything.
     const html = page();
     expect(html).toContain('<title>Reviewer 2 feedback</title>');
+    expect(html).toContain('<h1>Feedback</h1>');
     expect(html).not.toContain('http-equiv="refresh"');
-    expect(html).toContain('<a href="/">Status</a>');
-    expect(text(html)).toContain('Feedback 0 in all, newest first &middot; Status &middot; Reports None yet.');
+    expect(html).not.toMatch(INERT);
+    expect(html).toContain('<a href="/">Status</a><a href="/feedback" aria-current="page">Feedback</a>');
+    expect(text(html)).toContain(
+      '0 in all, newest first &middot; what became of it is changed with admin.cjs feedback None yet.',
+    );
   });
 
-  test('shows each one with what came along, the newest first', () => {
+  test('shows each one with what came along and its status, the newest first', () => {
     const entries = [
       feedback(2, {
         kind: 'bug',
@@ -225,43 +280,45 @@ describe('the feedback', () => {
       }),
       feedback(1),
     ];
-    const html = page({ total: 2, entries });
+    const html = page({ total: 2, statuses: { ...NO_FEEDBACK.statuses, new: 2 }, kinds: { bug: 1, idea: 1 }, entries });
     const shown = text(html);
     expect(shown).toContain('2 in all, newest first');
     expect(shown).toContain(
-      '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; Chinese &middot; from the room ' +
-        '&middot; not to be published Line one Line two Contact: wechat: r2 No name for the acknowledgments ' +
+      '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC New Line one Line two version v0.0.15 &middot; Chinese ' +
+        '&middot; from the room &middot; not to be published Contact: wechat: r2 No name for the acknowledgments ' +
         'Browser: Mozilla/5.0',
     );
     expect(shown).toContain(
-      '#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15 &middot; English &middot; ' +
-        'from the home page &middot; not to be published More fields, please. No contact No name for the acknowledgments',
+      '#1 &middot; Idea &middot; 2026-10-09 13:05 UTC New More fields, please. version v0.0.15 &middot; English ' +
+        '&middot; from the home page &middot; not to be published No contact No name for the acknowledgments',
     );
     expect(shown.indexOf('#2')).toBeLessThan(shown.indexOf('#1'));
-    // The text keeps its line breaks, which the page shows as they are.
+    // The text keeps its line breaks, which the page shows as they are, and the status is a badge.
     expect(html).toContain('<p class="text">Line one\nLine two</p>');
+    expect(html).toContain('<span class="badge new">New</span>');
+    expect(html).not.toContain('class="trail"');
   });
 
   test('shows the name for the acknowledgments, with its account and whether it was adopted', () => {
-    const shown = text(
-      page({
-        total: 3,
-        entries: [
-          feedback(3, { credit: 'Ann L', username: 'Ann', acknowledgmentId: 1 }),
-          feedback(2, { credit: 'Bob', username: null }),
-          feedback(1),
-        ],
-      }),
-    );
-    expect(shown).toContain('#3 &middot; Idea &middot; 2026-10-09 13:05 UTC');
+    const html = page({
+      total: 3,
+      entries: [
+        feedback(3, { credit: 'Ann L', username: 'Ann', acknowledgmentId: 1, status: 'thanked' }),
+        feedback(2, { credit: 'Bob', username: null }),
+        feedback(1),
+      ],
+    });
+    const shown = text(html);
     expect(shown).toContain(
-      'from the home page &middot; adopted as acknowledgment #1 &middot; not to be published More fields, please.',
+      '#3 &middot; Idea &middot; 2026-10-09 13:05 UTC Thanked More fields, please. thanked as acknowledgment #1 ' +
+        'version v0.0.15',
     );
+    expect(html).toContain('<span class="badge thanked">Thanked</span>');
     expect(shown).toContain('No contact Name for the acknowledgments: Ann L &middot; account Ann');
     expect(shown).toContain('#2 &middot; Idea');
     expect(shown).toContain('No contact Name for the acknowledgments: Bob #1');
     expect(shown).not.toContain('Bob &middot; account');
-    expect(shown.match(/adopted as acknowledgment/g)).toHaveLength(1);
+    expect(shown.match(/thanked as acknowledgment/g)).toHaveLength(1);
     expect(shown).not.toContain('also the username');
   });
 
@@ -269,20 +326,59 @@ describe('the feedback', () => {
     const html = page({
       total: 3,
       entries: [
-        feedback(3, { credit: 'Ann L', link: 'https://ann.example/', publicIssue: true, issue: 42 }),
+        feedback(3, { credit: 'Ann L', link: 'https://ann.example/', publicIssue: true, issue: 42, status: 'issue' }),
         feedback(2, { publicIssue: true }),
         feedback(1, { publicIssue: null }),
       ],
     });
     const shown = text(html);
-    expect(shown).toContain('from the home page &middot; published as issue #42 More fields');
+    expect(html).toContain('<span class="badge issue">Issue #42</span>');
+    expect(html).toContain('<p class="trail">published as issue #42</p>');
+    expect(shown).toContain(
+      'More fields, please. published as issue #42 version v0.0.15 &middot; English &middot; from the home page No contact',
+    );
     expect(shown).toContain('Name for the acknowledgments: Ann L &middot; link https://ann.example/');
     expect(html).toContain('from the home page &middot; <strong>may be published as an issue</strong>');
     // Feedback from before players were asked may not be.
-    expect(shown).toContain('#1 &middot; Idea &middot; 2026-10-09 13:05 UTC &middot; version v0.0.15');
+    expect(shown).toContain('#1 &middot; Idea &middot; 2026-10-09 13:05 UTC New More fields');
     expect(shown.match(/not to be published/g)).toHaveLength(1);
     // The link is shown, not linked.
     expect(html).not.toContain('href="https://ann.example/"');
+  });
+
+  test('shows the whole trail of what became of it, and how long the trash has left', () => {
+    const html = page({
+      total: 4,
+      entries: [
+        feedback(4, { resolvedPr: 50, resolvedAt: '2026-10-05T10:00:00.000Z', status: 'resolved' }),
+        feedback(3, {
+          issue: 42,
+          resolvedPr: 50,
+          resolvedAt: '2026-10-05T10:00:00.000Z',
+          acknowledgmentId: 7,
+          closedAt: '2026-10-06T10:00:00.000Z',
+          status: 'closed',
+        }),
+        feedback(2, { closedAt: '2026-10-06T10:00:00.000Z', deletedAt: '2026-10-07T09:00:00.000Z', status: 'trash' }),
+        feedback(1, { deletedAt: '2026-09-08T11:59:59.000Z', status: 'trash' }),
+      ],
+    });
+    expect(html).toContain('<span class="badge resolved">PR #50</span>');
+    expect(html).toContain('<p class="trail">resolved by PR #50</p>');
+    expect(html).toContain('<span class="badge closed">Closed</span>');
+    expect(html).toContain(
+      '<p class="trail">published as issue #42 &middot; resolved by PR #50 &middot; thanked as acknowledgment #7 ' +
+        '&middot; closed 2026-10-06</p>',
+    );
+    expect(html).toContain('<span class="badge trash">Trash</span>');
+    // Put in the trash a day and three hours ago, it has 29 days left; past its 30 days, none.
+    expect(html).toContain(
+      '<p class="trail">closed 2026-10-06 &middot; in the trash since 2026-10-07, 29 days left</p>',
+    );
+    expect(html).toContain('<p class="trail">in the trash since 2026-09-08, 0 days left</p>');
+    expect(
+      page({ total: 1, entries: [feedback(1, { deletedAt: '2026-09-09T12:00:00.000Z', status: 'trash' })] }),
+    ).toContain('in the trash since 2026-09-09, 1 day left');
   });
 
   test("points out a name that is another account's username, in bold", () => {
@@ -319,12 +415,9 @@ describe('the feedback', () => {
       ],
     });
     // The only links on the page are the page's own.
-    expect(
-      html
-        .replace('<a href="/">Status</a>', '')
-        .replace('<a href="/reports">Reports</a>', '')
-        .replace(/<p class="kinds">.*?<\/p>/, ''),
-    ).not.toMatch(/<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/);
+    expect(html.replace(/<nav[\s\S]*?<\/nav>/, '').replace(/<div class="filters">[\s\S]*?<\/div>/, '')).not.toMatch(
+      /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
+    );
     expect(html).toContain(
       'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; link https://x.co/&#34;&#62;&#60;script&#62;' +
         'alert(1)&#60;/script&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
@@ -339,35 +432,55 @@ describe('the feedback', () => {
     expect(html).toContain('Browser: &#60;/p&#62;&#60;script&#62;');
   });
 
-  test('shows each kind with how much there is of it, and the feedback of one kind', () => {
+  test('shows each view with how much there is of it, of the kind shown, and the open feedback by default', () => {
+    const statuses = { new: 2, issue: 1, resolved: 1, thanked: 1, closed: 2, trash: 1 };
+    const open = page({ total: 8, statuses, kinds: { idea: 3, game: 2 }, entries: [feedback(8)] });
+    expect(open).toContain(
+      '<p class="pills"><strong>Open <b>5</b></strong><a href="/feedback?status=new">New <b>2</b></a>' +
+        '<a href="/feedback?status=issue">Issue <b>1</b></a><a href="/feedback?status=resolved">Resolved <b>1</b></a>' +
+        '<a href="/feedback?status=thanked">Thanked <b>1</b></a><a href="/feedback?status=closed">Closed <b>2</b></a>' +
+        '<a href="/feedback?status=trash">Trash <b>1</b></a></p>',
+    );
+    const trash = page({ total: 8, statuses, kinds: { idea: 1 }, view: 'trash', entries: [feedback(3)], kind: 'idea' });
+    expect(trash).toContain('<a href="/feedback?kind=idea">Open <b>5</b></a>');
+    expect(trash).toContain('<strong>Trash <b>1</b></strong>');
+    expect(trash).toContain('<a href="/feedback?status=closed&amp;kind=idea">Closed <b>2</b></a>');
+    expect(page({ total: 8, statuses, view: 'closed' })).toContain('<p class="note">None here.</p>');
+    // Nothing to choose from while there is no feedback at all.
+    expect(page()).not.toContain('class="pills"');
+  });
+
+  test('shows each kind with how much there is of it in the view, and the feedback of one kind', () => {
     const kinds = { idea: 1, game: 2, later: 1 };
+    const statuses = { ...NO_FEEDBACK.statuses, new: 4 };
     const all = page({
       total: 4,
+      statuses,
       kinds,
       entries: [feedback(4, { kind: 'game' }), feedback(3, { kind: 'later' as Feedback['kind'] }), feedback(2)],
     });
     expect(all).toContain(
-      '<p class="kinds"><strong>All (4)</strong> &middot; <a href="/feedback?kind=idea">Idea (1)</a> &middot; ' +
-        '<a href="/feedback?kind=game">New game (2)</a> &middot; <a href="/feedback?kind=bug">Bug (0)</a> &middot; ' +
-        '<a href="/feedback?kind=words">Word lists (0)</a></p>',
+      '<p class="pills"><strong>All <b>4</b></strong><a href="/feedback?kind=idea">Idea <b>1</b></a>' +
+        '<a href="/feedback?kind=game">New game <b>2</b></a><a href="/feedback?kind=bug">Bug <b>0</b></a>' +
+        '<a href="/feedback?kind=words">Word lists <b>0</b></a></p>',
     );
+    expect(head(all)).toContain('Open 4 New 4 Issue 0');
     expect(text(all)).toContain('#4 &middot; New game &middot; 2026-10-09');
     // A kind from a later server, which this one was rolled back from, shows as it is.
     expect(text(all)).toContain('#3 &middot; later &middot; 2026-10-09');
 
-    const games = page({ total: 4, kinds, kind: 'game', entries: [feedback(4, { kind: 'game' })] });
+    const games = page({ total: 4, statuses, kinds, kind: 'game', entries: [feedback(4, { kind: 'game' })] });
     expect(games).toContain(
-      '<p class="kinds"><a href="/feedback">All (4)</a> &middot; <a href="/feedback?kind=idea">Idea (1)</a> &middot; ' +
-        '<strong>New game (2)</strong> &middot;',
+      '<p class="pills"><a href="/feedback">All <b>4</b></a><a href="/feedback?kind=idea">Idea <b>1</b></a>' +
+        '<strong>New game <b>2</b></strong>',
     );
-    expect(games).not.toContain('None of this kind yet.');
-    expect(page({ total: 4, kinds, kind: 'bug' })).toContain('<strong>Bug (0)</strong>');
-    expect(page({ total: 4, kinds, kind: 'bug' })).toContain('<p>None of this kind yet.</p>');
-    // Nothing to choose from while there is no feedback at all.
-    expect(page()).not.toContain('class="kinds"');
+    expect(games).toContain('<a href="/feedback?status=trash&amp;kind=game">Trash <b>0</b></a>');
+    expect(games).not.toContain('None here.');
+    expect(page({ total: 4, statuses, kinds, kind: 'bug' })).toContain('<strong>Bug <b>0</b></strong>');
+    expect(page({ total: 4, statuses, kinds, kind: 'bug' })).toContain('<p class="note">None here.</p>');
   });
 
-  test('links to older feedback, and back to the latest', () => {
+  test('links to older feedback, and back to the latest, keeping the view and the kind', () => {
     const entries = [feedback(60), feedback(59)];
     expect(page({ total: 99, entries, older: true })).toContain(
       '<p class="more"><a href="/feedback?before=59">Older</a></p>',
@@ -376,11 +489,17 @@ describe('the feedback', () => {
       '<p class="more"><a href="/feedback">Latest</a> &middot; <a href="/feedback?before=59">Older</a></p>',
     );
     expect(page({ total: 2, entries })).not.toContain('class="more"');
-    // Of one kind, the links keep to it.
     expect(page({ total: 99, kind: 'game', entries, paged: true, older: true })).toContain(
       '<p class="more"><a href="/feedback?kind=game">Latest</a> &middot; ' +
         '<a href="/feedback?kind=game&amp;before=59">Older</a></p>',
     );
+    expect(page({ total: 99, view: 'closed', kind: 'game', entries, paged: true, older: true })).toContain(
+      '<p class="more"><a href="/feedback?status=closed&amp;kind=game">Latest</a> &middot; ' +
+        '<a href="/feedback?status=closed&amp;kind=game&amp;before=59">Older</a></p>',
+    );
+    // Paged back to where there is nothing, the way back is still there.
+    expect(page({ total: 99, view: 'trash', paged: true })).toContain('<a href="/feedback?status=trash">Latest</a>');
+    expect(page({ total: 99, view: 'trash', paged: true })).not.toContain('None here.');
   });
 });
 

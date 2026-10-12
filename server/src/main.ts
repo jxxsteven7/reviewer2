@@ -34,8 +34,8 @@ export interface MainOptions {
   signals?: boolean;
   // How long stopping may take before the process ends regardless.
   stopMs?: number;
-  // How often contacts are cleared and a snapshot is taken: every hour, unless a test says
-  // otherwise.
+  // How often contacts are cleared, the trash is purged and a snapshot is taken: every hour,
+  // unless a test says otherwise.
   housekeepingMs?: number;
 }
 
@@ -92,20 +92,28 @@ export async function main({
   const snapshots = database.snapshots === null ? null : new Snapshots(db, database.snapshots, log);
 
   // Secure delete overwrites what is deleted in the database file, such as a contact that has been
-  // kept for 90 days or an account, but the WAL beside it still holds the pages as they were
-  // before, until a checkpoint writes them back and a truncation drops them. That can't be done
-  // while another connection is in the middle of the database, so it is tried again every hour
-  // until it is, with the contacts, and the log says each time whether it was: `contacts_cleared`
-  // says so for the hour that cleared contacts, and `wal_truncated` for every try after that.
+  // kept for 90 days, feedback that has been in the trash for 30 days or an account, but the WAL
+  // beside it still holds the pages as they were before, until a checkpoint writes them back and
+  // a truncation drops them. That can't be done while another connection is in the middle of the
+  // database, so it is tried again every hour until it is, with the contacts and the trash, and
+  // the log says each time whether it was: `contacts_cleared` and `feedback_purged` say so for
+  // the hour that cleared or purged something, with counts only, and `wal_truncated` for every
+  // try after that.
   let walHoldsDeleted = false;
   const dropFromWal = (): boolean => {
     walHoldsDeleted = !truncateWal(db);
     return !walHoldsDeleted;
   };
-  const clearContacts = () => {
-    const count = feedback.clearContacts();
-    if (count > 0) log('contacts_cleared', { count, walTruncated: dropFromWal() });
-    else if (walHoldsDeleted) log('wal_truncated', { ok: dropFromWal() });
+  const tidyFeedback = () => {
+    const cleared = feedback.clearContacts();
+    const purged = feedback.purge();
+    if (cleared > 0 || purged > 0) {
+      const walTruncated = dropFromWal();
+      if (cleared > 0) log('contacts_cleared', { count: cleared, walTruncated });
+      if (purged > 0) log('feedback_purged', { count: purged, walTruncated });
+    } else if (walHoldsDeleted) {
+      log('wal_truncated', { ok: dropFromWal() });
+    }
   };
 
   const { accountsPerHour } = config;
@@ -140,7 +148,7 @@ export async function main({
 
   let server: AppServer;
   try {
-    clearContacts();
+    tidyFeedback();
     accounts.prune();
     server = createAppServer({
       ...config,
@@ -202,12 +210,13 @@ export async function main({
       server.sockets.sweep();
       accounts.counters.prune();
     }, 60_000),
-    // Every hour, the contacts that have been kept for 90 days are cleared, the logins and the
-    // links in mails that have ended are deleted, and then a snapshot is taken, so that no new
-    // snapshot has them. None of it may end the process when it fails.
+    // Every hour, the contacts that have been kept for 90 days are cleared, the feedback that has
+    // been in the trash for 30 days is purged, the logins and the links in mails that have ended
+    // are deleted, and then a snapshot is taken, so that no new snapshot has them. None of it may
+    // end the process when it fails.
     setInterval(() => {
       try {
-        clearContacts();
+        tidyFeedback();
         accounts.prune();
       } catch (error) {
         log('error', { where: 'housekeeping', message: describe(error) });
