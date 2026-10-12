@@ -9,9 +9,9 @@ import KeywordsBoard from './KeywordsBoard.vue';
 // A finished game, step by step (shared/src/games/keywords/replay.ts): the board as it stood at
 // each step, with every color, the card the step is about outlined, and above it the turn, the
 // clue, who revealed what and whether it was right. The cards the PI meant with the turn's clue, if
-// they marked any, carry their numbers through the turn, and the clue's step names them. The slider goes to any step, the buttons to
-// the next and the last one. It takes a replay object and nothing else, so that the results page
-// and the account page show one the same way.
+// they marked any, carry their numbers through the turn, and the clue's step names them. The
+// slider goes to any step, the buttons to the next and the last one. It takes a replay object and
+// nothing else, so that the results page and the account page show one the same way.
 const props = defineProps<{ replay: KeywordsReplay }>();
 const { t, locale } = useI18n();
 const INFINITY = '\u221e';

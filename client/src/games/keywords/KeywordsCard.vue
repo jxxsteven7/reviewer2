@@ -294,10 +294,16 @@ const ariaLabel = computed(() =>
 }
 
 /* One of the cards a PI meant: a dashed ring, and its place in the order on a round sticker in the
-   top right corner, where the students' avatars hang in their turn. */
+   top right corner, where the students' avatars hang in their turn. The ring gives way to the
+   focus ring, which the scoped rule would otherwise beat, so that a PI moving by keyboard sees
+   which of the marked cards has the focus; the sticker still says that the card is marked. */
 .targeted {
   outline: var(--line) dashed var(--ink);
   outline-offset: 2px;
+}
+
+.targeted:focus-visible {
+  outline: var(--line-strong) solid var(--focus);
 }
 
 .target {

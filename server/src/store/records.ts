@@ -156,10 +156,10 @@ export class TitleStore {
   }
 }
 
-// A finished game to watch again, as the game module gave it (GameModule.replay()), kept as JSON
-// once for each game, however often the end of the game is reported.
-// A finished game to keep: the replay; the log of everything that happened in it, or null when it
-// grew too long to keep; and which player, by the ID they had in the room, was which account.
+// A finished game to keep, once for each game, however often the end of the game is reported: the
+// replay, as the game module gave it (GameModule.replay()), kept as JSON; the log of everything
+// that happened in it, or null when it grew too long to keep; and which player, by the ID they had
+// in the room, was which account.
 export interface NewReplay {
   game: string;
   gameId: string;

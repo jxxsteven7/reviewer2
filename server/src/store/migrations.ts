@@ -266,7 +266,8 @@ export const MIGRATIONS: readonly string[] = [
   // everything that happened in the game, as JSON, kept on the server alone; the replays from
   // before have none. game_players says which player, by the ID they had in the room, was which
   // account, for those with an account who played in the game, those who left it included. A
-  // row goes with its account, and the log then names a player whom nothing links to anyone.
+  // row goes with its account; the log keeps the player ID, and the replay the name the player
+  // had in the game if they revealed a card.
   `
   ALTER TABLE replays ADD COLUMN log TEXT;
 

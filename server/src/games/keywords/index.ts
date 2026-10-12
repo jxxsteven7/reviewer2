@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   cardsClash,
+  cleanClue,
   defaultSettings,
   otherTeam,
   sameSettings,
@@ -171,18 +172,17 @@ type Action<M extends KeywordsMessage> = (
 ) => GameUpdate<KeywordsData>;
 
 // What the log of the game keeps of each of its messages (docs/architecture.md#game-records): what
-// it said, as its schema reads it, without the game's ID, which is the log's own. Choosing a card,
-// changing seats, pausing and resuming are minor: a player may do them again and again. Nothing at
-// all is kept of a line of a group's chat.
-const MINOR = new Set(['keywords:select', 'keywords:seat', 'keywords:pause', 'keywords:resume']);
-
+// it said, as its schema reads it, without the game's ID, which is the log's own, and with the
+// clue's word as the record keeps it (cleanClue). Choosing a card is minor: a group's students may
+// do it again and again before they reveal one. Nothing at all is kept of a line of a group's chat.
 function logNote(type: string, payload: unknown): LogNote | null {
   if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:say') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
   if (!parsed.success) return null;
   const data: Record<string, unknown> = { ...parsed.data };
   delete data.gameId;
-  const minor = MINOR.has(type);
+  if (type === 'keywords:clue') data.word = cleanClue(data.word as string);
+  const minor = type === 'keywords:select';
   return Object.keys(data).length > 0 ? { data, minor } : { minor };
 }
 
@@ -312,10 +312,11 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { ...data, seating, match: rekeyMatch(data.match, from, to, team) };
   },
 
-  // The game begins with everyone in the seat they are in, by player ID; whoever has none watches.
-  opening: (data) => ({
-    seats: Object.fromEntries([...data.seating.seats].map(([id, seat]) => [id, { team: seat.team, role: seat.role }])),
-  }),
+  // Where a member is: the group and the role of the seat they are in, or the spectators'.
+  seated(data, playerId) {
+    const { team, role } = seatOf(data.seating, playerId);
+    return { team, role };
+  },
 
   logged: logNote,
 

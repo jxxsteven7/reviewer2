@@ -6,6 +6,8 @@ import { keywordsGame } from './index';
 // What the game tells the log of a game (docs/architecture.md#game-records).
 
 const gameId = 'g1';
+// A zero-width space, which cleanClue takes out of a clue.
+const INVISIBLE = String.fromCharCode(0x200b);
 
 describe('the log of the team word guessing game', () => {
   const logged = (type: string, payload: unknown) => keywordsGame.logged?.(type, payload);
@@ -24,19 +26,29 @@ describe('the log of the team word guessing game', () => {
       minor: false,
     });
     expect(logged('keywords:pass', { gameId, turn: 3 })).toEqual({ data: { turn: 3 }, minor: false });
+    expect(logged('keywords:extend', { gameId, turn: 3 })).toEqual({ data: { turn: 3 }, minor: false });
   });
 
-  test('counts choosing a card, changing seats, pausing and resuming as minor', () => {
-    expect(logged('keywords:pause', { gameId })).toEqual({ minor: true });
-    expect(logged('keywords:resume', { gameId })).toEqual({ minor: true });
+  test("keeps the clue's word as the record keeps it, without invisible characters", () => {
+    const word = ['Gra', 'dient', ' descent'].join(INVISIBLE);
+    expect(logged('keywords:clue', { gameId, turn: 1, word, count: 1 })).toEqual({
+      data: { turn: 1, word: 'Gradient descent', count: 1 },
+      minor: false,
+    });
+  });
+
+  test('counts choosing a card as minor, and nothing else', () => {
     expect(logged('keywords:select', { gameId, turn: 2, card: null })).toEqual({
       data: { turn: 2, card: null },
       minor: true,
     });
+    // A seat change says where a player is from then on, and a pause is the chair's alone.
     expect(logged('keywords:seat', { team: 'red', role: 'captain' })).toEqual({
       data: { team: 'red', role: 'captain' },
-      minor: true,
+      minor: false,
     });
+    expect(logged('keywords:pause', { gameId })).toEqual({ minor: false });
+    expect(logged('keywords:resume', { gameId })).toEqual({ minor: false });
   });
 
   test('keeps nothing of the chat, and nothing of what it does not know', () => {
@@ -45,7 +57,7 @@ describe('the log of the team word guessing game', () => {
     expect(logged('keywords:reveal', { gameId, turn: 'one' })).toBeNull();
   });
 
-  test('begins with who sits where, and counts everyone who sat in a group as having played', () => {
+  test('says where each player is, and counts everyone who sat in a group as having played', () => {
     const keys: Record<string, string> = { ann: 'key-ann', bob: 'key-bob', cat: 'key-cat', dan: 'key-dan' };
     const ctx: GameContext = {
       phase: 'lobby',
@@ -71,16 +83,17 @@ describe('the log of the team word guessing game', () => {
     sit('dan', 'blue', 'guesser');
     const words = Array.from({ length: 25 }, (_, index) => ({ word: `Word${index}` }));
     data = keywordsGame.start(data, { ...ctx, phase: 'playing' }, words, gameId);
-    expect(keywordsGame.opening?.(data, ctx)).toEqual({
-      seats: {
-        ann: { team: 'red', role: 'captain' },
-        bob: { team: 'red', role: 'guesser' },
-        cat: { team: 'blue', role: 'captain' },
-        dan: { team: 'blue', role: 'guesser' },
-      },
-    });
-    // Bob steps out to watch: he has played all the same.
+    const seated = (id: string) => keywordsGame.seated?.(data, id);
+    expect(['ann', 'bob', 'cat', 'dan'].map(seated)).toEqual([
+      { team: 'red', role: 'captain' },
+      { team: 'red', role: 'guesser' },
+      { team: 'blue', role: 'captain' },
+      { team: 'blue', role: 'guesser' },
+    ]);
+    // Whoever has no seat watches; so does Bob once he steps out, but he has played all the same.
+    expect(seated('eve')).toEqual({ team: null, role: 'spectator' });
     sit('bob', null, 'spectator');
+    expect(seated('bob')).toEqual({ team: null, role: 'spectator' });
     expect(keywordsGame.participants?.(data, ctx).sort()).toEqual(['key-ann', 'key-bob', 'key-cat', 'key-dan']);
   });
 });

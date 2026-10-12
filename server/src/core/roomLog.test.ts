@@ -35,7 +35,7 @@ const entries = (room: Room) => {
 };
 
 describe('the log of a game', () => {
-  test("notes the room's own events during the game, and nothing before it", () => {
+  test("notes where everyone began, the room's own events during the game, and nothing before it", () => {
     const { room, ann, bob, clock } = table();
     room.emote(bob.id, 'waiting');
     expect(room.start(0)).toMatchObject({ ok: true });
@@ -49,9 +49,12 @@ describe('the log of a game', () => {
     clock.now = 12_000;
     room.expire();
     room.bench(bob.id);
+    // Whoever comes during the game is noted with where the game has put them.
     const cat = room.join('key-cat', 'Cat', false);
     if (!cat.ok) throw new Error(cat.error);
     room.remove(cat.member.id);
+    const dee = room.join('key-dee', 'Dee', true);
+    if (!dee.ok) throw new Error(dee.error);
     room.handOver(bob.id);
     // The game started at 0 on the room's clock.
     expect(entries(room)).toEqual([
@@ -61,13 +64,48 @@ describe('the log of a game', () => {
       [11_000, ann.id, 'test:alarm', undefined],
       [12_000, null, 'tick', undefined],
       [12_000, ann.id, 'bench', { player: bob.id }],
-      [12_000, cat.member.id, 'join', { play: false }],
+      [12_000, cat.member.id, 'join', { play: false, seat: 'watcher' }],
       [12_000, ann.id, 'remove', { player: cat.member.id }],
       [12_000, cat.member.id, 'leave', undefined],
+      [12_000, dee.member.id, 'join', { play: true, seat: 'player' }],
       [12_000, ann.id, 'chair', { player: bob.id }],
       [12_000, bob.id, 'test:finish', undefined],
       [12_000, null, 'end', undefined],
     ]);
+    // Where everyone was when the game began, as the game says.
+    expect(room.record()?.log?.start).toEqual({ [ann.id]: 'player', [bob.id]: 'player' });
+  });
+
+  test('leaves out what the game calls minor once it has grown long, and keeps its own events', () => {
+    // A game whose presses are minor.
+    const game = { ...fakeGame, logged: (type: string) => ({ minor: type === 'test:press' }) };
+    const rooms = new Rooms(testWords(), seededRng(3), () => 0);
+    const created = rooms.create({
+      game,
+      language: 'en',
+      fields: ['general'],
+      key: 'key-kim',
+      name: 'Kim',
+      play: true,
+    });
+    if (!created.ok) throw new Error(created.error);
+    const { room, member: kim } = created;
+    room.attach(kim, 'socket-kim');
+    const lee = room.join('key-lee', 'Lee', true);
+    if (!lee.ok) throw new Error(lee.error);
+    room.attach(lee.member, 'socket-lee');
+    room.start(0);
+    // More presses than the log keeps before it has grown long; then someone goes offline, which
+    // is kept all the same.
+    for (let i = 0; i < 1400; i += 1) room.act(kim.id, 'test:press', undefined);
+    room.detach('socket-lee');
+    room.act(kim.id, 'test:finish', undefined);
+    const kept = room.record()?.log;
+    expect(kept?.truncated).toBe(true);
+    const types = kept?.entries.map(({ type }) => type) ?? [];
+    expect(types.filter((type) => type === 'test:press').length).toBeLessThan(1400);
+    expect(types.filter((type) => type === 'truncated')).toHaveLength(1);
+    expect(types.slice(-3)).toEqual(['offline', 'test:finish', 'end']);
   });
 
   test('notes neither a message that was refused nor one that changed nothing', () => {

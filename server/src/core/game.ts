@@ -141,9 +141,11 @@ export interface GameModule<Data = unknown, View = unknown> {
   // A game that can be played as a match.
   match?: MatchHooks<Data>;
   // For the log of the game (docs/architecture.md#game-records), which the room keeps from the
-  // start of a game to its end, and the record of who played in it. How the game begins, as the
-  // game describes it, such as who sits where: the room asks once, right after start().
-  opening?(data: Data, ctx: GameContext): unknown;
+  // start of a game to its end, and the record of who played in it. Where a member is in the
+  // game, as the game describes it, such as the group and the role they have: the room asks about
+  // everyone right after start(), for how the game began, and about whoever comes during the game,
+  // since the game may seat them. Without this, the log says nothing of where anyone is.
+  seated?(data: Data, playerId: string): unknown;
   // What the log keeps of one of the game's messages that changed the game, with the payload as
   // the message carried it, or null to keep nothing of it, as of a line of a group's chat. Without
   // this, the log keeps the message's type alone.

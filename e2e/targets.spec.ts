@@ -80,7 +80,7 @@ for (const language of ['en', 'zh'] as const) {
     const log = await openLog(table.spectator);
     const meant = log.locator('.meant');
     await expect(meant).toContainText(interpolate(text.game.meantFound, { found: '1', total: '2' }));
-    for (const word of words) await expect(meant).toContainText((word ?? '').replace(/­/g, ''));
+    for (const word of words) await expect(meant).toContainText((word ?? '').replace(/\u00ad/g, ''));
     await closeSheet(table.spectator);
 
     // And in the replay, at the clue's step.

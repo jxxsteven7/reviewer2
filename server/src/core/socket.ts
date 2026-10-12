@@ -278,9 +278,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (!kept || kept.accounts.length === 0) return;
     const replay = room.replay();
     if (replay === null) return;
-    if (kept.overflowed) log('game_log_too_large', { code: room.code });
     const { log: gameLog, accounts: players } = kept;
-    safely('replay', () => accounts.keepReplay({ game: room.game.id, gameId, replay, log: gameLog, players }));
+    safely('replay', () => {
+      const stored = accounts.keepReplay({ game: room.game.id, gameId, replay, log: gameLog, players });
+      // A log that grew too long is worth a line only when the rest of the record was kept: what
+      // kept the record out, such as a full database, has a line of its own.
+      if (stored && kept.overflowed) log('game_log_too_large', { code: room.code });
+    });
   }
 
   // The last match of each room whose end has been logged and recorded.

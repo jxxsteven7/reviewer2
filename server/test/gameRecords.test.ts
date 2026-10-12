@@ -92,7 +92,8 @@ describe('the record of a game of the team word guessing game', () => {
       expect(board(client).history[0]).toMatchObject({ word: 'Hint', captain: captain.state?.me });
     }
 
-    // The group talks it over, chooses a card and reveals it; Fay leaves in the middle of the game.
+    // The group talks it over, chooses a card and reveals it; Gus comes to play in the middle of
+    // the game, and Fay leaves.
     expect(await guesser.send('keywords:say', { gameId: clue.gameId, text: 'The secret plan' })).toEqual({ ok: true });
     expect(await guesser.send('keywords:select', { ...moment(board(guesser)), card: targets[0] })).toEqual({
       ok: true,
@@ -101,9 +102,11 @@ describe('the record of a game of the team word guessing game', () => {
       ok: true,
     });
     await settle(everyone);
+    const gus = await member('Gus', true);
+    await ann.waitFor((state) => state.players.length === 7, 'Gus here');
     const fayId = fay.state?.me as string;
     expect(await fay.send('room:leave')).toMatchObject({ ok: true });
-    await ann.waitFor((state) => state.players.length === 5, 'Fay gone');
+    await ann.waitFor((state) => state.players.length === 6, 'Fay gone');
     const reviewer2 = cards.findIndex((card) => card.color === 'reviewer2');
     expect(await guesser.send('keywords:reveal', { ...moment(board(guesser)), card: reviewer2 })).toEqual({ ok: true });
     const stayed = everyone.filter((client) => client !== fay);
@@ -124,15 +127,24 @@ describe('the record of a game of the team word guessing game', () => {
     ]);
     const log = JSON.parse(kept()[0]?.log as string) as GameLogData;
     expect(log).toMatchObject({ v: 1, game: 'keywords', gameId: clue.gameId });
-    expect((log.start as { seats: Record<string, unknown> }).seats[fayId]).toEqual({ team: 'red', role: 'guesser' });
+    // Where everyone was at the start, Eve, who watched, included.
+    expect(log.start?.[fayId]).toEqual({ team: 'red', role: 'guesser' });
+    expect(log.start?.[eve.state?.me as string]).toEqual({ team: null, role: 'spectator' });
     const types = log.entries.map((entry) => entry.type);
     expect(types).toEqual(
-      expect.arrayContaining(['keywords:clue', 'keywords:select', 'keywords:reveal', 'leave', 'end']),
+      expect.arrayContaining(['keywords:clue', 'keywords:select', 'keywords:reveal', 'join', 'leave', 'end']),
     );
     expect(types.indexOf('end')).toBe(types.length - 1);
     expect(log.entries.find((entry) => entry.type === 'keywords:clue')).toMatchObject({
       by: captain.state?.me,
       data: { turn: 1, word: 'Hint', count: 2, targets },
+    });
+    // Gus went to the group with fewer players, which the log says.
+    expect(log.entries.find((entry) => entry.type === 'join')).toEqual({
+      t: expect.any(Number),
+      by: gus.state?.me,
+      type: 'join',
+      data: { play: true, seat: { team: 'blue', role: 'guesser' } },
     });
     expect(log.entries.find((entry) => entry.type === 'leave')).toMatchObject({ by: fayId });
     // The times count up from the start of the game.
@@ -153,11 +165,20 @@ describe('the record of a game of the team word guessing game', () => {
 });
 
 describe('the record of a game', () => {
-  async function played(options: { press?: string; times?: number; withdraw?: boolean } = {}) {
+  // Ann, with an account, and Bob, a guest, play a game of the test game: Ann presses, and someone
+  // finishes it, or Ann withdraws it. Ann may come only to watch, or leave before the end.
+  async function played(
+    options: { press?: string; times?: number; withdraw?: boolean; watch?: boolean; leave?: boolean } = {},
+  ) {
     const anns = new Browser(server.url);
     expect((await anns.register('Ann')).body).toEqual({ ok: true });
     const ann = track(await anns.connect());
-    const reply = await ann.send('room:create', { game: 'test', language: 'en', fields: ['general'], play: true });
+    const reply = await ann.send('room:create', {
+      game: 'test',
+      language: 'en',
+      fields: ['general'],
+      play: !options.watch,
+    });
     if (!reply.ok) throw new Error(reply.error);
     const bob = track(await TestClient.connect(server.url));
     await bob.send('room:join', { code: reply.code, name: 'Bob', play: true });
@@ -165,10 +186,16 @@ describe('the record of a game', () => {
     await ann.send('room:start', { round: 0 });
     const { gameId } = (await ann.waitFor((state) => state.phase === 'playing')) as { gameId: string };
     for (let i = 0; i < (options.times ?? 1); i += 1) await ann.send('test:press', options.press);
-    if (options.withdraw) await ann.send('room:end', { gameId });
-    else await ann.send('test:finish');
-    await ann.waitFor((state) => state.phase === 'ended');
-    return { ann, gameId };
+    const annId = ann.state?.me as string;
+    if (options.leave) {
+      expect(await ann.send('room:leave')).toMatchObject({ ok: true });
+      await bob.waitFor((state) => state.players.length === 1, 'Ann gone');
+    }
+    const last = options.leave ? bob : ann;
+    if (options.withdraw) await last.send('room:end', { gameId });
+    else await last.send('test:finish');
+    await last.waitFor((state) => state.phase === 'ended');
+    return { ann, annId, anns, gameId };
   }
 
   test('is kept with what the game says of each message, for a guest and an account playing', async () => {
@@ -189,6 +216,23 @@ describe('the record of a game', () => {
     await played({ withdraw: true });
     expect(kept()).toEqual([]);
     expect(players()).toEqual([]);
+  });
+
+  test('is not kept when the one player with an account only watched', async () => {
+    server = await startServer();
+    await played({ watch: true });
+    expect(kept()).toEqual([]);
+    expect(players()).toEqual([]);
+  });
+
+  test('is kept when the one player with an account left before the end, who still has no replay', async () => {
+    server = await startServer();
+    const { annId, anns, gameId } = await played({ leave: true });
+    await until(() => kept().length === 1, 'the record');
+    expect(players()).toEqual([{ playerId: annId, accountId: 1 }]);
+    // Ann has no part in the end of the game, so it isn't on her record, and the replay needs that.
+    expect(server.db.prepare('SELECT count(*) AS count FROM game_records').get()).toEqual({ count: 0 });
+    expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
   });
 
   test('keeps the replay and the players without a log that grew too long, and says so', async () => {
