@@ -551,7 +551,8 @@ describe('feedback draft', () => {
       }),
     );
     const { title, body } = drafted('1');
-    // The title is text, which GitHub doesn't render, but its signs are unlinked all the same.
+    // GitHub renders no Markdown in a title but a code span, so the title is as written, with its
+    // signs unlinked all the same.
     expect(title).toBe(`Bug: # Heading @${ZWSP}octocat, see #${ZWSP}12, GH-${ZWSP}13 and f${ZWSP}bcd508 :${ZWSP}tada:`);
     // In the body, every ASCII punctuation character is escaped, and a zero-width space follows an
     // @ before a name, a # or GH- before a number, a / before a number, as in owner/repo/issues/4
@@ -581,6 +582,23 @@ describe('feedback draft', () => {
     );
     // Nothing that GitHub links or replaces is left as it was.
     expect(body).not.toMatch(/@[a-z0-9]|#\d|GH-\d|\/\d|https?:\/\/|www\.|fbcd508|7ccd7e7|:[\w+-]+:|[^\u200b]\\\$/i);
+  });
+
+  test('keeps the quotation from becoming an alert', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ text: '[!WARNING]\nDanger ahead', publicIssue: true }));
+    store.add(feedback({ text: '[!note]\n\nSee [!tip] here', kind: 'bug', publicIssue: true }));
+    // GitHub shows a quotation whose first line is [!NOTE], [!TIP], [!IMPORTANT], [!WARNING] or
+    // [!CAUTION] alone, in any case, as an alert, once Markdown has taken the backslashes away, so
+    // a zero-width space follows the [ of every [!.
+    const warning = drafted('1');
+    expect(warning.title).toBe(`Idea: [${ZWSP}!WARNING]`);
+    expect(warning.body.split('\n').slice(2, 4)).toEqual([`> \\[${ZWSP}\\!WARNING\\]`, '> Danger ahead']);
+    expect(drafted('2').body.split('\n').slice(2, 5)).toEqual([
+      `> \\[${ZWSP}\\!note\\]`,
+      '>',
+      `> See \\[${ZWSP}\\!tip\\] here`,
+    ]);
   });
 
   test('leaves a time, a date, a fraction and a word of few hexadecimal digits alone', () => {

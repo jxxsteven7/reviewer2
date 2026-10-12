@@ -319,14 +319,17 @@ const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
 // without the address of the site in front, which then shows the reference, links a commit written
 // as seven or more hexadecimal digits on their own, and shows :boom: as an emoji, in a title as
 // much as in a body; and in a body it shows $x^2$ or $$x^2$$ as a formula, in any size or color
-// that LaTeX gives it. Those patterns need the name, the number, the rest of the digits or the
-// shortcode right after their first character, and a formula needs nothing but a space or
+// that LaTeX gives it, and a quotation whose first line is [!NOTE], [!TIP], [!IMPORTANT],
+// [!WARNING] or [!CAUTION] alone, in any case, as an alert, with a title and an icon of GitHub's
+// own in place of that line. Those patterns need the name, the number, the rest of the digits, the
+// shortcode or the ! right after their first character, and a formula needs nothing but a space or
 // punctuation before its opening $, so a zero-width space after that character, or before the $,
 // which shows nothing, keeps them from matching; a backslash wouldn't, since GitHub reads the
 // signs in the text once Markdown has taken the backslash away. A slash or a colon after a digit,
 // as in a date or a time, is left alone: no reference or shortcode starts that way.
 const ZERO_WIDTH_SPACE = '\u200b';
-const LINKED = /@(?=[a-z0-9])|(?:#|GH-|(?<!\d)\/)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|(?<!\d):(?=[\w+-]+:)|(?=\$)/gi;
+const LINKED =
+  /@(?=[a-z0-9])|(?:#|GH-|(?<!\d)\/)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|(?<!\d):(?=[\w+-]+:)|(?=\$)|\[(?=!)/gi;
 const unlinked = (text: string): string => text.replace(LINKED, `$&${ZERO_WIDTH_SPACE}`);
 
 // A line of the text, or the name, as the body's Markdown shows it as it is: unlinked, and then
@@ -340,8 +343,9 @@ const literal = (text: string): string => escapeName(unlinked(text));
 // TITLE_POINTS code points, with an ellipsis. The characters are the ones that a reader sees, as
 // textLength counts them (shared/src/text.ts), so that a Chinese character or an emoji is never
 // cut in two, unless the first character alone is more than TITLE_POINTS code points, as many
-// emoji joined into one are, which is cut after that many. GitHub shows a title as text, not as
-// Markdown, so nothing is escaped, but the signs are unlinked all the same.
+// emoji joined into one are, which is cut after that many. GitHub renders no Markdown in a title
+// but a code span between backticks, so nothing is escaped, and the signs are unlinked all the
+// same.
 function issueTitle({ kind, text }: Feedback): string {
   const line = (text.split('\n')[0] ?? '').replace(/\s+/g, ' ').trim();
   const chars = [...graphemes.segment(line)].map(({ segment }) => segment);
