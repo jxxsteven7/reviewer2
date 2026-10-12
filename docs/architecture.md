@@ -100,7 +100,7 @@ A match plays a set number of games, scores every player in each, and ranks them
 ## Limits and housekeeping
 
 - **Rate:** about 10 messages a second per connection, bursts of 20; a message is at most 16 KB.
-- **Per address:** 5 rooms a minute (`ROOMS_PER_MINUTE`), 20 codes a minute that belong to no room (past them, public rooms are still found), 3 pieces of feedback every 10 minutes (`FEEDBACK_PER_10_MINUTES`). Behind a reverse proxy, `TRUST_PROXY` takes the address from `X-Forwarded-For`. **Per account:** 5 reports an hour, 30 friend requests a day, one invitation a minute to the same friend ([Friends](#friends)).
+- **Per address:** 5 rooms a minute (`ROOMS_PER_MINUTE`), 20 codes a minute that belong to no room (past them, public rooms are still found), 3 pieces of feedback every 10 minutes (`FEEDBACK_PER_10_MINUTES`). Behind a reverse proxy, `TRUST_PROXY` takes the address from `X-Forwarded-For`. **Per account:** 5 reports an hour, 30 friend requests a day, one invitation a minute to the same friend ([Friends](#friends)), 100 likes a day ([Public profiles](#public-profiles)).
 - **In one place:** `SocketLimits` in `server/src/core/socket.ts`, `RoomLimits` in `server/src/core/rooms.ts`. 30 players per room, 2000 rooms per server.
 - **The sweep,** once a minute, closes rooms with nobody online for 30 minutes or nothing happening for 6 hours, and drops members offline for 10 minutes from waiting rooms.
 - **Stopping:** every connection hears `room:closed` with `restart`, then the database closes; after 5 seconds the process ends anyway (`stop_timed_out`). A wrong setting, library or database stops the server before it listens (`startup_failed`, `listen_failed`).
@@ -116,7 +116,7 @@ Files under `/assets/` carry a content hash and are cached for good; everything 
 - **Migrations:** `PRAGMA user_version` and `server/src/store/migrations.ts`, run on start in one transaction, after a snapshot.
 - **Snapshots** every hour into `snapshots/`, the last three kept.
 - **The disk.** Feedback stops at 10,000 pieces or 50 MB, which `MAX_FEEDBACK` raises together; nothing is deleted to make room, and only what the operator puts in the trash ever goes, 30 days later ([Feedback](#feedback)). Past 1 GB nothing new is kept (`storage_full`). Avatars up to 2 GB.
-- **Deleting.** Everything of an account goes with it through foreign keys, its friendships included; earlier snapshots keep it. Its feedback, its acknowledgments and the reports it sent or got stay, no longer linked to it, and so do the replays of the games it played in, which hold the nicknames of those who revealed a card and the clues, since the others played in them too ([Replays](#replays)).
+- **Deleting.** Everything of an account goes with it through foreign keys, its friendships and its likes, given and received, included; earlier snapshots keep it. Its feedback, its acknowledgments and the reports it sent or got stay, no longer linked to it, and so do the replays of the games it played in, which hold the nicknames of those who revealed a card and the clues, since the others played in them too ([Replays](#replays)).
 
 ## Feedback
 
@@ -140,13 +140,14 @@ The home page folds the acknowledgments and the sponsors until a player opens on
 
 ## Accounts
 
-Optional: a username and a password, with an avatar, a record of games, titles, acknowledgments, and, if wanted, an email address for resetting a forgotten password, which itself is never kept.
+Optional: a username and a password, with an avatar, a record of games, titles, acknowledgments, a [public profile](#public-profiles), and, if wanted, an email address for resetting a forgotten password, which itself is never kept.
 
 - **Usernames** follow the nickname rules, with at least 2 characters and no reserved names; `usernameKey()` in `shared/src/accounts.ts` compares them.
 - **Passwords:** 8 to 128 characters after NFKC, as scrypt hashes, N = 2^15, r = 8, p = 3 (`server/src/accounts/passwords.ts`). Two hashes at a time, then `busy`.
 - **Logins:** a 32-byte secret in a cookie, kept as its SHA-256 (`sessions`). `HttpOnly`, `SameSite=Lax`, `Path=/`, and unless `COOKIE_SECURE=0`, `Secure` with `__Host-`. Ends after 30 days unused, a year in all, or on logout or a password change; its connections then get `account:ended`.
 - **Connections.** The handshake reads the cookie; a logged-in connection takes its member key from the account. A guest's seat becomes the account's when the browser logs in and comes back.
 - **Records.** At a game's end the room asks `GameModule.results()` and keeps the result per account, with the game's points ([Academic ranks](#academic-ranks)).
+- **Numbers.** An account's id, from 1 in the order of registration, never given out again, is its number, shown on its own page and its public profile and never a way to look an account up. The first account is the author's (`AUTHOR_ACCOUNT`), which both pages mark.
 
 ## Friends
 
@@ -157,6 +158,17 @@ Accounts only; guests see none of it. `shared/src/friends.ts` has the types, the
 - **Presence.** `friends:list` says of each friend whether they are online, every tab and device counting as one person, and which room they are in: with its code if the room is public, so that the page offers a Join button, and without it if the room is private, which only an invitation leads into. Nobody but a friend learns this, through any message or API; requests show the username and avatar alone.
 - **Invitations.** A member with an account invites a friend who is online into their room (`friends:invite`), once a minute for the same friend, unless the chair has removed the friend from it. Every connection of the friend hears `friends:invited`, with the inviter, the room's code and ID and how long the invitation stands, and a connection that comes while it stands hears it too. `room:join` with the `invitation` in place of the code lets the friend in, into a private room too, as a newcomer like any other: a removal by the chair and the account requirement of a public room keep them out as they would anyone. An invitation is used up when the friend comes into the room, by it or by the code, and forgotten when they ignore it (`friends:ignore`); it lapses after 10 minutes, when the inviter leaves, when the room closes or when the two part (`invitation_expired`). However an invitation ends, at once or found by the sweep, every connection of the friend hears `friends:uninvited`, so that none of their pages shows it on. Whoever has a seat in the room comes back by the code, with a lapsed invitation in hand or not. Invitations live in memory and are never kept.
 - **Data.** The `friendships` table (migration 8): one row per pair, whichever side asked, with its status and when it was asked and answered. A friendship that is removed is deleted, and a declined request is deleted once its wait is over; an account's rows go with it.
+
+## Public profiles
+
+Every account has a public page, `/p/<handle>`, which anyone may open, with or without an account. The handle (`accounts.handle`, migration 10) is 12 hexadecimal digits drawn at random when the account is created, never changed and never reused, so that a link outlives a new username and nobody can count through the accounts by their numbers. Rooms, friend lists, requests and the list of likers carry it (`PlayerView.handle`, `FriendView.handle`, `LikerView.handle`), so that every way to a profile uses the same key.
+
+- **Shown to everyone:** username, avatar, rank, number, the day of registration, titles, the link and the line the owner wrote, and how many accounts like the page.
+- **Shown if the owner chooses** (`show_record`, `show_thanks`; off until turned on): the record as counts, games, wins and matches, and the acknowledgments. The points, the state of the email address, the friends and the games themselves never show.
+- **The link** keeps the rules of the link for the acknowledgments (`checkWebLink` in `shared/src/feedback.ts`): `https://` only, no user name, at most 200 characters. The page shows it as the address it is, opening in a new tab with `rel="nofollow ugc noopener"`. **The line** has at most 80 characters, cleaned as a contact is (`checkBio` in `shared/src/accounts.ts`), and is shown as text, never as markup. Both are optional; `POST /api/account/profile` sets them with the two choices.
+- **Likes** (`likes`, migration 10). An account likes a page once and may take it back, never its own (`self_like`), 100 a day (`like_limited`). The count is public; who likes a page is shown to its owner alone (`GET /api/account/likers`), latest first, with whether each is a friend, so that the owner may ask the others. The rows go with either account.
+- **Requests waiting.** The owner's summary counts the friend requests waiting for an answer (`AccountSummary.requests`), for the badge on the home page and the account page; the page asks again on `friends:changed`.
+- **The operator** clears a link and a line that break the rules with `admin.cjs profile clear <username> [--ban]`, which with `--ban` bars the account from writing them again (`profile_banned`; `profile allow` lifts it), and looks them over with `profile list` ([development.md](development.md#accounts-and-email)).
 
 ## Academic ranks
 
@@ -181,10 +193,14 @@ Shown only; they change nothing in the game. Every game that ends by itself is s
 | `POST /api/password/forgot` | Mails a reset link |
 | `POST /api/password/reset` | Every browser logged out, this one in (the link) |
 | `POST /api/account/delete` | Deletes everything (login, password) |
+| `GET /api/profile/<handle>` | A [public profile](#public-profiles), for anyone; `no_such_profile` otherwise |
+| `POST /api/account/profile` | `link`, `bio`, `showRecord`, `showThanks` (login) |
+| `GET /api/account/likers` | Who likes the account's profile (login) |
+| `POST /api/profile/like`, `.../unlike` | `handle` (login) |
 
 A changing request must come from this site: `Origin` names the host, or `Sec-Fetch-Site` is `same-origin`. Only logging in or out sets the cookie.
 
-**Limits** (`server/src/accounts/limits.ts`), counted before any hashing: 5 accounts an hour per address (`ACCOUNTS_PER_HOUR`); wrong passwords 20 a minute per address and 10 in 15 minutes per name (`login_limited`); 30 `name_reserved` answers an hour per address, then `rate_limited`; 60 changing requests a minute per address; a few mails a day per account and destination; 10 avatar changes a day.
+**Limits** (`server/src/accounts/limits.ts`), counted before any hashing: 5 accounts an hour per address (`ACCOUNTS_PER_HOUR`); wrong passwords 20 a minute per address and 10 in 15 minutes per name (`login_limited`); 30 `name_reserved` answers an hour per address, then `rate_limited`; 60 changing requests a minute per address; a few mails a day per account and destination; 10 avatar changes a day; 100 likes a day.
 
 ## Mail
 
@@ -204,7 +220,7 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 - **Who has an account:** answers that reveal a taken name are limited, `login_failed` is the same for a wrong name or password, and the friends messages answer a name that is no account's as they answer a stranger's, except the request, which costs one of the day's 30.
 - **Stolen logins and other sites:** a random secret, kept hashed, only in a hardened cookie, HTTPS only; `Origin` and `Sec-Fetch-Site` checks, no CORS, no framing; password change, binding and deletion ask for the password.
 - **Links and mail:** 256 random bits after `#`, kept as hashes, short-lived, used once; two fixed mails from a mailer that alone holds the key.
-- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records with their points and titles, who is friends with whom and who asked whom, the replays of games, with their boards, the clues and the nicknames of those who revealed a card, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
+- **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records with their points and titles, who is friends with whom and who asked whom, the links and the lines that accounts wrote on their profiles and who likes whose, the replays of games, with their boards, the clues and the nicknames of those who revealed a card, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
 
 ## Logging
 

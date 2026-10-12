@@ -10,10 +10,11 @@ import {
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { errorKey } from '../errors';
-import { mayBefriend, mayReport } from '../manage';
+import { mayBefriend, mayReport, mayView } from '../manage';
 import { act, send } from '../socket';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
+import ProfileCard from './ProfileCard.vue';
 import UiButton from './UiButton.vue';
 import UiField from './UiField.vue';
 import UiSheet from './UiSheet.vue';
@@ -22,20 +23,24 @@ import UiSheet from './UiSheet.vue';
 // after a warning that says for how long, which is for good from a public room and two minutes
 // from a private one, or hand them the chair; for an account, the way to ask a player with an
 // account to be friends (docs/architecture.md#friends); and, in a public room, the way for anyone
-// with an account to report them to the operator (docs/architecture.md#public-rooms). The server
-// decides who may do what; the menu only shows what the viewer may ask for.
+// with an account to report them to the operator (docs/architecture.md#public-rooms); and, for a
+// player with an account, their public page (docs/architecture.md#public-profiles), in a sheet, so
+// that the viewer stays in the room. The server decides who may do what; the menu only shows what
+// the viewer may ask for.
 const props = defineProps<{ player: PlayerView | null; room: RoomView }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
 const { busy, run } = useBusy();
 const removing = ref(false);
 const reporting = ref(false);
+const viewing = ref(false);
 const note = ref('');
 const refused = ref<string | undefined>();
 
 const isChair = computed(() => props.room.chairId === props.room.me);
 const canReport = computed(() => mayReport(props.room));
 const canBefriend = computed(() => props.player !== null && mayBefriend(props.room, props.player));
+const canView = computed(() => props.player !== null && mayView(props.room, props.player));
 const checked = computed(() => checkReport(note.value));
 const noteProblem = computed(() => (checked.value.problem ? t(errorKey(checked.value.problem)) : undefined));
 const count = computed(() =>
@@ -48,6 +53,7 @@ watch(
   () => {
     removing.value = false;
     reporting.value = false;
+    viewing.value = false;
     note.value = '';
     refused.value = undefined;
   },
@@ -93,8 +99,13 @@ async function report() {
 </script>
 
 <template>
-  <UiSheet :open="player !== null && !removing && !reporting" :title="player?.name ?? ''" @close="emit('close')">
+  <UiSheet
+    :open="player !== null && !removing && !reporting && !viewing"
+    :title="player?.name ?? ''"
+    @close="emit('close')"
+  >
     <div class="actions">
+      <UiButton v-if="canView" @click="viewing = true">{{ t('lobby.manage.viewPage') }}</UiButton>
       <template v-if="isChair">
         <UiButton :disabled="busy" @click="manage('room:spectate')">{{ t('lobby.manage.spectate') }}</UiButton>
         <UiButton :disabled="busy" @click="manage('room:chair')">{{ t('lobby.manage.chair') }}</UiButton>
@@ -104,6 +115,10 @@ async function report() {
       <UiButton v-if="canReport" variant="quiet" @click="reporting = true">{{ t('lobby.manage.report') }}</UiButton>
       <UiButton variant="quiet" @click="emit('close')">{{ t('lobby.manage.cancel') }}</UiButton>
     </div>
+  </UiSheet>
+
+  <UiSheet :open="player !== null && viewing" :title="player?.name ?? ''" @close="viewing = false">
+    <ProfileCard v-if="player?.handle" :handle="player.handle" />
   </UiSheet>
 
   <UiSheet :open="player !== null && removing" :title="t('lobby.manage.remove')" @close="removing = false">

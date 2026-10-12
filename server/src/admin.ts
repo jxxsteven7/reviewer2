@@ -27,6 +27,9 @@ import { MIGRATIONS } from './store/migrations';
 //
 //   node server/dist/admin.cjs avatar remove <username> [--ban]
 //   node server/dist/admin.cjs avatar allow <username>
+//   node server/dist/admin.cjs profile clear <username> [--ban]
+//   node server/dist/admin.cjs profile allow <username>
+//   node server/dist/admin.cjs profile list
 //   node server/dist/admin.cjs accounts [--json]
 //   node server/dist/admin.cjs accounts bar <username>
 //   node server/dist/admin.cjs accounts unbar <username>
@@ -45,7 +48,10 @@ import { MIGRATIONS } from './store/migrations';
 // adminCli.ts runs this, as index.ts runs main.ts.
 //
 // `avatar remove` takes an account's avatar down, as for a picture that breaks the rules, and with
-// --ban bars the account from uploading another; `avatar allow` lifts that. `feedback adopt`
+// --ban bars the account from uploading another; `avatar allow` lifts that. `profile clear` does
+// the same for the link and the bio on an account's public profile
+// (docs/architecture.md#public-profiles), `profile allow` lifts the bar, and `profile list` shows
+// every profile with a link or a bio, for the operator to look over. `feedback adopt`
 // records that the feedback was adopted, counted for the account the player was logged in to if
 // they left a name, and says when the name is another account's username; `acknowledgments add`
 // thanks someone by hand, such as a playtester, counted for the account that --account names or,
@@ -66,7 +72,7 @@ import { MIGRATIONS } from './store/migrations';
 // and never what the database keeps in place of passwords, email addresses and logins; `accounts
 // bar` keeps an account out of public rooms, as for a player others reported, and `accounts unbar`
 // lets it back in. `reports list` shows the latest reports that players sent of each other.
-// `accounts`, `list`, `trash` and `reports list` only read. DATA_DIR names the server's data, as
+// `accounts`, `list`, `trash`, `reports list` and `profile list` only read. DATA_DIR names the server's data, as
 // it does for the server. The database is opened as it is, never migrated, and the server may go
 // on running meanwhile.
 
@@ -78,6 +84,9 @@ const USAGE = [
   'usage: admin.cjs <command>, one of',
   '  avatar remove <username> [--ban]',
   '  avatar allow <username>',
+  '  profile clear <username> [--ban]',
+  '  profile allow <username>',
+  '  profile list',
   '  accounts [--json]',
   '  accounts bar <username>',
   '  accounts unbar <username>',
@@ -208,10 +217,12 @@ function printAccountStats(store: AccountStore, print: Print): void {
   print('New accounts by day, UTC, last 30 days');
   for (const { day, count } of createdByDay) print(`${day}  ${count}`);
   print('');
-  print('Registered  Games  Matches  Username');
-  for (const { username, createdAt, games, matches, barred } of accounts) {
+  const width = Math.max(2, ...accounts.map(({ id }) => String(id).length + 1));
+  print(`${'Id'.padStart(width)}  Registered  Games  Matches  Username`);
+  for (const { id, username, createdAt, games, matches, barred } of accounts) {
     print(
-      `${createdAt.slice(0, 10)}  ${String(games).padStart(5)}  ${String(matches).padStart(7)}  ${username}` +
+      `${`#${id}`.padStart(width)}  ${createdAt.slice(0, 10)}  ${String(games).padStart(5)}  ` +
+        `${String(matches).padStart(7)}  ${username}` +
         (barred ? '  (barred from public rooms)' : ''),
     );
   }
@@ -357,6 +368,54 @@ const COMMANDS: Record<string, Command> = {
       if (!account) return 1;
       data.accounts.store.setAvatarBanned(account.id, false);
       print(`${account.username} may upload an avatar again.`);
+      return 0;
+    },
+  },
+  'profile clear': {
+    words: 1,
+    flags: ['ban'],
+    run(data, [name], { ban }, print) {
+      const account = accountNamed(data, name as string, print);
+      if (!account) return 1;
+      const cleared = data.accounts.takeDownProfile(account.id, ban === true);
+      print(
+        cleared
+          ? `Cleared the link and the bio on the profile of ${account.username}.`
+          : `${account.username} has no link or bio on their profile.`,
+      );
+      if (ban) print(`${account.username} may not write a link or a bio again.`);
+      return 0;
+    },
+  },
+  'profile allow': {
+    words: 1,
+    flags: [],
+    run(data, [name], _flags, print) {
+      const account = accountNamed(data, name as string, print);
+      if (!account) return 1;
+      data.accounts.store.setProfileBanned(account.id, false);
+      print(`${account.username} may write a link and a bio again.`);
+      return 0;
+    },
+  },
+  'profile list': {
+    words: 0,
+    flags: [],
+    readOnly: true,
+    run({ accounts }, _words, _flags, print) {
+      const profiles = accounts.store.profiles();
+      if (profiles.length === 0) {
+        print('No profile has a link or a bio.');
+        return 0;
+      }
+      print(
+        profiles.length === 1 ? '1 profile with a link or a bio:' : `${profiles.length} profiles with a link or a bio:`,
+      );
+      for (const { id, username, link, bio } of profiles) {
+        print(`#${id}  ${username}`);
+        if (link !== null) print(`    link: ${link}`);
+        if (bio !== null) print(`    bio: ${bio}`);
+      }
       return 0;
     },
   },

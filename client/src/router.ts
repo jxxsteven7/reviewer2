@@ -4,6 +4,7 @@ import ConfirmEmail from './core/views/ConfirmEmail.vue';
 import ForgotPassword from './core/views/ForgotPassword.vue';
 import HomeView from './core/views/HomeView.vue';
 import NotFound from './core/views/NotFound.vue';
+import ProfilePage from './core/views/ProfilePage.vue';
 import ResetPassword from './core/views/ResetPassword.vue';
 import RoomPage from './core/views/RoomPage.vue';
 import ScreenPage from './core/views/ScreenPage.vue';
@@ -19,6 +20,8 @@ export const router = createRouter({
     // The pages that the links in mails lead to (shared/src/mail.ts).
     { path: '/account/reset', name: 'reset', component: ResetPassword },
     { path: '/account/confirm', name: 'confirm', component: ConfirmEmail },
+    // A player's public page (docs/architecture.md#public-profiles).
+    { path: '/p/:handle', name: 'profile', component: ProfilePage, props: true },
     { path: '/room/:code', name: 'room', component: RoomPage, props: true },
     { path: '/room/:code/screen', name: 'screen', component: ScreenPage, props: true },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound },

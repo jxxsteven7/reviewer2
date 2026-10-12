@@ -1,5 +1,6 @@
 import type { InvitationView } from '@reviewer2/shared';
 import { reactive, ref } from 'vue';
+import { account, loadAccount } from './account';
 import { send, socket } from './socket';
 
 // What this browser hears of its account's friends (docs/architecture.md#friends): the invitations
@@ -49,7 +50,9 @@ socket.on('connect', () => {
 });
 
 // Goes up whenever the account's friends or requests change, by this page or by the other side.
+// The account's summary, which counts the requests waiting for an answer, is asked for again too.
 export const friendsVersion = ref(0);
 socket.on('friends:changed', () => {
   friendsVersion.value += 1;
+  if (account.summary) void loadAccount();
 });

@@ -15,6 +15,7 @@ import { useRouter } from 'vue-router';
 import { changeLogin, loadAccount, request } from '../account';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
+import PlayerNumber from '../components/PlayerNumber.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { errorKey } from '../errors';
 import { toast, toastError } from '../toast';
@@ -22,13 +23,14 @@ import { useBusy } from '../useBusy';
 import ProfileAvatar from './ProfileAvatar.vue';
 import ProfileEmail from './ProfileEmail.vue';
 import ProfileFriends from './ProfileFriends.vue';
+import ProfilePublic from './ProfilePublic.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's own page: its avatar and username, its academic rank, its titles and the
-// acknowledgments counted for it, its friends, its email address, its password, its record, and the
-// ways to log out and to delete it.
+// The account's own page: its avatar and username, its number and when it registered, its
+// academic rank, its titles and the acknowledgments counted for it, its public page, its friends,
+// its email address, its password, its record, and the ways to log out and to delete it.
 const props = defineProps<{ summary: AccountSummary }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const { busy, run } = useBusy();
 
@@ -61,6 +63,15 @@ const passwordProblem = computed(() => {
 // A title or an acknowledgment, with how often it was awarded when that is more than once.
 const counted = (label: string, count: number) =>
   count > 1 ? t('account.profile.titleCount', { title: label, count }) : label;
+
+// The day the account registered, as the page's language writes it, or the ISO date if the browser can't.
+const since = computed(() => {
+  try {
+    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(props.summary.createdAt));
+  } catch {
+    return props.summary.createdAt.slice(0, 10);
+  }
+});
 
 // The rank that the account's points hold, and the next one (shared/src/ranks.ts).
 const rank = computed(() => rankFor(props.summary.points));
@@ -149,6 +160,10 @@ async function logOut() {
           t('account.profile.rename')
         }}</UiButton>
       </div>
+      <p class="line">
+        <PlayerNumber :id="summary.id" />
+        <span class="hint">{{ t('playerPage.since', { date: since }) }}</span>
+      </p>
     </section>
 
     <section class="part" aria-labelledby="profile-rank">
@@ -179,8 +194,19 @@ async function logOut() {
       </ul>
     </section>
 
+    <section class="part" aria-labelledby="profile-public">
+      <h2 id="profile-public">{{ t('account.profile.public.title') }}</h2>
+      <ProfilePublic :summary="summary" />
+    </section>
+
     <section class="part" aria-labelledby="profile-friends">
-      <h2 id="profile-friends">{{ t('friends.title') }}</h2>
+      <h2 id="profile-friends">
+        {{ t('friends.title') }}
+        <span v-if="summary.requests > 0" class="badge num">{{ summary.requests }}</span>
+        <span v-if="summary.requests > 0" class="sr-only">{{
+          t('friends.requestsWaiting', { count: summary.requests })
+        }}</span>
+      </h2>
       <ProfileFriends />
     </section>
 
@@ -310,6 +336,23 @@ h1 {
 .hint {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--red);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-black);
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .inline-form,

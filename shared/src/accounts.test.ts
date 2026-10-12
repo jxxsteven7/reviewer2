@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import {
+  checkBio,
   checkPassword,
   checkUsername,
+  HANDLE,
+  MAX_BIO_INPUT,
+  MAX_BIO_LENGTH,
   isReservedName,
   looksLikeEmail,
   MAX_PASSWORD_INPUT,
@@ -118,5 +122,37 @@ describe('an email address', () => {
       expect(looksLikeEmail(text), text).toBe(false);
     }
     expect(looksLikeEmail(`${'a'.repeat(250)}@b.cn`)).toBe(false);
+  });
+});
+
+describe('a bio', () => {
+  test('is one line, cleaned as a contact is, or none when it shows nothing', () => {
+    expect(checkBio('  Reviewer  of\tpapers \n and games ')).toEqual({
+      bio: 'Reviewer of papers and games',
+      problem: null,
+    });
+    expect(checkBio('a\u{200b}b')).toEqual({ bio: 'ab', problem: null });
+    expect(checkBio(`a${ZERO_WIDTH_JOINER}b`)).toEqual({ bio: `a${ZERO_WIDTH_JOINER}b`, problem: null });
+    expect(checkBio(ZHANG_SAN)).toEqual({ bio: ZHANG_SAN, problem: null });
+    for (const none of [undefined, '', '   ', '\u{200b}', 7 as unknown as string]) {
+      expect(checkBio(none), JSON.stringify(none)).toEqual({ bio: null, problem: null });
+    }
+  });
+
+  test('has at most 80 characters as a reader counts them, and a long text is not looked at', () => {
+    const longest = 'x'.repeat(MAX_BIO_LENGTH);
+    expect(checkBio(longest)).toEqual({ bio: longest, problem: null });
+    expect(checkBio(`${longest}x`)).toEqual({ bio: `${longest}x`, problem: 'bio_too_long' });
+    expect(checkBio('\u{1f469}\u{200d}\u{1f4bb}'.repeat(MAX_BIO_LENGTH)).problem).toBeNull();
+    expect(checkBio('x'.repeat(MAX_BIO_INPUT + 1))).toEqual({ bio: null, problem: 'bio_too_long' });
+  });
+});
+
+describe('a handle', () => {
+  test('is 12 hexadecimal digits in lower case', () => {
+    expect(HANDLE.test('0123456789ab')).toBe(true);
+    for (const wrong of ['', '0123456789', '0123456789abc', '0123456789AB', '0123456789ag', '../etc/passwd']) {
+      expect(HANDLE.test(wrong), wrong).toBe(false);
+    }
   });
 });

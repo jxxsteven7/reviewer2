@@ -1,7 +1,7 @@
 import { isReservedName } from './accounts';
 import type { Language } from './language';
 import { cleanName } from './names';
-import { dropHidden, showsSomething, textLength, trimMarks, trimStrays } from './text';
+import { cleanLine, showsSomething, textLength } from './text';
 
 // Feedback from players to the author (docs/architecture.md). The client runs these rules while a
 // player types, and the server runs them again before it keeps what was sent. What shows and what
@@ -70,14 +70,6 @@ export interface FeedbackMessage {
   language: Language;
   page: FeedbackPage;
 }
-
-// Spaces, tabs and other control characters inside a line count as one space, and so does the
-// blank Braille pattern, as in the chat.
-const SPACES = /[\s\p{Cc}\u2800]+/gu;
-
-// One line as it is kept: as a chat message is cleaned, without hidden characters, with no more
-// than four marks of a kind on any character, and without spaces or stray marks at its ends.
-const cleanLine = (line: string): string => trimStrays(trimMarks(dropHidden(line.replace(SPACES, ' '))));
 
 // Feedback as it is kept. Unlike a chat message it keeps its line breaks, because the steps that
 // lead to a bug are easier to follow one to a line. Each line is cleaned on its own, blank lines
@@ -164,22 +156,37 @@ const REFERENCE = /&#?\w+;/;
 // same, and a link with a parenthesis, as Wikipedia's, is common enough not to be refused.
 const LINK_MARKUP = /[()]/g;
 
+// A web address that a player gives of themselves, as it is kept, or null for none, or why it
+// can't be one: the link that may go with the name for the acknowledgments, and the link on a
+// public profile (accounts.ts) take the same rules. One that is only spaces is none.
+export interface WebLinkCheck {
+  link: string | null;
+  problem: 'web_link_invalid' | 'web_link_too_long' | null;
+}
+
+export function checkWebLink(text: string | undefined): WebLinkCheck {
+  if (typeof text !== 'string') return { link: null, problem: null };
+  if (text.length > MAX_LINK_INPUT) return { link: null, problem: 'web_link_too_long' };
+  const typed = text.trim();
+  if (typed === '') return { link: null, problem: null };
+  if (!LINK.test(typed) || REFERENCE.test(typed)) return { link: null, problem: 'web_link_invalid' };
+  const link = typed.replace(LINK_MARKUP, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  if (link.length > MAX_LINK_LENGTH) return { link: null, problem: 'web_link_too_long' };
+  return { link, problem: null };
+}
+
 // The link that may go with the name for the acknowledgments, to a page about the player, such as
 // a homepage or a profile on GitHub, ORCID or Google Scholar. It goes with a name only, and is
 // dropped without one. ACKNOWLEDGMENTS.md takes links by the same rules, as they are kept here
 // (acknowledgments.ts).
 export function checkLink(text: string | undefined, credit: string | null): LinkCheck {
-  if (typeof text !== 'string' || credit === null) return { link: null, problem: null };
-  if (text.length > MAX_LINK_INPUT) return { link: null, problem: 'credit_link_too_long' };
-  const typed = text.trim();
-  if (typed === '') return { link: null, problem: null };
-  if (!LINK.test(typed) || REFERENCE.test(typed)) return { link: null, problem: 'credit_link_invalid' };
-  const link = typed.replace(LINK_MARKUP, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
-  if (link.length > MAX_LINK_LENGTH) return { link: null, problem: 'credit_link_too_long' };
+  if (credit === null) return { link: null, problem: null };
+  const { link, problem } = checkWebLink(text);
+  if (problem === 'web_link_invalid') return { link, problem: 'credit_link_invalid' };
+  if (problem === 'web_link_too_long') return { link, problem: 'credit_link_too_long' };
   return { link, problem: null };
 }
 
-// The note that may come with a report, cleaned as feedback is, or null when it shows nothing.
 export function checkReport(text: string | undefined): { text: string | null; problem: 'report_too_long' | null } {
   if (typeof text !== 'string') return { text: null, problem: null };
   if (text.length > MAX_REPORT_INPUT) return { text: null, problem: 'report_too_long' };

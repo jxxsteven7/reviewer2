@@ -14,8 +14,10 @@ export interface PlayerView {
   // The address of the avatar that a player with an account uploaded. Without it, the client
   // draws the default avatar from the name.
   avatar?: string;
-  // The academic rank of a player with an account (ranks.ts). A guest has none.
+  // The academic rank of a player with an account (ranks.ts), and the handle of their public
+  // profile (accounts.ts). A guest has neither.
   rank?: Rank;
+  handle?: string;
 }
 
 // Who chairs the room when the chair has gone: the first to have joined among those online, or

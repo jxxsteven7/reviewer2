@@ -75,6 +75,10 @@ The operator's commands, which the build makes, run beside the running server:
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username>          # back to the default avatar
 DATA_DIR=data node server/dist/admin.cjs avatar remove <username> --ban    # and no more uploads
 DATA_DIR=data node server/dist/admin.cjs avatar allow <username>           # uploads again
+DATA_DIR=data node server/dist/admin.cjs profile clear <username>          # no link or bio on their public page
+DATA_DIR=data node server/dist/admin.cjs profile clear <username> --ban    # and none ever again
+DATA_DIR=data node server/dist/admin.cjs profile allow <username>          # a link and a bio again
+DATA_DIR=data node server/dist/admin.cjs profile list                      # every page with a link or a bio
 DATA_DIR=data node server/dist/admin.cjs accounts [--json]                 # statistics of the accounts
 DATA_DIR=data node server/dist/admin.cjs accounts bar <username>           # no public rooms for this account
 DATA_DIR=data node server/dist/admin.cjs accounts unbar <username>         # public rooms again

@@ -81,7 +81,7 @@ test('players with accounts play a whole game with guests, and find it on their 
   for (const states of table.everyone) {
     for (const state of states) {
       for (const player of state.players) {
-        expect(Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar', 'rank'].includes(key))).toEqual(
+        expect(Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar', 'rank', 'handle'].includes(key))).toEqual(
           [],
         );
       }
@@ -126,7 +126,7 @@ test('a new name and avatar show in the room, and a guest can not take a registe
   await ann.goto('/account');
   await ann.getByRole('button', { name: text.account.profile.rename, exact: true }).click();
   await ann.getByRole('textbox', { name: text.account.username, exact: true }).fill(renamed);
-  await ann.getByRole('button', { name: text.account.profile.renameSubmit }).click();
+  await ann.getByRole('button', { name: text.account.profile.renameSubmit, exact: true }).click();
   await expect(ann.locator('.profile .name')).toHaveText(renamed);
   await expect(guest.locator('.lobby')).toContainText(renamed);
 

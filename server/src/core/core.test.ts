@@ -258,7 +258,12 @@ describe('removals', () => {
     // A guest on browser 7 is removed, and then, two minutes later, an account on the same browser.
     expect(removeNewcomer(room, 7)).toMatchObject({ ok: true });
     clock.now += REMOVED_FOR_MS;
-    const joined = room.join('account:bob', 'Bob', false, { id: 1, avatar: null, rank: 'undergraduate' });
+    const joined = room.join('account:bob', 'Bob', false, {
+      id: 1,
+      handle: 'a1b2c3d4e5f6',
+      avatar: null,
+      rank: 'undergraduate',
+    });
     if (!joined.ok) throw new Error(joined.error);
     room.attach(joined.member, 'socket-bob', 'browser-7');
     expect(room.remove(joined.member.id)).toMatchObject({ ok: true });
@@ -271,7 +276,12 @@ describe('removals', () => {
 
   test('keep a member out by the last few browsers they were on, with or without a connection', () => {
     const room = roomOf(true);
-    const joined = room.join('account:bob', 'Bob', false, { id: 1, avatar: null, rank: 'undergraduate' });
+    const joined = room.join('account:bob', 'Bob', false, {
+      id: 1,
+      handle: 'a1b2c3d4e5f6',
+      avatar: null,
+      rank: 'undergraduate',
+    });
     if (!joined.ok) throw new Error(joined.error);
     for (let i = 0; i <= MAX_BROWSERS; i += 1) {
       room.attach(joined.member, `socket-${i}`, `browser-${i}`);

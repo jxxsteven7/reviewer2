@@ -108,6 +108,70 @@ describe('avatar remove', () => {
   });
 });
 
+describe('profile clear', () => {
+  function annWithProfile() {
+    const ann = accounts.store.create('Ann Lee', 'ann lee', 'hash');
+    if (!ann) throw new Error('no account');
+    accounts.store.setProfile(ann.id, { link: 'https://ann.example/', bio: 'Hi', showRecord: true, showThanks: false });
+    return ann;
+  }
+
+  test('clears the link and the bio, and leaves what the owner shows', () => {
+    annWithProfile();
+    expect(run('profile', 'clear', 'ANN LEE')).toBe(0);
+    expect(printed).toEqual(['Cleared the link and the bio on the profile of Ann Lee.']);
+    expect(accounts.store.byKey('ann lee')).toMatchObject({
+      profile: { link: null, bio: null, showRecord: true, showThanks: false },
+      profileBanned: false,
+    });
+    expect(run('profile', 'clear', 'Ann Lee')).toBe(0);
+    expect(printed[1]).toBe('Ann Lee has no link or bio on their profile.');
+  });
+
+  test('with --ban bars the account from writing them again, until profile allow', () => {
+    annWithProfile();
+    expect(run('profile', 'clear', 'Ann Lee', '--ban')).toBe(0);
+    expect(printed.at(-1)).toBe('Ann Lee may not write a link or a bio again.');
+    expect(accounts.store.byKey('ann lee')?.profileBanned).toBe(true);
+    expect(run('profile', 'allow', 'Ann Lee')).toBe(0);
+    expect(printed.at(-1)).toBe('Ann Lee may write a link and a bio again.');
+    expect(accounts.store.byKey('ann lee')?.profileBanned).toBe(false);
+  });
+
+  test('says so when there is no such account', () => {
+    expect(run('profile', 'clear', 'Nobody')).toBe(1);
+    expect(printed).toEqual(['No account is called Nobody.']);
+    expect(run('profile', 'list', 'Ann')).toBe(2);
+  });
+});
+
+describe('profile list', () => {
+  test('lists every profile with a link or a bio, oldest first, and says when there is none', () => {
+    expect(run('profile', 'list')).toBe(0);
+    expect(printed).toEqual(['No profile has a link or a bio.']);
+    printed.length = 0;
+    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    const bob = accounts.store.create('Bob', 'bob', 'hash');
+    accounts.store.create('Cy', 'cy', 'hash');
+    if (!ann || !bob) throw new Error('no account');
+    accounts.store.setProfile(ann.id, {
+      link: 'https://ann.example/',
+      bio: null,
+      showRecord: false,
+      showThanks: false,
+    });
+    accounts.store.setProfile(bob.id, { link: null, bio: 'Bob here', showRecord: false, showThanks: false });
+    expect(run('profile', 'list')).toBe(0);
+    expect(printed).toEqual([
+      '2 profiles with a link or a bio:',
+      '#1  Ann',
+      '    link: https://ann.example/',
+      '#2  Bob',
+      '    bio: Bob here',
+    ]);
+  });
+});
+
 describe('accounts', () => {
   const DAY = 24 * 60 * 60_000;
   const NOW = Date.UTC(2026, 10, 1, 9);
@@ -125,10 +189,10 @@ describe('accounts', () => {
     expect(printed[22]).toBe('2026-10-22  1');
     expect(printed[32]).toBe('2026-11-01  1');
     expect(printed.slice(34)).toEqual([
-      'Registered  Games  Matches  Username',
-      '2026-09-22      1        1  Ann',
-      '2026-10-22      0        0  Bob',
-      '2026-11-01      0        0  Cy',
+      'Id  Registered  Games  Matches  Username',
+      '#1  2026-09-22      1        1  Ann',
+      '#2  2026-10-22      0        0  Bob',
+      '#3  2026-11-01      0        0  Cy',
     ]);
     expect(printed.join('\n')).not.toMatch(/hash|email|token|@/);
   });
@@ -143,11 +207,11 @@ describe('accounts', () => {
     expect(json.createdByDay[0]).toEqual({ day: '2026-10-03', count: 0 });
     expect(json.createdByDay[29]).toEqual({ day: '2026-11-01', count: 1 });
     expect(json.accounts).toEqual([
-      { username: 'Ann', createdAt: '2026-09-22T09:00:00.000Z', games: 1, matches: 1, barred: false },
-      { username: 'Bob', createdAt: '2026-10-22T09:00:00.000Z', games: 0, matches: 0, barred: false },
-      { username: 'Cy', createdAt: '2026-11-01T09:00:00.000Z', games: 0, matches: 0, barred: false },
+      { id: 1, username: 'Ann', createdAt: '2026-09-22T09:00:00.000Z', games: 1, matches: 1, barred: false },
+      { id: 2, username: 'Bob', createdAt: '2026-10-22T09:00:00.000Z', games: 0, matches: 0, barred: false },
+      { id: 3, username: 'Cy', createdAt: '2026-11-01T09:00:00.000Z', games: 0, matches: 0, barred: false },
     ]);
-    expect(Object.keys(json.accounts[0])).toEqual(['username', 'createdAt', 'games', 'matches', 'barred']);
+    expect(Object.keys(json.accounts[0])).toEqual(['id', 'username', 'createdAt', 'games', 'matches', 'barred']);
   });
 
   test('takes no other flag', () => {

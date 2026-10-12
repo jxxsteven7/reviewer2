@@ -19,6 +19,7 @@ export interface Friendship {
 // A friend, or the other side of a request, as the account's page lists them.
 export interface FriendRow {
   id: number;
+  handle: string;
   username: string;
   avatar: string | null;
 }
@@ -33,7 +34,8 @@ export interface FriendCounts {
 const COLUMNS =
   'id, requester_id AS requesterId, addressee_id AS addresseeId, status, created_at AS createdAt, ' +
   'answered_at AS answeredAt';
-const OTHER = 'SELECT accounts.id, accounts.username, accounts.avatar FROM friendships JOIN accounts ON accounts.id = ';
+const OTHER =
+  'SELECT accounts.id, accounts.handle, accounts.username, accounts.avatar FROM friendships JOIN accounts ON accounts.id = ';
 
 // The clock is the system's, in milliseconds since 1970, for the times that are kept.
 export class FriendStore {
