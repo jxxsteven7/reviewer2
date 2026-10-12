@@ -34,6 +34,24 @@ describe('PlayerName', () => {
     await wrapper.find('button').trigger('click');
     expect(wrapper.emitted('manage')).toEqual([[player]]);
   });
+
+  test('shows the academic rank of a player with an account, and none for a guest', () => {
+    const ranked = mount(PlayerName, {
+      props: {
+        player: { id: 'a', name: 'Ann', online: true, rank: 'phd' as const },
+        me: false,
+        chair: false,
+        manageable: false,
+      },
+      global: global(),
+    });
+    expect(ranked.find('.rank').text()).toBe('PhD student');
+    const guest = mount(PlayerName, {
+      props: { player: { id: 'b', name: 'Bob', online: true }, me: false, chair: false, manageable: false },
+      global: global(),
+    });
+    expect(guest.find('.rank').exists()).toBe(false);
+  });
 });
 
 describe('FieldPicker', () => {

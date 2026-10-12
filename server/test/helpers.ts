@@ -1,6 +1,15 @@
 import type { AddressInfo } from 'node:net';
 import type { DatabaseSync } from 'node:sqlite';
-import type { Ack, ClosedReason, EmoteEvent, MailRequest, RoomView, Session } from '@reviewer2/shared';
+import type {
+  Ack,
+  ClosedReason,
+  EmoteEvent,
+  FriendLimits,
+  InvitationView,
+  MailRequest,
+  RoomView,
+  Session,
+} from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 import { fingerprintKey } from '../src/accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from '../src/accounts/limits';
@@ -81,6 +90,7 @@ export async function startServer(
     socketLimits?: Partial<SocketLimits>;
     feedbackLimits?: Partial<FeedbackLimits>;
     accountLimits?: Partial<AccountLimits>;
+    friendLimits?: Partial<FriendLimits>;
     hasher?: PasswordHasher;
     cookieSecure?: boolean;
     // The system's clock for what accounts keep, such as how old a login is.
@@ -114,6 +124,7 @@ export async function startServer(
     ...(options.clock && { clock: options.clock }),
     log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
     limits: { ...DEFAULT_ACCOUNT_LIMITS, ...options.accountLimits },
+    ...(options.friendLimits && { friendLimits: options.friendLimits }),
     hasher: options.hasher ?? fastHasher(),
     ...(options.mail && { mail: options.mail, fingerprintKey: fingerprintKey(TEST_SECRET) }),
     ...(options.maxAvatarBytes !== undefined && { maxAvatarBytes: options.maxAvatarBytes }),
@@ -200,6 +211,10 @@ export class TestClient {
   readonly closed: ClosedReason[] = [];
   readonly emotes: EmoteEvent[] = [];
   readonly sessions: Session[] = [];
+  // The invitations to rooms that the connection was sent, and how often it heard that its
+  // account's friends or requests changed.
+  readonly invitations: InvitationView[] = [];
+  friendsChanged = 0;
   // How often the server said that the connection's login had ended, and why it disconnected.
   loginsEnded = 0;
   readonly disconnects: string[] = [];
@@ -211,6 +226,8 @@ export class TestClient {
     socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => this.closed.push(reason));
     socket.on('room:emote', (event: EmoteEvent) => this.emotes.push(event));
     socket.on('session', (session: Session) => this.sessions.push(session));
+    socket.on('friends:invited', (invitation: InvitationView) => this.invitations.push(invitation));
+    socket.on('friends:changed', () => (this.friendsChanged += 1));
     socket.on('account:ended', () => (this.loginsEnded += 1));
     socket.on('disconnect', (reason) => this.disconnects.push(reason));
   }

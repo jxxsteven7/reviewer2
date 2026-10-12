@@ -3,9 +3,10 @@ import type { PlayerView } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from './PlayerAvatar.vue';
 
-// A player's avatar and name with their online status, and marks for "you" and the chair. For the
-// chair, and in a public room for anyone who may report a player, other players' names are
-// buttons that open the player menu.
+// A player's avatar and name with their online status, the academic rank of a player with an
+// account, small beside the name, and marks for "you" and the chair. For the chair, in a public
+// room for anyone who may report a player, and for an account that may ask another to be friends,
+// other players' names are buttons that open the player menu.
 defineProps<{ player: PlayerView; me: boolean; chair: boolean; manageable: boolean }>();
 const emit = defineEmits<{ manage: [player: PlayerView] }>();
 const { t } = useI18n();
@@ -22,6 +23,7 @@ const { t } = useI18n();
     <span class="dot" :class="{ on: player.online }" aria-hidden="true"></span>
     <PlayerAvatar :name="player.name" :avatar="player.avatar" :class="{ away: !player.online }" />
     <span class="name">{{ player.name }}</span>
+    <span v-if="player.rank" class="rank">{{ t(`ranks.names.${player.rank}`) }}</span>
     <span v-if="me" class="mark">{{ t('room.you') }}</span>
     <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
     <span v-if="!player.online" class="mark">{{ t('room.offline') }}</span>
@@ -78,6 +80,13 @@ const { t } = useI18n();
 
 .offline .name {
   color: var(--ink-2);
+}
+
+.rank {
+  flex: none;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
 }
 
 .away {

@@ -3,9 +3,10 @@ import { useI18n } from 'vue-i18n';
 import { reconnecting } from '../socket';
 import { dismiss, toasts } from '../toast';
 
-// Short messages at the top of the screen. At the bottom they would cover a sheet's input, right
-// where a player just tapped, or sit behind a phone's keyboard. While the "Reconnecting..." banner
-// shows at the top, they move down below it.
+// Short messages at the top of the screen, and below them whatever else belongs in that column,
+// such as the invitations to rooms (InvitationNotices). At the bottom they would cover a sheet's
+// input, right where a player just tapped, or sit behind a phone's keyboard. While the
+// "Reconnecting..." banner shows at the top, they move down below it.
 const { t } = useI18n();
 </script>
 
@@ -14,6 +15,7 @@ const { t } = useI18n();
     <button v-for="item in toasts" :key="item.id" type="button" class="toast" @click="dismiss(item.id)">
       {{ t(item.key, item.params) }}
     </button>
+    <slot />
   </div>
 </template>
 

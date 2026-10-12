@@ -13,7 +13,8 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 // matches award (migration 3, docs/architecture.md#matches), and the games themselves to watch
 // again (migration 7, docs/architecture.md#replays).
 
-// One player's part in one game, as the game module described it (GameModule.results()).
+// One player's part in one game, as the game module described it (GameModule.results()), with the
+// points it brought them (migration 8), scored as a match scores a game.
 export interface NewRecord {
   game: string;
   gameId: string;
@@ -22,6 +23,7 @@ export interface NewRecord {
   winner: string;
   won: boolean;
   verdict: string;
+  points: number;
 }
 
 // One player's part in one match that ran its course.
@@ -38,6 +40,7 @@ export interface NewMatchRecord {
 export class RecordStore {
   readonly #insert: StatementSync;
   readonly #totals: StatementSync;
+  readonly #points: StatementSync;
   readonly #recent: StatementSync;
   readonly #insertMatch: StatementSync;
   readonly #matchCount: StatementSync;
@@ -49,12 +52,13 @@ export class RecordStore {
   ) {
     // A game is recorded once for each account, however often the end of the game is reported.
     this.#insert = db.prepare(
-      'INSERT OR IGNORE INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     this.#totals = db.prepare(
       'SELECT count(*) AS games, coalesce(sum(won), 0) AS wins FROM game_records WHERE account_id = ?',
     );
+    this.#points = db.prepare('SELECT coalesce(sum(points), 0) AS points FROM game_records WHERE account_id = ?');
     // With each game, whether there is a replay of it to watch.
     this.#recent = db.prepare(
       'SELECT game, game_id AS gameId, ended_at AS endedAt, side, role, winner, won, verdict, ' +
@@ -75,11 +79,18 @@ export class RecordStore {
 
   // Keeps the record, and says whether it was new.
   add(accountId: number, record: NewRecord): boolean {
-    const { game, gameId, side, role, winner, won, verdict } = record;
+    const { game, gameId, side, role, winner, won, verdict, points } = record;
     const endedAt = new Date(this.now()).toISOString();
     return (
-      Number(this.#insert.run(accountId, game, gameId, endedAt, side, role, winner, won ? 1 : 0, verdict).changes) > 0
+      Number(
+        this.#insert.run(accountId, game, gameId, endedAt, side, role, winner, won ? 1 : 0, verdict, points).changes,
+      ) > 0
     );
+  }
+
+  // The points of every game on the account's record, from which its rank is told (ranks.ts).
+  points(accountId: number): number {
+    return (this.#points.get(accountId) as { points: number }).points;
   }
 
   // Keeps the match, and says whether it was new.

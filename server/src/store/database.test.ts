@@ -66,6 +66,7 @@ describe('a database in DATA_DIR', () => {
       'acknowledgments',
       'email_tokens',
       'feedback',
+      'friendships',
       'game_records',
       'match_records',
       'replays',
@@ -335,29 +336,77 @@ describe('a database in DATA_DIR', () => {
     ]);
   });
 
-  test('of the sixth release keeps its records when it gets the replays, which outlive the accounts', async () => {
+  test('of the sixth release keeps its records when it gets the replays and the friendships', async () => {
     const sixth = await open(dir, MIGRATIONS.slice(0, 6));
     sixth.db.exec(`
       INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
       INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict)
         VALUES (1, 'keywords', 'g1', 'now', 'red', 'captain', 'red', 1, 'oral'), (2, 'keywords', 'g1', 'now', 'blue', 'guesser', 'red', 0, 'reject');
+      INSERT INTO reports VALUES (NULL, 'now', 1, 2, 'Bob', 'K7QX', 'Rude');
     `);
+    const reports = sixth.db.prepare('SELECT * FROM reports').all();
     sixth.db.close();
 
     const migrated = await open(dir);
-    expect(migrated).toMatchObject({ schema: 7, migratedFrom: 6 });
-    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v7.db'));
+    expect(migrated).toMatchObject({ schema: 8, migratedFrom: 6 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v8.db'));
     const { db } = migrated;
-    expect(db.prepare('SELECT account_id, game_id FROM game_records ORDER BY id').all()).toEqual([
-      { account_id: 1, game_id: 'g1' },
-      { account_id: 2, game_id: 'g1' },
+    // The records that were there count as 0 points, and the rest is as it was.
+    expect(db.prepare('SELECT account_id, game_id, points FROM game_records ORDER BY id').all()).toEqual([
+      { account_id: 1, game_id: 'g1', points: 0 },
+      { account_id: 2, game_id: 'g1', points: 0 },
     ]);
+    expect(db.prepare('SELECT * FROM reports').all()).toEqual(reports);
+    expect(tables(db)).toEqual(expect.arrayContaining(['replays', 'friendships']));
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
     // A replay is kept once for each game, and stays when a player who was in it is deleted.
     db.exec("INSERT INTO replays VALUES ('g1', 'keywords', 'now', '{}')");
     expect(() => db.exec("INSERT INTO replays VALUES ('g1', 'keywords', 'later', '{}')")).toThrow(/UNIQUE/);
     db.exec('DELETE FROM accounts WHERE id = 1');
     expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g1' }]);
     expect(db.prepare('SELECT account_id FROM game_records').all()).toEqual([{ account_id: 2 }]);
+  });
+
+  test('of the seventh release keeps its records and replays, which count for no points, when it gets the friendships', async () => {
+    const seventh = await open(dir, MIGRATIONS.slice(0, 7));
+    seventh.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now'), (3, 'Cat', 'cat', 'h', 'now');
+      INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral');
+      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{}');
+      INSERT INTO reports VALUES (NULL, 'now', 1, 2, 'Bob', 'K7QX', 'Rude');
+    `);
+    const reports = seventh.db.prepare('SELECT * FROM reports').all();
+    seventh.db.close();
+
+    const migrated = await open(dir);
+    expect(migrated).toMatchObject({ schema: 8, migratedFrom: 7 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v8.db'));
+    const { db } = migrated;
+    // The record that was there counts as 0 points, and the rest is as it was.
+    expect(db.prepare('SELECT game_id, verdict, points FROM game_records').all()).toEqual([
+      { game_id: 'g', verdict: 'oral', points: 0 },
+    ]);
+    expect(db.prepare('SELECT game_id, data FROM replays').all()).toEqual([{ game_id: 'g', data: '{}' }]);
+    expect(db.prepare('SELECT * FROM reports').all()).toEqual(reports);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    db.exec(
+      "INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g2', 'now', 'blue', 'guesser', 'red', 0, 'reject', -2)",
+    );
+    expect(db.prepare('SELECT sum(points) AS points FROM game_records WHERE account_id = 1').get()).toEqual({
+      points: -2,
+    });
+
+    // A pair of accounts has one row, whichever way round, of one of the three statuses, and never
+    // an account with itself; the rows go with either account, and the replay stays.
+    db.exec("INSERT INTO friendships VALUES (NULL, 1, 2, 'pending', 'now', NULL)");
+    expect(() => db.exec("INSERT INTO friendships VALUES (NULL, 2, 1, 'pending', 'now', NULL)")).toThrow(/UNIQUE/);
+    expect(() => db.exec("INSERT INTO friendships VALUES (NULL, 1, 1, 'pending', 'now', NULL)")).toThrow(/CHECK/);
+    expect(() => db.exec("INSERT INTO friendships VALUES (NULL, 1, 3, 'maybe', 'now', NULL)")).toThrow(/CHECK/);
+    expect(() => db.exec("INSERT INTO friendships VALUES (NULL, 1, 9, 'pending', 'now', NULL)")).toThrow(/FOREIGN KEY/);
+    db.exec("INSERT INTO friendships VALUES (NULL, 3, 1, 'accepted', 'now', 'now')");
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT count(*) AS n FROM friendships').get()).toEqual({ n: 0 });
+    expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g' }]);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
@@ -522,6 +571,7 @@ describe('a database in memory', () => {
       'acknowledgments',
       'email_tokens',
       'feedback',
+      'friendships',
       'game_records',
       'match_records',
       'replays',

@@ -1,5 +1,6 @@
 import type { Language } from './language';
 import type { MatchView } from './match';
+import type { Rank } from './ranks';
 
 // What every member of a room sees of it. The game's own part, such as seats and the board, is
 // in `data`; the server builds it for each viewer separately (docs/architecture.md).
@@ -13,6 +14,8 @@ export interface PlayerView {
   // The address of the avatar that a player with an account uploaded. Without it, the client
   // draws the default avatar from the name.
   avatar?: string;
+  // The academic rank of a player with an account (ranks.ts). A guest has none.
+  rank?: Rank;
 }
 
 // Who chairs the room when the chair has gone: the first to have joined among those online, or

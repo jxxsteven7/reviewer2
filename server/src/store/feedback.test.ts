@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
 import { AcknowledgmentStore } from './acknowledgments';
-import { openDatabase } from './database';
+import { databaseBytes, openDatabase } from './database';
 import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, feedbackLimits, type NewFeedback } from './feedback';
 
 const DAY = 24 * 60 * 60_000;
@@ -193,7 +193,8 @@ describe('no more feedback is taken', () => {
   });
 
   test('whatever else the database holds, until the whole database is larger than its limit', () => {
-    const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxDatabaseBytes: 256 * 1024 });
+    // The limit is set above what the schema takes, so that the test holds as the schema grows.
+    const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxDatabaseBytes: databaseBytes(db) + 256 * 1024 });
     db.exec('CREATE TABLE filler (data BLOB) STRICT');
     const fill = db.prepare('INSERT INTO filler VALUES (randomblob(4096))');
     for (let i = 0; i < 20; i += 1) fill.run();

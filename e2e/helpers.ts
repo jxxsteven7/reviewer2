@@ -98,21 +98,36 @@ export { expect };
 // the network or the WebSocket provoke: "Failed to load resource: ..." and "WebSocket
 // connection to ... failed", worded a little differently by each browser.
 const NETWORK_NOTICE = /Failed to load resource|WebSocket|network/i;
+// What WebKit reports, as a page error or on the console, when the page loads another page while a
+// long-polling request of the connection is still out, which takes the request with it: a page
+// that has logged in connects at once, and a test may load the next page before the connection has
+// left long polling behind. Playwright hands the text over without the "XMLHttpRequest cannot
+// load" that WebKit shows in front of the address. Only the connection's own requests are let
+// through; a script error says something else.
+const LEFT_WHILE_POLLING = /^\S*\/socket\.io\/\?\S+ due to access control checks\.$/;
 
 // A new player in the language: a browser context of their own, on the project's device.
 export async function newPlayer(browser: Browser, language: Language = 'en'): Promise<Page> {
   const context = await browser.newContext({ locale: language === 'zh' ? 'zh-CN' : 'en-US' });
   contexts.push(context);
   const page = await context.newPage();
-  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('pageerror', (error) => {
+    if (!LEFT_WHILE_POLLING.test(error.message)) pageErrors.push(error.message);
+  });
   // The production build of Vue doesn't throw an error from a component, a watcher or a click
   // handler: it hands it to console.error, and the page goes on with what it had. Such an error
   // counts all the same.
   page.on('console', (message) => {
-    if (message.type() === 'error' && !NETWORK_NOTICE.test(message.text())) pageErrors.push(message.text());
+    const text = message.text();
+    if (message.type() === 'error' && !NETWORK_NOTICE.test(text) && !LEFT_WHILE_POLLING.test(text)) {
+      pageErrors.push(text);
+    }
   });
   return page;
 }
+
+// What Chromium says of a response whose page has loaded another page before the body was read.
+const NAVIGATED_AWAY = /navigated away/;
 
 const snapshots = new WeakMap<Page, RoomView[]>();
 // The lists of every page of the current test, for the checks at its end.
@@ -148,9 +163,11 @@ export function snapshotsOf(page: Page): RoomView[] {
     try {
       text = await response.text();
     } catch (error) {
-      // The page closed before the body came, at the end of the test. For any other reason, the
-      // snapshots in the body went unchecked, and the test fails.
-      if (page.isClosed()) return;
+      // The page closed before the body came, at the end of the test, or it loaded another page
+      // meanwhile, which takes the connection with it: a page that has logged in connects at once,
+      // and a test may load the next page before the connection has left long polling behind. For
+      // any other reason, the snapshots in the body went unchecked, and the test fails.
+      if (page.isClosed() || NAVIGATED_AWAY.test(String(error))) return;
       pageErrors.push(`the body of a polling response was lost: ${String(error)}`);
       return;
     }
@@ -303,8 +320,11 @@ export async function createRoom(
 ): Promise<string> {
   const text = TEXT[language];
   await page.goto('/');
-  // The language's button begins with the language's name, and goes on with a description.
-  await page.getByRole('button', { name: new RegExp(`^${literally(text.language[language])}`) }).click();
+  // The language gate stands on the browser's first visit. Its button begins with the language's
+  // name, and goes on with a description.
+  await expect(page.locator('.gate, .home').first()).toBeVisible();
+  const gate = page.getByRole('button', { name: new RegExp(`^${literally(text.language[language])}`) });
+  if (await gate.count()) await gate.click();
   await page.getByRole('button', { name: text.home.newRoom }).click();
   await expect(page.locator('.fields li').first()).toBeVisible();
   // A player who is logged in has their username, and is asked for no name.

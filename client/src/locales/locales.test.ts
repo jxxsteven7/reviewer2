@@ -5,7 +5,9 @@ import {
   EMAIL_STATES,
   FEEDBACK_ERRORS,
   FEEDBACK_KINDS,
+  FRIEND_ERRORS,
   KEYWORDS_ERRORS,
+  RANKS,
   REPORT_ERRORS,
   ROOM_ERRORS,
   SEAT_ERRORS,
@@ -61,6 +63,7 @@ describe('locale files', () => {
       ...ROOM_ERRORS,
       ...FEEDBACK_ERRORS,
       ...REPORT_ERRORS,
+      ...FRIEND_ERRORS,
       ...ACCOUNT_ERRORS,
       ...KEYWORDS_ERRORS,
       ...SEAT_ERRORS,
@@ -70,9 +73,10 @@ describe('locale files', () => {
     }
   });
 
-  test('say every state of an email address, and name every title', () => {
+  test('say every state of an email address, and name every title and every rank', () => {
     for (const state of EMAIL_STATES) expect(en.has(`account.profile.emailStates.${state}`), state).toBe(true);
     for (const title of TITLES) expect(en.has(`account.profile.titleNames.${title}`), title).toBe(true);
+    for (const rank of RANKS) expect(en.has(`ranks.names.${rank}`), rank).toBe(true);
   });
 
   test('name every kind of feedback, of acknowledgment and of sponsor', () => {

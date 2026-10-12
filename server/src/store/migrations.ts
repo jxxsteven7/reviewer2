@@ -224,4 +224,29 @@ export const MIGRATIONS: readonly string[] = [
     data TEXT NOT NULL
   ) STRICT;
   `,
+  // 8: friends and academic ranks (docs/architecture.md#friends, docs/architecture.md#academic-ranks).
+  //
+  // - game_records get the points of the game, scored as a match scores it, which add up to the
+  //   account's rank. The records from before count as 0.
+  // - friendships: one row for each pair of accounts between which a request is open, was declined
+  //   or was accepted: who asked whom, how it stands, when it was asked and when it was answered. A
+  //   pair has one row whichever way it was asked, by the index on the ordered pair. It is a
+  //   relationship, not an archive: a friendship that is removed is deleted, a declined request once
+  //   its wait is over, and everything goes with either account.
+  `
+  ALTER TABLE game_records ADD COLUMN points INTEGER NOT NULL DEFAULT 0;
+
+  CREATE TABLE friendships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    requester_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    addressee_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'declined')),
+    created_at TEXT NOT NULL,
+    answered_at TEXT,
+    CHECK (requester_id <> addressee_id)
+  ) STRICT;
+  CREATE UNIQUE INDEX friendships_pair ON friendships (min(requester_id, addressee_id), max(requester_id, addressee_id));
+  CREATE INDEX friendships_requester ON friendships (requester_id);
+  CREATE INDEX friendships_addressee ON friendships (addressee_id);
+  `,
 ];

@@ -5,6 +5,8 @@ import {
   checkUsername,
   MAX_NAME_INPUT,
   MAX_PASSWORD_INPUT,
+  nextRank,
+  rankFor,
   type AccountSummary,
 } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
@@ -19,10 +21,12 @@ import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import ProfileAvatar from './ProfileAvatar.vue';
 import ProfileEmail from './ProfileEmail.vue';
+import ProfileFriends from './ProfileFriends.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's own page: its avatar and username, its titles and the acknowledgments counted for
-// it, its email address, its password, its record, and the ways to log out and to delete it.
+// The account's own page: its avatar and username, its academic rank, its titles and the
+// acknowledgments counted for it, its friends, its email address, its password, its record, and the
+// ways to log out and to delete it.
 const props = defineProps<{ summary: AccountSummary }>();
 const { t } = useI18n();
 const router = useRouter();
@@ -57,6 +61,10 @@ const passwordProblem = computed(() => {
 // A title or an acknowledgment, with how often it was awarded when that is more than once.
 const counted = (label: string, count: number) =>
   count > 1 ? t('account.profile.titleCount', { title: label, count }) : label;
+
+// The rank that the account's points hold, and the next one (shared/src/ranks.ts).
+const rank = computed(() => rankFor(props.summary.points));
+const next = computed(() => nextRank(props.summary.points));
 
 // Sends a change, and shows what the server had against it.
 async function change(path: string, body: object): Promise<boolean> {
@@ -143,6 +151,18 @@ async function logOut() {
       </div>
     </section>
 
+    <section class="part" aria-labelledby="profile-rank">
+      <h2 id="profile-rank">{{ t('ranks.title') }}</h2>
+      <p class="rank-line">
+        <span class="rank">{{ t(`ranks.names.${rank}`) }}</span>
+        <span class="num">{{ t('ranks.points', { points: summary.points }) }}</span>
+      </p>
+      <p class="hint">
+        {{ next ? t('ranks.next', { points: next.points, rank: t(`ranks.names.${next.rank}`) }) : t('ranks.top') }}
+      </p>
+      <p class="hint">{{ t('ranks.note') }}</p>
+    </section>
+
     <section
       v-if="summary.titles.length || summary.acknowledgments.length"
       class="part"
@@ -157,6 +177,11 @@ async function logOut() {
           {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
         </li>
       </ul>
+    </section>
+
+    <section class="part" aria-labelledby="profile-friends">
+      <h2 id="profile-friends">{{ t('friends.title') }}</h2>
+      <ProfileFriends />
     </section>
 
     <section class="part" aria-labelledby="profile-email">
@@ -266,6 +291,25 @@ h1 {
   font-size: var(--text-xl);
   font-weight: var(--weight-black);
   overflow-wrap: anywhere;
+}
+
+.rank-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.rank {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-display);
+  font-synthesis: none;
+}
+
+.hint {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
 }
 
 .inline-form,

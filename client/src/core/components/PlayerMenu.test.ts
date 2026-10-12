@@ -6,7 +6,9 @@ import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import PlayerMenu from './PlayerMenu.vue';
 
-const send = vi.hoisted(() => vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean; error?: string }>>());
+const send = vi.hoisted(() =>
+  vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean; error?: string; status?: string }>>(),
+);
 vi.mock('../socket', () => ({ send, act: (event: string, payload: object = {}) => send(event, payload) }));
 const signedIn = vi.hoisted(() => ({ account: { loaded: true, summary: null as object | null, mail: false } }));
 vi.mock('../account', () => signedIn);
@@ -103,6 +105,27 @@ describe('PlayerMenu', () => {
     expect(send).toHaveBeenCalledWith('room:report', { playerId: 'bob', text: 'Rude clues' });
     expect(wrapper.emitted('close')).toHaveLength(1);
     wrapper.unmount();
+  });
+
+  test('offers an account to ask a player with an account to be friends, and says how it went', async () => {
+    signedIn.account.summary = { username: 'Ann', avatar: null };
+    const ranked = { ...bob, rank: 'phd' as const };
+    send.mockResolvedValue({ ok: true, status: 'pending' });
+    const wrapper = mount(PlayerMenu, { props: { player: ranked, room: view('cat', false) }, global: global() });
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['×', 'Add friend', 'Cancel']);
+    button('Add friend').click();
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('friends:request', { playerId: 'bob' });
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    wrapper.unmount();
+    // Not to a guest, who has no rank, and not by a guest.
+    const guest = mount(PlayerMenu, { props: { player: bob, room: view('cat', false) }, global: global() });
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['×', 'Cancel']);
+    guest.unmount();
+    signedIn.account.summary = null;
+    const asGuest = mount(PlayerMenu, { props: { player: ranked, room: view('cat', false) }, global: global() });
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['×', 'Cancel']);
+    asGuest.unmount();
   });
 
   test('shows what the server had against a report, and offers none to guests or in private rooms', async () => {

@@ -24,10 +24,13 @@ export const roomLink = (code: string): string => `${window.location.origin}/roo
 // has sent the room, and goes with every request to be let back in, so that a code that has since
 // gone to another room doesn't take the page there (docs/architecture.md). Opening a room makes a
 // new object, so that an answer or a snapshot can be told to belong to the room that is wanted now.
+// An invitation from a friend (docs/architecture.md#friends) goes with the request in place of the
+// code, until the page is in: from then on it is a member, and comes back by the code.
 interface Wanted {
   code: string;
   screen: boolean;
   roomId?: string;
+  invitation?: string;
 }
 
 let wanted: Wanted | null = null;
@@ -48,10 +51,15 @@ function isWanted(view: RoomView): boolean {
   return wanted.roomId === undefined ? view.code === parseCode(wanted.code) : view.roomId === wanted.roomId;
 }
 
+// The page is in the room. The invitation, if one brought it, has done its work: from here on the
+// page comes back as a member, by the code and the room's ID.
 function show(view: RoomView): void {
   room.value = view;
   entry.status = 'in';
-  if (wanted) wanted.roomId = view.roomId;
+  if (wanted) {
+    wanted.roomId = view.roomId;
+    delete wanted.invitation;
+  }
   setHandshake(view.me === null ? { watch: view.code, roomId: view.roomId } : { code: view.code, roomId: view.roomId });
 }
 
@@ -94,17 +102,19 @@ interface Newcomer {
 async function ask(newcomer?: Newcomer): Promise<Ack> {
   const asked = wanted;
   if (!asked) return { ok: false, error: 'unknown' };
-  const { code, screen, roomId } = asked;
+  const { code, screen, roomId, invitation } = asked;
   // A newcomer stays on the name form while their name is on its way; the form says so itself.
   if (entry.status !== 'in' && !newcomer) entry.status = 'joining';
   const reply = await send<{ code: string; roomId: string }>(screen ? 'room:watch' : 'room:join', {
     code,
     ...(roomId === undefined ? {} : { roomId }),
+    ...(invitation === undefined || screen ? {} : { invitation }),
     ...(screen || !newcomer ? {} : newcomer),
   });
   if (wanted !== asked) return reply; // the page has left this room, or wants another one now
   if (reply.ok) {
     asked.roomId = reply.roomId;
+    delete asked.invitation;
     if (!room.value) entry.status = 'joining';
     return reply;
   }
@@ -127,17 +137,20 @@ async function ask(newcomer?: Newcomer): Promise<Ack> {
     default:
       // A newcomer whose name was refused stays on the name form, which shows the reason; one
       // whom the room, public by now, sends to log in leaves it for the notice, which has the
-      // way to the account page and back.
-      if (!newcomer || reply.error === 'account_required') {
+      // way to the account page and back, and so does one whose invitation lapsed meanwhile.
+      if (!newcomer || reply.error === 'account_required' || reply.error === 'invitation_expired') {
         Object.assign(entry, { status: 'failed', error: reply.error });
       }
   }
   return reply;
 }
 
-// Opens a room by its code, as a player or as a screen.
-export function openRoom(code: string, { screen = false } = {}): void {
-  wanted = { code, screen };
+// Opens a room by its code, as a player or as a screen, or with the invitation that a friend sent.
+export function openRoom(
+  code: string,
+  { screen = false, invitation }: { screen?: boolean; invitation?: string } = {},
+): void {
+  wanted = { code, screen, ...(invitation === undefined ? {} : { invitation }) };
   room.value = null;
   Object.assign(entry, { status: 'connecting', language: null, closed: null, error: null });
   setHandshake(screen ? { watch: code } : { code });

@@ -315,6 +315,7 @@ describe('deleting the account', () => {
       winner: 'red',
       won: true,
       verdict: 'oral',
+      points: 11,
     });
 
     expect((await browser.request('/api/account/delete', { password: 'wrong horse' })).body.error).toBe(

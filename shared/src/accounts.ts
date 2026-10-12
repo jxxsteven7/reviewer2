@@ -98,12 +98,14 @@ export interface TitleCount {
 }
 
 // What the owner of an account sees of it. `avatar` is the address of the uploaded avatar, or
-// null for the default one, which the client draws from the username. `acknowledgments` is how
-// often the account is thanked for each kind of help (acknowledgments.ts).
+// null for the default one, which the client draws from the username. `points` are those of every
+// game finished, from which the client tells the rank (ranks.ts). `acknowledgments` is how often
+// the account is thanked for each kind of help (acknowledgments.ts).
 export interface AccountSummary {
   username: string;
   avatar: string | null;
   email: EmailState;
+  points: number;
   titles: TitleCount[];
   acknowledgments: AcknowledgmentCount[];
 }
