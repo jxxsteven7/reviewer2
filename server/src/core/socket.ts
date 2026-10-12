@@ -256,27 +256,31 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // What the end of a game leaves behind for the players with accounts, as the game describes
   // their part in it (GameModule.results()): the game on each of their records, with the points it
-  // brought them (Room.points()), their ranks as they are now for everyone to see, and, once any of
-  // them took part, the game itself to watch again (GameModule.replay()). Whoever had left by then
-  // has no part in its end, and a game that the chair withdrew counts for nobody. Whatever else is
-  // to be kept of a finished game goes here, after the records.
+  // brought them (Room.points()), and their ranks as they are now for everyone to see. Whoever had
+  // left by then has no part in its end, and a game that the chair withdrew counts for nobody.
+  // Then, once anyone with an account has played in it, those who left included, the record of the
+  // game itself (docs/architecture.md#game-records): the replay to watch again
+  // (GameModule.replay()), the log of everything that happened, and which player was which
+  // account. Whatever else is to be kept of a finished game goes here, after the records.
   function keepRecords(room: Room): void {
     const results = accounts && room.gameId !== null ? room.results() : null;
     if (!results || !accounts) return;
     const gameId = room.gameId as string;
     const points = room.points();
-    let played = 0;
     for (const { playerId, ...result } of results) {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
-      played += 1;
       accounts.record(account.id, { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, ...result });
       room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id));
     }
-    if (played === 0) return;
+    const kept = room.record();
+    if (!kept || kept.accounts.length === 0) return;
     const replay = room.replay();
-    if (replay !== null) safely('replay', () => accounts.keepReplay({ game: room.game.id, gameId, replay }));
+    if (replay === null) return;
+    if (kept.overflowed) log('game_log_too_large', { code: room.code });
+    const { log: gameLog, accounts: players } = kept;
+    safely('replay', () => accounts.keepReplay({ game: room.game.id, gameId, replay, log: gameLog, players }));
   }
 
   // The last match of each room whose end has been logged and recorded.
@@ -957,7 +961,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const found = membership(socket);
       if (!found) return fail('not_member');
       const { room, member } = found;
-      const result = room.emote(member.id);
+      const result = room.emote(member.id, emote);
       if (!result.ok) return result;
       const event: EmoteEvent = { roomId: room.id, playerId: member.id, emote };
       io.to(room.connections()).emit('room:emote', event);

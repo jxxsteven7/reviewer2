@@ -3,7 +3,7 @@ import { MAX_EMAIL_LENGTH } from './accounts';
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
 import { MAX_CUSTOM_INPUT } from './games/keywords/custom';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
-import { ROLES, TEAMS } from './games/keywords/types';
+import { BOARD_SIZE, ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
 import { MATCH_GAMES, MATCH_GROUPINGS, MATCH_TEAMS } from './match';
 import { EMOTES, MAX_NAME_INPUT } from './protocol';
@@ -139,7 +139,14 @@ const moment = { gameId, turn: z.number().int().min(1).max(10_000) };
 
 export const KEYWORDS_MESSAGES = {
   'keywords:seat': z.object({ team: z.enum(TEAMS).nullable(), role: z.enum(ROLES) }),
-  'keywords:clue': z.object({ ...moment, word: z.string(), count: z.union([z.number(), z.literal('unlimited')]) }),
+  // The cards the captain marks as the ones the clue is meant for, which the rules check, are up
+  // to the captain; a list longer than the board is no list of its cards.
+  'keywords:clue': z.object({
+    ...moment,
+    word: z.string(),
+    count: z.union([z.number(), z.literal('unlimited')]),
+    targets: z.array(z.number()).max(BOARD_SIZE).optional(),
+  }),
   // A guesser chooses a card for the group to see, or takes the choice back with null.
   'keywords:select': z.object({ ...moment, card: z.number().int().nullable() }),
   'keywords:reveal': z.object({ ...moment, card: z.number().int() }),

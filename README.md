@@ -38,8 +38,8 @@ What we promise players:
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
 - **Feedback** is read only by the project's operator, unless you agree to its becoming a GitHub issue, which shows its text and the name you left, never your contact. A contact is kept as written and deleted after 90 days. The feedback itself is kept as the project's archive of suggestions; only what the operator discards, such as spam, is deleted 30 days after it is discarded.
 - **Reports** of players in public rooms are read only by the operator, and kept for good. A report keeps who reported whom, the name the reported player had in the room, the room's number and the note the reporter wrote.
-- **Replays** of finished games are kept for good when a player with an account took part, for them to watch again: the board, the clues, and the nicknames of those who revealed a card, guests included. A room with the chair's own words keeps none.
-- **Deleting an account** deletes everything of it, except that feedback sent from it, acknowledgments counted for it, reports it sent or got, and replays of games it played in, which others played in too, stay, no longer linked to it; backups keep the rest only until they expire.
+- **Games are recorded** for good when a player with an account played in them: the board, every move and when it came, such as each clue, choice and reveal, and who made it, linked to their account if they have one. The cards a PI marks as the ones a clue is meant for are hidden from everyone during the game and shown to its players afterwards. Group chat is never recorded, and neither is a game that the chair ended early or played with their own words. The players with accounts can watch a game again: the board, the clues and the nicknames of those who revealed a card, guests included.
+- **Deleting an account** deletes everything of it, except that feedback sent from it, acknowledgments counted for it, reports it sent or got, and the records of games it played in, which others played in too, stay, no longer linked to it; backups keep the rest only until they expire.
 
 ## Status
 

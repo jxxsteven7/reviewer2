@@ -2,6 +2,7 @@
 import {
   defaultSettings,
   type ChatMessage,
+  type ClueRecord,
   type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
@@ -439,16 +440,18 @@ describe('CluePanel', () => {
     { word: JOURNAL, revealed: false, translations: ['Journal'] },
     { word: 'Data', revealed: false, translations: [DATA], forms: ['dataset'] },
   ];
-  const panel = (settings: KeywordsSettings = STANDARD, language: 'en' | 'zh' = 'en') =>
+  const panel = (settings: KeywordsSettings = STANDARD, language: 'en' | 'zh' = 'en', targets: number[] = []) =>
     mount(CluePanel, {
       props: {
         game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView,
         settings,
         language,
         busy: false,
+        targets,
       },
       global: global(),
     });
+  const chosen = (wrapper: ReturnType<typeof panel>) => wrapper.get('.counts button.chosen').text();
   const counts = (wrapper: ReturnType<typeof panel>) =>
     wrapper.findAll('.counts button').map((button) => button.text());
 
@@ -551,6 +554,41 @@ describe('CluePanel', () => {
     );
   });
 
+  test('says that the PI may mark the cards the clue is for, and names them once marked', async () => {
+    const wrapper = panel();
+    expect(wrapper.get('.targets').classes()).toContain('none');
+    expect(wrapper.get('.targets').text()).toBe(
+      "Tap your group's cards to mark the ones this clue is for, and the number follows. " +
+        'Nobody sees the marks until the game is over.',
+    );
+    await wrapper.setProps({ targets: [1, 0] });
+    expect(wrapper.get('.targets').classes()).not.toContain('none');
+    expect(wrapper.get('.targets').text()).toBe(
+      'Marked: \u201cPeer review\u201d and \u201cModel\u201d. Everyone sees them after the game.',
+    );
+  });
+
+  test('sets the number to how many cards are marked, until the PI picks one', async () => {
+    const wrapper = panel({ ...STANDARD, guessRule: 'free' });
+    expect(chosen(wrapper)).toBe('1');
+    await wrapper.setProps({ targets: [0, 1, 2] });
+    expect(chosen(wrapper)).toBe('3');
+    await wrapper.setProps({ targets: [0, 1] });
+    expect(chosen(wrapper)).toBe('2');
+    // With no card marked, the number goes back to where it started.
+    await wrapper.setProps({ targets: [] });
+    expect(chosen(wrapper)).toBe('1');
+    await wrapper.setProps({ targets: [0, 1] });
+    // The PI picks a number: from then on it stays, whatever is marked.
+    const four = wrapper.findAll('.counts button').find((button) => button.text() === '4');
+    await four?.trigger('click');
+    await wrapper.setProps({ targets: [0] });
+    expect(chosen(wrapper)).toBe('4');
+    await wrapper.get('input').setValue('Science');
+    await wrapper.get('form').trigger('submit');
+    expect(wrapper.emitted('give')).toEqual([['Science', 4]]);
+  });
+
   // A Chinese room's page is in Chinese, and there a clue is one word whatever the settings.
   test('tells a Chinese room plainly that a clue has no spaces, and that English may do', async () => {
     const wrapper = mount(CluePanel, {
@@ -627,6 +665,21 @@ describe('ReplayViewer', () => {
     result: { winner: 'red', reason: 'found' },
     players: { bob: 'Bob' },
   };
+
+  test("shows the cards the PI meant through the clue's turn, and names them at the clue", async () => {
+    const meant: KeywordsReplay = { ...replay, history: [{ ...(replay.history[0] as ClueRecord), targets: [1, 0] }] };
+    const wrapper = mount(ReplayViewer, { props: { replay: meant }, global: global() });
+    expect(wrapper.findAll('.target')).toHaveLength(0);
+    await wrapper.get('input[type="range"]').setValue('1');
+    expect(wrapper.get('.step').text()).toContain('Meant: Model and Baseline');
+    expect(wrapper.findAll('.board button')[0]?.find('.target').text()).toBe('2');
+    expect(wrapper.findAll('.board button')[1]?.find('.target').text()).toBe('1');
+    expect(wrapper.findAll('.board button')[2]?.find('.target').exists()).toBe(false);
+    // The step of the guess keeps the numbers, and names the guess instead.
+    await wrapper.get('input[type="range"]').setValue('2');
+    expect(wrapper.get('.step').text()).not.toContain('Meant');
+    expect(wrapper.findAll('.target')).toHaveLength(2);
+  });
 
   test('keeps its step when the same game comes again, and starts over with another game', async () => {
     const wrapper = mount(ReplayViewer, { props: { replay }, global: global() });
@@ -753,6 +806,25 @@ describe('ClueLog', () => {
     expect(items[1]?.text()).toContain('[1]');
     expect(items[1]?.findAll('.event').map((line) => line.text())).toEqual(['The Red group asked for an extension']);
     expect(items[1]?.classes()).toContain('red');
+  });
+
+  test('names the cards a PI meant, once they are known, and how many of them the group found', () => {
+    const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
+    const history: KeywordsView['history'] = [
+      { turn: 1, team: 'red', word: 'Loss', count: 1, guesses: [] },
+      {
+        turn: 2,
+        team: 'red',
+        word: 'Science',
+        count: 2,
+        guesses: [{ card: 0, color: 'red', player: 'bob' }],
+        targets: [2, 0],
+      },
+    ];
+    const wrapper = mount(ClueLog, { props: { game: { ...game, history } }, global: global() });
+    const items = wrapper.findAll('li');
+    expect(items[0]?.get('.meant').text()).toBe('Meant: Journal and Baseline \u00b7 1 of 2 found');
+    expect(items[1]?.find('.meant').exists()).toBe(false);
   });
 
   test('shows a revealed card by its color alone while the game is paused, since there is no board', () => {
@@ -946,6 +1018,53 @@ describe('KeywordsGame', () => {
     expect(card(wrapper, 0)?.classes()).toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').attributes('disabled')).toBeUndefined();
     send.mockImplementation(async () => ({ ok: true }));
+  });
+
+  test("lets the PI mark the group's cards that are still hidden, and sends them with the clue", async () => {
+    const view = room('ann');
+    const data = view.data as KeywordsRoomData;
+    const game: KeywordsView = {
+      ...(data.game as KeywordsView),
+      phase: 'clue',
+      clue: null,
+      cards: [
+        { word: 'Baseline', revealed: false, color: 'red' },
+        { word: 'Model', revealed: false, color: 'blue' },
+        { word: 'Journal', revealed: true, color: 'red' },
+        { word: 'Ablation', revealed: false, color: 'red' },
+      ],
+    };
+    const props = { room: { ...view, data: { ...data, game } } };
+    const wrapper = mount(KeywordsGame, { props, global: global() });
+    const sent = send.mock.calls.length;
+    // The other group's card and a revealed one can't be marked.
+    expect(card(wrapper, 1)?.attributes('aria-disabled')).toBe('true');
+    expect(card(wrapper, 2)?.attributes('aria-disabled')).toBe('true');
+    await card(wrapper, 3)?.trigger('click');
+    await card(wrapper, 0)?.trigger('click');
+    await card(wrapper, 1)?.trigger('click');
+    expect(card(wrapper, 3)?.get('.target').text()).toBe('1');
+    expect(card(wrapper, 0)?.get('.target').text()).toBe('2');
+    expect(card(wrapper, 0)?.attributes('aria-pressed')).toBe('true');
+    expect(card(wrapper, 1)?.find('.target').exists()).toBe(false);
+    expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('2');
+    // A second tap takes a mark back. Marking sends nothing until the clue goes.
+    await card(wrapper, 3)?.trigger('click');
+    await card(wrapper, 3)?.trigger('click');
+    expect(card(wrapper, 0)?.get('.target').text()).toBe('1');
+    expect(send.mock.calls.length).toBe(sent);
+    await wrapper.get('.clue-panel input').setValue('Science');
+    await wrapper.get('form.clue-panel').trigger('submit');
+    expect(send).toHaveBeenLastCalledWith('keywords:clue', {
+      gameId: 'g1',
+      turn: 2,
+      word: 'Science',
+      count: 2,
+      targets: [0, 3],
+    });
+    // The next turn starts with no marks.
+    await wrapper.setProps({ room: { ...props.room, data: { ...data, game: { ...game, turn: 4 } } } });
+    expect(wrapper.findAll('.target')).toHaveLength(0);
   });
 
   test('shows both letters to a player who sat down only after the game, as to a spectator', () => {

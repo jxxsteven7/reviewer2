@@ -67,6 +67,7 @@ describe('a database in DATA_DIR', () => {
       'email_tokens',
       'feedback',
       'friendships',
+      'game_players',
       'game_records',
       'match_records',
       'replays',
@@ -460,6 +461,37 @@ describe('a database in DATA_DIR', () => {
     });
   });
 
+  test('of the ninth release keeps its replays, with no log, when it gets the record of who played', async () => {
+    const ninth = await open(dir, MIGRATIONS.slice(0, 9));
+    ninth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
+      INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
+      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}');
+    `);
+    ninth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 10));
+    expect(migrated).toMatchObject({ schema: 10, migratedFrom: 9 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v10.db'));
+    const { db } = migrated;
+    // The replay that was there is as it was, with no log, and the records too.
+    expect(db.prepare('SELECT game_id, data, log FROM replays').all()).toEqual([
+      { game_id: 'g', data: '{"cards":[]}', log: null },
+    ]);
+    expect(db.prepare('SELECT game_id, points FROM game_records').all()).toEqual([{ game_id: 'g', points: 4 }]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+
+    // A player of a game is one account, once; the row goes with the account, and the game stays.
+    db.exec("INSERT INTO game_players VALUES ('g', 'p1', 1), ('g', 'p2', 2), ('g', 'p3', 1)");
+    expect(() => db.exec("INSERT INTO game_players VALUES ('g', 'p1', 2)")).toThrow(/UNIQUE|PRIMARY KEY/);
+    expect(() => db.exec("INSERT INTO game_players VALUES ('g', 'p4', 9)")).toThrow(/FOREIGN KEY/);
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT player_id, account_id FROM game_players').all()).toEqual([
+      { player_id: 'p2', account_id: 2 },
+    ]);
+    expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g' }]);
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(
@@ -623,6 +655,7 @@ describe('a database in memory', () => {
       'email_tokens',
       'feedback',
       'friendships',
+      'game_players',
       'game_records',
       'match_records',
       'replays',

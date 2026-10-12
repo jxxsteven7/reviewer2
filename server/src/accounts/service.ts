@@ -590,9 +590,10 @@ export class Accounts {
     return this.store.byId(accountId) !== undefined && this.records.add(accountId, record);
   }
 
-  // Keeps a finished game to watch again (docs/architecture.md#replays), once for each game, unless
-  // the database is full or the replay is larger than MAX_REPLAY_BYTES as JSON, which the log
-  // says. Says whether it was kept.
+  // Keeps a finished game to watch again (docs/architecture.md#replays), with its log and which
+  // player was which account (docs/architecture.md#game-records), once for each game, unless the
+  // database is full or the replay is larger than MAX_REPLAY_BYTES as JSON, which the log says.
+  // The game's log has a limit of its own (gameLog.ts). Says whether it was kept.
   keepReplay(replay: NewReplay): boolean {
     if (this.#full()) return false;
     const data = JSON.stringify(replay.replay);
@@ -600,7 +601,7 @@ export class Accounts {
       this.#log('replay_too_large', { bytes: Buffer.byteLength(data), limit: MAX_REPLAY_BYTES });
       return false;
     }
-    return this.replays.add(replay, data);
+    return this.store.transaction(() => this.replays.add(replay, data));
   }
 
   // The replay of a game that the account played in, or null when there is none or the account

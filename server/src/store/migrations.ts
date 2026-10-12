@@ -262,4 +262,20 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE feedback ADD COLUMN deleted_at TEXT;
   CREATE INDEX feedback_trash ON feedback (deleted_at) WHERE deleted_at IS NOT NULL;
   `,
+  // 10: the record of each game (docs/architecture.md#game-records). A replay gets the log of
+  // everything that happened in the game, as JSON, kept on the server alone; the replays from
+  // before have none. game_players says which player, by the ID they had in the room, was which
+  // account, for those with an account who played in the game, those who left it included. A
+  // row goes with its account, and the log then names a player whom nothing links to anyone.
+  `
+  ALTER TABLE replays ADD COLUMN log TEXT;
+
+  CREATE TABLE game_players (
+    game_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    PRIMARY KEY (game_id, player_id)
+  ) STRICT;
+  CREATE INDEX game_players_account ON game_players (account_id);
+  `,
 ];

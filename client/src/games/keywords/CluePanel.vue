@@ -11,7 +11,7 @@ import {
   type KeywordsView,
   type Language,
 } from '@reviewer2/shared';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
 import { errorKey } from '../../core/errors';
@@ -22,17 +22,51 @@ import { formatList } from '../../core/i18n';
 // word on the board. The numbers on offer are the ones that the room's guess rule allows. The
 // panel is mounted for one clue: it goes away once the clue is given. `busy` holds the button
 // while a clue is on its way.
+//
+// The PI may mark on the board the cards the clue is meant for (`targets`, in the order marked),
+// which nobody sees until the game is over (docs/games/keywords.md#the-clue). A line at the top
+// says so, and stands out until the PI has marked a card; then it names them. The number follows
+// how many are marked, until the PI picks a number themselves.
 const props = withDefaults(
-  defineProps<{ game: KeywordsView; settings: KeywordsSettings; language: Language; busy?: boolean }>(),
-  { busy: false },
+  defineProps<{
+    game: KeywordsView;
+    settings: KeywordsSettings;
+    language: Language;
+    busy?: boolean;
+    targets?: number[];
+  }>(),
+  { busy: false, targets: () => [] },
 );
 const emit = defineEmits<{ give: [word: string, count: ClueCount] }>();
 const { t, locale } = useI18n();
 
 const word = ref('');
-const count = ref<ClueCount>(1);
+const DEFAULT_COUNT = 1;
+const count = ref<ClueCount>(DEFAULT_COUNT);
 const INFINITY = '\u221e';
 const counts = computed(() => clueCounts(props.settings.guessRule, props.game.remaining[props.game.team]));
+
+// Whether the PI has picked the number, after which it no longer follows the marked cards.
+const picked = ref(false);
+function pick(option: ClueCount) {
+  count.value = option;
+  picked.value = true;
+}
+// The PI may have marked cards before the panel came, as before a pause.
+watch(
+  () => props.targets.length,
+  (marked) => {
+    if (picked.value) return;
+    count.value = marked > 0 && counts.value.includes(marked) ? marked : DEFAULT_COUNT;
+  },
+  { immediate: true },
+);
+const marked = computed(() =>
+  formatList(
+    locale.value,
+    props.targets.map((card) => t('game.quoted', { word: props.game.cards[card]?.word ?? '' })),
+  ),
+);
 
 const check = computed(() => checkClue(word.value, props.game.cards, clueOptions(props.settings, props.language)));
 
@@ -84,6 +118,9 @@ function give() {
 
 <template>
   <form class="clue-panel" @submit.prevent="give">
+    <p class="targets" :class="{ none: targets.length === 0 }" aria-live="polite">
+      {{ targets.length === 0 ? t('game.targetsHint') : t('game.targetsMarked', { words: marked }) }}
+    </p>
     <label class="label" for="clue-word">{{ t('game.clueInput') }}</label>
     <input
       id="clue-word"
@@ -111,7 +148,7 @@ function give() {
         :class="{ chosen: count === option }"
         :aria-checked="count === option"
         :aria-label="option === 'unlimited' ? t('game.unlimited') : String(option)"
-        @click="count = option"
+        @click="pick(option)"
       >
         {{ option === 'unlimited' ? INFINITY : option }}
       </button>
@@ -131,6 +168,23 @@ function give() {
 
 .label {
   font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+/* Until a card is marked, the line stands out as a note card on the table; then it is a quiet line
+   that names the cards. */
+.targets {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.targets.none {
+  padding: var(--space-2) var(--space-3);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
   font-weight: var(--weight-bold);
 }
 

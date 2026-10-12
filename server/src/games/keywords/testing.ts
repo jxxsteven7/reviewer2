@@ -29,6 +29,7 @@ const COLORS: Record<string, CardColor> = { R: 'red', B: 'blue', N: 'neutral', X
 export function gameState(overrides: Partial<KeywordsState> = {}, layout = LAYOUT): KeywordsState {
   return {
     gameId: 'game-1',
+    startedAt: 0,
     settings: STANDARD,
     language: 'en',
     cards: [...layout].map((letter, index) => ({

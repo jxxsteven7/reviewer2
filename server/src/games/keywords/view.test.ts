@@ -87,7 +87,9 @@ describe('what each player sees of the cards', () => {
           team: 'red',
           word: 'Gradient',
           count: 2,
-          guesses: [{ card: 0, color: 'red', player: 'red-guesser' }],
+          guesses: [{ card: 0, color: 'red', player: 'red-guesser', at: 0 }],
+          captain: 'red-captain',
+          at: 0,
         },
       ]);
       expect(view.clock).toBeNull();
@@ -148,6 +150,50 @@ describe('what each player sees of a group', () => {
     expect(viewFor(state, redGuesser, 0).selections).toEqual([]);
     expect(viewFor(state, redGuesser, 0).chat).toEqual([]);
     expect('selections' in viewFor(state, blueGuesser, 0)).toBe(false);
+  });
+});
+
+describe('the cards a captain meant', () => {
+  // Red's captain marks two of the group's cards with the clue, and the group reveals one of them.
+  const marked = () => {
+    const start = gameState();
+    const clued = accepted(
+      giveClue(start, captain('red'), { ...now(start), word: 'Gradient', count: 2, targets: [3, 1] }, 0),
+    );
+    return accepted(reveal(clued, guesser('red'), { ...now(clued), card: 1 }, 0));
+  };
+
+  test("are in no view while the game is on, not even the captain's own", () => {
+    const state = marked();
+    expect(state.history[0]?.targets).toEqual([3, 1]);
+    for (const [name, seat] of Object.entries(SEATS)) {
+      const record = viewFor(state, seat, 0).history[0];
+      expect(record, name).toMatchObject({ word: 'Gradient', captain: 'red-captain' });
+      expect(record && 'targets' in record, name).toBe(false);
+      expect(JSON.stringify(viewFor(state, seat, 0)), name).not.toContain('targets');
+    }
+  });
+
+  test('stay out of every view during a pause, too', () => {
+    const state = accepted(pause(marked(), true, { gameId: 'game-1' }, 0));
+    for (const seat of Object.values(SEATS)) expect(JSON.stringify(viewFor(state, seat, 0))).not.toContain('targets');
+  });
+
+  test('are in every view once the game is over, in the order they were marked', () => {
+    const state = accepted(withdraw(marked(), { gameId: 'game-1' }));
+    for (const [name, seat] of Object.entries(SEATS)) {
+      expect(viewFor(state, seat, 0).history[0]?.targets, name).toEqual([3, 1]);
+    }
+  });
+
+  test('leave a record without them as it was in the game', () => {
+    const state = marked();
+    viewFor(state, redCaptain, 0);
+    expect(state.history[0]?.targets).toEqual([3, 1]);
+    const over = accepted(withdraw(state, { gameId: 'game-1' }));
+    const targets = viewFor(over, redCaptain, 0).history[0]?.targets;
+    targets?.push(99);
+    expect(over.history[0]?.targets).toEqual([3, 1]);
   });
 });
 
