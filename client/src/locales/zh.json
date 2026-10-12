@@ -651,7 +651,8 @@
     "invitation_expired": "这个邀请已经失效。请对方再邀请一次，或者凭房间号加入。"
   },
   "footer": {
-    "byline": "By Jiaxiao Shi",
+    "byline": "By {name}",
+    "author": "Jiaxiao Shi",
     "tip": "给作者点一杯可乐",
     "tipCode": "作者的微信赞赏码",
     "tipHint": "在微信里长按识别，或用微信扫一扫。",

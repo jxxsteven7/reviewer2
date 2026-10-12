@@ -15,10 +15,13 @@ for (const language of ['en', 'zh'] as const) {
     await expect(page.getByRole('button', { name: text.footer.tip })).toHaveCount(0);
     await page.getByRole('link', { name: TEXT.en.app.name, exact: true }).click();
 
-    const byline = page.getByRole('link', { name: text.footer.byline });
-    await expect(byline).toHaveAttribute('href', 'https://jxxsteven7.github.io/');
-    await expect(byline).toHaveAttribute('target', '_blank');
-    await expect(byline).toHaveAttribute('rel', 'noopener noreferrer');
+    // Only the author's name links to their page.
+    const author = page.getByRole('link', { name: text.footer.author, exact: true });
+    await expect(author).toHaveAttribute('href', 'https://jxxsteven7.github.io/');
+    await expect(author).toHaveAttribute('target', '_blank');
+    await expect(author).toHaveAttribute('rel', 'noopener noreferrer');
+    const byline = interpolate(text.footer.byline, { name: text.footer.author });
+    await expect(page.locator('footer').getByText(byline, { exact: true })).toBeVisible();
 
     // The foot names the version the page was built with, which is the one the server reports.
     const { version } = (await (await page.request.get('/healthz')).json()) as { version: string };
