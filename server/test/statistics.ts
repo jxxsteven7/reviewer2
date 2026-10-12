@@ -33,6 +33,7 @@ export function addAccounts(db: DatabaseSync, now: number): void {
     winner: 'red',
     won: true,
     verdict: 'oral',
+    points: 11,
   });
   records.addMatch(ann.id, {
     game: 'keywords',

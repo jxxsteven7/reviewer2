@@ -22,7 +22,12 @@ vi.mock('../account', async () => {
   signedIn.account = wrap(signedIn.account);
   return signedIn;
 });
-const socket = vi.hoisted(() => ({ connection: { connected: true, everConnected: true }, reconnect: vi.fn() }));
+// The friends section, which the account's page shows, listens on the connection.
+const socket = vi.hoisted(() => ({
+  connection: { connected: true, everConnected: true },
+  reconnect: vi.fn(),
+  socket: { on: vi.fn() },
+}));
 vi.mock('../socket', () => socket);
 vi.mock('../../games', () => ({ games: {} }));
 

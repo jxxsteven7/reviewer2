@@ -633,7 +633,22 @@
     "busy": "服务器正忙，请稍后再试。",
     "no_replay": "没有这一局的回放可看。",
     "cookies_blocked": "浏览器没有保存登录状态。请允许本站使用 Cookie，或者退出无痕模式。",
-    "avatar_unreadable": "这张图片读不出来，换一张吧。"
+    "avatar_unreadable": "这张图片读不出来，换一张吧。",
+    "no_such_account": "没有这个用户名的账号。",
+    "self_friend": "不能加自己为好友。",
+    "already_friends": "你们已经是好友了。",
+    "request_pending": "好友请求已经发出，等对方回应。",
+    "request_declined": "你的请求最近被拒绝过，一周后才能再发。",
+    "friend_requests_full": "待回应的好友请求太多了，等一些有了回应再发。",
+    "friend_limited": "今天发出的好友请求已经够多了，明天再试。",
+    "friends_full": "你们中有人的好友已满。",
+    "no_such_request": "没有这个好友请求。",
+    "not_friends": "只能邀请好友。",
+    "friend_offline": "这位好友现在不在线。",
+    "friend_in_room": "这位好友已经在这个房间里了。",
+    "friend_removed": "房主把这位好友移出了这个房间，不能再邀请。",
+    "invite_cooldown": "刚邀请过这位好友，一分钟后再试。",
+    "invitation_expired": "这个邀请已经失效。请对方再邀请一次，或者凭房间号加入。"
   },
   "footer": {
     "byline": "By Jiaxiao Shi",
@@ -812,7 +827,7 @@
       },
       "logout": "退出登录",
       "delete": "注销账号",
-      "deleteWarning": "账号、战绩、称号和头像都会永久删除，用户名会被释放，别人可以注册。你提过的建议、计入账号的致谢，以及你打过的那些局的回放（别人也在局里）会保留，但不再和账号关联。注销后无法恢复。",
+      "deleteWarning": "账号、战绩、头衔、好友关系、称号和头像都会永久删除，用户名会被释放，别人可以注册。你提过的建议、计入账号的致谢，以及你打过的那些局的回放（别人也在局里）会保留，但不再和账号关联。注销后无法恢复。",
       "deleteSubmit": "永久注销"
     },
     "avatar": {
@@ -841,5 +856,55 @@
       "done": "邮箱已绑定。忘记密码时可以用它找回。",
       "invalid": "这个链接已经过期，或者已经用过了。"
     }
+  },
+  "friends": {
+    "title": "好友",
+    "intro": "好友能看到你是否在线、在哪个公开房间，并能邀请你进他们的房间。",
+    "addLabel": "对方的用户名",
+    "addSubmit": "发送请求",
+    "requestSent": "好友请求已发送。",
+    "nowFriends": "你们成为好友了。",
+    "incoming": "收到的请求",
+    "outgoing": "发出的请求",
+    "accept": "接受",
+    "decline": "拒绝",
+    "withdraw": "撤回",
+    "remove": "删除",
+    "removeConfirm": "确定把 {name} 从好友中删除吗？以后可以重新发送请求。",
+    "none": "还没有好友。按用户名添加，或者在房间里点一下玩家的名字。",
+    "online": "在线",
+    "offline": "离线",
+    "inPublicRoom": "在房间 {code}",
+    "inRoom": "在房间里",
+    "join": "加入",
+    "refresh": "刷新",
+    "loading": "加载中…",
+    "invite": "邀请好友",
+    "inviteIntro": "在线的好友。邀请 10 分钟内有效。",
+    "inviteNone": "现在没有好友在线。",
+    "inviteAllHere": "在线的好友都已经在这个房间里了。",
+    "inviteOne": "邀请",
+    "invited": "已邀请",
+    "invitation": "{name} 邀请你加入房间 {code}",
+    "invitationJoin": "加入",
+    "invitationIgnore": "忽略",
+    "addFromRoom": "加为好友"
+  },
+  "ranks": {
+    "title": "学术头衔",
+    "names": {
+      "undergraduate": "本科生",
+      "master": "硕士生",
+      "phd": "博士生",
+      "postdoc": "博士后",
+      "lecturer": "讲师",
+      "associate_professor": "副教授",
+      "professor": "教授",
+      "academician": "院士"
+    },
+    "points": "积分：{points}",
+    "next": "再得 {points} 分升为{rank}。",
+    "top": "已经是最高头衔。",
+    "note": "登录后在座位上打完的每一局都按比赛的计分方式计入积分。头衔只是显示，不影响游戏。"
   }
 }

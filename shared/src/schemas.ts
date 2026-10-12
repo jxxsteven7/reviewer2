@@ -74,8 +74,15 @@ export const ROOM_MESSAGES = {
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out
-  // or send null.
-  'room:join': z.object({ code, name: name.optional(), roomId: roomId.nullish(), play }),
+  // or send null. A friend who was invited gives the invitation in place of the code (friends.ts);
+  // one of the two must be there.
+  'room:join': z.object({
+    code: code.optional(),
+    name: name.optional(),
+    roomId: roomId.nullish(),
+    play,
+    invitation: z.string().max(64).optional(),
+  }),
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:rename': z.object({ name }),
@@ -107,6 +114,16 @@ export const ROOM_MESSAGES = {
   'room:chair': z.object({ playerId }),
   'room:dismiss': none,
   'room:close': none,
+  // Friends and invitations (friends.ts), for accounts. A request names the other account by its
+  // username, or by the player's ID in the room that the connection is in; the rest name a friend,
+  // or the other side of a request, by username, and an invitation by its ID.
+  'friends:list': none,
+  'friends:request': z.object({ username: name.optional(), playerId: playerId.optional() }),
+  'friends:accept': z.object({ username: name }),
+  'friends:decline': z.object({ username: name }),
+  'friends:remove': z.object({ username: name }),
+  'friends:invite': z.object({ username: name }),
+  'friends:ignore': z.object({ id: z.string().max(64) }),
 } as const;
 
 export type RoomMessage = keyof typeof ROOM_MESSAGES;

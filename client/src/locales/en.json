@@ -633,7 +633,22 @@
     "busy": "The server is busy. Try again in a moment.",
     "no_replay": "There is no replay of this game for you to watch.",
     "cookies_blocked": "Your browser didn't keep the login. Allow cookies for this site, or leave private browsing.",
-    "avatar_unreadable": "That picture can't be read. Choose another."
+    "avatar_unreadable": "That picture can't be read. Choose another.",
+    "no_such_account": "No account has that username.",
+    "self_friend": "You can't be your own friend.",
+    "already_friends": "You're friends already.",
+    "request_pending": "Your request is out. Wait for the answer.",
+    "request_declined": "Your request was declined recently. Try again in a week.",
+    "friend_requests_full": "Too many requests are waiting for an answer. Wait for some of them.",
+    "friend_limited": "You have sent enough friend requests for today. Try again tomorrow.",
+    "friends_full": "One of you has as many friends as an account can have.",
+    "no_such_request": "There is no such request.",
+    "not_friends": "Only friends can be invited.",
+    "friend_offline": "That friend isn't online right now.",
+    "friend_in_room": "That friend is in this room already.",
+    "friend_removed": "The chair removed that friend from this room, so they can't be invited back.",
+    "invite_cooldown": "You invited that friend a moment ago. Wait a minute.",
+    "invitation_expired": "This invitation has lapsed. Ask for another one, or join by the room's number."
   },
   "footer": {
     "byline": "By Jiaxiao Shi",
@@ -812,7 +827,7 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, acknowledgments counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it. This can't be undone.",
+      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, acknowledgments counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it. This can't be undone.",
       "deleteSubmit": "Delete for good"
     },
     "avatar": {
@@ -841,5 +856,55 @@
       "done": "The address is bound. You can reset your password with it now.",
       "invalid": "This link has expired, or has been used already."
     }
+  },
+  "friends": {
+    "title": "Friends",
+    "intro": "Friends see whether you're online and which public room you're in, and can invite you into theirs.",
+    "addLabel": "Their username",
+    "addSubmit": "Send a request",
+    "requestSent": "The request has been sent.",
+    "nowFriends": "You're friends now.",
+    "incoming": "Requests for you",
+    "outgoing": "Requests you sent",
+    "accept": "Accept",
+    "decline": "Decline",
+    "withdraw": "Withdraw",
+    "remove": "Remove",
+    "removeConfirm": "Remove {name} from your friends? You can send a new request later.",
+    "none": "No friends yet. Add one by username, or tap a player's name in a room.",
+    "online": "online",
+    "offline": "offline",
+    "inPublicRoom": "In room {code}",
+    "inRoom": "In a room",
+    "join": "Join",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "invite": "Invite friends",
+    "inviteIntro": "Your friends who are online. An invitation lasts 10 minutes.",
+    "inviteNone": "None of your friends is online right now.",
+    "inviteAllHere": "Your friends who are online are all in this room already.",
+    "inviteOne": "Invite",
+    "invited": "Invited",
+    "invitation": "{name} invited you to room {code}",
+    "invitationJoin": "Join",
+    "invitationIgnore": "Ignore",
+    "addFromRoom": "Add friend"
+  },
+  "ranks": {
+    "title": "Academic rank",
+    "names": {
+      "undergraduate": "Undergraduate",
+      "master": "Master's student",
+      "phd": "PhD student",
+      "postdoc": "Postdoc",
+      "lecturer": "Lecturer",
+      "associate_professor": "Associate Professor",
+      "professor": "Professor",
+      "academician": "Academician"
+    },
+    "points": "Points: {points}",
+    "next": "{points} more to {rank}.",
+    "top": "The highest rank there is.",
+    "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game."
   }
 }

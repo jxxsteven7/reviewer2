@@ -5,11 +5,14 @@ import {
   cleanName,
   MAIL_LINK_MS,
   MAX_REPLAY_BYTES,
+  rankFor,
   usernameKey,
   type AccountError,
   type AccountSummary,
+  type FriendLimits,
   type Language,
   type MailKind,
+  type Rank,
   type RecordsView,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
@@ -28,6 +31,7 @@ import { MailTokenStore, SessionStore, type SessionLimits } from '../store/sessi
 import { SettingStore } from '../store/settings';
 import { inspectAvatar, MAX_AVATAR_STORAGE, MemoryAvatars, type AvatarFiles } from './avatars';
 import { fingerprint, normalizeEmail } from './email';
+import { Friendships } from './friends';
 import { AccountCounters, confirmKey, DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from './limits';
 import type { MailChannel } from './mail';
 import { BusyError, PasswordHasher } from './passwords';
@@ -56,10 +60,12 @@ const KEY_TEXT = 'the key that the fingerprints of addresses are made with';
 export interface AccountHooks {
   // These logins have ended: the connections that came with them are no longer the account.
   sessionsEnded(hashes: readonly Uint8Array[]): void;
-  // The username or the avatar changed, which the rooms that the account is in show.
+  // The username or the avatar changed, which the rooms that the account is in show, and the
+  // pages of its friends.
   accountChanged(accountId: number): void;
-  // The account is gone, and with it its place in every room.
-  accountDeleted(accountId: number): void;
+  // The account is gone, and with it its place in every room, and from the pages of the accounts
+  // that were its friends or had a request with it, whose rows went with it.
+  accountDeleted(accountId: number, others: readonly number[]): void;
 }
 
 const NO_HOOKS: AccountHooks = {
@@ -83,6 +89,7 @@ export interface AccountsOptions {
   log?: Log;
   limits?: AccountLimits;
   sessionLimits?: SessionLimits;
+  friendLimits?: Partial<FriendLimits>;
   hasher?: PasswordHasher;
   maxDatabaseBytes?: number;
   // Called after an account was deleted, so that what it held can be dropped from the WAL too.
@@ -106,6 +113,8 @@ export class Accounts {
   readonly titles: TitleStore;
   // The acknowledgments, which the operator writes (admin.ts) and an account's page counts.
   readonly acknowledgments: AcknowledgmentStore;
+  // The friendships between accounts, and their rules (friends.ts).
+  readonly friends: Friendships;
   readonly settings: SettingStore;
   readonly counters: AccountCounters;
   readonly hasher: PasswordHasher;
@@ -141,6 +150,7 @@ export class Accounts {
     this.replays = new ReplayStore(options.db, clock);
     this.titles = new TitleStore(options.db, clock);
     this.acknowledgments = new AcknowledgmentStore(options.db, clock);
+    this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
     this.settings = new SettingStore(options.db);
     this.counters = new AccountCounters(options.limits ?? DEFAULT_ACCOUNT_LIMITS, options.now);
     this.hasher = options.hasher ?? new PasswordHasher();
@@ -164,15 +174,26 @@ export class Accounts {
       username: account.username,
       avatar: avatarUrl(account),
       email,
+      points: this.records.points(account.id),
       titles: this.titles.counts(account.id),
       acknowledgments: this.acknowledgments.counts(account.id),
     };
   }
 
-  // Whether a guest's nickname is someone's username, compared as usernames are.
+  // The academic rank that the account's points hold (docs/architecture.md#academic-ranks).
+  rankOf(accountId: number): Rank {
+    return rankFor(this.records.points(accountId));
+  }
+
+  // The account whose username this is, as someone typed it, compared as usernames are.
+  byName(username: string): Account | undefined {
+    const name = cleanName(username);
+    return name === null ? undefined : this.store.byKey(usernameKey(name));
+  }
+
+  // Whether a guest's nickname is someone's username.
   reserved(nickname: string): boolean {
-    const name = cleanName(nickname);
-    return name !== null && this.store.byKey(usernameKey(name)) !== undefined;
+    return this.byName(nickname) !== undefined;
   }
 
   async register(ip: string, rawName: string, password: string): Promise<AccountResult<{ secret: string }>> {
@@ -310,12 +331,13 @@ export class Accounts {
     const removed = this.store.transaction(() => {
       if (!this.#stillLoggedIn(login)) return null;
       const ended = this.sessions.deleteForAccount(id);
+      const others = this.friends.others(id);
       const account = this.store.delete(id);
-      return account ? { ended, account } : null;
+      return account ? { ended, account, others } : null;
     });
     if (!removed) return refuse('not_logged_in');
     this.hooks.sessionsEnded(removed.ended);
-    this.hooks.accountDeleted(id);
+    this.hooks.accountDeleted(id, removed.others);
     this.#release(removed.account.avatar);
     this.#log('account_deleted', { id });
     this.#deleted();
@@ -551,9 +573,10 @@ export class Accounts {
     });
   }
 
-  // Deletes the logins and the links that have ended, and says how many of each.
-  prune(): { sessions: number; links: number } {
-    return { sessions: this.sessions.prune(), links: this.mailTokens.prune() };
+  // Deletes the logins and the links that have ended, and the declined friend requests whose wait
+  // is over, and says how many of each.
+  prune(): { sessions: number; links: number; declined: number } {
+    return { sessions: this.sessions.prune(), links: this.mailTokens.prune(), declined: this.friends.prune() };
   }
 
   recordsOf(login: Login): RecordsView {

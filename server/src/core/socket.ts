@@ -6,10 +6,15 @@ import {
   checkLink,
   checkReport,
   cleanName,
+  INVITE_COOLDOWN_MS,
   isReservedName,
   type Ack,
   type ClosedReason,
   type EmoteEvent,
+  type FriendRequestView,
+  type FriendView,
+  type InvitationView,
+  type Rank,
   type SeatedRoom,
   type Session,
 } from '@reviewer2/shared';
@@ -18,11 +23,14 @@ import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import { fromThisSite, readLoginCookie } from '../accounts/cookies';
 import { avatarUrl, type Accounts } from '../accounts/service';
+import type { Account } from '../store/accounts';
 import type { FeedbackStore } from '../store/feedback';
+import type { FriendRow } from '../store/friends';
 import { fail, type Refusal } from './answers';
 import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
 import { accountKey, isToken, memberKey, newToken } from './identity';
+import { Invitations, type Invitation } from './invitations';
 import { TokenBucket, WindowCounter } from './rateLimit';
 import type { Member, MemberAccount, Room } from './room';
 import type { Rooms } from './rooms';
@@ -164,6 +172,19 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   let feedbackFullLogged = false;
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
+  // The connections of each account that is logged in, so that whether a friend is online, and
+  // where their invitations go, costs no walk through every connection.
+  const accountSockets = new Map<number, Set<string>>();
+  // Invitations to rooms, and how often a member may invite the same friend
+  // (docs/architecture.md#friends). However an invitation ends, every connection of the invited
+  // account hears so, and takes it off the page.
+  const invitations = new Invitations(
+    now,
+    isOpen,
+    (a, b) => accounts?.friends.areFriends(a, b) ?? false,
+    ({ id, inviteeId }) => tellAccount(inviteeId, 'friends:uninvited', { id }),
+  );
+  const invites = new WindowCounter(1, INVITE_COOLDOWN_MS, now);
 
   // Logs something that went wrong, whatever was thrown: a game module may throw anything.
   function report(error: unknown, where: string, fields: Record<string, unknown> = {}): void {
@@ -234,20 +255,26 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
 
   // What the end of a game leaves behind for the players with accounts, as the game describes
-  // their part in it (GameModule.results()): the game on each of their records, and, once any of
+  // their part in it (GameModule.results()): the game on each of their records, with the points it
+  // brought them (Room.points()), their ranks as they are now for everyone to see, and, once any of
   // them took part, the game itself to watch again (GameModule.replay()). Whoever had left by then
-  // has no part in its end, and a game that the chair withdrew counts for nobody. Whatever else
-  // is to be kept of a finished game goes here, after the records.
+  // has no part in its end, and a game that the chair withdrew counts for nobody. Whatever else is
+  // to be kept of a finished game goes here, after the records.
   function keepRecords(room: Room): void {
     const results = accounts && room.gameId !== null ? room.results() : null;
     if (!results || !accounts) return;
     const gameId = room.gameId as string;
-    const played = results.flatMap(({ playerId, ...result }) => {
-      const account = room.members.get(playerId)?.account;
-      return account ? [{ account, result }] : [];
-    });
-    for (const { account, result } of played) accounts.record(account.id, { game: room.game.id, gameId, ...result });
-    if (played.length === 0) return;
+    const points = room.points();
+    let played = 0;
+    for (const { playerId, ...result } of results) {
+      const member = room.members.get(playerId);
+      const account = member?.account && accounts.store.byId(member.account.id);
+      if (!member || !account) continue;
+      played += 1;
+      accounts.record(account.id, { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, ...result });
+      room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id));
+    }
+    if (played === 0) return;
     const replay = room.replay();
     if (replay !== null) safely('replay', () => accounts.keepReplay({ game: room.game.id, gameId, replay }));
   }
@@ -339,6 +366,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // and asks again, as a client does after every reconnect, gets nothing new.
   function enter(socket: Socket, room: Room, member: Member): void {
     const conn = connection(socket);
+    // An account that is in the room has no more use for its invitations there.
+    if (conn.account) invitations.used(room, conn.account.id);
     if (conn.room === room && !conn.screen && member.sockets.has(socket.id)) return;
     release(socket);
     Object.assign(conn, { room, screen: false });
@@ -437,8 +466,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const guest = guestSeat(room, conn);
     const account = guest && conn.account ? accounts?.store.byId(conn.account.id) : undefined;
     if (!guest || !account) return undefined;
-    room.adopt(guest.id, conn.key, account.username, { id: account.id, avatar: avatarUrl(account) });
+    room.adopt(guest.id, conn.key, account.username, memberAccount(account));
     return guest;
+  }
+
+  // What a room keeps of a member's account: which it is, its avatar and its rank.
+  function memberAccount(account: Account): MemberAccount {
+    return { id: account.id, avatar: avatarUrl(account), rank: (accounts as Accounts).rankOf(account.id) };
   }
 
   // The seat that the browser of a logged-in connection took as a guest, if its account may have
@@ -472,6 +506,86 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const account = conn.account && accounts?.store.byId(conn.account.id);
     if (!account) return fail('account_required');
     return account.publicBarred ? fail('public_barred') : null;
+  }
+
+  // --- friends and invitations (docs/architecture.md#friends) -------------------------------
+
+  // The account that a connection is logged in to, read again now, or why it has none.
+  function accountOf(conn: Connection): { ok: true; account: Account } | Refusal {
+    const account = conn.account && accounts?.store.byId(conn.account.id);
+    return account ? { ok: true, account } : fail('account_required');
+  }
+
+  const isOnline = (accountId: number) => (accountSockets.get(accountId)?.size ?? 0) > 0;
+
+  // The room that an account is in, if it is online in one: the room of one of its connections,
+  // which stays in the room while the page is elsewhere, as the seat does.
+  function roomOf(accountId: number): Room | undefined {
+    for (const id of accountSockets.get(accountId) ?? []) {
+      const socket = io.sockets.sockets.get(id);
+      const conn = socket && connection(socket);
+      if (conn?.room && !conn.screen && isOpen(conn.room)) return conn.room;
+    }
+    return undefined;
+  }
+
+  // A friend as the account page shows them: online or not, and where, which only friends learn
+  // (docs/architecture.md#friends). A private room is shown without its code.
+  function friendView({ id, username, avatar }: FriendRow): FriendView {
+    const online = isOnline(id);
+    const room = online ? roomOf(id) : undefined;
+    return {
+      username,
+      avatar: avatarUrl({ avatar }),
+      online,
+      room: room ? { code: room.public ? room.code : null } : null,
+    };
+  }
+
+  const requestView = ({ username, avatar }: FriendRow): FriendRequestView => ({
+    username,
+    avatar: avatarUrl({ avatar }),
+  });
+
+  // An invitation as the invited account hears it. The inviter is still in the room, or the
+  // invitation would no longer stand.
+  function invitationView(invitation: Invitation): InvitationView {
+    const inviter = invitation.room.memberByKey(invitation.inviterKey);
+    return {
+      id: invitation.id,
+      code: invitation.room.code,
+      roomId: invitation.room.id,
+      from: { username: inviter?.name ?? '', avatar: inviter?.account?.avatar ?? null },
+      expiresInMs: invitations.remaining(invitation),
+    };
+  }
+
+  // Sends every connection of an account a message.
+  function tellAccount(accountId: number, event: string, payload?: object): void {
+    const sockets = accountSockets.get(accountId);
+    if (sockets?.size) io.to([...sockets]).emit(event, ...(payload === undefined ? [] : [payload]));
+  }
+
+  // Tells every connection of these accounts that their friends or requests have changed, so that a
+  // page that shows them asks again.
+  function tellFriends(...accountIds: number[]): void {
+    for (const id of accountIds) tellAccount(id, 'friends:changed');
+  }
+
+  // The room that an invitation lets a connection into: the invitation's, while it stands, or else
+  // the room by the code, where the connection has a seat already, having come in before. Otherwise
+  // why not: there is no such invitation for this account, or it has lapsed.
+  function invited(
+    conn: Connection,
+    id: string,
+    code: string | undefined,
+    roomId: string | undefined,
+  ): Room | 'invitation_expired' {
+    const invitation = conn.account ? invitations.find(id, conn.account.id) : undefined;
+    if (invitation) return invitation.room;
+    const room = code === undefined ? undefined : rooms.find(code);
+    if (!room || (roomId !== undefined && room.id !== roomId)) return 'invitation_expired';
+    return (room.memberByKey(conn.key) ?? guestSeat(room, conn)) ? room : 'invitation_expired';
   }
 
   function membership(socket: Socket): { room: Room; member: Member } | null {
@@ -639,7 +753,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (conn.account) {
         const account = accounts?.store.byId(conn.account.id);
         if (!account) return fail('not_member');
-        return { ok: true, name: account.username, account: { id: account.id, avatar: avatarUrl(account) } };
+        return { ok: true, name: account.username, account: memberAccount(account) };
       }
       if (cleanName(nickname) === null) return fail('name_invalid');
       return nameFree(nickname) ?? { ok: true, name: nickname, account: null };
@@ -776,8 +890,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ code: room.code, roomId: room.id });
     });
 
-    on(handlers, 'room:join', ({ code, name, roomId, play }) => {
-      const room = lookup(conn, code, roomId ?? undefined);
+    // A friend who was invited gives the invitation in place of the code (docs/architecture.md#friends);
+    // from there on they are a newcomer like any other, whom a removal or the account requirement of
+    // a public room keeps out as it would anyone. Whoever has a seat comes back by the code, whether
+    // or not the invitation that brought them still stands.
+    on(handlers, 'room:join', ({ code, name, roomId, play, invitation }) => {
+      if (code === undefined && invitation === undefined) return fail('bad_request');
+      const room =
+        invitation === undefined
+          ? lookup(conn, code as string, roomId ?? undefined)
+          : invited(conn, invitation, code, roomId ?? undefined);
       if (typeof room === 'string') return fail(room);
       const member = room.memberByKey(conn.key) ?? adoptGuest(room, conn);
       if (member) {
@@ -955,9 +1077,122 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
+    // The account's friends and the requests between them and others. Only the account's own
+    // connections ask, and only friends learn whether someone is online and where.
+    on(handlers, 'friends:list', () => {
+      const me = accountOf(conn);
+      if (!me.ok) return me;
+      const friends = (accounts as Accounts).friends;
+      const { incoming, outgoing } = friends.requests(me.account.id);
+      return ok({
+        friends: friends.friendsOf(me.account.id).map(friendView),
+        incoming: incoming.map(requestView),
+        outgoing: outgoing.map(requestView),
+      });
+    });
+
+    // A request to be friends, to an account by its username, or to a player in the room that the
+    // connection is in, who must have an account. By username, the day's count is taken before the
+    // name is looked up, so that trying names costs as much as asking. A player in the room is known
+    // to have an account, so asking them costs one of the day's requests only if one goes out: it is
+    // taken once the player is found, and given back if the request is refused. Both sides hear
+    // that something changed.
+    on(handlers, 'friends:request', ({ username, playerId }) => {
+      const me = accountOf(conn);
+      if (!me.ok) return me;
+      const friends = (accounts as Accounts).friends;
+      let target: Account | undefined;
+      if (playerId !== undefined) {
+        const found = membership(socket);
+        if (!found) return fail('not_member');
+        const other = found.room.members.get(playerId);
+        if (!other) return fail('no_such_player');
+        target = other.account ? accounts?.store.byId(other.account.id) : undefined;
+      } else if (username !== undefined) {
+        if (!friends.take(me.account.id)) return fail('friend_limited');
+        target = (accounts as Accounts).byName(username);
+      } else {
+        return fail('bad_request');
+      }
+      if (!target) return fail('no_such_account');
+      if (playerId !== undefined && !friends.take(me.account.id)) return fail('friend_limited');
+      const result = friends.request(me.account.id, target.id);
+      if (!result.ok) {
+        if (playerId !== undefined) friends.refund(me.account.id);
+        return result;
+      }
+      tellFriends(me.account.id, target.id);
+      return ok({ status: result.status });
+    });
+
+    // The answers to a request, and the end of a friendship, each about the account the username
+    // names. A name that is no account's is answered as one with no request, so that these can't
+    // tell which names are taken (docs/architecture.md#threat-model).
+    const about =
+      (answer: 'accept' | 'decline' | 'remove') =>
+      ({ username }: { username: string }): Reply => {
+        const me = accountOf(conn);
+        if (!me.ok) return me;
+        const other = (accounts as Accounts).byName(username);
+        if (!other) return fail('no_such_request');
+        const result = (accounts as Accounts).friends[answer](me.account.id, other.id);
+        if (!result.ok) return result;
+        tellFriends(me.account.id, other.id);
+        return ok();
+      };
+    on(handlers, 'friends:accept', about('accept'));
+    on(handlers, 'friends:decline', about('decline'));
+    on(handlers, 'friends:remove', about('remove'));
+
+    // A member invites a friend who is online into the room, once a minute for the same friend; a
+    // name that is no account's is answered as a stranger's. Every connection of the friend hears
+    // it; what admits them, or doesn't, is room:join's to say, except that whoever the chair has
+    // removed isn't invited to come and be refused.
+    on(handlers, 'friends:invite', ({ username }) => {
+      const found = membership(socket);
+      if (!found) return fail('not_member');
+      const me = accountOf(conn);
+      if (!me.ok) return me;
+      const friend = (accounts as Accounts).byName(username);
+      if (!friend || !(accounts as Accounts).friends.areFriends(me.account.id, friend.id)) return fail('not_friends');
+      if (found.room.memberByKey(accountKey(friend.id))) return fail('friend_in_room');
+      if (found.room.removal(accountKey(friend.id))) return fail('friend_removed');
+      if (!isOnline(friend.id)) return fail('friend_offline');
+      if (!invites.take(`${me.account.id}\n${friend.id}`)) return fail('invite_cooldown');
+      const invitation = invitations.create(found.room, me.account.id, found.member.key, friend.id);
+      tellAccount(friend.id, 'friends:invited', invitationView(invitation));
+      return ok();
+    });
+
+    // The account ignores an invitation of theirs: no connection of theirs hears it again.
+    on(handlers, 'friends:ignore', ({ id }) => {
+      const me = accountOf(conn);
+      if (!me.ok) return me;
+      invitations.ignore(id, me.account.id);
+      return ok();
+    });
+
     listen(socket, handlers);
 
-    socket.on('disconnect', () => safely('disconnect', () => release(socket)));
+    // A connection that is logged in counts for its account's presence from here on, and hears the
+    // invitations that stand for the account, as its other connections did when they came.
+    if (conn.account) {
+      const { id } = conn.account;
+      const sockets = accountSockets.get(id) ?? new Set<string>();
+      accountSockets.set(id, sockets.add(socket.id));
+      for (const invitation of invitations.for(id)) socket.emit('friends:invited', invitationView(invitation));
+    }
+
+    socket.on('disconnect', () =>
+      safely('disconnect', () => {
+        if (conn.account) {
+          const sockets = accountSockets.get(conn.account.id);
+          sockets?.delete(socket.id);
+          if (sockets?.size === 0) accountSockets.delete(conn.account.id);
+        }
+        release(socket);
+      }),
+    );
   });
 
   // What the account API can't do itself, since only the socket layer knows the connections.
@@ -984,17 +1219,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (!account) return;
         const key = accountKey(accountId);
         const avatar = avatarUrl(account);
+        const rank = accounts.rankOf(accountId);
         for (const room of rooms.all()) {
           const member = room.memberByKey(key);
-          if (member && room.updateAccount(member.id, account.username, avatar)) broadcast(room);
+          if (member && room.updateAccount(member.id, account.username, avatar, rank)) broadcast(room);
         }
-        // The account's own pages show the new name and avatar too.
+        // The account's own pages show the new name and avatar too, and so do its friends'.
         const session: Session = { version, account: { username: account.username, avatar } };
         for (const socket of connectionsOf(({ id }) => id === accountId)) socket.emit('session', session);
+        tellFriends(...accounts.friends.others(accountId));
       },
-      // An account that is gone leaves every room it was in, as if it had left. Leaving asks the
-      // game module, and what one room's module throws must not keep the account in the others.
-      accountDeleted(accountId) {
+      // An account that is gone leaves every room it was in, as if it had left, and the pages of
+      // those who were its friends or had a request with it. Leaving asks the game module, and what
+      // one room's module throws must not keep the account in the others.
+      accountDeleted(accountId, others) {
         const key = accountKey(accountId);
         for (const room of rooms.all()) {
           const member = room.memberByKey(key);
@@ -1005,6 +1243,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
             else broadcast(room);
           });
         }
+        tellFriends(...others);
       },
     };
   }
@@ -1018,18 +1257,24 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // through the hook above, so one that is gone is left alone here.
   function refreshAccounts(): void {
     if (!accounts) return;
-    const read = new Map<number, ReturnType<typeof accounts.store.byId>>();
+    // Each account is read once, with its rank, however many rooms it is in.
+    const read = new Map<number, { account: Account; rank: Rank } | undefined>();
     for (const room of rooms.all()) {
       let differs = false;
       for (const member of room.members.values()) {
         if (!member.account) continue;
         const { id } = member.account;
-        if (!read.has(id)) read.set(id, accounts.store.byId(id));
-        const account = read.get(id);
-        if (account && room.updateAccount(member.id, account.username, avatarUrl(account))) differs = true;
+        if (!read.has(id)) {
+          const account = accounts.store.byId(id);
+          read.set(id, account && { account, rank: accounts.rankOf(id) });
+        }
+        const known = read.get(id);
+        if (known && room.updateAccount(member.id, known.account.username, avatarUrl(known.account), known.rank)) {
+          differs = true;
+        }
       }
       const chair = room.chairId === null ? undefined : room.members.get(room.chairId);
-      const account = chair?.account ? read.get(chair.account.id) : undefined;
+      const account = chair?.account ? read.get(chair.account.id)?.account : undefined;
       if (room.public && chair && (!account || account.publicBarred) && room.unlist()) {
         log('room_unlisted', { code: room.code });
         differs = true;
@@ -1055,6 +1300,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         failedLookups.prune();
         feedbackSent.prune();
         reportsSent.prune();
+        invites.prune();
+        invitations.prune();
         for (const [key, time] of feedbackSeen) {
           if (now() - time >= limits.feedbackWindowMs) feedbackSeen.delete(key);
         }

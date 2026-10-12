@@ -10,9 +10,9 @@ import {
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { errorKey } from '../errors';
-import { mayReport } from '../manage';
+import { mayBefriend, mayReport } from '../manage';
 import { act, send } from '../socket';
-import { toast } from '../toast';
+import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import UiButton from './UiButton.vue';
 import UiField from './UiField.vue';
@@ -20,8 +20,9 @@ import UiSheet from './UiSheet.vue';
 
 // The menu for one player: the chair's actions, which move them to the spectators, remove them,
 // after a warning that says for how long, which is for good from a public room and two minutes
-// from a private one, or hand them the chair; and, in a public room, the way for anyone with
-// an account to report them to the operator (docs/architecture.md#public-rooms). The server
+// from a private one, or hand them the chair; for an account, the way to ask a player with an
+// account to be friends (docs/architecture.md#friends); and, in a public room, the way for anyone
+// with an account to report them to the operator (docs/architecture.md#public-rooms). The server
 // decides who may do what; the menu only shows what the viewer may ask for.
 const props = defineProps<{ player: PlayerView | null; room: RoomView }>();
 const emit = defineEmits<{ close: [] }>();
@@ -34,6 +35,7 @@ const refused = ref<string | undefined>();
 
 const isChair = computed(() => props.room.chairId === props.room.me);
 const canReport = computed(() => mayReport(props.room));
+const canBefriend = computed(() => props.player !== null && mayBefriend(props.room, props.player));
 const checked = computed(() => checkReport(note.value));
 const noteProblem = computed(() => (checked.value.problem ? t(errorKey(checked.value.problem)) : undefined));
 const count = computed(() =>
@@ -55,6 +57,21 @@ async function manage(message: 'room:spectate' | 'room:remove' | 'room:chair') {
   const player = props.player;
   if (!player) return;
   await run(() => act(message, { playerId: player.id }));
+  emit('close');
+}
+
+// A request to be friends, which the other side answers on their account page; one to someone who
+// has asked already makes friends at once.
+async function befriend() {
+  const player = props.player;
+  if (!player) return;
+  const reply = await run(() => send<{ status: 'pending' | 'accepted' }>('friends:request', { playerId: player.id }));
+  if (!reply) return;
+  if (!reply.ok) {
+    toastError(reply.error);
+    return;
+  }
+  toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
   emit('close');
 }
 
@@ -83,6 +100,7 @@ async function report() {
         <UiButton :disabled="busy" @click="manage('room:chair')">{{ t('lobby.manage.chair') }}</UiButton>
         <UiButton variant="danger" :disabled="busy" @click="removing = true">{{ t('lobby.manage.remove') }}</UiButton>
       </template>
+      <UiButton v-if="canBefriend" :disabled="busy" @click="befriend">{{ t('friends.addFromRoom') }}</UiButton>
       <UiButton v-if="canReport" variant="quiet" @click="reporting = true">{{ t('lobby.manage.report') }}</UiButton>
       <UiButton variant="quiet" @click="emit('close')">{{ t('lobby.manage.cancel') }}</UiButton>
     </div>

@@ -12,6 +12,7 @@ import {
   type Language,
   type MatchRules,
   type PublicRoom,
+  type Rank,
   type RoomPhase,
   type RoomView,
 } from '@reviewer2/shared';
@@ -30,11 +31,13 @@ import { drawWords, type WordLibrary } from './words';
 // A method asks the game module first and changes the room afterwards. A module that throws
 // then leaves the room exactly as it was, instead of half changed.
 
-// A member who is logged in to an account: which account, and the address of its avatar, or null
-// for the default one, which the client draws from the name.
+// A member who is logged in to an account: which account, the address of its avatar, or null for
+// the default one, which the client draws from the name, and its academic rank, which everyone in
+// the room sees beside the name (docs/architecture.md#academic-ranks).
 export interface MemberAccount {
   id: number;
   avatar: string | null;
+  rank: Rank;
 }
 
 export interface Member {
@@ -401,15 +404,16 @@ export class Room {
     return done;
   }
 
-  // A member's account has a new username or a new avatar. The name changes too, unless someone
-  // else in the room has it, as a guest may have since before the account was renamed: then the
-  // member keeps the name they had here. Returns whether the room looks any different.
-  updateAccount(id: string, username: string, avatar: string | null): boolean {
+  // A member's account has a new username, a new avatar or a new rank. The name changes too, unless
+  // someone else in the room has it, as a guest may have since before the account was renamed: then
+  // the member keeps the name they had here. Returns whether the room looks any different.
+  updateAccount(id: string, username: string, avatar: string | null, rank: Rank): boolean {
     const member = this.members.get(id);
     if (!member?.account) return false;
     const renamed = this.#takeUsername(member, username);
-    if (!renamed && member.account.avatar === avatar) return false;
+    if (!renamed && member.account.avatar === avatar && member.account.rank === rank) return false;
     member.account.avatar = avatar;
+    member.account.rank = rank;
     this.changed();
     return true;
   }
@@ -759,6 +763,14 @@ export class Room {
     return this.game.replay?.(this.data, this.context) ?? null;
   }
 
+  // The points of the game that has just ended, by member key, scored as a match scores a game
+  // (docs/architecture.md#academic-ranks), or null when the game counts for none: it was withdrawn,
+  // it hasn't ended, or the game can't be scored at all.
+  points(): ReadonlyMap<string, number> | null {
+    const scores = this.phase === 'ended' ? (this.game.match?.score(this.data, this.context) ?? null) : null;
+    return scores && new Map(scores.map(({ key, points }) => [key, points]));
+  }
+
   // --- the game's own time ----------------------------------------------------------------
 
   // When the game next has something to do by itself, on the room's clock, or null for never.
@@ -867,6 +879,7 @@ export class Room {
         name: member.name,
         online: member.sockets.size > 0,
         ...(member.account?.avatar ? { avatar: member.account.avatar } : {}),
+        ...(member.account ? { rank: member.account.rank } : {}),
       })),
       screens: this.screens.size,
     };

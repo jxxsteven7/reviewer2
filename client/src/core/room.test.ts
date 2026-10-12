@@ -96,6 +96,37 @@ describe('the room page', () => {
     expect(entry.error).toBe('account_required');
   });
 
+  test('joins with an invitation in place of the code, once, and leaves for the notice when it has lapsed', async () => {
+    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+    openRoom('K7QX', { invitation: 'inv-1' });
+    await flushPromises();
+    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', invitation: 'inv-1' });
+    // The newcomer's choice goes with the invitation too, until the page is in, which the snapshot
+    // says even when the answer is lost on the way.
+    mock.send.mockImplementationOnce(async () => {
+      emit('room:state', view('K7QX', 'room-a', 'ann'));
+      return fail('timeout');
+    });
+    await submitName(undefined, true);
+    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', invitation: 'inv-1', play: true });
+    expect(entry.status).toBe('in');
+    // After a reconnect the page is a member, and asks by the code and the room's ID alone.
+    mock.send.mockResolvedValueOnce(ok('K7QX', 'room-a'));
+    emit('connect');
+    await flushPromises();
+    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', roomId: 'room-a' });
+
+    // An invitation that lapsed while the newcomer was on the name form.
+    closeRoomPage();
+    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+    openRoom('K7QX', { invitation: 'inv-2' });
+    await flushPromises();
+    mock.send.mockResolvedValueOnce(fail('invitation_expired'));
+    await submitName(undefined, true);
+    expect(entry.status).toBe('failed');
+    expect(entry.error).toBe('invitation_expired');
+  });
+
   test('ignores the snapshots and the closing of a room the page has left', async () => {
     // The connection is still in room B, which keeps sending snapshots, while the page wants A.
     mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));

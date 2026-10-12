@@ -332,6 +332,7 @@ describe('the record of games', () => {
     winner: 'red',
     won: true,
     verdict: 'oral',
+    points: 11,
     ...changes,
   });
 

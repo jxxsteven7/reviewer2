@@ -65,12 +65,14 @@ test('players with accounts play a whole game with guests, and find it on their 
   await expect(await openGroups(table.spectator)).toContainText(usernames.Dan as string);
 
   await playToTheEnd(table);
-  // Nobody's snapshots say more about a player than the name, whether they are online and the
-  // avatar: nothing of an account, a login or an address.
+  // Nobody's snapshots say more about a player than the name, whether they are online, the avatar
+  // and the rank: nothing of an account, a login or an address.
   for (const states of table.everyone) {
     for (const state of states) {
       for (const player of state.players) {
-        expect(Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar'].includes(key))).toEqual([]);
+        expect(Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar', 'rank'].includes(key))).toEqual(
+          [],
+        );
       }
     }
   }
@@ -112,7 +114,7 @@ test('a new name and avatar show in the room, and a guest can not take a registe
   const renamed = own('Annie');
   await ann.goto('/account');
   await ann.getByRole('button', { name: text.account.profile.rename, exact: true }).click();
-  await ann.getByRole('textbox', { name: text.account.username }).fill(renamed);
+  await ann.getByRole('textbox', { name: text.account.username, exact: true }).fill(renamed);
   await ann.getByRole('button', { name: text.account.profile.renameSubmit }).click();
   await expect(ann.locator('.profile .name')).toHaveText(renamed);
   await expect(guest.locator('.lobby')).toContainText(renamed);
