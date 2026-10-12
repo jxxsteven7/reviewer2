@@ -656,6 +656,8 @@
     "tip": "Buy the author a cola",
     "tipCode": "The author's WeChat reward code",
     "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
+    "listTitle": "Want to be on the list of sponsors?",
+    "listHow": "When you tip, write the name you want in the message, or write \"list me\" to be listed by your WeChat name. Without a message you stay unlisted, and the list never shows amounts.",
     "sponsor": "No WeChat? Sponsor the author on GitHub",
     "version": "Version {version}"
   },

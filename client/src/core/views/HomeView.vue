@@ -25,7 +25,8 @@ import PublicRooms from './PublicRooms.vue';
 // and the sponsors. On a wide screen the games stand on the right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
-// or recompressed copy could spoil.
+// or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
+// sponsors: by a name, or "list me", in the tip's message.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const chosen = ref(storedLanguage() !== null);
@@ -94,6 +95,10 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <img :src="tipCode" :alt="t('footer.tipCode')" width="1152" height="1152" />
         <figcaption>{{ t('footer.tipHint') }}</figcaption>
       </figure>
+      <p class="listing">
+        <strong>{{ t('footer.listTitle') }}</strong>
+        {{ t('footer.listHow') }}
+      </p>
       <p class="sponsor">
         <a href="https://github.com/sponsors/jxxsteven7" target="_blank" rel="noopener noreferrer">{{
           t('footer.sponsor')
@@ -317,6 +322,25 @@ ol {
   color: var(--ink-2);
   font-size: var(--text-sm);
   text-align: center;
+}
+
+/* How a tipper gets on the list of sponsors: a sticker of its own, so that nobody misses it. */
+.listing {
+  width: min(100%, 20rem);
+  margin: var(--space-4) auto 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  box-shadow: var(--shadow-1);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.listing strong {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-md);
 }
 
 .sponsor {
