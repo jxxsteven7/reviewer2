@@ -8,3 +8,8 @@ _No one yet._
 
 <!-- start of GitHub Sponsors, which .github/workflows/sponsors.yml writes -->
 <!-- end of GitHub Sponsors -->
+
+## Other ways
+
+- RyeCatcher
+- 一个大胖猪
