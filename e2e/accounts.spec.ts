@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { ACCOUNT_API } from '@reviewer2/shared';
 import {
   closeSheet,
   createRoom,
@@ -27,6 +28,16 @@ import {
 // every account and address here has a part that is the test's own, and no guest in any test is
 // called that.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
+
+// The requests that a page makes for its records, which only the account's own page asks for: a
+// page that logs in and leaves must not show it on the way out, not even for a moment.
+function recordsRequests(page: Page): string[] {
+  const urls: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === ACCOUNT_API.records) urls.push(request.url());
+  });
+  return urls;
+}
 
 // A picture as a phone would give it: larger than an avatar, not square, and a PNG.
 async function picture(page: Page): Promise<Buffer> {
@@ -170,7 +181,9 @@ test('a password change keeps the browser logged in, on the page and on its conn
   const text = TEXT.en;
   const name = own('Ann');
   const page = await newPlayer(browser);
+  const records = recordsRequests(page);
   await register(page, name);
+  expect(records).toEqual([]);
   const url = await createRoom(page, 'en', '');
   // To the account page from the home page, without loading the page again: the connection, which
   // the server closes with the login, is the one the page keeps using.
@@ -240,7 +253,9 @@ test('an address is bound with the link in a mail, and resets a forgotten passwo
   await phone.getByLabel(text.account.password, { exact: true }).fill('correct horse');
   await phone.locator('form').getByRole('button', { name: text.account.signIn.loginSubmit }).click();
   await expect(phone.getByRole('alert')).toHaveText(text.errors.login_failed);
+  const records = recordsRequests(phone);
   await logIn(phone, name, 'battery staple');
+  expect(records).toEqual([]);
   await phone.goto('/account');
   await expect(phone.locator('.profile .name')).toHaveText(name);
 });
