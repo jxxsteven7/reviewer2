@@ -43,10 +43,11 @@ describe('the lists in the repository', () => {
     };
     expect([START, END]).toEqual([SPONSORS_START, SPONSORS_END]);
     const file = readFileSync(join(root, LIST_FILES.sponsors), 'utf8');
-    // The file as it is, and as it would be with nobody added by hand: up to the end of the
-    // workflow's lines, where the workflow puts "No one yet" back when nobody is listed.
+    // `bare` is the file up to the workflow's end line, as if nobody were added by hand; `empty`
+    // is that with nobody on GitHub either, where the workflow puts "No one yet" back in its own
+    // words, whatever words the file had.
     const bare = `${file.slice(0, file.indexOf(SPONSORS_END) + SPONSORS_END.length)}\n`;
-    const empty = writeSponsors(bare, []);
+    const empty = writeSponsors(writeSponsors(bare, ['octocat']), []);
     expect(empty).toContain('_No one yet._');
     const others = `${bare}\n## Other ways\n\n- Ann\n`;
     // "No one yet" in other words, which the rules take for it too.
