@@ -379,6 +379,15 @@ describe('the feedback', () => {
     expect(
       page({ total: 1, entries: [feedback(1, { deletedAt: '2026-09-09T12:00:00.000Z', status: 'trash' })] }),
     ).toContain('in the trash since 2026-09-09, 1 day left');
+    // Adopted on its way to the trash, it is kept there, however long ago it went in.
+    expect(
+      page({
+        total: 1,
+        entries: [feedback(1, { deletedAt: '2026-08-01T12:00:00.000Z', acknowledgmentId: 3, status: 'trash' })],
+      }),
+    ).toContain(
+      '<p class="trail">thanked as acknowledgment #3 &middot; in the trash since 2026-08-01, kept: thanked</p>',
+    );
   });
 
   test("points out a name that is another account's username, in bold", () => {

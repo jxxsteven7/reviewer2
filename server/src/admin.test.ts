@@ -26,6 +26,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
   if (database.db.isOpen) database.db.close();
   rmSync(dir, { recursive: true, force: true });
@@ -609,7 +610,7 @@ describe('feedback delete, restore and trash', () => {
         'back before then.',
     );
     expect(run('feedback', 'delete', '1')).toBe(1);
-    expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, with 27 days left.');
+    expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, 27 days left.');
 
     expect(run('feedback', 'trash')).toBe(0);
     expect(printed.slice(-3)).toEqual([
@@ -644,6 +645,57 @@ describe('feedback delete, restore and trash', () => {
     expect(store.count()).toBe(3);
   });
 
+  test('show feedback adopted on its way to the trash as kept there, not as purged any day', () => {
+    const NOW = Date.UTC(2026, 10, 1, 9);
+    vi.useFakeTimers({ now: NOW });
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Ann' }));
+    store.add(feedback());
+    expect(run('feedback', 'delete', '1')).toBe(0);
+    expect(run('feedback', 'delete', '2')).toBe(0);
+    // As `feedback adopt` would have, had it read the feedback just before it went to the trash.
+    accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: 1, accountId: null });
+    vi.setSystemTime(NOW + 31 * 24 * 60 * 60_000);
+    expect(run('feedback', 'trash')).toBe(0);
+    expect(printed.slice(-2)).toEqual([
+      '#2  2026-11-01  0 days left  idea  A timer, please.',
+      '#1  2026-11-01  kept: thanked  idea  A timer, please.',
+    ]);
+    expect(run('feedback', 'delete', '1')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, kept: thanked.');
+    expect(run('feedback', 'delete', '2')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #2 is in the trash already, 0 days left.');
+    expect(store.purge()).toBe(1);
+    expect(store.byId(1)).toMatchObject({ status: 'trash', acknowledgmentId: 1 });
+  });
+
+  test('say what another command did meanwhile when the feedback can no longer go to the trash', () => {
+    const store = new FeedbackStore(database.db);
+    for (let i = 0; i < 3; i += 1) store.add(feedback({ credit: 'Ann' }));
+    // Between the command's reading and its writing, someone else adopts the feedback, puts it in
+    // the trash, or deletes the row by hand. The store's own delete() is kept from before the spy,
+    // so that the change doesn't run the spy again.
+    const original = FeedbackStore.prototype.delete;
+    const meanwhile = (change: (id: number) => void) => {
+      vi.spyOn(FeedbackStore.prototype, 'delete').mockImplementation(function (this: FeedbackStore, id: number) {
+        change(id);
+        return original.call(this, id);
+      });
+    };
+    meanwhile((id) => accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: id, accountId: null }));
+    expect(run('feedback', 'delete', '1')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #1 was adopted just now, so it stays.');
+    expect(store.byId(1)).toMatchObject({ deletedAt: null, acknowledgmentId: 1 });
+    meanwhile((id) => original.call(store, id));
+    expect(run('feedback', 'delete', '2')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #2 was moved to the trash just now.');
+    expect(store.byId(2)?.status).toBe('trash');
+    meanwhile((id) => database.db.prepare('DELETE FROM feedback WHERE id = ?').run(id));
+    expect(run('feedback', 'delete', '3')).toBe(1);
+    expect(printed.at(-1)).toBe("Feedback #3 couldn't be moved to the trash. Look at it again.");
+    expect(store.byId(3)).toBeUndefined();
+  });
+
   test('cut a long text by its characters, so that an emoji stays whole', () => {
     vi.useFakeTimers({ now: Date.UTC(2026, 10, 1, 9) });
     const smile = String.fromCodePoint(0x1f600);
@@ -664,7 +716,7 @@ describe('feedback delete, restore and trash', () => {
     expect(run('feedback', 'trash')).toBe(0);
     expect(printed.at(-1)).toBe('#1  2026-11-01  0 days left  idea  A timer, please.');
     expect(run('feedback', 'delete', '1')).toBe(1);
-    expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, with 0 days left.');
+    expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, 0 days left.');
     expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
   });
 });

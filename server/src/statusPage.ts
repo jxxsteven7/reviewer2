@@ -231,7 +231,9 @@ function badge(feedback: Feedback): string {
 }
 
 // Everything that became of the feedback, in the order it happens, or '' for feedback that is
-// new. The days left in the trash count from `now`.
+// new. The days left in the trash count from `now`; feedback that an acknowledgment points at,
+// which only feedback adopted on its way to the trash is, is kept there instead
+// (store/feedback.ts).
 function trail(feedback: Feedback, now: number): string {
   const steps = [
     ...(feedback.issue === null ? [] : [`published as issue #${feedback.issue}`]),
@@ -242,7 +244,9 @@ function trail(feedback: Feedback, now: number): string {
       ? []
       : [
           `in the trash since ${escape(day(feedback.deletedAt))}, ` +
-            `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`,
+            (feedback.acknowledgmentId === null
+              ? `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`
+              : 'kept: thanked'),
         ]),
   ];
   return steps.length === 0 ? '' : `<p class="trail">${steps.join(' &middot; ')}</p>`;

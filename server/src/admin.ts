@@ -214,8 +214,13 @@ function printAccountStats(store: AccountStore, print: Print): void {
 const REPORTS_SHOWN = 100;
 const TRASH_SHOWN = 100;
 
-// "27 days left", "1 day left", or "0 days left" on the day the next purge takes it.
-const daysLeftText = (days: number) => `${days} day${days === 1 ? '' : 's'} left`;
+// How long feedback in the trash has left: "27 days left", "1 day left", or "0 days left" on the
+// day the next purge takes it; or that it is kept, since an acknowledgment points at it, which
+// only feedback adopted on its way to the trash is (store/feedback.ts).
+function trashTime(feedback: Feedback, daysLeft: number): string {
+  if (feedback.acknowledgmentId !== null) return 'kept: thanked';
+  return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
+}
 
 // Feedback in the trash as the operator reads it, one line each: the id, the day it went in, how
 // long it has left, its kind, and the start of its text on one line.
@@ -223,7 +228,7 @@ function trashLine(feedback: Feedback, daysLeft: number): string {
   // Cut by code points, so that an emoji isn't cut in two.
   const chars = Array.from(feedback.text.replace(/\n/g, ' / '));
   const text = chars.length > 60 ? `${chars.slice(0, 60).join('')}...` : chars.join('');
-  return `#${feedback.id}  ${(feedback.deletedAt as string).slice(0, 10)}  ${daysLeftText(daysLeft)}  ${feedback.kind}  ${text}`;
+  return `#${feedback.id}  ${(feedback.deletedAt as string).slice(0, 10)}  ${trashTime(feedback, daysLeft)}  ${feedback.kind}  ${text}`;
 }
 
 // The way out of the trash, which a command that needs the feedback out of it points to.
@@ -513,7 +518,7 @@ const COMMANDS: Record<string, Command> = {
       if (!found) return 1;
       if (found.deletedAt !== null) {
         print(
-          `Feedback #${found.id} is in the trash already, with ${daysLeftText(data.feedback.daysLeft(found) as number)}.`,
+          `Feedback #${found.id} is in the trash already, ${trashTime(found, data.feedback.daysLeft(found) as number)}.`,
         );
         return 1;
       }
@@ -525,10 +530,17 @@ const COMMANDS: Record<string, Command> = {
         );
         return 1;
       }
-      // Read a moment ago, it has been adopted since only if someone else is running `feedback
-      // adopt` at the same time.
+      // Read a moment ago, it has changed since only if someone else is running a command at the
+      // same time: `feedback adopt`, or `feedback delete` too. Read again to say which.
       if (!data.feedback.delete(found.id)) {
-        print(`Feedback #${found.id} was adopted just now, so it stays.`);
+        const again = data.feedback.byId(found.id);
+        if (again !== undefined && again.acknowledgmentId !== null) {
+          print(`Feedback #${found.id} was adopted just now, so it stays.`);
+        } else if (again !== undefined && again.deletedAt !== null) {
+          print(`Feedback #${found.id} was moved to the trash just now.`);
+        } else {
+          print(`Feedback #${found.id} couldn't be moved to the trash. Look at it again.`);
+        }
         return 1;
       }
       print(
