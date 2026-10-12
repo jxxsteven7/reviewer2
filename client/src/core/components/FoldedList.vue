@@ -75,7 +75,7 @@ summary {
   min-height: 44px;
   padding: 0 var(--space-2);
   border-radius: var(--radius-control);
-  font-weight: var(--weight-black);
+  font-weight: var(--weight-bold);
   list-style: none;
   cursor: pointer;
 }

@@ -20,9 +20,9 @@ import PublicRooms from './PublicRooms.vue';
 
 // The home page: the way back to any room where the player still has a seat, the tagline, the
 // first game on a big sticker with the games to come below it, the ways into a room, by its number
-// or from the list of public rooms, and footnotes, which name the author, offer a way to buy them a
-// cola, the way to send them feedback and, folded, the acknowledgments and the sponsors. On a wide
-// screen the games stand on the right, beside the rest.
+// or from the list of public rooms, and footnotes, which name the author with a link to their page,
+// offer a way to buy them a cola, the way to send them feedback and, folded, the acknowledgments
+// and the sponsors. On a wide screen the games stand on the right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil.
@@ -75,11 +75,15 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
     </main>
 
     <footer class="footnotes">
-      <p class="credits">
-        <a href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{ t('footer.byline') }}</a>
-        <UiButton variant="quiet" size="small" @click="tipping = true">{{ t('footer.tip') }}</UiButton>
-      </p>
-      <p class="num">{{ t('footer.version', { version }) }}</p>
+      <i18n-t keypath="footer.byline" tag="p" class="byline" scope="global">
+        <template #name>
+          <a class="author" href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{
+            t('footer.author')
+          }}</a>
+        </template>
+      </i18n-t>
+      <UiButton variant="quiet" size="small" @click="tipping = true">{{ t('footer.tip') }}</UiButton>
+      <p class="version num">{{ t('footer.version', { version }) }}</p>
       <SendFeedback page="home" />
       <AcknowledgmentsList />
       <SponsorsList @tip="tipping = true" />
@@ -241,28 +245,47 @@ ol {
   gap: var(--space-5);
 }
 
+/* Every footnote, button or not, is 44 px high with the same room on either side, so the words
+   stand the same distance apart and share a baseline. The row reaches that room past both edges
+   of the column, so the first footnote of every line starts on the column's edge, and so does the
+   list that a fold opens. */
 .footnotes {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-4);
-  margin-top: var(--space-6);
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  margin: var(--space-6) calc(-1 * var(--space-2)) 0;
   padding: var(--space-3) 0 max(var(--space-4), env(safe-area-inset-bottom));
   font-size: var(--text-sm);
 }
 
-.credits {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 var(--space-2);
+.byline,
+.version {
+  padding: 0 var(--space-2);
+  color: var(--ink-2);
+  line-height: 44px;
 }
 
-/* The feedback button and the folds of the lists of thanks line up with the footnotes around them;
-   the list that a fold opens keeps to the column. */
-.footnotes > :deep(.button),
-.footnotes > :deep(.fold > summary) {
-  margin-left: calc(-1 * var(--space-2));
+/* A small button's padding outweighs the quiet one's, and its border takes room too. */
+.footnotes > :deep(.button) {
+  padding: 0 var(--space-2);
+  border-width: 0;
+}
+
+.footnotes > :deep(.fold > .panel) {
+  margin-inline: var(--space-2);
+}
+
+/* The only link among the footnotes: blue, and underlined under a pointer or the keyboard. */
+.author {
+  display: inline-block;
+  color: var(--blue-deep);
+  text-decoration: none;
+}
+
+.author:hover,
+.author:focus-visible {
+  text-decoration: underline;
 }
 
 .tip {

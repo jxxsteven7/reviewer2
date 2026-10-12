@@ -651,7 +651,8 @@
     "invitation_expired": "This invitation has lapsed. Ask for another one, or join by the room's number."
   },
   "footer": {
-    "byline": "By Jiaxiao Shi",
+    "byline": "By {name}",
+    "author": "Jiaxiao Shi",
     "tip": "Buy the author a cola",
     "tipCode": "The author's WeChat reward code",
     "tipHint": "In WeChat, press and hold the code to open it, or scan it with WeChat's Scan.",
