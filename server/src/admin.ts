@@ -315,14 +315,16 @@ const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
 
 // The player's text and name go to GitHub as they are, and GitHub reads more in text than
 // Markdown: it mentions a user or a team written as @name, links an email address, refers to an
-// issue or a pull request written as #12 or GH-12, which then shows the reference, links a commit
-// written as seven or more hexadecimal digits on their own, and shows :boom: as an emoji, in a
-// title as much as in a body. Those patterns need the name, the number, the rest of the digits or
-// the shortcode right after their first character, so a zero-width space after it, which shows
+// issue, a pull request or a discussion written as #12, GH-12 or owner/repo/issues/12, with or
+// without the address of the site in front, which then shows the reference, links a commit written
+// as seven or more hexadecimal digits on their own, and shows :boom: as an emoji, in a title as
+// much as in a body. Those patterns need the name, the number, the rest of the digits or the
+// shortcode right after their first character, so a zero-width space after it, which shows
 // nothing, keeps them from matching; a backslash wouldn't, since GitHub reads the signs in the
-// text once Markdown has taken the backslash away.
+// text once Markdown has taken the backslash away. A slash or a colon after a digit, as in a date
+// or a time, is left alone: no reference or shortcode starts that way.
 const ZERO_WIDTH_SPACE = '\u200b';
-const LINKED = /@(?=[a-z0-9])|(?:#|GH-)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|:(?=[\w+-]+:)/gi;
+const LINKED = /@(?=[a-z0-9])|(?:#|GH-|(?<!\d)\/)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|(?<!\d):(?=[\w+-]+:)/gi;
 const unlinked = (text: string): string => text.replace(LINKED, `$&${ZERO_WIDTH_SPACE}`);
 
 // A line of the text, or the name, as the body's Markdown shows it as it is: unlinked, and then
@@ -335,14 +337,16 @@ const literal = (text: string): string => escapeName(unlinked(text));
 // with its spaces collapsed, cut after TITLE_LENGTH characters, or fewer when they are more than
 // TITLE_POINTS code points, with an ellipsis. The characters are the ones that a reader sees, as
 // textLength counts them (shared/src/text.ts), so that a Chinese character or an emoji is never
-// cut in two. GitHub shows a title as text, not as Markdown, so nothing is escaped, but the signs
-// are unlinked all the same.
+// cut in two, unless the first character alone is more than TITLE_POINTS code points, as many
+// emoji joined into one are, which is cut after that many. GitHub shows a title as text, not as
+// Markdown, so nothing is escaped, but the signs are unlinked all the same.
 function issueTitle({ kind, text }: Feedback): string {
   const line = (text.split('\n')[0] ?? '').replace(/\s+/g, ' ').trim();
   const chars = [...graphemes.segment(line)].map(({ segment }) => segment);
   const kept = chars.slice(0, TITLE_LENGTH);
   while ([...kept.join('')].length > TITLE_POINTS) kept.pop();
-  const cut = kept.length < chars.length ? `${kept.join('').trimEnd()}\u2026` : line;
+  const head = kept.length > 0 ? kept.join('') : [...line].slice(0, TITLE_POINTS).join('');
+  const cut = kept.length < chars.length ? `${head.trimEnd()}\u2026` : line;
   return `${KINDS[kind]}: ${unlinked(cut)}`;
 }
 

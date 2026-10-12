@@ -507,6 +507,8 @@ describe('feedback draft', () => {
     store.add(feedback({ text: ' Spaced \t  out \nand more', publicIssue: true }));
     store.add(feedback({ text: `${'x'.repeat(59)} and more`, publicIssue: true }));
     store.add(feedback({ text: family.repeat(61), publicIssue: true }));
+    const chain = Array.from({ length: 80 }, () => '\u{1f468}').join('‍');
+    store.add(feedback({ text: `${chain} and more`, publicIssue: true }));
     expect(drafted('1').title).toBe(`Idea: ${'x'.repeat(60)}`);
     expect(drafted('2').title).toBe(`Idea: ${'x'.repeat(60)}\u2026`);
     expect(drafted('3').title).toBe(`Idea: ${han.repeat(60)}\u2026`);
@@ -518,6 +520,9 @@ describe('feedback draft', () => {
     // Fewer characters when 60 would be more than 120 code points, which GitHub counts: 24 of these
     // emoji, of five code points each.
     expect(drafted('7').title).toBe(`Idea: ${family.repeat(24)}\u2026`);
+    // One character of more than 120 code points, such as 80 emoji joined into one, is cut inside,
+    // after 120: 60 of the emoji, with the joiners between them.
+    expect(drafted('8').title).toBe(`Idea: ${'\u{1f468}\u200d'.repeat(60)}\u2026`);
     // The body keeps every line as it is.
     expect(drafted('1').body).toContain(`> ${'x'.repeat(60)}\n> The second line`);
   });
@@ -537,8 +542,9 @@ describe('feedback draft', () => {
         kind: 'bug',
         text:
           '# Heading @octocat, see #12, GH-13 and fbcd508 :tada:\n\n- item [x](https://e.example) ' +
-          '![](https://i.example/i.png) <b>bold</b>\n> quoted 1. list\nwww.example.com me@example.com\n' +
-          '7ccd7e7e3bd9256e1cb82d4993944a842502dc58 :+1: at 10:30, by the feedback form',
+          '![](https://i.example/i.png) <b>bold</b>\n> quoted 1. list\nwww.example.com me@example.com ' +
+          'o/r/issues/4 https://github.com/o/r/pull/5\n' +
+          '7ccd7e7e3bd9256e1cb82d4993944a842502dc58 :+1: at 10:30:45, by the feedback form',
         credit: '[@bob](#1)',
         publicIssue: true,
       }),
@@ -547,9 +553,10 @@ describe('feedback draft', () => {
     // The title is text, which GitHub doesn't render, but its signs are unlinked all the same.
     expect(title).toBe(`Bug: # Heading @${ZWSP}octocat, see #${ZWSP}12, GH-${ZWSP}13 and f${ZWSP}bcd508 :${ZWSP}tada:`);
     // In the body, every ASCII punctuation character is escaped, and a zero-width space follows an
-    // @ before a name, a # or GH- before a number, the first of seven or more hexadecimal digits
-    // on their own and a : before a shortcode, so that GitHub, which reads them in the text once
-    // Markdown has taken the backslashes away, finds no mention, reference, address, commit or
+    // @ before a name, a # or GH- before a number, a / before a number, as in owner/repo/issues/4
+    // with or without the address of the site in front, the first of seven or more hexadecimal
+    // digits on their own and a : before a shortcode, so that GitHub, which reads them in the text
+    // once Markdown has taken the backslashes away, finds no mention, reference, address, commit or
     // emoji. A time, and a word with fewer such digits in a row, are left alone.
     expect(body).toBe(
       [
@@ -559,14 +566,23 @@ describe('feedback draft', () => {
         '>',
         '> \\- item \\[x\\]\\(https\\:\\/\\/e\\.example\\) \\!\\[\\]\\(https\\:\\/\\/i\\.example\\/i\\.png\\) \\<b\\>bold\\<\\/b\\>',
         '> \\> quoted 1\\. list',
-        `> www\\.example\\.com me\\@${ZWSP}example\\.com`,
-        `> 7${ZWSP}ccd7e7e3bd9256e1cb82d4993944a842502dc58 \\:${ZWSP}\\+1\\: at 10\\:30\\, by the feedback form`,
+        `> www\\.example\\.com me\\@${ZWSP}example\\.com o\\/r\\/issues\\/${ZWSP}4 ` +
+          `https\\:\\/\\/github\\.com\\/o\\/r\\/pull\\/${ZWSP}5`,
+        `> 7${ZWSP}ccd7e7e3bd9256e1cb82d4993944a842502dc58 \\:${ZWSP}\\+1\\: at 10\\:30\\:45\\, by the feedback form`,
         '',
         `Reported by \\[\\@${ZWSP}bob\\]\\(\\#${ZWSP}1\\).`,
       ].join('\n'),
     );
     // Nothing that GitHub links or replaces is left as it was.
-    expect(body).not.toMatch(/@[a-z0-9]|#\d|GH-\d|https?:\/\/|www\.|fbcd508|7ccd7e7|:[\w+-]+:/i);
+    expect(body).not.toMatch(/@[a-z0-9]|#\d|GH-\d|\/\d|https?:\/\/|www\.|fbcd508|7ccd7e7|:[\w+-]+:/i);
+  });
+
+  test('leaves a time, a date, a fraction and a word of few hexadecimal digits alone', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ text: 'Froze at 10:30:45 on 10/13, 1/2 of the time, with feedback', publicIssue: true }));
+    const { title, body } = drafted('1');
+    expect(title).toBe('Idea: Froze at 10:30:45 on 10/13, 1/2 of the time, with feedback');
+    expect(body).not.toContain(ZWSP);
   });
 
   test('escapes a name as the acknowledgments do, and unlinks it', () => {
