@@ -677,7 +677,7 @@
     "contact": "Contact (optional)",
     "contactHint": "An email address, a WeChat ID or anything else to reach you by.",
     "credit": "Name for the acknowledgments (optional)",
-    "creditHint": "Leave it empty to stay anonymous. If your suggestion is adopted, this name is listed publicly in the acknowledgments, on the home page and in the project's repository on GitHub, whose history keeps it even if it is removed later. Any name will do, such as your GitHub username. If you are logged in, your account page counts the acknowledgment too.",
+    "creditHint": "Leave it empty to stay anonymous. With a name, you can add a link to a page about you below, such as your homepage or your GitHub or ORCID profile. Any name will do, such as your GitHub username. If your suggestion is adopted, the name is listed publicly in the acknowledgments, on the home page and in the project's repository on GitHub, whose history keeps it even if it is removed later. If you are logged in, your account page counts the acknowledgment too.",
     "link": "Link for your name (optional)",
     "linkHint": "A page about you, such as your homepage or your profile on GitHub, ORCID or Google Scholar, linked from your name in the acknowledgments. It starts with https://; no email addresses.",
     "publicIssue": "You may publish this as a GitHub issue",

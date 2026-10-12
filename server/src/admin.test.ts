@@ -84,6 +84,8 @@ describe('avatar remove', () => {
       ['feedback', 'adopt', '1', '2'],
       ['acknowledgments', 'add', 'Ann', '--kind'],
       ['acknowledgments', 'add', 'Ann', '--kind', 'words', '--ban'],
+      ['acknowledgments', 'add', 'Ann', '--no-account', '--kind'],
+      ['acknowledgments', 'add', 'Ann', '--kind', 'words', '--no-account', '--account'],
       ['acknowledgments', 'list', '1'],
       ['feedback', 'issue', '1'],
       ['feedback', 'issue', '1', '2', '--clear'],
@@ -734,15 +736,15 @@ describe('acknowledgments', () => {
       '- Bob B \u{2014} <what they did>',
     ]);
     expect(printedEntry('Pilot study').problems).toEqual([]);
-    expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words')).toBe(0);
+    expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words', '--no-account')).toBe(0);
     expect(printed.at(-3)).toBe('Added acknowledgment #2: Cat, for Data, counted for no account.');
-    expect(run('acknowledgments', 'add', 'x'.repeat(17), '--kind', 'words')).toBe(1);
+    expect(run('acknowledgments', 'add', 'x'.repeat(17), '--kind', 'words', '--no-account')).toBe(1);
     expect(printed.at(-1)).toBe('The name must have 1 to 16 visible characters, as a nickname does.');
-    expect(run('acknowledgments', 'add', ' ', '--kind', 'words')).toBe(1);
+    expect(run('acknowledgments', 'add', ' ', '--kind', 'words', '--no-account')).toBe(1);
     expect(printed.at(-1)).toBe('The name must have 1 to 16 visible characters, as a nickname does.');
-    expect(run('acknowledgments', 'add', 'Reviewer 2', '--kind', 'words')).toBe(1);
+    expect(run('acknowledgments', 'add', 'Reviewer 2', '--kind', 'words', '--no-account')).toBe(1);
     expect(printed.at(-1)).toBe('Reviewer 2 is a reserved name, which no nickname may be either.');
-    expect(run('acknowledgments', 'add', 'Dan', '--kind', 'praise')).toBe(2);
+    expect(run('acknowledgments', 'add', 'Dan', '--kind', 'praise', '--no-account')).toBe(2);
     expect(printed.at(-1)).toBe('--kind must be one of feedback, words, playtesting.');
     expect(run('acknowledgments', 'add', 'Dan', '--kind', 'words', '--account', 'Nobody')).toBe(1);
     expect(printed.at(-1)).toBe('No account is called Nobody.');
@@ -757,6 +759,25 @@ describe('acknowledgments', () => {
     );
   });
 
+  test('say either which account they count for or that there is none, so that none is left out', () => {
+    accounts.store.create('Bob', 'bob', 'hash');
+    // The reason, then the usage of this command alone.
+    const told = [
+      'Add --account <username> or --no-account, one or the other, to say whether it counts for an account, ' +
+        "so that one isn't left out by mistake.",
+      'usage: admin.cjs acknowledgments add <name> --kind feedback|words|playtesting --account <username>|--no-account',
+    ];
+    expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting')).toBe(2);
+    expect(printed.slice(-2)).toEqual(told);
+    expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting', '--account', 'bob', '--no-account')).toBe(2);
+    expect(printed.slice(-2)).toEqual(told);
+    expect(accounts.acknowledgments.all()).toEqual([]);
+    expect(run('acknowledgments', 'add', 'Bob', '--no-account', '--kind', 'playtesting')).toBe(0);
+    expect(printed.at(-3)).toBe('Added acknowledgment #1: Bob, for Pilot study, counted for no account.');
+    expect(run('acknowledgments', 'add', 'Bob', '--account', 'bob', '--kind', 'playtesting')).toBe(0);
+    expect(printed.at(-3)).toBe('Added acknowledgment #2: Bob, for Pilot study, counted for the account Bob.');
+  });
+
   test('are listed in columns that line up whatever the names are made of', () => {
     accounts.store.create('\u5f20\u4e09', usernameKey('\u5f20\u4e09'), 'hash');
     const store = new FeedbackStore(database.db);
@@ -764,7 +785,7 @@ describe('acknowledgments', () => {
     store.add(feedback({ credit: '\u674e\u56db' }));
     expect(run('feedback', 'adopt', '12')).toBe(0);
     expect(run('acknowledgments', 'add', '\u5f20\u4e09\u4e30', '--kind', 'words', '--account', '\u5f20\u4e09')).toBe(0);
-    expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting')).toBe(0);
+    expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting', '--no-account')).toBe(0);
     expect(run('feedback', 'adopt', '1')).toBe(0);
     expect(run('acknowledgments', 'list')).toBe(0);
     // A terminal shows a Chinese character two columns wide, so the names and the usernames come
@@ -779,7 +800,7 @@ describe('acknowledgments', () => {
   });
 
   test('are listed on a database that no server has open, leaving nothing behind', () => {
-    expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words')).toBe(0);
+    expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words', '--no-account')).toBe(0);
     database.db.close();
     rmSync(join(dir, AVATAR_DIR), { recursive: true });
     expect(run('acknowledgments', 'list')).toBe(0);
@@ -790,7 +811,7 @@ describe('acknowledgments', () => {
   });
 
   test('take a name that begins with --, as a nickname may, and print it escaped', () => {
-    expect(run('acknowledgments', 'add', '--Ann', '--kind', 'words')).toBe(0);
+    expect(run('acknowledgments', 'add', '--Ann', '--kind', 'words', '--no-account')).toBe(0);
     expect(printed.at(-3)).toBe('Added acknowledgment #1: --Ann, for Data, counted for no account.');
     expect(printed.at(-1)).toBe('- \\-\\-Ann \u{2014} <what they did>');
     expect(printedEntry('Data').sections[0]?.entries[0]?.name).toBe('--Ann');

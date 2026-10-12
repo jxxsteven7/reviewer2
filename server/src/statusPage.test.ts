@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { Sample, Stats } from './stats';
 import {
+  DEFAULT_ADMIN_COMMAND,
   duration,
   NO_FEEDBACK,
   renderFeedbackPage,
@@ -221,18 +222,21 @@ describe('the feedback', () => {
     ...changes,
   });
   const page = (changes: Partial<FeedbackListing> = {}) =>
-    renderFeedbackPage({
-      total: 0,
-      statuses: NO_FEEDBACK.statuses,
-      kinds: {},
-      view: 'open',
-      kind: null,
-      entries: [],
-      paged: false,
-      older: false,
-      now: NOW,
-      ...changes,
-    });
+    renderFeedbackPage(
+      {
+        total: 0,
+        statuses: NO_FEEDBACK.statuses,
+        kinds: {},
+        view: 'open',
+        kind: null,
+        entries: [],
+        paged: false,
+        older: false,
+        now: NOW,
+        ...changes,
+      },
+      DEFAULT_ADMIN_COMMAND,
+    );
   // What the page shows between the heading and the entries.
   const head = (html: string) => text(html.slice(0, html.indexOf('<article>')));
 
@@ -316,7 +320,7 @@ describe('the feedback', () => {
     expect(html).toContain('<span class="badge thanked">Thanked</span>');
     expect(shown).toContain('No contact Name for the acknowledgments: Ann L &middot; account Ann');
     expect(shown).toContain('#2 &middot; Idea');
-    expect(shown).toContain('No contact Name for the acknowledgments: Bob #1');
+    expect(shown).toContain('No contact Name for the acknowledgments: Bob Commands');
     expect(shown).not.toContain('Bob &middot; account');
     expect(shown.match(/thanked as acknowledgment/g)).toHaveLength(1);
     expect(shown).not.toContain('also the username');
@@ -439,6 +443,104 @@ describe('the feedback', () => {
     expect(html).toContain('#1 &middot; &#60;i&#62;later&#60;/i&#62; &middot;');
     expect(html).toContain('version &#60;b&#62;v1&#60;/b&#62;');
     expect(html).toContain('Browser: &#60;/p&#62;&#60;script&#62;');
+  });
+
+  // The commands under one piece of feedback, each with its note, as the page shows them.
+  const commands = (html: string) =>
+    [...html.matchAll(/<p class="command"><code>(.*?)<\/code>(.*?)<\/p>/g)].map(([, code, note]) => `${code}${note}`);
+  const RUN = 'node server/dist/admin.cjs feedback';
+
+  test('lists the commands that may come next, by what became of it, folded under each one', () => {
+    const of = (changes: Partial<Feedback>) => commands(page({ total: 1, entries: [feedback(7, changes)] }));
+    // New, and the player agreed to an issue: everything is open.
+    expect(of({ publicIssue: true })).toEqual([
+      `${RUN} issue 7 &#60;number&#62;`,
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} adopt 7 can't be undone`,
+      `${RUN} close 7`,
+      `${RUN} delete 7`,
+    ]);
+    // Without the player's agreement, or from before they were asked, no issue.
+    for (const publicIssue of [false, null]) {
+      expect(of({ publicIssue }), String(publicIssue)).toEqual([
+        `${RUN} resolve 7 &#60;pr&#62;`,
+        `${RUN} adopt 7 can't be undone`,
+        `${RUN} close 7`,
+        `${RUN} delete 7`,
+      ]);
+    }
+    // Published and resolved: either can be taken back.
+    expect(of({ publicIssue: true, issue: 42, resolvedPr: 50, status: 'resolved' })).toEqual([
+      `${RUN} issue 7 --clear`,
+      `${RUN} resolve 7 --clear`,
+      `${RUN} adopt 7 can't be undone`,
+      `${RUN} close 7`,
+      `${RUN} delete 7`,
+    ]);
+    // Thanked: neither adopted again nor deleted.
+    expect(of({ acknowledgmentId: 3, status: 'thanked' })).toEqual([`${RUN} resolve 7 &#60;pr&#62;`, `${RUN} close 7`]);
+    // Closed: reopened rather than closed, and not adopted.
+    expect(of({ closedAt: '2026-10-06T10:00:00.000Z', status: 'closed' })).toEqual([
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} reopen 7`,
+      `${RUN} delete 7`,
+    ]);
+    expect(of({ closedAt: '2026-10-06T10:00:00.000Z', acknowledgmentId: 3, status: 'closed' })).toEqual([
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} reopen 7`,
+    ]);
+    // In the trash, only the way out, whatever else became of it.
+    expect(of({ deletedAt: '2026-10-07T09:00:00.000Z', status: 'trash' })).toEqual([`${RUN} restore 7`]);
+    expect(
+      of({
+        publicIssue: true,
+        issue: 42,
+        resolvedPr: 50,
+        acknowledgmentId: 3,
+        closedAt: '2026-10-06T10:00:00.000Z',
+        deletedAt: '2026-10-07T09:00:00.000Z',
+        status: 'trash',
+      }),
+    ).toEqual([`${RUN} restore 7`]);
+
+    // Folded by default, at the end of the entry, as text alone: nothing on the page runs them.
+    const html = page({ total: 1, entries: [feedback(7, { publicIssue: true, userAgent: 'Mozilla/5.0' })] });
+    expect(html).toContain(
+      '<p class="meta">Browser: Mozilla/5.0</p><details><summary>Commands</summary>' +
+        `<p class="command"><code>${RUN} issue 7 &#60;number&#62;</code></p>`,
+    );
+    expect(html).toContain(`<p class="command"><code>${RUN} adopt 7</code> can't be undone</p>`);
+    expect(html).toContain(`<p class="command"><code>${RUN} delete 7</code></p></details></article>`);
+    expect(html).not.toContain('<details open');
+    expect(html).not.toMatch(INERT);
+    expect(html).toContain('user-select: all');
+  });
+
+  test('puts how admin.cjs is run in front of the commands, the default unless told, escaped', () => {
+    const listing: FeedbackListing = {
+      total: 1,
+      statuses: { ...NO_FEEDBACK.statuses, new: 1 },
+      kinds: { idea: 1 },
+      view: 'open',
+      kind: null,
+      entries: [feedback(1)],
+      paged: false,
+      older: false,
+      now: NOW,
+    };
+    expect(commands(renderFeedbackPage(listing, DEFAULT_ADMIN_COMMAND))).toContain(`${RUN} close 1`);
+    expect(commands(renderFeedbackPage(listing, 'npm run admin --'))).toEqual([
+      'npm run admin -- feedback resolve 1 &#60;pr&#62;',
+      "npm run admin -- feedback adopt 1 can't be undone",
+      'npm run admin -- feedback close 1',
+      'npm run admin -- feedback delete 1',
+    ]);
+    // The operator set it, and it is escaped all the same.
+    const odd = renderFeedbackPage(listing, '<script>x</script> "a" & \'b\'');
+    expect(odd).toContain(
+      '<code>&#60;script&#62;x&#60;/script&#62; &#34;a&#34; &#38; &#39;b&#39; feedback close 1</code>',
+    );
+    expect(odd).not.toMatch(INERT);
   });
 
   test('shows each view with how much there is of it, of the kind shown, and the open feedback by default', () => {

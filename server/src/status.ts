@@ -25,7 +25,8 @@ import type { FeedbackStore } from './store/feedback';
 // feedback of one kind, and `/feedback?status=<status>` only what is open, which it shows
 // otherwise, of one status, or in the trash. `/reports` is the reports that players sent of each
 // other, paged the same way. All of it is read-only: what became of the feedback is changed with
-// admin.cjs alone.
+// admin.cjs alone, whose commands the feedback page shows as text to copy, with ADMIN_COMMAND in
+// front.
 
 export const STATUS_HOST = '127.0.0.1';
 
@@ -101,6 +102,9 @@ export function createStatusHandler(
   history: History,
   feedback: FeedbackStore,
   log: Log,
+  // What the feedback page puts in front of the commands it shows: ADMIN_COMMAND, or
+  // DEFAULT_ADMIN_COMMAND (config.ts).
+  adminCommand: string,
   // How many accounts there are, and how many are new.
   accounts: () => AccountCounts = () => ({ total: 0, recent: 0 }),
 ): RequestListener {
@@ -124,7 +128,12 @@ export function createStatusHandler(
           );
           send(res, 200, 'text/html; charset=utf-8', page);
         } else if (path === FEEDBACK_PATH) {
-          send(res, 200, 'text/html; charset=utf-8', renderFeedbackPage(feedbackListing(feedback, target)));
+          send(
+            res,
+            200,
+            'text/html; charset=utf-8',
+            renderFeedbackPage(feedbackListing(feedback, target), adminCommand),
+          );
         } else if (path === REPORTS_PATH) {
           send(res, 200, 'text/html; charset=utf-8', renderReportsPage(reportListing(feedback, target)));
         } else if (path === '/status.json') {

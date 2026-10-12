@@ -86,6 +86,25 @@ article { padding: 12px 16px 14px; margin: 0 0 14px; }
 .trail { margin: 0 0 6px; font-weight: 700; }
 .meta { color: var(--ink-2); font-size: 0.85rem; overflow-wrap: anywhere; }
 .more { margin: 4px 0 0; font-weight: 700; }
+/* The summary's padding makes it 44px to tap, as the game's targets are (docs/design.md), and its
+   negative margins keep the layout as it was: folded, the card ends as it did without it, and the
+   sides give the focus ring, drawn inside the padding, room beside the marker. Open, a margin below
+   keeps the ring off the first command. */
+details { margin: 0 0 -12px; }
+details[open] { margin-bottom: 0; }
+summary {
+  cursor: pointer; padding: 12px 6px; margin: 0 -6px; border-radius: 4px; color: var(--ink-2); font-size: 0.85rem;
+  font-weight: 700;
+}
+details[open] > summary { margin-bottom: 4px; }
+summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.command { color: var(--ink-2); font-size: 0.85rem; }
+.command + .command { margin-top: 6px; }
+.command code {
+  display: inline-block; max-width: 100%; padding: 1px 8px; border-radius: 6px; background: var(--bg); color: var(--ink);
+  font: 500 0.8rem/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  overflow-wrap: anywhere; user-select: all;
+}
 @media (max-width: 30rem) {
   main { padding: 12px 12px 40px; }
   section, article { padding: 12px 12px 14px; }
@@ -212,6 +231,10 @@ const VIEWS: Record<PageView, string> = {
   trash: 'Trash',
 };
 
+// What the feedback page puts in front of the arguments of the commands it shows, unless
+// ADMIN_COMMAND (config.ts) says how admin.cjs is run where the server is.
+export const DEFAULT_ADMIN_COMMAND = 'node server/dist/admin.cjs';
+
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
 const day = (iso: string) => iso.slice(0, 10);
@@ -252,6 +275,30 @@ function trail(feedback: Feedback, now: number): string {
   return steps.length === 0 ? '' : `<p class="trail">${steps.join(' &middot; ')}</p>`;
 }
 
+// The `admin.cjs feedback` commands that may come next for the feedback (admin.ts), as text for
+// the operator to copy to a terminal, each on a line of its own with `prefix` in front, under a
+// heading that is folded until it is opened. Which they are follows the feedback's status. In the
+// trash, only the way out. Otherwise: the issue, to record or to take back, for feedback whose
+// player agreed to one; the pull request, to record or to take back; adopting it, while it is
+// neither thanked nor closed, which can't be undone; closing or reopening it; and the trash, unless
+// an acknowledgment points at it. The page shows the commands and runs none of them.
+function commands(feedback: Feedback, prefix: string): string {
+  const { id, publicIssue, issue, resolvedPr, acknowledgmentId, closedAt, deletedAt } = feedback;
+  const line = (command: string, note = '') =>
+    `<p class="command"><code>${escape(`${prefix} feedback ${command}`)}</code>${note === '' ? '' : ` ${note}`}</p>`;
+  const lines =
+    deletedAt !== null
+      ? [line(`restore ${id}`)]
+      : [
+          ...(publicIssue === true ? [line(issue === null ? `issue ${id} <number>` : `issue ${id} --clear`)] : []),
+          line(resolvedPr === null ? `resolve ${id} <pr>` : `resolve ${id} --clear`),
+          ...(acknowledgmentId === null && closedAt === null ? [line(`adopt ${id}`, "can't be undone")] : []),
+          line(closedAt === null ? `close ${id}` : `reopen ${id}`),
+          ...(acknowledgmentId === null ? [line(`delete ${id}`)] : []),
+        ];
+  return `<details><summary>Commands</summary>${lines.join('')}</details>`;
+}
+
 // Players wrote the text, the contact, the name and the link, and the page sent the version, so all
 // of it is escaped like anything else that comes from outside, and the link is shown, not linked.
 // The text keeps its line breaks. The top line is the id, the kind and the time, with the status
@@ -259,10 +306,10 @@ function trail(feedback: Feedback, now: number): string {
 // version, the language, the page it came from, whether the player agreed to a public issue, the
 // contact, the name for the acknowledgments with its link and the account it was given from, in
 // bold with another account whose username it is, which may be someone passing for that
-// account's owner, and for a bug the browser. Older feedback, from before players were asked
-// about an issue, may not be published. A kind that this server doesn't know, from a later one
-// that it was rolled back from, shows as it is.
-function entry(feedback: Feedback, now: number): string {
+// account's owner, for a bug the browser, and last the commands that may come next, folded. Older
+// feedback, from before players were asked about an issue, may not be published. A kind that this
+// server doesn't know, from a later one that it was rolled back from, shows as it is.
+function entry(feedback: Feedback, now: number, prefix: string): string {
   const head = [
     `#${feedback.id}`,
     (KINDS as Partial<Record<string, string>>)[feedback.kind] ?? escape(feedback.kind),
@@ -294,6 +341,7 @@ function entry(feedback: Feedback, now: number): string {
     `<p class="meta">${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
     `<p class="meta">${credit}</p>` +
     (feedback.userAgent === null ? '' : `<p class="meta">Browser: ${escape(feedback.userAgent)}</p>`) +
+    commands(feedback, prefix) +
     '</article>'
   );
 }
@@ -337,9 +385,9 @@ function choices({ statuses, kinds, view, kind }: FeedbackListing): string {
   );
 }
 
-// The feedback page: the choices, the entries of one page, and the way to the latest and to the
-// older ones.
-function feedbackList(listing: FeedbackListing): string {
+// The feedback page: the choices, the entries of one page, each with its commands with `prefix` in
+// front, and the way to the latest and to the older ones.
+function feedbackList(listing: FeedbackListing, prefix: string): string {
   const { total, view, kind, entries, paged, older, now } = listing;
   if (total === 0) return '<p class="note">None yet.</p>';
   const links = [
@@ -349,7 +397,7 @@ function feedbackList(listing: FeedbackListing): string {
   return (
     choices(listing) +
     (entries.length === 0 && !paged ? '<p class="note">None here.</p>' : '') +
-    entries.map((feedback) => entry(feedback, now)).join('') +
+    entries.map((feedback) => entry(feedback, now, prefix)).join('') +
     (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '')
   );
 }
@@ -489,13 +537,14 @@ ${feedbackCounts(feedback)}</section>
 }
 
 // The feedback that players sent, newest first, a page at a time, of one view and of every kind
-// or of one.
-export function renderFeedbackPage(feedback: FeedbackListing): string {
+// or of one, each with the commands that may come next, with `adminCommand` in front: ADMIN_COMMAND,
+// or DEFAULT_ADMIN_COMMAND (config.ts).
+export function renderFeedbackPage(feedback: FeedbackListing, adminCommand: string): string {
   return document(
     'feedback',
     'Feedback',
     `${feedback.total} in all, newest first &middot; what became of it is changed with <code>admin.cjs feedback</code>`,
-    feedbackList(feedback),
+    feedbackList(feedback, adminCommand),
     false,
   );
 }
