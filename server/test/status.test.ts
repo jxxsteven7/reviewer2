@@ -1,7 +1,7 @@
 import { createServer, request, type IncomingHttpHeaders, type Server } from 'node:http';
 import { createConnection, type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
-import { History } from '../src/stats';
+import { History, type Stats } from '../src/stats';
 import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
 import { createRoom, joinRoom, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
 
@@ -166,10 +166,14 @@ describe('the status server', () => {
   let status: Server | undefined;
   let base: string;
 
-  async function startStatus({ history = new History(), stats = () => server.app.stats() } = {}) {
+  async function startStatus({
+    history = new History(),
+    stats = () => server.app.stats(),
+    adminCommand,
+  }: { history?: History; stats?: () => Stats; adminCommand?: string } = {}) {
     const log = (event: string, fields?: Record<string, unknown>) =>
       server.logs.push({ event, ...(fields ? { fields } : {}) });
-    const started = createServer(createStatusHandler(stats, history, server.feedback, log));
+    const started = createServer(createStatusHandler(stats, history, server.feedback, log, undefined, adminCommand));
     status = started;
     await new Promise<void>((resolve) => started.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(started.address() as AddressInfo).port}`;
@@ -328,6 +332,10 @@ describe('the status server', () => {
     );
     expect(latest.body).toContain(`${total} in all, newest first`);
     expect(latest.body).not.toContain('http-equiv="refresh"');
+    // Each piece has its commands to copy, with the build's own way of running them in front.
+    expect(latest.body).toContain(
+      `<details><summary>Commands</summary><p class="command"><code>node server/dist/admin.cjs feedback resolve ${total} &#60;pr&#62;</code></p>`,
+    );
     expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
     expect(latest.body).toContain('<p class="more"><a href="/feedback?before=6">Older</a></p>');
 
@@ -339,6 +347,27 @@ describe('the status server', () => {
     for (const query of ['?before=abc', '?before=-1', '?before=1e3', '?other=1']) {
       expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual(shown(latest.body));
     }
+  });
+
+  test('puts how admin.cjs is run, as ADMIN_COMMAND says, in front of the commands it shows', async () => {
+    server = await startServer();
+    server.feedback.add({
+      kind: 'idea',
+      text: 'Number 1',
+      contact: null,
+      credit: null,
+      link: null,
+      accountId: null,
+      publicIssue: false,
+      version: 'test',
+      language: 'en',
+      page: 'home',
+      userAgent: null,
+    });
+    await startStatus({ adminCommand: 'npm run admin --' });
+    const page = await get(base, '/feedback');
+    expect(page.body).toContain('<p class="command"><code>npm run admin -- feedback resolve 1 &#60;pr&#62;</code></p>');
+    expect(page.body).not.toContain('node server/dist/admin.cjs');
   });
 
   test('shows the feedback of one kind, a page at a time', async () => {

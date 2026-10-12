@@ -40,7 +40,7 @@ import { MIGRATIONS } from './store/migrations';
 //   node server/dist/admin.cjs feedback trash
 //   node server/dist/admin.cjs reports list
 //   node server/dist/admin.cjs acknowledgments list
-//   node server/dist/admin.cjs acknowledgments add <name> --kind <kind> [--account <username>]
+//   node server/dist/admin.cjs acknowledgments add <name> --kind <kind> --account <username>|--no-account
 //
 // adminCli.ts runs this, as index.ts runs main.ts.
 //
@@ -48,9 +48,10 @@ import { MIGRATIONS } from './store/migrations';
 // --ban bars the account from uploading another; `avatar allow` lifts that. `feedback adopt`
 // records that the feedback was adopted, counted for the account the player was logged in to if
 // they left a name, and says when the name is another account's username; `acknowledgments add`
-// thanks someone by hand, such as a playtester. Both print the entry for ACKNOWLEDGMENTS.md, the
-// public list, which the operator completes and adds to the file. `list` shows the
-// acknowledgments.
+// thanks someone by hand, such as a playtester, counted for the account that --account names or,
+// with --no-account, for none: it takes one or the other, so that an account isn't left out by
+// mistake. Both print the entry for ACKNOWLEDGMENTS.md, the public list, which the operator
+// completes and adds to the file. `list` shows the acknowledgments.
 //
 // The other `feedback` commands are the operator's notes on what became of the feedback, which
 // the status page shows (docs/architecture.md#feedback) and which only these commands change:
@@ -86,14 +87,14 @@ const USAGE = [
   '  feedback trash',
   '  reports list',
   '  acknowledgments list',
-  `  acknowledgments add <name> --kind ${ACKNOWLEDGMENT_KINDS.join('|')} [--account <username>]`,
+  `  acknowledgments add <name> --kind ${ACKNOWLEDGMENT_KINDS.join('|')} --account <username>|--no-account`,
 ].join('\n');
 
-type Flags = { ban?: true; json?: true; kind?: string; account?: string };
+type Flags = { ban?: true; json?: true; noAccount?: true; kind?: string; account?: string };
 
-// The words of a command and its flags: --ban and --json stand alone, and --kind and --account
-// take a value. Anything else is a word, even when it begins with --, as a name may. Null for a flag
-// that has no value.
+// The words of a command and its flags: --ban, --json and --no-account stand alone, and --kind and
+// --account take a value. Anything else is a word, even when it begins with --, as a name may. Null
+// for a flag that has no value.
 function parse(args: readonly string[]): { words: string[]; flags: Flags } | null {
   const words: string[] = [];
   const flags: Flags = {};
@@ -101,6 +102,8 @@ function parse(args: readonly string[]): { words: string[]; flags: Flags } | nul
     const arg = args[i] as string;
     if (arg === '--ban' || arg === '--json') {
       flags[arg.slice(2) as 'ban' | 'json'] = true;
+    } else if (arg === '--no-account') {
+      flags.noAccount = true;
     } else if (arg === '--kind' || arg === '--account') {
       if (i + 1 >= args.length) return null;
       flags[arg.slice(2) as 'kind' | 'account'] = args[(i += 1)] as string;
@@ -597,8 +600,8 @@ const COMMANDS: Record<string, Command> = {
   },
   'acknowledgments add': {
     words: 1,
-    flags: ['kind', 'account'],
-    run(data, [raw], { kind, account: username }, print) {
+    flags: ['kind', 'account', 'noAccount'],
+    run(data, [raw], { kind, account: username, noAccount }, print) {
       // By the rules of the name that a player leaves with their feedback.
       const { credit: name, problem } = checkCredit(raw);
       if (problem === 'credit_reserved') {
@@ -611,6 +614,14 @@ const COMMANDS: Record<string, Command> = {
       }
       if (!(ACKNOWLEDGMENT_KINDS as readonly string[]).includes(kind ?? '')) {
         print(`--kind must be one of ${ACKNOWLEDGMENT_KINDS.join(', ')}.`);
+        return 2;
+      }
+      // Whether it counts for an account is said either way, so that one isn't left out by mistake.
+      if ((username === undefined) === (noAccount === undefined)) {
+        print(
+          'Add --account <username> or --no-account, one or the other, to say whether it counts for an ' +
+            "account, so that one isn't left out by mistake.",
+        );
         return 2;
       }
       const account = username === undefined ? null : accountNamed(data, username, print);

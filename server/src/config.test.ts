@@ -223,3 +223,15 @@ describe('CONTENT_DIR', () => {
     expect(loadConfig({ CONTENT_DIR: 'lists' }).contentDir).toBe(join(root, 'lists'));
   });
 });
+
+describe('ADMIN_COMMAND', () => {
+  test('is how the build is run unless it is set, and is trimmed', () => {
+    for (const ADMIN_COMMAND of [undefined, '', ' ']) {
+      expect(loadConfig({ ADMIN_COMMAND }).adminCommand, JSON.stringify(ADMIN_COMMAND)).toBe(
+        'node server/dist/admin.cjs',
+      );
+    }
+    expect(loadConfig({ ADMIN_COMMAND: 'npm run admin --' }).adminCommand).toBe('npm run admin --');
+    expect(loadConfig({ ADMIN_COMMAND: '  npm run admin --\n' }).adminCommand).toBe('npm run admin --');
+  });
+});

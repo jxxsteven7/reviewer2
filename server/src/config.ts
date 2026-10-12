@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { MIN_SECRET_LENGTH } from './accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
+import { DEFAULT_ADMIN_COMMAND } from './statusPage';
 import { DEFAULT_FEEDBACK_LIMITS } from './store/feedback';
 
 // Settings come from environment variables; docs/development.md lists them.
@@ -29,6 +30,9 @@ export interface Config {
   contentDir: string | null;
   // The port of the status page, or null when it is off (docs/architecture.md).
   statusPort: number | null;
+  // What the status page puts in front of the arguments of the operator's commands it shows, for
+  // copying: how admin.cjs is run where the server is (statusPage.ts).
+  adminCommand: string;
   // The server's secret, which email fingerprints are made with, and the mailer's socket. Without
   // both, accounts have no email (docs/architecture.md).
   secret: string | null;
@@ -130,6 +134,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dataDir: env.DATA_DIR?.trim() ? resolve(root, env.DATA_DIR.trim()) : null,
     contentDir: env.CONTENT_DIR?.trim() ? resolve(root, env.CONTENT_DIR.trim()) : null,
     statusPort,
+    adminCommand: env.ADMIN_COMMAND?.trim() || DEFAULT_ADMIN_COMMAND,
     secret: serverSecret(env),
     mailerSocket: mailerSocket(env.MAILER_SOCKET),
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
