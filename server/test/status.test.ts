@@ -333,7 +333,7 @@ describe('the status server', () => {
     );
     expect(latest.body).toContain(`${total} in all, newest first`);
     expect(latest.body).not.toContain('http-equiv="refresh"');
-    // Each piece has its commands to copy, with the build's own way of running them in front.
+    // Each piece has its commands to copy, with the default in front.
     expect(latest.body).toContain(
       `<details><summary>Commands</summary><p class="command"><code>node server/dist/admin.cjs feedback resolve ${total} &#60;pr&#62;</code></p>`,
     );

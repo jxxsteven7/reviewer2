@@ -516,7 +516,7 @@ describe('the feedback', () => {
     expect(html).toContain('user-select: all');
   });
 
-  test("puts how admin.cjs is run in front of the commands, the build's way unless told, escaped", () => {
+  test('puts how admin.cjs is run in front of the commands, the default unless told, escaped', () => {
     const listing: FeedbackListing = {
       total: 1,
       statuses: { ...NO_FEEDBACK.statuses, new: 1 },

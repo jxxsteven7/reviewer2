@@ -225,7 +225,7 @@ describe('CONTENT_DIR', () => {
 });
 
 describe('ADMIN_COMMAND', () => {
-  test('is how the build is run unless it is set, and is trimmed', () => {
+  test('is the default unless it is set, and is trimmed', () => {
     for (const ADMIN_COMMAND of [undefined, '', ' ']) {
       expect(loadConfig({ ADMIN_COMMAND }).adminCommand, JSON.stringify(ADMIN_COMMAND)).toBe(
         'node server/dist/admin.cjs',

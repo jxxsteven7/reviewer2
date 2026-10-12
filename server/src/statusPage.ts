@@ -86,12 +86,17 @@ article { padding: 12px 16px 14px; margin: 0 0 14px; }
 .trail { margin: 0 0 6px; font-weight: 700; }
 .meta { color: var(--ink-2); font-size: 0.85rem; overflow-wrap: anywhere; }
 .more { margin: 4px 0 0; font-weight: 700; }
-/* The summary's padding makes it 44px to tap, as the game's targets are (docs/design.md); folded,
-   the margin gives the room below back, so that the card ends as it did without it. The focus ring
-   is drawn inside that padding, off the text above and the commands below. */
+/* The summary's padding makes it 44px to tap, as the game's targets are (docs/design.md), and its
+   negative margins keep the layout as it was: folded, the card ends as it did without it, and the
+   sides give the focus ring, drawn inside the padding, room beside the marker. Open, a margin below
+   keeps the ring off the first command. */
 details { margin: 0 0 -12px; }
 details[open] { margin-bottom: 0; }
-summary { cursor: pointer; padding: 12px 0; border-radius: 4px; color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
+summary {
+  cursor: pointer; padding: 12px 6px; margin: 0 -6px; border-radius: 4px; color: var(--ink-2); font-size: 0.85rem;
+  font-weight: 700;
+}
+details[open] > summary { margin-bottom: 4px; }
 summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 .command { color: var(--ink-2); font-size: 0.85rem; }
 .command + .command { margin-top: 6px; }
@@ -533,7 +538,7 @@ ${feedbackCounts(feedback)}</section>
 
 // The feedback that players sent, newest first, a page at a time, of one view and of every kind
 // or of one, each with the commands that may come next, with `adminCommand` in front: ADMIN_COMMAND,
-// or how the build is run (config.ts).
+// or DEFAULT_ADMIN_COMMAND (config.ts).
 export function renderFeedbackPage(feedback: FeedbackListing, adminCommand: string): string {
   return document(
     'feedback',

@@ -102,8 +102,8 @@ export function createStatusHandler(
   history: History,
   feedback: FeedbackStore,
   log: Log,
-  // What the feedback page puts in front of the commands it shows: ADMIN_COMMAND, or how the
-  // build is run (config.ts).
+  // What the feedback page puts in front of the commands it shows: ADMIN_COMMAND, or
+  // DEFAULT_ADMIN_COMMAND (config.ts).
   adminCommand: string,
   // How many accounts there are, and how many are new.
   accounts: () => AccountCounts = () => ({ total: 0, recent: 0 }),
