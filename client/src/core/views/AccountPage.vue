@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { account, loadAccount } from '../account';
@@ -16,6 +16,11 @@ import SignIn from './SignIn.vue';
 // screen of one; no other path is honored. Logging in leads back there. A page that is logged in
 // already, as when the player logged in from another tab, goes back at once, with a new
 // connection: the one it has was made as a guest, which the room refused.
+//
+// The account's own page is for a page that stays. One that is about to leave keeps showing what
+// it showed, the loading line or the form, busy, until the navigation lands: the account's own page
+// would be built and torn down at once, with its requests, and the player would see it flash. A
+// login elsewhere, as in another tab, still turns the form into it.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -23,10 +28,18 @@ const next = computed(() => {
   const { next: wanted } = route.query;
   return typeof wanted === 'string' && /^\/room\/[A-Za-z0-9]+(\/screen)?$/.test(wanted) ? wanted : undefined;
 });
+// Whether the form is logging in, and then leaving (SignIn).
+const signingIn = ref(false);
+// Whether the page is on its way back to the room: one opened with `next` may be, until the server
+// has said whether the browser is logged in.
+const leaving = ref(next.value !== undefined);
 
 onMounted(async () => {
   await loadAccount();
-  if (!account.summary || !next.value) return;
+  if (!account.summary || !next.value) {
+    leaving.value = false;
+    return;
+  }
   if (connection.everConnected) reconnect();
   await router.replace(next.value);
 });
@@ -37,9 +50,9 @@ onMounted(async () => {
     <PageMasthead><LanguageSwitch /></PageMasthead>
     <main>
       <RouterLink to="/" class="back">{{ t('account.back') }}</RouterLink>
-      <p v-if="!account.loaded" class="loading">{{ t('account.loading') }}</p>
-      <ProfileView v-else-if="account.summary" :summary="account.summary" />
-      <SignIn v-else :next="next" />
+      <SignIn v-if="signingIn || (account.loaded && !account.summary)" v-model:busy="signingIn" :next="next" />
+      <ProfileView v-else-if="account.summary && !leaving" :summary="account.summary" />
+      <p v-else class="loading">{{ t('account.loading') }}</p>
     </main>
   </div>
 </template>

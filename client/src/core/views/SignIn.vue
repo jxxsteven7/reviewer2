@@ -12,8 +12,14 @@ import { useBusy } from '../useBusy';
 // Logging in, or registering an account, which only needs a username and a password. Both forms
 // say what is wrong with what is typed before it is sent, by the rules that the server applies
 // (shared/src/accounts.ts), and what the server refused after. Registering logs the browser in.
-// Both lead to `next`, the room that sent the player here (AccountPage), or else home.
+// Both lead to `next`, the room that sent the player here (AccountPage), or else home. The form is
+// busy from the moment it sends until the page has left, and says so: the account page keeps the
+// form meanwhile, although the browser is logged in already.
 const props = defineProps<{ next?: string | undefined }>();
+// Whether the form is busy, as the account page hears it (v-model:busy): a copy, since a model with
+// a listener reads as the parent last rendered it, and the guard against a second submit must read
+// what it has just written (useBusy).
+const busyModel = defineModel<boolean>('busy', { default: false });
 const { t } = useI18n();
 const router = useRouter();
 const mode = ref<'login' | 'register'>('login');
@@ -22,6 +28,7 @@ const password = ref('');
 const refused = ref<string | undefined>();
 const { busy, run } = useBusy();
 
+watch(busy, (value) => (busyModel.value = value), { flush: 'sync' });
 watch([mode, username, password], () => (refused.value = undefined));
 
 const usernameProblem = computed(() => {
@@ -40,13 +47,11 @@ const ready = computed(
 
 async function submit() {
   const path = mode.value === 'login' ? ACCOUNT_API.login : ACCOUNT_API.register;
-  const reply = await run(() => logIn(path, { username: username.value, password: password.value }));
-  if (!reply) return;
-  if (!reply.ok) {
-    refused.value = t(errorKey(reply.error));
-    return;
-  }
-  await router.push(props.next ?? '/');
+  await run(async () => {
+    const reply = await logIn(path, { username: username.value, password: password.value });
+    if (reply.ok) await router.push(props.next ?? '/');
+    else refused.value = t(errorKey(reply.error));
+  });
 }
 </script>
 
