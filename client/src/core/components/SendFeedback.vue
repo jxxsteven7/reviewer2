@@ -31,14 +31,14 @@ import UiSheet from './UiSheet.vue';
 // drawing. The text, the contact, the name for the acknowledgments and its link are checked by the
 // rules that the server applies (shared/src/feedback.ts), and go as those rules clean them: what
 // the player pasted may hold characters that JSON writes out at six bytes each, and the message has
-// to stay under the server's 16 KB. The field for the link shows once a name
-// is typed, since a link goes with a name only. The player may agree to the feedback being
-// published as a GitHub issue, which is off until they tick it. Along with them go the build of
-// this page, the language it is shown in and whether it is the home page or a room, but never the
-// room's code. With a bug, the server also keeps the browser's user agent, which it reads from the
-// connection, and the panel says so. With a name, it keeps the account the player is logged in to,
-// and the panel says that too. A new game, which the player suggests the project make next, gets a
-// word on what to write.
+// to stay under the server's 16 KB. The field for the link shows once a name is typed, since a
+// link goes with a name only. The player may agree to the feedback being published as a GitHub
+// issue, which is off until they tick it. Along with them go the build of this page, the language
+// it is shown in and whether it is the home page or a room, but never the room's code. With a bug,
+// the server also keeps the browser's user agent, which it reads from the connection, and the
+// panel says so. With a name, it keeps the account the player is logged in to, and the panel says
+// that too. A new game, which the player suggests the project make next, gets a word on what to
+// write.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
 import { expect, interpolate, newPlayer, plural, TEXT, test } from './helpers';
 
-// The sponsors at the foot of the home page: while there are none, the fold asks for the first;
+// The sponsors on the home page: while there are none, the card asks for the first;
 // and the server shows SPONSORS.md from CONTENT_DIR, which e2e/server.mjs sets, as it changes
 // there, without a new build or a restart.
 

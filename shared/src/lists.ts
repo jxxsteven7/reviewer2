@@ -1,7 +1,7 @@
 import { checkCredit, checkLink, MAX_LINK_LENGTH } from './feedback';
 import { MAX_NAME_LENGTH } from './protocol';
 
-// The lists of thanks at the foot of the home page, ACKNOWLEDGMENTS.md and SPONSORS.md
+// The lists of thanks on the home page, ACKNOWLEDGMENTS.md and SPONSORS.md
 // (docs/architecture.md#lists-of-thanks), are Markdown of one shape: an introduction, then
 // sections, each under a heading of its own and holding entries of one line each. The server reads
 // them (server/src/thanks.ts) and the home page asks it for what they list. What both lists have
