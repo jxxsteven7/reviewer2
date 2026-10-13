@@ -50,11 +50,12 @@ export const FRIEND_ERRORS = [
 ] as const;
 export type FriendError = (typeof FRIEND_ERRORS)[number];
 
-// A friend, as the account page lists them: whether they are online, counting every tab and device
-// of theirs as one person, and where they are. `room` is null for a friend who is in no room; the
-// code of a public room, where the Join button leads; and without the code for a private room,
-// which only an invitation leads into.
+// A friend, as the account page lists them: the handle of their public profile (accounts.ts),
+// whether they are online, counting every tab and device of theirs as one person, and where they
+// are. `room` is null for a friend who is in no room; the code of a public room, where the Join
+// button leads; and without the code for a private room, which only an invitation leads into.
 export interface FriendView {
+  handle: string;
   username: string;
   avatar: string | null;
   online: boolean;
@@ -63,6 +64,7 @@ export interface FriendView {
 
 // The other side of a request that is still open, in either direction.
 export interface FriendRequestView {
+  handle: string;
   username: string;
   avatar: string | null;
 }

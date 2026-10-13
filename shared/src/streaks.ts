@@ -10,8 +10,8 @@ export const STREAK_MIN = 3;
 export const STREAK_KINDS = ['wins', 'losses'] as const;
 export type StreakKind = (typeof STREAK_KINDS)[number];
 
-// The longest streak of each kind on an account's record, which the account page shows as titles
-// from STREAK_MIN on. Zero for an account that has never won, or never lost.
+// The longest streak of each kind on an account's record, which the account page and the public
+// profile show as titles from STREAK_MIN on. Zero for an account that has never won, or never lost.
 export interface BestStreaks {
   wins: number;
   losses: number;

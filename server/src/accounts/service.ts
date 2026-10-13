@@ -1,7 +1,9 @@
 import {
   AVATAR_PATH,
+  checkBio,
   checkPassword,
   checkUsername,
+  checkWebLink,
   cleanName,
   MAIL_LINK_MS,
   MAX_REPLAY_BYTES,
@@ -11,7 +13,9 @@ import {
   type AccountSummary,
   type FriendLimits,
   type Language,
+  type LikerView,
   type MailKind,
+  type ProfileView,
   type Rank,
   type RecordsView,
   type Streak,
@@ -20,6 +24,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { AccountStore, type Account } from '../store/accounts';
 import { AcknowledgmentStore } from '../store/acknowledgments';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
+import { LikeStore } from '../store/likes';
 import {
   RecordStore,
   ReplayStore,
@@ -116,6 +121,8 @@ export class Accounts {
   readonly acknowledgments: AcknowledgmentStore;
   // The friendships between accounts, and their rules (friends.ts).
   readonly friends: Friendships;
+  // Who likes whose public profile (docs/architecture.md#public-profiles).
+  readonly likes: LikeStore;
   readonly settings: SettingStore;
   readonly counters: AccountCounters;
   readonly hasher: PasswordHasher;
@@ -152,6 +159,7 @@ export class Accounts {
     this.titles = new TitleStore(options.db, clock);
     this.acknowledgments = new AcknowledgmentStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
+    this.likes = new LikeStore(options.db, clock);
     this.settings = new SettingStore(options.db);
     this.counters = new AccountCounters(options.limits ?? DEFAULT_ACCOUNT_LIMITS, options.now);
     this.hasher = options.hasher ?? new PasswordHasher();
@@ -172,14 +180,109 @@ export class Accounts {
     if (account.emailFp !== null) email = 'bound';
     else if (this.mailTokens.pending(account.id)) email = 'pending';
     return {
+      id: account.id,
+      handle: account.handle,
       username: account.username,
       avatar: avatarUrl(account),
+      createdAt: account.createdAt,
       email,
       points: this.records.points(account.id),
       titles: this.titles.counts(account.id),
       streaks: this.records.streaks(account.id),
       acknowledgments: this.acknowledgments.counts(account.id),
+      profile: { ...account.profile, banned: account.profileBanned },
+      likes: this.likes.count(account.id),
+      requests: this.friends.store.counts(account.id).incoming,
     };
+  }
+
+  // The public profile of the account with this handle, as the viewer sees it
+  // (docs/architecture.md#public-profiles), or null when no account has the handle. The record and
+  // the acknowledgments are there only if the owner shows them, and are only read then. Of the time
+  // of registration, only the day goes out: anyone with the handle may ask.
+  profileOf(handle: string, viewer: Account | null): ProfileView | null {
+    const account = this.store.byHandle(handle);
+    if (!account) return null;
+    return {
+      id: account.id,
+      handle: account.handle,
+      username: account.username,
+      avatar: avatarUrl(account),
+      rank: this.rankOf(account.id),
+      createdAt: account.createdAt.slice(0, 10),
+      titles: this.titles.counts(account.id),
+      streaks: this.records.streaks(account.id),
+      link: account.profile.link,
+      bio: account.profile.bio,
+      record: account.profile.showRecord ? this.records.counts(account.id) : null,
+      acknowledgments: account.profile.showThanks ? this.acknowledgments.counts(account.id) : null,
+      likes: this.likes.count(account.id),
+      liked: viewer !== null && this.likes.has(account.id, viewer.id),
+      mine: viewer !== null && viewer.id === account.id,
+    };
+  }
+
+  // What the owner writes on the public profile, and what of the rest they show there. The link
+  // and the bio are cleaned as the feedback's are, and refused when they won't do; an account that
+  // the operator has barred from writing them may still choose what it shows.
+  setProfile(
+    login: Login,
+    body: { link: string; bio: string; showRecord: boolean; showThanks: boolean },
+  ): AccountResult {
+    const { account } = login;
+    const link = checkWebLink(body.link);
+    if (link.problem) return refuse(link.problem);
+    const bio = checkBio(body.bio);
+    if (bio.problem) return refuse(bio.problem);
+    const writes = link.link !== account.profile.link || bio.bio !== account.profile.bio;
+    if (writes && account.profileBanned) return refuse('profile_banned');
+    this.store.setProfile(account.id, {
+      link: link.link,
+      bio: bio.bio,
+      showRecord: body.showRecord,
+      showThanks: body.showThanks,
+    });
+    return { ok: true };
+  }
+
+  // The account likes the profile with this handle, once; liking it again changes nothing and
+  // costs nothing. So many a day (limits.ts), counted for each like that is new.
+  like(login: Login, handle: string): AccountResult {
+    const account = this.store.byHandle(handle);
+    if (!account) return refuse('no_such_profile');
+    if (account.id === login.account.id) return refuse('self_like');
+    if (this.likes.has(account.id, login.account.id)) return { ok: true };
+    if (!this.counters.likes.take(String(login.account.id))) return refuse('like_limited');
+    this.likes.add(account.id, login.account.id);
+    return { ok: true };
+  }
+
+  unlike(login: Login, handle: string): AccountResult {
+    const account = this.store.byHandle(handle);
+    if (!account) return refuse('no_such_profile');
+    this.likes.remove(account.id, login.account.id);
+    return { ok: true };
+  }
+
+  // Who likes the account's profile, the latest first, with whether each is a friend.
+  likersOf(login: Login): LikerView[] {
+    return this.likes.likersOf(login.account.id).map(({ id, handle, username, avatar }) => ({
+      handle,
+      username,
+      avatar: avatarUrl({ avatar }),
+      friend: this.friends.areFriends(login.account.id, id),
+    }));
+  }
+
+  // The operator clears an account's link and bio, as for ones that break the rules, and may bar
+  // the account from writing them again (admin.ts). Says whether there was anything to clear.
+  takeDownProfile(accountId: number, ban: boolean): boolean {
+    const account = this.store.byId(accountId);
+    if (!account) return false;
+    const had = account.profile.link !== null || account.profile.bio !== null;
+    if (had) this.store.setProfile(accountId, { ...account.profile, link: null, bio: null });
+    if (ban) this.store.setProfileBanned(accountId, true);
+    return had;
   }
 
   // The academic rank that the account's points hold (docs/architecture.md#academic-ranks).

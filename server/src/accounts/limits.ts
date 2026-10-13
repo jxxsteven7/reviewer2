@@ -26,8 +26,9 @@ export interface AccountLimits {
   bindsPerDay: number;
   mailsPerHour: number;
   resetsPerHour: number;
-  // Per account and day: avatars uploaded.
+  // Per account and day: avatars uploaded, and profiles liked, taking a like back not counted.
   avatarsPerDay: number;
+  likesPerDay: number;
 }
 
 export const DEFAULT_ACCOUNT_LIMITS: Readonly<AccountLimits> = Object.freeze({
@@ -41,6 +42,7 @@ export const DEFAULT_ACCOUNT_LIMITS: Readonly<AccountLimits> = Object.freeze({
   mailsPerHour: 10,
   resetsPerHour: 3,
   avatarsPerDay: 10,
+  likesPerDay: 100,
 });
 
 // The key that an account's wrong passwords are counted under where an action asks for the
@@ -62,6 +64,7 @@ export class AccountCounters {
   readonly mails: WindowCounter;
   readonly resets: WindowCounter;
   readonly avatars: WindowCounter;
+  readonly likes: WindowCounter;
 
   constructor(limits: AccountLimits, now: () => number) {
     this.registrations = new WindowCounter(limits.registrationsPerHour, HOUR, now);
@@ -74,6 +77,7 @@ export class AccountCounters {
     this.mails = new WindowCounter(limits.mailsPerHour, HOUR, now);
     this.resets = new WindowCounter(limits.resetsPerHour, HOUR, now);
     this.avatars = new WindowCounter(limits.avatarsPerDay, DAY, now);
+    this.likes = new WindowCounter(limits.likesPerDay, DAY, now);
   }
 
   // Takes one try at a password for this key from this address, or refuses it. The try counts as

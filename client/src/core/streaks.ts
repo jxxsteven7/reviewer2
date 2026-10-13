@@ -1,8 +1,15 @@
-import { numberWords, type Language, type StreakKind } from '@reviewer2/shared';
+import {
+  numberWords,
+  STREAK_KINDS,
+  STREAK_MIN,
+  type BestStreaks,
+  type Language,
+  type StreakKind,
+} from '@reviewer2/shared';
 import { fnv1a } from './hash';
 
-// The streaks as the pages show them (docs/architecture.md#streaks): the account page as titles,
-// and the end of a game as a notice to the player, with a line for the occasion under
+// The streaks as the pages show them (docs/architecture.md#streaks): the account page and the
+// public profile as titles, and the end of a game as a notice to the player, with a line for the occasion under
 // streaks.lines in the locale files, and as a cheer to the whole room for a winning streak
 // (StreakNotices.vue). The title's number is in words (shared/src/numbers.ts).
 
@@ -34,6 +41,19 @@ type Translate = (key: string, named: Record<string, string>) => string;
 // Acceptances". The account page and the notices at the end of a game both name streaks with it.
 export const streakTitle = (t: Translate, kind: StreakKind, length: number, language: Language): string =>
   t(`streaks.names.${kind}`, { n: numberWords(length, language) });
+
+// The titles that an account's longest streaks earn, from STREAK_MIN games on, as the account
+// page and the public profile show them (TitlePills.vue): the winning streak first, then the
+// losing one, each with its kind for the color of its pill.
+export const streakTitles = (
+  t: Translate,
+  streaks: BestStreaks,
+  language: Language,
+): { kind: StreakKind; title: string }[] =>
+  STREAK_KINDS.flatMap((kind) => {
+    const length = streaks[kind];
+    return length >= STREAK_MIN ? [{ kind, title: streakTitle(t, kind, length, language) }] : [];
+  });
 
 // The key of the line in the locale files.
 export const streakLineKey = (gameId: string, playerId: string, kind: StreakKind, length: number): string =>

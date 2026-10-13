@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { LINES_PER_TIER, streakLineKey, streakLineNumber, streakTier, streakTitle } from './streaks';
+import { LINES_PER_TIER, streakLineKey, streakLineNumber, streakTier, streakTitle, streakTitles } from './streaks';
 
 describe('the lines for a streak', () => {
   test('come in tiers: three or four games, five to nine, ten and up', () => {
@@ -25,5 +25,17 @@ describe('the title of a streak', () => {
     const t = (key: string, named: Record<string, string>) => `${key}[${named.n}]`;
     expect(streakTitle(t, 'wins', 21, 'en')).toBe('streaks.names.wins[Twenty-One]');
     expect(streakTitle(t, 'losses', 3, 'zh')).toBe('streaks.names.losses[\u4e09]');
+  });
+
+  test('is earned from three games on, the winning streak first', () => {
+    const t = (key: string, named: Record<string, string>) => `${key}[${named.n}]`;
+    expect(streakTitles(t, { wins: 3, losses: 2 }, 'en')).toEqual([
+      { kind: 'wins', title: 'streaks.names.wins[Three]' },
+    ]);
+    expect(streakTitles(t, { wins: 4, losses: 5 }, 'en')).toEqual([
+      { kind: 'wins', title: 'streaks.names.wins[Four]' },
+      { kind: 'losses', title: 'streaks.names.losses[Five]' },
+    ]);
+    expect(streakTitles(t, { wins: 0, losses: 0 }, 'zh')).toEqual([]);
   });
 });

@@ -64,6 +64,22 @@ export function onceConnected(run: () => void): () => void {
   return () => socket.off('connect', run);
 }
 
+// Whether there is a connection within so long, asked for if there is none yet: for a page that
+// may have none, such as a player's page, before it sends a message that goes over one.
+export function whenConnected(ms = 5000): Promise<boolean> {
+  if (socket.connected) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      off();
+      resolve(false);
+    }, ms);
+    const off = onceConnected(() => {
+      clearTimeout(timer);
+      resolve(true);
+    });
+  });
+}
+
 // Makes a fresh connection now. A connection that Socket.IO is waiting to retry would otherwise
 // keep waiting: connect() alone does nothing while a retry is pending, and the pauses between
 // retries grow to several seconds. Closing first drops the pending retry.

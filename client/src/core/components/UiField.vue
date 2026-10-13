@@ -4,12 +4,14 @@ import { useI18n } from 'vue-i18n';
 
 // A labelled text input, with an optional hint and error below it. With `multiline`, it is a text
 // area of `rows` lines, which the player can make taller. A password field has a button that
-// shows what is typed, for typing a long password on a phone.
+// shows what is typed, for typing a long password on a phone. A `disabled` field shows its value
+// and takes no typing, as when the operator has barred the account from writing it.
 const props = defineProps<{
   label: string;
   hint?: string | undefined;
   error?: string | undefined;
   placeholder?: string;
+  disabled?: boolean;
   maxlength?: number;
   autocomplete?: string;
   inputmode?: 'text' | 'search' | 'numeric' | 'url' | 'none';
@@ -29,7 +31,7 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
 </script>
 
 <template>
-  <div class="field" :class="{ invalid: error }">
+  <div class="field" :class="{ invalid: error, disabled }">
     <label :for="id" class="label">{{ label }}</label>
     <div class="control">
       <span v-if="prefix" class="prefix num" aria-hidden="true">{{ prefix }}</span>
@@ -39,6 +41,7 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
         v-model="model"
         :rows="rows ?? 4"
         :placeholder="placeholder"
+        :disabled="disabled"
         :maxlength="maxlength"
         :autocomplete="autocomplete ?? 'off'"
         :inputmode="inputmode"
@@ -53,6 +56,7 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
         v-model="model"
         :type="inputType"
         :placeholder="placeholder"
+        :disabled="disabled"
         :maxlength="maxlength"
         :autocomplete="autocomplete ?? 'off'"
         :inputmode="inputmode"
@@ -97,6 +101,17 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
 
 .invalid .control {
   border-color: var(--red-deep);
+}
+
+.disabled .control {
+  border-style: dashed;
+  background: var(--paper-2);
+}
+
+input:disabled,
+textarea:disabled {
+  color: var(--ink-2);
+  cursor: not-allowed;
 }
 
 .prefix {

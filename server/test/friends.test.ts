@@ -60,11 +60,11 @@ describe('a friend request', () => {
     expect(await listOf(ann)).toEqual({
       friends: [],
       incoming: [],
-      outgoing: [{ username: 'Bob', avatar: null }],
+      outgoing: [{ handle: expect.any(String), username: 'Bob', avatar: null }],
     });
     expect(await listOf(bob)).toEqual({
       friends: [],
-      incoming: [{ username: 'Ann', avatar: null }],
+      incoming: [{ handle: expect.any(String), username: 'Ann', avatar: null }],
       outgoing: [],
     });
     // Nobody is friends yet, and Ann can't answer her own request.
@@ -73,8 +73,12 @@ describe('a friend request', () => {
 
     expect(await bob.send('friends:accept', { username: 'Ann' })).toEqual({ ok: true });
     await until(() => ann.friendsChanged === 2, 'Ann to hear of it');
-    expect((await listOf(ann)).friends).toEqual([{ username: 'Bob', avatar: null, online: true, room: null }]);
-    expect((await listOf(bob)).friends).toEqual([{ username: 'Ann', avatar: null, online: true, room: null }]);
+    expect((await listOf(ann)).friends).toEqual([
+      { handle: expect.any(String), username: 'Bob', avatar: null, online: true, room: null },
+    ]);
+    expect((await listOf(bob)).friends).toEqual([
+      { handle: expect.any(String), username: 'Ann', avatar: null, online: true, room: null },
+    ]);
     expect(await ann.send('friends:request', { username: 'Bob' })).toEqual({ ok: false, error: 'already_friends' });
   });
 
@@ -224,19 +228,27 @@ describe('friends', () => {
     // Bob makes a private room, which Ann only hears he is in, and then lists it.
     const { chair, code } = await roomOf(bobs);
     expect((await listOf(ann)).friends).toEqual([
-      { username: 'Bob', avatar: null, online: true, room: { code: null } },
+      { handle: expect.any(String), username: 'Bob', avatar: null, online: true, room: { code: null } },
     ]);
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
-    expect((await listOf(ann)).friends).toEqual([{ username: 'Bob', avatar: null, online: true, room: { code } }]);
+    expect((await listOf(ann)).friends).toEqual([
+      { handle: expect.any(String), username: 'Bob', avatar: null, online: true, room: { code } },
+    ]);
     // Cat, who is not a friend, learns nothing of where Ann or Bob are: the request names them only.
-    expect(await listOf(cat)).toEqual({ friends: [], incoming: [{ username: 'Ann', avatar: null }], outgoing: [] });
+    expect(await listOf(cat)).toEqual({
+      friends: [],
+      incoming: [{ handle: expect.any(String), username: 'Ann', avatar: null }],
+      outgoing: [],
+    });
     // Bob's other connection goes; his seat and his presence stay with the one that is left.
     bob.close();
     await until(() => chair.state !== undefined, 'the chair to be in');
     expect((await listOf(ann)).friends[0]).toMatchObject({ online: true, room: { code } });
     chair.close();
     await until(() => server.app.rooms.find(code)?.onlineCount() === 0, 'Bob to go offline');
-    expect((await listOf(ann)).friends).toEqual([{ username: 'Bob', avatar: null, online: false, room: null }]);
+    expect((await listOf(ann)).friends).toEqual([
+      { handle: expect.any(String), username: 'Bob', avatar: null, online: false, room: null },
+    ]);
   });
 
   test('part when either removes the other, and when an account is deleted', async () => {
@@ -255,11 +267,11 @@ describe('friends', () => {
     const heard = ann.friendsChanged;
     expect((await bobs.request('/api/account/username', { username: 'Robert' })).body).toEqual({ ok: true });
     await until(() => ann.friendsChanged === heard + 1, 'Ann to hear of the new name');
-    expect((await listOf(ann)).outgoing).toEqual([{ username: 'Robert', avatar: null }]);
+    expect((await listOf(ann)).outgoing).toEqual([{ handle: expect.any(String), username: 'Robert', avatar: null }]);
     expect((await bobs.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
     await until(() => ann.friendsChanged === heard + 2, 'Ann to hear of the deletion');
     expect(await listOf(ann)).toEqual({
-      friends: [{ username: 'Cat', avatar: null, online: true, room: null }],
+      friends: [{ handle: expect.any(String), username: 'Cat', avatar: null, online: true, room: null }],
       incoming: [],
       outgoing: [],
     });

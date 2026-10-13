@@ -6,6 +6,7 @@ import { games } from '../../games';
 import { request } from '../account';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
+import { formatMoment } from '../dates';
 import { errorKey } from '../errors';
 import { points } from '../points';
 import { toastError } from '../toast';
@@ -51,13 +52,7 @@ onMounted(load);
 // for a game that came later than this page.
 const label = (key: string, fallback: string) => (te(key) ? t(key) : fallback);
 
-function date(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-  } catch {
-    return iso.slice(0, 16).replace('T', ' ');
-  }
-}
+const date = (iso: string) => formatMoment(iso, locale.value);
 </script>
 
 <template>
