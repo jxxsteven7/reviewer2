@@ -37,16 +37,16 @@ describe('the friendships table', () => {
       answeredAt: null,
     });
     expect(() => friends.request(bob, ann)).toThrow(/UNIQUE/);
-    expect(friends.outgoing(ann)).toEqual([{ id: bob, username: 'Bob', avatar: null }]);
-    expect(friends.incoming(bob)).toEqual([{ id: ann, username: 'Ann', avatar: null }]);
+    expect(friends.outgoing(ann)).toEqual([{ id: bob, handle: expect.any(String), username: 'Bob', avatar: null }]);
+    expect(friends.incoming(bob)).toEqual([{ id: ann, handle: expect.any(String), username: 'Ann', avatar: null }]);
     expect(friends.counts(ann)).toEqual({ friends: 0, outgoing: 1, incoming: 0 });
     expect(friends.counts(bob)).toEqual({ friends: 0, outgoing: 0, incoming: 1 });
 
     now += 60_000;
     friends.accept(1);
     expect(friends.between(ann, bob)).toMatchObject({ status: 'accepted', answeredAt: '2026-10-12T09:01:00.000Z' });
-    expect(friends.friendsOf(ann)).toEqual([{ id: bob, username: 'Bob', avatar: null }]);
-    expect(friends.friendsOf(bob)).toEqual([{ id: ann, username: 'Ann', avatar: null }]);
+    expect(friends.friendsOf(ann)).toEqual([{ id: bob, handle: expect.any(String), username: 'Bob', avatar: null }]);
+    expect(friends.friendsOf(bob)).toEqual([{ id: ann, handle: expect.any(String), username: 'Ann', avatar: null }]);
     expect(friends.friendsOf(cat)).toEqual([]);
     expect(friends.incoming(bob)).toEqual([]);
     // Friends come by username, whoever asked.

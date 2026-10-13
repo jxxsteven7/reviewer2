@@ -36,11 +36,13 @@ import { drawWords, type WordLibrary } from './words';
 // A method asks the game module first and changes the room afterwards. A module that throws
 // then leaves the room exactly as it was, instead of half changed.
 
-// A member who is logged in to an account: which account, the address of its avatar, or null for
-// the default one, which the client draws from the name, and its academic rank, which everyone in
-// the room sees beside the name (docs/architecture.md#academic-ranks).
+// A member who is logged in to an account: which account, the handle of its public profile
+// (docs/architecture.md#public-profiles), the address of its avatar, or null for the default one,
+// which the client draws from the name, and its academic rank, which everyone in the room sees
+// beside the name (docs/architecture.md#academic-ranks).
 export interface MemberAccount {
   id: number;
+  handle: string;
   avatar: string | null;
   rank: Rank;
 }
@@ -992,7 +994,7 @@ export class Room {
         name: member.name,
         online: member.sockets.size > 0,
         ...(member.account?.avatar ? { avatar: member.account.avatar } : {}),
-        ...(member.account ? { rank: member.account.rank } : {}),
+        ...(member.account ? { rank: member.account.rank, handle: member.account.handle } : {}),
       })),
       screens: this.screens.size,
     };

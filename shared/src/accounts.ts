@@ -1,13 +1,14 @@
 import type { AcknowledgmentCount } from './acknowledgments';
+import type { Rank } from './ranks';
 import { cleanName } from './names';
 import type { BestStreaks } from './streaks';
-import { SILENT, textLength } from './text';
+import { cleanLine, showsSomething, SILENT, textLength } from './text';
 
 // Accounts (docs/architecture.md): a username and a password, an optional email address for
-// resetting the password, an avatar, and the record of the games played. Both sides run these
-// rules: the client while a player types, and the server before it keeps anything. Everything
-// about accounts goes over HTTP under /api, because only an HTTP response can set the cookie that
-// carries a login.
+// resetting the password, an avatar, the record of the games played, and a public profile
+// (docs/architecture.md#public-profiles). Both sides run these rules: the client while a player
+// types, and the server before it keeps anything. Everything about accounts goes over HTTP under
+// /api, because only an HTTP response can set the cookie that carries a login.
 
 // A username follows the rules of a nickname (names.ts), with at least two characters, as a
 // reader counts them.
@@ -32,6 +33,22 @@ export type AvatarType = (typeof AVATAR_TYPES)[number];
 // Where avatars are served from. An avatar's address is its file name under this path.
 export const AVATAR_PATH = '/avatars/';
 
+// Public profiles (docs/architecture.md#public-profiles). An account's handle is the key that its
+// profile is opened by: 12 hexadecimal digits drawn at random when the account is created, which
+// never change, so that a link to a profile outlives a new username, and which nobody can guess or
+// count through, so that the account's number stays a thing to show and never a way to look
+// accounts up. The profile's page is PROFILE_PATH followed by the handle.
+export const HANDLE = /^[0-9a-f]{12}$/;
+export const PROFILE_PATH = '/p/';
+// The one line that an account may write about itself, in the characters a reader sees once it has
+// been cleaned, and the longest text that is looked at at all.
+export const MAX_BIO_LENGTH = 80;
+export const MAX_BIO_INPUT = 400;
+// The first account is the author's: the one who set the site up registered before anyone could.
+export const AUTHOR_ACCOUNT = 1;
+// How many of the accounts that like a profile its owner is shown, the latest first.
+export const LIKERS_SHOWN = 100;
+
 // The addresses of the account API, which the server answers and the client calls.
 export const ACCOUNT_API = {
   account: '/api/account',
@@ -50,6 +67,13 @@ export const ACCOUNT_API = {
   forgot: '/api/password/forgot',
   reset: '/api/password/reset',
   remove: '/api/account/delete',
+  // The public profile: what the owner writes on it, who liked it, and the profile itself, by its
+  // handle after this prefix, which anyone may read.
+  profile: '/api/account/profile',
+  likers: '/api/account/likers',
+  profiles: '/api/profile/',
+  like: '/api/profile/like',
+  unlike: '/api/profile/unlike',
 } as const;
 
 // What the account API may answer instead of doing what was asked, besides bad_request,
@@ -81,6 +105,13 @@ export const ACCOUNT_ERRORS = [
   'storage_full',
   'busy',
   'no_replay',
+  'no_such_profile',
+  'self_like',
+  'like_limited',
+  'profile_banned',
+  'bio_too_long',
+  'web_link_invalid',
+  'web_link_too_long',
 ] as const;
 export type AccountError = (typeof ACCOUNT_ERRORS)[number];
 
@@ -98,19 +129,72 @@ export interface TitleCount {
   count: number;
 }
 
-// What the owner of an account sees of it. `avatar` is the address of the uploaded avatar, or
-// null for the default one, which the client draws from the username. `points` are those of every
-// game finished, from which the client tells the rank (ranks.ts). `streaks` are the longest runs of
-// wins and of losses on the record, which the page shows as titles (streaks.ts). `acknowledgments`
-// is how often the account is thanked for each kind of help (acknowledgments.ts).
+// What an account's owner writes on its public profile, and what of the rest they choose to
+// show there: the record, as counts, and the acknowledgments.
+export interface ProfileSettings {
+  link: string | null;
+  bio: string | null;
+  showRecord: boolean;
+  showThanks: boolean;
+}
+
+// What the owner of an account sees of it. `id` is the account's number, from 1 up in the order
+// of registration, and `handle` the key of its public profile. `avatar` is the address of the
+// uploaded avatar, or null for the default one, which the client draws from the username. `points`
+// are those of every game finished, from which the client tells the rank (ranks.ts). `streaks` are
+// the longest runs of wins and of losses on the record, which the page shows as titles
+// (streaks.ts). `acknowledgments` is how often the account is thanked for each kind of help
+// (acknowledgments.ts). `profile` is what the owner put on the public profile, with `banned` for
+// an account that the operator has barred from writing a link or a bio there. `likes` is how many
+// accounts like the profile, and `requests` how many friend requests wait for the owner's answer
+// (friends.ts).
 export interface AccountSummary {
+  id: number;
+  handle: string;
   username: string;
   avatar: string | null;
+  createdAt: string;
   email: EmailState;
   points: number;
   titles: TitleCount[];
   streaks: BestStreaks;
   acknowledgments: AcknowledgmentCount[];
+  profile: ProfileSettings & { banned: boolean };
+  likes: number;
+  requests: number;
+}
+
+// A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's
+// number, username, avatar, rank, the day it registered (`createdAt`, as YYYY-MM-DD in UTC, and
+// never the time), its titles and its streaks, which the page shows as titles too (streaks.ts);
+// the link and the bio its owner wrote, if any; its record and its acknowledgments, if its owner
+// shows them, else null; and how many accounts like it. `liked` says whether the viewer likes it,
+// and `mine` whether the viewer is its owner; both are false for a guest.
+export interface ProfileView {
+  id: number;
+  handle: string;
+  username: string;
+  avatar: string | null;
+  rank: Rank;
+  createdAt: string;
+  titles: TitleCount[];
+  streaks: BestStreaks;
+  link: string | null;
+  bio: string | null;
+  record: { games: number; wins: number; matches: number } | null;
+  acknowledgments: AcknowledgmentCount[] | null;
+  likes: number;
+  liked: boolean;
+  mine: boolean;
+}
+
+// An account that likes a profile, as the profile's owner sees it, with whether the two are
+// friends, so that the owner may ask those who aren't.
+export interface LikerView {
+  handle: string;
+  username: string;
+  avatar: string | null;
+  friend: boolean;
 }
 
 // The answer to GET /api/account: the account that the browser is logged in to, if any, and
@@ -238,6 +322,23 @@ export function checkPassword(raw: unknown): 'password_short' | 'password_long' 
   const length = [...normalizePassword(raw)].length;
   if (length < MIN_PASSWORD_LENGTH) return 'password_short';
   return length > MAX_PASSWORD_LENGTH ? 'password_long' : null;
+}
+
+export interface BioCheck {
+  // The bio as it is kept and shown, on one line, or null for none.
+  bio: string | null;
+  problem: 'bio_too_long' | null;
+}
+
+// The line that an account writes about itself, cleaned as a contact is (feedback.ts): one line,
+// with hidden characters dropped and whitespace folded. One that shows nothing is none.
+export function checkBio(text: string | undefined): BioCheck {
+  if (typeof text !== 'string') return { bio: null, problem: null };
+  if (text.length > MAX_BIO_INPUT) return { bio: null, problem: 'bio_too_long' };
+  const cleaned = cleanLine(text);
+  if (!showsSomething(cleaned)) return { bio: null, problem: null };
+  if (textLength(cleaned) > MAX_BIO_LENGTH) return { bio: cleaned, problem: 'bio_too_long' };
+  return { bio: cleaned, problem: null };
 }
 
 // Whether a text could be an email address at all: something, an @, and a domain with a dot,

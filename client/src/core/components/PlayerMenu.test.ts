@@ -9,8 +9,20 @@ import PlayerMenu from './PlayerMenu.vue';
 const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean; error?: string; status?: string }>>(),
 );
-vi.mock('../socket', () => ({ send, act: (event: string, payload: object = {}) => send(event, payload) }));
-const signedIn = vi.hoisted(() => ({ account: { loaded: true, summary: null as object | null, mail: false } }));
+vi.mock('../socket', () => ({
+  send,
+  act: (event: string, payload: object = {}) => send(event, payload),
+  connect: vi.fn(),
+  onceConnected: vi.fn(),
+  whenConnected: vi.fn(async () => true),
+  socket: { connected: false, on: vi.fn() },
+}));
+// Who the browser is, and the request that the player's page in the sheet makes for the profile.
+const signedIn = vi.hoisted(() => ({
+  account: { loaded: true, summary: null as object | null, mail: false },
+  request: vi.fn<(path: string, body?: object) => Promise<object>>(),
+  loadAccount: vi.fn(),
+}));
 vi.mock('../account', () => signedIn);
 
 const global = () => ({ plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] });
@@ -127,6 +139,49 @@ describe('PlayerMenu', () => {
     const asGuest = mount(PlayerMenu, { props: { player: ranked, room: view('cat', false) }, global: global() });
     expect(buttons().map((b) => b.textContent?.trim())).toEqual(['×', 'Cancel']);
     asGuest.unmount();
+  });
+
+  test('opens the page of a player with an account in a sheet, for anyone, and stays in the room', async () => {
+    const withPage = { ...bob, rank: 'phd' as const, handle: 'a1b2c3d4e5f6' };
+    signedIn.request.mockResolvedValue({
+      ok: true,
+      profile: {
+        id: 7,
+        handle: 'a1b2c3d4e5f6',
+        username: 'Bob',
+        avatar: null,
+        rank: 'phd',
+        createdAt: '2026-10-01T00:00:00.000Z',
+        titles: [],
+        streaks: { wins: 0, losses: 0 },
+        link: 'https://bob.example/',
+        bio: 'Hi <b>there</b>',
+        record: null,
+        acknowledgments: null,
+        likes: 2,
+        liked: false,
+        mine: false,
+      },
+    });
+    // A guest sees the page, and nothing else to do with the player.
+    const wrapper = mount(PlayerMenu, { props: { player: withPage, room: view('cat', false) }, global: global() });
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['×', 'View their page', 'Cancel']);
+    button('View their page').click();
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledWith('/api/profile/a1b2c3d4e5f6');
+    const sheet = dialogs()[0] as HTMLElement;
+    expect(sheet.textContent).toContain('Player No. 7');
+    expect(sheet.textContent).toContain('Hi <b>there</b>');
+    expect(sheet.querySelector('.bio b')).toBeNull();
+    expect(sheet.querySelector<HTMLAnchorElement>('a.link')?.getAttribute('rel')).toBe('nofollow ugc noopener');
+    expect(sheet.textContent).toContain('♥ 2');
+    expect(sheet.querySelector('button[aria-pressed]')).toBeNull();
+    expect(wrapper.emitted('close')).toBeUndefined();
+    wrapper.unmount();
+    // Not for a guest player, who has no page.
+    const guest = mount(PlayerMenu, { props: { player: bob, room: view('cat', false) }, global: global() });
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['×', 'Cancel']);
+    guest.unmount();
   });
 
   test('shows what the server had against a report, and offers none to guests or in private rooms', async () => {

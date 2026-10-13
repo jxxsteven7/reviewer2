@@ -300,7 +300,38 @@ export const MIGRATIONS: readonly string[] = [
   FROM runs JOIN latest ON latest.account_id = runs.account_id
   GROUP BY runs.account_id;
   `,
-  // 11: the record of each game (docs/architecture.md#game-records). A replay gets the log of
+  // 11: public profiles and likes (docs/architecture.md#public-profiles).
+  //
+  // - accounts get the handle by which a profile is opened, 12 hexadecimal digits drawn at random
+  //   (HANDLE in shared/src/accounts.ts), given to every account that is there and to each new one
+  //   as it is created; the link and the bio that the owner writes; whether the owner shows the
+  //   record and the acknowledgments on the profile; and whether the operator has barred the
+  //   account from writing a link or a bio. A column added by ALTER TABLE can't be NOT NULL without
+  //   a constant default, so the handle is filled in right after, and the unique index makes sure
+  //   that every account has one of its own.
+  // - likes: one row for each account that likes a profile, by the account liked and the account
+  //   that likes it, which may not be the same. It is a relationship, not an archive: a like that
+  //   is taken back is deleted, and every row goes with either account.
+  `
+  ALTER TABLE accounts ADD COLUMN handle TEXT;
+  UPDATE accounts SET handle = lower(hex(randomblob(6)));
+  CREATE UNIQUE INDEX accounts_handle ON accounts (handle);
+  ALTER TABLE accounts ADD COLUMN link TEXT;
+  ALTER TABLE accounts ADD COLUMN bio TEXT;
+  ALTER TABLE accounts ADD COLUMN show_record INTEGER NOT NULL DEFAULT 0 CHECK (show_record IN (0, 1));
+  ALTER TABLE accounts ADD COLUMN show_thanks INTEGER NOT NULL DEFAULT 0 CHECK (show_thanks IN (0, 1));
+  ALTER TABLE accounts ADD COLUMN profile_banned INTEGER NOT NULL DEFAULT 0 CHECK (profile_banned IN (0, 1));
+
+  CREATE TABLE likes (
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    liker_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (account_id, liker_id),
+    CHECK (account_id <> liker_id)
+  ) STRICT, WITHOUT ROWID;
+  CREATE INDEX likes_liker ON likes (liker_id);
+  `,
+  // 12: the record of each game (docs/architecture.md#game-records). A replay gets the log of
   // everything that happened in the game, as JSON, kept on the server alone; the replays from
   // before have none. game_players says which player, by the ID they had in the room, was which
   // account, for those with an account who played in the game, those who left it included. A

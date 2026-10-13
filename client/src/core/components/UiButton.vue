@@ -64,8 +64,10 @@ withDefaults(
   letter-spacing: 0.04em;
 }
 
+/* Ink is flat, as the tags and badges are: an ink shadow would merge with the button. */
 .primary {
   background: var(--ink);
+  box-shadow: none;
   color: var(--on-ink);
 }
 
@@ -111,7 +113,7 @@ withDefaults(
 }
 
 @media (hover: hover) {
-  .button:not(:disabled, .quiet):hover {
+  .button:not(:disabled, .quiet, .primary):hover {
     transform: translate(-1px, -1px);
     box-shadow: calc(var(--shift-1) + 1px) calc(var(--shift-1) + 1px) 0 var(--ink);
   }

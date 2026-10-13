@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MAX_EMAIL_LENGTH } from './accounts';
+import { HANDLE, MAX_EMAIL_LENGTH } from './accounts';
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
 import { MAX_CUSTOM_INPUT } from './games/keywords/custom';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
@@ -206,4 +206,10 @@ export const ACCOUNT_REQUESTS = {
   reset: z.object({ token: linkToken, password }),
   remove: z.object({ password }),
   replay: z.object({ gameId }),
+  // The link and the bio are for the rules in feedback.ts and accounts.ts to judge, which refuse a
+  // long text before looking at it, so that it gets its own answer and not bad_request. The body
+  // of a request is at most 4 KB in any case (server/src/accounts/http.ts).
+  profile: z.object({ link: z.string(), bio: z.string(), showRecord: z.boolean(), showThanks: z.boolean() }),
+  like: z.object({ handle: z.string().regex(HANDLE) }),
+  unlike: z.object({ handle: z.string().regex(HANDLE) }),
 } as const;

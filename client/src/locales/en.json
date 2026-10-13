@@ -192,6 +192,7 @@
       "reportSubmit": "Send the report",
       "reportSent": "Thank you. The report has been sent.",
       "chair": "Make chair",
+      "viewPage": "View their page",
       "cancel": "Cancel"
     }
   },
@@ -663,7 +664,14 @@
     "friend_in_room": "That friend is in this room already.",
     "friend_removed": "The chair removed that friend from this room, so they can't be invited back.",
     "invite_cooldown": "You invited that friend a moment ago. Wait a minute.",
-    "invitation_expired": "This invitation has lapsed. Ask for another one, or join by the room's number."
+    "invitation_expired": "This invitation has lapsed. Ask for another one, or join by the room's number.",
+    "no_such_profile": "There is no such page. The account may have been deleted.",
+    "self_like": "You can't like your own page.",
+    "like_limited": "You have liked enough pages for today. Try again tomorrow.",
+    "profile_banned": "This account can't write a link or a line on its page.",
+    "bio_too_long": "Use at most 80 characters.",
+    "web_link_invalid": "Use a web address that starts with https://, not an email address.",
+    "web_link_too_long": "Use at most 200 characters for the link."
   },
   "footer": {
     "byline": "By {name}",
@@ -771,6 +779,7 @@
   "account": {
     "entry": "Log in / Register",
     "entryLabel": "Your account: {name}",
+    "entryRequests": "Your account: {name}. {count} friend request is waiting for your answer. | Your account: {name}. {count} friend requests are waiting for your answer.",
     "back": "Back to the contents",
     "loading": "Loading…",
     "cancel": "Cancel",
@@ -829,6 +838,25 @@
       },
       "titleCount": "{title} ×{count}",
       "acknowledged": "Acknowledged: {kind}",
+      "public": {
+        "title": "Public page",
+        "intro": "Anyone can open your page and see your username, avatar, rank, titles, player number, the day you registered and how many accounts like it. What else is there is up to you.",
+        "view": "Open my page",
+        "link": "Link",
+        "linkHint": "A page of yours, starting with https://: a homepage, GitHub, ORCID… Shown as the address it is.",
+        "linkPlaceholder": "https://",
+        "bio": "One line about you",
+        "bioCount": "{count}/{max} characters. Shown as plain text.",
+        "showRecord": "Show my record: games, wins and matches",
+        "showThanks": "Show my acknowledgments",
+        "save": "Save the page",
+        "saved": "Your page has been updated.",
+        "banned": "The operator has cleared the link and the line on your page, and this account can't write them again.",
+        "likes": "Likes: {count}",
+        "noLikes": "Nobody has liked your page yet. Only you see who did.",
+        "likersShown": "Only the latest {count} are listed.",
+        "friend": "Friend"
+      },
       "record": "Record",
       "recordSummary": "Games: {games} · Won: {wins}",
       "noRecords": "No games yet. The games that you finish in a seat while you are logged in are kept here.",
@@ -907,7 +935,8 @@
     "invitation": "{name} invited you to room {code}",
     "invitationJoin": "Join",
     "invitationIgnore": "Ignore",
-    "addFromRoom": "Add friend"
+    "addFromRoom": "Add friend",
+    "requestsWaiting": "{count} request is waiting for your answer. | {count} requests are waiting for your answer."
   },
   "ranks": {
     "title": "Academic rank",
@@ -930,6 +959,19 @@
     "next": "{points} more to {rank}.",
     "top": "The highest rank there is.",
     "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game."
+  },
+  "playerPage": {
+    "title": "Player page",
+    "loading": "Loading…",
+    "number": "Player No. {id}",
+    "author": "Author",
+    "since": "Registered {date}",
+    "record": "Games: {games} · Won: {wins} · Matches: {matches}",
+    "likes": "♥ {count}",
+    "like": "Like",
+    "liked": "Liked",
+    "logInToLike": "Log in to like this page or to add this player as a friend.",
+    "edit": "This is your page. Edit it on your account page."
   },
   "streaks": {
     "kinds": {

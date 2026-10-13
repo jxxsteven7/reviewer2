@@ -486,9 +486,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     return guest;
   }
 
-  // What a room keeps of a member's account: which it is, its avatar and its rank.
+  // What a room keeps of a member's account: which it is, its handle, its avatar and its rank.
   function memberAccount(account: Account): MemberAccount {
-    return { id: account.id, avatar: avatarUrl(account), rank: (accounts as Accounts).rankOf(account.id) };
+    return {
+      id: account.id,
+      handle: account.handle,
+      avatar: avatarUrl(account),
+      rank: (accounts as Accounts).rankOf(account.id),
+    };
   }
 
   // The seat that the browser of a logged-in connection took as a guest, if its account may have
@@ -547,10 +552,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // A friend as the account page shows them: online or not, and where, which only friends learn
   // (docs/architecture.md#friends). A private room is shown without its code.
-  function friendView({ id, username, avatar }: FriendRow): FriendView {
+  function friendView({ id, handle, username, avatar }: FriendRow): FriendView {
     const online = isOnline(id);
     const room = online ? roomOf(id) : undefined;
     return {
+      handle,
       username,
       avatar: avatarUrl({ avatar }),
       online,
@@ -558,7 +564,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     };
   }
 
-  const requestView = ({ username, avatar }: FriendRow): FriendRequestView => ({
+  const requestView = ({ handle, username, avatar }: FriendRow): FriendRequestView => ({
+    handle,
     username,
     avatar: avatarUrl({ avatar }),
   });

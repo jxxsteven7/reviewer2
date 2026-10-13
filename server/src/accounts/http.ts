@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ACCOUNT_API, AVATAR_PATH, AVATAR_TYPES, MAX_AVATAR_BYTES, type AccountState } from '@reviewer2/shared';
+import { ACCOUNT_API, AVATAR_PATH, AVATAR_TYPES, HANDLE, MAX_AVATAR_BYTES, type AccountState } from '@reviewer2/shared';
 import { ACCOUNT_REQUESTS } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { methodAllowed } from '../http';
@@ -46,6 +46,10 @@ const STATUS: Partial<Record<AccountFailure, number>> = {
   password_wrong: 401,
   link_invalid: 400,
   no_replay: 404,
+  no_such_profile: 404,
+  self_like: 403,
+  like_limited: 429,
+  profile_banned: 403,
   username_taken: 409,
   rate_limited: 429,
   login_limited: 429,
@@ -76,6 +80,8 @@ interface Request<Body> {
   ip: string;
   login: Login | null;
   body: Body;
+  // What follows the address of a route that takes a parameter, such as a profile's handle.
+  param: string;
 }
 
 type Route = {
@@ -85,6 +91,9 @@ type Route = {
   image?: boolean;
   // Whether the request needs a login.
   login?: boolean;
+  // Whether the route's address is a prefix, ending in /, with one parameter after it: a path that
+  // is no route's whole address is looked up by what comes before its last /.
+  param?: boolean;
   handle(request: Request<never>): Answer | Promise<Answer>;
 };
 
@@ -198,6 +207,36 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
       },
       true,
     ),
+    // The public profiles (docs/architecture.md#public-profiles): one by its handle, which anyone
+    // may read; what the owner writes on theirs; and the likes.
+    [ACCOUNT_API.profiles]: {
+      method: 'GET',
+      param: true,
+      handle: ({ login, param }) => {
+        const profile = HANDLE.test(param) ? accounts.profileOf(param, login?.account ?? null) : null;
+        return profile === null ? failure('no_such_profile') : ok({ profile });
+      },
+    },
+    [ACCOUNT_API.profile]: post(
+      ACCOUNT_REQUESTS.profile,
+      ({ login, body }) => fromResult(accounts.setProfile(login as Login, body)),
+      true,
+    ),
+    [ACCOUNT_API.likers]: {
+      method: 'GET',
+      login: true,
+      handle: ({ login }) => ok({ likers: accounts.likersOf(login as Login) }),
+    },
+    [ACCOUNT_API.like]: post(
+      ACCOUNT_REQUESTS.like,
+      ({ login, body }) => fromResult(accounts.like(login as Login, body.handle)),
+      true,
+    ),
+    [ACCOUNT_API.unlike]: post(
+      ACCOUNT_REQUESTS.unlike,
+      ({ login, body }) => fromResult(accounts.unlike(login as Login, body.handle)),
+      true,
+    ),
   };
 
   // Answers a request under /api, or for an avatar, and says whether it was one.
@@ -216,7 +255,15 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
   };
 
   async function respond(req: IncomingMessage, res: ServerResponse, path: string): Promise<void> {
-    const route = routes[path];
+    let route = routes[path];
+    let param = '';
+    if (!route) {
+      const prefix = path.slice(0, path.lastIndexOf('/') + 1);
+      if (routes[prefix]?.param) {
+        route = routes[prefix];
+        param = path.slice(prefix.length);
+      }
+    }
     if (!route) {
       send(res, { status: 404, body: { ok: false, error: 'bad_request' } });
       return;
@@ -249,7 +296,7 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
     }
     const login = accounts.login(readLoginCookie(req.headers, secureCookies));
     if (route.login && !login) return send(res, failure('not_logged_in'));
-    send(res, await route.handle({ ip, login, body } as Request<never>));
+    send(res, await route.handle({ ip, login, body, param } as Request<never>));
   }
 
   function send(res: ServerResponse, { status, body, cookie }: Answer): void {
