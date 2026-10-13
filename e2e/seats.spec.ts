@@ -33,7 +33,7 @@ test('players who come to play are dealt into the groups evenly, and the shuffle
   await expect(ann.locator('.spectators')).toContainText('Eve');
 
   await ann.getByRole('button', { name: TEXT.en.lobby.shuffle }).click();
-  await expect(ann.locator('.desk .ready')).toBeVisible();
+  await expect(ann.locator('.start-bar .ready')).toBeVisible();
   await expect(ann.locator('.spectators')).toContainText('Eve');
 });
 

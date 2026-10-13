@@ -28,7 +28,8 @@ test('a public room is joined from the home page with an account, and a removed 
   const url = await createRoom(ann, 'en', '', async (page) => {
     await page.getByRole('radio', { name: new RegExp(`^${text.create.public}\\b`) }).check();
   });
-  await expect(ann.locator('.lobby-head .public')).toHaveText(text.room.public);
+  // The chair's tag beside the heading says that the room is public, and is theirs to switch.
+  await expect(ann.locator('.lobby-head .visibility .tag')).toHaveText(text.room.public);
 
   // A guest finds the room on the home page, among those of the other tests that run meanwhile,
   // and is sent to register, which leads back to it.
@@ -54,6 +55,9 @@ test('a public room is joined from the home page with an account, and a removed 
   await bob.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(bob.locator('.lobby')).toContainText(annName);
   await expect(ann.locator('.lobby')).toContainText(bobName);
+  // Bob sees the tag, with nothing to switch.
+  await expect(bob.locator('.lobby-head .public')).toHaveText(text.room.public);
+  await expect(bob.locator('.lobby-head .visibility')).toHaveCount(0);
 
   // Bob reports Ann, with a note, which the operator's command shows.
   await bob.locator('.lobby').getByRole('button', { name: annName }).click();
@@ -97,7 +101,7 @@ test('a public room is joined from the home page with an account, and a removed 
   await expect(menu).toContainText(text.room.listed);
   await menu.getByRole('button', { name: text.room.makePrivate }).click();
   await expect(menu).toContainText(text.room.unlisted);
-  await expect(cat.locator('.lobby-head .public')).toHaveCount(0);
+  await expect(cat.locator('.lobby-head .visibility .tag')).toHaveText(text.room.private);
   await cat.keyboard.press('Escape');
 
   // The room is private now, so Bob, who is barred from public rooms only, gets in. Removed from a

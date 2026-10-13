@@ -7,6 +7,7 @@ import { account } from '../account';
 import InviteFriends from '../components/InviteFriends.vue';
 import PlayerAvatar from '../components/PlayerAvatar.vue';
 import SendFeedback from '../components/SendFeedback.vue';
+import SoundToggle from '../components/SoundToggle.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
@@ -19,11 +20,12 @@ import { useNameField } from '../useNameField';
 
 // The room menu, behind the "Room" button in the masthead: who you are, whether the room is public
 // or private, ways to rename yourself or leave, for an account the way to invite friends
-// (docs/architecture.md#friends), and the way to send the author feedback. The chair can also list
-// the room on the home page or take it off, in the waiting room, and close the room for everyone,
-// in the waiting room, during a game and after it. A player who is logged in is called by their
-// username, which changes on the account page, not here. Each action opens its own sheet over the
-// menu, as it did when they stood at the foot of the page.
+// (docs/architecture.md#friends), the switch for the sounds, which the quick reactions offer too,
+// and the way to send the author feedback. The chair can also list the room on the home page or
+// take it off, in the waiting room (as the tag beside the waiting room's heading does), and close
+// the room for everyone, in the waiting room, during a game and after it. A player who is logged
+// in is called by their username, which changes on the account page, not here. Each action opens
+// its own sheet over the menu, as it did when they stood at the foot of the page.
 const props = defineProps<{ room: RoomView; me: PlayerView }>();
 const { t } = useI18n();
 const router = useRouter();
@@ -106,6 +108,7 @@ const setPublic = (value: boolean) => act('room:public', { public: value });
       </template>
       <UiButton v-if="!account.summary" @click="startRenaming">{{ t('room.rename') }}</UiButton>
       <UiButton v-else @click="inviting = true">{{ t('friends.invite') }}</UiButton>
+      <SoundToggle />
       <UiButton @click="leaving = true">{{ t('room.leave') }}</UiButton>
       <UiButton v-if="isChair" variant="danger" @click="closing = true">{{ t('room.closeRoom') }}</UiButton>
       <SendFeedback page="room" />

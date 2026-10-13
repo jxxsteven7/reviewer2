@@ -2,20 +2,25 @@
 // Buttons, which look like stickers: an ink outline, a hard shadow, and a press that pushes the
 // sticker into its shadow. "primary" is the one main action on a screen, "secondary" the others,
 // "quiet" a link-like action without the outline, and "danger" an action that can't be undone.
-// "red" and "blue" are the bright buttons of the home page.
+// "red" and "blue" are the bright buttons of the home page. With an `href`, the button is a link
+// that looks like one, such as one that opens another page.
 withDefaults(
   defineProps<{
     variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'red' | 'blue';
     size?: 'normal' | 'small' | 'large';
     type?: 'button' | 'submit';
     disabled?: boolean;
+    href?: string;
   }>(),
-  { variant: 'secondary', size: 'normal', type: 'button', disabled: false },
+  { variant: 'secondary', size: 'normal', type: 'button', disabled: false, href: undefined },
 );
 </script>
 
 <template>
-  <button :type="type" :class="['button', variant, size]" :disabled="disabled">
+  <a v-if="href" :href="href" :class="['button', variant, size]">
+    <slot />
+  </a>
+  <button v-else :type="type" :class="['button', variant, size]" :disabled="disabled">
     <slot />
   </button>
 </template>
@@ -36,6 +41,7 @@ withDefaults(
   font-size: var(--text-md);
   font-weight: var(--weight-black);
   line-height: 1.2;
+  text-decoration: none;
   cursor: pointer;
   touch-action: manipulation;
   transition:

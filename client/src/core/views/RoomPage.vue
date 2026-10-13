@@ -30,6 +30,18 @@ watch(
   },
   { immediate: true },
 );
+
+// The waiting room and the game are pages of their own to the eye: when the room goes from one to
+// the other, as when the chair starts the game from the foot of the desk, the new one opens at its
+// top, rather than where the old one was scrolled to.
+const inLobby = computed(() => (room.value ? room.value.phase === 'lobby' : null));
+watch(
+  inLobby,
+  (now, before) => {
+    if (now !== null && before !== null && now !== before) window.scrollTo({ top: 0, behavior: 'instant' });
+  },
+  { flush: 'post' },
+);
 </script>
 
 <template>
