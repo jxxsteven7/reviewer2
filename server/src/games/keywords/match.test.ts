@@ -1,4 +1,12 @@
-import { SPECTATOR, type MatchRules, type RoomPhase, type Seat, type Team } from '@reviewer2/shared';
+import {
+  SPECTATOR,
+  type CardColor,
+  type ClueRecord,
+  type MatchRules,
+  type RoomPhase,
+  type Seat,
+  type Team,
+} from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { seededRng, type Rng } from '../../core/random';
@@ -29,19 +37,24 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     nameOf: (id) => id,
     isOnline: (id) => !offline.includes(id),
     playerIds: () => ids,
+    titleCount: () => null,
   };
 }
 
 const sides = (teams: Record<string, Team>) => new Map(Object.entries(teams).map(([id, team]) => [keyOf(id), team]));
 
-// A game in which red revealed two of its cards and one of blue's, blue one of its own and an
-// irrelevant paper, and then red revealed Reviewer 2, so blue won.
+// The groups of a game: who played for which, and who was its PI, having seen the key.
+const seated = (teams: Record<string, Team>, pis: string[]) => ({
+  sides: sides(teams),
+  keyViewers: new Set(pis.map(keyOf)),
+});
+
+type Guess = ClueRecord['guesses'][number];
+const guess = (card: number, color: CardColor, player: string): Guess => ({ card, color, player });
+
+// A game in which red's students revealed two of its cards and one of blue's, blue's one of its own
+// and an irrelevant paper, and then red's revealed Reviewer 2, so blue won.
 function played(): KeywordsState {
-  const guess = (card: number, color: KeywordsState['cards'][number]['color'], player: string) => ({
-    card,
-    color,
-    player,
-  });
   return gameState({
     phase: 'over',
     result: { winner: 'blue', reason: 'reviewer2' },
@@ -52,6 +65,7 @@ function played(): KeywordsState {
         word: 'One',
         count: 3,
         guesses: [guess(0, 'red', 'ron'), guess(1, 'red', 'ron'), guess(9, 'blue', 'ron')],
+        captain: 'rex',
       },
       {
         turn: 2,
@@ -59,53 +73,195 @@ function played(): KeywordsState {
         word: 'Two',
         count: 2,
         guesses: [guess(10, 'blue', 'bea'), guess(17, 'neutral', 'bea')],
+        captain: 'bo',
       },
-      { turn: 3, team: 'red', word: 'Three', count: 1, guesses: [guess(24, 'reviewer2', 'rae')] },
+      { turn: 3, team: 'red', word: 'Three', count: 1, guesses: [guess(24, 'reviewer2', 'rae')], captain: 'rex' },
     ],
   });
 }
 
 const PLAYERS = { rex: 'red', ron: 'red', rae: 'red', bo: 'blue', bea: 'blue' } as const;
+const PIS = ['rex', 'bo'];
+const SEATED = seated(PLAYERS, PIS);
 
 const pointsOf = (scores: ReturnType<typeof scoreGame>) =>
   Object.fromEntries((scores ?? []).map(({ key, points }) => [key.replace('key-', ''), points]));
+const detailsOf = (scores: ReturnType<typeof scoreGame>) =>
+  Object.fromEntries((scores ?? []).map(({ key, detail }) => [key.replace('key-', ''), detail]));
+
+// A game that red won in the turn after those `before`, with `guesses` in it, and the clue `count`
+// that rex, red's PI, gave for it.
+function redWins(guesses: Guess[], count: ClueRecord['count'], before: ClueRecord[] = []): KeywordsState {
+  const turn = before.length + 1;
+  return gameState({
+    phase: 'over',
+    result: { winner: 'red', reason: 'found' },
+    history: [...before, { turn, team: 'red', word: 'Win', count, guesses, captain: 'rex' }],
+  });
+}
+const ALL_RED = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((card) => guess(card, 'red', 'ron'));
 
 describe('the score of a game', () => {
-  test('gives a group a point for each of its own cards it found, and 3 for winning', () => {
-    // Red found 2 cards, blue 1: the blue card that red revealed doesn't count for blue. Ron pays
-    // 2 for the blue card, Rae 3 for Reviewer 2, and Bea 1 for the irrelevant paper.
-    expect(pointsOf(scoreGame(played(), sides(PLAYERS), keyOf))).toEqual({
-      rex: 2,
-      ron: 2 - 2,
-      rae: 2 - 3,
-      bo: 1 + 3,
+  test('gives everyone in a group a point for each of its cards its students found, and the PI more for the win', () => {
+    // Red found 2 cards, blue 1: the blue card that red revealed doesn't count for blue. Red's
+    // students revealed a blue card and Reviewer 2, which costs each of them 2 and 3, whoever revealed
+    // them, and the PI 3 and 5; blue's revealed an irrelevant paper, 1 for each student and 2 for the
+    // PI. Blue won: 3 for a student, 4 for the PI.
+    expect(pointsOf(scoreGame(played(), SEATED, keyOf))).toEqual({
+      rex: 2 - 3 - 5,
+      ron: 2 - 2 - 3,
+      rae: 2 - 2 - 3,
+      bo: 1 + 4 - 2,
       bea: 1 + 3 - 1,
     });
   });
 
   test('says where the points came from', () => {
-    const scores = scoreGame(played(), sides(PLAYERS), keyOf) ?? [];
-    const detail = (id: string) => scores.find(({ key }) => key === keyOf(id))?.detail;
-    expect(detail('ron')).toEqual({ found: 2, won: false, irrelevant: 0, wrong: 1, reviewer2: 0 });
-    expect(detail('rae')).toEqual({ found: 2, won: false, irrelevant: 0, wrong: 0, reviewer2: 1 });
-    expect(detail('bo')).toEqual({ found: 1, won: true, irrelevant: 0, wrong: 0, reviewer2: 0 });
-    expect(detail('bea')).toEqual({ found: 1, won: true, irrelevant: 1, wrong: 0, reviewer2: 0 });
+    const details = detailsOf(scoreGame(played(), SEATED, keyOf));
+    const none = { bigClues: 0, openingRecord: false, heavenlyHand: false };
+    const red = { found: 2, won: false, irrelevant: 0, wrong: 1, reviewer2: 1, ...none };
+    const blue = { found: 1, won: true, irrelevant: 1, wrong: 0, reviewer2: 0, ...none };
+    expect(details).toEqual({
+      rex: { role: 'captain', ...red },
+      ron: { role: 'guesser', ...red },
+      rae: { role: 'guesser', ...red },
+      bo: { role: 'captain', ...blue },
+      bea: { role: 'guesser', ...blue },
+    });
+  });
+
+  test('costs every student of a larger group the same', () => {
+    const many = seated({ ...PLAYERS, rio: 'red', ria: 'red' }, PIS);
+    const points = pointsOf(scoreGame(played(), many, keyOf));
+    expect([points.ron, points.rae, points.rio, points.ria]).toEqual([-3, -3, -3, -3]);
+    expect(points.rex).toBe(-6);
+  });
+
+  test('gives the PI who gave a big clue a point for each card it found from the fourth on', () => {
+    const own = (cards: number[]) => cards.map((card) => guess(card, 'red', 'ron'));
+    const clue = (turn: number, cards: number[], captain = 'rex'): ClueRecord => ({
+      turn,
+      team: 'red',
+      word: `Clue${turn}`,
+      count: 1,
+      guesses: [...own(cards), guess(17 + turn, 'neutral', 'ron')],
+      captain,
+    });
+    const blue = (turn: number): ClueRecord => ({ turn, team: 'blue', word: 'Blue', count: 1, guesses: [] });
+    // Three cards, then four, then five; the last clue came from another PI who took the seat over.
+    const game = gameState({
+      history: [clue(1, [0, 1, 2]), blue(2), clue(3, [3, 4, 5, 6]), blue(4), clue(5, [7, 8], 'roy')],
+    });
+    const scores = scoreGame(game, seated({ ...PLAYERS, roy: 'red' }, [...PIS, 'roy']), keyOf);
+    expect(detailsOf(scores)).toMatchObject({ rex: { bigClues: 1 }, roy: { bigClues: 0 }, ron: { bigClues: 0 } });
+    const five = gameState({ history: [{ ...clue(1, [0, 1, 2, 3, 4]) }] });
+    expect(detailsOf(scoreGame(five, SEATED, keyOf))).toMatchObject({ rex: { bigClues: 2 } });
+    // Only the cards found count, not the cards marked.
+    const marked = gameState({ history: [{ ...clue(1, [0, 1, 2]), targets: [0, 1, 2, 3, 4] }] });
+    expect(detailsOf(scoreGame(marked, SEATED, keyOf))).toMatchObject({ rex: { bigClues: 0 } });
+    // The PI's points: the group's 9 cards, 3 irrelevant papers at 2, the big clue.
+    expect(pointsOf(scores).rex).toBe(9 - 3 * 2 + 1);
+  });
+
+  test('gives everyone in a group a point for the opening record, and nothing for a near miss', () => {
+    const opening = (count: ClueRecord['count'], guesses: Guess[], before: ClueRecord[] = []) =>
+      detailsOf(
+        scoreGame(
+          gameState({
+            history: [...before, { turn: before.length + 1, team: 'red', word: 'Go', count, guesses, captain: 'rex' }],
+          }),
+          SEATED,
+          keyOf,
+        ),
+      );
+    const three = [guess(0, 'red', 'ron'), guess(1, 'red', 'rae'), guess(2, 'red', 'ron')];
+    // 3 named, 3 found first, and a wrong card after them changes nothing.
+    expect(opening(3, [...three, guess(17, 'neutral', 'ron')])).toMatchObject({
+      rex: { openingRecord: true },
+      ron: { openingRecord: true },
+      rae: { openingRecord: true },
+      bo: { openingRecord: false },
+    });
+    // A wrong card among the first three, a clue of 2, of 0 or unlimited, too few found: none.
+    const broken = [guess(0, 'red', 'ron'), guess(17, 'neutral', 'ron')];
+    expect(opening(3, broken).rex).toMatchObject({ openingRecord: false });
+    expect(opening(2, three.slice(0, 2)).rex).toMatchObject({ openingRecord: false });
+    expect(opening(0, three).rex).toMatchObject({ openingRecord: false });
+    expect(opening('unlimited', three).rex).toMatchObject({ openingRecord: false });
+    expect(opening(4, three).rex).toMatchObject({ openingRecord: false });
+    // A turn whose time ran out before the clue isn't the first clue: the next one is.
+    const lost: ClueRecord = { turn: 1, team: 'red', word: null, count: null, guesses: [], timedOut: true };
+    const blue: ClueRecord = { turn: 2, team: 'blue', word: 'Blue', count: 1, guesses: [] };
+    expect(opening(3, three, [lost, blue]).ron).toMatchObject({ openingRecord: true });
+    // A second clue that would have made it is too late.
+    const first: ClueRecord = { turn: 1, team: 'red', word: 'One', count: 1, guesses: [guess(3, 'red', 'ron')] };
+    expect(opening(3, three, [first, blue]).ron).toMatchObject({ openingRecord: false });
+    // Students and PI alike: one point each.
+    const scores = scoreGame(
+      gameState({ history: [{ ...lost, word: 'Go', count: 3, guesses: three }] }),
+      SEATED,
+      keyOf,
+    );
+    expect(pointsOf(scores)).toMatchObject({ rex: 3 + 1, ron: 3 + 1, rae: 3 + 1 });
+  });
+
+  test('gives a group that wins with its first clue the heavenly hand, which adds up with the rest', () => {
+    const game = redWins(ALL_RED, 9);
+    expect(detailsOf(scoreGame(game, SEATED, keyOf))).toMatchObject({
+      rex: { role: 'captain', found: 9, won: true, bigClues: 6, openingRecord: true, heavenlyHand: true },
+      ron: { role: 'guesser', found: 9, won: true, bigClues: 0, openingRecord: true, heavenlyHand: true },
+      bo: { heavenlyHand: false, openingRecord: false },
+    });
+    // The PI: 9 cards, the win, 6 cards from the fourth on, the opening record and 3; a student: 9,
+    // the win, the opening record and 1.
+    expect(pointsOf(scoreGame(game, SEATED, keyOf))).toMatchObject({
+      rex: 9 + 4 + 6 + 1 + 3,
+      ron: 9 + 3 + 1 + 1,
+      rae: 9 + 3 + 1 + 1,
+    });
+    // After blue's first turn, red's first clue still counts.
+    const blue: ClueRecord = { turn: 1, team: 'blue', word: 'Blue', count: 1, guesses: [guess(17, 'neutral', 'bea')] };
+    expect(detailsOf(scoreGame(redWins(ALL_RED, 'unlimited', [blue]), SEATED, keyOf)).ron).toMatchObject({
+      heavenlyHand: true,
+      openingRecord: false,
+    });
+  });
+
+  test('gives no heavenly hand to a group that wins with a later clue, or by the other group', () => {
+    const first: ClueRecord = { turn: 1, team: 'red', word: 'One', count: 1, guesses: [guess(0, 'red', 'ron')] };
+    const blue: ClueRecord = { turn: 2, team: 'blue', word: 'Blue', count: 1, guesses: [] };
+    const later = redWins(ALL_RED.slice(1), 'unlimited', [first, blue]);
+    expect(detailsOf(scoreGame(later, SEATED, keyOf)).ron).toMatchObject({ heavenlyHand: false });
+    // Blue revealed red's last card, and red won in blue's turn.
+    const gift = gameState({
+      phase: 'over',
+      result: { winner: 'red', reason: 'found' },
+      history: [
+        { turn: 1, team: 'red', word: 'One', count: 'unlimited', guesses: ALL_RED.slice(1), captain: 'rex' },
+        { turn: 2, team: 'blue', word: 'Blue', count: 1, guesses: [guess(0, 'red', 'bea')], captain: 'bo' },
+      ],
+    });
+    expect(detailsOf(scoreGame(gift, SEATED, keyOf)).ron).toMatchObject({ heavenlyHand: false, won: true });
   });
 
   test('of a game in progress has no winner yet', () => {
     const game = { ...played(), phase: 'guess' as const, result: null };
-    expect(pointsOf(scoreGame(game, sides(PLAYERS), keyOf))).toMatchObject({ bo: 1, bea: 0, rae: -1 });
+    expect(pointsOf(scoreGame(game, SEATED, keyOf))).toMatchObject({ bo: 1 - 2, bea: 1 - 1, rae: 2 - 2 - 3 });
   });
 
   test('of a game that the chair withdrew is none', () => {
     const game = { ...played(), result: { winner: null, reason: 'withdrawn' as const } };
-    expect(scoreGame(game, sides(PLAYERS), keyOf)).toBeNull();
+    expect(scoreGame(game, SEATED, keyOf)).toBeNull();
   });
 
-  test('counts what a player revealed under the key they had, also after they left', () => {
-    // ron has left the room; the room still knows his key.
-    const gone = (id: string) => (id === 'ron' ? 'key-ron' : keyOf(id));
-    expect(pointsOf(scoreGame(played(), sides(PLAYERS), gone)).ron).toBe(0);
+  test('gives a big clue to its PI under the key they had, also after they left', () => {
+    // rex has left the room; the room still knows his key.
+    const gone = (id: string) => (id === 'rex' ? 'key-rex' : keyOf(id));
+    const four = [0, 1, 2, 3].map((card) => guess(card, 'red', 'ron'));
+    const game = gameState({
+      history: [{ turn: 1, team: 'red', word: 'Four', count: 1, guesses: four, captain: 'rex' }],
+    });
+    expect(detailsOf(scoreGame(game, SEATED, gone)).rex).toMatchObject({ bigClues: 1 });
   });
 });
 

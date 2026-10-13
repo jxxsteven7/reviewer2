@@ -176,6 +176,7 @@ const context = (): GameContext => ({
   nameOf: (id) => id,
   isOnline: () => true,
   playerIds: () => ['ann', 'bob', 'cat'],
+  titleCount: () => null,
 });
 
 describe('the view', () => {
@@ -538,10 +539,13 @@ describe('the time limits', () => {
     await settle(table);
     expect(board(table.spectator)).toMatchObject({ turn: 2, team: otherTeam(first), phase: 'clue' });
     expect(board(table.spectator).clock).toEqual({ left: 10_000, total: 10_000 });
-    // The record says when the time ran out, from the start of the game.
+    // The record says when the time ran out, from the start of the game, and whose time it was. The
+    // room hears of the PI who missed the deadline; a guest's misses go uncounted.
+    const pi = table.captains[first].me;
     expect(board(table.spectator).history).toEqual([
-      { turn: 1, team: first, word: null, count: null, guesses: [], timedOut: true, at: 30_000 },
+      { turn: 1, team: first, word: null, count: null, guesses: [], timedOut: true, captain: pi, at: 30_000 },
     ]);
+    expect(board(table.spectator).events).toEqual([{ turn: 1, kind: 'missed', team: first, player: pi }]);
 
     // The second group's students run out of time without revealing anything.
     const second = otherTeam(first);
@@ -923,6 +927,7 @@ describe('a pause', () => {
     expect(board(table.spectator).events).toEqual([
       { turn: 1, kind: 'paused' },
       { turn: 1, kind: 'resumed' },
+      { turn: 1, kind: 'missed', team: 'red', player: ann.me },
     ]);
   });
 

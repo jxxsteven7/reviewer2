@@ -726,11 +726,20 @@ export class Accounts {
   }
 
   // Keeps a game on an account's record, as the game module described it, with the streak that it
-  // brings the account to, in one transaction, unless the database is full. Gives the streak back,
-  // or null when the game wasn't kept, as one that was on the record already.
+  // brings the account to and the titles that it brought them (docs/architecture.md#titles), in one
+  // transaction, unless the database is full. Gives the streak back, or null when the game wasn't
+  // kept, as one that was on the record already, whose titles were awarded with it.
   record(accountId: number, record: NewRecord): Streak | null {
     if (this.#full() || this.store.byId(accountId) === undefined) return null;
-    return this.store.transaction(() => this.records.add(accountId, record));
+    return this.store.transaction(() => {
+      const streak = this.records.add(accountId, record);
+      if (streak) {
+        for (const { title, turn } of record.titles ?? []) {
+          this.titles.awardForGame(accountId, title, record.gameId, turn);
+        }
+      }
+      return streak;
+    });
   }
 
   // Keeps a finished game to watch again (docs/architecture.md#replays), with its log and which

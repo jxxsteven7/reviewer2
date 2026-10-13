@@ -258,28 +258,29 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // What the end of a game leaves behind for the players with accounts, as the game describes
   // their part in it (GameModule.results()): the game on each of their records, with the points it
-  // brought them (Room.points()), the streak it brought them to, which the room tells in the
-  // snapshot that ends the game (Room.noteStreak()), their ranks as they are now for everyone to
-  // see, and the titles that the game brought friends who played in it, which the room tells each
-  // account alone (Room.noteDuos()). Whoever had left by then has no part in its end, and a game
-  // that the chair withdrew counts for nobody. Then, once anyone with an account that still exists
-  // has played in it, those who
-  // left included, the record of the game itself (docs/architecture.md#game-records): the replay
-  // to watch again (GameModule.replay()), the log of everything that happened, and which player
-  // was which account. Whatever else is to be kept of a finished game goes here, after the
+  // brought them (Room.points()), the match it was played in, if any (Room.matchGame()), and the
+  // titles it brought them; the streak it brought them to, which the room tells in the snapshot
+  // that ends the game (Room.noteStreak()); their ranks as they are now for everyone to see; and the
+  // titles that the game brought friends who played in it, which the room tells each account alone
+  // (Room.noteDuos()). Whoever had left by then has no part in its end, and a game that the chair
+  // withdrew counts for nobody. Then, once anyone with an account that still exists has played in
+  // it, those who left included, the record of the game itself (docs/architecture.md#game-records):
+  // the replay to watch again (GameModule.replay()), the log of everything that happened, and which
+  // player was which account. Whatever else is to be kept of a finished game goes here, after the
   // records.
   function keepRecords(room: Room): void {
     const results = accounts && room.gameId !== null ? room.results() : null;
     if (!results || !accounts) return;
     const gameId = room.gameId as string;
     const points = room.points();
+    const match = room.matchGame();
     // Those whose game went on the record, by account ID, with their player ID, side and result.
     const recorded = new Map<number, DuoPart & { playerId: string }>();
     for (const { playerId, ...result } of results) {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
-      const record = { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, ...result };
+      const record = { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, match, ...result };
       const streak = accounts.record(account.id, record);
       if (streak) {
         room.noteStreak(member.id, streak);

@@ -23,6 +23,7 @@ import { describe, expect, test } from 'vitest';
 import { DUO_LINES } from '../core/duos';
 import { CLIENT_ERRORS } from '../core/errors';
 import { LINES_PER_TIER, STREAK_TIERS } from '../core/streaks';
+import { MISSED_LINES } from '../games/keywords/missed';
 
 // Every interface string exists in both languages (docs/rules/constraints.md). The files are
 // read as plain JSON: importing them would hand back the compiled messages instead.
@@ -89,6 +90,12 @@ describe('locale files', () => {
     for (const kind of FEEDBACK_KINDS) expect(en.has(`feedback.kinds.${kind}`), kind).toBe(true);
     for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`acknowledgments.kinds.${kind}`), kind).toBe(true);
     for (const kind of SPONSOR_KINDS) expect(en.has(`sponsors.kinds.${kind}`), kind).toBe(true);
+  });
+
+  test('have every line with which the room teases a PI who missed the deadline', () => {
+    for (let n = 1; n <= MISSED_LINES; n += 1) expect(en.has(`game.missed.lines.${n}`), String(n)).toBe(true);
+    expect(en.has(`game.missed.lines.${MISSED_LINES + 1}`)).toBe(false);
+    for (let n = 1; n <= MISSED_LINES; n += 1) expect(en.get(`game.missed.lines.${n}`)).toContain('{name}');
   });
 
   test('have a phrase for every quick reaction', () => {

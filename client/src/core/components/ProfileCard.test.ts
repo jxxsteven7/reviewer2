@@ -44,7 +44,11 @@ const profile = (changes: Partial<ProfileView> = {}): ProfileView => ({
   streaks: { wins: 3, losses: 0 },
   link: 'https://ann.example/(me)',
   bio: '<script>alert(1)</script> & co',
-  record: { games: 12, wins: 7, matches: 3 },
+  record: {
+    ordinary: { games: 8, wins: 5 },
+    inMatches: { games: 4, wins: 2 },
+    matches: { played: 3, won: 1 },
+  },
   acknowledgments: [{ kind: 'feedback', count: 1 }],
   likes: 4,
   liked: false,
@@ -86,7 +90,16 @@ describe('ProfileCard', () => {
       target: '_blank',
       rel: 'nofollow ugc noopener',
     });
-    expect(text).toContain('Games: 12 · Won: 7 · Matches: 3');
+    // The record, as a table, when the owner shows it.
+    const rows = wrapper
+      .findAll('.record-table tbody tr')
+      .map((row) => row.findAll('th, td').map((cell) => cell.text()));
+    expect(rows).toEqual([
+      ['Ordinary games', '8', '5', '63%'],
+      ['Games in matches', '4', '2', '50%'],
+      ['Total', '12', '7', '58%'],
+    ]);
+    expect(wrapper.get('.record-table .matches').text()).toBe('Matches: 3 · Finished first: 1');
     expect(text).toContain('Acknowledged: Helpful discussions');
     expect(text).toContain('♥ 4');
     // A guest can neither like nor ask, and is told why.
@@ -144,7 +157,7 @@ describe('ProfileCard', () => {
     expect(wrapper.find('.titles').exists()).toBe(false);
     expect(wrapper.find('a.link').exists()).toBe(false);
     expect(wrapper.find('.bio').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain('Games:');
+    expect(wrapper.find('.record-table').exists()).toBe(false);
     wrapper.unmount();
   });
 

@@ -159,7 +159,7 @@ describe('streaks', () => {
     // A withdrawn game counts for nothing: it tells of no streak and leaves the record as it was.
     expect(await game('room:end')).toEqual([]);
     expect(records.streaks(1)).toEqual({ wins: 2, losses: 0 });
-    expect(records.view(1).games).toBe(2);
+    expect(records.view(1).ordinary.games).toBe(2);
     // The next win makes three, as if the withdrawn game had never been.
     expect(await game('test:finish')).toEqual([{ playerId: ann.me, kind: 'wins', length: STREAK_MIN, record: true }]);
     expect(records.streaks(1)).toEqual({ wins: STREAK_MIN, losses: 0 });

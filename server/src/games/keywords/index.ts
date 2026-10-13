@@ -9,6 +9,7 @@ import {
   SPECTATOR,
   TEAMS,
   verdictFor,
+  type ClueRecord,
   type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
@@ -19,7 +20,7 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import type { GameContext, GameModule, GameUpdate, LogNote } from '../../core/game';
+import type { GameContext, GameModule, GameTitle, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
   expire,
@@ -34,6 +35,7 @@ import {
   select,
   withdraw,
   type Actor,
+  type Missed,
   type Outcome,
 } from './rules';
 import {
@@ -41,8 +43,11 @@ import {
   arrangeFixed,
   counts,
   drawProblems,
+  firstClue,
+  heavenlyHand,
   lineupOf,
   newMatchSeating,
+  openingRecord,
   rekeyMatch,
   rekeySeating,
   scoreGame,
@@ -50,6 +55,7 @@ import {
 } from './match';
 import {
   autoSeat,
+  captainOf,
   changeSeat,
   emptySeating,
   endGame,
@@ -207,6 +213,40 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
     act(data, playerId, (game, actor) => extend(game, actor, moment)),
 };
 
+// The captain in the seat of the group whose time for the clue has run out, and how many times
+// they had missed the deadline before: as their account's titles count it, and in this game so far,
+// whose titles are awarded only at its end. A guest's misses go uncounted.
+function missedBy(data: KeywordsData, ctx: GameContext): Missed | null {
+  const game = data.game;
+  const captain = game && captainOf(data.seating, game.team);
+  if (!game || captain === null) return null;
+  const held = ctx.titleCount(captain, 'missed_deadline');
+  if (held === null) return { captain, before: null };
+  const key = ctx.keyOf(captain);
+  const earlier = game.history.filter((record) => missedDeadline(record) && ctx.keyOf(record.captain ?? '') === key);
+  return { captain, before: held + earlier.length };
+}
+
+// Whether a turn is one whose captain gave no clue in time, with the captain who was in the seat.
+const missedDeadline = (record: ClueRecord): boolean =>
+  record.word === null && record.timedOut === true && record.captain !== undefined;
+
+// The titles that a game which ended by itself brought a player who played for `team` in it, by
+// their member key (docs/games/keywords.md#titles), each with the turn it came in: Forgot to
+// Submit for each turn in which their time for the clue ran out, and for everyone in the group, the
+// opening record and the heavenly hand of its first clue.
+function titlesOf(game: KeywordsState, team: Team, key: string, keyOf: (playerId: string) => string): GameTitle[] {
+  const titles: GameTitle[] = game.history.flatMap((record) =>
+    missedDeadline(record) && keyOf(record.captain ?? '') === key
+      ? [{ title: 'missed_deadline' as const, turn: record.turn }]
+      : [],
+  );
+  const first = firstClue(game, team);
+  if (first && openingRecord(game, team)) titles.push({ title: 'opening_record', turn: first.turn });
+  if (first && heavenlyHand(game, team)) titles.push({ title: 'heavenly_hand', turn: first.turn });
+  return titles;
+}
+
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
   wordsNeeded: BOARD_SIZE,
@@ -276,9 +316,11 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // A game that is over has no clock, and a paused one has nothing due until it resumes.
   deadline: (data) => (data.game?.pause ? null : (data.game?.clock?.ends ?? null)),
 
+  // A captain whose time for the clue runs out is named, with how many times they have missed the
+  // deadline (missedBy).
   tick(data, ctx) {
     if (!data.game) return data;
-    const game = expire(data.game, ctx.now());
+    const game = expire(data.game, ctx.now(), () => missedBy(data, ctx));
     return game === data.game ? data : { ...data, game };
   },
 
@@ -326,7 +368,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   match: {
     setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules) }),
-    score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating.sides, ctx.keyOf) : null),
+    score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating, ctx.keyOf) : null),
     lineup: (data) => [...data.seating.seats].filter(([, seat]) => seat.team !== null).map(([id]) => id),
   },
 
@@ -342,14 +384,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   // A game that was withdrawn counts for no record. Everyone in a seat when it ended took part: the
   // captain as the group's PI and the guessers as its students. The verdict is the decision letter
-  // that their group got.
-  results(data) {
-    const result = data.game?.result;
-    if (!data.game || !result || result.winner === null) return null;
-    const left = Object.fromEntries(TEAMS.map((team) => [team, remaining(data.game?.cards ?? [], team)])) as Record<
-      Team,
-      number
-    >;
+  // that their group got, and the titles are those that the game brought them (titlesOf).
+  results(data, ctx) {
+    const game = data.game;
+    const result = game?.result;
+    if (!game || !result || result.winner === null) return null;
+    const left = Object.fromEntries(TEAMS.map((team) => [team, remaining(game.cards, team)])) as Record<Team, number>;
     const { winner } = result;
     return [...data.seating.seats].flatMap(([playerId, seat]) =>
       seat.team === null
@@ -362,6 +402,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
               winner,
               won: seat.team === winner,
               verdict: verdictFor(result, left, seat.team),
+              titles: titlesOf(game, seat.team, ctx.keyOf(playerId), ctx.keyOf),
             },
           ],
     );

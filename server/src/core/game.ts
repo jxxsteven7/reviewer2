@@ -1,4 +1,4 @@
-import type { Ack, BoardWord, Language, MatchRules, RoomPhase } from '@reviewer2/shared';
+import type { Ack, BoardWord, Language, MatchRules, RoomPhase, Title } from '@reviewer2/shared';
 import type { Rng } from './random';
 
 // What the shared layer needs from a game (docs/architecture.md). The shared layer runs rooms,
@@ -23,6 +23,10 @@ export interface GameContext {
   isOnline(playerId: string): boolean;
   // Everyone in the room, in the order they joined.
   playerIds(): string[];
+  // How many times the account of a player, also of one who has left during the current game, has
+  // won a title, as its record has it, or null for a guest, who keeps none, and when the record
+  // can't be read.
+  titleCount(playerId: string, title: Title): number | null;
 }
 
 // Who is looking: a member of the room, or a screen that only watches.
@@ -34,7 +38,8 @@ export type GameUpdate<Data> = Ack<{ data: Data }>;
 
 // One player's part in a game that has ended, as the game describes it, for the record of a player
 // with an account: which side they played for and in what role, which side won, whether they did,
-// and the game's own word for how it went, such as the verdict of a decision letter.
+// the game's own word for how it went, such as the verdict of a decision letter, and the titles
+// that the game brought them, if any.
 export interface PlayerResult {
   playerId: string;
   side: string;
@@ -42,6 +47,15 @@ export interface PlayerResult {
   winner: string;
   won: boolean;
   verdict: string;
+  titles?: GameTitle[];
+}
+
+// A title that a game brought a player (docs/architecture.md#titles), with the turn of the game it
+// came in, or whatever the game counts its moments in, which tells it apart from the same title
+// won again later in the game. The record keeps each once.
+export interface GameTitle {
+  title: Title;
+  turn: number;
 }
 
 // What the log of a game keeps of one of the game's messages that changed the game

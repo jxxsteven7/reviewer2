@@ -1,4 +1,4 @@
-import type { Title } from './accounts';
+import type { MatchTitle } from './accounts';
 
 // Matches (docs/architecture.md#matches): a room that plays a number of games in a row, scores
 // every player in each, and ranks them by their totals at the end. The first win the Best Paper
@@ -57,7 +57,7 @@ export interface StandingView {
   rank: number | null;
   left: boolean;
   // Only once the match is over.
-  title?: Title;
+  title?: MatchTitle;
 }
 
 export interface MatchView {

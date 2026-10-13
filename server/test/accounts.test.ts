@@ -345,7 +345,15 @@ describe('the record of games', () => {
     await browser.register('Ann');
     expect(await browser.request('/api/account/records')).toMatchObject({
       status: 200,
-      body: { ok: true, records: { games: 0, wins: 0, recent: [] } },
+      body: {
+        ok: true,
+        records: {
+          ordinary: { games: 0, wins: 0 },
+          inMatches: { games: 0, wins: 0 },
+          recent: [],
+          matches: { played: 0, won: 0, recent: [] },
+        },
+      },
     });
   });
 });
