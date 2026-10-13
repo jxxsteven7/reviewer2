@@ -101,6 +101,17 @@ test("a group's students mark cards for each other, in either turn, and nobody e
   // Before the clue, choosing is off, and a tap marks a card, as one of the group's own at first.
   await expect(tool(student, text.game.tools.choose)).toBeDisabled();
   await expect(tool(student, text.game.tools.ours)).toHaveAttribute('aria-pressed', 'true');
+  // Each tool is 44 px high to the finger: a tap just above or below it, on the pill's padding,
+  // lands on it.
+  await student.locator('.mark-tools').scrollIntoViewIfNeeded();
+  const reach = await student.locator('.mark-tools .tool').evaluateAll((tools) =>
+    tools.map((button) => {
+      const { left, right, top, bottom } = button.getBoundingClientRect();
+      const x = (left + right) / 2;
+      return [top - 1, bottom + 1].every((y) => button.contains(document.elementFromPoint(x, y)));
+    }),
+  );
+  expect(reach).toEqual([true, true, true, true]);
   const own = await keyCard(captain, team);
   const theirs = await keyCard(captain, other);
   await card(student, own).click();

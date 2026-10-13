@@ -70,7 +70,7 @@ const sections = computed(() => [
     <div class="rules sections">
       <p v-if="defaults" class="defaults">{{ t('rules.defaults') }}</p>
       <section>
-        <h3 class="section-title">{{ t('settings.title') }}</h3>
+        <h3 class="section-title">{{ t(defaults ? 'rules.defaultsTitle' : 'settings.title') }}</h3>
         <SettingsSummary class="summary" :settings="settings" :language="language" :custom-words="customWords" />
       </section>
       <section v-for="section in sections" :key="section.title">

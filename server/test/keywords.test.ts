@@ -681,6 +681,18 @@ describe('quick reactions', () => {
       expect(data(client).mayEmote).toBe(true);
       await expectOk(emote(client));
     }
+    // The other group's PI steps out to watch, and is held back all the same, having seen the
+    // key; back in the seat, the same.
+    const other = table.captains[otherTeam(team)];
+    await expectOk(other.send('keywords:seat', { team: null, role: 'spectator' }));
+    await settle(table);
+    expect(data(other).seats[other.me]).toEqual({ team: null, role: 'spectator' });
+    expect(data(other).mayEmote).toBe(false);
+    expect(await emote(other)).toEqual({ ok: false, error: 'emote_not_now' });
+    await expectOk(other.send('keywords:seat', { team: otherTeam(team), role: 'captain' }));
+    await settle(table);
+    expect(data(other).mayEmote).toBe(false);
+    expect(await emote(other)).toEqual({ ok: false, error: 'emote_not_now' });
     // The turn ends, and the PIs may react at once: a refusal starts no wait.
     const own = board(captain).cards.findIndex((card) => card.color === team);
     await expectOk(guesser.send('keywords:reveal', { ...moment(board(guesser)), card: own }));

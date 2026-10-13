@@ -208,19 +208,21 @@ async function choose(card: number) {
 //
 // The tools are a student's while the game is on and not paused. Choosing comes back by itself
 // when the group's guess phase begins; when it ends, the student goes on with the mark they used
-// last, the group's own at first.
+// last, the group's own at first. A pause in the phase, which hides the tools with the board,
+// changes nothing: the tool is as the student left it when the game goes on.
 const student = computed(
   () => mySeat.value?.role === 'guesser' && mySeat.value.team !== null && !game.value.result && !paused.value,
 );
+const guessPhase = computed(() => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser');
 const tool = ref<Tool>('choose');
 let lastMark: Mark = 'ours';
 watch(tool, (current) => {
   if (current !== 'choose') lastMark = current;
 });
 watch(
-  canGuess,
-  (can) => {
-    if (can) tool.value = 'choose';
+  guessPhase,
+  (guessing) => {
+    if (guessing) tool.value = 'choose';
     else if (tool.value === 'choose') tool.value = lastMark;
   },
   { immediate: true },

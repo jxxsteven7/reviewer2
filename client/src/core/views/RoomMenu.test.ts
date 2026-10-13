@@ -62,9 +62,9 @@ const global = () => ({
   stubs: { teleport: true },
 });
 
-async function opened(phase: RoomView['phase'] = 'lobby') {
+async function opened(phase: RoomView['phase'] = 'lobby', match: RoomView['match'] = null) {
   const wrapper = mount(RoomMenu, {
-    props: { room: { ...room, phase }, me: ann },
+    props: { room: { ...room, phase, match }, me: ann },
     global: global(),
     attachTo: document.body,
   });
@@ -112,6 +112,15 @@ describe('RoomMenu', () => {
     const game = await opened('playing');
     expect(texts(game)).toContain('Invite friends');
     game.unmount();
+    // While a match is on, the waiting room has the start bar; once the match is over, its
+    // ranking stands there instead, and the menu has the invitation.
+    const match = { id: 'm1', status: 'on', standings: [] } as unknown as RoomView['match'];
+    const playing = await opened('lobby', match);
+    expect(texts(playing)).not.toContain('Invite friends');
+    playing.unmount();
+    const over = await opened('lobby', { ...match, status: 'finished' } as unknown as RoomView['match']);
+    expect(texts(over)).toContain('Invite friends');
+    over.unmount();
     account.summary = null;
   });
 });

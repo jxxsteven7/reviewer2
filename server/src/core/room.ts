@@ -567,7 +567,7 @@ export class Room {
   emote(id: string): Ack {
     const member = this.members.get(id);
     if (!member) return fail('not_member');
-    if (this.game.mayEmote && !this.game.mayEmote(this.data, id)) return fail('emote_not_now');
+    if (this.game.mayEmote && !this.game.mayEmote(this.data, id, this.context)) return fail('emote_not_now');
     const now = this.#now();
     const since = now - (this.#emoted.get(member.key) ?? -Infinity);
     if (since >= 0 && since < EMOTE_COOLDOWN_MS)
@@ -785,6 +785,7 @@ export class Room {
     if (this.gameId === null || gameId !== this.gameId) return fail('stale');
     const result = this.game.withdraw(this.data, gameId);
     if (!result.ok) return refusalOf(result);
+    this.#logChanges(result.data);
     this.#ended('withdrawn');
     this.data = result.data;
     this.phase = 'ended';
@@ -845,6 +846,7 @@ export class Room {
     if (this.phase === 'playing' && this.gameId !== null) {
       const result = this.game.withdraw(this.data, this.gameId);
       if (!result.ok) return refusalOf(result);
+      this.#logChanges(result.data);
       this.#ended('withdrawn');
       this.data = result.data;
       this.phase = 'ended';
@@ -1040,13 +1042,21 @@ export class Room {
     return this.phase === 'playing' && this.game.isOver(data);
   }
 
-  // Takes the game's new data, and the end of the game if the data brought it. What the game keeps
-  // in the log of the change itself (GameModule.logChanges) comes first.
-  #take(data: unknown, over: boolean): void {
-    if (this.phase === 'playing' && this.#log && this.game.logChanges) {
-      for (const note of this.game.logChanges(this.data, data))
-        this.#log.add(this.#now(), null, note.type, { data: note.data });
+  // What the game keeps in the log of a change of its own (GameModule.logChanges), from the data
+  // the room has to `data`: such as where things stood when a turn ended, or when the chair
+  // withdrew the game. It goes into the log before the change, and before the end if the change
+  // brought it.
+  #logChanges(data: unknown): void {
+    if (this.phase !== 'playing' || !this.#log || !this.game.logChanges) return;
+    for (const note of this.game.logChanges(this.data, data)) {
+      this.#log.add(this.#now(), null, note.type, { data: note.data });
     }
+  }
+
+  // Takes the game's new data, and the end of the game if the data brought it. What the game keeps
+  // in the log of the change itself comes first.
+  #take(data: unknown, over: boolean): void {
+    this.#logChanges(data);
     this.data = data;
     if (!over) return;
     this.#ended('finished');

@@ -161,9 +161,9 @@ function send() {
   background: var(--bg);
 }
 
-.message :deep(.avatar) {
+/* The avatar's button sits on the line's baseline, which puts the avatar level with the name. */
+.message :deep(.avatar-button) {
   margin-right: var(--space-1);
-  vertical-align: -0.45em;
 }
 
 .name {

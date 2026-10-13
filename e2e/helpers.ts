@@ -42,7 +42,6 @@ export function plural(template: string, count: number): string {
   return interpolate(form ?? template, { count: String(count) });
 }
 
-// The button that offers a seat as a student of this group during a game.
 // What the banner at the top of a room says of the viewer's seat (RoleBanner.vue): their group and
 // role, or that they watch.
 export function seatSaid(
@@ -60,6 +59,7 @@ export function avatarOf(name: string, language: Language = 'en'): { name: strin
   return { name: interpolate(TEXT[language].room.viewProfile, { name }) };
 }
 
+// The button that offers a seat as a student of this group during a game.
 export function playFor(team: Team, language: Language = 'en'): { name: string } {
   const text = TEXT[language];
   return { name: interpolate(text.game.playFor, { group: text.lobby.group[team] }) };

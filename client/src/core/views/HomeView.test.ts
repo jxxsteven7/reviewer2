@@ -45,6 +45,8 @@ describe('the rules on the home page', () => {
     const sheet = document.querySelector('[role=dialog]');
     expect(sheet?.querySelector('h2')?.textContent).toBe('\u600e\u4e48\u73a9');
     expect(sheet?.querySelector('.defaults')?.textContent).toContain('\u8fd9\u91cc\u662f\u9ed8\u8ba4\u8bbe\u7f6e');
+    // "Default settings", not "Rules of this room".
+    expect(sheet?.querySelector('section h3')?.textContent).toBe('\u9ed8\u8ba4\u8bbe\u7f6e');
     // A Chinese room at its defaults: clues of up to four characters, and the line on homophones.
     expect(sheet?.textContent).toContain('\u9e21\u97f3');
     wrapper.unmount();

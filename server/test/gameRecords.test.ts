@@ -160,7 +160,7 @@ describe('the record of a game of the team word guessing game', () => {
       language: 'en',
       fields: '["general"]',
       version: 'test',
-      rules: 1,
+      rules: 2,
       words: expect.stringMatching(/^[0-9a-f]{16}$/),
       ordered: 1,
     });

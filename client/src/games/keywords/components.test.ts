@@ -1153,7 +1153,9 @@ describe('RulesSheet', () => {
     expect(zh.indexOf(sound(zh)[0] as string)).toBe(2);
     expect(sound(await clueLines('en'))).toEqual([]);
     for (const lines of [zh, await clueLines('en')]) {
-      expect(lines).toContain("While the students guess, neither group's PI may send a quick reaction.");
+      expect(lines).toContain(
+        "While the students guess, neither group's PI may send a quick reaction, nor may anyone who has been a PI in this game.",
+      );
     }
   });
 
@@ -1168,10 +1170,13 @@ describe('RulesSheet', () => {
     expect(wrapper.get('.rules .defaults').text()).toBe(
       "These are the default settings. Each room can change them; the room's own settings apply.",
     );
-    // In a room there is no such word.
+    // The settings are headed as the defaults, not as a room's, since there is none.
+    expect(wrapper.get('.rules section h3').text()).toBe('Default settings');
+    // In a room there is no such word, and the settings are the room's.
     const room = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
     await room.get('button').trigger('click');
     expect(room.find('.rules .defaults').exists()).toBe(false);
+    expect(room.get('.rules section h3').text()).toBe('Rules of this room');
   });
 
   test('ends with what becomes of the record of the game, for everyone who plays, guests included', async () => {
@@ -1415,6 +1420,20 @@ describe('KeywordsGame', () => {
     await tool(wrapper, 'Choose')?.trigger('click');
     await wrapper.setProps({ room: marked([{ card: 1, mark: 'ours' }], { team: 'blue' }) });
     expect(tool(wrapper, 'R2?')?.attributes('aria-pressed')).toBe('true');
+  });
+
+  test("keeps the tool a student chose through a pause in the group's guess phase", async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
+    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
+    await tool(wrapper, 'Theirs')?.trigger('click');
+    // The chair pauses the game: the tools go with the board, and come back as they were.
+    await wrapper.setProps({ room: marked([], { paused: true, cards: [] }) });
+    expect(wrapper.find('.mark-tools').exists()).toBe(false);
+    await wrapper.setProps({ room: marked([]) });
+    expect(tool(wrapper, 'Theirs')?.attributes('aria-pressed')).toBe('true');
+    expect(tool(wrapper, 'Choose')?.attributes('disabled')).toBeUndefined();
+    await card(wrapper, 2)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'theirs' });
   });
 
   test('gives no tools and no marks to a PI or a spectator, nor once the game is paused or over', async () => {

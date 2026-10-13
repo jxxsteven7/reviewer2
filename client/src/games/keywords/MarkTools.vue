@@ -55,7 +55,8 @@ const colorOf = (mark: Mark) => (mark === 'ours' ? props.team : mark === 'theirs
   gap: var(--space-2);
 }
 
-/* One pill of four even parts, 44 px high to the finger with its outline (docs/design.md). */
+/* One pill of four even parts. Each part's box reaches 2 px above and below it, out of sight, over
+   the pill's padding and outline, so that it is 44 px high to the finger (docs/design.md). */
 .tool-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -67,6 +68,7 @@ const colorOf = (mark: Mark) => (mark === 'ours' ? props.team : mark === 'theirs
 }
 
 .tool {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,6 +86,12 @@ const colorOf = (mark: Mark) => (mark === 'ours' ? props.team : mark === 'theirs
   white-space: nowrap;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.tool::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 22px) 0;
 }
 
 /* Ink is flat: the tool in use has no shadow. */

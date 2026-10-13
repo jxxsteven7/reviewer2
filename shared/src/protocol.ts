@@ -115,8 +115,8 @@ export interface Session {
 
 // The quick reactions that anyone in a room can send, spectators included (docs/architecture.md).
 // Their text and their sounds are the client's. A member may send one every EMOTE_COOLDOWN_MS, and
-// none while the game holds them back (emote_not_now), as a game of keywords does from its PIs while
-// the students are guessing.
+// none while the game holds them back (emote_not_now), as a game of keywords does from whoever has
+// seen the key while the students are guessing.
 export const EMOTES = [
   'waiting',
   'deadline',

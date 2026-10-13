@@ -261,8 +261,8 @@ export interface KeywordsRoomData {
   joinsNext: boolean;
   // What still keeps the game from starting; empty outside the waiting room.
   startProblems: StartProblem[];
-  // Whether the viewer may send a quick reaction now: a PI may not while a group's students are
-  // guessing (docs/games/keywords.md#quick-reactions).
+  // Whether the viewer may send a quick reaction now: whoever has seen the key may not while a
+  // group's students are guessing (docs/games/keywords.md#quick-reactions).
   mayEmote: boolean;
   game: KeywordsView | null;
 }

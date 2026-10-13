@@ -227,14 +227,18 @@ function markNotes(before: KeywordsData, after: KeywordsData): GameLogNote[] {
 }
 
 // A PI, of either group, sends no quick reaction while a group's students are guessing, paused or
-// not: a PI sees every color, and a reaction then could tell the students which card to reveal
-// (docs/games/keywords.md#quick-reactions).
-const mayEmote = (data: KeywordsData, playerId: string) =>
-  data.game?.phase !== 'guess' || seatOf(data.seating, playerId).role !== 'captain';
+// not, and neither does anyone who has been a PI in this game and has stepped out to watch: they
+// have seen every color, and a reaction then could tell the students which card to reveal
+// (docs/games/keywords.md#quick-reactions). Who has seen the key is kept by member key (seats.ts),
+// so that leaving the room and coming back changes nothing.
+const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, 'keyOf'>) =>
+  data.game?.phase !== 'guess' ||
+  (seatOf(data.seating, playerId).role !== 'captain' && !data.seating.keyViewers.has(ctx.keyOf(playerId)));
 
 // The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
-// change to either.
-export const RULES_VERSION = 1;
+// change to either. Version 2 brought the students' marks, the homophone rule of a Chinese room and
+// the hold on the quick reactions of whoever has seen the key while the students guess.
+export const RULES_VERSION = 2;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -575,7 +579,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
         ...shared,
         side: (key !== null && (data.seating.sides.get(key) ?? fixed)) || null,
         joinsNext: key !== null && (data.match?.waiting.has(key) ?? false),
-        mayEmote: !('playerId' in viewer) || mayEmote(data, viewer.playerId),
+        mayEmote: !('playerId' in viewer) || mayEmote(data, viewer.playerId, ctx),
         game,
       };
     };

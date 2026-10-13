@@ -144,7 +144,7 @@ describe('the log of the team word guessing game', () => {
     });
     if (!clued.ok) throw new Error(clued.error);
     expect(keywordsGame.due?.(clued.data)).toEqual([student]);
-    expect(keywordsGame.rulesVersion).toBe(1);
+    expect(keywordsGame.rulesVersion).toBe(2);
   });
 
   test('counts what an AI player did: its clues, the cards they found, its best clue and Reviewer 2', () => {

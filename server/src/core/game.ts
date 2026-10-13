@@ -231,9 +231,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // nothing else.
   logChanges?(before: Data, after: Data): GameLogNote[];
   // Whether a member may send a quick reaction now (Room.emote). Without this, always; a game that
-  // says no for a while, as a game of keywords does to a PI while the students guess, has the room
-  // refuse with emote_not_now.
-  mayEmote?(data: Data, playerId: string): boolean;
+  // says no for a while, as a game of keywords does to whoever has seen the key while the students
+  // guess, has the room refuse with emote_not_now.
+  mayEmote?(data: Data, playerId: string, ctx: GameContext): boolean;
   // The players the game is waiting for now, by player ID, such as the group's PI while a clue is
   // due: when a timer changes the game, the log names those of them who were offline then. Without
   // this, it names nobody.
