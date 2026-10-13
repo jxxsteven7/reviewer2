@@ -28,7 +28,16 @@ describe('the tip sheet', () => {
       attachTo: document.body,
       global: {
         plugins: [i18n],
-        stubs: ['AccountEntry', 'BackToRoom', 'CreateRoom', 'JoinRoom', 'SendFeedback', 'PageMasthead'],
+        stubs: [
+          'AccountEntry',
+          'AcknowledgmentsList',
+          'BackToRoom',
+          'CreateRoom',
+          'JoinRoom',
+          'PageMasthead',
+          'SendFeedback',
+          'SponsorsList',
+        ],
       },
     });
     await wrapper.get('footer button').trigger('click');

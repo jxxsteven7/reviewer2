@@ -5,7 +5,9 @@ import { useI18n } from 'vue-i18n';
 // A labelled text input, with an optional hint and error below it. With `multiline`, it is a text
 // area of `rows` lines, which the player can make taller. A password field has a button that
 // shows what is typed, for typing a long password on a phone. A `disabled` field shows its value
-// and takes no typing, as when the operator has barred the account from writing it.
+// and takes no typing, as when the operator has barred the account from writing it. The `beside`
+// slot stands level with the box, for a button that goes with it, under the label and above the
+// note, which take the whole row.
 const props = defineProps<{
   label: string;
   hint?: string | undefined;
@@ -23,6 +25,7 @@ const props = defineProps<{
   rows?: number;
   type?: 'text' | 'password' | 'email';
 }>();
+defineSlots<{ beside?(): unknown }>();
 const model = defineModel<string>({ required: true });
 const id = useId();
 const { t } = useI18n();
@@ -31,7 +34,7 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
 </script>
 
 <template>
-  <div class="field" :class="{ invalid: error, disabled }">
+  <div class="field" :class="{ invalid: error, disabled, beside: $slots.beside }">
     <label :for="id" class="label">{{ label }}</label>
     <div class="control">
       <span v-if="prefix" class="prefix num" aria-hidden="true">{{ prefix }}</span>
@@ -70,15 +73,29 @@ const inputType = computed(() => (props.type === 'password' && shown.value ? 'te
         {{ t(shown ? 'account.hidePassword' : 'account.showPassword') }}
       </button>
     </div>
+    <slot name="beside" />
     <p v-if="error || hint" :id="`${id}-note`" class="note" :class="{ error }">{{ error || hint }}</p>
   </div>
 </template>
 
 <style scoped>
+/* The label, the box and the note, one under the other. With something beside the box, the label
+   and the note take the whole row, and the box shares its row, whose height it sets. */
 .field {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.beside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+}
+
+.beside .label,
+.beside .note {
+  grid-column: 1 / -1;
 }
 
 .label {

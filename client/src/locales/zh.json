@@ -17,7 +17,7 @@
     "description": "界面和牌上的词都将使用中文。"
   },
   "home": {
-    "intro": "每人用自己的手机加入同一个房间，取个昵称就能开玩。",
+    "intro": "加入房间，取个昵称就能玩！",
     "players": "4–30 人",
     "newRoom": "新建房间",
     "forthcoming": "即将发表",
@@ -704,12 +704,13 @@
     "byline": "作者 {name}",
     "author": "Jiaxiao Shi",
     "tip": "给作者点一杯可乐",
+    "feedback": "提建议",
     "tipCode": "作者的微信赞赏码",
     "tipHint": "在微信里长按识别，或用微信扫一扫。",
     "listTitle": "想上赞助者名单？",
     "listHow": "赞赏时在留言里写上你想用的名字；想用微信昵称，就写“把我放进名单”。否则不会列出你，名单也不显示金额。",
     "sponsor": "没有微信？在 GitHub 上赞助",
-    "version": "版本 {version}"
+    "version": "{version}"
   },
   "feedback": {
     "open": "提建议",
@@ -739,6 +740,7 @@
   },
   "acknowledgments": {
     "title": "致谢",
+    "counted": "致谢 | 致谢 · {count} 位 | 致谢 · {count} 位",
     "intro": "感谢提出被采纳建议、贡献词库和参与测试的玩家。提建议时留下署名，被采纳后就会署名列在这里；不留署名就匿名致谢。",
     "kinds": {
       "feedback": "有益的讨论",
@@ -750,6 +752,7 @@
   },
   "sponsors": {
     "title": "赞助者",
+    "counted": "赞助者 | 赞助者 · {count} 位 | 赞助者 · {count} 位",
     "intro": "感谢赞助 Reviewer 2 的朋友：在 GitHub 上赞助的，只要赞助是公开的，就按 GitHub 用户名列出；用微信赞赏等其他方式赞助的，本人愿意留名时按自己选的名字列出。不显示金额。",
     "kinds": {
       "github": "GitHub Sponsors",
@@ -804,7 +807,7 @@
     "end": "某组的牌全部翻开时，该组立即获胜，即使最后一张是对方翻开的。"
   },
   "account": {
-    "entry": "登录 / 注册",
+    "entry": "登录",
     "entryLabel": "你的账号：{name}",
     "entryRequests": "你的账号：{name}，{count} 个好友请求等你处理 | 你的账号：{name}，{count} 个好友请求等你处理",
     "back": "回到目录",

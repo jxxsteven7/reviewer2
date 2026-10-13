@@ -33,23 +33,17 @@ function join() {
       autocapitalize="characters"
       enterkeyhint="go"
       :error="error"
-    />
-    <UiButton variant="blue" type="submit">{{ t('home.join.submit') }}</UiButton>
+    >
+      <template #beside>
+        <UiButton variant="blue" type="submit">{{ t('home.join.submit') }}</UiButton>
+      </template>
+    </UiField>
   </form>
 </template>
 
 <style scoped>
+/* The button stands beside the box, in the field's slot, as tall as the box. */
 .join {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: var(--space-3);
   max-width: 24rem;
-}
-
-/* Level with the box, below the field's label. */
-.join > button {
-  min-height: 56px;
-  margin-top: calc(var(--text-sm) * 1.55 + var(--space-2));
 }
 </style>

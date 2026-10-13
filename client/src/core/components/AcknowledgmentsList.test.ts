@@ -41,27 +41,58 @@ afterEach(() => {
 
 const i18n = (locale: 'en' | 'zh' = 'en') => createI18n({ legacy: false, locale, messages: { en, zh } });
 
-// The list, opened as a player opens it, once the server has answered.
-async function opened(locale: 'en' | 'zh' = 'en') {
+// The card as the page shows it, once the server has answered, and opened as a player opens it.
+async function shown(locale: 'en' | 'zh' = 'en') {
   const wrapper = mount(AcknowledgmentsList, { global: { plugins: [i18n(locale)] } });
-  await toggle(wrapper, true);
+  await flushPromises();
   return wrapper;
 }
-async function toggle(wrapper: ReturnType<typeof mount>, open: boolean) {
-  (wrapper.get('details').element as HTMLDetailsElement).open = open;
-  await wrapper.get('details').trigger('toggle');
+async function opened(locale: 'en' | 'zh' = 'en') {
+  const wrapper = await shown(locale);
+  await toggle(wrapper);
+  return wrapper;
+}
+async function toggle(wrapper: ReturnType<typeof mount>) {
+  await wrapper.get('h2 button').trigger('click');
   await flushPromises();
 }
 
+// "Acknowledgments", with how many people the list names.
+const title = (people: string) => `Acknowledgments \u{b7} ${people}`;
+
 describe('the acknowledgments', () => {
-  test('are asked for once, when they are first opened', async () => {
-    const wrapper = mount(AcknowledgmentsList, { global: { plugins: [i18n()] } });
-    expect(fetchMock).not.toHaveBeenCalled();
-    await toggle(wrapper, true);
-    await toggle(wrapper, false);
-    await toggle(wrapper, true);
+  test('are asked for once, when the card is shown, which stays folded until it is opened', async () => {
+    const wrapper = await shown();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(LIST_API.acknowledgments);
+    const button = wrapper.get('h2 button');
+    const panel = wrapper.get(`[id="${button.attributes('aria-controls')}"]`).element as HTMLElement;
+    const folded = () => panel.style.display === 'none';
+    expect(button.attributes('aria-expanded')).toBe('false');
+    expect(folded()).toBe(true);
+    await toggle(wrapper);
+    expect(button.attributes('aria-expanded')).toBe('true');
+    expect(folded()).toBe(false);
+    await toggle(wrapper);
+    expect(button.attributes('aria-expanded')).toBe('false');
+    expect(folded()).toBe(true);
+    await toggle(wrapper);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('count in their title the people they name, each once, and every anonymous player', async () => {
+    expect((await shown()).get('h2').text()).toBe(title('4 people'));
+    const ann = { name: 'Ann', link: null, contribution: 'tested' };
+    const anonymous = { name: null, link: null, contribution: 'tested' };
+    fetchMock.mockImplementation(async () =>
+      answer([
+        { kind: 'feedback', entries: [ann, anonymous] },
+        { kind: 'playtesting', entries: [ann, anonymous] },
+      ]),
+    );
+    expect((await shown()).get('h2').text()).toBe(title('3 people'));
+    fetchMock.mockImplementation(async () => answer([{ kind: 'feedback', entries: [ann] }]));
+    expect((await shown()).get('h2').text()).toBe(title('1 person'));
   });
 
   test('show the sections of the file, in its order, under the headings of the interface', async () => {
@@ -117,8 +148,8 @@ describe('the acknowledgments', () => {
 
   test('call the sections and an anonymous player in the language of the page, and leave the rest in English', async () => {
     const wrapper = await opened('zh');
-    // "Acknowledgments" in Chinese.
-    expect(wrapper.get('summary').text()).toBe('\u81f4\u8c22');
+    // "Acknowledgments", by 4 people, in Chinese.
+    expect(wrapper.get('h2').text()).toBe('\u81f4\u8c22 \u00b7 4 \u4f4d');
     // "Pilot study" and "Helpful discussions".
     expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual([
       '\u9884\u5b9e\u9a8c',
@@ -133,6 +164,7 @@ describe('the acknowledgments', () => {
   test('say so when there is nobody yet', async () => {
     fetchMock.mockImplementation(async () => answer([]));
     const wrapper = await opened();
+    expect(wrapper.get('h2').text()).toBe('Acknowledgments');
     expect(wrapper.text()).toContain('No one yet. Be the first!');
     expect(wrapper.find('section').exists()).toBe(false);
   });
@@ -145,10 +177,21 @@ describe('the acknowledgments', () => {
     answered(new Response('Bad gateway', { status: 502 }));
     await flushPromises();
     expect(wrapper.text()).toContain("The list couldn't be loaded.");
-    await wrapper.get('button').trigger('click');
+    expect(wrapper.get('h2').text()).toBe('Acknowledgments');
+    await wrapper.get('.failed button').trigger('click');
     await flushPromises();
     expect(wrapper.text()).not.toContain("The list couldn't be loaded.");
     expect(wrapper.findAll('li')).toHaveLength(4);
+    expect(wrapper.get('h2').text()).toBe(title('4 people'));
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  test('are asked for again when the card is opened after they could not be loaded', async () => {
+    fetchMock.mockImplementationOnce(async () => new Response('Bad gateway', { status: 502 }));
+    const wrapper = await shown();
+    expect(wrapper.get('h2').text()).toBe('Acknowledgments');
+    await toggle(wrapper);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(wrapper.findAll('li')).toHaveLength(4);
   });
 });

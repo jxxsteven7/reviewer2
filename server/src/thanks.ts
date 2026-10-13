@@ -8,7 +8,7 @@ import {
   parseSponsors,
 } from '@reviewer2/shared';
 
-// The lists of thanks at the foot of the home page, ACKNOWLEDGMENTS.md and SPONSORS.md
+// The lists of thanks on the home page, ACKNOWLEDGMENTS.md and SPONSORS.md
 // (docs/architecture.md#lists-of-thanks), as the page asks for them: { ok: true, sections }, in
 // JSON.
 //

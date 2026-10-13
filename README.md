@@ -92,7 +92,7 @@ The rules are in **[CONTRIBUTING.md](CONTRIBUTING.md)**; in short:
 
 AI assistants read `AGENTS.md`.
 
-Players whose suggestions are adopted, who add words or who test early versions are thanked, by name or anonymously, in [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) and at the foot of the home page. Sponsors are thanked in [SPONSORS.md](SPONSORS.md), also at the foot of the home page.
+Players whose suggestions are adopted, who add words or who test early versions are thanked, by name or anonymously, in [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) and on the home page. Sponsors are thanked in [SPONSORS.md](SPONSORS.md), also on the home page.
 
 ### Contributing words
 

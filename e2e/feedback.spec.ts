@@ -21,7 +21,7 @@ test('a bug report goes from the home page to the server, which logs its number 
   await page.getByRole('button', { name: /^English/ }).click();
   const before = logged().filter(({ event }) => event === 'feedback_received').length;
 
-  await page.getByRole('button', { name: text.feedback.open }).click();
+  await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
   const sheet = page.getByRole('dialog', { name: text.feedback.title });
   await expect(sheet).toContainText(text.feedback.privacy);
   await expect(sheet).not.toContainText(text.feedback.bugNote);

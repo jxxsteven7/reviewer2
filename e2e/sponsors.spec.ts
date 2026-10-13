@@ -1,9 +1,9 @@
 import { rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
-import { expect, interpolate, newPlayer, TEXT, test } from './helpers';
+import { expect, interpolate, newPlayer, plural, TEXT, test } from './helpers';
 
-// The sponsors at the foot of the home page: while there are none, the fold asks for the first;
+// The sponsors on the home page: while there are none, the card asks for the first;
 // and the server shows SPONSORS.md from CONTENT_DIR, which e2e/server.mjs sets, as it changes
 // there, without a new build or a restart.
 
@@ -18,8 +18,10 @@ for (const language of ['en', 'zh'] as const) {
     await page.goto('/');
     await page.getByRole('button', { name: new RegExp(`^${text.language[language]}`) }).click();
 
-    const fold = page.locator('details.sponsors');
-    await fold.locator('summary').click();
+    const fold = page.locator('.fold.sponsors');
+    // With nobody to count, the card's title is the list's name alone.
+    await expect(fold.locator('h2')).toHaveText(text.sponsors.title);
+    await fold.locator('h2 button').click();
     await expect(fold).toContainText(text.sponsors.intro);
     await expect(fold).toContainText(
       interpolate(text.sponsors.none, { github: text.sponsors.github, wechat: text.sponsors.wechat }),
@@ -65,8 +67,9 @@ test('the home page shows SPONSORS.md as the server finds it in CONTENT_DIR', as
     write(['octocat'], 1_000_000);
     await page.goto('/');
     await page.getByRole('button', { name: /^English/ }).click();
-    const fold = page.locator('details.sponsors');
-    await fold.locator('summary').click();
+    const fold = page.locator('.fold.sponsors');
+    await expect(fold.locator('h2')).toHaveText(plural(text.sponsors.counted, 2));
+    await fold.locator('h2 button').click();
     await expect(fold.locator('h3')).toHaveText([text.sponsors.kinds.github, text.sponsors.kinds.other]);
     await expect(fold.locator('li')).toHaveText(['octocat', 'Dr. Who']);
     const octocat = fold.getByRole('link', { name: 'octocat' });
@@ -77,7 +80,8 @@ test('the home page shows SPONSORS.md as the server finds it in CONTENT_DIR', as
     // A new list arrives, and the next visit shows it.
     write(['octocat', 'Mona-Lisa'], 1_000_100);
     await page.reload();
-    await fold.locator('summary').click();
+    await expect(fold.locator('h2')).toHaveText(plural(text.sponsors.counted, 3));
+    await fold.locator('h2 button').click();
     await expect(fold.locator('li')).toHaveText(['octocat', 'Mona-Lisa', 'Dr. Who']);
   } finally {
     rmSync(file, { force: true });
