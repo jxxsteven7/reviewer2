@@ -93,8 +93,13 @@ const changed = computed(() => {
 });
 const page = computed(() => `${PROFILE_PATH}${props.summary.handle}`);
 
+// Saves the form. The fields follow what was kept only once the summary has been read again: when
+// it can't be, they keep what was typed, which the owner may save again, instead of going back to
+// what the summary still says and sending that over what was just kept.
 async function save(): Promise<void> {
   if (linkProblem.value || bioProblem.value) return;
+  // A word against the last try is stale once another is made.
+  refused.value = undefined;
   const reply = await run(() =>
     request(ACCOUNT_API.profile, {
       link: link.value,
@@ -109,16 +114,14 @@ async function save(): Promise<void> {
     // refuses the ones the form still holds: the summary says so, the two fields follow it and
     // close, and the choices stay as made, for the owner to save again. The word on why is kept
     // past the change.
-    if (reply.error === 'profile_banned') {
-      await loadAccount();
+    if (reply.error === 'profile_banned' && (await loadAccount())) {
       followWritten();
       await nextTick();
     }
     refused.value = t(errorKey(reply.error));
     return;
   }
-  await loadAccount();
-  follow();
+  if (await loadAccount()) follow();
   toast('account.profile.public.saved');
 }
 

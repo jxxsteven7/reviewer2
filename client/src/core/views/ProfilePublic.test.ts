@@ -141,6 +141,10 @@ describe('ProfilePublic', () => {
     const save = wrapper.get('button[type=submit]');
     expect(save.attributes('disabled')).toBeUndefined();
     signedIn.request.mockResolvedValueOnce({ ok: true });
+    signedIn.loadAccount.mockImplementationOnce(async () => {
+      await wrapper.setProps({ summary: summary({}, { banned: true, bio: null, showRecord: true }) });
+      return true;
+    });
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(signedIn.request).toHaveBeenLastCalledWith('/api/account/profile', {
@@ -150,6 +154,27 @@ describe('ProfilePublic', () => {
       showThanks: false,
     });
     expect(toasts.toast).toHaveBeenCalledWith('account.profile.public.saved');
+    expect((record.element as HTMLInputElement).checked).toBe(true);
+    // The word against the first try has gone with the second.
+    expect(wrapper.find('[role=alert]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  test('keeps what was typed when the summary cannot be read after a save', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    const bio = wrapper.get('input[enterkeyhint="done"]');
+    const save = wrapper.get('button[type=submit]');
+    await bio.setValue('New line');
+    // The save goes through, but the summary read after it doesn't come: the form must not go
+    // back to the line the summary still has, which a later save would send over the new one.
+    signedIn.request.mockResolvedValueOnce({ ok: true });
+    signedIn.loadAccount.mockResolvedValueOnce(false);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(toasts.toast).toHaveBeenCalledWith('account.profile.public.saved');
+    expect((bio.element as HTMLInputElement).value).toBe('New line');
+    expect(save.attributes('disabled')).toBeUndefined();
     wrapper.unmount();
   });
 

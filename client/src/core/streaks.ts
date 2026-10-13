@@ -8,8 +8,8 @@ import {
 } from '@reviewer2/shared';
 import { fnv1a } from './hash';
 
-// The streaks as the pages show them (docs/architecture.md#streaks): the account page as titles,
-// and the end of a game as a notice to the player, with a line for the occasion under
+// The streaks as the pages show them (docs/architecture.md#streaks): the account page and the
+// public profile as titles, and the end of a game as a notice to the player, with a line for the occasion under
 // streaks.lines in the locale files, and as a cheer to the whole room for a winning streak
 // (StreakNotices.vue). The title's number is in words (shared/src/numbers.ts).
 
