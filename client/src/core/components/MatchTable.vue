@@ -215,11 +215,16 @@ td:last-child {
 }
 
 /* In a narrow column, such as the fold under the board on a narrow phone, the name column takes
-   what the numbers leave, and each line stays one line. The place column keeps room for its
-   heading in capitals, which "PLACE" needs. */
+   what the numbers leave, and each line stays one line. The columns of the place and the numbers
+   keep room for their headings in capitals, "PLACE" and "TOTAL", whose letters stand closer, so
+   that a space is left between one heading and the next. */
 @container (max-width: 17rem) {
   table {
     table-layout: fixed;
+  }
+
+  th {
+    letter-spacing: 0;
   }
 
   th.rank {
@@ -227,7 +232,7 @@ td:last-child {
   }
 
   th.number {
-    width: 2.5rem;
+    width: 2.75rem;
   }
 
   th,
