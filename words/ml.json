@@ -2154,6 +2154,535 @@
       "zh": "数据增强",
       "en": "Data augmentation",
       "forms": { "en": ["augment", "augmented"] }
+    },
+    {
+      "id": "machine-learning",
+      "zh": "机器学习",
+      "en": "ML",
+      "forms": { "en": ["machine learning"] }
+    },
+    {
+      "id": "vc-dimension",
+      "zh": "VC维",
+      "en": "VC dimension"
+    },
+    {
+      "id": "pac-learning",
+      "zh": "PAC学习",
+      "en": "PAC learning"
+    },
+    {
+      "id": "kernel-trick",
+      "zh": "核技巧",
+      "en": "Kernel trick"
+    },
+    {
+      "id": "empirical-risk",
+      "zh": "经验风险",
+      "en": "Empirical risk"
+    },
+    {
+      "id": "no-free-lunch",
+      "zh": "无免费午餐",
+      "en": "No free lunch"
+    },
+    {
+      "id": "lottery-ticket",
+      "zh": "彩票假设",
+      "en": "Lottery ticket"
+    },
+    {
+      "id": "bitter-lesson",
+      "zh": "苦涩的教训",
+      "en": "Bitter lesson"
+    },
+    {
+      "id": "unsupervised",
+      "zh": "无监督",
+      "en": "Unsupervised"
+    },
+    {
+      "id": "distillation",
+      "zh": "蒸馏",
+      "en": "Distillation",
+      "forms": { "en": ["distill", "distilled"] }
+    },
+    {
+      "id": "emergence",
+      "zh": "涌现",
+      "en": "Emergence",
+      "forms": { "en": ["emergent"] }
+    },
+    {
+      "id": "adversarial",
+      "zh": "对抗",
+      "en": "Adversarial",
+      "forms": { "en": ["adversary"] }
+    },
+    {
+      "id": "language-model",
+      "zh": "语言模型",
+      "en": "Language model"
+    },
+    {
+      "id": "symbolic-ai",
+      "zh": "符号主义",
+      "en": "Symbolic AI"
+    },
+    {
+      "id": "ai-ethics",
+      "zh": "AI伦理",
+      "en": "AI ethics"
+    },
+    {
+      "id": "superalignment",
+      "zh": "超级对齐",
+      "en": "Superalignment"
+    },
+    {
+      "id": "aigc",
+      "zh": "AIGC",
+      "en": "AIGC",
+      "forms": { "zh": ["人工智能生成内容"], "en": ["AI-generated content"] }
+    },
+    {
+      "id": "lightgbm",
+      "zh": "LightGBM",
+      "en": "LightGBM"
+    },
+    {
+      "id": "em-algorithm",
+      "zh": "EM算法",
+      "en": "EM algorithm",
+      "forms": { "en": ["expectation-maximization"] }
+    },
+    {
+      "id": "gmm",
+      "zh": "GMM",
+      "en": "GMM",
+      "forms": { "zh": ["高斯混合模型"], "en": ["Gaussian mixture model"] }
+    },
+    {
+      "id": "elbo",
+      "zh": "ELBO",
+      "en": "ELBO",
+      "forms": { "zh": ["证据下界"], "en": ["evidence lower bound"] }
+    },
+    {
+      "id": "crf",
+      "zh": "CRF",
+      "en": "CRF",
+      "forms": { "zh": ["条件随机场"], "en": ["conditional random field"] }
+    },
+    {
+      "id": "dbscan",
+      "zh": "DBSCAN",
+      "en": "DBSCAN"
+    },
+    {
+      "id": "elbow-method",
+      "zh": "肘部法则",
+      "en": "Elbow method"
+    },
+    {
+      "id": "slack-variable",
+      "zh": "松弛变量",
+      "en": "Slack variable"
+    },
+    {
+      "id": "hinge-loss",
+      "zh": "合页损失",
+      "en": "Hinge loss"
+    },
+    {
+      "id": "triplet-loss",
+      "zh": "三元组损失",
+      "en": "Triplet loss"
+    },
+    {
+      "id": "mse",
+      "zh": "MSE",
+      "en": "MSE",
+      "forms": { "zh": ["均方误差"], "en": ["mean squared error"] }
+    },
+    {
+      "id": "hessian",
+      "zh": "黑塞矩阵",
+      "en": "Hessian"
+    },
+    {
+      "id": "trust-region",
+      "zh": "信赖域",
+      "en": "Trust region"
+    },
+    {
+      "id": "momentum",
+      "zh": "动量",
+      "en": "Momentum"
+    },
+    {
+      "id": "rmsprop",
+      "zh": "RMSProp",
+      "en": "RMSProp"
+    },
+    {
+      "id": "tanh",
+      "zh": "Tanh",
+      "en": "Tanh",
+      "forms": { "zh": ["双曲正切"], "en": ["hyperbolic tangent"] }
+    },
+    {
+      "id": "weight-sharing",
+      "zh": "权值共享",
+      "en": "Weight sharing"
+    },
+    {
+      "id": "mixup",
+      "zh": "Mixup",
+      "en": "Mixup"
+    },
+    {
+      "id": "hard-negative",
+      "zh": "难负样本",
+      "en": "Hard negative"
+    },
+    {
+      "id": "flops",
+      "zh": "FLOPs",
+      "en": "FLOPs",
+      "forms": { "zh": ["浮点运算次数"], "en": ["floating point operations"] }
+    },
+    {
+      "id": "snn",
+      "zh": "SNN",
+      "en": "SNN",
+      "forms": { "zh": ["脉冲神经网络"], "en": ["spiking neural network"] }
+    },
+    {
+      "id": "rbm",
+      "zh": "RBM",
+      "en": "RBM",
+      "forms": { "zh": ["受限玻尔兹曼机"], "en": ["restricted Boltzmann machine"] }
+    },
+    {
+      "id": "alexnet",
+      "zh": "AlexNet",
+      "en": "AlexNet"
+    },
+    {
+      "id": "lenet",
+      "zh": "LeNet",
+      "en": "LeNet"
+    },
+    {
+      "id": "vgg",
+      "zh": "VGG",
+      "en": "VGG"
+    },
+    {
+      "id": "mobilenet",
+      "zh": "MobileNet",
+      "en": "MobileNet"
+    },
+    {
+      "id": "r-cnn",
+      "zh": "R-CNN",
+      "en": "R-CNN"
+    },
+    {
+      "id": "stylegan",
+      "zh": "StyleGAN",
+      "en": "StyleGAN"
+    },
+    {
+      "id": "ddpm",
+      "zh": "DDPM",
+      "en": "DDPM",
+      "forms": { "zh": ["去噪扩散概率模型"], "en": ["denoising diffusion probabilistic model"] }
+    },
+    {
+      "id": "controlnet",
+      "zh": "ControlNet",
+      "en": "ControlNet"
+    },
+    {
+      "id": "flashattention",
+      "zh": "FlashAttention",
+      "en": "FlashAttention"
+    },
+    {
+      "id": "rope",
+      "zh": "RoPE",
+      "en": "RoPE",
+      "forms": { "zh": ["旋转位置编码"], "en": ["rotary position embedding"] }
+    },
+    {
+      "id": "prompt",
+      "zh": "提示词",
+      "en": "Prompt",
+      "forms": { "en": ["prompting", "prompted"] }
+    },
+    {
+      "id": "temperature",
+      "zh": "温度",
+      "en": "Temperature"
+    },
+    {
+      "id": "bpe",
+      "zh": "BPE",
+      "en": "BPE",
+      "forms": { "zh": ["字节对编码"], "en": ["byte pair encoding"] }
+    },
+    {
+      "id": "best-of-n",
+      "zh": "Best-of-N",
+      "en": "Best-of-N"
+    },
+    {
+      "id": "verifier",
+      "zh": "验证器",
+      "en": "Verifier",
+      "forms": { "en": ["verify", "verification"] }
+    },
+    {
+      "id": "dpo",
+      "zh": "DPO",
+      "en": "DPO",
+      "forms": { "zh": ["直接偏好优化"], "en": ["direct preference optimization"] }
+    },
+    {
+      "id": "grpo",
+      "zh": "GRPO",
+      "en": "GRPO",
+      "forms": { "en": ["group relative policy optimization"] }
+    },
+    {
+      "id": "vllm",
+      "zh": "vLLM",
+      "en": "vLLM"
+    },
+    {
+      "id": "mmlu",
+      "zh": "MMLU",
+      "en": "MMLU"
+    },
+    {
+      "id": "common-crawl",
+      "zh": "Common Crawl",
+      "en": "Common Crawl"
+    },
+    {
+      "id": "word-vector",
+      "zh": "词向量",
+      "en": "Word vector"
+    },
+    {
+      "id": "skip-gram",
+      "zh": "Skip-gram",
+      "en": "Skip-gram"
+    },
+    {
+      "id": "glove",
+      "zh": "GloVe",
+      "en": "GloVe"
+    },
+    {
+      "id": "stemming",
+      "zh": "词干提取",
+      "en": "Stemming",
+      "forms": { "en": ["stemmer"] }
+    },
+    {
+      "id": "summarization",
+      "zh": "文本摘要",
+      "en": "Summarization",
+      "forms": { "en": ["summarize", "summarise", "summarisation"] }
+    },
+    {
+      "id": "machine-translation",
+      "zh": "机器翻译",
+      "en": "MT",
+      "forms": { "en": ["machine translation"] }
+    },
+    {
+      "id": "slot-filling",
+      "zh": "槽填充",
+      "en": "Slot filling"
+    },
+    {
+      "id": "sift",
+      "zh": "SIFT",
+      "en": "SIFT",
+      "forms": { "zh": ["尺度不变特征变换"], "en": ["scale-invariant feature transform"] }
+    },
+    {
+      "id": "nms",
+      "zh": "NMS",
+      "en": "NMS",
+      "forms": { "zh": ["非极大值抑制"], "en": ["non-maximum suppression"] }
+    },
+    {
+      "id": "superpixel",
+      "zh": "超像素",
+      "en": "Superpixel"
+    },
+    {
+      "id": "gaussian-blur",
+      "zh": "高斯模糊",
+      "en": "Gaussian blur"
+    },
+    {
+      "id": "occlusion",
+      "zh": "遮挡",
+      "en": "Occlusion",
+      "forms": { "en": ["occlude", "occluded"] }
+    },
+    {
+      "id": "psnr",
+      "zh": "PSNR",
+      "en": "PSNR",
+      "forms": { "zh": ["峰值信噪比"], "en": ["peak signal-to-noise ratio"] }
+    },
+    {
+      "id": "fid",
+      "zh": "FID",
+      "en": "FID",
+      "forms": { "en": ["Fréchet inception distance"] }
+    },
+    {
+      "id": "vqa",
+      "zh": "VQA",
+      "en": "VQA",
+      "forms": { "zh": ["视觉问答"], "en": ["visual question answering"] }
+    },
+    {
+      "id": "dino",
+      "zh": "DINO",
+      "en": "DINO"
+    },
+    {
+      "id": "cifar-10",
+      "zh": "CIFAR-10",
+      "en": "CIFAR-10"
+    },
+    {
+      "id": "3dgs",
+      "zh": "3DGS",
+      "en": "3DGS",
+      "forms": { "zh": ["3D高斯泼溅"], "en": ["3D Gaussian splatting"] }
+    },
+    {
+      "id": "pointnet",
+      "zh": "PointNet",
+      "en": "PointNet"
+    },
+    {
+      "id": "mfcc",
+      "zh": "MFCC",
+      "en": "MFCC",
+      "forms": { "zh": ["梅尔频率倒谱系数"], "en": ["mel-frequency cepstral coefficients"] }
+    },
+    {
+      "id": "vocoder",
+      "zh": "声码器",
+      "en": "Vocoder"
+    },
+    {
+      "id": "vad",
+      "zh": "VAD",
+      "en": "VAD",
+      "forms": { "zh": ["语音活动检测"], "en": ["voice activity detection"] }
+    },
+    {
+      "id": "ctc",
+      "zh": "CTC",
+      "en": "CTC",
+      "forms": { "zh": ["连接时序分类"], "en": ["connectionist temporal classification"] }
+    },
+    {
+      "id": "wavenet",
+      "zh": "WaveNet",
+      "en": "WaveNet"
+    },
+    {
+      "id": "codebook",
+      "zh": "码本",
+      "en": "Codebook"
+    },
+    {
+      "id": "policy-network",
+      "zh": "策略网络",
+      "en": "Policy network"
+    },
+    {
+      "id": "ucb",
+      "zh": "UCB",
+      "en": "UCB",
+      "forms": { "zh": ["上置信界"], "en": ["upper confidence bound"] }
+    },
+    {
+      "id": "pomdp",
+      "zh": "POMDP",
+      "en": "POMDP",
+      "forms": { "en": ["partially observable Markov decision process"] }
+    },
+    {
+      "id": "vla",
+      "zh": "VLA",
+      "en": "VLA",
+      "forms": { "zh": ["视觉-语言-动作模型"], "en": ["vision-language-action"] }
+    },
+    {
+      "id": "simulator",
+      "zh": "仿真器",
+      "en": "Simulator"
+    },
+    {
+      "id": "odometry",
+      "zh": "里程计",
+      "en": "Odometry"
+    },
+    {
+      "id": "loop-closure",
+      "zh": "回环检测",
+      "en": "Loop closure"
+    },
+    {
+      "id": "hd-map",
+      "zh": "高精地图",
+      "en": "HD map",
+      "forms": { "en": ["high-definition map"] }
+    },
+    {
+      "id": "bev",
+      "zh": "BEV",
+      "en": "BEV",
+      "forms": { "zh": ["鸟瞰图"], "en": ["bird's-eye view"] }
+    },
+    {
+      "id": "two-tower",
+      "zh": "双塔模型",
+      "en": "Two-tower"
+    },
+    {
+      "id": "mlops",
+      "zh": "MLOps",
+      "en": "MLOps"
+    },
+    {
+      "id": "tensorboard",
+      "zh": "TensorBoard",
+      "en": "TensorBoard"
+    },
+    {
+      "id": "jax",
+      "zh": "JAX",
+      "en": "JAX"
+    },
+    {
+      "id": "onnx",
+      "zh": "ONNX",
+      "en": "ONNX"
     }
   ]
 }
