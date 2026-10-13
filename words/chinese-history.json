@@ -1,0 +1,1716 @@
+{
+  "id": "chinese-history",
+  "name": {
+    "zh": "中国历史",
+    "en": "Chinese History"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "xia-dynasty",
+      "zh": "夏朝",
+      "en": "Xia dynasty"
+    },
+    {
+      "id": "shang-dynasty",
+      "zh": "商朝",
+      "en": "Shang dynasty"
+    },
+    {
+      "id": "zhou-dynasty",
+      "zh": "周朝",
+      "en": "Zhou dynasty"
+    },
+    {
+      "id": "western-zhou",
+      "zh": "西周",
+      "en": "Western Zhou"
+    },
+    {
+      "id": "eastern-zhou",
+      "zh": "东周",
+      "en": "Eastern Zhou"
+    },
+    {
+      "id": "warring-states",
+      "zh": "战国",
+      "en": "Warring States"
+    },
+    {
+      "id": "pre-qin",
+      "zh": "先秦",
+      "en": "Pre-Qin"
+    },
+    {
+      "id": "qin-dynasty",
+      "zh": "秦朝",
+      "en": "Qin dynasty"
+    },
+    {
+      "id": "han-dynasty",
+      "zh": "汉朝",
+      "en": "Han dynasty"
+    },
+    {
+      "id": "western-han",
+      "zh": "西汉",
+      "en": "Western Han"
+    },
+    {
+      "id": "eastern-han",
+      "zh": "东汉",
+      "en": "Eastern Han"
+    },
+    {
+      "id": "three-kingdoms",
+      "zh": "三国",
+      "en": "Three Kingdoms"
+    },
+    {
+      "id": "jin-dynasty",
+      "zh": "晋朝",
+      "en": "Jin dynasty"
+    },
+    {
+      "id": "eastern-jin",
+      "zh": "东晋",
+      "en": "Eastern Jin"
+    },
+    {
+      "id": "sui-dynasty",
+      "zh": "隋朝",
+      "en": "Sui dynasty"
+    },
+    {
+      "id": "tang-dynasty",
+      "zh": "唐朝",
+      "en": "Tang dynasty"
+    },
+    {
+      "id": "high-tang",
+      "zh": "盛唐",
+      "en": "High Tang"
+    },
+    {
+      "id": "five-dynasties",
+      "zh": "五代",
+      "en": "Five Dynasties"
+    },
+    {
+      "id": "song-dynasty",
+      "zh": "宋朝",
+      "en": "Song dynasty"
+    },
+    {
+      "id": "northern-song",
+      "zh": "北宋",
+      "en": "Northern Song"
+    },
+    {
+      "id": "southern-song",
+      "zh": "南宋",
+      "en": "Southern Song"
+    },
+    {
+      "id": "yuan-dynasty",
+      "zh": "元朝",
+      "en": "Yuan dynasty"
+    },
+    {
+      "id": "ming-dynasty",
+      "zh": "明朝",
+      "en": "Ming dynasty"
+    },
+    {
+      "id": "qing-dynasty",
+      "zh": "清朝",
+      "en": "Qing dynasty"
+    },
+    {
+      "id": "changan",
+      "zh": "长安",
+      "en": "Chang'an"
+    },
+    {
+      "id": "luoyang",
+      "zh": "洛阳",
+      "en": "Luoyang"
+    },
+    {
+      "id": "forbidden-city",
+      "zh": "紫禁城",
+      "en": "Forbidden City"
+    },
+    {
+      "id": "son-of-heaven",
+      "zh": "天子",
+      "en": "Son of Heaven"
+    },
+    {
+      "id": "mandate-of-heaven",
+      "zh": "天命",
+      "en": "Mandate of Heaven"
+    },
+    {
+      "id": "empress",
+      "zh": "皇后",
+      "en": "Empress"
+    },
+    {
+      "id": "crown-prince",
+      "zh": "太子",
+      "en": "Crown prince"
+    },
+    {
+      "id": "consort-clan",
+      "zh": "外戚",
+      "en": "Consort clan"
+    },
+    {
+      "id": "eunuch",
+      "zh": "宦官",
+      "en": "Eunuch"
+    },
+    {
+      "id": "feudal-lord",
+      "zh": "诸侯",
+      "en": "Feudal lord"
+    },
+    {
+      "id": "peerage",
+      "zh": "爵位",
+      "en": "Peerage"
+    },
+    {
+      "id": "abdication",
+      "zh": "禅让",
+      "en": "Abdication",
+      "forms": { "en": ["abdicate"] }
+    },
+    {
+      "id": "fengjian",
+      "zh": "分封制",
+      "en": "Fengjian"
+    },
+    {
+      "id": "junxian-system",
+      "zh": "郡县制",
+      "en": "Junxian system"
+    },
+    {
+      "id": "chancellor",
+      "zh": "宰相",
+      "en": "Chancellor"
+    },
+    {
+      "id": "secretariat",
+      "zh": "中书省",
+      "en": "Secretariat"
+    },
+    {
+      "id": "chancellery",
+      "zh": "门下省",
+      "en": "Chancellery"
+    },
+    {
+      "id": "six-ministries",
+      "zh": "六部",
+      "en": "Six Ministries"
+    },
+    {
+      "id": "censorate",
+      "zh": "御史台",
+      "en": "Censorate",
+      "forms": { "en": ["censor"] }
+    },
+    {
+      "id": "privy-council",
+      "zh": "枢密院",
+      "en": "Privy Council"
+    },
+    {
+      "id": "grand-council",
+      "zh": "军机处",
+      "en": "Grand Council"
+    },
+    {
+      "id": "hanlin-academy",
+      "zh": "翰林院",
+      "en": "Hanlin Academy"
+    },
+    {
+      "id": "guozijian",
+      "zh": "国子监",
+      "en": "Guozijian"
+    },
+    {
+      "id": "viceroy",
+      "zh": "总督",
+      "en": "Viceroy"
+    },
+    {
+      "id": "prefect",
+      "zh": "知府",
+      "en": "Prefect"
+    },
+    {
+      "id": "magistrate",
+      "zh": "县令",
+      "en": "Magistrate"
+    },
+    {
+      "id": "yamen",
+      "zh": "衙门",
+      "en": "Yamen"
+    },
+    {
+      "id": "constable",
+      "zh": "捕快",
+      "en": "Constable"
+    },
+    {
+      "id": "imperial-envoy",
+      "zh": "钦差",
+      "en": "Imperial envoy"
+    },
+    {
+      "id": "edict",
+      "zh": "圣旨",
+      "en": "Edict"
+    },
+    {
+      "id": "memorial",
+      "zh": "奏折",
+      "en": "Memorial"
+    },
+    {
+      "id": "imperial-seal",
+      "zh": "玉玺",
+      "en": "Imperial seal"
+    },
+    {
+      "id": "dragon-throne",
+      "zh": "龙椅",
+      "en": "Dragon throne"
+    },
+    {
+      "id": "dragon-robe",
+      "zh": "龙袍",
+      "en": "Dragon robe"
+    },
+    {
+      "id": "phoenix-crown",
+      "zh": "凤冠",
+      "en": "Phoenix crown"
+    },
+    {
+      "id": "era-name",
+      "zh": "年号",
+      "en": "Era name"
+    },
+    {
+      "id": "temple-name",
+      "zh": "庙号",
+      "en": "Temple name"
+    },
+    {
+      "id": "naming-taboo",
+      "zh": "避讳",
+      "en": "Naming taboo"
+    },
+    {
+      "id": "imperial-exam",
+      "zh": "科举",
+      "en": "Imperial exam",
+      "forms": { "en": ["Imperial examination"] }
+    },
+    {
+      "id": "palace-exam",
+      "zh": "殿试",
+      "en": "Palace exam"
+    },
+    {
+      "id": "zhuangyuan",
+      "zh": "状元",
+      "en": "Zhuangyuan"
+    },
+    {
+      "id": "jinshi",
+      "zh": "进士",
+      "en": "Jinshi"
+    },
+    {
+      "id": "xiucai",
+      "zh": "秀才",
+      "en": "Xiucai"
+    },
+    {
+      "id": "academy",
+      "zh": "书院",
+      "en": "Academy"
+    },
+    {
+      "id": "private-school",
+      "zh": "私塾",
+      "en": "Private school"
+    },
+    {
+      "id": "well-field",
+      "zh": "井田制",
+      "en": "Well-field"
+    },
+    {
+      "id": "equal-field",
+      "zh": "均田制",
+      "en": "Equal-field"
+    },
+    {
+      "id": "two-tax-system",
+      "zh": "两税法",
+      "en": "Two-tax system"
+    },
+    {
+      "id": "single-whip",
+      "zh": "一条鞭法",
+      "en": "Single whip"
+    },
+    {
+      "id": "corvee",
+      "zh": "徭役",
+      "en": "Corvée"
+    },
+    {
+      "id": "salt-and-iron",
+      "zh": "盐铁",
+      "en": "Salt and iron"
+    },
+    {
+      "id": "baojia",
+      "zh": "保甲",
+      "en": "Baojia"
+    },
+    {
+      "id": "fubing-system",
+      "zh": "府兵制",
+      "en": "Fubing system"
+    },
+    {
+      "id": "tiger-tally",
+      "zh": "虎符",
+      "en": "Tiger tally"
+    },
+    {
+      "id": "beacon-tower",
+      "zh": "烽火台",
+      "en": "Beacon tower"
+    },
+    {
+      "id": "crossbow",
+      "zh": "弩",
+      "en": "Crossbow"
+    },
+    {
+      "id": "hand-cannon",
+      "zh": "火铳",
+      "en": "Hand cannon"
+    },
+    {
+      "id": "red-cliffs",
+      "zh": "赤壁",
+      "en": "Red Cliffs"
+    },
+    {
+      "id": "gentry",
+      "zh": "士绅",
+      "en": "Gentry"
+    },
+    {
+      "id": "literati",
+      "zh": "文人",
+      "en": "Literati"
+    },
+    {
+      "id": "retainer",
+      "zh": "门客",
+      "en": "Retainer"
+    },
+    {
+      "id": "knight-errant",
+      "zh": "游侠",
+      "en": "Knight-errant"
+    },
+    {
+      "id": "jianghu",
+      "zh": "江湖",
+      "en": "Jianghu"
+    },
+    {
+      "id": "commoner",
+      "zh": "平民",
+      "en": "Commoner"
+    },
+    {
+      "id": "tenant-farmer",
+      "zh": "佃农",
+      "en": "Tenant farmer"
+    },
+    {
+      "id": "lineage",
+      "zh": "宗族",
+      "en": "Lineage"
+    },
+    {
+      "id": "genealogy",
+      "zh": "族谱",
+      "en": "Genealogy",
+      "forms": { "en": ["genealogical"] }
+    },
+    {
+      "id": "ancestral-hall",
+      "zh": "祠堂",
+      "en": "Ancestral hall"
+    },
+    {
+      "id": "filial-piety",
+      "zh": "孝道",
+      "en": "Filial piety"
+    },
+    {
+      "id": "courtesy-name",
+      "zh": "表字",
+      "en": "Courtesy name"
+    },
+    {
+      "id": "kowtow",
+      "zh": "磕头",
+      "en": "Kowtow"
+    },
+    {
+      "id": "matchmaker",
+      "zh": "媒人",
+      "en": "Matchmaker",
+      "forms": { "en": ["matchmaking"] }
+    },
+    {
+      "id": "bride-price",
+      "zh": "聘礼",
+      "en": "Bride price"
+    },
+    {
+      "id": "dowry",
+      "zh": "嫁妆",
+      "en": "Dowry"
+    },
+    {
+      "id": "sacrifice",
+      "zh": "祭祀",
+      "en": "Sacrifice"
+    },
+    {
+      "id": "fengshan",
+      "zh": "封禅",
+      "en": "Fengshan"
+    },
+    {
+      "id": "door-god",
+      "zh": "门神",
+      "en": "Door god"
+    },
+    {
+      "id": "kitchen-god",
+      "zh": "灶神",
+      "en": "Kitchen God"
+    },
+    {
+      "id": "god-of-wealth",
+      "zh": "财神",
+      "en": "God of Wealth"
+    },
+    {
+      "id": "city-god",
+      "zh": "城隍",
+      "en": "City god"
+    },
+    {
+      "id": "earth-god",
+      "zh": "土地神",
+      "en": "Earth god"
+    },
+    {
+      "id": "cash-coin",
+      "zh": "铜钱",
+      "en": "Cash coin"
+    },
+    {
+      "id": "shell-money",
+      "zh": "贝币",
+      "en": "Shell money"
+    },
+    {
+      "id": "jiaozi",
+      "zh": "交子",
+      "en": "Jiaozi"
+    },
+    {
+      "id": "tael",
+      "zh": "银两",
+      "en": "Tael"
+    },
+    {
+      "id": "sycee",
+      "zh": "元宝",
+      "en": "Sycee"
+    },
+    {
+      "id": "catty",
+      "zh": "斤",
+      "en": "Catty"
+    },
+    {
+      "id": "steelyard",
+      "zh": "秤",
+      "en": "Steelyard"
+    },
+    {
+      "id": "silk",
+      "zh": "丝绸",
+      "en": "Silk"
+    },
+    {
+      "id": "sericulture",
+      "zh": "养蚕",
+      "en": "Sericulture"
+    },
+    {
+      "id": "silk-reeling",
+      "zh": "缫丝",
+      "en": "Silk reeling"
+    },
+    {
+      "id": "spinning-wheel",
+      "zh": "纺车",
+      "en": "Spinning wheel"
+    },
+    {
+      "id": "loom",
+      "zh": "织机",
+      "en": "Loom"
+    },
+    {
+      "id": "drawloom",
+      "zh": "提花机",
+      "en": "Drawloom"
+    },
+    {
+      "id": "five-grains",
+      "zh": "五谷",
+      "en": "Five grains"
+    },
+    {
+      "id": "grain-tribute",
+      "zh": "漕运",
+      "en": "Grain tribute"
+    },
+    {
+      "id": "grand-canal",
+      "zh": "大运河",
+      "en": "Grand Canal"
+    },
+    {
+      "id": "post-station",
+      "zh": "驿站",
+      "en": "Post station"
+    },
+    {
+      "id": "plank-road",
+      "zh": "栈道",
+      "en": "Plank road"
+    },
+    {
+      "id": "escort-agency",
+      "zh": "镖局",
+      "en": "Escort agency"
+    },
+    {
+      "id": "inn",
+      "zh": "客栈",
+      "en": "Inn"
+    },
+    {
+      "id": "teahouse",
+      "zh": "茶馆",
+      "en": "Teahouse"
+    },
+    {
+      "id": "apothecary",
+      "zh": "药铺",
+      "en": "Apothecary"
+    },
+    {
+      "id": "temple-fair",
+      "zh": "庙会",
+      "en": "Temple fair"
+    },
+    {
+      "id": "peddler",
+      "zh": "货郎",
+      "en": "Peddler"
+    },
+    {
+      "id": "shopkeeper",
+      "zh": "掌柜",
+      "en": "Shopkeeper"
+    },
+    {
+      "id": "night-watch",
+      "zh": "打更",
+      "en": "Night watch"
+    },
+    {
+      "id": "curfew",
+      "zh": "宵禁",
+      "en": "Curfew"
+    },
+    {
+      "id": "yaodong",
+      "zh": "窑洞",
+      "en": "Yaodong"
+    },
+    {
+      "id": "hutong",
+      "zh": "胡同",
+      "en": "Hutong"
+    },
+    {
+      "id": "kang",
+      "zh": "炕",
+      "en": "Kang"
+    },
+    {
+      "id": "spirit-wall",
+      "zh": "影壁",
+      "en": "Spirit wall"
+    },
+    {
+      "id": "stone-lion",
+      "zh": "石狮",
+      "en": "Stone lion"
+    },
+    {
+      "id": "drum-tower",
+      "zh": "鼓楼",
+      "en": "Drum tower"
+    },
+    {
+      "id": "bell-tower",
+      "zh": "钟楼",
+      "en": "Bell tower"
+    },
+    {
+      "id": "city-wall",
+      "zh": "城墙",
+      "en": "City wall"
+    },
+    {
+      "id": "chopsticks",
+      "zh": "筷子",
+      "en": "Chopsticks"
+    },
+    {
+      "id": "sedan-chair",
+      "zh": "轿子",
+      "en": "Sedan chair"
+    },
+    {
+      "id": "folding-screen",
+      "zh": "屏风",
+      "en": "Folding screen"
+    },
+    {
+      "id": "folding-fan",
+      "zh": "折扇",
+      "en": "Folding fan"
+    },
+    {
+      "id": "papermaking",
+      "zh": "造纸术",
+      "en": "Papermaking"
+    },
+    {
+      "id": "movable-type",
+      "zh": "活字印刷",
+      "en": "Movable type"
+    },
+    {
+      "id": "block-printing",
+      "zh": "雕版印刷",
+      "en": "Block printing"
+    },
+    {
+      "id": "gunpowder",
+      "zh": "火药",
+      "en": "Gunpowder"
+    },
+    {
+      "id": "compass",
+      "zh": "指南针",
+      "en": "Compass"
+    },
+    {
+      "id": "abacus",
+      "zh": "算盘",
+      "en": "Abacus"
+    },
+    {
+      "id": "lodestone",
+      "zh": "磁石",
+      "en": "Lodestone",
+      "forms": { "en": ["loadstone"] }
+    },
+    {
+      "id": "seismoscope",
+      "zh": "地动仪",
+      "en": "Seismoscope"
+    },
+    {
+      "id": "counting-rods",
+      "zh": "算筹",
+      "en": "Counting rods"
+    },
+    {
+      "id": "chain-pump",
+      "zh": "龙骨水车",
+      "en": "Chain pump"
+    },
+    {
+      "id": "noria",
+      "zh": "筒车",
+      "en": "Noria"
+    },
+    {
+      "id": "shadoof",
+      "zh": "桔槔",
+      "en": "Shadoof"
+    },
+    {
+      "id": "windlass",
+      "zh": "辘轳",
+      "en": "Windlass"
+    },
+    {
+      "id": "trip-hammer",
+      "zh": "水碓",
+      "en": "Trip hammer"
+    },
+    {
+      "id": "watermill",
+      "zh": "水磨",
+      "en": "Watermill"
+    },
+    {
+      "id": "seed-drill",
+      "zh": "耧车",
+      "en": "Seed drill"
+    },
+    {
+      "id": "wheelbarrow",
+      "zh": "独轮车",
+      "en": "Wheelbarrow"
+    },
+    {
+      "id": "stirrup",
+      "zh": "马镫",
+      "en": "Stirrup"
+    },
+    {
+      "id": "bellows",
+      "zh": "风箱",
+      "en": "Bellows"
+    },
+    {
+      "id": "elixir",
+      "zh": "丹药",
+      "en": "Elixir"
+    },
+    {
+      "id": "materia-medica",
+      "zh": "本草",
+      "en": "Materia medica"
+    },
+    {
+      "id": "variolation",
+      "zh": "人痘",
+      "en": "Variolation"
+    },
+    {
+      "id": "treasure-ship",
+      "zh": "宝船",
+      "en": "Treasure ship"
+    },
+    {
+      "id": "sky-lantern",
+      "zh": "孔明灯",
+      "en": "Sky lantern"
+    },
+    {
+      "id": "diabolo",
+      "zh": "空竹",
+      "en": "Diabolo"
+    },
+    {
+      "id": "chinese-rings",
+      "zh": "九连环",
+      "en": "Chinese rings"
+    },
+    {
+      "id": "cuju",
+      "zh": "蹴鞠",
+      "en": "Cuju"
+    },
+    {
+      "id": "touhu",
+      "zh": "投壶",
+      "en": "Touhu"
+    },
+    {
+      "id": "xiangqi",
+      "zh": "象棋",
+      "en": "Xiangqi"
+    },
+    {
+      "id": "heavenly-stem",
+      "zh": "天干",
+      "en": "Heavenly stem"
+    },
+    {
+      "id": "earthly-branch",
+      "zh": "地支",
+      "en": "Earthly branch"
+    },
+    {
+      "id": "chinese-zodiac",
+      "zh": "生肖",
+      "en": "Chinese zodiac"
+    },
+    {
+      "id": "double-hour",
+      "zh": "时辰",
+      "en": "Double hour"
+    },
+    {
+      "id": "solar-term",
+      "zh": "节气",
+      "en": "Solar term"
+    },
+    {
+      "id": "dog-days",
+      "zh": "三伏",
+      "en": "Dog days"
+    },
+    {
+      "id": "auspicious-day",
+      "zh": "吉日",
+      "en": "Auspicious day"
+    },
+    {
+      "id": "lunar-new-year",
+      "zh": "春节",
+      "en": "Lunar New Year"
+    },
+    {
+      "id": "new-years-eve",
+      "zh": "除夕",
+      "en": "New Year's Eve"
+    },
+    {
+      "id": "reunion-dinner",
+      "zh": "年夜饭",
+      "en": "Reunion dinner"
+    },
+    {
+      "id": "lucky-money",
+      "zh": "压岁钱",
+      "en": "Lucky money"
+    },
+    {
+      "id": "firecracker",
+      "zh": "爆竹",
+      "en": "Firecracker"
+    },
+    {
+      "id": "couplet",
+      "zh": "对联",
+      "en": "Couplet"
+    },
+    {
+      "id": "lantern-riddle",
+      "zh": "灯谜",
+      "en": "Lantern riddle"
+    },
+    {
+      "id": "yuanxiao",
+      "zh": "元宵",
+      "en": "Yuanxiao"
+    },
+    {
+      "id": "qingming",
+      "zh": "清明",
+      "en": "Qingming"
+    },
+    {
+      "id": "spring-outing",
+      "zh": "踏青",
+      "en": "Spring outing"
+    },
+    {
+      "id": "zongzi",
+      "zh": "粽子",
+      "en": "Zongzi"
+    },
+    {
+      "id": "qixi",
+      "zh": "七夕",
+      "en": "Qixi"
+    },
+    {
+      "id": "mid-autumn",
+      "zh": "中秋",
+      "en": "Mid-Autumn"
+    },
+    {
+      "id": "mooncake",
+      "zh": "月饼",
+      "en": "Mooncake"
+    },
+    {
+      "id": "double-ninth",
+      "zh": "重阳",
+      "en": "Double Ninth"
+    },
+    {
+      "id": "laba",
+      "zh": "腊八",
+      "en": "Laba"
+    },
+    {
+      "id": "dragon-dance",
+      "zh": "舞龙",
+      "en": "Dragon dance"
+    },
+    {
+      "id": "book-of-songs",
+      "zh": "诗经",
+      "en": "Book of Songs"
+    },
+    {
+      "id": "book-of-rites",
+      "zh": "礼记",
+      "en": "Book of Rites"
+    },
+    {
+      "id": "rites-of-zhou",
+      "zh": "周礼",
+      "en": "Rites of Zhou"
+    },
+    {
+      "id": "i-ching",
+      "zh": "易经",
+      "en": "I Ching"
+    },
+    {
+      "id": "four-books",
+      "zh": "四书",
+      "en": "Four Books"
+    },
+    {
+      "id": "five-classics",
+      "zh": "五经",
+      "en": "Five Classics"
+    },
+    {
+      "id": "shiji",
+      "zh": "史记",
+      "en": "Shiji"
+    },
+    {
+      "id": "book-of-han",
+      "zh": "汉书",
+      "en": "Book of Han"
+    },
+    {
+      "id": "zizhi-tongjian",
+      "zh": "资治通鉴",
+      "en": "Zizhi Tongjian"
+    },
+    {
+      "id": "art-of-war",
+      "zh": "孙子兵法",
+      "en": "Art of War"
+    },
+    {
+      "id": "chu-ci",
+      "zh": "楚辞",
+      "en": "Chu Ci"
+    },
+    {
+      "id": "tang-poetry",
+      "zh": "唐诗",
+      "en": "Tang poetry"
+    },
+    {
+      "id": "shanhaijing",
+      "zh": "山海经",
+      "en": "Shanhaijing"
+    },
+    {
+      "id": "nine-chapters",
+      "zh": "九章算术",
+      "en": "Nine Chapters"
+    },
+    {
+      "id": "qimin-yaoshu",
+      "zh": "齐民要术",
+      "en": "Qimin Yaoshu"
+    },
+    {
+      "id": "classic-of-tea",
+      "zh": "茶经",
+      "en": "Classic of Tea"
+    },
+    {
+      "id": "yingzao-fashi",
+      "zh": "营造法式",
+      "en": "Yingzao Fashi"
+    },
+    {
+      "id": "bencao-gangmu",
+      "zh": "本草纲目",
+      "en": "Bencao Gangmu"
+    },
+    {
+      "id": "tiangong-kaiwu",
+      "zh": "天工开物",
+      "en": "Tiangong Kaiwu"
+    },
+    {
+      "id": "siku-quanshu",
+      "zh": "四库全书",
+      "en": "Siku Quanshu"
+    },
+    {
+      "id": "gazetteer",
+      "zh": "方志",
+      "en": "Gazetteer"
+    },
+    {
+      "id": "imperial-clan",
+      "zh": "宗室",
+      "en": "Imperial clan"
+    },
+    {
+      "id": "juren",
+      "zh": "举人",
+      "en": "Juren"
+    },
+    {
+      "id": "flying-cash",
+      "zh": "飞钱",
+      "en": "Flying cash"
+    },
+    {
+      "id": "salt-merchant",
+      "zh": "盐商",
+      "en": "Salt merchant"
+    },
+    {
+      "id": "poll-tax",
+      "zh": "人头税",
+      "en": "Poll tax"
+    },
+    {
+      "id": "land-tax",
+      "zh": "田赋",
+      "en": "Land tax"
+    },
+    {
+      "id": "champa-rice",
+      "zh": "占城稻",
+      "en": "Champa rice"
+    },
+    {
+      "id": "bulkhead",
+      "zh": "水密隔舱",
+      "en": "Bulkhead"
+    },
+    {
+      "id": "drinking-game",
+      "zh": "酒令",
+      "en": "Drinking game"
+    },
+    {
+      "id": "burr-puzzle",
+      "zh": "鲁班锁",
+      "en": "Burr puzzle"
+    },
+    {
+      "id": "sworn-brothers",
+      "zh": "结拜",
+      "en": "Sworn brothers"
+    },
+    {
+      "id": "joss-paper",
+      "zh": "纸钱",
+      "en": "Joss paper"
+    },
+    {
+      "id": "fu-lu-shou",
+      "zh": "福禄寿",
+      "en": "Fu Lu Shou"
+    },
+    {
+      "id": "nian",
+      "zh": "年兽",
+      "en": "Nian"
+    },
+    {
+      "id": "dongzhi",
+      "zh": "冬至",
+      "en": "Dongzhi"
+    },
+    {
+      "id": "zuo-zhuan",
+      "zh": "左传",
+      "en": "Zuo Zhuan"
+    },
+    {
+      "id": "barbican",
+      "zh": "瓮城",
+      "en": "Barbican"
+    },
+    {
+      "id": "zhan-guo-ce",
+      "zh": "战国策",
+      "en": "Zhan Guo Ce"
+    },
+    {
+      "id": "erya",
+      "zh": "尔雅",
+      "en": "Erya"
+    },
+    {
+      "id": "sanzijing",
+      "zh": "三字经",
+      "en": "Sanzijing"
+    },
+    {
+      "id": "qianziwen",
+      "zh": "千字文",
+      "en": "Qianziwen"
+    },
+    {
+      "id": "baijiaxing",
+      "zh": "百家姓",
+      "en": "Baijiaxing"
+    },
+    {
+      "id": "shui-jing-zhu",
+      "zh": "水经注",
+      "en": "Shui Jing Zhu"
+    },
+    {
+      "id": "taiping-yulan",
+      "zh": "太平御览",
+      "en": "Taiping Yulan"
+    },
+    {
+      "id": "tongdian",
+      "zh": "通典",
+      "en": "Tongdian"
+    },
+    {
+      "id": "yuefu",
+      "zh": "乐府",
+      "en": "Yuefu"
+    },
+    {
+      "id": "picul",
+      "zh": "担",
+      "en": "Picul"
+    },
+    {
+      "id": "mu",
+      "zh": "亩",
+      "en": "Mu"
+    },
+    {
+      "id": "ruqun",
+      "zh": "襦裙",
+      "en": "Ruqun"
+    },
+    {
+      "id": "shenyi",
+      "zh": "深衣",
+      "en": "Shenyi"
+    },
+    {
+      "id": "rank-badge",
+      "zh": "补子",
+      "en": "Rank badge"
+    },
+    {
+      "id": "futou",
+      "zh": "幞头",
+      "en": "Futou"
+    },
+    {
+      "id": "gauze-cap",
+      "zh": "乌纱帽",
+      "en": "Gauze cap"
+    },
+    {
+      "id": "conical-hat",
+      "zh": "斗笠",
+      "en": "Conical hat"
+    },
+    {
+      "id": "sachet",
+      "zh": "香囊",
+      "en": "Sachet"
+    },
+    {
+      "id": "hand-warmer",
+      "zh": "手炉",
+      "en": "Hand warmer"
+    },
+    {
+      "id": "oil-lamp",
+      "zh": "油灯",
+      "en": "Oil lamp"
+    },
+    {
+      "id": "capping-rite",
+      "zh": "冠礼",
+      "en": "Capping rite"
+    },
+    {
+      "id": "mourning-leave",
+      "zh": "丁忧",
+      "en": "Mourning leave"
+    },
+    {
+      "id": "mourning-dress",
+      "zh": "丧服",
+      "en": "Mourning dress"
+    },
+    {
+      "id": "vice-minister",
+      "zh": "侍郎",
+      "en": "Vice minister"
+    },
+    {
+      "id": "grand-tutor",
+      "zh": "太傅",
+      "en": "Grand tutor"
+    },
+    {
+      "id": "village-head",
+      "zh": "里正",
+      "en": "Village head"
+    },
+    {
+      "id": "palace-maid",
+      "zh": "宫女",
+      "en": "Palace maid"
+    },
+    {
+      "id": "chief-examiner",
+      "zh": "主考官",
+      "en": "Chief examiner"
+    },
+    {
+      "id": "bangyan",
+      "zh": "榜眼",
+      "en": "Bangyan"
+    },
+    {
+      "id": "tanhua",
+      "zh": "探花",
+      "en": "Tanhua"
+    },
+    {
+      "id": "policy-essay",
+      "zh": "策论",
+      "en": "Policy essay"
+    },
+    {
+      "id": "military-exam",
+      "zh": "武举",
+      "en": "Military exam"
+    },
+    {
+      "id": "xianyang",
+      "zh": "咸阳",
+      "en": "Xianyang"
+    },
+    {
+      "id": "kaifeng",
+      "zh": "开封",
+      "en": "Kaifeng"
+    },
+    {
+      "id": "linan",
+      "zh": "临安",
+      "en": "Lin'an"
+    },
+    {
+      "id": "jinling",
+      "zh": "金陵",
+      "en": "Jinling"
+    },
+    {
+      "id": "haojing",
+      "zh": "镐京",
+      "en": "Haojing"
+    },
+    {
+      "id": "dadu",
+      "zh": "大都",
+      "en": "Dadu"
+    },
+    {
+      "id": "quanzhou",
+      "zh": "泉州",
+      "en": "Quanzhou"
+    },
+    {
+      "id": "qufu",
+      "zh": "曲阜",
+      "en": "Qufu"
+    },
+    {
+      "id": "shibosi",
+      "zh": "市舶司",
+      "en": "Shibosi"
+    },
+    {
+      "id": "guild-hall",
+      "zh": "会馆",
+      "en": "Guild hall"
+    },
+    {
+      "id": "qianzhuang",
+      "zh": "钱庄",
+      "en": "Qianzhuang"
+    },
+    {
+      "id": "piaohao",
+      "zh": "票号",
+      "en": "Piaohao"
+    },
+    {
+      "id": "night-market",
+      "zh": "夜市",
+      "en": "Night market"
+    },
+    {
+      "id": "first-month",
+      "zh": "正月",
+      "en": "First month"
+    },
+    {
+      "id": "twelfth-month",
+      "zh": "腊月",
+      "en": "Twelfth month"
+    },
+    {
+      "id": "duanwu",
+      "zh": "端午",
+      "en": "Duanwu"
+    },
+    {
+      "id": "tai-sui",
+      "zh": "太岁",
+      "en": "Tai Sui"
+    },
+    {
+      "id": "travel-permit",
+      "zh": "路引",
+      "en": "Travel permit"
+    },
+    {
+      "id": "dibao",
+      "zh": "邸报",
+      "en": "Dibao"
+    },
+    {
+      "id": "proclamation",
+      "zh": "告示",
+      "en": "Proclamation"
+    },
+    {
+      "id": "taixue",
+      "zh": "太学",
+      "en": "Taixue"
+    },
+    {
+      "id": "ferule",
+      "zh": "戒尺",
+      "en": "Ferule"
+    },
+    {
+      "id": "six-arts",
+      "zh": "六艺",
+      "en": "Six Arts"
+    },
+    {
+      "id": "incense-clock",
+      "zh": "香钟",
+      "en": "Incense clock"
+    },
+    {
+      "id": "salt-well",
+      "zh": "盐井",
+      "en": "Salt well"
+    },
+    {
+      "id": "clan-elder",
+      "zh": "族长",
+      "en": "Clan elder"
+    },
+    {
+      "id": "spirit-tablet",
+      "zh": "牌位",
+      "en": "Spirit tablet"
+    },
+    {
+      "id": "visiting-card",
+      "zh": "拜帖",
+      "en": "Visiting card"
+    },
+    {
+      "id": "letter-home",
+      "zh": "家书",
+      "en": "Letter home"
+    },
+    {
+      "id": "bookshop",
+      "zh": "书肆",
+      "en": "Bookshop"
+    },
+    {
+      "id": "western-jin",
+      "zh": "西晋",
+      "en": "Western Jin"
+    },
+    {
+      "id": "xin-dynasty",
+      "zh": "新朝",
+      "en": "Xin dynasty"
+    },
+    {
+      "id": "corner-tower",
+      "zh": "角楼",
+      "en": "Corner tower"
+    },
+    {
+      "id": "city-gate",
+      "zh": "城门",
+      "en": "City gate"
+    },
+    {
+      "id": "post-road",
+      "zh": "驿道",
+      "en": "Post road"
+    },
+    {
+      "id": "mansion",
+      "zh": "府邸",
+      "en": "Mansion"
+    },
+    {
+      "id": "thatched-hut",
+      "zh": "茅屋",
+      "en": "Thatched hut"
+    },
+    {
+      "id": "liubo",
+      "zh": "六博",
+      "en": "Liubo"
+    },
+    {
+      "id": "sinan",
+      "zh": "司南",
+      "en": "Sinan"
+    },
+    {
+      "id": "chi",
+      "zh": "尺",
+      "en": "Chi"
+    },
+    {
+      "id": "cun",
+      "zh": "寸",
+      "en": "Cun"
+    },
+    {
+      "id": "kaogongji",
+      "zh": "考工记",
+      "en": "Kaogongji"
+    },
+    {
+      "id": "sanguozhi",
+      "zh": "三国志",
+      "en": "Sanguozhi"
+    },
+    {
+      "id": "strategist",
+      "zh": "军师",
+      "en": "Strategist"
+    },
+    {
+      "id": "princess",
+      "zh": "公主",
+      "en": "Princess"
+    },
+    {
+      "id": "prince",
+      "zh": "亲王",
+      "en": "Prince"
+    },
+    {
+      "id": "tomb-sweeping",
+      "zh": "扫墓",
+      "en": "Tomb sweeping"
+    },
+    {
+      "id": "rope-bridge",
+      "zh": "索桥",
+      "en": "Rope bridge"
+    },
+    {
+      "id": "disciple",
+      "zh": "弟子",
+      "en": "Disciple"
+    },
+    {
+      "id": "epang-palace",
+      "zh": "阿房宫",
+      "en": "Epang Palace"
+    },
+    {
+      "id": "daming-palace",
+      "zh": "大明宫",
+      "en": "Daming Palace"
+    },
+    {
+      "id": "yamen-runner",
+      "zh": "衙役",
+      "en": "Yamen runner"
+    },
+    {
+      "id": "coroner",
+      "zh": "仵作",
+      "en": "Coroner"
+    },
+    {
+      "id": "woodcutter",
+      "zh": "樵夫",
+      "en": "Woodcutter"
+    },
+    {
+      "id": "paperweight",
+      "zh": "镇纸",
+      "en": "Paperweight"
+    },
+    {
+      "id": "oxcart",
+      "zh": "牛车",
+      "en": "Oxcart"
+    },
+    {
+      "id": "sampan",
+      "zh": "舢板",
+      "en": "Sampan"
+    },
+    {
+      "id": "pleasure-boat",
+      "zh": "画舫",
+      "en": "Pleasure boat"
+    },
+    {
+      "id": "bamboo-raft",
+      "zh": "竹筏",
+      "en": "Bamboo raft"
+    },
+    {
+      "id": "rice-wine",
+      "zh": "黄酒",
+      "en": "Rice wine"
+    },
+    {
+      "id": "dumpling",
+      "zh": "饺子",
+      "en": "Dumpling"
+    },
+    {
+      "id": "tanghulu",
+      "zh": "糖葫芦",
+      "en": "Tanghulu"
+    },
+    {
+      "id": "rice-cake",
+      "zh": "年糕",
+      "en": "Rice cake"
+    },
+    {
+      "id": "new-year-visit",
+      "zh": "拜年",
+      "en": "New Year visit"
+    },
+    {
+      "id": "market-day",
+      "zh": "赶集",
+      "en": "Market day"
+    },
+    {
+      "id": "village-opera",
+      "zh": "社戏",
+      "en": "Village opera"
+    },
+    {
+      "id": "bridal-sedan",
+      "zh": "花轿",
+      "en": "Bridal sedan"
+    },
+    {
+      "id": "bridal-veil",
+      "zh": "红盖头",
+      "en": "Bridal veil"
+    },
+    {
+      "id": "longevity-lock",
+      "zh": "长命锁",
+      "en": "Longevity lock"
+    },
+    {
+      "id": "amulet",
+      "zh": "护身符",
+      "en": "Amulet"
+    },
+    {
+      "id": "fifth-watch",
+      "zh": "五更",
+      "en": "Fifth watch"
+    },
+    {
+      "id": "yecheng",
+      "zh": "邺城",
+      "en": "Yecheng"
+    },
+    {
+      "id": "suzhou",
+      "zh": "苏州",
+      "en": "Suzhou"
+    }
+  ]
+}
