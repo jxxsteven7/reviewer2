@@ -8,8 +8,10 @@ import {
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
+  type MatchView,
   type RoomView,
   type Seat,
+  type StandingView,
 } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -1464,6 +1466,48 @@ describe('KeywordsGame', () => {
       global: global(),
     });
     expect(wrapper.findAll('.letter .verdict').map((verdict) => verdict.text())).toEqual(['Accept (Oral)', 'Reject']);
+  });
+
+  test('says between the games where the points came from, and reads a detail without irrelevant papers as none', () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game = {
+      ...(data.game as KeywordsView),
+      phase: 'over' as const,
+      result: { winner: 'red' as const, reason: 'found' as const },
+    };
+    const standing = (name: string, detail: object): StandingView => ({
+      playerId: name.toLowerCase(),
+      name,
+      total: 0,
+      delta: 0,
+      games: 1,
+      rank: 1,
+      left: false,
+      detail,
+    });
+    const match: MatchView = {
+      id: 'm1',
+      rules: { games: 2, teams: 'fixed', grouping: 'random' },
+      played: 1,
+      status: 'on',
+      game: 1,
+      standings: [
+        standing('Ann', { found: 2, won: true, irrelevant: 1, wrong: 1, reviewer2: 0 }),
+        standing('Bob', { found: 0, won: false, irrelevant: 0, wrong: 0, reviewer2: 1 }),
+        standing('Cat', { found: 1, won: false, wrong: 0, reviewer2: 0 }),
+      ],
+    };
+    const wrapper = mount(KeywordsGame, {
+      props: { room: { ...view, match, data: { ...data, game } } },
+      global: global(),
+    });
+    expect(wrapper.findAll('.between .detail').map((detail) => detail.text())).toEqual([
+      "found 2 \u00b7 won \u00b7 irrelevant paper \u00d71 \u00b7 other group's card \u00d71",
+      'Reviewer 2',
+      'found 1',
+    ]);
+    expect(wrapper.get('.between .scoring').text()).toContain('revealing an irrelevant paper, \u22121;');
   });
 
   test('renders the group chat once, and keeps it after the game', async () => {

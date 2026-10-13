@@ -30,7 +30,7 @@ Set by the chair, locked during a game.
 | Guess rule | `free` or `standard` ([Turns](#turns)) | `free` |
 | Clue rule | `strict` or `loose` ([The clue](#the-clue)) | `strict` |
 | Clue length | Chinese room: 1 to 10 characters, two letters or digits counting as one; English room: 1 to 3 words | 4; 1 |
-| Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 90, 60, 90 |
+| Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 120, 90, 120 |
 | Extensions | `true` or `false` ([Pauses and extensions](#pauses-and-extensions)) | `false` |
 
 `settingsProblems()` in `shared/src/games/keywords/settings.ts` checks them on both sides; the server refuses with `bad_settings`.
@@ -159,9 +159,10 @@ In a match ([../architecture.md](../architecture.md#matches)), `server/src/games
 |---|---|---|
 | A student reveals one of the group's own cards | Everyone who played for the group, PI included | +1 each |
 | The group wins | The same | +3 each |
-| A student reveals the other group's card | That student | -1 |
+| A student reveals an irrelevant paper | That student | -1 |
+| A student reveals the other group's card | That student | -2 |
 | A student reveals Reviewer 2 | That student | -3 |
 
-A withdrawn game counts for nothing.
+A withdrawn game counts for nothing. `KeywordsScoreDetail` says where each player's points came from, in the match's table between the games; the records keep the points alone, so a game already on them keeps the points it was scored with.
 
 **The groups.** Drawn **at random**: the server deals the players as the shuffle does, the first dealt to each group its PI; four online players can start. **Chosen** by the players: as in an ordinary room. **Fixed**, once a game has been scored: everyone keeps their group; after each game all go back as students, and the PI is whoever has been PI the fewest times; a newcomer goes to the smaller group. During a match game, only those who played for a group may sit in one.

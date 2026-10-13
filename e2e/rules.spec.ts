@@ -58,7 +58,7 @@ test('the chair changes the rules in the waiting room, and everyone sees them', 
   const summary = bob.locator('.settings-summary');
   await expect(summary).toContainText(settings.guess.free);
   await expect(summary).toContainText(settings.clue.strict);
-  await expect(summary).toContainText(interpolate(settings.seconds, { count: '90' }));
+  await expect(summary).toContainText(interpolate(settings.seconds, { count: '120' }));
   // The chair sees the form instead, and the save button only once something has changed.
   await expect(ann.locator('.settings-summary')).toHaveCount(0);
   await expect(ann.getByRole('button', { name: TEXT.en.lobby.save })).toHaveCount(0);
@@ -98,7 +98,7 @@ test('the server ends a turn whose time has run out', async ({ browser }) => {
     timeout: 20_000,
   });
   await expect(await openLog(table.spectator)).toContainText(TEXT.en.game.noClueInTime);
-  // The next clue has the default time, 60 seconds.
+  // The next clue has the default time, 90 seconds.
   await expect(table.spectator.locator('.clock')).not.toHaveClass(/urgent/);
 });
 
