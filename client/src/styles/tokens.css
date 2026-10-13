@@ -13,6 +13,8 @@
   --ink-2: #4b4b60;
   --on-ink: #ffd23f;
   --focus: #2d5bff;
+  /* The table's yellow, faded: the titles of a friend who is offline. */
+  --bg-tint: #fbefc4;
 
   /* The two groups: a surface color, with the text that reads on it, a tint for backgrounds and
      a deep shade for text on white or yellow. Then the cards of neither group, and Reviewer 2's

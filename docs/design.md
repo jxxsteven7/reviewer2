@@ -11,6 +11,7 @@ Every color, font, outline, corner, shadow and page width is a variable in `toke
 | `--bg` | `#FFD23F` | The page |
 | `--paper`, `--paper-2` | `#FFFFFF`, `#F4EFE6` | Stickers; quiet and disabled areas |
 | `--ink`, `--ink-2`, `--on-ink` | `#1A1A2E`, `#4B4B60`, `#FFD23F` | Text, outlines, shadows; hints; type on ink |
+| `--bg-tint` | `#FBEFC4` | The table's yellow, faded: the titles of a friend who is offline |
 | `--red`, `--on-red`, `--red-tint`, `--red-deep` | `#F2543D`, ink, `#FFD6CF`, `#B02A1A` | The red group: surface, type on it, tint, red text |
 | `--blue`, `--on-blue`, `--blue-tint`, `--blue-deep` | `#2D5BFF`, white, `#D5DFFF`, `#1F44D6` | The blue group, the same way |
 | `--neutral`, `--on-neutral`, `--neutral-tint` | `#BDB6A8`, ink, `#F4EFE6` | Irrelevant papers |
