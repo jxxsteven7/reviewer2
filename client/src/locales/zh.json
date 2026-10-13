@@ -906,7 +906,7 @@
         "inMatches": "比赛中的对局",
         "total": "合计",
         "matches": "比赛 {played} 场，夺冠 {won} 场",
-        "noMatches": "还没有比赛。"
+        "noMatches": "还没有打完的比赛。"
       },
       "noRecords": "还没有战绩。登录后在座位上打完的每一局都会记在这里。",
       "recent": "最近 20 局",

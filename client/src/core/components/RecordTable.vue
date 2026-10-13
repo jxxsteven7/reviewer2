@@ -5,9 +5,10 @@ import { useI18n } from 'vue-i18n';
 
 // An account's record as counts (docs/architecture.md#accounts), on the account's page and on its
 // public page when its owner shows it: a table of the games finished outside matches, those
-// finished in matches and all of them, each with how many were won and the share of wins, which a
-// row without games doesn't have; then how many matches the account finished, and in how many it
-// finished first, level with others too.
+// finished in matches and all of them, each with how many were won and the share of wins, as whole
+// percentages rounded down, so that 100% is a record without a loss, which a row without games
+// doesn't have; then how many matches the account finished, and in how many it finished first,
+// level with others too.
 const props = defineProps<{ counts: RecordCounts }>();
 const { t, locale } = useI18n();
 
@@ -23,7 +24,12 @@ const rows = computed(() => {
       ['inMatches', inMatches],
       ['total', total],
     ] as const
-  ).map(([key, { games, wins }]) => ({ key, games, wins, rate: games === 0 ? NO_RATE : percent.format(wins / games) }));
+  ).map(([key, { games, wins }]) => ({
+    key,
+    games,
+    wins,
+    rate: games === 0 ? NO_RATE : percent.format(Math.floor((wins * 100) / games) / 100),
+  }));
 });
 </script>
 

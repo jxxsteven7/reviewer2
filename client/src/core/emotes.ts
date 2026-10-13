@@ -15,7 +15,7 @@ export type Bubble = {
   avatar?: string | undefined;
 } & ({ emote: Emote } | { call: string });
 
-// How long a bubble stays, a call a little longer, and how many show at once.
+// How long a bubble stays, a call a little longer, and how many show at once (show).
 const SHOWN_MS = 4000;
 const CALL_MS = 6000;
 const MOST_BUBBLES = 3;
@@ -28,9 +28,15 @@ function pop(id: number): void {
   if (index !== -1) bubbles.splice(index, 1);
 }
 
+// Shows a bubble for `ms`. Over the limit, the oldest reaction goes first, so that a call about a
+// player isn't crowded out by the reactions to it; only when nothing but calls is left does the
+// oldest of them go.
 function show(bubble: Bubble, ms: number): void {
   bubbles.push(bubble);
-  if (bubbles.length > MOST_BUBBLES) bubbles.splice(0, bubbles.length - MOST_BUBBLES);
+  while (bubbles.length > MOST_BUBBLES) {
+    const oldest = bubbles.findIndex((shown) => 'emote' in shown);
+    bubbles.splice(oldest === -1 ? 0 : oldest, 1);
+  }
   setTimeout(() => pop(bubble.id), ms);
 }
 

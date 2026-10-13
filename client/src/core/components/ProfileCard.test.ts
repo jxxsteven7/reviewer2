@@ -95,7 +95,7 @@ describe('ProfileCard', () => {
       .findAll('.record-table tbody tr')
       .map((row) => row.findAll('th, td').map((cell) => cell.text()));
     expect(rows).toEqual([
-      ['Ordinary games', '8', '5', '63%'],
+      ['Ordinary games', '8', '5', '62%'],
       ['Games in matches', '4', '2', '50%'],
       ['Total', '12', '7', '58%'],
     ]);

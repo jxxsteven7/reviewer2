@@ -22,9 +22,9 @@ import {
 } from './helpers';
 
 // Matches end to end: players with accounts and guests play a whole match whose groups are drawn
-// for every game, see the ranking with its titles, and find the match on their accounts; a match
-// whose groups stay the same keeps them from one game to the next; and an ordinary room plays as it
-// always did.
+// for the first game and kept, see the ranking with its titles, and find the match on their
+// accounts; a match whose groups may change draws them again for every game; a match whose groups
+// stay the same keeps them from one game to the next; and an ordinary room plays as it always did.
 //
 // All tests share one server, on which a registered name is nobody else's, so every account here
 // has a part that is the test's own.
@@ -150,6 +150,50 @@ test('players with accounts and guests play a whole match, and find its title on
   await expect(match).toContainText(/Place 1 of 4/);
   await bob.goto('/account');
   await expect(bob.locator('.records .match')).toHaveCount(1);
+});
+
+test('a match whose groups may change draws them again for every game', async ({ browser }) => {
+  const text = TEXT.en;
+  const ann = await newPlayer(browser, 'en');
+  snapshotsOf(ann);
+  const url = await createRoom(ann, 'en', 'Ann', (page) =>
+    chooseMatch(page, 'en', { games: 2, teams: 'switch', grouping: 'random' }),
+  );
+  const join = async (name: string) => {
+    const page = await newPlayer(browser, 'en');
+    snapshotsOf(page);
+    await joinByLink(page, url, name, 'en');
+    return page;
+  };
+  const [bob, cat, dan] = await Promise.all([join('Bob'), join('Cat'), join('Dan')]);
+  const pages = [ann, bob, cat, dan];
+  // The groups are drawn when each game starts: a PI and a student in each, from everyone who
+  // plays, who are back in the pool between the games.
+  const drawn = async () => {
+    for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
+    const seats = pages.map(seatOf);
+    for (const team of ['red', 'blue'] as const) {
+      expect(
+        seats
+          .filter((seat) => seat.team === team)
+          .map((seat) => seat.role)
+          .sort(),
+      ).toEqual(['captain', 'guesser']);
+    }
+  };
+  await expect(ann.locator('.pool')).toContainText('Dan');
+  await ann.getByRole('button', { name: text.lobby.start }).click();
+  await drawn();
+  await playQuickly(pages, 'en', ann);
+  await ann.getByRole('button', { name: text.match.next }).click();
+  await expect(ann.locator('.lobby .pool')).toContainText('Dan');
+  await expect(ann.locator('.lobby .match-table')).toContainText(
+    interpolate(text.match.progress, { game: '2', games: '2' }),
+  );
+  await ann.getByRole('button', { name: text.lobby.start }).click();
+  await drawn();
+  await playQuickly(pages, 'en', ann);
+  for (const page of pages) await expect(page.locator('.match-results h2')).toHaveText(text.match.over);
 });
 
 test('a match whose groups stay the same keeps them, and passes the PI on', async ({ browser }) => {

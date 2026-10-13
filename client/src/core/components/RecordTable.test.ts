@@ -8,7 +8,7 @@ import zh from '../../locales/zh.json';
 import RecordTable from './RecordTable.vue';
 
 // The record as counts (docs/architecture.md#accounts): the games outside matches, in matches and
-// all of them, with the wins and the share of wins, and the matches finished and won.
+// all of them, with the wins and the share of wins, rounded down, and the matches finished and won.
 
 const table = (counts: RecordCounts, locale: 'en' | 'zh' = 'en') =>
   mount(RecordTable, {
@@ -28,10 +28,19 @@ describe('RecordTable', () => {
     expect(cells(wrapper)).toEqual([
       ['', 'Games', 'Won', 'Win rate'],
       ['Ordinary games', '9', '3', '33%'],
-      ['Games in matches', '3', '2', '67%'],
-      ['Total', '12', '5', '42%'],
+      ['Games in matches', '3', '2', '66%'],
+      ['Total', '12', '5', '41%'],
     ]);
     expect(wrapper.get('.matches').text()).toBe('Matches: 2 \u00b7 Finished first: 1');
+  });
+
+  test('rounds the share of wins down, so that only a record without a loss shows 100%', () => {
+    const rates = (ordinary: { games: number; wins: number }) =>
+      cells(table({ ordinary, inMatches: { games: 0, wins: 0 }, matches: { played: 0, won: 0 } }))[1]?.[3];
+    expect(rates({ games: 200, wins: 199 })).toBe('99%');
+    expect(rates({ games: 200, wins: 200 })).toBe('100%');
+    expect(rates({ games: 300, wins: 1 })).toBe('0%');
+    expect(rates({ games: 3, wins: 2 })).toBe('66%');
   });
 
   test('is a table that a screen reader reads by its headers', () => {
@@ -44,7 +53,7 @@ describe('RecordTable', () => {
     expect(wrapper.findAll('tbody th').map((cell) => cell.attributes('scope'))).toEqual(['row', 'row', 'row']);
   });
 
-  test('has no rate for a row without games, and says when there is no match yet, in Chinese too', () => {
+  test('has no rate for a row without games, and says when no match is finished yet, in Chinese too', () => {
     const none = { ordinary: { games: 0, wins: 0 }, inMatches: { games: 0, wins: 0 }, matches: { played: 0, won: 0 } };
     const wrapper = table(none);
     expect(
@@ -52,7 +61,7 @@ describe('RecordTable', () => {
         .slice(1)
         .map((row) => row[3]),
     ).toEqual(['\u2014', '\u2014', '\u2014']);
-    expect(wrapper.get('.matches').text()).toBe('No matches yet.');
+    expect(wrapper.get('.matches').text()).toBe('No match finished yet.');
     const chinese = table({ ...none, ordinary: { games: 4, wins: 1 }, matches: { played: 3, won: 2 } }, 'zh');
     expect(cells(chinese)[0]).toEqual(['', '\u5c40\u6570', '\u80dc', '\u80dc\u7387']);
     expect(cells(chinese)[1]).toEqual(['\u666e\u901a\u5bf9\u5c40', '4', '1', '25%']);

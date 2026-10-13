@@ -1584,7 +1584,7 @@ describe('KeywordsGame', () => {
     expect(prepare(waiting())).toBe(true);
   });
 
-  test('calls out a PI who missed the deadline to the whole room, counted for an account', async () => {
+  test('calls out a PI who missed the deadline the moment it happens, counted for an account', async () => {
     bubbles.splice(0);
     const view = room('bob');
     const data = view.data as KeywordsRoomData;
@@ -1598,31 +1598,67 @@ describe('KeywordsGame', () => {
       timedOut: true,
       captain,
     });
+    const missed = (turn: number, player: string, count?: number) => ({
+      turn,
+      kind: 'missed' as const,
+      team: 'blue' as const,
+      player,
+      ...(count === undefined ? {} : { count }),
+    });
+    const calls = () => bubbles.map((bubble) => ('call' in bubble ? [bubble.name, bubble.call] : null));
+    const { t } = i18n().global;
+    const line = (turn: number, name: string) => t(`game.missed.lines.${missedLine('g1', turn)}`, { name });
     // A miss that was on record when the page opened is old news.
-    const before = { ...game, history: [...game.history, late(3, 'eve')] };
+    let shown: KeywordsView = { ...game, history: [...game.history, late(3, 'eve')], events: [missed(3, 'eve')] };
+    const show = async (changes: Partial<KeywordsView>) => {
+      shown = { ...shown, ...changes };
+      await wrapper.setProps({ room: { ...view, data: { ...data, game: shown } } });
+    };
     const wrapper = mount(KeywordsGame, {
-      props: { room: { ...view, data: { ...data, game: before } } },
+      props: { room: { ...view, data: { ...data, game: shown } } },
       global: global(),
     });
     expect(bubbles).toEqual([]);
-    // Ann's account has missed the deadline three times now, this one included; Cat is a guest.
-    const after = {
-      ...before,
-      history: [...before.history, late(4, 'ann'), late(5, 'cat')],
-      events: [
-        { turn: 4, kind: 'missed' as const, team: 'blue' as const, player: 'ann', count: 3 },
-        { turn: 5, kind: 'missed' as const, team: 'blue' as const, player: 'cat' },
-      ],
-    };
-    await wrapper.setProps({ room: { ...view, data: { ...data, game: after } } });
-    const { t } = i18n().global;
-    const line = (turn: number, name: string) => t(`game.missed.lines.${missedLine('g1', turn)}`, { name });
-    expect(bubbles.map((bubble) => ('call' in bubble ? [bubble.name, bubble.call] : null))).toEqual([
-      ['Ann', `${line(4, 'Ann')} (\u00d73)`],
-      ['Cat', line(5, 'Cat')],
-    ]);
+    // Ann's account has missed the deadline three times now, this one included: the next turn's
+    // clock has just started.
+    await show({
+      history: [...shown.history, late(4, 'ann')],
+      events: [...shown.events, missed(4, 'ann', 3)],
+      clock: { left: 88_000, total: 90_000 },
+    });
+    expect(calls()).toEqual([['Ann', `${line(4, 'Ann')} (\u00d73)`]]);
+    bubbles.splice(0);
+    // Cat is a guest, whose misses nobody counts; a turn without a clock is taken as it comes.
+    await show({
+      history: [...shown.history, late(5, 'cat')],
+      events: [...shown.events, missed(5, 'cat')],
+      clock: null,
+    });
+    expect(calls()).toEqual([['Cat', line(5, 'Cat')]]);
+    bubbles.splice(0);
+    // A page that slept through a miss and the clue after it, or wakes with the next clock well
+    // on its way, says nothing: the moment has passed.
+    await show({
+      history: [...shown.history, late(6, 'ann'), { turn: 7, team: 'red', word: 'Later', count: 1, guesses: [] }],
+      events: [...shown.events, missed(6, 'ann', 4)],
+    });
+    expect(bubbles).toEqual([]);
+    await show({
+      history: [...shown.history, late(8, 'cat')],
+      events: [...shown.events, missed(8, 'cat')],
+      clock: { left: 60_000, total: 90_000 },
+    });
+    expect(bubbles).toEqual([]);
+    // Nor does a snapshot of another game, however many misses it has on record.
+    await show({
+      gameId: 'g2',
+      history: [...shown.history, late(9, 'ann')],
+      events: [...shown.events, missed(9, 'ann', 5)],
+      clock: { left: 89_000, total: 90_000 },
+    });
+    expect(bubbles).toEqual([]);
     // The clue log says no more than that the turns had no clue.
-    expect(wrapper.findAll('.clue-log .missing')).toHaveLength(3);
+    expect(wrapper.findAll('.clue-log .missing')).toHaveLength(6);
     expect(wrapper.find('.clue-log .event').exists()).toBe(false);
     bubbles.splice(0);
   });

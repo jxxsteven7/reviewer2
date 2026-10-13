@@ -346,11 +346,11 @@
     "extended": "The {group} asked for an extension: 30 seconds more.",
     "missed": {
       "lines": {
-        "1": "{name}'s deadline has passed, and the manuscript is still on the desktop!",
-        "2": "{name}: “Submitting now, submitting now.” (They were not.)",
-        "3": "A reminder from the editorial office: {name}'s manuscript is past the deadline.",
+        "1": "{name}'s deadline has passed. The paper is still on the desk!",
+        "2": "{name}: “Submitting it right now!” (They were not.)",
+        "3": "Note from the editors: {name}'s manuscript is past due.",
         "4": "{name} raced the deadline. The deadline won.",
-        "5": "The submission portal has closed. {name}'s clue is still in drafts."
+        "5": "The portal has closed. {name}'s clue is still in drafts."
       },
       "count": "{line} (×{count})"
     },
@@ -887,7 +887,7 @@
         "linkPlaceholder": "https://",
         "bio": "One line about you",
         "bioCount": "{count}/{max} characters. Shown as plain text.",
-        "showRecord": "Show my record: games and wins, outside matches and in them, and matches finished and won",
+        "showRecord": "Show my record: games, wins and win rates, outside matches and in them, and matches finished and won",
         "showThanks": "Show my acknowledgments",
         "save": "Save the page",
         "saved": "Your page has been updated.",
@@ -906,7 +906,7 @@
         "inMatches": "Games in matches",
         "total": "Total",
         "matches": "Matches: {played} · Finished first: {won}",
-        "noMatches": "No matches yet."
+        "noMatches": "No match finished yet."
       },
       "noRecords": "No games yet. The games that you finish in a seat while you are logged in are kept here.",
       "recent": "The last 20 games",
@@ -1083,7 +1083,7 @@
       "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it.",
       "missed_deadline": "For a PI whose time for a clue ran out before they gave one: the paper was written, it just never left the desktop. Earned again with every missed deadline, in each game that ends by itself while you are logged in and in your seat.",
       "opening_record": "For everyone in a group whose very first clue of a game names 3 cards or more, and whose students then find that many of the group's cards before revealing anything else. The lab's first paper, accepted without a single revision.",
-      "heavenly_hand": "For everyone in a group that finds all of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all."
+      "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all."
     },
     "streak": {
       "wins": "The longest run of games won in a row on the record: {n}.",

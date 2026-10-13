@@ -5,8 +5,9 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // The quick reactions as they arrive, "Name: phrase", with the sender's avatar, at the top of the
 // page for a few seconds, over the masthead rather than the banner below it, which says whose move
 // it is, and the room's calls about a player, louder: ink with the table's yellow, a megaphone and
-// the player's avatar before the line. They let every tap through to the page underneath. `large`
-// is for a big screen across a room.
+// the player's avatar before the line, kept to the masthead's height on a phone as far as a line
+// of two rows goes. They let every tap through to the page underneath. `large` is for a big screen
+// across a room.
 defineProps<{ large?: boolean }>();
 </script>
 
@@ -15,7 +16,7 @@ defineProps<{ large?: boolean }>();
     <p v-for="bubble in bubbles" :key="bubble.id" class="bubble" :class="{ call: 'call' in bubble }">
       <template v-if="'call' in bubble">
         <PlayerAvatar :name="bubble.name" :avatar="bubble.avatar" />
-        {{ bubble.call }}
+        <span>{{ bubble.call }}</span>
       </template>
       <i18n-t v-else keypath="emotes.bubble" tag="span" scope="global">
         <template #name>
@@ -61,26 +62,42 @@ defineProps<{ large?: boolean }>();
   vertical-align: -0.45em;
 }
 
-/* A call, which the whole room is meant to notice: ink, flat as ink is, with yellow type, bigger,
-   after a megaphone that is for the eye alone. The first declaration of the pair is for the
-   browsers that don't know the form with the alternative text. */
+/* A call, which the whole room is meant to notice: ink, flat as ink is, with yellow type, after a
+   megaphone that is for the eye alone. The megaphone, the avatar and the line sit side by side, so
+   that two rows of the line, with the padding and the border, stay within the masthead's 64px and
+   leave the banner under it, which says whose move it is, in view. The first declaration of the
+   pair is for the browsers that don't know the form with the alternative text. */
 .call {
-  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-width: var(--line-strong);
   background: var(--ink);
   box-shadow: none;
   color: var(--on-ink);
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   font-weight: var(--weight-display);
   font-synthesis: none;
-  line-height: 1.3;
+  line-height: 1.25;
   text-align: center;
 }
 
 .call::before {
-  content: '\1F4E2  ';
-  content: '\1F4E2  ' / '';
+  content: '\1F4E2';
+  content: '\1F4E2' / '';
+  flex: none;
+}
+
+.call :deep(.avatar) {
+  flex: none;
+  margin: 0;
+}
+
+.call span {
+  min-width: 0;
 }
 
 .large {
@@ -95,9 +112,12 @@ defineProps<{ large?: boolean }>();
   font-size: var(--text-xl);
 }
 
+/* On a screen, a line of the call usually fits in one row, within the masthead; a second row
+   reaches no further than the top of the turn's title under it. */
 .large .call {
+  padding: var(--space-3) var(--space-4);
   box-shadow: none;
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
 }
 
 .bubble-enter-active,

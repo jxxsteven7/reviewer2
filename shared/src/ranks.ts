@@ -23,12 +23,15 @@ export const RANKS = [
 ] as const;
 export type Rank = (typeof RANKS)[number];
 
-// The points from which each rank is held. A regular player, who plays about four evenings a
-// week and wins about half of their games, makes about 90 points a week. The first ranks come
-// fast, to welcome a newcomer: primary school in the first day or two, and an undergraduate after
-// about three weeks. The later ones take the long way: a postdoc after about three months, a
-// professor after about ten, an academician after about a year and a half, and Reviewer 2, the
-// top, after about two years.
+// The points from which each rank is held, set under the scoring before the PI's stakes, when a
+// wrong card cost only the student who revealed it: a regular player, who plays about four
+// evenings a week and wins about half of their games, made about 90 points a week. The first
+// ranks come fast, to welcome a newcomer: primary school in the first day or two, and an
+// undergraduate after about three weeks. The later ones take the long way: a postdoc after about
+// three months, a professor after about ten, an academician after about a year and a half, and
+// Reviewer 2, the top, after about two years. Now that every student pays for every wrong card and
+// the PI pays more, a game gives less and the ranks come slower; the thresholds wait for play to
+// show how much (docs/architecture.md#academic-ranks).
 export const RANK_POINTS: Record<Rank, number> = {
   kindergarten: 0,
   primary: 30,

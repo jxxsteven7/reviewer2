@@ -84,6 +84,24 @@ describe('quick reactions', () => {
     expect(bubbles).toEqual([]);
   });
 
+  test('keep a call while the reactions to it crowd in, until nothing but calls is left', () => {
+    callOut({ name: 'Ann' }, 'Ann missed the deadline', 'deadline');
+    for (const emote of ['deadline', 'waiting', 'reviewer2']) emit({ roomId: 'room-a', playerId: 'bob', emote });
+    expect(bubbles.map((bubble) => ('call' in bubble ? bubble.call : bubble.emote))).toEqual([
+      'Ann missed the deadline',
+      'waiting',
+      'reviewer2',
+    ]);
+    callOut({ name: 'Bob' }, 'Bob missed the deadline', 'deadline');
+    callOut({ name: 'Cat' }, 'Cat missed the deadline', 'deadline');
+    callOut({ name: 'Dan' }, 'Dan missed the deadline', 'deadline');
+    expect(bubbles.map((bubble) => ('call' in bubble ? bubble.call : bubble.emote))).toEqual([
+      'Bob missed the deadline',
+      'Cat missed the deadline',
+      'Dan missed the deadline',
+    ]);
+  });
+
   test('wait ten seconds after one has gone, or as long as the server says, unless it never got there', async () => {
     const start = Date.now();
     await sendEmote('deadline');
