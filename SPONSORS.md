@@ -9,5 +9,8 @@ We thank the people who sponsor Reviewer 2. Those on [GitHub Sponsors](https://g
 
 ## Other ways
 
+- cici 感恩作者家属无时无刻的大力支持
 - RyeCatcher
 - 一个大胖猪
+- re\- 大哥nb
+- 粒子 萱帝大气
