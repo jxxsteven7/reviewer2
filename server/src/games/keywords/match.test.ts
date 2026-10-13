@@ -72,36 +72,29 @@ const pointsOf = (scores: ReturnType<typeof scoreGame>) =>
 
 describe('the score of a game', () => {
   test('gives a group a point for each of its own cards it found, and 3 for winning', () => {
-    // Red found 2 cards, blue 1: the blue card that red revealed doesn't count for blue.
+    // Red found 2 cards, blue 1: the blue card that red revealed doesn't count for blue. Ron pays
+    // 2 for the blue card, Rae 3 for Reviewer 2, and Bea 1 for the irrelevant paper.
     expect(pointsOf(scoreGame(played(), sides(PLAYERS), keyOf))).toEqual({
       rex: 2,
-      ron: 2 - 1,
+      ron: 2 - 2,
       rae: 2 - 3,
       bo: 1 + 3,
-      bea: 1 + 3,
+      bea: 1 + 3 - 1,
     });
   });
 
   test('says where the points came from', () => {
     const scores = scoreGame(played(), sides(PLAYERS), keyOf) ?? [];
-    expect(scores.find(({ key }) => key === 'key-ron')?.detail).toEqual({
-      found: 2,
-      won: false,
-      wrong: 1,
-      reviewer2: 0,
-    });
-    expect(scores.find(({ key }) => key === 'key-rae')?.detail).toEqual({
-      found: 2,
-      won: false,
-      wrong: 0,
-      reviewer2: 1,
-    });
-    expect(scores.find(({ key }) => key === 'key-bo')?.detail).toEqual({ found: 1, won: true, wrong: 0, reviewer2: 0 });
+    const detail = (id: string) => scores.find(({ key }) => key === keyOf(id))?.detail;
+    expect(detail('ron')).toEqual({ found: 2, won: false, irrelevant: 0, wrong: 1, reviewer2: 0 });
+    expect(detail('rae')).toEqual({ found: 2, won: false, irrelevant: 0, wrong: 0, reviewer2: 1 });
+    expect(detail('bo')).toEqual({ found: 1, won: true, irrelevant: 0, wrong: 0, reviewer2: 0 });
+    expect(detail('bea')).toEqual({ found: 1, won: true, irrelevant: 1, wrong: 0, reviewer2: 0 });
   });
 
   test('of a game in progress has no winner yet', () => {
     const game = { ...played(), phase: 'guess' as const, result: null };
-    expect(pointsOf(scoreGame(game, sides(PLAYERS), keyOf))).toMatchObject({ bo: 1, bea: 1, rae: -1 });
+    expect(pointsOf(scoreGame(game, sides(PLAYERS), keyOf))).toMatchObject({ bo: 1, bea: 0, rae: -1 });
   });
 
   test('of a game that the chair withdrew is none', () => {
@@ -112,7 +105,7 @@ describe('the score of a game', () => {
   test('counts what a player revealed under the key they had, also after they left', () => {
     // ron has left the room; the room still knows his key.
     const gone = (id: string) => (id === 'ron' ? 'key-ron' : keyOf(id));
-    expect(pointsOf(scoreGame(played(), sides(PLAYERS), gone)).ron).toBe(1);
+    expect(pointsOf(scoreGame(played(), sides(PLAYERS), gone)).ron).toBe(0);
   });
 });
 

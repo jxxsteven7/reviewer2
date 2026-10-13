@@ -23,25 +23,26 @@ export const RANKS = [
 ] as const;
 export type Rank = (typeof RANKS)[number];
 
-// The points from which each rank is held. A game gives about 7 points to a regular player, who
-// wins about half of their games. The first ranks come fast, to welcome a newcomer: primary school
-// in the second game, and an undergraduate after some 15. The later ones take the long way, for two
-// evenings a week: a professor after about seven months, an academician after about a year, and
-// Reviewer 2, the top, after about two years.
+// The points from which each rank is held. A regular player, who plays about four evenings a
+// week and wins about half of their games, makes about 90 points a week. The first ranks come
+// fast, to welcome a newcomer: primary school in the first day or two, and an undergraduate after
+// about three weeks. The later ones take the long way: a postdoc after about three months, a
+// professor after about ten, an academician after about a year and a half, and Reviewer 2, the
+// top, after about two years.
 export const RANK_POINTS: Record<Rank, number> = {
   kindergarten: 0,
-  primary: 10,
-  middle_school: 30,
-  high_school: 60,
-  undergraduate: 100,
-  master: 180,
-  phd: 300,
-  postdoc: 500,
-  lecturer: 800,
-  associate_professor: 1200,
-  professor: 1800,
-  academician: 3000,
-  reviewer2: 6000,
+  primary: 30,
+  middle_school: 80,
+  high_school: 150,
+  undergraduate: 300,
+  master: 500,
+  phd: 800,
+  postdoc: 1200,
+  lecturer: 1800,
+  associate_professor: 2500,
+  professor: 4000,
+  academician: 6000,
+  reviewer2: 10000,
 };
 
 // The rank that these points hold. Points below zero, which revealing Reviewer 2 can bring, still

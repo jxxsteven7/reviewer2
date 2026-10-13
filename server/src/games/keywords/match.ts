@@ -58,10 +58,16 @@ export function drawProblems(seating: Seating, online: ReadonlySet<string>): Sta
 // progress counts as it stands.
 export const counts = (game: KeywordsState): boolean => game.result?.reason !== 'withdrawn';
 
+// What a player revealed that wasn't their group's: irrelevant papers, the other group's cards
+// and Reviewer 2, as the detail counts them.
+type Mistakes = Pick<KeywordsScoreDetail, 'irrelevant' | 'wrong' | 'reviewer2'>;
+const noMistakes = (): Mistakes => ({ irrelevant: 0, wrong: 0, reviewer2: 0 });
+
 // Each player's points in a game, as they stand (shared/src/games/keywords/score.ts): everyone who
 // played for a group in it, by member key, with what their group found, whether it won, and what
-// they revealed themselves of the other group's cards and Reviewer 2. Null for a game that the
-// chair withdrew. `keyOf` gives the member key of whoever revealed a card, also once they have left.
+// they revealed themselves of the irrelevant papers, the other group's cards and Reviewer 2. Null
+// for a game that the chair withdrew. `keyOf` gives the member key of whoever revealed a card,
+// also once they have left.
 export function scoreGame(
   game: KeywordsState,
   sides: ReadonlyMap<string, Team>,
@@ -69,18 +75,18 @@ export function scoreGame(
 ): MatchScore[] | null {
   if (!counts(game)) return null;
   const found: Record<Team, number> = { red: 0, blue: 0 };
-  const mistakes = new Map<string, { wrong: number; reviewer2: number }>();
+  const mistakes = new Map<string, Mistakes>();
   for (const record of game.history) {
     for (const guess of record.guesses) {
       if (guess.color === record.team) {
         found[record.team] += 1;
         continue;
       }
-      if (guess.color === 'neutral') continue;
       const key = keyOf(guess.player);
-      const tally = mistakes.get(key) ?? { wrong: 0, reviewer2: 0 };
+      const tally = mistakes.get(key) ?? noMistakes();
       if (guess.color === 'reviewer2') tally.reviewer2 += 1;
       else if (guess.color === otherTeam(record.team)) tally.wrong += 1;
+      else tally.irrelevant += 1;
       mistakes.set(key, tally);
     }
   }
@@ -91,7 +97,7 @@ export function scoreGame(
     const detail: KeywordsScoreDetail = {
       found: team ? found[team] : 0,
       won: team !== null && team === winner,
-      ...(mistakes.get(key) ?? { wrong: 0, reviewer2: 0 }),
+      ...(mistakes.get(key) ?? noMistakes()),
     };
     return { key, points: pointsFor(detail), detail };
   });

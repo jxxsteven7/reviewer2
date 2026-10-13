@@ -89,7 +89,7 @@ describe('ProfileCard', () => {
     expect(text).toContain('Acknowledged: Helpful discussions');
     expect(text).toContain('♥ 4');
     // A guest can neither like nor ask, and is told why.
-    expect(wrapper.findAll('button')).toHaveLength(0);
+    expect(wrapper.findAll('.actions button')).toHaveLength(0);
     expect(text).toContain('Log in to like this page');
     expect(socket.connect).not.toHaveBeenCalled();
     wrapper.unmount();
@@ -129,16 +129,16 @@ describe('ProfileCard', () => {
     expect(signedIn.request).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain('Ann');
     expect(wrapper.text()).not.toContain('Log in to like');
-    expect(wrapper.findAll('button')).toHaveLength(0);
+    expect(wrapper.findAll('.actions button')).toHaveLength(0);
     signedIn.account.summary = { handle: 'f6e5d4c3b2a1' };
     signedIn.account.loaded = true;
     await flushPromises();
     expect(signedIn.request).toHaveBeenCalledTimes(1);
-    expect(wrapper.findAll('button')).toHaveLength(2);
+    expect(wrapper.findAll('.actions button')).toHaveLength(2);
     signedIn.account.summary = null;
     await flushPromises();
     expect(signedIn.request).toHaveBeenCalledTimes(2);
-    expect(wrapper.findAll('button')).toHaveLength(0);
+    expect(wrapper.findAll('.actions button')).toHaveLength(0);
     expect(wrapper.text()).toContain('Log in to like');
     wrapper.unmount();
   });
@@ -197,8 +197,29 @@ describe('ProfileCard', () => {
     expect(toasts.toastError).toHaveBeenCalledWith('offline');
     expect(wrapper.text()).toContain('Ann');
     expect(wrapper.text()).toContain('♥ 4');
-    expect(wrapper.findAll('button')).toHaveLength(2);
-    expect(wrapper.findAll('button')[0]?.attributes('disabled')).toBeUndefined();
+    expect(wrapper.findAll('.actions button')).toHaveLength(2);
+    expect(wrapper.findAll('.actions button')[0]?.attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  test('opens the ladder of ranks from the rank, with the rank marked and no points', async () => {
+    document.body.innerHTML = '';
+    signedIn.request.mockResolvedValue({ ok: true, profile: profile() });
+    const wrapper = mount(ProfileCard, {
+      props: { handle: 'a1b2c3d4e5f6' },
+      global: global(),
+      attachTo: document.body,
+    });
+    await flushPromises();
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    await wrapper.get('.rank-button').trigger('click');
+    const dialog = document.querySelector<HTMLElement>('[role=dialog]');
+    expect(dialog?.textContent).toContain('The academic ladder');
+    const current = dialog?.querySelector<HTMLElement>('.rung.current');
+    expect(current?.textContent).toContain('Professor');
+    expect(current?.textContent).toContain('Current rank');
+    expect(current?.textContent).not.toContain('more to');
+    expect(dialog?.textContent).not.toContain('Points:');
     wrapper.unmount();
   });
 
@@ -207,7 +228,7 @@ describe('ProfileCard', () => {
     signedIn.request.mockResolvedValueOnce({ ok: true, profile: profile({ mine: true }) });
     const mine = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
     await flushPromises();
-    expect(mine.findAll('button')).toHaveLength(0);
+    expect(mine.findAll('.actions button')).toHaveLength(0);
     expect(mine.text()).toContain('This is your page');
     mine.unmount();
     signedIn.request.mockResolvedValueOnce({ ok: false, error: 'no_such_profile' });

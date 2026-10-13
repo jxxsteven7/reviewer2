@@ -422,10 +422,11 @@
       "you": "You",
       "someone": "A player who left"
     },
-    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing the other group's card, −1; revealing Reviewer 2, −3.",
+    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing an irrelevant paper, −1; revealing the other group's card, −2; revealing Reviewer 2, −3.",
     "scoreDetail": {
       "found": "found {count}",
       "won": "won",
+      "irrelevant": "irrelevant paper ×{count}",
       "wrong": "other group's card ×{count}",
       "reviewer2": "Reviewer 2"
     },
@@ -958,7 +959,13 @@
     "points": "Points: {points}",
     "next": "{points} more to {rank}.",
     "top": "The highest rank there is.",
-    "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game."
+    "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game.",
+    "ladder": {
+      "open": "All ranks",
+      "title": "The academic ladder",
+      "from": "from {points} points",
+      "current": "Current rank"
+    }
   },
   "playerPage": {
     "title": "Player page",
