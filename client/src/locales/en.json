@@ -1153,6 +1153,6 @@
   },
   "privacy": {
     "recordsTitle": "Game records",
-    "records": "Games are recorded. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. Group chat is never recorded."
+    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. Deleting your account deletes what you said in them."
   }
 }

@@ -648,7 +648,9 @@ describe('an AI that plays for someone offline', () => {
 
 describe('a game that an AI played in', () => {
   const kept = () =>
-    server.db.prepare('SELECT log, agent_log AS agentLog FROM replays').all() as {
+    server.db.prepare('SELECT game_id AS gameId, ending, log, agent_log AS agentLog FROM replays').all() as {
+      gameId: string;
+      ending: string;
       log: string;
       agentLog: string | null;
     }[];
@@ -729,7 +731,11 @@ describe('a game that an AI played in', () => {
     await until(() => agent.questions.length === 5, 'the guess question');
     server.advance(GUESS_PACE_MS);
     await ann.waitFor((state) => state.phase === 'ended', 'the end');
-    const [row] = kept();
+    // The first game was withdrawn, and kept as such, with its own AI log.
+    await until(() => kept().length === 2, 'both records');
+    const first = kept().find((row) => row.gameId !== gameId);
+    expect(first?.ending).toBe('withdrawn');
+    const row = kept().find((record) => record.gameId === gameId);
     const agentLog = JSON.parse(row?.agentLog ?? '{}') as { gameId: string; steps: { kind: string; late?: true }[] };
     expect(agentLog.gameId).toBe(gameId);
     expect(agentLog.steps.map(({ kind, late }) => ({ kind, late }))).toEqual([

@@ -474,6 +474,8 @@ export class Accounts {
       if (!this.#stillLoggedIn(login)) return null;
       const ended = this.sessions.deleteForAccount(id);
       const others = this.friends.others(id);
+      // What it said in its games goes before the rows that say which player it was in them.
+      this.replays.unsay(id);
       const account = this.store.delete(id);
       return account ? { ended, account, others } : null;
     });
@@ -733,18 +735,20 @@ export class Accounts {
     return this.store.transaction(() => this.records.add(accountId, record));
   }
 
-  // Keeps a finished game to watch again (docs/architecture.md#replays), with its log and which
-  // player was which account (docs/architecture.md#game-records), once for each game, unless the
-  // database is full or the replay is larger than MAX_REPLAY_BYTES as JSON, which the log says.
-  // The game's log has a limit of its own (gameLog.ts). Says whether it was kept.
-  keepReplay(replay: NewReplay): boolean {
+  // Keeps the record of a game (docs/architecture.md#game-records), however it ended, with its
+  // replay to watch again if it finished (docs/architecture.md#replays), its logs and which player
+  // was which account, once for each game, unless the database is full, which the log says. A
+  // replay larger than MAX_REPLAY_BYTES as JSON is left out, and the log says so too; the rest of
+  // the record is kept. The game's log has a limit of its own (gameLog.ts). Says whether the game
+  // was kept.
+  keepGame(game: NewReplay): boolean {
     if (this.#full()) return false;
-    const data = JSON.stringify(replay.replay);
-    if (Buffer.byteLength(data) > MAX_REPLAY_BYTES) {
+    let data: string | null = game.replay === null || game.replay === undefined ? null : JSON.stringify(game.replay);
+    if (data !== null && Buffer.byteLength(data) > MAX_REPLAY_BYTES) {
       this.#log('replay_too_large', { bytes: Buffer.byteLength(data), limit: MAX_REPLAY_BYTES });
-      return false;
+      data = null;
     }
-    return this.store.transaction(() => this.replays.add(replay, data));
+    return this.store.transaction(() => this.replays.add(game, data));
   }
 
   // The replay of a game that the account played in, or null when there is none or the account

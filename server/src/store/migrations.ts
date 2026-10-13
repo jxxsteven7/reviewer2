@@ -355,17 +355,52 @@ export const MIGRATIONS: readonly string[] = [
   `
   CREATE INDEX game_records_game ON game_records (game_id);
   `,
-  // 14: AI players (docs/architecture.md#ai-players).
+  // 14: AI players (docs/architecture.md#ai-players), and a record of every game
+  // (docs/architecture.md#game-records).
   //
   // - accounts get whether the operator has let them have AI players in the rooms they chair.
   // - game records get whether an AI played in the game, which brings no points, streak or title of
   //   friends, and the records from before none.
+  // - replays become the record of every game, however it ended, with or without a replay to watch,
+  //   which goes in `data` for a game that finished: SQLite can't make a column nullable, so the
+  //   table is made again, with all it had. Each game gets what kind of game it was, for whoever
+  //   studies the games to tell them apart: how it ended (`ending`), when it began, how it began
+  //   (`setup`, as JSON), how many played in it with an account, as guests and as AI players,
+  //   whether an AI played for someone who was offline, whether it was a game of a match, its
+  //   language and fields, and the versions of the server, of the game's rules and of the word
+  //   lists. The replays from before, all of finished games, say `finished` and nothing else of
+  //   these.
   // - replays get the AI's own log of the game beside the game's log, as JSON, kept on the server
   //   alone: how each AI came to each of its moves (server/src/core/agentLog.ts). A game that no AI
   //   played in has none, and neither do the replays from before.
   `
   ALTER TABLE accounts ADD COLUMN agents INTEGER NOT NULL DEFAULT 0 CHECK (agents IN (0, 1));
   ALTER TABLE game_records ADD COLUMN agents INTEGER NOT NULL DEFAULT 0 CHECK (agents IN (0, 1));
-  ALTER TABLE replays ADD COLUMN agent_log TEXT;
+
+  CREATE TABLE games_kept (
+    game_id TEXT PRIMARY KEY,
+    game TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    data TEXT,
+    log TEXT,
+    agent_log TEXT,
+    ending TEXT NOT NULL CHECK (ending IN ('finished', 'withdrawn', 'abandoned', 'interrupted')),
+    started_at TEXT,
+    setup TEXT,
+    accounts INTEGER,
+    guests INTEGER,
+    agents INTEGER,
+    takeover INTEGER CHECK (takeover IN (0, 1)),
+    in_match INTEGER CHECK (in_match IN (0, 1)),
+    language TEXT,
+    fields TEXT,
+    version TEXT,
+    rules INTEGER,
+    words TEXT
+  ) STRICT;
+  INSERT INTO games_kept (game_id, game, ended_at, data, log, ending)
+    SELECT game_id, game, ended_at, data, log, 'finished' FROM replays;
+  DROP TABLE replays;
+  ALTER TABLE games_kept RENAME TO replays;
   `,
 ];

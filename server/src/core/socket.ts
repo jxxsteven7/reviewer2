@@ -31,6 +31,7 @@ import type { FriendRow } from '../store/friends';
 import type { AgentChannel } from './agentChannel';
 import { AgentDriver } from './agents';
 import { fail, type Refusal } from './answers';
+import { unsay } from './gameLog';
 import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
 import { accountKey, isToken, memberKey, newToken } from './identity';
@@ -281,26 +282,28 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (driver) safely('agents', () => driver.poke(room));
   }
 
-  // What the end of a game leaves behind for the players with accounts, as the game describes
-  // their part in it (GameModule.results()): the game on each of their records, with the points it
-  // brought them (Room.points()), the streak it brought them to, which the room tells in the
-  // snapshot that ends the game (Room.noteStreak()), their ranks as they are now for everyone to
+  // What the end of a game leaves behind. A game that finished leaves its part in it on the record
+  // of each player with an account, as the game describes it (GameModule.results()), with the
+  // points it brought them (Room.points()), the streak it brought them to, which the room tells in
+  // the snapshot that ends the game (Room.noteStreak()), their ranks as they are now for everyone to
   // see, and the titles that the game brought friends who played in it, which the room tells each
   // account alone (Room.noteDuos()). A game that an AI played in brings nobody points, a streak or
-  // a title (docs/architecture.md#ai-players). Whoever had left by then has no part in its end, and
-  // a game that the chair withdrew counts for nobody. Then, once anyone with an account that still
-  // exists has played in it, those who left included, the record of the game itself
-  // (docs/architecture.md#game-records): the replay to watch again (GameModule.replay()), the log of
-  // everything that happened with the AI's own log beside it, and which player was which account.
-  // Whatever else is to be kept of a finished game goes here, after the records.
+  // a title (docs/architecture.md#ai-players). Whoever had left by then has no part in its end.
+  //
+  // Then every game, however it ended, finished, withdrawn or cut short, and whoever played in it,
+  // leaves the record of the game itself (docs/architecture.md#game-records): how it ended and what
+  // kind of game it was, how it began, the replay to watch again if it finished
+  // (GameModule.replay()), the log of everything that happened with the AI's own log beside it, and
+  // which player was which account. A game with words of the chair's own leaves none
+  // (Room.record()). Whatever else is to be kept of a game goes here, after the records.
   function keepRecords(room: Room): void {
-    const results = accounts && room.gameId !== null ? room.results() : null;
-    if (!results || !accounts) return;
-    const gameId = room.gameId as string;
+    if (!accounts || room.gameId === null) return;
+    const gameId = room.gameId;
+    const results = room.ending === 'finished' ? room.results() : null;
     const points = room.points();
     // Those whose game went on the record, by account ID, with their player ID, side and result.
     const recorded = new Map<number, DuoPart & { playerId: string }>();
-    for (const { playerId, ...result } of results) {
+    for (const { playerId, ...result } of results ?? []) {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
@@ -321,15 +324,33 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (recorded.size > 1) safely('duos', () => noteDuos(room, recorded));
     const kept = room.record();
     if (!kept) return;
-    // An account deleted during the game no longer counts as having played: a game of guests and
-    // one who asked to be forgotten is kept for nobody.
+    // An account deleted during the game no longer counts as having played, and what it said goes
+    // from the log, as it would have if the account had been deleted after the game.
     const players = kept.accounts.filter(({ accountId }) => accounts.store.byId(accountId) !== undefined);
-    if (players.length === 0) return;
-    const replay = room.replay();
-    if (replay === null) return;
-    const { log: gameLog, agentLog } = kept;
+    const forgotten = new Set(
+      kept.accounts.filter((player) => !players.includes(player)).map(({ playerId }) => playerId),
+    );
+    const gameLog = kept.log && unsay(kept.log, forgotten);
     safely('replay', () => {
-      const stored = accounts.keepReplay({ game: room.game.id, gameId, replay, log: gameLog, agentLog, players });
+      const stored = accounts.keepGame({
+        game: room.game.id,
+        gameId,
+        ending: kept.ending,
+        durationMs: kept.durationMs,
+        replay: room.replay(),
+        setup: kept.setup,
+        log: gameLog,
+        agentLog: kept.agentLog,
+        players,
+        counts: kept.counts,
+        takeover: kept.takeover,
+        match: kept.match,
+        language: kept.language,
+        fields: kept.fields,
+        version,
+        rules: kept.rules,
+        words: kept.words,
+      });
       // A log that grew too long is worth a line only when the rest of the record was kept: what
       // kept the record out, such as a full database, has a line of its own.
       if (stored && kept.overflowed) log('game_log_too_large', { code: room.code });
@@ -405,10 +426,17 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // Closes a room, tells whoever is still connected to it, apart from `except`, and logs it.
   // `why` is for the log: "empty", "idle", "stale", "chair" or "restart".
   function shut(room: Room, reason: ClosedReason, why: string, except?: Iterable<string>): void {
+    cut(room, why);
     closeFor(rooms.close(room), reason, except);
     unschedule(room);
     driver?.forget(room);
     log('room_closed', { code: room.code, why });
+  }
+
+  // A room that closes with its game on cuts the game short there, which keeps its record
+  // (Room.cut()).
+  function cut(room: Room, why: string): void {
+    if (room.cut(why)) safely('records', () => keepRecords(room));
   }
 
   // Takes connections out of their room and tells them why, apart from `except`, which have been
@@ -1039,7 +1067,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const found = membership(socket);
       if (!found) return fail('not_member');
       const { room, member } = found;
-      const result = room.emote(member.id, emote);
+      const result = room.emote(member.id);
       if (!result.ok) return result;
       const event: EmoteEvent = { roomId: room.id, playerId: member.id, emote };
       io.to(room.connections()).emit('room:emote', event);
@@ -1385,6 +1413,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         const result = rooms.sweep();
         for (const { room, error } of result.failed) report(error, 'sweep', { code: room.code });
         for (const { room, sockets, why } of result.closed) {
+          cut(room, why);
           closeFor(sockets, 'expired');
           unschedule(room);
           driver?.forget(room);

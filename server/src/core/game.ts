@@ -57,12 +57,12 @@ export interface PlayerResult {
 }
 
 // What the log of a game keeps of one of the game's messages that changed the game
-// (docs/architecture.md#game-records): what the message said, as the game reads it, and whether
-// it is minor, of the kind that a player may send many of, such as choosing a card, which the log
-// stops keeping once it has grown long.
+// (docs/architecture.md#game-records): what the message carried, as the game reads it, and, for a
+// line of a group's chat, what the player said, which the log keeps apart, so that it can be taken
+// out again when their account is deleted.
 export interface LogNote {
   data?: unknown;
-  minor?: boolean;
+  said?: string;
 }
 
 // What an AI is to do in a seat now (GameModule.agentTask; docs/architecture.md#ai-players).
@@ -184,10 +184,21 @@ export interface GameModule<Data = unknown, View = unknown> {
   // everyone right after start(), for how the game began, and about whoever comes during the game,
   // since the game may seat them. Without this, the log says nothing of where anyone is.
   seated?(data: Data, playerId: string): unknown;
+  // How the game that has just started began, for its log: what it takes, with the moves in the
+  // log, to play the game through again, such as the board with every color, and the settings.
+  // The log stays on the server. Without this, the log says nothing of it.
+  setup?(data: Data): unknown;
   // What the log keeps of one of the game's messages that changed the game, with the payload as
-  // the message carried it, or null to keep nothing of it, as of a line of a group's chat. Without
-  // this, the log keeps the message's type alone.
+  // the message carried it, or null to keep nothing of it, as of a card chosen and chosen again.
+  // Without this, the log keeps the message's type alone.
   logged?(type: string, payload: unknown): LogNote | null;
+  // The players the game is waiting for now, by player ID, such as the group's PI while a clue is
+  // due: when a timer changes the game, the log names those of them who were offline then. Without
+  // this, it names nobody.
+  due?(data: Data): string[];
+  // The version of the game's rules and scoring, which goes on the record of every game, so that a
+  // game played under other rules can be told apart. It goes up by one whenever they change.
+  rulesVersion?: number;
   // The member keys of everyone who has played in the current game, those who have left it
   // included: the players whose part in it the record keeps. Without this, those whom results()
   // names.

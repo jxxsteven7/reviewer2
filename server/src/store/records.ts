@@ -11,6 +11,7 @@ import {
   type TitleCount,
 } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
+import { unsay, type GameEnding, type GameLogData } from '../core/gameLog';
 
 // What accounts keep of the games: a row for each game that a player with an account finished in
 // a seat (migration 2), a row for each match that they finished ranked, and the titles that
@@ -18,7 +19,8 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 // (migration 7, docs/architecture.md#replays), the streaks of wins and of losses that the games
 // make (migration 10, docs/architecture.md#streaks), and the log of each game kept and which of
 // its players had which account (migration 12, docs/architecture.md#game-records), with the AI's
-// own log of it (migration 14, docs/architecture.md#ai-players). What friends have played together
+// own log of it (migration 14, docs/architecture.md#ai-players) and, since then, a record of every
+// game, however it ended, and of what kind of game it was (migration 14). What friends have played together
 // is worked out from the records (migration 13, docs/architecture.md#friend-duos).
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
@@ -99,7 +101,7 @@ export class RecordStore {
     // With each game, whether there is a replay of it to watch.
     this.#recent = db.prepare(
       'SELECT game, game_id AS gameId, ended_at AS endedAt, side, role, winner, won, verdict, ' +
-        'EXISTS (SELECT 1 FROM replays WHERE replays.game_id = game_records.game_id) AS replay ' +
+        'EXISTS (SELECT 1 FROM replays WHERE replays.game_id = game_records.game_id AND data IS NOT NULL) AS replay ' +
         'FROM game_records WHERE account_id = ? ORDER BY id DESC LIMIT ?',
     );
     // A match is recorded once for each account, as a game is.
@@ -249,52 +251,101 @@ export class TitleStore {
   }
 }
 
-// A finished game to keep, once for each game, however often the end of the game is reported: the
-// replay, as the game module gave it (GameModule.replay()), kept as JSON; the log of everything
-// that happened in it, or null when it grew too long to keep; the AI's own log of it, or null when
-// no AI played in it (agentLog.ts); and which player, by the ID they had in the room, was which
-// account.
+// A game to keep (docs/architecture.md#game-records), once for each game, however often its end is
+// reported: how it ended and what kind of game it was (Room.record()), the replay of a game that
+// finished, as the game module gave it (GameModule.replay()), kept as JSON, or null; the log of
+// everything that happened in it, or null when it grew too long to keep; the AI's own log of it,
+// or null when no AI played in it (agentLog.ts); and which player, by the ID they had in the room,
+// was which account.
 export interface NewReplay {
   game: string;
   gameId: string;
+  ending: GameEnding;
+  durationMs: number;
   replay: unknown;
+  setup?: unknown;
   log?: unknown;
   agentLog?: unknown;
   players?: readonly { playerId: string; accountId: number }[];
+  counts?: { accounts: number; guests: number; agents: number };
+  takeover?: boolean;
+  match?: boolean;
+  language?: string;
+  fields?: readonly string[];
+  version?: string;
+  rules?: number | null;
+  words?: string;
 }
 
 export class ReplayStore {
   readonly #insert: StatementSync;
   readonly #player: StatementSync;
   readonly #read: StatementSync;
+  readonly #said: StatementSync;
+  readonly #unsay: StatementSync;
 
   constructor(
     db: DatabaseSync,
     private readonly now: () => number = () => Date.now(),
   ) {
     this.#insert = db.prepare(
-      'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log, agent_log) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log, agent_log, ending, started_at, setup, ' +
+        'accounts, guests, agents, takeover, in_match, language, fields, version, rules, words) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     // An account that is gone by now, deleted while the game was on, is left out.
     this.#player = db.prepare(
       'INSERT OR IGNORE INTO game_players (game_id, player_id, account_id) SELECT ?, ?, id FROM accounts WHERE id = ?',
     );
-    // Only an account that has the game on its record may read it.
+    // Only an account that has the game on its record may read it, and only a game that finished
+    // has a replay.
     this.#read = db.prepare(
-      'SELECT data FROM replays WHERE game_id = ? AND ' +
+      'SELECT data FROM replays WHERE game_id = ? AND data IS NOT NULL AND ' +
         'EXISTS (SELECT 1 FROM game_records WHERE account_id = ? AND game_id = replays.game_id)',
     );
+    // The logs of the games that an account played in, with the IDs it had in each.
+    this.#said = db.prepare(
+      'SELECT replays.game_id AS gameId, log, json_group_array(player_id) AS playerIds FROM game_players ' +
+        'JOIN replays ON replays.game_id = game_players.game_id ' +
+        'WHERE account_id = ? AND log IS NOT NULL GROUP BY replays.game_id',
+    );
+    this.#unsay = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
   }
 
-  // Keeps the replay, as `data`, which the caller has made into JSON of a size it allows, with its
-  // logs as JSON, if any, and which player was which account, and says whether it was new. A game
-  // that is kept already keeps what it had. The caller runs this in one transaction.
-  add({ game, gameId, log = null, agentLog = null, players = [] }: NewReplay, data: string): boolean {
-    const endedAt = new Date(this.now()).toISOString();
-    const logged = log === null ? null : JSON.stringify(log);
-    const agentLogged = agentLog === null ? null : JSON.stringify(agentLog);
-    const added = Number(this.#insert.run(gameId, game, endedAt, data, logged, agentLogged).changes) > 0;
-    if (added) for (const { playerId, accountId } of players) this.#player.run(gameId, playerId, accountId);
+  // Keeps a game, with the replay, as `data`, which the caller has made into JSON of a size it
+  // allows, or null, with its logs as JSON, if any, and which player was which account, and says
+  // whether it was new. A game that is kept already keeps what it had. The caller runs this in one
+  // transaction.
+  add(game: NewReplay, data: string | null): boolean {
+    const endedAt = this.now();
+    const json = (value: unknown) => (value === undefined || value === null ? null : JSON.stringify(value));
+    const flag = (value: boolean | undefined) => (value === undefined ? null : value ? 1 : 0);
+    const added =
+      Number(
+        this.#insert.run(
+          game.gameId,
+          game.game,
+          new Date(endedAt).toISOString(),
+          data,
+          json(game.log),
+          json(game.agentLog),
+          game.ending,
+          new Date(endedAt - game.durationMs).toISOString(),
+          json(game.setup),
+          game.counts?.accounts ?? null,
+          game.counts?.guests ?? null,
+          game.counts?.agents ?? null,
+          flag(game.takeover),
+          flag(game.match),
+          game.language ?? null,
+          json(game.fields),
+          game.version ?? null,
+          game.rules ?? null,
+          game.words ?? null,
+        ).changes,
+      ) > 0;
+    if (added)
+      for (const { playerId, accountId } of game.players ?? []) this.#player.run(game.gameId, playerId, accountId);
     return added;
   }
 
@@ -302,5 +353,17 @@ export class ReplayStore {
   read(accountId: number, gameId: string): unknown {
     const row = this.#read.get(gameId, accountId) as { data: string } | undefined;
     return row === undefined ? null : (JSON.parse(row.data) as unknown);
+  }
+
+  // Takes what the account said out of the logs of the games it played in (unsay), for an account
+  // that is being deleted: its rows in game_players go with it, by their foreign key, and the
+  // rest of each game stays. The caller runs this in the transaction that deletes the account.
+  unsay(accountId: number): void {
+    const rows = this.#said.all(accountId) as { gameId: string; log: string; playerIds: string }[];
+    for (const { gameId, log, playerIds } of rows) {
+      const kept = JSON.parse(log) as GameLogData;
+      const without = unsay(kept, new Set(JSON.parse(playerIds) as string[]));
+      if (without !== kept) this.#unsay.run(JSON.stringify(without), gameId);
+    }
   }
 }

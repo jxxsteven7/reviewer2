@@ -566,7 +566,7 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g' }]);
   });
 
-  test('of the thirteenth release keeps its accounts, records and replays when it gets AI players', async () => {
+  test('of the thirteenth release keeps its accounts, records and replays when it gets AI players and every game', async () => {
     const thirteenth = await open(dir, MIGRATIONS.slice(0, 13));
     thirteenth.db.exec(`
       INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
@@ -589,6 +589,38 @@ describe('a database in DATA_DIR', () => {
     ]);
     expect(() => db.exec('UPDATE accounts SET agents = 2 WHERE id = 1')).toThrow(/CHECK/);
     expect(() => db.exec('UPDATE game_records SET agents = 2')).toThrow(/CHECK/);
+    // The replays from before, all of finished games, are kept whole, say so, and say nothing else
+    // of what kind of game they were.
+    expect(db.prepare('SELECT * FROM replays').all()).toEqual([
+      {
+        game_id: 'g',
+        game: 'keywords',
+        ended_at: 'now',
+        data: '{"cards":[]}',
+        log: '{"v":1}',
+        agent_log: null,
+        ending: 'finished',
+        started_at: null,
+        setup: null,
+        accounts: null,
+        guests: null,
+        agents: null,
+        takeover: null,
+        in_match: null,
+        language: null,
+        fields: null,
+        version: null,
+        rules: null,
+        words: null,
+      },
+    ]);
+    // A game without a replay can be kept now, and an ending is one of four.
+    db.exec("INSERT INTO replays (game_id, game, ended_at, ending) VALUES ('h', 'keywords', 'now', 'abandoned')");
+    expect(() =>
+      db.exec("INSERT INTO replays (game_id, game, ended_at, ending) VALUES ('i', 'keywords', 'now', 'lost')"),
+    ).toThrow(/CHECK/);
+    expect(() => db.exec("UPDATE replays SET takeover = 2 WHERE game_id = 'h'")).toThrow(/CHECK/);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {

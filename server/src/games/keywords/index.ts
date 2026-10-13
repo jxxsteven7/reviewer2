@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   cardsClash,
+  checkChat,
   cleanClue,
   defaultSettings,
   otherTeam,
@@ -181,19 +182,24 @@ type Action<M extends KeywordsMessage> = (
 ) => GameUpdate<KeywordsData>;
 
 // What the log of the game keeps of each of its messages (docs/architecture.md#game-records): what
-// it said, as its schema reads it, without the game's ID, which is the log's own, and with the
-// clue's word as the record keeps it (cleanClue). Choosing a card is minor: a group's students may
-// do it again and again before they reveal one. Nothing at all is kept of a line of a group's chat.
+// it carried, as its schema reads it, without the game's ID, which is the log's own, and with the
+// clue's word as the record keeps it (cleanClue). A line of a group's chat is what the player said,
+// as the chat shows it (checkChat), which the log keeps apart. Nothing is kept of a card chosen: students choose and choose again
+// before they reveal one, for the fun of it as much as anything.
 function logNote(type: string, payload: unknown): LogNote | null {
-  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:say') return null;
+  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:select') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
   if (!parsed.success) return null;
   const data: Record<string, unknown> = { ...parsed.data };
   delete data.gameId;
+  if (type === 'keywords:say') return { said: checkChat(data.text as string).text };
   if (type === 'keywords:clue') data.word = cleanClue(data.word as string);
-  const minor = type === 'keywords:select';
-  return Object.keys(data).length > 0 ? { data, minor } : { minor };
+  return Object.keys(data).length > 0 ? { data } : {};
 }
+
+// The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
+// change to either.
+export const RULES_VERSION = 1;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -218,6 +224,7 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
 
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
+  rulesVersion: RULES_VERSION,
   wordsNeeded: BOARD_SIZE,
   // Two words of which one lies inside the other would give each other away: "Gene" and "Gene
   // editing" can't share a board.
@@ -345,7 +352,31 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { team, role };
   },
 
+  // How the game began: the language and the settings, the group that starts, and the board, every
+  // card's color included. It goes into the record of the game alone, which stays on the server.
+  setup(data) {
+    const game = data.game;
+    if (!game) return null;
+    return {
+      language: game.language,
+      settings: { ...game.settings },
+      startingTeam: game.startingTeam,
+      cards: game.cards.map(({ word, color }) => ({ word, color })),
+    };
+  },
+
   logged: logNote,
+
+  // Whom the game is waiting for: the PI of the group on turn while its clue is due, and its
+  // students while they guess. Nobody while the game is paused or over.
+  due(data) {
+    const game = data.game;
+    if (!game || game.phase === 'over' || game.pause) return [];
+    const role = game.phase === 'clue' ? 'captain' : 'guesser';
+    return [...data.seating.seats]
+      .filter(([, seat]) => seat.team === game.team && seat.role === role)
+      .map(([id]) => id);
+  },
 
   // Everyone who has sat in a group during the game has played in it, whether or not they are
   // still there.

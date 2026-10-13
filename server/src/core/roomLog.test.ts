@@ -31,23 +31,32 @@ function table() {
 
 const entries = (room: Room) => {
   room.act(room.chairId as string, 'test:finish', undefined);
-  return (room.record()?.log?.entries ?? []).map(({ t, by, type, data }) => [t, by, type, data]);
+  return (room.record()?.log?.entries ?? []).map(({ t, by, type, data, said }) =>
+    said === undefined ? [t, by, type, data] : [t, by, type, data, said],
+  );
 };
 
 describe('the log of a game', () => {
   test("notes where everyone began, the room's own events during the game, and nothing before it", () => {
     const { room, ann, bob, clock } = table();
-    room.emote(bob.id, 'waiting');
+    room.emote(bob.id);
     expect(room.start(0)).toMatchObject({ ok: true });
-    // A quick reaction waits 10 seconds after the last.
+    // Quick reactions and who goes offline and comes back are not noted.
     clock.now = 10_000;
-    room.emote(bob.id, 'deadline');
+    room.emote(bob.id);
     room.detach('socket-bob');
-    clock.now = 11_000;
+    clock.now = 10_500;
     room.attach(bob, 'socket-bob-2');
+    room.detach('socket-bob-2');
     room.act(ann.id, 'test:alarm', 500);
+    room.act(bob.id, 'test:say', 'one moment');
+    // An AI plays for Bob for a while.
+    room.takeOver(bob.id, true);
+    room.takeOver(bob.id, false);
+    // The timer rings while the game waits for its players, and Bob is offline.
     clock.now = 12_000;
     room.expire();
+    room.attach(bob, 'socket-bob-3');
     room.bench(bob.id);
     // Whoever comes during the game is noted with where the game has put them.
     const cat = room.join('key-cat', 'Cat', false);
@@ -58,11 +67,11 @@ describe('the log of a game', () => {
     room.handOver(bob.id);
     // The game started at 0 on the room's clock.
     expect(entries(room)).toEqual([
-      [10_000, bob.id, 'emote', { emote: 'deadline' }],
-      [10_000, bob.id, 'offline', undefined],
-      [11_000, bob.id, 'online', undefined],
-      [11_000, ann.id, 'test:alarm', undefined],
-      [12_000, null, 'tick', undefined],
+      [10_500, ann.id, 'test:alarm', undefined],
+      [10_500, bob.id, 'test:say', undefined, 'one moment'],
+      [10_500, null, 'takeover', { player: bob.id, on: true }],
+      [10_500, null, 'takeover', { player: bob.id, on: false }],
+      [12_000, null, 'tick', { offline: [bob.id] }],
       [12_000, ann.id, 'bench', { player: bob.id }],
       [12_000, cat.member.id, 'join', { play: false, seat: 'watcher' }],
       [12_000, ann.id, 'remove', { player: cat.member.id }],
@@ -72,40 +81,34 @@ describe('the log of a game', () => {
       [12_000, bob.id, 'test:finish', undefined],
       [12_000, null, 'end', undefined],
     ]);
-    // Where everyone was when the game began, as the game says.
+    // Where everyone was when the game began, as the game says, and how the game began.
     expect(room.record()?.log?.start).toEqual({ [ann.id]: 'player', [bob.id]: 'player' });
+    expect(room.record()?.setup).toEqual({ words: expect.any(Array) });
   });
 
-  test('leaves out what the game calls minor once it has grown long, and keeps its own events', () => {
-    // A game whose presses are minor.
-    const game = { ...fakeGame, logged: (type: string) => ({ minor: type === 'test:press' }) };
-    const rooms = new Rooms(testWords(), seededRng(3), () => 0);
-    const created = rooms.create({
-      game,
-      language: 'en',
-      fields: ['general'],
-      key: 'key-kim',
-      name: 'Kim',
-      play: true,
-    });
-    if (!created.ok) throw new Error(created.error);
-    const { room, member: kim } = created;
-    room.attach(kim, 'socket-kim');
-    const lee = room.join('key-lee', 'Lee', true);
-    if (!lee.ok) throw new Error(lee.error);
-    room.attach(lee.member, 'socket-lee');
+  test('names nobody on a timer when everyone it waited for was online', () => {
+    const { room, ann, clock } = table();
     room.start(0);
-    // More presses than the log keeps before it has grown long; then someone goes offline, which
-    // is kept all the same.
-    for (let i = 0; i < 1400; i += 1) room.act(kim.id, 'test:press', undefined);
-    room.detach('socket-lee');
-    room.act(kim.id, 'test:finish', undefined);
+    room.act(ann.id, 'test:alarm', 500);
+    clock.now = 1_000;
+    room.expire();
+    expect(entries(room).find(([, , type]) => type === 'tick')).toEqual([1_000, null, 'tick', undefined]);
+  });
+
+  test('leaves out what is said once the chat has taken up its share, and keeps its own events', () => {
+    const { room, ann, bob } = table();
+    room.start(0);
+    // More chat than the log keeps; then someone is moved to the spectators, which is kept all the
+    // same.
+    for (let i = 0; i < 600; i += 1) room.act(ann.id, 'test:say', 'x'.repeat(100));
+    room.bench(bob.id);
+    room.act(ann.id, 'test:finish', undefined);
     const kept = room.record()?.log;
     expect(kept?.truncated).toBe(true);
     const types = kept?.entries.map(({ type }) => type) ?? [];
-    expect(types.filter((type) => type === 'test:press').length).toBeLessThan(1400);
+    expect(types.filter((type) => type === 'test:say').length).toBeLessThan(600);
     expect(types.filter((type) => type === 'truncated')).toHaveLength(1);
-    expect(types.slice(-3)).toEqual(['offline', 'test:finish', 'end']);
+    expect(types.slice(-3)).toEqual(['bench', 'test:finish', 'end']);
   });
 
   test('notes neither a message that was refused nor one that changed nothing', () => {
@@ -153,5 +156,68 @@ describe('the log of a game', () => {
     const second = room.record()?.log;
     expect(second?.gameId).not.toBe(first?.gameId);
     expect(second?.entries.map(({ type }) => type)).toEqual(['test:finish', 'end']);
+  });
+});
+
+describe('the record of a game', () => {
+  test('says how a game that finished ended, and what kind of game it was', () => {
+    const { room, ann, clock } = table();
+    room.start(0);
+    clock.now = 90_000;
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.ending).toBe('finished');
+    expect(room.record()).toMatchObject({
+      ending: 'finished',
+      durationMs: 90_000,
+      counts: { accounts: 1, guests: 1, agents: 0 },
+      takeover: false,
+      match: false,
+      language: 'en',
+      fields: ['general'],
+      rules: 7,
+      words: expect.stringMatching(/^[0-9a-f]{16}$/),
+    });
+  });
+
+  test('is kept of a game that the chair withdrew, which says so', () => {
+    const { room } = table();
+    room.start(0);
+    expect(room.withdraw(room.gameId as string)).toEqual({ ok: true });
+    const record = room.record();
+    expect(record?.ending).toBe('withdrawn');
+    expect(record?.log?.entries.at(-1)).toMatchObject({ by: null, type: 'end', data: { ending: 'withdrawn' } });
+  });
+
+  test('is kept of a game cut short when its room closes, which says why', () => {
+    const { room } = table();
+    expect(room.cut('empty')).toBe(false);
+    room.start(0);
+    expect(room.record()).toBeNull();
+    expect(room.cut('idle')).toBe(true);
+    expect(room.cut('idle')).toBe(false);
+    expect(room.record()?.ending).toBe('abandoned');
+    expect(room.record()?.log?.entries.at(-1)).toMatchObject({
+      type: 'end',
+      data: { ending: 'abandoned', why: 'idle' },
+    });
+    // The record has no results: the game was never over.
+    expect(room.results()).toBeNull();
+  });
+
+  test('is kept of a game that the server stopped', () => {
+    const { room } = table();
+    room.start(0);
+    room.cut('restart');
+    expect(room.record()?.ending).toBe('interrupted');
+    expect(room.record()?.log?.entries.at(-1)).toMatchObject({ type: 'end', data: { ending: 'interrupted' } });
+  });
+
+  test('says when an AI played for someone who was offline', () => {
+    const { room, ann, bob } = table();
+    room.start(0);
+    room.act(bob.id, 'test:press', 'for Bob', 'reviewer1');
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()?.takeover).toBe(true);
+    expect(room.record()?.log?.entries[0]).toMatchObject({ by: bob.id, agent: 'reviewer1' });
   });
 });

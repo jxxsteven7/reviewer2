@@ -12,7 +12,6 @@ import {
   type AgentPersona,
   type BoardWord,
   type DuoNotice,
-  type Emote,
   type Language,
   type MatchRules,
   type PublicRoom,
@@ -25,7 +24,7 @@ import {
 import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
 import type { GameContext, GameModule, PlayerResult, Viewer } from './game';
-import { GameLog, type GameLogData, type GameLogEvent } from './gameLog';
+import { GameLog, type GameEnding, type GameLogData, type GameLogEvent } from './gameLog';
 import { newPlayerId } from './identity';
 import { Match, type Present } from './match';
 import { pinyinOf } from './pinyin';
@@ -144,6 +143,24 @@ function poolOf(words: WordLibrary, fields: readonly string[], language: Languag
 // The same fields in another order are no change.
 const sameFields = (a: readonly string[], b: readonly string[]) => [...a].sort().join() === [...b].sort().join();
 
+// What the record keeps of a game that has come to an end (Room.record()).
+export interface GameRecordData {
+  ending: GameEnding;
+  durationMs: number;
+  setup: unknown;
+  log: GameLogData | null;
+  overflowed: boolean;
+  agentLog: AgentLogData | null;
+  accounts: { playerId: string; accountId: number }[];
+  counts: { accounts: number; guests: number; agents: number };
+  takeover: boolean;
+  match: boolean;
+  language: string;
+  fields: string[];
+  rules: number | null;
+  words: string;
+}
+
 export class Room {
   readonly id = randomId();
   readonly code: string;
@@ -199,9 +216,16 @@ export class Room {
   // start until the room goes back to the waiting room, and the AI's own log beside it.
   #log: GameLog | null = null;
   #agentLog: AgentLog | null = null;
+  // How the game began, as the game describes it (GameModule.setup), for its record.
+  #setup: unknown = null;
+  // How the current game came to an end, for its record, once it has: by itself, withdrawn by the
+  // chair, or cut short when the room closed (cut()). Null while it is on.
+  #ending: GameEnding | null = null;
   // Whether an AI has played in the current game, as an AI player or for someone who was offline:
   // such a game brings nobody points, a streak or a friend title (docs/architecture.md#ai-players).
   #agentsPlayed = false;
+  // Whether an AI has played for someone who was offline in the current game.
+  #tookOver = false;
   readonly #agents: AgentState | null;
   // The streaks that the game which has just ended brought the members with accounts to, by player
   // ID, from STREAK_MIN games on (noteStreak), until the room leaves the ended game behind.
@@ -388,6 +412,7 @@ export class Room {
     const member = this.members.get(id);
     if (!member || member.agent || member.takenOver === on) return false;
     member.takenOver = on;
+    this.#note(null, 'takeover', { player: id, on });
     this.changed();
     return true;
   }
@@ -403,10 +428,7 @@ export class Room {
     if (member.browsers.size > MAX_BROWSERS) member.browsers.delete(member.browsers.values().next().value as string);
     member.offlineSince = null;
     this.lastSeen = this.#now();
-    if (first) {
-      this.#note(member.id, 'online');
-      this.changed();
-    }
+    if (first) this.changed();
     return first;
   }
 
@@ -424,7 +446,6 @@ export class Room {
     member.sockets.delete(socketId);
     if (member.sockets.size > 0) return false;
     member.offlineSince = this.#now();
-    this.#note(member.id, 'offline');
     this.changed();
     return true;
   }
@@ -502,11 +523,12 @@ export class Room {
   }
 
   // A member's quick reaction, at most one every EMOTE_COOLDOWN_MS. It changes nothing in the room:
-  // the socket layer passes it on, and no snapshot carries it. One that comes too soon is refused
+  // the socket layer passes it on, and neither a snapshot nor the log of the game carries it. One
+  // that comes too soon is refused
   // with how long is left, so that the tab it came from, which may not be the one that sent the
   // last, counts down the right wait. A clock that was set back counts as a wait that is over,
   // rather than one that lasts until the clock has caught up.
-  emote(id: string, emote: Emote): Ack {
+  emote(id: string): Ack {
     const member = this.members.get(id);
     if (!member) return fail('not_member');
     const now = this.#now();
@@ -514,7 +536,6 @@ export class Room {
     if (since >= 0 && since < EMOTE_COOLDOWN_MS)
       return { ...fail('emote_cooldown'), waitMs: EMOTE_COOLDOWN_MS - since };
     this.#emoted.set(member.key, now);
-    this.#note(id, 'emote', { emote });
     return done;
   }
 
@@ -696,7 +717,10 @@ export class Room {
     for (const member of this.members.values()) if (member.agent) agents[member.id] = member.agent;
     this.#log = new GameLog(this.game.id, gameId, this.#now(), this.#seating(data), agents);
     this.#agentLog = new AgentLog(gameId, this.#now());
+    this.#setup = this.game.setup?.(data) ?? null;
+    this.#ending = null;
     this.#agentsPlayed = Object.keys(agents).length > 0;
+    this.#tookOver = false;
     this.#usedWords = draw.used;
     this.gameId = gameId;
     this.round += 1;
@@ -724,6 +748,7 @@ export class Room {
     if (this.gameId === null || gameId !== this.gameId) return fail('stale');
     const result = this.game.withdraw(this.data, gameId);
     if (!result.ok) return refusalOf(result);
+    this.#ended('withdrawn');
     this.data = result.data;
     this.phase = 'ended';
     this.changed();
@@ -752,7 +777,10 @@ export class Room {
     this.#gone.clear();
     this.#log = null;
     this.#agentLog = null;
+    this.#setup = null;
+    this.#ending = null;
     this.#agentsPlayed = false;
+    this.#tookOver = false;
     this.#streaks.clear();
     this.#duos.clear();
   }
@@ -780,6 +808,7 @@ export class Room {
     if (this.phase === 'playing' && this.gameId !== null) {
       const result = this.game.withdraw(this.data, this.gameId);
       if (!result.ok) return refusalOf(result);
+      this.#ended('withdrawn');
       this.data = result.data;
       this.phase = 'ended';
     }
@@ -900,18 +929,21 @@ export class Room {
     if (!result.ok) return refusalOf(result);
     if (result.data !== this.data) {
       this.#noteMessage(id, type, payload, agent);
-      if (agent !== undefined && this.phase === 'playing') this.#agentsPlayed = true;
+      if (agent !== undefined && this.phase === 'playing') {
+        this.#agentsPlayed = true;
+        this.#tookOver = true;
+      }
     }
     this.#update(result.data);
     return done;
   }
 
   // Notes a game's message that changed the game, as the game says to (GameModule.logged): what
-  // it said, or nothing of it at all, as of a line of a group's chat.
+  // it carried and what the player said, or nothing of it at all, as of a card chosen.
   #noteMessage(id: string, type: string, payload: unknown, agent?: AgentPersona): void {
     if (this.phase !== 'playing' || !this.#log) return;
     const note = this.game.logged ? this.game.logged(type, payload) : {};
-    if (note !== null) this.#log.add(this.#now(), id, type, note.data, note.minor ?? false, agent);
+    if (note !== null) this.#log.add(this.#now(), id, type, { data: note.data, said: note.said, agent });
   }
 
   // Notes a step of an AI in the AI's log of the game it was asked for, `gameId`, at `at` on the
@@ -929,7 +961,32 @@ export class Room {
   // Notes one of the room's own events in the log of the game being played
   // (docs/architecture.md#game-records). Outside a game, there is nothing to note it in.
   #note(by: string | null, type: GameLogEvent, data?: unknown): void {
-    if (this.phase === 'playing') this.#log?.add(this.#now(), by, type, data);
+    if (this.phase === 'playing') this.#log?.add(this.#now(), by, type, { data });
+  }
+
+  // Ends the log of the game, which has come to an end in this way. A game that finished by itself
+  // ends with a plain `end`; one cut short says how, and why the room closed.
+  #ended(ending: GameEnding, why?: string): void {
+    this.#note(null, 'end', ending === 'finished' ? undefined : { ending, ...(why === undefined ? {} : { why }) });
+    this.#ending = ending;
+  }
+
+  // The room closes while its game is on: the game ends there, unfinished, for its record
+  // (docs/architecture.md#game-records): `interrupted` when the server stops, and otherwise
+  // `abandoned`, for `why` the room closed, as the socket layer says: its chair closed it
+  // ("chair"), its last person left ("empty"), or nobody was online, or nothing happened, in it for
+  // too long ("idle", "stale"). Returns whether there was a game to end; record() has it then. The
+  // room is closing, so nothing else about it changes.
+  cut(why: string): boolean {
+    if (this.phase !== 'playing' || this.#ending !== null) return false;
+    if (why === 'restart') this.#ended('interrupted');
+    else this.#ended('abandoned', why);
+    return true;
+  }
+
+  // How the current game came to an end, or null while it is on or when there is none.
+  get ending(): GameEnding | null {
+    return this.#ending;
   }
 
   // Where everyone in the room is in the game, by player ID, as the game describes each of them
@@ -950,7 +1007,7 @@ export class Room {
   #take(data: unknown, over: boolean): void {
     this.data = data;
     if (!over) return;
-    this.#note(null, 'end');
+    this.#ended('finished');
     this.phase = 'ended';
     this.#scoreGame();
   }
@@ -1029,31 +1086,57 @@ export class Room {
     return scores && new Map(scores.map(({ key, points }) => [key, points]));
   }
 
-  // What the record keeps of the game that has just ended (docs/architecture.md#game-records): its
-  // log, or null when it grew too long to keep, and which of those who played in it had which
-  // account, by the player ID they had, those who left during the game included; a player who left
-  // and came back has had two. Guests have no account, and are not in it. Null before a game has
-  // ended.
-  record(): {
-    log: GameLogData | null;
-    overflowed: boolean;
-    agentLog: AgentLogData | null;
-    accounts: { playerId: string; accountId: number }[];
-  } | null {
-    if (this.phase !== 'ended' || !this.#log) return null;
+  // What the record keeps of the game that has come to an end (docs/architecture.md#game-records),
+  // however it did: finished, withdrawn, or cut short when the room closed (cut()). Null while it
+  // is on, and for a game with words of the chair's own, which stay with the room
+  // (docs/games/keywords.md#custom-words).
+  //
+  // - How it ended, how long it took, and how it began (GameModule.setup).
+  // - Its log, or null when it grew too long to keep, and the AI's own log, if an AI played.
+  // - Which of those who played in it had which account, by the player ID they had, those who left
+  //   during the game included; a player who left and came back has had two. Guests have no
+  //   account, and are not in it.
+  // - How many played in it, by member key, with an account, as guests and as AI players, and
+  //   whether an AI played for someone who was offline.
+  // - Whether it was a game of a match, its language, its fields, and the version of its rules.
+  record(): GameRecordData | null {
+    if (this.#ending === null || !this.#log || this.customWords.length > 0) return null;
     const keys = new Set(
       this.game.participants?.(this.data, this.context) ??
         (this.results() ?? []).map(({ playerId }) => this.context.keyOf(playerId)),
     );
     const accounts: { playerId: string; accountId: number }[] = [];
+    const kinds = new Map<string, keyof GameRecordData['counts']>();
     for (const member of this.members.values()) {
       if (member.account && keys.has(member.key)) accounts.push({ playerId: member.id, accountId: member.account.id });
+      kinds.set(member.key, member.agent ? 'agents' : member.account ? 'accounts' : 'guests');
     }
-    for (const [playerId, { key, accountId }] of this.#gone) {
+    for (const [playerId, { key, accountId, agent }] of this.#gone) {
       if (accountId !== null && keys.has(key)) accounts.push({ playerId, accountId });
+      if (!kinds.has(key)) kinds.set(key, agent ? 'agents' : accountId !== null ? 'accounts' : 'guests');
+    }
+    const counts = { accounts: 0, guests: 0, agents: 0 };
+    for (const key of keys) {
+      const kind = kinds.get(key);
+      if (kind) counts[kind] += 1;
     }
     const agentLog = this.#agentLog && !this.#agentLog.empty ? this.#agentLog.data() : null;
-    return { log: this.#log.data(), overflowed: this.#log.overflowed, agentLog, accounts };
+    return {
+      ending: this.#ending,
+      durationMs: Math.max(0, Math.round(this.#now() - this.#log.startedAt)),
+      setup: this.#setup,
+      log: this.#log.data(),
+      overflowed: this.#log.overflowed,
+      agentLog,
+      accounts,
+      counts,
+      takeover: this.#tookOver,
+      match: this.match !== null,
+      language: this.language,
+      fields: [...this.fields],
+      rules: this.game.rulesVersion ?? null,
+      words: this.#words.hash,
+    };
   }
 
   // --- the game's own time ----------------------------------------------------------------
@@ -1073,7 +1156,12 @@ export class Room {
     const data = this.game.tick(this.data, this.context);
     if (data === this.data) return false;
     const over = this.#endsWith(data);
-    this.#note(null, 'tick');
+    // Whom the game was waiting for, of those who were offline then: the time they let run out.
+    const offline = (this.game.due?.(this.data) ?? []).filter((id) => {
+      const member = this.members.get(id);
+      return member !== undefined && member.agent === null && member.sockets.size === 0;
+    });
+    this.#note(null, 'tick', offline.length > 0 ? { offline } : undefined);
     this.#take(data, over);
     this.rev += 1;
     return true;
