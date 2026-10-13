@@ -29,7 +29,8 @@ import { formatList } from '../../core/i18n';
 //
 // The word and the number picked are models, so that the game can keep them as a draft while the
 // PI prepares the clue ahead of their turn, when `canGive` is false: the panel then says that
-// only the PI sees the draft, and holds the button until the turn comes. `gone` names the marked
+// only the PI sees the draft, and holds the button until the turn comes, as the keyboard's enter
+// key, which then says "done" rather than "send". `gone` names the marked
 // cards that were revealed meanwhile, whose marks the game took away, as it takes back a number
 // picked that is no longer on offer.
 const props = withDefaults(
@@ -131,7 +132,7 @@ function give() {
       autocomplete="off"
       autocapitalize="off"
       spellcheck="false"
-      enterkeyhint="send"
+      :enterkeyhint="canGive ? 'send' : 'done'"
       aria-describedby="clue-limit"
       :aria-invalid="problem ? 'true' : undefined"
     />

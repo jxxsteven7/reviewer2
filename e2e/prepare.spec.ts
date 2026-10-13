@@ -33,7 +33,7 @@ for (const language of ['en', 'zh'] as const) {
 
     // While the other group's PI thinks, the button is there and the panel is folded away.
     const prepare = captain.locator('.prepare');
-    const toggle = captain.locator('.prepare > button');
+    const toggle = captain.locator('button.prepare');
     await expect(toggle).toHaveText(text.game.prepare);
     await expect(captain.locator('.clue-panel')).toHaveCount(0);
     await toggle.click();

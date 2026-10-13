@@ -610,6 +610,8 @@ describe('CluePanel', () => {
       "This is the draft of your next clue. Only you see it, and you give it once it's your turn.",
     );
     expect((wrapper.get('input').element as HTMLInputElement).value).toBe('Sci');
+    // The keyboard's enter key can't send the clue yet, and says so.
+    expect(wrapper.get('input').attributes('enterkeyhint')).toBe('done');
     await wrapper.get('input').setValue('Science');
     expect(wrapper.find('.problem').exists()).toBe(false);
     const submit = () => wrapper.get('button[type="submit"]');
@@ -627,6 +629,7 @@ describe('CluePanel', () => {
     await wrapper.setProps({ canGive: true });
     expect(wrapper.find('.ahead').exists()).toBe(false);
     expect(wrapper.classes()).not.toContain('draft');
+    expect(wrapper.get('input').attributes('enterkeyhint')).toBe('send');
     expect(submit().attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     expect(wrapper.emitted('give')).toEqual([['Science', 4]]);
@@ -1171,7 +1174,7 @@ describe('KeywordsGame', () => {
     return { ...view, data: { ...data, settings, game } };
   };
   const HISTORY = ((waiting().data as KeywordsRoomData).game as KeywordsView).history;
-  const toggle = (wrapper: ReturnType<typeof mount>) => wrapper.get('.prepare > button');
+  const toggle = (wrapper: ReturnType<typeof mount>) => wrapper.get('button.prepare');
   const typed = (wrapper: ReturnType<typeof mount>) =>
     (wrapper.get('.clue-panel input').element as HTMLInputElement).value;
   const DRAFT = 'r2.clueDraft';
@@ -1208,7 +1211,13 @@ describe('KeywordsGame', () => {
     expect(card(wrapper, 0)?.attributes('aria-disabled')).toBe('true');
     // Nothing went to the server, and the draft is in the browser's storage, for this game.
     expect(send.mock.calls.length).toBe(sent);
-    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({ game: 'g1', word: 'Theory', count: null, targets: [3, 0] });
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: 'Theory',
+      count: null,
+      targets: [3, 0],
+    });
 
     // The PI's turn: the panel is open with the draft in it, and the clue goes with one tap.
     await wrapper.setProps({ room: waiting({ team: 'red' }) });
@@ -1252,7 +1261,13 @@ describe('KeywordsGame', () => {
     await flushPromises();
     expect(typed(wrapper)).toBe('Theory');
     expect(wrapper.findAll('.target')).toHaveLength(1);
-    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({ game: 'g1', word: 'Theory', count: null, targets: [3] });
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: 'Theory',
+      count: null,
+      targets: [3],
+    });
     // The snapshot that the connection brings back says that the clue went, and the next one was
     // given meanwhile too, so that two records came at once.
     const mine: ClueRecord = { turn: 2, team: 'red', word: 'Theory', count: 1, guesses: [] };
@@ -1261,6 +1276,32 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.target')).toHaveLength(0);
     expect(toggle(wrapper).text()).toBe('Prepare the next clue');
     expect(readStored(DRAFT)).toBeNull();
+  });
+
+  test('drops a draft read back after a reload if its clue went meanwhile', async () => {
+    // The clue went, the page was reloaded before the snapshot with it came, and the draft was
+    // last changed before red's clue in the history.
+    writeStored(DRAFT, JSON.stringify({ game: 'g1', since: 0, word: 'Science', count: null, targets: [0] }));
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    expect(toggle(wrapper).text()).toBe('Prepare the next clue');
+    expect(wrapper.findAll('.target')).toHaveLength(0);
+    expect(readStored(DRAFT)).toBeNull();
+  });
+
+  test('keeps the input, its focus and what is typed in it when the turn comes', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global(), attachTo: document.body });
+    await toggle(wrapper).trigger('click');
+    const input = document.body.querySelector<HTMLInputElement>('#clue-word');
+    if (!input) throw new Error('no input');
+    input.focus();
+    await wrapper.get('.clue-panel input').setValue('Theo');
+    expect(document.activeElement).toBe(input);
+    await wrapper.setProps({ room: waiting({ team: 'red' }) });
+    expect(wrapper.get('form.clue-panel').classes()).not.toContain('draft');
+    expect(document.body.querySelector('#clue-word')).toBe(input);
+    expect(input.value).toBe('Theo');
+    expect(document.activeElement).toBe(input);
+    wrapper.unmount();
   });
 
   test('folds the panel when the turn comes, and keeps the draft through a clue phase that ran out', async () => {
@@ -1295,7 +1336,13 @@ describe('KeywordsGame', () => {
     // number fewer, and 9 isn't one of them, so the number follows the marks again.
     await wrapper.setProps({ room: waiting({ remaining: { red: 8, blue: 8 } }, 'ann', free) });
     expect(toggle(wrapper).text()).toBe('Keep preparing (2 cards marked)');
-    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({ game: 'g1', word: '', count: null, targets: [3, 0] });
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: '',
+      count: null,
+      targets: [3, 0],
+    });
     await wrapper.setProps({ room: waiting({ team: 'red', remaining: { red: 8, blue: 8 } }, 'ann', free) });
     expect(numbers()).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
     expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('2');
@@ -1330,7 +1377,7 @@ describe('KeywordsGame', () => {
   });
 
   test('brings the draft back after a reload, less a card found meanwhile, and starts the next game without it', async () => {
-    writeStored(DRAFT, JSON.stringify({ game: 'g1', word: 'Science', count: 4, targets: [0, 2] }));
+    writeStored(DRAFT, JSON.stringify({ game: 'g1', since: 1, word: 'Science', count: 4, targets: [0, 2] }));
     const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
     expect(toggle(wrapper).text()).toBe('Keep preparing (“Science”, 1 card marked, number 4)');
     expect(card(wrapper, 0)?.get('.target').text()).toBe('1');
@@ -1339,7 +1386,13 @@ describe('KeywordsGame', () => {
     expect(wrapper.get('.clue-panel .gone').text()).toContain('“Journal”');
     // The number the PI picked stays picked.
     expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('4');
-    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({ game: 'g1', word: 'Science', count: 4, targets: [0] });
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: 'Science',
+      count: 4,
+      targets: [0],
+    });
     // Another game starts over, and the old draft is gone.
     await wrapper.setProps({ room: { ...waiting({ gameId: 'g2' }), gameId: 'g2' } });
     expect(toggle(wrapper).text()).toBe('Prepare the next clue');
@@ -1347,7 +1400,7 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.target')).toHaveLength(0);
     expect(readStored(DRAFT)).toBeNull();
     // A draft of another game is no draft for this one.
-    writeStored(DRAFT, JSON.stringify({ game: 'g0', word: 'Old', count: null, targets: [3] }));
+    writeStored(DRAFT, JSON.stringify({ game: 'g0', since: 1, word: 'Old', count: null, targets: [3] }));
     const other = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
     expect(toggle(other).text()).toBe('Prepare the next clue');
     expect(readStored(DRAFT)).toBeNull();
@@ -1384,7 +1437,7 @@ describe('KeywordsGame', () => {
         .exists();
     // The PI's draft in the browser's storage is left alone by anyone else who views the game,
     // or one that has ended, in another tab of the same browser.
-    const stored = JSON.stringify({ game: 'g1', word: 'Science', count: null, targets: [3] });
+    const stored = JSON.stringify({ game: 'g1', since: 1, word: 'Science', count: null, targets: [3] });
     writeStored(DRAFT, stored);
     expect(prepare(waiting({}, 'bob'))).toBe(false);
     expect(prepare(waiting({}, 'eve'))).toBe(false);

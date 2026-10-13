@@ -155,11 +155,14 @@ const preparing = ref(false);
 const draft = ref<ClueDraft>(emptyDraft());
 const gone = ref<string[]>([]);
 // The draft is read and written for a PI alone: anyone else who views the game, as in another
-// tab of the PI's browser, has none, and must not take theirs out of the storage.
+// tab of the PI's browser, has none, and must not take theirs out of the storage. A draft read
+// back after a reload is dropped if the group's clue went since it was last changed: the page
+// may have gone before the server's snapshot with the clue came.
 watch(
   () => (isCaptain.value ? game.value.gameId : null),
   (gameId) => {
-    draft.value = gameId === null ? emptyDraft() : readDraft(gameId);
+    const team = mySeat.value?.team;
+    draft.value = gameId === null || !team ? emptyDraft() : readDraft(gameId, team, game.value.history);
     gone.value = [];
     preparing.value = false;
   },
@@ -168,7 +171,7 @@ watch(
 watch(
   draft,
   (current) => {
-    if (isCaptain.value) writeDraft(game.value.gameId, current);
+    if (isCaptain.value) writeDraft(game.value.gameId, current, game.value.history.length);
   },
   { deep: true },
 );
@@ -369,8 +372,25 @@ const chosenByOthers = computed(() =>
             </div>
             <GroupChat :room="room" />
           </div>
+          <GuessBar v-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />
+          <p v-else-if="!canClue && !game.result && !paused" class="status">
+            {{ game.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group }) }}
+          </p>
+          <UiButton
+            v-if="mayPrepare"
+            class="prepare"
+            size="small"
+            :aria-expanded="preparing"
+            @click="preparing = !preparing"
+          >
+            {{ preparing ? t('game.prepareHide') : summary ? t('game.prepareDraft', { summary }) : t('game.prepare') }}
+          </UiButton>
+          <!--
+            One panel for the draft and for the clue, so that when the PI's turn comes while they
+            type, the input, its focus and what the keyboard is still composing stay as they are.
+          -->
           <CluePanel
-            v-if="canClue"
+            v-if="canClue || (mayPrepare && preparing)"
             v-model:word="draft.word"
             v-model:count="draft.count"
             :game="game"
@@ -380,31 +400,9 @@ const chosenByOthers = computed(() =>
             :busy="busy"
             :targets="draft.targets"
             :gone="gone"
+            :can-give="canClue"
             @give="giveClue"
           />
-          <GuessBar v-else-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />
-          <p v-else-if="!game.result && !paused" class="status">
-            {{ game.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group }) }}
-          </p>
-          <div v-if="mayPrepare" class="prepare">
-            <UiButton size="small" :aria-expanded="preparing" @click="preparing = !preparing">
-              {{
-                preparing ? t('game.prepareHide') : summary ? t('game.prepareDraft', { summary }) : t('game.prepare')
-              }}
-            </UiButton>
-            <CluePanel
-              v-if="preparing"
-              v-model:word="draft.word"
-              v-model:count="draft.count"
-              :game="game"
-              :counts="counts"
-              :settings="data.settings"
-              :language="room.language"
-              :targets="draft.targets"
-              :gone="gone"
-              :can-give="false"
-            />
-          </div>
           <UiButton v-if="canExtend" class="extend" size="small" :disabled="busy" @click="extend">
             {{ t('game.extend') }}
           </UiButton>
@@ -515,6 +513,7 @@ const chosenByOthers = computed(() =>
     'chat groups log .'
     'panel panel panel panel'
     'prepare prepare prepare prepare'
+    'draft draft draft draft'
     'extend extend extend extend';
   grid-template-columns: auto auto auto minmax(0, 1fr);
   gap: var(--space-2);
@@ -555,16 +554,13 @@ const chosenByOthers = computed(() =>
 }
 
 /* The draft of the next clue, under the status line: its button, and the panel once opened. */
-.prepare {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
+.actions > :deep(.prepare) {
   grid-area: prepare;
+  justify-self: start;
 }
 
-.prepare > :deep(.clue-panel) {
-  align-self: stretch;
+.actions > :deep(.clue-panel.draft) {
+  grid-area: draft;
 }
 
 .who {
