@@ -130,11 +130,6 @@
       "forms": { "en": ["prestressed"] }
     },
     {
-      "id": "reinforcement",
-      "zh": "配筋",
-      "en": "Reinforcement"
-    },
-    {
       "id": "concrete-cover",
       "zh": "保护层",
       "en": "Concrete cover"
