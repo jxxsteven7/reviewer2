@@ -406,6 +406,26 @@ describe('the AI players of a group', () => {
     expect(playerIn(ann.state as RoomView, catId)?.takenOver).toBeUndefined();
   });
 
+  test('play once a person of the group has been away, whoever chairs the room', async () => {
+    const { ann, bob, cat, code, student } = await withCat();
+    // Ann hands the chair to Bob, a guest: nobody is played for in the room any more, but the AI
+    // players in it play on, and count a person as gone after the same while.
+    await expectOk(ann.send('room:chair', { playerId: bob.me }));
+    await ann.waitFor((state) => state.chairId === bob.me && state.agents === false, 'Bob in the chair');
+    const reds = redTargets(code);
+    playReds(reds);
+    server.advance(CLUE_PACE_MS);
+    await until(() => guessQuestions().length === 1, 'the advice question');
+    const catId = await goes(cat, ann);
+    server.advance(TAKEOVER_MS);
+    // Without Cat, the AI student plays the guesses itself, as itself.
+    await until(() => guessQuestions().length === 2, 'the question of the student alone');
+    server.advance(GUESS_PACE_MS);
+    await until(() => truth(code).cards[reds[0] as number]?.revealed === true, 'the first card');
+    expect(truth(code).history.at(-1)?.guesses).toEqual([expect.objectContaining({ player: student.id })]);
+    expect(playerIn(ann.state as RoomView, catId)?.takenOver).toBeUndefined();
+  });
+
   test('drop an answer that comes after the game has moved on', async () => {
     const { ann, code } = await againstAi();
     agent.hold();
@@ -667,6 +687,59 @@ describe('a game that an AI played in', () => {
     expect((await browser.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
     expect(server.db.prepare('SELECT count(*) AS n FROM game_players').get()).toEqual({ n: 0 });
     expect(kept()).toEqual([row]);
+  });
+
+  test('keeps in the AI log an answer that came too late, and none from the game before', async () => {
+    const { ann, bob, code } = await againstAi();
+    // The agent is asked for the clue of the first game, and is still thinking when the chair ends
+    // the game and starts another, whose first red clue it is asked for too. Both answers come in
+    // the second game: the first belongs to no game that is played any more.
+    agent.hold();
+    await until(() => agent.questions.length === 1, 'the question of the first game');
+    await expectOk(ann.send('room:end', { gameId: truth(code).gameId }));
+    await expectOk(ann.send('room:again', { gameId: ann.state?.gameId }));
+    await ann.waitFor((state) => state.phase === 'lobby', 'the waiting room');
+    await start(ann);
+    const gameId = truth(code).gameId;
+    if (truth(code).team === 'blue') await peopleTurn(code, ann, bob);
+    await until(() => agent.questions.length === 2, 'the question of the second game');
+    agent.release();
+    await settle();
+    // The clue is given, and the red turn's time runs out while the agent thinks about the guesses:
+    // that answer is noted as late.
+    agent.hold();
+    server.advance(CLUE_PACE_MS);
+    await until(() => truth(code).phase === 'guess', 'the clue');
+    await until(() => agent.questions.length === 3, 'the guess question');
+    const { turn } = truth(code);
+    server.advance(defaultSettings('en').guessTime * 1000);
+    await until(() => truth(code).turn === turn + 1, 'the turn to end');
+    agent.release();
+    await settle();
+    // In the next red turn, the AI student ends the game on Reviewer 2, so that the record is kept.
+    agent.play = (request) => {
+      if (request.kind === 'clue') return scriptedPlay(request);
+      const reviewer2 = truth(code).cards.findIndex((card) => card.color === 'reviewer2');
+      return { ok: true, kind: 'guess', picks: [reviewer2], reason: 'A hunch.', note: SCRIPT_NOTE };
+    };
+    await peopleTurn(code, ann, bob);
+    await ann.waitFor((state) => roomData(state).game?.team === 'red', 'the red turn again');
+    await until(() => agent.questions.length === 4, 'the clue question');
+    server.advance(CLUE_PACE_MS);
+    await until(() => agent.questions.length === 5, 'the guess question');
+    server.advance(GUESS_PACE_MS);
+    await ann.waitFor((state) => state.phase === 'ended', 'the end');
+    const [row] = kept();
+    const agentLog = JSON.parse(row?.agentLog ?? '{}') as { gameId: string; steps: { kind: string; late?: true }[] };
+    expect(agentLog.gameId).toBe(gameId);
+    expect(agentLog.steps.map(({ kind, late }) => ({ kind, late }))).toEqual([
+      { kind: 'clue', late: undefined },
+      { kind: 'guess', late: true },
+      { kind: 'clue', late: undefined },
+      { kind: 'guess', late: undefined },
+    ]);
+    // The late answer is kept whole beside the mark.
+    expect(agentLog.steps[1]).toMatchObject({ answer: { picks: [] }, late: true });
   });
 
   test('counts one that an AI played in for someone offline, whose moves the logs mark', async () => {

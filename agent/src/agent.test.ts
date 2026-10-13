@@ -86,14 +86,14 @@ describe('a request', () => {
   });
 });
 
-describe('the queue', () => {
-  // A model whose first answer waits until it is let go.
-  function held() {
-    let release: (value: unknown) => void = () => {};
-    const answer = new Promise((resolve) => (release = resolve));
-    return { model: new ScriptedModel({ clue: [answer, clueAnswer, clueAnswer] }), release: () => release(clueAnswer) };
-  }
+// A model whose first answer waits until it is let go.
+function held() {
+  let release: (value: unknown) => void = () => {};
+  const answer = new Promise((resolve) => (release = resolve));
+  return { model: new ScriptedModel({ clue: [answer, clueAnswer, clueAnswer] }), release: () => release(clueAnswer) };
+}
 
+describe('the queue', () => {
   test('answers busy at once when it is full', async () => {
     const { model, release } = held();
     const { handle } = agent(model, { concurrency: 1, queue: 1 });
@@ -105,17 +105,20 @@ describe('the queue', () => {
     expect(await second).toMatchObject({ ok: true });
   });
 
-  test('answers busy to a request whose wait ran out before its turn came', async () => {
+  test('answers busy to a request as soon as its wait runs out before its turn came', async () => {
     const { model, release } = held();
     const { handle } = agent(model, { concurrency: 1, queue: 4 });
     const first = handle(JSON.stringify(clueRequest()));
+    // The second request hears `busy` while the first still holds the model, not once it lets go.
     const second = handle(JSON.stringify(clueRequest({ waitMs: 20 })));
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(await second).toEqual({ ok: false, error: 'busy' });
+    expect(model.asked).toHaveLength(1);
+    // The turn that it gave up goes to the next one.
+    const third = handle(JSON.stringify(clueRequest()));
     release();
     expect(await first).toMatchObject({ ok: true });
-    expect(await second).toEqual({ ok: false, error: 'busy' });
-    // The turn that it gave up goes to the next one.
-    expect(await handle(JSON.stringify(clueRequest()))).toMatchObject({ ok: true });
+    expect(await third).toMatchObject({ ok: true });
+    expect(model.asked).toHaveLength(2);
   });
 
   test("stops waiting for the model when the request's wait runs out, which is no fault of the model's", async () => {
@@ -159,6 +162,27 @@ describe('the socket', () => {
       expect(JSON.parse(answer)).toMatchObject({ ok: true, word: 'Biology' });
       const long = await exchange(path, 'x'.repeat(MAX_AGENT_REQUEST + 10));
       expect(JSON.parse(long)).toEqual({ ok: false, error: 'bad_request' });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  test('answers busy within the wait of a request that waits its turn, while the game server still listens', async () => {
+    const { model, release } = held();
+    const { server } = agent(model, { concurrency: 1, queue: 4 });
+    const path = join(dir, 'agent.sock');
+    await new Promise<void>((resolve) => server.listen(path, resolve));
+    try {
+      const first = exchange(path, `${JSON.stringify(clueRequest())}\n`);
+      // The model has the first request; the second asks to wait 50 ms, and the game server stops
+      // listening a moment after that (server/src/core/agentChannel.ts).
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const started = performance.now();
+      const second = await exchange(path, `${JSON.stringify(clueRequest({ waitMs: 50 }))}\n`);
+      expect(performance.now() - started).toBeLessThan(500);
+      expect(JSON.parse(second)).toEqual({ ok: false, error: 'busy' });
+      release();
+      expect(JSON.parse(await first)).toMatchObject({ ok: true, word: 'Biology' });
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }

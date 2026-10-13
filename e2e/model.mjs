@@ -3,16 +3,18 @@
 // the tests know what the AI players will do. As the PI it aims "zebra", or another clue that hasn't
 // been given, at the first two cards of its group's that are face down. As a student it reveals a
 // card that a test told it of with POST /e2e/picks, once, or else the first card that is face down,
-// whose color it doesn't know; a test names the card by its word rather than its number, which
-// keeps apart the rooms of tests that run at the same time. It lists one model, `e2e-model`.
+// whose color it doesn't know; a test names the card by its word, with the words of its board, so
+// that the rooms of tests that run at the same time, whose boards may share a word, keep apart. It
+// lists one model, `e2e-model`.
 import { createServer } from 'node:http';
 
 export const MODEL = 'e2e-model';
 
 const CLUES = ['zebra', 'quokka', 'narwhal'];
 
-// The words of the cards that students are to reveal, as tests named them.
-const told = new Set();
+// The cards that students are to reveal, as tests named them: the word, and the words of the board
+// it is on.
+const told = [];
 
 // The cards of the board in the question, by number: "7. Word [OURS]", and " (revealed)" for one
 // that is face up.
@@ -37,8 +39,10 @@ function answer(body) {
     // More than one clue, for when the first was given before in the game, which the agent refuses.
     return { candidates: CLUES.map((clue) => ({ targets, clue, count: targets.length })) };
   }
-  const wanted = board.find((card) => told.has(card.word));
-  if (wanted) told.delete(wanted.word);
+  const words = new Set(cards(question).map((card) => card.word));
+  const place = told.findIndex((pick) => pick.board.every((word) => words.has(word)));
+  const wanted = place === -1 ? undefined : board.find((card) => card.word === told[place].word);
+  if (place !== -1) told.splice(place, 1);
   return { picks: [(wanted ?? board[0])?.number ?? 0], reason: 'It fits the clue.' };
 }
 
@@ -53,7 +57,8 @@ export function startModel(port) {
       };
       if (request.method === 'GET' && request.url === '/v1/models') return reply(200, { data: [{ id: MODEL }] });
       if (request.method === 'POST' && request.url === '/e2e/picks') {
-        told.add(JSON.parse(text).word);
+        const { word, board } = JSON.parse(text);
+        told.push({ word, board });
         return reply(200, {});
       }
       if (request.method !== 'POST' || request.url !== '/v1/chat/completions') return reply(404, {});

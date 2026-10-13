@@ -15,7 +15,7 @@ import type { Timers } from './socket';
 // The driver looks at a room every time it changes (poke(), from the socket layer's broadcast), and
 // otherwise only when a timer it set comes due: a move that waits for its pace, a request to ask
 // again after one that brought no answer, a player who has been offline long enough to be played
-// for, or the agent to be asked whether it is back. The game says what a seat is to do
+// for or to be counted as gone by the AI players, or the agent to be asked whether it is back. The game says what a seat is to do
 // (GameModule.agentTask) and what message an answer makes (GameModule.agentMove); the driver knows
 // nothing of any game.
 //
@@ -192,9 +192,10 @@ export class AgentDriver {
   // the group has an AI student, who plays the guesses alone. Nobody plays a game that no person is
   // online in, so that no AI plays on for nobody.
   //
-  // Whoever is played for is marked so (Room.takeOver) from the first thing an AI does for them until
-  // they are back, or the game ends; the room is looked at again when someone who is offline will
-  // have been for long enough.
+  // Whoever is played for is marked so (Room.takeOver) from the moment an AI is to play for them,
+  // as it is asked what to do, until they are back, or the game ends. The room is looked at again
+  // when someone who is offline will have been for long enough: for an AI to play for them, or for
+  // the AI players of the room to count them as gone, as an AI student that advised them does.
   #seats(room: Room, playing: boolean): Map<string, Seat> {
     const now = this.#options.now();
     const seats = new Map<string, Seat>();
@@ -202,6 +203,7 @@ export class AgentDriver {
     const watched = [...room.members.values()].some((member) => !member.agent && member.sockets.size > 0);
     const asked = playing && watched && this.state.up && room.game.agentTask !== undefined;
     const allowed = playing && this.state.up && room.agentsAllowed();
+    const played = asked && room.hasAgents();
     let due: number | null = null;
     if (asked) {
       for (const member of room.members.values()) {
@@ -215,10 +217,10 @@ export class AgentDriver {
     for (const member of room.members.values()) {
       if (member.agent) continue;
       const since = member.offlineSince;
-      const offline = allowed && member.sockets.size === 0 && since !== null;
+      const offline = (allowed || played) && member.sockets.size === 0 && since !== null;
       const away = offline && now - since >= TAKEOVER_MS;
       if (offline && !away) due = Math.min(due ?? Infinity, since + TAKEOVER_MS);
-      if (!away) {
+      if (!away || !allowed) {
         room.takeOver(member.id, false);
         continue;
       }

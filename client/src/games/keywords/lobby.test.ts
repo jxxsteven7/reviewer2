@@ -124,14 +124,23 @@ describe('KeywordsLobby', () => {
     const reminded = mount(KeywordsLobby, { props: { room: untimed }, global: global() });
     expect(reminded.get('.groups').text()).toContain('A room with AI players needs time limits');
 
-    // Nobody else invites them, but everyone reads what they mean for the game.
+    // Nobody else invites them, but everyone reads what they mean for the game, and that an AI
+    // plays for whoever is offline in their turn, which it does in this room with or without an AI
+    // player in it.
     const player = mount(KeywordsLobby, { props: { room: withAgents('bob') }, global: global() });
     expect(player.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(0);
-    expect(player.text()).toContain('A game with AI players brings nobody points, a streak or a friend title');
+    expect(player.text()).toContain('A game that an AI plays in brings nobody points, a streak or a friend title.');
+    expect(player.text()).toContain('A player who is offline for 20 seconds in their turn is played for by an AI');
+    const alone = mount(KeywordsLobby, { props: { room: { ...view('bob', 0), agents: true } }, global: global() });
+    expect(alone.text()).toContain('A player who is offline for 20 seconds in their turn is played for by an AI');
+    // With AI players in a room whose chair may no longer invite them, nobody is played for.
+    const handed = mount(KeywordsLobby, { props: { room: { ...withAgents('bob'), agents: false } }, global: global() });
+    expect(handed.text()).toContain('A game that an AI plays in brings nobody points');
+    expect(handed.text()).not.toContain('is played for by an AI');
     // Nor a chair who may not.
     const barred = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     expect(barred.text()).not.toContain('Invite Reviewer 1');
-    expect(barred.text()).not.toContain('AI players');
+    expect(barred.text()).not.toContain('an AI');
   });
 
   test('offers to invite AI players only once a person sits in a group', () => {
@@ -142,7 +151,7 @@ describe('KeywordsLobby', () => {
     });
     expect(nobody.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(0);
     // Everyone still reads what the AI student means for the game.
-    expect(nobody.text()).toContain('A game with AI players brings nobody points');
+    expect(nobody.text()).toContain('A game that an AI plays in brings nobody points');
     const seated = mount(KeywordsLobby, {
       props: {
         room: withAgents('ann', { ai: { team: 'red', role: 'guesser' }, ann: { team: 'blue', role: 'captain' } }),

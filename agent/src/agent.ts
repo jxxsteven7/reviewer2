@@ -36,22 +36,36 @@ export function createAgent({
   readMs = 2_000,
   now = () => performance.now(),
 }: AgentOptions) {
-  // The requests that wait for the model, the earliest first, and how many it is answering.
+  // The requests that wait for the model, the earliest first, each as what gives it its turn, and
+  // how many requests the model is answering.
   const waiting: (() => void)[] = [];
   let running = 0;
 
   // Waits for a turn with the model, or says that there is none to be had: the queue is full, or
-  // the request's wait ran out before its turn came, when nobody needs its answer any more.
-  async function turnWith(until: number): Promise<boolean> {
+  // the request's wait ran out before its turn came, when nobody needs its answer any more. A
+  // request leaves the queue as soon as its wait is over, so that the server hears `busy` while it
+  // still listens, rather than nothing at all: nothing would read as the agent being gone.
+  function turnWith(until: number): Promise<boolean> {
     if (running < concurrency) {
       running += 1;
-      return true;
+      return Promise.resolve(true);
     }
-    if (waiting.length >= queue) return false;
-    await new Promise<void>((resolve) => waiting.push(resolve));
-    if (now() < until) return true;
-    done();
-    return false;
+    if (waiting.length >= queue) return Promise.resolve(false);
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(
+        () => {
+          const place = waiting.indexOf(take);
+          if (place !== -1) waiting.splice(place, 1);
+          resolve(false);
+        },
+        Math.max(0, until - now()),
+      );
+      const take = () => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      waiting.push(take);
+    });
   }
 
   // A request is done with the model: the next one in the queue takes its place.

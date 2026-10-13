@@ -54,11 +54,12 @@ async function chatOf(page: Page): Promise<Locator> {
 }
 
 // Tells the model of the tests which card a student is to name next, by its word, as the PI's key
-// shows it.
+// shows it, and by the words of the board it is on.
 async function tellModel(captain: Page, color: 'red' | 'blue' | 'neutral'): Promise<number> {
   const index = await keyCard(captain, color);
-  const word = gameOf(snapshotsOf(captain).at(-1))?.cards[index]?.word;
-  await fetch(`${modelUrl}/e2e/picks`, { method: 'POST', body: JSON.stringify({ word }) });
+  const cards = gameOf(snapshotsOf(captain).at(-1))?.cards ?? [];
+  const body = JSON.stringify({ word: cards[index]?.word, board: cards.map((card) => card.word) });
+  await fetch(`${modelUrl}/e2e/picks`, { method: 'POST', body });
   return index;
 }
 
