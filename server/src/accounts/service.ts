@@ -225,7 +225,11 @@ export class Accounts {
       likes: this.likes.count(account.id),
       liked: viewer !== null && this.likes.has(account.id, viewer.id),
       mine: viewer !== null && viewer.id === account.id,
-      duo: viewer !== null && viewer.id !== account.id ? (this.duosOf(viewer.id).get(account.id) ?? null) : null,
+      // Only a friend of the owner is sent this, and only for a friend is it worked out.
+      duo:
+        viewer !== null && this.friends.store.areFriends(viewer.id, account.id)
+          ? (this.duosOf(viewer.id).get(account.id) ?? null)
+          : null,
     };
   }
 
@@ -238,13 +242,16 @@ export class Accounts {
 
   // The titles that a game which has just ended brought friends who played in it, for one account
   // that played in it: `players` is everyone whose game went on the record, the account among them,
-  // with their side and whether they won. A friend is told of by their account ID.
+  // with their side and whether they won. A friend is told of by their account ID. The counts are
+  // only worked out when a friend of the account played: for most games, nobody did.
   duosBrought(
     accountId: number,
     players: ReadonlyMap<number, DuoPart>,
   ): { friend: number; title: DuoTitle; count: number }[] {
     const mine = players.get(accountId);
     if (!mine) return [];
+    const friends = this.friends.store;
+    if (![...players.keys()].some((other) => other !== accountId && friends.areFriends(accountId, other))) return [];
     // Every friend who played in the game shares it, so has counts.
     const after = this.records.duos(accountId);
     const played = new Map<number, ReturnType<typeof duoGame>>();

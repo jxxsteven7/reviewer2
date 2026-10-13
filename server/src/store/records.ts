@@ -34,6 +34,26 @@ export interface NewRecord {
   points: number;
 }
 
+// What the account has played with each of its friends (shared/src/duos.ts): its records, by
+// their own index, each with the friends' records of the same game. Those are found by the index
+// on the game (migration 13), which the statement names: left to itself, SQLite looks each friend
+// up in every one of the account's games instead, by the unique index on the account and the
+// game, which takes ten times as long with a hundred friends. Teammates were on the same side,
+// opponents on another. Exported for the test that reads the query plan.
+export const DUOS_SQL =
+  'SELECT theirs.account_id AS friend, ' +
+  'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 1) AS wonTogether, ' +
+  'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 0) AS lostTogether, ' +
+  'count(*) FILTER (WHERE theirs.side <> mine.side) AS against, ' +
+  'count(*) FILTER (WHERE theirs.side <> mine.side AND mine.won = 1) AS beat, ' +
+  'count(*) FILTER (WHERE theirs.side <> mine.side AND theirs.won = 1) AS beaten ' +
+  'FROM game_records AS mine JOIN game_records AS theirs INDEXED BY game_records_game ' +
+  'ON theirs.game_id = mine.game_id AND theirs.account_id <> mine.account_id ' +
+  'WHERE mine.account_id = ? AND theirs.account_id IN (' +
+  'SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END FROM friendships ' +
+  "WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?)) " +
+  'GROUP BY theirs.account_id';
+
 // One player's part in one match that ran its course.
 export interface NewMatchRecord {
   game: string;
@@ -96,23 +116,7 @@ export class RecordStore {
         'ON CONFLICT (account_id) DO UPDATE SET best_wins = excluded.best_wins, ' +
         'best_losses = excluded.best_losses, run = excluded.run, run_won = excluded.run_won',
     );
-    // What the account has played with each of its friends (shared/src/duos.ts): its records, by
-    // their own index, each with the friends' records of the same game, found by the index on the
-    // game (migration 13). Teammates were on the same side, opponents on another.
-    this.#duos = db.prepare(
-      'SELECT theirs.account_id AS friend, ' +
-        'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 1) AS wonTogether, ' +
-        'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 0) AS lostTogether, ' +
-        'count(*) FILTER (WHERE theirs.side <> mine.side) AS against, ' +
-        'count(*) FILTER (WHERE theirs.side <> mine.side AND mine.won = 1) AS beat, ' +
-        'count(*) FILTER (WHERE theirs.side <> mine.side AND theirs.won = 1) AS beaten ' +
-        'FROM game_records AS mine JOIN game_records AS theirs ' +
-        'ON theirs.game_id = mine.game_id AND theirs.account_id <> mine.account_id ' +
-        'WHERE mine.account_id = ? AND theirs.account_id IN (' +
-        'SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END FROM friendships ' +
-        "WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?)) " +
-        'GROUP BY theirs.account_id',
-    );
+    this.#duos = db.prepare(DUOS_SQL);
   }
 
   // Keeps the record, and the streak that the game brings the account to, or null when the game
