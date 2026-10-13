@@ -1,0 +1,1318 @@
+{
+  "id": "archaeology",
+  "name": {
+    "zh": "考古与文博",
+    "en": "Archaeology & Heritage"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "excavation",
+      "zh": "发掘",
+      "en": "Excavation",
+      "forms": { "en": ["excavate"] }
+    },
+    {
+      "id": "test-trench",
+      "zh": "探沟",
+      "en": "Test trench"
+    },
+    {
+      "id": "grid-square",
+      "zh": "探方",
+      "en": "Grid square"
+    },
+    {
+      "id": "stratigraphy",
+      "zh": "地层学",
+      "en": "Stratigraphy",
+      "forms": { "en": ["stratigraphic"] }
+    },
+    {
+      "id": "cultural-layer",
+      "zh": "文化层",
+      "en": "Cultural layer"
+    },
+    {
+      "id": "virgin-soil",
+      "zh": "生土",
+      "en": "Virgin soil"
+    },
+    {
+      "id": "typology",
+      "zh": "类型学",
+      "en": "Typology",
+      "forms": { "en": ["typological"] }
+    },
+    {
+      "id": "harris-matrix",
+      "zh": "哈里斯矩阵",
+      "en": "Harris matrix"
+    },
+    {
+      "id": "trowel",
+      "zh": "手铲",
+      "en": "Trowel"
+    },
+    {
+      "id": "luoyang-spade",
+      "zh": "洛阳铲",
+      "en": "Luoyang spade"
+    },
+    {
+      "id": "flotation",
+      "zh": "浮选",
+      "en": "Flotation"
+    },
+    {
+      "id": "sieving",
+      "zh": "过筛",
+      "en": "Sieving",
+      "forms": { "en": ["sieve"] }
+    },
+    {
+      "id": "backfill",
+      "zh": "回填",
+      "en": "Backfill"
+    },
+    {
+      "id": "rubbing",
+      "zh": "拓片",
+      "en": "Rubbing"
+    },
+    {
+      "id": "photogrammetry",
+      "zh": "摄影测量",
+      "en": "Photogrammetry"
+    },
+    {
+      "id": "gpr",
+      "zh": "探地雷达",
+      "en": "GPR",
+      "forms": { "en": ["ground-penetrating radar"] }
+    },
+    {
+      "id": "shipwreck",
+      "zh": "沉船",
+      "en": "Shipwreck"
+    },
+    {
+      "id": "artifact",
+      "zh": "遗物",
+      "en": "Artifact",
+      "forms": { "en": ["artefact"] }
+    },
+    {
+      "id": "cultural-relic",
+      "zh": "文物",
+      "en": "Cultural relic"
+    },
+    {
+      "id": "site",
+      "zh": "遗址",
+      "en": "Site"
+    },
+    {
+      "id": "remains",
+      "zh": "遗存",
+      "en": "Remains"
+    },
+    {
+      "id": "ruins",
+      "zh": "废墟",
+      "en": "Ruins"
+    },
+    {
+      "id": "hoard",
+      "zh": "窖藏",
+      "en": "Hoard"
+    },
+    {
+      "id": "ash-pit",
+      "zh": "灰坑",
+      "en": "Ash pit"
+    },
+    {
+      "id": "posthole",
+      "zh": "柱洞",
+      "en": "Posthole"
+    },
+    {
+      "id": "hearth",
+      "zh": "火塘",
+      "en": "Hearth"
+    },
+    {
+      "id": "storage-pit",
+      "zh": "窖穴",
+      "en": "Storage pit"
+    },
+    {
+      "id": "rammed-earth",
+      "zh": "夯土",
+      "en": "Rammed earth"
+    },
+    {
+      "id": "pit-house",
+      "zh": "半地穴",
+      "en": "Pit house"
+    },
+    {
+      "id": "stilt-house",
+      "zh": "干栏式建筑",
+      "en": "Stilt house"
+    },
+    {
+      "id": "kiln-site",
+      "zh": "窑址",
+      "en": "Kiln site"
+    },
+    {
+      "id": "shell-midden",
+      "zh": "贝丘",
+      "en": "Shell midden"
+    },
+    {
+      "id": "rock-shelter",
+      "zh": "岩厦",
+      "en": "Rock shelter"
+    },
+    {
+      "id": "dating",
+      "zh": "断代",
+      "en": "Dating"
+    },
+    {
+      "id": "carbon-14",
+      "zh": "碳十四",
+      "en": "Carbon-14",
+      "forms": { "en": ["C-14"] }
+    },
+    {
+      "id": "k-ar-dating",
+      "zh": "钾氩法",
+      "en": "K-Ar dating"
+    },
+    {
+      "id": "chronology",
+      "zh": "年代学",
+      "en": "Chronology",
+      "forms": { "en": ["chronological"] }
+    },
+    {
+      "id": "before-present",
+      "zh": "距今",
+      "en": "BP",
+      "forms": { "en": ["before present"] }
+    },
+    {
+      "id": "palynology",
+      "zh": "孢粉学",
+      "en": "Palynology"
+    },
+    {
+      "id": "phytolith",
+      "zh": "植硅体",
+      "en": "Phytolith"
+    },
+    {
+      "id": "starch-grain",
+      "zh": "淀粉粒",
+      "en": "Starch grain"
+    },
+    {
+      "id": "use-wear",
+      "zh": "微痕",
+      "en": "Use-wear"
+    },
+    {
+      "id": "paleopathology",
+      "zh": "古病理学",
+      "en": "Paleopathology",
+      "forms": { "en": ["palaeopathology"] }
+    },
+    {
+      "id": "archaeometry",
+      "zh": "科技考古",
+      "en": "Archaeometry"
+    },
+    {
+      "id": "zooarchaeology",
+      "zh": "动物考古",
+      "en": "Zooarchaeology"
+    },
+    {
+      "id": "archaeobotany",
+      "zh": "植物考古",
+      "en": "Archaeobotany"
+    },
+    {
+      "id": "processualism",
+      "zh": "过程考古学",
+      "en": "Processualism",
+      "forms": { "en": ["processual"] }
+    },
+    {
+      "id": "epigraphy",
+      "zh": "金石学",
+      "en": "Epigraphy"
+    },
+    {
+      "id": "numismatics",
+      "zh": "钱币学",
+      "en": "Numismatics"
+    },
+    {
+      "id": "egyptology",
+      "zh": "埃及学",
+      "en": "Egyptology"
+    },
+    {
+      "id": "assyriology",
+      "zh": "亚述学",
+      "en": "Assyriology"
+    },
+    {
+      "id": "museology",
+      "zh": "博物馆学",
+      "en": "Museology"
+    },
+    {
+      "id": "chiefdom",
+      "zh": "酋邦",
+      "en": "Chiefdom"
+    },
+    {
+      "id": "paleolithic",
+      "zh": "旧石器时代",
+      "en": "Paleolithic",
+      "forms": { "en": ["palaeolithic"] }
+    },
+    {
+      "id": "mesolithic",
+      "zh": "中石器时代",
+      "en": "Mesolithic"
+    },
+    {
+      "id": "neolithic",
+      "zh": "新石器时代",
+      "en": "Neolithic"
+    },
+    {
+      "id": "chalcolithic",
+      "zh": "铜石并用",
+      "en": "Chalcolithic"
+    },
+    {
+      "id": "iron-age",
+      "zh": "铁器时代",
+      "en": "Iron Age"
+    },
+    {
+      "id": "stone-tool",
+      "zh": "石器",
+      "en": "Stone tool"
+    },
+    {
+      "id": "hand-axe",
+      "zh": "手斧",
+      "en": "Hand axe"
+    },
+    {
+      "id": "flake",
+      "zh": "石片",
+      "en": "Flake"
+    },
+    {
+      "id": "microlith",
+      "zh": "细石器",
+      "en": "Microlith",
+      "forms": { "en": ["microlithic"] }
+    },
+    {
+      "id": "knapping",
+      "zh": "打制",
+      "en": "Knapping",
+      "forms": { "en": ["knap"] }
+    },
+    {
+      "id": "scraper",
+      "zh": "刮削器",
+      "en": "Scraper"
+    },
+    {
+      "id": "chopper",
+      "zh": "砍砸器",
+      "en": "Chopper"
+    },
+    {
+      "id": "arrowhead",
+      "zh": "箭镞",
+      "en": "Arrowhead"
+    },
+    {
+      "id": "flint",
+      "zh": "燧石",
+      "en": "Flint"
+    },
+    {
+      "id": "quern",
+      "zh": "石磨盘",
+      "en": "Quern"
+    },
+    {
+      "id": "adze",
+      "zh": "石锛",
+      "en": "Adze"
+    },
+    {
+      "id": "acheulean",
+      "zh": "阿舍利",
+      "en": "Acheulean"
+    },
+    {
+      "id": "levallois",
+      "zh": "勒瓦娄哇",
+      "en": "Levallois"
+    },
+    {
+      "id": "bone-tool",
+      "zh": "骨器",
+      "en": "Bone tool"
+    },
+    {
+      "id": "bone-flute",
+      "zh": "骨笛",
+      "en": "Bone flute"
+    },
+    {
+      "id": "spindle-whorl",
+      "zh": "纺轮",
+      "en": "Spindle whorl"
+    },
+    {
+      "id": "net-sinker",
+      "zh": "网坠",
+      "en": "Net sinker"
+    },
+    {
+      "id": "sherd",
+      "zh": "陶片",
+      "en": "Sherd",
+      "forms": { "en": ["potsherd", "shard"] }
+    },
+    {
+      "id": "painted-pottery",
+      "zh": "彩陶",
+      "en": "Painted ware"
+    },
+    {
+      "id": "black-pottery",
+      "zh": "黑陶",
+      "en": "Black pottery"
+    },
+    {
+      "id": "eggshell-ware",
+      "zh": "蛋壳陶",
+      "en": "Eggshell ware"
+    },
+    {
+      "id": "cord-marking",
+      "zh": "绳纹",
+      "en": "Cord marking",
+      "forms": { "en": ["cord-marked"] }
+    },
+    {
+      "id": "stoneware",
+      "zh": "炻器",
+      "en": "Stoneware"
+    },
+    {
+      "id": "protoporcelain",
+      "zh": "原始瓷",
+      "en": "Protoporcelain"
+    },
+    {
+      "id": "underglaze",
+      "zh": "釉下彩",
+      "en": "Underglaze"
+    },
+    {
+      "id": "crackle",
+      "zh": "开片",
+      "en": "Crackle"
+    },
+    {
+      "id": "saggar",
+      "zh": "匣钵",
+      "en": "Saggar",
+      "forms": { "en": ["sagger"] }
+    },
+    {
+      "id": "sancai",
+      "zh": "唐三彩",
+      "en": "Sancai"
+    },
+    {
+      "id": "ru-ware",
+      "zh": "汝窑",
+      "en": "Ru ware"
+    },
+    {
+      "id": "yue-ware",
+      "zh": "越窑",
+      "en": "Yue ware"
+    },
+    {
+      "id": "amphora",
+      "zh": "双耳瓶",
+      "en": "Amphora"
+    },
+    {
+      "id": "black-figure",
+      "zh": "黑绘",
+      "en": "Black-figure"
+    },
+    {
+      "id": "red-figure",
+      "zh": "红绘",
+      "en": "Red-figure"
+    },
+    {
+      "id": "ding",
+      "zh": "鼎",
+      "en": "Ding"
+    },
+    {
+      "id": "gui",
+      "zh": "簋",
+      "en": "Gui"
+    },
+    {
+      "id": "jue",
+      "zh": "爵",
+      "en": "Jue"
+    },
+    {
+      "id": "zun",
+      "zh": "尊",
+      "en": "Zun"
+    },
+    {
+      "id": "gu",
+      "zh": "觚",
+      "en": "Gu"
+    },
+    {
+      "id": "li",
+      "zh": "鬲",
+      "en": "Li"
+    },
+    {
+      "id": "ritual-vessel",
+      "zh": "礼器",
+      "en": "Ritual vessel"
+    },
+    {
+      "id": "wine-vessel",
+      "zh": "酒器",
+      "en": "Wine vessel"
+    },
+    {
+      "id": "bronze-ware",
+      "zh": "青铜器",
+      "en": "Bronze ware"
+    },
+    {
+      "id": "bronze-script",
+      "zh": "金文",
+      "en": "Bronze script"
+    },
+    {
+      "id": "inscription",
+      "zh": "铭文",
+      "en": "Inscription",
+      "forms": { "en": ["inscribe"] }
+    },
+    {
+      "id": "lost-wax",
+      "zh": "失蜡法",
+      "en": "Lost wax"
+    },
+    {
+      "id": "piece-mold",
+      "zh": "范铸",
+      "en": "Piece-mold",
+      "forms": { "en": ["piece-mould"] }
+    },
+    {
+      "id": "taotie",
+      "zh": "饕餮纹",
+      "en": "Taotie"
+    },
+    {
+      "id": "bronze-mirror",
+      "zh": "铜镜",
+      "en": "Bronze mirror"
+    },
+    {
+      "id": "belt-hook",
+      "zh": "带钩",
+      "en": "Belt hook"
+    },
+    {
+      "id": "dagger-axe",
+      "zh": "戈",
+      "en": "Dagger-axe"
+    },
+    {
+      "id": "halberd",
+      "zh": "戟",
+      "en": "Halberd"
+    },
+    {
+      "id": "bronze-drum",
+      "zh": "铜鼓",
+      "en": "Bronze drum"
+    },
+    {
+      "id": "chime-stones",
+      "zh": "编磬",
+      "en": "Chime stones"
+    },
+    {
+      "id": "gilding",
+      "zh": "鎏金",
+      "en": "Gilding",
+      "forms": { "en": ["gilt", "gild"] }
+    },
+    {
+      "id": "gold-inlay",
+      "zh": "错金",
+      "en": "Gold inlay"
+    },
+    {
+      "id": "bronze-disease",
+      "zh": "青铜病",
+      "en": "Bronze disease"
+    },
+    {
+      "id": "patina",
+      "zh": "包浆",
+      "en": "Patina"
+    },
+    {
+      "id": "censer",
+      "zh": "熏炉",
+      "en": "Censer"
+    },
+    {
+      "id": "coin",
+      "zh": "钱币",
+      "en": "Coin"
+    },
+    {
+      "id": "coin-mold",
+      "zh": "钱范",
+      "en": "Coin mold",
+      "forms": { "en": ["coin mould"] }
+    },
+    {
+      "id": "knife-money",
+      "zh": "刀币",
+      "en": "Knife money"
+    },
+    {
+      "id": "spade-money",
+      "zh": "布币",
+      "en": "Spade money"
+    },
+    {
+      "id": "wuzhu",
+      "zh": "五铢",
+      "en": "Wuzhu"
+    },
+    {
+      "id": "cowrie",
+      "zh": "海贝",
+      "en": "Cowrie"
+    },
+    {
+      "id": "jade",
+      "zh": "玉",
+      "en": "Jade"
+    },
+    {
+      "id": "cong",
+      "zh": "玉琮",
+      "en": "Cong"
+    },
+    {
+      "id": "bi-disc",
+      "zh": "玉璧",
+      "en": "Bi disc"
+    },
+    {
+      "id": "pig-dragon",
+      "zh": "玉猪龙",
+      "en": "Pig dragon"
+    },
+    {
+      "id": "yazhang",
+      "zh": "牙璋",
+      "en": "Yazhang"
+    },
+    {
+      "id": "nephrite",
+      "zh": "软玉",
+      "en": "Nephrite"
+    },
+    {
+      "id": "turquoise",
+      "zh": "绿松石",
+      "en": "Turquoise"
+    },
+    {
+      "id": "agate",
+      "zh": "玛瑙",
+      "en": "Agate"
+    },
+    {
+      "id": "cinnabar",
+      "zh": "朱砂",
+      "en": "Cinnabar"
+    },
+    {
+      "id": "ochre",
+      "zh": "赭石",
+      "en": "Ochre",
+      "forms": { "en": ["ocher"] }
+    },
+    {
+      "id": "eye-bead",
+      "zh": "蜻蜓眼",
+      "en": "Eye bead"
+    },
+    {
+      "id": "kaolin",
+      "zh": "高岭土",
+      "en": "Kaolin"
+    },
+    {
+      "id": "xun",
+      "zh": "埙",
+      "en": "Xun"
+    },
+    {
+      "id": "papyrus",
+      "zh": "莎草纸",
+      "en": "Papyrus"
+    },
+    {
+      "id": "parchment",
+      "zh": "羊皮纸",
+      "en": "Parchment"
+    },
+    {
+      "id": "clay-tablet",
+      "zh": "泥板",
+      "en": "Clay tablet"
+    },
+    {
+      "id": "bamboo-slip",
+      "zh": "竹简",
+      "en": "Bamboo slip"
+    },
+    {
+      "id": "wooden-tablet",
+      "zh": "木牍",
+      "en": "Wooden tablet"
+    },
+    {
+      "id": "oracle-bone",
+      "zh": "甲骨",
+      "en": "Oracle bone"
+    },
+    {
+      "id": "clay-sealing",
+      "zh": "封泥",
+      "en": "Clay sealing"
+    },
+    {
+      "id": "cylinder-seal",
+      "zh": "圆筒印章",
+      "en": "Cylinder seal"
+    },
+    {
+      "id": "stele",
+      "zh": "石碑",
+      "en": "Stele",
+      "forms": { "en": ["stela"] }
+    },
+    {
+      "id": "epitaph",
+      "zh": "墓志",
+      "en": "Epitaph"
+    },
+    {
+      "id": "eave-tile",
+      "zh": "瓦当",
+      "en": "Eave tile"
+    },
+    {
+      "id": "column-base",
+      "zh": "柱础",
+      "en": "Column base"
+    },
+    {
+      "id": "silk-painting",
+      "zh": "帛画",
+      "en": "Silk painting"
+    },
+    {
+      "id": "tomb",
+      "zh": "墓葬",
+      "en": "Tomb"
+    },
+    {
+      "id": "mausoleum",
+      "zh": "陵墓",
+      "en": "Mausoleum"
+    },
+    {
+      "id": "grave-goods",
+      "zh": "随葬品",
+      "en": "Grave goods"
+    },
+    {
+      "id": "sarcophagus",
+      "zh": "石棺",
+      "en": "Sarcophagus"
+    },
+    {
+      "id": "hanging-coffin",
+      "zh": "悬棺",
+      "en": "Hanging coffin"
+    },
+    {
+      "id": "urn-burial",
+      "zh": "瓮棺葬",
+      "en": "Urn burial"
+    },
+    {
+      "id": "flexed-burial",
+      "zh": "屈肢葬",
+      "en": "Flexed burial"
+    },
+    {
+      "id": "joint-burial",
+      "zh": "合葬",
+      "en": "Joint burial"
+    },
+    {
+      "id": "cremation",
+      "zh": "火葬",
+      "en": "Cremation",
+      "forms": { "en": ["cremate"] }
+    },
+    {
+      "id": "burial-mound",
+      "zh": "封土",
+      "en": "Burial mound"
+    },
+    {
+      "id": "cairn",
+      "zh": "积石冢",
+      "en": "Cairn"
+    },
+    {
+      "id": "dolmen",
+      "zh": "支石墓",
+      "en": "Dolmen"
+    },
+    {
+      "id": "kurgan",
+      "zh": "库尔干",
+      "en": "Kurgan"
+    },
+    {
+      "id": "catacomb",
+      "zh": "地下墓穴",
+      "en": "Catacomb"
+    },
+    {
+      "id": "cemetery",
+      "zh": "墓地",
+      "en": "Cemetery"
+    },
+    {
+      "id": "tomb-passage",
+      "zh": "墓道",
+      "en": "Tomb passage"
+    },
+    {
+      "id": "burial-chamber",
+      "zh": "墓室",
+      "en": "Burial chamber"
+    },
+    {
+      "id": "crypt",
+      "zh": "地宫",
+      "en": "Crypt"
+    },
+    {
+      "id": "spirit-way",
+      "zh": "神道",
+      "en": "Spirit way"
+    },
+    {
+      "id": "waist-pit",
+      "zh": "腰坑",
+      "en": "Waist pit"
+    },
+    {
+      "id": "mingqi",
+      "zh": "明器",
+      "en": "Mingqi"
+    },
+    {
+      "id": "figurine",
+      "zh": "俑",
+      "en": "Figurine"
+    },
+    {
+      "id": "tomb-guardian",
+      "zh": "镇墓兽",
+      "en": "Tomb guardian"
+    },
+    {
+      "id": "chariot-pit",
+      "zh": "车马坑",
+      "en": "Chariot pit"
+    },
+    {
+      "id": "ship-burial",
+      "zh": "船葬",
+      "en": "Ship burial"
+    },
+    {
+      "id": "bog-body",
+      "zh": "沼泽干尸",
+      "en": "Bog body"
+    },
+    {
+      "id": "grave-robbing",
+      "zh": "盗墓",
+      "en": "Grave robbing",
+      "forms": { "en": ["grave robber"] }
+    },
+    {
+      "id": "megalith",
+      "zh": "巨石",
+      "en": "Megalith",
+      "forms": { "en": ["megalithic"] }
+    },
+    {
+      "id": "rock-art",
+      "zh": "岩画",
+      "en": "Rock art"
+    },
+    {
+      "id": "cave-painting",
+      "zh": "洞穴壁画",
+      "en": "Cave painting"
+    },
+    {
+      "id": "obelisk",
+      "zh": "方尖碑",
+      "en": "Obelisk"
+    },
+    {
+      "id": "scarab",
+      "zh": "圣甲虫",
+      "en": "Scarab"
+    },
+    {
+      "id": "gold-mask",
+      "zh": "黄金面具",
+      "en": "Gold mask"
+    },
+    {
+      "id": "bronze-tree",
+      "zh": "青铜神树",
+      "en": "Bronze tree"
+    },
+    {
+      "id": "houmuwu-ding",
+      "zh": "后母戊鼎",
+      "en": "Houmuwu ding"
+    },
+    {
+      "id": "flying-horse",
+      "zh": "马踏飞燕",
+      "en": "Flying Horse"
+    },
+    {
+      "id": "jade-suit",
+      "zh": "金缕玉衣",
+      "en": "Jade suit"
+    },
+    {
+      "id": "zhoukoudian",
+      "zh": "周口店",
+      "en": "Zhoukoudian"
+    },
+    {
+      "id": "peking-man",
+      "zh": "北京人",
+      "en": "Peking Man"
+    },
+    {
+      "id": "yuanmou-man",
+      "zh": "元谋人",
+      "en": "Yuanmou Man"
+    },
+    {
+      "id": "banpo",
+      "zh": "半坡",
+      "en": "Banpo"
+    },
+    {
+      "id": "yangshao",
+      "zh": "仰韶",
+      "en": "Yangshao"
+    },
+    {
+      "id": "longshan",
+      "zh": "龙山",
+      "en": "Longshan"
+    },
+    {
+      "id": "hemudu",
+      "zh": "河姆渡",
+      "en": "Hemudu"
+    },
+    {
+      "id": "liangzhu",
+      "zh": "良渚",
+      "en": "Liangzhu"
+    },
+    {
+      "id": "hongshan",
+      "zh": "红山",
+      "en": "Hongshan"
+    },
+    {
+      "id": "dawenkou",
+      "zh": "大汶口",
+      "en": "Dawenkou"
+    },
+    {
+      "id": "majiayao",
+      "zh": "马家窑",
+      "en": "Majiayao"
+    },
+    {
+      "id": "peiligang",
+      "zh": "裴李岗",
+      "en": "Peiligang"
+    },
+    {
+      "id": "jiahu",
+      "zh": "贾湖",
+      "en": "Jiahu"
+    },
+    {
+      "id": "taosi",
+      "zh": "陶寺",
+      "en": "Taosi"
+    },
+    {
+      "id": "shimao",
+      "zh": "石峁",
+      "en": "Shimao"
+    },
+    {
+      "id": "erlitou",
+      "zh": "二里头",
+      "en": "Erlitou"
+    },
+    {
+      "id": "erligang",
+      "zh": "二里岗",
+      "en": "Erligang"
+    },
+    {
+      "id": "yinxu",
+      "zh": "殷墟",
+      "en": "Yinxu"
+    },
+    {
+      "id": "sanxingdui",
+      "zh": "三星堆",
+      "en": "Sanxingdui"
+    },
+    {
+      "id": "jinsha",
+      "zh": "金沙",
+      "en": "Jinsha"
+    },
+    {
+      "id": "mawangdui",
+      "zh": "马王堆",
+      "en": "Mawangdui"
+    },
+    {
+      "id": "niuheliang",
+      "zh": "牛河梁",
+      "en": "Niuheliang"
+    },
+    {
+      "id": "lingjiatan",
+      "zh": "凌家滩",
+      "en": "Lingjiatan"
+    },
+    {
+      "id": "panlongcheng",
+      "zh": "盘龙城",
+      "en": "Panlongcheng"
+    },
+    {
+      "id": "shijiahe",
+      "zh": "石家河",
+      "en": "Shijiahe"
+    },
+    {
+      "id": "mogao-caves",
+      "zh": "莫高窟",
+      "en": "Mogao Caves"
+    },
+    {
+      "id": "grotto",
+      "zh": "石窟",
+      "en": "Grotto"
+    },
+    {
+      "id": "stonehenge",
+      "zh": "巨石阵",
+      "en": "Stonehenge"
+    },
+    {
+      "id": "lascaux",
+      "zh": "拉斯科洞窟",
+      "en": "Lascaux"
+    },
+    {
+      "id": "altamira",
+      "zh": "阿尔塔米拉",
+      "en": "Altamira"
+    },
+    {
+      "id": "knossos",
+      "zh": "克诺索斯",
+      "en": "Knossos"
+    },
+    {
+      "id": "mycenae",
+      "zh": "迈锡尼",
+      "en": "Mycenae",
+      "forms": { "en": ["mycenaean"] }
+    },
+    {
+      "id": "troy",
+      "zh": "特洛伊",
+      "en": "Troy"
+    },
+    {
+      "id": "herculaneum",
+      "zh": "赫库兰尼姆",
+      "en": "Herculaneum"
+    },
+    {
+      "id": "sutton-hoo",
+      "zh": "萨顿胡",
+      "en": "Sutton Hoo"
+    },
+    {
+      "id": "olduvai-gorge",
+      "zh": "奥杜威峡谷",
+      "en": "Olduvai Gorge"
+    },
+    {
+      "id": "abu-simbel",
+      "zh": "阿布辛贝",
+      "en": "Abu Simbel"
+    },
+    {
+      "id": "great-zimbabwe",
+      "zh": "大津巴布韦",
+      "en": "Great Zimbabwe"
+    },
+    {
+      "id": "machu-picchu",
+      "zh": "马丘比丘",
+      "en": "Machu Picchu"
+    },
+    {
+      "id": "teotihuacan",
+      "zh": "特奥蒂瓦坎",
+      "en": "Teotihuacan"
+    },
+    {
+      "id": "chichen-itza",
+      "zh": "奇琴伊察",
+      "en": "Chichen Itza"
+    },
+    {
+      "id": "nazca-lines",
+      "zh": "纳斯卡线条",
+      "en": "Nazca Lines"
+    },
+    {
+      "id": "moai",
+      "zh": "摩艾石像",
+      "en": "Moai"
+    },
+    {
+      "id": "angkor-wat",
+      "zh": "吴哥窟",
+      "en": "Angkor Wat"
+    },
+    {
+      "id": "borobudur",
+      "zh": "婆罗浮屠",
+      "en": "Borobudur"
+    },
+    {
+      "id": "petra",
+      "zh": "佩特拉",
+      "en": "Petra"
+    },
+    {
+      "id": "mohenjo-daro",
+      "zh": "摩亨佐达罗",
+      "en": "Mohenjo-daro"
+    },
+    {
+      "id": "colosseum",
+      "zh": "斗兽场",
+      "en": "Colosseum",
+      "forms": { "en": ["coliseum"] }
+    },
+    {
+      "id": "acropolis",
+      "zh": "卫城",
+      "en": "Acropolis"
+    },
+    {
+      "id": "docent",
+      "zh": "讲解员",
+      "en": "Docent"
+    },
+    {
+      "id": "audio-guide",
+      "zh": "语音导览",
+      "en": "Audio guide"
+    },
+    {
+      "id": "display-case",
+      "zh": "展柜",
+      "en": "Display case"
+    },
+    {
+      "id": "storeroom",
+      "zh": "库房",
+      "en": "Storeroom"
+    },
+    {
+      "id": "collection",
+      "zh": "藏品",
+      "en": "Collection"
+    },
+    {
+      "id": "cataloging",
+      "zh": "编目",
+      "en": "Cataloging",
+      "forms": { "en": ["cataloguing", "catalog", "catalogue"] }
+    },
+    {
+      "id": "antique",
+      "zh": "古董",
+      "en": "Antique"
+    },
+    {
+      "id": "heirloom",
+      "zh": "传世品",
+      "en": "Heirloom"
+    },
+    {
+      "id": "world-heritage",
+      "zh": "世界遗产",
+      "en": "World Heritage"
+    },
+    {
+      "id": "conservator",
+      "zh": "文物修复师",
+      "en": "Conservator"
+    },
+    {
+      "id": "consolidation",
+      "zh": "加固",
+      "en": "Consolidation"
+    },
+    {
+      "id": "reversibility",
+      "zh": "可逆性",
+      "en": "Reversibility",
+      "forms": { "en": ["reversible"] }
+    },
+    {
+      "id": "authenticity",
+      "zh": "原真性",
+      "en": "Authenticity"
+    },
+    {
+      "id": "altar",
+      "zh": "祭坛",
+      "en": "Altar"
+    },
+    {
+      "id": "unearth",
+      "zh": "出土",
+      "en": "Unearth",
+      "forms": { "en": ["unearthed"] }
+    },
+    {
+      "id": "assemblage",
+      "zh": "器物组合",
+      "en": "Assemblage"
+    },
+    {
+      "id": "protohistory",
+      "zh": "原史",
+      "en": "Protohistory",
+      "forms": { "en": ["protohistoric"] }
+    },
+    {
+      "id": "sedentism",
+      "zh": "定居",
+      "en": "Sedentism",
+      "forms": { "en": ["sedentary"] }
+    },
+    {
+      "id": "luxor",
+      "zh": "卢克索",
+      "en": "Luxor"
+    },
+    {
+      "id": "dugout-canoe",
+      "zh": "独木舟",
+      "en": "Dugout canoe"
+    },
+    {
+      "id": "tombstone",
+      "zh": "墓碑",
+      "en": "Tombstone"
+    }
+  ]
+}
