@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { parseAcknowledgments } from '@reviewer2/shared';
-import { expect, newPlayer, register, TEXT, test } from './helpers';
+import { expect, newPlayer, plural, register, TEXT, test } from './helpers';
 
 // The acknowledgments end to end: a player with an account suggests a new game with a name, a link
 // and leave to publish it, the operator adopts it with the command, which prints its entry for
@@ -47,7 +47,7 @@ test("a suggestion that is adopted is counted on its author's account page, and 
   await page.goto('/');
   await page.getByRole('button', { name: /^English/ }).click();
 
-  await page.getByRole('button', { name: text.feedback.open }).click();
+  await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
   const sheet = page.getByRole('dialog', { name: text.feedback.title });
   await expect(sheet).toContainText(text.feedback.privacy);
   // The field says where the name goes public: the home page and the repository.
@@ -85,8 +85,8 @@ test("a suggestion that is adopted is counted on its author's account page, and 
 
   // The home page lists what ACKNOWLEDGMENTS.md has, not the database.
   await page.goto('/');
-  await page.locator('details.acknowledgments summary').click();
-  const fold = page.locator('details.acknowledgments');
+  const fold = page.locator('.fold.acknowledgments');
+  await fold.locator('h2 button').click();
   await expect(fold).toContainText(text.acknowledgments.intro);
   await expect(fold).not.toContainText(credit);
   await expect(fold).not.toContainText('bid on papers');
@@ -98,8 +98,17 @@ test('the home page shows ACKNOWLEDGMENTS.md, under headings in its own language
     const page = await newPlayer(browser, language);
     await page.goto('/');
     await page.getByRole('button', { name: new RegExp(`^${words.language[language]}`) }).click();
-    const fold = page.locator('details.acknowledgments');
-    await fold.locator('summary').click();
+    // The card counts the people the file names, each once, and every anonymous player.
+    const entries = file.sections.flatMap(({ entries }) => entries);
+    const people =
+      new Set(entries.flatMap(({ name }) => (name === null ? [] : [name]))).size +
+      entries.filter(({ name }) => name === null).length;
+    const fold = page.locator('.fold.acknowledgments');
+    const toggle = fold.locator('h2 button');
+    await expect(toggle).toHaveText(plural(words.acknowledgments.counted, people));
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect(fold.locator('h3')).toHaveText(file.sections.map(({ kind }) => words.acknowledgments.kinds[kind]));
     await expect(fold.locator('li')).toHaveCount(file.sections.flatMap(({ entries }) => entries).length);
     if (file.sections.length === 0) await expect(fold).toContainText(words.acknowledgments.none);

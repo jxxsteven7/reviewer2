@@ -3,12 +3,12 @@ import { SPONSORS_PAGE } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import FoldedList from './FoldedList.vue';
 
-// The sponsors at the foot of the home page (docs/architecture.md#sponsors): the sections of
-// SPONSORS.md, as the server reads it, with names, never an amount. A sponsor on GitHub links to
-// their profile there, and a sponsor of another way to the page they gave, if any. Under the name
-// comes the line of thanks that the maintainers may have written to them, as it is written, in
-// whatever language the page is in. While nobody is listed, the list asks for the first, on GitHub
-// Sponsors or with the WeChat tip that the home page offers, which `tip` opens.
+// The sponsors on the home page (docs/architecture.md#sponsors): the sections of SPONSORS.md,
+// as the server reads it, with names, never an amount. A sponsor on GitHub links to their profile
+// there, and a sponsor of another way to the page they gave, if any. Under the name comes the line
+// of thanks that the maintainers may have written to them, as it is written, in whatever language
+// the page is in. While nobody is listed, the list asks for the first, on GitHub Sponsors or with
+// the WeChat tip that the home page offers, which `tip` opens.
 const { t } = useI18n();
 const emit = defineEmits<{ tip: [] }>();
 </script>
