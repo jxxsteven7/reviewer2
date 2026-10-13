@@ -17,7 +17,8 @@ Run `npm install` first, in every worktree; it also turns on the git hooks.
 |---|---|
 | `npm run dev` | The server on port 3000 and Vite on <http://localhost:5173>, which forwards API and socket requests to it; open the Vite address. Both read `.env` |
 | `npm run dev:mailer` | The mailer, as `.env` says; see [Accounts and email](#accounts-and-email) |
-| `npm run build` | `client/dist`, `server/dist/index.cjs` and `admin.cjs`, `mailer/dist/mailer.cjs` |
+| `npm run dev:agent` | The agent, as `.env` says; see [AI players](#ai-players) |
+| `npm run build` | `client/dist`, `server/dist/index.cjs` and `admin.cjs`, `mailer/dist/mailer.cjs`, `agent/dist/agent.cjs` |
 | `npm start` | The production build on one port, <http://localhost:3000> |
 | `npm test` | The tests of `scripts/`, then Vitest (`npx vitest` watches) |
 | `npm run test:e2e` | Playwright, end to end; see below |
@@ -29,7 +30,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. After c
 
 ## End-to-end tests
 
-The tests in `e2e/` start the built server and the mailer on free ports and open a browser context per player. They play whole games in both languages, reload pages, cut the network and chat; afterwards every snapshot any page received is checked for colors, chats and choices it must not hold. Script, console and logged server errors fail the test. The tests run side by side, those of one file too, so none may count on another having run.
+The tests in `e2e/` start the built server, the mailer and the agent on free ports, the agent with a model that answers by rule (`e2e/model.mjs`), and open a browser context per player. They play whole games in both languages, reload pages, cut the network and chat; afterwards every snapshot any page received is checked for colors, chats and choices it must not hold. Script, console and logged server errors fail the test. The tests run side by side, those of one file too, so none may count on another having run.
 
 ```bash
 npx playwright install chromium webkit   # once; on Linux add --with-deps
@@ -59,9 +60,12 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `COOKIE_SECURE` [on] | `0` only over plain HTTP, as in development |
 | `SERVER_SECRET` or `SERVER_SECRET_FILE` [off] | The server's secret, 32 characters or more, or a file holding it. It fingerprints email addresses ([architecture.md](architecture.md#mail)), so never change or lose it. Without it, no email |
 | `MAILER_SOCKET` [off] | The mailer's Unix socket, at most 107 bytes. Without it, no email |
+| `AGENT_SOCKET` [off] | The agent's Unix socket, at most 107 bytes. Without it, no AI players ([architecture.md](architecture.md#ai-players)) |
 | `APP_VERSION` [`dev`] | Build time: the version `/healthz` and the footer report |
 
 The mailer reads `MAILER_TRANSPORT` [`resend`] (`print` writes the mails out as JSON instead of sending them), `RESEND_API_KEY` or `RESEND_API_KEY_FILE` (required with `resend`), `MAILER_BASE_URL` [`https://playreviewer2.com`] (where the links lead; HTTPS with `resend`), `MAILER_SOCKET` (required, unless systemd's socket activation hands a socket over), `STATE_DIRECTORY` or `MAILER_STATE_DIR` (where the daily count of mails is kept; required with `resend`) and `MAILER_PRINT_FILE` [off] (a file that `print` writes the mails to as well).
+
+The agent reads `AGENT_SOCKET` (required, unless systemd's socket activation hands a socket over), `AGENT_MODEL_URL` (required: a service that answers OpenAI's chat completions, without a slash at the end, such as `http://127.0.0.1:11434/v1` for a model that Ollama runs on the same machine), `AGENT_MODEL` (required: the model's name there), `AGENT_MODEL_KEY` or `AGENT_MODEL_KEY_FILE` [off] (the key that the service wants, if any), `AGENT_CONCURRENCY` [2] (the requests that go to the model at once) and `AGENT_QUEUE` [32] (how many more may wait).
 
 Never commit passwords, keys or tokens; `.env` is ignored by git.
 
@@ -82,6 +86,9 @@ DATA_DIR=data node server/dist/admin.cjs profile list                      # eve
 DATA_DIR=data node server/dist/admin.cjs accounts [--json]                 # statistics of the accounts
 DATA_DIR=data node server/dist/admin.cjs accounts bar <username>           # no public rooms for this account
 DATA_DIR=data node server/dist/admin.cjs accounts unbar <username>         # public rooms again
+DATA_DIR=data node server/dist/admin.cjs agents allow <username>           # may invite AI players
+DATA_DIR=data node server/dist/admin.cjs agents deny <username>            # may not any more
+DATA_DIR=data node server/dist/admin.cjs agents list                       # who may
 DATA_DIR=data node server/dist/admin.cjs feedback adopt <id>               # thank its player; prints the entry
 DATA_DIR=data node server/dist/admin.cjs feedback draft <id> [--json]      # the title and body of its issue
 DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>      # the GitHub issue it was published as
@@ -98,7 +105,7 @@ DATA_DIR=data node server/dist/admin.cjs acknowledgments list
 DATA_DIR=data node server/dist/admin.cjs acknowledgments add <name> --kind feedback|words|playtesting --account <username>|--no-account
 ```
 
-`accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address. `accounts bar` keeps an account out of public rooms, as for a player others reported ([architecture.md](architecture.md#public-rooms)); `reports list` shows who reported whom.
+`accounts` counts the accounts, the new ones and the active ones, and lists every username with its registration date, games and matches, never a password hash, email fingerprint, token or address. `accounts bar` keeps an account out of public rooms, as for a player others reported ([architecture.md](architecture.md#public-rooms)); `reports list` shows who reported whom. `agents allow` lets an account invite AI players to the private rooms it chairs, while they are tried out ([AI players](#ai-players)).
 
 The `feedback` commands are the only way to change what became of a piece of feedback; the status page shows it and changes nothing ([architecture.md](architecture.md#feedback)). `feedback adopt` records that feedback was adopted, counted for the account of a player who left a name while logged in, and says when the name is another account's username; `acknowledgments add` thanks someone by hand, counted for the account `--account` names or, with `--no-account`, for none, and takes one or the other, so that an account isn't left out by mistake. `feedback draft` writes the title and the body of the issue for feedback whose player agreed to a public issue, from a template, with its text and name and never its contact, and records nothing; `feedback issue` records the issue it became, for such feedback alone; `feedback resolve` takes any feedback. `feedback delete` puts feedback in the trash, from which the server deletes it for good after 30 days, unless `feedback restore` brings it back; feedback that was adopted can't be deleted, only closed. No command changes what a player sent, and the acknowledgments and the reports are never deleted or changed.
 
@@ -149,6 +156,10 @@ HOST=0.0.0.0 COOKIE_SECURE=0 npm start
 
 Open `http://<your computer's address>:3000` on a phone on the same Wi-Fi, or in WeChat to try its browser. `npm start` doesn't read `.env`, and without `COOKIE_SECURE=0` the phone's browser drops the login cookie, which is `Secure`, over plain HTTP, so logging in wouldn't stick.
 
+## AI players
+
+AI players ([architecture.md](architecture.md#ai-players)) need the agent and a language model that answers OpenAI's chat completions, which the agent asks with reasoning off and for JSON in a schema: a local one, such as one that [Ollama](https://ollama.com) runs, or a service's. Set `AGENT_SOCKET`, `AGENT_MODEL_URL` and `AGENT_MODEL` in `.env`, run `npm run dev:agent` beside `npm run dev`, and let your account have AI players with `admin.cjs agents allow <username>`: in the private rooms it chairs, the waiting room offers to invite Reviewer 1. The agent's prompts are in `agent/src/prompts.ts`; change `PROMPT_VERSION` with them.
+
 ## Running in production
 
 The build needs only Node. Build it with its version, the latest one in the commit titles on `main`, since a change to the [docs for people](rules/versioning.md#docs-for-people) alone lands without one:
@@ -157,11 +168,12 @@ The build needs only Node. Build it with its version, the latest one in the comm
 APP_VERSION="$(git log --first-parent --format=%s | awk '!v && /^v[0-9]+\.[0-9]+\.[0-9]+ / { v = $1 } END { if (!v) exit 1; print v }' || git rev-parse --short HEAD)" npm run build
 ```
 
-Copy `server/dist/`, `client/dist/`, `mailer/dist/` and `words/` in the same layout and run `node server/dist/index.cjs`. What the code expects of any deployment:
+Copy `server/dist/`, `client/dist/`, `mailer/dist/`, `agent/dist/` and `words/` in the same layout and run `node server/dist/index.cjs`. What the code expects of any deployment:
 
 - **`DATA_DIR`** set to a writable directory, and in your backups.
 - **A restart after replacing the build**.
 - **Behind a reverse proxy**, the `Host` header and the WebSocket upgrade passed through, `TRUST_PROXY=1`, and the player's address in `X-Forwarded-For`, or all players share one address's limits. Any proxy other than Cloudflare must drop the `CF-IPCountry` header, or a client can choose the country it is counted under.
 - **For accounts**, HTTPS only, HTTP redirected, HSTS on, and `COOKIE_SECURE` on.
 - **For email**, the secret from a file only the service reads (`SERVER_SECRET_FILE`), and the mailer as a service of its own on `MAILER_SOCKET`. Only the mailer needs the internet, Resend's key and a state directory.
+- **For AI players**, the agent as a service of its own on `AGENT_SOCKET`, set for both. Only the agent needs to reach the language model.
 - **The status page** is `http://127.0.0.1:<STATUS_PORT>` on the server's own machine.

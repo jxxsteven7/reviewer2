@@ -34,6 +34,14 @@ const group = (team: 'red' | 'blue') => t(`lobby.group.${team}`);
 // The cards the PI meant with the clue of the step's turn, in the order marked.
 const targets = computed(() => props.replay.history.find((record) => record.turn === step.value.turn)?.targets ?? []);
 
+// Who revealed a card: an AI player by its persona's name (docs/architecture.md#ai-players), anyone
+// else by the name they had in the game.
+function nameOf(playerId: string): string {
+  const persona = props.replay.agents?.[playerId];
+  if (persona) return t(`agents.personas.${persona}`);
+  return props.replay.players[playerId] ?? t('replay.someone');
+}
+
 // What the step says, line by line.
 const lines = computed(() => {
   const { turn, team, clue, guess, timedOut } = step.value;
@@ -46,7 +54,7 @@ const lines = computed(() => {
     found.push(t('game.meant', { words: formatList(locale.value, words) }));
   }
   if (guess) {
-    const name = props.replay.players[guess.player] ?? t('replay.someone');
+    const name = nameOf(guess.player);
     const word = props.replay.cards[guess.card]?.word ?? '';
     const outcome = guess.right
       ? t('replay.right')

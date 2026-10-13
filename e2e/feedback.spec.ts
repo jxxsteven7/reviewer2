@@ -38,7 +38,7 @@ test('a bug report goes from the home page to the server, which logs its number 
   await credit.fill('x'.repeat(17));
   await expect(sheet).toContainText(text.errors.credit_invalid);
   await expect(send).toBeDisabled();
-  await credit.fill('Reviewer 1');
+  await credit.fill('Reviewer 3');
   await send.click();
 
   await expect(page.getByText(text.feedback.sent)).toBeVisible();
@@ -60,5 +60,5 @@ test('a bug report goes from the home page to the server, which logs its number 
   const log = readFileSync(process.env.E2E_SERVER_LOG as string, 'utf8');
   expect(log).not.toContain('Lock the phone');
   expect(log).not.toContain('reviewer@example.com');
-  expect(log).not.toContain('Reviewer 1');
+  expect(log).not.toContain('Reviewer 3');
 });

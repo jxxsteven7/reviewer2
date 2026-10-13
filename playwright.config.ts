@@ -21,7 +21,8 @@ const isFree = (port: number) =>
 async function freePort(): Promise<number> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const port = 20000 + Math.floor(Math.random() * 10000);
-    if (await isFree(port)) return port;
+    // The next port is for the language model of the tests (e2e/model.mjs).
+    if ((await isFree(port)) && (await isFree(port + 1))) return port;
   }
   throw new Error('no free port between 20000 and 29999 for the test server');
 }

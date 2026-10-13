@@ -20,6 +20,7 @@ const mock = vi.hoisted(() => {
 });
 vi.mock('./socket', () => mock);
 
+import { i18n } from './i18n';
 import { closeRoom, closeRoomPage, entry, leaveRoom, openRoom, room, submitName } from './room';
 
 const emit = (event: string, payload?: unknown) => mock.handlers.get(event)?.(payload);
@@ -40,6 +41,7 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
   gameId: null,
   chairId: 'ann',
   players: [{ id: 'ann', name: 'Ann', online: true }],
+  agents: false,
   screens: 0,
   me,
   match: null,
@@ -67,6 +69,28 @@ describe('the room page', () => {
     expect(entry.status).toBe('in');
     expect(room.value?.roomId).toBe('room-a');
     expect(mock.setHandshake).toHaveBeenLastCalledWith({ code: 'K7QX', roomId: 'room-a' });
+  });
+
+  test('names an AI player by its persona, in the language of the interface', async () => {
+    i18n.global.locale.value = 'en';
+    const withAi = {
+      ...view('K7QX', 'room-a', 'ann'),
+      players: [
+        { id: 'ann', name: 'Ann', online: true },
+        { id: 'ai', name: 'reviewer1', online: true, agent: 'reviewer1' as const },
+      ],
+    };
+    mock.send.mockImplementation(async () => {
+      emit('room:state', withAi);
+      return ok('K7QX', 'room-a');
+    });
+    openRoom('K7QX');
+    await flushPromises();
+    expect(room.value?.players.map((player) => player.name)).toEqual(['Ann', 'Reviewer 1']);
+    i18n.global.locale.value = 'zh';
+    await flushPromises();
+    expect(room.value?.players[1]?.name).toBe('\u4e00\u53f7\u5ba1\u7a3f\u4eba');
+    i18n.global.locale.value = 'en';
   });
 
   test('keeps a newcomer on the name form when the server refuses the name', async () => {

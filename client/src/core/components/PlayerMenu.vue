@@ -26,8 +26,9 @@ import UiSheet from './UiSheet.vue';
 // account to be friends (docs/architecture.md#friends); and, in a public room, the way for anyone
 // with an account to report them to the operator (docs/architecture.md#public-rooms); and, for a
 // player with an account, their public page (docs/architecture.md#public-profiles), in a sheet, so
-// that the viewer stays in the room. The server decides who may do what; the menu only shows what
-// the viewer may ask for.
+// that the viewer stays in the room. The chair has one action on an AI player: to remove it, at once,
+// since it may be invited again (docs/architecture.md#ai-players). The server decides who may do
+// what; the menu only shows what the viewer may ask for.
 const props = defineProps<{ player: PlayerView | null; room: RoomView }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
@@ -100,7 +101,10 @@ async function report() {
   >
     <div class="actions">
       <UiButton v-if="canView" @click="viewing = true">{{ t('lobby.manage.viewPage') }}</UiButton>
-      <template v-if="isChair">
+      <UiButton v-if="isChair && player?.agent" variant="danger" :disabled="busy" @click="manage('room:remove')">
+        {{ t('lobby.manage.remove') }}
+      </UiButton>
+      <template v-else-if="isChair">
         <UiButton :disabled="busy" @click="manage('room:spectate')">{{ t('lobby.manage.spectate') }}</UiButton>
         <UiButton :disabled="busy" @click="manage('room:chair')">{{ t('lobby.manage.chair') }}</UiButton>
         <UiButton variant="danger" :disabled="busy" @click="removing = true">{{ t('lobby.manage.remove') }}</UiButton>

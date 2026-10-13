@@ -126,6 +126,8 @@
     "you": "你",
     "chair": "主持",
     "offline": "离线",
+    "agent": "AI",
+    "takenOver": "AI 托管中",
     "rename": "修改昵称",
     "renameSubmit": "保存",
     "leave": "离开房间",
@@ -162,10 +164,12 @@
     "nobody": "还没有人",
     "takeCaptain": "担任导师",
     "joinAsGuesser": "加入当学生",
+    "inviteAgent": "邀请{name}",
     "watch": "旁听",
     "screens": "正在显示这个房间的投屏：{count} 块。",
     "dismissScreens": "撤下所有投屏",
     "captainNote": "导师能看到哪些牌属于本组，并给出提示。",
+    "agentNote": "有 AI 的房间要开出题和猜词时限，有 AI 参与的局不加学术积分，也不算连胜和好友称号。玩家轮到自己时掉线满 20 秒，由 AI 代为托管，回来就交还。",
     "desk": "主持台",
     "fields": "词库",
     "save": "保存",
@@ -180,7 +184,9 @@
       "needs_captain": "{group}还需要一位导师。",
       "captain_offline": "{group}的导师不在线。",
       "needs_guesser": "{group}还需要至少一名在线的学生。",
-      "needs_players": "至少要有 4 位在线玩家才能开局，还差 {missing} 位。"
+      "needs_players": "至少要有 4 位在线玩家才能开局，还差 {missing} 位。",
+      "needs_timers": "有 AI 的房间要开出题和猜词时限。",
+      "needs_human": "至少要有一个真人入座。"
     },
     "manage": {
       "spectate": "改为旁听",
@@ -608,6 +614,9 @@
     "bad_match": "这个游戏不能打比赛。",
     "match_over": "比赛已经结束了。",
     "match_locked": "比赛进行中不能改词库和规则。",
+    "agents_not_allowed": "这里不能邀请 AI 玩家：AI 只能进私密房间，内测期间也只对部分账号开放。",
+    "agents_in_room": "请先移出 AI 玩家：公开房间和比赛里不能有 AI。",
+    "player_is_agent": "这是 AI 玩家，房主只能把它移出房间。",
     "game_over": "游戏已经结束了。",
     "not_your_turn": "现在没轮到你们组。",
     "not_captain": "只有导师可以给提示。",
@@ -634,6 +643,7 @@
     "bad_seat": "没有这个座位。",
     "between_games": "下一局才能加入。",
     "bigger_group": "这场比赛里，还没打过的人进人少的一组。",
+    "agent_limit": "每组最多一个 AI 导师和一个 AI 学生。",
     "offline": "你已离线，正在等待连接……",
     "timeout": "服务器没有回应，请再试一次。",
     "unknown": "出错了。",
@@ -1133,5 +1143,14 @@
         "3": "对阵了这么多回合，你们比合作者还熟。"
       }
     }
+  },
+  "agents": {
+    "personas": {
+      "reviewer1": "一号审稿人"
+    }
+  },
+  "privacy": {
+    "recordsTitle": "对局记录",
+    "records": "对局会被记录。记录会用来训练和评测游戏里的 AI 玩家，也可能在去掉昵称和账号后用于研究，并公开成数据集。组内聊天从不记录。"
   }
 }

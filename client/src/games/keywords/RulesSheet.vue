@@ -7,7 +7,8 @@ import UiSheet from '../../core/components/UiSheet.vue';
 import SettingsSummary from './SettingsSummary.vue';
 
 // "How to play", in the rules' own sections, as this room plays them: its guess rule, its clue
-// rule, its time limits and its extensions, with all of its settings at the top.
+// rule, its time limits and its extensions, with all of its settings at the top, and at the end what
+// becomes of the record of the game (docs/architecture.md#game-records), which guests read here.
 const props = withDefaults(defineProps<{ settings: KeywordsSettings; language: Language; customWords?: number }>(), {
   customWords: 0,
 });
@@ -42,6 +43,7 @@ const sections = computed(() => [
   },
   { title: t('rules.timeTitle'), text: time.value },
   { title: t('rules.endTitle'), text: [t('rules.end')] },
+  { title: t('privacy.recordsTitle'), text: [t('privacy.records')] },
 ]);
 </script>
 

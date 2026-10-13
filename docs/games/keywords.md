@@ -16,7 +16,7 @@ The first game. Its module is `keywords`; the name players see lives in the loca
 ## Setting up
 
 - The room's language, chosen at creation, is the cards' language.
-- To start, each group needs an online captain and guesser.
+- To start, each group needs an online captain and guesser. With [AI players](#ai-players), every time limit must be on and a person must sit in a group.
 - The server draws 25 different words with the crypto module and a random starting group: 9 cards for it, 8 for the other, 7 irrelevant papers, 1 Reviewer 2. The words come from the chair's fields and the chair's own words ([Custom words](#custom-words)), unused ones first.
 - No word on a board gives another away. Two words clash when one lies inside the other: it is the other or its plain plural, each of its pieces is a piece of the other or of one of its forms, or it is the other's term in another language. Pieces are the parts the strict clue rule counts ([The clue](#the-clue)) plus lone letters and numbers. "Gene" and "Gene editing" clash; "Data science" and "Data cleaning" don't. `cardsClash()` in `shared/src/games/keywords/clue.ts` decides; the draw is described in [../architecture.md](../architecture.md#games).
 - A card carries its term in the other language, its `forms` and, for a Chinese word, its `pinyin` (worked out by the server with [pinyin-pro](https://github.com/zh-lx/pinyin-pro), MIT), in every view.
@@ -97,7 +97,7 @@ Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a gr
 
 ## Replays
 
-Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. The record says who gave each clue (`captain`), the cards they meant (`targets`), which the replay marks with their numbers through the clue's turn, and when each clue and guess came, in milliseconds from the start (`at`); replays from before have none of these. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
+Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. It names the AI players who played (`agents`), by their persona. The record says who gave each clue (`captain`), the cards they meant (`targets`), which the replay marks with their numbers through the clue's turn, and when each clue and guess came, in milliseconds from the start (`at`); replays from before have none of these. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
 
 The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but the group chat, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; choosing a card is minor, and nothing else. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it.
 
@@ -116,10 +116,21 @@ The record of a game ([../architecture.md](../architecture.md#game-records)) log
 ## Seats
 
 - A newcomer who comes to play is a guesser: in the group they played for in this game, else in the smaller group, or at random. Whoever comes to watch, or doesn't say, is a spectator.
-- In the waiting room, anyone may take a free captain's seat, join either group as a guesser, or watch. The chair's shuffle deals everyone seated into the two groups at random, with random captains.
+- In the waiting room, anyone may take a free captain's seat, join either group as a guesser, or watch. The chair's shuffle deals everyone seated into the two groups at random, with random captains, around the [AI players](#ai-players), who keep their seats.
 - During a game, spectators may join either group and anyone may step out to watch.
 - Whoever sits in a group during a game belongs to it until the next game: the other group is `other_team`, also after the game has ended, since the chat is still there.
 - A captain in this game has seen the key and may not be a guesser until the next game (`key_viewer`); an empty captain's seat is open to that group's players and to spectators who haven't played.
+
+## AI players
+
+Where the chair may have them ([../architecture.md](../architecture.md#ai-players)), the chair invites Reviewer 1 in the waiting room as a group's PI or as one of its students, one of each a group at most (`agent_limit`), and removes it from the player menu. A game with AI players needs every time limit on (`needs_timers`), so that the clock moves the game on when the AI is slow or gone, and a person in a group (`needs_human`). It brings nobody points or a streak.
+
+- **As the PI**, it gives its clue no sooner than 3 seconds into its turn, with the cards it is meant for (`targets`), as anyone may; it doesn't talk.
+- **As a student, with no person of its group online,** it reveals its cards 2 seconds after the clue and 1.5 seconds apart, the surest first and never the extra guess of the standard rule, and ends the turn once it has revealed them.
+- **As a student beside people,** it advises: it chooses its surest card for the group to see and says in the group's chat why, once, and leaves the revealing to them; when they reveal that card, it chooses the next.
+- **For a player who is offline** for 20 seconds in their turn, an AI plays as they would, the PI's clue or the student's guesses, unless a person of the group is there to play it, and stops when they are back. The others see whom it plays for.
+
+It knows what the seat it plays sees, no more: a student never the colors of the cards still face down. It reads no chat. What it says and does goes through the same rules and checks as anyone's.
 
 ## Messages
 

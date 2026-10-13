@@ -42,6 +42,7 @@ const view = (me: string, isPublic: boolean): RoomView => ({
   gameId: null,
   chairId: 'ann',
   players: [{ id: 'ann', name: 'Ann', online: true }, bob],
+  agents: false,
   screens: 0,
   me,
   match: null,
@@ -100,6 +101,20 @@ describe('PlayerMenu', () => {
     expect(send).toHaveBeenCalledWith('room:remove', { playerId: 'bob' });
     expect(wrapper.emitted('close')).toHaveLength(1);
     wrapper.unmount();
+  });
+
+  test('gives the chair one action on an AI player: removing it at once', async () => {
+    const ai = { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' as const };
+    const wrapper = mount(PlayerMenu, { props: { player: ai, room: view('ann', false) }, global: global() });
+    expect(buttons().map((element) => element.textContent?.trim())).toEqual([
+      '\u00d7',
+      'Remove from the room',
+      'Cancel',
+    ]);
+    button('Remove from the room').click();
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('room:remove', { playerId: 'ai' });
+    expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
   test('offers a report in a public room to a player with an account, and sends it with the note', async () => {

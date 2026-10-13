@@ -70,6 +70,7 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
     { id: 'ann', name: 'Ann', online: true },
     { id: 'bob', name: 'Bob', online: true },
   ],
+  agents: false,
   screens,
   me,
   match: null,
@@ -78,10 +79,69 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   data: { ...data, settings },
 });
 
+// A room whose chair may invite AI players, with one as the red group's student.
+const withAgents = (me: string): RoomView => {
+  const room = view(me, 0);
+  return {
+    ...room,
+    agents: true,
+    players: [...room.players, { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' }],
+    data: { ...data, seats: { ai: { team: 'red', role: 'guesser' } } },
+  };
+};
+
 describe('KeywordsLobby', () => {
   beforeEach(() => {
     send.mockReset();
     send.mockImplementation(async (event) => (event === 'meta:fields' ? { ok: true, fields: [] } : { ok: true }));
+  });
+
+  test('lets a chair who may have them invite AI players to the seats left, and says what they need', async () => {
+    const chair = mount(KeywordsLobby, { props: { room: withAgents('ann') }, global: global() });
+    const invites = chair.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1');
+    // Both PIs' seats, and the blue students: the red group has its AI student.
+    expect(invites).toHaveLength(3);
+    await invites[0]?.trigger('click');
+    expect(send).toHaveBeenCalledWith('room:addAgent', {
+      persona: 'reviewer1',
+      seat: { team: 'red', role: 'captain' },
+    });
+    await invites[2]?.trigger('click');
+    expect(send).toHaveBeenCalledWith('room:addAgent', {
+      persona: 'reviewer1',
+      seat: { team: 'blue', role: 'guesser' },
+    });
+    expect(chair.text()).toContain('AI players need time limits for the clues and the guesses');
+    // The AI student is marked as one.
+    expect(chair.get('.group.red').text()).toContain('Reviewer 1AI');
+
+    // Nobody else invites them, but everyone reads what they mean for the game.
+    const player = mount(KeywordsLobby, { props: { room: withAgents('bob') }, global: global() });
+    expect(player.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(0);
+    expect(player.text()).toContain('a game with them brings nobody points or a streak');
+    // Nor a chair who may not.
+    const barred = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    expect(barred.text()).not.toContain('Invite Reviewer 1');
+    expect(barred.text()).not.toContain('AI players');
+  });
+
+  test('says what AI players still need before the game can start', () => {
+    const room = withAgents('ann');
+    const blocked = {
+      ...room,
+      data: {
+        ...data,
+        seats: { ai: { team: 'red', role: 'guesser' } },
+        startProblems: [{ problem: 'needs_timers' as const }, { problem: 'needs_human' as const }],
+      },
+    };
+    const chair = mount(KeywordsLobby, { props: { room: blocked }, global: global() });
+    expect(chair.get('.readiness').text()).toBe(
+      'A room with AI players needs time limits for the clues and the guesses.',
+    );
+    expect(chair.get('.desk .problems').text()).toContain(
+      'At least one person must sit in a group with the AI players.',
+    );
   });
 
   test('tells everyone how many screens show the room, and lets the chair send them away', async () => {

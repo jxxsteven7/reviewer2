@@ -1,5 +1,6 @@
 import { parseCode, type Ack, type ClosedReason, type Language, type RoomView } from '@reviewer2/shared';
-import { reactive, shallowRef } from 'vue';
+import { reactive, shallowRef, watch } from 'vue';
+import { i18n } from './i18n';
 import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 // The room this page shows, as the server last described it, and how far the page has got in
@@ -51,10 +52,29 @@ function isWanted(view: RoomView): boolean {
   return wanted.roomId === undefined ? view.code === parseCode(wanted.code) : view.roomId === wanted.roomId;
 }
 
+// The room as the page shows it. An AI player goes by the name of its persona, in the language of
+// the interface (docs/architecture.md#ai-players): the server knows the persona alone, and its name
+// is in the locale files, so it is put in here, once for every page that shows the player, and
+// again when the visitor switches the language.
+let shown: RoomView | null = null;
+
+function named(view: RoomView): RoomView {
+  if (!view.players.some((player) => player.agent)) return view;
+  const players = view.players.map((player) =>
+    player.agent ? { ...player, name: i18n.global.t(`agents.personas.${player.agent}`) } : player,
+  );
+  return { ...view, players };
+}
+
+watch(i18n.global.locale, () => {
+  if (shown && room.value?.roomId === shown.roomId) room.value = named(shown);
+});
+
 // The page is in the room. The invitation, if one brought it, has done its work: from here on the
 // page comes back as a member, by the code and the room's ID.
 function show(view: RoomView): void {
-  room.value = view;
+  shown = view;
+  room.value = named(view);
   entry.status = 'in';
   if (wanted) {
     wanted.roomId = view.roomId;

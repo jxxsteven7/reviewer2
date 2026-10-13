@@ -126,6 +126,8 @@
     "you": "you",
     "chair": "chair",
     "offline": "offline",
+    "agent": "AI",
+    "takenOver": "AI playing",
     "rename": "Change name",
     "renameSubmit": "Save",
     "leave": "Leave the room",
@@ -162,10 +164,12 @@
     "nobody": "nobody yet",
     "takeCaptain": "Be the PI",
     "joinAsGuesser": "Join as a student",
+    "inviteAgent": "Invite {name}",
     "watch": "Watch",
     "screens": "Big screens showing this room: {count}.",
     "dismissScreens": "Send the screens away",
     "captainNote": "The PI sees which cards belong to the group and gives the clues.",
+    "agentNote": "AI players need time limits for the clues and the guesses, and a game with them brings nobody points, a streak or a friend title. A player who is offline for 20 seconds in their turn is played for by an AI until they are back.",
     "desk": "Chair's desk",
     "fields": "Word lists",
     "save": "Save",
@@ -180,7 +184,9 @@
       "needs_captain": "The {group} needs a PI.",
       "captain_offline": "The PI of the {group} is offline.",
       "needs_guesser": "The {group} needs at least one student who is online.",
-      "needs_players": "At least 4 players must be online to start: {missing} more."
+      "needs_players": "At least 4 players must be online to start: {missing} more.",
+      "needs_timers": "A room with AI players needs time limits for the clues and the guesses.",
+      "needs_human": "At least one person must sit in a group with the AI players."
     },
     "manage": {
       "spectate": "Move to the spectators",
@@ -608,6 +614,9 @@
     "bad_match": "This game can't be played as a match.",
     "match_over": "The match is over.",
     "match_locked": "The word lists and the rules can't change in the middle of a match.",
+    "agents_not_allowed": "AI players can't be invited here: they are for private rooms, and only for some accounts while they are tried out.",
+    "agents_in_room": "Remove the AI players first: public rooms and matches have none.",
+    "player_is_agent": "That's an AI player: the chair can only remove it.",
     "game_over": "The game is over.",
     "not_your_turn": "It's not your group's turn.",
     "not_captain": "Only the PI can give the clue.",
@@ -634,6 +643,7 @@
     "bad_seat": "That seat doesn't exist.",
     "between_games": "You can play from the next game.",
     "bigger_group": "In this match, whoever hasn't played yet joins the group with fewer players.",
+    "agent_limit": "A group can have one AI PI and one AI student.",
     "offline": "You're offline. Waiting for the connection...",
     "timeout": "The server didn't answer. Please try again.",
     "unknown": "Something went wrong.",
@@ -1133,5 +1143,14 @@
         "3": "After this many rounds, you know each other better than co-authors do."
       }
     }
+  },
+  "agents": {
+    "personas": {
+      "reviewer1": "Reviewer 1"
+    }
+  },
+  "privacy": {
+    "recordsTitle": "Game records",
+    "records": "Games are recorded. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. Group chat is never recorded."
   }
 }
