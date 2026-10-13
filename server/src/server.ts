@@ -4,6 +4,7 @@ import { createAccountApi } from './accounts/http';
 import type { Accounts } from './accounts/service';
 import type { Config } from './config';
 import type { AgentChannel } from './core/agentChannel';
+import { agentsIn } from './core/agents';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
 import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
@@ -93,7 +94,16 @@ export function createAppServer(options: AppOptions): AppServer {
       version: options.version,
       lists: options.lists ?? new ThanksLists(null, log),
       log,
-      ...(accounts && { accounts: createAccountApi({ accounts, secureCookies: cookieSecure, trustProxy, log }) }),
+      ...(accounts && {
+        accounts: createAccountApi({
+          accounts,
+          secureCookies: cookieSecure,
+          trustProxy,
+          log,
+          // Asked only once the server answers requests, when the rooms are there.
+          agentsLive: (persona) => agentsIn(rooms.all(), persona),
+        }),
+      }),
     }),
   );
   const io = new Server(http, {

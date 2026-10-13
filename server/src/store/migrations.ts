@@ -373,6 +373,10 @@ export const MIGRATIONS: readonly string[] = [
   // - replays get the AI's own log of the game beside the game's log, as JSON, kept on the server
   //   alone: how each AI came to each of its moves (server/src/core/agentLog.ts). A game that no AI
   //   played in has none, and neither do the replays from before.
+  // - agent_plays keeps what each AI did in each game that finished, for its page: a row for each
+  //   AI player in a seat at the end, with its side, role, result and what the game counted of it,
+  //   and a row for each person it played for while they were offline, with their account, which
+  //   is forgotten when the account is deleted.
   `
   ALTER TABLE accounts ADD COLUMN agents INTEGER NOT NULL DEFAULT 0 CHECK (agents IN (0, 1));
   ALTER TABLE game_records ADD COLUMN agents INTEGER NOT NULL DEFAULT 0 CHECK (agents IN (0, 1));
@@ -402,5 +406,24 @@ export const MIGRATIONS: readonly string[] = [
     SELECT game_id, game, ended_at, data, log, 'finished' FROM replays;
   DROP TABLE replays;
   ALTER TABLE games_kept RENAME TO replays;
+
+  CREATE TABLE agent_plays (
+    game_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    persona TEXT NOT NULL,
+    takeover INTEGER NOT NULL CHECK (takeover IN (0, 1)),
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    side TEXT,
+    role TEXT,
+    won INTEGER CHECK (won IN (0, 1)),
+    clues INTEGER NOT NULL DEFAULT 0,
+    found INTEGER NOT NULL DEFAULT 0,
+    reviewer2 INTEGER NOT NULL DEFAULT 0,
+    best_word TEXT,
+    best_found INTEGER,
+    PRIMARY KEY (game_id, player_id)
+  ) STRICT;
+  CREATE INDEX agent_plays_persona ON agent_plays (persona);
+  CREATE INDEX agent_plays_account ON agent_plays (account_id);
   `,
 ];

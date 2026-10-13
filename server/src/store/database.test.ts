@@ -64,6 +64,7 @@ describe('a database in DATA_DIR', () => {
     expect(tables(database.db)).toEqual([
       'accounts',
       'acknowledgments',
+      'agent_plays',
       'email_tokens',
       'feedback',
       'friendships',
@@ -620,6 +621,14 @@ describe('a database in DATA_DIR', () => {
       db.exec("INSERT INTO replays (game_id, game, ended_at, ending) VALUES ('i', 'keywords', 'now', 'lost')"),
     ).toThrow(/CHECK/);
     expect(() => db.exec("UPDATE replays SET takeover = 2 WHERE game_id = 'h'")).toThrow(/CHECK/);
+    // What an AI did for an account stays on its page once the account is gone, for nobody.
+    db.exec(`
+      INSERT INTO agent_plays (game_id, player_id, persona, takeover, account_id) VALUES ('g', 'p1', 'reviewer1', 1, 1);
+      DELETE FROM accounts WHERE id = 1;
+    `);
+    expect(db.prepare('SELECT player_id, account_id FROM agent_plays').all()).toEqual([
+      { player_id: 'p1', account_id: null },
+    ]);
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 
@@ -783,6 +792,7 @@ describe('a database in memory', () => {
     expect(tables(database.db)).toEqual([
       'accounts',
       'acknowledgments',
+      'agent_plays',
       'email_tokens',
       'feedback',
       'friendships',

@@ -106,6 +106,48 @@ describe('the log of the team word guessing game', () => {
     expect(keywordsGame.rulesVersion).toBe(1);
   });
 
+  test('counts what an AI player did: its clues, the cards they found, its best clue and Reviewer 2', () => {
+    const ctx = context();
+    const words = Array.from({ length: 25 }, (_, index) => ({ word: `Word${index}` }));
+    let data = keywordsGame.start(seated(ctx), { ...ctx, phase: 'playing' }, words, gameId);
+    const playing = { ...ctx, phase: 'playing' as const };
+    const act = (id: string, type: string, payload: object) => {
+      const result = keywordsGame.handle(data, playing, id, type, { gameId, turn: data.game?.turn, ...payload });
+      if (!result.ok) throw new Error(result.error);
+      data = result.data;
+    };
+    const cards = data.game?.cards ?? [];
+    const red = (data.game?.team ?? 'red') === 'red';
+    const [pi, student, otherPi, otherStudent] = red ? ['ann', 'bob', 'cat', 'dan'] : ['cat', 'dan', 'ann', 'bob'];
+    const team = data.game?.team as 'red' | 'blue';
+    const own = cards.flatMap((card, index) => (card.color === team ? [index] : []));
+    const [neutral, otherNeutral] = cards.flatMap((card, index) => (card.color === 'neutral' ? [index] : []));
+    const reviewer2 = cards.findIndex((card) => card.color === 'reviewer2');
+    // A clue that finds two of the group's cards, then a card that is no group's.
+    act(pi as string, 'keywords:clue', { word: 'Pair', count: 2 });
+    act(student as string, 'keywords:reveal', { card: own[0] });
+    act(student as string, 'keywords:reveal', { card: own[1] });
+    act(student as string, 'keywords:reveal', { card: neutral });
+    // The other group's turn, then a clue that finds one, and Reviewer 2.
+    act(otherPi as string, 'keywords:clue', { word: 'Other', count: 1 });
+    act(otherStudent as string, 'keywords:reveal', { card: otherNeutral });
+    act(pi as string, 'keywords:clue', { word: 'Single', count: 1 });
+    act(student as string, 'keywords:reveal', { card: own[2] });
+    act(student as string, 'keywords:reveal', { card: reviewer2 });
+    expect(keywordsGame.agentFeats?.(data, pi as string)).toEqual({
+      clues: 2,
+      found: 3,
+      reviewer2: 0,
+      best: { word: 'Pair', found: 2 },
+    });
+    expect(keywordsGame.agentFeats?.(data, student as string)).toEqual({
+      clues: 0,
+      found: 0,
+      reviewer2: 1,
+      best: null,
+    });
+  });
+
   test('says where each player is, and counts everyone who sat in a group as having played', () => {
     const ctx = context();
     const words = Array.from({ length: 25 }, (_, index) => ({ word: `Word${index}` }));

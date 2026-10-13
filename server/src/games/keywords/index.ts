@@ -22,7 +22,7 @@ import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@rev
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
 import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask, personSeated } from './agents';
-import type { GameContext, GameModule, GameUpdate, LogNote } from '../../core/game';
+import type { AgentFeats, GameContext, GameModule, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
   expire,
@@ -366,6 +366,25 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   },
 
   logged: logNote,
+
+  // What an AI player did: the clues it gave as its group's PI, with how many of the group's cards
+  // were found in each of their turns, the clue that found the most, and how often it revealed
+  // Reviewer 2 as a student.
+  agentFeats(data, playerId) {
+    const feats: AgentFeats = { clues: 0, found: 0, reviewer2: 0, best: null };
+    for (const record of data.game?.history ?? []) {
+      if (record.captain === playerId && record.word !== null) {
+        const found = record.guesses.filter(({ color }) => color === record.team).length;
+        feats.clues += 1;
+        feats.found += found;
+        if (found > 0 && (feats.best === null || found > feats.best.found)) feats.best = { word: record.word, found };
+      }
+      feats.reviewer2 += record.guesses.filter(
+        ({ player, color }) => player === playerId && color === 'reviewer2',
+      ).length;
+    }
+    return feats;
+  },
 
   // Whom the game is waiting for: the PI of the group on turn while its clue is due, and its
   // students while they guess. Nobody while the game is paused or over.

@@ -56,6 +56,17 @@ export interface PlayerResult {
   verdict: string;
 }
 
+// What an AI player did in a game that finished, in the game's own counts, for its page
+// (docs/architecture.md#ai-players): the clues it gave as a PI and how many of its group's cards
+// they found, how often it revealed Reviewer 2 as a student, and the clue that found the most, if
+// any found one.
+export interface AgentFeats {
+  clues: number;
+  found: number;
+  reviewer2: number;
+  best: { word: string; found: number } | null;
+}
+
 // What the log of a game keeps of one of the game's messages that changed the game
 // (docs/architecture.md#game-records): what the message carried, as the game reads it, and, for a
 // line of a group's chat, what the player said, which the log keeps apart, so that it can be taken
@@ -196,6 +207,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // due: when a timer changes the game, the log names those of them who were offline then. Without
   // this, it names nobody.
   due?(data: Data): string[];
+  // What an AI player did in the game that has just finished, for its page; without this, its
+  // page counts its games alone.
+  agentFeats?(data: Data, playerId: string): AgentFeats;
   // The version of the game's rules and scoring, which goes on the record of every game, so that a
   // game played under other rules can be told apart. It goes up by one whenever they change.
   rulesVersion?: number;

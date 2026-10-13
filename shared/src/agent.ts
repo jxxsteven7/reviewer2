@@ -18,6 +18,29 @@ import type { Language } from './language';
 export const AGENT_PERSONAS = ['reviewer1'] as const;
 export type AgentPersona = (typeof AGENT_PERSONAS)[number];
 
+// The page of an AI player (docs/architecture.md#ai-players), which anyone may open from a room:
+// player number 0, how many of it are in the rooms right now, as AI players and playing for
+// someone offline, and what it has done in the games that finished, as counts only. `roles` counts
+// its games as a group's PI (`captain`) and as a student (`guesser`); `found` is how many of its
+// group's cards its clues found, of `clues` given; `best` is the clue that found the most. `you` is
+// what the viewer has played with it, for an account alone: the games in which it was in the
+// viewer's group and won or lost with them, those in which it was in the other group and the
+// viewer won or lost, and how often it played for the viewer while they were offline.
+export interface AgentProfileView {
+  persona: AgentPersona;
+  number: 0;
+  live: { players: number; rooms: number };
+  games: number;
+  wins: number;
+  roles: Record<'captain' | 'guesser', { games: number; wins: number }>;
+  clues: number;
+  found: number;
+  reviewer2: number;
+  takeovers: number;
+  best: { word: string; found: number } | null;
+  you: { wonTogether: number; lostTogether: number; beat: number; beaten: number; takenOver: number } | null;
+}
+
 // A clue that a group was given earlier in the game, as everyone saw it.
 export interface AgentClue {
   team: Team;

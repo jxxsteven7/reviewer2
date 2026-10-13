@@ -344,6 +344,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         players,
         counts: kept.counts,
         takeover: kept.takeover,
+        agentPlays: kept.agentPlays,
         match: kept.match,
         language: kept.language,
         fields: kept.fields,

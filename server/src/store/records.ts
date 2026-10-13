@@ -1,5 +1,6 @@
 import {
   RECENT_RECORDS,
+  type AgentProfileView,
   type BestStreaks,
   type DuoCounts,
   type GameRecord,
@@ -12,6 +13,7 @@ import {
 } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import { unsay, type GameEnding, type GameLogData } from '../core/gameLog';
+import type { AgentPlay } from '../core/room';
 
 // What accounts keep of the games: a row for each game that a player with an account finished in
 // a seat (migration 2), a row for each match that they finished ranked, and the titles that
@@ -269,6 +271,7 @@ export interface NewReplay {
   players?: readonly { playerId: string; accountId: number }[];
   counts?: { accounts: number; guests: number; agents: number };
   takeover?: boolean;
+  agentPlays?: readonly AgentPlay[];
   match?: boolean;
   language?: string;
   fields?: readonly string[];
@@ -283,6 +286,7 @@ export class ReplayStore {
   readonly #read: StatementSync;
   readonly #said: StatementSync;
   readonly #unsay: StatementSync;
+  readonly #agentPlay: StatementSync;
 
   constructor(
     db: DatabaseSync,
@@ -310,6 +314,12 @@ export class ReplayStore {
         'WHERE account_id = ? AND log IS NOT NULL GROUP BY replays.game_id',
     );
     this.#unsay = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
+    // The account of a person an AI played for, if it is still there.
+    this.#agentPlay = db.prepare(
+      'INSERT OR IGNORE INTO agent_plays (game_id, player_id, persona, takeover, account_id, side, role, won, ' +
+        'clues, found, reviewer2, best_word, best_found) ' +
+        'VALUES (?, ?, ?, ?, (SELECT id FROM accounts WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?)',
+    );
   }
 
   // Keeps a game, with the replay, as `data`, which the caller has made into JSON of a size it
@@ -344,9 +354,26 @@ export class ReplayStore {
           game.words ?? null,
         ).changes,
       ) > 0;
-    if (added)
-      for (const { playerId, accountId } of game.players ?? []) this.#player.run(game.gameId, playerId, accountId);
-    return added;
+    if (!added) return false;
+    for (const { playerId, accountId } of game.players ?? []) this.#player.run(game.gameId, playerId, accountId);
+    for (const play of game.agentPlays ?? []) {
+      this.#agentPlay.run(
+        game.gameId,
+        play.playerId,
+        play.persona,
+        play.takeover ? 1 : 0,
+        play.accountId,
+        play.side,
+        play.role,
+        play.won === null ? null : play.won ? 1 : 0,
+        play.feats?.clues ?? 0,
+        play.feats?.found ?? 0,
+        play.feats?.reviewer2 ?? 0,
+        play.feats?.best?.word ?? null,
+        play.feats?.best?.found ?? null,
+      );
+    }
+    return true;
   }
 
   // The replay of a game, for an account that played in it, or null.
@@ -365,5 +392,74 @@ export class ReplayStore {
       const without = unsay(kept, new Set(JSON.parse(playerIds) as string[]));
       if (without !== kept) this.#unsay.run(JSON.stringify(without), gameId);
     }
+  }
+}
+
+// What the AI players have done in the games that finished (agent_plays, migration 14), for the
+// page of each (docs/architecture.md#ai-players), as counts, and what one account has played with
+// it. Who else played with it is never read here.
+export class AgentPlayStore {
+  readonly #totals: StatementSync;
+  readonly #roles: StatementSync;
+  readonly #best: StatementSync;
+  readonly #takeovers: StatementSync;
+  readonly #withYou: StatementSync;
+  readonly #forYou: StatementSync;
+
+  constructor(db: DatabaseSync) {
+    // A game counts once, and as won if it won it, even with the AI in both groups.
+    this.#totals = db.prepare(
+      'SELECT count(DISTINCT game_id) AS games, count(DISTINCT game_id) FILTER (WHERE won = 1) AS wins, ' +
+        'coalesce(sum(clues), 0) AS clues, coalesce(sum(found), 0) AS found, ' +
+        'coalesce(sum(reviewer2), 0) AS reviewer2 FROM agent_plays WHERE persona = ? AND takeover = 0',
+    );
+    this.#roles = db.prepare(
+      'SELECT role, count(*) AS games, coalesce(sum(won), 0) AS wins FROM agent_plays ' +
+        'WHERE persona = ? AND takeover = 0 GROUP BY role',
+    );
+    // The earliest of the clues that found the most.
+    this.#best = db.prepare(
+      'SELECT best_word AS word, best_found AS found FROM agent_plays ' +
+        'WHERE persona = ? AND takeover = 0 AND best_found IS NOT NULL ORDER BY best_found DESC, rowid LIMIT 1',
+    );
+    this.#takeovers = db.prepare('SELECT count(*) AS count FROM agent_plays WHERE persona = ? AND takeover = 1');
+    // The account's games with the AI in a seat, by whether it was in the account's group.
+    this.#withYou = db.prepare(
+      'SELECT ' +
+        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side = mine.side AND mine.won = 1) AS wonTogether, ' +
+        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side = mine.side AND mine.won = 0) AS lostTogether, ' +
+        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side <> mine.side AND mine.won = 1) AS beat, ' +
+        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side <> mine.side AND mine.won = 0) AS beaten ' +
+        'FROM game_records AS mine JOIN agent_plays AS ai ' +
+        'ON ai.game_id = mine.game_id AND ai.persona = ? AND ai.takeover = 0 WHERE mine.account_id = ?',
+    );
+    this.#forYou = db.prepare(
+      'SELECT count(*) AS count FROM agent_plays WHERE persona = ? AND takeover = 1 AND account_id = ?',
+    );
+  }
+
+  // What the AI has done, without who played with it, and what it has played with the account, if
+  // one asks.
+  profile(persona: string, accountId: number | null): Omit<AgentProfileView, 'persona' | 'number' | 'live'> {
+    const totals = this.#totals.get(persona) as {
+      games: number;
+      wins: number;
+      clues: number;
+      found: number;
+      reviewer2: number;
+    };
+    const roles = { captain: { games: 0, wins: 0 }, guesser: { games: 0, wins: 0 } };
+    for (const { role, games, wins } of this.#roles.all(persona) as { role: string; games: number; wins: number }[]) {
+      if (role === 'captain' || role === 'guesser') roles[role] = { games, wins };
+    }
+    const best = (this.#best.get(persona) as { word: string; found: number } | undefined) ?? null;
+    const takeovers = (this.#takeovers.get(persona) as { count: number }).count;
+    let you: AgentProfileView['you'] = null;
+    if (accountId !== null) {
+      const together = this.#withYou.get(persona, accountId) as Omit<NonNullable<AgentProfileView['you']>, 'takenOver'>;
+      const takenOver = (this.#forYou.get(persona, accountId) as { count: number }).count;
+      you = { ...together, takenOver };
+    }
+    return { ...totals, roles, takeovers, best, you };
   }
 }

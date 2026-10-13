@@ -108,6 +108,7 @@ describe('PlayerMenu', () => {
     const wrapper = mount(PlayerMenu, { props: { player: ai, room: view('ann', false) }, global: global() });
     expect(buttons().map((element) => element.textContent?.trim())).toEqual([
       '\u00d7',
+      'View their page',
       'Remove from the room',
       'Cancel',
     ]);
@@ -115,6 +116,34 @@ describe('PlayerMenu', () => {
     await flushPromises();
     expect(send).toHaveBeenCalledWith('room:remove', { playerId: 'ai' });
     expect(wrapper.emitted('close')).toHaveLength(1);
+  });
+
+  test("opens an AI player's page for anyone, in a sheet", async () => {
+    signedIn.request.mockResolvedValue({
+      ok: true,
+      profile: {
+        persona: 'reviewer1',
+        number: 0,
+        live: { players: 3, rooms: 2 },
+        games: 0,
+        wins: 0,
+        roles: { captain: { games: 0, wins: 0 }, guesser: { games: 0, wins: 0 } },
+        clues: 0,
+        found: 0,
+        reviewer2: 0,
+        takeovers: 0,
+        best: null,
+        you: null,
+      },
+    });
+    const ai = { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' as const };
+    mount(PlayerMenu, { props: { player: ai, room: view('cat', false) }, global: global() });
+    expect(buttons().map((element) => element.textContent?.trim())).toEqual(['\u00d7', 'View their page', 'Cancel']);
+    button('View their page').click();
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledWith('/api/agent/reviewer1');
+    expect(dialogs()[0]?.textContent).toContain('Player No. 0');
+    expect(dialogs()[0]?.textContent).toContain('Clones in the rooms right now: 3, in 2 rooms');
   });
 
   test('offers a report in a public room to a player with an account, and sends it with the note', async () => {

@@ -26,7 +26,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 - Optional accounts: an avatar, a record of games, friends and friend titles, an academic rank and a public page; see [Privacy](#privacy)
 - Matches: several scored games in a row, with titles
 - Public rooms: play with strangers, with an account, and report players who misbehave
-- AI players, being tried out: Reviewer 1 can play a group's PI or student, advise people, and play the turn of a player who has gone offline; see [Privacy](#privacy)
+- AI players, being tried out: Reviewer 1 can play a group's PI or student, advise people, and play the turn of a player who has gone offline, and has a page of its own as player number 0; see [Privacy](#privacy)
 
 ## Privacy
 

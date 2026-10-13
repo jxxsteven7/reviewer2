@@ -1149,6 +1149,23 @@
   "agents": {
     "personas": {
       "reviewer1": "一号审稿人"
+    },
+    "profile": {
+      "bio": {
+        "reviewer1": "全站唯一的 0 号玩家。每一盘都审，从不睡觉，还能同时出现在好几个房间。"
+      },
+      "live": "此刻的分身：{players} 个，在 {rooms} 个房间里",
+      "liveNone": "此刻房间里没有它的分身",
+      "none": "还没有和它打完的局。",
+      "record": "对局：{games} · 获胜：{wins}",
+      "roles": "当导师：{piGames} 局，赢 {piWins} 局 · 当学生：{studentGames} 局，赢 {studentWins} 局",
+      "perClue": "每条线索翻对：{average} 张",
+      "best": "最得意的线索：「{word}」，翻对 {found} 张",
+      "reviewer2": "翻到二号审稿人：{count} 次",
+      "takeovers": "替掉线的人托管：{count} 局",
+      "together": "同组：赢 {won} 局，输 {lost} 局",
+      "against": "对阵：你赢 {won} 局，输 {lost} 局",
+      "takenOver": "替你托管：{count} 局"
     }
   },
   "privacy": {

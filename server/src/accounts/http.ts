@@ -1,5 +1,14 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ACCOUNT_API, AVATAR_PATH, AVATAR_TYPES, HANDLE, MAX_AVATAR_BYTES, type AccountState } from '@reviewer2/shared';
+import {
+  ACCOUNT_API,
+  AGENT_PERSONAS,
+  AVATAR_PATH,
+  AVATAR_TYPES,
+  HANDLE,
+  MAX_AVATAR_BYTES,
+  type AccountState,
+  type AgentPersona,
+} from '@reviewer2/shared';
 import { ACCOUNT_REQUESTS } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { methodAllowed } from '../http';
@@ -26,6 +35,9 @@ type Log = (event: string, fields?: Record<string, unknown>) => void;
 
 export interface AccountApiOptions {
   accounts: Accounts;
+  // How many of an AI player are in the rooms now, as AI players and playing for someone offline,
+  // and in how many rooms, for its page. Without this, none.
+  agentsLive?: (persona: AgentPersona) => { players: number; rooms: number };
   // Whether the login cookie is Secure, which it is unless the server is told that it is served
   // over plain HTTP (COOKIE_SECURE=0).
   secureCookies: boolean;
@@ -106,7 +118,7 @@ function post<Schema extends z.ZodType>(
   return { method: 'POST', schema, login, handle: handle as Route['handle'] };
 }
 
-export function createAccountApi({ accounts, secureCookies, trustProxy, log }: AccountApiOptions) {
+export function createAccountApi({ accounts, secureCookies, trustProxy, log, agentsLive }: AccountApiOptions) {
   const signedIn = (secret: string) => loginCookie(secret, secureCookies);
   const signedOut = clearedCookie(secureCookies);
   const state = (login: Login | null): AccountState => ({
@@ -215,6 +227,17 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log }: A
       handle: ({ login, param }) => {
         const profile = HANDLE.test(param) ? accounts.profileOf(param, login?.account ?? null) : null;
         return profile === null ? failure('no_such_profile') : ok({ profile });
+      },
+    },
+    // The page of an AI player, by its persona, which anyone may read.
+    [ACCOUNT_API.agents]: {
+      method: 'GET',
+      param: true,
+      handle: ({ login, param }) => {
+        if (!(AGENT_PERSONAS as readonly string[]).includes(param)) return failure('no_such_profile');
+        const persona = param as AgentPersona;
+        const live = agentsLive?.(persona) ?? { players: 0, rooms: 0 };
+        return ok({ profile: accounts.agentProfileOf(persona, login?.account ?? null, live) });
       },
     },
     [ACCOUNT_API.profile]: post(

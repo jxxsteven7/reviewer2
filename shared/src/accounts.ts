@@ -73,6 +73,8 @@ export const ACCOUNT_API = {
   profile: '/api/account/profile',
   likers: '/api/account/likers',
   profiles: '/api/profile/',
+  // The page of an AI player, by its persona after this prefix (docs/architecture.md#ai-players).
+  agents: '/api/agent/',
   like: '/api/profile/like',
   unlike: '/api/profile/unlike',
 } as const;

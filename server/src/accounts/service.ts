@@ -14,6 +14,8 @@ import {
   usernameKey,
   type AccountError,
   type AccountSummary,
+  type AgentPersona,
+  type AgentProfileView,
   type DuoPart,
   type DuoTitle,
   type DuoView,
@@ -32,6 +34,7 @@ import { AcknowledgmentStore } from '../store/acknowledgments';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { LikeStore } from '../store/likes';
 import {
+  AgentPlayStore,
   RecordStore,
   ReplayStore,
   TitleStore,
@@ -122,6 +125,7 @@ export class Accounts {
   readonly mailTokens: MailTokenStore;
   readonly records: RecordStore;
   readonly replays: ReplayStore;
+  readonly agentPlays: AgentPlayStore;
   readonly titles: TitleStore;
   // The acknowledgments, which the operator writes (admin.ts) and an account's page counts.
   readonly acknowledgments: AcknowledgmentStore;
@@ -162,6 +166,7 @@ export class Accounts {
     this.mailTokens = new MailTokenStore(options.db, clock);
     this.records = new RecordStore(options.db, clock);
     this.replays = new ReplayStore(options.db, clock);
+    this.agentPlays = new AgentPlayStore(options.db);
     this.titles = new TitleStore(options.db, clock);
     this.acknowledgments = new AcknowledgmentStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
@@ -231,6 +236,12 @@ export class Accounts {
           ? (this.duosOf(viewer.id).get(account.id) ?? null)
           : null,
     };
+  }
+
+  // The page of an AI player (docs/architecture.md#ai-players), with how many of it are in the rooms
+  // now, which the rooms count, and, for an account that asks, what it has played with the AI.
+  agentProfileOf(persona: AgentPersona, viewer: Account | null, live: AgentProfileView['live']): AgentProfileView {
+    return { persona, number: 0, live, ...this.agentPlays.profile(persona, viewer?.id ?? null) };
   }
 
   // What the account has played with each of its friends who shares a game with it, by the

@@ -23,7 +23,7 @@ import {
 } from '@reviewer2/shared';
 import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
-import type { GameContext, GameModule, PlayerResult, Viewer } from './game';
+import type { AgentFeats, GameContext, GameModule, PlayerResult, Viewer } from './game';
 import { GameLog, type GameEnding, type GameLogData, type GameLogEvent } from './gameLog';
 import { newPlayerId } from './identity';
 import { Match, type Present } from './match';
@@ -143,6 +143,20 @@ function poolOf(words: WordLibrary, fields: readonly string[], language: Languag
 // The same fields in another order are no change.
 const sameFields = (a: readonly string[], b: readonly string[]) => [...a].sort().join() === [...b].sort().join();
 
+// What an AI did in a game that finished, for its page (docs/architecture.md#ai-players): as an AI
+// player, in its seat, with what the game counts of it (GameModule.agentFeats); or for a person who
+// was offline, by their player ID, with their account, if any.
+export interface AgentPlay {
+  playerId: string;
+  persona: AgentPersona;
+  takeover: boolean;
+  accountId: number | null;
+  side: string | null;
+  role: string | null;
+  won: boolean | null;
+  feats: AgentFeats | null;
+}
+
 // What the record keeps of a game that has come to an end (Room.record()).
 export interface GameRecordData {
   ending: GameEnding;
@@ -154,6 +168,7 @@ export interface GameRecordData {
   accounts: { playerId: string; accountId: number }[];
   counts: { accounts: number; guests: number; agents: number };
   takeover: boolean;
+  agentPlays: AgentPlay[];
   match: boolean;
   language: string;
   fields: string[];
@@ -224,8 +239,9 @@ export class Room {
   // Whether an AI has played in the current game, as an AI player or for someone who was offline:
   // such a game brings nobody points, a streak or a friend title (docs/architecture.md#ai-players).
   #agentsPlayed = false;
-  // Whether an AI has played for someone who was offline in the current game.
-  #tookOver = false;
+  // Those an AI has played for while they were offline in the current game, by player ID, with the
+  // persona it played as.
+  readonly #tookOverFor = new Map<string, AgentPersona>();
   readonly #agents: AgentState | null;
   // The streaks that the game which has just ended brought the members with accounts to, by player
   // ID, from STREAK_MIN games on (noteStreak), until the room leaves the ended game behind.
@@ -720,7 +736,7 @@ export class Room {
     this.#setup = this.game.setup?.(data) ?? null;
     this.#ending = null;
     this.#agentsPlayed = Object.keys(agents).length > 0;
-    this.#tookOver = false;
+    this.#tookOverFor.clear();
     this.#usedWords = draw.used;
     this.gameId = gameId;
     this.round += 1;
@@ -780,7 +796,7 @@ export class Room {
     this.#setup = null;
     this.#ending = null;
     this.#agentsPlayed = false;
-    this.#tookOver = false;
+    this.#tookOverFor.clear();
     this.#streaks.clear();
     this.#duos.clear();
   }
@@ -931,7 +947,7 @@ export class Room {
       this.#noteMessage(id, type, payload, agent);
       if (agent !== undefined && this.phase === 'playing') {
         this.#agentsPlayed = true;
-        this.#tookOver = true;
+        this.#tookOverFor.set(id, agent);
       }
     }
     this.#update(result.data);
@@ -1130,13 +1146,51 @@ export class Room {
       agentLog,
       accounts,
       counts,
-      takeover: this.#tookOver,
+      takeover: this.#tookOverFor.size > 0,
+      agentPlays: this.#agentPlays(),
       match: this.match !== null,
       language: this.language,
       fields: [...this.fields],
       rules: this.game.rulesVersion ?? null,
       words: this.#words.hash,
     };
+  }
+
+  // What the AI players did in the game, if it finished: each that was in a seat at the end, and
+  // each person an AI played for while they were offline.
+  #agentPlays(): AgentPlay[] {
+    if (this.#ending !== 'finished') return [];
+    const plays: AgentPlay[] = [];
+    const results = new Map((this.results() ?? []).map((result) => [result.playerId, result]));
+    for (const [playerId, result] of results) {
+      const persona = this.members.get(playerId)?.agent ?? this.#gone.get(playerId)?.agent ?? null;
+      if (persona === null) continue;
+      plays.push({
+        playerId,
+        persona,
+        takeover: false,
+        accountId: null,
+        side: result.side,
+        role: result.role,
+        won: result.won,
+        feats: this.game.agentFeats?.(this.data, playerId) ?? null,
+      });
+    }
+    for (const [playerId, persona] of this.#tookOverFor) {
+      const result = results.get(playerId);
+      const accountId = this.members.get(playerId)?.account?.id ?? this.#gone.get(playerId)?.accountId ?? null;
+      plays.push({
+        playerId,
+        persona,
+        takeover: true,
+        accountId,
+        side: result?.side ?? null,
+        role: result?.role ?? null,
+        won: result?.won ?? null,
+        feats: null,
+      });
+    }
+    return plays;
   }
 
   // --- the game's own time ----------------------------------------------------------------

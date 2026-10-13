@@ -46,7 +46,7 @@ export const PING_MS = 30_000;
 // agentMove() would go on for ever.
 const MAX_MOVES = 30;
 // The persona that plays for someone offline.
-const STANDIN: AgentPersona = 'reviewer1';
+export const STANDIN: AgentPersona = 'reviewer1';
 // How far back the status page counts the AI's steps.
 const STATS_MS = 60 * 60_000;
 // What the agent answers when it, or the model behind it, is gone rather than short of an answer:
@@ -441,4 +441,21 @@ function answerOf(outcome: AgentOutcome): { answer?: unknown; note?: AgentAnswer
   }
   if (outcome.kind === 'guess') return { answer: { picks: outcome.picks, reason: outcome.reason }, note: outcome.note };
   return {};
+}
+
+// How many of an AI player are in the rooms now, for its page (docs/architecture.md#ai-players): the
+// AI players of that persona, and the people it plays for while they are offline, and how many
+// rooms they are in.
+export function agentsIn(rooms: Iterable<Room>, persona: AgentPersona): { players: number; rooms: number } {
+  let players = 0;
+  let count = 0;
+  for (const room of rooms) {
+    let here = 0;
+    for (const member of room.members.values()) {
+      if (member.agent === persona || (member.takenOver && persona === STANDIN)) here += 1;
+    }
+    players += here;
+    if (here > 0) count += 1;
+  }
+  return { players, rooms: count };
 }

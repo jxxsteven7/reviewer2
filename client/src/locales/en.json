@@ -1149,6 +1149,23 @@
   "agents": {
     "personas": {
       "reviewer1": "Reviewer 1"
+    },
+    "profile": {
+      "bio": {
+        "reviewer1": "The one and only Player No. 0. It reviews every board, never sleeps, and can be in many rooms at once."
+      },
+      "live": "Clones in the rooms right now: {players}, in {rooms} rooms",
+      "liveNone": "No clones in the rooms right now",
+      "none": "No game with it has finished yet.",
+      "record": "Games: {games} · Won: {wins}",
+      "roles": "As a PI: {piGames} games, {piWins} won · As a student: {studentGames} games, {studentWins} won",
+      "perClue": "Cards found per clue: {average}",
+      "best": "Best clue: “{word}”, {found} cards found",
+      "reviewer2": "Times it revealed Reviewer 2: {count}",
+      "takeovers": "Games in which it played for someone offline: {count}",
+      "together": "In your group: won {won}, lost {lost}",
+      "against": "Against you: you won {won}, lost {lost}",
+      "takenOver": "Games in which it played for you while you were offline: {count}"
     }
   },
   "privacy": {

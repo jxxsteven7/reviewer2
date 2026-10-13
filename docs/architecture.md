@@ -102,6 +102,7 @@ The chair invites Reviewer 1 (`AGENT_PERSONAS` in `shared/src/agent.ts`) to a gr
 - **Playing for someone offline.** In a room where the chair may invite AI players, a person who has been offline for 20 seconds while it is their turn is played for by an AI, unless a person of their group can play the turn; until then they count as there, so that a reload or a locked phone changes nothing of what any AI does. One AI plays the guesses of a group: its AI student, if it has one, or else one of its offline students. Whoever is played for is marked (`PlayerView.takenOver`) from the moment an AI is set to play for them, as it is asked what to do, until they are back, when it stops at once.
 - **Points.** A game in which an AI played, as a player or for someone offline, is on the record as any game, marked (`agents` in `game_records`, migration 14), but brings nobody points, a streak or a [friend title](#friend-duos).
 - **The record** names the AI players (`agents` in the log), marks every move made for someone offline with the persona (`agent`), and keeps the AI's own log beside the game's ([Game records](#game-records)).
+- **Its page.** Anyone may open an AI player's page from a room's player menu (`AgentProfileCard.vue`; `GET /api/agent/<persona>`, `AgentProfileView`): player number 0, which no account has, a line about it, how many of it are in the rooms now, as AI players and playing for someone offline, and in how many rooms, counted as the page is read (`agentsIn` in `server/src/core/agents.ts`); and what it has done in the games that finished, as counts alone: games and wins, as a PI and as a student, the cards its clues found per clue, the clue that found the most, how often it revealed Reviewer 2, and the games it played in for someone offline. An account also sees, apart, what it has played with it: the games in its group and against it, won and lost, and those it was played for in. The counts come from `agent_plays` (migration 14), a row for each AI player in a seat at the end of a game that finished, with what the game counts of it (`GameModule.agentFeats`), and one for each person it played for, with their account, which is forgotten when the account is deleted. It is in no ranking and has no friends.
 
 ## Replays
 
@@ -242,6 +243,7 @@ A streak of three games or more is a title, named with the number in words (`sha
 | `POST /api/password/reset` | Every browser logged out, this one in (the link) |
 | `POST /api/account/delete` | Deletes everything (login, password) |
 | `GET /api/profile/<handle>` | A [public profile](#public-profiles), for anyone; `no_such_profile` otherwise |
+| `GET /api/agent/<persona>` | The page of an [AI player](#ai-players), for anyone, with what the viewer played with it for an account; `no_such_profile` otherwise |
 | `POST /api/account/profile` | `link`, `bio`, `showRecord`, `showThanks` (login) |
 | `GET /api/account/likers` | Who likes the account's profile (login) |
 | `POST /api/profile/like`, `.../unlike` | `handle` (login) |
