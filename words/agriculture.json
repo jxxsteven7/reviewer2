@@ -486,11 +486,6 @@
       "en": "Lawn"
     },
     {
-      "id": "bonsai",
-      "zh": "盆景",
-      "en": "Bonsai"
-    },
-    {
       "id": "tillage",
       "zh": "耕作",
       "en": "Tillage"
@@ -587,21 +582,10 @@
       "en": "Growth period"
     },
     {
-      "id": "photoperiod",
-      "zh": "光周期",
-      "en": "Photoperiod",
-      "forms": { "en": ["photoperiodism"] }
-    },
-    {
       "id": "vernalization",
       "zh": "春化",
       "en": "Vernalization",
       "forms": { "en": ["vernalisation"] }
-    },
-    {
-      "id": "auxin",
-      "zh": "生长素",
-      "en": "Auxin"
     },
     {
       "id": "gibberellin",
@@ -758,12 +742,6 @@
       "id": "domestication",
       "zh": "驯化",
       "en": "Domestication"
-    },
-    {
-      "id": "polyploid",
-      "zh": "多倍体",
-      "en": "Polyploid",
-      "forms": { "en": ["polyploidy"] }
     },
     {
       "id": "colchicine",
@@ -2326,11 +2304,6 @@
       "en": "Anthocyanin"
     },
     {
-      "id": "carotenoid",
-      "zh": "类胡萝卜素",
-      "en": "Carotenoid"
-    },
-    {
       "id": "lycopene",
       "zh": "番茄红素",
       "en": "Lycopene"
@@ -2364,11 +2337,6 @@
       "id": "aspergillus",
       "zh": "曲霉",
       "en": "Aspergillus"
-    },
-    {
-      "id": "penicillium",
-      "zh": "青霉",
-      "en": "Penicillium"
     },
     {
       "id": "starter",

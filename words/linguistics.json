@@ -220,11 +220,6 @@
       "forms": { "en": ["uvula"] }
     },
     {
-      "id": "click",
-      "zh": "搭嘴音",
-      "en": "Click"
-    },
-    {
       "id": "implosive",
       "zh": "内爆音",
       "en": "Implosive"
@@ -1121,11 +1116,6 @@
       "id": "semantic-field",
       "zh": "语义场",
       "en": "Semantic field"
-    },
-    {
-      "id": "scope",
-      "zh": "辖域",
-      "en": "Scope"
     },
     {
       "id": "possible-world",

@@ -1809,12 +1809,6 @@
       "en": "Magazine"
     },
     {
-      "id": "column",
-      "zh": "专栏",
-      "en": "Column",
-      "forms": { "en": ["columnist"] }
-    },
-    {
       "id": "book-review",
       "zh": "书评",
       "en": "Book review"

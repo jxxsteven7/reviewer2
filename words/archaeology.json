@@ -158,11 +158,6 @@
       "en": "Pit house"
     },
     {
-      "id": "stilt-house",
-      "zh": "干栏式建筑",
-      "en": "Stilt house"
-    },
-    {
       "id": "kiln-site",
       "zh": "窑址",
       "en": "Kiln site"
@@ -1254,11 +1249,6 @@
       "id": "conservator",
       "zh": "文物修复师",
       "en": "Conservator"
-    },
-    {
-      "id": "consolidation",
-      "zh": "加固",
-      "en": "Consolidation"
     },
     {
       "id": "reversibility",
