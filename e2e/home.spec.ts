@@ -16,10 +16,10 @@ for (const language of ['en', 'zh'] as const) {
     await page.getByRole('link', { name: TEXT.en.app.name, exact: true }).click();
 
     // Only the author's name links to their page, once: after the line on how to play, or on an
-    // English phone after the tagline, whose last line has room for it.
+    // English page under 30rem, after the tagline, which takes two lines there.
     const author = page.getByRole('link', { name: text.footer.author, exact: true });
     await expect(author).toHaveCount(1);
-    const beside = language === 'en' && (page.viewportSize()?.width ?? 0) < 640;
+    const beside = language === 'en' && (page.viewportSize()?.width ?? 0) < 480;
     await expect(
       page.locator(beside ? '.heading' : '.intro').getByRole('link', { name: text.footer.author }),
     ).toBeVisible();

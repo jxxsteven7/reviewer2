@@ -23,8 +23,8 @@ import PublicRooms from './PublicRooms.vue';
 // game on a big sticker with the games to come below it, the acknowledgments and the sponsors,
 // folded, and footnotes, which offer a way to buy the author a cola and the way to send them
 // feedback, each with a drawing, and name the build's version. The author, linked to their page,
-// follows the line on how to play, or on an English phone the tagline, whose last line has room
-// for them there; the page holds both and shows one. On a wide screen the games stand on the
+// follows the line on how to play, or on a narrow English page the tagline, whose last line has
+// room for them there; the page holds both and shows one. On a wide screen the games stand on the
 // right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
@@ -183,13 +183,13 @@ h1 {
   white-space: nowrap;
 }
 
-/* On a phone the English tagline takes two lines, and the author follows its last line instead,
-   going to a line of their own if it leaves no room. */
+/* Below 30rem the English tagline takes two lines (it fits on one from about 32rem), and the
+   author follows its last line instead, going to a line of their own if it leaves no room. */
 .beside {
   display: none;
 }
 
-@media (max-width: 39.99rem) {
+@media (max-width: 29.99rem) {
   .home:lang(en) h1 {
     display: inline;
     margin-inline-end: var(--space-3);
