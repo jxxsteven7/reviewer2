@@ -1,0 +1,1596 @@
+{
+  "id": "linguistics",
+  "name": {
+    "zh": "语言学",
+    "en": "Linguistics"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "phoneme",
+      "zh": "音位",
+      "en": "Phoneme",
+      "forms": { "en": ["phonemic"] }
+    },
+    {
+      "id": "grammar",
+      "zh": "语法",
+      "en": "Grammar",
+      "forms": { "en": ["grammatical", "grammarian"] }
+    },
+    {
+      "id": "semantics",
+      "zh": "语义",
+      "en": "Semantics"
+    },
+    {
+      "id": "pragmatics",
+      "zh": "语用学",
+      "en": "Pragmatics"
+    },
+    {
+      "id": "dialect",
+      "zh": "方言",
+      "en": "Dialect",
+      "forms": { "en": ["dialectal"] }
+    },
+    {
+      "id": "tone",
+      "zh": "声调",
+      "en": "Tone",
+      "forms": { "en": ["tonal"] }
+    },
+    {
+      "id": "phonetics",
+      "zh": "语音学",
+      "en": "Phonetics",
+      "forms": { "en": ["phonetician"] }
+    },
+    {
+      "id": "corpus",
+      "zh": "语料库",
+      "en": "Corpus",
+      "forms": { "en": ["corpora"] }
+    },
+    {
+      "id": "vowel",
+      "zh": "元音",
+      "en": "Vowel",
+      "forms": { "en": ["vocalic"] }
+    },
+    {
+      "id": "consonant",
+      "zh": "辅音",
+      "en": "Consonant",
+      "forms": { "en": ["consonantal"] }
+    },
+    {
+      "id": "syllable",
+      "zh": "音节",
+      "en": "Syllable",
+      "forms": { "en": ["syllabic"] }
+    },
+    {
+      "id": "intonation",
+      "zh": "语调",
+      "en": "Intonation"
+    },
+    {
+      "id": "prosody",
+      "zh": "韵律",
+      "en": "Prosody",
+      "forms": { "en": ["prosodic"] }
+    },
+    {
+      "id": "allophone",
+      "zh": "音位变体",
+      "en": "Allophone",
+      "forms": { "en": ["allophonic"] }
+    },
+    {
+      "id": "minimal-pair",
+      "zh": "最小对立体",
+      "en": "Minimal pair"
+    },
+    {
+      "id": "ipa",
+      "zh": "国际音标",
+      "en": "IPA",
+      "forms": { "en": ["International Phonetic Alphabet"] }
+    },
+    {
+      "id": "aspiration",
+      "zh": "送气",
+      "en": "Aspiration",
+      "forms": { "en": ["aspirated"] }
+    },
+    {
+      "id": "nasal",
+      "zh": "鼻音",
+      "en": "Nasal",
+      "forms": { "en": ["nasalization", "nasalisation", "nasalized"] }
+    },
+    {
+      "id": "plosive",
+      "zh": "塞音",
+      "en": "Plosive"
+    },
+    {
+      "id": "fricative",
+      "zh": "擦音",
+      "en": "Fricative"
+    },
+    {
+      "id": "affricate",
+      "zh": "塞擦音",
+      "en": "Affricate"
+    },
+    {
+      "id": "trill",
+      "zh": "颤音",
+      "en": "Trill"
+    },
+    {
+      "id": "approximant",
+      "zh": "近音",
+      "en": "Approximant"
+    },
+    {
+      "id": "semivowel",
+      "zh": "半元音",
+      "en": "Semivowel"
+    },
+    {
+      "id": "diphthong",
+      "zh": "双元音",
+      "en": "Diphthong"
+    },
+    {
+      "id": "glottis",
+      "zh": "声门",
+      "en": "Glottis",
+      "forms": { "en": ["glottal"] }
+    },
+    {
+      "id": "glottal-stop",
+      "zh": "喉塞音",
+      "en": "Glottal stop"
+    },
+    {
+      "id": "pronunciation",
+      "zh": "发音",
+      "en": "Pronunciation",
+      "forms": { "en": ["pronounce"] }
+    },
+    {
+      "id": "formant",
+      "zh": "共振峰",
+      "en": "Formant"
+    },
+    {
+      "id": "spectrogram",
+      "zh": "语图",
+      "en": "Spectrogram"
+    },
+    {
+      "id": "voiceless",
+      "zh": "清音",
+      "en": "Voiceless"
+    },
+    {
+      "id": "voiced",
+      "zh": "浊音",
+      "en": "Voiced"
+    },
+    {
+      "id": "sonorant",
+      "zh": "响音",
+      "en": "Sonorant"
+    },
+    {
+      "id": "obstruent",
+      "zh": "阻音",
+      "en": "Obstruent"
+    },
+    {
+      "id": "bilabial",
+      "zh": "双唇音",
+      "en": "Bilabial"
+    },
+    {
+      "id": "alveolar",
+      "zh": "齿龈音",
+      "en": "Alveolar"
+    },
+    {
+      "id": "retroflex",
+      "zh": "卷舌音",
+      "en": "Retroflex"
+    },
+    {
+      "id": "velar",
+      "zh": "软腭音",
+      "en": "Velar",
+      "forms": { "en": ["velum"] }
+    },
+    {
+      "id": "uvular",
+      "zh": "小舌音",
+      "en": "Uvular",
+      "forms": { "en": ["uvula"] }
+    },
+    {
+      "id": "implosive",
+      "zh": "内爆音",
+      "en": "Implosive"
+    },
+    {
+      "id": "ejective",
+      "zh": "挤喉音",
+      "en": "Ejective"
+    },
+    {
+      "id": "segment",
+      "zh": "音段",
+      "en": "Segment",
+      "forms": { "en": ["segmental"] }
+    },
+    {
+      "id": "suprasegmental",
+      "zh": "超音段",
+      "en": "Suprasegmental"
+    },
+    {
+      "id": "foot",
+      "zh": "音步",
+      "en": "Foot"
+    },
+    {
+      "id": "mora",
+      "zh": "莫拉",
+      "en": "Mora",
+      "forms": { "en": ["moraic"] }
+    },
+    {
+      "id": "vowel-harmony",
+      "zh": "元音和谐",
+      "en": "Vowel harmony"
+    },
+    {
+      "id": "epenthesis",
+      "zh": "增音",
+      "en": "Epenthesis",
+      "forms": { "en": ["epenthetic"] }
+    },
+    {
+      "id": "elision",
+      "zh": "省音",
+      "en": "Elision",
+      "forms": { "en": ["elide"] }
+    },
+    {
+      "id": "metathesis",
+      "zh": "换位",
+      "en": "Metathesis"
+    },
+    {
+      "id": "coarticulation",
+      "zh": "协同发音",
+      "en": "Coarticulation"
+    },
+    {
+      "id": "juncture",
+      "zh": "音渡",
+      "en": "Juncture"
+    },
+    {
+      "id": "open-syllable",
+      "zh": "开音节",
+      "en": "Open syllable"
+    },
+    {
+      "id": "monosyllable",
+      "zh": "单音节",
+      "en": "Monosyllable",
+      "forms": { "en": ["monosyllabic"] }
+    },
+    {
+      "id": "schwa",
+      "zh": "央元音",
+      "en": "Schwa"
+    },
+    {
+      "id": "phonology",
+      "zh": "音系学",
+      "en": "Phonology",
+      "forms": { "en": ["phonological", "phonologist"] }
+    },
+    {
+      "id": "assimilation",
+      "zh": "同化",
+      "en": "Assimilation",
+      "forms": { "en": ["assimilate"] }
+    },
+    {
+      "id": "tone-sandhi",
+      "zh": "变调",
+      "en": "Tone sandhi"
+    },
+    {
+      "id": "neutral-tone",
+      "zh": "轻声",
+      "en": "Neutral tone"
+    },
+    {
+      "id": "erhua",
+      "zh": "儿化",
+      "en": "Erhua"
+    },
+    {
+      "id": "entering-tone",
+      "zh": "入声",
+      "en": "Entering tone"
+    },
+    {
+      "id": "initial",
+      "zh": "声母",
+      "en": "Initial"
+    },
+    {
+      "id": "final",
+      "zh": "韵母",
+      "en": "Final"
+    },
+    {
+      "id": "medial",
+      "zh": "介音",
+      "en": "Medial"
+    },
+    {
+      "id": "coda",
+      "zh": "韵尾",
+      "en": "Coda"
+    },
+    {
+      "id": "zero-initial",
+      "zh": "零声母",
+      "en": "Zero initial"
+    },
+    {
+      "id": "fanqie",
+      "zh": "反切",
+      "en": "Fanqie"
+    },
+    {
+      "id": "rhyme-book",
+      "zh": "韵书",
+      "en": "Rhyme book"
+    },
+    {
+      "id": "rime-table",
+      "zh": "韵图",
+      "en": "Rime table"
+    },
+    {
+      "id": "rhyme-group",
+      "zh": "韵部",
+      "en": "Rhyme group"
+    },
+    {
+      "id": "qieyun",
+      "zh": "切韵",
+      "en": "Qieyun"
+    },
+    {
+      "id": "shuowen-jiezi",
+      "zh": "说文解字",
+      "en": "Shuowen Jiezi",
+      "forms": { "en": ["Shuowen"] }
+    },
+    {
+      "id": "middle-chinese",
+      "zh": "中古汉语",
+      "en": "Middle Chinese"
+    },
+    {
+      "id": "old-chinese",
+      "zh": "上古汉语",
+      "en": "Old Chinese"
+    },
+    {
+      "id": "putonghua",
+      "zh": "普通话",
+      "en": "Putonghua"
+    },
+    {
+      "id": "vernacular",
+      "zh": "白话",
+      "en": "Vernacular"
+    },
+    {
+      "id": "exegesis",
+      "zh": "训诂",
+      "en": "Exegesis"
+    },
+    {
+      "id": "philology",
+      "zh": "语文学",
+      "en": "Philology",
+      "forms": { "en": ["philologist", "philological"] }
+    },
+    {
+      "id": "pictograph",
+      "zh": "象形",
+      "en": "Pictograph",
+      "forms": { "en": ["pictographic"] }
+    },
+    {
+      "id": "ideogram",
+      "zh": "表意文字",
+      "en": "Ideogram",
+      "forms": { "en": ["ideographic"] }
+    },
+    {
+      "id": "phonetic-loan",
+      "zh": "假借",
+      "en": "Phonetic loan"
+    },
+    {
+      "id": "radical",
+      "zh": "部首",
+      "en": "Radical"
+    },
+    {
+      "id": "glyph",
+      "zh": "字形",
+      "en": "Glyph"
+    },
+    {
+      "id": "syllabary",
+      "zh": "音节文字",
+      "en": "Syllabary"
+    },
+    {
+      "id": "abjad",
+      "zh": "辅音文字",
+      "en": "Abjad"
+    },
+    {
+      "id": "writing-system",
+      "zh": "书写系统",
+      "en": "Writing system"
+    },
+    {
+      "id": "orthography",
+      "zh": "正字法",
+      "en": "Orthography",
+      "forms": { "en": ["orthographic"] }
+    },
+    {
+      "id": "grapheme",
+      "zh": "字素",
+      "en": "Grapheme",
+      "forms": { "en": ["graphemic"] }
+    },
+    {
+      "id": "romanization",
+      "zh": "罗马化",
+      "en": "Romanization",
+      "forms": { "en": ["romanisation", "romanize", "romanise"] }
+    },
+    {
+      "id": "wade-giles",
+      "zh": "韦氏拼音",
+      "en": "Wade-Giles"
+    },
+    {
+      "id": "diacritic",
+      "zh": "变音符号",
+      "en": "Diacritic",
+      "forms": { "en": ["diacritical"] }
+    },
+    {
+      "id": "cyrillic",
+      "zh": "西里尔字母",
+      "en": "Cyrillic"
+    },
+    {
+      "id": "braille",
+      "zh": "盲文",
+      "en": "Braille"
+    },
+    {
+      "id": "shorthand",
+      "zh": "速记",
+      "en": "Shorthand"
+    },
+    {
+      "id": "morphology",
+      "zh": "形态学",
+      "en": "Morphology",
+      "forms": { "en": ["morphological"] }
+    },
+    {
+      "id": "morpheme",
+      "zh": "语素",
+      "en": "Morpheme",
+      "forms": { "en": ["morphemic"] }
+    },
+    {
+      "id": "bound-morpheme",
+      "zh": "黏着语素",
+      "en": "Bound morpheme"
+    },
+    {
+      "id": "affix",
+      "zh": "词缀",
+      "en": "Affix",
+      "forms": { "en": ["affixation"] }
+    },
+    {
+      "id": "prefix",
+      "zh": "前缀",
+      "en": "Prefix"
+    },
+    {
+      "id": "suffix",
+      "zh": "后缀",
+      "en": "Suffix"
+    },
+    {
+      "id": "infix",
+      "zh": "中缀",
+      "en": "Infix"
+    },
+    {
+      "id": "circumfix",
+      "zh": "环缀",
+      "en": "Circumfix"
+    },
+    {
+      "id": "root",
+      "zh": "词根",
+      "en": "Root"
+    },
+    {
+      "id": "inflection",
+      "zh": "屈折",
+      "en": "Inflection",
+      "forms": { "en": ["inflectional", "inflect", "inflexion"] }
+    },
+    {
+      "id": "derivation",
+      "zh": "派生",
+      "en": "Derivation",
+      "forms": { "en": ["derivational"] }
+    },
+    {
+      "id": "compound-word",
+      "zh": "复合词",
+      "en": "Compound word"
+    },
+    {
+      "id": "reduplication",
+      "zh": "重叠",
+      "en": "Reduplication",
+      "forms": { "en": ["reduplicate", "reduplicated"] }
+    },
+    {
+      "id": "part-of-speech",
+      "zh": "词性",
+      "en": "Part of speech",
+      "forms": { "en": ["POS"] }
+    },
+    {
+      "id": "noun",
+      "zh": "名词",
+      "en": "Noun"
+    },
+    {
+      "id": "verb",
+      "zh": "动词",
+      "en": "Verb"
+    },
+    {
+      "id": "adjective",
+      "zh": "形容词",
+      "en": "Adjective",
+      "forms": { "en": ["adjectival"] }
+    },
+    {
+      "id": "adverb",
+      "zh": "副词",
+      "en": "Adverb"
+    },
+    {
+      "id": "pronoun",
+      "zh": "代词",
+      "en": "Pronoun",
+      "forms": { "en": ["pronominal"] }
+    },
+    {
+      "id": "preposition",
+      "zh": "介词",
+      "en": "Preposition",
+      "forms": { "en": ["prepositional"] }
+    },
+    {
+      "id": "conjunction",
+      "zh": "连词",
+      "en": "Conjunction"
+    },
+    {
+      "id": "article",
+      "zh": "冠词",
+      "en": "Article"
+    },
+    {
+      "id": "measure-word",
+      "zh": "量词",
+      "en": "Measure word"
+    },
+    {
+      "id": "interjection",
+      "zh": "叹词",
+      "en": "Interjection"
+    },
+    {
+      "id": "numeral",
+      "zh": "数词",
+      "en": "Numeral"
+    },
+    {
+      "id": "determiner",
+      "zh": "限定词",
+      "en": "Determiner"
+    },
+    {
+      "id": "auxiliary",
+      "zh": "助动词",
+      "en": "Auxiliary"
+    },
+    {
+      "id": "modal-verb",
+      "zh": "情态动词",
+      "en": "Modal verb"
+    },
+    {
+      "id": "copula",
+      "zh": "系动词",
+      "en": "Copula",
+      "forms": { "en": ["copular"] }
+    },
+    {
+      "id": "infinitive",
+      "zh": "不定式",
+      "en": "Infinitive"
+    },
+    {
+      "id": "participle",
+      "zh": "分词",
+      "en": "Participle",
+      "forms": { "en": ["participial"] }
+    },
+    {
+      "id": "gerund",
+      "zh": "动名词",
+      "en": "Gerund"
+    },
+    {
+      "id": "modal-particle",
+      "zh": "语气词",
+      "en": "Modal particle"
+    },
+    {
+      "id": "localizer",
+      "zh": "方位词",
+      "en": "Localizer",
+      "forms": { "en": ["localiser"] }
+    },
+    {
+      "id": "content-word",
+      "zh": "实词",
+      "en": "Content word"
+    },
+    {
+      "id": "function-word",
+      "zh": "虚词",
+      "en": "Function word"
+    },
+    {
+      "id": "tense",
+      "zh": "时态",
+      "en": "Tense"
+    },
+    {
+      "id": "passive-voice",
+      "zh": "被动语态",
+      "en": "Passive voice"
+    },
+    {
+      "id": "subjunctive",
+      "zh": "虚拟语气",
+      "en": "Subjunctive"
+    },
+    {
+      "id": "imperative",
+      "zh": "祈使句",
+      "en": "Imperative"
+    },
+    {
+      "id": "perfective",
+      "zh": "完成体",
+      "en": "Perfective"
+    },
+    {
+      "id": "progressive",
+      "zh": "进行体",
+      "en": "Progressive"
+    },
+    {
+      "id": "nominative",
+      "zh": "主格",
+      "en": "Nominative"
+    },
+    {
+      "id": "accusative",
+      "zh": "宾格",
+      "en": "Accusative"
+    },
+    {
+      "id": "genitive",
+      "zh": "属格",
+      "en": "Genitive"
+    },
+    {
+      "id": "dative",
+      "zh": "与格",
+      "en": "Dative"
+    },
+    {
+      "id": "ergative",
+      "zh": "作格",
+      "en": "Ergative",
+      "forms": { "en": ["ergativity"] }
+    },
+    {
+      "id": "nominalization",
+      "zh": "名物化",
+      "en": "Nominalization",
+      "forms": { "en": ["nominalisation", "nominalize"] }
+    },
+    {
+      "id": "portmanteau",
+      "zh": "混成词",
+      "en": "Portmanteau"
+    },
+    {
+      "id": "back-formation",
+      "zh": "逆构词",
+      "en": "Back-formation"
+    },
+    {
+      "id": "calque",
+      "zh": "仿译词",
+      "en": "Calque"
+    },
+    {
+      "id": "loanword",
+      "zh": "借词",
+      "en": "Loanword"
+    },
+    {
+      "id": "neologism",
+      "zh": "新词",
+      "en": "Neologism"
+    },
+    {
+      "id": "abbreviation",
+      "zh": "缩略语",
+      "en": "Abbreviation",
+      "forms": { "en": ["abbreviate"] }
+    },
+    {
+      "id": "euphemism",
+      "zh": "委婉语",
+      "en": "Euphemism",
+      "forms": { "en": ["euphemistic"] }
+    },
+    {
+      "id": "pejorative",
+      "zh": "贬义",
+      "en": "Pejorative"
+    },
+    {
+      "id": "mental-lexicon",
+      "zh": "心理词典",
+      "en": "Mental lexicon"
+    },
+    {
+      "id": "lexicography",
+      "zh": "词典学",
+      "en": "Lexicography",
+      "forms": { "en": ["lexicographer", "lexicographic"] }
+    },
+    {
+      "id": "synonym",
+      "zh": "同义词",
+      "en": "Synonym",
+      "forms": { "en": ["synonymous", "synonymy"] }
+    },
+    {
+      "id": "antonym",
+      "zh": "反义词",
+      "en": "Antonym",
+      "forms": { "en": ["antonymy"] }
+    },
+    {
+      "id": "homophone",
+      "zh": "同音词",
+      "en": "Homophone",
+      "forms": { "en": ["homophonous", "homophony"] }
+    },
+    {
+      "id": "homograph",
+      "zh": "同形词",
+      "en": "Homograph"
+    },
+    {
+      "id": "polysemy",
+      "zh": "多义",
+      "en": "Polysemy",
+      "forms": { "en": ["polysemous"] }
+    },
+    {
+      "id": "hypernym",
+      "zh": "上位词",
+      "en": "Hypernym",
+      "forms": { "en": ["hypernymy"] }
+    },
+    {
+      "id": "hyponym",
+      "zh": "下位词",
+      "en": "Hyponym",
+      "forms": { "en": ["hyponymy"] }
+    },
+    {
+      "id": "collocation",
+      "zh": "搭配",
+      "en": "Collocation",
+      "forms": { "en": ["collocate"] }
+    },
+    {
+      "id": "syntax",
+      "zh": "句法",
+      "en": "Syntax",
+      "forms": { "en": ["syntactic"] }
+    },
+    {
+      "id": "subject",
+      "zh": "主语",
+      "en": "Subject"
+    },
+    {
+      "id": "predicate",
+      "zh": "谓语",
+      "en": "Predicate"
+    },
+    {
+      "id": "attributive",
+      "zh": "定语",
+      "en": "Attributive"
+    },
+    {
+      "id": "modifier",
+      "zh": "修饰语",
+      "en": "Modifier",
+      "forms": { "en": ["modify"] }
+    },
+    {
+      "id": "adjunct",
+      "zh": "附加语",
+      "en": "Adjunct"
+    },
+    {
+      "id": "phrase",
+      "zh": "短语",
+      "en": "Phrase",
+      "forms": { "en": ["phrasal"] }
+    },
+    {
+      "id": "word-order",
+      "zh": "语序",
+      "en": "Word order"
+    },
+    {
+      "id": "svo",
+      "zh": "主谓宾",
+      "en": "SVO"
+    },
+    {
+      "id": "constituent",
+      "zh": "成分",
+      "en": "Constituent",
+      "forms": { "en": ["constituency"] }
+    },
+    {
+      "id": "ditransitive",
+      "zh": "双宾语",
+      "en": "Ditransitive"
+    },
+    {
+      "id": "causative",
+      "zh": "使役",
+      "en": "Causative",
+      "forms": { "en": ["causation"] }
+    },
+    {
+      "id": "serial-verb",
+      "zh": "连动式",
+      "en": "Serial verb"
+    },
+    {
+      "id": "resultative",
+      "zh": "动结式",
+      "en": "Resultative"
+    },
+    {
+      "id": "pro-drop",
+      "zh": "代词脱落",
+      "en": "Pro-drop"
+    },
+    {
+      "id": "wh-word",
+      "zh": "疑问词",
+      "en": "Wh-word"
+    },
+    {
+      "id": "subordination",
+      "zh": "从属",
+      "en": "Subordination",
+      "forms": { "en": ["subordinate"] }
+    },
+    {
+      "id": "topic",
+      "zh": "话题",
+      "en": "Topic"
+    },
+    {
+      "id": "ambiguity",
+      "zh": "歧义",
+      "en": "Ambiguity",
+      "forms": { "en": ["ambiguous"] }
+    },
+    {
+      "id": "garden-path",
+      "zh": "花园路径句",
+      "en": "Garden path"
+    },
+    {
+      "id": "anaphora",
+      "zh": "回指",
+      "en": "Anaphora",
+      "forms": { "en": ["anaphoric"] }
+    },
+    {
+      "id": "deixis",
+      "zh": "指示语",
+      "en": "Deixis",
+      "forms": { "en": ["deictic"] }
+    },
+    {
+      "id": "ellipsis",
+      "zh": "省略",
+      "en": "Ellipsis"
+    },
+    {
+      "id": "agreement",
+      "zh": "一致",
+      "en": "Agreement"
+    },
+    {
+      "id": "valency",
+      "zh": "配价",
+      "en": "Valency"
+    },
+    {
+      "id": "thematic-role",
+      "zh": "题元角色",
+      "en": "Thematic role"
+    },
+    {
+      "id": "typology",
+      "zh": "类型学",
+      "en": "Typology",
+      "forms": { "en": ["typological"] }
+    },
+    {
+      "id": "markedness",
+      "zh": "标记性",
+      "en": "Markedness",
+      "forms": { "en": ["marked"] }
+    },
+    {
+      "id": "agglutination",
+      "zh": "黏着语",
+      "en": "Agglutination",
+      "forms": { "en": ["agglutinative"] }
+    },
+    {
+      "id": "signifier",
+      "zh": "能指",
+      "en": "Signifier"
+    },
+    {
+      "id": "signified",
+      "zh": "所指",
+      "en": "Signified"
+    },
+    {
+      "id": "arbitrariness",
+      "zh": "任意性",
+      "en": "Arbitrariness",
+      "forms": { "en": ["arbitrary"] }
+    },
+    {
+      "id": "iconicity",
+      "zh": "象似性",
+      "en": "Iconicity",
+      "forms": { "en": ["iconic"] }
+    },
+    {
+      "id": "synchrony",
+      "zh": "共时",
+      "en": "Synchrony",
+      "forms": { "en": ["synchronic"] }
+    },
+    {
+      "id": "diachrony",
+      "zh": "历时",
+      "en": "Diachrony",
+      "forms": { "en": ["diachronic"] }
+    },
+    {
+      "id": "semiotics",
+      "zh": "符号学",
+      "en": "Semiotics",
+      "forms": { "en": ["semiotician"] }
+    },
+    {
+      "id": "competence",
+      "zh": "语言能力",
+      "en": "Competence"
+    },
+    {
+      "id": "reference",
+      "zh": "指称",
+      "en": "Reference",
+      "forms": { "en": ["refer", "referent", "referential"] }
+    },
+    {
+      "id": "entailment",
+      "zh": "蕴涵",
+      "en": "Entailment",
+      "forms": { "en": ["entail"] }
+    },
+    {
+      "id": "presupposition",
+      "zh": "预设",
+      "en": "Presupposition",
+      "forms": { "en": ["presuppose"] }
+    },
+    {
+      "id": "implicature",
+      "zh": "会话含义",
+      "en": "Implicature",
+      "forms": { "en": ["implicate"] }
+    },
+    {
+      "id": "speech-act",
+      "zh": "言语行为",
+      "en": "Speech act"
+    },
+    {
+      "id": "illocution",
+      "zh": "言外行为",
+      "en": "Illocution",
+      "forms": { "en": ["illocutionary"] }
+    },
+    {
+      "id": "performative",
+      "zh": "施为句",
+      "en": "Performative"
+    },
+    {
+      "id": "politeness",
+      "zh": "礼貌",
+      "en": "Politeness",
+      "forms": { "en": ["polite"] }
+    },
+    {
+      "id": "face",
+      "zh": "面子",
+      "en": "Face"
+    },
+    {
+      "id": "semantic-field",
+      "zh": "语义场",
+      "en": "Semantic field"
+    },
+    {
+      "id": "possible-world",
+      "zh": "可能世界",
+      "en": "Possible world"
+    },
+    {
+      "id": "metonymy",
+      "zh": "转喻",
+      "en": "Metonymy",
+      "forms": { "en": ["metonymic"] }
+    },
+    {
+      "id": "synecdoche",
+      "zh": "提喻",
+      "en": "Synecdoche"
+    },
+    {
+      "id": "image-schema",
+      "zh": "意象图式",
+      "en": "Image schema"
+    },
+    {
+      "id": "cohesion",
+      "zh": "衔接",
+      "en": "Cohesion",
+      "forms": { "en": ["cohesive"] }
+    },
+    {
+      "id": "turn-taking",
+      "zh": "话轮转换",
+      "en": "Turn-taking"
+    },
+    {
+      "id": "filler",
+      "zh": "填充词",
+      "en": "Filler"
+    },
+    {
+      "id": "honorific",
+      "zh": "敬语",
+      "en": "Honorific"
+    },
+    {
+      "id": "address-term",
+      "zh": "称谓",
+      "en": "Address term"
+    },
+    {
+      "id": "code-switching",
+      "zh": "语码转换",
+      "en": "Code-switching"
+    },
+    {
+      "id": "creole",
+      "zh": "克里奥尔语",
+      "en": "Creole",
+      "forms": { "en": ["creolization", "creolisation"] }
+    },
+    {
+      "id": "diglossia",
+      "zh": "双言",
+      "en": "Diglossia",
+      "forms": { "en": ["diglossic"] }
+    },
+    {
+      "id": "sociolect",
+      "zh": "社会方言",
+      "en": "Sociolect"
+    },
+    {
+      "id": "idiolect",
+      "zh": "个人方言",
+      "en": "Idiolect"
+    },
+    {
+      "id": "jargon",
+      "zh": "行话",
+      "en": "Jargon"
+    },
+    {
+      "id": "dialectology",
+      "zh": "方言学",
+      "en": "Dialectology",
+      "forms": { "en": ["dialectologist"] }
+    },
+    {
+      "id": "isogloss",
+      "zh": "同言线",
+      "en": "Isogloss"
+    },
+    {
+      "id": "prescriptivism",
+      "zh": "规定主义",
+      "en": "Prescriptivism",
+      "forms": { "en": ["prescriptive", "prescriptivist"] }
+    },
+    {
+      "id": "descriptivism",
+      "zh": "描写主义",
+      "en": "Descriptivism",
+      "forms": { "en": ["descriptive", "descriptivist"] }
+    },
+    {
+      "id": "conlang",
+      "zh": "人造语言",
+      "en": "Conlang",
+      "forms": { "en": ["constructed language"] }
+    },
+    {
+      "id": "proto-language",
+      "zh": "原始语",
+      "en": "Proto-language"
+    },
+    {
+      "id": "indo-european",
+      "zh": "印欧语系",
+      "en": "Indo-European"
+    },
+    {
+      "id": "cognate",
+      "zh": "同源词",
+      "en": "Cognate"
+    },
+    {
+      "id": "sound-change",
+      "zh": "音变",
+      "en": "Sound change"
+    },
+    {
+      "id": "grimms-law",
+      "zh": "格林定律",
+      "en": "Grimm's law"
+    },
+    {
+      "id": "verners-law",
+      "zh": "维尔纳定律",
+      "en": "Verner's law"
+    },
+    {
+      "id": "reconstruction",
+      "zh": "构拟",
+      "en": "Reconstruction",
+      "forms": { "en": ["reconstruct"] }
+    },
+    {
+      "id": "latin",
+      "zh": "拉丁语",
+      "en": "Latin"
+    },
+    {
+      "id": "sanskrit",
+      "zh": "梵语",
+      "en": "Sanskrit"
+    },
+    {
+      "id": "onomastics",
+      "zh": "专名学",
+      "en": "Onomastics"
+    },
+    {
+      "id": "babbling",
+      "zh": "咿呀学语",
+      "en": "Babbling",
+      "forms": { "en": ["babble"] }
+    },
+    {
+      "id": "interlanguage",
+      "zh": "中介语",
+      "en": "Interlanguage"
+    },
+    {
+      "id": "fossilization",
+      "zh": "石化",
+      "en": "Fossilization",
+      "forms": { "en": ["fossilisation", "fossilize", "fossilise"] }
+    },
+    {
+      "id": "aphasia",
+      "zh": "失语症",
+      "en": "Aphasia",
+      "forms": { "en": ["aphasic"] }
+    },
+    {
+      "id": "brocas-area",
+      "zh": "布罗卡区",
+      "en": "Broca's area"
+    },
+    {
+      "id": "speech-error",
+      "zh": "口误",
+      "en": "Speech error"
+    },
+    {
+      "id": "native-speaker",
+      "zh": "母语者",
+      "en": "Native speaker"
+    },
+    {
+      "id": "lexical-access",
+      "zh": "词汇通达",
+      "en": "Lexical access"
+    },
+    {
+      "id": "mcgurk-effect",
+      "zh": "麦格克效应",
+      "en": "McGurk effect"
+    },
+    {
+      "id": "word-frequency",
+      "zh": "词频",
+      "en": "Word frequency"
+    },
+    {
+      "id": "zipfs-law",
+      "zh": "齐普夫定律",
+      "en": "Zipf's law"
+    },
+    {
+      "id": "treebank",
+      "zh": "树库",
+      "en": "Treebank"
+    },
+    {
+      "id": "co-occurrence",
+      "zh": "共现",
+      "en": "Co-occurrence"
+    },
+    {
+      "id": "pos-tagging",
+      "zh": "词性标注",
+      "en": "POS tagging"
+    },
+    {
+      "id": "interpreting",
+      "zh": "口译",
+      "en": "Interpreting",
+      "forms": { "en": ["interpret", "interpreter"] }
+    },
+    {
+      "id": "tongue-twister",
+      "zh": "绕口令",
+      "en": "Tongue twister"
+    },
+    {
+      "id": "connotation",
+      "zh": "内涵意义",
+      "en": "Connotation",
+      "forms": { "en": ["connote", "connotative"] }
+    },
+    {
+      "id": "phonation",
+      "zh": "发声",
+      "en": "Phonation"
+    },
+    {
+      "id": "creaky-voice",
+      "zh": "嘎裂声",
+      "en": "Creaky voice"
+    },
+    {
+      "id": "interrogative",
+      "zh": "疑问句",
+      "en": "Interrogative"
+    },
+    {
+      "id": "declarative",
+      "zh": "陈述句",
+      "en": "Declarative"
+    },
+    {
+      "id": "count-noun",
+      "zh": "可数名词",
+      "en": "Count noun"
+    },
+    {
+      "id": "proper-noun",
+      "zh": "专有名词",
+      "en": "Proper noun"
+    },
+    {
+      "id": "transitive",
+      "zh": "及物",
+      "en": "Transitive",
+      "forms": { "en": ["transitivity"] }
+    },
+    {
+      "id": "reflexive",
+      "zh": "反身代词",
+      "en": "Reflexive"
+    },
+    {
+      "id": "first-person",
+      "zh": "第一人称",
+      "en": "First person"
+    },
+    {
+      "id": "demonstrative",
+      "zh": "指示代词",
+      "en": "Demonstrative"
+    },
+    {
+      "id": "logography",
+      "zh": "语素文字",
+      "en": "Logography",
+      "forms": { "en": ["logogram", "logographic"] }
+    },
+    {
+      "id": "rune",
+      "zh": "卢恩字母",
+      "en": "Rune",
+      "forms": { "en": ["runic"] }
+    },
+    {
+      "id": "kana",
+      "zh": "假名",
+      "en": "Kana"
+    },
+    {
+      "id": "hangul",
+      "zh": "谚文",
+      "en": "Hangul"
+    },
+    {
+      "id": "prestige",
+      "zh": "声望",
+      "en": "Prestige",
+      "forms": { "en": ["prestigious"] }
+    },
+    {
+      "id": "perlocution",
+      "zh": "言后行为",
+      "en": "Perlocution",
+      "forms": { "en": ["perlocutionary"] }
+    },
+    {
+      "id": "sla",
+      "zh": "二语习得",
+      "en": "SLA",
+      "forms": { "en": ["second language acquisition"] }
+    },
+    {
+      "id": "holophrase",
+      "zh": "单词句",
+      "en": "Holophrase",
+      "forms": { "en": ["holophrastic"] }
+    },
+    {
+      "id": "chain-shift",
+      "zh": "链移",
+      "en": "Chain shift"
+    },
+    {
+      "id": "substratum",
+      "zh": "底层语言",
+      "en": "Substratum"
+    },
+    {
+      "id": "sonority",
+      "zh": "响度",
+      "en": "Sonority"
+    },
+    {
+      "id": "deep-structure",
+      "zh": "深层结构",
+      "en": "Deep structure"
+    },
+    {
+      "id": "binding-theory",
+      "zh": "约束理论",
+      "en": "Binding theory"
+    },
+    {
+      "id": "syntax-tree",
+      "zh": "句法树",
+      "en": "Syntax tree"
+    },
+    {
+      "id": "lexicology",
+      "zh": "词汇学",
+      "en": "Lexicology",
+      "forms": { "en": ["lexicologist"] }
+    },
+    {
+      "id": "lateral",
+      "zh": "边音",
+      "en": "Lateral"
+    },
+    {
+      "id": "phonotactics",
+      "zh": "音位配列",
+      "en": "Phonotactics"
+    },
+    {
+      "id": "word-formation",
+      "zh": "构词法",
+      "en": "Word formation"
+    },
+    {
+      "id": "polysynthesis",
+      "zh": "多式综合语",
+      "en": "Polysynthesis",
+      "forms": { "en": ["polysynthetic"] }
+    },
+    {
+      "id": "cleft-sentence",
+      "zh": "分裂句",
+      "en": "Cleft sentence"
+    },
+    {
+      "id": "aspect",
+      "zh": "体貌",
+      "en": "Aspect",
+      "forms": { "en": ["aspectual"] }
+    },
+    {
+      "id": "evidentiality",
+      "zh": "示证",
+      "en": "Evidentiality",
+      "forms": { "en": ["evidential"] }
+    },
+    {
+      "id": "adjacency-pair",
+      "zh": "相邻对",
+      "en": "Adjacency pair"
+    },
+    {
+      "id": "paleography",
+      "zh": "古文字学",
+      "en": "Paleography",
+      "forms": { "en": ["palaeography"] }
+    },
+    {
+      "id": "decipherment",
+      "zh": "破译",
+      "en": "Decipherment",
+      "forms": { "en": ["decipher"] }
+    },
+    {
+      "id": "hyphen",
+      "zh": "连字符",
+      "en": "Hyphen",
+      "forms": { "en": ["hyphenate", "hyphenation"] }
+    },
+    {
+      "id": "apostrophe",
+      "zh": "撇号",
+      "en": "Apostrophe"
+    },
+    {
+      "id": "devoicing",
+      "zh": "清化",
+      "en": "Devoicing",
+      "forms": { "en": ["devoice", "devoiced"] }
+    },
+    {
+      "id": "stylistics",
+      "zh": "文体学",
+      "en": "Stylistics"
+    },
+    {
+      "id": "toponymy",
+      "zh": "地名学",
+      "en": "Toponymy",
+      "forms": { "en": ["toponym"] }
+    },
+    {
+      "id": "sentence",
+      "zh": "句子",
+      "en": "Sentence"
+    },
+    {
+      "id": "language",
+      "zh": "语言",
+      "en": "Language"
+    }
+  ]
+}

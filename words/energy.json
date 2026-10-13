@@ -1,0 +1,1970 @@
+{
+  "id": "energy",
+  "name": {
+    "zh": "能源与动力",
+    "en": "Energy & Power"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "primary-energy",
+      "zh": "一次能源",
+      "en": "Primary energy"
+    },
+    {
+      "id": "watt",
+      "zh": "瓦特",
+      "en": "Watt"
+    },
+    {
+      "id": "megawatt",
+      "zh": "兆瓦",
+      "en": "Megawatt"
+    },
+    {
+      "id": "kilovolt",
+      "zh": "千伏",
+      "en": "Kilovolt"
+    },
+    {
+      "id": "joule",
+      "zh": "焦耳",
+      "en": "Joule"
+    },
+    {
+      "id": "btu",
+      "zh": "英热单位",
+      "en": "BTU",
+      "forms": { "en": ["British thermal unit"] }
+    },
+    {
+      "id": "standard-coal",
+      "zh": "标准煤",
+      "en": "Standard coal"
+    },
+    {
+      "id": "heating-value",
+      "zh": "热值",
+      "en": "Heating value"
+    },
+    {
+      "id": "sankey-diagram",
+      "zh": "桑基图",
+      "en": "Sankey diagram"
+    },
+    {
+      "id": "energy-poverty",
+      "zh": "能源贫困",
+      "en": "Energy poverty"
+    },
+    {
+      "id": "energy-audit",
+      "zh": "能源审计",
+      "en": "Energy audit"
+    },
+    {
+      "id": "energy-label",
+      "zh": "能效标识",
+      "en": "Energy label"
+    },
+    {
+      "id": "standby-power",
+      "zh": "待机功耗",
+      "en": "Standby power"
+    },
+    {
+      "id": "rated-power",
+      "zh": "额定功率",
+      "en": "Rated power"
+    },
+    {
+      "id": "nameplate",
+      "zh": "铭牌",
+      "en": "Nameplate"
+    },
+    {
+      "id": "full-load",
+      "zh": "满负荷",
+      "en": "Full load"
+    },
+    {
+      "id": "power-output",
+      "zh": "出力",
+      "en": "Power output"
+    },
+    {
+      "id": "oil-price",
+      "zh": "油价",
+      "en": "Oil price"
+    },
+    {
+      "id": "grid-parity",
+      "zh": "平价上网",
+      "en": "Grid parity"
+    },
+    {
+      "id": "feed-in-tariff",
+      "zh": "上网电价",
+      "en": "Feed-in tariff"
+    },
+    {
+      "id": "lcoe",
+      "zh": "度电成本",
+      "en": "LCOE",
+      "forms": { "en": ["levelized cost of electricity"] }
+    },
+    {
+      "id": "green-power",
+      "zh": "绿电",
+      "en": "Green power"
+    },
+    {
+      "id": "power-system",
+      "zh": "电力系统",
+      "en": "Power system"
+    },
+    {
+      "id": "power-plant",
+      "zh": "发电厂",
+      "en": "Power plant"
+    },
+    {
+      "id": "thermal-power",
+      "zh": "火电",
+      "en": "Thermal power"
+    },
+    {
+      "id": "coal-power",
+      "zh": "煤电",
+      "en": "Coal power"
+    },
+    {
+      "id": "cogeneration",
+      "zh": "热电联产",
+      "en": "Cogeneration",
+      "forms": { "en": ["CHP"] }
+    },
+    {
+      "id": "microgrid",
+      "zh": "微电网",
+      "en": "Microgrid"
+    },
+    {
+      "id": "vpp",
+      "zh": "虚拟电厂",
+      "en": "VPP",
+      "forms": { "en": ["virtual power plant"] }
+    },
+    {
+      "id": "uhv",
+      "zh": "特高压",
+      "en": "UHV",
+      "forms": { "en": ["ultra-high voltage"] }
+    },
+    {
+      "id": "hvdc",
+      "zh": "高压直流",
+      "en": "HVDC"
+    },
+    {
+      "id": "pylon",
+      "zh": "输电塔",
+      "en": "Pylon"
+    },
+    {
+      "id": "busbar",
+      "zh": "母线",
+      "en": "Busbar"
+    },
+    {
+      "id": "switchgear",
+      "zh": "开关柜",
+      "en": "Switchgear"
+    },
+    {
+      "id": "disconnector",
+      "zh": "隔离开关",
+      "en": "Disconnector"
+    },
+    {
+      "id": "surge-arrester",
+      "zh": "避雷器",
+      "en": "Surge arrester"
+    },
+    {
+      "id": "trip",
+      "zh": "跳闸",
+      "en": "Trip"
+    },
+    {
+      "id": "islanding",
+      "zh": "孤岛",
+      "en": "Islanding"
+    },
+    {
+      "id": "black-start",
+      "zh": "黑启动",
+      "en": "Black start"
+    },
+    {
+      "id": "grid-connected",
+      "zh": "并网",
+      "en": "Grid-connected"
+    },
+    {
+      "id": "off-grid",
+      "zh": "离网",
+      "en": "Off-grid"
+    },
+    {
+      "id": "power-flow",
+      "zh": "潮流",
+      "en": "Power flow"
+    },
+    {
+      "id": "reactive-power",
+      "zh": "无功功率",
+      "en": "Reactive power"
+    },
+    {
+      "id": "active-power",
+      "zh": "有功功率",
+      "en": "Active power"
+    },
+    {
+      "id": "three-phase",
+      "zh": "三相",
+      "en": "Three-phase"
+    },
+    {
+      "id": "reactance",
+      "zh": "电抗",
+      "en": "Reactance"
+    },
+    {
+      "id": "per-unit",
+      "zh": "标幺值",
+      "en": "Per-unit"
+    },
+    {
+      "id": "skin-effect",
+      "zh": "集肤效应",
+      "en": "Skin effect"
+    },
+    {
+      "id": "line-loss",
+      "zh": "线损",
+      "en": "Line loss"
+    },
+    {
+      "id": "power-quality",
+      "zh": "电能质量",
+      "en": "Power quality"
+    },
+    {
+      "id": "base-load",
+      "zh": "基荷",
+      "en": "Base load"
+    },
+    {
+      "id": "load-leveling",
+      "zh": "削峰填谷",
+      "en": "Load leveling"
+    },
+    {
+      "id": "duck-curve",
+      "zh": "鸭子曲线",
+      "en": "Duck curve"
+    },
+    {
+      "id": "power-market",
+      "zh": "电力市场",
+      "en": "Power market"
+    },
+    {
+      "id": "smart-meter",
+      "zh": "智能电表",
+      "en": "Smart meter"
+    },
+    {
+      "id": "scada",
+      "zh": "SCADA",
+      "en": "SCADA"
+    },
+    {
+      "id": "alternator",
+      "zh": "交流发电机",
+      "en": "Alternator"
+    },
+    {
+      "id": "excitation",
+      "zh": "励磁",
+      "en": "Excitation"
+    },
+    {
+      "id": "stator",
+      "zh": "定子",
+      "en": "Stator"
+    },
+    {
+      "id": "rotor",
+      "zh": "转子",
+      "en": "Rotor"
+    },
+    {
+      "id": "winding",
+      "zh": "绕组",
+      "en": "Winding"
+    },
+    {
+      "id": "vfd",
+      "zh": "变频器",
+      "en": "VFD",
+      "forms": { "en": ["variable-frequency drive"] }
+    },
+    {
+      "id": "converter",
+      "zh": "变流器",
+      "en": "Converter"
+    },
+    {
+      "id": "igbt",
+      "zh": "IGBT",
+      "en": "IGBT"
+    },
+    {
+      "id": "sic",
+      "zh": "碳化硅",
+      "en": "SiC",
+      "forms": { "en": ["silicon carbide"] }
+    },
+    {
+      "id": "der",
+      "zh": "分布式能源",
+      "en": "DER",
+      "forms": { "en": ["distributed energy resources"] }
+    },
+    {
+      "id": "li-ion-battery",
+      "zh": "锂电池",
+      "en": "Li-ion battery"
+    },
+    {
+      "id": "lfp",
+      "zh": "磷酸铁锂",
+      "en": "LFP",
+      "forms": { "en": ["lithium iron phosphate"] }
+    },
+    {
+      "id": "flow-battery",
+      "zh": "液流电池",
+      "en": "Flow battery"
+    },
+    {
+      "id": "nimh",
+      "zh": "镍氢电池",
+      "en": "NiMH"
+    },
+    {
+      "id": "dry-cell",
+      "zh": "干电池",
+      "en": "Dry cell"
+    },
+    {
+      "id": "button-cell",
+      "zh": "纽扣电池",
+      "en": "Button cell"
+    },
+    {
+      "id": "battery-pack",
+      "zh": "电池包",
+      "en": "Battery pack"
+    },
+    {
+      "id": "bms",
+      "zh": "BMS",
+      "en": "BMS",
+      "forms": { "zh": ["电池管理系统"], "en": ["battery management system"] }
+    },
+    {
+      "id": "separator",
+      "zh": "隔膜",
+      "en": "Separator"
+    },
+    {
+      "id": "intercalation",
+      "zh": "插层",
+      "en": "Intercalation"
+    },
+    {
+      "id": "sei",
+      "zh": "SEI膜",
+      "en": "SEI"
+    },
+    {
+      "id": "c-rate",
+      "zh": "倍率",
+      "en": "C-rate"
+    },
+    {
+      "id": "cycle-life",
+      "zh": "循环寿命",
+      "en": "Cycle life"
+    },
+    {
+      "id": "capacity-fade",
+      "zh": "容量衰减",
+      "en": "Capacity fade"
+    },
+    {
+      "id": "energy-density",
+      "zh": "能量密度",
+      "en": "Energy density"
+    },
+    {
+      "id": "power-density",
+      "zh": "功率密度",
+      "en": "Power density"
+    },
+    {
+      "id": "self-discharge",
+      "zh": "自放电",
+      "en": "Self-discharge"
+    },
+    {
+      "id": "fast-charging",
+      "zh": "快充",
+      "en": "Fast charging"
+    },
+    {
+      "id": "ev-charger",
+      "zh": "充电桩",
+      "en": "EV charger"
+    },
+    {
+      "id": "battery-swap",
+      "zh": "换电",
+      "en": "Battery swap"
+    },
+    {
+      "id": "power-bank",
+      "zh": "充电宝",
+      "en": "Power bank"
+    },
+    {
+      "id": "mah",
+      "zh": "毫安时",
+      "en": "mAh"
+    },
+    {
+      "id": "supercapacitor",
+      "zh": "超级电容",
+      "en": "Supercapacitor"
+    },
+    {
+      "id": "molten-salt",
+      "zh": "熔盐",
+      "en": "Molten salt"
+    },
+    {
+      "id": "pcm",
+      "zh": "相变材料",
+      "en": "PCM",
+      "forms": { "en": ["phase change material"] }
+    },
+    {
+      "id": "ice-storage",
+      "zh": "冰蓄冷",
+      "en": "Ice storage"
+    },
+    {
+      "id": "tritium",
+      "zh": "氚",
+      "en": "Tritium"
+    },
+    {
+      "id": "nuclear-fuel",
+      "zh": "核燃料",
+      "en": "Nuclear fuel"
+    },
+    {
+      "id": "fuel-rod",
+      "zh": "燃料棒",
+      "en": "Fuel rod"
+    },
+    {
+      "id": "control-rod",
+      "zh": "控制棒",
+      "en": "Control rod"
+    },
+    {
+      "id": "moderator",
+      "zh": "慢化剂",
+      "en": "Moderator"
+    },
+    {
+      "id": "coolant",
+      "zh": "冷却剂",
+      "en": "Coolant"
+    },
+    {
+      "id": "reactor-core",
+      "zh": "堆芯",
+      "en": "Reactor core"
+    },
+    {
+      "id": "criticality",
+      "zh": "临界",
+      "en": "Criticality"
+    },
+    {
+      "id": "neutron-flux",
+      "zh": "中子通量",
+      "en": "Neutron flux"
+    },
+    {
+      "id": "scram",
+      "zh": "停堆",
+      "en": "Scram"
+    },
+    {
+      "id": "decay-heat",
+      "zh": "衰变热",
+      "en": "Decay heat"
+    },
+    {
+      "id": "meltdown",
+      "zh": "熔毁",
+      "en": "Meltdown"
+    },
+    {
+      "id": "containment",
+      "zh": "安全壳",
+      "en": "Containment"
+    },
+    {
+      "id": "pwr",
+      "zh": "压水堆",
+      "en": "PWR",
+      "forms": { "en": ["pressurized water reactor"] }
+    },
+    {
+      "id": "fast-reactor",
+      "zh": "快堆",
+      "en": "Fast reactor"
+    },
+    {
+      "id": "hualong-one",
+      "zh": "华龙一号",
+      "en": "Hualong One"
+    },
+    {
+      "id": "smr",
+      "zh": "小型堆",
+      "en": "SMR",
+      "forms": { "en": ["small modular reactor"] }
+    },
+    {
+      "id": "spent-fuel",
+      "zh": "乏燃料",
+      "en": "Spent fuel"
+    },
+    {
+      "id": "reprocessing",
+      "zh": "后处理",
+      "en": "Reprocessing"
+    },
+    {
+      "id": "transmutation",
+      "zh": "嬗变",
+      "en": "Transmutation"
+    },
+    {
+      "id": "rtg",
+      "zh": "核电池",
+      "en": "RTG"
+    },
+    {
+      "id": "iter",
+      "zh": "ITER",
+      "en": "ITER"
+    },
+    {
+      "id": "artificial-sun",
+      "zh": "人造太阳",
+      "en": "Artificial sun"
+    },
+    {
+      "id": "stellarator",
+      "zh": "仿星器",
+      "en": "Stellarator"
+    },
+    {
+      "id": "blanket",
+      "zh": "包层",
+      "en": "Blanket"
+    },
+    {
+      "id": "ignition",
+      "zh": "点火",
+      "en": "Ignition"
+    },
+    {
+      "id": "water-turbine",
+      "zh": "水轮机",
+      "en": "Water turbine"
+    },
+    {
+      "id": "penstock",
+      "zh": "压力钢管",
+      "en": "Penstock"
+    },
+    {
+      "id": "run-of-river",
+      "zh": "径流式",
+      "en": "Run-of-river"
+    },
+    {
+      "id": "small-hydro",
+      "zh": "小水电",
+      "en": "Small hydro"
+    },
+    {
+      "id": "blade",
+      "zh": "叶片",
+      "en": "Blade"
+    },
+    {
+      "id": "hub",
+      "zh": "轮毂",
+      "en": "Hub"
+    },
+    {
+      "id": "nacelle",
+      "zh": "机舱",
+      "en": "Nacelle"
+    },
+    {
+      "id": "pitch-control",
+      "zh": "变桨",
+      "en": "Pitch control"
+    },
+    {
+      "id": "betz-limit",
+      "zh": "贝茨极限",
+      "en": "Betz limit"
+    },
+    {
+      "id": "offshore-wind",
+      "zh": "海上风电",
+      "en": "Offshore wind"
+    },
+    {
+      "id": "wind-farm",
+      "zh": "风电场",
+      "en": "Wind farm"
+    },
+    {
+      "id": "photovoltaics",
+      "zh": "光伏",
+      "en": "Photovoltaics",
+      "forms": { "en": ["PV"] }
+    },
+    {
+      "id": "rooftop-solar",
+      "zh": "屋顶光伏",
+      "en": "Rooftop solar"
+    },
+    {
+      "id": "solar-thermal",
+      "zh": "光热",
+      "en": "Solar thermal"
+    },
+    {
+      "id": "heliostat",
+      "zh": "定日镜",
+      "en": "Heliostat"
+    },
+    {
+      "id": "solar-cooker",
+      "zh": "太阳灶",
+      "en": "Solar cooker"
+    },
+    {
+      "id": "polysilicon",
+      "zh": "多晶硅",
+      "en": "Polysilicon"
+    },
+    {
+      "id": "heterojunction",
+      "zh": "异质结",
+      "en": "Heterojunction"
+    },
+    {
+      "id": "mppt",
+      "zh": "MPPT",
+      "en": "MPPT"
+    },
+    {
+      "id": "irradiance",
+      "zh": "辐照度",
+      "en": "Irradiance"
+    },
+    {
+      "id": "solar-constant",
+      "zh": "太阳常数",
+      "en": "Solar constant"
+    },
+    {
+      "id": "fill-factor",
+      "zh": "填充因子",
+      "en": "Fill factor"
+    },
+    {
+      "id": "watt-peak",
+      "zh": "峰瓦",
+      "en": "Watt-peak",
+      "forms": { "en": ["Wp"] }
+    },
+    {
+      "id": "soiling",
+      "zh": "积灰",
+      "en": "Soiling"
+    },
+    {
+      "id": "solar-tracker",
+      "zh": "跟踪支架",
+      "en": "Solar tracker"
+    },
+    {
+      "id": "hot-dry-rock",
+      "zh": "干热岩",
+      "en": "Hot dry rock"
+    },
+    {
+      "id": "wave-energy",
+      "zh": "波浪能",
+      "en": "Wave energy"
+    },
+    {
+      "id": "otec",
+      "zh": "海洋温差能",
+      "en": "OTEC"
+    },
+    {
+      "id": "bioenergy",
+      "zh": "生物质能",
+      "en": "Bioenergy"
+    },
+    {
+      "id": "fuel-ethanol",
+      "zh": "燃料乙醇",
+      "en": "Fuel ethanol"
+    },
+    {
+      "id": "biodiesel",
+      "zh": "生物柴油",
+      "en": "Biodiesel"
+    },
+    {
+      "id": "firewood",
+      "zh": "薪柴",
+      "en": "Firewood"
+    },
+    {
+      "id": "gasification",
+      "zh": "气化",
+      "en": "Gasification"
+    },
+    {
+      "id": "crude-oil",
+      "zh": "原油",
+      "en": "Crude oil"
+    },
+    {
+      "id": "gasoline",
+      "zh": "汽油",
+      "en": "Gasoline"
+    },
+    {
+      "id": "diesel",
+      "zh": "柴油",
+      "en": "Diesel"
+    },
+    {
+      "id": "kerosene",
+      "zh": "煤油",
+      "en": "Kerosene"
+    },
+    {
+      "id": "naphtha",
+      "zh": "石脑油",
+      "en": "Naphtha"
+    },
+    {
+      "id": "lng",
+      "zh": "液化天然气",
+      "en": "LNG"
+    },
+    {
+      "id": "lpg",
+      "zh": "液化石油气",
+      "en": "LPG"
+    },
+    {
+      "id": "town-gas",
+      "zh": "煤气",
+      "en": "Town gas"
+    },
+    {
+      "id": "shale-gas",
+      "zh": "页岩气",
+      "en": "Shale gas"
+    },
+    {
+      "id": "gas-hydrate",
+      "zh": "可燃冰",
+      "en": "Gas hydrate"
+    },
+    {
+      "id": "oil-sands",
+      "zh": "油砂",
+      "en": "Oil sands"
+    },
+    {
+      "id": "tight-oil",
+      "zh": "致密油",
+      "en": "Tight oil"
+    },
+    {
+      "id": "fracking",
+      "zh": "水力压裂",
+      "en": "Fracking",
+      "forms": { "en": ["hydraulic fracturing"] }
+    },
+    {
+      "id": "oil-field",
+      "zh": "油田",
+      "en": "Oil field"
+    },
+    {
+      "id": "oil-reservoir",
+      "zh": "油藏",
+      "en": "Oil reservoir"
+    },
+    {
+      "id": "oil-rig",
+      "zh": "钻井平台",
+      "en": "Oil rig"
+    },
+    {
+      "id": "well-logging",
+      "zh": "测井",
+      "en": "Well logging"
+    },
+    {
+      "id": "waterflooding",
+      "zh": "注水",
+      "en": "Waterflooding"
+    },
+    {
+      "id": "eor",
+      "zh": "三次采油",
+      "en": "EOR",
+      "forms": { "en": ["enhanced oil recovery"] }
+    },
+    {
+      "id": "blowout",
+      "zh": "井喷",
+      "en": "Blowout"
+    },
+    {
+      "id": "gas-flare",
+      "zh": "火炬",
+      "en": "Gas flare"
+    },
+    {
+      "id": "refinery",
+      "zh": "炼油厂",
+      "en": "Refinery"
+    },
+    {
+      "id": "reforming",
+      "zh": "重整",
+      "en": "Reforming"
+    },
+    {
+      "id": "oil-tanker",
+      "zh": "油轮",
+      "en": "Oil tanker"
+    },
+    {
+      "id": "gas-station",
+      "zh": "加油站",
+      "en": "Gas station"
+    },
+    {
+      "id": "octane-rating",
+      "zh": "辛烷值",
+      "en": "Octane rating"
+    },
+    {
+      "id": "coal-mine",
+      "zh": "煤矿",
+      "en": "Coal mine"
+    },
+    {
+      "id": "firedamp",
+      "zh": "瓦斯",
+      "en": "Firedamp"
+    },
+    {
+      "id": "coal-gangue",
+      "zh": "煤矸石",
+      "en": "Coal gangue"
+    },
+    {
+      "id": "anthracite",
+      "zh": "无烟煤",
+      "en": "Anthracite"
+    },
+    {
+      "id": "lignite",
+      "zh": "褐煤",
+      "en": "Lignite"
+    },
+    {
+      "id": "thermal-coal",
+      "zh": "动力煤",
+      "en": "Thermal coal"
+    },
+    {
+      "id": "coke",
+      "zh": "焦炭",
+      "en": "Coke"
+    },
+    {
+      "id": "coal-tar",
+      "zh": "煤焦油",
+      "en": "Coal tar"
+    },
+    {
+      "id": "coal-briquette",
+      "zh": "蜂窝煤",
+      "en": "Coal briquette"
+    },
+    {
+      "id": "flame",
+      "zh": "火焰",
+      "en": "Flame"
+    },
+    {
+      "id": "premixed-flame",
+      "zh": "预混火焰",
+      "en": "Premixed flame"
+    },
+    {
+      "id": "air-fuel-ratio",
+      "zh": "空燃比",
+      "en": "Air-fuel ratio"
+    },
+    {
+      "id": "excess-air",
+      "zh": "过量空气",
+      "en": "Excess air"
+    },
+    {
+      "id": "lean-burn",
+      "zh": "稀薄燃烧",
+      "en": "Lean burn"
+    },
+    {
+      "id": "oxy-combustion",
+      "zh": "富氧燃烧",
+      "en": "Oxy-combustion"
+    },
+    {
+      "id": "knock",
+      "zh": "爆震",
+      "en": "Knock"
+    },
+    {
+      "id": "deflagration",
+      "zh": "爆燃",
+      "en": "Deflagration"
+    },
+    {
+      "id": "detonation",
+      "zh": "爆轰",
+      "en": "Detonation"
+    },
+    {
+      "id": "flameout",
+      "zh": "熄火",
+      "en": "Flameout"
+    },
+    {
+      "id": "autoignition",
+      "zh": "自燃",
+      "en": "Autoignition"
+    },
+    {
+      "id": "flash-point",
+      "zh": "闪点",
+      "en": "Flash point"
+    },
+    {
+      "id": "combustor",
+      "zh": "燃烧室",
+      "en": "Combustor"
+    },
+    {
+      "id": "burner",
+      "zh": "燃烧器",
+      "en": "Burner"
+    },
+    {
+      "id": "fuel-injector",
+      "zh": "喷油器",
+      "en": "Fuel injector"
+    },
+    {
+      "id": "atomization",
+      "zh": "雾化",
+      "en": "Atomization"
+    },
+    {
+      "id": "swirl",
+      "zh": "旋流",
+      "en": "Swirl"
+    },
+    {
+      "id": "soot",
+      "zh": "碳烟",
+      "en": "Soot"
+    },
+    {
+      "id": "flue-gas",
+      "zh": "烟气",
+      "en": "Flue gas"
+    },
+    {
+      "id": "fgd",
+      "zh": "烟气脱硫",
+      "en": "FGD",
+      "forms": { "en": ["flue gas desulfurization"] }
+    },
+    {
+      "id": "fluidized-bed",
+      "zh": "流化床",
+      "en": "Fluidized bed"
+    },
+    {
+      "id": "steam-turbine",
+      "zh": "汽轮机",
+      "en": "Steam turbine"
+    },
+    {
+      "id": "gas-turbine",
+      "zh": "燃气轮机",
+      "en": "Gas turbine"
+    },
+    {
+      "id": "combined-cycle",
+      "zh": "联合循环",
+      "en": "Combined cycle"
+    },
+    {
+      "id": "rankine-cycle",
+      "zh": "朗肯循环",
+      "en": "Rankine cycle"
+    },
+    {
+      "id": "brayton-cycle",
+      "zh": "布雷顿循环",
+      "en": "Brayton cycle"
+    },
+    {
+      "id": "otto-cycle",
+      "zh": "奥托循环",
+      "en": "Otto cycle"
+    },
+    {
+      "id": "stirling-cycle",
+      "zh": "斯特林循环",
+      "en": "Stirling cycle"
+    },
+    {
+      "id": "reheat",
+      "zh": "再热",
+      "en": "Reheat"
+    },
+    {
+      "id": "superheater",
+      "zh": "过热器",
+      "en": "Superheater"
+    },
+    {
+      "id": "economizer",
+      "zh": "省煤器",
+      "en": "Economizer"
+    },
+    {
+      "id": "air-preheater",
+      "zh": "空气预热器",
+      "en": "Air preheater"
+    },
+    {
+      "id": "water-wall",
+      "zh": "水冷壁",
+      "en": "Water wall"
+    },
+    {
+      "id": "deaerator",
+      "zh": "除氧器",
+      "en": "Deaerator"
+    },
+    {
+      "id": "condenser",
+      "zh": "凝汽器",
+      "en": "Condenser"
+    },
+    {
+      "id": "condensate",
+      "zh": "凝结水",
+      "en": "Condensate"
+    },
+    {
+      "id": "coal-mill",
+      "zh": "磨煤机",
+      "en": "Coal mill"
+    },
+    {
+      "id": "heat-rate",
+      "zh": "热耗率",
+      "en": "Heat rate"
+    },
+    {
+      "id": "back-pressure",
+      "zh": "背压",
+      "en": "Back pressure"
+    },
+    {
+      "id": "safety-valve",
+      "zh": "安全阀",
+      "en": "Safety valve"
+    },
+    {
+      "id": "cavitation",
+      "zh": "汽蚀",
+      "en": "Cavitation"
+    },
+    {
+      "id": "fouling",
+      "zh": "结垢",
+      "en": "Fouling"
+    },
+    {
+      "id": "ic-engine",
+      "zh": "内燃机",
+      "en": "IC engine",
+      "forms": { "en": ["internal combustion engine"] }
+    },
+    {
+      "id": "four-stroke",
+      "zh": "四冲程",
+      "en": "Four-stroke"
+    },
+    {
+      "id": "common-rail",
+      "zh": "共轨",
+      "en": "Common rail"
+    },
+    {
+      "id": "intake",
+      "zh": "进气",
+      "en": "Intake"
+    },
+    {
+      "id": "idle",
+      "zh": "怠速",
+      "en": "Idle"
+    },
+    {
+      "id": "intercooler",
+      "zh": "中冷器",
+      "en": "Intercooler"
+    },
+    {
+      "id": "fuel-economy",
+      "zh": "燃油经济性",
+      "en": "Fuel economy"
+    },
+    {
+      "id": "range-extender",
+      "zh": "增程器",
+      "en": "Range extender"
+    },
+    {
+      "id": "phev",
+      "zh": "插混",
+      "en": "PHEV",
+      "forms": { "en": ["plug-in hybrid"] }
+    },
+    {
+      "id": "aero-engine",
+      "zh": "航空发动机",
+      "en": "Aero engine"
+    },
+    {
+      "id": "turbojet",
+      "zh": "涡喷",
+      "en": "Turbojet"
+    },
+    {
+      "id": "turboprop",
+      "zh": "涡桨",
+      "en": "Turboprop"
+    },
+    {
+      "id": "ramjet",
+      "zh": "冲压发动机",
+      "en": "Ramjet"
+    },
+    {
+      "id": "afterburner",
+      "zh": "加力燃烧室",
+      "en": "Afterburner"
+    },
+    {
+      "id": "film-cooling",
+      "zh": "气膜冷却",
+      "en": "Film cooling"
+    },
+    {
+      "id": "impeller",
+      "zh": "叶轮",
+      "en": "Impeller"
+    },
+    {
+      "id": "pump-head",
+      "zh": "扬程",
+      "en": "Pump head"
+    },
+    {
+      "id": "expander",
+      "zh": "膨胀机",
+      "en": "Expander"
+    },
+    {
+      "id": "blower",
+      "zh": "鼓风机",
+      "en": "Blower"
+    },
+    {
+      "id": "working-fluid",
+      "zh": "工质",
+      "en": "Working fluid"
+    },
+    {
+      "id": "steam",
+      "zh": "蒸汽",
+      "en": "Steam"
+    },
+    {
+      "id": "wet-steam",
+      "zh": "湿蒸汽",
+      "en": "Wet steam"
+    },
+    {
+      "id": "steam-quality",
+      "zh": "干度",
+      "en": "Steam quality"
+    },
+    {
+      "id": "t-s-diagram",
+      "zh": "温熵图",
+      "en": "T-s diagram"
+    },
+    {
+      "id": "isentropic",
+      "zh": "等熵",
+      "en": "Isentropic"
+    },
+    {
+      "id": "polytropic",
+      "zh": "多变过程",
+      "en": "Polytropic"
+    },
+    {
+      "id": "throttling",
+      "zh": "节流",
+      "en": "Throttling"
+    },
+    {
+      "id": "control-volume",
+      "zh": "控制体",
+      "en": "Control volume"
+    },
+    {
+      "id": "latent-heat",
+      "zh": "潜热",
+      "en": "Latent heat"
+    },
+    {
+      "id": "sensible-heat",
+      "zh": "显热",
+      "en": "Sensible heat"
+    },
+    {
+      "id": "boiling",
+      "zh": "沸腾",
+      "en": "Boiling"
+    },
+    {
+      "id": "evaporator",
+      "zh": "蒸发器",
+      "en": "Evaporator"
+    },
+    {
+      "id": "refrigerant",
+      "zh": "制冷剂",
+      "en": "Refrigerant"
+    },
+    {
+      "id": "chiller",
+      "zh": "冷水机组",
+      "en": "Chiller"
+    },
+    {
+      "id": "air-cooling",
+      "zh": "空冷",
+      "en": "Air cooling"
+    },
+    {
+      "id": "water-cooling",
+      "zh": "水冷",
+      "en": "Water cooling"
+    },
+    {
+      "id": "fin",
+      "zh": "翅片",
+      "en": "Fin"
+    },
+    {
+      "id": "heat-pipe",
+      "zh": "热管",
+      "en": "Heat pipe"
+    },
+    {
+      "id": "counterflow",
+      "zh": "逆流",
+      "en": "Counterflow"
+    },
+    {
+      "id": "pinch-point",
+      "zh": "夹点",
+      "en": "Pinch point"
+    },
+    {
+      "id": "nusselt-number",
+      "zh": "努塞尔数",
+      "en": "Nusselt number"
+    },
+    {
+      "id": "emissivity",
+      "zh": "发射率",
+      "en": "Emissivity"
+    },
+    {
+      "id": "waste-heat",
+      "zh": "余热",
+      "en": "Waste heat"
+    },
+    {
+      "id": "seebeck-effect",
+      "zh": "塞贝克效应",
+      "en": "Seebeck effect"
+    },
+    {
+      "id": "floor-heating",
+      "zh": "地暖",
+      "en": "Floor heating"
+    },
+    {
+      "id": "electrolyzer",
+      "zh": "电解槽",
+      "en": "Electrolyzer",
+      "forms": { "en": ["electrolyser"] }
+    },
+    {
+      "id": "pem",
+      "zh": "质子交换膜",
+      "en": "PEM",
+      "forms": { "en": ["proton exchange membrane"] }
+    },
+    {
+      "id": "grey-hydrogen",
+      "zh": "灰氢",
+      "en": "Grey hydrogen",
+      "forms": { "en": ["gray hydrogen"] }
+    },
+    {
+      "id": "blue-hydrogen",
+      "zh": "蓝氢",
+      "en": "Blue hydrogen"
+    },
+    {
+      "id": "power-to-gas",
+      "zh": "电转气",
+      "en": "Power-to-gas"
+    },
+    {
+      "id": "synthetic-fuel",
+      "zh": "合成燃料",
+      "en": "Synthetic fuel",
+      "forms": { "en": ["synfuel"] }
+    },
+    {
+      "id": "methanation",
+      "zh": "甲烷化",
+      "en": "Methanation"
+    },
+    {
+      "id": "nev",
+      "zh": "新能源汽车",
+      "en": "NEV",
+      "forms": { "en": ["new energy vehicle"] }
+    },
+    {
+      "id": "range-anxiety",
+      "zh": "里程焦虑",
+      "en": "Range anxiety"
+    },
+    {
+      "id": "v2g",
+      "zh": "车网互动",
+      "en": "V2G",
+      "forms": { "en": ["vehicle-to-grid"] }
+    },
+    {
+      "id": "kilowatt",
+      "zh": "千瓦",
+      "en": "Kilowatt"
+    },
+    {
+      "id": "peak-load",
+      "zh": "峰荷",
+      "en": "Peak load"
+    },
+    {
+      "id": "utility-pole",
+      "zh": "电线杆",
+      "en": "Utility pole"
+    },
+    {
+      "id": "power-dispatch",
+      "zh": "电力调度",
+      "en": "Power dispatch"
+    },
+    {
+      "id": "grid-forming",
+      "zh": "构网型",
+      "en": "Grid-forming"
+    },
+    {
+      "id": "grid-following",
+      "zh": "跟网型",
+      "en": "Grid-following"
+    },
+    {
+      "id": "ems",
+      "zh": "EMS",
+      "en": "EMS",
+      "forms": { "zh": ["能量管理系统"], "en": ["energy management system"] }
+    },
+    {
+      "id": "direct-drive",
+      "zh": "直驱",
+      "en": "Direct drive"
+    },
+    {
+      "id": "cut-in-speed",
+      "zh": "切入风速",
+      "en": "Cut-in speed"
+    },
+    {
+      "id": "onshore-wind",
+      "zh": "陆上风电",
+      "en": "Onshore wind"
+    },
+    {
+      "id": "floating-wind",
+      "zh": "漂浮式风电",
+      "en": "Floating wind"
+    },
+    {
+      "id": "silicon-wafer",
+      "zh": "硅片",
+      "en": "Silicon wafer"
+    },
+    {
+      "id": "cdte",
+      "zh": "碲化镉",
+      "en": "CdTe"
+    },
+    {
+      "id": "cigs",
+      "zh": "铜铟镓硒",
+      "en": "CIGS"
+    },
+    {
+      "id": "tandem-cell",
+      "zh": "叠层电池",
+      "en": "Tandem cell"
+    },
+    {
+      "id": "energy-crop",
+      "zh": "能源作物",
+      "en": "Energy crop"
+    },
+    {
+      "id": "pellet-fuel",
+      "zh": "颗粒燃料",
+      "en": "Pellet fuel"
+    },
+    {
+      "id": "oil-pipeline",
+      "zh": "输油管",
+      "en": "Oil pipeline"
+    },
+    {
+      "id": "barrel",
+      "zh": "桶",
+      "en": "Barrel"
+    },
+    {
+      "id": "oil-and-gas",
+      "zh": "油气",
+      "en": "Oil and gas"
+    },
+    {
+      "id": "hydrocracking",
+      "zh": "加氢裂化",
+      "en": "Hydrocracking"
+    },
+    {
+      "id": "peaker-plant",
+      "zh": "调峰电站",
+      "en": "Peaker plant"
+    },
+    {
+      "id": "christmas-tree",
+      "zh": "采油树",
+      "en": "Christmas tree"
+    },
+    {
+      "id": "pumpjack",
+      "zh": "抽油机",
+      "en": "Pumpjack"
+    },
+    {
+      "id": "wellhead",
+      "zh": "井口",
+      "en": "Wellhead"
+    },
+    {
+      "id": "casing",
+      "zh": "套管",
+      "en": "Casing"
+    },
+    {
+      "id": "drilling-mud",
+      "zh": "钻井液",
+      "en": "Drilling mud"
+    },
+    {
+      "id": "ash-content",
+      "zh": "灰分",
+      "en": "Ash content"
+    },
+    {
+      "id": "dust-explosion",
+      "zh": "粉尘爆炸",
+      "en": "Dust explosion"
+    },
+    {
+      "id": "guide-vane",
+      "zh": "导叶",
+      "en": "Guide vane"
+    },
+    {
+      "id": "axial-flow",
+      "zh": "轴流",
+      "en": "Axial flow"
+    },
+    {
+      "id": "centrifugal",
+      "zh": "离心式",
+      "en": "Centrifugal"
+    },
+    {
+      "id": "pressure-ratio",
+      "zh": "压比",
+      "en": "Pressure ratio"
+    },
+    {
+      "id": "rotating-stall",
+      "zh": "旋转失速",
+      "en": "Rotating stall"
+    },
+    {
+      "id": "heat-flux",
+      "zh": "热流密度",
+      "en": "Heat flux"
+    },
+    {
+      "id": "heat-sink",
+      "zh": "散热片",
+      "en": "Heat sink"
+    },
+    {
+      "id": "thermal-paste",
+      "zh": "导热硅脂",
+      "en": "Thermal paste"
+    },
+    {
+      "id": "vapor-chamber",
+      "zh": "均热板",
+      "en": "Vapor chamber"
+    },
+    {
+      "id": "heat-storage",
+      "zh": "储热",
+      "en": "Heat storage"
+    },
+    {
+      "id": "green-ammonia",
+      "zh": "绿氨",
+      "en": "Green ammonia"
+    },
+    {
+      "id": "time-of-use",
+      "zh": "分时电价",
+      "en": "Time-of-use"
+    },
+    {
+      "id": "tiered-pricing",
+      "zh": "阶梯电价",
+      "en": "Tiered pricing"
+    },
+    {
+      "id": "net-metering",
+      "zh": "净计量",
+      "en": "Net metering"
+    },
+    {
+      "id": "ppa",
+      "zh": "购电协议",
+      "en": "PPA",
+      "forms": { "en": ["power purchase agreement"] }
+    },
+    {
+      "id": "cold-fusion",
+      "zh": "冷聚变",
+      "en": "Cold fusion"
+    },
+    {
+      "id": "bwr",
+      "zh": "沸水堆",
+      "en": "BWR",
+      "forms": { "en": ["boiling water reactor"] }
+    },
+    {
+      "id": "reactivity",
+      "zh": "反应性",
+      "en": "Reactivity"
+    },
+    {
+      "id": "burnup",
+      "zh": "燃耗",
+      "en": "Burnup"
+    },
+    {
+      "id": "refueling",
+      "zh": "换料",
+      "en": "Refueling",
+      "forms": { "en": ["refuelling"] }
+    },
+    {
+      "id": "passive-safety",
+      "zh": "非能动",
+      "en": "Passive safety"
+    },
+    {
+      "id": "surge-tank",
+      "zh": "调压井",
+      "en": "Surge tank"
+    },
+    {
+      "id": "tailrace",
+      "zh": "尾水",
+      "en": "Tailrace"
+    },
+    {
+      "id": "lco",
+      "zh": "钴酸锂",
+      "en": "LCO"
+    },
+    {
+      "id": "nmc",
+      "zh": "三元材料",
+      "en": "NMC"
+    },
+    {
+      "id": "na-ion-battery",
+      "zh": "钠离子电池",
+      "en": "Na-ion battery"
+    },
+    {
+      "id": "lead-acid",
+      "zh": "铅酸电池",
+      "en": "Lead-acid"
+    },
+    {
+      "id": "trickle-charge",
+      "zh": "涓流充电",
+      "en": "Trickle charge"
+    },
+    {
+      "id": "memory-effect",
+      "zh": "记忆效应",
+      "en": "Memory effect"
+    },
+    {
+      "id": "cell-balancing",
+      "zh": "电池均衡",
+      "en": "Cell balancing"
+    },
+    {
+      "id": "pouch-cell",
+      "zh": "软包电池",
+      "en": "Pouch cell"
+    },
+    {
+      "id": "18650",
+      "zh": "18650",
+      "en": "18650"
+    },
+    {
+      "id": "turbo-lag",
+      "zh": "涡轮迟滞",
+      "en": "Turbo lag"
+    },
+    {
+      "id": "engine-oil",
+      "zh": "机油",
+      "en": "Engine oil"
+    },
+    {
+      "id": "fuel-tank",
+      "zh": "油箱",
+      "en": "Fuel tank"
+    },
+    {
+      "id": "jet-fuel",
+      "zh": "航油",
+      "en": "Jet fuel"
+    },
+    {
+      "id": "heavy-oil",
+      "zh": "重油",
+      "en": "Heavy oil"
+    },
+    {
+      "id": "wireless-power",
+      "zh": "无线输电",
+      "en": "Wireless power"
+    },
+    {
+      "id": "n-1-criterion",
+      "zh": "N-1准则",
+      "en": "N-1 criterion"
+    },
+    {
+      "id": "opf",
+      "zh": "最优潮流",
+      "en": "OPF",
+      "forms": { "en": ["optimal power flow"] }
+    },
+    {
+      "id": "lmp",
+      "zh": "节点电价",
+      "en": "LMP",
+      "forms": { "en": ["locational marginal price"] }
+    },
+    {
+      "id": "sag",
+      "zh": "弧垂",
+      "en": "Sag"
+    },
+    {
+      "id": "galloping",
+      "zh": "舞动",
+      "en": "Galloping"
+    },
+    {
+      "id": "icing",
+      "zh": "覆冰",
+      "en": "Icing"
+    },
+    {
+      "id": "live-line-work",
+      "zh": "带电作业",
+      "en": "Live-line work"
+    },
+    {
+      "id": "step-voltage",
+      "zh": "跨步电压",
+      "en": "Step voltage"
+    },
+    {
+      "id": "rcd",
+      "zh": "漏电保护器",
+      "en": "RCD",
+      "forms": { "en": ["residual current device"] }
+    },
+    {
+      "id": "reciprocating",
+      "zh": "往复式",
+      "en": "Reciprocating"
+    },
+    {
+      "id": "diffuser",
+      "zh": "扩压器",
+      "en": "Diffuser"
+    },
+    {
+      "id": "laval-nozzle",
+      "zh": "拉瓦尔喷管",
+      "en": "Laval nozzle"
+    },
+    {
+      "id": "shell-and-tube",
+      "zh": "管壳式",
+      "en": "Shell-and-tube"
+    },
+    {
+      "id": "gray-body",
+      "zh": "灰体",
+      "en": "Gray body",
+      "forms": { "en": ["grey body"] }
+    },
+    {
+      "id": "view-factor",
+      "zh": "角系数",
+      "en": "View factor"
+    },
+    {
+      "id": "bipolar-plate",
+      "zh": "双极板",
+      "en": "Bipolar plate"
+    },
+    {
+      "id": "nuclear-island",
+      "zh": "核岛",
+      "en": "Nuclear island"
+    },
+    {
+      "id": "pressurizer",
+      "zh": "稳压器",
+      "en": "Pressurizer",
+      "forms": { "en": ["pressuriser"] }
+    },
+    {
+      "id": "fuel-assembly",
+      "zh": "燃料组件",
+      "en": "Fuel assembly"
+    },
+    {
+      "id": "combiner-box",
+      "zh": "汇流箱",
+      "en": "Combiner box"
+    },
+    {
+      "id": "ar-coating",
+      "zh": "减反膜",
+      "en": "AR coating"
+    },
+    {
+      "id": "perc",
+      "zh": "PERC",
+      "en": "PERC"
+    },
+    {
+      "id": "agrivoltaics",
+      "zh": "农光互补",
+      "en": "Agrivoltaics"
+    },
+    {
+      "id": "met-mast",
+      "zh": "测风塔",
+      "en": "Met mast"
+    },
+    {
+      "id": "monopile",
+      "zh": "单桩",
+      "en": "Monopile"
+    },
+    {
+      "id": "binary-cycle",
+      "zh": "双工质循环",
+      "en": "Binary cycle"
+    },
+    {
+      "id": "tidal-stream",
+      "zh": "潮流能",
+      "en": "Tidal stream"
+    },
+    {
+      "id": "landfill-gas",
+      "zh": "填埋气",
+      "en": "Landfill gas"
+    },
+    {
+      "id": "algal-biofuel",
+      "zh": "藻类燃料",
+      "en": "Algal biofuel"
+    },
+    {
+      "id": "final-energy",
+      "zh": "终端能源",
+      "en": "Final energy"
+    },
+    {
+      "id": "soft-switching",
+      "zh": "软开关",
+      "en": "Soft switching"
+    },
+    {
+      "id": "gas-field",
+      "zh": "气田",
+      "en": "Gas field"
+    },
+    {
+      "id": "oil-shale",
+      "zh": "油页岩",
+      "en": "Oil shale"
+    },
+    {
+      "id": "furnace",
+      "zh": "炉膛",
+      "en": "Furnace"
+    },
+    {
+      "id": "gigawatt",
+      "zh": "吉瓦",
+      "en": "Gigawatt"
+    }
+  ]
+}

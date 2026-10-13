@@ -1643,6 +1643,882 @@
       "id": "word-problem",
       "zh": "应用题",
       "en": "Word problem"
+    },
+    {
+      "id": "mathematics",
+      "zh": "数学",
+      "en": "Mathematics",
+      "forms": { "en": ["math", "mathematical", "mathematician"] }
+    },
+    {
+      "id": "inequality",
+      "zh": "不等式",
+      "en": "Inequality"
+    },
+    {
+      "id": "unknown",
+      "zh": "未知数",
+      "en": "Unknown"
+    },
+    {
+      "id": "ratio",
+      "zh": "比率",
+      "en": "Ratio"
+    },
+    {
+      "id": "notation",
+      "zh": "记号",
+      "en": "Notation"
+    },
+    {
+      "id": "volume",
+      "zh": "体积",
+      "en": "Volume"
+    },
+    {
+      "id": "surface",
+      "zh": "曲面",
+      "en": "Surface"
+    },
+    {
+      "id": "transformation",
+      "zh": "变换",
+      "en": "Transformation",
+      "forms": { "en": ["transform"] }
+    },
+    {
+      "id": "invariant",
+      "zh": "不变量",
+      "en": "Invariant",
+      "forms": { "en": ["invariance"] }
+    },
+    {
+      "id": "discriminant",
+      "zh": "判别式",
+      "en": "Discriminant"
+    },
+    {
+      "id": "elimination",
+      "zh": "消元法",
+      "en": "Elimination",
+      "forms": { "en": ["eliminate"] }
+    },
+    {
+      "id": "cramers-rule",
+      "zh": "克拉默法则",
+      "en": "Cramer's rule"
+    },
+    {
+      "id": "quadratic-form",
+      "zh": "二次型",
+      "en": "Quadratic form"
+    },
+    {
+      "id": "commutativity",
+      "zh": "交换律",
+      "en": "Commutativity",
+      "forms": { "en": ["commutative", "commute"] }
+    },
+    {
+      "id": "associativity",
+      "zh": "结合律",
+      "en": "Associativity",
+      "forms": { "en": ["associative"] }
+    },
+    {
+      "id": "distributivity",
+      "zh": "分配律",
+      "en": "Distributivity",
+      "forms": { "en": ["distributive"] }
+    },
+    {
+      "id": "eigenvector",
+      "zh": "特征向量",
+      "en": "Eigenvector"
+    },
+    {
+      "id": "inner-product",
+      "zh": "内积",
+      "en": "Inner product"
+    },
+    {
+      "id": "null-space",
+      "zh": "零空间",
+      "en": "Null space"
+    },
+    {
+      "id": "direct-sum",
+      "zh": "直和",
+      "en": "Direct sum"
+    },
+    {
+      "id": "adjoint",
+      "zh": "伴随",
+      "en": "Adjoint",
+      "forms": { "en": ["adjunction"] }
+    },
+    {
+      "id": "vector-space",
+      "zh": "向量空间",
+      "en": "Vector space"
+    },
+    {
+      "id": "singular-value",
+      "zh": "奇异值",
+      "en": "Singular value"
+    },
+    {
+      "id": "pseudoinverse",
+      "zh": "伪逆",
+      "en": "Pseudoinverse"
+    },
+    {
+      "id": "low-rank",
+      "zh": "低秩",
+      "en": "Low rank"
+    },
+    {
+      "id": "abelian-group",
+      "zh": "阿贝尔群",
+      "en": "Abelian group"
+    },
+    {
+      "id": "coset",
+      "zh": "陪集",
+      "en": "Coset"
+    },
+    {
+      "id": "automorphism",
+      "zh": "自同构",
+      "en": "Automorphism"
+    },
+    {
+      "id": "morphism",
+      "zh": "态射",
+      "en": "Morphism"
+    },
+    {
+      "id": "galois-theory",
+      "zh": "伽罗瓦理论",
+      "en": "Galois theory"
+    },
+    {
+      "id": "lie-algebra",
+      "zh": "李代数",
+      "en": "Lie algebra"
+    },
+    {
+      "id": "finite-field",
+      "zh": "有限域",
+      "en": "Finite field"
+    },
+    {
+      "id": "exact-sequence",
+      "zh": "正合列",
+      "en": "Exact sequence"
+    },
+    {
+      "id": "homology",
+      "zh": "同调",
+      "en": "Homology",
+      "forms": { "en": ["homological"] }
+    },
+    {
+      "id": "cohomology",
+      "zh": "上同调",
+      "en": "Cohomology"
+    },
+    {
+      "id": "fiber-bundle",
+      "zh": "纤维丛",
+      "en": "Fiber bundle",
+      "forms": { "en": ["fibre bundle"] }
+    },
+    {
+      "id": "octonion",
+      "zh": "八元数",
+      "en": "Octonion"
+    },
+    {
+      "id": "monster-group",
+      "zh": "魔群",
+      "en": "Monster group"
+    },
+    {
+      "id": "e8",
+      "zh": "E8",
+      "en": "E8"
+    },
+    {
+      "id": "sylow-theorem",
+      "zh": "西罗定理",
+      "en": "Sylow theorem"
+    },
+    {
+      "id": "quintic",
+      "zh": "五次方程",
+      "en": "Quintic"
+    },
+    {
+      "id": "real-analysis",
+      "zh": "实分析",
+      "en": "Real analysis"
+    },
+    {
+      "id": "supremum",
+      "zh": "上确界",
+      "en": "Supremum",
+      "forms": { "en": ["sup"] }
+    },
+    {
+      "id": "infimum",
+      "zh": "下确界",
+      "en": "Infimum",
+      "forms": { "en": ["inf"] }
+    },
+    {
+      "id": "compactness",
+      "zh": "紧致性",
+      "en": "Compactness",
+      "forms": { "en": ["compact"] }
+    },
+    {
+      "id": "connectedness",
+      "zh": "连通性",
+      "en": "Connectedness",
+      "forms": { "en": ["connected"] }
+    },
+    {
+      "id": "completeness",
+      "zh": "完备性",
+      "en": "Completeness",
+      "forms": { "en": ["complete"] }
+    },
+    {
+      "id": "open-set",
+      "zh": "开集",
+      "en": "Open set"
+    },
+    {
+      "id": "metric-space",
+      "zh": "度量空间",
+      "en": "Metric space"
+    },
+    {
+      "id": "banach-space",
+      "zh": "巴拿赫空间",
+      "en": "Banach space"
+    },
+    {
+      "id": "antiderivative",
+      "zh": "原函数",
+      "en": "Antiderivative"
+    },
+    {
+      "id": "boundedness",
+      "zh": "有界性",
+      "en": "Boundedness",
+      "forms": { "en": ["bounded"] }
+    },
+    {
+      "id": "smoothness",
+      "zh": "光滑性",
+      "en": "Smoothness",
+      "forms": { "en": ["smooth"] }
+    },
+    {
+      "id": "conformal-map",
+      "zh": "共形映射",
+      "en": "Conformal map",
+      "forms": { "en": ["conformal"] }
+    },
+    {
+      "id": "residue",
+      "zh": "留数",
+      "en": "Residue"
+    },
+    {
+      "id": "well-posedness",
+      "zh": "适定性",
+      "en": "Well-posedness",
+      "forms": { "en": ["well-posed"] }
+    },
+    {
+      "id": "eulers-number",
+      "zh": "自然常数",
+      "en": "Euler's number"
+    },
+    {
+      "id": "gamma-function",
+      "zh": "伽马函数",
+      "en": "Gamma function"
+    },
+    {
+      "id": "spiral",
+      "zh": "螺线",
+      "en": "Spiral"
+    },
+    {
+      "id": "cycloid",
+      "zh": "摆线",
+      "en": "Cycloid"
+    },
+    {
+      "id": "cardioid",
+      "zh": "心形线",
+      "en": "Cardioid"
+    },
+    {
+      "id": "julia-set",
+      "zh": "朱利亚集",
+      "en": "Julia set"
+    },
+    {
+      "id": "penrose-tiling",
+      "zh": "彭罗斯镶嵌",
+      "en": "Penrose tiling"
+    },
+    {
+      "id": "hypotenuse",
+      "zh": "斜边",
+      "en": "Hypotenuse"
+    },
+    {
+      "id": "secant",
+      "zh": "割线",
+      "en": "Secant"
+    },
+    {
+      "id": "tetrahedron",
+      "zh": "四面体",
+      "en": "Tetrahedron"
+    },
+    {
+      "id": "icosahedron",
+      "zh": "二十面体",
+      "en": "Icosahedron"
+    },
+    {
+      "id": "cuboid",
+      "zh": "长方体",
+      "en": "Cuboid"
+    },
+    {
+      "id": "ellipsoid",
+      "zh": "椭球",
+      "en": "Ellipsoid",
+      "forms": { "en": ["ellipsoidal"] }
+    },
+    {
+      "id": "centroid",
+      "zh": "重心",
+      "en": "Centroid"
+    },
+    {
+      "id": "orthocenter",
+      "zh": "垂心",
+      "en": "Orthocenter",
+      "forms": { "en": ["orthocentre"] }
+    },
+    {
+      "id": "circumcircle",
+      "zh": "外接圆",
+      "en": "Circumcircle"
+    },
+    {
+      "id": "homothety",
+      "zh": "位似",
+      "en": "Homothety"
+    },
+    {
+      "id": "normal-vector",
+      "zh": "法向量",
+      "en": "Normal vector"
+    },
+    {
+      "id": "trisection",
+      "zh": "三等分角",
+      "en": "Trisection",
+      "forms": { "en": ["trisect"] }
+    },
+    {
+      "id": "set-square",
+      "zh": "三角板",
+      "en": "Set square"
+    },
+    {
+      "id": "orientability",
+      "zh": "可定向性",
+      "en": "Orientability",
+      "forms": { "en": ["orientable"] }
+    },
+    {
+      "id": "continuum",
+      "zh": "连续统",
+      "en": "Continuum"
+    },
+    {
+      "id": "gamblers-ruin",
+      "zh": "赌徒破产",
+      "en": "Gambler's ruin"
+    },
+    {
+      "id": "stopping-time",
+      "zh": "停时",
+      "en": "Stopping time"
+    },
+    {
+      "id": "wiener-process",
+      "zh": "维纳过程",
+      "en": "Wiener process"
+    },
+    {
+      "id": "itos-lemma",
+      "zh": "伊藤引理",
+      "en": "Itô's lemma"
+    },
+    {
+      "id": "almost-surely",
+      "zh": "几乎必然",
+      "en": "Almost surely"
+    },
+    {
+      "id": "sigma-algebra",
+      "zh": "σ代数",
+      "en": "Sigma-algebra",
+      "forms": { "en": ["σ-algebra"] }
+    },
+    {
+      "id": "f-test",
+      "zh": "F检验",
+      "en": "F-test"
+    },
+    {
+      "id": "glm",
+      "zh": "GLM",
+      "en": "GLM",
+      "forms": { "zh": ["广义线性模型"], "en": ["generalized linear model"] }
+    },
+    {
+      "id": "q-q-plot",
+      "zh": "QQ图",
+      "en": "Q-Q plot"
+    },
+    {
+      "id": "violin-plot",
+      "zh": "小提琴图",
+      "en": "Violin plot"
+    },
+    {
+      "id": "radar-chart",
+      "zh": "雷达图",
+      "en": "Radar chart"
+    },
+    {
+      "id": "quartile",
+      "zh": "四分位数",
+      "en": "Quartile",
+      "forms": { "en": ["interquartile"] }
+    },
+    {
+      "id": "z-score",
+      "zh": "z分数",
+      "en": "Z-score"
+    },
+    {
+      "id": "covariate",
+      "zh": "协变量",
+      "en": "Covariate"
+    },
+    {
+      "id": "sample-size",
+      "zh": "样本量",
+      "en": "Sample size"
+    },
+    {
+      "id": "jackknife",
+      "zh": "刀切法",
+      "en": "Jackknife"
+    },
+    {
+      "id": "censoring",
+      "zh": "删失",
+      "en": "Censoring",
+      "forms": { "en": ["censored"] }
+    },
+    {
+      "id": "unbiasedness",
+      "zh": "无偏性",
+      "en": "Unbiasedness",
+      "forms": { "en": ["unbiased"] }
+    },
+    {
+      "id": "fdr",
+      "zh": "错误发现率",
+      "en": "FDR",
+      "forms": { "en": ["false discovery rate"] }
+    },
+    {
+      "id": "am-gm",
+      "zh": "均值不等式",
+      "en": "AM-GM"
+    },
+    {
+      "id": "cauchy-schwarz",
+      "zh": "柯西不等式",
+      "en": "Cauchy–Schwarz"
+    },
+    {
+      "id": "p-adic-number",
+      "zh": "p进数",
+      "en": "p-adic number"
+    },
+    {
+      "id": "twin-primes",
+      "zh": "孪生素数",
+      "en": "Twin primes"
+    },
+    {
+      "id": "lcm",
+      "zh": "最小公倍数",
+      "en": "LCM",
+      "forms": { "en": ["least common multiple"] }
+    },
+    {
+      "id": "totient",
+      "zh": "欧拉函数",
+      "en": "Totient"
+    },
+    {
+      "id": "modular-form",
+      "zh": "模形式",
+      "en": "Modular form"
+    },
+    {
+      "id": "abc-conjecture",
+      "zh": "ABC猜想",
+      "en": "ABC conjecture"
+    },
+    {
+      "id": "basel-problem",
+      "zh": "巴塞尔问题",
+      "en": "Basel problem"
+    },
+    {
+      "id": "clique",
+      "zh": "团",
+      "en": "Clique"
+    },
+    {
+      "id": "matching",
+      "zh": "匹配",
+      "en": "Matching"
+    },
+    {
+      "id": "derangement",
+      "zh": "错排",
+      "en": "Derangement"
+    },
+    {
+      "id": "hypergraph",
+      "zh": "超图",
+      "en": "Hypergraph"
+    },
+    {
+      "id": "digraph",
+      "zh": "有向图",
+      "en": "Digraph",
+      "forms": { "en": ["directed graph"] }
+    },
+    {
+      "id": "adjacency",
+      "zh": "邻接",
+      "en": "Adjacency",
+      "forms": { "en": ["adjacent"] }
+    },
+    {
+      "id": "ramsey-theory",
+      "zh": "拉姆齐理论",
+      "en": "Ramsey theory"
+    },
+    {
+      "id": "matroid",
+      "zh": "拟阵",
+      "en": "Matroid"
+    },
+    {
+      "id": "young-tableau",
+      "zh": "杨表",
+      "en": "Young tableau",
+      "forms": { "en": ["tableaux"] }
+    },
+    {
+      "id": "power-set",
+      "zh": "幂集",
+      "en": "Power set"
+    },
+    {
+      "id": "partial-order",
+      "zh": "偏序",
+      "en": "Partial order",
+      "forms": { "en": ["poset"] }
+    },
+    {
+      "id": "ordinal",
+      "zh": "序数",
+      "en": "Ordinal"
+    },
+    {
+      "id": "well-ordering",
+      "zh": "良序",
+      "en": "Well-ordering",
+      "forms": { "en": ["well-ordered"] }
+    },
+    {
+      "id": "countability",
+      "zh": "可数性",
+      "en": "Countability",
+      "forms": { "en": ["countable", "uncountable"] }
+    },
+    {
+      "id": "aleph-null",
+      "zh": "阿列夫零",
+      "en": "Aleph-null",
+      "forms": { "en": ["aleph-zero"] }
+    },
+    {
+      "id": "zfc",
+      "zh": "ZFC",
+      "en": "ZFC"
+    },
+    {
+      "id": "model-theory",
+      "zh": "模型论",
+      "en": "Model theory"
+    },
+    {
+      "id": "peano-axioms",
+      "zh": "皮亚诺公理",
+      "en": "Peano axioms"
+    },
+    {
+      "id": "contradiction",
+      "zh": "矛盾",
+      "en": "Contradiction",
+      "forms": { "en": ["contradict", "contradictory"] }
+    },
+    {
+      "id": "disjunction",
+      "zh": "析取",
+      "en": "Disjunction",
+      "forms": { "en": ["disjunctive"] }
+    },
+    {
+      "id": "iff",
+      "zh": "充要条件",
+      "en": "Iff",
+      "forms": { "en": ["if and only if"] }
+    },
+    {
+      "id": "wlog",
+      "zh": "不失一般性",
+      "en": "WLOG",
+      "forms": { "en": ["without loss of generality"] }
+    },
+    {
+      "id": "well-defined",
+      "zh": "良定义",
+      "en": "Well-defined"
+    },
+    {
+      "id": "case-analysis",
+      "zh": "分类讨论",
+      "en": "Case analysis"
+    },
+    {
+      "id": "existence",
+      "zh": "存在性",
+      "en": "Existence",
+      "forms": { "en": ["exist", "existential"] }
+    },
+    {
+      "id": "linear-program",
+      "zh": "线性规划",
+      "en": "Linear program",
+      "forms": { "en": ["linear programming"] }
+    },
+    {
+      "id": "kkt-conditions",
+      "zh": "KKT条件",
+      "en": "KKT conditions"
+    },
+    {
+      "id": "subgradient",
+      "zh": "次梯度",
+      "en": "Subgradient"
+    },
+    {
+      "id": "line-search",
+      "zh": "线搜索",
+      "en": "Line search"
+    },
+    {
+      "id": "quasi-newton",
+      "zh": "拟牛顿法",
+      "en": "Quasi-Newton"
+    },
+    {
+      "id": "interior-point",
+      "zh": "内点法",
+      "en": "Interior point"
+    },
+    {
+      "id": "admm",
+      "zh": "ADMM",
+      "en": "ADMM",
+      "forms": { "en": ["alternating direction method of multipliers"] }
+    },
+    {
+      "id": "submodularity",
+      "zh": "次模性",
+      "en": "Submodularity",
+      "forms": { "en": ["submodular"] }
+    },
+    {
+      "id": "euler-method",
+      "zh": "欧拉法",
+      "en": "Euler method"
+    },
+    {
+      "id": "runge-kutta",
+      "zh": "龙格-库塔",
+      "en": "Runge–Kutta"
+    },
+    {
+      "id": "spline",
+      "zh": "样条",
+      "en": "Spline"
+    },
+    {
+      "id": "multigrid",
+      "zh": "多重网格",
+      "en": "Multigrid"
+    },
+    {
+      "id": "quadrature",
+      "zh": "数值积分",
+      "en": "Quadrature"
+    },
+    {
+      "id": "truncation",
+      "zh": "截断",
+      "en": "Truncation",
+      "forms": { "en": ["truncate", "truncated"] }
+    },
+    {
+      "id": "erdos-number",
+      "zh": "埃尔德什数",
+      "en": "Erdős number"
+    },
+    {
+      "id": "abel-prize",
+      "zh": "阿贝尔奖",
+      "en": "Abel Prize"
+    },
+    {
+      "id": "pell-equation",
+      "zh": "佩尔方程",
+      "en": "Pell equation"
+    },
+    {
+      "id": "polytope",
+      "zh": "多胞形",
+      "en": "Polytope"
+    },
+    {
+      "id": "pullback",
+      "zh": "拉回",
+      "en": "Pullback"
+    },
+    {
+      "id": "yoneda-lemma",
+      "zh": "米田引理",
+      "en": "Yoneda lemma"
+    },
+    {
+      "id": "riemann-sum",
+      "zh": "黎曼和",
+      "en": "Riemann sum"
+    },
+    {
+      "id": "branch-cut",
+      "zh": "分支切割",
+      "en": "Branch cut"
+    },
+    {
+      "id": "critical-value",
+      "zh": "临界值",
+      "en": "Critical value"
+    },
+    {
+      "id": "test-statistic",
+      "zh": "检验统计量",
+      "en": "Test statistic"
+    },
+    {
+      "id": "sufficiency",
+      "zh": "充分性",
+      "en": "Sufficiency",
+      "forms": { "en": ["sufficient"] }
+    },
+    {
+      "id": "preconditioner",
+      "zh": "预条件子",
+      "en": "Preconditioner",
+      "forms": { "en": ["preconditioning"] }
+    },
+    {
+      "id": "newton-raphson",
+      "zh": "牛顿法",
+      "en": "Newton–Raphson"
+    },
+    {
+      "id": "sdp",
+      "zh": "半定规划",
+      "en": "SDP",
+      "forms": { "en": ["semidefinite programming"] }
+    },
+    {
+      "id": "equals-sign",
+      "zh": "等号",
+      "en": "Equals sign"
+    },
+    {
+      "id": "mixing-time",
+      "zh": "混合时间",
+      "en": "Mixing time"
+    },
+    {
+      "id": "stabilizer",
+      "zh": "稳定子",
+      "en": "Stabilizer",
+      "forms": { "en": ["stabiliser"] }
+    },
+    {
+      "id": "bilinear",
+      "zh": "双线性",
+      "en": "Bilinear",
+      "forms": { "en": ["bilinearity"] }
+    },
+    {
+      "id": "bell-curve",
+      "zh": "钟形曲线",
+      "en": "Bell curve"
+    },
+    {
+      "id": "long-division",
+      "zh": "长除法",
+      "en": "Long division"
     }
   ]
 }

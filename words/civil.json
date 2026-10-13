@@ -1,0 +1,2112 @@
+{
+  "id": "civil",
+  "name": {
+    "zh": "土木与建筑",
+    "en": "Civil Engineering & Architecture"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "structure",
+      "zh": "结构",
+      "en": "Structure"
+    },
+    {
+      "id": "member",
+      "zh": "构件",
+      "en": "Member"
+    },
+    {
+      "id": "column",
+      "zh": "柱",
+      "en": "Column"
+    },
+    {
+      "id": "slab",
+      "zh": "楼板",
+      "en": "Slab"
+    },
+    {
+      "id": "shear-wall",
+      "zh": "剪力墙",
+      "en": "Shear wall"
+    },
+    {
+      "id": "rigid-frame",
+      "zh": "刚架",
+      "en": "Rigid frame"
+    },
+    {
+      "id": "axial-force",
+      "zh": "轴力",
+      "en": "Axial force"
+    },
+    {
+      "id": "deflection",
+      "zh": "挠度",
+      "en": "Deflection"
+    },
+    {
+      "id": "span",
+      "zh": "跨度",
+      "en": "Span"
+    },
+    {
+      "id": "support",
+      "zh": "支座",
+      "en": "Support"
+    },
+    {
+      "id": "fixed-end",
+      "zh": "固定端",
+      "en": "Fixed end"
+    },
+    {
+      "id": "simple-beam",
+      "zh": "简支梁",
+      "en": "Simple beam"
+    },
+    {
+      "id": "influence-line",
+      "zh": "影响线",
+      "en": "Influence line"
+    },
+    {
+      "id": "bending",
+      "zh": "弯曲",
+      "en": "Bending"
+    },
+    {
+      "id": "seismic-design",
+      "zh": "抗震设计",
+      "en": "Seismic design"
+    },
+    {
+      "id": "base-isolation",
+      "zh": "隔震",
+      "en": "Base isolation"
+    },
+    {
+      "id": "ductility",
+      "zh": "延性",
+      "en": "Ductility",
+      "forms": { "en": ["ductile"] }
+    },
+    {
+      "id": "shrinkage",
+      "zh": "收缩",
+      "en": "Shrinkage"
+    },
+    {
+      "id": "crack",
+      "zh": "裂缝",
+      "en": "Crack",
+      "forms": { "en": ["cracking"] }
+    },
+    {
+      "id": "live-load",
+      "zh": "活荷载",
+      "en": "Live load"
+    },
+    {
+      "id": "dead-load",
+      "zh": "恒荷载",
+      "en": "Dead load"
+    },
+    {
+      "id": "wind-load",
+      "zh": "风荷载",
+      "en": "Wind load"
+    },
+    {
+      "id": "limit-state",
+      "zh": "极限状态",
+      "en": "Limit state"
+    },
+    {
+      "id": "prestressing",
+      "zh": "预应力",
+      "en": "Prestressing",
+      "forms": { "en": ["prestressed"] }
+    },
+    {
+      "id": "concrete-cover",
+      "zh": "保护层",
+      "en": "Concrete cover"
+    },
+    {
+      "id": "i-beam",
+      "zh": "工字钢",
+      "en": "I-beam"
+    },
+    {
+      "id": "steel-plate",
+      "zh": "钢板",
+      "en": "Steel plate"
+    },
+    {
+      "id": "thin-shell",
+      "zh": "薄壳",
+      "en": "Thin shell"
+    },
+    {
+      "id": "stay-cable",
+      "zh": "斜拉索",
+      "en": "Stay cable"
+    },
+    {
+      "id": "pontoon-bridge",
+      "zh": "浮桥",
+      "en": "Pontoon bridge"
+    },
+    {
+      "id": "bridge-tower",
+      "zh": "桥塔",
+      "en": "Bridge tower"
+    },
+    {
+      "id": "pier",
+      "zh": "桥墩",
+      "en": "Pier"
+    },
+    {
+      "id": "abutment",
+      "zh": "桥台",
+      "en": "Abutment"
+    },
+    {
+      "id": "deck",
+      "zh": "桥面",
+      "en": "Deck"
+    },
+    {
+      "id": "girder",
+      "zh": "主梁",
+      "en": "Girder"
+    },
+    {
+      "id": "box-girder",
+      "zh": "箱梁",
+      "en": "Box girder"
+    },
+    {
+      "id": "main-cable",
+      "zh": "主缆",
+      "en": "Main cable"
+    },
+    {
+      "id": "hanger",
+      "zh": "吊杆",
+      "en": "Hanger"
+    },
+    {
+      "id": "anchorage",
+      "zh": "锚碇",
+      "en": "Anchorage"
+    },
+    {
+      "id": "covered-bridge",
+      "zh": "廊桥",
+      "en": "Covered bridge"
+    },
+    {
+      "id": "trestle",
+      "zh": "栈桥",
+      "en": "Trestle"
+    },
+    {
+      "id": "geotechnics",
+      "zh": "岩土工程",
+      "en": "Geotechnics",
+      "forms": { "en": ["geotechnical"] }
+    },
+    {
+      "id": "soil-mechanics",
+      "zh": "土力学",
+      "en": "Soil mechanics"
+    },
+    {
+      "id": "pore-pressure",
+      "zh": "孔隙水压力",
+      "en": "Pore pressure"
+    },
+    {
+      "id": "consolidation",
+      "zh": "固结",
+      "en": "Consolidation"
+    },
+    {
+      "id": "liquefaction",
+      "zh": "液化",
+      "en": "Liquefaction"
+    },
+    {
+      "id": "seepage",
+      "zh": "渗流",
+      "en": "Seepage"
+    },
+    {
+      "id": "piping",
+      "zh": "管涌",
+      "en": "Piping"
+    },
+    {
+      "id": "shear-strength",
+      "zh": "抗剪强度",
+      "en": "Shear strength"
+    },
+    {
+      "id": "mohrs-circle",
+      "zh": "摩尔圆",
+      "en": "Mohr's circle"
+    },
+    {
+      "id": "earth-pressure",
+      "zh": "土压力",
+      "en": "Earth pressure"
+    },
+    {
+      "id": "silt",
+      "zh": "粉土",
+      "en": "Silt"
+    },
+    {
+      "id": "gradation",
+      "zh": "级配",
+      "en": "Gradation"
+    },
+    {
+      "id": "compaction",
+      "zh": "压实",
+      "en": "Compaction"
+    },
+    {
+      "id": "water-content",
+      "zh": "含水率",
+      "en": "Water content"
+    },
+    {
+      "id": "void-ratio",
+      "zh": "孔隙比",
+      "en": "Void ratio"
+    },
+    {
+      "id": "permeability",
+      "zh": "渗透系数",
+      "en": "Permeability"
+    },
+    {
+      "id": "rock-bolt",
+      "zh": "锚杆",
+      "en": "Rock bolt"
+    },
+    {
+      "id": "soil-nail",
+      "zh": "土钉",
+      "en": "Soil nail"
+    },
+    {
+      "id": "diaphragm-wall",
+      "zh": "地下连续墙",
+      "en": "Diaphragm wall"
+    },
+    {
+      "id": "foundation-pit",
+      "zh": "基坑",
+      "en": "Foundation pit"
+    },
+    {
+      "id": "caisson",
+      "zh": "沉井",
+      "en": "Caisson"
+    },
+    {
+      "id": "mat-foundation",
+      "zh": "筏板基础",
+      "en": "Mat foundation"
+    },
+    {
+      "id": "strip-footing",
+      "zh": "条形基础",
+      "en": "Strip footing"
+    },
+    {
+      "id": "frost-heave",
+      "zh": "冻胀",
+      "en": "Frost heave"
+    },
+    {
+      "id": "triaxial-test",
+      "zh": "三轴试验",
+      "en": "Triaxial test"
+    },
+    {
+      "id": "borehole",
+      "zh": "钻孔",
+      "en": "Borehole"
+    },
+    {
+      "id": "geotextile",
+      "zh": "土工布",
+      "en": "Geotextile"
+    },
+    {
+      "id": "geogrid",
+      "zh": "土工格栅",
+      "en": "Geogrid"
+    },
+    {
+      "id": "tbm",
+      "zh": "盾构机",
+      "en": "TBM",
+      "forms": { "en": ["tunnel boring machine"] }
+    },
+    {
+      "id": "natm",
+      "zh": "新奥法",
+      "en": "NATM"
+    },
+    {
+      "id": "lining",
+      "zh": "衬砌",
+      "en": "Lining"
+    },
+    {
+      "id": "tunnel-face",
+      "zh": "掌子面",
+      "en": "Tunnel face"
+    },
+    {
+      "id": "blasting",
+      "zh": "爆破",
+      "en": "Blasting"
+    },
+    {
+      "id": "utility-tunnel",
+      "zh": "管廊",
+      "en": "Utility tunnel"
+    },
+    {
+      "id": "pavement",
+      "zh": "路面",
+      "en": "Pavement"
+    },
+    {
+      "id": "shoulder",
+      "zh": "路肩",
+      "en": "Shoulder"
+    },
+    {
+      "id": "guardrail",
+      "zh": "护栏",
+      "en": "Guardrail"
+    },
+    {
+      "id": "curb",
+      "zh": "路缘石",
+      "en": "Curb",
+      "forms": { "en": ["kerb"] }
+    },
+    {
+      "id": "sidewalk",
+      "zh": "人行道",
+      "en": "Sidewalk"
+    },
+    {
+      "id": "pothole",
+      "zh": "坑槽",
+      "en": "Pothole"
+    },
+    {
+      "id": "rutting",
+      "zh": "车辙",
+      "en": "Rutting",
+      "forms": { "en": ["rut"] }
+    },
+    {
+      "id": "superelevation",
+      "zh": "超高",
+      "en": "Superelevation"
+    },
+    {
+      "id": "sight-distance",
+      "zh": "视距",
+      "en": "Sight distance"
+    },
+    {
+      "id": "junction",
+      "zh": "交叉口",
+      "en": "Junction"
+    },
+    {
+      "id": "railway",
+      "zh": "铁路",
+      "en": "Railway"
+    },
+    {
+      "id": "rail",
+      "zh": "钢轨",
+      "en": "Rail"
+    },
+    {
+      "id": "sleeper",
+      "zh": "轨枕",
+      "en": "Sleeper"
+    },
+    {
+      "id": "ballast",
+      "zh": "道砟",
+      "en": "Ballast"
+    },
+    {
+      "id": "turnout",
+      "zh": "道岔",
+      "en": "Turnout"
+    },
+    {
+      "id": "overhead-line",
+      "zh": "接触网",
+      "en": "Overhead line"
+    },
+    {
+      "id": "light-rail",
+      "zh": "轻轨",
+      "en": "Light rail"
+    },
+    {
+      "id": "tram",
+      "zh": "有轨电车",
+      "en": "Tram"
+    },
+    {
+      "id": "apron",
+      "zh": "停机坪",
+      "en": "Apron"
+    },
+    {
+      "id": "wharf",
+      "zh": "码头",
+      "en": "Wharf"
+    },
+    {
+      "id": "breakwater",
+      "zh": "防波堤",
+      "en": "Breakwater"
+    },
+    {
+      "id": "ship-lock",
+      "zh": "船闸",
+      "en": "Ship lock"
+    },
+    {
+      "id": "parking-lot",
+      "zh": "停车场",
+      "en": "Parking lot"
+    },
+    {
+      "id": "bus-lane",
+      "zh": "公交专用道",
+      "en": "Bus lane"
+    },
+    {
+      "id": "underpass",
+      "zh": "地下通道",
+      "en": "Underpass"
+    },
+    {
+      "id": "spillway",
+      "zh": "溢洪道",
+      "en": "Spillway"
+    },
+    {
+      "id": "gravity-dam",
+      "zh": "重力坝",
+      "en": "Gravity dam"
+    },
+    {
+      "id": "stilling-basin",
+      "zh": "消力池",
+      "en": "Stilling basin"
+    },
+    {
+      "id": "flood-control",
+      "zh": "防洪",
+      "en": "Flood control"
+    },
+    {
+      "id": "reservoir",
+      "zh": "水库",
+      "en": "Reservoir"
+    },
+    {
+      "id": "groyne",
+      "zh": "丁坝",
+      "en": "Groyne",
+      "forms": { "en": ["groin"] }
+    },
+    {
+      "id": "water-level",
+      "zh": "水位",
+      "en": "Water level"
+    },
+    {
+      "id": "open-channel",
+      "zh": "明渠",
+      "en": "Open channel"
+    },
+    {
+      "id": "hydraulic-jump",
+      "zh": "水跃",
+      "en": "Hydraulic jump"
+    },
+    {
+      "id": "water-supply",
+      "zh": "给水",
+      "en": "Water supply"
+    },
+    {
+      "id": "pipe-network",
+      "zh": "管网",
+      "en": "Pipe network"
+    },
+    {
+      "id": "water-hammer",
+      "zh": "水锤",
+      "en": "Water hammer"
+    },
+    {
+      "id": "septic-tank",
+      "zh": "化粪池",
+      "en": "Septic tank"
+    },
+    {
+      "id": "gate",
+      "zh": "闸门",
+      "en": "Gate"
+    },
+    {
+      "id": "concrete",
+      "zh": "混凝土",
+      "en": "Concrete"
+    },
+    {
+      "id": "cement",
+      "zh": "水泥",
+      "en": "Cement"
+    },
+    {
+      "id": "aggregate",
+      "zh": "骨料",
+      "en": "Aggregate"
+    },
+    {
+      "id": "gravel",
+      "zh": "砾石",
+      "en": "Gravel"
+    },
+    {
+      "id": "admixture",
+      "zh": "外加剂",
+      "en": "Admixture"
+    },
+    {
+      "id": "slump",
+      "zh": "坍落度",
+      "en": "Slump"
+    },
+    {
+      "id": "yield-strength",
+      "zh": "屈服强度",
+      "en": "Yield strength"
+    },
+    {
+      "id": "plywood",
+      "zh": "胶合板",
+      "en": "Plywood"
+    },
+    {
+      "id": "glulam",
+      "zh": "胶合木",
+      "en": "Glulam"
+    },
+    {
+      "id": "drywall",
+      "zh": "石膏板",
+      "en": "Drywall"
+    },
+    {
+      "id": "roof-tile",
+      "zh": "瓦",
+      "en": "Roof tile"
+    },
+    {
+      "id": "adobe",
+      "zh": "土坯",
+      "en": "Adobe"
+    },
+    {
+      "id": "insulation",
+      "zh": "保温",
+      "en": "Insulation"
+    },
+    {
+      "id": "fireproofing",
+      "zh": "防火",
+      "en": "Fireproofing"
+    },
+    {
+      "id": "durability",
+      "zh": "耐久性",
+      "en": "Durability"
+    },
+    {
+      "id": "carbonation",
+      "zh": "碳化",
+      "en": "Carbonation"
+    },
+    {
+      "id": "masonry",
+      "zh": "砌体",
+      "en": "Masonry"
+    },
+    {
+      "id": "precast",
+      "zh": "预制",
+      "en": "Precast"
+    },
+    {
+      "id": "slipform",
+      "zh": "滑模",
+      "en": "Slipform"
+    },
+    {
+      "id": "mixer-truck",
+      "zh": "搅拌车",
+      "en": "Mixer truck"
+    },
+    {
+      "id": "tower-crane",
+      "zh": "塔吊",
+      "en": "Tower crane"
+    },
+    {
+      "id": "pile-driver",
+      "zh": "打桩机",
+      "en": "Pile driver"
+    },
+    {
+      "id": "safety-net",
+      "zh": "安全网",
+      "en": "Safety net"
+    },
+    {
+      "id": "building-site",
+      "zh": "工地",
+      "en": "Building site"
+    },
+    {
+      "id": "owner",
+      "zh": "业主",
+      "en": "Owner"
+    },
+    {
+      "id": "tender",
+      "zh": "招标",
+      "en": "Tender",
+      "forms": { "en": ["tendering"] }
+    },
+    {
+      "id": "bim",
+      "zh": "BIM",
+      "en": "BIM",
+      "forms": { "zh": ["建筑信息模型"], "en": ["building information modeling"] }
+    },
+    {
+      "id": "topping-out",
+      "zh": "封顶",
+      "en": "Topping out"
+    },
+    {
+      "id": "groundbreaking",
+      "zh": "奠基",
+      "en": "Groundbreaking"
+    },
+    {
+      "id": "demolition",
+      "zh": "拆除",
+      "en": "Demolition"
+    },
+    {
+      "id": "carpenter",
+      "zh": "木匠",
+      "en": "Carpenter",
+      "forms": { "en": ["carpentry"] }
+    },
+    {
+      "id": "plastering",
+      "zh": "抹灰",
+      "en": "Plastering",
+      "forms": { "en": ["plaster"] }
+    },
+    {
+      "id": "false-ceiling",
+      "zh": "吊顶",
+      "en": "False ceiling"
+    },
+    {
+      "id": "ceramic-tile",
+      "zh": "瓷砖",
+      "en": "Ceramic tile"
+    },
+    {
+      "id": "renovation",
+      "zh": "装修",
+      "en": "Renovation"
+    },
+    {
+      "id": "leveling",
+      "zh": "水准测量",
+      "en": "Leveling",
+      "forms": { "en": ["levelling"] }
+    },
+    {
+      "id": "elevation",
+      "zh": "高程",
+      "en": "Elevation"
+    },
+    {
+      "id": "control-point",
+      "zh": "控制点",
+      "en": "Control point"
+    },
+    {
+      "id": "setting-out",
+      "zh": "放样",
+      "en": "Setting out"
+    },
+    {
+      "id": "traverse",
+      "zh": "导线测量",
+      "en": "Traverse"
+    },
+    {
+      "id": "triangulation",
+      "zh": "三角测量",
+      "en": "Triangulation"
+    },
+    {
+      "id": "surveyor",
+      "zh": "测量员",
+      "en": "Surveyor"
+    },
+    {
+      "id": "laser-scanning",
+      "zh": "激光扫描",
+      "en": "Laser scanning"
+    },
+    {
+      "id": "misclosure",
+      "zh": "闭合差",
+      "en": "Misclosure"
+    },
+    {
+      "id": "plot-ratio",
+      "zh": "容积率",
+      "en": "Plot ratio"
+    },
+    {
+      "id": "setback",
+      "zh": "退界",
+      "en": "Setback"
+    },
+    {
+      "id": "roof",
+      "zh": "屋顶",
+      "en": "Roof"
+    },
+    {
+      "id": "eaves",
+      "zh": "屋檐",
+      "en": "Eaves"
+    },
+    {
+      "id": "gable",
+      "zh": "山墙",
+      "en": "Gable"
+    },
+    {
+      "id": "attic",
+      "zh": "阁楼",
+      "en": "Attic"
+    },
+    {
+      "id": "basement",
+      "zh": "地下室",
+      "en": "Basement"
+    },
+    {
+      "id": "staircase",
+      "zh": "楼梯",
+      "en": "Staircase"
+    },
+    {
+      "id": "handrail",
+      "zh": "扶手",
+      "en": "Handrail"
+    },
+    {
+      "id": "elevator",
+      "zh": "电梯",
+      "en": "Elevator"
+    },
+    {
+      "id": "escalator",
+      "zh": "自动扶梯",
+      "en": "Escalator"
+    },
+    {
+      "id": "porch",
+      "zh": "门廊",
+      "en": "Porch"
+    },
+    {
+      "id": "balcony",
+      "zh": "阳台",
+      "en": "Balcony"
+    },
+    {
+      "id": "windowsill",
+      "zh": "窗台",
+      "en": "Windowsill"
+    },
+    {
+      "id": "lintel",
+      "zh": "过梁",
+      "en": "Lintel"
+    },
+    {
+      "id": "storey",
+      "zh": "楼层",
+      "en": "Storey",
+      "forms": { "en": ["story"] }
+    },
+    {
+      "id": "bearing-wall",
+      "zh": "承重墙",
+      "en": "Bearing wall"
+    },
+    {
+      "id": "partition",
+      "zh": "隔墙",
+      "en": "Partition"
+    },
+    {
+      "id": "parapet",
+      "zh": "女儿墙",
+      "en": "Parapet"
+    },
+    {
+      "id": "skylight",
+      "zh": "天窗",
+      "en": "Skylight"
+    },
+    {
+      "id": "louver",
+      "zh": "百叶窗",
+      "en": "Louver",
+      "forms": { "en": ["louvre"] }
+    },
+    {
+      "id": "bay-window",
+      "zh": "飘窗",
+      "en": "Bay window"
+    },
+    {
+      "id": "lobby",
+      "zh": "大堂",
+      "en": "Lobby"
+    },
+    {
+      "id": "garage",
+      "zh": "车库",
+      "en": "Garage"
+    },
+    {
+      "id": "fireplace",
+      "zh": "壁炉",
+      "en": "Fireplace"
+    },
+    {
+      "id": "daylighting",
+      "zh": "采光",
+      "en": "Daylighting"
+    },
+    {
+      "id": "mortise-tenon",
+      "zh": "榫卯",
+      "en": "Mortise-tenon"
+    },
+    {
+      "id": "tulou",
+      "zh": "土楼",
+      "en": "Tulou"
+    },
+    {
+      "id": "igloo",
+      "zh": "冰屋",
+      "en": "Igloo"
+    },
+    {
+      "id": "apartment",
+      "zh": "公寓",
+      "en": "Apartment"
+    },
+    {
+      "id": "villa",
+      "zh": "别墅",
+      "en": "Villa"
+    },
+    {
+      "id": "high-rise",
+      "zh": "高层建筑",
+      "en": "High-rise"
+    },
+    {
+      "id": "bungalow",
+      "zh": "平房",
+      "en": "Bungalow"
+    },
+    {
+      "id": "evacuation",
+      "zh": "疏散",
+      "en": "Evacuation"
+    },
+    {
+      "id": "emergency-exit",
+      "zh": "安全出口",
+      "en": "Emergency exit"
+    },
+    {
+      "id": "fire-hydrant",
+      "zh": "消防栓",
+      "en": "Fire hydrant"
+    },
+    {
+      "id": "sprinkler",
+      "zh": "喷淋",
+      "en": "Sprinkler"
+    },
+    {
+      "id": "accessibility",
+      "zh": "无障碍",
+      "en": "Accessibility",
+      "forms": { "en": ["accessible", "a11y"] }
+    },
+    {
+      "id": "site-plan",
+      "zh": "总平面图",
+      "en": "Site plan"
+    },
+    {
+      "id": "axonometric",
+      "zh": "轴测图",
+      "en": "Axonometric"
+    },
+    {
+      "id": "zoning",
+      "zh": "分区",
+      "en": "Zoning"
+    },
+    {
+      "id": "public-space",
+      "zh": "公共空间",
+      "en": "Public space"
+    },
+    {
+      "id": "city-block",
+      "zh": "街区",
+      "en": "City block"
+    },
+    {
+      "id": "floor-area",
+      "zh": "建筑面积",
+      "en": "Floor area"
+    },
+    {
+      "id": "headroom",
+      "zh": "净高",
+      "en": "Headroom"
+    },
+    {
+      "id": "thermal-bridge",
+      "zh": "热桥",
+      "en": "Thermal bridge"
+    },
+    {
+      "id": "u-value",
+      "zh": "传热系数",
+      "en": "U-value"
+    },
+    {
+      "id": "airtightness",
+      "zh": "气密性",
+      "en": "Airtightness"
+    },
+    {
+      "id": "soundproofing",
+      "zh": "隔音",
+      "en": "Soundproofing"
+    },
+    {
+      "id": "reverberation",
+      "zh": "混响",
+      "en": "Reverberation"
+    },
+    {
+      "id": "shading",
+      "zh": "遮阳",
+      "en": "Shading"
+    },
+    {
+      "id": "illuminance",
+      "zh": "照度",
+      "en": "Illuminance"
+    },
+    {
+      "id": "thermal-mass",
+      "zh": "蓄热",
+      "en": "Thermal mass"
+    },
+    {
+      "id": "stack-effect",
+      "zh": "烟囱效应",
+      "en": "Stack effect"
+    },
+    {
+      "id": "tensegrity",
+      "zh": "张拉整体",
+      "en": "Tensegrity"
+    },
+    {
+      "id": "catenary",
+      "zh": "悬链线",
+      "en": "Catenary"
+    },
+    {
+      "id": "neutral-axis",
+      "zh": "中性轴",
+      "en": "Neutral axis"
+    },
+    {
+      "id": "plastic-hinge",
+      "zh": "塑性铰",
+      "en": "Plastic hinge"
+    },
+    {
+      "id": "natural-period",
+      "zh": "自振周期",
+      "en": "Natural period"
+    },
+    {
+      "id": "mode-shape",
+      "zh": "振型",
+      "en": "Mode shape"
+    },
+    {
+      "id": "storey-drift",
+      "zh": "层间位移",
+      "en": "Storey drift"
+    },
+    {
+      "id": "tacoma-narrows",
+      "zh": "塔科马大桥",
+      "en": "Tacoma Narrows"
+    },
+    {
+      "id": "flutter",
+      "zh": "颤振",
+      "en": "Flutter"
+    },
+    {
+      "id": "ndt",
+      "zh": "无损检测",
+      "en": "NDT",
+      "forms": { "en": ["non-destructive testing"] }
+    },
+    {
+      "id": "retrofitting",
+      "zh": "加固",
+      "en": "Retrofitting",
+      "forms": { "en": ["retrofit"] }
+    },
+    {
+      "id": "building-code",
+      "zh": "建筑规范",
+      "en": "Building code"
+    },
+    {
+      "id": "architect",
+      "zh": "建筑师",
+      "en": "Architect"
+    },
+    {
+      "id": "subcontracting",
+      "zh": "分包",
+      "en": "Subcontracting",
+      "forms": { "en": ["subcontractor"] }
+    },
+    {
+      "id": "change-order",
+      "zh": "变更",
+      "en": "Change order"
+    },
+    {
+      "id": "statics",
+      "zh": "静力学",
+      "en": "Statics"
+    },
+    {
+      "id": "slenderness",
+      "zh": "长细比",
+      "en": "Slenderness"
+    },
+    {
+      "id": "ring-beam",
+      "zh": "圈梁",
+      "en": "Ring beam"
+    },
+    {
+      "id": "pile-cap",
+      "zh": "承台",
+      "en": "Pile cap"
+    },
+    {
+      "id": "bored-pile",
+      "zh": "灌注桩",
+      "en": "Bored pile"
+    },
+    {
+      "id": "partial-factor",
+      "zh": "分项系数",
+      "en": "Partial factor"
+    },
+    {
+      "id": "service-life",
+      "zh": "使用寿命",
+      "en": "Service life"
+    },
+    {
+      "id": "intensity",
+      "zh": "烈度",
+      "en": "Intensity"
+    },
+    {
+      "id": "bracing",
+      "zh": "支撑",
+      "en": "Bracing"
+    },
+    {
+      "id": "liquid-limit",
+      "zh": "液限",
+      "en": "Liquid limit"
+    },
+    {
+      "id": "friction-angle",
+      "zh": "内摩擦角",
+      "en": "Friction angle"
+    },
+    {
+      "id": "soft-soil",
+      "zh": "软土",
+      "en": "Soft soil"
+    },
+    {
+      "id": "expansive-soil",
+      "zh": "膨胀土",
+      "en": "Expansive soil"
+    },
+    {
+      "id": "rockburst",
+      "zh": "岩爆",
+      "en": "Rockburst"
+    },
+    {
+      "id": "cave-in",
+      "zh": "塌方",
+      "en": "Cave-in"
+    },
+    {
+      "id": "shotcrete",
+      "zh": "喷射混凝土",
+      "en": "Shotcrete"
+    },
+    {
+      "id": "preloading",
+      "zh": "预压",
+      "en": "Preloading"
+    },
+    {
+      "id": "cut-and-cover",
+      "zh": "明挖",
+      "en": "Cut-and-cover"
+    },
+    {
+      "id": "pipe-jacking",
+      "zh": "顶管",
+      "en": "Pipe jacking"
+    },
+    {
+      "id": "water-inrush",
+      "zh": "涌水",
+      "en": "Water inrush"
+    },
+    {
+      "id": "cofferdam",
+      "zh": "围堰",
+      "en": "Cofferdam"
+    },
+    {
+      "id": "river-closure",
+      "zh": "截流",
+      "en": "River closure"
+    },
+    {
+      "id": "cistern",
+      "zh": "蓄水池",
+      "en": "Cistern"
+    },
+    {
+      "id": "seawall",
+      "zh": "海堤",
+      "en": "Seawall"
+    },
+    {
+      "id": "dredging",
+      "zh": "疏浚",
+      "en": "Dredging"
+    },
+    {
+      "id": "waterway",
+      "zh": "航道",
+      "en": "Waterway"
+    },
+    {
+      "id": "weir",
+      "zh": "堰",
+      "en": "Weir"
+    },
+    {
+      "id": "cutoff-wall",
+      "zh": "防渗墙",
+      "en": "Cutoff wall"
+    },
+    {
+      "id": "siltation",
+      "zh": "淤积",
+      "en": "Siltation"
+    },
+    {
+      "id": "scour",
+      "zh": "冲刷",
+      "en": "Scour"
+    },
+    {
+      "id": "hydraulic-head",
+      "zh": "水头",
+      "en": "Hydraulic head"
+    },
+    {
+      "id": "tensile-test",
+      "zh": "拉伸试验",
+      "en": "Tensile test"
+    },
+    {
+      "id": "fly-ash",
+      "zh": "粉煤灰",
+      "en": "Fly ash"
+    },
+    {
+      "id": "slag",
+      "zh": "矿渣",
+      "en": "Slag"
+    },
+    {
+      "id": "tempered-glass",
+      "zh": "钢化玻璃",
+      "en": "Tempered glass"
+    },
+    {
+      "id": "wrought-iron",
+      "zh": "熟铁",
+      "en": "Wrought iron"
+    },
+    {
+      "id": "central-axis",
+      "zh": "中轴线",
+      "en": "Central axis"
+    },
+    {
+      "id": "grey-space",
+      "zh": "灰空间",
+      "en": "Grey space",
+      "forms": { "en": ["gray space"] }
+    },
+    {
+      "id": "genius-loci",
+      "zh": "场所精神",
+      "en": "Genius loci"
+    },
+    {
+      "id": "shikumen",
+      "zh": "石库门",
+      "en": "Shikumen"
+    },
+    {
+      "id": "master-plan",
+      "zh": "总体规划",
+      "en": "Master plan"
+    },
+    {
+      "id": "tod",
+      "zh": "TOD",
+      "en": "TOD",
+      "forms": { "zh": ["公共交通导向开发"] }
+    },
+    {
+      "id": "plaza",
+      "zh": "广场",
+      "en": "Plaza"
+    },
+    {
+      "id": "plumbing",
+      "zh": "给排水",
+      "en": "Plumbing"
+    },
+    {
+      "id": "smart-building",
+      "zh": "智能建筑",
+      "en": "Smart building"
+    },
+    {
+      "id": "as-built",
+      "zh": "竣工图",
+      "en": "As-built"
+    },
+    {
+      "id": "rtk",
+      "zh": "RTK",
+      "en": "RTK"
+    },
+    {
+      "id": "cadastre",
+      "zh": "地籍",
+      "en": "Cadastre",
+      "forms": { "en": ["cadaster"] }
+    },
+    {
+      "id": "plumb-line",
+      "zh": "铅垂线",
+      "en": "Plumb line"
+    },
+    {
+      "id": "chalk-line",
+      "zh": "墨斗",
+      "en": "Chalk line"
+    },
+    {
+      "id": "cable-car",
+      "zh": "缆车",
+      "en": "Cable car"
+    },
+    {
+      "id": "switchback",
+      "zh": "盘山公路",
+      "en": "Switchback"
+    },
+    {
+      "id": "traffic-flow",
+      "zh": "交通流",
+      "en": "Traffic flow"
+    },
+    {
+      "id": "green-wave",
+      "zh": "绿波",
+      "en": "Green wave"
+    },
+    {
+      "id": "road-network",
+      "zh": "路网",
+      "en": "Road network"
+    },
+    {
+      "id": "road-marking",
+      "zh": "道路标线",
+      "en": "Road marking"
+    },
+    {
+      "id": "speed-bump",
+      "zh": "减速带",
+      "en": "Speed bump"
+    },
+    {
+      "id": "streetlight",
+      "zh": "路灯",
+      "en": "Streetlight"
+    },
+    {
+      "id": "manhole-cover",
+      "zh": "井盖",
+      "en": "Manhole cover",
+      "forms": { "en": ["manhole"] }
+    },
+    {
+      "id": "embankment",
+      "zh": "路堤",
+      "en": "Embankment"
+    },
+    {
+      "id": "earthwork",
+      "zh": "土方",
+      "en": "Earthwork"
+    },
+    {
+      "id": "mixed-use",
+      "zh": "混合用途",
+      "en": "Mixed-use"
+    },
+    {
+      "id": "eiffel-tower",
+      "zh": "埃菲尔铁塔",
+      "en": "Eiffel Tower"
+    },
+    {
+      "id": "burj-khalifa",
+      "zh": "哈利法塔",
+      "en": "Burj Khalifa"
+    },
+    {
+      "id": "leaning-tower",
+      "zh": "比萨斜塔",
+      "en": "Leaning Tower"
+    },
+    {
+      "id": "purlin",
+      "zh": "檩条",
+      "en": "Purlin"
+    },
+    {
+      "id": "rafter",
+      "zh": "椽子",
+      "en": "Rafter"
+    },
+    {
+      "id": "corbel",
+      "zh": "牛腿",
+      "en": "Corbel"
+    },
+    {
+      "id": "gutter",
+      "zh": "檐沟",
+      "en": "Gutter"
+    },
+    {
+      "id": "arcade",
+      "zh": "拱廊",
+      "en": "Arcade"
+    },
+    {
+      "id": "buttress",
+      "zh": "扶壁",
+      "en": "Buttress"
+    },
+    {
+      "id": "keystone",
+      "zh": "拱心石",
+      "en": "Keystone"
+    },
+    {
+      "id": "cornice",
+      "zh": "檐口",
+      "en": "Cornice"
+    },
+    {
+      "id": "hoisting",
+      "zh": "吊装",
+      "en": "Hoisting"
+    },
+    {
+      "id": "space-frame",
+      "zh": "网架",
+      "en": "Space frame"
+    },
+    {
+      "id": "virtual-work",
+      "zh": "虚功原理",
+      "en": "Virtual work"
+    },
+    {
+      "id": "load-path",
+      "zh": "传力路径",
+      "en": "Load path"
+    },
+    {
+      "id": "base-shear",
+      "zh": "基底剪力",
+      "en": "Base shear"
+    },
+    {
+      "id": "pushover",
+      "zh": "推覆分析",
+      "en": "Pushover"
+    },
+    {
+      "id": "strain-gauge",
+      "zh": "应变片",
+      "en": "Strain gauge",
+      "forms": { "en": ["strain gage"] }
+    },
+    {
+      "id": "rock-mass",
+      "zh": "岩体",
+      "en": "Rock mass"
+    },
+    {
+      "id": "rock-mechanics",
+      "zh": "岩石力学",
+      "en": "Rock mechanics"
+    },
+    {
+      "id": "in-situ-stress",
+      "zh": "地应力",
+      "en": "In-situ stress"
+    },
+    {
+      "id": "thixotropy",
+      "zh": "触变",
+      "en": "Thixotropy",
+      "forms": { "en": ["thixotropic"] }
+    },
+    {
+      "id": "quicksand",
+      "zh": "流砂",
+      "en": "Quicksand"
+    },
+    {
+      "id": "tamping",
+      "zh": "夯实",
+      "en": "Tamping"
+    },
+    {
+      "id": "spt",
+      "zh": "标贯",
+      "en": "SPT",
+      "forms": { "zh": ["标准贯入试验"], "en": ["standard penetration test"] }
+    },
+    {
+      "id": "immersed-tube",
+      "zh": "沉管",
+      "en": "Immersed tube"
+    },
+    {
+      "id": "pilot-tunnel",
+      "zh": "导洞",
+      "en": "Pilot tunnel"
+    },
+    {
+      "id": "invert",
+      "zh": "仰拱",
+      "en": "Invert"
+    },
+    {
+      "id": "arterial-road",
+      "zh": "主干道",
+      "en": "Arterial road"
+    },
+    {
+      "id": "cloverleaf",
+      "zh": "苜蓿叶立交",
+      "en": "Cloverleaf"
+    },
+    {
+      "id": "service-area",
+      "zh": "服务区",
+      "en": "Service area"
+    },
+    {
+      "id": "traffic-sign",
+      "zh": "交通标志",
+      "en": "Traffic sign"
+    },
+    {
+      "id": "vertical-curve",
+      "zh": "竖曲线",
+      "en": "Vertical curve"
+    },
+    {
+      "id": "clothoid",
+      "zh": "回旋线",
+      "en": "Clothoid"
+    },
+    {
+      "id": "camber",
+      "zh": "路拱",
+      "en": "Camber"
+    },
+    {
+      "id": "macadam",
+      "zh": "碎石路",
+      "en": "Macadam"
+    },
+    {
+      "id": "base-course",
+      "zh": "基层",
+      "en": "Base course"
+    },
+    {
+      "id": "design-speed",
+      "zh": "设计速度",
+      "en": "Design speed"
+    },
+    {
+      "id": "tactile-paving",
+      "zh": "盲道",
+      "en": "Tactile paving"
+    },
+    {
+      "id": "station",
+      "zh": "车站",
+      "en": "Station"
+    },
+    {
+      "id": "level-crossing",
+      "zh": "平交道口",
+      "en": "Level crossing"
+    },
+    {
+      "id": "clearance",
+      "zh": "限界",
+      "en": "Clearance"
+    },
+    {
+      "id": "monorail",
+      "zh": "单轨",
+      "en": "Monorail"
+    },
+    {
+      "id": "taxiway",
+      "zh": "滑行道",
+      "en": "Taxiway"
+    },
+    {
+      "id": "control-tower",
+      "zh": "塔台",
+      "en": "Control tower"
+    },
+    {
+      "id": "berth",
+      "zh": "泊位",
+      "en": "Berth"
+    },
+    {
+      "id": "dry-dock",
+      "zh": "干船坞",
+      "en": "Dry dock"
+    },
+    {
+      "id": "dam-break",
+      "zh": "溃坝",
+      "en": "Dam break"
+    },
+    {
+      "id": "overtopping",
+      "zh": "漫顶",
+      "en": "Overtopping"
+    },
+    {
+      "id": "froude-number",
+      "zh": "弗劳德数",
+      "en": "Froude number"
+    },
+    {
+      "id": "waterworks",
+      "zh": "自来水厂",
+      "en": "Waterworks"
+    },
+    {
+      "id": "storm-drain",
+      "zh": "雨水口",
+      "en": "Storm drain"
+    },
+    {
+      "id": "combined-sewer",
+      "zh": "合流制",
+      "en": "Combined sewer"
+    },
+    {
+      "id": "floor-drain",
+      "zh": "地漏",
+      "en": "Floor drain"
+    },
+    {
+      "id": "terrazzo",
+      "zh": "水磨石",
+      "en": "Terrazzo"
+    },
+    {
+      "id": "sealant",
+      "zh": "密封胶",
+      "en": "Sealant"
+    },
+    {
+      "id": "frp",
+      "zh": "FRP",
+      "en": "FRP",
+      "forms": { "zh": ["纤维增强复合材料"], "en": ["fiber-reinforced polymer", "fibre-reinforced polymer"] }
+    },
+    {
+      "id": "uhpc",
+      "zh": "UHPC",
+      "en": "UHPC",
+      "forms": { "zh": ["超高性能混凝土"], "en": ["ultra-high-performance concrete"] }
+    },
+    {
+      "id": "galvanizing",
+      "zh": "镀锌",
+      "en": "Galvanizing",
+      "forms": { "en": ["galvanized", "galvanising", "galvanised"] }
+    },
+    {
+      "id": "workability",
+      "zh": "和易性",
+      "en": "Workability"
+    },
+    {
+      "id": "segregation",
+      "zh": "离析",
+      "en": "Segregation"
+    },
+    {
+      "id": "bleeding",
+      "zh": "泌水",
+      "en": "Bleeding"
+    },
+    {
+      "id": "honeycomb",
+      "zh": "蜂窝",
+      "en": "Honeycomb"
+    },
+    {
+      "id": "gondola",
+      "zh": "吊篮",
+      "en": "Gondola"
+    },
+    {
+      "id": "dump-truck",
+      "zh": "自卸车",
+      "en": "Dump truck"
+    },
+    {
+      "id": "grader",
+      "zh": "平地机",
+      "en": "Grader"
+    },
+    {
+      "id": "paver",
+      "zh": "摊铺机",
+      "en": "Paver"
+    },
+    {
+      "id": "foreman",
+      "zh": "工长",
+      "en": "Foreman"
+    },
+    {
+      "id": "epc",
+      "zh": "EPC",
+      "en": "EPC"
+    },
+    {
+      "id": "massing",
+      "zh": "体块",
+      "en": "Massing"
+    },
+    {
+      "id": "walkability",
+      "zh": "步行性",
+      "en": "Walkability"
+    },
+    {
+      "id": "urban-fabric",
+      "zh": "城市肌理",
+      "en": "Urban fabric"
+    },
+    {
+      "id": "figure-ground",
+      "zh": "图底关系",
+      "en": "Figure-ground"
+    },
+    {
+      "id": "urban-design",
+      "zh": "城市设计",
+      "en": "Urban design"
+    },
+    {
+      "id": "housing",
+      "zh": "住宅",
+      "en": "Housing"
+    },
+    {
+      "id": "tv-tower",
+      "zh": "电视塔",
+      "en": "TV tower"
+    },
+    {
+      "id": "fallingwater",
+      "zh": "流水别墅",
+      "en": "Fallingwater"
+    },
+    {
+      "id": "taj-mahal",
+      "zh": "泰姬陵",
+      "en": "Taj Mahal"
+    },
+    {
+      "id": "parthenon",
+      "zh": "帕特农神庙",
+      "en": "Parthenon"
+    },
+    {
+      "id": "double-glazing",
+      "zh": "双层玻璃",
+      "en": "Double glazing"
+    },
+    {
+      "id": "heat-gain",
+      "zh": "得热",
+      "en": "Heat gain"
+    },
+    {
+      "id": "vapor-barrier",
+      "zh": "隔汽层",
+      "en": "Vapor barrier",
+      "forms": { "en": ["vapour barrier"] }
+    },
+    {
+      "id": "glare",
+      "zh": "眩光",
+      "en": "Glare"
+    },
+    {
+      "id": "smoke-detector",
+      "zh": "烟感",
+      "en": "Smoke detector"
+    },
+    {
+      "id": "rush-hour",
+      "zh": "早高峰",
+      "en": "Rush hour"
+    },
+    {
+      "id": "park-and-ride",
+      "zh": "停车换乘",
+      "en": "Park and ride"
+    },
+    {
+      "id": "brt",
+      "zh": "BRT",
+      "en": "BRT",
+      "forms": { "en": ["bus rapid transit"] }
+    },
+    {
+      "id": "downpipe",
+      "zh": "落水管",
+      "en": "Downpipe"
+    },
+    {
+      "id": "plinth",
+      "zh": "勒脚",
+      "en": "Plinth"
+    },
+    {
+      "id": "skirting-board",
+      "zh": "踢脚线",
+      "en": "Skirting board"
+    },
+    {
+      "id": "sliding-door",
+      "zh": "推拉门",
+      "en": "Sliding door"
+    },
+    {
+      "id": "revolving-door",
+      "zh": "旋转门",
+      "en": "Revolving door"
+    },
+    {
+      "id": "roller-shutter",
+      "zh": "卷帘门",
+      "en": "Roller shutter"
+    },
+    {
+      "id": "flue",
+      "zh": "烟道",
+      "en": "Flue"
+    },
+    {
+      "id": "pilotis",
+      "zh": "底层架空",
+      "en": "Pilotis"
+    },
+    {
+      "id": "free-plan",
+      "zh": "自由平面",
+      "en": "Free plan"
+    },
+    {
+      "id": "typical-floor",
+      "zh": "标准层",
+      "en": "Typical floor"
+    },
+    {
+      "id": "skybridge",
+      "zh": "连廊",
+      "en": "Skybridge"
+    },
+    {
+      "id": "light-well",
+      "zh": "天井",
+      "en": "Light well"
+    },
+    {
+      "id": "pointing",
+      "zh": "勾缝",
+      "en": "Pointing"
+    },
+    {
+      "id": "phreatic-line",
+      "zh": "浸润线",
+      "en": "Phreatic line"
+    },
+    {
+      "id": "ditch",
+      "zh": "排水沟",
+      "en": "Ditch"
+    },
+    {
+      "id": "revetment",
+      "zh": "护岸",
+      "en": "Revetment"
+    },
+    {
+      "id": "riprap",
+      "zh": "抛石",
+      "en": "Riprap"
+    },
+    {
+      "id": "gabion",
+      "zh": "石笼",
+      "en": "Gabion"
+    },
+    {
+      "id": "u-turn",
+      "zh": "掉头",
+      "en": "U-turn"
+    },
+    {
+      "id": "traffic-island",
+      "zh": "导流岛",
+      "en": "Traffic island"
+    },
+    {
+      "id": "carriageway",
+      "zh": "车行道",
+      "en": "Carriageway"
+    },
+    {
+      "id": "bollard",
+      "zh": "路桩",
+      "en": "Bollard"
+    },
+    {
+      "id": "movement-joint",
+      "zh": "变形缝",
+      "en": "Movement joint"
+    },
+    {
+      "id": "batching-plant",
+      "zh": "搅拌站",
+      "en": "Batching plant"
+    },
+    {
+      "id": "rangefinder",
+      "zh": "测距仪",
+      "en": "Rangefinder"
+    },
+    {
+      "id": "height-limit",
+      "zh": "建筑限高",
+      "en": "Height limit"
+    },
+    {
+      "id": "anchor-bolt",
+      "zh": "地脚螺栓",
+      "en": "Anchor bolt"
+    },
+    {
+      "id": "lap-splice",
+      "zh": "搭接",
+      "en": "Lap splice"
+    },
+    {
+      "id": "tread",
+      "zh": "踏步",
+      "en": "Tread"
+    },
+    {
+      "id": "riser",
+      "zh": "踢面",
+      "en": "Riser"
+    },
+    {
+      "id": "transom",
+      "zh": "气窗",
+      "en": "Transom"
+    },
+    {
+      "id": "dormer",
+      "zh": "老虎窗",
+      "en": "Dormer"
+    },
+    {
+      "id": "pilaster",
+      "zh": "壁柱",
+      "en": "Pilaster"
+    },
+    {
+      "id": "shake-table",
+      "zh": "振动台",
+      "en": "Shake table"
+    },
+    {
+      "id": "scale-model",
+      "zh": "缩尺模型",
+      "en": "Scale model"
+    },
+    {
+      "id": "flume",
+      "zh": "水槽",
+      "en": "Flume"
+    },
+    {
+      "id": "cbr",
+      "zh": "CBR",
+      "en": "CBR",
+      "forms": { "en": ["California bearing ratio"] }
+    },
+    {
+      "id": "leed",
+      "zh": "LEED",
+      "en": "LEED"
+    }
+  ]
+}

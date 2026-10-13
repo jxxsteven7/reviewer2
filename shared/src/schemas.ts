@@ -23,8 +23,10 @@ const playerId = z.string().max(32);
 const gameId = z.string().max(64);
 const roomId = z.string().max(64);
 // A room may have no word list at all when the chair's own words are enough for a game
-// (docs/games/keywords.md#custom-words); the room says no_words when they aren't.
-const fields = z.array(z.string().max(64)).max(20);
+// (docs/games/keywords.md#custom-words); the room says no_words when they aren't. The chair may
+// choose every list in the library at once, so the limit stays well above the number of lists in
+// words/; the room refuses an unknown one with bad_fields.
+const fields = z.array(z.string().max(64)).max(100);
 // Whether a newcomer has come to play rather than to watch. The game seats a player; whoever
 // leaves the field out watches, as everyone did before there was a choice.
 const play = z.boolean().optional();

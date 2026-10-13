@@ -1,0 +1,1388 @@
+{
+  "id": "communication",
+  "name": {
+    "zh": "传播与媒体",
+    "en": "Communication & Media"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "journalist",
+      "zh": "记者",
+      "en": "Journalist"
+    },
+    {
+      "id": "correspondent",
+      "zh": "通讯员",
+      "en": "Correspondent"
+    },
+    {
+      "id": "commentator",
+      "zh": "评论员",
+      "en": "Commentator"
+    },
+    {
+      "id": "editorial",
+      "zh": "社论",
+      "en": "Editorial"
+    },
+    {
+      "id": "feature-story",
+      "zh": "特稿",
+      "en": "Feature story"
+    },
+    {
+      "id": "headline",
+      "zh": "头条",
+      "en": "Headline"
+    },
+    {
+      "id": "lede",
+      "zh": "导语",
+      "en": "Lede",
+      "forms": { "en": ["lead"] }
+    },
+    {
+      "id": "subheading",
+      "zh": "副标题",
+      "en": "Subheading"
+    },
+    {
+      "id": "scoop",
+      "zh": "独家新闻",
+      "en": "Scoop"
+    },
+    {
+      "id": "breaking-news",
+      "zh": "突发新闻",
+      "en": "Breaking news"
+    },
+    {
+      "id": "soft-news",
+      "zh": "软新闻",
+      "en": "Soft news"
+    },
+    {
+      "id": "news-value",
+      "zh": "新闻价值",
+      "en": "News value"
+    },
+    {
+      "id": "press-release",
+      "zh": "新闻稿",
+      "en": "Press release"
+    },
+    {
+      "id": "newsroom",
+      "zh": "新闻编辑室",
+      "en": "Newsroom"
+    },
+    {
+      "id": "news-cycle",
+      "zh": "新闻周期",
+      "en": "News cycle"
+    },
+    {
+      "id": "news-agency",
+      "zh": "通讯社",
+      "en": "News agency"
+    },
+    {
+      "id": "fact-checking",
+      "zh": "事实核查",
+      "en": "Fact-checking"
+    },
+    {
+      "id": "debunking",
+      "zh": "辟谣",
+      "en": "Debunking",
+      "forms": { "en": ["debunk"] }
+    },
+    {
+      "id": "source",
+      "zh": "信源",
+      "en": "Source"
+    },
+    {
+      "id": "timeliness",
+      "zh": "时效性",
+      "en": "Timeliness"
+    },
+    {
+      "id": "human-interest",
+      "zh": "人情味",
+      "en": "Human interest"
+    },
+    {
+      "id": "coverage",
+      "zh": "报道",
+      "en": "Coverage"
+    },
+    {
+      "id": "correction",
+      "zh": "更正",
+      "en": "Correction"
+    },
+    {
+      "id": "obituary",
+      "zh": "讣告",
+      "en": "Obituary"
+    },
+    {
+      "id": "classified-ad",
+      "zh": "分类广告",
+      "en": "Classified ad"
+    },
+    {
+      "id": "editors-note",
+      "zh": "编者按",
+      "en": "Editor's note"
+    },
+    {
+      "id": "press-card",
+      "zh": "记者证",
+      "en": "Press card"
+    },
+    {
+      "id": "paparazzi",
+      "zh": "狗仔队",
+      "en": "Paparazzi"
+    },
+    {
+      "id": "penny-press",
+      "zh": "便士报",
+      "en": "Penny press"
+    },
+    {
+      "id": "newspaper",
+      "zh": "报纸",
+      "en": "Newspaper"
+    },
+    {
+      "id": "tabloid",
+      "zh": "小报",
+      "en": "Tabloid"
+    },
+    {
+      "id": "broadsheet",
+      "zh": "大报",
+      "en": "Broadsheet"
+    },
+    {
+      "id": "front-page",
+      "zh": "头版",
+      "en": "Front page"
+    },
+    {
+      "id": "daily",
+      "zh": "日报",
+      "en": "Daily"
+    },
+    {
+      "id": "weekly",
+      "zh": "周刊",
+      "en": "Weekly"
+    },
+    {
+      "id": "magazine",
+      "zh": "杂志",
+      "en": "Magazine"
+    },
+    {
+      "id": "newsstand",
+      "zh": "报摊",
+      "en": "Newsstand"
+    },
+    {
+      "id": "reader",
+      "zh": "读者",
+      "en": "Reader",
+      "forms": { "en": ["readership"] }
+    },
+    {
+      "id": "subscriber",
+      "zh": "订户",
+      "en": "Subscriber"
+    },
+    {
+      "id": "print-media",
+      "zh": "纸媒",
+      "en": "Print media"
+    },
+    {
+      "id": "circulation",
+      "zh": "发行量",
+      "en": "Circulation"
+    },
+    {
+      "id": "newsreel",
+      "zh": "新闻片",
+      "en": "Newsreel"
+    },
+    {
+      "id": "television",
+      "zh": "电视",
+      "en": "Television",
+      "forms": { "en": ["TV"] }
+    },
+    {
+      "id": "tv-station",
+      "zh": "电视台",
+      "en": "TV station"
+    },
+    {
+      "id": "radio-station",
+      "zh": "电台",
+      "en": "Radio station"
+    },
+    {
+      "id": "radio-drama",
+      "zh": "广播剧",
+      "en": "Radio drama"
+    },
+    {
+      "id": "channel",
+      "zh": "频道",
+      "en": "Channel"
+    },
+    {
+      "id": "program",
+      "zh": "节目",
+      "en": "Program",
+      "forms": { "en": ["programme"] }
+    },
+    {
+      "id": "news-anchor",
+      "zh": "新闻主播",
+      "en": "News anchor"
+    },
+    {
+      "id": "announcer",
+      "zh": "播音员",
+      "en": "Announcer"
+    },
+    {
+      "id": "control-room",
+      "zh": "导播间",
+      "en": "Control room"
+    },
+    {
+      "id": "teleprompter",
+      "zh": "提词器",
+      "en": "Teleprompter"
+    },
+    {
+      "id": "prime-time",
+      "zh": "黄金时段",
+      "en": "Prime time"
+    },
+    {
+      "id": "ratings",
+      "zh": "收视率",
+      "en": "Ratings"
+    },
+    {
+      "id": "viewer",
+      "zh": "观众",
+      "en": "Viewer"
+    },
+    {
+      "id": "listener",
+      "zh": "听众",
+      "en": "Listener"
+    },
+    {
+      "id": "talk-show",
+      "zh": "脱口秀",
+      "en": "Talk show"
+    },
+    {
+      "id": "reality-show",
+      "zh": "真人秀",
+      "en": "Reality show"
+    },
+    {
+      "id": "variety-show",
+      "zh": "综艺",
+      "en": "Variety show"
+    },
+    {
+      "id": "game-show",
+      "zh": "游戏节目",
+      "en": "Game show"
+    },
+    {
+      "id": "talent-show",
+      "zh": "选秀",
+      "en": "Talent show"
+    },
+    {
+      "id": "soap-opera",
+      "zh": "肥皂剧",
+      "en": "Soap opera"
+    },
+    {
+      "id": "tv-series",
+      "zh": "电视剧",
+      "en": "TV series"
+    },
+    {
+      "id": "web-series",
+      "zh": "网剧",
+      "en": "Web series"
+    },
+    {
+      "id": "episode",
+      "zh": "剧集",
+      "en": "Episode"
+    },
+    {
+      "id": "finale",
+      "zh": "大结局",
+      "en": "Finale"
+    },
+    {
+      "id": "spin-off",
+      "zh": "衍生剧",
+      "en": "Spin-off"
+    },
+    {
+      "id": "rerun",
+      "zh": "重播",
+      "en": "Rerun"
+    },
+    {
+      "id": "laugh-track",
+      "zh": "罐头笑声",
+      "en": "Laugh track"
+    },
+    {
+      "id": "ad-break",
+      "zh": "插播广告",
+      "en": "Ad break"
+    },
+    {
+      "id": "commercial",
+      "zh": "广告片",
+      "en": "Commercial"
+    },
+    {
+      "id": "infomercial",
+      "zh": "电视购物",
+      "en": "Infomercial"
+    },
+    {
+      "id": "audiobook",
+      "zh": "有声书",
+      "en": "Audiobook"
+    },
+    {
+      "id": "podcast",
+      "zh": "播客",
+      "en": "Podcast",
+      "forms": { "en": ["podcasting", "podcaster"] }
+    },
+    {
+      "id": "set-top-box",
+      "zh": "机顶盒",
+      "en": "Set-top box"
+    },
+    {
+      "id": "cable-tv",
+      "zh": "有线电视",
+      "en": "Cable TV"
+    },
+    {
+      "id": "hd",
+      "zh": "高清",
+      "en": "HD",
+      "forms": { "en": ["high definition"] }
+    },
+    {
+      "id": "narration",
+      "zh": "旁白",
+      "en": "Narration",
+      "forms": { "en": ["narrator"] }
+    },
+    {
+      "id": "foley",
+      "zh": "拟音",
+      "en": "Foley"
+    },
+    {
+      "id": "blooper",
+      "zh": "NG镜头",
+      "en": "Blooper"
+    },
+    {
+      "id": "wrap",
+      "zh": "杀青",
+      "en": "Wrap"
+    },
+    {
+      "id": "film-set",
+      "zh": "片场",
+      "en": "Film set"
+    },
+    {
+      "id": "audition",
+      "zh": "试镜",
+      "en": "Audition"
+    },
+    {
+      "id": "crew",
+      "zh": "剧组",
+      "en": "Crew"
+    },
+    {
+      "id": "emmy",
+      "zh": "艾美奖",
+      "en": "Emmy"
+    },
+    {
+      "id": "fansub",
+      "zh": "字幕组",
+      "en": "Fansub"
+    },
+    {
+      "id": "binge-watching",
+      "zh": "追剧",
+      "en": "Binge-watching",
+      "forms": { "en": ["binge-watch"] }
+    },
+    {
+      "id": "second-screen",
+      "zh": "第二屏",
+      "en": "Second screen"
+    },
+    {
+      "id": "video-camera",
+      "zh": "摄像机",
+      "en": "Video camera"
+    },
+    {
+      "id": "videotape",
+      "zh": "录像带",
+      "en": "Videotape"
+    },
+    {
+      "id": "cassette",
+      "zh": "磁带",
+      "en": "Cassette"
+    },
+    {
+      "id": "chroma-key",
+      "zh": "抠像",
+      "en": "Chroma key"
+    },
+    {
+      "id": "split-screen",
+      "zh": "分屏",
+      "en": "Split screen"
+    },
+    {
+      "id": "film-still",
+      "zh": "剧照",
+      "en": "Film still"
+    },
+    {
+      "id": "gaffer",
+      "zh": "灯光师",
+      "en": "Gaffer"
+    },
+    {
+      "id": "new-media",
+      "zh": "新媒体",
+      "en": "New media"
+    },
+    {
+      "id": "we-media",
+      "zh": "自媒体",
+      "en": "We media"
+    },
+    {
+      "id": "social-media",
+      "zh": "社交媒体",
+      "en": "Social media"
+    },
+    {
+      "id": "mass-media",
+      "zh": "大众媒体",
+      "en": "Mass media"
+    },
+    {
+      "id": "blog",
+      "zh": "博客",
+      "en": "Blog",
+      "forms": { "en": ["blogger", "blogging"] }
+    },
+    {
+      "id": "vlog",
+      "zh": "Vlog",
+      "en": "Vlog",
+      "forms": { "zh": ["视频博客"], "en": ["vlogger", "vlogging"] }
+    },
+    {
+      "id": "livestream",
+      "zh": "直播",
+      "en": "Livestream",
+      "forms": { "en": ["livestreaming"] }
+    },
+    {
+      "id": "short-video",
+      "zh": "短视频",
+      "en": "Short video"
+    },
+    {
+      "id": "danmaku",
+      "zh": "弹幕",
+      "en": "Danmaku"
+    },
+    {
+      "id": "hashtag",
+      "zh": "话题标签",
+      "en": "Hashtag"
+    },
+    {
+      "id": "trending-topic",
+      "zh": "热门话题",
+      "en": "Trending topic"
+    },
+    {
+      "id": "repost",
+      "zh": "转发",
+      "en": "Repost"
+    },
+    {
+      "id": "like",
+      "zh": "点赞",
+      "en": "Like"
+    },
+    {
+      "id": "follow",
+      "zh": "关注",
+      "en": "Follow",
+      "forms": { "en": ["follower"] }
+    },
+    {
+      "id": "fan",
+      "zh": "粉丝",
+      "en": "Fan"
+    },
+    {
+      "id": "fan-fiction",
+      "zh": "同人小说",
+      "en": "Fan fiction",
+      "forms": { "en": ["fanfic"] }
+    },
+    {
+      "id": "idol",
+      "zh": "偶像",
+      "en": "Idol"
+    },
+    {
+      "id": "celebrity",
+      "zh": "名人",
+      "en": "Celebrity"
+    },
+    {
+      "id": "gossip",
+      "zh": "八卦",
+      "en": "Gossip"
+    },
+    {
+      "id": "scandal",
+      "zh": "丑闻",
+      "en": "Scandal"
+    },
+    {
+      "id": "post",
+      "zh": "帖子",
+      "en": "Post"
+    },
+    {
+      "id": "direct-message",
+      "zh": "私信",
+      "en": "Direct message",
+      "forms": { "en": ["DM"] }
+    },
+    {
+      "id": "chat-room",
+      "zh": "聊天室",
+      "en": "Chat room"
+    },
+    {
+      "id": "netizen",
+      "zh": "网民",
+      "en": "Netizen"
+    },
+    {
+      "id": "screen-name",
+      "zh": "网名",
+      "en": "Screen name"
+    },
+    {
+      "id": "sockpuppet",
+      "zh": "马甲",
+      "en": "Sockpuppet"
+    },
+    {
+      "id": "troll",
+      "zh": "网络喷子",
+      "en": "Troll"
+    },
+    {
+      "id": "lurker",
+      "zh": "潜水者",
+      "en": "Lurker"
+    },
+    {
+      "id": "netiquette",
+      "zh": "网络礼仪",
+      "en": "Netiquette"
+    },
+    {
+      "id": "auto-reply",
+      "zh": "自动回复",
+      "en": "Auto-reply"
+    },
+    {
+      "id": "mailing-list",
+      "zh": "邮件列表",
+      "en": "Mailing list"
+    },
+    {
+      "id": "voice-message",
+      "zh": "语音消息",
+      "en": "Voice message"
+    },
+    {
+      "id": "beauty-filter",
+      "zh": "美颜",
+      "en": "Beauty filter"
+    },
+    {
+      "id": "ring-light",
+      "zh": "补光灯",
+      "en": "Ring light"
+    },
+    {
+      "id": "ugc",
+      "zh": "UGC",
+      "en": "UGC",
+      "forms": { "zh": ["用户生成内容"], "en": ["user-generated content"] }
+    },
+    {
+      "id": "prosumer",
+      "zh": "产消者",
+      "en": "Prosumer"
+    },
+    {
+      "id": "wiki",
+      "zh": "维基",
+      "en": "Wiki"
+    },
+    {
+      "id": "web-portal",
+      "zh": "门户网站",
+      "en": "Web portal"
+    },
+    {
+      "id": "aggregator",
+      "zh": "聚合器",
+      "en": "Aggregator"
+    },
+    {
+      "id": "rss",
+      "zh": "RSS",
+      "en": "RSS"
+    },
+    {
+      "id": "hypertext",
+      "zh": "超文本",
+      "en": "Hypertext"
+    },
+    {
+      "id": "landing-page",
+      "zh": "落地页",
+      "en": "Landing page"
+    },
+    {
+      "id": "paywall",
+      "zh": "付费墙",
+      "en": "Paywall"
+    },
+    {
+      "id": "content-farm",
+      "zh": "内容农场",
+      "en": "Content farm"
+    },
+    {
+      "id": "web-novel",
+      "zh": "网络小说",
+      "en": "Web novel"
+    },
+    {
+      "id": "e-book",
+      "zh": "电子书",
+      "en": "E-book"
+    },
+    {
+      "id": "cyberspace",
+      "zh": "赛博空间",
+      "en": "Cyberspace"
+    },
+    {
+      "id": "digital-native",
+      "zh": "数字原住民",
+      "en": "Digital native"
+    },
+    {
+      "id": "digital-detox",
+      "zh": "数字排毒",
+      "en": "Digital detox"
+    },
+    {
+      "id": "screen-time",
+      "zh": "屏幕时间",
+      "en": "Screen time"
+    },
+    {
+      "id": "virality",
+      "zh": "病毒式传播",
+      "en": "Virality",
+      "forms": { "en": ["viral"] }
+    },
+    {
+      "id": "flash-mob",
+      "zh": "快闪",
+      "en": "Flash mob"
+    },
+    {
+      "id": "spoof",
+      "zh": "恶搞",
+      "en": "Spoof"
+    },
+    {
+      "id": "thumbnail",
+      "zh": "缩略图",
+      "en": "Thumbnail"
+    },
+    {
+      "id": "vertical-video",
+      "zh": "竖屏",
+      "en": "Vertical video"
+    },
+    {
+      "id": "seo",
+      "zh": "SEO",
+      "en": "SEO",
+      "forms": { "zh": ["搜索引擎优化"], "en": ["search engine optimization"] }
+    },
+    {
+      "id": "page-view",
+      "zh": "浏览量",
+      "en": "Page view"
+    },
+    {
+      "id": "bounce-rate",
+      "zh": "跳出率",
+      "en": "Bounce rate"
+    },
+    {
+      "id": "impressions",
+      "zh": "曝光量",
+      "en": "Impressions"
+    },
+    {
+      "id": "reach",
+      "zh": "到达率",
+      "en": "Reach"
+    },
+    {
+      "id": "dau",
+      "zh": "日活",
+      "en": "DAU",
+      "forms": { "en": ["daily active users"] }
+    },
+    {
+      "id": "advertiser",
+      "zh": "广告主",
+      "en": "Advertiser"
+    },
+    {
+      "id": "ad-agency",
+      "zh": "广告公司",
+      "en": "Ad agency"
+    },
+    {
+      "id": "copywriting",
+      "zh": "文案",
+      "en": "Copywriting",
+      "forms": { "en": ["copywriter"] }
+    },
+    {
+      "id": "billboard",
+      "zh": "广告牌",
+      "en": "Billboard"
+    },
+    {
+      "id": "banner",
+      "zh": "横幅",
+      "en": "Banner"
+    },
+    {
+      "id": "flyer",
+      "zh": "传单",
+      "en": "Flyer",
+      "forms": { "en": ["flier"] }
+    },
+    {
+      "id": "pamphlet",
+      "zh": "小册子",
+      "en": "Pamphlet"
+    },
+    {
+      "id": "jingle",
+      "zh": "广告歌",
+      "en": "Jingle"
+    },
+    {
+      "id": "advertorial",
+      "zh": "软文",
+      "en": "Advertorial"
+    },
+    {
+      "id": "native-ad",
+      "zh": "原生广告",
+      "en": "Native ad"
+    },
+    {
+      "id": "ad-blocker",
+      "zh": "广告拦截器",
+      "en": "Ad blocker"
+    },
+    {
+      "id": "targeted-ad",
+      "zh": "定向广告",
+      "en": "Targeted ad"
+    },
+    {
+      "id": "psa",
+      "zh": "公益广告",
+      "en": "PSA",
+      "forms": { "en": ["public service announcement"] }
+    },
+    {
+      "id": "gimmick",
+      "zh": "噱头",
+      "en": "Gimmick"
+    },
+    {
+      "id": "aida",
+      "zh": "AIDA",
+      "en": "AIDA"
+    },
+    {
+      "id": "pr",
+      "zh": "公关",
+      "en": "PR",
+      "forms": { "en": ["public relations"] }
+    },
+    {
+      "id": "crisis-pr",
+      "zh": "危机公关",
+      "en": "Crisis PR"
+    },
+    {
+      "id": "spokesperson",
+      "zh": "新闻发言人",
+      "en": "Spokesperson"
+    },
+    {
+      "id": "statement",
+      "zh": "声明",
+      "en": "Statement"
+    },
+    {
+      "id": "no-comment",
+      "zh": "无可奉告",
+      "en": "No comment"
+    },
+    {
+      "id": "backdrop",
+      "zh": "背景板",
+      "en": "Backdrop"
+    },
+    {
+      "id": "ribbon-cutting",
+      "zh": "剪彩",
+      "en": "Ribbon cutting"
+    },
+    {
+      "id": "soundbite",
+      "zh": "金句",
+      "en": "Soundbite"
+    },
+    {
+      "id": "grapevine",
+      "zh": "小道消息",
+      "en": "Grapevine"
+    },
+    {
+      "id": "catalog",
+      "zh": "商品目录",
+      "en": "Catalog",
+      "forms": { "en": ["catalogue"] }
+    },
+    {
+      "id": "speech",
+      "zh": "演讲",
+      "en": "Speech"
+    },
+    {
+      "id": "eloquence",
+      "zh": "口才",
+      "en": "Eloquence"
+    },
+    {
+      "id": "body-language",
+      "zh": "肢体语言",
+      "en": "Body language"
+    },
+    {
+      "id": "eye-contact",
+      "zh": "眼神交流",
+      "en": "Eye contact"
+    },
+    {
+      "id": "storytelling",
+      "zh": "讲故事",
+      "en": "Storytelling"
+    },
+    {
+      "id": "megaphone",
+      "zh": "扩音器",
+      "en": "Megaphone"
+    },
+    {
+      "id": "voice-recorder",
+      "zh": "录音笔",
+      "en": "Voice recorder"
+    },
+    {
+      "id": "communication",
+      "zh": "传播",
+      "en": "Communication"
+    },
+    {
+      "id": "message",
+      "zh": "讯息",
+      "en": "Message"
+    },
+    {
+      "id": "medium",
+      "zh": "媒介",
+      "en": "Medium"
+    },
+    {
+      "id": "hot-medium",
+      "zh": "热媒介",
+      "en": "Hot medium"
+    },
+    {
+      "id": "cool-medium",
+      "zh": "冷媒介",
+      "en": "Cool medium"
+    },
+    {
+      "id": "decoding",
+      "zh": "解码",
+      "en": "Decoding"
+    },
+    {
+      "id": "magic-bullet",
+      "zh": "魔弹论",
+      "en": "Magic bullet"
+    },
+    {
+      "id": "two-step-flow",
+      "zh": "两级传播",
+      "en": "Two-step flow"
+    },
+    {
+      "id": "opinion-leader",
+      "zh": "意见领袖",
+      "en": "Opinion leader"
+    },
+    {
+      "id": "knowledge-gap",
+      "zh": "知沟",
+      "en": "Knowledge gap"
+    },
+    {
+      "id": "digital-divide",
+      "zh": "数字鸿沟",
+      "en": "Digital divide"
+    },
+    {
+      "id": "early-adopter",
+      "zh": "早期采用者",
+      "en": "Early adopter"
+    },
+    {
+      "id": "tipping-point",
+      "zh": "引爆点",
+      "en": "Tipping point"
+    },
+    {
+      "id": "frame-analysis",
+      "zh": "框架分析",
+      "en": "Frame analysis"
+    },
+    {
+      "id": "global-village",
+      "zh": "地球村",
+      "en": "Global village"
+    },
+    {
+      "id": "media-ecology",
+      "zh": "媒介生态",
+      "en": "Media ecology"
+    },
+    {
+      "id": "mediatization",
+      "zh": "媒介化",
+      "en": "Mediatization"
+    },
+    {
+      "id": "media-literacy",
+      "zh": "媒介素养",
+      "en": "Media literacy"
+    },
+    {
+      "id": "media-event",
+      "zh": "媒介事件",
+      "en": "Media event"
+    },
+    {
+      "id": "pseudo-event",
+      "zh": "伪事件",
+      "en": "Pseudo-event"
+    },
+    {
+      "id": "simulacrum",
+      "zh": "拟像",
+      "en": "Simulacrum",
+      "forms": { "en": ["simulacra"] }
+    },
+    {
+      "id": "hyperreality",
+      "zh": "超真实",
+      "en": "Hyperreality"
+    },
+    {
+      "id": "gaze",
+      "zh": "凝视",
+      "en": "Gaze"
+    },
+    {
+      "id": "dramaturgy",
+      "zh": "拟剧论",
+      "en": "Dramaturgy"
+    },
+    {
+      "id": "moral-panic",
+      "zh": "道德恐慌",
+      "en": "Moral panic"
+    },
+    {
+      "id": "sleeper-effect",
+      "zh": "睡眠者效应",
+      "en": "Sleeper effect"
+    },
+    {
+      "id": "persuasion",
+      "zh": "说服",
+      "en": "Persuasion",
+      "forms": { "en": ["persuade"] }
+    },
+    {
+      "id": "credibility",
+      "zh": "可信度",
+      "en": "Credibility"
+    },
+    {
+      "id": "fear-appeal",
+      "zh": "恐惧诉求",
+      "en": "Fear appeal"
+    },
+    {
+      "id": "involvement",
+      "zh": "卷入度",
+      "en": "Involvement"
+    },
+    {
+      "id": "weak-ties",
+      "zh": "弱关系",
+      "en": "Weak ties"
+    },
+    {
+      "id": "culture-shock",
+      "zh": "文化休克",
+      "en": "Culture shock"
+    },
+    {
+      "id": "glocalization",
+      "zh": "全球本土化",
+      "en": "Glocalization",
+      "forms": { "en": ["glocalisation"] }
+    },
+    {
+      "id": "transmedia",
+      "zh": "跨媒体",
+      "en": "Transmedia"
+    },
+    {
+      "id": "interactivity",
+      "zh": "互动性",
+      "en": "Interactivity"
+    },
+    {
+      "id": "affordance",
+      "zh": "可供性",
+      "en": "Affordance"
+    },
+    {
+      "id": "influence",
+      "zh": "影响力",
+      "en": "Influence"
+    },
+    {
+      "id": "media-mogul",
+      "zh": "媒体大亨",
+      "en": "Media mogul"
+    },
+    {
+      "id": "telephone",
+      "zh": "电话",
+      "en": "Telephone"
+    },
+    {
+      "id": "fax",
+      "zh": "传真",
+      "en": "Fax"
+    },
+    {
+      "id": "pager",
+      "zh": "寻呼机",
+      "en": "Pager"
+    },
+    {
+      "id": "publishing",
+      "zh": "出版业",
+      "en": "Publishing"
+    },
+    {
+      "id": "publisher",
+      "zh": "出版人",
+      "en": "Publisher"
+    },
+    {
+      "id": "book-review",
+      "zh": "书评",
+      "en": "Book review"
+    },
+    {
+      "id": "book-fair",
+      "zh": "书展",
+      "en": "Book fair"
+    },
+    {
+      "id": "book-signing",
+      "zh": "签售",
+      "en": "Book signing"
+    },
+    {
+      "id": "isbn",
+      "zh": "书号",
+      "en": "ISBN"
+    },
+    {
+      "id": "royalty",
+      "zh": "版税",
+      "en": "Royalty"
+    },
+    {
+      "id": "hotline",
+      "zh": "热线",
+      "en": "Hotline"
+    },
+    {
+      "id": "guest",
+      "zh": "嘉宾",
+      "en": "Guest"
+    },
+    {
+      "id": "presenter",
+      "zh": "主持人",
+      "en": "Presenter"
+    },
+    {
+      "id": "pen-pal",
+      "zh": "笔友",
+      "en": "Pen pal"
+    },
+    {
+      "id": "text-message",
+      "zh": "短信",
+      "en": "Text message"
+    },
+    {
+      "id": "voicemail",
+      "zh": "语音信箱",
+      "en": "Voicemail"
+    },
+    {
+      "id": "caller-id",
+      "zh": "来电显示",
+      "en": "Caller ID"
+    },
+    {
+      "id": "online-dating",
+      "zh": "网恋",
+      "en": "Online dating"
+    },
+    {
+      "id": "media-studies",
+      "zh": "媒介研究",
+      "en": "Media studies"
+    },
+    {
+      "id": "record-label",
+      "zh": "唱片公司",
+      "en": "Record label"
+    },
+    {
+      "id": "talent-agency",
+      "zh": "经纪公司",
+      "en": "Talent agency"
+    },
+    {
+      "id": "trainee",
+      "zh": "练习生",
+      "en": "Trainee"
+    },
+    {
+      "id": "anti-fan",
+      "zh": "黑粉",
+      "en": "Anti-fan"
+    },
+    {
+      "id": "news-ticker",
+      "zh": "跑马灯",
+      "en": "News ticker"
+    },
+    {
+      "id": "masthead",
+      "zh": "报头",
+      "en": "Masthead"
+    },
+    {
+      "id": "newsprint",
+      "zh": "新闻纸",
+      "en": "Newsprint"
+    },
+    {
+      "id": "nonfiction",
+      "zh": "非虚构",
+      "en": "Nonfiction"
+    },
+    {
+      "id": "reportage",
+      "zh": "报告文学",
+      "en": "Reportage"
+    },
+    {
+      "id": "streamer",
+      "zh": "主播",
+      "en": "Streamer"
+    },
+    {
+      "id": "music-video",
+      "zh": "音乐录影带",
+      "en": "Music video"
+    },
+    {
+      "id": "dating-show",
+      "zh": "相亲节目",
+      "en": "Dating show"
+    },
+    {
+      "id": "social-bot",
+      "zh": "社交机器人",
+      "en": "Social bot"
+    },
+    {
+      "id": "satellite-dish",
+      "zh": "卫星天线",
+      "en": "Satellite dish"
+    },
+    {
+      "id": "media-mix",
+      "zh": "媒介组合",
+      "en": "Media mix"
+    },
+    {
+      "id": "ad-recall",
+      "zh": "广告记忆",
+      "en": "Ad recall"
+    },
+    {
+      "id": "proxemics",
+      "zh": "空间关系学",
+      "en": "Proxemics"
+    },
+    {
+      "id": "pilot",
+      "zh": "试播集",
+      "en": "Pilot"
+    },
+    {
+      "id": "writers-room",
+      "zh": "编剧室",
+      "en": "Writers' room"
+    },
+    {
+      "id": "hardcover",
+      "zh": "精装",
+      "en": "Hardcover"
+    },
+    {
+      "id": "paperback",
+      "zh": "平装",
+      "en": "Paperback"
+    },
+    {
+      "id": "out-of-print",
+      "zh": "绝版",
+      "en": "Out of print"
+    },
+    {
+      "id": "reprint",
+      "zh": "加印",
+      "en": "Reprint"
+    },
+    {
+      "id": "vod",
+      "zh": "点播",
+      "en": "VOD",
+      "forms": { "en": ["video on demand"] }
+    },
+    {
+      "id": "catchphrase",
+      "zh": "口头禅",
+      "en": "Catchphrase"
+    }
+  ]
+}
