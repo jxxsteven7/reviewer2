@@ -305,6 +305,7 @@ h3 {
 }
 
 h4 {
+  margin: 0;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--weight-black);

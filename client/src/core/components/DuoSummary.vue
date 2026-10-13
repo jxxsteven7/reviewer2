@@ -15,7 +15,7 @@ const line = computed(() => duoLine(t, props.duo));
 </script>
 
 <template>
-  <span class="duo">
+  <span class="duo-summary">
     <span v-if="line" class="games">{{ line }}</span>
     <span v-if="duo.titles.length" class="badges">
       <TitleInfo v-for="title in duo.titles" :key="title" :title="{ kind: 'duo', duo: title }" class="badge" />
@@ -24,7 +24,7 @@ const line = computed(() => duoLine(t, props.duo));
 </template>
 
 <style scoped>
-.duo {
+.duo-summary {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
