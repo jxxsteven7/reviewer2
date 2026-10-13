@@ -1379,6 +1379,1368 @@
       "id": "expedition",
       "zh": "探险",
       "en": "Expedition"
+    },
+    {
+      "id": "island-arc",
+      "zh": "岛弧",
+      "en": "Island arc"
+    },
+    {
+      "id": "mantle-plume",
+      "zh": "地幔柱",
+      "en": "Mantle plume"
+    },
+    {
+      "id": "supercontinent",
+      "zh": "超大陆",
+      "en": "Supercontinent"
+    },
+    {
+      "id": "gondwana",
+      "zh": "冈瓦纳",
+      "en": "Gondwana",
+      "forms": { "en": ["Gondwanaland"] }
+    },
+    {
+      "id": "laurasia",
+      "zh": "劳亚古陆",
+      "en": "Laurasia"
+    },
+    {
+      "id": "craton",
+      "zh": "克拉通",
+      "en": "Craton",
+      "forms": { "en": ["cratonic"] }
+    },
+    {
+      "id": "shield",
+      "zh": "地盾",
+      "en": "Shield"
+    },
+    {
+      "id": "moho",
+      "zh": "莫霍面",
+      "en": "Moho"
+    },
+    {
+      "id": "isostasy",
+      "zh": "地壳均衡",
+      "en": "Isostasy",
+      "forms": { "en": ["isostatic"] }
+    },
+    {
+      "id": "wilson-cycle",
+      "zh": "威尔逊旋回",
+      "en": "Wilson cycle"
+    },
+    {
+      "id": "plate-boundary",
+      "zh": "板块边界",
+      "en": "Plate boundary"
+    },
+    {
+      "id": "graben",
+      "zh": "地堑",
+      "en": "Graben"
+    },
+    {
+      "id": "horst",
+      "zh": "地垒",
+      "en": "Horst"
+    },
+    {
+      "id": "strike",
+      "zh": "走向",
+      "en": "Strike"
+    },
+    {
+      "id": "dip",
+      "zh": "倾角",
+      "en": "Dip"
+    },
+    {
+      "id": "unconformity",
+      "zh": "不整合",
+      "en": "Unconformity",
+      "forms": { "en": ["unconformable"] }
+    },
+    {
+      "id": "ophiolite",
+      "zh": "蛇绿岩",
+      "en": "Ophiolite"
+    },
+    {
+      "id": "geoscience",
+      "zh": "地球科学",
+      "en": "Geoscience"
+    },
+    {
+      "id": "geophysics",
+      "zh": "地球物理学",
+      "en": "Geophysics",
+      "forms": { "en": ["geophysical", "geophysicist"] }
+    },
+    {
+      "id": "geochemistry",
+      "zh": "地球化学",
+      "en": "Geochemistry",
+      "forms": { "en": ["geochemical"] }
+    },
+    {
+      "id": "petrology",
+      "zh": "岩石学",
+      "en": "Petrology",
+      "forms": { "en": ["petrologist"] }
+    },
+    {
+      "id": "volcanology",
+      "zh": "火山学",
+      "en": "Volcanology",
+      "forms": { "en": ["vulcanology", "volcanologist"] }
+    },
+    {
+      "id": "glaciology",
+      "zh": "冰川学",
+      "en": "Glaciology",
+      "forms": { "en": ["glaciologist"] }
+    },
+    {
+      "id": "hydrology",
+      "zh": "水文学",
+      "en": "Hydrology",
+      "forms": { "en": ["hydrological", "hydrologist"] }
+    },
+    {
+      "id": "climatology",
+      "zh": "气候学",
+      "en": "Climatology",
+      "forms": { "en": ["climatologist"] }
+    },
+    {
+      "id": "hydrosphere",
+      "zh": "水圈",
+      "en": "Hydrosphere"
+    },
+    {
+      "id": "cryosphere",
+      "zh": "冰冻圈",
+      "en": "Cryosphere"
+    },
+    {
+      "id": "geologic-time",
+      "zh": "地质年代",
+      "en": "Geologic time",
+      "forms": { "en": ["geological time"] }
+    },
+    {
+      "id": "ordovician",
+      "zh": "奥陶纪",
+      "en": "Ordovician"
+    },
+    {
+      "id": "devonian",
+      "zh": "泥盆纪",
+      "en": "Devonian"
+    },
+    {
+      "id": "carboniferous",
+      "zh": "石炭纪",
+      "en": "Carboniferous"
+    },
+    {
+      "id": "permian",
+      "zh": "二叠纪",
+      "en": "Permian"
+    },
+    {
+      "id": "triassic",
+      "zh": "三叠纪",
+      "en": "Triassic"
+    },
+    {
+      "id": "paleozoic",
+      "zh": "古生代",
+      "en": "Paleozoic",
+      "forms": { "en": ["Palaeozoic"] }
+    },
+    {
+      "id": "mesozoic",
+      "zh": "中生代",
+      "en": "Mesozoic"
+    },
+    {
+      "id": "cenozoic",
+      "zh": "新生代",
+      "en": "Cenozoic",
+      "forms": { "en": ["Cainozoic"] }
+    },
+    {
+      "id": "archean",
+      "zh": "太古宙",
+      "en": "Archean",
+      "forms": { "en": ["Archaean"] }
+    },
+    {
+      "id": "hadean",
+      "zh": "冥古宙",
+      "en": "Hadean"
+    },
+    {
+      "id": "pleistocene",
+      "zh": "更新世",
+      "en": "Pleistocene"
+    },
+    {
+      "id": "miocene",
+      "zh": "中新世",
+      "en": "Miocene"
+    },
+    {
+      "id": "interglacial",
+      "zh": "间冰期",
+      "en": "Interglacial"
+    },
+    {
+      "id": "snowball-earth",
+      "zh": "雪球地球",
+      "en": "Snowball Earth"
+    },
+    {
+      "id": "index-fossil",
+      "zh": "标准化石",
+      "en": "Index fossil"
+    },
+    {
+      "id": "cleavage",
+      "zh": "解理",
+      "en": "Cleavage"
+    },
+    {
+      "id": "streak",
+      "zh": "条痕",
+      "en": "Streak"
+    },
+    {
+      "id": "luster",
+      "zh": "光泽",
+      "en": "Luster",
+      "forms": { "en": ["lustre"] }
+    },
+    {
+      "id": "calcite",
+      "zh": "方解石",
+      "en": "Calcite"
+    },
+    {
+      "id": "dolomite",
+      "zh": "白云石",
+      "en": "Dolomite"
+    },
+    {
+      "id": "fluorite",
+      "zh": "萤石",
+      "en": "Fluorite"
+    },
+    {
+      "id": "pyrite",
+      "zh": "黄铁矿",
+      "en": "Pyrite"
+    },
+    {
+      "id": "magnetite",
+      "zh": "磁铁矿",
+      "en": "Magnetite"
+    },
+    {
+      "id": "hematite",
+      "zh": "赤铁矿",
+      "en": "Hematite",
+      "forms": { "en": ["haematite"] }
+    },
+    {
+      "id": "olivine",
+      "zh": "橄榄石",
+      "en": "Olivine"
+    },
+    {
+      "id": "pyroxene",
+      "zh": "辉石",
+      "en": "Pyroxene"
+    },
+    {
+      "id": "amphibole",
+      "zh": "角闪石",
+      "en": "Amphibole"
+    },
+    {
+      "id": "garnet",
+      "zh": "石榴子石",
+      "en": "Garnet"
+    },
+    {
+      "id": "kaolinite",
+      "zh": "高岭石",
+      "en": "Kaolinite"
+    },
+    {
+      "id": "talc",
+      "zh": "滑石",
+      "en": "Talc"
+    },
+    {
+      "id": "corundum",
+      "zh": "刚玉",
+      "en": "Corundum"
+    },
+    {
+      "id": "zircon",
+      "zh": "锆石",
+      "en": "Zircon"
+    },
+    {
+      "id": "halite",
+      "zh": "石盐",
+      "en": "Halite"
+    },
+    {
+      "id": "galena",
+      "zh": "方铅矿",
+      "en": "Galena"
+    },
+    {
+      "id": "malachite",
+      "zh": "孔雀石",
+      "en": "Malachite"
+    },
+    {
+      "id": "serpentine",
+      "zh": "蛇纹石",
+      "en": "Serpentine"
+    },
+    {
+      "id": "apatite",
+      "zh": "磷灰石",
+      "en": "Apatite"
+    },
+    {
+      "id": "bauxite",
+      "zh": "铝土矿",
+      "en": "Bauxite"
+    },
+    {
+      "id": "sapphire",
+      "zh": "蓝宝石",
+      "en": "Sapphire"
+    },
+    {
+      "id": "emerald",
+      "zh": "祖母绿",
+      "en": "Emerald"
+    },
+    {
+      "id": "amethyst",
+      "zh": "紫水晶",
+      "en": "Amethyst"
+    },
+    {
+      "id": "opal",
+      "zh": "蛋白石",
+      "en": "Opal"
+    },
+    {
+      "id": "thin-section",
+      "zh": "薄片",
+      "en": "Thin section"
+    },
+    {
+      "id": "rock-cycle",
+      "zh": "岩石循环",
+      "en": "Rock cycle"
+    },
+    {
+      "id": "gneiss",
+      "zh": "片麻岩",
+      "en": "Gneiss"
+    },
+    {
+      "id": "slate",
+      "zh": "板岩",
+      "en": "Slate"
+    },
+    {
+      "id": "schist",
+      "zh": "片岩",
+      "en": "Schist"
+    },
+    {
+      "id": "quartzite",
+      "zh": "石英岩",
+      "en": "Quartzite"
+    },
+    {
+      "id": "andesite",
+      "zh": "安山岩",
+      "en": "Andesite"
+    },
+    {
+      "id": "rhyolite",
+      "zh": "流纹岩",
+      "en": "Rhyolite"
+    },
+    {
+      "id": "diorite",
+      "zh": "闪长岩",
+      "en": "Diorite"
+    },
+    {
+      "id": "gabbro",
+      "zh": "辉长岩",
+      "en": "Gabbro"
+    },
+    {
+      "id": "peridotite",
+      "zh": "橄榄岩",
+      "en": "Peridotite"
+    },
+    {
+      "id": "breccia",
+      "zh": "角砾岩",
+      "en": "Breccia"
+    },
+    {
+      "id": "mudstone",
+      "zh": "泥岩",
+      "en": "Mudstone"
+    },
+    {
+      "id": "tuff",
+      "zh": "凝灰岩",
+      "en": "Tuff"
+    },
+    {
+      "id": "pegmatite",
+      "zh": "伟晶岩",
+      "en": "Pegmatite"
+    },
+    {
+      "id": "kimberlite",
+      "zh": "金伯利岩",
+      "en": "Kimberlite"
+    },
+    {
+      "id": "evaporite",
+      "zh": "蒸发岩",
+      "en": "Evaporite"
+    },
+    {
+      "id": "batholith",
+      "zh": "岩基",
+      "en": "Batholith"
+    },
+    {
+      "id": "dike",
+      "zh": "岩墙",
+      "en": "Dike",
+      "forms": { "en": ["dyke"] }
+    },
+    {
+      "id": "sill",
+      "zh": "岩床",
+      "en": "Sill"
+    },
+    {
+      "id": "bedding",
+      "zh": "层理",
+      "en": "Bedding"
+    },
+    {
+      "id": "ripple-mark",
+      "zh": "波痕",
+      "en": "Ripple mark"
+    },
+    {
+      "id": "mud-crack",
+      "zh": "泥裂",
+      "en": "Mud crack"
+    },
+    {
+      "id": "diagenesis",
+      "zh": "成岩作用",
+      "en": "Diagenesis",
+      "forms": { "en": ["diagenetic"] }
+    },
+    {
+      "id": "stromatolite",
+      "zh": "叠层石",
+      "en": "Stromatolite"
+    },
+    {
+      "id": "caldera",
+      "zh": "破火山口",
+      "en": "Caldera"
+    },
+    {
+      "id": "stratovolcano",
+      "zh": "层状火山",
+      "en": "Stratovolcano"
+    },
+    {
+      "id": "fumarole",
+      "zh": "喷气孔",
+      "en": "Fumarole"
+    },
+    {
+      "id": "lahar",
+      "zh": "火山泥流",
+      "en": "Lahar"
+    },
+    {
+      "id": "volcanic-ash",
+      "zh": "火山灰",
+      "en": "Volcanic ash"
+    },
+    {
+      "id": "p-wave",
+      "zh": "P波",
+      "en": "P wave"
+    },
+    {
+      "id": "s-wave",
+      "zh": "S波",
+      "en": "S wave"
+    },
+    {
+      "id": "foreshock",
+      "zh": "前震",
+      "en": "Foreshock"
+    },
+    {
+      "id": "seismic-belt",
+      "zh": "地震带",
+      "en": "Seismic belt"
+    },
+    {
+      "id": "paleomagnetism",
+      "zh": "古地磁",
+      "en": "Paleomagnetism",
+      "forms": { "en": ["palaeomagnetism", "paleomagnetic"] }
+    },
+    {
+      "id": "gravimeter",
+      "zh": "重力仪",
+      "en": "Gravimeter"
+    },
+    {
+      "id": "geohazard",
+      "zh": "地质灾害",
+      "en": "Geohazard"
+    },
+    {
+      "id": "rockfall",
+      "zh": "崩塌",
+      "en": "Rockfall"
+    },
+    {
+      "id": "open-pit",
+      "zh": "露天矿",
+      "en": "Open pit"
+    },
+    {
+      "id": "core-sample",
+      "zh": "岩芯",
+      "en": "Core sample"
+    },
+    {
+      "id": "prospecting",
+      "zh": "勘探",
+      "en": "Prospecting",
+      "forms": { "en": ["prospector"] }
+    },
+    {
+      "id": "geologic-map",
+      "zh": "地质图",
+      "en": "Geologic map",
+      "forms": { "en": ["geological map"] }
+    },
+    {
+      "id": "hill",
+      "zh": "丘陵",
+      "en": "Hill",
+      "forms": { "en": ["hilly"] }
+    },
+    {
+      "id": "piedmont",
+      "zh": "山麓",
+      "en": "Piedmont"
+    },
+    {
+      "id": "terrace",
+      "zh": "阶地",
+      "en": "Terrace"
+    },
+    {
+      "id": "gully",
+      "zh": "冲沟",
+      "en": "Gully"
+    },
+    {
+      "id": "mesa",
+      "zh": "方山",
+      "en": "Mesa"
+    },
+    {
+      "id": "badlands",
+      "zh": "劣地",
+      "en": "Badlands"
+    },
+    {
+      "id": "danxia",
+      "zh": "丹霞",
+      "en": "Danxia"
+    },
+    {
+      "id": "stone-forest",
+      "zh": "石林",
+      "en": "Stone forest"
+    },
+    {
+      "id": "sinkhole",
+      "zh": "天坑",
+      "en": "Sinkhole"
+    },
+    {
+      "id": "gobi",
+      "zh": "戈壁",
+      "en": "Gobi"
+    },
+    {
+      "id": "moraine",
+      "zh": "冰碛",
+      "en": "Moraine"
+    },
+    {
+      "id": "drumlin",
+      "zh": "鼓丘",
+      "en": "Drumlin"
+    },
+    {
+      "id": "esker",
+      "zh": "蛇形丘",
+      "en": "Esker"
+    },
+    {
+      "id": "horn",
+      "zh": "角峰",
+      "en": "Horn"
+    },
+    {
+      "id": "erratic",
+      "zh": "漂砾",
+      "en": "Erratic"
+    },
+    {
+      "id": "crevasse",
+      "zh": "冰裂隙",
+      "en": "Crevasse"
+    },
+    {
+      "id": "sea-stack",
+      "zh": "海蚀柱",
+      "en": "Sea stack"
+    },
+    {
+      "id": "spit",
+      "zh": "沙嘴",
+      "en": "Spit"
+    },
+    {
+      "id": "tombolo",
+      "zh": "连岛沙洲",
+      "en": "Tombolo"
+    },
+    {
+      "id": "cape",
+      "zh": "海角",
+      "en": "Cape"
+    },
+    {
+      "id": "abyssal-plain",
+      "zh": "深海平原",
+      "en": "Abyssal plain"
+    },
+    {
+      "id": "meander",
+      "zh": "河曲",
+      "en": "Meander",
+      "forms": { "en": ["meandering"] }
+    },
+    {
+      "id": "watershed",
+      "zh": "分水岭",
+      "en": "Watershed"
+    },
+    {
+      "id": "headwaters",
+      "zh": "河源",
+      "en": "Headwaters"
+    },
+    {
+      "id": "alluvium",
+      "zh": "冲积物",
+      "en": "Alluvium",
+      "forms": { "en": ["alluvial"] }
+    },
+    {
+      "id": "braided-river",
+      "zh": "辫状河",
+      "en": "Braided river"
+    },
+    {
+      "id": "barrier-lake",
+      "zh": "堰塞湖",
+      "en": "Barrier lake"
+    },
+    {
+      "id": "runoff",
+      "zh": "径流",
+      "en": "Runoff"
+    },
+    {
+      "id": "infiltration",
+      "zh": "下渗",
+      "en": "Infiltration",
+      "forms": { "en": ["infiltrate"] }
+    },
+    {
+      "id": "water-table",
+      "zh": "地下水位",
+      "en": "Water table"
+    },
+    {
+      "id": "artesian-well",
+      "zh": "自流井",
+      "en": "Artesian well"
+    },
+    {
+      "id": "water-balance",
+      "zh": "水量平衡",
+      "en": "Water balance"
+    },
+    {
+      "id": "meltwater",
+      "zh": "融水",
+      "en": "Meltwater"
+    },
+    {
+      "id": "flood-season",
+      "zh": "汛期",
+      "en": "Flood season"
+    },
+    {
+      "id": "flood-peak",
+      "zh": "洪峰",
+      "en": "Flood peak"
+    },
+    {
+      "id": "thermocline",
+      "zh": "温跃层",
+      "en": "Thermocline"
+    },
+    {
+      "id": "halocline",
+      "zh": "盐跃层",
+      "en": "Halocline"
+    },
+    {
+      "id": "gyre",
+      "zh": "环流",
+      "en": "Gyre"
+    },
+    {
+      "id": "swell",
+      "zh": "涌浪",
+      "en": "Swell"
+    },
+    {
+      "id": "rip-current",
+      "zh": "离岸流",
+      "en": "Rip current"
+    },
+    {
+      "id": "black-smoker",
+      "zh": "黑烟囱",
+      "en": "Black smoker"
+    },
+    {
+      "id": "seawater",
+      "zh": "海水",
+      "en": "Seawater"
+    },
+    {
+      "id": "ice-floe",
+      "zh": "浮冰",
+      "en": "Ice floe"
+    },
+    {
+      "id": "cold-current",
+      "zh": "寒流",
+      "en": "Cold current"
+    },
+    {
+      "id": "warm-current",
+      "zh": "暖流",
+      "en": "Warm current"
+    },
+    {
+      "id": "spring-tide",
+      "zh": "大潮",
+      "en": "Spring tide"
+    },
+    {
+      "id": "neap-tide",
+      "zh": "小潮",
+      "en": "Neap tide"
+    },
+    {
+      "id": "tidal-bore",
+      "zh": "涌潮",
+      "en": "Tidal bore"
+    },
+    {
+      "id": "arctic-ocean",
+      "zh": "北冰洋",
+      "en": "Arctic Ocean"
+    },
+    {
+      "id": "southern-ocean",
+      "zh": "南大洋",
+      "en": "Southern Ocean"
+    },
+    {
+      "id": "tropopause",
+      "zh": "对流层顶",
+      "en": "Tropopause"
+    },
+    {
+      "id": "mesosphere",
+      "zh": "中间层",
+      "en": "Mesosphere"
+    },
+    {
+      "id": "thermosphere",
+      "zh": "热层",
+      "en": "Thermosphere"
+    },
+    {
+      "id": "advection",
+      "zh": "平流",
+      "en": "Advection"
+    },
+    {
+      "id": "anticyclone",
+      "zh": "反气旋",
+      "en": "Anticyclone",
+      "forms": { "en": ["anticyclonic"] }
+    },
+    {
+      "id": "trough",
+      "zh": "低压槽",
+      "en": "Trough"
+    },
+    {
+      "id": "cold-front",
+      "zh": "冷锋",
+      "en": "Cold front"
+    },
+    {
+      "id": "warm-front",
+      "zh": "暖锋",
+      "en": "Warm front"
+    },
+    {
+      "id": "squall-line",
+      "zh": "飑线",
+      "en": "Squall line"
+    },
+    {
+      "id": "supercell",
+      "zh": "超级单体",
+      "en": "Supercell"
+    },
+    {
+      "id": "downburst",
+      "zh": "下击暴流",
+      "en": "Downburst"
+    },
+    {
+      "id": "wind-shear",
+      "zh": "风切变",
+      "en": "Wind shear"
+    },
+    {
+      "id": "gust",
+      "zh": "阵风",
+      "en": "Gust",
+      "forms": { "en": ["gusty"] }
+    },
+    {
+      "id": "gale",
+      "zh": "大风",
+      "en": "Gale"
+    },
+    {
+      "id": "breeze",
+      "zh": "微风",
+      "en": "Breeze",
+      "forms": { "en": ["breezy"] }
+    },
+    {
+      "id": "westerlies",
+      "zh": "西风带",
+      "en": "Westerlies"
+    },
+    {
+      "id": "hadley-cell",
+      "zh": "哈得来环流",
+      "en": "Hadley cell"
+    },
+    {
+      "id": "rossby-wave",
+      "zh": "罗斯贝波",
+      "en": "Rossby wave"
+    },
+    {
+      "id": "beaufort-scale",
+      "zh": "蒲福风级",
+      "en": "Beaufort scale"
+    },
+    {
+      "id": "wind-chill",
+      "zh": "风寒",
+      "en": "Wind chill"
+    },
+    {
+      "id": "rain-shadow",
+      "zh": "雨影区",
+      "en": "Rain shadow"
+    },
+    {
+      "id": "cirrus",
+      "zh": "卷云",
+      "en": "Cirrus"
+    },
+    {
+      "id": "stratus",
+      "zh": "层云",
+      "en": "Stratus"
+    },
+    {
+      "id": "cumulus",
+      "zh": "积云",
+      "en": "Cumulus"
+    },
+    {
+      "id": "cloud-cover",
+      "zh": "云量",
+      "en": "Cloud cover"
+    },
+    {
+      "id": "drizzle",
+      "zh": "毛毛雨",
+      "en": "Drizzle"
+    },
+    {
+      "id": "sleet",
+      "zh": "雨夹雪",
+      "en": "Sleet"
+    },
+    {
+      "id": "shower",
+      "zh": "阵雨",
+      "en": "Shower"
+    },
+    {
+      "id": "rime",
+      "zh": "雾凇",
+      "en": "Rime"
+    },
+    {
+      "id": "ice-crystal",
+      "zh": "冰晶",
+      "en": "Ice crystal"
+    },
+    {
+      "id": "overcast",
+      "zh": "阴天",
+      "en": "Overcast"
+    },
+    {
+      "id": "meiyu",
+      "zh": "梅雨",
+      "en": "Meiyu"
+    },
+    {
+      "id": "enso",
+      "zh": "ENSO",
+      "en": "ENSO",
+      "forms": { "zh": ["恩索"] }
+    },
+    {
+      "id": "radiosonde",
+      "zh": "探空仪",
+      "en": "Radiosonde"
+    },
+    {
+      "id": "doppler-radar",
+      "zh": "多普勒雷达",
+      "en": "Doppler radar"
+    },
+    {
+      "id": "hectopascal",
+      "zh": "百帕",
+      "en": "Hectopascal",
+      "forms": { "en": ["hPa"] }
+    },
+    {
+      "id": "vorticity",
+      "zh": "涡度",
+      "en": "Vorticity"
+    },
+    {
+      "id": "urbanization",
+      "zh": "城市化",
+      "en": "Urbanization",
+      "forms": { "en": ["urbanisation"] }
+    },
+    {
+      "id": "megalopolis",
+      "zh": "大都市带",
+      "en": "Megalopolis"
+    },
+    {
+      "id": "central-place",
+      "zh": "中心地",
+      "en": "Central place"
+    },
+    {
+      "id": "hinterland",
+      "zh": "腹地",
+      "en": "Hinterland"
+    },
+    {
+      "id": "land-cover",
+      "zh": "土地覆盖",
+      "en": "Land cover"
+    },
+    {
+      "id": "sense-of-place",
+      "zh": "地方感",
+      "en": "Sense of place"
+    },
+    {
+      "id": "primate-city",
+      "zh": "首位城市",
+      "en": "Primate city"
+    },
+    {
+      "id": "green-belt",
+      "zh": "绿带",
+      "en": "Green belt"
+    },
+    {
+      "id": "cbd",
+      "zh": "中央商务区",
+      "en": "CBD",
+      "forms": { "en": ["central business district"] }
+    },
+    {
+      "id": "rust-belt",
+      "zh": "锈带",
+      "en": "Rust Belt"
+    },
+    {
+      "id": "growth-pole",
+      "zh": "增长极",
+      "en": "Growth pole"
+    },
+    {
+      "id": "distance-decay",
+      "zh": "距离衰减",
+      "en": "Distance decay"
+    },
+    {
+      "id": "mercator",
+      "zh": "墨卡托投影",
+      "en": "Mercator"
+    },
+    {
+      "id": "isoline",
+      "zh": "等值线",
+      "en": "Isoline"
+    },
+    {
+      "id": "isobath",
+      "zh": "等深线",
+      "en": "Isobath"
+    },
+    {
+      "id": "hillshade",
+      "zh": "晕渲",
+      "en": "Hillshade"
+    },
+    {
+      "id": "thematic-map",
+      "zh": "专题地图",
+      "en": "Thematic map"
+    },
+    {
+      "id": "choropleth",
+      "zh": "分级统计图",
+      "en": "Choropleth"
+    },
+    {
+      "id": "raster",
+      "zh": "栅格",
+      "en": "Raster"
+    },
+    {
+      "id": "dem",
+      "zh": "DEM",
+      "en": "DEM",
+      "forms": { "zh": ["数字高程模型"], "en": ["digital elevation model"] }
+    },
+    {
+      "id": "geocoding",
+      "zh": "地理编码",
+      "en": "Geocoding",
+      "forms": { "en": ["geocode"] }
+    },
+    {
+      "id": "kriging",
+      "zh": "克里金",
+      "en": "Kriging"
+    },
+    {
+      "id": "hyperspectral",
+      "zh": "高光谱",
+      "en": "Hyperspectral"
+    },
+    {
+      "id": "orthophoto",
+      "zh": "正射影像",
+      "en": "Orthophoto"
+    },
+    {
+      "id": "false-color",
+      "zh": "假彩色",
+      "en": "False color",
+      "forms": { "en": ["false colour"] }
+    },
+    {
+      "id": "landsat",
+      "zh": "Landsat",
+      "en": "Landsat"
+    },
+    {
+      "id": "polar-circle",
+      "zh": "极圈",
+      "en": "Polar circle"
+    },
+    {
+      "id": "local-time",
+      "zh": "地方时",
+      "en": "Local time"
+    },
+    {
+      "id": "topaz",
+      "zh": "黄玉",
+      "en": "Topaz"
+    },
+    {
+      "id": "city",
+      "zh": "城市",
+      "en": "City"
+    },
+    {
+      "id": "town",
+      "zh": "城镇",
+      "en": "Town"
+    },
+    {
+      "id": "countryside",
+      "zh": "乡村",
+      "en": "Countryside"
+    },
+    {
+      "id": "megacity",
+      "zh": "超大城市",
+      "en": "Megacity"
+    },
+    {
+      "id": "mental-map",
+      "zh": "心理地图",
+      "en": "Mental map"
+    },
+    {
+      "id": "hemisphere",
+      "zh": "半球",
+      "en": "Hemisphere",
+      "forms": { "en": ["hemispheric"] }
+    },
+    {
+      "id": "profile",
+      "zh": "剖面",
+      "en": "Profile"
+    },
+    {
+      "id": "agglomeration",
+      "zh": "集聚",
+      "en": "Agglomeration"
+    },
+    {
+      "id": "drilling",
+      "zh": "钻探",
+      "en": "Drilling"
+    },
+    {
+      "id": "permafrost",
+      "zh": "多年冻土",
+      "en": "Permafrost"
+    },
+    {
+      "id": "ammonite",
+      "zh": "菊石",
+      "en": "Ammonite"
+    },
+    {
+      "id": "snowfall",
+      "zh": "降雪",
+      "en": "Snowfall"
+    },
+    {
+      "id": "forecast",
+      "zh": "预报",
+      "en": "Forecast",
+      "forms": { "en": ["forecasting", "forecaster"] }
+    },
+    {
+      "id": "storm",
+      "zh": "风暴",
+      "en": "Storm",
+      "forms": { "en": ["stormy"] }
+    },
+    {
+      "id": "cave",
+      "zh": "洞穴",
+      "en": "Cave"
+    },
+    {
+      "id": "ice-cap",
+      "zh": "冰帽",
+      "en": "Ice cap"
+    },
+    {
+      "id": "landform",
+      "zh": "地貌",
+      "en": "Landform"
+    },
+    {
+      "id": "outcrop",
+      "zh": "露头",
+      "en": "Outcrop"
+    },
+    {
+      "id": "lithology",
+      "zh": "岩性",
+      "en": "Lithology",
+      "forms": { "en": ["lithologic"] }
+    },
+    {
+      "id": "facies",
+      "zh": "沉积相",
+      "en": "Facies"
+    },
+    {
+      "id": "dust-devil",
+      "zh": "尘卷风",
+      "en": "Dust devil"
+    },
+    {
+      "id": "waterspout",
+      "zh": "水龙卷",
+      "en": "Waterspout"
+    },
+    {
+      "id": "mesoscale",
+      "zh": "中尺度",
+      "en": "Mesoscale"
+    },
+    {
+      "id": "teleconnection",
+      "zh": "遥相关",
+      "en": "Teleconnection"
+    },
+    {
+      "id": "blocking-high",
+      "zh": "阻塞高压",
+      "en": "Blocking high"
+    },
+    {
+      "id": "rogue-wave",
+      "zh": "畸形波",
+      "en": "Rogue wave"
+    },
+    {
+      "id": "basemap",
+      "zh": "底图",
+      "en": "Basemap"
+    },
+    {
+      "id": "georeferencing",
+      "zh": "地理配准",
+      "en": "Georeferencing",
+      "forms": { "en": ["georeference"] }
+    },
+    {
+      "id": "mississippi",
+      "zh": "密西西比河",
+      "en": "Mississippi"
+    },
+    {
+      "id": "rockies",
+      "zh": "落基山脉",
+      "en": "Rockies",
+      "forms": { "en": ["Rocky Mountains"] }
+    },
+    {
+      "id": "danube",
+      "zh": "多瑙河",
+      "en": "Danube"
+    },
+    {
+      "id": "mount-fuji",
+      "zh": "富士山",
+      "en": "Mount Fuji"
+    },
+    {
+      "id": "vesuvius",
+      "zh": "维苏威火山",
+      "en": "Vesuvius"
+    },
+    {
+      "id": "kilimanjaro",
+      "zh": "乞力马扎罗",
+      "en": "Kilimanjaro"
+    },
+    {
+      "id": "great-lakes",
+      "zh": "五大湖",
+      "en": "Great Lakes"
+    },
+    {
+      "id": "grand-canyon",
+      "zh": "大峡谷",
+      "en": "Grand Canyon"
     }
   ]
 }
