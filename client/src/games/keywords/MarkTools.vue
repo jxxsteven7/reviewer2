@@ -20,7 +20,7 @@ const colorOf = (mark: Mark) => (mark === 'ours' ? props.team : mark === 'theirs
 
 <template>
   <div class="mark-tools">
-    <div class="tools" role="group" :aria-label="t('game.tools.label')">
+    <div class="tool-row" role="group" :aria-label="t('game.tools.label')">
       <button
         type="button"
         class="tool"
@@ -56,7 +56,7 @@ const colorOf = (mark: Mark) => (mark === 'ours' ? props.team : mark === 'theirs
 }
 
 /* One pill of four even parts, 44 px high to the finger with its outline (docs/design.md). */
-.tools {
+.tool-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 2px;

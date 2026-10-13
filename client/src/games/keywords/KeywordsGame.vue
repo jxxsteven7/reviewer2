@@ -391,9 +391,9 @@ watch(
   { immediate: true },
 );
 
-// The line under the board, besides what the viewer can do: the banner says who they are, and the
-// cards whom the others in the group chose. Whoever waits to play from a match's next game is told
-// so there.
+// The status line under the board, for whoever has nothing to do just then: whose PI is giving the
+// clue, or which group is guessing. Who the viewer is, the banner says, and whom the others in their
+// group chose, the cards; whoever plays from a match's next game is told so under the line.
 const status = computed(() => {
   if (canClue.value || game.value.result || paused.value || canGuess.value) return null;
   return game.value.phase === 'clue'
@@ -651,10 +651,11 @@ const status = computed(() => {
   grid-area: panel;
 }
 
+/* What the viewer can do now, a student's tools first, one gap of the bar's grid apart. */
 .play {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .actions > :deep(.extend) {
