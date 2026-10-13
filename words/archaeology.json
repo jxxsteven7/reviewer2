@@ -479,11 +479,6 @@
       "en": "Ding"
     },
     {
-      "id": "gui",
-      "zh": "簋",
-      "en": "Gui"
-    },
-    {
       "id": "jue",
       "zh": "爵",
       "en": "Jue"
@@ -592,19 +587,9 @@
       "en": "Bronze disease"
     },
     {
-      "id": "patina",
-      "zh": "包浆",
-      "en": "Patina"
-    },
-    {
       "id": "censer",
       "zh": "熏炉",
       "en": "Censer"
-    },
-    {
-      "id": "coin",
-      "zh": "钱币",
-      "en": "Coin"
     },
     {
       "id": "coin-mold",

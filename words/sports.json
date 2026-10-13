@@ -426,12 +426,6 @@
       "en": "Energy gel"
     },
     {
-      "id": "macronutrient",
-      "zh": "宏量营养素",
-      "en": "Macronutrient",
-      "forms": { "en": ["macros"] }
-    },
-    {
       "id": "fat-loss",
       "zh": "减脂",
       "en": "Fat loss"

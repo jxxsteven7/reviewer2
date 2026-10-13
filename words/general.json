@@ -1754,11 +1754,6 @@
       "en": "Outline"
     },
     {
-      "id": "margin",
-      "zh": "页边距",
-      "en": "Margin"
-    },
-    {
       "id": "page-number",
       "zh": "页码",
       "en": "Page number"
@@ -1767,11 +1762,6 @@
       "id": "preface",
       "zh": "前言",
       "en": "Preface"
-    },
-    {
-      "id": "cover",
-      "zh": "封面",
-      "en": "Cover"
     },
     {
       "id": "track-changes",
@@ -2115,11 +2105,6 @@
       "id": "idea",
       "zh": "想法",
       "en": "Idea"
-    },
-    {
-      "id": "topic",
-      "zh": "选题",
-      "en": "Topic"
     },
     {
       "id": "plan-b",
@@ -2466,12 +2451,6 @@
       "id": "job-talk",
       "zh": "求职报告",
       "en": "Job talk"
-    },
-    {
-      "id": "hiring",
-      "zh": "招聘",
-      "en": "Hiring",
-      "forms": { "en": ["hire", "hired"] }
     },
     {
       "id": "part-time-job",
