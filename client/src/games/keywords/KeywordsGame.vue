@@ -136,8 +136,33 @@ async function choose(card: number) {
   if (choicesOnTheWay === 0) pending.value = null;
 }
 
+// The PI's marks on the cards the clue is meant for, in the order marked: tapping one of the
+// group's cards marks it, tapping it again takes the mark back. They go with the clue, and start
+// over with every clue phase. Nobody else sees them until the game is over.
+const targets = ref<number[]>([]);
+watch(
+  () => `${game.value.gameId} ${game.value.turn} ${game.value.phase}`,
+  () => (targets.value = []),
+);
+function mark(card: number) {
+  targets.value = targets.value.includes(card)
+    ? targets.value.filter((other) => other !== card)
+    : [...targets.value, card];
+}
+
+// A tap on the board marks a card for the PI giving a clue, and chooses one for a student.
+const tap = (card: number) => (canClue.value ? mark(card) : choose(card));
+
 // The moves that change the game go one at a time, so that a double tap can't send one twice.
-const giveClue = (word: string, count: ClueCount) => run(() => act('keywords:clue', { ...moment.value, word, count }));
+const giveClue = (word: string, count: ClueCount) =>
+  run(() =>
+    act('keywords:clue', {
+      ...moment.value,
+      word,
+      count,
+      ...(targets.value.length > 0 ? { targets: [...targets.value] } : {}),
+    }),
+  );
 const reveal = (card: number) => run(() => act('keywords:reveal', { ...moment.value, card }));
 const pass = () => run(() => act('keywords:pass', moment.value));
 const extend = () => run(() => act('keywords:extend', moment.value));
@@ -235,11 +260,13 @@ const chosenByOthers = computed(() =>
         <KeywordsBoard
           v-else
           :cards="game.cards"
-          :selectable="canGuess"
-          :selected="choice"
+          :selectable="canGuess || canClue"
+          :selected="canClue ? null : choice"
           :choosers="choosers"
           :lang="HTML_LANG[room.language]"
-          @select="choose"
+          :targeting="canClue ? game.team : null"
+          :targets="canClue ? targets : []"
+          @select="tap"
         />
         <div class="actions">
           <div class="who-row">
@@ -258,6 +285,7 @@ const chosenByOthers = computed(() =>
             :settings="data.settings"
             :language="room.language"
             :busy="busy"
+            :targets="targets"
             @give="giveClue"
           />
           <GuessBar v-else-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />

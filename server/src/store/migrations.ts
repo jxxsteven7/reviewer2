@@ -331,4 +331,21 @@ export const MIGRATIONS: readonly string[] = [
   ) STRICT, WITHOUT ROWID;
   CREATE INDEX likes_liker ON likes (liker_id);
   `,
+  // 12: the record of each game (docs/architecture.md#game-records). A replay gets the log of
+  // everything that happened in the game, as JSON, kept on the server alone; the replays from
+  // before have none. game_players says which player, by the ID they had in the room, was which
+  // account, for those with an account who played in the game, those who left it included. A
+  // row goes with its account; the log keeps the player ID, and the replay the name the player
+  // had in the game if they revealed a card.
+  `
+  ALTER TABLE replays ADD COLUMN log TEXT;
+
+  CREATE TABLE game_players (
+    game_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    PRIMARY KEY (game_id, player_id)
+  ) STRICT;
+  CREATE INDEX game_players_account ON game_players (account_id);
+  `,
 ];

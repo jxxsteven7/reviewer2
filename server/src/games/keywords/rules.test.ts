@@ -48,7 +48,9 @@ describe('giving a clue', () => {
     const state = clued(2);
     expect(state.phase).toBe('guess');
     expect(state.clue).toEqual({ word: 'Gradient', count: 2 });
-    expect(state.history).toEqual([{ turn: 1, team: 'red', word: 'Gradient', count: 2, guesses: [] }]);
+    expect(state.history).toEqual([
+      { turn: 1, team: 'red', word: 'Gradient', count: 2, guesses: [], captain: 'red-captain', at: 0 },
+    ]);
     expect(guessesLeft(state)).toBe(3);
   });
 
@@ -146,6 +148,57 @@ describe('giving a clue', () => {
   });
 });
 
+describe('the cards a captain marks with a clue', () => {
+  const give = (state: KeywordsState, targets: number[] | undefined, word = 'Gradient', count: ClueCount = 2) =>
+    giveClue(state, captain('red'), { ...now(state), word, count, ...(targets ? { targets } : {}) }, 0);
+
+  test('are recorded with the clue, in the order they were marked', () => {
+    const state = accepted(give(gameState(), [5, 2, 7]));
+    expect(state.history[0]).toMatchObject({ word: 'Gradient', captain: 'red-captain', targets: [5, 2, 7] });
+  });
+
+  test('may be none at all, and then the record has none', () => {
+    for (const targets of [undefined, []]) {
+      const record = accepted(give(gameState(), targets)).history[0];
+      expect(record && 'targets' in record, JSON.stringify(targets)).toBe(false);
+    }
+  });
+
+  test("don't have to match the number", () => {
+    expect(accepted(give(gameState(), [0, 1, 2], 'Gradient', 1)).history[0]?.targets).toEqual([0, 1, 2]);
+    expect(accepted(give(gameState(), [0], 'Gradient', 'unlimited')).history[0]?.targets).toEqual([0]);
+  });
+
+  test("must be the group's own cards that are still to be found, each once", () => {
+    // Red has cards 0-8, of which 0 is revealed; blue has 9-16, papers are 17-23, Reviewer 2 is 24.
+    const base = gameState();
+    const state = {
+      ...base,
+      cards: base.cards.map((card, index) => (index === 0 ? { ...card, revealed: true } : card)),
+    };
+    expect(refused(give(state, [1, 8]))).toBeNull();
+    for (const targets of [[0], [9], [17], [24], [1, 1], [25], [-1], [1.5], [1, 9]]) {
+      expect(refused(give(state, targets)), JSON.stringify(targets)).toBe('bad_targets');
+    }
+  });
+
+  test('are judged after the clue itself, so that a bad clue is refused for what it is', () => {
+    const state = gameState();
+    expect(refused(give(state, [24], 'Word3'))).toBe('clue_on_board');
+    expect(refused(give(state, [24], 'Gradient', 12))).toBe('bad_count');
+    expect(refused(giveClue(state, captain('blue'), { ...now(state), word: 'Loss', count: 1, targets: [24] }, 0))).toBe(
+      'not_your_turn',
+    );
+  });
+
+  test('come with the time of the clue, from the start of the game', () => {
+    const started = newGame(WORDS, seededRng(3), setup('timed'), 1000);
+    const team = started.team;
+    const state = accepted(giveClue(started, captain(team), { ...now(started), word: 'Gradient', count: 1 }, 5000));
+    expect(state.history[0]).toMatchObject({ captain: `${team}-captain`, at: 4000 });
+  });
+});
+
 describe('revealing a card', () => {
   test("is only for the current team's guessers, after the clue", () => {
     const before = gameState();
@@ -175,9 +228,9 @@ describe('revealing a card', () => {
     state = revealAll(state, [2]);
     expect(state).toMatchObject({ team: 'blue', turn: 2, phase: 'clue', clue: null, guessesMade: 0 });
     expect(state.history[0]?.guesses).toEqual([
-      { card: 0, color: 'red', player: 'red-guesser' },
-      { card: 1, color: 'red', player: 'red-guesser' },
-      { card: 2, color: 'red', player: 'red-guesser' },
+      { card: 0, color: 'red', player: 'red-guesser', at: 0 },
+      { card: 1, color: 'red', player: 'red-guesser', at: 0 },
+      { card: 2, color: 'red', player: 'red-guesser', at: 0 },
     ]);
   });
 
@@ -194,9 +247,11 @@ describe('revealing a card', () => {
         word: 'Gradient',
         count: 2,
         guesses: [
-          { card: 0, color: 'red', player: 'red-guesser' },
-          { card: 17, color: 'neutral', player: 'red-guesser' },
+          { card: 0, color: 'red', player: 'red-guesser', at: 0 },
+          { card: 17, color: 'neutral', player: 'red-guesser', at: 0 },
         ],
+        captain: 'red-captain',
+        at: 0,
       },
       {
         turn: 2,
@@ -204,16 +259,20 @@ describe('revealing a card', () => {
         word: 'Loss',
         count: 1,
         guesses: [
-          { card: 9, color: 'blue', player: 'blue-guesser' },
-          { card: 10, color: 'blue', player: 'blue-guesser' },
+          { card: 9, color: 'blue', player: 'blue-guesser', at: 0 },
+          { card: 10, color: 'blue', player: 'blue-guesser', at: 0 },
         ],
+        captain: 'blue-captain',
+        at: 0,
       },
       {
         turn: 3,
         team: 'red',
         word: 'Epoch',
         count: 'unlimited',
-        guesses: [{ card: 1, color: 'red', player: 'red-guesser' }],
+        guesses: [{ card: 1, color: 'red', player: 'red-guesser', at: 0 }],
+        captain: 'red-captain',
+        at: 0,
       },
     ]);
   });
@@ -229,7 +288,7 @@ describe('revealing a card', () => {
   test('of an irrelevant paper ends the turn', () => {
     const state = revealAll(clued(3), [0, 17]);
     expect(state).toMatchObject({ team: 'blue', turn: 2, phase: 'clue' });
-    expect(state.history[0]?.guesses.at(-1)).toEqual({ card: 17, color: 'neutral', player: 'red-guesser' });
+    expect(state.history[0]?.guesses.at(-1)).toEqual({ card: 17, color: 'neutral', player: 'red-guesser', at: 0 });
   });
 
   test("of the other team's ends the turn and counts for them", () => {
@@ -537,7 +596,10 @@ describe('the clock', () => {
     const next = expire(state, 91_000);
     expect(next).toMatchObject({ turn: 2, team: otherTeam(state.team), phase: 'clue', clue: null });
     expect(next.clock).toEqual({ ends: 151_000, length: 60_000 });
-    expect(next.history).toEqual([{ turn: 1, team: state.team, word: null, count: null, guesses: [], timedOut: true }]);
+    // The time is counted from the start of the game.
+    expect(next.history).toEqual([
+      { turn: 1, team: state.team, word: null, count: null, guesses: [], timedOut: true, at: 90_000 },
+    ]);
   });
 
   test('ends a guess phase whose time has run out, also when nothing was revealed', () => {
@@ -547,7 +609,16 @@ describe('the clock', () => {
     const next = expire(state, 32_000);
     expect(next).toMatchObject({ turn: 2, team: otherTeam(state.team), phase: 'clue', guessesMade: 0, selections: [] });
     expect(next.history).toEqual([
-      { turn: 1, team: state.team, word: 'Gradient', count: 'unlimited', guesses: [], timedOut: true },
+      {
+        turn: 1,
+        team: state.team,
+        word: 'Gradient',
+        count: 'unlimited',
+        guesses: [],
+        timedOut: true,
+        captain: `${state.team}-captain`,
+        at: 1000,
+      },
     ]);
   });
 

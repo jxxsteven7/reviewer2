@@ -10,6 +10,7 @@ import {
   wordKey,
   type Ack,
   type BoardWord,
+  type Emote,
   type Language,
   type MatchRules,
   type PublicRoom,
@@ -21,6 +22,7 @@ import {
 } from '@reviewer2/shared';
 import { done, fail, refusalOf } from './answers';
 import type { GameContext, GameModule, PlayerResult, Viewer } from './game';
+import { GameLog, type GameLogData, type GameLogEvent } from './gameLog';
 import { newPlayerId } from './identity';
 import { Match, type Present } from './match';
 import { pinyinOf } from './pinyin';
@@ -167,10 +169,13 @@ export class Room {
   // When each member last sent a quick reaction, by member key, so that neither another tab nor
   // leaving and coming back starts the wait again.
   readonly #emoted = new Map<string, number>();
-  // Those who left during the current game, by player ID, with the member key and the name they
-  // had, so that the game can still tell whose was a move they made before they left, as a
-  // match's score and a replay need to.
-  readonly #gone = new Map<string, { key: string; name: string }>();
+  // Those who left during the current game, by player ID, with the member key, the name and the
+  // account they had, so that the game can still tell whose was a move they made before they left,
+  // as a match's score, a replay and the record of the game need to.
+  readonly #gone = new Map<string, { key: string; name: string; accountId: number | null }>();
+  // The log of the game being played or just ended (docs/architecture.md#game-records), from its
+  // start until the room goes back to the waiting room.
+  #log: GameLog | null = null;
   // The streaks that the game which has just ended brought the members with accounts to, by player
   // ID, from STREAK_MIN games on (noteStreak), until the room leaves the ended game behind.
   readonly #streaks = new Map<string, Streak>();
@@ -280,6 +285,10 @@ export class Room {
     this.members.set(member.id, member);
     this.chairId ??= member.id;
     this.data = data;
+    // During a game, the log also says where the game has put the newcomer, such as the group it
+    // seated them in.
+    const seat = this.game.seated?.(data, member.id);
+    this.#note(member.id, 'join', { play, ...(seat === undefined ? {} : { seat }) });
     this.changed();
     return { ok: true, member };
   }
@@ -295,7 +304,10 @@ export class Room {
     if (member.browsers.size > MAX_BROWSERS) member.browsers.delete(member.browsers.values().next().value as string);
     member.offlineSince = null;
     this.lastSeen = this.#now();
-    if (first) this.changed();
+    if (first) {
+      this.#note(member.id, 'online');
+      this.changed();
+    }
     return first;
   }
 
@@ -313,6 +325,7 @@ export class Room {
     member.sockets.delete(socketId);
     if (member.sockets.size > 0) return false;
     member.offlineSince = this.#now();
+    this.#note(member.id, 'offline');
     this.changed();
     return true;
   }
@@ -369,10 +382,13 @@ export class Room {
     if (!member) return [];
     const data = this.game.leave(this.data, id);
     const over = this.#endsWith(data);
-    if (this.phase !== 'lobby') this.#gone.set(id, { key: member.key, name: member.name });
+    if (this.phase !== 'lobby') {
+      this.#gone.set(id, { key: member.key, name: member.name, accountId: member.account?.id ?? null });
+    }
+    this.#note(id, 'leave');
     this.members.delete(id);
     this.#take(data, over);
-    if (this.chairId === id) this.chairId = this.#nextChair();
+    if (this.chairId === id) this.#passChair(this.#nextChair());
     this.changed();
     return [...member.sockets];
   }
@@ -382,7 +398,7 @@ export class Room {
   // with how long is left, so that the tab it came from, which may not be the one that sent the
   // last, counts down the right wait. A clock that was set back counts as a wait that is over,
   // rather than one that lasts until the clock has caught up.
-  emote(id: string): Ack {
+  emote(id: string, emote: Emote): Ack {
     const member = this.members.get(id);
     if (!member) return fail('not_member');
     const now = this.#now();
@@ -390,6 +406,7 @@ export class Room {
     if (since >= 0 && since < EMOTE_COOLDOWN_MS)
       return { ...fail('emote_cooldown'), waitMs: EMOTE_COOLDOWN_MS - since };
     this.#emoted.set(member.key, now);
+    this.#note(id, 'emote', { emote });
     return done;
   }
 
@@ -559,7 +576,10 @@ export class Room {
     // chooseFields() has made sure of this, and the library doesn't change while the server runs.
     if (!draw) throw new Error(`the fields of room ${this.code} have too few words for a game`);
     const gameId = randomId();
-    this.data = this.game.start(this.data, { ...this.context, phase: 'playing' }, draw.words, gameId);
+    const context: GameContext = { ...this.context, phase: 'playing' };
+    const data = this.game.start(this.data, context, draw.words, gameId);
+    this.data = data;
+    this.#log = new GameLog(this.game.id, gameId, this.#now(), this.#seating(data));
     this.#usedWords = draw.used;
     this.gameId = gameId;
     this.round += 1;
@@ -612,6 +632,7 @@ export class Room {
     this.phase = 'lobby';
     this.#lobbySince = this.#now();
     this.#gone.clear();
+    this.#log = null;
     this.#streaks.clear();
   }
 
@@ -686,7 +707,9 @@ export class Room {
 
   bench(id: string): Ack {
     if (!this.members.has(id)) return fail('no_such_player');
-    this.#update(this.game.bench(this.data, this.context, id));
+    const data = this.game.bench(this.data, this.context, id);
+    if (data !== this.data) this.#note(this.chairId, 'bench', { player: id });
+    this.#update(data);
     return done;
   }
 
@@ -698,6 +721,7 @@ export class Room {
   remove(id: string): Ack<{ sockets: string[]; keys: string[]; reason: 'removed' | 'removed_recently' }> {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');
+    this.#note(this.chairId, 'remove', { player: id });
     const sockets = this.drop(id);
     const removal: Removal = {
       name: member.name,
@@ -718,9 +742,17 @@ export class Room {
   handOver(id: string): Ack {
     if (!this.members.has(id)) return fail('no_such_player');
     if (!this.isOnline(id)) return fail('player_offline');
-    this.chairId = id;
+    this.#passChair(id, this.chairId);
     this.changed();
     return done;
+  }
+
+  // The chair passes to a member, or to nobody, from the chair who handed it on, or from the room
+  // itself. The log notes it during a game.
+  #passChair(id: string | null, by: string | null = null): void {
+    if (id === this.chairId) return;
+    this.chairId = id;
+    if (id !== null) this.#note(by, 'chair', { player: id });
   }
 
   // A game message from a member. Whatever the game had due by now happens first, so that a
@@ -730,8 +762,30 @@ export class Room {
     this.expire();
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return refusalOf(result);
+    if (result.data !== this.data) this.#noteMessage(id, type, payload);
     this.#update(result.data);
     return done;
+  }
+
+  // Notes a game's message that changed the game, as the game says to (GameModule.logged): what
+  // it said, or nothing of it at all, as of a line of a group's chat.
+  #noteMessage(id: string, type: string, payload: unknown): void {
+    if (this.phase !== 'playing' || !this.#log) return;
+    const note = this.game.logged ? this.game.logged(type, payload) : {};
+    if (note !== null) this.#log.add(this.#now(), id, type, note.data, note.minor ?? false);
+  }
+
+  // Notes one of the room's own events in the log of the game being played
+  // (docs/architecture.md#game-records). Outside a game, there is nothing to note it in.
+  #note(by: string | null, type: GameLogEvent, data?: unknown): void {
+    if (this.phase === 'playing') this.#log?.add(this.#now(), by, type, data);
+  }
+
+  // Where everyone in the room is in the game, by player ID, as the game describes each of them
+  // (GameModule.seated), for how the game began; null for a game that doesn't say.
+  #seating(data: unknown): Record<string, unknown> | null {
+    if (!this.game.seated) return null;
+    return Object.fromEntries([...this.members.keys()].map((id) => [id, this.game.seated?.(data, id)]));
   }
 
   // Whether the game has ended by itself with this data, such as when a team wins. A game may
@@ -745,6 +799,7 @@ export class Room {
   #take(data: unknown, over: boolean): void {
     this.data = data;
     if (!over) return;
+    this.#note(null, 'end');
     this.phase = 'ended';
     this.#scoreGame();
   }
@@ -804,6 +859,31 @@ export class Room {
     return scores && new Map(scores.map(({ key, points }) => [key, points]));
   }
 
+  // What the record keeps of the game that has just ended (docs/architecture.md#game-records): its
+  // log, or null when it grew too long to keep, and which of those who played in it had which
+  // account, by the player ID they had, those who left during the game included; a player who left
+  // and came back has had two. Guests have no account, and are not in it. Null before a game has
+  // ended.
+  record(): {
+    log: GameLogData | null;
+    overflowed: boolean;
+    accounts: { playerId: string; accountId: number }[];
+  } | null {
+    if (this.phase !== 'ended' || !this.#log) return null;
+    const keys = new Set(
+      this.game.participants?.(this.data, this.context) ??
+        (this.results() ?? []).map(({ playerId }) => this.context.keyOf(playerId)),
+    );
+    const accounts: { playerId: string; accountId: number }[] = [];
+    for (const member of this.members.values()) {
+      if (member.account && keys.has(member.key)) accounts.push({ playerId: member.id, accountId: member.account.id });
+    }
+    for (const [playerId, { key, accountId }] of this.#gone) {
+      if (accountId !== null && keys.has(key)) accounts.push({ playerId, accountId });
+    }
+    return { log: this.#log.data(), overflowed: this.#log.overflowed, accounts };
+  }
+
   // --- the game's own time ----------------------------------------------------------------
 
   // When the game next has something to do by itself, on the room's clock, or null for never.
@@ -820,7 +900,9 @@ export class Room {
     if (this.phase !== 'playing') return false;
     const data = this.game.tick(this.data, this.context);
     if (data === this.data) return false;
-    this.#take(data, this.#endsWith(data));
+    const over = this.#endsWith(data);
+    this.#note(null, 'tick');
+    this.#take(data, over);
     this.rev += 1;
     return true;
   }
@@ -834,7 +916,7 @@ export class Room {
     if (chair && (chair.offlineSince === null || this.#now() - chair.offlineSince < after)) return false;
     const next = [...this.members.values()].find((member) => member.sockets.size > 0 && member.id !== this.chairId);
     if (!next) return false;
-    this.chairId = next.id;
+    this.#passChair(next.id);
     this.changed();
     return true;
   }

@@ -61,7 +61,11 @@ A plain plural ends in "-s", or "-es" after s, x, z, ch or sh.
 
 **Warned under either rule**, where the check can only guess: another ending of a board word ("-ing", "-ed", "-ion", an irregular plural); in an English room, a board word or part of four letters or more inside the clue ("support" beside "Port"), which would be refused too often there; and a card's term in another language, or a part of it, inside the clue.
 
-Revealed words no longer count. The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0).
+Revealed words no longer count.
+
+**The cards it is meant for.** With the clue, the PI may mark the group's cards that are still to be found as the ones the clue is meant for, in the order they choose, as many as they like; their screen offers it above the clue and sets the number to how many are marked, until the PI picks a number themselves. The rules don't tie the number to the marks. Each mark must be one of the group's own cards that is still face down, and none may come twice (`bad_targets`). The marks are the PI's secret until the game is over: no view carries them before then, the PI's own included. Then every view has them, and the clue log and the replay show them, with how many the group found.
+
+The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0).
 
 ## Time limits
 
@@ -91,7 +95,9 @@ Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a gr
 
 ## Replays
 
-Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
+Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. The record says who gave each clue (`captain`), the cards they meant (`targets`), which the replay marks with their numbers through the clue's turn, and when each clue and guess came, in milliseconds from the start (`at`); replays from before have none of these. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
+
+The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but the group chat, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; choosing a card is minor, and nothing else. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it.
 
 ## What each player sees
 
@@ -103,7 +109,7 @@ Once a game is over, the results page offers a **review**: the page builds a rep
 | While paused | No cards at all | As before | Write to the group |
 | After the game | Every color | As before | Review the game |
 
-`view.ts` is the only way game state leaves the server, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups and no `selections` key outside the group whose turn it is. Translations, forms and pinyin go to everyone.
+`view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups and no `selections` key outside the group whose turn it is; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone.
 
 ## Seats
 
@@ -120,7 +126,7 @@ On top of the room messages ([../architecture.md](../architecture.md#messages));
 | Message | Payload | Who |
 |---|---|---|
 | `keywords:seat` | `team` (`red`, `blue`, `null`), `role` (`captain`, `guesser`, `spectator`) | Any member, within the seat rules |
-| `keywords:clue` | `gameId`, `turn`, `word`, `count` (1 to the cards left under `free`; 0 to 9 or `"unlimited"` under `standard`) | The current captain |
+| `keywords:clue` | `gameId`, `turn`, `word`, `count` (1 to the cards left under `free`; 0 to 9 or `"unlimited"` under `standard`), `targets`? (the cards meant) | The current captain |
 | `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null`) | The current guessers |
 | `keywords:reveal` | `gameId`, `turn`, `card` | The current guessers |
 | `keywords:pass` | `gameId`, `turn` | The current guessers |
@@ -139,7 +145,7 @@ Before a game action, the server ends a phase whose time has run out. Then:
 3. `paused`, for everything but a chat message and a withdrawal. A pause and a resumption need the chair first (`not_chair`), and then a game that isn't paused, or is (`paused`, `not_paused`).
 4. `not_your_turn`, `not_captain`, `not_guesser`; a chat message only needs a guesser.
 5. `wrong_phase`, such as revealing before the clue.
-6. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_many_words`, `clue_too_long`, `clue_on_board`; `no_such_card`, `card_revealed`; `must_guess_first`; `chat_empty`, `chat_too_long`; `no_extension`, `extension_used`.
+6. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_many_words`, `clue_too_long`, `clue_on_board`, `bad_targets`; `no_such_card`, `card_revealed`; `must_guess_first`; `chat_empty`, `chat_too_long`; `no_extension`, `extension_used`.
 
 Content comes last, so nothing a player can't see changes the answer. Two reveals at once are handled one at a time; if the first ends the turn, the second is `stale`.
 

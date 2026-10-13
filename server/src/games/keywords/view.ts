@@ -1,4 +1,4 @@
-import type { CardView, KeywordsView, Seat } from '@reviewer2/shared';
+import type { CardView, ClueRecord, KeywordsView, Seat } from '@reviewer2/shared';
 import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state';
 
 // The only way game state leaves the server (docs/rules/constraints.md). What a viewer gets
@@ -12,6 +12,9 @@ import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state'
 //   chosen go to them while it is the group's turn. Nobody else gets either: the keys are absent.
 // - While the game is paused, nobody gets the board at all, the captains and the screens
 //   included: the cards are an empty list, and the clock shows the time the phase had left.
+// - The cards that a captain marked as the ones a clue was meant for stay the captain's secret
+//   until the game is over: before then, no record in any view has `targets`, not even the
+//   captain's own, so that nobody can read them off another seat's view either.
 //
 // `at` is the time on the room's clock when the view is sent, from which the view counts how
 // long the current phase has left.
@@ -40,7 +43,7 @@ export function viewFor(state: KeywordsState, viewer: Seat, at: number): Keyword
     guessesMade: state.guessesMade,
     guessesLeft: guessesLeft(state),
     clock: clockOf(state, at),
-    history: state.history.map(copyRecord),
+    history: state.history.map((record) => (state.phase === 'over' ? copyRecord(record) : withoutTargets(record))),
     events: state.events.map((event) => ({ ...event })),
     extended: { ...state.extended },
     result: state.result && { ...state.result },
@@ -50,6 +53,14 @@ export function viewFor(state: KeywordsState, viewer: Seat, at: number): Keyword
     if (viewer.team === state.team) view.selections = state.selections.map((selection) => ({ ...selection }));
   }
   return view;
+}
+
+// A turn of the record without the cards its captain meant: what every view carries while the game
+// is on.
+function withoutTargets(record: ClueRecord): ClueRecord {
+  const shown = copyRecord(record);
+  delete shown.targets;
+  return shown;
 }
 
 // How long the phase has left and how long it was given, or null for a phase without a limit.
