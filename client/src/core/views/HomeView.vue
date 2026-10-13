@@ -103,7 +103,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
 
     <footer class="footnotes">
       <UiButton variant="quiet" size="small" @click="tipping = true">
-        <span>
+        <span class="footnote">
           <svg class="icon cola" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 7.5 14 2h4" />
             <path class="cup" d="M6.5 9.5h11l-1.4 11.6a1.6 1.6 0 0 1-1.6 1.4H9.5a1.6 1.6 0 0 1-1.6-1.4Z" />
@@ -114,7 +114,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         </span>
       </UiButton>
       <SendFeedback page="home">
-        <span>
+        <span class="footnote">
           <svg class="icon bulb" viewBox="0 0 24 24" aria-hidden="true">
             <path
               class="glass"
@@ -353,11 +353,19 @@ ol {
 }
 
 /* The footnotes' drawings, in ink, in front of their words: a cup of cola with a lid and a bent
-   straw, and a light bulb for ideas. */
+   straw, and a light bulb for ideas. Each stands centered on the line of its words, in either
+   language. */
+.footnote {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
 .icon {
+  display: block;
+  flex: none;
   width: 1.5em;
   height: 1.5em;
-  vertical-align: -0.4em;
   fill: none;
   stroke: var(--ink);
   stroke-linecap: round;
