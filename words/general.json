@@ -1680,11 +1680,6 @@
       "forms": { "en": ["bibliographic"] }
     },
     {
-      "id": "paywall",
-      "zh": "付费墙",
-      "en": "Paywall"
-    },
-    {
       "id": "camera-ready",
       "zh": "终稿",
       "en": "Camera-ready"
@@ -1792,16 +1787,6 @@
       "id": "handbook",
       "zh": "手册",
       "en": "Handbook"
-    },
-    {
-      "id": "magazine",
-      "zh": "杂志",
-      "en": "Magazine"
-    },
-    {
-      "id": "book-review",
-      "zh": "书评",
-      "en": "Book review"
     },
     {
       "id": "oral",
@@ -1931,12 +1916,6 @@
       "zh": "赞助商",
       "en": "Sponsor",
       "forms": { "en": ["sponsorship", "sponsored"] }
-    },
-    {
-      "id": "live-stream",
-      "zh": "直播",
-      "en": "Live stream",
-      "forms": { "en": ["livestreaming"] }
     },
     {
       "id": "pilot-study",
@@ -2304,22 +2283,6 @@
       "id": "screen-sharing",
       "zh": "共享屏幕",
       "en": "Screen sharing"
-    },
-    {
-      "id": "blog",
-      "zh": "博客",
-      "en": "Blog",
-      "forms": { "en": ["blogger"] }
-    },
-    {
-      "id": "podcast",
-      "zh": "播客",
-      "en": "Podcast"
-    },
-    {
-      "id": "social-media",
-      "zh": "社交媒体",
-      "en": "Social media"
     },
     {
       "id": "clicker",
