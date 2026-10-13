@@ -44,7 +44,9 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
   expect: { timeout: 10_000 },
-  fullyParallel: false,
+  // Every test stands on its own, so the tests of a file run side by side as the files do, and
+  // --shard deals the tests out between the CI jobs one by one rather than file by file.
+  fullyParallel: true,
   workers: process.env.CI ? 2 : 3,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
@@ -52,7 +54,7 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
-  // CI runs each project in a job of its own, from the matrix in .github/workflows/ci.yml. When
+  // CI runs each project in jobs of its own, from the matrix in .github/workflows/ci.yml. When
   // you add, rename or remove a project, change the matrix too.
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },

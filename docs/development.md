@@ -29,7 +29,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. After c
 
 ## End-to-end tests
 
-The tests in `e2e/` start the built server and the mailer on free ports and open a browser context per player. They play whole games in both languages, reload pages, cut the network and chat; afterwards every snapshot any page received is checked for colors, chats and choices it must not hold. Script, console and logged server errors fail the test.
+The tests in `e2e/` start the built server and the mailer on free ports and open a browser context per player. They play whole games in both languages, reload pages, cut the network and chat; afterwards every snapshot any page received is checked for colors, chats and choices it must not hold. Script, console and logged server errors fail the test. The tests run side by side, those of one file too, so none may count on another having run.
 
 ```bash
 npx playwright install chromium webkit   # once; on Linux add --with-deps

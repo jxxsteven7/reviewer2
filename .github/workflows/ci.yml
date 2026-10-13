@@ -71,10 +71,12 @@ jobs:
       - run: node scripts/check-words.mjs
 
   e2e-browser:
-    # Real browsers against the production build. One job per browser project, side by side,
-    # each with only the browser it runs. WebKit is the slowest, so its tests are split over two
-    # jobs. Playwright's --shard deals the test files out between them by their number of tests,
-    # not by how long they take, so one part can take much longer than the other.
+    # Real browsers against the production build. Each project's tests are split over jobs side
+    # by side, each with only the browser it runs: WebKit, which takes about four times as long,
+    # over six, the others over two. Each job runs two tests at a time, as before. Playwright's
+    # --shard deals the tests out in order, one by one (fullyParallel in playwright.config.ts), by
+    # their number, not by how long they take; the slowest part is the one with both whole games
+    # of full-game.spec.ts.
     name: End-to-end on ${{ matrix.project }}${{ matrix.shards && format(', part {0} of {1}', matrix.shard, matrix.shards) || '' }}
     runs-on: ubuntu-latest
     # A browser install or a server that hangs must not hold the check for the six hours that
@@ -84,22 +86,20 @@ jobs:
       # A failure in one browser says nothing about the others.
       fail-fast: false
       matrix:
-        # One entry per project in playwright.config.ts, with the browser it runs on; a project
-        # split into parts has one entry per part, with its shard and the number of shards. A
-        # project that is missing here is not tested in CI, so keep the two lists the same.
+        # One entry per part of each project in playwright.config.ts, with the browser it runs
+        # on, the part and the number of parts. A project or a part that is missing here is not
+        # tested in CI, so keep the two lists the same, with every part of a project.
         include:
-          - project: desktop-chromium
-            browser: chromium
-          - project: phone-chromium
-            browser: chromium
-          - project: iphone-webkit
-            browser: webkit
-            shard: 1
-            shards: 2
-          - project: iphone-webkit
-            browser: webkit
-            shard: 2
-            shards: 2
+          - { project: desktop-chromium, browser: chromium, shard: 1, shards: 2 }
+          - { project: desktop-chromium, browser: chromium, shard: 2, shards: 2 }
+          - { project: phone-chromium, browser: chromium, shard: 1, shards: 2 }
+          - { project: phone-chromium, browser: chromium, shard: 2, shards: 2 }
+          - { project: iphone-webkit, browser: webkit, shard: 1, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 2, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 3, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 4, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 5, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 6, shards: 6 }
     steps:
       - uses: actions/checkout@v5
       - name: Decide whether the browsers are needed
@@ -138,8 +138,9 @@ jobs:
         run: |
           echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
           echo "system=$(. /etc/os-release && echo "$ID-$VERSION_ID")" >> "$GITHUB_OUTPUT"
+          echo "image=$ImageVersion" >> "$GITHUB_OUTPUT"
       - name: Keep the browser between runs
-        # The download is the slow part of the install; the system packages still come from apt.
+        # The download is the slow part of the install; the system packages it needs are kept below.
         # Playwright builds its browsers for each system, so a new runner image needs its own.
         if: steps.need.outputs.browsers == 'true'
         id: browser
@@ -147,10 +148,29 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ steps.playwright.outputs.system }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+      - name: Keep the browser's system packages between runs
+        # apt would download them again, about 120 MB for WebKit. It takes those it finds in its
+        # archive directory instead, after checking each against its index, and downloads any that
+        # changed since. A new runner image starts its own.
+        if: steps.need.outputs.browsers == 'true'
+        id: packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/playwright-packages
+          key: playwright-packages-${{ steps.playwright.outputs.system }}-${{ steps.playwright.outputs.image }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+      - name: Hand the kept packages to apt
+        if: steps.need.outputs.browsers == 'true' && steps.packages.outputs.cache-hit == 'true'
+        run: sudo find ~/.cache/playwright-packages -name '*.deb' -exec cp -t /var/cache/apt/archives {} +
       - run: npx playwright install --with-deps ${{ matrix.browser }}
         if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit != 'true'
       - run: npx playwright install-deps ${{ matrix.browser }}
         if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit == 'true'
+      - name: Keep the packages that apt downloaded
+        if: steps.need.outputs.browsers == 'true' && steps.packages.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.cache/playwright-packages
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t ~/.cache/playwright-packages {} +
+          echo "Kept $(ls ~/.cache/playwright-packages | wc -l) packages."
       - run: npm run build
         if: steps.need.outputs.browsers == 'true'
       - run: npm run test:e2e -- --project=${{ matrix.project }} ${{ matrix.shards && format('--shard={0}/{1}', matrix.shard, matrix.shards) || '' }}
