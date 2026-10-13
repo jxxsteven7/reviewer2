@@ -5,15 +5,17 @@
 //   the group in that game 1 point, the PI included. A card that the other group reveals for it
 //   gives nothing.
 // - The group that wins gives each of them 3 more.
-// - Whoever reveals a card of the other group loses 1 point, and whoever reveals Reviewer 2 loses 3.
-//   An irrelevant paper costs nothing.
-export const POINTS = { found: 1, won: 3, wrong: -1, reviewer2: -3 } as const;
+// - Whoever reveals an irrelevant paper loses 1 point, whoever reveals a card of the other group
+//   loses 2, and whoever reveals Reviewer 2 loses 3. Only the player who revealed the card pays.
+export const POINTS = { found: 1, won: 3, irrelevant: -1, wrong: -2, reviewer2: -3 } as const;
 
 export interface KeywordsScoreDetail {
   // The own cards that the player's group found.
   found: number;
   won: boolean;
-  // The cards of the other group, and Reviewer 2, that the player revealed.
+  // The irrelevant papers, the cards of the other group, and Reviewer 2, that the player revealed.
+  // A detail from before irrelevant papers cost anything has no `irrelevant`, which counts as 0.
+  irrelevant?: number;
   wrong: number;
   reviewer2: number;
 }
@@ -21,5 +23,6 @@ export interface KeywordsScoreDetail {
 export const pointsFor = (detail: KeywordsScoreDetail): number =>
   detail.found * POINTS.found +
   (detail.won ? POINTS.won : 0) +
+  (detail.irrelevant ?? 0) * POINTS.irrelevant +
   detail.wrong * POINTS.wrong +
   detail.reviewer2 * POINTS.reviewer2;

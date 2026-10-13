@@ -422,10 +422,11 @@
       "you": "You",
       "someone": "A player who left"
     },
-    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing the other group's card, −1; revealing Reviewer 2, −3.",
+    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing an irrelevant paper, −1; revealing the other group's card, −2; revealing Reviewer 2, −3.",
     "scoreDetail": {
       "found": "found {count}",
       "won": "won",
+      "irrelevant": "irrelevant paper ×{count}",
       "wrong": "other group's card ×{count}",
       "reviewer2": "Reviewer 2"
     },

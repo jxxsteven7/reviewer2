@@ -3,6 +3,7 @@ import type { KeywordsRoomData, MatchRules, Seat, Team } from '@reviewer2/shared
 import {
   chooseCard,
   createRoom,
+  endTurn,
   expect,
   giveClue,
   interpolate,
@@ -55,8 +56,10 @@ const seated = (pages: Page[], team: Team, role: 'captain' | 'guesser') => {
 };
 
 // Ends a game in one or two turns, so that `favoured`'s group wins: if it is on turn, its student
-// reveals an irrelevant paper, which ends the turn; then the other group's student reveals
-// Reviewer 2. So everyone in the favoured group scores 3, and the other group's student loses 3.
+// reveals one of the group's own cards and ends the turn, since an irrelevant paper would cost the
+// student a point and leave the group unequal; then the other group's student reveals Reviewer 2.
+// So everyone in the favoured group scores 3, or 4 when it was on turn, and the other group's
+// student loses 3.
 async function playQuickly(pages: Page[], language: Language, favoured: Page): Promise<void> {
   const [first] = pages as [Page];
   const ours = seatOf(favoured).team;
@@ -64,7 +67,9 @@ async function playQuickly(pages: Page[], language: Language, favoured: Page): P
   if (team === ours) {
     const captain = seated(pages, team, 'captain');
     await giveClue(captain, 'Hint', 1, language);
-    await reveal(seated(pages, team, 'guesser'), await keyCard(captain, 'neutral'));
+    const guesser = seated(pages, team, 'guesser');
+    await reveal(guesser, await keyCard(captain, team));
+    await endTurn(guesser, language);
     await expect(first.locator(`.strip:not(.${team})`)).toBeVisible();
     team = await teamOnTurn(first);
   }
@@ -109,7 +114,7 @@ test('players with accounts and guests play a whole match, and find its title on
   const between = cat.locator('.match-table.between');
   await expect(between).toContainText(text.match.delta);
   await expect(between.locator('tbody tr')).toHaveCount(4);
-  await expect(between.locator('tbody tr').first()).toContainText('+3');
+  await expect(between.locator('tbody tr').first()).toContainText(/\+[34]/);
   await expect(cat.getByText(text.match.waitNext)).toBeVisible();
   await ann.getByRole('button', { name: text.match.next }).click();
   await expect(ann.locator('.lobby .match-table')).toContainText(

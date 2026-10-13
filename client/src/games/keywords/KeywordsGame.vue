@@ -55,12 +55,14 @@ const room = toRef(props, 'room');
 const { data, mySeat, mySide, isChair } = useKeywords(room);
 const match = computed(() => room.value.match);
 
-// Where a player's points in a game came from, in a few words.
+// Where a player's points in a game came from, in a few words. A detail from before irrelevant
+// papers cost anything has no count of them.
 function describe(detail: unknown): string {
-  const { found, won, wrong, reviewer2 } = detail as KeywordsScoreDetail;
+  const { found, won, irrelevant = 0, wrong, reviewer2 } = detail as KeywordsScoreDetail;
   return [
     found > 0 ? t('game.scoreDetail.found', { count: found }) : null,
     won ? t('game.scoreDetail.won') : null,
+    irrelevant > 0 ? t('game.scoreDetail.irrelevant', { count: irrelevant }) : null,
     wrong > 0 ? t('game.scoreDetail.wrong', { count: wrong }) : null,
     reviewer2 > 0 ? t('game.scoreDetail.reviewer2') : null,
   ]
