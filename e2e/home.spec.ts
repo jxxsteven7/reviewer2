@@ -1,4 +1,4 @@
-import { createRoom, interpolate, newPlayer, TEXT, expect, test } from './helpers';
+import { createRoom, interpolate, isPhone, newPlayer, TEXT, expect, test } from './helpers';
 
 // The home page names the author and the build's version, and offers the reward code, which is
 // served from our own server as it was given, and which the rooms never show, and for players
@@ -62,3 +62,25 @@ for (const language of ['en', 'zh'] as const) {
     await expect(sponsor).toHaveAttribute('rel', 'noopener noreferrer');
   });
 }
+
+// On a wide screen the games stand on the right, and the left column is at least 30rem wide, so
+// that the tagline stays on one line where the columns are at their narrowest, in both languages.
+test('the tagline stays on one line where the columns are narrowest', async ({ browser }, testInfo) => {
+  test.skip(isPhone(testInfo), 'on a wide screen only');
+  for (const language of ['en', 'zh'] as const) {
+    const page = await newPlayer(browser, language);
+    await page.setViewportSize({ width: 960, height: 800 });
+    await page.goto('/');
+    await page.getByRole('button', { name: new RegExp(`^${TEXT[language].language[language]}`) }).click();
+    const tagline = page.getByRole('heading', { level: 1, name: TEXT[language].app.tagline });
+    await expect(tagline).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const lines = await tagline.evaluate((heading) => {
+      const range = document.createRange();
+      range.selectNodeContents(heading);
+      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+    });
+    expect(lines, `the ${language} tagline at 960 px`).toBe(1);
+    await page.context().close();
+  }
+});

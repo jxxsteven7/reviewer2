@@ -48,7 +48,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
     <main>
       <div class="heading">
         <h1>{{ t('app.tagline') }}</h1>
-        <i18n-t keypath="footer.byline" tag="span" class="byline beside" scope="global">
+        <i18n-t keypath="footer.byline" tag="span" class="byline after-tagline" scope="global">
           <template #name>
             <a class="author" href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{
               t('footer.author')
@@ -185,7 +185,7 @@ h1 {
 
 /* Below 30rem the English tagline takes two lines (it fits on one from about 32rem), and the
    author follows its last line instead, going to a line of their own if it leaves no room. */
-.beside {
+.after-tagline {
   display: none;
 }
 
@@ -195,7 +195,7 @@ h1 {
     margin-inline-end: var(--space-3);
   }
 
-  .home:lang(en) .beside {
+  .home:lang(en) .after-tagline {
     display: inline-block;
   }
 
@@ -454,8 +454,9 @@ ol {
   }
 }
 
-/* On a wide screen the contents stand on the right, and the rest keeps to the left, wide enough for
-   the tagline on one line. */
+/* On a wide screen the contents stand on the right, and the rest keeps to the left, which is at
+   least 30rem wide, so that the tagline stays on one line where the columns are at their
+   narrowest. */
 @media (min-width: 60rem) {
   main {
     grid-template-areas:
@@ -463,7 +464,7 @@ ol {
       'intro contents'
       'ways contents'
       'thanks contents';
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(30rem, 1.1fr) minmax(0, 1fr);
     grid-template-rows: auto auto auto 1fr;
     gap: var(--space-5) var(--space-7);
     padding-top: var(--space-6);
