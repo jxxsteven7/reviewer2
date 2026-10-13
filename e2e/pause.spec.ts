@@ -34,7 +34,19 @@ test('the chair pauses the game, which hides the board and stops the clock, and 
 
   const dealt = game()?.cards.map((card) => card.word) ?? [];
   expect(dealt).toHaveLength(25);
-  await ann.getByRole('button', { name: text.game.pause }).click();
+  // The chair's button to pause stands at the end of the clock, which stays at the top of the
+  // screen, so it is in sight at the foot of the page too. Nobody else has one, and the tools at
+  // the foot of the page don't.
+  const bar = ann.locator('.sticky-clock');
+  await expect(bar.locator('[role="timer"]')).toBeVisible();
+  await expect(ann.locator('.tools').getByRole('button', { name: text.game.pause })).toHaveCount(0);
+  for (const page of [guesser, table.captains.blue, table.spectator]) {
+    await expect(page.locator('.sticky-clock [role="timer"]')).toBeVisible();
+    await expect(page.locator('.sticky-clock button')).toHaveCount(0);
+  }
+  await ann.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(bar.getByRole('button', { name: text.game.pause })).toBeInViewport();
+  await bar.getByRole('button', { name: text.game.pause }).click();
   // Everyone sees that the game is paused, and nobody has a card to look at, the PIs and the screen
   // included; the words of the board are nowhere on the page.
   for (const page of [ann, table.captains.blue, guesser, table.spectator, table.screen]) {
@@ -67,10 +79,11 @@ test('the chair pauses the game, which hides the board and stops the clock, and 
   await guesser.waitForTimeout(2_000);
   await expect(guesser.locator('[role="timer"] .seconds')).toHaveText(shown);
   await expect(table.screen.locator('[role="timer"] .seconds')).toHaveText(onScreen);
-  // Only the chair has the way to resume.
+  // Only the chair has the way to resume: in the notice, and where the button to pause was.
   await expect(guesser.locator('.paused button')).toHaveCount(0);
+  await expect(ann.locator('.paused').getByRole('button', { name: text.game.resume })).toBeVisible();
 
-  await ann.locator('.paused').getByRole('button', { name: text.game.resume }).click();
+  await bar.getByRole('button', { name: text.game.resume }).click();
   for (const page of [ann, guesser, table.screen]) {
     await expect(page.locator('.paused-title')).toHaveCount(0);
     await expect(page.locator('.board .card')).toHaveCount(25);
@@ -92,4 +105,26 @@ test('the chair pauses the game, which hides the board and stops the clock, and 
     text.game.events.paused,
   ]);
   await expect(log.locator('.guess')).toHaveText(text.game.card[team]);
+});
+
+// Without a time limit there is no clock: the chair's button to pause stands at the top of the
+// screen on its own, and the others have nothing there.
+test('the chair pauses a game without a clock from the top of the screen', async ({ browser }) => {
+  const text = TEXT.en;
+  const table = await seatTable(browser, 'en', undefined, async (page) => {
+    await setSetting(page, text.settings.firstClueTime, 0);
+    await setSetting(page, text.settings.clueTime, 0);
+    await setSetting(page, text.settings.guessTime, 0);
+  });
+  const ann = table.captains.red;
+  const bob = table.guessers.red;
+  await expect(ann.locator('[role="timer"]')).toHaveCount(0);
+  await expect(bob.locator('.sticky-clock')).toHaveCount(0);
+  const bar = ann.locator('.sticky-clock');
+  await ann.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(bar.getByRole('button', { name: text.game.pause })).toBeInViewport();
+  await bar.getByRole('button', { name: text.game.pause }).click();
+  await expect(bob.locator('.paused-title')).toHaveText(text.game.paused);
+  await bar.getByRole('button', { name: text.game.resume }).click();
+  await expect(bob.locator('.board .card')).toHaveCount(25);
 });

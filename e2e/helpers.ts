@@ -465,7 +465,7 @@ export async function seatTable(
   await expect(screen.locator('.screen')).toBeVisible();
 
   const text = TEXT[language];
-  await expect(ann.locator('.desk .ready')).toBeVisible();
+  await expect(ann.locator('.start-bar .ready')).toBeVisible();
   await desk?.(ann);
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of [ann, bob, cat, dan, eve]) await expect(page.locator('.keywords-game')).toBeVisible();
