@@ -31,21 +31,27 @@ const line = computed(() => duoLine(t, props.duo));
   gap: var(--space-1);
 }
 
+/* The line breaks only at its plain spaces, after the dot and between the words of the English
+   copy: its no-break spaces keep each number with its word, and keep-all keeps the Chinese copy,
+   which has no plain space, from breaking between two characters. */
 .games {
   color: var(--ink-2);
   font-size: var(--text-sm);
+  word-break: keep-all;
 }
 
 .badges {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3) var(--space-2);
 }
 
-/* A badge is a small pill whose box reaches past it, out of sight, so that it is 44px tall to tap. */
+/* A badge is a small pill whose box reaches above and below it, out of sight, to 44px tall,
+   centered on it; the rows are 12px apart, more than the box reaches on either side, so that no
+   badge's box lies over another's. */
 .badge {
   position: relative;
-  padding: 0 var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
@@ -56,6 +62,6 @@ const line = computed(() => duoLine(t, props.duo));
 .badge::before {
   content: '';
   position: absolute;
-  inset: -10px 0;
+  inset: calc(50% - 22px) 0;
 }
 </style>

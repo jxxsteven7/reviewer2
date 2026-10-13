@@ -10,14 +10,17 @@ import { fnv1a } from './hash';
 type Translate = (key: string, named?: Record<string, string | number>) => string;
 
 // The games played together and against each other, as one line: "As teammates: won 5, lost 2 ·
-// As opponents: you won 3, they won 4". A kind of game that the two never played is left out.
+// As opponents: won 3, lost 4". A kind of game that the two never played is left out. The line
+// may break after the dot, which a no-break space keeps on the first part's line, and where the
+// locale files allow: their no-break spaces keep each number with its word, so that a narrow
+// column never parts "won" from "3" (DuoSummary.vue keeps the Chinese copy whole).
 export function duoLine(t: Translate, duo: DuoCounts): string {
   const parts: string[] = [];
   if (duo.wonTogether + duo.lostTogether > 0) {
     parts.push(t('duos.together', { won: duo.wonTogether, lost: duo.lostTogether }));
   }
   if (duo.against > 0) parts.push(t('duos.against', { won: duo.beat, lost: duo.beaten }));
-  return parts.join(' · ');
+  return parts.join('\u00a0\u00b7 ');
 }
 
 // How many lines each title has, under duos.lines.<title> in the locale files, numbered from 1.

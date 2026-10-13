@@ -191,7 +191,7 @@ Every account has a public page, `/p/<handle>`, which anyone may open, with or w
 
 ## Titles
 
-Every title that a page shows opens, at a tap, a sheet that says what it is and how it is won (`TitleInfo.vue`, `client/src/core/titles.ts`): the titles of matches, the streaks, the acknowledgments, the author's badge, the decision of each game, on the record and in its letter, and the [friend titles](#friend-duos). The academic rank opens its ladder instead. A screen, which nobody taps, shows them as text. What each says is in the locale files.
+Every title that a page shows opens, at a tap, a sheet that says what it is and how it is won (`TitleInfo.vue`, `client/src/core/titles.ts`): the titles of matches, the streaks, on the account page as the longest on the record and at the end of a game as the run so far, the acknowledgments, the author's badge, the decision of each game, on the record and in its letter, and the [friend titles](#friend-duos). The academic rank opens its ladder instead. Two places show a title that opens nothing: a screen, which nobody taps, shows them as text, and the rank beside a name in a room's list of players is part of the name, which is itself the button that opens the player's menu, where the public page with its titles is a tap away. What each says is in the locale files.
 
 ## Academic ranks
 
@@ -251,6 +251,7 @@ The page crops the picture and encodes it at 256 by 256 as WebP or JPEG, within 
 - **Who has an account:** answers that reveal a taken name are limited, `login_failed` is the same for a wrong name or password, and the friends messages answer a name that is no account's as they answer a stranger's, except the request, which costs one of the day's 30.
 - **Stolen logins and other sites:** a random secret, kept hashed, only in a hardened cookie, HTTPS only; `Origin` and `Sec-Fetch-Site` checks, no CORS, no framing; password change, binding and deletion ask for the password.
 - **Links and mail:** 256 random bits after `#`, kept as hashes, short-lived, used once; two fixed mails from a mailer that alone holds the key.
+- **Who plays with whom:** what two friends have played together, and the titles it earns, go to the two of them alone, each on their own friends list and on the other's profile; nobody else in a room or at a profile is sent them, and nothing of them is stored, since they are worked out from the records and the friendships when asked.
 - **A leaked database** holds usernames, password hashes, hashes of random secrets, keyed HMACs of email addresses, records with their points and titles, who is friends with whom and who asked whom, the links and the lines that accounts wrote on their profiles and who likes whose, the replays of games, with their boards, the clues and the nicknames of those who revealed a card, and their logs, with every move, when it came and the player ID that made it, and which player ID in a game was which account, the feedback, with the contacts of the last 90 days and the user agents of bug reports, and the reports, with who reported whom, the name the player had, in which room and the note; no IP addresses.
 
 ## Logging

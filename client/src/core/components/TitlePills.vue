@@ -28,7 +28,7 @@ const counted = (label: string, count: number) =>
       </TitleInfo>
     </li>
     <li v-for="{ kind, length, title } in streaks" :key="kind">
-      <TitleInfo :title="{ kind: 'streak', streak: kind, length }" class="pill streak" :class="kind">
+      <TitleInfo :title="{ kind: 'streak', streak: kind, length, best: true }" class="pill streak" :class="kind">
         {{ title }}
       </TitleInfo>
     </li>
@@ -44,14 +44,15 @@ const counted = (label: string, count: number) =>
 .titles {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3) var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* A pill is a button that a tap opens. Its box reaches a few pixels above and below it, out of
-   sight, so that it is 44px tall to tap without spreading the rows apart. */
+/* A pill is a button that a tap opens. Its box reaches above and below it, out of sight, to 44px
+   tall, centered on it; the rows are 12px apart, more than the box reaches on either side, so that
+   no pill's box lies over another's. */
 .titles .pill {
   position: relative;
   padding: var(--space-1) var(--space-3);
@@ -64,7 +65,7 @@ const counted = (label: string, count: number) =>
 .titles .pill::before {
   content: '';
   position: absolute;
-  inset: -4px 0;
+  inset: calc(50% - 22px) 0;
 }
 
 .titles .streak.wins {

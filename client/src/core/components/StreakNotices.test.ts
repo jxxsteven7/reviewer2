@@ -84,11 +84,14 @@ describe('StreakNotices', () => {
     ]);
     expect(cheers[0]?.find('.who .avatar').classes()).toContain('small');
     expect(page.find('.announcement').text()).toBe('Bob is on a hot streak: Three Submissions, Three Acceptances!');
-    // The screen's cheers are bigger, with a bigger avatar.
+    // The title in a cheer is a button that explains it, as the title on the player's own card is.
+    expect(cheers[0]?.find('button').text()).toBe('Three Submissions, Three Acceptances');
+    // The screen's cheers are bigger, with a bigger avatar, and nothing on them is a button.
     const notices = mountFor(null, streaks).find('.streak-notices');
     expect(notices.classes()).toContain('large');
     expect(notices.findAll('.cheer')).toHaveLength(1);
     expect(notices.find('.who .avatar').classes()).toContain('medium');
+    expect(notices.find('button').exists()).toBe(false);
   });
 
   test('write the number in Chinese characters in Chinese', () => {

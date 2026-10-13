@@ -55,13 +55,27 @@ describe('TitleInfo', () => {
 
   test('explains in Chinese too', async () => {
     const wrapper = mount(TitleInfo, {
-      props: { title: { kind: 'streak', streak: 'losses', length: 4 } },
+      props: { title: { kind: 'streak', streak: 'losses', length: 4, best: true } },
       global: global('zh'),
       attachTo: document.body,
     });
     expect(wrapper.text()).toBe('四投四拒');
     await wrapper.find('button').trigger('click');
     expect(sheet()?.textContent).toContain('记录里最长的连败：连续输了 4 局。');
+    expect(sheet()?.textContent).toContain('连续 3 局起才有这个称号。');
+    wrapper.unmount();
+  });
+
+  test('tells a streak the player is on apart from the longest on their record', async () => {
+    const wrapper = mount(TitleInfo, {
+      props: { title: { kind: 'streak', streak: 'wins', length: 3, best: false } },
+      global: global(),
+      attachTo: document.body,
+    });
+    await wrapper.find('button').trigger('click');
+    expect(sheet()?.textContent).toContain('Games won in a row so far: 3.');
+    expect(sheet()?.textContent).not.toContain('on the record');
+    expect(sheet()?.textContent).toContain('The title comes at 3 in a row.');
     wrapper.unmount();
   });
 });
@@ -98,7 +112,7 @@ describe('TitlePills', () => {
     expect(explained[0]).toContain('the player with the highest total');
     expect(explained[1]).toContain('the lowest total');
     expect(explained[2]).toContain('The longest run of games won in a row on the record: 5.');
-    expect(explained[2]).toContain('The title comes at three in a row.');
+    expect(explained[2]).toContain('The title comes at 3 in a row.');
     expect(explained[3]).toContain('words for the word lists');
     wrapper.unmount();
   });

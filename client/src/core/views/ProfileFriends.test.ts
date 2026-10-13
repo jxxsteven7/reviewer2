@@ -19,6 +19,8 @@ vi.mock('../socket', () => ({ send: vi.fn() }));
 vi.mock('../toast', () => ({ toast: vi.fn(), toastError: vi.fn() }));
 
 const NONE = { wonTogether: 0, lostTogether: 0, against: 0, beat: 0, beaten: 0 };
+// The line keeps each number with its word by no-break spaces; the test reads them as spaces.
+const plain = (text: string) => text.replace(/\u00a0/g, ' ');
 const friend = (username: string, duo: DuoView | null): FriendView => ({
   handle: `${username.toLowerCase()}00000000`.slice(0, 12),
   username,
@@ -48,19 +50,21 @@ describe('ProfileFriends', () => {
     ]);
     const lines = wrapper.findAll('.list .line');
     const duoOf = (index: number) => lines[index]?.find('.duo');
-    expect(duoOf(0)?.find('.games').text()).toBe('As teammates: won 4, lost 1');
+    expect(plain(duoOf(0)?.find('.games').text() ?? '')).toBe('As teammates: won 4, lost 1');
     expect(
       duoOf(0)
         ?.findAll('.badge')
         .map((badge) => badge.text()),
     ).toEqual(['Co-First Author']);
-    expect(duoOf(1)?.find('.games').text()).toBe('As teammates: won 4, lost 0 · As opponents: won 0, lost 3');
+    expect(plain(duoOf(1)?.find('.games').text() ?? '')).toBe(
+      'As teammates: won 4, lost 0 · As opponents: won 0, lost 3',
+    );
     expect(
       duoOf(1)
         ?.findAll('.badge')
         .map((badge) => badge.text()),
     ).toEqual(['Co-First Author', 'Your Reviewer 2', 'Rival Reviewer']);
-    expect(duoOf(2)?.find('.games').text()).toBe('As opponents: won 1, lost 0');
+    expect(plain(duoOf(2)?.find('.games').text() ?? '')).toBe('As opponents: won 1, lost 0');
     expect(duoOf(2)?.find('.badge').exists()).toBe(false);
     // A friend who shares no game has no line.
     expect(duoOf(3)?.exists()).toBe(false);
@@ -84,7 +88,7 @@ describe('ProfileFriends', () => {
       [friend('Bob', { ...NONE, wonTogether: 3, lostTogether: 2, titles: ['coauthor'] })],
       'zh',
     );
-    expect(wrapper.find('.duo .games').text()).toBe('同队 3 胜 2 负');
+    expect(plain(wrapper.find('.duo .games').text())).toBe('同队 3 胜 2 负');
     expect(wrapper.find('.board li button').text()).toBe('共同一作');
     expect(wrapper.find('.board li .holder-names').text()).toBe('Bob');
   });

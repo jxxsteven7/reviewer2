@@ -108,7 +108,10 @@ describe('locale files', () => {
 
   test('explain every title that a tap opens', () => {
     for (const title of TITLES) expect(en.has(`titles.award.${title}`), title).toBe(true);
-    for (const kind of STREAK_KINDS) expect(en.has(`titles.streak.${kind}`), kind).toBe(true);
+    for (const kind of STREAK_KINDS) {
+      expect(en.has(`titles.streak.${kind}`), kind).toBe(true);
+      expect(en.has(`titles.streakNow.${kind}`), kind).toBe(true);
+    }
     for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`titles.thanks.${kind}`), kind).toBe(true);
     for (const verdict of VERDICTS) {
       expect(en.has(`game.letter.verdicts.${verdict}`), verdict).toBe(true);

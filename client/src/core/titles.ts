@@ -1,5 +1,6 @@
 import {
   DUO_MIN,
+  STREAK_MIN,
   type AcknowledgmentKind,
   type DuoTitle,
   type Language,
@@ -13,10 +14,12 @@ import { streakTitle } from './streaks';
 // the author's badge, the decision letter that a group gets at the end of a game, and the titles
 // that friends hold among an account's friends. The academic rank opens its ladder instead
 // (RankLadder.vue). What each title is and how it is won is under titles, duos and
-// game.letter.explain in the locale files.
+// game.letter.explain in the locale files. A streak is the longest of its kind on the record,
+// `best`, as the pills on the account page and the public profile show it, or else the run that
+// the game which has just ended brought the player to, which may fall short of their record.
 export type TitleRef =
   | { kind: 'award'; title: Title }
-  | { kind: 'streak'; streak: StreakKind; length: number }
+  | { kind: 'streak'; streak: StreakKind; length: number; best: boolean }
   | { kind: 'thanks'; thanks: AcknowledgmentKind }
   | { kind: 'author' }
   | { kind: 'verdict'; verdict: string }
@@ -49,7 +52,10 @@ export function titleExplanation(t: Translate, title: TitleRef): string[] {
     case 'award':
       return [t(`titles.award.${title.title}`)];
     case 'streak':
-      return [t(`titles.streak.${title.streak}`, { n: title.length }), t('titles.streakCounts')];
+      return [
+        t(`titles.${title.best ? 'streak' : 'streakNow'}.${title.streak}`, { n: title.length }),
+        t('titles.streakCounts', { min: STREAK_MIN }),
+      ];
     case 'thanks':
       return [t(`titles.thanks.${title.thanks}`)];
     case 'author':

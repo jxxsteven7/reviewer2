@@ -29,7 +29,10 @@ const { t } = useI18n();
   font-weight: var(--weight-bold);
 }
 
+/* The badge is a button that a tap opens (TitleInfo.vue). Its box reaches above and below it, out
+   of sight, to 44px tall, centered on it, as far as the lines around it, 8px away, allow. */
 .author {
+  position: relative;
   display: inline-flex;
   align-items: center;
   padding: 1px var(--space-3);
@@ -43,5 +46,11 @@ const { t } = useI18n();
   font-synthesis: none;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.author::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 22px) 0;
 }
 </style>

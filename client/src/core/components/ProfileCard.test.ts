@@ -108,7 +108,9 @@ describe('ProfileCard', () => {
     await flushPromises();
     const section = wrapper.find('section.duo');
     expect(section.find('h3').text()).toBe('You and Ann');
-    expect(section.text()).toContain('As teammates: won 5, lost 2 · As opponents: won 1, lost 3');
+    expect(section.text().replace(/\u00a0/g, ' ')).toContain(
+      'As teammates: won 5, lost 2 · As opponents: won 1, lost 3',
+    );
     await section.find('button.badge').trigger('click');
     const sheet = document.body.querySelector('[role=dialog]');
     expect(sheet?.querySelector('h2')?.textContent).toBe('Co-First Author');

@@ -6,8 +6,9 @@ const t = (key: string, named?: Record<string, string | number>) => `${key}${JSO
 
 describe('duoLine', () => {
   test('says the games together and against each other, leaving out a kind the two never played', () => {
+    // The dot stays with the first part: a no-break space before it, a plain one after.
     expect(duoLine(t, { wonTogether: 5, lostTogether: 2, against: 7, beat: 3, beaten: 4 })).toBe(
-      'duos.together{"won":5,"lost":2} · duos.against{"won":3,"lost":4}',
+      'duos.together{"won":5,"lost":2}\u00a0\u00b7 duos.against{"won":3,"lost":4}',
     );
     expect(duoLine(t, { ...NO_GAMES, lostTogether: 1 })).toBe('duos.together{"won":0,"lost":1}');
     expect(duoLine(t, { ...NO_GAMES, against: 1 })).toBe('duos.against{"won":0,"lost":0}');

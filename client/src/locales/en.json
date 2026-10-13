@@ -1062,7 +1062,11 @@
       "wins": "The longest run of games won in a row on the record: {n}.",
       "losses": "The longest run of games lost in a row on the record: {n}."
     },
-    "streakCounts": "Every game finished in a seat while logged in counts, in the order the games ended, whichever game it was and in a match or not. A withdrawn game counts for nothing. The title comes at three in a row.",
+    "streakNow": {
+      "wins": "Games won in a row so far: {n}.",
+      "losses": "Games lost in a row so far: {n}."
+    },
+    "streakCounts": "Every game finished in a seat while logged in counts, in the order the games ended, whichever game it was and in a match or not. A withdrawn game counts for nothing. The title comes at {min} in a row.",
     "thanks": {
       "feedback": "Thanked in the acknowledgments for a suggestion, an idea for a game or a bug report that was taken up.",
       "words": "Thanked in the acknowledgments for words for the word lists.",
@@ -1086,8 +1090,8 @@
       "rival": "The friend you have played against the most, won or lost, at least {min} games."
     },
     "private": "Only friends count, with every game you both finished, from before you were friends too. Friends level at the top share the title. Only you see your friend titles.",
-    "together": "As teammates: won {won}, lost {lost}",
-    "against": "As opponents: won {won}, lost {lost}",
+    "together": "As\u00a0teammates: won\u00a0{won}, lost\u00a0{lost}",
+    "against": "As\u00a0opponents: won\u00a0{won}, lost\u00a0{lost}",
     "board": "Friend titles",
     "notice": {
       "kicker": "Friend title",
