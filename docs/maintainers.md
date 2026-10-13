@@ -1,10 +1,10 @@
 # Maintainer guide
 
-How `main` is protected on GitHub, and the token that keeps the sponsors up to date.
+How `main` is protected on GitHub, how the lists of thanks go to it, and the token that keeps the sponsors up to date.
 
 ## Branch protection
 
-**Settings → Rules → Rulesets → New branch ruleset** `protect-main`: enforcement **Active**, no bypass list, targeting the default branch, with these rules:
+**Settings → Rules → Rulesets → New branch ruleset** `protect-main`: enforcement **Active**, with **Repository admin** on the bypass list, **Always allow**, for the [lists of thanks](#lists-of-thanks), targeting the default branch, with these rules:
 
 - Restrict deletions; Block force pushes.
 - Require a pull request before merging: required approvals **1**, dismiss stale approvals when new commits are pushed, require review from Code Owners, require approval of the most recent reviewable push, require conversation resolution, allowed merge method **Squash** only.
@@ -22,6 +22,24 @@ A maintainer has the **Admin** or **Maintain** role; CI uses it to decide who ma
 - **Code security → Private vulnerability reporting**: on, once the repository is public.
 - `.github/CODEOWNERS` names the default reviewers.
 - Default workflow permissions stay read-only; the Conventions workflow asks for its own.
+
+## Lists of thanks
+
+A maintainer may commit a change to nothing but `ACKNOWLEDGMENTS.md` and `SPONSORS.md` to `main` directly, without a PR ([rules/git.md](rules/git.md)). The daily update of the sponsors on GitHub still comes as a PR ([Sponsors](#sponsors)).
+
+1. **Once:** in `protect-main`, **Bypass list → Add bypass → Repository admin**, set to **Always allow**, and **Save changes**. Or with `gh`, in a checkout; 5 is the ID of the Repository admin role, so check afterwards that the ruleset's page lists it:
+
+   ```bash
+   id=$(gh api 'repos/{owner}/{repo}/rulesets' --jq '.[] | select(.name == "protect-main") | .id')
+   gh api "repos/{owner}/{repo}/rulesets/$id" \
+     --jq '{name, target, enforcement, conditions, rules, bypass_actors: [{actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always"}]}' |
+     gh api -X PUT "repos/{owner}/{repo}/rulesets/$id" --input -
+   ```
+
+2. To check a change first, make it in a checkout of `main` and run `npx vitest run server/src/thanks.test.ts`, which names each line that breaks the rules ([development.md](development.md#acknowledgments)).
+3. On GitHub, open the file on `main`, edit it, and **Commit changes...** with the message `docs: <summary>`, such as `docs: thank a sponsor`: in English, with no version or `(#N)`. Choose **Commit directly to the `main` branch** and tick the box that bypasses the rules. The local `pre-push` hook refuses every push to `main`, so these commits are made on GitHub.
+
+A list that breaks the rules doesn't stop the server: a copy in `CONTENT_DIR` that breaks them leaves the one that the build bundled on the home page, and the log says why (`thanks_list_skipped`). On `main`, the `Tests` and `Lowest Node` checks fail; fix the list with another commit. Any other commit without ` (#N)`, of another file, of another type or with a version, fails `Landed commits and release`, so a change that skipped its PR shows at once. The bypass lets admins past every rule of the ruleset, so use it for the lists alone.
 
 ## Sponsors
 

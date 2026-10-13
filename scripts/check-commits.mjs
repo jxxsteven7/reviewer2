@@ -34,6 +34,10 @@
 // major (X+1, Y=Z=0) version is legal. A pull request that changes only docs for people
 // (UNVERSIONED_RE) takes no version, nor does its squash commit on main.
 //
+// A commit on main without the " (#N)" of a squash merge came without a pull request. Only a
+// maintainer's commit of the lists of thanks alone (LISTS_RE) may, titled "docs: <summary>" with
+// no version, and `head` reports any other.
+//
 // Exit codes: 0 pass, 1 convention violated, 2 usage or environment error.
 
 import { spawnSync } from 'node:child_process';
@@ -60,6 +64,8 @@ const TAG_RE = /^v(\d+)\.(\d+)\.(\d+)$/;
 // without a version. The rules, the licenses and everything else take one.
 const UNVERSIONED_RE =
   /^(?:ACKNOWLEDGMENTS\.md|SPONSORS\.md|README\.md|README\.zh-CN\.md|CONTRIBUTING\.md|docs\/(?!rules\/).+)$/;
+// The lists of thanks, which a maintainer may commit to main without a pull request.
+const LISTS_RE = /^(?:ACKNOWLEDGMENTS\.md|SPONSORS\.md)$/;
 // A fixup of a fixup commit stacks the prefixes: "fixup! fixup! <subject>".
 const FIXUP_RE = /^((fixup|squash|amend)! )+/;
 const PRINTABLE_ASCII_RE = /^[\x20-\x7e]+$/;
@@ -285,6 +291,25 @@ export function checkIdentity(commit, where) {
       ? [problem(where, 'identity', `the ${role}, ${name} <${email}>, is an AI agent; commit as yourself`)]
       : [],
   );
+}
+
+// A commit on main that came without a pull request, with the files it changes: only the lists of
+// thanks, titled "docs: <summary>" with no version. The other rules of a subject are checkMessage's.
+export function checkDirect(subject, files, where) {
+  const problems = [];
+  const add = (rule, detail) => problems.push(problem(where, rule, detail));
+  const others = files.filter((file) => !LISTS_RE.test(file));
+  if (!files.length || others.length) {
+    const changed = others.length ? `, not ${others.join(', ')}` : '';
+    add('direct', `without a pull request, a commit may change only ACKNOWLEDGMENTS.md and SPONSORS.md${changed}`);
+  }
+  const [version, rest] = splitVersion(subject);
+  if (version) add('version', 'a commit without a pull request carries no version');
+  const typed = rest.match(TYPE_RE);
+  if (typed && typed[1] !== 'docs') {
+    add('direct', `a commit without a pull request has the type docs, not ${typed[1]}`);
+  }
+  return problems;
 }
 
 export function checkSuccessor(version, previous, where) {
@@ -546,12 +571,17 @@ function modeHead(options) {
     const where = commit.sha.slice(0, 7);
     const cleaned = cleanMessage(commit.message, { mode: 'verbatim' });
     const [subject, ...body] = cleaned.split('\n');
-    const message = [subject.replace(PR_NUMBER_RE, ''), ...body].join('\n');
-    const unversioned = commit.parents.length > 0 && isUnversioned(changedFiles(commit.parents[0], commit.sha));
-    problems.push(...checkMessage(message, where, { version: unversioned ? 'none' : 'required' }));
-    const [version] = splitVersion(subject);
-    if (version && !unversioned && commit.parents.length) {
-      problems.push(...checkSuccessor(version, previousVersion(commit.parents[0]), where));
+    const files = commit.parents.length > 0 ? changedFiles(commit.parents[0], commit.sha) : [];
+    if (PR_NUMBER_RE.test(subject)) {
+      const message = [subject.replace(PR_NUMBER_RE, ''), ...body].join('\n');
+      const unversioned = isUnversioned(files);
+      problems.push(...checkMessage(message, where, { version: unversioned ? 'none' : 'required' }));
+      const [version] = splitVersion(subject);
+      if (version && !unversioned && commit.parents.length) {
+        problems.push(...checkSuccessor(version, previousVersion(commit.parents[0]), where));
+      }
+    } else {
+      problems.push(...checkDirect(subject, files, where), ...checkMessage(cleaned, where, { version: 'optional' }));
     }
     problems.push(...checkIdentity(commit, where));
   }

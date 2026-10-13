@@ -1,6 +1,6 @@
 # Code review
 
-Someone other than the author approves every change before it is merged, whether by people or by AI, docs and word lists alike. The one exception is a maintainer's own PR that changes only [docs for people](versioning.md#docs-for-people), which merges once the checks pass.
+Someone other than the author approves every change before it is merged, whether by people or by AI, docs and word lists alike. The exceptions are a maintainer's own PR that changes only [docs for people](versioning.md#docs-for-people), which merges once the checks pass, and a maintainer's commit of the lists of thanks, which goes to `main` without a PR and is checked there ([git.md](git.md)).
 
 ## Rules
 

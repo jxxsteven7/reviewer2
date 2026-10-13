@@ -115,7 +115,7 @@ DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>         # 
 
 ## Acknowledgments
 
-`ACKNOWLEDGMENTS.md` is the list of thanks, which the home page shows ([architecture.md](architecture.md#lists-of-thanks)). `feedback adopt` and `acknowledgments add` print an entry for it and the section to put it in: replace `<what they did>` with a few words, add the line and open a PR. The sections are `## Helpful discussions`, `## Data` and `## Pilot study`, after the introduction; an entry is one line:
+`ACKNOWLEDGMENTS.md` is the list of thanks, which the home page shows ([architecture.md](architecture.md#lists-of-thanks)). `feedback adopt` and `acknowledgments add` print an entry for it and the section to put it in: replace `<what they did>` with a few words, add the line and open a PR, or, as a maintainer, commit it to `main` ([maintainers.md](maintainers.md#lists-of-thanks)). The sections are `## Helpful discussions`, `## Data` and `## Pilot study`, after the introduction; an entry is one line:
 
 ```markdown
 - [Alice](https://alice.example) — suggested public rooms (#40)

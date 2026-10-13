@@ -8,9 +8,12 @@
 # missing or stale, and only keeps a minor or major version that a maintainer chose. A PR that
 # changes only docs for people takes no version (docs/rules/versioning.md), and loses one it has.
 # The job can't retitle a PR from a fork, so there it fails and prints the title to use.
-# On a push to main: the commits that just landed. Every new minor or major version on main gets
-# a tag and a GitHub Release, including one that an earlier run missed. Then the open PRs get
-# their versions refreshed, because every merge moves the next number on.
+# On a push to main: the commits that just landed. One without the " (#N)" of a squash merge came
+# without a pull request, which only a maintainer's commit of nothing but the lists of thanks,
+# ACKNOWLEDGMENTS.md and SPONSORS.md, may do (docs/rules/git.md); any other fails. Every new minor
+# or major version on main gets a tag and a GitHub Release, including one that an earlier run
+# missed. Then the open PRs get their versions refreshed, because every merge moves the next
+# number on.
 #
 # PR metadata reaches the scripts only through `env:`. Never interpolate `github.event.*` into a
 # `run:` script, which would allow script injection.
