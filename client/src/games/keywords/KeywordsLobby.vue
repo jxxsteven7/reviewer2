@@ -36,7 +36,8 @@ import { useKeywords } from './useKeywords';
 // students, the spectators and the screens, the room's settings, and the chair's desk with the
 // word lists, the chair's own words, the settings, the shuffle and the start button.
 //
-// In a match, the match's table comes first, or its final ranking once it is over. When the server
+// In a match, the match's table comes first, or its final ranking once it is over, and while the
+// match has locked the settings the chair sees the rules under their desk. When the server
 // draws the groups as the game starts, the players are one list rather than two groups; when the
 // groups are fixed, everyone is offered the seats of their own group only. The word lists and the
 // settings stay as they are once a game of the match has counted.
@@ -165,165 +166,173 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
     <MatchResults v-if="finished" :room="room" />
 
     <div class="sections">
-      <MatchTable v-if="match && !finished" :room="room" />
+      <div class="column">
+        <MatchTable v-if="match && !finished" :room="room" />
 
-      <section v-if="lineup === 'draw'" class="pool">
-        <h2 class="section-title">{{ t('match.drawn') }}</h2>
-        <ul v-if="pool.length" class="names inline">
-          <li v-for="player in pool" :key="player.id">
-            <PlayerName
-              :player="player"
-              :me="isMe(player)"
-              :chair="isChairOf(player)"
-              :manageable="manageable(player)"
-              @manage="managing = $event"
-            />
-          </li>
-        </ul>
-        <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
-        <UiButton v-if="mySeat?.role === 'spectator'" size="small" @click="joinPool">{{ t('match.play') }}</UiButton>
-        <p class="hint">{{ t('match.drawnNote') }}</p>
-      </section>
-
-      <div v-else class="groups">
-        <section v-for="group in groups" :key="group.team" class="group" :class="group.team">
-          <h2 class="section-title">{{ t(`lobby.group.${group.team}`) }}</h2>
-          <dl>
-            <dt>{{ t('lobby.roles.captain') }}</dt>
-            <dd class="seat-line">
+        <section v-if="lineup === 'draw'" class="pool">
+          <h2 class="section-title">{{ t('match.drawn') }}</h2>
+          <ul v-if="pool.length" class="names inline">
+            <li v-for="player in pool" :key="player.id">
               <PlayerName
-                v-if="group.captain"
-                :player="group.captain"
-                :me="isMe(group.captain)"
-                :chair="isChairOf(group.captain)"
-                :manageable="manageable(group.captain)"
+                :player="player"
+                :me="isMe(player)"
+                :chair="isChairOf(player)"
+                :manageable="manageable(player)"
                 @manage="managing = $event"
               />
-              <span v-else class="vacant">{{ t('lobby.vacant') }}</span>
-              <UiButton v-if="!group.captain && mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
-                {{ t('lobby.takeCaptain') }}
-              </UiButton>
-            </dd>
-            <dt>{{ t('lobby.roles.guesser') }}</dt>
-            <dd>
-              <ul v-if="group.guessers.length" class="names">
-                <li v-for="player in group.guessers" :key="player.id">
-                  <PlayerName
-                    :player="player"
-                    :me="isMe(player)"
-                    :chair="isChairOf(player)"
-                    :manageable="manageable(player)"
-                    @manage="managing = $event"
-                  />
-                </li>
-              </ul>
-              <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
-              <UiButton
-                v-if="!(mySeat?.team === group.team && mySeat.role === 'guesser') && mayTake(group.team)"
-                size="small"
-                @click="sit(group.team, 'guesser')"
-              >
-                {{ t('lobby.joinAsGuesser') }}
-              </UiButton>
-            </dd>
-          </dl>
+            </li>
+          </ul>
+          <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
+          <UiButton v-if="mySeat?.role === 'spectator'" size="small" @click="joinPool">{{ t('match.play') }}</UiButton>
+          <p class="hint">{{ t('match.drawnNote') }}</p>
+        </section>
+
+        <div v-else class="groups">
+          <section v-for="group in groups" :key="group.team" class="group" :class="group.team">
+            <h2 class="section-title">{{ t(`lobby.group.${group.team}`) }}</h2>
+            <dl>
+              <dt>{{ t('lobby.roles.captain') }}</dt>
+              <dd class="seat-line">
+                <PlayerName
+                  v-if="group.captain"
+                  :player="group.captain"
+                  :me="isMe(group.captain)"
+                  :chair="isChairOf(group.captain)"
+                  :manageable="manageable(group.captain)"
+                  @manage="managing = $event"
+                />
+                <span v-else class="vacant">{{ t('lobby.vacant') }}</span>
+                <UiButton v-if="!group.captain && mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
+                  {{ t('lobby.takeCaptain') }}
+                </UiButton>
+              </dd>
+              <dt>{{ t('lobby.roles.guesser') }}</dt>
+              <dd>
+                <ul v-if="group.guessers.length" class="names">
+                  <li v-for="player in group.guessers" :key="player.id">
+                    <PlayerName
+                      :player="player"
+                      :me="isMe(player)"
+                      :chair="isChairOf(player)"
+                      :manageable="manageable(player)"
+                      @manage="managing = $event"
+                    />
+                  </li>
+                </ul>
+                <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
+                <UiButton
+                  v-if="!(mySeat?.team === group.team && mySeat.role === 'guesser') && mayTake(group.team)"
+                  size="small"
+                  @click="sit(group.team, 'guesser')"
+                >
+                  {{ t('lobby.joinAsGuesser') }}
+                </UiButton>
+              </dd>
+            </dl>
+          </section>
+        </div>
+
+        <section class="spectators">
+          <h2 class="section-title">{{ t('lobby.roles.spectator') }}</h2>
+          <ul v-if="spectators.length" class="names inline">
+            <li v-for="player in spectators" :key="player.id">
+              <PlayerName
+                :player="player"
+                :me="isMe(player)"
+                :chair="isChairOf(player)"
+                :manageable="manageable(player)"
+                @manage="managing = $event"
+              />
+            </li>
+          </ul>
+          <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
+          <UiButton v-if="mySeat?.role !== 'spectator'" size="small" @click="sit(null, 'spectator')">
+            {{ t('lobby.watch') }}
+          </UiButton>
+          <p v-if="room.screens > 0" class="screens">
+            {{ t('lobby.screens', { count: room.screens }) }}
+            <UiButton v-if="isChair" size="small" variant="quiet" @click="act('room:dismiss')">
+              {{ t('lobby.dismissScreens') }}
+            </UiButton>
+          </p>
+        </section>
+
+        <p class="footnote">
+          {{ lineup === 'fixed' ? t('match.fixedNote') : t('lobby.captainNote') }}
+        </p>
+      </div>
+      <div class="column">
+        <section v-if="isChair && !finished" class="desk">
+          <h2 class="section-title">{{ t('lobby.desk') }}</h2>
+          <p v-if="locked" class="hint">{{ t('match.locked') }}</p>
+          <template v-else>
+            <h3 class="label">{{ t('lobby.fields') }}</h3>
+            <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
+            <FieldPicker
+              v-else
+              v-model="chosenFields"
+              :fields="fields"
+              :language="room.language"
+              :needed="BOARD_SIZE"
+            />
+            <h3 class="label">
+              <label for="custom-words">{{ t('settings.customWords') }}</label>
+            </h3>
+            <p v-if="room.public" class="hint">{{ t(errorKey('custom_words_private')) }}</p>
+            <template v-else>
+              <textarea
+                id="custom-words"
+                v-model="wordsText"
+                class="words"
+                rows="4"
+                :maxlength="MAX_CUSTOM_INPUT"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+              ></textarea>
+              <p v-if="words.tooLong.length" class="problem">
+                {{ t('settings.customWordsTooLong', { words: tooLong }) }}
+              </p>
+              <p v-if="words.tooMany" class="problem">{{ t('settings.customWordsTooMany') }}</p>
+              <p class="hint">
+                {{ t('settings.customWordsCount', { count: words.words.length }, words.words.length) }} &middot;
+                {{ t('settings.customWordsHint') }}
+              </p>
+            </template>
+            <h3 class="label">{{ t('settings.title') }}</h3>
+            <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
+          </template>
+          <div v-if="unsaved" class="save">
+            <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
+            <p class="hint">{{ t('lobby.saveHint') }}</p>
+          </div>
+          <ul class="problems">
+            <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
+            <li v-if="!problems.length" class="ready">{{ t('lobby.ready') }}</li>
+          </ul>
+          <p v-if="lineup === 'free'" class="hint shuffle-hint">{{ t('lobby.shuffleHint') }}</p>
+          <div class="desk-actions">
+            <UiButton v-if="lineup === 'free'" @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
+            <UiButton
+              variant="primary"
+              :disabled="problems.length > 0 || starting || (unsaved && !savable)"
+              @click="start"
+            >
+              {{ t('lobby.start') }}
+            </UiButton>
+          </div>
+        </section>
+        <section v-if="!isChair || locked" class="rules">
+          <h2 class="section-title">{{ t('settings.title') }}</h2>
+          <SettingsSummary :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
+        </section>
+        <section v-if="!isChair && !finished" class="waiting">
+          <ul class="problems">
+            <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
+          </ul>
+          <p>{{ t('lobby.waiting') }}</p>
         </section>
       </div>
-
-      <section class="spectators">
-        <h2 class="section-title">{{ t('lobby.roles.spectator') }}</h2>
-        <ul v-if="spectators.length" class="names inline">
-          <li v-for="player in spectators" :key="player.id">
-            <PlayerName
-              :player="player"
-              :me="isMe(player)"
-              :chair="isChairOf(player)"
-              :manageable="manageable(player)"
-              @manage="managing = $event"
-            />
-          </li>
-        </ul>
-        <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
-        <UiButton v-if="mySeat?.role !== 'spectator'" size="small" @click="sit(null, 'spectator')">
-          {{ t('lobby.watch') }}
-        </UiButton>
-        <p v-if="room.screens > 0" class="screens">
-          {{ t('lobby.screens', { count: room.screens }) }}
-          <UiButton v-if="isChair" size="small" variant="quiet" @click="act('room:dismiss')">
-            {{ t('lobby.dismissScreens') }}
-          </UiButton>
-        </p>
-      </section>
-
-      <p class="footnote">
-        {{ lineup === 'fixed' ? t('match.fixedNote') : t('lobby.captainNote') }}
-      </p>
-
-      <section v-if="!isChair || locked" class="rules">
-        <h2 class="section-title">{{ t('settings.title') }}</h2>
-        <SettingsSummary :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
-      </section>
-
-      <section v-if="isChair && !finished" class="desk">
-        <h2 class="section-title">{{ t('lobby.desk') }}</h2>
-        <p v-if="locked" class="hint">{{ t('match.locked') }}</p>
-        <template v-else>
-          <h3 class="label">{{ t('lobby.fields') }}</h3>
-          <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
-          <FieldPicker v-else v-model="chosenFields" :fields="fields" :language="room.language" :needed="BOARD_SIZE" />
-          <h3 class="label">
-            <label for="custom-words">{{ t('settings.customWords') }}</label>
-          </h3>
-          <p v-if="room.public" class="hint">{{ t(errorKey('custom_words_private')) }}</p>
-          <template v-else>
-            <textarea
-              id="custom-words"
-              v-model="wordsText"
-              class="words"
-              rows="4"
-              :maxlength="MAX_CUSTOM_INPUT"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-            ></textarea>
-            <p v-if="words.tooLong.length" class="problem">
-              {{ t('settings.customWordsTooLong', { words: tooLong }) }}
-            </p>
-            <p v-if="words.tooMany" class="problem">{{ t('settings.customWordsTooMany') }}</p>
-            <p class="hint">
-              {{ t('settings.customWordsCount', { count: words.words.length }, words.words.length) }} &middot;
-              {{ t('settings.customWordsHint') }}
-            </p>
-          </template>
-          <h3 class="label">{{ t('settings.title') }}</h3>
-          <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
-        </template>
-        <div v-if="unsaved" class="save">
-          <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
-          <p class="hint">{{ t('lobby.saveHint') }}</p>
-        </div>
-        <ul class="problems">
-          <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
-          <li v-if="!problems.length" class="ready">{{ t('lobby.ready') }}</li>
-        </ul>
-        <p v-if="lineup === 'free'" class="hint shuffle-hint">{{ t('lobby.shuffleHint') }}</p>
-        <div class="desk-actions">
-          <UiButton v-if="lineup === 'free'" @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
-          <UiButton
-            variant="primary"
-            :disabled="problems.length > 0 || starting || (unsaved && !savable)"
-            @click="start"
-          >
-            {{ t('lobby.start') }}
-          </UiButton>
-        </div>
-      </section>
-      <section v-else-if="!finished" class="waiting">
-        <ul class="problems">
-          <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
-        </ul>
-        <p>{{ t('lobby.waiting') }}</p>
-      </section>
     </div>
 
     <PlayerMenu :player="managing" :room="room" @close="managing = null" />
@@ -554,55 +563,27 @@ dd .vacant {
   }
 }
 
-/* Two columns: a match's table, the groups (or the pool) and the spectators on the left, the
-   desk, or the rules, on the right. The rows have no gap of their own, so that an empty table
-   row takes no room; the items keep their distance with margins. */
+/* On a phone the sections are one column, the two below being no boxes of their own. */
+.column {
+  display: contents;
+}
+
+/* Two columns: a match's table, the groups (or the pool), the spectators and the footnote on the
+   left; on the right the chair's desk, or the rules, or both while a match has locked the
+   settings, the desk first, in the page's own order, so that the start button is at hand for the
+   eye, the keyboard and a screen reader alike. Each column stacks its sections from the top,
+   whatever the other holds. */
 @media (min-width: 64rem) {
   .sections {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto 1fr;
     gap: 0 var(--space-5);
     align-items: start;
   }
 
-  .sections > * {
-    margin-bottom: var(--space-4);
-  }
-
-  .sections > :deep(.match-table) {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .groups,
-  .pool {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .spectators {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
-  .footnote {
-    grid-column: 1;
-    grid-row: 4;
-  }
-
-  .rules {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-  }
-
-  .waiting {
-    grid-column: 2;
-    grid-row: 4 / span 2;
-  }
-
-  .desk {
-    grid-column: 2;
-    grid-row: 1 / span 5;
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
   }
 }
 </style>

@@ -1,6 +1,16 @@
+import { readFileSync } from 'node:fs';
 import { SPECTATOR, type KeywordsView, type Seat } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { bannerFor } from './banner';
+import { bannerFor, type BannerLine } from './banner';
+
+// The locale files as text: imported, they are compiled for vue-i18n, and their strings are gone.
+interface Locale {
+  banner: { seat: string; spectator: string; lines: Record<BannerLine, string> };
+}
+const locale = (name: string): Locale =>
+  JSON.parse(readFileSync(new URL(`../../locales/${name}.json`, import.meta.url), 'utf8')) as Locale;
+const en = locale('en');
+const zh = locale('zh');
 
 const game = (team: 'red' | 'blue', phase: KeywordsView['phase'], over = false) =>
   ({ team, phase, result: over ? { winner: 'red', reason: 'found' } : null }) as KeywordsView;
@@ -35,5 +45,40 @@ describe('the banner', () => {
       expect(bannerFor(seat, game('red', 'guess', true))).toEqual({ line: 'over', group: null, urgent: false });
       expect(bannerFor(seat, game('red', 'over'), true)).toEqual({ line: 'over', group: null, urgent: false });
     }
+  });
+
+  test('ends a line that waits for someone in an ellipsis, a move in an exclamation mark, and the rest in a full stop', () => {
+    const waiting: BannerLine[] = [
+      'lobby',
+      'studentsGuessing',
+      'piThinking',
+      'otherClue',
+      'otherGuess',
+      'watchClue',
+      'watchGuess',
+    ];
+    const moves: BannerLine[] = ['yourClue', 'yourGuess'];
+    const rest: BannerLine[] = ['lobbyChair', 'over', 'paused'];
+    const lines = (text: Locale) => text.banner.lines;
+    for (const line of waiting) {
+      expect(lines(en)[line]).toMatch(/[^\u2026]\u2026$/);
+      expect(lines(zh)[line]).toMatch(/[^\u2026]\u2026\u2026$/);
+    }
+    for (const line of moves) {
+      expect(lines(en)[line]).toMatch(/!$/);
+      expect(lines(zh)[line]).toMatch(/\uff01$/);
+    }
+    for (const line of rest) {
+      expect(lines(en)[line]).toMatch(/\.$/);
+      expect(lines(zh)[line]).toMatch(/\u3002$/);
+    }
+    expect([...waiting, ...moves, ...rest].sort()).toEqual(Object.keys(lines(en)).sort());
+  });
+
+  test('says who the viewer is, in front of their seat', () => {
+    expect(en.banner.seat).toMatch(/^You: /);
+    expect(en.banner.spectator).toMatch(/^You: /);
+    expect(zh.banner.seat).toMatch(/^\u4f60\u662f\uff1a/);
+    expect(zh.banner.spectator).toMatch(/^\u4f60\u662f\uff1a/);
   });
 });

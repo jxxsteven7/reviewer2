@@ -15,8 +15,10 @@ import {
 } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { computed, defineComponent, h } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { clearMemory, readStored, writeStored } from '../../core/storage';
+import { seenIn } from './chat';
 import { toasts } from '../../core/toast';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
@@ -34,6 +36,7 @@ import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
+import { useChatLine } from './useChatLine';
 
 const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>(async () => ({ ok: true })),
@@ -140,8 +143,31 @@ describe('GroupChat', () => {
   });
   afterEach(() => clearMemory());
 
+  // The chat as the page shows it: the line and its sending are the page's (useChatLine.ts), and
+  // the panel and the button are two chats, one at a time, as on the page.
+  const chatOf = (view: RoomView) =>
+    defineComponent({
+      props: { panel: { type: Boolean, default: false } },
+      setup(props) {
+        const line = useChatLine(computed(() => (view.data as KeywordsRoomData).game ?? null));
+        return () =>
+          h(GroupChat, {
+            key: props.panel ? 'panel' : 'button',
+            room: view,
+            panel: props.panel,
+            draft: line.draft.value,
+            'onUpdate:draft': (draft: string) => (line.draft.value = draft),
+            sending: line.sending.value,
+            onSend: line.say,
+          });
+      },
+    });
+
   test("shows a student the others' new messages, by turn", async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('bob', messages) }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('bob', messages), draft: '', sending: false },
+      global: global(),
+    });
     const entry = wrapper.get('button');
     expect(entry.text()).toContain('Group chat');
     expect(entry.get('.badge').text()).toBe('2');
@@ -156,34 +182,31 @@ describe('GroupChat', () => {
   });
 
   test('lets a student send only a message that passes the check', async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
+    const wrapper = mount(chatOf(room('bob', [])), { global: global() });
     await wrapper.get('button').trigger('click');
     expect(wrapper.text()).toContain('No messages yet.');
-    const input = wrapper.get('input');
+    // The teleport stub renders the sheet anew whenever the line changes, so the input and the
+    // button are looked up again each time.
+    const input = () => wrapper.get('input');
     const sendButton = () => wrapper.get('form button[type="submit"]');
 
     expect(sendButton().attributes('disabled')).toBeDefined();
-    await input.setValue('x'.repeat(201));
+    await input().setValue('x'.repeat(201));
     expect(sendButton().attributes('disabled')).toBeDefined();
     expect(wrapper.text()).toContain('That message is too long.');
 
-    await input.setValue('  the second row  ');
+    await input().setValue('  the second row  ');
     expect(sendButton().attributes('disabled')).toBeUndefined();
     expect(wrapper.get('.hint').text()).toBe('14/200');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(send).toHaveBeenCalledWith('keywords:say', { gameId: 'g1', text: '  the second row  ' });
-    // The teleport stub renders the sheet anew, so the input is looked up again.
-    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('');
+    expect((input().element as HTMLInputElement).value).toBe('');
     expect(wrapper.get('.hint').text()).toBe('0/200');
   });
 
   test('keeps the input and its focus after sending, so that a phone keeps its keyboard open', async () => {
-    const wrapper = mount(GroupChat, {
-      props: { room: room('bob', []) },
-      global: { plugins: [i18n()] },
-      attachTo: document.body,
-    });
+    const wrapper = mount(chatOf(room('bob', [])), { global: { plugins: [i18n()] }, attachTo: document.body });
     await wrapper.get('button').trigger('click');
     const input = document.body.querySelector<HTMLInputElement>('#chat-text');
     if (!input) throw new Error('no input');
@@ -206,7 +229,7 @@ describe('GroupChat', () => {
     const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
     const later = () => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve));
     send.mockImplementationOnce(later).mockImplementationOnce(later);
-    const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
+    const wrapper = mount(chatOf(room('bob', [])), { global: global() });
     await wrapper.get('button').trigger('click');
     const value = () => (wrapper.get('input').element as HTMLInputElement).value;
 
@@ -227,8 +250,50 @@ describe('GroupChat', () => {
     expect(value()).toBe('second third');
   });
 
+  test('keeps a half-written line, and brings back a refused one, while the sheet is closed', async () => {
+    const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
+    send.mockImplementationOnce(() => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve)));
+    const wrapper = mount(chatOf(room('bob', [])), { global: global() });
+    await wrapper.get('button').trigger('click');
+    await wrapper.get('input').setValue('first');
+    await wrapper.get('form').trigger('submit');
+    await wrapper.get('input').setValue('half a');
+    // The sheet closes, on the board a student wants a look at, and takes the thread with it.
+    await wrapper.get('.close').trigger('click');
+    expect(wrapper.find('input').exists()).toBe(false);
+    answers[0]?.({ ok: false, error: 'offline' });
+    await flushPromises();
+    await wrapper.get('button').trigger('click');
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('first half a');
+  });
+
+  test('keeps a message on its way, and brings back a refused one, as the panel gives way to the button', async () => {
+    const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
+    send.mockImplementationOnce(() => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve)));
+    const wrapper = mount(chatOf(room('bob', [])), { props: { panel: true }, global: global() });
+    await wrapper.get('.chat-panel input').setValue('first');
+    await wrapper.get('form').trigger('submit');
+    await wrapper.get('input').setValue('half a');
+    // The page narrows while the message is on its way, as a tablet turns: the panel goes, and the
+    // button and the sheet come, which the student opens. The line is there, and nothing else can
+    // be sent until the answer comes.
+    await wrapper.setProps({ panel: false });
+    expect(wrapper.find('.chat-panel').exists()).toBe(false);
+    await wrapper.get('button').trigger('click');
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('half a');
+    expect(wrapper.get('form button[type="submit"]').attributes('disabled')).toBeDefined();
+    answers[0]?.({ ok: false, error: 'offline' });
+    await flushPromises();
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('first half a');
+    expect(wrapper.get('form button[type="submit"]').attributes('disabled')).toBeUndefined();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   test('lets a PI read the chat but not write in it', async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('ann', messages) }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('ann', messages), draft: '', sending: false },
+      global: global(),
+    });
     await wrapper.get('button').trigger('click');
     expect(wrapper.findAll('.message')).toHaveLength(3);
     expect(wrapper.find('input').exists()).toBe(false);
@@ -236,15 +301,51 @@ describe('GroupChat', () => {
   });
 
   test('closes the input once the game is over', async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('bob', messages, 'over') }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('bob', messages, 'over'), draft: '', sending: false },
+      global: global(),
+    });
     await wrapper.get('button').trigger('click');
     expect(wrapper.find('input').exists()).toBe(false);
     expect(wrapper.text()).toContain('The game is over');
   });
 
   test('offers nothing to someone without a chat, such as a spectator', () => {
-    const wrapper = mount(GroupChat, { props: { room: room('eve') }, global: global() });
+    const wrapper = mount(GroupChat, { props: { room: room('eve'), draft: '', sending: false }, global: global() });
     expect(wrapper.find('button').exists()).toBe(false);
+  });
+
+  test('stands open beside the board as a panel, where every message counts as read', () => {
+    const wrapper = mount(GroupChat, {
+      props: { room: room('bob', messages), panel: true, draft: '', sending: false },
+      global: global(),
+    });
+    expect(wrapper.find('.open-chat').exists()).toBe(false);
+    expect(wrapper.get('.chat-panel h2').text()).toBe('Chat of the Red group');
+    expect(wrapper.findAll('.turn').map((turn) => turn.get('.turn-title').text())).toEqual(['Turn 1', 'Turn 2']);
+    expect(wrapper.findAll('.message')).toHaveLength(3);
+    expect(wrapper.find('input').exists()).toBe(true);
+    expect(wrapper.find('.badge').exists()).toBe(false);
+    expect(seenIn('g1')).toBe(3);
+  });
+
+  test('lets a PI read the panel but not write in it', () => {
+    const wrapper = mount(GroupChat, {
+      props: { room: room('ann', messages), panel: true, draft: '', sending: false },
+      global: global(),
+    });
+    expect(wrapper.findAll('.chat-panel .message')).toHaveLength(3);
+    expect(wrapper.find('input').exists()).toBe(false);
+    expect(wrapper.text()).toContain('the clue is all a PI may say');
+  });
+
+  test('shows a spectator no panel', () => {
+    const wrapper = mount(GroupChat, {
+      props: { room: room('eve'), panel: true, draft: '', sending: false },
+      global: global(),
+    });
+    expect(wrapper.find('.chat-panel').exists()).toBe(false);
+    expect(wrapper.text()).toBe('');
   });
 });
 
@@ -254,13 +355,14 @@ describe('RoleBanner', () => {
   test("stands out on the viewer's move, and says so in the tab's title for as long as it lasts", async () => {
     document.title = 'Reviewer 2';
     const wrapper = mount(RoleBanner, { props: { seat: seats.bob as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('Red group · Student');
+    expect(wrapper.find('.who').text()).toBe('You: Red group · Student');
     expect(wrapper.find('.line').text()).toBe('Your turn to guess!');
     expect(wrapper.classes()).toEqual(expect.arrayContaining(['red', 'urgent']));
     expect(document.title).toBe('Your turn!');
 
     await wrapper.setProps({ game: { ...game, phase: 'clue' } });
-    expect(wrapper.find('.line').text()).toBe('Your PI is thinking of a clue.');
+    expect(wrapper.find('.line').text()).toBe('Your PI is thinking of a clue\u2026');
+    expect(wrapper.find('.line .dots').text()).toBe('\u2026');
     expect(wrapper.classes()).not.toContain('urgent');
     expect(document.title).toBe('Reviewer 2');
 
@@ -272,8 +374,8 @@ describe('RoleBanner', () => {
 
   test('tells a spectator who is doing what', () => {
     const wrapper = mount(RoleBanner, { props: { seat: seats.eve as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('Spectator');
-    expect(wrapper.find('.line').text()).toBe('The Red group is guessing.');
+    expect(wrapper.find('.who').text()).toBe('You: Spectator');
+    expect(wrapper.find('.line').text()).toBe('The Red group is guessing\u2026');
     expect(wrapper.classes()).toEqual(['role-banner', 'spectator']);
   });
 
@@ -285,7 +387,7 @@ describe('RoleBanner', () => {
     });
     const live = wrapper.findAll('[aria-live]');
     expect(live).toHaveLength(1);
-    expect(live[0]?.find('.line').text()).toBe('The Red group is guessing.');
+    expect(live[0]?.find('.line').text()).toBe('The Red group is guessing\u2026');
     expect(live[0]?.find('button').exists()).toBe(false);
     expect(wrapper.find('button').text()).toBe('React (9)');
   });
@@ -389,6 +491,25 @@ describe('KeywordsCard', () => {
     });
     expect(wrapper.find('.choosers').exists()).toBe(false);
     expect(wrapper.get('button').classes()).toContain('selected');
+  });
+
+  test('labels an irrelevant paper N/A in its corner, and Irrelevant to a screen reader', () => {
+    const wrapper = mount(KeywordsCard, {
+      props: {
+        card: { ...card, color: 'neutral', revealed: true },
+        index: 3,
+        selectable: false,
+        selected: false,
+        choosers: [],
+      },
+      // The board's lang is the words', as in a replay of a Chinese game seen in English.
+      attrs: { lang: 'zh-CN' },
+      global: global(),
+    });
+    expect(wrapper.get('.tag').text()).toBe('N/A');
+    // The label's own lang is the interface's, which sets its size.
+    expect(wrapper.get('.tag').attributes('lang')).toBe('en');
+    expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, Irrelevant');
   });
 
   test("stays readable, but out of the Tab order and inert, when it can't be chosen", async () => {
@@ -1468,6 +1589,40 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.letter .verdict').map((verdict) => verdict.text())).toEqual(['Accept (Oral)', 'Reject']);
   });
 
+  test("folds a match's table under the board to a line with the progress and the viewer's standing", () => {
+    const view = room('bob');
+    const line = (playerId: string, total: number, rank: number | null): StandingView => ({
+      playerId,
+      name: playerId,
+      total,
+      delta: null,
+      games: rank === null ? 0 : 1,
+      rank,
+      left: false,
+    });
+    const match: RoomView['match'] = {
+      id: 'm1',
+      rules: { games: 3, teams: 'fixed', grouping: 'choose' },
+      played: 1,
+      status: 'on',
+      game: 2,
+      standings: [line('ann', 4, 1), line('bob', 1, 2), line('dan', -1, 3), line('eve', 0, null)],
+    };
+    const game = (me: string) => mount(KeywordsGame, { props: { room: { ...view, me, match } }, global: global() });
+    const fold = (me: string) => game(me).get('.match-fold summary');
+    // One point is "1 point", and so is minus one.
+    expect(fold('bob').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 2 \u00b7 1 point');
+    expect(fold('dan').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 3 \u00b7 \u22121 point');
+    expect(fold('ann').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 1 \u00b7 4 points');
+    // Someone without a scored game yet sees the progress alone.
+    expect(fold('eve').text()).toBe('Match progress \u00b7 Game 2 of 3');
+    // The chair's button to end the match stands among the tools, in sight, not in the fold.
+    const chair = game('ann');
+    expect(chair.find('.match-fold .end-match').exists()).toBe(false);
+    expect(chair.get('.tools .end-match').text()).toBe('End the match');
+    expect(game('bob').find('.end-match').exists()).toBe(false);
+  });
+
   test('says between the games where the points came from, and reads a detail without irrelevant papers as none', () => {
     const view = room('bob');
     const data = view.data as KeywordsRoomData;
@@ -1513,7 +1668,11 @@ describe('KeywordsGame', () => {
   test('renders the group chat once, and keeps it after the game', async () => {
     const view = room('bob', []);
     const wrapper = mount(KeywordsGame, { props: { room: view }, global: global() });
-    expect(wrapper.findAll('.who-row button')).toHaveLength(1);
+    // The test's window is as wide as the three columns, which the page finds out once mounted:
+    // the chat is then the panel beside the board, and there is no button under it.
+    await flushPromises();
+    expect(wrapper.findAll('.chat-panel')).toHaveLength(1);
+    expect(wrapper.findAll('.open-chat')).toHaveLength(0);
     expect(wrapper.text()).toContain('Only the PIs see the colors of hidden cards.');
 
     const data = view.data as KeywordsRoomData;
@@ -1524,7 +1683,7 @@ describe('KeywordsGame', () => {
         data: { ...data, game: { ...game, phase: 'over', result: { winner: 'red', reason: 'found' } } },
       },
     });
-    expect(wrapper.findAll('.who-row button')).toHaveLength(1);
+    expect(wrapper.findAll('.chat-panel')).toHaveLength(1);
     expect(wrapper.find('.letter .verdict').text()).toBe('Accept (Oral)');
     expect(wrapper.text()).not.toContain('Only the PIs see the colors of hidden cards.');
   });
