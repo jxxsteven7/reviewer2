@@ -74,13 +74,23 @@ export interface CardView {
 // and `count` are null. `timedOut` marks a turn that ended because its time ran out, before the
 // clue or during the guesses. Each guess names the player who revealed the card, by player ID,
 // which a match scores.
+//
+// `captain` is the player who gave the clue, and `targets` the cards that they marked as the ones
+// the clue was meant for, if they marked any (docs/games/keywords.md#the-clue). The targets are
+// the captain's secret until the game is over: no view carries them before then, the captain's
+// own included. `at`, on the clue and on each guess, is when it came, in milliseconds from the
+// start of the game; for a turn without a clue, when its time ran out. Replays from before these
+// were kept have none of them.
 export interface ClueRecord {
   turn: number;
   team: Team;
   word: string | null;
   count: ClueCount | null;
-  guesses: { card: number; color: CardColor; player: string }[];
+  guesses: { card: number; color: CardColor; player: string; at?: number }[];
   timedOut?: true;
+  captain?: string;
+  targets?: number[];
+  at?: number;
 }
 
 // What happened in a game besides the clues and the guesses, for the clue log: the chair paused
@@ -166,6 +176,7 @@ export const KEYWORDS_ERRORS = [
   'clue_too_long',
   'clue_on_board',
   'bad_count',
+  'bad_targets',
   'chat_empty',
   'chat_too_long',
   'not_chair',

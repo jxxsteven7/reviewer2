@@ -14,8 +14,9 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 // What accounts keep of the games: a row for each game that a player with an account finished in
 // a seat (migration 2), a row for each match that they finished ranked, and the titles that
 // matches award (migration 3, docs/architecture.md#matches), the games themselves to watch again
-// (migration 7, docs/architecture.md#replays), and the streaks of wins and of losses that the
-// games make (migration 10, docs/architecture.md#streaks).
+// (migration 7, docs/architecture.md#replays), the streaks of wins and of losses that the games
+// make (migration 10, docs/architecture.md#streaks), and the log of each game kept and which of
+// its players had which account (migration 12, docs/architecture.md#game-records).
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
 // points it brought them (migration 8), scored as a match scores a game.
@@ -207,23 +208,34 @@ export class TitleStore {
   }
 }
 
-// A finished game to watch again, as the game module gave it (GameModule.replay()), kept as JSON
-// once for each game, however often the end of the game is reported.
+// A finished game to keep, once for each game, however often the end of the game is reported: the
+// replay, as the game module gave it (GameModule.replay()), kept as JSON; the log of everything
+// that happened in it, or null when it grew too long to keep; and which player, by the ID they had
+// in the room, was which account.
 export interface NewReplay {
   game: string;
   gameId: string;
   replay: unknown;
+  log?: unknown;
+  players?: readonly { playerId: string; accountId: number }[];
 }
 
 export class ReplayStore {
   readonly #insert: StatementSync;
+  readonly #player: StatementSync;
   readonly #read: StatementSync;
 
   constructor(
     db: DatabaseSync,
     private readonly now: () => number = () => Date.now(),
   ) {
-    this.#insert = db.prepare('INSERT OR IGNORE INTO replays (game_id, game, ended_at, data) VALUES (?, ?, ?, ?)');
+    this.#insert = db.prepare(
+      'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log) VALUES (?, ?, ?, ?, ?)',
+    );
+    // An account that is gone by now, deleted while the game was on, is left out.
+    this.#player = db.prepare(
+      'INSERT OR IGNORE INTO game_players (game_id, player_id, account_id) SELECT ?, ?, id FROM accounts WHERE id = ?',
+    );
     // Only an account that has the game on its record may read it.
     this.#read = db.prepare(
       'SELECT data FROM replays WHERE game_id = ? AND ' +
@@ -231,11 +243,15 @@ export class ReplayStore {
     );
   }
 
-  // Keeps the replay, as `data`, which the caller has made into JSON of a size it allows, and
-  // says whether it was new.
-  add({ game, gameId }: NewReplay, data: string): boolean {
+  // Keeps the replay, as `data`, which the caller has made into JSON of a size it allows, with its
+  // log as JSON, if any, and which player was which account, and says whether it was new. A game
+  // that is kept already keeps what it had. The caller runs this in one transaction.
+  add({ game, gameId, log = null, players = [] }: NewReplay, data: string): boolean {
     const endedAt = new Date(this.now()).toISOString();
-    return Number(this.#insert.run(gameId, game, endedAt, data).changes) > 0;
+    const logged = log === null ? null : JSON.stringify(log);
+    const added = Number(this.#insert.run(gameId, game, endedAt, data, logged).changes) > 0;
+    if (added) for (const { playerId, accountId } of players) this.#player.run(gameId, playerId, accountId);
+    return added;
   }
 
   // The replay of a game, for an account that played in it, or null.

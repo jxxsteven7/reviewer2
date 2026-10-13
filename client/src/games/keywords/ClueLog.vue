@@ -2,13 +2,15 @@
 import { otherTeam, type ClueRecord, type GameEvent, type KeywordsView } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { formatList } from '../../core/i18n';
 
 // Every clue so far, newest first, with the cards revealed after it, like a list of references. A
 // turn whose time ran out says so: before the clue, it has none. A pause, its end and an
 // extension are noted in short under the turn they came in, which may have no clue yet. During a
-// pause there is no board, so a revealed card shows its color alone.
+// pause there is no board, so a revealed card shows its color alone. Once the game is over, a clue
+// whose PI marked the cards it was meant for names them, and how many of them the group found.
 const props = defineProps<{ game: KeywordsView }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const INFINITY = '\u221e';
 
 const word = (index: number) => props.game.cards[index]?.word ?? '';
@@ -30,6 +32,16 @@ const turns = computed(() => {
 
 // Whose turn a turn without a clue yet is: the starting group plays the odd ones.
 const teamOf = (turn: number) => (turn % 2 === 1 ? props.game.startingTeam : otherTeam(props.game.startingTeam));
+
+// The cards a PI meant with a clue, and how many of them the group revealed in that turn.
+const meant = (record: ClueRecord) => {
+  const targets = record.targets ?? [];
+  const found = targets.filter((card) => record.guesses.some((guess) => guess.card === card)).length;
+  return [
+    t('game.meant', { words: formatList(locale.value, targets.map(word)) }),
+    t('game.meantFound', { found, total: targets.length }),
+  ].join(' \u00b7 ');
+};
 
 const eventText = (event: GameEvent) =>
   t(`game.events.${event.kind}`, { group: event.team ? t(`lobby.group.${event.team}`) : '' });
@@ -54,6 +66,7 @@ const eventText = (event: GameEvent) =>
               <span class="sr">{{ t(`game.card.${guess.color}`) }}</span>
             </span>
           </span>
+          <span v-if="record.targets?.length" class="meant">{{ meant(record) }}</span>
           <span v-if="record.timedOut && record.word !== null" class="timed-out">{{ t('game.timeRanOut') }}</span>
         </template>
         <span v-else class="clue missing">{{ t('game.noClues') }}</span>
@@ -141,8 +154,13 @@ li.blue {
 }
 
 .timed-out,
-.event {
+.event,
+.meant {
   grid-column: 2;
+}
+
+.meant {
+  font-size: var(--text-sm);
 }
 
 .event {

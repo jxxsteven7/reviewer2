@@ -13,7 +13,8 @@ import type { Chooser } from './useKeywords';
 // color is never the only signal; the accessible name says the color in full. The others in the
 // group who have chosen the card hang their avatars on its corner; the card's accessible name says
 // who they are. On a big screen the cards are `large`, with bigger type. A `marked` card, in a
-// replay, is outlined.
+// replay, is outlined. A `target` is one of the cards a PI meant with a clue, numbered in the order
+// they were marked: on the PI's board while they mark them, and for everyone once the game is over.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -23,8 +24,9 @@ const props = withDefaults(
     choosers: Chooser[];
     large?: boolean;
     marked?: boolean;
+    target?: number | null;
   }>(),
-  { large: false, marked: false },
+  { large: false, marked: false, target: null },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t, locale } = useI18n();
@@ -53,6 +55,7 @@ const ariaLabel = computed(() =>
   [
     props.card.word,
     props.card.color ? label.value : t('game.hidden'),
+    ...(props.target !== null ? [t('game.targetOrder', { order: props.target })] : []),
     ...(props.choosers.length ? [t('game.chosenBy', { names: chosenBy.value })] : []),
   ].join(', '),
 );
@@ -68,10 +71,15 @@ const ariaLabel = computed(() =>
   <button
     type="button"
     class="card"
-    :class="[state, card.color, size, { large, selected, selectable, marked, chosen: choosers.length > 0 }]"
+    :class="[
+      state,
+      card.color,
+      size,
+      { large, selected, selectable, marked, targeted: target !== null, chosen: choosers.length > 0 },
+    ]"
     :aria-disabled="selectable ? undefined : 'true'"
     :tabindex="selectable ? undefined : -1"
-    :aria-pressed="selectable ? selected : undefined"
+    :aria-pressed="selectable ? selected || target !== null : undefined"
     :aria-label="ariaLabel"
     @click="selectable && emit('select', index)"
   >
@@ -80,6 +88,7 @@ const ariaLabel = computed(() =>
     <span v-if="card.revealed && card.color === 'reviewer2'" class="stamp" aria-hidden="true">{{
       t('game.stamp')
     }}</span>
+    <span v-if="target !== null" class="target num" aria-hidden="true">{{ target }}</span>
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar v-for="chooser in choosers" :key="chooser.name" :name="chooser.name" :avatar="chooser.avatar" />
     </span>
@@ -290,6 +299,46 @@ const ariaLabel = computed(() =>
   width: 30px;
   height: 30px;
   font-size: 0.9rem;
+}
+
+/* One of the cards a PI meant: a dashed ring, and its place in the order on a round sticker in the
+   top right corner, where the students' avatars hang in their turn. The ring gives way to the
+   focus ring, which the scoped rule would otherwise beat, so that a PI moving by keyboard sees
+   which of the marked cards has the focus; the sticker still says that the card is marked. */
+.targeted {
+  outline: var(--line) dashed var(--ink);
+  outline-offset: 2px;
+}
+
+.targeted:focus-visible {
+  outline: var(--line-strong) solid var(--focus);
+}
+
+.target {
+  position: absolute;
+  top: -9px;
+  right: -7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: var(--line-thin) solid var(--paper);
+  border-radius: 11px;
+  background: var(--ink);
+  box-shadow: var(--shadow-1);
+  color: var(--on-ink);
+  font-size: 12px;
+  font-weight: var(--weight-black);
+  line-height: 1;
+}
+
+.large .target {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  font-size: 15px;
 }
 
 /* The card that a replay's step is about. */

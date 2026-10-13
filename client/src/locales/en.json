@@ -302,6 +302,9 @@
     "clueNumber": "How many cards it points to",
     "unlimited": "No limit",
     "sendClue": "Give the clue",
+    "targetsHint": "Tap your group's cards to mark the ones this clue is for, and the number follows. Nobody sees the marks until the game is over.",
+    "targetsMarked": "Marked: {words}. Everyone sees them after the game.",
+    "quoted": "“{word}”",
     "onBoard": "{word} is on the board. A clue can't be a word on the board, or part of one.",
     "formOnBoard": "{word} is on the board, and this clue repeats a form of it that the word lists give. This room's clue check doesn't allow it.",
     "characterOnBoard": "This clue has a Chinese character in common with {word}, which is on the board. This room's clue check doesn't allow it.",
@@ -312,6 +315,7 @@
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
     "pick": "Tap a card to choose it. Your group sees your choice; reveal it once you agree.",
     "chosenBy": "chosen by {names}",
+    "targetOrder": "marked {order}",
     "reveal": "Reveal “{word}”",
     "endTurn": "End the turn",
     "endTurnConfirm": "End the turn now? Your group reveals no more cards until its next turn.",
@@ -319,6 +323,8 @@
     "noClues": "No clues yet.",
     "noClueInTime": "No clue in time",
     "timeRanOut": "Time ran out",
+    "meant": "Meant: {words}",
+    "meantFound": "{found} of {total} found",
     "groups": "Groups",
     "playFor": "Play for the {group}",
     "watch": "Just watch",
@@ -596,6 +602,7 @@
     "clue_too_long": "That clue is too long.",
     "clue_on_board": "The clue can't be a word on the board, or part of one.",
     "bad_count": "That number isn't allowed under this room's rules.",
+    "bad_targets": "Mark only your group's cards that are still face down, each once.",
     "chat_empty": "Write a message first.",
     "chat_too_long": "That message is too long.",
     "paused": "The game is paused.",
@@ -762,6 +769,7 @@
       "en": "A clue is one word. | A clue has at most {count} words."
     },
     "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
+    "clueTargets": "When giving a clue, the PI may tap cards to mark the ones it is meant for, and the number follows. Nobody sees the marks during the game; afterwards, the clue log and the replay show them.",
     "clueRule": {
       "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a Chinese character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
       "loose": "This room's clue check is loose: other forms of a word on the board, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."

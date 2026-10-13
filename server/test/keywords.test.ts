@@ -538,8 +538,9 @@ describe('the time limits', () => {
     await settle(table);
     expect(board(table.spectator)).toMatchObject({ turn: 2, team: otherTeam(first), phase: 'clue' });
     expect(board(table.spectator).clock).toEqual({ left: 10_000, total: 10_000 });
+    // The record says when the time ran out, from the start of the game.
     expect(board(table.spectator).history).toEqual([
-      { turn: 1, team: first, word: null, count: null, guesses: [], timedOut: true },
+      { turn: 1, team: first, word: null, count: null, guesses: [], timedOut: true, at: 30_000 },
     ]);
 
     // The second group's students run out of time without revealing anything.
@@ -561,6 +562,8 @@ describe('the time limits', () => {
       count: 1,
       guesses: [],
       timedOut: true,
+      captain: table.captains[second].state?.me,
+      at: 30_000,
     });
     // The timer that was set for that turn is gone; the next turn has its own.
     expect(server.timers()).toBe(1);
