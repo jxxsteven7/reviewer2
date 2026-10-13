@@ -9,14 +9,14 @@ import {
 } from './settings';
 
 describe('the settings of a room', () => {
-  test('start with the free and strict rules, one word or four characters, and 90, 60 and 90 seconds', () => {
+  test('start with the free and strict rules, one word or four characters, and 120, 90 and 120 seconds', () => {
     expect(defaultSettings('en')).toEqual({
       guessRule: 'free',
       clueRule: 'strict',
       clueLength: 1,
-      firstClueTime: 90,
-      clueTime: 60,
-      guessTime: 90,
+      firstClueTime: 120,
+      clueTime: 90,
+      guessTime: 120,
       extensions: false,
     });
     expect(defaultSettings('zh').clueLength).toBe(4);

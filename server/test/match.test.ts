@@ -139,7 +139,7 @@ describe('a match', () => {
       ...Object.fromEntries(first.winners.map((client) => [nameOf(client), 3])),
     });
     expect(matchOf(ann)).toMatchObject({ played: 1, game: 1, status: 'on' });
-    expect(matchOf(ann).standings[0]?.detail).toEqual({ found: 0, won: true, wrong: 0, reviewer2: 0 });
+    expect(matchOf(ann).standings[0]?.detail).toEqual({ found: 0, won: true, irrelevant: 0, wrong: 0, reviewer2: 0 });
 
     // The settings stay as they were for the rest of the match.
     await expectOk(ann.send('room:again', { gameId: ann.state?.gameId }));

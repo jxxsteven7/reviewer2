@@ -79,12 +79,14 @@ const matchSummary = computed(() => {
   return parts.join(' \u00b7 ');
 });
 
-// Where a player's points in a game came from, in a few words.
+// Where a player's points in a game came from, in a few words. The detail comes from the server as
+// it is; one without a count of irrelevant papers reads as none.
 function describe(detail: unknown): string {
-  const { found, won, wrong, reviewer2 } = detail as KeywordsScoreDetail;
+  const { found, won, irrelevant = 0, wrong, reviewer2 } = detail as KeywordsScoreDetail;
   return [
     found > 0 ? t('game.scoreDetail.found', { count: found }) : null,
     won ? t('game.scoreDetail.won') : null,
+    irrelevant > 0 ? t('game.scoreDetail.irrelevant', { count: irrelevant }) : null,
     wrong > 0 ? t('game.scoreDetail.wrong', { count: wrong }) : null,
     reviewer2 > 0 ? t('game.scoreDetail.reviewer2') : null,
   ]
