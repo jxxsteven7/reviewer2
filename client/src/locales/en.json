@@ -801,6 +801,8 @@
   },
   "rules": {
     "title": "How to play",
+    "link": "Rules",
+    "defaults": "These are the default settings. Each room can change them; the room's own settings apply.",
     "goalTitle": "The goal",
     "goal": "Two research groups, red and blue, each have keywords hidden among the 25 cards on the board. The group that finds all of its keywords first wins.",
     "rolesTitle": "Roles",
@@ -818,6 +820,8 @@
       "en": "A clue is one word. | A clue has at most {count} words."
     },
     "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
+    "clueSound": "In a Chinese room, don't give a clue that sounds like a word on the board, such as 鸡音 (jīyīn) for 基因 (jīyīn, gene). The game doesn't check this: it's up to everyone to play fair.",
+    "clueQuiet": "While the students guess, neither group's PI may send a quick reaction.",
     "clueTargets": "When giving a clue, the PI may tap cards to mark the ones it is meant for, and the number follows. Nobody sees the marks during the game; afterwards, the clue log and the replay show them.",
     "clueRule": {
       "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a Chinese character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",

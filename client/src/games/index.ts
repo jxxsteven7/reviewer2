@@ -4,19 +4,22 @@ import KeywordsGame from './keywords/KeywordsGame.vue';
 import KeywordsLobby from './keywords/KeywordsLobby.vue';
 import KeywordsScreen from './keywords/KeywordsScreen.vue';
 import ReplayViewer from './keywords/ReplayViewer.vue';
+import RulesSheet from './keywords/RulesSheet.vue';
 import SettingsForm from './keywords/SettingsForm.vue';
 
 // Each game's screens: the waiting room, the game itself (with its result), the view for a big
 // screen, and the replay of a finished game, which takes the replay the server kept. The room page
 // picks them by the room's game. The room setup asks the game for the form of its own settings,
 // which it binds with v-model to the settings and with v-model:valid to whether they will do, and
-// for the settings that the form starts with in a room's language.
+// for the settings that the form starts with in a room's language. The home page shows the rules
+// beside the game's name, as a `link` with the `defaults`, for the settings and the language given.
 export interface GameScreens {
   Lobby: Component;
   Game: Component;
   Screen: Component;
   Replay: Component;
   Settings: Component;
+  Rules: Component;
   defaultSettings(language: Language): object;
 }
 
@@ -27,6 +30,7 @@ export const games: Record<string, GameScreens> = {
     Screen: KeywordsScreen,
     Replay: ReplayViewer,
     Settings: SettingsForm,
+    Rules: RulesSheet,
     defaultSettings,
   },
 };

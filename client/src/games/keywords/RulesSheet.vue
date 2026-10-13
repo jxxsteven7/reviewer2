@@ -8,10 +8,22 @@ import SettingsSummary from './SettingsSummary.vue';
 
 // "How to play", in the rules' own sections, as this room plays them: its guess rule, its clue
 // rule, its time limits and its extensions, with all of its settings at the top, and at the end what
-// becomes of the record of the game (docs/architecture.md#game-records), which guests read here.
-const props = withDefaults(defineProps<{ settings: KeywordsSettings; language: Language; customWords?: number }>(), {
-  customWords: 0,
-});
+// becomes of the record of the game (docs/architecture.md#game-records), which guests read here. A
+// Chinese room also asks for no clue that sounds like a word on the board, which no program checks.
+//
+// In a room it opens from a quiet button. On the home page it opens from a `link`, the small word
+// "Rules" beside the game's name, with the `defaults`, as a new room has them, and a word that each
+// room may change them.
+const props = withDefaults(
+  defineProps<{
+    settings: KeywordsSettings;
+    language: Language;
+    customWords?: number;
+    link?: boolean;
+    defaults?: boolean;
+  }>(),
+  { customWords: 0, link: false, defaults: false },
+);
 const { t } = useI18n();
 const open = ref(false);
 
@@ -37,6 +49,8 @@ const sections = computed(() => [
     text: [
       t(`rules.clue.${props.language}`, { count: props.settings.clueLength }, props.settings.clueLength),
       t('rules.clueCommon'),
+      ...(props.language === 'zh' ? [t('rules.clueSound')] : []),
+      t('rules.clueQuiet'),
       t('rules.clueTargets'),
       t(`rules.clueRule.${props.settings.clueRule}`),
     ],
@@ -48,9 +62,13 @@ const sections = computed(() => [
 </script>
 
 <template>
-  <UiButton variant="quiet" size="small" @click="open = true">{{ t('rules.title') }}</UiButton>
+  <button v-if="link" type="button" class="rules-link" aria-haspopup="dialog" @click="open = true">
+    {{ t('rules.link') }}
+  </button>
+  <UiButton v-else variant="quiet" size="small" @click="open = true">{{ t('rules.title') }}</UiButton>
   <UiSheet :open="open" :title="t('rules.title')" @close="open = false">
     <div class="rules sections">
+      <p v-if="defaults" class="defaults">{{ t('rules.defaults') }}</p>
       <section>
         <h3 class="section-title">{{ t('settings.title') }}</h3>
         <SettingsSummary class="summary" :settings="settings" :language="language" :custom-words="customWords" />
@@ -81,5 +99,41 @@ const sections = computed(() => [
 
 .summary {
   margin-top: var(--space-2);
+}
+
+.rules .defaults {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+
+/* The small word beside the game's name: underlined text in the text font, whose box reaches 44 px
+   high, and wide, out of sight, and which follows the name's last line. */
+.rules-link {
+  position: relative;
+  margin-left: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+
+.rules-link::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 22px) -8px;
 }
 </style>

@@ -1121,6 +1121,44 @@ describe('RulesSheet', () => {
     ]);
   });
 
+  // The lines of the section on clues, once the sheet is open, for a room of this language.
+  const clueLines = async (language: 'zh' | 'en') => {
+    const wrapper = mount(RulesSheet, { props: { settings: STANDARD, language }, global: global() });
+    await wrapper.get('button').trigger('click');
+    const section = wrapper.findAll('.rules section').find((found) => found.get('h3').text() === 'Clues');
+    return section?.findAll('p').map((line) => line.text()) ?? [];
+  };
+
+  test('asks a Chinese room alone for no clue that sounds like a word on the board, and every PI to hold reactions', async () => {
+    const sound = (lines: string[]) => lines.filter((line) => line.startsWith('In a Chinese room'));
+    const zh = await clueLines('zh');
+    expect(sound(zh)).toHaveLength(1);
+    expect(sound(zh)[0]).toContain('\u9e21\u97f3 (j\u012by\u012bn) for \u57fa\u56e0');
+    // Right after the line on what a clue can't be.
+    expect(zh.indexOf(sound(zh)[0] as string)).toBe(2);
+    expect(sound(await clueLines('en'))).toEqual([]);
+    for (const lines of [zh, await clueLines('en')]) {
+      expect(lines).toContain("While the students guess, neither group's PI may send a quick reaction.");
+    }
+  });
+
+  test('opens from a small word on the home page, with the defaults and a word that rooms may change them', async () => {
+    const wrapper = mount(RulesSheet, {
+      props: { settings: STANDARD, language: 'en', link: true, defaults: true },
+      global: global(),
+    });
+    expect(wrapper.get('button.rules-link').text()).toBe('Rules');
+    expect(wrapper.find('.button').exists()).toBe(false);
+    await wrapper.get('button.rules-link').trigger('click');
+    expect(wrapper.get('.rules .defaults').text()).toBe(
+      "These are the default settings. Each room can change them; the room's own settings apply.",
+    );
+    // In a room there is no such word.
+    const room = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
+    await room.get('button').trigger('click');
+    expect(room.find('.rules .defaults').exists()).toBe(false);
+  });
+
   test('ends with what becomes of the record of the game, for everyone who plays, guests included', async () => {
     const wrapper = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
     await wrapper.get('button').trigger('click');

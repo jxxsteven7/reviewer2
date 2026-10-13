@@ -11,7 +11,8 @@ import SendFeedback from '../components/SendFeedback.vue';
 import SponsorsList from '../components/SponsorsList.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
-import { storedLanguage } from '../i18n';
+import { games } from '../../games';
+import { storedLanguage, useLanguage } from '../i18n';
 import BackToRoom from './BackToRoom.vue';
 import CreateRoom from './CreateRoom.vue';
 import JoinRoom from './JoinRoom.vue';
@@ -33,6 +34,9 @@ import PublicRooms from './PublicRooms.vue';
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const chosen = ref(storedLanguage() !== null);
+// The rules of the first game, beside its name, as a new room in the page's language has them.
+const keywords = games.keywords;
+const language = useLanguage();
 const creating = ref(false);
 const tipping = ref(false);
 
@@ -76,7 +80,16 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <ol>
           <li class="entry">
             <div class="line">
-              <span class="title">{{ t('home.games.keywords.name') }}</span>
+              <span class="title"
+                >{{ t('home.games.keywords.name')
+                }}<component
+                  :is="keywords.Rules"
+                  v-if="keywords"
+                  link
+                  defaults
+                  :settings="keywords.defaultSettings(language)"
+                  :language="language"
+              /></span>
               <UiButton v-if="!creating" variant="red" size="large" @click="creating = true">
                 {{ t('home.newRoom') }}
               </UiButton>
