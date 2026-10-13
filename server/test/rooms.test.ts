@@ -1,8 +1,10 @@
+import { resolve } from 'node:path';
 import { CODE_ALPHABET, EMOTE_COOLDOWN_MS, EMOTES, MAX_PLAYERS, MAX_SCREENS } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { GameModule } from '../src/core/game';
 import { seededRng } from '../src/core/random';
 import { DEFAULT_SOCKET_LIMITS } from '../src/core/socket';
+import { loadWordLibrary } from '../src/core/words';
 import type { FakeView } from './fakeGame';
 import { fakeGame } from './fakeGame';
 import {
@@ -678,6 +680,22 @@ describe("the chair's controls", () => {
     expect(await chair.send('room:settings', { fields: ['general', 'tiny', 'general'] })).toEqual({ ok: true });
     await chair.waitFor((state) => state.fields.length === 2);
     expect(chair.state?.fields).toEqual(['general', 'tiny']);
+  });
+
+  test('takes every list of the library at once', async () => {
+    // The library itself, which has more lists than the tests' one.
+    await server.close();
+    const words = loadWordLibrary(resolve(import.meta.dirname, '..', '..', 'words'));
+    server = await startServer({ words });
+    const fields = words.fields().map((field) => field.id);
+    expect(fields.length).toBeGreaterThan(20);
+    const { chair, code } = await room();
+    expect(await chair.send('room:settings', { fields })).toEqual({ ok: true });
+    await chair.waitFor((state) => state.fields.length === fields.length);
+    expect(server.app.rooms.find(code)?.fields).toEqual(fields);
+    const created = await createRoom(server.url, 'Bob', { fields, language: 'zh' });
+    track(created.chair);
+    expect(server.app.rooms.find(created.code)?.fields).toEqual(fields);
   });
 
   test("can change the game's settings in the waiting room, with the fields or without them", async () => {
