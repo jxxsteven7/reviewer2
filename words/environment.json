@@ -1351,6 +1351,867 @@
       "zh": "仿生",
       "en": "Biomimicry",
       "forms": { "en": ["biomimetic"] }
+    },
+    {
+      "id": "r-selection",
+      "zh": "r选择",
+      "en": "r-selection"
+    },
+    {
+      "id": "k-selection",
+      "zh": "K选择",
+      "en": "K-selection"
+    },
+    {
+      "id": "predation",
+      "zh": "捕食",
+      "en": "Predation"
+    },
+    {
+      "id": "parasitism",
+      "zh": "寄生",
+      "en": "Parasitism"
+    },
+    {
+      "id": "amensalism",
+      "zh": "偏害共生",
+      "en": "Amensalism"
+    },
+    {
+      "id": "allelopathy",
+      "zh": "化感作用",
+      "en": "Allelopathy"
+    },
+    {
+      "id": "frugivore",
+      "zh": "食果动物",
+      "en": "Frugivore",
+      "forms": { "en": ["frugivorous"] }
+    },
+    {
+      "id": "detritivore",
+      "zh": "食碎屑动物",
+      "en": "Detritivore"
+    },
+    {
+      "id": "zooxanthellae",
+      "zh": "虫黄藻",
+      "en": "Zooxanthellae"
+    },
+    {
+      "id": "corridor",
+      "zh": "廊道",
+      "en": "Corridor"
+    },
+    {
+      "id": "metapopulation",
+      "zh": "集合种群",
+      "en": "Metapopulation"
+    },
+    {
+      "id": "ecotone",
+      "zh": "生态交错带",
+      "en": "Ecotone"
+    },
+    {
+      "id": "resilience",
+      "zh": "恢复力",
+      "en": "Resilience",
+      "forms": { "en": ["resilient"] }
+    },
+    {
+      "id": "regime-shift",
+      "zh": "稳态转换",
+      "en": "Regime shift"
+    },
+    {
+      "id": "bioindicator",
+      "zh": "指示生物",
+      "en": "Bioindicator"
+    },
+    {
+      "id": "home-range",
+      "zh": "家域",
+      "en": "Home range"
+    },
+    {
+      "id": "life-table",
+      "zh": "生命表",
+      "en": "Life table"
+    },
+    {
+      "id": "age-structure",
+      "zh": "年龄结构",
+      "en": "Age structure"
+    },
+    {
+      "id": "lynx",
+      "zh": "猞猁",
+      "en": "Lynx"
+    },
+    {
+      "id": "lemming",
+      "zh": "旅鼠",
+      "en": "Lemming"
+    },
+    {
+      "id": "refugium",
+      "zh": "避难所",
+      "en": "Refugium",
+      "forms": { "en": ["refugia"] }
+    },
+    {
+      "id": "canopy-gap",
+      "zh": "林窗",
+      "en": "Canopy gap"
+    },
+    {
+      "id": "understory",
+      "zh": "林下层",
+      "en": "Understory",
+      "forms": { "en": ["understorey"] }
+    },
+    {
+      "id": "epiphyte",
+      "zh": "附生植物",
+      "en": "Epiphyte",
+      "forms": { "en": ["epiphytic"] }
+    },
+    {
+      "id": "heterotroph",
+      "zh": "异养生物",
+      "en": "Heterotroph",
+      "forms": { "en": ["heterotrophic"] }
+    },
+    {
+      "id": "chemosynthesis",
+      "zh": "化能合成",
+      "en": "Chemosynthesis"
+    },
+    {
+      "id": "cold-seep",
+      "zh": "冷泉",
+      "en": "Cold seep"
+    },
+    {
+      "id": "phytoplankton",
+      "zh": "浮游植物",
+      "en": "Phytoplankton"
+    },
+    {
+      "id": "zooplankton",
+      "zh": "浮游动物",
+      "en": "Zooplankton"
+    },
+    {
+      "id": "benthos",
+      "zh": "底栖生物",
+      "en": "Benthos",
+      "forms": { "en": ["benthic"] }
+    },
+    {
+      "id": "limnology",
+      "zh": "湖沼学",
+      "en": "Limnology"
+    },
+    {
+      "id": "microcosm",
+      "zh": "微宇宙",
+      "en": "Microcosm"
+    },
+    {
+      "id": "vegetation",
+      "zh": "植被",
+      "en": "Vegetation"
+    },
+    {
+      "id": "taiga",
+      "zh": "泰加林",
+      "en": "Taiga"
+    },
+    {
+      "id": "shrubland",
+      "zh": "灌丛",
+      "en": "Shrubland"
+    },
+    {
+      "id": "meadow",
+      "zh": "草甸",
+      "en": "Meadow"
+    },
+    {
+      "id": "woodland",
+      "zh": "林地",
+      "en": "Woodland"
+    },
+    {
+      "id": "cloud-forest",
+      "zh": "云雾林",
+      "en": "Cloud forest"
+    },
+    {
+      "id": "biocrust",
+      "zh": "生物结皮",
+      "en": "Biocrust"
+    },
+    {
+      "id": "dung-beetle",
+      "zh": "蜣螂",
+      "en": "Dung beetle"
+    },
+    {
+      "id": "shannon-index",
+      "zh": "香农指数",
+      "en": "Shannon index"
+    },
+    {
+      "id": "least-concern",
+      "zh": "无危",
+      "en": "Least concern"
+    },
+    {
+      "id": "genetic-rescue",
+      "zh": "遗传拯救",
+      "en": "Genetic rescue"
+    },
+    {
+      "id": "spartina",
+      "zh": "互花米草",
+      "en": "Spartina"
+    },
+    {
+      "id": "asian-carp",
+      "zh": "亚洲鲤鱼",
+      "en": "Asian carp"
+    },
+    {
+      "id": "cane-toad",
+      "zh": "海蟾蜍",
+      "en": "Cane toad"
+    },
+    {
+      "id": "fire-ant",
+      "zh": "红火蚁",
+      "en": "Fire ant"
+    },
+    {
+      "id": "thylacine",
+      "zh": "袋狼",
+      "en": "Thylacine"
+    },
+    {
+      "id": "orangutan",
+      "zh": "红毛猩猩",
+      "en": "Orangutan"
+    },
+    {
+      "id": "asian-elephant",
+      "zh": "亚洲象",
+      "en": "Asian elephant"
+    },
+    {
+      "id": "sea-otter",
+      "zh": "海獭",
+      "en": "Sea otter"
+    },
+    {
+      "id": "dugong",
+      "zh": "儒艮",
+      "en": "Dugong"
+    },
+    {
+      "id": "koala",
+      "zh": "树袋熊",
+      "en": "Koala"
+    },
+    {
+      "id": "arboretum",
+      "zh": "树木园",
+      "en": "Arboretum"
+    },
+    {
+      "id": "land-ethic",
+      "zh": "土地伦理",
+      "en": "Land ethic"
+    },
+    {
+      "id": "land-use",
+      "zh": "土地利用",
+      "en": "Land use"
+    },
+    {
+      "id": "footprint",
+      "zh": "足迹",
+      "en": "Footprint"
+    },
+    {
+      "id": "street-tree",
+      "zh": "行道树",
+      "en": "Street tree"
+    },
+    {
+      "id": "forest-bathing",
+      "zh": "森林浴",
+      "en": "Forest bathing"
+    },
+    {
+      "id": "urban-sprawl",
+      "zh": "城市蔓延",
+      "en": "Urban sprawl"
+    },
+    {
+      "id": "biophilia",
+      "zh": "亲生命性",
+      "en": "Biophilia"
+    },
+    {
+      "id": "eco-anxiety",
+      "zh": "生态焦虑",
+      "en": "Eco-anxiety"
+    },
+    {
+      "id": "field-station",
+      "zh": "野外台站",
+      "en": "Field station"
+    },
+    {
+      "id": "field-guide",
+      "zh": "图鉴",
+      "en": "Field guide"
+    },
+    {
+      "id": "point-count",
+      "zh": "样点法",
+      "en": "Point count"
+    },
+    {
+      "id": "bird-ringing",
+      "zh": "环志",
+      "en": "Bird ringing"
+    },
+    {
+      "id": "bioacoustics",
+      "zh": "生物声学",
+      "en": "Bioacoustics"
+    },
+    {
+      "id": "flux-tower",
+      "zh": "通量塔",
+      "en": "Flux tower"
+    },
+    {
+      "id": "ndvi",
+      "zh": "NDVI",
+      "en": "NDVI",
+      "forms": { "zh": ["归一化植被指数"], "en": ["normalized difference vegetation index"] }
+    },
+    {
+      "id": "buoy",
+      "zh": "浮标",
+      "en": "Buoy"
+    },
+    {
+      "id": "monitoring",
+      "zh": "监测",
+      "en": "Monitoring",
+      "forms": { "en": ["monitor"] }
+    },
+    {
+      "id": "biomonitoring",
+      "zh": "生物监测",
+      "en": "Biomonitoring"
+    },
+    {
+      "id": "secchi-disk",
+      "zh": "塞氏盘",
+      "en": "Secchi disk",
+      "forms": { "en": ["Secchi disc"] }
+    },
+    {
+      "id": "earth-system",
+      "zh": "地球系统",
+      "en": "Earth system"
+    },
+    {
+      "id": "downscaling",
+      "zh": "降尺度",
+      "en": "Downscaling"
+    },
+    {
+      "id": "reanalysis",
+      "zh": "再分析",
+      "en": "Reanalysis"
+    },
+    {
+      "id": "keeling-curve",
+      "zh": "基林曲线",
+      "en": "Keeling Curve"
+    },
+    {
+      "id": "albedo",
+      "zh": "反照率",
+      "en": "Albedo"
+    },
+    {
+      "id": "aerosol",
+      "zh": "气溶胶",
+      "en": "Aerosol"
+    },
+    {
+      "id": "anthropogenic",
+      "zh": "人为",
+      "en": "Anthropogenic"
+    },
+    {
+      "id": "net-zero",
+      "zh": "净零",
+      "en": "Net zero"
+    },
+    {
+      "id": "cfc",
+      "zh": "CFC",
+      "en": "CFC",
+      "forms": { "zh": ["氯氟烃"], "en": ["chlorofluorocarbon"] }
+    },
+    {
+      "id": "ppm",
+      "zh": "ppm",
+      "en": "ppm",
+      "forms": { "en": ["parts per million"] }
+    },
+    {
+      "id": "virtual-water",
+      "zh": "虚拟水",
+      "en": "Virtual water"
+    },
+    {
+      "id": "tap-water",
+      "zh": "自来水",
+      "en": "Tap water"
+    },
+    {
+      "id": "surface-water",
+      "zh": "地表水",
+      "en": "Surface water"
+    },
+    {
+      "id": "leaching",
+      "zh": "淋溶",
+      "en": "Leaching",
+      "forms": { "en": ["leach"] }
+    },
+    {
+      "id": "leachate",
+      "zh": "渗滤液",
+      "en": "Leachate"
+    },
+    {
+      "id": "aeration",
+      "zh": "曝气",
+      "en": "Aeration",
+      "forms": { "en": ["aerate"] }
+    },
+    {
+      "id": "settling-tank",
+      "zh": "沉淀池",
+      "en": "Settling tank"
+    },
+    {
+      "id": "flocculation",
+      "zh": "絮凝",
+      "en": "Flocculation",
+      "forms": { "en": ["flocculant"] }
+    },
+    {
+      "id": "chlorination",
+      "zh": "氯化",
+      "en": "Chlorination",
+      "forms": { "en": ["chlorinate"] }
+    },
+    {
+      "id": "biofilter",
+      "zh": "生物滤池",
+      "en": "Biofilter"
+    },
+    {
+      "id": "biodegradation",
+      "zh": "生物降解",
+      "en": "Biodegradation",
+      "forms": { "en": ["biodegradable"] }
+    },
+    {
+      "id": "bod",
+      "zh": "BOD",
+      "en": "BOD",
+      "forms": { "zh": ["生化需氧量"], "en": ["biochemical oxygen demand"] }
+    },
+    {
+      "id": "cod",
+      "zh": "COD",
+      "en": "COD",
+      "forms": { "zh": ["化学需氧量"], "en": ["chemical oxygen demand"] }
+    },
+    {
+      "id": "turbidity",
+      "zh": "浊度",
+      "en": "Turbidity",
+      "forms": { "en": ["turbid"] }
+    },
+    {
+      "id": "outfall",
+      "zh": "排污口",
+      "en": "Outfall"
+    },
+    {
+      "id": "point-source",
+      "zh": "点源",
+      "en": "Point source"
+    },
+    {
+      "id": "exceedance",
+      "zh": "超标",
+      "en": "Exceedance",
+      "forms": { "en": ["exceed"] }
+    },
+    {
+      "id": "pump-and-treat",
+      "zh": "抽出处理",
+      "en": "Pump and treat"
+    },
+    {
+      "id": "pm10",
+      "zh": "PM10",
+      "en": "PM10",
+      "forms": { "zh": ["可吸入颗粒物"] }
+    },
+    {
+      "id": "sulfur-dioxide",
+      "zh": "二氧化硫",
+      "en": "Sulfur dioxide",
+      "forms": { "en": ["sulphur dioxide", "SO2"] }
+    },
+    {
+      "id": "nox",
+      "zh": "氮氧化物",
+      "en": "NOx",
+      "forms": { "en": ["nitrogen oxides"] }
+    },
+    {
+      "id": "voc",
+      "zh": "VOC",
+      "en": "VOC",
+      "forms": { "zh": ["挥发性有机物"], "en": ["volatile organic compound"] }
+    },
+    {
+      "id": "haze",
+      "zh": "霾",
+      "en": "Haze",
+      "forms": { "en": ["hazy"] }
+    },
+    {
+      "id": "plume",
+      "zh": "烟羽",
+      "en": "Plume"
+    },
+    {
+      "id": "inversion",
+      "zh": "逆温",
+      "en": "Inversion"
+    },
+    {
+      "id": "black-carbon",
+      "zh": "黑碳",
+      "en": "Black carbon"
+    },
+    {
+      "id": "scrubber",
+      "zh": "洗涤塔",
+      "en": "Scrubber"
+    },
+    {
+      "id": "baghouse",
+      "zh": "袋式除尘器",
+      "en": "Baghouse"
+    },
+    {
+      "id": "solid-waste",
+      "zh": "固体废物",
+      "en": "Solid waste"
+    },
+    {
+      "id": "garbage-patch",
+      "zh": "垃圾带",
+      "en": "Garbage patch"
+    },
+    {
+      "id": "urban-mining",
+      "zh": "城市矿山",
+      "en": "Urban mining"
+    },
+    {
+      "id": "liner",
+      "zh": "防渗层",
+      "en": "Liner"
+    },
+    {
+      "id": "bioremediation",
+      "zh": "生物修复",
+      "en": "Bioremediation"
+    },
+    {
+      "id": "brownfield",
+      "zh": "棕地",
+      "en": "Brownfield"
+    },
+    {
+      "id": "reclamation",
+      "zh": "复垦",
+      "en": "Reclamation",
+      "forms": { "en": ["reclaim"] }
+    },
+    {
+      "id": "oil-boom",
+      "zh": "围油栏",
+      "en": "Oil boom"
+    },
+    {
+      "id": "ecotoxicology",
+      "zh": "生态毒理学",
+      "en": "Ecotoxicology",
+      "forms": { "en": ["ecotoxicity"] }
+    },
+    {
+      "id": "methylmercury",
+      "zh": "甲基汞",
+      "en": "Methylmercury"
+    },
+    {
+      "id": "pah",
+      "zh": "多环芳烃",
+      "en": "PAH",
+      "forms": { "en": ["polycyclic aromatic hydrocarbon"] }
+    },
+    {
+      "id": "pfas",
+      "zh": "PFAS",
+      "en": "PFAS"
+    },
+    {
+      "id": "bpa",
+      "zh": "双酚A",
+      "en": "BPA",
+      "forms": { "en": ["bisphenol A"] }
+    },
+    {
+      "id": "love-canal",
+      "zh": "拉夫运河",
+      "en": "Love Canal"
+    },
+    {
+      "id": "end-of-pipe",
+      "zh": "末端治理",
+      "en": "End-of-pipe"
+    },
+    {
+      "id": "evenness",
+      "zh": "均匀度",
+      "en": "Evenness"
+    },
+    {
+      "id": "ecohydrology",
+      "zh": "生态水文学",
+      "en": "Ecohydrology"
+    },
+    {
+      "id": "stepping-stone",
+      "zh": "踏脚石",
+      "en": "Stepping stone"
+    },
+    {
+      "id": "snare",
+      "zh": "猎套",
+      "en": "Snare"
+    },
+    {
+      "id": "megafauna",
+      "zh": "巨型动物",
+      "en": "Megafauna"
+    },
+    {
+      "id": "vadose-zone",
+      "zh": "包气带",
+      "en": "Vadose zone"
+    },
+    {
+      "id": "noise-barrier",
+      "zh": "声屏障",
+      "en": "Noise barrier"
+    },
+    {
+      "id": "valorization",
+      "zh": "资源化",
+      "en": "Valorization",
+      "forms": { "en": ["valorisation"] }
+    },
+    {
+      "id": "ghost-net",
+      "zh": "幽灵渔网",
+      "en": "Ghost net"
+    },
+    {
+      "id": "return-period",
+      "zh": "重现期",
+      "en": "Return period"
+    },
+    {
+      "id": "biocapacity",
+      "zh": "生物承载力",
+      "en": "Biocapacity"
+    },
+    {
+      "id": "bioswale",
+      "zh": "植草沟",
+      "en": "Bioswale"
+    },
+    {
+      "id": "tracer",
+      "zh": "示踪剂",
+      "en": "Tracer"
+    },
+    {
+      "id": "lai",
+      "zh": "叶面积指数",
+      "en": "LAI",
+      "forms": { "en": ["leaf area index"] }
+    },
+    {
+      "id": "metabarcoding",
+      "zh": "宏条形码",
+      "en": "Metabarcoding"
+    },
+    {
+      "id": "aral-sea",
+      "zh": "咸海",
+      "en": "Aral Sea"
+    },
+    {
+      "id": "wind-rose",
+      "zh": "风玫瑰图",
+      "en": "Wind rose"
+    },
+    {
+      "id": "green-tide",
+      "zh": "绿潮",
+      "en": "Green tide"
+    },
+    {
+      "id": "organochlorine",
+      "zh": "有机氯",
+      "en": "Organochlorine"
+    },
+    {
+      "id": "anammox",
+      "zh": "厌氧氨氧化",
+      "en": "Anammox"
+    },
+    {
+      "id": "mbr",
+      "zh": "MBR",
+      "en": "MBR",
+      "forms": { "zh": ["膜生物反应器"], "en": ["membrane bioreactor"] }
+    },
+    {
+      "id": "snowpack",
+      "zh": "积雪",
+      "en": "Snowpack"
+    },
+    {
+      "id": "commons",
+      "zh": "公地",
+      "en": "Commons"
+    },
+    {
+      "id": "mist-net",
+      "zh": "雾网",
+      "en": "Mist net"
+    },
+    {
+      "id": "reforestation",
+      "zh": "再造林",
+      "en": "Reforestation",
+      "forms": { "en": ["reforest"] }
+    },
+    {
+      "id": "snag",
+      "zh": "枯立木",
+      "en": "Snag"
+    },
+    {
+      "id": "fish-ladder",
+      "zh": "鱼道",
+      "en": "Fish ladder",
+      "forms": { "en": ["fishway"] }
+    },
+    {
+      "id": "global-dimming",
+      "zh": "全球变暗",
+      "en": "Global dimming"
+    },
+    {
+      "id": "contrail",
+      "zh": "航迹云",
+      "en": "Contrail"
+    },
+    {
+      "id": "downcycling",
+      "zh": "降级回收",
+      "en": "Downcycling",
+      "forms": { "en": ["downcycle"] }
+    },
+    {
+      "id": "biofouling",
+      "zh": "生物污损",
+      "en": "Biofouling"
+    },
+    {
+      "id": "oligotrophic",
+      "zh": "贫营养",
+      "en": "Oligotrophic"
+    },
+    {
+      "id": "seed-rain",
+      "zh": "种子雨",
+      "en": "Seed rain"
+    },
+    {
+      "id": "allee-effect",
+      "zh": "阿利效应",
+      "en": "Allee effect"
+    },
+    {
+      "id": "ecoregion",
+      "zh": "生态区",
+      "en": "Ecoregion"
+    },
+    {
+      "id": "wallace-line",
+      "zh": "华莱士线",
+      "en": "Wallace Line"
+    },
+    {
+      "id": "critical-load",
+      "zh": "临界负荷",
+      "en": "Critical load"
+    },
+    {
+      "id": "canary",
+      "zh": "金丝雀",
+      "en": "Canary"
+    },
+    {
+      "id": "stormwater",
+      "zh": "雨水",
+      "en": "Stormwater"
     }
   ]
 }
