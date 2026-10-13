@@ -77,7 +77,7 @@ jobs:
     # (playwright.config.ts). Playwright's --shard deals the tests out in order, one by one
     # (fullyParallel in playwright.config.ts), by their number, not by how long they take, so the
     # parts with the whole games take the longest.
-    name: End-to-end on ${{ matrix.project }}${{ matrix.shards && format(', part {0} of {1}', matrix.shard, matrix.shards) || '' }}
+    name: End-to-end on ${{ matrix.project }}, part ${{ matrix.shard }} of ${{ matrix.shards }}
     runs-on: ubuntu-latest
     # A browser install or a server that hangs must not hold the check for the six hours that
     # GitHub allows a job. Two full games that each time out twice take about 12 minutes.
@@ -173,7 +173,7 @@ jobs:
           echo "Kept $(ls ~/.cache/playwright-packages | wc -l) packages."
       - run: npm run build
         if: steps.need.outputs.browsers == 'true'
-      - run: npm run test:e2e -- --project=${{ matrix.project }} ${{ matrix.shards && format('--shard={0}/{1}', matrix.shard, matrix.shards) || '' }}
+      - run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/${{ matrix.shards }}
         if: steps.need.outputs.browsers == 'true'
       - name: Keep the report
         # Also of a run that passed: a test that failed once and passed on its retry is in it,
@@ -181,7 +181,7 @@ jobs:
         if: ${{ !cancelled() && steps.need.outputs.browsers == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.project }}${{ matrix.shards && format('-{0}of{1}', matrix.shard, matrix.shards) || '' }}
+          name: playwright-report-${{ matrix.project }}-${{ matrix.shard }}of${{ matrix.shards }}
           path: playwright-report/
           retention-days: 7
 
