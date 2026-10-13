@@ -432,22 +432,37 @@ describe('KeywordsLobby, public or private', () => {
 
   // The share row offers a player with an account their friends first, as the room menu does, and
   // the big screen as a button among the others.
-  test('offers a player with an account the invitation of friends in the share row', async () => {
+  test('offers an account the invitation of friends in the start bar, the chair and the others alike', async () => {
+    const bar = (wrapper: ReturnType<typeof mount>) =>
+      wrapper.findAll('.start-dock .start-actions .button').map((button) => button.text());
+    // A guest who doesn't chair has no bar, and the share row no invitation.
     const guest = mount(KeywordsLobby, { props: { room: view('bob', 0) }, global: global() });
+    expect(guest.find('.start-dock').exists()).toBe(false);
     expect(guest.find('.share .invite-friends').exists()).toBe(false);
     const screen = guest.get('.share a.screen');
     expect(screen.classes()).toContain('button');
     expect(screen.attributes('href')).toBe('/room/K7QX/screen');
     expect(screen.attributes('target')).toBe('_blank');
+    // A guest who chairs: the shuffle and the start, half the row each.
+    expect(bar(mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() }))).toEqual([
+      'Shuffle the groups',
+      'Start the game',
+    ]);
 
     account.summary = { username: 'Bob', avatar: null } as unknown as typeof account.summary;
     const member = mount(KeywordsLobby, { props: { room: view('bob', 0) }, global: global() });
-    const buttons = member.get('.share').findAll('.button');
-    expect(buttons[0]?.text()).toBe('Invite friends');
-    await buttons[0]?.trigger('click');
+    expect(member.get('.start-bar').classes()).toContain('member');
+    expect(member.get('.start-bar .readiness').text()).toBe('Everyone needed is seated.');
+    expect(bar(member)).toEqual(['Invite friends']);
+    expect(member.find('.share .invite-friends').exists()).toBe(false);
+    await member.get('.start-dock .invite-friends').trigger('click');
     await flushPromises();
     expect(send).toHaveBeenCalledWith('friends:list');
     expect(member.get('.invite').text()).toContain('Your friends who are online.');
+    // The chair with an account: the invitation between the shuffle and the start.
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    expect(chair.get('.start-bar').classes()).not.toContain('member');
+    expect(bar(chair)).toEqual(['Shuffle the groups', 'Invite friends', 'Start the game']);
   });
 });
 
