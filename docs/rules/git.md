@@ -1,6 +1,6 @@
 # Branches, commits and pull requests
 
-`main` is protected: nobody commits, pushes, force-pushes or deletes it. Every change arrives through a pull request, squash-merged as one commit titled `vX.Y.Z <type>: <summary>`, or with no version for [docs for people](versioning.md#docs-for-people) alone ([versioning.md](versioning.md)).
+`main` is protected: nobody force-pushes or deletes it, and every change arrives through a pull request, squash-merged as one commit titled `vX.Y.Z <type>: <summary>`, or with no version for [docs for people](versioning.md#docs-for-people) alone ([versioning.md](versioning.md)). The one exception is an admin's commit of nothing but the lists of thanks, `ACKNOWLEDGMENTS.md` and `SPONSORS.md`, which goes to `main` directly, titled `docs: <summary>` with no version, such as `docs: thank a sponsor` ([maintainers.md](../maintainers.md#lists-of-thanks)). Nobody else commits or pushes to `main`, and AI assistants never do.
 
 ## Worktrees
 

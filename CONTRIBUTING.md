@@ -4,7 +4,7 @@ These rules apply to everyone: project members, outside contributors and AI codi
 
 ## Core rules
 
-1. **`main` is protected.** Nobody, maintainers included, commits or pushes to it directly. Every change arrives through a pull request.
+1. **`main` is protected.** Every change arrives through a pull request. The one exception is an admin's commit of the lists of thanks, `ACKNOWLEDGMENTS.md` and `SPONSORS.md`, which goes to `main` directly ([docs/rules/git.md](docs/rules/git.md)).
 2. **Work on a branch of your own.** Members use a git worktree per piece of work; outside contributors fork the repository.
 3. **All code is reviewed.** Someone other than the author approves every PR, docs included; a collaborator merges it once CI passes. A maintainer's own PR that changes only [docs for people](docs/rules/versioning.md#docs-for-people) needs no approval.
 4. **No AI or agent attribution** in commits, PR titles or PR descriptions. The committer is responsible for the content.

@@ -1,10 +1,9 @@
 import { log } from './log';
 import { main } from './main';
 
-// Node writes its warnings to stderr as plain text, and on Node 22 it writes one on every start:
-// that node:sqlite is experimental. The log is one JSON object a line (log.ts), so warnings go to
-// it as such instead. Node puts a warning out a tick after it was raised, so this is in place
-// before the one that loading the modules above raised comes out.
+// Node writes its warnings to stderr as plain text. The log is one JSON object a line (log.ts), so
+// warnings go to it as such instead. Node puts a warning out a tick after it was raised, so this is
+// in place before any that loading the modules above raised comes out.
 process.removeAllListeners('warning');
 process.on('warning', (warning) => log('warning', { name: warning.name, message: warning.message }));
 

@@ -1,9 +1,10 @@
-# Lints, type-checks and tests the app, on Node 24 and on the lowest Node that package.json
-# allows, checks the word lists, plays it end to end in real browsers, and builds it and checks
-# that the build serves it. Each job's name is a required status check, except the browser jobs,
-# which report through `End-to-end`; see docs/maintainers.md. There are no `paths:` filters on
-# purpose: a required check that a filter skips stays pending and blocks the merge. A PR that
-# changes only docs skips the browsers inside their jobs instead, which still pass.
+# Checks the app on Node 24, in one job, `Checks`, one step after another and the quickest
+# first: that the two READMEs are in sync, the word lists, lint, types and the tests, then the
+# build, as for production, and that it serves the app. Beside it, the browser jobs play the app
+# end to end, reporting through `End-to-end`. `Checks` and `End-to-end` are required status checks;
+# see docs/maintainers.md. There are no `paths:` filters on purpose: a required check that a filter
+# skips stays pending and blocks the merge. A PR that changes only docs skips the browsers inside
+# their jobs instead, which still pass.
 
 name: CI
 
@@ -20,8 +21,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  lint:
-    name: Lint and types
+  checks:
+    # Everything that needs no browser. A step that fails stops the job.
+    name: Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -30,162 +32,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: README.md and README.zh-CN.md are in sync
+        run: node scripts/check-readme-sync.mjs
+      - name: The word lists
+        run: node scripts/check-words.mjs
       - run: npm run lint
       - run: npm run typecheck
-
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
       - run: npm test
-
-  lowest-node:
-    # The lowest version that `engines` in package.json allows. `npm ci` checks that every
-    # dependency takes it, and the tests that node:sqlite works on it, backup() included.
-    name: Lowest Node
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22.22.2
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-
-  words:
-    name: Word lists
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - run: node scripts/check-words.mjs
-
-  e2e-browser:
-    # Real browsers against the production build. One job per browser project, side by side,
-    # each with only the browser it runs. WebKit is the slowest, so its tests are split over two
-    # jobs. Playwright's --shard deals the test files out between them by their number of tests,
-    # not by how long they take, so one part can take much longer than the other.
-    name: End-to-end on ${{ matrix.project }}${{ matrix.shards && format(', part {0} of {1}', matrix.shard, matrix.shards) || '' }}
-    runs-on: ubuntu-latest
-    # A browser install or a server that hangs must not hold the check for the six hours that
-    # GitHub allows a job. Two full games that each time out twice take about 12 minutes.
-    timeout-minutes: 20
-    strategy:
-      # A failure in one browser says nothing about the others.
-      fail-fast: false
-      matrix:
-        # One entry per project in playwright.config.ts, with the browser it runs on; a project
-        # split into parts has one entry per part, with its shard and the number of shards. A
-        # project that is missing here is not tested in CI, so keep the two lists the same.
-        include:
-          - project: desktop-chromium
-            browser: chromium
-          - project: phone-chromium
-            browser: chromium
-          - project: iphone-webkit
-            browser: webkit
-            shard: 1
-            shards: 2
-          - project: iphone-webkit
-            browser: webkit
-            shard: 2
-            shards: 2
-    steps:
-      - uses: actions/checkout@v5
-      - name: Decide whether the browsers are needed
-        # A PR that changes only docs gets the job without the browsers: Markdown files, docs/,
-        # license files and the files at the top of .github, such as CODEOWNERS, which leaves out
-        # the workflows. Pushes to main always run the browsers.
-        id: need
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          browsers=true
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
-            git fetch --no-tags --depth=1 origin "$BASE"
-            # Outside any condition, so that an error in git stops the job instead of skipping the
-            # browsers. --no-renames lists a moved file under its old path as well as its new one.
-            files=$(git diff --no-renames --name-only "$BASE" HEAD)
-            # The files that are not docs. grep exits with 1 when there are none, and with 2 on an
-            # error, which stops the job too.
-            code=$(grep -vE '(^|/)[^/]+\.md$|^docs/|(^|/)LICENSE[^/]*$|^\.github/[^/]+$' <<< "$files" || [ $? = 1 ])
-            if [ -z "$code" ]; then
-              echo "Only docs changed, so the browser tests are skipped."
-              browsers=false
-            fi
-          fi
-          echo "browsers=$browsers" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v5
-        if: steps.need.outputs.browsers == 'true'
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-        if: steps.need.outputs.browsers == 'true'
-      - name: Read Playwright's version and the runner's system
-        if: steps.need.outputs.browsers == 'true'
-        id: playwright
-        run: |
-          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-          echo "system=$(. /etc/os-release && echo "$ID-$VERSION_ID")" >> "$GITHUB_OUTPUT"
-      - name: Keep the browser between runs
-        # The download is the slow part of the install; the system packages still come from apt.
-        # Playwright builds its browsers for each system, so a new runner image needs its own.
-        if: steps.need.outputs.browsers == 'true'
-        id: browser
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ steps.playwright.outputs.system }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
-        if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit != 'true'
-      - run: npx playwright install-deps ${{ matrix.browser }}
-        if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit == 'true'
-      - run: npm run build
-        if: steps.need.outputs.browsers == 'true'
-      - run: npm run test:e2e -- --project=${{ matrix.project }} ${{ matrix.shards && format('--shard={0}/{1}', matrix.shard, matrix.shards) || '' }}
-        if: steps.need.outputs.browsers == 'true'
-      - name: Keep the report
-        # Also of a run that passed: a test that failed once and passed on its retry is in it,
-        # with the trace of the attempt that failed.
-        if: ${{ !cancelled() && steps.need.outputs.browsers == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ matrix.project }}${{ matrix.shards && format('-{0}of{1}', matrix.shard, matrix.shards) || '' }}
-          path: playwright-report/
-          retention-days: 7
-
-  e2e:
-    # The required status check for the browser jobs above: one name, whatever their number.
-    # `always()`, not `!cancelled()`: a skipped required check counts as passed, so this job must
-    # run and fail when the run is cancelled.
-    name: End-to-end
-    needs: e2e-browser
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: test "${{ needs.e2e-browser.result }}" = success
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
       - name: Build, as for production
         env:
           SHA: ${{ github.sha }}
@@ -261,3 +114,129 @@ jobs:
           test "$status" -eq 2
           grep -q '^usage: admin.cjs <command>, one of$' "$RUNNER_TEMP/admin.log"
           grep -q '^  avatar remove <username> \[--ban\]$' "$RUNNER_TEMP/admin.log"
+
+  e2e-browser:
+    # Real browsers against the production build. Each project's tests are split over jobs side
+    # by side, each with only the browser it runs: WebKit, the slowest, over six, the others over
+    # two. A Chromium job runs two tests at a time, as before, and a WebKit job one
+    # (playwright.config.ts). Playwright's --shard deals the tests out in order, one by one
+    # (fullyParallel in playwright.config.ts), by their number, not by how long they take, so the
+    # parts with the whole games take the longest.
+    name: End-to-end on ${{ matrix.project }}, part ${{ matrix.shard }} of ${{ matrix.shards }}
+    runs-on: ubuntu-latest
+    # A browser install or a server that hangs must not hold the check for the six hours that
+    # GitHub allows a job. Two full games that each time out twice take about 12 minutes.
+    timeout-minutes: 20
+    strategy:
+      # A failure in one browser says nothing about the others.
+      fail-fast: false
+      matrix:
+        # One entry per part of each project in playwright.config.ts, with the browser it runs
+        # on, the part and the number of parts. A project or a part that is missing here is not
+        # tested in CI, so keep the two lists the same, with every part of a project.
+        include:
+          - { project: desktop-chromium, browser: chromium, shard: 1, shards: 2 }
+          - { project: desktop-chromium, browser: chromium, shard: 2, shards: 2 }
+          - { project: phone-chromium, browser: chromium, shard: 1, shards: 2 }
+          - { project: phone-chromium, browser: chromium, shard: 2, shards: 2 }
+          - { project: iphone-webkit, browser: webkit, shard: 1, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 2, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 3, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 4, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 5, shards: 6 }
+          - { project: iphone-webkit, browser: webkit, shard: 6, shards: 6 }
+    steps:
+      - uses: actions/checkout@v5
+      - name: Decide whether the browsers are needed
+        # A PR that changes only docs gets the job without the browsers: Markdown files, docs/,
+        # license files and the files at the top of .github, such as CODEOWNERS, which leaves out
+        # the workflows. Pushes to main always run the browsers.
+        id: need
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          browsers=true
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            git fetch --no-tags --depth=1 origin "$BASE"
+            # Outside any condition, so that an error in git stops the job instead of skipping the
+            # browsers. --no-renames lists a moved file under its old path as well as its new one.
+            files=$(git diff --no-renames --name-only "$BASE" HEAD)
+            # The files that are not docs. grep exits with 1 when there are none, and with 2 on an
+            # error, which stops the job too.
+            code=$(grep -vE '(^|/)[^/]+\.md$|^docs/|(^|/)LICENSE[^/]*$|^\.github/[^/]+$' <<< "$files" || [ $? = 1 ])
+            if [ -z "$code" ]; then
+              echo "Only docs changed, so the browser tests are skipped."
+              browsers=false
+            fi
+          fi
+          echo "browsers=$browsers" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v5
+        if: steps.need.outputs.browsers == 'true'
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        if: steps.need.outputs.browsers == 'true'
+      - name: Read Playwright's version and the runner's system
+        if: steps.need.outputs.browsers == 'true'
+        id: playwright
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "system=$(. /etc/os-release && echo "$ID-$VERSION_ID")" >> "$GITHUB_OUTPUT"
+          echo "image=$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Keep the browser between runs
+        # The download is the slow part of the install; the system packages it needs are kept below.
+        # Playwright builds its browsers for each system, so a new runner image needs its own.
+        if: steps.need.outputs.browsers == 'true'
+        id: browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright.outputs.system }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+      - name: Keep the browser's system packages between runs
+        # apt would download them again, about 120 MB for WebKit. It takes those it finds in its
+        # archive directory instead, after checking each against its index, and downloads any that
+        # changed since. A new runner image starts its own.
+        if: steps.need.outputs.browsers == 'true'
+        id: packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/playwright-packages
+          key: playwright-packages-${{ steps.playwright.outputs.system }}-${{ steps.playwright.outputs.image }}-${{ matrix.browser }}-${{ steps.playwright.outputs.version }}
+      - name: Hand the kept packages to apt
+        if: steps.need.outputs.browsers == 'true' && steps.packages.outputs.cache-hit == 'true'
+        run: sudo find ~/.cache/playwright-packages -name '*.deb' -exec cp -t /var/cache/apt/archives {} +
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+        if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit != 'true'
+      - run: npx playwright install-deps ${{ matrix.browser }}
+        if: steps.need.outputs.browsers == 'true' && steps.browser.outputs.cache-hit == 'true'
+      - name: Keep the packages that apt downloaded
+        if: steps.need.outputs.browsers == 'true' && steps.packages.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.cache/playwright-packages
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t ~/.cache/playwright-packages {} +
+          echo "Kept $(ls ~/.cache/playwright-packages | wc -l) packages."
+      - run: npm run build
+        if: steps.need.outputs.browsers == 'true'
+      - run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/${{ matrix.shards }}
+        if: steps.need.outputs.browsers == 'true'
+      - name: Keep the report
+        # Also of a run that passed: a test that failed once and passed on its retry is in it,
+        # with the trace of the attempt that failed.
+        if: ${{ !cancelled() && steps.need.outputs.browsers == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}-${{ matrix.shard }}of${{ matrix.shards }}
+          path: playwright-report/
+          retention-days: 7
+
+  e2e:
+    # The required status check for the browser jobs above: one name, whatever their number.
+    # `always()`, not `!cancelled()`: a skipped required check counts as passed, so this job must
+    # run and fail when the run is cancelled.
+    name: End-to-end
+    needs: e2e-browser
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.e2e-browser.result }}" = success

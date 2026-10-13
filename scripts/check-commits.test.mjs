@@ -440,6 +440,50 @@ describe('in a git repository', () => {
     assert.match(cli('head').stdout, /must start with "vX\.Y\.Z "/);
   });
 
+  test('head takes a commit without a pull request only for the lists of thanks, titled "docs: <summary>"', () => {
+    const { directory, git, commit, cli } = makeRepo();
+    const change = (files, subject) => {
+      for (const file of files) {
+        writeFileSync(join(directory, file), `${subject}\n`);
+        git('add', file);
+      }
+      commit(subject);
+    };
+    const landed = () => {
+      const result = cli('head');
+      return {
+        status: result.status,
+        rules: [...result.stdout.matchAll(/^check-commits: \w+ ([\w-]+):/gm)].map((m) => m[1]),
+      };
+    };
+    change(['README.md'], 'v0.0.1 docs: add a readme (#1)');
+    change(['SPONSORS.md'], 'docs: thank a sponsor');
+    assert.deepEqual(landed(), { status: 0, rules: [] });
+    change(['ACKNOWLEDGMENTS.md', 'SPONSORS.md'], 'docs: thank a tester and a sponsor\n\nBoth asked to be named.');
+    assert.deepEqual(landed(), { status: 0, rules: [] });
+    // They take no version, so the next pull request still takes the next one.
+    assert.equal(cli('next', '--base', 'main').stdout.trim(), 'v0.0.2');
+
+    change(['ACKNOWLEDGMENTS.md', 'README.md'], 'docs: thank a tester');
+    assert.deepEqual(landed(), { status: 1, rules: ['direct'] });
+    assert.match(cli('head').stdout, /may change only ACKNOWLEDGMENTS\.md and SPONSORS\.md, not README\.md/);
+    change(['server.js'], 'v0.0.2 feat: add a server');
+    assert.deepEqual(landed(), { status: 1, rules: ['direct', 'version', 'direct'] });
+    change(['SPONSORS.md'], 'v0.0.2 docs: thank a sponsor');
+    assert.deepEqual(landed(), { status: 1, rules: ['version'] });
+    change(['SPONSORS.md'], 'chore: thank a sponsor');
+    assert.deepEqual(landed(), { status: 1, rules: ['direct'] });
+    change(['SPONSORS.md'], 'docs: Thank a sponsor.');
+    assert.deepEqual(landed(), { status: 1, rules: ['period', 'lowercase'] });
+    change(['SPONSORS.md'], 'Update SPONSORS.md');
+    assert.deepEqual(landed(), { status: 1, rules: ['type'] });
+    commit('docs: change nothing');
+    assert.deepEqual(landed(), { status: 1, rules: ['direct'] });
+    // A squash merge of the same change is a pull request's, as before.
+    change(['SPONSORS.md'], 'docs: thank a sponsor (#2)');
+    assert.deepEqual(landed(), { status: 0, rules: [] });
+  });
+
   test('msg on main asks for the next version, or none for the docs for people alone', () => {
     const { directory, git, commit, cli } = makeRepo();
     commit('v0.0.1 docs: add rules (#1)');

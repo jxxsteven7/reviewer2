@@ -71,7 +71,7 @@ What we promise players:
 
 ## Running locally
 
-You need [Node.js](https://nodejs.org) 22.22.2 or later (24.15 or later on Node 24), but not 23 or 25.
+You need [Node.js](https://nodejs.org) 24.15 or later, but not 25.
 
 ```bash
 npm install   # also turns on the git hooks
