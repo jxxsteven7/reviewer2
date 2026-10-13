@@ -1645,6 +1645,1117 @@
       "id": "pipette-tip",
       "zh": "枪头",
       "en": "Pipette tip"
+    },
+    {
+      "id": "translation",
+      "zh": "翻译",
+      "en": "Translation",
+      "forms": { "en": ["translate", "translational"] }
+    },
+    {
+      "id": "histone",
+      "zh": "组蛋白",
+      "en": "Histone"
+    },
+    {
+      "id": "chromatin",
+      "zh": "染色质",
+      "en": "Chromatin"
+    },
+    {
+      "id": "nucleosome",
+      "zh": "核小体",
+      "en": "Nucleosome"
+    },
+    {
+      "id": "centromere",
+      "zh": "着丝粒",
+      "en": "Centromere"
+    },
+    {
+      "id": "polyploid",
+      "zh": "多倍体",
+      "en": "Polyploid",
+      "forms": { "en": ["polyploidy"] }
+    },
+    {
+      "id": "genetic-code",
+      "zh": "遗传密码",
+      "en": "Genetic code"
+    },
+    {
+      "id": "reading-frame",
+      "zh": "阅读框",
+      "en": "Reading frame"
+    },
+    {
+      "id": "snp",
+      "zh": "SNP",
+      "en": "SNP",
+      "forms": { "zh": ["单核苷酸多态性"], "en": ["single nucleotide polymorphism"] }
+    },
+    {
+      "id": "mirna",
+      "zh": "miRNA",
+      "en": "miRNA",
+      "forms": { "zh": ["微RNA"], "en": ["microRNA"] }
+    },
+    {
+      "id": "ubiquitin",
+      "zh": "泛素",
+      "en": "Ubiquitin",
+      "forms": { "en": ["ubiquitination"] }
+    },
+    {
+      "id": "proteasome",
+      "zh": "蛋白酶体",
+      "en": "Proteasome"
+    },
+    {
+      "id": "ligase",
+      "zh": "连接酶",
+      "en": "Ligase"
+    },
+    {
+      "id": "helicase",
+      "zh": "解旋酶",
+      "en": "Helicase"
+    },
+    {
+      "id": "operon",
+      "zh": "操纵子",
+      "en": "Operon"
+    },
+    {
+      "id": "ribozyme",
+      "zh": "核酶",
+      "en": "Ribozyme"
+    },
+    {
+      "id": "trna",
+      "zh": "tRNA",
+      "en": "tRNA",
+      "forms": { "zh": ["转运RNA"], "en": ["transfer RNA"] }
+    },
+    {
+      "id": "pseudogene",
+      "zh": "假基因",
+      "en": "Pseudogene"
+    },
+    {
+      "id": "cas9",
+      "zh": "Cas9",
+      "en": "Cas9"
+    },
+    {
+      "id": "qpcr",
+      "zh": "qPCR",
+      "en": "qPCR",
+      "forms": { "en": ["quantitative PCR"] }
+    },
+    {
+      "id": "recombination",
+      "zh": "重组",
+      "en": "Recombination",
+      "forms": { "en": ["recombinant", "recombine"] }
+    },
+    {
+      "id": "crossing-over",
+      "zh": "交叉互换",
+      "en": "Crossing over"
+    },
+    {
+      "id": "karyotype",
+      "zh": "核型",
+      "en": "Karyotype"
+    },
+    {
+      "id": "pedigree",
+      "zh": "系谱",
+      "en": "Pedigree"
+    },
+    {
+      "id": "gwas",
+      "zh": "GWAS",
+      "en": "GWAS",
+      "forms": { "zh": ["全基因组关联分析"], "en": ["genome-wide association study"] }
+    },
+    {
+      "id": "codominance",
+      "zh": "共显性",
+      "en": "Codominance",
+      "forms": { "en": ["codominant"] }
+    },
+    {
+      "id": "pleiotropy",
+      "zh": "多效性",
+      "en": "Pleiotropy",
+      "forms": { "en": ["pleiotropic"] }
+    },
+    {
+      "id": "epistasis",
+      "zh": "上位效应",
+      "en": "Epistasis",
+      "forms": { "en": ["epistatic"] }
+    },
+    {
+      "id": "gene-drive",
+      "zh": "基因驱动",
+      "en": "Gene drive"
+    },
+    {
+      "id": "metagenome",
+      "zh": "宏基因组",
+      "en": "Metagenome",
+      "forms": { "en": ["metagenomics"] }
+    },
+    {
+      "id": "mtdna",
+      "zh": "mtDNA",
+      "en": "mtDNA",
+      "forms": { "zh": ["线粒体DNA"], "en": ["mitochondrial DNA"] }
+    },
+    {
+      "id": "gene-flow",
+      "zh": "基因流",
+      "en": "Gene flow"
+    },
+    {
+      "id": "hox-gene",
+      "zh": "Hox基因",
+      "en": "Hox gene"
+    },
+    {
+      "id": "p53",
+      "zh": "p53",
+      "en": "p53"
+    },
+    {
+      "id": "rna-world",
+      "zh": "RNA世界",
+      "en": "RNA world"
+    },
+    {
+      "id": "sticky-end",
+      "zh": "黏性末端",
+      "en": "Sticky end"
+    },
+    {
+      "id": "hairpin",
+      "zh": "发夹结构",
+      "en": "Hairpin"
+    },
+    {
+      "id": "zinc-finger",
+      "zh": "锌指",
+      "en": "Zinc finger"
+    },
+    {
+      "id": "competent-cell",
+      "zh": "感受态细胞",
+      "en": "Competent cell"
+    },
+    {
+      "id": "genomics",
+      "zh": "基因组学",
+      "en": "Genomics"
+    },
+    {
+      "id": "genetics",
+      "zh": "遗传学",
+      "en": "Genetics",
+      "forms": { "en": ["geneticist"] }
+    },
+    {
+      "id": "cell",
+      "zh": "细胞",
+      "en": "Cell",
+      "forms": { "en": ["cellular"] }
+    },
+    {
+      "id": "golgi",
+      "zh": "高尔基体",
+      "en": "Golgi",
+      "forms": { "en": ["Golgi apparatus"] }
+    },
+    {
+      "id": "centrosome",
+      "zh": "中心体",
+      "en": "Centrosome"
+    },
+    {
+      "id": "microtubule",
+      "zh": "微管",
+      "en": "Microtubule"
+    },
+    {
+      "id": "actin",
+      "zh": "肌动蛋白",
+      "en": "Actin"
+    },
+    {
+      "id": "myosin",
+      "zh": "肌球蛋白",
+      "en": "Myosin"
+    },
+    {
+      "id": "spindle",
+      "zh": "纺锤体",
+      "en": "Spindle"
+    },
+    {
+      "id": "cytokinesis",
+      "zh": "胞质分裂",
+      "en": "Cytokinesis"
+    },
+    {
+      "id": "exocytosis",
+      "zh": "胞吐",
+      "en": "Exocytosis"
+    },
+    {
+      "id": "exosome",
+      "zh": "外泌体",
+      "en": "Exosome"
+    },
+    {
+      "id": "lipid-bilayer",
+      "zh": "脂双层",
+      "en": "Lipid bilayer"
+    },
+    {
+      "id": "nuclear-pore",
+      "zh": "核孔",
+      "en": "Nuclear pore"
+    },
+    {
+      "id": "nucleolus",
+      "zh": "核仁",
+      "en": "Nucleolus",
+      "forms": { "en": ["nucleoli"] }
+    },
+    {
+      "id": "thylakoid",
+      "zh": "类囊体",
+      "en": "Thylakoid"
+    },
+    {
+      "id": "proton-pump",
+      "zh": "质子泵",
+      "en": "Proton pump"
+    },
+    {
+      "id": "motor-protein",
+      "zh": "马达蛋白",
+      "en": "Motor protein"
+    },
+    {
+      "id": "phagocytosis",
+      "zh": "吞噬作用",
+      "en": "Phagocytosis",
+      "forms": { "en": ["phagocytic"] }
+    },
+    {
+      "id": "chemotaxis",
+      "zh": "趋化性",
+      "en": "Chemotaxis"
+    },
+    {
+      "id": "ferroptosis",
+      "zh": "铁死亡",
+      "en": "Ferroptosis"
+    },
+    {
+      "id": "totipotency",
+      "zh": "全能性",
+      "en": "Totipotency",
+      "forms": { "en": ["totipotent"] }
+    },
+    {
+      "id": "ipsc",
+      "zh": "iPSC",
+      "en": "iPSC",
+      "forms": { "zh": ["诱导多能干细胞"], "en": ["induced pluripotent stem cell"] }
+    },
+    {
+      "id": "cell-theory",
+      "zh": "细胞学说",
+      "en": "Cell theory"
+    },
+    {
+      "id": "trypsin",
+      "zh": "胰蛋白酶",
+      "en": "Trypsin"
+    },
+    {
+      "id": "confocal",
+      "zh": "共聚焦",
+      "en": "Confocal"
+    },
+    {
+      "id": "patch-clamp",
+      "zh": "膜片钳",
+      "en": "Patch clamp"
+    },
+    {
+      "id": "shaker",
+      "zh": "摇床",
+      "en": "Shaker"
+    },
+    {
+      "id": "water-bath",
+      "zh": "水浴",
+      "en": "Water bath"
+    },
+    {
+      "id": "in-situ",
+      "zh": "原位",
+      "en": "In situ"
+    },
+    {
+      "id": "histology",
+      "zh": "组织学",
+      "en": "Histology",
+      "forms": { "en": ["histological"] }
+    },
+    {
+      "id": "lysis",
+      "zh": "裂解",
+      "en": "Lysis",
+      "forms": { "en": ["lyse", "lysate"] }
+    },
+    {
+      "id": "t-cell",
+      "zh": "T细胞",
+      "en": "T cell"
+    },
+    {
+      "id": "glycogen",
+      "zh": "糖原",
+      "en": "Glycogen"
+    },
+    {
+      "id": "amylase",
+      "zh": "淀粉酶",
+      "en": "Amylase"
+    },
+    {
+      "id": "keratin",
+      "zh": "角蛋白",
+      "en": "Keratin"
+    },
+    {
+      "id": "chitin",
+      "zh": "几丁质",
+      "en": "Chitin"
+    },
+    {
+      "id": "lignin",
+      "zh": "木质素",
+      "en": "Lignin"
+    },
+    {
+      "id": "fatty-acid",
+      "zh": "脂肪酸",
+      "en": "Fatty acid"
+    },
+    {
+      "id": "steroid",
+      "zh": "类固醇",
+      "en": "Steroid"
+    },
+    {
+      "id": "purine",
+      "zh": "嘌呤",
+      "en": "Purine"
+    },
+    {
+      "id": "disulfide-bond",
+      "zh": "二硫键",
+      "en": "Disulfide bond",
+      "forms": { "en": ["disulphide bond"] }
+    },
+    {
+      "id": "active-site",
+      "zh": "活性位点",
+      "en": "Active site"
+    },
+    {
+      "id": "coenzyme",
+      "zh": "辅酶",
+      "en": "Coenzyme"
+    },
+    {
+      "id": "denaturation",
+      "zh": "变性",
+      "en": "Denaturation",
+      "forms": { "en": ["denature", "denatured"] }
+    },
+    {
+      "id": "nadh",
+      "zh": "NADH",
+      "en": "NADH"
+    },
+    {
+      "id": "calvin-cycle",
+      "zh": "卡尔文循环",
+      "en": "Calvin cycle"
+    },
+    {
+      "id": "respiration",
+      "zh": "呼吸作用",
+      "en": "Respiration",
+      "forms": { "en": ["respire", "respiratory"] }
+    },
+    {
+      "id": "anaerobe",
+      "zh": "厌氧菌",
+      "en": "Anaerobe",
+      "forms": { "en": ["anaerobic"] }
+    },
+    {
+      "id": "autotroph",
+      "zh": "自养生物",
+      "en": "Autotroph",
+      "forms": { "en": ["autotrophic"] }
+    },
+    {
+      "id": "rubisco",
+      "zh": "Rubisco",
+      "en": "Rubisco"
+    },
+    {
+      "id": "cortex",
+      "zh": "皮层",
+      "en": "Cortex",
+      "forms": { "en": ["cortical", "cortices"] }
+    },
+    {
+      "id": "amygdala",
+      "zh": "杏仁核",
+      "en": "Amygdala"
+    },
+    {
+      "id": "cerebellum",
+      "zh": "小脑",
+      "en": "Cerebellum",
+      "forms": { "en": ["cerebellar"] }
+    },
+    {
+      "id": "hypothalamus",
+      "zh": "下丘脑",
+      "en": "Hypothalamus"
+    },
+    {
+      "id": "brainstem",
+      "zh": "脑干",
+      "en": "Brainstem"
+    },
+    {
+      "id": "engram",
+      "zh": "记忆印迹",
+      "en": "Engram"
+    },
+    {
+      "id": "grid-cell",
+      "zh": "网格细胞",
+      "en": "Grid cell"
+    },
+    {
+      "id": "place-cell",
+      "zh": "位置细胞",
+      "en": "Place cell"
+    },
+    {
+      "id": "photoreceptor",
+      "zh": "光感受器",
+      "en": "Photoreceptor"
+    },
+    {
+      "id": "acetylcholine",
+      "zh": "乙酰胆碱",
+      "en": "Acetylcholine"
+    },
+    {
+      "id": "gaba",
+      "zh": "GABA",
+      "en": "GABA",
+      "forms": { "zh": ["γ-氨基丁酸"], "en": ["gamma-aminobutyric acid"] }
+    },
+    {
+      "id": "glutamate",
+      "zh": "谷氨酸",
+      "en": "Glutamate"
+    },
+    {
+      "id": "connectome",
+      "zh": "连接组",
+      "en": "Connectome"
+    },
+    {
+      "id": "basal-ganglia",
+      "zh": "基底神经节",
+      "en": "Basal ganglia"
+    },
+    {
+      "id": "olfaction",
+      "zh": "嗅觉",
+      "en": "Olfaction",
+      "forms": { "en": ["olfactory"] }
+    },
+    {
+      "id": "compound-eye",
+      "zh": "复眼",
+      "en": "Compound eye"
+    },
+    {
+      "id": "electric-eel",
+      "zh": "电鳗",
+      "en": "Electric eel"
+    },
+    {
+      "id": "pituitary",
+      "zh": "垂体",
+      "en": "Pituitary"
+    },
+    {
+      "id": "endocrine",
+      "zh": "内分泌",
+      "en": "Endocrine"
+    },
+    {
+      "id": "testosterone",
+      "zh": "睾酮",
+      "en": "Testosterone"
+    },
+    {
+      "id": "estrogen",
+      "zh": "雌激素",
+      "en": "Estrogen",
+      "forms": { "en": ["oestrogen"] }
+    },
+    {
+      "id": "cortisol",
+      "zh": "皮质醇",
+      "en": "Cortisol"
+    },
+    {
+      "id": "growth-factor",
+      "zh": "生长因子",
+      "en": "Growth factor"
+    },
+    {
+      "id": "gamete",
+      "zh": "配子",
+      "en": "Gamete"
+    },
+    {
+      "id": "zygote",
+      "zh": "合子",
+      "en": "Zygote"
+    },
+    {
+      "id": "sperm",
+      "zh": "精子",
+      "en": "Sperm"
+    },
+    {
+      "id": "egg-cell",
+      "zh": "卵细胞",
+      "en": "Egg cell"
+    },
+    {
+      "id": "hermaphrodite",
+      "zh": "雌雄同体",
+      "en": "Hermaphrodite"
+    },
+    {
+      "id": "budding",
+      "zh": "出芽",
+      "en": "Budding",
+      "forms": { "en": ["bud"] }
+    },
+    {
+      "id": "binary-fission",
+      "zh": "二分裂",
+      "en": "Binary fission"
+    },
+    {
+      "id": "placenta",
+      "zh": "胎盘",
+      "en": "Placenta",
+      "forms": { "en": ["placental"] }
+    },
+    {
+      "id": "pupa",
+      "zh": "蛹",
+      "en": "Pupa",
+      "forms": { "en": ["pupae"] }
+    },
+    {
+      "id": "tadpole",
+      "zh": "蝌蚪",
+      "en": "Tadpole"
+    },
+    {
+      "id": "metamorphosis",
+      "zh": "变态发育",
+      "en": "Metamorphosis"
+    },
+    {
+      "id": "gill",
+      "zh": "鳃",
+      "en": "Gill"
+    },
+    {
+      "id": "invertebrate",
+      "zh": "无脊椎动物",
+      "en": "Invertebrate"
+    },
+    {
+      "id": "arthropod",
+      "zh": "节肢动物",
+      "en": "Arthropod"
+    },
+    {
+      "id": "mollusk",
+      "zh": "软体动物",
+      "en": "Mollusk",
+      "forms": { "en": ["mollusc"] }
+    },
+    {
+      "id": "rodent",
+      "zh": "啮齿动物",
+      "en": "Rodent"
+    },
+    {
+      "id": "phylum",
+      "zh": "门",
+      "en": "Phylum",
+      "forms": { "en": ["phyla"] }
+    },
+    {
+      "id": "kingdom",
+      "zh": "界",
+      "en": "Kingdom"
+    },
+    {
+      "id": "genus",
+      "zh": "属",
+      "en": "Genus",
+      "forms": { "en": ["genera"] }
+    },
+    {
+      "id": "foraging",
+      "zh": "觅食",
+      "en": "Foraging",
+      "forms": { "en": ["forage"] }
+    },
+    {
+      "id": "eusociality",
+      "zh": "真社会性",
+      "en": "Eusociality",
+      "forms": { "en": ["eusocial"] }
+    },
+    {
+      "id": "kin-selection",
+      "zh": "亲缘选择",
+      "en": "Kin selection"
+    },
+    {
+      "id": "aposematism",
+      "zh": "警戒色",
+      "en": "Aposematism"
+    },
+    {
+      "id": "red-queen",
+      "zh": "红皇后",
+      "en": "Red Queen"
+    },
+    {
+      "id": "selfish-gene",
+      "zh": "自私的基因",
+      "en": "Selfish gene"
+    },
+    {
+      "id": "neutral-theory",
+      "zh": "中性理论",
+      "en": "Neutral theory"
+    },
+    {
+      "id": "lamarckism",
+      "zh": "拉马克主义",
+      "en": "Lamarckism"
+    },
+    {
+      "id": "darwinism",
+      "zh": "达尔文主义",
+      "en": "Darwinism"
+    },
+    {
+      "id": "bipedalism",
+      "zh": "直立行走",
+      "en": "Bipedalism"
+    },
+    {
+      "id": "denisovan",
+      "zh": "丹尼索瓦人",
+      "en": "Denisovan"
+    },
+    {
+      "id": "peking-man",
+      "zh": "北京人",
+      "en": "Peking Man"
+    },
+    {
+      "id": "archaeopteryx",
+      "zh": "始祖鸟",
+      "en": "Archaeopteryx"
+    },
+    {
+      "id": "trilobite",
+      "zh": "三叶虫",
+      "en": "Trilobite"
+    },
+    {
+      "id": "mammoth",
+      "zh": "猛犸象",
+      "en": "Mammoth"
+    },
+    {
+      "id": "t-rex",
+      "zh": "霸王龙",
+      "en": "T. rex",
+      "forms": { "en": ["Tyrannosaurus"] }
+    },
+    {
+      "id": "sea-urchin",
+      "zh": "海胆",
+      "en": "Sea urchin"
+    },
+    {
+      "id": "starfish",
+      "zh": "海星",
+      "en": "Starfish"
+    },
+    {
+      "id": "squid",
+      "zh": "鱿鱼",
+      "en": "Squid"
+    },
+    {
+      "id": "xenopus",
+      "zh": "爪蟾",
+      "en": "Xenopus"
+    },
+    {
+      "id": "planarian",
+      "zh": "涡虫",
+      "en": "Planarian"
+    },
+    {
+      "id": "hydra",
+      "zh": "水螅",
+      "en": "Hydra"
+    },
+    {
+      "id": "gecko",
+      "zh": "壁虎",
+      "en": "Gecko"
+    },
+    {
+      "id": "hummingbird",
+      "zh": "蜂鸟",
+      "en": "Hummingbird"
+    },
+    {
+      "id": "shark",
+      "zh": "鲨鱼",
+      "en": "Shark"
+    },
+    {
+      "id": "dolphin",
+      "zh": "海豚",
+      "en": "Dolphin"
+    },
+    {
+      "id": "giraffe",
+      "zh": "长颈鹿",
+      "en": "Giraffe"
+    },
+    {
+      "id": "kangaroo",
+      "zh": "袋鼠",
+      "en": "Kangaroo"
+    },
+    {
+      "id": "peacock",
+      "zh": "孔雀",
+      "en": "Peacock"
+    },
+    {
+      "id": "cuckoo",
+      "zh": "杜鹃",
+      "en": "Cuckoo"
+    },
+    {
+      "id": "spider",
+      "zh": "蜘蛛",
+      "en": "Spider"
+    },
+    {
+      "id": "beetle",
+      "zh": "甲虫",
+      "en": "Beetle"
+    },
+    {
+      "id": "cicada",
+      "zh": "蝉",
+      "en": "Cicada"
+    },
+    {
+      "id": "frog",
+      "zh": "青蛙",
+      "en": "Frog"
+    },
+    {
+      "id": "mule",
+      "zh": "骡子",
+      "en": "Mule"
+    },
+    {
+      "id": "amoeba",
+      "zh": "变形虫",
+      "en": "Amoeba",
+      "forms": { "en": ["amoebae", "ameba"] }
+    },
+    {
+      "id": "paramecium",
+      "zh": "草履虫",
+      "en": "Paramecium"
+    },
+    {
+      "id": "protist",
+      "zh": "原生生物",
+      "en": "Protist"
+    },
+    {
+      "id": "diatom",
+      "zh": "硅藻",
+      "en": "Diatom"
+    },
+    {
+      "id": "slime-mold",
+      "zh": "黏菌",
+      "en": "Slime mold",
+      "forms": { "en": ["slime mould"] }
+    },
+    {
+      "id": "mushroom",
+      "zh": "蘑菇",
+      "en": "Mushroom"
+    },
+    {
+      "id": "mycelium",
+      "zh": "菌丝体",
+      "en": "Mycelium",
+      "forms": { "en": ["mycelia"] }
+    },
+    {
+      "id": "penicillium",
+      "zh": "青霉菌",
+      "en": "Penicillium"
+    },
+    {
+      "id": "bacillus",
+      "zh": "芽孢杆菌",
+      "en": "Bacillus",
+      "forms": { "en": ["bacilli"] }
+    },
+    {
+      "id": "extremophile",
+      "zh": "极端微生物",
+      "en": "Extremophile"
+    },
+    {
+      "id": "capsid",
+      "zh": "衣壳",
+      "en": "Capsid"
+    },
+    {
+      "id": "chimera",
+      "zh": "嵌合体",
+      "en": "Chimera",
+      "forms": { "en": ["chimeric"] }
+    },
+    {
+      "id": "stomata",
+      "zh": "气孔",
+      "en": "Stomata",
+      "forms": { "en": ["stoma"] }
+    },
+    {
+      "id": "xylem",
+      "zh": "木质部",
+      "en": "Xylem"
+    },
+    {
+      "id": "phloem",
+      "zh": "韧皮部",
+      "en": "Phloem"
+    },
+    {
+      "id": "auxin",
+      "zh": "生长素",
+      "en": "Auxin"
+    },
+    {
+      "id": "phototropism",
+      "zh": "向光性",
+      "en": "Phototropism"
+    },
+    {
+      "id": "monocot",
+      "zh": "单子叶植物",
+      "en": "Monocot",
+      "forms": { "en": ["monocotyledon"] }
+    },
+    {
+      "id": "dicot",
+      "zh": "双子叶植物",
+      "en": "Dicot",
+      "forms": { "en": ["dicotyledon"] }
+    },
+    {
+      "id": "angiosperm",
+      "zh": "被子植物",
+      "en": "Angiosperm"
+    },
+    {
+      "id": "gymnosperm",
+      "zh": "裸子植物",
+      "en": "Gymnosperm"
+    },
+    {
+      "id": "stamen",
+      "zh": "雄蕊",
+      "en": "Stamen"
+    },
+    {
+      "id": "pistil",
+      "zh": "雌蕊",
+      "en": "Pistil"
+    },
+    {
+      "id": "carotenoid",
+      "zh": "类胡萝卜素",
+      "en": "Carotenoid"
+    },
+    {
+      "id": "photoperiod",
+      "zh": "光周期",
+      "en": "Photoperiod",
+      "forms": { "en": ["photoperiodism"] }
+    },
+    {
+      "id": "venus-flytrap",
+      "zh": "捕蝇草",
+      "en": "Venus flytrap"
+    },
+    {
+      "id": "mimosa",
+      "zh": "含羞草",
+      "en": "Mimosa"
+    },
+    {
+      "id": "meristem",
+      "zh": "分生组织",
+      "en": "Meristem"
+    },
+    {
+      "id": "callus",
+      "zh": "愈伤组织",
+      "en": "Callus"
+    },
+    {
+      "id": "fern",
+      "zh": "蕨类",
+      "en": "Fern"
+    },
+    {
+      "id": "cactus",
+      "zh": "仙人掌",
+      "en": "Cactus",
+      "forms": { "en": ["cacti"] }
+    },
+    {
+      "id": "cork",
+      "zh": "软木",
+      "en": "Cork"
+    },
+    {
+      "id": "bark",
+      "zh": "树皮",
+      "en": "Bark"
+    },
+    {
+      "id": "blastocyst",
+      "zh": "囊胚",
+      "en": "Blastocyst"
+    },
+    {
+      "id": "germ-layer",
+      "zh": "胚层",
+      "en": "Germ layer"
+    },
+    {
+      "id": "microbiology",
+      "zh": "微生物学",
+      "en": "Microbiology",
+      "forms": { "en": ["microbiologist"] }
+    },
+    {
+      "id": "cell-biology",
+      "zh": "细胞生物学",
+      "en": "Cell biology"
+    },
+    {
+      "id": "embryology",
+      "zh": "胚胎学",
+      "en": "Embryology"
+    },
+    {
+      "id": "entomology",
+      "zh": "昆虫学",
+      "en": "Entomology",
+      "forms": { "en": ["entomologist"] }
+    },
+    {
+      "id": "ornithology",
+      "zh": "鸟类学",
+      "en": "Ornithology",
+      "forms": { "en": ["ornithologist"] }
+    },
+    {
+      "id": "mycology",
+      "zh": "真菌学",
+      "en": "Mycology"
+    },
+    {
+      "id": "ethology",
+      "zh": "动物行为学",
+      "en": "Ethology"
+    },
+    {
+      "id": "marine-biology",
+      "zh": "海洋生物学",
+      "en": "Marine biology"
+    },
+    {
+      "id": "biophysics",
+      "zh": "生物物理学",
+      "en": "Biophysics",
+      "forms": { "en": ["biophysical"] }
     }
   ]
 }
