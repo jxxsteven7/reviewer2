@@ -1,11 +1,22 @@
-import { finish, LINKED, type ListFormat, type ListProblem, type ListSection, parseName, readLines } from './lists';
+import {
+  finish,
+  LINKED,
+  type ListFormat,
+  type ListProblem,
+  type ListSection,
+  parseName,
+  readLines,
+  SEPARATOR,
+} from './lists';
+import { cleanLine, MAX_MARKS, showsSomething, textLength } from './text';
 
 // The sponsors (docs/architecture.md#sponsors): SPONSORS.md in the repository, a list by the rules
 // of lists.ts. Every day, .github/workflows/sponsors.yml writes those who sponsor on GitHub
 // Sponsors and made it public, by their GitHub usernames, between two lines that mark them
 // (scripts/update-sponsors.mjs). Maintainers add those who sponsor in other ways, such as a WeChat
-// tip, by hand, and only those who asked to be named. No list shows an amount, a tier or whether a
-// sponsorship is monthly.
+// tip, by hand, and only those who asked to be named, and may write a line of thanks to them after
+// their names. No list shows an amount, a tier or whether a sponsorship is monthly, and a line of
+// thanks is the maintainers' own choice, whatever someone gave.
 
 export const SPONSOR_KINDS = ['github', 'other'] as const;
 export type SponsorKind = (typeof SPONSOR_KINDS)[number];
@@ -24,12 +35,17 @@ export const SPONSORS_END = '<!-- end of GitHub Sponsors -->';
 // The page where people sponsor the author.
 export const SPONSORS_PAGE = 'https://github.com/sponsors/jxxsteven7';
 
-// A sponsor: the name, which is the GitHub username of a sponsor on GitHub, and the link that may
-// go with it, which a sponsor on GitHub always has, to their profile.
+// A sponsor: the name, which is the GitHub username of a sponsor on GitHub, the link that may go
+// with it, which a sponsor on GitHub always has, to their profile, and the line of thanks that the
+// maintainers may write to a sponsor of another way, in any language, or null.
 export interface Sponsor {
   name: string;
   link: string | null;
+  thanks: string | null;
 }
+
+// The longest line of thanks, in the characters that a reader sees (text.ts).
+export const MAX_THANKS_LENGTH = 40;
 
 export type SponsorSection = ListSection<SponsorKind, Sponsor>;
 
@@ -42,7 +58,49 @@ function onGitHub(text: string): Sponsor | string {
   if (name === undefined || !USERNAME.test(name) || linked?.[2] !== `https://github.com/${name}`) {
     return 'A sponsor on GitHub is "- [<username>](https://github.com/<username>)", as the workflow writes it.';
   }
-  return { name, link: linked[2] };
+  return { name, link: linked[2], thanks: null };
+}
+
+// What would make a line of thanks a link, on GitHub or in an app that shows it, which it never is:
+// a web address, with its scheme, with www. or as a bare domain such as example.com, which an
+// email address holds too; a Markdown link; an @mention; and an issue's number, #12.
+const LINKS = /http|www\.|:\/\/|[a-z\d]\.[a-z]{2}|\]\(|@[a-z\d]|#\d/i;
+
+// What is wrong with a line of thanks, if anything. It is shown as the maintainers wrote it, so it
+// is refused, not cleaned, when the rules of text.ts would change it. The home page shows it as
+// plain text.
+function checkThanks(thanks: string): string | null {
+  if (!showsSomething(thanks)) {
+    return `Write the line of thanks after "${SEPARATOR}", or leave "${SEPARATOR.trimEnd()}" out.`;
+  }
+  if (cleanLine(thanks) !== thanks) {
+    return `A line of thanks has single spaces, none at its ends, no control or hidden characters, and at most ${MAX_MARKS} marks of a kind on a character.`;
+  }
+  if (LINKS.test(thanks)) {
+    return 'Leave links out of a line of thanks: no http, www., domain such as example.com, email address, Markdown link, @mention or #number.';
+  }
+  const length = textLength(thanks);
+  if (length > MAX_THANKS_LENGTH) {
+    return `A line of thanks has at most ${MAX_THANKS_LENGTH} visible characters, and this one has ${length}.`;
+  }
+  return null;
+}
+
+// What follows the "- " of an entry of another way, or what is wrong with it: a name, alone or with
+// a line of thanks after the separator, which comes once at most, so that neither the name nor the
+// thanks is cut in the wrong place. A separator at the end of the line, with its last space
+// trimmed, as an editor may do, still counts as one.
+function byHand(text: string): Sponsor | string {
+  const padded = `${text} `;
+  const at = padded.indexOf(SEPARATOR);
+  if (at >= 0 && padded.lastIndexOf(SEPARATOR) !== at) {
+    return `An entry has "${SEPARATOR}" once at most, between the name and the line of thanks.`;
+  }
+  const thanks = at < 0 ? null : text.slice(at + SEPARATOR.length);
+  const wrong = thanks === null ? null : checkThanks(thanks);
+  if (wrong) return wrong;
+  const named = parseName(at < 0 ? text : text.slice(0, at), 'sponsors');
+  return typeof named === 'string' ? named : { ...named, thanks };
 }
 
 // What the workflow writes, and the rest of the file.
@@ -55,8 +113,9 @@ const GITHUB: ListFormat<'github', Sponsor> = {
 const BY_HAND: ListFormat<SponsorKind, Sponsor> = {
   list: 'sponsors',
   headings: SPONSOR_HEADINGS,
-  shape: '- <name>',
-  entry: (text) => parseName(text, 'sponsors'),
+  // Either shape, as the message quotes it.
+  shape: `- <name>" or "- <name>${SEPARATOR}<thanks>`,
+  entry: byHand,
 };
 
 const MARKERS = `SPONSORS.md has the line "${SPONSORS_START}" once, and the line "${SPONSORS_END}" once after it, which the workflow writes the GitHub Sponsors between.`;
@@ -64,7 +123,7 @@ const MARKERS = `SPONSORS.md has the line "${SPONSORS_START}" once, and the line
 // SPONSORS.md as the home page shows it, and what in it breaks the rules: the introduction, then
 // the two lines that mark the GitHub Sponsors, with nothing between them but blank lines or the
 // section "## GitHub Sponsors", and after them the section "## Other ways", which follows the rules
-// of names in lists.ts.
+// of names in lists.ts, and those of a line of thanks here.
 export function parseSponsors(text: string): { sections: SponsorSection[]; problems: ListProblem[] } {
   const lines = text.split(/\r?\n/);
   const start = lines.indexOf(SPONSORS_START);
