@@ -1438,6 +1438,1271 @@
       "id": "picture-frame",
       "zh": "画框",
       "en": "Picture frame"
+    },
+    {
+      "id": "painting",
+      "zh": "绘画",
+      "en": "Painting",
+      "forms": { "en": ["painter"] }
+    },
+    {
+      "id": "chiaroscuro",
+      "zh": "明暗对照法",
+      "en": "Chiaroscuro"
+    },
+    {
+      "id": "sfumato",
+      "zh": "晕涂法",
+      "en": "Sfumato"
+    },
+    {
+      "id": "triptych",
+      "zh": "三联画",
+      "en": "Triptych"
+    },
+    {
+      "id": "foreshortening",
+      "zh": "透视缩短",
+      "en": "Foreshortening"
+    },
+    {
+      "id": "impasto",
+      "zh": "厚涂",
+      "en": "Impasto"
+    },
+    {
+      "id": "ultramarine",
+      "zh": "群青",
+      "en": "Ultramarine"
+    },
+    {
+      "id": "vermilion",
+      "zh": "朱红",
+      "en": "Vermilion",
+      "forms": { "en": ["vermillion"] }
+    },
+    {
+      "id": "warm-colors",
+      "zh": "暖色",
+      "en": "Warm colors",
+      "forms": { "en": ["warm colours"] }
+    },
+    {
+      "id": "cool-colors",
+      "zh": "冷色",
+      "en": "Cool colors",
+      "forms": { "en": ["cool colours"] }
+    },
+    {
+      "id": "monochrome",
+      "zh": "单色",
+      "en": "Monochrome",
+      "forms": { "en": ["monochromatic"] }
+    },
+    {
+      "id": "highlight",
+      "zh": "高光",
+      "en": "Highlight"
+    },
+    {
+      "id": "crayon",
+      "zh": "蜡笔",
+      "en": "Crayon"
+    },
+    {
+      "id": "mosaic",
+      "zh": "马赛克",
+      "en": "Mosaic"
+    },
+    {
+      "id": "gongbi",
+      "zh": "工笔",
+      "en": "Gongbi"
+    },
+    {
+      "id": "xieyi",
+      "zh": "写意",
+      "en": "Xieyi"
+    },
+    {
+      "id": "shan-shui",
+      "zh": "山水画",
+      "en": "Shan shui"
+    },
+    {
+      "id": "splashed-ink",
+      "zh": "泼墨",
+      "en": "Splashed ink"
+    },
+    {
+      "id": "scroll",
+      "zh": "卷轴",
+      "en": "Scroll"
+    },
+    {
+      "id": "mounting",
+      "zh": "装裱",
+      "en": "Mounting"
+    },
+    {
+      "id": "four-treasures",
+      "zh": "文房四宝",
+      "en": "Four Treasures"
+    },
+    {
+      "id": "seal-script",
+      "zh": "篆书",
+      "en": "Seal script"
+    },
+    {
+      "id": "cursive-script",
+      "zh": "草书",
+      "en": "Cursive script"
+    },
+    {
+      "id": "regular-script",
+      "zh": "楷书",
+      "en": "Regular script"
+    },
+    {
+      "id": "starry-night",
+      "zh": "星月夜",
+      "en": "Starry Night"
+    },
+    {
+      "id": "venus-de-milo",
+      "zh": "断臂维纳斯",
+      "en": "Venus de Milo"
+    },
+    {
+      "id": "water-lilies",
+      "zh": "睡莲",
+      "en": "Water Lilies"
+    },
+    {
+      "id": "iconography",
+      "zh": "图像学",
+      "en": "Iconography"
+    },
+    {
+      "id": "romanesque",
+      "zh": "罗马式",
+      "en": "Romanesque"
+    },
+    {
+      "id": "constructivism",
+      "zh": "构成主义",
+      "en": "Constructivism",
+      "forms": { "en": ["constructivist"] }
+    },
+    {
+      "id": "de-stijl",
+      "zh": "风格派",
+      "en": "De Stijl"
+    },
+    {
+      "id": "hyperrealism",
+      "zh": "超写实主义",
+      "en": "Hyperrealism"
+    },
+    {
+      "id": "land-art",
+      "zh": "大地艺术",
+      "en": "Land art"
+    },
+    {
+      "id": "readymade",
+      "zh": "现成品",
+      "en": "Readymade"
+    },
+    {
+      "id": "kinetic-art",
+      "zh": "动态艺术",
+      "en": "Kinetic art"
+    },
+    {
+      "id": "folk-art",
+      "zh": "民间艺术",
+      "en": "Folk art"
+    },
+    {
+      "id": "chinoiserie",
+      "zh": "中国风",
+      "en": "Chinoiserie"
+    },
+    {
+      "id": "pixel-art",
+      "zh": "像素画",
+      "en": "Pixel art"
+    },
+    {
+      "id": "low-poly",
+      "zh": "低多边形",
+      "en": "Low poly"
+    },
+    {
+      "id": "generative-art",
+      "zh": "生成艺术",
+      "en": "Generative art"
+    },
+    {
+      "id": "graphic-novel",
+      "zh": "图像小说",
+      "en": "Graphic novel"
+    },
+    {
+      "id": "chisel",
+      "zh": "凿子",
+      "en": "Chisel"
+    },
+    {
+      "id": "clay",
+      "zh": "黏土",
+      "en": "Clay"
+    },
+    {
+      "id": "grotto",
+      "zh": "石窟",
+      "en": "Grotto",
+      "forms": { "en": ["grottoes"] }
+    },
+    {
+      "id": "wax-figure",
+      "zh": "蜡像",
+      "en": "Wax figure"
+    },
+    {
+      "id": "ice-sculpture",
+      "zh": "冰雕",
+      "en": "Ice sculpture"
+    },
+    {
+      "id": "jade-carving",
+      "zh": "玉雕",
+      "en": "Jade carving"
+    },
+    {
+      "id": "camera",
+      "zh": "相机",
+      "en": "Camera"
+    },
+    {
+      "id": "polaroid",
+      "zh": "拍立得",
+      "en": "Polaroid"
+    },
+    {
+      "id": "zoom",
+      "zh": "变焦",
+      "en": "Zoom"
+    },
+    {
+      "id": "prime-lens",
+      "zh": "定焦",
+      "en": "Prime lens"
+    },
+    {
+      "id": "mirrorless",
+      "zh": "无反",
+      "en": "Mirrorless"
+    },
+    {
+      "id": "vignette",
+      "zh": "暗角",
+      "en": "Vignette"
+    },
+    {
+      "id": "light-painting",
+      "zh": "光绘",
+      "en": "Light painting"
+    },
+    {
+      "id": "aerial-shot",
+      "zh": "航拍",
+      "en": "Aerial shot"
+    },
+    {
+      "id": "moire",
+      "zh": "摩尔纹",
+      "en": "Moiré"
+    },
+    {
+      "id": "hdr",
+      "zh": "高动态范围",
+      "en": "HDR",
+      "forms": { "en": ["high dynamic range"] }
+    },
+    {
+      "id": "grayscale",
+      "zh": "灰度",
+      "en": "Grayscale",
+      "forms": { "en": ["greyscale"] }
+    },
+    {
+      "id": "actor",
+      "zh": "演员",
+      "en": "Actor"
+    },
+    {
+      "id": "cinema",
+      "zh": "电影院",
+      "en": "Cinema",
+      "forms": { "en": ["cinematic"] }
+    },
+    {
+      "id": "blockbuster",
+      "zh": "大片",
+      "en": "Blockbuster"
+    },
+    {
+      "id": "thriller",
+      "zh": "惊悚片",
+      "en": "Thriller"
+    },
+    {
+      "id": "horror-film",
+      "zh": "恐怖片",
+      "en": "Horror film"
+    },
+    {
+      "id": "wuxia",
+      "zh": "武侠",
+      "en": "Wuxia"
+    },
+    {
+      "id": "sitcom",
+      "zh": "情景喜剧",
+      "en": "Sitcom",
+      "forms": { "en": ["situation comedy"] }
+    },
+    {
+      "id": "dubbing",
+      "zh": "配音",
+      "en": "Dubbing",
+      "forms": { "en": ["dub"] }
+    },
+    {
+      "id": "voice-over",
+      "zh": "画外音",
+      "en": "Voice-over"
+    },
+    {
+      "id": "mise-en-scene",
+      "zh": "场面调度",
+      "en": "Mise-en-scène"
+    },
+    {
+      "id": "new-wave",
+      "zh": "新浪潮",
+      "en": "New Wave"
+    },
+    {
+      "id": "vfx",
+      "zh": "特效",
+      "en": "VFX",
+      "forms": { "en": ["visual effects"] }
+    },
+    {
+      "id": "silver-screen",
+      "zh": "银幕",
+      "en": "Silver screen"
+    },
+    {
+      "id": "short-film",
+      "zh": "短片",
+      "en": "Short film"
+    },
+    {
+      "id": "film-festival",
+      "zh": "电影节",
+      "en": "Film festival"
+    },
+    {
+      "id": "cannes",
+      "zh": "戛纳",
+      "en": "Cannes"
+    },
+    {
+      "id": "superhero",
+      "zh": "超级英雄",
+      "en": "Superhero"
+    },
+    {
+      "id": "dissolve",
+      "zh": "叠化",
+      "en": "Dissolve"
+    },
+    {
+      "id": "keyframe",
+      "zh": "关键帧",
+      "en": "Keyframe"
+    },
+    {
+      "id": "score",
+      "zh": "配乐",
+      "en": "Score"
+    },
+    {
+      "id": "theme-song",
+      "zh": "主题曲",
+      "en": "Theme song"
+    },
+    {
+      "id": "major-key",
+      "zh": "大调",
+      "en": "Major key"
+    },
+    {
+      "id": "minor-key",
+      "zh": "小调",
+      "en": "Minor key"
+    },
+    {
+      "id": "tonic",
+      "zh": "主音",
+      "en": "Tonic"
+    },
+    {
+      "id": "triad",
+      "zh": "三和弦",
+      "en": "Triad"
+    },
+    {
+      "id": "tritone",
+      "zh": "三全音",
+      "en": "Tritone"
+    },
+    {
+      "id": "arpeggio",
+      "zh": "琶音",
+      "en": "Arpeggio"
+    },
+    {
+      "id": "syncopation",
+      "zh": "切分音",
+      "en": "Syncopation",
+      "forms": { "en": ["syncopated"] }
+    },
+    {
+      "id": "allegro",
+      "zh": "快板",
+      "en": "Allegro"
+    },
+    {
+      "id": "adagio",
+      "zh": "柔板",
+      "en": "Adagio"
+    },
+    {
+      "id": "glissando",
+      "zh": "滑音",
+      "en": "Glissando"
+    },
+    {
+      "id": "fermata",
+      "zh": "延长记号",
+      "en": "Fermata"
+    },
+    {
+      "id": "bar",
+      "zh": "小节",
+      "en": "Bar"
+    },
+    {
+      "id": "leitmotif",
+      "zh": "主导动机",
+      "en": "Leitmotif"
+    },
+    {
+      "id": "polyphony",
+      "zh": "复调",
+      "en": "Polyphony",
+      "forms": { "en": ["polyphonic"] }
+    },
+    {
+      "id": "unison",
+      "zh": "齐奏",
+      "en": "Unison"
+    },
+    {
+      "id": "pentatonic",
+      "zh": "五声音阶",
+      "en": "Pentatonic"
+    },
+    {
+      "id": "jianpu",
+      "zh": "简谱",
+      "en": "Jianpu"
+    },
+    {
+      "id": "bel-canto",
+      "zh": "美声",
+      "en": "Bel canto"
+    },
+    {
+      "id": "falsetto",
+      "zh": "假声",
+      "en": "Falsetto"
+    },
+    {
+      "id": "soprano",
+      "zh": "女高音",
+      "en": "Soprano"
+    },
+    {
+      "id": "tenor",
+      "zh": "男高音",
+      "en": "Tenor"
+    },
+    {
+      "id": "baritone",
+      "zh": "男中音",
+      "en": "Baritone"
+    },
+    {
+      "id": "vocal-range",
+      "zh": "音域",
+      "en": "Vocal range"
+    },
+    {
+      "id": "overtone",
+      "zh": "泛音",
+      "en": "Overtone"
+    },
+    {
+      "id": "groove",
+      "zh": "律动",
+      "en": "Groove"
+    },
+    {
+      "id": "overture",
+      "zh": "序曲",
+      "en": "Overture"
+    },
+    {
+      "id": "aria",
+      "zh": "咏叹调",
+      "en": "Aria"
+    },
+    {
+      "id": "requiem",
+      "zh": "安魂曲",
+      "en": "Requiem"
+    },
+    {
+      "id": "lullaby",
+      "zh": "摇篮曲",
+      "en": "Lullaby"
+    },
+    {
+      "id": "nocturne",
+      "zh": "夜曲",
+      "en": "Nocturne"
+    },
+    {
+      "id": "etude",
+      "zh": "练习曲",
+      "en": "Étude"
+    },
+    {
+      "id": "waltz",
+      "zh": "圆舞曲",
+      "en": "Waltz"
+    },
+    {
+      "id": "minuet",
+      "zh": "小步舞曲",
+      "en": "Minuet"
+    },
+    {
+      "id": "march",
+      "zh": "进行曲",
+      "en": "March"
+    },
+    {
+      "id": "rhapsody",
+      "zh": "狂想曲",
+      "en": "Rhapsody"
+    },
+    {
+      "id": "serenade",
+      "zh": "小夜曲",
+      "en": "Serenade"
+    },
+    {
+      "id": "rondo",
+      "zh": "回旋曲",
+      "en": "Rondo"
+    },
+    {
+      "id": "suite",
+      "zh": "组曲",
+      "en": "Suite"
+    },
+    {
+      "id": "chamber-music",
+      "zh": "室内乐",
+      "en": "Chamber music"
+    },
+    {
+      "id": "trio",
+      "zh": "三重奏",
+      "en": "Trio"
+    },
+    {
+      "id": "rock-and-roll",
+      "zh": "摇滚",
+      "en": "Rock and roll"
+    },
+    {
+      "id": "punk",
+      "zh": "朋克",
+      "en": "Punk"
+    },
+    {
+      "id": "reggae",
+      "zh": "雷鬼",
+      "en": "Reggae"
+    },
+    {
+      "id": "disco",
+      "zh": "迪斯科",
+      "en": "Disco"
+    },
+    {
+      "id": "country-music",
+      "zh": "乡村音乐",
+      "en": "Country music"
+    },
+    {
+      "id": "swing",
+      "zh": "摇摆乐",
+      "en": "Swing"
+    },
+    {
+      "id": "viola",
+      "zh": "中提琴",
+      "en": "Viola",
+      "forms": { "en": ["violist"] }
+    },
+    {
+      "id": "double-bass",
+      "zh": "低音提琴",
+      "en": "Double bass"
+    },
+    {
+      "id": "clarinet",
+      "zh": "单簧管",
+      "en": "Clarinet",
+      "forms": { "en": ["clarinetist"] }
+    },
+    {
+      "id": "oboe",
+      "zh": "双簧管",
+      "en": "Oboe",
+      "forms": { "en": ["oboist"] }
+    },
+    {
+      "id": "bassoon",
+      "zh": "大管",
+      "en": "Bassoon"
+    },
+    {
+      "id": "french-horn",
+      "zh": "圆号",
+      "en": "French horn"
+    },
+    {
+      "id": "trombone",
+      "zh": "长号",
+      "en": "Trombone"
+    },
+    {
+      "id": "tuba",
+      "zh": "大号",
+      "en": "Tuba"
+    },
+    {
+      "id": "timpani",
+      "zh": "定音鼓",
+      "en": "Timpani"
+    },
+    {
+      "id": "xylophone",
+      "zh": "木琴",
+      "en": "Xylophone"
+    },
+    {
+      "id": "harmonica",
+      "zh": "口琴",
+      "en": "Harmonica"
+    },
+    {
+      "id": "accordion",
+      "zh": "手风琴",
+      "en": "Accordion"
+    },
+    {
+      "id": "ukulele",
+      "zh": "尤克里里",
+      "en": "Ukulele"
+    },
+    {
+      "id": "harpsichord",
+      "zh": "羽管键琴",
+      "en": "Harpsichord"
+    },
+    {
+      "id": "bagpipes",
+      "zh": "风笛",
+      "en": "Bagpipes"
+    },
+    {
+      "id": "synthesizer",
+      "zh": "合成器",
+      "en": "Synthesizer",
+      "forms": { "en": ["synth"] }
+    },
+    {
+      "id": "guqin",
+      "zh": "古琴",
+      "en": "Guqin"
+    },
+    {
+      "id": "bamboo-flute",
+      "zh": "笛子",
+      "en": "Bamboo flute"
+    },
+    {
+      "id": "suona",
+      "zh": "唢呐",
+      "en": "Suona"
+    },
+    {
+      "id": "gong",
+      "zh": "锣",
+      "en": "Gong"
+    },
+    {
+      "id": "cymbals",
+      "zh": "钹",
+      "en": "Cymbals"
+    },
+    {
+      "id": "music-box",
+      "zh": "八音盒",
+      "en": "Music box"
+    },
+    {
+      "id": "reed",
+      "zh": "簧片",
+      "en": "Reed"
+    },
+    {
+      "id": "pedal",
+      "zh": "踏板",
+      "en": "Pedal"
+    },
+    {
+      "id": "bow",
+      "zh": "琴弓",
+      "en": "Bow"
+    },
+    {
+      "id": "album",
+      "zh": "专辑",
+      "en": "Album"
+    },
+    {
+      "id": "single",
+      "zh": "单曲",
+      "en": "Single"
+    },
+    {
+      "id": "concert",
+      "zh": "音乐会",
+      "en": "Concert"
+    },
+    {
+      "id": "cover",
+      "zh": "翻唱",
+      "en": "Cover"
+    },
+    {
+      "id": "grammy",
+      "zh": "格莱美",
+      "en": "Grammy"
+    },
+    {
+      "id": "music-festival",
+      "zh": "音乐节",
+      "en": "Music festival"
+    },
+    {
+      "id": "theatre",
+      "zh": "剧院",
+      "en": "Theatre",
+      "forms": { "en": ["theater"] }
+    },
+    {
+      "id": "spotlight",
+      "zh": "聚光灯",
+      "en": "Spotlight"
+    },
+    {
+      "id": "costume",
+      "zh": "戏服",
+      "en": "Costume"
+    },
+    {
+      "id": "makeup",
+      "zh": "化妆",
+      "en": "Makeup"
+    },
+    {
+      "id": "scenery",
+      "zh": "布景",
+      "en": "Scenery"
+    },
+    {
+      "id": "playwright",
+      "zh": "剧作家",
+      "en": "Playwright"
+    },
+    {
+      "id": "farce",
+      "zh": "闹剧",
+      "en": "Farce"
+    },
+    {
+      "id": "acrobatics",
+      "zh": "杂技",
+      "en": "Acrobatics",
+      "forms": { "en": ["acrobat"] }
+    },
+    {
+      "id": "circus",
+      "zh": "马戏",
+      "en": "Circus"
+    },
+    {
+      "id": "clown",
+      "zh": "小丑",
+      "en": "Clown"
+    },
+    {
+      "id": "magic",
+      "zh": "魔术",
+      "en": "Magic",
+      "forms": { "en": ["magician"] }
+    },
+    {
+      "id": "tap-dance",
+      "zh": "踢踏舞",
+      "en": "Tap dance"
+    },
+    {
+      "id": "tango",
+      "zh": "探戈",
+      "en": "Tango"
+    },
+    {
+      "id": "flamenco",
+      "zh": "弗拉明戈",
+      "en": "Flamenco"
+    },
+    {
+      "id": "breakdance",
+      "zh": "霹雳舞",
+      "en": "Breakdance"
+    },
+    {
+      "id": "modern-dance",
+      "zh": "现代舞",
+      "en": "Modern dance"
+    },
+    {
+      "id": "lion-dance",
+      "zh": "舞狮",
+      "en": "Lion dance"
+    },
+    {
+      "id": "ballroom-dance",
+      "zh": "国标舞",
+      "en": "Ballroom dance"
+    },
+    {
+      "id": "tutu",
+      "zh": "芭蕾舞裙",
+      "en": "Tutu"
+    },
+    {
+      "id": "swan-lake",
+      "zh": "天鹅湖",
+      "en": "Swan Lake"
+    },
+    {
+      "id": "the-nutcracker",
+      "zh": "胡桃夹子",
+      "en": "The Nutcracker"
+    },
+    {
+      "id": "chinese-opera",
+      "zh": "戏曲",
+      "en": "Chinese opera"
+    },
+    {
+      "id": "kunqu",
+      "zh": "昆曲",
+      "en": "Kunqu"
+    },
+    {
+      "id": "yue-opera",
+      "zh": "越剧",
+      "en": "Yue opera"
+    },
+    {
+      "id": "huangmei-opera",
+      "zh": "黄梅戏",
+      "en": "Huangmei opera"
+    },
+    {
+      "id": "face-changing",
+      "zh": "变脸",
+      "en": "Face-changing"
+    },
+    {
+      "id": "facial-makeup",
+      "zh": "脸谱",
+      "en": "Facial makeup"
+    },
+    {
+      "id": "water-sleeves",
+      "zh": "水袖",
+      "en": "Water sleeves"
+    },
+    {
+      "id": "xiangsheng",
+      "zh": "相声",
+      "en": "Xiangsheng"
+    },
+    {
+      "id": "skit",
+      "zh": "小品",
+      "en": "Skit"
+    },
+    {
+      "id": "noh",
+      "zh": "能剧",
+      "en": "Noh"
+    },
+    {
+      "id": "doric",
+      "zh": "多立克柱式",
+      "en": "Doric"
+    },
+    {
+      "id": "ionic",
+      "zh": "爱奥尼柱式",
+      "en": "Ionic"
+    },
+    {
+      "id": "corinthian",
+      "zh": "科林斯柱式",
+      "en": "Corinthian"
+    },
+    {
+      "id": "rose-window",
+      "zh": "玫瑰窗",
+      "en": "Rose window"
+    },
+    {
+      "id": "spire",
+      "zh": "尖塔",
+      "en": "Spire"
+    },
+    {
+      "id": "gargoyle",
+      "zh": "滴水兽",
+      "en": "Gargoyle"
+    },
+    {
+      "id": "cathedral",
+      "zh": "大教堂",
+      "en": "Cathedral"
+    },
+    {
+      "id": "pantheon",
+      "zh": "万神殿",
+      "en": "Pantheon"
+    },
+    {
+      "id": "upturned-eaves",
+      "zh": "飞檐",
+      "en": "Upturned eaves"
+    },
+    {
+      "id": "glazed-tile",
+      "zh": "琉璃瓦",
+      "en": "Glazed tile"
+    },
+    {
+      "id": "rockery",
+      "zh": "假山",
+      "en": "Rockery"
+    },
+    {
+      "id": "tulou",
+      "zh": "土楼",
+      "en": "Tulou"
+    },
+    {
+      "id": "paifang",
+      "zh": "牌坊",
+      "en": "Paifang"
+    },
+    {
+      "id": "courtyard",
+      "zh": "庭院",
+      "en": "Courtyard"
+    },
+    {
+      "id": "stilt-house",
+      "zh": "吊脚楼",
+      "en": "Stilt house"
+    },
+    {
+      "id": "typography",
+      "zh": "字体排印",
+      "en": "Typography",
+      "forms": { "en": ["typographic", "typographer"] }
+    },
+    {
+      "id": "kerning",
+      "zh": "字距",
+      "en": "Kerning"
+    },
+    {
+      "id": "italic",
+      "zh": "斜体",
+      "en": "Italic"
+    },
+    {
+      "id": "bold",
+      "zh": "粗体",
+      "en": "Bold",
+      "forms": { "en": ["boldface"] }
+    },
+    {
+      "id": "ligature",
+      "zh": "连字",
+      "en": "Ligature"
+    },
+    {
+      "id": "song-typeface",
+      "zh": "宋体",
+      "en": "Song typeface"
+    },
+    {
+      "id": "mockup",
+      "zh": "样机",
+      "en": "Mockup"
+    },
+    {
+      "id": "hamburger-menu",
+      "zh": "汉堡菜单",
+      "en": "Hamburger menu"
+    },
+    {
+      "id": "splash-screen",
+      "zh": "启动页",
+      "en": "Splash screen"
+    },
+    {
+      "id": "carousel",
+      "zh": "轮播图",
+      "en": "Carousel"
+    },
+    {
+      "id": "breadcrumb",
+      "zh": "面包屑",
+      "en": "Breadcrumb"
+    },
+    {
+      "id": "ornament",
+      "zh": "装饰",
+      "en": "Ornament",
+      "forms": { "en": ["ornamental"] }
+    },
+    {
+      "id": "streamline",
+      "zh": "流线型",
+      "en": "Streamline",
+      "forms": { "en": ["streamlined"] }
+    },
+    {
+      "id": "ready-to-wear",
+      "zh": "成衣",
+      "en": "Ready-to-wear"
+    },
+    {
+      "id": "qipao",
+      "zh": "旗袍",
+      "en": "Qipao"
+    },
+    {
+      "id": "hanfu",
+      "zh": "汉服",
+      "en": "Hanfu"
+    },
+    {
+      "id": "denim",
+      "zh": "牛仔布",
+      "en": "Denim"
+    },
+    {
+      "id": "lace",
+      "zh": "蕾丝",
+      "en": "Lace"
+    },
+    {
+      "id": "velvet",
+      "zh": "天鹅绒",
+      "en": "Velvet"
+    },
+    {
+      "id": "jewelry",
+      "zh": "珠宝",
+      "en": "Jewelry",
+      "forms": { "en": ["jewellery"] }
+    },
+    {
+      "id": "retro",
+      "zh": "复古",
+      "en": "Retro"
+    },
+    {
+      "id": "batik",
+      "zh": "蜡染",
+      "en": "Batik"
+    },
+    {
+      "id": "tie-dye",
+      "zh": "扎染",
+      "en": "Tie-dye"
+    },
+    {
+      "id": "knitting",
+      "zh": "针织",
+      "en": "Knitting",
+      "forms": { "en": ["knit"] }
+    },
+    {
+      "id": "cross-stitch",
+      "zh": "十字绣",
+      "en": "Cross-stitch"
+    },
+    {
+      "id": "glassblowing",
+      "zh": "吹玻璃",
+      "en": "Glassblowing"
+    },
+    {
+      "id": "woodworking",
+      "zh": "木工",
+      "en": "Woodworking"
+    },
+    {
+      "id": "bookbinding",
+      "zh": "装帧",
+      "en": "Bookbinding"
+    },
+    {
+      "id": "kintsugi",
+      "zh": "金缮",
+      "en": "Kintsugi"
+    },
+    {
+      "id": "celadon",
+      "zh": "青瓷",
+      "en": "Celadon"
+    },
+    {
+      "id": "zisha",
+      "zh": "紫砂",
+      "en": "Zisha"
+    },
+    {
+      "id": "jingdezhen",
+      "zh": "景德镇",
+      "en": "Jingdezhen"
+    },
+    {
+      "id": "chinese-knot",
+      "zh": "中国结",
+      "en": "Chinese knot"
+    },
+    {
+      "id": "lantern",
+      "zh": "灯笼",
+      "en": "Lantern"
+    },
+    {
+      "id": "kite",
+      "zh": "风筝",
+      "en": "Kite"
+    },
+    {
+      "id": "penjing",
+      "zh": "盆景",
+      "en": "Penjing"
+    },
+    {
+      "id": "curator",
+      "zh": "策展人",
+      "en": "Curator",
+      "forms": { "en": ["curate", "curatorial"] }
+    },
+    {
+      "id": "patron",
+      "zh": "赞助人",
+      "en": "Patron",
+      "forms": { "en": ["patronage"] }
+    },
+    {
+      "id": "studio",
+      "zh": "工作室",
+      "en": "Studio"
+    },
+    {
+      "id": "salon",
+      "zh": "沙龙",
+      "en": "Salon"
+    },
+    {
+      "id": "louvre",
+      "zh": "卢浮宫",
+      "en": "Louvre"
+    },
+    {
+      "id": "masterclass",
+      "zh": "大师课",
+      "en": "Masterclass"
+    },
+    {
+      "id": "replica",
+      "zh": "复制品",
+      "en": "Replica"
+    },
+    {
+      "id": "fur-elise",
+      "zh": "致爱丽丝",
+      "en": "Für Elise"
+    },
+    {
+      "id": "ode-to-joy",
+      "zh": "欢乐颂",
+      "en": "Ode to Joy"
     }
   ]
 }
