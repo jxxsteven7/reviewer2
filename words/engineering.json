@@ -1392,6 +1392,1186 @@
       "id": "anchor",
       "zh": "锚",
       "en": "Anchor"
+    },
+    {
+      "id": "impedance",
+      "zh": "阻抗",
+      "en": "Impedance"
+    },
+    {
+      "id": "open-circuit",
+      "zh": "开路",
+      "en": "Open circuit"
+    },
+    {
+      "id": "motor",
+      "zh": "电动机",
+      "en": "Motor",
+      "forms": { "zh": ["电机"] }
+    },
+    {
+      "id": "stepper-motor",
+      "zh": "步进电机",
+      "en": "Stepper motor"
+    },
+    {
+      "id": "sensor",
+      "zh": "传感器",
+      "en": "Sensor"
+    },
+    {
+      "id": "transducer",
+      "zh": "换能器",
+      "en": "Transducer"
+    },
+    {
+      "id": "thermocouple",
+      "zh": "热电偶",
+      "en": "Thermocouple"
+    },
+    {
+      "id": "imu",
+      "zh": "IMU",
+      "en": "IMU",
+      "forms": { "zh": ["惯性测量单元"], "en": ["inertial measurement unit"] }
+    },
+    {
+      "id": "pll",
+      "zh": "锁相环",
+      "en": "PLL",
+      "forms": { "en": ["phase-locked loop"] }
+    },
+    {
+      "id": "adc",
+      "zh": "模数转换器",
+      "en": "ADC",
+      "forms": { "en": ["analog-to-digital converter"] }
+    },
+    {
+      "id": "dac",
+      "zh": "数模转换器",
+      "en": "DAC",
+      "forms": { "en": ["digital-to-analog converter"] }
+    },
+    {
+      "id": "emc",
+      "zh": "电磁兼容",
+      "en": "EMC",
+      "forms": { "en": ["electromagnetic compatibility"] }
+    },
+    {
+      "id": "esd",
+      "zh": "静电放电",
+      "en": "ESD",
+      "forms": { "en": ["electrostatic discharge"] }
+    },
+    {
+      "id": "pwm",
+      "zh": "脉宽调制",
+      "en": "PWM",
+      "forms": { "en": ["pulse-width modulation"] }
+    },
+    {
+      "id": "h-bridge",
+      "zh": "H桥",
+      "en": "H-bridge"
+    },
+    {
+      "id": "brush",
+      "zh": "电刷",
+      "en": "Brush"
+    },
+    {
+      "id": "solder",
+      "zh": "焊锡",
+      "en": "Solder"
+    },
+    {
+      "id": "jumper",
+      "zh": "跳线",
+      "en": "Jumper"
+    },
+    {
+      "id": "connector",
+      "zh": "连接器",
+      "en": "Connector"
+    },
+    {
+      "id": "lcd",
+      "zh": "液晶显示器",
+      "en": "LCD",
+      "forms": { "en": ["liquid-crystal display"] }
+    },
+    {
+      "id": "comparator",
+      "zh": "比较器",
+      "en": "Comparator"
+    },
+    {
+      "id": "latch",
+      "zh": "锁存器",
+      "en": "Latch"
+    },
+    {
+      "id": "counter",
+      "zh": "计数器",
+      "en": "Counter"
+    },
+    {
+      "id": "timer",
+      "zh": "定时器",
+      "en": "Timer"
+    },
+    {
+      "id": "ripple",
+      "zh": "纹波",
+      "en": "Ripple"
+    },
+    {
+      "id": "jitter",
+      "zh": "抖动",
+      "en": "Jitter"
+    },
+    {
+      "id": "smith-chart",
+      "zh": "史密斯圆图",
+      "en": "Smith chart"
+    },
+    {
+      "id": "rf",
+      "zh": "射频",
+      "en": "RF",
+      "forms": { "en": ["radio frequency"] }
+    },
+    {
+      "id": "microstrip",
+      "zh": "微带线",
+      "en": "Microstrip"
+    },
+    {
+      "id": "mixer",
+      "zh": "混频器",
+      "en": "Mixer"
+    },
+    {
+      "id": "phased-array",
+      "zh": "相控阵",
+      "en": "Phased array"
+    },
+    {
+      "id": "smd",
+      "zh": "贴片",
+      "en": "SMD",
+      "forms": { "en": ["surface-mount device"] }
+    },
+    {
+      "id": "reflow",
+      "zh": "回流焊",
+      "en": "Reflow"
+    },
+    {
+      "id": "process-node",
+      "zh": "工艺节点",
+      "en": "Process node"
+    },
+    {
+      "id": "cleanroom",
+      "zh": "洁净室",
+      "en": "Cleanroom"
+    },
+    {
+      "id": "foundry",
+      "zh": "晶圆代工",
+      "en": "Foundry"
+    },
+    {
+      "id": "asic",
+      "zh": "ASIC",
+      "en": "ASIC",
+      "forms": { "zh": ["专用集成电路"], "en": ["application-specific integrated circuit"] }
+    },
+    {
+      "id": "soc",
+      "zh": "SoC",
+      "en": "SoC",
+      "forms": { "zh": ["片上系统"], "en": ["system on a chip"] }
+    },
+    {
+      "id": "verilog",
+      "zh": "Verilog",
+      "en": "Verilog"
+    },
+    {
+      "id": "dsp",
+      "zh": "DSP",
+      "en": "DSP",
+      "forms": { "zh": ["数字信号处理器"], "en": ["digital signal processor"] }
+    },
+    {
+      "id": "rtos",
+      "zh": "RTOS",
+      "en": "RTOS",
+      "forms": { "zh": ["实时操作系统"], "en": ["real-time operating system"] }
+    },
+    {
+      "id": "datasheet",
+      "zh": "数据手册",
+      "en": "Datasheet"
+    },
+    {
+      "id": "electric-shock",
+      "zh": "触电",
+      "en": "Electric shock"
+    },
+    {
+      "id": "contactor",
+      "zh": "接触器",
+      "en": "Contactor"
+    },
+    {
+      "id": "limit-switch",
+      "zh": "限位开关",
+      "en": "Limit switch"
+    },
+    {
+      "id": "can-bus",
+      "zh": "CAN总线",
+      "en": "CAN bus"
+    },
+    {
+      "id": "hmi",
+      "zh": "人机界面",
+      "en": "HMI",
+      "forms": { "en": ["human-machine interface"] }
+    },
+    {
+      "id": "telecom",
+      "zh": "电信",
+      "en": "Telecom",
+      "forms": { "en": ["telecommunications"] }
+    },
+    {
+      "id": "multiplexing",
+      "zh": "复用",
+      "en": "Multiplexing",
+      "forms": { "en": ["multiplex", "multiplexer", "mux"] }
+    },
+    {
+      "id": "demodulation",
+      "zh": "解调",
+      "en": "Demodulation",
+      "forms": { "en": ["demodulate", "demodulator"] }
+    },
+    {
+      "id": "transmitter",
+      "zh": "发射机",
+      "en": "Transmitter"
+    },
+    {
+      "id": "receiver",
+      "zh": "接收机",
+      "en": "Receiver"
+    },
+    {
+      "id": "frequency-band",
+      "zh": "频段",
+      "en": "Frequency band"
+    },
+    {
+      "id": "mimo",
+      "zh": "MIMO",
+      "en": "MIMO",
+      "forms": { "zh": ["多输入多输出"], "en": ["multiple-input multiple-output"] }
+    },
+    {
+      "id": "ofdm",
+      "zh": "OFDM",
+      "en": "OFDM",
+      "forms": { "zh": ["正交频分复用"], "en": ["orthogonal frequency-division multiplexing"] }
+    },
+    {
+      "id": "beamforming",
+      "zh": "波束成形",
+      "en": "Beamforming"
+    },
+    {
+      "id": "roaming",
+      "zh": "漫游",
+      "en": "Roaming"
+    },
+    {
+      "id": "sim-card",
+      "zh": "SIM卡",
+      "en": "SIM card"
+    },
+    {
+      "id": "coaxial-cable",
+      "zh": "同轴电缆",
+      "en": "Coaxial cable",
+      "forms": { "en": ["coax"] }
+    },
+    {
+      "id": "twisted-pair",
+      "zh": "双绞线",
+      "en": "Twisted pair"
+    },
+    {
+      "id": "channel-coding",
+      "zh": "信道编码",
+      "en": "Channel coding"
+    },
+    {
+      "id": "shannon-limit",
+      "zh": "香农极限",
+      "en": "Shannon limit"
+    },
+    {
+      "id": "aliasing",
+      "zh": "混叠",
+      "en": "Aliasing"
+    },
+    {
+      "id": "bit-error-rate",
+      "zh": "误码率",
+      "en": "Bit error rate",
+      "forms": { "en": ["BER"] }
+    },
+    {
+      "id": "codec",
+      "zh": "编解码器",
+      "en": "Codec"
+    },
+    {
+      "id": "baseband",
+      "zh": "基带",
+      "en": "Baseband"
+    },
+    {
+      "id": "repeater",
+      "zh": "中继器",
+      "en": "Repeater"
+    },
+    {
+      "id": "multipath",
+      "zh": "多径",
+      "en": "Multipath"
+    },
+    {
+      "id": "fading",
+      "zh": "衰落",
+      "en": "Fading"
+    },
+    {
+      "id": "attenuation",
+      "zh": "衰减",
+      "en": "Attenuation"
+    },
+    {
+      "id": "cdma",
+      "zh": "CDMA",
+      "en": "CDMA",
+      "forms": { "zh": ["码分多址"], "en": ["code-division multiple access"] }
+    },
+    {
+      "id": "nfc",
+      "zh": "NFC",
+      "en": "NFC",
+      "forms": { "zh": ["近场通信"], "en": ["near-field communication"] }
+    },
+    {
+      "id": "shortwave",
+      "zh": "短波",
+      "en": "Shortwave"
+    },
+    {
+      "id": "ham-radio",
+      "zh": "业余无线电",
+      "en": "Ham radio"
+    },
+    {
+      "id": "duplex",
+      "zh": "双工",
+      "en": "Duplex"
+    },
+    {
+      "id": "broadband",
+      "zh": "宽带",
+      "en": "Broadband"
+    },
+    {
+      "id": "axle",
+      "zh": "车轴",
+      "en": "Axle"
+    },
+    {
+      "id": "roughness",
+      "zh": "粗糙度",
+      "en": "Roughness"
+    },
+    {
+      "id": "gasket",
+      "zh": "垫片",
+      "en": "Gasket"
+    },
+    {
+      "id": "hinge",
+      "zh": "铰链",
+      "en": "Hinge"
+    },
+    {
+      "id": "winch",
+      "zh": "绞车",
+      "en": "Winch"
+    },
+    {
+      "id": "forklift",
+      "zh": "叉车",
+      "en": "Forklift"
+    },
+    {
+      "id": "sprocket",
+      "zh": "链轮",
+      "en": "Sprocket"
+    },
+    {
+      "id": "timing-belt",
+      "zh": "同步带",
+      "en": "Timing belt"
+    },
+    {
+      "id": "bushing",
+      "zh": "衬套",
+      "en": "Bushing"
+    },
+    {
+      "id": "caster",
+      "zh": "万向轮",
+      "en": "Caster",
+      "forms": { "en": ["castor"] }
+    },
+    {
+      "id": "tribology",
+      "zh": "摩擦学",
+      "en": "Tribology"
+    },
+    {
+      "id": "escapement",
+      "zh": "擒纵机构",
+      "en": "Escapement"
+    },
+    {
+      "id": "ball-screw",
+      "zh": "滚珠丝杠",
+      "en": "Ball screw"
+    },
+    {
+      "id": "linear-guide",
+      "zh": "直线导轨",
+      "en": "Linear guide"
+    },
+    {
+      "id": "harmonic-drive",
+      "zh": "谐波减速器",
+      "en": "Harmonic drive"
+    },
+    {
+      "id": "shock-absorber",
+      "zh": "减振器",
+      "en": "Shock absorber"
+    },
+    {
+      "id": "teach-pendant",
+      "zh": "示教器",
+      "en": "Teach pendant"
+    },
+    {
+      "id": "cobot",
+      "zh": "协作机器人",
+      "en": "Cobot"
+    },
+    {
+      "id": "soft-robot",
+      "zh": "软体机器人",
+      "en": "Soft robot"
+    },
+    {
+      "id": "agv",
+      "zh": "AGV",
+      "en": "AGV",
+      "forms": { "zh": ["自动导引车"], "en": ["automated guided vehicle"] }
+    },
+    {
+      "id": "ros",
+      "zh": "ROS",
+      "en": "ROS",
+      "forms": { "zh": ["机器人操作系统"], "en": ["Robot Operating System"] }
+    },
+    {
+      "id": "quadcopter",
+      "zh": "四旋翼",
+      "en": "Quadcopter"
+    },
+    {
+      "id": "gimbal",
+      "zh": "云台",
+      "en": "Gimbal"
+    },
+    {
+      "id": "dof",
+      "zh": "自由度",
+      "en": "DOF",
+      "forms": { "en": ["degree of freedom"] }
+    },
+    {
+      "id": "turning",
+      "zh": "车削",
+      "en": "Turning"
+    },
+    {
+      "id": "boring",
+      "zh": "镗削",
+      "en": "Boring"
+    },
+    {
+      "id": "tapping",
+      "zh": "攻丝",
+      "en": "Tapping"
+    },
+    {
+      "id": "edm",
+      "zh": "电火花加工",
+      "en": "EDM",
+      "forms": { "en": ["electrical discharge machining"] }
+    },
+    {
+      "id": "sheet-metal",
+      "zh": "钣金",
+      "en": "Sheet metal"
+    },
+    {
+      "id": "rolling",
+      "zh": "轧制",
+      "en": "Rolling"
+    },
+    {
+      "id": "tooling",
+      "zh": "工装",
+      "en": "Tooling"
+    },
+    {
+      "id": "cutting-tool",
+      "zh": "刀具",
+      "en": "Cutting tool"
+    },
+    {
+      "id": "burr",
+      "zh": "毛刺",
+      "en": "Burr"
+    },
+    {
+      "id": "workpiece",
+      "zh": "工件",
+      "en": "Workpiece"
+    },
+    {
+      "id": "bom",
+      "zh": "物料清单",
+      "en": "BOM",
+      "forms": { "en": ["bill of materials"] }
+    },
+    {
+      "id": "lean",
+      "zh": "精益生产",
+      "en": "Lean"
+    },
+    {
+      "id": "takt-time",
+      "zh": "生产节拍",
+      "en": "Takt time"
+    },
+    {
+      "id": "shop-floor",
+      "zh": "车间",
+      "en": "Shop floor"
+    },
+    {
+      "id": "spc",
+      "zh": "SPC",
+      "en": "SPC",
+      "forms": { "zh": ["统计过程控制"], "en": ["statistical process control"] }
+    },
+    {
+      "id": "control-chart",
+      "zh": "控制图",
+      "en": "Control chart"
+    },
+    {
+      "id": "pareto-chart",
+      "zh": "帕累托图",
+      "en": "Pareto chart"
+    },
+    {
+      "id": "5s",
+      "zh": "5S",
+      "en": "5S"
+    },
+    {
+      "id": "poka-yoke",
+      "zh": "防错",
+      "en": "Poka-yoke"
+    },
+    {
+      "id": "ergonomics",
+      "zh": "人因工程",
+      "en": "Ergonomics"
+    },
+    {
+      "id": "setpoint",
+      "zh": "设定值",
+      "en": "Setpoint"
+    },
+    {
+      "id": "mpc",
+      "zh": "MPC",
+      "en": "MPC",
+      "forms": { "zh": ["模型预测控制"], "en": ["model predictive control"] }
+    },
+    {
+      "id": "lqr",
+      "zh": "LQR",
+      "en": "LQR",
+      "forms": { "zh": ["线性二次型调节器"], "en": ["linear quadratic regulator"] }
+    },
+    {
+      "id": "fuzzy-control",
+      "zh": "模糊控制",
+      "en": "Fuzzy control"
+    },
+    {
+      "id": "feedforward",
+      "zh": "前馈",
+      "en": "Feedforward"
+    },
+    {
+      "id": "time-constant",
+      "zh": "时间常数",
+      "en": "Time constant"
+    },
+    {
+      "id": "phase-margin",
+      "zh": "相位裕度",
+      "en": "Phase margin"
+    },
+    {
+      "id": "block-diagram",
+      "zh": "方框图",
+      "en": "Block diagram"
+    },
+    {
+      "id": "pole",
+      "zh": "极点",
+      "en": "Pole"
+    },
+    {
+      "id": "aileron",
+      "zh": "副翼",
+      "en": "Aileron"
+    },
+    {
+      "id": "airfoil",
+      "zh": "翼型",
+      "en": "Airfoil",
+      "forms": { "en": ["aerofoil"] }
+    },
+    {
+      "id": "supersonic",
+      "zh": "超声速",
+      "en": "Supersonic"
+    },
+    {
+      "id": "hypersonic",
+      "zh": "高超声速",
+      "en": "Hypersonic"
+    },
+    {
+      "id": "autopilot",
+      "zh": "自动驾驶仪",
+      "en": "Autopilot"
+    },
+    {
+      "id": "airship",
+      "zh": "飞艇",
+      "en": "Airship"
+    },
+    {
+      "id": "glider",
+      "zh": "滑翔机",
+      "en": "Glider"
+    },
+    {
+      "id": "avionics",
+      "zh": "航空电子",
+      "en": "Avionics"
+    },
+    {
+      "id": "flight-control",
+      "zh": "飞行控制",
+      "en": "Flight control",
+      "forms": { "zh": ["飞控"] }
+    },
+    {
+      "id": "fly-by-wire",
+      "zh": "电传操纵",
+      "en": "Fly-by-wire"
+    },
+    {
+      "id": "cfd",
+      "zh": "CFD",
+      "en": "CFD",
+      "forms": { "zh": ["计算流体力学"], "en": ["computational fluid dynamics"] }
+    },
+    {
+      "id": "boundary-layer",
+      "zh": "边界层",
+      "en": "Boundary layer"
+    },
+    {
+      "id": "airworthiness",
+      "zh": "适航",
+      "en": "Airworthiness"
+    },
+    {
+      "id": "ejection-seat",
+      "zh": "弹射座椅",
+      "en": "Ejection seat"
+    },
+    {
+      "id": "hud",
+      "zh": "平视显示器",
+      "en": "HUD",
+      "forms": { "en": ["head-up display"] }
+    },
+    {
+      "id": "altimeter",
+      "zh": "高度表",
+      "en": "Altimeter"
+    },
+    {
+      "id": "pitot-tube",
+      "zh": "皮托管",
+      "en": "Pitot tube"
+    },
+    {
+      "id": "abs",
+      "zh": "ABS",
+      "en": "ABS",
+      "forms": { "zh": ["防抱死制动系统"], "en": ["anti-lock braking system"] }
+    },
+    {
+      "id": "cruise-control",
+      "zh": "定速巡航",
+      "en": "Cruise control"
+    },
+    {
+      "id": "powertrain",
+      "zh": "动力总成",
+      "en": "Powertrain"
+    },
+    {
+      "id": "muffler",
+      "zh": "消声器",
+      "en": "Muffler"
+    },
+    {
+      "id": "wheelbase",
+      "zh": "轴距",
+      "en": "Wheelbase"
+    },
+    {
+      "id": "windshield",
+      "zh": "挡风玻璃",
+      "en": "Windshield"
+    },
+    {
+      "id": "wiper",
+      "zh": "雨刮器",
+      "en": "Wiper"
+    },
+    {
+      "id": "bumper",
+      "zh": "保险杠",
+      "en": "Bumper"
+    },
+    {
+      "id": "oversteer",
+      "zh": "过度转向",
+      "en": "Oversteer"
+    },
+    {
+      "id": "adas",
+      "zh": "ADAS",
+      "en": "ADAS",
+      "forms": { "zh": ["高级驾驶辅助系统"], "en": ["advanced driver-assistance system"] }
+    },
+    {
+      "id": "bogie",
+      "zh": "转向架",
+      "en": "Bogie"
+    },
+    {
+      "id": "pantograph",
+      "zh": "受电弓",
+      "en": "Pantograph"
+    },
+    {
+      "id": "drift",
+      "zh": "漂移",
+      "en": "Drift"
+    },
+    {
+      "id": "tachometer",
+      "zh": "转速表",
+      "en": "Tachometer"
+    },
+    {
+      "id": "pressure-gauge",
+      "zh": "压力表",
+      "en": "Pressure gauge"
+    },
+    {
+      "id": "flowmeter",
+      "zh": "流量计",
+      "en": "Flowmeter"
+    },
+    {
+      "id": "metrology",
+      "zh": "计量",
+      "en": "Metrology"
+    },
+    {
+      "id": "dial-indicator",
+      "zh": "百分表",
+      "en": "Dial indicator"
+    },
+    {
+      "id": "feeler-gauge",
+      "zh": "塞尺",
+      "en": "Feeler gauge"
+    },
+    {
+      "id": "clamp-meter",
+      "zh": "钳形表",
+      "en": "Clamp meter"
+    },
+    {
+      "id": "mtbf",
+      "zh": "MTBF",
+      "en": "MTBF",
+      "forms": { "zh": ["平均故障间隔时间"], "en": ["mean time between failures"] }
+    },
+    {
+      "id": "fmea",
+      "zh": "FMEA",
+      "en": "FMEA",
+      "forms": { "zh": ["失效模式与影响分析"], "en": ["failure mode and effects analysis"] }
+    },
+    {
+      "id": "fault-tree",
+      "zh": "故障树",
+      "en": "Fault tree"
+    },
+    {
+      "id": "fail-safe",
+      "zh": "故障安全",
+      "en": "Fail-safe"
+    },
+    {
+      "id": "interlock",
+      "zh": "联锁",
+      "en": "Interlock"
+    },
+    {
+      "id": "emergency-stop",
+      "zh": "急停",
+      "en": "Emergency stop",
+      "forms": { "en": ["e-stop"] }
+    },
+    {
+      "id": "downtime",
+      "zh": "停机",
+      "en": "Downtime"
+    },
+    {
+      "id": "bathtub-curve",
+      "zh": "浴盆曲线",
+      "en": "Bathtub curve"
+    },
+    {
+      "id": "root-cause",
+      "zh": "根本原因",
+      "en": "Root cause"
+    },
+    {
+      "id": "burn-in",
+      "zh": "老化",
+      "en": "Burn-in"
+    },
+    {
+      "id": "push-pull",
+      "zh": "推挽",
+      "en": "Push-pull"
+    },
+    {
+      "id": "spice",
+      "zh": "SPICE",
+      "en": "SPICE"
+    },
+    {
+      "id": "via",
+      "zh": "过孔",
+      "en": "Via"
+    },
+    {
+      "id": "debouncing",
+      "zh": "消抖",
+      "en": "Debouncing",
+      "forms": { "en": ["debounce"] }
+    },
+    {
+      "id": "dev-board",
+      "zh": "开发板",
+      "en": "Dev board",
+      "forms": { "en": ["development board"] }
+    },
+    {
+      "id": "ladder-diagram",
+      "zh": "梯形图",
+      "en": "Ladder diagram"
+    },
+    {
+      "id": "rack",
+      "zh": "齿条",
+      "en": "Rack"
+    },
+    {
+      "id": "snap-fit",
+      "zh": "卡扣",
+      "en": "Snap fit"
+    },
+    {
+      "id": "backlash",
+      "zh": "背隙",
+      "en": "Backlash"
+    },
+    {
+      "id": "preload",
+      "zh": "预紧",
+      "en": "Preload"
+    },
+    {
+      "id": "chamfer",
+      "zh": "倒角",
+      "en": "Chamfer"
+    },
+    {
+      "id": "fillet",
+      "zh": "圆角",
+      "en": "Fillet"
+    },
+    {
+      "id": "section-view",
+      "zh": "剖视图",
+      "en": "Section view"
+    },
+    {
+      "id": "exploded-view",
+      "zh": "爆炸图",
+      "en": "Exploded view"
+    },
+    {
+      "id": "mecanum-wheel",
+      "zh": "麦克纳姆轮",
+      "en": "Mecanum wheel"
+    },
+    {
+      "id": "suction-cup",
+      "zh": "吸盘",
+      "en": "Suction cup"
+    },
+    {
+      "id": "legged-robot",
+      "zh": "足式机器人",
+      "en": "Legged robot"
+    },
+    {
+      "id": "brazing",
+      "zh": "钎焊",
+      "en": "Brazing",
+      "forms": { "en": ["braze"] }
+    },
+    {
+      "id": "sandblasting",
+      "zh": "喷砂",
+      "en": "Sandblasting"
+    },
+    {
+      "id": "g-code",
+      "zh": "G代码",
+      "en": "G-code"
+    },
+    {
+      "id": "cae",
+      "zh": "CAE",
+      "en": "CAE",
+      "forms": { "zh": ["计算机辅助工程"], "en": ["computer-aided engineering"] }
+    },
+    {
+      "id": "rework",
+      "zh": "返工",
+      "en": "Rework"
+    },
+    {
+      "id": "derating",
+      "zh": "降额",
+      "en": "Derating"
+    },
+    {
+      "id": "repeatability",
+      "zh": "重复性",
+      "en": "Repeatability"
+    },
+    {
+      "id": "handbrake",
+      "zh": "手刹",
+      "en": "Handbrake"
+    },
+    {
+      "id": "downforce",
+      "zh": "下压力",
+      "en": "Downforce"
+    },
+    {
+      "id": "delta-wing",
+      "zh": "三角翼",
+      "en": "Delta wing"
+    },
+    {
+      "id": "yaw",
+      "zh": "偏航",
+      "en": "Yaw"
+    },
+    {
+      "id": "g-force",
+      "zh": "过载",
+      "en": "G-force"
+    },
+    {
+      "id": "taxiing",
+      "zh": "滑行",
+      "en": "Taxiing",
+      "forms": { "en": ["taxi"] }
+    },
+    {
+      "id": "hover",
+      "zh": "悬停",
+      "en": "Hover"
+    },
+    {
+      "id": "vtol",
+      "zh": "垂直起降",
+      "en": "VTOL",
+      "forms": { "en": ["vertical takeoff and landing"] }
+    },
+    {
+      "id": "damping-ratio",
+      "zh": "阻尼比",
+      "en": "Damping ratio"
+    },
+    {
+      "id": "settling-time",
+      "zh": "调节时间",
+      "en": "Settling time"
+    },
+    {
+      "id": "decoupling",
+      "zh": "解耦",
+      "en": "Decoupling",
+      "forms": { "en": ["decouple"] }
+    },
+    {
+      "id": "compensator",
+      "zh": "补偿器",
+      "en": "Compensator"
+    },
+    {
+      "id": "fieldbus",
+      "zh": "现场总线",
+      "en": "Fieldbus"
+    },
+    {
+      "id": "encoder",
+      "zh": "编码器",
+      "en": "Encoder"
+    },
+    {
+      "id": "photoresistor",
+      "zh": "光敏电阻",
+      "en": "Photoresistor"
+    },
+    {
+      "id": "gantry",
+      "zh": "龙门架",
+      "en": "Gantry"
+    },
+    {
+      "id": "chuck",
+      "zh": "卡盘",
+      "en": "Chuck"
+    },
+    {
+      "id": "anvil",
+      "zh": "铁砧",
+      "en": "Anvil"
+    },
+    {
+      "id": "press-brake",
+      "zh": "折弯机",
+      "en": "Press brake"
+    },
+    {
+      "id": "collet",
+      "zh": "夹头",
+      "en": "Collet"
+    },
+    {
+      "id": "hex-key",
+      "zh": "内六角扳手",
+      "en": "Hex key"
+    },
+    {
+      "id": "omni-wheel",
+      "zh": "全向轮",
+      "en": "Omni wheel"
+    },
+    {
+      "id": "rise-time",
+      "zh": "上升时间",
+      "en": "Rise time"
+    },
+    {
+      "id": "data-logger",
+      "zh": "数据记录仪",
+      "en": "Data logger"
+    },
+    {
+      "id": "thermal-imager",
+      "zh": "热像仪",
+      "en": "Thermal imager"
+    },
+    {
+      "id": "drill-press",
+      "zh": "台钻",
+      "en": "Drill press"
     }
   ]
 }
