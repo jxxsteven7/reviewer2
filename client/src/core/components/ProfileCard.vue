@@ -118,6 +118,7 @@ watch(
           <button type="button" class="rank-button" aria-haspopup="dialog" @click="ladder = true">
             <span class="rank">{{ t(`ranks.names.${profile.rank}`) }}</span>
             <span class="sr-only">{{ t('ranks.ladder.open') }}</span>
+            <span class="chevron" aria-hidden="true"></span>
           </button>
           <PlayerNumber :id="profile.id" />
           <span class="since">{{ t('playerPage.since', { date: since }) }}</span>
@@ -194,26 +195,36 @@ watch(
 }
 
 /* The rank is one line of display type that opens the ladder. Padding that the margins take back
-   makes it 44px tall to tap without moving anything, and a chevron says that it opens. */
+   makes it 44px tall to tap without moving anything; the focus ring is drawn inside that padding,
+   so that it clears the lines above and below; and a chevron says that it opens. */
 .rank-button {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   align-self: flex-start;
   max-width: 100%;
-  margin: -8px 0;
-  padding: 8px 0;
+  min-height: 44px;
+  margin: -8px -8px;
+  padding: 8px 8px;
   border: 0;
   background: none;
   text-align: left;
   cursor: pointer;
 }
 
-.rank-button::after {
-  content: '\203a';
-  font-size: var(--text-xl);
-  font-weight: var(--weight-black);
-  line-height: 1;
+.rank-button:focus-visible {
+  outline-offset: -5px;
+}
+
+/* Two sides of a small square, turned to point right and raised to the middle of the type. */
+.chevron {
+  flex: none;
+  width: 0.45em;
+  height: 0.45em;
+  margin-right: 0.3em;
+  border: solid var(--ink);
+  border-width: var(--line) var(--line) 0 0;
+  transform: rotate(45deg);
 }
 
 .rank {

@@ -14,8 +14,7 @@ export interface KeywordsScoreDetail {
   found: number;
   won: boolean;
   // The irrelevant papers, the cards of the other group, and Reviewer 2, that the player revealed.
-  // A detail from before irrelevant papers cost anything has no `irrelevant`, which counts as 0.
-  irrelevant?: number;
+  irrelevant: number;
   wrong: number;
   reviewer2: number;
 }
@@ -23,6 +22,6 @@ export interface KeywordsScoreDetail {
 export const pointsFor = (detail: KeywordsScoreDetail): number =>
   detail.found * POINTS.found +
   (detail.won ? POINTS.won : 0) +
-  (detail.irrelevant ?? 0) * POINTS.irrelevant +
+  detail.irrelevant * POINTS.irrelevant +
   detail.wrong * POINTS.wrong +
   detail.reviewer2 * POINTS.reviewer2;

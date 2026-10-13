@@ -59,12 +59,13 @@ const seated = (pages: Page[], team: Team, role: 'captain' | 'guesser') => {
 // reveals one of the group's own cards and ends the turn, since an irrelevant paper would cost the
 // student a point and leave the group unequal; then the other group's student reveals Reviewer 2.
 // So everyone in the favoured group scores 3, or 4 when it was on turn, and the other group's
-// student loses 3.
-async function playQuickly(pages: Page[], language: Language, favoured: Page): Promise<void> {
+// student loses 3. Returns whether the favoured group was on turn.
+async function playQuickly(pages: Page[], language: Language, favoured: Page): Promise<boolean> {
   const [first] = pages as [Page];
   const ours = seatOf(favoured).team;
   let team = await teamOnTurn(first);
-  if (team === ours) {
+  const onTurn = team === ours;
+  if (onTurn) {
     const captain = seated(pages, team, 'captain');
     await giveClue(captain, 'Hint', 1, language);
     const guesser = seated(pages, team, 'guesser');
@@ -79,6 +80,7 @@ async function playQuickly(pages: Page[], language: Language, favoured: Page): P
   await chooseCard(guesser, await keyCard(captain, 'reviewer2'));
   await guesser.locator('.guess-bar button.primary').click();
   for (const page of pages) await expect(page.locator('.letter').first()).toBeVisible();
+  return onTurn;
 }
 
 test('players with accounts and guests play a whole match, and find its title on their accounts', async ({
@@ -109,12 +111,13 @@ test('players with accounts and guests play a whole match, and find its title on
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
   await expect(ann.locator('.side .match-table')).toBeVisible();
 
-  await playQuickly(pages, 'en', ann);
-  // Between the games: everyone's points in this game, under the letters.
+  const onTurn = await playQuickly(pages, 'en', ann);
+  // Between the games: everyone's points in this game, under the letters. Ann's group leads with
+  // the 3 for winning, and the 1 for the card it found when it was on turn.
   const between = cat.locator('.match-table.between');
   await expect(between).toContainText(text.match.delta);
   await expect(between.locator('tbody tr')).toHaveCount(4);
-  await expect(between.locator('tbody tr').first()).toContainText(/\+[34]/);
+  await expect(between.locator('tbody tr').first()).toContainText(onTurn ? '+4' : '+3');
   await expect(cat.getByText(text.match.waitNext)).toBeVisible();
   await ann.getByRole('button', { name: text.match.next }).click();
   await expect(ann.locator('.lobby .match-table')).toContainText(

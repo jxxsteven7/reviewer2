@@ -422,11 +422,11 @@
       "you": "我",
       "someone": "已离开的玩家"
     },
-    "scoring": "比赛计分：本组找到一张本组的牌，组里每人 +1；获胜，每人再 +3；翻到无关的牌 −1；翻到对方的牌 −2；翻到 Reviewer 2 −3。",
+    "scoring": "比赛计分：本组找到一张本组的牌，组里每人 +1；获胜，每人再 +3；翻到无关论文 −1；翻到对方的牌 −2；翻到 Reviewer 2 −3。",
     "scoreDetail": {
       "found": "找到 {count} 张",
       "won": "获胜",
-      "irrelevant": "翻到无关的牌 ×{count}",
+      "irrelevant": "翻到无关论文 ×{count}",
       "wrong": "翻到对方的牌 ×{count}",
       "reviewer2": "翻到 Reviewer 2"
     },

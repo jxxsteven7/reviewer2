@@ -10,15 +10,11 @@ describe('the points of a game', () => {
     expect(pointsFor({ found: 0, won: false, irrelevant: 0, wrong: 0, reviewer2: 0 })).toBe(0);
   });
 
-  test('cost 1 for an irrelevant paper, 2 for the other group’s card and 3 for Reviewer 2', () => {
+  test("cost 1 for an irrelevant paper, 2 for the other group's card and 3 for Reviewer 2", () => {
     expect(POINTS).toEqual({ found: 1, won: 3, irrelevant: -1, wrong: -2, reviewer2: -3 });
     expect(pointsFor({ found: 2, won: false, irrelevant: 1, wrong: 0, reviewer2: 0 })).toBe(1);
     expect(pointsFor({ found: 2, won: false, irrelevant: 0, wrong: 1, reviewer2: 0 })).toBe(0);
     expect(pointsFor({ found: 2, won: false, irrelevant: 0, wrong: 0, reviewer2: 1 })).toBe(-1);
     expect(pointsFor({ found: 0, won: false, irrelevant: 2, wrong: 1, reviewer2: 1 })).toBe(-7);
-  });
-
-  test('count no irrelevant papers in a detail from before they cost anything', () => {
-    expect(pointsFor({ found: 3, won: true, wrong: 1, reviewer2: 0 })).toBe(4);
   });
 });

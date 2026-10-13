@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { nextRank, RANK_POINTS, RANKS, type Rank } from '@reviewer2/shared';
+import { RANK_POINTS, RANKS, type Rank } from '@reviewer2/shared';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { wayUp } from '../ranks';
 import UiSheet from './UiSheet.vue';
 
 // The ladder of academic ranks (docs/architecture.md#academic-ranks), in a sheet: every rank from
@@ -14,24 +15,19 @@ const props = defineProps<{ open: boolean; rank: Rank; points?: number | null }>
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
 
-const own = computed(() => props.points !== null && props.points !== undefined);
 const held = computed(() => RANKS.indexOf(props.rank));
 // Top rung first.
 const rungs = computed(() =>
-  [...RANKS].reverse().map((rank) => ({
+  RANKS.map((rank, i) => ({
     rank,
     points: RANK_POINTS[rank],
     current: rank === props.rank,
-    reached: RANKS.indexOf(rank) <= held.value,
-  })),
+    reached: i <= held.value,
+  })).reverse(),
 );
-// What the marked rung says under its name, on the player's own ladder: how far the next rank is,
-// or that this is the top.
-const progress = computed(() => {
-  if (!own.value) return null;
-  const next = nextRank(props.points as number);
-  return next ? t('ranks.next', { points: next.points, rank: t(`ranks.names.${next.rank}`) }) : t('ranks.top');
-});
+// What the marked rung says under its name, on the player's own ladder: the way up from their
+// points, as the account page says it.
+const progress = computed(() => (props.points == null ? null : wayUp(t, props.points)));
 
 const list = ref<HTMLElement | null>(null);
 watch(
@@ -111,9 +107,12 @@ watch(
   background: var(--ink);
 }
 
+/* The marked rung's box reaches out past the mark on the left, which the padding keeps in place
+   on the rail, so that its border clears the mark. */
 .current {
-  margin: var(--space-1) 0;
+  margin: var(--space-1) 0 var(--space-1) calc(-1 * var(--space-2));
   padding-right: var(--space-3);
+  padding-left: var(--space-2);
   background: var(--bg);
   box-shadow: 0 0 0 var(--line) var(--ink);
 }

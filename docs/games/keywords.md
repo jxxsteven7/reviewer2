@@ -161,6 +161,6 @@ In a match ([../architecture.md](../architecture.md#matches)), `server/src/games
 | A student reveals the other group's card | That student | -2 |
 | A student reveals Reviewer 2 | That student | -3 |
 
-A withdrawn game counts for nothing. `KeywordsScoreDetail` says where each player's points came from; a detail from before irrelevant papers cost anything has no `irrelevant`, which counts as 0. Games already on the records keep the points they were scored with.
+A withdrawn game counts for nothing. `KeywordsScoreDetail` says where each player's points came from, in the match's table between the games; the records keep the points alone, so a game already on them keeps the points it was scored with.
 
 **The groups.** Drawn **at random**: the server deals the players as the shuffle does, the first dealt to each group its PI; four online players can start. **Chosen** by the players: as in an ordinary room. **Fixed**, once a game has been scored: everyone keeps their group; after each game all go back as students, and the PI is whoever has been PI the fewest times; a newcomer goes to the smaller group. During a match game, only those who played for a group may sit in one.

@@ -59,12 +59,8 @@ export function drawProblems(seating: Seating, online: ReadonlySet<string>): Sta
 export const counts = (game: KeywordsState): boolean => game.result?.reason !== 'withdrawn';
 
 // What a player revealed that wasn't their group's: irrelevant papers, the other group's cards
-// and Reviewer 2.
-interface Mistakes {
-  irrelevant: number;
-  wrong: number;
-  reviewer2: number;
-}
+// and Reviewer 2, as the detail counts them.
+type Mistakes = Pick<KeywordsScoreDetail, 'irrelevant' | 'wrong' | 'reviewer2'>;
 const noMistakes = (): Mistakes => ({ irrelevant: 0, wrong: 0, reviewer2: 0 });
 
 // Each player's points in a game, as they stand (shared/src/games/keywords/score.ts): everyone who

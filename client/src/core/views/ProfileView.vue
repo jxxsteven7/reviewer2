@@ -5,7 +5,6 @@ import {
   checkUsername,
   MAX_NAME_INPUT,
   MAX_PASSWORD_INPUT,
-  nextRank,
   rankFor,
   type AccountSummary,
 } from '@reviewer2/shared';
@@ -22,6 +21,7 @@ import UiSheet from '../components/UiSheet.vue';
 import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { useLanguage } from '../i18n';
+import { wayUp } from '../ranks';
 import { streakTitles as titlesOf } from '../streaks';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
@@ -69,10 +69,10 @@ const passwordProblem = computed(() => {
 // The day the account registered, as its public page shows it too.
 const since = computed(() => formatDay(props.summary.createdAt, locale.value));
 
-// The rank that the account's points hold, and the next one (shared/src/ranks.ts). The rank opens
-// the ladder of every rank, with this one marked.
+// The rank that the account's points hold, and the way to the next one (shared/src/ranks.ts). The
+// rank opens the ladder of every rank, with this one marked.
 const rank = computed(() => rankFor(props.summary.points));
-const next = computed(() => nextRank(props.summary.points));
+const progress = computed(() => wayUp(t, props.summary.points));
 const ladder = ref(false);
 
 // The streak titles (streaks.ts): the longest run of wins and of losses, from three games on, with
@@ -176,9 +176,7 @@ async function logOut() {
           <span class="rank">{{ t(`ranks.names.${rank}`) }}</span>
           <span class="num">{{ t('ranks.points', { points: summary.points }) }}</span>
         </span>
-        <span class="hint">
-          {{ next ? t('ranks.next', { points: next.points, rank: t(`ranks.names.${next.rank}`) }) : t('ranks.top') }}
-        </span>
+        <span class="hint">{{ progress }}</span>
         <span class="open">{{ t('ranks.ladder.open') }}</span>
       </button>
       <p class="hint">{{ t('ranks.note') }}</p>
