@@ -12,6 +12,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { changeLogin, loadAccount, request } from '../account';
+import PlayerAvatar from '../components/PlayerAvatar.vue';
 import PlayerNumber from '../components/PlayerNumber.vue';
 import RankLadder from '../components/RankLadder.vue';
 import TitlePills from '../components/TitlePills.vue';
@@ -31,7 +32,8 @@ import ProfileFriends from './ProfileFriends.vue';
 import ProfilePublic from './ProfilePublic.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's own page: its avatar and username, its number and when it registered, its
+// The account's own page: who it is, on one card at the top, with its avatar and the ways to
+// change it, its username and the way to rename it, its number and when it registered; then its
 // academic rank, its titles, its streaks and the acknowledgments counted for it, its public page,
 // its friends, its email address, its password, its record, and the ways to log out and to delete
 // it.
@@ -136,10 +138,23 @@ async function logOut() {
   <section class="profile">
     <h1>{{ t('account.profile.title') }}</h1>
 
-    <ProfileAvatar :summary="summary" />
-
-    <section class="part" aria-labelledby="profile-username">
-      <h2 id="profile-username">{{ t('account.profile.username') }}</h2>
+    <section class="part identity" aria-labelledby="profile-username">
+      <div class="head">
+        <PlayerAvatar :name="summary.username" :avatar="summary.avatar" size="large" />
+        <div class="who">
+          <div class="line">
+            <span id="profile-username" class="name">{{ summary.username }}</span>
+            <UiButton v-if="editing !== 'username'" variant="quiet" size="small" @click="editing = 'username'">{{
+              t('account.profile.rename')
+            }}</UiButton>
+          </div>
+          <p class="line meta">
+            <PlayerNumber :id="summary.id" />
+            <span class="hint">{{ t('playerPage.since', { date: since }) }}</span>
+          </p>
+          <ProfileAvatar :summary="summary" />
+        </div>
+      </div>
       <form v-if="editing === 'username'" class="inline-form" @submit.prevent="rename">
         <UiField
           v-model="username"
@@ -157,16 +172,6 @@ async function logOut() {
           <UiButton variant="quiet" @click="editing = null">{{ t('account.cancel') }}</UiButton>
         </div>
       </form>
-      <div v-else class="line">
-        <span class="name">{{ summary.username }}</span>
-        <UiButton variant="quiet" size="small" @click="editing = 'username'">{{
-          t('account.profile.rename')
-        }}</UiButton>
-      </div>
-      <p class="line">
-        <PlayerNumber :id="summary.id" />
-        <span class="hint">{{ t('playerPage.since', { date: since }) }}</span>
-      </p>
     </section>
 
     <section class="part" aria-labelledby="profile-rank">
@@ -311,9 +316,31 @@ h1 {
   gap: var(--space-3);
 }
 
+/* Who the account is: the avatar on the left, and beside it the name, the number and the avatar's
+   buttons, which wrap under each other on a phone. */
+.identity .head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.who .line {
+  gap: var(--space-1) var(--space-3);
+}
+
 .name {
+  min-width: 0;
   font-size: var(--text-xl);
   font-weight: var(--weight-black);
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 

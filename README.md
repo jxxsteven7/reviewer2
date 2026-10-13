@@ -23,7 +23,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 - Mobile-first; works in WeChat's browser
 - Reconnects after a locked screen to the same seat
 - Server-authoritative: guessers can't see unrevealed colors, even with developer tools
-- Optional accounts: an avatar, a record of games, friends, an academic rank and a public page; see [Privacy](#privacy)
+- Optional accounts: an avatar, a record of games, friends and friend titles, an academic rank and a public page; see [Privacy](#privacy)
 - Matches: several scored games in a row, with titles
 - Public rooms: play with strangers, with an account, and report players who misbehave
 
@@ -33,6 +33,7 @@ What we promise players:
 
 - **An account is recommended, not required.** A nickname is enough to play; an account keeps your avatar, records, rank and titles from game to game.
 - **Only your friends** see whether you are online and whether you are in a room, and the room's code only when it is public. The players in a room see who is in it with them, as always; nobody else learns any of this.
+- **Friend titles**, such as your Co-First Author, are counted from the games you played with each friend, and only you see them: on your friends list and on a friend's page.
 - **Your public page** shows anyone who opens it your username, avatar, rank, titles, player number and the day you registered, with the link and the line you chose to write; your record and your acknowledgments only if you turn that on. Everyone sees how many accounts like it; only you see which.
 - **Passwords** are kept only as a one-way hash. Nobody, the operator included, can read them.
 - **An account's email address is never stored.** The server keeps only a keyed fingerprint of it, to check the address and to mail a password reset.

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { AUTHOR_ACCOUNT } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
+import TitleInfo from './TitleInfo.vue';
 
 // An account's number, from 1 up in the order of registration, as its own page and its public
 // page show it (docs/architecture.md#public-profiles). The first account is the author's, which
-// gets a badge to say so.
+// gets a badge to say so, which a tap explains.
 defineProps<{ id: number }>();
 const { t } = useI18n();
 </script>
@@ -12,7 +13,9 @@ const { t } = useI18n();
 <template>
   <span class="number">
     <span class="num">{{ t('playerPage.number', { id }) }}</span>
-    <span v-if="id === AUTHOR_ACCOUNT" class="author">{{ t('playerPage.author') }}</span>
+    <TitleInfo v-if="id === AUTHOR_ACCOUNT" :title="{ kind: 'author' }" class="author">{{
+      t('playerPage.author')
+    }}</TitleInfo>
   </span>
 </template>
 

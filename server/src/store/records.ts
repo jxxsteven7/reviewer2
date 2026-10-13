@@ -1,6 +1,7 @@
 import {
   RECENT_RECORDS,
   type BestStreaks,
+  type DuoCounts,
   type GameRecord,
   type MatchRecord,
   type RecordsView,
@@ -16,7 +17,9 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 // matches award (migration 3, docs/architecture.md#matches), the games themselves to watch again
 // (migration 7, docs/architecture.md#replays), the streaks of wins and of losses that the games
 // make (migration 10, docs/architecture.md#streaks), and the log of each game kept and which of
-// its players had which account (migration 12, docs/architecture.md#game-records).
+// its players had which account (migration 12, docs/architecture.md#game-records). What friends
+// have played together is worked out from the records (migration 13,
+// docs/architecture.md#friend-duos).
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
 // points it brought them (migration 8), scored as a match scores a game.
@@ -52,6 +55,7 @@ export class RecordStore {
   readonly #recentMatches: StatementSync;
   readonly #streak: StatementSync;
   readonly #putStreak: StatementSync;
+  readonly #duos: StatementSync;
 
   constructor(
     db: DatabaseSync,
@@ -91,6 +95,23 @@ export class RecordStore {
       'INSERT INTO streaks (account_id, best_wins, best_losses, run, run_won) VALUES (?, ?, ?, ?, ?) ' +
         'ON CONFLICT (account_id) DO UPDATE SET best_wins = excluded.best_wins, ' +
         'best_losses = excluded.best_losses, run = excluded.run, run_won = excluded.run_won',
+    );
+    // What the account has played with each of its friends (shared/src/duos.ts): its records, by
+    // their own index, each with the friends' records of the same game, found by the index on the
+    // game (migration 13). Teammates were on the same side, opponents on another.
+    this.#duos = db.prepare(
+      'SELECT theirs.account_id AS friend, ' +
+        'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 1) AS wonTogether, ' +
+        'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 0) AS lostTogether, ' +
+        'count(*) FILTER (WHERE theirs.side <> mine.side) AS against, ' +
+        'count(*) FILTER (WHERE theirs.side <> mine.side AND mine.won = 1) AS beat, ' +
+        'count(*) FILTER (WHERE theirs.side <> mine.side AND theirs.won = 1) AS beaten ' +
+        'FROM game_records AS mine JOIN game_records AS theirs ' +
+        'ON theirs.game_id = mine.game_id AND theirs.account_id <> mine.account_id ' +
+        'WHERE mine.account_id = ? AND theirs.account_id IN (' +
+        'SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END FROM friendships ' +
+        "WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?)) " +
+        'GROUP BY theirs.account_id',
     );
   }
 
@@ -132,6 +153,14 @@ export class RecordStore {
   streaks(accountId: number): BestStreaks {
     const row = this.#streak.get(accountId) as { wins: number; losses: number } | undefined;
     return { wins: row?.wins ?? 0, losses: row?.losses ?? 0 };
+  }
+
+  // What the account has played with each friend who shares a game with it, by the friend's
+  // account ID, from every game on both their records (docs/architecture.md#friend-duos).
+  duos(accountId: number): Map<number, DuoCounts> {
+    type Row = DuoCounts & { friend: number };
+    const rows = this.#duos.all(accountId, accountId, accountId, accountId) as unknown as Row[];
+    return new Map(rows.map(({ friend, ...counts }) => [friend, counts]));
   }
 
   // The points of every game on the account's record, from which its rank is told (ranks.ts).

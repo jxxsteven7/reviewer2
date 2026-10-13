@@ -9,6 +9,7 @@ import {
 } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import DuoNotices from '../../core/components/DuoNotices.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
@@ -49,8 +50,9 @@ import { useKeywords, type Chooser } from './useKeywords';
 // In a match, its table sits beside the board while the game is on, above the groups on a wide
 // screen. Once the game has ended, the table follows the letters, with where each player's
 // points came from, or the final ranking does when the match is over. The streaks that the game
-// brought the players to come right after the letters, before the match's table; their notices
-// are on the page from the start, out of sight, so that a screen reader is told of them.
+// brought the players to come right after the letters, before the match's table, and the titles
+// that it brought the player's friends after them; their notices are on the page from the start,
+// out of sight, so that a screen reader is told of them.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -337,6 +339,7 @@ const chosenByOthers = computed(() =>
       :class="{ 'below-banner': reconnecting }"
     />
     <StreakNotices :room="room" />
+    <DuoNotices :room="room" />
     <template v-if="game.result && match">
       <MatchResults v-if="match.status !== 'on'" :room="room" />
       <MatchTable v-else :room="room" :describe="describe" class="between">

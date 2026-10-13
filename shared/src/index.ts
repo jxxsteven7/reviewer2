@@ -1,6 +1,7 @@
 export * from './accounts';
 export * from './acknowledgments';
 export * from './codes';
+export * from './duos';
 export * from './feedback';
 export * from './friends';
 export { hasHan } from './han';

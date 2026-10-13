@@ -5,12 +5,14 @@ import { useI18n } from 'vue-i18n';
 import { useLanguage } from '../i18n';
 import { streakLineKey, streakTitle } from '../streaks';
 import PlayerAvatar from './PlayerAvatar.vue';
+import TitleInfo from './TitleInfo.vue';
 
 // The streaks that the game which has just ended brought the players to
 // (docs/architecture.md#streaks), under the decision letters. The viewer's own, won or lost, is a
-// card: its title, a line for the occasion, and whether it is a new record. Everyone else's winning
-// streak is a cheer to the whole room, which the screens show too; a losing streak is told to its
-// player alone, so there is none to show for anyone else. `large` is for a big screen across a room.
+// card: its title, which a tap explains, a line for the occasion, and whether it is a new record.
+// Everyone else's winning streak is a cheer to the whole room, which the screens show too; a losing
+// streak is told to its player alone, so there is none to show for anyone else. `large` is for a big
+// screen across a room.
 //
 // A screen reader is told of them by a live region that is on the page throughout the game, out of
 // sight, since one that comes with its contents is often passed over; the notices themselves come
@@ -57,7 +59,9 @@ const announcement = computed(() =>
   <section v-if="mine || cheers.length > 0" class="streak-notices" :class="{ large }">
     <article v-if="mine" class="mine" :class="mine.kind">
       <p class="kicker">{{ t(`streaks.kinds.${mine.kind}`) }}</p>
-      <h2 class="title">{{ title(mine) }}</h2>
+      <h2 class="title">
+        <TitleInfo :title="{ kind: 'streak', streak: mine.kind, length: mine.length }">{{ title(mine) }}</TitleInfo>
+      </h2>
       <p class="line">{{ line(mine) }}</p>
       <p v-if="mine.record" class="record">{{ t('streaks.record') }}</p>
     </article>

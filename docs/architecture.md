@@ -156,7 +156,7 @@ Optional: a username and a password, with an avatar, a record of games, titles, 
 - **Passwords:** 8 to 128 characters after NFKC, as scrypt hashes, N = 2^15, r = 8, p = 3 (`server/src/accounts/passwords.ts`). Two hashes at a time, then `busy`.
 - **Logins:** a 32-byte secret in a cookie, kept as its SHA-256 (`sessions`). `HttpOnly`, `SameSite=Lax`, `Path=/`, and unless `COOKIE_SECURE=0`, `Secure` with `__Host-`. Ends after 30 days unused, a year in all, or on logout or a password change; its connections then get `account:ended`.
 - **Connections.** The handshake reads the cookie; a logged-in connection takes its member key from the account. A guest's seat becomes the account's when the browser logs in and comes back.
-- **Records.** At a game's end the room asks `GameModule.results()` and keeps the result per account, with the game's points ([Academic ranks](#academic-ranks)) and the streak it brings ([Streaks](#streaks)).
+- **Records.** At a game's end the room asks `GameModule.results()` and keeps the result per account, with the game's points ([Academic ranks](#academic-ranks)), the streak it brings ([Streaks](#streaks)) and the titles it brings friends ([Friend duos](#friend-duos)).
 - **Numbers.** An account's id, from 1 in the order of registration, never given out again, is its number, shown on its own page and its public profile and never a way to look an account up. The first account is the author's (`AUTHOR_ACCOUNT`), which both pages mark.
 
 ## Friends
@@ -169,6 +169,15 @@ Accounts only; guests see none of it. `shared/src/friends.ts` has the types, the
 - **Invitations.** A member with an account invites a friend who is online into their room (`friends:invite`), once a minute for the same friend, unless the chair has removed the friend from it. Every connection of the friend hears `friends:invited`, with the inviter, the room's code and ID and how long the invitation stands, and a connection that comes while it stands hears it too. `room:join` with the `invitation` in place of the code lets the friend in, into a private room too, as a newcomer like any other: a removal by the chair and the account requirement of a public room keep them out as they would anyone. An invitation is used up when the friend comes into the room, by it or by the code, and forgotten when they ignore it (`friends:ignore`); it lapses after 10 minutes, when the inviter leaves, when the room closes or when the two part (`invitation_expired`). However an invitation ends, at once or found by the sweep, every connection of the friend hears `friends:uninvited`, so that none of their pages shows it on. Whoever has a seat in the room comes back by the code, with a lapsed invitation in hand or not. Invitations live in memory and are never kept.
 - **Data.** The `friendships` table (migration 8): one row per pair, whichever side asked, with its status and when it was asked and answered. A friendship that is removed is deleted, and a declined request is deleted once its wait is over; an account's rows go with it.
 
+## Friend duos
+
+What two friends have played together, and five titles for the friends who stand out (`shared/src/duos.ts`). Two accounts were teammates in a game when both have it on their records on the same side, and opponents when on different sides; every game on both records counts, whichever game it was and in a match or not, from before the two were friends too. Only friends count: a request counts for nothing, and the counts go when the friendship ends and come back when it is made again.
+
+- **Counts.** For each friend: the games won and lost on the same side, and the games on different sides, with those the account won and those the friend won.
+- **Titles.** Each is held by the friend with the most of one count, from three on, and friends level at the top share it: Co-First Author, the most games won together; Rejected Together, the most lost together; Your Reviewer 2, the most won against the account; Frequent Submitter, the most lost to it; Rival Reviewer, the most played against it. Each account has its own: Ann's Co-First Author may be Bob while Bob's is Cat.
+- **Who sees them.** The account alone. Its friends list carries each friend's counts and titles (`FriendView.duo`) and sums up who holds which, and a friend's public profile carries what the two have played, for that friend alone (`ProfileView.duo`). When a game ends, the snapshot that ends it tells each account player of the titles that the game brought friends who played in it, who didn't hold them before (`RoomView.duos`); nobody else in the room is told, and the screens nothing.
+- **Data.** Nothing new is kept. One query counts every friend's games from `game_records`, finding the others in each game by the index on the game (migration 13), whenever the friends list or a profile asks, and once for each account player with a friend in a game that ends. A deleted account's records go with it, and its counts with them.
+
 ## Public profiles
 
 Every account has a public page, `/p/<handle>`, which anyone may open, with or without an account. The handle (`accounts.handle`, migration 11) is 12 hexadecimal digits drawn at random when the account is created, never changed and never reused, so that a link outlives a new username and nobody can count through the accounts by their numbers. Rooms, friend lists, requests and the list of likers carry it (`PlayerView.handle`, `FriendView.handle`, `LikerView.handle`), so that every way to a profile uses the same key.
@@ -179,6 +188,10 @@ Every account has a public page, `/p/<handle>`, which anyone may open, with or w
 - **Likes** (`likes`, migration 11). An account likes a page once and may take it back, never its own (`self_like`), 100 a day (`like_limited`). The count is public; who likes a page is shown to its owner alone (`GET /api/account/likers`), the latest 100 of them (`LIKERS_SHOWN`), with whether each is a friend, so that the owner may ask the others. The rows go with either account.
 - **Requests waiting.** The owner's summary counts the friend requests waiting for an answer (`AccountSummary.requests`), for the badge on the home page and the account page; the page asks again on `friends:changed`.
 - **The operator** clears a link and a line that break the rules with `admin.cjs profile clear <username> [--ban]`, which with `--ban` bars the account from writing them again (`profile_banned`; `profile allow` lifts it), and looks them over with `profile list` ([development.md](development.md#accounts-and-email)).
+
+## Titles
+
+Every title that a page shows opens, at a tap, a sheet that says what it is and how it is won (`TitleInfo.vue`, `client/src/core/titles.ts`): the titles of matches, the streaks, the acknowledgments, the author's badge, the decision of each game, on the record and in its letter, and the [friend titles](#friend-duos). The academic rank opens its ladder instead. A screen, which nobody taps, shows them as text. What each says is in the locale files.
 
 ## Academic ranks
 

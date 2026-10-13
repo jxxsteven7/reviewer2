@@ -7,12 +7,14 @@ import { act } from '../socket';
 import { useBusy } from '../useBusy';
 import MatchForm from './MatchForm.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
+import TitleInfo from './TitleInfo.vue';
 import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
 
 // The end of a match: everyone's place and total, the Best Paper Award for the first and the
 // game's black hole for the last, with what the reviewers would say to them. A match that the chair
-// ended early has places but no titles. The chair starts another match, with rules that they may
+// ended early has places but no titles, and a tap on a title says what it is (TitleInfo.vue),
+// except on a screen, which nobody taps. The chair starts another match, with rules that they may
 // change, or makes the room an ordinary one again.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
@@ -56,7 +58,13 @@ async function next(nextRules: MatchRules | null) {
             {{ line.name }}
             <span v-if="line.left" class="mark">{{ t('match.left') }}</span>
           </span>
-          <span v-if="line.title" class="title">{{ t(`match.titleNames.${line.title}`) }}</span>
+          <TitleInfo
+            v-if="line.title"
+            :title="{ kind: 'award', title: line.title }"
+            :still="room.me === null"
+            class="title"
+            >{{ t(`match.titleNames.${line.title}`) }}</TitleInfo
+          >
           <span v-if="line.title === 'black_hole'" class="line">{{ t('match.blackHoleLine') }}</span>
         </span>
         <span class="total num">{{ points(line.total) }}</span>

@@ -5,12 +5,18 @@ import {
   checkUsername,
   checkWebLink,
   cleanName,
+  duoChanges,
+  duoGame,
+  duoViews,
   MAIL_LINK_MS,
   MAX_REPLAY_BYTES,
   rankFor,
   usernameKey,
   type AccountError,
   type AccountSummary,
+  type DuoPart,
+  type DuoTitle,
+  type DuoView,
   type FriendLimits,
   type Language,
   type LikerView,
@@ -219,7 +225,31 @@ export class Accounts {
       likes: this.likes.count(account.id),
       liked: viewer !== null && this.likes.has(account.id, viewer.id),
       mine: viewer !== null && viewer.id === account.id,
+      duo: viewer !== null && viewer.id !== account.id ? (this.duosOf(viewer.id).get(account.id) ?? null) : null,
     };
+  }
+
+  // What the account has played with each of its friends who shares a game with it, by the
+  // friend's account ID, with the titles each holds among them (docs/architecture.md#friend-duos).
+  // Only friends are counted, so a profile's owner who isn't one has nothing here.
+  duosOf(accountId: number): Map<number, DuoView> {
+    return duoViews(this.records.duos(accountId));
+  }
+
+  // The titles that a game which has just ended brought friends who played in it, for one account
+  // that played in it: `players` is everyone whose game went on the record, the account among them,
+  // with their side and whether they won. A friend is told of by their account ID.
+  duosBrought(
+    accountId: number,
+    players: ReadonlyMap<number, DuoPart>,
+  ): { friend: number; title: DuoTitle; count: number }[] {
+    const mine = players.get(accountId);
+    if (!mine) return [];
+    // Every friend who played in the game shares it, so has counts.
+    const after = this.records.duos(accountId);
+    const played = new Map<number, ReturnType<typeof duoGame>>();
+    for (const [other, theirs] of players) if (after.has(other)) played.set(other, duoGame(mine, theirs));
+    return played.size > 0 ? duoChanges(after, played) : [];
   }
 
   // What the owner writes on the public profile, and what of the rest they show there. The link

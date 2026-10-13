@@ -10,6 +10,8 @@ import {
   isReservedName,
   type Ack,
   type ClosedReason,
+  type DuoPart,
+  type DuoView,
   type EmoteEvent,
   type FriendRequestView,
   type FriendView,
@@ -257,9 +259,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // What the end of a game leaves behind for the players with accounts, as the game describes
   // their part in it (GameModule.results()): the game on each of their records, with the points it
   // brought them (Room.points()), the streak it brought them to, which the room tells in the
-  // snapshot that ends the game (Room.noteStreak()), and their ranks as they are now for everyone to
-  // see. Whoever had left by then has no part in its end, and a game that the chair withdrew counts
-  // for nobody. Then, once anyone with an account that still exists has played in it, those who
+  // snapshot that ends the game (Room.noteStreak()), their ranks as they are now for everyone to
+  // see, and the titles that the game brought friends who played in it, which the room tells each
+  // account alone (Room.noteDuos()). Whoever had left by then has no part in its end, and a game
+  // that the chair withdrew counts for nobody. Then, once anyone with an account that still exists
+  // has played in it, those who
   // left included, the record of the game itself (docs/architecture.md#game-records): the replay
   // to watch again (GameModule.replay()), the log of everything that happened, and which player
   // was which account. Whatever else is to be kept of a finished game goes here, after the
@@ -269,15 +273,21 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (!results || !accounts) return;
     const gameId = room.gameId as string;
     const points = room.points();
+    // Those whose game went on the record, by account ID, with their player ID, side and result.
+    const recorded = new Map<number, DuoPart & { playerId: string }>();
     for (const { playerId, ...result } of results) {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
       const record = { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, ...result };
       const streak = accounts.record(account.id, record);
-      if (streak) room.noteStreak(member.id, streak);
+      if (streak) {
+        room.noteStreak(member.id, streak);
+        recorded.set(account.id, { playerId: member.id, side: result.side, won: result.won });
+      }
       room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id));
     }
+    if (recorded.size > 1) safely('duos', () => noteDuos(room, recorded));
     const kept = room.record();
     if (!kept) return;
     // An account deleted during the game no longer counts as having played: a game of guests and
@@ -293,6 +303,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       // kept the record out, such as a full database, has a line of its own.
       if (stored && kept.overflowed) log('game_log_too_large', { code: room.code });
     });
+  }
+
+  // Tells each account whose game went on the record of the titles that the game brought friends
+  // who played in it (docs/architecture.md#friend-duos), by their player IDs in the room. Only the
+  // account itself is told: who is friends with whom is nobody else's business.
+  function noteDuos(room: Room, recorded: ReadonlyMap<number, DuoPart & { playerId: string }>): void {
+    for (const [accountId, { playerId }] of recorded) {
+      const brought = (accounts as Accounts).duosBrought(accountId, recorded);
+      const notices = brought.flatMap(({ friend, title, count }) => {
+        const theirs = recorded.get(friend);
+        return theirs ? [{ playerId: theirs.playerId, title, count }] : [];
+      });
+      room.noteDuos(playerId, notices);
+    }
   }
 
   // The last match of each room whose end has been logged and recorded.
@@ -551,8 +575,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
 
   // A friend as the account page shows them: online or not, and where, which only friends learn
-  // (docs/architecture.md#friends). A private room is shown without its code.
-  function friendView({ id, handle, username, avatar }: FriendRow): FriendView {
+  // (docs/architecture.md#friends), and what the two have played together
+  // (docs/architecture.md#friend-duos). A private room is shown without its code.
+  function friendView({ id, handle, username, avatar }: FriendRow, duo: DuoView | null): FriendView {
     const online = isOnline(id);
     const room = online ? roomOf(id) : undefined;
     return {
@@ -561,6 +586,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       avatar: avatarUrl({ avatar }),
       online,
       room: room ? { code: room.public ? room.code : null } : null,
+      duo,
     };
   }
 
@@ -1101,14 +1127,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     );
 
     // The account's friends and the requests between them and others. Only the account's own
-    // connections ask, and only friends learn whether someone is online and where.
+    // connections ask, and only friends learn whether someone is online and where, and what the two
+    // have played together.
     on(handlers, 'friends:list', () => {
       const me = accountOf(conn);
       if (!me.ok) return me;
       const friends = (accounts as Accounts).friends;
       const { incoming, outgoing } = friends.requests(me.account.id);
+      const duos = (accounts as Accounts).duosOf(me.account.id);
       return ok({
-        friends: friends.friendsOf(me.account.id).map(friendView),
+        friends: friends.friendsOf(me.account.id).map((row) => friendView(row, duos.get(row.id) ?? null)),
         incoming: incoming.map(requestView),
         outgoing: outgoing.map(requestView),
       });

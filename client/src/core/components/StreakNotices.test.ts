@@ -40,6 +40,7 @@ function room(me: string | null, streaks: StreakNotice[]): RoomView {
     me,
     match: null,
     streaks,
+    duos: [],
     data: {},
   };
 }

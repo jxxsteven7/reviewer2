@@ -30,11 +30,11 @@ describe('the title of a streak', () => {
   test('is earned from three games on, the winning streak first', () => {
     const t = (key: string, named: Record<string, string>) => `${key}[${named.n}]`;
     expect(streakTitles(t, { wins: 3, losses: 2 }, 'en')).toEqual([
-      { kind: 'wins', title: 'streaks.names.wins[Three]' },
+      { kind: 'wins', length: 3, title: 'streaks.names.wins[Three]' },
     ]);
     expect(streakTitles(t, { wins: 4, losses: 5 }, 'en')).toEqual([
-      { kind: 'wins', title: 'streaks.names.wins[Four]' },
-      { kind: 'losses', title: 'streaks.names.losses[Five]' },
+      { kind: 'wins', length: 4, title: 'streaks.names.wins[Four]' },
+      { kind: 'losses', length: 5, title: 'streaks.names.losses[Five]' },
     ]);
     expect(streakTitles(t, { wins: 0, losses: 0 }, 'zh')).toEqual([]);
   });

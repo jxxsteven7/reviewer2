@@ -10,6 +10,7 @@ import {
   wordKey,
   type Ack,
   type BoardWord,
+  type DuoNotice,
   type Emote,
   type Language,
   type MatchRules,
@@ -179,6 +180,9 @@ export class Room {
   // The streaks that the game which has just ended brought the members with accounts to, by player
   // ID, from STREAK_MIN games on (noteStreak), until the room leaves the ended game behind.
   readonly #streaks = new Map<string, Streak>();
+  // The titles that the game which has just ended brought each member's friends who played in it,
+  // by the member's player ID (noteDuos), until the room leaves the ended game behind.
+  readonly #duos = new Map<string, DuoNotice[]>();
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
   readonly #words: WordLibrary;
@@ -586,6 +590,7 @@ export class Room {
     this.phase = 'playing';
     this.#gone.clear();
     this.#streaks.clear();
+    this.#duos.clear();
     // Whoever plays in a match's game is in its table from the start, with no points if new.
     if (this.match && this.game.match) {
       for (const id of this.game.match.lineup(this.data)) {
@@ -634,6 +639,7 @@ export class Room {
     this.#gone.clear();
     this.#log = null;
     this.#streaks.clear();
+    this.#duos.clear();
   }
 
   // --- matches ----------------------------------------------------------------------------
@@ -851,6 +857,23 @@ export class Room {
     return notices;
   }
 
+  // The titles that the game which has just ended brought a member's friends who played in it,
+  // which the socket layer tells the room once it has kept the records
+  // (docs/architecture.md#friend-duos). They go to that member alone. Returns whether the room
+  // looks any different.
+  noteDuos(id: string, notices: DuoNotice[]): boolean {
+    if (this.phase !== 'ended' || !this.members.has(id) || notices.length === 0) return false;
+    this.#duos.set(id, notices);
+    this.changed();
+    return true;
+  }
+
+  // The viewer's own duo notices, of the friends who are still in the room.
+  #duoNotices(viewer: Viewer): DuoNotice[] {
+    const notices = 'playerId' in viewer ? this.#duos.get(viewer.playerId) : undefined;
+    return (notices ?? []).filter(({ playerId }) => this.members.has(playerId));
+  }
+
   // The points of the game that has just ended, by member key, scored as a match scores a game
   // (docs/architecture.md#academic-ranks), or null when the game counts for none: it was withdrawn,
   // it hasn't ended, or the game can't be scored at all.
@@ -1016,6 +1039,7 @@ export class Room {
       ...(chair(viewer) ? { customWords: this.customWords.map(({ word }) => word) } : {}),
       match: match === undefined ? (match = matchView()) : match,
       streaks: this.#streakNotices(viewer),
+      duos: this.#duoNotices(viewer),
       data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }

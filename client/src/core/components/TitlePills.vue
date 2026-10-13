@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import type { AcknowledgmentCount, StreakKind, TitleCount } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
+import TitleInfo from './TitleInfo.vue';
 
 // An account's titles, its streaks, named already (streaks.ts), and the acknowledgments counted
 // for it, as pills, each title with how many times it was won when that is more than once: on the
-// account's own page and on its public page.
+// account's own page and on its public page. A tap on a pill says what it is (TitleInfo.vue).
 withDefaults(
   defineProps<{
     titles: TitleCount[];
-    streaks?: { kind: StreakKind; title: string }[];
+    streaks?: { kind: StreakKind; length: number; title: string }[];
     acknowledgments?: AcknowledgmentCount[] | null;
   }>(),
   { streaks: () => [], acknowledgments: null },
@@ -22,11 +23,19 @@ const counted = (label: string, count: number) =>
 <template>
   <ul class="titles">
     <li v-for="{ title, count } in titles" :key="title">
-      {{ counted(t(`account.profile.titleNames.${title}`), count) }}
+      <TitleInfo :title="{ kind: 'award', title }" class="pill">
+        {{ counted(t(`account.profile.titleNames.${title}`), count) }}
+      </TitleInfo>
     </li>
-    <li v-for="{ kind, title } in streaks" :key="kind" class="streak" :class="kind">{{ title }}</li>
+    <li v-for="{ kind, length, title } in streaks" :key="kind">
+      <TitleInfo :title="{ kind: 'streak', streak: kind, length }" class="pill streak" :class="kind">
+        {{ title }}
+      </TitleInfo>
+    </li>
     <li v-for="{ kind, count } in acknowledgments ?? []" :key="kind">
-      {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
+      <TitleInfo :title="{ kind: 'thanks', thanks: kind }" class="pill">
+        {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
+      </TitleInfo>
     </li>
   </ul>
 </template>
@@ -41,12 +50,21 @@ const counted = (label: string, count: number) =>
   list-style: none;
 }
 
-.titles li {
+/* A pill is a button that a tap opens. Its box reaches a few pixels above and below it, out of
+   sight, so that it is 44px tall to tap without spreading the rows apart. */
+.titles .pill {
+  position: relative;
   padding: var(--space-1) var(--space-3);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
   font-weight: var(--weight-bold);
+}
+
+.titles .pill::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .titles .streak.wins {

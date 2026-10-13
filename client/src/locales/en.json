@@ -359,6 +359,14 @@
         "reject": "Reject",
         "withdrawn": "Withdrawn"
       },
+      "explain": {
+        "oral": "The group won while the other group still had four or more keywords to find.",
+        "spotlight": "The group won while the other group still had two or three keywords to find.",
+        "poster": "The group won while the other group had one keyword left to find.",
+        "reject": "The group lost: the other group's keywords were all found first.",
+        "deskReject": "The group revealed Reviewer 2 and lost on the spot.",
+        "withdrawn": "The chair withdrew the game, so it counts for nobody: no record, no points, no streak."
+      },
       "bodies": {
         "oral": {
           "found": {
@@ -815,8 +823,7 @@
       "uploadAvatar": "Upload a picture",
       "defaultAvatar": "Use the default",
       "cropTitle": "Crop your avatar",
-      "username": "Username",
-      "rename": "Change",
+      "rename": "Rename",
       "renameSubmit": "Save",
       "email": "Email address",
       "emailStates": {
@@ -981,6 +988,7 @@
     "number": "Player No. {id}",
     "author": "Author",
     "since": "Registered {date}",
+    "duo": "You and {name}",
     "record": "Games: {games} · Won: {wins} · Matches: {matches}",
     "likes": "♥ {count}",
     "like": "Like",
@@ -1034,6 +1042,78 @@
           "2": "Collector of rejection letters, first in the field.",
           "3": "Submit once more and the journal sends you a loyalty card."
         }
+      }
+    }
+  },
+  "titles": {
+    "award": {
+      "best_paper": "Awarded at the end of a match to the player with the highest total. Players level at the top all get it; when everyone is level, nobody does.",
+      "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it."
+    },
+    "streak": {
+      "wins": "The longest run of games won in a row on the record: {n}.",
+      "losses": "The longest run of games lost in a row on the record: {n}."
+    },
+    "streakCounts": "Every game finished in a seat while logged in counts, in the order the games ended, whichever game it was and in a match or not. A withdrawn game counts for nothing. The title comes at three in a row.",
+    "thanks": {
+      "feedback": "Thanked in the acknowledgments for a suggestion, an idea for a game or a bug report that was taken up.",
+      "words": "Thanked in the acknowledgments for words for the word lists.",
+      "playtesting": "Thanked in the acknowledgments for playtesting the game."
+    },
+    "author": "The first account to register belongs to the author of the game."
+  },
+  "duos": {
+    "names": {
+      "coauthor": "Co-First Author",
+      "corejected": "Rejected Together",
+      "reviewer2": "Your Reviewer 2",
+      "submitter": "Frequent Submitter",
+      "rival": "Rival Reviewer"
+    },
+    "explain": {
+      "coauthor": "The friend you have won the most games with on the same side, at least {min}.",
+      "corejected": "The friend you have lost the most games with on the same side, at least {min}.",
+      "reviewer2": "The friend who has beaten you the most from the other side, at least {min} times.",
+      "submitter": "The friend you have beaten the most from the other side, at least {min} times.",
+      "rival": "The friend you have played against the most, won or lost, at least {min} games."
+    },
+    "private": "Only friends count, with every game you both finished, from before you were friends too. Friends level at the top share the title. Only you see your friend titles.",
+    "together": "As teammates: won {won}, lost {lost}",
+    "against": "As opponents: won {won}, lost {lost}",
+    "board": "Friend titles",
+    "notice": {
+      "kicker": "Friend title",
+      "coauthor": "{name} is now your Co-First Author: {count} games won together.",
+      "corejected": "{name} is now Rejected Together with you: {count} games lost side by side.",
+      "reviewer2": "{name} is now your Reviewer 2: they have beaten you {count} times.",
+      "submitter": "{name} is now your Frequent Submitter: you have beaten them {count} times.",
+      "rival": "{name} is now your Rival Reviewer: {count} games on opposite sides."
+    },
+    "lines": {
+      "coauthor": {
+        "1": "No need to argue about the author order: you're equals.",
+        "2": "A good collaborator is harder to find than a good topic.",
+        "3": "Submit the next one together too."
+      },
+      "corejected": {
+        "1": "Rejection is easier with company.",
+        "2": "Rejected together, revised together, resubmitted together.",
+        "3": "You can read the reviews together, and share the tissues."
+      },
+      "reviewer2": {
+        "1": "Every submission lands on their desk. Fate, or a grudge?",
+        "2": "You could recite their reviews by heart by now.",
+        "3": "Before you submit again, find out whether they're reviewing."
+      },
+      "submitter": {
+        "1": "You could reject their papers with your eyes closed.",
+        "2": "They keep submitting, you keep rejecting: the circle of academic life.",
+        "3": "Go easy on them. They need to graduate too."
+      },
+      "rival": {
+        "1": "Either you're reviewing them, or they're reviewing you.",
+        "2": "It's a small field, and an even smaller pool of reviewers.",
+        "3": "After this many rounds, you know each other better than co-authors do."
       }
     }
   }
