@@ -33,7 +33,6 @@ const { t } = useI18n();
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--ink);
-  box-shadow: var(--shadow-1);
   color: var(--on-ink);
   font-family: var(--font-display);
   font-size: var(--text-sm);
