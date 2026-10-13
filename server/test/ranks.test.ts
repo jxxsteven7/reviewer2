@@ -66,7 +66,7 @@ describe('academic ranks', () => {
     // The ranks that the players bring, and none for the guests.
     expect(ann.state?.players.map(({ name, rank }) => [name, rank])).toEqual([
       ['Ann', 'undergraduate'],
-      ['Bob', 'undergraduate'],
+      ['Bob', 'kindergarten'],
       ['Cat', undefined],
       ['Dan', undefined],
     ]);
@@ -108,9 +108,9 @@ describe('academic ranks', () => {
     expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: team !== 'red', replay: true });
     expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
     // The snapshot that ends the game shows the ranks as they are now: Ann is a master's student
-    // either way, with 30 or 32 points, and Bob still an undergraduate, with 3 or -2.
+    // either way, with 180 or 182 points, and Bob still a kindergartner, with 3 or -2.
     expect(rankOf(dan, 'Ann')).toBe('master');
-    expect(rankOf(dan, 'Bob')).toBe('undergraduate');
+    expect(rankOf(dan, 'Bob')).toBe('kindergarten');
     expect((await anns.account())?.points).toBe(records.points(1));
     // A withdrawn game would have counted for nothing, and a game is counted once however often its
     // end is told: the record holds one game from today.

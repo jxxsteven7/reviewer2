@@ -345,8 +345,8 @@ describe('the record of games', () => {
     const records = new RecordStore(db, () => now);
     const ann = account('Ann');
     const bob = account('Bob');
-    expect(records.add(ann.id, record())).toBe(true);
-    expect(records.add(ann.id, record())).toBe(false);
+    expect(records.add(ann.id, record())).toEqual({ kind: 'wins', length: 1, record: true });
+    expect(records.add(ann.id, record())).toBeNull();
     now += 60_000;
     records.add(ann.id, record({ gameId: 'g2', side: 'blue', role: 'guesser', won: false, verdict: 'deskReject' }));
     records.add(bob.id, record());
@@ -389,6 +389,74 @@ describe('the record of games', () => {
     const view = records.view(ann.id);
     expect(view).toMatchObject({ games: 25, wins: 5 });
     expect(view.recent).toHaveLength(20);
+  });
+});
+
+describe('streaks', () => {
+  const record = (gameId: string, won: boolean, game = 'keywords'): NewRecord => ({
+    game,
+    gameId,
+    side: won ? 'red' : 'blue',
+    role: 'guesser',
+    winner: 'red',
+    won,
+    verdict: won ? 'oral' : 'reject',
+    points: won ? 3 : -1,
+  });
+
+  test('grow with each game that goes the way of the last, and start over when one does not', () => {
+    const records = new RecordStore(db, () => now);
+    const ann = account();
+    expect(records.streaks(ann.id)).toEqual({ wins: 0, losses: 0 });
+    const outcomes = ['WWWLLWL'].flatMap((pattern) =>
+      [...pattern].map((result, i) => records.add(ann.id, record(`g${i}`, result === 'W'))),
+    );
+    expect(outcomes).toEqual([
+      { kind: 'wins', length: 1, record: true },
+      { kind: 'wins', length: 2, record: true },
+      { kind: 'wins', length: 3, record: true },
+      { kind: 'losses', length: 1, record: true },
+      { kind: 'losses', length: 2, record: true },
+      { kind: 'wins', length: 1, record: false },
+      { kind: 'losses', length: 1, record: false },
+    ]);
+    expect(records.streaks(ann.id)).toEqual({ wins: 3, losses: 2 });
+  });
+
+  test('are a record only once longer than every streak of their kind before', () => {
+    const records = new RecordStore(db, () => now);
+    const ann = account();
+    let n = 0;
+    const play = (won: boolean) => records.add(ann.id, record(`g${(n += 1)}`, won));
+    for (let i = 0; i < 5; i += 1) play(true);
+    play(false);
+    // Up to the old record of five, nothing new; the sixth win breaks it.
+    const again = [1, 2, 3, 4, 5, 6].map(() => play(true));
+    expect(again.map((streak) => streak?.record)).toEqual([false, false, false, false, false, true]);
+    expect(records.streaks(ann.id)).toEqual({ wins: 6, losses: 1 });
+  });
+
+  test('count every game in the order it was kept, whichever game it came from, each game once', () => {
+    const records = new RecordStore(db, () => now);
+    const ann = account();
+    records.add(ann.id, record('k1', false, 'keywords'));
+    records.add(ann.id, record('t1', false, 'test'));
+    expect(records.add(ann.id, record('k2', false, 'keywords'))).toEqual({ kind: 'losses', length: 3, record: true });
+    // The end of a game reported again changes nothing.
+    expect(records.add(ann.id, record('k2', false, 'keywords'))).toBeNull();
+    expect(records.add(ann.id, record('t2', true, 'test'))).toEqual({ kind: 'wins', length: 1, record: true });
+    expect(records.streaks(ann.id)).toEqual({ wins: 1, losses: 3 });
+  });
+
+  test("are each account's own", () => {
+    const records = new RecordStore(db, () => now);
+    const ann = account('Ann');
+    const bob = account('Bob');
+    records.add(ann.id, record('g1', true));
+    records.add(ann.id, record('g2', true));
+    expect(records.add(bob.id, record('g2', true))).toEqual({ kind: 'wins', length: 1, record: true });
+    expect(records.streaks(ann.id)).toEqual({ wins: 2, losses: 0 });
+    expect(records.streaks(bob.id)).toEqual({ wins: 1, losses: 0 });
   });
 });
 

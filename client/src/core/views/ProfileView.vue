@@ -7,6 +7,8 @@ import {
   MAX_PASSWORD_INPUT,
   nextRank,
   rankFor,
+  STREAK_KINDS,
+  STREAK_MIN,
   type AccountSummary,
 } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
@@ -20,6 +22,8 @@ import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { formatDay } from '../dates';
 import { errorKey } from '../errors';
+import { useLanguage } from '../i18n';
+import { streakTitle } from '../streaks';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import ProfileAvatar from './ProfileAvatar.vue';
@@ -29,8 +33,9 @@ import ProfilePublic from './ProfilePublic.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
 // The account's own page: its avatar and username, its number and when it registered, its
-// academic rank, its titles and the acknowledgments counted for it, its public page, its friends,
-// its email address, its password, its record, and the ways to log out and to delete it.
+// academic rank, its titles, its streaks and the acknowledgments counted for it, its public page,
+// its friends, its email address, its password, its record, and the ways to log out and to delete
+// it.
 const props = defineProps<{ summary: AccountSummary }>();
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -68,6 +73,16 @@ const since = computed(() => formatDay(props.summary.createdAt, locale.value));
 // The rank that the account's points hold, and the next one (shared/src/ranks.ts).
 const rank = computed(() => rankFor(props.summary.points));
 const next = computed(() => nextRank(props.summary.points));
+
+// The streak titles (shared/src/streaks.ts): the longest run of wins and of losses, from three games
+// on, with the number in the words of the language.
+const language = useLanguage();
+const streakTitles = computed(() =>
+  STREAK_KINDS.flatMap((kind) => {
+    const length = props.summary.streaks[kind];
+    return length >= STREAK_MIN ? [{ kind, title: streakTitle(t, kind, length, language.value) }] : [];
+  }),
+);
 
 // Sends a change, and shows what the server had against it.
 async function change(path: string, body: object): Promise<boolean> {
@@ -171,12 +186,12 @@ async function logOut() {
     </section>
 
     <section
-      v-if="summary.titles.length || summary.acknowledgments.length"
+      v-if="summary.titles.length || streakTitles.length || summary.acknowledgments.length"
       class="part"
       aria-labelledby="profile-titles"
     >
       <h2 id="profile-titles">{{ t('account.profile.titles') }}</h2>
-      <TitlePills :titles="summary.titles" :acknowledgments="summary.acknowledgments" />
+      <TitlePills :titles="summary.titles" :streaks="streakTitles" :acknowledgments="summary.acknowledgments" />
     </section>
 
     <section class="part" aria-labelledby="profile-public">

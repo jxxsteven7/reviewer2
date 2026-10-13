@@ -6,6 +6,7 @@ import {
   nextChair,
   parseCustomWords,
   sameName,
+  STREAK_MIN,
   wordKey,
   type Ack,
   type BoardWord,
@@ -15,6 +16,8 @@ import {
   type Rank,
   type RoomPhase,
   type RoomView,
+  type Streak,
+  type StreakNotice,
 } from '@reviewer2/shared';
 import { done, fail, refusalOf } from './answers';
 import type { GameContext, GameModule, PlayerResult, Viewer } from './game';
@@ -168,6 +171,9 @@ export class Room {
   // had, so that the game can still tell whose was a move they made before they left, as a
   // match's score and a replay need to.
   readonly #gone = new Map<string, { key: string; name: string }>();
+  // The streaks that the game which has just ended brought the members with accounts to, by player
+  // ID, from STREAK_MIN games on (noteStreak), until the room leaves the ended game behind.
+  readonly #streaks = new Map<string, Streak>();
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
   readonly #words: WordLibrary;
@@ -559,6 +565,7 @@ export class Room {
     this.round += 1;
     this.phase = 'playing';
     this.#gone.clear();
+    this.#streaks.clear();
     // Whoever plays in a match's game is in its table from the start, with no points if new.
     if (this.match && this.game.match) {
       for (const id of this.game.match.lineup(this.data)) {
@@ -605,6 +612,7 @@ export class Room {
     this.phase = 'lobby';
     this.#lobbySince = this.#now();
     this.#gone.clear();
+    this.#streaks.clear();
   }
 
   // --- matches ----------------------------------------------------------------------------
@@ -765,6 +773,29 @@ export class Room {
     return this.game.replay?.(this.data, this.context) ?? null;
   }
 
+  // The streak that the game which has just ended brought a member to, which the socket layer tells
+  // the room once it has kept the records (docs/architecture.md#streaks). One of STREAK_MIN games or
+  // more goes into the snapshots, which say whose it is and who may see it (views); a shorter one is
+  // nobody's business. Returns whether the room looks any different.
+  noteStreak(id: string, streak: Streak): boolean {
+    if (this.phase !== 'ended' || !this.members.has(id) || streak.length < STREAK_MIN) return false;
+    this.#streaks.set(id, streak);
+    this.changed();
+    return true;
+  }
+
+  // The streaks of the ended game as a viewer may see them: every winning streak, for the whole
+  // room and its screens to cheer, and the viewer's own losing streak, which nobody else is told
+  // of. Whoever has left the room since is left out.
+  #streakNotices(viewer: Viewer): StreakNotice[] {
+    const notices: StreakNotice[] = [];
+    for (const [playerId, streak] of this.#streaks) {
+      const own = 'playerId' in viewer && viewer.playerId === playerId;
+      if (this.members.has(playerId) && (streak.kind === 'wins' || own)) notices.push({ playerId, ...streak });
+    }
+    return notices;
+  }
+
   // The points of the game that has just ended, by member key, scored as a match scores a game
   // (docs/architecture.md#academic-ranks), or null when the game counts for none: it was withdrawn,
   // it hasn't ended, or the game can't be scored at all.
@@ -902,6 +933,7 @@ export class Room {
       me: 'playerId' in viewer ? viewer.playerId : null,
       ...(chair(viewer) ? { customWords: this.customWords.map(({ word }) => word) } : {}),
       match: match === undefined ? (match = matchView()) : match,
+      streaks: this.#streakNotices(viewer),
       data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }

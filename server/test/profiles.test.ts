@@ -47,7 +47,7 @@ describe('a public profile', () => {
           handle: ann.handle,
           username: 'Ann',
           avatar: null,
-          rank: 'undergraduate',
+          rank: 'kindergarten',
           // The day of registration, never the time.
           createdAt: expect.stringMatching(/^\d{4}-\d\d-\d\d$/),
           titles: [],
@@ -76,7 +76,7 @@ describe('a public profile', () => {
     const reply = await own.send('room:create', { game: 'test', language: 'en', fields: ['general'] });
     if (!reply.ok) throw new Error(reply.error);
     await own.waitFor((state) => state.code === reply.code);
-    expect(own.state?.players[0]).toMatchObject({ name: 'Ann', handle: ann.handle, rank: 'undergraduate' });
+    expect(own.state?.players[0]).toMatchObject({ name: 'Ann', handle: ann.handle, rank: 'kindergarten' });
     own.close();
   });
 

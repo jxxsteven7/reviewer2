@@ -7,8 +7,10 @@ import SoundToggle from './SoundToggle.vue';
 import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
 
-// The quick reactions: a button that opens the three phrases and the switch for their sounds.
-// After one has gone, the button counts down the seconds until the next may.
+// The quick reactions: a button that opens the phrases (EMOTES, shared/src/protocol.ts) and the
+// switch for their sounds. After one has gone, the button counts down the seconds until the next
+// may. Every phrase is a row of its own, at least 44 pixels tall for a thumb, so that a dozen of
+// them fit a phone's screen and none is hard to hit.
 const { t } = useI18n();
 const open = ref(false);
 const now = ref(Date.now());
@@ -65,7 +67,7 @@ function send(emote: Emote) {
 .emotes {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .hint {
@@ -76,7 +78,7 @@ function send(emote: Emote) {
 
 .phrase {
   justify-content: flex-start;
-  min-height: 52px;
+  min-height: 44px;
   text-align: left;
 }
 </style>

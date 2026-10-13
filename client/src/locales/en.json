@@ -527,7 +527,15 @@
     "phrases": {
       "waiting": "I could have finished a PhD by now.",
       "deadline": "The deadline is 23:59 AoE. Hurry up!",
-      "reviewer2": "Reviewer 2 is on the way."
+      "reviewer2": "Reviewer 2 is on the way.",
+      "accept": "Accept as is!",
+      "great_clue": "That clue reads better than my thesis.",
+      "p_hacking": "You got that one? Smells like p-hacking.",
+      "major_revision": "Major revision. Back to the drawing board.",
+      "resubmit": "Rejected again. Fine, we'll try another venue.",
+      "first_author": "Carry me and I'll make you first author.",
+      "coauthor": "Same coauthors on the next one?",
+      "all_nighter": "Don't leave, we're pulling an all-nighter."
     },
     "bubble": "{name}: {phrase}",
     "mute": "Mute the sounds",
@@ -924,6 +932,10 @@
   "ranks": {
     "title": "Academic rank",
     "names": {
+      "kindergarten": "Kindergartner",
+      "primary": "Primary school pupil",
+      "middle_school": "Middle school student",
+      "high_school": "High school student",
       "undergraduate": "Undergraduate",
       "master": "Master's student",
       "phd": "PhD student",
@@ -931,7 +943,8 @@
       "lecturer": "Lecturer",
       "associate_professor": "Associate Professor",
       "professor": "Professor",
-      "academician": "Academician"
+      "academician": "Academician",
+      "reviewer2": "Reviewer 2"
     },
     "points": "Points: {points}",
     "next": "{points} more to {rank}.",
@@ -950,5 +963,54 @@
     "liked": "Liked",
     "logInToLike": "Log in to like this page or to add this player as a friend.",
     "edit": "This is your page. Edit it on your account page."
+  },
+  "streaks": {
+    "kinds": {
+      "wins": "Winning streak",
+      "losses": "Losing streak"
+    },
+    "names": {
+      "wins": "{n} Submissions, {n} Acceptances",
+      "losses": "{n} Submissions, {n} Rejections"
+    },
+    "record": "A new personal record!",
+    "announce": "{kind}: {title}. {line}",
+    "broadcast": "{name} is on a hot streak: {title}!",
+    "lines": {
+      "wins": {
+        "low": {
+          "1": "The reviewers are in a good mood. Submit another one while it lasts.",
+          "2": "Accepted again. Your advisor is already drafting the group newsletter.",
+          "3": "One more line for the CV, and it isn't even Friday."
+        },
+        "mid": {
+          "1": "Acceptances by the armful. The reviewers know you by name now.",
+          "2": "At this rate, the reviewers will start citing you.",
+          "3": "A few more and they'll make you Reviewer 2."
+        },
+        "high": {
+          "1": "You don't submit papers anymore. You announce them.",
+          "2": "The reviewers just stamp it now.",
+          "3": "They should rename the conference after you."
+        }
+      },
+      "losses": {
+        "low": {
+          "1": "Rejected again. Did you read the reviews, or just the verdict?",
+          "2": "Try another venue. This one clearly can't read.",
+          "3": "Every big name has a drawer of rejections. Yours is filling up nicely."
+        },
+        "mid": {
+          "1": "Those rejection letters would make a decent book by now.",
+          "2": "The reviewers: \"You again?\"",
+          "3": "At this rate, your rejections deserve a literature review of their own."
+        },
+        "high": {
+          "1": "Perseverance is a scientific virtue. So is a new method.",
+          "2": "Collector of rejection letters, first in the field.",
+          "3": "Submit once more and the journal sends you a loyalty card."
+        }
+      }
+    }
   }
 }

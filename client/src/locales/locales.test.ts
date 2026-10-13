@@ -3,6 +3,7 @@ import {
   ACCOUNT_ERRORS,
   ACKNOWLEDGMENT_KINDS,
   EMAIL_STATES,
+  EMOTES,
   FEEDBACK_ERRORS,
   FEEDBACK_KINDS,
   FRIEND_ERRORS,
@@ -13,10 +14,12 @@ import {
   SEAT_ERRORS,
   SPONSOR_KINDS,
   START_PROBLEMS,
+  STREAK_KINDS,
   TITLES,
 } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { CLIENT_ERRORS } from '../core/errors';
+import { LINES_PER_TIER, STREAK_TIERS } from '../core/streaks';
 
 // Every interface string exists in both languages (docs/rules/constraints.md). The files are
 // read as plain JSON: importing them would hand back the compiled messages instead.
@@ -83,6 +86,21 @@ describe('locale files', () => {
     for (const kind of FEEDBACK_KINDS) expect(en.has(`feedback.kinds.${kind}`), kind).toBe(true);
     for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`acknowledgments.kinds.${kind}`), kind).toBe(true);
     for (const kind of SPONSOR_KINDS) expect(en.has(`sponsors.kinds.${kind}`), kind).toBe(true);
+  });
+
+  test('have a phrase for every quick reaction', () => {
+    for (const emote of EMOTES) expect(en.has(`emotes.phrases.${emote}`), emote).toBe(true);
+  });
+
+  test('name every kind of streak, and have every line of every tier', () => {
+    for (const kind of STREAK_KINDS) {
+      expect(en.has(`streaks.kinds.${kind}`), kind).toBe(true);
+      expect(en.has(`streaks.names.${kind}`), kind).toBe(true);
+      for (const tier of STREAK_TIERS) {
+        for (let n = 1; n <= LINES_PER_TIER; n += 1) expect(en.has(`streaks.lines.${kind}.${tier}.${n}`)).toBe(true);
+        expect(en.has(`streaks.lines.${kind}.${tier}.${LINES_PER_TIER + 1}`)).toBe(false);
+      }
+    }
   });
 
   test('say what keeps a game from starting', () => {

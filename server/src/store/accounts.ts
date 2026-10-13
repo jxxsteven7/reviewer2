@@ -9,7 +9,7 @@ import { DEFAULT_SESSION_LIMITS } from './sessions';
 
 export interface Account {
   id: number;
-  // The key of the public profile (migration 10; HANDLE in shared/src/accounts.ts).
+  // The key of the public profile (migration 11; HANDLE in shared/src/accounts.ts).
   handle: string;
   username: string;
   // usernameKey() of the username, which no other account has.
@@ -24,7 +24,7 @@ export interface Account {
   avatarBanned: boolean;
   // Whether the operator has barred the account from public rooms (migration 6).
   publicBarred: boolean;
-  // The public profile (migration 10): the link and the bio the owner wrote, what else they show
+  // The public profile (migration 11): the link and the bio the owner wrote, what else they show
   // there, and whether the operator has barred the account from writing a link or a bio.
   profile: ProfileSettings;
   profileBanned: boolean;

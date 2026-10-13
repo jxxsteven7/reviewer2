@@ -527,7 +527,15 @@
     "phrases": {
       "waiting": "我等的花都谢了",
       "deadline": "DDL 要到了，快点吧",
-      "reviewer2": "Reviewer 2 正在路上"
+      "reviewer2": "Reviewer 2 正在路上",
+      "accept": "Accept as is！",
+      "great_clue": "你这提示写得比我的论文还好",
+      "p_hacking": "这都能猜中，p 值调过吧",
+      "major_revision": "大修，回去重写吧",
+      "resubmit": "又被拒了，没事，换一家投",
+      "first_author": "带带我，给你挂一作",
+      "coauthor": "下一篇还和你合作",
+      "all_nighter": "别走，通宵赶 DDL"
     },
     "bubble": "{name}：{phrase}",
     "mute": "静音",
@@ -924,6 +932,10 @@
   "ranks": {
     "title": "学术头衔",
     "names": {
+      "kindergarten": "幼儿园小朋友",
+      "primary": "小学生",
+      "middle_school": "初中生",
+      "high_school": "高中生",
       "undergraduate": "本科生",
       "master": "硕士生",
       "phd": "博士生",
@@ -931,7 +943,8 @@
       "lecturer": "讲师",
       "associate_professor": "副教授",
       "professor": "教授",
-      "academician": "院士"
+      "academician": "院士",
+      "reviewer2": "Reviewer 2"
     },
     "points": "积分：{points}",
     "next": "再得 {points} 分升为{rank}。",
@@ -950,5 +963,54 @@
     "liked": "已赞",
     "logInToLike": "登录后可以点赞，也可以加对方为好友。",
     "edit": "这是你自己的主页，去账号页修改。"
+  },
+  "streaks": {
+    "kinds": {
+      "wins": "连胜",
+      "losses": "连败"
+    },
+    "names": {
+      "wins": "{n}投{n}中",
+      "losses": "{n}投{n}拒"
+    },
+    "record": "新纪录！",
+    "announce": "{kind}：{title}。{line}",
+    "broadcast": "{name} 已经{title}！",
+    "lines": {
+      "wins": {
+        "low": {
+          "1": "审稿人今天心情不错，趁热再投一篇。",
+          "2": "投一篇中一篇，导师的朋友圈又有素材了。",
+          "3": "连着中稿，简历可以再加一行了。"
+        },
+        "mid": {
+          "1": "中稿中到手软，审稿人都认识你了。",
+          "2": "这个命中率，已经不像投稿，像收稿。",
+          "3": "再中几篇，就该轮到你当 Reviewer 2 了。"
+        },
+        "high": {
+          "1": "这哪是投稿，这是在出论文集。",
+          "2": "审稿人现在只负责盖章。",
+          "3": "建议会议直接改名叫你的个人作品展。"
+        }
+      },
+      "losses": {
+        "low": {
+          "1": "被拒不丢人，审稿意见好歹读一读。",
+          "2": "换一家投吧，这家不识货。",
+          "3": "大牛也被拒过，但大牛会改稿。"
+        },
+        "mid": {
+          "1": "拒稿信已经可以装订成册了。",
+          "2": "审稿人：怎么又是你？",
+          "3": "拒稿信都够写一篇综述了。"
+        },
+        "high": {
+          "1": "坚持是科研的美德，换方法也是。",
+          "2": "拒稿信收藏家，领域第一。",
+          "3": "再投下去，期刊要给你发常客卡了。"
+        }
+      }
+    }
   }
 }

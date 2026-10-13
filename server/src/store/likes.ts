@@ -1,6 +1,6 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 
-// The likes table (migration 10, docs/architecture.md#public-profiles): which accounts like which
+// The likes table (migration 11, docs/architecture.md#public-profiles): which accounts like which
 // profiles. This module only reads and writes rows; who may like whom is for accounts/service.ts.
 
 // An account that likes a profile, as its owner is shown them.

@@ -1,4 +1,4 @@
-import { CODE_ALPHABET, MAX_PLAYERS, MAX_SCREENS } from '@reviewer2/shared';
+import { CODE_ALPHABET, EMOTE_COOLDOWN_MS, EMOTES, MAX_PLAYERS, MAX_SCREENS } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { GameModule } from '../src/core/game';
 import { seededRng } from '../src/core/random';
@@ -513,6 +513,19 @@ describe('quick reactions', () => {
     server.advance(-60_000);
     expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
     await until(() => chair.emotes.length === 4, 'the chair hears all four');
+  });
+
+  test('are any of the phrases, old and new, with the same wait between any two', async () => {
+    const { chair, code, roomId } = await room();
+    const bob = await join(code, 'Bob');
+    for (const [i, emote] of EMOTES.entries()) {
+      expect(await bob.send('room:emote', { emote })).toEqual({ ok: true });
+      expect(await bob.send('room:emote', { emote })).toMatchObject({ ok: false, error: 'emote_cooldown' });
+      await until(() => chair.emotes.length === i + 1, `the chair hears ${emote}`);
+      expect(chair.emotes.at(-1)).toEqual({ roomId, playerId: bob.me, emote });
+      server.advance(EMOTE_COOLDOWN_MS);
+    }
+    expect(chair.emotes.map((event) => event.emote)).toEqual([...EMOTES]);
   });
 
   test('are for members, and only the ones there are', async () => {

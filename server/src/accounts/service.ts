@@ -18,6 +18,7 @@ import {
   type ProfileView,
   type Rank,
   type RecordsView,
+  type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { AccountStore, type Account } from '../store/accounts';
@@ -187,6 +188,7 @@ export class Accounts {
       email,
       points: this.records.points(account.id),
       titles: this.titles.counts(account.id),
+      streaks: this.records.streaks(account.id),
       acknowledgments: this.acknowledgments.counts(account.id),
       profile: { ...account.profile, banned: account.profileBanned },
       likes: this.likes.count(account.id),
@@ -687,11 +689,12 @@ export class Accounts {
     return this.records.view(login.account.id);
   }
 
-  // Keeps a game on an account's record, as the game module described it, unless the database is
-  // full. Says whether it was kept.
-  record(accountId: number, record: NewRecord): boolean {
-    if (this.#full()) return false;
-    return this.store.byId(accountId) !== undefined && this.records.add(accountId, record);
+  // Keeps a game on an account's record, as the game module described it, with the streak that it
+  // brings the account to, in one transaction, unless the database is full. Gives the streak back,
+  // or null when the game wasn't kept, as one that was on the record already.
+  record(accountId: number, record: NewRecord): Streak | null {
+    if (this.#full() || this.store.byId(accountId) === undefined) return null;
+    return this.store.transaction(() => this.records.add(accountId, record));
   }
 
   // Keeps a finished game to watch again (docs/architecture.md#replays), once for each game, unless

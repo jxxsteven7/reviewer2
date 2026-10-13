@@ -82,6 +82,9 @@ describe('avatar remove', () => {
       ['avatar', 'remove', 'Ann', '--kind', 'words'],
       ['feedback', 'adopt'],
       ['feedback', 'adopt', '1', '2'],
+      ['feedback', 'draft'],
+      ['feedback', 'draft', '1', '2'],
+      ['feedback', 'draft', '1', '--ban'],
       ['acknowledgments', 'add', 'Ann', '--kind'],
       ['acknowledgments', 'add', 'Ann', '--kind', 'words', '--ban'],
       ['acknowledgments', 'add', 'Ann', '--no-account', '--kind'],
@@ -438,6 +441,294 @@ describe('feedback adopt', () => {
       "CAT is also the username of the account Cat, which didn't send the feedback. Make sure that they are " +
         'the same person before you list the name.',
     ]);
+  });
+});
+
+describe('feedback draft', () => {
+  const ZWSP = '\u200b';
+  const AGREED = 'that a player sent through the feedback form, published with their agreement:';
+  const hint = (id: number) =>
+    `Create the issue on GitHub with this title and body, then record its number: feedback issue ${id} <number>.`;
+  // The command's exit code and what it printed, which the next run starts afresh.
+  const draft = (id: string, ...flags: string[]) => ({
+    code: run('feedback', 'draft', id, ...flags),
+    lines: printed.splice(0),
+  });
+  // The draft as --json prints it.
+  const drafted = (id: string): { id: number; kind: string; title: string; body: string } => {
+    expect(run('feedback', 'draft', id, '--json')).toBe(0);
+    return JSON.parse(printed.splice(0).join('\n')) as { id: number; kind: string; title: string; body: string };
+  };
+
+  test('writes the title and the body of the issue for feedback whose player agreed, and says what comes next', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(
+      feedback({
+        text: 'AI agent player',
+        contact: 'me@example.com',
+        credit: 'Ann L',
+        link: 'https://ann.example/',
+        publicIssue: true,
+        version: 'v0.1.10',
+        userAgent: 'Mozilla/5.0',
+      }),
+    );
+    expect(draft('1')).toEqual({
+      code: 0,
+      lines: [
+        'Idea: AI agent player',
+        '',
+        `An idea ${AGREED}`,
+        '',
+        '> AI agent player',
+        '',
+        'Suggested by Ann L.',
+        '',
+        hint(1),
+      ],
+    });
+    // It only reads: nothing is recorded until the issue is.
+    expect(store.byId(1)).toMatchObject({ issue: null, status: 'new' });
+  });
+
+  test('with --json prints the draft on one line, with the id and the kind for a script', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ kind: 'bug', text: 'Line one\nLine two', credit: 'Ann', publicIssue: true }));
+    expect(run('feedback', 'draft', '1', '--json')).toBe(0);
+    expect(printed).toEqual([
+      JSON.stringify({
+        id: 1,
+        kind: 'bug',
+        title: 'Bug: Line one',
+        body: `A bug report ${AGREED}\n\n> Line one\n> Line two\n\nReported by Ann.`,
+      }),
+    ]);
+    expect(Object.keys(JSON.parse(printed[0] as string) as object)).toEqual(['id', 'kind', 'title', 'body']);
+  });
+
+  test('holds the text and the name alone, which is all the player agreed to', () => {
+    const store = new FeedbackStore(database.db);
+    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    store.add(
+      feedback({
+        kind: 'bug',
+        text: 'The board is gone.',
+        contact: 'wechat: r2',
+        credit: 'Ann L',
+        link: 'https://ann.example/',
+        accountId: ann?.id,
+        publicIssue: true,
+        version: 'v0.1.10',
+        language: 'zh',
+        page: 'room',
+        userAgent: 'Mozilla/5.0',
+      }),
+    );
+    const { title, body } = drafted('1');
+    expect(title).toBe('Bug: The board is gone.');
+    expect(body).toBe(`A bug report ${AGREED}\n\n> The board is gone\\.\n\nReported by Ann L.`);
+    // No contact, link, account, version, language, page, browser, time or id.
+    expect(`${title}\n${body}`).not.toMatch(
+      /wechat|r2|ann\.example|account|v0\.1\.10|Chinese|zh|room|Mozilla|20\d\d|#1/,
+    );
+  });
+
+  test('opens by the kind, as the status page calls it, and names who sent it, or an anonymous player', () => {
+    const store = new FeedbackStore(database.db);
+    for (const kind of ['idea', 'game', 'bug', 'words'] as const)
+      store.add(feedback({ kind, credit: 'Ann', publicIssue: true }));
+    for (const kind of ['idea', 'bug'] as const) store.add(feedback({ kind, publicIssue: true }));
+    expect(drafted('1')).toEqual({
+      id: 1,
+      kind: 'idea',
+      title: 'Idea: A timer, please.',
+      body: `An idea ${AGREED}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
+    });
+    expect(drafted('2')).toMatchObject({
+      title: 'New game: A timer, please.',
+      body: `An idea for a new game ${AGREED}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
+    });
+    expect(drafted('3')).toMatchObject({
+      title: 'Bug: A timer, please.',
+      body: `A bug report ${AGREED}\n\n> A timer\\, please\\.\n\nReported by Ann.`,
+    });
+    expect(drafted('4')).toMatchObject({
+      title: 'Word lists: A timer, please.',
+      body: `A suggestion for the word lists ${AGREED}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
+    });
+    expect(drafted('5').body).toBe(`An idea ${AGREED}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
+    expect(drafted('6').body).toBe(`A bug report ${AGREED}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
+  });
+
+  test('takes the first line for the title, on one line, cut after 60 characters that a reader sees', () => {
+    const store = new FeedbackStore(database.db);
+    const han = '\u6c49';
+    const family = '\u{1f468}\u200d\u{1f469}\u200d\u{1f467}';
+    store.add(feedback({ text: `${'x'.repeat(60)}\nThe second line`, publicIssue: true }));
+    store.add(feedback({ text: 'x'.repeat(61), publicIssue: true }));
+    store.add(feedback({ text: han.repeat(61), publicIssue: true }));
+    store.add(feedback({ text: `${'x'.repeat(59)}${family}${family}`, publicIssue: true }));
+    store.add(feedback({ text: ' Spaced \t  out \nand more', publicIssue: true }));
+    store.add(feedback({ text: `${'x'.repeat(59)} and more`, publicIssue: true }));
+    store.add(feedback({ text: family.repeat(61), publicIssue: true }));
+    const chain = Array.from({ length: 80 }, () => '\u{1f468}').join('\u200d');
+    store.add(feedback({ text: `${chain} and more`, publicIssue: true }));
+    expect(drafted('1').title).toBe(`Idea: ${'x'.repeat(60)}`);
+    expect(drafted('2').title).toBe(`Idea: ${'x'.repeat(60)}\u2026`);
+    expect(drafted('3').title).toBe(`Idea: ${han.repeat(60)}\u2026`);
+    // An emoji built from several code points is one character, and stays whole.
+    expect(drafted('4').title).toBe(`Idea: ${'x'.repeat(59)}${family}\u2026`);
+    expect(drafted('5').title).toBe('Idea: Spaced out');
+    // No space is left before the ellipsis.
+    expect(drafted('6').title).toBe(`Idea: ${'x'.repeat(59)}\u2026`);
+    // Fewer characters when 60 would be more than 120 code points, which GitHub counts: 24 of these
+    // emoji, of five code points each.
+    expect(drafted('7').title).toBe(`Idea: ${family.repeat(24)}\u2026`);
+    // One character of more than 120 code points, such as 80 emoji joined into one, is cut inside,
+    // after 120: 60 of the emoji, with the joiners between them.
+    expect(drafted('8').title).toBe(`Idea: ${'\u{1f468}\u200d'.repeat(60)}\u2026`);
+    // The body keeps every line as it is.
+    expect(drafted('1').body).toContain(`> ${'x'.repeat(60)}\n> The second line`);
+  });
+
+  test('quotes every line of the text as one quotation, with a blank line as a bare >', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ kind: 'bug', text: 'Steps:\n1. Lock the phone\n\n2. Come back', publicIssue: true }));
+    expect(drafted('1').body).toBe(
+      `A bug report ${AGREED}\n\n> Steps\\:\n> 1\\. Lock the phone\n>\n> 2\\. Come back\n\nSent by an anonymous player.`,
+    );
+  });
+
+  test('keeps what the player wrote from mentioning, referring, linking or marking anything up on GitHub', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(
+      feedback({
+        kind: 'bug',
+        text:
+          '# Heading @octocat, see #12, GH-13 and fbcd508 :tada:\n\n- item [x](https://e.example) ' +
+          '![](https://i.example/i.png) <b>bold</b>\n> quoted 1. list\nwww.example.com me@example.com ' +
+          'o/r/issues/4 https://github.com/o/r/pull/5\n' +
+          '7ccd7e7e3bd9256e1cb82d4993944a842502dc58 :+1: at 10:30:45, by the feedback form\n' +
+          '$x^2$ costs $5 or $$\\color{red}{\\Huge y}$$\n$$\n\\sum\n$$',
+        credit: '[@bob](#1)',
+        publicIssue: true,
+      }),
+    );
+    const { title, body } = drafted('1');
+    // GitHub renders no Markdown in a title but a code span, so the title is as written, with its
+    // signs unlinked all the same.
+    expect(title).toBe(`Bug: # Heading @${ZWSP}octocat, see #${ZWSP}12, GH-${ZWSP}13 and f${ZWSP}bcd508 :${ZWSP}tada:`);
+    // In the body, every ASCII punctuation character is escaped, and a zero-width space follows an
+    // @ before a name, a # or GH- before a number, a / before a number, as in owner/repo/issues/4
+    // with or without the address of the site in front, the first of seven or more hexadecimal
+    // digits on their own and a : before a shortcode, and precedes every $, so that GitHub, which
+    // reads them in the text once Markdown has taken the backslashes away, finds no mention,
+    // reference, address, commit, emoji or formula. A time, and a word with fewer such digits in a
+    // row, are left alone.
+    expect(body).toBe(
+      [
+        `A bug report ${AGREED}`,
+        '',
+        `> \\# Heading \\@${ZWSP}octocat\\, see \\#${ZWSP}12\\, GH\\-${ZWSP}13 and f${ZWSP}bcd508 \\:${ZWSP}tada\\:`,
+        '>',
+        '> \\- item \\[x\\]\\(https\\:\\/\\/e\\.example\\) \\!\\[\\]\\(https\\:\\/\\/i\\.example\\/i\\.png\\) \\<b\\>bold\\<\\/b\\>',
+        '> \\> quoted 1\\. list',
+        `> www\\.example\\.com me\\@${ZWSP}example\\.com o\\/r\\/issues\\/${ZWSP}4 ` +
+          `https\\:\\/\\/github\\.com\\/o\\/r\\/pull\\/${ZWSP}5`,
+        `> 7${ZWSP}ccd7e7e3bd9256e1cb82d4993944a842502dc58 \\:${ZWSP}\\+1\\: at 10\\:30\\:45\\, by the feedback form`,
+        `> ${ZWSP}\\$x\\^2${ZWSP}\\$ costs ${ZWSP}\\$5 or ${ZWSP}\\$${ZWSP}\\$\\\\color\\{red\\}\\{\\\\Huge y\\}${ZWSP}\\$${ZWSP}\\$`,
+        `> ${ZWSP}\\$${ZWSP}\\$`,
+        '> \\\\sum',
+        `> ${ZWSP}\\$${ZWSP}\\$`,
+        '',
+        `Reported by \\[\\@${ZWSP}bob\\]\\(\\#${ZWSP}1\\).`,
+      ].join('\n'),
+    );
+    // Nothing that GitHub links or replaces is left as it was.
+    expect(body).not.toMatch(/@[a-z0-9]|#\d|GH-\d|\/\d|https?:\/\/|www\.|fbcd508|7ccd7e7|:[\w+-]+:|[^\u200b]\\\$/i);
+  });
+
+  test('keeps the quotation from becoming an alert', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ text: '[!WARNING]\nDanger ahead', publicIssue: true }));
+    store.add(feedback({ text: '[!note]\n\nSee [!tip] here', kind: 'bug', publicIssue: true }));
+    // GitHub shows a quotation whose first line is [!NOTE], [!TIP], [!IMPORTANT], [!WARNING] or
+    // [!CAUTION] alone, in any case, as an alert, once Markdown has taken the backslashes away, so
+    // a zero-width space follows the [ of every [!.
+    const warning = drafted('1');
+    expect(warning.title).toBe(`Idea: [${ZWSP}!WARNING]`);
+    expect(warning.body.split('\n').slice(2, 4)).toEqual([`> \\[${ZWSP}\\!WARNING\\]`, '> Danger ahead']);
+    expect(drafted('2').body.split('\n').slice(2, 5)).toEqual([
+      `> \\[${ZWSP}\\!note\\]`,
+      '>',
+      `> See \\[${ZWSP}\\!tip\\] here`,
+    ]);
+  });
+
+  test('leaves a time, a date, a fraction and a word of few hexadecimal digits alone', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ text: 'Froze at 10:30:45 on 10/13, 1/2 of the time, with feedback', publicIssue: true }));
+    const { title, body } = drafted('1');
+    expect(title).toBe('Idea: Froze at 10:30:45 on 10/13, 1/2 of the time, with feedback');
+    expect(body).not.toContain(ZWSP);
+  });
+
+  test('escapes a name as the acknowledgments do, and unlinks it', () => {
+    const store = new FeedbackStore(database.db);
+    for (const credit of ['--Ann', '#1 fan', '<b>Ann</b>', '@octocat', 'Dr. Who', '$\\Huge Ann$']) {
+      store.add(feedback({ credit, publicIssue: true }));
+    }
+    const signed = (id: string) => drafted(id).body.split('\n').at(-1);
+    expect(signed('1')).toBe('Suggested by \\-\\-Ann.');
+    expect(signed('2')).toBe(`Suggested by \\#${ZWSP}1 fan.`);
+    expect(signed('3')).toBe('Suggested by \\<b\\>Ann\\<\\/b\\>.');
+    expect(signed('4')).toBe(`Suggested by \\@${ZWSP}octocat.`);
+    expect(signed('5')).toBe('Suggested by Dr\\. Who.');
+    expect(signed('6')).toBe(`Suggested by ${ZWSP}\\$\\\\Huge Ann${ZWSP}\\$.`);
+  });
+
+  test("refuses feedback whose player didn't agree or wasn't asked, in the trash, published already, or not there", () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback());
+    store.add(feedback({ publicIssue: null }));
+    store.add(feedback({ publicIssue: true }));
+    store.add(feedback({ publicIssue: true }));
+    store.add(feedback({ publicIssue: true }));
+    const refused = "The player didn't agree to feedback #1 being published as an issue.";
+    expect(draft('1')).toEqual({ code: 1, lines: [refused] });
+    expect(draft('2')).toEqual({ code: 1, lines: [refused.replace('#1', '#2')] });
+    expect(run('feedback', 'delete', '3')).toBe(0);
+    printed = [];
+    expect(draft('3')).toEqual({
+      code: 1,
+      lines: ['Feedback #3 is in the trash. Restore it first: feedback restore 3.'],
+    });
+    expect(run('feedback', 'issue', '4', '42')).toBe(0);
+    printed = [];
+    expect(draft('4')).toEqual({
+      code: 1,
+      lines: ['Feedback #4 is issue #42 already. To publish it again, take that back first: feedback issue 4 --clear.'],
+    });
+    expect(run('feedback', 'issue', '4', '--clear')).toBe(0);
+    printed = [];
+    expect(draft('4').code).toBe(0);
+    expect(draft('6')).toEqual({ code: 1, lines: ['There is no feedback #6.'] });
+    expect(draft('x')).toEqual({ code: 1, lines: ['There is no feedback #x.'] });
+    // Closed feedback is drafted all the same, as feedback issue records an issue for it.
+    expect(run('feedback', 'close', '5')).toBe(0);
+    printed = [];
+    expect(draft('5').code).toBe(0);
+    // A kind from a later server, which this one was rolled back from, has no title or opening.
+    database.db.exec("UPDATE feedback SET kind = 'later' WHERE id = 5");
+    expect(draft('5')).toEqual({ code: 1, lines: ["This build doesn't know the kind later of feedback #5."] });
+    expect(draft('1', '--json').code).toBe(1);
+  });
+
+  test('only reads, on a database that no server has open, and leaves no WAL behind', () => {
+    new FeedbackStore(database.db).add(feedback({ publicIssue: true }));
+    database.db.close();
+    expect(draft('1').code).toBe(0);
+    expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
   });
 });
 

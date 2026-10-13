@@ -262,7 +262,45 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE feedback ADD COLUMN deleted_at TEXT;
   CREATE INDEX feedback_trash ON feedback (deleted_at) WHERE deleted_at IS NOT NULL;
   `,
-  // 10: public profiles and likes (docs/architecture.md#public-profiles).
+  // 10: streaks (docs/architecture.md#streaks): for each account with a game on its record, the
+  // longest run of games won in a row and of games lost in a row, and the run that its latest game
+  // is part of, as long as it is and whether it is of wins. The runs are counted over the records
+  // in the order they were kept, which is the order the games ended in, whichever game and in a
+  // match or not. The row is kept up with every game that goes on the record, in the same
+  // transaction, so that the account page and the end of a game read one row however long the
+  // record is, and the rows for the records that are there are worked out here, once, from
+  // game_records: each run is the games of one account with the same result between a change of
+  // result, which the difference of the two row numbers tells apart. An account's row goes with it.
+  `
+  CREATE TABLE streaks (
+    account_id INTEGER PRIMARY KEY REFERENCES accounts (id) ON DELETE CASCADE,
+    best_wins INTEGER NOT NULL,
+    best_losses INTEGER NOT NULL,
+    run INTEGER NOT NULL,
+    run_won INTEGER NOT NULL CHECK (run_won IN (0, 1))
+  ) STRICT;
+  WITH ordered AS (
+    SELECT account_id, id, won,
+      row_number() OVER (PARTITION BY account_id ORDER BY id)
+        - row_number() OVER (PARTITION BY account_id, won ORDER BY id) AS run_key
+    FROM game_records
+  ), runs AS (
+    SELECT account_id, won, count(*) AS length, max(id) AS last_id
+    FROM ordered GROUP BY account_id, won, run_key
+  ), latest AS (
+    SELECT account_id, won, length FROM runs
+    WHERE last_id = (SELECT max(id) FROM game_records WHERE game_records.account_id = runs.account_id)
+  )
+  INSERT INTO streaks (account_id, best_wins, best_losses, run, run_won)
+  SELECT runs.account_id,
+    max(CASE WHEN runs.won = 1 THEN runs.length ELSE 0 END),
+    max(CASE WHEN runs.won = 0 THEN runs.length ELSE 0 END),
+    latest.length,
+    latest.won
+  FROM runs JOIN latest ON latest.account_id = runs.account_id
+  GROUP BY runs.account_id;
+  `,
+  // 11: public profiles and likes (docs/architecture.md#public-profiles).
   //
   // - accounts get the handle by which a profile is opened, 12 hexadecimal digits drawn at random
   //   (HANDLE in shared/src/accounts.ts), given to every account that is there and to each new one

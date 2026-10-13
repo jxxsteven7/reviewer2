@@ -81,8 +81,8 @@ describe('a player with an account', () => {
     // Nothing in the room says who has an account, apart from an avatar, the rank and the handle
     // of their public page.
     expect(visitor.state?.players).toEqual([
-      { id: expect.any(String), name: 'Ann', online: true, rank: 'undergraduate', handle: expect.any(String) },
-      { id: expect.any(String), name: 'Bob', online: true, rank: 'undergraduate', handle: expect.any(String) },
+      { id: expect.any(String), name: 'Ann', online: true, rank: 'kindergarten', handle: expect.any(String) },
+      { id: expect.any(String), name: 'Bob', online: true, rank: 'kindergarten', handle: expect.any(String) },
     ]);
   });
 
@@ -114,7 +114,7 @@ describe('a player with an account', () => {
     const again = await back.waitFor((view) => view.code === code);
     expect(again.me).toBe(state.me);
     expect(again.players).toEqual([
-      { id: state.me, name: 'Ann', online: true, rank: 'undergraduate', handle: expect.any(String) },
+      { id: state.me, name: 'Ann', online: true, rank: 'kindergarten', handle: expect.any(String) },
     ]);
   });
 

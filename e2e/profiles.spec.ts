@@ -35,7 +35,7 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await bob.goto(address as string);
   const card = bob.locator('.profile-card');
   await expect(card).toContainText(annName);
-  await expect(card).toContainText(text.ranks.names.undergraduate);
+  await expect(card).toContainText(text.ranks.names.kindergarten);
   await expect(card.locator('.bio')).toHaveText('Reviewer of <b>everything</b>');
   expect(await card.locator('.bio b').count()).toBe(0);
   const link = card.getByRole('link', { name: 'https://ann.example/me' });
