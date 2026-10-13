@@ -116,7 +116,7 @@ The record of a game ([../architecture.md](../architecture.md#game-records)) log
 ## Seats
 
 - A newcomer who comes to play is a guesser: in the group they played for in this game, else in the smaller group, or at random. Whoever comes to watch, or doesn't say, is a spectator.
-- In the waiting room, anyone may take a free captain's seat, join either group as a guesser, or watch. The chair's shuffle deals everyone seated into the two groups at random, with random captains, around the [AI players](#ai-players), who keep their seats.
+- In the waiting room, anyone may take a free captain's seat, join either group as a guesser, or watch. The chair's shuffle deals everyone seated into the two groups at random, with random captains, around the [AI players](#ai-players), who keep their seats. A deal that puts the same people together as before, whatever the colors and the captains, is dealt again once, and the second deal stands: four players then keep their groups one time in nine rather than one in three.
 - During a game, spectators may join either group and anyone may step out to watch.
 - Whoever sits in a group during a game belongs to it until the next game: the other group is `other_team`, also after the game has ended, since the chat is still there.
 - A captain in this game has seen the key and may not be a guesser until the next game (`key_viewer`); an empty captain's seat is open to that group's players and to spectators who haven't played.
@@ -176,4 +176,4 @@ In a match ([../architecture.md](../architecture.md#matches)), `server/src/games
 
 A withdrawn game counts for nothing. `KeywordsScoreDetail` says where each player's points came from, in the match's table between the games; the records keep the points alone, so a game already on them keeps the points it was scored with.
 
-**The groups.** Drawn **at random**: the server deals the players as the shuffle does, the first dealt to each group its PI; four online players can start. **Chosen** by the players: as in an ordinary room. **Fixed**, once a game has been scored: everyone keeps their group; after each game all go back as students, and the PI is whoever has been PI the fewest times; a newcomer goes to the smaller group. During a match game, only those who played for a group may sit in one.
+**The groups.** Drawn **at random**: the server deals the players as the shuffle does, the first dealt to each group its PI, and deals again once if the groups are those of the game before; four online players can start. **Chosen** by the players: as in an ordinary room. **Fixed**, once a game has been scored: everyone keeps their group; after each game all go back as students, and the PI is whoever has been PI the fewest times; a newcomer goes to the smaller group. During a match game, only those who played for a group may sit in one.

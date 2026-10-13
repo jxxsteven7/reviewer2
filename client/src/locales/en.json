@@ -176,7 +176,7 @@
     "save": "Save",
     "saveHint": "Starting the game saves these as well.",
     "shuffle": "Shuffle the groups",
-    "shuffleHint": "Shuffling deals everyone seated into two even groups and picks a PI for each.",
+    "shuffleHint": "Shuffling deals everyone seated into two even groups and picks a PI for each. A deal that repeats the groups as they were is dealt again once.",
     "start": "Start the game",
     "ready": "Everyone needed is seated.",
     "unsavable": "What was changed at the desk can't be saved yet.",
@@ -265,7 +265,7 @@
     "waitAgain": "Waiting for the chair to decide what comes next.",
     "joinsNext": "You play from the next game.",
     "drawn": "Players",
-    "drawnNote": "The groups and their PIs are drawn at random when the game starts.",
+    "drawnNote": "The groups and their PIs are drawn at random when the game starts, and drawn again once if they repeat the last game's groups.",
     "play": "Play",
     "fixedNote": "The groups stay the same for the whole match, and the PI changes from game to game.",
     "locked": "The word lists and the rules stay as they are until the match is over."
