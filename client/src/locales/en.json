@@ -227,6 +227,8 @@
       "choose": "Everyone picks a group and a seat in the waiting room."
     },
     "progress": "Game {game} of {games}",
+    "progressTitle": "Match progress",
+    "yourStanding": "Your place: {rank} · {points} point | Your place: {rank} · {points} points",
     "gamesPlayed": "Games played: {played} of {games}",
     "table": "Scores",
     "rank": "Place",
@@ -277,6 +279,12 @@
       "neutral": "Irrelevant",
       "reviewer2": "R2"
     },
+    "cardTag": {
+      "red": "Red",
+      "blue": "Blue",
+      "neutral": "N/A",
+      "reviewer2": "R2"
+    },
     "stamp": "Reject",
     "hidden": "not revealed",
     "you": {
@@ -286,6 +294,14 @@
     },
     "waitClue": "Waiting for the PI of the {group} to give a clue.",
     "waitGuess": "The {group} is guessing.",
+    "prepare": "Prepare the next clue",
+    "prepareDraft": "Keep preparing ({summary})",
+    "prepareHide": "Hide the draft",
+    "draftMarked": "{count} card marked | {count} cards marked",
+    "draftCount": "number {count}",
+    "draftJoin": ", ",
+    "prepareNote": "This is the draft of your next clue. Only you see it, and you give it once it's your turn.",
+    "targetGone": "You marked {words}, which has been revealed, so the mark is gone. | You marked {words}, which have been revealed, so the marks are gone.",
     "clueInput": "Your clue",
     "clueLimit": {
       "zh": "At most {count} characters: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation is fine, but not the English for a word on the board, nor its pinyin.",
@@ -422,10 +438,11 @@
       "you": "You",
       "someone": "A player who left"
     },
-    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing the other group's card, −1; revealing Reviewer 2, −3.",
+    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing an irrelevant paper, −1; revealing the other group's card, −2; revealing Reviewer 2, −3.",
     "scoreDetail": {
       "found": "found {count}",
       "won": "won",
+      "irrelevant": "irrelevant paper ×{count}",
       "wrong": "other group's card ×{count}",
       "reviewer2": "Reviewer 2"
     },
@@ -503,25 +520,25 @@
     "noLimit": "no limit"
   },
   "banner": {
-    "seat": "{group} · {role}",
-    "spectator": "Spectator",
+    "seat": "You: {group} · {role}",
+    "spectator": "You: Spectator",
     "roles": {
       "captain": "PI",
       "guesser": "Student"
     },
     "lines": {
-      "lobby": "Waiting for the chair to start the game.",
+      "lobby": "Waiting for the chair to start the game…",
       "lobbyChair": "Start the game below once both groups are ready.",
       "over": "The game is over.",
       "paused": "The game is paused.",
       "yourClue": "Your turn to give a clue!",
-      "studentsGuessing": "Your students are guessing. All you can do is watch.",
-      "piThinking": "Your PI is thinking of a clue.",
+      "studentsGuessing": "Your students are guessing. All you can do is watch…",
+      "piThinking": "Your PI is thinking of a clue…",
       "yourGuess": "Your turn to guess!",
-      "otherClue": "The other group's PI is thinking of a clue.",
-      "otherGuess": "The other group is guessing.",
-      "watchClue": "The PI of the {group} is thinking of a clue.",
-      "watchGuess": "The {group} is guessing."
+      "otherClue": "The other group's PI is thinking of a clue…",
+      "otherGuess": "The other group is guessing…",
+      "watchClue": "The PI of the {group} is thinking of a clue…",
+      "watchGuess": "The {group} is guessing…"
     },
     "tabTitle": "Your turn!"
   },
@@ -958,7 +975,13 @@
     "points": "Points: {points}",
     "next": "{points} more to {rank}.",
     "top": "The highest rank there is.",
-    "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game."
+    "note": "Every game you finish in a seat while logged in counts, scored as a match scores it. Ranks are only shown; they change nothing in the game.",
+    "ladder": {
+      "open": "All ranks",
+      "title": "The academic ladder",
+      "from": "from {points} points",
+      "current": "Current rank"
+    }
   },
   "playerPage": {
     "title": "Player page",

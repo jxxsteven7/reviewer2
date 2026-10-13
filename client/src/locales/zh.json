@@ -227,6 +227,8 @@
       "choose": "大家在大厅里自己选组和位置。"
     },
     "progress": "第 {game} / {games} 局",
+    "progressTitle": "比赛进度",
+    "yourStanding": "你第 {rank} 名 · {points} 分 | 你第 {rank} 名 · {points} 分",
     "gamesPlayed": "已打完 {played} / {games} 局",
     "table": "总分表",
     "rank": "名次",
@@ -277,6 +279,12 @@
       "neutral": "无关",
       "reviewer2": "R2"
     },
+    "cardTag": {
+      "red": "红",
+      "blue": "蓝",
+      "neutral": "无关",
+      "reviewer2": "R2"
+    },
     "stamp": "拒稿",
     "hidden": "未翻开",
     "you": {
@@ -286,6 +294,14 @@
     },
     "waitClue": "等待{group}的导师给出提示。",
     "waitGuess": "{group}正在猜词。",
+    "prepare": "提前准备下一条提示",
+    "prepareDraft": "继续准备（{summary}）",
+    "prepareHide": "收起草稿",
+    "draftMarked": "已标 {count} 张 | 已标 {count} 张",
+    "draftCount": "数字 {count}",
+    "draftJoin": "，",
+    "prepareNote": "这是你下一条提示的草稿，只有你看得到，轮到你出题时再给出。",
+    "targetGone": "你标的{words}被翻开了，已去掉。 | 你标的{words}被翻开了，已去掉。",
     "clueInput": "你的提示",
     "clueLimit": {
       "zh": "最多 {count} 个字，两个字母或数字算一个字。可以是英文单词或缩写，但不能是牌上的词的英文或拼音。",
@@ -422,10 +438,11 @@
       "you": "我",
       "someone": "已离开的玩家"
     },
-    "scoring": "比赛计分：本组找到一张本组的牌，组里每人 +1；获胜，每人再 +3；翻到对方的牌 −1；翻到 Reviewer 2 −3。",
+    "scoring": "比赛计分：本组找到一张本组的牌，组里每人 +1；获胜，每人再 +3；翻到无关论文 −1；翻到对方的牌 −2；翻到 Reviewer 2 −3。",
     "scoreDetail": {
       "found": "找到 {count} 张",
       "won": "获胜",
+      "irrelevant": "翻到无关论文 ×{count}",
       "wrong": "翻到对方的牌 ×{count}",
       "reviewer2": "翻到 Reviewer 2"
     },
@@ -503,25 +520,25 @@
     "noLimit": "不限时"
   },
   "banner": {
-    "seat": "{group} · {role}",
-    "spectator": "旁听",
+    "seat": "你是：{group} · {role}",
+    "spectator": "你是：旁听",
     "roles": {
       "captain": "导师",
       "guesser": "学生"
     },
     "lines": {
-      "lobby": "等待主持开始游戏。",
+      "lobby": "等待主持开始游戏……",
       "lobbyChair": "两组人齐后，就可以在下方开始游戏。",
       "over": "本局已结束。",
       "paused": "游戏已暂停。",
       "yourClue": "轮到你出题了！",
-      "studentsGuessing": "学生正在猜，你只能看着。",
-      "piThinking": "你们的导师正在出题。",
+      "studentsGuessing": "学生正在猜，你只能看着……",
+      "piThinking": "你们的导师正在出题……",
       "yourGuess": "轮到你们猜了！",
-      "otherClue": "对方正在出题。",
-      "otherGuess": "对方正在猜词。",
-      "watchClue": "{group}的导师正在出题。",
-      "watchGuess": "{group}正在猜词。"
+      "otherClue": "对方正在出题……",
+      "otherGuess": "对方正在猜词……",
+      "watchClue": "{group}的导师正在出题……",
+      "watchGuess": "{group}正在猜词……"
     },
     "tabTitle": "轮到你了！"
   },
@@ -958,7 +975,13 @@
     "points": "积分：{points}",
     "next": "再得 {points} 分升为{rank}。",
     "top": "已经是最高头衔。",
-    "note": "登录后在座位上打完的每一局都按比赛的计分方式计入积分。头衔只是显示，不影响游戏。"
+    "note": "登录后在座位上打完的每一局都按比赛的计分方式计入积分。头衔只是显示，不影响游戏。",
+    "ladder": {
+      "open": "查看全部头衔",
+      "title": "学术阶梯",
+      "from": "{points} 分起",
+      "current": "当前头衔"
+    }
   },
   "playerPage": {
     "title": "玩家主页",

@@ -50,9 +50,23 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(cat.locator('.friends .line', { hasText: annName })).toContainText(text.friends.online);
   await expect(annsFriends.locator('.line', { hasText: catName })).toContainText(text.friends.online);
 
-  // The rank on the account page: a kindergartner with no points, 10 short of primary school.
+  // The rank on the account page: a kindergartner with no points, 30 short of primary school. The
+  // rank opens the ladder of every rank, the kindergartner marked at the bottom and Reviewer 2 at
+  // the top, which Escape closes.
   await expect(ann.locator('.rank-line')).toContainText(text.ranks.names.kindergarten);
   await expect(ann.locator('.rank-line')).toContainText(interpolate(text.ranks.points, { points: '0' }));
+  await ann.locator('.rank-button').click();
+  const ladder = ann.locator('[role=dialog]', { has: ann.locator('.ladder') });
+  await expect(ladder).toContainText(text.ranks.ladder.title);
+  await expect(ladder.locator('.rung')).toHaveCount(13);
+  await expect(ladder.locator('.rung').first()).toContainText(text.ranks.names.reviewer2);
+  const marked = ladder.locator('.rung[aria-current="true"]');
+  await expect(marked).toHaveCount(1);
+  await expect(marked).toContainText(text.ranks.names.kindergarten);
+  await expect(marked).toContainText(interpolate(text.ranks.next, { points: '30', rank: text.ranks.names.primary }));
+  await expect(marked).toBeInViewport();
+  await ann.keyboard.press('Escape');
+  await expect(ladder).toHaveCount(0);
 
   // Ann makes a second private room and invites Bob from the room menu. Bob, who is on his account
   // page, sees the invitation there and follows it into the room.

@@ -108,7 +108,7 @@ describe('academic ranks', () => {
     expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: team !== 'red', replay: true });
     expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
     // The snapshot that ends the game shows the ranks as they are now: Ann is a master's student
-    // either way, with 180 or 182 points, and Bob still a kindergartner, with 3 or -2.
+    // either way, with 500 or 502 points, and Bob still a kindergartner, with 3 or -2.
     expect(rankOf(dan, 'Ann')).toBe('master');
     expect(rankOf(dan, 'Bob')).toBe('kindergarten');
     expect((await anns.account())?.points).toBe(records.points(1));

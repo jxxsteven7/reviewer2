@@ -30,7 +30,7 @@ Set by the chair, locked during a game.
 | Guess rule | `free` or `standard` ([Turns](#turns)) | `free` |
 | Clue rule | `strict` or `loose` ([The clue](#the-clue)) | `strict` |
 | Clue length | Chinese room: 1 to 10 characters, two letters or digits counting as one; English room: 1 to 3 words | 4; 1 |
-| Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 90, 60, 90 |
+| Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 120, 90, 120 |
 | Extensions | `true` or `false` ([Pauses and extensions](#pauses-and-extensions)) | `false` |
 
 `settingsProblems()` in `shared/src/games/keywords/settings.ts` checks them on both sides; the server refuses with `bad_settings`.
@@ -64,6 +64,8 @@ A plain plural ends in "-s", or "-es" after s, x, z, ch or sh.
 Revealed words no longer count.
 
 **The cards it is meant for.** With the clue, the PI may mark the group's cards that are still to be found as the ones the clue is meant for, in the order they choose, as many as they like; their screen offers it above the clue and sets the number to how many are marked, until the PI picks a number themselves. The rules don't tie the number to the marks. Each mark must be one of the group's own cards that is still face down, and none may come twice (`bad_targets`). The marks are the PI's secret until the game is over: no view carries them before then, the PI's own included. Then every view has them, and the clue log and the replay show them, with how many the group found.
+
+**Preparing ahead.** Whenever it isn't their turn to give a clue, while the game is on and not paused, a PI may prepare the next one: the word, the number and the marks, in the same panel, which opens from a button under the status line and folds away again so that the PI can watch the other group guess. The draft stays in the PI's browser alone, in local storage under `r2.clueDraft` with the ID of the game, and nothing of it reaches the server until the clue is given: nobody else, their own group included, can tell that a PI is preparing or what. It comes back after a reload, unless the clue went meanwhile, and goes once the clue is given, when the game ends and when another game starts; without working storage it lasts as long as the page. The draft follows the board: a marked card that is revealed meanwhile loses its mark, and the panel says so, and a number picked that the rule no longer offers the group, as under the free rule once a card of theirs was found, goes back to following the marks. When the PI's turn comes the panel opens with the draft in it, and the PI gives the clue themselves: nothing is sent on its own.
 
 The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0).
 
@@ -157,9 +159,10 @@ In a match ([../architecture.md](../architecture.md#matches)), `server/src/games
 |---|---|---|
 | A student reveals one of the group's own cards | Everyone who played for the group, PI included | +1 each |
 | The group wins | The same | +3 each |
-| A student reveals the other group's card | That student | -1 |
+| A student reveals an irrelevant paper | That student | -1 |
+| A student reveals the other group's card | That student | -2 |
 | A student reveals Reviewer 2 | That student | -3 |
 
-A withdrawn game counts for nothing.
+A withdrawn game counts for nothing. `KeywordsScoreDetail` says where each player's points came from, in the match's table between the games; the records keep the points alone, so a game already on them keeps the points it was scored with.
 
 **The groups.** Drawn **at random**: the server deals the players as the shuffle does, the first dealt to each group its PI; four online players can start. **Chosen** by the players: as in an ordinary room. **Fixed**, once a game has been scored: everyone keeps their group; after each game all go back as students, and the PI is whoever has been PI the fewest times; a newcomer goes to the smaller group. During a match game, only those who played for a group may sit in one.

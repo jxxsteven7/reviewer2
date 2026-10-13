@@ -44,6 +44,14 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await expect(link).toHaveAttribute('rel', 'nofollow ugc noopener');
   await expect(card).toContainText(interpolate(text.playerPage.record, { games: '0', wins: '0', matches: '0' }));
   await expect(card).toContainText(interpolate(text.playerPage.likes, { count: '0' }));
+  // The rank opens the ladder of every rank, Ann's marked and her points nowhere on it.
+  await card.locator('.rank-button').click();
+  const ladder = bob.locator('[role=dialog]', { has: bob.locator('.ladder') });
+  await expect(ladder.locator('.rung[aria-current="true"]')).toContainText(text.ranks.names.kindergarten);
+  await expect(ladder.locator('.rung[aria-current="true"]')).not.toContainText(text.ranks.names.primary);
+  await expect(ladder).not.toContainText(interpolate(text.ranks.points, { points: '0' }));
+  await ladder.getByRole('button', { name: text.room.close }).click();
+  await expect(ladder).toHaveCount(0);
 
   // Bob likes the page, and asks Ann to be friends from it.
   await card.getByRole('button', { name: text.playerPage.like, exact: true }).click();
@@ -73,14 +81,14 @@ test('a public page is set up, opened by its address and from a room, liked and 
   // Ann opens her own page: no way to like it, and the way back to the account page.
   await ann.goto(address as string);
   await expect(ann.locator('.profile-card')).toContainText(text.playerPage.edit);
-  expect(await ann.locator('.profile-card button').count()).toBe(0);
+  expect(await ann.locator('.profile-card .actions button').count()).toBe(0);
 
   // A guest sees the count and the line, and nothing to do; an address that is no page says so.
   const guest = await newPlayer(browser, 'en');
   await guest.goto(address as string);
   await expect(guest.locator('.profile-card')).toContainText(interpolate(text.playerPage.likes, { count: '1' }));
   await expect(guest.locator('.profile-card')).toContainText(text.playerPage.logInToLike);
-  expect(await guest.locator('.profile-card button').count()).toBe(0);
+  expect(await guest.locator('.profile-card .actions button').count()).toBe(0);
   await guest.goto('/p/000000000000');
   await expect(guest.locator('.player-page')).toContainText(text.errors.no_such_profile);
 

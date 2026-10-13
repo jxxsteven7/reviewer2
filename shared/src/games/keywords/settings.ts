@@ -53,9 +53,9 @@ export const defaultSettings = (language: Language): KeywordsSettings => ({
   guessRule: 'free',
   clueRule: 'strict',
   clueLength: CLUE_LENGTH[language].default,
-  firstClueTime: 90,
-  clueTime: 60,
-  guessTime: 90,
+  firstClueTime: 120,
+  clueTime: 90,
+  guessTime: 120,
   extensions: false,
 });
 

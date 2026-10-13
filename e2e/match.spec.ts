@@ -1,8 +1,10 @@
 import type { Page } from '@playwright/test';
-import type { KeywordsRoomData, MatchRules, Seat, Team } from '@reviewer2/shared';
+import type { KeywordsRoomData, Seat, Team } from '@reviewer2/shared';
 import {
   chooseCard,
+  chooseMatch,
   createRoom,
+  endTurn,
   expect,
   giveClue,
   interpolate,
@@ -28,16 +30,6 @@ import {
 // has a part that is the test's own.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
 
-// Makes the room a match on the room setup.
-async function chooseMatch(page: Page, language: Language, rules: MatchRules): Promise<void> {
-  const text = TEXT[language];
-  await page.getByRole('radio', { name: new RegExp(`^${text.match.match}`) }).check();
-  const form = page.locator('.match-form');
-  await form.getByLabel(text.match.games).fill(String(rules.games));
-  await form.getByLabel(text.match.teamsChoice[rules.teams], { exact: true }).check();
-  await form.getByLabel(text.match.groupingChoice[rules.grouping], { exact: true }).check();
-}
-
 // Where a page's player sits, as its latest snapshot says.
 function seatOf(page: Page): Seat {
   const state = snapshotsOf(page).at(-1);
@@ -55,16 +47,21 @@ const seated = (pages: Page[], team: Team, role: 'captain' | 'guesser') => {
 };
 
 // Ends a game in one or two turns, so that `favoured`'s group wins: if it is on turn, its student
-// reveals an irrelevant paper, which ends the turn; then the other group's student reveals
-// Reviewer 2. So everyone in the favoured group scores 3, and the other group's student loses 3.
-async function playQuickly(pages: Page[], language: Language, favoured: Page): Promise<void> {
+// reveals one of the group's own cards and ends the turn, since an irrelevant paper would cost the
+// student a point and leave the group unequal; then the other group's student reveals Reviewer 2.
+// So everyone in the favoured group scores 3, or 4 when it was on turn, and the other group's
+// student loses 3. Returns whether the favoured group was on turn.
+async function playQuickly(pages: Page[], language: Language, favoured: Page): Promise<boolean> {
   const [first] = pages as [Page];
   const ours = seatOf(favoured).team;
   let team = await teamOnTurn(first);
-  if (team === ours) {
+  const onTurn = team === ours;
+  if (onTurn) {
     const captain = seated(pages, team, 'captain');
     await giveClue(captain, 'Hint', 1, language);
-    await reveal(seated(pages, team, 'guesser'), await keyCard(captain, 'neutral'));
+    const guesser = seated(pages, team, 'guesser');
+    await reveal(guesser, await keyCard(captain, team));
+    await endTurn(guesser, language);
     await expect(first.locator(`.strip:not(.${team})`)).toBeVisible();
     team = await teamOnTurn(first);
   }
@@ -74,6 +71,7 @@ async function playQuickly(pages: Page[], language: Language, favoured: Page): P
   await chooseCard(guesser, await keyCard(captain, 'reviewer2'));
   await guesser.locator('.guess-bar button.primary').click();
   for (const page of pages) await expect(page.locator('.letter').first()).toBeVisible();
+  return onTurn;
 }
 
 test('players with accounts and guests play a whole match, and find its title on their accounts', async ({
@@ -102,14 +100,16 @@ test('players with accounts and guests play a whole match, and find its title on
   await expect(ann.locator('.match-table')).toContainText(interpolate(text.match.progress, { game: '1', games: '2' }));
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
-  await expect(ann.locator('.side .match-table')).toBeVisible();
+  // During the game the table is folded under the board, to a line with the progress.
+  await expect(ann.locator('.match-fold summary')).toContainText(text.match.progressTitle);
 
-  await playQuickly(pages, 'en', ann);
-  // Between the games: everyone's points in this game, under the letters.
+  const onTurn = await playQuickly(pages, 'en', ann);
+  // Between the games: everyone's points in this game, under the letters. Ann's group leads with
+  // the 3 for winning, and the 1 for the card it found when it was on turn.
   const between = cat.locator('.match-table.between');
   await expect(between).toContainText(text.match.delta);
   await expect(between.locator('tbody tr')).toHaveCount(4);
-  await expect(between.locator('tbody tr').first()).toContainText('+3');
+  await expect(between.locator('tbody tr').first()).toContainText(onTurn ? '+4' : '+3');
   await expect(cat.getByText(text.match.waitNext)).toBeVisible();
   await ann.getByRole('button', { name: text.match.next }).click();
   await expect(ann.locator('.lobby .match-table')).toContainText(
