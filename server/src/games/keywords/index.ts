@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   cardsClash,
+  cleanClue,
   defaultSettings,
   otherTeam,
   sameSettings,
@@ -18,7 +19,7 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import type { GameContext, GameModule, GameUpdate } from '../../core/game';
+import type { GameContext, GameModule, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
   expire,
@@ -170,6 +171,21 @@ type Action<M extends KeywordsMessage> = (
   payload: Payload<M>,
 ) => GameUpdate<KeywordsData>;
 
+// What the log of the game keeps of each of its messages (docs/architecture.md#game-records): what
+// it said, as its schema reads it, without the game's ID, which is the log's own, and with the
+// clue's word as the record keeps it (cleanClue). Choosing a card is minor: a group's students may
+// do it again and again before they reveal one. Nothing at all is kept of a line of a group's chat.
+function logNote(type: string, payload: unknown): LogNote | null {
+  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:say') return null;
+  const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
+  if (!parsed.success) return null;
+  const data: Record<string, unknown> = { ...parsed.data };
+  delete data.gameId;
+  if (type === 'keywords:clue') data.word = cleanClue(data.word as string);
+  const minor = type === 'keywords:select';
+  return Object.keys(data).length > 0 ? { data, minor } : { minor };
+}
+
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
   'keywords:clue': (data, ctx, playerId, clue) =>
@@ -295,6 +311,18 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     const team = seating.sides.get(to) ?? seatOf(seating, playerId).team ?? undefined;
     return { ...data, seating, match: rekeyMatch(data.match, from, to, team) };
   },
+
+  // Where a member is: the group and the role of the seat they are in, or the spectators'.
+  seated(data, playerId) {
+    const { team, role } = seatOf(data.seating, playerId);
+    return { team, role };
+  },
+
+  logged: logNote,
+
+  // Everyone who has sat in a group during the game has played in it, whether or not they are
+  // still there.
+  participants: (data) => [...data.seating.sides.keys()],
 
   match: {
     setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules) }),

@@ -3,16 +3,17 @@ import { replaySteps, type CardView, type KeywordsReplay, type ReplayStep } from
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
-import { HTML_LANG } from '../../core/i18n';
+import { formatList, HTML_LANG } from '../../core/i18n';
 import KeywordsBoard from './KeywordsBoard.vue';
 
 // A finished game, step by step (shared/src/games/keywords/replay.ts): the board as it stood at
 // each step, with every color, the card the step is about outlined, and above it the turn, the
-// clue, who revealed what and whether it was right. The slider goes to any step, the buttons to
-// the next and the last one. It takes a replay object and nothing else, so that the results page
-// and the account page show one the same way.
+// clue, who revealed what and whether it was right. The cards the PI meant with the turn's clue, if
+// they marked any, carry their numbers through the turn, and the clue's step names them. The
+// slider goes to any step, the buttons to the next and the last one. It takes a replay object and
+// nothing else, so that the results page and the account page show one the same way.
 const props = defineProps<{ replay: KeywordsReplay }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const INFINITY = '\u221e';
 
 const steps = computed(() => replaySteps(props.replay));
@@ -30,6 +31,8 @@ const cards = computed<CardView[]>(() =>
   props.replay.cards.map((card, index) => ({ ...card, revealed: step.value.revealed.includes(index) })),
 );
 const group = (team: 'red' | 'blue') => t(`lobby.group.${team}`);
+// The cards the PI meant with the clue of the step's turn, in the order marked.
+const targets = computed(() => props.replay.history.find((record) => record.turn === step.value.turn)?.targets ?? []);
 
 // What the step says, line by line.
 const lines = computed(() => {
@@ -38,6 +41,10 @@ const lines = computed(() => {
   const found: string[] = [t('replay.turn', { turn, group: group(team) })];
   if (clue === null) found.push(t('replay.noClue'));
   else found.push(t('replay.clue', { word: clue.word, count: clue.count === 'unlimited' ? INFINITY : clue.count }));
+  if (clue !== null && guess === null && !timedOut && targets.value.length > 0) {
+    const words = targets.value.map((card) => props.replay.cards[card]?.word ?? '');
+    found.push(t('game.meant', { words: formatList(locale.value, words) }));
+  }
   if (guess) {
     const name = props.replay.players[guess.player] ?? t('replay.someone');
     const word = props.replay.cards[guess.card]?.word ?? '';
@@ -78,6 +85,7 @@ const lines = computed(() => {
       :selectable="false"
       :selected="null"
       :marked="step.guess?.card ?? null"
+      :targets="targets"
       :lang="HTML_LANG[replay.language]"
     />
   </div>

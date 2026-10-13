@@ -11,6 +11,7 @@ import {
   TEAMS,
   type BoardWord,
   type ClueCount,
+  type ClueRecord,
   type EventKind,
   type KeywordsError,
   type KeywordsSettings,
@@ -66,6 +67,7 @@ export function newGame(words: readonly (string | BoardWord)[], rng: Rng, setup:
   const { cards, startingTeam } = deal(words, rng);
   return {
     ...setup,
+    startedAt: at,
     cards,
     startingTeam,
     turn: 1,
@@ -124,12 +126,23 @@ function finish(state: KeywordsState, winner: Team | null, reason: 'found' | 're
   return { ...state, phase: 'over', clock: null, pause: null, clue: null, selections: [], result: { winner, reason } };
 }
 
+// The cards that a captain marked as the ones their clue is meant for, as the record keeps them, in
+// the order they were marked, or null when they won't do: each must be one of the group's own
+// cards that is still to be found, and none may come twice. Marking none is fine.
+function targetsOf(state: KeywordsState, targets: readonly number[] | undefined): number[] | null {
+  if (targets === undefined) return [];
+  const own = (card: number) =>
+    Number.isInteger(card) && state.cards[card]?.color === state.team && !state.cards[card]?.revealed;
+  if (!targets.every(own) || new Set(targets).size !== targets.length) return null;
+  return [...targets];
+}
+
 // The current team's captain gives a clue: up to as many words as the room allows, and a number
-// that the room's guess rule allows.
+// that the room's guess rule allows, with the cards it is meant for if the captain marked them.
 export function giveClue(
   state: KeywordsState,
   actor: Actor,
-  action: Moment & { word: string; count: ClueCount },
+  action: Moment & { word: string; count: ClueCount; targets?: readonly number[] },
   at: number,
 ): Outcome {
   const denied = refusal(state, action, actor, 'captain');
@@ -140,15 +153,27 @@ export function giveClue(
   }
   const { problem } = checkClue(action.word, state.cards, clueOptions(state.settings, state.language));
   if (problem) return refuse(problem);
+  const targets = targetsOf(state, action.targets);
+  if (targets === null) return refuse('bad_targets');
 
   const word = cleanClue(action.word);
+  const record: ClueRecord = {
+    turn: state.turn,
+    team: state.team,
+    word,
+    count: action.count,
+    guesses: [],
+    captain: actor.id,
+    at: at - state.startedAt,
+    ...(targets.length > 0 ? { targets } : {}),
+  };
   return ok({
     ...state,
     phase: 'guess',
     clock: clockFor(state.settings.guessTime, at),
     clue: { word, count: action.count },
     guessesMade: 0,
-    history: [...state.history, { turn: state.turn, team: state.team, word, count: action.count, guesses: [] }],
+    history: [...state.history, record],
   });
 }
 
@@ -189,7 +214,13 @@ export function reveal(state: KeywordsState, actor: Actor, action: Moment & { ca
   const cards = state.cards.map((card, index) => (index === action.card ? { ...card, revealed: true } : card));
   const history = state.history.map((record, index) =>
     index === state.history.length - 1
-      ? { ...record, guesses: [...record.guesses, { card: action.card, color: target.color, player: actor.id }] }
+      ? {
+          ...record,
+          guesses: [
+            ...record.guesses,
+            { card: action.card, color: target.color, player: actor.id, at: at - state.startedAt },
+          ],
+        }
       : record,
   );
   const next: KeywordsState = { ...state, cards, history, guessesMade: state.guessesMade + 1, selections: [] };
@@ -225,7 +256,15 @@ export function expire(state: KeywordsState, at: number): KeywordsState {
     state.phase === 'clue'
       ? [
           ...state.history,
-          { turn: state.turn, team: state.team, word: null, count: null, guesses: [], timedOut: true as const },
+          {
+            turn: state.turn,
+            team: state.team,
+            word: null,
+            count: null,
+            guesses: [],
+            timedOut: true as const,
+            at: at - state.startedAt,
+          },
         ]
       : state.history.map((record, index) =>
           index === state.history.length - 1 ? { ...record, timedOut: true as const } : record,

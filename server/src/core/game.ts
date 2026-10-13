@@ -44,6 +44,15 @@ export interface PlayerResult {
   verdict: string;
 }
 
+// What the log of a game keeps of one of the game's messages that changed the game
+// (docs/architecture.md#game-records): what the message said, as the game reads it, and whether
+// it is minor, of the kind that a player may send many of, such as choosing a card, which the log
+// stops keeping once it has grown long.
+export interface LogNote {
+  data?: unknown;
+  minor?: boolean;
+}
+
 // One player's points in a game of a match, by member key, with the game's own detail of where
 // they came from, which the match's table shows.
 export interface MatchScore {
@@ -131,6 +140,20 @@ export interface GameModule<Data = unknown, View = unknown> {
   rekey?(data: Data, playerId: string, from: string, to: string): Data;
   // A game that can be played as a match.
   match?: MatchHooks<Data>;
+  // For the log of the game (docs/architecture.md#game-records), which the room keeps from the
+  // start of a game to its end, and the record of who played in it. Where a member is in the
+  // game, as the game describes it, such as the group and the role they have: the room asks about
+  // everyone right after start(), for how the game began, and about whoever comes during the game,
+  // since the game may seat them. Without this, the log says nothing of where anyone is.
+  seated?(data: Data, playerId: string): unknown;
+  // What the log keeps of one of the game's messages that changed the game, with the payload as
+  // the message carried it, or null to keep nothing of it, as of a line of a group's chat. Without
+  // this, the log keeps the message's type alone.
+  logged?(type: string, payload: unknown): LogNote | null;
+  // The member keys of everyone who has played in the current game, those who have left it
+  // included: the players whose part in it the record keeps. Without this, those whom results()
+  // names.
+  participants?(data: Data, ctx: GameContext): string[];
   // The game's part of the room view, as a function of the viewer. The only way a game's data
   // leaves the server. The room asks once for a snapshot and calls the function for each member
   // and for the screens, so a module builds what everyone sees once, and filters it for each.
