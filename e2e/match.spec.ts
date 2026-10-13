@@ -22,9 +22,9 @@ import {
 } from './helpers';
 
 // Matches end to end: players with accounts and guests play a whole match whose groups are drawn
-// for every game, see the ranking with its titles, and find the match on their accounts; a match
-// whose groups stay the same keeps them from one game to the next; and an ordinary room plays as it
-// always did.
+// for the first game and kept, see the ranking with its titles, and find the match on their
+// accounts; a match whose groups may change draws them again for every game; a match whose groups
+// stay the same keeps them from one game to the next; and an ordinary room plays as it always did.
 //
 // All tests share one server, on which a registered name is nobody else's, so every account here
 // has a part that is the test's own.
@@ -82,8 +82,10 @@ test('players with accounts and guests play a whole match, and find its title on
   const ann = await newPlayer(browser, 'en');
   snapshotsOf(ann);
   await register(ann, names.Ann);
+  // The groups are drawn for the first game and stay the same: the PI's seat goes round, so Ann and
+  // her teammate are each their group's PI once, which plays for higher stakes, and finish level.
   const url = await createRoom(ann, 'en', '', (page) =>
-    chooseMatch(page, 'en', { games: 2, teams: 'switch', grouping: 'random' }),
+    chooseMatch(page, 'en', { games: 2, teams: 'fixed', grouping: 'random' }),
   );
   const join = async (name: string, account?: string) => {
     const page = await newPlayer(browser, 'en');
@@ -104,12 +106,12 @@ test('players with accounts and guests play a whole match, and find its title on
   await expect(ann.locator('.match-fold summary')).toContainText(text.match.progressTitle);
 
   const onTurn = await playQuickly(pages, 'en', ann);
-  // Between the games: everyone's points in this game, under the letters. Ann's group leads with
-  // the 3 for winning, and the 1 for the card it found when it was on turn.
+  // Between the games: everyone's points in this game, under the letters. Ann's group leads, its PI
+  // first with the 4 for winning, and the 1 for the card it found when it was on turn.
   const between = cat.locator('.match-table.between');
   await expect(between).toContainText(text.match.delta);
   await expect(between.locator('tbody tr')).toHaveCount(4);
-  await expect(between.locator('tbody tr').first()).toContainText(onTurn ? '+4' : '+3');
+  await expect(between.locator('tbody tr').first()).toContainText(onTurn ? '+5' : '+4');
   await expect(cat.getByText(text.match.waitNext)).toBeVisible();
   await ann.getByRole('button', { name: text.match.next }).click();
   await expect(ann.locator('.lobby .match-table')).toContainText(
@@ -119,8 +121,8 @@ test('players with accounts and guests play a whole match, and find its title on
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
 
   await playQuickly(pages, 'en', ann);
-  // The ranking: Ann's group won both games, so she has the Best Paper Award, and whoever lost the
-  // most is the game's black hole.
+  // The ranking: Ann's group won both games, so she has the Best Paper Award with her teammate, and
+  // whoever lost the most is the game's black hole.
   for (const page of pages) await expect(page.locator('.match-results h2')).toHaveText(text.match.over);
   const results = dan.locator('.match-results');
   await expect(results.locator('li').first()).toContainText(text.match.titleNames.best_paper);
@@ -132,7 +134,15 @@ test('players with accounts and guests play a whole match, and find its title on
   // The accounts keep the match, and Ann's title.
   await ann.goto('/account');
   await expect(ann.locator('.titles')).toHaveText(text.account.profile.titleNames.best_paper);
-  await expect(ann.locator('.records')).toContainText(interpolate(text.account.profile.matchSummary, { played: '1' }));
+  await expect(ann.locator('.records .record-table .matches')).toHaveText(
+    interpolate(text.account.profile.recordTable.matches, { played: '1', won: '1' }),
+  );
+  // Both games were the match's, and say which of its games they were.
+  await expect(ann.locator('.records .record-table tr.inMatches td').first()).toHaveText('2');
+  await expect(ann.locator('.records .record .tag')).toHaveText([
+    interpolate(text.account.profile.matchTag, { game: '2', games: '2' }),
+    interpolate(text.account.profile.matchTag, { game: '1', games: '2' }),
+  ]);
   const match = ann.locator('.records .match');
   await expect(match).toHaveCount(1);
   await expect(match).toContainText(text.match.titleNames.best_paper);
@@ -140,6 +150,50 @@ test('players with accounts and guests play a whole match, and find its title on
   await expect(match).toContainText(/Place 1 of 4/);
   await bob.goto('/account');
   await expect(bob.locator('.records .match')).toHaveCount(1);
+});
+
+test('a match whose groups may change draws them again for every game', async ({ browser }) => {
+  const text = TEXT.en;
+  const ann = await newPlayer(browser, 'en');
+  snapshotsOf(ann);
+  const url = await createRoom(ann, 'en', 'Ann', (page) =>
+    chooseMatch(page, 'en', { games: 2, teams: 'switch', grouping: 'random' }),
+  );
+  const join = async (name: string) => {
+    const page = await newPlayer(browser, 'en');
+    snapshotsOf(page);
+    await joinByLink(page, url, name, 'en');
+    return page;
+  };
+  const [bob, cat, dan] = await Promise.all([join('Bob'), join('Cat'), join('Dan')]);
+  const pages = [ann, bob, cat, dan];
+  // The groups are drawn when each game starts: a PI and a student in each, from everyone who
+  // plays, who are back in the pool between the games.
+  const drawn = async () => {
+    for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
+    const seats = pages.map(seatOf);
+    for (const team of ['red', 'blue'] as const) {
+      expect(
+        seats
+          .filter((seat) => seat.team === team)
+          .map((seat) => seat.role)
+          .sort(),
+      ).toEqual(['captain', 'guesser']);
+    }
+  };
+  await expect(ann.locator('.pool')).toContainText('Dan');
+  await ann.getByRole('button', { name: text.lobby.start }).click();
+  await drawn();
+  await playQuickly(pages, 'en', ann);
+  await ann.getByRole('button', { name: text.match.next }).click();
+  await expect(ann.locator('.lobby .pool')).toContainText('Dan');
+  await expect(ann.locator('.lobby .match-table')).toContainText(
+    interpolate(text.match.progress, { game: '2', games: '2' }),
+  );
+  await ann.getByRole('button', { name: text.lobby.start }).click();
+  await drawn();
+  await playQuickly(pages, 'en', ann);
+  for (const page of pages) await expect(page.locator('.match-results h2')).toHaveText(text.match.over);
 });
 
 test('a match whose groups stay the same keeps them, and passes the PI on', async ({ browser }) => {

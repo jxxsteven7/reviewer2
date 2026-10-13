@@ -76,14 +76,12 @@ test('the chat, the groups, the clue log and the tools stand at the top of their
   // A spectator has no chat: the groups stand at the top.
   await expectColumnsFromTheTop(spectator, ['.rosters'], ['.clue-log', '.tools']);
   await expectBarStacked(spectator, ['.status']);
-  // The PI whose turn it isn't prepares the next clue: the button and the draft's panel have
-  // their rows under the status line, as on a phone.
+  // The PI whose turn it isn't prepares the next clue in the panel that is always open: it has its
+  // row under the status line, as on a phone.
   const pi = table.captains[(await teamOnTurn(student)) === 'red' ? 'blue' : 'red'];
-  await pi.locator('button.prepare').click();
   await expect(pi.locator('.clue-panel.draft')).toBeVisible();
-  await expectBarStacked(pi, ['.status', '.prepare', '.clue-panel.draft']);
-  await pi.locator('button.prepare').click();
-  await expect(pi.locator('.clue-panel')).toHaveCount(0);
+  await expect(pi.locator('.prepare')).toHaveCount(0);
+  await expectBarStacked(pi, ['.status', '.clue-panel.draft']);
 
   // At the end, the log is longer than the groups by far, and nothing moves down.
   await playToTheEnd(table, 4);

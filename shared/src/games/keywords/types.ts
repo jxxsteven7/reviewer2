@@ -72,15 +72,15 @@ export interface CardView {
 
 // A turn in the record of the game. A captain who ran out of time gave no clue, and then `word`
 // and `count` are null. `timedOut` marks a turn that ended because its time ran out, before the
-// clue or during the guesses. Each guess names the player who revealed the card, by player ID,
-// which a match scores.
+// clue or during the guesses. Each guess names the player who revealed the card, by player ID.
 //
-// `captain` is the player who gave the clue, and `targets` the cards that they marked as the ones
-// the clue was meant for, if they marked any (docs/games/keywords.md#the-clue). The targets are
-// the captain's secret until the game is over: no view carries them before then, the captain's
-// own included. `at`, on the clue and on each guess, is when it came, in milliseconds from the
-// start of the game; for a turn without a clue, when its time ran out. Replays from before these
-// were kept have none of them.
+// `captain` is the player who gave the clue, or who was in the captain's seat when the time for it
+// ran out, if anyone was, and `targets` the cards that they marked as the ones the clue was meant
+// for, if they marked any (docs/games/keywords.md#the-clue). The targets are the captain's secret
+// until the game is over: no view carries them before then, the captain's own included. `at`, on
+// the clue and on each guess, is when it came, in milliseconds from the start of the game; for a
+// turn without a clue, when its time ran out. Replays from before these were kept have none of
+// them, and a turn without a clue had no captain before the missed deadlines were counted.
 export interface ClueRecord {
   turn: number;
   team: Team;
@@ -93,11 +93,13 @@ export interface ClueRecord {
   at?: number;
 }
 
-// What happened in a game besides the clues and the guesses, for the clue log: the chair paused
-// the game and resumed it, and a group asked for an extension. Each is noted with the turn it
-// came in; an extension names the group. A game keeps the last EVENTS_KEPT of them, more than a
-// game has, so that no number of pauses can grow its snapshots without end.
-export const EVENT_KINDS = ['paused', 'resumed', 'extended'] as const;
+// What happened in a game besides the clues and the guesses: the chair paused the game and resumed
+// it, and a group asked for an extension, for the clue log; and a captain missed the deadline for
+// their clue, which the room hears of at once (docs/games/keywords.md#titles), while the clue log
+// has the turn without a clue already. Each is noted with the turn it came in; an extension and a
+// missed deadline name the group. A game keeps the last EVENTS_KEPT of them, more than a game has,
+// so that no number of pauses can grow its snapshots without end.
+export const EVENT_KINDS = ['paused', 'resumed', 'extended', 'missed'] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENTS_KEPT = 50;
 
@@ -105,6 +107,10 @@ export interface GameEvent {
   turn: number;
   kind: EventKind;
   team?: Team;
+  // A missed deadline names the captain, by player ID, and, for a captain with an account, how many
+  // times they have missed one, this time included, as their titles and the game so far count them.
+  player?: string;
+  count?: number;
 }
 
 // A card that a guesser has chosen but not revealed yet, for the rest of their group to see.

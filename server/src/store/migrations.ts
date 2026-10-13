@@ -355,7 +355,49 @@ export const MIGRATIONS: readonly string[] = [
   `
   CREATE INDEX game_records_game ON game_records (game_id);
   `,
-  // 14: AI players (docs/architecture.md#ai-players), and a record of every game
+  // 14: the titles that games bring (docs/architecture.md#titles), and the games of matches on the
+  // records (docs/architecture.md#accounts).
+  //
+  // - titles is rebuilt, once, as migration 5 rebuilt the feedback, so that its title is no longer
+  //   fixed by a CHECK: the titles are in shared/src/accounts.ts alone (TitleStore checks them), and
+  //   a new one is a change to the code. Every row is kept as it was, with its id, and the count that
+  //   AUTOINCREMENT goes on from. A title comes from a match, by its ID, or from a turn of a game, by
+  //   the game's ID and the turn, or, for titles from before matches had IDs, from neither; never
+  //   from both. A turn of a game brings an account a title once, as a match does, however often its
+  //   end is reported.
+  // - game_records get the match that a game was played in, if any, which game of it the game was,
+  //   from 1, and how many games the match was to have; all three or none. The records from before
+  //   all count as games outside a match: nothing tells which were in one.
+  `
+  CREATE TABLE new_titles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    match_id TEXT,
+    game_id TEXT,
+    turn INTEGER CHECK (turn > 0),
+    awarded_at TEXT NOT NULL,
+    CHECK ((game_id IS NULL) = (turn IS NULL)),
+    CHECK (match_id IS NULL OR game_id IS NULL)
+  ) STRICT;
+  INSERT INTO new_titles (id, account_id, title, match_id, awarded_at)
+    SELECT id, account_id, title, match_id, awarded_at FROM titles;
+  DELETE FROM sqlite_sequence WHERE name = 'new_titles';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_titles', seq FROM sqlite_sequence WHERE name = 'titles';
+  DROP TABLE titles;
+  ALTER TABLE new_titles RENAME TO titles;
+  CREATE INDEX titles_account ON titles (account_id);
+  CREATE UNIQUE INDEX titles_match ON titles (account_id, title, match_id) WHERE match_id IS NOT NULL;
+  CREATE UNIQUE INDEX titles_game ON titles (account_id, title, game_id, turn) WHERE game_id IS NOT NULL;
+
+  ALTER TABLE game_records ADD COLUMN match_id TEXT;
+  ALTER TABLE game_records ADD COLUMN match_game INTEGER;
+  ALTER TABLE game_records ADD COLUMN match_games INTEGER CHECK (
+    (match_id IS NULL) = (match_game IS NULL) AND (match_id IS NULL) = (match_games IS NULL)
+    AND match_game BETWEEN 1 AND match_games
+  );
+  `,
+  // 15: AI players (docs/architecture.md#ai-players), and a record of every game
   // (docs/architecture.md#game-records).
   //
   // - accounts get whether the operator has let them have AI players in the rooms they chair.

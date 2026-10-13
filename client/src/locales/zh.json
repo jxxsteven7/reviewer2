@@ -169,7 +169,7 @@
     "screens": "正在显示这个房间的投屏：{count} 块。",
     "dismissScreens": "撤下所有投屏",
     "captainNote": "导师能看到哪些牌属于本组，并给出提示。",
-    "agentNote": "有 AI 参与的局不加学术积分，也不算连胜和好友称号。",
+    "agentNote": "有 AI 参与的局不加学术积分，也不算连胜、称号和好友称号。",
     "takeoverNote": "玩家轮到自己时掉线满 20 秒，由 AI 代为托管，回来就交还。",
     "desk": "主持台",
     "fields": "词库",
@@ -303,12 +303,6 @@
     },
     "waitClue": "等待{group}的导师给出提示。",
     "waitGuess": "{group}正在猜词。",
-    "prepare": "提前准备下一条提示",
-    "prepareDraft": "继续准备（{summary}）",
-    "prepareHide": "收起草稿",
-    "draftMarked": "已标 {count} 张 | 已标 {count} 张",
-    "draftCount": "数字 {count}",
-    "draftJoin": "，",
     "prepareNote": "这是你下一条提示的草稿，只有你看得到，轮到你出题时再给出。",
     "targetGone": "你标的{words}被翻开了，已去掉。 | 你标的{words}被翻开了，已去掉。",
     "clueInput": "你的提示",
@@ -319,8 +313,8 @@
     "clueNumber": "这个提示对应几张牌",
     "unlimited": "不限",
     "sendClue": "给出提示",
-    "targetsHint": "点本组的牌，标出这条提示想指的牌，数字会跟着变。标记对局中谁都看不到，赛后公开。",
-    "targetsMarked": "已标：{words}。赛后公开。",
+    "targetsHint": "先点牌标出这条提示想指的牌，数字会跟着变。对局中谁都看不到，复盘看得到。",
+    "targetsMarked": "已标 {count} 张：{words}。赛后公开。 | 已标 {count} 张：{words}。赛后公开。",
     "quoted": "「{word}」",
     "onBoard": "{word}还在牌上。提示词不能是牌上的词，也不能是牌上的词的一部分。",
     "formOnBoard": "{word}还在牌上，这个提示重复了词库列出的它的另一种形式。本房间的提示词规则不允许这样做。",
@@ -357,6 +351,16 @@
     "pausedResume": "大家都回来了就可以继续。",
     "extend": "申请延时 30 秒",
     "extended": "{group}申请了延时：多 30 秒。",
+    "missed": {
+      "lines": {
+        "1": "{name} 的 DDL 过了，稿子还躺在桌面上！",
+        "2": "{name}：在投了在投了（并没有）",
+        "3": "编辑部提醒：{name} 的稿件已超过截稿时间。",
+        "4": "{name} 和 DDL 赛跑，DDL 赢了。",
+        "5": "投稿系统已关闭，{name} 的提示还在草稿箱里。"
+      },
+      "count": "{line}（×{count}）"
+    },
     "events": {
       "paused": "主持暂停了游戏",
       "resumed": "游戏继续",
@@ -455,13 +459,17 @@
       "you": "我",
       "someone": "已离开的玩家"
     },
-    "scoring": "比赛计分：本组找到一张本组的牌，组里每人 +1；获胜，每人再 +3；翻到无关论文 −1；翻到对方的牌 −2；翻到 Reviewer 2 −3。",
+    "scoring": "比赛计分：本组学生翻到一张本组的牌，组里每人 +1；获胜，学生每人 +3，导师 +4。本组学生翻到无关论文、对方的牌、Reviewer 2，不管是谁翻的，学生每人 −1、−2、−3，导师 −2、−3、−5。大提示：一条提示让学生翻中本组 4 张以上，出这条提示的导师从第 4 张起每张 +1。首开纪录：本组第一条提示的数字是 3 以上，学生先连续翻中这么多张本组的牌，组里每人 +1。天胡：第一条提示的回合里就翻完本组全部的牌，学生每人 +1，导师 +3。",
     "scoreDetail": {
+      "captain": "导师",
       "found": "找到 {count} 张",
       "won": "获胜",
       "irrelevant": "翻到无关论文 ×{count}",
       "wrong": "翻到对方的牌 ×{count}",
-      "reviewer2": "翻到 Reviewer 2"
+      "reviewer2": "翻到 Reviewer 2",
+      "bigClue": "大提示 +{count}",
+      "openingRecord": "首开纪录",
+      "heavenlyHand": "天胡"
     },
     "choice": "{name} 选了「{word}」",
     "choiceJoin": "，"
@@ -875,7 +883,10 @@
       "titles": "称号",
       "titleNames": {
         "best_paper": "Best Paper Award",
-        "black_hole": "游戏黑洞"
+        "black_hole": "游戏黑洞",
+        "missed_deadline": "DDL过了忘投稿",
+        "opening_record": "首开纪录",
+        "heavenly_hand": "天胡"
       },
       "titleCount": "{title} ×{count}",
       "acknowledged": "致谢：{kind}",
@@ -888,7 +899,7 @@
         "linkPlaceholder": "https://",
         "bio": "一句简介",
         "bioCount": "{count}/{max} 个字符，按纯文本显示。",
-        "showRecord": "公开战绩：局数、胜场和比赛场数",
+        "showRecord": "公开战绩：普通对局和比赛中的对局各自的局数、胜场、胜率，以及比赛场数和夺冠次数",
         "showThanks": "公开致谢次数",
         "save": "保存主页",
         "saved": "主页已更新。",
@@ -899,13 +910,22 @@
         "friend": "好友"
       },
       "record": "战绩",
-      "recordSummary": "总局数：{games} · 胜场：{wins}",
+      "recordTable": {
+        "games": "局数",
+        "wins": "胜",
+        "rate": "胜率",
+        "ordinary": "普通对局",
+        "inMatches": "比赛中的对局",
+        "total": "合计",
+        "matches": "比赛 {played} 场，夺冠 {won} 场",
+        "noMatches": "还没有打完的比赛。"
+      },
       "noRecords": "还没有战绩。登录后在座位上打完的每一局都会记在这里。",
       "recent": "最近 20 局",
       "recordsAgain": "重试",
       "recordLine": "{side}，{role}",
+      "matchTag": "比赛 · 第 {game}/{games} 局",
       "watchAgain": "回放",
-      "matchSummary": "打完的比赛：{played} 场",
       "recentMatches": "最近 20 场比赛",
       "matchLine": "{players} 人中第 {rank} 名 · {score} 分",
       "matchGames": "{games} 局",
@@ -1014,7 +1034,6 @@
     "author": "作者",
     "since": "{date} 注册",
     "duo": "你和 {name}",
-    "record": "总局数：{games} · 胜场：{wins} · 比赛：{matches} 场",
     "likes": "♥ {count}",
     "like": "赞",
     "liked": "已赞",
@@ -1073,7 +1092,10 @@
   "titles": {
     "award": {
       "best_paper": "比赛结束时，总分最高的玩家获得。并列第一的都有；所有人同分就谁都没有。",
-      "black_hole": "三人以上的比赛结束时，总分最低的玩家获得。并列最后的都有。"
+      "black_hole": "三人以上的比赛结束时，总分最低的玩家获得。并列最后的都有。",
+      "missed_deadline": "导师出题的时间到了还没交出提示：稿子写好了，就是没点提交。每错过一次截稿再得一次，算登录后坐在位置上、正常结束的对局。",
+      "opening_record": "本组在一局里的第一条提示数字是 3 以上，学生接着一张不错地先翻中这么多张本组的牌，组里每人都得。课题组的第一篇论文，一字没改直接接收。",
+      "heavenly_hand": "本组第一条提示的回合里就把本组的牌全部翻完、当场获胜，组里每人都得。一条提示，一篇论文，直接中了梦中情刊：最难拿的称号。"
     },
     "streak": {
       "wins": "记录里最长的连胜：连续赢了 {n} 局。",

@@ -1,4 +1,5 @@
 import { createServer, type Server as HttpServer } from 'node:http';
+import type { Title } from '@reviewer2/shared';
 import { Server } from 'socket.io';
 import { createAccountApi } from './accounts/http';
 import type { Accounts } from './accounts/service';
@@ -120,9 +121,10 @@ export function createAppServer(options: AppOptions): AppServer {
   // clock is one that only runs forward. The system's clock gets corrected, sometimes by a lot,
   // and every one of those waits would stretch or collapse with it.
   const now = options.now ?? (() => performance.now());
+  const titleCount = accounts ? (id: number, title: Title) => accounts.titles.count(id, title) : null;
   // Whether the agent answers, which the driver of the AI players finds out and the rooms read.
   const agentState = options.agent ? { up: false } : null;
-  const rooms = new Rooms(options.words, rng, now, options.limits ?? DEFAULT_LIMITS, agentState);
+  const rooms = new Rooms(options.words, rng, now, options.limits ?? DEFAULT_LIMITS, titleCount, agentState);
   const sockets = attachSockets(io, {
     rooms,
     words: options.words,

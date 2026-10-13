@@ -567,17 +567,98 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g' }]);
   });
 
-  test('of the thirteenth release keeps its accounts, records and replays when it gets AI players and every game', async () => {
+  test('of the thirteenth release has its titles rebuilt for the titles of games, and its records kept outside matches', async () => {
     const thirteenth = await open(dir, MIGRATIONS.slice(0, 13));
     thirteenth.db.exec(`
-      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
-      INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
-      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}', '{"v":1}');
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
+      INSERT INTO titles VALUES (2, 1, 'best_paper', NULL, '2026-10-01T08:00:00.000Z');
+      INSERT INTO titles VALUES (5, 1, 'best_paper', 'm1', '2026-10-02T08:00:00.000Z');
+      INSERT INTO titles VALUES (9, 2, 'black_hole', 'm1', '2026-10-02T08:00:00.000Z');
+      INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g0', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
     `);
+    // Ids up to 12 were given out once, as by the titles of an account that was deleted.
+    thirteenth.db.exec("UPDATE sqlite_sequence SET seq = 12 WHERE name = 'titles'");
+    const before = thirteenth.db.prepare('SELECT * FROM titles ORDER BY id').all();
     thirteenth.db.close();
 
     const migrated = await open(dir, MIGRATIONS.slice(0, 14));
     expect(migrated).toMatchObject({ schema: 14, migratedFrom: 13 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v14.db'));
+    const { db } = migrated;
+    // Every row is as it was, with its id, and from no game.
+    expect(before.map((row) => row.id)).toEqual([2, 5, 9]);
+    expect(db.prepare('SELECT * FROM titles ORDER BY id').all()).toEqual(
+      before.map((row) => ({ ...row, game_id: null, turn: null })),
+    );
+    expect(tables(db)).not.toContain('new_titles');
+    expect(
+      db.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'titles' ORDER BY name").all(),
+    ).toEqual([{ name: 'titles_account' }, { name: 'titles_game' }, { name: 'titles_match' }]);
+    expect(db.prepare("SELECT name, seq FROM sqlite_sequence WHERE name LIKE '%titles'").all()).toEqual([
+      { name: 'titles', seq: 12 },
+    ]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+
+    const award = (title: string, gameId: string | null, turn: number | null, matchId: string | null = null) =>
+      db
+        .prepare(
+          'INSERT INTO titles (account_id, title, match_id, game_id, turn, awarded_at) VALUES (1, ?, ?, ?, ?, ?)',
+        )
+        .run(title, matchId, gameId, turn, 'now').lastInsertRowid;
+    // The title is the code's to check; a turn of a game brings it once, and a match too.
+    expect(award('missed_deadline', 'g1', 1)).toBe(13);
+    expect(award('missed_deadline', 'g1', 2)).toBe(14);
+    expect(() => award('missed_deadline', 'g1', 1)).toThrow(/UNIQUE/);
+    expect(() => award('best_paper', null, null, 'm1')).toThrow(/UNIQUE/);
+    expect(award('heavenly_hand', 'g1', 1)).toBe(15);
+    // A game's title has its turn, from 1, and comes from no match.
+    expect(() => award('opening_record', 'g1', null)).toThrow(/CHECK/);
+    expect(() => award('opening_record', null, 3)).toThrow(/CHECK/);
+    expect(() => award('opening_record', 'g1', 0)).toThrow(/CHECK/);
+    expect(() => award('opening_record', 'g1', 3, 'm2')).toThrow(/CHECK/);
+    expect(() => db.exec("INSERT INTO titles (account_id, title, awarded_at) VALUES (9, 'best_paper', 'now')")).toThrow(
+      /FOREIGN KEY/,
+    );
+    // The records from before are of no match; a game of a match has the match, its number in it
+    // and how many games the match was to have, all three, and its number is one of them.
+    expect(db.prepare('SELECT game_id, match_id, match_game, match_games FROM game_records').all()).toEqual([
+      { game_id: 'g0', match_id: null, match_game: null, match_games: null },
+    ]);
+    const play = (gameId: string, match: [string | null, number | null, number | null]) =>
+      db
+        .prepare(
+          'INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points, ' +
+            "match_id, match_game, match_games) VALUES (2, 'keywords', ?, 'now', 'red', 'guesser', 'red', 1, 'oral', 4, ?, ?, ?)",
+        )
+        .run(gameId, ...match);
+    play('g1', ['m2', 2, 3]);
+    play('g2', [null, null, null]);
+    for (const match of [
+      ['m2', null, 3],
+      ['m2', 2, null],
+      [null, 2, 3],
+      ['m2', 0, 3],
+      ['m2', 4, 3],
+    ] as const) {
+      expect(() => play('g3', [...match]), JSON.stringify(match)).toThrow(/CHECK/);
+    }
+    // The titles still go with their account.
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT id, title FROM titles').all()).toEqual([{ id: 9, title: 'black_hole' }]);
+  });
+
+  test('of the fourteenth release keeps its accounts, records and replays when it gets AI players and every game', async () => {
+    const fourteenth = await open(dir, MIGRATIONS.slice(0, 14));
+    fourteenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points)
+        VALUES (1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
+      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}', '{"v":1}');
+    `);
+    fourteenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 15));
+    expect(migrated).toMatchObject({ schema: 15, migratedFrom: 14 });
     const { db } = migrated;
     // Nobody may have AI players until the operator lets them, no AI played in the games from
     // before, and their replays have no AI log.

@@ -97,6 +97,14 @@ test('the server ends a turn whose time has run out', async ({ browser }) => {
   await expect(table.spectator.locator('.strip')).toHaveClass(new RegExp(`\\b${otherTeam(team)}\\b`), {
     timeout: 20_000,
   });
+  // Everyone in the room, the PI and the screen included, hears of the missed deadline at once,
+  // by the PI's name; the PI is a guest, whose misses nobody counts.
+  const pages = [...Object.values(table.captains), ...Object.values(table.guessers), table.spectator, table.screen];
+  for (const page of pages) {
+    const call = page.locator('.bubbles .call');
+    await expect(call).toContainText(table.names.captains[team]);
+    await expect(call).not.toContainText('\u00d7');
+  }
   await expect(await openLog(table.spectator)).toContainText(TEXT.en.game.noClueInTime);
   // The next clue has the default time, 90 seconds.
   await expect(table.spectator.locator('.clock')).not.toHaveClass(/urgent/);

@@ -23,6 +23,7 @@ describe('the log of the team word guessing game', () => {
     isOnline: () => true,
     agentOf: () => null,
     playerIds: () => Object.keys(keys),
+    titleCount: () => null,
   });
   // Ann and Bob are the red PI and student, Cat and Dan the blue ones.
   const seated = (ctx: GameContext) => {

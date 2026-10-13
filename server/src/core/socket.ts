@@ -284,9 +284,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // What the end of a game leaves behind. A game that finished leaves its part in it on the record
   // of each player with an account, as the game describes it (GameModule.results()), with the
-  // points it brought them (Room.points()), the streak it brought them to, which the room tells in
-  // the snapshot that ends the game (Room.noteStreak()), their ranks as they are now for everyone to
-  // see, and the titles that the game brought friends who played in it, which the room tells each
+  // points it brought them (Room.points()), the match it was played in, if any (Room.matchGame()),
+  // and the titles it brought them; the streak it brought them to, which the room tells in the
+  // snapshot that ends the game (Room.noteStreak()); their ranks as they are now for everyone to
+  // see; and the titles that the game brought friends who played in it, which the room tells each
   // account alone (Room.noteDuos()). A game that an AI played in brings nobody points, a streak or
   // a title (docs/architecture.md#ai-players). Whoever had left by then has no part in its end.
   //
@@ -301,6 +302,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const gameId = room.gameId;
     const results = room.ending === 'finished' ? room.results() : null;
     const points = room.points();
+    const match = room.matchGame();
     // Those whose game went on the record, by account ID, with their player ID, side and result.
     const recorded = new Map<number, DuoPart & { playerId: string }>();
     for (const { playerId, ...result } of results ?? []) {
@@ -311,6 +313,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         game: room.game.id,
         gameId,
         points: points?.get(member.key) ?? 0,
+        match,
         agents: room.agentsPlayed,
         ...result,
       };

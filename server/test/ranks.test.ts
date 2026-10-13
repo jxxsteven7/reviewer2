@@ -82,38 +82,46 @@ describe('academic ranks', () => {
     expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: true });
     for (const client of everyone) await client.waitFor((state) => state.phase === 'playing', 'the game');
 
-    // The group on turn finds one of its cards and then reveals Reviewer 2, which ends the game: its
-    // players get 1 point for the card, the one who revealed Reviewer 2 loses 3, and the other group
-    // wins, 3 points each.
+    // The red group wins either way. If it is on turn, it finds one of its cards and ends the turn,
+    // and the blue group reveals Reviewer 2; if the blue group is, it finds one of its cards and then
+    // reveals Reviewer 2. The red PI gets a point for each card that red found and 4 for the win,
+    // and the red student 3 for the win.
     const team = board(ann).team;
-    const captain = team === 'red' ? ann : cat;
-    const guesser = team === 'red' ? bob : dan;
-    expect(await captain.send('keywords:clue', { ...moment(board(captain)), word: 'Hint', count: 1 })).toEqual({
-      ok: true,
-    });
-    await settle(everyone);
-    const cards = board(captain).cards;
-    const own = cards.findIndex((card) => !card.revealed && card.color === team);
-    const reviewer2 = cards.findIndex((card) => card.color === 'reviewer2');
-    expect(await guesser.send('keywords:reveal', { ...moment(board(guesser)), card: own })).toEqual({ ok: true });
-    await settle(everyone);
-    expect(await guesser.send('keywords:reveal', { ...moment(board(guesser)), card: reviewer2 })).toEqual({ ok: true });
+    const play = async (captain: TestClient, guesser: TestClient, find: boolean) => {
+      expect(await captain.send('keywords:clue', { ...moment(board(captain)), word: 'Hint', count: 1 })).toEqual({
+        ok: true,
+      });
+      await settle(everyone);
+      const cards = board(captain).cards;
+      const own = cards.findIndex((card) => !card.revealed && card.color === board(captain).team);
+      const reviewer2 = cards.findIndex((card) => card.color === 'reviewer2');
+      expect(await guesser.send('keywords:reveal', { ...moment(board(guesser)), card: own })).toEqual({ ok: true });
+      await settle(everyone);
+      if (find) expect(await guesser.send('keywords:pass', moment(board(guesser)))).toEqual({ ok: true });
+      else
+        expect(await guesser.send('keywords:reveal', { ...moment(board(guesser)), card: reviewer2 })).toEqual({
+          ok: true,
+        });
+      await settle(everyone);
+    };
+    if (team === 'red') await play(ann, bob, true);
+    await play(cat, dan, false);
     for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
 
-    const points = { Ann: team === 'red' ? 1 : 3, Bob: team === 'red' ? -2 : 3 };
+    const points = { Ann: team === 'red' ? 1 + 4 : 4, Bob: team === 'red' ? 1 + 3 : 3 };
     const { records } = server.accounts;
     await until(() => records.points(1) === RANK_POINTS.master - 1 + points.Ann, "Ann's points");
     expect(records.points(2)).toBe(points.Bob);
     // The game went on the records with its points, and once to the replays, to watch again.
-    expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: team !== 'red', replay: true });
+    expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: true, replay: true });
     expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
     // The snapshot that ends the game shows the ranks as they are now: Ann is a master's student
-    // either way, with 500 or 502 points, and Bob still a kindergartner, with 3 or -2.
+    // either way, with 503 or 504 points, and Bob still a kindergartner, with 3 or 4.
     expect(rankOf(dan, 'Ann')).toBe('master');
     expect(rankOf(dan, 'Bob')).toBe('kindergarten');
     expect((await anns.account())?.points).toBe(records.points(1));
     // A withdrawn game would have counted for nothing, and a game is counted once however often its
     // end is told: the record holds one game from today.
-    expect(records.view(1).games).toBe(2);
+    expect(records.view(1).ordinary.games).toBe(2);
   });
 });

@@ -20,6 +20,7 @@ import {
   type RoomView,
   type Streak,
   type StreakNotice,
+  type Title,
 } from '@reviewer2/shared';
 import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
@@ -112,6 +113,8 @@ export interface RoomOptions {
   words: WordLibrary;
   rng: Rng;
   now: () => number;
+  // How many times an account has won a title, where accounts are on (GameContext.titleCount).
+  titleCount?: ((accountId: number, title: Title) => number) | null;
   agents?: AgentState | null;
 }
 
@@ -256,6 +259,7 @@ export class Room {
   #usedWords: ReadonlySet<string> = new Set();
   readonly #rng: Rng;
   readonly #now: () => number;
+  readonly #titleCount: ((accountId: number, title: Title) => number) | null;
 
   constructor(options: RoomOptions) {
     this.code = options.code;
@@ -266,6 +270,7 @@ export class Room {
     this.#words = options.words;
     this.#rng = options.rng;
     this.#now = options.now;
+    this.#titleCount = options.titleCount ?? null;
     this.#agents = options.agents ?? null;
     this.createdAt = options.now();
     this.lastActivity = this.createdAt;
@@ -286,7 +291,21 @@ export class Room {
       isOnline: (id) => this.isOnline(id),
       agentOf: (id) => this.members.get(id)?.agent ?? this.#gone.get(id)?.agent ?? null,
       playerIds: () => [...this.members.keys()],
+      titleCount: (id, title) => this.#titleCountOf(id, title),
     };
+  }
+
+  // How many times the account of a member, or of one who has left during the game, has won a
+  // title. A record that can't be read leaves the count out, as for a guest: the game goes on.
+  #titleCountOf(id: string, title: Title): number | null {
+    const member = this.members.get(id);
+    const accountId = member ? (member.account?.id ?? null) : (this.#gone.get(id)?.accountId ?? null);
+    if (accountId === null || !this.#titleCount) return null;
+    try {
+      return this.#titleCount(accountId, title);
+    } catch {
+      return null;
+    }
   }
 
   // Marks a change: everyone gets a new snapshot.
@@ -1100,6 +1119,15 @@ export class Room {
     if (this.#agentsPlayed) return null;
     const scores = this.phase === 'ended' ? (this.game.match?.score(this.data, this.context) ?? null) : null;
     return scores && new Map(scores.map(({ key, points }) => [key, points]));
+  }
+
+  // Which game of a match the game that has just ended was, for the records
+  // (docs/architecture.md#accounts): the match, the game's number in it, from 1, and how many games
+  // the match was to have. Null for a game outside a match, and for one that the match didn't score.
+  matchGame(): { id: string; game: number; games: number } | null {
+    const { match } = this;
+    if (this.phase !== 'ended' || !match || this.gameId === null || match.lastGameId !== this.gameId) return null;
+    return { id: match.id, game: match.played, games: match.rules.games };
   }
 
   // What the record keeps of the game that has come to an end (docs/architecture.md#game-records),

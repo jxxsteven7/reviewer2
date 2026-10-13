@@ -122,7 +122,7 @@ describe('a public profile', () => {
     expect((await profileOf(guest, ann.handle)).profile).toMatchObject({
       link: 'https://ann.example/me?x=%281%29',
       bio: 'Reviewer of everything',
-      record: { games: 0, wins: 0, matches: 0 },
+      record: { ordinary: { games: 0, wins: 0 }, inMatches: { games: 0, wins: 0 }, matches: { played: 0, won: 0 } },
       acknowledgments: [],
     });
     // Each is optional, and what won't do is refused with its own answer.
@@ -167,7 +167,11 @@ describe('a public profile', () => {
     expect((await ann.browser.request('/api/account/profile', settings)).body).toEqual({ ok: true });
     expect(server.accounts.takeDownProfile(ann.id, true)).toBe(true);
     expect(server.accounts.takeDownProfile(ann.id, false)).toBe(false);
-    expect((await profileOf(guest, ann.handle)).profile).toMatchObject({ link: null, bio: null, record: { games: 0 } });
+    expect((await profileOf(guest, ann.handle)).profile).toMatchObject({
+      link: null,
+      bio: null,
+      record: { ordinary: { games: 0 } },
+    });
     expect(await ann.browser.account()).toMatchObject({ profile: { link: null, bio: null, banned: true } });
     expect(await ann.browser.request('/api/account/profile', settings)).toMatchObject({
       status: 403,

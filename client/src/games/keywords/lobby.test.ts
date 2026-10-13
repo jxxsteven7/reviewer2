@@ -129,7 +129,9 @@ describe('KeywordsLobby', () => {
     // player in it.
     const player = mount(KeywordsLobby, { props: { room: withAgents('bob') }, global: global() });
     expect(player.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(0);
-    expect(player.text()).toContain('A game that an AI plays in brings nobody points, a streak or a friend title.');
+    expect(player.text()).toContain(
+      'A game that an AI plays in brings nobody points, a streak, a title or a friend title.',
+    );
     expect(player.text()).toContain('A player who is offline for 20 seconds in their turn is played for by an AI');
     const alone = mount(KeywordsLobby, { props: { room: { ...view('bob', 0), agents: true } }, global: global() });
     expect(alone.text()).toContain('A player who is offline for 20 seconds in their turn is played for by an AI');
