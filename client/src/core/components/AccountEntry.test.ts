@@ -26,7 +26,7 @@ describe('AccountEntry', () => {
 
   test('offers to log in, or shows the account with the friend requests that wait', () => {
     const guest = mount(AccountEntry, { global: global() });
-    expect(guest.text()).toContain('Log in / Register');
+    expect(guest.text()).toBe('Log in');
     guest.unmount();
 
     signedIn.account.summary = { username: 'Ann', avatar: null, requests: 0 };

@@ -41,18 +41,19 @@ afterEach(() => {
 async function opened(locale: 'en' | 'zh' = 'en') {
   const i18n = createI18n({ legacy: false, locale, messages: { en, zh } });
   const wrapper = mount(SponsorsList, { global: { plugins: [i18n] } });
-  expect(fetchMock).not.toHaveBeenCalled();
-  (wrapper.get('details').element as HTMLDetailsElement).open = true;
-  await wrapper.get('details').trigger('toggle');
   await flushPromises();
+  // Asked for once the card is shown, so that its title counts the sponsors, and not again.
   expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([LIST_API.sponsors]);
+  await wrapper.get('h2 button').trigger('click');
+  await flushPromises();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
   return wrapper;
 }
 
 describe('the sponsors', () => {
   test('are listed by name alone, in the sections of the file, each linked to their page', async () => {
     const wrapper = await opened();
-    expect(wrapper.get('summary').text()).toBe('Sponsors');
+    expect(wrapper.get('h2').text()).toBe('Sponsors \u{b7} 4 people');
     const groups = wrapper.findAll('section');
     expect(groups.map((group) => group.get('h3').text())).toEqual(['GitHub Sponsors', 'Other ways']);
     expect(groups.map((group) => group.findAll('li').map((item) => item.text()))).toEqual([
@@ -72,8 +73,8 @@ describe('the sponsors', () => {
 
   test('call the sections in the language of the page', async () => {
     const wrapper = await opened('zh');
-    // "Sponsors" and "Other ways" in Chinese; GitHub Sponsors keeps its name.
-    expect(wrapper.get('summary').text()).toBe('\u8d5e\u52a9\u8005');
+    // "Sponsors", 4 of them, and "Other ways" in Chinese; GitHub Sponsors keeps its name.
+    expect(wrapper.get('h2').text()).toBe('\u8d5e\u52a9\u8005 \u00b7 4 \u4f4d');
     expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual([
       'GitHub Sponsors',
       '\u5176\u4ed6\u65b9\u5f0f',
@@ -101,6 +102,8 @@ describe('the sponsors', () => {
     for (const locale of ['en', 'zh'] as const) {
       const wrapper = await opened(locale);
       const text = texts[locale];
+      // The title alone, with nobody to count: "Sponsors" in Chinese.
+      expect(wrapper.get('h2').text()).toBe(locale === 'en' ? 'Sponsors' : '\u8d5e\u52a9\u8005');
       expect(wrapper.find('section').exists()).toBe(false);
       const github = wrapper.get('.note a');
       expect(github.text()).toBe(text.github);

@@ -25,6 +25,14 @@ export const TEXT = { en, zh };
 export const interpolate = (template: string, values: Record<string, string>): string =>
   template.replace(/\{(\w+)\}/g, (placeholder, key: string) => values[key] ?? placeholder);
 
+// A locale string with a plural in the form that vue-i18n picks for the count: of three forms, the
+// first for none, the second for one and the last for more; of two, the first for one.
+export function plural(template: string, count: number): string {
+  const forms = template.split(' | ');
+  const form = forms.length === 3 ? forms[Math.min(count, 2)] : forms[count === 1 ? 0 : forms.length - 1];
+  return interpolate(form ?? template, { count: String(count) });
+}
+
 // The button that offers a seat as a student of this group during a game.
 export function playFor(team: Team, language: Language = 'en'): { name: string } {
   const text = TEXT[language];

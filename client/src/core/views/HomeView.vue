@@ -19,12 +19,13 @@ import LanguageGate from './LanguageGate.vue';
 import PublicRooms from './PublicRooms.vue';
 
 // The home page: the way back to any room where the player still has a seat, the tagline, a line
-// on how to play with the author after it, linked to their page, or after the tagline on an
-// English phone, where its last line has room for them, the ways into a room, by its
-// number or from the list of public rooms, the first game on a big sticker with the games to come
-// below it, the acknowledgments and the sponsors, folded, and footnotes, which offer a way to buy
-// the author a cola, with a cup, and the way to send them feedback, with a light bulb, and name
-// the build's version. On a wide screen the games stand on the right, beside the rest.
+// on how to play, the ways into a room, by its number or from the list of public rooms, the first
+// game on a big sticker with the games to come below it, the acknowledgments and the sponsors,
+// folded, and footnotes, which offer a way to buy the author a cola and the way to send them
+// feedback, each with a drawing, and name the build's version. The author, linked to their page,
+// follows the line on how to play, or on an English phone the tagline, whose last line has room
+// for them there; the page holds both and shows one. On a wide screen the games stand on the
+// right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
@@ -104,7 +105,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
       <UiButton variant="quiet" size="small" @click="tipping = true">
         <span>
           <svg class="icon cola" viewBox="0 0 24 24" aria-hidden="true">
-            <path class="straw" d="M12 7.5 14 2h4" />
+            <path d="M12 7.5 14 2h4" />
             <path class="cup" d="M6.5 9.5h11l-1.4 11.6a1.6 1.6 0 0 1-1.6 1.4H9.5a1.6 1.6 0 0 1-1.6-1.4Z" />
             <path class="band" d="M7.2 14.2h9.6l-.4 3.3H7.6Z" />
             <rect class="lid" x="5" y="6.6" width="14" height="3" rx="1.5" />

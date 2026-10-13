@@ -56,7 +56,7 @@ const title = computed(() =>
 </script>
 
 <template>
-  <section :class="['fold', name]">
+  <div :class="['fold', name]">
     <h2>
       <button type="button" class="toggle" :aria-expanded="open" :aria-controls="panel" @click="toggle">
         {{ title }}
@@ -81,7 +81,7 @@ const title = computed(() =>
         </section>
       </template>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>

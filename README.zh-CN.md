@@ -91,7 +91,7 @@ npm run dev   # front end on http://localhost:5173, server on port 3000
 
 AI 助手读 `AGENTS.md`。
 
-建议被采纳、贡献了词库或参与早期测试的玩家，会署名或以匿名方式列在 [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) 和首页最下方的致谢名单里。赞助者列在 [SPONSORS.md](SPONSORS.md) 里，首页最下方也有。
+建议被采纳、贡献了词库或参与早期测试的玩家，会署名或以匿名方式列在 [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) 和首页的致谢名单里。赞助者列在 [SPONSORS.md](SPONSORS.md) 里，首页上也有。
 
 ### 贡献词库
 
@@ -105,4 +105,4 @@ Reviewer 2 免费、无广告。如果你喜欢，可以在首页底部用微信
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: 723566fc678e3ccb3636b3f1ec513e4e42ee6c1aeb9f49fab28ec0453d184a51 -->
+<!-- readme-sync: 42a27ced5ffc5ecff96401c7b6057144254bfd206e866053e579fdc26011c6ef -->
