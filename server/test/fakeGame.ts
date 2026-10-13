@@ -121,8 +121,9 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
           won: true,
           verdict: `pressed ${data.presses}`,
         })),
-  // How the game began, for its record: the words.
+  // How the game began, for its record: the words. How it came out: everyone won, by finishing.
   setup: (data) => ({ words: data.words }),
+  outcome: (data) => (data.withdrawn ? null : { winner: 'all', reason: 'finish' }),
   // A finished game, to watch again: what was pressed, and the words, which no one but the
   // players should read back from the database.
   replay: (data) => (data.withdrawn ? null : { presses: data.presses, words: data.words }),

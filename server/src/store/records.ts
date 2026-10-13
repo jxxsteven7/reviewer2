@@ -16,6 +16,7 @@ import {
 } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import { unsay, type GameEnding, type GameLogData } from '../core/gameLog';
+import type { GameOutcome } from '../core/game';
 import type { AgentPlay } from '../core/room';
 
 // What accounts keep of the games: a row for each game that a player with an account finished in
@@ -309,8 +310,9 @@ function known(title: Title): void {
 }
 
 // A game to keep (docs/architecture.md#game-records), once for each game, however often its end is
-// reported: how it ended and what kind of game it was (Room.record()), the replay of a game that
-// finished, as the game module gave it (GameModule.replay()), kept as JSON, or null; the log of
+// reported: how it ended, who won and how if it finished, and what kind of game it was
+// (Room.record()), the replay of a game that finished, as the game module gave it
+// (GameModule.replay()), kept as JSON, or null; the log of
 // everything that happened in it, or null when it grew too long to keep; the AI's own log of it,
 // or null when no AI played in it (agentLog.ts); and which player, by the ID they had in the room,
 // was which account.
@@ -318,6 +320,7 @@ export interface NewReplay {
   game: string;
   gameId: string;
   ending: GameEnding;
+  outcome?: GameOutcome | null;
   durationMs: number;
   replay: unknown;
   setup?: unknown;
@@ -348,9 +351,9 @@ export class ReplayStore {
     private readonly now: () => number = () => Date.now(),
   ) {
     this.#insert = db.prepare(
-      'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log, agent_log, ending, started_at, setup, ' +
-        'accounts, guests, agents, takeover, in_match, language, fields, version, rules, words) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log, agent_log, ending, winner, reason, ' +
+        'started_at, setup, accounts, guests, agents, takeover, in_match, language, fields, version, rules, words) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     // An account that is gone by now, deleted while the game was on, is left out.
     this.#player = db.prepare(
@@ -395,6 +398,8 @@ export class ReplayStore {
           json(game.log),
           json(game.agentLog),
           game.ending,
+          game.outcome?.winner ?? null,
+          game.outcome?.reason ?? null,
           new Date(endedAt - game.durationMs).toISOString(),
           json(game.setup),
           game.counts?.accounts ?? null,
@@ -468,16 +473,20 @@ export class AgentPlayStore {
         'coalesce(sum(clues), 0) AS clues, coalesce(sum(found), 0) AS found, ' +
         'coalesce(sum(reviewer2), 0) AS reviewer2 FROM agent_plays WHERE persona = ? AND takeover = 0',
     );
+    // A game counts once in a role too, with the AI in both groups' seats of it.
     this.#roles = db.prepare(
-      'SELECT role, count(*) AS games, coalesce(sum(won), 0) AS wins FROM agent_plays ' +
-        'WHERE persona = ? AND takeover = 0 GROUP BY role',
+      'SELECT role, count(DISTINCT game_id) AS games, count(DISTINCT game_id) FILTER (WHERE won = 1) AS wins ' +
+        'FROM agent_plays WHERE persona = ? AND takeover = 0 GROUP BY role',
     );
     // The earliest of the clues that found the most.
     this.#best = db.prepare(
       'SELECT best_word AS word, best_found AS found FROM agent_plays ' +
         'WHERE persona = ? AND takeover = 0 AND best_found IS NOT NULL ORDER BY best_found DESC, rowid LIMIT 1',
     );
-    this.#takeovers = db.prepare('SELECT count(*) AS count FROM agent_plays WHERE persona = ? AND takeover = 1');
+    // Games, not people: an AI may play for two people who are offline in one game.
+    this.#takeovers = db.prepare(
+      'SELECT count(DISTINCT game_id) AS count FROM agent_plays WHERE persona = ? AND takeover = 1',
+    );
     // The account's games with the AI in a seat, by whether it was in the account's group.
     this.#withYou = db.prepare(
       'SELECT ' +
@@ -489,7 +498,7 @@ export class AgentPlayStore {
         'ON ai.game_id = mine.game_id AND ai.persona = ? AND ai.takeover = 0 WHERE mine.account_id = ?',
     );
     this.#forYou = db.prepare(
-      'SELECT count(*) AS count FROM agent_plays WHERE persona = ? AND takeover = 1 AND account_id = ?',
+      'SELECT count(DISTINCT game_id) AS count FROM agent_plays WHERE persona = ? AND takeover = 1 AND account_id = ?',
     );
   }
 

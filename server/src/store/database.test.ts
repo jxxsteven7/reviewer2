@@ -682,6 +682,8 @@ describe('a database in DATA_DIR', () => {
         log: '{"v":1}',
         agent_log: null,
         ending: 'finished',
+        winner: null,
+        reason: null,
         started_at: null,
         setup: null,
         accounts: null,

@@ -28,8 +28,8 @@ import UiSheet from './UiSheet.vue';
 // with an account to report them to the operator (docs/architecture.md#public-rooms); and, for a
 // player with an account, their public page (docs/architecture.md#public-profiles), in a sheet, so
 // that the viewer stays in the room, as is the page of an AI player. The chair has one action on an
-// AI player: to remove it, at once, since it may be invited again (docs/architecture.md#ai-players). The server decides who may do
-// what; the menu only shows what the viewer may ask for.
+// AI player: to remove it, at once, since it may be invited again (docs/architecture.md#ai-players).
+// The server decides who may do what; the menu only shows what the viewer may ask for.
 const props = defineProps<{ player: PlayerView | null; room: RoomView }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();

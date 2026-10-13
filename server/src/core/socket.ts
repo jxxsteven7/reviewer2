@@ -339,6 +339,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         game: room.game.id,
         gameId,
         ending: kept.ending,
+        outcome: kept.outcome,
         durationMs: kept.durationMs,
         replay: room.replay(),
         setup: kept.setup,

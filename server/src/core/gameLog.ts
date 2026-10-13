@@ -1,8 +1,9 @@
-// The log of one game (docs/architecture.md#game-records): everything that changed it, in order, from its start to its end, with when it came and who did it. The room keeps one for
-// the game it is playing, and the record of the game keeps it, on the server alone, however the
-// game ended. The game says what of its messages the log keeps (GameModule.logged). What a player
-// said in their group's chat is kept apart in its entry, as `said`, so that it can be taken out
-// again when their account is deleted (unsay).
+// The log of one game (docs/architecture.md#game-records): everything that changed it, in order,
+// from its start to its end, with when it came and who did it. The room keeps one for the game it
+// is playing, and the record of the game keeps it, on the server alone, however the game ended. The
+// game says what of its messages the log keeps (GameModule.logged). What a player said in their
+// group's chat is kept apart in its entry, as `said`, so that it can be taken out again when their
+// account is deleted (unsay).
 
 // The largest log that is kept, as JSON, in bytes. A whole game makes a few kilobytes; a player who
 // sends message after message could make it grow without end, and every room holds its log in

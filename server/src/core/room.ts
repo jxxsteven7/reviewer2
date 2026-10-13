@@ -24,7 +24,7 @@ import {
 } from '@reviewer2/shared';
 import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
-import type { AgentFeats, GameContext, GameModule, PlayerResult, Viewer } from './game';
+import type { AgentFeats, GameContext, GameModule, GameOutcome, PlayerResult, Viewer } from './game';
 import { GameLog, type GameEnding, type GameLogData, type GameLogEvent } from './gameLog';
 import { newPlayerId } from './identity';
 import { Match, type Present } from './match';
@@ -163,6 +163,7 @@ export interface AgentPlay {
 // What the record keeps of a game that has come to an end (Room.record()).
 export interface GameRecordData {
   ending: GameEnding;
+  outcome: GameOutcome | null;
   durationMs: number;
   setup: unknown;
   log: GameLogData | null;
@@ -296,11 +297,13 @@ export class Room {
   }
 
   // How many times the account of a member, or of one who has left during the game, has won a
-  // title. A record that can't be read leaves the count out, as for a guest: the game goes on.
+  // title. A record that can't be read leaves the count out, as for a guest, and so does a game
+  // that an AI has played in, which awards no title (docs/architecture.md#ai-players): the game
+  // goes on.
   #titleCountOf(id: string, title: Title): number | null {
     const member = this.members.get(id);
     const accountId = member ? (member.account?.id ?? null) : (this.#gone.get(id)?.accountId ?? null);
-    if (accountId === null || !this.#titleCount) return null;
+    if (accountId === null || !this.#titleCount || this.#agentsPlayed) return null;
     try {
       return this.#titleCount(accountId, title);
     } catch {
@@ -559,10 +562,9 @@ export class Room {
 
   // A member's quick reaction, at most one every EMOTE_COOLDOWN_MS. It changes nothing in the room:
   // the socket layer passes it on, and neither a snapshot nor the log of the game carries it. One
-  // that comes too soon is refused
-  // with how long is left, so that the tab it came from, which may not be the one that sent the
-  // last, counts down the right wait. A clock that was set back counts as a wait that is over,
-  // rather than one that lasts until the clock has caught up.
+  // that comes too soon is refused with how long is left, so that the tab it came from, which may
+  // not be the one that sent the last, counts down the right wait. A clock that was set back counts
+  // as a wait that is over, rather than one that lasts until the clock has caught up.
   emote(id: string): Ack {
     const member = this.members.get(id);
     if (!member) return fail('not_member');
@@ -1135,7 +1137,8 @@ export class Room {
   // is on, and for a game with words of the chair's own, which stay with the room
   // (docs/games/keywords.md#custom-words).
   //
-  // - How it ended, how long it took, and how it began (GameModule.setup).
+  // - How it ended, and for a game that finished who won and how (GameModule.outcome), how long it
+  //   took, and how it began (GameModule.setup).
   // - Its log, or null when it grew too long to keep, and the AI's own log, if an AI played.
   // - Which of those who played in it had which account, by the player ID they had, those who left
   //   during the game included; a player who left and came back has had two. Guests have no
@@ -1167,6 +1170,7 @@ export class Room {
     const agentLog = this.#agentLog && !this.#agentLog.empty ? this.#agentLog.data() : null;
     return {
       ending: this.#ending,
+      outcome: this.#ending === 'finished' ? (this.game.outcome?.(this.data) ?? null) : null,
       durationMs: Math.max(0, Math.round(this.#now() - this.#log.startedAt)),
       setup: this.#setup,
       log: this.#log.data(),

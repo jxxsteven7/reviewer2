@@ -406,7 +406,8 @@ export const MIGRATIONS: readonly string[] = [
   // - replays become the record of every game, however it ended, with or without a replay to watch,
   //   which goes in `data` for a game that finished: SQLite can't make a column nullable, so the
   //   table is made again, with all it had. Each game gets what kind of game it was, for whoever
-  //   studies the games to tell them apart: how it ended (`ending`), when it began, how it began
+  //   studies the games to tell them apart: how it ended (`ending`), and who won and how
+  //   (`winner`, `reason`) when it finished, when it began, how it began
   //   (`setup`, as JSON), how many played in it with an account, as guests and as AI players,
   //   whether an AI played for someone who was offline, whether it was a game of a match, its
   //   language and fields, and the versions of the server, of the game's rules and of the word
@@ -431,6 +432,8 @@ export const MIGRATIONS: readonly string[] = [
     log TEXT,
     agent_log TEXT,
     ending TEXT NOT NULL CHECK (ending IN ('finished', 'withdrawn', 'abandoned', 'interrupted')),
+    winner TEXT,
+    reason TEXT,
     started_at TEXT,
     setup TEXT,
     accounts INTEGER,

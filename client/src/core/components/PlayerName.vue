@@ -7,11 +7,10 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // A player's avatar and name with their online status, the academic rank of a player with an
 // account, small beside the name, and marks for "you", the chair, an AI player, with the robot's
 // head that is its avatar too, and a player whose turns an AI plays while they are away
-// (docs/architecture.md#ai-players). For the chair, in a public
-// room for anyone who may report a player, and for an account that may ask another to be friends,
-// other players' names are buttons that open the player menu. The name, the rank and the marks
-// wrap under the name, never under the avatar, so that on a narrow screen they stay clear of the
-// sticker's round ends.
+// (docs/architecture.md#ai-players). For the chair, in a public room for anyone who may report a
+// player, and for an account that may ask another to be friends, other players' names are buttons
+// that open the player menu. The name, the rank and the marks wrap under the name, never under the
+// avatar, so that on a narrow screen they stay clear of the sticker's round ends.
 defineProps<{ player: PlayerView; me: boolean; chair: boolean; manageable: boolean }>();
 const emit = defineEmits<{ manage: [player: PlayerView] }>();
 const { t } = useI18n();

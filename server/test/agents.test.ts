@@ -426,6 +426,40 @@ describe('the AI players of a group', () => {
     expect(playerIn(ann.state as RoomView, catId)?.takenOver).toBeUndefined();
   });
 
+  test('keep what they are doing while the one person in the room reloads, and stop once nobody is there', async () => {
+    const { ann, bob, code } = await againstAi();
+    await until(() => agent.questions.some((request) => request.kind === 'clue'), 'the clue question');
+    const clueQuestions = () => agent.questions.filter((request) => request.kind === 'clue');
+    // Ann goes, and Bob, the one person left, reloads his page while the AI PI waits for its pace:
+    // it asks nothing new, and gives its clue when its pace allows.
+    await goes(ann, bob);
+    const bobId = bob.me;
+    const { token } = bob;
+    const roomId = bob.state?.roomId;
+    bob.close();
+    await until(() => roomOf(code).members.get(bobId)?.sockets.size === 0, 'Bob offline');
+    await settle();
+    const back = track(await TestClient.connect(server.url, { token, code, roomId }));
+    await back.waitFor((state) => state.me === bobId, 'Bob back');
+    await settle();
+    expect(clueQuestions()).toHaveLength(1);
+    // The AI student's question is held up by the agent. Everyone has been gone for as long as a
+    // takeover takes when the answer comes: it is dropped, and the student reveals nothing.
+    agent.hold();
+    server.advance(CLUE_PACE_MS);
+    await back.waitFor((state) => roomData(state).game?.clue?.word === 'zebra', 'the clue');
+    await until(() => guessQuestions().length === 1, 'the guess question');
+    back.close();
+    await until(() => roomOf(code).members.get(bobId)?.sockets.size === 0, 'Bob gone');
+    server.advance(TAKEOVER_MS);
+    agent.release();
+    await settle();
+    server.advance(GUESS_PACE_MS);
+    await settle();
+    expect(truth(code).guessesMade).toBe(0);
+    expect(guessQuestions()).toHaveLength(1);
+  });
+
   test('drop an answer that comes after the game has moved on', async () => {
     const { ann, code } = await againstAi();
     agent.hold();
@@ -654,6 +688,29 @@ describe('a game that an AI played in', () => {
       log: string;
       agentLog: string | null;
     }[];
+
+  test('counts no missed deadline of a PI with an account, since it awards no title', async () => {
+    const { chair: ann, code } = await chairRoom(true, { firstClueTime: 30, clueTime: 10, guessTime: 20 });
+    await until(() => ann.state?.agents === true, 'the agent');
+    const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
+    const cat = track(await joinRoom(server.url, code, 'Cat', { play: true }));
+    await seat(ann, 'red', 'captain');
+    await seat(bob, 'blue', 'captain');
+    await seat(cat, 'blue', 'guesser');
+    await expectOk(invite(ann, 'red', 'guesser'));
+    await start(ann);
+    // Whoever starts, Ann's time for her clue runs out at her group's first turn.
+    if (truth(code).team === 'blue') {
+      server.advance(30_000);
+      await ann.waitFor((state) => roomData(state).game?.team === 'red', 'the red turn');
+      server.advance(10_000);
+    } else {
+      server.advance(30_000);
+    }
+    await ann.waitFor((state) => roomData(state).game?.team === 'blue' && (roomData(state).game?.turn ?? 0) > 1);
+    const missed = board(ann).events.filter((event) => event.kind === 'missed' && event.player === ann.me);
+    expect(missed).toEqual([{ turn: expect.any(Number), kind: 'missed', team: 'red', player: ann.me }]);
+  });
 
   test('brings nobody points, a streak or a friend title, and is kept with the AI log beside its own', async () => {
     // The AI student reveals Reviewer 2 at once, which ends the game.

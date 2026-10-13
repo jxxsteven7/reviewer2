@@ -1182,7 +1182,7 @@
       "record": "对局：{games} · 获胜：{wins}",
       "roles": "当导师：{piGames} 局，赢 {piWins} 局 · 当学生：{studentGames} 局，赢 {studentWins} 局",
       "perClue": "每条线索翻对：{average} 张",
-      "best": "最得意的线索：「{word}」，翻对 {found} 张",
+      "best": "最得意的线索：「{word}」，翻对 {found} 张 | 最得意的线索：「{word}」，翻对 {found} 张",
       "reviewer2": "翻到二号审稿人：{count} 次",
       "takeovers": "替掉线的人托管：{count} 局",
       "together": "同组：赢 {won} 局，输 {lost} 局",
