@@ -112,13 +112,16 @@ describe('the table of a match', () => {
     const player = mount(MatchTable, { props: { room: room({ standings }, { me: 'bob' }) }, global: global() });
     expect(player.text()).not.toContain('End the match');
     const chair = mount(MatchTable, { props: { room: room({ standings }) }, global: global() });
-    await chair.get('.end').trigger('click');
+    await chair.get('.end button').trigger('click');
     const confirm = chair.findAll('button').find((button) => button.classes().includes('danger'));
     await confirm?.trigger('click');
     await flushPromises();
     expect(act).toHaveBeenCalledWith('room:matchEnd', { matchId: 'm1' });
     const over = mount(MatchTable, { props: { room: room({ standings, status: 'over' }) }, global: global() });
     expect(over.text()).not.toContain('End the match');
+    // Where the game puts the button elsewhere, the table has none.
+    const elsewhere = mount(MatchTable, { props: { room: room({ standings }), endable: false }, global: global() });
+    expect(elsewhere.text()).not.toContain('End the match');
   });
 });
 

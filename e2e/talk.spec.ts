@@ -138,3 +138,34 @@ test('students write to their group, the PI only reads, and nobody else sees the
   }
   for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
 });
+
+test("a student's half-written line outlives the sheet's closing and the page's change of width", async ({
+  browser,
+}) => {
+  const table = await seatTable(browser, 'en');
+  const student = table.guessers.red;
+  const input = () => student.getByLabel(text.game.chat.input);
+  await chatOf(student);
+  await input().fill('Second row, on the');
+  if (isPhone(student)) {
+    // The sheet closes, for a look at the board, and opens again.
+    await closeSheet(student);
+    await expect(input()).toHaveCount(0);
+    await chatOf(student);
+    await expect(input()).toHaveValue('Second row, on the');
+    return;
+  }
+  // The page changes width, as a tablet turns: the panel gives way to the button and the sheet, and
+  // the line is still there, and there again once the page is wide. A desktop browser's viewport is
+  // free to change like this; a phone's is its device's.
+  const size = student.viewportSize();
+  if (!size) throw new Error('the page has no viewport');
+  await student.setViewportSize({ width: 390, height: size.height });
+  await expect(student.locator('.open-chat')).toBeVisible();
+  await chatOf(student);
+  await expect(input()).toHaveValue('Second row, on the');
+  await student.setViewportSize(size);
+  await expect(student.locator('.chat-panel')).toBeVisible();
+  await chatOf(student);
+  await expect(input()).toHaveValue('Second row, on the');
+});

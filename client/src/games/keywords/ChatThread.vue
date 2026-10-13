@@ -4,15 +4,17 @@ import { computed, nextTick, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
 import UiButton from '../../core/components/UiButton.vue';
-import { act } from '../../core/socket';
 import { byTurn } from './chat';
 import { useKeywords } from './useKeywords';
 
 // The group's messages by turn, and the line a student writes under them. GroupChat.vue shows
-// this beside the board, in a panel that is open all the time, or on a phone in a sheet. Students
-// write one line at a time; PIs read but can't write, and after the game nobody can. `open` says
-// whether the viewer sees the thread now: always in the panel, in the sheet while it is open.
-const props = defineProps<{ room: RoomView; open: boolean }>();
+// this beside the board, in a panel that is open all the time, or on a phone in a sheet, which
+// throws the thread away as it closes: so the line, `draft`, and the sending are the parent's,
+// and the thread only shows and edits the one and asks for the other. Students write one line at
+// a time; PIs read but can't write, and after the game nobody can.
+const props = defineProps<{ room: RoomView; sending: boolean }>();
+const draft = defineModel<string>('draft', { required: true });
+const emit = defineEmits<{ send: [] }>();
 const { t } = useI18n();
 const { data, mySeat } = useKeywords(toRef(props, 'room'));
 
@@ -21,19 +23,17 @@ const chat = computed(() => game.value?.chat ?? []);
 const turns = computed(() => byTurn(chat.value));
 const canWrite = computed(() => mySeat.value?.role === 'guesser' && game.value?.phase !== 'over');
 
-// The list shows the newest message when the thread comes into view, and follows new ones only
-// while it is at its end, so that a player reading older messages isn't pulled away from them;
-// the viewer's own message always comes into view.
+// The list shows the newest message as the thread comes into view, which is when it is mounted,
+// and follows new ones only while it is at its end, so that a player reading older messages
+// isn't pulled away from them; the viewer's own message always comes into view.
 const NEAR_END = 40;
 const list = ref<HTMLElement | null>(null);
 watch(
-  [() => props.open, () => chat.value.at(-1)?.id ?? 0],
-  async ([isOpen], [wasOpen]) => {
-    if (!isOpen) return;
+  () => chat.value.at(-1)?.id ?? 0,
+  async () => {
     // Measured before the new message is rendered: was the list at its end until now?
     const before = list.value;
     const follow =
-      !wasOpen ||
       !before ||
       before.scrollHeight - before.scrollTop - before.clientHeight <= NEAR_END ||
       chat.value.at(-1)?.player === props.room.me;
@@ -51,24 +51,13 @@ function nameOf(playerId: string): string {
 // The player who wrote a message, for the avatar beside it, or none for someone who has left.
 const playerOf = (playerId: string) => props.room.players.find((player) => player.id === playerId);
 
-const text = ref('');
 const input = ref<HTMLInputElement | null>(null);
-const sending = ref(false);
-const check = computed(() => checkChat(text.value));
+const check = computed(() => checkChat(draft.value));
 const length = computed(() => textLength(check.value.text));
 const tooLong = computed(() => check.value.problem === 'chat_too_long');
 
-async function say() {
-  if (check.value.problem || sending.value || !game.value) return;
-  // The input is cleared before the answer comes, so that the next message, which a player on
-  // a slow connection may already be typing, isn't wiped out with the sent one. A message the
-  // server refuses comes back into the input, in front of whatever was typed since.
-  const sent = text.value;
-  text.value = '';
-  sending.value = true;
-  const reply = await act('keywords:say', { gameId: game.value.gameId, text: sent });
-  sending.value = false;
-  if (!reply.ok) text.value = text.value ? `${sent} ${text.value}` : sent;
+function send() {
+  emit('send');
   // Tapping "Send" moves the focus to the button, which closes a phone's keyboard. The next
   // message is likely to follow, so the input gets the focus back.
   input.value?.focus();
@@ -98,13 +87,13 @@ async function say() {
     </ol>
     <p v-else class="empty">{{ t('game.chat.empty') }}</p>
 
-    <form v-if="canWrite" class="compose" @submit.prevent="say">
+    <form v-if="canWrite" class="compose" @submit.prevent="send">
       <label class="label" for="chat-text">{{ t('game.chat.input') }}</label>
       <div class="row">
         <input
           id="chat-text"
           ref="input"
-          v-model="text"
+          v-model="draft"
           :maxlength="MAX_CHAT_INPUT"
           autocomplete="off"
           enterkeyhint="send"

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { hasHan, type CardView } from '@reviewer2/shared';
+import { hasHan, type CardView, type Language } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
-import { formatList } from '../../core/i18n';
+import { formatList, HTML_LANG } from '../../core/i18n';
 import { hyphenate } from './hyphenate';
 import type { Chooser } from './useKeywords';
 
@@ -45,6 +45,8 @@ const state = computed(() => {
 
 const label = computed(() => (props.card.color ? t(`game.card.${props.card.color}`) : ''));
 const tag = computed(() => (props.card.color ? t(`game.cardTag.${props.card.color}`) : ''));
+// The label is in the interface's language, whatever the words' is.
+const uiLanguage = computed(() => locale.value as Language);
 const chosenBy = computed(() =>
   formatList(
     locale.value,
@@ -84,7 +86,7 @@ const ariaLabel = computed(() =>
     @click="selectable && emit('select', index)"
   >
     <span class="word">{{ hyphenate(card.word) }}</span>
-    <span v-if="card.color" class="tag" aria-hidden="true">{{ tag }}</span>
+    <span v-if="card.color" class="tag" :lang="HTML_LANG[uiLanguage]" aria-hidden="true">{{ tag }}</span>
     <span v-if="card.revealed && card.color === 'reviewer2'" class="stamp" aria-hidden="true">{{
       t('game.stamp')
     }}</span>
@@ -214,8 +216,9 @@ const ariaLabel = computed(() =>
 }
 
 /* The English labels, in capitals, are set a little smaller and tighter, to the size of the
-   Chinese ones. */
-.card:lang(en) .tag {
+   Chinese ones. The label's own lang is the interface's, which the board's, the words', may
+   differ from in a replay. */
+.tag:lang(en) {
   font-size: 9px;
   letter-spacing: 0.02em;
 }

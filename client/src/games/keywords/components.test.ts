@@ -158,22 +158,23 @@ describe('GroupChat', () => {
     const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
     await wrapper.get('button').trigger('click');
     expect(wrapper.text()).toContain('No messages yet.');
-    const input = wrapper.get('input');
+    // The teleport stub renders the sheet anew whenever the line changes, so the input and the
+    // button are looked up again each time.
+    const input = () => wrapper.get('input');
     const sendButton = () => wrapper.get('form button[type="submit"]');
 
     expect(sendButton().attributes('disabled')).toBeDefined();
-    await input.setValue('x'.repeat(201));
+    await input().setValue('x'.repeat(201));
     expect(sendButton().attributes('disabled')).toBeDefined();
     expect(wrapper.text()).toContain('That message is too long.');
 
-    await input.setValue('  the second row  ');
+    await input().setValue('  the second row  ');
     expect(sendButton().attributes('disabled')).toBeUndefined();
     expect(wrapper.get('.hint').text()).toBe('14/200');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(send).toHaveBeenCalledWith('keywords:say', { gameId: 'g1', text: '  the second row  ' });
-    // The teleport stub renders the sheet anew, so the input is looked up again.
-    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('');
+    expect((input().element as HTMLInputElement).value).toBe('');
     expect(wrapper.get('.hint').text()).toBe('0/200');
   });
 
@@ -224,6 +225,23 @@ describe('GroupChat', () => {
     answers[1]?.({ ok: false, error: 'offline' });
     await flushPromises();
     expect(value()).toBe('second third');
+  });
+
+  test('keeps a half-written line, and brings back a refused one, while the sheet is closed', async () => {
+    const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
+    send.mockImplementationOnce(() => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve)));
+    const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
+    await wrapper.get('button').trigger('click');
+    await wrapper.get('input').setValue('first');
+    await wrapper.get('form').trigger('submit');
+    await wrapper.get('input').setValue('half a');
+    // The sheet closes, on the board a student wants a look at, and takes the thread with it.
+    await wrapper.get('.close').trigger('click');
+    expect(wrapper.find('input').exists()).toBe(false);
+    answers[0]?.({ ok: false, error: 'offline' });
+    await flushPromises();
+    await wrapper.get('button').trigger('click');
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('first half a');
   });
 
   test('lets a PI read the chat but not write in it', async () => {
@@ -424,9 +442,13 @@ describe('KeywordsCard', () => {
         selected: false,
         choosers: [],
       },
+      // The board's lang is the words', as in a replay of a Chinese game seen in English.
+      attrs: { lang: 'zh-CN' },
       global: global(),
     });
     expect(wrapper.get('.tag').text()).toBe('N/A');
+    // The label's own lang is the interface's, which sets its size.
+    expect(wrapper.get('.tag').attributes('lang')).toBe('en');
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, Irrelevant');
   });
 
@@ -1144,14 +1166,19 @@ describe('KeywordsGame', () => {
       game: 2,
       standings: [line('ann', 4, 1), line('bob', 1, 2), line('dan', -1, 3), line('eve', 0, null)],
     };
-    const fold = (me: string) =>
-      mount(KeywordsGame, { props: { room: { ...view, me, match } }, global: global() }).get('.match-fold summary');
+    const game = (me: string) => mount(KeywordsGame, { props: { room: { ...view, me, match } }, global: global() });
+    const fold = (me: string) => game(me).get('.match-fold summary');
     // One point is "1 point", and so is minus one.
     expect(fold('bob').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 2 \u00b7 1 point');
     expect(fold('dan').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 3 \u00b7 \u22121 point');
     expect(fold('ann').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 1 \u00b7 4 points');
     // Someone without a scored game yet sees the progress alone.
     expect(fold('eve').text()).toBe('Match progress \u00b7 Game 2 of 3');
+    // The chair's button to end the match stands among the tools, in sight, not in the fold.
+    const chair = game('ann');
+    expect(chair.find('.match-fold .end-match').exists()).toBe(false);
+    expect(chair.get('.tools .end-match').text()).toBe('End the match');
+    expect(game('bob').find('.end-match').exists()).toBe(false);
   });
 
   test('renders the group chat once, and keeps it after the game', async () => {

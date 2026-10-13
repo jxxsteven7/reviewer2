@@ -9,6 +9,7 @@ import {
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import EmoteButton from '../../core/components/EmoteButton.vue';
+import EndMatchButton from '../../core/components/EndMatchButton.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
 import StreakNotices from '../../core/components/StreakNotices.vue';
@@ -47,7 +48,8 @@ import { useKeywords, type Chooser } from './useKeywords';
 // extension, where the room allows one. Once the game has ended, the review opens the replay.
 //
 // In a match, its table stands under the board while the game is on, folded to a line with the
-// progress and the viewer's place, since it is seldom looked at then. Once the game has ended, the
+// progress and the viewer's place, since it is seldom looked at then; the chair's button to end
+// the match stands among the tools instead. Once the game has ended, the
 // table follows the letters, with where each player's points came from, or the final ranking does
 // when the match is over. The streaks that the game brought the players to come right after the
 // letters, before the match's table; their notices are on the page from the start, out of sight,
@@ -100,6 +102,10 @@ const panel = ref<'groups' | 'log' | null>(null);
 watch(wide, () => {
   panel.value = null;
 });
+// The line a student is writing to their group, kept by the page: the chat's sheet throws its
+// thread away as it closes, and the panel beside the board gives way to the button under it as
+// the page narrows, so neither can hold it.
+const draft = ref('');
 
 const game = computed(() => data.value.game as KeywordsView);
 const moment = computed(() => ({ gameId: game.value.gameId, turn: game.value.turn }));
@@ -299,7 +305,7 @@ const chosenByOthers = computed(() =>
               </p>
               <p v-if="chosenByOthers" class="choices">{{ chosenByOthers }}</p>
             </div>
-            <GroupChat v-if="!wide" :room="room" />
+            <GroupChat v-if="!wide" v-model:draft="draft" :room="room" />
           </div>
           <CluePanel
             v-if="canClue"
@@ -325,7 +331,7 @@ const chosenByOthers = computed(() =>
         <p v-if="!game.result" class="note">{{ t('game.keyNote') }}</p>
         <details v-if="match && !game.result" class="match-fold">
           <summary>{{ matchSummary }}</summary>
-          <MatchTable :room="room">
+          <MatchTable :room="room" :endable="false">
             <p class="scoring">{{ t('game.scoring') }}</p>
           </MatchTable>
         </details>
@@ -333,7 +339,7 @@ const chosenByOthers = computed(() =>
 
       <aside class="side">
         <div class="column">
-          <GroupChat v-if="wide" :room="room" panel />
+          <GroupChat v-if="wide" v-model:draft="draft" :room="room" panel />
           <GameRosters v-if="wide" :room="room" />
         </div>
         <div class="column">
@@ -349,6 +355,7 @@ const chosenByOthers = computed(() =>
             <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
               {{ t('game.end') }}
             </UiButton>
+            <EndMatchButton v-if="isChair && !game.result && match?.status === 'on'" :match-id="match.id" />
           </div>
         </div>
       </aside>
@@ -422,9 +429,9 @@ const chosenByOthers = computed(() =>
   scroll-padding-top: calc(var(--banner-height) + 3rem);
 }
 
-/* The bar under the board: the seat line on one row, the chat and the panel buttons on the next,
-   and then what the viewer can do. The rows are drawn from the elements as they are, through
-   display: contents. */
+/* The bar under the board: the seat line on one row, on a phone the chat and the panel buttons on
+   the next, and then what the viewer can do. The rows are drawn from the elements as they are,
+   through display: contents. */
 .actions {
   display: grid;
   grid-template-areas:
@@ -527,13 +534,18 @@ const chosenByOthers = computed(() =>
   display: none;
 }
 
+/* The triangle is for the eye alone: its alternative text is empty, so that a screen reader
+   doesn't read it out as part of the line. The first declaration of each pair is for the browsers
+   that don't know the form with the alternative text. */
 .match-fold summary::before {
   content: '\25B8';
+  content: '\25B8' / '';
   font-size: var(--text-xs);
 }
 
 .match-fold[open] summary::before {
   content: '\25BE';
+  content: '\25BE' / '';
 }
 
 .match-fold > :deep(.match-table) {
@@ -596,6 +608,15 @@ const chosenByOthers = computed(() =>
 
   .main {
     grid-area: main;
+  }
+
+  /* Under the board, no row for the buttons: the chat is a panel beside it, and the groups and
+     the clue log are columns. */
+  .actions {
+    grid-template-areas:
+      'me me me .'
+      'panel panel panel panel'
+      'extend extend extend extend';
   }
 
   .side {

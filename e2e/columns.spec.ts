@@ -47,6 +47,15 @@ async function expectColumnsFromTheTop(page: Page, left: string[], right: string
   }
 }
 
+// The bar under the board has no empty row where a phone has its buttons: what the viewer can do
+// follows the seat line within one gap of the bar's grid.
+async function expectBarWithoutEmptyRow(page: Page): Promise<void> {
+  const me = await box(page.locator('.actions .me'));
+  const next = await box(page.locator('.actions .status, .actions .guess-bar, .actions .clue-panel').first());
+  const gap = await page.locator('.actions').evaluate((bar) => parseFloat(getComputedStyle(bar).rowGap));
+  expect(next.top - me.bottom, 'what the viewer can do follows the seat line').toBeLessThanOrEqual(gap + 1);
+}
+
 test('the chat, the groups, the clue log and the tools stand at the top of their columns, however long the log', async ({
   browser,
 }, testInfo) => {
@@ -57,8 +66,10 @@ test('the chat, the groups, the clue log and the tools stand at the top of their
   for (let turn = 1; turn <= 4; turn += 1) await playTurn(table, turn);
   await expect(student.locator('.clue-log li')).toHaveCount(4);
   await expectColumnsFromTheTop(student, ['.chat-panel', '.rosters'], ['.clue-log', '.tools']);
+  await expectBarWithoutEmptyRow(student);
   // A spectator has no chat: the groups stand at the top.
   await expectColumnsFromTheTop(spectator, ['.rosters'], ['.clue-log', '.tools']);
+  await expectBarWithoutEmptyRow(spectator);
 
   // At the end, the log is longer than the groups by far, and nothing moves down.
   await playToTheEnd(table, 4);
@@ -84,11 +95,18 @@ test("in a match, the table folds under the board with each line on one line, an
   // the columns stand at the top beside it.
   const student = table.guessers.red;
   const fold = student.locator('.match-fold');
+  const progress = interpolate(text.match.progress, { game: '1', games: '3' });
   await expect(fold.locator('summary')).toContainText(text.match.progressTitle);
-  await expect(fold.locator('summary')).toContainText(interpolate(text.match.progress, { game: '1', games: '3' }));
+  await expect(fold.locator('summary')).toContainText(progress);
+  // The triangle before the line is for the eye alone: a screen reader hears the line.
+  await expect(fold.locator('summary')).toHaveAccessibleName(`${text.match.progressTitle} · ${progress}`);
   await expect(fold.locator('.match-table')).toBeHidden();
   expect((await box(fold)).top).toBeGreaterThanOrEqual((await box(student.locator('.actions'))).bottom);
   await expectColumnsFromTheTop(student, ['.chat-panel', '.rosters'], ['.clue-log', '.tools']);
+  // The chair's button to end the match stays in sight among the tools, not in the fold.
+  const chair = table.captains.red;
+  await expect(chair.locator('.tools').getByRole('button', { name: text.match.end })).toBeVisible();
+  await expect(chair.locator('.match-fold .end-match')).toHaveCount(0);
 
   // Opened, every line keeps its avatar, name and marks on one line, with the numbers beside them.
   await fold.locator('summary').click();
@@ -111,7 +129,6 @@ test("in a match, the table folds under the board with each line on one line, an
 
   // Between the games, the chair's desk, with the start button, stands above the rules.
   await playToTheEnd(table, 4);
-  const chair = table.captains.red;
   await chair.getByRole('button', { name: text.match.next }).click();
   await expect(chair.locator('.lobby .desk')).toBeVisible();
   await expect(chair.locator('.lobby .rules')).toBeVisible();
