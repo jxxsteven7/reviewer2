@@ -1668,6 +1668,1070 @@
       "zh": "成瘾",
       "en": "Addiction",
       "forms": { "en": ["addict", "addicted", "addictive"] }
+    },
+    {
+      "id": "esophagus",
+      "zh": "食管",
+      "en": "Esophagus",
+      "forms": { "en": ["oesophagus", "esophageal"] }
+    },
+    {
+      "id": "trachea",
+      "zh": "气管",
+      "en": "Trachea",
+      "forms": { "en": ["tracheal"] }
+    },
+    {
+      "id": "alveolus",
+      "zh": "肺泡",
+      "en": "Alveolus",
+      "forms": { "en": ["alveoli", "alveolar"] }
+    },
+    {
+      "id": "diaphragm",
+      "zh": "膈肌",
+      "en": "Diaphragm"
+    },
+    {
+      "id": "gallbladder",
+      "zh": "胆囊",
+      "en": "Gallbladder"
+    },
+    {
+      "id": "duodenum",
+      "zh": "十二指肠",
+      "en": "Duodenum",
+      "forms": { "en": ["duodenal"] }
+    },
+    {
+      "id": "prostate",
+      "zh": "前列腺",
+      "en": "Prostate"
+    },
+    {
+      "id": "uterus",
+      "zh": "子宫",
+      "en": "Uterus",
+      "forms": { "en": ["uterine"] }
+    },
+    {
+      "id": "ovary",
+      "zh": "卵巢",
+      "en": "Ovary",
+      "forms": { "en": ["ovarian", "ovaries"] }
+    },
+    {
+      "id": "thymus",
+      "zh": "胸腺",
+      "en": "Thymus"
+    },
+    {
+      "id": "adrenal-gland",
+      "zh": "肾上腺",
+      "en": "Adrenal gland"
+    },
+    {
+      "id": "aorta",
+      "zh": "主动脉",
+      "en": "Aorta",
+      "forms": { "en": ["aortic"] }
+    },
+    {
+      "id": "ventricle",
+      "zh": "心室",
+      "en": "Ventricle",
+      "forms": { "en": ["ventricular"] }
+    },
+    {
+      "id": "mitral-valve",
+      "zh": "二尖瓣",
+      "en": "Mitral valve"
+    },
+    {
+      "id": "tendon",
+      "zh": "肌腱",
+      "en": "Tendon"
+    },
+    {
+      "id": "fascia",
+      "zh": "筋膜",
+      "en": "Fascia"
+    },
+    {
+      "id": "femur",
+      "zh": "股骨",
+      "en": "Femur"
+    },
+    {
+      "id": "pelvis",
+      "zh": "骨盆",
+      "en": "Pelvis",
+      "forms": { "en": ["pelvic"] }
+    },
+    {
+      "id": "sternum",
+      "zh": "胸骨",
+      "en": "Sternum"
+    },
+    {
+      "id": "vertebra",
+      "zh": "椎骨",
+      "en": "Vertebra",
+      "forms": { "en": ["vertebrae"] }
+    },
+    {
+      "id": "larynx",
+      "zh": "喉",
+      "en": "Larynx",
+      "forms": { "en": ["laryngeal"] }
+    },
+    {
+      "id": "pharynx",
+      "zh": "咽",
+      "en": "Pharynx"
+    },
+    {
+      "id": "sinus",
+      "zh": "鼻窦",
+      "en": "Sinus"
+    },
+    {
+      "id": "eardrum",
+      "zh": "鼓膜",
+      "en": "Eardrum"
+    },
+    {
+      "id": "iris",
+      "zh": "虹膜",
+      "en": "Iris"
+    },
+    {
+      "id": "molar",
+      "zh": "磨牙",
+      "en": "Molar"
+    },
+    {
+      "id": "bile",
+      "zh": "胆汁",
+      "en": "Bile"
+    },
+    {
+      "id": "saliva",
+      "zh": "唾液",
+      "en": "Saliva"
+    },
+    {
+      "id": "mucus",
+      "zh": "黏液",
+      "en": "Mucus"
+    },
+    {
+      "id": "phlegm",
+      "zh": "痰",
+      "en": "Phlegm"
+    },
+    {
+      "id": "red-blood-cell",
+      "zh": "红细胞",
+      "en": "Red blood cell"
+    },
+    {
+      "id": "leukocyte",
+      "zh": "白细胞",
+      "en": "Leukocyte",
+      "forms": { "en": ["leucocyte"] }
+    },
+    {
+      "id": "neutrophil",
+      "zh": "中性粒细胞",
+      "en": "Neutrophil"
+    },
+    {
+      "id": "amniotic-fluid",
+      "zh": "羊水",
+      "en": "Amniotic fluid"
+    },
+    {
+      "id": "vocal-cord",
+      "zh": "声带",
+      "en": "Vocal cord"
+    },
+    {
+      "id": "coagulation",
+      "zh": "凝血",
+      "en": "Coagulation"
+    },
+    {
+      "id": "ovulation",
+      "zh": "排卵",
+      "en": "Ovulation"
+    },
+    {
+      "id": "menstruation",
+      "zh": "月经",
+      "en": "Menstruation",
+      "forms": { "en": ["menstrual"] }
+    },
+    {
+      "id": "hypoxia",
+      "zh": "缺氧",
+      "en": "Hypoxia",
+      "forms": { "en": ["hypoxic"] }
+    },
+    {
+      "id": "ischemia",
+      "zh": "缺血",
+      "en": "Ischemia",
+      "forms": { "en": ["ischaemia", "ischemic"] }
+    },
+    {
+      "id": "hemorrhage",
+      "zh": "出血",
+      "en": "Hemorrhage",
+      "forms": { "en": ["haemorrhage"] }
+    },
+    {
+      "id": "necrosis",
+      "zh": "坏死",
+      "en": "Necrosis",
+      "forms": { "en": ["necrotic"] }
+    },
+    {
+      "id": "fibrosis",
+      "zh": "纤维化",
+      "en": "Fibrosis"
+    },
+    {
+      "id": "hyperplasia",
+      "zh": "增生",
+      "en": "Hyperplasia"
+    },
+    {
+      "id": "atrophy",
+      "zh": "萎缩",
+      "en": "Atrophy"
+    },
+    {
+      "id": "calcification",
+      "zh": "钙化",
+      "en": "Calcification"
+    },
+    {
+      "id": "abscess",
+      "zh": "脓肿",
+      "en": "Abscess"
+    },
+    {
+      "id": "benign",
+      "zh": "良性",
+      "en": "Benign"
+    },
+    {
+      "id": "malignant",
+      "zh": "恶性",
+      "en": "Malignant",
+      "forms": { "en": ["malignancy"] }
+    },
+    {
+      "id": "embolism",
+      "zh": "栓塞",
+      "en": "Embolism"
+    },
+    {
+      "id": "stenosis",
+      "zh": "狭窄",
+      "en": "Stenosis"
+    },
+    {
+      "id": "polyp",
+      "zh": "息肉",
+      "en": "Polyp"
+    },
+    {
+      "id": "angina",
+      "zh": "心绞痛",
+      "en": "Angina"
+    },
+    {
+      "id": "bradycardia",
+      "zh": "心动过缓",
+      "en": "Bradycardia"
+    },
+    {
+      "id": "tachycardia",
+      "zh": "心动过速",
+      "en": "Tachycardia"
+    },
+    {
+      "id": "palpitations",
+      "zh": "心悸",
+      "en": "Palpitations"
+    },
+    {
+      "id": "copd",
+      "zh": "慢阻肺",
+      "en": "COPD",
+      "forms": { "zh": ["慢性阻塞性肺疾病"], "en": ["chronic obstructive pulmonary disease"] }
+    },
+    {
+      "id": "pneumothorax",
+      "zh": "气胸",
+      "en": "Pneumothorax"
+    },
+    {
+      "id": "rhinitis",
+      "zh": "鼻炎",
+      "en": "Rhinitis"
+    },
+    {
+      "id": "otitis-media",
+      "zh": "中耳炎",
+      "en": "Otitis media"
+    },
+    {
+      "id": "conjunctivitis",
+      "zh": "结膜炎",
+      "en": "Conjunctivitis"
+    },
+    {
+      "id": "meningitis",
+      "zh": "脑膜炎",
+      "en": "Meningitis"
+    },
+    {
+      "id": "gastritis",
+      "zh": "胃炎",
+      "en": "Gastritis"
+    },
+    {
+      "id": "diarrhea",
+      "zh": "腹泻",
+      "en": "Diarrhea",
+      "forms": { "en": ["diarrhoea"] }
+    },
+    {
+      "id": "constipation",
+      "zh": "便秘",
+      "en": "Constipation",
+      "forms": { "en": ["constipated"] }
+    },
+    {
+      "id": "nausea",
+      "zh": "恶心",
+      "en": "Nausea",
+      "forms": { "en": ["nauseous"] }
+    },
+    {
+      "id": "gallstone",
+      "zh": "胆结石",
+      "en": "Gallstone"
+    },
+    {
+      "id": "cirrhosis",
+      "zh": "肝硬化",
+      "en": "Cirrhosis"
+    },
+    {
+      "id": "crohns",
+      "zh": "克罗恩病",
+      "en": "Crohn's"
+    },
+    {
+      "id": "uremia",
+      "zh": "尿毒症",
+      "en": "Uremia",
+      "forms": { "en": ["uraemia"] }
+    },
+    {
+      "id": "hemophilia",
+      "zh": "血友病",
+      "en": "Hemophilia",
+      "forms": { "en": ["haemophilia"] }
+    },
+    {
+      "id": "lymphoma",
+      "zh": "淋巴瘤",
+      "en": "Lymphoma"
+    },
+    {
+      "id": "melanoma",
+      "zh": "黑色素瘤",
+      "en": "Melanoma"
+    },
+    {
+      "id": "lupus",
+      "zh": "红斑狼疮",
+      "en": "Lupus"
+    },
+    {
+      "id": "psoriasis",
+      "zh": "银屑病",
+      "en": "Psoriasis"
+    },
+    {
+      "id": "hives",
+      "zh": "荨麻疹",
+      "en": "Hives"
+    },
+    {
+      "id": "rash",
+      "zh": "皮疹",
+      "en": "Rash"
+    },
+    {
+      "id": "athletes-foot",
+      "zh": "足癣",
+      "en": "Athlete's foot"
+    },
+    {
+      "id": "beriberi",
+      "zh": "脚气病",
+      "en": "Beriberi"
+    },
+    {
+      "id": "rickets",
+      "zh": "佝偻病",
+      "en": "Rickets"
+    },
+    {
+      "id": "strabismus",
+      "zh": "斜视",
+      "en": "Strabismus"
+    },
+    {
+      "id": "hyperopia",
+      "zh": "远视",
+      "en": "Hyperopia",
+      "forms": { "en": ["hypermetropia", "hyperopic"] }
+    },
+    {
+      "id": "caries",
+      "zh": "龋齿",
+      "en": "Caries"
+    },
+    {
+      "id": "herniated-disc",
+      "zh": "椎间盘突出",
+      "en": "Herniated disc"
+    },
+    {
+      "id": "vertigo",
+      "zh": "眩晕",
+      "en": "Vertigo"
+    },
+    {
+      "id": "tremor",
+      "zh": "震颤",
+      "en": "Tremor"
+    },
+    {
+      "id": "paralysis",
+      "zh": "瘫痪",
+      "en": "Paralysis",
+      "forms": { "en": ["paralyzed", "paralysed"] }
+    },
+    {
+      "id": "als",
+      "zh": "渐冻症",
+      "en": "ALS",
+      "forms": { "zh": ["肌萎缩侧索硬化"], "en": ["amyotrophic lateral sclerosis"] }
+    },
+    {
+      "id": "narcolepsy",
+      "zh": "发作性睡病",
+      "en": "Narcolepsy"
+    },
+    {
+      "id": "syncope",
+      "zh": "晕厥",
+      "en": "Syncope"
+    },
+    {
+      "id": "chills",
+      "zh": "寒战",
+      "en": "Chills"
+    },
+    {
+      "id": "dyspnea",
+      "zh": "呼吸困难",
+      "en": "Dyspnea",
+      "forms": { "en": ["dyspnoea"] }
+    },
+    {
+      "id": "bedsore",
+      "zh": "压疮",
+      "en": "Bedsore"
+    },
+    {
+      "id": "coronavirus",
+      "zh": "冠状病毒",
+      "en": "Coronavirus"
+    },
+    {
+      "id": "norovirus",
+      "zh": "诺如病毒",
+      "en": "Norovirus"
+    },
+    {
+      "id": "hpv",
+      "zh": "HPV",
+      "en": "HPV",
+      "forms": { "zh": ["人乳头瘤病毒"], "en": ["human papillomavirus"] }
+    },
+    {
+      "id": "rubella",
+      "zh": "风疹",
+      "en": "Rubella"
+    },
+    {
+      "id": "diphtheria",
+      "zh": "白喉",
+      "en": "Diphtheria"
+    },
+    {
+      "id": "whooping-cough",
+      "zh": "百日咳",
+      "en": "Whooping cough"
+    },
+    {
+      "id": "staphylococcus",
+      "zh": "葡萄球菌",
+      "en": "Staphylococcus"
+    },
+    {
+      "id": "h-pylori",
+      "zh": "幽门螺杆菌",
+      "en": "H. pylori",
+      "forms": { "en": ["Helicobacter pylori"] }
+    },
+    {
+      "id": "agonist",
+      "zh": "激动剂",
+      "en": "Agonist"
+    },
+    {
+      "id": "antagonist",
+      "zh": "拮抗剂",
+      "en": "Antagonist"
+    },
+    {
+      "id": "adjuvant",
+      "zh": "佐剂",
+      "en": "Adjuvant"
+    },
+    {
+      "id": "opioid",
+      "zh": "阿片类",
+      "en": "Opioid"
+    },
+    {
+      "id": "antiviral",
+      "zh": "抗病毒药",
+      "en": "Antiviral"
+    },
+    {
+      "id": "antihistamine",
+      "zh": "抗组胺药",
+      "en": "Antihistamine"
+    },
+    {
+      "id": "antidepressant",
+      "zh": "抗抑郁药",
+      "en": "Antidepressant"
+    },
+    {
+      "id": "anticoagulant",
+      "zh": "抗凝药",
+      "en": "Anticoagulant"
+    },
+    {
+      "id": "antipyretic",
+      "zh": "退热药",
+      "en": "Antipyretic"
+    },
+    {
+      "id": "diuretic",
+      "zh": "利尿剂",
+      "en": "Diuretic"
+    },
+    {
+      "id": "antidote",
+      "zh": "解毒剂",
+      "en": "Antidote"
+    },
+    {
+      "id": "lidocaine",
+      "zh": "利多卡因",
+      "en": "Lidocaine"
+    },
+    {
+      "id": "propofol",
+      "zh": "丙泊酚",
+      "en": "Propofol"
+    },
+    {
+      "id": "atropine",
+      "zh": "阿托品",
+      "en": "Atropine"
+    },
+    {
+      "id": "warfarin",
+      "zh": "华法林",
+      "en": "Warfarin"
+    },
+    {
+      "id": "heparin",
+      "zh": "肝素",
+      "en": "Heparin"
+    },
+    {
+      "id": "metformin",
+      "zh": "二甲双胍",
+      "en": "Metformin"
+    },
+    {
+      "id": "statin",
+      "zh": "他汀",
+      "en": "Statin"
+    },
+    {
+      "id": "artemisinin",
+      "zh": "青蒿素",
+      "en": "Artemisinin"
+    },
+    {
+      "id": "quinine",
+      "zh": "奎宁",
+      "en": "Quinine"
+    },
+    {
+      "id": "amoxicillin",
+      "zh": "阿莫西林",
+      "en": "Amoxicillin"
+    },
+    {
+      "id": "cephalosporin",
+      "zh": "头孢菌素",
+      "en": "Cephalosporin"
+    },
+    {
+      "id": "thalidomide",
+      "zh": "沙利度胺",
+      "en": "Thalidomide"
+    },
+    {
+      "id": "digitalis",
+      "zh": "洋地黄",
+      "en": "Digitalis"
+    },
+    {
+      "id": "semaglutide",
+      "zh": "司美格鲁肽",
+      "en": "Semaglutide"
+    },
+    {
+      "id": "ointment",
+      "zh": "软膏",
+      "en": "Ointment"
+    },
+    {
+      "id": "eye-drops",
+      "zh": "滴眼液",
+      "en": "Eye drops"
+    },
+    {
+      "id": "inhaler",
+      "zh": "吸入器",
+      "en": "Inhaler"
+    },
+    {
+      "id": "nebulizer",
+      "zh": "雾化器",
+      "en": "Nebulizer",
+      "forms": { "en": ["nebuliser", "nebulization"] }
+    },
+    {
+      "id": "pharmacopoeia",
+      "zh": "药典",
+      "en": "Pharmacopoeia"
+    },
+    {
+      "id": "indication",
+      "zh": "适应证",
+      "en": "Indication"
+    },
+    {
+      "id": "adverse-event",
+      "zh": "不良事件",
+      "en": "Adverse event"
+    },
+    {
+      "id": "toxicology",
+      "zh": "毒理学",
+      "en": "Toxicology",
+      "forms": { "en": ["toxicologist"] }
+    },
+    {
+      "id": "ld50",
+      "zh": "LD50",
+      "en": "LD50"
+    },
+    {
+      "id": "titer",
+      "zh": "滴度",
+      "en": "Titer",
+      "forms": { "en": ["titre"] }
+    },
+    {
+      "id": "creatinine",
+      "zh": "肌酐",
+      "en": "Creatinine"
+    },
+    {
+      "id": "bilirubin",
+      "zh": "胆红素",
+      "en": "Bilirubin"
+    },
+    {
+      "id": "troponin",
+      "zh": "肌钙蛋白",
+      "en": "Troponin"
+    },
+    {
+      "id": "uric-acid",
+      "zh": "尿酸",
+      "en": "Uric acid"
+    },
+    {
+      "id": "urology",
+      "zh": "泌尿外科",
+      "en": "Urology",
+      "forms": { "en": ["urologist"] }
+    },
+    {
+      "id": "ent",
+      "zh": "耳鼻喉科",
+      "en": "ENT",
+      "forms": { "en": ["otolaryngology"] }
+    },
+    {
+      "id": "endocrinology",
+      "zh": "内分泌科",
+      "en": "Endocrinology",
+      "forms": { "en": ["endocrinologist"] }
+    },
+    {
+      "id": "nephrology",
+      "zh": "肾内科",
+      "en": "Nephrology",
+      "forms": { "en": ["nephrologist"] }
+    },
+    {
+      "id": "gp",
+      "zh": "全科医生",
+      "en": "GP",
+      "forms": { "en": ["general practitioner"] }
+    },
+    {
+      "id": "orderly",
+      "zh": "护工",
+      "en": "Orderly"
+    },
+    {
+      "id": "acupoint",
+      "zh": "穴位",
+      "en": "Acupoint"
+    },
+    {
+      "id": "moxibustion",
+      "zh": "艾灸",
+      "en": "Moxibustion"
+    },
+    {
+      "id": "gua-sha",
+      "zh": "刮痧",
+      "en": "Gua sha"
+    },
+    {
+      "id": "tuina",
+      "zh": "推拿",
+      "en": "Tuina"
+    },
+    {
+      "id": "decoction",
+      "zh": "汤剂",
+      "en": "Decoction"
+    },
+    {
+      "id": "ginseng",
+      "zh": "人参",
+      "en": "Ginseng"
+    },
+    {
+      "id": "ephedra",
+      "zh": "麻黄",
+      "en": "Ephedra"
+    },
+    {
+      "id": "tongue-coating",
+      "zh": "舌苔",
+      "en": "Tongue coating"
+    },
+    {
+      "id": "contrast-agent",
+      "zh": "造影剂",
+      "en": "Contrast agent"
+    },
+    {
+      "id": "laparoscopy",
+      "zh": "腹腔镜",
+      "en": "Laparoscopy",
+      "forms": { "en": ["laparoscope", "laparoscopic"] }
+    },
+    {
+      "id": "gastroscopy",
+      "zh": "胃镜",
+      "en": "Gastroscopy",
+      "forms": { "en": ["gastroscope"] }
+    },
+    {
+      "id": "colonoscopy",
+      "zh": "肠镜",
+      "en": "Colonoscopy",
+      "forms": { "en": ["colonoscope"] }
+    },
+    {
+      "id": "bone-density",
+      "zh": "骨密度",
+      "en": "Bone density"
+    },
+    {
+      "id": "vital-signs",
+      "zh": "生命体征",
+      "en": "Vital signs"
+    },
+    {
+      "id": "triage",
+      "zh": "分诊",
+      "en": "Triage"
+    },
+    {
+      "id": "palpation",
+      "zh": "触诊",
+      "en": "Palpation"
+    },
+    {
+      "id": "oximeter",
+      "zh": "血氧仪",
+      "en": "Oximeter",
+      "forms": { "en": ["oximetry"] }
+    },
+    {
+      "id": "eye-chart",
+      "zh": "视力表",
+      "en": "Eye chart"
+    },
+    {
+      "id": "lead-apron",
+      "zh": "铅衣",
+      "en": "Lead apron"
+    },
+    {
+      "id": "gamma-knife",
+      "zh": "伽玛刀",
+      "en": "Gamma knife"
+    },
+    {
+      "id": "incision",
+      "zh": "切口",
+      "en": "Incision"
+    },
+    {
+      "id": "anastomosis",
+      "zh": "吻合",
+      "en": "Anastomosis"
+    },
+    {
+      "id": "intubation",
+      "zh": "插管",
+      "en": "Intubation",
+      "forms": { "en": ["intubate", "intubated"] }
+    },
+    {
+      "id": "tourniquet",
+      "zh": "止血带",
+      "en": "Tourniquet"
+    },
+    {
+      "id": "implant",
+      "zh": "植入物",
+      "en": "Implant"
+    },
+    {
+      "id": "dressing",
+      "zh": "敷料",
+      "en": "Dressing"
+    },
+    {
+      "id": "splint",
+      "zh": "夹板",
+      "en": "Splint"
+    },
+    {
+      "id": "crutch",
+      "zh": "拐杖",
+      "en": "Crutch"
+    },
+    {
+      "id": "aed",
+      "zh": "AED",
+      "en": "AED",
+      "forms": { "zh": ["自动体外除颤器"], "en": ["automated external defibrillator"] }
+    },
+    {
+      "id": "car-t",
+      "zh": "CAR-T",
+      "en": "CAR-T"
+    },
+    {
+      "id": "pd-1",
+      "zh": "PD-1",
+      "en": "PD-1"
+    },
+    {
+      "id": "r0",
+      "zh": "基本再生数",
+      "en": "R0",
+      "forms": { "en": ["R-naught"] }
+    },
+    {
+      "id": "risk-factor",
+      "zh": "危险因素",
+      "en": "Risk factor"
+    },
+    {
+      "id": "case-control",
+      "zh": "病例对照",
+      "en": "Case-control"
+    },
+    {
+      "id": "airborne",
+      "zh": "空气传播",
+      "en": "Airborne"
+    },
+    {
+      "id": "cdc",
+      "zh": "疾控中心",
+      "en": "CDC"
+    },
+    {
+      "id": "waiting-room",
+      "zh": "候诊室",
+      "en": "Waiting room"
+    },
+    {
+      "id": "visiting-hours",
+      "zh": "探视时间",
+      "en": "Visiting hours"
+    },
+    {
+      "id": "handover",
+      "zh": "交班",
+      "en": "Handover"
+    },
+    {
+      "id": "on-call",
+      "zh": "值班",
+      "en": "On call"
+    },
+    {
+      "id": "house-call",
+      "zh": "出诊",
+      "en": "House call"
+    },
+    {
+      "id": "blood-bank",
+      "zh": "血库",
+      "en": "Blood bank"
+    },
+    {
+      "id": "n95",
+      "zh": "N95",
+      "en": "N95"
+    },
+    {
+      "id": "due-date",
+      "zh": "预产期",
+      "en": "Due date"
+    },
+    {
+      "id": "apgar-score",
+      "zh": "阿普加评分",
+      "en": "Apgar score"
+    },
+    {
+      "id": "preterm-birth",
+      "zh": "早产",
+      "en": "Preterm birth"
+    },
+    {
+      "id": "breastfeeding",
+      "zh": "母乳喂养",
+      "en": "Breastfeeding",
+      "forms": { "en": ["breastfeed", "breastfed"] }
+    },
+    {
+      "id": "folic-acid",
+      "zh": "叶酸",
+      "en": "Folic acid"
+    },
+    {
+      "id": "floss",
+      "zh": "牙线",
+      "en": "Floss",
+      "forms": { "en": ["flossing"] }
+    },
+    {
+      "id": "root-canal",
+      "zh": "根管",
+      "en": "Root canal"
+    },
+    {
+      "id": "orthodontics",
+      "zh": "正畸",
+      "en": "Orthodontics",
+      "forms": { "en": ["orthodontist"] }
+    },
+    {
+      "id": "odds-ratio",
+      "zh": "比值比",
+      "en": "Odds ratio"
+    },
+    {
+      "id": "relative-risk",
+      "zh": "相对危险度",
+      "en": "Relative risk"
+    },
+    {
+      "id": "sensitivity",
+      "zh": "灵敏度",
+      "en": "Sensitivity"
+    },
+    {
+      "id": "specificity",
+      "zh": "特异度",
+      "en": "Specificity"
+    },
+    {
+      "id": "cotton-swab",
+      "zh": "棉签",
+      "en": "Cotton swab"
+    },
+    {
+      "id": "hyperlipidemia",
+      "zh": "高脂血症",
+      "en": "Hyperlipidemia",
+      "forms": { "en": ["hyperlipidaemia"] }
     }
   ]
 }
