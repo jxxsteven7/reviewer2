@@ -1,7 +1,7 @@
 import type { AgentAnswer, AgentPersona } from '@reviewer2/shared';
 import type { AgentChannel, AgentOutcome } from './agentChannel';
 import type { AgentTask, GameContext } from './game';
-import type { Room } from './room';
+import type { Member, Room } from './room';
 import type { Timers } from './socket';
 
 // The driver of the AI players (docs/architecture.md#ai-players). An AI player is a member of a room
@@ -15,9 +15,9 @@ import type { Timers } from './socket';
 // The driver looks at a room every time it changes (poke(), from the socket layer's broadcast), and
 // otherwise only when a timer it set comes due: a move that waits for its pace, a request to ask
 // again after one that brought no answer, a player who has been offline long enough to be played
-// for or to be counted as gone by the AI players, or the agent to be asked whether it is back. The game says what a seat is to do
-// (GameModule.agentTask) and what message an answer makes (GameModule.agentMove); the driver knows
-// nothing of any game.
+// for or to be counted as gone by the AI players, or the agent to be asked whether it is back. The
+// game says what a seat is to do (GameModule.agentTask) and what message an answer makes
+// (GameModule.agentMove); the driver knows nothing of any game.
 //
 // What the agent answers is a suggestion that has to get past the rules like any message. An
 // answer that comes after the game has moved on is dropped. When the agent can't be reached or its
@@ -30,6 +30,10 @@ type Log = (event: string, fields?: Record<string, unknown>) => void;
 // time to reload the page or to unlock their phone. Until then, the game counts them as there, so
 // that nobody's brief drop changes what an AI does.
 export const TAKEOVER_MS = 20_000;
+// Whether a person is there, as the AI players see it: online, or offline for less than
+// TAKEOVER_MS yet.
+const present = (member: Member, now: number): boolean =>
+  member.sockets.size > 0 || (member.offlineSince !== null && now - member.offlineSince < TAKEOVER_MS);
 // How long a request may wait at most, and how long before the end of the phase the driver stops
 // waiting, so that a move doesn't arrive as the clock runs out. A phase without a time limit, which
 // only a game played for someone offline can have, waits MAX_WAIT_MS.
@@ -190,7 +194,8 @@ export class AgentDriver {
   // that an AI player gives the people of its group, since they are there to play the turn, and not
   // what another seat is given already, as when two students of a group are offline, or one is and
   // the group has an AI student, who plays the guesses alone. Nobody plays a game that no person is
-  // online in, so that no AI plays on for nobody.
+  // in, online or offline for less than TAKEOVER_MS, so that no AI plays on for nobody, and nothing
+  // an AI is doing is dropped when the one person in the room reloads the page.
   //
   // Whoever is played for is marked so (Room.takeOver) from the moment an AI is to play for them,
   // as it is asked what to do, until they are back, or the game ends. The room is looked at again
@@ -200,7 +205,7 @@ export class AgentDriver {
     const now = this.#options.now();
     const seats = new Map<string, Seat>();
     const moments = new Set<string>();
-    const watched = [...room.members.values()].some((member) => !member.agent && member.sockets.size > 0);
+    const watched = [...room.members.values()].some((member) => !member.agent && present(member, now));
     const asked = playing && watched && this.state.up && room.game.agentTask !== undefined;
     const allowed = playing && this.state.up && room.agentsAllowed();
     const played = asked && room.hasAgents();
@@ -218,7 +223,7 @@ export class AgentDriver {
       if (member.agent) continue;
       const since = member.offlineSince;
       const offline = (allowed || played) && member.sockets.size === 0 && since !== null;
-      const away = offline && now - since >= TAKEOVER_MS;
+      const away = offline && !present(member, now);
       if (offline && !away) due = Math.min(due ?? Infinity, since + TAKEOVER_MS);
       if (!away || !allowed) {
         room.takeOver(member.id, false);
@@ -244,9 +249,7 @@ export class AgentDriver {
       isOnline: (playerId) => {
         const member = room.members.get(playerId);
         if (!member) return false;
-        if (member.agent) return this.state.up;
-        if (member.sockets.size > 0) return true;
-        return member.offlineSince !== null && now - member.offlineSince < TAKEOVER_MS;
+        return member.agent ? this.state.up : present(member, now);
       },
     };
     return room.game.agentTask?.(room.data, context, id) ?? null;

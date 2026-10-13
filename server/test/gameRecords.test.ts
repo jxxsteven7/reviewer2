@@ -38,8 +38,9 @@ const kept = () =>
 const kinds = () =>
   server.db
     .prepare(
-      'SELECT ending, data IS NOT NULL AS replay, accounts, guests, agents, takeover, in_match AS inMatch, ' +
-        'language, fields, version, rules, words, setup, started_at <= ended_at AS ordered FROM replays',
+      'SELECT ending, winner, reason, data IS NOT NULL AS replay, accounts, guests, agents, takeover, ' +
+        'in_match AS inMatch, language, fields, version, rules, words, setup, started_at <= ended_at AS ordered ' +
+        'FROM replays',
     )
     .all();
 const players = () =>
@@ -146,11 +147,14 @@ describe('the record of a game of the team word guessing game', () => {
     ]);
     const log = JSON.parse(kept()[0]?.log as string) as GameLogData;
     expect(log).toMatchObject({ v: 2, game: 'keywords', gameId: clue.gameId });
-    // What kind of game it was: finished, with a replay; three players with accounts and three
-    // guests, Gus included and Eve, who watched, not.
+    // What kind of game it was: finished, won by the other group when this one revealed Reviewer 2,
+    // with a replay; three players with accounts and three guests, Gus included and Eve, who
+    // watched, not.
     const [kind] = kinds() as Record<string, unknown>[];
     expect(kind).toMatchObject({
       ending: 'finished',
+      winner: team === 'red' ? 'blue' : 'red',
+      reason: 'reviewer2',
       replay: 1,
       accounts: 3,
       guests: 3,
@@ -330,7 +334,9 @@ describe('the record of a game', () => {
     server = await startServer();
     const { annId, anns, gameId } = await played({ withdraw: true });
     await until(() => kept().length === 1, 'the record');
-    expect(kinds()).toMatchObject([{ ending: 'withdrawn', replay: 0, accounts: 1, guests: 1 }]);
+    expect(kinds()).toMatchObject([
+      { ending: 'withdrawn', winner: null, reason: null, replay: 0, accounts: 1, guests: 1 },
+    ]);
     expect(players()).toEqual([{ playerId: annId, accountId: 1 }]);
     expect(server.db.prepare('SELECT count(*) AS count FROM game_records').get()).toEqual({ count: 0 });
     expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
@@ -340,7 +346,9 @@ describe('the record of a game', () => {
     server = await startServer();
     await played({ watch: true });
     await until(() => kept().length === 1, 'the record');
-    expect(kinds()).toMatchObject([{ ending: 'finished', replay: 1, accounts: 0, guests: 1 }]);
+    expect(kinds()).toMatchObject([
+      { ending: 'finished', winner: 'all', reason: 'finish', replay: 1, accounts: 0, guests: 1 },
+    ]);
     expect(players()).toEqual([]);
   });
 

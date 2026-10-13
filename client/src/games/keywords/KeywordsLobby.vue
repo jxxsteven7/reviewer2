@@ -344,10 +344,8 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
         <p class="footnote">
           {{ lineup === 'fixed' ? t('match.fixedNote') : t('lobby.captainNote') }}
         </p>
-        <p v-if="room.agents || hasAgents" class="footnote">
-          {{ t('lobby.agentNote') }}
-          <template v-if="room.agents">{{ t('lobby.takeoverNote') }}</template>
-        </p>
+        <p v-if="room.agents || hasAgents" class="footnote">{{ t('lobby.agentNote') }}</p>
+        <p v-if="room.agents" class="footnote">{{ t('lobby.takeoverNote') }}</p>
       </div>
       <div class="column">
         <section v-if="isChair && !finished" class="desk">

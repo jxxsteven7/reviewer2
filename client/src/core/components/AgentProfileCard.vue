@@ -102,7 +102,7 @@ const you = computed(() => {
           }}
         </li>
         <li v-if="perClue !== null" class="num">{{ t('agents.profile.perClue', { average: perClue }) }}</li>
-        <li v-if="profile.best" class="num">{{ t('agents.profile.best', profile.best) }}</li>
+        <li v-if="profile.best" class="num">{{ t('agents.profile.best', profile.best, profile.best.found) }}</li>
         <li class="num">{{ t('agents.profile.reviewer2', { count: profile.reviewer2 }) }}</li>
         <li class="num">{{ t('agents.profile.takeovers', { count: profile.takeovers }) }}</li>
       </ul>

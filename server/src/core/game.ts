@@ -37,8 +37,9 @@ export interface GameContext {
   // Everyone in the room, in the order they joined.
   playerIds(): string[];
   // How many times the account of a player, also of one who has left during the current game, has
-  // won a title, as its record has it, or null for a guest, who keeps none, and when the record
-  // can't be read.
+  // won a title, as its record has it, or null when there is no count to give: for a guest, who
+  // keeps none, in a game that an AI has played in, which awards none
+  // (docs/architecture.md#ai-players), and when the record can't be read.
   titleCount(playerId: string, title: Title): number | null;
 }
 
@@ -61,6 +62,14 @@ export interface PlayerResult {
   won: boolean;
   verdict: string;
   titles?: GameTitle[];
+}
+
+// How a game that finished came out (docs/architecture.md#game-records), for its record: which side
+// won, in the game's own words, and how, such as by finding every card of its own or because the
+// other side revealed Reviewer 2, so that games can be told apart by it without the replay.
+export interface GameOutcome {
+  winner: string;
+  reason: string;
 }
 
 // A title that a game brought a player (docs/architecture.md#titles), with the turn of the game it
@@ -238,6 +247,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // due: when a timer changes the game, the log names those of them who were offline then. Without
   // this, it names nobody.
   due?(data: Data): string[];
+  // How the game that has just finished came out, for its record: who won and how, or null when
+  // the game can't say. Without this, the record says how the game ended and nothing of who won.
+  outcome?(data: Data): GameOutcome | null;
   // What an AI player did in the game that has just finished, for its page; without this, its
   // page counts its games alone.
   agentFeats?(data: Data, playerId: string): AgentFeats;

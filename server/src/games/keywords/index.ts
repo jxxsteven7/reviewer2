@@ -191,10 +191,10 @@ type Action<M extends KeywordsMessage> = (
 // What the log of the game keeps of each of its messages (docs/architecture.md#game-records): what
 // it carried, as its schema reads it, without the game's ID, which is the log's own, and with the
 // clue's word as the record keeps it (cleanClue). A line of a group's chat is what the player said,
-// as the chat shows it (checkChat), which the log keeps apart. Nothing is kept of a card chosen: students choose and choose again
-// before they reveal one, for the fun of it as much as anything. Nor of each mark, which a group
-// sets and changes as it talks: the log keeps how a group's marks stood when it acted instead
-// (markNotes).
+// as the chat shows it (checkChat), which the log keeps apart. Nothing is kept of a card chosen:
+// students choose and choose again before they reveal one, for the fun of it as much as anything.
+// Nor of each mark, which a group sets and changes as it talks: the log keeps how a group's marks
+// stood when it acted instead (markNotes).
 function logNote(type: string, payload: unknown): LogNote | null {
   if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:select' || type === 'keywords:mark') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
@@ -264,7 +264,8 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
 
 // The captain in the seat of the group whose time for the clue has run out, and how many times
 // they had missed the deadline before: as their account's titles count it, and in this game so far,
-// whose titles are awarded only at its end. A guest's misses go uncounted.
+// whose titles are awarded only at its end. A guest's misses go uncounted, and so does everyone's
+// in a game that awards no titles, as one with AI players (GameContext.titleCount).
 function missedBy(data: KeywordsData, ctx: GameContext): Missed | null {
   const game = data.game;
   const captain = game && captainOf(data.seating, game.team);
@@ -444,6 +445,13 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   logged: logNote,
   logChanges: markNotes,
   mayEmote,
+
+  // How the game came out, for its record: the group that won, and whether it found every card of
+  // its own or the other group revealed Reviewer 2.
+  outcome(data) {
+    const result = data.game?.result;
+    return result && result.winner !== null ? { winner: result.winner, reason: result.reason } : null;
+  },
 
   // What an AI player did: the clues it gave as its group's PI, with how many of the group's cards
   // were found in each of their turns, the clue that found the most, and how often it revealed

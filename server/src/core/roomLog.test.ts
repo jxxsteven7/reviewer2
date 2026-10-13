@@ -168,6 +168,7 @@ describe('the record of a game', () => {
     expect(room.ending).toBe('finished');
     expect(room.record()).toMatchObject({
       ending: 'finished',
+      outcome: { winner: 'all', reason: 'finish' },
       durationMs: 90_000,
       counts: { accounts: 1, guests: 1, agents: 0 },
       takeover: false,
@@ -185,6 +186,7 @@ describe('the record of a game', () => {
     expect(room.withdraw(room.gameId as string)).toEqual({ ok: true });
     const record = room.record();
     expect(record?.ending).toBe('withdrawn');
+    expect(record?.outcome).toBeNull();
     expect(record?.log?.entries.at(-1)).toMatchObject({ by: null, type: 'end', data: { ending: 'withdrawn' } });
   });
 

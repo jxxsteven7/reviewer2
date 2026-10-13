@@ -147,7 +147,7 @@ describe('the log of the team word guessing game', () => {
     expect(keywordsGame.rulesVersion).toBe(2);
   });
 
-  test('counts what an AI player did: its clues, the cards they found, its best clue and Reviewer 2', () => {
+  test('counts what an AI player did, and says how the game came out once it is over', () => {
     const ctx = context();
     const words = Array.from({ length: 25 }, (_, index) => ({ word: `Word${index}` }));
     let data = keywordsGame.start(seated(ctx), { ...ctx, phase: 'playing' }, words, gameId);
@@ -174,7 +174,10 @@ describe('the log of the team word guessing game', () => {
     act(otherStudent as string, 'keywords:reveal', { card: otherNeutral });
     act(pi as string, 'keywords:clue', { word: 'Single', count: 1 });
     act(student as string, 'keywords:reveal', { card: own[2] });
+    // The game isn't over yet, so it has no outcome; then the other group wins by Reviewer 2.
+    expect(keywordsGame.outcome?.(data)).toBeNull();
     act(student as string, 'keywords:reveal', { card: reviewer2 });
+    expect(keywordsGame.outcome?.(data)).toEqual({ winner: team === 'red' ? 'blue' : 'red', reason: 'reviewer2' });
     expect(keywordsGame.agentFeats?.(data, pi as string)).toEqual({
       clues: 2,
       found: 3,
@@ -187,6 +190,10 @@ describe('the log of the team word guessing game', () => {
       reviewer2: 1,
       best: null,
     });
+    // A withdrawn game has no outcome either.
+    const withdrawn = keywordsGame.withdraw(keywordsGame.start(seated(ctx), playing, words, 'g2'), 'g2');
+    if (!withdrawn.ok) throw new Error(withdrawn.error);
+    expect(keywordsGame.outcome?.(withdrawn.data)).toBeNull();
   });
 
   test('says where each player is, and counts everyone who sat in a group as having played', () => {

@@ -58,13 +58,20 @@ describe('AgentProfileCard', () => {
     expect(text).toContain('Player No. 0');
     expect(text).toContain('Clones in the rooms right now: 4 · Rooms: 3');
     expect(text).toContain('Games: 12 · Won: 7');
-    expect(text).toContain('As a PI: 8 games, 5 won · As a student: 6 games, 3 won');
+    expect(text).toContain('As a PI: 8 played, 5 won · As a student: 6 played, 3 won');
     expect(text).toContain('Cards found per clue: 1.2');
     expect(text).toContain('Best clue: “Zebra”, 4 cards found');
     expect(text).toContain('Times it revealed Reviewer 2: 2');
     expect(text).toContain('Games in which it played for someone offline: 5');
     // A guest has nothing of their own with it.
     expect(wrapper.find('.you').exists()).toBe(false);
+  });
+
+  test('says how many cards its best clue found, one or more', async () => {
+    signedIn.request.mockResolvedValue({ ok: true, profile: page({ best: { word: 'Quokka', found: 1 } }) });
+    const wrapper = mount(AgentProfileCard, { props: { persona: 'reviewer1' }, global: global() });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Best clue: “Quokka”, 1 card found');
   });
 
   test('says when it is in no room and has played no game yet', async () => {
