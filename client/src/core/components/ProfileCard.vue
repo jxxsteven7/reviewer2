@@ -12,6 +12,7 @@ import { connect } from '../socket';
 import { streakTitles as titlesOf } from '../streaks';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
+import DuoSummary from './DuoSummary.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
 import RankLadder from './RankLadder.vue';
@@ -25,7 +26,9 @@ import UiButton from './UiButton.vue';
 // is shown as the text it is, never as markup, and the link as the address it is, which opens in a
 // new tab and which search engines are told not to follow. The rank opens the ladder of every
 // rank, with this one marked and no points, which the profile never shows. Anyone may look; an
-// account that isn't the owner may like the profile and ask the owner to be friends.
+// account that isn't the owner may like the profile and ask the owner to be friends. A friend of
+// the owner also sees what the two have played together (docs/architecture.md#friend-duos), which
+// nobody else is sent.
 const props = defineProps<{ handle: string }>();
 const { t, locale } = useI18n();
 const profile = ref<ProfileView | null>(null);
@@ -132,6 +135,11 @@ watch(
         :acknowledgments="profile.acknowledgments"
       />
 
+      <section v-if="profile.duo" class="duo" aria-labelledby="profile-duo">
+        <h3 id="profile-duo">{{ t('playerPage.duo', { name: profile.username }) }}</h3>
+        <DuoSummary :duo="profile.duo" />
+      </section>
+
       <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
       <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">{{
         profile.link
@@ -216,6 +224,14 @@ watch(
   outline-offset: -5px;
 }
 
+/* The author's badge, on the line under the rank, reaches down alone to its 44px (PlayerNumber.vue),
+   over the date, which opens nothing: the lines here are 4px apart, so a box that reached up as
+   well would lie over the rank's. */
+.who :deep(.number .author)::before {
+  top: 0;
+  bottom: calc(100% - 44px);
+}
+
 /* Two sides of a small square, turned to point right and raised to the middle of the type. */
 .chevron {
   flex: none;
@@ -238,6 +254,24 @@ watch(
 .meta {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+/* What the viewer has played with the owner, a friend, set apart from what everyone sees. */
+.duo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+}
+
+.duo h3 {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-black);
+  overflow-wrap: anywhere;
 }
 
 .bio {

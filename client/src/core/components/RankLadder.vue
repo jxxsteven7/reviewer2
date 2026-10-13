@@ -10,7 +10,8 @@ import UiSheet from './UiSheet.vue';
 // the player's own rank marked, scrolled into view when the sheet opens. The rungs the player has
 // climbed are solid. With `points`, the player's own on the account page, the marked rung says how
 // far the next rank is; without, as on another player's public page, the ladder marks the rank
-// alone, since the points never show there.
+// alone, since the points never show there, and a line above it says where the points come from,
+// which the account page says under the rank itself.
 const props = defineProps<{ open: boolean; rank: Rank; points?: number | null }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
@@ -43,6 +44,7 @@ watch(
 
 <template>
   <UiSheet :open="open" :title="t('ranks.ladder.title')" @close="emit('close')">
+    <p v-if="progress === null" class="note">{{ t('ranks.note') }}</p>
     <ol ref="list" class="ladder">
       <li
         v-for="rung in rungs"
@@ -64,6 +66,12 @@ watch(
 </template>
 
 <style scoped>
+.note {
+  margin-bottom: var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
 .ladder {
   --rail: 20px;
   position: relative;

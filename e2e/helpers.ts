@@ -613,6 +613,24 @@ export async function endTurn(guesser: Page, language: Language): Promise<void> 
   await guesser.locator('[role=dialog]').getByRole('button', { name: text.game.endTurn }).click();
 }
 
+// Red wins in one or two turns, with blue far behind: if red is on turn, Bob reveals an irrelevant
+// paper, which ends the turn; then Dan reveals Reviewer 2 for blue. Ends when every page shows the
+// letters.
+export async function redWins(table: Table, language: Language): Promise<void> {
+  const ann = table.captains.red;
+  if ((await teamOnTurn(ann)) === 'red') {
+    await giveClue(ann, 'Hint', 1, language);
+    await reveal(table.guessers.red, await keyCard(ann, 'neutral'));
+    await expect(ann.locator('.strip.blue')).toBeVisible();
+  }
+  const cat = table.captains.blue;
+  await giveClue(cat, 'Hint', 1, language);
+  await reveal(table.guessers.blue, await keyCard(cat, 'reviewer2'));
+  for (const page of [ann, table.guessers.red, cat, table.guessers.blue, table.spectator, table.screen]) {
+    await expect(page.locator('.letter').first()).toBeVisible();
+  }
+}
+
 // Plays one turn, the `turn`th of the game: the PI of the group on turn gives a clue for one card
 // and the group reveals one of its own cards, then ends the turn. Returns once the other group is
 // on turn, or the game has ended. Under the free guess rule, 1 is the only number that a group

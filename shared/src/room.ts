@@ -1,3 +1,4 @@
+import type { DuoNotice } from './duos';
 import type { Language } from './language';
 import type { MatchView } from './match';
 import type { Rank } from './ranks';
@@ -67,6 +68,9 @@ export interface RoomView<Game = unknown> {
   // STREAK_MIN games on (streaks.ts): every winning streak, for the whole room to cheer, and the
   // viewer's own losing streak, which nobody else is told of. Empty in any other phase.
   streaks: StreakNotice[];
+  // The titles that the game which has just ended brought the viewer's friends who played in it
+  // (duos.ts), told to the viewer alone. Empty for anyone else, a screen and in any other phase.
+  duos: DuoNotice[];
   // The game's own part of the view, built for this viewer alone.
   data: Game;
 }

@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
 import { request } from '../account';
+import TitleInfo from '../components/TitleInfo.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { formatMoment } from '../dates';
@@ -15,8 +16,9 @@ import { useBusy } from '../useBusy';
 // The account's record: how many games it has finished in a seat and won, and the last 20, each
 // with its game, its date, the group and the role, and the decision letter that the group got;
 // then how many matches it finished, and the last 20 of them, each with its place, its total and
-// its title. A record that can't be fetched says so, with a way to try again. A game that the
-// server kept to watch again opens in a sheet, in the game's own replay viewer.
+// its title. A tap on a decision or a title says what it means (TitleInfo.vue). A record that
+// can't be fetched says so, with a way to try again. A game that the server kept to watch again
+// opens in a sheet, in the game's own replay viewer.
 const { t, te, locale } = useI18n();
 const records = ref<RecordsView | null>(null);
 const failed = ref<string | undefined>();
@@ -53,6 +55,9 @@ onMounted(load);
 const label = (key: string, fallback: string) => (te(key) ? t(key) : fallback);
 
 const date = (iso: string) => formatMoment(iso, locale.value);
+
+// Whether the locale files explain the decision, as they do for every decision of the first game.
+const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
 </script>
 
 <template>
@@ -73,7 +78,12 @@ const date = (iso: string) => formatMoment(iso, locale.value);
               })
             }}
           </span>
-          <span class="verdict">{{ label(`game.letter.verdicts.${record.verdict}`, record.verdict) }}</span>
+          <TitleInfo
+            v-if="explained(record.verdict)"
+            :title="{ kind: 'verdict', verdict: record.verdict }"
+            class="verdict"
+          />
+          <span v-else class="verdict">{{ label(`game.letter.verdicts.${record.verdict}`, record.verdict) }}</span>
           <UiButton
             v-if="record.replay && games[record.game]"
             class="watch"
@@ -107,7 +117,9 @@ const date = (iso: string) => formatMoment(iso, locale.value);
               t('account.profile.matchLine', { rank: match.rank, players: match.players, score: points(match.score) })
             }}
           </span>
-          <span v-if="match.title" class="verdict">{{ t(`match.titleNames.${match.title}`) }}</span>
+          <TitleInfo v-if="match.title" :title="{ kind: 'award', title: match.title }" class="verdict">{{
+            t(`match.titleNames.${match.title}`)
+          }}</TitleInfo>
         </li>
       </ol>
     </template>
@@ -187,6 +199,11 @@ h3 {
   grid-column: 2;
   align-self: center;
   font-weight: var(--weight-bold);
+}
+
+/* A decision that a tap explains is 44px tall to tap. */
+button.verdict {
+  min-height: 44px;
 }
 
 .watch {

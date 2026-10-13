@@ -49,6 +49,7 @@ const profile = (changes: Partial<ProfileView> = {}): ProfileView => ({
   likes: 4,
   liked: false,
   mine: false,
+  duo: null,
   ...changes,
 });
 
@@ -93,6 +94,34 @@ describe('ProfileCard', () => {
     expect(text).toContain('Log in to like this page');
     expect(socket.connect).not.toHaveBeenCalled();
     wrapper.unmount();
+  });
+
+  test('shows a friend what the two have played together, and nothing of it to anyone else', async () => {
+    signedIn.account.summary = { handle: 'b1b2c3d4e5f6' };
+    const duo = { wonTogether: 5, lostTogether: 2, against: 4, beat: 1, beaten: 3, titles: ['coauthor' as const] };
+    signedIn.request.mockResolvedValue({ ok: true, profile: profile({ duo }) });
+    const wrapper = mount(ProfileCard, {
+      props: { handle: 'a1b2c3d4e5f6' },
+      global: global(),
+      attachTo: document.body,
+    });
+    await flushPromises();
+    const section = wrapper.find('section.duo');
+    expect(section.find('h3').text()).toBe('You and Ann');
+    expect(section.text().replace(/\u00a0/g, ' ')).toContain(
+      'As teammates: won 5, lost 2 · As opponents: won 1, lost 3',
+    );
+    await section.find('button.badge').trigger('click');
+    const sheet = document.body.querySelector('[role=dialog]');
+    expect(sheet?.querySelector('h2')?.textContent).toBe('Co-First Author');
+    expect(sheet?.textContent).toContain('The friend you have won the most games with on the same side, at least 3.');
+    wrapper.unmount();
+
+    signedIn.request.mockResolvedValue({ ok: true, profile: profile() });
+    const stranger = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
+    await flushPromises();
+    expect(stranger.find('section.duo').exists()).toBe(false);
+    stranger.unmount();
   });
 
   test('is not the author for any other account, and hides what the owner does not show', async () => {

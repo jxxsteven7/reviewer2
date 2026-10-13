@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import {
   ACCOUNT_ERRORS,
   ACKNOWLEDGMENT_KINDS,
+  DUO_TITLES,
   EMAIL_STATES,
   EMOTES,
   FEEDBACK_ERRORS,
@@ -16,8 +17,10 @@ import {
   START_PROBLEMS,
   STREAK_KINDS,
   TITLES,
+  VERDICTS,
 } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
+import { DUO_LINES } from '../core/duos';
 import { CLIENT_ERRORS } from '../core/errors';
 import { LINES_PER_TIER, STREAK_TIERS } from '../core/streaks';
 
@@ -100,6 +103,28 @@ describe('locale files', () => {
         for (let n = 1; n <= LINES_PER_TIER; n += 1) expect(en.has(`streaks.lines.${kind}.${tier}.${n}`)).toBe(true);
         expect(en.has(`streaks.lines.${kind}.${tier}.${LINES_PER_TIER + 1}`)).toBe(false);
       }
+    }
+  });
+
+  test('explain every title that a tap opens', () => {
+    for (const title of TITLES) expect(en.has(`titles.award.${title}`), title).toBe(true);
+    for (const kind of STREAK_KINDS) {
+      expect(en.has(`titles.streak.${kind}`), kind).toBe(true);
+      expect(en.has(`titles.streakNow.${kind}`), kind).toBe(true);
+    }
+    for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`titles.thanks.${kind}`), kind).toBe(true);
+    for (const verdict of VERDICTS) {
+      expect(en.has(`game.letter.verdicts.${verdict}`), verdict).toBe(true);
+      expect(en.has(`game.letter.explain.${verdict}`), verdict).toBe(true);
+    }
+  });
+
+  test('name and explain every friend title, with every line and every notice', () => {
+    for (const title of DUO_TITLES) {
+      for (const key of ['names', 'explain', 'notice'])
+        expect(en.has(`duos.${key}.${title}`), `${key} ${title}`).toBe(true);
+      for (let n = 1; n <= DUO_LINES; n += 1) expect(en.has(`duos.lines.${title}.${n}`), title).toBe(true);
+      expect(en.has(`duos.lines.${title}.${DUO_LINES + 1}`)).toBe(false);
     }
   });
 

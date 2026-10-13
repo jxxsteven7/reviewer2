@@ -2,6 +2,7 @@
 import { otherTeam, type KeywordsView, type MatchView, type Team } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import TitleInfo from '../../core/components/TitleInfo.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { letterNumber, lettersFor, verdictFor } from './letters';
 
@@ -11,7 +12,8 @@ import { letterNumber, lettersFor, verdictFor } from './letters';
 // plays for, if any. `busy` holds "Play again" while a press of it is on its way, and `compact`
 // makes the letters smaller for a big screen, where they sit above the board. In a match, "Play
 // again" is the way to its next game, and a match that is over has none: its ranking, below the
-// letters, says what comes next.
+// letters, says what comes next. A tap on the decision says what it means (TitleInfo.vue), except
+// on a big screen, which nobody taps.
 const props = withDefaults(
   defineProps<{
     game: KeywordsView;
@@ -57,7 +59,7 @@ const letters = computed(() => {
         <p class="kicker">
           {{ letter.team ? t('game.letter.titleFor', { group: group(letter.team) }) : t('game.letter.title') }}
         </p>
-        <h2 class="verdict">{{ t(`game.letter.verdicts.${letter.verdict}`) }}</h2>
+        <h2 class="verdict"><TitleInfo :title="{ kind: 'verdict', verdict: letter.verdict }" :still="compact" /></h2>
         <p class="body">{{ letter.body }}</p>
         <p class="signature">{{ t('game.letter.signature') }}</p>
       </article>

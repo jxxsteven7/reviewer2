@@ -44,15 +44,16 @@ export const streakTitle = (t: Translate, kind: StreakKind, length: number, lang
 
 // The titles that an account's longest streaks earn, from STREAK_MIN games on, as the account
 // page and the public profile show them (TitlePills.vue): the winning streak first, then the
-// losing one, each with its kind for the color of its pill.
+// losing one, each with its kind for the color of its pill and its length for what a tap on it
+// explains.
 export const streakTitles = (
   t: Translate,
   streaks: BestStreaks,
   language: Language,
-): { kind: StreakKind; title: string }[] =>
+): { kind: StreakKind; length: number; title: string }[] =>
   STREAK_KINDS.flatMap((kind) => {
     const length = streaks[kind];
-    return length >= STREAK_MIN ? [{ kind, title: streakTitle(t, kind, length, language) }] : [];
+    return length >= STREAK_MIN ? [{ kind, length, title: streakTitle(t, kind, length, language) }] : [];
   });
 
 // The key of the line in the locale files.

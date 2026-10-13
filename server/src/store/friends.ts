@@ -96,6 +96,11 @@ export class FriendStore {
     return this.#between.get(Math.min(a, b), Math.max(a, b)) as Friendship | undefined;
   }
 
+  // Whether the two are friends: one asked, and the other accepted.
+  areFriends(a: number, b: number): boolean {
+    return this.between(a, b)?.status === 'accepted';
+  }
+
   // A new request. The caller has made sure that the pair has no row.
   request(requesterId: number, addresseeId: number): void {
     this.#insert.run(requesterId, addresseeId, this.#time());

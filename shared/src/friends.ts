@@ -1,3 +1,5 @@
+import type { DuoView } from './duos';
+
 // Friends and invitations (docs/architecture.md#friends), for accounts alone. Two accounts are
 // friends once one has asked and the other has accepted; either may decline or end it. Friends see
 // of each other whether they are online and in which public room they are, and may invite each
@@ -54,12 +56,15 @@ export type FriendError = (typeof FRIEND_ERRORS)[number];
 // whether they are online, counting every tab and device of theirs as one person, and where they
 // are. `room` is null for a friend who is in no room; the code of a public room, where the Join
 // button leads; and without the code for a private room, which only an invitation leads into.
+// `duo` is what the account has played with the friend and the titles the friend holds among its
+// friends (duos.ts), or null when the two share no game.
 export interface FriendView {
   handle: string;
   username: string;
   avatar: string | null;
   online: boolean;
   room: { code: string | null } | null;
+  duo: DuoView | null;
 }
 
 // The other side of a request that is still open, in either direction.

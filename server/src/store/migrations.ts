@@ -348,4 +348,11 @@ export const MIGRATIONS: readonly string[] = [
   ) STRICT;
   CREATE INDEX game_players_account ON game_players (account_id);
   `,
+  // 13: friend duos (docs/architecture.md#friend-duos): the records of a game by the game, so that
+  // the others who played in each game on an account's record are found without reading every
+  // record. Nothing new is kept: the counts are worked out from the records whenever they are asked
+  // for.
+  `
+  CREATE INDEX game_records_game ON game_records (game_id);
+  `,
 ];

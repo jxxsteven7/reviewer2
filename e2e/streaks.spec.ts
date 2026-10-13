@@ -1,18 +1,6 @@
 import type { Page } from '@playwright/test';
 import { englishNumber, STREAK_MIN } from '@reviewer2/shared';
-import {
-  expect,
-  giveClue,
-  interpolate,
-  keyCard,
-  register,
-  reveal,
-  seatTable,
-  teamOnTurn,
-  TEXT,
-  test,
-  type Language,
-} from './helpers';
+import { expect, interpolate, redWins, register, seatTable, TEXT, test } from './helpers';
 
 // Streaks end to end (docs/architecture.md#streaks): Ann, red's PI, and Dan, blue's student, have
 // accounts, and red wins three games in a row. After the third, Ann's page tells her of her winning
@@ -22,23 +10,6 @@ import {
 // All tests share one server, on which a registered name is nobody else's, so every account here
 // has a part that is the test's own.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
-
-// Red wins in one or two turns: if red is on turn, Bob reveals an irrelevant paper, which ends the
-// turn; then Dan reveals Reviewer 2 for blue.
-async function redWins(table: Awaited<ReturnType<typeof seatTable>>, language: Language): Promise<void> {
-  const ann = table.captains.red;
-  if ((await teamOnTurn(ann)) === 'red') {
-    await giveClue(ann, 'Hint', 1, language);
-    await reveal(table.guessers.red, await keyCard(ann, 'neutral'));
-    await expect(ann.locator('.strip.blue')).toBeVisible();
-  }
-  const cat = table.captains.blue;
-  await giveClue(cat, 'Hint', 1, language);
-  await reveal(table.guessers.blue, await keyCard(cat, 'reviewer2'));
-  for (const page of [ann, table.guessers.red, cat, table.guessers.blue, table.spectator, table.screen]) {
-    await expect(page.locator('.letter').first()).toBeVisible();
-  }
-}
 
 const title = (text: (typeof TEXT)['en'], kind: 'wins' | 'losses', length: number) =>
   interpolate(text.streaks.names[kind], { n: englishNumber(length) });

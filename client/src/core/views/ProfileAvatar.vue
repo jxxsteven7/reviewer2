@@ -4,14 +4,14 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { loadAccount, request } from '../account';
 import AvatarCropper from '../components/AvatarCropper.vue';
-import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 
-// The account's avatar: a picture from the phone or the computer, cropped here to a square and
-// shown as a circle, or the default one, drawn from the username.
+// The ways to change the account's avatar, which the account page shows beside it: a picture from
+// the phone or the computer, cropped here to a square and shown as a circle, or the default one,
+// drawn from the username.
 const props = defineProps<{ summary: AccountSummary }>();
 const { t } = useI18n();
 const input = ref<HTMLInputElement | null>(null);
@@ -49,15 +49,12 @@ function failed(code: string) {
 </script>
 
 <template>
-  <div class="avatar-row">
-    <PlayerAvatar :name="props.summary.username" :avatar="props.summary.avatar" size="large" />
-    <div class="buttons">
-      <UiButton size="small" :disabled="busy" @click="input?.click()">{{ t('account.profile.uploadAvatar') }}</UiButton>
-      <UiButton v-if="props.summary.avatar" variant="quiet" size="small" :disabled="busy" @click="useDefault">
-        {{ t('account.profile.defaultAvatar') }}
-      </UiButton>
-      <input ref="input" class="file" type="file" accept="image/*" tabindex="-1" aria-hidden="true" @change="chosen" />
-    </div>
+  <div class="avatar-buttons">
+    <UiButton size="small" :disabled="busy" @click="input?.click()">{{ t('account.profile.uploadAvatar') }}</UiButton>
+    <UiButton v-if="props.summary.avatar" variant="quiet" size="small" :disabled="busy" @click="useDefault">
+      {{ t('account.profile.defaultAvatar') }}
+    </UiButton>
+    <input ref="input" class="file" type="file" accept="image/*" tabindex="-1" aria-hidden="true" @change="chosen" />
 
     <UiSheet :open="file !== null" :title="t('account.profile.cropTitle')" @close="file = null">
       <AvatarCropper
@@ -73,16 +70,10 @@ function failed(code: string) {
 </template>
 
 <style scoped>
-.avatar-row {
+.avatar-buttons {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
-}
-
-.buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   gap: var(--space-2);
 }
 

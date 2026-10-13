@@ -54,6 +54,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
       ...match,
     },
     streaks: [],
+    duos: [],
     data: {},
     ...overrides,
   };

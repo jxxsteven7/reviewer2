@@ -25,7 +25,7 @@ import { friendsVersion } from './friends';
 import { useFriendsList } from './useFriendsList';
 
 const LIST: FriendsView = {
-  friends: [{ handle: 'a1b2c3d4e5f6', username: 'Bob', avatar: null, online: true, room: null }],
+  friends: [{ handle: 'a1b2c3d4e5f6', username: 'Bob', avatar: null, online: true, room: null, duo: null }],
   incoming: [],
   outgoing: [],
 };

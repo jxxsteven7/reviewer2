@@ -137,8 +137,8 @@ test('a new name and avatar show in the room, and a guest can not take a registe
   });
   await expect(ann.locator('.cropper canvas')).toBeVisible();
   await ann.getByRole('button', { name: text.account.avatar.use }).click();
-  await expect(ann.locator('.avatar-row img')).toHaveAttribute('src', /^\/avatars\/[0-9a-f]{64}\.(webp|jpg)$/);
-  const avatar = await ann.locator('.avatar-row img').getAttribute('src');
+  await expect(ann.locator('.identity img')).toHaveAttribute('src', /^\/avatars\/[0-9a-f]{64}\.(webp|jpg)$/);
+  const avatar = await ann.locator('.identity img').getAttribute('src');
   await expect(guest.locator(`.lobby img[src="${avatar}"]`)).toBeVisible();
   // The picture is served as an image, and nothing more.
   const response = await guest.request.get(avatar as string);

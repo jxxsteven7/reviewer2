@@ -88,7 +88,7 @@ describe('RankLadder', () => {
     wrapper.unmount();
   });
 
-  test("marks another player's rank alone, with no points and no way up", () => {
+  test("marks another player's rank alone, with no points and no way up, and says where points come from", () => {
     const wrapper = mount(RankLadder, {
       props: { open: true, rank: 'lecturer' },
       global: global(),
@@ -99,7 +99,16 @@ describe('RankLadder', () => {
     expect(current()?.textContent).not.toContain('more to');
     expect(current()?.textContent).not.toContain('highest rank');
     expect(rungs().filter((rung) => rung.classList.contains('reached'))).toHaveLength(9);
+    // The public page has nowhere else to say it; the account page says it under the rank.
+    expect(dialog()?.querySelector('.note')?.textContent).toContain('Every game you finish in a seat');
     wrapper.unmount();
+    const own = mount(RankLadder, {
+      props: { open: true, rank: 'lecturer', points: 2000 },
+      global: global(),
+      attachTo: document.body,
+    });
+    expect(dialog()?.querySelector('.note')).toBeNull();
+    own.unmount();
   });
 
   test('speaks Chinese too, and closes from its button', async () => {

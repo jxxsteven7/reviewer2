@@ -1,4 +1,5 @@
 import type { AcknowledgmentCount } from './acknowledgments';
+import type { DuoView } from './duos';
 import type { Rank } from './ranks';
 import { cleanName } from './names';
 import type { BestStreaks } from './streaks';
@@ -169,7 +170,9 @@ export interface AccountSummary {
 // never the time), its titles and its streaks, which the page shows as titles too (streaks.ts);
 // the link and the bio its owner wrote, if any; its record and its acknowledgments, if its owner
 // shows them, else null; and how many accounts like it. `liked` says whether the viewer likes it,
-// and `mine` whether the viewer is its owner; both are false for a guest.
+// and `mine` whether the viewer is its owner; both are false for a guest. `duo` is what the viewer
+// has played with the owner, for a viewer who is the owner's friend and shares a game with them,
+// else null (duos.ts): nobody else learns of it.
 export interface ProfileView {
   id: number;
   handle: string;
@@ -186,6 +189,7 @@ export interface ProfileView {
   likes: number;
   liked: boolean;
   mine: boolean;
+  duo: DuoView | null;
 }
 
 // An account that likes a profile, as the profile's owner sees it, with whether the two are

@@ -126,6 +126,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     me,
     match: null,
     streaks: [],
+    duos: [],
     data,
   };
 }
@@ -466,8 +467,28 @@ describe('DecisionLetter', () => {
       expect(letters(wrapper).map(({ verdict }) => verdict)).toEqual(['Withdrawn']);
     }
     const chair = mount(DecisionLetter, { props: { game, side: 'red', isChair: true }, global: global() });
-    await chair.find('button').trigger('click');
+    await chair.find('.decision > button').trigger('click');
     expect(chair.emitted('again')).toHaveLength(1);
+  });
+
+  test('says what a decision means when it is tapped, except on a big screen', async () => {
+    const game = over({ winner: 'red', reason: 'found' }, { red: 0, blue: 2 });
+    const wrapper = mount(DecisionLetter, {
+      props: { game, side: 'red', isChair: false },
+      global: global(),
+      attachTo: document.body,
+    });
+    await wrapper.find('.verdict button').trigger('click');
+    const sheet = document.body.querySelector('[role=dialog]');
+    expect(sheet?.textContent).toContain('Accept (Spotlight)');
+    expect(sheet?.textContent).toContain('two or three keywords');
+    wrapper.unmount();
+    const screen = mount(DecisionLetter, {
+      props: { game, side: null, isChair: false, compact: true },
+      global: global(),
+    });
+    expect(screen.find('.verdict button').exists()).toBe(false);
+    expect(screen.find('.verdict').text()).toBe('Accept (Spotlight)');
   });
 });
 
