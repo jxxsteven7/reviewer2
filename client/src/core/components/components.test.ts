@@ -146,4 +146,28 @@ describe('UiSheet', () => {
     expect(wrapper.emitted('close')).toHaveLength(1);
     wrapper.unmount();
   });
+
+  // A switch, such as the one for the sounds in the room menu, is armed by the space bar as a
+  // button is: the focus goes past it, to a field to type in or else to the panel.
+  test('gives the focus to the first field to type in, and never to a checkbox', async () => {
+    const open = (inputs: (() => ReturnType<typeof h>)[]) =>
+      mount(UiSheet, {
+        props: { open: false, title: 'd' },
+        slots: { default: () => inputs.map((input) => input()) },
+        global: global(),
+        attachTo: document.body,
+      });
+    const checkbox = () => h('input', { type: 'checkbox', id: 'mute' });
+    const field = () => h('input', { type: 'text', id: 'name' });
+    const switchOnly = open([checkbox]);
+    await switchOnly.setProps({ open: true });
+    await nextTick();
+    expect(document.activeElement?.getAttribute('role')).toBe('dialog');
+    switchOnly.unmount();
+    const withField = open([checkbox, field]);
+    await withField.setProps({ open: true });
+    await nextTick();
+    expect(active()).toBe('name');
+    withField.unmount();
+  });
 });

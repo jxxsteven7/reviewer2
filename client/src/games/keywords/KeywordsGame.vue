@@ -46,9 +46,12 @@ import { useKeywords, type Chooser } from './useKeywords';
 // with the tools on its right; on a phone the groups and the clue log open as sheets from the two
 // buttons in the bar under the board, so that the board comes first, and the chat from a third.
 //
-// While the chair has paused the game, a notice stands in place of the board, with the way to
-// resume for the chair, and the clock stands still. A group whose turn it is may ask for an
-// extension, where the room allows one. Once the game has ended, the review opens the replay.
+// The clock stays at the top of the screen, and the chair's button to pause the game and resume it
+// stands at its end, in reach wherever the page is scrolled and away from the cards and the clue;
+// in a game without a time limit the chair has the button there alone. While the chair has paused
+// the game, a notice stands in place of the board, with the way to resume for the chair too, and
+// the clock stands still. A group whose turn it is may ask for an extension, where the room allows
+// one. Once the game has ended, the review opens the replay.
 //
 // In a match, its table stands under the board while the game is on, folded to a line with the
 // progress and the viewer's place, since it is seldom looked at then; the chair's button to end
@@ -359,13 +362,12 @@ const chosenByOthers = computed(() =>
       @again="again"
     />
     <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" clock-apart />
-    <ClockBar
-      v-if="!game.result && game.clock"
-      :clock="game.clock"
-      :frozen="paused"
-      class="sticky-clock"
-      :class="{ 'below-banner': reconnecting }"
-    />
+    <div v-if="!game.result && (game.clock || isChair)" class="sticky-clock" :class="{ 'below-banner': reconnecting }">
+      <ClockBar v-if="game.clock" :clock="game.clock" :frozen="paused" />
+      <UiButton v-if="isChair" class="pause" size="small" :disabled="busy" @click="paused ? resume() : pause()">
+        {{ paused ? t('game.resume') : t('game.pause') }}
+      </UiButton>
+    </div>
     <StreakNotices :room="room" />
     <template v-if="game.result && match">
       <MatchResults v-if="match.status !== 'on'" :room="room" />
@@ -464,9 +466,6 @@ const chosenByOthers = computed(() =>
             <UiButton v-if="replay" class="review" variant="quiet" size="small" @click="reviewing = true">
               {{ t('game.review') }}
             </UiButton>
-            <UiButton v-if="isChair && !game.result && !paused" variant="quiet" size="small" @click="pause">
-              {{ t('game.pause') }}
-            </UiButton>
             <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
               {{ t('game.end') }}
             </UiButton>
@@ -510,12 +509,17 @@ const chosenByOthers = computed(() =>
 }
 
 /* The clock stays at the top of the screen while the page scrolls, and under the banner while the
-   page reconnects. It is kept thin, and its background reaches the edges of the screen, so that
-   no card shows through it beside the column. */
+   page reconnects, with the chair's button to pause at its end. It is kept thin, and its
+   background reaches the edges of the screen, so that no card shows through it beside the column.
+   Without a clock, the chair's button stands there alone, on the right. */
 .sticky-clock {
   position: sticky;
   top: 0;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
   margin-top: var(--space-2);
   padding: var(--space-1) 0;
   background: var(--bg);
@@ -523,8 +527,17 @@ const chosenByOthers = computed(() =>
   clip-path: inset(0 -100vmax);
 }
 
+.sticky-clock > .clock {
+  flex: 1;
+  min-width: 0;
+}
+
 .sticky-clock :deep(.seconds) {
   min-height: 32px;
+}
+
+.sticky-clock > .pause {
+  flex: none;
 }
 
 .sticky-clock.below-banner {

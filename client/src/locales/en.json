@@ -138,6 +138,7 @@
     "closeConfirmGame": "Close this room for everyone? The game in progress ends without a winner. Everyone in it, big screens included, is told that the room has closed, and its number stops working.",
     "menu": "Room",
     "public": "Public",
+    "private": "Private",
     "listed": "Public room: listed on the home page for anyone with an account.",
     "unlisted": "Private room: joined by number or link only.",
     "makePublic": "Make the room public",

@@ -169,7 +169,7 @@ test('a match whose groups stay the same keeps them, and passes the PI on', asyn
   }
   await expect(ann.locator('.desk')).toContainText(text.match.locked);
 
-  await expect(ann.locator('.desk .ready')).toBeVisible();
+  await expect(ann.locator('.start-bar .ready')).toBeVisible();
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
   expect(teams()).toEqual(before);

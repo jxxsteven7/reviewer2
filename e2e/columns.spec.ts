@@ -141,7 +141,8 @@ test("in a match, the table folds under the board with each line on one line, an
     for (const cell of ['.total', '.delta']) expect((await box(row.locator(cell))).width).toBeGreaterThanOrEqual(32);
   }
 
-  // Between the games, the chair's desk, with the start button, stands above the rules.
+  // Between the games, the chair's desk stands above the rules, and the start button above both,
+  // in the start bar.
   await playToTheEnd(table, 4);
   await chair.getByRole('button', { name: text.match.next }).click();
   await expect(chair.locator('.lobby .desk')).toBeVisible();
@@ -150,7 +151,9 @@ test("in a match, the table folds under the board with each line on one line, an
   const rules = await box(chair.locator('.rules'));
   expect(rules.top).toBeGreaterThanOrEqual(desk.bottom);
   expect(rules.top - desk.bottom).toBeLessThanOrEqual(SPACING);
-  await expect(chair.locator('.desk').getByRole('button', { name: text.lobby.start })).toBeVisible();
+  await expect(chair.locator('.start-bar').getByRole('button', { name: text.lobby.start })).toBeVisible();
+  expect((await box(chair.locator('.start-bar'))).bottom).toBeLessThanOrEqual(desk.top);
+  await expect(chair.locator('.desk').getByRole('button', { name: text.lobby.start })).toHaveCount(0);
 });
 
 // On a phone as narrow as 320 px the fold's table is narrower than 17 rem and takes its narrow
