@@ -1,25 +1,46 @@
 // @vitest-environment happy-dom
 import { defaultSettings, type KeywordsRoomData, type RoomView } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
+import { createMemoryHistory, createRouter } from 'vue-router';
+import { account } from '../../core/account';
 import { fields } from '../../core/fields';
 import en from '../../locales/en.json';
 import KeywordsLobby from './KeywordsLobby.vue';
 
-const send = vi.hoisted(() => vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean; fields?: [] }>>());
-vi.mock('../../core/socket', () => ({
-  send,
-  act: (event: string, payload: object = {}) => send(event, payload),
-  // The page is connected already.
-  onceConnected: (run: () => void) => {
-    run();
-    return () => {};
-  },
-  socket: { connected: true, on: vi.fn(), once: vi.fn() },
-}));
+const send = vi.hoisted(() =>
+  vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean; fields?: []; friends?: [] }>>(),
+);
+// The page is connected already.
+const page = vi.hoisted(() => ({ connection: { connected: true, everConnected: true } }));
+vi.mock('../../core/socket', async () => {
+  const { computed, reactive } = await import('vue');
+  page.connection = reactive(page.connection);
+  return {
+    send,
+    act: (event: string, payload: object = {}) => send(event, payload),
+    onceConnected: (run: () => void) => {
+      run();
+      return () => {};
+    },
+    socket: { connected: true, on: vi.fn(), once: vi.fn() },
+    connection: page.connection,
+    reconnecting: computed(() => page.connection.everConnected && !page.connection.connected),
+  };
+});
 
-const global = () => ({ plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] });
+// The way to log in, which the tag offers a guest, is a link of the page's router. The sheets are
+// teleported to the body; rendering them in place keeps them inside the wrapper.
+const router = () =>
+  createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/:path(.*)*', component: { render: () => null } }],
+  });
+const global = () => ({
+  plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } }), router()],
+  stubs: { teleport: true },
+});
 
 const data: KeywordsRoomData = {
   settings: defaultSettings('en'),
@@ -100,18 +121,29 @@ describe('KeywordsLobby', () => {
     expect(chair.find('.save').exists()).toBe(false);
   });
 
-  test('keeps the save and the start buttons off while a setting is wrong', async () => {
+  test('keeps the save and the start buttons off while a setting is wrong, and says so in the start bar', async () => {
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
-    await chair.findAll('.settings-form input[inputmode="numeric"]')[1]?.setValue('5');
+    const field = chair.findAll('.settings-form input[inputmode="numeric"]')[1];
+    const was = (field?.element as HTMLInputElement).value;
+    await field?.setValue('5');
     expect(chair.get('.save button').attributes('disabled')).toBeDefined();
-    expect(chair.get('.desk-actions .primary').attributes('disabled')).toBeDefined();
+    expect(chair.get('.start-bar .primary').attributes('disabled')).toBeDefined();
+    // The bar's line says why the game can't start, since the field may be scrolled out of sight
+    // under it; the desk marks the field itself.
+    const line = chair.get('.start-bar .readiness');
+    expect(line.text()).toBe("What was changed at the desk can't be saved yet.");
+    expect(line.classes()).not.toContain('ready');
+    await field?.setValue(was);
+    expect(line.text()).toBe('Everyone needed is seated.');
+    expect(line.classes()).toContain('ready');
+    expect(chair.get('.start-bar .primary').attributes('disabled')).toBeUndefined();
   });
 
   test('starts the game with the number of games the room has started', async () => {
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
-    await chair.find('.desk-actions .primary').trigger('click');
+    await chair.find('.start-bar .primary').trigger('click');
     expect(send).toHaveBeenCalledWith('room:start', { round: 2 });
     expect(send).not.toHaveBeenCalledWith('room:settings', expect.anything());
   });
@@ -121,7 +153,7 @@ describe('KeywordsLobby', () => {
     await flushPromises();
     await chair.find('.settings-form input[value="standard"]').setValue(true);
     expect(chair.get('.save .hint').text()).toBe('Starting the game saves these as well.');
-    await chair.find('.desk-actions .primary').trigger('click');
+    await chair.find('.start-bar .primary').trigger('click');
     await flushPromises();
     expect(send.mock.calls.filter(([event]) => event !== 'meta:fields')).toEqual([
       ['room:settings', { fields: ['general'], settings: { ...defaultSettings('en'), guessRule: 'standard' } }],
@@ -186,7 +218,7 @@ describe('KeywordsLobby', () => {
     expect(chair.text()).toContain('Custom words are for private rooms');
     // Nothing is left to save, and the game starts without a word of the chair's own.
     expect(chair.find('.save').exists()).toBe(false);
-    await chair.find('.desk-actions .primary').trigger('click');
+    await chair.find('.start-bar .primary').trigger('click');
     await flushPromises();
     expect(send.mock.calls.filter(([event]) => event !== 'meta:fields')).toEqual([['room:start', { round: 2 }]]);
   });
@@ -196,10 +228,129 @@ describe('KeywordsLobby', () => {
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
     await chair.find('.settings-form input[value="standard"]').setValue(true);
-    await chair.find('.desk-actions .primary').trigger('click');
+    await chair.find('.start-bar .primary').trigger('click');
     await flushPromises();
     expect(send).toHaveBeenCalledWith('room:settings', expect.anything());
     expect(send).not.toHaveBeenCalledWith('room:start', expect.anything());
+  });
+
+  // The start bar stands above the groups and the desk, for the chair alone: one line for what is
+  // still missing, which the desk lists in full, and the one start button of the page.
+  test('gives the chair a start bar above it all, which says what is missing', async () => {
+    const missing = {
+      ...data,
+      startProblems: [
+        { problem: 'needs_captain', team: 'red' },
+        { problem: 'needs_guesser', team: 'blue' },
+      ],
+    };
+    const waiting = { ...view('ann', 0), data: missing } as RoomView;
+    const chair = mount(KeywordsLobby, { props: { room: waiting }, global: global() });
+    await flushPromises();
+    const bar = chair.get('.start-bar');
+    expect(bar.get('.readiness').text()).toBe('The Red group needs a PI.');
+    expect(bar.get('.readiness').classes()).not.toContain('ready');
+    expect(chair.get('.desk .problems').findAll('li')).toHaveLength(2);
+    expect(bar.get('.primary').attributes('disabled')).toBeDefined();
+    expect(bar.findAll('button').map((button) => button.text())).toEqual(['Shuffle the groups', 'Start the game']);
+    const starts = chair.findAll('button').filter((button) => button.text() === 'Start the game');
+    expect(starts).toHaveLength(1);
+    // Above the groups and the desk, in the page's order too.
+    const html = chair.html();
+    expect(html.indexOf('start-bar')).toBeLessThan(html.indexOf('class="groups"'));
+
+    await chair.setProps({ room: view('ann', 0) });
+    expect(bar.get('.readiness').text()).toBe('Everyone needed is seated.');
+    expect(bar.get('.readiness').classes()).toContain('ready');
+    expect(chair.find('.desk .problems').exists()).toBe(false);
+    expect(bar.get('.primary').attributes('disabled')).toBeUndefined();
+
+    const player = mount(KeywordsLobby, { props: { room: view('bob', 0) }, global: global() });
+    expect(player.find('.start-bar').exists()).toBe(false);
+    expect(player.findAll('button').filter((button) => button.text() === 'Start the game')).toHaveLength(0);
+  });
+
+  test('keeps the start bar under the banner while the page reconnects', async () => {
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    expect(chair.get('.start-dock').classes()).not.toContain('below-banner');
+    page.connection.connected = false;
+    await flushPromises();
+    expect(chair.get('.start-dock').classes()).toContain('below-banner');
+    page.connection.connected = true;
+  });
+});
+
+// The tag beside the heading says whether the room is public, and the chair switches it there.
+describe('KeywordsLobby, public or private', () => {
+  beforeEach(() => {
+    send.mockReset();
+    send.mockImplementation(async (event) =>
+      event === 'meta:fields'
+        ? { ok: true, fields: [] }
+        : event === 'friends:list'
+          ? { ok: true, friends: [] }
+          : { ok: true },
+    );
+  });
+  afterEach(() => {
+    account.summary = null;
+  });
+
+  test('lets a chair with an account switch the room from the tag beside the heading', async () => {
+    account.summary = { username: 'Ann', avatar: null } as unknown as typeof account.summary;
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    const tag = chair.get('.lobby-head button.visibility');
+    expect(tag.get('.tag').text()).toBe('Private');
+    expect(tag.text()).toContain('Make the room public');
+    await tag.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('room:public', { public: true });
+    await chair.setProps({ room: { ...view('ann', 0), public: true } });
+    expect(tag.get('.tag').text()).toBe('Public');
+    expect(tag.get('.tag').classes()).toContain('listed');
+    expect(tag.text()).toContain('Make the room private');
+    await tag.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('room:public', { public: false });
+  });
+
+  test('shows the others the tag of a public room alone, with nothing to tap', async () => {
+    const player = mount(KeywordsLobby, { props: { room: view('bob', 0) }, global: global() });
+    expect(player.find('.lobby-head .public').exists()).toBe(false);
+    expect(player.find('.lobby-head .visibility').exists()).toBe(false);
+    await player.setProps({ room: { ...view('bob', 0), public: true } });
+    expect(player.get('.lobby-head .public').text()).toBe('Public');
+    expect(player.find('.lobby-head button.visibility').exists()).toBe(false);
+  });
+
+  test('tells a chair without an account that listing the room takes one, with the way to log in', async () => {
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    await flushPromises();
+    await chair.get('.lobby-head button.visibility').trigger('click');
+    expect(send).not.toHaveBeenCalledWith('room:public', expect.anything());
+    const sheet = chair.get('.needs-account');
+    expect(sheet.text()).toContain('Log in or register to make the room public.');
+    const link = sheet.get('a.button');
+    expect(link.text()).toBe('Log in or register');
+    expect(decodeURIComponent(link.attributes('href') ?? '')).toBe('/account?next=/room/K7QX');
+  });
+
+  // The share row offers a player with an account their friends first, as the room menu does, and
+  // the big screen as a button among the others.
+  test('offers a player with an account the invitation of friends in the share row', async () => {
+    const guest = mount(KeywordsLobby, { props: { room: view('bob', 0) }, global: global() });
+    expect(guest.find('.share .invite-friends').exists()).toBe(false);
+    const screen = guest.get('.share a.screen');
+    expect(screen.classes()).toContain('button');
+    expect(screen.attributes('href')).toBe('/room/K7QX/screen');
+    expect(screen.attributes('target')).toBe('_blank');
+
+    account.summary = { username: 'Bob', avatar: null } as unknown as typeof account.summary;
+    const member = mount(KeywordsLobby, { props: { room: view('bob', 0) }, global: global() });
+    const buttons = member.get('.share').findAll('.button');
+    expect(buttons[0]?.text()).toBe('Invite friends');
+    await buttons[0]?.trigger('click');
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('friends:list');
+    expect(member.get('.invite').text()).toContain('Your friends who are online.');
   });
 });
 

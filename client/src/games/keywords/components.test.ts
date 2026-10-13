@@ -1720,20 +1720,46 @@ describe('KeywordsGame', () => {
     expect(student.text()).toContain('The chair has paused the game.');
     expect(student.find('.guess-bar').exists()).toBe(false);
     expect(student.find('.paused button').exists()).toBe(false);
+    expect(student.find('.sticky-clock button').exists()).toBe(false);
     expect(student.get('.role-banner .line').text()).toBe('The game is paused.');
     // The clock stands still at what the server said.
     expect(student.get('[role="timer"]').attributes('aria-label')).toBe('42 seconds left');
-    // The chair resumes, and has nothing to pause meanwhile.
+    // The chair resumes, from the notice or from the end of the clock, which pauses the game
+    // otherwise; the tools at the foot of the page have no way to pause.
     const chair = mount(KeywordsGame, { props: { room: paused('ann') }, global: global() });
     expect(chair.findAll('.tools button').map((button) => button.text())).toEqual(['How to play', 'End the game']);
     await chair.get('.paused button').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
+    send.mockClear();
+    expect(chair.get('.sticky-clock .pause').text()).toBe('Resume the game');
+    await chair.get('.sticky-clock .pause').trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     const playing = mount(KeywordsGame, { props: { room: room('ann') }, global: global() });
-    await playing
-      .findAll('.tools button')
-      .find((button) => button.text() === 'Pause the game')
-      ?.trigger('click');
+    expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause the game');
+    expect(playing.get('.sticky-clock .pause').text()).toBe('Pause the game');
+    await playing.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
+  });
+
+  // A game without a time limit has no clock: the chair's button to pause stands at the top alone,
+  // and the others have nothing there.
+  test('gives the chair the button to pause at the top of a game without a clock', async () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const game = { ...(data.game as KeywordsView), clock: null };
+    const untimed = (me: string) => ({ ...view, me, data: { ...data, side: seats[me]?.team ?? null, game } });
+    const chair = mount(KeywordsGame, { props: { room: untimed('ann') }, global: global() });
+    expect(chair.find('[role="timer"]').exists()).toBe(false);
+    expect(
+      chair
+        .get('.strip + .sticky-clock')
+        .findAll('button')
+        .map((button) => button.text()),
+    ).toEqual(['Pause the game']);
+    await chair.get('.sticky-clock .pause').trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
+    const student = mount(KeywordsGame, { props: { room: untimed('bob') }, global: global() });
+    expect(student.find('.sticky-clock').exists()).toBe(false);
   });
 
   test("offers the group's extension in its own turn, where the room allows one, and tells everyone of it", async () => {
@@ -1825,12 +1851,14 @@ describe('KeywordsGame', () => {
     const wrapper = mount(KeywordsGame, { props: { room: { ...view, data: { ...data, game } } }, global: global() });
     expect(wrapper.findAll('[role="timer"]')).toHaveLength(1);
     expect(wrapper.find('.strip .clock').exists()).toBe(false);
-    const clock = wrapper.get('.strip + .clock');
-    expect(clock.attributes('aria-label')).toBe('42 seconds left');
-    expect(clock.classes()).not.toContain('below-banner');
+    const bar = wrapper.get('.strip + .sticky-clock');
+    expect(bar.get('.clock').attributes('aria-label')).toBe('42 seconds left');
+    // Bob isn't the chair: there is no button to pause beside his clock.
+    expect(bar.find('button').exists()).toBe(false);
+    expect(bar.classes()).not.toContain('below-banner');
     page.connection.connected = false;
     await flushPromises();
-    expect(clock.classes()).toContain('below-banner');
+    expect(bar.classes()).toContain('below-banner');
     page.connection.connected = true;
   });
 });

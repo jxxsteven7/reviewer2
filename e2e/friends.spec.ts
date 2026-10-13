@@ -68,13 +68,15 @@ test('friends are made in a room and by username, invited into a private room, a
   await ann.keyboard.press('Escape');
   await expect(ladder).toHaveCount(0);
 
-  // Ann makes a second private room and invites Bob from the room menu. Bob, who is on his account
-  // page, sees the invitation there and follows it into the room.
+  // Ann makes a second private room and invites Bob from the share row, where a player with an
+  // account finds the invitation first. Bob, who is on his account page, sees the invitation there
+  // and follows it into the room.
   const second = await createRoom(ann, 'en', '');
   await bob.goto('/account');
   await expect(bob.locator('.friends .line', { hasText: annName })).toContainText(text.friends.inRoom);
-  const menu = await roomMenu(ann);
-  await menu.getByRole('button', { name: text.friends.invite }).click();
+  const share = ann.locator('.lobby-head .share');
+  await expect(share.locator('.button').first()).toHaveText(text.friends.invite);
+  await share.getByRole('button', { name: text.friends.invite }).click();
   const sheet = ann.locator('[role=dialog]:has(.invite)');
   await expect(sheet.locator('.friend', { hasText: catName })).toBeVisible();
   await sheet.locator('.friend', { hasText: bobName }).getByRole('button', { name: text.friends.inviteOne }).click();
@@ -90,11 +92,12 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(bob).toHaveURL(second);
   await expect(ann.locator('.lobby')).toContainText(bobName);
   await ann.keyboard.press('Escape');
-  await ann.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
 
   // Ann lists the room: Cat, who is friends with her, sees which room she is in and joins it from
-  // her friend list.
+  // her friend list. The room menu offers the invitation of friends as well.
   const again = await roomMenu(ann);
+  await expect(again.getByRole('button', { name: text.friends.invite })).toBeVisible();
   await again.getByRole('button', { name: text.room.makePublic }).click();
   await expect(again).toContainText(text.room.listed);
   await ann.keyboard.press('Escape');

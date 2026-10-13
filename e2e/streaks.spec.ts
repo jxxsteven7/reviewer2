@@ -31,7 +31,7 @@ test('a winning streak is cheered by the whole room, and a losing streak told to
   for (let game = 1; game <= STREAK_MIN; game += 1) {
     if (game > 1) {
       await ann.getByRole('button', { name: text.game.letter.again }).click();
-      await expect(ann.locator('.desk .ready')).toBeVisible();
+      await expect(ann.locator('.start-bar .ready')).toBeVisible();
       await ann.getByRole('button', { name: text.lobby.start }).click();
       await expect(ann.locator('.keywords-game')).toBeVisible();
     }

@@ -109,7 +109,9 @@ test('the clock stays at the top of the screen as the page scrolls, under the re
   const page = table.spectator;
   // A phone's screen with the keyboard up, which leaves the board more than a screen to scroll.
   await page.setViewportSize({ width: 390, height: 420 });
-  const clock = page.locator('.clock');
+  // The bar that holds the clock, and the chair's button to pause, is what sticks.
+  const clock = page.locator('.sticky-clock');
+  await expect(clock.locator('[role="timer"]')).toBeVisible();
   const top = async (locator: typeof clock) => Math.round((await locator.boundingBox())?.y ?? -1);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
@@ -173,5 +175,5 @@ test('the chair can withdraw a game and play again with the same seats', async (
   }
   await chair.getByRole('button', { name: TEXT.en.game.letter.again }).click();
   await expect(table.guessers.blue.locator('.lobby')).toBeVisible();
-  await expect(chair.locator('.desk .ready')).toBeVisible();
+  await expect(chair.locator('.start-bar .ready')).toBeVisible();
 });

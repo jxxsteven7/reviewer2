@@ -14,6 +14,7 @@ import {
 } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { RouterLink } from 'vue-router';
 import FieldPicker from '../../core/components/FieldPicker.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
@@ -22,11 +23,14 @@ import PlayerName from '../../core/components/PlayerName.vue';
 import ShareTools from '../../core/components/ShareTools.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
+import UiSheet from '../../core/components/UiSheet.vue';
+import { account } from '../../core/account';
 import { fields, loadFields } from '../../core/fields';
 import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
 import { mayManage } from '../../core/manage';
-import { act } from '../../core/socket';
+import { act, reconnecting } from '../../core/socket';
+import { useStickyHeight } from '../../core/useStickyHeight';
 import RoleBanner from './RoleBanner.vue';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
@@ -34,7 +38,11 @@ import { useKeywords } from './useKeywords';
 
 // The waiting room: the banner that says where the viewer sits, the two groups with their PI and
 // students, the spectators and the screens, the room's settings, and the chair's desk with the
-// word lists, the chair's own words, the settings, the shuffle and the start button.
+// word lists, the chair's own words and the settings. The chair's start bar stands above it all
+// and stays at the top of the screen as the page scrolls, so that the start button is at hand
+// from the first screen to the foot of the desk: whether everyone needed is seated, or the first
+// thing still missing, the shuffle and the start button. The tag beside the heading says whether
+// the room is public, and the chair switches it there, as in the room menu.
 //
 // In a match, the match's table comes first, or its final ranking once it is over, and while the
 // match has locked the settings the chair sees the rules under their desk. When the server
@@ -145,6 +153,34 @@ async function start() {
 watch(isChair, (chair) => chair && loadFields(), { immediate: true });
 
 const problems = computed(() => data.value.startProblems);
+// What the start bar says on its one line: the first thing still missing, which the desk lists in
+// full; or, with everyone seated, that what was changed at the desk can't be saved, which the desk
+// marks and which keeps the start button off too; or else that the room is ready.
+const unsavable = computed(() => unsaved.value && !savable.value);
+const ready = computed(() => problems.value.length === 0 && !unsavable.value);
+const readiness = computed(() => {
+  const first = problems.value[0];
+  if (first) return problemText(first);
+  return t(unsavable.value ? 'lobby.unsavable' : 'lobby.ready');
+});
+// The bar's height goes into the page's scroll padding, so that a field of the desk that takes the
+// focus comes into view below it, however many rows the bar has.
+const dock = ref<HTMLElement | null>(null);
+useStickyHeight(dock);
+
+// The chair switches the room between public and private from the tag beside the heading, as in
+// the room menu, and without asking again. Listing it takes an account: a guest is told so, with
+// the way to log in or register and come back to the room (AccountPage), where the server finds
+// them in their seat, the chair's included.
+const needsAccount = ref(false);
+const signIn = computed(() => ({ path: '/account', query: { next: `/room/${props.room.code}` } }));
+function switchVisibility() {
+  if (!props.room.public && !account.summary) {
+    needsAccount.value = true;
+    return;
+  }
+  void act('room:public', { public: !props.room.public });
+}
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 const manageable = (player: PlayerView) => mayManage(props.room, player);
@@ -158,10 +194,30 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
     <header class="lobby-head">
       <p class="kicker">
         {{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}
-        <span v-if="room.public" class="public">{{ t('room.public') }}</span>
+        <button v-if="isChair" type="button" class="visibility" @click="switchVisibility">
+          <span class="tag" :class="{ listed: room.public }">{{
+            t(room.public ? 'room.public' : 'room.private')
+          }}</span>
+          <span class="sr-only">{{ t(room.public ? 'room.makePrivate' : 'room.makePublic') }}</span>
+        </button>
+        <span v-else-if="room.public" class="public">{{ t('room.public') }}</span>
       </p>
-      <ShareTools :code="room.code" />
+      <ShareTools :room="room" />
     </header>
+
+    <div v-if="isChair && !finished" ref="dock" class="start-dock" :class="{ 'below-banner': reconnecting }">
+      <div class="start-bar">
+        <p class="readiness" :class="{ ready }">{{ readiness }}</p>
+        <div class="start-actions">
+          <UiButton v-if="lineup === 'free'" size="small" @click="act('room:shuffle')">{{
+            t('lobby.shuffle')
+          }}</UiButton>
+          <UiButton variant="primary" size="small" :disabled="!ready || starting" @click="start">
+            {{ t('lobby.start') }}
+          </UiButton>
+        </div>
+      </div>
+    </div>
 
     <MatchResults v-if="finished" :room="room" />
 
@@ -306,21 +362,10 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
             <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
             <p class="hint">{{ t('lobby.saveHint') }}</p>
           </div>
-          <ul class="problems">
+          <ul v-if="problems.length" class="problems">
             <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
-            <li v-if="!problems.length" class="ready">{{ t('lobby.ready') }}</li>
           </ul>
           <p v-if="lineup === 'free'" class="hint shuffle-hint">{{ t('lobby.shuffleHint') }}</p>
-          <div class="desk-actions">
-            <UiButton v-if="lineup === 'free'" @click="act('room:shuffle')">{{ t('lobby.shuffle') }}</UiButton>
-            <UiButton
-              variant="primary"
-              :disabled="problems.length > 0 || starting || (unsaved && !savable)"
-              @click="start"
-            >
-              {{ t('lobby.start') }}
-            </UiButton>
-          </div>
         </section>
         <section v-if="!isChair || locked" class="rules">
           <h2 class="section-title">{{ t('settings.title') }}</h2>
@@ -336,6 +381,15 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
     </div>
 
     <PlayerMenu :player="managing" :room="room" @close="managing = null" />
+
+    <UiSheet :open="needsAccount" :title="t('room.makePublic')" @close="needsAccount = false">
+      <div class="needs-account">
+        <p>{{ t('room.publicNeedsAccount') }}</p>
+        <RouterLink v-slot="{ href, navigate }" :to="signIn" custom>
+          <UiButton variant="primary" :href="href" @click="navigate">{{ t('room.signIn') }}</UiButton>
+        </RouterLink>
+      </div>
+    </UiSheet>
   </section>
 </template>
 
@@ -356,9 +410,9 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
   font-synthesis: none;
 }
 
-.public {
+.public,
+.tag {
   display: inline-block;
-  margin-left: var(--space-1);
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--ink);
@@ -367,7 +421,119 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
   line-height: 1.6;
+}
+
+.public {
+  margin-left: var(--space-1);
   vertical-align: middle;
+}
+
+/* The chair's tag is a sticker to tap, 44 px high to the finger (docs/design.md): white while the
+   room is private, ink and flat once it is listed, as the others see it. */
+.visibility {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: calc(-1 * var(--space-2)) 0;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: inherit;
+  vertical-align: middle;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.visibility .tag {
+  padding: 2px var(--space-3);
+  border: var(--line-thin) solid var(--ink);
+  background: var(--paper);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+  transition:
+    transform var(--motion),
+    box-shadow var(--motion);
+}
+
+.visibility .tag.listed {
+  background: var(--ink);
+  box-shadow: none;
+  color: var(--on-ink);
+}
+
+.visibility:active .tag {
+  transform: translate(var(--shift-1), var(--shift-1));
+  box-shadow: none;
+}
+
+.visibility:active .tag.listed {
+  transform: none;
+}
+
+/* The chair's start bar, which stays at the top of the screen as the page scrolls, and under the
+   banner while the page reconnects, as the game's clock does. Its background reaches the edges of
+   the screen and covers its own sticker's shadow, so that nothing shows through beside it. A field
+   of the desk that the page brings into view stays below it: the bar's height, as measured
+   (useStickyHeight), and the banner's go into the page's scroll padding. */
+.start-dock {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) 0 var(--space-3);
+  background: var(--bg);
+  box-shadow: 0 0 0 100vmax var(--bg);
+  clip-path: inset(0 -100vmax);
+}
+
+.start-dock.below-banner {
+  top: var(--banner-height);
+}
+
+:global(html:has(.start-dock)) {
+  scroll-padding-top: calc(var(--banner-height) + var(--sticky-height, 8rem));
+}
+
+/* One line for whether the room is ready, and the buttons under it, or beside it where there is
+   room. */
+.start-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
+}
+
+.readiness {
+  flex: 1 1 14rem;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--red-deep);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.readiness.ready {
+  color: var(--ink);
+}
+
+.start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.needs-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .sections {
@@ -544,13 +710,7 @@ dd .vacant {
 }
 
 .shuffle-hint {
-  margin-bottom: var(--space-3);
-}
-
-.desk-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .waiting p {

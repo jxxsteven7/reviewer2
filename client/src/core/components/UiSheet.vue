@@ -10,10 +10,11 @@ import { useI18n } from 'vue-i18n';
 
 // A panel over the page: a sheet from the bottom on phones, a dialog on wider screens. Escape,
 // the close button and a tap outside close it. It is written by hand rather than with <dialog>,
-// which older in-app browsers lack. Focus goes to its first input, or to the panel itself when
-// there is none, so that no button is armed by opening it; Tab then stays inside the panel. A
-// sheet opened from another one, such as the chair's menu from the groups on a phone, lies over
-// it, and only the sheet on top listens to the keys.
+// which older in-app browsers lack. Focus goes to its first input other than a checkbox, or to the
+// panel itself when there is none, so that no button or switch, such as the one for the sounds, is
+// armed by opening it; Tab then stays inside the panel. A sheet opened from another one, such as
+// the chair's menu from the groups on a phone, lies over it, and only the sheet on top listens to
+// the keys.
 const props = defineProps<{ open: boolean; title: string }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
@@ -67,7 +68,7 @@ watch(
       openSheets.push(me);
       document.addEventListener('keydown', onKey);
       await nextTick();
-      (panel.value?.querySelector<HTMLElement>('input') ?? panel.value)?.focus();
+      (panel.value?.querySelector<HTMLElement>('input:not([type="checkbox"])') ?? panel.value)?.focus();
     } else if (was) {
       leave();
       document.removeEventListener('keydown', onKey);

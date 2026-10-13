@@ -8,6 +8,7 @@ import {
   playTurn,
   seatTable,
   sideChannel,
+  teamOnTurn,
   test,
   TEXT,
 } from './helpers';
@@ -47,13 +48,18 @@ async function expectColumnsFromTheTop(page: Page, left: string[], right: string
   }
 }
 
-// The bar under the board has no empty row where a phone has its buttons: what the viewer can do
-// follows the seat line within one gap of the bar's grid.
-async function expectBarWithoutEmptyRow(page: Page): Promise<void> {
-  const me = await box(page.locator('.actions .me'));
-  const next = await box(page.locator('.actions .status, .actions .guess-bar, .actions .clue-panel').first());
+// The bar under the board has no empty row where a phone has its buttons, and no row out of
+// place: each of the given parts follows the one before it within one gap of the bar's grid, the
+// seat line first.
+async function expectBarStacked(page: Page, parts: string[]): Promise<void> {
   const gap = await page.locator('.actions').evaluate((bar) => parseFloat(getComputedStyle(bar).rowGap));
-  expect(next.top - me.bottom, 'what the viewer can do follows the seat line').toBeLessThanOrEqual(gap + 1);
+  let above = (await box(page.locator('.actions .me'))).bottom;
+  for (const selector of parts) {
+    const part = await box(page.locator(`.actions ${selector}`).first());
+    expect(part.top, `${selector} is below the part above it`).toBeGreaterThanOrEqual(above);
+    expect(part.top - above, `${selector} follows the part above it`).toBeLessThanOrEqual(gap + 1);
+    above = part.bottom;
+  }
 }
 
 test('the chat, the groups, the clue log and the tools stand at the top of their columns, however long the log', async ({
@@ -66,10 +72,18 @@ test('the chat, the groups, the clue log and the tools stand at the top of their
   for (let turn = 1; turn <= 4; turn += 1) await playTurn(table, turn);
   await expect(student.locator('.clue-log li')).toHaveCount(4);
   await expectColumnsFromTheTop(student, ['.chat-panel', '.rosters'], ['.clue-log', '.tools']);
-  await expectBarWithoutEmptyRow(student);
+  await expectBarStacked(student, ['.status']);
   // A spectator has no chat: the groups stand at the top.
   await expectColumnsFromTheTop(spectator, ['.rosters'], ['.clue-log', '.tools']);
-  await expectBarWithoutEmptyRow(spectator);
+  await expectBarStacked(spectator, ['.status']);
+  // The PI whose turn it isn't prepares the next clue: the button and the draft's panel have
+  // their rows under the status line, as on a phone.
+  const pi = table.captains[(await teamOnTurn(student)) === 'red' ? 'blue' : 'red'];
+  await pi.locator('button.prepare').click();
+  await expect(pi.locator('.clue-panel.draft')).toBeVisible();
+  await expectBarStacked(pi, ['.status', '.prepare', '.clue-panel.draft']);
+  await pi.locator('button.prepare').click();
+  await expect(pi.locator('.clue-panel')).toHaveCount(0);
 
   // At the end, the log is longer than the groups by far, and nothing moves down.
   await playToTheEnd(table, 4);
@@ -127,7 +141,8 @@ test("in a match, the table folds under the board with each line on one line, an
     for (const cell of ['.total', '.delta']) expect((await box(row.locator(cell))).width).toBeGreaterThanOrEqual(32);
   }
 
-  // Between the games, the chair's desk, with the start button, stands above the rules.
+  // Between the games, the chair's desk stands above the rules, and the start button above both,
+  // in the start bar.
   await playToTheEnd(table, 4);
   await chair.getByRole('button', { name: text.match.next }).click();
   await expect(chair.locator('.lobby .desk')).toBeVisible();
@@ -136,5 +151,63 @@ test("in a match, the table folds under the board with each line on one line, an
   const rules = await box(chair.locator('.rules'));
   expect(rules.top).toBeGreaterThanOrEqual(desk.bottom);
   expect(rules.top - desk.bottom).toBeLessThanOrEqual(SPACING);
-  await expect(chair.locator('.desk').getByRole('button', { name: text.lobby.start })).toBeVisible();
+  await expect(chair.locator('.start-bar').getByRole('button', { name: text.lobby.start })).toBeVisible();
+  expect((await box(chair.locator('.start-bar'))).bottom).toBeLessThanOrEqual(desk.top);
+  await expect(chair.locator('.desk').getByRole('button', { name: text.lobby.start })).toHaveCount(0);
+});
+
+// On a phone as narrow as 320 px the fold's table is narrower than 17 rem and takes its narrow
+// form (MatchTable.vue): the headings in capitals keep a space between them, and each line
+// stays one line, the long name cut short.
+test.describe('on a 320 px phone', () => {
+  test.use({ viewport: { width: 320, height: 700 } });
+
+  test('the folded table keeps its headings apart and its lines on one line', async ({ browser }, testInfo) => {
+    test.skip(!isPhone(testInfo), 'the fold is the same at every width, but a phone is where it gets narrow');
+    const table = await seatTable(browser, 'en', undefined, (page) =>
+      chooseMatch(page, 'en', { games: 3, teams: 'fixed', grouping: 'choose' }),
+    );
+    const tab = await sideChannel(table.guessers.blue, table.url);
+    expect(await tab.send('room:rename', { name: 'Bartholomew Long' })).toMatchObject({ ok: true });
+    await playTurn(table, 1);
+
+    const student = table.guessers.red;
+    const fold = student.locator('.match-fold');
+    await fold.locator('summary').click();
+    await expect(fold.locator('.match-table')).toBeVisible();
+    expect(await fold.locator('.match-table').evaluate((found) => found.getBoundingClientRect().width)).toBeLessThan(
+      17 * 16,
+    );
+    // The text of each heading, where it is, ends before the next one begins.
+    const headings = await fold.locator('th').evaluateAll((cells) =>
+      cells.map((cell) => {
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        const rect = range.getBoundingClientRect();
+        return { text: cell.textContent?.trim() ?? '', left: rect.left, right: rect.right };
+      }),
+    );
+    expect(headings.map((heading) => heading.text)).toEqual([
+      text.match.rank,
+      text.match.player,
+      text.match.total,
+      text.match.delta,
+    ]);
+    for (let index = 1; index < headings.length; index += 1) {
+      const before = headings[index - 1] as { text: string; right: number };
+      const heading = headings[index] as { text: string; left: number };
+      expect(
+        heading.left - before.right,
+        `"${heading.text}" stands apart from "${before.text}"`,
+      ).toBeGreaterThanOrEqual(4);
+    }
+    for (const row of await fold.locator('tbody tr').all()) {
+      expect((await box(row.locator('.name-line'))).height).toBeLessThanOrEqual(40);
+      expect((await box(row.locator('.name'))).height).toBeLessThanOrEqual(26);
+    }
+    await expect(fold.locator('tbody .name', { hasText: 'Bartholomew Long' })).toHaveAttribute(
+      'title',
+      'Bartholomew Long',
+    );
+  });
 });
