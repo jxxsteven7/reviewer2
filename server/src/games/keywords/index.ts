@@ -20,7 +20,7 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask } from './agents';
+import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask, personSeated } from './agents';
 import type { GameContext, GameModule, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
@@ -323,11 +323,13 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { ...data, seating, match: rekeyMatch(data.match, from, to, team) };
   },
 
-  // An AI player sits as a group's PI or as one of its students, in the waiting room; a match has
-  // none (Room.startMatch). A group has one AI PI and one AI student at most.
+  // An AI player sits as a group's PI or as one of its students, in the waiting room, once a person
+  // sits in a group; a match has none (Room.startMatch). A group has one AI PI and one AI student at
+  // most.
   seatAgent(data, ctx, playerId, seat) {
     const wanted = agentSeat(seat);
     if (!wanted) return { ok: false, error: 'bad_seat' };
+    if (!personSeated(data.seating, ctx)) return { ok: false, error: 'needs_human' };
     if (agentLimitReached(data.seating, ctx, playerId, wanted.team, wanted.role)) {
       return { ok: false, error: 'agent_limit' };
     }
@@ -402,10 +404,11 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     for (const record of game.history) {
       for (const { player } of record.guesses) players[player] ??= ctx.nameOf(player);
     }
+    // The AI players: those in a group, and whoever revealed a card and has since been removed.
     const agents: Record<string, AgentPersona> = {};
-    for (const id of ctx.playerIds()) {
+    for (const id of [...ctx.playerIds(), ...Object.keys(players)]) {
       const persona = ctx.agentOf(id);
-      if (persona !== null && seatOf(data.seating, id).team !== null) agents[id] = persona;
+      if (persona !== null && (seatOf(data.seating, id).team !== null || id in players)) agents[id] = persona;
     }
     return {
       gameId: game.gameId,

@@ -189,8 +189,12 @@ export class Room {
   readonly #emoted = new Map<string, number>();
   // Those who left during the current game, by player ID, with the member key, the name and the
   // account they had, so that the game can still tell whose was a move they made before they left,
-  // as a match's score, a replay and the record of the game need to.
-  readonly #gone = new Map<string, { key: string; name: string; accountId: number | null }>();
+  // as a match's score, a replay and the record of the game need to, and the persona of an AI
+  // player among them.
+  readonly #gone = new Map<
+    string,
+    { key: string; name: string; accountId: number | null; agent: AgentPersona | null }
+  >();
   // The log of the game being played or just ended (docs/architecture.md#game-records), from its
   // start until the room goes back to the waiting room, and the AI's own log beside it.
   #log: GameLog | null = null;
@@ -240,7 +244,7 @@ export class Room {
       keyOf: (id) => this.members.get(id)?.key ?? this.#gone.get(id)?.key ?? id,
       nameOf: (id) => this.members.get(id)?.name ?? this.#gone.get(id)?.name ?? '',
       isOnline: (id) => this.isOnline(id),
-      agentOf: (id) => this.members.get(id)?.agent ?? null,
+      agentOf: (id) => this.members.get(id)?.agent ?? this.#gone.get(id)?.agent ?? null,
       playerIds: () => [...this.members.keys()],
     };
   }
@@ -479,7 +483,12 @@ export class Room {
     const data = this.game.leave(this.data, id);
     const over = this.#endsWith(data);
     if (this.phase !== 'lobby') {
-      this.#gone.set(id, { key: member.key, name: member.name, accountId: member.account?.id ?? null });
+      this.#gone.set(id, {
+        key: member.key,
+        name: member.name,
+        accountId: member.account?.id ?? null,
+        agent: member.agent,
+      });
     }
     this.#note(id, 'leave');
     this.members.delete(id);
@@ -819,11 +828,16 @@ export class Room {
     return done;
   }
 
-  // An AI player doesn't watch: the chair removes it instead.
+  // An AI player doesn't watch: sending it to the spectators removes it from the room, as
+  // remove() does, and the chair may invite it again.
   bench(id: string): Ack {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');
-    if (member.agent) return fail('player_is_agent');
+    if (member.agent) {
+      this.#note(this.chairId, 'remove', { player: id });
+      this.drop(id);
+      return done;
+    }
     const data = this.game.bench(this.data, this.context, id);
     if (data !== this.data) this.#note(this.chairId, 'bench', { player: id });
     this.#update(data);
@@ -900,10 +914,11 @@ export class Room {
     if (note !== null) this.#log.add(this.#now(), id, type, note.data, note.minor ?? false, agent);
   }
 
-  // Notes a step of an AI in the AI's log of the game being played (agentLog.ts). Outside a game,
-  // there is nothing to note it in.
-  noteAgent(step: Omit<AgentStep, 't'>): void {
-    if (this.phase === 'playing') this.#agentLog?.add(this.#now(), step);
+  // Notes a step of an AI in the AI's log of the game it was asked for, `gameId`, at `at` on the
+  // room's clock (agentLog.ts). Once that game is over, there is nothing to note it in: an answer
+  // that comes after the end of its game goes nowhere, and never into the next game's log.
+  noteAgent(gameId: string | null, at: number, step: Omit<AgentStep, 't'>): void {
+    if (this.phase === 'playing' && gameId !== null && gameId === this.gameId) this.#agentLog?.add(at, step);
   }
 
   // Whether an AI has played in the current game, as an AI player or for someone who was offline.

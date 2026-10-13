@@ -15,7 +15,8 @@ export const MAX_AGENT_LOG_BYTES = 64 * 1024;
 // One step: when it was asked for, in milliseconds from the start of the game on the room's clock;
 // the seat, by player ID; the persona that played it, and whether it played for a player who was
 // offline rather than as an AI player of its own; what it was to do, as the game names it (such as
-// "clue", "guess" or "advise"); and either the answer, as the agent gave it, or why there was none.
+// "clue", "guess" or "advise"); either the answer, as the agent gave it, or why there was none; and
+// whether the answer came too late to be of use, once the game had moved on.
 export interface AgentStep {
   t: number;
   by: string;
@@ -25,6 +26,7 @@ export interface AgentStep {
   answer?: unknown;
   note?: AgentNote;
   error?: string;
+  late?: true;
 }
 
 export interface AgentLogData {

@@ -68,7 +68,9 @@ export interface LogNote {
 // What an AI is to do in a seat now (GameModule.agentTask; docs/architecture.md#ai-players).
 export interface AgentTask {
   // The moment of the game it is for, such as a turn and its phase, in the game's own words. Once
-  // the game has moved on, the task is dropped, and so is its answer when it comes.
+  // the game has moved on, the task is dropped, and so is its answer when it comes. Two seats whose
+  // tasks are for the same moment would do the same thing, as two students of a group would, so
+  // the driver gives the task to one of them.
   moment: string;
   // What the seat is to do, in the game's words, for the AI's log, such as "clue" or "guess".
   kind: string;
@@ -196,7 +198,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // newcomer's member key and persona.
   seatAgent?(data: Data, ctx: GameContext, playerId: string, seat: unknown): GameUpdate<Data>;
   // What a seat is to do now when an AI plays it: an AI player's own seat, or the seat of a player
-  // who is offline in their turn. Null when there is nothing for it to do.
+  // who is offline in their turn. Null when there is nothing for it to do. The context's isOnline
+  // says who is there to play, which counts a person who has been offline for a short while as
+  // there still (server/src/core/agents.ts).
   agentTask?(data: Data, ctx: GameContext, playerId: string): AgentTask | null;
   // The next message that the agent's answer to a task makes for the seat, with the game as it is
   // now, or null when the answer has nothing more to give. `made` are the types of the messages

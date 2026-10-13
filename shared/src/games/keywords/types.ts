@@ -191,7 +191,8 @@ export type KeywordsError = (typeof KEYWORDS_ERRORS)[number];
 // `between_games`: in a match, only those who have played for a group in the game being played
 // may sit in one until it ends; anyone else joins from the next game. `bigger_group`: in a match
 // whose groups are fixed, a newcomer joins the group with fewer players. `agent_limit`: a group has
-// one AI PI and one AI student at most (docs/games/keywords.md#ai-players).
+// one AI PI and one AI student at most, and `needs_human`: an AI player can be invited once a
+// person sits in a group (docs/games/keywords.md#ai-players).
 export const SEAT_ERRORS = [
   'seat_taken',
   'key_viewer',
@@ -200,6 +201,7 @@ export const SEAT_ERRORS = [
   'between_games',
   'bigger_group',
   'agent_limit',
+  'needs_human',
 ] as const;
 export type SeatError = (typeof SEAT_ERRORS)[number];
 

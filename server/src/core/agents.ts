@@ -1,6 +1,6 @@
 import type { AgentAnswer, AgentPersona } from '@reviewer2/shared';
 import type { AgentChannel, AgentOutcome } from './agentChannel';
-import type { AgentTask } from './game';
+import type { AgentTask, GameContext } from './game';
 import type { Room } from './room';
 import type { Timers } from './socket';
 
@@ -9,13 +9,15 @@ import type { Timers } from './socket';
 // to do, the driver asks the agent (agentChannel.ts) and sends the answer to the game as the
 // player's page would send a message, through Room.act(), where the rules judge it as they judge
 // anyone's. An AI also plays for a person who has been offline for TAKEOVER_MS in a room that may
-// have AI players, as long as the turn is theirs, and stops when they come back.
+// have AI players, as long as the turn is theirs and nobody else plays it, and stops when they come
+// back.
 //
 // The driver looks at a room every time it changes (poke(), from the socket layer's broadcast), and
-// otherwise only when a timer it set comes due: a move that waits for its pace, a player who has
-// been offline long enough to be played for, or the agent to be asked whether it is back. The game
-// says what a seat is to do (GameModule.agentTask) and what message an answer makes
-// (GameModule.agentMove); the driver knows nothing of any game.
+// otherwise only when a timer it set comes due: a move that waits for its pace, a request to ask
+// again after one that brought no answer, a player who has been offline long enough to be played
+// for, or the agent to be asked whether it is back. The game says what a seat is to do
+// (GameModule.agentTask) and what message an answer makes (GameModule.agentMove); the driver knows
+// nothing of any game.
 //
 // What the agent answers is a suggestion that has to get past the rules like any message. An
 // answer that comes after the game has moved on is dropped. When the agent can't be reached or its
@@ -25,13 +27,19 @@ import type { Timers } from './socket';
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
 // How long a person has been offline in a game before an AI plays their turns, which leaves them
-// time to reload the page or to unlock their phone.
+// time to reload the page or to unlock their phone. Until then, the game counts them as there, so
+// that nobody's brief drop changes what an AI does.
 export const TAKEOVER_MS = 20_000;
 // How long a request may wait at most, and how long before the end of the phase the driver stops
 // waiting, so that a move doesn't arrive as the clock runs out. A phase without a time limit, which
 // only a game played for someone offline can have, waits MAX_WAIT_MS.
 export const MAX_WAIT_MS = 60_000;
 export const MARGIN_MS = 3_000;
+// How long the driver waits before asking again for a seat whose request brought no answer, as
+// when the agent was busy, doubling each time up to the longest wait, for as long as the phase
+// lasts. A phase without a time limit would otherwise stand still after one such answer.
+export const RETRY_MS = 10_000;
+export const MAX_RETRY_MS = 60_000;
 // How often the agent is asked whether it is back, once it has failed.
 export const PING_MS = 30_000;
 // The most moves that one answer can make, which no game comes near: a guard against a game whose
@@ -41,21 +49,36 @@ const MAX_MOVES = 30;
 const STANDIN: AgentPersona = 'reviewer1';
 // How far back the status page counts the AI's steps.
 const STATS_MS = 60 * 60_000;
+// What the agent answers when it, or the model behind it, is gone rather than short of an answer:
+// then the AI players are offline until a ping finds it back.
+const DOWN_ERRORS = new Set(['unreachable', 'timeout', 'bad_reply', 'model_failed']);
 
-// A task that is under way in a seat: what it is, when it came up, the agent's answer once it has
-// come, the messages sent for it so far and when the last went, and the timer of the next move.
+// A task that is under way in a seat: what it is, when it came up, the game it belongs to, the
+// agent's answer once it has come, the messages sent for it so far and when the last went, the
+// timer of the next move or of the next request, and how many times the request has been made
+// again.
 interface Running {
   task: AgentTask;
   persona: AgentPersona;
   takeover: boolean;
   since: number;
+  gameId: string | null;
   answer: AgentAnswer | null;
   made: string[];
   lastMove: number;
   timer: unknown;
+  retries: number;
   // Done, by a move that the rules refused or by too many moves: nothing more is sent for the task.
   done: boolean;
   cancelled: boolean;
+}
+
+// A seat that an AI plays now: as which persona, what it is to do, and whether it plays for a
+// person who is offline.
+interface Seat {
+  persona: AgentPersona;
+  task: AgentTask;
+  takeover: boolean;
 }
 
 export interface DriverOptions {
@@ -97,27 +120,16 @@ export class AgentDriver {
     const { isOpen, now, broadcast } = this.#options;
     const playing = isOpen(room) && room.phase === 'playing';
     const rev = room.rev;
-    this.#takeovers(room, playing);
+    const seats = this.#seats(room, playing);
     if (room.rev !== rev) {
-      // The new state goes out first, and comes back here with it.
+      // Someone is played for, or no longer: the new state goes out first, and comes back here.
       broadcast(room);
       return;
     }
-    // Nobody plays a game that no person is online in, so that no AI plays on for nobody.
-    const watched = [...room.members.values()].some((member) => !member.agent && member.sockets.size > 0);
-    const seats = playing && watched && room.game.agentTask ? this.#seats(room) : new Map<string, AgentPersona>();
     const running = this.#running.get(room) ?? new Map<string, Running>();
     for (const [id, run] of running) if (!seats.has(id)) this.#cancel(running, id, run);
-    for (const [id, persona] of seats) {
-      const member = room.members.get(id);
-      let task = room.game.agentTask?.(room.data, room.context, id) ?? null;
-      const takeover = member?.agent === null;
-      if (task?.advice && takeover) task = null;
+    for (const [id, { persona, task, takeover }] of seats) {
       const run = running.get(id);
-      if (!task) {
-        if (run) this.#cancel(running, id, run);
-        continue;
-      }
       if (run && run.task.moment === task.moment) {
         this.#next(room, id, run);
         continue;
@@ -128,10 +140,12 @@ export class AgentDriver {
         persona,
         takeover,
         since: now(),
+        gameId: room.gameId,
         answer: null,
         made: [],
         lastMove: 0,
         timer: null,
+        retries: 0,
         done: false,
         cancelled: false,
       };
@@ -170,35 +184,70 @@ export class AgentDriver {
     for (const room of [...this.#running.keys(), ...this.#wakeups.keys()]) this.forget(room);
   }
 
-  // Who is played for: a person who has been offline for TAKEOVER_MS in a game of a room that may
-  // have AI players, until they come back or the game ends. For whoever isn't offline long enough
-  // yet, the room is looked at again when they will be.
-  #takeovers(room: Room, playing: boolean): void {
-    const allowed = playing && this.state.up && room.agentsAllowed();
+  // The seats that an AI plays now, and as whom. The AI players' own, while the agent answers; and
+  // the seats of the people who have been offline for TAKEOVER_MS in a game of a room that may have
+  // AI players, as far as those seats have something to do that nobody else does: not the advice
+  // that an AI player gives the people of its group, since they are there to play the turn, and not
+  // what another seat is given already, as when two students of a group are offline, or one is and
+  // the group has an AI student, who plays the guesses alone. Nobody plays a game that no person is
+  // online in, so that no AI plays on for nobody.
+  //
+  // Whoever is played for is marked so (Room.takeOver) from the first thing an AI does for them until
+  // they are back, or the game ends; the room is looked at again when someone who is offline will
+  // have been for long enough.
+  #seats(room: Room, playing: boolean): Map<string, Seat> {
     const now = this.#options.now();
+    const seats = new Map<string, Seat>();
+    const moments = new Set<string>();
+    const watched = [...room.members.values()].some((member) => !member.agent && member.sockets.size > 0);
+    const asked = playing && watched && this.state.up && room.game.agentTask !== undefined;
+    const allowed = playing && this.state.up && room.agentsAllowed();
     let due: number | null = null;
+    if (asked) {
+      for (const member of room.members.values()) {
+        if (!member.agent) continue;
+        const task = this.#task(room, member.id);
+        if (!task || moments.has(task.moment)) continue;
+        seats.set(member.id, { persona: member.agent, task, takeover: false });
+        moments.add(task.moment);
+      }
+    }
     for (const member of room.members.values()) {
       if (member.agent) continue;
       const since = member.offlineSince;
-      const away = allowed && member.sockets.size === 0 && since !== null;
-      const ripe = away && now - since >= TAKEOVER_MS;
-      room.takeOver(member.id, ripe);
-      if (away && !ripe) due = Math.min(due ?? Infinity, since + TAKEOVER_MS);
+      const offline = allowed && member.sockets.size === 0 && since !== null;
+      const away = offline && now - since >= TAKEOVER_MS;
+      if (offline && !away) due = Math.min(due ?? Infinity, since + TAKEOVER_MS);
+      if (!away) {
+        room.takeOver(member.id, false);
+        continue;
+      }
+      const task = asked ? this.#task(room, member.id) : null;
+      if (!task || task.advice || moments.has(task.moment)) continue;
+      room.takeOver(member.id, true);
+      seats.set(member.id, { persona: STANDIN, task, takeover: true });
+      moments.add(task.moment);
     }
     this.#wake(room, due);
+    return seats;
   }
 
-  // The seats that an AI plays, with the persona it plays them as.
-  #seats(room: Room): Map<string, AgentPersona> {
-    const seats = new Map<string, AgentPersona>();
-    for (const member of room.members.values()) {
-      if (member.agent) {
-        if (this.state.up) seats.set(member.id, member.agent);
-      } else if (member.takenOver) {
-        seats.set(member.id, STANDIN);
-      }
-    }
-    return seats;
+  // What the game has for a seat now. The game is told who is there to play: the AI players while
+  // the agent answers, and the people who are online or have been offline for less than TAKEOVER_MS
+  // yet, so that a person's brief drop changes nothing of what an AI does.
+  #task(room: Room, id: string): AgentTask | null {
+    const now = this.#options.now();
+    const context: GameContext = {
+      ...room.context,
+      isOnline: (playerId) => {
+        const member = room.members.get(playerId);
+        if (!member) return false;
+        if (member.agent) return this.state.up;
+        if (member.sockets.size > 0) return true;
+        return member.offlineSince !== null && now - member.offlineSince < TAKEOVER_MS;
+      },
+    };
+    return room.game.agentTask?.(room.data, context, id) ?? null;
   }
 
   #wake(room: Room, at: number | null): void {
@@ -224,7 +273,7 @@ export class AgentDriver {
   }
 
   // Asks the agent what to do in a seat, for as long as the phase leaves, and notes what came of it in
-  // the AI's log of the game.
+  // the AI's log of the game it was asked for.
   #ask(room: Room, id: string, run: Running): void {
     const { channel, now, log } = this.#options;
     const deadline = room.deadline();
@@ -233,31 +282,54 @@ export class AgentDriver {
       run.done = true;
       return;
     }
-    this.#steps.push(now());
+    const asked = now();
+    this.#steps.push(asked);
     this.#forgetOld();
     const request = { v: 1 as const, persona: run.persona, waitMs: Math.round(waitMs), ...run.task.question };
     void channel.ask(request, waitMs).then((outcome) =>
       this.#safely(room, () => {
         const late = run.cancelled;
-        room.noteAgent({
+        room.noteAgent(run.gameId, asked, {
           by: id,
           persona: run.persona,
           ...(run.takeover ? { takeover: true as const } : {}),
           kind: run.task.kind,
           ...answerOf(outcome),
-          ...(late ? { error: 'late' } : {}),
+          ...(late ? { late: true as const } : {}),
         });
         if (!outcome.ok) {
           this.#failures.push(now());
           log('agent_failed', { code: room.code, kind: run.task.kind, error: outcome.error });
-          if (['unreachable', 'timeout', 'bad_reply', 'model_failed'].includes(outcome.error)) this.#down();
-          run.done = true;
+          if (DOWN_ERRORS.has(outcome.error)) this.#down();
+          else if (!late) this.#retry(room, id, run);
           return;
         }
         if (late || outcome.kind === 'ping') return;
         run.answer = outcome;
         this.#next(room, id, run);
       }),
+    );
+  }
+
+  // Asks again after a while for a seat whose request brought no answer, with the task as the game
+  // has it then, as long as the game is at the same moment: the agent may have been busy, or the
+  // model may have nothing the first time and something the next.
+  #retry(room: Room, id: string, run: Running): void {
+    if (run.done || run.cancelled || run.timer !== null) return;
+    const { timers } = this.#options;
+    const wait = Math.min(MAX_RETRY_MS, RETRY_MS * 2 ** run.retries);
+    run.retries += 1;
+    run.timer = timers.start(
+      () =>
+        this.#safely(room, () => {
+          run.timer = null;
+          if (run.done || run.cancelled) return;
+          const task = this.#task(room, id);
+          if (task?.moment !== run.task.moment) return;
+          run.task = task;
+          this.#ask(room, id, run);
+        }),
+      wait,
     );
   }
 
@@ -271,7 +343,7 @@ export class AgentDriver {
     const move = () => {
       run.timer = null;
       if (run.done || run.cancelled || !run.answer) return;
-      const current = room.game.agentTask?.(room.data, room.context, id) ?? null;
+      const current = this.#task(room, id);
       if (current?.moment !== run.task.moment) return;
       const next = room.game.agentMove?.(room.data, room.context, id, run.task, run.answer, run.made) ?? null;
       if (!next) return;
@@ -329,12 +401,18 @@ export class AgentDriver {
   }
 
   // Everyone in a room with AI players sees them come online or go offline, and the driver looks at
-  // the room again.
+  // the room again; so does it at every other room that may have an AI play for someone offline,
+  // whom it takes over or lets go of.
   #refresh(): void {
+    const { isOpen, broadcast } = this.#options;
     for (const room of this.#options.rooms()) {
-      if (!room.hasAgents() || !this.#options.isOpen(room)) continue;
-      room.changed();
-      this.#safely(room, () => this.#options.broadcast(room));
+      if (!isOpen(room)) continue;
+      if (room.hasAgents()) {
+        room.changed();
+        this.#safely(room, () => broadcast(room));
+      } else if (room.agentsAllowed()) {
+        this.#safely(room, () => this.poke(room));
+      }
     }
   }
 

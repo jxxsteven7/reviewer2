@@ -25,6 +25,12 @@ export function agentLimitReached(seating: Seating, ctx: GameContext, playerId: 
   );
 }
 
+// Whether a person sits in a group: an AI player can be invited once one does, so that a room is
+// never the AI players' alone.
+export function personSeated(seating: Seating, ctx: GameContext): boolean {
+  return [...seating.seats].some(([id, seat]) => seat.team !== null && ctx.agentOf(id) === null);
+}
+
 // What keeps a game with AI players from starting: a time limit missing for the clues or the
 // guesses, which carry a game on when the agent is slow or gone, or no person in a group at all.
 export function agentProblems(data: KeywordsData, ctx: GameContext): StartProblem[] {
@@ -48,7 +54,9 @@ export function agentSeat(seat: unknown): { team: (typeof TEAMS)[number]; role: 
 
 // What a seat is to do now: the group's PI gives the clue in its turn, and a student plays the
 // turn's guesses, or, while a person of the group is there as a student too, advises them. Nothing
-// while the game is paused or over, or in the other group's turn.
+// while the game is paused or over, or in the other group's turn. Who is there is as the context
+// says: the driver of the AI players counts a person who has been offline for a short while as
+// there still (server/src/core/agents.ts).
 export function agentTask(data: KeywordsData, ctx: GameContext, playerId: string): AgentTask | null {
   const game = data.game;
   if (!game || game.phase === 'over' || game.pause) return null;
@@ -87,7 +95,8 @@ export function agentTask(data: KeywordsData, ctx: GameContext, playerId: string
     );
   return {
     // Whether the AI advises or plays is part of the moment: when the last person of the group goes
-    // offline, or one comes back, the AI asks again for what it does now.
+    // offline, or one comes back, the AI asks again for what it does now. The moment names no seat:
+    // every student of the group would do the same, and the driver has one of them do it.
     moment: `${game.gameId}:${game.turn}:guess:${advice ? 'advise' : 'play'}`,
     kind: advice ? 'advise' : 'guess',
     question: { kind: 'guess', ...base, clue: { ...game.clue }, guessesLeft: view.guessesLeft },
