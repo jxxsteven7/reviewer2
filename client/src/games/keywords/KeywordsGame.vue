@@ -43,6 +43,7 @@ import RulesSheet from './RulesSheet.vue';
 import TurnStrip from './TurnStrip.vue';
 import { useChatLine } from './useChatLine';
 import { useKeywords, type Chooser } from './useKeywords';
+import { useMissedDeadlines } from './useMissedDeadlines';
 
 // A game in progress, and its result. The banner that says what is going on for the viewer, the
 // turn strip, the clock, the board and what the viewer can do now come first. On a wide screen the
@@ -90,16 +91,32 @@ const matchSummary = computed(() => {
   return parts.join(' \u00b7 ');
 });
 
-// Where a player's points in a game came from, in a few words. The detail comes from the server as
-// it is; one without a count of irrelevant papers reads as none.
+// Where a player's points in a game came from, in a few words: a PI's line starts with the role,
+// since a PI plays for higher stakes, and the group's opening record and heavenly hand stand by
+// name. The detail comes from the server as it is: one from before a count of irrelevant papers
+// reads as none, and one from before the PI's stakes as a student's, without the bonuses.
 function describe(detail: unknown): string {
-  const { found, won, irrelevant = 0, wrong, reviewer2 } = detail as KeywordsScoreDetail;
+  const {
+    role,
+    found,
+    won,
+    irrelevant = 0,
+    wrong,
+    reviewer2,
+    bigClues = 0,
+    openingRecord,
+    heavenlyHand,
+  } = detail as KeywordsScoreDetail;
   return [
+    role === 'captain' ? t('game.scoreDetail.captain') : null,
     found > 0 ? t('game.scoreDetail.found', { count: found }) : null,
     won ? t('game.scoreDetail.won') : null,
     irrelevant > 0 ? t('game.scoreDetail.irrelevant', { count: irrelevant }) : null,
     wrong > 0 ? t('game.scoreDetail.wrong', { count: wrong }) : null,
     reviewer2 > 0 ? t('game.scoreDetail.reviewer2') : null,
+    bigClues > 0 ? t('game.scoreDetail.bigClue', { count: bigClues }) : null,
+    openingRecord ? t('game.scoreDetail.openingRecord') : null,
+    heavenlyHand ? t('game.scoreDetail.heavenlyHand') : null,
   ]
     .filter((part) => part !== null)
     .join(' \u00b7 ');
@@ -236,14 +253,12 @@ async function note(card: number) {
 // kept in this browser alone (draft.ts), for this game, and comes back after a reload. It goes
 // with the clue, and starts over with the next game.
 //
-// A PI may prepare the clue whenever it isn't their turn to give one, while the game is on and
-// not paused (docs/games/keywords.md#the-clue): the panel opens from a button under the status
-// line, so that it doesn't stand in the way of watching the other group, and folds away again.
-// When their turn comes the panel is open with the draft in it, and the PI gives the clue
-// themselves.
+// A PI prepares the clue whenever it isn't their turn to give one, while the game is on and not
+// paused (docs/games/keywords.md#the-clue): the panel stays open under the status line, below the
+// board, so that the PI watches the other group guess above it. When their turn comes it is the
+// same panel, with the draft in it, and the PI gives the clue themselves.
 const isCaptain = computed(() => mySeat.value?.role === 'captain');
 const mayPrepare = computed(() => isCaptain.value && !canClue.value && !paused.value && !game.value.result);
-const preparing = ref(false);
 const draft = ref<ClueDraft>(emptyDraft());
 const gone = ref<string[]>([]);
 // The draft is read and written for a PI alone: anyone else who views the game, as in another
@@ -256,7 +271,6 @@ watch(
     const team = mySeat.value?.team;
     draft.value = gameId === null || !team ? emptyDraft() : readDraft(gameId, team, game.value.history);
     gone.value = [];
-    preparing.value = false;
   },
   { immediate: true },
 );
@@ -312,30 +326,14 @@ watch(
     gone.value = [];
   },
 );
-// The panel folds when the PI's turn comes: the clue panel takes its place, and the PI watches
-// the board after it, whether the clue went or its time ran out.
-watch(canClue, (on) => {
-  if (on) preparing.value = false;
-});
-
-// Whether a tap on the board marks a card a clue is meant for: for the PI giving a clue, or preparing
-// one in the open panel. Otherwise it chooses a card for a student, or puts the group's mark on it.
-const marking = computed(() => canClue.value || (mayPrepare.value && preparing.value));
+// Whether a tap on the board marks a card a clue is meant for: for the PI giving a clue or preparing
+// one. Otherwise it chooses a card for a student, or puts the group's mark on it.
+const marking = computed(() => canClue.value || mayPrepare.value);
 function tap(card: number) {
   if (marking.value) mark(card);
   else if (noting.value) void note(card);
   else void choose(card);
 }
-
-// What the button that opens the draft says: what is in the draft, if anything.
-const summary = computed(() => {
-  const { word, count, targets } = draft.value;
-  return [
-    ...(word.trim() ? [t('game.quoted', { word: word.trim() })] : []),
-    ...(targets.length > 0 ? [t('game.draftMarked', { count: targets.length }, targets.length)] : []),
-    ...(count !== null ? [t('game.draftCount', { count: count === 'unlimited' ? '\u221e' : count })] : []),
-  ].join(t('game.draftJoin'));
-});
 
 // The moves that change the game go one at a time, so that a double tap can't send one twice.
 const giveClue = (word: string, count: ClueCount) =>
@@ -355,7 +353,8 @@ const pause = () => run(() => act('keywords:pause', { gameId: game.value.gameId 
 const resume = () => run(() => act('keywords:resume', { gameId: game.value.gameId }));
 const again = () => run(() => act('room:again', { gameId: game.value.gameId }));
 
-// Everyone hears of an extension as it comes: the newest event, when it is one.
+// Everyone hears of an extension as it comes: the newest event, when it is one. A PI who misses the
+// deadline for a clue is called out to the whole room (useMissedDeadlines.ts).
 watch(
   () => game.value.events.length,
   (count, before) => {
@@ -364,6 +363,10 @@ watch(
       toast('game.extended', { group: t(`lobby.group.${event.team}`) });
     }
   },
+);
+useMissedDeadlines(
+  game,
+  computed(() => room.value.players),
 );
 
 // The review of the game that has ended, step by step, for everyone who sees the result.
@@ -471,21 +474,12 @@ const status = computed(() => {
             <p v-else-if="status" class="status">{{ status }}</p>
             <p v-if="data.joinsNext" class="joins-next">{{ t('match.joinsNext') }}</p>
           </div>
-          <UiButton
-            v-if="mayPrepare"
-            class="prepare"
-            size="small"
-            :aria-expanded="preparing"
-            @click="preparing = !preparing"
-          >
-            {{ preparing ? t('game.prepareHide') : summary ? t('game.prepareDraft', { summary }) : t('game.prepare') }}
-          </UiButton>
           <!--
             One panel for the draft and for the clue, so that when the PI's turn comes while they
             type, the input, its focus and what the keyboard is still composing stay as they are.
           -->
           <CluePanel
-            v-if="canClue || (mayPrepare && preparing)"
+            v-if="canClue || mayPrepare"
             v-model:word="draft.word"
             v-model:count="draft.count"
             :game="game"
@@ -496,6 +490,7 @@ const status = computed(() => {
             :targets="draft.targets"
             :gone="gone"
             :can-give="canClue"
+            :team="mySeat?.team ?? null"
             @give="giveClue"
           />
           <UiButton v-if="canExtend" class="extend" size="small" :disabled="busy" @click="extend">
@@ -627,7 +622,6 @@ const status = computed(() => {
   grid-template-areas:
     'chat groups log .'
     'panel panel panel panel'
-    'prepare prepare prepare prepare'
     'draft draft draft draft'
     'extend extend extend extend';
   grid-template-columns: auto auto auto minmax(0, 1fr);
@@ -668,12 +662,7 @@ const status = computed(() => {
   justify-self: start;
 }
 
-/* The draft of the next clue, under the status line: its button, and the panel once opened. */
-.actions > :deep(.prepare) {
-  grid-area: prepare;
-  justify-self: start;
-}
-
+/* The draft of the next clue, under the status line. */
 .actions > :deep(.clue-panel.draft) {
   grid-area: draft;
 }
@@ -812,7 +801,6 @@ const status = computed(() => {
   .actions {
     grid-template-areas:
       'panel panel panel panel'
-      'prepare prepare prepare prepare'
       'draft draft draft draft'
       'extend extend extend extend';
   }

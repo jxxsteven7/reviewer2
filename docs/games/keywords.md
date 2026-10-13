@@ -65,15 +65,15 @@ Revealed words no longer count.
 
 **Homophones** are left to the players: in a Chinese room, the rules ask for no clue that sounds like a word on the board, such as 鸡音 (jīyīn) for 基因 (jīyīn, gene), and nothing checks it. The rules sheet says so in a Chinese room alone, in either language of the interface. The home page shows the rules too, as a new room in the page's language has them, from the small word "Rules" beside the game's name, with a word that each room may change its settings.
 
-**The cards it is meant for.** With the clue, the PI may mark the group's cards that are still to be found as the ones the clue is meant for, in the order they choose, as many as they like; their screen offers it above the clue and sets the number to how many are marked, until the PI picks a number themselves. The rules don't tie the number to the marks. Each mark must be one of the group's own cards that is still face down, and none may come twice (`bad_targets`). The marks are the PI's secret until the game is over: no view carries them before then, the PI's own included. Then every view has them, and the clue log and the replay show them, with how many the group found.
+**The cards it is meant for.** With the clue, the PI may mark the group's cards that are still to be found as the ones the clue is meant for, in the order they choose, as many as they like; their screen asks for them above the clue, loudly, on a sticker in the group's tint with the badge of a marked card, until one is marked, then counts and names them, and sets the number to how many are marked, until the PI picks a number themselves. A clue without marks goes at the first tap all the same. The rules don't tie the number to the marks. Each mark must be one of the group's own cards that is still face down, and none may come twice (`bad_targets`). The marks are the PI's secret until the game is over: no view carries them before then, the PI's own included. Then every view has them, and the clue log and the replay show them, with how many the group found.
 
-**Preparing ahead.** Whenever it isn't their turn to give a clue, while the game is on and not paused, a PI may prepare the next one: the word, the number and the marks, in the same panel, which opens from a button under the status line and folds away again so that the PI can watch the other group guess. The draft stays in the PI's browser alone, in local storage under `r2.clueDraft` with the ID of the game, and nothing of it reaches the server until the clue is given: nobody else, their own group included, can tell that a PI is preparing or what. It comes back after a reload, unless the clue went meanwhile, and goes once the clue is given, when the game ends and when another game starts; without working storage it lasts as long as the page. The draft follows the board: a marked card that is revealed meanwhile loses its mark, and the panel says so, and a number picked that the rule no longer offers the group, as under the free rule once a card of theirs was found, goes back to following the marks. When the PI's turn comes the panel opens with the draft in it, and the PI gives the clue themselves: nothing is sent on its own.
+**Preparing ahead.** Whenever it isn't their turn to give a clue, while the game is on and not paused, a PI prepares the next one: the word, the number and the marks, in the same panel, which stays open under the status line, below the board, so that the PI watches the other group guess above it; there is nothing to open or fold. A pause hides it with the board, and the draft waits. The draft stays in the PI's browser alone, in local storage under `r2.clueDraft` with the ID of the game, and nothing of it reaches the server until the clue is given: nobody else, their own group included, can tell that a PI is preparing or what. It comes back after a reload, unless the clue went meanwhile, and goes once the clue is given, when the game ends and when another game starts; without working storage it lasts as long as the page. The draft follows the board: a marked card that is revealed meanwhile loses its mark, and the panel says so, and a number picked that the rule no longer offers the group, as under the free rule once a card of theirs was found, goes back to following the marks. When the PI's turn comes it is the same panel, with the draft in it, and the PI gives the clue themselves: nothing is sent on its own.
 
 The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0).
 
 ## Time limits
 
-The server keeps the time. A captain who gives no clue in time loses the turn, recorded with `word` and `count` null and `timedOut` true; guessers out of time end their turn, the clue marked `timedOut`. Time runs whether or not players are online. A timer ends the phase and sends a snapshot; an action arriving after the deadline, even before the timer fired, is `stale`. Every view carries `clock`, the time left and given, in milliseconds; the client only counts down.
+The server keeps the time. A captain who gives no clue in time loses the turn, recorded with `word` and `count` null, `timedOut` true and the `captain` who was in the seat, if any, and the room hears of it at once ([Titles](#titles)); guessers out of time end their turn, the clue marked `timedOut`. Time runs whether or not players are online. A timer ends the phase and sends a snapshot; an action arriving after the deadline, even before the timer fired, is `stale`. Every view carries `clock`, the time left and given, in milliseconds; the client only counts down.
 
 ## Pauses and extensions
 
@@ -107,7 +107,7 @@ Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a gr
 
 Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. It names the AI players who played (`agents`), by their persona. The record says who gave each clue (`captain`), the cards they meant (`targets`), which the replay marks with their numbers through the clue's turn, and when each clue and guess came, in milliseconds from the start (`at`); replays from before have none of these. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
 
-The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but the group chat, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; choosing a card is minor, and nothing else. Of the marks, it keeps no single one but how they stood: those of the group that reveals a card, as they were when it did, and both groups' when a turn or the game ends (`keywords:marks`, by nobody, with the group and its marks; `GameModule.logChanges`), unless a group has none. Replays carry no marks. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it.
+The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but choosing a card, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; a line of the group chat is kept as what the player said, as the chat shows it. Choosing a card is left out because students choose and choose again before they reveal, as much for the fun of it as to decide. The record says how the game began (`GameModule.setup`): the language, the settings, the group that started and the board with every color. Of the marks, it keeps no single one but how they stood: those of the group that reveals a card, as they were when it did, and both groups' when a turn or the game ends (`keywords:marks`, by nobody, with the group and its marks; `GameModule.logChanges`), unless a group has none. Replays carry no marks. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it. The game waits for the PI of the group on turn while the clue is due, and for its students while they guess (`GameModule.due`), so a timer that ends a phase names those of them who were offline. The rules are at version 1 (`RULES_VERSION`), which goes up with every change to the rules or the scoring.
 
 ## What each player sees
 
@@ -131,7 +131,7 @@ The record of a game ([../architecture.md](../architecture.md#game-records)) log
 
 ## AI players
 
-Where the chair may have them ([../architecture.md](../architecture.md#ai-players)), the chair invites Reviewer 1 in the waiting room as a group's PI or as one of its students, once a person sits in a group (`needs_human`) and one of each a group at most (`agent_limit`), and removes it from its panel, which a tap on its avatar opens. A game with AI players needs every time limit on (`needs_timers`), so that the clock moves the game on when the AI is slow or gone, and a person in a group (`needs_human`). It brings nobody points, a streak or a friend title.
+Where the chair may have them ([../architecture.md](../architecture.md#ai-players)), the chair invites Reviewer 1 in the waiting room as a group's PI or as one of its students, once a person sits in a group (`needs_human`) and one of each a group at most (`agent_limit`), and removes it from its panel, which a tap on its avatar opens. A game with AI players needs every time limit on (`needs_timers`), so that the clock moves the game on when the AI is slow or gone, and a person in a group (`needs_human`). It brings nobody points, a streak, a title or a friend title.
 
 - **As the PI**, it gives its clue no sooner than 3 seconds into its turn, with the cards it is meant for (`targets`), as anyone may; it doesn't talk.
 - **As a student, with no person of its group there,** it reveals its cards 2 seconds after the clue and 1.5 seconds apart, the surest first and never the extra guess of the standard rule, and ends the turn once it has revealed them.
@@ -173,16 +173,34 @@ Content comes last, so nothing a player can't see changes the answer. Two reveal
 
 ## Matches
 
-In a match ([../architecture.md](../architecture.md#matches)), `server/src/games/keywords/match.ts` makes the groups and `shared/src/games/keywords/score.ts` scores, in every game that ends by itself:
+In a match ([../architecture.md](../architecture.md#matches)), `server/src/games/keywords/match.ts` makes the groups and `shared/src/games/keywords/score.ts` scores, in every game that ends by itself. The PI, who gives the clues, plays for higher stakes. A group's students are everyone who played for it as a student in the game, those who sat down during it too, and each of them scores the same, whoever revealed the card; its PI is whoever was its captain in the game:
 
-| What happened | Who | Points |
+| What happened | Each student | The PI |
 |---|---|---|
-| A student reveals one of the group's own cards | Everyone who played for the group, PI included | +1 each |
-| The group wins | The same | +3 each |
-| A student reveals an irrelevant paper | That student | -1 |
-| A student reveals the other group's card | That student | -2 |
-| A student reveals Reviewer 2 | That student | -3 |
+| A student of the group reveals one of its own cards | +1 | +1 |
+| The group wins | +3 | +4 |
+| A student of the group reveals an irrelevant paper | -1 | -2 |
+| A student of the group reveals the other group's card | -2 | -3 |
+| A student of the group reveals Reviewer 2 | -3 | -5 |
+| **A big clue**: the students find 4 of the group's cards or more with one clue | | +1 for each from the fourth on, to the PI who gave it |
+| **The opening record**: the group's first clue has a number of 3 or more, and the students find that many of its cards with it before revealing anything else | +1 | +1 |
+| **A heavenly hand**: the group wins in the turn of its first clue | +1 | +3 |
 
-A withdrawn game counts for nothing. `KeywordsScoreDetail` says where each player's points came from, in the match's table between the games; the records keep the points alone, so a game already on them keeps the points it was scored with.
+The first clue is the first that the group's PI gave: a turn whose time ran out before the clue doesn't count. 0 and "unlimited" name no number, and under the free rule the number counts as it does under the standard rule. A big clue counts the cards found, whether or not they were marked. A card that the other group reveals for a group gives it nothing. The bonuses add up: a heavenly hand comes with the win, and usually with a big clue and the opening record too.
+
+A withdrawn game counts for nothing. `KeywordsScoreDetail` says where each player's points came from, in the match's table between the games, with the PI's role and the bonuses; a detail from before the PI's stakes reads as a student's, without them. The records keep the points alone, so a game already on them keeps the points it was scored with.
 
 **The groups.** Drawn **at random**: the server deals the players as the shuffle does, the first dealt to each group its PI, and deals again once if the groups are those of the game before; four online players can start. **Chosen** by the players: as in an ordinary room. **Fixed**, once a game has been scored: everyone keeps their group; after each game all go back as students, and the PI is whoever has been PI the fewest times; a newcomer goes to the smaller group. During a match game, only those who played for a group may sit in one.
+
+## Titles
+
+A game brings titles to the players with accounts whose game goes on the record ([../architecture.md](../architecture.md#titles)): by the seat they were in when they earned it, and only in a game that ends by itself. A withdrawn game brings none, and a guest keeps none.
+
+| Title | Who | When |
+|---|---|---|
+| `missed_deadline`, Forgot to Submit | The PI | Each turn in which their time for the clue ran out |
+| `opening_record`, Opened the Scoring | Everyone in the group | The group's [opening record](#matches) |
+| `heavenly_hand`, Heavenly Hand | Everyone in the group | The group's [heavenly hand](#matches) |
+
+**Missed deadlines are called out.** The moment a PI's time for the clue runs out, everyone in the room, the PI, both groups, the spectators and the screens, sees a teasing line with the PI's name, to the sound of the "deadline" reaction, for a few seconds, letting every tap through. The line is drawn from a few by the game and the turn, so everyone reads the same. The call is for that moment alone: a page that comes back after a while, from a locked phone, say, hears nothing of the misses it slept through, and nothing of a miss on record when it opened. For a PI with an account it adds how many times they have missed the deadline, this time included: the titles on their record, and the misses of this game so far, whose titles come with its end. The game's `events` note the miss (`missed`), with the PI's player ID and the count; the clue log has the turn without a clue already, and shows no more. A game withdrawn later has been called out all the same.
+

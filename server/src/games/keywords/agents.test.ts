@@ -34,6 +34,7 @@ function context(online = new Set(SEATS.map(([id]) => id))): GameContext {
     nameOf: (id) => id,
     isOnline: (id) => online.has(id),
     agentOf: (id) => (id.startsWith('ai-') ? 'reviewer1' : null),
+    titleCount: () => null,
     playerIds: () => SEATS.map(([id]) => id),
   };
 }

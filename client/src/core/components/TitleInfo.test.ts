@@ -116,6 +116,38 @@ describe('TitlePills', () => {
     expect(explained[3]).toContain('words for the word lists');
     wrapper.unmount();
   });
+
+  test('shows the titles that games bring as often as they were won, each explained, in both languages', async () => {
+    const titles = [
+      { title: 'heavenly_hand' as const, count: 1 },
+      { title: 'missed_deadline' as const, count: 3 },
+      { title: 'opening_record' as const, count: 2 },
+    ];
+    const wrapper = mount(TitlePills, { props: { titles }, global: global(), attachTo: document.body });
+    const pills = wrapper.findAll('li > button.pill');
+    expect(pills.map((pill) => pill.text())).toEqual([
+      'Heavenly Hand',
+      'Forgot to Submit \u00d73',
+      'Opened the Scoring \u00d72',
+    ]);
+    const explained: string[] = [];
+    for (const pill of pills) {
+      await pill.trigger('click');
+      explained.push(sheet()?.querySelector('.body')?.textContent ?? '');
+      (sheet()?.querySelector('button.close') as HTMLButtonElement).click();
+      await wrapper.vm.$nextTick();
+    }
+    expect(explained[0]).toContain('in the turn of its very first clue');
+    expect(explained[1]).toContain('Earned again with every missed deadline');
+    expect(explained[2]).toContain('names 3 cards or more');
+    wrapper.unmount();
+    const chinese = mount(TitlePills, { props: { titles }, global: global('zh') });
+    expect(chinese.findAll('li > button.pill').map((pill) => pill.text())).toEqual([
+      '\u5929\u80e1',
+      'DDL\u8fc7\u4e86\u5fd8\u6295\u7a3f \u00d73',
+      '\u9996\u5f00\u7eaa\u5f55 \u00d72',
+    ]);
+  });
 });
 
 describe('PlayerNumber', () => {

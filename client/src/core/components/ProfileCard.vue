@@ -16,19 +16,20 @@ import DuoSummary from './DuoSummary.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
 import RankLadder from './RankLadder.vue';
+import RecordTable from './RecordTable.vue';
 import TitlePills from './TitlePills.vue';
 import UiButton from './UiButton.vue';
 
 // A public profile (docs/architecture.md#public-profiles), by the handle of its account, on its
-// own page and in the sheet that a room's player menu opens: the avatar, the username, the rank,
+// own page and in a room's player panel: the avatar, the username, the rank,
 // the number and the day of registration, the titles, the streaks among them, and what the owner
-// chose to put there: a link, a line about themselves, the record and the acknowledgments. The bio
-// is shown as the text it is, never as markup, and the link as the address it is, which opens in a
-// new tab and which search engines are told not to follow. The rank opens the ladder of every
-// rank, with this one marked and no points, which the profile never shows. Anyone may look; an
-// account that isn't the owner may like the profile and ask the owner to be friends. A friend of
-// the owner also sees what the two have played together (docs/architecture.md#friend-duos), which
-// nobody else is sent.
+// chose to put there: a link, a line about themselves, the record as counts (RecordTable.vue) and
+// the acknowledgments. The bio is shown as the text it is, never as markup, and the link as the
+// address it is, which opens in a new tab and which search engines are told not to follow. The
+// rank opens the ladder of every rank, with this one marked and no points, which the profile never
+// shows. Anyone may look; an account that isn't the owner may like the profile and ask the owner to
+// be friends. A friend of the owner also sees what the two have played together
+// (docs/architecture.md#friend-duos), which nobody else is sent.
 //
 // In a room's panel (PlayerPanel.vue), whose title is the player's name, the card has no name of
 // its own (`named` false), and is `brief` until the viewer opens the whole page: the avatar, the
@@ -153,7 +154,7 @@ watch(
           profile.link
         }}</a>
 
-        <p v-if="profile.record" class="meta">{{ t('playerPage.record', profile.record) }}</p>
+        <RecordTable v-if="profile.record" :counts="profile.record" />
 
         <div class="actions">
           <span class="likes num">{{ t('playerPage.likes', { count: profile.likes }) }}</span>
@@ -259,8 +260,7 @@ watch(
   font-synthesis: none;
 }
 
-.since,
-.meta {
+.since {
   color: var(--ink-2);
   font-size: var(--text-sm);
 }

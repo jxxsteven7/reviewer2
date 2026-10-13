@@ -24,7 +24,7 @@ export interface Account {
   avatarBanned: boolean;
   // Whether the operator has barred the account from public rooms (migration 6).
   publicBarred: boolean;
-  // Whether the operator has let the account have AI players in the rooms it chairs (migration 14).
+  // Whether the operator has let the account have AI players in the rooms it chairs (migration 15).
   agents: boolean;
   // The public profile (migration 11): the link and the bio the owner wrote, what else they show
   // there, and whether the operator has barred the account from writing a link or a bio.

@@ -15,17 +15,23 @@ import KeywordsBoard from './KeywordsBoard.vue';
 import PausedNotice from './PausedNotice.vue';
 import TurnStrip from './TurnStrip.vue';
 import { useKeywords } from './useKeywords';
+import { useMissedDeadlines } from './useMissedDeadlines';
 
 // The room on a big screen. In the waiting room: how to join, and who sits where. During the
 // game: the board as spectators see it, with the turn and the clue log. A screen never gets the
 // key, so it can stay on the wall for everyone. A match's table, or its ranking, is shown too, and
-// so are the winning streaks that a game has just brought players to, for the room to cheer.
+// so are the winning streaks that a game has just brought players to, for the room to cheer, and a
+// PI who misses the deadline for a clue, for the room to tease (useMissedDeadlines.ts).
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const { data, groups, spectators } = useKeywords(toRef(props, 'room'));
 const link = computed(() => roomLink(props.room.code));
 const number = computed(() => formatCode(props.room.code));
 const game = computed(() => data.value.game as KeywordsView | null);
+useMissedDeadlines(
+  game,
+  computed(() => props.room.players),
+);
 </script>
 
 <template>

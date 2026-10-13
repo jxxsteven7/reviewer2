@@ -16,9 +16,10 @@ import {
   test,
 } from './helpers';
 
-// A PI prepares the next clue while the other group is on (docs/games/keywords.md#the-clue): the
-// word and the marks wait in their browser, through a reload, no snapshot anyone receives holds a
-// trace of them, and when the PI's turn comes one tap gives the clue. In both languages.
+// A PI prepares the next clue while the other group is on (docs/games/keywords.md#the-clue), in
+// the panel that is always open for them: the word and the marks wait in their browser, through a
+// reload, no snapshot anyone receives holds a trace of them, and when the PI's turn comes one tap
+// gives the clue. In both languages.
 
 for (const language of ['en', 'zh'] as const) {
   test(`a PI prepares the next clue ahead of their turn, and one tap gives it when it comes, in ${language}`, async ({
@@ -31,13 +32,14 @@ for (const language of ['en', 'zh'] as const) {
     const captain = table.captains[team];
     const guesser = table.guessers[team];
 
-    // While the other group's PI thinks, the button is there and the panel is folded away.
-    const prepare = captain.locator('.prepare');
-    const toggle = captain.locator('button.prepare');
-    await expect(toggle).toHaveText(text.game.prepare);
-    await expect(captain.locator('.clue-panel')).toHaveCount(0);
-    await toggle.click();
-    await expect(captain.locator('.clue-panel.draft .ahead')).toHaveText(text.game.prepareNote);
+    // While the other group's PI thinks, the panel is open under the board, with nothing to open
+    // or fold, and the board in sight above it; until a card is marked, its first line asks for one.
+    const draft = captain.locator('.clue-panel.draft');
+    await expect(draft.locator('.ahead')).toHaveText(text.game.prepareNote);
+    await expect(draft.locator('.targets.none')).toHaveText(text.game.targetsHint);
+    await expect(draft.locator('.targets.none')).toHaveClass(new RegExp(`\\b${team}\\b`));
+    await expect(captain.locator('.prepare, [aria-expanded]')).toHaveCount(0);
+    await expect(captain.locator('.board')).toBeInViewport();
     // The clue can't go yet.
     await expect(captain.getByRole('button', { name: text.game.sendClue })).toBeDisabled();
     // The numbers on offer are the PI's own group's, which has one card fewer than the group
@@ -61,20 +63,15 @@ for (const language of ['en', 'zh'] as const) {
     await expect(cards.nth(targets[1] as number).locator('.target')).toHaveText('2');
     await expect(captain.getByRole('radio', { name: '2' })).toHaveAttribute('aria-checked', 'true');
 
-    // Folded away, the button says what is ready, and the marks stay on the board.
-    await toggle.click();
-    await expect(captain.locator('.clue-panel')).toHaveCount(0);
-    const marked = interpolate(text.game.draftMarked.split(' | ')[1] as string, { count: '2' });
-    const summary = interpolate(text.game.prepareDraft, {
-      summary: `${interpolate(text.game.quoted, { word })}${text.game.draftJoin}${marked}`,
-    });
-    await expect(toggle).toHaveText(summary);
-    await expect(captain.locator('.board .target')).toHaveCount(2);
+    // Once marked, the line counts the cards.
+    const counted = (text.game.targetsMarked.split(' | ')[1] as string).split('{words}')[0] as string;
+    await expect(draft.locator('.targets')).not.toHaveClass(/none/);
+    await expect(draft.locator('.targets')).toContainText(interpolate(counted, { count: '2' }));
 
-    // After a reload the draft is back.
+    // After a reload the draft is back, in the open panel.
     await captain.reload();
     await expect(captain.locator('.keywords-game')).toBeVisible();
-    await expect(toggle).toHaveText(summary);
+    await expect(draft.getByLabel(text.game.clueInput)).toHaveValue(word);
     await expect(captain.locator('.board .target')).toHaveCount(2);
 
     // The other group plays its turn.
@@ -85,7 +82,6 @@ for (const language of ['en', 'zh'] as const) {
     // The PI's turn comes with the panel open and the draft in it, and one tap gives the clue.
     const panel = captain.locator('form.clue-panel:not(.draft)');
     await expect(panel).toBeVisible();
-    await expect(prepare).toHaveCount(0);
     await expect(panel.getByLabel(text.game.clueInput)).toHaveValue(word);
     await expect(captain.getByRole('radio', { name: '2' })).toHaveAttribute('aria-checked', 'true');
     const received = table.everyone.map((states) => states.length);

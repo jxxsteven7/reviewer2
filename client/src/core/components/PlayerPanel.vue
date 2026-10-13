@@ -17,6 +17,7 @@ import { mayBefriend, mayReport } from '../manage';
 import { act, send } from '../socket';
 import { toast } from '../toast';
 import { useBusy } from '../useBusy';
+import AgentProfileCard from './AgentProfileCard.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import ProfileCard from './ProfileCard.vue';
 import UiButton from './UiButton.vue';
@@ -27,8 +28,9 @@ import UiSheet from './UiSheet.vue';
 // room, so that the viewer stays in it: a game goes on meanwhile. Its title is the player's name.
 //
 // It shows who the player is: for an account, a brief profile card (ProfileCard.vue), with the rank,
-// the number, the day of registration and the titles; for a guest, who has no page, or an AI
-// player, the avatar and a word of what they are. Under it, what the viewer may do with the player:
+// the number, the day of registration and the titles; for an AI player, its own page at once
+// (AgentProfileCard.vue; docs/architecture.md#ai-players); for a guest, who has no page, the avatar
+// and a word that they have none. Under it, what the viewer may do with the player:
 // ask them to be friends, for an account that may (docs/architecture.md#friends); the chair's
 // actions, which move them to the spectators, hand them the chair, or remove them after a warning
 // that says for how long, which is for good from a public room and two minutes from a private one,
@@ -116,11 +118,12 @@ async function report() {
   <UiSheet :open="player !== null && !removing && !reporting" :title="player?.name ?? ''" @close="emit('close')">
     <div v-if="player" class="panel-body">
       <ProfileCard v-if="player.handle" :handle="player.handle" brief :named="false" />
+      <AgentProfileCard v-else-if="player.agent" :persona="player.agent" />
       <div v-else class="nobody">
-        <PlayerAvatar :name="player.name" :avatar="player.avatar" :agent="isAgent" size="large" />
+        <PlayerAvatar :name="player.name" :avatar="player.avatar" size="large" />
         <div class="what">
-          <span class="tag">{{ t(isAgent ? 'room.agent' : 'room.panel.guest') }}</span>
-          <span class="hint">{{ t(isAgent ? 'room.panel.agentNote' : 'room.panel.guestNote') }}</span>
+          <span class="tag">{{ t('room.panel.guest') }}</span>
+          <span class="hint">{{ t('room.panel.guestNote') }}</span>
         </div>
       </div>
 

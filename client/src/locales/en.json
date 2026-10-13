@@ -103,7 +103,6 @@
       "myAccount": "My account",
       "guest": "Guest",
       "guestNote": "Guests have no page.",
-      "agentNote": "AI players have no page.",
       "back": "Back"
     },
     "reconnecting": "Reconnecting...",
@@ -178,7 +177,7 @@
     "screens": "Big screens showing this room: {count}.",
     "dismissScreens": "Send the screens away",
     "captainNote": "The PI sees which cards belong to the group and gives the clues.",
-    "agentNote": "A game that an AI plays in brings nobody points, a streak or a friend title.",
+    "agentNote": "A game that an AI plays in brings nobody points, a streak, a title or a friend title.",
     "takeoverNote": "A player who is offline for 20 seconds in their turn is played for by an AI until they are back.",
     "desk": "Chair's desk",
     "fields": "Word lists",
@@ -306,12 +305,6 @@
     "hidden": "not revealed",
     "waitClue": "Waiting for the PI of the {group} to give a clue.",
     "waitGuess": "The {group} is guessing.",
-    "prepare": "Prepare the next clue",
-    "prepareDraft": "Keep preparing ({summary})",
-    "prepareHide": "Hide the draft",
-    "draftMarked": "{count} card marked | {count} cards marked",
-    "draftCount": "number {count}",
-    "draftJoin": ", ",
     "prepareNote": "This is the draft of your next clue. Only you see it, and you give it once it's your turn.",
     "targetGone": "You marked {words}, which has been revealed, so the mark is gone. | You marked {words}, which have been revealed, so the marks are gone.",
     "clueInput": "Your clue",
@@ -322,8 +315,8 @@
     "clueNumber": "How many cards it points to",
     "unlimited": "No limit",
     "sendClue": "Give the clue",
-    "targetsHint": "Tap your group's cards to mark the ones this clue is for, and the number follows. Nobody sees the marks until the game is over.",
-    "targetsMarked": "Marked: {words}. Everyone sees them after the game.",
+    "targetsHint": "First tap the cards this clue is meant for, and the number follows. Nobody sees them during the game; the replay shows them.",
+    "targetsMarked": "{count} card marked: {words}. Everyone sees it after the game. | {count} cards marked: {words}. Everyone sees them after the game.",
     "quoted": "“{word}”",
     "onBoard": "{word} is on the board. A clue can't be a word on the board, or part of one.",
     "formOnBoard": "{word} is on the board, and this clue repeats a form of it that the word lists give. This room's clue check doesn't allow it.",
@@ -373,6 +366,16 @@
     "pausedResume": "Resume whenever everyone is back.",
     "extend": "Ask for 30 seconds more",
     "extended": "The {group} asked for an extension: 30 seconds more.",
+    "missed": {
+      "lines": {
+        "1": "{name}'s deadline has passed. The paper is still on the desk!",
+        "2": "{name}: “Submitting it right now!” (They were not.)",
+        "3": "Note from the editors: {name}'s manuscript is past due.",
+        "4": "{name} raced the deadline. The deadline won.",
+        "5": "The portal has closed. {name}'s clue is still in drafts."
+      },
+      "count": "{line} (×{count})"
+    },
     "events": {
       "paused": "The chair paused the game",
       "resumed": "The game went on",
@@ -471,13 +474,17 @@
       "you": "You",
       "someone": "A player who left"
     },
-    "scoring": "Scores in a match: every own card that your group finds, +1 for everyone in it; winning, +3 each; revealing an irrelevant paper, −1; revealing the other group's card, −2; revealing Reviewer 2, −3.",
+    "scoring": "Scores in a match: every own card that your group's students find, +1 for everyone in the group; winning, +3 for each student and +4 for the PI. Every irrelevant paper, card of the other group and Reviewer 2 that your students reveal, whoever of them it was, costs each student 1, 2 and 3, and the PI 2, 3 and 5. A big clue, with which the students find 4 of the group's cards or more: +1 for its PI for each from the fourth on. Opening the scoring, when the students find as many cards as the group's first clue names, 3 or more, before anything else: +1 for everyone. A heavenly hand, winning in the turn of the first clue: +1 for each student, +3 for the PI.",
     "scoreDetail": {
+      "captain": "PI",
       "found": "found {count}",
       "won": "won",
       "irrelevant": "irrelevant paper ×{count}",
       "wrong": "other group's card ×{count}",
-      "reviewer2": "Reviewer 2"
+      "reviewer2": "Reviewer 2",
+      "bigClue": "big clue +{count}",
+      "openingRecord": "Opened the Scoring",
+      "heavenlyHand": "Heavenly Hand"
     }
   },
   "replay": {
@@ -894,7 +901,10 @@
       "titles": "Titles",
       "titleNames": {
         "best_paper": "Best Paper Award",
-        "black_hole": "Game black hole"
+        "black_hole": "Game black hole",
+        "missed_deadline": "Forgot to Submit",
+        "opening_record": "Opened the Scoring",
+        "heavenly_hand": "Heavenly Hand"
       },
       "titleCount": "{title} ×{count}",
       "acknowledged": "Acknowledged: {kind}",
@@ -907,7 +917,7 @@
         "linkPlaceholder": "https://",
         "bio": "One line about you",
         "bioCount": "{count}/{max} characters. Shown as plain text.",
-        "showRecord": "Show my record: games, wins and matches",
+        "showRecord": "Show my record: games, wins and win rates, outside matches and in them, and matches finished and won",
         "showThanks": "Show my acknowledgments",
         "save": "Save the page",
         "saved": "Your page has been updated.",
@@ -918,13 +928,22 @@
         "friend": "Friend"
       },
       "record": "Record",
-      "recordSummary": "Games: {games} · Won: {wins}",
+      "recordTable": {
+        "games": "Games",
+        "wins": "Won",
+        "rate": "Win rate",
+        "ordinary": "Ordinary games",
+        "inMatches": "Games in matches",
+        "total": "Total",
+        "matches": "Matches: {played} · Finished first: {won}",
+        "noMatches": "No match finished yet."
+      },
       "noRecords": "No games yet. The games that you finish in a seat while you are logged in are kept here.",
       "recent": "The last 20 games",
       "recordsAgain": "Try again",
       "recordLine": "{side}, {role}",
+      "matchTag": "Match · game {game}/{games}",
       "watchAgain": "Watch again",
-      "matchSummary": "Matches finished: {played}",
       "recentMatches": "The last 20 matches",
       "matchLine": "Place {rank} of {players} · Total: {score}",
       "matchGames": "{games}-game match",
@@ -1036,7 +1055,6 @@
     "author": "Author",
     "since": "Registered {date}",
     "duo": "You and {name}",
-    "record": "Games: {games} · Won: {wins} · Matches: {matches}",
     "likes": "♥ {count}",
     "like": "Like",
     "liked": "Liked",
@@ -1095,7 +1113,10 @@
   "titles": {
     "award": {
       "best_paper": "Awarded at the end of a match to the player with the highest total. Players level at the top all get it; when everyone is level, nobody does.",
-      "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it."
+      "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it.",
+      "missed_deadline": "For a PI whose time for a clue ran out before they gave one: the paper was written, it just never left the desktop. Earned again with every missed deadline, in each game that ends by itself while you are logged in and in your seat.",
+      "opening_record": "For everyone in a group whose very first clue of a game names 3 cards or more, and whose students then find that many of the group's cards before revealing anything else. The lab's first paper, accepted without a single revision.",
+      "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all."
     },
     "streak": {
       "wins": "The longest run of games won in a row on the record: {n}.",
@@ -1171,10 +1192,27 @@
   "agents": {
     "personas": {
       "reviewer1": "Reviewer 1"
+    },
+    "profile": {
+      "bio": {
+        "reviewer1": "The one and only Player No. 0. It reviews every board, never sleeps, and can be in many rooms at once."
+      },
+      "live": "Clones in the rooms right now: {players} · Rooms: {rooms}",
+      "liveNone": "No clones in the rooms right now",
+      "none": "No game with it has finished yet.",
+      "record": "Games: {games} · Won: {wins}",
+      "roles": "As a PI: {piGames} games, {piWins} won · As a student: {studentGames} games, {studentWins} won",
+      "perClue": "Cards found per clue: {average}",
+      "best": "Best clue: “{word}”, {found} cards found",
+      "reviewer2": "Times it revealed Reviewer 2: {count}",
+      "takeovers": "Games in which it played for someone offline: {count}",
+      "together": "In your group: won {won}, lost {lost}",
+      "against": "Against you: you won {won}, lost {lost}",
+      "takenOver": "Games in which it played for you while you were offline: {count}"
     }
   },
   "privacy": {
     "recordsTitle": "Game records",
-    "records": "Games are recorded. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. Group chat is never recorded."
+    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. Deleting your account deletes what you said in them."
   }
 }

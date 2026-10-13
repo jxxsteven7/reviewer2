@@ -648,7 +648,9 @@ describe('an AI that plays for someone offline', () => {
 
 describe('a game that an AI played in', () => {
   const kept = () =>
-    server.db.prepare('SELECT log, agent_log AS agentLog FROM replays').all() as {
+    server.db.prepare('SELECT game_id AS gameId, ending, log, agent_log AS agentLog FROM replays').all() as {
+      gameId: string;
+      ending: string;
       log: string;
       agentLog: string | null;
     }[];
@@ -683,6 +685,36 @@ describe('a game that an AI played in', () => {
       { kind: 'clue', answer: { word: 'zebra', count: 2, targets: reds } },
       { kind: 'guess', answer: { picks: [reviewer2], reason: 'A hunch.' } },
     ]);
+    // Its page: the game, as the red PI and as a red student, its clue, which found nothing, and
+    // Reviewer 2; for Ann, the game she won against it. Both of it are still in the room.
+    const page = await browser.request('/api/agent/reviewer1');
+    expect(page.body).toEqual({
+      ok: true,
+      profile: {
+        persona: 'reviewer1',
+        number: 0,
+        live: { players: 2, rooms: 1 },
+        games: 1,
+        wins: 0,
+        roles: { captain: { games: 1, wins: 0 }, guesser: { games: 1, wins: 0 } },
+        clues: 1,
+        found: 0,
+        reviewer2: 1,
+        takeovers: 0,
+        best: null,
+        you: { wonTogether: 0, lostTogether: 0, beat: 1, beaten: 0, takenOver: 0 },
+      },
+    });
+    // Anyone may read it, and a guest is told nothing of their own.
+    const guest = new Browser(server.url);
+    expect((await guest.request('/api/agent/reviewer1')).body).toMatchObject({
+      ok: true,
+      profile: { games: 1, you: null },
+    });
+    expect(await guest.request('/api/agent/reviewer9')).toMatchObject({
+      status: 404,
+      body: { error: 'no_such_profile' },
+    });
     // Ann deletes her account: the record stays, the AI's log with it, and says no longer who she was.
     expect((await browser.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
     expect(server.db.prepare('SELECT count(*) AS n FROM game_players').get()).toEqual({ n: 0 });
@@ -729,7 +761,11 @@ describe('a game that an AI played in', () => {
     await until(() => agent.questions.length === 5, 'the guess question');
     server.advance(GUESS_PACE_MS);
     await ann.waitFor((state) => state.phase === 'ended', 'the end');
-    const [row] = kept();
+    // The first game was withdrawn, and kept as such, with its own AI log.
+    await until(() => kept().length === 2, 'both records');
+    const first = kept().find((row) => row.gameId !== gameId);
+    expect(first?.ending).toBe('withdrawn');
+    const row = kept().find((record) => record.gameId === gameId);
     const agentLog = JSON.parse(row?.agentLog ?? '{}') as { gameId: string; steps: { kind: string; late?: true }[] };
     expect(agentLog.gameId).toBe(gameId);
     expect(agentLog.steps.map(({ kind, late }) => ({ kind, late }))).toEqual([
@@ -774,5 +810,48 @@ describe('a game that an AI played in', () => {
     expect(agentLog.steps).toEqual([
       expect.objectContaining({ by: catId, persona: 'reviewer1', takeover: true, kind: 'clue', t: expect.any(Number) }),
     ]);
+    // The AI's page counts the game it played in for Cat, a guest, and no game as an AI player.
+    expect(
+      server.db
+        .prepare('SELECT player_id AS id, takeover, account_id AS account, side, role, won FROM agent_plays')
+        .all(),
+    ).toEqual([{ id: catId, takeover: 1, account: null, side: 'red', role: 'captain', won: 0 }]);
+    const page = await new Browser(server.url).request('/api/agent/reviewer1');
+    expect(page.body).toMatchObject({ ok: true, profile: { games: 0, takeovers: 1, best: null } });
+  });
+
+  test('is counted on its page with the clue that found the most, and the game it won against an account', async () => {
+    const { browser, ann, bob, code } = await againstAi();
+    const reds = redTargets(code);
+    playReds(reds);
+    server.advance(CLUE_PACE_MS);
+    await until(() => agent.questions.some((request) => request.kind === 'guess'), 'the guess question');
+    server.advance(GUESS_PACE_MS);
+    await until(() => truth(code).cards[reds[0] as number]?.revealed === true, 'the first card');
+    server.advance(STEP_PACE_MS);
+    await until(() => truth(code).cards[reds[1] as number]?.revealed === true, 'the second card');
+    server.advance(STEP_PACE_MS);
+    await until(() => truth(code).team === 'blue', 'the blue turn');
+    // Bob, a blue student, reveals Reviewer 2, and the red group, the AI's, wins.
+    const game = truth(code);
+    const moment = { gameId: game.gameId, turn: game.turn };
+    await expectOk(ann.send('keywords:clue', { ...moment, word: 'Hint', count: 1 }));
+    const reviewer2 = game.cards.findIndex((card) => card.color === 'reviewer2');
+    await expectOk(bob.send('keywords:reveal', { ...moment, card: reviewer2 }));
+    await ann.waitFor((state) => state.phase === 'ended', 'the end');
+    const page = await browser.request('/api/agent/reviewer1');
+    expect(page.body).toMatchObject({
+      ok: true,
+      profile: {
+        games: 1,
+        wins: 1,
+        roles: { captain: { games: 1, wins: 1 }, guesser: { games: 1, wins: 1 } },
+        clues: 1,
+        found: 2,
+        reviewer2: 0,
+        best: { word: 'zebra', found: 2 },
+        you: { wonTogether: 0, lostTogether: 0, beat: 0, beaten: 1, takenOver: 0 },
+      },
+    });
   });
 });

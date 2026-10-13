@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   cardsClash,
+  checkChat,
   cleanClue,
   defaultSettings,
   otherTeam,
@@ -10,6 +11,7 @@ import {
   TEAMS,
   verdictFor,
   type AgentPersona,
+  type ClueRecord,
   type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
@@ -21,7 +23,7 @@ import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@rev
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
 import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask, personSeated } from './agents';
-import type { GameContext, GameLogNote, GameModule, GameUpdate, LogNote } from '../../core/game';
+import type { AgentFeats, GameContext, GameLogNote, GameModule, GameTitle, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
   expire,
@@ -37,6 +39,7 @@ import {
   select,
   withdraw,
   type Actor,
+  type Missed,
   type Outcome,
 } from './rules';
 import {
@@ -44,8 +47,11 @@ import {
   arrangeFixed,
   counts,
   drawProblems,
+  firstClue,
+  heavenlyHand,
   lineupOf,
   newMatchSeating,
+  openingRecord,
   rekeyMatch,
   rekeySeating,
   scoreGame,
@@ -53,6 +59,7 @@ import {
 } from './match';
 import {
   autoSeat,
+  captainOf,
   changeSeat,
   emptySeating,
   endGame,
@@ -182,20 +189,21 @@ type Action<M extends KeywordsMessage> = (
 ) => GameUpdate<KeywordsData>;
 
 // What the log of the game keeps of each of its messages (docs/architecture.md#game-records): what
-// it said, as its schema reads it, without the game's ID, which is the log's own, and with the
-// clue's word as the record keeps it (cleanClue). Choosing a card is minor: a group's students may
-// do it again and again before they reveal one. Nothing at all is kept of a line of a group's chat,
-// nor of each mark, which a group sets and changes as it talks: the log keeps how a group's marks
-// stood when it acted instead (markNotes).
+// it carried, as its schema reads it, without the game's ID, which is the log's own, and with the
+// clue's word as the record keeps it (cleanClue). A line of a group's chat is what the player said,
+// as the chat shows it (checkChat), which the log keeps apart. Nothing is kept of a card chosen: students choose and choose again
+// before they reveal one, for the fun of it as much as anything. Nor of each mark, which a group
+// sets and changes as it talks: the log keeps how a group's marks stood when it acted instead
+// (markNotes).
 function logNote(type: string, payload: unknown): LogNote | null {
-  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:say' || type === 'keywords:mark') return null;
+  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:select' || type === 'keywords:mark') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
   if (!parsed.success) return null;
   const data: Record<string, unknown> = { ...parsed.data };
   delete data.gameId;
+  if (type === 'keywords:say') return { said: checkChat(data.text as string).text };
   if (type === 'keywords:clue') data.word = cleanClue(data.word as string);
-  const minor = type === 'keywords:select';
-  return Object.keys(data).length > 0 ? { data, minor } : { minor };
+  return Object.keys(data).length > 0 ? { data } : {};
 }
 
 // The marks of a group, as the log keeps them (docs/architecture.md#game-records): those of the
@@ -224,6 +232,10 @@ function markNotes(before: KeywordsData, after: KeywordsData): GameLogNote[] {
 const mayEmote = (data: KeywordsData, playerId: string) =>
   data.game?.phase !== 'guess' || seatOf(data.seating, playerId).role !== 'captain';
 
+// The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
+// change to either.
+export const RULES_VERSION = 1;
+
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
   'keywords:clue': (data, ctx, playerId, clue) =>
@@ -246,8 +258,43 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
     act(data, playerId, (game, actor) => extend(game, actor, moment)),
 };
 
+// The captain in the seat of the group whose time for the clue has run out, and how many times
+// they had missed the deadline before: as their account's titles count it, and in this game so far,
+// whose titles are awarded only at its end. A guest's misses go uncounted.
+function missedBy(data: KeywordsData, ctx: GameContext): Missed | null {
+  const game = data.game;
+  const captain = game && captainOf(data.seating, game.team);
+  if (!game || captain === null) return null;
+  const held = ctx.titleCount(captain, 'missed_deadline');
+  if (held === null) return { captain, before: null };
+  const key = ctx.keyOf(captain);
+  const earlier = game.history.filter((record) => missedDeadline(record) && ctx.keyOf(record.captain ?? '') === key);
+  return { captain, before: held + earlier.length };
+}
+
+// Whether a turn is one whose captain gave no clue in time, with the captain who was in the seat.
+const missedDeadline = (record: ClueRecord): boolean =>
+  record.word === null && record.timedOut === true && record.captain !== undefined;
+
+// The titles that a game which ended by itself brought a player who played for `team` in it, by
+// their member key (docs/games/keywords.md#titles), each with the turn it came in: Forgot to
+// Submit for each turn in which their time for the clue ran out, and for everyone in the group, the
+// opening record and the heavenly hand of its first clue.
+function titlesOf(game: KeywordsState, team: Team, key: string, keyOf: (playerId: string) => string): GameTitle[] {
+  const titles: GameTitle[] = game.history.flatMap((record) =>
+    missedDeadline(record) && keyOf(record.captain ?? '') === key
+      ? [{ title: 'missed_deadline' as const, turn: record.turn }]
+      : [],
+  );
+  const first = firstClue(game, team);
+  if (first && openingRecord(game, team)) titles.push({ title: 'opening_record', turn: first.turn });
+  if (first && heavenlyHand(game, team)) titles.push({ title: 'heavenly_hand', turn: first.turn });
+  return titles;
+}
+
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
+  rulesVersion: RULES_VERSION,
   wordsNeeded: BOARD_SIZE,
   // Two words of which one lies inside the other would give each other away: "Gene" and "Gene
   // editing" can't share a board.
@@ -317,9 +364,11 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // A game that is over has no clock, and a paused one has nothing due until it resumes.
   deadline: (data) => (data.game?.pause ? null : (data.game?.clock?.ends ?? null)),
 
+  // A captain whose time for the clue runs out is named, with how many times they have missed the
+  // deadline (missedBy).
   tick(data, ctx) {
     if (!data.game) return data;
-    const game = expire(data.game, ctx.now());
+    const game = expire(data.game, ctx.now(), () => missedBy(data, ctx));
     return game === data.game ? data : { ...data, game };
   },
 
@@ -375,9 +424,52 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { team, role };
   },
 
+  // How the game began: the language and the settings, the group that starts, and the board, every
+  // card's color included. It goes into the record of the game alone, which stays on the server.
+  setup(data) {
+    const game = data.game;
+    if (!game) return null;
+    return {
+      language: game.language,
+      settings: { ...game.settings },
+      startingTeam: game.startingTeam,
+      cards: game.cards.map(({ word, color }) => ({ word, color })),
+    };
+  },
+
   logged: logNote,
   logChanges: markNotes,
   mayEmote,
+
+  // What an AI player did: the clues it gave as its group's PI, with how many of the group's cards
+  // were found in each of their turns, the clue that found the most, and how often it revealed
+  // Reviewer 2 as a student.
+  agentFeats(data, playerId) {
+    const feats: AgentFeats = { clues: 0, found: 0, reviewer2: 0, best: null };
+    for (const record of data.game?.history ?? []) {
+      if (record.captain === playerId && record.word !== null) {
+        const found = record.guesses.filter(({ color }) => color === record.team).length;
+        feats.clues += 1;
+        feats.found += found;
+        if (found > 0 && (feats.best === null || found > feats.best.found)) feats.best = { word: record.word, found };
+      }
+      feats.reviewer2 += record.guesses.filter(
+        ({ player, color }) => player === playerId && color === 'reviewer2',
+      ).length;
+    }
+    return feats;
+  },
+
+  // Whom the game is waiting for: the PI of the group on turn while its clue is due, and its
+  // students while they guess. Nobody while the game is paused or over.
+  due(data) {
+    const game = data.game;
+    if (!game || game.phase === 'over' || game.pause) return [];
+    const role = game.phase === 'clue' ? 'captain' : 'guesser';
+    return [...data.seating.seats]
+      .filter(([, seat]) => seat.team === game.team && seat.role === role)
+      .map(([id]) => id);
+  },
 
   // Everyone who has sat in a group during the game has played in it, whether or not they are
   // still there.
@@ -385,7 +477,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   match: {
     setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules) }),
-    score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating.sides, ctx.keyOf) : null),
+    score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating, ctx.keyOf) : null),
     lineup: (data) => [...data.seating.seats].filter(([, seat]) => seat.team !== null).map(([id]) => id),
   },
 
@@ -401,14 +493,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   // A game that was withdrawn counts for no record. Everyone in a seat when it ended took part: the
   // captain as the group's PI and the guessers as its students. The verdict is the decision letter
-  // that their group got.
-  results(data) {
-    const result = data.game?.result;
-    if (!data.game || !result || result.winner === null) return null;
-    const left = Object.fromEntries(TEAMS.map((team) => [team, remaining(data.game?.cards ?? [], team)])) as Record<
-      Team,
-      number
-    >;
+  // that their group got, and the titles are those that the game brought them (titlesOf).
+  results(data, ctx) {
+    const game = data.game;
+    const result = game?.result;
+    if (!game || !result || result.winner === null) return null;
+    const left = Object.fromEntries(TEAMS.map((team) => [team, remaining(game.cards, team)])) as Record<Team, number>;
     const { winner } = result;
     return [...data.seating.seats].flatMap(([playerId, seat]) =>
       seat.team === null
@@ -421,6 +511,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
               winner,
               won: seat.team === winner,
               verdict: verdictFor(result, left, seat.team),
+              titles: titlesOf(game, seat.team, ctx.keyOf(playerId), ctx.keyOf),
             },
           ],
     );

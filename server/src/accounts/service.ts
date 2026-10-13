@@ -14,6 +14,8 @@ import {
   usernameKey,
   type AccountError,
   type AccountSummary,
+  type AgentPersona,
+  type AgentProfileView,
   type DuoPart,
   type DuoTitle,
   type DuoView,
@@ -32,6 +34,7 @@ import { AcknowledgmentStore } from '../store/acknowledgments';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { LikeStore } from '../store/likes';
 import {
+  AgentPlayStore,
   RecordStore,
   ReplayStore,
   TitleStore,
@@ -122,6 +125,7 @@ export class Accounts {
   readonly mailTokens: MailTokenStore;
   readonly records: RecordStore;
   readonly replays: ReplayStore;
+  readonly agentPlays: AgentPlayStore;
   readonly titles: TitleStore;
   // The acknowledgments, which the operator writes (admin.ts) and an account's page counts.
   readonly acknowledgments: AcknowledgmentStore;
@@ -162,6 +166,7 @@ export class Accounts {
     this.mailTokens = new MailTokenStore(options.db, clock);
     this.records = new RecordStore(options.db, clock);
     this.replays = new ReplayStore(options.db, clock);
+    this.agentPlays = new AgentPlayStore(options.db);
     this.titles = new TitleStore(options.db, clock);
     this.acknowledgments = new AcknowledgmentStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
@@ -231,6 +236,12 @@ export class Accounts {
           ? (this.duosOf(viewer.id).get(account.id) ?? null)
           : null,
     };
+  }
+
+  // The page of an AI player (docs/architecture.md#ai-players), with how many of it are in the rooms
+  // now, which the rooms count, and, for an account that asks, what it has played with the AI.
+  agentProfileOf(persona: AgentPersona, viewer: Account | null, live: AgentProfileView['live']): AgentProfileView {
+    return { persona, number: 0, live, ...this.agentPlays.profile(persona, viewer?.id ?? null) };
   }
 
   // What the account has played with each of its friends who shares a game with it, by the
@@ -474,6 +485,8 @@ export class Accounts {
       if (!this.#stillLoggedIn(login)) return null;
       const ended = this.sessions.deleteForAccount(id);
       const others = this.friends.others(id);
+      // What it said in its games goes before the rows that say which player it was in them.
+      this.replays.unsay(id);
       const account = this.store.delete(id);
       return account ? { ended, account, others } : null;
     });
@@ -726,25 +739,36 @@ export class Accounts {
   }
 
   // Keeps a game on an account's record, as the game module described it, with the streak that it
-  // brings the account to, in one transaction, unless the database is full. Gives the streak back,
-  // or null when the game wasn't kept, as one that was on the record already.
+  // brings the account to and the titles that it brought them (docs/architecture.md#titles), in one
+  // transaction, unless the database is full. Gives the streak back, or null when the game wasn't
+  // kept, as one that was on the record already, whose titles were awarded with it.
   record(accountId: number, record: NewRecord): Streak | null {
     if (this.#full() || this.store.byId(accountId) === undefined) return null;
-    return this.store.transaction(() => this.records.add(accountId, record));
+    return this.store.transaction(() => {
+      const streak = this.records.add(accountId, record);
+      if (streak) {
+        for (const { title, turn } of record.titles ?? []) {
+          this.titles.awardForGame(accountId, title, record.gameId, turn);
+        }
+      }
+      return streak;
+    });
   }
 
-  // Keeps a finished game to watch again (docs/architecture.md#replays), with its log and which
-  // player was which account (docs/architecture.md#game-records), once for each game, unless the
-  // database is full or the replay is larger than MAX_REPLAY_BYTES as JSON, which the log says.
-  // The game's log has a limit of its own (gameLog.ts). Says whether it was kept.
-  keepReplay(replay: NewReplay): boolean {
+  // Keeps the record of a game (docs/architecture.md#game-records), however it ended, with its
+  // replay to watch again if it finished (docs/architecture.md#replays), its logs and which player
+  // was which account, once for each game, unless the database is full, which the log says. A
+  // replay larger than MAX_REPLAY_BYTES as JSON is left out, and the log says so too; the rest of
+  // the record is kept. The game's log has a limit of its own (gameLog.ts). Says whether the game
+  // was kept.
+  keepGame(game: NewReplay): boolean {
     if (this.#full()) return false;
-    const data = JSON.stringify(replay.replay);
-    if (Buffer.byteLength(data) > MAX_REPLAY_BYTES) {
+    let data: string | null = game.replay === null || game.replay === undefined ? null : JSON.stringify(game.replay);
+    if (data !== null && Buffer.byteLength(data) > MAX_REPLAY_BYTES) {
       this.#log('replay_too_large', { bytes: Buffer.byteLength(data), limit: MAX_REPLAY_BYTES });
-      return false;
+      data = null;
     }
-    return this.store.transaction(() => this.replays.add(replay, data));
+    return this.store.transaction(() => this.replays.add(game, data));
   }
 
   // The replay of a game that the account played in, or null when there is none or the account

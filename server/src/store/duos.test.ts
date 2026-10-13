@@ -68,7 +68,7 @@ describe('friend duos', () => {
     game({ red: [ann, bob], blue: [] }, 'red', 'keywords', true);
     game({ red: [ann, bob], blue: [] }, 'red');
     expect(records.duos(ann)).toEqual(new Map([[bob, { ...NONE, wonTogether: 1 }]]));
-    expect(records.counts(ann)).toMatchObject({ games: 3, wins: 3 });
+    expect(records.counts(ann)).toMatchObject({ ordinary: { games: 3, wins: 3 } });
     expect(records.streaks(ann)).toMatchObject({ wins: 1 });
   });
 

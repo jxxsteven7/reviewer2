@@ -7,6 +7,7 @@ import type {
   Language,
   MatchRules,
   RoomPhase,
+  Title,
 } from '@reviewer2/shared';
 import type { Rng } from './random';
 
@@ -35,6 +36,10 @@ export interface GameContext {
   agentOf(playerId: string): AgentPersona | null;
   // Everyone in the room, in the order they joined.
   playerIds(): string[];
+  // How many times the account of a player, also of one who has left during the current game, has
+  // won a title, as its record has it, or null for a guest, who keeps none, and when the record
+  // can't be read.
+  titleCount(playerId: string, title: Title): number | null;
 }
 
 // Who is looking: a member of the room, or a screen that only watches.
@@ -46,7 +51,8 @@ export type GameUpdate<Data> = Ack<{ data: Data }>;
 
 // One player's part in a game that has ended, as the game describes it, for the record of a player
 // with an account: which side they played for and in what role, which side won, whether they did,
-// and the game's own word for how it went, such as the verdict of a decision letter.
+// the game's own word for how it went, such as the verdict of a decision letter, and the titles
+// that the game brought them, if any.
 export interface PlayerResult {
   playerId: string;
   side: string;
@@ -54,15 +60,35 @@ export interface PlayerResult {
   winner: string;
   won: boolean;
   verdict: string;
+  titles?: GameTitle[];
+}
+
+// A title that a game brought a player (docs/architecture.md#titles), with the turn of the game it
+// came in, or whatever the game counts its moments in, which tells it apart from the same title
+// won again later in the game. The record keeps each once.
+export interface GameTitle {
+  title: Title;
+  turn: number;
+}
+
+// What an AI player did in a game that finished, in the game's own counts, for its page
+// (docs/architecture.md#ai-players): the clues it gave as a PI and how many of its group's cards
+// they found, how often it revealed Reviewer 2 as a student, and the clue that found the most, if
+// any found one.
+export interface AgentFeats {
+  clues: number;
+  found: number;
+  reviewer2: number;
+  best: { word: string; found: number } | null;
 }
 
 // What the log of a game keeps of one of the game's messages that changed the game
-// (docs/architecture.md#game-records): what the message said, as the game reads it, and whether
-// it is minor, of the kind that a player may send many of, such as choosing a card, which the log
-// stops keeping once it has grown long.
+// (docs/architecture.md#game-records): what the message carried, as the game reads it, and, for a
+// line of a group's chat, what the player said, which the log keeps apart, so that it can be taken
+// out again when their account is deleted.
 export interface LogNote {
   data?: unknown;
-  minor?: boolean;
+  said?: string;
 }
 
 // An entry that the log of a game keeps of a change of the game's own (GameModule.logChanges): its
@@ -191,9 +217,13 @@ export interface GameModule<Data = unknown, View = unknown> {
   // everyone right after start(), for how the game began, and about whoever comes during the game,
   // since the game may seat them. Without this, the log says nothing of where anyone is.
   seated?(data: Data, playerId: string): unknown;
+  // How the game that has just started began, for its log: what it takes, with the moves in the
+  // log, to play the game through again, such as the board with every color, and the settings.
+  // The log stays on the server. Without this, the log says nothing of it.
+  setup?(data: Data): unknown;
   // What the log keeps of one of the game's messages that changed the game, with the payload as
-  // the message carried it, or null to keep nothing of it, as of a line of a group's chat. Without
-  // this, the log keeps the message's type alone.
+  // the message carried it, or null to keep nothing of it, as of a card chosen and chosen again.
+  // Without this, the log keeps the message's type alone.
   logged?(type: string, payload: unknown): LogNote | null;
   // What else the log keeps of a change in the game, besides the message, the timer or the room's
   // event that brought it, as entries of the game's own, in order: such as where things stood when
@@ -204,6 +234,16 @@ export interface GameModule<Data = unknown, View = unknown> {
   // says no for a while, as a game of keywords does to a PI while the students guess, has the room
   // refuse with emote_not_now.
   mayEmote?(data: Data, playerId: string): boolean;
+  // The players the game is waiting for now, by player ID, such as the group's PI while a clue is
+  // due: when a timer changes the game, the log names those of them who were offline then. Without
+  // this, it names nobody.
+  due?(data: Data): string[];
+  // What an AI player did in the game that has just finished, for its page; without this, its
+  // page counts its games alone.
+  agentFeats?(data: Data, playerId: string): AgentFeats;
+  // The version of the game's rules and scoring, which goes on the record of every game, so that a
+  // game played under other rules can be told apart. It goes up by one whenever they change.
+  rulesVersion?: number;
   // The member keys of everyone who has played in the current game, those who have left it
   // included: the players whose part in it the record keeps. Without this, those whom results()
   // names.

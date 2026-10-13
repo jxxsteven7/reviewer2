@@ -131,15 +131,35 @@ describe('PlayerPanel', () => {
     wrapper.unmount();
   });
 
-  test('says what a guest and an AI player are, and gives the chair one action on an AI: removing it at once', async () => {
+  test("says a guest has no page, opens an AI player's own page, and gives the chair one action on an AI", async () => {
     const guest = panel('bob', view('cat', false));
     expect(dialogs()[0]?.querySelector('.nobody')?.textContent).toContain('GuestGuests have no page.');
     expect(names()).toEqual(['\u00d7']);
     guest.unmount();
+    signedIn.request.mockResolvedValue({
+      ok: true,
+      profile: {
+        persona: 'reviewer1',
+        number: 0,
+        live: { players: 3, rooms: 2 },
+        games: 0,
+        wins: 0,
+        roles: { captain: { games: 0, wins: 0 }, guesser: { games: 0, wins: 0 } },
+        clues: 0,
+        found: 0,
+        reviewer2: 0,
+        takeovers: 0,
+        best: null,
+        you: null,
+      },
+    });
     const wrapper = panel('ai', view('ann', false));
-    expect(dialogs()[0]?.querySelector('.nobody')?.textContent).toContain('AI players have no page.');
-    expect(dialogs()[0]?.querySelector('.avatar svg')).not.toBeNull();
-    expect(names()).toEqual(['\u00d7', 'Remove from the room']);
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledWith('/api/agent/reviewer1');
+    expect(dialogs()[0]?.textContent).toContain('Player No. 0');
+    expect(dialogs()[0]?.querySelector('.nobody')).toBeNull();
+    const actions = [...(dialogs()[0]?.querySelectorAll('.actions > *') ?? [])].map((item) => item.textContent?.trim());
+    expect(actions).toEqual(['Remove from the room']);
     button('Remove from the room').click();
     await flushPromises();
     expect(send).toHaveBeenCalledWith('room:remove', { playerId: 'ai' });

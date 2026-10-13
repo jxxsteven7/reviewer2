@@ -11,7 +11,8 @@ import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from './
 import { DEFAULT_SESSION_LIMITS, MailTokenStore, SessionStore } from './sessions';
 
 const DAY = 24 * 60 * 60_000;
-const NO_MATCHES = { played: 0, recent: [] };
+const NO_MATCHES = { played: 0, won: 0, recent: [] };
+const NONE = { games: 0, wins: 0 };
 const START = Date.UTC(2026, 9, 9, 12);
 
 let db: DatabaseSync;
@@ -352,8 +353,8 @@ describe('the record of games', () => {
     records.add(ann.id, record({ gameId: 'g2', side: 'blue', role: 'guesser', won: false, verdict: 'deskReject' }));
     records.add(bob.id, record());
     expect(records.view(ann.id)).toEqual({
-      games: 2,
-      wins: 1,
+      ordinary: { games: 2, wins: 1 },
+      inMatches: NONE,
       recent: [
         {
           game: 'keywords',
@@ -365,6 +366,7 @@ describe('the record of games', () => {
           won: false,
           verdict: 'deskReject',
           replay: false,
+          match: null,
         },
         {
           game: 'keywords',
@@ -376,11 +378,17 @@ describe('the record of games', () => {
           won: true,
           verdict: 'oral',
           replay: false,
+          match: null,
         },
       ],
       matches: NO_MATCHES,
     });
-    expect(records.view(account('Cat').id)).toEqual({ games: 0, wins: 0, recent: [], matches: NO_MATCHES });
+    expect(records.view(account('Cat').id)).toEqual({
+      ordinary: NONE,
+      inMatches: NONE,
+      recent: [],
+      matches: NO_MATCHES,
+    });
   });
 
   test('lists the latest 20 games and counts them all', () => {
@@ -388,8 +396,33 @@ describe('the record of games', () => {
     const ann = account();
     for (let i = 1; i <= 25; i += 1) records.add(ann.id, record({ gameId: `g${i}`, won: i % 5 === 0 }));
     const view = records.view(ann.id);
-    expect(view).toMatchObject({ games: 25, wins: 5 });
+    expect(view).toMatchObject({ ordinary: { games: 25, wins: 5 }, inMatches: NONE });
     expect(view.recent).toHaveLength(20);
+  });
+
+  test('counts the games of matches apart, and says which game of its match each was', () => {
+    const records = new RecordStore(db, () => now);
+    const ann = account();
+    records.add(ann.id, record({ gameId: 'g1' }));
+    records.add(ann.id, record({ gameId: 'g2', match: { id: 'm1', game: 1, games: 3 } }));
+    records.add(ann.id, record({ gameId: 'g3', won: false, match: { id: 'm1', game: 2, games: 3 } }));
+    records.add(ann.id, record({ gameId: 'g4', won: false }));
+    const view = records.view(ann.id);
+    expect(view).toMatchObject({ ordinary: { games: 2, wins: 1 }, inMatches: { games: 2, wins: 1 } });
+    expect(view.recent.map(({ gameId, match }) => [gameId, match])).toEqual([
+      ['g4', null],
+      ['g3', { game: 2, games: 3 }],
+      ['g2', { game: 1, games: 3 }],
+      ['g1', null],
+    ]);
+    expect(records.counts(ann.id)).toEqual({
+      ordinary: { games: 2, wins: 1 },
+      inMatches: { games: 2, wins: 1 },
+      matches: { played: 0, won: 0 },
+    });
+    // A game of a match is one of its games: one that can't be is never kept.
+    expect(records.add(ann.id, record({ gameId: 'g5', match: { id: 'm1', game: 4, games: 3 } }))).toBeNull();
+    expect(records.view(ann.id).recent).toHaveLength(4);
   });
 });
 
@@ -473,7 +506,10 @@ describe('titles', () => {
       { title: 'best_paper', count: 2 },
       { title: 'black_hole', count: 1 },
     ]);
-    expect(() => titles.award(ann.id, 'worst_paper' as 'best_paper')).toThrow(/CHECK constraint/);
+    // A title that isn't one is refused by the code, which holds the titles (migration 14).
+    expect(() => titles.award(ann.id, 'worst_paper' as 'best_paper')).toThrow(/Unknown title/);
+    expect(() => titles.awardForGame(ann.id, 'worst_paper' as 'best_paper', 'g1', 1)).toThrow(/Unknown title/);
+    expect(titles.counts(ann.id)).toHaveLength(2);
   });
 
   test('are awarded once for each match, however often its end is reported', () => {
@@ -483,6 +519,23 @@ describe('titles', () => {
     expect(titles.award(ann.id, 'best_paper', 'm1')).toBe(false);
     expect(titles.award(account('Bob').id, 'best_paper', 'm1')).toBe(true);
     expect(titles.counts(ann.id)).toEqual([{ title: 'best_paper', count: 1 }]);
+  });
+
+  test('that games bring are awarded once for each turn of a game, and add up', () => {
+    const titles = new TitleStore(db, () => now);
+    const ann = account();
+    expect(titles.awardForGame(ann.id, 'missed_deadline', 'g1', 1)).toBe(true);
+    expect(titles.awardForGame(ann.id, 'missed_deadline', 'g1', 1)).toBe(false);
+    expect(titles.awardForGame(ann.id, 'missed_deadline', 'g1', 3)).toBe(true);
+    expect(titles.awardForGame(ann.id, 'missed_deadline', 'g2', 1)).toBe(true);
+    expect(titles.awardForGame(ann.id, 'heavenly_hand', 'g2', 1)).toBe(true);
+    expect(titles.awardForGame(account('Bob').id, 'heavenly_hand', 'g2', 1)).toBe(true);
+    expect(titles.count(ann.id, 'missed_deadline')).toBe(3);
+    expect(titles.count(ann.id, 'opening_record')).toBe(0);
+    expect(titles.counts(ann.id)).toEqual([
+      { title: 'heavenly_hand', count: 1 },
+      { title: 'missed_deadline', count: 3 },
+    ]);
   });
 });
 
@@ -506,29 +559,29 @@ describe('the record of matches', () => {
     now += 60_000;
     records.addMatch(ann.id, match({ matchId: 'm2', rank: 4, score: -2, title: 'black_hole' }));
     records.addMatch(account('Bob').id, match());
-    expect(records.view(ann.id).matches).toEqual({
-      played: 2,
-      recent: [
-        {
-          game: 'keywords',
-          endedAt: '2026-10-09T12:01:00.000Z',
-          games: 3,
-          rank: 4,
-          players: 4,
-          score: -2,
-          title: 'black_hole',
-        },
-        {
-          game: 'keywords',
-          endedAt: '2026-10-09T12:00:00.000Z',
-          games: 3,
-          rank: 1,
-          players: 4,
-          score: 12,
-          title: 'best_paper',
-        },
-      ],
-    });
+    // A match is won by finishing first, level with others too.
+    records.addMatch(ann.id, match({ matchId: 'm3', rank: 1, title: null }));
+    expect(records.view(ann.id).matches).toMatchObject({ played: 3, won: 2 });
+    expect(records.view(ann.id).matches.recent.slice(1)).toEqual([
+      {
+        game: 'keywords',
+        endedAt: '2026-10-09T12:01:00.000Z',
+        games: 3,
+        rank: 4,
+        players: 4,
+        score: -2,
+        title: 'black_hole',
+      },
+      {
+        game: 'keywords',
+        endedAt: '2026-10-09T12:00:00.000Z',
+        games: 3,
+        rank: 1,
+        players: 4,
+        score: 12,
+        title: 'best_paper',
+      },
+    ]);
   });
 
   test("refuses a title that isn't one", () => {

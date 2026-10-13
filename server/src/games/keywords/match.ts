@@ -1,7 +1,10 @@
 import {
+  bigClueCards,
+  OPENING_RECORD,
   otherTeam,
   pointsFor,
   TEAMS,
+  type ClueRecord,
   type KeywordsScoreDetail,
   type Lineup,
   type MatchRules,
@@ -58,46 +61,74 @@ export function drawProblems(seating: Seating, online: ReadonlySet<string>): Sta
 // progress counts as it stands.
 export const counts = (game: KeywordsState): boolean => game.result?.reason !== 'withdrawn';
 
-// What a player revealed that wasn't their group's: irrelevant papers, the other group's cards
-// and Reviewer 2, as the detail counts them.
+// What a group's students revealed that wasn't the group's: irrelevant papers, the other group's
+// cards and Reviewer 2, as the detail counts them.
 type Mistakes = Pick<KeywordsScoreDetail, 'irrelevant' | 'wrong' | 'reviewer2'>;
 const noMistakes = (): Mistakes => ({ irrelevant: 0, wrong: 0, reviewer2: 0 });
 
+// A group's first clue of the game: its first turn with a clue, since a turn whose time ran out
+// before the clue had none. Null before the group has given one.
+export const firstClue = (game: KeywordsState, team: Team): ClueRecord | null =>
+  game.history.find((record) => record.team === team && record.word !== null) ?? null;
+
+// The own cards that the group's students found with a clue.
+const foundWith = (record: ClueRecord): number => record.guesses.filter((guess) => guess.color === record.team).length;
+
+// Whether a group's first clue made the opening record: its number was 3 or more, and the
+// students found that many of the group's cards with it before they revealed anything else. A
+// clue of 0 or "unlimited" names no number.
+export function openingRecord(game: KeywordsState, team: Team): boolean {
+  const first = firstClue(game, team);
+  if (!first || typeof first.count !== 'number' || first.count < OPENING_RECORD) return false;
+  const opening = first.guesses.slice(0, first.count);
+  return opening.length === first.count && opening.every((guess) => guess.color === team);
+}
+
+// Whether a group won in the turn of its first clue, which is then the last turn of the game.
+export function heavenlyHand(game: KeywordsState, team: Team): boolean {
+  const { result } = game;
+  return result?.winner === team && result.reason === 'found' && game.history.at(-1) === firstClue(game, team);
+}
+
 // Each player's points in a game, as they stand (shared/src/games/keywords/score.ts): everyone who
-// played for a group in it, by member key, with what their group found, whether it won, and what
-// they revealed themselves of the irrelevant papers, the other group's cards and Reviewer 2. Null
-// for a game that the chair withdrew. `keyOf` gives the member key of whoever revealed a card,
-// also once they have left.
+// played for a group in it, by member key, as its PI, having seen the key, or as a student, with
+// what the group's students found and revealed wrongly, whether it won, its opening record and
+// heavenly hand, and a PI's big clues. A big clue goes to the PI who gave it, by the member key
+// that `keyOf` gives, also once they have left. Null for a game that the chair withdrew.
 export function scoreGame(
   game: KeywordsState,
-  sides: ReadonlyMap<string, Team>,
+  seating: Pick<Seating, 'sides' | 'keyViewers'>,
   keyOf: (playerId: string) => string,
 ): MatchScore[] | null {
   if (!counts(game)) return null;
   const found: Record<Team, number> = { red: 0, blue: 0 };
-  const mistakes = new Map<string, Mistakes>();
+  const mistakes: Record<Team, Mistakes> = { red: noMistakes(), blue: noMistakes() };
+  const bigClues = new Map<string, number>();
   for (const record of game.history) {
     for (const guess of record.guesses) {
-      if (guess.color === record.team) {
-        found[record.team] += 1;
-        continue;
-      }
-      const key = keyOf(guess.player);
-      const tally = mistakes.get(key) ?? noMistakes();
-      if (guess.color === 'reviewer2') tally.reviewer2 += 1;
+      const tally = mistakes[record.team];
+      if (guess.color === record.team) found[record.team] += 1;
+      else if (guess.color === 'reviewer2') tally.reviewer2 += 1;
       else if (guess.color === otherTeam(record.team)) tally.wrong += 1;
       else tally.irrelevant += 1;
-      mistakes.set(key, tally);
+    }
+    const cards = bigClueCards(foundWith(record));
+    if (cards > 0 && record.captain !== undefined) {
+      const key = keyOf(record.captain);
+      bigClues.set(key, (bigClues.get(key) ?? 0) + cards);
     }
   }
   const winner = game.result?.winner ?? null;
-  const keys = new Map<string, Team | null>(sides);
-  for (const key of mistakes.keys()) if (!keys.has(key)) keys.set(key, null);
-  return [...keys].map(([key, team]) => {
+  return [...seating.sides].map(([key, team]) => {
+    const pi = seating.keyViewers.has(key);
     const detail: KeywordsScoreDetail = {
-      found: team ? found[team] : 0,
-      won: team !== null && team === winner,
-      ...(mistakes.get(key) ?? noMistakes()),
+      role: pi ? 'captain' : 'guesser',
+      found: found[team],
+      won: team === winner,
+      ...mistakes[team],
+      bigClues: pi ? (bigClues.get(key) ?? 0) : 0,
+      openingRecord: openingRecord(game, team),
+      heavenlyHand: heavenlyHand(game, team),
     };
     return { key, points: pointsFor(detail), detail };
   });
