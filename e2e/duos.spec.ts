@@ -32,9 +32,9 @@ test('friends who win together become co-first authors, which they alone are tol
   await expect(annAlone.getByText(text.friends.requestSent)).toBeVisible();
   await bobAlone.goto('/account');
   await bobAlone.locator('.friends').getByRole('button', { name: text.friends.accept }).click();
-  await expect(bobAlone.locator('.friends .list .line', { hasText: names.Ann as string })).toBeVisible();
+  await expect(bobAlone.locator('.friends .list .friend', { hasText: names.Ann as string })).toBeVisible();
   // Friends who have played nothing together have nothing to show.
-  await expect(bobAlone.locator('.friends .duo')).toHaveCount(0);
+  await expect(bobAlone.locator('.friends .friend .rest')).toHaveCount(0);
   await expect(bobAlone.locator('.friends .board')).toHaveCount(0);
 
   const table = await seatTable(browser, 'en', async (page, name) => {
@@ -77,15 +77,15 @@ test('friends who win together become co-first authors, which they alone are tol
 
   // Ann's friends list: what the two have played, the title, and the board above the list.
   await ann.goto('/account');
-  const bobsLine = ann.locator('.friends .list .line', { hasText: names.Bob as string });
-  await expect(bobsLine.locator('.duo .games')).toHaveText(
+  const bobsLine = ann.locator('.friends .list .friend', { hasText: names.Bob as string });
+  await expect(bobsLine.locator('.games')).toHaveText(
     interpolate(text.duos.together, { won: String(DUO_MIN), lost: '0' }),
   );
-  await expect(bobsLine.locator('.duo .badge')).toHaveText(text.duos.names.coauthor);
+  await expect(bobsLine.locator('.folded-titles .title .pill')).toHaveText(text.duos.names.coauthor);
   const board = ann.locator('.friends .board');
   await expect(board.locator('li')).toHaveCount(1);
   await expect(board.locator('.holder-names')).toHaveText(names.Bob as string);
-  await bobsLine.locator('.duo .badge').click();
+  await bobsLine.locator('.folded-titles .title .pill').click();
   await expect(ann.getByRole('dialog', { name: text.duos.names.coauthor })).toContainText(text.duos.private);
   await ann.keyboard.press('Escape');
 

@@ -96,10 +96,9 @@ test('Reviewer 1 plays a group, and gives the clue of a PI who is offline until 
   snapshotsOf(bob);
   await joinByLink(bob, url, 'Bob', 'en');
   await sit(bob, 'blue', 'guesser', 'en');
-  // Bob opens Reviewer 1's page from the player menu: player number 0, and how many of it are in the
-  // rooms, which the tests running beside this one share.
-  await bob.locator('.group.red .seat-line .player').click();
-  await bob.getByRole('button', { name: text.lobby.manage.viewPage }).click();
+  // Bob opens Reviewer 1's page from its avatar, in its panel: player number 0, and how many of it
+  // are in the rooms, which the tests running beside this one share.
+  await bob.locator('.group.red .seat-line .player .avatar-button').click();
   const agentPage = bob.locator('[role=dialog] .agent-card');
   await expect(agentPage).toContainText(interpolate(text.playerPage.number, { id: '0' }));
   const live = interpolate(text.agents.profile.live, { players: '(\\d+)', rooms: '(\\d+)' });

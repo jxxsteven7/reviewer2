@@ -75,34 +75,49 @@ test('a public page is set up, opened by its address and from a room, liked and 
   const liker = ann.locator('.likers .line', { hasText: bobName });
   await expect(liker.getByRole('button', { name: text.friends.addFromRoom })).toBeVisible();
   await ann.locator('.friends').getByRole('button', { name: text.friends.accept }).click();
-  await expect(ann.locator('.friends .line', { hasText: bobName })).toContainText(text.friends.online);
+  await expect(ann.locator('.friends .friend', { hasText: bobName })).toContainText(text.friends.online);
   await expect(ann.locator('.profile h2 .badge')).toHaveCount(0);
   // The list of likers hears of it too, without a reload.
   await expect(ann.locator('.likers .line', { hasText: bobName })).toContainText(text.account.profile.public.friend);
 
-  // Ann opens her own page: no way to like it, and the way back to the account page.
-  await ann.goto(address as string);
+  // Ann opens her own page from the account page: no way to like it, and the round button back to
+  // the account page.
+  await ann.getByRole('link', { name: text.account.profile.public.view }).click();
   await expect(ann.locator('.profile-card')).toContainText(text.playerPage.edit);
   expect(await ann.locator('.profile-card .actions button').count()).toBe(0);
+  await ann.getByRole('button', { name: text.account.back }).click();
+  await expect(ann).toHaveURL(/\/account$/);
 
   // A guest sees the count and the line, and nothing to do; an address that is no page says so.
   const guest = await newPlayer(browser, 'en');
   await guest.goto(address as string);
   await expect(guest.locator('.profile-card')).toContainText(interpolate(text.playerPage.likes, { count: '1' }));
+  // Opened on its own, the page has no way back: the wordmark leads home.
+  await expect(guest.getByRole('button', { name: text.account.back })).toHaveCount(0);
   await expect(guest.locator('.profile-card')).toContainText(text.playerPage.logInToLike);
   expect(await guest.locator('.profile-card .actions button').count()).toBe(0);
   await guest.goto('/p/000000000000');
   await expect(guest.locator('.player-page')).toContainText(text.errors.no_such_profile);
 
-  // In a room, Bob opens Ann's page from the player menu, in a sheet, and stays in the room.
+  // In a room, Bob taps Ann's avatar: her panel, with a brief card, and her whole page over it,
+  // from which he goes back to the panel. He stays in the room throughout.
   const room = await createRoom(ann, 'en', '');
   await joinByLink(bob, room, '', 'en');
-  await bob.locator('.lobby .player', { hasText: annName }).click();
-  await bob.getByRole('button', { name: text.lobby.manage.viewPage }).click();
-  const sheet = bob.locator('[role=dialog]', { has: bob.locator('.profile-card') });
-  await expect(sheet.locator('.profile-card')).toContainText('https://ann.example/me');
-  await expect(sheet.locator('.profile-card .number')).toContainText(/Player No\. \d+/);
+  await bob
+    .locator('.lobby .player', { hasText: annName })
+    .getByRole('button', { name: `View ${annName}'s profile` })
+    .click();
+  const panel = bob.locator('[role=dialog]:not(.tall)', { has: bob.locator('.profile-card') });
+  await expect(panel.locator('.profile-card .number')).toContainText(/Player No\. \d+/);
+  await expect(panel.locator('.profile-card')).not.toContainText('https://ann.example/me');
+  await panel.getByRole('button', { name: text.room.panel.fullPage }).click();
+  const page = bob.locator('[role=dialog].tall');
+  await expect(page.locator('.profile-card')).toContainText('https://ann.example/me');
+  await page.getByRole('button', { name: text.room.panel.back }).click();
+  await expect(page).toHaveCount(0);
+  await expect(panel).toBeVisible();
   await expect(bob).toHaveURL(room);
   await bob.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
   await expect(bob.locator('.lobby')).toContainText(annName);
 });

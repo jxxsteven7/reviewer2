@@ -1,8 +1,9 @@
 import { EMOTES } from '@reviewer2/shared';
-import { interpolate, seatTable, TEXT, expect, test } from './helpers';
+import { giveClue, interpolate, keyCard, reveal, seatTable, teamOnTurn, TEXT, expect, test } from './helpers';
 
 // Quick reactions: anyone in the room, spectators included, sends one of the phrases, and every
-// page, the big screen included, shows who sent which (docs/architecture.md).
+// page, the big screen included, shows who sent which (docs/architecture.md); but no PI while the
+// students guess (docs/games/keywords.md#quick-reactions).
 
 const text = TEXT.en;
 const bubble = (name: string, phrase: string) => interpolate(text.emotes.bubble, { name, phrase });
@@ -51,4 +52,35 @@ test('a reaction reaches every page, and the sender waits before the next', asyn
   await expect(table.screen.locator('.sound-hint')).toHaveText(text.emotes.locked);
   await table.screen.locator('.screen-game').click();
   await expect(table.screen.locator('.sound-hint')).toHaveCount(0);
+});
+
+test("a PI's reactions are held while the students guess, and come back when the turn ends", async ({ browser }) => {
+  const table = await seatTable(browser, 'en');
+  const team = await teamOnTurn(table.captains.red);
+  const pis = [table.captains.red, table.captains.blue];
+  const button = (page: (typeof pis)[number]) => page.locator('.role-banner .emote-button .button');
+  await giveClue(table.captains[team], 'Hint', 1, 'en');
+  for (const pi of pis) {
+    await expect(button(pi)).toHaveAttribute('aria-disabled', 'true');
+    // A tap says why, and opens nothing. Playwright waits for a button that says it is disabled to
+    // be enabled; a finger doesn't, and the tap goes through.
+    await button(pi).click({ force: true });
+    await expect(pi.getByText(text.errors.emote_not_now)).toBeVisible();
+    await expect(pi.locator('[role=dialog] .phrase')).toHaveCount(0);
+  }
+  for (const page of [table.guessers.red, table.guessers.blue, table.spectator]) {
+    await expect(button(page)).not.toHaveAttribute('aria-disabled', 'true');
+  }
+
+  // The group finds a card of its own and ends its turn: the PIs may react again.
+  const guesser = table.guessers[team];
+  await reveal(guesser, await keyCard(table.captains[team], team));
+  await guesser.locator('.guess-bar').getByRole('button', { name: text.game.endTurn }).click();
+  await guesser.locator('[role=dialog]').getByRole('button', { name: text.game.endTurn }).click();
+  for (const pi of pis) {
+    await expect(button(pi)).not.toHaveAttribute('aria-disabled', 'true');
+    await button(pi).click();
+    await expect(pi.locator('[role=dialog] .phrase').first()).toBeVisible();
+    await pi.keyboard.press('Escape');
+  }
 });

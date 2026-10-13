@@ -43,6 +43,23 @@ export function plural(template: string, count: number): string {
 }
 
 // The button that offers a seat as a student of this group during a game.
+// What the banner at the top of a room says of the viewer's seat (RoleBanner.vue): their group and
+// role, or that they watch.
+export function seatSaid(
+  team: Team | null,
+  role: 'captain' | 'guesser' = 'guesser',
+  language: Language = 'en',
+): string {
+  const text = TEXT[language];
+  if (team === null) return text.banner.spectator;
+  return interpolate(text.banner.seat, { group: text.lobby.group[team], role: text.banner.roles[role] });
+}
+
+// The avatar of a player in a room, which opens their panel, by its accessible name.
+export function avatarOf(name: string, language: Language = 'en'): { name: string } {
+  return { name: interpolate(TEXT[language].room.viewProfile, { name }) };
+}
+
 export function playFor(team: Team, language: Language = 'en'): { name: string } {
   const text = TEXT[language];
   return { name: interpolate(text.game.playFor, { group: text.lobby.group[team] }) };
@@ -257,7 +274,8 @@ export function expectNoKey(states: RoomView[]): number {
 
 // No snapshot that this page received during a game held another group's chat or its choices of
 // cards. A page outside the groups has neither key; a page in a group has its own group's chat,
-// and its choices only in its turn. Returns how many snapshots it checked.
+// and its choices only in its turn. Only a group's students get its marks, while the game is on.
+// Returns how many snapshots it checked.
 export function expectOwnGroupOnly(states: RoomView[]): number {
   let checked = 0;
   // The group of every player this page has seen in a seat. A player who left the room is in no
@@ -270,6 +288,8 @@ export function expectOwnGroupOnly(states: RoomView[]): number {
     if (!game) continue;
     checked += 1;
     const team = state.me === null ? null : (seats[state.me]?.team ?? null);
+    const role = state.me === null ? 'spectator' : seats[state.me]?.role;
+    if (role !== 'guesser' || game.phase === 'over') expect(game).not.toHaveProperty('marks');
     if (team === null) {
       expect(game).not.toHaveProperty('chat');
       expect(game).not.toHaveProperty('selections');
