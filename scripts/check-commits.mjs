@@ -35,8 +35,8 @@
 // (UNVERSIONED_RE) takes no version, nor does its squash commit on main.
 //
 // A commit on main without the " (#N)" of a squash merge came without a pull request. Only a
-// maintainer's commit of the lists of thanks alone (LISTS_RE) may, titled "docs: <summary>" with
-// no version, and `head` reports any other.
+// maintainer's commit of the lists of thanks alone (LISTS_RE) may do so, titled "docs: <summary>"
+// with no version, and `head` reports any other.
 //
 // Exit codes: 0 pass, 1 convention violated, 2 usage or environment error.
 
