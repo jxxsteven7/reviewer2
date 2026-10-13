@@ -15,6 +15,7 @@ import StreakNotices from '../../core/components/StreakNotices.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
+import { points } from '../../core/points';
 import { act, reconnecting } from '../../core/socket';
 import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
@@ -37,23 +38,42 @@ import { useKeywords, type Chooser } from './useKeywords';
 
 // A game in progress, and its result. The banner that says what is going on for the viewer, the
 // turn strip, the clock, the board and what the viewer can do now come first. On a wide screen the
-// groups stand on the left of the board and the clue log on its right; on a phone they open as
-// sheets from the two buttons in the bar under the board, so that the board comes first.
+// group chat, open all the time, and the groups stand on the left of the board, and the clue log
+// with the tools on its right; on a phone the groups and the clue log open as sheets from the two
+// buttons in the bar under the board, so that the board comes first, and the chat from a third.
 //
 // While the chair has paused the game, a notice stands in place of the board, with the way to
 // resume for the chair, and the clock stands still. A group whose turn it is may ask for an
 // extension, where the room allows one. Once the game has ended, the review opens the replay.
 //
-// In a match, its table sits beside the board while the game is on, above the groups on a wide
-// screen. Once the game has ended, the table follows the letters, with where each player's
-// points came from, or the final ranking does when the match is over. The streaks that the game
-// brought the players to come right after the letters, before the match's table; their notices
-// are on the page from the start, out of sight, so that a screen reader is told of them.
+// In a match, its table stands under the board while the game is on, folded to a line with the
+// progress and the viewer's place, since it is seldom looked at then. Once the game has ended, the
+// table follows the letters, with where each player's points came from, or the final ranking does
+// when the match is over. The streaks that the game brought the players to come right after the
+// letters, before the match's table; their notices are on the page from the start, out of sight,
+// so that a screen reader is told of them.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
 const { data, mySeat, mySide, isChair } = useKeywords(room);
 const match = computed(() => room.value.match);
+
+// The line that the folded table shows during the game: the match's progress, and the viewer's
+// place and total once they have one, which takes a scored game.
+const standing = computed(
+  () => match.value?.standings.find((line) => line.playerId !== null && line.playerId === room.value.me) ?? null,
+);
+const matchSummary = computed(() => {
+  if (!match.value) return '';
+  const parts = [
+    t('match.progressTitle'),
+    t('match.progress', { game: match.value.game, games: match.value.rules.games }),
+  ];
+  if (standing.value && standing.value.rank !== null) {
+    parts.push(t('match.yourStanding', { rank: standing.value.rank, points: points(standing.value.total) }));
+  }
+  return parts.join(' \u00b7 ');
+});
 
 // Where a player's points in a game came from, in a few words.
 function describe(detail: unknown): string {
@@ -250,7 +270,7 @@ const chosenByOthers = computed(() =>
               </p>
               <p v-if="chosenByOthers" class="choices">{{ chosenByOthers }}</p>
             </div>
-            <GroupChat :room="room" />
+            <GroupChat v-if="!wide" :room="room" />
           </div>
           <CluePanel
             v-if="canClue"
@@ -273,25 +293,33 @@ const chosenByOthers = computed(() =>
           </div>
         </div>
         <p v-if="!game.result" class="note">{{ t('game.keyNote') }}</p>
+        <details v-if="match && !game.result" class="match-fold">
+          <summary>{{ matchSummary }}</summary>
+          <MatchTable :room="room">
+            <p class="scoring">{{ t('game.scoring') }}</p>
+          </MatchTable>
+        </details>
       </div>
 
-      <aside class="side sections">
-        <MatchTable v-if="match && !game.result" :room="room">
-          <p class="scoring">{{ t('game.scoring') }}</p>
-        </MatchTable>
-        <GameRosters v-if="wide" :room="room" />
-        <ClueLog v-if="wide" :game="game" />
-        <div class="tools">
-          <RulesSheet :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
-          <UiButton v-if="replay" class="review" variant="quiet" size="small" @click="reviewing = true">
-            {{ t('game.review') }}
-          </UiButton>
-          <UiButton v-if="isChair && !game.result && !paused" variant="quiet" size="small" @click="pause">
-            {{ t('game.pause') }}
-          </UiButton>
-          <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
-            {{ t('game.end') }}
-          </UiButton>
+      <aside class="side">
+        <div class="column">
+          <GroupChat v-if="wide" :room="room" panel />
+          <GameRosters v-if="wide" :room="room" />
+        </div>
+        <div class="column">
+          <ClueLog v-if="wide" :game="game" />
+          <div class="tools">
+            <RulesSheet :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
+            <UiButton v-if="replay" class="review" variant="quiet" size="small" @click="reviewing = true">
+              {{ t('game.review') }}
+            </UiButton>
+            <UiButton v-if="isChair && !game.result && !paused" variant="quiet" size="small" @click="pause">
+              {{ t('game.pause') }}
+            </UiButton>
+            <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
+              {{ t('game.end') }}
+            </UiButton>
+          </div>
         </div>
       </aside>
     </div>
@@ -437,6 +465,57 @@ const chosenByOthers = computed(() =>
   gap: var(--space-4);
 }
 
+/* On a phone the columns below are no boxes of their own: the tools follow the board. */
+.column {
+  display: contents;
+}
+
+/* A match's table during the game, folded to a line with the progress and the viewer's place: it
+   is seldom looked at while the game is on. Open, the table loses its own frame and header, which
+   the fold has. */
+.match-fold {
+  margin-top: var(--space-4);
+  padding: 0 var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-2);
+}
+
+.match-fold summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  list-style: none;
+  cursor: pointer;
+}
+
+.match-fold summary::-webkit-details-marker {
+  display: none;
+}
+
+.match-fold summary::before {
+  content: '\25B8';
+  font-size: var(--text-xs);
+}
+
+.match-fold[open] summary::before {
+  content: '\25BE';
+}
+
+.match-fold > :deep(.match-table) {
+  padding: 0 0 var(--space-4);
+  border: 0;
+  box-shadow: none;
+}
+
+.match-fold :deep(.match-table > header) {
+  display: none;
+}
+
 /* Inside a sheet, the sheet's frame and title do: it says "Groups" or "Clue log" already. */
 .in-sheet.in-sheet {
   padding: 0;
@@ -469,28 +548,20 @@ const chosenByOthers = computed(() =>
   gap: var(--space-3);
 }
 
-/* Three columns: the groups, with a match's table above them, the board, and the clue log with
-   the tools under it. The rows have no gap of their own, so that an empty table row takes no
-   room; the items keep their distance with margins. */
+/* Three columns: the chat and the groups on the left, the board in the middle, and the clue log
+   with the tools on the right. Each column stacks its panels from the top, whatever the others
+   hold, so that no column has empty space of its own. The side columns take 18 rem where the page
+   is wide enough, which lets a five-character name and its rank share a line on a sticker and
+   gives the chat's input some width, but never more than leaves the board 26 rem, so that at 64 rem
+   the board keeps the width it had with 16 rem columns. */
 @media (min-width: 64rem) {
   .layout {
-    grid-template-areas:
-      'table main log'
-      'groups main log'
-      'groups main tools';
-    grid-template-columns: 16rem minmax(0, 1fr) 18rem;
-    grid-template-rows: auto auto 1fr;
+    --side: min(18rem, calc((100% - 26rem - 2 * var(--space-5)) / 2));
+
+    grid-template-areas: 'left main right';
+    grid-template-columns: var(--side) minmax(0, 1fr) var(--side);
     gap: 0 var(--space-5);
     align-items: start;
-  }
-
-  .side > :deep(.match-table) {
-    grid-area: table;
-    margin-bottom: var(--space-5);
-  }
-
-  .side > :deep(.clue-log) {
-    margin-bottom: var(--space-5);
   }
 
   .main {
@@ -501,16 +572,18 @@ const chosenByOthers = computed(() =>
     display: contents;
   }
 
-  .side > :deep(.rosters) {
-    grid-area: groups;
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
   }
 
-  .side > :deep(.clue-log) {
-    grid-area: log;
+  .column:first-child {
+    grid-area: left;
   }
 
-  .tools {
-    grid-area: tools;
+  .column:last-child {
+    grid-area: right;
   }
 }
 </style>

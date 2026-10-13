@@ -98,6 +98,16 @@ describe('the table of a match', () => {
     expect(wrapper.find('table').exists()).toBe(false);
   });
 
+  test('gives every name its whole as a title, for where a narrow column cuts it short', () => {
+    const wrapper = mount(MatchTable, {
+      props: { room: room({ standings: [line('Bartholomew Longname')] }) },
+      global: global(),
+    });
+    const name = wrapper.get('tbody .name');
+    expect(name.text()).toBe('Bartholomew Longname');
+    expect(name.attributes('title')).toBe('Bartholomew Longname');
+  });
+
   test("lets the chair alone end the match, once they've confirmed", async () => {
     const player = mount(MatchTable, { props: { room: room({ standings }, { me: 'bob' }) }, global: global() });
     expect(player.text()).not.toContain('End the match');

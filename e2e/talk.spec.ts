@@ -1,10 +1,11 @@
-import type { Browser, Page } from '@playwright/test';
+import type { Browser, Locator, Page } from '@playwright/test';
 import { otherTeam } from '@reviewer2/shared';
 import {
   closeSheet,
   expectOwnGroupOnly,
   giveClue,
   interpolate,
+  isPhone,
   joinByLink,
   keyCard,
   newPlayer,
@@ -23,7 +24,16 @@ import {
 
 const text = TEXT.en;
 const card = (page: Page, index: number) => page.locator('.board .card').nth(index);
-const openChat = (page: Page) => page.locator('.who-row').getByRole('button').click();
+
+// The group's chat: on a wide screen the panel beside the board, which is open all the time; on a
+// phone the sheet, opened from the button under the board.
+async function chatOf(page: Page): Promise<Locator> {
+  const button = page.locator('.open-chat');
+  if (await button.count()) await button.click();
+  const chat = page.locator('.chat');
+  await expect(chat).toBeVisible();
+  return chat;
+}
 
 // The usual table, and a second student, Fay, in the group whose turn it is.
 async function groupOfTwo(browser: Browser) {
@@ -87,40 +97,44 @@ test("a group's students see each other's choices, and nobody else does", async 
 test('students write to their group, the PI only reads, and nobody else sees the chat', async ({ browser }) => {
   const { table, team, other, fay, student, name, states } = await groupOfTwo(browser);
   const chat = text.game.chat;
-  // Written, and back from the server as the writer's own message. The input is empty before
-  // the server has answered, so it says nothing about whether the message was taken.
+  const phone = isPhone(student);
+  // Written with Enter, and back from the server as the writer's own message. The input is empty
+  // before the server has answered, so it says nothing about whether the message was taken.
   const write = async (page: Page, line: string) => {
-    const own = page.locator('[role=dialog] .message.own');
+    const own = page.locator('.chat .message.own');
     const before = await own.count();
     await page.getByLabel(chat.input).fill(line);
-    await page.getByRole('button', { name: chat.send, exact: true }).click();
+    await page.getByLabel(chat.input).press('Enter');
     await expect(own).toHaveCount(before + 1);
     await expect(own.last().locator('.text')).toHaveText(line);
   };
 
-  await openChat(student);
+  // On a wide screen the student writes straight into the panel, with nothing to open first, and
+  // Fay reads the message there as it comes; on a phone her button counts it until she opens the
+  // sheet.
+  await chatOf(student);
   await write(student, 'Second row, on the left?');
-  await expect(fay.locator('.who-row .badge')).toHaveText('1');
-  await openChat(fay);
-  await expect(fay.locator('[role=dialog] .message')).toHaveCount(1);
-  await expect(fay.locator('[role=dialog] .message .name')).toHaveText(name);
-  await expect(fay.locator('[role=dialog] .message .text')).toHaveText('Second row, on the left?');
-  await expect(fay.locator('.who-row .badge')).toHaveCount(0);
+  if (phone) await expect(fay.locator('.open-chat .badge')).toHaveText('1');
+  else await expect(fay.locator('.chat-panel .message')).toHaveCount(1);
+  const fayChat = await chatOf(fay);
+  await expect(fayChat.locator('.message')).toHaveCount(1);
+  await expect(fayChat.locator('.message .name')).toHaveText(name);
+  await expect(fayChat.locator('.message .text')).toHaveText('Second row, on the left?');
+  await expect(fay.locator('.badge')).toHaveCount(0);
   await write(fay, 'Yes, and the card next to it');
-  await expect(student.locator('[role=dialog] .message')).toHaveCount(2);
+  await expect(student.locator('.chat .message')).toHaveCount(2);
 
   // The PI reads the chat but can't write in it.
   const captain = table.captains[team];
-  await openChat(captain);
-  await expect(captain.locator('[role=dialog] .message')).toHaveCount(2);
+  const captainChat = await chatOf(captain);
+  await expect(captainChat.locator('.message')).toHaveCount(2);
   await expect(captain.getByLabel(chat.input)).toHaveCount(0);
-  await expect(captain.locator('[role=dialog]')).toContainText(chat.readOnly);
+  await expect(captainChat).toContainText(chat.readOnly);
 
   // The other group has a chat of its own, which is empty; spectators and screens have none.
-  await openChat(table.guessers[other]);
-  await expect(table.guessers[other].locator('[role=dialog]')).toContainText(chat.empty);
+  await expect(await chatOf(table.guessers[other])).toContainText(chat.empty);
   for (const page of [table.spectator, table.screen]) {
-    await expect(page.getByRole('button', { name: chat.open })).toHaveCount(0);
+    await expect(page.locator('.open-chat, .chat-panel')).toHaveCount(0);
   }
   for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
 });

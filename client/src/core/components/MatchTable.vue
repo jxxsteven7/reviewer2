@@ -12,7 +12,9 @@ import UiSheet from './UiSheet.vue';
 // The scores of a match, which everyone in the room sees: which game it is, and each player's
 // place, total and points in the game in focus, as the server counted them. The game describes
 // where the points came from, with `describe`, when it wants to, as between two games. The chair
-// may end the match early from here.
+// may end the match early from here. In a narrow column the avatar, the name and the marks keep to
+// one line, the name cut short with an ellipsis (its title has the whole), and the numbers keep
+// their room.
 const props = withDefaults(
   defineProps<{ room: RoomView; describe?: ((detail: unknown) => string) | null; endable?: boolean }>(),
   { describe: null, endable: true },
@@ -59,7 +61,7 @@ async function end() {
           <td class="who">
             <span class="name-line">
               <PlayerAvatar :name="line.name" :avatar="line.avatar" />
-              <span class="name">{{ line.name }}</span>
+              <span class="name" :title="line.name">{{ line.name }}</span>
               <span v-if="line.playerId !== null && line.playerId === room.me" class="mark">{{ t('room.you') }}</span>
               <span v-if="line.left" class="mark">{{ t('match.left') }}</span>
             </span>
@@ -98,6 +100,7 @@ async function end() {
 
 <style scoped>
 .match-table {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -241,5 +244,36 @@ td:last-child {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* In a narrow column, such as beside the board on a small laptop, the name column takes what the
+   numbers leave, and each line stays one line. */
+@container (max-width: 17rem) {
+  table {
+    table-layout: fixed;
+  }
+
+  th.rank {
+    width: 2rem;
+  }
+
+  th.number {
+    width: 2.5rem;
+  }
+
+  th,
+  td {
+    padding-right: var(--space-1);
+  }
+
+  .name-line {
+    flex-wrap: nowrap;
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 </style>

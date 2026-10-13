@@ -1,4 +1,3 @@
-import type { Page } from '@playwright/test';
 import {
   closeSheet,
   createRoom,
@@ -13,6 +12,7 @@ import {
   sideChannel,
   TEXT,
   expect,
+  isPhone,
   test,
 } from './helpers';
 
@@ -113,10 +113,6 @@ test('an empty PI seat can be taken over, and its new PI sees the key and stays 
   const tab = await sideChannel(ann, table.url);
   expect(await tab.send('keywords:seat', { team: 'red', role: 'guesser' })).toEqual({ ok: false, error: 'key_viewer' });
 });
-
-// Whether the page is a phone's, where the groups and the clue log are sheets that open from the
-// bar under the board (KeywordsGame.vue).
-const isPhone = (page: Page) => (page.viewportSize()?.width ?? 1280) < 1024;
 
 test('on a phone, the groups and the clue log open as sheets from the bar under the board', async ({ browser }) => {
   const table = await seatTable(browser, 'en');

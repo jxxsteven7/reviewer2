@@ -5,6 +5,7 @@ import {
   type CardColor,
   type KeywordsRoomData,
   type KeywordsView,
+  type MatchRules,
   type RoomView,
   type Team,
 } from '@reviewer2/shared';
@@ -298,6 +299,20 @@ export async function chooseRule(page: Page, label: string): Promise<void> {
 export async function setSetting(page: Page, label: string, value: number): Promise<void> {
   await page.locator('.settings-form').getByLabel(label, { exact: true }).fill(String(value));
 }
+
+// Makes the room a match on the room setup, with these rules.
+export async function chooseMatch(page: Page, language: Language, rules: MatchRules): Promise<void> {
+  const text = TEXT[language];
+  await page.getByRole('radio', { name: new RegExp(`^${text.match.match}`) }).check();
+  const form = page.locator('.match-form');
+  await form.getByLabel(text.match.games).fill(String(rules.games));
+  await form.getByLabel(text.match.teamsChoice[rules.teams], { exact: true }).check();
+  await form.getByLabel(text.match.groupingChoice[rules.grouping], { exact: true }).check();
+}
+
+// Whether the page is a phone's, narrower than the three columns of the game, where the groups,
+// the clue log and the chat open as sheets from the bar under the board (KeywordsGame.vue).
+export const isPhone = (page: Page): boolean => (page.viewportSize()?.width ?? 1280) < 1024;
 
 // How a newcomer takes part: to play, which the forms offer first, or only to watch.
 export interface Joining {

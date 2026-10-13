@@ -6,9 +6,10 @@ import { bannerFor } from './banner';
 
 // A strip across the top of the waiting room and the game, in the viewer's group color: who they
 // are, and what is going on for them now (banner.ts). It stands out when it is the viewer's move,
-// and so does the tab's title, for a player who has gone to another tab while they wait. A screen
-// reader is told the words as they change, but not what is in the slot: that is the reaction
-// button, whose countdown would otherwise be read out second by second.
+// and so does the tab's title, for a player who has gone to another tab while they wait. A line
+// that waits for someone ends in an ellipsis, which breathes a little, by CSS alone: the words
+// stay as they are. A screen reader is told the words as they change, but not what is in the
+// slot: that is the reaction button, whose countdown would otherwise be read out second by second.
 const props = withDefaults(defineProps<{ seat: Seat; game: KeywordsView | null; chair?: boolean }>(), {
   chair: false,
 });
@@ -24,6 +25,11 @@ const line = computed(() => {
   const { group } = banner.value;
   return t(`banner.lines.${banner.value.line}`, { group: group ? t(`lobby.group.${group}`) : '' });
 });
+// The line's words, and the ellipsis it ends in while someone is waited for, if any.
+const parts = computed(() => {
+  const found = /^(.*?)(\u2026+)$/su.exec(line.value);
+  return found ? { text: found[1] ?? '', dots: found[2] ?? '' } : { text: line.value, dots: '' };
+});
 
 const title = document.title;
 watchEffect(() => {
@@ -38,7 +44,9 @@ onBeforeUnmount(() => {
   <section class="role-banner" :class="[seat.team ?? 'spectator', { urgent: banner.urgent }]">
     <div class="text" aria-live="polite">
       <p class="who">{{ who }}</p>
-      <p class="line">{{ line }}</p>
+      <p class="line">
+        {{ parts.text }}<span v-if="parts.dots" class="dots">{{ parts.dots }}</span>
+      </p>
     </div>
     <slot />
   </section>
@@ -112,5 +120,23 @@ onBeforeUnmount(() => {
   font-size: var(--text-xl);
   font-weight: var(--weight-display);
   font-synthesis: none;
+}
+
+/* The ellipsis of a line that waits breathes, gently. */
+.dots {
+  display: inline-block;
+  animation: breathe 2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots {
+    animation: none;
+  }
 }
 </style>

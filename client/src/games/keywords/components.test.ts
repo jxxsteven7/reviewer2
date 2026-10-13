@@ -13,6 +13,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import { clearMemory } from '../../core/storage';
+import { seenIn } from './chat';
 import { toasts } from '../../core/toast';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
@@ -242,6 +243,30 @@ describe('GroupChat', () => {
     const wrapper = mount(GroupChat, { props: { room: room('eve') }, global: global() });
     expect(wrapper.find('button').exists()).toBe(false);
   });
+
+  test('stands open beside the board as a panel, where every message counts as read', () => {
+    const wrapper = mount(GroupChat, { props: { room: room('bob', messages), panel: true }, global: global() });
+    expect(wrapper.find('.open-chat').exists()).toBe(false);
+    expect(wrapper.get('.chat-panel h2').text()).toBe('Chat of the Red group');
+    expect(wrapper.findAll('.turn').map((turn) => turn.get('.turn-title').text())).toEqual(['Turn 1', 'Turn 2']);
+    expect(wrapper.findAll('.message')).toHaveLength(3);
+    expect(wrapper.find('input').exists()).toBe(true);
+    expect(wrapper.find('.badge').exists()).toBe(false);
+    expect(seenIn('g1')).toBe(3);
+  });
+
+  test('lets a PI read the panel but not write in it', () => {
+    const wrapper = mount(GroupChat, { props: { room: room('ann', messages), panel: true }, global: global() });
+    expect(wrapper.findAll('.chat-panel .message')).toHaveLength(3);
+    expect(wrapper.find('input').exists()).toBe(false);
+    expect(wrapper.text()).toContain('the clue is all a PI may say');
+  });
+
+  test('shows a spectator no panel', () => {
+    const wrapper = mount(GroupChat, { props: { room: room('eve'), panel: true }, global: global() });
+    expect(wrapper.find('.chat-panel').exists()).toBe(false);
+    expect(wrapper.text()).toBe('');
+  });
 });
 
 describe('RoleBanner', () => {
@@ -250,13 +275,14 @@ describe('RoleBanner', () => {
   test("stands out on the viewer's move, and says so in the tab's title for as long as it lasts", async () => {
     document.title = 'Reviewer 2';
     const wrapper = mount(RoleBanner, { props: { seat: seats.bob as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('Red group · Student');
+    expect(wrapper.find('.who').text()).toBe('You: Red group · Student');
     expect(wrapper.find('.line').text()).toBe('Your turn to guess!');
     expect(wrapper.classes()).toEqual(expect.arrayContaining(['red', 'urgent']));
     expect(document.title).toBe('Your turn!');
 
     await wrapper.setProps({ game: { ...game, phase: 'clue' } });
-    expect(wrapper.find('.line').text()).toBe('Your PI is thinking of a clue.');
+    expect(wrapper.find('.line').text()).toBe('Your PI is thinking of a clue\u2026');
+    expect(wrapper.find('.line .dots').text()).toBe('\u2026');
     expect(wrapper.classes()).not.toContain('urgent');
     expect(document.title).toBe('Reviewer 2');
 
@@ -268,8 +294,8 @@ describe('RoleBanner', () => {
 
   test('tells a spectator who is doing what', () => {
     const wrapper = mount(RoleBanner, { props: { seat: seats.eve as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('Spectator');
-    expect(wrapper.find('.line').text()).toBe('The Red group is guessing.');
+    expect(wrapper.find('.who').text()).toBe('You: Spectator');
+    expect(wrapper.find('.line').text()).toBe('The Red group is guessing\u2026');
     expect(wrapper.classes()).toEqual(['role-banner', 'spectator']);
   });
 
@@ -281,7 +307,7 @@ describe('RoleBanner', () => {
     });
     const live = wrapper.findAll('[aria-live]');
     expect(live).toHaveLength(1);
-    expect(live[0]?.find('.line').text()).toBe('The Red group is guessing.');
+    expect(live[0]?.find('.line').text()).toBe('The Red group is guessing\u2026');
     expect(live[0]?.find('button').exists()).toBe(false);
     expect(wrapper.find('button').text()).toBe('React (9)');
   });
@@ -385,6 +411,21 @@ describe('KeywordsCard', () => {
     });
     expect(wrapper.find('.choosers').exists()).toBe(false);
     expect(wrapper.get('button').classes()).toContain('selected');
+  });
+
+  test('labels an irrelevant paper N/A in its corner, and Irrelevant to a screen reader', () => {
+    const wrapper = mount(KeywordsCard, {
+      props: {
+        card: { ...card, color: 'neutral', revealed: true },
+        index: 3,
+        selectable: false,
+        selected: false,
+        choosers: [],
+      },
+      global: global(),
+    });
+    expect(wrapper.get('.tag').text()).toBe('N/A');
+    expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, Irrelevant');
   });
 
   test("stays readable, but out of the Tab order and inert, when it can't be chosen", async () => {
@@ -967,7 +1008,11 @@ describe('KeywordsGame', () => {
   test('renders the group chat once, and keeps it after the game', async () => {
     const view = room('bob', []);
     const wrapper = mount(KeywordsGame, { props: { room: view }, global: global() });
-    expect(wrapper.findAll('.who-row button')).toHaveLength(1);
+    // The test's window is as wide as the three columns, which the page finds out once mounted:
+    // the chat is then the panel beside the board, and there is no button under it.
+    await flushPromises();
+    expect(wrapper.findAll('.chat-panel')).toHaveLength(1);
+    expect(wrapper.findAll('.open-chat')).toHaveLength(0);
     expect(wrapper.text()).toContain('Only the PIs see the colors of hidden cards.');
 
     const data = view.data as KeywordsRoomData;
@@ -978,7 +1023,7 @@ describe('KeywordsGame', () => {
         data: { ...data, game: { ...game, phase: 'over', result: { winner: 'red', reason: 'found' } } },
       },
     });
-    expect(wrapper.findAll('.who-row button')).toHaveLength(1);
+    expect(wrapper.findAll('.chat-panel')).toHaveLength(1);
     expect(wrapper.find('.letter .verdict').text()).toBe('Accept (Oral)');
     expect(wrapper.text()).not.toContain('Only the PIs see the colors of hidden cards.');
   });

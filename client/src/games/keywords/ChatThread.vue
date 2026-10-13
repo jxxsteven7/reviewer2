@@ -1,0 +1,240 @@
+<script setup lang="ts">
+import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, textLength, type RoomView } from '@reviewer2/shared';
+import { computed, nextTick, ref, toRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
+import UiButton from '../../core/components/UiButton.vue';
+import { act } from '../../core/socket';
+import { byTurn } from './chat';
+import { useKeywords } from './useKeywords';
+
+// The group's messages by turn, and the line a student writes under them. GroupChat.vue shows
+// this beside the board, in a panel that is open all the time, or on a phone in a sheet. Students
+// write one line at a time; PIs read but can't write, and after the game nobody can. `open` says
+// whether the viewer sees the thread now: always in the panel, in the sheet while it is open.
+const props = defineProps<{ room: RoomView; open: boolean }>();
+const { t } = useI18n();
+const { data, mySeat } = useKeywords(toRef(props, 'room'));
+
+const game = computed(() => data.value.game);
+const chat = computed(() => game.value?.chat ?? []);
+const turns = computed(() => byTurn(chat.value));
+const canWrite = computed(() => mySeat.value?.role === 'guesser' && game.value?.phase !== 'over');
+
+// The list shows the newest message when the thread comes into view, and follows new ones only
+// while it is at its end, so that a player reading older messages isn't pulled away from them;
+// the viewer's own message always comes into view.
+const NEAR_END = 40;
+const list = ref<HTMLElement | null>(null);
+watch(
+  [() => props.open, () => chat.value.at(-1)?.id ?? 0],
+  async ([isOpen], [wasOpen]) => {
+    if (!isOpen) return;
+    // Measured before the new message is rendered: was the list at its end until now?
+    const before = list.value;
+    const follow =
+      !wasOpen ||
+      !before ||
+      before.scrollHeight - before.scrollTop - before.clientHeight <= NEAR_END ||
+      chat.value.at(-1)?.player === props.room.me;
+    await nextTick();
+    if (follow && list.value) list.value.scrollTop = list.value.scrollHeight;
+  },
+  { immediate: true },
+);
+
+function nameOf(playerId: string): string {
+  if (playerId === props.room.me) return t('game.chat.you');
+  return props.room.players.find((player) => player.id === playerId)?.name ?? t('game.chat.someone');
+}
+
+// The player who wrote a message, for the avatar beside it, or none for someone who has left.
+const playerOf = (playerId: string) => props.room.players.find((player) => player.id === playerId);
+
+const text = ref('');
+const input = ref<HTMLInputElement | null>(null);
+const sending = ref(false);
+const check = computed(() => checkChat(text.value));
+const length = computed(() => textLength(check.value.text));
+const tooLong = computed(() => check.value.problem === 'chat_too_long');
+
+async function say() {
+  if (check.value.problem || sending.value || !game.value) return;
+  // The input is cleared before the answer comes, so that the next message, which a player on
+  // a slow connection may already be typing, isn't wiped out with the sent one. A message the
+  // server refuses comes back into the input, in front of whatever was typed since.
+  const sent = text.value;
+  text.value = '';
+  sending.value = true;
+  const reply = await act('keywords:say', { gameId: game.value.gameId, text: sent });
+  sending.value = false;
+  if (!reply.ok) text.value = text.value ? `${sent} ${text.value}` : sent;
+  // Tapping "Send" moves the focus to the button, which closes a phone's keyboard. The next
+  // message is likely to follow, so the input gets the focus back.
+  input.value?.focus();
+}
+</script>
+
+<template>
+  <div class="chat">
+    <ol v-if="turns.length" ref="list" class="turns">
+      <li v-for="turn in turns" :key="turn.turn" class="turn">
+        <h3 class="turn-title">{{ t('game.turn', { turn: turn.turn }) }}</h3>
+        <p
+          v-for="message in turn.messages"
+          :key="message.id"
+          class="message"
+          :class="{ own: message.player === room.me }"
+        >
+          <PlayerAvatar
+            v-if="playerOf(message.player)"
+            :name="playerOf(message.player)?.name ?? ''"
+            :avatar="playerOf(message.player)?.avatar"
+          />
+          <span class="name">{{ nameOf(message.player) }}</span>
+          <span class="text">{{ message.text }}</span>
+        </p>
+      </li>
+    </ol>
+    <p v-else class="empty">{{ t('game.chat.empty') }}</p>
+
+    <form v-if="canWrite" class="compose" @submit.prevent="say">
+      <label class="label" for="chat-text">{{ t('game.chat.input') }}</label>
+      <div class="row">
+        <input
+          id="chat-text"
+          ref="input"
+          v-model="text"
+          :maxlength="MAX_CHAT_INPUT"
+          autocomplete="off"
+          enterkeyhint="send"
+          :aria-invalid="tooLong ? 'true' : undefined"
+          aria-describedby="chat-hint"
+        />
+        <UiButton variant="primary" type="submit" :disabled="check.problem !== null || sending">
+          {{ t('game.chat.send') }}
+        </UiButton>
+      </div>
+      <p id="chat-hint" class="hint num" :class="{ problem: tooLong }">
+        {{ tooLong ? t('errors.chat_too_long') : t('game.chat.count', { count: length, max: MAX_CHAT_LENGTH }) }}
+      </p>
+    </form>
+    <p v-else class="note">{{ game?.phase === 'over' ? t('game.chat.over') : t('game.chat.readOnly') }}</p>
+  </div>
+</template>
+
+<style scoped>
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.turns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: min(50vh, 24rem);
+  max-height: min(50dvh, 24rem);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.turn-title {
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Each message on a block; the viewer's own take the table's yellow. */
+.message {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
+  overflow-wrap: anywhere;
+}
+
+.message.own {
+  background: var(--bg);
+}
+
+.message :deep(.avatar) {
+  margin-right: var(--space-1);
+  vertical-align: -0.45em;
+}
+
+.name {
+  margin-right: var(--space-2);
+  font-weight: var(--weight-black);
+}
+
+.empty,
+.note {
+  color: var(--ink-2);
+}
+
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: var(--line-strong) solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: var(--weight-bold);
+}
+
+input:focus-visible {
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--red-deep);
+}
+
+.hint {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  text-align: right;
+}
+
+.hint.problem {
+  color: var(--red-deep);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  text-align: left;
+}
+</style>
