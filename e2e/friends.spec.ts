@@ -19,12 +19,12 @@ test('friends are made in a room and by username, invited into a private room, a
   const cat = await newPlayer(browser, 'en');
   await register(cat, catName);
 
-  // Ann's private room, where Bob joins her. Both are undergraduates, which shows beside their names.
+  // Ann's private room, where Bob joins her. Both are kindergartners, which shows beside their names.
   const first = await createRoom(ann, 'en', '');
   await joinByLink(bob, first, '', 'en');
   const annInRoom = bob.locator('.lobby .player', { hasText: annName });
-  await expect(annInRoom).toContainText(text.ranks.names.undergraduate);
-  await expect(ann.locator('.lobby .player', { hasText: bobName })).toContainText(text.ranks.names.undergraduate);
+  await expect(annInRoom).toContainText(text.ranks.names.kindergarten);
+  await expect(ann.locator('.lobby .player', { hasText: bobName })).toContainText(text.ranks.names.kindergarten);
 
   // Bob asks Ann to be friends from the player menu.
   await annInRoom.click();
@@ -50,8 +50,8 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(cat.locator('.friends .line', { hasText: annName })).toContainText(text.friends.online);
   await expect(annsFriends.locator('.line', { hasText: catName })).toContainText(text.friends.online);
 
-  // The rank on the account page: an undergraduate with no points, 30 short of a master's degree.
-  await expect(ann.locator('.rank-line')).toContainText(text.ranks.names.undergraduate);
+  // The rank on the account page: a kindergartner with no points, 10 short of primary school.
+  await expect(ann.locator('.rank-line')).toContainText(text.ranks.names.kindergarten);
   await expect(ann.locator('.rank-line')).toContainText(interpolate(text.ranks.points, { points: '0' }));
 
   // Ann makes a second private room and invites Bob from the room menu. Bob, who is on his account
@@ -91,5 +91,5 @@ test('friends are made in a room and by username, invited into a private room, a
   await cat.waitForURL(second);
   await cat.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(cat.locator('.lobby')).toContainText(bobName);
-  await expect(ann.locator('.lobby .player', { hasText: catName })).toContainText(text.ranks.names.undergraduate);
+  await expect(ann.locator('.lobby .player', { hasText: catName })).toContainText(text.ranks.names.kindergarten);
 });

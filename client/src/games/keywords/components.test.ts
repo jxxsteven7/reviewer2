@@ -118,6 +118,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     screens: 0,
     me,
     match: null,
+    streaks: [],
     data,
   };
 }

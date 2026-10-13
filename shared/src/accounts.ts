@@ -1,5 +1,6 @@
 import type { AcknowledgmentCount } from './acknowledgments';
 import { cleanName } from './names';
+import type { BestStreaks } from './streaks';
 import { SILENT, textLength } from './text';
 
 // Accounts (docs/architecture.md): a username and a password, an optional email address for
@@ -99,14 +100,16 @@ export interface TitleCount {
 
 // What the owner of an account sees of it. `avatar` is the address of the uploaded avatar, or
 // null for the default one, which the client draws from the username. `points` are those of every
-// game finished, from which the client tells the rank (ranks.ts). `acknowledgments` is how often
-// the account is thanked for each kind of help (acknowledgments.ts).
+// game finished, from which the client tells the rank (ranks.ts). `streaks` are the longest runs of
+// wins and of losses on the record, which the page shows as titles (streaks.ts). `acknowledgments`
+// is how often the account is thanked for each kind of help (acknowledgments.ts).
 export interface AccountSummary {
   username: string;
   avatar: string | null;
   email: EmailState;
   points: number;
   titles: TitleCount[];
+  streaks: BestStreaks;
   acknowledgments: AcknowledgmentCount[];
 }
 

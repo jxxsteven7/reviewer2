@@ -33,6 +33,7 @@ const view = (me: string, isPublic: boolean): RoomView => ({
   screens: 0,
   me,
   match: null,
+  streaks: [],
   data: {},
 });
 

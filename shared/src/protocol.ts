@@ -111,7 +111,19 @@ export interface Session {
 
 // The quick reactions that anyone in a room can send, spectators included (docs/architecture.md).
 // Their text and their sounds are the client's. A member may send one every EMOTE_COOLDOWN_MS.
-export const EMOTES = ['waiting', 'deadline', 'reviewer2'] as const;
+export const EMOTES = [
+  'waiting',
+  'deadline',
+  'reviewer2',
+  'accept',
+  'great_clue',
+  'p_hacking',
+  'major_revision',
+  'resubmit',
+  'first_author',
+  'coauthor',
+  'all_nighter',
+] as const;
 export type Emote = (typeof EMOTES)[number];
 export const EMOTE_COOLDOWN_MS = 10_000;
 

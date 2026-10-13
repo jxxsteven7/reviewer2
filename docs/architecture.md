@@ -58,7 +58,7 @@ Everything after the page load goes over Socket.IO, except the account API ([Acc
 | `room:join` | `code`, or `invitation` ([Friends](#friends)); `name`, `play` (newcomers); `roomId` (returning) | Anyone; `removed`, `removed_recently`, `room_full`, `account_required`, `public_barred`, `name_required`, `invitation_expired` |
 | `room:watch` | `code`, `roomId` (returning screen) | A screen; `removed`, `removed_recently`, `screens_full`; in a public room `account_required`, `public_barred`, `not_member` |
 | `room:leave`, `room:rename` | `name` | Members; `account_name` for accounts |
-| `room:emote` | `emote`: `waiting`, `deadline`, `reviewer2` | Members; one every 10 seconds, else `emote_cooldown` with `waitMs`; in no snapshot |
+| `room:emote` | `emote`: one of `EMOTES` in `shared/src/protocol.ts`, eleven phrases | Members; one every 10 seconds, else `emote_cooldown` with `waitMs`; in no snapshot |
 | `room:report` | `playerId`, `text`? | Members with accounts, in a public room; `not_public`, `report_too_long`, `report_limited`, `report_full` |
 | `room:settings` | `fields`, `settings`, `words` | The chair, in the waiting room; all or none; `match_locked`, `bad_words`, `custom_words_private` ([custom words](games/keywords.md#custom-words)) |
 | `room:public` | `public` | The chair, in the waiting room; `account_required`, `public_barred`, `custom_words_private` |
@@ -146,7 +146,7 @@ Optional: a username and a password, with an avatar, a record of games, titles, 
 - **Passwords:** 8 to 128 characters after NFKC, as scrypt hashes, N = 2^15, r = 8, p = 3 (`server/src/accounts/passwords.ts`). Two hashes at a time, then `busy`.
 - **Logins:** a 32-byte secret in a cookie, kept as its SHA-256 (`sessions`). `HttpOnly`, `SameSite=Lax`, `Path=/`, and unless `COOKIE_SECURE=0`, `Secure` with `__Host-`. Ends after 30 days unused, a year in all, or on logout or a password change; its connections then get `account:ended`.
 - **Connections.** The handshake reads the cookie; a logged-in connection takes its member key from the account. A guest's seat becomes the account's when the browser logs in and comes back.
-- **Records.** At a game's end the room asks `GameModule.results()` and keeps the result per account, with the game's points ([Academic ranks](#academic-ranks)).
+- **Records.** At a game's end the room asks `GameModule.results()` and keeps the result per account, with the game's points ([Academic ranks](#academic-ranks)) and the streak it brings ([Streaks](#streaks)).
 
 ## Friends
 
@@ -160,7 +160,15 @@ Accounts only; guests see none of it. `shared/src/friends.ts` has the types, the
 
 ## Academic ranks
 
-Shown only; they change nothing in the game. Every game that ends by itself is scored as a match scores it ([games/keywords.md](games/keywords.md#matches)), in a match or not, and each account player's points go on their `game_records` row (migration 8; older rows count as 0). A withdrawn game counts for nothing, and a game is recorded once per account. The total holds a rank (`shared/src/ranks.ts`): undergraduate from 0, master's student from 30, PhD student from 100, postdoc from 250, lecturer from 450, associate professor from 700, professor from 1000, academician from 2000. The rank travels with the player in every snapshot (`PlayerView.rank`), is read again when a game ends, when the account changes and at every sweep, and the account page shows the total and the way to the next rank.
+Shown only; they change nothing in the game. Every game that ends by itself is scored as a match scores it ([games/keywords.md](games/keywords.md#matches)), in a match or not, and each account player's points go on their `game_records` row (migration 8; older rows count as 0). A withdrawn game counts for nothing, and a game is recorded once per account. The total holds a rank (`shared/src/ranks.ts`), thirteen of them: kindergartner from 0, primary school pupil from 10, middle school student from 30, high school student from 60, undergraduate from 100, master's student from 180, PhD student from 300, postdoc from 500, lecturer from 800, associate professor from 1200, professor from 1800, academician from 3000, and Reviewer 2 from 6000, the top, which the account page says has no next rank. A game is worth about 7 points, so the first ranks come within a few games and the last ones take months. The rank travels with the player in every snapshot (`PlayerView.rank`), is read again when a game ends, when the account changes and at every sweep, and the account page shows the total and the way to the next rank.
+
+The rank is the sum of the points of every game on the account, whichever game they come from: a new game calibrates what a game gives to about what the first one gives, so that no game becomes the place to farm points.
+
+## Streaks
+
+How many games in a row an account has won, and lost, at most (`shared/src/streaks.ts`). They are counted over every game on the record, whichever game it was and in a match or not, in the order the games ended, counting only games with a result: a withdrawn game has no row, watching is no game, and a guest has no record. The `streaks` table (migration 10) keeps one row per account, the longest run of wins, the longest run of losses, and the run the latest game is part of, written in the same transaction as the game's record (`RecordStore` in `server/src/store/records.ts`), so that the account page and the end of a game read one row however long the record is; the migration works the rows out once from the records that are there, so players have their history from the start.
+
+A streak of three games or more is a title, named with the number in words (`shared/src/numbers.ts`), never a digit: Three Submissions, Three Acceptances, and Three Submissions, Three Rejections, with the number in Chinese characters in Chinese. The account page shows the longest of each kind among the titles. When a game ends, the snapshot that ends it carries each account player's streak of three or more (`RoomView.streaks`): a winning streak goes to everyone in the room, screens included, who cheer the player by name; a losing streak goes to its player alone, so that nobody is shown up. The player reads their own streak with a line for the occasion, drawn from a few per tier of length, and whether it is a new record for them. The snapshots of the waiting room and of the next game carry none.
 
 ### The account API
 

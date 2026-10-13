@@ -1,5 +1,6 @@
 import { isLanguage, type Language } from '@reviewer2/shared';
-import { createI18n } from 'vue-i18n';
+import { computed, type ComputedRef } from 'vue';
+import { createI18n, useI18n } from 'vue-i18n';
 import en from '../locales/en.json';
 import zh from '../locales/zh.json';
 import { readStored, writeStored } from './storage';
@@ -38,9 +39,17 @@ export function setLanguage(language: Language, { remember = true } = {}): void 
   if (remember) writeStored(STORAGE_KEY, language);
 }
 
+// The language that a locale is: English for one that is neither, which nothing sets.
+const languageOf = (locale: string): Language => (isLanguage(locale) ? locale : 'en');
+
 export function currentLanguage(): Language {
-  const locale = i18n.global.locale.value;
-  return isLanguage(locale) ? locale : 'en';
+  return languageOf(i18n.global.locale.value);
+}
+
+// The language a component's interface is in, which follows the switcher.
+export function useLanguage(): ComputedRef<Language> {
+  const { locale } = useI18n();
+  return computed(() => languageOf(locale.value));
 }
 
 // Words in a list, joined the way the language joins them: "Ann and Cat" in English, and with

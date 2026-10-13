@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n';
 import EmoteButton from '../../core/components/EmoteButton.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
+import StreakNotices from '../../core/components/StreakNotices.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
@@ -45,7 +46,9 @@ import { useKeywords, type Chooser } from './useKeywords';
 //
 // In a match, its table sits beside the board while the game is on, above the groups on a wide
 // screen. Once the game has ended, the table follows the letters, with where each player's
-// points came from, or the final ranking does when the match is over.
+// points came from, or the final ranking does when the match is over. The streaks that the game
+// brought the players to come right after the letters, before the match's table; their notices
+// are on the page from the start, out of sight, so that a screen reader is told of them.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -213,6 +216,7 @@ const chosenByOthers = computed(() =>
       class="sticky-clock"
       :class="{ 'below-banner': reconnecting }"
     />
+    <StreakNotices :room="room" />
     <template v-if="game.result && match">
       <MatchResults v-if="match.status !== 'on'" :room="room" />
       <MatchTable v-else :room="room" :describe="describe" class="between">
