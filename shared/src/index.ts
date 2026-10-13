@@ -1,5 +1,6 @@
 export * from './accounts';
 export * from './acknowledgments';
+export * from './agent';
 export * from './codes';
 export * from './duos';
 export * from './feedback';

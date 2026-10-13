@@ -52,6 +52,33 @@ describe('PlayerName', () => {
     });
     expect(guest.find('.rank').exists()).toBe(false);
   });
+
+  test('marks an AI player with the robot that is its avatar, and a player whom an AI plays for', () => {
+    const ai = mount(PlayerName, {
+      props: {
+        player: { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' as const },
+        me: false,
+        chair: false,
+        manageable: false,
+      },
+      global: global(),
+    });
+    expect(ai.get('.mark.agent').text()).toBe('AI');
+    expect(ai.get('.mark.agent').find('svg').exists()).toBe(true);
+    expect(ai.get('.avatar').find('svg').exists()).toBe(true);
+    expect(ai.get('.avatar').find('.initial').exists()).toBe(false);
+    const played = mount(PlayerName, {
+      props: {
+        player: { id: 'a', name: 'Ann', online: false, takenOver: true as const },
+        me: false,
+        chair: false,
+        manageable: false,
+      },
+      global: global(),
+    });
+    expect(played.findAll('.mark').map((mark) => mark.text())).toEqual(['AI playing', 'offline']);
+    expect(played.get('.avatar').find('svg').exists()).toBe(false);
+  });
 });
 
 describe('FieldPicker', () => {

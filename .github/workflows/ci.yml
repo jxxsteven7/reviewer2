@@ -114,6 +114,33 @@ jobs:
           test "$status" -eq 2
           grep -q '^usage: admin.cjs <command>, one of$' "$RUNNER_TEMP/admin.log"
           grep -q '^  avatar remove <username> \[--ban\]$' "$RUNNER_TEMP/admin.log"
+      - name: The agent runs from the build
+        run: |
+          # Without node_modules too. No model answers here, so a ping is answered model_failed, which
+          # is enough to show that the bundle runs and speaks its protocol.
+          app="$RUNNER_TEMP/agent"
+          mkdir -p "$app/agent"
+          cp -r agent/dist "$app/agent/"
+          socket="$RUNNER_TEMP/agent.sock"
+          AGENT_SOCKET="$socket" AGENT_MODEL_URL=http://127.0.0.1:9/v1 AGENT_MODEL=none \
+            node "$app/agent/dist/agent.cjs" > "$RUNNER_TEMP/agent.log" 2>&1 &
+          agent=$!
+          trap 'kill "$agent" 2>/dev/null || true; cat "$RUNNER_TEMP/agent.log"' EXIT
+          for attempt in $(seq 1 30); do
+            if [ -S "$socket" ]; then break; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "The agent did not open its socket within 30 seconds." >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          node -e '
+            const socket = require("net").connect(process.argv[1], () => socket.write("{\"v\":1,\"kind\":\"ping\"}\n"));
+            let answer = "";
+            socket.on("data", (data) => (answer += data));
+            socket.on("close", () => { if (answer.trim() !== "{\"ok\":false,\"error\":\"model_failed\"}") { console.error(answer); process.exit(1); } });
+          ' "$socket"
+          grep -q '"event":"agent_answered","kind":"ping"' "$RUNNER_TEMP/agent.log"
 
   e2e-browser:
     # Real browsers against the production build. Each project's tests are split over jobs side

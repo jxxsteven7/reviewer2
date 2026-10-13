@@ -9,7 +9,8 @@
     "shared",
     "server",
     "client",
-    "mailer"
+    "mailer",
+    "agent"
   ],
   "engines": {
     "node": "^24.15 || >=26"
@@ -17,13 +18,14 @@
   "scripts": {
     "dev": "concurrently --names server,client --prefix-colors blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
     "dev:mailer": "npm run dev -w mailer",
-    "build": "npm run build -w client && npm run build -w server && npm run build -w mailer",
+    "dev:agent": "npm run dev -w agent",
+    "build": "npm run build -w client && npm run build -w server && npm run build -w mailer && npm run build -w agent",
     "start": "node server/dist/index.cjs",
     "test": "node --test scripts/*.test.mjs && vitest run",
     "test:e2e": "playwright test",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write . && eslint --fix .",
-    "typecheck": "tsc -p . && tsc -p shared && tsc -p server && tsc -p mailer && vue-tsc -p client && vue-tsc -p client/tsconfig.node.json",
+    "typecheck": "tsc -p . && tsc -p shared && tsc -p server && tsc -p mailer && tsc -p agent && vue-tsc -p client && vue-tsc -p client/tsconfig.node.json",
     "check:names": "node scripts/check-names.mjs files",
     "check:words": "node scripts/check-words.mjs",
     "prepare": "node scripts/install-hooks.mjs"

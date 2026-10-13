@@ -526,6 +526,7 @@ export function renderStatusPage(
 <dl>${tile('Online', stats.players.online)}${tile('Offline', stats.players.offline, 'with a seat to come back to')}${tile('Accounts', accounts.total, 'registered')}${tile('New accounts', accounts.recent, 'in the last 7 days')}</dl></section>
 <section><h2>Rooms</h2>
 <dl>${tile('Waiting', stats.rooms.lobby)}${tile('Playing', stats.rooms.playing)}${tile('Game over', stats.rooms.ended)}</dl></section>
+${agents(stats)}
 <section><h2>Connections</h2>
 <dl>${tile('WebSocket', stats.connections.websocket)}${tile('Long-polling', stats.connections.polling)}</dl>
 ${countries(stats)}</section>
@@ -540,6 +541,14 @@ ${feedbackCounts(feedback)}</section>
 `,
     true,
   );
+}
+
+// The AI players (docs/architecture.md#ai-players), on a server with an agent: how many are in the
+// rooms, whether the agent answers, and how their last hour went.
+function agents({ agents: ai }: Stats): string {
+  if (!ai) return '';
+  return `<section><h2>AI players</h2>
+<dl>${tile('Agent', ai.up ? 'Up' : '<strong>Down</strong>')}${tile('In rooms', ai.players)}${tile('Steps', ai.steps, 'in the last hour')}${tile('Failed', ai.failures, 'in the last hour')}</dl></section>`;
 }
 
 // The feedback that players sent, newest first, a page at a time, of one view and of every kind

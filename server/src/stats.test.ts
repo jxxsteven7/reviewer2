@@ -20,6 +20,7 @@ function stats(changes: Partial<Stats> = {}): Stats {
     memory: { rss: 80 * 2 ** 20, heapUsed: 20 * 2 ** 20, limit: null },
     rooms: { lobby: 1, playing: 2, ended: 0 },
     players: { online: 7, offline: 1 },
+    agents: null,
     connections: { websocket: 6, polling: 2 },
     countries: [
       { country: 'SG', connections: 5, latency: 40 },

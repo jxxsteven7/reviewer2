@@ -92,7 +92,13 @@ const ariaLabel = computed(() =>
     }}</span>
     <span v-if="target !== null" class="target num" aria-hidden="true">{{ target }}</span>
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
-      <PlayerAvatar v-for="chooser in choosers" :key="chooser.name" :name="chooser.name" :avatar="chooser.avatar" />
+      <PlayerAvatar
+        v-for="chooser in choosers"
+        :key="chooser.name"
+        :name="chooser.name"
+        :avatar="chooser.avatar"
+        :agent="chooser.agent !== undefined"
+      />
     </span>
   </button>
 </template>

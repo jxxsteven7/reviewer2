@@ -391,11 +391,13 @@ describe('the record of games', () => {
     expect((await records(ann)).ordinary.games).toBe(2);
   });
 
-  test('keeps nothing of a game that the chair withdrew', async () => {
+  test('keeps nothing of a game that the chair withdrew on the records, and the game only as withdrawn', async () => {
     server = await startServer();
     const { ann } = await playedGame('room:end');
     expect(await records(ann)).toEqual(NO_RECORDS);
-    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
+    // The record of the game itself, for whoever studies the games (docs/architecture.md#game-records).
+    await until(() => server.db.prepare('SELECT count(*) AS count FROM replays').get()?.count === 1, 'the record');
+    expect(server.db.prepare('SELECT ending, data FROM replays').get()).toEqual({ ending: 'withdrawn', data: null });
   });
 });
 
@@ -461,7 +463,7 @@ describe('a replay', () => {
     expect(await replay(ann, gameId)).toMatchObject({ status: 404 });
   });
 
-  test('is not kept when nobody with an account played', async () => {
+  test('is kept when nobody with an account played, for nobody to watch', async () => {
     server = await startServer();
     const { chair, code } = await createRoom(server.url, 'Ann', { play: true });
     track(chair);
@@ -472,10 +474,11 @@ describe('a replay', () => {
     await chair.waitFor((state) => state.phase === 'playing');
     await chair.send('test:finish');
     await chair.waitFor((state) => state.phase === 'ended');
-    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
+    await until(() => server.db.prepare('SELECT count(*) AS count FROM replays').get()?.count === 1, 'the record');
+    expect(server.db.prepare('SELECT count(*) AS count FROM game_players').get()).toEqual({ count: 0 });
   });
 
-  test('that is too large is logged and left out, while the records are kept', async () => {
+  test('that is too large is logged and left out, while the records and the rest of the game are kept', async () => {
     const big = { ...fakeGame, replay: () => ({ text: 'x'.repeat(MAX_REPLAY_BYTES) }) };
     server = await startServer({ games: [big] });
     const ann = await loggedIn('Ann');
@@ -488,7 +491,10 @@ describe('a replay', () => {
     await chair.send('test:finish');
     await chair.waitFor((state) => state.phase === 'ended');
     await until(() => server.logs.some(({ event }) => event === 'replay_too_large'), 'the log');
-    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
+    await until(() => server.db.prepare('SELECT count(*) AS count FROM replays').get()?.count === 1, 'the record');
+    expect(server.db.prepare('SELECT ending, data FROM replays').get()).toEqual({ ending: 'finished', data: null });
+    const [game] = (await records(ann)).recent;
+    expect(game?.replay).toBe(false);
     expect((await records(ann)).ordinary.games).toBe(1);
   });
 });

@@ -74,11 +74,30 @@ function mayTake(team: Team): boolean {
   if (mySide.value !== null) return mySide.value === team;
   return seatedIn(team) <= seatedIn(otherTeam(team));
 }
-const problemText = (item: StartProblem) =>
-  item.problem === 'needs_players'
-    ? t('lobby.problems.needs_players', { missing: item.missing })
-    : t(`lobby.problems.${item.problem}`, { group: t(`lobby.group.${item.team}`) });
-const problemKey = (item: StartProblem) => `${item.problem}-${'team' in item ? item.team : item.missing}`;
+const problemText = (item: StartProblem) => {
+  if (item.problem === 'needs_players') return t('lobby.problems.needs_players', { missing: item.missing });
+  if (!('team' in item)) return t(`lobby.problems.${item.problem}`);
+  return t(`lobby.problems.${item.problem}`, { group: t(`lobby.group.${item.team}`) });
+};
+const problemKey = (item: StartProblem) =>
+  [item.problem, 'team' in item ? item.team : 'missing' in item ? item.missing : ''].join('-');
+
+// The chair invites AI players where the room may have them (docs/games/keywords.md#ai-players): a
+// group's PI, in its empty seat, and one of its students, as long as the group has no AI student,
+// once a person sits in a group. A game with them needs every time limit on, which the chair is
+// reminded of beside the seats while one is off.
+const personSeated = computed(() =>
+  props.room.players.some((player) => player.agent === undefined && data.value.seats[player.id]?.team),
+);
+const canInvite = computed(() => isChair.value && props.room.agents && lineup.value === 'free' && personSeated.value);
+const hasAgents = computed(() => props.room.players.some((player) => player.agent));
+const timersOff = computed(() => {
+  const { firstClueTime, clueTime, guessTime } = data.value.settings;
+  return firstClueTime === 0 || clueTime === 0 || guessTime === 0;
+});
+const agentName = computed(() => t('agents.personas.reviewer1'));
+const invite = (team: Team, role: 'captain' | 'guesser') =>
+  act('room:addAgent', { persona: 'reviewer1', seat: { team, role } });
 
 const managing = ref<PlayerView | null>(null);
 
@@ -261,6 +280,14 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
                 <UiButton v-if="!group.captain && mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
                   {{ t('lobby.takeCaptain') }}
                 </UiButton>
+                <UiButton
+                  v-if="!group.captain && canInvite"
+                  size="small"
+                  variant="quiet"
+                  @click="invite(group.team, 'captain')"
+                >
+                  {{ t('lobby.inviteAgent', { name: agentName }) }}
+                </UiButton>
               </dd>
               <dt>{{ t('lobby.roles.guesser') }}</dt>
               <dd>
@@ -283,9 +310,18 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
                 >
                   {{ t('lobby.joinAsGuesser') }}
                 </UiButton>
+                <UiButton
+                  v-if="canInvite && !group.guessers.some((player) => player.agent)"
+                  size="small"
+                  variant="quiet"
+                  @click="invite(group.team, 'guesser')"
+                >
+                  {{ t('lobby.inviteAgent', { name: agentName }) }}
+                </UiButton>
               </dd>
             </dl>
           </section>
+          <p v-if="canInvite && timersOff" class="footnote">{{ t('lobby.problems.needs_timers') }}</p>
         </div>
 
         <section class="spectators">
@@ -316,6 +352,8 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
         <p class="footnote">
           {{ lineup === 'fixed' ? t('match.fixedNote') : t('lobby.captainNote') }}
         </p>
+        <p v-if="room.agents || hasAgents" class="footnote">{{ t('lobby.agentNote') }}</p>
+        <p v-if="room.agents" class="footnote">{{ t('lobby.takeoverNote') }}</p>
       </div>
       <div class="column">
         <section v-if="isChair && !finished" class="desk">

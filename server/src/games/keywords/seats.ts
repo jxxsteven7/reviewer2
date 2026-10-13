@@ -163,17 +163,30 @@ export const endGame = (seating: Seating): Seating => ({
 // into the two groups at random, as evenly as possible, and the first player dealt to each group
 // becomes its captain. Players who are online are dealt first. A game needs a captain and a
 // guesser online in each group, so the shuffle doesn't hand those seats to someone who is away
-// while enough others are there. Spectators keep their seats.
-export function shuffleGroups(seating: Seating, rng: Rng, online: ReadonlySet<string>): Seating {
-  const seated = [...seating.seats].filter(([, seat]) => seat.role !== 'spectator').map(([id]) => id);
+// while enough others are there. Spectators keep their seats, and so do the AI players in `kept`
+// (docs/games/keywords.md#ai-players): a group whose PI is an AI keeps it, and the others are dealt
+// around them, so that the groups are as even as they can be with them.
+export function shuffleGroups(
+  seating: Seating,
+  rng: Rng,
+  online: ReadonlySet<string>,
+  kept: ReadonlySet<string> = new Set(),
+): Seating {
+  const seated = [...seating.seats]
+    .filter(([id, seat]) => seat.role !== 'spectator' && !kept.has(id))
+    .map(([id]) => id);
   const present = seated.filter((id) => online.has(id));
   const away = seated.filter((id) => !online.has(id));
   const seats = new Map(seating.seats);
+  const keptIn = (group: Team) => [...kept].filter((id) => seating.seats.get(id)?.team === group);
+  const sizes = { red: keptIn('red').length, blue: keptIn('blue').length };
+  const captains = new Set<Team>(TEAMS.filter((group) => keptIn(group).includes(captainOf(seating, group) ?? '')));
   let team: Team = TEAMS[rng.int(TEAMS.length)] as Team;
-  const captains = new Set<Team>();
   for (const id of [...shuffle(present, rng), ...shuffle(away, rng)]) {
+    if (sizes[team] > sizes[otherTeam(team)]) team = otherTeam(team);
     seats.set(id, captains.has(team) ? { team, role: 'guesser' } : { team, role: 'captain' });
     captains.add(team);
+    sizes[team] += 1;
     team = otherTeam(team);
   }
   return { ...seating, seats };

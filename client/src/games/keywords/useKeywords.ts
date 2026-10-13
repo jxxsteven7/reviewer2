@@ -11,7 +11,7 @@ import { computed, type Ref } from 'vue';
 import { act } from '../../core/socket';
 
 // A player who has chosen a card, as the card shows them: their name and their avatar.
-export type Chooser = Pick<PlayerView, 'name' | 'avatar'>;
+export type Chooser = Pick<PlayerView, 'name' | 'avatar' | 'agent'>;
 
 // What the game's screens need to know about the room, worked out once.
 export function useKeywords(room: Ref<RoomView>) {

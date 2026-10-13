@@ -1,11 +1,12 @@
-// Starts the bundled server and mailer for the end-to-end tests; playwright.config.ts runs this
-// file. The server gets exactly the settings below and nothing from the shell that runs the tests,
-// such as a HOST or PUBLIC_DIR exported for testing on a phone, so whatever it reads and isn't set
-// here has its default. Its log goes to a file, which helpers.ts reads after each test to fail the
-// test on an error the server reported.
+// Starts the bundled server, mailer and agent for the end-to-end tests, with a model that answers
+// by rule (e2e/model.mjs); playwright.config.ts runs this file. The server gets exactly the settings
+// below and nothing from the shell that runs the tests, such as a HOST or PUBLIC_DIR exported for
+// testing on a phone, so whatever it reads and isn't set here has its default. Its log goes to a
+// file, which helpers.ts reads after each test to fail the test on an error the server reported.
 import { spawn } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
+import { MODEL, startModel } from './model.mjs';
 
 const root = join(import.meta.dirname, '..');
 const port = process.env.E2E_PORT;
@@ -55,6 +56,23 @@ for (let tries = 0; !existsSync(socket); tries += 1) {
   await new Promise((resolve) => setTimeout(resolve, 50));
 }
 
+// The agent, which plays for the AI players, with the model of the tests on the next port.
+const model = await startModel(Number(port) + 1);
+const agentSocket = join(dirname(log), `agent-${port}.sock`);
+const agent = spawn(process.execPath, [join(root, 'agent', 'dist', 'agent.cjs')], {
+  cwd: root,
+  env: {
+    AGENT_SOCKET: agentSocket,
+    AGENT_MODEL_URL: `http://127.0.0.1:${Number(port) + 1}/v1`,
+    AGENT_MODEL: MODEL,
+  },
+  stdio: ['ignore', 'ignore', 'inherit'],
+});
+for (let tries = 0; !existsSync(agentSocket); tries += 1) {
+  if (tries > 100) throw new Error('the agent did not start');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+
 const server = spawn(process.execPath, [join(root, 'server', 'dist', 'index.cjs')], {
   cwd: root,
   env: {
@@ -75,6 +93,7 @@ const server = spawn(process.execPath, [join(root, 'server', 'dist', 'index.cjs'
     COOKIE_SECURE: '0',
     SERVER_SECRET: 'end-to-end-tests-only-'.repeat(2),
     MAILER_SOCKET: socket,
+    AGENT_SOCKET: agentSocket,
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -86,10 +105,14 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
   process.on(signal, () => {
     server.kill(signal);
     mailer.kill(signal);
+    agent.kill(signal);
+    model.close();
   });
 }
 server.on('close', (code) => {
   mailer.kill();
+  agent.kill();
+  model.close();
   file.end();
   process.exitCode = code ?? 0;
 });

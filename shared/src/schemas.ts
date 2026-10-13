@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { HANDLE, MAX_EMAIL_LENGTH } from './accounts';
+import { AGENT_ERRORS, AGENT_PERSONAS, MAX_AGENT_REASON, MAX_AGENT_WAIT_MS } from './agent';
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
 import { MAX_CUSTOM_INPUT } from './games/keywords/custom';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
-import { BOARD_SIZE, ROLES, TEAMS } from './games/keywords/types';
+import { BOARD_SIZE, MAX_CLUE_NUMBER, ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
 import { MATCH_GAMES, MATCH_GROUPINGS, MATCH_TEAMS } from './match';
 import { EMOTES, MAX_NAME_INPUT } from './protocol';
@@ -112,6 +113,8 @@ export const ROOM_MESSAGES = {
   'room:matchNext': z.object({ matchId, match: match.nullable() }),
   'room:shuffle': none,
   'room:spectate': z.object({ playerId }),
+  // The chair invites an AI player to a seat, which the game reads (GameModule.seatAgent).
+  'room:addAgent': z.object({ persona: z.enum(AGENT_PERSONAS), seat: z.unknown() }),
   'room:remove': z.object({ playerId }),
   'room:chair': z.object({ playerId }),
   'room:dismiss': none,
@@ -215,3 +218,97 @@ export const ACCOUNT_REQUESTS = {
   like: z.object({ handle: z.string().regex(HANDLE) }),
   unlike: z.object({ handle: z.string().regex(HANDLE) }),
 } as const;
+
+// What the game server and the agent say to each other (agent.ts). Each side reads the other's
+// lines with these, and takes nothing that has a field more or less than it should: the agent
+// plays only with what a seat may see, and the server takes only a clue or cards that it can check.
+const cardIndex = z
+  .number()
+  .int()
+  .min(0)
+  .max(BOARD_SIZE - 1);
+const count = z.union([z.number().int().min(0).max(MAX_CLUE_NUMBER), z.literal('unlimited')]);
+const term = z.string().max(200);
+const color = z.enum([...TEAMS, 'neutral', 'reviewer2']);
+const terms = z.array(term).max(50);
+const agentGame = {
+  game: z.literal('keywords'),
+  language: z.enum(LANGUAGES),
+  settings: KEYWORDS_SETTINGS.strict(),
+  team: z.enum(TEAMS),
+  cards: z
+    .array(
+      z.strictObject({
+        word: term,
+        revealed: z.boolean(),
+        color: color.optional(),
+        translations: terms.optional(),
+        forms: terms.optional(),
+        pinyin: term.optional(),
+      }),
+    )
+    .length(BOARD_SIZE),
+  clues: z.array(z.strictObject({ team: z.enum(TEAMS), word: term, count })).max(200),
+};
+const asked = {
+  v: z.literal(1),
+  persona: z.enum(AGENT_PERSONAS),
+  waitMs: z.number().int().min(1).max(MAX_AGENT_WAIT_MS),
+};
+
+export const AGENT_REQUEST = z.discriminatedUnion('kind', [
+  z.strictObject({ v: z.literal(1), kind: z.literal('ping') }),
+  z.strictObject({ ...asked, kind: z.literal('clue'), ...agentGame }),
+  z.strictObject({
+    ...asked,
+    kind: z.literal('guess'),
+    ...agentGame,
+    clue: z.strictObject({ word: term, count }),
+    guessesLeft: z.number().int().min(0).max(BOARD_SIZE).nullable(),
+  }),
+]);
+
+const note = z.strictObject({
+  model: z.string().max(200),
+  prompt: z.string().max(64),
+  ms: z.number().min(0),
+  candidates: z
+    .array(
+      z.strictObject({
+        word: term,
+        count: z.number().int().min(0).max(BOARD_SIZE),
+        targets: z.array(cardIndex).max(BOARD_SIZE),
+        problem: z.string().max(64).nullable(),
+        rehearsal: z
+          .strictObject({
+            picks: z.array(cardIndex).max(BOARD_SIZE),
+            found: z.number().int().min(0).max(BOARD_SIZE),
+            stop: color.nullable(),
+          })
+          .optional(),
+      }),
+    )
+    .max(10)
+    .optional(),
+  reason: z.string().max(MAX_AGENT_REASON).optional(),
+});
+
+export const AGENT_REPLY = z.union([
+  z.strictObject({ ok: z.literal(true), kind: z.literal('ping'), model: z.string().max(200) }),
+  z.strictObject({
+    ok: z.literal(true),
+    kind: z.literal('clue'),
+    word: term,
+    count: z.number().int().min(1).max(BOARD_SIZE),
+    targets: z.array(cardIndex).max(BOARD_SIZE),
+    note,
+  }),
+  z.strictObject({
+    ok: z.literal(true),
+    kind: z.literal('guess'),
+    picks: z.array(cardIndex).max(BOARD_SIZE),
+    reason: z.string().max(MAX_AGENT_REASON),
+    note,
+  }),
+  z.strictObject({ ok: z.literal(false), error: z.enum(AGENT_ERRORS), note: note.optional() }),
+]);

@@ -17,9 +17,13 @@ export interface Stats {
   // first, so the process's own share is still what matters.
   memory: { rss: number; heapUsed: number; limit: number | null };
   rooms: Record<RoomPhase, number>;
-  // The members of all rooms: online with at least one connection, or offline, with a seat to
-  // come back to.
+  // The people in all rooms: online with at least one connection, or offline, with a seat to come
+  // back to. AI players aren't people, and are counted apart.
   players: { online: number; offline: number };
+  // The AI players (docs/architecture.md#ai-players), or null on a server without an agent: how many
+  // are in the rooms, whether the agent answers, and how many steps they took in the last hour and
+  // how many of those failed.
+  agents: { players: number; up: boolean; steps: number; failures: number } | null;
   connections: { websocket: number; polling: number };
   // Most connections first. `latency` is the median of the connections' last heartbeats, in
   // milliseconds, or null while none has come back.
@@ -34,21 +38,29 @@ export const SAMPLE_MS = 30_000;
 // How far back the chart goes.
 export const HISTORY_MS = 24 * 60 * 60_000;
 
-export function collectStats(version: string, rooms: Rooms, connections: readonly ConnectionInfo[]): Stats {
+export function collectStats(
+  version: string,
+  rooms: Rooms,
+  connections: readonly ConnectionInfo[],
+  agents: { up: boolean; steps: number; failures: number } | null = null,
+): Stats {
   const stats: Stats = {
     version,
     uptime: Math.round(process.uptime()),
     memory: memory(),
     rooms: { lobby: 0, playing: 0, ended: 0 },
     players: { online: 0, offline: 0 },
+    agents: agents && { players: 0, ...agents },
     connections: { websocket: 0, polling: 0 },
     countries: [],
   };
   for (const room of rooms.all()) {
     stats.rooms[room.phase] += 1;
     const online = room.onlineCount();
+    const ai = [...room.members.values()].filter((member) => member.agent).length;
     stats.players.online += online;
-    stats.players.offline += room.members.size - online;
+    stats.players.offline += room.members.size - ai - online;
+    if (stats.agents) stats.agents.players += ai;
   }
   const countries = new Map<string, { connections: number; latencies: number[] }>();
   for (const { transport, country, latency } of connections) {

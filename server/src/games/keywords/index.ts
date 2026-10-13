@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   cardsClash,
+  checkChat,
   cleanClue,
   defaultSettings,
   otherTeam,
@@ -9,6 +10,7 @@ import {
   SPECTATOR,
   TEAMS,
   verdictFor,
+  type AgentPersona,
   type ClueRecord,
   type KeywordsReplay,
   type KeywordsRoomData,
@@ -20,7 +22,8 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import type { GameContext, GameModule, GameTitle, GameUpdate, LogNote } from '../../core/game';
+import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask, personSeated } from './agents';
+import type { AgentFeats, GameContext, GameModule, GameTitle, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
   expire,
@@ -89,9 +92,16 @@ const online = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.
 const membersOf = (ctx: GameContext) => ctx.playerIds().map((id) => ({ id, key: ctx.keyOf(id) }));
 
 // What keeps the next game from starting: with groups that the server draws, too few players;
-// otherwise a missing PI or student in a group.
-const problemsOf = (data: KeywordsData, ctx: GameContext) =>
-  lineupOf(data.match) === 'draw' ? drawProblems(data.seating, online(ctx)) : startProblems(data.seating, online(ctx));
+// otherwise a missing PI or student in a group; and with AI players, what they need (agents.ts).
+const problemsOf = (data: KeywordsData, ctx: GameContext) => [
+  ...(lineupOf(data.match) === 'draw'
+    ? drawProblems(data.seating, online(ctx))
+    : startProblems(data.seating, online(ctx))),
+  ...agentProblems(data, ctx),
+];
+
+// The AI players, whose seats the chair's shuffle leaves as they are.
+const agentsOf = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.agentOf(id) !== null));
 
 // The rules give the state back as it is when an action changed nothing, and then so does the
 // module: the room sends no snapshot for that.
@@ -178,19 +188,24 @@ type Action<M extends KeywordsMessage> = (
 ) => GameUpdate<KeywordsData>;
 
 // What the log of the game keeps of each of its messages (docs/architecture.md#game-records): what
-// it said, as its schema reads it, without the game's ID, which is the log's own, and with the
-// clue's word as the record keeps it (cleanClue). Choosing a card is minor: a group's students may
-// do it again and again before they reveal one. Nothing at all is kept of a line of a group's chat.
+// it carried, as its schema reads it, without the game's ID, which is the log's own, and with the
+// clue's word as the record keeps it (cleanClue). A line of a group's chat is what the player said,
+// as the chat shows it (checkChat), which the log keeps apart. Nothing is kept of a card chosen:
+// students choose and choose again before they reveal one, for the fun of it as much as anything.
 function logNote(type: string, payload: unknown): LogNote | null {
-  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:say') return null;
+  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:select') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
   if (!parsed.success) return null;
   const data: Record<string, unknown> = { ...parsed.data };
   delete data.gameId;
+  if (type === 'keywords:say') return { said: checkChat(data.text as string).text };
   if (type === 'keywords:clue') data.word = cleanClue(data.word as string);
-  const minor = type === 'keywords:select';
-  return Object.keys(data).length > 0 ? { data, minor } : { minor };
+  return Object.keys(data).length > 0 ? { data } : {};
 }
+
+// The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
+// change to either.
+export const RULES_VERSION = 1;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -215,7 +230,8 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
 
 // The captain in the seat of the group whose time for the clue has run out, and how many times
 // they had missed the deadline before: as their account's titles count it, and in this game so far,
-// whose titles are awarded only at its end. A guest's misses go uncounted.
+// whose titles are awarded only at its end. A guest's misses go uncounted, and so does everyone's
+// in a game that awards no titles, as one with AI players (GameContext.titleCount).
 function missedBy(data: KeywordsData, ctx: GameContext): Missed | null {
   const game = data.game;
   const captain = game && captainOf(data.seating, game.team);
@@ -249,6 +265,7 @@ function titlesOf(game: KeywordsState, team: Team, key: string, keyOf: (playerId
 
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
+  rulesVersion: RULES_VERSION,
   wordsNeeded: BOARD_SIZE,
   // Two words of which one lies inside the other would give each other away: "Gene" and "Gene
   // editing" can't share a board.
@@ -298,7 +315,9 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // A match whose groups are fixed, or drawn when its game starts, has nothing for the chair to
   // shuffle.
   shuffle: (data, ctx) =>
-    lineupOf(data.match) === 'free' ? { ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) } : data,
+    lineupOf(data.match) === 'free'
+      ? { ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx), agentsOf(ctx)) }
+      : data,
 
   canStart: (data, ctx) => problemsOf(data, ctx).length === 0,
 
@@ -354,13 +373,79 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { ...data, seating, match: rekeyMatch(data.match, from, to, team) };
   },
 
+  // An AI player sits as a group's PI or as one of its students, in the waiting room, once a person
+  // sits in a group; a match has none (Room.startMatch). A group has one AI PI and one AI student at
+  // most.
+  seatAgent(data, ctx, playerId, seat) {
+    const wanted = agentSeat(seat);
+    if (!wanted) return { ok: false, error: 'bad_seat' };
+    if (!personSeated(data.seating, ctx)) return { ok: false, error: 'needs_human' };
+    if (agentLimitReached(data.seating, ctx, playerId, wanted.team, wanted.role)) {
+      return { ok: false, error: 'agent_limit' };
+    }
+    return sit(data, ctx, playerId, wanted);
+  },
+
+  agentTask,
+  agentMove: (data, _ctx, playerId, task, answer, made) => agentMove(data, playerId, task, answer, made),
+
   // Where a member is: the group and the role of the seat they are in, or the spectators'.
   seated(data, playerId) {
     const { team, role } = seatOf(data.seating, playerId);
     return { team, role };
   },
 
+  // How the game began: the language and the settings, the group that starts, and the board, every
+  // card's color included. It goes into the record of the game alone, which stays on the server.
+  setup(data) {
+    const game = data.game;
+    if (!game) return null;
+    return {
+      language: game.language,
+      settings: { ...game.settings },
+      startingTeam: game.startingTeam,
+      cards: game.cards.map(({ word, color }) => ({ word, color })),
+    };
+  },
+
   logged: logNote,
+
+  // How the game came out, for its record: the group that won, and whether it found every card of
+  // its own or the other group revealed Reviewer 2.
+  outcome(data) {
+    const result = data.game?.result;
+    return result && result.winner !== null ? { winner: result.winner, reason: result.reason } : null;
+  },
+
+  // What an AI player did: the clues it gave as its group's PI, with how many of the group's cards
+  // were found in each of their turns, the clue that found the most, and how often it revealed
+  // Reviewer 2 as a student.
+  agentFeats(data, playerId) {
+    const feats: AgentFeats = { clues: 0, found: 0, reviewer2: 0, best: null };
+    for (const record of data.game?.history ?? []) {
+      if (record.captain === playerId && record.word !== null) {
+        const found = record.guesses.filter(({ color }) => color === record.team).length;
+        feats.clues += 1;
+        feats.found += found;
+        if (found > 0 && (feats.best === null || found > feats.best.found)) feats.best = { word: record.word, found };
+      }
+      feats.reviewer2 += record.guesses.filter(
+        ({ player, color }) => player === playerId && color === 'reviewer2',
+      ).length;
+    }
+    return feats;
+  },
+
+  // Whom the game is waiting for: the PI of the group on turn while its clue is due, and its
+  // students while they guess. Nobody while the game is paused or over.
+  due(data) {
+    const game = data.game;
+    if (!game || game.phase === 'over' || game.pause) return [];
+    const role = game.phase === 'clue' ? 'captain' : 'guesser';
+    return [...data.seating.seats]
+      .filter(([, seat]) => seat.team === game.team && seat.role === role)
+      .map(([id]) => id);
+  },
 
   // Everyone who has sat in a group during the game has played in it, whether or not they are
   // still there.
@@ -418,6 +503,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     for (const record of game.history) {
       for (const { player } of record.guesses) players[player] ??= ctx.nameOf(player);
     }
+    // The AI players: those in a group, and whoever revealed a card and has since been removed.
+    const agents: Record<string, AgentPersona> = {};
+    for (const id of [...ctx.playerIds(), ...Object.keys(players)]) {
+      const persona = ctx.agentOf(id);
+      if (persona !== null && (seatOf(data.seating, id).team !== null || id in players)) agents[id] = persona;
+    }
     return {
       gameId: game.gameId,
       language: game.language,
@@ -426,6 +517,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       history: game.history.map(copyRecord),
       result: { ...game.result },
       players,
+      ...(Object.keys(agents).length > 0 ? { agents } : {}),
     };
   },
 

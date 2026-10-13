@@ -50,6 +50,13 @@ describe('signing in', () => {
     expect(router.push).toHaveBeenLastCalledWith('/');
   });
 
+  test('tells whoever registers what becomes of the record of their games', async () => {
+    const wrapper = mount(SignIn, { global: { plugins: [i18n], stubs: { RouterLink: true } } });
+    expect(wrapper.text()).not.toContain('Games are recorded.');
+    await wrapper.findAll('.tab')[1]?.trigger('click');
+    expect(wrapper.text()).toContain("used to train and test the game's AI players");
+  });
+
   test('is busy, and says so, until the page has left', async () => {
     const wrapper = await signIn();
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();

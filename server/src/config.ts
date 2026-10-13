@@ -37,6 +37,9 @@ export interface Config {
   // both, accounts have no email (docs/architecture.md).
   secret: string | null;
   mailerSocket: string | null;
+  // The agent's socket, or null when the server has no agent, and no AI players
+  // (docs/architecture.md#the-agent).
+  agentSocket: string | null;
   version: string;
 }
 
@@ -90,12 +93,13 @@ function serverSecret(env: NodeJS.ProcessEnv): string | null {
   return secret;
 }
 
-// The mailer's socket, taken from the repository's root when it is relative, as DATA_DIR is. A
-// socket's path can have 107 bytes at most on Linux, and a longer one would be cut short.
-function mailerSocket(value: string | undefined): string | null {
+// The socket of the mailer or of the agent, taken from the repository's root when it is relative, as
+// DATA_DIR is. A socket's path can have 107 bytes at most on Linux, and a longer one would be cut
+// short.
+function socketPath(name: string, value: string | undefined): string | null {
   if (!value?.trim()) return null;
   const path = resolve(root, value.trim());
-  if (Buffer.byteLength(path) > 107) throw new Error(`MAILER_SOCKET must be a path of at most 107 bytes, not ${path}`);
+  if (Buffer.byteLength(path) > 107) throw new Error(`${name} must be a path of at most 107 bytes, not ${path}`);
   return path;
 }
 
@@ -136,7 +140,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     statusPort,
     adminCommand: env.ADMIN_COMMAND?.trim() || DEFAULT_ADMIN_COMMAND,
     secret: serverSecret(env),
-    mailerSocket: mailerSocket(env.MAILER_SOCKET),
+    mailerSocket: socketPath('MAILER_SOCKET', env.MAILER_SOCKET),
+    agentSocket: socketPath('AGENT_SOCKET', env.AGENT_SOCKET),
     version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   };
 }

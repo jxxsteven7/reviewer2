@@ -64,6 +64,7 @@ describe('a database in DATA_DIR', () => {
     expect(tables(database.db)).toEqual([
       'accounts',
       'acknowledgments',
+      'agent_plays',
       'email_tokens',
       'feedback',
       'friendships',
@@ -646,6 +647,74 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT id, title FROM titles').all()).toEqual([{ id: 9, title: 'black_hole' }]);
   });
 
+  test('of the fourteenth release keeps its accounts, records and replays when it gets AI players and every game', async () => {
+    const fourteenth = await open(dir, MIGRATIONS.slice(0, 14));
+    fourteenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points)
+        VALUES (1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
+      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}', '{"v":1}');
+    `);
+    fourteenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 15));
+    expect(migrated).toMatchObject({ schema: 15, migratedFrom: 14 });
+    const { db } = migrated;
+    // Nobody may have AI players until the operator lets them, no AI played in the games from
+    // before, and their replays have no AI log.
+    expect(db.prepare('SELECT id, agents FROM accounts').all()).toEqual([{ id: 1, agents: 0 }]);
+    expect(db.prepare('SELECT game_id, points, agents FROM game_records').all()).toEqual([
+      { game_id: 'g', points: 4, agents: 0 },
+    ]);
+    expect(db.prepare('SELECT game_id, log, agent_log FROM replays').all()).toEqual([
+      { game_id: 'g', log: '{"v":1}', agent_log: null },
+    ]);
+    expect(() => db.exec('UPDATE accounts SET agents = 2 WHERE id = 1')).toThrow(/CHECK/);
+    expect(() => db.exec('UPDATE game_records SET agents = 2')).toThrow(/CHECK/);
+    // The replays from before, all of finished games, are kept whole, say so, and say nothing else
+    // of what kind of game they were.
+    expect(db.prepare('SELECT * FROM replays').all()).toEqual([
+      {
+        game_id: 'g',
+        game: 'keywords',
+        ended_at: 'now',
+        data: '{"cards":[]}',
+        log: '{"v":1}',
+        agent_log: null,
+        ending: 'finished',
+        winner: null,
+        reason: null,
+        started_at: null,
+        setup: null,
+        accounts: null,
+        guests: null,
+        agents: null,
+        takeover: null,
+        in_match: null,
+        language: null,
+        fields: null,
+        version: null,
+        rules: null,
+        words: null,
+      },
+    ]);
+    // A game without a replay can be kept now, and an ending is one of four.
+    db.exec("INSERT INTO replays (game_id, game, ended_at, ending) VALUES ('h', 'keywords', 'now', 'abandoned')");
+    expect(() =>
+      db.exec("INSERT INTO replays (game_id, game, ended_at, ending) VALUES ('i', 'keywords', 'now', 'lost')"),
+    ).toThrow(/CHECK/);
+    expect(() => db.exec("UPDATE replays SET takeover = 2 WHERE game_id = 'h'")).toThrow(/CHECK/);
+    // What an AI did for an account stays on its page once the account is gone, for nobody.
+    db.exec(`
+      INSERT INTO agent_plays (game_id, player_id, persona, takeover, account_id) VALUES ('g', 'p1', 'reviewer1', 1, 1);
+      DELETE FROM accounts WHERE id = 1;
+    `);
+    expect(db.prepare('SELECT player_id, account_id FROM agent_plays').all()).toEqual([
+      { player_id: 'p1', account_id: null },
+    ]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(
@@ -806,6 +875,7 @@ describe('a database in memory', () => {
     expect(tables(database.db)).toEqual([
       'accounts',
       'acknowledgments',
+      'agent_plays',
       'email_tokens',
       'feedback',
       'friendships',

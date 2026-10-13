@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { LANGUAGES, wordKey, type BoardWord, type FieldInfo, type Language } from '@reviewer2/shared';
@@ -37,8 +38,13 @@ export type Skip = (file: string, reason: string, term?: string) => void;
 
 export class WordLibrary {
   readonly #fields = new Map<string, Field>();
+  // What the lists held, as the first 16 hex digits of the SHA-256 of their data, in the order they
+  // were read: the record of every game keeps it (docs/architecture.md#game-records), so that the
+  // games played with other word lists can be told apart.
+  readonly hash: string;
 
   constructor(lists: readonly WordListData[], skip: Skip = () => {}) {
+    this.hash = createHash('sha256').update(JSON.stringify(lists)).digest('hex').slice(0, 16);
     for (const list of lists) {
       // Rooms name their fields by id, so a second list with the same id would replace the first.
       if (this.#fields.has(list.id)) throw new Error(`two word lists have the id "${list.id}"`);

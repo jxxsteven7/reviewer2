@@ -88,6 +88,7 @@ async function submit() {
       />
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>
       <p v-if="mode === 'register'" class="note">{{ t('account.signIn.noEmail') }}</p>
+      <p v-if="mode === 'register'" class="note">{{ t('privacy.records') }}</p>
       <div class="actions">
         <UiButton variant="primary" type="submit" :disabled="busy || !ready">
           {{ t(mode === 'login' ? 'account.signIn.loginSubmit' : 'account.signIn.registerSubmit') }}

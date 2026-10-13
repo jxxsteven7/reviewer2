@@ -1,3 +1,4 @@
+import type { AgentPersona } from './agent';
 import type { DuoNotice } from './duos';
 import type { Language } from './language';
 import type { MatchView } from './match';
@@ -20,14 +21,21 @@ export interface PlayerView {
   // profile (accounts.ts). A guest has neither.
   rank?: Rank;
   handle?: string;
+  // An AI player (docs/architecture.md#ai-players) has the persona it plays as, which the client
+  // names it by, and no account. It is online while the server's agent answers.
+  agent?: AgentPersona;
+  // A player who has been offline long enough in their turn for an AI to play it for them, until
+  // they come back (docs/architecture.md#ai-players).
+  takenOver?: true;
 }
 
 // Who chairs the room when the chair has gone: the first to have joined among those online, or
-// else among everyone, in the order of `players`, which is the order they joined in. Nobody when
-// there is no one. The server hands the chair over with this, and the chair's leave sheet names
-// whom it will be, so the two can't drift apart.
-export function nextChair(players: readonly Pick<PlayerView, 'id' | 'online'>[]): string | null {
-  return (players.find((player) => player.online) ?? players[0])?.id ?? null;
+// else among everyone, in the order of `players`, which is the order they joined in. An AI player
+// never chairs a room. Nobody when there is no one. The server hands the chair over with this, and
+// the chair's leave sheet names whom it will be, so the two can't drift apart.
+export function nextChair(players: readonly Pick<PlayerView, 'id' | 'online' | 'agent'>[]): string | null {
+  const people = players.filter((player) => player.agent === undefined);
+  return (people.find((player) => player.online) ?? people[0])?.id ?? null;
 }
 
 export interface RoomView<Game = unknown> {
@@ -56,6 +64,10 @@ export interface RoomView<Game = unknown> {
   gameId: string | null;
   chairId: string | null;
   players: PlayerView[];
+  // Whether the chair may invite AI players now, and players who go offline in their turn are
+  // played for (docs/architecture.md#ai-players): the server has an agent, the room is private and
+  // plays no match, and the operator has let the chair's account have AI players.
+  agents: boolean;
   // How many screens are watching. They have no name and no seat, so this number is all that
   // anyone sees of them; the chair can send them all away.
   screens: number;

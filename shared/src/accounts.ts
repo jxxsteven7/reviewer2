@@ -73,6 +73,8 @@ export const ACCOUNT_API = {
   profile: '/api/account/profile',
   likers: '/api/account/likers',
   profiles: '/api/profile/',
+  // The page of an AI player, by its persona after this prefix (docs/architecture.md#ai-players).
+  agents: '/api/agent/',
   like: '/api/profile/like',
   unlike: '/api/profile/unlike',
 } as const;
@@ -308,6 +310,9 @@ const RESERVED = new Set(
     'official',
     'reviewer2',
     'playreviewer2',
+    // The AI player's names in both languages (agent.ts), which nobody else may go by.
+    'reviewer1',
+    '\u{4e00}\u{53f7}\u{5ba1}\u{7a3f}\u{4eba}',
     '\u{7ba1}\u{7406}\u{5458}',
     '\u{7cfb}\u{7edf}',
     '\u{5b98}\u{65b9}',

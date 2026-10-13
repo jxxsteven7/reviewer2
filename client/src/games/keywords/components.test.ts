@@ -124,6 +124,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     gameId: 'g1',
     chairId: 'ann',
     players: ['ann', 'bob', 'cat', 'eve'].map((id) => ({ id, name: id[0]?.toUpperCase() + id.slice(1), online: true })),
+    agents: false,
     screens: 0,
     me,
     match: null,
@@ -907,6 +908,18 @@ describe('ReplayViewer', () => {
     expect(wrapper.findAll('.target')).toHaveLength(2);
   });
 
+  test('names an AI player who revealed a card by its persona', async () => {
+    const withAi: KeywordsReplay = {
+      ...replay,
+      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'ai' }] }],
+      players: { ai: 'reviewer1' },
+      agents: { ai: 'reviewer1' },
+    };
+    const wrapper = mount(ReplayViewer, { props: { replay: withAi }, global: global() });
+    await wrapper.get('input[type="range"]').setValue('2');
+    expect(wrapper.get('.step').text()).toContain('Reviewer 1 revealed \u201cBaseline\u201d');
+  });
+
   test('keeps its step when the same game comes again, and starts over with another game', async () => {
     const wrapper = mount(ReplayViewer, { props: { replay }, global: global() });
     await wrapper.get('input[type="range"]').setValue('2');
@@ -1102,6 +1115,14 @@ describe('RulesSheet', () => {
       'This room has no time limits.',
       PAUSE,
     ]);
+  });
+
+  test('ends with what becomes of the record of the game, for everyone who plays, guests included', async () => {
+    const wrapper = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
+    await wrapper.get('button').trigger('click');
+    const last = wrapper.findAll('.rules section').at(-1);
+    expect(last?.get('h3').text()).toBe('Game records');
+    expect(last?.text()).toContain('may be used for research and published as a dataset, without names or accounts');
   });
 
   test('lists the settings, with the extensions and how many words the chair brought', async () => {

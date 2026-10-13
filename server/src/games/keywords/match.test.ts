@@ -36,6 +36,7 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     keyOf,
     nameOf: (id) => id,
     isOnline: (id) => !offline.includes(id),
+    agentOf: () => null,
     playerIds: () => ids,
     titleCount: () => null,
   };

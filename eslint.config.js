@@ -25,6 +25,7 @@ export default defineConfig([
     files: [
       'server/**',
       'mailer/**',
+      'agent/**',
       'scripts/**',
       'e2e/*.mjs',
       '*.config.*',

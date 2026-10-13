@@ -3,8 +3,9 @@ import type { GameModule } from '../src/core/game';
 // A tiny game for testing the shared layer. Players press a button; each viewer sees a line
 // meant only for them, which shows whether snapshots are really built per connection. A player can
 // also break one part of the game, which then throws until someone mends it, and set an alarm,
-// which rings by itself at its time. The game has one setting, a level from 1 to 3. A game that
-// is finished, rather than withdrawn, is won by everyone who came to play, for the records.
+// which rings by itself at its time, and say something, as in a chat. The game has one setting, a
+// level from 1 to 3. A game that is finished, rather than withdrawn, is won by everyone who came to
+// play, for the records.
 
 export interface FakeData {
   joined: string[];
@@ -26,6 +27,8 @@ export interface FakeData {
   // When the alarm rings, on the room's clock, and how often it has rung.
   alarm: number | null;
   rings: number;
+  // How many things have been said.
+  said: number;
 }
 
 // The view leaves the game's ID out on purpose: the chair's controls have to work with what the
@@ -50,6 +53,7 @@ const isLevel = (value: unknown): value is number =>
 
 export const fakeGame: GameModule<FakeData, FakeView> = {
   id: 'test',
+  rulesVersion: 7,
   wordsNeeded: 3,
   create: (language) => ({
     joined: [],
@@ -67,6 +71,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     level: 1,
     alarm: null,
     rings: 0,
+    said: 0,
   }),
   configure(data, _ctx, settings) {
     const { level } = (settings ?? {}) as { level?: unknown };
@@ -116,14 +121,20 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
           won: true,
           verdict: `pressed ${data.presses}`,
         })),
+  // How the game began, for its record: the words. How it came out: everyone won, by finishing.
+  setup: (data) => ({ words: data.words }),
+  outcome: (data) => (data.withdrawn ? null : { winner: 'all', reason: 'finish' }),
   // A finished game, to watch again: what was pressed, and the words, which no one but the
   // players should read back from the database.
   replay: (data) => (data.withdrawn ? null : { presses: data.presses, words: data.words }),
   // Whoever came to play has played, also after leaving, and is a player wherever they are; the
-  // others watch. The log keeps what a press said.
+  // others watch. The log keeps what a press carried and what was said. The game waits for its
+  // players while the alarm is set.
   participants: (data, ctx) => data.players.map((id) => ctx.keyOf(id)),
   seated: (data, id) => (data.players.includes(id) ? 'player' : 'watcher'),
-  logged: (type, payload) => (type === 'test:press' ? { data: payload ?? null } : {}),
+  logged: (type, payload) =>
+    type === 'test:press' ? { data: payload ?? null } : type === 'test:say' ? { said: String(payload) } : {},
+  due: (data) => (data.alarm === null ? [] : data.players),
   again: (data) => ({ ...data, words: [], gameId: null, over: false, alarm: null }),
   handle(data, ctx, _playerId, type, payload) {
     if (type === 'test:break') {
@@ -142,6 +153,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (type === 'test:throw') throw payload;
     if (ctx.phase !== 'playing') return { ok: false, error: 'wrong_phase' };
     if (type === 'test:press') return { ok: true, data: { ...data, presses: data.presses + 1 } };
+    if (type === 'test:say') return { ok: true, data: { ...data, said: data.said + 1 } };
     if (type === 'test:finish') return { ok: true, data: { ...data, over: true, alarm: null } };
     // The alarm rings this many milliseconds from now, by the room's clock.
     if (type === 'test:alarm') return { ok: true, data: { ...data, alarm: ctx.now() + (payload as number) } };

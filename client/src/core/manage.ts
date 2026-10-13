@@ -13,9 +13,10 @@ export const mayReport = (room: RoomView): boolean => room.public && account.sum
 export const mayBefriend = (room: RoomView, player: PlayerView): boolean =>
   player.id !== room.me && account.summary !== null && player.rank !== undefined;
 
-// Anyone may open the public page of a player with an account (docs/architecture.md#public-profiles).
+// Anyone may open the public page of a player with an account (docs/architecture.md#public-profiles),
+// and the page of an AI player (docs/architecture.md#ai-players).
 export const mayView = (room: RoomView, player: PlayerView): boolean =>
-  player.id !== room.me && player.handle !== undefined;
+  player.id !== room.me && (player.handle !== undefined || player.agent !== undefined);
 
 // Whether the viewer has anything to do with a player, which makes the player's name a button
 // that opens the menu: the chair has their actions on everyone else, whoever may report has that,

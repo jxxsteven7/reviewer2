@@ -50,6 +50,9 @@ export const ROOM_ERRORS = [
   'bad_match',
   'match_over',
   'match_locked',
+  'agents_not_allowed',
+  'agents_in_room',
+  'player_is_agent',
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 

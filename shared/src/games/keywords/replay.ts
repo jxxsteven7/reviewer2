@@ -1,3 +1,4 @@
+import type { AgentPersona } from '../../agent';
 import type { Language } from '../../language';
 import type { CardColor, ClueCount, ClueRecord, GameResult, Team } from './types';
 
@@ -22,6 +23,9 @@ export interface KeywordsReplay {
   // The name that each player who revealed a card had in the game, by player ID. A guess by a
   // player who is missing here is shown without a name.
   players: Record<string, string>;
+  // The AI players who played in the game, by player ID, with the persona that names them
+  // (docs/architecture.md#ai-players). Replays from before there were any have none.
+  agents?: Record<string, AgentPersona>;
 }
 
 // The largest replay the server keeps, as JSON, in bytes.

@@ -2,7 +2,8 @@ import type { CardColor, KeywordsReplay, KeywordsView, Language, PlayerView } fr
 
 // The replay of the game that has just ended, from the view, for the review on the results page
 // (ReplayViewer): once a game is over, every view carries every color. Null while the game is on,
-// when there is nothing to review yet.
+// when there is nothing to review yet. The AI players are named as the server's replays name them,
+// by their persona.
 export function replayOf(
   game: KeywordsView,
   language: Language,
@@ -17,5 +18,6 @@ export function replayOf(
     history: game.history,
     result: game.result,
     players: Object.fromEntries(players.map((player) => [player.id, player.name])),
+    agents: Object.fromEntries(players.flatMap((player) => (player.agent ? [[player.id, player.agent]] : []))),
   };
 }

@@ -197,6 +197,20 @@ describe('MAILER_SOCKET', () => {
   });
 });
 
+describe('AGENT_SOCKET', () => {
+  test('is off when unset, and taken from the repository root when it is relative', () => {
+    expect(loadConfig({}).agentSocket).toBeNull();
+    expect(loadConfig({ AGENT_SOCKET: '/srv/agent/agent.sock' }).agentSocket).toBe('/srv/agent/agent.sock');
+    expect(loadConfig({ AGENT_SOCKET: 'data/agent.sock' }).agentSocket).toBe(join(root, 'data', 'agent.sock'));
+  });
+
+  test('is a path that a socket can have, and says so by its own name', () => {
+    expect(() => loadConfig({ AGENT_SOCKET: `/${'x'.repeat(107)}` })).toThrow(
+      /AGENT_SOCKET must be .* at most 107 bytes/,
+    );
+  });
+});
+
 describe('DATA_DIR', () => {
   test('keeps the database in memory when it is unset, empty or blank', () => {
     for (const DATA_DIR of [undefined, '', '  ']) {

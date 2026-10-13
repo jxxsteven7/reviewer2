@@ -26,6 +26,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 - Optional accounts: an avatar, a record of games, friends and friend titles, an academic rank and a public page; see [Privacy](#privacy)
 - Matches: several scored games in a row, with titles
 - Public rooms: play with strangers, with an account, and report players who misbehave
+- AI players, being tried out: Reviewer 1 can play a group's PI or student, advise people, and play the turn of a player who has gone offline, and has a page of its own as player number 0; see [Privacy](#privacy)
 
 ## Privacy
 
@@ -40,8 +41,9 @@ What we promise players:
 - **No IP addresses or names in the logs.** Statistics are counts only: players, rooms and countries.
 - **Feedback** is read only by the project's operator, unless you agree to its becoming a GitHub issue, which shows its text and the name you left, never your contact. A contact is kept as written and deleted after 90 days. The feedback itself is kept as the project's archive of suggestions; only what the operator discards, such as spam, is deleted 30 days after it is discarded.
 - **Reports** of players in public rooms are read only by the operator, and kept for good. A report keeps who reported whom, the name the reported player had in the room, the room's number and the note the reporter wrote.
-- **Games are recorded** for good when a player with an account played in them: the board, every move and when it came, such as each clue, choice and reveal, and who made it, linked to their account if they have one; and when everyone in the room, those who only watched included, came, left, went offline or came back, or sent a quick reaction. The cards a PI marks as the ones a clue is meant for are hidden from everyone during the game and shown to everyone in the room afterwards. Group chat is never recorded, and neither is a game that the chair ended early or played with their own words. The players with accounts can watch a game again: the board, the clues and the nicknames of those who revealed a card, guests included.
-- **Deleting an account** deletes everything of it, except that feedback sent from it, acknowledgments counted for it, reports it sent or got, and the records of games it played in, which others played in too, stay, with the name it had in them, no longer linked to it; backups keep the rest only until they expire.
+- **Every game is recorded** for good, however it ended and whoever played in it, except a game played with the chair's own words: the board, every move and when it came, such as each clue and reveal, what the players said in their group's chat, and who did each, linked to their account if they have one; when anyone came or left, when time ran out on players who were offline, and how the game ended. Cards chosen but not revealed, quick reactions and who was offline for a moment are not recorded. The cards a PI marks as the ones a clue is meant for are hidden from everyone during the game and shown to everyone in the room afterwards. The players with accounts can watch a finished game again: the board, the clues and the nicknames of those who revealed a card, guests included, without the chat.
+- **What the records are for:** training and testing the game's AI players, and research: they may be published as a dataset, without nicknames or accounts. When an AI plays in a game, as an AI player or for someone who went offline, the record keeps each of its moves with the model it asked and the reason it gave, and the game brings nobody points, a streak, a title or a friend title.
+- **Deleting an account** deletes everything of it, except that feedback sent from it, acknowledgments counted for it, reports it sent or got, and the records of games it played in, which others played in too, stay, with the name it had in them, no longer linked to it and without what it said in the chat; backups keep the rest only until they expire.
 
 ## Status
 
@@ -66,6 +68,7 @@ What we promise players:
 | `server/src/` | The server: `core/` rooms, `games/<game>/` each game's rules, `accounts/`, `store/` the database |
 | `shared/` | Types and rules used by both sides |
 | `mailer/` | The program that sends the mails of accounts |
+| `agent/` | The program that asks a language model for the AI players' moves |
 | `words/` | Word lists, one JSON file per field |
 | `e2e/`, `scripts/`, `docs/` | End-to-end tests, repository checks, documentation |
 
@@ -78,7 +81,7 @@ npm install   # also turns on the git hooks
 npm run dev   # front end on http://localhost:5173, server on port 3000
 ```
 
-A local copy needs no key for any outside service. For email, copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`: the mails are printed, not sent. The other commands, testing on a phone and the environment variables are in [docs/development.md](docs/development.md).
+A local copy needs no key for any outside service. For email, copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`: the mails are printed, not sent. AI players also need a language model, and `npm run dev:agent`. The other commands, testing on a phone and the environment variables are in [docs/development.md](docs/development.md).
 
 ## Contributing
 

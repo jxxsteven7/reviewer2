@@ -48,6 +48,7 @@ describe('an account', () => {
       avatar: null,
       avatarBanned: false,
       publicBarred: false,
+      agents: false,
       profile: { link: null, bio: null, showRecord: false, showThanks: false },
       profileBanned: false,
       createdAt: '2026-10-09T12:00:00.000Z',

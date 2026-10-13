@@ -6,6 +6,7 @@ import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
 import { socketMail } from './accounts/mail';
 import { Accounts } from './accounts/service';
 import { loadConfig } from './config';
+import { socketAgent } from './core/agentChannel';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
 import { loadWordLibrary } from './core/words';
 import { keywordsGame } from './games/keywords';
@@ -154,6 +155,7 @@ export async function main({
       ...config,
       words,
       games: [keywordsGame],
+      ...(config.agentSocket !== null && { agent: socketAgent(config.agentSocket) }),
       feedback,
       accounts,
       lists,
@@ -192,6 +194,8 @@ export async function main({
         cookieSecure: config.cookieSecure,
         // Email for accounts needs both the server's secret and the mailer.
         mail: accounts.mailAvailable,
+        // AI players need the agent (docs/architecture.md#ai-players).
+        agent: config.agentSocket !== null,
       });
       resolve(true);
     });
