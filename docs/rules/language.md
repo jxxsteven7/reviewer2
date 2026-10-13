@@ -7,7 +7,7 @@ Reviewer 2 is built by a Chinese-speaking team for players around the world, so 
 - `README.zh-CN.md` is the Chinese translation of `README.md`; see below. The language switcher at the top of `README.md` names it in Chinese.
 - UI text lives in the locale files, and `zh.json` is in Chinese. It is never hard-coded in components ([constraints.md](constraints.md)). The mailer's mails are in `mailer/src/locales/`, in both languages too.
 - Word lists under `words/`, and examples of them in the docs, have Chinese terms in their `zh` fields.
-- `ACKNOWLEDGMENTS.md` and `SPONSORS.md` list people by the names they chose, in any language; what they did is in English.
+- `ACKNOWLEDGMENTS.md` and `SPONSORS.md` list people by the names they chose, in any language; what they did is in English. The line of thanks that the maintainers may write to a sponsor in `SPONSORS.md` may be in any language, so that the sponsor can read it.
 - Issues and review comments may be in English or Chinese. Anything that lands in the repository is in English.
 
 ## Keeping the two READMEs in sync

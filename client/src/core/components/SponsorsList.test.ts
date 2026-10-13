@@ -7,6 +7,9 @@ import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
 import SponsorsList from './SponsorsList.vue';
 
+// "Thanks for all your support" in Chinese, a line of thanks that shows as it is in either language.
+const SUPPORT = '\u{611f}\u{8c22}\u{4e00}\u{76f4}\u{4ee5}\u{6765}\u{7684}\u{652f}\u{6301}';
+
 // The list is what the server reads from SPONSORS.md; here, the sections of a file made up for the
 // tests, which the server answers with.
 const FILE = [
@@ -22,7 +25,8 @@ const FILE = [
   '## Other ways',
   '',
   '- [Ann L](https://ann.example/)',
-  '- Dr\\. Who',
+  '- Dr\\. Who \u{2014} Thanks for the late-night fixes',
+  `- Eve \u{2014} ${SUPPORT}`,
 ].join('\n');
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -51,14 +55,14 @@ async function opened(locale: 'en' | 'zh' = 'en') {
 }
 
 describe('the sponsors', () => {
-  test('are listed by name alone, in the sections of the file, each linked to their page', async () => {
+  test('are listed by name, in the sections of the file, each linked to their page', async () => {
     const wrapper = await opened();
-    expect(wrapper.get('h2').text()).toBe('Sponsors \u{b7} 4 people');
+    expect(wrapper.get('h2').text()).toBe('Sponsors \u{b7} 5 people');
     const groups = wrapper.findAll('section');
     expect(groups.map((group) => group.get('h3').text())).toEqual(['GitHub Sponsors', 'Other ways']);
-    expect(groups.map((group) => group.findAll('li').map((item) => item.text()))).toEqual([
+    expect(groups.map((group) => group.findAll('li').map((item) => item.get('.name').text()))).toEqual([
       ['octocat', 'Mona-Lisa'],
-      ['Ann L', 'Dr. Who'],
+      ['Ann L', 'Dr. Who', 'Eve'],
     ]);
     const links = wrapper.findAll('a.name');
     expect(links.map((link) => link.attributes('href'))).toEqual([
@@ -71,24 +75,43 @@ describe('the sponsors', () => {
     }
   });
 
+  test('show the line of thanks under the name of those who have one, as it is in either language', async () => {
+    for (const locale of ['en', 'zh'] as const) {
+      const wrapper = await opened(locale);
+      const items = wrapper.findAll('li');
+      expect(items.map((item) => item.find('.thanks').exists() && item.get('.thanks').text())).toEqual([
+        false,
+        false,
+        false,
+        'Thanks for the late-night fixes',
+        SUPPORT,
+      ]);
+      // The line comes after the name.
+      expect(items[3]?.text()).toBe('Dr. WhoThanks for the late-night fixes');
+      fetchMock.mockClear();
+    }
+  });
+
   test('call the sections in the language of the page', async () => {
     const wrapper = await opened('zh');
-    // "Sponsors", 4 of them, and "Other ways" in Chinese; GitHub Sponsors keeps its name.
-    expect(wrapper.get('h2').text()).toBe('\u8d5e\u52a9\u8005 \u00b7 4 \u4f4d');
+    // "Sponsors", 5 of them, and "Other ways" in Chinese; GitHub Sponsors keeps its name.
+    expect(wrapper.get('h2').text()).toBe('\u8d5e\u52a9\u8005 \u00b7 5 \u4f4d');
     expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual([
       'GitHub Sponsors',
       '\u5176\u4ed6\u65b9\u5f0f',
     ]);
   });
 
-  test('show a name as plain text, and link it only to an https page', async () => {
+  test('show a name and a line of thanks as plain text, and link the name only to an https page', async () => {
     fetchMock.mockImplementation(async () =>
-      answer([{ kind: 'other', entries: [{ name: '<i>Ann</i>', link: 'javascript:alert(1)' }] }]),
+      answer([{ kind: 'other', entries: [{ name: '<i>Ann</i>', link: 'javascript:alert(1)', thanks: '<b>hi</b>' }] }]),
     );
     const wrapper = await opened();
     expect(wrapper.find('a.name').exists()).toBe(false);
     expect(wrapper.find('i').exists()).toBe(false);
-    expect(wrapper.get('li').text()).toBe('<i>Ann</i>');
+    expect(wrapper.find('b').exists()).toBe(false);
+    expect(wrapper.get('.name').text()).toBe('<i>Ann</i>');
+    expect(wrapper.get('.thanks').text()).toBe('<b>hi</b>');
   });
 
   test('while there are none, ask for the first, on GitHub Sponsors or with a WeChat tip', async () => {
