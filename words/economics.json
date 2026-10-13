@@ -1629,6 +1629,1163 @@
       "zh": "滞后",
       "en": "Lag",
       "forms": { "en": ["lagged", "lagging"] }
+    },
+    {
+      "id": "pareto-optimum",
+      "zh": "帕累托最优",
+      "en": "Pareto optimum"
+    },
+    {
+      "id": "agency-cost",
+      "zh": "代理成本",
+      "en": "Agency cost"
+    },
+    {
+      "id": "signaling",
+      "zh": "信号传递",
+      "en": "Signaling",
+      "forms": { "en": ["signalling"] }
+    },
+    {
+      "id": "lemon-market",
+      "zh": "柠檬市场",
+      "en": "Lemon market"
+    },
+    {
+      "id": "monopsony",
+      "zh": "买方垄断",
+      "en": "Monopsony"
+    },
+    {
+      "id": "entry-barrier",
+      "zh": "进入壁垒",
+      "en": "Entry barrier"
+    },
+    {
+      "id": "bundling",
+      "zh": "捆绑销售",
+      "en": "Bundling",
+      "forms": { "en": ["bundle", "bundled"] }
+    },
+    {
+      "id": "isoquant",
+      "zh": "等产量线",
+      "en": "Isoquant"
+    },
+    {
+      "id": "menu-cost",
+      "zh": "菜单成本",
+      "en": "Menu cost"
+    },
+    {
+      "id": "shadow-price",
+      "zh": "影子价格",
+      "en": "Shadow price"
+    },
+    {
+      "id": "coase-theorem",
+      "zh": "科斯定理",
+      "en": "Coase theorem"
+    },
+    {
+      "id": "pigouvian-tax",
+      "zh": "庇古税",
+      "en": "Pigouvian tax",
+      "forms": { "en": ["Pigovian tax"] }
+    },
+    {
+      "id": "laffer-curve",
+      "zh": "拉弗曲线",
+      "en": "Laffer curve"
+    },
+    {
+      "id": "lorenz-curve",
+      "zh": "洛伦兹曲线",
+      "en": "Lorenz curve"
+    },
+    {
+      "id": "engels-law",
+      "zh": "恩格尔定律",
+      "en": "Engel's law"
+    },
+    {
+      "id": "says-law",
+      "zh": "萨伊定律",
+      "en": "Say's law"
+    },
+    {
+      "id": "greshams-law",
+      "zh": "格雷欣法则",
+      "en": "Gresham's law"
+    },
+    {
+      "id": "okuns-law",
+      "zh": "奥肯定律",
+      "en": "Okun's law"
+    },
+    {
+      "id": "mixed-strategy",
+      "zh": "混合策略",
+      "en": "Mixed strategy"
+    },
+    {
+      "id": "subgame",
+      "zh": "子博弈",
+      "en": "Subgame"
+    },
+    {
+      "id": "repeated-game",
+      "zh": "重复博弈",
+      "en": "Repeated game"
+    },
+    {
+      "id": "shapley-value",
+      "zh": "夏普利值",
+      "en": "Shapley value"
+    },
+    {
+      "id": "tit-for-tat",
+      "zh": "以牙还牙",
+      "en": "Tit for tat"
+    },
+    {
+      "id": "chicken-game",
+      "zh": "胆小鬼博弈",
+      "en": "Chicken game"
+    },
+    {
+      "id": "stag-hunt",
+      "zh": "猎鹿博弈",
+      "en": "Stag hunt"
+    },
+    {
+      "id": "payoff-matrix",
+      "zh": "支付矩阵",
+      "en": "Payoff matrix"
+    },
+    {
+      "id": "focal-point",
+      "zh": "聚点",
+      "en": "Focal point"
+    },
+    {
+      "id": "fiscal-policy",
+      "zh": "财政政策",
+      "en": "Fiscal policy"
+    },
+    {
+      "id": "liquidity-trap",
+      "zh": "流动性陷阱",
+      "en": "Liquidity trap"
+    },
+    {
+      "id": "hyperinflation",
+      "zh": "恶性通胀",
+      "en": "Hyperinflation",
+      "forms": { "zh": ["恶性通货膨胀"] }
+    },
+    {
+      "id": "capital-flight",
+      "zh": "资本外逃",
+      "en": "Capital flight"
+    },
+    {
+      "id": "hot-money",
+      "zh": "热钱",
+      "en": "Hot money"
+    },
+    {
+      "id": "forex",
+      "zh": "外汇",
+      "en": "Forex",
+      "forms": { "en": ["foreign exchange", "FX"] }
+    },
+    {
+      "id": "seigniorage",
+      "zh": "铸币税",
+      "en": "Seigniorage",
+      "forms": { "en": ["seignorage"] }
+    },
+    {
+      "id": "m2",
+      "zh": "M2",
+      "en": "M2",
+      "forms": { "zh": ["广义货币"] }
+    },
+    {
+      "id": "treasury-bond",
+      "zh": "国债",
+      "en": "Treasury bond"
+    },
+    {
+      "id": "sovereign-debt",
+      "zh": "主权债务",
+      "en": "Sovereign debt"
+    },
+    {
+      "id": "solow-model",
+      "zh": "索洛模型",
+      "en": "Solow model"
+    },
+    {
+      "id": "output-gap",
+      "zh": "产出缺口",
+      "en": "Output gap"
+    },
+    {
+      "id": "rate-hike",
+      "zh": "加息",
+      "en": "Rate hike"
+    },
+    {
+      "id": "bretton-woods",
+      "zh": "布雷顿森林",
+      "en": "Bretton Woods"
+    },
+    {
+      "id": "deleveraging",
+      "zh": "去杠杆",
+      "en": "Deleveraging",
+      "forms": { "en": ["deleverage"] }
+    },
+    {
+      "id": "minsky-moment",
+      "zh": "明斯基时刻",
+      "en": "Minsky moment"
+    },
+    {
+      "id": "systemic-risk",
+      "zh": "系统性风险",
+      "en": "Systemic risk"
+    },
+    {
+      "id": "bailout",
+      "zh": "救助",
+      "en": "Bailout"
+    },
+    {
+      "id": "capm",
+      "zh": "CAPM",
+      "en": "CAPM",
+      "forms": { "zh": ["资本资产定价模型"], "en": ["capital asset pricing model"] }
+    },
+    {
+      "id": "sharpe-ratio",
+      "zh": "夏普比率",
+      "en": "Sharpe ratio"
+    },
+    {
+      "id": "swap",
+      "zh": "互换",
+      "en": "Swap"
+    },
+    {
+      "id": "forward",
+      "zh": "远期",
+      "en": "Forward"
+    },
+    {
+      "id": "strike-price",
+      "zh": "行权价",
+      "en": "Strike price"
+    },
+    {
+      "id": "margin",
+      "zh": "保证金",
+      "en": "Margin"
+    },
+    {
+      "id": "market-maker",
+      "zh": "做市商",
+      "en": "Market maker"
+    },
+    {
+      "id": "hedge-fund",
+      "zh": "对冲基金",
+      "en": "Hedge fund"
+    },
+    {
+      "id": "index-fund",
+      "zh": "指数基金",
+      "en": "Index fund"
+    },
+    {
+      "id": "private-equity",
+      "zh": "私募股权",
+      "en": "Private equity"
+    },
+    {
+      "id": "m-and-a",
+      "zh": "并购",
+      "en": "M&A",
+      "forms": { "en": ["mergers and acquisitions"] }
+    },
+    {
+      "id": "buyback",
+      "zh": "回购",
+      "en": "Buyback"
+    },
+    {
+      "id": "junk-bond",
+      "zh": "垃圾债券",
+      "en": "Junk bond",
+      "forms": { "zh": ["垃圾债"] }
+    },
+    {
+      "id": "duration",
+      "zh": "久期",
+      "en": "Duration"
+    },
+    {
+      "id": "yield-curve",
+      "zh": "收益率曲线",
+      "en": "Yield curve"
+    },
+    {
+      "id": "spread",
+      "zh": "利差",
+      "en": "Spread"
+    },
+    {
+      "id": "interest",
+      "zh": "利息",
+      "en": "Interest"
+    },
+    {
+      "id": "annuity",
+      "zh": "年金",
+      "en": "Annuity",
+      "forms": { "en": ["annuities"] }
+    },
+    {
+      "id": "present-value",
+      "zh": "现值",
+      "en": "Present value"
+    },
+    {
+      "id": "irr",
+      "zh": "IRR",
+      "en": "IRR",
+      "forms": { "zh": ["内部收益率"], "en": ["internal rate of return"] }
+    },
+    {
+      "id": "premium",
+      "zh": "溢价",
+      "en": "Premium"
+    },
+    {
+      "id": "subprime",
+      "zh": "次贷",
+      "en": "Subprime",
+      "forms": { "zh": ["次级贷款"] }
+    },
+    {
+      "id": "cheque",
+      "zh": "支票",
+      "en": "Check",
+      "forms": { "en": ["cheque"] }
+    },
+    {
+      "id": "remittance",
+      "zh": "汇款",
+      "en": "Remittance",
+      "forms": { "en": ["remit"] }
+    },
+    {
+      "id": "quant-trading",
+      "zh": "量化交易",
+      "en": "Quant trading"
+    },
+    {
+      "id": "exchange",
+      "zh": "交易所",
+      "en": "Exchange"
+    },
+    {
+      "id": "stop-loss",
+      "zh": "止损",
+      "en": "Stop loss"
+    },
+    {
+      "id": "drawdown",
+      "zh": "回撤",
+      "en": "Drawdown"
+    },
+    {
+      "id": "eps",
+      "zh": "EPS",
+      "en": "EPS",
+      "forms": { "zh": ["每股收益"], "en": ["earnings per share"] }
+    },
+    {
+      "id": "risk-aversion",
+      "zh": "风险厌恶",
+      "en": "Risk aversion"
+    },
+    {
+      "id": "pnl",
+      "zh": "损益表",
+      "en": "P&L",
+      "forms": { "en": ["profit and loss"] }
+    },
+    {
+      "id": "debit",
+      "zh": "借方",
+      "en": "Debit"
+    },
+    {
+      "id": "double-entry",
+      "zh": "复式记账",
+      "en": "Double entry"
+    },
+    {
+      "id": "accrual-basis",
+      "zh": "权责发生制",
+      "en": "Accrual basis",
+      "forms": { "en": ["accrual"] }
+    },
+    {
+      "id": "amortization",
+      "zh": "摊销",
+      "en": "Amortization",
+      "forms": { "en": ["amortisation", "amortize", "amortise"] }
+    },
+    {
+      "id": "receivables",
+      "zh": "应收账款",
+      "en": "Receivables"
+    },
+    {
+      "id": "gross-profit",
+      "zh": "毛利",
+      "en": "Gross profit"
+    },
+    {
+      "id": "ebitda",
+      "zh": "EBITDA",
+      "en": "EBITDA"
+    },
+    {
+      "id": "gaap",
+      "zh": "GAAP",
+      "en": "GAAP",
+      "forms": { "zh": ["公认会计准则"], "en": ["generally accepted accounting principles"] }
+    },
+    {
+      "id": "capex",
+      "zh": "资本支出",
+      "en": "Capex",
+      "forms": { "en": ["capital expenditure"] }
+    },
+    {
+      "id": "fixed-cost",
+      "zh": "固定成本",
+      "en": "Fixed cost"
+    },
+    {
+      "id": "receipt",
+      "zh": "收据",
+      "en": "Receipt"
+    },
+    {
+      "id": "impairment",
+      "zh": "减值",
+      "en": "Impairment",
+      "forms": { "en": ["impaired"] }
+    },
+    {
+      "id": "book-value",
+      "zh": "账面价值",
+      "en": "Book value"
+    },
+    {
+      "id": "fair-value",
+      "zh": "公允价值",
+      "en": "Fair value"
+    },
+    {
+      "id": "solvency",
+      "zh": "偿付能力",
+      "en": "Solvency",
+      "forms": { "en": ["solvent", "insolvency", "insolvent"] }
+    },
+    {
+      "id": "wacc",
+      "zh": "WACC",
+      "en": "WACC",
+      "forms": { "zh": ["加权平均资本成本"], "en": ["weighted average cost of capital"] }
+    },
+    {
+      "id": "diff-in-diff",
+      "zh": "双重差分",
+      "en": "Diff-in-diff",
+      "forms": { "en": ["difference-in-differences", "DiD"] }
+    },
+    {
+      "id": "rdd",
+      "zh": "断点回归",
+      "en": "RDD",
+      "forms": { "en": ["regression discontinuity"] }
+    },
+    {
+      "id": "fixed-effects",
+      "zh": "固定效应",
+      "en": "Fixed effects"
+    },
+    {
+      "id": "unit-root",
+      "zh": "单位根",
+      "en": "Unit root"
+    },
+    {
+      "id": "cointegration",
+      "zh": "协整",
+      "en": "Cointegration",
+      "forms": { "en": ["cointegrated"] }
+    },
+    {
+      "id": "import",
+      "zh": "进口",
+      "en": "Import",
+      "forms": { "en": ["importer"] }
+    },
+    {
+      "id": "free-trade",
+      "zh": "自由贸易",
+      "en": "Free trade"
+    },
+    {
+      "id": "trade-barrier",
+      "zh": "贸易壁垒",
+      "en": "Trade barrier"
+    },
+    {
+      "id": "gravity-model",
+      "zh": "引力模型",
+      "en": "Gravity model"
+    },
+    {
+      "id": "dutch-disease",
+      "zh": "荷兰病",
+      "en": "Dutch disease"
+    },
+    {
+      "id": "decision",
+      "zh": "决策",
+      "en": "Decision"
+    },
+    {
+      "id": "catfish-effect",
+      "zh": "鲶鱼效应",
+      "en": "Catfish effect"
+    },
+    {
+      "id": "rule-80-20",
+      "zh": "二八定律",
+      "en": "80/20 rule"
+    },
+    {
+      "id": "taylorism",
+      "zh": "泰勒制",
+      "en": "Taylorism"
+    },
+    {
+      "id": "kanban",
+      "zh": "看板",
+      "en": "Kanban"
+    },
+    {
+      "id": "pdca",
+      "zh": "PDCA",
+      "en": "PDCA",
+      "forms": { "zh": ["戴明环"], "en": ["plan-do-check-act"] }
+    },
+    {
+      "id": "safety-stock",
+      "zh": "安全库存",
+      "en": "Safety stock"
+    },
+    {
+      "id": "eoq",
+      "zh": "经济订货量",
+      "en": "EOQ",
+      "forms": { "en": ["economic order quantity"] }
+    },
+    {
+      "id": "procurement",
+      "zh": "采购",
+      "en": "Procurement",
+      "forms": { "en": ["procure"] }
+    },
+    {
+      "id": "warehousing",
+      "zh": "仓储",
+      "en": "Warehousing",
+      "forms": { "en": ["warehouse"] }
+    },
+    {
+      "id": "last-mile",
+      "zh": "最后一公里",
+      "en": "Last mile"
+    },
+    {
+      "id": "capacity",
+      "zh": "产能",
+      "en": "Capacity"
+    },
+    {
+      "id": "lead-time",
+      "zh": "提前期",
+      "en": "Lead time"
+    },
+    {
+      "id": "critical-path",
+      "zh": "关键路径",
+      "en": "Critical path"
+    },
+    {
+      "id": "five-forces",
+      "zh": "五力模型",
+      "en": "Five forces"
+    },
+    {
+      "id": "red-ocean",
+      "zh": "红海",
+      "en": "Red ocean"
+    },
+    {
+      "id": "lock-in",
+      "zh": "锁定效应",
+      "en": "Lock-in"
+    },
+    {
+      "id": "switching-cost",
+      "zh": "转换成本",
+      "en": "Switching cost"
+    },
+    {
+      "id": "board",
+      "zh": "董事会",
+      "en": "Board"
+    },
+    {
+      "id": "executive",
+      "zh": "高管",
+      "en": "Executive"
+    },
+    {
+      "id": "recruitment",
+      "zh": "招聘",
+      "en": "Recruitment",
+      "forms": { "en": ["recruit", "recruiter"] }
+    },
+    {
+      "id": "job-hopping",
+      "zh": "跳槽",
+      "en": "Job hopping"
+    },
+    {
+      "id": "subsidiary",
+      "zh": "子公司",
+      "en": "Subsidiary",
+      "forms": { "en": ["subsidiaries"] }
+    },
+    {
+      "id": "sme",
+      "zh": "中小企业",
+      "en": "SME",
+      "forms": { "en": ["small and medium-sized enterprise"] }
+    },
+    {
+      "id": "marketing-mix",
+      "zh": "营销组合",
+      "en": "Marketing mix"
+    },
+    {
+      "id": "positioning",
+      "zh": "定位",
+      "en": "Positioning"
+    },
+    {
+      "id": "market-share",
+      "zh": "市场份额",
+      "en": "Market share"
+    },
+    {
+      "id": "conversion",
+      "zh": "转化",
+      "en": "Conversion"
+    },
+    {
+      "id": "retention",
+      "zh": "留存",
+      "en": "Retention"
+    },
+    {
+      "id": "live-commerce",
+      "zh": "直播带货",
+      "en": "Live commerce"
+    },
+    {
+      "id": "crm",
+      "zh": "CRM",
+      "en": "CRM",
+      "forms": { "zh": ["客户关系管理"], "en": ["customer relationship management"] }
+    },
+    {
+      "id": "charm-pricing",
+      "zh": "尾数定价",
+      "en": "Charm pricing"
+    },
+    {
+      "id": "freemium",
+      "zh": "免费增值",
+      "en": "Freemium"
+    },
+    {
+      "id": "blind-box",
+      "zh": "盲盒",
+      "en": "Blind box"
+    },
+    {
+      "id": "retail",
+      "zh": "零售",
+      "en": "Retail",
+      "forms": { "en": ["retailer"] }
+    },
+    {
+      "id": "wholesale",
+      "zh": "批发",
+      "en": "Wholesale",
+      "forms": { "en": ["wholesaler"] }
+    },
+    {
+      "id": "middleman",
+      "zh": "中间商",
+      "en": "Middleman",
+      "forms": { "en": ["middlemen"] }
+    },
+    {
+      "id": "supermarket",
+      "zh": "超市",
+      "en": "Supermarket"
+    },
+    {
+      "id": "black-friday",
+      "zh": "黑色星期五",
+      "en": "Black Friday"
+    },
+    {
+      "id": "impulse-buying",
+      "zh": "冲动消费",
+      "en": "Impulse buying"
+    },
+    {
+      "id": "growth-hacking",
+      "zh": "增长黑客",
+      "en": "Growth hacking"
+    },
+    {
+      "id": "bestseller",
+      "zh": "爆款",
+      "en": "Bestseller"
+    },
+    {
+      "id": "trade-in",
+      "zh": "以旧换新",
+      "en": "Trade-in"
+    },
+    {
+      "id": "installment",
+      "zh": "分期付款",
+      "en": "Installment",
+      "forms": { "en": ["instalment"] }
+    },
+    {
+      "id": "refund",
+      "zh": "退款",
+      "en": "Refund"
+    },
+    {
+      "id": "after-sales",
+      "zh": "售后",
+      "en": "After-sales"
+    },
+    {
+      "id": "free-shipping",
+      "zh": "包邮",
+      "en": "Free shipping"
+    },
+    {
+      "id": "cashback",
+      "zh": "返现",
+      "en": "Cashback"
+    },
+    {
+      "id": "incubator",
+      "zh": "孵化器",
+      "en": "Incubator"
+    },
+    {
+      "id": "cash-burn",
+      "zh": "烧钱",
+      "en": "Cash burn"
+    },
+    {
+      "id": "exit",
+      "zh": "退出",
+      "en": "Exit"
+    },
+    {
+      "id": "elevator-pitch",
+      "zh": "电梯演讲",
+      "en": "Elevator pitch"
+    },
+    {
+      "id": "mvp",
+      "zh": "MVP",
+      "en": "MVP",
+      "forms": { "zh": ["最小可行产品"], "en": ["minimum viable product"] }
+    },
+    {
+      "id": "pivot",
+      "zh": "转型",
+      "en": "Pivot"
+    },
+    {
+      "id": "lean-startup",
+      "zh": "精益创业",
+      "en": "Lean startup"
+    },
+    {
+      "id": "free-lunch",
+      "zh": "免费午餐",
+      "en": "Free lunch"
+    },
+    {
+      "id": "framing-effect",
+      "zh": "框架效应",
+      "en": "Framing effect"
+    },
+    {
+      "id": "veblen-good",
+      "zh": "凡勃伦商品",
+      "en": "Veblen good"
+    },
+    {
+      "id": "ratchet-effect",
+      "zh": "棘轮效应",
+      "en": "Ratchet effect"
+    },
+    {
+      "id": "greater-fool",
+      "zh": "博傻",
+      "en": "Greater fool"
+    },
+    {
+      "id": "dual-economy",
+      "zh": "二元经济",
+      "en": "Dual economy"
+    },
+    {
+      "id": "stamp-duty",
+      "zh": "印花税",
+      "en": "Stamp duty"
+    },
+    {
+      "id": "basis-point",
+      "zh": "基点",
+      "en": "Basis point",
+      "forms": { "en": ["bp"] }
+    },
+    {
+      "id": "microfinance",
+      "zh": "小额信贷",
+      "en": "Microfinance"
+    },
+    {
+      "id": "finance",
+      "zh": "金融",
+      "en": "Finance",
+      "forms": { "en": ["financial", "financier"] }
+    },
+    {
+      "id": "otc",
+      "zh": "场外交易",
+      "en": "OTC",
+      "forms": { "en": ["over-the-counter"] }
+    },
+    {
+      "id": "hard-currency",
+      "zh": "硬通货",
+      "en": "Hard currency"
+    },
+    {
+      "id": "pmi",
+      "zh": "PMI",
+      "en": "PMI",
+      "forms": { "zh": ["采购经理指数"], "en": ["purchasing managers' index"] }
+    },
+    {
+      "id": "down-payment",
+      "zh": "首付",
+      "en": "Down payment"
+    },
+    {
+      "id": "rent",
+      "zh": "租金",
+      "en": "Rent",
+      "forms": { "en": ["rental"] }
+    },
+    {
+      "id": "firm",
+      "zh": "厂商",
+      "en": "Firm"
+    },
+    {
+      "id": "wage",
+      "zh": "工资",
+      "en": "Wage"
+    },
+    {
+      "id": "money-illusion",
+      "zh": "货币幻觉",
+      "en": "Money illusion"
+    },
+    {
+      "id": "trilemma",
+      "zh": "不可能三角",
+      "en": "Trilemma"
+    },
+    {
+      "id": "lucas-critique",
+      "zh": "卢卡斯批判",
+      "en": "Lucas critique"
+    },
+    {
+      "id": "is-lm",
+      "zh": "IS-LM",
+      "en": "IS-LM"
+    },
+    {
+      "id": "dsge",
+      "zh": "DSGE",
+      "en": "DSGE",
+      "forms": { "zh": ["动态随机一般均衡"], "en": ["dynamic stochastic general equilibrium"] }
+    },
+    {
+      "id": "edgeworth-box",
+      "zh": "埃奇沃思盒",
+      "en": "Edgeworth box"
+    },
+    {
+      "id": "club-good",
+      "zh": "俱乐部物品",
+      "en": "Club good"
+    },
+    {
+      "id": "stress-test",
+      "zh": "压力测试",
+      "en": "Stress test"
+    },
+    {
+      "id": "tail-risk",
+      "zh": "尾部风险",
+      "en": "Tail risk"
+    },
+    {
+      "id": "asset-pricing",
+      "zh": "资产定价",
+      "en": "Asset pricing"
+    },
+    {
+      "id": "risk-free-rate",
+      "zh": "无风险利率",
+      "en": "Risk-free rate"
+    },
+    {
+      "id": "rule-of-72",
+      "zh": "72法则",
+      "en": "Rule of 72"
+    },
+    {
+      "id": "delisting",
+      "zh": "退市",
+      "en": "Delisting",
+      "forms": { "en": ["delist", "delisted"] }
+    },
+    {
+      "id": "reinsurance",
+      "zh": "再保险",
+      "en": "Reinsurance",
+      "forms": { "en": ["reinsurer"] }
+    },
+    {
+      "id": "deductible",
+      "zh": "免赔额",
+      "en": "Deductible"
+    },
+    {
+      "id": "claim",
+      "zh": "理赔",
+      "en": "Claim"
+    },
+    {
+      "id": "collusion",
+      "zh": "合谋",
+      "en": "Collusion",
+      "forms": { "en": ["collude", "collusive"] }
+    },
+    {
+      "id": "cournot-model",
+      "zh": "古诺模型",
+      "en": "Cournot model"
+    },
+    {
+      "id": "beauty-contest",
+      "zh": "选美比赛",
+      "en": "Beauty contest"
+    },
+    {
+      "id": "best-response",
+      "zh": "最优反应",
+      "en": "Best response"
+    },
+    {
+      "id": "customization",
+      "zh": "定制",
+      "en": "Customization",
+      "forms": { "en": ["customisation", "customize", "customise", "customized", "customised"] }
+    },
+    {
+      "id": "stockout",
+      "zh": "缺货",
+      "en": "Stockout"
+    },
+    {
+      "id": "courier",
+      "zh": "快递",
+      "en": "Courier"
+    },
+    {
+      "id": "food-delivery",
+      "zh": "外卖",
+      "en": "Food delivery"
+    },
+    {
+      "id": "talent",
+      "zh": "人才",
+      "en": "Talent"
+    },
+    {
+      "id": "boss",
+      "zh": "老板",
+      "en": "Boss"
+    },
+    {
+      "id": "pay-raise",
+      "zh": "加薪",
+      "en": "Pay raise"
+    },
+    {
+      "id": "paid-leave",
+      "zh": "带薪休假",
+      "en": "Paid leave"
+    },
+    {
+      "id": "team-building",
+      "zh": "团建",
+      "en": "Team building"
+    },
+    {
+      "id": "workplace",
+      "zh": "职场",
+      "en": "Workplace"
+    },
+    {
+      "id": "career",
+      "zh": "职业生涯",
+      "en": "Career"
+    },
+    {
+      "id": "remote-work",
+      "zh": "远程办公",
+      "en": "Remote work"
+    },
+    {
+      "id": "flextime",
+      "zh": "弹性工作制",
+      "en": "Flextime",
+      "forms": { "en": ["flexitime"] }
+    },
+    {
+      "id": "expense",
+      "zh": "费用",
+      "en": "Expense"
+    },
+    {
+      "id": "net-worth",
+      "zh": "净值",
+      "en": "Net worth"
+    },
+    {
+      "id": "account",
+      "zh": "账户",
+      "en": "Account"
+    },
+    {
+      "id": "fifo",
+      "zh": "先进先出",
+      "en": "FIFO",
+      "forms": { "en": ["first in, first out"] }
+    },
+    {
+      "id": "duty-free",
+      "zh": "免税",
+      "en": "Duty-free"
+    },
+    {
+      "id": "coin",
+      "zh": "硬币",
+      "en": "Coin"
+    },
+    {
+      "id": "atm",
+      "zh": "ATM",
+      "en": "ATM",
+      "forms": { "zh": ["自动取款机"], "en": ["automated teller machine"] }
+    },
+    {
+      "id": "overdraft",
+      "zh": "透支",
+      "en": "Overdraft",
+      "forms": { "en": ["overdraw", "overdrawn"] }
+    },
+    {
+      "id": "microeconomics",
+      "zh": "微观经济学",
+      "en": "Microeconomics"
+    },
+    {
+      "id": "macroeconomics",
+      "zh": "宏观经济学",
+      "en": "Macroeconomics"
+    },
+    {
+      "id": "boom",
+      "zh": "繁荣",
+      "en": "Boom"
+    },
+    {
+      "id": "employment",
+      "zh": "就业",
+      "en": "Employment",
+      "forms": { "en": ["employ", "employer", "employee"] }
+    },
+    {
+      "id": "mean-reversion",
+      "zh": "均值回归",
+      "en": "Mean reversion"
     }
   ]
 }
