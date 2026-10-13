@@ -14,6 +14,7 @@ import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
+import RankLadder from './RankLadder.vue';
 import TitlePills from './TitlePills.vue';
 import UiButton from './UiButton.vue';
 
@@ -22,13 +23,15 @@ import UiButton from './UiButton.vue';
 // the number and the day of registration, the titles, the streaks among them, and what the owner
 // chose to put there: a link, a line about themselves, the record and the acknowledgments. The bio
 // is shown as the text it is, never as markup, and the link as the address it is, which opens in a
-// new tab and which search engines are told not to follow. Anyone may look; an account that isn't
-// the owner may like the profile and ask the owner to be friends.
+// new tab and which search engines are told not to follow. The rank opens the ladder of every
+// rank, with this one marked and no points, which the profile never shows. Anyone may look; an
+// account that isn't the owner may like the profile and ask the owner to be friends.
 const props = defineProps<{ handle: string }>();
 const { t, locale } = useI18n();
 const profile = ref<ProfileView | null>(null);
 const failed = ref<string | undefined>();
 const { busy, run } = useBusy();
+const ladder = ref(false);
 
 // Reads the profile. One that is up stays up when it can't be read again, as after a like on a
 // poor connection: the reader is told why, and keeps what they had.
@@ -112,7 +115,10 @@ watch(
         <PlayerAvatar :name="profile.username" :avatar="profile.avatar" size="large" />
         <div class="who">
           <span class="name">{{ profile.username }}</span>
-          <span class="rank">{{ t(`ranks.names.${profile.rank}`) }}</span>
+          <button type="button" class="rank-button" aria-haspopup="dialog" @click="ladder = true">
+            <span class="rank">{{ t(`ranks.names.${profile.rank}`) }}</span>
+            <span class="sr-only">{{ t('ranks.ladder.open') }}</span>
+          </button>
           <PlayerNumber :id="profile.id" />
           <span class="since">{{ t('playerPage.since', { date: since }) }}</span>
         </div>
@@ -150,6 +156,7 @@ watch(
         <RouterLink v-if="profile.mine" to="/account" class="edit">{{ t('playerPage.edit') }}</RouterLink>
         <span v-else-if="guest" class="hint">{{ t('playerPage.logInToLike') }}</span>
       </div>
+      <RankLadder :open="ladder" :rank="profile.rank" @close="ladder = false" />
     </template>
   </div>
 </template>
@@ -184,6 +191,29 @@ watch(
   font-size: var(--text-xl);
   font-weight: var(--weight-black);
   overflow-wrap: anywhere;
+}
+
+/* The rank is one line of display type that opens the ladder. Padding that the margins take back
+   makes it 44px tall to tap without moving anything, and a chevron says that it opens. */
+.rank-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  max-width: 100%;
+  margin: -8px 0;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rank-button::after {
+  content: '\203a';
+  font-size: var(--text-xl);
+  font-weight: var(--weight-black);
+  line-height: 1;
 }
 
 .rank {

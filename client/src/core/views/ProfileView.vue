@@ -14,6 +14,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { changeLogin, loadAccount, request } from '../account';
 import PlayerNumber from '../components/PlayerNumber.vue';
+import RankLadder from '../components/RankLadder.vue';
 import TitlePills from '../components/TitlePills.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
@@ -68,9 +69,11 @@ const passwordProblem = computed(() => {
 // The day the account registered, as its public page shows it too.
 const since = computed(() => formatDay(props.summary.createdAt, locale.value));
 
-// The rank that the account's points hold, and the next one (shared/src/ranks.ts).
+// The rank that the account's points hold, and the next one (shared/src/ranks.ts). The rank opens
+// the ladder of every rank, with this one marked.
 const rank = computed(() => rankFor(props.summary.points));
 const next = computed(() => nextRank(props.summary.points));
+const ladder = ref(false);
 
 // The streak titles (streaks.ts): the longest run of wins and of losses, from three games on, with
 // the number in the words of the language.
@@ -168,14 +171,18 @@ async function logOut() {
 
     <section class="part" aria-labelledby="profile-rank">
       <h2 id="profile-rank">{{ t('ranks.title') }}</h2>
-      <p class="rank-line">
-        <span class="rank">{{ t(`ranks.names.${rank}`) }}</span>
-        <span class="num">{{ t('ranks.points', { points: summary.points }) }}</span>
-      </p>
-      <p class="hint">
-        {{ next ? t('ranks.next', { points: next.points, rank: t(`ranks.names.${next.rank}`) }) : t('ranks.top') }}
-      </p>
+      <button type="button" class="rank-button" aria-haspopup="dialog" @click="ladder = true">
+        <span class="rank-line">
+          <span class="rank">{{ t(`ranks.names.${rank}`) }}</span>
+          <span class="num">{{ t('ranks.points', { points: summary.points }) }}</span>
+        </span>
+        <span class="hint">
+          {{ next ? t('ranks.next', { points: next.points, rank: t(`ranks.names.${next.rank}`) }) : t('ranks.top') }}
+        </span>
+        <span class="open">{{ t('ranks.ladder.open') }}</span>
+      </button>
       <p class="hint">{{ t('ranks.note') }}</p>
+      <RankLadder :open="ladder" :rank="rank" :points="summary.points" @close="ladder = false" />
     </section>
 
     <section
@@ -312,11 +319,42 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+/* The rank is a sticker that opens the ladder: pressing it moves it by its shift and drops the
+   shadow, as a button. */
+.rank-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rank-button:active {
+  transform: translate(var(--shift-1), var(--shift-1));
+  box-shadow: none;
+}
+
 .rank-line {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1) var(--space-3);
+}
+
+.open {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-black);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
 }
 
 .rank {
