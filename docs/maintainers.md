@@ -13,10 +13,12 @@ How `main` is protected on GitHub, how the lists of thanks go to it, and the tok
 `protect-main`, with **Repository admin** on the bypass list, **Always allow**, for the [lists of thanks](#lists-of-thanks):
 
 - Require a pull request before merging: required approvals **1**, dismiss stale approvals when new commits are pushed, require review from Code Owners, require approval of the most recent reviewable push, require conversation resolution, allowed merge method **Squash** only.
-- Require status checks to pass: `Commits and version`, `Script tests` and `Forbidden name` from `conventions.yml`; `README sync` from `docs.yml`; `Lint and types`, `Tests`, `Lowest Node`, `Word lists`, `End-to-end` (summing up the per-browser jobs) and `Build` from `ci.yml`.
+- Require status checks to pass: `Checks` and `End-to-end` (summing up the per-browser jobs) from `ci.yml`; `Commits and version` and `Forbidden name` from `conventions.yml`.
 - Require branches to be up to date before merging, so that `Commits and version` reruns after every merge and two PRs can't land with the same version.
 
 A bypass lets its actors past every rule of its ruleset, so the two rules that nobody may get past are in a ruleset without one.
+
+A PR that renames or removes a required check needs the list changed right before it merges: a name that no job reports any more keeps every PR waiting. For the PR that brought `Lint and types`, `Tests`, `Lowest Node`, `Build`, `Word lists` and `README sync` together in `Checks`: in `protect-main`, under **Require status checks to pass**, remove those six, **Add checks** `Checks`, and **Save changes**; then merge it. A PR from before it gets `Checks` once it is brought up to date with `main`, which the ruleset asks for anyway.
 
 ## Maintainers
 
@@ -51,7 +53,7 @@ A maintainer with the Admin role may commit a change to nothing but `ACKNOWLEDGM
 2. To check a change first, make it in a checkout of `main` and run `npx vitest run server/src/thanks.test.ts`, which names each line that breaks the rules ([development.md](development.md#acknowledgments)).
 3. On GitHub, open the file on `main`, edit it, and **Commit changes...** with the message `docs: <summary>`, such as `docs: thank a sponsor`: in English, with no version or `(#N)`. Choose **Commit directly to the `main` branch** and tick the box that bypasses the rules. The local `pre-push` hook refuses every push to `main`, so these commits are made on GitHub.
 
-A list that breaks the rules doesn't stop the server: a copy in `CONTENT_DIR` that breaks them leaves the one that the build bundled on the home page, and the log says why (`thanks_list_skipped`). The build takes the lists from `main` as they are, though: on `main`, the `Tests` and `Lowest Node` checks fail, and until another commit fixes the list, a build from `main` shows it without the entries that break the rules. Any other commit without ` (#N)`, of another file, of another type or with a version, fails `Landed commits and release`. The check reads only the title, so a commit that skipped its PR shows at once unless its title ends in ` (#N)` like a squash merge's. The bypass also puts a box on the merge form of every PR, for admins, that merges without the approval and the checks: never tick it; the bypass is for the lists alone.
+A list that breaks the rules doesn't stop the server: a copy in `CONTENT_DIR` that breaks them leaves the one that the build bundled on the home page, and the log says why (`thanks_list_skipped`). The build takes the lists from `main` as they are, though: on `main`, the `Checks` job fails, and until another commit fixes the list, a build from `main` shows it without the entries that break the rules. Any other commit without ` (#N)`, of another file, of another type or with a version, fails `Landed commits and release`. The check reads only the title, so a commit that skipped its PR shows at once unless its title ends in ` (#N)` like a squash merge's. The bypass also puts a box on the merge form of every PR, for admins, that merges without the approval and the checks: never tick it; the bypass is for the lists alone.
 
 ## Sponsors
 

@@ -1,9 +1,10 @@
-# Lints, type-checks and tests the app, on Node 24 and on the lowest Node that package.json
-# allows, checks the word lists, plays it end to end in real browsers, and builds it and checks
-# that the build serves it. Each job's name is a required status check, except the browser jobs,
-# which report through `End-to-end`; see docs/maintainers.md. There are no `paths:` filters on
-# purpose: a required check that a filter skips stays pending and blocks the merge. A PR that
-# changes only docs skips the browsers inside their jobs instead, which still pass.
+# Checks the app on Node 24, in one job, `Checks`, one step after another and the quickest
+# first: that the two READMEs are in sync, the word lists, lint, types and the tests, then the
+# build, as for production, and that it serves the app. Beside it, the browser jobs play the app
+# end to end, reporting through `End-to-end`. `Checks` and `End-to-end` are required status checks;
+# see docs/maintainers.md. There are no `paths:` filters on purpose: a required check that a filter
+# skips stays pending and blocks the merge. A PR that changes only docs skips the browsers inside
+# their jobs instead, which still pass.
 
 name: CI
 
@@ -20,8 +21,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  lint:
-    name: Lint and types
+  checks:
+    # Everything that needs no browser. A step that fails stops the job.
+    name: Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -30,45 +32,88 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: README.md and README.zh-CN.md are in sync
+        run: node scripts/check-readme-sync.mjs
+      - name: The word lists
+        run: node scripts/check-words.mjs
       - run: npm run lint
       - run: npm run typecheck
-
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
       - run: npm test
-
-  lowest-node:
-    # The lowest version that `engines` in package.json allows. `npm ci` checks that every
-    # dependency takes it, and the tests that node:sqlite works on it, backup() included.
-    name: Lowest Node
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22.22.2
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-
-  words:
-    name: Word lists
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - run: node scripts/check-words.mjs
+      - name: Build, as for production
+        env:
+          SHA: ${{ github.sha }}
+        run: APP_VERSION="${SHA::7}" npm run build
+      - name: The build serves the app
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          # Production needs no node_modules, so run the build from a copy that has none.
+          app="$RUNNER_TEMP/app"
+          data="$RUNNER_TEMP/data"
+          mkdir -p "$app/server" "$app/client" "$data"
+          cp -r server/dist "$app/server/"
+          cp -r client/dist "$app/client/"
+          cp -r words "$app/"
+          DATA_DIR="$data" node "$app/server/dist/index.cjs" > "$RUNNER_TEMP/server.log" 2>&1 &
+          server=$!
+          # Print the server's log however this step ends: a failure is hard to explain without it.
+          # A server that has already stopped can't be killed, so that must not stop the trap.
+          trap 'kill "$server" 2>/dev/null || true; cat "$RUNNER_TEMP/server.log"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "The server did not answer /healthz within 30 seconds." >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          echo
+          curl --fail --silent http://127.0.0.1:3000/healthz | grep -q "\"version\":\"${SHA::7}\""
+          curl --fail --silent http://127.0.0.1:3000/ | grep -q '<div id="app">'
+          curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
+          # The lists of thanks come with the bundle, which has no copy of the repository beside it.
+          for list in acknowledgments sponsors; do
+            curl --fail --silent "http://127.0.0.1:3000/api/$list" | grep -q '^{"ok":true,"sections":\['
+          done
+          # The server sends the compressed copies that the build wrote.
+          curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'
+          # The bundle opened its database in DATA_DIR, and every line of its log is JSON.
+          test -f "$data/reviewer2.db"
+          grep -q '"event":"database_opened","storage":"file"' "$RUNNER_TEMP/server.log"
+          node -e 'for (const line of require("fs").readFileSync(process.argv[1], "utf8").split("\n").filter(Boolean)) JSON.parse(line)' "$RUNNER_TEMP/server.log"
+      - name: The mailer and the operator's command run from the build
+        run: |
+          # Without node_modules too. The mailer prints the mail instead of sending it.
+          app="$RUNNER_TEMP/tools"
+          mkdir -p "$app/server" "$app/mailer"
+          cp -r server/dist "$app/server/"
+          cp -r mailer/dist "$app/mailer/"
+          socket="$RUNNER_TEMP/mailer.sock"
+          MAILER_TRANSPORT=print MAILER_SOCKET="$socket" node "$app/mailer/dist/mailer.cjs" > "$RUNNER_TEMP/mailer.log" 2>&1 &
+          mailer=$!
+          trap 'kill "$mailer" 2>/dev/null || true; cat "$RUNNER_TEMP/mailer.log"' EXIT
+          for attempt in $(seq 1 30); do
+            if [ -S "$socket" ]; then break; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "The mailer did not open its socket within 30 seconds." >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          node -e '
+            const socket = require("net").connect(process.argv[1], () =>
+              socket.write(JSON.stringify({ v: 1, kind: "reset", to: "ann@example.com", token: "T".repeat(43), language: "en" }) + "\n"));
+            let answer = "";
+            socket.on("data", (data) => (answer += data));
+            socket.on("close", () => { if (answer.trim() !== "{\"ok\":true}") { console.error(answer); process.exit(1); } });
+          ' "$socket"
+          grep -q '"event":"mail_sent","kind":"reset"' "$RUNNER_TEMP/mailer.log"
+          # The operator's command loads, and says how it is used.
+          status=0
+          node "$app/server/dist/admin.cjs" > "$RUNNER_TEMP/admin.log" 2>&1 || status=$?
+          test "$status" -eq 2
+          grep -q '^usage: admin.cjs <command>, one of$' "$RUNNER_TEMP/admin.log"
+          grep -q '^  avatar remove <username> \[--ban\]$' "$RUNNER_TEMP/admin.log"
 
   e2e-browser:
     # Real browsers against the production build. Each project's tests are split over jobs side
@@ -195,89 +240,3 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: test "${{ needs.e2e-browser.result }}" = success
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - name: Build, as for production
-        env:
-          SHA: ${{ github.sha }}
-        run: APP_VERSION="${SHA::7}" npm run build
-      - name: The build serves the app
-        env:
-          SHA: ${{ github.sha }}
-        run: |
-          # Production needs no node_modules, so run the build from a copy that has none.
-          app="$RUNNER_TEMP/app"
-          data="$RUNNER_TEMP/data"
-          mkdir -p "$app/server" "$app/client" "$data"
-          cp -r server/dist "$app/server/"
-          cp -r client/dist "$app/client/"
-          cp -r words "$app/"
-          DATA_DIR="$data" node "$app/server/dist/index.cjs" > "$RUNNER_TEMP/server.log" 2>&1 &
-          server=$!
-          # Print the server's log however this step ends: a failure is hard to explain without it.
-          # A server that has already stopped can't be killed, so that must not stop the trap.
-          trap 'kill "$server" 2>/dev/null || true; cat "$RUNNER_TEMP/server.log"' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
-            if [ "$attempt" -eq 30 ]; then
-              echo "The server did not answer /healthz within 30 seconds." >&2
-              exit 1
-            fi
-            sleep 1
-          done
-          echo
-          curl --fail --silent http://127.0.0.1:3000/healthz | grep -q "\"version\":\"${SHA::7}\""
-          curl --fail --silent http://127.0.0.1:3000/ | grep -q '<div id="app">'
-          curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
-          # The lists of thanks come with the bundle, which has no copy of the repository beside it.
-          for list in acknowledgments sponsors; do
-            curl --fail --silent "http://127.0.0.1:3000/api/$list" | grep -q '^{"ok":true,"sections":\['
-          done
-          # The server sends the compressed copies that the build wrote.
-          curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'
-          # The bundle opened its database in DATA_DIR, and every line of its log is JSON.
-          test -f "$data/reviewer2.db"
-          grep -q '"event":"database_opened","storage":"file"' "$RUNNER_TEMP/server.log"
-          node -e 'for (const line of require("fs").readFileSync(process.argv[1], "utf8").split("\n").filter(Boolean)) JSON.parse(line)' "$RUNNER_TEMP/server.log"
-      - name: The mailer and the operator's command run from the build
-        run: |
-          # Without node_modules too. The mailer prints the mail instead of sending it.
-          app="$RUNNER_TEMP/tools"
-          mkdir -p "$app/server" "$app/mailer"
-          cp -r server/dist "$app/server/"
-          cp -r mailer/dist "$app/mailer/"
-          socket="$RUNNER_TEMP/mailer.sock"
-          MAILER_TRANSPORT=print MAILER_SOCKET="$socket" node "$app/mailer/dist/mailer.cjs" > "$RUNNER_TEMP/mailer.log" 2>&1 &
-          mailer=$!
-          trap 'kill "$mailer" 2>/dev/null || true; cat "$RUNNER_TEMP/mailer.log"' EXIT
-          for attempt in $(seq 1 30); do
-            if [ -S "$socket" ]; then break; fi
-            if [ "$attempt" -eq 30 ]; then
-              echo "The mailer did not open its socket within 30 seconds." >&2
-              exit 1
-            fi
-            sleep 1
-          done
-          node -e '
-            const socket = require("net").connect(process.argv[1], () =>
-              socket.write(JSON.stringify({ v: 1, kind: "reset", to: "ann@example.com", token: "T".repeat(43), language: "en" }) + "\n"));
-            let answer = "";
-            socket.on("data", (data) => (answer += data));
-            socket.on("close", () => { if (answer.trim() !== "{\"ok\":true}") { console.error(answer); process.exit(1); } });
-          ' "$socket"
-          grep -q '"event":"mail_sent","kind":"reset"' "$RUNNER_TEMP/mailer.log"
-          # The operator's command loads, and says how it is used.
-          status=0
-          node "$app/server/dist/admin.cjs" > "$RUNNER_TEMP/admin.log" 2>&1 || status=$?
-          test "$status" -eq 2
-          grep -q '^usage: admin.cjs <command>, one of$' "$RUNNER_TEMP/admin.log"
-          grep -q '^  avatar remove <username> \[--ban\]$' "$RUNNER_TEMP/admin.log"
