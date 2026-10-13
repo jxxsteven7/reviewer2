@@ -9,9 +9,9 @@ import { useKeywords } from './useKeywords';
 
 // The group's messages by turn, and the line a student writes under them. GroupChat.vue shows
 // this beside the board, in a panel that is open all the time, or on a phone in a sheet, which
-// throws the thread away as it closes: so the line, `draft`, and the sending are the parent's,
-// and the thread only shows and edits the one and asks for the other. Students write one line at
-// a time; PIs read but can't write, and after the game nobody can.
+// throws the thread away as it closes: so the line, `draft`, and the sending are the page's
+// (useChatLine.ts), and the thread only shows and edits the one and asks for the other. Students
+// write one line at a time; PIs read but can't write, and after the game nobody can.
 const props = defineProps<{ room: RoomView; sending: boolean }>();
 const draft = defineModel<string>('draft', { required: true });
 const emit = defineEmits<{ send: [] }>();

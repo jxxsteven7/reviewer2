@@ -35,6 +35,7 @@ import ReplayViewer from './ReplayViewer.vue';
 import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import TurnStrip from './TurnStrip.vue';
+import { useChatLine } from './useChatLine';
 import { useKeywords, type Chooser } from './useKeywords';
 
 // A game in progress, and its result. The banner that says what is going on for the viewer, the
@@ -104,12 +105,12 @@ const panel = ref<'groups' | 'log' | null>(null);
 watch(wide, () => {
   panel.value = null;
 });
-// The line a student is writing to their group, kept by the page: the chat's sheet throws its
-// thread away as it closes, and the panel beside the board gives way to the button under it as
-// the page narrows, so neither can hold it.
-const draft = ref('');
 
 const game = computed(() => data.value.game as KeywordsView);
+// The line a student is writing to their group, and its sending, kept by the page: the chat's
+// sheet throws its thread away as it closes, and the panel beside the board gives way to the
+// button under it as the page narrows, so neither can hold them.
+const { draft, sending, say } = useChatLine(game);
 const moment = computed(() => ({ gameId: game.value.gameId, turn: game.value.turn }));
 const paused = computed(() => game.value.paused);
 const myTurn = computed(() => mySeat.value?.team === game.value.team);
@@ -307,7 +308,7 @@ const chosenByOthers = computed(() =>
               </p>
               <p v-if="chosenByOthers" class="choices">{{ chosenByOthers }}</p>
             </div>
-            <GroupChat v-if="!wide" v-model:draft="draft" :room="room" />
+            <GroupChat v-if="!wide" v-model:draft="draft" :room="room" :sending="sending" @send="say" />
           </div>
           <CluePanel
             v-if="canClue"
@@ -341,7 +342,7 @@ const chosenByOthers = computed(() =>
 
       <aside class="side">
         <div class="column">
-          <GroupChat v-if="wide" v-model:draft="draft" :room="room" panel />
+          <GroupChat v-if="wide" v-model:draft="draft" :room="room" :sending="sending" panel @send="say" />
           <GameRosters v-if="wide" :room="room" />
         </div>
         <div class="column">

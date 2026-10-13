@@ -14,6 +14,7 @@ import {
 } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { computed, defineComponent, h } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { clearMemory } from '../../core/storage';
 import { seenIn } from './chat';
@@ -34,6 +35,7 @@ import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
+import { useChatLine } from './useChatLine';
 
 const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>(async () => ({ ok: true })),
@@ -140,8 +142,31 @@ describe('GroupChat', () => {
   });
   afterEach(() => clearMemory());
 
+  // The chat as the page shows it: the line and its sending are the page's (useChatLine.ts), and
+  // the panel and the button are two chats, one at a time, as on the page.
+  const chatOf = (view: RoomView) =>
+    defineComponent({
+      props: { panel: { type: Boolean, default: false } },
+      setup(props) {
+        const line = useChatLine(computed(() => (view.data as KeywordsRoomData).game ?? null));
+        return () =>
+          h(GroupChat, {
+            key: props.panel ? 'panel' : 'button',
+            room: view,
+            panel: props.panel,
+            draft: line.draft.value,
+            'onUpdate:draft': (draft: string) => (line.draft.value = draft),
+            sending: line.sending.value,
+            onSend: line.say,
+          });
+      },
+    });
+
   test("shows a student the others' new messages, by turn", async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('bob', messages) }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('bob', messages), draft: '', sending: false },
+      global: global(),
+    });
     const entry = wrapper.get('button');
     expect(entry.text()).toContain('Group chat');
     expect(entry.get('.badge').text()).toBe('2');
@@ -156,7 +181,7 @@ describe('GroupChat', () => {
   });
 
   test('lets a student send only a message that passes the check', async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
+    const wrapper = mount(chatOf(room('bob', [])), { global: global() });
     await wrapper.get('button').trigger('click');
     expect(wrapper.text()).toContain('No messages yet.');
     // The teleport stub renders the sheet anew whenever the line changes, so the input and the
@@ -180,11 +205,7 @@ describe('GroupChat', () => {
   });
 
   test('keeps the input and its focus after sending, so that a phone keeps its keyboard open', async () => {
-    const wrapper = mount(GroupChat, {
-      props: { room: room('bob', []) },
-      global: { plugins: [i18n()] },
-      attachTo: document.body,
-    });
+    const wrapper = mount(chatOf(room('bob', [])), { global: { plugins: [i18n()] }, attachTo: document.body });
     await wrapper.get('button').trigger('click');
     const input = document.body.querySelector<HTMLInputElement>('#chat-text');
     if (!input) throw new Error('no input');
@@ -207,7 +228,7 @@ describe('GroupChat', () => {
     const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
     const later = () => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve));
     send.mockImplementationOnce(later).mockImplementationOnce(later);
-    const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
+    const wrapper = mount(chatOf(room('bob', [])), { global: global() });
     await wrapper.get('button').trigger('click');
     const value = () => (wrapper.get('input').element as HTMLInputElement).value;
 
@@ -231,7 +252,7 @@ describe('GroupChat', () => {
   test('keeps a half-written line, and brings back a refused one, while the sheet is closed', async () => {
     const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
     send.mockImplementationOnce(() => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve)));
-    const wrapper = mount(GroupChat, { props: { room: room('bob', []) }, global: global() });
+    const wrapper = mount(chatOf(room('bob', [])), { global: global() });
     await wrapper.get('button').trigger('click');
     await wrapper.get('input').setValue('first');
     await wrapper.get('form').trigger('submit');
@@ -245,8 +266,33 @@ describe('GroupChat', () => {
     expect((wrapper.get('input').element as HTMLInputElement).value).toBe('first half a');
   });
 
+  test('keeps a message on its way, and brings back a refused one, as the panel gives way to the button', async () => {
+    const answers: ((reply: { ok: boolean; error?: string }) => void)[] = [];
+    send.mockImplementationOnce(() => new Promise<{ ok: boolean }>((resolve) => answers.push(resolve)));
+    const wrapper = mount(chatOf(room('bob', [])), { props: { panel: true }, global: global() });
+    await wrapper.get('.chat-panel input').setValue('first');
+    await wrapper.get('form').trigger('submit');
+    await wrapper.get('input').setValue('half a');
+    // The page narrows while the message is on its way, as a tablet turns: the panel goes, and the
+    // button and the sheet come, which the student opens. The line is there, and nothing else can
+    // be sent until the answer comes.
+    await wrapper.setProps({ panel: false });
+    expect(wrapper.find('.chat-panel').exists()).toBe(false);
+    await wrapper.get('button').trigger('click');
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('half a');
+    expect(wrapper.get('form button[type="submit"]').attributes('disabled')).toBeDefined();
+    answers[0]?.({ ok: false, error: 'offline' });
+    await flushPromises();
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('first half a');
+    expect(wrapper.get('form button[type="submit"]').attributes('disabled')).toBeUndefined();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   test('lets a PI read the chat but not write in it', async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('ann', messages) }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('ann', messages), draft: '', sending: false },
+      global: global(),
+    });
     await wrapper.get('button').trigger('click');
     expect(wrapper.findAll('.message')).toHaveLength(3);
     expect(wrapper.find('input').exists()).toBe(false);
@@ -254,19 +300,25 @@ describe('GroupChat', () => {
   });
 
   test('closes the input once the game is over', async () => {
-    const wrapper = mount(GroupChat, { props: { room: room('bob', messages, 'over') }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('bob', messages, 'over'), draft: '', sending: false },
+      global: global(),
+    });
     await wrapper.get('button').trigger('click');
     expect(wrapper.find('input').exists()).toBe(false);
     expect(wrapper.text()).toContain('The game is over');
   });
 
   test('offers nothing to someone without a chat, such as a spectator', () => {
-    const wrapper = mount(GroupChat, { props: { room: room('eve') }, global: global() });
+    const wrapper = mount(GroupChat, { props: { room: room('eve'), draft: '', sending: false }, global: global() });
     expect(wrapper.find('button').exists()).toBe(false);
   });
 
   test('stands open beside the board as a panel, where every message counts as read', () => {
-    const wrapper = mount(GroupChat, { props: { room: room('bob', messages), panel: true }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('bob', messages), panel: true, draft: '', sending: false },
+      global: global(),
+    });
     expect(wrapper.find('.open-chat').exists()).toBe(false);
     expect(wrapper.get('.chat-panel h2').text()).toBe('Chat of the Red group');
     expect(wrapper.findAll('.turn').map((turn) => turn.get('.turn-title').text())).toEqual(['Turn 1', 'Turn 2']);
@@ -277,14 +329,20 @@ describe('GroupChat', () => {
   });
 
   test('lets a PI read the panel but not write in it', () => {
-    const wrapper = mount(GroupChat, { props: { room: room('ann', messages), panel: true }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('ann', messages), panel: true, draft: '', sending: false },
+      global: global(),
+    });
     expect(wrapper.findAll('.chat-panel .message')).toHaveLength(3);
     expect(wrapper.find('input').exists()).toBe(false);
     expect(wrapper.text()).toContain('the clue is all a PI may say');
   });
 
   test('shows a spectator no panel', () => {
-    const wrapper = mount(GroupChat, { props: { room: room('eve'), panel: true }, global: global() });
+    const wrapper = mount(GroupChat, {
+      props: { room: room('eve'), panel: true, draft: '', sending: false },
+      global: global(),
+    });
     expect(wrapper.find('.chat-panel').exists()).toBe(false);
     expect(wrapper.text()).toBe('');
   });

@@ -8,8 +8,9 @@ import hyphenated from 'virtual:hyphenation';
 //
 // A word that the patterns leave whole, which they do with many a proper name and some plain
 // words ("Wikipedia", "Premise", the "Doppler" of "Doppler effect"), and a word outside the
-// library, such as one of the chair's own, gets the fallback below, word by word. Every Chinese
-// word is shown as it is.
+// library, such as one of the chair's own, gets the fallback below, word by word. Chinese
+// characters are shown as they are; a Latin word in a Chinese term, such as "Kubernetes", gets
+// the fallback too.
 export function hyphenate(term: string): string {
   // Looked up as an own property: the map is a plain object, and a chair may well call a word
   // "constructor".
