@@ -54,6 +54,9 @@ const unescapeName = (text: string): string => text.replace(/\\([!-/:-@[-`{-~])/
 const HEADING = /^## (.*)$/;
 // [name](link), where the name may hold escaped brackets.
 export const LINKED = /^\[((?:\\.|[^\\\]])+)\]\(([^\s()]+)\)$/;
+// What stands between a name and the words that follow it in an entry: an em dash, with a space on
+// each side.
+export const SEPARATOR = ' \u{2014} ';
 // What an introduction says while nobody is listed, which goes with the first entry.
 const NO_ONE = /no one yet/i;
 

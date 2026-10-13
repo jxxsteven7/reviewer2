@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { hasHan, type CardView } from '@reviewer2/shared';
+import { hasHan, type CardView, type Language } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
-import { formatList } from '../../core/i18n';
+import { formatList, HTML_LANG } from '../../core/i18n';
 import { hyphenate } from './hyphenate';
 import type { Chooser } from './useKeywords';
 
 // One card, a sticker on the table. A revealed card is filled with its color and pressed into
 // the table. A card whose color the viewer may know without its being revealed (a PI's key, or
-// the end of the game) is tinted. Every color also comes with a short text label, so that color
-// is never the only signal. The others in the group who have chosen the card hang their avatars
-// on its corner; the card's accessible name says who they are. On a big screen the cards are
-// `large`, with bigger type. A `marked` card, in a replay, is outlined. A `target` is one of the
-// cards a PI meant with a clue, numbered in the order they were marked: on the PI's board while
-// they mark them, and for everyone once the game is over.
+// the end of the game) is tinted. Every color also comes with a short label in the corner, so that
+// color is never the only signal; the accessible name says the color in full. The others in the
+// group who have chosen the card hang their avatars on its corner; the card's accessible name says
+// who they are. On a big screen the cards are `large`, with bigger type. A `marked` card, in a
+// replay, is outlined. A `target` is one of the cards a PI meant with a clue, numbered in the order
+// they were marked: on the PI's board while they mark them, and for everyone once the game is over.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -44,6 +44,9 @@ const state = computed(() => {
 });
 
 const label = computed(() => (props.card.color ? t(`game.card.${props.card.color}`) : ''));
+const tag = computed(() => (props.card.color ? t(`game.cardTag.${props.card.color}`) : ''));
+// The label is in the interface's language, whatever the words' is.
+const uiLanguage = computed(() => locale.value as Language);
 const chosenBy = computed(() =>
   formatList(
     locale.value,
@@ -83,7 +86,7 @@ const ariaLabel = computed(() =>
     @click="selectable && emit('select', index)"
   >
     <span class="word">{{ hyphenate(card.word) }}</span>
-    <span v-if="card.color" class="tag" aria-hidden="true">{{ label }}</span>
+    <span v-if="card.color" class="tag" :lang="HTML_LANG[uiLanguage]" aria-hidden="true">{{ tag }}</span>
     <span v-if="card.revealed && card.color === 'reviewer2'" class="stamp" aria-hidden="true">{{
       t('game.stamp')
     }}</span>
@@ -210,6 +213,14 @@ const ariaLabel = computed(() =>
   letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
+}
+
+/* The English labels, in capitals, are set a little smaller and tighter, to the size of the
+   Chinese ones. The label's own lang is the interface's, which the board's, the words', may
+   differ from in a replay. */
+.tag:lang(en) {
+  font-size: 9px;
+  letter-spacing: 0.02em;
 }
 
 /* Room for the label in the corner. */

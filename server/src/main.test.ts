@@ -116,7 +116,7 @@ describe('starting', () => {
     const { port } = started.server.http.address() as AddressInfo;
     expect(await (await fetch(`http://127.0.0.1:${port}${LIST_API.sponsors}`)).json()).toEqual({
       ok: true,
-      sections: [{ kind: 'github', entries: [{ name: 'octocat', link: 'https://github.com/octocat' }] }],
+      sections: [{ kind: 'github', entries: [{ name: 'octocat', link: 'https://github.com/octocat', thanks: null }] }],
     });
   });
 

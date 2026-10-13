@@ -1,4 +1,13 @@
-import { escapeName, finish, type ListFormat, type ListProblem, type ListSection, parseName, readLines } from './lists';
+import {
+  escapeName,
+  finish,
+  type ListFormat,
+  type ListProblem,
+  type ListSection,
+  parseName,
+  readLines,
+  SEPARATOR,
+} from './lists';
 
 // The acknowledgments (docs/architecture.md#acknowledgments). The list is ACKNOWLEDGMENTS.md in
 // the repository, which maintainers write by hand and the home page shows as the server reads it;
@@ -44,7 +53,6 @@ export interface AcknowledgmentCount {
   count: number;
 }
 
-const SEPARATOR = ' \u{2014} ';
 // What GitHub would not show as it is written in what someone did, which the home page shows as
 // plain text: Markdown's characters, an @mention, an HTML character reference such as &lt;, an
 // emoji code such as :tada:, and a web address, which it would link.

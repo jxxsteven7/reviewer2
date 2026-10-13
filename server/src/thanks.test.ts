@@ -66,7 +66,7 @@ describe('the lists in the repository', () => {
         const { sections, problems } = parseSponsors(written);
         expect(problems, written).toEqual([]);
         expect(sections.find(({ kind }) => kind === 'github')?.entries ?? []).toEqual(
-          usernames.map((name) => ({ name, link: `https://github.com/${name}` })),
+          usernames.map((name) => ({ name, link: `https://github.com/${name}`, thanks: null })),
         );
       }
     }
@@ -75,12 +75,14 @@ describe('the lists in the repository', () => {
 
 const BUNDLED = {
   acknowledgments: '# Acknowledgments\n\n## Data\n\n- Ann \u{2014} added words\n',
-  sponsors: `# Sponsors\n\n${SPONSORS_START}\n${SPONSORS_END}\n\n## Other ways\n\n- Bob\n`,
+  sponsors: `# Sponsors\n\n${SPONSORS_START}\n${SPONSORS_END}\n\n## Other ways\n\n- Bob \u{2014} Thanks for the fixes\n`,
 };
 const NEWER = `# Sponsors\n\n${SPONSORS_START}\n## GitHub Sponsors\n\n- [octocat](https://github.com/octocat)\n${SPONSORS_END}\n`;
 const sections = (answer: string) => (JSON.parse(answer) as { ok: true; sections: unknown }).sections;
-const bundledSponsors = [{ kind: 'other', entries: [{ name: 'Bob', link: null }] }];
-const newerSponsors = [{ kind: 'github', entries: [{ name: 'octocat', link: 'https://github.com/octocat' }] }];
+const bundledSponsors = [{ kind: 'other', entries: [{ name: 'Bob', link: null, thanks: 'Thanks for the fixes' }] }];
+const newerSponsors = [
+  { kind: 'github', entries: [{ name: 'octocat', link: 'https://github.com/octocat', thanks: null }] },
+];
 
 describe('the lists of thanks', () => {
   let dir: string;
@@ -129,7 +131,7 @@ describe('the lists of thanks', () => {
     expect(sections(lists.answer('sponsors'))).toEqual(newerSponsors);
     write(NEWER.replaceAll('octocat', 'octodog'));
     expect(sections(lists.answer('sponsors'))).toEqual([
-      { kind: 'github', entries: [{ name: 'octodog', link: 'https://github.com/octodog' }] },
+      { kind: 'github', entries: [{ name: 'octodog', link: 'https://github.com/octodog', thanks: null }] },
     ]);
     expect(logs).toHaveLength(2);
     // The other list has no file here, so it is the bundled one.

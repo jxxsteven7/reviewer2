@@ -227,6 +227,8 @@
       "choose": "Everyone picks a group and a seat in the waiting room."
     },
     "progress": "Game {game} of {games}",
+    "progressTitle": "Match progress",
+    "yourStanding": "Your place: {rank} · {points} point | Your place: {rank} · {points} points",
     "gamesPlayed": "Games played: {played} of {games}",
     "table": "Scores",
     "rank": "Place",
@@ -275,6 +277,12 @@
       "red": "Red",
       "blue": "Blue",
       "neutral": "Irrelevant",
+      "reviewer2": "R2"
+    },
+    "cardTag": {
+      "red": "Red",
+      "blue": "Blue",
+      "neutral": "N/A",
       "reviewer2": "R2"
     },
     "stamp": "Reject",
@@ -520,25 +528,25 @@
     "noLimit": "no limit"
   },
   "banner": {
-    "seat": "{group} · {role}",
-    "spectator": "Spectator",
+    "seat": "You: {group} · {role}",
+    "spectator": "You: Spectator",
     "roles": {
       "captain": "PI",
       "guesser": "Student"
     },
     "lines": {
-      "lobby": "Waiting for the chair to start the game.",
+      "lobby": "Waiting for the chair to start the game…",
       "lobbyChair": "Start the game below once both groups are ready.",
       "over": "The game is over.",
       "paused": "The game is paused.",
       "yourClue": "Your turn to give a clue!",
-      "studentsGuessing": "Your students are guessing. All you can do is watch.",
-      "piThinking": "Your PI is thinking of a clue.",
+      "studentsGuessing": "Your students are guessing. All you can do is watch…",
+      "piThinking": "Your PI is thinking of a clue…",
       "yourGuess": "Your turn to guess!",
-      "otherClue": "The other group's PI is thinking of a clue.",
-      "otherGuess": "The other group is guessing.",
-      "watchClue": "The PI of the {group} is thinking of a clue.",
-      "watchGuess": "The {group} is guessing."
+      "otherClue": "The other group's PI is thinking of a clue…",
+      "otherGuess": "The other group is guessing…",
+      "watchClue": "The PI of the {group} is thinking of a clue…",
+      "watchGuess": "The {group} is guessing…"
     },
     "tabTitle": "Your turn!"
   },

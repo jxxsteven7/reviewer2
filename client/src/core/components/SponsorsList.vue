@@ -4,10 +4,11 @@ import { useI18n } from 'vue-i18n';
 import FoldedList from './FoldedList.vue';
 
 // The sponsors at the foot of the home page (docs/architecture.md#sponsors): the sections of
-// SPONSORS.md, as the server reads it, with names alone, never an amount. A sponsor on GitHub links
-// to their profile there, and a sponsor of another way to the page they gave, if any. While nobody
-// is listed, the list asks for the first, on GitHub Sponsors or with the WeChat tip that the home
-// page offers, which `tip` opens.
+// SPONSORS.md, as the server reads it, with names, never an amount. A sponsor on GitHub links to
+// their profile there, and a sponsor of another way to the page they gave, if any. Under the name
+// comes the line of thanks that the maintainers may have written to them, as it is written, in
+// whatever language the page is in. While nobody is listed, the list asks for the first, on GitHub
+// Sponsors or with the WeChat tip that the home page offers, which `tip` opens.
 const { t } = useI18n();
 const emit = defineEmits<{ tip: [] }>();
 </script>
@@ -34,6 +35,7 @@ const emit = defineEmits<{ tip: [] }>();
         >{{ entry.name }}</a
       >
       <span v-else class="name">{{ entry.name }}</span>
+      <span v-if="entry.thanks" class="thanks">{{ entry.thanks }}</span>
     </template>
   </FoldedList>
 </template>
@@ -42,6 +44,13 @@ const emit = defineEmits<{ tip: [] }>();
 .name {
   color: var(--ink);
   font-weight: var(--weight-bold);
+}
+
+/* A line of thanks takes a line of its own, smaller and quieter than the name. */
+.thanks {
+  display: block;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
 }
 
 /* The way to the WeChat tip reads as a link in the sentence, like the one to GitHub Sponsors
