@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import {
+  clueCounts,
   defaultSettings,
   type ChatMessage,
   type ClueRecord,
@@ -16,7 +17,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { computed, defineComponent, h } from 'vue';
 import { createI18n } from 'vue-i18n';
-import { clearMemory } from '../../core/storage';
+import { clearMemory, readStored, writeStored } from '../../core/storage';
 import { seenIn } from './chat';
 import { toasts } from '../../core/toast';
 import en from '../../locales/en.json';
@@ -564,10 +565,13 @@ describe('CluePanel', () => {
     { word: JOURNAL, revealed: false, translations: ['Journal'] },
     { word: 'Data', revealed: false, translations: [DATA], forms: ['dataset'] },
   ];
+  // The numbers that the rule offers the PI's group, which has 9 cards left in the test game.
+  const countsOf = (settings: KeywordsSettings) => clueCounts(settings.guessRule, 9);
   const panel = (settings: KeywordsSettings = STANDARD, language: 'en' | 'zh' = 'en', targets: number[] = []) =>
     mount(CluePanel, {
       props: {
         game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView,
+        counts: countsOf(settings),
         settings,
         language,
         busy: false,
@@ -605,9 +609,8 @@ describe('CluePanel', () => {
     expect(wrapper.emitted('give')).toEqual([['modeling', 1]]);
   });
 
-  test("offers the numbers of the room's guess rule", () => {
+  test('offers the numbers it is given, as the rule allows them', () => {
     expect(counts(panel())).toEqual(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '\u221e']);
-    // Red has 9 cards left in the test game.
     expect(counts(panel({ ...STANDARD, guessRule: 'free' }))).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
   });
 
@@ -713,11 +716,74 @@ describe('CluePanel', () => {
     expect(wrapper.emitted('give')).toEqual([['Science', 4]]);
   });
 
+  test('holds the clue while the PI prepares it ahead of their turn, and says that only they see it', async () => {
+    const wrapper = mount(CluePanel, {
+      props: {
+        game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView,
+        counts: countsOf(STANDARD),
+        settings: STANDARD,
+        language: 'en',
+        canGive: false,
+        word: 'Sci',
+      },
+      global: global(),
+    });
+    expect(wrapper.classes()).toContain('draft');
+    expect(wrapper.get('.ahead').text()).toBe(
+      "This is the draft of your next clue. Only you see it, and you give it once it's your turn.",
+    );
+    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('Sci');
+    // The keyboard's enter key can't send the clue yet, and says so.
+    expect(wrapper.get('input').attributes('enterkeyhint')).toBe('done');
+    await wrapper.get('input').setValue('Science');
+    expect(wrapper.find('.problem').exists()).toBe(false);
+    const submit = () => wrapper.get('button[type="submit"]');
+    expect(submit().attributes('disabled')).toBeDefined();
+    await wrapper.get('form').trigger('submit');
+    expect(wrapper.emitted('give')).toBeUndefined();
+    // The word and the number picked are told to whoever keeps the draft.
+    expect(wrapper.emitted('update:word')).toEqual([['Science']]);
+    await wrapper
+      .findAll('.counts button')
+      .find((button) => button.text() === '4')
+      ?.trigger('click');
+    expect(wrapper.emitted('update:count')).toEqual([[4]]);
+    // The turn comes.
+    await wrapper.setProps({ canGive: true });
+    expect(wrapper.find('.ahead').exists()).toBe(false);
+    expect(wrapper.classes()).not.toContain('draft');
+    expect(wrapper.get('input').attributes('enterkeyhint')).toBe('send');
+    expect(submit().attributes('disabled')).toBeUndefined();
+    await wrapper.get('form').trigger('submit');
+    expect(wrapper.emitted('give')).toEqual([['Science', 4]]);
+  });
+
+  test('says which marked cards were revealed meanwhile', async () => {
+    const wrapper = mount(CluePanel, {
+      props: {
+        game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView,
+        counts: countsOf(STANDARD),
+        settings: STANDARD,
+        language: 'en',
+        gone: ['Model'],
+      },
+      global: global(),
+    });
+    expect(wrapper.get('.gone').text()).toBe('You marked “Model”, which has been revealed, so the mark is gone.');
+    await wrapper.setProps({ gone: ['Model', 'Data'] });
+    expect(wrapper.get('.gone').text()).toBe(
+      'You marked “Model” and “Data”, which have been revealed, so the marks are gone.',
+    );
+    await wrapper.setProps({ gone: [] });
+    expect(wrapper.find('.gone').exists()).toBe(false);
+  });
+
   // A Chinese room's page is in Chinese, and there a clue is one word whatever the settings.
   test('tells a Chinese room plainly that a clue has no spaces, and that English may do', async () => {
     const wrapper = mount(CluePanel, {
       props: {
         game: { ...(room('ann').data as KeywordsRoomData).game, cards: board } as KeywordsView,
+        counts: countsOf(STANDARD),
         settings: { ...STANDARD, clueLength: 4 },
         language: 'zh',
       },
@@ -1104,6 +1170,20 @@ describe('GameRosters', () => {
 });
 
 describe('KeywordsGame', () => {
+  // The draft of a clue is kept in the browser's storage, which starts every test empty.
+  const forget = () => {
+    clearMemory();
+    try {
+      localStorage.clear();
+    } catch {
+      // no storage in this test
+    }
+  };
+  beforeEach(forget);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    forget();
+  });
   const answers: (() => void)[] = [];
   // The server answers when the test says so.
   const later = () => new Promise<{ ok: boolean }>((resolve) => answers.push(() => resolve({ ok: true })));
@@ -1186,9 +1266,312 @@ describe('KeywordsGame', () => {
       count: 2,
       targets: [0, 3],
     });
-    // The next turn starts with no marks.
-    await wrapper.setProps({ room: { ...props.room, data: { ...data, game: { ...game, turn: 4 } } } });
+    // Once the server's snapshot has the clue, the marks go with it.
+    await flushPromises();
+    expect(wrapper.findAll('.target')).toHaveLength(2);
+    const record: ClueRecord = { turn: 2, team: 'red', word: 'Science', count: 2, guesses: [] };
+    await wrapper.setProps({
+      room: { ...view, data: { ...data, game: { ...game, phase: 'guess', history: [...game.history, record] } } },
+    });
     expect(wrapper.findAll('.target')).toHaveLength(0);
+  });
+
+  // The red PI's view while the blue group is on, with the key: red's cards are 0 and 3, and 2
+  // has been found. The history holds red's clue of the turn before.
+  const waiting = (changes: Partial<KeywordsView> = {}, me = 'ann', settings = STANDARD): RoomView => {
+    const view = room(me);
+    const data = view.data as KeywordsRoomData;
+    const game: KeywordsView = {
+      ...(data.game as KeywordsView),
+      team: 'blue',
+      phase: 'clue',
+      clue: null,
+      cards: [
+        { word: 'Baseline', revealed: false, color: 'red' },
+        { word: 'Model', revealed: false, color: 'blue' },
+        { word: 'Journal', revealed: true, color: 'red' },
+        { word: 'Ablation', revealed: false, color: 'red' },
+      ],
+      ...changes,
+    };
+    return { ...view, data: { ...data, settings, game } };
+  };
+  const HISTORY = ((waiting().data as KeywordsRoomData).game as KeywordsView).history;
+  const toggle = (wrapper: ReturnType<typeof mount>) => wrapper.get('button.prepare');
+  const typed = (wrapper: ReturnType<typeof mount>) =>
+    (wrapper.get('.clue-panel input').element as HTMLInputElement).value;
+  const DRAFT = 'r2.clueDraft';
+
+  test('lets a PI prepare the next clue while the other group is on, and give it when their turn comes', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    const sent = send.mock.calls.length;
+    expect(wrapper.get('.status').text()).toBe('Waiting for the PI of the Blue group to give a clue.');
+    expect(toggle(wrapper).text()).toBe('Prepare the next clue');
+    expect(toggle(wrapper).attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('.clue-panel').exists()).toBe(false);
+    // Folded away, the board takes no marks.
+    expect(card(wrapper, 0)?.attributes('aria-disabled')).toBe('true');
+
+    await toggle(wrapper).trigger('click');
+    expect(toggle(wrapper).text()).toBe('Hide the draft');
+    expect(wrapper.get('.clue-panel').classes()).toContain('draft');
+    expect(wrapper.find('.clue-panel .ahead').exists()).toBe(true);
+    expect(wrapper.get('.clue-panel button[type="submit"]').attributes('disabled')).toBeDefined();
+    await wrapper.get('.clue-panel input').setValue('Theory');
+    // Only the group's own hidden cards can be marked, as in the PI's turn.
+    expect(card(wrapper, 1)?.attributes('aria-disabled')).toBe('true');
+    await card(wrapper, 3)?.trigger('click');
+    await card(wrapper, 0)?.trigger('click');
+    expect(card(wrapper, 3)?.get('.target').text()).toBe('1');
+    expect(card(wrapper, 0)?.get('.target').text()).toBe('2');
+    expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('2');
+    // Folded away again, the button says what is ready, the marks stay in sight, and the board
+    // takes no more.
+    await toggle(wrapper).trigger('click');
+    expect(wrapper.find('.clue-panel').exists()).toBe(false);
+    expect(toggle(wrapper).text()).toBe('Keep preparing (“Theory”, 2 cards marked)');
+    expect(wrapper.findAll('.target')).toHaveLength(2);
+    expect(card(wrapper, 0)?.attributes('aria-disabled')).toBe('true');
+    // Nothing went to the server, and the draft is in the browser's storage, for this game.
+    expect(send.mock.calls.length).toBe(sent);
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: 'Theory',
+      count: null,
+      targets: [3, 0],
+    });
+
+    // The PI's turn: the panel is open with the draft in it, and the clue goes with one tap.
+    await wrapper.setProps({ room: waiting({ team: 'red' }) });
+    expect(wrapper.find('.prepare').exists()).toBe(false);
+    const panel = wrapper.get('form.clue-panel');
+    expect(panel.classes()).not.toContain('draft');
+    expect(typed(wrapper)).toBe('Theory');
+    expect(panel.get('.counts button.chosen').text()).toBe('2');
+    expect(panel.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
+    await panel.trigger('submit');
+    expect(send).toHaveBeenLastCalledWith('keywords:clue', {
+      gameId: 'g1',
+      turn: 2,
+      word: 'Theory',
+      count: 2,
+      targets: [3, 0],
+    });
+    await flushPromises();
+    // The server's snapshot has the clue, and with it the draft is gone: from the board, the
+    // panel and the storage. While the group guesses, the PI may prepare the next one, from a
+    // folded panel again.
+    const record: ClueRecord = { turn: 2, team: 'red', word: 'Theory', count: 2, guesses: [] };
+    await wrapper.setProps({
+      room: waiting({ team: 'red', phase: 'guess', clue: { word: 'Theory', count: 2 }, history: [...HISTORY, record] }),
+    });
+    expect(wrapper.findAll('.target')).toHaveLength(0);
+    expect(readStored(DRAFT)).toBeNull();
+    expect(toggle(wrapper).text()).toBe('Prepare the next clue');
+    expect(toggle(wrapper).attributes('aria-expanded')).toBe('false');
+    await toggle(wrapper).trigger('click');
+    expect(typed(wrapper)).toBe('');
+  });
+
+  test('keeps the draft while the answer to the clue is lost, until the snapshot has the clue', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: waiting({ team: 'red' }) }, global: global() });
+    await wrapper.get('.clue-panel input').setValue('Theory');
+    await card(wrapper, 3)?.trigger('click');
+    // The server took the clue, but its answer never came.
+    send.mockImplementationOnce(async () => ({ ok: false, error: 'timeout' }));
+    await wrapper.get('form.clue-panel').trigger('submit');
+    await flushPromises();
+    expect(typed(wrapper)).toBe('Theory');
+    expect(wrapper.findAll('.target')).toHaveLength(1);
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: 'Theory',
+      count: null,
+      targets: [3],
+    });
+    // The snapshot that the connection brings back says that the clue went, and the next one was
+    // given meanwhile too, so that two records came at once.
+    const mine: ClueRecord = { turn: 2, team: 'red', word: 'Theory', count: 1, guesses: [] };
+    const theirs: ClueRecord = { turn: 3, team: 'blue', word: 'Method', count: 1, guesses: [] };
+    await wrapper.setProps({ room: waiting({ turn: 3, history: [...HISTORY, mine, theirs] }) });
+    expect(wrapper.findAll('.target')).toHaveLength(0);
+    expect(toggle(wrapper).text()).toBe('Prepare the next clue');
+    expect(readStored(DRAFT)).toBeNull();
+  });
+
+  test('drops a draft read back after a reload if its clue went meanwhile', async () => {
+    // The clue went, the page was reloaded before the snapshot with it came, and the draft was
+    // last changed before red's clue in the history.
+    writeStored(DRAFT, JSON.stringify({ game: 'g1', since: 0, word: 'Science', count: null, targets: [0] }));
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    expect(toggle(wrapper).text()).toBe('Prepare the next clue');
+    expect(wrapper.findAll('.target')).toHaveLength(0);
+    expect(readStored(DRAFT)).toBeNull();
+  });
+
+  test('keeps the input, its focus and what is typed in it when the turn comes', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global(), attachTo: document.body });
+    await toggle(wrapper).trigger('click');
+    const input = document.body.querySelector<HTMLInputElement>('#clue-word');
+    if (!input) throw new Error('no input');
+    input.focus();
+    await wrapper.get('.clue-panel input').setValue('Theo');
+    expect(document.activeElement).toBe(input);
+    await wrapper.setProps({ room: waiting({ team: 'red' }) });
+    expect(wrapper.get('form.clue-panel').classes()).not.toContain('draft');
+    expect(document.body.querySelector('#clue-word')).toBe(input);
+    expect(input.value).toBe('Theo');
+    expect(document.activeElement).toBe(input);
+    wrapper.unmount();
+  });
+
+  test('folds the panel when the turn comes, and keeps the draft through a clue phase that ran out', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    await toggle(wrapper).trigger('click');
+    await wrapper.get('.clue-panel input').setValue('Theory');
+    await wrapper.setProps({ room: waiting({ team: 'red' }) });
+    expect(wrapper.find('.prepare').exists()).toBe(false);
+    // The time ran out: the record has no word, and the draft waits for the next turn, with the
+    // panel folded, so that the PI sees the other group play.
+    const timedOut: ClueRecord = { turn: 2, team: 'red', word: null, count: null, guesses: [], timedOut: true };
+    await wrapper.setProps({ room: waiting({ turn: 3, history: [...HISTORY, timedOut] }) });
+    expect(toggle(wrapper).text()).toBe('Keep preparing (“Theory”)');
+    expect(toggle(wrapper).attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('.clue-panel').exists()).toBe(false);
+  });
+
+  test('offers a PI the numbers for their own group, and takes back a number picked that the rule no longer offers', async () => {
+    const free: KeywordsSettings = { ...STANDARD, guessRule: 'free' };
+    // Red has 9 cards left and blue, which is on, 8.
+    const wrapper = mount(KeywordsGame, { props: { room: waiting({}, 'ann', free) }, global: global() });
+    await toggle(wrapper).trigger('click');
+    const numbers = () => wrapper.findAll('.clue-panel .counts button').map((button) => button.text());
+    expect(numbers()).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    await card(wrapper, 3)?.trigger('click');
+    await card(wrapper, 0)?.trigger('click');
+    await wrapper.findAll('.clue-panel .counts button').at(-1)?.trigger('click');
+    expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('9');
+    await toggle(wrapper).trigger('click');
+    expect(toggle(wrapper).text()).toBe('Keep preparing (2 cards marked, number 9)');
+    // The blue group finds one of red's cards, one the PI didn't mark: the rule now offers red one
+    // number fewer, and 9 isn't one of them, so the number follows the marks again.
+    await wrapper.setProps({ room: waiting({ remaining: { red: 8, blue: 8 } }, 'ann', free) });
+    expect(toggle(wrapper).text()).toBe('Keep preparing (2 cards marked)');
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: '',
+      count: null,
+      targets: [3, 0],
+    });
+    await wrapper.setProps({ room: waiting({ team: 'red', remaining: { red: 8, blue: 8 } }, 'ann', free) });
+    expect(numbers()).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+    expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('2');
+  });
+
+  test('takes the mark off a card that is revealed meanwhile, says so, and keeps the draft through a pause', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    await toggle(wrapper).trigger('click');
+    await card(wrapper, 3)?.trigger('click');
+    await card(wrapper, 0)?.trigger('click');
+    const cards = ((waiting().data as KeywordsRoomData).game as KeywordsView).cards;
+    const revealed = cards.map((card, index) => (index === 3 ? { ...card, revealed: true } : card));
+    await wrapper.setProps({ room: waiting({ cards: revealed }) });
+    expect(wrapper.findAll('.target')).toHaveLength(1);
+    expect(card(wrapper, 0)?.get('.target').text()).toBe('1');
+    expect(wrapper.get('.clue-panel .gone').text()).toBe(
+      'You marked “Ablation”, which has been revealed, so the mark is gone.',
+    );
+    // The number followed the marks down.
+    expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('1');
+    // A pause takes the board away, and the draft waits for it to come back.
+    await wrapper.setProps({ room: waiting({ cards: [], paused: true }) });
+    expect(wrapper.find('.prepare').exists()).toBe(false);
+    expect(wrapper.find('.clue-panel').exists()).toBe(false);
+    await wrapper.setProps({ room: waiting({ cards: revealed }) });
+    expect(wrapper.find('.clue-panel .gone').exists()).toBe(true);
+    expect(card(wrapper, 0)?.get('.target').text()).toBe('1');
+    // The next mark takes the line away.
+    await card(wrapper, 0)?.trigger('click');
+    expect(wrapper.find('.clue-panel .gone').exists()).toBe(false);
+    expect(wrapper.findAll('.target')).toHaveLength(0);
+  });
+
+  test('brings the draft back after a reload, less a card found meanwhile, and starts the next game without it', async () => {
+    writeStored(DRAFT, JSON.stringify({ game: 'g1', since: 1, word: 'Science', count: 4, targets: [0, 2] }));
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    expect(toggle(wrapper).text()).toBe('Keep preparing (“Science”, 1 card marked, number 4)');
+    expect(card(wrapper, 0)?.get('.target').text()).toBe('1');
+    await toggle(wrapper).trigger('click');
+    expect(typed(wrapper)).toBe('Science');
+    expect(wrapper.get('.clue-panel .gone').text()).toContain('“Journal”');
+    // The number the PI picked stays picked.
+    expect(wrapper.get('.clue-panel .counts button.chosen').text()).toBe('4');
+    expect(JSON.parse(readStored(DRAFT) ?? '')).toEqual({
+      game: 'g1',
+      since: 1,
+      word: 'Science',
+      count: 4,
+      targets: [0],
+    });
+    // Another game starts over, and the old draft is gone.
+    await wrapper.setProps({ room: { ...waiting({ gameId: 'g2' }), gameId: 'g2' } });
+    expect(toggle(wrapper).text()).toBe('Prepare the next clue');
+    expect(wrapper.find('.clue-panel').exists()).toBe(false);
+    expect(wrapper.findAll('.target')).toHaveLength(0);
+    expect(readStored(DRAFT)).toBeNull();
+    // A draft of another game is no draft for this one.
+    writeStored(DRAFT, JSON.stringify({ game: 'g0', since: 1, word: 'Old', count: null, targets: [3] }));
+    const other = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    expect(toggle(other).text()).toBe('Prepare the next clue');
+    expect(readStored(DRAFT)).toBeNull();
+  });
+
+  test('plays on without storage for the draft, which then lasts as long as the page', async () => {
+    const throwing = (): never => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    };
+    vi.stubGlobal('localStorage', { getItem: throwing, setItem: throwing, removeItem: throwing });
+    const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });
+    await toggle(wrapper).trigger('click');
+    await wrapper.get('.clue-panel input').setValue('Science');
+    await card(wrapper, 3)?.trigger('click');
+    await toggle(wrapper).trigger('click');
+    expect(toggle(wrapper).text()).toBe('Keep preparing (“Science”, 1 card marked)');
+    await wrapper.setProps({ room: waiting({ team: 'red' }) });
+    expect(typed(wrapper)).toBe('Science');
+    await wrapper.get('form.clue-panel').trigger('submit');
+    expect(send).toHaveBeenLastCalledWith('keywords:clue', {
+      gameId: 'g1',
+      turn: 2,
+      word: 'Science',
+      count: 1,
+      targets: [3],
+    });
+  });
+
+  test('offers the draft to a PI alone, and not once the game is over', async () => {
+    const over: Partial<KeywordsView> = { phase: 'over', result: { winner: 'blue', reason: 'found' } };
+    const prepare = (view: RoomView) =>
+      mount(KeywordsGame, { props: { room: view }, global: global() })
+        .find('.prepare')
+        .exists();
+    // The PI's draft in the browser's storage is left alone by anyone else who views the game,
+    // or one that has ended, in another tab of the same browser.
+    const stored = JSON.stringify({ game: 'g1', since: 1, word: 'Science', count: null, targets: [3] });
+    writeStored(DRAFT, stored);
+    expect(prepare(waiting({}, 'bob'))).toBe(false);
+    expect(prepare(waiting({}, 'eve'))).toBe(false);
+    expect(prepare(waiting(over, 'eve'))).toBe(false);
+    expect(prepare({ ...waiting({ gameId: 'g2' }, 'bob'), gameId: 'g2' })).toBe(false);
+    await flushPromises();
+    expect(readStored(DRAFT)).toBe(stored);
+    // The PI's own page of the game that has ended drops it.
+    expect(prepare(waiting(over))).toBe(false);
+    await flushPromises();
+    expect(readStored(DRAFT)).toBeNull();
   });
 
   test('shows both letters to a player who sat down only after the game, as to a spectator', () => {
