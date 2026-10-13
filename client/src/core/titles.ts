@@ -10,9 +10,9 @@ import {
 import { streakTitle } from './streaks';
 
 // Every title that a page shows, which a tap explains (TitleInfo.vue,
-// docs/architecture.md#titles): the titles that matches award, the streaks, the acknowledgments,
-// the author's badge, the decision letter that a group gets at the end of a game, and the titles
-// that friends hold among an account's friends. The academic rank opens its ladder instead
+// docs/architecture.md#titles): the titles that matches award and games bring, the streaks, the
+// acknowledgments, the author's badge, the decision letter that a group gets at the end of a game,
+// and the titles that friends hold among an account's friends. The academic rank opens its ladder instead
 // (RankLadder.vue). What each title is and how it is won is under titles, duos and
 // game.letter.explain in the locale files. A streak is the longest of its kind on the record,
 // `best`, as the pills on the account page and the public profile show it, or else the run that

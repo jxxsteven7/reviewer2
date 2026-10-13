@@ -13,6 +13,7 @@ import {
   type ClueCount,
   type ClueRecord,
   type EventKind,
+  type GameEvent,
   type KeywordsError,
   type KeywordsSettings,
   type Language,
@@ -244,32 +245,50 @@ export function pass(state: KeywordsState, actor: Actor, action: Moment, at: num
   return ok(endTurn(state, at));
 }
 
+// The captain whose time for the clue ran out, by player ID, and how many times they had missed the
+// deadline before, or null for one without an account, whose misses nobody counts.
+export interface Missed {
+  captain: string;
+  before: number | null;
+}
+
 // Ends the phase whose time has run out by `at`, and gives the state back as it is when none has,
 // or while the game is paused, when the clock stands still. A captain who gave no clue in time
-// loses the turn, which the record notes as a turn without a clue. Guessers who run out of time
-// end their turn, whether or not they have revealed a card, and the record notes that on the
-// turn's clue. Either way the other group's turn begins, and its time counts from now. An action
-// meant for the turn that ended is stale from then on.
-export function expire(state: KeywordsState, at: number): KeywordsState {
+// loses the turn, which the record notes as a turn without a clue, with the captain who was in the
+// seat, if any, whom `missed` names; it is asked only then. The events note the missed deadline,
+// with how many times the captain has missed one now. Guessers who run out of time end their turn,
+// whether or not they have revealed a card, and the record notes that on the turn's clue. Either
+// way the other group's turn begins, and its time counts from now. An action meant for the turn
+// that ended is stale from then on.
+export function expire(state: KeywordsState, at: number, missed: () => Missed | null = () => null): KeywordsState {
   if (state.phase === 'over' || state.pause || !state.clock || at < state.clock.ends) return state;
-  const history =
-    state.phase === 'clue'
-      ? [
-          ...state.history,
-          {
-            turn: state.turn,
-            team: state.team,
-            word: null,
-            count: null,
-            guesses: [],
-            timedOut: true as const,
-            at: at - state.startedAt,
-          },
-        ]
-      : state.history.map((record, index) =>
-          index === state.history.length - 1 ? { ...record, timedOut: true as const } : record,
-        );
-  return endTurn({ ...state, history }, at);
+  if (state.phase === 'guess') {
+    const history = state.history.map((record, index) =>
+      index === state.history.length - 1 ? { ...record, timedOut: true as const } : record,
+    );
+    return endTurn({ ...state, history }, at);
+  }
+  const blamed = missed();
+  const record: ClueRecord = {
+    turn: state.turn,
+    team: state.team,
+    word: null,
+    count: null,
+    guesses: [],
+    timedOut: true,
+    ...(blamed ? { captain: blamed.captain } : {}),
+    at: at - state.startedAt,
+  };
+  const history = [...state.history, record];
+  if (!blamed) return endTurn({ ...state, history }, at);
+  const event: GameEvent = {
+    turn: state.turn,
+    kind: 'missed',
+    team: state.team,
+    player: blamed.captain,
+    ...(blamed.before !== null ? { count: blamed.before + 1 } : {}),
+  };
+  return endTurn({ ...state, history, events: [...state.events, event].slice(-EVENTS_KEPT) }, at);
 }
 
 // A guesser writes to their group, in either team's turn. Captains can't write: the clue is all

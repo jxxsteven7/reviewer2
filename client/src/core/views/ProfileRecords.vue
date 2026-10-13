@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ACCOUNT_API, type GameRecord, type RecordsView } from '@reviewer2/shared';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
 import { request } from '../account';
+import RecordTable from '../components/RecordTable.vue';
 import TitleInfo from '../components/TitleInfo.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
@@ -13,14 +14,17 @@ import { points } from '../points';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 
-// The account's record: how many games it has finished in a seat and won, and the last 20, each
-// with its game, its date, the group and the role, and the decision letter that the group got;
-// then how many matches it finished, and the last 20 of them, each with its place, its total and
-// its title. A tap on a decision or a title says what it means (TitleInfo.vue). A record that
-// can't be fetched says so, with a way to try again. A game that the server kept to watch again
-// opens in a sheet, in the game's own replay viewer.
+// The account's record: the table of how many games it has finished in a seat and won, outside
+// matches and in them, with the matches it finished and won (RecordTable.vue); then the last 20
+// games, each with its game, its date, which game of its match it was, if it was one, the group and
+// the role, and the decision letter that the group got; then the last 20 matches, each with its
+// place, its total and its title. A tap on a decision or a title says what it means
+// (TitleInfo.vue). A record that can't be fetched says so, with a way to try again. A game that the
+// server kept to watch again opens in a sheet, in the game's own replay viewer.
 const { t, te, locale } = useI18n();
 const records = ref<RecordsView | null>(null);
+// Every game on the record, in matches or not.
+const played = computed(() => (records.value ? records.value.ordinary.games + records.value.inMatches.games : 0));
 const failed = ref<string | undefined>();
 const { busy, run } = useBusy();
 
@@ -62,14 +66,17 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
 
 <template>
   <div v-if="records" class="records">
-    <p class="summary">{{ t('account.profile.recordSummary', { games: records.games, wins: records.wins }) }}</p>
-    <p v-if="records.games === 0" class="note">{{ t('account.profile.noRecords') }}</p>
+    <RecordTable :counts="records" />
+    <p v-if="played === 0" class="note">{{ t('account.profile.noRecords') }}</p>
     <template v-else>
       <h3>{{ t('account.profile.recent') }}</h3>
       <ol class="list">
         <li v-for="(record, index) in records.recent" :key="index" class="record" :class="{ won: record.won }">
           <span class="when">{{ date(record.endedAt) }}</span>
-          <span class="game">{{ label(`home.games.${record.game}.name`, record.game) }}</span>
+          <span class="game">
+            {{ label(`home.games.${record.game}.name`, record.game) }}
+            <span v-if="record.match" class="tag">{{ t('account.profile.matchTag', record.match) }}</span>
+          </span>
           <span class="part">
             {{
               t('account.profile.recordLine', {
@@ -98,7 +105,6 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
       </ol>
     </template>
     <template v-if="records.matches.played > 0">
-      <p class="summary">{{ t('account.profile.matchSummary', { played: records.matches.played }) }}</p>
       <h3>{{ t('account.profile.recentMatches') }}</h3>
       <ol class="list">
         <li
@@ -138,10 +144,6 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.summary {
-  font-weight: var(--weight-bold);
 }
 
 .problem {
@@ -192,6 +194,18 @@ h3 {
 .game {
   grid-column: 1;
   font-weight: var(--weight-bold);
+}
+
+/* A game of a match says so, in a small tag after the game's name. */
+.tag {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border: var(--line-thin) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
 }
 
 .verdict {

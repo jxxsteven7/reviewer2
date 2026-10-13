@@ -16,7 +16,7 @@ vi.mock('./socket', () => ({ socket: mock.socket, act: mock.act }));
 vi.mock('./sound', () => ({ playSound: mock.playSound }));
 vi.mock('./room', async () => ({ room: (await import('vue')).shallowRef(null) }));
 
-import { bubbles, readyAt, sendEmote } from './emotes';
+import { bubbles, callOut, readyAt, sendEmote } from './emotes';
 import { room } from './room';
 
 const emit = (payload: object) => mock.handlers.get('room:emote')?.(payload);
@@ -61,11 +61,45 @@ describe('quick reactions', () => {
       emit({ roomId: 'room-a', playerId: 'ann', emote });
       vi.advanceTimersByTime(1000);
     }
-    expect(bubbles.map(({ emote }) => emote)).toEqual(['deadline', 'reviewer2', 'waiting']);
+    expect(bubbles.map((bubble) => ('emote' in bubble ? bubble.emote : null))).toEqual([
+      'deadline',
+      'reviewer2',
+      'waiting',
+    ]);
     vi.advanceTimersByTime(1000);
-    expect(bubbles.map(({ emote }) => emote)).toEqual(['reviewer2', 'waiting']);
+    expect(bubbles.map((bubble) => ('emote' in bubble ? bubble.emote : null))).toEqual(['reviewer2', 'waiting']);
     vi.advanceTimersByTime(2000);
     expect(bubbles).toEqual([]);
+  });
+
+  test("carry the room's calls about a player, louder and longer, with the reaction's sound", () => {
+    callOut({ name: 'Ann', avatar: '/avatars/a.webp' }, 'Ann missed the deadline (\u00d72)', 'deadline');
+    expect(bubbles).toEqual([
+      { id: expect.any(Number), name: 'Ann', avatar: '/avatars/a.webp', call: 'Ann missed the deadline (\u00d72)' },
+    ]);
+    expect(mock.playSound).toHaveBeenCalledWith('deadline');
+    vi.advanceTimersByTime(5000);
+    expect(bubbles).toHaveLength(1);
+    vi.advanceTimersByTime(1000);
+    expect(bubbles).toEqual([]);
+  });
+
+  test('keep a call while the reactions to it crowd in, until nothing but calls is left', () => {
+    callOut({ name: 'Ann' }, 'Ann missed the deadline', 'deadline');
+    for (const emote of ['deadline', 'waiting', 'reviewer2']) emit({ roomId: 'room-a', playerId: 'bob', emote });
+    expect(bubbles.map((bubble) => ('call' in bubble ? bubble.call : bubble.emote))).toEqual([
+      'Ann missed the deadline',
+      'waiting',
+      'reviewer2',
+    ]);
+    callOut({ name: 'Bob' }, 'Bob missed the deadline', 'deadline');
+    callOut({ name: 'Cat' }, 'Cat missed the deadline', 'deadline');
+    callOut({ name: 'Dan' }, 'Dan missed the deadline', 'deadline');
+    expect(bubbles.map((bubble) => ('call' in bubble ? bubble.call : bubble.emote))).toEqual([
+      'Bob missed the deadline',
+      'Cat missed the deadline',
+      'Dan missed the deadline',
+    ]);
   });
 
   test('wait ten seconds after one has gone, or as long as the server says, unless it never got there', async () => {

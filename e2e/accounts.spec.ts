@@ -91,9 +91,12 @@ test('players with accounts play a whole game with guests, and find it on their 
   const annWon = winner === 'red';
 
   await ann.goto('/account');
-  await expect(ann.locator('.records .summary')).toHaveText(
-    text.account.profile.recordSummary.replace('{games}', '1').replace('{wins}', annWon ? '1' : '0'),
-  );
+  // The game is an ordinary one, outside a match.
+  const ordinary = ann.locator('.records .record-table tr.ordinary');
+  await expect(ordinary.locator('th')).toHaveText(text.account.profile.recordTable.ordinary);
+  await expect(ordinary.locator('td')).toHaveText(['1', annWon ? '1' : '0', annWon ? '100%' : '0%']);
+  await expect(ann.locator('.records .record-table tr.inMatches td')).toHaveText(['0', '0', '\u2014']);
+  await expect(ann.locator('.records .record .tag')).toHaveCount(0);
   const record = ann.locator('.records .record');
   await expect(record).toHaveCount(1);
   await expect(record).toContainText(text.game.letter.verdicts[annWon ? 'poster' : 'reject']);

@@ -1,4 +1,4 @@
-import type { MatchRules, MatchStatus, MatchView, RoomPhase, StandingView, Title } from '@reviewer2/shared';
+import type { MatchRules, MatchStatus, MatchTitle, MatchView, RoomPhase, StandingView } from '@reviewer2/shared';
 import type { MatchScore } from './game';
 import { randomId } from './random';
 
@@ -24,7 +24,7 @@ interface Entry {
 export interface Placing {
   rank: number;
   total: number;
-  title: Title | null;
+  title: MatchTitle | null;
 }
 
 // Who a member key is in the room now, or null for someone who has left it.
@@ -41,8 +41,8 @@ export function rankings(players: readonly { key: string; total: number }[]): Ma
 // The titles of a match that has run its course. Everyone with the highest total wins the Best
 // Paper Award, and with three or more ranked players, everyone with the lowest is the game's black
 // hole. When all have the same total, nobody is awarded anything.
-export function titlesFor(players: readonly { key: string; total: number }[]): Map<string, Title> {
-  const titles = new Map<string, Title>();
+export function titlesFor(players: readonly { key: string; total: number }[]): Map<string, MatchTitle> {
+  const titles = new Map<string, MatchTitle>();
   if (players.length === 0) return titles;
   const totals = players.map(({ total }) => total);
   const best = Math.max(...totals);
@@ -81,6 +81,11 @@ export class Match {
     return this.#status;
   }
 
+  // The last game that was scored, by its ID, or null before the first.
+  get lastGameId(): string | null {
+    return this.#lastGameId;
+  }
+
   // Lists a player who plays in a game that starts, with no points if they are new.
   enter(key: string, name: string, avatar: string | null): void {
     const entry = this.#entries.get(key);
@@ -113,7 +118,7 @@ export class Match {
     this.#status = status;
     const ranked = this.ranked(present);
     const ranks = rankings(ranked);
-    const titles = status === 'over' ? titlesFor(ranked) : new Map<string, Title>();
+    const titles = status === 'over' ? titlesFor(ranked) : new Map<string, MatchTitle>();
     this.#final = new Map(
       ranked.map(({ key, total }) => [key, { rank: ranks.get(key) as number, total, title: titles.get(key) ?? null }]),
     );

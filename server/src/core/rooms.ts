@@ -1,4 +1,4 @@
-import { parseCode, type Ack, type Language, type MatchRules, type PublicRoom } from '@reviewer2/shared';
+import { parseCode, type Ack, type Language, type MatchRules, type PublicRoom, type Title } from '@reviewer2/shared';
 import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule } from './game';
@@ -45,11 +45,14 @@ export interface SweepResult {
 export class Rooms {
   readonly #rooms = new Map<string, Room>();
 
+  // `titleCount` says how many times an account has won a title, where accounts are on, for the
+  // games to tell (GameContext.titleCount).
   constructor(
     private readonly words: WordLibrary,
     private readonly rng: Rng,
     private readonly now: () => number,
     readonly limits: RoomLimits = DEFAULT_LIMITS,
+    private readonly titleCount: ((accountId: number, title: Title) => number) | null = null,
   ) {}
 
   get size(): number {
@@ -91,6 +94,7 @@ export class Rooms {
       words: this.words,
       rng: this.rng,
       now: this.now,
+      titleCount: this.titleCount,
     });
     if (options.settings !== undefined) {
       const configured = room.setSettings({ settings: options.settings });

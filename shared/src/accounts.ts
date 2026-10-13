@@ -121,8 +121,15 @@ export type AccountError = (typeof ACCOUNT_ERRORS)[number];
 export const EMAIL_STATES = ['none', 'pending', 'bound'] as const;
 export type EmailState = (typeof EMAIL_STATES)[number];
 
-// The titles that matches award (the match PR awards them; accounts keep and show them).
-export const TITLES = ['best_paper', 'black_hole'] as const;
+// The titles that an account keeps and shows (docs/architecture.md#titles), each as often as it
+// was won. A match that runs its course awards its two to the top and the bottom of its ranking
+// (MATCH_TITLES); a game brings the others to the players with accounts whose game goes on the
+// record, each time they earn one (docs/games/keywords.md#titles): a PI who gives no clue in time
+// misses the deadline, a group's first clue may make the opening record, and a group that wins
+// with its first clue has the heavenly hand.
+export const MATCH_TITLES = ['best_paper', 'black_hole'] as const;
+export type MatchTitle = (typeof MATCH_TITLES)[number];
+export const TITLES = [...MATCH_TITLES, 'missed_deadline', 'opening_record', 'heavenly_hand'] as const;
 export type Title = (typeof TITLES)[number];
 
 export interface TitleCount {
@@ -184,7 +191,7 @@ export interface ProfileView {
   streaks: BestStreaks;
   link: string | null;
   bio: string | null;
-  record: { games: number; wins: number; matches: number } | null;
+  record: RecordCounts | null;
   acknowledgments: AcknowledgmentCount[] | null;
   likes: number;
   liked: boolean;
@@ -211,7 +218,9 @@ export interface AccountState {
 // One game on an account's record, as the game module described the player's part in it. For
 // the team word guessing game, `side` is the group and `role` is captain or guesser. `replay`
 // says whether the server kept the game to watch again (docs/architecture.md#replays), which the
-// page asks for with the game's ID.
+// page asks for with the game's ID. `match` says which game of a match it was, from 1, and how many
+// games the match was to have, or is null for a game outside a match, as is every game from before
+// the records kept that.
 export interface GameRecord {
   game: string;
   gameId: string;
@@ -222,6 +231,7 @@ export interface GameRecord {
   winner: string;
   won: boolean;
   verdict: string;
+  match: { game: number; games: number } | null;
 }
 
 // A match on an account's record: when it ended, how many games it had, the place the player
@@ -233,16 +243,23 @@ export interface MatchRecord {
   rank: number;
   players: number;
   score: number;
-  title: Title | null;
+  title: MatchTitle | null;
 }
 
-export interface RecordsView {
-  games: number;
-  wins: number;
-  // The latest first.
+// How many games the account has finished and won, outside matches and in them, and how many
+// matches it has finished, and finished first in, alone or level with others
+// (docs/architecture.md#accounts).
+export interface RecordCounts {
+  ordinary: { games: number; wins: number };
+  inMatches: { games: number; wins: number };
+  matches: { played: number; won: number };
+}
+
+// The account's own record: the counts, the latest games, and the latest matches, the latest
+// first.
+export interface RecordsView extends RecordCounts {
   recent: GameRecord[];
-  // The matches that the account finished, and the latest of them, the latest first.
-  matches: { played: number; recent: MatchRecord[] };
+  matches: RecordCounts['matches'] & { recent: MatchRecord[] };
 }
 
 // How many games the record page lists.

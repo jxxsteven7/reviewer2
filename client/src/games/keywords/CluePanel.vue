@@ -9,6 +9,7 @@ import {
   type KeywordsSettings,
   type KeywordsView,
   type Language,
+  type Team,
 } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -24,8 +25,10 @@ import { formatList } from '../../core/i18n';
 //
 // The PI may mark on the board the cards the clue is meant for (`targets`, in the order marked),
 // which nobody sees until the game is over (docs/games/keywords.md#the-clue). A line at the top
-// says so, and stands out until the PI has marked a card; then it names them. The number follows
-// how many are marked, until the PI picks a number themselves.
+// asks for them, loud until the PI has marked a card: a sticker in the tint of the PI's group,
+// `team`, with the badge that a marked card wears. Then it is a quiet line that counts and names
+// them. Nothing more asks for marks: a clue may go without any. The number follows how many are
+// marked, until the PI picks a number themselves.
 //
 // The word and the number picked are models, so that the game can keep them as a draft while the
 // PI prepares the clue ahead of their turn, when `canGive` is false: the panel then says that
@@ -43,8 +46,9 @@ const props = withDefaults(
     targets?: number[];
     canGive?: boolean;
     gone?: string[];
+    team?: Team | null;
   }>(),
-  { busy: false, targets: () => [], canGive: true, gone: () => [] },
+  { busy: false, targets: () => [], canGive: true, gone: () => [], team: null },
 );
 const emit = defineEmits<{ give: [word: string, count: ClueCount] }>();
 const word = defineModel<string>('word', { default: '' });
@@ -117,8 +121,12 @@ function give() {
 <template>
   <form class="clue-panel" :class="{ draft: !canGive }" @submit.prevent="give">
     <p v-if="!canGive" class="ahead">{{ t('game.prepareNote') }}</p>
-    <p class="targets" :class="{ none: targets.length === 0 }" aria-live="polite">
-      {{ targets.length === 0 ? t('game.targetsHint') : t('game.targetsMarked', { words: marked }) }}
+    <p class="targets" :class="targets.length === 0 ? ['none', team] : null" aria-live="polite">
+      {{
+        targets.length === 0
+          ? t('game.targetsHint')
+          : t('game.targetsMarked', { count: targets.length, words: marked }, targets.length)
+      }}
     </p>
     <p v-if="gone.length > 0" class="gone" role="status">
       {{ t('game.targetGone', { words: quoted(gone) }, gone.length) }}
@@ -179,8 +187,9 @@ function give() {
   font-size: var(--text-sm);
 }
 
-/* Until a card is marked, the line stands out as a note card on the table; then it is a quiet line
-   that names the cards. */
+/* Until a card is marked, the line stands out as a sticker in the tint of the PI's group, with the
+   badge of a marked card, which is for the eye alone; then it is a quiet line that names the
+   cards. */
 .targets {
   color: var(--ink-2);
   font-size: var(--text-sm);
@@ -194,13 +203,47 @@ function give() {
 }
 
 .targets.none {
-  padding: var(--space-2) var(--space-3);
-  border: var(--line) solid var(--ink);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-card);
   background: var(--paper);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-2);
   color: var(--ink);
   font-weight: var(--weight-bold);
+}
+
+.targets.none.red {
+  background: var(--red-tint);
+}
+
+.targets.none.blue {
+  background: var(--blue-tint);
+}
+
+/* The first declaration of the pair is for the browsers that don't know the form with the
+   alternative text. */
+.targets.none::before {
+  content: '1';
+  content: '1' / '';
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: var(--line-thin) solid var(--paper);
+  border-radius: 11px;
+  background: var(--ink);
+  box-shadow: var(--shadow-1);
+  color: var(--on-ink);
+  font-family: var(--font-number);
+  font-size: 12px;
+  font-weight: var(--weight-black);
+  line-height: 1;
 }
 
 .word {

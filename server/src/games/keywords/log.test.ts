@@ -69,6 +69,7 @@ describe('the log of the team word guessing game', () => {
       nameOf: (id) => id,
       isOnline: () => true,
       playerIds: () => Object.keys(keys),
+      titleCount: () => null,
     };
     let data = keywordsGame.create('en');
     for (const id of Object.keys(keys)) data = keywordsGame.join(data, ctx, id, false);

@@ -36,7 +36,7 @@ describe('academic ranks', () => {
     expect(rankFor(10 ** 6)).toBe('reviewer2');
   });
 
-  test('come at the pace the comments promise: a regular player makes about 90 points a week', () => {
+  test('come at the pace the comments describe, for a player who made about 90 points a week', () => {
     const weeks = (rank: keyof typeof RANK_POINTS) => RANK_POINTS[rank] / 90;
     expect(weeks('primary') * 7).toBeCloseTo(2.3, 0);
     expect(weeks('undergraduate')).toBeCloseTo(3.3, 0);

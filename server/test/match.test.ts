@@ -81,8 +81,8 @@ async function start(chair: TestClient, everyone: TestClient[]) {
 }
 
 // The group whose turn it is finds one of its cards and then reveals Reviewer 2, which ends the game:
-// its students' group gets a point each, the one who revealed Reviewer 2 loses 3, and the other
-// group wins. Returns who did what.
+// everyone in it gets a point for the card, and Reviewer 2 costs its student 3 and its PI 5; the
+// other group wins, 3 for its student and 4 for its PI. Returns who did what.
 async function playOneTurn(everyone: TestClient[]) {
   const [someone] = everyone as [TestClient];
   const team = board(someone).team;
@@ -97,7 +97,13 @@ async function playOneTurn(everyone: TestClient[]) {
   await settle(everyone);
   await expectOk(guesser.send('keywords:reveal', { ...moment(board(guesser)), card: reviewer2 }));
   for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
-  return { team, captain, guesser, winners: everyone.filter((client) => data(client).side !== team) };
+  // What the winners got, by name, as their seats in this game say.
+  const won = Object.fromEntries(
+    everyone
+      .filter((client) => data(client).side !== team)
+      .map((client) => [nameOf(client), data(client).seats[client.me]?.role === 'captain' ? 4 : 3]),
+  );
+  return { team, captain, guesser, won };
 }
 
 const pointsOf = (client: TestClient) =>
@@ -133,13 +139,21 @@ describe('a match', () => {
     );
     const first = await playOneTurn(everyone);
     const loser = (client: TestClient) => nameOf(client);
-    expect(pointsOf(ann)).toEqual({
-      [loser(first.captain)]: 1,
-      [loser(first.guesser)]: 1 - 3,
-      ...Object.fromEntries(first.winners.map((client) => [nameOf(client), 3])),
-    });
+    expect(pointsOf(ann)).toEqual({ [loser(first.captain)]: 1 - 5, [loser(first.guesser)]: 1 - 3, ...first.won });
+    expect(Object.values(first.won).sort()).toEqual([3, 4]);
     expect(matchOf(ann)).toMatchObject({ played: 1, game: 1, status: 'on' });
-    expect(matchOf(ann).standings[0]?.detail).toEqual({ found: 0, won: true, irrelevant: 0, wrong: 0, reviewer2: 0 });
+    // The winning PI is on top.
+    expect(matchOf(ann).standings[0]?.detail).toEqual({
+      role: 'captain',
+      found: 0,
+      won: true,
+      irrelevant: 0,
+      wrong: 0,
+      reviewer2: 0,
+      bigClues: 0,
+      openingRecord: false,
+      heavenlyHand: false,
+    });
 
     // The settings stay as they were for the rest of the match.
     await expectOk(ann.send('room:again', { gameId: ann.state?.gameId }));
@@ -156,9 +170,9 @@ describe('a match', () => {
     const totals = totalsOf(ann);
     const expected: Record<string, number> = {};
     for (const game of [first, second]) {
-      expected[nameOf(game.captain)] = (expected[nameOf(game.captain)] ?? 0) + 1;
+      expected[nameOf(game.captain)] = (expected[nameOf(game.captain)] ?? 0) - 4;
       expected[nameOf(game.guesser)] = (expected[nameOf(game.guesser)] ?? 0) - 2;
-      for (const winner of game.winners) expected[nameOf(winner)] = (expected[nameOf(winner)] ?? 0) + 3;
+      for (const [name, points] of Object.entries(game.won)) expected[name] = (expected[name] ?? 0) + points;
     }
     expect(totals).toEqual(expected);
     const best = Math.max(...Object.values(totals));
@@ -178,6 +192,7 @@ describe('a match', () => {
       const standing = view.standings.find((line) => line.name === name);
       expect((await records(accounts[name])).matches).toEqual({
         played: 1,
+        won: standing?.rank === 1 ? 1 : 0,
         recent: [
           {
             game: 'keywords',
@@ -198,6 +213,13 @@ describe('a match', () => {
     // before the match and the two of the match, adds up to, whichever way each game went.
     const annsRecord = (await records(accounts.Ann)).recent.map(({ won }) => won).reverse();
     expect(annsRecord).toHaveLength(3);
+    // The games of the match are on the record as its games, apart from the game before it.
+    const anns = await records(accounts.Ann);
+    expect(anns.recent.map(({ match }) => match)).toEqual([{ game: 2, games: 2 }, { game: 1, games: 2 }, null]);
+    expect(anns).toMatchObject({
+      ordinary: { games: 1, wins: 1 },
+      inMatches: { games: 2, wins: annsRecord.slice(1).filter(Boolean).length },
+    });
     const streaks = { wins: 0, losses: 0 };
     let run = { won: true, length: 0 };
     for (const won of annsRecord) {
