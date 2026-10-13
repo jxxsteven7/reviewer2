@@ -27,7 +27,7 @@ import UiField from './UiField.vue';
 import UiSheet from './UiSheet.vue';
 
 // "Send feedback", for the footer of the home page and of a room, and its panel
-// (docs/architecture.md). The text, the contact, the name for the acknowledgments and its link are
+// (docs/architecture.md). The page may give the button a label of its own, such as one with an icon. The text, the contact, the name for the acknowledgments and its link are
 // checked by the rules that the server applies (shared/src/feedback.ts), and go as those rules
 // clean them: what the player pasted may hold characters that JSON writes out at six bytes each,
 // and the message has to stay under the server's 16 KB. The field for the link shows once a name
@@ -130,7 +130,9 @@ function submit() {
 </script>
 
 <template>
-  <UiButton variant="quiet" size="small" @click="openPanel">{{ t('feedback.open') }}</UiButton>
+  <UiButton variant="quiet" size="small" @click="openPanel">
+    <slot>{{ t('feedback.open') }}</slot>
+  </UiButton>
 
   <UiSheet :open="open" :title="t('feedback.title')" @close="open = false">
     <form class="feedback" @submit.prevent="submit">

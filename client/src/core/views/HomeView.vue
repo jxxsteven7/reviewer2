@@ -18,11 +18,13 @@ import JoinRoom from './JoinRoom.vue';
 import LanguageGate from './LanguageGate.vue';
 import PublicRooms from './PublicRooms.vue';
 
-// The home page: the way back to any room where the player still has a seat, the tagline, the
-// first game on a big sticker with the games to come below it, the ways into a room, by its number
-// or from the list of public rooms, and footnotes, which name the author with a link to their page,
-// offer a way to buy them a cola, the way to send them feedback and, folded, the acknowledgments
-// and the sponsors. On a wide screen the games stand on the right, beside the rest.
+// The home page: the way back to any room where the player still has a seat, the tagline, a line
+// on how to play with the author after it, linked to their page, or after the tagline on an
+// English phone, where its last line has room for them, the ways into a room, by its
+// number or from the list of public rooms, the first game on a big sticker with the games to come
+// below it, the acknowledgments and the sponsors, folded, and footnotes, which offer a way to buy
+// the author a cola, with a cup, and the way to send them feedback, with a light bulb, and name
+// the build's version. On a wide screen the games stand on the right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
@@ -43,8 +45,31 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
     <BackToRoom />
 
     <main>
-      <h1>{{ t('app.tagline') }}</h1>
-      <p class="intro">{{ t('home.intro') }}</p>
+      <div class="heading">
+        <h1>{{ t('app.tagline') }}</h1>
+        <i18n-t keypath="footer.byline" tag="span" class="byline beside" scope="global">
+          <template #name>
+            <a class="author" href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{
+              t('footer.author')
+            }}</a>
+          </template>
+        </i18n-t>
+      </div>
+      <p class="intro">
+        <span>{{ t('home.intro') }}</span>
+        <i18n-t keypath="footer.byline" tag="span" class="byline" scope="global">
+          <template #name>
+            <a class="author" href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{
+              t('footer.author')
+            }}</a>
+          </template>
+        </i18n-t>
+      </p>
+
+      <section class="ways">
+        <JoinRoom />
+        <PublicRooms />
+      </section>
 
       <section class="contents">
         <ol>
@@ -69,25 +94,37 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         </ol>
       </section>
 
-      <section class="ways">
-        <JoinRoom />
-        <PublicRooms />
-      </section>
+      <div class="thanks">
+        <AcknowledgmentsList />
+        <SponsorsList @tip="tipping = true" />
+      </div>
     </main>
 
     <footer class="footnotes">
-      <i18n-t keypath="footer.byline" tag="p" class="byline" scope="global">
-        <template #name>
-          <a class="author" href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{
-            t('footer.author')
-          }}</a>
-        </template>
-      </i18n-t>
-      <UiButton variant="quiet" size="small" @click="tipping = true">{{ t('footer.tip') }}</UiButton>
+      <UiButton variant="quiet" size="small" @click="tipping = true">
+        <span>
+          <svg class="icon cola" viewBox="0 0 24 24" aria-hidden="true">
+            <path class="straw" d="M12 7.5 14 2h4" />
+            <path class="cup" d="M6.5 9.5h11l-1.4 11.6a1.6 1.6 0 0 1-1.6 1.4H9.5a1.6 1.6 0 0 1-1.6-1.4Z" />
+            <path class="band" d="M7.2 14.2h9.6l-.4 3.3H7.6Z" />
+            <rect class="lid" x="5" y="6.6" width="14" height="3" rx="1.5" />
+          </svg>
+          {{ t('footer.tip') }}
+        </span>
+      </UiButton>
+      <SendFeedback page="home">
+        <span>
+          <svg class="icon bulb" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              class="glass"
+              d="M12 2.5a6.5 6.5 0 0 0-3.9 11.7c.8.6 1.4 1.5 1.4 2.5v.8h5v-.8c0-1 .6-1.9 1.4-2.5A6.5 6.5 0 0 0 12 2.5Z"
+            />
+            <path d="M9.5 20h5M10.5 22.5h3M9.4 8a3 3 0 0 1 2.1-2" />
+          </svg>
+          {{ t('footer.feedback') }}
+        </span>
+      </SendFeedback>
       <p class="version num">{{ t('footer.version', { version }) }}</p>
-      <SendFeedback page="home" />
-      <AcknowledgmentsList />
-      <SponsorsList @tip="tipping = true" />
     </footer>
 
     <UiSheet :open="tipping" :title="t('footer.tip')" @close="tipping = false">
@@ -129,9 +166,41 @@ h1 {
   line-height: 1.08;
 }
 
+/* How to play, close under the tagline, and the author after it, who goes to the start of a line
+   of their own when the sentence leaves no room. */
 .intro {
-  margin-top: calc(-1 * var(--space-3));
-  font-size: var(--text-lg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+  margin-top: calc(-1 * var(--space-4));
+  font-size: var(--text-md);
+}
+
+.byline {
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+/* On a phone the English tagline takes two lines, and the author follows its last line instead,
+   going to a line of their own if it leaves no room. */
+.beside {
+  display: none;
+}
+
+@media (max-width: 39.99rem) {
+  .home:lang(en) h1 {
+    display: inline;
+    margin-inline-end: var(--space-3);
+  }
+
+  .home:lang(en) .beside {
+    display: inline-block;
+  }
+
+  .home:lang(en) .intro .byline {
+    display: none;
+  }
 }
 
 ol {
@@ -250,10 +319,16 @@ ol {
   gap: var(--space-5);
 }
 
+/* The acknowledgments and the sponsors, a folded card each. */
+.thanks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 /* Every footnote, button or not, is 44 px high with the same room on either side, so the words
    stand the same distance apart and share a baseline. The row reaches that room past both edges
-   of the column, so the first footnote of every line starts on the column's edge, and so does the
-   list that a fold opens. */
+   of the column, so the first footnote of every line starts on the column's edge. */
 .footnotes {
   display: flex;
   flex-wrap: wrap;
@@ -264,7 +339,6 @@ ol {
   font-size: var(--text-sm);
 }
 
-.byline,
 .version {
   padding: 0 var(--space-2);
   color: var(--ink-2);
@@ -277,12 +351,38 @@ ol {
   border-width: 0;
 }
 
-.footnotes > :deep(.fold > .panel) {
-  margin-inline: var(--space-2);
+/* The footnotes' drawings, in ink, in front of their words: a cup of cola with a lid and a bent
+   straw, and a light bulb for ideas. */
+.icon {
+  width: 1.5em;
+  height: 1.5em;
+  vertical-align: -0.4em;
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
 }
 
-/* The only link among the footnotes: blue, and underlined under a pointer or the keyboard. Its
-   focus ring sits close, clear of "By" before it; a tap on a touch screen leaves no underline. */
+.bulb .glass {
+  fill: var(--paper);
+}
+
+.cola .cup {
+  fill: var(--red);
+}
+
+.cola .band {
+  fill: var(--paper);
+  stroke: none;
+}
+
+.cola .lid {
+  fill: var(--paper);
+}
+
+/* The author's name: blue, and underlined under a pointer or the keyboard. Its focus ring sits
+   close, clear of "By" before it; a tap on a touch screen leaves no underline. */
 .author {
   display: inline-block;
   color: var(--blue-deep);
@@ -353,26 +453,28 @@ ol {
   }
 }
 
-/* On a wide screen the contents stand on the right, and the rest keeps to the left. */
+/* On a wide screen the contents stand on the right, and the rest keeps to the left, wide enough for
+   the tagline on one line. */
 @media (min-width: 60rem) {
   main {
     grid-template-areas:
       'tagline contents'
       'intro contents'
-      'ways contents';
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-    grid-template-rows: auto auto 1fr;
+      'ways contents'
+      'thanks contents';
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
     gap: var(--space-5) var(--space-7);
     padding-top: var(--space-6);
   }
 
-  h1 {
+  .heading {
     grid-area: tagline;
   }
 
   .intro {
     grid-area: intro;
-    margin-top: 0;
+    margin-top: calc(-1 * var(--space-3));
   }
 
   .contents {
@@ -381,6 +483,11 @@ ol {
 
   .ways {
     grid-area: ways;
+  }
+
+  .thanks {
+    grid-area: thanks;
+    align-self: start;
   }
 }
 </style>

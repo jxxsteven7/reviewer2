@@ -3,7 +3,7 @@ import { SPONSORS_PAGE } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import FoldedList from './FoldedList.vue';
 
-// The sponsors at the foot of the home page (docs/architecture.md#sponsors): the sections of
+// The sponsors on the home page (docs/architecture.md#sponsors): the sections of
 // SPONSORS.md, as the server reads it, with names alone, never an amount. A sponsor on GitHub links
 // to their profile there, and a sponsor of another way to the page they gave, if any. While nobody
 // is listed, the list asks for the first, on GitHub Sponsors or with the WeChat tip that the home

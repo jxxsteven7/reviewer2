@@ -1,20 +1,24 @@
 <script setup lang="ts" generic="Name extends ListName">
 import { type Acknowledgment, LIST_API, type ListName, type ListSection, type Sponsor } from '@reviewer2/shared';
-import { ref, shallowRef } from 'vue';
+import { computed, onMounted, ref, shallowRef, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { request } from '../account';
 import UiButton from './UiButton.vue';
 
-// A list of thanks at the foot of the home page (docs/architecture.md#lists-of-thanks), folded
-// until it is opened, which is when the page asks the server for it, once. The server reads the
-// list from ACKNOWLEDGMENTS.md or SPONSORS.md, so it can change without a new build, and sends its
-// sections. Each section has its heading in the page's language; the component that uses this one
-// shows the entries, as plain text, and what to say while nobody is listed.
+// A list of thanks on the home page (docs/architecture.md#lists-of-thanks): a card whose title
+// says how many people the list names, folded until its title is pressed. The page asks the server
+// for the list once, when the card is shown, so that the title can count them, and again when the
+// card is opened after a failure. The server reads the list from ACKNOWLEDGMENTS.md or SPONSORS.md,
+// so it can change without a new build, and sends its sections. Each section has its heading in
+// the page's language; the component that uses this one shows the entries, as plain text, and what
+// to say while nobody is listed.
 type Entries = { acknowledgments: Acknowledgment; sponsors: Sponsor };
 
 const props = defineProps<{ name: Name }>();
 defineSlots<{ default(props: { entry: Entries[Name] }): unknown; none(): unknown }>();
 const { t } = useI18n();
+const panel = useId();
+const open = ref(false);
 
 // The sections once the server has sent them, and whether it is being asked or failed to answer.
 const sections = shallowRef<ListSection<string, Entries[Name]>[] | null>(null);
@@ -31,15 +35,34 @@ async function load(): Promise<void> {
   else failed.value = true;
 }
 
-const toggled = (event: Event) => {
-  if ((event.target as HTMLDetailsElement).open) void load();
-};
+onMounted(load);
+
+function toggle() {
+  open.value = !open.value;
+  if (open.value) void load();
+}
+
+// How many people the list names: someone listed in two sections counts once, and every anonymous
+// player counts on their own. Until the list arrives, the title is the list's name alone.
+const people = computed(() => {
+  if (sections.value === null) return null;
+  const entries = sections.value.flatMap((section) => section.entries);
+  const names = new Set(entries.flatMap(({ name }) => (name === null ? [] : [name])));
+  return names.size + entries.filter(({ name }) => name === null).length;
+});
+const title = computed(() =>
+  people.value === null ? t(`${props.name}.title`) : t(`${props.name}.counted`, { count: people.value }, people.value),
+);
 </script>
 
 <template>
-  <details :class="['fold', name]" @toggle="toggled">
-    <summary>{{ t(`${name}.title`) }}</summary>
-    <div class="panel list">
+  <section :class="['fold', name]">
+    <h2>
+      <button type="button" class="toggle" :aria-expanded="open" :aria-controls="panel" @click="toggle">
+        {{ title }}
+      </button>
+    </h2>
+    <div v-show="open" :id="panel" class="list">
       <p class="intro">{{ t(`${name}.intro`) }}</p>
       <p v-if="failed" class="note failed">
         {{ t('thanks.failed') }}
@@ -58,47 +81,63 @@ const toggled = (event: Event) => {
         </section>
       </template>
     </div>
-  </details>
+  </section>
 </template>
 
 <style scoped>
-/* The fold is a quiet button, like "Send feedback" beside it, with its own marker. Open, the
-   list takes a row of its own below the footnotes. */
-.fold[open] {
-  flex-basis: 100%;
+/* A sticker with a thin outline, quieter than the ways into a room above it. The whole title row
+   is the button, with its marker in front. */
+.fold {
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-panel);
+  background: var(--paper);
+  box-shadow: var(--shadow-1);
 }
 
-summary {
-  display: inline-flex;
+h2 {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-black);
+}
+
+.toggle {
+  display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 44px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-control);
-  font-weight: var(--weight-bold);
-  list-style: none;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: calc(var(--radius-panel) - var(--line));
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
-summary::-webkit-details-marker {
-  display: none;
-}
-
-summary::before {
+.toggle::before {
   content: '\25B8';
   font-size: var(--text-xs);
 }
 
-.fold[open] summary::before {
+.toggle[aria-expanded='true']::before {
   content: '\25BE';
+}
+
+@media (hover: hover) {
+  .toggle:hover {
+    background: var(--paper-2);
+  }
 }
 
 .list {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 34rem;
-  margin: var(--space-2) 0 var(--space-3);
+  padding: var(--space-1) var(--space-4) var(--space-4);
+  font-size: var(--text-sm);
 }
 
 .intro,

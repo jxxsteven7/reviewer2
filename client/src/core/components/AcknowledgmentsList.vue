@@ -3,7 +3,7 @@ import { contributionPieces, REPOSITORY_URL } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import FoldedList from './FoldedList.vue';
 
-// The acknowledgments at the foot of the home page (docs/architecture.md#acknowledgments): the
+// The acknowledgments on the home page (docs/architecture.md#acknowledgments): the
 // sections of ACKNOWLEDGMENTS.md, as the server reads it. The entries stay in English, as the file
 // has them. A name links to the page its player gave, which is theirs and not the site's, and a
 // number such as #12 to that issue or pull request in the repository. The file's rules are checked
