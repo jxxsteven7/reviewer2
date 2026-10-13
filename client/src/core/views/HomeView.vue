@@ -341,12 +341,13 @@ ol {
 }
 
 /* Every footnote, button or not, is 44 px high with the same room on either side, so the words
-   stand the same distance apart and share a baseline. The row reaches that room past both edges
-   of the column, so the first footnote of every line starts on the column's edge. */
+   stand the same distance apart and on one middle line, the drawings' with them. The row reaches
+   that room past both edges of the column, so the first footnote of every line starts on the
+   column's edge. */
 .footnotes {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0 var(--space-2);
   margin: var(--space-6) calc(-1 * var(--space-2)) 0;
   padding: var(--space-3) 0 max(var(--space-4), env(safe-area-inset-bottom));
