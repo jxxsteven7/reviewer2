@@ -68,7 +68,7 @@ describe('a request', () => {
     expect(await handle('{"v":1,"kind":"ping"}')).toEqual({ ok: false, error: 'model_failed' });
   });
 
-  test('is answered with a failure rather than a line the protocol doesn’t allow', async () => {
+  test("is answered with a failure rather than a line the protocol doesn't allow", async () => {
     const { handle, logged } = agent(new ScriptedModel({ clue: [clueAnswer] }, 'm'.repeat(300)));
     expect(await handle(JSON.stringify(clueRequest()))).toEqual({ ok: false, error: 'model_failed' });
     expect(logged.some(([event]) => event === 'error')).toBe(true);
@@ -118,7 +118,7 @@ describe('the queue', () => {
     expect(await handle(JSON.stringify(clueRequest()))).toMatchObject({ ok: true });
   });
 
-  test('stops waiting for the model when the request’s wait runs out', async () => {
+  test("stops waiting for the model when the request's wait runs out", async () => {
     const model = new ScriptedModel({ clue: [new Promise(() => {})] });
     const { handle } = agent(model);
     expect(await handle(JSON.stringify(clueRequest({ waitMs: 30 })))).toMatchObject({

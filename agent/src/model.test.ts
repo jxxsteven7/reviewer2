@@ -44,7 +44,7 @@ describe('the model', () => {
     expect((keyless.calls[0]?.init.headers as Record<string, string>).Authorization).toBeUndefined();
   });
 
-  test('gives no answer that isn’t a JSON object', async () => {
+  test("gives no answer that isn't a JSON object", async () => {
     const answers = [
       () => new Response('down', { status: 503 }),
       () => new Response('not json'),

@@ -17,7 +17,7 @@ const candidate = (clue: string, targets: number[]) => ({ clue, targets, count: 
 const rehearsing: Persona = { ...PERSONAS.reviewer1, rehearse: true };
 
 describe('a clue', () => {
-  test('is the first that the rules take, aimed at the group’s own cards that are still covered', async () => {
+  test("is the first that the rules take, aimed at the group's own cards that are still covered", async () => {
     const model = new ScriptedModel({
       clue: [
         {
@@ -159,7 +159,7 @@ describe('a clue', () => {
     expect(await giveClue(clueRequest(), turn(model, rehearsing))).toMatchObject({ word: 'Physics' });
   });
 
-  test('is given without its rehearsal when the model can’t rehearse it', async () => {
+  test("is given without its rehearsal when the model can't rehearse it", async () => {
     const model = new ScriptedModel({
       clue: [{ candidates: [candidate('Biology', [6, 7]), candidate('Cell', [6, 8])] }],
       guess: [new ModelError('down')],
@@ -172,7 +172,7 @@ describe('a clue', () => {
 });
 
 describe('a guess', () => {
-  test('names covered cards, each once, no more than the clue’s number, with a reason', async () => {
+  test("names covered cards, each once, no more than the clue's number, with a reason", async () => {
     const model = new ScriptedModel({
       guess: [{ picks: [3, 3, 99, 6, 7, 8], reason: '  Proteins\n and   enzymes. ' }],
     });
