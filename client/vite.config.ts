@@ -11,9 +11,10 @@ const HYPHENATION = 'virtual:hyphenation';
 
 // The English terms of the word library, hyphenated with Liang's en-us patterns (the `hyphen`
 // package, the same patterns that TeX uses) at build time, as a module that maps each term that
-// breaks to itself with soft hyphens. The page then carries a few hundred bytes of break points
-// instead of the patterns, which weigh as much as the rest of the app, and hyphenates nothing
-// at run time. Cards show the words of this library and no others (words/README.md).
+// the patterns break to itself with soft hyphens. The page then carries a few hundred bytes of
+// break points instead of the patterns, which weigh as much as the rest of the app. A word the
+// patterns leave whole, and a word outside the library, such as one of the chair's own, gets a
+// plainer fallback at run time (src/games/keywords/hyphenate.ts).
 function hyphenation(): Plugin {
   const resolved = `\0${HYPHENATION}`;
   return {

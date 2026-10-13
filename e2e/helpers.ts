@@ -1,10 +1,19 @@
 import { readFileSync } from 'node:fs';
-import { test as base, expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import {
+  test as base,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from '@playwright/test';
 import {
   checkClue,
   type CardColor,
   type KeywordsRoomData,
   type KeywordsView,
+  type MatchRules,
   type RoomView,
   type Team,
 } from '@reviewer2/shared';
@@ -307,6 +316,25 @@ export async function setSetting(page: Page, label: string, value: number): Prom
   await page.locator('.settings-form').getByLabel(label, { exact: true }).fill(String(value));
 }
 
+// Makes the room a match on the room setup, with these rules.
+export async function chooseMatch(page: Page, language: Language, rules: MatchRules): Promise<void> {
+  const text = TEXT[language];
+  await page.getByRole('radio', { name: new RegExp(`^${text.match.match}`) }).check();
+  const form = page.locator('.match-form');
+  await form.getByLabel(text.match.games).fill(String(rules.games));
+  await form.getByLabel(text.match.teamsChoice[rules.teams], { exact: true }).check();
+  await form.getByLabel(text.match.groupingChoice[rules.grouping], { exact: true }).check();
+}
+
+// Whether the page, or the project a test runs in, is a phone's: narrower than the three columns
+// of the game, where the groups, the clue log and the chat open as sheets from the bar under the
+// board (KeywordsGame.vue). A test that is for one kind of screen alone asks about its project
+// before it seats a table, so that it skips without opening a browser for each player.
+export const isPhone = (page: Page | TestInfo): boolean => {
+  const width = 'viewportSize' in page ? page.viewportSize()?.width : page.project.use.viewport?.width;
+  return (width ?? 1280) < 1024;
+};
+
 // How a newcomer takes part: to play, which the forms offer first, or only to watch.
 export interface Joining {
   watch?: boolean;
@@ -585,22 +613,30 @@ export async function endTurn(guesser: Page, language: Language): Promise<void> 
   await guesser.locator('[role=dialog]').getByRole('button', { name: text.game.endTurn }).click();
 }
 
-// Plays until the game ends: each turn, the PI gives a clue for one card and the group reveals one
-// of its own cards, then ends the turn. Returns how many turns that took: 16, because the group
-// that goes second reveals its eighth card, the last one, in its eighth turn, before the first
-// group gets to its ninth. Under the free guess rule, 1 is the only number that a group with one
-// card left may give.
-export async function playToTheEnd(table: Table): Promise<number> {
+// Plays one turn, the `turn`th of the game: the PI of the group on turn gives a clue for one card
+// and the group reveals one of its own cards, then ends the turn. Returns once the other group is
+// on turn, or the game has ended. Under the free guess rule, 1 is the only number that a group
+// with one card left may give.
+export async function playTurn(table: Table, turn: number): Promise<void> {
   const ann = table.captains.red;
-  for (let turn = 1; turn < 40; turn += 1) {
+  const team = await teamOnTurn(ann);
+  await giveClue(table.captains[team], `Hint${turn}`, 1, table.language);
+  await revealByKey(table, team);
+  const guesser = table.guessers[team];
+  if (await guesser.locator('.guess-bar').isVisible()) await endTurn(guesser, table.language);
+  // The other group's turn, or the letter that ends the game.
+  await expect(ann.locator(`.strip:not(.${team}), .letter`).first()).toBeVisible();
+}
+
+// Plays until the game ends, turn by turn (playTurn), after the `played` turns that the test played
+// already. Returns how many turns the game took in all: 16, because the group that goes second
+// reveals its eighth card, the last one, in its eighth turn, before the first group gets to its
+// ninth.
+export async function playToTheEnd(table: Table, played = 0): Promise<number> {
+  const ann = table.captains.red;
+  for (let turn = played + 1; turn < 40; turn += 1) {
     if (await ann.locator('.letter').isVisible()) return turn - 1;
-    const team = await teamOnTurn(ann);
-    await giveClue(table.captains[team], `Hint${turn}`, 1, table.language);
-    await revealByKey(table, team);
-    const guesser = table.guessers[team];
-    if (await guesser.locator('.guess-bar').isVisible()) await endTurn(guesser, table.language);
-    // The other group's turn, or the letter that ends the game.
-    await expect(ann.locator(`.strip:not(.${team}), .letter`).first()).toBeVisible();
+    await playTurn(table, turn);
   }
   throw new Error('the game did not end');
 }

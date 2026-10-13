@@ -1,7 +1,8 @@
 import type { Page } from '@playwright/test';
-import type { KeywordsRoomData, MatchRules, Seat, Team } from '@reviewer2/shared';
+import type { KeywordsRoomData, Seat, Team } from '@reviewer2/shared';
 import {
   chooseCard,
+  chooseMatch,
   createRoom,
   endTurn,
   expect,
@@ -28,16 +29,6 @@ import {
 // All tests share one server, on which a registered name is nobody else's, so every account here
 // has a part that is the test's own.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
-
-// Makes the room a match on the room setup.
-async function chooseMatch(page: Page, language: Language, rules: MatchRules): Promise<void> {
-  const text = TEXT[language];
-  await page.getByRole('radio', { name: new RegExp(`^${text.match.match}`) }).check();
-  const form = page.locator('.match-form');
-  await form.getByLabel(text.match.games).fill(String(rules.games));
-  await form.getByLabel(text.match.teamsChoice[rules.teams], { exact: true }).check();
-  await form.getByLabel(text.match.groupingChoice[rules.grouping], { exact: true }).check();
-}
 
 // Where a page's player sits, as its latest snapshot says.
 function seatOf(page: Page): Seat {
@@ -109,7 +100,8 @@ test('players with accounts and guests play a whole match, and find its title on
   await expect(ann.locator('.match-table')).toContainText(interpolate(text.match.progress, { game: '1', games: '2' }));
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
-  await expect(ann.locator('.side .match-table')).toBeVisible();
+  // During the game the table is folded under the board, to a line with the progress.
+  await expect(ann.locator('.match-fold summary')).toContainText(text.match.progressTitle);
 
   const onTurn = await playQuickly(pages, 'en', ann);
   // Between the games: everyone's points in this game, under the letters. Ann's group leads with

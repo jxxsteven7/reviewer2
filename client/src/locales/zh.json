@@ -227,6 +227,8 @@
       "choose": "大家在大厅里自己选组和位置。"
     },
     "progress": "第 {game} / {games} 局",
+    "progressTitle": "比赛进度",
+    "yourStanding": "你第 {rank} 名 · {points} 分 | 你第 {rank} 名 · {points} 分",
     "gamesPlayed": "已打完 {played} / {games} 局",
     "table": "总分表",
     "rank": "名次",
@@ -272,6 +274,12 @@
     "clock": "还剩 {seconds} 秒",
     "remaining": "{count}",
     "card": {
+      "red": "红",
+      "blue": "蓝",
+      "neutral": "无关",
+      "reviewer2": "R2"
+    },
+    "cardTag": {
       "red": "红",
       "blue": "蓝",
       "neutral": "无关",
@@ -512,25 +520,25 @@
     "noLimit": "不限时"
   },
   "banner": {
-    "seat": "{group} · {role}",
-    "spectator": "旁听",
+    "seat": "你是：{group} · {role}",
+    "spectator": "你是：旁听",
     "roles": {
       "captain": "导师",
       "guesser": "学生"
     },
     "lines": {
-      "lobby": "等待主持开始游戏。",
+      "lobby": "等待主持开始游戏……",
       "lobbyChair": "两组人齐后，就可以在下方开始游戏。",
       "over": "本局已结束。",
       "paused": "游戏已暂停。",
       "yourClue": "轮到你出题了！",
-      "studentsGuessing": "学生正在猜，你只能看着。",
-      "piThinking": "你们的导师正在出题。",
+      "studentsGuessing": "学生正在猜，你只能看着……",
+      "piThinking": "你们的导师正在出题……",
       "yourGuess": "轮到你们猜了！",
-      "otherClue": "对方正在出题。",
-      "otherGuess": "对方正在猜词。",
-      "watchClue": "{group}的导师正在出题。",
-      "watchGuess": "{group}正在猜词。"
+      "otherClue": "对方正在出题……",
+      "otherGuess": "对方正在猜词……",
+      "watchClue": "{group}的导师正在出题……",
+      "watchGuess": "{group}正在猜词……"
     },
     "tabTitle": "轮到你了！"
   },

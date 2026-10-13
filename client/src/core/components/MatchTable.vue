@@ -1,36 +1,28 @@
 <script setup lang="ts">
 import type { MatchView, RoomView } from '@reviewer2/shared';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points, signedPoints } from '../points';
-import { act } from '../socket';
-import { useBusy } from '../useBusy';
+import EndMatchButton from './EndMatchButton.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
-import UiButton from './UiButton.vue';
-import UiSheet from './UiSheet.vue';
 
 // The scores of a match, which everyone in the room sees: which game it is, and each player's
 // place, total and points in the game in focus, as the server counted them. The game describes
 // where the points came from, with `describe`, when it wants to, as between two games. The chair
-// may end the match early from here.
+// may end the match early from here, unless the game puts that button elsewhere (`endable`). In a
+// narrow column the avatar, the name and the marks keep to one line, the name cut short with an
+// ellipsis (its title has the whole), and the numbers keep their room.
 const props = withDefaults(
   defineProps<{ room: RoomView; describe?: ((detail: unknown) => string) | null; endable?: boolean }>(),
   { describe: null, endable: true },
 );
 const { t } = useI18n();
-const { busy, run } = useBusy();
 
 const match = computed(() => props.room.match as MatchView);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
 // In the waiting room the points are those of the last game; otherwise of the game on or just
 // ended.
 const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastDelta') : t('match.delta')));
-
-const ending = ref(false);
-async function end() {
-  ending.value = false;
-  await run(() => act('room:matchEnd', { matchId: match.value.id }));
-}
 </script>
 
 <template>
@@ -59,7 +51,7 @@ async function end() {
           <td class="who">
             <span class="name-line">
               <PlayerAvatar :name="line.name" :avatar="line.avatar" />
-              <span class="name">{{ line.name }}</span>
+              <span class="name" :title="line.name">{{ line.name }}</span>
               <span v-if="line.playerId !== null && line.playerId === room.me" class="mark">{{ t('room.you') }}</span>
               <span v-if="line.left" class="mark">{{ t('match.left') }}</span>
             </span>
@@ -76,28 +68,13 @@ async function end() {
       </tbody>
     </table>
     <slot />
-    <UiButton
-      v-if="endable && isChair && match.status === 'on'"
-      class="end"
-      variant="quiet"
-      size="small"
-      @click="ending = true"
-    >
-      {{ t('match.end') }}
-    </UiButton>
-
-    <UiSheet :open="ending" :title="t('match.end')" @close="ending = false">
-      <div class="confirm">
-        <p>{{ t('match.endConfirm') }}</p>
-        <UiButton variant="danger" :disabled="busy" @click="end">{{ t('match.end') }}</UiButton>
-        <UiButton variant="quiet" @click="ending = false">{{ t('lobby.manage.cancel') }}</UiButton>
-      </div>
-    </UiSheet>
+    <EndMatchButton v-if="endable && isChair && match.status === 'on'" class="end" :match-id="match.id" />
   </section>
 </template>
 
 <style scoped>
 .match-table {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -237,9 +214,35 @@ td:last-child {
   margin-top: var(--space-1);
 }
 
-.confirm {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* In a narrow column, such as the fold under the board on a narrow phone, the name column takes
+   what the numbers leave, and each line stays one line. The place column keeps room for its
+   heading in capitals, which "PLACE" needs. */
+@container (max-width: 17rem) {
+  table {
+    table-layout: fixed;
+  }
+
+  th.rank {
+    width: 3rem;
+  }
+
+  th.number {
+    width: 2.5rem;
+  }
+
+  th,
+  td {
+    padding-right: var(--space-1);
+  }
+
+  .name-line {
+    flex-wrap: nowrap;
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 </style>
