@@ -120,12 +120,23 @@ describe('KeywordsLobby', () => {
     expect(chair.find('.save').exists()).toBe(false);
   });
 
-  test('keeps the save and the start buttons off while a setting is wrong', async () => {
+  test('keeps the save and the start buttons off while a setting is wrong, and says so in the start bar', async () => {
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
-    await chair.findAll('.settings-form input[inputmode="numeric"]')[1]?.setValue('5');
+    const field = chair.findAll('.settings-form input[inputmode="numeric"]')[1];
+    const was = (field?.element as HTMLInputElement).value;
+    await field?.setValue('5');
     expect(chair.get('.save button').attributes('disabled')).toBeDefined();
     expect(chair.get('.start-bar .primary').attributes('disabled')).toBeDefined();
+    // The bar's line says why the game can't start, since the field may be scrolled out of sight
+    // under it; the desk marks the field itself.
+    const line = chair.get('.start-bar .readiness');
+    expect(line.text()).toBe("What was changed at the desk can't be saved yet.");
+    expect(line.classes()).not.toContain('ready');
+    await field?.setValue(was);
+    expect(line.text()).toBe('Everyone needed is seated.');
+    expect(line.classes()).toContain('ready');
+    expect(chair.get('.start-bar .primary').attributes('disabled')).toBeUndefined();
   });
 
   test('starts the game with the number of games the room has started', async () => {

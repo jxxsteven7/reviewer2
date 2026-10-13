@@ -30,6 +30,7 @@ import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
 import { mayManage } from '../../core/manage';
 import { act, reconnecting } from '../../core/socket';
+import { useStickyHeight } from '../../core/useStickyHeight';
 import RoleBanner from './RoleBanner.vue';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
@@ -152,12 +153,20 @@ async function start() {
 watch(isChair, (chair) => chair && loadFields(), { immediate: true });
 
 const problems = computed(() => data.value.startProblems);
-// What the start bar says on its one line: that everyone needed is seated, or the first thing still
-// missing, which the desk lists in full.
+// What the start bar says on its one line: the first thing still missing, which the desk lists in
+// full; or, with everyone seated, that what was changed at the desk can't be saved, which the desk
+// marks and which keeps the start button off too; or else that the room is ready.
+const unsavable = computed(() => unsaved.value && !savable.value);
+const ready = computed(() => problems.value.length === 0 && !unsavable.value);
 const readiness = computed(() => {
   const first = problems.value[0];
-  return first ? problemText(first) : t('lobby.ready');
+  if (first) return problemText(first);
+  return t(unsavable.value ? 'lobby.unsavable' : 'lobby.ready');
 });
+// The bar's height goes into the page's scroll padding, so that a field of the desk that takes the
+// focus comes into view below it, however many rows the bar has.
+const dock = ref<HTMLElement | null>(null);
+useStickyHeight(dock);
 
 // The chair switches the room between public and private from the tag beside the heading, as in
 // the room menu, and without asking again. Listing it takes an account: a guest is told so, with
@@ -196,19 +205,14 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
       <ShareTools :room="room" />
     </header>
 
-    <div v-if="isChair && !finished" class="start-dock" :class="{ 'below-banner': reconnecting }">
+    <div v-if="isChair && !finished" ref="dock" class="start-dock" :class="{ 'below-banner': reconnecting }">
       <div class="start-bar">
-        <p class="readiness" :class="{ ready: !problems.length }">{{ readiness }}</p>
+        <p class="readiness" :class="{ ready }">{{ readiness }}</p>
         <div class="start-actions">
           <UiButton v-if="lineup === 'free'" size="small" @click="act('room:shuffle')">{{
             t('lobby.shuffle')
           }}</UiButton>
-          <UiButton
-            variant="primary"
-            size="small"
-            :disabled="problems.length > 0 || starting || (unsaved && !savable)"
-            @click="start"
-          >
+          <UiButton variant="primary" size="small" :disabled="!ready || starting" @click="start">
             {{ t('lobby.start') }}
           </UiButton>
         </div>
@@ -468,8 +472,9 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
 
 /* The chair's start bar, which stays at the top of the screen as the page scrolls, and under the
    banner while the page reconnects, as the game's clock does. Its background reaches the edges of
-   the screen and covers its own sticker's shadow, so that nothing shows through beside it; a field
-   of the desk that the page brings into view stays below it. */
+   the screen and covers its own sticker's shadow, so that nothing shows through beside it. A field
+   of the desk that the page brings into view stays below it: the bar's height, as measured
+   (useStickyHeight), and the banner's go into the page's scroll padding. */
 .start-dock {
   position: sticky;
   top: 0;
@@ -486,7 +491,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
 }
 
 :global(html:has(.start-dock)) {
-  scroll-padding-top: calc(var(--banner-height) + 8rem);
+  scroll-padding-top: calc(var(--banner-height) + var(--sticky-height, 8rem));
 }
 
 /* One line for whether the room is ready, and the buttons under it, or beside it where there is

@@ -3,6 +3,7 @@ import {
   createRoom,
   expect,
   interpolate,
+  isPhone,
   joinByLink,
   newPlayer,
   register,
@@ -109,6 +110,16 @@ test('the chair switches the room between public and private from the tag beside
   const bob = await newPlayer(browser, 'en');
   await joinByLink(bob, url, 'Bob', 'en');
 
+  // Eve, on the home page, finds the room among the public rooms once it is listed, and no more
+  // once it is private again; the list is asked for afresh each time.
+  const eve = await newPlayer(browser, 'en');
+  await eve.goto('/');
+  await eve.getByRole('button', { name: /^English/ }).click();
+  await eve.getByRole('button', { name: text.home.publicRooms.open }).click();
+  const inList = eve.locator('.public-rooms .room', { has: eve.locator(`a[href="/room/${url.slice(-4)}"]`) });
+  await expect(eve.locator('.public-rooms .rooms, .public-rooms .hint').last()).toBeVisible();
+  await expect(inList).toHaveCount(0);
+
   const tag = ann.locator('.lobby-head').getByRole('button', { name: text.room.makePublic });
   await expect(tag.locator('.tag')).toHaveText(text.room.private);
   const height = (await tag.boundingBox())?.height ?? 0;
@@ -120,9 +131,57 @@ test('the chair switches the room between public and private from the tag beside
   await expect(bob.locator('.lobby-head .public')).toHaveText(text.room.public);
   await expect((await roomMenu(ann)).locator('.visibility')).toHaveText(text.room.listed);
   await ann.keyboard.press('Escape');
+  await eve.getByRole('button', { name: text.home.publicRooms.refresh }).click();
+  await expect(inList).toHaveCount(1);
+  await expect(inList).toContainText(text.home.publicRooms.waiting);
+
   await listed.click();
   await expect(ann.locator('.lobby-head .visibility .tag')).toHaveText(text.room.private);
   await expect(bob.locator('.lobby-head .public')).toHaveCount(0);
+  await eve.getByRole('button', { name: text.home.publicRooms.refresh }).click();
+  await expect(eve.locator('.public-rooms .rooms, .public-rooms .hint').last()).toBeVisible();
+  await expect(inList).toHaveCount(0);
+});
+
+// On a phone as narrow as 320 px the start bar's buttons stand under one another, and the bar
+// takes three rows: whatever the desk brings into view still comes below it.
+test.describe('on a 320 px phone', () => {
+  test.use({ viewport: { width: 320, height: 700 } });
+
+  test('a desk field that takes the focus comes into view below the taller start bar', async ({
+    browser,
+  }, testInfo) => {
+    test.skip(!isPhone(testInfo), 'the bar wraps only where the screen is narrow');
+    const ann = await newPlayer(browser, 'en');
+    snapshotsOf(ann);
+    const url = await createRoom(ann, 'en', 'Ann');
+    await seatRoom(browser, ann, url);
+    await expect(ann.locator('.start-bar .ready')).toBeVisible();
+    const shuffle = await box(ann, '.start-bar .button:not(.primary)');
+    const start = await box(ann, '.start-bar .primary');
+    expect(start.top, 'the start button stands under the shuffle').toBeGreaterThanOrEqual(shuffle.bottom);
+
+    // From the foot of the desk, back up through its controls with the keyboard, which brings each
+    // one that takes the focus into view: none of them ends up under the bar. Focus set from a
+    // script scrolls otherwise, and doesn't show it.
+    await scrollToFoot(ann);
+    await ann.locator('.desk input, .desk textarea, .desk button').last().focus();
+    const covered: string[] = [];
+    for (let step = 0; step < 60; step += 1) {
+      await ann.keyboard.press('Shift+Tab');
+      const focused = await ann.evaluate(() => {
+        const active = document.activeElement as HTMLElement | null;
+        const dock = document.querySelector('.start-dock');
+        if (!active?.closest('.desk') || !dock) return null;
+        const name = active.id || active.closest('label')?.textContent?.trim() || active.tagName;
+        return { name, top: active.getBoundingClientRect().top, bar: dock.getBoundingClientRect().bottom };
+      });
+      if (!focused) break;
+      if (focused.top < focused.bar)
+        covered.push(`${focused.name} at ${Math.round(focused.top)}, bar to ${Math.round(focused.bar)}`);
+    }
+    expect(covered, 'controls of the desk under the start bar').toEqual([]);
+  });
 });
 
 test('a chair without an account is told how to list the room, and comes back as the chair', async ({ browser }) => {

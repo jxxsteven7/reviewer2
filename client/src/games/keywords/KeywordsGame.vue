@@ -22,6 +22,7 @@ import { act, reconnecting } from '../../core/socket';
 import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
+import { useStickyHeight } from '../../core/useStickyHeight';
 import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
@@ -110,6 +111,10 @@ const panel = ref<'groups' | 'log' | null>(null);
 watch(wide, () => {
   panel.value = null;
 });
+// The height of the bar with the clock, taller for the chair, goes into the page's scroll padding,
+// so that a card reached with the keyboard comes into view below it.
+const clockBar = ref<HTMLElement | null>(null);
+useStickyHeight(clockBar);
 
 const game = computed(() => data.value.game as KeywordsView);
 // The line a student is writing to their group, and its sending, kept by the page: the chat's
@@ -362,7 +367,12 @@ const chosenByOthers = computed(() =>
       @again="again"
     />
     <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" clock-apart />
-    <div v-if="!game.result && (game.clock || isChair)" class="sticky-clock" :class="{ 'below-banner': reconnecting }">
+    <div
+      v-if="!game.result && (game.clock || isChair)"
+      ref="clockBar"
+      class="sticky-clock"
+      :class="{ 'below-banner': reconnecting }"
+    >
       <ClockBar v-if="game.clock" :clock="game.clock" :frozen="paused" />
       <UiButton v-if="isChair" class="pause" size="small" :disabled="busy" @click="paused ? resume() : pause()">
         {{ paused ? t('game.resume') : t('game.pause') }}
@@ -548,13 +558,14 @@ const chosenByOthers = computed(() =>
    changes, such as the clue that appears in the turn strip, WebKit's scroll anchoring moves the
    page a moment later, taking the card from under a tap that is on its way. Whatever the page
    scrolls or focuses into view, such as a card reached with the keyboard, stays below the clock
-   and the banner. The page is what scrolls, so the rules go on the root. */
+   and the banner: the clock's height, as measured (useStickyHeight), and the banner's go into the
+   scroll padding. The page is what scrolls, so the rules go on the root. */
 :global(html:has(.keywords-game)) {
   overflow-anchor: none;
 }
 
 :global(html:has(.sticky-clock)) {
-  scroll-padding-top: calc(var(--banner-height) + 3rem);
+  scroll-padding-top: calc(var(--banner-height) + var(--sticky-height, 3rem));
 }
 
 /* The bar under the board: the seat line on one row, on a phone the chat and the panel buttons on

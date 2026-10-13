@@ -174,6 +174,7 @@
     "shuffleHint": "Shuffling deals everyone seated into two even groups and picks a PI for each.",
     "start": "Start the game",
     "ready": "Everyone needed is seated.",
+    "unsavable": "What was changed at the desk can't be saved yet.",
     "waiting": "Waiting for the chair to start the game.",
     "problems": {
       "needs_captain": "The {group} needs a PI.",
