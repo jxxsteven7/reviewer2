@@ -505,10 +505,12 @@ export class Room {
   // the socket layer passes it on, and no snapshot carries it. One that comes too soon is refused
   // with how long is left, so that the tab it came from, which may not be the one that sent the
   // last, counts down the right wait. A clock that was set back counts as a wait that is over,
-  // rather than one that lasts until the clock has caught up.
+  // rather than one that lasts until the clock has caught up. One that the game holds back for now
+  // (GameModule.mayEmote) is refused with emote_not_now, and starts no wait.
   emote(id: string, emote: Emote): Ack {
     const member = this.members.get(id);
     if (!member) return fail('not_member');
+    if (this.game.mayEmote && !this.game.mayEmote(this.data, id)) return fail('emote_not_now');
     const now = this.#now();
     const since = now - (this.#emoted.get(member.key) ?? -Infinity);
     if (since >= 0 && since < EMOTE_COOLDOWN_MS)
@@ -946,8 +948,12 @@ export class Room {
     return this.phase === 'playing' && this.game.isOver(data);
   }
 
-  // Takes the game's new data, and the end of the game if the data brought it.
+  // Takes the game's new data, and the end of the game if the data brought it. What the game keeps
+  // in the log of the change itself (GameModule.logChanges) comes first.
   #take(data: unknown, over: boolean): void {
+    if (this.phase === 'playing' && this.#log && this.game.logChanges) {
+      for (const note of this.game.logChanges(this.data, data)) this.#log.add(this.#now(), null, note.type, note.data);
+    }
     this.data = data;
     if (!over) return;
     this.#note(null, 'end');

@@ -85,11 +85,17 @@ In a **private room**, the chair pastes words of their own in the waiting room (
 
 ## Talking it over
 
-Each group has two things the other never sees.
+Each group has three things the other never sees.
 
 **Choosing a card.** In their group's guess phase, a guesser may choose a card, or take it back; the group's guessers and captain see who chose which. Choices clear at every reveal and when the turn or game ends; a guesser who leaves takes theirs along.
 
+**Marking cards.** At any time during a game but a pause, in either group's turn, a guesser may mark a hidden card for their group (`keywords:mark`): as `ours`, one of the group's own, `theirs`, one of the other group's, or `r2`, maybe Reviewer 2; or clear its mark with `null`. A card has one mark for each group, the last one standing, whoever set it, and the marks don't say who did. Only the group's guessers get them (`marks`): not its captain, who sees every color, nor the other group, spectators or screens. A card's marks, both groups', go when it is revealed, and nobody gets any once the game is over.
+
 **The group chat.** A guesser may write to their group at any time during a game. Captains read but can't write: the clue is all they say. Spectators and screens see none. A message is one line of up to 200 characters, cleaned as `shared/src/text.ts` says. Each group keeps its latest 20 messages; it goes with every snapshot, lasts one game and stays readable after the end.
+
+## Quick reactions
+
+Anyone in the room may send a quick reaction ([../architecture.md](../architecture.md#messages)), except a PI, of either group, while a group's students are guessing, paused or not: a PI sees every color, and a reaction then could point the students to a card. The server refuses with `emote_not_now` (`GameModule.mayEmote`), and each member's view says whether they may react now (`mayEmote`), so that the button is greyed out meanwhile.
 
 ## Winning
 
@@ -99,19 +105,19 @@ Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a gr
 
 Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. It names the AI players who played (`agents`), by their persona. The record says who gave each clue (`captain`), the cards they meant (`targets`), which the replay marks with their numbers through the clue's turn, and when each clue and guess came, in milliseconds from the start (`at`); replays from before have none of these. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
 
-The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but the group chat, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; choosing a card is minor, and nothing else. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it.
+The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but the group chat, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; choosing a card is minor, and nothing else. Of the marks, it keeps no single one but how they stood: those of the group that reveals a card, as they were when it did, and both groups' when a turn or the game ends (`keywords:marks`, by nobody, with the group and its marks; `GameModule.logChanges`), unless a group has none. Replays carry no marks. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it.
 
 ## What each player sees
 
 | Seat | Cards | Of the groups | Can do |
 |---|---|---|---|
 | Captain | All words and colors | Their group's chat and choices | Give the clue |
-| Guesser | All words; revealed colors | The same | Choose, reveal, end the turn, write |
+| Guesser | All words; revealed colors | Their group's chat, choices and marks | Choose, mark, reveal, end the turn, write |
 | Spectator, screen | Like a guesser | Nothing | Watch |
 | While paused | No cards at all | As before | Write to the group |
 | After the game | Every color | As before | Review the game |
 
-`view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups and no `selections` key outside the group whose turn it is; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone.
+`view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups, no `selections` key outside the group whose turn it is, and no `marks` key outside a group's guessers or after the game; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone.
 
 ## Seats
 
@@ -141,6 +147,7 @@ On top of the room messages ([../architecture.md](../architecture.md#messages));
 | `keywords:seat` | `team` (`red`, `blue`, `null`), `role` (`captain`, `guesser`, `spectator`) | Any member, within the seat rules |
 | `keywords:clue` | `gameId`, `turn`, `word`, `count` (1 to the cards left under `free`; 0 to 9 or `"unlimited"` under `standard`), `targets`? (the cards meant) | The current captain |
 | `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null`) | The current guessers |
+| `keywords:mark` | `gameId`, `card` (0 to 24), `mark` (`ours`, `theirs`, `r2`, or `null`) | Either group's guessers, in any turn; at most about 10 messages a second, as for every message |
 | `keywords:reveal` | `gameId`, `turn`, `card` | The current guessers |
 | `keywords:pass` | `gameId`, `turn` | The current guessers |
 | `keywords:say` | `gameId`, `text` | Either group's guessers, in any turn |
@@ -156,7 +163,7 @@ Before a game action, the server ends a phase whose time has run out. Then:
 1. `stale`: an earlier game or turn, or no game.
 2. `game_over`.
 3. `paused`, for everything but a chat message and a withdrawal. A pause and a resumption need the chair first (`not_chair`), and then a game that isn't paused, or is (`paused`, `not_paused`).
-4. `not_your_turn`, `not_captain`, `not_guesser`; a chat message only needs a guesser.
+4. `not_your_turn`, `not_captain`, `not_guesser`; a chat message and a mark only need a guesser.
 5. `wrong_phase`, such as revealing before the clue.
 6. The content: `bad_count`, `clue_empty`, `clue_not_one_word`, `clue_too_many_words`, `clue_too_long`, `clue_on_board`, `bad_targets`; `no_such_card`, `card_revealed`; `must_guess_first`; `chat_empty`, `chat_too_long`; `no_extension`, `extension_used`.
 

@@ -4,7 +4,7 @@ import { AGENT_ERRORS, AGENT_PERSONAS, MAX_AGENT_REASON, MAX_AGENT_WAIT_MS } fro
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
 import { MAX_CUSTOM_INPUT } from './games/keywords/custom';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
-import { BOARD_SIZE, MAX_CLUE_NUMBER, ROLES, TEAMS } from './games/keywords/types';
+import { BOARD_SIZE, MARKS, MAX_CLUE_NUMBER, ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
 import { MATCH_GAMES, MATCH_GROUPINGS, MATCH_TEAMS } from './match';
 import { EMOTES, MAX_NAME_INPUT } from './protocol';
@@ -154,6 +154,9 @@ export const KEYWORDS_MESSAGES = {
   }),
   // A guesser chooses a card for the group to see, or takes the choice back with null.
   'keywords:select': z.object({ ...moment, card: z.number().int().nullable() }),
+  // A guesser marks a card for their group, or clears its mark with null. It names the game but
+  // not the turn: a group may mark cards in either group's turn.
+  'keywords:mark': z.object({ gameId, card: z.number().int(), mark: z.enum(MARKS).nullable() }),
   'keywords:reveal': z.object({ ...moment, card: z.number().int() }),
   'keywords:pass': z.object(moment),
   // A guesser writes one line to their group. It names the game but not the turn: a message is

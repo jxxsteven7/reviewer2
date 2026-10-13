@@ -21,12 +21,13 @@ import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@rev
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
 import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask, personSeated } from './agents';
-import type { GameContext, GameModule, GameUpdate, LogNote } from '../../core/game';
+import type { GameContext, GameLogNote, GameModule, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
   expire,
   extend,
   giveClue,
+  mark,
   newGame,
   pass,
   pause,
@@ -183,9 +184,11 @@ type Action<M extends KeywordsMessage> = (
 // What the log of the game keeps of each of its messages (docs/architecture.md#game-records): what
 // it said, as its schema reads it, without the game's ID, which is the log's own, and with the
 // clue's word as the record keeps it (cleanClue). Choosing a card is minor: a group's students may
-// do it again and again before they reveal one. Nothing at all is kept of a line of a group's chat.
+// do it again and again before they reveal one. Nothing at all is kept of a line of a group's chat,
+// nor of each mark, which a group sets and changes as it talks: the log keeps how a group's marks
+// stood when it acted instead (markNotes).
 function logNote(type: string, payload: unknown): LogNote | null {
-  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:say') return null;
+  if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:say' || type === 'keywords:mark') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
   if (!parsed.success) return null;
   const data: Record<string, unknown> = { ...parsed.data };
@@ -195,12 +198,39 @@ function logNote(type: string, payload: unknown): LogNote | null {
   return Object.keys(data).length > 0 ? { data, minor } : { minor };
 }
 
+// The marks of a group, as the log keeps them (docs/architecture.md#game-records): those of the
+// group that reveals a card, as they stood when it did, and those of both groups when a turn or the
+// game ends. A group without marks has nothing to note.
+const guessesIn = (game: KeywordsState) => game.history.reduce((count, record) => count + record.guesses.length, 0);
+const marksOf = (game: KeywordsState, team: Team): GameLogNote[] =>
+  game.marks[team].length > 0
+    ? [{ type: 'keywords:marks', data: { team, marks: game.marks[team].map((entry) => ({ ...entry })) } }]
+    : [];
+
+function markNotes(before: KeywordsData, after: KeywordsData): GameLogNote[] {
+  const was = before.game;
+  const now = after.game;
+  if (!was || !now || was.gameId !== now.gameId) return [];
+  const notes = guessesIn(now) > guessesIn(was) ? marksOf(was, was.team) : [];
+  if (now.turn !== was.turn || (now.phase === 'over' && was.phase !== 'over')) {
+    for (const team of TEAMS) notes.push(...marksOf(now, team));
+  }
+  return notes;
+}
+
+// A PI, of either group, sends no quick reaction while a group's students are guessing, paused or
+// not: a PI sees every color, and a reaction then could tell the students which card to reveal
+// (docs/games/keywords.md#quick-reactions).
+const mayEmote = (data: KeywordsData, playerId: string) =>
+  data.game?.phase !== 'guess' || seatOf(data.seating, playerId).role !== 'captain';
+
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
   'keywords:clue': (data, ctx, playerId, clue) =>
     act(data, playerId, (game, actor) => giveClue(game, actor, clue, ctx.now())),
   'keywords:select': (data, _ctx, playerId, choice) =>
     act(data, playerId, (game, actor) => select(game, actor, choice)),
+  'keywords:mark': (data, _ctx, playerId, marking) => act(data, playerId, (game, actor) => mark(game, actor, marking)),
   'keywords:reveal': (data, ctx, playerId, guess) =>
     act(data, playerId, (game, actor) => reveal(game, actor, guess, ctx.now())),
   'keywords:pass': (data, ctx, playerId, moment) =>
@@ -346,6 +376,8 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   },
 
   logged: logNote,
+  logChanges: markNotes,
+  mayEmote,
 
   // Everyone who has sat in a group during the game has played in it, whether or not they are
   // still there.
@@ -452,6 +484,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
         ...shared,
         side: (key !== null && (data.seating.sides.get(key) ?? fixed)) || null,
         joinsNext: key !== null && (data.match?.waiting.has(key) ?? false),
+        mayEmote: !('playerId' in viewer) || mayEmote(data, viewer.playerId),
         game,
       };
     };

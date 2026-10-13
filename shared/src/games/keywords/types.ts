@@ -113,6 +113,17 @@ export interface Selection {
   card: number;
 }
 
+// What a group's students may mark a hidden card as, for each other to see
+// (docs/games/keywords.md#talking-it-over): one of their own group's, one of the other group's, or maybe
+// Reviewer 2. A mark is the group's, whoever set it.
+export const MARKS = ['ours', 'theirs', 'r2'] as const;
+export type Mark = (typeof MARKS)[number];
+
+export interface CardMark {
+  card: number;
+  mark: Mark;
+}
+
 // A message that a guesser wrote to their group, with the turn in which it was written. The IDs
 // of a group's messages count up from 1, also when the oldest messages have been dropped.
 export interface ChatMessage {
@@ -156,6 +167,9 @@ export interface KeywordsView {
   // The messages of the viewer's own group. Only a captain or a guesser gets this; spectators
   // and screens don't.
   chat?: ChatMessage[];
+  // The marks of the viewer's own group, while the game is on. Only its guessers get this: its
+  // captain, who sees every color, the other group, spectators and screens don't.
+  marks?: CardMark[];
 }
 
 // Why the server refused a game action. The order of the checks (see docs/games/keywords.md)
@@ -241,5 +255,8 @@ export interface KeywordsRoomData {
   joinsNext: boolean;
   // What still keeps the game from starting; empty outside the waiting room.
   startProblems: StartProblem[];
+  // Whether the viewer may send a quick reaction now: a PI may not while a group's students are
+  // guessing (docs/games/keywords.md#quick-reactions).
+  mayEmote: boolean;
   game: KeywordsView | null;
 }

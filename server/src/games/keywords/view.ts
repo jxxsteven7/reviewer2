@@ -10,6 +10,8 @@ import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state'
 //   everyone sees every color.
 // - A group's chat goes to its own captain and guessers, and the cards that its guessers have
 //   chosen go to them while it is the group's turn. Nobody else gets either: the keys are absent.
+// - A group's marks go to its guessers alone, in either group's turn, until the game is over. Its
+//   captain, who sees every color, doesn't get them, nor does anyone else.
 // - While the game is paused, nobody gets the board at all, the captains and the screens
 //   included: the cards are an empty list, and the clock shows the time the phase had left.
 // - The cards that a captain marked as the ones a clue was meant for stay the captain's secret
@@ -51,6 +53,9 @@ export function viewFor(state: KeywordsState, viewer: Seat, at: number): Keyword
   if (viewer.team !== null) {
     view.chat = state.chat[viewer.team].map((message) => ({ ...message }));
     if (viewer.team === state.team) view.selections = state.selections.map((selection) => ({ ...selection }));
+    if (viewer.role === 'guesser' && state.phase !== 'over') {
+      view.marks = state.marks[viewer.team].map((mark) => ({ ...mark }));
+    }
   }
   return view;
 }

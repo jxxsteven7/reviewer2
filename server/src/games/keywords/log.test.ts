@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { seededRng } from '../../core/random';
 import { keywordsGame } from './index';
+import { seatedGame } from './testing';
 
 // What the game tells the log of a game (docs/architecture.md#game-records).
 
@@ -51,10 +52,49 @@ describe('the log of the team word guessing game', () => {
     expect(logged('keywords:resume', { gameId })).toEqual({ minor: false });
   });
 
-  test('keeps nothing of the chat, and nothing of what it does not know', () => {
+  test('keeps nothing of the chat, nor of each mark, and nothing of what it does not know', () => {
     expect(logged('keywords:say', { gameId, text: 'The secret plan' })).toBeNull();
+    expect(logged('keywords:mark', { gameId, card: 3, mark: 'ours' })).toBeNull();
     expect(logged('keywords:nonsense', {})).toBeNull();
     expect(logged('keywords:reveal', { gameId, turn: 'one' })).toBeNull();
+  });
+
+  test("keeps a group's marks when it reveals a card, as they stood, and both groups' when a turn ends", () => {
+    const game = seatedGame();
+    const changes = (id: string, type: string, payload: unknown) => {
+      const before = game.data;
+      return keywordsGame.logChanges?.(before, game.send(id, type, payload)) ?? [];
+    };
+    const state = () => {
+      if (!game.data.game) throw new Error('no game');
+      return game.data.game;
+    };
+    const first = state().team;
+    const [pi, student, other] = first === 'red' ? ['ann', 'bob', 'dan'] : ['cat', 'dan', 'bob'];
+    const own = state().cards.findIndex((card) => card.color === first);
+    // Marks come and go without a word in the log.
+    expect(changes(student, 'keywords:mark', { gameId, card: own, mark: 'ours' })).toEqual([]);
+    expect(changes(student, 'keywords:mark', { gameId, card: 24, mark: 'r2' })).toEqual([]);
+    expect(changes(other, 'keywords:mark', { gameId, card: own, mark: 'theirs' })).toEqual([]);
+    expect(changes(pi, 'keywords:clue', { gameId, turn: 1, word: 'Hint', count: 2 })).toEqual([]);
+    // The reveal: the marks of the group that revealed, its mark on the card included.
+    expect(changes(student, 'keywords:reveal', { gameId, turn: 1, card: own })).toEqual([
+      {
+        type: 'keywords:marks',
+        data: {
+          team: first,
+          marks: [
+            { card: own, mark: 'ours' },
+            { card: 24, mark: 'r2' },
+          ],
+        },
+      },
+    ]);
+    // The end of the turn: each group's marks as they are, the revealed card's gone. The other
+    // group has none left, and so nothing to note.
+    expect(changes(student, 'keywords:pass', { gameId, turn: 1 })).toEqual([
+      { type: 'keywords:marks', data: { team: first, marks: [{ card: 24, mark: 'r2' }] } },
+    ]);
   });
 
   test('says where each player is, and counts everyone who sat in a group as having played', () => {

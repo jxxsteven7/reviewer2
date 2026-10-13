@@ -65,6 +65,13 @@ export interface LogNote {
   minor?: boolean;
 }
 
+// An entry that the log of a game keeps of a change of the game's own (GameModule.logChanges): its
+// type, in the game's words, and what it says.
+export interface GameLogNote {
+  type: string;
+  data?: unknown;
+}
+
 // What an AI is to do in a seat now (GameModule.agentTask; docs/architecture.md#ai-players).
 export interface AgentTask {
   // The moment of the game it is for, such as a turn and its phase, in the game's own words. Once
@@ -188,6 +195,15 @@ export interface GameModule<Data = unknown, View = unknown> {
   // the message carried it, or null to keep nothing of it, as of a line of a group's chat. Without
   // this, the log keeps the message's type alone.
   logged?(type: string, payload: unknown): LogNote | null;
+  // What else the log keeps of a change in the game, besides the message, the timer or the room's
+  // event that brought it, as entries of the game's own, in order: such as where things stood when
+  // a turn ended. `before` and `after` are the data on either side of the change. Without this,
+  // nothing else.
+  logChanges?(before: Data, after: Data): GameLogNote[];
+  // Whether a member may send a quick reaction now (Room.emote). Without this, always; a game that
+  // says no for a while, as a game of keywords does to a PI while the students guess, has the room
+  // refuse with emote_not_now.
+  mayEmote?(data: Data, playerId: string): boolean;
   // The member keys of everyone who has played in the current game, those who have left it
   // included: the players whose part in it the record keeps. Without this, those whom results()
   // names.

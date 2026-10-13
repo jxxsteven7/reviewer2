@@ -1,5 +1,6 @@
 import type {
   CardColor,
+  CardMark,
   ChatMessage,
   ClueCount,
   ClueRecord,
@@ -75,6 +76,9 @@ export interface KeywordsState {
   // The cards that guessers of the current team have chosen in this turn, one for each of them
   // at most.
   selections: Selection[];
+  // What each group's guessers have marked the hidden cards as, one mark for a card at most. A
+  // card's marks go once it is revealed.
+  marks: Record<Team, CardMark[]>;
   // What the guessers of each team have written to their group, oldest first.
   chat: Record<Team, ChatMessage[]>;
 }

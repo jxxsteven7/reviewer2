@@ -612,6 +612,7 @@
     "cannot_start": "The game can't start yet.",
     "stale": "That turn or that game is already over.",
     "emote_cooldown": "Wait a moment before you send another reaction.",
+    "emote_not_now": "PIs can't react while students are guessing.",
     "bad_match": "This game can't be played as a match.",
     "match_over": "The match is over.",
     "match_locked": "The word lists and the rules can't change in the middle of a match.",

@@ -95,6 +95,15 @@ describe('the record of a game of the team word guessing game', () => {
     // The group talks it over, chooses a card and reveals it; Gus comes to play in the middle of
     // the game, and Fay leaves.
     expect(await guesser.send('keywords:say', { gameId: clue.gameId, text: 'The secret plan' })).toEqual({ ok: true });
+    // The group marks two cards as it talks, one of them twice.
+    const neutral = cards.findIndex((card) => card.color === 'neutral');
+    for (const [card, mark] of [
+      [targets[0], 'theirs'],
+      [targets[0], 'ours'],
+      [neutral, 'r2'],
+    ] as const) {
+      expect(await guesser.send('keywords:mark', { gameId: clue.gameId, card, mark })).toEqual({ ok: true });
+    }
     expect(await guesser.send('keywords:select', { ...moment(board(guesser)), card: targets[0] })).toEqual({
       ok: true,
     });
@@ -152,6 +161,35 @@ describe('the record of a game of the team word guessing game', () => {
     expect(times).toEqual([...times].sort((a, b) => a - b));
     // Nothing of the chat, not even that there was any.
     expect(types).not.toContain('keywords:say');
+    // Of the marks, how the group's stood when it revealed each card, and both groups' at the end:
+    // no single mark.
+    expect(types).not.toContain('keywords:mark');
+    expect(log.entries.filter((entry) => entry.type === 'keywords:marks')).toEqual([
+      {
+        t: expect.any(Number),
+        by: null,
+        type: 'keywords:marks',
+        data: {
+          team,
+          marks: [
+            { card: targets[0], mark: 'ours' },
+            { card: neutral, mark: 'r2' },
+          ],
+        },
+      },
+      {
+        t: expect.any(Number),
+        by: null,
+        type: 'keywords:marks',
+        data: { team, marks: [{ card: neutral, mark: 'r2' }] },
+      },
+      {
+        t: expect.any(Number),
+        by: null,
+        type: 'keywords:marks',
+        data: { team, marks: [{ card: neutral, mark: 'r2' }] },
+      },
+    ]);
     expect(kept()[0]?.log).not.toContain('secret plan');
     // The game's ID is the log's own, not each message's.
     expect(log.entries.some((entry) => JSON.stringify(entry.data ?? {}).includes('gameId'))).toBe(false);

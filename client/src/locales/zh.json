@@ -612,6 +612,7 @@
     "cannot_start": "游戏还不能开始。",
     "stale": "那一轮或那一局已经结束了。",
     "emote_cooldown": "稍等一下，再发下一条表情。",
+    "emote_not_now": "学生猜词时，导师不能发表情。",
     "bad_match": "这个游戏不能打比赛。",
     "match_over": "比赛已经结束了。",
     "match_locked": "比赛进行中不能改词库和规则。",
