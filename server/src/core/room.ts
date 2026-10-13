@@ -196,7 +196,7 @@ export class Room {
   #log: GameLog | null = null;
   #agentLog: AgentLog | null = null;
   // Whether an AI has played in the current game, as an AI player or for someone who was offline:
-  // such a game brings nobody points or a streak (docs/architecture.md#ai-players).
+  // such a game brings nobody points, a streak or a friend title (docs/architecture.md#ai-players).
   #agentsPlayed = false;
   readonly #agents: AgentState | null;
   // The streaks that the game which has just ended brought the members with accounts to, by player

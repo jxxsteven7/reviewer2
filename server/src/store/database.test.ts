@@ -566,24 +566,29 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g' }]);
   });
 
-  test('of the twelfth release keeps its accounts and replays when it gets AI players', async () => {
-    const twelfth = await open(dir, MIGRATIONS.slice(0, 12));
-    twelfth.db.exec(`
+  test('of the thirteenth release keeps its accounts, records and replays when it gets AI players', async () => {
+    const thirteenth = await open(dir, MIGRATIONS.slice(0, 13));
+    thirteenth.db.exec(`
       INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
       INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}', '{"v":1}');
     `);
-    twelfth.db.close();
+    thirteenth.db.close();
 
-    const migrated = await open(dir, MIGRATIONS.slice(0, 13));
-    expect(migrated).toMatchObject({ schema: 13, migratedFrom: 12 });
+    const migrated = await open(dir, MIGRATIONS.slice(0, 14));
+    expect(migrated).toMatchObject({ schema: 14, migratedFrom: 13 });
     const { db } = migrated;
-    // Nobody may have AI players until the operator lets them, and the replays from before have no
-    // AI log.
+    // Nobody may have AI players until the operator lets them, no AI played in the games from
+    // before, and their replays have no AI log.
     expect(db.prepare('SELECT id, agents FROM accounts').all()).toEqual([{ id: 1, agents: 0 }]);
+    expect(db.prepare('SELECT game_id, points, agents FROM game_records').all()).toEqual([
+      { game_id: 'g', points: 4, agents: 0 },
+    ]);
     expect(db.prepare('SELECT game_id, log, agent_log FROM replays').all()).toEqual([
       { game_id: 'g', log: '{"v":1}', agent_log: null },
     ]);
     expect(() => db.exec('UPDATE accounts SET agents = 2 WHERE id = 1')).toThrow(/CHECK/);
+    expect(() => db.exec('UPDATE game_records SET agents = 2')).toThrow(/CHECK/);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {

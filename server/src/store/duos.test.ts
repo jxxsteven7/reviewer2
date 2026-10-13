@@ -38,7 +38,7 @@ const befriend = (a: number, b: number) => {
 let games = 0;
 // One game with the accounts on each of its sides, which `winner` won; red and blue as a rule, but
 // a game may have more sides.
-function game(sides: Record<string, number[]>, winner: string, name = 'keywords') {
+function game(sides: Record<string, number[]>, winner: string, name = 'keywords', agents = false) {
   games += 1;
   const gameId = `game-${games}`;
   for (const [side, players] of Object.entries(sides)) {
@@ -52,6 +52,7 @@ function game(sides: Record<string, number[]>, winner: string, name = 'keywords'
         won: side === winner,
         verdict: 'v',
         points: 0,
+        agents,
       });
     }
   }
@@ -60,6 +61,17 @@ function game(sides: Record<string, number[]>, winner: string, name = 'keywords'
 const NONE = { wonTogether: 0, lostTogether: 0, against: 0, beat: 0, beaten: 0 };
 
 describe('friend duos', () => {
+  test('leave out the games that an AI played in, which are on the records all the same', () => {
+    const [ann, bob] = [account('Ann'), account('Bob')];
+    befriend(ann, bob);
+    game({ red: [ann, bob], blue: [] }, 'red', 'keywords', true);
+    game({ red: [ann, bob], blue: [] }, 'red', 'keywords', true);
+    game({ red: [ann, bob], blue: [] }, 'red');
+    expect(records.duos(ann)).toEqual(new Map([[bob, { ...NONE, wonTogether: 1 }]]));
+    expect(records.counts(ann)).toMatchObject({ games: 3, wins: 3 });
+    expect(records.streaks(ann)).toMatchObject({ wins: 1 });
+  });
+
   test('count the games two friends played together and against each other', () => {
     const [ann, bob, cat] = [account('Ann'), account('Bob'), account('Cat')];
     befriend(ann, bob);

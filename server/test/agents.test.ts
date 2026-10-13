@@ -417,7 +417,7 @@ describe('an AI that plays for someone offline', () => {
 });
 
 describe('a game that an AI played in', () => {
-  test('brings nobody points or a streak, and is kept with the AI log beside its own', async () => {
+  test('brings nobody points, a streak or a friend title, and is kept with the AI log beside its own', async () => {
     // The AI student reveals Reviewer 2 at once, which ends the game.
     agent.play = (request) => {
       if (request.kind === 'clue') return scriptedPlay(request);

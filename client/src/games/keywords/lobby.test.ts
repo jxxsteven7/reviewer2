@@ -118,7 +118,7 @@ describe('KeywordsLobby', () => {
     // Nobody else invites them, but everyone reads what they mean for the game.
     const player = mount(KeywordsLobby, { props: { room: withAgents('bob') }, global: global() });
     expect(player.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(0);
-    expect(player.text()).toContain('a game with them brings nobody points or a streak');
+    expect(player.text()).toContain('a game with them brings nobody points, a streak or a friend title');
     // Nor a chair who may not.
     const barred = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     expect(barred.text()).not.toContain('Invite Reviewer 1');
