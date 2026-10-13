@@ -224,6 +224,14 @@ watch(
   outline-offset: -5px;
 }
 
+/* The author's badge, on the line under the rank, reaches down alone to its 44px (PlayerNumber.vue),
+   over the date, which opens nothing: the lines here are 4px apart, so a box that reached up as
+   well would lie over the rank's. */
+.who :deep(.number .author)::before {
+  top: 0;
+  bottom: calc(100% - 44px);
+}
+
 /* Two sides of a small square, turned to point right and raised to the middle of the type. */
 .chevron {
   flex: none;

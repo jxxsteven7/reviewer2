@@ -175,11 +175,21 @@ async function next(nextRules: MatchRules | null) {
   line-height: 1.6;
 }
 
+/* The title is one line of display type. As a button (TitleInfo.vue), its box reaches above and
+   below it, out of sight, to 44px tall, centered on it; the name above and the line below open
+   nothing. */
 .title {
+  position: relative;
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: var(--weight-display);
   font-synthesis: none;
+}
+
+button.title::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 22px) 0;
 }
 
 .best_paper .title {

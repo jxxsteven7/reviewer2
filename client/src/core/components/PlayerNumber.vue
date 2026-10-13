@@ -30,7 +30,8 @@ const { t } = useI18n();
 }
 
 /* The badge is a button that a tap opens (TitleInfo.vue). Its box reaches above and below it, out
-   of sight, to 44px tall, centered on it, as far as the lines around it, 8px away, allow. */
+   of sight, to 44px tall, centered on it, as far as the lines around it, 8px away, allow; the
+   public profile, whose lines are closer, lets it reach down alone (ProfileCard.vue). */
 .author {
   position: relative;
   display: inline-flex;
