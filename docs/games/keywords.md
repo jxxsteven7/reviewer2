@@ -30,7 +30,7 @@ Set by the chair, locked during a game.
 | Guess rule | `free` or `standard` ([Turns](#turns)) | `free` |
 | Clue rule | `strict` or `loose` ([The clue](#the-clue)) | `strict` |
 | Clue length | Chinese room: 1 to 10 characters, two letters or digits counting as one; English room: 1 to 3 words | 4; 1 |
-| Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 90, 60, 90 |
+| Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 120, 90, 120 |
 | Extensions | `true` or `false` ([Pauses and extensions](#pauses-and-extensions)) | `false` |
 
 `settingsProblems()` in `shared/src/games/keywords/settings.ts` checks them on both sides; the server refuses with `bad_settings`.
