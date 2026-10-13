@@ -228,7 +228,7 @@
     },
     "progress": "Game {game} of {games}",
     "progressTitle": "Match progress",
-    "yourStanding": "Your place: {rank} · {points} points",
+    "yourStanding": "Your place: {rank} · {points} point | Your place: {rank} · {points} points",
     "gamesPlayed": "Games played: {played} of {games}",
     "table": "Scores",
     "rank": "Place",

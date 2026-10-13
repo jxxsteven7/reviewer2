@@ -49,9 +49,9 @@ async function expectColumnsFromTheTop(page: Page, left: string[], right: string
 
 test('the chat, the groups, the clue log and the tools stand at the top of their columns, however long the log', async ({
   browser,
-}) => {
+}, testInfo) => {
+  test.skip(isPhone(testInfo), 'on a phone the groups and the log are sheets');
   const table = await seatTable(browser, 'en');
-  test.skip(isPhone(table.spectator), 'on a phone the groups and the log are sheets');
   const student = table.guessers.red;
   const spectator = table.spectator;
   for (let turn = 1; turn <= 4; turn += 1) await playTurn(table, turn);
@@ -70,11 +70,11 @@ test('the chat, the groups, the clue log and the tools stand at the top of their
 
 test("in a match, the table folds under the board with each line on one line, and the chair's desk and the rules stack between the games", async ({
   browser,
-}) => {
+}, testInfo) => {
+  test.skip(isPhone(testInfo), 'on a wide screen only');
   const table = await seatTable(browser, 'en', undefined, (page) =>
     chooseMatch(page, 'en', { games: 3, teams: 'fixed', grouping: 'choose' }),
   );
-  test.skip(isPhone(table.spectator), 'on a wide screen only');
   // Dan takes the longest name there is.
   const tab = await sideChannel(table.guessers.blue, table.url);
   expect(await tab.send('room:rename', { name: 'Bartholomew Long' })).toMatchObject({ ok: true });

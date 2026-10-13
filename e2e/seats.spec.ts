@@ -114,9 +114,11 @@ test('an empty PI seat can be taken over, and its new PI sees the key and stays 
   expect(await tab.send('keywords:seat', { team: 'red', role: 'guesser' })).toEqual({ ok: false, error: 'key_viewer' });
 });
 
-test('on a phone, the groups and the clue log open as sheets from the bar under the board', async ({ browser }) => {
+test('on a phone, the groups and the clue log open as sheets from the bar under the board', async ({
+  browser,
+}, testInfo) => {
+  test.skip(!isPhone(testInfo), 'on a wide screen they stand beside the board');
   const table = await seatTable(browser, 'en');
-  test.skip(!isPhone(table.spectator), 'on a wide screen they stand beside the board');
   const text = TEXT.en;
   // The spectator, a PI and a student open both, read them, and close them: the groups with the
   // close button, the log with Escape.

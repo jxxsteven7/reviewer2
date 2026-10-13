@@ -7,11 +7,21 @@ import hyphenated from 'virtual:hyphenation';
 // words that break, not the patterns, which weigh as much as the rest of the app.
 //
 // A word that the patterns leave whole, which they do with many a proper name and some plain
-// words ("Wikipedia", "Premise"), and a word outside the library, such as one of the chair's own,
-// gets the fallback below. Every Chinese word is shown as it is.
-export const hyphenate = (word: string): string => hyphenated[word] ?? fallback(word);
+// words ("Wikipedia", "Premise", the "Doppler" of "Doppler effect"), and a word outside the
+// library, such as one of the chair's own, gets the fallback below, word by word. Every Chinese
+// word is shown as it is.
+export function hyphenate(term: string): string {
+  // Looked up as an own property: the map is a plain object, and a chair may well call a word
+  // "constructor".
+  const broken = (Object.hasOwn(hyphenated, term) ? hyphenated[term] : undefined) ?? term;
+  // The patterns keep the spaces, so the words of the broken term and the term's own line up.
+  return broken
+    .split(' ')
+    .map((word) => (word.includes(SOFT_HYPHEN) ? word : fallback(word)))
+    .join(' ');
+}
 
-const SOFT_HYPHEN = '­';
+const SOFT_HYPHEN = '\u00ad';
 // The fewest letters a piece keeps at either end of a word that breaks by the fallback.
 const KEEP = 3;
 

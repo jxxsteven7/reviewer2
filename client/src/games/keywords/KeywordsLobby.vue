@@ -262,11 +262,6 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
         </p>
       </div>
       <div class="column">
-        <section v-if="!isChair || locked" class="rules">
-          <h2 class="section-title">{{ t('settings.title') }}</h2>
-          <SettingsSummary :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
-        </section>
-
         <section v-if="isChair && !finished" class="desk">
           <h2 class="section-title">{{ t('lobby.desk') }}</h2>
           <p v-if="locked" class="hint">{{ t('match.locked') }}</p>
@@ -327,7 +322,11 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
             </UiButton>
           </div>
         </section>
-        <section v-else-if="!finished" class="waiting">
+        <section v-if="!isChair || locked" class="rules">
+          <h2 class="section-title">{{ t('settings.title') }}</h2>
+          <SettingsSummary :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
+        </section>
+        <section v-if="!isChair && !finished" class="waiting">
           <ul class="problems">
             <li v-for="item in problems" :key="problemKey(item)">{{ problemText(item) }}</li>
           </ul>
@@ -571,8 +570,9 @@ dd .vacant {
 
 /* Two columns: a match's table, the groups (or the pool), the spectators and the footnote on the
    left; on the right the chair's desk, or the rules, or both while a match has locked the
-   settings, the desk first so that the start button is at hand. Each column stacks its sections
-   from the top, whatever the other holds. */
+   settings, the desk first, in the page's own order, so that the start button is at hand for the
+   eye, the keyboard and a screen reader alike. Each column stacks its sections from the top,
+   whatever the other holds. */
 @media (min-width: 64rem) {
   .sections {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -584,10 +584,6 @@ dd .vacant {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-  }
-
-  .desk {
-    order: -1;
   }
 }
 </style>

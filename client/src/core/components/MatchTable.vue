@@ -246,15 +246,16 @@ td:last-child {
   gap: var(--space-3);
 }
 
-/* In a narrow column, such as beside the board on a small laptop, the name column takes what the
-   numbers leave, and each line stays one line. */
+/* In a narrow column, such as the fold under the board on a narrow phone, the name column takes
+   what the numbers leave, and each line stays one line. The place column keeps room for its
+   heading in capitals, which "PLACE" needs. */
 @container (max-width: 17rem) {
   table {
     table-layout: fixed;
   }
 
   th.rank {
-    width: 2rem;
+    width: 3rem;
   }
 
   th.number {

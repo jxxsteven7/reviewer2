@@ -122,9 +122,9 @@ onBeforeUnmount(() => {
   font-synthesis: none;
 }
 
-/* The ellipsis of a line that waits breathes, gently. */
+/* The ellipsis of a line that waits breathes, gently. It stays an inline, so that a narrow screen
+   never wraps it onto a line of its own. */
 .dots {
-  display: inline-block;
   animation: breathe 2s ease-in-out infinite;
 }
 

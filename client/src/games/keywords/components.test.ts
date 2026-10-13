@@ -8,6 +8,7 @@ import {
   type KeywordsView,
   type RoomView,
   type Seat,
+  type StandingView,
 } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -1003,6 +1004,35 @@ describe('KeywordsGame', () => {
       global: global(),
     });
     expect(wrapper.findAll('.letter .verdict').map((verdict) => verdict.text())).toEqual(['Accept (Oral)', 'Reject']);
+  });
+
+  test("folds a match's table under the board to a line with the progress and the viewer's standing", () => {
+    const view = room('bob');
+    const line = (playerId: string, total: number, rank: number | null): StandingView => ({
+      playerId,
+      name: playerId,
+      total,
+      delta: null,
+      games: rank === null ? 0 : 1,
+      rank,
+      left: false,
+    });
+    const match: RoomView['match'] = {
+      id: 'm1',
+      rules: { games: 3, teams: 'fixed', grouping: 'choose' },
+      played: 1,
+      status: 'on',
+      game: 2,
+      standings: [line('ann', 4, 1), line('bob', 1, 2), line('dan', -1, 3), line('eve', 0, null)],
+    };
+    const fold = (me: string) =>
+      mount(KeywordsGame, { props: { room: { ...view, me, match } }, global: global() }).get('.match-fold summary');
+    // One point is "1 point", and so is minus one.
+    expect(fold('bob').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 2 \u00b7 1 point');
+    expect(fold('dan').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 3 \u00b7 \u22121 point');
+    expect(fold('ann').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 1 \u00b7 4 points');
+    // Someone without a scored game yet sees the progress alone.
+    expect(fold('eve').text()).toBe('Match progress \u00b7 Game 2 of 3');
   });
 
   test('renders the group chat once, and keeps it after the game', async () => {

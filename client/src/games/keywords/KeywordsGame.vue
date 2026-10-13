@@ -59,7 +59,8 @@ const { data, mySeat, mySide, isChair } = useKeywords(room);
 const match = computed(() => room.value.match);
 
 // The line that the folded table shows during the game: the match's progress, and the viewer's
-// place and total once they have one, which takes a scored game.
+// place and total once they have one, which takes a scored game. The total's size picks the
+// plural of "point", for the languages that have one.
 const standing = computed(
   () => match.value?.standings.find((line) => line.playerId !== null && line.playerId === room.value.me) ?? null,
 );
@@ -70,7 +71,8 @@ const matchSummary = computed(() => {
     t('match.progress', { game: match.value.game, games: match.value.rules.games }),
   ];
   if (standing.value && standing.value.rank !== null) {
-    parts.push(t('match.yourStanding', { rank: standing.value.rank, points: points(standing.value.total) }));
+    const { rank, total } = standing.value;
+    parts.push(t('match.yourStanding', { rank, points: points(total) }, Math.abs(total)));
   }
   return parts.join(' \u00b7 ');
 });
@@ -552,8 +554,8 @@ const chosenByOthers = computed(() =>
    with the tools on the right. Each column stacks its panels from the top, whatever the others
    hold, so that no column has empty space of its own. The side columns take 18 rem where the page
    is wide enough, which lets a five-character name and its rank share a line on a sticker and
-   gives the chat's input some width, but never more than leaves the board 26 rem, so that at 64 rem
-   the board keeps the width it had with 16 rem columns. */
+   gives the chat's input some width, but never more than leaves the board 26 rem: at 64 rem both
+   columns are 16 rem, the right one 2 rem narrower than it was, and the board 2 rem wider. */
 @media (min-width: 64rem) {
   .layout {
     --side: min(18rem, calc((100% - 26rem - 2 * var(--space-5)) / 2));

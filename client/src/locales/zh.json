@@ -228,7 +228,7 @@
     },
     "progress": "第 {game} / {games} 局",
     "progressTitle": "比赛进度",
-    "yourStanding": "你第 {rank} 名 · {points} 分",
+    "yourStanding": "你第 {rank} 名 · {points} 分 | 你第 {rank} 名 · {points} 分",
     "gamesPlayed": "已打完 {played} / {games} 局",
     "table": "总分表",
     "rank": "名次",

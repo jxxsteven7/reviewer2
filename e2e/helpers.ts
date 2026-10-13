@@ -1,5 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { test as base, expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import {
+  test as base,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from '@playwright/test';
 import {
   checkClue,
   type CardColor,
@@ -310,9 +318,14 @@ export async function chooseMatch(page: Page, language: Language, rules: MatchRu
   await form.getByLabel(text.match.groupingChoice[rules.grouping], { exact: true }).check();
 }
 
-// Whether the page is a phone's, narrower than the three columns of the game, where the groups,
-// the clue log and the chat open as sheets from the bar under the board (KeywordsGame.vue).
-export const isPhone = (page: Page): boolean => (page.viewportSize()?.width ?? 1280) < 1024;
+// Whether the page, or the project a test runs in, is a phone's: narrower than the three columns
+// of the game, where the groups, the clue log and the chat open as sheets from the bar under the
+// board (KeywordsGame.vue). A test that is for one kind of screen alone asks about its project
+// before it seats a table, so that it skips without opening a browser for each player.
+export const isPhone = (page: Page | TestInfo): boolean => {
+  const width = 'viewportSize' in page ? page.viewportSize()?.width : page.project.use.viewport?.width;
+  return (width ?? 1280) < 1024;
+};
 
 // How a newcomer takes part: to play, which the forms offer first, or only to watch.
 export interface Joining {
