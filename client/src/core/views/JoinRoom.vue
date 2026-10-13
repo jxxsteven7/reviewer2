@@ -33,37 +33,17 @@ function join() {
       autocapitalize="characters"
       enterkeyhint="go"
       :error="error"
-    />
-    <UiButton variant="blue" type="submit">{{ t('home.join.submit') }}</UiButton>
+    >
+      <template #beside>
+        <UiButton variant="blue" type="submit">{{ t('home.join.submit') }}</UiButton>
+      </template>
+    </UiField>
   </form>
 </template>
 
 <style scoped>
+/* The button stands beside the box, in the field's slot, as tall as the box. */
 .join {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: var(--space-2) var(--space-3);
   max-width: 24rem;
-}
-
-/* The field's label takes the whole row, however long it is in either language, and the button
-   stands level with the box below it, with the field's note under the box. */
-.join > :deep(.field) {
-  display: contents;
-}
-
-.join > :deep(.field > .label) {
-  grid-column: 1 / -1;
-}
-
-.join > :deep(.field > .note) {
-  grid-column: 1;
-}
-
-.join > button {
-  grid-row: 2;
-  grid-column: 2;
-  min-height: 56px;
 }
 </style>
