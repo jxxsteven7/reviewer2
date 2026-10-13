@@ -89,6 +89,7 @@ export function seatedGame() {
     isOnline: () => true,
     agentOf: () => null,
     playerIds: () => players,
+    titleCount: () => null,
   };
   let data = keywordsGame.create('en');
   for (const id of players) data = keywordsGame.join(data, ctx, id, false);
