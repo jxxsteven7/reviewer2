@@ -290,6 +290,7 @@
     "prepareDraft": "继续准备（{summary}）",
     "prepareHide": "收起草稿",
     "draftMarked": "已标 {count} 张 | 已标 {count} 张",
+    "draftCount": "数字 {count}",
     "draftJoin": "，",
     "prepareNote": "这是你下一条提示的草稿，只有你看得到，轮到你出题时再给出。",
     "targetGone": "你标的{words}被翻开了，已去掉。 | 你标的{words}被翻开了，已去掉。",

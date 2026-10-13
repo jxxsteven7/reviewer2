@@ -294,9 +294,10 @@ const ariaLabel = computed(() =>
 }
 
 /* One of the cards a PI meant: a dashed ring, and its place in the order on a round sticker in the
-   top right corner, where the students' avatars hang in their turn. The ring gives way to the
-   focus ring, which the scoped rule would otherwise beat, so that a PI moving by keyboard sees
-   which of the marked cards has the focus; the sticker still says that the card is marked. */
+   bottom right corner, clear of the students' avatars on the top one, which come and go on the
+   PI's board while the group guesses. The ring gives way to the focus ring, which the scoped rule
+   would otherwise beat, so that a PI moving by keyboard sees which of the marked cards has the
+   focus; the sticker still says that the card is marked. */
 .targeted {
   outline: var(--line) dashed var(--ink);
   outline-offset: 2px;
@@ -308,8 +309,8 @@ const ariaLabel = computed(() =>
 
 .target {
   position: absolute;
-  top: -9px;
   right: -7px;
+  bottom: -9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -331,13 +332,6 @@ const ariaLabel = computed(() =>
   height: 28px;
   border-radius: 14px;
   font-size: 15px;
-}
-
-/* On the PI's board while their group guesses, the students' avatars take the top corner and the
-   PI's mark for the next clue moves to the bottom one. */
-.chosen .target {
-  top: auto;
-  bottom: -9px;
 }
 
 /* The card that a replay's step is about. */

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  clueCounts,
   SPECTATOR,
   type ClueCount,
   type KeywordsScoreDetail,
@@ -147,28 +148,47 @@ async function choose(card: number) {
 // not paused (docs/games/keywords.md#the-clue): the panel opens from a button under the status
 // line, so that it doesn't stand in the way of watching the other group, and folds away again.
 // When their turn comes the panel is open with the draft in it, and the PI gives the clue
-// themselves. A marked card that someone reveals meanwhile loses its mark, and the panel says
-// so until the PI marks or unmarks a card again.
+// themselves.
 const isCaptain = computed(() => mySeat.value?.role === 'captain');
 const mayPrepare = computed(() => isCaptain.value && !canClue.value && !paused.value && !game.value.result);
 const preparing = ref(false);
-const draft = ref<ClueDraft>(readDraft(game.value.gameId));
+const draft = ref<ClueDraft>(emptyDraft());
 const gone = ref<string[]>([]);
+// The draft is read and written for a PI alone: anyone else who views the game, as in another
+// tab of the PI's browser, has none, and must not take theirs out of the storage.
 watch(
-  () => game.value.gameId,
+  () => (isCaptain.value ? game.value.gameId : null),
   (gameId) => {
-    draft.value = readDraft(gameId);
+    draft.value = gameId === null ? emptyDraft() : readDraft(gameId);
     gone.value = [];
     preparing.value = false;
   },
+  { immediate: true },
 );
-watch(draft, (current) => writeDraft(game.value.gameId, current), { deep: true });
+watch(
+  draft,
+  (current) => {
+    if (isCaptain.value) writeDraft(game.value.gameId, current);
+  },
+  { deep: true },
+);
+
+// The numbers that the room's guess rule offers the PI's group, which under the free rule are as
+// many as the group has cards left: none for a viewer without a group.
+const counts = computed(() => {
+  const team = mySeat.value?.team;
+  return team ? clueCounts(data.value.settings.guessRule, game.value.remaining[team]) : [];
+});
+// The draft follows the board: a marked card that someone reveals loses its mark, and the panel
+// says so until the PI marks or unmarks a card again; a number picked that the rule no longer
+// offers, once a card of the group's was found, goes back to following the marks.
 watch(
   game,
   ({ cards }) => {
+    const { count, targets } = draft.value;
+    if (count !== null && !counts.value.includes(count)) draft.value.count = null;
     // While the game is paused there are no cards, and nothing to tell.
     if (cards.length === 0) return;
-    const targets = draft.value.targets;
     const kept = targets.filter((card) => cards[card] && !cards[card].revealed);
     if (kept.length === targets.length) return;
     gone.value = [...gone.value, ...targets.flatMap((card) => (cards[card]?.revealed ? [cards[card].word] : []))];
@@ -182,6 +202,27 @@ function mark(card: number) {
   gone.value = [];
 }
 
+// The clue has gone once the server's snapshot has it in the game's history, and the draft goes
+// with it: from the board, the panel and the storage. The answer to the message tells nothing of
+// that, since it can be lost on the way after the server took the clue. A clue phase that ran
+// out leaves a record without a word, and the draft waits for the next turn.
+watch(
+  () => game.value.history.length,
+  (_, before) => {
+    const given = game.value.history
+      .slice(before)
+      .some((record) => record.team === mySeat.value?.team && record.word !== null);
+    if (!given) return;
+    draft.value = emptyDraft();
+    gone.value = [];
+  },
+);
+// The panel folds when the PI's turn comes: the clue panel takes its place, and the PI watches
+// the board after it, whether the clue went or its time ran out.
+watch(canClue, (on) => {
+  if (on) preparing.value = false;
+});
+
 // Whether a tap on the board marks a card: for the PI giving a clue, or preparing one in the
 // open panel. Otherwise it chooses one for a student.
 const marking = computed(() => canClue.value || (mayPrepare.value && preparing.value));
@@ -189,27 +230,24 @@ const tap = (card: number) => (marking.value ? mark(card) : choose(card));
 
 // What the button that opens the draft says: what is in the draft, if anything.
 const summary = computed(() => {
-  const { word, targets } = draft.value;
+  const { word, count, targets } = draft.value;
   return [
     ...(word.trim() ? [t('game.quoted', { word: word.trim() })] : []),
     ...(targets.length > 0 ? [t('game.draftMarked', { count: targets.length }, targets.length)] : []),
+    ...(count !== null ? [t('game.draftCount', { count: count === 'unlimited' ? '\u221e' : count })] : []),
   ].join(t('game.draftJoin'));
 });
 
 // The moves that change the game go one at a time, so that a double tap can't send one twice.
 const giveClue = (word: string, count: ClueCount) =>
-  run(async () => {
+  run(() => {
     const { targets } = draft.value;
-    const reply = await act('keywords:clue', {
+    return act('keywords:clue', {
       ...moment.value,
       word,
       count,
       ...(targets.length > 0 ? { targets: [...targets] } : {}),
     });
-    if (!reply.ok) return;
-    draft.value = emptyDraft();
-    gone.value = [];
-    preparing.value = false;
   });
 const reveal = (card: number) => run(() => act('keywords:reveal', { ...moment.value, card }));
 const pass = () => run(() => act('keywords:pass', moment.value));
@@ -336,6 +374,7 @@ const chosenByOthers = computed(() =>
             v-model:word="draft.word"
             v-model:count="draft.count"
             :game="game"
+            :counts="counts"
             :settings="data.settings"
             :language="room.language"
             :busy="busy"
@@ -358,6 +397,7 @@ const chosenByOthers = computed(() =>
               v-model:word="draft.word"
               v-model:count="draft.count"
               :game="game"
+              :counts="counts"
               :settings="data.settings"
               :language="room.language"
               :targets="draft.targets"

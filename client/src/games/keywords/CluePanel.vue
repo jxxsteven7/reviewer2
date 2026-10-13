@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   checkClue,
-  clueCounts,
   clueOptions,
   MAX_CLUE_INPUT,
   type ClueCount,
@@ -19,8 +18,9 @@ import { formatList } from '../../core/i18n';
 
 // The PI's clue: a word, or as many words as the room allows, and a number. The same check that
 // the server runs shows problems while the PI types, and warns about clues that come close to a
-// word on the board. The numbers on offer are the ones that the room's guess rule allows. `busy`
-// holds the button while a clue is on its way.
+// word on the board. The numbers on offer, `counts`, are the ones that the room's guess rule
+// allows the PI's group, which the game works out. `busy` holds the button while a clue is on
+// its way.
 //
 // The PI may mark on the board the cards the clue is meant for (`targets`, in the order marked),
 // which nobody sees until the game is over (docs/games/keywords.md#the-clue). A line at the top
@@ -30,10 +30,12 @@ import { formatList } from '../../core/i18n';
 // The word and the number picked are models, so that the game can keep them as a draft while the
 // PI prepares the clue ahead of their turn, when `canGive` is false: the panel then says that
 // only the PI sees the draft, and holds the button until the turn comes. `gone` names the marked
-// cards that were revealed meanwhile, whose marks the game took away.
+// cards that were revealed meanwhile, whose marks the game took away, as it takes back a number
+// picked that is no longer on offer.
 const props = withDefaults(
   defineProps<{
     game: KeywordsView;
+    counts: ClueCount[];
     settings: KeywordsSettings;
     language: Language;
     busy?: boolean;
@@ -51,11 +53,10 @@ const { t, locale } = useI18n();
 
 const DEFAULT_COUNT = 1;
 const INFINITY = '\u221e';
-const counts = computed(() => clueCounts(props.settings.guessRule, props.game.remaining[props.game.team]));
 const count = computed<ClueCount>(() => {
   if (picked.value !== null) return picked.value;
   const marked = props.targets.length;
-  return marked > 0 && counts.value.includes(marked) ? marked : DEFAULT_COUNT;
+  return marked > 0 && props.counts.includes(marked) ? marked : DEFAULT_COUNT;
 });
 const quoted = (cards: readonly string[]) =>
   formatList(

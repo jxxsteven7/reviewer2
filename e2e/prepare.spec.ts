@@ -40,6 +40,9 @@ for (const language of ['en', 'zh'] as const) {
     await expect(captain.locator('.clue-panel.draft .ahead')).toHaveText(text.game.prepareNote);
     // The clue can't go yet.
     await expect(captain.getByRole('button', { name: text.game.sendClue })).toBeDisabled();
+    // The numbers on offer are the PI's own group's, which has one card fewer than the group
+    // that goes first, not the other group's.
+    await expect(captain.locator('.clue-panel .counts button')).toHaveCount(8);
 
     const word = clueFor(captain, 'Lantern');
     await captain.getByLabel(text.game.clueInput).fill(word);
