@@ -1,24 +1,29 @@
 <script setup lang="ts">
-import { computed, toRef, watch } from 'vue';
+import { computed, ref, toRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ConnectionBanner from '../components/ConnectionBanner.vue';
 import EmoteBubbles from '../components/EmoteBubbles.vue';
 import ManuscriptId from '../components/ManuscriptId.vue';
 import PageMasthead from '../components/PageMasthead.vue';
+import PlayerPanel from '../components/PlayerPanel.vue';
 import RoomNotice from '../components/RoomNotice.vue';
+import { provideOpenPlayer } from '../playerPanel';
 import { useRoomPage } from '../useRoomPage';
 import NameForm from './NameForm.vue';
 import RoomMenu from './RoomMenu.vue';
 
 // /room/:code. Enters the room, with the invitation that a friend sent when the address carries one
 // as `invite`, asks a newcomer for a name, and then shows the room's game, with the room menu in the
-// masthead. The whole page is in the room's language for as long as it is open.
+// masthead. The whole page is in the room's language for as long as it is open. A tap on a player's
+// avatar anywhere on the page opens the player's panel (PlayerPanel.vue).
 const props = defineProps<{ code: string }>();
 const route = useRoute();
 const router = useRouter();
 const invitation = computed(() => (typeof route.query.invite === 'string' ? route.query.invite : undefined));
 const { room, entry, screens } = useRoomPage(toRef(props, 'code'), { invitation });
 const me = computed(() => room.value?.players.find((player) => player.id === room.value?.me));
+const opened = ref<string | null>(null);
+provideOpenPlayer((playerId) => (opened.value = playerId));
 
 // The invitation has done its work once the page is in the room, whether it brought the page in or
 // came while the page was in already. It leaves the address, so that a reload comes back as a
@@ -60,6 +65,7 @@ watch(
       <NameForm v-else-if="entry.status === 'needs_name'" :code="code" />
       <RoomNotice v-else />
     </main>
+    <PlayerPanel v-if="entry.status === 'in' && room" :player-id="opened" :room="room" @close="opened = null" />
   </div>
 </template>
 

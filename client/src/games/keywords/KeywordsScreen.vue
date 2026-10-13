@@ -40,12 +40,12 @@ const game = computed(() => data.value.game as KeywordsView | null);
       <section v-for="group in groups" :key="group.team" class="group" :class="group.team">
         <h2>{{ t(`lobby.group.${group.team}`) }}</h2>
         <p class="role">{{ t('lobby.roles.captain') }}</p>
-        <PlayerName v-if="group.captain" :player="group.captain" :me="false" :chair="false" :manageable="false" />
+        <PlayerName v-if="group.captain" :player="group.captain" :me="false" :chair="false" />
         <p v-else class="vacant">{{ t('lobby.vacant') }}</p>
         <p class="role">{{ t('lobby.roles.guesser') }}</p>
         <ul>
           <li v-for="player in group.guessers" :key="player.id">
-            <PlayerName :player="player" :me="false" :chair="false" :manageable="false" />
+            <PlayerName :player="player" :me="false" :chair="false" />
           </li>
         </ul>
       </section>

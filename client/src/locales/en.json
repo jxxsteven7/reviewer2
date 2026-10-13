@@ -97,6 +97,15 @@
     "screenHint": "Open this on a projector or a shared screen. It shows the board without the key.",
     "selectLink": "Select the link and copy it.",
     "close": "Close",
+    "viewProfile": "View {name}'s profile",
+    "panel": {
+      "fullPage": "Open the full page",
+      "myAccount": "My account",
+      "guest": "Guest",
+      "guestNote": "Guests have no page.",
+      "agentNote": "AI players have no page.",
+      "back": "Back"
+    },
     "reconnecting": "Reconnecting...",
     "joining": "Opening the room...",
     "join": {
@@ -201,7 +210,6 @@
       "reportSubmit": "Send the report",
       "reportSent": "Thank you. The report has been sent.",
       "chair": "Make chair",
-      "viewPage": "View their page",
       "cancel": "Cancel"
     }
   },
@@ -829,7 +837,7 @@
     "entry": "Log in",
     "entryLabel": "Your account: {name}",
     "entryRequests": "Your account: {name}. {count} friend request is waiting for your answer. | Your account: {name}. {count} friend requests are waiting for your answer.",
-    "back": "Back to the contents",
+    "back": "Go back",
     "loading": "Loading…",
     "cancel": "Cancel",
     "showPassword": "Show",
@@ -966,7 +974,7 @@
     "withdraw": "Withdraw",
     "remove": "Remove",
     "removeConfirm": "Remove {name} from your friends? You can send a new request later.",
-    "none": "No friends yet. Add one by username, or tap a player's name in a room.",
+    "none": "No friends yet. Add one by username, or tap a player's avatar in a room.",
     "online": "online",
     "offline": "offline",
     "inPublicRoom": "In room {code}",

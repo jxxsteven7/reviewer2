@@ -129,7 +129,7 @@ The record of a game ([../architecture.md](../architecture.md#game-records)) log
 
 ## AI players
 
-Where the chair may have them ([../architecture.md](../architecture.md#ai-players)), the chair invites Reviewer 1 in the waiting room as a group's PI or as one of its students, once a person sits in a group (`needs_human`) and one of each a group at most (`agent_limit`), and removes it from the player menu. A game with AI players needs every time limit on (`needs_timers`), so that the clock moves the game on when the AI is slow or gone, and a person in a group (`needs_human`). It brings nobody points, a streak or a friend title.
+Where the chair may have them ([../architecture.md](../architecture.md#ai-players)), the chair invites Reviewer 1 in the waiting room as a group's PI or as one of its students, once a person sits in a group (`needs_human`) and one of each a group at most (`agent_limit`), and removes it from its panel, which a tap on its avatar opens. A game with AI players needs every time limit on (`needs_timers`), so that the clock moves the game on when the AI is slow or gone, and a person in a group (`needs_human`). It brings nobody points, a streak or a friend title.
 
 - **As the PI**, it gives its clue no sooner than 3 seconds into its turn, with the cards it is meant for (`targets`), as anyone may; it doesn't talk.
 - **As a student, with no person of its group there,** it reveals its cards 2 seconds after the clue and 1.5 seconds apart, the surest first and never the extra guess of the standard rule, and ends the turn once it has revealed them.

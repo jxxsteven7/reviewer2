@@ -6,7 +6,7 @@ import { points } from '../points';
 import { act } from '../socket';
 import { useBusy } from '../useBusy';
 import MatchForm from './MatchForm.vue';
-import PlayerAvatar from './PlayerAvatar.vue';
+import AvatarButton from './AvatarButton.vue';
 import TitleInfo from './TitleInfo.vue';
 import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
@@ -17,6 +17,9 @@ import UiSheet from './UiSheet.vue';
 // except on a screen, which nobody taps. The chair starts another match, with rules that they may
 // change, or makes the room an ordinary one again.
 const props = defineProps<{ room: RoomView }>();
+// A line's player while they are still in the room, whose panel a tap on the avatar opens.
+const inRoom = (id: string | null) =>
+  id !== null && props.room.players.some((player) => player.id === id) ? id : null;
 const { t } = useI18n();
 const { busy, run } = useBusy();
 
@@ -52,7 +55,12 @@ async function next(nextRules: MatchRules | null) {
         :class="[line.title, { me: line.playerId !== null && line.playerId === room.me, left: line.left }]"
       >
         <span class="rank num">{{ line.rank ?? '\u2013' }}</span>
-        <PlayerAvatar :name="line.name" :avatar="line.avatar" :size="line.title ? 'medium' : 'small'" />
+        <AvatarButton
+          :player-id="inRoom(line.playerId)"
+          :name="line.name"
+          :avatar="line.avatar"
+          :size="line.title ? 'medium' : 'small'"
+        />
         <span class="who">
           <span class="name">
             {{ line.name }}

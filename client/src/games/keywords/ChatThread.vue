@@ -2,7 +2,7 @@
 import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, textLength, type RoomView } from '@reviewer2/shared';
 import { computed, nextTick, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
+import AvatarButton from '../../core/components/AvatarButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import { byTurn } from './chat';
 import { useKeywords } from './useKeywords';
@@ -75,8 +75,9 @@ function send() {
           class="message"
           :class="{ own: message.player === room.me }"
         >
-          <PlayerAvatar
+          <AvatarButton
             v-if="playerOf(message.player)"
+            :player-id="message.player"
             :name="playerOf(message.player)?.name ?? ''"
             :avatar="playerOf(message.player)?.avatar"
             :agent="playerOf(message.player)?.agent !== undefined"

@@ -3,7 +3,7 @@ import type { DuoNotice, PlayerView, RoomView } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { duoLineKey } from '../duos';
-import PlayerAvatar from './PlayerAvatar.vue';
+import AvatarButton from './AvatarButton.vue';
 import TitleInfo from './TitleInfo.vue';
 
 // The titles that the game which has just ended brought the viewer's friends who played in it
@@ -37,7 +37,7 @@ const announcement = computed(() => notices.value.map((item) => `${headline(item
       <i18n-t :keypath="`duos.notice.${notice.title}`" tag="p" class="headline" scope="global">
         <template #name>
           <span class="who">
-            <PlayerAvatar :name="player.name" :avatar="player.avatar" />
+            <AvatarButton :player-id="player.id" :name="player.name" :avatar="player.avatar" />
             <strong>{{ player.name }}</strong>
           </span>
         </template>

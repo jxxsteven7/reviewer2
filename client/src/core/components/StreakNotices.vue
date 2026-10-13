@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLanguage } from '../i18n';
 import { streakLineKey, streakTitle } from '../streaks';
-import PlayerAvatar from './PlayerAvatar.vue';
+import AvatarButton from './AvatarButton.vue';
 import TitleInfo from './TitleInfo.vue';
 
 // The streaks that the game which has just ended brought the players to
@@ -78,7 +78,12 @@ const announcement = computed(() =>
     >
       <template #name>
         <span class="who">
-          <PlayerAvatar :name="player.name" :avatar="player.avatar" :size="large ? 'medium' : 'small'" />
+          <AvatarButton
+            :player-id="player.id"
+            :name="player.name"
+            :avatar="player.avatar"
+            :size="large ? 'medium' : 'small'"
+          />
           <strong>{{ player.name }}</strong>
         </span>
       </template>

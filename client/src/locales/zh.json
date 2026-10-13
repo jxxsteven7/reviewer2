@@ -97,6 +97,15 @@
     "screenHint": "在投影或共享屏幕上打开这个页面。它显示棋盘，但不显示答案。",
     "selectLink": "请选中链接，手动复制。",
     "close": "关闭",
+    "viewProfile": "查看 {name} 的资料",
+    "panel": {
+      "fullPage": "打开完整主页",
+      "myAccount": "我的账号",
+      "guest": "游客",
+      "guestNote": "游客没有主页。",
+      "agentNote": "AI 玩家没有主页。",
+      "back": "返回"
+    },
     "reconnecting": "正在重新连接……",
     "joining": "正在打开房间……",
     "join": {
@@ -201,7 +210,6 @@
       "reportSubmit": "发送举报",
       "reportSent": "谢谢，举报已发送。",
       "chair": "设为主持",
-      "viewPage": "查看主页",
       "cancel": "取消"
     }
   },
@@ -829,7 +837,7 @@
     "entry": "登录",
     "entryLabel": "你的账号：{name}",
     "entryRequests": "你的账号：{name}，{count} 个好友请求等你处理 | 你的账号：{name}，{count} 个好友请求等你处理",
-    "back": "回到目录",
+    "back": "返回上一页",
     "loading": "加载中…",
     "cancel": "取消",
     "showPassword": "显示",
@@ -966,7 +974,7 @@
     "withdraw": "撤回",
     "remove": "删除",
     "removeConfirm": "确定把 {name} 从好友中删除吗？以后可以重新发送请求。",
-    "none": "还没有好友。按用户名添加，或者在房间里点一下玩家的名字。",
+    "none": "还没有好友。按用户名添加，或者在房间里点一下玩家的头像。",
     "online": "在线",
     "offline": "离线",
     "inPublicRoom": "在房间 {code}",

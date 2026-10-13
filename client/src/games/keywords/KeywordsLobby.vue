@@ -18,7 +18,6 @@ import { RouterLink } from 'vue-router';
 import FieldPicker from '../../core/components/FieldPicker.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
-import PlayerMenu from '../../core/components/PlayerMenu.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import ShareTools from '../../core/components/ShareTools.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
@@ -28,7 +27,6 @@ import { account } from '../../core/account';
 import { fields, loadFields } from '../../core/fields';
 import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
-import { mayManage } from '../../core/manage';
 import { act, reconnecting } from '../../core/socket';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import RoleBanner from './RoleBanner.vue';
@@ -98,8 +96,6 @@ const timersOff = computed(() => {
 const agentName = computed(() => t('agents.personas.reviewer1'));
 const invite = (team: Team, role: 'captain' | 'guesser') =>
   act('room:addAgent', { persona: 'reviewer1', seat: { team, role } });
-
-const managing = ref<PlayerView | null>(null);
 
 // The chair's choice of word lists, which is only sent when they save it. Every snapshot brings
 // the room's lists as a new array, so they are compared by their contents: an unsaved choice
@@ -202,7 +198,6 @@ function switchVisibility() {
 }
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
-const manageable = (player: PlayerView) => mayManage(props.room, player);
 </script>
 
 <template>
@@ -248,13 +243,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
           <h2 class="section-title">{{ t('match.drawn') }}</h2>
           <ul v-if="pool.length" class="names inline">
             <li v-for="player in pool" :key="player.id">
-              <PlayerName
-                :player="player"
-                :me="isMe(player)"
-                :chair="isChairOf(player)"
-                :manageable="manageable(player)"
-                @manage="managing = $event"
-              />
+              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
             </li>
           </ul>
           <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
@@ -273,8 +262,6 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
                   :player="group.captain"
                   :me="isMe(group.captain)"
                   :chair="isChairOf(group.captain)"
-                  :manageable="manageable(group.captain)"
-                  @manage="managing = $event"
                 />
                 <span v-else class="vacant">{{ t('lobby.vacant') }}</span>
                 <UiButton v-if="!group.captain && mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
@@ -293,13 +280,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
               <dd>
                 <ul v-if="group.guessers.length" class="names">
                   <li v-for="player in group.guessers" :key="player.id">
-                    <PlayerName
-                      :player="player"
-                      :me="isMe(player)"
-                      :chair="isChairOf(player)"
-                      :manageable="manageable(player)"
-                      @manage="managing = $event"
-                    />
+                    <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
                   </li>
                 </ul>
                 <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
@@ -328,13 +309,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
           <h2 class="section-title">{{ t('lobby.roles.spectator') }}</h2>
           <ul v-if="spectators.length" class="names inline">
             <li v-for="player in spectators" :key="player.id">
-              <PlayerName
-                :player="player"
-                :me="isMe(player)"
-                :chair="isChairOf(player)"
-                :manageable="manageable(player)"
-                @manage="managing = $event"
-              />
+              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
             </li>
           </ul>
           <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
@@ -419,8 +394,6 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
         </section>
       </div>
     </div>
-
-    <PlayerMenu :player="managing" :room="room" @close="managing = null" />
 
     <UiSheet :open="needsAccount" :title="t('room.makePublic')" @close="needsAccount = false">
       <div class="needs-account">
