@@ -738,11 +738,13 @@ const chosenByOthers = computed(() =>
   }
 
   /* Under the board, no row for the buttons: the chat is a panel beside it, and the groups and
-     the clue log are columns. */
+     the clue log are columns. The other rows are as on a phone. */
   .actions {
     grid-template-areas:
       'me me me .'
       'panel panel panel panel'
+      'prepare prepare prepare prepare'
+      'draft draft draft draft'
       'extend extend extend extend';
   }
 
