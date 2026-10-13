@@ -7,32 +7,35 @@ import {
   MAX_PASSWORD_INPUT,
   nextRank,
   rankFor,
-  STREAK_KINDS,
-  STREAK_MIN,
   type AccountSummary,
 } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { changeLogin, loadAccount, request } from '../account';
+import PlayerNumber from '../components/PlayerNumber.vue';
+import TitlePills from '../components/TitlePills.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
+import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { useLanguage } from '../i18n';
-import { streakTitle } from '../streaks';
+import { streakTitles as titlesOf } from '../streaks';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import ProfileAvatar from './ProfileAvatar.vue';
 import ProfileEmail from './ProfileEmail.vue';
 import ProfileFriends from './ProfileFriends.vue';
+import ProfilePublic from './ProfilePublic.vue';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's own page: its avatar and username, its academic rank, its titles, its streaks and
-// the acknowledgments counted for it, its friends, its email address, its password, its record, and
-// the ways to log out and to delete it.
+// The account's own page: its avatar and username, its number and when it registered, its
+// academic rank, its titles, its streaks and the acknowledgments counted for it, its public page,
+// its friends, its email address, its password, its record, and the ways to log out and to delete
+// it.
 const props = defineProps<{ summary: AccountSummary }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const { busy, run } = useBusy();
 
@@ -62,23 +65,17 @@ const passwordProblem = computed(() => {
   return problem ? t(errorKey(problem)) : undefined;
 });
 
-// A title or an acknowledgment, with how often it was awarded when that is more than once.
-const counted = (label: string, count: number) =>
-  count > 1 ? t('account.profile.titleCount', { title: label, count }) : label;
+// The day the account registered, as its public page shows it too.
+const since = computed(() => formatDay(props.summary.createdAt, locale.value));
 
 // The rank that the account's points hold, and the next one (shared/src/ranks.ts).
 const rank = computed(() => rankFor(props.summary.points));
 const next = computed(() => nextRank(props.summary.points));
 
-// The streak titles (shared/src/streaks.ts): the longest run of wins and of losses, from three games
-// on, with the number in the words of the language.
+// The streak titles (streaks.ts): the longest run of wins and of losses, from three games on, with
+// the number in the words of the language.
 const language = useLanguage();
-const streakTitles = computed(() =>
-  STREAK_KINDS.flatMap((kind) => {
-    const length = props.summary.streaks[kind];
-    return length >= STREAK_MIN ? [{ kind, title: streakTitle(t, kind, length, language.value) }] : [];
-  }),
-);
+const streakTitles = computed(() => titlesOf(t, props.summary.streaks, language.value));
 
 // Sends a change, and shows what the server had against it.
 async function change(path: string, body: object): Promise<boolean> {
@@ -163,6 +160,10 @@ async function logOut() {
           t('account.profile.rename')
         }}</UiButton>
       </div>
+      <p class="line">
+        <PlayerNumber :id="summary.id" />
+        <span class="hint">{{ t('playerPage.since', { date: since }) }}</span>
+      </p>
     </section>
 
     <section class="part" aria-labelledby="profile-rank">
@@ -183,19 +184,22 @@ async function logOut() {
       aria-labelledby="profile-titles"
     >
       <h2 id="profile-titles">{{ t('account.profile.titles') }}</h2>
-      <ul class="titles">
-        <li v-for="{ title, count } in summary.titles" :key="title">
-          {{ counted(t(`account.profile.titleNames.${title}`), count) }}
-        </li>
-        <li v-for="{ kind, title } in streakTitles" :key="kind" class="streak" :class="kind">{{ title }}</li>
-        <li v-for="{ kind, count } in summary.acknowledgments" :key="kind">
-          {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
-        </li>
-      </ul>
+      <TitlePills :titles="summary.titles" :streaks="streakTitles" :acknowledgments="summary.acknowledgments" />
+    </section>
+
+    <section class="part" aria-labelledby="profile-public">
+      <h2 id="profile-public">{{ t('account.profile.public.title') }}</h2>
+      <ProfilePublic :summary="summary" />
     </section>
 
     <section class="part" aria-labelledby="profile-friends">
-      <h2 id="profile-friends">{{ t('friends.title') }}</h2>
+      <h2 id="profile-friends">
+        {{ t('friends.title') }}
+        <span v-if="summary.requests > 0" class="badge num" aria-hidden="true">{{ summary.requests }}</span>
+        <span v-if="summary.requests > 0" class="sr-only">{{
+          t('friends.requestsWaiting', { count: summary.requests }, summary.requests)
+        }}</span>
+      </h2>
       <ProfileFriends />
     </section>
 
@@ -327,6 +331,23 @@ h1 {
   font-size: var(--text-sm);
 }
 
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--red);
+  color: var(--on-red);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-black);
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .inline-form,
 .sheet-form {
   display: flex;
@@ -338,31 +359,6 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-}
-
-.titles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.titles li {
-  padding: var(--space-1) var(--space-3);
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius-pill);
-  background: var(--bg);
-  font-weight: var(--weight-bold);
-}
-
-.titles .streak.wins {
-  background: var(--blue-tint);
-}
-
-.titles .streak.losses {
-  background: var(--red-tint);
 }
 
 .leave {

@@ -39,6 +39,7 @@ describe('an account', () => {
     const ann = account();
     expect(ann).toEqual({
       id: 1,
+      handle: expect.stringMatching(/^[0-9a-f]{12}$/),
       username: 'Ann',
       key: 'ann',
       password: 'scrypt$hash',
@@ -46,8 +47,12 @@ describe('an account', () => {
       avatar: null,
       avatarBanned: false,
       publicBarred: false,
+      profile: { link: null, bio: null, showRecord: false, showThanks: false },
+      profileBanned: false,
       createdAt: '2026-10-09T12:00:00.000Z',
     });
+    expect(accounts.byHandle(ann.handle)).toEqual(ann);
+    expect(accounts.byHandle('000000000000')).toBeUndefined();
     expect(accounts.byKey('ann')).toEqual(ann);
     expect(accounts.byKey('bob')).toBeUndefined();
     expect(accounts.count()).toBe(1);
@@ -128,9 +133,9 @@ describe('the statistics of the accounts', () => {
     expect(accounts.activeWithin(30)).toBe(2);
     accounts.setPublicBarred(2, true);
     expect(accounts.list()).toEqual([
-      { username: 'Ann', createdAt: '2026-08-30T12:00:00.000Z', games: 1, matches: 1, barred: false },
-      { username: 'Bob', createdAt: '2026-09-29T12:00:00.000Z', games: 0, matches: 0, barred: true },
-      { username: 'Cy', createdAt: '2026-10-09T12:00:00.000Z', games: 0, matches: 0, barred: false },
+      { id: 1, username: 'Ann', createdAt: '2026-08-30T12:00:00.000Z', games: 1, matches: 1, barred: false },
+      { id: 2, username: 'Bob', createdAt: '2026-09-29T12:00:00.000Z', games: 0, matches: 0, barred: true },
+      { id: 3, username: 'Cy', createdAt: '2026-10-09T12:00:00.000Z', games: 0, matches: 0, barred: false },
     ]);
     expect(accounts.byId(2)).toMatchObject({ publicBarred: true });
     accounts.setPublicBarred(2, false);

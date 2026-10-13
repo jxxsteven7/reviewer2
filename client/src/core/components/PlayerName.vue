@@ -6,7 +6,9 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // A player's avatar and name with their online status, the academic rank of a player with an
 // account, small beside the name, and marks for "you" and the chair. For the chair, in a public
 // room for anyone who may report a player, and for an account that may ask another to be friends,
-// other players' names are buttons that open the player menu.
+// other players' names are buttons that open the player menu. The name, the rank and the marks
+// wrap under the name, never under the avatar, so that on a narrow screen they stay clear of the
+// sticker's round ends.
 defineProps<{ player: PlayerView; me: boolean; chair: boolean; manageable: boolean }>();
 const emit = defineEmits<{ manage: [player: PlayerView] }>();
 const { t } = useI18n();
@@ -22,20 +24,21 @@ const { t } = useI18n();
   >
     <span class="dot" :class="{ on: player.online }" aria-hidden="true"></span>
     <PlayerAvatar :name="player.name" :avatar="player.avatar" :class="{ away: !player.online }" />
-    <span class="name">{{ player.name }}</span>
-    <span v-if="player.rank" class="rank">{{ t(`ranks.names.${player.rank}`) }}</span>
-    <span v-if="me" class="mark">{{ t('room.you') }}</span>
-    <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
-    <span v-if="!player.online" class="mark">{{ t('room.offline') }}</span>
+    <span class="label">
+      <span class="name">{{ player.name }}</span>
+      <span v-if="player.rank" class="rank">{{ t(`ranks.names.${player.rank}`) }}</span>
+      <span v-if="me" class="mark">{{ t('room.you') }}</span>
+      <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
+      <span v-if="!player.online" class="mark">{{ t('room.offline') }}</span>
+    </span>
   </component>
 </template>
 
 <style scoped>
 .player {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 2px var(--space-2);
+  gap: var(--space-2);
   min-height: 44px;
   max-width: 100%;
   padding: 0;
@@ -46,11 +49,12 @@ const { t } = useI18n();
   text-align: left;
 }
 
-/* A name that can be acted on is a small sticker of its own. */
+/* A name that can be acted on is a small sticker of its own, a pill on one line and a rounded box
+   on two, with room above and below the lines. */
 .manageable {
-  padding: 0 var(--space-3) 0 var(--space-1);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
   border: var(--line-thin) solid var(--ink);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-panel);
   background: var(--paper);
   cursor: pointer;
 }
@@ -70,6 +74,14 @@ const { t } = useI18n();
 
 .dot.on {
   background: var(--ink);
+}
+
+.label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-2);
+  min-width: 0;
 }
 
 .name {

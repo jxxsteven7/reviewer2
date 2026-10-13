@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatCode, MAX_NAME_INPUT, type FriendView } from '@reviewer2/shared';
+import { formatCode, MAX_NAME_INPUT, PROFILE_PATH, type FriendView } from '@reviewer2/shared';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
@@ -15,10 +15,10 @@ import { useFriendsList } from '../useFriendsList';
 
 // The account's friends (docs/architecture.md#friends): the way to ask someone by their username,
 // the requests waiting for an answer each way, and the friends, each with whether they are online
-// and where. A friend in a public room can be joined from here; one in a private room only by
-// their invitation. A change made here comes back as the word that the server sends both sides,
-// on which the list is asked for again (useFriendsList); after a refusal it is asked for here,
-// since the list may have been out of date.
+// and where. Every name leads to that account's public page. A friend in a public room can be
+// joined from here; one in a private room only by their invitation. A change made here comes back
+// as the word that the server sends both sides, on which the list is asked for again
+// (useFriendsList); after a refusal it is asked for here, since the list may have been out of date.
 const { t } = useI18n();
 const { view, failed, load } = useFriendsList();
 const username = ref('');
@@ -74,7 +74,7 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
         <ul class="list">
           <li v-for="other in view.incoming" :key="other.username" class="line">
             <PlayerAvatar :name="other.username" :avatar="other.avatar" />
-            <span class="name">{{ other.username }}</span>
+            <RouterLink :to="`${PROFILE_PATH}${other.handle}`" class="name">{{ other.username }}</RouterLink>
             <UiButton variant="primary" size="small" :disabled="busy" @click="answer('friends:accept', other.username)">
               {{ t('friends.accept') }}
             </UiButton>
@@ -90,7 +90,7 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
         <ul class="list">
           <li v-for="other in view.outgoing" :key="other.username" class="line">
             <PlayerAvatar :name="other.username" :avatar="other.avatar" />
-            <span class="name">{{ other.username }}</span>
+            <RouterLink :to="`${PROFILE_PATH}${other.handle}`" class="name">{{ other.username }}</RouterLink>
             <UiButton variant="quiet" size="small" :disabled="busy" @click="answer('friends:remove', other.username)">
               {{ t('friends.withdraw') }}
             </UiButton>
@@ -106,7 +106,7 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
             <span class="dot" :class="{ on: friend.online }" aria-hidden="true"></span>
             <PlayerAvatar :name="friend.username" :avatar="friend.avatar" :class="{ away: !friend.online }" />
             <span class="who">
-              <span class="name">{{ friend.username }}</span>
+              <RouterLink :to="`${PROFILE_PATH}${friend.handle}`" class="name">{{ friend.username }}</RouterLink>
               <span class="where">
                 {{ t(friend.online ? 'friends.online' : 'friends.offline') }}
                 <template v-if="friend.room">
@@ -232,10 +232,16 @@ h3 {
   min-width: 0;
 }
 
+/* The name is a link on one line of text. Padding that the margins take back makes it 44px tall
+   to tap, as the buttons beside it are, without moving anything. */
 .name {
+  position: relative;
   flex: 1;
   min-width: 0;
+  margin: -10px 0;
+  padding: 10px 0;
   overflow: hidden;
+  color: var(--ink);
   font-weight: var(--weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -7,12 +7,14 @@ const mock = vi.hoisted(() => {
   return {
     handlers,
     socket: { on: (event: string, handler: (...args: unknown[]) => void) => handlers.set(event, handler) },
-    send: vi.fn(() => Promise.resolve({ ok: true })),
+    send: vi.fn(() => Promise.resolve({ ok: true } as object)),
+    whenConnected: vi.fn(() => Promise.resolve(true)),
   };
 });
 vi.mock('./socket', () => mock);
 
-import { ignore, invitations } from './friends';
+import { ignore, invitations, requestFriend } from './friends';
+import { toasts } from './toast';
 
 // What the server says.
 const hear = (event: string, ...args: unknown[]) => mock.handlers.get(event)?.(...args);
@@ -63,5 +65,27 @@ describe('the invitations on the page', () => {
     expect(shown()).toEqual(['b', 'c', 'd', 'e', 'f']);
     hear('connect');
     expect(shown()).toEqual([]);
+  });
+});
+
+describe('a request to be friends', () => {
+  test('goes over a connection, and the player hears how it went', async () => {
+    const heard = () => toasts.at(-1)?.key;
+    mock.send.mockResolvedValueOnce({ ok: true, status: 'pending' });
+    expect(await requestFriend({ username: 'Bob' })).toBe(true);
+    expect(mock.send).toHaveBeenCalledWith('friends:request', { username: 'Bob' });
+    expect(heard()).toBe('friends.requestSent');
+    mock.send.mockResolvedValueOnce({ ok: true, status: 'accepted' });
+    expect(await requestFriend({ playerId: 'p1' })).toBe(true);
+    expect(mock.send).toHaveBeenCalledWith('friends:request', { playerId: 'p1' });
+    expect(heard()).toBe('friends.nowFriends');
+    mock.send.mockResolvedValueOnce({ ok: false, error: 'request_pending' });
+    expect(await requestFriend({ username: 'Bob' })).toBe(false);
+    expect(heard()).toBe('errors.request_pending');
+    // Without a connection within the wait, nothing is sent.
+    mock.whenConnected.mockResolvedValueOnce(false);
+    expect(await requestFriend({ username: 'Cy' })).toBe(false);
+    expect(mock.send).not.toHaveBeenCalledWith('friends:request', { username: 'Cy' });
+    expect(heard()).toBe('errors.offline');
   });
 });

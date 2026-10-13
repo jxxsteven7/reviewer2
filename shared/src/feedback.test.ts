@@ -4,6 +4,7 @@ import {
   checkCredit,
   checkFeedback,
   checkLink,
+  checkWebLink,
   cleanFeedback,
   MAX_CONTACT_INPUT,
   MAX_CONTACT_LENGTH,
@@ -209,5 +210,25 @@ describe('the link for the acknowledgments', () => {
 
   test('that is not text is none', () => {
     expect(checkLink(7 as unknown as string, 'Ann')).toEqual({ link: null, problem: null });
+  });
+});
+
+describe('a web link of a player', () => {
+  test('takes the rules of the link for the acknowledgments, with problems of its own', () => {
+    expect(checkWebLink(undefined)).toEqual({ link: null, problem: null });
+    expect(checkWebLink('  ')).toEqual({ link: null, problem: null });
+    expect(checkWebLink(' https://ann.example/me ')).toEqual({ link: 'https://ann.example/me', problem: null });
+    expect(checkWebLink('https://en.wikipedia.org/wiki/Ann_(dev)')).toEqual({
+      link: 'https://en.wikipedia.org/wiki/Ann_%28dev%29',
+      problem: null,
+    });
+    for (const text of ['http://ann.example', 'mailto:ann@example.com', 'https://ann@example.com', 'ann.example']) {
+      expect(checkWebLink(text), text).toEqual({ link: null, problem: 'web_link_invalid' });
+    }
+    expect(checkWebLink(`https://ann.example/${'x'.repeat(200)}`)).toEqual({
+      link: null,
+      problem: 'web_link_too_long',
+    });
+    expect(checkWebLink('x'.repeat(MAX_LINK_INPUT + 1))).toEqual({ link: null, problem: 'web_link_too_long' });
   });
 });

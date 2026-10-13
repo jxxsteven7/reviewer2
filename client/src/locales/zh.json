@@ -192,6 +192,7 @@
       "reportSubmit": "发送举报",
       "reportSent": "谢谢，举报已发送。",
       "chair": "设为主持",
+      "viewPage": "查看主页",
       "cancel": "取消"
     }
   },
@@ -656,7 +657,14 @@
     "friend_in_room": "这位好友已经在这个房间里了。",
     "friend_removed": "房主把这位好友移出了这个房间，不能再邀请。",
     "invite_cooldown": "刚邀请过这位好友，一分钟后再试。",
-    "invitation_expired": "这个邀请已经失效。请对方再邀请一次，或者凭房间号加入。"
+    "invitation_expired": "这个邀请已经失效。请对方再邀请一次，或者凭房间号加入。",
+    "no_such_profile": "没有这个主页，账号可能已经注销。",
+    "self_like": "不能给自己的主页点赞。",
+    "like_limited": "今天点赞已经够多了，明天再来。",
+    "profile_banned": "这个账号不能在主页上填写链接和简介。",
+    "bio_too_long": "最多 80 个字符。",
+    "web_link_invalid": "请填以 https:// 开头的网址，不能是邮箱。",
+    "web_link_too_long": "链接最多 200 个字符。"
   },
   "footer": {
     "byline": "作者 {name}",
@@ -763,6 +771,7 @@
   "account": {
     "entry": "登录 / 注册",
     "entryLabel": "你的账号：{name}",
+    "entryRequests": "你的账号：{name}，{count} 个好友请求等你处理 | 你的账号：{name}，{count} 个好友请求等你处理",
     "back": "回到目录",
     "loading": "加载中…",
     "cancel": "取消",
@@ -821,6 +830,25 @@
       },
       "titleCount": "{title} ×{count}",
       "acknowledged": "致谢：{kind}",
+      "public": {
+        "title": "公开主页",
+        "intro": "任何人都能打开你的主页，看到用户名、头像、学术头衔、称号、玩家编号、注册日期和点赞数。其余的由你决定。",
+        "view": "打开我的主页",
+        "link": "公开链接",
+        "linkHint": "介绍你自己的网页，以 https:// 开头：个人主页、GitHub、ORCID 等。按原样显示网址。",
+        "linkPlaceholder": "https://",
+        "bio": "一句简介",
+        "bioCount": "{count}/{max} 个字符，按纯文本显示。",
+        "showRecord": "公开战绩：局数、胜场和比赛场数",
+        "showThanks": "公开致谢次数",
+        "save": "保存主页",
+        "saved": "主页已更新。",
+        "banned": "运营者清掉了你主页上的链接和简介，这个账号不能再填写。",
+        "likes": "收到的赞：{count}",
+        "noLikes": "还没有人给你的主页点赞。点赞的人只有你能看到。",
+        "likersShown": "这里只列出最近的 {count} 位。",
+        "friend": "好友"
+      },
       "record": "战绩",
       "recordSummary": "总局数：{games} · 胜场：{wins}",
       "noRecords": "还没有战绩。登录后在座位上打完的每一局都会记在这里。",
@@ -899,7 +927,8 @@
     "invitation": "{name} 邀请你加入房间 {code}",
     "invitationJoin": "加入",
     "invitationIgnore": "忽略",
-    "addFromRoom": "加为好友"
+    "addFromRoom": "加为好友",
+    "requestsWaiting": "{count} 个请求等你处理。 | {count} 个请求等你处理。"
   },
   "ranks": {
     "title": "学术头衔",
@@ -922,6 +951,19 @@
     "next": "再得 {points} 分升为{rank}。",
     "top": "已经是最高头衔。",
     "note": "登录后在座位上打完的每一局都按比赛的计分方式计入积分。头衔只是显示，不影响游戏。"
+  },
+  "playerPage": {
+    "title": "玩家主页",
+    "loading": "加载中…",
+    "number": "第 {id} 号玩家",
+    "author": "作者",
+    "since": "{date} 注册",
+    "record": "总局数：{games} · 胜场：{wins} · 比赛：{matches} 场",
+    "likes": "♥ {count}",
+    "like": "赞",
+    "liked": "已赞",
+    "logInToLike": "登录后可以点赞，也可以加对方为好友。",
+    "edit": "这是你自己的主页，去账号页修改。"
   },
   "streaks": {
     "kinds": {

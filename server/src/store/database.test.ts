@@ -68,6 +68,7 @@ describe('a database in DATA_DIR', () => {
       'feedback',
       'friendships',
       'game_records',
+      'likes',
       'match_records',
       'replays',
       'reports',
@@ -493,6 +494,46 @@ describe('a database in DATA_DIR', () => {
     expect(() => db.exec('INSERT INTO streaks VALUES (3, 0, 0, 0, 2)')).toThrow(/CHECK/);
   });
 
+  test('of the tenth release gives every account a handle of its own when it gets the profiles', async () => {
+    const tenth = await open(dir, MIGRATIONS.slice(0, 10));
+    tenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (2, 'Bob', 'bob', 'h', 'now');
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (3, 'Cy', 'cy', 'h', 'now');
+    `);
+    tenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 11));
+    expect(migrated).toMatchObject({ schema: 11, migratedFrom: 10 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v11.db'));
+    const { db } = migrated;
+    // Each account has a handle of 12 hexadecimal digits, no two the same, and an empty profile.
+    const rows = db
+      .prepare('SELECT id, handle, link, bio, show_record, show_thanks, profile_banned FROM accounts ORDER BY id')
+      .all() as { id: number; handle: string }[];
+    expect(rows).toEqual(
+      [1, 2, 3].map((id) => expect.objectContaining({ id, handle: expect.stringMatching(/^[0-9a-f]{12}$/) })),
+    );
+    expect(rows).toEqual(
+      rows.map(() =>
+        expect.objectContaining({ link: null, bio: null, show_record: 0, show_thanks: 0, profile_banned: 0 }),
+      ),
+    );
+    expect(new Set(rows.map(({ handle }) => handle)).size).toBe(3);
+    expect(() => db.exec(`UPDATE accounts SET handle = '${rows[0]?.handle}' WHERE id = 2`)).toThrow(/UNIQUE/);
+    expect(() => db.exec('UPDATE accounts SET show_record = 2 WHERE id = 1')).toThrow(/CHECK/);
+
+    // A like is one row for a pair, never an account with itself, and goes with either account.
+    db.exec("INSERT INTO likes VALUES (1, 2, 'now')");
+    expect(() => db.exec("INSERT INTO likes VALUES (1, 2, 'later')")).toThrow(/UNIQUE/);
+    expect(() => db.exec("INSERT INTO likes VALUES (1, 1, 'now')")).toThrow(/CHECK/);
+    expect(() => db.exec("INSERT INTO likes VALUES (1, 9, 'now')")).toThrow(/FOREIGN KEY/);
+    db.exec("INSERT INTO likes VALUES (2, 1, 'now'); INSERT INTO likes VALUES (3, 1, 'now')");
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT count(*) AS n FROM likes').get()).toEqual({ n: 0 });
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(
@@ -657,6 +698,7 @@ describe('a database in memory', () => {
       'feedback',
       'friendships',
       'game_records',
+      'likes',
       'match_records',
       'replays',
       'reports',

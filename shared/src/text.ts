@@ -86,3 +86,12 @@ const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('en'
 // code points is one, and so is a letter with its marks.
 export const textLength = (text: string): number =>
   segmenter ? [...segmenter.segment(text)].length : [...text].length;
+
+// Spaces, tabs and other control characters inside a line count as one space, and so does the
+// blank Braille pattern, as in the chat.
+const SPACES = /[\s\p{Cc}\u2800]+/gu;
+
+// One line as it is kept, as a contact or a bio is: as a chat message is cleaned, without hidden
+// characters, with no more than four marks of a kind on any character, and without spaces or
+// stray marks at its ends.
+export const cleanLine = (line: string): string => trimStrays(trimMarks(dropHidden(line.replace(SPACES, ' '))));
