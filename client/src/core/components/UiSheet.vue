@@ -121,6 +121,13 @@ onBeforeUnmount(() => {
   animation: rise var(--motion) ease-out;
 }
 
+/* The panel takes the focus when it opens, so that the keyboard and screen readers start inside it,
+   but it is no control of its own: it shows no focus ring, which would only draw a second frame
+   around the sheet. The buttons and fields inside it keep theirs. */
+.panel:focus-visible {
+  outline: none;
+}
+
 @keyframes rise {
   from {
     transform: translateY(24px);
