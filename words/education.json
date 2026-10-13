@@ -1,0 +1,1328 @@
+{
+  "id": "education",
+  "name": {
+    "zh": "教育学",
+    "en": "Education"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "education",
+      "zh": "教育",
+      "en": "Education",
+      "forms": { "en": ["educational", "educate"] }
+    },
+    {
+      "id": "teaching",
+      "zh": "教学",
+      "en": "Teaching",
+      "forms": { "en": ["teach"] }
+    },
+    {
+      "id": "learning",
+      "zh": "学习",
+      "en": "Learning",
+      "forms": { "en": ["learn"] }
+    },
+    {
+      "id": "teacher",
+      "zh": "教师",
+      "en": "Teacher"
+    },
+    {
+      "id": "learner",
+      "zh": "学习者",
+      "en": "Learner"
+    },
+    {
+      "id": "skill",
+      "zh": "技能",
+      "en": "Skill"
+    },
+    {
+      "id": "prodigy",
+      "zh": "神童",
+      "en": "Prodigy"
+    },
+    {
+      "id": "deskmate",
+      "zh": "同桌",
+      "en": "Deskmate"
+    },
+    {
+      "id": "class-monitor",
+      "zh": "班长",
+      "en": "Class monitor"
+    },
+    {
+      "id": "parent",
+      "zh": "家长",
+      "en": "Parent",
+      "forms": { "en": ["parenting"] }
+    },
+    {
+      "id": "headmaster",
+      "zh": "校长",
+      "en": "Headmaster"
+    },
+    {
+      "id": "class-teacher",
+      "zh": "班主任",
+      "en": "Class teacher"
+    },
+    {
+      "id": "provost",
+      "zh": "教务长",
+      "en": "Provost"
+    },
+    {
+      "id": "lecturer",
+      "zh": "讲师",
+      "en": "Lecturer"
+    },
+    {
+      "id": "school-board",
+      "zh": "校董会",
+      "en": "School board"
+    },
+    {
+      "id": "auditor",
+      "zh": "旁听生",
+      "en": "Auditor"
+    },
+    {
+      "id": "graduate",
+      "zh": "毕业生",
+      "en": "Graduate"
+    },
+    {
+      "id": "sophomore",
+      "zh": "大二",
+      "en": "Sophomore"
+    },
+    {
+      "id": "valedictorian",
+      "zh": "毕业生代表",
+      "en": "Valedictorian"
+    },
+    {
+      "id": "kindergarten",
+      "zh": "幼儿园",
+      "en": "Kindergarten"
+    },
+    {
+      "id": "daycare",
+      "zh": "托儿所",
+      "en": "Daycare"
+    },
+    {
+      "id": "primary-school",
+      "zh": "小学",
+      "en": "Primary school"
+    },
+    {
+      "id": "middle-school",
+      "zh": "初中",
+      "en": "Middle school"
+    },
+    {
+      "id": "high-school",
+      "zh": "高中",
+      "en": "High school"
+    },
+    {
+      "id": "college",
+      "zh": "学院",
+      "en": "College"
+    },
+    {
+      "id": "grad-school",
+      "zh": "研究生院",
+      "en": "Grad school"
+    },
+    {
+      "id": "night-school",
+      "zh": "夜校",
+      "en": "Night school"
+    },
+    {
+      "id": "public-school",
+      "zh": "公立学校",
+      "en": "Public school"
+    },
+    {
+      "id": "normal-school",
+      "zh": "师范学校",
+      "en": "Normal school"
+    },
+    {
+      "id": "trade-school",
+      "zh": "技校",
+      "en": "Trade school"
+    },
+    {
+      "id": "cram-school",
+      "zh": "补习班",
+      "en": "Cram school"
+    },
+    {
+      "id": "summer-camp",
+      "zh": "夏令营",
+      "en": "Summer camp"
+    },
+    {
+      "id": "homeschooling",
+      "zh": "在家上学",
+      "en": "Homeschooling",
+      "forms": { "en": ["homeschool"] }
+    },
+    {
+      "id": "truancy",
+      "zh": "逃学",
+      "en": "Truancy",
+      "forms": { "en": ["truant"] }
+    },
+    {
+      "id": "tardiness",
+      "zh": "迟到",
+      "en": "Tardiness",
+      "forms": { "en": ["tardy"] }
+    },
+    {
+      "id": "expulsion",
+      "zh": "开除",
+      "en": "Expulsion",
+      "forms": { "en": ["expel"] }
+    },
+    {
+      "id": "student-loan",
+      "zh": "学生贷款",
+      "en": "Student loan"
+    },
+    {
+      "id": "curriculum",
+      "zh": "课程设置",
+      "en": "Curriculum",
+      "forms": { "en": ["curricula"] }
+    },
+    {
+      "id": "credit-system",
+      "zh": "学分制",
+      "en": "Credit system"
+    },
+    {
+      "id": "learning-goal",
+      "zh": "学习目标",
+      "en": "Learning goal"
+    },
+    {
+      "id": "lesson-plan",
+      "zh": "教案",
+      "en": "Lesson plan"
+    },
+    {
+      "id": "didactics",
+      "zh": "教学论",
+      "en": "Didactics"
+    },
+    {
+      "id": "courseware",
+      "zh": "课件",
+      "en": "Courseware"
+    },
+    {
+      "id": "workbook",
+      "zh": "练习册",
+      "en": "Workbook"
+    },
+    {
+      "id": "capstone",
+      "zh": "毕业设计",
+      "en": "Capstone"
+    },
+    {
+      "id": "book-report",
+      "zh": "读后感",
+      "en": "Book report"
+    },
+    {
+      "id": "essay",
+      "zh": "作文",
+      "en": "Essay"
+    },
+    {
+      "id": "school-bell",
+      "zh": "上课铃",
+      "en": "School bell"
+    },
+    {
+      "id": "school-uniform",
+      "zh": "校服",
+      "en": "School uniform"
+    },
+    {
+      "id": "schoolbag",
+      "zh": "书包",
+      "en": "Schoolbag"
+    },
+    {
+      "id": "locker",
+      "zh": "储物柜",
+      "en": "Locker"
+    },
+    {
+      "id": "playground",
+      "zh": "操场",
+      "en": "Playground"
+    },
+    {
+      "id": "school-bus",
+      "zh": "校车",
+      "en": "School bus"
+    },
+    {
+      "id": "honor-roll",
+      "zh": "光荣榜",
+      "en": "Honor roll",
+      "forms": { "en": ["honour roll"] }
+    },
+    {
+      "id": "yearbook",
+      "zh": "毕业纪念册",
+      "en": "Yearbook"
+    },
+    {
+      "id": "home-visit",
+      "zh": "家访",
+      "en": "Home visit"
+    },
+    {
+      "id": "teachers-day",
+      "zh": "教师节",
+      "en": "Teachers' Day"
+    },
+    {
+      "id": "prom",
+      "zh": "毕业舞会",
+      "en": "Prom"
+    },
+    {
+      "id": "assessment",
+      "zh": "评价",
+      "en": "Assessment",
+      "forms": { "en": ["assess"] }
+    },
+    {
+      "id": "grade",
+      "zh": "成绩",
+      "en": "Grade",
+      "forms": { "en": ["grading"] }
+    },
+    {
+      "id": "rubric",
+      "zh": "量规",
+      "en": "Rubric"
+    },
+    {
+      "id": "item-bank",
+      "zh": "题库",
+      "en": "Item bank"
+    },
+    {
+      "id": "test-paper",
+      "zh": "试卷",
+      "en": "Test paper"
+    },
+    {
+      "id": "answer-sheet",
+      "zh": "答题卡",
+      "en": "Answer sheet"
+    },
+    {
+      "id": "answer-key",
+      "zh": "标准答案",
+      "en": "Answer key"
+    },
+    {
+      "id": "proctor",
+      "zh": "监考",
+      "en": "Proctor",
+      "forms": { "en": ["proctoring"] }
+    },
+    {
+      "id": "exam-hall",
+      "zh": "考场",
+      "en": "Exam hall"
+    },
+    {
+      "id": "mock-exam",
+      "zh": "模拟考试",
+      "en": "Mock exam"
+    },
+    {
+      "id": "placement-test",
+      "zh": "分班考试",
+      "en": "Placement test"
+    },
+    {
+      "id": "entrance-exam",
+      "zh": "入学考试",
+      "en": "Entrance exam"
+    },
+    {
+      "id": "oral-exam",
+      "zh": "口试",
+      "en": "Oral exam"
+    },
+    {
+      "id": "written-exam",
+      "zh": "笔试",
+      "en": "Written exam"
+    },
+    {
+      "id": "open-book-exam",
+      "zh": "开卷考试",
+      "en": "Open-book exam"
+    },
+    {
+      "id": "pop-quiz",
+      "zh": "随堂测验",
+      "en": "Pop quiz"
+    },
+    {
+      "id": "test",
+      "zh": "测验",
+      "en": "Test"
+    },
+    {
+      "id": "short-answer",
+      "zh": "简答题",
+      "en": "Short answer"
+    },
+    {
+      "id": "essay-question",
+      "zh": "论述题",
+      "en": "Essay question"
+    },
+    {
+      "id": "cutoff-score",
+      "zh": "分数线",
+      "en": "Cutoff score"
+    },
+    {
+      "id": "marking",
+      "zh": "阅卷",
+      "en": "Marking"
+    },
+    {
+      "id": "raw-score",
+      "zh": "原始分",
+      "en": "Raw score"
+    },
+    {
+      "id": "standard-score",
+      "zh": "标准分",
+      "en": "Standard score"
+    },
+    {
+      "id": "report-card",
+      "zh": "成绩报告单",
+      "en": "Report card"
+    },
+    {
+      "id": "test-anxiety",
+      "zh": "考试焦虑",
+      "en": "Test anxiety"
+    },
+    {
+      "id": "math-anxiety",
+      "zh": "数学焦虑",
+      "en": "Math anxiety"
+    },
+    {
+      "id": "washback",
+      "zh": "反拨效应",
+      "en": "Washback"
+    },
+    {
+      "id": "validity",
+      "zh": "效度",
+      "en": "Validity",
+      "forms": { "en": ["valid"] }
+    },
+    {
+      "id": "pretest",
+      "zh": "前测",
+      "en": "Pretest"
+    },
+    {
+      "id": "posttest",
+      "zh": "后测",
+      "en": "Posttest"
+    },
+    {
+      "id": "item-analysis",
+      "zh": "项目分析",
+      "en": "Item analysis"
+    },
+    {
+      "id": "ceiling-effect",
+      "zh": "天花板效应",
+      "en": "Ceiling effect"
+    },
+    {
+      "id": "floor-effect",
+      "zh": "地板效应",
+      "en": "Floor effect"
+    },
+    {
+      "id": "mixed-methods",
+      "zh": "混合方法",
+      "en": "Mixed methods"
+    },
+    {
+      "id": "delphi-method",
+      "zh": "德尔菲法",
+      "en": "Delphi method"
+    },
+    {
+      "id": "likert-scale",
+      "zh": "李克特量表",
+      "en": "Likert scale"
+    },
+    {
+      "id": "meta-analysis",
+      "zh": "元分析",
+      "en": "Meta-analysis"
+    },
+    {
+      "id": "intervention",
+      "zh": "干预",
+      "en": "Intervention"
+    },
+    {
+      "id": "lesson-study",
+      "zh": "课例研究",
+      "en": "Lesson study"
+    },
+    {
+      "id": "case-method",
+      "zh": "案例教学",
+      "en": "Case method"
+    },
+    {
+      "id": "microteaching",
+      "zh": "微格教学",
+      "en": "Microteaching"
+    },
+    {
+      "id": "practicum",
+      "zh": "教育实习",
+      "en": "Practicum"
+    },
+    {
+      "id": "inquiry",
+      "zh": "探究",
+      "en": "Inquiry",
+      "forms": { "en": ["enquiry"] }
+    },
+    {
+      "id": "edutainment",
+      "zh": "寓教于乐",
+      "en": "Edutainment"
+    },
+    {
+      "id": "gamification",
+      "zh": "游戏化",
+      "en": "Gamification",
+      "forms": { "en": ["gamify"] }
+    },
+    {
+      "id": "rote-learning",
+      "zh": "死记硬背",
+      "en": "Rote learning"
+    },
+    {
+      "id": "spoon-feeding",
+      "zh": "填鸭式",
+      "en": "Spoon-feeding"
+    },
+    {
+      "id": "peer-tutoring",
+      "zh": "同伴辅导",
+      "en": "Peer tutoring"
+    },
+    {
+      "id": "demonstration",
+      "zh": "示范",
+      "en": "Demonstration",
+      "forms": { "en": ["demonstrate"] }
+    },
+    {
+      "id": "questioning",
+      "zh": "提问",
+      "en": "Questioning"
+    },
+    {
+      "id": "wait-time",
+      "zh": "等待时间",
+      "en": "Wait time"
+    },
+    {
+      "id": "worked-example",
+      "zh": "例题",
+      "en": "Worked example"
+    },
+    {
+      "id": "teaching-aid",
+      "zh": "教具",
+      "en": "Teaching aid"
+    },
+    {
+      "id": "flashcard",
+      "zh": "抽认卡",
+      "en": "Flashcard"
+    },
+    {
+      "id": "copybook",
+      "zh": "字帖",
+      "en": "Copybook"
+    },
+    {
+      "id": "picture-book",
+      "zh": "绘本",
+      "en": "Picture book"
+    },
+    {
+      "id": "times-table",
+      "zh": "乘法表",
+      "en": "Times table"
+    },
+    {
+      "id": "number-sense",
+      "zh": "数感",
+      "en": "Number sense"
+    },
+    {
+      "id": "mental-math",
+      "zh": "心算",
+      "en": "Mental math"
+    },
+    {
+      "id": "phonics",
+      "zh": "自然拼读",
+      "en": "Phonics"
+    },
+    {
+      "id": "spelling-bee",
+      "zh": "拼字比赛",
+      "en": "Spelling bee"
+    },
+    {
+      "id": "nursery-rhyme",
+      "zh": "儿歌",
+      "en": "Nursery rhyme"
+    },
+    {
+      "id": "seating-chart",
+      "zh": "座位表",
+      "en": "Seating chart"
+    },
+    {
+      "id": "jigsaw",
+      "zh": "拼图法",
+      "en": "Jigsaw"
+    },
+    {
+      "id": "grouping",
+      "zh": "分组",
+      "en": "Grouping"
+    },
+    {
+      "id": "praise",
+      "zh": "表扬",
+      "en": "Praise"
+    },
+    {
+      "id": "preview",
+      "zh": "预习",
+      "en": "Preview"
+    },
+    {
+      "id": "review",
+      "zh": "复习",
+      "en": "Review"
+    },
+    {
+      "id": "recitation",
+      "zh": "背诵",
+      "en": "Recitation",
+      "forms": { "en": ["recite"] }
+    },
+    {
+      "id": "dictation",
+      "zh": "听写",
+      "en": "Dictation",
+      "forms": { "en": ["dictate"] }
+    },
+    {
+      "id": "reading-aloud",
+      "zh": "朗读",
+      "en": "Reading aloud"
+    },
+    {
+      "id": "skimming",
+      "zh": "略读",
+      "en": "Skimming",
+      "forms": { "en": ["skim"] }
+    },
+    {
+      "id": "speed-reading",
+      "zh": "速读",
+      "en": "Speed reading"
+    },
+    {
+      "id": "note-taking",
+      "zh": "记笔记",
+      "en": "Note-taking"
+    },
+    {
+      "id": "mnemonic",
+      "zh": "记忆术",
+      "en": "Mnemonic"
+    },
+    {
+      "id": "cornell-notes",
+      "zh": "康奈尔笔记",
+      "en": "Cornell notes"
+    },
+    {
+      "id": "comprehension",
+      "zh": "阅读理解",
+      "en": "Comprehension"
+    },
+    {
+      "id": "e-learning",
+      "zh": "在线学习",
+      "en": "E-learning"
+    },
+    {
+      "id": "edtech",
+      "zh": "教育技术",
+      "en": "EdTech",
+      "forms": { "en": ["educational technology"] }
+    },
+    {
+      "id": "multimedia",
+      "zh": "多媒体",
+      "en": "Multimedia"
+    },
+    {
+      "id": "microlecture",
+      "zh": "微课",
+      "en": "Microlecture"
+    },
+    {
+      "id": "stem",
+      "zh": "STEM",
+      "en": "STEM"
+    },
+    {
+      "id": "tabula-rasa",
+      "zh": "白板说",
+      "en": "Tabula rasa"
+    },
+    {
+      "id": "perennialism",
+      "zh": "永恒主义",
+      "en": "Perennialism"
+    },
+    {
+      "id": "montessori",
+      "zh": "蒙台梭利",
+      "en": "Montessori"
+    },
+    {
+      "id": "waldorf",
+      "zh": "华德福",
+      "en": "Waldorf"
+    },
+    {
+      "id": "dalton-plan",
+      "zh": "道尔顿制",
+      "en": "Dalton plan"
+    },
+    {
+      "id": "cognitivism",
+      "zh": "认知主义",
+      "en": "Cognitivism"
+    },
+    {
+      "id": "zpd",
+      "zh": "最近发展区",
+      "en": "ZPD",
+      "forms": { "en": ["zone of proximal development"] }
+    },
+    {
+      "id": "scaffolding",
+      "zh": "脚手架",
+      "en": "Scaffolding",
+      "forms": { "en": ["scaffold"] }
+    },
+    {
+      "id": "metacognition",
+      "zh": "元认知",
+      "en": "Metacognition",
+      "forms": { "en": ["metacognitive"] }
+    },
+    {
+      "id": "cognitive-load",
+      "zh": "认知负荷",
+      "en": "Cognitive load"
+    },
+    {
+      "id": "dual-coding",
+      "zh": "双重编码",
+      "en": "Dual coding"
+    },
+    {
+      "id": "growth-mindset",
+      "zh": "成长型思维",
+      "en": "Growth mindset"
+    },
+    {
+      "id": "testing-effect",
+      "zh": "测试效应",
+      "en": "Testing effect"
+    },
+    {
+      "id": "spacing-effect",
+      "zh": "间隔效应",
+      "en": "Spacing effect"
+    },
+    {
+      "id": "interleaving",
+      "zh": "交错练习",
+      "en": "Interleaving"
+    },
+    {
+      "id": "learning-style",
+      "zh": "学习风格",
+      "en": "Learning style"
+    },
+    {
+      "id": "misconception",
+      "zh": "迷思概念",
+      "en": "Misconception"
+    },
+    {
+      "id": "concept-map",
+      "zh": "概念图",
+      "en": "Concept map"
+    },
+    {
+      "id": "credentialism",
+      "zh": "文凭主义",
+      "en": "Credentialism"
+    },
+    {
+      "id": "literacy-rate",
+      "zh": "识字率",
+      "en": "Literacy rate"
+    },
+    {
+      "id": "resource-room",
+      "zh": "资源教室",
+      "en": "Resource room"
+    },
+    {
+      "id": "school",
+      "zh": "学校",
+      "en": "School"
+    },
+    {
+      "id": "schooling",
+      "zh": "学校教育",
+      "en": "Schooling"
+    },
+    {
+      "id": "preschool",
+      "zh": "学前班",
+      "en": "Preschool"
+    },
+    {
+      "id": "examinee",
+      "zh": "考生",
+      "en": "Examinee"
+    },
+    {
+      "id": "grade-skipping",
+      "zh": "跳级",
+      "en": "Grade skipping"
+    },
+    {
+      "id": "attendance",
+      "zh": "出勤",
+      "en": "Attendance",
+      "forms": { "en": ["attend"] }
+    },
+    {
+      "id": "distractor",
+      "zh": "干扰项",
+      "en": "Distractor"
+    },
+    {
+      "id": "scoring",
+      "zh": "计分",
+      "en": "Scoring"
+    },
+    {
+      "id": "rater",
+      "zh": "评分者",
+      "en": "Rater"
+    },
+    {
+      "id": "online-class",
+      "zh": "网课",
+      "en": "Online class"
+    },
+    {
+      "id": "virtual-lab",
+      "zh": "虚拟实验室",
+      "en": "Virtual lab"
+    },
+    {
+      "id": "serious-game",
+      "zh": "严肃游戏",
+      "en": "Serious game"
+    },
+    {
+      "id": "role-model",
+      "zh": "榜样",
+      "en": "Role model"
+    },
+    {
+      "id": "novelty-effect",
+      "zh": "新奇效应",
+      "en": "Novelty effect"
+    },
+    {
+      "id": "scratch-paper",
+      "zh": "草稿纸",
+      "en": "Scratch paper"
+    },
+    {
+      "id": "bonus-question",
+      "zh": "附加题",
+      "en": "Bonus question"
+    },
+    {
+      "id": "andragogy",
+      "zh": "成人教育学",
+      "en": "Andragogy"
+    },
+    {
+      "id": "coursework",
+      "zh": "课程作业",
+      "en": "Coursework"
+    },
+    {
+      "id": "prerequisite",
+      "zh": "先修课",
+      "en": "Prerequisite"
+    },
+    {
+      "id": "double-degree",
+      "zh": "双学位",
+      "en": "Double degree"
+    },
+    {
+      "id": "practice",
+      "zh": "练习",
+      "en": "Practice"
+    },
+    {
+      "id": "study-group",
+      "zh": "学习小组",
+      "en": "Study group"
+    },
+    {
+      "id": "class-size",
+      "zh": "班级规模",
+      "en": "Class size"
+    },
+    {
+      "id": "overlearning",
+      "zh": "过度学习",
+      "en": "Overlearning"
+    },
+    {
+      "id": "past-paper",
+      "zh": "真题",
+      "en": "Past paper"
+    },
+    {
+      "id": "graded-reader",
+      "zh": "分级读物",
+      "en": "Graded reader"
+    },
+    {
+      "id": "grammar-school",
+      "zh": "文法学校",
+      "en": "Grammar school"
+    },
+    {
+      "id": "prep-school",
+      "zh": "预备学校",
+      "en": "Prep school"
+    },
+    {
+      "id": "aptitude",
+      "zh": "能力倾向",
+      "en": "Aptitude"
+    },
+    {
+      "id": "faculty",
+      "zh": "教职员",
+      "en": "Faculty"
+    },
+    {
+      "id": "finals-week",
+      "zh": "考试周",
+      "en": "Finals week"
+    },
+    {
+      "id": "formative",
+      "zh": "形成性评价",
+      "en": "Formative",
+      "forms": { "en": ["formative assessment"] }
+    },
+    {
+      "id": "summative",
+      "zh": "终结性评价",
+      "en": "Summative",
+      "forms": { "en": ["summative assessment"] }
+    },
+    {
+      "id": "pass-mark",
+      "zh": "及格线",
+      "en": "Pass mark"
+    },
+    {
+      "id": "stanine",
+      "zh": "标准九分",
+      "en": "Stanine"
+    },
+    {
+      "id": "test-blueprint",
+      "zh": "双向细目表",
+      "en": "Test blueprint"
+    },
+    {
+      "id": "value-added",
+      "zh": "增值评价",
+      "en": "Value-added"
+    },
+    {
+      "id": "checklist",
+      "zh": "检核表",
+      "en": "Checklist"
+    },
+    {
+      "id": "big-idea",
+      "zh": "大概念",
+      "en": "Big idea"
+    },
+    {
+      "id": "gifted-child",
+      "zh": "超常儿童",
+      "en": "Gifted child"
+    },
+    {
+      "id": "inclusion",
+      "zh": "全纳教育",
+      "en": "Inclusion",
+      "forms": { "en": ["inclusive education"] }
+    },
+    {
+      "id": "reggio-emilia",
+      "zh": "瑞吉欧",
+      "en": "Reggio Emilia"
+    },
+    {
+      "id": "froebel-gifts",
+      "zh": "恩物",
+      "en": "Froebel gifts"
+    },
+    {
+      "id": "grade-level",
+      "zh": "年级",
+      "en": "Grade level"
+    },
+    {
+      "id": "day-school",
+      "zh": "走读学校",
+      "en": "Day school"
+    },
+    {
+      "id": "boarding",
+      "zh": "寄宿",
+      "en": "Boarding"
+    },
+    {
+      "id": "trimester",
+      "zh": "三学期制",
+      "en": "Trimester"
+    },
+    {
+      "id": "school-rules",
+      "zh": "校规",
+      "en": "School rules"
+    },
+    {
+      "id": "accreditation",
+      "zh": "认证",
+      "en": "Accreditation",
+      "forms": { "en": ["accredit"] }
+    },
+    {
+      "id": "endowed-chair",
+      "zh": "讲席教授",
+      "en": "Endowed chair"
+    },
+    {
+      "id": "fraternity",
+      "zh": "兄弟会",
+      "en": "Fraternity"
+    },
+    {
+      "id": "sorority",
+      "zh": "姐妹会",
+      "en": "Sorority"
+    },
+    {
+      "id": "honor-code",
+      "zh": "荣誉准则",
+      "en": "Honor code",
+      "forms": { "en": ["honour code"] }
+    },
+    {
+      "id": "endowment",
+      "zh": "捐赠基金",
+      "en": "Endowment"
+    },
+    {
+      "id": "supply-teacher",
+      "zh": "代课教师",
+      "en": "Supply teacher"
+    },
+    {
+      "id": "makerspace",
+      "zh": "创客空间",
+      "en": "Makerspace"
+    },
+    {
+      "id": "worksheet",
+      "zh": "学习单",
+      "en": "Worksheet"
+    },
+    {
+      "id": "study-tour",
+      "zh": "游学",
+      "en": "Study tour"
+    },
+    {
+      "id": "deschooling",
+      "zh": "去学校化",
+      "en": "Deschooling"
+    },
+    {
+      "id": "teaching-style",
+      "zh": "教学风格",
+      "en": "Teaching style"
+    },
+    {
+      "id": "study-habits",
+      "zh": "学习习惯",
+      "en": "Study habits"
+    },
+    {
+      "id": "silent-reading",
+      "zh": "默读",
+      "en": "Silent reading"
+    },
+    {
+      "id": "classwork",
+      "zh": "课堂练习",
+      "en": "Classwork"
+    },
+    {
+      "id": "self-study",
+      "zh": "自学",
+      "en": "Self-study"
+    },
+    {
+      "id": "autodidact",
+      "zh": "自学者",
+      "en": "Autodidact"
+    },
+    {
+      "id": "thematic-unit",
+      "zh": "主题单元",
+      "en": "Thematic unit"
+    },
+    {
+      "id": "object-lesson",
+      "zh": "实物教学",
+      "en": "Object lesson"
+    },
+    {
+      "id": "model-un",
+      "zh": "模拟联合国",
+      "en": "Model UN",
+      "forms": { "zh": ["模联"], "en": ["Model United Nations"] }
+    },
+    {
+      "id": "special-school",
+      "zh": "特殊学校",
+      "en": "Special school"
+    },
+    {
+      "id": "remediation",
+      "zh": "补救教学",
+      "en": "Remediation"
+    },
+    {
+      "id": "childcare",
+      "zh": "保育",
+      "en": "Childcare"
+    },
+    {
+      "id": "oxbridge",
+      "zh": "牛剑",
+      "en": "Oxbridge"
+    },
+    {
+      "id": "e-textbook",
+      "zh": "电子教材",
+      "en": "E-textbook"
+    },
+    {
+      "id": "reading-corner",
+      "zh": "图书角",
+      "en": "Reading corner"
+    },
+    {
+      "id": "exercise-book",
+      "zh": "作业本",
+      "en": "Exercise book"
+    },
+    {
+      "id": "stationery",
+      "zh": "文具",
+      "en": "Stationery"
+    },
+    {
+      "id": "pencil-case",
+      "zh": "铅笔盒",
+      "en": "Pencil case"
+    },
+    {
+      "id": "eraser",
+      "zh": "橡皮",
+      "en": "Eraser"
+    },
+    {
+      "id": "red-pen",
+      "zh": "红笔",
+      "en": "Red pen"
+    },
+    {
+      "id": "back-to-school",
+      "zh": "开学",
+      "en": "Back to school"
+    },
+    {
+      "id": "spot-check",
+      "zh": "抽查",
+      "en": "Spot check"
+    },
+    {
+      "id": "extra-credit",
+      "zh": "加分",
+      "en": "Extra credit"
+    },
+    {
+      "id": "handwriting",
+      "zh": "书写",
+      "en": "Handwriting"
+    },
+    {
+      "id": "model-essay",
+      "zh": "范文",
+      "en": "Model essay"
+    },
+    {
+      "id": "pck",
+      "zh": "PCK",
+      "en": "PCK",
+      "forms": { "zh": ["学科教学知识"], "en": ["pedagogical content knowledge"] }
+    },
+    {
+      "id": "reading-list",
+      "zh": "书单",
+      "en": "Reading list"
+    },
+    {
+      "id": "study-plan",
+      "zh": "学习计划",
+      "en": "Study plan"
+    },
+    {
+      "id": "conservatory",
+      "zh": "音乐学院",
+      "en": "Conservatory"
+    },
+    {
+      "id": "junior-college",
+      "zh": "大专",
+      "en": "Junior college"
+    },
+    {
+      "id": "board-work",
+      "zh": "板书",
+      "en": "Board work"
+    },
+    {
+      "id": "study-buddy",
+      "zh": "学伴",
+      "en": "Study buddy"
+    },
+    {
+      "id": "study-guide",
+      "zh": "复习提纲",
+      "en": "Study guide"
+    },
+    {
+      "id": "desk",
+      "zh": "课桌",
+      "en": "Desk"
+    },
+    {
+      "id": "class-photo",
+      "zh": "毕业照",
+      "en": "Class photo"
+    },
+    {
+      "id": "learning-path",
+      "zh": "学习路径",
+      "en": "Learning path"
+    },
+    {
+      "id": "constructivism",
+      "zh": "建构主义",
+      "en": "Constructivism",
+      "forms": { "en": ["constructivist"] }
+    }
+  ]
+}
