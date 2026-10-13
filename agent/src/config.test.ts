@@ -31,6 +31,18 @@ describe('the settings', () => {
     const file = join(dir, 'key');
     writeFileSync(file, 'from-file\n');
     expect(loadConfig({ ...base, AGENT_MODEL_KEY_FILE: file }, 1).modelKey).toBe('from-file');
+    // A key goes over HTTPS, or to a model on this machine.
+    const keyed = { ...base, AGENT_MODEL_KEY: 'k' };
+    expect(loadConfig({ ...keyed, AGENT_MODEL_URL: 'https://model.test/v1' }, 1).modelUrl).toBe(
+      'https://model.test/v1',
+    );
+    expect(loadConfig({ ...keyed, AGENT_MODEL_URL: 'http://localhost:11434/v1' }, 1).modelUrl).toBe(
+      'http://localhost:11434/v1',
+    );
+    expect(loadConfig({ ...keyed, AGENT_MODEL_URL: 'http://[::1]:11434/v1' }, 1).modelUrl).toBe(
+      'http://[::1]:11434/v1',
+    );
+    expect(() => loadConfig({ ...keyed, AGENT_MODEL_URL: 'http://model.test/v1' }, 1)).toThrow(/https/);
     expect(loadConfig({ ...base, AGENT_CONCURRENCY: '4', AGENT_QUEUE: '0' }, 1)).toMatchObject({
       concurrency: 4,
       queue: 0,

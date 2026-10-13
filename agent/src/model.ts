@@ -40,7 +40,17 @@ export interface Model {
   ping(signal: AbortSignal): Promise<boolean>;
 }
 
-export class ModelError extends Error {}
+// Why the model gave no answer: its service couldn't be reached, or refused the request (`service`),
+// which the server takes as the model being down; or it answered with something that isn't an
+// answer, which says nothing of the next request.
+export class ModelError extends Error {
+  constructor(
+    message: string,
+    readonly service = false,
+  ) {
+    super(message);
+  }
+}
 
 // The longest answer the model may write, in tokens. An answer is a few candidates or a few card
 // numbers with a sentence; this only stops a model that has lost its way from writing on until the
@@ -57,9 +67,9 @@ export function createModel(options: ModelOptions): Model {
     try {
       response = await call(`${options.url}${path}`, { ...init, headers });
     } catch (error) {
-      throw new ModelError(error instanceof Error ? error.message : String(error));
+      throw new ModelError(error instanceof Error ? error.message : String(error), true);
     }
-    if (!response.ok) throw new ModelError(`the model's service answered ${response.status}`);
+    if (!response.ok) throw new ModelError(`the model's service answered ${response.status}`, true);
     try {
       return await response.json();
     } catch {

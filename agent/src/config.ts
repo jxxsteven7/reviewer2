@@ -40,7 +40,12 @@ function secret(env: NodeJS.ProcessEnv): string | null {
   return key === '' ? null : key;
 }
 
-function modelUrl(text: string | undefined): string {
+// The hosts that are this machine, where a key may go over plain HTTP.
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+// The model's address. With a key, it is HTTPS, so that the key never goes over the network in the
+// clear, unless the model runs on this machine.
+function modelUrl(text: string | undefined, keyed: boolean): string {
   const trimmed = text?.trim() ?? '';
   if (trimmed === '') throw new Error('set AGENT_MODEL_URL, the address of the language model');
   let url: URL;
@@ -51,6 +56,9 @@ function modelUrl(text: string | undefined): string {
   }
   if (!['https:', 'http:'].includes(url.protocol) || url.search || url.hash || url.username || url.password) {
     throw new Error(`AGENT_MODEL_URL must be an http or https address without a query, not "${trimmed}"`);
+  }
+  if (keyed && url.protocol === 'http:' && !LOOPBACK.has(url.hostname)) {
+    throw new Error('AGENT_MODEL_URL must be an https address when a key is set, unless it is on this machine');
   }
   return url.href.replace(/\/+$/, '');
 }
@@ -75,12 +83,13 @@ export function loadConfig(env: NodeJS.ProcessEnv, pid: number): AgentConfig {
   }
   const model = env.AGENT_MODEL?.trim() ?? '';
   if (model === '') throw new Error("set AGENT_MODEL, the model's name");
+  const modelKey = secret(env);
   return {
     activated,
     socket,
-    modelUrl: modelUrl(env.AGENT_MODEL_URL),
+    modelUrl: modelUrl(env.AGENT_MODEL_URL, modelKey !== null),
     model,
-    modelKey: secret(env),
+    modelKey,
     concurrency: wholeNumber('AGENT_CONCURRENCY', env.AGENT_CONCURRENCY, DEFAULT_CONCURRENCY, 1, 64),
     queue: wholeNumber('AGENT_QUEUE', env.AGENT_QUEUE, DEFAULT_QUEUE, 0, 1000),
   };

@@ -8,7 +8,9 @@ import { PERSONAS } from './personas';
 // The agent's work (docs/architecture.md#the-agent): one request on one line of a connection, one
 // answer on one line back, and then the connection closes, as with the mailer. The log says what
 // kind of request came, how long its answer took and whether it was one, and never what was on the
-// board, what the model wrote or which seat asked.
+// board, what the model wrote or which seat asked. Time is read from a clock that only runs
+// forward, as the game server reads its own: the system's clock gets corrected, and a wait or a
+// note's time would stretch or collapse with it.
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
@@ -26,7 +28,14 @@ export interface AgentOptions {
 // How long a ping may take: it only asks the service which models it has.
 const PING_MS = 5_000;
 
-export function createAgent({ model, log, concurrency, queue, readMs = 2_000, now = Date.now }: AgentOptions) {
+export function createAgent({
+  model,
+  log,
+  concurrency,
+  queue,
+  readMs = 2_000,
+  now = () => performance.now(),
+}: AgentOptions) {
   // The requests that wait for the model, the earliest first, and how many it is answering.
   const waiting: (() => void)[] = [];
   let running = 0;
@@ -59,7 +68,7 @@ export function createAgent({ model, log, concurrency, queue, readMs = 2_000, no
       const turn = {
         model,
         persona: PERSONAS[request.persona],
-        signal: AbortSignal.timeout(Math.max(1, until - now())),
+        signal: AbortSignal.timeout(Math.max(1, Math.ceil(until - now()))),
         now,
       };
       return request.kind === 'clue' ? await giveClue(request, turn) : await guess(request, turn);
@@ -75,7 +84,8 @@ export function createAgent({ model, log, concurrency, queue, readMs = 2_000, no
   }
 
   // Answers one line. An answer that is anything but what the protocol allows, as a bug could make
-  // it, goes out as a failure instead, so that the server never reads a line it can't take.
+  // it, goes out as a failure instead, so that the server never reads a line it can't take: as no
+  // answer, since the agent and the model are there all the same.
   async function handle(line: string): Promise<AgentReply> {
     const started = now();
     let parsed: unknown;
@@ -86,7 +96,7 @@ export function createAgent({ model, log, concurrency, queue, readMs = 2_000, no
     }
     const request = AGENT_REQUEST.safeParse(parsed);
     if (!request.success) {
-      log('agent_answered', { kind: null, ms: now() - started, ok: false, error: 'bad_request' });
+      log('agent_answered', { kind: null, ms: Math.round(now() - started), ok: false, error: 'bad_request' });
       return { ok: false, error: 'bad_request' };
     }
     let reply: AgentReply;
@@ -94,14 +104,19 @@ export function createAgent({ model, log, concurrency, queue, readMs = 2_000, no
       reply = await answer(request.data);
     } catch (error) {
       log('error', { message: error instanceof Error ? error.message : String(error) });
-      reply = { ok: false, error: 'model_failed' };
+      reply = { ok: false, error: 'no_answer' };
     }
     if (!AGENT_REPLY.safeParse(reply).success) {
       log('error', { message: 'an answer that the protocol does not allow', kind: request.data.kind });
-      reply = { ok: false, error: 'model_failed' };
+      reply = { ok: false, error: 'no_answer' };
     }
     const { kind } = request.data;
-    log('agent_answered', { kind, ms: now() - started, ok: reply.ok, ...(reply.ok ? {} : { error: reply.error }) });
+    log('agent_answered', {
+      kind,
+      ms: Math.round(now() - started),
+      ok: reply.ok,
+      ...(reply.ok ? {} : { error: reply.error }),
+    });
     return reply;
   }
 
@@ -133,7 +148,7 @@ export function createAgent({ model, log, concurrency, queue, readMs = 2_000, no
       socket.setTimeout(0);
       handle(received.slice(0, end)).then(reply, (error: unknown) => {
         log('error', { message: error instanceof Error ? error.message : String(error) });
-        reply({ ok: false, error: 'model_failed' });
+        reply({ ok: false, error: 'no_answer' });
       });
     });
   }

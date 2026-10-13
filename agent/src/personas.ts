@@ -21,8 +21,10 @@ export interface Persona {
   // turns safer but found fewer cards, and took two to three times as long, so Reviewer 1 does
   // without it.
   rehearse: boolean;
-  // As a student: how the one sentence of the reason sounds, which the group reads when the agent
-  // advises a human student.
+  // As a student: how sure it must be of a card, after the first, to reveal it, in the words the
+  // model is told; a student that is less sure stops. And how the one sentence of the reason
+  // sounds, which the group reads when the agent advises a human student.
+  caution: string;
   tone: string;
 }
 
@@ -34,6 +36,7 @@ export const PERSONAS: Readonly<Record<AgentPersona, Persona>> = {
     temperature: 0.6,
     targets: { min: 1, preferred: 2, max: 3 },
     rehearse: false,
+    caution: 'fairly sure',
     tone: 'calm and brief, like a polite senior colleague',
   },
 };

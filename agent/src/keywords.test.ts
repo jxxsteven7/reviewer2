@@ -53,19 +53,20 @@ describe('a clue', () => {
     expect(question?.system).not.toMatch(/\bred\b|\bblue\b/i);
   });
 
-  test('asks once more with the clues that were refused, and gives up after that', async () => {
+  test('asks twice more with the clues that were refused, and gives up after that', async () => {
     const refused = { candidates: [candidate('Kernels', [2]), candidate('Grants', [3])] };
-    const model = new ScriptedModel({ clue: [refused, { candidates: [candidate('Biology', [6, 7])] }] });
+    const model = new ScriptedModel({ clue: [refused, refused, { candidates: [candidate('Biology', [6, 7])] }] });
     const reply = allowed(await giveClue(clueRequest(), turn(model)));
     expect(reply).toMatchObject({ ok: true, word: 'Biology' });
     expect(model.asked[1]?.user).toMatch(/refused these clues[\s\S]*- Kernels: [\s\S]*- Grants: /);
+    expect(model.asked).toHaveLength(3);
 
-    const stubborn = new ScriptedModel({ clue: [refused, refused] });
+    const stubborn = new ScriptedModel({ clue: [refused, refused, refused] });
     const none = allowed(await giveClue(clueRequest(), turn(stubborn)));
-    expect(none).toMatchObject({ ok: false, error: 'no_clue' });
+    expect(none).toMatchObject({ ok: false, error: 'no_legal_clue' });
     if (none.ok) throw new Error('a clue');
-    expect(none.note?.candidates).toHaveLength(4);
-    expect(stubborn.asked).toHaveLength(2);
+    expect(none.note?.candidates).toHaveLength(6);
+    expect(stubborn.asked).toHaveLength(3);
   });
 
   test('is never one that was given before', async () => {
@@ -119,10 +120,20 @@ describe('a clue', () => {
   });
 
   test('fails with the model, and says what it had considered', async () => {
-    const model = new ScriptedModel({ clue: [new ModelError('down')] });
-    expect(allowed(await giveClue(clueRequest(), turn(model)))).toMatchObject({ ok: false, error: 'model_failed' });
-    const nonsense = new ScriptedModel({ clue: [{ candidates: 'none' }, { thoughts: [] }] });
-    expect(allowed(await giveClue(clueRequest(), turn(nonsense)))).toMatchObject({ ok: false, error: 'no_clue' });
+    // The model's service is gone: the AI players are offline. The model answered nonsense, or
+    // nothing in time: this clue alone is lost.
+    const down = new ScriptedModel({ clue: [new ModelError('down', true)] });
+    expect(allowed(await giveClue(clueRequest(), turn(down)))).toMatchObject({ ok: false, error: 'model_failed' });
+    const garbled = new ScriptedModel({ clue: [new ModelError("the model's answer isn't JSON")] });
+    expect(allowed(await giveClue(clueRequest(), turn(garbled)))).toMatchObject({ ok: false, error: 'no_answer' });
+    const slow = new ScriptedModel({ clue: [new Promise(() => {})] });
+    const short = { ...turn(slow), signal: AbortSignal.timeout(20) };
+    expect(allowed(await giveClue(clueRequest(), short))).toMatchObject({ ok: false, error: 'no_answer' });
+    const nonsense = new ScriptedModel({ clue: [{ candidates: 'none' }, { thoughts: [] }, { candidates: [] }] });
+    expect(allowed(await giveClue(clueRequest(), turn(nonsense)))).toMatchObject({
+      ok: false,
+      error: 'no_legal_clue',
+    });
   });
 
   test('can be rehearsed: the clue whose guesses go best is given', async () => {
@@ -201,7 +212,7 @@ describe('a guess', () => {
 
   test('always names a card, or fails', async () => {
     const empty = new ScriptedModel({ guess: [{ picks: [], reason: 'Not sure.' }] });
-    expect(allowed(await guess(guessRequest(), turn(empty)))).toMatchObject({ ok: false, error: 'model_failed' });
+    expect(allowed(await guess(guessRequest(), turn(empty)))).toMatchObject({ ok: false, error: 'no_answer' });
     const revealed = new ScriptedModel({ guess: [{ picks: [6], reason: '' }] });
     expect(await guess(guessRequest({ cards: studentCards([6]) }), turn(revealed))).toMatchObject({ ok: false });
   });
@@ -214,7 +225,27 @@ describe('a guess', () => {
   });
 
   test('fails with the model', async () => {
-    const model = new ScriptedModel({ guess: [new ModelError('down')] });
+    const model = new ScriptedModel({ guess: [new ModelError('down', true)] });
     expect(allowed(await guess(guessRequest(), turn(model)))).toMatchObject({ ok: false, error: 'model_failed' });
+    const garbled = new ScriptedModel({ guess: [new ModelError('not JSON')] });
+    expect(allowed(await guess(guessRequest(), turn(garbled)))).toMatchObject({ ok: false, error: 'no_answer' });
+  });
+
+  test('tells the model what the number means, and how sure the persona is before it reveals a card', async () => {
+    const counted = new ScriptedModel({ guess: [{ picks: [6], reason: '' }] });
+    await guess(guessRequest(), turn(counted));
+    expect(counted.asked[0]?.user).toContain("Clue: Biology, 2: the clue links 2 of our group's cards.");
+    expect(counted.asked[0]?.system).toContain('list only cards that you are fairly sure of');
+    const bold = { ...PERSONAS.reviewer1, caution: 'at all sure' };
+    const standard = { ...defaultSettings('en'), guessRule: 'standard' as const };
+    const open = new ScriptedModel({ guess: [{ picks: [6], reason: '' }] });
+    await guess(guessRequest({ settings: standard, clue: { word: 'Life', count: 'unlimited' } }), turn(open, bold));
+    expect(open.asked[0]?.user).toContain("Clue: Life, unlimited: the clue links any number of our group's cards");
+    expect(open.asked[0]?.system).toContain('list only cards that you are at all sure of');
+    // A clue of 0 warns the group off: the student goes by the earlier clues.
+    const warned = new ScriptedModel({ guess: [{ picks: [6], reason: '' }] });
+    await guess(guessRequest({ settings: standard, clue: { word: 'Radiation', count: 0 } }), turn(warned));
+    expect(warned.asked[0]?.user).toContain("Clue: Radiation, 0: the clue links none of our group's cards");
+    expect(warned.asked[0]?.user).toContain('Go by the earlier clues instead.');
   });
 });

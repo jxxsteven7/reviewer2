@@ -35,10 +35,10 @@ export interface Turn {
   now: () => number;
 }
 
-// How many clues the model is asked for at a time, and how many times: once more, with the clues
-// that the rules refused, when none of the first would do.
+// How many clues the model is asked for at a time, and how many times: twice more, with the clues
+// that the rules refused, when none so far would do.
 const CANDIDATES = 3;
-const TRIES = 2;
+const TRIES = 3;
 // The most cards that a student lists for a clue of 0 or "unlimited", which says nothing of how
 // many cards it links.
 const OPEN_LIMIT = 3;
@@ -131,7 +131,17 @@ function limitFor(clue: { count: ClueCount }, guessesLeft: number | null): numbe
   return Math.max(1, Math.min(count, guessesLeft ?? count));
 }
 
-const failed = (note: AgentNote): AgentReply => ({ ok: false, error: 'model_failed', note });
+// Why a turn came to nothing: the model's service is gone (`model_failed`), or the model gave
+// nothing usable in the time there was (`no_answer`).
+const failed = (note: AgentNote, error: 'model_failed' | 'no_answer'): AgentReply => ({ ok: false, error, note });
+
+// What a failure of the model makes of the turn. The wait running out comes first: the service's
+// own error then says only that the request was cut short.
+function failure(error: unknown, note: AgentNote, signal: AbortSignal): AgentReply {
+  if (signal.aborted) return failed(note, 'no_answer');
+  if (error instanceof ModelError) return failed(note, error.service ? 'model_failed' : 'no_answer');
+  throw error;
+}
 
 // The cards that a student would reveal: the model's picks, of which there is at least one, since a
 // group that has revealed no card yet can't pass; and the reason, in a sentence.
@@ -157,11 +167,15 @@ async function picksFor(
 
 export async function guess(request: GuessRequest, turn: Turn): Promise<AgentReply> {
   const started = turn.now();
-  const note = (): AgentNote => ({ model: turn.model.name, prompt: PROMPT_VERSION, ms: turn.now() - started });
+  const note = (): AgentNote => ({
+    model: turn.model.name,
+    prompt: PROMPT_VERSION,
+    ms: Math.round(turn.now() - started),
+  });
   try {
     const found = await picksFor(request, request.clue, limitFor(request.clue, request.guessesLeft), turn);
     // A model that named no card that is still covered gave no answer to go by.
-    if (!found) return failed(note());
+    if (!found) return failed(note(), 'no_answer');
     return {
       ok: true,
       kind: 'guess',
@@ -170,8 +184,7 @@ export async function guess(request: GuessRequest, turn: Turn): Promise<AgentRep
       note: { ...note(), reason: found.reason },
     };
   } catch (error) {
-    if (error instanceof ModelError || turn.signal.aborted) return failed(note());
-    throw error;
+    return failure(error, note(), turn.signal);
   }
 }
 
@@ -205,7 +218,7 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
   const note = (): AgentNote => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
-    ms: turn.now() - started,
+    ms: Math.round(turn.now() - started),
     candidates: considered,
   });
   try {
@@ -231,13 +244,12 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
       const clean = judged.filter(({ clean }) => clean);
       chosen = clean.length > 0 ? clean : judged.filter(({ legal }) => legal);
     }
-    if (chosen.length === 0) return { ok: false, error: 'no_clue', note: note() };
+    if (chosen.length === 0) return { ok: false, error: 'no_legal_clue', note: note() };
     const best = turn.persona.rehearse ? await rehearsed(request, chosen, turn) : chosen[0];
     const { word, count, targets } = (best ?? (chosen[0] as Judged)).candidate;
     return { ok: true, kind: 'clue', word, count, targets, note: note() };
   } catch (error) {
-    if (error instanceof ModelError || turn.signal.aborted) return failed(note());
-    throw error;
+    return failure(error, note(), turn.signal);
   }
 }
 

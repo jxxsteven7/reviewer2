@@ -8,7 +8,7 @@ import type { Persona } from './personas';
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'keywords-1';
+export const PROMPT_VERSION = 'keywords-2';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
 
@@ -90,20 +90,33 @@ export function guessSystem(game: AgentGame, persona: Persona, limit: number): s
   return [
     'You are playing a team word-guessing game for academics, as a student (a guesser) of your group. The board ' +
       "has 25 cards, each an academic term, numbered 0 to 24. You can't see whose the cards are, except for the " +
-      "revealed ones. Your PI gave a clue and a number: the clue links that many of your group's cards.",
+      "revealed ones. Your PI gave a clue and a number: how many of your group's cards the clue links, " +
+      'unlimited, or 0 when it links none and warns you off the cards it brings to mind.',
     `List the numbers of the cards you would reveal, the surest first, at most ${limit}. Always list at least one ` +
-      'card. After the first, list only cards that you are fairly sure of: a card of the other group ends your ' +
-      'turn, and REVIEWER 2 loses the game at once. Never list a revealed card.',
+      `card. After the first, list only cards that you are ${persona.caution} of: a card of the other group ends ` +
+      'your turn, and REVIEWER 2 loses the game at once. Never list a revealed card.',
     `Give your reason in one short sentence in ${LANGUAGE_NAMES[game.language]}, ${persona.tone}.`,
     'Answer in JSON: picks (card numbers) and reason.',
   ].join('\n');
 }
 
+// The clue with its number, and what the number means: a count of the group's cards, no limit, or
+// none at all, when the clue is a warning and the earlier clues are what to go by.
+function clueLine({ word, count }: { word: string; count: ClueCount }): string {
+  if (count === 'unlimited') {
+    return `Clue: ${word}, unlimited: the clue links any number of our group's cards, and the earlier clues may link more.`;
+  }
+  if (count === 0) {
+    return (
+      `Clue: ${word}, 0: the clue links none of our group's cards and warns us off the cards it brings to mind. ` +
+      'Go by the earlier clues instead.'
+    );
+  }
+  return `Clue: ${word}, ${count}: the clue links ${count} of our group's cards.`;
+}
+
 export function guessUser(game: AgentGame, clue: { word: string; count: ClueCount }): string {
-  const count = clue.count === 'unlimited' ? 'unlimited' : String(clue.count);
-  return [`Board:\n${board(game.cards, game.team)}`, earlierClues(game), `Clue: ${clue.word}  Number: ${count}`].join(
-    '\n\n',
-  );
+  return [`Board:\n${board(game.cards, game.team)}`, earlierClues(game), clueLine(clue)].join('\n\n');
 }
 
 // The shapes of the answers, as JSON schemas that the model writes to (model.ts).

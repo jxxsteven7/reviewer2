@@ -83,13 +83,14 @@ export interface AgentNote {
   reason?: string;
 }
 
-export const AGENT_ERRORS = ['bad_request', 'busy', 'model_failed', 'no_clue'] as const;
+export const AGENT_ERRORS = ['bad_request', 'busy', 'model_failed', 'no_answer', 'no_legal_clue'] as const;
 export type AgentError = (typeof AGENT_ERRORS)[number];
 
 // The clue to give, with the cards it is meant for; the cards to reveal, the surest first, with
 // the reason; or why there is no answer: a request that the agent can't read, too many waiting
-// before it, a model that didn't answer or answered nonsense, or no clue that the rules of the
-// room take.
+// before it, a model whose service can't be reached or refuses, which the server takes as the AI
+// players being offline, a model that answered nothing usable in time, which is this request's
+// bad luck alone, or no clue that the rules of the room take.
 export type AgentReply =
   | { ok: true; kind: 'ping'; model: string }
   | { ok: true; kind: 'clue'; word: string; count: number; targets: number[]; note: AgentNote }
