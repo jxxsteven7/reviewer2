@@ -1600,6 +1600,1022 @@
       "id": "dyson-sphere",
       "zh": "戴森球",
       "en": "Dyson sphere"
+    },
+    {
+      "id": "projectile",
+      "zh": "抛体",
+      "en": "Projectile"
+    },
+    {
+      "id": "point-mass",
+      "zh": "质点",
+      "en": "Point mass"
+    },
+    {
+      "id": "capillarity",
+      "zh": "毛细现象",
+      "en": "Capillarity",
+      "forms": { "en": ["capillary"] }
+    },
+    {
+      "id": "action",
+      "zh": "作用量",
+      "en": "Action"
+    },
+    {
+      "id": "normal-mode",
+      "zh": "简正模",
+      "en": "Normal mode"
+    },
+    {
+      "id": "e-mc2",
+      "zh": "质能方程",
+      "en": "E=mc²"
+    },
+    {
+      "id": "emf",
+      "zh": "电动势",
+      "en": "EMF",
+      "forms": { "en": ["electromotive force"] }
+    },
+    {
+      "id": "permittivity",
+      "zh": "介电常数",
+      "en": "Permittivity"
+    },
+    {
+      "id": "electrostatics",
+      "zh": "静电学",
+      "en": "Electrostatics"
+    },
+    {
+      "id": "gausss-law",
+      "zh": "高斯定律",
+      "en": "Gauss's law"
+    },
+    {
+      "id": "amperes-law",
+      "zh": "安培定律",
+      "en": "Ampère's law"
+    },
+    {
+      "id": "faradays-law",
+      "zh": "法拉第定律",
+      "en": "Faraday's law"
+    },
+    {
+      "id": "joules-law",
+      "zh": "焦耳定律",
+      "en": "Joule's law"
+    },
+    {
+      "id": "diamagnetism",
+      "zh": "抗磁性",
+      "en": "Diamagnetism",
+      "forms": { "en": ["diamagnetic"] }
+    },
+    {
+      "id": "paramagnetism",
+      "zh": "顺磁性",
+      "en": "Paramagnetism",
+      "forms": { "en": ["paramagnetic"] }
+    },
+    {
+      "id": "curie-point",
+      "zh": "居里点",
+      "en": "Curie point"
+    },
+    {
+      "id": "magnetization",
+      "zh": "磁化",
+      "en": "Magnetization",
+      "forms": { "en": ["magnetize", "magnetise", "magnetisation"] }
+    },
+    {
+      "id": "dispersion",
+      "zh": "色散",
+      "en": "Dispersion",
+      "forms": { "en": ["disperse", "dispersive"] }
+    },
+    {
+      "id": "coherence",
+      "zh": "相干性",
+      "en": "Coherence",
+      "forms": { "en": ["coherent"] }
+    },
+    {
+      "id": "beam-splitter",
+      "zh": "分束器",
+      "en": "Beam splitter"
+    },
+    {
+      "id": "virtual-image",
+      "zh": "虚像",
+      "en": "Virtual image"
+    },
+    {
+      "id": "magnifier",
+      "zh": "放大镜",
+      "en": "Magnifier"
+    },
+    {
+      "id": "terahertz",
+      "zh": "太赫兹",
+      "en": "Terahertz",
+      "forms": { "en": ["THz"] }
+    },
+    {
+      "id": "bec",
+      "zh": "BEC",
+      "en": "BEC",
+      "forms": { "zh": ["玻色-爱因斯坦凝聚"], "en": ["Bose-Einstein condensate"] }
+    },
+    {
+      "id": "fluctuation",
+      "zh": "涨落",
+      "en": "Fluctuation",
+      "forms": { "en": ["fluctuate"] }
+    },
+    {
+      "id": "mean-field",
+      "zh": "平均场",
+      "en": "Mean field"
+    },
+    {
+      "id": "ising-model",
+      "zh": "伊辛模型",
+      "en": "Ising model"
+    },
+    {
+      "id": "universality",
+      "zh": "普适性",
+      "en": "Universality"
+    },
+    {
+      "id": "dewar-flask",
+      "zh": "杜瓦瓶",
+      "en": "Dewar flask"
+    },
+    {
+      "id": "kinetic-theory",
+      "zh": "气体动理论",
+      "en": "Kinetic theory"
+    },
+    {
+      "id": "equipartition",
+      "zh": "能量均分",
+      "en": "Equipartition"
+    },
+    {
+      "id": "qft",
+      "zh": "量子场论",
+      "en": "QFT",
+      "forms": { "en": ["quantum field theory"] }
+    },
+    {
+      "id": "qcd",
+      "zh": "QCD",
+      "en": "QCD",
+      "forms": { "zh": ["量子色动力学"], "en": ["quantum chromodynamics"] }
+    },
+    {
+      "id": "dirac-sea",
+      "zh": "狄拉克海",
+      "en": "Dirac sea"
+    },
+    {
+      "id": "dirac-cone",
+      "zh": "狄拉克锥",
+      "en": "Dirac cone"
+    },
+    {
+      "id": "density-matrix",
+      "zh": "密度矩阵",
+      "en": "Density matrix"
+    },
+    {
+      "id": "pure-state",
+      "zh": "纯态",
+      "en": "Pure state"
+    },
+    {
+      "id": "stark-effect",
+      "zh": "斯塔克效应",
+      "en": "Stark effect"
+    },
+    {
+      "id": "lamb-shift",
+      "zh": "兰姆位移",
+      "en": "Lamb shift"
+    },
+    {
+      "id": "fine-structure",
+      "zh": "精细结构",
+      "en": "Fine structure"
+    },
+    {
+      "id": "berry-phase",
+      "zh": "贝里相位",
+      "en": "Berry phase"
+    },
+    {
+      "id": "gauge-theory",
+      "zh": "规范场论",
+      "en": "Gauge theory"
+    },
+    {
+      "id": "parity",
+      "zh": "宇称",
+      "en": "Parity"
+    },
+    {
+      "id": "isospin",
+      "zh": "同位旋",
+      "en": "Isospin"
+    },
+    {
+      "id": "gut",
+      "zh": "大统一理论",
+      "en": "GUT",
+      "forms": { "en": ["grand unified theory"] }
+    },
+    {
+      "id": "antiparticle",
+      "zh": "反粒子",
+      "en": "Antiparticle"
+    },
+    {
+      "id": "annihilation",
+      "zh": "湮灭",
+      "en": "Annihilation",
+      "forms": { "en": ["annihilate"] }
+    },
+    {
+      "id": "alpha-particle",
+      "zh": "α粒子",
+      "en": "Alpha particle"
+    },
+    {
+      "id": "nucleon",
+      "zh": "核子",
+      "en": "Nucleon"
+    },
+    {
+      "id": "binding-energy",
+      "zh": "结合能",
+      "en": "Binding energy"
+    },
+    {
+      "id": "mass-defect",
+      "zh": "质量亏损",
+      "en": "Mass defect"
+    },
+    {
+      "id": "accelerator",
+      "zh": "加速器",
+      "en": "Accelerator"
+    },
+    {
+      "id": "cyclotron",
+      "zh": "回旋加速器",
+      "en": "Cyclotron"
+    },
+    {
+      "id": "linac",
+      "zh": "直线加速器",
+      "en": "Linac",
+      "forms": { "en": ["linear accelerator"] }
+    },
+    {
+      "id": "scintillator",
+      "zh": "闪烁体",
+      "en": "Scintillator",
+      "forms": { "en": ["scintillation"] }
+    },
+    {
+      "id": "axion",
+      "zh": "轴子",
+      "en": "Axion"
+    },
+    {
+      "id": "tachyon",
+      "zh": "快子",
+      "en": "Tachyon"
+    },
+    {
+      "id": "lorentz-factor",
+      "zh": "洛伦兹因子",
+      "en": "Lorentz factor"
+    },
+    {
+      "id": "proper-time",
+      "zh": "固有时",
+      "en": "Proper time"
+    },
+    {
+      "id": "four-vector",
+      "zh": "四维矢量",
+      "en": "Four-vector"
+    },
+    {
+      "id": "rest-mass",
+      "zh": "静止质量",
+      "en": "Rest mass"
+    },
+    {
+      "id": "hole",
+      "zh": "空穴",
+      "en": "Hole"
+    },
+    {
+      "id": "charge-carrier",
+      "zh": "载流子",
+      "en": "Charge carrier"
+    },
+    {
+      "id": "exciton",
+      "zh": "激子",
+      "en": "Exciton"
+    },
+    {
+      "id": "polaron",
+      "zh": "极化子",
+      "en": "Polaron"
+    },
+    {
+      "id": "quasiparticle",
+      "zh": "准粒子",
+      "en": "Quasiparticle"
+    },
+    {
+      "id": "cooper-pair",
+      "zh": "库珀对",
+      "en": "Cooper pair"
+    },
+    {
+      "id": "magnon",
+      "zh": "磁振子",
+      "en": "Magnon"
+    },
+    {
+      "id": "plasmon",
+      "zh": "等离激元",
+      "en": "Plasmon"
+    },
+    {
+      "id": "brillouin-zone",
+      "zh": "布里渊区",
+      "en": "Brillouin zone"
+    },
+    {
+      "id": "braggs-law",
+      "zh": "布拉格定律",
+      "en": "Bragg's law"
+    },
+    {
+      "id": "spintronics",
+      "zh": "自旋电子学",
+      "en": "Spintronics"
+    },
+    {
+      "id": "soft-matter",
+      "zh": "软物质",
+      "en": "Soft matter"
+    },
+    {
+      "id": "spin-glass",
+      "zh": "自旋玻璃",
+      "en": "Spin glass"
+    },
+    {
+      "id": "stm",
+      "zh": "STM",
+      "en": "STM",
+      "forms": { "zh": ["扫描隧道显微镜"], "en": ["scanning tunneling microscope"] }
+    },
+    {
+      "id": "debye-length",
+      "zh": "德拜长度",
+      "en": "Debye length"
+    },
+    {
+      "id": "reconnection",
+      "zh": "磁重联",
+      "en": "Reconnection"
+    },
+    {
+      "id": "mhd",
+      "zh": "磁流体力学",
+      "en": "MHD",
+      "forms": { "en": ["magnetohydrodynamics"] }
+    },
+    {
+      "id": "ionization",
+      "zh": "电离",
+      "en": "Ionization",
+      "forms": { "en": ["ionize", "ionise", "ionisation"] }
+    },
+    {
+      "id": "landau-damping",
+      "zh": "朗道阻尼",
+      "en": "Landau damping"
+    },
+    {
+      "id": "speed-of-sound",
+      "zh": "声速",
+      "en": "Speed of sound"
+    },
+    {
+      "id": "white-noise",
+      "zh": "白噪声",
+      "en": "White noise"
+    },
+    {
+      "id": "displacement",
+      "zh": "位移",
+      "en": "Displacement"
+    },
+    {
+      "id": "group-velocity",
+      "zh": "群速度",
+      "en": "Group velocity"
+    },
+    {
+      "id": "pascals-law",
+      "zh": "帕斯卡定律",
+      "en": "Pascal's law"
+    },
+    {
+      "id": "snells-law",
+      "zh": "斯涅尔定律",
+      "en": "Snell's law"
+    },
+    {
+      "id": "boyles-law",
+      "zh": "玻意耳定律",
+      "en": "Boyle's law"
+    },
+    {
+      "id": "poisson-spot",
+      "zh": "泊松亮斑",
+      "en": "Poisson spot"
+    },
+    {
+      "id": "maluss-law",
+      "zh": "马吕斯定律",
+      "en": "Malus's law"
+    },
+    {
+      "id": "matter-wave",
+      "zh": "物质波",
+      "en": "Matter wave"
+    },
+    {
+      "id": "air-track",
+      "zh": "气垫导轨",
+      "en": "Air track"
+    },
+    {
+      "id": "plasticity",
+      "zh": "塑性",
+      "en": "Plasticity"
+    },
+    {
+      "id": "vortex-street",
+      "zh": "卡门涡街",
+      "en": "Vortex street"
+    },
+    {
+      "id": "recoil",
+      "zh": "反冲",
+      "en": "Recoil"
+    },
+    {
+      "id": "ball-lightning",
+      "zh": "球状闪电",
+      "en": "Ball lightning"
+    },
+    {
+      "id": "strangeness",
+      "zh": "奇异数",
+      "en": "Strangeness"
+    },
+    {
+      "id": "cp-violation",
+      "zh": "CP破坏",
+      "en": "CP violation"
+    },
+    {
+      "id": "baryon",
+      "zh": "重子",
+      "en": "Baryon",
+      "forms": { "en": ["baryonic"] }
+    },
+    {
+      "id": "wimp",
+      "zh": "WIMP",
+      "en": "WIMP",
+      "forms": { "zh": ["弱相互作用大质量粒子"], "en": ["weakly interacting massive particle"] }
+    },
+    {
+      "id": "planck-length",
+      "zh": "普朗克长度",
+      "en": "Planck length"
+    },
+    {
+      "id": "frequency-comb",
+      "zh": "光频梳",
+      "en": "Frequency comb"
+    },
+    {
+      "id": "supercooling",
+      "zh": "过冷",
+      "en": "Supercooling",
+      "forms": { "en": ["supercooled"] }
+    },
+    {
+      "id": "airy-disk",
+      "zh": "艾里斑",
+      "en": "Airy disk"
+    },
+    {
+      "id": "birefringence",
+      "zh": "双折射",
+      "en": "Birefringence",
+      "forms": { "en": ["birefringent"] }
+    },
+    {
+      "id": "skyrmion",
+      "zh": "斯格明子",
+      "en": "Skyrmion"
+    },
+    {
+      "id": "anyon",
+      "zh": "任意子",
+      "en": "Anyon"
+    },
+    {
+      "id": "moire-pattern",
+      "zh": "莫尔条纹",
+      "en": "Moiré pattern"
+    },
+    {
+      "id": "magic-angle",
+      "zh": "魔角",
+      "en": "Magic angle"
+    },
+    {
+      "id": "supersolid",
+      "zh": "超固体",
+      "en": "Supersolid"
+    },
+    {
+      "id": "nuclear-force",
+      "zh": "核力",
+      "en": "Nuclear force"
+    },
+    {
+      "id": "shell-model",
+      "zh": "壳层模型",
+      "en": "Shell model"
+    },
+    {
+      "id": "nuclide",
+      "zh": "核素",
+      "en": "Nuclide"
+    },
+    {
+      "id": "alfven-wave",
+      "zh": "阿尔芬波",
+      "en": "Alfvén wave"
+    },
+    {
+      "id": "pinch",
+      "zh": "箍缩",
+      "en": "Pinch"
+    },
+    {
+      "id": "bound-state",
+      "zh": "束缚态",
+      "en": "Bound state"
+    },
+    {
+      "id": "selection-rule",
+      "zh": "选择定则",
+      "en": "Selection rule"
+    },
+    {
+      "id": "squeezed-state",
+      "zh": "压缩态",
+      "en": "Squeezed state"
+    },
+    {
+      "id": "bell-state",
+      "zh": "贝尔态",
+      "en": "Bell state"
+    },
+    {
+      "id": "quantum-eraser",
+      "zh": "量子擦除",
+      "en": "Quantum eraser"
+    },
+    {
+      "id": "wavefront",
+      "zh": "波前",
+      "en": "Wavefront"
+    },
+    {
+      "id": "cryostat",
+      "zh": "低温恒温器",
+      "en": "Cryostat"
+    },
+    {
+      "id": "liquid-helium",
+      "zh": "液氦",
+      "en": "Liquid helium"
+    },
+    {
+      "id": "storage-ring",
+      "zh": "储存环",
+      "en": "Storage ring"
+    },
+    {
+      "id": "spallation",
+      "zh": "散裂",
+      "en": "Spallation"
+    },
+    {
+      "id": "cold-atom",
+      "zh": "冷原子",
+      "en": "Cold atom"
+    },
+    {
+      "id": "ion-trap",
+      "zh": "离子阱",
+      "en": "Ion trap"
+    },
+    {
+      "id": "electroscope",
+      "zh": "验电器",
+      "en": "Electroscope"
+    },
+    {
+      "id": "time",
+      "zh": "时间",
+      "en": "Time"
+    },
+    {
+      "id": "space",
+      "zh": "空间",
+      "en": "Space"
+    },
+    {
+      "id": "matter",
+      "zh": "物质",
+      "en": "Matter"
+    },
+    {
+      "id": "density",
+      "zh": "密度",
+      "en": "Density"
+    },
+    {
+      "id": "sound",
+      "zh": "声音",
+      "en": "Sound"
+    },
+    {
+      "id": "speed",
+      "zh": "速率",
+      "en": "Speed"
+    },
+    {
+      "id": "energy",
+      "zh": "能量",
+      "en": "Energy"
+    },
+    {
+      "id": "entropy",
+      "zh": "熵",
+      "en": "Entropy"
+    },
+    {
+      "id": "frequency",
+      "zh": "频率",
+      "en": "Frequency"
+    },
+    {
+      "id": "atom",
+      "zh": "原子",
+      "en": "Atom"
+    },
+    {
+      "id": "semiconductor",
+      "zh": "半导体",
+      "en": "Semiconductor"
+    },
+    {
+      "id": "symmetry",
+      "zh": "对称性",
+      "en": "Symmetry"
+    },
+    {
+      "id": "interferometer",
+      "zh": "干涉仪",
+      "en": "Interferometer"
+    },
+    {
+      "id": "limit-cycle",
+      "zh": "极限环",
+      "en": "Limit cycle"
+    },
+    {
+      "id": "sandpile-model",
+      "zh": "沙堆模型",
+      "en": "Sandpile model"
+    },
+    {
+      "id": "relaxation",
+      "zh": "弛豫",
+      "en": "Relaxation",
+      "forms": { "en": ["relax"] }
+    },
+    {
+      "id": "reduced-mass",
+      "zh": "约化质量",
+      "en": "Reduced mass"
+    },
+    {
+      "id": "fresnel-lens",
+      "zh": "菲涅耳透镜",
+      "en": "Fresnel lens"
+    },
+    {
+      "id": "kerr-effect",
+      "zh": "克尔效应",
+      "en": "Kerr effect"
+    },
+    {
+      "id": "zeroth-law",
+      "zh": "第零定律",
+      "en": "Zeroth law"
+    },
+    {
+      "id": "shot-noise",
+      "zh": "散粒噪声",
+      "en": "Shot noise"
+    },
+    {
+      "id": "pauli-matrices",
+      "zh": "泡利矩阵",
+      "en": "Pauli matrices"
+    },
+    {
+      "id": "bloch-sphere",
+      "zh": "布洛赫球",
+      "en": "Bloch sphere"
+    },
+    {
+      "id": "tight-binding",
+      "zh": "紧束缚",
+      "en": "Tight binding"
+    },
+    {
+      "id": "band-theory",
+      "zh": "能带论",
+      "en": "Band theory"
+    },
+    {
+      "id": "hubbard-model",
+      "zh": "哈伯德模型",
+      "en": "Hubbard model"
+    },
+    {
+      "id": "kondo-effect",
+      "zh": "近藤效应",
+      "en": "Kondo effect"
+    },
+    {
+      "id": "chern-number",
+      "zh": "陈数",
+      "en": "Chern number"
+    },
+    {
+      "id": "landau-level",
+      "zh": "朗道能级",
+      "en": "Landau level"
+    },
+    {
+      "id": "microstate",
+      "zh": "微观态",
+      "en": "Microstate"
+    },
+    {
+      "id": "parton",
+      "zh": "部分子",
+      "en": "Parton"
+    },
+    {
+      "id": "invariant-mass",
+      "zh": "不变质量",
+      "en": "Invariant mass"
+    },
+    {
+      "id": "track",
+      "zh": "径迹",
+      "en": "Track"
+    },
+    {
+      "id": "divertor",
+      "zh": "偏滤器",
+      "en": "Divertor"
+    },
+    {
+      "id": "hohlraum",
+      "zh": "黑腔",
+      "en": "Hohlraum"
+    },
+    {
+      "id": "chladni-figure",
+      "zh": "克拉尼图形",
+      "en": "Chladni figure"
+    },
+    {
+      "id": "mot",
+      "zh": "磁光阱",
+      "en": "MOT",
+      "forms": { "en": ["magneto-optical trap"] }
+    },
+    {
+      "id": "collimator",
+      "zh": "准直器",
+      "en": "Collimator",
+      "forms": { "en": ["collimate", "collimated"] }
+    },
+    {
+      "id": "droplet",
+      "zh": "液滴",
+      "en": "Droplet"
+    },
+    {
+      "id": "rheology",
+      "zh": "流变学",
+      "en": "Rheology"
+    },
+    {
+      "id": "frame-dragging",
+      "zh": "参考系拖曳",
+      "en": "Frame dragging"
+    },
+    {
+      "id": "worldline",
+      "zh": "世界线",
+      "en": "Worldline"
+    },
+    {
+      "id": "spherical-cow",
+      "zh": "球形奶牛",
+      "en": "Spherical cow"
+    },
+    {
+      "id": "natural-units",
+      "zh": "自然单位制",
+      "en": "Natural units"
+    },
+    {
+      "id": "dimensionless",
+      "zh": "无量纲",
+      "en": "Dimensionless"
+    },
+    {
+      "id": "arpes",
+      "zh": "ARPES",
+      "en": "ARPES",
+      "forms": { "zh": ["角分辨光电子能谱"], "en": ["angle-resolved photoemission spectroscopy"] }
+    },
+    {
+      "id": "photodetector",
+      "zh": "光电探测器",
+      "en": "Photodetector"
+    },
+    {
+      "id": "glow-discharge",
+      "zh": "辉光放电",
+      "en": "Glow discharge"
+    },
+    {
+      "id": "electron-beam",
+      "zh": "电子束",
+      "en": "Electron beam"
+    },
+    {
+      "id": "rabi-frequency",
+      "zh": "拉比频率",
+      "en": "Rabi frequency"
+    },
+    {
+      "id": "pn-junction",
+      "zh": "PN结",
+      "en": "PN junction"
+    },
+    {
+      "id": "effective-mass",
+      "zh": "有效质量",
+      "en": "Effective mass"
+    },
+    {
+      "id": "mobility",
+      "zh": "迁移率",
+      "en": "Mobility"
+    },
+    {
+      "id": "electron-gas",
+      "zh": "电子气",
+      "en": "Electron gas"
+    },
+    {
+      "id": "mott-insulator",
+      "zh": "莫特绝缘体",
+      "en": "Mott insulator"
+    },
+    {
+      "id": "gmr",
+      "zh": "巨磁阻",
+      "en": "GMR",
+      "forms": { "en": ["giant magnetoresistance"] }
+    },
+    {
+      "id": "cuprate",
+      "zh": "铜氧化物",
+      "en": "Cuprate"
+    },
+    {
+      "id": "flux-pinning",
+      "zh": "磁通钉扎",
+      "en": "Flux pinning"
+    },
+    {
+      "id": "polarizer",
+      "zh": "偏振片",
+      "en": "Polarizer",
+      "forms": { "en": ["polariser"] }
+    },
+    {
+      "id": "euler-angles",
+      "zh": "欧拉角",
+      "en": "Euler angles"
+    },
+    {
+      "id": "central-force",
+      "zh": "有心力",
+      "en": "Central force"
+    },
+    {
+      "id": "dissipation",
+      "zh": "耗散",
+      "en": "Dissipation",
+      "forms": { "en": ["dissipate", "dissipative"] }
+    },
+    {
+      "id": "free-expansion",
+      "zh": "自由膨胀",
+      "en": "Free expansion"
+    },
+    {
+      "id": "state-function",
+      "zh": "状态函数",
+      "en": "State function"
+    },
+    {
+      "id": "gyroradius",
+      "zh": "回旋半径",
+      "en": "Gyroradius"
+    },
+    {
+      "id": "langmuir-wave",
+      "zh": "朗缪尔波",
+      "en": "Langmuir wave"
+    },
+    {
+      "id": "nonlocality",
+      "zh": "非定域性",
+      "en": "Nonlocality",
+      "forms": { "en": ["nonlocal"] }
+    },
+    {
+      "id": "born-rule",
+      "zh": "玻恩定则",
+      "en": "Born rule"
+    },
+    {
+      "id": "pilot-wave",
+      "zh": "导航波",
+      "en": "Pilot wave"
+    },
+    {
+      "id": "no-cloning",
+      "zh": "不可克隆",
+      "en": "No-cloning"
     }
   ]
 }
