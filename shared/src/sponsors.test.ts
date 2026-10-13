@@ -191,8 +191,11 @@ describe('the sponsors', () => {
         '- Bob',
         `- [Cat](https://cat.example)${DASH}${'x'.repeat(MAX_THANKS_LENGTH)}`,
         `- Dan${DASH}${FAMILY.repeat(MAX_THANKS_LENGTH)}`,
-        // Dots, # and @ that make no link.
+        // Dots that make no domain, and # and @, which GitHub links nowhere in a file.
         `- Eve${DASH}Ph.D. thanks, e.g. 3.14 times! C# (@_@)`,
+        `- Fay${DASH}Our #1 fan, @octocat and team@home`,
+        // Markdown's characters, which stay as written.
+        `- Gus${DASH}*you rock* \\o/ ~ _really_`,
       ),
     );
     expect(problems).toEqual([]);
@@ -206,6 +209,8 @@ describe('the sponsors', () => {
           { name: 'Cat', link: 'https://cat.example', thanks: 'x'.repeat(MAX_THANKS_LENGTH) },
           { name: 'Dan', link: null, thanks: FAMILY.repeat(MAX_THANKS_LENGTH) },
           { name: 'Eve', link: null, thanks: 'Ph.D. thanks, e.g. 3.14 times! C# (@_@)' },
+          { name: 'Fay', link: null, thanks: 'Our #1 fan, @octocat and team@home' },
+          { name: 'Gus', link: null, thanks: '*you rock* \\o/ ~ _really_' },
         ],
       },
     ]);
@@ -232,9 +237,15 @@ describe('the sponsors', () => {
       [1, `A line of thanks has at most ${MAX_THANKS_LENGTH} visible characters, and this one has 41.`],
     ]);
     const unclean = expect.stringMatching(/^A line of thanks has single spaces, none at its ends, no control/);
-    // A bell, a zero-width space, two spaces, a tab, and a space at the end.
-    expect(thanks('hi\u{7}', 'hi\u{200b}there', 'hi  there', 'hi\tthere', 'hi ')).toEqual(
-      [1, 2, 3, 4, 5].map((line) => [line, unclean]),
+    // A bell, a zero-width space, two spaces, and a space at the end.
+    expect(thanks('hi\u{7}', 'hi\u{200b}there', 'hi  there', 'hi ')).toEqual(
+      [1, 2, 3, 4].map((line) => [line, unclean]),
+    );
+    // A tab, a no-break space and a full-width space, which cleanLine would turn into a space, get
+    // a message of their own, since the line looks right.
+    const spaces = 'Use ordinary spaces in a line of thanks: no tab, no-break space or full-width space.';
+    expect(thanks('hi\tthere', 'hi\u{a0}there', `${HELLO}\u{3000}${HELLO}`)).toEqual(
+      [1, 2, 3].map((line) => [line, spaces]),
     );
     const links = expect.stringMatching(/^Leave links out of a line of thanks: no http, www\., domain/);
     expect(
@@ -245,17 +256,29 @@ describe('the sponsors', () => {
         'ann.example',
         'Ann.Example',
         'mail ann@mail.example',
+        'ftp://ann',
         '[hi](/issues)',
-        'hi @octocat',
-        'see #12',
       ),
-    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9].map((line) => [line, links]));
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((line) => [line, links]));
+    // HTML, which GitHub would render, a tag as a link too; a character reference and an emoji code,
+    // which it would turn into the character.
+    const html = 'Leave HTML out of a line of thanks: no < or >, &...; reference or :emoji: code.';
+    expect(thanks('<a href="/issues">see</a>', 'thanks <!-- ok', '<3', '&lt;3', '&#60;3', ':tada: thanks')).toEqual(
+      [1, 2, 3, 4, 5, 6].map((line) => [line, html]),
+    );
     // The separator once at most, so that neither the name nor the thanks is cut in the wrong place.
     const once = `An entry has "${DASH}" once at most, between the name and the line of thanks.`;
     expect(thanks(`hi${DASH}there`, `${DASH}hi`)).toEqual([
       [1, once],
       [2, once],
     ]);
+    // Nearly the separator: an em dash with a space on one side only or doubled, as a Chinese input
+    // method writes it, or a hyphen between spaces. Without the hint, the whole line would be read
+    // as a name, and the message would be about its length.
+    const nearly = `Write the line of thanks after "${DASH}", an em dash with one space on each side.`;
+    expect(
+      problems(`Ann \u{2014}\u{2014} ${HELLO}`, `Ann \u{2014}${HELLO}`, `Ann\u{2014} ${HELLO}`, `Ann - ${HELLO}`),
+    ).toEqual([1, 2, 3, 4].map((line) => [line, nearly]));
     // The name keeps its own rules.
     expect(problems(`${'x'.repeat(17)}${DASH}hi`, `${DASH}hi`)).toEqual([
       [1, expect.stringMatching(/^"x+" can't be a name for the sponsors/)],

@@ -63,8 +63,16 @@ function onGitHub(text: string): Sponsor | string {
 
 // What would make a line of thanks a link, on GitHub or in an app that shows it, which it never is:
 // a web address, with its scheme, with www. or as a bare domain such as example.com, which an
-// email address holds too; a Markdown link; an @mention; and an issue's number, #12.
-const LINKS = /http|www\.|:\/\/|[a-z\d]\.[a-z]{2}|\]\(|@[a-z\d]|#\d/i;
+// email address holds too, and a Markdown link. GitHub links neither @name nor #12 in a file.
+const LINKS = /http|www\.|:\/\/|[a-z\d]\.[a-z]{2}|\]\(/i;
+// What GitHub would show otherwise than as it is written, where the home page shows the line as
+// plain text: an HTML tag, which could be a link too, an HTML character reference such as &lt;,
+// and an emoji code such as :tada:. Markdown's characters, such as * and _, are let through, so
+// that a line can be kept as it is written.
+const MARKUP = /[<>]|&#?\w+;|:[\w+-]+:/;
+// A space that isn't the ASCII one: a tab, a no-break space, or the full-width space that a Chinese
+// input method writes, which cleanLine would turn into an ASCII space.
+const ODD_SPACE = /[^\S ]/u;
 
 // What is wrong with a line of thanks, if anything. It is shown as the maintainers wrote it, so it
 // is refused, not cleaned, when the rules of text.ts would change it. The home page shows it as
@@ -73,11 +81,17 @@ function checkThanks(thanks: string): string | null {
   if (!showsSomething(thanks)) {
     return `Write the line of thanks after "${SEPARATOR}", or leave "${SEPARATOR.trimEnd()}" out.`;
   }
+  if (ODD_SPACE.test(thanks)) {
+    return 'Use ordinary spaces in a line of thanks: no tab, no-break space or full-width space.';
+  }
   if (cleanLine(thanks) !== thanks) {
     return `A line of thanks has single spaces, none at its ends, no control or hidden characters, and at most ${MAX_MARKS} marks of a kind on a character.`;
   }
   if (LINKS.test(thanks)) {
-    return 'Leave links out of a line of thanks: no http, www., domain such as example.com, email address, Markdown link, @mention or #number.';
+    return 'Leave links out of a line of thanks: no http, www., domain such as example.com, email address or Markdown link.';
+  }
+  if (MARKUP.test(thanks)) {
+    return 'Leave HTML out of a line of thanks: no < or >, &...; reference or :emoji: code.';
   }
   const length = textLength(thanks);
   if (length > MAX_THANKS_LENGTH) {
@@ -85,6 +99,11 @@ function checkThanks(thanks: string): string | null {
   }
   return null;
 }
+
+// What is nearly the separator, in an entry that has none: an em dash with a space on one side
+// only, or doubled, as a Chinese input method writes it, or a hyphen between spaces, which a name
+// would escape. The message then points at the separator, not at the name's length.
+const NEARLY_SEPARATOR = / \u{2014}|\u{2014} |\u{2014}\u{2014}| - /u;
 
 // What follows the "- " of an entry of another way, or what is wrong with it: a name, alone or with
 // a line of thanks after the separator, which comes once at most, so that neither the name nor the
@@ -95,6 +114,9 @@ function byHand(text: string): Sponsor | string {
   const at = padded.indexOf(SEPARATOR);
   if (at >= 0 && padded.lastIndexOf(SEPARATOR) !== at) {
     return `An entry has "${SEPARATOR}" once at most, between the name and the line of thanks.`;
+  }
+  if (at < 0 && NEARLY_SEPARATOR.test(text)) {
+    return `Write the line of thanks after "${SEPARATOR}", an em dash with one space on each side.`;
   }
   const thanks = at < 0 ? null : text.slice(at + SEPARATOR.length);
   const wrong = thanks === null ? null : checkThanks(thanks);
