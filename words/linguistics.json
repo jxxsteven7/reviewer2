@@ -1236,12 +1236,6 @@
       "en": "Indo-European"
     },
     {
-      "id": "pie",
-      "zh": "原始印欧语",
-      "en": "PIE",
-      "forms": { "en": ["Proto-Indo-European"] }
-    },
-    {
       "id": "cognate",
       "zh": "同源词",
       "en": "Cognate"
@@ -1555,12 +1549,6 @@
       "forms": { "en": ["palaeography"] }
     },
     {
-      "id": "epigraphy",
-      "zh": "金石学",
-      "en": "Epigraphy",
-      "forms": { "en": ["epigraphic"] }
-    },
-    {
       "id": "decipherment",
       "zh": "破译",
       "en": "Decipherment",
@@ -1582,12 +1570,6 @@
       "zh": "清化",
       "en": "Devoicing",
       "forms": { "en": ["devoice", "devoiced"] }
-    },
-    {
-      "id": "parsing",
-      "zh": "句法分析",
-      "en": "Parsing",
-      "forms": { "en": ["parse", "parser"] }
     },
     {
       "id": "stylistics",

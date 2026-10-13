@@ -2410,7 +2410,7 @@
       "id": "urbanization",
       "zh": "城市化",
       "en": "Urbanization",
-      "forms": { "en": ["urbanisation"] }
+      "forms": { "en": ["urbanisation", "urbanize"] }
     },
     {
       "id": "megalopolis",
@@ -2467,11 +2467,6 @@
       "id": "distance-decay",
       "zh": "距离衰减",
       "en": "Distance decay"
-    },
-    {
-      "id": "mercator",
-      "zh": "墨卡托投影",
-      "en": "Mercator"
     },
     {
       "id": "isoline",

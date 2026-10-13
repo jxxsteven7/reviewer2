@@ -170,11 +170,6 @@
       "en": "Optimism bias"
     },
     {
-      "id": "dunning-kruger",
-      "zh": "达克效应",
-      "en": "Dunning-Kruger"
-    },
-    {
       "id": "barnum-effect",
       "zh": "巴纳姆效应",
       "en": "Barnum effect"
@@ -808,7 +803,8 @@
     {
       "id": "perfectionism",
       "zh": "完美主义",
-      "en": "Perfectionism"
+      "en": "Perfectionism",
+      "forms": { "en": ["perfectionist"] }
     },
     {
       "id": "comfort-zone",
@@ -963,7 +959,8 @@
     {
       "id": "attribution",
       "zh": "归因",
-      "en": "Attribution"
+      "en": "Attribution",
+      "forms": { "en": ["attribute", "attributed"] }
     },
     {
       "id": "big-five",
@@ -1058,7 +1055,8 @@
     {
       "id": "sublimation",
       "zh": "升华",
-      "en": "Sublimation"
+      "en": "Sublimation",
+      "forms": { "en": ["sublimate", "sublime"] }
     },
     {
       "id": "transference",
@@ -1124,7 +1122,8 @@
     {
       "id": "assimilation",
       "zh": "同化",
-      "en": "Assimilation"
+      "en": "Assimilation",
+      "forms": { "en": ["assimilate"] }
     },
     {
       "id": "accommodation",
@@ -1236,12 +1235,6 @@
       "id": "experimenter",
       "zh": "主试",
       "en": "Experimenter"
-    },
-    {
-      "id": "confound",
-      "zh": "混淆变量",
-      "en": "Confound",
-      "forms": { "en": ["confounding"] }
     },
     {
       "id": "main-effect",
@@ -1669,11 +1662,6 @@
       "id": "criterion",
       "zh": "效标",
       "en": "Criterion"
-    },
-    {
-      "id": "stroop",
-      "zh": "斯特鲁普",
-      "en": "Stroop"
     },
     {
       "id": "cocktail-party",

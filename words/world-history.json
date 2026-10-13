@@ -795,8 +795,7 @@
     {
       "id": "coinage",
       "zh": "铸币",
-      "en": "Coinage",
-      "forms": { "en": ["mint"] }
+      "en": "Coinage"
     },
     {
       "id": "drachma",

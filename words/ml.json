@@ -2205,13 +2205,13 @@
       "id": "distillation",
       "zh": "蒸馏",
       "en": "Distillation",
-      "forms": { "en": ["distill", "distilled"] }
+      "forms": { "en": ["distill", "distil", "distilled"] }
     },
     {
       "id": "emergence",
       "zh": "涌现",
       "en": "Emergence",
-      "forms": { "en": ["emergent"] }
+      "forms": { "en": ["emergent", "emerge"] }
     },
     {
       "id": "adversarial",
@@ -2318,7 +2318,8 @@
     {
       "id": "momentum",
       "zh": "动量",
-      "en": "Momentum"
+      "en": "Momentum",
+      "forms": { "en": ["momenta"] }
     },
     {
       "id": "rmsprop",

@@ -1332,12 +1332,6 @@
       "en": "Refrigerant"
     },
     {
-      "id": "cop",
-      "zh": "性能系数",
-      "en": "COP",
-      "forms": { "en": ["coefficient of performance"] }
-    },
-    {
       "id": "chiller",
       "zh": "冷水机组",
       "en": "Chiller"

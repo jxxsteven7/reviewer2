@@ -755,7 +755,7 @@
       "id": "translation",
       "zh": "翻译",
       "en": "Translation",
-      "forms": { "en": ["translate", "translator"] }
+      "forms": { "en": ["translate", "translational", "translator"] }
     },
     {
       "id": "suspense",
@@ -2205,8 +2205,7 @@
     {
       "id": "world-tree",
       "zh": "世界树",
-      "en": "World tree",
-      "forms": { "en": ["Yggdrasil"] }
+      "en": "World tree"
     },
     {
       "id": "nuwa",

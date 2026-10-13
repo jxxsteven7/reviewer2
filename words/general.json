@@ -1696,12 +1696,6 @@
       "en": "Under review"
     },
     {
-      "id": "ghostwriting",
-      "zh": "代写",
-      "en": "Ghostwriting",
-      "forms": { "en": ["ghostwriter", "ghostwritten"] }
-    },
-    {
       "id": "paper-mill",
       "zh": "论文工厂",
       "en": "Paper mill"
@@ -1909,7 +1903,8 @@
     {
       "id": "invoice",
       "zh": "发票",
-      "en": "Invoice"
+      "en": "Invoice",
+      "forms": { "en": ["invoicing"] }
     },
     {
       "id": "sponsor",
@@ -2526,12 +2521,6 @@
       "forms": { "en": ["enrolment", "enroll", "enrol"] }
     },
     {
-      "id": "gym",
-      "zh": "健身房",
-      "en": "Gym",
-      "forms": { "en": ["gymnasium"] }
-    },
-    {
       "id": "bookworm",
       "zh": "书虫",
       "en": "Bookworm"
@@ -2545,12 +2534,6 @@
       "id": "workaholic",
       "zh": "工作狂",
       "en": "Workaholic"
-    },
-    {
-      "id": "perfectionist",
-      "zh": "完美主义者",
-      "en": "Perfectionist",
-      "forms": { "en": ["perfectionism"] }
     },
     {
       "id": "newbie",

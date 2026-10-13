@@ -759,7 +759,8 @@
     {
       "id": "abacus",
       "zh": "算盘",
-      "en": "Abacus"
+      "en": "Abacus",
+      "forms": { "en": ["abaci"] }
     },
     {
       "id": "lodestone",

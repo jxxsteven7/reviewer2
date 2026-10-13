@@ -2198,7 +2198,7 @@
       "id": "pdca",
       "zh": "PDCA",
       "en": "PDCA",
-      "forms": { "zh": ["戴明环"], "en": ["plan-do-check-act"] }
+      "forms": { "en": ["plan-do-check-act"] }
     },
     {
       "id": "safety-stock",
@@ -2440,12 +2440,6 @@
       "id": "elevator-pitch",
       "zh": "电梯演讲",
       "en": "Elevator pitch"
-    },
-    {
-      "id": "mvp",
-      "zh": "MVP",
-      "en": "MVP",
-      "forms": { "zh": ["最小可行产品"], "en": ["minimum viable product"] }
     },
     {
       "id": "pivot",

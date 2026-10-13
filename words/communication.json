@@ -874,12 +874,6 @@
       "forms": { "en": ["public service announcement"] }
     },
     {
-      "id": "sponsorship",
-      "zh": "赞助",
-      "en": "Sponsorship",
-      "forms": { "en": ["sponsor"] }
-    },
-    {
       "id": "gimmick",
       "zh": "噱头",
       "en": "Gimmick"

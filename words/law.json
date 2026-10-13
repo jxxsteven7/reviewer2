@@ -1607,11 +1607,6 @@
       "en": "Chattel"
     },
     {
-      "id": "supervisor",
-      "zh": "监事",
-      "en": "Supervisor"
-    },
-    {
       "id": "bylaws",
       "zh": "章程",
       "en": "Bylaws"
@@ -2207,9 +2202,9 @@
       "en": "Hardship"
     },
     {
-      "id": "joint-crime",
+      "id": "complicity",
       "zh": "共同犯罪",
-      "en": "Joint crime"
+      "en": "Complicity"
     },
     {
       "id": "payment-order",

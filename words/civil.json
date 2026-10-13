@@ -999,7 +999,8 @@
     {
       "id": "accessibility",
       "zh": "无障碍",
-      "en": "Accessibility"
+      "en": "Accessibility",
+      "forms": { "en": ["accessible", "a11y"] }
     },
     {
       "id": "site-plan",
@@ -1112,9 +1113,9 @@
       "en": "Mode shape"
     },
     {
-      "id": "story-drift",
+      "id": "storey-drift",
       "zh": "层间位移",
-      "en": "Story drift"
+      "en": "Storey drift"
     },
     {
       "id": "tacoma-narrows",
@@ -2005,12 +2006,6 @@
       "id": "gabion",
       "zh": "石笼",
       "en": "Gabion"
-    },
-    {
-      "id": "etc",
-      "zh": "ETC",
-      "en": "ETC",
-      "forms": { "en": ["electronic toll collection"] }
     },
     {
       "id": "u-turn",

@@ -871,7 +871,7 @@
       "id": "fertilizer",
       "zh": "化肥",
       "en": "Fertilizer",
-      "forms": { "en": ["fertiliser"] }
+      "forms": { "en": ["fertiliser", "fertilize"] }
     },
     {
       "id": "npk",

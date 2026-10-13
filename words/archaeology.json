@@ -249,7 +249,7 @@
     },
     {
       "id": "epigraphy",
-      "zh": "金石学",
+      "zh": "碑铭学",
       "en": "Epigraphy"
     },
     {
@@ -1070,7 +1070,8 @@
     {
       "id": "grotto",
       "zh": "石窟",
-      "en": "Grotto"
+      "en": "Grotto",
+      "forms": { "en": ["grottoes"] }
     },
     {
       "id": "stonehenge",

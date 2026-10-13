@@ -1837,7 +1837,8 @@
     {
       "id": "monad",
       "zh": "单子",
-      "en": "Monad"
+      "en": "Monad",
+      "forms": { "en": ["monadic"] }
     },
     {
       "id": "duck-typing",
@@ -1882,7 +1883,7 @@
       "id": "code",
       "zh": "代码",
       "en": "Code",
-      "forms": { "en": ["coding", "coder"] }
+      "forms": { "en": ["coding", "coder", "codebase"] }
     },
     {
       "id": "dead-code",
@@ -2467,11 +2468,6 @@
       "id": "x86",
       "zh": "x86",
       "en": "x86"
-    },
-    {
-      "id": "arm",
-      "zh": "ARM",
-      "en": "ARM"
     },
     {
       "id": "multi-core",

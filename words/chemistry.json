@@ -1312,7 +1312,8 @@
     {
       "id": "fatigue",
       "zh": "疲劳",
-      "en": "Fatigue"
+      "en": "Fatigue",
+      "forms": { "en": ["fatigued"] }
     },
     {
       "id": "toughness",

@@ -2511,7 +2511,8 @@
     {
       "id": "encoder",
       "zh": "编码器",
-      "en": "Encoder"
+      "en": "Encoder",
+      "forms": { "en": ["encode", "encoding"] }
     },
     {
       "id": "photoresistor",

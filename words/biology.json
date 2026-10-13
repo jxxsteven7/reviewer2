@@ -1650,7 +1650,7 @@
       "id": "translation",
       "zh": "翻译",
       "en": "Translation",
-      "forms": { "en": ["translate", "translational"] }
+      "forms": { "en": ["translate", "translational", "translator"] }
     },
     {
       "id": "histone",

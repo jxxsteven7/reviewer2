@@ -488,7 +488,8 @@
     {
       "id": "motor",
       "zh": "电动机",
-      "en": "Motor"
+      "en": "Motor",
+      "forms": { "zh": ["电机"] }
     },
     {
       "id": "railgun",
@@ -1028,7 +1029,8 @@
     {
       "id": "redshift",
       "zh": "红移",
-      "en": "Redshift"
+      "en": "Redshift",
+      "forms": { "en": ["redshifted"] }
     },
     {
       "id": "doppler-effect",
@@ -1834,12 +1836,6 @@
       "en": "Isospin"
     },
     {
-      "id": "gut",
-      "zh": "大统一理论",
-      "en": "GUT",
-      "forms": { "en": ["grand unified theory"] }
-    },
-    {
       "id": "antiparticle",
       "zh": "反粒子",
       "en": "Antiparticle"
@@ -2292,37 +2288,44 @@
     {
       "id": "energy",
       "zh": "能量",
-      "en": "Energy"
+      "en": "Energy",
+      "forms": { "en": ["energies", "energetic"] }
     },
     {
       "id": "entropy",
       "zh": "熵",
-      "en": "Entropy"
+      "en": "Entropy",
+      "forms": { "en": ["entropic"] }
     },
     {
       "id": "frequency",
       "zh": "频率",
-      "en": "Frequency"
+      "en": "Frequency",
+      "forms": { "en": ["frequencies", "frequent"] }
     },
     {
       "id": "atom",
       "zh": "原子",
-      "en": "Atom"
+      "en": "Atom",
+      "forms": { "en": ["atomic"] }
     },
     {
       "id": "semiconductor",
       "zh": "半导体",
-      "en": "Semiconductor"
+      "en": "Semiconductor",
+      "forms": { "en": ["semiconducting"] }
     },
     {
       "id": "symmetry",
       "zh": "对称性",
-      "en": "Symmetry"
+      "en": "Symmetry",
+      "forms": { "en": ["symmetric", "symmetrical"] }
     },
     {
       "id": "interferometer",
       "zh": "干涉仪",
-      "en": "Interferometer"
+      "en": "Interferometer",
+      "forms": { "en": ["interferometry"] }
     },
     {
       "id": "limit-cycle",
@@ -2439,12 +2442,6 @@
       "id": "chladni-figure",
       "zh": "克拉尼图形",
       "en": "Chladni figure"
-    },
-    {
-      "id": "mot",
-      "zh": "磁光阱",
-      "en": "MOT",
-      "forms": { "en": ["magneto-optical trap"] }
     },
     {
       "id": "collimator",

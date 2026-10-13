@@ -106,12 +106,6 @@
       "en": "Hypertrophy"
     },
     {
-      "id": "met",
-      "zh": "代谢当量",
-      "en": "MET",
-      "forms": { "en": ["metabolic equivalent"] }
-    },
-    {
       "id": "bmr",
       "zh": "BMR",
       "en": "BMR",
@@ -555,8 +549,7 @@
     {
       "id": "pull-up",
       "zh": "引体向上",
-      "en": "Pull-up",
-      "forms": { "en": ["chin-up"] }
+      "en": "Pull-up"
     },
     {
       "id": "push-up",
