@@ -72,11 +72,11 @@ jobs:
 
   e2e-browser:
     # Real browsers against the production build. Each project's tests are split over jobs side
-    # by side, each with only the browser it runs: WebKit, which takes about four times as long,
-    # over six, the others over two. Each job runs two tests at a time, as before. Playwright's
-    # --shard deals the tests out in order, one by one (fullyParallel in playwright.config.ts), by
-    # their number, not by how long they take; the slowest part is the one with both whole games
-    # of full-game.spec.ts.
+    # by side, each with only the browser it runs: WebKit, the slowest, over six, the others over
+    # two. A Chromium job runs two tests at a time, as before, and a WebKit job one
+    # (playwright.config.ts). Playwright's --shard deals the tests out in order, one by one
+    # (fullyParallel in playwright.config.ts), by their number, not by how long they take, so the
+    # parts with the whole games take the longest.
     name: End-to-end on ${{ matrix.project }}${{ matrix.shards && format(', part {0} of {1}', matrix.shard, matrix.shards) || '' }}
     runs-on: ubuntu-latest
     # A browser install or a server that hangs must not hold the check for the six hours that

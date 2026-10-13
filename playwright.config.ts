@@ -59,7 +59,9 @@ export default defineConfig({
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'phone-chromium', use: { ...devices['Pixel 7'] } },
-    { name: 'iphone-webkit', use: { ...devices['iPhone 13'] } },
+    // On a CI runner, two WebKit tests side by side take almost twice as long each as one alone,
+    // so there WebKit runs one test at a time, which gets as much done on a less busy machine.
+    { name: 'iphone-webkit', use: { ...devices['iPhone 13'] }, ...(process.env.CI ? { workers: 1 } : {}) },
   ],
   webServer: {
     // e2e/server.mjs starts the server with its settings pinned and keeps its log.
