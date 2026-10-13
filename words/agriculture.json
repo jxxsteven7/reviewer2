@@ -1,0 +1,2445 @@
+{
+  "id": "agriculture",
+  "name": {
+    "zh": "农业与食品科学",
+    "en": "Agriculture & Food Science"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "agronomy",
+      "zh": "农学",
+      "en": "Agronomy",
+      "forms": { "en": ["agronomic", "agronomist"] }
+    },
+    {
+      "id": "horticulture",
+      "zh": "园艺",
+      "en": "Horticulture",
+      "forms": { "en": ["horticultural"] }
+    },
+    {
+      "id": "animal-science",
+      "zh": "畜牧学",
+      "en": "Animal science"
+    },
+    {
+      "id": "forestry",
+      "zh": "林学",
+      "en": "Forestry"
+    },
+    {
+      "id": "food-science",
+      "zh": "食品科学",
+      "en": "Food science"
+    },
+    {
+      "id": "agroecology",
+      "zh": "农业生态学",
+      "en": "Agroecology"
+    },
+    {
+      "id": "farm",
+      "zh": "农场",
+      "en": "Farm"
+    },
+    {
+      "id": "farmer",
+      "zh": "农民",
+      "en": "Farmer"
+    },
+    {
+      "id": "farmland",
+      "zh": "农田",
+      "en": "Farmland"
+    },
+    {
+      "id": "paddy-field",
+      "zh": "稻田",
+      "en": "Paddy field"
+    },
+    {
+      "id": "orchard",
+      "zh": "果园",
+      "en": "Orchard"
+    },
+    {
+      "id": "rangeland",
+      "zh": "草场",
+      "en": "Rangeland"
+    },
+    {
+      "id": "family-farm",
+      "zh": "家庭农场",
+      "en": "Family farm"
+    },
+    {
+      "id": "smallholder",
+      "zh": "小农户",
+      "en": "Smallholder"
+    },
+    {
+      "id": "produce",
+      "zh": "农产品",
+      "en": "Produce"
+    },
+    {
+      "id": "agritourism",
+      "zh": "农家乐",
+      "en": "Agritourism"
+    },
+    {
+      "id": "organic-food",
+      "zh": "有机食品",
+      "en": "Organic food"
+    },
+    {
+      "id": "smart-farming",
+      "zh": "智慧农业",
+      "en": "Smart farming"
+    },
+    {
+      "id": "eco-farming",
+      "zh": "生态农业",
+      "en": "Eco-farming"
+    },
+    {
+      "id": "fao",
+      "zh": "粮农组织",
+      "en": "FAO"
+    },
+    {
+      "id": "bumper-harvest",
+      "zh": "丰收",
+      "en": "Bumper harvest"
+    },
+    {
+      "id": "crop-failure",
+      "zh": "歉收",
+      "en": "Crop failure"
+    },
+    {
+      "id": "bushel",
+      "zh": "蒲式耳",
+      "en": "Bushel"
+    },
+    {
+      "id": "field-trial",
+      "zh": "田间试验",
+      "en": "Field trial"
+    },
+    {
+      "id": "crop",
+      "zh": "作物",
+      "en": "Crop"
+    },
+    {
+      "id": "grain-crop",
+      "zh": "粮食作物",
+      "en": "Grain crop"
+    },
+    {
+      "id": "cash-crop",
+      "zh": "经济作物",
+      "en": "Cash crop"
+    },
+    {
+      "id": "oil-crop",
+      "zh": "油料作物",
+      "en": "Oil crop"
+    },
+    {
+      "id": "cereal",
+      "zh": "谷物",
+      "en": "Cereal"
+    },
+    {
+      "id": "rice",
+      "zh": "水稻",
+      "en": "Rice"
+    },
+    {
+      "id": "wheat",
+      "zh": "小麦",
+      "en": "Wheat"
+    },
+    {
+      "id": "maize",
+      "zh": "玉米",
+      "en": "Maize"
+    },
+    {
+      "id": "soybean",
+      "zh": "大豆",
+      "en": "Soybean"
+    },
+    {
+      "id": "sorghum",
+      "zh": "高粱",
+      "en": "Sorghum"
+    },
+    {
+      "id": "foxtail-millet",
+      "zh": "谷子",
+      "en": "Foxtail millet"
+    },
+    {
+      "id": "barley",
+      "zh": "大麦",
+      "en": "Barley"
+    },
+    {
+      "id": "oat",
+      "zh": "燕麦",
+      "en": "Oat"
+    },
+    {
+      "id": "rye",
+      "zh": "黑麦",
+      "en": "Rye"
+    },
+    {
+      "id": "buckwheat",
+      "zh": "荞麦",
+      "en": "Buckwheat"
+    },
+    {
+      "id": "quinoa",
+      "zh": "藜麦",
+      "en": "Quinoa"
+    },
+    {
+      "id": "potato",
+      "zh": "马铃薯",
+      "en": "Potato"
+    },
+    {
+      "id": "sweet-potato",
+      "zh": "甘薯",
+      "en": "Sweet potato"
+    },
+    {
+      "id": "cassava",
+      "zh": "木薯",
+      "en": "Cassava"
+    },
+    {
+      "id": "taro",
+      "zh": "芋头",
+      "en": "Taro"
+    },
+    {
+      "id": "rapeseed",
+      "zh": "油菜",
+      "en": "Rapeseed"
+    },
+    {
+      "id": "peanut",
+      "zh": "花生",
+      "en": "Peanut"
+    },
+    {
+      "id": "sesame",
+      "zh": "芝麻",
+      "en": "Sesame"
+    },
+    {
+      "id": "cotton",
+      "zh": "棉花",
+      "en": "Cotton"
+    },
+    {
+      "id": "flax",
+      "zh": "亚麻",
+      "en": "Flax"
+    },
+    {
+      "id": "jute",
+      "zh": "黄麻",
+      "en": "Jute"
+    },
+    {
+      "id": "sugarcane",
+      "zh": "甘蔗",
+      "en": "Sugarcane"
+    },
+    {
+      "id": "sugar-beet",
+      "zh": "甜菜",
+      "en": "Sugar beet"
+    },
+    {
+      "id": "tea-plant",
+      "zh": "茶树",
+      "en": "Tea plant"
+    },
+    {
+      "id": "cocoa",
+      "zh": "可可",
+      "en": "Cocoa"
+    },
+    {
+      "id": "tobacco",
+      "zh": "烟草",
+      "en": "Tobacco"
+    },
+    {
+      "id": "rubber-tree",
+      "zh": "橡胶树",
+      "en": "Rubber tree"
+    },
+    {
+      "id": "oil-palm",
+      "zh": "油棕",
+      "en": "Oil palm"
+    },
+    {
+      "id": "alfalfa",
+      "zh": "苜蓿",
+      "en": "Alfalfa"
+    },
+    {
+      "id": "mung-bean",
+      "zh": "绿豆",
+      "en": "Mung bean"
+    },
+    {
+      "id": "broad-bean",
+      "zh": "蚕豆",
+      "en": "Broad bean"
+    },
+    {
+      "id": "tomato",
+      "zh": "番茄",
+      "en": "Tomato"
+    },
+    {
+      "id": "cucumber",
+      "zh": "黄瓜",
+      "en": "Cucumber"
+    },
+    {
+      "id": "napa-cabbage",
+      "zh": "大白菜",
+      "en": "Napa cabbage"
+    },
+    {
+      "id": "chili-pepper",
+      "zh": "辣椒",
+      "en": "Chili pepper",
+      "forms": { "en": ["chilli"] }
+    },
+    {
+      "id": "eggplant",
+      "zh": "茄子",
+      "en": "Eggplant"
+    },
+    {
+      "id": "pumpkin",
+      "zh": "南瓜",
+      "en": "Pumpkin"
+    },
+    {
+      "id": "broccoli",
+      "zh": "西兰花",
+      "en": "Broccoli"
+    },
+    {
+      "id": "spinach",
+      "zh": "菠菜",
+      "en": "Spinach"
+    },
+    {
+      "id": "carrot",
+      "zh": "胡萝卜",
+      "en": "Carrot"
+    },
+    {
+      "id": "garlic",
+      "zh": "大蒜",
+      "en": "Garlic"
+    },
+    {
+      "id": "ginger",
+      "zh": "生姜",
+      "en": "Ginger"
+    },
+    {
+      "id": "lotus-root",
+      "zh": "莲藕",
+      "en": "Lotus root"
+    },
+    {
+      "id": "watermelon",
+      "zh": "西瓜",
+      "en": "Watermelon"
+    },
+    {
+      "id": "apple",
+      "zh": "苹果",
+      "en": "Apple"
+    },
+    {
+      "id": "citrus",
+      "zh": "柑橘",
+      "en": "Citrus"
+    },
+    {
+      "id": "grape",
+      "zh": "葡萄",
+      "en": "Grape"
+    },
+    {
+      "id": "banana",
+      "zh": "香蕉",
+      "en": "Banana"
+    },
+    {
+      "id": "strawberry",
+      "zh": "草莓",
+      "en": "Strawberry"
+    },
+    {
+      "id": "kiwifruit",
+      "zh": "猕猴桃",
+      "en": "Kiwifruit"
+    },
+    {
+      "id": "lychee",
+      "zh": "荔枝",
+      "en": "Lychee",
+      "forms": { "en": ["litchi"] }
+    },
+    {
+      "id": "mango",
+      "zh": "芒果",
+      "en": "Mango"
+    },
+    {
+      "id": "coconut",
+      "zh": "椰子",
+      "en": "Coconut"
+    },
+    {
+      "id": "olive",
+      "zh": "橄榄",
+      "en": "Olive"
+    },
+    {
+      "id": "walnut",
+      "zh": "核桃",
+      "en": "Walnut"
+    },
+    {
+      "id": "chestnut",
+      "zh": "板栗",
+      "en": "Chestnut"
+    },
+    {
+      "id": "goji",
+      "zh": "枸杞",
+      "en": "Goji"
+    },
+    {
+      "id": "shiitake",
+      "zh": "香菇",
+      "en": "Shiitake"
+    },
+    {
+      "id": "enoki",
+      "zh": "金针菇",
+      "en": "Enoki"
+    },
+    {
+      "id": "wood-ear",
+      "zh": "木耳",
+      "en": "Wood ear"
+    },
+    {
+      "id": "truffle",
+      "zh": "松露",
+      "en": "Truffle"
+    },
+    {
+      "id": "fruiting-body",
+      "zh": "子实体",
+      "en": "Fruiting body"
+    },
+    {
+      "id": "vegetable",
+      "zh": "蔬菜",
+      "en": "Vegetable"
+    },
+    {
+      "id": "fruit-tree",
+      "zh": "果树",
+      "en": "Fruit tree"
+    },
+    {
+      "id": "forage",
+      "zh": "牧草",
+      "en": "Forage"
+    },
+    {
+      "id": "lawn",
+      "zh": "草坪",
+      "en": "Lawn"
+    },
+    {
+      "id": "bonsai",
+      "zh": "盆景",
+      "en": "Bonsai"
+    },
+    {
+      "id": "tillage",
+      "zh": "耕作",
+      "en": "Tillage"
+    },
+    {
+      "id": "sowing",
+      "zh": "播种",
+      "en": "Sowing"
+    },
+    {
+      "id": "seedling",
+      "zh": "幼苗",
+      "en": "Seedling"
+    },
+    {
+      "id": "transplanting",
+      "zh": "移栽",
+      "en": "Transplanting"
+    },
+    {
+      "id": "intercropping",
+      "zh": "间作",
+      "en": "Intercropping"
+    },
+    {
+      "id": "relay-cropping",
+      "zh": "套作",
+      "en": "Relay cropping"
+    },
+    {
+      "id": "fallow",
+      "zh": "休耕",
+      "en": "Fallow"
+    },
+    {
+      "id": "thinning",
+      "zh": "间伐",
+      "en": "Thinning"
+    },
+    {
+      "id": "topping",
+      "zh": "打顶",
+      "en": "Topping"
+    },
+    {
+      "id": "plastic-mulch",
+      "zh": "地膜",
+      "en": "Plastic mulch"
+    },
+    {
+      "id": "greenhouse",
+      "zh": "温室",
+      "en": "Greenhouse"
+    },
+    {
+      "id": "harvest",
+      "zh": "收获",
+      "en": "Harvest"
+    },
+    {
+      "id": "crop-yield",
+      "zh": "产量",
+      "en": "Crop yield"
+    },
+    {
+      "id": "harvest-index",
+      "zh": "收获指数",
+      "en": "Harvest index"
+    },
+    {
+      "id": "lodging",
+      "zh": "倒伏",
+      "en": "Lodging"
+    },
+    {
+      "id": "tiller",
+      "zh": "分蘖",
+      "en": "Tiller",
+      "forms": { "en": ["tillering"] }
+    },
+    {
+      "id": "heading",
+      "zh": "抽穗",
+      "en": "Heading"
+    },
+    {
+      "id": "grain-filling",
+      "zh": "灌浆",
+      "en": "Grain filling"
+    },
+    {
+      "id": "growth-period",
+      "zh": "生育期",
+      "en": "Growth period"
+    },
+    {
+      "id": "photoperiod",
+      "zh": "光周期",
+      "en": "Photoperiod",
+      "forms": { "en": ["photoperiodism"] }
+    },
+    {
+      "id": "vernalization",
+      "zh": "春化",
+      "en": "Vernalization",
+      "forms": { "en": ["vernalisation"] }
+    },
+    {
+      "id": "auxin",
+      "zh": "生长素",
+      "en": "Auxin"
+    },
+    {
+      "id": "gibberellin",
+      "zh": "赤霉素",
+      "en": "Gibberellin"
+    },
+    {
+      "id": "cytokinin",
+      "zh": "细胞分裂素",
+      "en": "Cytokinin"
+    },
+    {
+      "id": "abscisic-acid",
+      "zh": "脱落酸",
+      "en": "Abscisic acid"
+    },
+    {
+      "id": "ethylene",
+      "zh": "乙烯",
+      "en": "Ethylene"
+    },
+    {
+      "id": "c4-plant",
+      "zh": "C4植物",
+      "en": "C4 plant"
+    },
+    {
+      "id": "root-nodule",
+      "zh": "根瘤",
+      "en": "Root nodule"
+    },
+    {
+      "id": "rhizobium",
+      "zh": "根瘤菌",
+      "en": "Rhizobium"
+    },
+    {
+      "id": "rhizosphere",
+      "zh": "根际",
+      "en": "Rhizosphere"
+    },
+    {
+      "id": "root-system",
+      "zh": "根系",
+      "en": "Root system"
+    },
+    {
+      "id": "wilting",
+      "zh": "萎蔫",
+      "en": "Wilting"
+    },
+    {
+      "id": "tuber",
+      "zh": "块茎",
+      "en": "Tuber"
+    },
+    {
+      "id": "bulb",
+      "zh": "鳞茎",
+      "en": "Bulb"
+    },
+    {
+      "id": "rhizome",
+      "zh": "根茎",
+      "en": "Rhizome"
+    },
+    {
+      "id": "rootstock",
+      "zh": "砧木",
+      "en": "Rootstock"
+    },
+    {
+      "id": "scion",
+      "zh": "接穗",
+      "en": "Scion"
+    },
+    {
+      "id": "cutting",
+      "zh": "扦插",
+      "en": "Cutting"
+    },
+    {
+      "id": "layering",
+      "zh": "压条",
+      "en": "Layering"
+    },
+    {
+      "id": "tissue-culture",
+      "zh": "组织培养",
+      "en": "Tissue culture",
+      "forms": { "zh": ["组培"] }
+    },
+    {
+      "id": "weed",
+      "zh": "杂草",
+      "en": "Weed"
+    },
+    {
+      "id": "waterlogging",
+      "zh": "涝害",
+      "en": "Waterlogging"
+    },
+    {
+      "id": "freeze-injury",
+      "zh": "冻害",
+      "en": "Freeze injury"
+    },
+    {
+      "id": "breeding",
+      "zh": "育种",
+      "en": "Breeding"
+    },
+    {
+      "id": "cultivar",
+      "zh": "品种",
+      "en": "Cultivar"
+    },
+    {
+      "id": "heterosis",
+      "zh": "杂种优势",
+      "en": "Heterosis"
+    },
+    {
+      "id": "backcross",
+      "zh": "回交",
+      "en": "Backcross"
+    },
+    {
+      "id": "inbred-line",
+      "zh": "自交系",
+      "en": "Inbred line"
+    },
+    {
+      "id": "male-sterility",
+      "zh": "雄性不育",
+      "en": "Male sterility"
+    },
+    {
+      "id": "emasculation",
+      "zh": "去雄",
+      "en": "Emasculation"
+    },
+    {
+      "id": "germplasm",
+      "zh": "种质",
+      "en": "Germplasm"
+    },
+    {
+      "id": "landrace",
+      "zh": "地方品种",
+      "en": "Landrace"
+    },
+    {
+      "id": "domestication",
+      "zh": "驯化",
+      "en": "Domestication"
+    },
+    {
+      "id": "polyploid",
+      "zh": "多倍体",
+      "en": "Polyploid",
+      "forms": { "en": ["polyploidy"] }
+    },
+    {
+      "id": "colchicine",
+      "zh": "秋水仙素",
+      "en": "Colchicine"
+    },
+    {
+      "id": "seedless",
+      "zh": "无籽",
+      "en": "Seedless"
+    },
+    {
+      "id": "semi-dwarf",
+      "zh": "半矮秆",
+      "en": "Semi-dwarf"
+    },
+    {
+      "id": "dwarfing",
+      "zh": "矮化",
+      "en": "Dwarfing"
+    },
+    {
+      "id": "space-breeding",
+      "zh": "太空育种",
+      "en": "Space breeding"
+    },
+    {
+      "id": "qtl",
+      "zh": "QTL",
+      "en": "QTL",
+      "forms": { "zh": ["数量性状位点"] }
+    },
+    {
+      "id": "germination",
+      "zh": "发芽",
+      "en": "Germination",
+      "forms": { "en": ["germinate"] }
+    },
+    {
+      "id": "seed-coating",
+      "zh": "种子包衣",
+      "en": "Seed coating"
+    },
+    {
+      "id": "seed-vigor",
+      "zh": "种子活力",
+      "en": "Seed vigor",
+      "forms": { "en": ["seed vigour"] }
+    },
+    {
+      "id": "soil-science",
+      "zh": "土壤学",
+      "en": "Soil science"
+    },
+    {
+      "id": "soil-fertility",
+      "zh": "土壤肥力",
+      "en": "Soil fertility"
+    },
+    {
+      "id": "soil-texture",
+      "zh": "土壤质地",
+      "en": "Soil texture"
+    },
+    {
+      "id": "soil-profile",
+      "zh": "土壤剖面",
+      "en": "Soil profile"
+    },
+    {
+      "id": "loam",
+      "zh": "壤土",
+      "en": "Loam"
+    },
+    {
+      "id": "clay",
+      "zh": "黏土",
+      "en": "Clay"
+    },
+    {
+      "id": "black-soil",
+      "zh": "黑土",
+      "en": "Black soil"
+    },
+    {
+      "id": "red-soil",
+      "zh": "红壤",
+      "en": "Red soil"
+    },
+    {
+      "id": "saline-soil",
+      "zh": "盐碱地",
+      "en": "Saline soil"
+    },
+    {
+      "id": "topsoil",
+      "zh": "表土",
+      "en": "Topsoil"
+    },
+    {
+      "id": "plow-pan",
+      "zh": "犁底层",
+      "en": "Plow pan",
+      "forms": { "en": ["plough pan"] }
+    },
+    {
+      "id": "soil-aggregate",
+      "zh": "团聚体",
+      "en": "Soil aggregate"
+    },
+    {
+      "id": "organic-matter",
+      "zh": "有机质",
+      "en": "Organic matter"
+    },
+    {
+      "id": "field-capacity",
+      "zh": "田间持水量",
+      "en": "Field capacity"
+    },
+    {
+      "id": "soil-moisture",
+      "zh": "墒情",
+      "en": "Soil moisture"
+    },
+    {
+      "id": "fertilizer",
+      "zh": "化肥",
+      "en": "Fertilizer",
+      "forms": { "en": ["fertiliser"] }
+    },
+    {
+      "id": "npk",
+      "zh": "氮磷钾",
+      "en": "NPK"
+    },
+    {
+      "id": "urea",
+      "zh": "尿素",
+      "en": "Urea"
+    },
+    {
+      "id": "potash",
+      "zh": "钾肥",
+      "en": "Potash"
+    },
+    {
+      "id": "biofertilizer",
+      "zh": "生物肥料",
+      "en": "Biofertilizer",
+      "forms": { "en": ["biofertiliser"] }
+    },
+    {
+      "id": "topdressing",
+      "zh": "追肥",
+      "en": "Topdressing"
+    },
+    {
+      "id": "foliar-spray",
+      "zh": "叶面喷施",
+      "en": "Foliar spray"
+    },
+    {
+      "id": "micronutrient",
+      "zh": "微量元素",
+      "en": "Micronutrient"
+    },
+    {
+      "id": "macronutrient",
+      "zh": "大量元素",
+      "en": "Macronutrient"
+    },
+    {
+      "id": "chlorosis",
+      "zh": "黄化",
+      "en": "Chlorosis"
+    },
+    {
+      "id": "nitrification",
+      "zh": "硝化作用",
+      "en": "Nitrification"
+    },
+    {
+      "id": "guano",
+      "zh": "鸟粪",
+      "en": "Guano"
+    },
+    {
+      "id": "bone-meal",
+      "zh": "骨粉",
+      "en": "Bone meal"
+    },
+    {
+      "id": "wood-ash",
+      "zh": "草木灰",
+      "en": "Wood ash"
+    },
+    {
+      "id": "crop-residue",
+      "zh": "秸秆",
+      "en": "Crop residue"
+    },
+    {
+      "id": "fertigation",
+      "zh": "水肥一体化",
+      "en": "Fertigation"
+    },
+    {
+      "id": "dry-farming",
+      "zh": "旱作农业",
+      "en": "Dry farming"
+    },
+    {
+      "id": "waterwheel",
+      "zh": "水车",
+      "en": "Waterwheel"
+    },
+    {
+      "id": "pesticide",
+      "zh": "农药",
+      "en": "Pesticide"
+    },
+    {
+      "id": "insecticide",
+      "zh": "杀虫剂",
+      "en": "Insecticide"
+    },
+    {
+      "id": "herbicide",
+      "zh": "除草剂",
+      "en": "Herbicide"
+    },
+    {
+      "id": "fungicide",
+      "zh": "杀菌剂",
+      "en": "Fungicide"
+    },
+    {
+      "id": "acaricide",
+      "zh": "杀螨剂",
+      "en": "Acaricide"
+    },
+    {
+      "id": "glyphosate",
+      "zh": "草甘膦",
+      "en": "Glyphosate"
+    },
+    {
+      "id": "imidacloprid",
+      "zh": "吡虫啉",
+      "en": "Imidacloprid"
+    },
+    {
+      "id": "neonicotinoid",
+      "zh": "新烟碱类",
+      "en": "Neonicotinoid"
+    },
+    {
+      "id": "pyrethroid",
+      "zh": "拟除虫菊酯",
+      "en": "Pyrethroid"
+    },
+    {
+      "id": "ipm",
+      "zh": "综合防治",
+      "en": "IPM",
+      "forms": { "en": ["integrated pest management"] }
+    },
+    {
+      "id": "phytopathology",
+      "zh": "植物病理学",
+      "en": "Phytopathology"
+    },
+    {
+      "id": "plant-disease",
+      "zh": "病害",
+      "en": "Plant disease"
+    },
+    {
+      "id": "stripe-rust",
+      "zh": "条锈病",
+      "en": "Stripe rust"
+    },
+    {
+      "id": "powdery-mildew",
+      "zh": "白粉病",
+      "en": "Powdery mildew"
+    },
+    {
+      "id": "downy-mildew",
+      "zh": "霜霉病",
+      "en": "Downy mildew"
+    },
+    {
+      "id": "rice-blast",
+      "zh": "稻瘟病",
+      "en": "Rice blast"
+    },
+    {
+      "id": "late-blight",
+      "zh": "晚疫病",
+      "en": "Late blight"
+    },
+    {
+      "id": "fusarium-wilt",
+      "zh": "枯萎病",
+      "en": "Fusarium wilt"
+    },
+    {
+      "id": "bacterial-wilt",
+      "zh": "青枯病",
+      "en": "Bacterial wilt"
+    },
+    {
+      "id": "oomycete",
+      "zh": "卵菌",
+      "en": "Oomycete"
+    },
+    {
+      "id": "sclerotium",
+      "zh": "菌核",
+      "en": "Sclerotium"
+    },
+    {
+      "id": "aphid",
+      "zh": "蚜虫",
+      "en": "Aphid"
+    },
+    {
+      "id": "corn-borer",
+      "zh": "玉米螟",
+      "en": "Corn borer"
+    },
+    {
+      "id": "fall-armyworm",
+      "zh": "草地贪夜蛾",
+      "en": "Fall armyworm"
+    },
+    {
+      "id": "planthopper",
+      "zh": "稻飞虱",
+      "en": "Planthopper"
+    },
+    {
+      "id": "bollworm",
+      "zh": "棉铃虫",
+      "en": "Bollworm"
+    },
+    {
+      "id": "spider-mite",
+      "zh": "叶螨",
+      "en": "Spider mite"
+    },
+    {
+      "id": "whitefly",
+      "zh": "粉虱",
+      "en": "Whitefly"
+    },
+    {
+      "id": "thrips",
+      "zh": "蓟马",
+      "en": "Thrips"
+    },
+    {
+      "id": "scale-insect",
+      "zh": "介壳虫",
+      "en": "Scale insect"
+    },
+    {
+      "id": "cutworm",
+      "zh": "地老虎",
+      "en": "Cutworm"
+    },
+    {
+      "id": "mole-cricket",
+      "zh": "蝼蛄",
+      "en": "Mole cricket"
+    },
+    {
+      "id": "weevil",
+      "zh": "象甲",
+      "en": "Weevil"
+    },
+    {
+      "id": "grub",
+      "zh": "蛴螬",
+      "en": "Grub"
+    },
+    {
+      "id": "scarecrow",
+      "zh": "稻草人",
+      "en": "Scarecrow"
+    },
+    {
+      "id": "barnyard-grass",
+      "zh": "稗草",
+      "en": "Barnyard grass"
+    },
+    {
+      "id": "dodder",
+      "zh": "菟丝子",
+      "en": "Dodder"
+    },
+    {
+      "id": "trichogramma",
+      "zh": "赤眼蜂",
+      "en": "Trichogramma"
+    },
+    {
+      "id": "ladybug",
+      "zh": "瓢虫",
+      "en": "Ladybug"
+    },
+    {
+      "id": "parasitoid",
+      "zh": "寄生蜂",
+      "en": "Parasitoid"
+    },
+    {
+      "id": "bt-cotton",
+      "zh": "抗虫棉",
+      "en": "Bt cotton"
+    },
+    {
+      "id": "sticky-trap",
+      "zh": "粘虫板",
+      "en": "Sticky trap"
+    },
+    {
+      "id": "light-trap",
+      "zh": "杀虫灯",
+      "en": "Light trap"
+    },
+    {
+      "id": "sprayer",
+      "zh": "喷雾器",
+      "en": "Sprayer"
+    },
+    {
+      "id": "fumigation",
+      "zh": "熏蒸",
+      "en": "Fumigation",
+      "forms": { "en": ["fumigant"] }
+    },
+    {
+      "id": "livestock",
+      "zh": "家畜",
+      "en": "Livestock"
+    },
+    {
+      "id": "poultry",
+      "zh": "家禽",
+      "en": "Poultry"
+    },
+    {
+      "id": "cattle",
+      "zh": "牛",
+      "en": "Cattle"
+    },
+    {
+      "id": "dairy-cow",
+      "zh": "奶牛",
+      "en": "Dairy cow"
+    },
+    {
+      "id": "beef-cattle",
+      "zh": "肉牛",
+      "en": "Beef cattle"
+    },
+    {
+      "id": "water-buffalo",
+      "zh": "水牛",
+      "en": "Water buffalo"
+    },
+    {
+      "id": "yak",
+      "zh": "牦牛",
+      "en": "Yak"
+    },
+    {
+      "id": "pig",
+      "zh": "猪",
+      "en": "Pig"
+    },
+    {
+      "id": "sow",
+      "zh": "母猪",
+      "en": "Sow"
+    },
+    {
+      "id": "piglet",
+      "zh": "仔猪",
+      "en": "Piglet"
+    },
+    {
+      "id": "sheep",
+      "zh": "绵羊",
+      "en": "Sheep"
+    },
+    {
+      "id": "goat",
+      "zh": "山羊",
+      "en": "Goat"
+    },
+    {
+      "id": "alpaca",
+      "zh": "羊驼",
+      "en": "Alpaca"
+    },
+    {
+      "id": "horse",
+      "zh": "马",
+      "en": "Horse"
+    },
+    {
+      "id": "donkey",
+      "zh": "驴",
+      "en": "Donkey"
+    },
+    {
+      "id": "camel",
+      "zh": "骆驼",
+      "en": "Camel"
+    },
+    {
+      "id": "rabbit",
+      "zh": "兔",
+      "en": "Rabbit"
+    },
+    {
+      "id": "chicken",
+      "zh": "鸡",
+      "en": "Chicken"
+    },
+    {
+      "id": "rooster",
+      "zh": "公鸡",
+      "en": "Rooster"
+    },
+    {
+      "id": "hen",
+      "zh": "母鸡",
+      "en": "Hen"
+    },
+    {
+      "id": "broiler",
+      "zh": "肉鸡",
+      "en": "Broiler"
+    },
+    {
+      "id": "duck",
+      "zh": "鸭",
+      "en": "Duck"
+    },
+    {
+      "id": "goose",
+      "zh": "鹅",
+      "en": "Goose"
+    },
+    {
+      "id": "turkey",
+      "zh": "火鸡",
+      "en": "Turkey"
+    },
+    {
+      "id": "quail",
+      "zh": "鹌鹑",
+      "en": "Quail"
+    },
+    {
+      "id": "ostrich",
+      "zh": "鸵鸟",
+      "en": "Ostrich"
+    },
+    {
+      "id": "holstein",
+      "zh": "荷斯坦牛",
+      "en": "Holstein"
+    },
+    {
+      "id": "merino",
+      "zh": "美利奴羊",
+      "en": "Merino"
+    },
+    {
+      "id": "sheepdog",
+      "zh": "牧羊犬",
+      "en": "Sheepdog"
+    },
+    {
+      "id": "calf",
+      "zh": "犊牛",
+      "en": "Calf"
+    },
+    {
+      "id": "lamb",
+      "zh": "羔羊",
+      "en": "Lamb"
+    },
+    {
+      "id": "chick",
+      "zh": "雏鸡",
+      "en": "Chick"
+    },
+    {
+      "id": "animal-feed",
+      "zh": "饲料",
+      "en": "Animal feed"
+    },
+    {
+      "id": "silage",
+      "zh": "青贮",
+      "en": "Silage"
+    },
+    {
+      "id": "hay",
+      "zh": "干草",
+      "en": "Hay"
+    },
+    {
+      "id": "concentrate",
+      "zh": "精饲料",
+      "en": "Concentrate"
+    },
+    {
+      "id": "roughage",
+      "zh": "粗饲料",
+      "en": "Roughage"
+    },
+    {
+      "id": "premix",
+      "zh": "预混料",
+      "en": "Premix"
+    },
+    {
+      "id": "soybean-meal",
+      "zh": "豆粕",
+      "en": "Soybean meal"
+    },
+    {
+      "id": "fcr",
+      "zh": "饲料转化率",
+      "en": "FCR",
+      "forms": { "en": ["feed conversion ratio"] }
+    },
+    {
+      "id": "crude-protein",
+      "zh": "粗蛋白",
+      "en": "Crude protein"
+    },
+    {
+      "id": "lysine",
+      "zh": "赖氨酸",
+      "en": "Lysine"
+    },
+    {
+      "id": "methionine",
+      "zh": "蛋氨酸",
+      "en": "Methionine"
+    },
+    {
+      "id": "digestibility",
+      "zh": "消化率",
+      "en": "Digestibility"
+    },
+    {
+      "id": "salt-lick",
+      "zh": "舔砖",
+      "en": "Salt lick"
+    },
+    {
+      "id": "mealworm",
+      "zh": "黄粉虫",
+      "en": "Mealworm"
+    },
+    {
+      "id": "rumen",
+      "zh": "瘤胃",
+      "en": "Rumen"
+    },
+    {
+      "id": "ruminant",
+      "zh": "反刍动物",
+      "en": "Ruminant",
+      "forms": { "en": ["rumination"] }
+    },
+    {
+      "id": "monogastric",
+      "zh": "单胃动物",
+      "en": "Monogastric"
+    },
+    {
+      "id": "lactation",
+      "zh": "泌乳",
+      "en": "Lactation"
+    },
+    {
+      "id": "milking",
+      "zh": "挤奶",
+      "en": "Milking"
+    },
+    {
+      "id": "colostrum",
+      "zh": "初乳",
+      "en": "Colostrum"
+    },
+    {
+      "id": "estrus",
+      "zh": "发情",
+      "en": "Estrus",
+      "forms": { "en": ["oestrus"] }
+    },
+    {
+      "id": "gestation",
+      "zh": "妊娠期",
+      "en": "Gestation"
+    },
+    {
+      "id": "weaning",
+      "zh": "断奶",
+      "en": "Weaning"
+    },
+    {
+      "id": "hatching",
+      "zh": "孵化",
+      "en": "Hatching"
+    },
+    {
+      "id": "laying-rate",
+      "zh": "产蛋率",
+      "en": "Laying rate"
+    },
+    {
+      "id": "grazing",
+      "zh": "放牧",
+      "en": "Grazing"
+    },
+    {
+      "id": "overgrazing",
+      "zh": "过度放牧",
+      "en": "Overgrazing"
+    },
+    {
+      "id": "stocking-rate",
+      "zh": "载畜量",
+      "en": "Stocking rate"
+    },
+    {
+      "id": "free-range",
+      "zh": "散养",
+      "en": "Free-range"
+    },
+    {
+      "id": "battery-cage",
+      "zh": "笼养",
+      "en": "Battery cage"
+    },
+    {
+      "id": "feedlot",
+      "zh": "饲养场",
+      "en": "Feedlot"
+    },
+    {
+      "id": "shearing",
+      "zh": "剪毛",
+      "en": "Shearing"
+    },
+    {
+      "id": "horseshoe",
+      "zh": "马蹄铁",
+      "en": "Horseshoe"
+    },
+    {
+      "id": "saddle",
+      "zh": "马鞍",
+      "en": "Saddle"
+    },
+    {
+      "id": "tail-docking",
+      "zh": "断尾",
+      "en": "Tail docking"
+    },
+    {
+      "id": "breeding-value",
+      "zh": "育种值",
+      "en": "Breeding value"
+    },
+    {
+      "id": "beekeeping",
+      "zh": "养蜂",
+      "en": "Beekeeping",
+      "forms": { "en": ["beekeeper"] }
+    },
+    {
+      "id": "honey",
+      "zh": "蜂蜜",
+      "en": "Honey"
+    },
+    {
+      "id": "royal-jelly",
+      "zh": "蜂王浆",
+      "en": "Royal jelly"
+    },
+    {
+      "id": "mulberry",
+      "zh": "桑树",
+      "en": "Mulberry"
+    },
+    {
+      "id": "wool",
+      "zh": "羊毛",
+      "en": "Wool"
+    },
+    {
+      "id": "leather",
+      "zh": "皮革",
+      "en": "Leather"
+    },
+    {
+      "id": "slaughterhouse",
+      "zh": "屠宰场",
+      "en": "Slaughterhouse"
+    },
+    {
+      "id": "carcass",
+      "zh": "胴体",
+      "en": "Carcass"
+    },
+    {
+      "id": "chilled-meat",
+      "zh": "冷鲜肉",
+      "en": "Chilled meat"
+    },
+    {
+      "id": "veterinarian",
+      "zh": "兽医",
+      "en": "Veterinarian",
+      "forms": { "en": ["vet", "veterinary"] }
+    },
+    {
+      "id": "zoonosis",
+      "zh": "人畜共患病",
+      "en": "Zoonosis",
+      "forms": { "en": ["zoonotic"] }
+    },
+    {
+      "id": "foot-and-mouth",
+      "zh": "口蹄疫",
+      "en": "Foot-and-mouth"
+    },
+    {
+      "id": "bird-flu",
+      "zh": "禽流感",
+      "en": "Bird flu"
+    },
+    {
+      "id": "asf",
+      "zh": "非洲猪瘟",
+      "en": "ASF",
+      "forms": { "en": ["african swine fever"] }
+    },
+    {
+      "id": "bse",
+      "zh": "疯牛病",
+      "en": "BSE",
+      "forms": { "en": ["bovine spongiform encephalopathy"] }
+    },
+    {
+      "id": "swine-fever",
+      "zh": "猪瘟",
+      "en": "Swine fever"
+    },
+    {
+      "id": "brucellosis",
+      "zh": "布鲁氏菌病",
+      "en": "Brucellosis"
+    },
+    {
+      "id": "anthrax",
+      "zh": "炭疽",
+      "en": "Anthrax"
+    },
+    {
+      "id": "coccidiosis",
+      "zh": "球虫病",
+      "en": "Coccidiosis"
+    },
+    {
+      "id": "mastitis",
+      "zh": "乳房炎",
+      "en": "Mastitis"
+    },
+    {
+      "id": "tick",
+      "zh": "蜱",
+      "en": "Tick"
+    },
+    {
+      "id": "flea",
+      "zh": "跳蚤",
+      "en": "Flea"
+    },
+    {
+      "id": "deworming",
+      "zh": "驱虫",
+      "en": "Deworming"
+    },
+    {
+      "id": "culling",
+      "zh": "扑杀",
+      "en": "Culling"
+    },
+    {
+      "id": "biosecurity",
+      "zh": "生物安全",
+      "en": "Biosecurity"
+    },
+    {
+      "id": "mariculture",
+      "zh": "海水养殖",
+      "en": "Mariculture"
+    },
+    {
+      "id": "net-cage",
+      "zh": "网箱",
+      "en": "Net cage"
+    },
+    {
+      "id": "fish-pond",
+      "zh": "鱼塘",
+      "en": "Fish pond"
+    },
+    {
+      "id": "fry",
+      "zh": "鱼苗",
+      "en": "Fry"
+    },
+    {
+      "id": "fingerling",
+      "zh": "鱼种",
+      "en": "Fingerling"
+    },
+    {
+      "id": "broodstock",
+      "zh": "亲鱼",
+      "en": "Broodstock"
+    },
+    {
+      "id": "bait",
+      "zh": "饵料",
+      "en": "Bait"
+    },
+    {
+      "id": "aerator",
+      "zh": "增氧机",
+      "en": "Aerator"
+    },
+    {
+      "id": "fishmeal",
+      "zh": "鱼粉",
+      "en": "Fishmeal"
+    },
+    {
+      "id": "fish-oil",
+      "zh": "鱼油",
+      "en": "Fish oil"
+    },
+    {
+      "id": "grass-carp",
+      "zh": "草鱼",
+      "en": "Grass carp"
+    },
+    {
+      "id": "carp",
+      "zh": "鲤鱼",
+      "en": "Carp"
+    },
+    {
+      "id": "tilapia",
+      "zh": "罗非鱼",
+      "en": "Tilapia"
+    },
+    {
+      "id": "salmon",
+      "zh": "三文鱼",
+      "en": "Salmon"
+    },
+    {
+      "id": "prawn",
+      "zh": "对虾",
+      "en": "Prawn"
+    },
+    {
+      "id": "oyster",
+      "zh": "牡蛎",
+      "en": "Oyster"
+    },
+    {
+      "id": "scallop",
+      "zh": "扇贝",
+      "en": "Scallop"
+    },
+    {
+      "id": "sea-cucumber",
+      "zh": "海参",
+      "en": "Sea cucumber"
+    },
+    {
+      "id": "kelp",
+      "zh": "海带",
+      "en": "Kelp"
+    },
+    {
+      "id": "laver",
+      "zh": "紫菜",
+      "en": "Laver"
+    },
+    {
+      "id": "pearl",
+      "zh": "珍珠",
+      "en": "Pearl"
+    },
+    {
+      "id": "hairy-crab",
+      "zh": "大闸蟹",
+      "en": "Hairy crab"
+    },
+    {
+      "id": "trawl",
+      "zh": "拖网",
+      "en": "Trawl",
+      "forms": { "en": ["trawling", "trawler"] }
+    },
+    {
+      "id": "closed-season",
+      "zh": "休渔期",
+      "en": "Closed season"
+    },
+    {
+      "id": "nursery",
+      "zh": "苗圃",
+      "en": "Nursery"
+    },
+    {
+      "id": "clear-cutting",
+      "zh": "皆伐",
+      "en": "Clear-cutting"
+    },
+    {
+      "id": "planted-forest",
+      "zh": "人工林",
+      "en": "Planted forest"
+    },
+    {
+      "id": "growing-stock",
+      "zh": "蓄积量",
+      "en": "Growing stock"
+    },
+    {
+      "id": "dbh",
+      "zh": "胸径",
+      "en": "DBH",
+      "forms": { "en": ["diameter at breast height"] }
+    },
+    {
+      "id": "crown",
+      "zh": "树冠",
+      "en": "Crown"
+    },
+    {
+      "id": "timber",
+      "zh": "木材",
+      "en": "Timber"
+    },
+    {
+      "id": "bamboo",
+      "zh": "竹子",
+      "en": "Bamboo"
+    },
+    {
+      "id": "chinese-fir",
+      "zh": "杉木",
+      "en": "Chinese fir"
+    },
+    {
+      "id": "poplar",
+      "zh": "杨树",
+      "en": "Poplar"
+    },
+    {
+      "id": "eucalyptus",
+      "zh": "桉树",
+      "en": "Eucalyptus"
+    },
+    {
+      "id": "pine",
+      "zh": "松树",
+      "en": "Pine"
+    },
+    {
+      "id": "dendrology",
+      "zh": "树木学",
+      "en": "Dendrology"
+    },
+    {
+      "id": "forest-ranger",
+      "zh": "护林员",
+      "en": "Forest ranger"
+    },
+    {
+      "id": "farm-machinery",
+      "zh": "农机",
+      "en": "Farm machinery"
+    },
+    {
+      "id": "farm-tool",
+      "zh": "农具",
+      "en": "Farm tool"
+    },
+    {
+      "id": "tractor",
+      "zh": "拖拉机",
+      "en": "Tractor"
+    },
+    {
+      "id": "combine",
+      "zh": "联合收割机",
+      "en": "Combine"
+    },
+    {
+      "id": "seeder",
+      "zh": "播种机",
+      "en": "Seeder"
+    },
+    {
+      "id": "plow",
+      "zh": "犁",
+      "en": "Plow",
+      "forms": { "en": ["plough"] }
+    },
+    {
+      "id": "harrow",
+      "zh": "耙",
+      "en": "Harrow"
+    },
+    {
+      "id": "rotary-tiller",
+      "zh": "旋耕机",
+      "en": "Rotary tiller"
+    },
+    {
+      "id": "sickle",
+      "zh": "镰刀",
+      "en": "Sickle"
+    },
+    {
+      "id": "hoe",
+      "zh": "锄头",
+      "en": "Hoe"
+    },
+    {
+      "id": "spade",
+      "zh": "铁锹",
+      "en": "Spade"
+    },
+    {
+      "id": "thresher",
+      "zh": "脱粒机",
+      "en": "Thresher",
+      "forms": { "en": ["threshing"] }
+    },
+    {
+      "id": "baler",
+      "zh": "打捆机",
+      "en": "Baler"
+    },
+    {
+      "id": "transplanter",
+      "zh": "插秧机",
+      "en": "Transplanter"
+    },
+    {
+      "id": "silo",
+      "zh": "筒仓",
+      "en": "Silo"
+    },
+    {
+      "id": "granary",
+      "zh": "粮仓",
+      "en": "Granary"
+    },
+    {
+      "id": "millstone",
+      "zh": "石磨",
+      "en": "Millstone"
+    },
+    {
+      "id": "postharvest",
+      "zh": "采后",
+      "en": "Postharvest"
+    },
+    {
+      "id": "climacteric",
+      "zh": "呼吸跃变",
+      "en": "Climacteric"
+    },
+    {
+      "id": "ripening",
+      "zh": "催熟",
+      "en": "Ripening"
+    },
+    {
+      "id": "precooling",
+      "zh": "预冷",
+      "en": "Precooling"
+    },
+    {
+      "id": "cold-storage",
+      "zh": "冷库",
+      "en": "Cold storage"
+    },
+    {
+      "id": "cold-chain",
+      "zh": "冷链",
+      "en": "Cold chain"
+    },
+    {
+      "id": "processing",
+      "zh": "加工",
+      "en": "Processing"
+    },
+    {
+      "id": "milling",
+      "zh": "磨粉",
+      "en": "Milling"
+    },
+    {
+      "id": "flour",
+      "zh": "面粉",
+      "en": "Flour"
+    },
+    {
+      "id": "gluten",
+      "zh": "面筋",
+      "en": "Gluten"
+    },
+    {
+      "id": "bran",
+      "zh": "麸皮",
+      "en": "Bran"
+    },
+    {
+      "id": "endosperm",
+      "zh": "胚乳",
+      "en": "Endosperm"
+    },
+    {
+      "id": "rice-husk",
+      "zh": "稻壳",
+      "en": "Rice husk"
+    },
+    {
+      "id": "brewing",
+      "zh": "酿造",
+      "en": "Brewing"
+    },
+    {
+      "id": "malt",
+      "zh": "麦芽",
+      "en": "Malt"
+    },
+    {
+      "id": "hops",
+      "zh": "啤酒花",
+      "en": "Hops"
+    },
+    {
+      "id": "baijiu",
+      "zh": "白酒",
+      "en": "Baijiu"
+    },
+    {
+      "id": "black-tea",
+      "zh": "红茶",
+      "en": "Black tea"
+    },
+    {
+      "id": "oolong",
+      "zh": "乌龙茶",
+      "en": "Oolong"
+    },
+    {
+      "id": "soy-sauce",
+      "zh": "酱油",
+      "en": "Soy sauce"
+    },
+    {
+      "id": "vinegar",
+      "zh": "醋",
+      "en": "Vinegar"
+    },
+    {
+      "id": "tofu",
+      "zh": "豆腐",
+      "en": "Tofu"
+    },
+    {
+      "id": "curing",
+      "zh": "腌制",
+      "en": "Curing"
+    },
+    {
+      "id": "pickle",
+      "zh": "泡菜",
+      "en": "Pickle"
+    },
+    {
+      "id": "canned-food",
+      "zh": "罐头",
+      "en": "Canned food"
+    },
+    {
+      "id": "pasteurization",
+      "zh": "巴氏杀菌",
+      "en": "Pasteurization",
+      "forms": { "en": ["pasteurisation", "pasteurize"] }
+    },
+    {
+      "id": "uht",
+      "zh": "超高温灭菌",
+      "en": "UHT",
+      "forms": { "en": ["ultra-high temperature"] }
+    },
+    {
+      "id": "freeze-drying",
+      "zh": "冷冻干燥",
+      "en": "Freeze-drying",
+      "forms": { "zh": ["冻干"], "en": ["freeze-dried"] }
+    },
+    {
+      "id": "spray-drying",
+      "zh": "喷雾干燥",
+      "en": "Spray drying"
+    },
+    {
+      "id": "quick-freezing",
+      "zh": "速冻",
+      "en": "Quick freezing"
+    },
+    {
+      "id": "puffing",
+      "zh": "膨化",
+      "en": "Puffing"
+    },
+    {
+      "id": "homogenization",
+      "zh": "均质",
+      "en": "Homogenization",
+      "forms": { "en": ["homogenisation"] }
+    },
+    {
+      "id": "emulsifier",
+      "zh": "乳化剂",
+      "en": "Emulsifier"
+    },
+    {
+      "id": "cling-film",
+      "zh": "保鲜膜",
+      "en": "Cling film"
+    },
+    {
+      "id": "vacuum-packing",
+      "zh": "真空包装",
+      "en": "Vacuum packing"
+    },
+    {
+      "id": "irradiation",
+      "zh": "辐照",
+      "en": "Irradiation"
+    },
+    {
+      "id": "cold-pressed",
+      "zh": "冷榨",
+      "en": "Cold-pressed"
+    },
+    {
+      "id": "milk-powder",
+      "zh": "奶粉",
+      "en": "Milk powder"
+    },
+    {
+      "id": "infant-formula",
+      "zh": "配方奶粉",
+      "en": "Infant formula"
+    },
+    {
+      "id": "cheese",
+      "zh": "奶酪",
+      "en": "Cheese"
+    },
+    {
+      "id": "butter",
+      "zh": "黄油",
+      "en": "Butter"
+    },
+    {
+      "id": "yogurt",
+      "zh": "酸奶",
+      "en": "Yogurt",
+      "forms": { "en": ["yoghurt"] }
+    },
+    {
+      "id": "whey",
+      "zh": "乳清",
+      "en": "Whey"
+    },
+    {
+      "id": "cultured-meat",
+      "zh": "培养肉",
+      "en": "Cultured meat"
+    },
+    {
+      "id": "steamed-bun",
+      "zh": "馒头",
+      "en": "Steamed bun"
+    },
+    {
+      "id": "noodles",
+      "zh": "面条",
+      "en": "Noodles"
+    },
+    {
+      "id": "sweetener",
+      "zh": "甜味剂",
+      "en": "Sweetener"
+    },
+    {
+      "id": "aspartame",
+      "zh": "阿斯巴甜",
+      "en": "Aspartame"
+    },
+    {
+      "id": "thickener",
+      "zh": "增稠剂",
+      "en": "Thickener"
+    },
+    {
+      "id": "flavoring",
+      "zh": "香精",
+      "en": "Flavoring",
+      "forms": { "en": ["flavouring"] }
+    },
+    {
+      "id": "food-coloring",
+      "zh": "食用色素",
+      "en": "Food coloring",
+      "forms": { "en": ["food colouring"] }
+    },
+    {
+      "id": "mouthfeel",
+      "zh": "口感",
+      "en": "Mouthfeel"
+    },
+    {
+      "id": "caramelization",
+      "zh": "焦糖化",
+      "en": "Caramelization",
+      "forms": { "en": ["caramelisation", "caramelize"] }
+    },
+    {
+      "id": "browning",
+      "zh": "褐变",
+      "en": "Browning"
+    },
+    {
+      "id": "gelatinization",
+      "zh": "糊化",
+      "en": "Gelatinization",
+      "forms": { "en": ["gelatinisation"] }
+    },
+    {
+      "id": "dietary-fiber",
+      "zh": "膳食纤维",
+      "en": "Dietary fiber",
+      "forms": { "en": ["dietary fibre"] }
+    },
+    {
+      "id": "pectin",
+      "zh": "果胶",
+      "en": "Pectin"
+    },
+    {
+      "id": "gelatin",
+      "zh": "明胶",
+      "en": "Gelatin"
+    },
+    {
+      "id": "carrageenan",
+      "zh": "卡拉胶",
+      "en": "Carrageenan"
+    },
+    {
+      "id": "xanthan-gum",
+      "zh": "黄原胶",
+      "en": "Xanthan gum"
+    },
+    {
+      "id": "casein",
+      "zh": "酪蛋白",
+      "en": "Casein"
+    },
+    {
+      "id": "lactose",
+      "zh": "乳糖",
+      "en": "Lactose"
+    },
+    {
+      "id": "sucrose",
+      "zh": "蔗糖",
+      "en": "Sucrose"
+    },
+    {
+      "id": "fructose",
+      "zh": "果糖",
+      "en": "Fructose"
+    },
+    {
+      "id": "maltose",
+      "zh": "麦芽糖",
+      "en": "Maltose"
+    },
+    {
+      "id": "trans-fat",
+      "zh": "反式脂肪",
+      "en": "Trans fat"
+    },
+    {
+      "id": "saturated-fat",
+      "zh": "饱和脂肪",
+      "en": "Saturated fat"
+    },
+    {
+      "id": "water-activity",
+      "zh": "水分活度",
+      "en": "Water activity"
+    },
+    {
+      "id": "brix",
+      "zh": "糖度",
+      "en": "Brix"
+    },
+    {
+      "id": "polyphenol",
+      "zh": "多酚",
+      "en": "Polyphenol"
+    },
+    {
+      "id": "anthocyanin",
+      "zh": "花青素",
+      "en": "Anthocyanin"
+    },
+    {
+      "id": "carotenoid",
+      "zh": "类胡萝卜素",
+      "en": "Carotenoid"
+    },
+    {
+      "id": "lycopene",
+      "zh": "番茄红素",
+      "en": "Lycopene"
+    },
+    {
+      "id": "capsaicin",
+      "zh": "辣椒素",
+      "en": "Capsaicin"
+    },
+    {
+      "id": "aflatoxin",
+      "zh": "黄曲霉毒素",
+      "en": "Aflatoxin"
+    },
+    {
+      "id": "nitrite",
+      "zh": "亚硝酸盐",
+      "en": "Nitrite"
+    },
+    {
+      "id": "acrylamide",
+      "zh": "丙烯酰胺",
+      "en": "Acrylamide"
+    },
+    {
+      "id": "lactobacillus",
+      "zh": "乳酸杆菌",
+      "en": "Lactobacillus"
+    },
+    {
+      "id": "aspergillus",
+      "zh": "曲霉",
+      "en": "Aspergillus"
+    },
+    {
+      "id": "penicillium",
+      "zh": "青霉",
+      "en": "Penicillium"
+    },
+    {
+      "id": "starter",
+      "zh": "发酵剂",
+      "en": "Starter"
+    },
+    {
+      "id": "prebiotic",
+      "zh": "益生元",
+      "en": "Prebiotic"
+    },
+    {
+      "id": "salmonella",
+      "zh": "沙门氏菌",
+      "en": "Salmonella"
+    },
+    {
+      "id": "listeria",
+      "zh": "李斯特菌",
+      "en": "Listeria"
+    },
+    {
+      "id": "botulism",
+      "zh": "肉毒中毒",
+      "en": "Botulism"
+    },
+    {
+      "id": "coliform",
+      "zh": "大肠菌群",
+      "en": "Coliform"
+    },
+    {
+      "id": "spoilage",
+      "zh": "腐败",
+      "en": "Spoilage"
+    },
+    {
+      "id": "food-poisoning",
+      "zh": "食物中毒",
+      "en": "Food poisoning"
+    },
+    {
+      "id": "shelf-life",
+      "zh": "保质期",
+      "en": "Shelf life"
+    },
+    {
+      "id": "food-safety",
+      "zh": "食品安全",
+      "en": "Food safety"
+    },
+    {
+      "id": "traceability",
+      "zh": "追溯",
+      "en": "Traceability",
+      "forms": { "en": ["traceable"] }
+    },
+    {
+      "id": "haccp",
+      "zh": "HACCP",
+      "en": "HACCP"
+    },
+    {
+      "id": "allergen",
+      "zh": "过敏原",
+      "en": "Allergen"
+    },
+    {
+      "id": "food-label",
+      "zh": "食品标签",
+      "en": "Food label"
+    }
+  ]
+}
