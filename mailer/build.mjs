@@ -9,7 +9,7 @@ await build({
   outfile: 'dist/mailer.cjs',
   bundle: true,
   platform: 'node',
-  target: 'node22',
+  target: 'node24',
   format: 'cjs',
   sourcemap: true,
   define: { 'import.meta.dirname': '__dirname' },

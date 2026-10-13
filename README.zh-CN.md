@@ -71,7 +71,7 @@
 
 ## 本地运行
 
-需要 [Node.js](https://nodejs.org) 22.22.2 或更高（Node 24 需要 24.15 或更高），但不能是 23 或 25。
+需要 [Node.js](https://nodejs.org) 24.15 或更高，但不能是 25。
 
 ```bash
 npm install   # also turns on the git hooks
@@ -106,4 +106,4 @@ Reviewer 2 免费、无广告。如果你喜欢，可以在首页底部用微信
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)。
 
-<!-- readme-sync: bd079e0df39745a6ec9de774a18da5d3a287521c73e09c5b2a7808862d0ded71 -->
+<!-- readme-sync: 15721e6ee52b2471946f16d9778b94c759b6569e88ecde5c4bfafb749789ae85 -->

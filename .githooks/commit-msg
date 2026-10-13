@@ -10,7 +10,7 @@ if [ ! -f scripts/check-commits.mjs ]; then
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "The commit-msg hook needs Node.js to check your commit message. Install 22.22.2 or later (24.15 or later on 24), but not 23 or 25; see docs/development.md." >&2
+  echo "The commit-msg hook needs Node.js to check your commit message. Install 24.15 or later, but not 25; see docs/development.md." >&2
   exit 1
 fi
 

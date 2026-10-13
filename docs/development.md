@@ -4,7 +4,7 @@ How to run and test the app on your machine. Branches, commits and PRs are in [r
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) 22.22.2 or later, 24.15 or later on Node 24, and not 23 or 25: the test runner doesn't support them. CI uses 24 LTS and 22.22.2.
+- [Node.js](https://nodejs.org) 24.15 or later, and not 25: the test runner doesn't support it. CI uses 24 LTS.
 - npm and Git. The repository is an npm workspace of `shared`, `server`, `client` and `mailer`.
 
 In mainland China, `npm config set registry https://registry.npmmirror.com` is faster.
