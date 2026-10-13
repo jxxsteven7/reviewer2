@@ -1,0 +1,2288 @@
+{
+  "id": "psychology",
+  "name": {
+    "zh": "心理学",
+    "en": "Psychology"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "behaviorism",
+      "zh": "行为主义",
+      "en": "Behaviorism",
+      "forms": { "en": ["behaviourism", "behaviorist", "behaviourist"] }
+    },
+    {
+      "id": "psychoanalysis",
+      "zh": "精神分析",
+      "en": "Psychoanalysis",
+      "forms": { "en": ["psychoanalytic", "psychoanalyst"] }
+    },
+    {
+      "id": "gestalt",
+      "zh": "格式塔",
+      "en": "Gestalt"
+    },
+    {
+      "id": "functionalism",
+      "zh": "机能主义",
+      "en": "Functionalism"
+    },
+    {
+      "id": "psychophysics",
+      "zh": "心理物理学",
+      "en": "Psychophysics",
+      "forms": { "en": ["psychophysical"] }
+    },
+    {
+      "id": "psychometrics",
+      "zh": "心理测量学",
+      "en": "Psychometrics"
+    },
+    {
+      "id": "psychotherapy",
+      "zh": "心理治疗",
+      "en": "Psychotherapy",
+      "forms": { "en": ["psychotherapist"] }
+    },
+    {
+      "id": "introspection",
+      "zh": "内省",
+      "en": "Introspection",
+      "forms": { "en": ["introspective"] }
+    },
+    {
+      "id": "associationism",
+      "zh": "联想主义",
+      "en": "Associationism"
+    },
+    {
+      "id": "phrenology",
+      "zh": "颅相学",
+      "en": "Phrenology"
+    },
+    {
+      "id": "nativism",
+      "zh": "先天论",
+      "en": "Nativism",
+      "forms": { "en": ["nativist"] }
+    },
+    {
+      "id": "working-memory",
+      "zh": "工作记忆",
+      "en": "Working memory"
+    },
+    {
+      "id": "sensory-memory",
+      "zh": "感觉记忆",
+      "en": "Sensory memory"
+    },
+    {
+      "id": "false-memory",
+      "zh": "虚假记忆",
+      "en": "False memory"
+    },
+    {
+      "id": "forgetting",
+      "zh": "遗忘",
+      "en": "Forgetting"
+    },
+    {
+      "id": "chunk",
+      "zh": "组块",
+      "en": "Chunk"
+    },
+    {
+      "id": "priming",
+      "zh": "启动效应",
+      "en": "Priming"
+    },
+    {
+      "id": "amnesia",
+      "zh": "遗忘症",
+      "en": "Amnesia",
+      "forms": { "en": ["amnesic"] }
+    },
+    {
+      "id": "memory-palace",
+      "zh": "记忆宫殿",
+      "en": "Memory palace"
+    },
+    {
+      "id": "primacy-effect",
+      "zh": "首因效应",
+      "en": "Primacy effect"
+    },
+    {
+      "id": "recency-effect",
+      "zh": "近因效应",
+      "en": "Recency effect"
+    },
+    {
+      "id": "memory-span",
+      "zh": "记忆广度",
+      "en": "Memory span"
+    },
+    {
+      "id": "digit-span",
+      "zh": "数字广度",
+      "en": "Digit span"
+    },
+    {
+      "id": "cue",
+      "zh": "线索",
+      "en": "Cue"
+    },
+    {
+      "id": "schema",
+      "zh": "图式",
+      "en": "Schema",
+      "forms": { "en": ["schemata"] }
+    },
+    {
+      "id": "metamemory",
+      "zh": "元记忆",
+      "en": "Metamemory"
+    },
+    {
+      "id": "eyewitness",
+      "zh": "目击者",
+      "en": "Eyewitness"
+    },
+    {
+      "id": "cognitive-map",
+      "zh": "认知地图",
+      "en": "Cognitive map"
+    },
+    {
+      "id": "inhibition",
+      "zh": "抑制",
+      "en": "Inhibition"
+    },
+    {
+      "id": "cognitive-bias",
+      "zh": "认知偏差",
+      "en": "Cognitive bias"
+    },
+    {
+      "id": "optimism-bias",
+      "zh": "乐观偏差",
+      "en": "Optimism bias"
+    },
+    {
+      "id": "dunning-kruger",
+      "zh": "达克效应",
+      "en": "Dunning-Kruger"
+    },
+    {
+      "id": "barnum-effect",
+      "zh": "巴纳姆效应",
+      "en": "Barnum effect"
+    },
+    {
+      "id": "availability",
+      "zh": "可得性",
+      "en": "Availability"
+    },
+    {
+      "id": "base-rate",
+      "zh": "基础比率",
+      "en": "Base rate"
+    },
+    {
+      "id": "linda-problem",
+      "zh": "琳达问题",
+      "en": "Linda problem"
+    },
+    {
+      "id": "peak-end-rule",
+      "zh": "峰终定律",
+      "en": "Peak-end rule"
+    },
+    {
+      "id": "default-effect",
+      "zh": "默认效应",
+      "en": "Default effect"
+    },
+    {
+      "id": "system-1",
+      "zh": "系统1",
+      "en": "System 1"
+    },
+    {
+      "id": "system-2",
+      "zh": "系统2",
+      "en": "System 2"
+    },
+    {
+      "id": "mental-model",
+      "zh": "心理模型",
+      "en": "Mental model"
+    },
+    {
+      "id": "typicality",
+      "zh": "典型性",
+      "en": "Typicality"
+    },
+    {
+      "id": "exemplar",
+      "zh": "范例",
+      "en": "Exemplar"
+    },
+    {
+      "id": "problem-space",
+      "zh": "问题空间",
+      "en": "Problem space"
+    },
+    {
+      "id": "candle-problem",
+      "zh": "蜡烛问题",
+      "en": "Candle problem"
+    },
+    {
+      "id": "mental-set",
+      "zh": "思维定势",
+      "en": "Mental set"
+    },
+    {
+      "id": "incubation",
+      "zh": "酝酿",
+      "en": "Incubation"
+    },
+    {
+      "id": "imagination",
+      "zh": "想象",
+      "en": "Imagination"
+    },
+    {
+      "id": "mind",
+      "zh": "心智",
+      "en": "Mind"
+    },
+    {
+      "id": "modularity",
+      "zh": "模块性",
+      "en": "Modularity"
+    },
+    {
+      "id": "expertise",
+      "zh": "专长",
+      "en": "Expertise"
+    },
+    {
+      "id": "automaticity",
+      "zh": "自动性",
+      "en": "Automaticity"
+    },
+    {
+      "id": "ikea-effect",
+      "zh": "宜家效应",
+      "en": "IKEA effect"
+    },
+    {
+      "id": "cold-reading",
+      "zh": "冷读术",
+      "en": "Cold reading"
+    },
+    {
+      "id": "attention-span",
+      "zh": "注意广度",
+      "en": "Attention span"
+    },
+    {
+      "id": "vigilance",
+      "zh": "警觉",
+      "en": "Vigilance"
+    },
+    {
+      "id": "visual-search",
+      "zh": "视觉搜索",
+      "en": "Visual search"
+    },
+    {
+      "id": "dual-task",
+      "zh": "双任务",
+      "en": "Dual task"
+    },
+    {
+      "id": "mind-wandering",
+      "zh": "走神",
+      "en": "Mind wandering"
+    },
+    {
+      "id": "daydream",
+      "zh": "白日梦",
+      "en": "Daydream"
+    },
+    {
+      "id": "adhd",
+      "zh": "ADHD",
+      "en": "ADHD",
+      "forms": { "zh": ["注意缺陷多动障碍"] }
+    },
+    {
+      "id": "sensation",
+      "zh": "感觉",
+      "en": "Sensation"
+    },
+    {
+      "id": "jnd",
+      "zh": "最小可觉差",
+      "en": "JND",
+      "forms": { "en": ["just noticeable difference"] }
+    },
+    {
+      "id": "webers-law",
+      "zh": "韦伯定律",
+      "en": "Weber's law"
+    },
+    {
+      "id": "fechners-law",
+      "zh": "费希纳定律",
+      "en": "Fechner's law"
+    },
+    {
+      "id": "constancy",
+      "zh": "恒常性",
+      "en": "Constancy"
+    },
+    {
+      "id": "blindsight",
+      "zh": "盲视",
+      "en": "Blindsight"
+    },
+    {
+      "id": "synesthesia",
+      "zh": "联觉",
+      "en": "Synesthesia",
+      "forms": { "en": ["synaesthesia"] }
+    },
+    {
+      "id": "phantom-limb",
+      "zh": "幻肢",
+      "en": "Phantom limb"
+    },
+    {
+      "id": "kinesthesia",
+      "zh": "动觉",
+      "en": "Kinesthesia",
+      "forms": { "en": ["kinaesthesia"] }
+    },
+    {
+      "id": "color-vision",
+      "zh": "色觉",
+      "en": "Color vision",
+      "forms": { "en": ["colour vision"] }
+    },
+    {
+      "id": "trichromacy",
+      "zh": "三色视觉",
+      "en": "Trichromacy"
+    },
+    {
+      "id": "blind-spot",
+      "zh": "盲点",
+      "en": "Blind spot"
+    },
+    {
+      "id": "afterimage",
+      "zh": "后像",
+      "en": "Afterimage"
+    },
+    {
+      "id": "fovea",
+      "zh": "中央凹",
+      "en": "Fovea"
+    },
+    {
+      "id": "visual-field",
+      "zh": "视野",
+      "en": "Visual field"
+    },
+    {
+      "id": "habituation",
+      "zh": "习惯化",
+      "en": "Habituation"
+    },
+    {
+      "id": "sensitization",
+      "zh": "敏感化",
+      "en": "Sensitization",
+      "forms": { "en": ["sensitisation"] }
+    },
+    {
+      "id": "bottom-up",
+      "zh": "自下而上",
+      "en": "Bottom-up"
+    },
+    {
+      "id": "top-down",
+      "zh": "自上而下",
+      "en": "Top-down"
+    },
+    {
+      "id": "masking",
+      "zh": "掩蔽",
+      "en": "Masking"
+    },
+    {
+      "id": "saccade",
+      "zh": "眼跳",
+      "en": "Saccade"
+    },
+    {
+      "id": "fixation",
+      "zh": "注视",
+      "en": "Fixation"
+    },
+    {
+      "id": "rubins-vase",
+      "zh": "鲁宾之杯",
+      "en": "Rubin's vase"
+    },
+    {
+      "id": "duck-rabbit",
+      "zh": "鸭兔图",
+      "en": "Duck-rabbit"
+    },
+    {
+      "id": "ames-room",
+      "zh": "艾姆斯小屋",
+      "en": "Ames room"
+    },
+    {
+      "id": "ponzo-illusion",
+      "zh": "庞佐错觉",
+      "en": "Ponzo illusion"
+    },
+    {
+      "id": "hermann-grid",
+      "zh": "赫尔曼栅格",
+      "en": "Hermann grid"
+    },
+    {
+      "id": "simon-effect",
+      "zh": "西蒙效应",
+      "en": "Simon effect"
+    },
+    {
+      "id": "false-alarm",
+      "zh": "虚报",
+      "en": "False alarm"
+    },
+    {
+      "id": "response-bias",
+      "zh": "反应偏向",
+      "en": "Response bias"
+    },
+    {
+      "id": "forced-choice",
+      "zh": "迫选",
+      "en": "Forced choice"
+    },
+    {
+      "id": "pain-threshold",
+      "zh": "痛阈",
+      "en": "Pain threshold"
+    },
+    {
+      "id": "reinforcement",
+      "zh": "强化",
+      "en": "Reinforcement"
+    },
+    {
+      "id": "shaping",
+      "zh": "塑造",
+      "en": "Shaping"
+    },
+    {
+      "id": "skinner-box",
+      "zh": "斯金纳箱",
+      "en": "Skinner box"
+    },
+    {
+      "id": "puzzle-box",
+      "zh": "迷笼",
+      "en": "Puzzle box"
+    },
+    {
+      "id": "law-of-effect",
+      "zh": "效果律",
+      "en": "Law of effect"
+    },
+    {
+      "id": "imitation",
+      "zh": "模仿",
+      "en": "Imitation"
+    },
+    {
+      "id": "bobo-doll",
+      "zh": "波波玩偶",
+      "en": "Bobo doll"
+    },
+    {
+      "id": "association",
+      "zh": "联想",
+      "en": "Association"
+    },
+    {
+      "id": "token-economy",
+      "zh": "代币制",
+      "en": "Token economy"
+    },
+    {
+      "id": "taste-aversion",
+      "zh": "味觉厌恶",
+      "en": "Taste aversion"
+    },
+    {
+      "id": "habit",
+      "zh": "习惯",
+      "en": "Habit"
+    },
+    {
+      "id": "water-maze",
+      "zh": "水迷宫",
+      "en": "Water maze"
+    },
+    {
+      "id": "startle-reflex",
+      "zh": "惊跳反射",
+      "en": "Startle reflex"
+    },
+    {
+      "id": "frontal-lobe",
+      "zh": "额叶",
+      "en": "Frontal lobe"
+    },
+    {
+      "id": "temporal-lobe",
+      "zh": "颞叶",
+      "en": "Temporal lobe"
+    },
+    {
+      "id": "occipital-lobe",
+      "zh": "枕叶",
+      "en": "Occipital lobe"
+    },
+    {
+      "id": "visual-cortex",
+      "zh": "视觉皮层",
+      "en": "Visual cortex"
+    },
+    {
+      "id": "thalamus",
+      "zh": "丘脑",
+      "en": "Thalamus"
+    },
+    {
+      "id": "split-brain",
+      "zh": "裂脑",
+      "en": "Split brain"
+    },
+    {
+      "id": "limbic-system",
+      "zh": "边缘系统",
+      "en": "Limbic system"
+    },
+    {
+      "id": "fusiform-gyrus",
+      "zh": "梭状回",
+      "en": "Fusiform gyrus"
+    },
+    {
+      "id": "insula",
+      "zh": "脑岛",
+      "en": "Insula"
+    },
+    {
+      "id": "striatum",
+      "zh": "纹状体",
+      "en": "Striatum"
+    },
+    {
+      "id": "fmri",
+      "zh": "fMRI",
+      "en": "fMRI",
+      "forms": { "zh": ["功能磁共振成像"] }
+    },
+    {
+      "id": "tms",
+      "zh": "经颅磁刺激",
+      "en": "TMS",
+      "forms": { "en": ["transcranial magnetic stimulation"] }
+    },
+    {
+      "id": "lateralization",
+      "zh": "偏侧化",
+      "en": "Lateralization",
+      "forms": { "en": ["lateralisation"] }
+    },
+    {
+      "id": "handedness",
+      "zh": "利手",
+      "en": "Handedness"
+    },
+    {
+      "id": "resting-state",
+      "zh": "静息态",
+      "en": "Resting state"
+    },
+    {
+      "id": "biofeedback",
+      "zh": "生物反馈",
+      "en": "Biofeedback"
+    },
+    {
+      "id": "brainwave",
+      "zh": "脑电波",
+      "en": "Brainwave"
+    },
+    {
+      "id": "hpa-axis",
+      "zh": "HPA轴",
+      "en": "HPA axis"
+    },
+    {
+      "id": "eq",
+      "zh": "情商",
+      "en": "EQ",
+      "forms": { "en": ["emotional intelligence"] }
+    },
+    {
+      "id": "mood",
+      "zh": "心境",
+      "en": "Mood"
+    },
+    {
+      "id": "affect",
+      "zh": "情感",
+      "en": "Affect",
+      "forms": { "en": ["affective"] }
+    },
+    {
+      "id": "fear",
+      "zh": "恐惧",
+      "en": "Fear"
+    },
+    {
+      "id": "anger",
+      "zh": "愤怒",
+      "en": "Anger"
+    },
+    {
+      "id": "disgust",
+      "zh": "厌恶",
+      "en": "Disgust"
+    },
+    {
+      "id": "surprise",
+      "zh": "惊讶",
+      "en": "Surprise"
+    },
+    {
+      "id": "sadness",
+      "zh": "悲伤",
+      "en": "Sadness"
+    },
+    {
+      "id": "grief",
+      "zh": "哀伤",
+      "en": "Grief"
+    },
+    {
+      "id": "shame",
+      "zh": "羞耻",
+      "en": "Shame"
+    },
+    {
+      "id": "guilt",
+      "zh": "内疚",
+      "en": "Guilt"
+    },
+    {
+      "id": "pride",
+      "zh": "骄傲",
+      "en": "Pride"
+    },
+    {
+      "id": "embarrassment",
+      "zh": "尴尬",
+      "en": "Embarrassment"
+    },
+    {
+      "id": "awe",
+      "zh": "敬畏",
+      "en": "Awe"
+    },
+    {
+      "id": "contempt",
+      "zh": "轻蔑",
+      "en": "Contempt"
+    },
+    {
+      "id": "jealousy",
+      "zh": "嫉妒",
+      "en": "Jealousy"
+    },
+    {
+      "id": "schadenfreude",
+      "zh": "幸灾乐祸",
+      "en": "Schadenfreude"
+    },
+    {
+      "id": "loneliness",
+      "zh": "孤独",
+      "en": "Loneliness"
+    },
+    {
+      "id": "boredom",
+      "zh": "无聊",
+      "en": "Boredom"
+    },
+    {
+      "id": "worry",
+      "zh": "担忧",
+      "en": "Worry"
+    },
+    {
+      "id": "sympathy",
+      "zh": "同情",
+      "en": "Sympathy"
+    },
+    {
+      "id": "alexithymia",
+      "zh": "述情障碍",
+      "en": "Alexithymia"
+    },
+    {
+      "id": "apathy",
+      "zh": "情感淡漠",
+      "en": "Apathy"
+    },
+    {
+      "id": "arousal",
+      "zh": "唤醒",
+      "en": "Arousal"
+    },
+    {
+      "id": "drive",
+      "zh": "驱力",
+      "en": "Drive"
+    },
+    {
+      "id": "volition",
+      "zh": "意志",
+      "en": "Volition"
+    },
+    {
+      "id": "willpower",
+      "zh": "意志力",
+      "en": "Willpower"
+    },
+    {
+      "id": "self-control",
+      "zh": "自我控制",
+      "en": "Self-control"
+    },
+    {
+      "id": "ego-depletion",
+      "zh": "自我损耗",
+      "en": "Ego depletion"
+    },
+    {
+      "id": "coping",
+      "zh": "应对",
+      "en": "Coping"
+    },
+    {
+      "id": "well-being",
+      "zh": "幸福感",
+      "en": "Well-being"
+    },
+    {
+      "id": "gratitude",
+      "zh": "感恩",
+      "en": "Gratitude"
+    },
+    {
+      "id": "perfectionism",
+      "zh": "完美主义",
+      "en": "Perfectionism"
+    },
+    {
+      "id": "comfort-zone",
+      "zh": "舒适区",
+      "en": "Comfort zone"
+    },
+    {
+      "id": "catharsis",
+      "zh": "宣泄",
+      "en": "Catharsis"
+    },
+    {
+      "id": "frustration",
+      "zh": "挫折",
+      "en": "Frustration"
+    },
+    {
+      "id": "obedience",
+      "zh": "服从",
+      "en": "Obedience"
+    },
+    {
+      "id": "bystander",
+      "zh": "旁观者",
+      "en": "Bystander"
+    },
+    {
+      "id": "social-loafing",
+      "zh": "社会惰化",
+      "en": "Social loafing"
+    },
+    {
+      "id": "ingroup",
+      "zh": "内群体",
+      "en": "Ingroup"
+    },
+    {
+      "id": "outgroup",
+      "zh": "外群体",
+      "en": "Outgroup"
+    },
+    {
+      "id": "attitude",
+      "zh": "态度",
+      "en": "Attitude"
+    },
+    {
+      "id": "reciprocity",
+      "zh": "互惠",
+      "en": "Reciprocity"
+    },
+    {
+      "id": "belonging",
+      "zh": "归属感",
+      "en": "Belonging"
+    },
+    {
+      "id": "social-norm",
+      "zh": "社会规范",
+      "en": "Social norm"
+    },
+    {
+      "id": "aggression",
+      "zh": "攻击性",
+      "en": "Aggression"
+    },
+    {
+      "id": "bullying",
+      "zh": "欺凌",
+      "en": "Bullying"
+    },
+    {
+      "id": "stigma",
+      "zh": "污名",
+      "en": "Stigma"
+    },
+    {
+      "id": "group-dynamics",
+      "zh": "团体动力学",
+      "en": "Group dynamics"
+    },
+    {
+      "id": "social-support",
+      "zh": "社会支持",
+      "en": "Social support"
+    },
+    {
+      "id": "scapegoat",
+      "zh": "替罪羊",
+      "en": "Scapegoat"
+    },
+    {
+      "id": "implicit-bias",
+      "zh": "内隐偏见",
+      "en": "Implicit bias"
+    },
+    {
+      "id": "intimacy",
+      "zh": "亲密关系",
+      "en": "Intimacy"
+    },
+    {
+      "id": "charisma",
+      "zh": "魅力",
+      "en": "Charisma"
+    },
+    {
+      "id": "personal-space",
+      "zh": "个人空间",
+      "en": "Personal space"
+    },
+    {
+      "id": "crowding",
+      "zh": "拥挤",
+      "en": "Crowding"
+    },
+    {
+      "id": "moral-dilemma",
+      "zh": "道德两难",
+      "en": "Moral dilemma"
+    },
+    {
+      "id": "trust-game",
+      "zh": "信任博弈",
+      "en": "Trust game"
+    },
+    {
+      "id": "gaslighting",
+      "zh": "煤气灯效应",
+      "en": "Gaslighting"
+    },
+    {
+      "id": "suggestion",
+      "zh": "暗示",
+      "en": "Suggestion"
+    },
+    {
+      "id": "false-belief",
+      "zh": "错误信念",
+      "en": "False belief"
+    },
+    {
+      "id": "self-efficacy",
+      "zh": "自我效能",
+      "en": "Self-efficacy"
+    },
+    {
+      "id": "self-concept",
+      "zh": "自我概念",
+      "en": "Self-concept"
+    },
+    {
+      "id": "attribution",
+      "zh": "归因",
+      "en": "Attribution"
+    },
+    {
+      "id": "big-five",
+      "zh": "大五人格",
+      "en": "Big Five"
+    },
+    {
+      "id": "neuroticism",
+      "zh": "神经质",
+      "en": "Neuroticism"
+    },
+    {
+      "id": "agreeableness",
+      "zh": "宜人性",
+      "en": "Agreeableness"
+    },
+    {
+      "id": "openness",
+      "zh": "开放性",
+      "en": "Openness"
+    },
+    {
+      "id": "temperament",
+      "zh": "气质",
+      "en": "Temperament"
+    },
+    {
+      "id": "dark-triad",
+      "zh": "黑暗三联征",
+      "en": "Dark triad"
+    },
+    {
+      "id": "type-a",
+      "zh": "A型人格",
+      "en": "Type A"
+    },
+    {
+      "id": "choleric",
+      "zh": "胆汁质",
+      "en": "Choleric"
+    },
+    {
+      "id": "sanguine",
+      "zh": "多血质",
+      "en": "Sanguine"
+    },
+    {
+      "id": "phlegmatic",
+      "zh": "黏液质",
+      "en": "Phlegmatic"
+    },
+    {
+      "id": "melancholic",
+      "zh": "抑郁质",
+      "en": "Melancholic"
+    },
+    {
+      "id": "mbti",
+      "zh": "MBTI",
+      "en": "MBTI"
+    },
+    {
+      "id": "mmpi",
+      "zh": "MMPI",
+      "en": "MMPI"
+    },
+    {
+      "id": "16pf",
+      "zh": "16PF",
+      "en": "16PF"
+    },
+    {
+      "id": "rorschach-test",
+      "zh": "罗夏测验",
+      "en": "Rorschach test"
+    },
+    {
+      "id": "inkblot",
+      "zh": "墨迹",
+      "en": "Inkblot"
+    },
+    {
+      "id": "repression",
+      "zh": "压抑",
+      "en": "Repression"
+    },
+    {
+      "id": "denial",
+      "zh": "否认",
+      "en": "Denial"
+    },
+    {
+      "id": "sublimation",
+      "zh": "升华",
+      "en": "Sublimation"
+    },
+    {
+      "id": "transference",
+      "zh": "移情",
+      "en": "Transference"
+    },
+    {
+      "id": "libido",
+      "zh": "力比多",
+      "en": "Libido"
+    },
+    {
+      "id": "unconscious",
+      "zh": "无意识",
+      "en": "Unconscious"
+    },
+    {
+      "id": "preconscious",
+      "zh": "前意识",
+      "en": "Preconscious"
+    },
+    {
+      "id": "oral-stage",
+      "zh": "口欲期",
+      "en": "Oral stage"
+    },
+    {
+      "id": "inferiority",
+      "zh": "自卑",
+      "en": "Inferiority"
+    },
+    {
+      "id": "anima",
+      "zh": "阿尼玛",
+      "en": "Anima"
+    },
+    {
+      "id": "synchronicity",
+      "zh": "共时性",
+      "en": "Synchronicity"
+    },
+    {
+      "id": "couch",
+      "zh": "躺椅",
+      "en": "Couch"
+    },
+    {
+      "id": "sour-grapes",
+      "zh": "酸葡萄",
+      "en": "Sour grapes"
+    },
+    {
+      "id": "egocentrism",
+      "zh": "自我中心",
+      "en": "Egocentrism",
+      "forms": { "en": ["egocentric"] }
+    },
+    {
+      "id": "animism",
+      "zh": "泛灵论",
+      "en": "Animism"
+    },
+    {
+      "id": "assimilation",
+      "zh": "同化",
+      "en": "Assimilation"
+    },
+    {
+      "id": "accommodation",
+      "zh": "顺应",
+      "en": "Accommodation"
+    },
+    {
+      "id": "secure-base",
+      "zh": "安全基地",
+      "en": "Secure base"
+    },
+    {
+      "id": "visual-cliff",
+      "zh": "视崖",
+      "en": "Visual cliff"
+    },
+    {
+      "id": "mirror-test",
+      "zh": "镜像测试",
+      "en": "Mirror test"
+    },
+    {
+      "id": "pretend-play",
+      "zh": "假装游戏",
+      "en": "Pretend play"
+    },
+    {
+      "id": "infancy",
+      "zh": "婴儿期",
+      "en": "Infancy"
+    },
+    {
+      "id": "adolescence",
+      "zh": "青少年期",
+      "en": "Adolescence",
+      "forms": { "en": ["adolescent"] }
+    },
+    {
+      "id": "parenting",
+      "zh": "养育",
+      "en": "Parenting"
+    },
+    {
+      "id": "birth-order",
+      "zh": "出生顺序",
+      "en": "Birth order"
+    },
+    {
+      "id": "empty-nest",
+      "zh": "空巢",
+      "en": "Empty nest"
+    },
+    {
+      "id": "heinz-dilemma",
+      "zh": "海因茨难题",
+      "en": "Heinz dilemma"
+    },
+    {
+      "id": "twin-study",
+      "zh": "双生子研究",
+      "en": "Twin study"
+    },
+    {
+      "id": "adoption-study",
+      "zh": "收养研究",
+      "en": "Adoption study"
+    },
+    {
+      "id": "flynn-effect",
+      "zh": "弗林效应",
+      "en": "Flynn effect"
+    },
+    {
+      "id": "g-factor",
+      "zh": "g因素",
+      "en": "g factor"
+    },
+    {
+      "id": "mental-age",
+      "zh": "心理年龄",
+      "en": "Mental age"
+    },
+    {
+      "id": "wechsler-scale",
+      "zh": "韦氏量表",
+      "en": "Wechsler scale"
+    },
+    {
+      "id": "test-retest",
+      "zh": "重测信度",
+      "en": "Test-retest"
+    },
+    {
+      "id": "true-score",
+      "zh": "真分数",
+      "en": "True score"
+    },
+    {
+      "id": "norm",
+      "zh": "常模",
+      "en": "Norm"
+    },
+    {
+      "id": "construct",
+      "zh": "构念",
+      "en": "Construct"
+    },
+    {
+      "id": "experimenter",
+      "zh": "主试",
+      "en": "Experimenter"
+    },
+    {
+      "id": "confound",
+      "zh": "混淆变量",
+      "en": "Confound",
+      "forms": { "en": ["confounding"] }
+    },
+    {
+      "id": "main-effect",
+      "zh": "主效应",
+      "en": "Main effect"
+    },
+    {
+      "id": "reaction-time",
+      "zh": "反应时",
+      "en": "Reaction time"
+    },
+    {
+      "id": "self-report",
+      "zh": "自我报告",
+      "en": "Self-report"
+    },
+    {
+      "id": "think-aloud",
+      "zh": "出声思维",
+      "en": "Think-aloud"
+    },
+    {
+      "id": "p-hacking",
+      "zh": "p值操纵",
+      "en": "p-hacking"
+    },
+    {
+      "id": "latin-square",
+      "zh": "拉丁方",
+      "en": "Latin square"
+    },
+    {
+      "id": "manipulation",
+      "zh": "操纵",
+      "en": "Manipulation"
+    },
+    {
+      "id": "deception",
+      "zh": "欺骗",
+      "en": "Deception"
+    },
+    {
+      "id": "debriefing",
+      "zh": "事后说明",
+      "en": "Debriefing"
+    },
+    {
+      "id": "weird",
+      "zh": "WEIRD",
+      "en": "WEIRD"
+    },
+    {
+      "id": "spss",
+      "zh": "SPSS",
+      "en": "SPSS"
+    },
+    {
+      "id": "psychopy",
+      "zh": "PsychoPy",
+      "en": "PsychoPy"
+    },
+    {
+      "id": "e-prime",
+      "zh": "E-Prime",
+      "en": "E-Prime"
+    },
+    {
+      "id": "qualtrics",
+      "zh": "Qualtrics",
+      "en": "Qualtrics"
+    },
+    {
+      "id": "n-back",
+      "zh": "n-back",
+      "en": "n-back"
+    },
+    {
+      "id": "flanker-task",
+      "zh": "侧翼任务",
+      "en": "Flanker task"
+    },
+    {
+      "id": "go-no-go",
+      "zh": "Go/No-go",
+      "en": "Go/No-go"
+    },
+    {
+      "id": "stop-signal",
+      "zh": "停止信号",
+      "en": "Stop signal"
+    },
+    {
+      "id": "task-switching",
+      "zh": "任务切换",
+      "en": "Task switching"
+    },
+    {
+      "id": "dot-probe",
+      "zh": "点探测",
+      "en": "Dot probe"
+    },
+    {
+      "id": "scl-90",
+      "zh": "SCL-90",
+      "en": "SCL-90"
+    },
+    {
+      "id": "human-factors",
+      "zh": "人因",
+      "en": "Human factors"
+    },
+    {
+      "id": "human-error",
+      "zh": "人为失误",
+      "en": "Human error"
+    },
+    {
+      "id": "dsm",
+      "zh": "DSM",
+      "en": "DSM"
+    },
+    {
+      "id": "schizophrenia",
+      "zh": "精神分裂症",
+      "en": "Schizophrenia"
+    },
+    {
+      "id": "ocd",
+      "zh": "强迫症",
+      "en": "OCD",
+      "forms": { "en": ["obsessive-compulsive disorder"] }
+    },
+    {
+      "id": "ptsd",
+      "zh": "PTSD",
+      "en": "PTSD",
+      "forms": { "zh": ["创伤后应激障碍"], "en": ["post-traumatic stress disorder"] }
+    },
+    {
+      "id": "panic-attack",
+      "zh": "惊恐发作",
+      "en": "Panic attack"
+    },
+    {
+      "id": "social-anxiety",
+      "zh": "社交焦虑",
+      "en": "Social anxiety"
+    },
+    {
+      "id": "agoraphobia",
+      "zh": "广场恐惧症",
+      "en": "Agoraphobia"
+    },
+    {
+      "id": "anorexia",
+      "zh": "厌食症",
+      "en": "Anorexia"
+    },
+    {
+      "id": "bulimia",
+      "zh": "贪食症",
+      "en": "Bulimia"
+    },
+    {
+      "id": "autism",
+      "zh": "孤独症",
+      "en": "Autism",
+      "forms": { "en": ["autistic"] }
+    },
+    {
+      "id": "dyslexia",
+      "zh": "阅读障碍",
+      "en": "Dyslexia",
+      "forms": { "en": ["dyslexic"] }
+    },
+    {
+      "id": "agnosia",
+      "zh": "失认症",
+      "en": "Agnosia"
+    },
+    {
+      "id": "prosopagnosia",
+      "zh": "面孔失认症",
+      "en": "Prosopagnosia"
+    },
+    {
+      "id": "hemineglect",
+      "zh": "单侧忽视",
+      "en": "Hemineglect"
+    },
+    {
+      "id": "delirium",
+      "zh": "谵妄",
+      "en": "Delirium"
+    },
+    {
+      "id": "dissociation",
+      "zh": "解离",
+      "en": "Dissociation"
+    },
+    {
+      "id": "somatization",
+      "zh": "躯体化",
+      "en": "Somatization",
+      "forms": { "en": ["somatisation"] }
+    },
+    {
+      "id": "delusion",
+      "zh": "妄想",
+      "en": "Delusion"
+    },
+    {
+      "id": "mania",
+      "zh": "躁狂",
+      "en": "Mania",
+      "forms": { "en": ["manic"] }
+    },
+    {
+      "id": "anhedonia",
+      "zh": "快感缺失",
+      "en": "Anhedonia"
+    },
+    {
+      "id": "rumination",
+      "zh": "反刍思维",
+      "en": "Rumination"
+    },
+    {
+      "id": "neurosis",
+      "zh": "神经症",
+      "en": "Neurosis",
+      "forms": { "en": ["neurotic"] }
+    },
+    {
+      "id": "mood-disorder",
+      "zh": "心境障碍",
+      "en": "Mood disorder"
+    },
+    {
+      "id": "comorbidity",
+      "zh": "共病",
+      "en": "Comorbidity"
+    },
+    {
+      "id": "withdrawal",
+      "zh": "戒断",
+      "en": "Withdrawal"
+    },
+    {
+      "id": "craving",
+      "zh": "渴求",
+      "en": "Craving"
+    },
+    {
+      "id": "cbt",
+      "zh": "CBT",
+      "en": "CBT",
+      "forms": { "zh": ["认知行为疗法"], "en": ["cognitive behavioral therapy"] }
+    },
+    {
+      "id": "flooding",
+      "zh": "满灌疗法",
+      "en": "Flooding"
+    },
+    {
+      "id": "morita-therapy",
+      "zh": "森田疗法",
+      "en": "Morita therapy"
+    },
+    {
+      "id": "family-therapy",
+      "zh": "家庭治疗",
+      "en": "Family therapy"
+    },
+    {
+      "id": "group-therapy",
+      "zh": "团体治疗",
+      "en": "Group therapy"
+    },
+    {
+      "id": "play-therapy",
+      "zh": "游戏治疗",
+      "en": "Play therapy"
+    },
+    {
+      "id": "sandplay",
+      "zh": "沙盘游戏",
+      "en": "Sandplay"
+    },
+    {
+      "id": "psychodrama",
+      "zh": "心理剧",
+      "en": "Psychodrama"
+    },
+    {
+      "id": "empty-chair",
+      "zh": "空椅子",
+      "en": "Empty chair"
+    },
+    {
+      "id": "therapist",
+      "zh": "治疗师",
+      "en": "Therapist"
+    },
+    {
+      "id": "confrontation",
+      "zh": "面质",
+      "en": "Confrontation"
+    },
+    {
+      "id": "adherence",
+      "zh": "依从性",
+      "en": "Adherence"
+    },
+    {
+      "id": "rem",
+      "zh": "快速眼动",
+      "en": "REM",
+      "forms": { "en": ["rapid eye movement"] }
+    },
+    {
+      "id": "lucid-dream",
+      "zh": "清醒梦",
+      "en": "Lucid dream"
+    },
+    {
+      "id": "nightmare",
+      "zh": "噩梦",
+      "en": "Nightmare"
+    },
+    {
+      "id": "depth-cue",
+      "zh": "深度线索",
+      "en": "Depth cue"
+    },
+    {
+      "id": "authority",
+      "zh": "权威",
+      "en": "Authority"
+    },
+    {
+      "id": "commitment",
+      "zh": "承诺",
+      "en": "Commitment"
+    },
+    {
+      "id": "proximity",
+      "zh": "邻近性",
+      "en": "Proximity"
+    },
+    {
+      "id": "attraction",
+      "zh": "吸引力",
+      "en": "Attraction"
+    },
+    {
+      "id": "social-dilemma",
+      "zh": "社会困境",
+      "en": "Social dilemma"
+    },
+    {
+      "id": "elaboration",
+      "zh": "精细加工",
+      "en": "Elaboration"
+    },
+    {
+      "id": "grit",
+      "zh": "坚毅",
+      "en": "Grit"
+    },
+    {
+      "id": "pessimism",
+      "zh": "悲观",
+      "en": "Pessimism",
+      "forms": { "en": ["pessimistic"] }
+    },
+    {
+      "id": "impulsivity",
+      "zh": "冲动性",
+      "en": "Impulsivity",
+      "forms": { "en": ["impulsive"] }
+    },
+    {
+      "id": "shyness",
+      "zh": "害羞",
+      "en": "Shyness"
+    },
+    {
+      "id": "wire-mother",
+      "zh": "铁丝妈妈",
+      "en": "Wire mother"
+    },
+    {
+      "id": "stressor",
+      "zh": "应激源",
+      "en": "Stressor"
+    },
+    {
+      "id": "meditation",
+      "zh": "冥想",
+      "en": "Meditation"
+    },
+    {
+      "id": "categorization",
+      "zh": "范畴化",
+      "en": "Categorization",
+      "forms": { "en": ["categorisation"] }
+    },
+    {
+      "id": "basic-level",
+      "zh": "基本水平",
+      "en": "Basic level"
+    },
+    {
+      "id": "neuroimaging",
+      "zh": "脑成像",
+      "en": "Neuroimaging"
+    },
+    {
+      "id": "observer-bias",
+      "zh": "观察者偏差",
+      "en": "Observer bias"
+    },
+    {
+      "id": "criterion",
+      "zh": "效标",
+      "en": "Criterion"
+    },
+    {
+      "id": "stroop",
+      "zh": "斯特鲁普",
+      "en": "Stroop"
+    },
+    {
+      "id": "cocktail-party",
+      "zh": "鸡尾酒会",
+      "en": "Cocktail party"
+    },
+    {
+      "id": "forgiveness",
+      "zh": "宽恕",
+      "en": "Forgiveness"
+    },
+    {
+      "id": "holland-code",
+      "zh": "霍兰德代码",
+      "en": "Holland code"
+    },
+    {
+      "id": "goal-setting",
+      "zh": "目标设定",
+      "en": "Goal setting"
+    },
+    {
+      "id": "clever-hans",
+      "zh": "聪明汉斯",
+      "en": "Clever Hans"
+    },
+    {
+      "id": "hicks-law",
+      "zh": "希克定律",
+      "en": "Hick's law"
+    },
+    {
+      "id": "reappraisal",
+      "zh": "认知重评",
+      "en": "Reappraisal"
+    },
+    {
+      "id": "mmse",
+      "zh": "MMSE",
+      "en": "MMSE"
+    },
+    {
+      "id": "duchenne-smile",
+      "zh": "杜兴微笑",
+      "en": "Duchenne smile"
+    },
+    {
+      "id": "p300",
+      "zh": "P300",
+      "en": "P300"
+    },
+    {
+      "id": "fnirs",
+      "zh": "fNIRS",
+      "en": "fNIRS"
+    },
+    {
+      "id": "bayesian-brain",
+      "zh": "贝叶斯大脑",
+      "en": "Bayesian brain"
+    },
+    {
+      "id": "earworm",
+      "zh": "耳虫",
+      "en": "Earworm"
+    },
+    {
+      "id": "introjection",
+      "zh": "内射",
+      "en": "Introjection"
+    },
+    {
+      "id": "survivor-guilt",
+      "zh": "幸存者内疚",
+      "en": "Survivor guilt"
+    },
+    {
+      "id": "g-power",
+      "zh": "G*Power",
+      "en": "G*Power"
+    },
+    {
+      "id": "mentalization",
+      "zh": "心智化",
+      "en": "Mentalization",
+      "forms": { "en": ["mentalisation"] }
+    },
+    {
+      "id": "derealization",
+      "zh": "现实解体",
+      "en": "Derealization"
+    },
+    {
+      "id": "shadow",
+      "zh": "阴影",
+      "en": "Shadow"
+    },
+    {
+      "id": "belief",
+      "zh": "信念",
+      "en": "Belief"
+    },
+    {
+      "id": "dyscalculia",
+      "zh": "计算障碍",
+      "en": "Dyscalculia"
+    },
+    {
+      "id": "sleep-hygiene",
+      "zh": "睡眠卫生",
+      "en": "Sleep hygiene"
+    },
+    {
+      "id": "sleep-cycle",
+      "zh": "睡眠周期",
+      "en": "Sleep cycle"
+    },
+    {
+      "id": "night-terror",
+      "zh": "夜惊",
+      "en": "Night terror"
+    },
+    {
+      "id": "dual-process",
+      "zh": "双加工",
+      "en": "Dual process"
+    },
+    {
+      "id": "looking-time",
+      "zh": "注视时间",
+      "en": "Looking time"
+    },
+    {
+      "id": "average-face",
+      "zh": "平均脸",
+      "en": "Average face"
+    },
+    {
+      "id": "baby-schema",
+      "zh": "婴儿图式",
+      "en": "Baby schema"
+    },
+    {
+      "id": "life-event",
+      "zh": "生活事件",
+      "en": "Life event"
+    },
+    {
+      "id": "daily-hassles",
+      "zh": "日常困扰",
+      "en": "Daily hassles"
+    },
+    {
+      "id": "minimal-group",
+      "zh": "最小群体",
+      "en": "Minimal group"
+    },
+    {
+      "id": "passion",
+      "zh": "激情",
+      "en": "Passion"
+    },
+    {
+      "id": "romantic-love",
+      "zh": "浪漫爱",
+      "en": "Romantic love"
+    },
+    {
+      "id": "mere-exposure",
+      "zh": "单纯曝光",
+      "en": "Mere exposure"
+    },
+    {
+      "id": "familiarity",
+      "zh": "熟悉性",
+      "en": "Familiarity"
+    },
+    {
+      "id": "just-world",
+      "zh": "公正世界",
+      "en": "Just world"
+    },
+    {
+      "id": "risky-shift",
+      "zh": "冒险转移",
+      "en": "Risky shift"
+    },
+    {
+      "id": "power-distance",
+      "zh": "权力距离",
+      "en": "Power distance"
+    },
+    {
+      "id": "self-construal",
+      "zh": "自我建构",
+      "en": "Self-construal"
+    },
+    {
+      "id": "iat",
+      "zh": "IAT",
+      "en": "IAT",
+      "forms": { "en": ["implicit association test"] }
+    },
+    {
+      "id": "balance-theory",
+      "zh": "平衡理论",
+      "en": "Balance theory"
+    },
+    {
+      "id": "lowball",
+      "zh": "低球技术",
+      "en": "Lowball"
+    },
+    {
+      "id": "social-proof",
+      "zh": "社会证明",
+      "en": "Social proof"
+    },
+    {
+      "id": "moratorium",
+      "zh": "同一性延缓",
+      "en": "Moratorium"
+    },
+    {
+      "id": "personal-fable",
+      "zh": "个人神话",
+      "en": "Personal fable"
+    },
+    {
+      "id": "childhood",
+      "zh": "童年期",
+      "en": "Childhood"
+    },
+    {
+      "id": "maturation",
+      "zh": "成熟",
+      "en": "Maturation"
+    },
+    {
+      "id": "gender-role",
+      "zh": "性别角色",
+      "en": "Gender role"
+    },
+    {
+      "id": "parallel-play",
+      "zh": "平行游戏",
+      "en": "Parallel play"
+    },
+    {
+      "id": "risk-taking",
+      "zh": "冒险",
+      "en": "Risk-taking"
+    },
+    {
+      "id": "ideal-self",
+      "zh": "理想自我",
+      "en": "Ideal self"
+    },
+    {
+      "id": "possible-self",
+      "zh": "可能自我",
+      "en": "Possible self",
+      "forms": { "en": ["possible selves"] }
+    },
+    {
+      "id": "animus",
+      "zh": "阿尼姆斯",
+      "en": "Animus"
+    },
+    {
+      "id": "individuation",
+      "zh": "个体化",
+      "en": "Individuation"
+    },
+    {
+      "id": "superiority",
+      "zh": "优越感",
+      "en": "Superiority"
+    },
+    {
+      "id": "basic-anxiety",
+      "zh": "基本焦虑",
+      "en": "Basic anxiety"
+    },
+    {
+      "id": "identification",
+      "zh": "认同",
+      "en": "Identification"
+    },
+    {
+      "id": "suppression",
+      "zh": "压制",
+      "en": "Suppression"
+    },
+    {
+      "id": "gad",
+      "zh": "广泛性焦虑",
+      "en": "GAD",
+      "forms": { "en": ["generalized anxiety disorder", "generalised anxiety disorder"] }
+    },
+    {
+      "id": "dysthymia",
+      "zh": "心境恶劣",
+      "en": "Dysthymia"
+    },
+    {
+      "id": "tic-disorder",
+      "zh": "抽动障碍",
+      "en": "Tic disorder"
+    },
+    {
+      "id": "neurodiversity",
+      "zh": "神经多样性",
+      "en": "Neurodiversity"
+    },
+    {
+      "id": "paranoia",
+      "zh": "偏执",
+      "en": "Paranoia",
+      "forms": { "en": ["paranoid"] }
+    },
+    {
+      "id": "catatonia",
+      "zh": "紧张症",
+      "en": "Catatonia"
+    },
+    {
+      "id": "binge-eating",
+      "zh": "暴食",
+      "en": "Binge eating"
+    },
+    {
+      "id": "pica",
+      "zh": "异食癖",
+      "en": "Pica"
+    },
+    {
+      "id": "thought-record",
+      "zh": "思维记录",
+      "en": "Thought record"
+    },
+    {
+      "id": "abc-model",
+      "zh": "ABC理论",
+      "en": "ABC model"
+    },
+    {
+      "id": "logotherapy",
+      "zh": "意义疗法",
+      "en": "Logotherapy"
+    },
+    {
+      "id": "brief-therapy",
+      "zh": "短程治疗",
+      "en": "Brief therapy"
+    },
+    {
+      "id": "art-therapy",
+      "zh": "艺术治疗",
+      "en": "Art therapy"
+    },
+    {
+      "id": "music-therapy",
+      "zh": "音乐治疗",
+      "en": "Music therapy"
+    },
+    {
+      "id": "peer-support",
+      "zh": "同伴支持",
+      "en": "Peer support"
+    },
+    {
+      "id": "support-group",
+      "zh": "支持小组",
+      "en": "Support group"
+    },
+    {
+      "id": "sick-role",
+      "zh": "病人角色",
+      "en": "Sick role"
+    },
+    {
+      "id": "hope",
+      "zh": "希望",
+      "en": "Hope"
+    },
+    {
+      "id": "optimism",
+      "zh": "乐观",
+      "en": "Optimism",
+      "forms": { "en": ["optimistic"] }
+    },
+    {
+      "id": "person-job-fit",
+      "zh": "人岗匹配",
+      "en": "Person-job fit"
+    },
+    {
+      "id": "career-anchor",
+      "zh": "职业锚",
+      "en": "Career anchor"
+    },
+    {
+      "id": "robbers-cave",
+      "zh": "罗伯斯山洞",
+      "en": "Robbers Cave"
+    },
+    {
+      "id": "wason-task",
+      "zh": "四卡片问题",
+      "en": "Wason task"
+    },
+    {
+      "id": "allais-paradox",
+      "zh": "阿莱悖论",
+      "en": "Allais paradox"
+    },
+    {
+      "id": "response-set",
+      "zh": "反应定势",
+      "en": "Response set"
+    },
+    {
+      "id": "diary-method",
+      "zh": "日记法",
+      "en": "Diary method"
+    },
+    {
+      "id": "file-drawer",
+      "zh": "文件抽屉",
+      "en": "File drawer"
+    },
+    {
+      "id": "funnel-plot",
+      "zh": "漏斗图",
+      "en": "Funnel plot"
+    },
+    {
+      "id": "harking",
+      "zh": "HARKing",
+      "en": "HARKing"
+    },
+    {
+      "id": "mozart-effect",
+      "zh": "莫扎特效应",
+      "en": "Mozart effect"
+    },
+    {
+      "id": "factor-loading",
+      "zh": "因子载荷",
+      "en": "Factor loading"
+    },
+    {
+      "id": "social-role",
+      "zh": "社会角色",
+      "en": "Social role"
+    },
+    {
+      "id": "moral-outrage",
+      "zh": "道德愤怒",
+      "en": "Moral outrage"
+    },
+    {
+      "id": "still-face",
+      "zh": "静止脸",
+      "en": "Still face"
+    },
+    {
+      "id": "social-smile",
+      "zh": "社会微笑",
+      "en": "Social smile"
+    },
+    {
+      "id": "toddlerhood",
+      "zh": "学步期",
+      "en": "Toddlerhood",
+      "forms": { "en": ["toddler"] }
+    },
+    {
+      "id": "bereavement",
+      "zh": "丧亲",
+      "en": "Bereavement",
+      "forms": { "en": ["bereaved"] }
+    },
+    {
+      "id": "death-anxiety",
+      "zh": "死亡焦虑",
+      "en": "Death anxiety"
+    },
+    {
+      "id": "situationism",
+      "zh": "情境主义",
+      "en": "Situationism"
+    },
+    {
+      "id": "hopelessness",
+      "zh": "绝望感",
+      "en": "Hopelessness"
+    },
+    {
+      "id": "core-belief",
+      "zh": "核心信念",
+      "en": "Core belief"
+    },
+    {
+      "id": "numbing",
+      "zh": "情感麻木",
+      "en": "Numbing"
+    },
+    {
+      "id": "health-anxiety",
+      "zh": "健康焦虑",
+      "en": "Health anxiety"
+    },
+    {
+      "id": "body-image",
+      "zh": "身体意象",
+      "en": "Body image"
+    },
+    {
+      "id": "self-criticism",
+      "zh": "自我批评",
+      "en": "Self-criticism"
+    },
+    {
+      "id": "codependency",
+      "zh": "共依存",
+      "en": "Codependency",
+      "forms": { "en": ["codependent"] }
+    },
+    {
+      "id": "harm-reduction",
+      "zh": "减害",
+      "en": "Harm reduction"
+    },
+    {
+      "id": "genuineness",
+      "zh": "真诚",
+      "en": "Genuineness"
+    },
+    {
+      "id": "clarification",
+      "zh": "澄清",
+      "en": "Clarification"
+    },
+    {
+      "id": "immediacy",
+      "zh": "即时化",
+      "en": "Immediacy"
+    },
+    {
+      "id": "affiliation",
+      "zh": "亲和需要",
+      "en": "Affiliation"
+    },
+    {
+      "id": "hostility",
+      "zh": "敌意",
+      "en": "Hostility"
+    },
+    {
+      "id": "perma",
+      "zh": "PERMA",
+      "en": "PERMA"
+    },
+    {
+      "id": "job-crafting",
+      "zh": "工作重塑",
+      "en": "Job crafting"
+    },
+    {
+      "id": "detachment",
+      "zh": "心理脱离",
+      "en": "Detachment"
+    },
+    {
+      "id": "role-ambiguity",
+      "zh": "角色模糊",
+      "en": "Role ambiguity"
+    },
+    {
+      "id": "job-analysis",
+      "zh": "工作分析",
+      "en": "Job analysis"
+    },
+    {
+      "id": "stopping-rule",
+      "zh": "停止规则",
+      "en": "Stopping rule"
+    },
+    {
+      "id": "post-hoc",
+      "zh": "事后检验",
+      "en": "Post hoc"
+    },
+    {
+      "id": "single-blind",
+      "zh": "单盲",
+      "en": "Single-blind"
+    },
+    {
+      "id": "role-conflict",
+      "zh": "角色冲突",
+      "en": "Role conflict"
+    },
+    {
+      "id": "helplessness",
+      "zh": "无助感",
+      "en": "Helplessness"
+    }
+  ]
+}
