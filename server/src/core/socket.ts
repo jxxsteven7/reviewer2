@@ -259,10 +259,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // brought them (Room.points()), the streak it brought them to, which the room tells in the
   // snapshot that ends the game (Room.noteStreak()), and their ranks as they are now for everyone to
   // see. Whoever had left by then has no part in its end, and a game that the chair withdrew counts
-  // for nobody. Then, once anyone with an account has played in it, those who left included, the
-  // record of the game itself (docs/architecture.md#game-records): the replay to watch again
-  // (GameModule.replay()), the log of everything that happened, and which player was which
-  // account. Whatever else is to be kept of a finished game goes here, after the records.
+  // for nobody. Then, once anyone with an account that still exists has played in it, those who
+  // left included, the record of the game itself (docs/architecture.md#game-records): the replay
+  // to watch again (GameModule.replay()), the log of everything that happened, and which player
+  // was which account. Whatever else is to be kept of a finished game goes here, after the
+  // records.
   function keepRecords(room: Room): void {
     const results = accounts && room.gameId !== null ? room.results() : null;
     if (!results || !accounts) return;
@@ -278,10 +279,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id));
     }
     const kept = room.record();
-    if (!kept || kept.accounts.length === 0) return;
+    if (!kept) return;
+    // An account deleted during the game no longer counts as having played: a game of guests and
+    // one who asked to be forgotten is kept for nobody.
+    const players = kept.accounts.filter(({ accountId }) => accounts.store.byId(accountId) !== undefined);
+    if (players.length === 0) return;
     const replay = room.replay();
     if (replay === null) return;
-    const { log: gameLog, accounts: players } = kept;
+    const { log: gameLog } = kept;
     safely('replay', () => {
       const stored = accounts.keepReplay({ game: room.game.id, gameId, replay, log: gameLog, players });
       // A log that grew too long is worth a line only when the rest of the record was kept: what

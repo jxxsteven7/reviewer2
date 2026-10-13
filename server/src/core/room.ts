@@ -577,7 +577,7 @@ export class Room {
     const context: GameContext = { ...this.context, phase: 'playing' };
     const data = this.game.start(this.data, context, draw.words, gameId);
     this.data = data;
-    this.#log = new GameLog(this.game.id, gameId, this.#now(), this.#seating());
+    this.#log = new GameLog(this.game.id, gameId, this.#now(), this.#seating(data));
     this.#usedWords = draw.used;
     this.gameId = gameId;
     this.round += 1;
@@ -781,10 +781,9 @@ export class Room {
 
   // Where everyone in the room is in the game, by player ID, as the game describes each of them
   // (GameModule.seated), for how the game began; null for a game that doesn't say.
-  #seating(): Record<string, unknown> | null {
-    const { seated } = this.game;
-    if (!seated) return null;
-    return Object.fromEntries([...this.members.keys()].map((id) => [id, seated(this.data, id)]));
+  #seating(data: unknown): Record<string, unknown> | null {
+    if (!this.game.seated) return null;
+    return Object.fromEntries([...this.members.keys()].map((id) => [id, this.game.seated?.(data, id)]));
   }
 
   // Whether the game has ended by itself with this data, such as when a team wins. A game may

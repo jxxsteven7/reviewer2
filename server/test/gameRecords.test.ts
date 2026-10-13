@@ -166,9 +166,17 @@ describe('the record of a game of the team word guessing game', () => {
 
 describe('the record of a game', () => {
   // Ann, with an account, and Bob, a guest, play a game of the test game: Ann presses, and someone
-  // finishes it, or Ann withdraws it. Ann may come only to watch, or leave before the end.
+  // finishes it, or Ann withdraws it. Ann may come only to watch, leave before the end, or delete
+  // her account during the game, which takes her out of the room.
   async function played(
-    options: { press?: string; times?: number; withdraw?: boolean; watch?: boolean; leave?: boolean } = {},
+    options: {
+      press?: string;
+      times?: number;
+      withdraw?: boolean;
+      watch?: boolean;
+      leave?: boolean;
+      forget?: boolean;
+    } = {},
   ) {
     const anns = new Browser(server.url);
     expect((await anns.register('Ann')).body).toEqual({ ok: true });
@@ -187,11 +195,12 @@ describe('the record of a game', () => {
     const { gameId } = (await ann.waitFor((state) => state.phase === 'playing')) as { gameId: string };
     for (let i = 0; i < (options.times ?? 1); i += 1) await ann.send('test:press', options.press);
     const annId = ann.state?.me as string;
-    if (options.leave) {
-      expect(await ann.send('room:leave')).toMatchObject({ ok: true });
-      await bob.waitFor((state) => state.players.length === 1, 'Ann gone');
+    if (options.leave) expect(await ann.send('room:leave')).toMatchObject({ ok: true });
+    if (options.forget) {
+      expect((await anns.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
     }
-    const last = options.leave ? bob : ann;
+    if (options.leave || options.forget) await bob.waitFor((state) => state.players.length === 1, 'Ann gone');
+    const last = options.leave || options.forget ? bob : ann;
     if (options.withdraw) await last.send('room:end', { gameId });
     else await last.send('test:finish');
     await last.waitFor((state) => state.phase === 'ended');
@@ -233,6 +242,13 @@ describe('the record of a game', () => {
     // Ann has no part in the end of the game, so it isn't on her record, and the replay needs that.
     expect(server.db.prepare('SELECT count(*) AS count FROM game_records').get()).toEqual({ count: 0 });
     expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
+  });
+
+  test('is not kept when the one player with an account deleted it during the game', async () => {
+    server = await startServer();
+    await played({ forget: true });
+    expect(kept()).toEqual([]);
+    expect(players()).toEqual([]);
   });
 
   test('keeps the replay and the players without a log that grew too long, and says so', async () => {
