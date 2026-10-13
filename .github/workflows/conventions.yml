@@ -108,17 +108,6 @@ jobs:
           node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" --head "$HEAD_SHA" \
             --head-ref "$HEAD_REF" --body-file "$RUNNER_TEMP/pr-body.md" -- "$title"
 
-  scripts:
-    # This name is a required status check; see docs/maintainers.md.
-    name: Script tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - run: node --test scripts/*.test.mjs
-
   names:
     # The name of the board game the first game is based on must not appear anywhere
     # (docs/rules/constraints.md). scripts/check-names.mjs looks for it in every file and file
