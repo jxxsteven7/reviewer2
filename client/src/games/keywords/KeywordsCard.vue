@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { hasHan, type CardView, type Language } from '@reviewer2/shared';
+import { hasHan, type CardView, type Language, type Mark, type Team } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
 import { formatList, HTML_LANG } from '../../core/i18n';
 import { hyphenate } from './hyphenate';
+import MarkSticker from './MarkSticker.vue';
 import type { Chooser } from './useKeywords';
 
 // One card, a sticker on the table. A revealed card is filled with its color and pressed into
@@ -15,6 +16,9 @@ import type { Chooser } from './useKeywords';
 // who they are. On a big screen the cards are `large`, with bigger type. A `marked` card, in a
 // replay, is outlined. A `target` is one of the cards a PI meant with a clue, numbered in the order
 // they were marked: on the PI's board while they mark them, and for everyone once the game is over.
+// A `note` is the mark that the viewer's group has put on a hidden card, for its students alone: the
+// card takes the tint of the color it stands for, unless it is the viewer's choice, and the mark's
+// round sticker hangs on its bottom left corner.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -25,8 +29,9 @@ const props = withDefaults(
     large?: boolean;
     marked?: boolean;
     target?: number | null;
+    note?: { mark: Mark; color: Team | 'r2' } | null;
   }>(),
-  { large: false, marked: false, target: null },
+  { large: false, marked: false, target: null, note: null },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t, locale } = useI18n();
@@ -58,6 +63,7 @@ const ariaLabel = computed(() =>
     props.card.word,
     props.card.color ? label.value : t('game.hidden'),
     ...(props.target !== null ? [t('game.targetOrder', { order: props.target })] : []),
+    ...(props.note ? [t(`game.noted.${props.note.mark}`)] : []),
     ...(props.choosers.length ? [t('game.chosenBy', { names: chosenBy.value })] : []),
   ].join(', '),
 );
@@ -77,6 +83,7 @@ const ariaLabel = computed(() =>
       state,
       card.color,
       size,
+      note ? `noted note-${note.color}` : '',
       { large, selected, selectable, marked, targeted: target !== null, chosen: choosers.length > 0 },
     ]"
     :aria-disabled="selectable ? undefined : 'true'"
@@ -91,6 +98,7 @@ const ariaLabel = computed(() =>
       t('game.stamp')
     }}</span>
     <span v-if="target !== null" class="target num" aria-hidden="true">{{ target }}</span>
+    <MarkSticker v-if="note" class="note" :mark="note.mark" :color="note.color" />
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar
         v-for="chooser in choosers"
@@ -350,6 +358,28 @@ const ariaLabel = computed(() =>
   height: 28px;
   border-radius: 14px;
   font-size: 15px;
+}
+
+/* A card that the viewer's group has marked: the tint of the color the mark stands for, unless it
+   is the viewer's choice, and the mark's sticker on the bottom left corner, where a PI's numbered
+   sticker would be on a PI's board, which never has marks. */
+.noted.note-red:not(.selected) {
+  background: var(--red-tint);
+}
+
+.noted.note-blue:not(.selected) {
+  background: var(--blue-tint);
+}
+
+.noted.note-r2:not(.selected) {
+  background: var(--r2-tint);
+}
+
+.note {
+  position: absolute;
+  bottom: -9px;
+  left: -7px;
+  box-shadow: var(--shadow-1);
 }
 
 /* The card that a replay's step is about. */

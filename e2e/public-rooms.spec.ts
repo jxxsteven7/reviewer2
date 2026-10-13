@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { createRoom, expect, interpolate, logIn, newPlayer, register, TEXT, test } from './helpers';
+import { avatarOf, createRoom, expect, interpolate, logIn, newPlayer, register, TEXT, test } from './helpers';
 
 // Public rooms end to end: a player with an account creates one, a guest finds it on the home
 // page and is sent to register, which brings them back into the room; a player reports another,
@@ -59,8 +59,9 @@ test('a public room is joined from the home page with an account, and a removed 
   await expect(bob.locator('.lobby-head .public')).toHaveText(text.room.public);
   await expect(bob.locator('.lobby-head .visibility')).toHaveCount(0);
 
-  // Bob reports Ann, with a note, which the operator's command shows.
-  await bob.locator('.lobby').getByRole('button', { name: annName }).click();
+  // Bob reports Ann from her panel, which her avatar opens, with a note, which the operator's
+  // command shows.
+  await bob.locator('.lobby').getByRole('button', avatarOf(annName)).click();
   await bob.getByRole('button', { name: text.lobby.manage.report }).click();
   await bob.getByLabel(text.lobby.manage.reportNote).fill('Rude clues');
   await bob.getByRole('button', { name: text.lobby.manage.reportSubmit }).click();
@@ -71,7 +72,7 @@ test('a public room is joined from the home page with an account, and a removed 
 
   // Ann removes Bob, after a word of warning. Bob is told, and can't come back by a reload, by the
   // link, or on another device.
-  await ann.locator('.lobby').getByRole('button', { name: bobName }).click();
+  await ann.locator('.lobby').getByRole('button', avatarOf(bobName)).click();
   await ann.getByRole('button', { name: text.lobby.manage.remove }).click();
   const warning = ann.locator('[role=dialog]');
   await expect(warning).toContainText(interpolate(text.lobby.manage.removeConfirm, { name: bobName }));
@@ -109,7 +110,7 @@ test('a public room is joined from the home page with an account, and a removed 
   await bobsPhone.goto(other);
   await bobsPhone.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(cat.locator('.lobby')).toContainText(bobName);
-  await cat.locator('.lobby').getByRole('button', { name: bobName }).click();
+  await cat.locator('.lobby').getByRole('button', avatarOf(bobName)).click();
   await cat.getByRole('button', { name: text.lobby.manage.remove }).click();
   const privateWarning = cat.locator('[role=dialog]');
   await expect(privateWarning).toContainText(interpolate(text.lobby.manage.removeConfirmPrivate, { name: bobName }));

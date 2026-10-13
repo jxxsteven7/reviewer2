@@ -1,6 +1,6 @@
 import { SPECTATOR, type Seat } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { seededRng } from '../../core/random';
+import { seededRng, type Rng } from '../../core/random';
 import {
   autoSeat,
   captainOf,
@@ -308,6 +308,89 @@ describe('shuffling the groups', () => {
       for (const team of ['red', 'blue'] as const) captains.add(captainOf(shuffled, team) ?? '');
     }
     expect(captains).toEqual(online);
+  });
+
+  // A generator that gives the answers in the list, in order, and fails on any other question.
+  function scripted(answers: number[]) {
+    const left = [...answers];
+    const rng: Rng = {
+      int(below) {
+        const answer = left.shift();
+        if (answer === undefined || answer >= below) throw new Error(`unexpected draw below ${below}`);
+        return answer;
+      },
+    };
+    return { rng, left: () => left.length };
+  }
+  const four = seated({ a: redCaptain, b: redGuesser, c: blueCaptain, d: blueGuesser });
+  const everyone = new Set(['a', 'b', 'c', 'd']);
+  // Who sits with whom, whatever the colors.
+  const groupsOf = (seating: Seating) =>
+    teamsOf(seating)
+      .map((members) =>
+        members
+          .map(([id]) => id)
+          .sort()
+          .join(''),
+      )
+      .sort()
+      .join(' ');
+
+  test('deals again once when a deal keeps the same people together', () => {
+    // The first deal is a, c, b, d: a and b red, c and d blue, as they sat. The second is a, b, c, d.
+    const { rng, left } = scripted([0, 3, 1, 1, 0, 3, 2, 1]);
+    const shuffled = shuffleGroups(four, rng, everyone);
+    expect(groupsOf(shuffled)).toBe('ac bd');
+    expect(seatOf(shuffled, 'a')).toEqual(redCaptain);
+    expect(seatOf(shuffled, 'b')).toEqual(blueCaptain);
+    expect(left()).toBe(0);
+  });
+
+  test('keeps a first deal that changes the groups', () => {
+    const { rng, left } = scripted([0, 3, 2, 1]);
+    expect(groupsOf(shuffleGroups(four, rng, everyone))).toBe('ac bd');
+    expect(left()).toBe(0);
+  });
+
+  test('keeps the second deal even when it repeats the groups again, as two players must', () => {
+    const two = seated({ a: redGuesser, b: blueGuesser });
+    const { rng, left } = scripted([0, 1, 1, 0]);
+    const shuffled = shuffleGroups(two, rng, new Set(['a', 'b']));
+    expect(seatOf(shuffled, 'a')).toEqual(redCaptain);
+    expect(seatOf(shuffled, 'b')).toEqual(blueCaptain);
+    expect(left()).toBe(0);
+  });
+
+  test('keeps four players together about one time in nine, and splits them the other two ways alike', () => {
+    const counts = new Map<string, number>();
+    for (let seed = 0; seed < 3000; seed += 1) {
+      const groups = groupsOf(shuffleGroups(four, seededRng(seed), everyone));
+      counts.set(groups, (counts.get(groups) ?? 0) + 1);
+    }
+    // One in nine of 3000 is 333; the other two ways take about 1333 each.
+    expect(counts.get('ab cd')).toBeGreaterThan(250);
+    expect(counts.get('ab cd')).toBeLessThan(430);
+    for (const groups of ['ac bd', 'ad bc']) {
+      expect(counts.get(groups)).toBeGreaterThan(1150);
+      expect(counts.get(groups)).toBeLessThan(1520);
+    }
+  });
+
+  test('keeps six players together about one time in a hundred', () => {
+    const online = new Set(['ann', 'bob', 'cat', 'dan', 'eve', 'fay']);
+    const all = seated({
+      ann: redCaptain,
+      bob: redGuesser,
+      cat: redGuesser,
+      dan: blueCaptain,
+      eve: blueGuesser,
+      fay: blueGuesser,
+    });
+    let kept = 0;
+    for (let seed = 0; seed < 3000; seed += 1) {
+      if (groupsOf(shuffleGroups(all, seededRng(seed), online)) === groupsOf(all)) kept += 1;
+    }
+    expect(kept).toBeLessThan(90);
   });
 
   test('still deals everyone when too few players are online', () => {

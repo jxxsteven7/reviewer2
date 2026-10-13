@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import BackButton from '../components/BackButton.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 
 // The frame of the pages that links in mails lead to, and of the one that sends those mails.
 defineProps<{ title: string }>();
-const { t } = useI18n();
 </script>
 
 <template>
   <div class="page mail-page">
     <PageMasthead><LanguageSwitch /></PageMasthead>
     <main>
-      <RouterLink to="/" class="back">{{ t('account.back') }}</RouterLink>
+      <BackButton />
       <section class="content">
         <h1>{{ title }}</h1>
         <slot />
@@ -24,13 +23,6 @@ const { t } = useI18n();
 <style scoped>
 main {
   padding: var(--space-3) 0 var(--space-7);
-}
-
-.back {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-size: var(--text-sm);
 }
 
 .content {

@@ -21,7 +21,7 @@ import TitlePills from './TitlePills.vue';
 import UiButton from './UiButton.vue';
 
 // A public profile (docs/architecture.md#public-profiles), by the handle of its account, on its
-// own page and in the sheet that a room's player menu opens: the avatar, the username, the rank,
+// own page and in a room's player panel: the avatar, the username, the rank,
 // the number and the day of registration, the titles, the streaks among them, and what the owner
 // chose to put there: a link, a line about themselves, the record as counts (RecordTable.vue) and
 // the acknowledgments. The bio is shown as the text it is, never as markup, and the link as the
@@ -30,7 +30,14 @@ import UiButton from './UiButton.vue';
 // shows. Anyone may look; an account that isn't the owner may like the profile and ask the owner to
 // be friends. A friend of the owner also sees what the two have played together
 // (docs/architecture.md#friend-duos), which nobody else is sent.
-const props = defineProps<{ handle: string }>();
+//
+// In a room's panel (PlayerPanel.vue), whose title is the player's name, the card has no name of
+// its own (`named` false), and is `brief` until the viewer opens the whole page: the avatar, the
+// rank, the number, the day of registration and the titles.
+const props = withDefaults(defineProps<{ handle: string; brief?: boolean; named?: boolean }>(), {
+  brief: false,
+  named: true,
+});
 const { t, locale } = useI18n();
 const profile = ref<ProfileView | null>(null);
 const failed = ref<string | undefined>();
@@ -118,7 +125,7 @@ watch(
       <div class="head">
         <PlayerAvatar :name="profile.username" :avatar="profile.avatar" size="large" />
         <div class="who">
-          <span class="name">{{ profile.username }}</span>
+          <span v-if="named" class="name">{{ profile.username }}</span>
           <button type="button" class="rank-button" aria-haspopup="dialog" @click="ladder = true">
             <span class="rank">{{ t(`ranks.names.${profile.rank}`) }}</span>
             <span class="sr-only">{{ t('ranks.ladder.open') }}</span>
@@ -136,36 +143,38 @@ watch(
         :acknowledgments="profile.acknowledgments"
       />
 
-      <section v-if="profile.duo" class="duo" aria-labelledby="profile-duo">
-        <h3 id="profile-duo">{{ t('playerPage.duo', { name: profile.username }) }}</h3>
-        <DuoSummary :duo="profile.duo" />
-      </section>
+      <template v-if="!brief">
+        <section v-if="profile.duo" class="duo" aria-labelledby="profile-duo">
+          <h3 id="profile-duo">{{ t('playerPage.duo', { name: profile.username }) }}</h3>
+          <DuoSummary :duo="profile.duo" />
+        </section>
 
-      <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
-      <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">{{
-        profile.link
-      }}</a>
+        <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
+        <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">{{
+          profile.link
+        }}</a>
 
-      <RecordTable v-if="profile.record" :counts="profile.record" />
+        <RecordTable v-if="profile.record" :counts="profile.record" />
 
-      <div class="actions">
-        <span class="likes num">{{ t('playerPage.likes', { count: profile.likes }) }}</span>
-        <UiButton
-          v-if="canAct"
-          size="small"
-          :variant="profile.liked ? 'primary' : 'secondary'"
-          :aria-pressed="profile.liked"
-          :disabled="busy"
-          @click="toggleLike"
-        >
-          {{ t(profile.liked ? 'playerPage.liked' : 'playerPage.like') }}
-        </UiButton>
-        <UiButton v-if="canAct" size="small" variant="quiet" :disabled="busy" @click="befriend">
-          {{ t('friends.addFromRoom') }}
-        </UiButton>
-        <RouterLink v-if="profile.mine" to="/account" class="edit">{{ t('playerPage.edit') }}</RouterLink>
-        <span v-else-if="guest" class="hint">{{ t('playerPage.logInToLike') }}</span>
-      </div>
+        <div class="actions">
+          <span class="likes num">{{ t('playerPage.likes', { count: profile.likes }) }}</span>
+          <UiButton
+            v-if="canAct"
+            size="small"
+            :variant="profile.liked ? 'primary' : 'secondary'"
+            :aria-pressed="profile.liked"
+            :disabled="busy"
+            @click="toggleLike"
+          >
+            {{ t(profile.liked ? 'playerPage.liked' : 'playerPage.like') }}
+          </UiButton>
+          <UiButton v-if="canAct" size="small" variant="quiet" :disabled="busy" @click="befriend">
+            {{ t('friends.addFromRoom') }}
+          </UiButton>
+          <RouterLink v-if="profile.mine" to="/account" class="edit">{{ t('playerPage.edit') }}</RouterLink>
+          <span v-else-if="guest" class="hint">{{ t('playerPage.logInToLike') }}</span>
+        </div>
+      </template>
       <RankLadder :open="ladder" :rank="profile.rank" @close="ladder = false" />
     </template>
   </div>

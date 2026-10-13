@@ -13,6 +13,8 @@
   --ink-2: #4b4b60;
   --on-ink: #ffd23f;
   --focus: #2d5bff;
+  /* The table's yellow, faded: the titles of a friend who is offline. */
+  --bg-tint: #fbefc4;
 
   /* The two groups: a surface color, with the text that reads on it, a tint for backgrounds and
      a deep shade for text on white or yellow. Then the cards of neither group, and Reviewer 2's
@@ -28,6 +30,9 @@
   --neutral: #bdb6a8;
   --on-neutral: #1a1a2e;
   --neutral-tint: #f4efe6;
+  /* The tint of a card that a group's students mark as maybe Reviewer 2: a pale grey violet, apart
+     from the groups' tints and from the irrelevant papers'. */
+  --r2-tint: #d9d9e6;
   --r2: #1a1a2e;
   --on-r2: #ffd23f;
   --stamp: #ffd23f;

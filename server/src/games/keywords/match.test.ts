@@ -413,6 +413,22 @@ describe('a match of the game', () => {
     expect(seats.filter(({ team }) => team === 'red')).toHaveLength(2);
   });
 
+  test('with groups drawn at random draws again once when the draw repeats the last game', () => {
+    const before = { ann: red, bob: red, cat: blue, dee: blue };
+    const together = (data: KeywordsData) => seatOf(data.seating, 'ann').team === seatOf(data.seating, 'bob').team;
+    let kept = 0;
+    for (let seed = 0; seed < 900; seed += 1) {
+      const data = start(
+        withMatch({ teams: 'switch', grouping: 'random' }, before),
+        context(ids, { rng: seededRng(seed) }),
+      );
+      if (together(data)) kept += 1;
+    }
+    // One in nine of 900 is 100; one in three, without the second draw, would be 300.
+    expect(kept).toBeGreaterThan(60);
+    expect(kept).toBeLessThan(150);
+  });
+
   test('lets a newcomer watch the game that is on, and seats them for the next one', () => {
     let data = start(withMatch({ teams: 'fixed', grouping: 'choose' }, chosen));
     const ctx = context(ids, { phase: 'playing' });

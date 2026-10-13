@@ -5,6 +5,7 @@ import {
   type ClueCount,
   type KeywordsScoreDetail,
   type KeywordsView,
+  type Mark,
   type RoomView,
 } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
@@ -33,6 +34,7 @@ import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
+import MarkTools, { type Tool } from './MarkTools.vue';
 import PausedNotice from './PausedNotice.vue';
 import { replayOf } from './replay';
 import ReplayViewer from './ReplayViewer.vue';
@@ -197,6 +199,56 @@ async function choose(card: number) {
   if (choicesOnTheWay === 0) pending.value = null;
 }
 
+// A student's marks for the group (docs/games/keywords.md#talking-it-over), which the server sends
+// to the group's students alone, in either group's turn. The tool in use says what a tap on a card
+// does: choose it, in the group's own guess phase, or mark it. A tap with a mark puts it on the card,
+// or takes it off if the card has that mark already, whoever put it there; the last tap of the
+// group stands. As with the choice, the viewer's own taps show at once, until the server has
+// answered every one on its way.
+//
+// The tools are a student's while the game is on and not paused. Choosing comes back by itself
+// when the group's guess phase begins; when it ends, the student goes on with the mark they used
+// last, the group's own at first. A pause in the phase, which hides the tools with the board,
+// changes nothing: the tool is as the student left it when the game goes on.
+const student = computed(
+  () => mySeat.value?.role === 'guesser' && mySeat.value.team !== null && !game.value.result && !paused.value,
+);
+const guessPhase = computed(() => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser');
+const tool = ref<Tool>('choose');
+let lastMark: Mark = 'ours';
+watch(tool, (current) => {
+  if (current !== 'choose') lastMark = current;
+});
+watch(
+  guessPhase,
+  (guessing) => {
+    if (guessing) tool.value = 'choose';
+    else if (tool.value === 'choose') tool.value = lastMark;
+  },
+  { immediate: true },
+);
+const pendingMarks = ref(new Map<number, Mark | null>());
+let marksOnTheWay = 0;
+const marks = computed(() => {
+  const shown = new Map((game.value.marks ?? []).map(({ card, mark }) => [card, mark] as const));
+  for (const [card, mark] of pendingMarks.value) {
+    if (mark === null) shown.delete(card);
+    else shown.set(card, mark);
+  }
+  return shown;
+});
+const noting = computed(() => student.value && tool.value !== 'choose');
+
+async function note(card: number) {
+  if (tool.value === 'choose') return;
+  const next = marks.value.get(card) === tool.value ? null : tool.value;
+  pendingMarks.value.set(card, next);
+  marksOnTheWay += 1;
+  await act('keywords:mark', { gameId: game.value.gameId, card, mark: next });
+  marksOnTheWay -= 1;
+  if (marksOnTheWay === 0) pendingMarks.value = new Map();
+}
+
 // The PI's clue in the making: the word, the number if they picked one, and their marks on the
 // cards the clue is meant for, in the order marked. Tapping one of the group's cards marks it,
 // tapping it again takes the mark back. Nobody else sees any of it until the clue is given: it is
@@ -276,10 +328,14 @@ watch(
     gone.value = [];
   },
 );
-// Whether a tap on the board marks a card: for the PI giving a clue or preparing one. Otherwise it
-// chooses one for a student.
+// Whether a tap on the board marks a card a clue is meant for: for the PI giving a clue or preparing
+// one. Otherwise it chooses a card for a student, or puts the group's mark on it.
 const marking = computed(() => canClue.value || mayPrepare.value);
-const tap = (card: number) => (marking.value ? mark(card) : choose(card));
+function tap(card: number) {
+  if (marking.value) mark(card);
+  else if (noting.value) void note(card);
+  else void choose(card);
+}
 
 // The moves that change the game go one at a time, so that a double tap can't send one twice.
 const giveClue = (word: string, count: ClueCount) =>
@@ -337,30 +393,21 @@ watch(
   { immediate: true },
 );
 
-const whoAmI = computed(() => {
-  const seat = mySeat.value;
-  if (!seat || seat.role === 'spectator') return t('game.you.spectator');
-  return t(`game.you.${seat.role}`, { group: t(`lobby.group.${seat.team}`) });
+// The status line under the board, for whoever has nothing to do just then: whose PI is giving the
+// clue, or which group is guessing. Who the viewer is, the banner says, and whom the others in their
+// group chose, the cards; whoever plays from a match's next game is told so under the line.
+const status = computed(() => {
+  if (canClue.value || game.value.result || paused.value || canGuess.value) return null;
+  return game.value.phase === 'clue'
+    ? t('game.waitClue', { group: group.value })
+    : t('game.waitGuess', { group: group.value });
 });
-
-// What the others in the group have chosen, as a sentence after the viewer's seat: the same
-// choices that hang on the cards, which the server sends to the group alone.
-const chosenByOthers = computed(() =>
-  selections.value
-    .filter((choice) => choice.player !== room.value.me)
-    .flatMap((choice) => {
-      const player = playerOf(choice.player);
-      const card = game.value.cards[choice.card];
-      return player && card ? [t('game.choice', { name: player.name, word: card.word })] : [];
-    })
-    .join(t('game.choiceJoin')),
-);
 </script>
 
 <template>
   <section class="keywords-game">
     <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game">
-      <EmoteButton />
+      <EmoteButton :held="!data.mayEmote" />
     </RoleBanner>
     <DecisionLetter
       v-if="game.result"
@@ -403,29 +450,32 @@ const chosenByOthers = computed(() =>
         <KeywordsBoard
           v-else
           :cards="game.cards"
-          :selectable="canGuess || marking"
+          :selectable="canGuess || marking || noting"
           :selected="marking ? null : choice"
           :choosers="choosers"
           :lang="HTML_LANG[room.language]"
           :targeting="marking ? (mySeat?.team ?? null) : null"
           :targets="isCaptain && !game.result ? draft.targets : []"
+          :notes="student ? marks : undefined"
+          :team="mySeat?.team ?? null"
           @select="tap"
         />
         <div class="actions">
-          <div class="who-row">
-            <div class="me">
-              <p class="who">
-                {{ whoAmI }}
-                <template v-if="data.joinsNext"> &middot; {{ t('match.joinsNext') }}</template>
-              </p>
-              <p v-if="chosenByOthers" class="choices">{{ chosenByOthers }}</p>
-            </div>
-            <GroupChat v-if="!wide" v-model:draft="chatLine" :room="room" :sending="sending" @send="say" />
+          <GroupChat v-if="!wide" v-model:draft="chatLine" :room="room" :sending="sending" @send="say" />
+          <div v-if="student || status || data.joinsNext" class="play">
+            <MarkTools v-if="student && mySeat?.team" v-model="tool" :team="mySeat.team" :can-choose="canGuess" />
+            <GuessBar
+              v-if="canGuess"
+              :game="game"
+              :selected="choice"
+              :busy="busy"
+              :quiet="tool !== 'choose'"
+              @reveal="reveal"
+              @pass="pass"
+            />
+            <p v-else-if="status" class="status">{{ status }}</p>
+            <p v-if="data.joinsNext" class="joins-next">{{ t('match.joinsNext') }}</p>
           </div>
-          <GuessBar v-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />
-          <p v-else-if="!canClue && !game.result && !paused" class="status">
-            {{ game.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group }) }}
-          </p>
           <!--
             One panel for the draft and for the clue, so that when the PI's turn comes while they
             type, the input, its focus and what the keyboard is still composing stay as they are.
@@ -566,13 +616,12 @@ const chosenByOthers = computed(() =>
   scroll-padding-top: calc(var(--banner-height) + var(--sticky-height, 3rem));
 }
 
-/* The bar under the board: the seat line on one row, on a phone the chat and the panel buttons on
-   the next, and then what the viewer can do. The rows are drawn from the elements as they are,
-   through display: contents. */
+/* The bar under the board: on a phone the chat and the panel buttons on one row, and then what the
+   viewer can do: a student's tools first. The rows are drawn from the elements as they are, through
+   display: contents. */
 .actions {
   display: grid;
   grid-template-areas:
-    'me me me .'
     'chat groups log .'
     'panel panel panel panel'
     'draft draft draft draft'
@@ -583,16 +632,11 @@ const chosenByOthers = computed(() =>
   padding: var(--space-2) 0;
 }
 
-.who-row,
 .panels {
   display: contents;
 }
 
-.me {
-  grid-area: me;
-}
-
-.who-row > :deep(.button) {
+.actions > :deep(.open-chat) {
   grid-area: chat;
 }
 
@@ -605,9 +649,15 @@ const chosenByOthers = computed(() =>
 }
 
 .actions > :deep(.clue-panel),
-.actions > :deep(.guess-bar),
-.status {
+.play {
   grid-area: panel;
+}
+
+/* What the viewer can do now, a student's tools first, one gap of the bar's grid apart. */
+.play {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .actions > :deep(.extend) {
@@ -620,16 +670,12 @@ const chosenByOthers = computed(() =>
   grid-area: draft;
 }
 
-.who {
-  font-size: var(--text-sm);
+.status {
   font-weight: var(--weight-bold);
 }
 
-.choices {
+.joins-next {
   font-size: var(--text-sm);
-}
-
-.status {
   font-weight: var(--weight-bold);
 }
 
@@ -757,7 +803,6 @@ const chosenByOthers = computed(() =>
      the clue log are columns. The other rows are as on a phone. */
   .actions {
     grid-template-areas:
-      'me me me .'
       'panel panel panel panel'
       'draft draft draft draft'
       'extend extend extend extend';

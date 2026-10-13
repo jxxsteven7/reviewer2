@@ -3,6 +3,7 @@ import { EMOTE_COOLDOWN_MS, EMOTES, type Emote } from '@reviewer2/shared';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { readyAt, sendEmote } from '../emotes';
+import { toastError } from '../toast';
 import SoundToggle from './SoundToggle.vue';
 import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
@@ -11,8 +12,23 @@ import UiSheet from './UiSheet.vue';
 // switch for their sounds. After one has gone, the button counts down the seconds until the next
 // may. Every phrase is a row of its own, at least 44 pixels tall for a thumb, so that a dozen of
 // them fit a phone's screen and none is hard to hit.
+//
+// While the game holds the viewer's reactions back (`held`, as for a PI while the students guess;
+// docs/games/keywords.md#quick-reactions), the button stays where it is but looks and reads as
+// disabled, and a tap on it says why; the phrases close if they were open.
+const props = withDefaults(defineProps<{ held?: boolean }>(), { held: false });
 const { t } = useI18n();
 const open = ref(false);
+watch(
+  () => props.held,
+  (held) => {
+    if (held) open.value = false;
+  },
+);
+function press() {
+  if (props.held) toastError('emote_not_now');
+  else open.value = true;
+}
 const now = ref(Date.now());
 const secondsLeft = computed(() => Math.max(0, Math.ceil((readyAt.value - now.value) / 1000)));
 
@@ -44,7 +60,13 @@ function send(emote: Emote) {
 
 <template>
   <span class="emote-button">
-    <UiButton size="small" :disabled="secondsLeft > 0" @click="open = true">
+    <UiButton
+      size="small"
+      :class="{ held }"
+      :aria-disabled="held ? 'true' : undefined"
+      :disabled="secondsLeft > 0"
+      @click="press"
+    >
       {{ secondsLeft > 0 ? t('emotes.wait', { seconds: secondsLeft }) : t('emotes.open') }}
     </UiButton>
     <UiSheet :open="open" :title="t('emotes.title')" @close="open = false">
@@ -62,6 +84,21 @@ function send(emote: Emote) {
 <style scoped>
 .emote-button {
   flex: none;
+}
+
+/* Held back: the look of a disabled button, which still takes a tap to say why. */
+.emote-button :deep(.button.held) {
+  border-color: var(--neutral);
+  background: var(--paper-2);
+  box-shadow: none;
+  color: var(--ink-2);
+  cursor: not-allowed;
+}
+
+.emote-button :deep(.button.held:active),
+.emote-button :deep(.button.held:hover) {
+  transform: none;
+  box-shadow: none;
 }
 
 .emotes {

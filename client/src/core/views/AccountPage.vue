@@ -49,7 +49,6 @@ onMounted(async () => {
   <div class="page account-page">
     <PageMasthead><LanguageSwitch /></PageMasthead>
     <main>
-      <RouterLink to="/" class="back">{{ t('account.back') }}</RouterLink>
       <SignIn v-if="signingIn || (account.loaded && !account.summary)" v-model:busy="signingIn" :next="next" />
       <ProfileView v-else-if="account.summary && !leaving" :summary="account.summary" />
       <p v-else class="loading">{{ t('account.loading') }}</p>
@@ -60,13 +59,6 @@ onMounted(async () => {
 <style scoped>
 main {
   padding: var(--space-3) 0 var(--space-7);
-}
-
-.back {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-size: var(--text-sm);
 }
 
 .loading {

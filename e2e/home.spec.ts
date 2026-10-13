@@ -29,11 +29,38 @@ for (const language of ['en', 'zh'] as const) {
     const byline = interpolate(text.footer.byline, { name: text.footer.author });
     await expect(page.locator('main').getByText(byline, { exact: true }).filter({ visible: true })).toBeVisible();
 
-    // The foot offers the cola and the way to send feedback, whose drawings screen readers skip,
-    // and names the version the page was built with, which is the one the server reports.
+    // Beside the first game's name, its rules, at the defaults of a new room in the page's language:
+    // a Chinese room's ask for no clue that sounds like a word on the board.
+    await page.locator('.entry .title').getByRole('button', { name: text.rules.link, exact: true }).click();
+    const rules = page.locator('[role=dialog]', { has: page.locator('.rules') });
+    await expect(rules.locator('h2')).toHaveText(text.rules.title);
+    await expect(rules.locator('.defaults')).toHaveText(text.rules.defaults);
+    await expect(rules).toContainText(text.rules.clueQuiet);
+    if (language === 'zh') await expect(rules).toContainText(text.rules.clueSound);
+    else await expect(rules).not.toContainText(text.rules.clueSound);
+    await page.keyboard.press('Escape');
+    await expect(rules).toHaveCount(0);
+
+    // The foot offers the cola and the way to send feedback, whose drawings screen readers skip, each
+    // centered on the line of its words, and names the version the page was built with, which is the
+    // one the server reports.
     const foot = page.locator('footer');
-    await expect(foot.getByRole('button', { name: text.footer.tip, exact: true })).toBeVisible();
-    await expect(foot.getByRole('button', { name: text.footer.feedback, exact: true })).toBeVisible();
+    for (const name of [text.footer.tip, text.footer.feedback]) {
+      const button = foot.getByRole('button', { name, exact: true });
+      await expect(button).toBeVisible();
+      // The middle of the drawing, and of the words' own line, as the browser lays them out.
+      const [drawing, words] = await button.evaluate((element) => {
+        const svg = element.querySelector('svg')?.getBoundingClientRect();
+        const text = [...(element.querySelector('.footnote')?.childNodes ?? [])].find(
+          (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+        );
+        const range = document.createRange();
+        if (text) range.selectNodeContents(text);
+        const line = range.getBoundingClientRect();
+        return [svg ? svg.top + svg.height / 2 : NaN, line.top + line.height / 2];
+      });
+      expect(Math.abs((drawing ?? NaN) - (words ?? NaN))).toBeLessThanOrEqual(1.5);
+    }
     const { version } = (await (await page.request.get('/healthz')).json()) as { version: string };
     const label = interpolate(text.footer.version, { version });
     await expect(foot.getByText(label, { exact: true })).toBeVisible();

@@ -26,7 +26,7 @@ const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`
 async function box(page: Page, selector: string) {
   const found = await page.locator(selector).boundingBox();
   if (!found) throw new Error(`${selector} has no box`);
-  return { top: found.y, bottom: found.y + found.height };
+  return { top: found.y, bottom: found.y + found.height, width: found.width };
 }
 
 const scrollToFoot = (page: Page) => page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
@@ -143,8 +143,8 @@ test('the chair switches the room between public and private from the tag beside
   await expect(inList).toHaveCount(0);
 });
 
-// On a phone as narrow as 320 px the start bar's buttons stand under one another, and the bar
-// takes three rows: whatever the desk brings into view still comes below it.
+// On a phone as narrow as 320 px the start bar's line takes a row of its own, and its buttons share
+// the next one evenly: whatever the desk brings into view still comes below the bar.
 test.describe('on a 320 px phone', () => {
   test.use({ viewport: { width: 320, height: 700 } });
 
@@ -157,9 +157,12 @@ test.describe('on a 320 px phone', () => {
     const url = await createRoom(ann, 'en', 'Ann');
     await seatRoom(browser, ann, url);
     await expect(ann.locator('.start-bar .ready')).toBeVisible();
+    const line = await box(ann, '.start-bar .readiness');
     const shuffle = await box(ann, '.start-bar .button:not(.primary)');
     const start = await box(ann, '.start-bar .primary');
-    expect(start.top, 'the start button stands under the shuffle').toBeGreaterThanOrEqual(shuffle.bottom);
+    expect(shuffle.top, 'the buttons stand under the line').toBeGreaterThanOrEqual(line.bottom);
+    expect(Math.abs(start.top - shuffle.top), 'the buttons share a row').toBeLessThanOrEqual(1);
+    expect(Math.abs(start.width - shuffle.width), 'the buttons share it evenly').toBeLessThanOrEqual(1);
 
     // From the foot of the desk, back up through its controls with the keyboard, which brings each
     // one that takes the focus into view: none of them ends up under the bar. Focus set from a
@@ -191,7 +194,7 @@ test('a chair without an account is told how to list the room, and comes back as
   const hal = await newPlayer(browser, 'en');
   await joinByLink(hal, url, 'Hal', 'en');
   // A guest has no friends to invite.
-  await expect(gus.locator('.share .invite-friends')).toHaveCount(0);
+  await expect(gus.locator('.start-dock .invite-friends')).toHaveCount(0);
 
   await gus.locator('.lobby-head').getByRole('button', { name: text.room.makePublic }).click();
   const sheet = gus.locator('[role=dialog]', { has: gus.locator('.needs-account') });
@@ -209,7 +212,7 @@ test('a chair without an account is told how to list the room, and comes back as
   await gus.waitForURL(url);
   await expect(gus.locator('.lobby')).toBeVisible();
   await expect(gus.locator('.start-bar')).toBeVisible();
-  await expect(gus.locator('.share .invite-friends')).toBeVisible();
+  await expect(gus.locator('.start-dock .invite-friends')).toBeVisible();
   await gus.locator('.lobby-head').getByRole('button', { name: text.room.makePublic }).click();
   await expect(hal.locator('.lobby-head .public')).toHaveText(text.room.public);
   await expect(hal.locator('.start-bar')).toHaveCount(0);

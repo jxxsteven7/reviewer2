@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points, signedPoints } from '../points';
 import EndMatchButton from './EndMatchButton.vue';
-import PlayerAvatar from './PlayerAvatar.vue';
+import AvatarButton from './AvatarButton.vue';
 
 // The scores of a match, which everyone in the room sees: which game it is, and each player's
 // place, total and points in the game in focus, as the server counted them. The game describes
@@ -16,6 +16,9 @@ const props = withDefaults(
   defineProps<{ room: RoomView; describe?: ((detail: unknown) => string) | null; endable?: boolean }>(),
   { describe: null, endable: true },
 );
+// A line's player while they are still in the room, whose panel a tap on the avatar opens.
+const inRoom = (id: string | null) =>
+  id !== null && props.room.players.some((player) => player.id === id) ? id : null;
 const { t } = useI18n();
 
 const match = computed(() => props.room.match as MatchView);
@@ -50,7 +53,7 @@ const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastD
           <td class="rank num">{{ line.rank ?? '\u2013' }}</td>
           <td class="who">
             <span class="name-line">
-              <PlayerAvatar :name="line.name" :avatar="line.avatar" />
+              <AvatarButton :player-id="inRoom(line.playerId)" :name="line.name" :avatar="line.avatar" />
               <span class="name" :title="line.name">{{ line.name }}</span>
               <span v-if="line.playerId !== null && line.playerId === room.me" class="mark">{{ t('room.you') }}</span>
               <span v-if="line.left" class="mark">{{ t('match.left') }}</span>

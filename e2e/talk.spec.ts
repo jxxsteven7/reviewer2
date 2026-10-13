@@ -2,25 +2,25 @@ import type { Browser, Locator, Page } from '@playwright/test';
 import { otherTeam } from '@reviewer2/shared';
 import {
   closeSheet,
+  expect,
   expectOwnGroupOnly,
   giveClue,
-  interpolate,
   isPhone,
   joinByLink,
   keyCard,
   newPlayer,
   openGroups,
   playFor,
+  seatSaid,
   seatTable,
   snapshotsOf,
   teamOnTurn,
-  TEXT,
-  expect,
   test,
+  TEXT,
 } from './helpers';
 
-// Students of a group talk it over: they see each other's choices of cards and write to each
-// other, and nobody outside the group sees either (docs/games/keywords.md).
+// Students of a group talk it over: they see each other's choices of cards and marks on them, and
+// write to each other, and nobody outside the group sees any of it (docs/games/keywords.md).
 
 const text = TEXT.en;
 const card = (page: Page, index: number) => page.locator('.board .card').nth(index);
@@ -46,9 +46,7 @@ async function groupOfTwo(browser: Browser) {
   await openGroups(fay);
   await fay.getByRole('button', playFor(team)).click();
   await closeSheet(fay);
-  await expect(fay.locator('.actions .who')).toHaveText(
-    interpolate(text.game.you.guesser, { group: text.lobby.group[team] }),
-  );
+  await expect(fay.locator('.role-banner .who')).toHaveText(seatSaid(team));
   const student = table.guessers[team];
   const name = table.names.guessers[team];
   return { table, team, other, fay, fayStates, student, name, states: [...table.everyone, fayStates] };
@@ -91,6 +89,55 @@ test("a group's students see each other's choices, and nobody else does", async 
   for (const page of [student, fay, captain]) {
     await expect(page.locator('.board .choosers, .board .selected')).toHaveCount(0);
   }
+  for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
+});
+
+test("a group's students mark cards for each other, in either turn, and nobody else sees the marks", async ({
+  browser,
+}) => {
+  const { table, team, other, fay, student, states } = await groupOfTwo(browser);
+  const captain = table.captains[team];
+  const tool = (page: Page, name: string) => page.locator('.mark-tools').getByRole('button', { name, exact: true });
+  // Before the clue, choosing is off, and a tap marks a card, as one of the group's own at first.
+  await expect(tool(student, text.game.tools.choose)).toBeDisabled();
+  await expect(tool(student, text.game.tools.ours)).toHaveAttribute('aria-pressed', 'true');
+  // Each tool is 44 px high to the finger: a tap just above or below it, on the pill's padding,
+  // lands on it.
+  await student.locator('.mark-tools').scrollIntoViewIfNeeded();
+  const reach = await student.locator('.mark-tools .tool').evaluateAll((tools) =>
+    tools.map((button) => {
+      const { left, right, top, bottom } = button.getBoundingClientRect();
+      const x = (left + right) / 2;
+      return [top - 1, bottom + 1].every((y) => button.contains(document.elementFromPoint(x, y)));
+    }),
+  );
+  expect(reach).toEqual([true, true, true, true]);
+  const own = await keyCard(captain, team);
+  const theirs = await keyCard(captain, other);
+  await card(student, own).click();
+  await expect(card(fay, own)).toHaveClass(new RegExp(`note-${team}`));
+  await expect(card(fay, own)).toHaveAttribute('aria-label', /, marked as ours$/);
+
+  // Fay marks another card as the other group's, and the student takes the first mark off again.
+  await tool(fay, text.game.tools.theirs).click();
+  await card(fay, theirs).click();
+  await expect(card(student, theirs)).toHaveClass(new RegExp(`note-${other}`));
+  await card(student, own).click();
+  await expect(card(fay, own)).not.toHaveClass(/noted/);
+
+  // The other group's marks are its own; no PI, spectator or screen has marks or the tools.
+  await card(table.guessers[other], own).click();
+  await expect(card(table.guessers[other], own)).toHaveClass(new RegExp(`note-${other}`));
+  await expect(card(student, own)).not.toHaveClass(/noted/);
+  for (const page of [captain, table.captains[other], table.spectator, table.screen]) {
+    await expect(page.locator('.board .noted')).toHaveCount(0);
+    await expect(page.locator('.mark-tools')).toHaveCount(0);
+  }
+
+  // The group's guess phase comes: choosing is back, and the marks stay.
+  await giveClue(captain, 'Hint', 2, 'en');
+  await expect(tool(student, text.game.tools.choose)).toHaveAttribute('aria-pressed', 'true');
+  await expect(card(student, theirs)).toHaveClass(new RegExp(`note-${other}`));
   for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
 });
 

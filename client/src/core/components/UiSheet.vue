@@ -15,8 +15,16 @@ import { useI18n } from 'vue-i18n';
 // armed by opening it; Tab then stays inside the panel. A sheet opened from another one, such as
 // the chair's menu from the groups on a phone, lies over it, and only the sheet on top listens to
 // the keys.
-const props = defineProps<{ open: boolean; title: string }>();
-const emit = defineEmits<{ close: [] }>();
+//
+// A `tall` sheet is as tall as a sheet may be, however much it holds, and scrolls inside, as a page
+// shown over the one below. A sheet with a way `back`, named by that text, has a round button with
+// an arrow before its title, as the close button has its cross after it, which takes the viewer
+// back to the sheet it was opened from.
+const props = withDefaults(defineProps<{ open: boolean; title: string; tall?: boolean; back?: string | null }>(), {
+  tall: false,
+  back: null,
+});
+const emit = defineEmits<{ close: []; back: [] }>();
 const { t } = useI18n();
 const id = useId();
 const panel = ref<HTMLElement | null>(null);
@@ -87,10 +95,23 @@ onBeforeUnmount(() => {
 <template>
   <Teleport to="body">
     <div v-if="open" class="backdrop" @click.self="emit('close')">
-      <section ref="panel" class="panel" role="dialog" aria-modal="true" :aria-labelledby="id" tabindex="-1">
+      <section
+        ref="panel"
+        class="panel"
+        :class="{ tall }"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="id"
+        tabindex="-1"
+      >
         <header class="head">
+          <button v-if="back" type="button" class="round back" :aria-label="back" @click="emit('back')">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
+          </button>
           <h2 :id="id">{{ title }}</h2>
-          <button type="button" class="close" :aria-label="t('room.close')" @click="emit('close')">&times;</button>
+          <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
+            &times;
+          </button>
         </header>
         <div class="body"><slot /></div>
       </section>
@@ -145,13 +166,20 @@ onBeforeUnmount(() => {
 }
 
 h2 {
+  flex: 1;
+  min-width: 0;
   font-size: var(--text-2xl);
 }
 
-.close {
+/* The round buttons at either end of the title: back, with its arrow, and close, with its cross. */
+.round {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
   width: 44px;
   height: 44px;
+  padding: 0;
   border: var(--line) solid var(--ink);
   border-radius: 50%;
   background: var(--paper);
@@ -161,8 +189,23 @@ h2 {
   cursor: pointer;
 }
 
-.close:active {
+.round:active {
   background: var(--bg);
+}
+
+.back svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.panel.tall {
+  height: 88vh;
+  height: 88dvh;
 }
 
 @media (min-width: 40rem) {

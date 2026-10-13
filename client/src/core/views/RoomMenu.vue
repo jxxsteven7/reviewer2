@@ -19,8 +19,10 @@ import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
 // The room menu, behind the "Room" button in the masthead: who you are, whether the room is public
-// or private, ways to rename yourself or leave, for an account the way to invite friends
-// (docs/architecture.md#friends), the switch for the sounds, which the quick reactions offer too,
+// or private, ways to rename yourself or leave, for an account the way to invite friends during a
+// game and while a finished match's ranking stands in the waiting room (docs/architecture.md#friends),
+// which the waiting room's start bar has otherwise, the switch for the sounds, which the quick
+// reactions offer too,
 // and the way to send the author feedback. The chair can also list the room on the home page or
 // take it off, in the waiting room (as the tag beside the waiting room's heading does), and close
 // the room for everyone, in the waiting room, during a game and after it. A player who is logged
@@ -38,6 +40,8 @@ const { name, clean, problem, refuse } = useNameField();
 const { busy, run } = useBusy();
 
 const isChair = computed(() => props.room.chairId === props.me.id);
+// A finished match's ranking stands in the waiting room, where the start bar would be.
+const matchOver = computed(() => props.room.match !== null && props.room.match.status !== 'on');
 // Whoever would chair the room after the chair has left, by the server's own rule. Nobody, when
 // the chair is the last one.
 const successor = computed(() => {
@@ -107,7 +111,9 @@ const setPublic = (value: boolean) => act('room:public', { public: value });
         <p v-if="!room.public" class="hint">{{ t(account.summary ? 'room.publicHint' : 'room.publicNeedsAccount') }}</p>
       </template>
       <UiButton v-if="!account.summary" @click="startRenaming">{{ t('room.rename') }}</UiButton>
-      <UiButton v-else @click="inviting = true">{{ t('friends.invite') }}</UiButton>
+      <UiButton v-else-if="room.phase !== 'lobby' || matchOver" @click="inviting = true">{{
+        t('friends.invite')
+      }}</UiButton>
       <SoundToggle />
       <UiButton @click="leaving = true">{{ t('room.leave') }}</UiButton>
       <UiButton v-if="isChair" variant="danger" @click="closing = true">{{ t('room.closeRoom') }}</UiButton>

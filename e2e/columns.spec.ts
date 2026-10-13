@@ -49,11 +49,14 @@ async function expectColumnsFromTheTop(page: Page, left: string[], right: string
 }
 
 // The bar under the board has no empty row where a phone has its buttons, and no row out of
-// place: each of the given parts follows the one before it within one gap of the bar's grid, the
-// seat line first.
+// place: the first of the given parts stands at the top of the bar, and each of the others follows
+// the one before it within one gap of the bar's grid.
 async function expectBarStacked(page: Page, parts: string[]): Promise<void> {
-  const gap = await page.locator('.actions').evaluate((bar) => parseFloat(getComputedStyle(bar).rowGap));
-  let above = (await box(page.locator('.actions .me'))).bottom;
+  const { gap, top } = await page.locator('.actions').evaluate((bar) => {
+    const style = getComputedStyle(bar);
+    return { gap: parseFloat(style.rowGap), top: bar.getBoundingClientRect().top + parseFloat(style.paddingTop) };
+  });
+  let above = top - gap;
   for (const selector of parts) {
     const part = await box(page.locator(`.actions ${selector}`).first());
     expect(part.top, `${selector} is below the part above it`).toBeGreaterThanOrEqual(above);
@@ -72,7 +75,7 @@ test('the chat, the groups, the clue log and the tools stand at the top of their
   for (let turn = 1; turn <= 4; turn += 1) await playTurn(table, turn);
   await expect(student.locator('.clue-log li')).toHaveCount(4);
   await expectColumnsFromTheTop(student, ['.chat-panel', '.rosters'], ['.clue-log', '.tools']);
-  await expectBarStacked(student, ['.status']);
+  await expectBarStacked(student, ['.mark-tools', '.status']);
   // A spectator has no chat: the groups stand at the top.
   await expectColumnsFromTheTop(spectator, ['.rosters'], ['.clue-log', '.tools']);
   await expectBarStacked(spectator, ['.status']);

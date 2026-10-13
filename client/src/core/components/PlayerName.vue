@@ -2,30 +2,23 @@
 import type { PlayerView } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import AgentIcon from './AgentIcon.vue';
-import PlayerAvatar from './PlayerAvatar.vue';
+import AvatarButton from './AvatarButton.vue';
 
 // A player's avatar and name with their online status, the academic rank of a player with an
 // account, small beside the name, and marks for "you", the chair, an AI player, with the robot's
 // head that is its avatar too, and a player whose turns an AI plays while they are away
-// (docs/architecture.md#ai-players). For the chair, in a public room for anyone who may report a
-// player, and for an account that may ask another to be friends, other players' names are buttons
-// that open the player menu. The name, the rank and the marks wrap under the name, never under the
-// avatar, so that on a narrow screen they stay clear of the sticker's round ends.
-defineProps<{ player: PlayerView; me: boolean; chair: boolean; manageable: boolean }>();
-const emit = defineEmits<{ manage: [player: PlayerView] }>();
+// (docs/architecture.md#ai-players). In a room, the avatar opens the player's panel, for everyone,
+// the viewer included (AvatarButton.vue); the name is plain text. The rank and the marks wrap
+// under the name, never under the avatar.
+defineProps<{ player: PlayerView; me: boolean; chair: boolean }>();
 const { t } = useI18n();
 </script>
 
 <template>
-  <component
-    :is="manageable ? 'button' : 'span'"
-    :type="manageable ? 'button' : undefined"
-    class="player"
-    :class="{ offline: !player.online, manageable }"
-    @click="manageable && emit('manage', player)"
-  >
+  <span class="player" :class="{ offline: !player.online }">
     <span class="dot" :class="{ on: player.online }" aria-hidden="true"></span>
-    <PlayerAvatar
+    <AvatarButton
+      :player-id="player.id"
       :name="player.name"
       :avatar="player.avatar"
       :agent="player.agent !== undefined"
@@ -40,7 +33,7 @@ const { t } = useI18n();
       <span v-if="player.takenOver" class="mark agent">{{ t('room.takenOver') }}</span>
       <span v-if="!player.online" class="mark">{{ t('room.offline') }}</span>
     </span>
-  </component>
+  </span>
 </template>
 
 <style scoped>
@@ -50,26 +43,7 @@ const { t } = useI18n();
   gap: var(--space-2);
   min-height: 44px;
   max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
   font-weight: var(--weight-bold);
-  text-align: left;
-}
-
-/* A name that can be acted on is a small sticker of its own, a pill on one line and a rounded box
-   on two, with room above and below the lines. */
-.manageable {
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
-  border: var(--line-thin) solid var(--ink);
-  border-radius: var(--radius-panel);
-  background: var(--paper);
-  cursor: pointer;
-}
-
-.manageable:active {
-  background: var(--bg);
 }
 
 .dot {

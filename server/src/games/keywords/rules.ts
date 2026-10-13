@@ -17,6 +17,7 @@ import {
   type KeywordsError,
   type KeywordsSettings,
   type Language,
+  type Mark,
   type Role,
   type Team,
 } from '@reviewer2/shared';
@@ -83,6 +84,7 @@ export function newGame(words: readonly (string | BoardWord)[], rng: Rng, setup:
     extended: { red: false, blue: false },
     result: null,
     selections: [],
+    marks: { red: [], blue: [] },
     chat: { red: [], blue: [] },
   };
 }
@@ -202,8 +204,33 @@ export function dropSelection(state: KeywordsState, playerId: string): KeywordsS
   return others.length === state.selections.length ? state : { ...state, selections: others };
 }
 
+// A guesser marks a hidden card for their group (docs/games/keywords.md#talking-it-over): as one of their own
+// group's, one of the other group's or maybe Reviewer 2, or clears its mark with null. Unlike a
+// choice, a mark may come in either group's turn, while the game is on and not paused, when nobody
+// has the board. The mark is the group's: any of its guessers may change it, and the last one
+// stands. A mark that is there already, or the clearing of none, gives the state back as it is.
+export function mark(
+  state: KeywordsState,
+  actor: Actor,
+  action: Pick<Moment, 'gameId'> & { card: number; mark: Mark | null },
+): Outcome {
+  if (action.gameId !== state.gameId) return refuse('stale');
+  if (state.phase === 'over') return refuse('game_over');
+  if (state.pause) return refuse('paused');
+  if (actor.team === null || actor.role !== 'guesser') return refuse('not_guesser');
+  const target = Number.isInteger(action.card) ? state.cards[action.card] : undefined;
+  if (!target) return refuse('no_such_card');
+  if (target.revealed) return refuse('card_revealed');
+  const marks = state.marks[actor.team];
+  if ((marks.find(({ card }) => card === action.card)?.mark ?? null) === action.mark) return ok(state);
+  const others = marks.filter(({ card }) => card !== action.card);
+  const next = action.mark === null ? others : [...others, { card: action.card, mark: action.mark }];
+  return ok({ ...state, marks: { ...state.marks, [actor.team]: next } });
+}
+
 // One of the current team's guessers reveals a card. The board has changed then, so everyone's
-// choice is cleared, and the guessers choose again if their turn goes on.
+// choice is cleared, and the guessers choose again if their turn goes on. Neither group's mark
+// stays on the card: its color is there for all to see.
 export function reveal(state: KeywordsState, actor: Actor, action: Moment & { card: number }, at: number): Outcome {
   const denied = refusal(state, action, actor, 'guesser');
   if (denied) return refuse(denied);
@@ -224,7 +251,18 @@ export function reveal(state: KeywordsState, actor: Actor, action: Moment & { ca
         }
       : record,
   );
-  const next: KeywordsState = { ...state, cards, history, guessesMade: state.guessesMade + 1, selections: [] };
+  const marks = {
+    red: state.marks.red.filter(({ card }) => card !== action.card),
+    blue: state.marks.blue.filter(({ card }) => card !== action.card),
+  };
+  const next: KeywordsState = {
+    ...state,
+    cards,
+    history,
+    guessesMade: state.guessesMade + 1,
+    selections: [],
+    marks,
+  };
 
   // Reviewer 2 rejects the group that reveals them, whatever else is on the board.
   if (target.color === 'reviewer2') return ok(finish(next, otherTeam(state.team), 'reviewer2'));

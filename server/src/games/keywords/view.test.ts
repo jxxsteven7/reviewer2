@@ -1,6 +1,6 @@
 import { SPECTATOR, type Seat } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { extend, giveClue, pause, reveal, say, select, withdraw } from './rules';
+import { extend, giveClue, mark, pause, reveal, say, select, withdraw } from './rules';
 import type { KeywordsState } from './state';
 import { accepted, captain, gameState, guesser, now } from './testing';
 import { viewFor } from './view';
@@ -150,6 +150,36 @@ describe('what each player sees of a group', () => {
     expect(viewFor(state, redGuesser, 0).selections).toEqual([]);
     expect(viewFor(state, redGuesser, 0).chat).toEqual([]);
     expect('selections' in viewFor(state, blueGuesser, 0)).toBe(false);
+  });
+});
+
+describe("what each player sees of a group's marks", () => {
+  // Both groups have marked cards while red guesses.
+  const marking = () => {
+    let state = playing();
+    state = accepted(mark(state, guesser('red'), { gameId: state.gameId, card: 3, mark: 'ours' }));
+    state = accepted(mark(state, guesser('red'), { gameId: state.gameId, card: 17, mark: 'r2' }));
+    return accepted(mark(state, guesser('blue'), { gameId: state.gameId, card: 9, mark: 'theirs' }));
+  };
+
+  test("each group's guessers see the group's own marks, in either group's turn", () => {
+    expect(viewFor(marking(), redGuesser, 0).marks).toEqual([
+      { card: 3, mark: 'ours' },
+      { card: 17, mark: 'r2' },
+    ]);
+    expect(viewFor(marking(), blueGuesser, 0).marks).toEqual([{ card: 9, mark: 'theirs' }]);
+  });
+
+  test('captains, spectators and screens see no marks at all', () => {
+    for (const seat of [redCaptain, blueCaptain, SPECTATOR]) {
+      expect('marks' in viewFor(marking(), seat, 0)).toBe(false);
+    }
+  });
+
+  test('a group with no marks yet gets an empty list, and nobody gets any once the game is over', () => {
+    expect(viewFor(playing(), redGuesser, 0).marks).toEqual([]);
+    const over = accepted(withdraw(marking(), { gameId: 'game-1' }));
+    for (const seat of Object.values(SEATS)) expect('marks' in viewFor(over, seat, 0)).toBe(false);
   });
 });
 

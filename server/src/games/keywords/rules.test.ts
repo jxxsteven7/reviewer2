@@ -6,6 +6,7 @@ import {
   expire,
   extend,
   giveClue,
+  mark,
   newGame,
   pass,
   pause,
@@ -389,6 +390,78 @@ describe('choosing a card', () => {
     expect(dropSelection(state, 'ann').selections).toEqual([{ player: 'bob', card: 4 }]);
     // Nothing changes for a player who has chosen nothing.
     expect(dropSelection(state, 'cat')).toBe(state);
+  });
+});
+
+describe('marking cards', () => {
+  const ann = guesser('red', 'ann');
+  const bob = guesser('red', 'bob');
+  const dan = guesser('blue', 'dan');
+  const game = (state: KeywordsState) => ({ gameId: state.gameId });
+
+  test('keeps one mark a card for each group, set and changed by any of its guessers', () => {
+    let state = clued();
+    state = accepted(mark(state, ann, { ...game(state), card: 3, mark: 'ours' }));
+    state = accepted(mark(state, bob, { ...game(state), card: 17, mark: 'theirs' }));
+    state = accepted(mark(state, dan, { ...game(state), card: 3, mark: 'r2' }));
+    expect(state.marks).toEqual({
+      red: [
+        { card: 3, mark: 'ours' },
+        { card: 17, mark: 'theirs' },
+      ],
+      blue: [{ card: 3, mark: 'r2' }],
+    });
+    // Bob changes Ann's mark: the last one stands.
+    state = accepted(mark(state, bob, { ...game(state), card: 3, mark: 'r2' }));
+    expect(state.marks.red).toEqual([
+      { card: 17, mark: 'theirs' },
+      { card: 3, mark: 'r2' },
+    ]);
+    // Nothing else changes, not even the choices.
+    expect(state).toMatchObject({ phase: 'guess', guessesMade: 0, selections: [] });
+  });
+
+  test('can be cleared, and changes nothing when it is there already', () => {
+    let state = clued();
+    state = accepted(mark(state, ann, { ...game(state), card: 3, mark: 'ours' }));
+    expect(accepted(mark(state, bob, { ...game(state), card: 3, mark: 'ours' }))).toBe(state);
+    expect(accepted(mark(state, bob, { ...game(state), card: 4, mark: null }))).toBe(state);
+    state = accepted(mark(state, bob, { ...game(state), card: 3, mark: null }));
+    expect(state.marks.red).toEqual([]);
+  });
+
+  test("comes in either group's turn and phase, but not from a captain or a spectator", () => {
+    const before = gameState();
+    expect(accepted(mark(before, dan, { ...game(before), card: 0, mark: 'theirs' })).marks.blue).toHaveLength(1);
+    const state = clued();
+    expect(accepted(mark(state, dan, { ...game(state), card: 0, mark: 'theirs' })).marks.blue).toHaveLength(1);
+    expect(refused(mark(state, captain('red'), { ...game(state), card: 0, mark: 'ours' }))).toBe('not_guesser');
+    expect(refused(mark(state, spectator, { ...game(state), card: 0, mark: 'ours' }))).toBe('not_guesser');
+  });
+
+  test('checks the game, its end and a pause before the player, and the card last', () => {
+    const state = revealAll(clued(), [0]);
+    expect(refused(mark(state, captain('red'), { gameId: 'other', card: 99, mark: 'ours' }))).toBe('stale');
+    const paused = accepted(pause(state, true, game(state), 0));
+    expect(refused(mark(paused, captain('red'), { ...game(paused), card: 99, mark: 'ours' }))).toBe('paused');
+    const over = accepted(withdraw(state, now(state)));
+    expect(refused(mark(over, captain('red'), { ...game(over), card: 99, mark: 'ours' }))).toBe('game_over');
+    for (const card of [-1, 25, 1.5, Number.NaN]) {
+      expect(refused(mark(state, ann, { ...game(state), card, mark: 'ours' })), String(card)).toBe('no_such_card');
+    }
+    expect(refused(mark(state, ann, { ...game(state), card: 0, mark: 'ours' }))).toBe('card_revealed');
+  });
+
+  test("goes from a card once it is revealed, both groups' marks, and stays on the others", () => {
+    let state = clued(3);
+    state = accepted(mark(state, ann, { ...game(state), card: 0, mark: 'ours' }));
+    state = accepted(mark(state, ann, { ...game(state), card: 5, mark: 'theirs' }));
+    state = accepted(mark(state, dan, { ...game(state), card: 0, mark: 'theirs' }));
+    state = revealAll(state, [0]);
+    expect(state.marks).toEqual({ red: [{ card: 5, mark: 'theirs' }], blue: [] });
+    // A turn that ends leaves them be.
+    state = accepted(pass(state, ann, now(state), 0));
+    expect(state).toMatchObject({ phase: 'clue', team: 'blue', marks: { red: [{ card: 5, mark: 'theirs' }] } });
   });
 });
 

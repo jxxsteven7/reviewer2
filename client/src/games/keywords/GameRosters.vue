@@ -2,11 +2,9 @@
 import type { PlayerView, RoomView, Team } from '@reviewer2/shared';
 import { computed, ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import PlayerMenu from '../../core/components/PlayerMenu.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
-import { mayManage } from '../../core/manage';
 import { useKeywords } from './useKeywords';
 
 // Who plays where during a game, and the seat changes the rules allow: latecomers can play for
@@ -19,12 +17,10 @@ const { t } = useI18n();
 const { data, mySeat, mySide, isKeyViewer, groups, spectators, sit } = useKeywords(toRef(props, 'room'));
 // Seats change only while the game is on; afterwards the waiting room is the place for that.
 const playing = computed(() => data.value.game !== null && data.value.game.phase !== 'over');
-const managing = ref<PlayerView | null>(null);
 const takingOver = ref<Team | null>(null);
 
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
-const manageable = (player: PlayerView) => mayManage(props.room, player);
 // In a match, whoever hasn't played for a group in this game plays from the next one instead.
 const mayJoin = (team: Team) =>
   playing.value && props.room.me !== null && (mySide.value ?? (props.room.match ? null : team)) === team;
@@ -47,8 +43,6 @@ async function takeOver() {
           :player="group.captain"
           :me="isMe(group.captain)"
           :chair="isChairOf(group.captain)"
-          :manageable="manageable(group.captain)"
-          @manage="managing = $event"
         />
         <template v-else>
           <span class="vacant">{{ t('lobby.vacant') }}</span>
@@ -66,8 +60,6 @@ async function takeOver() {
             :player="player"
             :me="isMe(player)"
             :chair="isChairOf(player)"
-            :manageable="manageable(player)"
-            @manage="managing = $event"
           />
         </span>
       </p>
@@ -88,8 +80,6 @@ async function takeOver() {
           :player="player"
           :me="isMe(player)"
           :chair="isChairOf(player)"
-          :manageable="manageable(player)"
-          @manage="managing = $event"
         />
       </span>
     </p>
@@ -109,7 +99,6 @@ async function takeOver() {
         <UiButton variant="quiet" @click="takingOver = null">{{ t('lobby.manage.cancel') }}</UiButton>
       </div>
     </UiSheet>
-    <PlayerMenu :player="managing" :room="room" @close="managing = null" />
   </section>
 </template>
 

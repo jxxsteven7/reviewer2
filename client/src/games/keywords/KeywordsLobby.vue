@@ -16,9 +16,9 @@ import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import FieldPicker from '../../core/components/FieldPicker.vue';
+import InviteFriends from '../../core/components/InviteFriends.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
-import PlayerMenu from '../../core/components/PlayerMenu.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import ShareTools from '../../core/components/ShareTools.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
@@ -28,7 +28,6 @@ import { account } from '../../core/account';
 import { fields, loadFields } from '../../core/fields';
 import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
-import { mayManage } from '../../core/manage';
 import { act, reconnecting } from '../../core/socket';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import RoleBanner from './RoleBanner.vue';
@@ -41,8 +40,11 @@ import { useKeywords } from './useKeywords';
 // word lists, the chair's own words and the settings. The chair's start bar stands above it all
 // and stays at the top of the screen as the page scrolls, so that the start button is at hand
 // from the first screen to the foot of the desk: whether everyone needed is seated, or the first
-// thing still missing, the shuffle and the start button. The tag beside the heading says whether
-// the room is public, and the chair switches it there, as in the room menu.
+// thing still missing, and under it the shuffle, the invitation to friends for an account, and the
+// start button, sharing their row evenly however many there are. A member with an account who
+// doesn't chair the room has a bar of their own there, on one row where it fits, with the same
+// line and the invitation alone; a guest, who can't invite anyone, has none. The tag beside the
+// heading says whether the room is public, and the chair switches it there, as in the room menu.
 //
 // In a match, the match's table comes first, or its final ranking once it is over, and while the
 // match has locked the settings the chair sees the rules under their desk. When the server
@@ -89,6 +91,10 @@ const problemKey = (item: StartProblem) =>
 const personSeated = computed(() =>
   props.room.players.some((player) => player.agent === undefined && data.value.seats[player.id]?.team),
 );
+// An account may invite its friends who are online into the room, from the start bar
+// (docs/architecture.md#friends).
+const mayInviteFriends = computed(() => account.summary !== null);
+const invitingFriends = ref(false);
 const canInvite = computed(() => isChair.value && props.room.agents && lineup.value === 'free' && personSeated.value);
 const hasAgents = computed(() => props.room.players.some((player) => player.agent));
 const timersOff = computed(() => {
@@ -98,8 +104,6 @@ const timersOff = computed(() => {
 const agentName = computed(() => t('agents.personas.reviewer1'));
 const invite = (team: Team, role: 'captain' | 'guesser') =>
   act('room:addAgent', { persona: 'reviewer1', seat: { team, role } });
-
-const managing = ref<PlayerView | null>(null);
 
 // The chair's choice of word lists, which is only sent when they save it. Every snapshot brings
 // the room's lists as a new array, so they are compared by their contents: an unsaved choice
@@ -202,7 +206,6 @@ function switchVisibility() {
 }
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
-const manageable = (player: PlayerView) => mayManage(props.room, player);
 </script>
 
 <template>
@@ -224,19 +227,28 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
       <ShareTools :room="room" />
     </header>
 
-    <div v-if="isChair && !finished" ref="dock" class="start-dock" :class="{ 'below-banner': reconnecting }">
-      <div class="start-bar">
+    <div
+      v-if="(isChair || mayInviteFriends) && !finished"
+      ref="dock"
+      class="start-dock"
+      :class="{ 'below-banner': reconnecting }"
+    >
+      <div class="start-bar" :class="{ member: !isChair }">
         <p class="readiness" :class="{ ready }">{{ readiness }}</p>
         <div class="start-actions">
-          <UiButton v-if="lineup === 'free'" size="small" @click="act('room:shuffle')">{{
+          <UiButton v-if="isChair && lineup === 'free'" size="small" @click="act('room:shuffle')">{{
             t('lobby.shuffle')
           }}</UiButton>
-          <UiButton variant="primary" size="small" :disabled="!ready || starting" @click="start">
+          <UiButton v-if="mayInviteFriends" class="invite-friends" size="small" @click="invitingFriends = true">
+            {{ t('friends.invite') }}
+          </UiButton>
+          <UiButton v-if="isChair" variant="primary" size="small" :disabled="!ready || starting" @click="start">
             {{ t('lobby.start') }}
           </UiButton>
         </div>
       </div>
     </div>
+    <InviteFriends :open="invitingFriends" :room="room" @close="invitingFriends = false" />
 
     <MatchResults v-if="finished" :room="room" />
 
@@ -248,13 +260,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
           <h2 class="section-title">{{ t('match.drawn') }}</h2>
           <ul v-if="pool.length" class="names inline">
             <li v-for="player in pool" :key="player.id">
-              <PlayerName
-                :player="player"
-                :me="isMe(player)"
-                :chair="isChairOf(player)"
-                :manageable="manageable(player)"
-                @manage="managing = $event"
-              />
+              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
             </li>
           </ul>
           <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
@@ -273,8 +279,6 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
                   :player="group.captain"
                   :me="isMe(group.captain)"
                   :chair="isChairOf(group.captain)"
-                  :manageable="manageable(group.captain)"
-                  @manage="managing = $event"
                 />
                 <span v-else class="vacant">{{ t('lobby.vacant') }}</span>
                 <UiButton v-if="!group.captain && mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
@@ -293,13 +297,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
               <dd>
                 <ul v-if="group.guessers.length" class="names">
                   <li v-for="player in group.guessers" :key="player.id">
-                    <PlayerName
-                      :player="player"
-                      :me="isMe(player)"
-                      :chair="isChairOf(player)"
-                      :manageable="manageable(player)"
-                      @manage="managing = $event"
-                    />
+                    <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
                   </li>
                 </ul>
                 <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
@@ -328,13 +326,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
           <h2 class="section-title">{{ t('lobby.roles.spectator') }}</h2>
           <ul v-if="spectators.length" class="names inline">
             <li v-for="player in spectators" :key="player.id">
-              <PlayerName
-                :player="player"
-                :me="isMe(player)"
-                :chair="isChairOf(player)"
-                :manageable="manageable(player)"
-                @manage="managing = $event"
-              />
+              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
             </li>
           </ul>
           <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
@@ -417,8 +409,6 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
         </section>
       </div>
     </div>
-
-    <PlayerMenu :player="managing" :room="room" @close="managing = null" />
 
     <UiSheet :open="needsAccount" :title="t('room.makePublic')" @close="needsAccount = false">
       <div class="needs-account">
@@ -533,7 +523,10 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
 }
 
 /* One line for whether the room is ready, and the buttons under it, or beside it where there is
-   room. */
+   room. The chair's buttons share their row evenly, two or three of them, or one that takes the
+   row, and a long word wraps inside its button; on a wide screen they stand beside the line, all
+   as wide. A member's bar keeps its line and its one button on one row where they fit, the line
+   wrapping rather than cut off. */
 .start-bar {
   display: flex;
   flex-wrap: wrap;
@@ -562,10 +555,51 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
 }
 
 .start-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-left: auto;
+  display: grid;
+  flex: 1 1 100%;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-2);
+}
+
+.start-bar:not(.member) .readiness {
+  flex-basis: 100%;
+}
+
+.start-actions > .button {
+  padding: 0 var(--space-2);
+  white-space: normal;
+  text-align: center;
+}
+
+.start-bar.member {
+  column-gap: var(--space-2);
+  padding-right: var(--space-3);
+  padding-left: var(--space-3);
+}
+
+.member .readiness {
+  flex: 1 1 8rem;
+  white-space: normal;
+}
+
+.member .start-actions {
+  flex: none;
+}
+
+.member .start-actions > .button {
+  padding: 0 var(--space-3);
+}
+
+@media (min-width: 40rem) {
+  .start-bar:not(.member) .readiness {
+    flex: 1 1 14rem;
+  }
+
+  .start-bar:not(.member) .start-actions {
+    flex: 0 1 auto;
+    grid-auto-columns: 10rem;
+  }
 }
 
 .needs-account {
@@ -698,7 +732,8 @@ dd .vacant {
   margin-bottom: var(--space-3);
 }
 
-.desk .label + .settings-form {
+.desk .label + .settings-form,
+.desk .label + .fields {
   margin-top: var(--space-2);
 }
 

@@ -2,17 +2,15 @@
 import { formatCode, type RoomView } from '@reviewer2/shared';
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { account } from '../account';
 import { roomLink } from '../room';
 import { toast } from '../toast';
-import InviteFriends from './InviteFriends.vue';
 import QrCode from './QrCode.vue';
 import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
 
-// Ways to bring people into a room: for a player with an account, an invitation to their friends
-// (docs/architecture.md#friends), which the room menu offers too; the share sheet where there is
-// one (it needs HTTPS), the clipboard, a QR code, and the link to the room's big screen. When
+// Ways to bring people into a room by its link: the share sheet where there is one (it needs
+// HTTPS), the clipboard, a QR code, and the link to the room's big screen; an account invites its
+// friends from the waiting room's start bar (docs/architecture.md#friends). When
 // neither the share sheet nor the clipboard works, as in some in-app browsers and on plain http,
 // the link is shown selected, ready to copy by hand.
 const props = defineProps<{ room: RoomView }>();
@@ -21,7 +19,6 @@ const { t } = useI18n();
 const link = computed(() => roomLink(props.room.code));
 const screenLink = computed(() => `/room/${props.room.code}/screen`);
 const number = computed(() => formatCode(props.room.code));
-const inviting = ref(false);
 const canShare = typeof navigator.share === 'function';
 const showQr = ref(false);
 const showLink = ref(false);
@@ -49,17 +46,12 @@ async function copy() {
 
 <template>
   <div class="share">
-    <UiButton v-if="account.summary" class="invite-friends" size="small" @click="inviting = true">
-      {{ t('friends.invite') }}
-    </UiButton>
     <UiButton v-if="canShare" size="small" @click="share">{{ t('room.share') }}</UiButton>
     <UiButton v-else size="small" @click="copy">{{ t('room.copyLink') }}</UiButton>
     <UiButton size="small" @click="showQr = true">{{ t('room.qr') }}</UiButton>
     <UiButton class="screen" size="small" :href="screenLink" target="_blank" rel="noopener">
       {{ t('room.screen') }}
     </UiButton>
-
-    <InviteFriends :open="inviting" :room="room" @close="inviting = false" />
 
     <UiSheet :open="showQr" :title="t('room.qr')" @close="showQr = false">
       <div class="qr">

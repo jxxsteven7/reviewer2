@@ -16,7 +16,7 @@ import { computed, nextTick, onMounted, ref, watch, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { loadAccount, request } from '../account';
-import PlayerAvatar from '../components/PlayerAvatar.vue';
+import AvatarButton from '../components/AvatarButton.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
@@ -197,8 +197,8 @@ async function befriend(liker: LikerView): Promise<void> {
       <p v-else-if="likers.length === 0" class="hint">{{ t('account.profile.public.noLikes') }}</p>
       <ul v-else class="list">
         <li v-for="liker in likers" :key="liker.handle" class="line">
-          <PlayerAvatar :name="liker.username" :avatar="liker.avatar" />
-          <RouterLink :to="`${PROFILE_PATH}${liker.handle}`" class="name">{{ liker.username }}</RouterLink>
+          <AvatarButton :to="`${PROFILE_PATH}${liker.handle}`" :name="liker.username" :avatar="liker.avatar" />
+          <span class="name">{{ liker.username }}</span>
           <span v-if="liker.friend" class="hint">{{ t('account.profile.public.friend') }}</span>
           <UiButton v-else variant="quiet" size="small" :disabled="busy" @click="befriend(liker)">
             {{ t('friends.addFromRoom') }}
@@ -285,16 +285,11 @@ h3 {
   background: var(--paper-2);
 }
 
-/* The name is a link on one line of text. Padding that the margins take back makes it 44px tall
-   to tap, as the button beside it is, without moving anything. */
+/* The name is one line of text; the avatar before it leads to the liker's page. */
 .name {
-  position: relative;
   flex: 1;
   min-width: 0;
-  margin: -10px 0;
-  padding: 10px 0;
   overflow: hidden;
-  color: var(--ink);
   font-weight: var(--weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;

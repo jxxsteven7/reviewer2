@@ -7,6 +7,7 @@ import { createI18n } from 'vue-i18n';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import en from '../../locales/en.json';
 import { muted, setMuted } from '../sound';
+import { account } from '../account';
 import RoomMenu from './RoomMenu.vue';
 
 const send = vi.hoisted(() => vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>());
@@ -61,8 +62,12 @@ const global = () => ({
   stubs: { teleport: true },
 });
 
-async function opened() {
-  const wrapper = mount(RoomMenu, { props: { room, me: ann }, global: global(), attachTo: document.body });
+async function opened(phase: RoomView['phase'] = 'lobby', match: RoomView['match'] = null) {
+  const wrapper = mount(RoomMenu, {
+    props: { room: { ...room, phase, match }, me: ann },
+    global: global(),
+    attachTo: document.body,
+  });
   await wrapper.get('.room-button').trigger('click');
   await nextTick();
   await flushPromises();
@@ -96,5 +101,26 @@ describe('RoomMenu', () => {
     await nextTick();
     expect((box.element as HTMLInputElement).checked).toBe(false);
     wrapper.unmount();
+  });
+
+  test("leaves the invitation of friends to the waiting room's start bar, and has it during a game", async () => {
+    account.summary = { username: 'Ann', avatar: null } as unknown as typeof account.summary;
+    const texts = (wrapper: ReturnType<typeof mount>) => wrapper.findAll('.room-menu .button').map((b) => b.text());
+    const lobby = await opened('lobby');
+    expect(texts(lobby)).not.toContain('Invite friends');
+    lobby.unmount();
+    const game = await opened('playing');
+    expect(texts(game)).toContain('Invite friends');
+    game.unmount();
+    // While a match is on, the waiting room has the start bar; once the match is over, its
+    // ranking stands there instead, and the menu has the invitation.
+    const match = { id: 'm1', status: 'on', standings: [] } as unknown as RoomView['match'];
+    const playing = await opened('lobby', match);
+    expect(texts(playing)).not.toContain('Invite friends');
+    playing.unmount();
+    const over = await opened('lobby', { ...match, status: 'finished' } as unknown as RoomView['match']);
+    expect(texts(over)).toContain('Invite friends');
+    over.unmount();
+    account.summary = null;
   });
 });

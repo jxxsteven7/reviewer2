@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
-import { mount } from '@vue/test-utils';
-import { describe, expect, test } from 'vitest';
-import { h, nextTick } from 'vue';
+import { mount, RouterLinkStub } from '@vue/test-utils';
+import { describe, expect, test, vi } from 'vitest';
+import { defineComponent, h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
+import { provideOpenPlayer } from '../playerPanel';
+import AvatarButton from './AvatarButton.vue';
+import BackButton from './BackButton.vue';
 import FieldPicker from './FieldPicker.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
@@ -15,7 +18,7 @@ const global = () => ({ plugins: [i18n()] });
 describe('PlayerName', () => {
   test('marks the viewer, the chair and offline players', () => {
     const wrapper = mount(PlayerName, {
-      props: { player: { id: 'a', name: 'Ann', online: false }, me: true, chair: true, manageable: false },
+      props: { player: { id: 'a', name: 'Ann', online: false }, me: true, chair: true },
       global: global(),
     });
     expect(wrapper.text()).toContain('Ann');
@@ -25,14 +28,24 @@ describe('PlayerName', () => {
     expect(wrapper.find('button').exists()).toBe(false);
   });
 
-  test('is a button for the chair, which reports the player', async () => {
+  test("opens the player's panel from the avatar in a room, and leaves the name as text", async () => {
+    const opened: string[] = [];
+    const room = defineComponent({
+      setup(_, { slots }) {
+        provideOpenPlayer((id) => opened.push(id));
+        return () => slots.default?.();
+      },
+    });
     const player = { id: 'b', name: 'Bob', online: true };
-    const wrapper = mount(PlayerName, {
-      props: { player, me: false, chair: false, manageable: true },
+    const wrapper = mount(room, {
+      slots: { default: () => h(PlayerName, { player, me: false, chair: false }) },
       global: global(),
     });
-    await wrapper.find('button').trigger('click');
-    expect(wrapper.emitted('manage')).toEqual([[player]]);
+    const button = wrapper.get('button.avatar-button');
+    expect(button.attributes('aria-label')).toBe("View Bob's profile");
+    expect(wrapper.get('.name').element.tagName).toBe('SPAN');
+    await button.trigger('click');
+    expect(opened).toEqual(['b']);
   });
 
   test('shows the academic rank of a player with an account, and none for a guest', () => {
@@ -41,13 +54,12 @@ describe('PlayerName', () => {
         player: { id: 'a', name: 'Ann', online: true, rank: 'phd' as const },
         me: false,
         chair: false,
-        manageable: false,
       },
       global: global(),
     });
     expect(ranked.find('.rank').text()).toBe('PhD student');
     const guest = mount(PlayerName, {
-      props: { player: { id: 'b', name: 'Bob', online: true }, me: false, chair: false, manageable: false },
+      props: { player: { id: 'b', name: 'Bob', online: true }, me: false, chair: false },
       global: global(),
     });
     expect(guest.find('.rank').exists()).toBe(false);
@@ -59,7 +71,6 @@ describe('PlayerName', () => {
         player: { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' as const },
         me: false,
         chair: false,
-        manageable: false,
       },
       global: global(),
     });
@@ -72,7 +83,6 @@ describe('PlayerName', () => {
         player: { id: 'a', name: 'Ann', online: false, takenOver: true as const },
         me: false,
         chair: false,
-        manageable: false,
       },
       global: global(),
     });
@@ -122,6 +132,39 @@ describe('PlayerAvatar', () => {
   });
 });
 
+describe('AvatarButton', () => {
+  test('is the avatar alone where the page opens no panel, as on a big screen', () => {
+    const wrapper = mount(AvatarButton, { props: { playerId: 'b', name: 'Bob' }, global: global() });
+    expect(wrapper.find('button').exists()).toBe(false);
+    expect(wrapper.get('.avatar').attributes('aria-hidden')).toBe('true');
+  });
+
+  test("leads to a player's page outside a room", () => {
+    const wrapper = mount(AvatarButton, {
+      props: { to: '/p/abc', name: 'Bob' },
+      global: { ...global(), stubs: { RouterLink: RouterLinkStub } },
+    });
+    expect(wrapper.getComponent(RouterLinkStub).props('to')).toBe('/p/abc');
+    expect(wrapper.getComponent(RouterLinkStub).attributes('aria-label')).toBe("View Bob's profile");
+  });
+});
+
+describe('BackButton', () => {
+  test('goes back to the page before on the site, and is not there for the first page of a visit', async () => {
+    window.history.replaceState({ back: '/room/K7QX' }, '');
+    const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+    const wrapper = mount(BackButton, { global: global() });
+    expect(wrapper.get('button').attributes('aria-label')).toBe('Go back');
+    await wrapper.get('button').trigger('click');
+    expect(back).toHaveBeenCalledTimes(1);
+    back.mockRestore();
+    window.history.replaceState({ back: null }, '');
+    expect(mount(BackButton, { global: global() }).find('button').exists()).toBe(false);
+    window.history.replaceState(null, '');
+    expect(mount(BackButton, { global: global() }).find('button').exists()).toBe(false);
+  });
+});
+
 describe('UiSheet', () => {
   // A sheet on the page's body, with three buttons in it, named by a prefix.
   function sheet(title: string, open = false) {
@@ -154,7 +197,7 @@ describe('UiSheet', () => {
     expect(active()).toBe('b1');
     focus('b3');
     press('Tab');
-    expect(active()).toBe('close');
+    expect(active()).toBe('round close');
     press('Tab', true);
     expect(active()).toBe('b3');
     // Once the one on top has gone, the one below takes the keys again.
@@ -163,6 +206,21 @@ describe('UiSheet', () => {
     expect(under.emitted('close')).toHaveLength(1);
     under.unmount();
     over.unmount();
+  });
+
+  test('has a round button back before its title when it leads back to another', async () => {
+    const wrapper = mount(UiSheet, {
+      props: { open: true, title: 'Page', back: 'Back', tall: true },
+      global: global(),
+      attachTo: document.body,
+    });
+    const back = document.querySelector<HTMLButtonElement>('[role=dialog] button.back');
+    expect(back?.getAttribute('aria-label')).toBe('Back');
+    expect(document.querySelector('[role=dialog]')?.classList).toContain('tall');
+    back?.click();
+    expect(wrapper.emitted('back')).toHaveLength(1);
+    expect(wrapper.emitted('close')).toBeUndefined();
+    wrapper.unmount();
   });
 
   test('takes the keys and the focus when it is created open', async () => {

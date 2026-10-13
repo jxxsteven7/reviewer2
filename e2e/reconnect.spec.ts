@@ -1,15 +1,16 @@
 import { formatCode } from '@reviewer2/shared';
 import {
+  expect,
   gameOf,
   giveClue,
   interpolate,
   revealByKey,
+  seatSaid,
   seatTable,
   snapshotsOf,
   teamOnTurn,
-  TEXT,
-  expect,
   test,
+  TEXT,
 } from './helpers';
 
 // After a refresh, a locked screen, a lost network or a visit to the home page, players come back
@@ -61,9 +62,7 @@ test('a player who opens the home page anew is offered the way back to their sea
   expect(new URL(guesser.url()).pathname).toBe('/');
   await seat.getByRole('link', { name: TEXT.en.home.seats.back }).click();
   await expect(guesser).toHaveURL(new RegExp(`/room/${code}$`));
-  await expect(guesser.locator('.actions .who')).toHaveText(
-    interpolate(TEXT.en.game.you.guesser, { group: TEXT.en.lobby.group[team] }),
-  );
+  await expect(guesser.locator('.role-banner .who')).toHaveText(seatSaid(team));
   await expect(guesser.locator('form.name-form')).toHaveCount(0);
   await giveClue(table.captains[team], 'Hint', 2, 'en');
   await revealByKey(table, team);

@@ -7,11 +7,11 @@ import { Rooms } from './rooms';
 
 // What a room notes in the log of the game it plays (docs/architecture.md#game-records).
 
-function table() {
+function table(game: typeof fakeGame = fakeGame) {
   const clock = { now: 0 };
   const rooms = new Rooms(testWords(), seededRng(3), () => clock.now);
   const created = rooms.create({
-    game: fakeGame,
+    game,
     language: 'en',
     fields: ['general'],
     key: 'key-ann',
@@ -188,6 +188,36 @@ describe('the record of a game', () => {
     expect(record?.ending).toBe('withdrawn');
     expect(record?.outcome).toBeNull();
     expect(record?.log?.entries.at(-1)).toMatchObject({ by: null, type: 'end', data: { ending: 'withdrawn' } });
+  });
+
+  test('keeps what the game says of a change before it, when the chair withdraws the game too', () => {
+    // A game that notes, with the end of the game, how many presses there had been.
+    const noting: typeof fakeGame = {
+      ...fakeGame,
+      logChanges: (before, after) =>
+        after.over && !before.over ? [{ type: 'test:last', data: { presses: after.presses } }] : [],
+    };
+    const finished = table(noting);
+    finished.room.start(0);
+    finished.room.act(finished.ann.id, 'test:press', 'hard');
+    finished.clock.now = 5_000;
+    finished.room.act(finished.ann.id, 'test:finish', undefined);
+    // After the message that brought the change, and before the end.
+    expect(finished.room.record()?.log?.entries.slice(-3)).toMatchObject([
+      { t: 5_000, by: finished.ann.id, type: 'test:finish' },
+      { t: 5_000, by: null, type: 'test:last', data: { presses: 1 } },
+      { t: 5_000, by: null, type: 'end' },
+    ]);
+    const withdrawn = table(noting);
+    withdrawn.room.start(0);
+    withdrawn.room.act(withdrawn.ann.id, 'test:press', 'soft');
+    withdrawn.room.act(withdrawn.ann.id, 'test:press', 'hard');
+    withdrawn.clock.now = 7_000;
+    expect(withdrawn.room.withdraw(withdrawn.room.gameId as string)).toEqual({ ok: true });
+    expect(withdrawn.room.record()?.log?.entries.slice(-2)).toMatchObject([
+      { t: 7_000, by: null, type: 'test:last', data: { presses: 2 } },
+      { t: 7_000, by: null, type: 'end', data: { ending: 'withdrawn' } },
+    ]);
   });
 
   test('is kept of a game cut short when its room closes, which says why', () => {

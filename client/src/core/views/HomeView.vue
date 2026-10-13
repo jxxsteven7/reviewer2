@@ -11,7 +11,8 @@ import SendFeedback from '../components/SendFeedback.vue';
 import SponsorsList from '../components/SponsorsList.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
-import { storedLanguage } from '../i18n';
+import { games } from '../../games';
+import { storedLanguage, useLanguage } from '../i18n';
 import BackToRoom from './BackToRoom.vue';
 import CreateRoom from './CreateRoom.vue';
 import JoinRoom from './JoinRoom.vue';
@@ -33,6 +34,9 @@ import PublicRooms from './PublicRooms.vue';
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const chosen = ref(storedLanguage() !== null);
+// The rules of the first game, beside its name, as a new room in the page's language has them.
+const keywords = games.keywords;
+const language = useLanguage();
 const creating = ref(false);
 const tipping = ref(false);
 
@@ -76,7 +80,16 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <ol>
           <li class="entry">
             <div class="line">
-              <span class="title">{{ t('home.games.keywords.name') }}</span>
+              <span class="title"
+                >{{ t('home.games.keywords.name')
+                }}<component
+                  :is="keywords.Rules"
+                  v-if="keywords"
+                  link
+                  defaults
+                  :settings="keywords.defaultSettings(language)"
+                  :language="language"
+              /></span>
               <UiButton v-if="!creating" variant="red" size="large" @click="creating = true">
                 {{ t('home.newRoom') }}
               </UiButton>
@@ -103,7 +116,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
 
     <footer class="footnotes">
       <UiButton variant="quiet" size="small" @click="tipping = true">
-        <span>
+        <span class="footnote">
           <svg class="icon cola" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 7.5 14 2h4" />
             <path class="cup" d="M6.5 9.5h11l-1.4 11.6a1.6 1.6 0 0 1-1.6 1.4H9.5a1.6 1.6 0 0 1-1.6-1.4Z" />
@@ -114,7 +127,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         </span>
       </UiButton>
       <SendFeedback page="home">
-        <span>
+        <span class="footnote">
           <svg class="icon bulb" viewBox="0 0 24 24" aria-hidden="true">
             <path
               class="glass"
@@ -328,12 +341,13 @@ ol {
 }
 
 /* Every footnote, button or not, is 44 px high with the same room on either side, so the words
-   stand the same distance apart and share a baseline. The row reaches that room past both edges
-   of the column, so the first footnote of every line starts on the column's edge. */
+   stand the same distance apart and on one middle line, the drawings' with them. The row reaches
+   that room past both edges of the column, so the first footnote of every line starts on the
+   column's edge. */
 .footnotes {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0 var(--space-2);
   margin: var(--space-6) calc(-1 * var(--space-2)) 0;
   padding: var(--space-3) 0 max(var(--space-4), env(safe-area-inset-bottom));
@@ -353,11 +367,19 @@ ol {
 }
 
 /* The footnotes' drawings, in ink, in front of their words: a cup of cola with a lid and a bent
-   straw, and a light bulb for ideas. */
+   straw, and a light bulb for ideas. Each stands centered on the line of its words, in either
+   language. */
+.footnote {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
 .icon {
+  display: block;
+  flex: none;
   width: 1.5em;
   height: 1.5em;
-  vertical-align: -0.4em;
   fill: none;
   stroke: var(--ink);
   stroke-linecap: round;

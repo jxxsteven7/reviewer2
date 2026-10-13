@@ -1,22 +1,22 @@
 import {
   closeSheet,
   createRoom,
-  interpolate,
+  expect,
+  isPhone,
   joinByLink,
   newPlayer,
   openGroups,
   openLog,
   playFor,
   roomMenu,
+  seatSaid,
   seatTable,
   sideChannel,
-  TEXT,
-  expect,
-  isPhone,
   test,
+  TEXT,
 } from './helpers';
 
-const guesserIn = (team: 'red' | 'blue') => interpolate(TEXT.en.game.you.guesser, { group: TEXT.en.lobby.group[team] });
+const guesserIn = (team: 'red' | 'blue') => seatSaid(team);
 
 test('players who come to play are dealt into the groups evenly, and the shuffle picks the PIs', async ({
   browser,
@@ -47,16 +47,16 @@ test('a latecomer who comes to play gets a seat in the smaller group in the midd
 
   const fay = await newPlayer(browser);
   await joinByLink(fay, table.url, 'Fay', 'en');
-  await expect(fay.locator('.actions .who')).toHaveText(guesserIn('red'));
+  await expect(fay.locator('.role-banner .who')).toHaveText(guesserIn('red'));
   await expect(table.captains.red.locator('.rosters .group.red')).toContainText('Fay');
 
   // A latecomer who comes to watch may still choose either group.
   const gus = await newPlayer(browser);
   await joinByLink(gus, table.url, 'Gus', 'en', { watch: true });
-  await expect(gus.locator('.actions .who')).toHaveText(TEXT.en.game.you.spectator);
+  await expect(gus.locator('.role-banner .who')).toHaveText(seatSaid(null));
   await openGroups(gus);
   await gus.getByRole('button', playFor('blue')).click();
-  await expect(gus.locator('.actions .who')).toHaveText(guesserIn('blue'));
+  await expect(gus.locator('.role-banner .who')).toHaveText(guesserIn('blue'));
 });
 
 test('nobody changes groups in the middle of a game', async ({ browser }) => {
@@ -67,7 +67,7 @@ test('nobody changes groups in the middle of a game', async ({ browser }) => {
   // A student is offered no seat in the other group, also after stepping out to watch.
   await expect(bob.getByRole('button', playFor('blue'))).toHaveCount(0);
   await bob.getByRole('button', { name: TEXT.en.game.watch }).click();
-  await expect(bob.locator('.actions .who')).toHaveText(TEXT.en.game.you.spectator);
+  await expect(bob.locator('.role-banner .who')).toHaveText(seatSaid(null));
   await expect(table.captains.red.locator('.rosters .spectators')).toContainText('Bob');
   await expect(bob.getByRole('button', playFor('red'))).toBeVisible();
   await expect(bob.getByRole('button', playFor('blue'))).toHaveCount(0);
@@ -79,7 +79,7 @@ test('nobody changes groups in the middle of a game', async ({ browser }) => {
   });
   await bob.getByRole('button', playFor('red')).click();
   // Back in the red group, on his own page and on the PI's.
-  await expect(bob.locator('.actions .who')).toHaveText(guesserIn('red'));
+  await expect(bob.locator('.role-banner .who')).toHaveText(guesserIn('red'));
   await expect(table.captains.red.locator('.rosters .spectators')).not.toContainText('Bob');
   await expect(table.captains.red.locator('.rosters .group.red')).toContainText('Bob');
 });
@@ -105,7 +105,7 @@ test('an empty PI seat can be taken over, and its new PI sees the key and stays 
   // Ann comes back with the same browser, to play. Having seen the key, she can't play as a
   // student, and the server leaves her watching.
   await joinByLink(ann, table.url, 'Ann', 'en');
-  await expect(ann.locator('.actions .who')).toHaveText(TEXT.en.game.you.spectator);
+  await expect(ann.locator('.role-banner .who')).toHaveText(seatSaid(null));
   await expect(ann.locator('.keywords-game')).toBeVisible();
   await openGroups(ann);
   for (const team of ['red', 'blue'] as const) await expect(ann.getByRole('button', playFor(team))).toHaveCount(0);
@@ -140,6 +140,6 @@ test('on a phone, the groups and the clue log open as sheets from the bar under 
   // on the PI's.
   await openGroups(table.spectator);
   await table.spectator.getByRole('button', playFor('blue')).click();
-  await expect(table.spectator.locator('.actions .who')).toHaveText(guesserIn('blue'));
+  await expect(table.spectator.locator('.role-banner .who')).toHaveText(guesserIn('blue'));
   await expect((await openGroups(table.captains.blue)).locator('.group.blue')).toContainText('Eve');
 });

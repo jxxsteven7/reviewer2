@@ -2,7 +2,7 @@
 import { HANDLE } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { RouterLink } from 'vue-router';
+import BackButton from '../components/BackButton.vue';
 import AccountEntry from '../components/AccountEntry.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
@@ -21,7 +21,7 @@ const valid = computed(() => HANDLE.test(props.handle));
   <div class="page player-page">
     <PageMasthead><AccountEntry /><LanguageSwitch /></PageMasthead>
     <main>
-      <RouterLink to="/" class="back">{{ t('account.back') }}</RouterLink>
+      <BackButton />
       <section class="card">
         <h1>{{ t('playerPage.title') }}</h1>
         <ProfileCard v-if="valid" :handle="handle" />
@@ -34,13 +34,6 @@ const valid = computed(() => HANDLE.test(props.handle));
 <style scoped>
 main {
   padding: var(--space-3) 0 var(--space-7);
-}
-
-.back {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-size: var(--text-sm);
 }
 
 .card {

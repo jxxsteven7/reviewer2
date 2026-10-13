@@ -7,8 +7,8 @@ import { errorKey } from '../errors';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
 
-// The page of an AI player (docs/architecture.md#ai-players), in the sheet that a room's player
-// menu opens: player number 0, how many of it are in the rooms right now, and what it has done in
+// The page of an AI player (docs/architecture.md#ai-players), in the panel that a tap on its
+// avatar opens in a room: player number 0, how many of it are in the rooms right now, and what it has done in
 // the games that finished, as counts; and, for an account, what the viewer has played with it,
 // which nobody else is sent.
 const props = defineProps<{ persona: AgentPersona }>();

@@ -166,12 +166,38 @@ export const endGame = (seating: Seating): Seating => ({
 // while enough others are there. Spectators keep their seats, and so do the AI players in `kept`
 // (docs/games/keywords.md#ai-players): a group whose PI is an AI keeps it, and the others are dealt
 // around them, so that the groups are as even as they can be with them.
+//
+// A deal that puts the same people together as before, whatever the colors and the roles, is dealt
+// again once, and the second deal stands, whatever it is. Four players can be split three ways, so
+// a single deal would keep the groups one time in three; dealing again makes it one in nine, and
+// one in a hundred for five or six players, while every deal stays possible. A match that draws its
+// groups as each game starts does the same against the groups of the game before.
 export function shuffleGroups(
   seating: Seating,
   rng: Rng,
   online: ReadonlySet<string>,
   kept: ReadonlySet<string> = new Set(),
 ): Seating {
+  const dealt = dealGroups(seating, rng, online, kept);
+  return sameGroups(dealt, seating) ? dealGroups(seating, rng, online, kept) : dealt;
+}
+
+// Who sits with whom: each group as its players, whatever its color and whoever is its captain.
+function groupsOf(seating: Seating): string {
+  const groups = TEAMS.map((team) =>
+    JSON.stringify(
+      [...seating.seats]
+        .filter(([, seat]) => seat.team === team)
+        .map(([id]) => id)
+        .sort(),
+    ),
+  );
+  return JSON.stringify(groups.sort());
+}
+
+const sameGroups = (a: Seating, b: Seating) => groupsOf(a) === groupsOf(b);
+
+function dealGroups(seating: Seating, rng: Rng, online: ReadonlySet<string>, kept: ReadonlySet<string>): Seating {
   const seated = [...seating.seats]
     .filter(([id, seat]) => seat.role !== 'spectator' && !kept.has(id))
     .map(([id]) => id);
