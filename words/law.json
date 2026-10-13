@@ -1413,6 +1413,829 @@
       "id": "high-seas",
       "zh": "公海",
       "en": "High seas"
+    },
+    {
+      "id": "legal-capacity",
+      "zh": "行为能力",
+      "en": "Legal capacity"
+    },
+    {
+      "id": "juristic-act",
+      "zh": "法律行为",
+      "en": "Juristic act"
+    },
+    {
+      "id": "estoppel",
+      "zh": "禁反言",
+      "en": "Estoppel"
+    },
+    {
+      "id": "consideration",
+      "zh": "对价",
+      "en": "Consideration"
+    },
+    {
+      "id": "duty-of-care",
+      "zh": "注意义务",
+      "en": "Duty of care"
+    },
+    {
+      "id": "causation",
+      "zh": "因果关系",
+      "en": "Causation"
+    },
+    {
+      "id": "nuisance",
+      "zh": "妨害",
+      "en": "Nuisance"
+    },
+    {
+      "id": "trespass",
+      "zh": "非法侵入",
+      "en": "Trespass",
+      "forms": { "en": ["trespasser"] }
+    },
+    {
+      "id": "deed",
+      "zh": "契据",
+      "en": "Deed"
+    },
+    {
+      "id": "land-use-right",
+      "zh": "土地使用权",
+      "en": "Land use right"
+    },
+    {
+      "id": "expropriation",
+      "zh": "征收",
+      "en": "Expropriation",
+      "forms": { "en": ["expropriate"] }
+    },
+    {
+      "id": "heir",
+      "zh": "继承人",
+      "en": "Heir",
+      "forms": { "en": ["heiress"] }
+    },
+    {
+      "id": "testator",
+      "zh": "立遗嘱人",
+      "en": "Testator"
+    },
+    {
+      "id": "forced-share",
+      "zh": "特留份",
+      "en": "Forced share"
+    },
+    {
+      "id": "estate-tax",
+      "zh": "遗产税",
+      "en": "Estate tax"
+    },
+    {
+      "id": "cohabitation",
+      "zh": "同居",
+      "en": "Cohabitation",
+      "forms": { "en": ["cohabit"] }
+    },
+    {
+      "id": "paternity-test",
+      "zh": "亲子鉴定",
+      "en": "Paternity test"
+    },
+    {
+      "id": "next-of-kin",
+      "zh": "近亲属",
+      "en": "Next of kin"
+    },
+    {
+      "id": "domicile",
+      "zh": "住所",
+      "en": "Domicile"
+    },
+    {
+      "id": "spouse",
+      "zh": "配偶",
+      "en": "Spouse",
+      "forms": { "en": ["spousal"] }
+    },
+    {
+      "id": "foster-care",
+      "zh": "寄养",
+      "en": "Foster care"
+    },
+    {
+      "id": "visitation",
+      "zh": "探视权",
+      "en": "Visitation"
+    },
+    {
+      "id": "family-law",
+      "zh": "婚姻家庭法",
+      "en": "Family law"
+    },
+    {
+      "id": "probate",
+      "zh": "遗嘱认证",
+      "en": "Probate"
+    },
+    {
+      "id": "assignment",
+      "zh": "转让",
+      "en": "Assignment",
+      "forms": { "en": ["assign"] }
+    },
+    {
+      "id": "set-off",
+      "zh": "抵销",
+      "en": "Set-off"
+    },
+    {
+      "id": "subrogation",
+      "zh": "代位权",
+      "en": "Subrogation"
+    },
+    {
+      "id": "standard-terms",
+      "zh": "格式条款",
+      "en": "Standard terms"
+    },
+    {
+      "id": "privity",
+      "zh": "合同相对性",
+      "en": "Privity"
+    },
+    {
+      "id": "claim-right",
+      "zh": "请求权",
+      "en": "Claim right"
+    },
+    {
+      "id": "bailment",
+      "zh": "保管",
+      "en": "Bailment",
+      "forms": { "en": ["bailee", "bailor"] }
+    },
+    {
+      "id": "image-rights",
+      "zh": "肖像权",
+      "en": "Image rights"
+    },
+    {
+      "id": "malpractice",
+      "zh": "医疗事故",
+      "en": "Malpractice"
+    },
+    {
+      "id": "remedy",
+      "zh": "救济",
+      "en": "Remedy"
+    },
+    {
+      "id": "dispute",
+      "zh": "纠纷",
+      "en": "Dispute"
+    },
+    {
+      "id": "pre-emption",
+      "zh": "优先购买权",
+      "en": "Pre-emption"
+    },
+    {
+      "id": "chattel",
+      "zh": "动产",
+      "en": "Chattel"
+    },
+    {
+      "id": "supervisor",
+      "zh": "监事",
+      "en": "Supervisor"
+    },
+    {
+      "id": "bylaws",
+      "zh": "章程",
+      "en": "Bylaws"
+    },
+    {
+      "id": "corporate-veil",
+      "zh": "公司面纱",
+      "en": "Corporate veil"
+    },
+    {
+      "id": "fiduciary-duty",
+      "zh": "信义义务",
+      "en": "Fiduciary duty",
+      "forms": { "en": ["fiduciary"] }
+    },
+    {
+      "id": "merger",
+      "zh": "兼并",
+      "en": "Merger",
+      "forms": { "en": ["merge"] }
+    },
+    {
+      "id": "reorganization",
+      "zh": "破产重整",
+      "en": "Reorganization",
+      "forms": { "en": ["reorganisation"] }
+    },
+    {
+      "id": "quorum",
+      "zh": "法定人数",
+      "en": "Quorum"
+    },
+    {
+      "id": "incorporation",
+      "zh": "公司设立",
+      "en": "Incorporation",
+      "forms": { "en": ["incorporate"] }
+    },
+    {
+      "id": "voting-rights",
+      "zh": "表决权",
+      "en": "Voting rights"
+    },
+    {
+      "id": "tender-offer",
+      "zh": "要约收购",
+      "en": "Tender offer"
+    },
+    {
+      "id": "prospectus",
+      "zh": "招股书",
+      "en": "Prospectus"
+    },
+    {
+      "id": "disclosure",
+      "zh": "信息披露",
+      "en": "Disclosure",
+      "forms": { "en": ["disclose"] }
+    },
+    {
+      "id": "securities-law",
+      "zh": "证券法",
+      "en": "Securities law"
+    },
+    {
+      "id": "insurance-law",
+      "zh": "保险法",
+      "en": "Insurance law"
+    },
+    {
+      "id": "policyholder",
+      "zh": "投保人",
+      "en": "Policyholder"
+    },
+    {
+      "id": "salvage",
+      "zh": "海难救助",
+      "en": "Salvage"
+    },
+    {
+      "id": "prior-art",
+      "zh": "现有技术",
+      "en": "Prior art"
+    },
+    {
+      "id": "inventive-step",
+      "zh": "创造性",
+      "en": "Inventive step"
+    },
+    {
+      "id": "utility-model",
+      "zh": "实用新型",
+      "en": "Utility model"
+    },
+    {
+      "id": "know-how",
+      "zh": "专有技术",
+      "en": "Know-how"
+    },
+    {
+      "id": "moral-rights",
+      "zh": "著作人身权",
+      "en": "Moral rights"
+    },
+    {
+      "id": "related-rights",
+      "zh": "邻接权",
+      "en": "Related rights"
+    },
+    {
+      "id": "patent-troll",
+      "zh": "专利流氓",
+      "en": "Patent troll"
+    },
+    {
+      "id": "passing-off",
+      "zh": "仿冒",
+      "en": "Passing off"
+    },
+    {
+      "id": "orphan-work",
+      "zh": "孤儿作品",
+      "en": "Orphan work"
+    },
+    {
+      "id": "mens-rea",
+      "zh": "犯罪意图",
+      "en": "Mens rea"
+    },
+    {
+      "id": "abetting",
+      "zh": "教唆",
+      "en": "Abetting",
+      "forms": { "en": ["abet", "abettor"] }
+    },
+    {
+      "id": "murder",
+      "zh": "谋杀",
+      "en": "Murder",
+      "forms": { "en": ["murderer"] }
+    },
+    {
+      "id": "hijacking",
+      "zh": "劫持",
+      "en": "Hijacking",
+      "forms": { "en": ["hijack", "hijacker"] }
+    },
+    {
+      "id": "contraband",
+      "zh": "违禁品",
+      "en": "Contraband"
+    },
+    {
+      "id": "harboring",
+      "zh": "窝藏",
+      "en": "Harboring",
+      "forms": { "en": ["harbouring", "harbor", "harbour"] }
+    },
+    {
+      "id": "obstruction",
+      "zh": "妨碍司法",
+      "en": "Obstruction",
+      "forms": { "en": ["obstruct"] }
+    },
+    {
+      "id": "modus-operandi",
+      "zh": "作案手法",
+      "en": "Modus operandi"
+    },
+    {
+      "id": "punishment",
+      "zh": "刑罚",
+      "en": "Punishment",
+      "forms": { "en": ["punish"] }
+    },
+    {
+      "id": "life-sentence",
+      "zh": "无期徒刑",
+      "en": "Life sentence"
+    },
+    {
+      "id": "confiscation",
+      "zh": "没收",
+      "en": "Confiscation",
+      "forms": { "en": ["confiscate"] }
+    },
+    {
+      "id": "wiretap",
+      "zh": "窃听",
+      "en": "Wiretap",
+      "forms": { "en": ["wiretapping"] }
+    },
+    {
+      "id": "entrapment",
+      "zh": "诱惑侦查",
+      "en": "Entrapment",
+      "forms": { "en": ["entrap"] }
+    },
+    {
+      "id": "stalking",
+      "zh": "跟踪骚扰",
+      "en": "Stalking",
+      "forms": { "en": ["stalker"] }
+    },
+    {
+      "id": "identity-theft",
+      "zh": "身份盗用",
+      "en": "Identity theft"
+    },
+    {
+      "id": "premeditation",
+      "zh": "预谋",
+      "en": "Premeditation",
+      "forms": { "en": ["premeditated"] }
+    },
+    {
+      "id": "ringleader",
+      "zh": "首要分子",
+      "en": "Ringleader"
+    },
+    {
+      "id": "warden",
+      "zh": "典狱长",
+      "en": "Warden"
+    },
+    {
+      "id": "ankle-monitor",
+      "zh": "电子脚镣",
+      "en": "Ankle monitor"
+    },
+    {
+      "id": "investigation",
+      "zh": "侦查",
+      "en": "Investigation",
+      "forms": { "en": ["investigate", "investigator"] }
+    },
+    {
+      "id": "affidavit",
+      "zh": "宣誓书",
+      "en": "Affidavit"
+    },
+    {
+      "id": "summons",
+      "zh": "传唤",
+      "en": "Summons"
+    },
+    {
+      "id": "counterclaim",
+      "zh": "反诉",
+      "en": "Counterclaim"
+    },
+    {
+      "id": "standing",
+      "zh": "原告资格",
+      "en": "Standing"
+    },
+    {
+      "id": "res-judicata",
+      "zh": "既判力",
+      "en": "Res judicata"
+    },
+    {
+      "id": "precedent",
+      "zh": "判例",
+      "en": "Precedent"
+    },
+    {
+      "id": "stare-decisis",
+      "zh": "遵循先例",
+      "en": "Stare decisis"
+    },
+    {
+      "id": "obiter-dictum",
+      "zh": "附带意见",
+      "en": "Obiter dictum",
+      "forms": { "en": ["obiter dicta"] }
+    },
+    {
+      "id": "dissent",
+      "zh": "反对意见",
+      "en": "Dissent",
+      "forms": { "en": ["dissenting"] }
+    },
+    {
+      "id": "small-claims",
+      "zh": "小额诉讼",
+      "en": "Small claims"
+    },
+    {
+      "id": "first-instance",
+      "zh": "一审",
+      "en": "First instance"
+    },
+    {
+      "id": "remand",
+      "zh": "发回重审",
+      "en": "Remand"
+    },
+    {
+      "id": "writ",
+      "zh": "令状",
+      "en": "Writ"
+    },
+    {
+      "id": "certiorari",
+      "zh": "调卷令",
+      "en": "Certiorari"
+    },
+    {
+      "id": "arbitral-award",
+      "zh": "仲裁裁决",
+      "en": "Arbitral award"
+    },
+    {
+      "id": "court-fees",
+      "zh": "诉讼费",
+      "en": "Court fees"
+    },
+    {
+      "id": "admissibility",
+      "zh": "可采性",
+      "en": "Admissibility",
+      "forms": { "en": ["admissible"] }
+    },
+    {
+      "id": "corroboration",
+      "zh": "补强证据",
+      "en": "Corroboration",
+      "forms": { "en": ["corroborate"] }
+    },
+    {
+      "id": "smoking-gun",
+      "zh": "确凿证据",
+      "en": "Smoking gun"
+    },
+    {
+      "id": "arraignment",
+      "zh": "传讯",
+      "en": "Arraignment",
+      "forms": { "en": ["arraign"] }
+    },
+    {
+      "id": "mistrial",
+      "zh": "无效审判",
+      "en": "Mistrial"
+    },
+    {
+      "id": "grand-jury",
+      "zh": "大陪审团",
+      "en": "Grand jury"
+    },
+    {
+      "id": "ruling",
+      "zh": "裁定",
+      "en": "Ruling"
+    },
+    {
+      "id": "juvenile-court",
+      "zh": "少年法庭",
+      "en": "Juvenile court"
+    },
+    {
+      "id": "habeas-corpus",
+      "zh": "人身保护令",
+      "en": "Habeas corpus"
+    },
+    {
+      "id": "miranda-rights",
+      "zh": "米兰达规则",
+      "en": "Miranda rights"
+    },
+    {
+      "id": "legal-norm",
+      "zh": "法律规范",
+      "en": "Legal norm"
+    },
+    {
+      "id": "positive-law",
+      "zh": "实在法",
+      "en": "Positive law"
+    },
+    {
+      "id": "soft-law",
+      "zh": "软法",
+      "en": "Soft law"
+    },
+    {
+      "id": "lex-specialis",
+      "zh": "特别法",
+      "en": "Lex specialis"
+    },
+    {
+      "id": "grundnorm",
+      "zh": "基础规范",
+      "en": "Grundnorm"
+    },
+    {
+      "id": "subsumption",
+      "zh": "涵摄",
+      "en": "Subsumption"
+    },
+    {
+      "id": "hard-case",
+      "zh": "疑难案件",
+      "en": "Hard case"
+    },
+    {
+      "id": "sources-of-law",
+      "zh": "法律渊源",
+      "en": "Sources of law"
+    },
+    {
+      "id": "legal-subject",
+      "zh": "法律主体",
+      "en": "Legal subject"
+    },
+    {
+      "id": "legal-relation",
+      "zh": "法律关系",
+      "en": "Legal relation"
+    },
+    {
+      "id": "commentary",
+      "zh": "评注",
+      "en": "Commentary"
+    },
+    {
+      "id": "restatement",
+      "zh": "法律重述",
+      "en": "Restatement"
+    },
+    {
+      "id": "doctrine",
+      "zh": "学说",
+      "en": "Doctrine",
+      "forms": { "en": ["doctrinal"] }
+    },
+    {
+      "id": "gazette",
+      "zh": "公报",
+      "en": "Gazette"
+    },
+    {
+      "id": "law-report",
+      "zh": "判例汇编",
+      "en": "Law report"
+    },
+    {
+      "id": "living-law",
+      "zh": "活法",
+      "en": "Living law"
+    },
+    {
+      "id": "public-law",
+      "zh": "公法",
+      "en": "Public law"
+    },
+    {
+      "id": "private-law",
+      "zh": "私法",
+      "en": "Private law"
+    },
+    {
+      "id": "space-law",
+      "zh": "空间法",
+      "en": "Space law"
+    },
+    {
+      "id": "canon-law",
+      "zh": "教会法",
+      "en": "Canon law"
+    },
+    {
+      "id": "bgb",
+      "zh": "德国民法典",
+      "en": "BGB",
+      "forms": { "en": ["Bürgerliches Gesetzbuch"] }
+    },
+    {
+      "id": "xiezhi",
+      "zh": "獬豸",
+      "en": "Xiezhi"
+    },
+    {
+      "id": "jus-cogens",
+      "zh": "强行法",
+      "en": "Jus cogens"
+    },
+    {
+      "id": "reservation",
+      "zh": "保留",
+      "en": "Reservation"
+    },
+    {
+      "id": "signatory",
+      "zh": "签署国",
+      "en": "Signatory"
+    },
+    {
+      "id": "comity",
+      "zh": "国际礼让",
+      "en": "Comity"
+    },
+    {
+      "id": "renvoi",
+      "zh": "反致",
+      "en": "Renvoi"
+    },
+    {
+      "id": "choice-of-law",
+      "zh": "法律选择",
+      "en": "Choice of law"
+    },
+    {
+      "id": "apostille",
+      "zh": "海牙认证",
+      "en": "Apostille"
+    },
+    {
+      "id": "diplomatic-bag",
+      "zh": "外交邮袋",
+      "en": "Diplomatic bag"
+    },
+    {
+      "id": "forum-shopping",
+      "zh": "挑选法院",
+      "en": "Forum shopping"
+    },
+    {
+      "id": "flag-state",
+      "zh": "船旗国",
+      "en": "Flag state"
+    },
+    {
+      "id": "jd",
+      "zh": "法律博士",
+      "en": "JD",
+      "forms": { "en": ["Juris Doctor"] }
+    },
+    {
+      "id": "paralegal",
+      "zh": "律师助理",
+      "en": "Paralegal"
+    },
+    {
+      "id": "barrister",
+      "zh": "出庭律师",
+      "en": "Barrister"
+    },
+    {
+      "id": "solicitor",
+      "zh": "事务律师",
+      "en": "Solicitor"
+    },
+    {
+      "id": "law-clerk",
+      "zh": "法官助理",
+      "en": "Law clerk"
+    },
+    {
+      "id": "legal-clinic",
+      "zh": "法律诊所",
+      "en": "Legal clinic"
+    },
+    {
+      "id": "billable-hour",
+      "zh": "计费工时",
+      "en": "Billable hour"
+    },
+    {
+      "id": "tribunal",
+      "zh": "法庭",
+      "en": "Tribunal"
+    },
+    {
+      "id": "ultra-vires",
+      "zh": "越权",
+      "en": "Ultra vires"
+    },
+    {
+      "id": "bill",
+      "zh": "法案",
+      "en": "Bill"
+    },
+    {
+      "id": "ne-bis-in-idem",
+      "zh": "一事不再理",
+      "en": "Ne bis in idem"
+    },
+    {
+      "id": "hardship",
+      "zh": "情势变更",
+      "en": "Hardship"
+    },
+    {
+      "id": "joint-crime",
+      "zh": "共同犯罪",
+      "en": "Joint crime"
+    },
+    {
+      "id": "payment-order",
+      "zh": "支付令",
+      "en": "Payment order"
+    },
+    {
+      "id": "safe-harbor",
+      "zh": "避风港",
+      "en": "Safe harbor",
+      "forms": { "en": ["safe harbour"] }
+    },
+    {
+      "id": "state-immunity",
+      "zh": "国家豁免",
+      "en": "State immunity"
+    },
+    {
+      "id": "applicable-law",
+      "zh": "准据法",
+      "en": "Applicable law"
+    },
+    {
+      "id": "demand-letter",
+      "zh": "律师函",
+      "en": "Demand letter"
     }
   ]
 }
