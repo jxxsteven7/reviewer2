@@ -4,7 +4,7 @@ How to run and test the app on your machine. Branches, commits and PRs are in [r
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) 22.22.2 or later, 24.15 or later on Node 24, and not 23 or 25: the test runner doesn't support them. CI uses 24 LTS and 22.22.2.
+- [Node.js](https://nodejs.org) 24.15 or later, and not 25: the test runner doesn't support it. CI uses 24 LTS.
 - npm and Git. The repository is an npm workspace of `shared`, `server`, `client` and `mailer`.
 
 In mainland China, `npm config set registry https://registry.npmmirror.com` is faster.
@@ -29,7 +29,7 @@ Before you push, run `npm run lint`, `npm run typecheck` and `npm test`. After c
 
 ## End-to-end tests
 
-The tests in `e2e/` start the built server and the mailer on free ports and open a browser context per player. They play whole games in both languages, reload pages, cut the network and chat; afterwards every snapshot any page received is checked for colors, chats and choices it must not hold. Script, console and logged server errors fail the test.
+The tests in `e2e/` start the built server and the mailer on free ports and open a browser context per player. They play whole games in both languages, reload pages, cut the network and chat; afterwards every snapshot any page received is checked for colors, chats and choices it must not hold. Script, console and logged server errors fail the test. The tests run side by side, those of one file too, so none may count on another having run.
 
 ```bash
 npx playwright install chromium webkit   # once; on Linux add --with-deps
@@ -115,7 +115,7 @@ DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>         # 
 
 ## Acknowledgments
 
-`ACKNOWLEDGMENTS.md` is the list of thanks, which the home page shows ([architecture.md](architecture.md#lists-of-thanks)). `feedback adopt` and `acknowledgments add` print an entry for it and the section to put it in: replace `<what they did>` with a few words, add the line and open a PR. The sections are `## Helpful discussions`, `## Data` and `## Pilot study`, after the introduction; an entry is one line:
+`ACKNOWLEDGMENTS.md` is the list of thanks, which the home page shows ([architecture.md](architecture.md#lists-of-thanks)). `feedback adopt` and `acknowledgments add` print an entry for it and the section to put it in: replace `<what they did>` with a few words, add the line and open a PR, or, as an admin, commit it to `main` ([maintainers.md](maintainers.md#lists-of-thanks)). The sections are `## Helpful discussions`, `## Data` and `## Pilot study`, after the introduction; an entry is one line:
 
 ```markdown
 - [Alice](https://alice.example) — suggested public rooms (#40)

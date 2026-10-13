@@ -1,0 +1,1578 @@
+{
+  "id": "world-history",
+  "name": {
+    "zh": "世界历史",
+    "en": "World History"
+  },
+  "contributors": ["jxxsteven7"],
+  "terms": [
+    {
+      "id": "mesopotamia",
+      "zh": "两河流域",
+      "en": "Mesopotamia",
+      "forms": { "en": ["mesopotamian"] }
+    },
+    {
+      "id": "sumer",
+      "zh": "苏美尔",
+      "en": "Sumer",
+      "forms": { "en": ["sumerian"] }
+    },
+    {
+      "id": "babylon",
+      "zh": "巴比伦",
+      "en": "Babylon",
+      "forms": { "en": ["babylonian"] }
+    },
+    {
+      "id": "assyria",
+      "zh": "亚述",
+      "en": "Assyria",
+      "forms": { "en": ["assyrian"] }
+    },
+    {
+      "id": "hittites",
+      "zh": "赫梯",
+      "en": "Hittites"
+    },
+    {
+      "id": "phoenicia",
+      "zh": "腓尼基",
+      "en": "Phoenicia",
+      "forms": { "en": ["phoenician"] }
+    },
+    {
+      "id": "carthage",
+      "zh": "迦太基",
+      "en": "Carthage",
+      "forms": { "en": ["carthaginian"] }
+    },
+    {
+      "id": "persia",
+      "zh": "波斯",
+      "en": "Persia",
+      "forms": { "en": ["persian"] }
+    },
+    {
+      "id": "sea-peoples",
+      "zh": "海上民族",
+      "en": "Sea Peoples"
+    },
+    {
+      "id": "ancient-egypt",
+      "zh": "古埃及",
+      "en": "Ancient Egypt"
+    },
+    {
+      "id": "nubia",
+      "zh": "努比亚",
+      "en": "Nubia",
+      "forms": { "en": ["nubian"] }
+    },
+    {
+      "id": "pharaoh",
+      "zh": "法老",
+      "en": "Pharaoh"
+    },
+    {
+      "id": "scribe",
+      "zh": "书吏",
+      "en": "Scribe"
+    },
+    {
+      "id": "ziggurat",
+      "zh": "塔庙",
+      "en": "Ziggurat"
+    },
+    {
+      "id": "eye-of-horus",
+      "zh": "荷鲁斯之眼",
+      "en": "Eye of Horus"
+    },
+    {
+      "id": "lex-talionis",
+      "zh": "同态复仇",
+      "en": "Lex talionis"
+    },
+    {
+      "id": "ancient-greece",
+      "zh": "古希腊",
+      "en": "Ancient Greece"
+    },
+    {
+      "id": "athens",
+      "zh": "雅典",
+      "en": "Athens",
+      "forms": { "en": ["athenian"] }
+    },
+    {
+      "id": "sparta",
+      "zh": "斯巴达",
+      "en": "Sparta",
+      "forms": { "en": ["spartan"] }
+    },
+    {
+      "id": "delphi",
+      "zh": "德尔斐",
+      "en": "Delphi"
+    },
+    {
+      "id": "ostracism",
+      "zh": "陶片放逐法",
+      "en": "Ostracism",
+      "forms": { "en": ["ostracize", "ostracise"] }
+    },
+    {
+      "id": "sortition",
+      "zh": "抽签制",
+      "en": "Sortition"
+    },
+    {
+      "id": "oligarchy",
+      "zh": "寡头政治",
+      "en": "Oligarchy",
+      "forms": { "en": ["oligarch"] }
+    },
+    {
+      "id": "tyrant",
+      "zh": "僭主",
+      "en": "Tyrant",
+      "forms": { "en": ["tyranny"] }
+    },
+    {
+      "id": "monarchy",
+      "zh": "君主制",
+      "en": "Monarchy",
+      "forms": { "en": ["monarch"] }
+    },
+    {
+      "id": "citizen",
+      "zh": "公民",
+      "en": "Citizen",
+      "forms": { "en": ["citizenship"] }
+    },
+    {
+      "id": "orator",
+      "zh": "演说家",
+      "en": "Orator",
+      "forms": { "en": ["oratory"] }
+    },
+    {
+      "id": "sophist",
+      "zh": "智者",
+      "en": "Sophist"
+    },
+    {
+      "id": "symposium",
+      "zh": "会饮",
+      "en": "Symposium"
+    },
+    {
+      "id": "delian-league",
+      "zh": "提洛同盟",
+      "en": "Delian League"
+    },
+    {
+      "id": "thermopylae",
+      "zh": "温泉关",
+      "en": "Thermopylae"
+    },
+    {
+      "id": "hellenism",
+      "zh": "希腊化",
+      "en": "Hellenism",
+      "forms": { "en": ["hellenistic"] }
+    },
+    {
+      "id": "hoplite",
+      "zh": "重装步兵",
+      "en": "Hoplite"
+    },
+    {
+      "id": "phalanx",
+      "zh": "方阵",
+      "en": "Phalanx"
+    },
+    {
+      "id": "laurel-wreath",
+      "zh": "月桂冠",
+      "en": "Laurel wreath"
+    },
+    {
+      "id": "olive-branch",
+      "zh": "橄榄枝",
+      "en": "Olive branch"
+    },
+    {
+      "id": "ancient-rome",
+      "zh": "古罗马",
+      "en": "Ancient Rome"
+    },
+    {
+      "id": "roman-empire",
+      "zh": "罗马帝国",
+      "en": "Roman Empire"
+    },
+    {
+      "id": "senate",
+      "zh": "元老院",
+      "en": "Senate",
+      "forms": { "en": ["senator"] }
+    },
+    {
+      "id": "consul",
+      "zh": "执政官",
+      "en": "Consul",
+      "forms": { "en": ["consular"] }
+    },
+    {
+      "id": "tribune",
+      "zh": "保民官",
+      "en": "Tribune"
+    },
+    {
+      "id": "triumvirate",
+      "zh": "三头同盟",
+      "en": "Triumvirate"
+    },
+    {
+      "id": "twelve-tables",
+      "zh": "十二铜表法",
+      "en": "Twelve Tables"
+    },
+    {
+      "id": "rubicon",
+      "zh": "卢比孔河",
+      "en": "Rubicon"
+    },
+    {
+      "id": "toga",
+      "zh": "托加袍",
+      "en": "Toga"
+    },
+    {
+      "id": "triumphal-arch",
+      "zh": "凯旋门",
+      "en": "Triumphal arch"
+    },
+    {
+      "id": "punic-wars",
+      "zh": "布匿战争",
+      "en": "Punic Wars"
+    },
+    {
+      "id": "legion",
+      "zh": "军团",
+      "en": "Legion",
+      "forms": { "en": ["legionary"] }
+    },
+    {
+      "id": "centurion",
+      "zh": "百夫长",
+      "en": "Centurion"
+    },
+    {
+      "id": "gladiator",
+      "zh": "角斗士",
+      "en": "Gladiator",
+      "forms": { "en": ["gladiatorial"] }
+    },
+    {
+      "id": "chariot",
+      "zh": "战车",
+      "en": "Chariot"
+    },
+    {
+      "id": "etruscans",
+      "zh": "伊特鲁里亚",
+      "en": "Etruscans"
+    },
+    {
+      "id": "celts",
+      "zh": "凯尔特人",
+      "en": "Celts",
+      "forms": { "en": ["celtic"] }
+    },
+    {
+      "id": "druid",
+      "zh": "德鲁伊",
+      "en": "Druid"
+    },
+    {
+      "id": "scythians",
+      "zh": "斯基泰人",
+      "en": "Scythians"
+    },
+    {
+      "id": "franks",
+      "zh": "法兰克人",
+      "en": "Franks",
+      "forms": { "en": ["frankish"] }
+    },
+    {
+      "id": "normans",
+      "zh": "诺曼人",
+      "en": "Normans"
+    },
+    {
+      "id": "vandals",
+      "zh": "汪达尔人",
+      "en": "Vandals",
+      "forms": { "en": ["vandalism"] }
+    },
+    {
+      "id": "carolingian",
+      "zh": "加洛林王朝",
+      "en": "Carolingian"
+    },
+    {
+      "id": "ottoman",
+      "zh": "奥斯曼",
+      "en": "Ottoman"
+    },
+    {
+      "id": "mughal",
+      "zh": "莫卧儿",
+      "en": "Mughal",
+      "forms": { "en": ["mogul"] }
+    },
+    {
+      "id": "aztec",
+      "zh": "阿兹特克",
+      "en": "Aztec"
+    },
+    {
+      "id": "inca",
+      "zh": "印加",
+      "en": "Inca"
+    },
+    {
+      "id": "olmec",
+      "zh": "奥尔梅克",
+      "en": "Olmec"
+    },
+    {
+      "id": "timbuktu",
+      "zh": "廷巴克图",
+      "en": "Timbuktu"
+    },
+    {
+      "id": "swahili",
+      "zh": "斯瓦希里",
+      "en": "Swahili"
+    },
+    {
+      "id": "shogunate",
+      "zh": "幕府",
+      "en": "Shogunate",
+      "forms": { "en": ["shogun"] }
+    },
+    {
+      "id": "daimyo",
+      "zh": "大名",
+      "en": "Daimyo"
+    },
+    {
+      "id": "tsar",
+      "zh": "沙皇",
+      "en": "Tsar",
+      "forms": { "en": ["czar", "tsarist"] }
+    },
+    {
+      "id": "venice",
+      "zh": "威尼斯",
+      "en": "Venice",
+      "forms": { "en": ["venetian"] }
+    },
+    {
+      "id": "hanse",
+      "zh": "汉萨同盟",
+      "en": "Hanse",
+      "forms": { "en": ["hanseatic"] }
+    },
+    {
+      "id": "saga",
+      "zh": "萨迦",
+      "en": "Saga"
+    },
+    {
+      "id": "manor",
+      "zh": "庄园",
+      "en": "Manor",
+      "forms": { "en": ["manorial", "manorialism"] }
+    },
+    {
+      "id": "serf",
+      "zh": "农奴",
+      "en": "Serf",
+      "forms": { "en": ["serfdom"] }
+    },
+    {
+      "id": "lord",
+      "zh": "领主",
+      "en": "Lord"
+    },
+    {
+      "id": "vassal",
+      "zh": "封臣",
+      "en": "Vassal",
+      "forms": { "en": ["vassalage"] }
+    },
+    {
+      "id": "fief",
+      "zh": "采邑",
+      "en": "Fief"
+    },
+    {
+      "id": "chivalry",
+      "zh": "骑士精神",
+      "en": "Chivalry",
+      "forms": { "en": ["chivalrous"] }
+    },
+    {
+      "id": "squire",
+      "zh": "侍从",
+      "en": "Squire"
+    },
+    {
+      "id": "coat-of-arms",
+      "zh": "纹章",
+      "en": "Coat of arms"
+    },
+    {
+      "id": "joust",
+      "zh": "马上比武",
+      "en": "Joust",
+      "forms": { "en": ["jousting"] }
+    },
+    {
+      "id": "castle",
+      "zh": "城堡",
+      "en": "Castle"
+    },
+    {
+      "id": "drawbridge",
+      "zh": "吊桥",
+      "en": "Drawbridge"
+    },
+    {
+      "id": "dungeon",
+      "zh": "地牢",
+      "en": "Dungeon"
+    },
+    {
+      "id": "fortress",
+      "zh": "要塞",
+      "en": "Fortress"
+    },
+    {
+      "id": "guild",
+      "zh": "行会",
+      "en": "Guild"
+    },
+    {
+      "id": "journeyman",
+      "zh": "帮工",
+      "en": "Journeyman"
+    },
+    {
+      "id": "fair",
+      "zh": "集市",
+      "en": "Fair"
+    },
+    {
+      "id": "monastery",
+      "zh": "修道院",
+      "en": "Monastery",
+      "forms": { "en": ["monastic"] }
+    },
+    {
+      "id": "monk",
+      "zh": "修士",
+      "en": "Monk"
+    },
+    {
+      "id": "hermit",
+      "zh": "隐士",
+      "en": "Hermit"
+    },
+    {
+      "id": "scriptorium",
+      "zh": "缮写室",
+      "en": "Scriptorium"
+    },
+    {
+      "id": "codex",
+      "zh": "抄本",
+      "en": "Codex"
+    },
+    {
+      "id": "pilgrimage",
+      "zh": "朝圣",
+      "en": "Pilgrimage",
+      "forms": { "en": ["pilgrim"] }
+    },
+    {
+      "id": "holy-grail",
+      "zh": "圣杯",
+      "en": "Holy Grail"
+    },
+    {
+      "id": "round-table",
+      "zh": "圆桌",
+      "en": "Round table"
+    },
+    {
+      "id": "tithe",
+      "zh": "什一税",
+      "en": "Tithe"
+    },
+    {
+      "id": "scholasticism",
+      "zh": "经院哲学",
+      "en": "Scholasticism",
+      "forms": { "en": ["scholastic"] }
+    },
+    {
+      "id": "troubadour",
+      "zh": "吟游诗人",
+      "en": "Troubadour"
+    },
+    {
+      "id": "domesday-book",
+      "zh": "末日审判书",
+      "en": "Domesday Book"
+    },
+    {
+      "id": "ordeal",
+      "zh": "神明裁判",
+      "en": "Ordeal"
+    },
+    {
+      "id": "plague-doctor",
+      "zh": "鸟嘴医生",
+      "en": "Plague doctor"
+    },
+    {
+      "id": "dark-ages",
+      "zh": "黑暗时代",
+      "en": "Dark Ages"
+    },
+    {
+      "id": "divine-right",
+      "zh": "君权神授",
+      "en": "Divine right"
+    },
+    {
+      "id": "coronation",
+      "zh": "加冕",
+      "en": "Coronation"
+    },
+    {
+      "id": "throne",
+      "zh": "王座",
+      "en": "Throne"
+    },
+    {
+      "id": "scepter",
+      "zh": "权杖",
+      "en": "Scepter",
+      "forms": { "en": ["sceptre"] }
+    },
+    {
+      "id": "regent",
+      "zh": "摄政",
+      "en": "Regent",
+      "forms": { "en": ["regency"] }
+    },
+    {
+      "id": "usurper",
+      "zh": "篡位者",
+      "en": "Usurper",
+      "forms": { "en": ["usurp", "usurpation"] }
+    },
+    {
+      "id": "courtier",
+      "zh": "朝臣",
+      "en": "Courtier"
+    },
+    {
+      "id": "jester",
+      "zh": "弄臣",
+      "en": "Jester"
+    },
+    {
+      "id": "herald",
+      "zh": "传令官",
+      "en": "Herald"
+    },
+    {
+      "id": "envoy",
+      "zh": "使节",
+      "en": "Envoy"
+    },
+    {
+      "id": "duke",
+      "zh": "公爵",
+      "en": "Duke",
+      "forms": { "en": ["duchy", "duchess"] }
+    },
+    {
+      "id": "baron",
+      "zh": "男爵",
+      "en": "Baron",
+      "forms": { "en": ["baroness"] }
+    },
+    {
+      "id": "nobility",
+      "zh": "贵族",
+      "en": "Nobility",
+      "forms": { "en": ["noble", "nobleman"] }
+    },
+    {
+      "id": "yeoman",
+      "zh": "自耕农",
+      "en": "Yeoman"
+    },
+    {
+      "id": "primogeniture",
+      "zh": "长子继承制",
+      "en": "Primogeniture"
+    },
+    {
+      "id": "duel",
+      "zh": "决斗",
+      "en": "Duel",
+      "forms": { "en": ["duelling", "dueling"] }
+    },
+    {
+      "id": "battering-ram",
+      "zh": "攻城锤",
+      "en": "Battering ram"
+    },
+    {
+      "id": "catapult",
+      "zh": "投石机",
+      "en": "Catapult"
+    },
+    {
+      "id": "armor",
+      "zh": "盔甲",
+      "en": "Armor",
+      "forms": { "en": ["armour"] }
+    },
+    {
+      "id": "chain-mail",
+      "zh": "锁子甲",
+      "en": "Chain mail"
+    },
+    {
+      "id": "longbow",
+      "zh": "长弓",
+      "en": "Longbow"
+    },
+    {
+      "id": "musketeer",
+      "zh": "火枪手",
+      "en": "Musketeer"
+    },
+    {
+      "id": "dragoon",
+      "zh": "龙骑兵",
+      "en": "Dragoon"
+    },
+    {
+      "id": "cannon",
+      "zh": "大炮",
+      "en": "Cannon"
+    },
+    {
+      "id": "mercenary",
+      "zh": "雇佣兵",
+      "en": "Mercenary"
+    },
+    {
+      "id": "cavalry",
+      "zh": "骑兵",
+      "en": "Cavalry"
+    },
+    {
+      "id": "infantry",
+      "zh": "步兵",
+      "en": "Infantry"
+    },
+    {
+      "id": "standing-army",
+      "zh": "常备军",
+      "en": "Standing army"
+    },
+    {
+      "id": "war-elephant",
+      "zh": "战象",
+      "en": "War elephant"
+    },
+    {
+      "id": "horse-archer",
+      "zh": "弓骑兵",
+      "en": "Horse archer"
+    },
+    {
+      "id": "greek-fire",
+      "zh": "希腊火",
+      "en": "Greek fire"
+    },
+    {
+      "id": "siege",
+      "zh": "围城",
+      "en": "Siege"
+    },
+    {
+      "id": "longship",
+      "zh": "长船",
+      "en": "Longship"
+    },
+    {
+      "id": "galley",
+      "zh": "桨帆船",
+      "en": "Galley"
+    },
+    {
+      "id": "galleon",
+      "zh": "盖伦帆船",
+      "en": "Galleon"
+    },
+    {
+      "id": "privateer",
+      "zh": "私掠船",
+      "en": "Privateer"
+    },
+    {
+      "id": "pirate",
+      "zh": "海盗",
+      "en": "Pirate",
+      "forms": { "en": ["piracy"] }
+    },
+    {
+      "id": "armada",
+      "zh": "无敌舰队",
+      "en": "Armada"
+    },
+    {
+      "id": "spice-trade",
+      "zh": "香料贸易",
+      "en": "Spice trade"
+    },
+    {
+      "id": "trade-route",
+      "zh": "商路",
+      "en": "Trade route"
+    },
+    {
+      "id": "caravan",
+      "zh": "商队",
+      "en": "Caravan"
+    },
+    {
+      "id": "amber-road",
+      "zh": "琥珀之路",
+      "en": "Amber Road"
+    },
+    {
+      "id": "entrepot",
+      "zh": "转口港",
+      "en": "Entrepôt"
+    },
+    {
+      "id": "trading-post",
+      "zh": "贸易站",
+      "en": "Trading post"
+    },
+    {
+      "id": "fur-trade",
+      "zh": "毛皮贸易",
+      "en": "Fur trade"
+    },
+    {
+      "id": "coinage",
+      "zh": "铸币",
+      "en": "Coinage"
+    },
+    {
+      "id": "drachma",
+      "zh": "德拉克马",
+      "en": "Drachma"
+    },
+    {
+      "id": "cubit",
+      "zh": "腕尺",
+      "en": "Cubit"
+    },
+    {
+      "id": "goldsmith",
+      "zh": "金匠",
+      "en": "Goldsmith"
+    },
+    {
+      "id": "tax-farming",
+      "zh": "包税制",
+      "en": "Tax farming"
+    },
+    {
+      "id": "tribute",
+      "zh": "贡品",
+      "en": "Tribute"
+    },
+    {
+      "id": "ransom",
+      "zh": "赎金",
+      "en": "Ransom"
+    },
+    {
+      "id": "mercantilism",
+      "zh": "重商主义",
+      "en": "Mercantilism",
+      "forms": { "en": ["mercantilist"] }
+    },
+    {
+      "id": "physiocracy",
+      "zh": "重农主义",
+      "en": "Physiocracy",
+      "forms": { "en": ["physiocrat"] }
+    },
+    {
+      "id": "handicraft",
+      "zh": "手工业",
+      "en": "Handicraft"
+    },
+    {
+      "id": "new-world",
+      "zh": "新大陆",
+      "en": "New World"
+    },
+    {
+      "id": "old-world",
+      "zh": "旧大陆",
+      "en": "Old World"
+    },
+    {
+      "id": "explorer",
+      "zh": "探险家",
+      "en": "Explorer"
+    },
+    {
+      "id": "navigator",
+      "zh": "航海家",
+      "en": "Navigator"
+    },
+    {
+      "id": "logbook",
+      "zh": "航海日志",
+      "en": "Logbook"
+    },
+    {
+      "id": "age-of-sail",
+      "zh": "风帆时代",
+      "en": "Age of Sail"
+    },
+    {
+      "id": "scurvy",
+      "zh": "坏血病",
+      "en": "Scurvy"
+    },
+    {
+      "id": "el-dorado",
+      "zh": "黄金国",
+      "en": "El Dorado"
+    },
+    {
+      "id": "gold-rush",
+      "zh": "淘金热",
+      "en": "Gold rush"
+    },
+    {
+      "id": "carriage",
+      "zh": "马车",
+      "en": "Carriage"
+    },
+    {
+      "id": "stagecoach",
+      "zh": "驿马车",
+      "en": "Stagecoach"
+    },
+    {
+      "id": "blacksmith",
+      "zh": "铁匠",
+      "en": "Blacksmith"
+    },
+    {
+      "id": "tavern",
+      "zh": "酒馆",
+      "en": "Tavern"
+    },
+    {
+      "id": "pendulum-clock",
+      "zh": "摆钟",
+      "en": "Pendulum clock"
+    },
+    {
+      "id": "pocket-watch",
+      "zh": "怀表",
+      "en": "Pocket watch"
+    },
+    {
+      "id": "printing-press",
+      "zh": "印刷机",
+      "en": "Printing press"
+    },
+    {
+      "id": "incunabulum",
+      "zh": "摇篮本",
+      "en": "Incunabulum",
+      "forms": { "en": ["incunabula"] }
+    },
+    {
+      "id": "quill",
+      "zh": "羽毛笔",
+      "en": "Quill"
+    },
+    {
+      "id": "sealing-wax",
+      "zh": "火漆",
+      "en": "Sealing wax"
+    },
+    {
+      "id": "wax-tablet",
+      "zh": "蜡板",
+      "en": "Wax tablet"
+    },
+    {
+      "id": "carrier-pigeon",
+      "zh": "信鸽",
+      "en": "Carrier pigeon"
+    },
+    {
+      "id": "trivium",
+      "zh": "三艺",
+      "en": "Trivium"
+    },
+    {
+      "id": "quadrivium",
+      "zh": "四艺",
+      "en": "Quadrivium"
+    },
+    {
+      "id": "humanism",
+      "zh": "人文主义",
+      "en": "Humanism",
+      "forms": { "en": ["humanist"] }
+    },
+    {
+      "id": "polymath",
+      "zh": "博学者",
+      "en": "Polymath"
+    },
+    {
+      "id": "wunderkammer",
+      "zh": "珍奇屋",
+      "en": "Wunderkammer"
+    },
+    {
+      "id": "royal-society",
+      "zh": "皇家学会",
+      "en": "Royal Society"
+    },
+    {
+      "id": "coffeehouse",
+      "zh": "咖啡馆",
+      "en": "Coffeehouse"
+    },
+    {
+      "id": "deism",
+      "zh": "自然神论",
+      "en": "Deism",
+      "forms": { "en": ["deist"] }
+    },
+    {
+      "id": "historicism",
+      "zh": "历史主义",
+      "en": "Historicism",
+      "forms": { "en": ["historicist"] }
+    },
+    {
+      "id": "zeitgeist",
+      "zh": "时代精神",
+      "en": "Zeitgeist"
+    },
+    {
+      "id": "platonism",
+      "zh": "柏拉图主义",
+      "en": "Platonism",
+      "forms": { "en": ["platonic", "platonist"] }
+    },
+    {
+      "id": "humorism",
+      "zh": "体液学说",
+      "en": "Humorism",
+      "forms": { "en": ["humoral"] }
+    },
+    {
+      "id": "bloodletting",
+      "zh": "放血",
+      "en": "Bloodletting"
+    },
+    {
+      "id": "miasma",
+      "zh": "瘴气",
+      "en": "Miasma",
+      "forms": { "en": ["miasmatic"] }
+    },
+    {
+      "id": "alchemy",
+      "zh": "炼金术",
+      "en": "Alchemy",
+      "forms": { "en": ["alchemist", "alchemical"] }
+    },
+    {
+      "id": "flat-earth",
+      "zh": "地平说",
+      "en": "Flat Earth"
+    },
+    {
+      "id": "four-elements",
+      "zh": "四元素",
+      "en": "Four elements"
+    },
+    {
+      "id": "phlogiston",
+      "zh": "燃素",
+      "en": "Phlogiston"
+    },
+    {
+      "id": "vitalism",
+      "zh": "生机论",
+      "en": "Vitalism",
+      "forms": { "en": ["vitalist"] }
+    },
+    {
+      "id": "quack",
+      "zh": "江湖郎中",
+      "en": "Quack",
+      "forms": { "en": ["quackery"] }
+    },
+    {
+      "id": "panacea",
+      "zh": "万灵药",
+      "en": "Panacea"
+    },
+    {
+      "id": "camera-obscura",
+      "zh": "暗箱",
+      "en": "Camera obscura"
+    },
+    {
+      "id": "magic-lantern",
+      "zh": "魔术幻灯",
+      "en": "Magic lantern"
+    },
+    {
+      "id": "age-of-steam",
+      "zh": "蒸汽时代",
+      "en": "Age of steam"
+    },
+    {
+      "id": "spinning-jenny",
+      "zh": "珍妮纺纱机",
+      "en": "Spinning jenny"
+    },
+    {
+      "id": "flying-shuttle",
+      "zh": "飞梭",
+      "en": "Flying shuttle"
+    },
+    {
+      "id": "jacquard-loom",
+      "zh": "雅卡尔织机",
+      "en": "Jacquard loom"
+    },
+    {
+      "id": "factory-system",
+      "zh": "工厂制",
+      "en": "Factory system"
+    },
+    {
+      "id": "enclosure",
+      "zh": "圈地运动",
+      "en": "Enclosure"
+    },
+    {
+      "id": "luddite",
+      "zh": "卢德分子",
+      "en": "Luddite",
+      "forms": { "en": ["luddism"] }
+    },
+    {
+      "id": "workhouse",
+      "zh": "济贫院",
+      "en": "Workhouse"
+    },
+    {
+      "id": "world-s-fair",
+      "zh": "世博会",
+      "en": "World's fair"
+    },
+    {
+      "id": "crystal-palace",
+      "zh": "水晶宫",
+      "en": "Crystal Palace"
+    },
+    {
+      "id": "gaslight",
+      "zh": "煤气灯",
+      "en": "Gaslight"
+    },
+    {
+      "id": "typewriter",
+      "zh": "打字机",
+      "en": "Typewriter"
+    },
+    {
+      "id": "sewing-machine",
+      "zh": "缝纫机",
+      "en": "Sewing machine"
+    },
+    {
+      "id": "standard-time",
+      "zh": "标准时间",
+      "en": "Standard time"
+    },
+    {
+      "id": "daguerreotype",
+      "zh": "银版照相法",
+      "en": "Daguerreotype"
+    },
+    {
+      "id": "steamship",
+      "zh": "蒸汽船",
+      "en": "Steamship"
+    },
+    {
+      "id": "locomotive",
+      "zh": "火车头",
+      "en": "Locomotive"
+    },
+    {
+      "id": "turnpike",
+      "zh": "收费公路",
+      "en": "Turnpike"
+    },
+    {
+      "id": "cowboy",
+      "zh": "牛仔",
+      "en": "Cowboy"
+    },
+    {
+      "id": "postage-stamp",
+      "zh": "邮票",
+      "en": "Postage stamp"
+    },
+    {
+      "id": "grand-tour",
+      "zh": "壮游",
+      "en": "Grand Tour"
+    },
+    {
+      "id": "fin-de-siecle",
+      "zh": "世纪末",
+      "en": "Fin de siècle"
+    },
+    {
+      "id": "historiography",
+      "zh": "史学",
+      "en": "Historiography",
+      "forms": { "en": ["historiographer"] }
+    },
+    {
+      "id": "primary-source",
+      "zh": "一手史料",
+      "en": "Primary source"
+    },
+    {
+      "id": "annales-school",
+      "zh": "年鉴学派",
+      "en": "Annales school"
+    },
+    {
+      "id": "longue-duree",
+      "zh": "长时段",
+      "en": "Longue durée"
+    },
+    {
+      "id": "microhistory",
+      "zh": "微观史",
+      "en": "Microhistory"
+    },
+    {
+      "id": "global-history",
+      "zh": "全球史",
+      "en": "Global history"
+    },
+    {
+      "id": "big-history",
+      "zh": "大历史",
+      "en": "Big History"
+    },
+    {
+      "id": "social-history",
+      "zh": "社会史",
+      "en": "Social history"
+    },
+    {
+      "id": "anachronism",
+      "zh": "时代错置",
+      "en": "Anachronism",
+      "forms": { "en": ["anachronistic"] }
+    },
+    {
+      "id": "whig-history",
+      "zh": "辉格史观",
+      "en": "Whig history"
+    },
+    {
+      "id": "classics",
+      "zh": "古典学",
+      "en": "Classics"
+    },
+    {
+      "id": "axial-age",
+      "zh": "轴心时代",
+      "en": "Axial Age"
+    },
+    {
+      "id": "early-modern",
+      "zh": "近代早期",
+      "en": "Early modern"
+    },
+    {
+      "id": "antiquity",
+      "zh": "古典古代",
+      "en": "Antiquity"
+    },
+    {
+      "id": "golden-age",
+      "zh": "黄金时代",
+      "en": "Golden Age"
+    },
+    {
+      "id": "eurocentrism",
+      "zh": "欧洲中心论",
+      "en": "Eurocentrism",
+      "forms": { "en": ["eurocentric"] }
+    },
+    {
+      "id": "historian",
+      "zh": "历史学家",
+      "en": "Historian"
+    },
+    {
+      "id": "era",
+      "zh": "纪元",
+      "en": "Era"
+    },
+    {
+      "id": "memphis",
+      "zh": "孟菲斯",
+      "en": "Memphis"
+    },
+    {
+      "id": "thebes",
+      "zh": "底比斯",
+      "en": "Thebes"
+    },
+    {
+      "id": "pax-romana",
+      "zh": "罗马和平",
+      "en": "Pax Romana"
+    },
+    {
+      "id": "emperor",
+      "zh": "皇帝",
+      "en": "Emperor"
+    },
+    {
+      "id": "bishop",
+      "zh": "主教",
+      "en": "Bishop"
+    },
+    {
+      "id": "parish",
+      "zh": "教区",
+      "en": "Parish",
+      "forms": { "en": ["parishioner"] }
+    },
+    {
+      "id": "relic",
+      "zh": "圣物",
+      "en": "Relic"
+    },
+    {
+      "id": "nun",
+      "zh": "修女",
+      "en": "Nun"
+    },
+    {
+      "id": "fealty",
+      "zh": "效忠",
+      "en": "Fealty"
+    },
+    {
+      "id": "flintlock",
+      "zh": "燧发枪",
+      "en": "Flintlock"
+    },
+    {
+      "id": "bayonet",
+      "zh": "刺刀",
+      "en": "Bayonet"
+    },
+    {
+      "id": "hourglass",
+      "zh": "沙漏",
+      "en": "Hourglass"
+    },
+    {
+      "id": "memoir",
+      "zh": "回忆录",
+      "en": "Memoir"
+    },
+    {
+      "id": "atomism",
+      "zh": "原子论",
+      "en": "Atomism",
+      "forms": { "en": ["atomist"] }
+    },
+    {
+      "id": "prime-mover",
+      "zh": "第一推动者",
+      "en": "Prime mover"
+    },
+    {
+      "id": "logos",
+      "zh": "逻各斯",
+      "en": "Logos"
+    },
+    {
+      "id": "catastrophism",
+      "zh": "灾变论",
+      "en": "Catastrophism",
+      "forms": { "en": ["catastrophist"] }
+    },
+    {
+      "id": "deep-time",
+      "zh": "深时",
+      "en": "Deep time"
+    },
+    {
+      "id": "shilling",
+      "zh": "先令",
+      "en": "Shilling"
+    },
+    {
+      "id": "sumptuary-law",
+      "zh": "禁奢令",
+      "en": "Sumptuary law"
+    },
+    {
+      "id": "public-history",
+      "zh": "公众史学",
+      "en": "Public history"
+    },
+    {
+      "id": "rangaku",
+      "zh": "兰学",
+      "en": "Rangaku"
+    },
+    {
+      "id": "watchmaker",
+      "zh": "钟表匠",
+      "en": "Watchmaker"
+    },
+    {
+      "id": "masquerade",
+      "zh": "假面舞会",
+      "en": "Masquerade"
+    },
+    {
+      "id": "carnival",
+      "zh": "狂欢节",
+      "en": "Carnival"
+    },
+    {
+      "id": "priest",
+      "zh": "祭司",
+      "en": "Priest",
+      "forms": { "en": ["priesthood"] }
+    },
+    {
+      "id": "temple",
+      "zh": "神庙",
+      "en": "Temple"
+    },
+    {
+      "id": "omen",
+      "zh": "预兆",
+      "en": "Omen"
+    },
+    {
+      "id": "public-baths",
+      "zh": "公共浴场",
+      "en": "Public baths"
+    },
+    {
+      "id": "paladin",
+      "zh": "圣骑士",
+      "en": "Paladin"
+    },
+    {
+      "id": "bestiary",
+      "zh": "动物寓言集",
+      "en": "Bestiary"
+    },
+    {
+      "id": "danse-macabre",
+      "zh": "死亡之舞",
+      "en": "Danse macabre"
+    },
+    {
+      "id": "king",
+      "zh": "国王",
+      "en": "King"
+    },
+    {
+      "id": "palace",
+      "zh": "宫殿",
+      "en": "Palace"
+    },
+    {
+      "id": "etiquette",
+      "zh": "礼仪",
+      "en": "Etiquette"
+    },
+    {
+      "id": "encyclopedists",
+      "zh": "百科全书派",
+      "en": "Encyclopedists"
+    },
+    {
+      "id": "ironclad",
+      "zh": "铁甲舰",
+      "en": "Ironclad"
+    },
+    {
+      "id": "clipper",
+      "zh": "飞剪船",
+      "en": "Clipper"
+    },
+    {
+      "id": "merchant",
+      "zh": "商人",
+      "en": "Merchant"
+    },
+    {
+      "id": "pseudohistory",
+      "zh": "伪历史",
+      "en": "Pseudohistory"
+    },
+    {
+      "id": "hagiography",
+      "zh": "圣徒传",
+      "en": "Hagiography",
+      "forms": { "en": ["hagiographic"] }
+    },
+    {
+      "id": "biography",
+      "zh": "传记",
+      "en": "Biography",
+      "forms": { "en": ["biographer"] }
+    },
+    {
+      "id": "caloric",
+      "zh": "热质",
+      "en": "Caloric"
+    },
+    {
+      "id": "falconry",
+      "zh": "鹰猎",
+      "en": "Falconry",
+      "forms": { "en": ["falconer"] }
+    },
+    {
+      "id": "flanders",
+      "zh": "佛兰德",
+      "en": "Flanders",
+      "forms": { "en": ["flemish"] }
+    },
+    {
+      "id": "samarkand",
+      "zh": "撒马尔罕",
+      "en": "Samarkand"
+    },
+    {
+      "id": "florence",
+      "zh": "佛罗伦萨",
+      "en": "Florence",
+      "forms": { "en": ["florentine"] }
+    },
+    {
+      "id": "tudor",
+      "zh": "都铎王朝",
+      "en": "Tudor"
+    },
+    {
+      "id": "republic",
+      "zh": "共和国",
+      "en": "Republic",
+      "forms": { "en": ["republican"] }
+    },
+    {
+      "id": "testudo",
+      "zh": "龟甲阵",
+      "en": "Testudo"
+    },
+    {
+      "id": "portcullis",
+      "zh": "吊闸",
+      "en": "Portcullis"
+    },
+    {
+      "id": "tunic",
+      "zh": "束腰外衣",
+      "en": "Tunic"
+    },
+    {
+      "id": "monocle",
+      "zh": "单片眼镜",
+      "en": "Monocle"
+    },
+    {
+      "id": "seven-wonders",
+      "zh": "七大奇迹",
+      "en": "Seven Wonders"
+    },
+    {
+      "id": "colossus",
+      "zh": "巨像",
+      "en": "Colossus",
+      "forms": { "en": ["colossal"] }
+    },
+    {
+      "id": "atlantis",
+      "zh": "亚特兰蒂斯",
+      "en": "Atlantis"
+    },
+    {
+      "id": "tax-collector",
+      "zh": "税吏",
+      "en": "Tax collector"
+    }
+  ]
+}

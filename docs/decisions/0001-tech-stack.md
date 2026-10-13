@@ -12,7 +12,7 @@ The brief fixed TypeScript on both sides, a Vue front end, a Node server with So
 | Area | Choice |
 |---|---|
 | Package manager | npm workspaces: `shared`, `server`, `client`, later `mailer` |
-| Node | `^22.22.2 \|\| ^24.15 \|\| >=26`; CI uses 24 LTS. Raised from `^22.13 \|\| ^24` on 2026-10-09, when `npm ci` stopped running below and the server came to use `backup()` from `node:sqlite` |
+| Node | `^24.15 \|\| >=26`; CI uses 24 LTS. Raised from `^22.13 \|\| ^24` to `^22.22.2 \|\| ^24.15 \|\| >=26` on 2026-10-09, when `npm ci` stopped running below and the server came to use `backup()` from `node:sqlite`, and to Node 24 on 2026-10-14, when CI stopped testing on Node 22 |
 | Language | TypeScript `~6.0.3`; vue-tsc for `.vue` files |
 | Front end | Vue 3.5, Vite 8, vue-router 5, vue-i18n 11 with messages compiled at build time |
 | Server | Node's `http`, Socket.IO 4.8, sirv for static files |

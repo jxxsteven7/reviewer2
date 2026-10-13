@@ -18,7 +18,7 @@ await build({
   outExtension: { '.js': '.cjs' },
   bundle: true,
   platform: 'node',
-  target: 'node22',
+  target: 'node24',
   format: 'cjs',
   sourcemap: true,
   // Optional native add-ons that ws uses when they are installed; it works without them.

@@ -755,7 +755,7 @@
       "id": "translation",
       "zh": "翻译",
       "en": "Translation",
-      "forms": { "en": ["translate", "translator"] }
+      "forms": { "en": ["translate", "translational", "translator"] }
     },
     {
       "id": "suspense",
@@ -1705,6 +1705,1172 @@
       "id": "feng-shui",
       "zh": "风水",
       "en": "Feng shui"
+    },
+    {
+      "id": "deontology",
+      "zh": "义务论",
+      "en": "Deontology",
+      "forms": { "en": ["deontological"] }
+    },
+    {
+      "id": "logic",
+      "zh": "逻辑",
+      "en": "Logic",
+      "forms": { "en": ["logical", "logician"] }
+    },
+    {
+      "id": "fallacy",
+      "zh": "谬误",
+      "en": "Fallacy",
+      "forms": { "en": ["fallacious"] }
+    },
+    {
+      "id": "dilemma",
+      "zh": "两难",
+      "en": "Dilemma"
+    },
+    {
+      "id": "tautology",
+      "zh": "同义反复",
+      "en": "Tautology",
+      "forms": { "en": ["tautological"] }
+    },
+    {
+      "id": "straw-man",
+      "zh": "稻草人谬误",
+      "en": "Straw man"
+    },
+    {
+      "id": "slippery-slope",
+      "zh": "滑坡谬误",
+      "en": "Slippery slope"
+    },
+    {
+      "id": "liar-paradox",
+      "zh": "说谎者悖论",
+      "en": "Liar paradox"
+    },
+    {
+      "id": "zenos-paradox",
+      "zh": "芝诺悖论",
+      "en": "Zeno's paradox"
+    },
+    {
+      "id": "red-herring",
+      "zh": "红鲱鱼",
+      "en": "Red herring"
+    },
+    {
+      "id": "a-priori",
+      "zh": "先天",
+      "en": "A priori"
+    },
+    {
+      "id": "cogito",
+      "zh": "我思故我在",
+      "en": "Cogito"
+    },
+    {
+      "id": "qualia",
+      "zh": "感受质",
+      "en": "Qualia",
+      "forms": { "en": ["quale"] }
+    },
+    {
+      "id": "solipsism",
+      "zh": "唯我论",
+      "en": "Solipsism",
+      "forms": { "en": ["solipsist", "solipsistic"] }
+    },
+    {
+      "id": "monism",
+      "zh": "一元论",
+      "en": "Monism",
+      "forms": { "en": ["monist", "monistic"] }
+    },
+    {
+      "id": "teleology",
+      "zh": "目的论",
+      "en": "Teleology",
+      "forms": { "en": ["teleological"] }
+    },
+    {
+      "id": "essence",
+      "zh": "本质",
+      "en": "Essence",
+      "forms": { "en": ["essential"] }
+    },
+    {
+      "id": "nominalism",
+      "zh": "唯名论",
+      "en": "Nominalism",
+      "forms": { "en": ["nominalist"] }
+    },
+    {
+      "id": "absurdism",
+      "zh": "荒诞主义",
+      "en": "Absurdism",
+      "forms": { "en": ["absurd", "absurdist"] }
+    },
+    {
+      "id": "bad-faith",
+      "zh": "自欺",
+      "en": "Bad faith"
+    },
+    {
+      "id": "dasein",
+      "zh": "此在",
+      "en": "Dasein"
+    },
+    {
+      "id": "will-to-power",
+      "zh": "权力意志",
+      "en": "Will to power"
+    },
+    {
+      "id": "ubermensch",
+      "zh": "超人",
+      "en": "Übermensch"
+    },
+    {
+      "id": "worldview",
+      "zh": "世界观",
+      "en": "Worldview"
+    },
+    {
+      "id": "falsification",
+      "zh": "证伪",
+      "en": "Falsification",
+      "forms": { "en": ["falsify", "falsifiable", "falsifiability"] }
+    },
+    {
+      "id": "positivism",
+      "zh": "实证主义",
+      "en": "Positivism",
+      "forms": { "en": ["positivist"] }
+    },
+    {
+      "id": "reductionism",
+      "zh": "还原论",
+      "en": "Reductionism",
+      "forms": { "en": ["reductionist", "reductive"] }
+    },
+    {
+      "id": "holism",
+      "zh": "整体论",
+      "en": "Holism",
+      "forms": { "en": ["holistic"] }
+    },
+    {
+      "id": "naturalism",
+      "zh": "自然主义",
+      "en": "Naturalism",
+      "forms": { "en": ["naturalist", "naturalistic"] }
+    },
+    {
+      "id": "sublime",
+      "zh": "崇高",
+      "en": "Sublime",
+      "forms": { "en": ["sublimity"] }
+    },
+    {
+      "id": "mimesis",
+      "zh": "摹仿",
+      "en": "Mimesis",
+      "forms": { "en": ["mimetic"] }
+    },
+    {
+      "id": "antinomy",
+      "zh": "二律背反",
+      "en": "Antinomy"
+    },
+    {
+      "id": "sublation",
+      "zh": "扬弃",
+      "en": "Sublation",
+      "forms": { "en": ["sublate"] }
+    },
+    {
+      "id": "reification",
+      "zh": "物化",
+      "en": "Reification",
+      "forms": { "en": ["reify"] }
+    },
+    {
+      "id": "scientism",
+      "zh": "科学主义",
+      "en": "Scientism"
+    },
+    {
+      "id": "physicalism",
+      "zh": "物理主义",
+      "en": "Physicalism",
+      "forms": { "en": ["physicalist"] }
+    },
+    {
+      "id": "compatibilism",
+      "zh": "相容论",
+      "en": "Compatibilism",
+      "forms": { "en": ["compatibilist"] }
+    },
+    {
+      "id": "fatalism",
+      "zh": "宿命论",
+      "en": "Fatalism",
+      "forms": { "en": ["fatalist", "fatalistic"] }
+    },
+    {
+      "id": "monad",
+      "zh": "单子",
+      "en": "Monad",
+      "forms": { "en": ["monadic"] }
+    },
+    {
+      "id": "intentionality",
+      "zh": "意向性",
+      "en": "Intentionality",
+      "forms": { "en": ["intentional"] }
+    },
+    {
+      "id": "language-game",
+      "zh": "语言游戏",
+      "en": "Language game"
+    },
+    {
+      "id": "pascals-wager",
+      "zh": "帕斯卡赌注",
+      "en": "Pascal's wager"
+    },
+    {
+      "id": "platos-cave",
+      "zh": "洞穴之喻",
+      "en": "Plato's cave"
+    },
+    {
+      "id": "marys-room",
+      "zh": "玛丽的房间",
+      "en": "Mary's room"
+    },
+    {
+      "id": "carpe-diem",
+      "zh": "及时行乐",
+      "en": "Carpe diem"
+    },
+    {
+      "id": "human-nature",
+      "zh": "人性",
+      "en": "Human nature"
+    },
+    {
+      "id": "benevolence",
+      "zh": "仁",
+      "en": "Benevolence",
+      "forms": { "en": ["benevolent"] }
+    },
+    {
+      "id": "mohism",
+      "zh": "墨家",
+      "en": "Mohism",
+      "forms": { "en": ["Mohist"] }
+    },
+    {
+      "id": "wu-wei",
+      "zh": "无为",
+      "en": "Wu wei"
+    },
+    {
+      "id": "five-elements",
+      "zh": "五行",
+      "en": "Five elements"
+    },
+    {
+      "id": "koan",
+      "zh": "公案",
+      "en": "Koan"
+    },
+    {
+      "id": "karma",
+      "zh": "业力",
+      "en": "Karma",
+      "forms": { "en": ["karmic"] }
+    },
+    {
+      "id": "nirvana",
+      "zh": "涅槃",
+      "en": "Nirvana"
+    },
+    {
+      "id": "samsara",
+      "zh": "轮回",
+      "en": "Samsara"
+    },
+    {
+      "id": "monotheism",
+      "zh": "一神教",
+      "en": "Monotheism",
+      "forms": { "en": ["monotheistic", "monotheist"] }
+    },
+    {
+      "id": "polytheism",
+      "zh": "多神教",
+      "en": "Polytheism",
+      "forms": { "en": ["polytheistic", "polytheist"] }
+    },
+    {
+      "id": "pantheism",
+      "zh": "泛神论",
+      "en": "Pantheism",
+      "forms": { "en": ["pantheist", "pantheistic"] }
+    },
+    {
+      "id": "atheism",
+      "zh": "无神论",
+      "en": "Atheism",
+      "forms": { "en": ["atheist", "atheistic"] }
+    },
+    {
+      "id": "agnosticism",
+      "zh": "不可知论",
+      "en": "Agnosticism",
+      "forms": { "en": ["agnostic"] }
+    },
+    {
+      "id": "asceticism",
+      "zh": "苦行",
+      "en": "Asceticism",
+      "forms": { "en": ["ascetic"] }
+    },
+    {
+      "id": "mysticism",
+      "zh": "神秘主义",
+      "en": "Mysticism",
+      "forms": { "en": ["mystic", "mystical"] }
+    },
+    {
+      "id": "theology",
+      "zh": "神学",
+      "en": "Theology",
+      "forms": { "en": ["theologian", "theological"] }
+    },
+    {
+      "id": "theodicy",
+      "zh": "神义论",
+      "en": "Theodicy"
+    },
+    {
+      "id": "sacred",
+      "zh": "神圣",
+      "en": "Sacred",
+      "forms": { "en": ["sacredness"] }
+    },
+    {
+      "id": "prophet",
+      "zh": "先知",
+      "en": "Prophet",
+      "forms": { "en": ["prophecy", "prophetic", "prophesy"] }
+    },
+    {
+      "id": "afterlife",
+      "zh": "来世",
+      "en": "Afterlife"
+    },
+    {
+      "id": "underworld",
+      "zh": "冥界",
+      "en": "Underworld"
+    },
+    {
+      "id": "purgatory",
+      "zh": "炼狱",
+      "en": "Purgatory"
+    },
+    {
+      "id": "paradise",
+      "zh": "天堂",
+      "en": "Paradise"
+    },
+    {
+      "id": "deity",
+      "zh": "神祇",
+      "en": "Deity",
+      "forms": { "en": ["deities"] }
+    },
+    {
+      "id": "demigod",
+      "zh": "半神",
+      "en": "Demigod"
+    },
+    {
+      "id": "original-sin",
+      "zh": "原罪",
+      "en": "Original sin"
+    },
+    {
+      "id": "scripture",
+      "zh": "经文",
+      "en": "Scripture",
+      "forms": { "en": ["scriptural"] }
+    },
+    {
+      "id": "prayer",
+      "zh": "祈祷",
+      "en": "Prayer",
+      "forms": { "en": ["pray"] }
+    },
+    {
+      "id": "immortality",
+      "zh": "不朽",
+      "en": "Immortality",
+      "forms": { "en": ["immortal"] }
+    },
+    {
+      "id": "religion",
+      "zh": "宗教",
+      "en": "Religion",
+      "forms": { "en": ["religious"] }
+    },
+    {
+      "id": "great-flood",
+      "zh": "大洪水",
+      "en": "Great Flood"
+    },
+    {
+      "id": "zeus",
+      "zh": "宙斯",
+      "en": "Zeus"
+    },
+    {
+      "id": "athena",
+      "zh": "雅典娜",
+      "en": "Athena"
+    },
+    {
+      "id": "hercules",
+      "zh": "赫拉克勒斯",
+      "en": "Hercules",
+      "forms": { "en": ["Heracles"] }
+    },
+    {
+      "id": "achilles",
+      "zh": "阿喀琉斯",
+      "en": "Achilles"
+    },
+    {
+      "id": "medusa",
+      "zh": "美杜莎",
+      "en": "Medusa"
+    },
+    {
+      "id": "oedipus",
+      "zh": "俄狄浦斯",
+      "en": "Oedipus",
+      "forms": { "en": ["oedipal"] }
+    },
+    {
+      "id": "icarus",
+      "zh": "伊卡洛斯",
+      "en": "Icarus"
+    },
+    {
+      "id": "olympus",
+      "zh": "奥林匹斯",
+      "en": "Olympus",
+      "forms": { "en": ["Olympian"] }
+    },
+    {
+      "id": "minotaur",
+      "zh": "弥诺陶洛斯",
+      "en": "Minotaur"
+    },
+    {
+      "id": "trojan-horse",
+      "zh": "特洛伊木马",
+      "en": "Trojan horse"
+    },
+    {
+      "id": "odin",
+      "zh": "奥丁",
+      "en": "Odin"
+    },
+    {
+      "id": "valhalla",
+      "zh": "英灵殿",
+      "en": "Valhalla"
+    },
+    {
+      "id": "ragnarok",
+      "zh": "诸神黄昏",
+      "en": "Ragnarok"
+    },
+    {
+      "id": "world-tree",
+      "zh": "世界树",
+      "en": "World tree"
+    },
+    {
+      "id": "nuwa",
+      "zh": "女娲",
+      "en": "Nüwa"
+    },
+    {
+      "id": "pangu",
+      "zh": "盘古",
+      "en": "Pangu"
+    },
+    {
+      "id": "hou-yi",
+      "zh": "后羿",
+      "en": "Hou Yi"
+    },
+    {
+      "id": "monkey-king",
+      "zh": "孙悟空",
+      "en": "Monkey King"
+    },
+    {
+      "id": "jade-emperor",
+      "zh": "玉皇大帝",
+      "en": "Jade Emperor"
+    },
+    {
+      "id": "nezha",
+      "zh": "哪吒",
+      "en": "Nezha"
+    },
+    {
+      "id": "dragon",
+      "zh": "龙",
+      "en": "Dragon"
+    },
+    {
+      "id": "phoenix",
+      "zh": "凤凰",
+      "en": "Phoenix"
+    },
+    {
+      "id": "qilin",
+      "zh": "麒麟",
+      "en": "Qilin"
+    },
+    {
+      "id": "mermaid",
+      "zh": "美人鱼",
+      "en": "Mermaid"
+    },
+    {
+      "id": "vampire",
+      "zh": "吸血鬼",
+      "en": "Vampire"
+    },
+    {
+      "id": "werewolf",
+      "zh": "狼人",
+      "en": "Werewolf"
+    },
+    {
+      "id": "centaur",
+      "zh": "半人马",
+      "en": "Centaur"
+    },
+    {
+      "id": "griffin",
+      "zh": "狮鹫",
+      "en": "Griffin",
+      "forms": { "en": ["gryphon"] }
+    },
+    {
+      "id": "cyclops",
+      "zh": "独眼巨人",
+      "en": "Cyclops"
+    },
+    {
+      "id": "siren",
+      "zh": "塞壬",
+      "en": "Siren"
+    },
+    {
+      "id": "superstition",
+      "zh": "迷信",
+      "en": "Superstition",
+      "forms": { "en": ["superstitious"] }
+    },
+    {
+      "id": "divination",
+      "zh": "占卜",
+      "en": "Divination"
+    },
+    {
+      "id": "witchcraft",
+      "zh": "巫术",
+      "en": "Witchcraft",
+      "forms": { "en": ["witch"] }
+    },
+    {
+      "id": "curse",
+      "zh": "诅咒",
+      "en": "Curse",
+      "forms": { "en": ["cursed"] }
+    },
+    {
+      "id": "spell",
+      "zh": "咒语",
+      "en": "Spell"
+    },
+    {
+      "id": "potlatch",
+      "zh": "夸富宴",
+      "en": "Potlatch"
+    },
+    {
+      "id": "gift-exchange",
+      "zh": "礼物交换",
+      "en": "Gift exchange"
+    },
+    {
+      "id": "clan",
+      "zh": "氏族",
+      "en": "Clan"
+    },
+    {
+      "id": "patriarchy",
+      "zh": "父权制",
+      "en": "Patriarchy",
+      "forms": { "en": ["patriarchal"] }
+    },
+    {
+      "id": "liminality",
+      "zh": "阈限",
+      "en": "Liminality",
+      "forms": { "en": ["liminal"] }
+    },
+    {
+      "id": "ethnology",
+      "zh": "民族学",
+      "en": "Ethnology",
+      "forms": { "en": ["ethnologist", "ethnological"] }
+    },
+    {
+      "id": "custom",
+      "zh": "习俗",
+      "en": "Custom",
+      "forms": { "en": ["customary"] }
+    },
+    {
+      "id": "acculturation",
+      "zh": "涵化",
+      "en": "Acculturation",
+      "forms": { "en": ["acculturate"] }
+    },
+    {
+      "id": "shame-culture",
+      "zh": "耻感文化",
+      "en": "Shame culture"
+    },
+    {
+      "id": "habitus",
+      "zh": "惯习",
+      "en": "Habitus"
+    },
+    {
+      "id": "anomie",
+      "zh": "失范",
+      "en": "Anomie",
+      "forms": { "en": ["anomic"] }
+    },
+    {
+      "id": "iron-cage",
+      "zh": "铁笼",
+      "en": "Iron cage"
+    },
+    {
+      "id": "ideal-type",
+      "zh": "理想类型",
+      "en": "Ideal type"
+    },
+    {
+      "id": "social-fact",
+      "zh": "社会事实",
+      "en": "Social fact"
+    },
+    {
+      "id": "reflexivity",
+      "zh": "反身性",
+      "en": "Reflexivity",
+      "forms": { "en": ["reflexive"] }
+    },
+    {
+      "id": "lifeworld",
+      "zh": "生活世界",
+      "en": "Lifeworld"
+    },
+    {
+      "id": "risk-society",
+      "zh": "风险社会",
+      "en": "Risk society"
+    },
+    {
+      "id": "orientalism",
+      "zh": "东方主义",
+      "en": "Orientalism",
+      "forms": { "en": ["orientalist"] }
+    },
+    {
+      "id": "the-other",
+      "zh": "他者",
+      "en": "The Other",
+      "forms": { "en": ["otherness"] }
+    },
+    {
+      "id": "biopower",
+      "zh": "生命权力",
+      "en": "Biopower"
+    },
+    {
+      "id": "heterotopia",
+      "zh": "异托邦",
+      "en": "Heterotopia",
+      "forms": { "en": ["heterotopic"] }
+    },
+    {
+      "id": "individualism",
+      "zh": "个人主义",
+      "en": "Individualism",
+      "forms": { "en": ["individualist", "individualistic"] }
+    },
+    {
+      "id": "deviance",
+      "zh": "越轨",
+      "en": "Deviance",
+      "forms": { "en": ["deviant"] }
+    },
+    {
+      "id": "generation-gap",
+      "zh": "代沟",
+      "en": "Generation gap"
+    },
+    {
+      "id": "gen-z",
+      "zh": "Z世代",
+      "en": "Gen Z",
+      "forms": { "en": ["Generation Z"] }
+    },
+    {
+      "id": "general-will",
+      "zh": "公意",
+      "en": "General will"
+    },
+    {
+      "id": "freedom",
+      "zh": "自由",
+      "en": "Freedom"
+    },
+    {
+      "id": "poetics",
+      "zh": "诗学",
+      "en": "Poetics"
+    },
+    {
+      "id": "formalism",
+      "zh": "形式主义",
+      "en": "Formalism",
+      "forms": { "en": ["formalist"] }
+    },
+    {
+      "id": "close-reading",
+      "zh": "细读",
+      "en": "Close reading"
+    },
+    {
+      "id": "bildungsroman",
+      "zh": "成长小说",
+      "en": "Bildungsroman"
+    },
+    {
+      "id": "oxymoron",
+      "zh": "矛盾修辞",
+      "en": "Oxymoron",
+      "forms": { "en": ["oxymoronic"] }
+    },
+    {
+      "id": "simile",
+      "zh": "明喻",
+      "en": "Simile"
+    },
+    {
+      "id": "alliteration",
+      "zh": "头韵",
+      "en": "Alliteration",
+      "forms": { "en": ["alliterative"] }
+    },
+    {
+      "id": "stanza",
+      "zh": "诗节",
+      "en": "Stanza"
+    },
+    {
+      "id": "free-verse",
+      "zh": "自由诗",
+      "en": "Free verse"
+    },
+    {
+      "id": "elegy",
+      "zh": "挽歌",
+      "en": "Elegy",
+      "forms": { "en": ["elegiac"] }
+    },
+    {
+      "id": "ode",
+      "zh": "颂歌",
+      "en": "Ode"
+    },
+    {
+      "id": "lyric",
+      "zh": "抒情诗",
+      "en": "Lyric",
+      "forms": { "en": ["lyrical"] }
+    },
+    {
+      "id": "cyberpunk",
+      "zh": "赛博朋克",
+      "en": "Cyberpunk"
+    },
+    {
+      "id": "steampunk",
+      "zh": "蒸汽朋克",
+      "en": "Steampunk"
+    },
+    {
+      "id": "antihero",
+      "zh": "反英雄",
+      "en": "Antihero"
+    },
+    {
+      "id": "prologue",
+      "zh": "序幕",
+      "en": "Prologue",
+      "forms": { "en": ["prolog"] }
+    },
+    {
+      "id": "chekhovs-gun",
+      "zh": "契诃夫之枪",
+      "en": "Chekhov's gun"
+    },
+    {
+      "id": "hubris",
+      "zh": "傲慢",
+      "en": "Hubris"
+    },
+    {
+      "id": "anthology",
+      "zh": "选集",
+      "en": "Anthology",
+      "forms": { "en": ["anthologist"] }
+    },
+    {
+      "id": "poet-laureate",
+      "zh": "桂冠诗人",
+      "en": "Poet laureate"
+    },
+    {
+      "id": "water-margin",
+      "zh": "水浒传",
+      "en": "Water Margin"
+    },
+    {
+      "id": "divine-comedy",
+      "zh": "神曲",
+      "en": "Divine Comedy"
+    },
+    {
+      "id": "iliad",
+      "zh": "伊利亚特",
+      "en": "Iliad"
+    },
+    {
+      "id": "frankenstein",
+      "zh": "弗兰肯斯坦",
+      "en": "Frankenstein"
+    },
+    {
+      "id": "arabian-nights",
+      "zh": "一千零一夜",
+      "en": "Arabian Nights"
+    },
+    {
+      "id": "plot",
+      "zh": "情节",
+      "en": "Plot"
+    },
+    {
+      "id": "fantasy",
+      "zh": "奇幻",
+      "en": "Fantasy"
+    },
+    {
+      "id": "wisdom",
+      "zh": "智慧",
+      "en": "Wisdom",
+      "forms": { "en": ["wise"] }
+    },
+    {
+      "id": "fate",
+      "zh": "命运",
+      "en": "Fate",
+      "forms": { "en": ["fateful"] }
+    },
+    {
+      "id": "conscience",
+      "zh": "良心",
+      "en": "Conscience",
+      "forms": { "en": ["conscientious"] }
+    },
+    {
+      "id": "dignity",
+      "zh": "尊严",
+      "en": "Dignity"
+    },
+    {
+      "id": "happiness",
+      "zh": "幸福",
+      "en": "Happiness",
+      "forms": { "en": ["happy"] }
+    },
+    {
+      "id": "abduction",
+      "zh": "溯因",
+      "en": "Abduction",
+      "forms": { "en": ["abductive", "abduce"] }
+    },
+    {
+      "id": "ad-hominem",
+      "zh": "人身攻击",
+      "en": "Ad hominem"
+    },
+    {
+      "id": "panpsychism",
+      "zh": "泛心论",
+      "en": "Panpsychism",
+      "forms": { "en": ["panpsychist"] }
+    },
+    {
+      "id": "supervenience",
+      "zh": "随附性",
+      "en": "Supervenience",
+      "forms": { "en": ["supervene"] }
+    },
+    {
+      "id": "motif",
+      "zh": "母题",
+      "en": "Motif"
+    },
+    {
+      "id": "proverb",
+      "zh": "谚语",
+      "en": "Proverb",
+      "forms": { "en": ["proverbial"] }
+    },
+    {
+      "id": "riddle",
+      "zh": "谜语",
+      "en": "Riddle"
+    },
+    {
+      "id": "urban-legend",
+      "zh": "都市传说",
+      "en": "Urban legend"
+    },
+    {
+      "id": "ghost",
+      "zh": "鬼魂",
+      "en": "Ghost",
+      "forms": { "en": ["ghostly"] }
+    },
+    {
+      "id": "demon",
+      "zh": "恶魔",
+      "en": "Demon",
+      "forms": { "en": ["demonic"] }
+    },
+    {
+      "id": "angel",
+      "zh": "天使",
+      "en": "Angel",
+      "forms": { "en": ["angelic"] }
+    },
+    {
+      "id": "gilgamesh",
+      "zh": "吉尔伽美什",
+      "en": "Gilgamesh"
+    },
+    {
+      "id": "noahs-ark",
+      "zh": "诺亚方舟",
+      "en": "Noah's Ark"
+    },
+    {
+      "id": "tower-of-babel",
+      "zh": "巴别塔",
+      "en": "Tower of Babel",
+      "forms": { "en": ["Babel"] }
+    },
+    {
+      "id": "golden-fleece",
+      "zh": "金羊毛",
+      "en": "Golden fleece"
+    },
+    {
+      "id": "cupid",
+      "zh": "丘比特",
+      "en": "Cupid"
+    },
+    {
+      "id": "fiction",
+      "zh": "虚构",
+      "en": "Fiction",
+      "forms": { "en": ["fictional", "fictive"] }
+    },
+    {
+      "id": "melodrama",
+      "zh": "情节剧",
+      "en": "Melodrama",
+      "forms": { "en": ["melodramatic"] }
+    },
+    {
+      "id": "black-humor",
+      "zh": "黑色幽默",
+      "en": "Black humor",
+      "forms": { "en": ["black humour"] }
+    },
+    {
+      "id": "doggerel",
+      "zh": "打油诗",
+      "en": "Doggerel"
+    },
+    {
+      "id": "quatrain",
+      "zh": "绝句",
+      "en": "Quatrain"
+    },
+    {
+      "id": "aphorism",
+      "zh": "格言",
+      "en": "Aphorism",
+      "forms": { "en": ["aphoristic"] }
+    },
+    {
+      "id": "epigram",
+      "zh": "警句",
+      "en": "Epigram",
+      "forms": { "en": ["epigrammatic"] }
+    },
+    {
+      "id": "coming-of-age",
+      "zh": "成年礼",
+      "en": "Coming of age"
+    },
+    {
+      "id": "intellectual",
+      "zh": "知识分子",
+      "en": "Intellectual"
+    },
+    {
+      "id": "festival",
+      "zh": "节日",
+      "en": "Festival",
+      "forms": { "en": ["festive"] }
+    },
+    {
+      "id": "tea-ceremony",
+      "zh": "茶道",
+      "en": "Tea ceremony"
+    },
+    {
+      "id": "noble-lie",
+      "zh": "高贵的谎言",
+      "en": "Noble lie"
+    },
+    {
+      "id": "sage",
+      "zh": "圣人",
+      "en": "Sage",
+      "forms": { "en": ["sagely"] }
+    },
+    {
+      "id": "gentleman",
+      "zh": "君子",
+      "en": "Gentleman",
+      "forms": { "en": ["gentlemanly"] }
+    },
+    {
+      "id": "emptiness",
+      "zh": "空性",
+      "en": "Emptiness"
+    },
+    {
+      "id": "impermanence",
+      "zh": "无常",
+      "en": "Impermanence",
+      "forms": { "en": ["impermanent"] }
+    },
+    {
+      "id": "zombie",
+      "zh": "僵尸",
+      "en": "Zombie"
+    },
+    {
+      "id": "hero",
+      "zh": "英雄",
+      "en": "Hero",
+      "forms": { "en": ["heroic", "heroism"] }
+    },
+    {
+      "id": "apocalypse",
+      "zh": "末日",
+      "en": "Apocalypse",
+      "forms": { "en": ["apocalyptic"] }
+    },
+    {
+      "id": "fox-spirit",
+      "zh": "狐仙",
+      "en": "Fox spirit"
+    },
+    {
+      "id": "doppelganger",
+      "zh": "二重身",
+      "en": "Doppelgänger"
+    },
+    {
+      "id": "ouroboros",
+      "zh": "衔尾蛇",
+      "en": "Ouroboros"
+    },
+    {
+      "id": "desire",
+      "zh": "欲望",
+      "en": "Desire"
+    },
+    {
+      "id": "melancholy",
+      "zh": "忧郁",
+      "en": "Melancholy",
+      "forms": { "en": ["melancholic", "melancholia"] }
+    },
+    {
+      "id": "monogamy",
+      "zh": "一夫一妻制",
+      "en": "Monogamy",
+      "forms": { "en": ["monogamous"] }
+    },
+    {
+      "id": "nuclear-family",
+      "zh": "核心家庭",
+      "en": "Nuclear family"
+    },
+    {
+      "id": "spirit",
+      "zh": "精神",
+      "en": "Spirit",
+      "forms": { "en": ["spiritual"] }
     }
   ]
 }
