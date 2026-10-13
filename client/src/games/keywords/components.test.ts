@@ -106,6 +106,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     startProblems: [],
     lineup: 'free',
     joinsNext: false,
+    mayEmote: true,
     game,
   };
   return {
@@ -357,7 +358,7 @@ describe('RoleBanner', () => {
   test("stands out on the viewer's move, and says so in the tab's title for as long as it lasts", async () => {
     document.title = 'Reviewer 2';
     const wrapper = mount(RoleBanner, { props: { seat: seats.bob as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('You: Red group · Student');
+    expect(wrapper.find('.who').text()).toBe('You are Red group · Student');
     expect(wrapper.find('.line').text()).toBe('Your turn to guess!');
     expect(wrapper.classes()).toEqual(expect.arrayContaining(['red', 'urgent']));
     expect(document.title).toBe('Your turn!');
@@ -376,7 +377,7 @@ describe('RoleBanner', () => {
 
   test('tells a spectator who is doing what', () => {
     const wrapper = mount(RoleBanner, { props: { seat: seats.eve as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('You: Spectator');
+    expect(wrapper.find('.who').text()).toBe('You are a spectator');
     expect(wrapper.find('.line').text()).toBe('The Red group is guessing\u2026');
     expect(wrapper.classes()).toEqual(['role-banner', 'spectator']);
   });
@@ -504,6 +505,24 @@ describe('KeywordsCard', () => {
     expect(wrapper.get('.choosers').attributes('aria-hidden')).toBe('true');
     expect(wrapper.findAll('.choosers .avatar')).toHaveLength(2);
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann and Cat');
+  });
+
+  test("shows the group's mark in the tint of its color, with its sticker, and names it to screen readers", () => {
+    const wrapper = mount(KeywordsCard, {
+      props: {
+        card,
+        index: 3,
+        selectable: true,
+        selected: false,
+        choosers: [],
+        note: { mark: 'theirs', color: 'blue' },
+      },
+      global: global(),
+    });
+    expect(wrapper.get('button').classes()).toEqual(expect.arrayContaining(['noted', 'note-blue']));
+    expect(wrapper.get('.note').classes()).toContain('blue');
+    expect(wrapper.get('.note').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, marked as theirs');
   });
 
   test('shows no names when nobody else has chosen it', () => {
@@ -1264,6 +1283,144 @@ describe('KeywordsGame', () => {
     expect(card(wrapper, 0)?.classes()).toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').attributes('disabled')).toBeUndefined();
     send.mockImplementation(async () => ({ ok: true }));
+  });
+
+  // Bob, a red student, with the group's marks as the server sends them, in whatever phase.
+  const marked = (marks: KeywordsView['marks'], change: Partial<KeywordsView> = {}, me = 'bob') => {
+    const view = room(me);
+    const data = view.data as KeywordsRoomData;
+    return { ...view, data: { ...data, game: { ...(data.game as KeywordsView), marks, ...change } } };
+  };
+  const tool = (wrapper: ReturnType<typeof mount>, name: string) =>
+    wrapper.findAll('.mark-tools .tool').find((button) => button.text() === name);
+
+  test('lets a student mark cards for the group, take a mark back, and go back to choosing', async () => {
+    send.mockImplementation(later);
+    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
+    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
+    expect(wrapper.find('.mark-tools .hint').exists()).toBe(false);
+
+    await tool(wrapper, 'Ours')?.trigger('click');
+    expect(tool(wrapper, 'Ours')?.attributes('aria-pressed')).toBe('true');
+    expect(wrapper.get('.mark-tools .hint').text()).toBe(
+      "Tap a card to mark it, and again to clear it. Only your group's students see the marks.",
+    );
+    // The guess bar keeps its buttons, and leaves the hint to the tools.
+    expect(wrapper.find('.guess-bar .hint').exists()).toBe(false);
+    await card(wrapper, 0)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
+    expect(card(wrapper, 0)?.classes()).toEqual(expect.arrayContaining(['noted', 'note-red']));
+    expect(card(wrapper, 0)?.classes()).not.toContain('selected');
+    // The same mark again takes it off, before the first tap has been answered.
+    await card(wrapper, 0)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: null });
+    expect(card(wrapper, 0)?.classes()).not.toContain('noted');
+
+    await tool(wrapper, 'Theirs')?.trigger('click');
+    await card(wrapper, 1)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
+    expect(card(wrapper, 1)?.classes()).toContain('note-blue');
+    for (const answer of answers.splice(0)) answer();
+    await flushPromises();
+
+    await tool(wrapper, 'Choose')?.trigger('click');
+    await card(wrapper, 2)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 2 });
+    send.mockImplementation(async () => ({ ok: true }));
+  });
+
+  test("shows the group's marks from the server, and changes a teammate's mark with another tool", async () => {
+    const wrapper = mount(KeywordsGame, {
+      props: {
+        room: marked([
+          { card: 0, mark: 'r2' },
+          { card: 2, mark: 'ours' },
+        ]),
+      },
+      global: global(),
+    });
+    expect(card(wrapper, 0)?.classes()).toContain('note-r2');
+    expect(card(wrapper, 0)?.attributes('aria-label')).toBe('Baseline, not revealed, marked as maybe Reviewer 2');
+    expect(card(wrapper, 2)?.classes()).toContain('note-red');
+    await tool(wrapper, 'Ours')?.trigger('click');
+    await card(wrapper, 0)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
+  });
+
+  test("greys choosing out while the other group guesses, and comes back to it in the group's guess phase", async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: marked([], { team: 'blue' }) }, global: global() });
+    expect(tool(wrapper, 'Choose')?.attributes('disabled')).toBeDefined();
+    expect(tool(wrapper, 'Ours')?.attributes('aria-pressed')).toBe('true');
+    expect(wrapper.find('.guess-bar').exists()).toBe(false);
+    expect(wrapper.get('.status').text()).toBe('The Blue group is guessing.');
+    await card(wrapper, 1)?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'ours' });
+    // The group's turn comes, and the student chooses again; when it goes, the mark used last is back.
+    await wrapper.setProps({ room: marked([{ card: 1, mark: 'ours' }]) });
+    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
+    await tool(wrapper, 'R2?')?.trigger('click');
+    await tool(wrapper, 'Choose')?.trigger('click');
+    await wrapper.setProps({ room: marked([{ card: 1, mark: 'ours' }], { team: 'blue' }) });
+    expect(tool(wrapper, 'R2?')?.attributes('aria-pressed')).toBe('true');
+  });
+
+  test('gives no tools and no marks to a PI or a spectator, nor once the game is paused or over', async () => {
+    const marks = [{ card: 0, mark: 'ours' as const }];
+    for (const me of ['ann', 'eve']) {
+      const wrapper = mount(KeywordsGame, { props: { room: marked(marks, {}, me) }, global: global() });
+      expect(wrapper.find('.mark-tools').exists(), me).toBe(false);
+      expect(wrapper.find('.board .noted').exists(), me).toBe(false);
+    }
+    const over = mount(KeywordsGame, {
+      props: { room: marked(undefined, { phase: 'over', result: { winner: 'red', reason: 'found' } }) },
+      global: global(),
+    });
+    expect(over.find('.mark-tools').exists()).toBe(false);
+    const paused = mount(KeywordsGame, {
+      props: { room: marked(marks, { paused: true, cards: [] }) },
+      global: global(),
+    });
+    expect(paused.find('.mark-tools').exists()).toBe(false);
+  });
+
+  test('says nothing under the board of who the viewer is or what the others chose, but who plays next', async () => {
+    const view = marked([], {
+      selections: [
+        { player: 'cat', card: 1 },
+        { player: 'bob', card: 0 },
+      ],
+    });
+    const wrapper = mount(KeywordsGame, { props: { room: view }, global: global() });
+    expect(wrapper.find('.actions').text()).not.toContain('student');
+    expect(wrapper.find('.actions').text()).not.toContain('Cat');
+    // Cat's choice hangs on the card, as before.
+    expect(card(wrapper, 1)?.attributes('aria-label')).toContain('chosen by Cat');
+    const data = view.data as KeywordsRoomData;
+    const next = mount(KeywordsGame, {
+      props: { room: { ...room('eve'), data: { ...(room('eve').data as KeywordsRoomData), joinsNext: true } } },
+      global: global(),
+    });
+    expect(next.get('.joins-next').text()).toBe('You play from the next game.');
+    expect(data.joinsNext).toBe(false);
+  });
+
+  test("greys out a PI's reactions while the game holds them back, and says why on a tap", async () => {
+    toasts.splice(0);
+    const view = room('ann');
+    const held = { ...view, data: { ...(view.data as KeywordsRoomData), mayEmote: false } };
+    const wrapper = mount(KeywordsGame, { props: { room: held }, global: global() });
+    const button = wrapper.get('.emote-button .button');
+    expect(button.attributes('aria-disabled')).toBe('true');
+    expect(button.classes()).toContain('held');
+    await button.trigger('click');
+    expect(toasts.map((item) => item.key)).toEqual(['errors.emote_not_now']);
+    expect(wrapper.find('.emotes').exists()).toBe(false);
+    // Once they may again, the button opens the phrases.
+    await wrapper.setProps({ room: view });
+    expect(wrapper.get('.emote-button .button').attributes('aria-disabled')).toBeUndefined();
+    await wrapper.get('.emote-button .button').trigger('click');
+    expect(wrapper.find('.emotes').exists()).toBe(true);
+    toasts.splice(0);
   });
 
   test("lets the PI mark the group's cards that are still hidden, and sends them with the clue", async () => {

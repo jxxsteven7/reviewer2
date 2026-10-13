@@ -296,11 +296,6 @@
     },
     "stamp": "拒稿",
     "hidden": "未翻开",
-    "you": {
-      "captain": "你是{group}的导师。",
-      "guesser": "你是{group}的学生。",
-      "spectator": "你在旁听。"
-    },
     "waitClue": "等待{group}的导师给出提示。",
     "waitGuess": "{group}正在猜词。",
     "prepare": "提前准备下一条提示",
@@ -331,7 +326,20 @@
     "characterWarning": "这个提示和牌上的词有相同的汉字：{words}。由你决定。",
     "insideWarning": "这个提示包含了牌上的词：{words}。它可能会暴露这个词，由你决定。",
     "pick": "点一张牌选中它，组里的人都能看到；商量好了再翻开。",
+    "tools": {
+      "label": "点牌时",
+      "choose": "选牌",
+      "ours": "标我方",
+      "theirs": "标对方",
+      "r2": "标 R2",
+      "hint": "点牌标上，同一个按钮再点一次就取消。标记只有本组学生看得到。"
+    },
     "chosenBy": "{names}选了这张",
+    "noted": {
+      "ours": "标记：我方",
+      "theirs": "标记：对方",
+      "r2": "标记：疑似 Reviewer 2"
+    },
     "targetOrder": "标记的第 {order} 张",
     "reveal": "翻开“{word}”",
     "endTurn": "结束本轮",
@@ -462,9 +470,7 @@
       "irrelevant": "翻到无关论文 ×{count}",
       "wrong": "翻到对方的牌 ×{count}",
       "reviewer2": "翻到 Reviewer 2"
-    },
-    "choice": "{name} 选了「{word}」",
-    "choiceJoin": "，"
+    }
   },
   "replay": {
     "title": "回放",
@@ -537,8 +543,8 @@
     "noLimit": "不限时"
   },
   "banner": {
-    "seat": "你是：{group} · {role}",
-    "spectator": "你是：旁听",
+    "seat": "你是 {group} · {role}",
+    "spectator": "你是 旁听",
     "roles": {
       "captain": "导师",
       "guesser": "学生"

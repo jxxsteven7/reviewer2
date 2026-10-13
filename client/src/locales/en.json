@@ -296,11 +296,6 @@
     },
     "stamp": "Reject",
     "hidden": "not revealed",
-    "you": {
-      "captain": "You are the PI of the {group}.",
-      "guesser": "You are a student in the {group}.",
-      "spectator": "You are watching."
-    },
     "waitClue": "Waiting for the PI of the {group} to give a clue.",
     "waitGuess": "The {group} is guessing.",
     "prepare": "Prepare the next clue",
@@ -331,7 +326,20 @@
     "characterWarning": "This clue has a Chinese character in common with a word still on the board: {words}. It's your call.",
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
     "pick": "Tap a card to choose it. Your group sees your choice; reveal it once you agree.",
+    "tools": {
+      "label": "A tap on a card",
+      "choose": "Choose",
+      "ours": "Ours",
+      "theirs": "Theirs",
+      "r2": "R2?",
+      "hint": "Tap a card to mark it, and again to clear it. Only your group's students see the marks."
+    },
     "chosenBy": "chosen by {names}",
+    "noted": {
+      "ours": "marked as ours",
+      "theirs": "marked as theirs",
+      "r2": "marked as maybe Reviewer 2"
+    },
     "targetOrder": "marked {order}",
     "reveal": "Reveal “{word}”",
     "endTurn": "End the turn",
@@ -462,9 +470,7 @@
       "irrelevant": "irrelevant paper ×{count}",
       "wrong": "other group's card ×{count}",
       "reviewer2": "Reviewer 2"
-    },
-    "choice": "{name} chose “{word}”",
-    "choiceJoin": ", "
+    }
   },
   "replay": {
     "title": "Replay",
@@ -537,8 +543,8 @@
     "noLimit": "no limit"
   },
   "banner": {
-    "seat": "You: {group} · {role}",
-    "spectator": "You: Spectator",
+    "seat": "You are {group} · {role}",
+    "spectator": "You are a spectator",
     "roles": {
       "captain": "PI",
       "guesser": "Student"

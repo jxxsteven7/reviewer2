@@ -75,10 +75,14 @@ describe('the banner', () => {
     expect([...waiting, ...moves, ...rest].sort()).toEqual(Object.keys(lines(en)).sort());
   });
 
-  test('says who the viewer is, in front of their seat', () => {
-    expect(en.banner.seat).toMatch(/^You: /);
-    expect(en.banner.spectator).toMatch(/^You: /);
-    expect(zh.banner.seat).toMatch(/^\u4f60\u662f\uff1a/);
-    expect(zh.banner.spectator).toMatch(/^\u4f60\u662f\uff1a/);
+  test('says who the viewer is, in front of their seat, without a colon', () => {
+    expect(en.banner.seat).toMatch(/^You are /);
+    expect(en.banner.spectator).toMatch(/^You are /);
+    // "你是 ", with a space and no colon after it.
+    expect(zh.banner.seat).toMatch(/^\u4f60\u662f /);
+    expect(zh.banner.spectator).toMatch(/^\u4f60\u662f /);
+    for (const line of [en.banner.seat, en.banner.spectator, zh.banner.seat, zh.banner.spectator]) {
+      expect(line).not.toMatch(/[:\uff1a]/);
+    }
   });
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CardView, Team } from '@reviewer2/shared';
+import { otherTeam, type CardView, type Mark, type Team } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import KeywordsCard from './KeywordsCard.vue';
 import type { Chooser } from './useKeywords';
@@ -9,6 +9,7 @@ import type { Chooser } from './useKeywords';
 // (`targeting`, the group). `choosers` holds, for each card, the others in the group who have
 // chosen it. A `large` board, for a big screen, sets its words in bigger type. A `marked` card is
 // the one a replay's step is about, and `targets` are the cards a PI meant, in the order marked.
+// `notes` are the marks of the viewer's group, by card, for its students, and `team` that group.
 const props = withDefaults(
   defineProps<{
     cards: CardView[];
@@ -20,12 +21,28 @@ const props = withDefaults(
     marked?: number | null;
     targeting?: Team | null;
     targets?: number[];
+    notes?: ReadonlyMap<number, Mark>;
+    team?: Team | null;
   }>(),
-  { choosers: () => [], large: false, marked: null, targeting: null, targets: () => [] },
+  {
+    choosers: () => [],
+    large: false,
+    marked: null,
+    targeting: null,
+    targets: () => [],
+    notes: () => new Map(),
+    team: null,
+  },
 );
 const open = (card: CardView) =>
   props.selectable && !card.revealed && (props.targeting === null || card.color === props.targeting);
 const order = (index: number) => (props.targets.includes(index) ? props.targets.indexOf(index) + 1 : null);
+// A mark as its card shows it: in the group's own color, the other group's, or Reviewer 2's.
+function noteOf(index: number) {
+  const mark = props.notes.get(index);
+  if (!mark || !props.team) return null;
+  return { mark, color: mark === 'ours' ? props.team : mark === 'theirs' ? otherTeam(props.team) : ('r2' as const) };
+}
 const emit = defineEmits<{ select: [index: number] }>();
 const { t } = useI18n();
 </script>
@@ -43,6 +60,7 @@ const { t } = useI18n();
       :large="large"
       :marked="marked === index"
       :target="order(index)"
+      :note="card.revealed ? null : noteOf(index)"
       @select="emit('select', $event)"
     />
   </div>

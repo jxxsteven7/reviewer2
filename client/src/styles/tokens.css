@@ -28,6 +28,9 @@
   --neutral: #bdb6a8;
   --on-neutral: #1a1a2e;
   --neutral-tint: #f4efe6;
+  /* The tint of a card that a group's students mark as maybe Reviewer 2: a pale grey violet, apart
+     from the groups' tints and from the irrelevant papers'. */
+  --r2-tint: #d9d9e6;
   --r2: #1a1a2e;
   --on-r2: #ffd23f;
   --stamp: #ffd23f;
