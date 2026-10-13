@@ -1656,6 +1656,900 @@
       "zh": "工业界",
       "en": "Industry",
       "forms": { "en": ["industrial"] }
+    },
+    {
+      "id": "rejection",
+      "zh": "拒稿",
+      "en": "Rejection",
+      "forms": { "en": ["reject", "rejected"] }
+    },
+    {
+      "id": "special-issue",
+      "zh": "特刊",
+      "en": "Special issue"
+    },
+    {
+      "id": "review-article",
+      "zh": "综述",
+      "en": "Review article"
+    },
+    {
+      "id": "bibliography",
+      "zh": "参考书目",
+      "en": "Bibliography",
+      "forms": { "en": ["bibliographic"] }
+    },
+    {
+      "id": "camera-ready",
+      "zh": "终稿",
+      "en": "Camera-ready"
+    },
+    {
+      "id": "resubmission",
+      "zh": "重投",
+      "en": "Resubmission",
+      "forms": { "en": ["resubmit", "resubmitted"] }
+    },
+    {
+      "id": "under-review",
+      "zh": "审稿中",
+      "en": "Under review"
+    },
+    {
+      "id": "paper-mill",
+      "zh": "论文工厂",
+      "en": "Paper mill"
+    },
+    {
+      "id": "hot-topic",
+      "zh": "研究热点",
+      "en": "Hot topic"
+    },
+    {
+      "id": "related-work",
+      "zh": "相关工作",
+      "en": "Related work"
+    },
+    {
+      "id": "background",
+      "zh": "背景",
+      "en": "Background"
+    },
+    {
+      "id": "caption",
+      "zh": "图注",
+      "en": "Caption"
+    },
+    {
+      "id": "glossary",
+      "zh": "术语表",
+      "en": "Glossary"
+    },
+    {
+      "id": "paraphrase",
+      "zh": "改写",
+      "en": "Paraphrase",
+      "forms": { "en": ["paraphrasing", "paraphrased"] }
+    },
+    {
+      "id": "quotation",
+      "zh": "引语",
+      "en": "Quotation",
+      "forms": { "en": ["quote", "quoted"] }
+    },
+    {
+      "id": "outline",
+      "zh": "提纲",
+      "en": "Outline"
+    },
+    {
+      "id": "page-number",
+      "zh": "页码",
+      "en": "Page number"
+    },
+    {
+      "id": "preface",
+      "zh": "前言",
+      "en": "Preface"
+    },
+    {
+      "id": "track-changes",
+      "zh": "修订模式",
+      "en": "Track changes"
+    },
+    {
+      "id": "diagram",
+      "zh": "示意图",
+      "en": "Diagram"
+    },
+    {
+      "id": "chart",
+      "zh": "图表",
+      "en": "Chart"
+    },
+    {
+      "id": "storyline",
+      "zh": "故事线",
+      "en": "Storyline"
+    },
+    {
+      "id": "dissertation",
+      "zh": "博士论文",
+      "en": "Dissertation"
+    },
+    {
+      "id": "handbook",
+      "zh": "手册",
+      "en": "Handbook"
+    },
+    {
+      "id": "oral",
+      "zh": "口头报告",
+      "en": "Oral"
+    },
+    {
+      "id": "session",
+      "zh": "分会场",
+      "en": "Session"
+    },
+    {
+      "id": "plenary",
+      "zh": "大会报告",
+      "en": "Plenary"
+    },
+    {
+      "id": "panel",
+      "zh": "圆桌讨论",
+      "en": "Panel",
+      "forms": { "en": ["panelist"] }
+    },
+    {
+      "id": "tutorial",
+      "zh": "教程",
+      "en": "Tutorial"
+    },
+    {
+      "id": "venue",
+      "zh": "会场",
+      "en": "Venue"
+    },
+    {
+      "id": "registration",
+      "zh": "注册",
+      "en": "Registration",
+      "forms": { "en": ["register", "registered"] }
+    },
+    {
+      "id": "early-bird",
+      "zh": "早鸟",
+      "en": "Early bird"
+    },
+    {
+      "id": "organizer",
+      "zh": "主办方",
+      "en": "Organizer",
+      "forms": { "en": ["organiser", "organize", "organise"] }
+    },
+    {
+      "id": "volunteer",
+      "zh": "志愿者",
+      "en": "Volunteer"
+    },
+    {
+      "id": "booth",
+      "zh": "展台",
+      "en": "Booth"
+    },
+    {
+      "id": "reception",
+      "zh": "招待会",
+      "en": "Reception"
+    },
+    {
+      "id": "icebreaker",
+      "zh": "破冰",
+      "en": "Icebreaker"
+    },
+    {
+      "id": "small-talk",
+      "zh": "寒暄",
+      "en": "Small talk"
+    },
+    {
+      "id": "group-photo",
+      "zh": "合影",
+      "en": "Group photo"
+    },
+    {
+      "id": "buffet",
+      "zh": "自助餐",
+      "en": "Buffet"
+    },
+    {
+      "id": "souvenir",
+      "zh": "纪念品",
+      "en": "Souvenir"
+    },
+    {
+      "id": "sightseeing",
+      "zh": "观光",
+      "en": "Sightseeing"
+    },
+    {
+      "id": "hotel",
+      "zh": "酒店",
+      "en": "Hotel"
+    },
+    {
+      "id": "layover",
+      "zh": "转机",
+      "en": "Layover"
+    },
+    {
+      "id": "luggage",
+      "zh": "行李",
+      "en": "Luggage"
+    },
+    {
+      "id": "boarding-pass",
+      "zh": "登机牌",
+      "en": "Boarding pass"
+    },
+    {
+      "id": "business-trip",
+      "zh": "出差",
+      "en": "Business trip"
+    },
+    {
+      "id": "invoice",
+      "zh": "发票",
+      "en": "Invoice",
+      "forms": { "en": ["invoicing"] }
+    },
+    {
+      "id": "sponsor",
+      "zh": "赞助商",
+      "en": "Sponsor",
+      "forms": { "en": ["sponsorship", "sponsored"] }
+    },
+    {
+      "id": "pilot-study",
+      "zh": "预实验",
+      "en": "Pilot study"
+    },
+    {
+      "id": "raw-data",
+      "zh": "原始数据",
+      "en": "Raw data"
+    },
+    {
+      "id": "data-analysis",
+      "zh": "数据分析",
+      "en": "Data analysis"
+    },
+    {
+      "id": "qualitative",
+      "zh": "定性",
+      "en": "Qualitative"
+    },
+    {
+      "id": "quantitative",
+      "zh": "定量",
+      "en": "Quantitative"
+    },
+    {
+      "id": "participant",
+      "zh": "被试",
+      "en": "Participant"
+    },
+    {
+      "id": "feasibility",
+      "zh": "可行性",
+      "en": "Feasibility",
+      "forms": { "en": ["feasible"] }
+    },
+    {
+      "id": "rigor",
+      "zh": "严谨性",
+      "en": "Rigor",
+      "forms": { "en": ["rigour", "rigorous"] }
+    },
+    {
+      "id": "originality",
+      "zh": "原创性",
+      "en": "Originality",
+      "forms": { "en": ["original"] }
+    },
+    {
+      "id": "serendipity",
+      "zh": "机缘巧合",
+      "en": "Serendipity",
+      "forms": { "en": ["serendipitous"] }
+    },
+    {
+      "id": "creativity",
+      "zh": "创造力",
+      "en": "Creativity",
+      "forms": { "en": ["creative"] }
+    },
+    {
+      "id": "objectivity",
+      "zh": "客观性",
+      "en": "Objectivity"
+    },
+    {
+      "id": "open-question",
+      "zh": "开放问题",
+      "en": "Open question"
+    },
+    {
+      "id": "rule-of-thumb",
+      "zh": "经验法则",
+      "en": "Rule of thumb"
+    },
+    {
+      "id": "sanity-check",
+      "zh": "合理性检查",
+      "en": "Sanity check"
+    },
+    {
+      "id": "pseudoscience",
+      "zh": "伪科学",
+      "en": "Pseudoscience",
+      "forms": { "en": ["pseudoscientific"] }
+    },
+    {
+      "id": "pop-science",
+      "zh": "科普",
+      "en": "Pop science",
+      "forms": { "en": ["popular science"] }
+    },
+    {
+      "id": "hype",
+      "zh": "炒作",
+      "en": "Hype",
+      "forms": { "en": ["hyped"] }
+    },
+    {
+      "id": "buzzword",
+      "zh": "流行语",
+      "en": "Buzzword"
+    },
+    {
+      "id": "knowledge",
+      "zh": "知识",
+      "en": "Knowledge"
+    },
+    {
+      "id": "expert",
+      "zh": "专家",
+      "en": "Expert",
+      "forms": { "en": ["expertise"] }
+    },
+    {
+      "id": "pioneer",
+      "zh": "先驱",
+      "en": "Pioneer",
+      "forms": { "en": ["pioneering"] }
+    },
+    {
+      "id": "genius",
+      "zh": "天才",
+      "en": "Genius"
+    },
+    {
+      "id": "trade-off",
+      "zh": "权衡",
+      "en": "Trade-off"
+    },
+    {
+      "id": "controversy",
+      "zh": "争议",
+      "en": "Controversy",
+      "forms": { "en": ["controversial"] }
+    },
+    {
+      "id": "debate",
+      "zh": "辩论",
+      "en": "Debate"
+    },
+    {
+      "id": "phenomenon",
+      "zh": "现象",
+      "en": "Phenomenon",
+      "forms": { "en": ["phenomena"] }
+    },
+    {
+      "id": "mechanism",
+      "zh": "机制",
+      "en": "Mechanism"
+    },
+    {
+      "id": "principle",
+      "zh": "原理",
+      "en": "Principle"
+    },
+    {
+      "id": "technology",
+      "zh": "技术",
+      "en": "Technology",
+      "forms": { "en": ["technological"] }
+    },
+    {
+      "id": "idea",
+      "zh": "想法",
+      "en": "Idea"
+    },
+    {
+      "id": "plan-b",
+      "zh": "备选方案",
+      "en": "Plan B"
+    },
+    {
+      "id": "dead-end",
+      "zh": "死胡同",
+      "en": "Dead end"
+    },
+    {
+      "id": "detour",
+      "zh": "弯路",
+      "en": "Detour"
+    },
+    {
+      "id": "tech-transfer",
+      "zh": "成果转化",
+      "en": "Tech transfer",
+      "forms": { "en": ["technology transfer"] }
+    },
+    {
+      "id": "gloves",
+      "zh": "手套",
+      "en": "Gloves"
+    },
+    {
+      "id": "lab-bench",
+      "zh": "实验台",
+      "en": "Lab bench"
+    },
+    {
+      "id": "paperwork",
+      "zh": "文书工作",
+      "en": "Paperwork"
+    },
+    {
+      "id": "approval",
+      "zh": "审批",
+      "en": "Approval",
+      "forms": { "en": ["approve", "approved"] }
+    },
+    {
+      "id": "official-seal",
+      "zh": "公章",
+      "en": "Official seal"
+    },
+    {
+      "id": "consumables",
+      "zh": "耗材",
+      "en": "Consumables"
+    },
+    {
+      "id": "final-report",
+      "zh": "结题报告",
+      "en": "Final report"
+    },
+    {
+      "id": "start-up-fund",
+      "zh": "启动经费",
+      "en": "Start-up fund"
+    },
+    {
+      "id": "cubicle",
+      "zh": "工位",
+      "en": "Cubicle"
+    },
+    {
+      "id": "meeting-room",
+      "zh": "会议室",
+      "en": "Meeting room"
+    },
+    {
+      "id": "office",
+      "zh": "办公室",
+      "en": "Office"
+    },
+    {
+      "id": "bookshelf",
+      "zh": "书架",
+      "en": "Bookshelf"
+    },
+    {
+      "id": "bookmark",
+      "zh": "书签",
+      "en": "Bookmark"
+    },
+    {
+      "id": "laptop",
+      "zh": "笔记本电脑",
+      "en": "Laptop"
+    },
+    {
+      "id": "scanner",
+      "zh": "扫描仪",
+      "en": "Scanner",
+      "forms": { "en": ["scan"] }
+    },
+    {
+      "id": "paper-clip",
+      "zh": "回形针",
+      "en": "Paper clip"
+    },
+    {
+      "id": "envelope",
+      "zh": "信封",
+      "en": "Envelope"
+    },
+    {
+      "id": "shredder",
+      "zh": "碎纸机",
+      "en": "Shredder",
+      "forms": { "en": ["shred"] }
+    },
+    {
+      "id": "photocopy",
+      "zh": "复印",
+      "en": "Photocopy",
+      "forms": { "en": ["photocopier"] }
+    },
+    {
+      "id": "print-shop",
+      "zh": "打印店",
+      "en": "Print shop"
+    },
+    {
+      "id": "memo",
+      "zh": "备忘录",
+      "en": "Memo",
+      "forms": { "en": ["memorandum"] }
+    },
+    {
+      "id": "burnout",
+      "zh": "倦怠",
+      "en": "Burnout"
+    },
+    {
+      "id": "to-do-list",
+      "zh": "待办清单",
+      "en": "To-do list"
+    },
+    {
+      "id": "pomodoro",
+      "zh": "番茄钟",
+      "en": "Pomodoro"
+    },
+    {
+      "id": "distraction",
+      "zh": "分心",
+      "en": "Distraction",
+      "forms": { "en": ["distract", "distracted"] }
+    },
+    {
+      "id": "afternoon-tea",
+      "zh": "下午茶",
+      "en": "Afternoon tea"
+    },
+    {
+      "id": "milk-tea",
+      "zh": "奶茶",
+      "en": "Milk tea"
+    },
+    {
+      "id": "inbox",
+      "zh": "收件箱",
+      "en": "Inbox"
+    },
+    {
+      "id": "reply-all",
+      "zh": "全部回复",
+      "en": "Reply all"
+    },
+    {
+      "id": "reminder",
+      "zh": "提醒",
+      "en": "Reminder",
+      "forms": { "en": ["remind"] }
+    },
+    {
+      "id": "video-call",
+      "zh": "视频通话",
+      "en": "Video call"
+    },
+    {
+      "id": "group-chat",
+      "zh": "群聊",
+      "en": "Group chat"
+    },
+    {
+      "id": "mute",
+      "zh": "静音",
+      "en": "Mute",
+      "forms": { "en": ["muted", "unmute"] }
+    },
+    {
+      "id": "screen-sharing",
+      "zh": "共享屏幕",
+      "en": "Screen sharing"
+    },
+    {
+      "id": "clicker",
+      "zh": "翻页笔",
+      "en": "Clicker"
+    },
+    {
+      "id": "stage-fright",
+      "zh": "怯场",
+      "en": "Stage fright"
+    },
+    {
+      "id": "bullet-point",
+      "zh": "要点",
+      "en": "Bullet point"
+    },
+    {
+      "id": "demo",
+      "zh": "演示",
+      "en": "Demo",
+      "forms": { "en": ["demonstration", "demonstrate"] }
+    },
+    {
+      "id": "cheating",
+      "zh": "作弊",
+      "en": "Cheating",
+      "forms": { "en": ["cheat", "cheater"] }
+    },
+    {
+      "id": "cramming",
+      "zh": "临时抱佛脚",
+      "en": "Cramming",
+      "forms": { "en": ["cram"] }
+    },
+    {
+      "id": "cheat-sheet",
+      "zh": "小抄",
+      "en": "Cheat sheet"
+    },
+    {
+      "id": "term-paper",
+      "zh": "课程论文",
+      "en": "Term paper"
+    },
+    {
+      "id": "lab-report",
+      "zh": "实验报告",
+      "en": "Lab report"
+    },
+    {
+      "id": "problem-set",
+      "zh": "习题集",
+      "en": "Problem set"
+    },
+    {
+      "id": "elective",
+      "zh": "选修课",
+      "en": "Elective"
+    },
+    {
+      "id": "retake",
+      "zh": "重修",
+      "en": "Retake"
+    },
+    {
+      "id": "full-marks",
+      "zh": "满分",
+      "en": "Full marks"
+    },
+    {
+      "id": "pass",
+      "zh": "及格",
+      "en": "Pass",
+      "forms": { "en": ["passed"] }
+    },
+    {
+      "id": "tutoring",
+      "zh": "家教",
+      "en": "Tutoring",
+      "forms": { "en": ["tutor"] }
+    },
+    {
+      "id": "timetable",
+      "zh": "课表",
+      "en": "Timetable"
+    },
+    {
+      "id": "top-student",
+      "zh": "学霸",
+      "en": "Top student"
+    },
+    {
+      "id": "work-study",
+      "zh": "勤工俭学",
+      "en": "Work-study"
+    },
+    {
+      "id": "academic-year",
+      "zh": "学年",
+      "en": "Academic year"
+    },
+    {
+      "id": "grad-student",
+      "zh": "研究生",
+      "en": "Grad student",
+      "forms": { "en": ["graduate student"] }
+    },
+    {
+      "id": "labmate",
+      "zh": "同门",
+      "en": "Labmate"
+    },
+    {
+      "id": "classmate",
+      "zh": "同学",
+      "en": "Classmate"
+    },
+    {
+      "id": "fellow",
+      "zh": "会士",
+      "en": "Fellow"
+    },
+    {
+      "id": "job-hunting",
+      "zh": "求职",
+      "en": "Job hunting"
+    },
+    {
+      "id": "job-talk",
+      "zh": "求职报告",
+      "en": "Job talk"
+    },
+    {
+      "id": "part-time-job",
+      "zh": "兼职",
+      "en": "Part-time job"
+    },
+    {
+      "id": "institute",
+      "zh": "研究所",
+      "en": "Institute"
+    },
+    {
+      "id": "university",
+      "zh": "大学",
+      "en": "University"
+    },
+    {
+      "id": "department",
+      "zh": "院系",
+      "en": "Department",
+      "forms": { "en": ["departmental"] }
+    },
+    {
+      "id": "waitlist",
+      "zh": "候补名单",
+      "en": "Waitlist",
+      "forms": { "en": ["waitlisted"] }
+    },
+    {
+      "id": "shortlist",
+      "zh": "入围名单",
+      "en": "Shortlist",
+      "forms": { "en": ["shortlisted"] }
+    },
+    {
+      "id": "gap-year",
+      "zh": "间隔年",
+      "en": "Gap year"
+    },
+    {
+      "id": "study-abroad",
+      "zh": "留学",
+      "en": "Study abroad"
+    },
+    {
+      "id": "ielts",
+      "zh": "雅思",
+      "en": "IELTS",
+      "forms": { "en": ["International English Language Testing System"] }
+    },
+    {
+      "id": "sign-up",
+      "zh": "报名",
+      "en": "Sign-up"
+    },
+    {
+      "id": "reading-room",
+      "zh": "阅览室",
+      "en": "Reading room"
+    },
+    {
+      "id": "student-id",
+      "zh": "学生证",
+      "en": "Student ID"
+    },
+    {
+      "id": "campus-card",
+      "zh": "校园卡",
+      "en": "Campus card"
+    },
+    {
+      "id": "orientation",
+      "zh": "迎新",
+      "en": "Orientation"
+    },
+    {
+      "id": "bunk-bed",
+      "zh": "上下铺",
+      "en": "Bunk bed"
+    },
+    {
+      "id": "lights-out",
+      "zh": "熄灯",
+      "en": "Lights out"
+    },
+    {
+      "id": "bulletin-board",
+      "zh": "公告栏",
+      "en": "Bulletin board"
+    },
+    {
+      "id": "lost-and-found",
+      "zh": "失物招领",
+      "en": "Lost and found"
+    },
+    {
+      "id": "gown",
+      "zh": "学位服",
+      "en": "Gown"
+    },
+    {
+      "id": "open-day",
+      "zh": "开放日",
+      "en": "Open day"
+    },
+    {
+      "id": "enrollment",
+      "zh": "入学",
+      "en": "Enrollment",
+      "forms": { "en": ["enrolment", "enroll", "enrol"] }
+    },
+    {
+      "id": "bookworm",
+      "zh": "书虫",
+      "en": "Bookworm"
+    },
+    {
+      "id": "night-owl",
+      "zh": "夜猫子",
+      "en": "Night owl"
+    },
+    {
+      "id": "workaholic",
+      "zh": "工作狂",
+      "en": "Workaholic"
+    },
+    {
+      "id": "newbie",
+      "zh": "新手",
+      "en": "Newbie"
+    },
+    {
+      "id": "summer-break",
+      "zh": "暑假",
+      "en": "Summer break"
+    },
+    {
+      "id": "nap",
+      "zh": "午睡",
+      "en": "Nap",
+      "forms": { "en": ["napping"] }
     }
   ]
 }

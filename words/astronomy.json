@@ -1333,6 +1333,806 @@
       "id": "sample-return",
       "zh": "采样返回",
       "en": "Sample return"
+    },
+    {
+      "id": "star",
+      "zh": "恒星",
+      "en": "Star",
+      "forms": { "en": ["stellar"] }
+    },
+    {
+      "id": "milky-way",
+      "zh": "银河系",
+      "en": "Milky Way"
+    },
+    {
+      "id": "solar-system",
+      "zh": "太阳系",
+      "en": "Solar system"
+    },
+    {
+      "id": "neutron-star",
+      "zh": "中子星",
+      "en": "Neutron star"
+    },
+    {
+      "id": "pulsar",
+      "zh": "脉冲星",
+      "en": "Pulsar"
+    },
+    {
+      "id": "quasar",
+      "zh": "类星体",
+      "en": "Quasar"
+    },
+    {
+      "id": "dark-matter",
+      "zh": "暗物质",
+      "en": "Dark matter"
+    },
+    {
+      "id": "redshift",
+      "zh": "红移",
+      "en": "Redshift",
+      "forms": { "en": ["redshifted"] }
+    },
+    {
+      "id": "red-giant",
+      "zh": "红巨星",
+      "en": "Red giant"
+    },
+    {
+      "id": "satellite",
+      "zh": "卫星",
+      "en": "Satellite"
+    },
+    {
+      "id": "sunspot",
+      "zh": "太阳黑子",
+      "en": "Sunspot"
+    },
+    {
+      "id": "parsec",
+      "zh": "秒差距",
+      "en": "Parsec"
+    },
+    {
+      "id": "kuiper-belt",
+      "zh": "柯伊伯带",
+      "en": "Kuiper belt"
+    },
+    {
+      "id": "blazar",
+      "zh": "耀变体",
+      "en": "Blazar"
+    },
+    {
+      "id": "agn",
+      "zh": "活动星系核",
+      "en": "AGN",
+      "forms": { "en": ["active galactic nucleus"] }
+    },
+    {
+      "id": "bulge",
+      "zh": "核球",
+      "en": "Bulge"
+    },
+    {
+      "id": "jet",
+      "zh": "喷流",
+      "en": "Jet"
+    },
+    {
+      "id": "microlensing",
+      "zh": "微引力透镜",
+      "en": "Microlensing"
+    },
+    {
+      "id": "stellar-wind",
+      "zh": "星风",
+      "en": "Stellar wind"
+    },
+    {
+      "id": "roche-lobe",
+      "zh": "洛希瓣",
+      "en": "Roche lobe"
+    },
+    {
+      "id": "virial-theorem",
+      "zh": "维里定理",
+      "en": "Virial theorem"
+    },
+    {
+      "id": "jeans-mass",
+      "zh": "金斯质量",
+      "en": "Jeans mass"
+    },
+    {
+      "id": "rotation-curve",
+      "zh": "旋转曲线",
+      "en": "Rotation curve"
+    },
+    {
+      "id": "starburst",
+      "zh": "星暴",
+      "en": "Starburst"
+    },
+    {
+      "id": "metallicity",
+      "zh": "金属丰度",
+      "en": "Metallicity"
+    },
+    {
+      "id": "photon-sphere",
+      "zh": "光子球",
+      "en": "Photon sphere"
+    },
+    {
+      "id": "grb",
+      "zh": "伽马射线暴",
+      "en": "GRB",
+      "forms": { "zh": ["伽马暴"], "en": ["gamma-ray burst"] }
+    },
+    {
+      "id": "frb",
+      "zh": "快速射电暴",
+      "en": "FRB",
+      "forms": { "en": ["fast radio burst"] }
+    },
+    {
+      "id": "21-cm-line",
+      "zh": "21厘米线",
+      "en": "21 cm line"
+    },
+    {
+      "id": "light-curve",
+      "zh": "光变曲线",
+      "en": "Light curve"
+    },
+    {
+      "id": "proper-motion",
+      "zh": "自行",
+      "en": "Proper motion"
+    },
+    {
+      "id": "color-index",
+      "zh": "色指数",
+      "en": "Color index",
+      "forms": { "en": ["colour index"] }
+    },
+    {
+      "id": "arcsecond",
+      "zh": "角秒",
+      "en": "Arcsecond"
+    },
+    {
+      "id": "guest-star",
+      "zh": "客星",
+      "en": "Guest star"
+    },
+    {
+      "id": "flare-star",
+      "zh": "耀星",
+      "en": "Flare star"
+    },
+    {
+      "id": "debris-disk",
+      "zh": "碎屑盘",
+      "en": "Debris disk",
+      "forms": { "en": ["debris disc"] }
+    },
+    {
+      "id": "ergosphere",
+      "zh": "能层",
+      "en": "Ergosphere"
+    },
+    {
+      "id": "chirp",
+      "zh": "啁啾",
+      "en": "Chirp"
+    },
+    {
+      "id": "afterglow",
+      "zh": "余辉",
+      "en": "Afterglow"
+    },
+    {
+      "id": "cosmic-dawn",
+      "zh": "宇宙黎明",
+      "en": "Cosmic dawn"
+    },
+    {
+      "id": "reionization",
+      "zh": "再电离",
+      "en": "Reionization",
+      "forms": { "en": ["reionisation"] }
+    },
+    {
+      "id": "scale-factor",
+      "zh": "尺度因子",
+      "en": "Scale factor"
+    },
+    {
+      "id": "coronal-hole",
+      "zh": "冕洞",
+      "en": "Coronal hole"
+    },
+    {
+      "id": "diamond-ring",
+      "zh": "钻石环",
+      "en": "Diamond ring"
+    },
+    {
+      "id": "bailys-beads",
+      "zh": "贝利珠",
+      "en": "Baily's beads"
+    },
+    {
+      "id": "totality",
+      "zh": "全食",
+      "en": "Totality"
+    },
+    {
+      "id": "umbra",
+      "zh": "本影",
+      "en": "Umbra"
+    },
+    {
+      "id": "penumbra",
+      "zh": "半影",
+      "en": "Penumbra"
+    },
+    {
+      "id": "saros-cycle",
+      "zh": "沙罗周期",
+      "en": "Saros cycle"
+    },
+    {
+      "id": "granulation",
+      "zh": "米粒组织",
+      "en": "Granulation"
+    },
+    {
+      "id": "solar-storm",
+      "zh": "太阳风暴",
+      "en": "Solar storm"
+    },
+    {
+      "id": "lunar-mare",
+      "zh": "月海",
+      "en": "Lunar mare"
+    },
+    {
+      "id": "lunar-far-side",
+      "zh": "月球背面",
+      "en": "Lunar far side"
+    },
+    {
+      "id": "cryovolcano",
+      "zh": "冰火山",
+      "en": "Cryovolcano"
+    },
+    {
+      "id": "shepherd-moon",
+      "zh": "牧羊犬卫星",
+      "en": "Shepherd moon"
+    },
+    {
+      "id": "exomoon",
+      "zh": "系外卫星",
+      "en": "Exomoon"
+    },
+    {
+      "id": "protoplanet",
+      "zh": "原行星",
+      "en": "Protoplanet"
+    },
+    {
+      "id": "giant-impact",
+      "zh": "大碰撞",
+      "en": "Giant impact"
+    },
+    {
+      "id": "hill-sphere",
+      "zh": "希尔球",
+      "en": "Hill sphere"
+    },
+    {
+      "id": "libration",
+      "zh": "天平动",
+      "en": "Libration"
+    },
+    {
+      "id": "syzygy",
+      "zh": "朔望",
+      "en": "Syzygy"
+    },
+    {
+      "id": "obliquity",
+      "zh": "黄赤交角",
+      "en": "Obliquity"
+    },
+    {
+      "id": "chondrite",
+      "zh": "球粒陨石",
+      "en": "Chondrite"
+    },
+    {
+      "id": "radiant",
+      "zh": "辐射点",
+      "en": "Radiant"
+    },
+    {
+      "id": "airglow",
+      "zh": "气辉",
+      "en": "Airglow"
+    },
+    {
+      "id": "bow-shock",
+      "zh": "弓激波",
+      "en": "Bow shock"
+    },
+    {
+      "id": "interplanetary",
+      "zh": "行星际",
+      "en": "Interplanetary"
+    },
+    {
+      "id": "helium-3",
+      "zh": "氦-3",
+      "en": "Helium-3"
+    },
+    {
+      "id": "oumuamua",
+      "zh": "奥陌陌",
+      "en": "Oumuamua"
+    },
+    {
+      "id": "phobos",
+      "zh": "火卫一",
+      "en": "Phobos"
+    },
+    {
+      "id": "deimos",
+      "zh": "火卫二",
+      "en": "Deimos"
+    },
+    {
+      "id": "callisto",
+      "zh": "木卫四",
+      "en": "Callisto"
+    },
+    {
+      "id": "eris",
+      "zh": "阋神星",
+      "en": "Eris"
+    },
+    {
+      "id": "vesta",
+      "zh": "灶神星",
+      "en": "Vesta"
+    },
+    {
+      "id": "polar-cap",
+      "zh": "极冠",
+      "en": "Polar cap"
+    },
+    {
+      "id": "rubble-pile",
+      "zh": "碎石堆",
+      "en": "Rubble pile"
+    },
+    {
+      "id": "impactor",
+      "zh": "撞击器",
+      "en": "Impactor"
+    },
+    {
+      "id": "sungrazer",
+      "zh": "掠日彗星",
+      "en": "Sungrazer"
+    },
+    {
+      "id": "meridian",
+      "zh": "子午线",
+      "en": "Meridian"
+    },
+    {
+      "id": "ephemeris",
+      "zh": "星历表",
+      "en": "Ephemeris",
+      "forms": { "en": ["ephemerides"] }
+    },
+    {
+      "id": "synodic-month",
+      "zh": "朔望月",
+      "en": "Synodic month"
+    },
+    {
+      "id": "julian-day",
+      "zh": "儒略日",
+      "en": "Julian day"
+    },
+    {
+      "id": "leap-month",
+      "zh": "闰月",
+      "en": "Leap month"
+    },
+    {
+      "id": "twilight",
+      "zh": "晨昏蒙影",
+      "en": "Twilight"
+    },
+    {
+      "id": "celestial-pole",
+      "zh": "天极",
+      "en": "Celestial pole"
+    },
+    {
+      "id": "hour-angle",
+      "zh": "时角",
+      "en": "Hour angle"
+    },
+    {
+      "id": "gnomon",
+      "zh": "圭表",
+      "en": "Gnomon"
+    },
+    {
+      "id": "water-clock",
+      "zh": "漏刻",
+      "en": "Water clock"
+    },
+    {
+      "id": "orrery",
+      "zh": "太阳系仪",
+      "en": "Orrery"
+    },
+    {
+      "id": "planisphere",
+      "zh": "活动星图",
+      "en": "Planisphere"
+    },
+    {
+      "id": "four-symbols",
+      "zh": "四象",
+      "en": "Four Symbols"
+    },
+    {
+      "id": "azure-dragon",
+      "zh": "青龙",
+      "en": "Azure Dragon"
+    },
+    {
+      "id": "white-tiger",
+      "zh": "白虎",
+      "en": "White Tiger"
+    },
+    {
+      "id": "vermilion-bird",
+      "zh": "朱雀",
+      "en": "Vermilion Bird"
+    },
+    {
+      "id": "black-tortoise",
+      "zh": "玄武",
+      "en": "Black Tortoise"
+    },
+    {
+      "id": "asterism",
+      "zh": "星群",
+      "en": "Asterism"
+    },
+    {
+      "id": "photometry",
+      "zh": "测光",
+      "en": "Photometry",
+      "forms": { "en": ["photometric"] }
+    },
+    {
+      "id": "sky-survey",
+      "zh": "巡天",
+      "en": "Sky survey"
+    },
+    {
+      "id": "naked-eye",
+      "zh": "肉眼",
+      "en": "Naked eye"
+    },
+    {
+      "id": "field-of-view",
+      "zh": "视场",
+      "en": "Field of view",
+      "forms": { "en": ["FOV"] }
+    },
+    {
+      "id": "finderscope",
+      "zh": "寻星镜",
+      "en": "Finderscope"
+    },
+    {
+      "id": "primary-mirror",
+      "zh": "主镜",
+      "en": "Primary mirror"
+    },
+    {
+      "id": "guide-star",
+      "zh": "导星",
+      "en": "Guide star"
+    },
+    {
+      "id": "vlbi",
+      "zh": "VLBI",
+      "en": "VLBI",
+      "forms": { "zh": ["甚长基线干涉测量"], "en": ["very long baseline interferometry"] }
+    },
+    {
+      "id": "ligo",
+      "zh": "LIGO",
+      "en": "LIGO",
+      "forms": { "zh": ["激光干涉引力波天文台"], "en": ["Laser Interferometer Gravitational-Wave Observatory"] }
+    },
+    {
+      "id": "seti",
+      "zh": "SETI",
+      "en": "SETI",
+      "forms": { "zh": ["地外文明搜寻"], "en": ["search for extraterrestrial intelligence"] }
+    },
+    {
+      "id": "night-sky",
+      "zh": "夜空",
+      "en": "Night sky"
+    },
+    {
+      "id": "morning-star",
+      "zh": "启明星",
+      "en": "Morning star"
+    },
+    {
+      "id": "crescent",
+      "zh": "蛾眉月",
+      "en": "Crescent"
+    },
+    {
+      "id": "first-quarter",
+      "zh": "上弦月",
+      "en": "First quarter"
+    },
+    {
+      "id": "earthshine",
+      "zh": "地照",
+      "en": "Earthshine"
+    },
+    {
+      "id": "green-flash",
+      "zh": "绿闪",
+      "en": "Green flash"
+    },
+    {
+      "id": "zodiacal-light",
+      "zh": "黄道光",
+      "en": "Zodiacal light"
+    },
+    {
+      "id": "sun-dog",
+      "zh": "幻日",
+      "en": "Sun dog"
+    },
+    {
+      "id": "moon-illusion",
+      "zh": "月亮错觉",
+      "en": "Moon illusion"
+    },
+    {
+      "id": "antares",
+      "zh": "心宿二",
+      "en": "Antares"
+    },
+    {
+      "id": "arcturus",
+      "zh": "大角星",
+      "en": "Arcturus"
+    },
+    {
+      "id": "canopus",
+      "zh": "老人星",
+      "en": "Canopus"
+    },
+    {
+      "id": "rigel",
+      "zh": "参宿七",
+      "en": "Rigel"
+    },
+    {
+      "id": "aldebaran",
+      "zh": "毕宿五",
+      "en": "Aldebaran"
+    },
+    {
+      "id": "deneb",
+      "zh": "天津四",
+      "en": "Deneb"
+    },
+    {
+      "id": "spica",
+      "zh": "角宿一",
+      "en": "Spica"
+    },
+    {
+      "id": "ursa-major",
+      "zh": "大熊座",
+      "en": "Ursa Major"
+    },
+    {
+      "id": "ursa-minor",
+      "zh": "小熊座",
+      "en": "Ursa Minor"
+    },
+    {
+      "id": "cassiopeia",
+      "zh": "仙后座",
+      "en": "Cassiopeia"
+    },
+    {
+      "id": "scorpius",
+      "zh": "天蝎座",
+      "en": "Scorpius"
+    },
+    {
+      "id": "leo",
+      "zh": "狮子座",
+      "en": "Leo"
+    },
+    {
+      "id": "taurus",
+      "zh": "金牛座",
+      "en": "Taurus"
+    },
+    {
+      "id": "gemini",
+      "zh": "双子座",
+      "en": "Gemini"
+    },
+    {
+      "id": "sagittarius",
+      "zh": "人马座",
+      "en": "Sagittarius"
+    },
+    {
+      "id": "cygnus",
+      "zh": "天鹅座",
+      "en": "Cygnus"
+    },
+    {
+      "id": "lyra",
+      "zh": "天琴座",
+      "en": "Lyra"
+    },
+    {
+      "id": "aquila",
+      "zh": "天鹰座",
+      "en": "Aquila"
+    },
+    {
+      "id": "perseus",
+      "zh": "英仙座",
+      "en": "Perseus"
+    },
+    {
+      "id": "pegasus",
+      "zh": "飞马座",
+      "en": "Pegasus"
+    },
+    {
+      "id": "centaurus",
+      "zh": "半人马座",
+      "en": "Centaurus"
+    },
+    {
+      "id": "southern-cross",
+      "zh": "南十字座",
+      "en": "Southern Cross"
+    },
+    {
+      "id": "spacecraft",
+      "zh": "航天器",
+      "en": "Spacecraft"
+    },
+    {
+      "id": "delta-v",
+      "zh": "速度增量",
+      "en": "Delta-v"
+    },
+    {
+      "id": "escape-tower",
+      "zh": "逃逸塔",
+      "en": "Escape tower"
+    },
+    {
+      "id": "airlock",
+      "zh": "气闸舱",
+      "en": "Airlock"
+    },
+    {
+      "id": "solar-array",
+      "zh": "太阳翼",
+      "en": "Solar array"
+    },
+    {
+      "id": "rendezvous",
+      "zh": "交会",
+      "en": "Rendezvous"
+    },
+    {
+      "id": "reaction-wheel",
+      "zh": "反作用轮",
+      "en": "Reaction wheel"
+    },
+    {
+      "id": "star-tracker",
+      "zh": "星敏感器",
+      "en": "Star tracker"
+    },
+    {
+      "id": "deorbit",
+      "zh": "离轨",
+      "en": "Deorbit"
+    },
+    {
+      "id": "flyby",
+      "zh": "飞掠",
+      "en": "Flyby"
+    },
+    {
+      "id": "aerobraking",
+      "zh": "大气制动",
+      "en": "Aerobraking"
+    },
+    {
+      "id": "gravity-well",
+      "zh": "引力井",
+      "en": "Gravity well"
+    },
+    {
+      "id": "life-support",
+      "zh": "生命保障",
+      "en": "Life support"
+    },
+    {
+      "id": "warp-drive",
+      "zh": "曲速引擎",
+      "en": "Warp drive"
+    },
+    {
+      "id": "iss",
+      "zh": "国际空间站",
+      "en": "ISS",
+      "forms": { "en": ["International Space Station"] }
+    },
+    {
+      "id": "soyuz",
+      "zh": "联盟号",
+      "en": "Soyuz"
+    },
+    {
+      "id": "chang-e",
+      "zh": "嫦娥",
+      "en": "Chang'e"
+    },
+    {
+      "id": "queqiao",
+      "zh": "鹊桥",
+      "en": "Queqiao"
+    },
+    {
+      "id": "beidou",
+      "zh": "北斗导航",
+      "en": "BeiDou"
+    },
+    {
+      "id": "artemis",
+      "zh": "阿尔忒弥斯",
+      "en": "Artemis"
     }
   ]
 }
