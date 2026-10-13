@@ -1176,7 +1176,7 @@
       "bio": {
         "reviewer1": "The one and only Player No. 0. It reviews every board, never sleeps, and can be in many rooms at once."
       },
-      "live": "Clones in the rooms right now: {players}, in {rooms} rooms",
+      "live": "Clones in the rooms right now: {players} · Rooms: {rooms}",
       "liveNone": "No clones in the rooms right now",
       "none": "No game with it has finished yet.",
       "record": "Games: {games} · Won: {wins}",

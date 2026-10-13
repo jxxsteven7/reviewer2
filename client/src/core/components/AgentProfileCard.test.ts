@@ -56,7 +56,7 @@ describe('AgentProfileCard', () => {
     const text = wrapper.text();
     expect(text).toContain('Reviewer 1');
     expect(text).toContain('Player No. 0');
-    expect(text).toContain('Clones in the rooms right now: 4, in 3 rooms');
+    expect(text).toContain('Clones in the rooms right now: 4 · Rooms: 3');
     expect(text).toContain('Games: 12 · Won: 7');
     expect(text).toContain('As a PI: 8 games, 5 won · As a student: 6 games, 3 won');
     expect(text).toContain('Cards found per clue: 1.2');

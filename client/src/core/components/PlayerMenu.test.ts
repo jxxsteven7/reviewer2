@@ -143,7 +143,7 @@ describe('PlayerMenu', () => {
     await flushPromises();
     expect(signedIn.request).toHaveBeenCalledWith('/api/agent/reviewer1');
     expect(dialogs()[0]?.textContent).toContain('Player No. 0');
-    expect(dialogs()[0]?.textContent).toContain('Clones in the rooms right now: 3, in 2 rooms');
+    expect(dialogs()[0]?.textContent).toContain('Clones in the rooms right now: 3 · Rooms: 2');
   });
 
   test('offers a report in a public room to a player with an account, and sends it with the note', async () => {
