@@ -7,12 +7,14 @@ import {
   acknowledgmentLine,
   checkCredit,
   cleanName,
+  escapeName,
   formatCode,
   MAX_NAME_LENGTH,
   REPOSITORY_URL,
   usernameKey,
   type Acknowledgment,
   type AcknowledgmentKind,
+  type FeedbackKind,
 } from '@reviewer2/shared';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
@@ -22,6 +24,7 @@ import { AccountStore } from './store/accounts';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
 import { FeedbackStore, type Feedback, type Report } from './store/feedback';
 import { MIGRATIONS } from './store/migrations';
+import { KINDS } from './statusPage';
 
 // The operator's commands (docs/development.md), which run beside the server on its data:
 //
@@ -31,6 +34,7 @@ import { MIGRATIONS } from './store/migrations';
 //   node server/dist/admin.cjs accounts bar <username>
 //   node server/dist/admin.cjs accounts unbar <username>
 //   node server/dist/admin.cjs feedback adopt <id>
+//   node server/dist/admin.cjs feedback draft <id> [--json]
 //   node server/dist/admin.cjs feedback issue <id> <number>|--clear
 //   node server/dist/admin.cjs feedback resolve <id> <pr>|--clear
 //   node server/dist/admin.cjs feedback close <id>
@@ -53,22 +57,26 @@ import { MIGRATIONS } from './store/migrations';
 // mistake. Both print the entry for ACKNOWLEDGMENTS.md, the public list, which the operator
 // completes and adds to the file. `list` shows the acknowledgments.
 //
-// The other `feedback` commands are the operator's notes on what became of the feedback, which
-// the status page shows (docs/architecture.md#feedback) and which only these commands change:
-// `issue` records the GitHub issue it was published as, which only feedback whose player agreed
-// may be; `resolve` the pull request that resolved it, for any feedback; `close` and `reopen`
-// whether it was closed without being adopted; `delete` puts it in the trash, from which `restore`
-// takes it back and the server deletes it for good after 30 days, and `trash` lists what is there.
-// Feedback that was adopted can't be deleted, since the acknowledgment points at it. Nothing
-// changes what a player sent, deletes acknowledgments or reports, or changes who an
-// acknowledgment is for or counted for: those are archives (docs/architecture.md#feedback).
+// `feedback draft` writes the title and the body of the GitHub issue for feedback whose player
+// agreed to one, from a template, with the player's text and name alone: the operator creates the
+// issue from them on a machine that reaches GitHub, which the server needn't, and then records its
+// number with `feedback issue`. The other `feedback` commands are the operator's notes on what
+// became of the feedback, which the status page shows (docs/architecture.md#feedback) and which
+// only these commands change: `issue` records the GitHub issue it was published as, which only
+// feedback whose player agreed may be; `resolve` the pull request that resolved it, for any
+// feedback; `close` and `reopen` whether it was closed without being adopted; `delete` puts it in
+// the trash, from which `restore` takes it back and the server deletes it for good after 30 days,
+// and `trash` lists what is there. Feedback that was adopted can't be deleted, since the
+// acknowledgment points at it. Nothing changes what a player sent, deletes acknowledgments or
+// reports, or changes who an acknowledgment is for or counted for: those are archives
+// (docs/architecture.md#feedback).
 // `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
 // and never what the database keeps in place of passwords, email addresses and logins; `accounts
 // bar` keeps an account out of public rooms, as for a player others reported, and `accounts unbar`
 // lets it back in. `reports list` shows the latest reports that players sent of each other.
-// `accounts`, `list`, `trash` and `reports list` only read. DATA_DIR names the server's data, as
-// it does for the server. The database is opened as it is, never migrated, and the server may go
-// on running meanwhile.
+// `accounts`, `feedback draft`, `list`, `trash` and `reports list` only read. DATA_DIR names the
+// server's data, as it does for the server. The database is opened as it is, never migrated, and
+// the server may go on running meanwhile.
 
 // The usage of `acknowledgments add` alone, which the command prints when it isn't told, one way
 // or the other, whether it counts for an account.
@@ -82,6 +90,7 @@ const USAGE = [
   '  accounts bar <username>',
   '  accounts unbar <username>',
   '  feedback adopt <id>',
+  '  feedback draft <id> [--json]',
   '  feedback issue <id> <number>|--clear',
   '  feedback resolve <id> <pr>|--clear',
   '  feedback close <id>',
@@ -242,6 +251,10 @@ function trashLine(feedback: Feedback, daysLeft: number): string {
 const inTrash = (print: Print, { id }: Feedback) =>
   print(`Feedback #${id} is in the trash. Restore it first: feedback restore ${id}.`);
 
+// Why feedback whose player didn't agree to an issue, or who wasn't asked, is never one.
+const notAgreed = (print: Print, { id }: Feedback) =>
+  print(`The player didn't agree to feedback #${id} being published as an issue.`);
+
 // A note taken on feedback in the trash, which may be a mistake, says where the feedback is.
 const trashNote = (print: Print, { id, deletedAt }: Feedback) => {
   if (deletedAt !== null) print(`It is in the trash, by the way: feedback restore ${id} brings it back.`);
@@ -279,6 +292,83 @@ function reportLine({
     `#${id}  ${createdAt.slice(0, 10)}  ${reporter ?? '(deleted account)'} reported ${who} in ${formatCode(roomCode)}` +
     (text === null ? '' : `: ${text.replace(/\n/g, ' / ')}`)
   );
+}
+
+// The issue that `feedback draft` writes holds what the player agreed to publish, which the form
+// promises (feedback.publicIssueHint in the locales): their text and the name they left, if any,
+// and nothing else that came with the feedback, neither contact, link, account, version, browser
+// nor time, nor the feedback's id. The body opens with what the feedback is, by its kind, quotes
+// the text, and says who sent it.
+const OPENINGS: Record<FeedbackKind, string> = {
+  idea: 'An idea',
+  game: 'An idea for a new game',
+  bug: 'A bug report',
+  words: 'A suggestion for the word lists',
+};
+
+// How much of the first line of the text the title takes, in the characters that a reader sees,
+// and in code points, which GitHub counts, taking a title of at most 256: a character that a reader
+// sees may be several, so this bound leaves room for the kind and the zero-width spaces.
+const TITLE_LENGTH = 60;
+const TITLE_POINTS = 120;
+const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+// The player's text and name go to GitHub as they are, and GitHub reads more in text than
+// Markdown: it mentions a user or a team written as @name, links an email address, refers to an
+// issue, a pull request or a discussion written as #12, GH-12 or owner/repo/issues/12, with or
+// without the address of the site in front, which then shows the reference, links a commit written
+// as seven or more hexadecimal digits on their own, and shows :boom: as an emoji, in a title as
+// much as in a body; and in a body it shows $x^2$ or $$x^2$$ as a formula, in any size or color
+// that LaTeX gives it, and a quotation whose first line is [!NOTE], [!TIP], [!IMPORTANT],
+// [!WARNING] or [!CAUTION] alone, in any case, as an alert, with a title and an icon of GitHub's
+// own in place of that line. Those patterns need the name, the number, the rest of the digits, the
+// shortcode or the ! right after their first character, and a formula needs nothing but a space or
+// punctuation before its opening $, so a zero-width space after that character, or before the $,
+// which shows nothing, keeps them from matching; a backslash wouldn't, since GitHub reads the
+// signs in the text once Markdown has taken the backslash away. A slash or a colon after a digit,
+// as in a date or a time, is left alone: no reference or shortcode starts that way.
+const ZERO_WIDTH_SPACE = '\u200b';
+const LINKED =
+  /@(?=[a-z0-9])|(?:#|GH-|(?<!\d)\/)(?=\d)|\b[0-9a-f](?=[0-9a-f]{6,}\b)|(?<!\d):(?=[\w+-]+:)|(?=\$)|\[(?=!)/gi;
+const unlinked = (text: string): string => text.replace(LINKED, `$&${ZERO_WIDTH_SPACE}`);
+
+// A line of the text, or the name, as the body's Markdown shows it as it is: unlinked, and then
+// with every ASCII punctuation character escaped, as a name is in ACKNOWLEDGMENTS.md
+// (shared/src/lists.ts), so that no line is a heading, a list item, a quotation of its own, a
+// rule, emphasis, code, a link, an image, a tag or a web address.
+const literal = (text: string): string => escapeName(unlinked(text));
+
+// The title: the kind, as the status page calls it, and the first line of the text, on one line
+// with its spaces collapsed, cut after TITLE_LENGTH characters, or fewer when they are more than
+// TITLE_POINTS code points, with an ellipsis. The characters are the ones that a reader sees, as
+// textLength counts them (shared/src/text.ts), so that a Chinese character or an emoji is never
+// cut in two, unless the first character alone is more than TITLE_POINTS code points, as many
+// emoji joined into one are, which is cut after that many. GitHub renders no Markdown in a title
+// but a code span between backticks, so nothing is escaped, and the signs are unlinked all the
+// same.
+function issueTitle({ kind, text }: Feedback): string {
+  const line = (text.split('\n')[0] ?? '').replace(/\s+/g, ' ').trim();
+  const chars = [...graphemes.segment(line)].map(({ segment }) => segment);
+  const kept = chars.slice(0, TITLE_LENGTH);
+  while ([...kept.join('')].length > TITLE_POINTS) kept.pop();
+  const head = kept.length > 0 ? kept.join('') : [...line].slice(0, TITLE_POINTS).join('');
+  const cut = kept.length < chars.length ? `${head.trimEnd()}\u2026` : line;
+  return `${KINDS[kind]}: ${unlinked(cut)}`;
+}
+
+// The body, in Markdown: the opening sentence, the text as one quotation, line by line, with a
+// blank line kept as a bare >, and who sent it: the name, or that the player left none.
+function issueBody({ kind, text, credit }: Feedback): string {
+  const quoted = text.split('\n').map((line) => (line === '' ? '>' : `> ${literal(line)}`));
+  const sent = kind === 'bug' ? 'Reported' : 'Suggested';
+  const who = credit === null ? 'Sent by an anonymous player.' : `${sent} by ${literal(credit)}.`;
+  return [
+    `${OPENINGS[kind]} that a player sent through the feedback form, published with their agreement:`,
+    '',
+    ...quoted,
+    '',
+    who,
+  ].join('\n');
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -413,6 +503,49 @@ const COMMANDS: Record<string, Command> = {
       return 0;
     },
   },
+  'feedback draft': {
+    words: 1,
+    flags: ['json'],
+    readOnly: true,
+    run(data, [word], { json }, print) {
+      const found = feedbackNumbered(data, word as string, print);
+      if (!found) return 1;
+      if (found.deletedAt !== null) {
+        inTrash(print, found);
+        return 1;
+      }
+      if (found.publicIssue !== true) {
+        notAgreed(print, found);
+        return 1;
+      }
+      if (found.issue !== null) {
+        print(
+          `Feedback #${found.id} is issue #${found.issue} already. To publish it again, take that back first: ` +
+            `feedback issue ${found.id} --clear.`,
+        );
+        return 1;
+      }
+      // A kind from a later server, which this one was rolled back from, has no name or opening.
+      if (!Object.hasOwn(KINDS, found.kind)) {
+        print(`This build doesn't know the kind ${found.kind} of feedback #${found.id}.`);
+        return 1;
+      }
+      const title = issueTitle(found);
+      const body = issueBody(found);
+      if (json) {
+        print(JSON.stringify({ id: found.id, kind: found.kind, title, body }));
+        return 0;
+      }
+      print(title);
+      print('');
+      for (const line of body.split('\n')) print(line);
+      print('');
+      print(
+        `Create the issue on GitHub with this title and body, then record its number: feedback issue ${found.id} <number>.`,
+      );
+      return 0;
+    },
+  },
   'feedback issue': {
     words: 2,
     flags: [],
@@ -436,7 +569,7 @@ const COMMANDS: Record<string, Command> = {
         return 1;
       }
       if (found.publicIssue !== true) {
-        print(`The player didn't agree to feedback #${found.id} being published as an issue.`);
+        notAgreed(print, found);
         return 1;
       }
       data.feedback.setIssue(found.id, issue);
