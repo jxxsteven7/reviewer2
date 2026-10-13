@@ -4,12 +4,19 @@ How `main` is protected on GitHub, how the lists of thanks go to it, and the tok
 
 ## Branch protection
 
-**Settings → Rules → Rulesets → New branch ruleset** `protect-main`: enforcement **Active**, with **Repository admin** on the bypass list, **Always allow**, for the [lists of thanks](#lists-of-thanks), targeting the default branch, with these rules:
+**Settings → Rules → Rulesets → New branch ruleset**, twice, both with enforcement **Active** and targeting the default branch.
+
+`protect-main-history`, with no bypass list:
 
 - Restrict deletions; Block force pushes.
+
+`protect-main`, with **Repository admin** on the bypass list, **Always allow**, for the [lists of thanks](#lists-of-thanks):
+
 - Require a pull request before merging: required approvals **1**, dismiss stale approvals when new commits are pushed, require review from Code Owners, require approval of the most recent reviewable push, require conversation resolution, allowed merge method **Squash** only.
 - Require status checks to pass: `Commits and version`, `Script tests` and `Forbidden name` from `conventions.yml`; `README sync` from `docs.yml`; `Lint and types`, `Tests`, `Lowest Node`, `Word lists`, `End-to-end` (summing up the per-browser jobs) and `Build` from `ci.yml`.
 - Require branches to be up to date before merging, so that `Commits and version` reruns after every merge and two PRs can't land with the same version.
+
+A bypass lets its actors past every rule of its ruleset, so the two rules that nobody may get past are in a ruleset without one.
 
 ## Maintainers
 
@@ -25,21 +32,26 @@ A maintainer has the **Admin** or **Maintain** role; CI uses it to decide who ma
 
 ## Lists of thanks
 
-A maintainer may commit a change to nothing but `ACKNOWLEDGMENTS.md` and `SPONSORS.md` to `main` directly, without a PR ([rules/git.md](rules/git.md)). The daily update of the sponsors on GitHub still comes as a PR ([Sponsors](#sponsors)).
+A maintainer with the Admin role may commit a change to nothing but `ACKNOWLEDGMENTS.md` and `SPONSORS.md` to `main` directly, without a PR ([rules/git.md](rules/git.md)). The daily update of the sponsors on GitHub still comes as a PR ([Sponsors](#sponsors)).
 
-1. **Once:** in `protect-main`, **Bypass list → Add bypass → Repository admin**, set to **Always allow**, and **Save changes**. Or with `gh`, in a checkout; 5 is the ID of the Repository admin role, so check afterwards that the ruleset's page lists it:
+1. **Once:** create `protect-main-history` with Restrict deletions and Block force pushes, take those two rules out of `protect-main`, and there **Bypass list → Add bypass → Repository admin**, set to **Always allow**, and **Save changes** ([Branch protection](#branch-protection)). Or with `gh`, in a checkout; 5 is the ID of the Repository admin role, so check afterwards that the page of `protect-main` lists it:
 
    ```bash
+   gh api -X POST 'repos/{owner}/{repo}/rulesets' --input - <<'EOF'
+   {"name": "protect-main-history", "target": "branch", "enforcement": "active",
+    "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
+    "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}]}
+   EOF
    id=$(gh api 'repos/{owner}/{repo}/rulesets' --jq '.[] | select(.name == "protect-main") | .id')
    gh api "repos/{owner}/{repo}/rulesets/$id" \
-     --jq '{name, target, enforcement, conditions, rules, bypass_actors: [{actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always"}]}' |
+     --jq '{name, target, enforcement, conditions, rules: [.rules[] | select(.type != "deletion" and .type != "non_fast_forward")], bypass_actors: [{actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always"}]}' |
      gh api -X PUT "repos/{owner}/{repo}/rulesets/$id" --input -
    ```
 
 2. To check a change first, make it in a checkout of `main` and run `npx vitest run server/src/thanks.test.ts`, which names each line that breaks the rules ([development.md](development.md#acknowledgments)).
 3. On GitHub, open the file on `main`, edit it, and **Commit changes...** with the message `docs: <summary>`, such as `docs: thank a sponsor`: in English, with no version or `(#N)`. Choose **Commit directly to the `main` branch** and tick the box that bypasses the rules. The local `pre-push` hook refuses every push to `main`, so these commits are made on GitHub.
 
-A list that breaks the rules doesn't stop the server: a copy in `CONTENT_DIR` that breaks them leaves the one that the build bundled on the home page, and the log says why (`thanks_list_skipped`). On `main`, the `Tests` and `Lowest Node` checks fail; fix the list with another commit. Any other commit without ` (#N)`, of another file, of another type or with a version, fails `Landed commits and release`, so a change that skipped its PR shows at once. The bypass lets admins past every rule of the ruleset, so use it for the lists alone.
+A list that breaks the rules doesn't stop the server: a copy in `CONTENT_DIR` that breaks them leaves the one that the build bundled on the home page, and the log says why (`thanks_list_skipped`). The build takes the lists from `main` as they are, though: on `main`, the `Tests` and `Lowest Node` checks fail, and until another commit fixes the list, a build from `main` shows it without the entries that break the rules. Any other commit without ` (#N)`, of another file, of another type or with a version, fails `Landed commits and release`. The check reads only the title, so a commit that skipped its PR shows at once unless its title ends in ` (#N)` like a squash merge's. The bypass also puts a box on the merge form of every PR, for admins, that merges without the approval and the checks: never tick it; the bypass is for the lists alone.
 
 ## Sponsors
 

@@ -10,7 +10,7 @@ Rules for AI coding assistants. Codex reads this file itself; Claude Code loads 
 
 ## Always
 
-- **Never work on `main`.** Work in a worktree on a branch of your own (`docs/rules/git.md`); create them if needed. Never commit or push to `main`, not even the lists of thanks, which only maintainers commit there; never force-push other people's branches or bypass hooks with `--no-verify`.
+- **Never work on `main`.** Work in a worktree on a branch of your own (`docs/rules/git.md`); create them if needed. Never commit or push to `main`, not even the lists of thanks, which only an admin commits there; never force-push other people's branches or bypass hooks with `--no-verify`.
 - **No AI or agent attribution**: no `Co-Authored-By` trailers for AI tools, "Generated with" lines or session links in commits, PR titles or descriptions. Remove any your tool adds.
 - **Leave versions to CI and maintainers.** Commit subjects and PR titles are `<type>: <summary>`, with no version. Never choose a minor or major version or create tags or releases.
 - **Run the checks** before you push: `npm run lint`, `npm run typecheck` and `npm test`; after changing the interface or a game's flow, also `npm run build && npm run test:e2e`.

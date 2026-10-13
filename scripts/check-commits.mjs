@@ -34,8 +34,8 @@
 // major (X+1, Y=Z=0) version is legal. A pull request that changes only docs for people
 // (UNVERSIONED_RE) takes no version, nor does its squash commit on main.
 //
-// A commit on main without the " (#N)" of a squash merge came without a pull request. Only a
-// maintainer's commit of the lists of thanks alone (LISTS_RE) may do so, titled "docs: <summary>"
+// A commit on main without the " (#N)" of a squash merge came without a pull request. Only an
+// admin's commit of the lists of thanks alone (LISTS_RE) may do so, titled "docs: <summary>"
 // with no version, and `head` reports any other.
 //
 // Exit codes: 0 pass, 1 convention violated, 2 usage or environment error.
@@ -64,7 +64,7 @@ const TAG_RE = /^v(\d+)\.(\d+)\.(\d+)$/;
 // without a version. The rules, the licenses and everything else take one.
 const UNVERSIONED_RE =
   /^(?:ACKNOWLEDGMENTS\.md|SPONSORS\.md|README\.md|README\.zh-CN\.md|CONTRIBUTING\.md|docs\/(?!rules\/).+)$/;
-// The lists of thanks, which a maintainer may commit to main without a pull request.
+// The lists of thanks, which an admin may commit to main without a pull request.
 const LISTS_RE = /^(?:ACKNOWLEDGMENTS\.md|SPONSORS\.md)$/;
 // A fixup of a fixup commit stacks the prefixes: "fixup! fixup! <subject>".
 const FIXUP_RE = /^((fixup|squash|amend)! )+/;
