@@ -1,8 +1,11 @@
 import {
   RECENT_RECORDS,
+  type BestStreaks,
   type GameRecord,
   type MatchRecord,
   type RecordsView,
+  type Streak,
+  type StreakKind,
   type Title,
   type TitleCount,
 } from '@reviewer2/shared';
@@ -10,9 +13,10 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 
 // What accounts keep of the games: a row for each game that a player with an account finished in
 // a seat (migration 2), a row for each match that they finished ranked, and the titles that
-// matches award (migration 3, docs/architecture.md#matches), and the games themselves to watch
-// again (migration 7, docs/architecture.md#replays), with the log of each and which of its players
-// had which account (migration 10, docs/architecture.md#game-records).
+// matches award (migration 3, docs/architecture.md#matches), the games themselves to watch again
+// (migration 7, docs/architecture.md#replays), the streaks of wins and of losses that the games
+// make (migration 10, docs/architecture.md#streaks), and the log of each game kept and which of
+// its players had which account (migration 11, docs/architecture.md#game-records).
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
 // points it brought them (migration 8), scored as a match scores a game.
@@ -46,6 +50,8 @@ export class RecordStore {
   readonly #insertMatch: StatementSync;
   readonly #matchCount: StatementSync;
   readonly #recentMatches: StatementSync;
+  readonly #streak: StatementSync;
+  readonly #putStreak: StatementSync;
 
   constructor(
     db: DatabaseSync,
@@ -76,17 +82,56 @@ export class RecordStore {
       'SELECT game, ended_at AS endedAt, games, rank, players, score, title FROM match_records ' +
         'WHERE account_id = ? ORDER BY id DESC LIMIT ?',
     );
+    // The account's streaks, one row kept up with every game, so that neither the account page nor
+    // the end of a game reads the whole record (migration 10).
+    this.#streak = db.prepare(
+      'SELECT best_wins AS wins, best_losses AS losses, run, run_won AS runWon FROM streaks WHERE account_id = ?',
+    );
+    this.#putStreak = db.prepare(
+      'INSERT INTO streaks (account_id, best_wins, best_losses, run, run_won) VALUES (?, ?, ?, ?, ?) ' +
+        'ON CONFLICT (account_id) DO UPDATE SET best_wins = excluded.best_wins, ' +
+        'best_losses = excluded.best_losses, run = excluded.run, run_won = excluded.run_won',
+    );
   }
 
-  // Keeps the record, and says whether it was new.
-  add(accountId: number, record: NewRecord): boolean {
+  // Keeps the record, and the streak that the game brings the account to, or null when the game
+  // was on the record already. The caller runs it in a transaction (Accounts.record), so that the
+  // streaks can't fall behind the records.
+  add(accountId: number, record: NewRecord): Streak | null {
     const { game, gameId, side, role, winner, won, verdict, points } = record;
     const endedAt = new Date(this.now()).toISOString();
-    return (
-      Number(
-        this.#insert.run(accountId, game, gameId, endedAt, side, role, winner, won ? 1 : 0, verdict, points).changes,
-      ) > 0
+    const { changes } = this.#insert.run(
+      accountId,
+      game,
+      gameId,
+      endedAt,
+      side,
+      role,
+      winner,
+      won ? 1 : 0,
+      verdict,
+      points,
     );
+    return Number(changes) > 0 ? this.#extend(accountId, won) : null;
+  }
+
+  // The streak that one more game, won or lost, brings the account to: one game longer when it went
+  // the way of the game before, else a new one of one game. It is a record when it is longer than
+  // every streak of its kind before it, so the first streak of each kind is one.
+  #extend(accountId: number, won: boolean): Streak {
+    type Row = { wins: number; losses: number; run: number; runWon: number };
+    const before = (this.#streak.get(accountId) as Row | undefined) ?? { wins: 0, losses: 0, run: 0, runWon: 1 };
+    const kind: StreakKind = won ? 'wins' : 'losses';
+    const length = (before.runWon === 1) === won ? before.run + 1 : 1;
+    const best = { ...before, [kind]: Math.max(before[kind], length) };
+    this.#putStreak.run(accountId, best.wins, best.losses, length, won ? 1 : 0);
+    return { kind, length, record: length > before[kind] };
+  }
+
+  // The longest streaks of wins and of losses on the account's record (shared/src/streaks.ts).
+  streaks(accountId: number): BestStreaks {
+    const row = this.#streak.get(accountId) as { wins: number; losses: number } | undefined;
+    return { wins: row?.wins ?? 0, losses: row?.losses ?? 0 };
   }
 
   // The points of every game on the account's record, from which its rank is told (ranks.ts).

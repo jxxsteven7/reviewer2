@@ -1,4 +1,5 @@
 import { AVATAR_SIZE, AVATAR_TARGET_BYTES, MAX_AVATAR_BYTES, usernameKey } from '@reviewer2/shared';
+import { fnv1a } from './hash';
 
 // Avatars on the page (docs/design.md): always a circle. A player who uploaded none, and every
 // guest, gets a default one, drawn here from the name: its first character on a color that the
@@ -17,16 +18,10 @@ export function initialOf(name: string): string {
   return (first ?? '?').toLocaleUpperCase();
 }
 
-// The color of the name's default avatar, as a CSS value. FNV-1a over the key of the name, so
-// that "Ann" and "ANN" get the same color.
+// The color of the name's default avatar, as a CSS value. A hash of the key of the name, so that
+// "Ann" and "ANN" get the same color.
 export function colorOf(name: string): string {
-  const key = usernameKey(name);
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < key.length; i += 1) {
-    hash ^= key.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return `var(--avatar-${((hash >>> 0) % AVATAR_COLORS) + 1})`;
+  return `var(--avatar-${(fnv1a(usernameKey(name)) % AVATAR_COLORS) + 1})`;
 }
 
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>

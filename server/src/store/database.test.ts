@@ -75,6 +75,7 @@ describe('a database in DATA_DIR', () => {
       'sessions',
       'settings',
       'sqlite_sequence',
+      'streaks',
       'titles',
     ]);
     expect(schemaVersion(database.db)).toBe(MIGRATIONS.length);
@@ -461,18 +462,50 @@ describe('a database in DATA_DIR', () => {
     });
   });
 
-  test('of the ninth release keeps its replays, with no log, when it gets the record of who played', async () => {
+  test('of the ninth release works out the streaks of the records it has when it gets the table for them', async () => {
     const ninth = await open(dir, MIGRATIONS.slice(0, 9));
     ninth.db.exec(`
-      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
-      INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
-      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}');
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES
+        (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now'), (3, 'Cat', 'cat', 'h', 'now');
     `);
+    // Ann won three, lost four, then won two; Bob lost one; Cat never played. The ids are the order
+    // the games ended in, whichever game they were.
+    const game = ninth.db.prepare(
+      "INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict) VALUES (?, ?, ?, 'now', 's', 'r', 'w', ?, 'v')",
+    );
+    [...'WWWLLLLWW'].forEach((result, i) =>
+      game.run(1, i % 2 === 0 ? 'keywords' : 'test', `g${i}`, result === 'W' ? 1 : 0),
+    );
+    game.run(2, 'keywords', 'g9', 0);
     ninth.db.close();
 
     const migrated = await open(dir, MIGRATIONS.slice(0, 10));
     expect(migrated).toMatchObject({ schema: 10, migratedFrom: 9 });
-    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v10.db'));
+    const { db } = migrated;
+    expect(db.prepare('SELECT * FROM streaks ORDER BY account_id').all()).toEqual([
+      { account_id: 1, best_wins: 3, best_losses: 4, run: 2, run_won: 1 },
+      { account_id: 2, best_wins: 0, best_losses: 1, run: 1, run_won: 0 },
+    ]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    // The row goes with the account.
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT account_id FROM streaks').all()).toEqual([{ account_id: 2 }]);
+    expect(() => db.exec('INSERT INTO streaks VALUES (9, 0, 0, 0, 0)')).toThrow(/FOREIGN KEY/);
+    expect(() => db.exec('INSERT INTO streaks VALUES (3, 0, 0, 0, 2)')).toThrow(/CHECK/);
+  });
+
+  test('of the tenth release keeps its replays, with no log, when it gets the record of who played', async () => {
+    const tenth = await open(dir, MIGRATIONS.slice(0, 10));
+    tenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
+      INSERT INTO game_records VALUES (NULL, 1, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral', 4);
+      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}');
+    `);
+    tenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 11));
+    expect(migrated).toMatchObject({ schema: 11, migratedFrom: 10 });
+    expect(migrated.beforeMigration).toBe(join(dir, SNAPSHOT_DIR, 'reviewer2-20261009T133005Z-before-v11.db'));
     const { db } = migrated;
     // The replay that was there is as it was, with no log, and the records too.
     expect(db.prepare('SELECT game_id, data, log FROM replays').all()).toEqual([
@@ -663,6 +696,7 @@ describe('a database in memory', () => {
       'sessions',
       'settings',
       'sqlite_sequence',
+      'streaks',
       'titles',
     ]);
     expect(readdirSync(dir)).toEqual([]);

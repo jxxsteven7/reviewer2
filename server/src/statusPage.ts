@@ -218,7 +218,8 @@ export interface ReportListing {
   older: boolean;
 }
 
-const KINDS: Record<FeedbackKind, string> = { idea: 'Idea', game: 'New game', bug: 'Bug', words: 'Word lists' };
+// What the page calls the kinds, and the title of an issue does (admin.ts).
+export const KINDS: Record<FeedbackKind, string> = { idea: 'Idea', game: 'New game', bug: 'Bug', words: 'Word lists' };
 const LANGUAGES: Record<Feedback['language'], string> = { zh: 'Chinese', en: 'English' };
 const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room' };
 const VIEWS: Record<PageView, string> = {
@@ -278,19 +279,24 @@ function trail(feedback: Feedback, now: number): string {
 // The `admin.cjs feedback` commands that may come next for the feedback (admin.ts), as text for
 // the operator to copy to a terminal, each on a line of its own with `prefix` in front, under a
 // heading that is folded until it is opened. Which they are follows the feedback's status. In the
-// trash, only the way out. Otherwise: the issue, to record or to take back, for feedback whose
-// player agreed to one; the pull request, to record or to take back; adopting it, while it is
-// neither thanked nor closed, which can't be undone; closing or reopening it; and the trash, unless
-// an acknowledgment points at it. The page shows the commands and runs none of them.
+// trash, only the way out. Otherwise: the issue, to draft, when this build knows the kind, and to
+// record or to take back, for feedback whose player agreed to one; the pull request, to record or
+// to take back; adopting it, while it is neither thanked nor closed, which can't be undone; closing
+// or reopening it; and the trash, unless an acknowledgment points at it. The page shows the
+// commands and runs none of them.
 function commands(feedback: Feedback, prefix: string): string {
-  const { id, publicIssue, issue, resolvedPr, acknowledgmentId, closedAt, deletedAt } = feedback;
+  const { id, kind, publicIssue, issue, resolvedPr, acknowledgmentId, closedAt, deletedAt } = feedback;
   const line = (command: string, note = '') =>
     `<p class="command"><code>${escape(`${prefix} feedback ${command}`)}</code>${note === '' ? '' : ` ${note}`}</p>`;
   const lines =
     deletedAt !== null
       ? [line(`restore ${id}`)]
       : [
-          ...(publicIssue === true ? [line(issue === null ? `issue ${id} <number>` : `issue ${id} --clear`)] : []),
+          ...(publicIssue !== true
+            ? []
+            : issue === null
+              ? [...(Object.hasOwn(KINDS, kind) ? [line(`draft ${id}`)] : []), line(`issue ${id} <number>`)]
+              : [line(`issue ${id} --clear`)]),
           line(resolvedPr === null ? `resolve ${id} <pr>` : `resolve ${id} --clear`),
           ...(acknowledgmentId === null && closedAt === null ? [line(`adopt ${id}`, "can't be undone")] : []),
           line(closedAt === null ? `close ${id}` : `reopen ${id}`),

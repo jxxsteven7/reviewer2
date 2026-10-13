@@ -84,6 +84,62 @@ const SOUNDS: Record<Emote, (audio: AudioContext, at: number) => void> = {
     tone(audio, { type: 'sawtooth', from: 147, at, length: 0.45, volume: 0.3, filter: 600 });
     tone(audio, { type: 'sawtooth', from: 104, to: 98, at: at + 0.5, length: 1.1, volume: 0.3, filter: 450 });
   },
+  // A rising major chord, note by note, with the top held: accepted as it is.
+  accept(audio, at) {
+    [523, 659, 784].forEach((pitch, i) =>
+      tone(audio, { type: 'triangle', from: pitch, at: at + i * 0.11, length: 0.18, volume: 0.18 }),
+    );
+    tone(audio, { type: 'triangle', from: 1047, at: at + 0.33, length: 0.7, volume: 0.2 });
+  },
+  // Three quick sparkles going up, like a pen flourish: a clue to be proud of.
+  great_clue(audio, at) {
+    [880, 1109, 1319].forEach((pitch, i) =>
+      tone(audio, { type: 'sine', from: pitch, to: pitch * 1.06, at: at + i * 0.09, length: 0.16, volume: 0.16 }),
+    );
+    tone(audio, { type: 'sine', from: 1760, at: at + 0.3, length: 0.35, volume: 0.1 });
+  },
+  // Three notes sliding down a semitone each, the sound of raised eyebrows: suspicious.
+  p_hacking(audio, at) {
+    [440, 415, 392].forEach((pitch, i) =>
+      tone(audio, {
+        type: 'sawtooth',
+        from: pitch,
+        to: pitch * 0.97,
+        at: at + i * 0.22,
+        length: 0.2,
+        volume: 0.14,
+        filter: 1200,
+      }),
+    );
+  },
+  // A rubber stamp coming down, then a low buzz: sent back for a major revision.
+  major_revision(audio, at) {
+    tone(audio, { type: 'sine', from: 160, to: 60, at, length: 0.12, volume: 0.3 });
+    tone(audio, { type: 'square', from: 196, at: at + 0.2, length: 0.4, volume: 0.08, filter: 800 });
+  },
+  // A long sigh down, and a small hopeful note back up: on to the next venue.
+  resubmit(audio, at) {
+    tone(audio, { type: 'sine', from: 440, to: 300, at, length: 0.6, volume: 0.18 });
+    tone(audio, { type: 'sine', from: 330, to: 392, at: at + 0.7, length: 0.3, volume: 0.14 });
+  },
+  // Two notes rising like a question, asked twice: please, please.
+  first_author(audio, at) {
+    for (let i = 0; i < 2; i += 1) {
+      tone(audio, { type: 'triangle', from: 392, to: 523, at: at + i * 0.4, length: 0.3, volume: 0.16 });
+    }
+  },
+  // A doorbell's two notes: a knock on the door for the next paper.
+  coauthor(audio, at) {
+    tone(audio, { type: 'triangle', from: 659, at, length: 0.35, volume: 0.18 });
+    tone(audio, { type: 'triangle', from: 523, at: at + 0.3, length: 0.6, volume: 0.18 });
+  },
+  // Typing late at night, then the carriage bell: an all-nighter.
+  all_nighter(audio, at) {
+    for (let i = 0; i < 5; i += 1) {
+      tone(audio, { type: 'square', from: 1800, at: at + i * 0.09, length: 0.02, volume: 0.05 });
+    }
+    tone(audio, { type: 'sine', from: 1568, at: at + 0.5, length: 0.5, volume: 0.12 });
+  },
 };
 
 let audio: AudioContext | null = null;

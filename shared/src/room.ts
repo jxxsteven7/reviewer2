@@ -1,6 +1,7 @@
 import type { Language } from './language';
 import type { MatchView } from './match';
 import type { Rank } from './ranks';
+import type { StreakNotice } from './streaks';
 
 // What every member of a room sees of it. The game's own part, such as seats and the board, is
 // in `data`; the server builds it for each viewer separately (docs/architecture.md).
@@ -60,6 +61,10 @@ export interface RoomView<Game = unknown> {
   // The match that the room is playing, or null for a room that isn't a match. Everyone sees the
   // same scores.
   match: MatchView | null;
+  // The streaks that the game which has just ended brought the players with accounts to, from
+  // STREAK_MIN games on (streaks.ts): every winning streak, for the whole room to cheer, and the
+  // viewer's own losing streak, which nobody else is told of. Empty in any other phase.
+  streaks: StreakNotice[];
   // The game's own part of the view, built for this viewer alone.
   data: Game;
 }
