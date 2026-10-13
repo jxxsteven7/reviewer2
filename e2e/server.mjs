@@ -1,8 +1,8 @@
 // Starts the bundled server, mailer and agent for the end-to-end tests, with a model that answers
-// by rule (e2e/model.mjs); playwright.config.ts runs this file. The server gets exactly the settings below and nothing from the shell that runs the tests,
-// such as a HOST or PUBLIC_DIR exported for testing on a phone, so whatever it reads and isn't set
-// here has its default. Its log goes to a file, which helpers.ts reads after each test to fail the
-// test on an error the server reported.
+// by rule (e2e/model.mjs); playwright.config.ts runs this file. The server gets exactly the settings
+// below and nothing from the shell that runs the tests, such as a HOST or PUBLIC_DIR exported for
+// testing on a phone, so whatever it reads and isn't set here has its default. Its log goes to a
+// file, which helpers.ts reads after each test to fail the test on an error the server reported.
 import { spawn } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';

@@ -79,6 +79,7 @@ function send() {
             v-if="playerOf(message.player)"
             :name="playerOf(message.player)?.name ?? ''"
             :avatar="playerOf(message.player)?.avatar"
+            :agent="playerOf(message.player)?.agent !== undefined"
           />
           <span class="name">{{ nameOf(message.player) }}</span>
           <span class="text">{{ message.text }}</span>

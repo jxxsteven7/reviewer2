@@ -79,14 +79,19 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   data: { ...data, settings },
 });
 
-// A room whose chair may invite AI players, with one as the red group's student.
-const withAgents = (me: string): RoomView => {
-  const room = view(me, 0);
+// A room whose chair may invite AI players, with one as the red group's student and Bob as a blue
+// student, unless `seats` says otherwise.
+const withAgents = (
+  me: string,
+  seats: KeywordsRoomData['seats'] = { ai: { team: 'red', role: 'guesser' }, bob: { team: 'blue', role: 'guesser' } },
+  settings = data.settings,
+): RoomView => {
+  const room = view(me, 0, settings);
   return {
     ...room,
     agents: true,
     players: [...room.players, { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' }],
-    data: { ...data, seats: { ai: { team: 'red', role: 'guesser' } } },
+    data: { ...data, settings, seats },
   };
 };
 
@@ -111,18 +116,40 @@ describe('KeywordsLobby', () => {
       persona: 'reviewer1',
       seat: { team: 'blue', role: 'guesser' },
     });
-    expect(chair.text()).toContain('AI players need time limits for the clues and the guesses');
     // The AI student is marked as one.
     expect(chair.get('.group.red').text()).toContain('Reviewer 1AI');
+    // With every time limit on, nothing says that they are needed; with one off, the groups do.
+    expect(chair.text()).not.toContain('needs time limits');
+    const untimed = withAgents('ann', undefined, { ...data.settings, guessTime: 0 });
+    const reminded = mount(KeywordsLobby, { props: { room: untimed }, global: global() });
+    expect(reminded.get('.groups').text()).toContain('A room with AI players needs time limits');
 
     // Nobody else invites them, but everyone reads what they mean for the game.
     const player = mount(KeywordsLobby, { props: { room: withAgents('bob') }, global: global() });
     expect(player.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(0);
-    expect(player.text()).toContain('a game with them brings nobody points, a streak or a friend title');
+    expect(player.text()).toContain('A game with AI players brings nobody points, a streak or a friend title');
     // Nor a chair who may not.
     const barred = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     expect(barred.text()).not.toContain('Invite Reviewer 1');
     expect(barred.text()).not.toContain('AI players');
+  });
+
+  test('offers to invite AI players only once a person sits in a group', () => {
+    // The chair and Bob watch: the AI student alone is seated.
+    const nobody = mount(KeywordsLobby, {
+      props: { room: withAgents('ann', { ai: { team: 'red', role: 'guesser' } }) },
+      global: global(),
+    });
+    expect(nobody.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(0);
+    // Everyone still reads what the AI student means for the game.
+    expect(nobody.text()).toContain('A game with AI players brings nobody points');
+    const seated = mount(KeywordsLobby, {
+      props: {
+        room: withAgents('ann', { ai: { team: 'red', role: 'guesser' }, ann: { team: 'blue', role: 'captain' } }),
+      },
+      global: global(),
+    });
+    expect(seated.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(2);
   });
 
   test('says what AI players still need before the game can start', () => {

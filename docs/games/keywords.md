@@ -123,12 +123,12 @@ The record of a game ([../architecture.md](../architecture.md#game-records)) log
 
 ## AI players
 
-Where the chair may have them ([../architecture.md](../architecture.md#ai-players)), the chair invites Reviewer 1 in the waiting room as a group's PI or as one of its students, one of each a group at most (`agent_limit`), and removes it from the player menu. A game with AI players needs every time limit on (`needs_timers`), so that the clock moves the game on when the AI is slow or gone, and a person in a group (`needs_human`). It brings nobody points, a streak or a friend title.
+Where the chair may have them ([../architecture.md](../architecture.md#ai-players)), the chair invites Reviewer 1 in the waiting room as a group's PI or as one of its students, once a person sits in a group (`needs_human`) and one of each a group at most (`agent_limit`), and removes it from the player menu. A game with AI players needs every time limit on (`needs_timers`), so that the clock moves the game on when the AI is slow or gone, and a person in a group (`needs_human`). It brings nobody points, a streak or a friend title.
 
 - **As the PI**, it gives its clue no sooner than 3 seconds into its turn, with the cards it is meant for (`targets`), as anyone may; it doesn't talk.
-- **As a student, with no person of its group online,** it reveals its cards 2 seconds after the clue and 1.5 seconds apart, the surest first and never the extra guess of the standard rule, and ends the turn once it has revealed them.
-- **As a student beside people,** it advises: it chooses its surest card for the group to see and says in the group's chat why, once, and leaves the revealing to them; when they reveal that card, it chooses the next.
-- **For a player who is offline** for 20 seconds in their turn, an AI plays as they would, the PI's clue or the student's guesses, unless a person of the group is there to play it, and stops when they are back. The others see whom it plays for.
+- **As a student, with no person of its group there,** it reveals its cards 2 seconds after the clue and 1.5 seconds apart, the surest first and never the extra guess of the standard rule, and ends the turn once it has revealed them.
+- **As a student beside people,** it advises: it chooses its surest card for the group to see and says in the group's chat why, once, and leaves the revealing to them; when they reveal that card, it chooses the next. A person who has been offline for less than 20 seconds is there still, so that nobody's reload turns advice into play.
+- **For a player who is offline** for 20 seconds in their turn, an AI plays as they would, the PI's clue or the student's guesses, unless a person of the group is there to play it or the group has an AI student, who plays the guesses alone; of several students offline, one is played for. It stops when they are back. The others see whom it plays for, from the first thing it does for them.
 
 It knows what the seat it plays sees, no more: a student never the colors of the cards still face down. It reads no chat. What it says and does goes through the same rules and checks as anyone's.
 

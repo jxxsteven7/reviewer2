@@ -83,9 +83,18 @@ const problemKey = (item: StartProblem) =>
   [item.problem, 'team' in item ? item.team : 'missing' in item ? item.missing : ''].join('-');
 
 // The chair invites AI players where the room may have them (docs/games/keywords.md#ai-players): a
-// group's PI, in its empty seat, and one of its students, as long as the group has no AI student.
-const canInvite = computed(() => isChair.value && props.room.agents && lineup.value === 'free');
+// group's PI, in its empty seat, and one of its students, as long as the group has no AI student,
+// once a person sits in a group. A game with them needs every time limit on, which the chair is
+// reminded of beside the seats while one is off.
+const personSeated = computed(() =>
+  props.room.players.some((player) => player.agent === undefined && data.value.seats[player.id]?.team),
+);
+const canInvite = computed(() => isChair.value && props.room.agents && lineup.value === 'free' && personSeated.value);
 const hasAgents = computed(() => props.room.players.some((player) => player.agent));
+const timersOff = computed(() => {
+  const { firstClueTime, clueTime, guessTime } = data.value.settings;
+  return firstClueTime === 0 || clueTime === 0 || guessTime === 0;
+});
 const agentName = computed(() => t('agents.personas.reviewer1'));
 const invite = (team: Team, role: 'captain' | 'guesser') =>
   act('room:addAgent', { persona: 'reviewer1', seat: { team, role } });
@@ -312,6 +321,7 @@ const manageable = (player: PlayerView) => mayManage(props.room, player);
               </dd>
             </dl>
           </section>
+          <p v-if="canInvite && timersOff" class="footnote">{{ t('lobby.problems.needs_timers') }}</p>
         </div>
 
         <section class="spectators">
