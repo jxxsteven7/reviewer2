@@ -333,6 +333,13 @@ const ariaLabel = computed(() =>
   font-size: 15px;
 }
 
+/* On the PI's board while their group guesses, the students' avatars take the top corner and the
+   PI's mark for the next clue moves to the bottom one. */
+.chosen .target {
+  top: auto;
+  bottom: -9px;
+}
+
 /* The card that a replay's step is about. */
 .marked {
   outline: var(--line-strong) solid var(--focus);

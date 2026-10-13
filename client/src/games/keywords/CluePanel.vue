@@ -11,7 +11,7 @@ import {
   type KeywordsView,
   type Language,
 } from '@reviewer2/shared';
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
 import { errorKey } from '../../core/errors';
@@ -19,14 +19,18 @@ import { formatList } from '../../core/i18n';
 
 // The PI's clue: a word, or as many words as the room allows, and a number. The same check that
 // the server runs shows problems while the PI types, and warns about clues that come close to a
-// word on the board. The numbers on offer are the ones that the room's guess rule allows. The
-// panel is mounted for one clue: it goes away once the clue is given. `busy` holds the button
-// while a clue is on its way.
+// word on the board. The numbers on offer are the ones that the room's guess rule allows. `busy`
+// holds the button while a clue is on its way.
 //
 // The PI may mark on the board the cards the clue is meant for (`targets`, in the order marked),
 // which nobody sees until the game is over (docs/games/keywords.md#the-clue). A line at the top
 // says so, and stands out until the PI has marked a card; then it names them. The number follows
 // how many are marked, until the PI picks a number themselves.
+//
+// The word and the number picked are models, so that the game can keep them as a draft while the
+// PI prepares the clue ahead of their turn, when `canGive` is false: the panel then says that
+// only the PI sees the draft, and holds the button until the turn comes. `gone` names the marked
+// cards that were revealed meanwhile, whose marks the game took away.
 const props = withDefaults(
   defineProps<{
     game: KeywordsView;
@@ -34,39 +38,31 @@ const props = withDefaults(
     language: Language;
     busy?: boolean;
     targets?: number[];
+    canGive?: boolean;
+    gone?: string[];
   }>(),
-  { busy: false, targets: () => [] },
+  { busy: false, targets: () => [], canGive: true, gone: () => [] },
 );
 const emit = defineEmits<{ give: [word: string, count: ClueCount] }>();
+const word = defineModel<string>('word', { default: '' });
+// The number the PI picked, or null while it follows the marked cards.
+const picked = defineModel<ClueCount | null>('count', { default: null });
 const { t, locale } = useI18n();
 
-const word = ref('');
 const DEFAULT_COUNT = 1;
-const count = ref<ClueCount>(DEFAULT_COUNT);
 const INFINITY = '\u221e';
 const counts = computed(() => clueCounts(props.settings.guessRule, props.game.remaining[props.game.team]));
-
-// Whether the PI has picked the number, after which it no longer follows the marked cards.
-const picked = ref(false);
-function pick(option: ClueCount) {
-  count.value = option;
-  picked.value = true;
-}
-// The PI may have marked cards before the panel came, as before a pause.
-watch(
-  () => props.targets.length,
-  (marked) => {
-    if (picked.value) return;
-    count.value = marked > 0 && counts.value.includes(marked) ? marked : DEFAULT_COUNT;
-  },
-  { immediate: true },
-);
-const marked = computed(() =>
+const count = computed<ClueCount>(() => {
+  if (picked.value !== null) return picked.value;
+  const marked = props.targets.length;
+  return marked > 0 && counts.value.includes(marked) ? marked : DEFAULT_COUNT;
+});
+const quoted = (cards: readonly string[]) =>
   formatList(
     locale.value,
-    props.targets.map((card) => t('game.quoted', { word: props.game.cards[card]?.word ?? '' })),
-  ),
-);
+    cards.map((card) => t('game.quoted', { word: card })),
+  );
+const marked = computed(() => quoted(props.targets.map((card) => props.game.cards[card]?.word ?? '')));
 
 const check = computed(() => checkClue(word.value, props.game.cards, clueOptions(props.settings, props.language)));
 
@@ -111,15 +107,19 @@ const warnings = computed(() => {
 });
 
 function give() {
-  if (check.value.problem || props.busy) return;
+  if (check.value.problem || props.busy || !props.canGive) return;
   emit('give', word.value.trim(), count.value);
 }
 </script>
 
 <template>
-  <form class="clue-panel" @submit.prevent="give">
+  <form class="clue-panel" :class="{ draft: !canGive }" @submit.prevent="give">
+    <p v-if="!canGive" class="ahead">{{ t('game.prepareNote') }}</p>
     <p class="targets" :class="{ none: targets.length === 0 }" aria-live="polite">
       {{ targets.length === 0 ? t('game.targetsHint') : t('game.targetsMarked', { words: marked }) }}
+    </p>
+    <p v-if="gone.length > 0" class="gone" role="status">
+      {{ t('game.targetGone', { words: quoted(gone) }, gone.length) }}
     </p>
     <label class="label" for="clue-word">{{ t('game.clueInput') }}</label>
     <input
@@ -148,12 +148,12 @@ function give() {
         :class="{ chosen: count === option }"
         :aria-checked="count === option"
         :aria-label="option === 'unlimited' ? t('game.unlimited') : String(option)"
-        @click="pick(option)"
+        @click="picked = option"
       >
         {{ option === 'unlimited' ? INFINITY : option }}
       </button>
     </div>
-    <UiButton variant="primary" type="submit" :disabled="check.problem !== null || busy">{{
+    <UiButton variant="primary" type="submit" :disabled="check.problem !== null || busy || !canGive">{{
       t('game.sendClue')
     }}</UiButton>
   </form>
@@ -171,11 +171,24 @@ function give() {
   font-weight: var(--weight-bold);
 }
 
+/* The line at the top while the PI prepares the clue ahead of their turn: only they see the draft. */
+.ahead {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
 /* Until a card is marked, the line stands out as a note card on the table; then it is a quiet line
    that names the cards. */
 .targets {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+/* A marked card that was revealed meanwhile: the mark went, and this says so. */
+.gone {
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .targets.none {

@@ -286,6 +286,13 @@
     },
     "waitClue": "Waiting for the PI of the {group} to give a clue.",
     "waitGuess": "The {group} is guessing.",
+    "prepare": "Prepare the next clue",
+    "prepareDraft": "Keep preparing ({summary})",
+    "prepareHide": "Hide the draft",
+    "draftMarked": "{count} card marked | {count} cards marked",
+    "draftJoin": ", ",
+    "prepareNote": "This is the draft of your next clue. Only you see it, and you give it once it's your turn.",
+    "targetGone": "You marked {words}, which has been revealed, so the mark is gone. | You marked {words}, which have been revealed, so the marks are gone.",
     "clueInput": "Your clue",
     "clueLimit": {
       "zh": "At most {count} characters: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation is fine, but not the English for a word on the board, nor its pinyin.",

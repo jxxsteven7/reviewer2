@@ -23,6 +23,7 @@ import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
+import { emptyDraft, readDraft, writeDraft, type ClueDraft } from './draft';
 import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
@@ -136,33 +137,80 @@ async function choose(card: number) {
   if (choicesOnTheWay === 0) pending.value = null;
 }
 
-// The PI's marks on the cards the clue is meant for, in the order marked: tapping one of the
-// group's cards marks it, tapping it again takes the mark back. They go with the clue, and start
-// over with every clue phase. Nobody else sees them until the game is over.
-const targets = ref<number[]>([]);
+// The PI's clue in the making: the word, the number if they picked one, and their marks on the
+// cards the clue is meant for, in the order marked. Tapping one of the group's cards marks it,
+// tapping it again takes the mark back. Nobody else sees any of it until the clue is given: it is
+// kept in this browser alone (draft.ts), for this game, and comes back after a reload. It goes
+// with the clue, and starts over with the next game.
+//
+// A PI may prepare the clue whenever it isn't their turn to give one, while the game is on and
+// not paused (docs/games/keywords.md#the-clue): the panel opens from a button under the status
+// line, so that it doesn't stand in the way of watching the other group, and folds away again.
+// When their turn comes the panel is open with the draft in it, and the PI gives the clue
+// themselves. A marked card that someone reveals meanwhile loses its mark, and the panel says
+// so until the PI marks or unmarks a card again.
+const isCaptain = computed(() => mySeat.value?.role === 'captain');
+const mayPrepare = computed(() => isCaptain.value && !canClue.value && !paused.value && !game.value.result);
+const preparing = ref(false);
+const draft = ref<ClueDraft>(readDraft(game.value.gameId));
+const gone = ref<string[]>([]);
 watch(
-  () => `${game.value.gameId} ${game.value.turn} ${game.value.phase}`,
-  () => (targets.value = []),
+  () => game.value.gameId,
+  (gameId) => {
+    draft.value = readDraft(gameId);
+    gone.value = [];
+    preparing.value = false;
+  },
+);
+watch(draft, (current) => writeDraft(game.value.gameId, current), { deep: true });
+watch(
+  game,
+  ({ cards }) => {
+    // While the game is paused there are no cards, and nothing to tell.
+    if (cards.length === 0) return;
+    const targets = draft.value.targets;
+    const kept = targets.filter((card) => cards[card] && !cards[card].revealed);
+    if (kept.length === targets.length) return;
+    gone.value = [...gone.value, ...targets.flatMap((card) => (cards[card]?.revealed ? [cards[card].word] : []))];
+    draft.value.targets = kept;
+  },
+  { immediate: true },
 );
 function mark(card: number) {
-  targets.value = targets.value.includes(card)
-    ? targets.value.filter((other) => other !== card)
-    : [...targets.value, card];
+  const { targets } = draft.value;
+  draft.value.targets = targets.includes(card) ? targets.filter((other) => other !== card) : [...targets, card];
+  gone.value = [];
 }
 
-// A tap on the board marks a card for the PI giving a clue, and chooses one for a student.
-const tap = (card: number) => (canClue.value ? mark(card) : choose(card));
+// Whether a tap on the board marks a card: for the PI giving a clue, or preparing one in the
+// open panel. Otherwise it chooses one for a student.
+const marking = computed(() => canClue.value || (mayPrepare.value && preparing.value));
+const tap = (card: number) => (marking.value ? mark(card) : choose(card));
+
+// What the button that opens the draft says: what is in the draft, if anything.
+const summary = computed(() => {
+  const { word, targets } = draft.value;
+  return [
+    ...(word.trim() ? [t('game.quoted', { word: word.trim() })] : []),
+    ...(targets.length > 0 ? [t('game.draftMarked', { count: targets.length }, targets.length)] : []),
+  ].join(t('game.draftJoin'));
+});
 
 // The moves that change the game go one at a time, so that a double tap can't send one twice.
 const giveClue = (word: string, count: ClueCount) =>
-  run(() =>
-    act('keywords:clue', {
+  run(async () => {
+    const { targets } = draft.value;
+    const reply = await act('keywords:clue', {
       ...moment.value,
       word,
       count,
-      ...(targets.value.length > 0 ? { targets: [...targets.value] } : {}),
-    }),
-  );
+      ...(targets.length > 0 ? { targets: [...targets] } : {}),
+    });
+    if (!reply.ok) return;
+    draft.value = emptyDraft();
+    gone.value = [];
+    preparing.value = false;
+  });
 const reveal = (card: number) => run(() => act('keywords:reveal', { ...moment.value, card }));
 const pass = () => run(() => act('keywords:pass', moment.value));
 const extend = () => run(() => act('keywords:extend', moment.value));
@@ -191,12 +239,16 @@ async function withdraw() {
   await run(() => act('room:end', { gameId: game.value.gameId }));
 }
 
-// A game that ends while the chair is still deciding leaves nothing to end.
+// A game that ends while the chair is still deciding leaves nothing to end, and a draft of a
+// clue nothing to prepare, also for a page that opens on a game that has ended.
 watch(
   () => game.value.result,
   (result) => {
-    if (result) ending.value = false;
+    if (!result) return;
+    ending.value = false;
+    draft.value = emptyDraft();
   },
+  { immediate: true },
 );
 
 const whoAmI = computed(() => {
@@ -260,12 +312,12 @@ const chosenByOthers = computed(() =>
         <KeywordsBoard
           v-else
           :cards="game.cards"
-          :selectable="canGuess || canClue"
-          :selected="canClue ? null : choice"
+          :selectable="canGuess || marking"
+          :selected="marking ? null : choice"
           :choosers="choosers"
           :lang="HTML_LANG[room.language]"
-          :targeting="canClue ? game.team : null"
-          :targets="canClue ? targets : []"
+          :targeting="marking ? (mySeat?.team ?? null) : null"
+          :targets="isCaptain && !game.result ? draft.targets : []"
           @select="tap"
         />
         <div class="actions">
@@ -281,17 +333,38 @@ const chosenByOthers = computed(() =>
           </div>
           <CluePanel
             v-if="canClue"
+            v-model:word="draft.word"
+            v-model:count="draft.count"
             :game="game"
             :settings="data.settings"
             :language="room.language"
             :busy="busy"
-            :targets="targets"
+            :targets="draft.targets"
+            :gone="gone"
             @give="giveClue"
           />
           <GuessBar v-else-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />
           <p v-else-if="!game.result && !paused" class="status">
             {{ game.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group }) }}
           </p>
+          <div v-if="mayPrepare" class="prepare">
+            <UiButton size="small" :aria-expanded="preparing" @click="preparing = !preparing">
+              {{
+                preparing ? t('game.prepareHide') : summary ? t('game.prepareDraft', { summary }) : t('game.prepare')
+              }}
+            </UiButton>
+            <CluePanel
+              v-if="preparing"
+              v-model:word="draft.word"
+              v-model:count="draft.count"
+              :game="game"
+              :settings="data.settings"
+              :language="room.language"
+              :targets="draft.targets"
+              :gone="gone"
+              :can-give="false"
+            />
+          </div>
           <UiButton v-if="canExtend" class="extend" size="small" :disabled="busy" @click="extend">
             {{ t('game.extend') }}
           </UiButton>
@@ -401,6 +474,7 @@ const chosenByOthers = computed(() =>
     'me me me .'
     'chat groups log .'
     'panel panel panel panel'
+    'prepare prepare prepare prepare'
     'extend extend extend extend';
   grid-template-columns: auto auto auto minmax(0, 1fr);
   gap: var(--space-2);
@@ -438,6 +512,19 @@ const chosenByOthers = computed(() =>
 .actions > :deep(.extend) {
   grid-area: extend;
   justify-self: start;
+}
+
+/* The draft of the next clue, under the status line: its button, and the panel once opened. */
+.prepare {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  grid-area: prepare;
+}
+
+.prepare > :deep(.clue-panel) {
+  align-self: stretch;
 }
 
 .who {
