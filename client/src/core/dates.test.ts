@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { formatDay, formatMoment } from './dates';
 
+// The time zone of the process, put back after each test: one that had none gets none back,
+// since a string, even "undefined", would be a zone.
 const zone = process.env.TZ;
 
 afterEach(() => {
-  process.env.TZ = zone;
+  if (zone === undefined) delete process.env.TZ;
+  else process.env.TZ = zone;
 });
 
 describe('a day', () => {

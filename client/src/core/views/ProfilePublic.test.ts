@@ -55,6 +55,7 @@ describe('ProfilePublic', () => {
   beforeEach(() => {
     signedIn.request.mockReset();
     signedIn.request.mockResolvedValue({ ok: true, likers: [liker(false)] });
+    signedIn.loadAccount.mockClear();
     socket.send.mockReset();
     toasts.toast.mockReset();
     toasts.toastError.mockReset();
@@ -95,6 +96,75 @@ describe('ProfilePublic', () => {
     wrapper.unmount();
   });
 
+  test('follows what was kept after a save, so that a line kept as cleaned is not left to save', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    const bio = wrapper.get('input[enterkeyhint="done"]');
+    const save = wrapper.get('button[type=submit]');
+    expect(save.attributes('disabled')).toBeDefined();
+    await bio.setValue('Hi ');
+    expect(save.attributes('disabled')).toBeUndefined();
+    // The server keeps 'Hi' as before, so the summary read again says the same.
+    signedIn.request.mockResolvedValueOnce({ ok: true });
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledWith('/api/account/profile', expect.objectContaining({ bio: 'Hi ' }));
+    expect((bio.element as HTMLInputElement).value).toBe('Hi');
+    expect(save.attributes('disabled')).toBeDefined();
+    wrapper.unmount();
+  });
+
+  test('asks for the summary again when the operator barred the account meanwhile, and closes the fields', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    const link = wrapper.get('input[inputmode="url"]');
+    const bio = wrapper.get('input[enterkeyhint="done"]');
+    const record = wrapper.get('input[type=checkbox]');
+    await record.setValue(true);
+    // The operator cleared the line and barred the account meanwhile: the server refuses the line
+    // the form still holds, and the summary, read again, says what happened. The choice stays.
+    signedIn.request.mockResolvedValueOnce({ ok: false, error: 'profile_banned' });
+    signedIn.loadAccount.mockImplementationOnce(async () => {
+      await wrapper.setProps({ summary: summary({}, { banned: true, bio: null }) });
+      return true;
+    });
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenLastCalledWith('/api/account/profile', expect.objectContaining({ bio: 'Hi' }));
+    expect(signedIn.loadAccount).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[role=alert]').text()).toContain("This account can't write a link or a line");
+    expect(link.attributes('disabled')).toBeDefined();
+    expect(bio.attributes('disabled')).toBeDefined();
+    expect((bio.element as HTMLInputElement).value).toBe('');
+    expect((record.element as HTMLInputElement).checked).toBe(true);
+    // The second try, with the choice alone, goes through.
+    const save = wrapper.get('button[type=submit]');
+    expect(save.attributes('disabled')).toBeUndefined();
+    signedIn.request.mockResolvedValueOnce({ ok: true });
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenLastCalledWith('/api/account/profile', {
+      link: '',
+      bio: '',
+      showRecord: true,
+      showThanks: false,
+    });
+    expect(toasts.toast).toHaveBeenCalledWith('account.profile.public.saved');
+    wrapper.unmount();
+  });
+
+  test('keeps a choice the owner is making when a kept value of another field changes', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    const record = wrapper.findAll('input[type=checkbox]')[0];
+    await record?.setValue(true);
+    // A save in another tab changed the line: the line follows, the choice stays.
+    await wrapper.setProps({ summary: summary({}, { bio: 'Elsewhere' }) });
+    expect((wrapper.get('input[enterkeyhint="done"]').element as HTMLInputElement).value).toBe('Elsewhere');
+    expect((record?.element as HTMLInputElement).checked).toBe(true);
+    wrapper.unmount();
+  });
+
   test('takes no link or line from an account the operator has barred, which still chooses what it shows', async () => {
     const wrapper = mount(ProfilePublic, {
       props: { summary: summary({}, { banned: true, bio: null }) },
@@ -126,6 +196,20 @@ describe('ProfilePublic', () => {
     await flushPromises();
     expect(wrapper.get('.likers .line').text()).toContain('Friend');
     expect(wrapper.get('.likers .line').find('button').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Only the latest');
+    wrapper.unmount();
+  });
+
+  test('says when the list stops short of the count', async () => {
+    const likers = Array.from({ length: 100 }, (_, i) => ({
+      ...liker(false),
+      handle: i.toString(16).padStart(12, '0'),
+    }));
+    signedIn.request.mockResolvedValue({ ok: true, likers });
+    const wrapper = mount(ProfilePublic, { props: { summary: summary({ likes: 150 }) }, global: global() });
+    await flushPromises();
+    expect(wrapper.findAll('.likers .line')).toHaveLength(100);
+    expect(wrapper.text()).toContain('Only the latest 100 are listed.');
     wrapper.unmount();
   });
 });

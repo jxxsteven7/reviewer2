@@ -51,6 +51,7 @@ describe('a public profile', () => {
           // The day of registration, never the time.
           createdAt: expect.stringMatching(/^\d{4}-\d\d-\d\d$/),
           titles: [],
+          streaks: { wins: 0, losses: 0 },
           link: null,
           bio: null,
           record: null,
@@ -62,6 +63,23 @@ describe('a public profile', () => {
       },
     });
     expect((await profileOf(ann.browser, ann.handle)).profile).toMatchObject({ mine: true, liked: false });
+    // The streaks go out with the titles, for the page to name them (docs/architecture.md#streaks).
+    for (let i = 0; i < 3; i += 1) {
+      server.accounts.records.add(ann.id, {
+        game: 'test',
+        gameId: `earlier-${i}`,
+        side: 'red',
+        role: 'guesser',
+        winner: 'red',
+        won: true,
+        verdict: 'v',
+        points: 0,
+      });
+    }
+    expect((await profileOf(guest, ann.handle)).profile).toMatchObject({
+      streaks: { wins: 3, losses: 0 },
+      record: null,
+    });
     // Nothing of the owner's own page is in it.
     const shown = JSON.stringify((await profileOf(guest, ann.handle)).profile);
     expect(shown).not.toMatch(/email|points|password|requests|T\d\d:\d\d/);

@@ -7,7 +7,9 @@ import { account, request } from '../account';
 import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { requestFriend } from '../friends';
+import { useLanguage } from '../i18n';
 import { connect } from '../socket';
+import { streakTitles as titlesOf } from '../streaks';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import PlayerAvatar from './PlayerAvatar.vue';
@@ -17,11 +19,11 @@ import UiButton from './UiButton.vue';
 
 // A public profile (docs/architecture.md#public-profiles), by the handle of its account, on its
 // own page and in the sheet that a room's player menu opens: the avatar, the username, the rank,
-// the number and the day of registration, the titles, and what the owner chose to put there: a
-// link, a line about themselves, the record and the acknowledgments. The bio is shown as the text
-// it is, never as markup, and the link as the address it is, which opens in a new tab and which
-// search engines are told not to follow. Anyone may look; an account that isn't the owner may
-// like the profile and ask the owner to be friends.
+// the number and the day of registration, the titles, the streaks among them, and what the owner
+// chose to put there: a link, a line about themselves, the record and the acknowledgments. The bio
+// is shown as the text it is, never as markup, and the link as the address it is, which opens in a
+// new tab and which search engines are told not to follow. Anyone may look; an account that isn't
+// the owner may like the profile and ask the owner to be friends.
 const props = defineProps<{ handle: string }>();
 const { t, locale } = useI18n();
 const profile = ref<ProfileView | null>(null);
@@ -52,17 +54,22 @@ watch(
   { immediate: true },
 );
 // Whether the viewer likes the profile is the viewer's, so the profile is read again when the
-// browser logs in or out.
+// browser logs in or out. The server's first word on who the browser is changes nothing: the
+// profile was read with the same cookie, so what it says of the viewer holds.
 watch(
-  () => account.summary?.handle ?? null,
+  () => (account.loaded ? (account.summary?.handle ?? null) : undefined),
   (now, before) => {
-    if (now !== before && profile.value !== null) void load();
+    if (before !== undefined && now !== before && profile.value !== null) void load();
   },
 );
 
 const viewer = computed(() => account.summary);
 const canAct = computed(() => viewer.value !== null && profile.value !== null && !profile.value.mine);
+// A guest, once the server has said so: until then, the card offers nothing and explains nothing.
+const guest = computed(() => account.loaded && viewer.value === null);
 const since = computed(() => (profile.value ? formatDay(profile.value.createdAt, locale.value) : ''));
+const language = useLanguage();
+const streakTitles = computed(() => (profile.value ? titlesOf(t, profile.value.streaks, language.value) : []));
 
 // Likes the profile, or takes the like back. The count and the viewer's like then come from the
 // server, which keeps them, and the button waits for them: a second tap meanwhile would send the
@@ -112,8 +119,9 @@ watch(
       </div>
 
       <TitlePills
-        v-if="profile.titles.length || profile.acknowledgments?.length"
+        v-if="profile.titles.length || streakTitles.length || profile.acknowledgments?.length"
         :titles="profile.titles"
+        :streaks="streakTitles"
         :acknowledgments="profile.acknowledgments"
       />
 
@@ -140,7 +148,7 @@ watch(
           {{ t('friends.addFromRoom') }}
         </UiButton>
         <RouterLink v-if="profile.mine" to="/account" class="edit">{{ t('playerPage.edit') }}</RouterLink>
-        <span v-else-if="viewer === null" class="hint">{{ t('playerPage.logInToLike') }}</span>
+        <span v-else-if="guest" class="hint">{{ t('playerPage.logInToLike') }}</span>
       </div>
     </template>
   </div>

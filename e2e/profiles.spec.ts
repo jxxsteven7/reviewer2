@@ -67,7 +67,7 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await ann.locator('.friends').getByRole('button', { name: text.friends.accept }).click();
   await expect(ann.locator('.friends .line', { hasText: bobName })).toContainText(text.friends.online);
   await expect(ann.locator('.profile h2 .badge')).toHaveCount(0);
-  await ann.reload();
+  // The list of likers hears of it too, without a reload.
   await expect(ann.locator('.likers .line', { hasText: bobName })).toContainText(text.account.profile.public.friend);
 
   // Ann opens her own page: no way to like it, and the way back to the account page.

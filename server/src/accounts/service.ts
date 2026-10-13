@@ -211,6 +211,7 @@ export class Accounts {
       rank: this.rankOf(account.id),
       createdAt: account.createdAt.slice(0, 10),
       titles: this.titles.counts(account.id),
+      streaks: this.records.streaks(account.id),
       link: account.profile.link,
       bio: account.profile.bio,
       record: account.profile.showRecord ? this.records.counts(account.id) : null,
@@ -251,9 +252,7 @@ export class Accounts {
     if (!account) return refuse('no_such_profile');
     if (account.id === login.account.id) return refuse('self_like');
     if (this.likes.has(account.id, login.account.id)) return { ok: true };
-    const key = String(login.account.id);
-    if (!this.counters.likes.allowed(key)) return refuse('like_limited');
-    this.counters.likes.add(key);
+    if (!this.counters.likes.take(String(login.account.id))) return refuse('like_limited');
     this.likes.add(account.id, login.account.id);
     return { ok: true };
   }

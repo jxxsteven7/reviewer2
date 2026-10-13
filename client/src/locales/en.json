@@ -846,6 +846,7 @@
         "banned": "The operator has cleared the link and the line on your page, and this account can't write them again.",
         "likes": "Likes: {count}",
         "noLikes": "Nobody has liked your page yet. Only you see who did.",
+        "likersShown": "Only the latest {count} are listed.",
         "friend": "Friend"
       },
       "record": "Record",

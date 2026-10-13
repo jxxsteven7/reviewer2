@@ -41,6 +41,7 @@ const profile = (changes: Partial<ProfileView> = {}): ProfileView => ({
   rank: 'professor',
   createdAt: '2026-10-01',
   titles: [{ title: 'best_paper', count: 2 }],
+  streaks: { wins: 3, losses: 0 },
   link: 'https://ann.example/(me)',
   bio: '<script>alert(1)</script> & co',
   record: { games: 12, wins: 7, matches: 3 },
@@ -58,6 +59,7 @@ describe('ProfileCard', () => {
     socket.connect.mockReset();
     toasts.toast.mockReset();
     toasts.toastError.mockReset();
+    signedIn.account.loaded = true;
     signedIn.account.summary = null;
   });
 
@@ -73,6 +75,7 @@ describe('ProfileCard', () => {
     expect(text).toContain('Author');
     expect(text).toContain('Registered Oct 1, 2026');
     expect(text).toContain('Best Paper Award ×2');
+    expect(text).toContain('Three Submissions, Three Acceptances');
     expect(text).toContain('<script>alert(1)</script> & co');
     expect(wrapper.find('script').exists()).toBe(false);
     const link = wrapper.find('a.link');
@@ -95,15 +98,48 @@ describe('ProfileCard', () => {
   test('is not the author for any other account, and hides what the owner does not show', async () => {
     signedIn.request.mockResolvedValue({
       ok: true,
-      profile: profile({ id: 2, link: null, bio: null, record: null, acknowledgments: null, titles: [] }),
+      profile: profile({
+        id: 2,
+        link: null,
+        bio: null,
+        record: null,
+        acknowledgments: null,
+        titles: [],
+        streaks: { wins: 2, losses: 0 },
+      }),
     });
     const wrapper = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
     await flushPromises();
     expect(wrapper.text()).toContain('Player No. 2');
     expect(wrapper.text()).not.toContain('Author');
+    expect(wrapper.find('.titles').exists()).toBe(false);
     expect(wrapper.find('a.link').exists()).toBe(false);
     expect(wrapper.find('.bio').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Games:');
+    wrapper.unmount();
+  });
+
+  test('offers nothing and explains nothing until the server has said who the browser is', async () => {
+    // The page is read before the account is known, with the same cookie: once the account comes,
+    // the page is not read again. A logout later does read it again, since the like was the viewer's.
+    signedIn.account.loaded = false;
+    signedIn.request.mockResolvedValue({ ok: true, profile: profile() });
+    const wrapper = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain('Ann');
+    expect(wrapper.text()).not.toContain('Log in to like');
+    expect(wrapper.findAll('button')).toHaveLength(0);
+    signedIn.account.summary = { handle: 'f6e5d4c3b2a1' };
+    signedIn.account.loaded = true;
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledTimes(1);
+    expect(wrapper.findAll('button')).toHaveLength(2);
+    signedIn.account.summary = null;
+    await flushPromises();
+    expect(signedIn.request).toHaveBeenCalledTimes(2);
+    expect(wrapper.findAll('button')).toHaveLength(0);
+    expect(wrapper.text()).toContain('Log in to like');
     wrapper.unmount();
   });
 

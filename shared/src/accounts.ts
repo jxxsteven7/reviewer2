@@ -46,6 +46,8 @@ export const MAX_BIO_LENGTH = 80;
 export const MAX_BIO_INPUT = 400;
 // The first account is the author's: the one who set the site up registered before anyone could.
 export const AUTHOR_ACCOUNT = 1;
+// How many of the accounts that like a profile its owner is shown, the latest first.
+export const LIKERS_SHOWN = 100;
 
 // The addresses of the account API, which the server answers and the client calls.
 export const ACCOUNT_API = {
@@ -128,8 +130,7 @@ export interface TitleCount {
 }
 
 // What an account's owner writes on its public profile, and what of the rest they choose to
-// show there: the record, as counts, and the acknowledgments. `banned` says that the operator has
-// barred the account from writing a link or a bio.
+// show there: the record, as counts, and the acknowledgments.
 export interface ProfileSettings {
   link: string | null;
   bio: string | null;
@@ -143,8 +144,10 @@ export interface ProfileSettings {
 // are those of every game finished, from which the client tells the rank (ranks.ts). `streaks` are
 // the longest runs of wins and of losses on the record, which the page shows as titles
 // (streaks.ts). `acknowledgments` is how often the account is thanked for each kind of help
-// (acknowledgments.ts). `likes` is how many accounts like the profile, and `requests` how many
-// friend requests wait for the owner's answer (friends.ts).
+// (acknowledgments.ts). `profile` is what the owner put on the public profile, with `banned` for
+// an account that the operator has barred from writing a link or a bio there. `likes` is how many
+// accounts like the profile, and `requests` how many friend requests wait for the owner's answer
+// (friends.ts).
 export interface AccountSummary {
   id: number;
   handle: string;
@@ -163,10 +166,10 @@ export interface AccountSummary {
 
 // A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's
 // number, username, avatar, rank, the day it registered (`createdAt`, as YYYY-MM-DD in UTC, and
-// never the time) and its titles; the link and the bio its owner wrote, if any; its record and its
-// acknowledgments, if its owner shows them, else null; and how many accounts like it. `liked` says
-// whether the viewer likes it, and `mine` whether the viewer is its owner; both are false for a
-// guest.
+// never the time), its titles and its streaks, which the page shows as titles too (streaks.ts);
+// the link and the bio its owner wrote, if any; its record and its acknowledgments, if its owner
+// shows them, else null; and how many accounts like it. `liked` says whether the viewer likes it,
+// and `mine` whether the viewer is its owner; both are false for a guest.
 export interface ProfileView {
   id: number;
   handle: string;
@@ -175,6 +178,7 @@ export interface ProfileView {
   rank: Rank;
   createdAt: string;
   titles: TitleCount[];
+  streaks: BestStreaks;
   link: string | null;
   bio: string | null;
   record: { games: number; wins: number; matches: number } | null;

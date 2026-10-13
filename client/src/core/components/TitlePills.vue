@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 
 // An account's titles, its streaks, named already (streaks.ts), and the acknowledgments counted
 // for it, as pills, each title with how many times it was won when that is more than once: on the
-// account's own page, and, without the streaks, on its public page.
+// account's own page and on its public page.
 withDefaults(
   defineProps<{
     titles: TitleCount[];

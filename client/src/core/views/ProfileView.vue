@@ -7,8 +7,6 @@ import {
   MAX_PASSWORD_INPUT,
   nextRank,
   rankFor,
-  STREAK_KINDS,
-  STREAK_MIN,
   type AccountSummary,
 } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
@@ -23,7 +21,7 @@ import UiSheet from '../components/UiSheet.vue';
 import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { useLanguage } from '../i18n';
-import { streakTitle } from '../streaks';
+import { streakTitles as titlesOf } from '../streaks';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import ProfileAvatar from './ProfileAvatar.vue';
@@ -74,15 +72,10 @@ const since = computed(() => formatDay(props.summary.createdAt, locale.value));
 const rank = computed(() => rankFor(props.summary.points));
 const next = computed(() => nextRank(props.summary.points));
 
-// The streak titles (shared/src/streaks.ts): the longest run of wins and of losses, from three games
-// on, with the number in the words of the language.
+// The streak titles (streaks.ts): the longest run of wins and of losses, from three games on, with
+// the number in the words of the language.
 const language = useLanguage();
-const streakTitles = computed(() =>
-  STREAK_KINDS.flatMap((kind) => {
-    const length = props.summary.streaks[kind];
-    return length >= STREAK_MIN ? [{ kind, title: streakTitle(t, kind, length, language.value) }] : [];
-  }),
-);
+const streakTitles = computed(() => titlesOf(t, props.summary.streaks, language.value));
 
 // Sends a change, and shows what the server had against it.
 async function change(path: string, body: object): Promise<boolean> {

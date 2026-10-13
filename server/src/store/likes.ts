@@ -1,4 +1,5 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
+import { LIKERS_SHOWN } from '@reviewer2/shared';
 
 // The likes table (migration 11, docs/architecture.md#public-profiles): which accounts like which
 // profiles. This module only reads and writes rows; who may like whom is for accounts/service.ts.
@@ -10,9 +11,6 @@ export interface LikerRow {
   username: string;
   avatar: string | null;
 }
-
-// How many likers the owner is shown, the latest first.
-export const LIKERS_SHOWN = 100;
 
 // The clock is the system's, in milliseconds since 1970, for the times that are kept.
 export class LikeStore {

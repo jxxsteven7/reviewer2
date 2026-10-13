@@ -153,6 +153,7 @@ describe('PlayerMenu', () => {
         rank: 'phd',
         createdAt: '2026-10-01T00:00:00.000Z',
         titles: [],
+        streaks: { wins: 0, losses: 0 },
         link: 'https://bob.example/',
         bio: 'Hi <b>there</b>',
         record: null,

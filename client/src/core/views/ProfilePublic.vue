@@ -3,6 +3,7 @@ import {
   ACCOUNT_API,
   checkBio,
   checkWebLink,
+  LIKERS_SHOWN,
   MAX_BIO_INPUT,
   MAX_BIO_LENGTH,
   MAX_LINK_INPUT,
@@ -11,7 +12,7 @@ import {
   type AccountSummary,
   type LikerView,
 } from '@reviewer2/shared';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { loadAccount, request } from '../account';
@@ -39,20 +40,37 @@ const refused = ref<string | undefined>();
 const likers = ref<LikerView[] | null>(null);
 const likersFailed = ref<string | undefined>();
 
-// The form shows the profile as the server last said, until the owner edits it. It follows the
-// values that are kept, not the summary, which is asked for again whenever the friends change
-// (friends.ts): what the owner has typed must not go when a request comes in.
+// The form shows the profile as the server last said, until the owner edits it. Each field follows
+// the value that is kept, not the summary, which is asked for again whenever the friends change
+// (friends.ts): what the owner has typed must not go when a request comes in, and a field whose
+// kept value is as it was stays as typed. The link and the bio follow when the operator bars the
+// account too, since the fields then close on whatever was typed.
 const kept = () => props.summary.profile;
+function follows<Value>(keptValue: () => Value, field: Ref<Value>): void {
+  watch(keptValue, (value) => (field.value = value), { immediate: true });
+}
+follows(() => kept().link ?? '', link);
+follows(() => kept().bio ?? '', bio);
+follows(() => kept().showRecord, showRecord);
+follows(() => kept().showThanks, showThanks);
+function followWritten(): void {
+  link.value = kept().link ?? '';
+  bio.value = kept().bio ?? '';
+}
 watch(
-  [() => kept().link ?? '', () => kept().bio ?? '', () => kept().showRecord, () => kept().showThanks],
-  ([keptLink, keptBio, keptRecord, keptThanks]) => {
-    link.value = keptLink;
-    bio.value = keptBio;
-    showRecord.value = keptRecord;
-    showThanks.value = keptThanks;
+  () => kept().banned,
+  (banned) => {
+    if (banned) followWritten();
   },
-  { immediate: true },
 );
+// After a save, every field follows whether its kept value changed or not: what was typed may have
+// been kept as cleaned, with a space at the end gone, and the form must not go on saying there is
+// something to save.
+function follow(): void {
+  followWritten();
+  showRecord.value = kept().showRecord;
+  showThanks.value = kept().showThanks;
+}
 watch([link, bio, showRecord, showThanks], () => (refused.value = undefined));
 
 const linkProblem = computed(() => {
@@ -87,10 +105,20 @@ async function save(): Promise<void> {
   );
   if (!reply) return;
   if (!reply.ok) {
+    // An account barred while the page was open has lost its link and bio already, and the server
+    // refuses the ones the form still holds: the summary says so, the two fields follow it and
+    // close, and the choices stay as made, for the owner to save again. The word on why is kept
+    // past the change.
+    if (reply.error === 'profile_banned') {
+      await loadAccount();
+      followWritten();
+      await nextTick();
+    }
     refused.value = t(errorKey(reply.error));
     return;
   }
   await loadAccount();
+  follow();
   toast('account.profile.public.saved');
 }
 
@@ -102,6 +130,10 @@ async function loadLikers(): Promise<void> {
 }
 
 onMounted(loadLikers);
+// The list stops at LIKERS_SHOWN, which the count on the summary may be past.
+const likersCut = computed(
+  () => likers.value !== null && likers.value.length >= LIKERS_SHOWN && props.summary.likes > likers.value.length,
+);
 // A new like changes the count on the summary, on which the list is asked for again; so does a
 // change among the friends, since the list says who is one.
 watch(() => props.summary.likes, loadLikers);
@@ -170,6 +202,7 @@ async function befriend(liker: LikerView): Promise<void> {
           </UiButton>
         </li>
       </ul>
+      <p v-if="likersCut" class="hint">{{ t('account.profile.public.likersShown', { count: LIKERS_SHOWN }) }}</p>
     </section>
   </div>
 </template>
