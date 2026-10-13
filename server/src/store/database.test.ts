@@ -566,6 +566,26 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT game_id FROM replays').all()).toEqual([{ game_id: 'g' }]);
   });
 
+  test('of the twelfth release keeps its accounts and replays when it gets AI players', async () => {
+    const twelfth = await open(dir, MIGRATIONS.slice(0, 12));
+    twelfth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO replays VALUES ('g', 'keywords', 'now', '{"cards":[]}', '{"v":1}');
+    `);
+    twelfth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 13));
+    expect(migrated).toMatchObject({ schema: 13, migratedFrom: 12 });
+    const { db } = migrated;
+    // Nobody may have AI players until the operator lets them, and the replays from before have no
+    // AI log.
+    expect(db.prepare('SELECT id, agents FROM accounts').all()).toEqual([{ id: 1, agents: 0 }]);
+    expect(db.prepare('SELECT game_id, log, agent_log FROM replays').all()).toEqual([
+      { game_id: 'g', log: '{"v":1}', agent_log: null },
+    ]);
+    expect(() => db.exec('UPDATE accounts SET agents = 2 WHERE id = 1')).toThrow(/CHECK/);
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(

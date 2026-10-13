@@ -175,6 +175,7 @@ const context = (): GameContext => ({
   keyOf: (id) => id,
   nameOf: (id) => id,
   isOnline: () => true,
+  agentOf: () => null,
   playerIds: () => ['ann', 'bob', 'cat'],
 });
 

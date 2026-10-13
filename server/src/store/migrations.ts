@@ -355,4 +355,17 @@ export const MIGRATIONS: readonly string[] = [
   `
   CREATE INDEX game_records_game ON game_records (game_id);
   `,
+  // 14: AI players (docs/architecture.md#ai-players).
+  //
+  // - accounts get whether the operator has let them have AI players in the rooms they chair.
+  // - game records get whether an AI played in the game, which brings no points, streak or title of
+  //   friends, and the records from before none.
+  // - replays get the AI's own log of the game beside the game's log, as JSON, kept on the server
+  //   alone: how each AI came to each of its moves (server/src/core/agentLog.ts). A game that no AI
+  //   played in has none, and neither do the replays from before.
+  `
+  ALTER TABLE accounts ADD COLUMN agents INTEGER NOT NULL DEFAULT 0 CHECK (agents IN (0, 1));
+  ALTER TABLE game_records ADD COLUMN agents INTEGER NOT NULL DEFAULT 0 CHECK (agents IN (0, 1));
+  ALTER TABLE replays ADD COLUMN agent_log TEXT;
+  `,
 ];

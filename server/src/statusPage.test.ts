@@ -21,6 +21,7 @@ function stats(changes: Partial<Stats> = {}): Stats {
     memory: { rss: 128 * MB, heapUsed: 21 * MB, limit: 512 * MB },
     rooms: { lobby: 2, playing: 3, ended: 1 },
     players: { online: 17, offline: 4 },
+    agents: null,
     connections: { websocket: 15, polling: 3 },
     countries: [
       { country: 'SG', connections: 9, latency: 38 },
@@ -61,6 +62,14 @@ describe('the status page', () => {
     const page = text(renderStatusPage(stats({ memory: { rss: 128 * MB, heapUsed: 21 * MB, limit: null } }), [], NOW));
     expect(page).toContain('Process 128 MB JavaScript heap');
     expect(page).not.toContain('% of');
+  });
+
+  test('shows the AI players on a server with an agent, and nothing of them without one', () => {
+    expect(text(renderStatusPage(stats(), [], NOW))).not.toContain('AI players');
+    const up = text(renderStatusPage(stats({ agents: { players: 3, up: true, steps: 40, failures: 1 } }), [], NOW));
+    expect(up).toContain('AI players Agent Up In rooms 3 Steps 40 in the last hour Failed 1 in the last hour');
+    const down = text(renderStatusPage(stats({ agents: { players: 0, up: false, steps: 0, failures: 0 } }), [], NOW));
+    expect(down).toContain('Agent Down');
   });
 
   test('says so when there are no connections', () => {

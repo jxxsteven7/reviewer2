@@ -211,6 +211,7 @@ describe('the status server', () => {
       version: 'test',
       rooms: { lobby: 0, playing: 0, ended: 0 },
       players: { online: 0, offline: 0 },
+      agents: null,
       connections: { websocket: 0, polling: 0 },
       countries: [],
     });

@@ -2,6 +2,8 @@ import type { AddressInfo } from 'node:net';
 import type { DatabaseSync } from 'node:sqlite';
 import type {
   Ack,
+  AgentReply,
+  AgentRequest,
   ClosedReason,
   EmoteEvent,
   FriendLimits,
@@ -16,6 +18,7 @@ import { DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from '../src/accounts/limi
 import type { MailChannel, MailOutcome } from '../src/accounts/mail';
 import { PasswordHasher } from '../src/accounts/passwords';
 import { Accounts } from '../src/accounts/service';
+import type { AgentChannel, AgentOutcome } from '../src/core/agentChannel';
 import type { GameModule } from '../src/core/game';
 import { seededRng, type Rng } from '../src/core/random';
 import type { RoomLimits } from '../src/core/rooms';
@@ -56,6 +59,53 @@ export class FakeMail implements MailChannel {
     if (!mail) throw new Error(`no ${kind} mail was sent`);
     return mail.token;
   }
+}
+
+// An agent that plays by a script rather than with a model, for the tests of AI players: it answers
+// a ping while it is `up`, and every other request as `play` answers it, by default with the clue
+// "zebra" for the first two cards of the group's own that are face down, and with no cards to
+// reveal. It keeps every request, and holds the answers back from hold() until release().
+export class ScriptedAgent implements AgentChannel {
+  readonly asked: AgentRequest[] = [];
+  up = true;
+  play: (request: Exclude<AgentRequest, { kind: 'ping' }>) => AgentOutcome = scriptedPlay;
+  #held: (() => void)[] | null = null;
+
+  ask(request: AgentRequest): Promise<AgentOutcome> {
+    this.asked.push(request);
+    const down = { ok: false, error: 'unreachable' } as const;
+    if (request.kind === 'ping') return Promise.resolve(this.up ? { ok: true, kind: 'ping', model: 'script' } : down);
+    const answer = () => (this.up ? this.play(request) : down);
+    const held = this.#held;
+    if (held) return new Promise((resolve) => held.push(() => resolve(answer())));
+    return Promise.resolve(answer());
+  }
+
+  // The requests other than pings.
+  get questions(): Exclude<AgentRequest, { kind: 'ping' }>[] {
+    return this.asked.filter((request) => request.kind !== 'ping');
+  }
+
+  hold(): void {
+    this.#held = [];
+  }
+
+  release(): void {
+    const held = this.#held ?? [];
+    this.#held = null;
+    for (const go of held) go();
+  }
+}
+
+export const SCRIPT_NOTE = { model: 'script', prompt: 'test', ms: 1 };
+
+export function scriptedPlay(request: Exclude<AgentRequest, { kind: 'ping' }>): AgentReply {
+  if (request.kind === 'clue') {
+    const own = request.cards.flatMap((card, i) => (card.color === request.team && !card.revealed ? [i] : []));
+    const targets = own.slice(0, 2);
+    return { ok: true, kind: 'clue', word: 'zebra', count: targets.length, targets, note: SCRIPT_NOTE };
+  }
+  return { ok: true, kind: 'guess', picks: [], reason: 'No idea.', note: SCRIPT_NOTE };
 }
 
 export const TEST_SECRET = 'test-secret-'.repeat(4);
@@ -100,6 +150,8 @@ export async function startServer(
     // How much room all avatars may take.
     maxAvatarBytes?: number;
     rng?: Rng;
+    // The agent that plays for the AI players.
+    agent?: AgentChannel;
   } = {},
 ): Promise<TestServer> {
   let offset = 0;
@@ -148,6 +200,7 @@ export async function startServer(
       accounts,
       socketLimits,
       ...(options.limits ? { limits: options.limits } : {}),
+      ...(options.agent ? { agent: options.agent } : {}),
       log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
     });
   } catch (error) {

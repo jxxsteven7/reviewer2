@@ -3,6 +3,7 @@ import { Server } from 'socket.io';
 import { createAccountApi } from './accounts/http';
 import type { Accounts } from './accounts/service';
 import type { Config } from './config';
+import type { AgentChannel } from './core/agentChannel';
 import type { GameModule } from './core/game';
 import { cryptoRng, type Rng } from './core/random';
 import { DEFAULT_LIMITS, Rooms, type RoomLimits } from './core/rooms';
@@ -50,6 +51,9 @@ export interface AppOptions
   accounts?: Accounts;
   // The lists of thanks for the home page; by default, the ones the build bundled.
   lists?: ThanksLists;
+  // The agent, which plays for the AI players (docs/architecture.md#ai-players). Without it, there
+  // are none.
+  agent?: AgentChannel;
   rng?: Rng;
   now?: () => number;
   // The timers for the games' deadlines, which go by `now`.
@@ -106,7 +110,9 @@ export function createAppServer(options: AppOptions): AppServer {
   // clock is one that only runs forward. The system's clock gets corrected, sometimes by a lot,
   // and every one of those waits would stretch or collapse with it.
   const now = options.now ?? (() => performance.now());
-  const rooms = new Rooms(options.words, rng, now, options.limits ?? DEFAULT_LIMITS);
+  // Whether the agent answers, which the driver of the AI players finds out and the rooms read.
+  const agentState = options.agent ? { up: false } : null;
+  const rooms = new Rooms(options.words, rng, now, options.limits ?? DEFAULT_LIMITS, agentState);
   const sockets = attachSockets(io, {
     rooms,
     words: options.words,
@@ -118,6 +124,7 @@ export function createAppServer(options: AppOptions): AppServer {
     limits: socketLimits,
     feedback: options.feedback,
     ...(accounts && { accounts, cookieSecure }),
+    ...(options.agent && agentState && { agent: { channel: options.agent, state: agentState } }),
     log,
   });
   // io.close() also closes the HTTP server.
@@ -149,6 +156,6 @@ export function createAppServer(options: AppOptions): AppServer {
     for (const socket of io.sockets.sockets.values()) socket.disconnect(true);
     await close();
   };
-  const stats = () => collectStats(options.version, rooms, sockets.connections());
+  const stats = () => collectStats(options.version, rooms, sockets.connections(), sockets.agents());
   return { http, io, rooms, sockets, stats, stop, close };
 }

@@ -36,6 +36,9 @@ import { KINDS } from './statusPage';
 //   node server/dist/admin.cjs accounts [--json]
 //   node server/dist/admin.cjs accounts bar <username>
 //   node server/dist/admin.cjs accounts unbar <username>
+//   node server/dist/admin.cjs agents allow <username>
+//   node server/dist/admin.cjs agents deny <username>
+//   node server/dist/admin.cjs agents list
 //   node server/dist/admin.cjs feedback adopt <id>
 //   node server/dist/admin.cjs feedback draft <id> [--json]
 //   node server/dist/admin.cjs feedback issue <id> <number>|--clear
@@ -98,6 +101,9 @@ const USAGE = [
   '  accounts [--json]',
   '  accounts bar <username>',
   '  accounts unbar <username>',
+  '  agents allow <username>',
+  '  agents deny <username>',
+  '  agents list',
   '  feedback adopt <id>',
   '  feedback draft <id> [--json]',
   '  feedback issue <id> <number>|--clear',
@@ -415,6 +421,41 @@ const COMMANDS: Record<string, Command> = {
       if (!account) return 1;
       data.accounts.store.setPublicBarred(account.id, false);
       print(`${account.username} may create and join public rooms again.`);
+      return 0;
+    },
+  },
+  // AI players (docs/architecture.md#ai-players) are for the accounts that the operator lets have
+  // them while they are tried out: in the private rooms that such an account chairs.
+  'agents allow': {
+    words: 1,
+    flags: [],
+    run(data, [name], _flags, print) {
+      const account = accountNamed(data, name as string, print);
+      if (!account) return 1;
+      data.accounts.store.setAgents(account.id, true);
+      print(`${account.username} may invite AI players to the private rooms they chair.`);
+      return 0;
+    },
+  },
+  'agents deny': {
+    words: 1,
+    flags: [],
+    run(data, [name], _flags, print) {
+      const account = accountNamed(data, name as string, print);
+      if (!account) return 1;
+      data.accounts.store.setAgents(account.id, false);
+      print(`${account.username} may not invite AI players any more. Those in their rooms now stay.`);
+      return 0;
+    },
+  },
+  'agents list': {
+    words: 0,
+    flags: [],
+    readOnly: true,
+    run({ accounts }, _words, _flags, print) {
+      const users = accounts.store.agentUsers();
+      if (users.length === 0) print('No account may invite AI players.');
+      for (const { id, username } of users) print(`${id}\t${username}`);
       return 0;
     },
   },

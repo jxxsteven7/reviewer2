@@ -28,6 +28,8 @@ import { avatarUrl, type Accounts } from '../accounts/service';
 import type { Account } from '../store/accounts';
 import type { FeedbackStore } from '../store/feedback';
 import type { FriendRow } from '../store/friends';
+import type { AgentChannel } from './agentChannel';
+import { AgentDriver } from './agents';
 import { fail, type Refusal } from './answers';
 import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
@@ -70,6 +72,9 @@ export interface SocketOptions {
   // Accounts, and whether their cookie is Secure. Without them, everyone is a guest.
   accounts?: Accounts;
   cookieSecure?: boolean;
+  // The agent, which plays for the AI players, and whether it answers, which the rooms read too
+  // (docs/architecture.md#ai-players). Without it, there are no AI players.
+  agent?: { channel: AgentChannel; state: { up: boolean } };
   log: (event: string, fields?: Record<string, unknown>) => void;
 }
 
@@ -148,6 +153,9 @@ export interface RoomSockets {
   sweep(): void;
   closeAll(reason: ClosedReason): void;
   connections(): ConnectionInfo[];
+  // For the status page: whether the agent answers, and the AI's steps of the last hour, or null on
+  // a server without an agent.
+  agents(): { up: boolean; steps: number; failures: number } | null;
 }
 
 const hex = (hash: Uint8Array): string => Buffer.from(hash).toString('hex');
@@ -174,6 +182,22 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   let feedbackFullLogged = false;
   const connection = (socket: Socket) => socket.data as Connection;
   const isOpen = (room: Room) => rooms.find(room.code) === room;
+  // The AI players' driver (agents.ts), which sends their moves through the rooms as the socket
+  // layer sends a player's, and the new state to everyone when a move changed anything.
+  const driver =
+    options.agent &&
+    new AgentDriver({
+      channel: options.agent.channel,
+      state: options.agent.state,
+      now,
+      timers,
+      log,
+      broadcast: (room) => {
+        if (isOpen(room) && room.rev !== sent.get(room)) broadcast(room);
+      },
+      isOpen,
+      rooms: () => rooms.all(),
+    });
   // The connections of each account that is logged in, so that whether a friend is online, and
   // where their invitations go, costs no walk through every connection.
   const accountSockets = new Map<number, Set<string>>();
@@ -254,6 +278,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     for (const member of room.members.values()) send(room, member.sockets, { playerId: member.id }, view);
     send(room, room.screens.keys(), { screen: true }, view);
     safely('deadline', () => schedule(room));
+    if (driver) safely('agents', () => driver.poke(room));
   }
 
   // What the end of a game leaves behind for the players with accounts, as the game describes
@@ -261,13 +286,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // brought them (Room.points()), the streak it brought them to, which the room tells in the
   // snapshot that ends the game (Room.noteStreak()), their ranks as they are now for everyone to
   // see, and the titles that the game brought friends who played in it, which the room tells each
-  // account alone (Room.noteDuos()). Whoever had left by then has no part in its end, and a game
-  // that the chair withdrew counts for nobody. Then, once anyone with an account that still exists
-  // has played in it, those who
-  // left included, the record of the game itself (docs/architecture.md#game-records): the replay
-  // to watch again (GameModule.replay()), the log of everything that happened, and which player
-  // was which account. Whatever else is to be kept of a finished game goes here, after the
-  // records.
+  // account alone (Room.noteDuos()). A game that an AI played in brings nobody points, a streak or
+  // a title (docs/architecture.md#ai-players). Whoever had left by then has no part in its end, and
+  // a game that the chair withdrew counts for nobody. Then, once anyone with an account that still
+  // exists has played in it, those who left included, the record of the game itself
+  // (docs/architecture.md#game-records): the replay to watch again (GameModule.replay()), the log of
+  // everything that happened with the AI's own log beside it, and which player was which account.
+  // Whatever else is to be kept of a finished game goes here, after the records.
   function keepRecords(room: Room): void {
     const results = accounts && room.gameId !== null ? room.results() : null;
     if (!results || !accounts) return;
@@ -279,13 +304,19 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
-      const record = { game: room.game.id, gameId, points: points?.get(member.key) ?? 0, ...result };
+      const record = {
+        game: room.game.id,
+        gameId,
+        points: points?.get(member.key) ?? 0,
+        agents: room.agentsPlayed,
+        ...result,
+      };
       const streak = accounts.record(account.id, record);
       if (streak) {
         room.noteStreak(member.id, streak);
         recorded.set(account.id, { playerId: member.id, side: result.side, won: result.won });
       }
-      room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id));
+      room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id), account.agents);
     }
     if (recorded.size > 1) safely('duos', () => noteDuos(room, recorded));
     const kept = room.record();
@@ -296,9 +327,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (players.length === 0) return;
     const replay = room.replay();
     if (replay === null) return;
-    const { log: gameLog } = kept;
+    const { log: gameLog, agentLog } = kept;
     safely('replay', () => {
-      const stored = accounts.keepReplay({ game: room.game.id, gameId, replay, log: gameLog, players });
+      const stored = accounts.keepReplay({ game: room.game.id, gameId, replay, log: gameLog, agentLog, players });
       // A log that grew too long is worth a line only when the rest of the record was kept: what
       // kept the record out, such as a full database, has a line of its own.
       if (stored && kept.overflowed) log('game_log_too_large', { code: room.code });
@@ -376,6 +407,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   function shut(room: Room, reason: ClosedReason, why: string, except?: Iterable<string>): void {
     closeFor(rooms.close(room), reason, except);
     unschedule(room);
+    driver?.forget(room);
     log('room_closed', { code: room.code, why });
   }
 
@@ -517,6 +549,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       handle: account.handle,
       avatar: avatarUrl(account),
       rank: (accounts as Accounts).rankOf(account.id),
+      agents: account.agents,
     };
   }
 
@@ -1084,6 +1117,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     );
     on(handlers, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
     on(handlers, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));
+    // The chair invites an AI player (docs/architecture.md#ai-players). Only a chair whose account
+    // the operator lets have them can, in a private room that plays no match (Room.agentsAllowed).
+    on(handlers, 'room:addAgent', ({ persona, seat }) =>
+      asChair(socket, (room) => {
+        const added = room.addAgent(persona, seat);
+        if (added.ok) log('agent_added', { code: room.code, persona });
+        return changed(room, added);
+      }),
+    );
     on(handlers, 'room:chair', ({ playerId }) => asChair(socket, (room) => changed(room, room.handOver(playerId))));
 
     // Screens have no token and no name, so the chair can't pick one out: all of them go, and
@@ -1273,7 +1315,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         const rank = accounts.rankOf(accountId);
         for (const room of rooms.all()) {
           const member = room.memberByKey(key);
-          if (member && room.updateAccount(member.id, account.username, avatar, rank)) broadcast(room);
+          if (member && room.updateAccount(member.id, account.username, avatar, rank, account.agents)) broadcast(room);
         }
         // The account's own pages show the new name and avatar too, and so do its friends'.
         const session: Session = { version, account: { username: account.username, avatar } };
@@ -1308,7 +1350,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // through the hook above, so one that is gone is left alone here.
   function refreshAccounts(): void {
     if (!accounts) return;
-    // Each account is read once, with its rank, however many rooms it is in.
+    // Each account is read once, with its rank, however many rooms it is in. Whether the operator has
+    // let an account have AI players comes along, and with it whether its rooms may.
     const read = new Map<number, { account: Account; rank: Rank } | undefined>();
     for (const room of rooms.all()) {
       let differs = false;
@@ -1320,9 +1363,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
           read.set(id, account && { account, rank: accounts.rankOf(id) });
         }
         const known = read.get(id);
-        if (known && room.updateAccount(member.id, known.account.username, avatarUrl(known.account), known.rank)) {
-          differs = true;
-        }
+        if (!known) continue;
+        const { account, rank } = known;
+        if (room.updateAccount(member.id, account.username, avatarUrl(account), rank, account.agents)) differs = true;
       }
       const chair = room.chairId === null ? undefined : room.members.get(room.chairId);
       const account = chair?.account ? read.get(chair.account.id)?.account : undefined;
@@ -1344,6 +1387,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         for (const { room, sockets, why } of result.closed) {
           closeFor(sockets, 'expired');
           unschedule(room);
+          driver?.forget(room);
           log('room_closed', { code: room.code, why });
         }
         for (const room of result.changed) broadcast(room);
@@ -1360,6 +1404,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     },
     closeAll(reason) {
       for (const room of rooms.all()) shut(room, reason, reason);
+      driver?.close();
     },
     connections() {
       return [...io.sockets.sockets.values()].map((socket) => ({
@@ -1367,6 +1412,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         country: connection(socket).country,
         latency: latencies.get(socket.conn) ?? null,
       }));
+    },
+    agents() {
+      return driver ? driver.stats() : null;
     },
   };
 }

@@ -24,6 +24,8 @@ export interface Account {
   avatarBanned: boolean;
   // Whether the operator has barred the account from public rooms (migration 6).
   publicBarred: boolean;
+  // Whether the operator has let the account have AI players in the rooms it chairs (migration 13).
+  agents: boolean;
   // The public profile (migration 11): the link and the bio the owner wrote, what else they show
   // there, and whether the operator has barred the account from writing a link or a bio.
   profile: ProfileSettings;
@@ -41,6 +43,7 @@ interface Row {
   avatar: string | null;
   avatarBanned: number;
   publicBarred: number;
+  agents: number;
   link: string | null;
   bio: string | null;
   showRecord: number;
@@ -51,16 +54,17 @@ interface Row {
 
 const COLUMNS =
   'id, handle, username, username_key AS key, password, email_fp AS emailFp, avatar, ' +
-  'avatar_banned AS avatarBanned, public_barred AS publicBarred, link, bio, show_record AS showRecord, ' +
+  'avatar_banned AS avatarBanned, public_barred AS publicBarred, agents, link, bio, show_record AS showRecord, ' +
   'show_thanks AS showThanks, profile_banned AS profileBanned, created_at AS createdAt';
 
 function toAccount(row: Row | undefined): Account | undefined {
   if (!row) return undefined;
-  const { avatarBanned, publicBarred, link, bio, showRecord, showThanks, profileBanned, ...rest } = row;
+  const { avatarBanned, publicBarred, agents, link, bio, showRecord, showThanks, profileBanned, ...rest } = row;
   return {
     ...rest,
     avatarBanned: avatarBanned === 1,
     publicBarred: publicBarred === 1,
+    agents: agents === 1,
     profile: { link, bio, showRecord: showRecord === 1, showThanks: showThanks === 1 },
     profileBanned: profileBanned === 1,
   };
@@ -108,6 +112,8 @@ export class AccountStore {
   readonly #avatars: StatementSync;
   readonly #ban: StatementSync;
   readonly #bar: StatementSync;
+  readonly #agents: StatementSync;
+  readonly #agentUsers: StatementSync;
   readonly #byHandle: StatementSync;
   readonly #profile: StatementSync;
   readonly #profileBan: StatementSync;
@@ -144,6 +150,8 @@ export class AccountStore {
     this.#avatars = db.prepare('SELECT DISTINCT avatar FROM accounts WHERE avatar IS NOT NULL');
     this.#ban = db.prepare('UPDATE accounts SET avatar_banned = ? WHERE id = ?');
     this.#bar = db.prepare('UPDATE accounts SET public_barred = ? WHERE id = ?');
+    this.#agents = db.prepare('UPDATE accounts SET agents = ? WHERE id = ?');
+    this.#agentUsers = db.prepare('SELECT id, username FROM accounts WHERE agents = 1 ORDER BY id');
     this.#delete = db.prepare(`DELETE FROM accounts WHERE id = ? RETURNING ${COLUMNS}`);
     this.#count = db.prepare('SELECT count(*) AS count FROM accounts');
     // The statistics for the operator (admin.ts) and the status page.
@@ -258,6 +266,15 @@ export class AccountStore {
 
   setPublicBarred(id: number, barred: boolean): void {
     this.#bar.run(barred ? 1 : 0, id);
+  }
+
+  setAgents(id: number, allowed: boolean): void {
+    this.#agents.run(allowed ? 1 : 0, id);
+  }
+
+  // The accounts that may have AI players, for the operator (admin.ts).
+  agentUsers(): { id: number; username: string }[] {
+    return this.#agentUsers.all() as { id: number; username: string }[];
   }
 
   // What the owner writes on the public profile, and what of the rest they show there.

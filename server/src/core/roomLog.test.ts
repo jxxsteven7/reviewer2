@@ -17,7 +17,7 @@ function table() {
     key: 'key-ann',
     name: 'Ann',
     play: true,
-    account: { id: 1, handle: 'a1b2c3d4e5f6', avatar: null, rank: 'undergraduate' },
+    account: { id: 1, handle: 'a1b2c3d4e5f6', avatar: null, rank: 'undergraduate', agents: false },
   });
   if (!created.ok) throw new Error(created.error);
   const { room, member: ann } = created;
@@ -124,6 +124,7 @@ describe('the log of a game', () => {
       handle: 'b2c3d4e5f6a1',
       avatar: null,
       rank: 'undergraduate',
+      agents: false,
     });
     if (!fay.ok) throw new Error(fay.error);
     room.attach(fay.member as Member, 'socket-fay');

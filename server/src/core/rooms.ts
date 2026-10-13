@@ -3,7 +3,7 @@ import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule } from './game';
 import type { Rng } from './random';
-import { chooseFields, Room, type Member, type MemberAccount } from './room';
+import { chooseFields, Room, type AgentState, type Member, type MemberAccount } from './room';
 import type { WordLibrary } from './words';
 
 // All the rooms on this server, which live in memory (docs/architecture.md), and the rules for
@@ -50,6 +50,9 @@ export class Rooms {
     private readonly rng: Rng,
     private readonly now: () => number,
     readonly limits: RoomLimits = DEFAULT_LIMITS,
+    // Whether the server's agent answers, for the AI players of every room, or null on a server
+    // without an agent (docs/architecture.md#ai-players).
+    private readonly agents: AgentState | null = null,
   ) {}
 
   get size(): number {
@@ -91,6 +94,7 @@ export class Rooms {
       words: this.words,
       rng: this.rng,
       now: this.now,
+      agents: this.agents,
     });
     if (options.settings !== undefined) {
       const configured = room.setSettings({ settings: options.settings });

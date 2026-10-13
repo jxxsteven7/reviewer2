@@ -9,6 +9,7 @@ import {
   SPECTATOR,
   TEAMS,
   verdictFor,
+  type AgentPersona,
   type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
@@ -19,6 +20,7 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
+import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask } from './agents';
 import type { GameContext, GameModule, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
@@ -83,9 +85,16 @@ const online = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.
 const membersOf = (ctx: GameContext) => ctx.playerIds().map((id) => ({ id, key: ctx.keyOf(id) }));
 
 // What keeps the next game from starting: with groups that the server draws, too few players;
-// otherwise a missing PI or student in a group.
-const problemsOf = (data: KeywordsData, ctx: GameContext) =>
-  lineupOf(data.match) === 'draw' ? drawProblems(data.seating, online(ctx)) : startProblems(data.seating, online(ctx));
+// otherwise a missing PI or student in a group; and with AI players, what they need (agents.ts).
+const problemsOf = (data: KeywordsData, ctx: GameContext) => [
+  ...(lineupOf(data.match) === 'draw'
+    ? drawProblems(data.seating, online(ctx))
+    : startProblems(data.seating, online(ctx))),
+  ...agentProblems(data, ctx),
+];
+
+// The AI players, whose seats the chair's shuffle leaves as they are.
+const agentsOf = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.agentOf(id) !== null));
 
 // The rules give the state back as it is when an action changed nothing, and then so does the
 // module: the room sends no snapshot for that.
@@ -258,7 +267,9 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // A match whose groups are fixed, or drawn when its game starts, has nothing for the chair to
   // shuffle.
   shuffle: (data, ctx) =>
-    lineupOf(data.match) === 'free' ? { ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx)) } : data,
+    lineupOf(data.match) === 'free'
+      ? { ...data, seating: shuffleGroups(data.seating, ctx.rng, online(ctx), agentsOf(ctx)) }
+      : data,
 
   canStart: (data, ctx) => problemsOf(data, ctx).length === 0,
 
@@ -311,6 +322,20 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     const team = seating.sides.get(to) ?? seatOf(seating, playerId).team ?? undefined;
     return { ...data, seating, match: rekeyMatch(data.match, from, to, team) };
   },
+
+  // An AI player sits as a group's PI or as one of its students, in the waiting room; a match has
+  // none (Room.startMatch). A group has one AI PI and one AI student at most.
+  seatAgent(data, ctx, playerId, seat) {
+    const wanted = agentSeat(seat);
+    if (!wanted) return { ok: false, error: 'bad_seat' };
+    if (agentLimitReached(data.seating, ctx, playerId, wanted.team, wanted.role)) {
+      return { ok: false, error: 'agent_limit' };
+    }
+    return sit(data, ctx, playerId, wanted);
+  },
+
+  agentTask,
+  agentMove: (data, _ctx, playerId, task, answer, made) => agentMove(data, playerId, task, answer, made),
 
   // Where a member is: the group and the role of the seat they are in, or the spectators'.
   seated(data, playerId) {
@@ -377,6 +402,11 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     for (const record of game.history) {
       for (const { player } of record.guesses) players[player] ??= ctx.nameOf(player);
     }
+    const agents: Record<string, AgentPersona> = {};
+    for (const id of ctx.playerIds()) {
+      const persona = ctx.agentOf(id);
+      if (persona !== null && seatOf(data.seating, id).team !== null) agents[id] = persona;
+    }
     return {
       gameId: game.gameId,
       language: game.language,
@@ -385,6 +415,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       history: game.history.map(copyRecord),
       result: { ...game.result },
       players,
+      ...(Object.keys(agents).length > 0 ? { agents } : {}),
     };
   },
 

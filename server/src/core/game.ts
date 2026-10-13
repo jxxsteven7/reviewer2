@@ -1,4 +1,13 @@
-import type { Ack, BoardWord, Language, MatchRules, RoomPhase } from '@reviewer2/shared';
+import type {
+  Ack,
+  AgentAnswer,
+  AgentPersona,
+  AgentQuestion,
+  BoardWord,
+  Language,
+  MatchRules,
+  RoomPhase,
+} from '@reviewer2/shared';
 import type { Rng } from './random';
 
 // What the shared layer needs from a game (docs/architecture.md). The shared layer runs rooms,
@@ -20,7 +29,10 @@ export interface GameContext {
   // A player's name in the room, also of one who has left during the current game, for what a
   // game keeps of them, such as a replay.
   nameOf(playerId: string): string;
+  // An AI player is online while the server's agent answers (docs/architecture.md#ai-players).
   isOnline(playerId: string): boolean;
+  // The persona of an AI player, or null for a person.
+  agentOf(playerId: string): AgentPersona | null;
   // Everyone in the room, in the order they joined.
   playerIds(): string[];
 }
@@ -51,6 +63,30 @@ export interface PlayerResult {
 export interface LogNote {
   data?: unknown;
   minor?: boolean;
+}
+
+// What an AI is to do in a seat now (GameModule.agentTask; docs/architecture.md#ai-players).
+export interface AgentTask {
+  // The moment of the game it is for, such as a turn and its phase, in the game's own words. Once
+  // the game has moved on, the task is dropped, and so is its answer when it comes.
+  moment: string;
+  // What the seat is to do, in the game's words, for the AI's log, such as "clue" or "guess".
+  kind: string;
+  // What to ask the agent, from the seat's own view of the game.
+  question: AgentQuestion;
+  // Advice for the people of the seat's group, who decide what to do with it, as an AI student
+  // gives its group. An AI player gives it; an AI that plays for someone who is offline doesn't,
+  // since the people who are there can play the turn themselves.
+  advice: boolean;
+  // How long the moves wait, in milliseconds: the first from when the task came up, each one after
+  // from the one before, so that an AI plays at a pace that people can follow.
+  pace: { first: number; step: number };
+}
+
+// One of the game's messages that an AI sends for its seat, as a player's page would.
+export interface AgentMove {
+  type: string;
+  payload: unknown;
 }
 
 // One player's points in a game of a match, by member key, with the game's own detail of where
@@ -154,6 +190,26 @@ export interface GameModule<Data = unknown, View = unknown> {
   // included: the players whose part in it the record keeps. Without this, those whom results()
   // names.
   participants?(data: Data, ctx: GameContext): string[];
+  // AI players (docs/architecture.md#ai-players); a game without these has none. The chair seats a
+  // new AI player at the seat that the chair's message names, as the game reads it, or the game
+  // refuses with one of its codes, as for a seat that is taken. The context already knows the
+  // newcomer's member key and persona.
+  seatAgent?(data: Data, ctx: GameContext, playerId: string, seat: unknown): GameUpdate<Data>;
+  // What a seat is to do now when an AI plays it: an AI player's own seat, or the seat of a player
+  // who is offline in their turn. Null when there is nothing for it to do.
+  agentTask?(data: Data, ctx: GameContext, playerId: string): AgentTask | null;
+  // The next message that the agent's answer to a task makes for the seat, with the game as it is
+  // now, or null when the answer has nothing more to give. `made` are the types of the messages
+  // sent for the task so far, in order. Each move goes through handle() as a player's would, so a
+  // move that the game has meanwhile made impossible is refused there; the room then stops the task.
+  agentMove?(
+    data: Data,
+    ctx: GameContext,
+    playerId: string,
+    task: AgentTask,
+    answer: AgentAnswer,
+    made: readonly string[],
+  ): AgentMove | null;
   // The game's part of the room view, as a function of the viewer. The only way a game's data
   // leaves the server. The room asks once for a snapshot and calls the function for each member
   // and for the screens, so a module builds what everyone sees once, and filters it for each.

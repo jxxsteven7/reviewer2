@@ -16,12 +16,15 @@ const MINOR_BYTES = (MAX_GAME_LOG_BYTES * 3) / 4;
 // One thing that happened: when, in milliseconds from the start of the game on the room's clock;
 // who did it, by player ID, or null for the room itself, such as a timer that ran out; what it was,
 // a game's message such as "keywords:reveal" or one of the room's own (GameLogEvent); and what it
-// said, if anything.
+// said, if anything. A move that an AI made for a player who was offline in their turn names the
+// persona it played as in `agent` (docs/architecture.md#ai-players), so that nobody takes it for
+// the player's own.
 export interface GameLogEntry {
   t: number;
   by: string | null;
   type: string;
   data?: unknown;
+  agent?: string;
 }
 
 // What the room logs of its own, besides the game's messages: a member who came or went, came
@@ -45,12 +48,14 @@ export type GameLogEvent = (typeof GAME_LOG_EVENTS)[number];
 
 // A log as the record keeps it. `v` is the version of this shape. `start` is where everyone in the
 // room was when the game began, by player ID, as the game describes each of them
-// (GameModule.seated), or null for a game that doesn't say.
+// (GameModule.seated), or null for a game that doesn't say. `agents` names the AI players among
+// them, by player ID, with the persona each played as; a game without any has none.
 export interface GameLogData {
   v: 1;
   game: string;
   gameId: string;
   start: Record<string, unknown> | null;
+  agents?: Record<string, string>;
   entries: GameLogEntry[];
   truncated?: true;
 }
@@ -72,13 +77,15 @@ export class GameLog {
     // When the game started, on the room's clock.
     readonly startedAt: number,
     readonly start: Record<string, unknown> | null,
+    readonly agents: Record<string, string> = {},
   ) {
     this.#bytes = Buffer.byteLength(JSON.stringify(this.#data()));
   }
 
-  // Notes one thing that happened at `at`, on the room's clock. A minor one is left out once the
-  // log has grown long, and nothing is noted once it has grown too long to keep.
-  add(at: number, by: string | null, type: string, data?: unknown, minor = false): void {
+  // Notes one thing that happened at `at`, on the room's clock, and the persona of the AI that did
+  // it for an offline player, if one did. A minor one is left out once the log has grown long, and
+  // nothing is noted once it has grown too long to keep.
+  add(at: number, by: string | null, type: string, data?: unknown, minor = false, agent?: string): void {
     if (this.#overflowed) return;
     if (minor && this.#bytes > MINOR_BYTES) {
       if (this.#truncated) return;
@@ -87,7 +94,13 @@ export class GameLog {
       this.#push({ t: at - this.startedAt, by: null, type: 'truncated' });
       return;
     }
-    this.#push({ t: at - this.startedAt, by, type, ...(data === undefined ? {} : { data }) });
+    this.#push({
+      t: at - this.startedAt,
+      by,
+      type,
+      ...(data === undefined ? {} : { data }),
+      ...(agent === undefined ? {} : { agent }),
+    });
   }
 
   #push(entry: GameLogEntry): void {
@@ -117,6 +130,7 @@ export class GameLog {
       game: this.game,
       gameId: this.gameId,
       start: this.start,
+      ...(Object.keys(this.agents).length > 0 ? { agents: this.agents } : {}),
       entries: this.#entries,
       ...(this.#truncated ? { truncated: true as const } : {}),
     };

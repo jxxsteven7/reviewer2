@@ -58,6 +58,9 @@ describe('a username', () => {
       'Reviewer-2',
       'PlayReviewer2',
       '\u{7ba1}\u{7406}\u{5458}',
+      // The AI player's names.
+      'Reviewer 1',
+      '\u{4e00}\u{53f7}\u{5ba1}\u{7a3f}\u{4eba}',
     ]) {
       expect(checkUsername(name).problem, name).toBe('username_reserved');
     }

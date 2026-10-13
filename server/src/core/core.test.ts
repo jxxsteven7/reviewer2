@@ -263,6 +263,7 @@ describe('removals', () => {
       handle: 'a1b2c3d4e5f6',
       avatar: null,
       rank: 'undergraduate',
+      agents: false,
     });
     if (!joined.ok) throw new Error(joined.error);
     room.attach(joined.member, 'socket-bob', 'browser-7');
@@ -281,6 +282,7 @@ describe('removals', () => {
       handle: 'a1b2c3d4e5f6',
       avatar: null,
       rank: 'undergraduate',
+      agents: false,
     });
     if (!joined.ok) throw new Error(joined.error);
     for (let i = 0; i <= MAX_BROWSERS; i += 1) {

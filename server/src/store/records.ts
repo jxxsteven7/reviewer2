@@ -17,12 +17,14 @@ import type { DatabaseSync, StatementSync } from 'node:sqlite';
 // matches award (migration 3, docs/architecture.md#matches), the games themselves to watch again
 // (migration 7, docs/architecture.md#replays), the streaks of wins and of losses that the games
 // make (migration 10, docs/architecture.md#streaks), and the log of each game kept and which of
-// its players had which account (migration 12, docs/architecture.md#game-records). What friends
-// have played together is worked out from the records (migration 13,
-// docs/architecture.md#friend-duos).
+// its players had which account (migration 12, docs/architecture.md#game-records), with the AI's
+// own log of it (migration 14, docs/architecture.md#ai-players). What friends have played together
+// is worked out from the records (migration 13, docs/architecture.md#friend-duos).
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
-// points it brought them (migration 8), scored as a match scores a game.
+// points it brought them (migration 8), scored as a match scores a game. A game that an AI played
+// in (docs/architecture.md#ai-players) brings no points: it is on the record, marked by `agents`
+// (migration 14), which keeps it out of the streaks and out of what friends have played together.
 export interface NewRecord {
   game: string;
   gameId: string;
@@ -32,6 +34,7 @@ export interface NewRecord {
   won: boolean;
   verdict: string;
   points: number;
+  agents?: boolean;
 }
 
 // What the account has played with each of its friends (shared/src/duos.ts): its records, by
@@ -39,7 +42,9 @@ export interface NewRecord {
 // on the game (migration 13), which the statement names: left to itself, SQLite looks each friend
 // up in every one of the account's games instead, by the unique index on the account and the
 // game, which takes ten times as long with a hundred friends. Teammates were on the same side,
-// opponents on another. Exported for the test that reads the query plan.
+// opponents on another. A game that an AI played in counts for no friend (migration 14), so that no
+// two friends make titles together against AI players. Exported for the test that reads the query
+// plan.
 export const DUOS_SQL =
   'SELECT theirs.account_id AS friend, ' +
   'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 1) AS wonTogether, ' +
@@ -49,7 +54,7 @@ export const DUOS_SQL =
   'count(*) FILTER (WHERE theirs.side <> mine.side AND theirs.won = 1) AS beaten ' +
   'FROM game_records AS mine JOIN game_records AS theirs INDEXED BY game_records_game ' +
   'ON theirs.game_id = mine.game_id AND theirs.account_id <> mine.account_id ' +
-  'WHERE mine.account_id = ? AND theirs.account_id IN (' +
+  'WHERE mine.account_id = ? AND mine.agents = 0 AND theirs.account_id IN (' +
   'SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END FROM friendships ' +
   "WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?)) " +
   'GROUP BY theirs.account_id';
@@ -83,8 +88,9 @@ export class RecordStore {
   ) {
     // A game is recorded once for each account, however often the end of the game is reported.
     this.#insert = db.prepare(
-      'INSERT OR IGNORE INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO game_records ' +
+        '(account_id, game, game_id, ended_at, side, role, winner, won, verdict, points, agents) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     this.#totals = db.prepare(
       'SELECT count(*) AS games, coalesce(sum(won), 0) AS wins FROM game_records WHERE account_id = ?',
@@ -120,8 +126,8 @@ export class RecordStore {
   }
 
   // Keeps the record, and the streak that the game brings the account to, or null when the game
-  // was on the record already. The caller runs it in a transaction (Accounts.record), so that the
-  // streaks can't fall behind the records.
+  // was on the record already or an AI played in it. The caller runs it in a transaction
+  // (Accounts.record), so that the streaks can't fall behind the records.
   add(accountId: number, record: NewRecord): Streak | null {
     const { game, gameId, side, role, winner, won, verdict, points } = record;
     const endedAt = new Date(this.now()).toISOString();
@@ -136,8 +142,9 @@ export class RecordStore {
       won ? 1 : 0,
       verdict,
       points,
+      record.agents ? 1 : 0,
     );
-    return Number(changes) > 0 ? this.#extend(accountId, won) : null;
+    return Number(changes) > 0 && !record.agents ? this.#extend(accountId, won) : null;
   }
 
   // The streak that one more game, won or lost, brings the account to: one game longer when it went
@@ -160,7 +167,8 @@ export class RecordStore {
   }
 
   // What the account has played with each friend who shares a game with it, by the friend's
-  // account ID, from every game on both their records (docs/architecture.md#friend-duos).
+  // account ID, from every game on both their records but those that an AI played in
+  // (docs/architecture.md#friend-duos).
   duos(accountId: number): Map<number, DuoCounts> {
     type Row = DuoCounts & { friend: number };
     const rows = this.#duos.all(accountId, accountId, accountId, accountId) as unknown as Row[];
@@ -243,13 +251,15 @@ export class TitleStore {
 
 // A finished game to keep, once for each game, however often the end of the game is reported: the
 // replay, as the game module gave it (GameModule.replay()), kept as JSON; the log of everything
-// that happened in it, or null when it grew too long to keep; and which player, by the ID they had
-// in the room, was which account.
+// that happened in it, or null when it grew too long to keep; the AI's own log of it, or null when
+// no AI played in it (agentLog.ts); and which player, by the ID they had in the room, was which
+// account.
 export interface NewReplay {
   game: string;
   gameId: string;
   replay: unknown;
   log?: unknown;
+  agentLog?: unknown;
   players?: readonly { playerId: string; accountId: number }[];
 }
 
@@ -263,7 +273,7 @@ export class ReplayStore {
     private readonly now: () => number = () => Date.now(),
   ) {
     this.#insert = db.prepare(
-      'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log) VALUES (?, ?, ?, ?, ?)',
+      'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log, agent_log) VALUES (?, ?, ?, ?, ?, ?)',
     );
     // An account that is gone by now, deleted while the game was on, is left out.
     this.#player = db.prepare(
@@ -277,12 +287,13 @@ export class ReplayStore {
   }
 
   // Keeps the replay, as `data`, which the caller has made into JSON of a size it allows, with its
-  // log as JSON, if any, and which player was which account, and says whether it was new. A game
+  // logs as JSON, if any, and which player was which account, and says whether it was new. A game
   // that is kept already keeps what it had. The caller runs this in one transaction.
-  add({ game, gameId, log = null, players = [] }: NewReplay, data: string): boolean {
+  add({ game, gameId, log = null, agentLog = null, players = [] }: NewReplay, data: string): boolean {
     const endedAt = new Date(this.now()).toISOString();
     const logged = log === null ? null : JSON.stringify(log);
-    const added = Number(this.#insert.run(gameId, game, endedAt, data, logged).changes) > 0;
+    const agentLogged = agentLog === null ? null : JSON.stringify(agentLog);
+    const added = Number(this.#insert.run(gameId, game, endedAt, data, logged, agentLogged).changes) > 0;
     if (added) for (const { playerId, accountId } of players) this.#player.run(gameId, playerId, accountId);
     return added;
   }

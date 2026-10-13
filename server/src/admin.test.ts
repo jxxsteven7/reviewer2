@@ -277,6 +277,25 @@ describe('accounts bar', () => {
   });
 });
 
+describe('agents', () => {
+  test('let an account invite AI players, until agents deny, and list those that may', () => {
+    accounts.store.create('Ann Lee', 'ann lee', 'hash');
+    expect(run('agents', 'list')).toBe(0);
+    expect(printed).toEqual(['No account may invite AI players.']);
+    expect(run('agents', 'allow', 'ANN LEE')).toBe(0);
+    expect(printed.at(-1)).toBe('Ann Lee may invite AI players to the private rooms they chair.');
+    expect(accounts.store.byKey('ann lee')).toMatchObject({ agents: true });
+    expect(run('agents', 'list')).toBe(0);
+    expect(printed.at(-1)).toMatch(/^\d+\tAnn Lee$/);
+    expect(run('agents', 'deny', 'Ann Lee')).toBe(0);
+    expect(printed.at(-1)).toBe('Ann Lee may not invite AI players any more. Those in their rooms now stay.');
+    expect(accounts.store.byKey('ann lee')).toMatchObject({ agents: false });
+    expect(run('agents', 'allow', 'Bob')).toBe(1);
+    expect(printed.at(-1)).toBe('No account is called Bob.');
+    expect(run('agents', 'allow')).toBe(2);
+  });
+});
+
 describe('reports list', () => {
   test('prints the latest reports, with whom they name and the note on one line', () => {
     vi.useFakeTimers({ now: Date.UTC(2026, 10, 1, 9) });

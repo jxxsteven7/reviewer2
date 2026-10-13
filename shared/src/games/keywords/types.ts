@@ -190,7 +190,8 @@ export type KeywordsError = (typeof KEYWORDS_ERRORS)[number];
 // Why a seat can't be taken.
 // `between_games`: in a match, only those who have played for a group in the game being played
 // may sit in one until it ends; anyone else joins from the next game. `bigger_group`: in a match
-// whose groups are fixed, a newcomer joins the group with fewer players.
+// whose groups are fixed, a newcomer joins the group with fewer players. `agent_limit`: a group has
+// one AI PI and one AI student at most (docs/games/keywords.md#ai-players).
 export const SEAT_ERRORS = [
   'seat_taken',
   'key_viewer',
@@ -198,14 +199,19 @@ export const SEAT_ERRORS = [
   'bad_seat',
   'between_games',
   'bigger_group',
+  'agent_limit',
 ] as const;
 export type SeatError = (typeof SEAT_ERRORS)[number];
 
 // What keeps a game from starting, for each team, or, when the server draws the groups at the
-// start of a match's game, how many more players need to be online in a seat.
+// start of a match's game, how many more players need to be online in a seat. With AI players in
+// the room (docs/architecture.md#ai-players), also no time limit for the clues or the guesses,
+// which keep a game going when the agent is slow, or no person in a group at all.
 export const START_PROBLEMS = ['needs_captain', 'captain_offline', 'needs_guesser'] as const;
 export type StartProblem =
-  { problem: (typeof START_PROBLEMS)[number]; team: Team } | { problem: 'needs_players'; missing: number };
+  | { problem: (typeof START_PROBLEMS)[number]; team: Team }
+  | { problem: 'needs_players'; missing: number }
+  | { problem: 'needs_timers' | 'needs_human' };
 
 // How the waiting room seats the players. 'free': everyone chooses a group and a role, as in a
 // room that isn't a match. 'draw': the players only say that they play, and the server draws the
