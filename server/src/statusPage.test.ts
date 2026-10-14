@@ -236,9 +236,8 @@ describe('the feedback', () => {
       {
         total: 0,
         statuses: NO_FEEDBACK.statuses,
-        kinds: {},
+
         view: 'open',
-        kind: null,
         entries: [],
         paged: false,
         older: false,
@@ -247,22 +246,19 @@ describe('the feedback', () => {
       },
       { admin: DEFAULT_ADMIN_COMMAND },
     );
-  // What the page shows between the heading and the entries.
-  const head = (html: string) => text(html.slice(0, html.indexOf('<article>')));
 
   test('has a page of its own, which the status page counts by status and links to', () => {
     const status = renderStatusPage(stats(), [], NOW);
     expect(text(status)).toContain('Feedback None yet.');
     expect(status).toContain('<meta http-equiv="refresh" content="5">');
-    // Open is new and issue alone, and no status overlaps another.
+    // Open is the new feedback alone, which nobody has dealt with yet, and no status overlaps another.
     const some = renderStatusPage(stats(), [], NOW, {
       total: 11,
       statuses: { new: 3, issue: 2, resolved: 2, closed: 3, trash: 1 },
     });
     expect(some).toContain(
-      '<p class="pills"><a class="badge" href="/feedback">Open <b>5</b></a>' +
-        '<a class="badge new" href="/feedback?status=new">New <b>3</b></a>' +
-        '<a class="badge issue" href="/feedback?status=issue">Issue <b>2</b></a>' +
+      '<p class="pills"><a class="badge" href="/feedback">Open <b>3</b></a>' +
+        '<a class="badge issue" href="/feedback?status=issue">Issued <b>2</b></a>' +
         '<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>2</b></a>' +
         '<a class="badge closed" href="/feedback?status=closed">Closed <b>3</b></a>' +
         '<a class="badge trash" href="/feedback?status=trash">Trash <b>1</b></a></p>' +
@@ -294,7 +290,7 @@ describe('the feedback', () => {
       }),
       feedback(1),
     ];
-    const html = page({ total: 2, statuses: { ...NO_FEEDBACK.statuses, new: 2 }, kinds: { bug: 1, idea: 1 }, entries });
+    const html = page({ total: 2, statuses: { ...NO_FEEDBACK.statuses, new: 2 }, entries });
     const shown = text(html);
     expect(shown).toContain('2 in all, newest first');
     expect(shown).toContain(
@@ -588,9 +584,8 @@ describe('the feedback', () => {
     const listing: FeedbackListing = {
       total: 1,
       statuses: { ...NO_FEEDBACK.statuses, new: 1 },
-      kinds: { idea: 1 },
+
       view: 'open',
-      kind: null,
       entries: [feedback(1)],
       paged: false,
       older: false,
@@ -616,9 +611,8 @@ describe('the feedback', () => {
     const listing = (changes: Partial<Feedback>): FeedbackListing => ({
       total: 1,
       statuses: { ...NO_FEEDBACK.statuses, new: 1 },
-      kinds: { idea: 1 },
+
       view: 'open',
-      kind: null,
       entries: [feedback(7, changes)],
       paged: false,
       older: false,
@@ -669,55 +663,33 @@ describe('the feedback', () => {
     expect(odd).not.toMatch(INERT);
   });
 
-  test('shows each view with how much there is of it, of the kind shown, and the open feedback by default', () => {
+  test('shows the views in one row, each with how much there is of it, and the open feedback by default', () => {
     const statuses = { new: 2, issue: 1, resolved: 1, closed: 2, trash: 1 };
-    const open = page({ total: 8, statuses, kinds: { idea: 3, game: 2 }, entries: [feedback(8)] });
+    // All is everything, the trash included; open is the new feedback alone, and none overlaps
+    // another.
+    const open = page({ total: 7, statuses, entries: [feedback(8)] });
     expect(open).toContain(
-      '<p class="pills"><strong>Open <b>3</b></strong><a href="/feedback?status=new">New <b>2</b></a>' +
-        '<a href="/feedback?status=issue">Issue <b>1</b></a><a href="/feedback?status=resolved">Resolved <b>1</b></a>' +
-        '<a href="/feedback?status=closed">Closed <b>2</b></a>' +
-        '<a href="/feedback?status=trash">Trash <b>1</b></a></p>',
+      '<div class="filters"><p class="pills"><a href="/feedback?status=all">All <b>7</b></a>' +
+        '<strong>Open <b>2</b></strong><a href="/feedback?status=issue">Issued <b>1</b></a>' +
+        '<a href="/feedback?status=resolved">Resolved <b>1</b></a><a href="/feedback?status=closed">Closed <b>2</b></a>' +
+        '<a href="/feedback?status=trash">Trash <b>1</b></a></p></div>',
     );
-    const trash = page({ total: 8, statuses, kinds: { idea: 1 }, view: 'trash', entries: [feedback(3)], kind: 'idea' });
-    expect(trash).toContain('<a href="/feedback?kind=idea">Open <b>3</b></a>');
+    // No row of kinds: each piece of feedback says its kind.
+    expect(open.match(/class="pills"/g)).toHaveLength(1);
+    expect(open).not.toContain('kind=');
+    const trash = page({ total: 7, statuses, view: 'trash', entries: [feedback(3)] });
+    expect(trash).toContain('<a href="/feedback">Open <b>2</b></a>');
     expect(trash).toContain('<strong>Trash <b>1</b></strong>');
-    expect(trash).toContain('<a href="/feedback?status=closed&amp;kind=idea">Closed <b>2</b></a>');
-    expect(page({ total: 8, statuses, view: 'closed' })).toContain('<p class="note">None here.</p>');
+    expect(page({ total: 7, statuses, view: 'all' })).toContain('<strong>All <b>7</b></strong>');
+    expect(page({ total: 7, statuses, view: 'closed' })).toContain('<p class="note">None here.</p>');
+    // A kind from a later server, which this one was rolled back from, shows as it is.
+    const later = page({ total: 1, statuses, entries: [feedback(3, { kind: 'later' as Feedback['kind'] })] });
+    expect(text(later)).toContain('#3 &middot; later &middot; 2026-10-09');
     // Nothing to choose from while there is no feedback at all.
     expect(page()).not.toContain('class="pills"');
   });
 
-  test('shows each kind with how much there is of it in the view, and the feedback of one kind', () => {
-    const kinds = { idea: 1, game: 2, later: 1 };
-    const statuses = { ...NO_FEEDBACK.statuses, new: 4 };
-    const all = page({
-      total: 4,
-      statuses,
-      kinds,
-      entries: [feedback(4, { kind: 'game' }), feedback(3, { kind: 'later' as Feedback['kind'] }), feedback(2)],
-    });
-    expect(all).toContain(
-      '<p class="pills"><strong>All <b>4</b></strong><a href="/feedback?kind=idea">Idea <b>1</b></a>' +
-        '<a href="/feedback?kind=game">New game <b>2</b></a><a href="/feedback?kind=bug">Bug <b>0</b></a>' +
-        '<a href="/feedback?kind=words">Word lists <b>0</b></a></p>',
-    );
-    expect(head(all)).toContain('Open 4 New 4 Issue 0');
-    expect(text(all)).toContain('#4 &middot; New game &middot; 2026-10-09');
-    // A kind from a later server, which this one was rolled back from, shows as it is.
-    expect(text(all)).toContain('#3 &middot; later &middot; 2026-10-09');
-
-    const games = page({ total: 4, statuses, kinds, kind: 'game', entries: [feedback(4, { kind: 'game' })] });
-    expect(games).toContain(
-      '<p class="pills"><a href="/feedback">All <b>4</b></a><a href="/feedback?kind=idea">Idea <b>1</b></a>' +
-        '<strong>New game <b>2</b></strong>',
-    );
-    expect(games).toContain('<a href="/feedback?status=trash&amp;kind=game">Trash <b>0</b></a>');
-    expect(games).not.toContain('None here.');
-    expect(page({ total: 4, statuses, kinds, kind: 'bug' })).toContain('<strong>Bug <b>0</b></strong>');
-    expect(page({ total: 4, statuses, kinds, kind: 'bug' })).toContain('<p class="note">None here.</p>');
-  });
-
-  test('links to older feedback, and back to the latest, keeping the view and the kind', () => {
+  test('links to older feedback, and back to the latest, keeping the view', () => {
     const entries = [feedback(60), feedback(59)];
     expect(page({ total: 99, entries, older: true })).toContain(
       '<p class="more"><a href="/feedback?before=59">Older</a></p>',
@@ -726,13 +698,9 @@ describe('the feedback', () => {
       '<p class="more"><a href="/feedback">Latest</a> &middot; <a href="/feedback?before=59">Older</a></p>',
     );
     expect(page({ total: 2, entries })).not.toContain('class="more"');
-    expect(page({ total: 99, kind: 'game', entries, paged: true, older: true })).toContain(
-      '<p class="more"><a href="/feedback?kind=game">Latest</a> &middot; ' +
-        '<a href="/feedback?kind=game&amp;before=59">Older</a></p>',
-    );
-    expect(page({ total: 99, view: 'closed', kind: 'game', entries, paged: true, older: true })).toContain(
-      '<p class="more"><a href="/feedback?status=closed&amp;kind=game">Latest</a> &middot; ' +
-        '<a href="/feedback?status=closed&amp;kind=game&amp;before=59">Older</a></p>',
+    expect(page({ total: 99, view: 'closed', entries, paged: true, older: true })).toContain(
+      '<p class="more"><a href="/feedback?status=closed">Latest</a> &middot; ' +
+        '<a href="/feedback?status=closed&amp;before=59">Older</a></p>',
     );
     // Paged back to where there is nothing, the way back is still there.
     expect(page({ total: 99, view: 'trash', paged: true })).toContain('<a href="/feedback?status=trash">Latest</a>');

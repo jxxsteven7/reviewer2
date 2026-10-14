@@ -16,6 +16,7 @@ const CONTRIBUTIONS: Contribution[] = [
     kind: 'words',
     name: 'Ann',
     profile: 'a1b2c3d4e5f6',
+    avatar: '/avatars/ann.webp',
     summary: { zh: '\u52a0\u4e86\u8bcd', en: 'Added words' },
     issue: 85,
     month: '2026-11',
@@ -24,12 +25,13 @@ const CONTRIBUTIONS: Contribution[] = [
     kind: 'bug',
     name: null,
     profile: null,
+    avatar: null,
     summary: { zh: '\u62a5\u4e86 bug', en: 'Reported a bug' },
     issue: 82,
     month: '2026-11',
   },
-  { kind: 'idea', name: 'Lizi', profile: null, summary: SUMMARY, issue: 57, month: '2026-10' },
-  { kind: 'idea', name: 'Ann', profile: 'a1b2c3d4e5f6', summary: null, issue: null, month: '2026-09' },
+  { kind: 'idea', name: 'Lizi', profile: null, avatar: null, summary: SUMMARY, issue: 57, month: '2026-10' },
+  { kind: 'idea', name: 'Ann', profile: 'a1b2c3d4e5f6', avatar: null, summary: null, issue: null, month: '2026-09' },
 ];
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -89,6 +91,14 @@ describe('the feedback contributions', () => {
       expect(link.attributes()).toMatchObject({ target: '_blank', rel: 'noopener noreferrer' });
     const people = wrapper.findAll('button.person');
     expect(people.map((person) => person.text())).toEqual(['Ann', 'Ann']);
+    // Each with the account's avatar before the username: the picture uploaded, or the default.
+    const pictures = people.map((person) => person.find('.avatar img'));
+    expect(pictures.map((picture) => (picture.exists() ? picture.attributes('src') : null))).toEqual([
+      null,
+      '/avatars/ann.webp',
+    ]);
+    expect(people.every((person) => person.find('.avatar').exists())).toBe(true);
+    expect(wrapper.findAll('span.name .avatar')).toHaveLength(0);
     expect(wrapper.findAll('span.name').map((name) => name.text())).toEqual(['Lizi', 'An anonymous player']);
     expect(wrapper.findComponent(ProfileCard).exists()).toBe(false);
 

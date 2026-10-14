@@ -133,18 +133,20 @@ onBeforeUnmount(() => {
         :aria-labelledby="id"
         tabindex="-1"
       >
-        <header class="head">
-          <button v-if="back" type="button" class="round back" :aria-label="back" @click="emit('back')">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
-          </button>
-          <h2 :id="id">
-            {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
-          </h2>
-          <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
-            &times;
-          </button>
-        </header>
-        <div class="body"><slot /></div>
+        <div class="scroller">
+          <header class="head">
+            <button v-if="back" type="button" class="round back" :aria-label="back" @click="emit('back')">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
+            </button>
+            <h2 :id="id">
+              {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
+            </h2>
+            <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
+              &times;
+            </button>
+          </header>
+          <div class="body"><slot /></div>
+        </div>
       </section>
     </div>
   </Teleport>
@@ -162,16 +164,28 @@ onBeforeUnmount(() => {
 }
 
 .panel {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-height: 88vh;
   max-height: 88dvh;
-  overflow-y: auto;
-  padding: var(--space-4) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
+  overflow: hidden;
   border: var(--line-strong) solid var(--ink);
   border-bottom: 0;
   border-radius: var(--radius-hero) var(--radius-hero) 0 0;
   background: var(--paper);
   animation: rise var(--motion) ease-out;
+}
+
+/* What scrolls is inside the panel, a little below its top edge and, where it is round, above its
+   bottom edge, so that the scrollbar stays clear of the round corners rather than running over
+   them. Its padding makes up the rest of the panel's space around the content. */
+.scroller {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: var(--space-4);
+  overflow-y: auto;
+  padding: 0 var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
 }
 
 /* The panel takes the focus when it opens, so that the keyboard and screen readers start inside it,
@@ -249,17 +263,20 @@ h2 {
 /* Fitted to the part of the screen that the keyboard leaves: the backdrop is that part, and the
    panel a column of at most 88% of it, whose body holds the content as tall as it may be. */
 .panel.fit {
+  max-height: 88%;
+}
+
+.fit > .scroller {
   display: flex;
   flex-direction: column;
-  max-height: 88%;
   overflow: hidden;
 }
 
-.fit > .head {
+.fit .head {
   flex: none;
 }
 
-.fit > .body {
+.fit .body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -274,10 +291,14 @@ h2 {
 
   .panel {
     max-width: 30rem;
-    padding: var(--space-5);
     border-bottom: var(--line-strong) solid var(--ink);
     border-radius: var(--radius-hero);
     box-shadow: var(--shadow-3);
+  }
+
+  .scroller {
+    margin-bottom: var(--space-4);
+    padding: var(--space-1) var(--space-5);
   }
 }
 </style>

@@ -56,12 +56,14 @@ export type ReportError = (typeof REPORT_ERRORS)[number];
 // What the client sends with meta:feedback: what the player wrote, and what comes along by itself.
 // `credit` is the name to list among the feedback contributions should the feedback be adopted
 // (contributions.ts), which is also the name on the GitHub issue that it then becomes; without
-// one, the player is listed as anonymous. `linkProfile` says that a player who is logged in and
-// leaves a name lets that name link to their public profile there; the form ticks it until they
-// untick it, and without a name or an account it means nothing. `version` is the build of the
-// page, which may be older than the server's. Pages from before carried a link for the name and
-// whether the player agreed to a public issue, which the server ignores, and no `linkProfile`,
-// which is then no.
+// one, the player is listed as anonymous. `linkProfile` says that a player who is logged in signs
+// the feedback with their account: the server takes the account's username for the name, and the
+// contributions show it with the account's avatar, which opens their public profile. The form
+// asks whether to stay anonymous or sign; a player who signs without an account leaves a name of
+// their own. Without an account, `linkProfile` means nothing. `version` is the build of the page,
+// which may be older than the server's. Pages from before carried a link for the name and whether
+// the player agreed to a public issue, which the server ignores, and no `linkProfile`, which is
+// then no.
 export interface FeedbackMessage {
   kind: FeedbackKind;
   text: string;

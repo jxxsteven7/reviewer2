@@ -344,8 +344,8 @@ describe('feedback adopt', () => {
     vi.useFakeTimers({ now: Date.parse('2026-10-14T08:00:00.000Z') });
     expect(adopt('1')).toBe(0);
     expect(printed).toEqual([
-      'Adopted feedback #1, issue #41. The home page lists it now, as Ann L., counted for the account Ann, ' +
-        'saying that the player contributed:',
+      "Adopted feedback #1, issue #41. The home page lists it now, as Ann, with the account's avatar, counted " +
+        'for the account Ann, saying that the player contributed:',
       `  zh: ${ZH}`,
       `  en: ${EN}`,
     ]);
@@ -368,16 +368,33 @@ describe('feedback adopt', () => {
       summaryEn: EN,
     });
     expect(store.contributions()).toEqual([
-      { kind: 'bug', name: null, profile: null, summary: { zh: ZH, en: EN }, issue: 43, month: '2026-10' },
+      {
+        kind: 'bug',
+        name: null,
+        profile: null,
+        avatar: null,
+        summary: { zh: ZH, en: EN },
+        issue: 43,
+        month: '2026-10',
+      },
       {
         kind: 'words',
         name: 'octocat',
         profile: null,
+        avatar: null,
         summary: { zh: '加了词', en: 'Added words' },
         issue: 42,
         month: '2026-10',
       },
-      { kind: 'idea', name: 'Ann L.', profile: ann.handle, summary: { zh: ZH, en: EN }, issue: 41, month: '2026-10' },
+      {
+        kind: 'idea',
+        name: 'Ann',
+        profile: ann.handle,
+        avatar: null,
+        summary: { zh: ZH, en: EN },
+        issue: 41,
+        month: '2026-10',
+      },
     ]);
     expect(accounts.summary(ann).contributions).toEqual([
       { kind: 'idea', count: 1 },

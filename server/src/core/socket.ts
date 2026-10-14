@@ -1011,9 +1011,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
     // who they are but the name they may leave for the feedback contributions and the account
     // they are logged in to, if any, with a name or without, so that the feedback counts for it
-    // once it is adopted, and whether the name may link to that account's public profile, which
-    // takes a name, an account and the player's yes. The log gets its number and kind, and never
-    // its text, contact or name. Only what was kept
+    // once it is adopted, and whether the name links to that account's public profile. A player
+    // who is logged in and signs the feedback (`linkProfile`) is listed by the account, with its
+    // username as the name, whatever name was sent along, as older pages may; anyone else may
+    // leave a name of their own. The log gets its number and kind, and never its text, contact or
+    // name. Only what was kept
     // counts against the address, so that a player who is told to shorten their text doesn't lose
     // a turn for it, and feedback that the address sent once already in the window is answered as
     // it was the first time, without being kept or counted again.
@@ -1023,9 +1025,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (checked.problem) return fail(checked.problem);
       const given = checkContact(contact);
       if (given.problem) return fail(given.problem);
-      const named = checkCredit(credit);
+      // An account that has been deleted since the handshake is nobody's.
+      const account = conn.account ? accounts?.store.byId(conn.account.id) : undefined;
+      const linked = linkProfile === true && account !== undefined;
+      const named = linked ? { credit: account.username, problem: null } : checkCredit(credit);
       if (named.problem) return fail(named.problem);
-      const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, linkProfile === true]);
+      const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, linked]);
       if (feedbackSeen.has(key)) return ok();
       if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
       const full = feedback.full();
@@ -1035,15 +1040,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         return fail('feedback_full');
       }
       const userAgent = socket.handshake.headers['user-agent'];
-      // An account that has been deleted since the handshake is nobody's.
-      const account = conn.account ? accounts?.store.byId(conn.account.id) : undefined;
       const id = feedback.add({
         kind,
         text: checked.text,
         contact: given.contact,
         credit: named.credit,
         accountId: account?.id ?? null,
-        linkProfile: linkProfile === true && named.credit !== null && account !== undefined,
+        linkProfile: linked,
         version: pageVersion,
         language,
         page,

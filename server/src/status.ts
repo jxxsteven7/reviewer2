@@ -1,4 +1,3 @@
-import { FEEDBACK_KINDS, type FeedbackKind } from '@reviewer2/shared';
 import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http';
 import { methodAllowed, notFound, pathOf, send } from './http';
 import type { History, Stats } from './stats';
@@ -9,6 +8,7 @@ import {
   renderReportsPage,
   renderStatusPage,
   REPORTS_PATH,
+  storeView,
   type AccountCounts,
   type FeedbackCommands,
   type FeedbackListing,
@@ -22,10 +22,9 @@ import type { FeedbackStore } from './store/feedback';
 // whatever stands in front of the server, such as a reverse proxy, leads to the game's port
 // alone. That is why it needs no password. `/` is the page and `/status.json` the same numbers
 // for scripts. `/feedback` is the feedback that players sent, a page of it at a time:
-// `/feedback?before=<id>` shows what came before that one, `/feedback?kind=<kind>` only the
-// feedback of one kind, and `/feedback?status=<status>` the feedback of one status, such as what
-// is resolved or in the trash; without it, or with a status that the page doesn't know, what is
-// open, new or published as an issue. `/reports` is the reports that players sent of each other,
+// `/feedback?before=<id>` shows what came before that one, and `/feedback?status=<view>` all of
+// it or the feedback of one status, such as what is resolved or in the trash; without it, or with
+// a view that the page doesn't know, what is open, which nobody has dealt with yet. `/reports` is the reports that players sent of each other,
 // paged the same way. All of it is read-only: what became of the feedback is changed with
 // admin.cjs alone, whose commands the feedback page shows as text to copy, with ADMIN_COMMAND in
 // front, or the operator's own command for them, which can also publish an issue in one go
@@ -63,24 +62,19 @@ export const FEEDBACK_SHOWN = 50;
 const beforeIn = (query: URLSearchParams): number | undefined =>
   /^\d{1,15}$/.test(query.get('before') ?? '') ? Number(query.get('before')) : undefined;
 
-// The feedback for the page, before the id in the query when it has one, of the kind in it when
-// it has one and of the view in it, or the open feedback, and whether there is more before that.
-// A query that isn't a number, a kind that the server doesn't know or a view that isn't one is
-// taken for none.
+// The feedback for the page, before the id in the query when it has one, and of the view in it,
+// or the open feedback, and whether there is more before that. A query that isn't a number or a
+// view that isn't one is taken for none, as is anything else in the query.
 function feedbackListing(feedback: FeedbackStore, target: string): FeedbackListing {
   const query = new URLSearchParams(target.slice(pathOf(target).length));
   const before = beforeIn(query);
-  const askedKind = query.get('kind') ?? '';
-  const kind = (FEEDBACK_KINDS as readonly string[]).includes(askedKind) ? (askedKind as FeedbackKind) : null;
   const askedView = query.get('status') ?? '';
   const view = (FEEDBACK_VIEWS as readonly string[]).includes(askedView) ? (askedView as PageView) : 'open';
-  const entries = feedback.latest(FEEDBACK_SHOWN + 1, before, kind, view);
+  const entries = feedback.latest(FEEDBACK_SHOWN + 1, before, storeView(view));
   return {
     total: feedback.count(),
-    statuses: feedback.statuses(kind),
-    kinds: feedback.kinds(view),
+    statuses: feedback.statuses(),
     view,
-    kind,
     entries: entries.slice(0, FEEDBACK_SHOWN),
     paged: before !== undefined,
     older: entries.length > FEEDBACK_SHOWN,

@@ -813,9 +813,15 @@
     "count": "{count} / {max}",
     "contact": "Contact (optional)",
     "contactHint": "An email address, a WeChat ID or anything else to reach you by.",
-    "credit": "Your name (optional)",
-    "creditHint": "Leave it empty to stay anonymous. If your feedback is adopted, the name is listed among the feedback contributions on the home page, and on its GitHub issue. Any name will do, such as your GitHub username. If you send it logged in and tick the box below, the name opens your public page.",
-    "linkProfile": "Let my name in the feedback contributions open my public page",
+    "signature": "If it is adopted, list me",
+    "signatures": {
+      "signed": "By name",
+      "anonymous": "Anonymously"
+    },
+    "anonymousHint": "You are listed as an anonymous player among the feedback contributions on the home page, and the GitHub issue names nobody.",
+    "accountHint": "The feedback contributions on the home page show your avatar and username, and a tap on your avatar opens your public page. The GitHub issue names your username.",
+    "credit": "Your name",
+    "creditHint": "The name is listed among the feedback contributions on the home page, and on the GitHub issue. Any name will do, such as your GitHub username.",
     "gameNote": "Which game should we make next? Say how a round goes and what makes it fun.",
     "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model.",
     "submit": "Send",
@@ -824,7 +830,7 @@
   "contributions": {
     "title": "Feedback contributions",
     "counted": "Feedback contributions | Feedback contributions · {count} person | Feedback contributions · {count} people",
-    "intro": "We thank the players whose suggestions, ideas for games, bug reports and words were adopted. What is adopted is the idea, and what was built may differ: the number opens the discussion and the changes. Leave a name with your feedback to be listed by it; without one, you are listed anonymously.",
+    "intro": "We thank the players whose suggestions, ideas for games, bug reports and words were adopted. What is adopted is the idea, and what was built may differ: the number opens the discussion and the changes. Sign your feedback to be listed by your account, or by a name if you have no account; otherwise, you are listed anonymously.",
     "kinds": {
       "idea": "Suggestions",
       "game": "New games",

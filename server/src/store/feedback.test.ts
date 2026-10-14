@@ -1,4 +1,4 @@
-import { usernameKey, type FeedbackKind } from '@reviewer2/shared';
+import { usernameKey } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
@@ -157,20 +157,6 @@ describe('the feedback', () => {
     expect(feedback.latest(2, 4).map(({ id }) => id)).toEqual([3, 2]);
     expect(feedback.latest(2, 2).map(({ id }) => id)).toEqual([1]);
     expect(feedback.latest(2, 1)).toEqual([]);
-  });
-
-  test('is read of one kind, and counted by kind', () => {
-    const feedback = store();
-    for (const kind of ['game', 'idea', 'game', 'bug', 'game'] as const) feedback.add(entry({ kind }));
-    expect(feedback.latest(10, undefined, 'game').map(({ id, kind }) => [id, kind])).toEqual([
-      [5, 'game'],
-      [3, 'game'],
-      [1, 'game'],
-    ]);
-    expect(feedback.latest(1, 5, 'game').map(({ id }) => id)).toEqual([3]);
-    expect(feedback.latest(10, undefined, 'words')).toEqual([]);
-    expect(feedback.latest(10).map(({ id }) => id)).toEqual([5, 4, 3, 2, 1]);
-    expect(feedback.kinds()).toEqual({ game: 3, idea: 1, bug: 1 });
   });
 
   test('of a language or a page that does not exist is refused by the database too', () => {
@@ -386,7 +372,7 @@ describe('what became of the feedback', () => {
     expect(feedback.count()).toBe(1);
   });
 
-  test('is read by view, and counted by status and by kind within a view', () => {
+  test('is read by status, or all of it, and counted by status', () => {
     const feedback = store();
     for (const kind of ['idea', 'bug', 'idea', 'bug', 'idea', 'words', 'bug', 'idea'] as const) {
       feedback.add(entry({ kind }));
@@ -403,39 +389,26 @@ describe('what became of the feedback', () => {
     adopt(7);
     feedback.resolve(8, 52);
     feedback.close(8);
-    const ids = (view: FeedbackView, kind: FeedbackKind | null = null) =>
-      feedback.latest(10, undefined, kind, view).map(({ id }) => id);
+    const ids = (view: FeedbackView) => feedback.latest(10, undefined, view).map(({ id }) => id);
+    // All of it, in the trash too, newest first.
     expect(ids('all')).toEqual([8, 7, 6, 5, 4, 3, 2, 1]);
-    // Open is what still waits: new, or an issue, which feedback with a pull request recorded but
-    // not adopted is too.
-    expect(ids('open')).toEqual([3, 2, 1]);
     expect(ids('new')).toEqual([1]);
+    // An issue is published as one, or has a pull request recorded but isn't adopted.
     expect(ids('issue')).toEqual([3, 2]);
     // Resolved is what was adopted, with a pull request recorded or not; closed feedback is closed
     // alone. No view overlaps another.
     expect(ids('resolved')).toEqual([7, 4]);
     expect(ids('closed')).toEqual([8, 5]);
     expect(ids('trash')).toEqual([6]);
-    expect(ids('open', 'idea')).toEqual([3, 1]);
-    expect(ids('open', 'bug')).toEqual([2]);
-    expect(ids('resolved', 'bug')).toEqual([7, 4]);
-    expect(ids('trash', 'idea')).toEqual([]);
-    expect(feedback.latest(1, 7, 'bug', 'resolved').map(({ id }) => id)).toEqual([4]);
+    expect(feedback.latest(1, 7, 'resolved').map(({ id }) => id)).toEqual([4]);
     expect(feedback.statuses()).toEqual({ new: 1, issue: 2, resolved: 2, closed: 2, trash: 1 });
-    expect(feedback.statuses('idea')).toEqual({ new: 1, issue: 1, resolved: 0, closed: 2, trash: 0 });
-    expect(feedback.statuses('game')).toEqual({ new: 0, issue: 0, resolved: 0, closed: 0, trash: 0 });
-    expect(feedback.kinds()).toEqual({ idea: 4, bug: 3, words: 1 });
-    expect(feedback.kinds('open')).toEqual({ idea: 2, bug: 1 });
-    expect(feedback.kinds('resolved')).toEqual({ bug: 2 });
-    expect(feedback.kinds('trash')).toEqual({ words: 1 });
-    expect(feedback.kinds('new')).toEqual({ idea: 1 });
   });
 });
 
 describe('the feedback contributions', () => {
   const SAID = { zh: '提出了更多领域', en: 'Suggested more fields' };
 
-  test('are the adopted feedback, the latest first, by the name left with it or anonymous', () => {
+  test('are the adopted feedback, the latest first, by the account that signed it, the name left with it or anonymous', () => {
     const feedback = store();
     const accounts = new AccountStore(db);
     const ann = accounts.create('Ann', 'ann', 'h');
@@ -459,12 +432,21 @@ describe('the feedback contributions', () => {
     // Only once.
     expect(feedback.adopt(1, { zh: '又一次', en: 'Again' })).toBe(false);
     expect(feedback.contributions()).toEqual([
-      { kind: 'game', name: null, profile: null, summary: SAID, issue: 44, month: '2026-11' },
-      { kind: 'words', name: 'Cat', profile: null, summary: SAID, issue: 43, month: '2026-11' },
-      { kind: 'bug', name: 'Bob', profile: null, summary: SAID, issue: 42, month: '2026-11' },
-      { kind: 'idea', name: 'Ann L', profile: ann.handle, summary: SAID, issue: 41, month: '2026-10' },
+      { kind: 'game', name: null, profile: null, avatar: null, summary: SAID, issue: 44, month: '2026-11' },
+      { kind: 'words', name: 'Cat', profile: null, avatar: null, summary: SAID, issue: 43, month: '2026-11' },
+      { kind: 'bug', name: 'Bob', profile: null, avatar: null, summary: SAID, issue: 42, month: '2026-11' },
+      { kind: 'idea', name: 'Ann', profile: ann.handle, avatar: null, summary: SAID, issue: 41, month: '2026-10' },
     ]);
-    // Once Ann's account is gone, her name links nowhere.
+    // Signed with the account, the contribution shows it as it is now: its username, rather than
+    // the name that an older page sent along, and its avatar.
+    accounts.setAvatar(ann.id, 'a1b2.webp');
+    accounts.rename(ann.id, 'Annie', 'annie');
+    expect(feedback.contributions().at(-1)).toMatchObject({
+      name: 'Annie',
+      profile: ann.handle,
+      avatar: '/avatars/a1b2.webp',
+    });
+    // Once Ann's account is gone, the name it was sent with is left, and links nowhere.
     accounts.delete(ann.id);
     expect(feedback.contributions().map(({ name, profile }) => [name, profile])).toEqual([
       [null, null],
@@ -472,6 +454,7 @@ describe('the feedback contributions', () => {
       ['Bob', null],
       ['Ann L', null],
     ]);
+    expect(feedback.contributions().at(-1)?.avatar).toBeNull();
   });
 
   test('say what the player contributed once the operator has written it, which can be written again', () => {
@@ -492,6 +475,7 @@ describe('the feedback contributions', () => {
       kind: 'idea',
       name: null,
       profile: null,
+      avatar: null,
       summary: null,
       issue: null,
       month: '2026-10',
