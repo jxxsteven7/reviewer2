@@ -65,6 +65,7 @@ function data(side: KeywordsRoomData['side']): KeywordsRoomData {
     joinsNext: false,
     startProblems: [],
     mayEmote: true,
+    titles: {},
     game: null,
   };
 }

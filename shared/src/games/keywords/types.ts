@@ -1,3 +1,4 @@
+import type { TitleCount } from '../../accounts';
 import type { KeywordsSettings } from './settings';
 
 // Types for the team word guessing game, whose module is called `keywords`. The rules are in
@@ -283,4 +284,9 @@ export interface KeywordsRoomData {
   // group's students are guessing (docs/games/keywords.md#quick-reactions).
   mayEmote: boolean;
   game: KeywordsView | null;
+  // The titles that the game being played, or just ended, has brought each player so far, by
+  // player ID, each with how many times it came (docs/games/keywords.md#titles): only for those
+  // whom the game's titles go to, with an account, in a game that no AI has played in. Empty
+  // without a game.
+  titles: Record<string, TitleCount[]>;
 }

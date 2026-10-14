@@ -51,6 +51,7 @@ const data: KeywordsRoomData = {
   lineup: 'free',
   joinsNext: false,
   mayEmote: true,
+  titles: {},
   game: null,
 };
 

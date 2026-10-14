@@ -181,6 +181,7 @@ const context = (): GameContext => ({
   agentOf: () => null,
   playerIds: () => ['ann', 'bob', 'cat'],
   titleCount: () => null,
+  awardsTitles: () => false,
 });
 
 describe('the view', () => {

@@ -111,6 +111,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     lineup: 'free',
     joinsNext: false,
     mayEmote: true,
+    titles: {},
     game,
   };
   return {
@@ -179,7 +180,7 @@ describe('GroupChat', () => {
       global: global(),
     });
     const entry = wrapper.get('button');
-    expect(entry.text()).toContain('Group chat');
+    expect(entry.text()).toContain('Chat');
     expect(entry.get('.badge').text()).toBe('2');
     expect(entry.attributes('aria-label')).toBe('Group chat, 2 new');
 
@@ -949,7 +950,7 @@ describe('TurnStrip', () => {
     expect(red?.find('.more.many').exists()).toBe(false);
     // Dan is offline, as is Fay, the blue PI, who has no students.
     expect(students[2]?.find('.avatar .wait').exists()).toBe(true);
-    expect(blue?.get('.pi .avatar .wait').exists()).toBe(true);
+    expect(blue?.find('.pi .avatar .wait').exists()).toBe(true);
     expect(blue?.find('.divider').exists()).toBe(false);
   });
 
@@ -2130,7 +2131,7 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.letter .verdict').map((verdict) => verdict.text())).toEqual(['Accept (Oral)', 'Reject']);
   });
 
-  test("folds a match's table under the board to a line with the progress and the viewer's standing", () => {
+  test("opens a match's progress from a button beside the chat, the groups and the clue log", async () => {
     const view = room('bob');
     const line = (playerId: string, total: number, rank: number | null): StandingView => ({
       playerId,
@@ -2149,19 +2150,47 @@ describe('KeywordsGame', () => {
       game: 2,
       standings: [line('ann', 4, 1), line('bob', 1, 2), line('dan', -1, 3), line('eve', 0, null)],
     };
-    const game = (me: string) => mount(KeywordsGame, { props: { room: { ...view, me, match } }, global: global() });
-    const fold = (me: string) => game(me).get('.match-fold summary');
-    // One point is "1 point", and so is minus one.
-    expect(fold('bob').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 2 \u00b7 1 point');
-    expect(fold('dan').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 3 \u00b7 \u22121 point');
-    expect(fold('ann').text()).toBe('Match progress \u00b7 Game 2 of 3 \u00b7 Your place: 1 \u00b7 4 points');
-    // Someone without a scored game yet sees the progress alone.
-    expect(fold('eve').text()).toBe('Match progress \u00b7 Game 2 of 3');
-    // The chair's button to end the match stands among the tools, in sight, not in the fold.
+    const game = (me: string) =>
+      mount(KeywordsGame, { props: { room: { ...view, me, match } }, global: global(), attachTo: document.body });
+    // On a phone, the fourth of the buttons under the board opens the table in a sheet.
+    const bob = game('bob');
+    const button = bob.get('.panels .open-match');
+    expect(button.text()).toBe('Match');
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    await button.trigger('click');
+    await flushPromises();
+    const sheet = document.querySelector<HTMLElement>('[role=dialog]');
+    expect(sheet?.textContent).toContain('Match progress');
+    expect(sheet?.querySelector('.match-table')?.textContent).toContain('Game 2 of 3');
+    // The table under the board is gone.
+    expect(bob.find('.match-fold').exists()).toBe(false);
+    bob.unmount();
+    // The chair's button to end the match stands among the tools, in sight, not in the sheet.
     const chair = game('ann');
-    expect(chair.find('.match-fold .end-match').exists()).toBe(false);
     expect(chair.get('.tools .end-match').text()).toBe('End the match');
+    chair.unmount();
     expect(game('bob').find('.end-match').exists()).toBe(false);
+    document.body.innerHTML = '';
+  });
+
+  test('lists the titles of an ordinary game under its letter, once it is over, for those who won any', () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const titles = { ann: [{ title: 'missed_deadline' as const, count: 2 }], bob: [] };
+    const during = mount(KeywordsGame, { props: { room: { ...view, data: { ...data, titles } } }, global: global() });
+    expect(during.find('.game-titles').exists()).toBe(false);
+    const game = {
+      ...(data.game as KeywordsView),
+      phase: 'over' as const,
+      result: { winner: 'red' as const, reason: 'found' as const },
+    };
+    const over = mount(KeywordsGame, {
+      props: { room: { ...view, data: { ...data, game, titles } } },
+      global: global(),
+    });
+    const lines = over.findAll('.game-titles li');
+    expect(lines.map((line) => line.get('.title-name').text())).toEqual(['Ann']);
+    expect(lines[0]?.findAll('.title-line > .pill').map((pill) => pill.text())).toEqual(['Forgot to Submit \u00d72']);
   });
 
   test("says between the games where the points came from, and reads an older detail as a student's", () => {
@@ -2223,7 +2252,7 @@ describe('KeywordsGame', () => {
       props: { room: { ...view, match, data: { ...data, game } } },
       global: global(),
     });
-    expect(wrapper.findAll('.between .detail').map((detail) => detail.text())).toEqual([
+    expect(wrapper.findAll('.between .detail.below').map((detail) => detail.text())).toEqual([
       'PI \u00b7 found 9 \u00b7 won \u00b7 big clue +6 \u00b7 Opened the Scoring \u00b7 Heavenly Hand',
       "found 2 \u00b7 irrelevant paper \u00d71 \u00b7 other group's card \u00d71",
       "found 2 \u00b7 won \u00b7 irrelevant paper \u00d71 \u00b7 other group's card \u00d71",

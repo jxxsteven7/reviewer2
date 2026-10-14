@@ -53,6 +53,7 @@ function room(view: KeywordsView, more: Partial<RoomView> = {}): RoomView {
     joinsNext: false,
     startProblems: [],
     mayEmote: true,
+    titles: {},
     game: view,
   };
   return {

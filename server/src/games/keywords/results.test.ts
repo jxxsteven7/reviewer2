@@ -178,3 +178,26 @@ describe('the titles of a game', () => {
     expect(results(data)).toBeNull();
   });
 });
+
+describe('the titles in the view', () => {
+  test('count what the game so far has brought each player whom its titles go to', () => {
+    const history: ClueRecord[] = [
+      { turn: 1, team: 'red', word: null, count: null, guesses: [], timedOut: true, captain: 'ann' },
+      { turn: 2, team: 'blue', word: null, count: null, guesses: [], timedOut: true, captain: 'cat' },
+      { turn: 3, team: 'red', word: null, count: null, guesses: [], timedOut: true, captain: 'ann-2' },
+    ];
+    const data = { ...ended(null), game: { ...gameState({ turn: 4 }), history } };
+    const ctx = {
+      phase: 'playing',
+      keyOf,
+      now: () => 0,
+      playerIds: () => Object.keys(seats),
+      agentOf: () => null,
+      // Cat plays as a guest, whom titles don't go to.
+      awardsTitles: (id: string) => id !== 'cat',
+    } as unknown as GameContext;
+    const view = keywordsGame.views(data, ctx)({ playerId: 'eve' });
+    expect(view.titles).toEqual({ ann: [{ title: 'missed_deadline', count: 2 }] });
+    expect(keywordsGame.views({ ...data, game: null }, ctx)({ playerId: 'eve' }).titles).toEqual({});
+  });
+});

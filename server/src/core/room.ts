@@ -326,7 +326,14 @@ export class Room {
       agentOf: (id) => this.members.get(id)?.agent ?? this.#gone.get(id)?.agent ?? null,
       playerIds: () => [...this.members.keys()],
       titleCount: (id, title) => this.#titleCountOf(id, title),
+      awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#agentsPlayed,
     };
+  }
+
+  // The account of a member, or of one who has left during the game, or null for a guest.
+  #accountIdOf(id: string): number | null {
+    const member = this.members.get(id);
+    return member ? (member.account?.id ?? null) : (this.#gone.get(id)?.accountId ?? null);
   }
 
   // How many times the account of a member, or of one who has left during the game, has won a
@@ -334,8 +341,7 @@ export class Room {
   // that an AI has played in, which awards no title (docs/architecture.md#ai-players): the game
   // goes on.
   #titleCountOf(id: string, title: Title): number | null {
-    const member = this.members.get(id);
-    const accountId = member ? (member.account?.id ?? null) : (this.#gone.get(id)?.accountId ?? null);
+    const accountId = this.#accountIdOf(id);
     if (accountId === null || !this.#titleCount || this.#agentsPlayed) return null;
     try {
       return this.#titleCount(accountId, title);

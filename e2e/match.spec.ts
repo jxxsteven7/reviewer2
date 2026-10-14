@@ -103,14 +103,20 @@ test('players with accounts and guests play a whole match, and find its title on
   await expect(ann.locator('.match-table')).toContainText(interpolate(text.match.progress, { game: '1', games: '2' }));
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
-  // During the game the table is folded under the board, to a line with the progress.
-  await expect(ann.locator('.match-fold summary')).toContainText(text.match.progressTitle);
+  // During the game a button opens the match's progress in a sheet.
+  await ann.locator('.open-match').click();
+  const progress = ann.getByRole('dialog', { name: text.match.progressTitle });
+  await expect(progress.locator('.match-table')).toContainText(
+    interpolate(text.match.progress, { game: '1', games: '2' }),
+  );
+  await ann.keyboard.press('Escape');
+  await expect(progress).toBeHidden();
 
   const onTurn = await playQuickly(pages, 'en', ann);
   // Between the games: everyone's points in this game, under the letters. Ann's group leads, its PI
   // first with the 4 for winning, and the 1 for the card it found when it was on turn.
   const between = cat.locator('.match-table.between');
-  await expect(between).toContainText(text.match.delta);
+  await expect(between.locator('thead th').last()).toHaveAccessibleName(text.match.delta);
   await expect(between.locator('tbody tr')).toHaveCount(4);
   await expect(between.locator('tbody tr').first()).toContainText(onTurn ? '+5' : '+4');
   await expect(cat.getByText(text.match.waitNext)).toBeVisible();

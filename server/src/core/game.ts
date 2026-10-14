@@ -41,6 +41,9 @@ export interface GameContext {
   // keeps none, in a game that an AI has played in, which awards none
   // (docs/architecture.md#ai-players), and when the record can't be read.
   titleCount(playerId: string, title: Title): number | null;
+  // Whether the game's titles go to a player, also to one who has left during the current game:
+  // to one with an account, where the server keeps accounts, in a game that no AI has played in.
+  awardsTitles(playerId: string): boolean;
 }
 
 // Who is looking: a member of the room, or a screen that only watches.

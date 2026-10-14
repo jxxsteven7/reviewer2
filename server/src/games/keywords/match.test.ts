@@ -43,6 +43,7 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     agentOf: () => null,
     playerIds: () => ids,
     titleCount: () => null,
+    awardsTitles: () => false,
   };
 }
 
