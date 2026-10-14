@@ -128,6 +128,7 @@ export async function main({
   }
   const accounts = new Accounts({
     db,
+    feedback,
     now: () => performance.now(),
     log,
     limits: { ...DEFAULT_ACCOUNT_LIMITS, registrationsPerHour: accountsPerHour },

@@ -1,10 +1,4 @@
-import {
-  MAX_CONTACT_LENGTH,
-  MAX_FEEDBACK_INPUT,
-  MAX_FEEDBACK_LENGTH,
-  MAX_LINK_LENGTH,
-  MAX_NAME_LENGTH,
-} from '@reviewer2/shared';
+import { MAX_CONTACT_LENGTH, MAX_FEEDBACK_INPUT, MAX_FEEDBACK_LENGTH, MAX_NAME_LENGTH } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import { DEFAULT_SOCKET_LIMITS } from '../src/core/socket';
 import { Browser, createRoom, startServer, TestClient, type TestServer } from './helpers';
@@ -48,17 +42,18 @@ describe('feedback', () => {
     expect(await client.send('meta:feedback', message({ language: 'zh', page: 'room' }))).toEqual({ ok: true });
     const nobody = {
       credit: null,
-      link: null,
       accountId: null,
-      publicIssue: null,
+      linkProfile: false,
       issue: null,
       resolvedPr: null,
       resolvedAt: null,
+      adoptedAt: null,
+      summaryZh: null,
+      summaryEn: null,
       closedAt: null,
       deletedAt: null,
       status: 'new',
       username: null,
-      acknowledgmentId: null,
       nameTakenBy: null,
     };
     expect(server.feedback.latest(10)).toEqual([
@@ -98,7 +93,7 @@ describe('feedback', () => {
     }
   });
 
-  test('keeps the name for the acknowledgments, and with it the account that gave it', async () => {
+  test('keeps the name for the contributions, and the account that sent it, with a name or without', async () => {
     server = await startServer();
     const ann = new Browser(server.url);
     await ann.register('Ann');
@@ -107,14 +102,15 @@ describe('feedback', () => {
     clients.push(loggedIn);
     expect(await loggedIn.send('meta:feedback', message({ credit: '  Ann   L ' }))).toEqual({ ok: true });
     expect(await guest.send('meta:feedback', message({ text: 'As a guest', credit: 'octocat' }))).toEqual({ ok: true });
-    // Without a name, a player stays anonymous, logged in or not.
+    // Without a name, a player stays anonymous, and the feedback counts for their account all the
+    // same.
     expect(await loggedIn.send('meta:feedback', message({ text: 'Anonymous', credit: ' \u200b' }))).toEqual({
       ok: true,
     });
     expect(
       server.feedback.latest(10).map(({ text, credit, accountId, username }) => [text, credit, accountId, username]),
     ).toEqual([
-      ['Anonymous', null, null, null],
+      ['Anonymous', null, 1, 'Ann'],
       ['As a guest', 'octocat', null, null],
       ['A timer for the clues, please.', 'Ann L', 1, 'Ann'],
     ]);
@@ -134,52 +130,60 @@ describe('feedback', () => {
     expect(server.feedback.count()).toBe(3);
   });
 
-  test('keeps the link that came with a name, and drops one that came without', async () => {
+  test('ignores the link for the name and the answer about a public issue that older pages send', async () => {
     server = await startServer();
     const client = await connect();
-    const link = ' https://orcid.org/0000-0002-1825-0097 ';
-    expect(await client.send('meta:feedback', message({ credit: 'Ann L', link }))).toEqual({ ok: true });
-    expect(await client.send('meta:feedback', message({ text: 'No name', link }))).toEqual({ ok: true });
-    expect(server.feedback.latest(10).map(({ credit, link: kept }) => [credit, kept])).toEqual([
-      [null, null],
-      ['Ann L', 'https://orcid.org/0000-0002-1825-0097'],
-    ]);
-    // The same text with another link is other feedback.
-    const again = message({ credit: 'Ann L', link: 'https://ann.example' });
-    expect(await client.send('meta:feedback', again)).toEqual({ ok: true });
-    expect(server.feedback.count()).toBe(3);
-    expect(JSON.stringify(server.logs)).not.toContain('orcid');
-    // A link that isn't a web page of https, or is an email address, is refused, and nothing is kept.
-    for (const refused of ['http://ann.example', 'mailto:ann@example.com', 'https://ann@example.com', 'ann.example']) {
-      expect(await client.send('meta:feedback', message({ text: 'Refused', credit: 'Ann L', link: refused }))).toEqual({
-        ok: false,
-        error: 'credit_link_invalid',
-      });
-    }
-    const long = `https://ann.example/${'x'.repeat(MAX_LINK_LENGTH)}`;
-    expect(await client.send('meta:feedback', message({ text: 'Refused', credit: 'Ann L', link: long }))).toEqual({
-      ok: false,
-      error: 'credit_link_too_long',
+    const old = message({ credit: 'Ann L', link: 'https://orcid.org/0000-0002-1825-0097', publicIssue: false });
+    expect(await client.send('meta:feedback', old)).toEqual({ ok: true });
+    // Whatever they were, as an older page could send them.
+    expect(await client.send('meta:feedback', message({ text: 'Odd', link: 'mailto:x', publicIssue: 'yes' }))).toEqual({
+      ok: true,
     });
-    expect(server.feedback.count()).toBe(3);
+    expect(server.feedback.latest(10).map(({ text, credit }) => [text, credit])).toEqual([
+      ['Odd', null],
+      ['A timer for the clues, please.', 'Ann L'],
+    ]);
+    expect(JSON.stringify(server.feedback.latest(10))).not.toMatch(/orcid|mailto|publicIssue/);
   });
 
-  test('says whether the player agreed to a public issue, or that the page did not ask', async () => {
-    server = await startServer();
-    const client = await connect();
-    expect(await client.send('meta:feedback', message({ publicIssue: true }))).toEqual({ ok: true });
-    expect(await client.send('meta:feedback', message({ text: 'Private', publicIssue: false }))).toEqual({ ok: true });
-    // A page from before players were asked.
-    expect(await client.send('meta:feedback', message({ text: 'Not asked' }))).toEqual({ ok: true });
-    expect(await client.send('meta:feedback', message({ text: 'Odd', publicIssue: 'yes' }))).toEqual({
+  test("lets a name left from an account link to its profile, with the player's yes alone", async () => {
+    server = await startServer({ socketLimits: { ...DEFAULT_SOCKET_LIMITS, feedbackPerWindow: 10 } });
+    const ann = new Browser(server.url);
+    await ann.register('Ann');
+    const loggedIn = await ann.connect();
+    clients.push(loggedIn);
+    const guest = await connect();
+    expect(await loggedIn.send('meta:feedback', message({ credit: 'Ann L', linkProfile: true }))).toEqual({ ok: true });
+    expect(await loggedIn.send('meta:feedback', message({ text: 'No', credit: 'Ann L', linkProfile: false }))).toEqual({
+      ok: true,
+    });
+    // From an older page, which doesn't ask.
+    expect(await loggedIn.send('meta:feedback', message({ text: 'Not asked', credit: 'Ann L' }))).toEqual({ ok: true });
+    // Without a name, or without an account, there is nothing to link.
+    expect(await loggedIn.send('meta:feedback', message({ text: 'No name', linkProfile: true }))).toEqual({ ok: true });
+    expect(await guest.send('meta:feedback', message({ text: 'Guest', credit: 'Bob', linkProfile: true }))).toEqual({
+      ok: true,
+    });
+    expect(
+      server.feedback
+        .latest(10)
+        .map(({ text, credit, username, linkProfile }) => [text, credit, username, linkProfile]),
+    ).toEqual([
+      ['Guest', 'Bob', null, false],
+      ['No name', null, 'Ann', false],
+      ['Not asked', 'Ann L', 'Ann', false],
+      ['No', 'Ann L', 'Ann', false],
+      ['A timer for the clues, please.', 'Ann L', 'Ann', true],
+    ]);
+    // The same feedback with the other answer is other feedback.
+    expect(await loggedIn.send('meta:feedback', message({ credit: 'Ann L', linkProfile: false }))).toEqual({
+      ok: true,
+    });
+    expect(server.feedback.count()).toBe(6);
+    expect(await loggedIn.send('meta:feedback', message({ credit: 'Ann L', linkProfile: 'yes' }))).toEqual({
       ok: false,
       error: 'bad_request',
     });
-    expect(server.feedback.latest(10).map(({ text, publicIssue }) => [text, publicIssue])).toEqual([
-      ['Not asked', null],
-      ['Private', false],
-      ['A timer for the clues, please.', true],
-    ]);
   });
 
   test('keeps nothing that says who sent it, even from someone in a room', async () => {
@@ -210,28 +214,24 @@ describe('feedback', () => {
     expect(server.feedback.latest(10).map(({ userAgent }) => userAgent)).toEqual([null, null, null]);
   });
 
-  test('suggesting a new game is kept with its name, its link and the public issue, as any other', async () => {
+  test('suggesting a new game is kept with its name, as any other', async () => {
     server = await startServer({ socketLimits: { ...DEFAULT_SOCKET_LIMITS, feedbackPerWindow: 10 } });
     const client = await connect();
     const game = message({
       kind: 'game',
       text: 'A game where the reviewers bid on papers.',
       credit: 'Ann',
-      link: 'https://ann.example/',
-      publicIssue: true,
     });
     expect(await client.send('meta:feedback', game)).toEqual({ ok: true });
     // A page from before the new game, which sends the kinds it knows and asks nothing more.
     for (const kind of ['idea', 'bug', 'words']) {
       expect(await client.send('meta:feedback', message({ kind, text: `Old ${kind}` }))).toEqual({ ok: true });
     }
-    expect(
-      server.feedback.latest(10).map(({ kind, credit, link, publicIssue }) => [kind, credit, link, publicIssue]),
-    ).toEqual([
-      ['words', null, null, null],
-      ['bug', null, null, null],
-      ['idea', null, null, null],
-      ['game', 'Ann', 'https://ann.example/', true],
+    expect(server.feedback.latest(10).map(({ kind, credit }) => [kind, credit])).toEqual([
+      ['words', null],
+      ['bug', null],
+      ['idea', null],
+      ['game', 'Ann'],
     ]);
     expect(server.feedback.kinds()).toEqual({ game: 1, idea: 1, bug: 1, words: 1 });
   });

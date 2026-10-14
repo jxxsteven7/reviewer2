@@ -144,7 +144,7 @@ describe('the sponsors', () => {
     ]);
   });
 
-  test('of other ways, take names and links by the rules of the acknowledgments', () => {
+  test('of other ways, take names by the rules of a nickname and links by those of a web link', () => {
     const { sections, problems } = parseSponsors(
       file(
         INTRO,

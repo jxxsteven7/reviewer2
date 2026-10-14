@@ -8,7 +8,7 @@ vi.mock('../socket', () => ({
   connect: vi.fn(),
   send: vi.fn(),
   onceConnected: vi.fn(),
-  socket: { connected: false, once: vi.fn(), off: vi.fn() },
+  socket: { connected: false, on: vi.fn(), once: vi.fn(), off: vi.fn() },
 }));
 vi.mock('../fields', () => ({ fields: { value: null }, loadFields: vi.fn() }));
 vi.mock('../../games', async () => {
@@ -24,6 +24,7 @@ const stubs = [
   'AccountEntry',
   'AcknowledgmentsList',
   'BackToRoom',
+  'ContributionsList',
   'CreateRoom',
   'FriendsPlaying',
   'JoinRoom',
@@ -73,6 +74,7 @@ describe('the tip sheet', () => {
           'AccountEntry',
           'AcknowledgmentsList',
           'BackToRoom',
+          'ContributionsList',
           'CreateRoom',
           'FriendsPlaying',
           'JoinRoom',

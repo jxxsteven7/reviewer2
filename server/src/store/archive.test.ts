@@ -2,19 +2,18 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
-import { AcknowledgmentStore } from './acknowledgments';
 import { FeedbackStore } from './feedback';
 import { MIGRATIONS } from './migrations';
 
-// The feedback, the acknowledgments and the reports of players are archives
-// (docs/architecture.md#feedback): what a player sent, whom an acknowledgment is for and whom a
-// report is about are never changed, and no row of the acknowledgments or the reports is ever
-// deleted. The only changes are the ones that the players were promised and the operator's
-// notes: a contact is cleared after 90 days, what became of the feedback is recorded (the GitHub
-// issue, the pull request, closed or not, in the trash or not), and a deleted account is unlinked
-// from all three, which its foreign keys do. The one way a row of feedback goes is the purge of
-// what has been in the trash for 30 days. These tests fail when code that breaks that is added;
-// change them only with a maintainer's agreement.
+// The feedback and the reports of players are archives (docs/architecture.md#feedback): what a
+// player sent and whom a report is about are never changed, and no row of the reports is ever
+// deleted. The only changes are the ones that the players were promised and the operator's notes:
+// a contact is cleared after 90 days, what became of the feedback is recorded (the GitHub issue,
+// the pull request, adopted or not, with what the player contributed, closed or not, in the trash
+// or not), and a deleted account is unlinked from both, which its foreign keys do. The one way a
+// row of feedback goes is the purge of what has been in the trash for 30 days, and feedback that
+// was adopted or is a GitHub issue never goes. These tests fail when code that breaks that is added; change them only
+// with a maintainer's agreement.
 
 const SOURCE = join(import.meta.dirname, '..');
 const MIGRATIONS_FILE = join(import.meta.dirname, 'migrations.ts');
@@ -37,13 +36,14 @@ const ALLOWED = [
   'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
   'UPDATE feedback SET issue = ? WHERE id = ?',
   'UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?',
-  'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL',
+  'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL AND adopted_at IS NULL',
   'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
-  'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND ' +
-    'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
+  'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND adopted_at IS NULL AND issue IS NULL',
   'UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL',
-  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' +
-    'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
+  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL AND issue IS NULL',
+  'UPDATE feedback SET adopted_at = ?, summary_zh = ?, summary_en = ? ' +
+    'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL AND closed_at IS NULL AND issue IS NOT NULL',
+  'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
 ];
 
 // The methods of the stores whose names say that they delete or rewrite, and the ones of the
@@ -58,6 +58,24 @@ const FEEDBACK_METHODS = ['setIssue', 'delete', 'purge'];
 const REBUILD = {
   migration: 5,
   statements: ['DROP TABLE feedback', 'ALTER TABLE new_feedback RENAME TO feedback'],
+};
+
+// Migration 17 lets the names left with the feedback that is there link to their profiles, drops
+// the link that came with a name and whether the player agreed to a public issue, which nothing
+// uses any more, marks the feedback that the acknowledgments adopted as adopted, and drops the
+// table of acknowledgments, whose rows that adopted no feedback are in ACKNOWLEDGMENTS.md
+// (store/migrations.ts). The maintainers agreed to each. Its statements are allowed there and in
+// no other migration.
+const RETIREMENT = {
+  migration: 17,
+  statements: [
+    'UPDATE feedback SET link_profile = 1',
+    'ALTER TABLE feedback DROP COLUMN link',
+    'ALTER TABLE feedback DROP COLUMN public_issue',
+    'UPDATE feedback SET adopted_at = (SELECT credited_at FROM acknowledgments WHERE feedback_id = feedback.id) ' +
+      'WHERE id IN (SELECT feedback_id FROM acknowledgments)',
+    'DROP TABLE acknowledgments',
+  ],
 };
 
 // The strings in TypeScript code, as the SQL in them is written: a literal, or literals joined with
@@ -121,10 +139,12 @@ function offending(sql: string, allowed: readonly string[] = ALLOWED): string[] 
 // The same for the strings in TypeScript code.
 const offendingCode = (code: string): string[] => strings(code).flatMap((sql) => offending(sql));
 
-// The same for each migration, with the rebuild allowed in migration 5 alone.
+// The same for each migration, with the rebuild allowed in migration 5 alone, and the end of the
+// acknowledgments in migration 17 alone.
 const offendingMigrations = (migrations: readonly string[]): string[] =>
   migrations.flatMap((migration, index) => {
-    const allowed = index + 1 === REBUILD.migration ? [...ALLOWED, ...REBUILD.statements] : ALLOWED;
+    const once = [REBUILD, RETIREMENT].find(({ migration: number }) => number === index + 1);
+    const allowed = once ? [...ALLOWED, ...once.statements] : ALLOWED;
     return offending(migration, allowed).map((statement) => `migration ${index + 1}: ${statement}`);
   });
 
@@ -133,7 +153,6 @@ describe('the archive', () => {
     const changing = (store: object) =>
       Object.getOwnPropertyNames((store as { prototype: object }).prototype).filter((name) => CHANGING.test(name));
     expect(changing(FeedbackStore).sort()).toEqual([...FEEDBACK_METHODS].sort());
-    expect(changing(AcknowledgmentStore)).toEqual([]);
   });
 
   test('is changed by no SQL in the server but what was promised, each written once, in the store', () => {
@@ -189,6 +208,21 @@ describe('the archive', () => {
       `migration ${MIGRATIONS.length + 2}: DROP TABLE IF EXISTS main.feedback`,
       `migration ${MIGRATIONS.length + 2}: ALTER TABLE copy RENAME TO "feedback"`,
     ]);
+  });
+
+  test('allows the end of the acknowledgments in migration 17 and in no other migration', () => {
+    const retirement = MIGRATIONS[RETIREMENT.migration - 1] as string;
+    expect(offending(retirement)).toEqual(RETIREMENT.statements);
+    expect(offendingMigrations([...MIGRATIONS, retirement])).toEqual(
+      RETIREMENT.statements.map((statement) => `migration ${MIGRATIONS.length + 1}: ${statement}`),
+    );
+    // Any other change there.
+    expect(
+      offendingMigrations([
+        ...MIGRATIONS.slice(0, RETIREMENT.migration - 1),
+        `${retirement}\n  UPDATE feedback SET adopted_at = NULL;\n`,
+      ]),
+    ).toEqual([`migration ${RETIREMENT.migration}: UPDATE feedback SET adopted_at = NULL`]);
   });
 
   test('would be found changed, however the SQL is written', () => {
@@ -264,7 +298,7 @@ describe('the archive', () => {
       "db.prepare('UPDATE feedback SET issue = ? WHERE id = ?')",
       "db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL ' + 'AND created_at < ?')",
       "db.prepare('DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' + " +
-        "'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)')",
+        "'adopted_at IS NULL AND issue IS NULL')",
       "db.prepare('UPDATE accounts SET username = ? WHERE id = ?')",
       "db.prepare('DELETE FROM feedback_drafts')",
       "db.prepare('INSERT INTO reports (created_at, reporter_id) VALUES (?, ?)')",

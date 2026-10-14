@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import {
   ACCOUNT_ERRORS,
-  ACKNOWLEDGMENT_KINDS,
   DUO_TITLES,
   EMAIL_STATES,
   EMOTES,
@@ -87,9 +86,11 @@ describe('locale files', () => {
     for (const rank of RANKS) expect(en.has(`ranks.names.${rank}`), rank).toBe(true);
   });
 
-  test('name every kind of feedback, of acknowledgment and of sponsor', () => {
-    for (const kind of FEEDBACK_KINDS) expect(en.has(`feedback.kinds.${kind}`), kind).toBe(true);
-    for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`acknowledgments.kinds.${kind}`), kind).toBe(true);
+  test('name every kind of feedback, of feedback contribution and of sponsor', () => {
+    for (const kind of FEEDBACK_KINDS) {
+      expect(en.has(`feedback.kinds.${kind}`), kind).toBe(true);
+      expect(en.has(`contributions.kinds.${kind}`), kind).toBe(true);
+    }
     for (const kind of SPONSOR_KINDS) expect(en.has(`sponsors.kinds.${kind}`), kind).toBe(true);
   });
 
@@ -125,7 +126,7 @@ describe('locale files', () => {
       expect(en.has(`titles.streak.${kind}`), kind).toBe(true);
       expect(en.has(`titles.streakNow.${kind}`), kind).toBe(true);
     }
-    for (const kind of ACKNOWLEDGMENT_KINDS) expect(en.has(`titles.thanks.${kind}`), kind).toBe(true);
+    for (const kind of FEEDBACK_KINDS) expect(en.has(`titles.contribution.${kind}`), kind).toBe(true);
     for (const verdict of VERDICTS) {
       expect(en.has(`game.letter.verdicts.${verdict}`), verdict).toBe(true);
       expect(en.has(`game.letter.explain.${verdict}`), verdict).toBe(true);

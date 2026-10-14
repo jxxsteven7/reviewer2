@@ -1,37 +1,45 @@
-<script setup lang="ts" generic="Name extends ListName">
-import { type Acknowledgment, LIST_API, type ListName, type ListSection, type Sponsor } from '@reviewer2/shared';
+<script setup lang="ts" generic="Data extends object">
 import { computed, onMounted, ref, shallowRef, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { request } from '../account';
 import UiButton from './UiButton.vue';
 
-// A list of thanks on the home page (docs/architecture.md#lists-of-thanks): a card whose title
-// says how many people the list names, folded until its title is pressed. The page asks the server
-// for the list once, when the card is shown, so that the title can count them, and again when the
-// card is opened after a failure. The server reads the list from ACKNOWLEDGMENTS.md or SPONSORS.md,
-// so it can change without a new build, and sends its sections. Each section has its heading in
-// the page's language; the component that uses this one shows the entries, as plain text, and what
-// to say while nobody is listed.
-type Entries = { acknowledgments: Acknowledgment; sponsors: Sponsor };
-
-const props = defineProps<{ name: Name }>();
-defineSlots<{ default(props: { entry: Entries[Name] }): unknown; none(): unknown }>();
+// A list of thanks on the home page (docs/architecture.md#lists-of-thanks): a card folded until its
+// title is pressed. The page asks the server for the list once, when the card is shown, so that
+// the title can count the people it names, and again when the card is opened after a failure. The
+// feedback contributions come from the database; the acknowledgments and the sponsors from
+// ACKNOWLEDGMENTS.md and SPONSORS.md, which the server reads, so they can change without a new
+// build. The card says what the list is for, while it loads, when it couldn't be loaded and while
+// nobody is listed; the component that uses this one shows what the server sent, as plain text.
+// Its title counts the people with `people`, and is the list's name alone without it, or until the
+// list has come.
+const props = defineProps<{
+  // The list's key in the locale files, which names its card too.
+  name: 'contributions' | 'acknowledgments' | 'sponsors';
+  api: string;
+  people?: (data: Data) => number;
+  // Whether the list has nobody, or nothing, in it.
+  empty: (data: Data) => boolean;
+  // Whether the card opens with the sentence that says what the list is for.
+  intro?: boolean;
+}>();
+defineSlots<{ default(props: { data: Data }): unknown; none(): unknown }>();
 const { t } = useI18n();
 const panel = useId();
 const open = ref(false);
 
-// The sections once the server has sent them, and whether it is being asked or failed to answer.
-const sections = shallowRef<ListSection<string, Entries[Name]>[] | null>(null);
+// The list once the server has sent it, and whether it is being asked or failed to answer.
+const data = shallowRef<Data | null>(null);
 const failed = ref(false);
 let asking = false;
 
 async function load(): Promise<void> {
-  if (sections.value !== null || asking) return;
+  if (data.value !== null || asking) return;
   asking = true;
   failed.value = false;
-  const reply = await request<{ sections: ListSection<string, Entries[Name]>[] }>(LIST_API[props.name]);
+  const reply = await request<Data>(props.api);
   asking = false;
-  if (reply.ok) sections.value = reply.sections;
+  if (reply.ok) data.value = reply;
   else failed.value = true;
 }
 
@@ -42,17 +50,10 @@ function toggle() {
   if (open.value) void load();
 }
 
-// How many people the list names: someone listed in two sections counts once, and every anonymous
-// player counts on their own. Until the list arrives, the title is the list's name alone.
-const people = computed(() => {
-  if (sections.value === null) return null;
-  const entries = sections.value.flatMap((section) => section.entries);
-  const names = new Set(entries.flatMap(({ name }) => (name === null ? [] : [name])));
-  return names.size + entries.filter(({ name }) => name === null).length;
+const title = computed(() => {
+  const count = data.value === null || !props.people ? null : props.people(data.value);
+  return count === null ? t(`${props.name}.title`) : t(`${props.name}.counted`, { count }, count);
 });
-const title = computed(() =>
-  people.value === null ? t(`${props.name}.title`) : t(`${props.name}.counted`, { count: people.value }, people.value),
-);
 </script>
 
 <template>
@@ -63,23 +64,14 @@ const title = computed(() =>
       </button>
     </h2>
     <div v-show="open" :id="panel" class="list">
-      <p class="intro">{{ t(`${name}.intro`) }}</p>
+      <p v-if="intro" class="intro">{{ t(`${name}.intro`) }}</p>
       <p v-if="failed" class="note failed">
         {{ t('thanks.failed') }}
         <UiButton variant="quiet" size="small" @click="load">{{ t('thanks.retry') }}</UiButton>
       </p>
-      <p v-else-if="sections === null" class="note">{{ t('thanks.loading') }}</p>
-      <p v-else-if="sections.length === 0" class="note"><slot name="none" /></p>
-      <template v-else>
-        <section v-for="section in sections" :key="section.kind" class="group">
-          <h3>{{ t(`${name}.kinds.${section.kind}`) }}</h3>
-          <ul>
-            <li v-for="(entry, index) in section.entries" :key="index">
-              <slot :entry="entry" />
-            </li>
-          </ul>
-        </section>
-      </template>
+      <p v-else-if="data === null" class="note">{{ t('thanks.loading') }}</p>
+      <p v-else-if="empty(data)" class="note"><slot name="none" /></p>
+      <slot v-else :data="data" />
     </div>
   </div>
 </template>
@@ -150,33 +142,5 @@ h2 {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-}
-
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-h3 {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-black);
-}
-
-ul {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-li {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-card);
-  background: var(--paper-2);
-  overflow-wrap: anywhere;
 }
 </style>

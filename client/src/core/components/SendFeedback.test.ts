@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { flushPromises, mount } from '@vue/test-utils';
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { reactive } from 'vue';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import { toasts } from '../toast';
@@ -11,6 +12,17 @@ const socket = vi.hoisted(() => ({
   connect: vi.fn(),
 }));
 vi.mock('../socket', () => socket);
+// Who the browser is, as the server last said: a guest, until a test logs in.
+const signedIn = vi.hoisted(() => ({ account: null as unknown as { loaded: boolean; summary: object | null } }));
+vi.mock('../account', () => {
+  signedIn.account = reactive({ loaded: true, summary: null, mail: false });
+  return signedIn;
+});
+const route = vi.hoisted(() => ({ path: '/room/ABCD' }));
+vi.mock('vue-router', async () => ({
+  useRoute: () => route,
+  RouterLink: (await import('@vue/test-utils')).RouterLinkStub,
+}));
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
 // The sheet is teleported to the page's body; rendering it in place keeps it inside the wrapper.
@@ -21,6 +33,8 @@ beforeEach(() => {
   socket.send.mockResolvedValue({ ok: true });
   socket.connect.mockReset();
   toasts.splice(0);
+  signedIn.account.loaded = true;
+  signedIn.account.summary = null;
 });
 
 async function opened(page: 'home' | 'room' = 'home') {
@@ -38,18 +52,19 @@ const field = (wrapper: Panel, label: string) =>
     .find((item) => item.get('label').text() === label)
     ?.find('input');
 const contact = (wrapper: Panel) => field(wrapper, 'Contact (optional)');
-const credit = (wrapper: Panel) => field(wrapper, 'Name for the acknowledgments (optional)');
-const link = (wrapper: Panel) => field(wrapper, 'Link for your name (optional)');
-const consent = (wrapper: Panel) => wrapper.get('input[type="checkbox"]');
+const credit = (wrapper: Panel) => field(wrapper, 'Your name (optional)');
 
 describe('the feedback panel', () => {
   test('connects when it opens, and says who reads it', async () => {
     const wrapper = await opened();
     expect(socket.connect).toHaveBeenCalledOnce();
-    expect(wrapper.text()).toContain('Only the author can read your feedback, unless you agree below');
     expect(wrapper.text()).toContain(
-      'Your contact details are used only to reply to you, and are deleted after 90 days.',
+      'What you write may be published as a GitHub issue; your contact details never are.',
     );
+    expect(wrapper.text()).toContain('They are used only to reply to you, and are deleted after 90 days.');
+    // Nothing to tick: whatever is adopted becomes an issue, and the name decides who is listed.
+    expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Leave it empty to stay anonymous.');
     expect(wrapper.text()).toContain(
       "The feedback itself is kept as the project's archive of suggestions; only what the author discards, " +
         'such as spam, is deleted 30 days after it is discarded.',
@@ -64,8 +79,6 @@ describe('the feedback panel', () => {
     expect(wrapper.text()).toContain('32 / 1000');
     await contact(wrapper)?.setValue(' me@example.com ');
     await credit(wrapper)?.setValue('  Ann   L ');
-    await link(wrapper)?.setValue(' https://ann.example/ ');
-    await consent(wrapper).setValue(true);
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
@@ -75,8 +88,6 @@ describe('the feedback panel', () => {
       text: 'More terms from biology, please.',
       contact: 'me@example.com',
       credit: 'Ann L',
-      link: 'https://ann.example/',
-      publicIssue: true,
       version: 'dev',
       language: 'en',
       page: 'room',
@@ -86,8 +97,7 @@ describe('the feedback panel', () => {
     expect(wrapper.find('form').exists()).toBe(false);
     await wrapper.get('button').trigger('click');
     expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('');
-    expect(link(wrapper)).toBeUndefined();
-    expect((consent(wrapper).element as HTMLInputElement).checked).toBe(false);
+    expect((credit(wrapper)?.element as HTMLInputElement).value).toBe('');
   });
 
   test('keeps what was written while the panel is closed, even once the button is gone', async () => {
@@ -95,16 +105,12 @@ describe('the feedback panel', () => {
     await wrapper.get('input[value="bug"]').setValue(true);
     await wrapper.get('textarea').setValue('The clock stops when');
     await credit(wrapper)?.setValue('Ann L');
-    await link(wrapper)?.setValue('https://ann.example/');
-    await consent(wrapper).setValue(true);
     // Closed, and the whole thing unmounted, as when the room menu that holds it closes.
     wrapper.unmount();
     const again = await opened('room');
     expect((again.get('textarea').element as HTMLTextAreaElement).value).toBe('The clock stops when');
     expect((again.get('input[value="bug"]').element as HTMLInputElement).checked).toBe(true);
     expect((credit(again)?.element as HTMLInputElement).value).toBe('Ann L');
-    expect((link(again)?.element as HTMLInputElement).value).toBe('https://ann.example/');
-    expect((consent(again).element as HTMLInputElement).checked).toBe(true);
     // Sent, it is gone.
     await again.get('form').trigger('submit');
     await flushPromises();
@@ -112,10 +118,9 @@ describe('the feedback panel', () => {
     expect((again.get('textarea').element as HTMLTextAreaElement).value).toBe('');
     expect((again.get('input[value="idea"]').element as HTMLInputElement).checked).toBe(true);
     expect((credit(again)?.element as HTMLInputElement).value).toBe('');
-    expect((consent(again).element as HTMLInputElement).checked).toBe(false);
   });
 
-  test('leaves out a contact or a name that shows nothing, and asks for no public issue unless ticked', async () => {
+  test('leaves out a contact or a name that shows nothing', async () => {
     const wrapper = await opened();
     await wrapper.get('textarea').setValue('Hi');
     await contact(wrapper)?.setValue('   ');
@@ -124,34 +129,77 @@ describe('the feedback panel', () => {
     await flushPromises();
     expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('contact');
     expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('credit');
-    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ publicIssue: false });
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('publicIssue');
   });
 
-  test('asks for a link once there is a name, and sends it with the name only', async () => {
-    const wrapper = await opened();
+  test('asks a guest to log in first, by a way back to their room, and lets them send all the same', async () => {
+    const wrapper = await opened('room');
+    expect(wrapper.get('.guest').text()).toContain(
+      "You aren't logged in. Log in first, and if your feedback is adopted, it counts for your account.",
+    );
+    const signIn = wrapper.getComponent(RouterLinkStub);
+    expect(signIn.text()).toBe('Log in');
+    expect(signIn.props('to')).toEqual({ path: '/account', query: { next: '/room/ABCD' } });
+    // From the home page, the account page leads home, as it does by itself.
+    route.path = '/';
+    expect((await opened()).getComponent(RouterLinkStub).props('to')).toBe('/account');
+    route.path = '/room/ABCD';
     await wrapper.get('textarea').setValue('Hi');
-    expect(link(wrapper)).toBeUndefined();
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+  });
+
+  test('offers a player who is logged in and leaves a name to let it open their page, ticked until they untick it', async () => {
+    const box = (wrapper: Panel) => wrapper.find('input[type="checkbox"]');
+    // A guest, with a name or not, is offered nothing.
+    let wrapper = await opened();
     await credit(wrapper)?.setValue('Ann');
-    expect(link(wrapper)?.attributes('inputmode')).toBe('url');
-    expect(wrapper.text()).toContain('It starts with https://; no email addresses.');
-    await link(wrapper)?.setValue('https://ann.example/');
-    // Taken back, the name takes the link with it, which stays in the field for when it comes back.
-    await credit(wrapper)?.setValue('');
-    expect(link(wrapper)).toBeUndefined();
+    expect(box(wrapper).exists()).toBe(false);
+    await wrapper.get('textarea').setValue('Hi');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
-    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('link');
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('linkProfile');
+
+    // Logged in, the box shows with a name only, ticked.
+    signedIn.account.summary = { username: 'ann' };
+    wrapper = await opened();
+    expect(box(wrapper).exists()).toBe(false);
+    await credit(wrapper)?.setValue('Ann');
+    expect((box(wrapper).element as HTMLInputElement).checked).toBe(true);
+    expect(box(wrapper).element.closest('label')?.textContent).toContain(
+      'Let my name in the feedback contributions open my public page',
+    );
+    await wrapper.get('textarea').setValue('Hi');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[1]?.[1]).toMatchObject({ credit: 'Ann', linkProfile: true });
+
+    // Unticked, it says no, and the box is ticked again for the next feedback.
+    await wrapper.get('button').trigger('click');
+    await credit(wrapper)?.setValue('Ann');
+    await box(wrapper).setValue(false);
+    await wrapper.get('textarea').setValue('Hi again');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[2]?.[1]).toMatchObject({ credit: 'Ann', linkProfile: false });
+    await wrapper.get('button').trigger('click');
+    await credit(wrapper)?.setValue('Ann');
+    expect((box(wrapper).element as HTMLInputElement).checked).toBe(true);
+
+    // Without a name, nothing is said of it.
+    await credit(wrapper)?.setValue('');
+    expect(box(wrapper).exists()).toBe(false);
+    await wrapper.get('textarea').setValue('Hi once more');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[3]?.[1]).not.toHaveProperty('linkProfile');
   });
 
-  test('says what a public issue would show, and what never', async () => {
-    const wrapper = await opened();
-    const box = consent(wrapper);
-    expect((box.element as HTMLInputElement).checked).toBe(false);
-    expect(box.element.closest('label')?.textContent).toContain('You may publish this as a GitHub issue');
-    const note = wrapper.get(`#${box.attributes('aria-describedby')}`);
-    expect(note.text()).toBe(
-      'Only the text is published, with your name if you left one; your contact details never are.',
-    );
+  test('asks nothing of a player who is logged in, or before the server has said who they are', async () => {
+    signedIn.account.summary = { username: 'Ann' };
+    expect((await opened()).find('.guest').exists()).toBe(false);
+    signedIn.account.summary = null;
+    signedIn.account.loaded = false;
+    expect((await opened()).find('.guest').exists()).toBe(false);
   });
 
   test('says that a bug report takes the browser along, and only then', async () => {
@@ -161,7 +209,7 @@ describe('the feedback panel', () => {
     expect(wrapper.text()).toContain("your browser's user agent is sent along");
   });
 
-  test('offers a new game as a kind, says what to write about it, and sends it with a name and a public issue', async () => {
+  test('offers a new game as a kind, says what to write about it, and sends it with a name', async () => {
     const wrapper = await opened();
     expect(wrapper.findAll('input[type="radio"]').map((input) => input.attributes('value'))).toEqual([
       'idea',
@@ -175,16 +223,10 @@ describe('the feedback panel', () => {
     expect(wrapper.text()).toContain('Which game should we make next?');
     await wrapper.get('textarea').setValue('A game of peer review where the reviewers bid on papers.');
     await credit(wrapper)?.setValue('Ann');
-    await link(wrapper)?.setValue('https://ann.example/');
-    await consent(wrapper).setValue(true);
     await wrapper.get('form').trigger('submit');
     await flushPromises();
-    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({
-      kind: 'game',
-      credit: 'Ann',
-      link: 'https://ann.example/',
-      publicIssue: true,
-    });
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ kind: 'game', credit: 'Ann' });
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('link');
   });
 
   test("won't send what the server would refuse", async () => {
@@ -202,18 +244,8 @@ describe('the feedback panel', () => {
     await credit(wrapper)?.setValue('x'.repeat(17));
     expect(wrapper.text()).toContain('Use 1 to 16 visible characters for the name.');
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
-    // Beside a name that is refused, a wrong link is pointed out at once too.
-    await link(wrapper)?.setValue('ann@example.com');
-    expect(wrapper.text()).toContain('Use 1 to 16 visible characters for the name.');
-    expect(wrapper.text()).toContain('Use a web address that starts with https://, not an email address.');
     await credit(wrapper)?.setValue('Ann');
     expect(wrapper.text()).not.toContain('Use 1 to 16 visible characters for the name.');
-    expect(wrapper.text()).toContain('Use a web address that starts with https://, not an email address.');
-    expect(submit(wrapper).attributes('disabled')).toBeDefined();
-    await link(wrapper)?.setValue(`https://ann.example/${'x'.repeat(200)}`);
-    expect(wrapper.text()).toContain('Use at most 200 characters for the link.');
-    expect(submit(wrapper).attributes('disabled')).toBeDefined();
-    await link(wrapper)?.setValue('https://ann.example/');
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
   });
 

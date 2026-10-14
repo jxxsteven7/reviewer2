@@ -35,7 +35,7 @@ import ProfileRecords from './ProfileRecords.vue';
 
 // The account's own page: who it is, on one card at the top, with its avatar and the ways to
 // change it, its username and the way to rename it, its number and when it registered; then its
-// academic rank, its titles, its streaks and the acknowledgments counted for it, its public page,
+// academic rank, its titles, its streaks and its feedback contributions, counted, its public page,
 // its friends, its email address, its password, its record, and the ways to log out and to delete
 // it.
 const props = defineProps<{ summary: AccountSummary }>();
@@ -193,12 +193,12 @@ async function logOut() {
     </section>
 
     <section
-      v-if="summary.titles.length || streakTitles.length || summary.acknowledgments.length"
+      v-if="summary.titles.length || streakTitles.length || summary.contributions.length"
       class="part"
       aria-labelledby="profile-titles"
     >
       <h2 id="profile-titles">{{ t('account.profile.titles') }}</h2>
-      <TitlePills :titles="summary.titles" :streaks="streakTitles" :acknowledgments="summary.acknowledgments" />
+      <TitlePills :titles="summary.titles" :streaks="streakTitles" :contributions="summary.contributions" />
     </section>
 
     <section class="part" aria-labelledby="profile-public">

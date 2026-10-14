@@ -212,17 +212,18 @@ describe('the feedback', () => {
     text: 'More fields, please.',
     contact: null,
     credit: null,
-    link: null,
     accountId: null,
-    publicIssue: false,
+    linkProfile: false,
     issue: null,
     resolvedPr: null,
     resolvedAt: null,
+    adoptedAt: null,
+    summaryZh: null,
+    summaryEn: null,
     closedAt: null,
     deletedAt: null,
     status: 'new',
     username: null,
-    acknowledgmentId: null,
     nameTakenBy: null,
     version: 'v0.0.15',
     language: 'en',
@@ -299,12 +300,11 @@ describe('the feedback', () => {
     expect(shown).toContain('2 in all, newest first');
     expect(shown).toContain(
       '#2 &middot; Bug &middot; 2026-10-09 13:05 UTC New Line one Line two version v0.0.15 &middot; Chinese ' +
-        '&middot; from the room &middot; not to be published Contact: wechat: r2 No name for the acknowledgments ' +
-        'Browser: Mozilla/5.0',
+        '&middot; from the room Contact: wechat: r2 No name: listed as anonymous Browser: Mozilla/5.0',
     );
     expect(shown).toContain(
       '#1 &middot; Idea &middot; 2026-10-09 13:05 UTC New More fields, please. version v0.0.15 &middot; English ' +
-        '&middot; from the home page &middot; not to be published No contact No name for the acknowledgments',
+        '&middot; from the home page No contact No name: listed as anonymous',
     );
     expect(shown.indexOf('#2')).toBeLessThan(shown.indexOf('#1'));
     // The text keeps its line breaks, which the page shows as they are, and the status is a badge.
@@ -313,37 +313,51 @@ describe('the feedback', () => {
     expect(html).not.toContain('class="trail"');
   });
 
-  test('shows the name for the acknowledgments, with its account and whether it was adopted', () => {
+  test('shows the name for the contributions, the account it came from, and what was adopted', () => {
     const html = page({
-      total: 3,
+      total: 4,
       entries: [
-        feedback(3, { credit: 'Ann L', username: 'Ann', acknowledgmentId: 1, status: 'thanked' }),
-        feedback(2, { credit: 'Bob', username: null }),
+        feedback(4, { username: 'Ann' }),
+        feedback(3, {
+          credit: 'Ann L',
+          username: 'Ann',
+          issue: 42,
+          adoptedAt: '2026-10-08T10:00:00.000Z',
+          summaryZh: '提出了更多领域',
+          summaryEn: 'Suggested more fields',
+          status: 'thanked',
+        }),
+        feedback(2, {
+          credit: 'Bob',
+          username: null,
+          issue: 41,
+          adoptedAt: '2026-10-08T10:00:00.000Z',
+          status: 'thanked',
+        }),
         feedback(1),
       ],
     });
     const shown = text(html);
     expect(shown).toContain(
-      '#3 &middot; Idea &middot; 2026-10-09 13:05 UTC Thanked More fields, please. thanked as acknowledgment #1 ' +
-        'version v0.0.15',
+      '#3 &middot; Idea &middot; 2026-10-09 13:05 UTC Thanked More fields, please. published as issue #42 ' +
+        '&middot; adopted 2026-10-08 Contributed: 提出了更多领域 &middot; Suggested more fields version v0.0.15',
     );
     expect(html).toContain('<span class="badge thanked">Thanked</span>');
-    expect(shown).toContain('No contact Name for the acknowledgments: Ann L &middot; account Ann');
-    expect(shown).toContain('#2 &middot; Idea');
-    expect(shown).toContain('No contact Name for the acknowledgments: Bob Commands');
+    expect(shown).toContain('No contact Name for the contributions: Ann L &middot; account Ann');
+    // Adopted before what the player contributed was written, as the migration leaves it.
+    expect(shown).toContain('adopted 2026-10-08 Contributed: not written yet version');
+    expect(shown).toContain('No contact Name for the contributions: Bob Commands');
     expect(shown).not.toContain('Bob &middot; account');
-    expect(shown.match(/thanked as acknowledgment/g)).toHaveLength(1);
+    // An account without a name: listed as anonymous, and counted for the account.
+    expect(shown).toContain('No contact No name: listed as anonymous &middot; account Ann Commands');
+    expect(shown.match(/Contributed:/g)).toHaveLength(2);
     expect(shown).not.toContain('also the username');
   });
 
-  test('shows the link that came with the name, and whether it may be or was published as an issue', () => {
+  test('shows the issue it was published as', () => {
     const html = page({
-      total: 3,
-      entries: [
-        feedback(3, { credit: 'Ann L', link: 'https://ann.example/', publicIssue: true, issue: 42, status: 'issue' }),
-        feedback(2, { publicIssue: true }),
-        feedback(1, { publicIssue: null }),
-      ],
+      total: 2,
+      entries: [feedback(2, { credit: 'Ann L', issue: 42, status: 'issue' }), feedback(1)],
     });
     const shown = text(html);
     expect(html).toContain('<span class="badge issue">Issue #42</span>');
@@ -351,24 +365,19 @@ describe('the feedback', () => {
     expect(shown).toContain(
       'More fields, please. published as issue #42 version v0.0.15 &middot; English &middot; from the home page No contact',
     );
-    expect(shown).toContain('Name for the acknowledgments: Ann L &middot; link https://ann.example/');
-    expect(html).toContain('from the home page &middot; <strong>may be published as an issue</strong>');
-    // Feedback from before players were asked may not be.
-    expect(shown).toContain('#1 &middot; Idea &middot; 2026-10-09 13:05 UTC New More fields');
-    expect(shown.match(/not to be published/g)).toHaveLength(1);
-    // The link is shown, not linked.
-    expect(html).not.toContain('href="https://ann.example/"');
+    expect(shown).not.toMatch(/published\b(?! as issue)/);
   });
 
   test('shows the whole trail of what became of it, and how long the trash has left', () => {
     const html = page({
       total: 6,
       entries: [
-        feedback(6, { acknowledgmentId: 8, status: 'thanked' }),
+        feedback(6, { issue: 41, adoptedAt: '2026-10-06T10:00:00.000Z', status: 'thanked' }),
         feedback(5, {
           resolvedPr: 72,
           resolvedAt: '2026-10-05T10:00:00.000Z',
-          acknowledgmentId: 9,
+          issue: 40,
+          adoptedAt: '2026-10-05T11:00:00.000Z',
           status: 'thanked',
         }),
         feedback(4, { resolvedPr: 50, resolvedAt: '2026-10-05T10:00:00.000Z', status: 'resolved' }),
@@ -376,7 +385,7 @@ describe('the feedback', () => {
           issue: 42,
           resolvedPr: 50,
           resolvedAt: '2026-10-05T10:00:00.000Z',
-          acknowledgmentId: 7,
+          adoptedAt: '2026-10-05T12:00:00.000Z',
           closedAt: '2026-10-06T10:00:00.000Z',
           status: 'closed',
         }),
@@ -391,7 +400,7 @@ describe('the feedback', () => {
     expect(html).toContain('<p class="trail">resolved by PR #50</p>');
     expect(html).toContain('<span class="badge closed">Closed</span>');
     expect(html).toContain(
-      '<p class="trail">published as issue #42 &middot; resolved by PR #50 &middot; thanked as acknowledgment #7 ' +
+      '<p class="trail">published as issue #42 &middot; resolved by PR #50 &middot; adopted 2026-10-05 ' +
         '&middot; closed 2026-10-06</p>',
     );
     expect(html).toContain('<span class="badge trash">Trash</span>');
@@ -407,11 +416,19 @@ describe('the feedback', () => {
     expect(
       page({
         total: 1,
-        entries: [feedback(1, { deletedAt: '2026-08-01T12:00:00.000Z', acknowledgmentId: 3, status: 'trash' })],
+        entries: [
+          feedback(1, {
+            deletedAt: '2026-08-01T12:00:00.000Z',
+            adoptedAt: '2026-07-31T12:00:00.000Z',
+            status: 'trash',
+          }),
+        ],
       }),
-    ).toContain(
-      '<p class="trail">thanked as acknowledgment #3 &middot; in the trash since 2026-08-01, kept: thanked</p>',
-    );
+    ).toContain('<p class="trail">adopted 2026-07-31 &middot; in the trash since 2026-08-01, kept: thanked</p>');
+    // So is an issue, recorded there, or from before issues kept feedback out of the trash.
+    expect(
+      page({ total: 1, entries: [feedback(1, { issue: 42, deletedAt: '2026-08-01T12:00:00.000Z', status: 'trash' })] }),
+    ).toContain('<p class="trail">published as issue #42 &middot; in the trash since 2026-08-01, kept: issue</p>');
   });
 
   test("points out a name that is another account's username, in bold", () => {
@@ -423,10 +440,10 @@ describe('the feedback', () => {
       ],
     });
     expect(text(html)).toContain(
-      "Name for the acknowledgments: cat &middot; account Bob &middot; also the username of the account Cat, which didn't send it",
+      "Name for the contributions: cat &middot; account Bob &middot; also the username of the account Cat, which didn't send it",
     );
     expect(html).toContain(
-      "Name for the acknowledgments: Cat &middot; <strong>also the username of the account Cat, which didn't send it</strong>",
+      "Name for the contributions: Cat &middot; <strong>also the username of the account Cat, which didn't send it</strong>",
     );
   });
 
@@ -439,8 +456,10 @@ describe('the feedback', () => {
           text: '<script>alert("text")</script><img src=x onerror=alert(1)>',
           contact: "<a href='javascript:alert(1)'>me</a>",
           credit: '<i>Ann</i>',
-          link: 'https://x.co/"><script>alert(1)</script>',
           username: '<u>ann</u>',
+          adoptedAt: '2026-10-08T10:00:00.000Z',
+          summaryZh: '<b>提出</b>',
+          summaryEn: '<script>alert("summary")</script>',
           nameTakenBy: '<s>Ann</s>',
           version: '<b>v1</b>',
           userAgent: '</p><script>alert("agent")</script>',
@@ -452,8 +471,10 @@ describe('the feedback', () => {
       /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
     );
     expect(html).toContain(
-      'Name for the acknowledgments: &#60;i&#62;Ann&#60;/i&#62; &middot; link https://x.co/&#34;&#62;&#60;script&#62;' +
-        'alert(1)&#60;/script&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
+      'Name for the contributions: &#60;i&#62;Ann&#60;/i&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
+    );
+    expect(html).toContain(
+      'Contributed: &#60;b&#62;提出&#60;/b&#62; &middot; &#60;script&#62;alert(&#34;summary&#34;)&#60;/script&#62;',
     );
     expect(html).toContain('also the username of the account &#60;s&#62;Ann&#60;/s&#62;,');
     expect(html).toContain(
@@ -472,56 +493,55 @@ describe('the feedback', () => {
 
   test('lists the commands that may come next, by what became of it, folded under each one', () => {
     const of = (changes: Partial<Feedback>) => commands(page({ total: 1, entries: [feedback(7, changes)] }));
-    // New, and the player agreed to an issue: everything is open, the issue's draft first.
-    expect(of({ publicIssue: true })).toEqual([
+    const SENTENCES = '--zh &#34;&#60;sentence&#62;&#34; --en &#34;&#60;sentence&#62;&#34;';
+    // New: the issue's draft first, and nothing to adopt until it is an issue.
+    expect(of({})).toEqual([
       `${RUN} draft 7`,
       `${RUN} issue 7 &#60;number&#62;`,
       `${RUN} resolve 7 &#60;pr&#62;`,
-      `${RUN} adopt 7 can't be undone`,
       `${RUN} close 7`,
       `${RUN} delete 7`,
     ]);
-    // Without the player's agreement, or from before they were asked, no issue.
-    for (const publicIssue of [false, null]) {
-      expect(of({ publicIssue }), String(publicIssue)).toEqual([
-        `${RUN} resolve 7 &#60;pr&#62;`,
-        `${RUN} adopt 7 can't be undone`,
-        `${RUN} close 7`,
-        `${RUN} delete 7`,
-      ]);
-    }
     // A kind this build doesn't know, from a later server, has no draft, which the command would
     // refuse, but the issue can still be recorded.
-    expect(of({ publicIssue: true, kind: 'later' as Feedback['kind'] })).toEqual([
+    expect(of({ kind: 'later' as Feedback['kind'] })).toEqual([
       `${RUN} issue 7 &#60;number&#62;`,
       `${RUN} resolve 7 &#60;pr&#62;`,
-      `${RUN} adopt 7 can't be undone`,
       `${RUN} close 7`,
       `${RUN} delete 7`,
     ]);
-    // Published and resolved: either can be taken back, and there is nothing to draft.
-    expect(of({ publicIssue: true, issue: 42, resolvedPr: 50, status: 'resolved' })).toEqual([
+    // Published: never deleted, since the issue is public.
+    expect(of({ issue: 42, status: 'issue' })).toEqual([
+      `${RUN} issue 7 --clear`,
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} adopt 7 ${SENTENCES} can't be undone`,
+      `${RUN} close 7`,
+    ]);
+    // Published and resolved: either can be taken back, there is nothing to draft, and it may be
+    // adopted, but not deleted: the issue is public, so it is closed instead.
+    expect(of({ issue: 42, resolvedPr: 50, status: 'resolved' })).toEqual([
       `${RUN} issue 7 --clear`,
       `${RUN} resolve 7 --clear`,
-      `${RUN} adopt 7 can't be undone`,
+      `${RUN} adopt 7 ${SENTENCES} can't be undone`,
       `${RUN} close 7`,
-      `${RUN} delete 7`,
     ]);
-    // Thanked: neither adopted again nor deleted.
-    expect(of({ acknowledgmentId: 3, status: 'thanked' })).toEqual([`${RUN} resolve 7 &#60;pr&#62;`, `${RUN} close 7`]);
-    // Closed: reopened rather than closed, and not adopted.
+    // Thanked: neither adopted again, its issue taken back, closed nor deleted, but what the
+    // player contributed may be said again.
+    expect(of({ issue: 42, adoptedAt: '2026-10-08T10:00:00.000Z', status: 'thanked' })).toEqual([
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} describe 7 ${SENTENCES}`,
+    ]);
+    // Closed: reopened rather than closed, and not adopted; as an issue, still not deleted.
+    expect(of({ issue: 42, closedAt: '2026-10-06T10:00:00.000Z', status: 'closed' })).toEqual([
+      `${RUN} issue 7 --clear`,
+      `${RUN} resolve 7 &#60;pr&#62;`,
+      `${RUN} reopen 7`,
+    ]);
+    expect(
+      of({ issue: 42, closedAt: '2026-10-06T10:00:00.000Z', adoptedAt: '2026-10-05T10:00:00.000Z', status: 'closed' }),
+    ).toEqual([`${RUN} resolve 7 &#60;pr&#62;`, `${RUN} describe 7 ${SENTENCES}`, `${RUN} reopen 7`]);
+    // Closed with no issue yet: the draft is still offered, as the issue is.
     expect(of({ closedAt: '2026-10-06T10:00:00.000Z', status: 'closed' })).toEqual([
-      `${RUN} resolve 7 &#60;pr&#62;`,
-      `${RUN} reopen 7`,
-      `${RUN} delete 7`,
-    ]);
-    expect(of({ closedAt: '2026-10-06T10:00:00.000Z', acknowledgmentId: 3, status: 'closed' })).toEqual([
-      `${RUN} resolve 7 &#60;pr&#62;`,
-      `${RUN} reopen 7`,
-    ]);
-    // Closed, with the player's agreement and no issue yet: the draft is still offered, as the
-    // issue is.
-    expect(of({ publicIssue: true, closedAt: '2026-10-06T10:00:00.000Z', status: 'closed' })).toEqual([
       `${RUN} draft 7`,
       `${RUN} issue 7 &#60;number&#62;`,
       `${RUN} resolve 7 &#60;pr&#62;`,
@@ -532,10 +552,9 @@ describe('the feedback', () => {
     expect(of({ deletedAt: '2026-10-07T09:00:00.000Z', status: 'trash' })).toEqual([`${RUN} restore 7`]);
     expect(
       of({
-        publicIssue: true,
         issue: 42,
         resolvedPr: 50,
-        acknowledgmentId: 3,
+        adoptedAt: '2026-10-05T10:00:00.000Z',
         closedAt: '2026-10-06T10:00:00.000Z',
         deletedAt: '2026-10-07T09:00:00.000Z',
         status: 'trash',
@@ -543,13 +562,17 @@ describe('the feedback', () => {
     ).toEqual([`${RUN} restore 7`]);
 
     // Folded by default, at the end of the entry, as text alone: nothing on the page runs them.
-    const html = page({ total: 1, entries: [feedback(7, { publicIssue: true, userAgent: 'Mozilla/5.0' })] });
+    const html = page({ total: 1, entries: [feedback(7, { userAgent: 'Mozilla/5.0' })] });
     expect(html).toContain(
       '<p class="meta">Browser: Mozilla/5.0</p><details><summary>Commands</summary>' +
         `<p class="command"><code>${RUN} draft 7</code></p>` +
         `<p class="command"><code>${RUN} issue 7 &#60;number&#62;</code></p>`,
     );
-    expect(html).toContain(`<p class="command"><code>${RUN} adopt 7</code> can't be undone</p>`);
+    const adoptable = page({ total: 1, entries: [feedback(7, { issue: 42, status: 'issue' })] });
+    expect(adoptable).toContain(
+      `<p class="command"><code>${RUN} adopt 7 --zh &#34;&#60;sentence&#62;&#34; --en &#34;&#60;sentence&#62;&#34;</code> ` +
+        "can't be undone</p>",
+    );
     expect(html).toContain(`<p class="command"><code>${RUN} delete 7</code></p></details></article>`);
     expect(html).not.toContain('<details open');
     expect(html).not.toMatch(INERT);
@@ -570,8 +593,9 @@ describe('the feedback', () => {
     };
     expect(commands(renderFeedbackPage(listing, { admin: DEFAULT_ADMIN_COMMAND }))).toContain(`${RUN} close 1`);
     expect(commands(renderFeedbackPage(listing, { admin: 'npm run admin --' }))).toEqual([
+      'npm run admin -- feedback draft 1',
+      'npm run admin -- feedback issue 1 &#60;number&#62;',
       'npm run admin -- feedback resolve 1 &#60;pr&#62;',
-      "npm run admin -- feedback adopt 1 can't be undone",
       'npm run admin -- feedback close 1',
       'npm run admin -- feedback delete 1',
     ]);
@@ -596,25 +620,32 @@ describe('the feedback', () => {
       now: NOW,
     });
     const run = { admin: DEFAULT_ADMIN_COMMAND, feedback: 'triage-feedback' };
-    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), run))).toEqual([
+    expect(commands(renderFeedbackPage(listing({}), run))).toEqual([
       'triage-feedback publish 7 publishes the issue in one go',
       'triage-feedback draft 7',
       'triage-feedback issue 7 &#60;number&#62;',
       'triage-feedback resolve 7 &#60;pr&#62;',
-      "triage-feedback adopt 7 can't be undone",
       'triage-feedback close 7',
       'triage-feedback delete 7',
     ]);
+    // Once it is an issue, the operator's command adopts it as it records the pull request, and
+    // asks for the sentences itself; there is no adopt, and no delete.
+    expect(commands(renderFeedbackPage(listing({ issue: 42, status: 'issue' }), run))).toEqual([
+      'triage-feedback issue 7 --clear',
+      "triage-feedback resolve 7 &#60;pr&#62; records the pull request and adopts it, which can't be undone",
+      'triage-feedback close 7',
+    ]);
+    expect(
+      commands(
+        renderFeedbackPage(listing({ issue: 42, adoptedAt: '2026-10-02T00:00:00.000Z', status: 'thanked' }), run),
+      ),
+    ).toEqual(['triage-feedback resolve 7 &#60;pr&#62;', 'triage-feedback describe 7']);
     expect(commands(renderFeedbackPage(listing({ deletedAt: '2026-10-01T00:00:00.000Z' }), run))).toEqual([
       'triage-feedback restore 7',
     ]);
-    // No publish without the player's agreement, nor once the issue is recorded, nor for a kind
-    // this build doesn't know, which it couldn't draft.
-    for (const changes of [
-      { publicIssue: false },
-      { publicIssue: true, issue: 42, status: 'issue' as const },
-      { publicIssue: true, kind: 'later' as Feedback['kind'] },
-    ]) {
+    // No publish once the issue is recorded, nor for a kind this build doesn't know, which it
+    // couldn't draft.
+    for (const changes of [{ issue: 42, status: 'issue' as const }, { kind: 'later' as Feedback['kind'] }]) {
       const shown = commands(renderFeedbackPage(listing(changes), run));
       expect(
         shown.filter((command) => command.includes(' publish ')),
@@ -626,11 +657,9 @@ describe('the feedback', () => {
       ).toBe(true);
     }
     // Without it, the page is as it was: no publish.
-    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), { admin: DEFAULT_ADMIN_COMMAND }))[0]).toBe(
-      `${RUN} draft 7`,
-    );
+    expect(commands(renderFeedbackPage(listing({}), { admin: DEFAULT_ADMIN_COMMAND }))[0]).toBe(`${RUN} draft 7`);
     // The operator set it, and it is escaped all the same.
-    const odd = renderFeedbackPage(listing({ publicIssue: true }), { ...run, feedback: '<b>go</b>' });
+    const odd = renderFeedbackPage(listing({}), { ...run, feedback: '<b>go</b>' });
     expect(odd).toContain('<code>&#60;b&#62;go&#60;/b&#62; publish 7</code>');
     expect(odd).not.toMatch(INERT);
   });

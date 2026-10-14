@@ -43,21 +43,31 @@ export async function request<Data extends object = object>(path: string, body?:
   }
 }
 
+// Whom the connection was last told it belongs to, by username, null for a guest, or undefined
+// while it hasn't been told, as before it is made and after it drops.
+let connectedAs: string | null | undefined;
+
 // Asks the server who this browser is, and says whether it answered. When it didn't, the page keeps
-// what it last knew.
+// what it last knew. A connection that was made as someone else, as when the player logged in or
+// out in another tab, is made again, so that the server knows there too who the browser is: what
+// it sends, such as feedback, goes by the connection.
 export async function loadAccount(): Promise<boolean> {
   const reply = await request<AccountState>(ACCOUNT_API.account);
-  if (reply.ok) Object.assign(account, { summary: reply.account, mail: reply.mail });
+  if (reply.ok) {
+    Object.assign(account, { summary: reply.account, mail: reply.mail });
+    if (connectedAs !== undefined && connectedAs !== (reply.account?.username ?? null)) reconnect();
+  }
   account.loaded = true;
   return reply.ok;
 }
 
 // After a login, a logout or anything else that changes who this browser is: the page learns it,
-// and its connection is made again, so that the server knows it there too. Says whether the server
-// answered the question.
+// and its connection is made again, so that the server knows it there too, which loadAccount()
+// does once the connection has said whom it was made for, and this does before. Says whether the
+// server answered the question.
 export async function loggedInOrOut(): Promise<boolean> {
   const answered = await loadAccount();
-  if (connection.everConnected) reconnect();
+  if (connection.everConnected && connectedAs === undefined) reconnect();
   return answered;
 }
 
@@ -113,6 +123,7 @@ socket.on('account:ended', () => {
   void loadAccount();
 });
 socket.on('disconnect', (reason) => {
+  connectedAs = undefined;
   if (!endedHere || reason !== 'io server disconnect') return;
   endedHere = false;
   reconnect();
@@ -121,6 +132,7 @@ socket.on('disconnect', (reason) => {
 // Every connection hears who it is. When that isn't what the page thinks, as after a rename in
 // another tab, the page asks again.
 socket.on('session', ({ account: connected }: Session) => {
+  connectedAs = connected?.username ?? null;
   if (!account.loaded) return;
   const { summary } = account;
   if (

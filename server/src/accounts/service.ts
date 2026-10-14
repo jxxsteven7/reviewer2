@@ -31,8 +31,8 @@ import {
 import type { DatabaseSync } from 'node:sqlite';
 import type { GameLogEntry } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
-import { AcknowledgmentStore } from '../store/acknowledgments';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
+import { FeedbackStore } from '../store/feedback';
 import { LikeStore } from '../store/likes';
 import {
   AgentPlayStore,
@@ -118,6 +118,9 @@ export interface AccountsOptions {
   // room they may take together.
   avatars?: AvatarFiles;
   maxAvatarBytes?: number;
+  // The server's feedback, which an account's page counts the contributions of; without it, as in
+  // tests of the accounts alone, the feedback is read from the database here.
+  feedback?: FeedbackStore;
 }
 
 export class Accounts {
@@ -128,8 +131,9 @@ export class Accounts {
   readonly replays: ReplayStore;
   readonly agentPlays: AgentPlayStore;
   readonly titles: TitleStore;
-  // The acknowledgments, which the operator writes (admin.ts) and an account's page counts.
-  readonly acknowledgments: AcknowledgmentStore;
+  // The feedback, for the feedback contributions that an account's page counts, which the operator
+  // adopts (admin.ts).
+  readonly #feedback: FeedbackStore;
   // The friendships between accounts, and their rules (friends.ts).
   readonly friends: Friendships;
   // Who likes whose public profile (docs/architecture.md#public-profiles).
@@ -169,7 +173,7 @@ export class Accounts {
     this.replays = new ReplayStore(options.db, clock);
     this.agentPlays = new AgentPlayStore(options.db);
     this.titles = new TitleStore(options.db, clock);
-    this.acknowledgments = new AcknowledgmentStore(options.db, clock);
+    this.#feedback = options.feedback ?? new FeedbackStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
     this.likes = new LikeStore(options.db, clock);
     this.settings = new SettingStore(options.db);
@@ -201,7 +205,7 @@ export class Accounts {
       points: this.records.points(account.id),
       titles: this.titles.counts(account.id),
       streaks: this.records.streaks(account.id),
-      acknowledgments: this.acknowledgments.counts(account.id),
+      contributions: this.#feedback.counts(account.id),
       profile: { ...account.profile, banned: account.profileBanned },
       likes: this.likes.count(account.id),
       requests: this.friends.store.counts(account.id).incoming,
@@ -210,8 +214,8 @@ export class Accounts {
 
   // The public profile of the account with this handle, as the viewer sees it
   // (docs/architecture.md#public-profiles), or null when no account has the handle. The record and
-  // the acknowledgments are there only if the owner shows them, and are only read then. Of the time
-  // of registration, only the day goes out: anyone with the handle may ask.
+  // the feedback contributions are there only if the owner shows them, and are only read then. Of
+  // the time of registration, only the day goes out: anyone with the handle may ask.
   profileOf(handle: string, viewer: Account | null): ProfileView | null {
     const account = this.store.byHandle(handle);
     if (!account) return null;
@@ -227,7 +231,7 @@ export class Accounts {
       link: account.profile.link,
       bio: account.profile.bio,
       record: account.profile.showRecord ? this.records.counts(account.id) : null,
-      acknowledgments: account.profile.showThanks ? this.acknowledgments.counts(account.id) : null,
+      contributions: account.profile.showThanks ? this.#feedback.counts(account.id) : null,
       likes: this.likes.count(account.id),
       liked: viewer !== null && this.likes.has(account.id, viewer.id),
       mine: viewer !== null && viewer.id === account.id,

@@ -308,9 +308,8 @@ describe('the status server', () => {
         text: `Number ${i}`,
         contact: null,
         credit: null,
-        link: null,
         accountId: null,
-        publicIssue: false,
+        linkProfile: false,
         version: 'test',
         language: 'en',
         page: 'home',
@@ -339,7 +338,7 @@ describe('the status server', () => {
     expect(latest.body).not.toContain('http-equiv="refresh"');
     // Each piece has its commands to copy, with the default in front.
     expect(latest.body).toContain(
-      `<details><summary>Commands</summary><p class="command"><code>node server/dist/admin.cjs feedback resolve ${total} &#60;pr&#62;</code></p>`,
+      `<details><summary>Commands</summary><p class="command"><code>node server/dist/admin.cjs feedback draft ${total}</code></p>`,
     );
     expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
     expect(latest.body).toContain('<p class="more"><a href="/feedback?before=6">Older</a></p>');
@@ -361,9 +360,8 @@ describe('the status server', () => {
       text: 'Number 1',
       contact: null,
       credit: null,
-      link: null,
       accountId: null,
-      publicIssue: false,
+      linkProfile: false,
       version: 'test',
       language: 'en',
       page: 'home',
@@ -377,29 +375,34 @@ describe('the status server', () => {
 
   test('puts the command that FEEDBACK_COMMAND names in front of the commands, with publish first', async () => {
     server = await startServer();
-    const add = (publicIssue: boolean) =>
+    const add = () =>
       server.feedback.add({
         kind: 'idea',
         text: 'Number 1',
         contact: null,
         credit: null,
-        link: null,
         accountId: null,
-        publicIssue,
+        linkProfile: false,
         version: 'test',
         language: 'en',
         page: 'home',
         userAgent: null,
       });
-    add(true);
-    add(false);
+    add();
+    add();
+    // Published already, it has no publish, and the command adopts it as it records the PR.
+    server.feedback.setIssue(2, 42);
     await startStatus({ feedbackCommand: 'triage-feedback' });
     const page = await get(base, '/feedback');
     const first = (id: number) =>
       page.body.split(`<article><p class="head"><span>#${id}`)[1]?.match(/<code>([^<]*)<\/code>/)?.[1];
     expect(first(1)).toBe('triage-feedback publish 1');
     expect(page.body).toContain('<code>triage-feedback draft 1</code>');
-    expect(first(2)).toBe('triage-feedback resolve 2 &#60;pr&#62;');
+    expect(first(2)).toBe('triage-feedback issue 2 --clear');
+    expect(page.body).toContain(
+      "<code>triage-feedback resolve 2 &#60;pr&#62;</code> records the pull request and adopts it, which can't be undone",
+    );
+    expect(page.body).not.toContain('triage-feedback adopt');
     expect(page.body).not.toContain('triage-feedback publish 2');
     expect(page.body).not.toContain('admin.cjs feedback resolve');
   });
@@ -413,9 +416,8 @@ describe('the status server', () => {
         text: `Number ${i + 1}`,
         contact: null,
         credit: null,
-        link: null,
         accountId: null,
-        publicIssue: null,
+        linkProfile: false,
         version: 'test',
         language: 'en',
         page: 'home',
@@ -448,9 +450,8 @@ describe('the status server', () => {
         text: `Number ${i}`,
         contact: null,
         credit: i === 4 || i === 7 ? 'Ann' : null,
-        link: null,
         accountId: null,
-        publicIssue: true,
+        linkProfile: false,
         version: 'test',
         language: 'en',
         page: 'home',
@@ -459,12 +460,14 @@ describe('the status server', () => {
     }
     server.feedback.setIssue(2, 42);
     server.feedback.resolve(3, 50);
-    server.accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: 4, accountId: null });
+    server.feedback.setIssue(4, 43);
+    server.feedback.adopt(4, { zh: '提出了计时器', en: 'Suggested a timer' });
     server.feedback.close(5);
     server.feedback.delete(6);
     // Resolved and thanked at once, which is neither open nor one of the two alone.
     server.feedback.resolve(7, 51);
-    server.accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: 7, accountId: null });
+    server.feedback.setIssue(7, 44);
+    server.feedback.adopt(7, { zh: '\u63d0\u51fa\u4e86\u6682\u505c', en: 'Suggested a pause' });
     await startStatus();
     const shown = (body: string) =>
       [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
@@ -504,7 +507,8 @@ describe('the status server', () => {
     expect(resolved).toContain('<p class="trail">resolved by PR #50</p>');
     const thanked = (await get(base, '/feedback?status=thanked')).body;
     expect(thanked).toContain('<span class="badge thanked">Thanked</span>');
-    expect(thanked).toContain('<p class="trail">thanked as acknowledgment #1</p>');
+    expect(thanked).toMatch(/<p class="trail">published as issue #43 &middot; adopted \d{4}-\d\d-\d\d<\/p>/);
+    expect(thanked).toContain('Contributed: 提出了计时器 &middot; Suggested a timer');
     const trash = (await get(base, '/feedback?status=trash')).body;
     expect(trash).toContain('<span class="badge trash">Trash</span>');
     expect(trash).toMatch(/<p class="trail">in the trash since \d{4}-\d{2}-\d{2}, 30 days left<\/p>/);

@@ -3,7 +3,6 @@ import {
   checkContact,
   checkCredit,
   checkFeedback,
-  checkLink,
   checkWebLink,
   cleanFeedback,
   MAX_CONTACT_INPUT,
@@ -100,7 +99,7 @@ describe('the contact', () => {
   });
 });
 
-describe('the name for the acknowledgments', () => {
+describe('the name for the feedback contributions', () => {
   test('is optional, and one that shows nothing is none', () => {
     for (const text of [undefined, '', '  ', ZERO_WIDTH_SPACE, '\n']) {
       expect(checkCredit(text), JSON.stringify(text)).toEqual({ credit: null, problem: null });
@@ -127,13 +126,11 @@ describe('the name for the acknowledgments', () => {
   });
 });
 
-describe('the link for the acknowledgments', () => {
-  test('is optional, and goes with a name only', () => {
+describe('a web link of a player', () => {
+  test('is optional: none, empty or only spaces is none', () => {
     for (const text of [undefined, '', '  ']) {
-      expect(checkLink(text, 'Ann'), JSON.stringify(text)).toEqual({ link: null, problem: null });
+      expect(checkWebLink(text), JSON.stringify(text)).toEqual({ link: null, problem: null });
     }
-    expect(checkLink('https://ann.example', null)).toEqual({ link: null, problem: null });
-    expect(checkLink('not a link at all', null)).toEqual({ link: null, problem: null });
   });
 
   test('is a web page of https, such as a homepage or a profile, kept as it was given', () => {
@@ -145,7 +142,7 @@ describe('the link for the acknowledgments', () => {
       'HTTPS://Ann.Example:8443/a/b%20c#top',
       'https://xn--fiqs8s.example/',
     ]) {
-      expect(checkLink(` ${link}\n`, 'Ann'), link).toEqual({ link, problem: null });
+      expect(checkWebLink(` ${link}\n`), link).toEqual({ link, problem: null });
     }
   });
 
@@ -167,24 +164,24 @@ describe('the link for the acknowledgments', () => {
       `https://ann.example/${HELLO}`,
       'https://',
     ]) {
-      expect(checkLink(text, 'Ann'), JSON.stringify(text)).toEqual({ link: null, problem: 'credit_link_invalid' });
+      expect(checkWebLink(text), JSON.stringify(text)).toEqual({ link: null, problem: 'web_link_invalid' });
     }
   });
 
   test('keeps ( ) percent-encoded, as Markdown would read them, and takes no backslash or character reference', () => {
-    expect(checkLink('https://en.wikipedia.org/wiki/Ann_(dev)', 'Ann')).toEqual({
+    expect(checkWebLink('https://en.wikipedia.org/wiki/Ann_(dev)')).toEqual({
       link: 'https://en.wikipedia.org/wiki/Ann_%28dev%29',
       problem: null,
     });
-    expect(checkLink('https://ann.example/a)b', 'Ann')).toEqual({
+    expect(checkWebLink('https://ann.example/a)b')).toEqual({
       link: 'https://ann.example/a%29b',
       problem: null,
     });
-    expect(checkLink('https://ann.example/%28x%29', 'Ann')).toEqual({
+    expect(checkWebLink('https://ann.example/%28x%29')).toEqual({
       link: 'https://ann.example/%28x%29',
       problem: null,
     });
-    expect(checkLink('https://ann.example/?a=1&b=2', 'Ann')).toEqual({
+    expect(checkWebLink('https://ann.example/?a=1&b=2')).toEqual({
       link: 'https://ann.example/?a=1&b=2',
       problem: null,
     });
@@ -196,39 +193,19 @@ describe('the link for the acknowledgments', () => {
       'https://ann.example/users\\ann',
       'https://ann.example/?q=a\\b',
     ]) {
-      expect(checkLink(text, 'Ann'), text).toEqual({ link: null, problem: 'credit_link_invalid' });
+      expect(checkWebLink(text), text).toEqual({ link: null, problem: 'web_link_invalid' });
     }
   });
 
   test('is 200 characters at most, as it is kept', () => {
     const longest = `https://ann.example/${'x'.repeat(MAX_LINK_LENGTH - 20)}`;
-    expect(checkLink(longest, 'Ann')).toEqual({ link: longest, problem: null });
-    expect(checkLink(`${longest}x`, 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
-    expect(checkLink(`${longest.slice(0, -2)}()`, 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
-    expect(checkLink(' '.repeat(MAX_LINK_INPUT + 1), 'Ann')).toEqual({ link: null, problem: 'credit_link_too_long' });
+    expect(checkWebLink(longest)).toEqual({ link: longest, problem: null });
+    expect(checkWebLink(`${longest}x`)).toEqual({ link: null, problem: 'web_link_too_long' });
+    expect(checkWebLink(`${longest.slice(0, -2)}()`)).toEqual({ link: null, problem: 'web_link_too_long' });
+    expect(checkWebLink(' '.repeat(MAX_LINK_INPUT + 1))).toEqual({ link: null, problem: 'web_link_too_long' });
   });
 
   test('that is not text is none', () => {
-    expect(checkLink(7 as unknown as string, 'Ann')).toEqual({ link: null, problem: null });
-  });
-});
-
-describe('a web link of a player', () => {
-  test('takes the rules of the link for the acknowledgments, with problems of its own', () => {
-    expect(checkWebLink(undefined)).toEqual({ link: null, problem: null });
-    expect(checkWebLink('  ')).toEqual({ link: null, problem: null });
-    expect(checkWebLink(' https://ann.example/me ')).toEqual({ link: 'https://ann.example/me', problem: null });
-    expect(checkWebLink('https://en.wikipedia.org/wiki/Ann_(dev)')).toEqual({
-      link: 'https://en.wikipedia.org/wiki/Ann_%28dev%29',
-      problem: null,
-    });
-    for (const text of ['http://ann.example', 'mailto:ann@example.com', 'https://ann@example.com', 'ann.example']) {
-      expect(checkWebLink(text), text).toEqual({ link: null, problem: 'web_link_invalid' });
-    }
-    expect(checkWebLink(`https://ann.example/${'x'.repeat(200)}`)).toEqual({
-      link: null,
-      problem: 'web_link_too_long',
-    });
-    expect(checkWebLink('x'.repeat(MAX_LINK_INPUT + 1))).toEqual({ link: null, problem: 'web_link_too_long' });
+    expect(checkWebLink(7 as unknown as string)).toEqual({ link: null, problem: null });
   });
 });

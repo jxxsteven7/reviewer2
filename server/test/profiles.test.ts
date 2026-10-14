@@ -55,7 +55,7 @@ describe('a public profile', () => {
           link: null,
           bio: null,
           record: null,
-          acknowledgments: null,
+          contributions: null,
           likes: 0,
           liked: false,
           mine: false,
@@ -123,7 +123,7 @@ describe('a public profile', () => {
       link: 'https://ann.example/me?x=%281%29',
       bio: 'Reviewer of everything',
       record: { ordinary: { games: 0, wins: 0 }, inMatches: { games: 0, wins: 0 }, matches: { played: 0, won: 0 } },
-      acknowledgments: [],
+      contributions: [],
     });
     // Each is optional, and what won't do is refused with its own answer.
     expect(
@@ -133,7 +133,7 @@ describe('a public profile', () => {
       link: null,
       bio: null,
       record: null,
-      acknowledgments: null,
+      contributions: null,
     });
     const refusals: [object, number, string][] = [
       [{ link: 'http://ann.example/', bio: '', showRecord: false, showThanks: false }, 400, 'web_link_invalid'],
@@ -181,7 +181,7 @@ describe('a public profile', () => {
     expect(
       await ann.browser.request('/api/account/profile', { link: '', bio: '', showRecord: false, showThanks: true }),
     ).toMatchObject({ status: 200, body: { ok: true } });
-    expect((await profileOf(guest, ann.handle)).profile).toMatchObject({ record: null, acknowledgments: [] });
+    expect((await profileOf(guest, ann.handle)).profile).toMatchObject({ record: null, contributions: [] });
     server.accounts.store.setProfileBanned(ann.id, false);
     expect((await ann.browser.request('/api/account/profile', settings)).body).toEqual({ ok: true });
   });

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { SPONSORS_PAGE } from '@reviewer2/shared';
+import { LIST_API, type ListSection, type Sponsor, type SponsorKind, SPONSORS_PAGE } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
+import { countPeople } from '../thanks';
 import FoldedList from './FoldedList.vue';
+import FoldedSection from './FoldedSection.vue';
 
 // The sponsors on the home page (docs/architecture.md#sponsors): the sections of SPONSORS.md,
 // as the server reads it, with names, never an amount. A sponsor on GitHub links to their profile
@@ -11,10 +13,15 @@ import FoldedList from './FoldedList.vue';
 // the WeChat tip that the home page offers, which `tip` opens.
 const { t } = useI18n();
 const emit = defineEmits<{ tip: [] }>();
+
+type Sponsors = { sections: ListSection<SponsorKind, Sponsor>[] };
+const people = ({ sections }: Sponsors) =>
+  countPeople(sections.flatMap(({ entries }) => entries.map(({ name }) => name)));
+const empty = ({ sections }: Sponsors) => sections.length === 0;
 </script>
 
 <template>
-  <FoldedList name="sponsors">
+  <FoldedList name="sponsors" :api="LIST_API.sponsors" :people="people" :empty="empty" intro>
     <template #none>
       <i18n-t keypath="sponsors.none" scope="global">
         <template #github>
@@ -25,17 +32,25 @@ const emit = defineEmits<{ tip: [] }>();
         </template>
       </i18n-t>
     </template>
-    <template #default="{ entry }">
-      <a
-        v-if="entry.link?.startsWith('https://')"
-        class="name"
-        :href="entry.link"
-        target="_blank"
-        rel="nofollow ugc noopener"
-        >{{ entry.name }}</a
+    <template #default="{ data }">
+      <FoldedSection
+        v-for="section in data.sections"
+        :key="section.kind"
+        v-slot="{ entry }"
+        :heading="t(`sponsors.kinds.${section.kind}`)"
+        :entries="section.entries"
       >
-      <span v-else class="name">{{ entry.name }}</span>
-      <span v-if="entry.thanks" class="thanks">{{ entry.thanks }}</span>
+        <a
+          v-if="entry.link?.startsWith('https://')"
+          class="name"
+          :href="entry.link"
+          target="_blank"
+          rel="nofollow ugc noopener"
+          >{{ entry.name }}</a
+        >
+        <span v-else class="name">{{ entry.name }}</span>
+        <span v-if="entry.thanks" class="thanks">{{ entry.thanks }}</span>
+      </FoldedSection>
     </template>
   </FoldedList>
 </template>

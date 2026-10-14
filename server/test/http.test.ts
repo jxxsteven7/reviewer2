@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { brotliCompressSync, brotliDecompressSync, gunzipSync, gzipSync } from 'node:zlib';
-import { LIST_API, parseAcknowledgments, parseSponsors } from '@reviewer2/shared';
+import { CONTRIBUTIONS_API, LIST_API, parseAcknowledgments, parseSponsors } from '@reviewer2/shared';
 import { io as connect } from 'socket.io-client';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { WordLibrary } from '../src/core/words';
@@ -156,22 +156,27 @@ describe('with a built front end', () => {
     expect(head.body.length).toBe(0);
   });
 
-  test('the lists of thanks are answered in JSON, as the repository has them unless CONTENT_DIR is set', async () => {
+  test('the lists of thanks and the contributions are answered in JSON, the lists as the repository has them unless CONTENT_DIR is set', async () => {
     const root = join(import.meta.dirname, '..', '..');
     const lists = [
       {
         path: LIST_API.acknowledgments,
-        parsed: parseAcknowledgments(readFileSync(join(root, 'ACKNOWLEDGMENTS.md'), 'utf8')),
+        answer: { blocks: parseAcknowledgments(readFileSync(join(root, 'ACKNOWLEDGMENTS.md'), 'utf8')).blocks },
       },
-      { path: LIST_API.sponsors, parsed: parseSponsors(readFileSync(join(root, 'SPONSORS.md'), 'utf8')) },
+      {
+        path: LIST_API.sponsors,
+        answer: { sections: parseSponsors(readFileSync(join(root, 'SPONSORS.md'), 'utf8')).sections },
+      },
+      // The feedback contributions, from the database, which has none here.
+      { path: CONTRIBUTIONS_API, answer: { contributions: [] } },
     ];
-    for (const { path, parsed } of lists) {
+    for (const { path, answer } of lists) {
       for (const target of [path, `${path}?again=1`]) {
         const response = await fetch(`${base}${target}`);
         expect(response.status, target).toBe(200);
         expect(response.headers.get('content-type'), target).toBe('application/json');
         expect(response.headers.get('cache-control'), target).toBe('no-store');
-        expect(await response.json(), target).toEqual({ ok: true, sections: parsed.sections });
+        expect(await response.json(), target).toEqual({ ok: true, ...answer });
       }
       const head = await get(base, path, {}, 'HEAD');
       expect(head.status, path).toBe(200);

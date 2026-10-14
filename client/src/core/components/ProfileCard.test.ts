@@ -49,7 +49,7 @@ const profile = (changes: Partial<ProfileView> = {}): ProfileView => ({
     inMatches: { games: 4, wins: 2 },
     matches: { played: 3, won: 1 },
   },
-  acknowledgments: [{ kind: 'feedback', count: 1 }],
+  contributions: [{ kind: 'bug', count: 1 }],
   likes: 4,
   liked: false,
   mine: false,
@@ -100,7 +100,7 @@ describe('ProfileCard', () => {
       ['Matches', '3', 'won 1'],
     ]);
     expect(wrapper.get('.record-stats .split').text()).toBe('Ordinary games: 8, won 5 · In matches: 4, won 2');
-    expect(text).toContain('Acknowledged: Helpful discussions');
+    expect(text).toContain('Contributions: Bugs');
     expect(text).toContain('♥ 4');
     // A guest can neither like nor ask, and is told why.
     expect(wrapper.findAll('.actions button')).toHaveLength(0);
@@ -145,7 +145,7 @@ describe('ProfileCard', () => {
         link: null,
         bio: null,
         record: null,
-        acknowledgments: null,
+        contributions: null,
         titles: [],
         streaks: { wins: 2, losses: 0 },
       }),

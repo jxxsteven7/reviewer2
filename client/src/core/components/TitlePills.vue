@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import type { AcknowledgmentCount, StreakKind, TitleCount } from '@reviewer2/shared';
+import type { ContributionCount, StreakKind, TitleCount } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import TitleInfo from './TitleInfo.vue';
 
-// An account's titles, its streaks, named already (streaks.ts), and the acknowledgments counted
-// for it, as pills, each title with how many times it was won when that is more than once: on the
+// An account's titles, its streaks, named already (streaks.ts), and its feedback contributions of
+// each kind, counted, as pills, each title with how many times it was won when that is more than once: on the
 // account's own page and on its public page. A tap on a pill says what it is (TitleInfo.vue).
 withDefaults(
   defineProps<{
     titles: TitleCount[];
     streaks?: { kind: StreakKind; length: number; title: string }[];
-    acknowledgments?: AcknowledgmentCount[] | null;
+    contributions?: ContributionCount[] | null;
   }>(),
-  { streaks: () => [], acknowledgments: null },
+  { streaks: () => [], contributions: null },
 );
 const { t } = useI18n();
 
@@ -32,9 +32,9 @@ const counted = (label: string, count: number) =>
         {{ title }}
       </TitleInfo>
     </li>
-    <li v-for="{ kind, count } in acknowledgments ?? []" :key="kind">
-      <TitleInfo :title="{ kind: 'thanks', thanks: kind }" class="pill">
-        {{ counted(t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${kind}`) }), count) }}
+    <li v-for="{ kind, count } in contributions ?? []" :key="kind">
+      <TitleInfo :title="{ kind: 'contribution', contribution: kind }" class="pill">
+        {{ counted(t('account.profile.contributed', { kind: t(`contributions.kinds.${kind}`) }), count) }}
       </TitleInfo>
     </li>
   </ul>

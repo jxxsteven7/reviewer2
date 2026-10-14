@@ -143,10 +143,11 @@ describe('the account page', () => {
     wrapper.unmount();
   });
 
-  test('takes a page that is logged in by now back to the room, with a new connection', async () => {
-    // As when the player logged in from another tab: this page's connection is still a guest's.
+  test('takes a page that is logged in by now back to the room', async () => {
+    // As when the player logged in from another tab: this page's connection is still a guest's,
+    // which loadAccount() makes again (account.test.ts), not the page.
     const wrapper = await open('/room/K7QX', true);
-    expect(socket.reconnect).toHaveBeenCalledOnce();
+    expect(socket.reconnect).not.toHaveBeenCalled();
     expect(router.replace).toHaveBeenCalledWith('/room/K7QX');
     // Until the navigation lands, the page shows that it is loading, as it did, and not the account.
     expect(profileMounted).not.toHaveBeenCalled();
