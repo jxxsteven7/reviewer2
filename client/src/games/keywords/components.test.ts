@@ -39,7 +39,7 @@ import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
-import { HOLD_MS, TAP_MS } from './useCardGestures';
+import { HOLD_MS } from './useCardGestures';
 import { useChatLine } from './useChatLine';
 
 const send = vi.hoisted(() =>
@@ -1432,11 +1432,32 @@ describe('KeywordsGame', () => {
   const later = () => new Promise<{ ok: boolean }>((resolve) => answers.push(() => resolve({ ok: true })));
   const card = (wrapper: ReturnType<typeof mount>, index: number) => wrapper.findAll('.board button')[index];
 
-  // A student's taps on a card (useCardGestures.ts), which count once the time for one more is over.
-  async function tapCard(wrapper: ReturnType<typeof mount>, index: number, taps = 1) {
+  // A tap on a card, which counts at once (useCardGestures.ts).
+  async function tapCard(wrapper: ReturnType<typeof mount>, index: number) {
+    await card(wrapper, index)?.trigger('click');
+    await flushPromises();
+  }
+
+  // A long press on a card, held until the menu of marks opens (MarkMenu.vue), and the click that
+  // ends it, which chooses nothing.
+  async function holdCard(wrapper: ReturnType<typeof mount>, index: number) {
     vi.useFakeTimers();
-    for (let tap = 0; tap < taps; tap += 1) await card(wrapper, index)?.trigger('click');
-    vi.advanceTimersByTime(TAP_MS);
+    const press = { isPrimary: true, button: 0, pointerType: 'touch', clientX: 5, clientY: 5 };
+    await card(wrapper, index)?.trigger('pointerdown', press);
+    vi.advanceTimersByTime(HOLD_MS);
+    await card(wrapper, index)?.trigger('pointerup');
+    await card(wrapper, index)?.trigger('click');
+    vi.useRealTimers();
+    await flushPromises();
+  }
+  // The menu is drawn in place here, where the tests stub the teleport to the end of the page.
+  const menuItems = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll<HTMLButtonElement>('.mark-menu [role="menuitemradio"]').map((item) => item.element);
+  // A mark chosen in the open menu, which closes it, and then puts the mark on the card.
+  async function chooseMark(wrapper: ReturnType<typeof mount>, index: number) {
+    vi.useFakeTimers();
+    menuItems(wrapper)[index]?.click();
+    vi.advanceTimersByTime(300);
     vi.useRealTimers();
     await flushPromises();
   }
@@ -1482,42 +1503,76 @@ describe('KeywordsGame', () => {
     const data = view.data as KeywordsRoomData;
     return { ...view, data: { ...data, game: { ...(data.game as KeywordsView), marks, ...change } } };
   };
-  test('lets a student mark cards for the group with taps and a long press, and take a mark back', async () => {
+  test('lets a student mark cards for the group from the menu that a long press opens, and take a mark back', async () => {
     send.mockImplementation(later);
     const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
-    // No row of tools: the line above the guess bar's buttons says what taps do.
+    // No row of tools: the line above the guess bar's buttons says what a tap and a press do.
     expect(wrapper.find('.mark-tools').exists()).toBe(false);
-    expect(wrapper.get('.guess-bar .hint').text()).toBe(
-      'Tap: choose \u00b7 double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 or keys 1, 2, 3',
-    );
-    await tapCard(wrapper, 0, 2);
-    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
-    expect(send).not.toHaveBeenCalledWith('keywords:select', expect.anything());
-    expect(card(wrapper, 0)?.classes()).toEqual(expect.arrayContaining(['noted', 'note-red']));
-    expect(card(wrapper, 0)?.classes()).not.toContain('selected');
-    // The same mark again takes it off, before the first has been answered.
-    await tapCard(wrapper, 0, 2);
-    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: null });
-    expect(card(wrapper, 0)?.classes()).not.toContain('noted');
-    await tapCard(wrapper, 1, 3);
-    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
-    expect(card(wrapper, 1)?.classes()).toContain('note-blue');
-    // A long press, and the click that ends it, which chooses nothing.
+    expect(wrapper.get('.guess-bar .hint').text()).toBe('Tap: choose \u00b7 hold: mark \u00b7 or keys 1, 2, 3');
+    // A tap chooses at once, a marked card too.
+    await tapCard(wrapper, 0);
+    expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 0 });
+    // A long press opens the menu for the card, which lifts out of the page meanwhile; the click
+    // that ends the press chooses nothing.
+    send.mockClear();
+    await holdCard(wrapper, 1);
+    expect(menuItems(wrapper).map((item) => item.textContent?.trim())).toEqual(['Ours1', 'Theirs2', 'R2?3']);
+    expect(menuItems(wrapper).map((item) => item.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false']);
+    expect(wrapper.find('.mark-menu [role="menu"]').attributes('aria-label')).toBe('Mark Model');
+    expect(card(wrapper, 1)?.classes()).toContain('lifting');
+    expect(send).not.toHaveBeenCalled();
+    await chooseMark(wrapper, 0);
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'ours' });
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    expect(card(wrapper, 1)?.classes()).toEqual(expect.arrayContaining(['noted', 'note-red']));
+    expect(card(wrapper, 1)?.classes()).not.toContain('lifting');
+    // The card's own mark stands out in the menu, and choosing it again takes it off, before the
+    // first has been answered; another one takes its place.
+    await holdCard(wrapper, 1);
+    expect(menuItems(wrapper).map((item) => item.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+    expect(menuItems(wrapper)[0]?.classList).toContain('current');
+    await chooseMark(wrapper, 0);
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: null });
+    expect(card(wrapper, 1)?.classes()).not.toContain('noted');
+    await holdCard(wrapper, 2);
+    await chooseMark(wrapper, 2);
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'r2' });
+    expect(card(wrapper, 2)?.classes()).toContain('note-r2');
+    // Escape closes the menu, and the card keeps what it had.
+    send.mockClear();
+    await holdCard(wrapper, 2);
     vi.useFakeTimers();
-    await card(wrapper, 2)?.trigger('pointerdown', { isPrimary: true, button: 0, clientX: 5, clientY: 5 });
-    vi.advanceTimersByTime(HOLD_MS);
-    await card(wrapper, 2)?.trigger('pointerup');
-    await card(wrapper, 2)?.trigger('click');
-    vi.advanceTimersByTime(TAP_MS);
+    wrapper.find('.mark-menu').element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    vi.advanceTimersByTime(300);
     vi.useRealTimers();
     await flushPromises();
-    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'r2' });
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    expect(send).not.toHaveBeenCalled();
     for (const answer of answers.splice(0)) answer();
     await flushPromises();
-    // One tap chooses, once the time for a second has passed.
-    await tapCard(wrapper, 2);
-    expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 2 });
     send.mockImplementation(async () => ({ ok: true }));
+  });
+
+  test('opens the menu of marks on a right click with a mouse, and on no press that moves away', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
+    // A press that moves, as the page scrolls, is no press.
+    vi.useFakeTimers();
+    const press = { isPrimary: true, button: 0, pointerType: 'touch', clientX: 5, clientY: 5 };
+    await card(wrapper, 1)?.trigger('pointerdown', press);
+    await card(wrapper, 1)?.trigger('pointermove', { ...press, clientY: 40 });
+    vi.advanceTimersByTime(HOLD_MS);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    // A right click.
+    await card(wrapper, 1)?.trigger('pointerdown', { isPrimary: true, button: 2, pointerType: 'mouse' });
+    const context = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    card(wrapper, 1)?.element.dispatchEvent(context);
+    await flushPromises();
+    expect(context.defaultPrevented).toBe(true);
+    expect(menuItems(wrapper)).toHaveLength(3);
+    await chooseMark(wrapper, 1);
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
   });
 
   test("shows the group's marks from the server, and changes a teammate's mark, also from the keyboard", async () => {
@@ -1541,17 +1596,16 @@ describe('KeywordsGame', () => {
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'r2' });
   });
 
-  test('marks while the other group guesses, where one tap chooses nothing', async () => {
+  test('marks while the other group guesses, where a tap chooses nothing', async () => {
     const wrapper = mount(KeywordsGame, { props: { room: marked([], { team: 'blue' }) }, global: global() });
     expect(wrapper.find('.guess-bar').exists()).toBe(false);
     expect(wrapper.get('.status').text()).toBe('The Blue group is guessing.');
-    expect(wrapper.get('.gestures').text()).toBe(
-      'Double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 or keys 1, 2, 3 \u00b7 the same again clears it',
-    );
+    expect(wrapper.get('.gestures').text()).toBe('Hold a card to mark it \u00b7 or keys 1, 2, 3');
     send.mockClear();
     await tapCard(wrapper, 1);
     expect(send).not.toHaveBeenCalled();
-    await tapCard(wrapper, 1, 2);
+    await holdCard(wrapper, 1);
+    await chooseMark(wrapper, 0);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'ours' });
   });
 
@@ -1604,7 +1658,8 @@ describe('KeywordsGame', () => {
     expect(card(wrapper, 0)?.attributes('aria-label')).toContain('marked as ours');
     send.mockClear();
     await card(wrapper, 0)?.trigger('keydown', { key: '2' });
-    await tapCard(wrapper, 0, 2);
+    await holdCard(wrapper, 0);
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
     expect(send).not.toHaveBeenCalledWith('keywords:mark', expect.anything());
   });
 

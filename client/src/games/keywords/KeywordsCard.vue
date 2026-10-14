@@ -105,7 +105,9 @@ const ariaLabel = computed(() =>
       t('game.stamp')
     }}</span>
     <span v-if="target !== null" class="target num" aria-hidden="true">{{ target }}</span>
-    <MarkSticker v-if="note" class="note" :mark="note.mark" :color="note.color" />
+    <Transition name="pop">
+      <MarkSticker v-if="note" :key="note.mark" class="note" :mark="note.mark" :color="note.color" />
+    </Transition>
     <ScoreFloat v-if="float" :key="float.key" :float="float" />
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar
@@ -408,6 +410,58 @@ const ariaLabel = computed(() =>
   width: var(--corner);
   height: var(--corner);
   box-shadow: var(--shadow-1);
+}
+
+/* A mark that comes pops onto the corner, and one that goes shrinks away. */
+.pop-enter-active {
+  animation: pop 420ms cubic-bezier(0.2, 1.35, 0.4, 1) both;
+}
+
+.pop-leave-active {
+  animation: unpop 240ms ease-in both;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0);
+  }
+
+  60% {
+    transform: scale(1.3);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes unpop {
+  from {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.3);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+/* A press held on a student's card: it sinks into its shadow until the menu of marks opens. */
+.pressing {
+  box-shadow: 1px 1px 0 var(--ink);
+  transform: translate(2px, 2px) scale(0.96);
+  transition:
+    transform 400ms cubic-bezier(0.3, 0, 0.2, 1),
+    box-shadow 400ms cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+/* The card whose menu of marks is open, which a copy of lifts out of the page meanwhile. */
+.lifting {
+  visibility: hidden;
 }
 
 /* The card that a replay's step is about. */

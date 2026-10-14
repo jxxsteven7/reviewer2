@@ -66,8 +66,12 @@ const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDe
     <table v-else>
       <thead>
         <tr>
-          <th scope="col" class="rank"><span class="sr-only">{{ t('match.rank') }}</span></th>
-          <th scope="col"><span class="sr-only">{{ t('match.player') }}</span></th>
+          <th scope="col" class="rank">
+            <span class="sr-only">{{ t('match.rank') }}</span>
+          </th>
+          <th scope="col">
+            <span class="sr-only">{{ t('match.player') }}</span>
+          </th>
           <th scope="col" class="number">{{ t('match.total') }}</th>
           <th scope="col" class="number" :aria-label="deltaLabel">{{ deltaHead }}</th>
         </tr>

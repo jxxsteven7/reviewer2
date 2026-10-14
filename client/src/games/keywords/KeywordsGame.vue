@@ -528,7 +528,9 @@ const status = computed(() => {
             {{ t('game.extend') }}
           </UiButton>
           <div v-if="!wide" class="panels">
-            <UiButton class="open-groups" size="small" @click="panel = 'groups'">{{ t('game.buttons.groups') }}</UiButton>
+            <UiButton class="open-groups" size="small" @click="panel = 'groups'">{{
+              t('game.buttons.groups')
+            }}</UiButton>
             <UiButton class="open-log" size="small" @click="panel = 'log'">{{ t('game.buttons.log') }}</UiButton>
             <UiButton v-if="match && !game.result" class="open-match" size="small" @click="matchOpen = true">
               {{ t('game.buttons.match') }}

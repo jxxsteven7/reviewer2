@@ -1,57 +1,50 @@
 import type { Mark } from '@reviewer2/shared';
-import { onBeforeUnmount } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
 
-// How a student's taps on a card become what they mean (docs/games/keywords.md#talking-it-over):
-// one tap chooses the card, two mark it as one of the group's own, three as one of the other
-// group's, and holding it down marks it as maybe Reviewer 2. A tap waits a moment for the next
-// before it counts, so that two taps don't choose the card first; three count at once. A press held
-// long enough marks the card, and the click that ends it counts for nothing; one that moves away
-// first, as when the page scrolls, is no press. From the keyboard, 1, 2 and 3 mark the card that
-// has the focus, and Enter or Space taps it.
-export const TAP_MS = 260;
-export const HOLD_MS = 500;
+// How a student's taps on a card become what they mean (docs/games/keywords.md#talking-it-over): a
+// tap chooses the card at once, whatever marks it has, and holding it down opens the menu of marks
+// for it (MarkMenu.vue), as a right click does with a mouse. While the press is held, the card sinks
+// into its shadow (`pressing`). A press held long enough opens the menu, and the click that ends it
+// counts for nothing; one that moves away first, as when the page scrolls, is no press. From the
+// keyboard, 1, 2 and 3 mark the card that has the focus, and Enter or Space taps it.
+export const HOLD_MS = 400;
 const MOVE_PX = 10;
 
 const KEYS: Record<string, Mark> = { '1': 'ours', '2': 'theirs', '3': 'r2' };
-const BY_TAPS: Record<number, Mark> = { 2: 'ours', 3: 'theirs' };
 
-export function useCardGestures(on: { tap: (card: number) => void; mark: (card: number, mark: Mark) => void }) {
-  let taps: { card: number; count: number; timer: ReturnType<typeof setTimeout> } | null = null;
+export function useCardGestures(on: {
+  tap: (card: number) => void;
+  hold: (card: number) => void;
+  mark: (card: number, mark: Mark) => void;
+}) {
   let hold: { card: number; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null = null;
   // The card whose press was held long enough: the click that ends the press counts for nothing.
   let held: number | null = null;
-
-  function settle() {
-    if (!taps) return;
-    const { card, count } = taps;
-    clearTimeout(taps.timer);
-    taps = null;
-    const mark = BY_TAPS[Math.min(count, 3)];
-    if (mark) on.mark(card, mark);
-    else on.tap(card);
-  }
+  // Whether the last press came from a mouse, whose right click opens the menu at once.
+  let mouse = false;
+  // The card that is being pressed, until the press ends, moves away or opens the menu.
+  const pressing = ref<number | null>(null);
 
   function click(card: number) {
     if (held === card) {
       held = null;
       return;
     }
-    if (taps && taps.card !== card) settle();
-    const count = (taps?.count ?? 0) + 1;
-    if (taps) clearTimeout(taps.timer);
-    taps = { card, count, timer: setTimeout(settle, TAP_MS) };
-    if (count >= 3) settle();
+    on.tap(card);
   }
 
   function letGo() {
     if (hold) clearTimeout(hold.timer);
     hold = null;
+    pressing.value = null;
   }
 
   function press(card: number, event: PointerEvent) {
     held = null;
     letGo();
+    mouse = event.pointerType === 'mouse';
     if (!event.isPrimary || event.button !== 0) return;
+    pressing.value = card;
     hold = {
       card,
       x: event.clientX,
@@ -59,17 +52,22 @@ export function useCardGestures(on: { tap: (card: number) => void; mark: (card: 
       timer: setTimeout(() => {
         hold = null;
         held = card;
-        if (taps?.card === card) {
-          clearTimeout(taps.timer);
-          taps = null;
-        }
-        on.mark(card, 'r2');
+        pressing.value = null;
+        on.hold(card);
       }, HOLD_MS),
     };
   }
 
   function move(event: PointerEvent) {
     if (hold && Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > MOVE_PX) letGo();
+  }
+
+  // A long press on a phone opens no menu of the browser's, and a mouse's right click opens ours.
+  function contextMenu(card: number, event: Event) {
+    event.preventDefault();
+    if (!mouse || hold) return;
+    held = null;
+    on.hold(card);
   }
 
   function key(card: number, event: KeyboardEvent) {
@@ -79,10 +77,7 @@ export function useCardGestures(on: { tap: (card: number) => void; mark: (card: 
     on.mark(card, mark);
   }
 
-  onBeforeUnmount(() => {
-    if (taps) clearTimeout(taps.timer);
-    letGo();
-  });
+  onBeforeUnmount(letGo);
 
-  return { click, press, move, letGo, key };
+  return { click, press, move, letGo, contextMenu, key, pressing };
 }
