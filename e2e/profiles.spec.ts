@@ -114,11 +114,11 @@ test('a public page is set up, opened by its address and from a room, liked and 
     .locator('.lobby .player', { hasText: annName })
     .getByRole('button', { name: `View ${annName}'s profile` })
     .click();
-  const panel = bob.locator('[role=dialog]:not(.tall)', { has: bob.locator('.profile-card') });
+  const panel = bob.locator('[role=dialog]:not(:has(button.back))', { has: bob.locator('.profile-card') });
   await expect(panel.locator('.profile-card .number')).toContainText(/Player No\. \d+/);
   await expect(panel.locator('.profile-card')).not.toContainText('https://ann.example/me');
   await panel.getByRole('button', { name: text.room.panel.fullPage }).click();
-  const page = bob.locator('[role=dialog].tall');
+  const page = bob.locator('[role=dialog]:has(button.back)');
   await expect(page.locator('.profile-card')).toContainText('https://ann.example/me');
   await page.getByRole('button', { name: text.room.panel.back }).click();
   await expect(page).toHaveCount(0);

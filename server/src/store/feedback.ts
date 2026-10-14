@@ -1,4 +1,5 @@
 import {
+  AVATAR_PATH,
   type Contribution,
   type ContributionCount,
   type ContributionSummary,
@@ -62,18 +63,16 @@ export const feedbackLimits = (maxEntries: number): FeedbackLimits => ({
 });
 
 // What became of a piece of feedback, from the operator's notes, the first of these that holds:
-// in the trash; closed without being adopted; thanked, by being adopted, which lists it among the
-// feedback contributions; resolved, by a pull request; published as a GitHub issue; or new. The
-// page shows the status, and the whole trail beside it. As views, they go by the facts, and may
-// overlap: the resolved feedback is all that a pull request resolved, thanked or not, unless it is
-// closed or in the trash, and the thanked is all that was thanked, resolved or not, likewise; the
-// others are the feedback of that status.
-export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'thanked', 'closed', 'trash'] as const;
+// in the trash; closed without being adopted; resolved, by being adopted, which lists it among the
+// feedback contributions, whether a pull request was recorded or not; published as a GitHub issue,
+// or recorded as resolved by a pull request without being adopted, which still waits for the
+// adoption; or new. The page shows the status, and the whole trail beside it. As views, each is
+// the feedback of that status, and none overlaps another.
+export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'closed', 'trash'] as const;
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
-// What is read: the feedback of one view above, the open feedback, which still waits for the
-// operator, new or published as an issue, or all of it.
-export type FeedbackView = 'all' | 'open' | FeedbackStatus;
+// What is read: the feedback of one status above, or all of it.
+export type FeedbackView = 'all' | FeedbackStatus;
 
 // How many days feedback that went to the trash at `deletedAt` has left before it is purged,
 // rounded up, so that the last day says 1, and 0 once the next purge takes it.
@@ -148,8 +147,8 @@ export interface Report extends Omit<NewReport, 'reporterId'> {
 // The status, as a column, in the order of FEEDBACK_STATUSES from the last to the first.
 const STATUS =
   "CASE WHEN f.deleted_at IS NOT NULL THEN 'trash' WHEN f.closed_at IS NOT NULL THEN 'closed' " +
-  "WHEN f.adopted_at IS NOT NULL THEN 'thanked' WHEN f.resolved_pr IS NOT NULL THEN 'resolved' " +
-  "WHEN f.issue IS NOT NULL THEN 'issue' ELSE 'new' END AS status";
+  "WHEN f.adopted_at IS NOT NULL THEN 'resolved' " +
+  "WHEN f.issue IS NOT NULL OR f.resolved_pr IS NOT NULL THEN 'issue' ELSE 'new' END AS status";
 const COLUMNS =
   'f.id, f.created_at AS createdAt, f.kind, f.text, f.contact, f.credit, f.account_id AS accountId, ' +
   'f.link_profile AS linkProfile, f.issue, ' +
@@ -157,19 +156,13 @@ const COLUMNS =
   'f.summary_en AS summaryEn, f.closed_at AS closedAt, f.deleted_at AS deletedAt, f.version, f.language, f.page, ' +
   `f.user_agent AS userAgent, a.username, ${STATUS}`;
 const FROM = 'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id';
-// Every row as Feedback, and the kind and the status of every row, for counting. Both are read as
-// subqueries, so that `status` in a WHERE clause names the column above and nothing that a table
-// joined in may come to have.
+// Every row as Feedback, and the status of every row, for counting, which reads the feedback's
+// own columns alone. Both are read as subqueries, so that `status` in a WHERE clause names the
+// column above and nothing that a table joined in may come to have.
 const ROWS = `(SELECT ${COLUMNS} ${FROM})`;
-const KINDS_AND_STATUSES = `(SELECT f.kind, f.resolved_pr AS resolvedPr, ${STATUS} ${FROM})`;
-// Whether a row is resolved, as the view goes: a pull request resolved it, and it is neither
-// closed nor in the trash, whether it was thanked too or not.
-const RESOLVED = "resolvedPr IS NOT NULL AND status IN ('resolved', 'thanked')";
-// The rows of a view, given twice: every row, the open ones, the resolved ones, or those of the
-// status that the view names.
-const VIEW =
-  "CASE ? WHEN 'all' THEN 1 WHEN 'open' THEN status IN ('new', 'issue') " +
-  `WHEN 'resolved' THEN ${RESOLVED} ELSE status = ? END`;
+const STATUSES = `(SELECT ${STATUS} FROM feedback f)`;
+// The rows of a view, given twice: every row, or those of the status that the view names.
+const VIEW = "CASE ? WHEN 'all' THEN 1 ELSE status = ? END";
 
 // The parameters of VIEW.
 const viewParams = (view: FeedbackView): [string, string] => [view, view];
@@ -181,7 +174,6 @@ export class FeedbackStore {
   readonly #count: StatementSync;
   readonly #size: StatementSync;
   readonly #latest: StatementSync;
-  readonly #kinds: StatementSync;
   readonly #statuses: StatementSync;
   readonly #byId: StatementSync;
   readonly #account: StatementSync;
@@ -218,15 +210,12 @@ export class FeedbackStore {
         'coalesce(length(CAST(credit AS BLOB)), 0) + coalesce(length(CAST(user_agent AS BLOB)), 0) + ' +
         'length(version)), 0) AS bytes FROM feedback',
     );
-    this.#latest = db.prepare(
-      `SELECT * FROM ${ROWS} WHERE id < ? AND kind = coalesce(?, kind) AND ${VIEW} ORDER BY id DESC LIMIT ?`,
-    );
-    this.#kinds = db.prepare(`SELECT kind, count(*) AS count FROM ${KINDS_AND_STATUSES} WHERE ${VIEW} GROUP BY kind`);
+    this.#latest = db.prepare(`SELECT * FROM ${ROWS} WHERE id < ? AND ${VIEW} ORDER BY id DESC LIMIT ?`);
     this.#statuses = db.prepare(
       "SELECT coalesce(sum(status = 'new'), 0) AS new, coalesce(sum(status = 'issue'), 0) AS issue, " +
-        `coalesce(sum(${RESOLVED}), 0) AS resolved, coalesce(sum(status = 'thanked'), 0) AS thanked, ` +
+        "coalesce(sum(status = 'resolved'), 0) AS resolved, " +
         "coalesce(sum(status = 'closed'), 0) AS closed, coalesce(sum(status = 'trash'), 0) AS trash " +
-        `FROM ${KINDS_AND_STATUSES} WHERE kind = coalesce(?, kind)`,
+        `FROM ${STATUSES}`,
     );
     this.#byId = db.prepare(`SELECT ${COLUMNS} ${FROM} WHERE f.id = ?`);
     this.#account = db.prepare('SELECT id, username FROM accounts WHERE username_key = ?');
@@ -261,11 +250,14 @@ export class FeedbackStore {
     this.#describe = db.prepare(
       'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
     );
-    // The contributions as anyone sees them. The handle of the profile goes with a name left from
-    // an account by a player who let it link there, and with nothing else.
+    // The contributions as anyone sees them. Feedback signed with an account is listed by the
+    // account's username as it is now, with the handle of its profile and its avatar, and by the
+    // name it was sent with once the account is gone; nothing else has a handle or an avatar.
     this.#contributions = db.prepare(
-      'SELECT f.kind, f.credit AS name, ' +
+      'SELECT f.kind, CASE WHEN f.credit IS NOT NULL AND f.link_profile = 1 THEN coalesce(a.username, f.credit) ' +
+        'ELSE f.credit END AS name, ' +
         'CASE WHEN f.credit IS NOT NULL AND f.link_profile = 1 THEN a.handle END AS profile, ' +
+        'CASE WHEN f.credit IS NOT NULL AND f.link_profile = 1 THEN a.avatar END AS avatar, ' +
         'f.summary_zh AS summaryZh, f.summary_en AS summaryEn, f.issue, substr(f.adopted_at, 1, 7) AS month ' +
         'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id ' +
         'WHERE f.adopted_at IS NOT NULL ORDER BY f.adopted_at DESC, f.id DESC',
@@ -320,28 +312,14 @@ export class FeedbackStore {
   }
 
   // The latest feedback first, up to `limit` of it, from before the id `before` when it is given,
-  // of one kind when `kind` is, and of one view when `view` is.
-  latest(
-    limit: number,
-    before = Number.MAX_SAFE_INTEGER,
-    kind: FeedbackKind | null = null,
-    view: FeedbackView = 'all',
-  ): Feedback[] {
-    return this.#latest.all(before, kind, ...viewParams(view), limit).map((row) => this.#fromRow(row));
+  // and of one view when `view` is.
+  latest(limit: number, before = Number.MAX_SAFE_INTEGER, view: FeedbackView = 'all'): Feedback[] {
+    return this.#latest.all(before, ...viewParams(view), limit).map((row) => this.#fromRow(row));
   }
 
-  // How much feedback of a view there is of each kind that has any. The table takes any kind and
-  // the server only those it knows (shared/src/feedback.ts), so a server that was rolled back from
-  // a later one may find others, which are counted too.
-  kinds(view: FeedbackView = 'all'): Record<string, number> {
-    const rows = this.#kinds.all(...viewParams(view)) as { kind: string; count: number }[];
-    return Object.fromEntries(rows.map(({ kind, count }) => [kind, count]));
-  }
-
-  // How much feedback there is in each view of a status (FEEDBACK_STATUSES), of one kind or of
-  // every kind, with 0 for one that has none. Feedback that was resolved and thanked counts in both.
-  statuses(kind: FeedbackKind | null = null): Record<FeedbackStatus, number> {
-    const row = this.#statuses.get(kind) as Record<FeedbackStatus, number>;
+  // How much feedback there is of each status (FEEDBACK_STATUSES), with 0 for one that has none.
+  statuses(): Record<FeedbackStatus, number> {
+    const row = this.#statuses.get() as Record<FeedbackStatus, number>;
     return Object.fromEntries(FEEDBACK_STATUSES.map((status) => [status, row[status]])) as Record<
       FeedbackStatus,
       number
@@ -354,11 +332,13 @@ export class FeedbackStore {
   }
 
   // A row as Feedback, with Feedback.nameTakenBy, which is looked up here and not in the query
-  // because only usernameKey() (shared/src/accounts.ts) says which username a name is.
+  // because only usernameKey() (shared/src/accounts.ts) says which username a name is. Feedback
+  // signed with an account has the username that the server gave it, which nobody passed for,
+  // even if the account was renamed since and another took the name.
   #fromRow(row: Record<string, SQLOutputValue>): Feedback {
     const feedback = { ...row, linkProfile: row.linkProfile === 1 } as unknown as Omit<Feedback, 'nameTakenBy'>;
     const owner =
-      feedback.credit === null
+      feedback.credit === null || feedback.linkProfile
         ? undefined
         : (this.#account.get(usernameKey(feedback.credit)) as { id: number; username: string } | undefined);
     return { ...feedback, nameTakenBy: owner && owner.id !== feedback.accountId ? owner.username : null };
@@ -408,13 +388,14 @@ export class FeedbackStore {
       summaryZh: string | null;
       summaryEn: string | null;
     })[];
-    return rows.flatMap(({ kind, name, profile, summaryZh, summaryEn, issue, month }) =>
+    return rows.flatMap(({ kind, name, profile, avatar, summaryZh, summaryEn, issue, month }) =>
       (FEEDBACK_KINDS as readonly string[]).includes(kind)
         ? [
             {
               kind,
               name,
               profile,
+              avatar: avatar === null ? null : `${AVATAR_PATH}${avatar}`,
               summary: summaryZh && summaryEn ? { zh: summaryZh, en: summaryEn } : null,
               issue,
               month,

@@ -324,7 +324,7 @@ describe('the status server', () => {
     const status = await get(base, '/');
     expect(status.body).toContain(`<p class="note">${total} in all &middot; <a href="/feedback">Read it</a></p>`);
     expect(status.body).toContain(`<a class="badge" href="/feedback">Open <b>${total}</b></a>`);
-    expect(status.body).toContain(`<a class="badge new" href="/feedback?status=new">New <b>${total}</b></a>`);
+    expect(status.body).toContain('<a class="badge issue" href="/feedback?status=issue">Issued <b>0</b></a>');
     expect(shown(status.body)).toEqual([]);
 
     const latest = await get(base, '/feedback');
@@ -393,7 +393,7 @@ describe('the status server', () => {
     // Published already, it has no publish, and the command adopts it as it records the PR.
     server.feedback.setIssue(2, 42);
     await startStatus({ feedbackCommand: 'triage-feedback' });
-    const page = await get(base, '/feedback');
+    const page = await get(base, '/feedback?status=all');
     const first = (id: number) =>
       page.body.split(`<article><p class="head"><span>#${id}`)[1]?.match(/<code>([^<]*)<\/code>/)?.[1];
     expect(first(1)).toBe('triage-feedback publish 1');
@@ -405,41 +405,6 @@ describe('the status server', () => {
     expect(page.body).not.toContain('triage-feedback adopt');
     expect(page.body).not.toContain('triage-feedback publish 2');
     expect(page.body).not.toContain('admin.cjs feedback resolve');
-  });
-
-  test('shows the feedback of one kind, a page at a time', async () => {
-    server = await startServer();
-    const kinds = ['game', 'idea', 'game', 'bug', 'game'] as const;
-    for (const [i, kind] of kinds.entries()) {
-      server.feedback.add({
-        kind,
-        text: `Number ${i + 1}`,
-        contact: null,
-        credit: null,
-        accountId: null,
-        linkProfile: false,
-        version: 'test',
-        language: 'en',
-        page: 'home',
-        userAgent: null,
-      });
-    }
-    await startStatus();
-    const shown = (body: string) =>
-      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
-
-    const games = (await get(base, '/feedback?kind=game')).body;
-    expect(shown(games)).toEqual([5, 3, 1]);
-    expect(games).toContain('5 in all, newest first');
-    expect(games).toContain('<strong>New game <b>3</b></strong>');
-    expect(games).toContain('<a href="/feedback?kind=idea">Idea <b>1</b></a>');
-    expect(games).toContain('<a href="/feedback?kind=words">Word lists <b>0</b></a>');
-    expect(shown((await get(base, '/feedback?kind=game&before=5')).body)).toEqual([3, 1]);
-    expect(shown((await get(base, '/feedback?kind=words')).body)).toEqual([]);
-    // A kind that the server doesn't know is taken for none.
-    for (const query of ['?kind=other', '?kind=', '?kind=GAME']) {
-      expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual([5, 4, 3, 2, 1]);
-    }
   });
 
   test('shows the open feedback unless asked for a status, with the trail of each and the trash with its days left', async () => {
@@ -464,7 +429,7 @@ describe('the status server', () => {
     server.feedback.adopt(4, { zh: '提出了计时器', en: 'Suggested a timer' });
     server.feedback.close(5);
     server.feedback.delete(6);
-    // Resolved and thanked at once, which is neither open nor one of the two alone.
+    // Adopted with a pull request recorded, which is resolved all the same.
     server.feedback.resolve(7, 51);
     server.feedback.setIssue(7, 44);
     server.feedback.adopt(7, { zh: '\u63d0\u51fa\u4e86\u6682\u505c', en: 'Suggested a pause' });
@@ -472,52 +437,59 @@ describe('the status server', () => {
     const shown = (body: string) =>
       [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
 
-    // Open is what still waits: new, or published as an issue.
+    // Open is what nobody has dealt with yet, the new feedback; all is everything, the trash too.
     const open = (await get(base, '/feedback')).body;
-    expect(shown(open)).toEqual([2, 1]);
-    expect(open).toContain('<strong>Open <b>2</b></strong>');
-    expect(open).toContain('<a href="/feedback?status=resolved">Resolved <b>2</b></a>');
-    expect(open).toContain('<a href="/feedback?status=thanked">Thanked <b>2</b></a>');
-    expect(open).toContain('<a href="/feedback?status=closed">Closed <b>1</b></a>');
-    expect(open).toContain('<a href="/feedback?status=trash">Trash <b>1</b></a>');
-    expect(open).toContain('<strong>All <b>2</b></strong><a href="/feedback?kind=idea">Idea <b>1</b></a>');
-    expect(open).toContain('<span class="badge issue">Issue #42</span>');
+    expect(shown(open)).toEqual([1]);
+    expect(open).toContain(
+      '<p class="pills"><a href="/feedback?status=all">All <b>7</b></a><strong>Open <b>1</b></strong>' +
+        '<a href="/feedback?status=issue">Issued <b>2</b></a><a href="/feedback?status=resolved">Resolved <b>2</b></a>' +
+        '<a href="/feedback?status=closed">Closed <b>1</b></a><a href="/feedback?status=trash">Trash <b>1</b></a></p>',
+    );
+    expect(open).not.toContain('Thanked');
+    expect(open).toContain('<span class="badge new">New</span>');
+    // An issue, and feedback with a pull request recorded but not adopted, which waits for that.
+    const issued = (await get(base, '/feedback?status=issue')).body;
+    expect(issued).toContain('<span class="badge issue">Issue #42</span>');
+    expect(issued).toContain('<span class="badge issue">PR #50</span>');
+    expect(issued).toContain('<p class="trail">resolved by PR #50</p>');
     for (const [query, ids] of [
-      ['?status=new', [1]],
-      ['?status=issue', [2]],
-      ['?status=resolved', [7, 3]],
-      ['?status=thanked', [7, 4]],
+      ['?status=all', [7, 6, 5, 4, 3, 2, 1]],
+      ['?status=all&before=4', [3, 2, 1]],
+      ['?status=issue', [3, 2]],
+      ['?status=resolved', [7, 4]],
       ['?status=closed', [5]],
       ['?status=trash', [6]],
-      ['?status=trash&kind=idea', []],
-      ['?status=open&kind=bug', [2]],
       ['?status=open&before=2', [1]],
-      ['?status=resolved&kind=idea', [7, 3]],
-      // A status that isn't one is taken for none.
-      ['?status=all', [2, 1]],
-      ['?status=', [2, 1]],
-      ['?status=Trash', [2, 1]],
+      // There is no choosing a kind any more.
+      ['?status=issue&kind=idea', [3, 2]],
+      // A view that isn't one is taken for none, as are the ones that the page had once.
+      ['?status=', [1]],
+      ['?status=Trash', [1]],
+      ['?status=new', [1]],
+      ['?status=thanked', [1]],
     ] as const) {
       expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual([...ids]);
     }
     // The badges write out what the feedback came to.
     const resolved = (await get(base, '/feedback?status=resolved')).body;
-    expect(resolved).toContain('<span class="badge thanked">Resolved #51 &middot; Thanked</span>');
-    expect(resolved).toContain('<span class="badge resolved">Resolved #50</span>');
-    expect(resolved).toContain('<p class="trail">resolved by PR #50</p>');
-    const thanked = (await get(base, '/feedback?status=thanked')).body;
-    expect(thanked).toContain('<span class="badge thanked">Thanked</span>');
-    expect(thanked).toMatch(/<p class="trail">published as issue #43 &middot; adopted \d{4}-\d\d-\d\d<\/p>/);
-    expect(thanked).toContain('Contributed: 提出了计时器 &middot; Suggested a timer');
+    expect(resolved).toContain('<span class="badge resolved">Resolved &middot; PR #51 &middot; issue #44</span>');
+    expect(resolved).toContain('<span class="badge resolved">Resolved &middot; issue #43</span>');
+    expect(resolved).toMatch(/<p class="trail">published as issue #43 &middot; adopted \d{4}-\d\d-\d\d<\/p>/);
+    expect(resolved).toContain('Contributed: 提出了计时器 &middot; Suggested a timer');
     const trash = (await get(base, '/feedback?status=trash')).body;
     expect(trash).toContain('<span class="badge trash">Trash</span>');
     expect(trash).toMatch(/<p class="trail">in the trash since \d{4}-\d{2}-\d{2}, 30 days left<\/p>/);
     expect(trash).toContain('<a href="/feedback?status=closed">Closed <b>1</b></a>');
-    expect(trash).toContain('<strong>All <b>1</b></strong>');
+    expect(trash).toContain('<strong>Trash <b>1</b></strong>');
+    const all = (await get(base, '/feedback?status=all')).body;
+    for (const badge of ['new', 'issue', 'resolved', 'closed', 'trash']) {
+      expect(all, badge).toContain(`<span class="badge ${badge}">`);
+    }
     const status = (await get(base, '/')).body;
-    expect(status).toContain('<a class="badge" href="/feedback">Open <b>2</b></a>');
+    expect(status).toContain('<a class="badge" href="/feedback">Open <b>1</b></a>');
+    expect(status).toContain('<a class="badge issue" href="/feedback?status=issue">Issued <b>2</b></a>');
     expect(status).toContain('<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>2</b></a>');
-    expect(status).toContain('<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>2</b></a>');
+    expect(status).not.toContain('Thanked');
     expect(status).toContain('<p class="note">7 in all &middot; <a href="/feedback">Read it</a></p>');
   });
 

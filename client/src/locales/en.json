@@ -721,6 +721,7 @@
     "contact_too_long": "Use at most 100 characters for the contact.",
     "credit_invalid": "Use 1 to 16 visible characters for the name.",
     "credit_reserved": "That name is reserved. Choose another.",
+    "feedback_unsigned": "The feedback couldn't be signed with your account. Try again, log in again, or choose Anonymously.",
     "feedback_limited": "At most 3 pieces of feedback can come from one network in 10 minutes. Please try again later.",
     "feedback_full": "The server has no room for more feedback at the moment. Sorry!",
     "report_too_long": "Use at most 300 characters.",
@@ -814,9 +815,15 @@
     "count": "{count} / {max}",
     "contact": "Contact (optional)",
     "contactHint": "An email address, a WeChat ID or anything else to reach you by.",
-    "credit": "Your name (optional)",
-    "creditHint": "Leave it empty to stay anonymous. If your feedback is adopted, the name is listed among the feedback contributions on the home page, and on its GitHub issue. Any name will do, such as your GitHub username. If you send it logged in and tick the box below, the name opens your public page.",
-    "linkProfile": "Let my name in the feedback contributions open my public page",
+    "signature": "If it is adopted, list me",
+    "signatures": {
+      "signed": "By name",
+      "anonymous": "Anonymously"
+    },
+    "anonymousHint": "You are listed as an anonymous player among the feedback contributions on the home page, and the GitHub issue names nobody.",
+    "accountHint": "The feedback contributions on the home page show your avatar and username, and a tap on either opens your panel. Your username appears on the GitHub issue.",
+    "credit": "Your name",
+    "creditHint": "Signing needs a name; to leave none, choose Anonymously. The name is listed among the feedback contributions on the home page, and on the GitHub issue. Any name will do, such as your GitHub username.",
     "gameNote": "Which game should we make next? Say how a round goes and what makes it fun.",
     "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model.",
     "submit": "Send",
@@ -825,7 +832,7 @@
   "contributions": {
     "title": "Feedback contributions",
     "counted": "Feedback contributions | Feedback contributions · {count} person | Feedback contributions · {count} people",
-    "intro": "We thank the players whose suggestions, ideas for games, bug reports and words were adopted. What is adopted is the idea, and what was built may differ: the number opens the discussion and the changes. Leave a name with your feedback to be listed by it; without one, you are listed anonymously.",
+    "intro": "We thank the players whose suggestions, ideas for games, bug reports and words were adopted. What is adopted is the idea, and what was built may differ: the number opens the discussion and the changes. Sign your feedback to be listed by your account, or by a name if you have no account; otherwise, you are listed anonymously.",
     "kinds": {
       "idea": "Suggestions",
       "game": "New games",
@@ -833,8 +840,7 @@
       "words": "Word lists"
     },
     "anonymous": "An anonymous player",
-    "none": "No feedback has been adopted yet. Be the first!",
-    "fullPage": "Open the full page"
+    "none": "No feedback has been adopted yet. Be the first!"
   },
   "acknowledgments": {
     "title": "Acknowledgments",
@@ -1073,9 +1079,7 @@
     "none": "No friends yet. Search for a username above, or tap a player's avatar in a room.",
     "online": "online",
     "offline": "offline",
-    "inPublicRoom": "In room {code}",
-    "inRoom": "In a room",
-    "join": "Join",
+    "join": "Join room",
     "more": "More for {name}",
     "moreTitles": "Show {count} more title | Show {count} more titles",
     "refresh": "Refresh",
@@ -1090,6 +1094,7 @@
     "invitationJoin": "Join",
     "invitationIgnore": "Ignore",
     "askJoin": "Ask to join",
+    "askJoinRoom": "Ask to join room",
     "asked": "Asked",
     "askSent": "Asked. If they invite you, you'll see it here.",
     "askNotice": "{name} would like to join",

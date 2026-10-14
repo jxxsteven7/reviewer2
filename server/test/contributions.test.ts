@@ -52,13 +52,15 @@ test('are listed for anyone, and counted for the account they came from', async 
   expect(list.body).toEqual({
     ok: true,
     contributions: [
-      { kind: 'idea', name: 'Ann L', profile: null, summary: SAID, issue: 43, month },
-      { kind: 'bug', name: null, profile: null, summary: SAID, issue: 42, month },
-      { kind: 'idea', name: 'Ann L', profile: handle, summary: SAID, issue: 41, month },
+      { kind: 'idea', name: 'Ann L', profile: null, avatar: null, summary: SAID, issue: 43, month },
+      { kind: 'bug', name: null, profile: null, avatar: null, summary: SAID, issue: 42, month },
+      { kind: 'idea', name: 'Ann', profile: handle, avatar: null, summary: SAID, issue: 41, month },
     ],
   });
-  // Never the text, the contact, or the account but by the handle its player let it link to.
-  expect(JSON.stringify(list.body)).not.toMatch(/timer, please|me@example|"accountId"|Ann"/);
+  // Never the text, the contact, or the account but for feedback signed with it, which shows its
+  // username, handle and avatar.
+  expect(JSON.stringify(list.body)).not.toMatch(/timer, please|me@example|"accountId"/);
+  expect(JSON.stringify(list.body).match(/"Ann"/g)).toHaveLength(1);
 
   expect(await ann.account()).toMatchObject({
     contributions: [

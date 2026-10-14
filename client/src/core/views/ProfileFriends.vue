@@ -3,7 +3,6 @@ import {
   ACCOUNT_API,
   cleanName,
   DUO_TITLES,
-  formatCode,
   handleInLink,
   type Ack,
   type FriendView,
@@ -32,21 +31,21 @@ import { useFriendsList } from '../useFriendsList';
 // The account's friends (docs/architecture.md#friends): the search for someone to ask, the requests
 // waiting for an answer each way, the line that came with each request for the account under its
 // name, and the friends, each on a card: the avatar, which opens the friend's panel
-// (ProfilePanel.vue), the name and whether they are online and where; under it, in small type,
-// what the account has played with them, and the titles they hold among its friends
-// (docs/architecture.md#friend-duos), on one line, folded where they don't fit. The friends' board
-// above the list sums the titles up, in the same look, each with the avatar and the name of the
-// friends who hold it, the avatar opening their panel as on the cards. A friend who is offline has
-// the whole card faded, still readable. A friend in a public room can be joined from here; one in
-// a private room only by their invitation, which the account may ask them for (askToJoin), and
-// which the card says it has while the request stands. A friend whom the account has given a name
-// of its own (an alias, for the account alone) goes by it, with the username after it in small
-// grey type, here and in the sheets about them. The card's "more" button opens a sheet with the
-// friend's name, from which the account gives them a name, or takes it away by leaving it empty,
-// or removes them, after asking first. The requests are answered, and taken back, as the panels
-// answer them (answerFriend). A change made here comes back as the word that the server sends
-// both sides, on which the list is asked for again (useFriendsList), as it is after a refusal,
-// since the list may have been out of date.
+// (ProfilePanel.vue), with a green dot on its corner while they are online, the name and the way
+// into the room they are in, if any; under it, in small type, what the account has played with
+// them, and the titles they hold among its friends (docs/architecture.md#friend-duos), on one line,
+// folded where they don't fit. The friends' board above the list sums the titles up, in the same
+// look, each with the avatar and the name of the friends who hold it, the avatar opening their
+// panel as on the cards. A friend who is offline has the whole card faded, still readable. A friend
+// in a public room can be joined from here; one in a private room only by their invitation, which
+// the account may ask them for (askToJoin), and which the card says it has while the request
+// stands. A friend whom the account has given a name of its own (an alias, for the account alone)
+// goes by it, with the username after it in small grey type, here and in the sheets about them. The
+// card's "more" button opens a sheet with the friend's name, from which the account gives them a
+// name, or takes it away by leaving it empty, or removes them, after asking first. The requests are
+// answered, and taken back, as the panels answer them (answerFriend). A change made here comes back
+// as the word that the server sends both sides, on which the list is asked for again
+// (useFriendsList), as it is after a refusal, since the list may have been out of date.
 //
 // The search finds someone by their whole username, or by a link to their page pasted with any
 // text around it, and opens their panel, as a tap on an avatar does (ProfilePanel.vue). Once
@@ -241,31 +240,16 @@ function closeAll() {
             class="card friend"
             :class="{ offline: !friend.online }"
           >
-            <AvatarButton
-              class="face"
-              :handle="friend.handle"
-              :name="friend.username"
-              :avatar="friend.avatar"
-              size="medium"
-            />
+            <span class="face">
+              <AvatarButton :handle="friend.handle" :name="friend.username" :avatar="friend.avatar" size="medium" />
+              <span v-if="friend.online" class="dot" aria-hidden="true"></span>
+            </span>
             <p class="top">
-              <span class="name">{{ friend.alias ?? friend.username }}</span>
-              <span v-if="friend.alias" class="username">{{ friend.username }}</span>
-              <span class="where">
-                <span class="dot" :class="{ on: friend.online }" aria-hidden="true"></span>
-                {{ t(friend.online ? 'friends.online' : 'friends.offline') }}
-                <template v-if="friend.room">
-                  ·
-                  <i18n-t v-if="friend.room.code" keypath="friends.inPublicRoom" tag="span" scope="global">
-                    <template #code>
-                      <span class="code">{{ formatCode(friend.room.code) }}</span>
-                    </template>
-                  </i18n-t>
-                  <template v-else>{{ t('friends.inRoom') }}</template>
-                </template>
+              <span class="who">
+                <span class="name">{{ friend.alias ?? friend.username }}</span>
+                <span v-if="friend.alias" class="username">{{ friend.username }}</span>
               </span>
-            </p>
-            <span class="end">
+              <span class="sr-only">{{ t(friend.online ? 'friends.online' : 'friends.offline') }}</span>
               <RouterLink v-if="friend.room?.code" :to="`/room/${friend.room.code}`" class="join">{{
                 t('friends.join')
               }}</RouterLink>
@@ -276,8 +260,10 @@ function closeAll() {
                 :disabled="busy || friend.asked"
                 @click="ask(friend)"
               >
-                {{ t(friend.asked ? 'friends.asked' : 'friends.askJoin') }}
+                {{ t(friend.asked ? 'friends.asked' : 'friends.askJoinRoom') }}
               </button>
+            </p>
+            <span class="end">
               <button
                 type="button"
                 class="more"
@@ -402,6 +388,7 @@ h3 {
 }
 
 .face {
+  position: relative;
   grid-area: face;
   margin-top: 2px;
 }
@@ -450,32 +437,42 @@ h3 {
   white-space: nowrap;
 }
 
-.where {
-  display: inline-flex;
+/* A friend's line: the name, and the way into the room they are in, if any, on one line. A name
+   that doesn't fit is cut short at its end, the username first; the way in never is. */
+.friend .top {
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 5px;
-  color: var(--ink-2);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
+}
+
+.who {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.who .name,
+.who .username {
+  display: inline;
+}
+
+.who .username {
+  margin-left: var(--space-2);
+}
+
+/* A friend who is online has a green dot on the avatar's corner, as in the sheet that invites
+   friends to a room. */
 .dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 11px;
+  height: 11px;
   border: var(--line-thin) solid var(--ink);
   border-radius: 50%;
-  background: var(--neutral);
-}
-
-.dot.on {
   background: var(--online);
-}
-
-/* A room's number never breaks in two. */
-.code {
-  white-space: nowrap;
+  pointer-events: none;
 }
 
 .end {
@@ -496,15 +493,16 @@ h3 {
 .join {
   position: relative;
   display: inline-flex;
+  flex: none;
   align-items: center;
-  min-height: 36px;
-  padding: 0 var(--space-3);
+  min-height: 30px;
+  padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--on-ink);
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--weight-black);
   text-decoration: none;
   white-space: nowrap;
@@ -582,10 +580,6 @@ h3 {
 
 .offline .name {
   color: var(--ink-2);
-}
-
-.offline .dot {
-  border-color: var(--ink-2);
 }
 
 .offline :deep(.folded-titles .pill) {

@@ -1,7 +1,7 @@
-import { FEEDBACK_KINDS, formatCode, type FeedbackKind } from '@reviewer2/shared';
+import { formatCode, type FeedbackKind } from '@reviewer2/shared';
 import { UNKNOWN_COUNTRY } from './core/clientIp';
 import { megabytes, type Sample, type Stats } from './stats';
-import { daysLeft, FEEDBACK_STATUSES, type Feedback, type FeedbackStatus, type Report } from './store/feedback';
+import { daysLeft, type Feedback, type FeedbackStatus, type FeedbackView, type Report } from './store/feedback';
 
 // The status page (status.ts) as one HTML document, built on the server from the numbers, the
 // page of the feedback that players sent, and the page of the reports they sent of each other.
@@ -18,7 +18,7 @@ const STYLE = `
 :root {
   --bg: #f4efe6; --paper: #ffffff; --ink: #1a1a2e; --ink-2: #4b4b60; --line: #bdb6a8;
   --yellow: #ffd23f; --blue: #2d5bff; --blue-tint: #d5dfff; --blue-deep: #1f44d6;
-  --red: #f2543d; --red-tint: #ffd6cf; --neutral: #bdb6a8; --mint: #5fd3a0; --focus: #2d5bff;
+  --red: #f2543d; --red-tint: #ffd6cf; --neutral: #bdb6a8; --focus: #2d5bff;
   --outline: 2px; --radius: 12px; --shadow: 3px 3px 0 var(--ink);
 }
 * { box-sizing: border-box; }
@@ -73,8 +73,7 @@ polyline { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
 .pills strong { background: var(--ink); color: var(--yellow); }
 .badge.new { background: var(--yellow); }
 .badge.issue { background: var(--blue-tint); }
-.badge.resolved { background: var(--mint); }
-.badge.thanked { background: var(--ink); color: var(--yellow); }
+.badge.resolved { background: var(--ink); color: var(--yellow); }
 .badge.closed { background: var(--neutral); }
 .badge.trash { background: var(--red-tint); }
 .pills a b, .badge b { font-weight: 800; }
@@ -184,24 +183,23 @@ function chart(samples: readonly Sample[], now: number): string {
   );
 }
 
-// What the feedback page shows: the open feedback, which still waits for the operator, new or
-// published as an issue, or the feedback of one status, where the resolved and the thanked go by
-// the facts and may overlap (store/feedback.ts).
-export const FEEDBACK_VIEWS = ['open', ...FEEDBACK_STATUSES] as const;
+// What the feedback page shows, one row of choices: all of it, in the trash too until it is
+// purged; the open feedback, which nobody has dealt with yet, that is, the new; or the feedback of
+// one of the other statuses (store/feedback.ts). None overlaps another but all.
+export const FEEDBACK_VIEWS = ['all', 'open', 'issue', 'resolved', 'closed', 'trash'] as const;
 export type PageView = (typeof FEEDBACK_VIEWS)[number];
 
+// The feedback that a view of the page reads.
+export const storeView = (view: PageView): FeedbackView => (view === 'open' ? 'new' : view);
+
 // One page of the feedback that players sent (store/feedback.ts), newest first: the latest, or
-// those before an id that the operator paged back to, of one view and of every kind or of one.
+// those before an id that the operator paged back to, of one view.
 export interface FeedbackListing {
   // How much feedback there is in all, the trash included.
   total: number;
-  // How much there is in each view of a status, of the kind shown, and of each kind, in the view
-  // shown.
+  // How much there is of each status.
   statuses: Record<FeedbackStatus, number>;
-  kinds: Record<string, number>;
   view: PageView;
-  // The kind that the page shows, or null for every kind.
-  kind: FeedbackKind | null;
   entries: readonly Feedback[];
   // Whether the page was paged back from the latest.
   paged: boolean;
@@ -225,14 +223,15 @@ export const KINDS: Record<FeedbackKind, string> = { idea: 'Idea', game: 'New ga
 const LANGUAGES: Record<Feedback['language'], string> = { zh: 'Chinese', en: 'English' };
 const PAGES: Record<Feedback['page'], string> = { home: 'home page', room: 'room' };
 const VIEWS: Record<PageView, string> = {
+  all: 'All',
   open: 'Open',
-  new: 'New',
-  issue: 'Issue',
+  issue: 'Issued',
   resolved: 'Resolved',
-  thanked: 'Thanked',
   closed: 'Closed',
   trash: 'Trash',
 };
+// What the badges of the statuses say that need nothing more.
+const BADGES: Record<'new' | 'closed' | 'trash', string> = { new: 'New', closed: 'Closed', trash: 'Trash' };
 
 // What the feedback page puts in front of the arguments of the commands it shows, unless
 // ADMIN_COMMAND (config.ts) says how admin.cjs is run where the server is.
@@ -253,21 +252,20 @@ const day = (iso: string) => iso.slice(0, 10);
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
-// The badge of a status, in its colors, with what it stands for written out: the issue's number
-// for feedback published as one, and for feedback that is resolved or thanked, both that apply,
-// such as "Resolved #72 &middot; Thanked", the pull request's number with the first.
+// The badge of a status, in its colors, with what it stands for written out: for feedback that
+// waits as an issue, the issue's number and the pull request's, when one was recorded without the
+// adoption, such as "Issue #77 &middot; PR #76", which tells the operator that the adoption is
+// still to come; for resolved feedback, that is, adopted, the pull request's number and the
+// issue's, such as "Resolved &middot; PR #76 &middot; issue #77".
 function badge(feedback: Feedback): string {
-  const { status, issue, resolvedPr, adoptedAt } = feedback;
-  const done = [
-    ...(resolvedPr === null ? [] : [`Resolved #${resolvedPr}`]),
-    ...(adoptedAt === null ? [] : ['Thanked']),
-  ];
+  const { status, issue, resolvedPr } = feedback;
+  const pr = resolvedPr === null ? [] : [`PR #${resolvedPr}`];
   const label =
     status === 'issue'
-      ? `Issue #${issue}`
-      : status === 'resolved' || status === 'thanked'
-        ? done.join(' &middot; ')
-        : VIEWS[status];
+      ? [...(issue === null ? [] : [`Issue #${issue}`]), ...pr].join(' &middot; ')
+      : status === 'resolved'
+        ? ['Resolved', ...pr, ...(issue === null ? [] : [`issue #${issue}`])].join(' &middot; ')
+        : BADGES[status];
   return `<span class="badge ${status}">${label}</span>`;
 }
 
@@ -286,7 +284,7 @@ function trail(feedback: Feedback, now: number): string {
       : [
           `in the trash since ${escape(day(feedback.deletedAt))}, ` +
             (feedback.adoptedAt !== null
-              ? 'kept: thanked'
+              ? 'kept: adopted'
               : feedback.issue !== null
                 ? 'kept: issue'
                 : `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`),
@@ -349,7 +347,7 @@ function commands(feedback: Feedback, run: FeedbackCommands): string {
 // at its end; the trail, when there is one, comes after the text, and, for adopted feedback, what
 // the player contributed, as the home page shows it; the rest below: the version, the language,
 // the page it came from, the contact, the name for the feedback contributions, the account it was
-// sent from, whether the player let the name link to that account's profile, and, in bold,
+// sent from, whether the player signed it with that account, and, in bold,
 // another account whose username the name is, which may be someone passing for that account's
 // owner, for a bug the browser, and last the commands that may come next (`run`), folded. A kind
 // that this server doesn't know, from a later one that it was rolled back from, shows as it is.
@@ -371,7 +369,7 @@ function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
     (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
     (feedback.credit === null || feedback.username === null || !feedback.linkProfile
       ? ''
-      : ' &middot; links to their profile') +
+      : ' &middot; signed with the account') +
     (feedback.credit === null || feedback.nameTakenBy === null
       ? ''
       : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
@@ -398,14 +396,10 @@ function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
 
 export const FEEDBACK_PATH = '/feedback';
 
-// The address of the feedback of a view, of a kind or of every kind, from before an id when one
-// is given. The open feedback is the page's default, and goes unnamed.
-function feedbackHref(view: PageView, kind: FeedbackKind | null, before?: number): string {
-  const query = [
-    ...(view === 'open' ? [] : [`status=${view}`]),
-    ...(kind === null ? [] : [`kind=${kind}`]),
-    ...(before === undefined ? [] : [`before=${before}`]),
-  ];
+// The address of the feedback of a view, from before an id when one is given. The open feedback
+// is the page's default, and goes unnamed.
+function feedbackHref(view: PageView, before?: number): string {
+  const query = [...(view === 'open' ? [] : [`status=${view}`]), ...(before === undefined ? [] : [`before=${before}`])];
   return query.length === 0 ? FEEDBACK_PATH : `${FEEDBACK_PATH}?${query.join('&amp;')}`;
 }
 
@@ -413,32 +407,23 @@ function feedbackHref(view: PageView, kind: FeedbackKind | null, before?: number
 const pill = (href: string, label: string, count: number, shown: boolean) =>
   shown ? `<strong>${label} <b>${count}</b></strong>` : `<a href="${href}">${label} <b>${count}</b></a>`;
 
-// The views to choose from, of the kind shown, and then the kinds, in the view shown.
-function choices({ statuses, kinds, view, kind }: FeedbackListing): string {
-  const counts: Record<PageView, number> = { ...statuses, open: statuses.new + statuses.issue };
+// The views to choose from, in one row.
+function choices({ total, statuses, view }: FeedbackListing): string {
+  const counts: Record<PageView, number> = { ...statuses, all: total, open: statuses.new };
   const views = FEEDBACK_VIEWS.map((choice) =>
-    pill(feedbackHref(choice, kind), VIEWS[choice], counts[choice], choice === view),
+    pill(feedbackHref(choice), VIEWS[choice], counts[choice], choice === view),
   );
-  const all = Object.values(kinds).reduce((sum, count) => sum + count, 0);
-  const kindChoices = [
-    pill(feedbackHref(view, null), 'All', all, kind === null),
-    ...FEEDBACK_KINDS.map((choice) =>
-      pill(feedbackHref(view, choice), KINDS[choice], kinds[choice] ?? 0, choice === kind),
-    ),
-  ];
-  return (
-    `<div class="filters"><p class="pills">${views.join('')}</p>` + `<p class="pills">${kindChoices.join('')}</p></div>`
-  );
+  return `<div class="filters"><p class="pills">${views.join('')}</p></div>`;
 }
 
 // The feedback page: the choices, the entries of one page, each with its commands (`run`), and the
 // way to the latest and to the older ones.
 function feedbackList(listing: FeedbackListing, run: FeedbackCommands): string {
-  const { total, view, kind, entries, paged, older, now } = listing;
+  const { total, view, entries, paged, older, now } = listing;
   if (total === 0) return '<p class="note">None yet.</p>';
   const links = [
-    ...(paged ? [`<a href="${feedbackHref(view, kind)}">Latest</a>`] : []),
-    ...(older ? [`<a href="${feedbackHref(view, kind, (entries.at(-1) as Feedback).id)}">Older</a>`] : []),
+    ...(paged ? [`<a href="${feedbackHref(view)}">Latest</a>`] : []),
+    ...(older ? [`<a href="${feedbackHref(view, (entries.at(-1) as Feedback).id)}">Older</a>`] : []),
   ];
   return (
     choices(listing) +
@@ -525,20 +510,18 @@ export interface FeedbackCounts {
 
 export const NO_FEEDBACK: FeedbackCounts = {
   total: 0,
-  statuses: { new: 0, issue: 0, resolved: 0, thanked: 0, closed: 0, trash: 0 },
+  statuses: { new: 0, issue: 0, resolved: 0, closed: 0, trash: 0 },
 };
 
-// The feedback on the status page: how much there is in each view of a status, each the way to
-// that view, and of the open feedback, new or published as an issue, the way to the page itself.
-// Feedback that was resolved and thanked counts in both.
+// The feedback on the status page: how much there is of each status, each the way to that view,
+// the open feedback, which nobody has dealt with yet, first, with the way to the page itself.
 function feedbackCounts({ total, statuses }: FeedbackCounts): string {
   if (total === 0) return '<p class="note">None yet.</p>';
-  const open = statuses.new + statuses.issue;
   const pills = [
-    `<a class="badge" href="${FEEDBACK_PATH}">Open <b>${open}</b></a>`,
-    ...FEEDBACK_STATUSES.map(
+    `<a class="badge" href="${FEEDBACK_PATH}">Open <b>${statuses.new}</b></a>`,
+    ...(['issue', 'resolved', 'closed', 'trash'] as const).map(
       (status) =>
-        `<a class="badge ${status}" href="${feedbackHref(status, null)}">${VIEWS[status]} <b>${statuses[status]}</b></a>`,
+        `<a class="badge ${status}" href="${feedbackHref(status)}">${VIEWS[status]} <b>${statuses[status]}</b></a>`,
     ),
   ];
   return `<p class="pills">${pills.join('')}</p><p class="note">${total} in all &middot; <a href="${FEEDBACK_PATH}">Read it</a></p>`;
@@ -592,9 +575,9 @@ function agents({ agents: ai }: Stats): string {
 <dl>${tile('Agent', ai.up ? 'Up' : '<strong>Down</strong>')}${tile('In rooms', ai.players)}${tile('Steps', ai.steps, 'in the last hour')}${tile('Failed', ai.failures, 'in the last hour')}</dl></section>`;
 }
 
-// The feedback that players sent, newest first, a page at a time, of one view and of every kind
-// or of one, each with the commands that may come next (`run`): FEEDBACK_COMMAND, where it is
-// set, or ADMIN_COMMAND, or DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs (config.ts).
+// The feedback that players sent, newest first, a page at a time, of one view, each with the
+// commands that may come next (`run`): FEEDBACK_COMMAND, where it is set, or ADMIN_COMMAND, or
+// DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs (config.ts).
 export function renderFeedbackPage(feedback: FeedbackListing, run: FeedbackCommands): string {
   return document(
     'feedback',

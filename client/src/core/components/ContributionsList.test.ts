@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
 import { type Contribution, CONTRIBUTIONS_API } from '@reviewer2/shared';
-import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
+import { closeProfile, shownProfile } from '../profilePanel';
 import ContributionsList from './ContributionsList.vue';
-import ProfileCard from './ProfileCard.vue';
 
 // The feedback contributions, as the server answers from its database: the adopted feedback,
 // newest first, each with what the operator wrote in both languages.
@@ -16,6 +16,7 @@ const CONTRIBUTIONS: Contribution[] = [
     kind: 'words',
     name: 'Ann',
     profile: 'a1b2c3d4e5f6',
+    avatar: '/avatars/ann.webp',
     summary: { zh: '\u52a0\u4e86\u8bcd', en: 'Added words' },
     issue: 85,
     month: '2026-11',
@@ -24,12 +25,13 @@ const CONTRIBUTIONS: Contribution[] = [
     kind: 'bug',
     name: null,
     profile: null,
+    avatar: null,
     summary: { zh: '\u62a5\u4e86 bug', en: 'Reported a bug' },
     issue: 82,
     month: '2026-11',
   },
-  { kind: 'idea', name: 'Lizi', profile: null, summary: SUMMARY, issue: 57, month: '2026-10' },
-  { kind: 'idea', name: 'Ann', profile: 'a1b2c3d4e5f6', summary: null, issue: null, month: '2026-09' },
+  { kind: 'idea', name: 'Lizi', profile: null, avatar: null, summary: SUMMARY, issue: 57, month: '2026-10' },
+  { kind: 'idea', name: 'Ann', profile: 'a1b2c3d4e5f6', avatar: null, summary: null, issue: null, month: '2026-09' },
 ];
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -43,13 +45,12 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  closeProfile();
 });
 
 async function opened(locale: 'en' | 'zh' = 'en') {
   const i18n = createI18n({ legacy: false, locale, messages: { en, zh } });
-  const wrapper = mount(ContributionsList, {
-    global: { plugins: [i18n], stubs: { RouterLink: RouterLinkStub, ProfileCard: true } },
-  });
+  const wrapper = mount(ContributionsList, { global: { plugins: [i18n] } });
   await flushPromises();
   // Asked for once the card is shown, so that its title counts the players, and not again.
   expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([CONTRIBUTIONS_API]);
@@ -77,7 +78,7 @@ describe('the feedback contributions', () => {
     ]);
   });
 
-  test('link the issue, and open a card for a name only with the profile that the server names', async () => {
+  test('link the issue, and open the panel of an account only with the profile that the server names', async () => {
     const wrapper = await opened();
     const issues = wrapper.findAll('.meta a');
     expect(issues.map((link) => [link.text(), link.attributes('href')])).toEqual([
@@ -89,17 +90,21 @@ describe('the feedback contributions', () => {
       expect(link.attributes()).toMatchObject({ target: '_blank', rel: 'noopener noreferrer' });
     const people = wrapper.findAll('button.person');
     expect(people.map((person) => person.text())).toEqual(['Ann', 'Ann']);
+    // Each with the account's avatar before the username: the picture uploaded, or the default.
+    const pictures = people.map((person) => person.find('.avatar img'));
+    expect(pictures.map((picture) => (picture.exists() ? picture.attributes('src') : null))).toEqual([
+      null,
+      '/avatars/ann.webp',
+    ]);
+    expect(people.every((person) => person.find('.avatar').exists())).toBe(true);
+    expect(wrapper.findAll('span.name .avatar')).toHaveLength(0);
     expect(wrapper.findAll('span.name').map((name) => name.text())).toEqual(['Lizi', 'An anonymous player']);
-    expect(wrapper.findComponent(ProfileCard).exists()).toBe(false);
 
-    // A sheet over the page, titled with the name, with the brief card and the way to the page.
+    // The site's panel of the account, as an avatar opens it anywhere else (ProfilePanel.vue).
+    expect(people[0]?.attributes('aria-haspopup')).toBe('dialog');
+    expect(shownProfile.value).toBeNull();
     await people[0]?.trigger('click');
-    const dialog = document.querySelector('[role=dialog]');
-    expect(dialog?.textContent).toContain('Ann');
-    expect(wrapper.findComponent(ProfileCard).props()).toMatchObject({ handle: 'a1b2c3d4e5f6', brief: true });
-    expect(wrapper.findComponent(RouterLinkStub).props('to')).toBe('/p/a1b2c3d4e5f6');
-    // vue-i18n compiles the imported messages in place, so the text is written out.
-    expect(dialog?.textContent).toContain('Open the full page');
+    expect(shownProfile.value).toEqual({ handle: 'a1b2c3d4e5f6', username: 'Ann' });
     wrapper.unmount();
   });
 

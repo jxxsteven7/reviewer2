@@ -12,8 +12,12 @@ const socket = vi.hoisted(() => ({
   connect: vi.fn(),
 }));
 vi.mock('../socket', () => socket);
-// Who the browser is, as the server last said: a guest, until a test logs in.
-const signedIn = vi.hoisted(() => ({ account: null as unknown as { loaded: boolean; summary: object | null } }));
+// Who the browser is, as the server last said: a guest, until a test logs in; and the page's way
+// of asking again, which a test answers by setting what the server would have said.
+const signedIn = vi.hoisted(() => ({
+  account: null as unknown as { loaded: boolean; summary: object | null },
+  loadAccount: vi.fn(),
+}));
 vi.mock('../account', () => {
   signedIn.account = reactive({ loaded: true, summary: null, mail: false });
   return signedIn;
@@ -32,6 +36,7 @@ beforeEach(() => {
   socket.send.mockReset();
   socket.send.mockResolvedValue({ ok: true });
   socket.connect.mockReset();
+  signedIn.loadAccount.mockReset();
   toasts.splice(0);
   signedIn.account.loaded = true;
   signedIn.account.summary = null;
@@ -52,7 +57,12 @@ const field = (wrapper: Panel, label: string) =>
     .find((item) => item.get('label').text() === label)
     ?.find('input');
 const contact = (wrapper: Panel) => field(wrapper, 'Contact (optional)');
-const credit = (wrapper: Panel) => field(wrapper, 'Your name (optional)');
+const credit = (wrapper: Panel) => field(wrapper, 'Your name');
+// Chooses to sign the feedback, as the panel does at first, or to stay anonymous.
+const sign = (wrapper: Panel) => wrapper.get('input[value="signed"]').setValue(true);
+const anonymous = (wrapper: Panel) => wrapper.get('input[value="anonymous"]').setValue(true);
+const checked = (wrapper: Panel, value: string) =>
+  (wrapper.get(`input[value="${value}"]`).element as HTMLInputElement).checked;
 
 describe('the feedback panel', () => {
   test('connects when it opens, and says who reads it', async () => {
@@ -62,9 +72,17 @@ describe('the feedback panel', () => {
       'What you write may be published as a GitHub issue; your contact details never are.',
     );
     expect(wrapper.text()).toContain('They are used only to reply to you, and are deleted after 90 days.');
-    // Nothing to tick: whatever is adopted becomes an issue, and the name decides who is listed.
+    // Nothing to tick: whatever is adopted becomes an issue, and signing it decides who is listed,
+    // by name unless the player chooses to stay anonymous; a guest's name is their own.
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Leave it empty to stay anonymous.');
+    expect(checked(wrapper, 'signed')).toBe(true);
+    expect(credit(wrapper)).toBeDefined();
+    expect(wrapper.text()).toContain('The name is listed among the feedback contributions on the home page');
+    await anonymous(wrapper);
+    expect(wrapper.text()).toContain('You are listed as an anonymous player');
+    expect(credit(wrapper)).toBeUndefined();
+    // The choice outlives the panel, as what is written does, so the next test starts signed.
+    await sign(wrapper);
     expect(wrapper.text()).toContain(
       "The feedback itself is kept as the project's archive of suggestions; only what the author discards, " +
         'such as spam, is deleted 30 days after it is discarded.',
@@ -78,6 +96,8 @@ describe('the feedback panel', () => {
     await wrapper.get('textarea').setValue('  More terms from biology, please.  ');
     expect(wrapper.text()).toContain('32 / 1000');
     await contact(wrapper)?.setValue(' me@example.com ');
+    // Signed, as the panel starts, it waits for a name.
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
     await credit(wrapper)?.setValue('  Ann   L ');
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
@@ -117,14 +137,21 @@ describe('the feedback panel', () => {
     await again.get('button').trigger('click');
     expect((again.get('textarea').element as HTMLTextAreaElement).value).toBe('');
     expect((again.get('input[value="idea"]').element as HTMLInputElement).checked).toBe(true);
+    expect(checked(again, 'signed')).toBe(true);
     expect((credit(again)?.element as HTMLInputElement).value).toBe('');
   });
 
-  test('leaves out a contact or a name that shows nothing', async () => {
+  test('leaves out a contact that shows nothing, and a name unless the player signs', async () => {
     const wrapper = await opened();
     await wrapper.get('textarea').setValue('Hi');
     await contact(wrapper)?.setValue('   ');
+    // A name that shows nothing is no name, which signing needs.
     await credit(wrapper)?.setValue(' \u200b ');
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    // Typed, and then anonymous after all, it stays behind.
+    await credit(wrapper)?.setValue('Ann');
+    await anonymous(wrapper);
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('contact');
@@ -145,53 +172,48 @@ describe('the feedback panel', () => {
     expect((await opened()).getComponent(RouterLinkStub).props('to')).toBe('/account');
     route.path = '/room/ABCD';
     await wrapper.get('textarea').setValue('Hi');
+    await anonymous(wrapper);
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await sign(wrapper);
   });
 
-  test('offers a player who is logged in and leaves a name to let it open their page, ticked until they untick it', async () => {
-    const box = (wrapper: Panel) => wrapper.find('input[type="checkbox"]');
-    // A guest, with a name or not, is offered nothing.
-    let wrapper = await opened();
-    await credit(wrapper)?.setValue('Ann');
-    expect(box(wrapper).exists()).toBe(false);
+  test('signs with the account of a player who is logged in, by its avatar and username', async () => {
+    signedIn.account.summary = { username: 'ann', avatar: null };
+    const wrapper = await opened();
+    // Signed from the start, with nothing to fill in.
+    expect(checked(wrapper, 'signed')).toBe(true);
+    expect(credit(wrapper)).toBeUndefined();
+    expect(wrapper.get('.signer').text()).toBe('ann');
+    expect(wrapper.find('.signer .avatar').exists()).toBe(true);
+    expect(wrapper.text()).toContain('a tap on either opens your panel');
     await wrapper.get('textarea').setValue('Hi');
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
-    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('linkProfile');
+    // The server takes the account's username for the name.
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ linkProfile: true });
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('credit');
 
-    // Logged in, the box shows with a name only, ticked.
-    signedIn.account.summary = { username: 'ann' };
-    wrapper = await opened();
-    expect(box(wrapper).exists()).toBe(false);
-    await credit(wrapper)?.setValue('Ann');
-    expect((box(wrapper).element as HTMLInputElement).checked).toBe(true);
-    expect(box(wrapper).element.closest('label')?.textContent).toContain(
-      'Let my name in the feedback contributions open my public page',
-    );
-    await wrapper.get('textarea').setValue('Hi');
-    await wrapper.get('form').trigger('submit');
-    await flushPromises();
-    expect(socket.send.mock.calls[1]?.[1]).toMatchObject({ credit: 'Ann', linkProfile: true });
-
-    // Unticked, it says no, and the box is ticked again for the next feedback.
+    // Anonymous, nothing is said of the account, which the server knows all the same.
     await wrapper.get('button').trigger('click');
-    await credit(wrapper)?.setValue('Ann');
-    await box(wrapper).setValue(false);
+    expect(checked(wrapper, 'signed')).toBe(true);
+    await anonymous(wrapper);
+    expect(wrapper.find('.signer').exists()).toBe(false);
     await wrapper.get('textarea').setValue('Hi again');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
-    expect(socket.send.mock.calls[2]?.[1]).toMatchObject({ credit: 'Ann', linkProfile: false });
-    await wrapper.get('button').trigger('click');
-    await credit(wrapper)?.setValue('Ann');
-    expect((box(wrapper).element as HTMLInputElement).checked).toBe(true);
+    expect(socket.send.mock.calls[1]?.[1]).not.toHaveProperty('linkProfile');
+    expect(socket.send.mock.calls[1]?.[1]).not.toHaveProperty('credit');
 
-    // Without a name, nothing is said of it.
-    await credit(wrapper)?.setValue('');
-    expect(box(wrapper).exists()).toBe(false);
-    await wrapper.get('textarea').setValue('Hi once more');
-    await wrapper.get('form').trigger('submit');
+    // A guest who signs leaves a name, and never links an account.
+    signedIn.account.summary = null;
+    const guest = await opened();
+    await credit(guest)?.setValue('Ann');
+    await guest.get('textarea').setValue('Hi once more');
+    await guest.get('form').trigger('submit');
     await flushPromises();
-    expect(socket.send.mock.calls[3]?.[1]).not.toHaveProperty('linkProfile');
+    expect(socket.send.mock.calls[2]?.[1]).toMatchObject({ credit: 'Ann' });
+    expect(socket.send.mock.calls[2]?.[1]).not.toHaveProperty('linkProfile');
   });
 
   test('asks nothing of a player who is logged in, or before the server has said who they are', async () => {
@@ -199,7 +221,63 @@ describe('the feedback panel', () => {
     expect((await opened()).find('.guest').exists()).toBe(false);
     signedIn.account.summary = null;
     signedIn.account.loaded = false;
-    expect((await opened()).find('.guest').exists()).toBe(false);
+    const wrapper = await opened();
+    expect(wrapper.find('.guest').exists()).toBe(false);
+    // Nor for a name, which a player who turns out to be logged in wouldn't need, and nothing is
+    // sent signed meanwhile, which would go as anonymous; nor is anything said of anonymity, which
+    // the player didn't choose. Once the server has answered, a guest is asked for a name.
+    expect(checked(wrapper, 'signed')).toBe(true);
+    expect(credit(wrapper)).toBeUndefined();
+    expect(wrapper.find('.signer').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('You are listed as an anonymous player');
+    await wrapper.get('textarea').setValue('Early');
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send).not.toHaveBeenCalled();
+    // Anonymous feedback waits for nobody.
+    await anonymous(wrapper);
+    expect(wrapper.text()).toContain('You are listed as an anonymous player');
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await sign(wrapper);
+    signedIn.account.loaded = true;
+    await flushPromises();
+    expect(credit(wrapper)).toBeDefined();
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    await credit(wrapper)?.setValue('Ann');
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await wrapper.get('textarea').setValue('');
+  });
+
+  test("asks again who the browser is when the server couldn't sign with the account", async () => {
+    signedIn.account.summary = { username: 'ann', avatar: null };
+    socket.send.mockResolvedValue({ ok: false, error: 'feedback_unsigned' });
+    const wrapper = await opened();
+    await wrapper.get('textarea').setValue('Signed, I thought');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toBe(
+      "The feedback couldn't be signed with your account. Try again, log in again, or choose Anonymously.",
+    );
+    expect(signedIn.loadAccount).toHaveBeenCalledOnce();
+    expect(toasts).toEqual([]);
+    // The login had ended: the form turns to a guest's, asking for a name, with the refusal still
+    // up and what was written kept.
+    signedIn.account.summary = null;
+    await flushPromises();
+    expect(wrapper.find('.guest').exists()).toBe(true);
+    expect(wrapper.find('.signer').exists()).toBe(false);
+    expect(credit(wrapper)).toBeDefined();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('Signed, I thought');
+    // Any other refusal leaves the question alone.
+    socket.send.mockResolvedValue({ ok: false, error: 'feedback_limited' });
+    await credit(wrapper)?.setValue('Ann');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(signedIn.loadAccount).toHaveBeenCalledOnce();
+    await wrapper.get('textarea').setValue('');
+    await credit(wrapper)?.setValue('');
   });
 
   test('says that a bug report takes the browser along, and only then', async () => {
@@ -211,7 +289,7 @@ describe('the feedback panel', () => {
 
   test('offers a new game as a kind, says what to write about it, and sends it with a name', async () => {
     const wrapper = await opened();
-    expect(wrapper.findAll('input[type="radio"]').map((input) => input.attributes('value'))).toEqual([
+    expect(wrapper.findAll('.kinds input[type="radio"]').map((input) => input.attributes('value'))).toEqual([
       'idea',
       'game',
       'bug',
@@ -241,6 +319,11 @@ describe('the feedback panel', () => {
     expect(wrapper.text()).toContain('Use at most 100 characters for the contact.');
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
     await contact(wrapper)?.setValue('me@example.com');
+    // Signed, a guest needs a name; anonymous, none.
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    await anonymous(wrapper);
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await sign(wrapper);
     await credit(wrapper)?.setValue('x'.repeat(17));
     expect(wrapper.text()).toContain('Use 1 to 16 visible characters for the name.');
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
@@ -253,6 +336,7 @@ describe('the feedback panel', () => {
     socket.send.mockResolvedValue({ ok: false, error: 'feedback_limited' });
     const wrapper = await opened();
     await wrapper.get('textarea').setValue('Again');
+    await anonymous(wrapper);
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(wrapper.get('[role="alert"]').text()).toBe(

@@ -209,7 +209,7 @@ const TRASH_SHOWN = 100;
 // which only feedback adopted or recorded on its way to the trash is, or feedback that was in the
 // trash as an issue before issues kept feedback out of it (store/feedback.ts).
 function trashTime(feedback: Feedback, daysLeft: number): string {
-  if (feedback.adoptedAt !== null) return 'kept: thanked';
+  if (feedback.adoptedAt !== null) return 'kept: adopted';
   if (feedback.issue !== null) return 'kept: issue';
   return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
 }
@@ -558,7 +558,13 @@ const COMMANDS: Record<string, Command> = {
         );
         return 1;
       }
-      const as = found.credit === null ? 'as an anonymous player' : `as ${found.credit}`;
+      // Signed with the account, it is listed by the account's username, with its avatar.
+      const as =
+        found.credit === null
+          ? 'as an anonymous player'
+          : found.linkProfile && found.username !== null
+            ? `as ${found.username}, with the account's avatar`
+            : `as ${found.credit}`;
       print(
         `Adopted feedback #${found.id}, issue #${found.issue}. The home page lists it now, ${as}, ` +
           `${counted(found.username)}, saying that the player contributed:`,
@@ -815,7 +821,7 @@ const COMMANDS: Record<string, Command> = {
     flags: [],
     readOnly: true,
     run({ feedback }, _words, _flags, print) {
-      const entries = feedback.latest(TRASH_SHOWN, undefined, null, 'trash');
+      const entries = feedback.latest(TRASH_SHOWN, undefined, 'trash');
       const total = feedback.statuses().trash;
       if (total === 0) {
         print('The trash is empty.');

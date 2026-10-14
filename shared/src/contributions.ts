@@ -26,16 +26,18 @@ export interface ContributionSummary {
 }
 
 // One contribution as anyone sees it: the kind of feedback; the name the player left, or null for
-// one who left none; the handle of the public profile that the name links to, which only a name
-// left from an account by a player who let it link there has (`linkProfile`, feedback.ts);
-// what they contributed, or null until the operator writes it; the GitHub issue it became, or
-// null for feedback adopted before every adopted piece became one; and the month it was adopted,
-// YYYY-MM in UTC. Never the text or the contact, nor the account of a contribution without a name
-// or of a player who didn't let the name link to it.
+// one who left none; the handle of the public profile that the name links to, which only feedback
+// signed with an account has (`linkProfile`, feedback.ts), whose name is then the account's
+// username as it is now, and the address of the account's avatar, or null for the default one,
+// which the page draws from the name; what they contributed, or null until the operator writes
+// it; the GitHub issue it became, or null for feedback adopted before every adopted piece became
+// one; and the month it was adopted, YYYY-MM in UTC. Never the text or the contact, nor the
+// account of a contribution without a name or of feedback that wasn't signed with it.
 export interface Contribution {
   kind: FeedbackKind;
   name: string | null;
   profile: string | null;
+  avatar: string | null;
   summary: ContributionSummary | null;
   issue: number | null;
   month: string;

@@ -1,30 +1,23 @@
 <script setup lang="ts">
-import { type Contribution, CONTRIBUTIONS_API, FEEDBACK_KINDS, PROFILE_PATH, REPOSITORY_URL } from '@reviewer2/shared';
-import { ref } from 'vue';
+import { type Contribution, CONTRIBUTIONS_API, FEEDBACK_KINDS, REPOSITORY_URL } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
-import { RouterLink } from 'vue-router';
 import { useLanguage } from '../i18n';
+import { openProfile } from '../profilePanel';
 import { countPeople } from '../thanks';
 import FoldedList from './FoldedList.vue';
 import FoldedSection from './FoldedSection.vue';
-import ProfileCard from './ProfileCard.vue';
-import UiButton from './UiButton.vue';
-import UiSheet from './UiSheet.vue';
+import PlayerAvatar from './PlayerAvatar.vue';
 
 // The feedback contributions on the home page (docs/architecture.md#feedback-contributions): the
 // feedback that the operator adopted, which the server reads from its database, newest first, in a
 // section for each kind of feedback that has any. Each is the name its player left, or "an
 // anonymous player"; what they contributed, as the operator wrote it in the page's language; the
 // GitHub issue it became, where the discussion and the changes are; and the month it was adopted.
-// A name opens its player's profile only when the server sends the profile's handle, which it
-// does for a player who let it when sending the feedback: a tap opens a sheet over the home page,
-// from the bottom on a phone and in the middle on a wider screen, with the brief profile card, as
-// a player's avatar does in a room, and the way to the whole page. Names and what they did are
-// plain text.
+// Feedback signed with an account comes with the handle of its profile, and shows the account's
+// avatar before its username: a tap on either opens the account's panel over the home page, as an
+// avatar does anywhere else (ProfilePanel.vue). Any other name, and what they did, is plain text.
 const { t } = useI18n();
 const language = useLanguage();
-// The player whose card is open: the name they left, the sheet's title, and their profile.
-const shown = ref<{ name: string; handle: string } | null>(null);
 
 type Contributions = { contributions: Contribution[] };
 const people = ({ contributions }: Contributions) => countPeople(contributions.map(({ name }) => name));
@@ -50,9 +43,11 @@ const sections = ({ contributions }: Contributions) =>
           v-if="entry.name !== null && entry.profile"
           type="button"
           class="name person"
-          @click="shown = { name: entry.name, handle: entry.profile }"
+          aria-haspopup="dialog"
+          @click="openProfile(entry.profile, entry.name)"
         >
-          {{ entry.name }}
+          <PlayerAvatar :name="entry.name" :avatar="entry.avatar" />
+          <span>{{ entry.name }}</span>
         </button>
         <span v-else class="name">{{ entry.name ?? t('contributions.anonymous') }}</span>
         <template v-if="entry.summary">
@@ -70,15 +65,6 @@ const sections = ({ contributions }: Contributions) =>
       </FoldedSection>
     </template>
   </FoldedList>
-
-  <UiSheet :open="shown !== null" :title="shown?.name ?? ''" @close="shown = null">
-    <div v-if="shown" class="card">
-      <ProfileCard :handle="shown.handle" brief />
-      <RouterLink v-slot="{ href, navigate }" :to="`${PROFILE_PATH}${shown.handle}`" custom>
-        <UiButton :href="href" @click="navigate">{{ t('contributions.fullPage') }}</UiButton>
-      </RouterLink>
-    </div>
-  </UiSheet>
 </template>
 
 <style scoped>
@@ -87,23 +73,27 @@ const sections = ({ contributions }: Contributions) =>
   font-weight: var(--weight-bold);
 }
 
-/* A name that opens a card looks like a link, as it is one to the player. */
+/* An account that opens its panel: its avatar and its username, as a player shows in a room, with
+   no underline; the avatar says that it is a player to tap. */
 .person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: none;
   font: inherit;
   font-weight: var(--weight-bold);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.2em;
+  text-align: start;
+  vertical-align: middle;
   cursor: pointer;
 }
 
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.person:focus-visible {
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-small);
 }
 
 .dash,
