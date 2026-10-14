@@ -1,5 +1,8 @@
+import type { CardColor, Team } from './types';
+
 // How a game of a match is scored, for each player (docs/games/keywords.md#matches). The server
-// adds the points up; the client shows them, with this detail of where they came from.
+// adds the points up; the client shows them, with this detail of where they came from, and with
+// each card as it is revealed (revealPoints()).
 //
 // The PI, who gives the clues, plays for higher stakes than the students:
 //
@@ -55,16 +58,39 @@ export interface KeywordsScoreDetail {
   heavenlyHand?: boolean;
 }
 
-export function pointsFor(detail: KeywordsScoreDetail): number {
+// The points of the cards that the group's students revealed, and those that the game adds at its
+// end: the win, the big clues, the opening record and the heavenly hand.
+export function cardPoints(detail: KeywordsScoreDetail): number {
   const prices = POINTS[detail.role ?? 'guesser'];
   return (
     detail.found * prices.found +
-    (detail.won ? prices.won : 0) +
     detail.irrelevant * prices.irrelevant +
     detail.wrong * prices.wrong +
-    detail.reviewer2 * prices.reviewer2 +
+    detail.reviewer2 * prices.reviewer2
+  );
+}
+
+export function bonusPoints(detail: KeywordsScoreDetail): number {
+  const prices = POINTS[detail.role ?? 'guesser'];
+  return (
+    (detail.won ? prices.won : 0) +
     (detail.bigClues ?? 0) * POINTS.bigClue +
     (detail.openingRecord ? prices.openingRecord : 0) +
     (detail.heavenlyHand ? prices.heavenlyHand : 0)
   );
+}
+
+export const pointsFor = (detail: KeywordsScoreDetail): number => cardPoints(detail) + bonusPoints(detail);
+
+// What one revealed card does to the points of a player who plays for `team` in `role`, when the
+// students of the group `by` revealed it: what the card adds to cardPoints() of the player's
+// detail. Only the group whose students revealed it gains or loses, so a card that the other group
+// reveals is 0, whatever its color.
+export function revealPoints(color: CardColor, by: Team, team: Team, role: 'captain' | 'guesser'): number {
+  if (by !== team) return 0;
+  const prices = POINTS[role];
+  if (color === team) return prices.found;
+  if (color === 'neutral') return prices.irrelevant;
+  if (color === 'reviewer2') return prices.reviewer2;
+  return prices.wrong;
 }

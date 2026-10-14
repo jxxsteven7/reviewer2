@@ -1,8 +1,10 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 
 // The friendships table (migration 8, docs/architecture.md#friends): one row for each pair of
-// accounts between which a request is open, was declined or was accepted. This module only reads
-// and writes rows; the rules, and the limits, are in accounts/friends.ts.
+// accounts between which a request is open, was declined or was accepted, with the line that came
+// with a request that is open, if any, and the name that each of two friends gives the other
+// (migration 16). This module only reads and writes rows; the rules, and the limits, are in
+// accounts/friends.ts.
 
 export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
 
@@ -16,12 +18,15 @@ export interface Friendship {
   answeredAt: string | null;
 }
 
-// A friend, or the other side of a request, as the account's page lists them.
+// A friend, or the other side of a request, as the account's page lists them, with the name the
+// account gives a friend, and the line that came with a request to the account.
 export interface FriendRow {
   id: number;
   handle: string;
   username: string;
   avatar: string | null;
+  alias?: string | null;
+  note?: string | null;
 }
 
 // How many friends an account has, and how many requests it has open each way.
@@ -50,30 +55,46 @@ export class FriendStore {
   readonly #counts: StatementSync;
   readonly #others: StatementSync;
   readonly #pruneDeclined: StatementSync;
+  readonly #alias: StatementSync;
+  readonly #aliasOf: StatementSync;
 
   constructor(
     db: DatabaseSync,
     private readonly now: () => number = () => Date.now(),
   ) {
     this.#insert = db.prepare(
-      "INSERT INTO friendships (requester_id, addressee_id, status, created_at) VALUES (?, ?, 'pending', ?)",
+      "INSERT INTO friendships (requester_id, addressee_id, status, created_at, note) VALUES (?, ?, 'pending', ?, ?)",
     );
     // The pair in order, as the unique index has it.
     this.#between = db.prepare(
       `SELECT ${COLUMNS} FROM friendships WHERE min(requester_id, addressee_id) = ? AND max(requester_id, addressee_id) = ?`,
     );
-    this.#answer = db.prepare('UPDATE friendships SET status = ?, answered_at = ? WHERE id = ?');
+    // An answer clears the line that came with the request: nobody reads it again.
+    this.#answer = db.prepare('UPDATE friendships SET status = ?, answered_at = ?, note = NULL WHERE id = ?');
     this.#renew = db.prepare(
-      "UPDATE friendships SET requester_id = ?, addressee_id = ?, status = 'pending', created_at = ?, answered_at = NULL " +
-        'WHERE id = ?',
+      "UPDATE friendships SET requester_id = ?, addressee_id = ?, status = 'pending', created_at = ?, answered_at = NULL, " +
+        'note = ? WHERE id = ?',
     );
     this.#delete = db.prepare('DELETE FROM friendships WHERE id = ?');
     this.#friends = db.prepare(
-      `${OTHER}CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END ` +
+      'SELECT accounts.id, accounts.handle, accounts.username, accounts.avatar, ' +
+        'CASE WHEN requester_id = ? THEN requester_alias ELSE addressee_alias END AS alias FROM friendships ' +
+        'JOIN accounts ON accounts.id = CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END ' +
         "WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?) ORDER BY accounts.username_key",
     );
+    // Each side sets its own name for the other, and only while the two are friends.
+    this.#alias = db.prepare(
+      'UPDATE friendships SET requester_alias = CASE WHEN requester_id = ? THEN ? ELSE requester_alias END, ' +
+        'addressee_alias = CASE WHEN addressee_id = ? THEN ? ELSE addressee_alias END ' +
+        "WHERE id = ? AND status = 'accepted'",
+    );
+    this.#aliasOf = db.prepare(
+      'SELECT CASE WHEN requester_id = ? THEN requester_alias ELSE addressee_alias END AS alias FROM friendships ' +
+        "WHERE min(requester_id, addressee_id) = ? AND max(requester_id, addressee_id) = ? AND status = 'accepted'",
+    );
     this.#incoming = db.prepare(
-      `${OTHER}requester_id WHERE status = 'pending' AND addressee_id = ? ORDER BY friendships.id`,
+      'SELECT accounts.id, accounts.handle, accounts.username, accounts.avatar, friendships.note FROM friendships ' +
+        "JOIN accounts ON accounts.id = requester_id WHERE status = 'pending' AND addressee_id = ? ORDER BY friendships.id",
     );
     this.#outgoing = db.prepare(
       `${OTHER}addressee_id WHERE status = 'pending' AND requester_id = ? ORDER BY friendships.id`,
@@ -101,14 +122,14 @@ export class FriendStore {
     return this.between(a, b)?.status === 'accepted';
   }
 
-  // A new request. The caller has made sure that the pair has no row.
-  request(requesterId: number, addresseeId: number): void {
-    this.#insert.run(requesterId, addresseeId, this.#time());
+  // A new request, with its line, if any. The caller has made sure that the pair has no row.
+  request(requesterId: number, addresseeId: number, note: string | null = null): void {
+    this.#insert.run(requesterId, addresseeId, this.#time(), note);
   }
 
-  // A request that was declined is asked anew, by whoever asks now.
-  renew(id: number, requesterId: number, addresseeId: number): void {
-    this.#renew.run(requesterId, addresseeId, this.#time(), id);
+  // A request that was declined is asked anew, by whoever asks now, with a line of its own.
+  renew(id: number, requesterId: number, addresseeId: number, note: string | null = null): void {
+    this.#renew.run(requesterId, addresseeId, this.#time(), note, id);
   }
 
   accept(id: number): void {
@@ -123,12 +144,25 @@ export class FriendStore {
     this.#delete.run(id);
   }
 
-  // The account's friends, by username.
+  // The account's friends, by username, with the name it gives each.
   friendsOf(accountId: number): FriendRow[] {
-    return this.#friends.all(accountId, accountId, accountId) as unknown as FriendRow[];
+    return this.#friends.all(accountId, accountId, accountId, accountId) as unknown as FriendRow[];
   }
 
-  // Those who asked the account, and those the account asked, the oldest first.
+  // The name that an account gives the other side of a friendship, which is `id`, or null for none.
+  setAlias(id: number, accountId: number, alias: string | null): void {
+    this.#alias.run(accountId, alias, accountId, alias, id);
+  }
+
+  // The name that an account gives a friend, or null.
+  aliasOf(accountId: number, friendId: number): string | null {
+    const row = this.#aliasOf.get(accountId, Math.min(accountId, friendId), Math.max(accountId, friendId)) as
+      { alias: string | null } | undefined;
+    return row?.alias ?? null;
+  }
+
+  // Those who asked the account, with the line each sent, and those the account asked, the oldest
+  // first.
   incoming(accountId: number): FriendRow[] {
     return this.#incoming.all(accountId) as unknown as FriendRow[];
   }

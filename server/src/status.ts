@@ -10,6 +10,7 @@ import {
   renderStatusPage,
   REPORTS_PATH,
   type AccountCounts,
+  type FeedbackCommands,
   type FeedbackListing,
   type PageView,
   type ReportListing,
@@ -22,11 +23,13 @@ import type { FeedbackStore } from './store/feedback';
 // alone. That is why it needs no password. `/` is the page and `/status.json` the same numbers
 // for scripts. `/feedback` is the feedback that players sent, a page of it at a time:
 // `/feedback?before=<id>` shows what came before that one, `/feedback?kind=<kind>` only the
-// feedback of one kind, and `/feedback?status=<status>` only what is open, which it shows
-// otherwise, of one status, or in the trash. `/reports` is the reports that players sent of each
-// other, paged the same way. All of it is read-only: what became of the feedback is changed with
+// feedback of one kind, and `/feedback?status=<status>` one view of a status, where the resolved
+// and the thanked go by the facts and may overlap, or what is in the trash; without it, what is
+// open, new or published as an issue. `/reports` is the reports that players sent of each other,
+// paged the same way. All of it is read-only: what became of the feedback is changed with
 // admin.cjs alone, whose commands the feedback page shows as text to copy, with ADMIN_COMMAND in
-// front.
+// front, or the operator's own command for them, which can also publish an issue in one go
+// (FEEDBACK_COMMAND).
 
 export const STATUS_HOST = '127.0.0.1';
 
@@ -102,9 +105,9 @@ export function createStatusHandler(
   history: History,
   feedback: FeedbackStore,
   log: Log,
-  // What the feedback page puts in front of the commands it shows: ADMIN_COMMAND, or
-  // DEFAULT_ADMIN_COMMAND (config.ts).
-  adminCommand: string,
+  // What the commands that the feedback page shows are made of: ADMIN_COMMAND, or
+  // DEFAULT_ADMIN_COMMAND, and FEEDBACK_COMMAND, if any (config.ts).
+  commands: FeedbackCommands,
   // How many accounts there are, and how many are new.
   accounts: () => AccountCounts = () => ({ total: 0, recent: 0 }),
 ): RequestListener {
@@ -128,12 +131,7 @@ export function createStatusHandler(
           );
           send(res, 200, 'text/html; charset=utf-8', page);
         } else if (path === FEEDBACK_PATH) {
-          send(
-            res,
-            200,
-            'text/html; charset=utf-8',
-            renderFeedbackPage(feedbackListing(feedback, target), adminCommand),
-          );
+          send(res, 200, 'text/html; charset=utf-8', renderFeedbackPage(feedbackListing(feedback, target), commands));
         } else if (path === REPORTS_PATH) {
           send(res, 200, 'text/html; charset=utf-8', renderReportsPage(reportListing(feedback, target)));
         } else if (path === '/status.json') {

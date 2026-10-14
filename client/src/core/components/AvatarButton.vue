@@ -9,7 +9,8 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // sticker that can, and the press takes it away. The button reaches 44 px around the avatar, out of
 // sight, and its name says whose profile it shows. Where the page opens no panel, as on a big
 // screen, or for a player who has left the room, it is the avatar alone. Outside a room, an avatar
-// with somewhere `to` go is a link there, to the player's page, in the same look.
+// with somewhere `to` go is a link there, to the player's page, in the same look, without the
+// underline that links have, which would strike through the initial of a default avatar.
 const props = withDefaults(
   defineProps<{
     playerId?: string | null;
@@ -51,6 +52,8 @@ const press = () => props.playerId !== null && open?.(props.playerId);
   border: 0;
   border-radius: 50%;
   background: none;
+  color: inherit;
+  text-decoration: none;
   cursor: pointer;
   touch-action: manipulation;
 }

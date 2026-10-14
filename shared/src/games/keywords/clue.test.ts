@@ -8,6 +8,7 @@ import {
   normalizeClue,
   wordKey,
   type BoardText,
+  type ClueCard,
   type ClueOptions,
 } from './clue';
 
@@ -194,9 +195,16 @@ describe('a clue must not repeat a word on the board', () => {
     expect(problemOf('gpt', ['GPT4'])).toBe('clue_on_board');
     expect(problemOf('gpt', ['GPT-4'])).toBe('clue_on_board');
     expect(problemOf('covid19', ['COVID-19'])).toBe('clue_on_board');
-    // Digits alone are not a part of a word.
-    expect(problemOf('19', ['COVID-19'])).toBeNull();
-    expect(problemOf('gpt4', ['Llama 4'])).toBeNull();
+    // Digits alone are not a part of a word, only characters in common, which the loose rule lets
+    // through with a warning (see the numbers below).
+    expect(checkClue('19', board('COVID-19'), LOOSE)).toMatchObject({
+      problem: null,
+      similar: [{ kind: 'character' }],
+    });
+    expect(checkClue('gpt4', board('Llama 4'), LOOSE)).toMatchObject({
+      problem: null,
+      similar: [{ kind: 'character' }],
+    });
   });
 
   test('does not take one letter for a part of a word', () => {
@@ -635,6 +643,120 @@ describe('the strict and the loose clue rules', () => {
   test('gives each card one warning, the strongest', () => {
     const cards = [card('Data', { forms: ['datacenter'] }), card('Model')];
     expect(loose('datacenter', cards).similar).toEqual([{ card: 0, text: 'datacenter', kind: 'form' }]);
+  });
+});
+
+describe('a character in common, however it is written', () => {
+  // The words of the playtest: a game, the Chinese word for "rebound" (with the characters of a
+  // basket, a board and a ball), for "road network" (a road and a net), for "potash" (potassium and
+  // fertilizer) and for "land", whose first character is also a cheque's six.
+  const LIUBO = '\u516d\u535a';
+  const NAME = '\u540d\u5b57';
+  const REBOUND = '\u7bee\u677f\u7403';
+  const SCATTERED_CHINA = '\u6563\u74f7';
+  const ROAD_NET = '\u8def\u7f51';
+  const LAND = '\u9646\u5730';
+  const FAT_BLACK = '\u80d6\u9ed1';
+  const POTASH = '\u94be\u80a5';
+  const SIX = '\u516d';
+  const FIVE = '\u4e94';
+  // Clues of up to six, such as NAME with the numeral six and "com".
+  const CHINESE: ClueOptions = { words: 1, length: 6, strict: true };
+  const CHINESE_LOOSE: ClueOptions = { ...CHINESE, strict: false };
+  // Cards as the captains get them, with the English of their characters and their pinyin.
+  const rebound = {
+    word: REBOUND,
+    revealed: false,
+    pinyin: 'lan ban qiu',
+    glosses: ['basket', 'board', 'plank', 'ball', 'globe', 'sphere'],
+  };
+  const roadNet = { word: ROAD_NET, revealed: false, pinyin: 'lu wang', glosses: ['road', 'route', 'net', 'web'] };
+  const potash = { word: POTASH, revealed: false, pinyin: 'jia fei', glosses: ['potassium', 'fat', 'fertilizer'] };
+  const land = { word: LAND, revealed: false, pinyin: 'lu di', glosses: ['land', 'ground'] };
+  const liubo = { word: LIUBO, revealed: false, pinyin: 'liu bo', glosses: ['six', 'abundant', 'gamble'] };
+  const check = (clue: string, cards: ClueCard[], options = CHINESE) => checkClue(clue, cards, options);
+
+  test('takes a digit, a Chinese numeral and an English number word for one character, both ways', () => {
+    for (const clue of [`${NAME}6com`, `${NAME}${SIX}com`, 'six']) {
+      expect(check(clue, [liubo])).toMatchObject({ problem: 'clue_on_board', conflict: { kind: 'character' } });
+    }
+    expect(check('6', board(LIUBO))).toMatchObject({ problem: 'clue_on_board', conflict: { kind: 'character' } });
+    // The card may have the digit.
+    for (const clue of [FIVE, 'five']) {
+      expect(check(clue, board('5G')).conflict?.kind, clue).toBe('character');
+    }
+    // An English room, where every card is English.
+    expect(checkClue('6', board('Six Sigma'))).toMatchObject({
+      problem: 'clue_on_board',
+      conflict: { kind: 'character' },
+    });
+    expect(checkClue('six', board('6G'))).toMatchObject({ problem: 'clue_on_board' });
+    expect(checkClue('ten', board('Top 10'))).toMatchObject({ problem: 'clue_on_board' });
+    // The character for two that counts things, as in the Chinese word for "two-stage", is two as
+    // well: "2" and "two" alike have a character in common with the card.
+    const twoStage = { word: '两阶段', revealed: false, glosses: ['two', 'both', 'stage'] };
+    for (const clue of ['2', 'two', '二']) {
+      expect(check(clue, [twoStage]), clue).toMatchObject({
+        problem: 'clue_on_board',
+        conflict: { kind: 'character' },
+      });
+    }
+  });
+
+  test("leaves a cheque's numerals alone, which are other words too", () => {
+    expect(check(LAND, board(LIUBO)).problem).toBeNull();
+    expect(check('6', [land]).problem).toBeNull();
+    expect(check('six', [land]).problem).toBeNull();
+    expect(check('tensor', board('Top 10')).problem).toBeNull();
+  });
+
+  test('takes the English of a character on the board for the character', () => {
+    expect(check(`ball${SCATTERED_CHINA}`, [rebound])).toMatchObject({
+      problem: 'clue_on_board',
+      conflict: { card: 0, text: REBOUND, kind: 'character' },
+    });
+    expect(check('balls', [rebound]).problem).toBe('clue_on_board');
+    expect(check(`K${FAT_BLACK}web`, [potash, roadNet])).toMatchObject({
+      problem: 'clue_on_board',
+      conflict: { card: 1, kind: 'character' },
+    });
+    // Three letters are enough; a word of two is too short to count.
+    expect(check('net', [roadNet]).problem).toBe('clue_on_board');
+    expect(checkClue('it', [{ word: ROAD_NET, revealed: false, glosses: ['it'] }], CHINESE).problem).toBeNull();
+  });
+
+  test('takes the pinyin of a character on the board, of three letters or more, for the character', () => {
+    expect(check(`qiu${SCATTERED_CHINA}`, [rebound])).toMatchObject({
+      problem: 'clue_on_board',
+      conflict: { text: REBOUND, kind: 'character' },
+    });
+    expect(check('wang', [roadNet]).problem).toBe('clue_on_board');
+    // Two letters are too few to tell a syllable from an English word.
+    expect(check('lu', [roadNet]).problem).toBeNull();
+    // The umlaut written as "v", as keyboards have it.
+    const green = { word: '\u7eff', revealed: false, pinyin: 'l\u00fc' };
+    expect(check('lvv', [green]).problem).toBeNull();
+    const female = { word: '\u5973\u513f', revealed: false, pinyin: 'n\u00fcer er' };
+    expect(check('nver', [female]).problem).toBe('clue_on_board');
+  });
+
+  test('leaves an element symbol alone, and a character that only sounds alike', () => {
+    expect(check(`K${FAT_BLACK}`, [potash]).problem).toBeNull();
+  });
+
+  test('only warns under the loose rule, and counts for nothing once the card is revealed', () => {
+    for (const [clue, card] of [
+      [`${NAME}6com`, liubo],
+      [`ball${SCATTERED_CHINA}`, rebound],
+      [`qiu${SCATTERED_CHINA}`, rebound],
+      ['web', roadNet],
+    ] as const) {
+      expect(check(clue, [card], CHINESE_LOOSE), clue).toMatchObject({
+        problem: null,
+        similar: [{ card: 0, kind: 'character' }],
+      });
+      expect(check(clue, [{ ...card, revealed: true }]).problem, clue).toBeNull();
+    }
   });
 });
 

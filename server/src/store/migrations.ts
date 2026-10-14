@@ -471,4 +471,15 @@ export const MIGRATIONS: readonly string[] = [
   CREATE INDEX agent_plays_persona ON agent_plays (persona);
   CREATE INDEX agent_plays_account ON agent_plays (account_id);
   `,
+  // 16: the line that may come with a friend request, and the names that friends give each other
+  // (docs/architecture.md#friends), each for one account alone. The line is for the account asked;
+  // it is cleared once the request is answered, accepted or declined. Each side's name for the
+  // other, the requester's and the addressee's, is theirs to set while the two are friends. All go
+  // with the row when the request is withdrawn, the friendship ends or either account is deleted, so
+  // that nobody reads them again. NULL for none, as for the rows that were there.
+  `
+  ALTER TABLE friendships ADD COLUMN note TEXT;
+  ALTER TABLE friendships ADD COLUMN requester_alias TEXT;
+  ALTER TABLE friendships ADD COLUMN addressee_alias TEXT;
+  `,
 ];

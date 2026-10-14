@@ -9,6 +9,7 @@ import { account } from './account';
 export const mayReport = (room: RoomView): boolean => room.public && account.summary !== null;
 
 // Anyone with an account may ask a player who has one to be friends (docs/architecture.md#friends).
-// A rank marks a player with an account; a guest has none.
+// A rank marks a player with an account; a guest has none. The panel then leaves out a friend, and
+// says that a request went to whoever was asked already, by the viewer's own friends list.
 export const mayBefriend = (room: RoomView, player: PlayerView): boolean =>
   player.id !== room.me && account.summary !== null && player.rank !== undefined;

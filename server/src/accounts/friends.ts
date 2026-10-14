@@ -43,10 +43,11 @@ export class Friendships {
     this.#requests.refund(String(accountId));
   }
 
-  // One account asks another to be friends. A request to someone who has asked already accepts
-  // theirs: the two want the same thing. Whoever was declined waits before asking again; whoever
-  // declined may ask at any time. Says whether the request is open or the two are friends.
-  request(from: number, to: number): FriendResult<{ status: 'pending' | 'accepted' }> {
+  // One account asks another to be friends, with a line for them, if any, which the caller has
+  // cleaned (checkFriendNote). A request to someone who has asked already accepts theirs: the two
+  // want the same thing, and the line goes unread. Whoever was declined waits before asking again;
+  // whoever declined may ask at any time. Says whether the request is open or the two are friends.
+  request(from: number, to: number, note: string | null = null): FriendResult<{ status: 'pending' | 'accepted' }> {
     if (from === to) return refuse('self_friend');
     const found = this.store.between(from, to);
     if (found?.status === 'accepted') return refuse('already_friends');
@@ -66,8 +67,8 @@ export class Friendships {
     if (mine.outgoing >= this.limits.maxOutgoing || theirs.incoming >= this.limits.maxIncoming) {
       return refuse('friend_requests_full');
     }
-    if (found) this.store.renew(found.id, from, to);
-    else this.store.request(from, to);
+    if (found) this.store.renew(found.id, from, to, note);
+    else this.store.request(from, to, note);
     return { ok: true, status: 'pending' };
   }
 
@@ -96,6 +97,15 @@ export class Friendships {
     const mine = found?.status === 'accepted' || (found?.status === 'pending' && found.requesterId === accountId);
     if (!found || !mine) return refuse('no_such_request');
     this.store.delete(found.id);
+    return { ok: true };
+  }
+
+  // The account names its friend `other` as it likes, for itself alone, or takes the name away with
+  // null; the caller has cleaned it (checkAlias). Only a friend has one.
+  alias(accountId: number, other: number, alias: string | null): FriendResult {
+    const found = this.store.between(accountId, other);
+    if (found?.status !== 'accepted') return refuse('not_friends');
+    this.store.setAlias(found.id, accountId, alias);
     return { ok: true };
   }
 

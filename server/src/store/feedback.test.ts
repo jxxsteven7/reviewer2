@@ -343,7 +343,7 @@ describe('what became of the feedback', () => {
 
   test('is read by view, and counted by status and by kind within a view', () => {
     const feedback = store();
-    for (const kind of ['idea', 'bug', 'idea', 'bug', 'idea', 'words'] as const) {
+    for (const kind of ['idea', 'bug', 'idea', 'bug', 'idea', 'words', 'bug', 'idea'] as const) {
       feedback.add(entry({ kind, publicIssue: true }));
     }
     feedback.setIssue(2, 42);
@@ -351,25 +351,34 @@ describe('what became of the feedback', () => {
     adopt(4);
     feedback.close(5);
     feedback.delete(6);
+    // Resolved by a pull request and thanked, both; and resolved, then closed.
+    feedback.resolve(7, 51);
+    adopt(7);
+    feedback.resolve(8, 52);
+    feedback.close(8);
     const ids = (view: FeedbackView, kind: FeedbackKind | null = null) =>
       feedback.latest(10, undefined, kind, view).map(({ id }) => id);
-    expect(ids('all')).toEqual([6, 5, 4, 3, 2, 1]);
-    expect(ids('open')).toEqual([4, 3, 2, 1]);
+    expect(ids('all')).toEqual([8, 7, 6, 5, 4, 3, 2, 1]);
+    // Open is what still waits: new, or published as an issue.
+    expect(ids('open')).toEqual([2, 1]);
     expect(ids('new')).toEqual([1]);
     expect(ids('issue')).toEqual([2]);
-    expect(ids('resolved')).toEqual([3]);
-    expect(ids('thanked')).toEqual([4]);
-    expect(ids('closed')).toEqual([5]);
+    // Resolved and thanked go by the facts, and overlap; closed feedback is closed alone.
+    expect(ids('resolved')).toEqual([7, 3]);
+    expect(ids('thanked')).toEqual([7, 4]);
+    expect(ids('closed')).toEqual([8, 5]);
     expect(ids('trash')).toEqual([6]);
-    expect(ids('open', 'idea')).toEqual([3, 1]);
-    expect(ids('open', 'bug')).toEqual([4, 2]);
+    expect(ids('open', 'idea')).toEqual([1]);
+    expect(ids('open', 'bug')).toEqual([2]);
+    expect(ids('resolved', 'bug')).toEqual([7]);
     expect(ids('trash', 'idea')).toEqual([]);
-    expect(feedback.latest(1, 3, 'idea', 'open').map(({ id }) => id)).toEqual([1]);
-    expect(feedback.statuses()).toEqual({ new: 1, issue: 1, resolved: 1, thanked: 1, closed: 1, trash: 1 });
-    expect(feedback.statuses('idea')).toEqual({ new: 1, issue: 0, resolved: 1, thanked: 0, closed: 1, trash: 0 });
+    expect(feedback.latest(1, 7, 'bug', 'thanked').map(({ id }) => id)).toEqual([4]);
+    expect(feedback.statuses()).toEqual({ new: 1, issue: 1, resolved: 2, thanked: 2, closed: 2, trash: 1 });
+    expect(feedback.statuses('idea')).toEqual({ new: 1, issue: 0, resolved: 1, thanked: 0, closed: 2, trash: 0 });
     expect(feedback.statuses('game')).toEqual({ new: 0, issue: 0, resolved: 0, thanked: 0, closed: 0, trash: 0 });
-    expect(feedback.kinds()).toEqual({ idea: 3, bug: 2, words: 1 });
-    expect(feedback.kinds('open')).toEqual({ idea: 2, bug: 2 });
+    expect(feedback.kinds()).toEqual({ idea: 4, bug: 3, words: 1 });
+    expect(feedback.kinds('open')).toEqual({ idea: 1, bug: 1 });
+    expect(feedback.kinds('resolved')).toEqual({ idea: 1, bug: 1 });
     expect(feedback.kinds('trash')).toEqual({ words: 1 });
     expect(feedback.kinds('new')).toEqual({ idea: 1 });
   });

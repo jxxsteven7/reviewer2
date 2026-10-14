@@ -42,7 +42,7 @@ export const EXTENSION_SECONDS = 30;
 
 // The clue length that a room may choose, and the one it starts with, by the room's language.
 export const CLUE_LENGTH: Record<Language, { min: number; max: number; default: number }> = {
-  zh: { min: 1, max: 10, default: 4 },
+  zh: { min: 1, max: 10, default: 2 },
   en: { min: 1, max: 3, default: 1 },
 };
 

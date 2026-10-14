@@ -24,7 +24,10 @@ import { viewFor } from './view';
 // unrevealed card, another group's chat, or the cards another group is choosing. Half the games
 // play under the free guess rule with time limits, and time runs out on some of their turns.
 
-const WORDS = Array.from({ length: 25 }, (_, i) => `Term${i}`);
+// The words have no digits, which every clue with a digit would have a character in common with.
+const letters = (n: number): string =>
+  (n < 26 ? '' : letters(Math.floor(n / 26) - 1)) + String.fromCharCode(97 + (n % 26));
+const WORDS = Array.from({ length: 25 }, (_, i) => `Term${letters(i)}`);
 const GUESSERS: Actor[] = TEAMS.flatMap((team) => [guesser(team, `${team}-ann`), guesser(team, `${team}-bob`)]);
 const ACTORS: Actor[] = [captain('red'), captain('blue'), ...GUESSERS, spectator];
 const COUNTS: ClueCount[] = [0, 1, 2, 3, 4, 9, 'unlimited'];
@@ -44,7 +47,7 @@ function randomStep(state: KeywordsState, rng: Rng, step: number, at: number): O
   const action = right ? (state.phase === 'clue' ? 0 : pick([1, 1, 1, 2, 3, 3], rng)) : rng.int(5);
   switch (action) {
     case 0: {
-      const word = rng.int(5) === 0 ? pick(['', 'two words', ...WORDS], rng) : `Clue${step}`;
+      const word = rng.int(5) === 0 ? pick(['', 'two words', ...WORDS], rng) : `Clue${letters(step)}`;
       return giveClue(state, actor, { ...moment, word, count: pick(COUNTS, rng) }, at);
     }
     case 1:

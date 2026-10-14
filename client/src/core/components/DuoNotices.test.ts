@@ -43,6 +43,8 @@ function room(duos: DuoNotice[]): RoomView {
     match: null,
     streaks: [],
     duos,
+    agentsPlayed: false,
+    points: [],
     data: {},
   };
 }

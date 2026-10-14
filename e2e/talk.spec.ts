@@ -1,6 +1,7 @@
 import type { Browser, Locator, Page } from '@playwright/test';
 import { otherTeam } from '@reviewer2/shared';
 import {
+  chooseCard,
   closeSheet,
   expect,
   expectOwnGroupOnly,
@@ -52,6 +53,9 @@ async function groupOfTwo(browser: Browser) {
   return { table, team, other, fay, fayStates, student, name, states: [...table.everyone, fayStates] };
 }
 
+// Longer than a tap waits for the next one (useCardGestures.ts).
+const TAP_WAIT = 400;
+
 // The choosers of a card hang on it as avatars, and the card's accessible name says who they are.
 const chosenBy = (names: string) => new RegExp(`, chosen by ${names}$`);
 
@@ -92,51 +96,60 @@ test("a group's students see each other's choices, and nobody else does", async 
   for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
 });
 
-test("a group's students mark cards for each other, in either turn, and nobody else sees the marks", async ({
+test("a group's students mark cards for each other with taps, which their PI reads and nobody else sees", async ({
   browser,
 }) => {
   const { table, team, other, fay, student, states } = await groupOfTwo(browser);
   const captain = table.captains[team];
-  const tool = (page: Page, name: string) => page.locator('.mark-tools').getByRole('button', { name, exact: true });
-  // Before the clue, choosing is off, and a tap marks a card, as one of the group's own at first.
-  await expect(tool(student, text.game.tools.choose)).toBeDisabled();
-  await expect(tool(student, text.game.tools.ours)).toHaveAttribute('aria-pressed', 'true');
-  // Each tool is 44 px high to the finger: a tap just above or below it, on the pill's padding,
-  // lands on it.
-  await student.locator('.mark-tools').scrollIntoViewIfNeeded();
-  const reach = await student.locator('.mark-tools .tool').evaluateAll((tools) =>
-    tools.map((button) => {
-      const { left, right, top, bottom } = button.getBoundingClientRect();
-      const x = (left + right) / 2;
-      return [top - 1, bottom + 1].every((y) => button.contains(document.elementFromPoint(x, y)));
-    }),
-  );
-  expect(reach).toEqual([true, true, true, true]);
+  // No tools to pick: the line under the board says which taps do what, and one tap chooses
+  // nothing before the group's clue.
+  await expect(student.locator('.mark-tools')).toHaveCount(0);
+  await expect(student.locator('.play .gestures')).toHaveText(text.game.gestures.mark);
   const own = await keyCard(captain, team);
   const theirs = await keyCard(captain, other);
+  const paper = await keyCard(captain, 'neutral');
   await card(student, own).click();
+  // A tap counts once the time for another has passed.
+  await student.waitForTimeout(TAP_WAIT);
+  await expect(card(student, own)).not.toHaveClass(/noted|selected/);
+  // Two taps: one of the group's own.
+  await card(student, own).dblclick();
   await expect(card(fay, own)).toHaveClass(new RegExp(`note-${team}`));
   await expect(card(fay, own)).toHaveAttribute('aria-label', /, marked as ours$/);
+  // The group's PI reads it, small in the corner, on the card's own tint; the other PI doesn't.
+  await expect(card(captain, own).locator('.note.quiet')).toBeVisible();
+  await expect(card(captain, own)).toHaveAttribute('aria-label', /, marked as ours$/);
+  await expect(card(captain, own)).not.toHaveClass(/noted/);
+  await expect(table.captains[other].locator('.board .note')).toHaveCount(0);
 
-  // Fay marks another card as the other group's, and the student takes the first mark off again.
-  await tool(fay, text.game.tools.theirs).click();
-  await card(fay, theirs).click();
+  // Fay marks another card as the other group's with three taps, and a third as maybe Reviewer 2
+  // by holding it down; the student takes the first mark off again with two more taps.
+  await card(fay, theirs).click({ clickCount: 3 });
   await expect(card(student, theirs)).toHaveClass(new RegExp(`note-${other}`));
-  await card(student, own).click();
+  const box = await card(fay, paper).boundingBox();
+  if (!box) throw new Error('the card has no box');
+  await fay.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await fay.mouse.down();
+  await fay.waitForTimeout(700);
+  await fay.mouse.up();
+  await expect(card(student, paper)).toHaveClass(/note-r2/);
+  await card(student, own).dblclick();
   await expect(card(fay, own)).not.toHaveClass(/noted/);
+  // From the keyboard, 1 marks the card that has the focus as one of the group's own.
+  await card(student, own).focus();
+  await student.keyboard.press('1');
+  await expect(card(fay, own)).toHaveClass(new RegExp(`note-${team}`));
 
-  // The other group's marks are its own; no PI, spectator or screen has marks or the tools.
-  await card(table.guessers[other], own).click();
-  await expect(card(table.guessers[other], own)).toHaveClass(new RegExp(`note-${other}`));
-  await expect(card(student, own)).not.toHaveClass(/noted/);
-  for (const page of [captain, table.captains[other], table.spectator, table.screen]) {
-    await expect(page.locator('.board .noted')).toHaveCount(0);
-    await expect(page.locator('.mark-tools')).toHaveCount(0);
-  }
+  // The other group's marks are its own; no spectator or screen has marks.
+  await card(table.guessers[other], paper).dblclick();
+  await expect(card(table.guessers[other], paper)).toHaveClass(new RegExp(`note-${other}`));
+  await expect(card(student, paper)).toHaveClass(/note-r2/);
+  for (const page of [table.spectator, table.screen]) await expect(page.locator('.board .note')).toHaveCount(0);
 
-  // The group's guess phase comes: choosing is back, and the marks stay.
+  // The group's guess phase comes: one tap chooses, and the marks stay.
   await giveClue(captain, 'Hint', 2, 'en');
-  await expect(tool(student, text.game.tools.choose)).toHaveAttribute('aria-pressed', 'true');
+  await expect(student.locator('.guess-bar .hint')).toHaveText(text.game.gestures.choose);
+  await chooseCard(student, theirs);
   await expect(card(student, theirs)).toHaveClass(new RegExp(`note-${other}`));
   for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
 });
@@ -215,4 +228,94 @@ test("a student's half-written line outlives the sheet's closing and the page's 
   await expect(student.locator('.chat-panel')).toBeVisible();
   await chatOf(student);
   await expect(input()).toHaveValue('Second row, on the');
+});
+
+test('after the game the group talks it over, its PI too, and the review shows it last', async ({ browser }) => {
+  const { table, team, other, student, name, states } = await groupOfTwo(browser);
+  const chat = text.game.chat;
+  const chair = table.captains.red;
+  await chair.getByRole('button', { name: text.game.end }).click();
+  await chair.locator('[role=dialog]').getByRole('button', { name: text.game.end }).click();
+  for (const page of [...Object.values(table.captains), ...Object.values(table.guessers)]) {
+    await expect(page.locator('.letter').first()).toBeVisible();
+  }
+
+  // The student and the PI both write; the other group sees none of it.
+  const captain = table.captains[team];
+  for (const [page, line] of [
+    [student, 'That was close'],
+    [captain, 'Should have said Gradient'],
+  ] as const) {
+    const thread = await chatOf(page);
+    await expect(thread).toContainText(chat.review);
+    await page.getByLabel(chat.input).fill(line);
+    await page.getByLabel(chat.input).press('Enter');
+    await expect(page.locator('.chat .message.own .text').last()).toHaveText(line);
+    if (isPhone(page)) await closeSheet(page);
+  }
+  const thread = await chatOf(student);
+  await expect(thread.locator('.turn').last().locator('.turn-title')).toHaveText(chat.after);
+  await expect(thread.locator('.turn').last().locator('.message .text')).toHaveText([
+    'That was close',
+    'Should have said Gradient',
+  ]);
+  if (isPhone(student)) await closeSheet(student);
+  await expect(await chatOf(table.guessers[other])).not.toContainText('That was close');
+  if (isPhone(table.guessers[other])) await closeSheet(table.guessers[other]);
+  for (const page of [table.spectator, table.screen]) {
+    await expect(page.locator('.open-chat, .chat-panel')).toHaveCount(0);
+  }
+
+  // The review ends with it, under its own heading.
+  await student.getByRole('button', { name: text.game.review }).click();
+  const talk = student.locator('[role=dialog] .talk');
+  await expect(talk.locator('h3')).toHaveText(text.replay.talk);
+  await expect(talk.locator('.line .name')).toHaveText([name, table.names.captains[team]]);
+  for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
+});
+
+test('on a phone the chat brings up the keyboard only while it is empty, and keeps the line above it', async ({
+  browser,
+}) => {
+  const { student, fay } = await groupOfTwo(browser);
+  test.skip(!isPhone(student), 'The chat is a sheet on a phone alone.');
+  const input = (page: Page) => page.getByLabel(text.game.chat.input);
+  // Nothing to read yet: the input takes the focus, which brings the keyboard up.
+  await student.locator('.open-chat').click();
+  await expect(input(student)).toBeFocused();
+  await closeSheet(student);
+  await chatOf(fay);
+  for (let line = 1; line <= 12; line += 1) {
+    await input(fay).fill(`Line ${line}`);
+    await input(fay).press('Enter');
+    // One at a time: a line sent while the one before is on its way waits in the input.
+    await expect(fay.locator('.chat .message.own')).toHaveCount(line);
+  }
+  await expect(fay.locator('.chat .message.own')).toHaveCount(12);
+  // Messages to read: the sheet itself takes the focus, and no keyboard comes up.
+  await student.locator('.open-chat').click();
+  const sheet = student.locator('[role=dialog]');
+  await expect(sheet).toBeFocused();
+  await expect(input(student)).not.toBeFocused();
+  // The keyboard comes up as the student taps the input, and takes the bottom of the screen: the
+  // sheet keeps above it, the input in sight at its foot and the newest message above it, while the
+  // messages scroll.
+  await input(student).click();
+  // The keyboard takes its time, longer than the page waits before it looks at the list again.
+  await student.waitForTimeout(600);
+  const size = student.viewportSize();
+  if (!size) throw new Error('the page has no viewport');
+  const left = Math.round(size.height * 0.55);
+  await student.setViewportSize({ width: size.width, height: left });
+  await expect(async () => {
+    const box = await input(student).boundingBox();
+    expect(box).not.toBeNull();
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(left);
+    expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+  }).toPass();
+  const list = sheet.locator('.turns');
+  expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await expect(sheet.locator('.message').last()).toBeInViewport();
+  await student.setViewportSize(size);
+  await expect(input(student)).toBeInViewport();
 });

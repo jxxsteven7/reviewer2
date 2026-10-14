@@ -164,7 +164,7 @@ describe('the record of a game of the team word guessing game', () => {
       language: 'en',
       fields: '["general"]',
       version: 'test',
-      rules: 2,
+      rules: 3,
       words: expect.stringMatching(/^[0-9a-f]{16}$/),
       ordered: 1,
     });
@@ -250,6 +250,113 @@ describe('the record of a game of the team word guessing game', () => {
       by: fayId,
       type: 'keywords:say',
     });
+  });
+});
+
+describe('what the groups say after the end of a game', () => {
+  // Ann chairs and is red's PI, Bob plays for red; Cat and Dan, guests, for blue. Ann and Bob have
+  // accounts.
+  async function seated() {
+    server = await startServer({ games: [keywordsGame] });
+    const anns = new Browser(server.url);
+    const bobs = new Browser(server.url);
+    expect((await anns.register('Ann')).body).toEqual({ ok: true });
+    expect((await bobs.register('Bob')).body).toEqual({ ok: true });
+    const ann = track(await anns.connect());
+    const reply = await ann.send('room:create', { game: 'keywords', language: 'en', fields: ['general'] });
+    if (!reply.ok) throw new Error(reply.error);
+    const join = async (client: TestClient, name?: string) => {
+      track(client);
+      expect(await client.send('room:join', { code: reply.code, play: true, ...(name ? { name } : {}) })).toMatchObject(
+        {
+          ok: true,
+        },
+      );
+      return client;
+    };
+    const bob = await join(await bobs.connect());
+    const cat = await join(await TestClient.connect(server.url), 'Cat');
+    const dan = await join(await TestClient.connect(server.url), 'Dan');
+    const everyone = [ann, bob, cat, dan];
+    await ann.waitFor((state) => state.players.length === 4);
+    for (const [client, team, role] of [
+      [ann, 'red', 'captain'],
+      [bob, 'red', 'guesser'],
+      [cat, 'blue', 'captain'],
+      [dan, 'blue', 'guesser'],
+    ] as const) {
+      expect(await client.send('keywords:seat', { team, role })).toEqual({ ok: true });
+    }
+    return { ann, bob, cat, dan, everyone, bobs };
+  }
+
+  async function playAndEnd(ann: TestClient, everyone: TestClient[]) {
+    await ann.waitFor((state) => (state.data as KeywordsRoomData).startProblems.length === 0, 'ready');
+    expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: true });
+    for (const client of everyone) await client.waitFor((state) => state.phase === 'playing', 'the game');
+    const { gameId } = board(ann);
+    expect(await ann.send('room:end', { gameId })).toEqual({ ok: true });
+    for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
+    return gameId;
+  }
+
+  const logOf = (gameId: string) =>
+    JSON.parse(kept().find((game) => game.gameId === gameId)?.log as string) as GameLogData;
+  const talkIn = (log: GameLogData) =>
+    log.entries.slice(log.entries.findIndex((entry) => entry.type === 'end') + 1).map(({ by, type, said }) => ({
+      by,
+      type,
+      said,
+    }));
+
+  test('go into its record after its end, when the chair plays again or the room closes', async () => {
+    const { ann, bob, dan, everyone, bobs } = await seated();
+    const first = await playAndEnd(ann, everyone);
+    await until(() => kept().length === 1, 'the record');
+    expect(talkIn(logOf(first))).toEqual([]);
+    const say = (client: TestClient, text: string, gameId = first) => client.send('keywords:say', { gameId, text });
+    expect(await say(bob, 'gg')).toEqual({ ok: true });
+    expect(await say(ann, 'Well played')).toEqual({ ok: true });
+    expect(await say(dan, 'Close one')).toEqual({ ok: true });
+    // Kept as the room leaves the game behind, once.
+    expect(talkIn(logOf(first))).toEqual([]);
+    expect(await ann.send('room:again', { gameId: first })).toEqual({ ok: true });
+    const talk = [
+      { by: bob.state?.me, type: 'keywords:say', said: 'gg' },
+      { by: ann.state?.me, type: 'keywords:say', said: 'Well played' },
+      { by: dan.state?.me, type: 'keywords:say', said: 'Close one' },
+    ];
+    expect(talkIn(logOf(first))).toEqual(talk);
+
+    // The next game, which the room closes after its end.
+    const second = await playAndEnd(ann, everyone);
+    await until(() => kept().length === 2, 'the second record');
+    expect(await say(bob, 'Again?', second)).toEqual({ ok: true });
+    expect(await ann.send('room:close')).toEqual({ ok: true });
+    expect(talkIn(logOf(second))).toEqual([{ by: bob.state?.me, type: 'keywords:say', said: 'Again?' }]);
+    expect(talkIn(logOf(first))).toEqual(talk);
+
+    // Bob deletes his account: what he said goes, as from the rest of the log.
+    expect((await bobs.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
+    expect(talkIn(logOf(first))).toEqual([
+      { by: bob.state?.me, type: 'keywords:say', said: undefined },
+      ...talk.slice(1),
+    ]);
+    expect(talkIn(logOf(second))).toEqual([{ by: bob.state?.me, type: 'keywords:say', said: undefined }]);
+  });
+
+  test('leave out what an account deleted before the room leaves the game said', async () => {
+    const { ann, bob, everyone, bobs } = await seated();
+    const gameId = await playAndEnd(ann, everyone);
+    await until(() => kept().length === 1, 'the record');
+    expect(await bob.send('keywords:say', { gameId, text: 'Bye' })).toEqual({ ok: true });
+    expect((await bobs.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
+    expect(await ann.send('keywords:say', { gameId, text: 'Bye, Bob' })).toEqual({ ok: true });
+    expect(await ann.send('room:again', { gameId })).toEqual({ ok: true });
+    expect(talkIn(logOf(gameId))).toEqual([
+      { by: bob.state?.me, type: 'keywords:say', said: undefined },
+      { by: ann.state?.me, type: 'keywords:say', said: 'Bye, Bob' },
+    ]);
   });
 });
 

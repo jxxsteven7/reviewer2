@@ -59,6 +59,10 @@
       "join": "Join",
       "refresh": "Refresh"
     },
+    "friendsPlaying": {
+      "title": "Friends playing",
+      "and": ", "
+    },
     "seats": {
       "waiting": "You're still in room {code} (waiting for the game to start)",
       "playing": "You're still in room {code} (game in progress)",
@@ -316,24 +320,26 @@
     "unlimited": "No limit",
     "sendClue": "Give the clue",
     "targetsHint": "First tap the cards this clue is meant for, and the number follows. Nobody sees them during the game; the replay shows them.",
+    "tips": "Tips",
     "targetsMarked": "{count} card marked: {words}. Everyone sees it after the game. | {count} cards marked: {words}. Everyone sees them after the game.",
     "quoted": "“{word}”",
     "onBoard": "{word} is on the board. A clue can't be a word on the board, or part of one.",
     "formOnBoard": "{word} is on the board, and this clue repeats a form of it that the word lists give. This room's clue check doesn't allow it.",
-    "characterOnBoard": "This clue has a Chinese character in common with {word}, which is on the board. This room's clue check doesn't allow it.",
+    "characterOnBoard": "This clue has a character in common with {word}, which is on the board: a Chinese character, a number however it is written, or the English or the pinyin of one of its characters. This room's clue check doesn't allow it.",
     "insideOnBoard": "This clue contains {word}, which is on the board. This room's clue check doesn't allow it.",
     "similar": "This may be another form of a word still on the board: {words}. The rules don't allow that, but the check can't be sure, so it's your call.",
     "formWarning": "This clue repeats a form that the word lists give of a word still on the board: {words}. This room's clue check leaves it to you.",
-    "characterWarning": "This clue has a Chinese character in common with a word still on the board: {words}. It's your call.",
+    "characterWarning": "This clue has a character in common with a word still on the board, as a Chinese character, a number however it is written, or the English or the pinyin of a character: {words}. It's your call.",
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
-    "pick": "Tap a card to choose it. Your group sees your choice; reveal it once you agree.",
-    "tools": {
-      "label": "A tap on a card",
-      "choose": "Choose",
-      "ours": "Ours",
-      "theirs": "Theirs",
-      "r2": "R2?",
-      "hint": "Tap a card to mark it, and again to clear it. Only your group's students see the marks."
+    "gestures": {
+      "choose": "Tap: choose · double-tap: ours · triple-tap: theirs · hold: R2? · or keys 1, 2, 3",
+      "mark": "Double-tap: ours · triple-tap: theirs · hold: R2? · or keys 1, 2, 3 · the same again clears it",
+      "keys": "Key 1 marks it as ours, 2 as theirs, 3 as maybe Reviewer 2; the same key again clears the mark.",
+      "markAs": {
+        "ours": "Mark {word} as ours",
+        "theirs": "Mark {word} as theirs",
+        "r2": "Mark {word} as maybe Reviewer 2"
+      }
     },
     "chosenBy": "chosen by {names}",
     "noted": {
@@ -373,6 +379,16 @@
         "3": "Note from the editors: {name}'s manuscript is past due.",
         "4": "{name} raced the deadline. The deadline won.",
         "5": "The portal has closed. {name}'s clue is still in drafts."
+      },
+      "count": "{line} (×{count})"
+    },
+    "hero": {
+      "lines": {
+        "1": "{name} submitted with three seconds to spare. Accepted!",
+        "2": "Deadline Hero {name}: three seconds left, and nailed it!",
+        "3": "Note from the editors: {name}'s manuscript arrived at 23:59:58.",
+        "4": "{name} raced the deadline, and won this time.",
+        "5": "{name}: “Submitted!” The portal closed right behind them."
       },
       "count": "{line} (×{count})"
     },
@@ -470,7 +486,9 @@
       "send": "Send",
       "count": "{count}/{max}",
       "readOnly": "As the PI you can read your group's chat but not write in it: the clue is all a PI may say.",
-      "over": "The game is over, so nobody can write any more.",
+      "over": "After the game, only those who played for the group in it can write here.",
+      "review": "The game is over: talk it over with your group, the PI too, until the next game.",
+      "after": "After the game",
       "you": "You",
       "someone": "A player who left"
     },
@@ -507,7 +525,8 @@
     "timedOut": "Time ran out, and the turn ended.",
     "someone": "A player who left",
     "won": "The {group} won.",
-    "withdrawn": "The chair withdrew the game."
+    "withdrawn": "The chair withdrew the game.",
+    "talk": "Talking it over"
   },
   "settings": {
     "title": "Rules of this room",
@@ -596,7 +615,8 @@
       "resubmit": "Rejected again. Fine, we'll try another venue.",
       "first_author": "Carry me and I'll make you first author.",
       "coauthor": "Same coauthors on the next one?",
-      "all_nighter": "Don't leave, we're pulling an all-nighter."
+      "all_nighter": "Don't leave, we're pulling an all-nighter.",
+      "mine_mine": "mine mine"
     },
     "bubble": "{name}: {phrase}",
     "mute": "Mute the sounds",
@@ -718,14 +738,21 @@
     "request_declined": "Your request was declined recently. Try again in a week.",
     "friend_requests_full": "Too many requests are waiting for an answer. Wait for some of them.",
     "friend_limited": "You have sent enough friend requests for today. Try again tomorrow.",
+    "friend_note_too_long": "Use at most 50 characters.",
+    "friend_alias_invalid": "That alias has characters in it that don't show.",
+    "friend_alias_too_long": "Use at most 20 characters.",
     "friends_full": "One of you has as many friends as an account can have.",
     "no_such_request": "There is no such request.",
-    "not_friends": "Only friends can be invited.",
+    "not_friends": "You aren't friends with that account.",
     "friend_offline": "That friend isn't online right now.",
     "friend_in_room": "That friend is in this room already.",
     "friend_removed": "The chair removed that friend from this room, so they can't be invited back.",
     "invite_cooldown": "You invited that friend a moment ago. Wait a minute.",
     "invitation_expired": "This invitation has lapsed. Ask for another one, or join by the room's number.",
+    "friend_not_in_room": "That friend isn't in a room right now.",
+    "already_in_room": "You're in that room already.",
+    "join_ask_pending": "You've asked them already. Wait for their answer.",
+    "join_ask_limited": "You've asked to join too often this hour. Try again later.",
     "no_such_profile": "There is no such page. The account may have been deleted.",
     "self_like": "You can't like your own page.",
     "like_limited": "You have liked enough pages for today. Try again tomorrow.",
@@ -822,18 +849,20 @@
     },
     "revealTitle": "Revealing a card",
     "reveal": "One of your group's cards: go on. An irrelevant paper or a card of the other group: your turn ends, and the other group's card counts for them. Reviewer 2: your paper is rejected, and your group loses at once.",
+    "marks": "A group's students may mark the cards still face down for each other, at any time: double-tap a card for one of ours, triple-tap it for one of theirs, hold it for maybe Reviewer 2 (with the keyboard: 1, 2 and 3), and do the same again to clear the mark. The group's students and its PI see the marks; the PI can't set them.",
     "clueTitle": "Clues",
     "clue": {
       "zh": "A clue is one word of at most one character: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation such as GPU is fine, but not the English for a word on the board, nor its pinyin. | A clue is one word of at most {count} characters: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation such as GPU is fine, but not the English for a word on the board, nor its pinyin.",
       "en": "A clue is one word. | A clue has at most {count} words."
     },
     "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
+    "clueCharacter": "A number is the same character however it is written: 6, 六 and six. So are the English of a character and its pinyin, of three letters or more: ball and qiu are the same character as 球. With 大 on the board, big and great count as 大 too.",
     "clueSound": "In a Chinese room, don't give a clue that sounds like a word on the board, such as 鸡音 (jīyīn) for 基因 (jīyīn, gene). The game doesn't check this: it's up to everyone to play fair.",
     "clueQuiet": "While the students guess, neither group's PI may send a quick reaction, nor may anyone who has been a PI in this game.",
     "clueTargets": "When giving a clue, the PI may tap cards to mark the ones it is meant for, and the number follows. Nobody sees the marks during the game; afterwards, the clue log and the replay show them.",
     "clueRule": {
-      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a Chinese character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
-      "loose": "This room's clue check is loose: other forms of a word on the board, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."
+      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
+      "loose": "This room's clue check is loose: other forms of a word on the board, characters in common with one, and clues that contain one only bring a warning, and the PI decides."
     },
     "timeTitle": "Time",
     "time": "The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.",
@@ -904,6 +933,7 @@
         "best_paper": "Best Paper Award",
         "black_hole": "Game black hole",
         "missed_deadline": "Forgot to Submit",
+        "deadline_hero": "Deadline Hero",
         "opening_record": "Opened the Scoring",
         "heavenly_hand": "Heavenly Hand"
       },
@@ -929,22 +959,22 @@
         "friend": "Friend"
       },
       "record": "Record",
-      "recordTable": {
+      "recordStats": {
         "games": "Games",
-        "wins": "Won",
         "rate": "Win rate",
-        "ordinary": "Ordinary games",
-        "inMatches": "Games in matches",
-        "total": "Total",
-        "matches": "Matches: {played} · Finished first: {won}",
-        "noMatches": "No match finished yet."
+        "matches": "Matches",
+        "won": "won {won}",
+        "ordinary": "Ordinary games: {games}, won {wins}",
+        "inMatches": "In matches: {games}, won {wins}"
       },
       "noRecords": "No games yet. The games that you finish in a seat while you are logged in are kept here.",
       "recent": "The last 20 games",
       "recordsAgain": "Try again",
       "recordLine": "{side}, {role}",
+      "ordinaryTag": "Ordinary game",
       "matchTag": "Match · game {game}/{games}",
       "watchAgain": "Watch again",
+      "watchAgainOf": "Watch the game of {when} again",
       "recentMatches": "The last 20 matches",
       "matchLine": "Place {rank} of {players} · Total: {score}",
       "matchGames": "{games}-game match",
@@ -986,9 +1016,12 @@
   },
   "friends": {
     "title": "Friends",
-    "intro": "Friends see whether you're online and which public room you're in, and can invite you into theirs.",
+    "intro": "Friends see whether you're online, which room you're in (without the number of a private one) and whether a game is on there, can invite you into theirs, and can ask to join yours.",
     "addLabel": "Their username",
     "addSubmit": "Send a request",
+    "noteLabel": "A line for them (optional)",
+    "noteCount": "{count}/{max}",
+    "noteQuoted": "“{note}”",
     "requestSent": "The request has been sent.",
     "nowFriends": "You're friends now.",
     "incoming": "Requests for you",
@@ -998,6 +1031,12 @@
     "withdraw": "Withdraw",
     "remove": "Remove",
     "removeFriend": "Remove friend",
+    "aliasEdit": "Edit alias",
+    "aliasTitle": "Alias for {name}",
+    "aliasLabel": "Alias",
+    "aliasHint": "Only you see it. Leave it empty to remove it. At most 20 characters.",
+    "aliasSave": "Save",
+    "aliasWithName": "{alias} ({username})",
     "removeConfirm": "Remove {name} from your friends? You can send a new request later.",
     "none": "No friends yet. Add one by username, or tap a player's avatar in a room.",
     "online": "online",
@@ -1018,7 +1057,16 @@
     "invitation": "{name} invited you to room {code}",
     "invitationJoin": "Join",
     "invitationIgnore": "Ignore",
+    "askJoin": "Ask to join",
+    "asked": "Asked",
+    "askSent": "Asked. If they invite you, you'll see it here.",
+    "askNotice": "{name} would like to join",
+    "askInvite": "Invite",
+    "askIgnore": "Ignore",
+    "askInvited": "Invitation sent to {name}.",
     "addFromRoom": "Add friend",
+    "addTitle": "Add {name} as a friend",
+    "requestPending": "Request sent",
     "requestsWaiting": "{count} request is waiting for your answer. | {count} requests are waiting for your answer."
   },
   "ranks": {
@@ -1116,6 +1164,7 @@
       "best_paper": "Awarded at the end of a match to the player with the highest total. Players level at the top all get it; when everyone is level, nobody does.",
       "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it.",
       "missed_deadline": "For a PI whose time for a clue ran out before they gave one: the paper was written, it just never left the desktop. Earned again with every missed deadline, in each game that ends by itself while you are logged in and in your seat.",
+      "deadline_hero": "For a PI who gives a clue in the last 3 seconds of their time, when it finds at least one of the group's cards, and for a student who reveals one of the group's cards in the last 3 seconds of the guesses: submitted at 23:59:57, and accepted. Earned again in every turn that makes you one, in each game with time limits that ends by itself while you are logged in and in your seat.",
       "opening_record": "For everyone in a group whose very first clue of a game names 3 cards or more, and whose students then find that many of the group's cards before revealing anything else. The lab's first paper, accepted without a single revision.",
       "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all."
     },

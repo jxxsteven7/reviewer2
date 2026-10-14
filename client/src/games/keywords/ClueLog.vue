@@ -6,10 +6,10 @@ import { formatList } from '../../core/i18n';
 
 // Every clue so far, newest first, with the cards revealed after it, like a list of references. A
 // turn whose time ran out says so: before the clue, it has none, which is all the log says of a
-// missed deadline. A pause, its end and an extension are noted in short under the turn they came
-// in, which may have no clue yet. During a pause there is no board, so a revealed card shows its
-// color alone. Once the game is over, a clue whose PI marked the cards it was meant for names
-// them, and how many of them the group found.
+// missed deadline; a deadline hero, called out at the time, isn't noted. A pause, its end and an
+// extension are noted in short under the turn they came in, which may have no clue yet. During a
+// pause there is no board, so a revealed card shows its color alone. Once the game is over, a clue
+// whose PI marked the cards it was meant for names them, and how many of them the group found.
 const props = defineProps<{ game: KeywordsView }>();
 const { t, locale } = useI18n();
 const INFINITY = '\u221e';
@@ -25,7 +25,9 @@ const turns = computed(() => {
     return entry;
   };
   for (const record of props.game.history) of(record.turn).record = record;
-  for (const event of props.game.events) if (event.kind !== 'missed') of(event.turn).events.push(event);
+  for (const event of props.game.events) {
+    if (event.kind !== 'missed' && event.kind !== 'hero') of(event.turn).events.push(event);
+  }
   return [...found]
     .sort(([a], [b]) => b - a)
     .map(([turn, entry]) => ({ turn, ...entry, team: entry.record?.team ?? teamOf(turn) }));

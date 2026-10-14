@@ -8,10 +8,14 @@ import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state'
 //   cards only, and the other cards carry no color at all, not even an empty one, so that
 //   nothing gives the key away in the browser's developer tools. Once the game is over,
 //   everyone sees every color.
+// - Captains also get the English meanings of the characters of each card that is still face
+//   down, while the game is on, for the clue check on their screen: nobody else gives a clue, and
+//   they are many.
 // - A group's chat goes to its own captain and guessers, and the cards that its guessers have
 //   chosen go to them while it is the group's turn. Nobody else gets either: the keys are absent.
-// - A group's marks go to its guessers alone, in either group's turn, until the game is over. Its
-//   captain, who sees every color, doesn't get them, nor does anyone else.
+// - A group's marks go to its guessers and its captain, in either group's turn, until the game is
+//   over, so that the captain sees what the students make of the board; the captain only reads
+//   them. Nobody else gets them.
 // - While the game is paused, nobody gets the board at all, the captains and the screens
 //   included: the cards are an empty list, and the clock shows the time the phase had left.
 // - The cards that a captain marked as the ones a clue was meant for stay the captain's secret
@@ -22,6 +26,7 @@ import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state'
 // long the current phase has left.
 export function viewFor(state: KeywordsState, viewer: Seat, at: number): KeywordsView {
   const showKey = viewer.role === 'captain' || state.phase === 'over';
+  const glossed = viewer.role === 'captain' && state.phase !== 'over';
   const paused = state.pause !== null;
   const view: KeywordsView = {
     gameId: state.gameId,
@@ -31,13 +36,14 @@ export function viewFor(state: KeywordsState, viewer: Seat, at: number): Keyword
     startingTeam: state.startingTeam,
     cards: paused
       ? []
-      : state.cards.map(({ word, color, revealed, translations, forms, pinyin }): CardView => ({
+      : state.cards.map(({ word, color, revealed, translations, forms, pinyin, glosses }): CardView => ({
           word,
           revealed,
           ...(revealed || showKey ? { color } : {}),
           ...(translations ? { translations: [...translations] } : {}),
           ...(forms ? { forms: [...forms] } : {}),
           ...(pinyin ? { pinyin } : {}),
+          ...(glossed && glosses && !revealed ? { glosses: [...glosses] } : {}),
         })),
     paused,
     remaining: { red: remaining(state.cards, 'red'), blue: remaining(state.cards, 'blue') },
@@ -53,9 +59,7 @@ export function viewFor(state: KeywordsState, viewer: Seat, at: number): Keyword
   if (viewer.team !== null) {
     view.chat = state.chat[viewer.team].map((message) => ({ ...message }));
     if (viewer.team === state.team) view.selections = state.selections.map((selection) => ({ ...selection }));
-    if (viewer.role === 'guesser' && state.phase !== 'over') {
-      view.marks = state.marks[viewer.team].map((mark) => ({ ...mark }));
-    }
+    if (state.phase !== 'over') view.marks = state.marks[viewer.team].map((mark) => ({ ...mark }));
   }
   return view;
 }

@@ -15,8 +15,12 @@ export type ClueProblem =
 //   Chinese word. Always refused.
 // - 'form': it repeats one of the other forms of the term that the word library lists for the
 //   card, in any of the ways that 'same' repeats the card's word. Refused under the strict rule.
-// - 'character': it has a Chinese character in common with the card's word, which the strict
-//   rule refuses, or with the card's term in another language, which only brings a warning.
+// - 'character': it has a character in common with the card's word, which the strict rule
+//   refuses, or with the card's term in another language, which only brings a warning. A number
+//   counts as a character, written in digits, in Chinese or in English: "6", the Chinese numeral
+//   for six and "six" are the same character. So, with the card's word, do the English meanings of
+//   its Chinese characters (`glosses`), such as "ball" for the character of a ball, and the pinyin
+//   of each of them, of three letters or more, such as "qiu" for the same character.
 // - 'similar': it may be another form of the card's word by its ending, such as "modeling" for
 //   "model", or a part or such a form of the card's term in another language. A warning.
 // - 'inside': it contains the card's word, or a part of it, of four letters or more, such as
@@ -46,13 +50,16 @@ export interface ClueCheck {
 // What the check needs to know about a card. The translations are the card's term in the other
 // languages of the word library, which a clue must not repeat either, the forms are the other
 // forms of the term that the library lists, in any language, and the pinyin is that of a Chinese
-// word, as the server works it out (BoardWord in types.ts), which a clue must not be either.
+// word, as the server works it out (BoardWord in types.ts), which a clue must not be either. The
+// glosses are the English meanings of the Chinese characters of the card's word, from a dictionary,
+// which only the captains get.
 export interface ClueCard {
   word: string;
   revealed: boolean;
   translations?: readonly string[];
   forms?: readonly string[];
   pinyin?: string;
+  glosses?: readonly string[];
 }
 
 // What a room allows (clueOptions() in settings.ts): how many words a clue may have, how long it
@@ -74,6 +81,9 @@ export const MAX_CLUE_HAN = 10;
 export const MAX_CLUE_INPUT = 128;
 // The shortest word or part of a card that brings a warning when a clue contains it.
 const INSIDE_LENGTH = 4;
+// The shortest word of a clue that counts as the English or the pinyin of a character: shorter
+// ones, such as "a", "he" or "an", are too often English words of their own.
+const CHARACTER_WORD_LENGTH = 3;
 
 // One word, counted as in an English room, and the strict rule: what a room has unless its
 // settings say otherwise.
@@ -102,6 +112,67 @@ const NOT_LETTER_OR_DIGIT = /[^\p{L}\p{N}]+/gu;
 const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
 
 const SPACES = /\s+/gu;
+
+// Numbers, which count as characters (docs/games/keywords.md#the-clue): a digit, a Chinese numeral
+// and an English number word that stand for the same number are the same character. The Chinese
+// numerals are those of zero to ten, a hundred, a thousand and ten thousand, and the character for
+// two that counts things, which is two in nearly every word of the lists. The capital numerals that
+// cheques use are left out, since they are other words as well, as in the Chinese word for "land".
+// A run of digits counts digit by digit, and as a whole too when it is a number that a Chinese
+// numeral or an English word of its own names: "10" is "1", "0" and "10".
+const HAN_NUMBERS = new Map([
+  ['\u3007', '0'],
+  ['\u96f6', '0'],
+  ['\u4e00', '1'],
+  ['\u4e8c', '2'],
+  ['\u4e24', '2'],
+  ['\u4e09', '3'],
+  ['\u56db', '4'],
+  ['\u4e94', '5'],
+  ['\u516d', '6'],
+  ['\u4e03', '7'],
+  ['\u516b', '8'],
+  ['\u4e5d', '9'],
+  ['\u5341', '10'],
+  ['\u767e', '100'],
+  ['\u5343', '1000'],
+  ['\u4e07', '10000'],
+]);
+const NUMBER_WORDS = new Map([
+  ['zero', '0'],
+  ['one', '1'],
+  ['two', '2'],
+  ['three', '3'],
+  ['four', '4'],
+  ['five', '5'],
+  ['six', '6'],
+  ['seven', '7'],
+  ['eight', '8'],
+  ['nine', '9'],
+  ['ten', '10'],
+  ['hundred', '100'],
+  ['thousand', '1000'],
+]);
+const NAMED_NUMBERS = new Set(HAN_NUMBERS.values());
+const DIGITS = /[0-9]+/g;
+
+// The numbers in a folded text, as the strings of their digits.
+function numbersIn(folded: string, parts: readonly string[]): Set<string> {
+  const numbers = new Set<string>();
+  for (const char of folded) {
+    const number = HAN_NUMBERS.get(char);
+    if (number !== undefined) numbers.add(number);
+  }
+  for (const run of folded.match(DIGITS) ?? []) {
+    for (const digit of run) numbers.add(digit);
+    if (NAMED_NUMBERS.has(run)) numbers.add(run);
+  }
+  for (const part of parts) {
+    const number = NUMBER_WORDS.get(part);
+    if (number !== undefined) numbers.add(number);
+  }
+  return numbers;
+}
 
 // A clue as it is recorded and shown: as the captain typed it, but without invisible characters,
 // without the spaces at its ends, and with one plain space between its words.
@@ -143,17 +214,26 @@ interface Word {
   // test", "Series A" from "Time series" and "GPT-3" from "GPT-4". Only the small words are left
   // out. Where one word lies inside another is decided by these (liesInside()).
   pieces: string[];
-  // Its Chinese characters, in their simplified forms.
+  // Its Chinese characters, in their simplified forms, and the numbers in it (numbersIn()).
   han: Set<string>;
+  numbers: Set<string>;
+  // Its Latin parts of CHARACTER_WORD_LENGTH letters or more, which may be the English or the
+  // pinyin of a character.
+  latin: string[];
 }
 
 function wordOf(text: string): Word {
   const folded = fold(text);
+  const parts = (folded.match(PART) ?? []).filter(
+    (part) => HAN.test(part) || (part.length > 1 && !SMALL_WORDS.has(part)),
+  );
   return {
     key: folded.replace(NOT_LETTER_OR_DIGIT, ''),
-    parts: (folded.match(PART) ?? []).filter((part) => HAN.test(part) || (part.length > 1 && !SMALL_WORDS.has(part))),
+    parts,
     pieces: (folded.match(PIECE) ?? []).filter((piece) => piece.length === 1 || !SMALL_WORDS.has(piece)),
     han: new Set([...folded].filter((char) => HAN.test(char))),
+    numbers: numbersIn(folded, parts),
+    latin: parts.filter((part) => part.length >= CHARACTER_WORD_LENGTH && LATIN_ONLY.test(part)),
   };
 }
 
@@ -238,7 +318,27 @@ function resembles(clue: Word, word: Word): boolean {
   return clue.parts.some((part) => LATIN.test(part) && latin.some((other) => shareStem(part, other)));
 }
 
-const sharesHan = (clue: Word, word: Word) => [...clue.han].some((char) => word.han.has(char));
+// A character in common: a Chinese character, or a number however it is written.
+const sharesCharacter = (clue: Word, word: Word) =>
+  [...clue.han].some((char) => word.han.has(char)) || [...clue.numbers].some((number) => word.numbers.has(number));
+
+// A word of the clue is the English of a Chinese character of the card's word, as the dictionary
+// gives it, or its plain plural, or the pinyin of one of its characters, without tones: "ball" or
+// "qiu" for the character of a ball. Only the pinyin of whole syllables counts, and only words of
+// CHARACTER_WORD_LENGTH letters or more.
+function namesCharacter(clue: Word, glosses: readonly string[], syllables: ReadonlySet<string>): boolean {
+  return clue.latin.some((part) => syllables.has(part) || glosses.some((gloss) => sameOrPlural(part, gloss)));
+}
+
+// The syllables of a card's pinyin, written with "u" and with "v" for the umlaut, as keyboards have
+// it.
+function syllablesOf(pinyin: string | undefined): Set<string> {
+  if (pinyin === undefined) return new Set();
+  const syllables = pinyin
+    .split(' ')
+    .flatMap((syllable) => [wordKey(syllable), wordKey(syllable.replace(/\u00fc/g, 'v'))]);
+  return new Set(syllables.filter((syllable) => syllable.length >= CHARACTER_WORD_LENGTH && LATIN_ONLY.test(syllable)));
+}
 
 // The clue contains the word, or a part of it, of four Latin letters or more: "datacenter" for
 // "Data", "metadata" for "Big data". A clue of several words contains what runs across its words
@@ -296,14 +396,21 @@ function judge(clues: readonly Word[], card: ClueCard, index: number, insideRefu
     return other.key !== '' && clues.some((clue) => repeats(clue, other));
   });
   const similar = ofWord(resembles, 'similar');
+  const glosses = (card.glosses ?? []).map((gloss) => gloss.toLowerCase());
+  const syllables = syllablesOf(card.pinyin);
+  const character =
+    ofWord(sharesCharacter, 'character') ??
+    (clues.some((clue) => namesCharacter(clue, glosses, syllables))
+      ? { card: index, text: card.word, kind: 'character' as const }
+      : null);
   const strict =
     form === undefined
-      ? (ofWord(sharesHan, 'character') ?? (insideRefused && !similar ? ofWord(contains, 'inside') : null))
+      ? (character ?? (insideRefused && !similar ? ofWord(contains, 'inside') : null))
       : { card: index, text: form, kind: 'form' as const };
   const warned =
     similar ??
     ofTranslation((clue, other) => repeats(clue, other) || resembles(clue, other), 'similar') ??
-    ofTranslation(sharesHan, 'character') ??
+    ofTranslation(sharesCharacter, 'character') ??
     ofWord(contains, 'inside') ??
     ofTranslation(contains, 'inside');
   return { refused: null, strict, warned };

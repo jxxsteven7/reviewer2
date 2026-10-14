@@ -73,6 +73,20 @@ describe('what each player sees of the cards', () => {
     }
   });
 
+  test("only the captains get the English of a card's characters, while the game is on and the card face down", () => {
+    const state = playing();
+    state.cards = state.cards.map((card, i) => (i <= 1 ? { ...card, glosses: ['ball', 'sphere'] } : card));
+    for (const seat of Object.values(SEATS)) {
+      const view = viewFor(state, seat, 0);
+      // Card 0 has been revealed, card 1 hasn't.
+      expect(view.cards[0]).not.toHaveProperty('glosses');
+      if (seat.role === 'captain') expect(view.cards[1]?.glosses).toEqual(['ball', 'sphere']);
+      else expect(view.cards[1]).not.toHaveProperty('glosses');
+    }
+    const over = viewFor(accepted(withdraw(state, { gameId: 'game-1' })), redCaptain, 0);
+    expect(over.cards.some((card) => 'glosses' in card)).toBe(false);
+  });
+
   test('all views share the public facts of the game', () => {
     const state = talking();
     const shared = { turn: 1, team: 'red', phase: 'guess', startingTeam: 'red', guessesMade: 1, guessesLeft: 2 };
@@ -162,18 +176,20 @@ describe("what each player sees of a group's marks", () => {
     return accepted(mark(state, guesser('blue'), { gameId: state.gameId, card: 9, mark: 'theirs' }));
   };
 
-  test("each group's guessers see the group's own marks, in either group's turn", () => {
-    expect(viewFor(marking(), redGuesser, 0).marks).toEqual([
-      { card: 3, mark: 'ours' },
-      { card: 17, mark: 'r2' },
-    ]);
-    expect(viewFor(marking(), blueGuesser, 0).marks).toEqual([{ card: 9, mark: 'theirs' }]);
+  test("each group's guessers and captain see the group's own marks, in either group's turn", () => {
+    for (const seat of [redGuesser, redCaptain]) {
+      expect(viewFor(marking(), seat, 0).marks).toEqual([
+        { card: 3, mark: 'ours' },
+        { card: 17, mark: 'r2' },
+      ]);
+    }
+    for (const seat of [blueGuesser, blueCaptain]) {
+      expect(viewFor(marking(), seat, 0).marks).toEqual([{ card: 9, mark: 'theirs' }]);
+    }
   });
 
-  test('captains, spectators and screens see no marks at all', () => {
-    for (const seat of [redCaptain, blueCaptain, SPECTATOR]) {
-      expect('marks' in viewFor(marking(), seat, 0)).toBe(false);
-    }
+  test('spectators and screens see no marks at all', () => {
+    expect('marks' in viewFor(marking(), SPECTATOR, 0)).toBe(false);
   });
 
   test('a group with no marks yet gets an empty list, and nobody gets any once the game is over', () => {

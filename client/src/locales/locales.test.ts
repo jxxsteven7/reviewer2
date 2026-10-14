@@ -24,6 +24,7 @@ import { DUO_LINES } from '../core/duos';
 import { CLIENT_ERRORS } from '../core/errors';
 import { LINES_PER_TIER, STREAK_TIERS } from '../core/streaks';
 import { MISSED_LINES } from '../games/keywords/missed';
+import { HERO_LINES } from '../games/keywords/heroes';
 
 // Every interface string exists in both languages (docs/rules/constraints.md). The files are
 // read as plain JSON: importing them would hand back the compiled messages instead.
@@ -96,6 +97,11 @@ describe('locale files', () => {
     for (let n = 1; n <= MISSED_LINES; n += 1) expect(en.has(`game.missed.lines.${n}`), String(n)).toBe(true);
     expect(en.has(`game.missed.lines.${MISSED_LINES + 1}`)).toBe(false);
     for (let n = 1; n <= MISSED_LINES; n += 1) expect(en.get(`game.missed.lines.${n}`)).toContain('{name}');
+  });
+
+  test('have every line with which the room cheers a deadline hero', () => {
+    for (let n = 1; n <= HERO_LINES; n += 1) expect(en.get(`game.hero.lines.${n}`), String(n)).toContain('{name}');
+    expect(en.has(`game.hero.lines.${HERO_LINES + 1}`)).toBe(false);
   });
 
   test('have a phrase for every quick reaction', () => {

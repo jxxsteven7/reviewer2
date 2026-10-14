@@ -75,7 +75,7 @@ test('the chat, the groups, the clue log and the tools stand at the top of their
   for (let turn = 1; turn <= 4; turn += 1) await playTurn(table, turn);
   await expect(student.locator('.clue-log li')).toHaveCount(4);
   await expectColumnsFromTheTop(student, ['.chat-panel', '.rosters'], ['.clue-log', '.tools']);
-  await expectBarStacked(student, ['.mark-tools', '.status']);
+  await expectBarStacked(student, ['.status', '.gestures']);
   // A spectator has no chat: the groups stand at the top.
   await expectColumnsFromTheTop(spectator, ['.rosters'], ['.clue-log', '.tools']);
   await expectBarStacked(spectator, ['.status']);

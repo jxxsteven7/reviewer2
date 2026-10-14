@@ -43,12 +43,13 @@ const sections = computed(() => [
   { title: t('rules.goalTitle'), text: [t('rules.goal')] },
   { title: t('rules.rolesTitle'), text: [t('rules.roles')] },
   { title: t('rules.turnTitle'), text: [t(`rules.turn.${props.settings.guessRule}`)] },
-  { title: t('rules.revealTitle'), text: [t('rules.reveal')] },
+  { title: t('rules.revealTitle'), text: [t('rules.reveal'), t('rules.marks')] },
   {
     title: t('rules.clueTitle'),
     text: [
       t(`rules.clue.${props.language}`, { count: props.settings.clueLength }, props.settings.clueLength),
       t('rules.clueCommon'),
+      t('rules.clueCharacter'),
       ...(props.language === 'zh' ? [t('rules.clueSound')] : []),
       t('rules.clueQuiet'),
       t('rules.clueTargets'),

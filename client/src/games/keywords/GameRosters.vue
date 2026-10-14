@@ -3,6 +3,7 @@ import type { PlayerView, RoomView, Team } from '@reviewer2/shared';
 import { computed, ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerName from '../../core/components/PlayerName.vue';
+import type { Shown } from '../../core/components/ScoreFloat.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { useKeywords } from './useKeywords';
@@ -12,7 +13,13 @@ import { useKeywords } from './useKeywords';
 // warning that they will see the key. Whoever has sat in a group in this game belongs to it until
 // the next one, so they are offered seats in that group only. In a match, a latecomer plays from
 // the next game instead, and may change their mind and just watch until the waiting room opens.
-const props = defineProps<{ room: RoomView }>();
+//
+// Each role has a line of its own, the PI's and the students', and under it one player a line; the
+// spectators have theirs only when there are any. `floats` are the numbers that rise from the
+// players' avatars beside the board as their points change, by player ID (useScoreFloats.ts).
+const props = withDefaults(defineProps<{ room: RoomView; floats?: ReadonlyMap<string, Shown> }>(), {
+  floats: () => new Map(),
+});
 const { t } = useI18n();
 const { data, mySeat, mySide, isKeyViewer, groups, spectators, sit } = useKeywords(toRef(props, 'room'));
 // Seats change only while the game is on; afterwards the waiting room is the place for that.
@@ -36,33 +43,36 @@ async function takeOver() {
     <h2 class="section-title">{{ t('game.groups') }}</h2>
     <div v-for="group in groups" :key="group.team" class="group" :class="group.team">
       <h3>{{ t(`lobby.group.${group.team}`) }}</h3>
-      <p class="line">
-        <span class="role">{{ t('lobby.roles.captain') }}</span>
+      <div class="seat">
+        <p class="role">{{ t('lobby.roles.captain') }}</p>
         <PlayerName
           v-if="group.captain"
           :player="group.captain"
           :me="isMe(group.captain)"
           :chair="isChairOf(group.captain)"
+          :float="floats.get(group.captain.id) ?? null"
         />
-        <template v-else>
+        <p v-else class="vacant-line">
           <span class="vacant">{{ t('lobby.vacant') }}</span>
           <UiButton v-if="mayJoin(group.team)" size="small" @click="takingOver = group.team">{{
             t('game.takeOver')
           }}</UiButton>
-        </template>
-      </p>
-      <p class="line">
-        <span class="role">{{ t('lobby.roles.guesser') }}</span>
-        <span class="names">
-          <PlayerName
-            v-for="player in group.guessers"
-            :key="player.id"
-            :player="player"
-            :me="isMe(player)"
-            :chair="isChairOf(player)"
-          />
-        </span>
-      </p>
+        </p>
+      </div>
+      <div class="seat">
+        <p class="role">{{ t('lobby.roles.guesser') }}</p>
+        <ul v-if="group.guessers.length" class="names">
+          <li v-for="player in group.guessers" :key="player.id">
+            <PlayerName
+              :player="player"
+              :me="isMe(player)"
+              :chair="isChairOf(player)"
+              :float="floats.get(player.id) ?? null"
+            />
+          </li>
+        </ul>
+        <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
+      </div>
       <UiButton
         v-if="mayJoin(group.team) && !isKeyViewer && mySeat?.role !== 'captain' && mySeat?.team !== group.team"
         size="small"
@@ -71,18 +81,14 @@ async function takeOver() {
         {{ t('game.playFor', { group: t(`lobby.group.${group.team}`) }) }}
       </UiButton>
     </div>
-    <p class="line spectators">
-      <span class="role">{{ t('lobby.roles.spectator') }}</span>
-      <span class="names">
-        <PlayerName
-          v-for="player in spectators"
-          :key="player.id"
-          :player="player"
-          :me="isMe(player)"
-          :chair="isChairOf(player)"
-        />
-      </span>
-    </p>
+    <div v-if="spectators.length" class="seat spectators">
+      <p class="role">{{ t('lobby.roles.spectator') }}</p>
+      <ul class="names">
+        <li v-for="player in spectators" :key="player.id">
+          <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
+        </li>
+      </ul>
+    </div>
     <div v-if="playing || data.joinsNext" class="own">
       <UiButton v-if="mySeat?.role === 'guesser' || data.joinsNext" size="small" @click="sit(null, 'spectator')">
         {{ t('game.watch') }}
@@ -144,15 +150,16 @@ h3 {
   color: var(--blue-deep);
 }
 
-.line {
+/* A role's name on a line of its own, and under it one player a line, each as wide as the column. */
+.seat {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
+  flex-direction: column;
+  align-self: stretch;
+  gap: 0;
+  min-width: 0;
 }
 
 .role {
-  width: 4.5rem;
   color: var(--ink-2);
   font-size: var(--text-xs);
   font-weight: var(--weight-black);
@@ -162,8 +169,28 @@ h3 {
 
 .names {
   display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.names li,
+.seat > :deep(.player) {
+  display: flex;
+  min-width: 0;
+}
+
+.vacant-line {
+  display: flex;
   flex-wrap: wrap;
-  gap: 0 var(--space-3);
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: 44px;
+}
+
+.spectators {
+  padding: 0 var(--space-3);
 }
 
 .vacant {

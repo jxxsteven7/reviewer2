@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { DUO_TITLES, formatCode, MAX_NAME_INPUT, PROFILE_PATH, type FriendView } from '@reviewer2/shared';
+import {
+  checkAlias,
+  checkFriendNote,
+  DUO_TITLES,
+  FRIEND_NOTE_LENGTH,
+  formatCode,
+  MAX_FRIEND_ALIAS_INPUT,
+  MAX_FRIEND_NOTE_INPUT,
+  MAX_NAME_INPUT,
+  PROFILE_PATH,
+  textLength,
+  type FriendView,
+} from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
@@ -11,29 +23,52 @@ import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { duoLine } from '../duos';
 import { errorKey } from '../errors';
-import { formatList } from '../i18n';
+import { askToJoin } from '../friends';
 import { send } from '../socket';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import { useFriendsList } from '../useFriendsList';
 
 // The account's friends (docs/architecture.md#friends): the way to ask someone by their username,
-// the requests waiting for an answer each way, and the friends, each on a card: the avatar, which
-// leads to the account's public page, the name and whether they are online and where; under it, in
-// small type, what the account has played with them, and the titles they hold among its friends
-// (docs/architecture.md#friend-duos), on one line, folded where they don't fit. The friends' board
-// above the list sums the titles up, in the same look. A friend who is offline has the whole card
-// faded, still readable. A friend in a public room can be joined from here; one in a private room
-// only by their invitation. Removing a friend sits behind the card's "more" button, which asks
-// first. A change made here comes back as the word that the server sends both sides, on which the
-// list is asked for again (useFriendsList); after a refusal it is asked for here, since the list may
-// have been out of date.
-const { t, locale } = useI18n();
+// with a line for them if the account likes, the requests waiting for an answer each way, the line
+// that came with each request for the account under its name, and the friends, each on a card: the
+// avatar, which leads to the account's public page, the name and whether they are online and where;
+// under it, in small type, what the account has played with them, and the titles they hold among
+// its friends (docs/architecture.md#friend-duos), on one line, folded where they don't fit. The
+// friends' board above the list sums the titles up, in the same look, each with the avatar and the
+// name of the friends who hold it, the avatar leading to their page as on the cards. A friend who
+// is offline has the whole card faded, still readable. A friend in a public room can be joined from
+// here; one in a private room only by their invitation, which the account may ask them for
+// (askToJoin), and which the card says it has while the request stands. A friend whom the account
+// has given a name of its own (an alias, for the account alone) goes by it, with the username after
+// it in small grey type, here and in the sheets about them. The card's "more" button opens a sheet
+// with the friend's name, from which the account gives them a name, or takes it away by leaving it
+// empty, or removes them, after asking first. A change made here comes back as the word that the
+// server sends both sides, on which the list is asked for again (useFriendsList); after a refusal
+// it is asked for here, since the list may have been out of date.
+const { t } = useI18n();
 const { view, failed, load } = useFriendsList();
 const username = ref('');
+const note = ref('');
 const problem = ref<string | undefined>();
+const checkedNote = computed(() => checkFriendNote(note.value));
+const noteProblem = computed(() => (checkedNote.value.problem ? t(errorKey(checkedNote.value.problem)) : undefined));
+const noteCount = computed(() =>
+  t('friends.noteCount', { count: textLength(checkedNote.value.note ?? ''), max: FRIEND_NOTE_LENGTH }),
+);
+// The friend whose "more" sheet is open, the one being given a name, with the name as typed, and
+// the one about to be removed.
+const managing = ref<FriendView | null>(null);
+const naming = ref<FriendView | null>(null);
+const alias = ref('');
+const aliasRefused = ref<string | undefined>();
 const removing = ref<FriendView | null>(null);
 const { busy, run } = useBusy();
+const checkedAlias = computed(() => checkAlias(alias.value));
+const aliasProblem = computed(
+  () => aliasRefused.value ?? (checkedAlias.value.problem ? t(errorKey(checkedAlias.value.problem)) : undefined),
+);
+watch(alias, () => (aliasRefused.value = undefined));
 
 watch(username, () => (problem.value = undefined));
 
@@ -41,17 +76,7 @@ watch(username, () => (problem.value = undefined));
 const board = computed(() =>
   DUO_TITLES.flatMap((title) => {
     const holders = (view.value?.friends ?? []).filter((friend) => friend.duo?.titles.includes(title));
-    return holders.length > 0
-      ? [
-          {
-            title,
-            names: formatList(
-              locale.value,
-              holders.map(({ username }) => username),
-            ),
-          },
-        ]
-      : [];
+    return holders.length > 0 ? [{ title, holders }] : [];
   }),
 );
 
@@ -59,8 +84,13 @@ const page = (handle: string) => `${PROFILE_PATH}${handle}`;
 const games = (friend: FriendView) => (friend.duo ? duoLine(t, friend.duo) : '');
 
 async function request() {
+  if (checkedNote.value.problem) return;
+  const line = checkedNote.value.note;
   const reply = await run(() =>
-    send<{ status: 'pending' | 'accepted' }>('friends:request', { username: username.value }),
+    send<{ status: 'pending' | 'accepted' }>('friends:request', {
+      username: username.value,
+      ...(line === null ? {} : { note: line }),
+    }),
   );
   if (!reply) return;
   if (!reply.ok) {
@@ -68,6 +98,7 @@ async function request() {
     return;
   }
   username.value = '';
+  note.value = '';
   toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
 }
 
@@ -75,8 +106,38 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
   const reply = await run(() => send(message, { username: name }));
   if (!reply) return;
   removing.value = null;
+  managing.value = null;
   if (reply.ok) return;
   toastError(reply.error);
+  void load();
+}
+
+async function ask(friend: FriendView) {
+  await run(() => askToJoin(friend.username));
+}
+
+function startNaming(friend: FriendView) {
+  alias.value = friend.alias ?? '';
+  aliasRefused.value = undefined;
+  naming.value = friend;
+}
+
+function closeAll() {
+  managing.value = null;
+  naming.value = null;
+  removing.value = null;
+}
+
+async function saveAlias() {
+  const friend = naming.value;
+  if (!friend || checkedAlias.value.problem) return;
+  const reply = await run(() => send('friends:alias', { username: friend.username, alias: alias.value }));
+  if (!reply) return;
+  if (!reply.ok) {
+    aliasRefused.value = t(errorKey(reply.error));
+    return;
+  }
+  closeAll();
   void load();
 }
 </script>
@@ -93,7 +154,18 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
         enterkeyhint="send"
         :error="problem"
       />
-      <UiButton type="submit" :disabled="busy || !username.trim()">{{ t('friends.addSubmit') }}</UiButton>
+      <UiField
+        v-model="note"
+        :label="t('friends.noteLabel')"
+        :maxlength="MAX_FRIEND_NOTE_INPUT"
+        autocomplete="off"
+        enterkeyhint="send"
+        :hint="noteCount"
+        :error="noteProblem"
+      />
+      <UiButton type="submit" :disabled="busy || !username.trim() || checkedNote.problem !== null">{{
+        t('friends.addSubmit')
+      }}</UiButton>
     </form>
 
     <p v-if="failed" class="hint">{{ t(errorKey(failed)) }}</p>
@@ -113,6 +185,7 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
             <span class="top"
               ><span class="name">{{ other.username }}</span></span
             >
+            <span v-if="other.note" class="note">{{ t('friends.noteQuoted', { note: other.note }) }}</span>
             <span class="end">
               <UiButton
                 variant="primary"
@@ -163,9 +236,12 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
         <section v-if="board.length > 0" class="board" aria-labelledby="friends-board">
           <h4 id="friends-board">{{ t('duos.board') }}</h4>
           <ul class="holders">
-            <li v-for="{ title, names } in board" :key="title">
+            <li v-for="{ title, holders } in board" :key="title">
               <TitleInfo :title="{ kind: 'duo', duo: title }" class="pill" />
-              <span class="holder-names">{{ names }}</span>
+              <span v-for="friend in holders" :key="friend.username" class="holder">
+                <AvatarButton :to="page(friend.handle)" :name="friend.username" :avatar="friend.avatar" />
+                <span class="holder-name">{{ friend.alias ?? friend.username }}</span>
+              </span>
             </li>
           </ul>
         </section>
@@ -185,7 +261,8 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
               size="medium"
             />
             <p class="top">
-              <span class="name">{{ friend.username }}</span>
+              <span class="name">{{ friend.alias ?? friend.username }}</span>
+              <span v-if="friend.alias" class="username">{{ friend.username }}</span>
               <span class="where">
                 <span class="dot" :class="{ on: friend.online }" aria-hidden="true"></span>
                 {{ t(friend.online ? 'friends.online' : 'friends.offline') }}
@@ -205,12 +282,21 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
                 t('friends.join')
               }}</RouterLink>
               <button
+                v-else-if="friend.room"
+                type="button"
+                class="join"
+                :disabled="busy || friend.asked"
+                @click="ask(friend)"
+              >
+                {{ t(friend.asked ? 'friends.asked' : 'friends.askJoin') }}
+              </button>
+              <button
                 type="button"
                 class="more"
-                :aria-label="t('friends.more', { name: friend.username })"
+                :aria-label="t('friends.more', { name: friend.alias ?? friend.username })"
                 aria-haspopup="dialog"
                 :disabled="busy"
-                @click="removing = friend"
+                @click="managing = friend"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <circle cx="5" cy="12" r="2" />
@@ -231,13 +317,50 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
       t('friends.refresh')
     }}</UiButton>
 
-    <UiSheet :open="removing !== null" :title="removing?.username ?? ''" @close="removing = null">
+    <UiSheet
+      :open="managing !== null && naming === null && removing === null"
+      :title="managing?.alias ?? managing?.username ?? ''"
+      :subtitle="managing?.alias ? managing.username : null"
+      @close="closeAll"
+    >
+      <div class="confirm">
+        <UiButton :disabled="busy" @click="managing && startNaming(managing)">{{ t('friends.aliasEdit') }}</UiButton>
+        <UiButton variant="danger" :disabled="busy" @click="removing = managing">
+          {{ t('friends.removeFriend') }}
+        </UiButton>
+        <UiButton variant="quiet" @click="closeAll">{{ t('account.cancel') }}</UiButton>
+      </div>
+    </UiSheet>
+
+    <UiSheet
+      :open="naming !== null"
+      :title="t('friends.aliasTitle', { name: naming?.username ?? '' })"
+      @close="closeAll"
+    >
+      <form class="confirm" @submit.prevent="saveAlias">
+        <UiField
+          v-model="alias"
+          :label="t('friends.aliasLabel')"
+          :maxlength="MAX_FRIEND_ALIAS_INPUT"
+          autocomplete="off"
+          enterkeyhint="done"
+          :hint="t('friends.aliasHint')"
+          :error="aliasProblem"
+        />
+        <UiButton variant="primary" type="submit" :disabled="busy || checkedAlias.problem !== null">
+          {{ t('friends.aliasSave') }}
+        </UiButton>
+        <UiButton variant="quiet" @click="closeAll">{{ t('account.cancel') }}</UiButton>
+      </form>
+    </UiSheet>
+
+    <UiSheet :open="removing !== null" :title="removing?.username ?? ''" @close="closeAll">
       <div class="confirm">
         <p>{{ t('friends.removeConfirm', { name: removing?.username ?? '' }) }}</p>
         <UiButton variant="danger" :disabled="busy" @click="answer('friends:remove', removing?.username ?? '')">
           {{ t('friends.removeFriend') }}
         </UiButton>
-        <UiButton variant="quiet" @click="removing = null">{{ t('account.cancel') }}</UiButton>
+        <UiButton variant="quiet" @click="closeAll">{{ t('account.cancel') }}</UiButton>
       </div>
     </UiSheet>
   </div>
@@ -266,17 +389,16 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
   font-size: var(--text-sm);
 }
 
+/* The username, the line for them, and the button under both. */
 .add {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  align-items: start;
   align-self: stretch;
 }
 
-/* Level with the box, below the field's label. */
 .add > button {
-  margin-top: calc(var(--text-sm) * 1.55 + var(--space-2));
+  align-self: flex-start;
 }
 
 h3 {
@@ -312,7 +434,9 @@ h3 {
 }
 
 .card.request {
-  grid-template-areas: 'face top end';
+  grid-template-areas:
+    'face top end'
+    'face note note';
   align-items: center;
 }
 
@@ -323,6 +447,16 @@ h3 {
 
 .request .face {
   margin-top: 0;
+}
+
+/* The line that came with a request, under the name and the buttons, across the card. */
+.note {
+  grid-area: note;
+  min-width: 0;
+  margin-top: var(--space-1);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  overflow-wrap: break-word;
 }
 
 .top {
@@ -344,6 +478,17 @@ h3 {
   white-space: nowrap;
 }
 
+/* The username after the name the account gives a friend. */
+.username {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .where {
   display: inline-flex;
   align-items: center;
@@ -360,11 +505,11 @@ h3 {
   height: 8px;
   border: var(--line-thin) solid var(--ink);
   border-radius: 50%;
-  background: var(--paper);
+  background: var(--neutral);
 }
 
 .dot.on {
-  background: var(--ink);
+  background: var(--online);
 }
 
 /* A room's number never breaks in two. */
@@ -385,19 +530,30 @@ h3 {
   margin: 0;
 }
 
-/* Joining is an ink pill whose box reaches 44 px high, out of sight. */
+/* Joining, or asking to, is an ink pill whose box reaches 44 px high, out of sight; once asked, it
+   is grey. */
 .join {
   position: relative;
   display: inline-flex;
   align-items: center;
   min-height: 36px;
   padding: 0 var(--space-3);
+  border: 0;
   border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--on-ink);
+  font: inherit;
   font-size: var(--text-sm);
   font-weight: var(--weight-black);
   text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.join:disabled {
+  background: var(--paper-2);
+  color: var(--ink-2);
+  cursor: default;
 }
 
 .join::before {
@@ -534,9 +690,21 @@ h4 {
   inset: calc(50% - 22px) 0;
 }
 
-.holder-names {
+/* Each friend who holds a title: the avatar and the name, side by side, never apart. */
+.holder {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.holder-name {
+  min-width: 0;
+  overflow: hidden;
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

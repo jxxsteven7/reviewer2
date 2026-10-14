@@ -47,6 +47,8 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
   match: null,
   streaks: [],
   duos: [],
+  agentsPlayed: false,
+  points: [],
   data: {},
 });
 

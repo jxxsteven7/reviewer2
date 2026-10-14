@@ -127,11 +127,12 @@ export type EmailState = (typeof EMAIL_STATES)[number];
 // was won. A match that runs its course awards its two to the top and the bottom of its ranking
 // (MATCH_TITLES); a game brings the others to the players with accounts whose game goes on the
 // record, each time they earn one (docs/games/keywords.md#titles): a PI who gives no clue in time
-// misses the deadline, a group's first clue may make the opening record, and a group that wins
-// with its first clue has the heavenly hand.
+// misses the deadline, one who gives it in its last seconds, and a student who finds one of the
+// group's cards in the last seconds of the guesses, is a deadline hero, a group's first clue may
+// make the opening record, and a group that wins with its first clue has the heavenly hand.
 export const MATCH_TITLES = ['best_paper', 'black_hole'] as const;
 export type MatchTitle = (typeof MATCH_TITLES)[number];
-export const TITLES = [...MATCH_TITLES, 'missed_deadline', 'opening_record', 'heavenly_hand'] as const;
+export const TITLES = [...MATCH_TITLES, 'missed_deadline', 'deadline_hero', 'opening_record', 'heavenly_hand'] as const;
 export type Title = (typeof TITLES)[number];
 
 export interface TitleCount {

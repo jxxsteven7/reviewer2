@@ -1,13 +1,29 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { LANGUAGES, wordKey, type BoardWord, type FieldInfo, type Language } from '@reviewer2/shared';
+import {
+  hasHan,
+  LANGUAGES,
+  toSimplified,
+  wordKey,
+  type BoardWord,
+  type FieldInfo,
+  type Language,
+} from '@reviewer2/shared';
 import { pinyinOf } from './pinyin';
 import { shuffle, type Rng } from './random';
 
 // The word library: one list per academic field, from the JSON files in words/ (see
 // words/README.md). CI checks those files with scripts/check-words.mjs, so the server only makes
-// sure of the shapes it relies on, skips anything else and says what it skipped.
+// sure of the shapes it relies on, skips anything else and says what it skipped. Beside the lists,
+// words/dictionary/han-glosses.json gives the English meanings of the Chinese characters that the
+// lists use (scripts/build-han-glosses.mjs), for the clue check (BoardWord.glosses).
+
+// The English meanings of each Chinese character, by the character.
+export type Glosses = ReadonlyMap<string, readonly string[]>;
+
+// Where the meanings are, under the directory of the lists.
+export const GLOSSES_FILE = join('dictionary', 'han-glosses.json');
 
 export interface WordListData {
   id: string;
@@ -30,6 +46,8 @@ interface Entry {
   // The other forms of the term that the list gives, in all its languages at once.
   forms: string[];
   pinyin: string | null;
+  // The English meanings of the characters of a Chinese word.
+  glosses: string[];
 }
 
 // Hears of everything that the library leaves out, so that the server can log it: a file, or one
@@ -42,13 +60,15 @@ export class WordLibrary {
   // were read: the record of every game keeps it (docs/architecture.md#game-records), so that the
   // games played with other word lists can be told apart.
   readonly hash: string;
+  readonly #glosses: Glosses;
 
-  constructor(lists: readonly WordListData[], skip: Skip = () => {}) {
+  constructor(lists: readonly WordListData[], skip: Skip = () => {}, glosses: Glosses = new Map()) {
     this.hash = createHash('sha256').update(JSON.stringify(lists)).digest('hex').slice(0, 16);
+    this.#glosses = glosses;
     for (const list of lists) {
       // Rooms name their fields by id, so a second list with the same id would replace the first.
       if (this.#fields.has(list.id)) throw new Error(`two word lists have the id "${list.id}"`);
-      const words = unique(list, skip);
+      const words = unique(list, skip, (word) => this.glossesOf(word));
       const counts = Object.fromEntries(LANGUAGES.map((language) => [language, words[language].length])) as Record<
         Language,
         number
@@ -70,6 +90,21 @@ export class WordLibrary {
     return this.#fields.has(id);
   }
 
+  // How many characters the library knows the English meanings of.
+  get glossed(): number {
+    return this.#glosses.size;
+  }
+
+  // The English meanings of the Chinese characters of a word, each once, in the order of the
+  // characters: for the cards of the lists, and for the chair's own words. The dictionary has the
+  // simplified characters, so a word in traditional ones is read as the clue check reads it.
+  glossesOf(word: string): string[] {
+    if (!hasHan(word)) return [];
+    const found = new Set<string>();
+    for (const char of toSimplified(word)) for (const gloss of this.#glosses.get(char) ?? []) found.add(gloss);
+    return [...found];
+  }
+
   // Every word of the chosen fields in one language, once each, with the same term in the other
   // languages and the other forms of the term. The game holds a clue against both. A word that two
   // fields share brings the translations and the forms of both.
@@ -83,12 +118,13 @@ export class WordLibrary {
       if (!field) throw new Error(`no word list has the id "${id}"`);
       for (const entry of field.words[language]) collect(pool, entry);
     }
-    return [...pool.values()].map(({ key, word, translations, forms, pinyin }) => {
+    return [...pool.values()].map(({ key, word, translations, forms, pinyin, glosses }) => {
       const boardWord: BoardWord = {
         word,
         ...(translations.length ? { translations } : {}),
         ...(forms.length ? { forms } : {}),
         ...(pinyin === null ? {} : { pinyin }),
+        ...(glosses.length ? { glosses } : {}),
       };
       keys.set(boardWord, key);
       return boardWord;
@@ -107,8 +143,8 @@ type Collected = Map<string, Entry>;
 // Adds a word to those collected so far. A word that is there already keeps its spelling and
 // gains the translations and the forms that it doesn't have yet. Two forms are the same when their
 // `wordKey` is.
-function collect(words: Collected, { key, word, translations, forms, pinyin }: Entry): void {
-  const entry = words.get(key) ?? { key, word, translations: [], forms: [], pinyin };
+function collect(words: Collected, { key, word, translations, forms, pinyin, glosses }: Entry): void {
+  const entry = words.get(key) ?? { key, word, translations: [], forms: [], pinyin, glosses };
   words.set(key, entry);
   for (const translation of translations) {
     if (!entry.translations.includes(translation)) entry.translations.push(translation);
@@ -129,7 +165,7 @@ function collect(words: Collected, { key, word, translations, forms, pinyin }: E
 //
 // CI refuses a list in which a term has no letters or digits, or is the same word as another, so
 // either means that the list wasn't checked. `skip` hears of both.
-function unique(list: WordListData, skip: Skip): Record<Language, Entry[]> {
+function unique(list: WordListData, skip: Skip, glossesOf: (word: string) => string[]): Record<Language, Entry[]> {
   const file = `${list.id}.json`;
   const quote = (text: string) => JSON.stringify(text);
   const words = Object.fromEntries(LANGUAGES.map((language) => [language, new Map()])) as Record<Language, Collected>;
@@ -157,7 +193,7 @@ function unique(list: WordListData, skip: Skip): Record<Language, Entry[]> {
       const same = words[language].get(key);
       if (same) skip(file, `"${language}" ${quote(word)} is the same word as ${quote(same.word)}`, term.id);
       const translations = texts.filter((other) => other.language !== language).map((other) => other.word);
-      collect(words[language], { key, word, translations, forms, pinyin: pinyinOf(word) });
+      collect(words[language], { key, word, translations, forms, pinyin: pinyinOf(word), glosses: glossesOf(word) });
     }
   }
   return Object.fromEntries(LANGUAGES.map((language) => [language, [...words[language].values()]])) as Record<
@@ -326,7 +362,35 @@ export function loadWordLibrary(dir: string, skip: Skip = () => {}): WordLibrary
   }
   if (lists.length === 0) throw new Error(`there are no word lists in ${dir}`);
   if (lists.every((list) => list.terms.length === 0)) throw new Error(`there are no words in the word lists in ${dir}`);
-  return new WordLibrary(lists, skip);
+  return new WordLibrary(lists, skip, loadGlosses(dir, skip));
+}
+
+// Reads the English meanings of the characters, if the directory has them: without them, the
+// library has none, and the clue check takes no English word for a character. A file that can't be
+// read, or a character with meanings that aren't a list of text, is skipped and reported.
+function loadGlosses(dir: string, skip: Skip): Glosses {
+  const glosses = new Map<string, string[]>();
+  let data: unknown;
+  try {
+    data = JSON.parse(readFileSync(join(dir, GLOSSES_FILE), 'utf8'));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') skip(GLOSSES_FILE, (error as Error).message);
+    return glosses;
+  }
+  const found = (data as { glosses?: unknown } | null)?.glosses;
+  if (!found || typeof found !== 'object' || Array.isArray(found)) {
+    skip(GLOSSES_FILE, 'not a dictionary of meanings');
+    return glosses;
+  }
+  for (const [char, words] of Object.entries(found)) {
+    if (Array.isArray(words) && words.every(isText))
+      glosses.set(
+        char,
+        words.map((word: string) => word.toLowerCase()),
+      );
+    else skip(GLOSSES_FILE, 'meanings that are not a list of text', char);
+  }
+  return glosses;
 }
 
 // One term as it comes out of a file: the term with the texts that the library can use, or

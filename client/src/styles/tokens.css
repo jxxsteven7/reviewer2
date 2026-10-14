@@ -15,6 +15,8 @@
   --focus: #2d5bff;
   /* The table's yellow, faded: the titles of a friend who is offline. */
   --bg-tint: #fbefc4;
+  /* The dot of someone who is online; someone offline has a grey one (--neutral). */
+  --online: #2fbf71;
 
   /* The two groups: a surface color, with the text that reads on it, a tint for backgrounds and
      a deep shade for text on white or yellow. Then the cards of neither group, and Reviewer 2's
@@ -50,12 +52,14 @@
   --avatar-8: #5fd3e0;
 
   /* Baloo 2 sets Latin letters and digits, ZCOOL KuaiLe sets Chinese headings, and Noto Sans SC
-     sets everything else. All three come from npm and are served by our own server, in slices
+     sets everything else; Nanum Pen Script, a pencil's hand, sets the points that rise in a game,
+     digits and signs alone. All four come from npm and are served by our own server, in slices
      that browsers download only as they need them (docs/design.md). */
   --font-display:
     'Baloo 2 Variable', 'ZCOOL KuaiLe', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC',
     system-ui, sans-serif;
   --font-number: 'Baloo 2 Variable', 'Noto Sans SC Variable', system-ui, sans-serif;
+  --font-hand: 'Nanum Pen Script', 'Baloo 2 Variable', system-ui, sans-serif;
   --font-sans:
     'Noto Sans SC Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui,
     sans-serif;

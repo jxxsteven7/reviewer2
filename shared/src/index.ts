@@ -5,7 +5,7 @@ export * from './codes';
 export * from './duos';
 export * from './feedback';
 export * from './friends';
-export { hasHan } from './han';
+export { hasHan, toSimplified } from './han';
 export * from './language';
 export * from './lists';
 export * from './mail';

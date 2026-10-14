@@ -59,6 +59,10 @@
       "join": "加入",
       "refresh": "刷新"
     },
+    "friendsPlaying": {
+      "title": "好友在玩",
+      "and": "、"
+    },
     "seats": {
       "waiting": "你还在房间 {code} 里（等待开局）",
       "playing": "你还在房间 {code} 里（游戏进行中）",
@@ -316,24 +320,26 @@
     "unlimited": "不限",
     "sendClue": "给出提示",
     "targetsHint": "先点牌标出这条提示想指的牌，数字会跟着变。对局中谁都看不到，复盘看得到。",
+    "tips": "Tips",
     "targetsMarked": "已标 {count} 张：{words}。赛后公开。 | 已标 {count} 张：{words}。赛后公开。",
     "quoted": "「{word}」",
     "onBoard": "{word}还在牌上。提示词不能是牌上的词，也不能是牌上的词的一部分。",
     "formOnBoard": "{word}还在牌上，这个提示重复了词库列出的它的另一种形式。本房间的提示词规则不允许这样做。",
-    "characterOnBoard": "这个提示和牌上的{word}有相同的汉字。本房间的提示词规则不允许这样做。",
+    "characterOnBoard": "这个提示和牌上的{word}有相同的字：相同的汉字、写法不同的同一个数字，或者其中某个字的英文、拼音都算。本房间的提示词规则不允许这样做。",
     "insideOnBoard": "这个提示包含了牌上的{word}。本房间的提示词规则不允许这样做。",
     "similar": "这可能是牌上某个词的另一种形式：{words}。规则不允许这样做，但程序判断不准，由你决定。",
     "formWarning": "这个提示重复了词库列出的牌上某个词的另一种形式：{words}。本房间的提示词规则把决定权交给你。",
-    "characterWarning": "这个提示和牌上的词有相同的汉字：{words}。由你决定。",
+    "characterWarning": "这个提示和牌上还没翻开的词有相同的字（相同的汉字、写法不同的同一个数字，或者某个字的英文、拼音）：{words}。由你决定。",
     "insideWarning": "这个提示包含了牌上的词：{words}。它可能会暴露这个词，由你决定。",
-    "pick": "点一张牌选中它，组里的人都能看到；商量好了再翻开。",
-    "tools": {
-      "label": "点牌时",
-      "choose": "选牌",
-      "ours": "标我方",
-      "theirs": "标对方",
-      "r2": "标 R2",
-      "hint": "点牌标上，同一个按钮再点一次就取消。标记只有本组学生看得到。"
+    "gestures": {
+      "choose": "单击选牌 · 双击标我方 · 三击标对方 · 长按标 R2 · 或按键盘 1、2、3",
+      "mark": "双击标我方 · 三击标对方 · 长按标 R2 · 或按键盘 1、2、3 · 再做一次就取消",
+      "keys": "按 1 标我方，2 标对方，3 标疑似 Reviewer 2；同一个键再按一次就取消。",
+      "markAs": {
+        "ours": "把{word}标为我方",
+        "theirs": "把{word}标为对方",
+        "r2": "把{word}标为疑似 Reviewer 2"
+      }
     },
     "chosenBy": "{names}选了这张",
     "noted": {
@@ -373,6 +379,16 @@
         "3": "编辑部提醒：{name} 的稿件已超过截稿时间。",
         "4": "{name} 和 DDL 赛跑，DDL 赢了。",
         "5": "投稿系统已关闭，{name} 的提示还在草稿箱里。"
+      },
+      "count": "{line}（×{count}）"
+    },
+    "hero": {
+      "lines": {
+        "1": "{name} 卡着最后三秒交稿，照样录用！",
+        "2": "DDL战神 {name}：最后三秒，稳稳拿下！",
+        "3": "编辑部提醒：{name} 的稿件于 23:59:58 送达。",
+        "4": "{name} 和 DDL 赛跑，这次赢了！",
+        "5": "{name}：交了！投稿系统在身后关上了门。"
       },
       "count": "{line}（×{count}）"
     },
@@ -470,7 +486,9 @@
       "send": "发送",
       "count": "{count}/{max}",
       "readOnly": "导师可以看本组的讨论，但不能发言：提示就是导师能说的全部。",
-      "over": "本局已经结束，不能再发言了。",
+      "over": "终局后，只有在本局为本组上过场的人能在这里发言。",
+      "review": "本局已经结束，可以和本组继续讨论复盘，导师也能发言，直到下一局开始。",
+      "after": "复盘讨论",
       "you": "我",
       "someone": "已离开的玩家"
     },
@@ -507,7 +525,8 @@
     "timedOut": "时间到，本轮结束。",
     "someone": "已离开的玩家",
     "won": "{group}获胜。",
-    "withdrawn": "主持撤回了这一局。"
+    "withdrawn": "主持撤回了这一局。",
+    "talk": "复盘讨论"
   },
   "settings": {
     "title": "本房间的规则",
@@ -596,7 +615,8 @@
       "resubmit": "又被拒了，没事，换一家投",
       "first_author": "带带我，给你挂一作",
       "coauthor": "下一篇还和你合作",
-      "all_nighter": "别走，通宵赶 DDL"
+      "all_nighter": "别走，通宵赶 DDL",
+      "mine_mine": "mine mine"
     },
     "bubble": "{name}：{phrase}",
     "mute": "静音",
@@ -718,14 +738,21 @@
     "request_declined": "你的请求最近被拒绝过，一周后才能再发。",
     "friend_requests_full": "待回应的好友请求太多了，等一些有了回应再发。",
     "friend_limited": "今天发出的好友请求已经够多了，明天再试。",
+    "friend_note_too_long": "最多 50 个字。",
+    "friend_alias_invalid": "备注里有看不见的字符。",
+    "friend_alias_too_long": "最多 20 个字。",
     "friends_full": "你们中有人的好友已满。",
     "no_such_request": "没有这个好友请求。",
-    "not_friends": "只能邀请好友。",
+    "not_friends": "你们不是好友。",
     "friend_offline": "这位好友现在不在线。",
     "friend_in_room": "这位好友已经在这个房间里了。",
     "friend_removed": "房主把这位好友移出了这个房间，不能再邀请。",
     "invite_cooldown": "刚邀请过这位好友，一分钟后再试。",
     "invitation_expired": "这个邀请已经失效。请对方再邀请一次，或者凭房间号加入。",
+    "friend_not_in_room": "这位好友现在不在房间里。",
+    "already_in_room": "你已经在这个房间里了。",
+    "join_ask_pending": "已经申请过了，等对方回复。",
+    "join_ask_limited": "这一小时申请得太多了，稍后再试。",
     "no_such_profile": "没有这个主页，账号可能已经注销。",
     "self_like": "不能给自己的主页点赞。",
     "like_limited": "今天点赞已经够多了，明天再来。",
@@ -822,18 +849,20 @@
     },
     "revealTitle": "翻牌",
     "reveal": "翻到本组的牌：继续。翻到无关论文或对方的牌：本轮立即结束，对方的牌算对方的。翻到二号审稿人：论文被拒，本组立即判负。",
+    "marks": "学生随时可以给还没翻开的牌做预标：双击标我方，三击标对方，长按标疑似 Reviewer 2（键盘上按 1、2、3），同样的手势再做一次就取消。本组的学生和导师都看得到预标，导师不能标。",
     "clueTitle": "提示",
     "clue": {
       "zh": "提示是一个词，最多一个字：一个汉字算一个字，两个字母或数字算一个字。可以是英文单词或缩写，比如 GPU，但不能是牌上的词的英文或拼音。| 提示是一个词，最多 {count} 个字：一个汉字算一个字，两个字母或数字算一个字。可以是英文单词或缩写，比如 GPU，但不能是牌上的词的英文或拼音。",
       "en": "提示是一个词。| 提示最多 {count} 个词。"
     },
     "clueCommon": "提示不能是牌上的词、牌上的词的一部分，也不能是牌上的词在另一种语言里的说法。导师不能说别的话，也不能比划。",
+    "clueCharacter": "同一个数字不管怎么写都算同一个字：6、六、six。一个字的英文和拼音（3 个字母以上）也算这个字：ball、qiu 都算“球”。板上有“大”时，big、great 也算“大”。",
     "clueSound": "提示不要用和牌上的词同音的字，比如用“鸡音”提示“基因”。系统不会拦，靠大家自觉。",
     "clueQuiet": "学生猜牌时，两组导师都不能发表情，本局当过导师的人也不能。",
     "clueTargets": "出题时，导师可以点牌标出这条提示想指的牌，数字会跟着变。对局中谁都看不到这些标记，赛后在提示记录和回放里公开。",
     "clueRule": {
-      "strict": "本房间的提示词规则是严格：词库列出的牌上词语的其他形式、和牌上的词有相同汉字的提示，以及中文房间里包含了牌上的词的提示，都不能用。程序只能猜测的其他形式会给出警告，由导师决定。",
-      "loose": "本房间的提示词规则是宽松：牌上词语的其他形式、相同的汉字，以及包含了牌上的词的提示，都只给出警告，由导师决定。"
+      "strict": "本房间的提示词规则是严格：词库列出的牌上词语的其他形式、和牌上的词有相同的字的提示，以及中文房间里包含了牌上的词的提示，都不能用。程序只能猜测的其他形式会给出警告，由导师决定。",
+      "loose": "本房间的提示词规则是宽松：牌上词语的其他形式、相同的字，以及包含了牌上的词的提示，都只给出警告，由导师决定。"
     },
     "timeTitle": "时间",
     "time": "上面的设置写明了每个阶段有多少时间。轮次信息下方的进度条显示剩余时间，页面往下滚时它会固定在屏幕顶部。",
@@ -904,6 +933,7 @@
         "best_paper": "Best Paper Award",
         "black_hole": "游戏黑洞",
         "missed_deadline": "DDL过了忘投稿",
+        "deadline_hero": "DDL战神",
         "opening_record": "首开纪录",
         "heavenly_hand": "天胡"
       },
@@ -929,22 +959,22 @@
         "friend": "好友"
       },
       "record": "战绩",
-      "recordTable": {
+      "recordStats": {
         "games": "局数",
-        "wins": "胜",
         "rate": "胜率",
-        "ordinary": "普通对局",
-        "inMatches": "比赛中的对局",
-        "total": "合计",
-        "matches": "比赛 {played} 场，夺冠 {won} 场",
-        "noMatches": "还没有打完的比赛。"
+        "matches": "比赛",
+        "won": "夺冠 {won} 场",
+        "ordinary": "普通对局 {games} 局 {wins} 胜",
+        "inMatches": "比赛中的对局 {games} 局 {wins} 胜"
       },
       "noRecords": "还没有战绩。登录后在座位上打完的每一局都会记在这里。",
       "recent": "最近 20 局",
       "recordsAgain": "重试",
       "recordLine": "{side}，{role}",
+      "ordinaryTag": "普通对局",
       "matchTag": "比赛 · 第 {game}/{games} 局",
       "watchAgain": "回放",
+      "watchAgainOf": "回放 {when} 的这一局",
       "recentMatches": "最近 20 场比赛",
       "matchLine": "{players} 人中第 {rank} 名 · {score} 分",
       "matchGames": "{games} 局",
@@ -986,9 +1016,12 @@
   },
   "friends": {
     "title": "好友",
-    "intro": "好友能看到你是否在线、在哪个公开房间，并能邀请你进他们的房间。",
+    "intro": "好友能看到你是否在线、在哪个房间（私密房间不显示房号）、房间里是否在对局，能邀请你进他们的房间，也能申请加入你的房间。",
     "addLabel": "对方的用户名",
     "addSubmit": "发送请求",
+    "noteLabel": "附一句话（可选）",
+    "noteCount": "{count}/{max}",
+    "noteQuoted": "“{note}”",
     "requestSent": "好友请求已发送。",
     "nowFriends": "你们成为好友了。",
     "incoming": "收到的请求",
@@ -998,6 +1031,12 @@
     "withdraw": "撤回",
     "remove": "删除",
     "removeFriend": "删除好友",
+    "aliasEdit": "改备注",
+    "aliasTitle": "给 {name} 改备注",
+    "aliasLabel": "备注",
+    "aliasHint": "只有你自己看得到。清空就是删掉备注，最多 20 个字。",
+    "aliasSave": "保存",
+    "aliasWithName": "{alias}（{username}）",
     "removeConfirm": "确定把 {name} 从好友中删除吗？以后可以重新发送请求。",
     "none": "还没有好友。按用户名添加，或者在房间里点一下玩家的头像。",
     "online": "在线",
@@ -1018,7 +1057,16 @@
     "invitation": "{name} 邀请你加入房间 {code}",
     "invitationJoin": "加入",
     "invitationIgnore": "忽略",
+    "askJoin": "申请加入",
+    "asked": "已申请",
+    "askSent": "已发送申请。对方邀请你时，这里会收到邀请。",
+    "askNotice": "{name}想加入",
+    "askInvite": "邀请",
+    "askIgnore": "忽略",
+    "askInvited": "已邀请{name}。",
     "addFromRoom": "加为好友",
+    "addTitle": "加 {name} 为好友",
+    "requestPending": "已发送请求",
     "requestsWaiting": "{count} 个请求等你处理。 | {count} 个请求等你处理。"
   },
   "ranks": {
@@ -1116,6 +1164,7 @@
       "best_paper": "比赛结束时，总分最高的玩家获得。并列第一的都有；所有人同分就谁都没有。",
       "black_hole": "三人以上的比赛结束时，总分最低的玩家获得。并列最后的都有。",
       "missed_deadline": "导师出题的时间到了还没交出提示：稿子写好了，就是没点提交。每错过一次截稿再得一次，算登录后坐在位置上、正常结束的对局。",
+      "deadline_hero": "导师在出题时限的最后 3 秒内交出提示，而且这条提示至少翻对一张本组的牌；或者学生在猜词时限的最后 3 秒内翻开一张本组的牌：23:59:57 提交，照样录用。每个做到的回合都再得一次，算登录后坐在位置上、正常结束、开了时限的对局。",
       "opening_record": "本组在一局里的第一条提示数字是 3 以上，学生接着一张不错地先翻中这么多张本组的牌，组里每人都得。课题组的第一篇论文，一字没改直接接收。",
       "heavenly_hand": "本组第一条提示的回合里就把本组的牌全部翻完、当场获胜，组里每人都得。一条提示，一篇论文，直接中了梦中情刊：最难拿的称号。"
     },

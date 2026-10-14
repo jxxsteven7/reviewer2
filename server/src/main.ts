@@ -68,7 +68,12 @@ export async function main({
   const words = loadWordLibrary(config.wordsDir, (file, reason, term) =>
     log(term === undefined ? 'word_list_skipped' : 'term_skipped', { file, term, reason }),
   );
-  log('word_lists_loaded', { fields: words.fields().map(({ id, counts }) => ({ id, ...counts })) });
+  // `glossed` counts the characters whose English meanings the clue check knows (words.ts): none
+  // when the dictionary beside the lists is missing.
+  log('word_lists_loaded', {
+    fields: words.fields().map(({ id, counts }) => ({ id, ...counts })),
+    glossed: words.glossed,
+  });
 
   const database = await openDatabase(config.dataDir, { log });
   const { db } = database;
@@ -241,7 +246,14 @@ export async function main({
   let status: HttpServer | null = null;
   if (statusPort !== null && history !== null) {
     const page = createServer(
-      createStatusHandler(server.stats, history, feedback, log, config.adminCommand, () => accounts.store.counts(7)),
+      createStatusHandler(
+        server.stats,
+        history,
+        feedback,
+        log,
+        { admin: config.adminCommand, feedback: config.feedbackCommand },
+        () => accounts.store.counts(7),
+      ),
     );
     status = page;
     // The page is the operator's alone. A port that can't be opened, because something else has

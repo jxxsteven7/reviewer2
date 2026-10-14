@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'vitest';
-import { bigClueCards, POINTS, pointsFor, type KeywordsScoreDetail } from './score';
+import {
+  bigClueCards,
+  bonusPoints,
+  cardPoints,
+  POINTS,
+  pointsFor,
+  revealPoints,
+  type KeywordsScoreDetail,
+} from './score';
 
 // The points of a game (docs/games/keywords.md#matches): what a group's own cards and a win give
 // everyone in the group, what a wrong card costs every student and, more, the PI, and the bonuses.
@@ -43,5 +51,46 @@ describe('the points of a game', () => {
 
   test("read a detail from before the PI's stakes as a student's, without bonuses", () => {
     expect(pointsFor({ found: 4, won: true, irrelevant: 1, wrong: 0, reviewer2: 1 })).toBe(4 + 3 - 1 - 3);
+  });
+});
+
+describe('a revealed card', () => {
+  test("gives the group whose students revealed it the price of its color, by each player's role", () => {
+    expect(revealPoints('red', 'red', 'red', 'guesser')).toBe(1);
+    expect(revealPoints('red', 'red', 'red', 'captain')).toBe(1);
+    expect(revealPoints('neutral', 'red', 'red', 'guesser')).toBe(-1);
+    expect(revealPoints('neutral', 'red', 'red', 'captain')).toBe(-2);
+    expect(revealPoints('blue', 'red', 'red', 'guesser')).toBe(-2);
+    expect(revealPoints('blue', 'red', 'red', 'captain')).toBe(-3);
+    expect(revealPoints('reviewer2', 'red', 'red', 'guesser')).toBe(-3);
+    expect(revealPoints('reviewer2', 'red', 'red', 'captain')).toBe(-5);
+  });
+
+  test('gives the other group nothing, its own card included', () => {
+    for (const color of ['red', 'blue', 'neutral', 'reviewer2'] as const) {
+      expect(revealPoints(color, 'red', 'blue', 'guesser')).toBe(0);
+      expect(revealPoints(color, 'red', 'blue', 'captain')).toBe(0);
+    }
+  });
+});
+
+describe('the points of a game split in two', () => {
+  test('are the cards and the bonuses of the end, which add up to the whole', () => {
+    const detail: KeywordsScoreDetail = {
+      role: 'captain',
+      found: 6,
+      won: true,
+      irrelevant: 1,
+      wrong: 1,
+      reviewer2: 0,
+      bigClues: 2,
+      openingRecord: true,
+      heavenlyHand: false,
+    };
+    expect(cardPoints(detail)).toBe(6 - 2 - 3);
+    expect(bonusPoints(detail)).toBe(4 + 2 + 1);
+    expect(cardPoints(detail) + bonusPoints(detail)).toBe(pointsFor(detail));
+    expect(bonusPoints({ ...NOTHING, role: 'guesser', won: true })).toBe(3);
+    expect(bonusPoints({ ...NOTHING, found: 3 })).toBe(0);
   });
 });

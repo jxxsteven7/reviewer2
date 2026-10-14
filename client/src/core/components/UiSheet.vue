@@ -5,8 +5,9 @@ const openSheets: symbol[] = [];
 </script>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useVisualViewport } from '../useVisualViewport';
 
 // A panel over the page: a sheet from the bottom on phones, a dialog on wider screens. Escape,
 // the close button and a tap outside close it. It is written by hand rather than with <dialog>,
@@ -20,15 +21,39 @@ import { useI18n } from 'vue-i18n';
 // shown over the one below. A sheet with a way `back`, named by that text, has a round button with
 // an arrow before its title, as the close button has its cross after it, which takes the viewer
 // back to the sheet it was opened from.
-const props = withDefaults(defineProps<{ open: boolean; title: string; tall?: boolean; back?: string | null }>(), {
-  tall: false,
-  back: null,
-});
+//
+// A `subtitle` follows the title in small grey type, as a friend's username follows the name the
+// account gives them.
+//
+// A sheet that isn't to `focusInput` takes the focus itself as it opens, so that a phone shows no
+// keyboard before the viewer asks for one, as a chat opened only to read it. A sheet that is to
+// `fitScreen` keeps to the part of the screen that a phone's keyboard leaves (useVisualViewport.ts)
+// and holds its content in a column as tall as it may be, so that what the content keeps at its
+// foot, such as the line a player writes, stays in sight above the keyboard while the rest
+// scrolls.
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    title: string;
+    tall?: boolean;
+    back?: string | null;
+    subtitle?: string | null;
+    focusInput?: boolean;
+    fitScreen?: boolean;
+  }>(),
+  { tall: false, back: null, subtitle: null, focusInput: true, fitScreen: false },
+);
 const emit = defineEmits<{ close: []; back: [] }>();
 const { t } = useI18n();
 const id = useId();
 const panel = ref<HTMLElement | null>(null);
+// The subtitle as it follows the title, a space apart, so that the heading reads as two words.
+const spacedSubtitle = computed(() => ` ${props.subtitle ?? ''}`);
 let returnFocus: HTMLElement | null = null;
+const screen = useVisualViewport(computed(() => props.open && props.fitScreen));
+const placed = computed(() =>
+  screen.value ? { top: `${screen.value.top}px`, height: `${screen.value.height}px`, bottom: 'auto' } : undefined,
+);
 
 const FOCUSABLE = 'input, textarea, button, [href], [tabindex]:not([tabindex="-1"])';
 
@@ -76,7 +101,8 @@ watch(
       openSheets.push(me);
       document.addEventListener('keydown', onKey);
       await nextTick();
-      (panel.value?.querySelector<HTMLElement>('input:not([type="checkbox"])') ?? panel.value)?.focus();
+      const input = props.focusInput ? panel.value?.querySelector<HTMLElement>('input:not([type="checkbox"])') : null;
+      (input ?? panel.value)?.focus();
     } else if (was) {
       leave();
       document.removeEventListener('keydown', onKey);
@@ -94,11 +120,11 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="backdrop" @click.self="emit('close')">
+    <div v-if="open" class="backdrop" :style="placed" @click.self="emit('close')">
       <section
         ref="panel"
         class="panel"
-        :class="{ tall }"
+        :class="{ tall, fit: fitScreen }"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="id"
@@ -108,7 +134,9 @@ onBeforeUnmount(() => {
           <button v-if="back" type="button" class="round back" :aria-label="back" @click="emit('back')">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
           </button>
-          <h2 :id="id">{{ title }}</h2>
+          <h2 :id="id">
+            {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
+          </h2>
           <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
             &times;
           </button>
@@ -171,6 +199,13 @@ h2 {
   font-size: var(--text-2xl);
 }
 
+.subtitle {
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
 /* The round buttons at either end of the title: back, with its arrow, and close, with its cross. */
 .round {
   display: inline-flex;
@@ -206,6 +241,26 @@ h2 {
 .panel.tall {
   height: 88vh;
   height: 88dvh;
+}
+
+/* Fitted to the part of the screen that the keyboard leaves: the backdrop is that part, and the
+   panel a column of at most 88% of it, whose body holds the content as tall as it may be. */
+.panel.fit {
+  display: flex;
+  flex-direction: column;
+  max-height: 88%;
+  overflow: hidden;
+}
+
+.fit > .head {
+  flex: none;
+}
+
+.fit > .body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 @media (min-width: 40rem) {

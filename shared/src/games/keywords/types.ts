@@ -48,19 +48,23 @@ export interface GameResult {
 // A term for a card: the word in the room's language and, when the word library has them, the
 // same term in its other languages, and the other forms of the term that the library lists in
 // any language, such as "dataset" for "Data". A Chinese word also comes with its pinyin, which
-// the server works out, without tones and with a space between the syllables. The clue check
-// holds a clue against all of these (see clue.ts).
+// the server works out, without tones and with a space between the syllables, and with the English
+// meanings of its characters, as the dictionary in words/dictionary/ gives them (`glosses`). The
+// clue check holds a clue against all of these (see clue.ts).
 export interface BoardWord {
   word: string;
   translations?: readonly string[];
   forms?: readonly string[];
   pinyin?: string;
+  glosses?: readonly string[];
 }
 
 // What a player sees of a card. `color` is there only when the player may know it: the card has
 // been revealed, the player is a captain, or the game is over. Otherwise the key is absent.
 // `translations`, `forms` and `pinyin` are there when the card has any, for the clue check on the
-// captain's screen. They are no secret.
+// captain's screen. They are no secret. `glosses`, the English meanings of the characters of a
+// Chinese word, which the check needs too, are many, so only the captains get them, while the
+// game is on, and only for the cards that are still face down.
 export interface CardView {
   word: string;
   revealed: boolean;
@@ -68,6 +72,7 @@ export interface CardView {
   translations?: string[];
   forms?: string[];
   pinyin?: string;
+  glosses?: string[];
 }
 
 // A turn in the record of the game. A captain who ran out of time gave no clue, and then `word`
@@ -81,25 +86,32 @@ export interface CardView {
 // the clue and on each guess, is when it came, in milliseconds from the start of the game; for a
 // turn without a clue, when its time ran out. Replays from before these were kept have none of
 // them, and a turn without a clue had no captain before the missed deadlines were counted.
+// `lastSeconds`, on the clue and on each guess, says that it came in the last DEADLINE_HERO_MS of
+// the phase's time limit (docs/games/keywords.md#titles).
 export interface ClueRecord {
   turn: number;
   team: Team;
   word: string | null;
   count: ClueCount | null;
-  guesses: { card: number; color: CardColor; player: string; at?: number }[];
+  guesses: { card: number; color: CardColor; player: string; at?: number; lastSeconds?: true }[];
   timedOut?: true;
   captain?: string;
   targets?: number[];
   at?: number;
+  lastSeconds?: true;
 }
+
+// How close to the end of its time limit a clue or a guess makes its giver a deadline hero.
+export const DEADLINE_HERO_MS = 3000;
 
 // What happened in a game besides the clues and the guesses: the chair paused the game and resumed
 // it, and a group asked for an extension, for the clue log; and a captain missed the deadline for
-// their clue, which the room hears of at once (docs/games/keywords.md#titles), while the clue log
-// has the turn without a clue already. Each is noted with the turn it came in; an extension and a
-// missed deadline name the group. A game keeps the last EVENTS_KEPT of them, more than a game has,
-// so that no number of pauses can grow its snapshots without end.
-export const EVENT_KINDS = ['paused', 'resumed', 'extended', 'missed'] as const;
+// their clue, or someone became a deadline hero, which the room hears of at once
+// (docs/games/keywords.md#titles), while the clue log has the turn already. Each is noted with the
+// turn it came in; an extension, a missed deadline and a deadline hero name the group. A game keeps
+// the last EVENTS_KEPT of them, more than a game has, so that no number of pauses can grow its
+// snapshots without end.
+export const EVENT_KINDS = ['paused', 'resumed', 'extended', 'missed', 'hero'] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENTS_KEPT = 50;
 
@@ -109,6 +121,8 @@ export interface GameEvent {
   team?: Team;
   // A missed deadline names the captain, by player ID, and, for a captain with an account, how many
   // times they have missed one, this time included, as their titles and the game so far count them.
+  // A deadline hero names the PI or the student in the same way, with how many times they have been
+  // one.
   player?: string;
   count?: number;
 }
@@ -130,13 +144,16 @@ export interface CardMark {
   mark: Mark;
 }
 
-// A message that a guesser wrote to their group, with the turn in which it was written. The IDs
-// of a group's messages count up from 1, also when the oldest messages have been dropped.
+// A message that a guesser wrote to their group, with the turn in which it was written, or that
+// anyone who played for the group wrote once the game was over (`after`), its PI too, to talk the
+// game over. The IDs of a group's messages count up from 1, also when the oldest messages have
+// been dropped.
 export interface ChatMessage {
   id: number;
   player: string;
   turn: number;
   text: string;
+  after?: true;
 }
 
 export interface KeywordsView {
@@ -171,10 +188,11 @@ export interface KeywordsView {
   // captain and guessers get this; for everyone else the key is absent.
   selections?: Selection[];
   // The messages of the viewer's own group. Only a captain or a guesser gets this; spectators
-  // and screens don't.
+  // and screens don't. It goes on after the game, for those who played for the group to talk it
+  // over.
   chat?: ChatMessage[];
-  // The marks of the viewer's own group, while the game is on. Only its guessers get this: its
-  // captain, who sees every color, the other group, spectators and screens don't.
+  // The marks of the viewer's own group, while the game is on. Its guessers and its captain, who
+  // only reads them, get this; the other group, spectators and screens don't.
   marks?: CardMark[];
 }
 

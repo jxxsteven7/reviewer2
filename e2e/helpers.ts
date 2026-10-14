@@ -274,7 +274,8 @@ export function expectNoKey(states: RoomView[]): number {
 
 // No snapshot that this page received during a game held another group's chat or its choices of
 // cards. A page outside the groups has neither key; a page in a group has its own group's chat,
-// and its choices only in its turn. Only a group's students get its marks, while the game is on.
+// and its choices only in its turn. Only a group's students and its PI get its marks, while the game
+// is on.
 // Returns how many snapshots it checked.
 export function expectOwnGroupOnly(states: RoomView[]): number {
   let checked = 0;
@@ -289,7 +290,7 @@ export function expectOwnGroupOnly(states: RoomView[]): number {
     checked += 1;
     const team = state.me === null ? null : (seats[state.me]?.team ?? null);
     const role = state.me === null ? 'spectator' : seats[state.me]?.role;
-    if (role !== 'guesser' || game.phase === 'over') expect(game).not.toHaveProperty('marks');
+    if (role === 'spectator' || game.phase === 'over') expect(game).not.toHaveProperty('marks');
     if (team === null) {
       expect(game).not.toHaveProperty('chat');
       expect(game).not.toHaveProperty('selections');
@@ -459,7 +460,9 @@ export interface Table {
 // it creates or joins the room, for a test that needs a player's connection set up in some other
 // way or a player logged in to an account with the same name, `setup` on
 // Ann's room setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before
-// she starts the game. The game has started when this returns.
+// she starts the game. The game has started when this returns. The tests' clues are English words
+// of up to eight letters, which a Chinese room counts as up to four characters, more than its
+// default allows, so a Chinese room is set to four.
 export async function seatTable(
   browser: Browser,
   language: Language,
@@ -470,7 +473,10 @@ export async function seatTable(
   const ann = await newPlayer(browser, language);
   snapshotsOf(ann);
   await prepare?.(ann, 'Ann');
-  const url = await createRoom(ann, language, 'Ann', setup);
+  const url = await createRoom(ann, language, 'Ann', async (page) => {
+    if (language === 'zh') await setSetting(page, TEXT.zh.settings.clueLength.zh, 4);
+    await setup?.(page);
+  });
   // The others join at the same time, as separate people do.
   const join = async (name: string, joining: Joining = {}) => {
     const page = await newPlayer(browser, language);

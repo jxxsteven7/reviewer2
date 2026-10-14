@@ -18,6 +18,8 @@ vi.mock('../useFriendsList', () => ({
 const send = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
 vi.mock('../socket', () => ({ send }));
 vi.mock('../toast', () => ({ toast: vi.fn(), toastError: vi.fn() }));
+const askToJoin = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('../friends', () => ({ askToJoin }));
 
 const NONE = { wonTogether: 0, lostTogether: 0, against: 0, beat: 0, beaten: 0 };
 // The line keeps each number with its word by no-break spaces; the test reads them as spaces.
@@ -63,11 +65,23 @@ describe('ProfileFriends', () => {
 
     const board = wrapper.find('.board');
     expect(board.find('h4').text()).toBe('Friend titles');
-    expect(board.findAll('li').map((line) => [line.find('.pill').text(), line.find('.holder-names').text()])).toEqual([
-      ['Co-First Author', 'Bob and Cat'],
+    // Each title with the avatar and the name of each friend who holds it, the avatar leading to
+    // their page.
+    expect(
+      board
+        .findAll('li')
+        .map((line) => [line.find('.pill').text(), ...line.findAll('.holder-name').map((name) => name.text())]),
+    ).toEqual([
+      ['Co-First Author', 'Bob', 'Cat'],
       ['Your Reviewer 2', 'Cat'],
       ['Rival Reviewer', 'Cat'],
     ]);
+    expect(
+      board
+        .findAll('li')[0]
+        ?.findAll('.holder a')
+        .map((link) => link.attributes('aria-label')),
+    ).toEqual(["View Bob's profile", "View Cat's profile"]);
   });
 
   test("leads from each friend's avatar to their page, with the name as plain text and where they are beside it", () => {
@@ -85,6 +99,26 @@ describe('ProfileFriends', () => {
     expect(cat?.get('.where').text()).toBe('offline');
   });
 
+  test('asks a friend in a private room to be let in, and says so while the request stands', async () => {
+    const inPrivate = { ...friend('Bob', null), online: true, room: { code: null } };
+    const wrapper = mountWith([inPrivate, { ...friend('Cat', null), online: true, room: { code: null }, asked: true }]);
+    const [bob, cat] = wrapper.findAll('.list .friend');
+    expect(bob?.get('.where').text().replace(/\s+/g, ' ')).toBe('online \u00b7 In a room');
+    expect(bob?.find('a.join').exists()).toBe(false);
+    const asking = bob?.get('button.join');
+    expect(asking?.text()).toBe('Ask to join');
+    await asking?.trigger('click');
+    expect(askToJoin).toHaveBeenCalledWith('Bob');
+    expect(cat?.get('button.join').text()).toBe('Asked');
+    expect(cat?.get('button.join').attributes('disabled')).toBeDefined();
+  });
+
+  const press = async (wrapper: ReturnType<typeof mountWith>, text: string) => {
+    const found = wrapper.findAll('[role=dialog] button').find((button) => button.text() === text);
+    if (!found) throw new Error(`no button "${text}"`);
+    await found.trigger('click');
+  };
+
   test('removes a friend from behind the card\'s "more" button, after asking', async () => {
     send.mockClear();
     const wrapper = mountWith([friend('Bob', null)]);
@@ -94,13 +128,40 @@ describe('ProfileFriends', () => {
     await more.trigger('click');
     const sheet = wrapper.get('[role=dialog]');
     expect(sheet.get('h2').text()).toBe('Bob');
-    expect(sheet.text()).toContain('Remove Bob from your friends?');
+    expect(sheet.findAll('button').map((button) => button.text())).toEqual([
+      '\u00d7',
+      'Edit alias',
+      'Remove friend',
+      'Cancel',
+    ]);
+    await press(wrapper, 'Remove friend');
+    expect(wrapper.get('[role=dialog]').text()).toContain('Remove Bob from your friends?');
     expect(send).not.toHaveBeenCalled();
-    await sheet
-      .findAll('button')
-      .find((button) => button.text() === 'Remove friend')
-      ?.trigger('click');
+    await press(wrapper, 'Remove friend');
     expect(send).toHaveBeenCalledWith('friends:remove', { username: 'Bob' });
+  });
+
+  test("gives a friend a name of the account's own, which shows with the username after it", async () => {
+    send.mockClear();
+    const wrapper = mountWith([{ ...friend('Bob', null), alias: 'Bobby' }, friend('Cat', null)]);
+    const card = wrapper.findAll('.friend')[0];
+    expect(card?.get('.name').text()).toBe('Bobby');
+    expect(card?.get('.username').text()).toBe('Bob');
+    expect(wrapper.findAll('.friend')[1]?.find('.username').exists()).toBe(false);
+    await card?.get('button.more').trigger('click');
+    expect(wrapper.get('[role=dialog] h2').text()).toBe('Bobby Bob');
+    expect(wrapper.get('[role=dialog] h2 .subtitle').text()).toBe('Bob');
+    await press(wrapper, 'Edit alias');
+    // The sheet is drawn anew as it changes, so it is looked up each time.
+    const sheet = () => wrapper.get('[role=dialog]');
+    expect(sheet().get('h2').text()).toBe('Alias for Bob');
+    expect(sheet().text()).toContain('Only you see it. Leave it empty to remove it. At most 20 characters.');
+    expect((sheet().get('input').element as HTMLInputElement).value).toBe('Bobby');
+    await sheet().get('input').setValue('x'.repeat(21));
+    expect(sheet().text()).toContain('Use at most 20 characters.');
+    await sheet().get('input').setValue('');
+    await sheet().get('form').trigger('submit');
+    expect(send).toHaveBeenCalledWith('friends:alias', { username: 'Bob', alias: '' });
   });
 
   test('has no board while no friend holds a title', () => {
@@ -115,6 +176,6 @@ describe('ProfileFriends', () => {
     );
     expect(plain(wrapper.find('.friend .games').text())).toBe('同队 3 胜 2 负');
     expect(wrapper.find('.board li .pill').text()).toBe('共同一作');
-    expect(wrapper.find('.board li .holder-names').text()).toBe('Bob');
+    expect(wrapper.find('.board li .holder-name').text()).toBe('Bob');
   });
 });

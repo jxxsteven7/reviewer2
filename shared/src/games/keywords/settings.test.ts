@@ -9,7 +9,7 @@ import {
 } from './settings';
 
 describe('the settings of a room', () => {
-  test('start with the free and strict rules, one word or four characters, and 120, 90 and 120 seconds', () => {
+  test('start with the free and strict rules, one word or two characters, and 120, 90 and 120 seconds', () => {
     expect(defaultSettings('en')).toEqual({
       guessRule: 'free',
       clueRule: 'strict',
@@ -19,7 +19,7 @@ describe('the settings of a room', () => {
       guessTime: 120,
       extensions: false,
     });
-    expect(defaultSettings('zh').clueLength).toBe(4);
+    expect(defaultSettings('zh').clueLength).toBe(2);
     expect(settingsProblems(defaultSettings('en'), 'en')).toEqual({});
     expect(settingsProblems(defaultSettings('zh'), 'zh')).toEqual({});
   });

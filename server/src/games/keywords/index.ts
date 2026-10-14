@@ -29,6 +29,7 @@ import {
   expire,
   extend,
   giveClue,
+  heroesOf,
   mark,
   newGame,
   pass,
@@ -237,8 +238,10 @@ const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, '
 
 // The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
 // change to either. Version 2 brought the students' marks, the homophone rule of a Chinese room and
-// the hold on the quick reactions of whoever has seen the key while the students guess.
-export const RULES_VERSION = 2;
+// the hold on the quick reactions of whoever has seen the key while the students guess; version 3
+// the numbers, the English and the pinyin of a character as the same character in the clue check,
+// and the groups' talk after the game, the PI's included.
+export const RULES_VERSION = 3;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -248,10 +251,12 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
     act(data, playerId, (game, actor) => select(game, actor, choice)),
   'keywords:mark': (data, _ctx, playerId, marking) => act(data, playerId, (game, actor) => mark(game, actor, marking)),
   'keywords:reveal': (data, ctx, playerId, guess) =>
-    act(data, playerId, (game, actor) => reveal(game, actor, guess, ctx.now())),
+    act(data, playerId, (game, actor) => reveal(game, actor, guess, ctx.now(), (hero) => heroBefore(game, ctx, hero))),
   'keywords:pass': (data, ctx, playerId, moment) =>
     act(data, playerId, (game, actor) => pass(game, actor, moment, ctx.now())),
-  'keywords:say': (data, _ctx, playerId, line) => act(data, playerId, (game, actor) => say(game, actor, line)),
+  // After the game, whoever played for a group may talk it over with it (rules.ts).
+  'keywords:say': (data, ctx, playerId, line) =>
+    act(data, playerId, (game, actor) => say(game, actor, line, data.seating.sides.get(ctx.keyOf(playerId)) ?? null)),
   // Only the chair pauses and resumes, whoever that is by now: the room passes the chair on after
   // a while when the chair is offline.
   'keywords:pause': (data, ctx, playerId, moment) =>
@@ -277,20 +282,34 @@ function missedBy(data: KeywordsData, ctx: GameContext): Missed | null {
   return { captain, before: held + earlier.length };
 }
 
+// How many times a player had been a deadline hero before the card that makes them one now: as
+// their account's titles count it, and in this game so far, whose titles are awarded only at its
+// end. Null for a guest, and for everyone in a game that awards no titles (GameContext.titleCount).
+function heroBefore(game: KeywordsState, ctx: GameContext, playerId: string): number | null {
+  const held = ctx.titleCount(playerId, 'deadline_hero');
+  if (held === null) return null;
+  const key = ctx.keyOf(playerId);
+  return held + game.history.filter((record) => [...heroesOf(record)].some((hero) => ctx.keyOf(hero) === key)).length;
+}
+
 // Whether a turn is one whose captain gave no clue in time, with the captain who was in the seat.
 const missedDeadline = (record: ClueRecord): boolean =>
   record.word === null && record.timedOut === true && record.captain !== undefined;
 
 // The titles that a game which ended by itself brought a player who played for `team` in it, by
 // their member key (docs/games/keywords.md#titles), each with the turn it came in: Forgot to
-// Submit for each turn in which their time for the clue ran out, and for everyone in the group, the
-// opening record and the heavenly hand of its first clue.
+// Submit for each turn in which their time for the clue ran out, Deadline Hero for each turn that
+// made them one (heroesOf), and for everyone in the group, the opening record and the heavenly hand
+// of its first clue.
 function titlesOf(game: KeywordsState, team: Team, key: string, keyOf: (playerId: string) => string): GameTitle[] {
-  const titles: GameTitle[] = game.history.flatMap((record) =>
-    missedDeadline(record) && keyOf(record.captain ?? '') === key
+  const titles: GameTitle[] = game.history.flatMap((record) => [
+    ...(missedDeadline(record) && keyOf(record.captain ?? '') === key
       ? [{ title: 'missed_deadline' as const, turn: record.turn }]
-      : [],
-  );
+      : []),
+    ...([...heroesOf(record)].some((hero) => keyOf(hero) === key)
+      ? [{ title: 'deadline_hero' as const, turn: record.turn }]
+      : []),
+  ]);
   const first = firstClue(game, team);
   if (first && openingRecord(game, team)) titles.push({ title: 'opening_record', turn: first.turn });
   if (first && heavenlyHand(game, team)) titles.push({ title: 'heavenly_hand', turn: first.turn });

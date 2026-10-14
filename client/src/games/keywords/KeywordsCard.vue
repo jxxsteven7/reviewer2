@@ -3,6 +3,7 @@ import { hasHan, type CardView, type Language, type Mark, type Team } from '@rev
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
+import ScoreFloat, { type Shown } from '../../core/components/ScoreFloat.vue';
 import { formatList, HTML_LANG } from '../../core/i18n';
 import { hyphenate } from './hyphenate';
 import MarkSticker from './MarkSticker.vue';
@@ -18,7 +19,10 @@ import type { Chooser } from './useKeywords';
 // they were marked: on the PI's board while they mark them, and for everyone once the game is over.
 // A `note` is the mark that the viewer's group has put on a hidden card, for its students alone: the
 // card takes the tint of the color it stands for, unless it is the viewer's choice, and the mark's
-// round sticker hangs on its bottom left corner.
+// round sticker hangs on its bottom left corner; for the group's PI, who only reads it (`noteQuiet`),
+// the card keeps the tint of its color and a small sticker sits inside the bottom right corner,
+// clear of the number of a card a clue is meant for. A `float` is what the card did to the viewer's
+// points as it was revealed, which rises from it.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -30,8 +34,10 @@ const props = withDefaults(
     marked?: boolean;
     target?: number | null;
     note?: { mark: Mark; color: Team | 'r2' } | null;
+    noteQuiet?: boolean;
+    float?: Shown | null;
   }>(),
-  { large: false, marked: false, target: null, note: null },
+  { large: false, marked: false, target: null, note: null, noteQuiet: false, float: null },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t, locale } = useI18n();
@@ -83,7 +89,7 @@ const ariaLabel = computed(() =>
       state,
       card.color,
       size,
-      note ? `noted note-${note.color}` : '',
+      note && !noteQuiet ? `noted note-${note.color}` : '',
       { large, selected, selectable, marked, targeted: target !== null, chosen: choosers.length > 0 },
     ]"
     :aria-disabled="selectable ? undefined : 'true'"
@@ -98,7 +104,15 @@ const ariaLabel = computed(() =>
       t('game.stamp')
     }}</span>
     <span v-if="target !== null" class="target num" aria-hidden="true">{{ target }}</span>
-    <MarkSticker v-if="note" class="note" :mark="note.mark" :color="note.color" />
+    <MarkSticker
+      v-if="note"
+      class="note"
+      :class="{ quiet: noteQuiet }"
+      :mark="note.mark"
+      :color="note.color"
+      :small="noteQuiet"
+    />
+    <ScoreFloat v-if="float" :key="float.key" :float="float" />
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar
         v-for="chooser in choosers"
@@ -112,8 +126,12 @@ const ariaLabel = computed(() =>
 </template>
 
 <style scoped>
+/* A long press marks a student's card (useCardGestures.ts): it selects no text and opens no menu. */
 .card {
   position: relative;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -380,6 +398,14 @@ const ariaLabel = computed(() =>
   bottom: -9px;
   left: -7px;
   box-shadow: var(--shadow-1);
+}
+
+/* The PI's: small, inside the bottom right corner, where nothing hangs. */
+.note.quiet {
+  right: 3px;
+  bottom: 3px;
+  left: auto;
+  box-shadow: none;
 }
 
 /* The card that a replay's step is about. */

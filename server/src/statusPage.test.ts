@@ -244,7 +244,7 @@ describe('the feedback', () => {
         now: NOW,
         ...changes,
       },
-      DEFAULT_ADMIN_COMMAND,
+      { admin: DEFAULT_ADMIN_COMMAND },
     );
   // What the page shows between the heading and the entries.
   const head = (html: string) => text(html.slice(0, html.indexOf('<article>')));
@@ -253,19 +253,20 @@ describe('the feedback', () => {
     const status = renderStatusPage(stats(), [], NOW);
     expect(text(status)).toContain('Feedback None yet.');
     expect(status).toContain('<meta http-equiv="refresh" content="5">');
+    // Open is new and issue alone; one piece of feedback was resolved and thanked, and counts in both.
     const some = renderStatusPage(stats(), [], NOW, {
-      total: 12,
+      total: 11,
       statuses: { new: 3, issue: 2, resolved: 1, thanked: 2, closed: 3, trash: 1 },
     });
     expect(some).toContain(
-      '<p class="pills"><a class="badge" href="/feedback">Open <b>8</b></a>' +
+      '<p class="pills"><a class="badge" href="/feedback">Open <b>5</b></a>' +
         '<a class="badge new" href="/feedback?status=new">New <b>3</b></a>' +
         '<a class="badge issue" href="/feedback?status=issue">Issue <b>2</b></a>' +
         '<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>1</b></a>' +
         '<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>2</b></a>' +
         '<a class="badge closed" href="/feedback?status=closed">Closed <b>3</b></a>' +
         '<a class="badge trash" href="/feedback?status=trash">Trash <b>1</b></a></p>' +
-        '<p class="note">12 in all &middot; <a href="/feedback">Read it</a></p>',
+        '<p class="note">11 in all &middot; <a href="/feedback">Read it</a></p>',
     );
     expect(some).not.toContain('<article>');
 
@@ -361,8 +362,15 @@ describe('the feedback', () => {
 
   test('shows the whole trail of what became of it, and how long the trash has left', () => {
     const html = page({
-      total: 4,
+      total: 6,
       entries: [
+        feedback(6, { acknowledgmentId: 8, status: 'thanked' }),
+        feedback(5, {
+          resolvedPr: 72,
+          resolvedAt: '2026-10-05T10:00:00.000Z',
+          acknowledgmentId: 9,
+          status: 'thanked',
+        }),
         feedback(4, { resolvedPr: 50, resolvedAt: '2026-10-05T10:00:00.000Z', status: 'resolved' }),
         feedback(3, {
           issue: 42,
@@ -376,7 +384,10 @@ describe('the feedback', () => {
         feedback(1, { deletedAt: '2026-09-08T11:59:59.000Z', status: 'trash' }),
       ],
     });
-    expect(html).toContain('<span class="badge resolved">PR #50</span>');
+    // The badge writes out all that the feedback came to: resolved, thanked, or both.
+    expect(html).toContain('<span class="badge resolved">Resolved #50</span>');
+    expect(html).toContain('<span class="badge thanked">Resolved #72 &middot; Thanked</span>');
+    expect(html).toContain('<span class="badge thanked">Thanked</span>');
     expect(html).toContain('<p class="trail">resolved by PR #50</p>');
     expect(html).toContain('<span class="badge closed">Closed</span>');
     expect(html).toContain(
@@ -557,18 +568,70 @@ describe('the feedback', () => {
       older: false,
       now: NOW,
     };
-    expect(commands(renderFeedbackPage(listing, DEFAULT_ADMIN_COMMAND))).toContain(`${RUN} close 1`);
-    expect(commands(renderFeedbackPage(listing, 'npm run admin --'))).toEqual([
+    expect(commands(renderFeedbackPage(listing, { admin: DEFAULT_ADMIN_COMMAND }))).toContain(`${RUN} close 1`);
+    expect(commands(renderFeedbackPage(listing, { admin: 'npm run admin --' }))).toEqual([
       'npm run admin -- feedback resolve 1 &#60;pr&#62;',
       "npm run admin -- feedback adopt 1 can't be undone",
       'npm run admin -- feedback close 1',
       'npm run admin -- feedback delete 1',
     ]);
     // The operator set it, and it is escaped all the same.
-    const odd = renderFeedbackPage(listing, '<script>x</script> "a" & \'b\'');
+    const odd = renderFeedbackPage(listing, { admin: '<script>x</script> "a" & \'b\'' });
     expect(odd).toContain(
       '<code>&#60;script&#62;x&#60;/script&#62; &#34;a&#34; &#38; &#39;b&#39; feedback close 1</code>',
     );
+    expect(odd).not.toMatch(INERT);
+  });
+
+  test("puts the operator's feedback command in front of every command, with publish first where it may", () => {
+    const listing = (changes: Partial<Feedback>): FeedbackListing => ({
+      total: 1,
+      statuses: { ...NO_FEEDBACK.statuses, new: 1 },
+      kinds: { idea: 1 },
+      view: 'open',
+      kind: null,
+      entries: [feedback(7, changes)],
+      paged: false,
+      older: false,
+      now: NOW,
+    });
+    const run = { admin: DEFAULT_ADMIN_COMMAND, feedback: 'triage-feedback' };
+    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), run))).toEqual([
+      'triage-feedback publish 7 publishes the issue in one go',
+      'triage-feedback draft 7',
+      'triage-feedback issue 7 &#60;number&#62;',
+      'triage-feedback resolve 7 &#60;pr&#62;',
+      "triage-feedback adopt 7 can't be undone",
+      'triage-feedback close 7',
+      'triage-feedback delete 7',
+    ]);
+    expect(commands(renderFeedbackPage(listing({ deletedAt: '2026-10-01T00:00:00.000Z' }), run))).toEqual([
+      'triage-feedback restore 7',
+    ]);
+    // No publish without the player's agreement, nor once the issue is recorded, nor for a kind
+    // this build doesn't know, which it couldn't draft.
+    for (const changes of [
+      { publicIssue: false },
+      { publicIssue: true, issue: 42, status: 'issue' as const },
+      { publicIssue: true, kind: 'later' as Feedback['kind'] },
+    ]) {
+      const shown = commands(renderFeedbackPage(listing(changes), run));
+      expect(
+        shown.filter((command) => command.includes(' publish ')),
+        JSON.stringify(changes),
+      ).toEqual([]);
+      expect(
+        shown.every((command) => command.startsWith('triage-feedback ')),
+        JSON.stringify(changes),
+      ).toBe(true);
+    }
+    // Without it, the page is as it was: no publish.
+    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), { admin: DEFAULT_ADMIN_COMMAND }))[0]).toBe(
+      `${RUN} draft 7`,
+    );
+    // The operator set it, and it is escaped all the same.
+    const odd = renderFeedbackPage(listing({ publicIssue: true }), { ...run, feedback: '<b>go</b>' });
+    expect(odd).toContain('<code>&#60;b&#62;go&#60;/b&#62; publish 7</code>');
     expect(odd).not.toMatch(INERT);
   });
 
@@ -576,13 +639,13 @@ describe('the feedback', () => {
     const statuses = { new: 2, issue: 1, resolved: 1, thanked: 1, closed: 2, trash: 1 };
     const open = page({ total: 8, statuses, kinds: { idea: 3, game: 2 }, entries: [feedback(8)] });
     expect(open).toContain(
-      '<p class="pills"><strong>Open <b>5</b></strong><a href="/feedback?status=new">New <b>2</b></a>' +
+      '<p class="pills"><strong>Open <b>3</b></strong><a href="/feedback?status=new">New <b>2</b></a>' +
         '<a href="/feedback?status=issue">Issue <b>1</b></a><a href="/feedback?status=resolved">Resolved <b>1</b></a>' +
         '<a href="/feedback?status=thanked">Thanked <b>1</b></a><a href="/feedback?status=closed">Closed <b>2</b></a>' +
         '<a href="/feedback?status=trash">Trash <b>1</b></a></p>',
     );
     const trash = page({ total: 8, statuses, kinds: { idea: 1 }, view: 'trash', entries: [feedback(3)], kind: 'idea' });
-    expect(trash).toContain('<a href="/feedback?kind=idea">Open <b>5</b></a>');
+    expect(trash).toContain('<a href="/feedback?kind=idea">Open <b>3</b></a>');
     expect(trash).toContain('<strong>Trash <b>1</b></strong>');
     expect(trash).toContain('<a href="/feedback?status=closed&amp;kind=idea">Closed <b>2</b></a>');
     expect(page({ total: 8, statuses, view: 'closed' })).toContain('<p class="note">None here.</p>');

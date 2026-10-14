@@ -33,11 +33,13 @@ import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
 import { missedLine } from './missed';
+import { heroLine } from './heroes';
 import ReplayViewer from './ReplayViewer.vue';
 import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
+import { HOLD_MS, TAP_MS } from './useCardGestures';
 import { useChatLine } from './useChatLine';
 
 const send = vi.hoisted(() =>
@@ -131,6 +133,8 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     match: null,
     streaks: [],
     duos: [],
+    agentsPlayed: false,
+    points: [],
     data,
   };
 }
@@ -305,14 +309,49 @@ describe('GroupChat', () => {
     expect(wrapper.text()).toContain('the clue is all a PI may say');
   });
 
-  test('closes the input once the game is over', async () => {
-    const wrapper = mount(GroupChat, {
-      props: { room: room('bob', messages, 'over'), draft: '', sending: false },
-      global: global(),
-    });
+  test('stays open after the game to those who played for the group, the PI too, after the turns', async () => {
+    const talk: ChatMessage[] = [...messages, { id: 4, player: 'ann', turn: 2, text: 'well played', after: true }];
+    for (const me of ['bob', 'ann']) {
+      const wrapper = mount(GroupChat, {
+        props: { room: room(me, talk, 'over'), draft: '', sending: false },
+        global: global(),
+      });
+      await wrapper.get('button').trigger('click');
+      expect(wrapper.find('input').exists()).toBe(true);
+      expect(wrapper.text()).toContain('The game is over: talk it over with your group');
+      expect(wrapper.findAll('.turn').map((turn) => turn.get('.turn-title').text())).toEqual([
+        'Turn 1',
+        'Turn 2',
+        'After the game',
+      ]);
+      wrapper.unmount();
+    }
+    // Whoever sat down in the group after the end reads.
+    const late = room('eve', talk, 'over');
+    (late.data as KeywordsRoomData).seats = { ...seats, eve: { team: 'red', role: 'guesser' } };
+    const wrapper = mount(GroupChat, { props: { room: late, draft: '', sending: false }, global: global() });
     await wrapper.get('button').trigger('click');
     expect(wrapper.find('input').exists()).toBe(false);
-    expect(wrapper.text()).toContain('The game is over');
+    expect(wrapper.text()).toContain('After the game, only those who played for the group in it can write here.');
+    // The messages read here count for no other test.
+    localStorage.clear();
+  });
+
+  test('brings up the keyboard on opening while there is nothing to read, and not once there is', async () => {
+    const opened = async (chat: ChatMessage[]) => {
+      const wrapper = mount(GroupChat, {
+        props: { room: room('bob', chat), draft: '', sending: false },
+        global: global(),
+        attachTo: document.body,
+      });
+      await wrapper.get('button').trigger('click');
+      await flushPromises();
+      const focused = document.activeElement?.tagName;
+      wrapper.unmount();
+      return focused;
+    };
+    expect(await opened([])).toBe('INPUT');
+    expect(await opened(messages)).toBe('SECTION');
   });
 
   test('offers nothing to someone without a chat, such as a spectator', () => {
@@ -680,7 +719,8 @@ describe('CluePanel', () => {
     const wrapper = panel();
     await wrapper.get('input').setValue(NUMBER);
     expect(wrapper.findAll('.warning').map((line) => line.text())).toEqual([
-      `This clue has a Chinese character in common with a word still on the board: \u201cData\u201d (${DATA}). ` +
+      'This clue has a character in common with a word still on the board, as a Chinese character, a number ' +
+        `however it is written, or the English or the pinyin of a character: \u201cData\u201d (${DATA}). ` +
         "It's your call.",
     ]);
     // In an English room, a clue that contains a word on the board is a warning under either rule.
@@ -727,10 +767,12 @@ describe('CluePanel', () => {
   test('asks the PI loudly to mark the cards the clue is for, and counts and names them once marked', async () => {
     const wrapper = panel();
     await wrapper.setProps({ team: 'red' });
-    // A sticker in the group's tint until a card is marked.
+    // A sticker in the group's tint until a card is marked, with a "Tips" tag for the eye alone.
     expect(wrapper.get('.targets').classes()).toEqual(['targets', 'none', 'red']);
+    expect(wrapper.get('.targets .tips').text()).toBe('Tips');
+    expect(wrapper.get('.targets .tips').attributes('aria-hidden')).toBe('true');
     expect(wrapper.get('.targets').text()).toBe(
-      'First tap the cards this clue is meant for, and the number follows. ' +
+      'Tips First tap the cards this clue is meant for, and the number follows. ' +
         'Nobody sees them during the game; the replay shows them.',
     );
     await wrapper.setProps({ targets: [1] });
@@ -911,6 +953,15 @@ describe('ReplayViewer', () => {
     result: { winner: 'red', reason: 'found' },
     players: { bob: 'Bob' },
   };
+
+  test('shows last what the group has said since the game ended, and nothing without it', () => {
+    const talk = [{ id: 4, name: 'Ann', text: 'Well played' }];
+    const wrapper = mount(ReplayViewer, { props: { replay, talk }, global: global() });
+    expect(wrapper.get('.talk h3').text()).toBe('Talking it over');
+    expect(wrapper.get('.talk .line .name').text()).toBe('Ann');
+    expect(wrapper.get('.talk .line').text()).toContain('Well played');
+    expect(mount(ReplayViewer, { props: { replay }, global: global() }).find('.talk').exists()).toBe(false);
+  });
 
   test("shows the cards the PI meant through the clue's turn, and names them at the clue", async () => {
     const meant: KeywordsReplay = { ...replay, history: [{ ...(replay.history[0] as ClueRecord), targets: [1, 0] }] };
@@ -1149,8 +1200,8 @@ describe('RulesSheet', () => {
     const zh = await clueLines('zh');
     expect(sound(zh)).toHaveLength(1);
     expect(sound(zh)[0]).toContain('\u9e21\u97f3 (j\u012by\u012bn) for \u57fa\u56e0');
-    // Right after the line on what a clue can't be.
-    expect(zh.indexOf(sound(zh)[0] as string)).toBe(2);
+    // Right after the lines on what a clue can't be.
+    expect(zh.indexOf(sound(zh)[0] as string)).toBe(3);
     expect(sound(await clueLines('en'))).toEqual([]);
     for (const lines of [zh, await clueLines('en')]) {
       expect(lines).toContain(
@@ -1248,7 +1299,7 @@ describe('SettingsForm', () => {
   test('counts a clue in Chinese characters in a Chinese room', async () => {
     const wrapper = form('zh');
     expect(wrapper.text()).toContain('Characters in a clue');
-    expect((boxes(wrapper)[0]?.element as HTMLInputElement).value).toBe('4');
+    expect((boxes(wrapper)[0]?.element as HTMLInputElement).value).toBe('2');
     // Another language brings its own default length.
     await wrapper.setProps({ language: 'en' });
     expect(sent(wrapper).clueLength).toBe(1);
@@ -1262,6 +1313,43 @@ describe('SettingsForm', () => {
 });
 
 describe('GameRosters', () => {
+  test('puts each role on a line of its own, one player a line, and no spectators without any', () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const wrapper = mount(GameRosters, { props: { room: view }, global: global() });
+    const red = wrapper.get('.group.red');
+    expect(red.findAll('.seat').map((seat) => seat.get('.role').text())).toEqual(['PI', 'Students']);
+    expect(
+      red
+        .findAll('.seat')[1]
+        ?.findAll('li')
+        .map((line) => line.get('.name').text()),
+    ).toEqual(['Bob', 'Cat']);
+    // "You" and "Chair" stay on the line of the name.
+    expect(
+      red
+        .findAll('.seat')[1]
+        ?.findAll('li')[0]
+        ?.findAll('.label .mark')
+        .map((mark) => mark.text()),
+    ).toEqual(['you']);
+    expect(wrapper.find('.spectators').exists()).toBe(true);
+    const nobody = mount(GameRosters, {
+      props: { room: { ...view, data: { ...data, seats: { ...data.seats, eve: { team: 'blue', role: 'guesser' } } } } },
+      global: global(),
+    });
+    expect(nobody.find('.spectators').exists()).toBe(false);
+    // Whether a player is online is a dot on the avatar's corner.
+    expect(red.find('.face .dot.on').exists()).toBe(true);
+  });
+
+  test('raises the numbers that the floats give, on the avatars of their players', () => {
+    const floats = new Map([['bob', { key: 1, text: '+1', team: 'red' as const }]]);
+    const wrapper = mount(GameRosters, { props: { room: room('bob'), floats }, global: global() });
+    expect(wrapper.findAll('.score-float').map((float) => float.text())).toEqual(['+1']);
+    expect(wrapper.get('.score-float').attributes('aria-hidden')).toBe('true');
+  });
+
   test('lets whoever plays from the next game of a match change their mind and just watch', async () => {
     const view = room('eve');
     const data = view.data as KeywordsRoomData;
@@ -1308,21 +1396,30 @@ describe('KeywordsGame', () => {
   const later = () => new Promise<{ ok: boolean }>((resolve) => answers.push(() => resolve({ ok: true })));
   const card = (wrapper: ReturnType<typeof mount>, index: number) => wrapper.findAll('.board button')[index];
 
+  // A student's taps on a card (useCardGestures.ts), which count once the time for one more is over.
+  async function tapCard(wrapper: ReturnType<typeof mount>, index: number, taps = 1) {
+    vi.useFakeTimers();
+    for (let tap = 0; tap < taps; tap += 1) await card(wrapper, index)?.trigger('click');
+    vi.advanceTimersByTime(TAP_MS);
+    vi.useRealTimers();
+    await flushPromises();
+  }
+
   test('shows a choice at once and sends it, takes it back, and reveals the card chosen last', async () => {
     send.mockImplementation(later);
     const wrapper = mount(KeywordsGame, { props: { room: room('bob') }, global: global() });
 
-    await card(wrapper, 1)?.trigger('click');
+    await tapCard(wrapper, 1);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 1 });
     expect(card(wrapper, 1)?.classes()).toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').text()).toBe('Reveal \u201cModel\u201d');
 
     // A second tap takes the choice back, also before the first one has been answered.
-    await card(wrapper, 1)?.trigger('click');
+    await tapCard(wrapper, 1);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: null });
     expect(card(wrapper, 1)?.classes()).not.toContain('selected');
 
-    await card(wrapper, 2)?.trigger('click');
+    await tapCard(wrapper, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 2 });
     await wrapper.get('.guess-bar button.primary').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:reveal', { gameId: 'g1', turn: 2, card: 2 });
@@ -1337,7 +1434,7 @@ describe('KeywordsGame', () => {
     // and the next choice can be revealed again.
     expect(card(wrapper, 2)?.classes()).not.toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').text()).toBe('Reveal a card');
-    await card(wrapper, 0)?.trigger('click');
+    await tapCard(wrapper, 0);
     expect(card(wrapper, 0)?.classes()).toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').attributes('disabled')).toBeUndefined();
     send.mockImplementation(async () => ({ ok: true }));
@@ -1349,45 +1446,45 @@ describe('KeywordsGame', () => {
     const data = view.data as KeywordsRoomData;
     return { ...view, data: { ...data, game: { ...(data.game as KeywordsView), marks, ...change } } };
   };
-  const tool = (wrapper: ReturnType<typeof mount>, name: string) =>
-    wrapper.findAll('.mark-tools .tool').find((button) => button.text() === name);
-
-  test('lets a student mark cards for the group, take a mark back, and go back to choosing', async () => {
+  test('lets a student mark cards for the group with taps and a long press, and take a mark back', async () => {
     send.mockImplementation(later);
     const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
-    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
-    expect(wrapper.find('.mark-tools .hint').exists()).toBe(false);
-
-    await tool(wrapper, 'Ours')?.trigger('click');
-    expect(tool(wrapper, 'Ours')?.attributes('aria-pressed')).toBe('true');
-    expect(wrapper.get('.mark-tools .hint').text()).toBe(
-      "Tap a card to mark it, and again to clear it. Only your group's students see the marks.",
+    // No row of tools: the line above the guess bar's buttons says what taps do.
+    expect(wrapper.find('.mark-tools').exists()).toBe(false);
+    expect(wrapper.get('.guess-bar .hint').text()).toBe(
+      'Tap: choose \u00b7 double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 or keys 1, 2, 3',
     );
-    // The guess bar keeps its buttons, and leaves the hint to the tools.
-    expect(wrapper.find('.guess-bar .hint').exists()).toBe(false);
-    await card(wrapper, 0)?.trigger('click');
+    await tapCard(wrapper, 0, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
+    expect(send).not.toHaveBeenCalledWith('keywords:select', expect.anything());
     expect(card(wrapper, 0)?.classes()).toEqual(expect.arrayContaining(['noted', 'note-red']));
     expect(card(wrapper, 0)?.classes()).not.toContain('selected');
-    // The same mark again takes it off, before the first tap has been answered.
-    await card(wrapper, 0)?.trigger('click');
+    // The same mark again takes it off, before the first has been answered.
+    await tapCard(wrapper, 0, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: null });
     expect(card(wrapper, 0)?.classes()).not.toContain('noted');
-
-    await tool(wrapper, 'Theirs')?.trigger('click');
-    await card(wrapper, 1)?.trigger('click');
+    await tapCard(wrapper, 1, 3);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
     expect(card(wrapper, 1)?.classes()).toContain('note-blue');
+    // A long press, and the click that ends it, which chooses nothing.
+    vi.useFakeTimers();
+    await card(wrapper, 2)?.trigger('pointerdown', { isPrimary: true, button: 0, clientX: 5, clientY: 5 });
+    vi.advanceTimersByTime(HOLD_MS);
+    await card(wrapper, 2)?.trigger('pointerup');
+    await card(wrapper, 2)?.trigger('click');
+    vi.advanceTimersByTime(TAP_MS);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'r2' });
     for (const answer of answers.splice(0)) answer();
     await flushPromises();
-
-    await tool(wrapper, 'Choose')?.trigger('click');
-    await card(wrapper, 2)?.trigger('click');
+    // One tap chooses, once the time for a second has passed.
+    await tapCard(wrapper, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 2 });
     send.mockImplementation(async () => ({ ok: true }));
   });
 
-  test("shows the group's marks from the server, and changes a teammate's mark with another tool", async () => {
+  test("shows the group's marks from the server, and changes a teammate's mark, also from the keyboard", async () => {
     const wrapper = mount(KeywordsGame, {
       props: {
         room: marked([
@@ -1400,59 +1497,95 @@ describe('KeywordsGame', () => {
     expect(card(wrapper, 0)?.classes()).toContain('note-r2');
     expect(card(wrapper, 0)?.attributes('aria-label')).toBe('Baseline, not revealed, marked as maybe Reviewer 2');
     expect(card(wrapper, 2)?.classes()).toContain('note-red');
-    await tool(wrapper, 'Ours')?.trigger('click');
-    await card(wrapper, 0)?.trigger('click');
+    await card(wrapper, 0)?.trigger('keydown', { key: '1' });
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
+    await card(wrapper, 2)?.trigger('keydown', { key: '1' });
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: null });
+    await card(wrapper, 1)?.trigger('keydown', { key: '3' });
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'r2' });
   });
 
-  test("greys choosing out while the other group guesses, and comes back to it in the group's guess phase", async () => {
+  test('marks while the other group guesses, where one tap chooses nothing', async () => {
     const wrapper = mount(KeywordsGame, { props: { room: marked([], { team: 'blue' }) }, global: global() });
-    expect(tool(wrapper, 'Choose')?.attributes('disabled')).toBeDefined();
-    expect(tool(wrapper, 'Ours')?.attributes('aria-pressed')).toBe('true');
     expect(wrapper.find('.guess-bar').exists()).toBe(false);
     expect(wrapper.get('.status').text()).toBe('The Blue group is guessing.');
-    await card(wrapper, 1)?.trigger('click');
+    expect(wrapper.get('.gestures').text()).toBe(
+      'Double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 or keys 1, 2, 3 \u00b7 the same again clears it',
+    );
+    send.mockClear();
+    await tapCard(wrapper, 1);
+    expect(send).not.toHaveBeenCalled();
+    await tapCard(wrapper, 1, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'ours' });
-    // The group's turn comes, and the student chooses again; when it goes, the mark used last is back.
-    await wrapper.setProps({ room: marked([{ card: 1, mark: 'ours' }]) });
-    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
-    await tool(wrapper, 'R2?')?.trigger('click');
-    await tool(wrapper, 'Choose')?.trigger('click');
-    await wrapper.setProps({ room: marked([{ card: 1, mark: 'ours' }], { team: 'blue' }) });
-    expect(tool(wrapper, 'R2?')?.attributes('aria-pressed')).toBe('true');
   });
 
-  test("keeps the tool a student chose through a pause in the group's guess phase", async () => {
-    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
-    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
-    await tool(wrapper, 'Theirs')?.trigger('click');
-    // The chair pauses the game: the tools go with the board, and come back as they were.
-    await wrapper.setProps({ room: marked([], { paused: true, cards: [] }) });
-    expect(wrapper.find('.mark-tools').exists()).toBe(false);
-    await wrapper.setProps({ room: marked([]) });
-    expect(tool(wrapper, 'Theirs')?.attributes('aria-pressed')).toBe('true');
-    expect(tool(wrapper, 'Choose')?.attributes('disabled')).toBeUndefined();
-    await card(wrapper, 2)?.trigger('click');
-    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'theirs' });
-  });
-
-  test('gives no tools and no marks to a PI or a spectator, nor once the game is paused or over', async () => {
-    const marks = [{ card: 0, mark: 'ours' as const }];
-    for (const me of ['ann', 'eve']) {
-      const wrapper = mount(KeywordsGame, { props: { room: marked(marks, {}, me) }, global: global() });
-      expect(wrapper.find('.mark-tools').exists(), me).toBe(false);
-      expect(wrapper.find('.board .noted').exists(), me).toBe(false);
-    }
-    const over = mount(KeywordsGame, {
-      props: { room: marked(undefined, { phase: 'over', result: { winner: 'red', reason: 'found' } }) },
+  test('tells assistive technology of the keys that mark a card, and offers buttons that mark the focused one', async () => {
+    const wrapper = mount(KeywordsGame, {
+      props: {
+        room: marked([], {
+          team: 'blue',
+          cards: [{ word: 'Done', revealed: true, color: 'red' }, ...cards('Model', 'Journal')],
+        }),
+      },
       global: global(),
     });
-    expect(over.find('.mark-tools').exists()).toBe(false);
+    // The first card is revealed: it takes no mark, and so says nothing of the keys.
+    expect(card(wrapper, 0)?.attributes('aria-keyshortcuts')).toBeUndefined();
+    expect(card(wrapper, 0)?.attributes('aria-describedby')).toBeUndefined();
+    const keys = card(wrapper, 1)?.attributes('aria-describedby');
+    expect(card(wrapper, 1)?.attributes('aria-keyshortcuts')).toBe('1 2 3');
+    expect(wrapper.get(`[id="${keys}"]`).text()).toBe(
+      'Key 1 marks it as ours, 2 as theirs, 3 as maybe Reviewer 2; the same key again clears the mark.',
+    );
+    // No card has had the focus: no buttons yet. Once one has, the buttons mark it, for a screen
+    // reader on a phone, which can neither tap a card several times nor press a key.
+    expect(wrapper.find('.mark-buttons').exists()).toBe(false);
+    await card(wrapper, 1)?.trigger('focus');
+    const buttons = wrapper.get('.mark-buttons');
+    expect(buttons.classes()).toContain('sr-only');
+    expect(buttons.findAll('button').map((button) => button.text())).toEqual([
+      'Mark Model as ours',
+      'Mark Model as theirs',
+      'Mark Model as maybe Reviewer 2',
+    ]);
+    send.mockClear();
+    await buttons.findAll('button')[1]?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
+    // A revealed card gets none.
+    await card(wrapper, 0)?.trigger('focus');
+    expect(wrapper.find('.mark-buttons').exists()).toBe(false);
+  });
+
+  test("shows a PI the group's marks small in the corner, which a PI can't change", async () => {
+    const wrapper = mount(KeywordsGame, {
+      props: { room: marked([{ card: 0, mark: 'ours' }], {}, 'ann') },
+      global: global(),
+    });
+    const sticker = card(wrapper, 0)?.find('.note');
+    expect(sticker?.classes()).toContain('quiet');
+    expect(card(wrapper, 0)?.classes()).not.toContain('noted');
+    expect(card(wrapper, 0)?.attributes('aria-label')).toContain('marked as ours');
+    send.mockClear();
+    await card(wrapper, 0)?.trigger('keydown', { key: '2' });
+    await tapCard(wrapper, 0, 2);
+    expect(send).not.toHaveBeenCalledWith('keywords:mark', expect.anything());
+  });
+
+  test('gives no marks to a spectator, nor once the game is paused or over', async () => {
+    const marks = [{ card: 0, mark: 'ours' as const }];
+    const eve = mount(KeywordsGame, { props: { room: marked(marks, {}, 'eve') }, global: global() });
+    expect(eve.find('.board .note').exists()).toBe(false);
+    expect(eve.find('.gestures').exists()).toBe(false);
+    const over = mount(KeywordsGame, {
+      props: { room: marked(marks, { phase: 'over', result: { winner: 'red', reason: 'found' } }) },
+      global: global(),
+    });
+    expect(over.find('.board .note').exists()).toBe(false);
     const paused = mount(KeywordsGame, {
       props: { room: marked(marks, { paused: true, cards: [] }) },
       global: global(),
     });
-    expect(paused.find('.mark-tools').exists()).toBe(false);
+    expect(paused.find('.gestures').exists()).toBe(false);
   });
 
   test('says nothing under the board of who the viewer is or what the others chose, but who plays next', async () => {
@@ -1896,6 +2029,55 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.clue-log .missing')).toHaveLength(6);
     expect(wrapper.find('.clue-log .event').exists()).toBe(false);
     bubbles.splice(0);
+  });
+
+  test('calls out a deadline hero the moment the card that makes them one is revealed, counted for an account', async () => {
+    bubbles.splice(0);
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const hero = (player: string, count?: number) => ({
+      turn: 2,
+      kind: 'hero' as const,
+      team: 'red' as const,
+      player,
+      ...(count === undefined ? {} : { count }),
+    });
+    const calls = () => bubbles.map((bubble) => ('call' in bubble ? [bubble.name, bubble.call] : null));
+    const { t } = i18n().global;
+    const line = (player: string, name: string) => t(`game.hero.lines.${heroLine('g1', 2, player)}`, { name });
+    let shown = data.game as KeywordsView;
+    const show = async (changes: Partial<KeywordsView>) => {
+      shown = { ...shown, ...changes };
+      await wrapper.setProps({ room: { ...view, data: { ...data, game: shown } } });
+    };
+    // Bob reveals a card of red's: his first in the last seconds, which makes him a hero, and the
+    // first of Ann's last-second clue, which makes her one, her third time.
+    const turned = (...indexes: number[]) => ({
+      cards: shown.cards.map((card, index) =>
+        indexes.includes(index) ? { ...card, revealed: true, color: 'red' as const } : card,
+      ),
+      history: [
+        {
+          ...(shown.history[0] as ClueRecord),
+          guesses: indexes.map((card) => ({ card, color: 'red' as const, player: 'bob', lastSeconds: true as const })),
+        },
+      ],
+    });
+    const wrapper = mount(KeywordsGame, {
+      props: { room: { ...view, data: { ...data, game: shown } } },
+      global: global(),
+    });
+    // Bob's first time has no count.
+    await show({ ...turned(0), events: [hero('bob', 1), hero('ann', 3)] });
+    expect(calls()).toEqual([
+      ['Bob', line('bob', 'Bob')],
+      ['Ann', `${line('ann', 'Ann')} (\u00d73)`],
+    ]);
+    bubbles.splice(0);
+    // A snapshot that catches the page up with several cards at once says nothing.
+    await show({ ...turned(0, 1, 2), events: [...shown.events, hero('cat')] });
+    expect(bubbles).toEqual([]);
+    expect(wrapper.find('.clue-log .event').exists()).toBe(false);
   });
 
   test('shows both letters to a player who sat down only after the game, as to a spectator', () => {

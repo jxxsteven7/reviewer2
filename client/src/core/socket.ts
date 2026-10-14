@@ -21,7 +21,9 @@ export const socket = io({
   auth: (callback) => callback({ ...handshake, ...(storedToken() ? { token: storedToken() } : {}) }),
 });
 
-export const connection = reactive({ connected: false, everConnected: false });
+// `connects` counts the connections the page has made, so that what comes with a new one, such as
+// the snapshot that catches a page up after a locked screen, can be told from what happens live.
+export const connection = reactive({ connected: false, everConnected: false, connects: 0 });
 
 // Whether the page has lost its connection and is getting it back. A room's page then shows the
 // "Reconnecting..." banner (ConnectionBanner), and what sticks to the top of the screen keeps
@@ -31,6 +33,7 @@ export const reconnecting = computed(() => connection.everConnected && !connecti
 socket.on('connect', () => {
   connection.connected = true;
   connection.everConnected = true;
+  connection.connects += 1;
 });
 
 socket.on('disconnect', () => {

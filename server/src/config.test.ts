@@ -249,3 +249,12 @@ describe('ADMIN_COMMAND', () => {
     expect(loadConfig({ ADMIN_COMMAND: '  npm run admin --\n' }).adminCommand).toBe('npm run admin --');
   });
 });
+
+describe('FEEDBACK_COMMAND', () => {
+  test('is none unless it is set, and is trimmed', () => {
+    for (const FEEDBACK_COMMAND of [undefined, '', ' ']) {
+      expect(loadConfig({ FEEDBACK_COMMAND }).feedbackCommand, JSON.stringify(FEEDBACK_COMMAND)).toBeNull();
+    }
+    expect(loadConfig({ FEEDBACK_COMMAND: ' triage-feedback\n' }).feedbackCommand).toBe('triage-feedback');
+  });
+});

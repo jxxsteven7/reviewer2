@@ -184,8 +184,9 @@ function chart(samples: readonly Sample[], now: number): string {
   );
 }
 
-// What the feedback page shows: the open feedback, which is neither closed nor in the trash, or
-// the feedback of one status.
+// What the feedback page shows: the open feedback, which still waits for the operator, new or
+// published as an issue, or the feedback of one status, where the resolved and the thanked go by
+// the facts and may overlap (store/feedback.ts).
 export const FEEDBACK_VIEWS = ['open', ...FEEDBACK_STATUSES] as const;
 export type PageView = (typeof FEEDBACK_VIEWS)[number];
 
@@ -194,7 +195,8 @@ export type PageView = (typeof FEEDBACK_VIEWS)[number];
 export interface FeedbackListing {
   // How much feedback there is in all, the trash included.
   total: number;
-  // How much there is of each status, of the kind shown, and of each kind, in the view shown.
+  // How much there is in each view of a status, of the kind shown, and of each kind, in the view
+  // shown.
   statuses: Record<FeedbackStatus, number>;
   kinds: Record<string, number>;
   view: PageView;
@@ -236,20 +238,35 @@ const VIEWS: Record<PageView, string> = {
 // ADMIN_COMMAND (config.ts) says how admin.cjs is run where the server is.
 export const DEFAULT_ADMIN_COMMAND = 'node server/dist/admin.cjs';
 
+// What the commands that the feedback page shows are made of: how admin.cjs is run (`admin`), or,
+// where the operator has one, a command of theirs that takes the subcommands of `admin.cjs
+// feedback`, and `publish <id>`, which publishes the feedback as an issue in one go (`feedback`,
+// FEEDBACK_COMMAND in config.ts).
+export interface FeedbackCommands {
+  admin: string;
+  feedback?: string | null;
+}
+
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
 const day = (iso: string) => iso.slice(0, 10);
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
-// The badge of a status: the word, and the number of the issue or the pull request with it.
+// The badge of a status, in its colors, with what it stands for written out: the issue's number
+// for feedback published as one, and for feedback that is resolved or thanked, both that apply,
+// such as "Resolved #72 &middot; Thanked", the pull request's number with the first.
 function badge(feedback: Feedback): string {
-  const { status } = feedback;
+  const { status, issue, resolvedPr, acknowledgmentId } = feedback;
+  const done = [
+    ...(resolvedPr === null ? [] : [`Resolved #${resolvedPr}`]),
+    ...(acknowledgmentId === null ? [] : ['Thanked']),
+  ];
   const label =
     status === 'issue'
-      ? `Issue #${feedback.issue}`
-      : status === 'resolved'
-        ? `PR #${feedback.resolvedPr}`
+      ? `Issue #${issue}`
+      : status === 'resolved' || status === 'thanked'
+        ? done.join(' &middot; ')
         : VIEWS[status];
   return `<span class="badge ${status}">${label}</span>`;
 }
@@ -277,17 +294,21 @@ function trail(feedback: Feedback, now: number): string {
 }
 
 // The `admin.cjs feedback` commands that may come next for the feedback (admin.ts), as text for
-// the operator to copy to a terminal, each on a line of its own with `prefix` in front, under a
-// heading that is folded until it is opened. Which they are follows the feedback's status. In the
-// trash, only the way out. Otherwise: the issue, to draft, when this build knows the kind, and to
-// record or to take back, for feedback whose player agreed to one; the pull request, to record or
-// to take back; adopting it, while it is neither thanked nor closed, which can't be undone; closing
-// or reopening it; and the trash, unless an acknowledgment points at it. The page shows the
-// commands and runs none of them.
-function commands(feedback: Feedback, prefix: string): string {
+// the operator to copy to a terminal, each on a line of its own with `run.feedback` in front where
+// the operator has that command, and `run.admin` and `feedback` otherwise, under a heading that is
+// folded until it is opened. Which they are follows the feedback's status. In the trash, only the
+// way out. Otherwise: the issue, for feedback whose player agreed to one: first, with the
+// operator's command, to publish it in one go, when this build knows the kind; then, to do it by
+// hand, to draft it, when this build knows the kind, and to record it; or, once there is one, to
+// take it back. Then the pull request, to record or to take back; adopting it, while it is neither
+// thanked nor closed, which can't be undone; closing or reopening it; and the trash, unless an
+// acknowledgment points at it. The page shows the commands and runs none of them.
+function commands(feedback: Feedback, run: FeedbackCommands): string {
   const { id, kind, publicIssue, issue, resolvedPr, acknowledgmentId, closedAt, deletedAt } = feedback;
+  const prefix = run.feedback ? run.feedback : `${run.admin} feedback`;
   const line = (command: string, note = '') =>
-    `<p class="command"><code>${escape(`${prefix} feedback ${command}`)}</code>${note === '' ? '' : ` ${note}`}</p>`;
+    `<p class="command"><code>${escape(`${prefix} ${command}`)}</code>${note === '' ? '' : ` ${note}`}</p>`;
+  const known = Object.hasOwn(KINDS, kind);
   const lines =
     deletedAt !== null
       ? [line(`restore ${id}`)]
@@ -295,7 +316,11 @@ function commands(feedback: Feedback, prefix: string): string {
           ...(publicIssue !== true
             ? []
             : issue === null
-              ? [...(Object.hasOwn(KINDS, kind) ? [line(`draft ${id}`)] : []), line(`issue ${id} <number>`)]
+              ? [
+                  ...(run.feedback && known ? [line(`publish ${id}`, 'publishes the issue in one go')] : []),
+                  ...(known ? [line(`draft ${id}`)] : []),
+                  line(`issue ${id} <number>`),
+                ]
               : [line(`issue ${id} --clear`)]),
           line(resolvedPr === null ? `resolve ${id} <pr>` : `resolve ${id} --clear`),
           ...(acknowledgmentId === null && closedAt === null ? [line(`adopt ${id}`, "can't be undone")] : []),
@@ -315,7 +340,7 @@ function commands(feedback: Feedback, prefix: string): string {
 // account's owner, for a bug the browser, and last the commands that may come next, folded. Older
 // feedback, from before players were asked about an issue, may not be published. A kind that this
 // server doesn't know, from a later one that it was rolled back from, shows as it is.
-function entry(feedback: Feedback, now: number, prefix: string): string {
+function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
   const head = [
     `#${feedback.id}`,
     (KINDS as Partial<Record<string, string>>)[feedback.kind] ?? escape(feedback.kind),
@@ -347,7 +372,7 @@ function entry(feedback: Feedback, now: number, prefix: string): string {
     `<p class="meta">${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
     `<p class="meta">${credit}</p>` +
     (feedback.userAgent === null ? '' : `<p class="meta">Browser: ${escape(feedback.userAgent)}</p>`) +
-    commands(feedback, prefix) +
+    commands(feedback, run) +
     '</article>'
   );
 }
@@ -371,11 +396,7 @@ const pill = (href: string, label: string, count: number, shown: boolean) =>
 
 // The views to choose from, of the kind shown, and then the kinds, in the view shown.
 function choices({ statuses, kinds, view, kind }: FeedbackListing): string {
-  const open = FEEDBACK_STATUSES.filter((status) => status !== 'closed' && status !== 'trash');
-  const counts: Record<PageView, number> = {
-    ...statuses,
-    open: open.reduce((sum, status) => sum + statuses[status], 0),
-  };
+  const counts: Record<PageView, number> = { ...statuses, open: statuses.new + statuses.issue };
   const views = FEEDBACK_VIEWS.map((choice) =>
     pill(feedbackHref(choice, kind), VIEWS[choice], counts[choice], choice === view),
   );
@@ -391,9 +412,9 @@ function choices({ statuses, kinds, view, kind }: FeedbackListing): string {
   );
 }
 
-// The feedback page: the choices, the entries of one page, each with its commands with `prefix` in
-// front, and the way to the latest and to the older ones.
-function feedbackList(listing: FeedbackListing, prefix: string): string {
+// The feedback page: the choices, the entries of one page, each with its commands (`run`), and the
+// way to the latest and to the older ones.
+function feedbackList(listing: FeedbackListing, run: FeedbackCommands): string {
   const { total, view, kind, entries, paged, older, now } = listing;
   if (total === 0) return '<p class="note">None yet.</p>';
   const links = [
@@ -403,7 +424,7 @@ function feedbackList(listing: FeedbackListing, prefix: string): string {
   return (
     choices(listing) +
     (entries.length === 0 && !paged ? '<p class="note">None here.</p>' : '') +
-    entries.map((feedback) => entry(feedback, now, prefix)).join('') +
+    entries.map((feedback) => entry(feedback, now, run)).join('') +
     (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '')
   );
 }
@@ -488,11 +509,12 @@ export const NO_FEEDBACK: FeedbackCounts = {
   statuses: { new: 0, issue: 0, resolved: 0, thanked: 0, closed: 0, trash: 0 },
 };
 
-// The feedback on the status page: how much there is of each status, each the way to that view,
-// and of the open feedback, the way to the page itself.
+// The feedback on the status page: how much there is in each view of a status, each the way to
+// that view, and of the open feedback, new or published as an issue, the way to the page itself.
+// Feedback that was resolved and thanked counts in both.
 function feedbackCounts({ total, statuses }: FeedbackCounts): string {
   if (total === 0) return '<p class="note">None yet.</p>';
-  const open = statuses.new + statuses.issue + statuses.resolved + statuses.thanked;
+  const open = statuses.new + statuses.issue;
   const pills = [
     `<a class="badge" href="${FEEDBACK_PATH}">Open <b>${open}</b></a>`,
     ...FEEDBACK_STATUSES.map(
@@ -552,14 +574,14 @@ function agents({ agents: ai }: Stats): string {
 }
 
 // The feedback that players sent, newest first, a page at a time, of one view and of every kind
-// or of one, each with the commands that may come next, with `adminCommand` in front: ADMIN_COMMAND,
-// or DEFAULT_ADMIN_COMMAND (config.ts).
-export function renderFeedbackPage(feedback: FeedbackListing, adminCommand: string): string {
+// or of one, each with the commands that may come next (`run`): FEEDBACK_COMMAND, where it is
+// set, or ADMIN_COMMAND, or DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs (config.ts).
+export function renderFeedbackPage(feedback: FeedbackListing, run: FeedbackCommands): string {
   return document(
     'feedback',
     'Feedback',
     `${feedback.total} in all, newest first &middot; what became of it is changed with <code>admin.cjs feedback</code>`,
-    feedbackList(feedback, adminCommand),
+    feedbackList(feedback, run),
     false,
   );
 }
