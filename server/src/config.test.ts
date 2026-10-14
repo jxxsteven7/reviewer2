@@ -249,3 +249,12 @@ describe('ADMIN_COMMAND', () => {
     expect(loadConfig({ ADMIN_COMMAND: '  npm run admin --\n' }).adminCommand).toBe('npm run admin --');
   });
 });
+
+describe('ISSUE_COMMAND', () => {
+  test('is none unless it is set, and is trimmed', () => {
+    for (const ISSUE_COMMAND of [undefined, '', ' ']) {
+      expect(loadConfig({ ISSUE_COMMAND }).issueCommand, JSON.stringify(ISSUE_COMMAND)).toBeNull();
+    }
+    expect(loadConfig({ ISSUE_COMMAND: ' publish-feedback\n' }).issueCommand).toBe('publish-feedback');
+  });
+});

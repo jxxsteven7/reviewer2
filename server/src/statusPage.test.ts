@@ -244,7 +244,7 @@ describe('the feedback', () => {
         now: NOW,
         ...changes,
       },
-      DEFAULT_ADMIN_COMMAND,
+      { admin: DEFAULT_ADMIN_COMMAND },
     );
   // What the page shows between the heading and the entries.
   const head = (html: string) => text(html.slice(0, html.indexOf('<article>')));
@@ -557,18 +557,51 @@ describe('the feedback', () => {
       older: false,
       now: NOW,
     };
-    expect(commands(renderFeedbackPage(listing, DEFAULT_ADMIN_COMMAND))).toContain(`${RUN} close 1`);
-    expect(commands(renderFeedbackPage(listing, 'npm run admin --'))).toEqual([
+    expect(commands(renderFeedbackPage(listing, { admin: DEFAULT_ADMIN_COMMAND }))).toContain(`${RUN} close 1`);
+    expect(commands(renderFeedbackPage(listing, { admin: 'npm run admin --' }))).toEqual([
       'npm run admin -- feedback resolve 1 &#60;pr&#62;',
       "npm run admin -- feedback adopt 1 can't be undone",
       'npm run admin -- feedback close 1',
       'npm run admin -- feedback delete 1',
     ]);
     // The operator set it, and it is escaped all the same.
-    const odd = renderFeedbackPage(listing, '<script>x</script> "a" & \'b\'');
+    const odd = renderFeedbackPage(listing, { admin: '<script>x</script> "a" & \'b\'' });
     expect(odd).toContain(
       '<code>&#60;script&#62;x&#60;/script&#62; &#34;a&#34; &#38; &#39;b&#39; feedback close 1</code>',
     );
+    expect(odd).not.toMatch(INERT);
+  });
+
+  test("puts the operator's command that publishes an issue in one go first, where there is one", () => {
+    const listing = (changes: Partial<Feedback>): FeedbackListing => ({
+      total: 1,
+      statuses: { ...NO_FEEDBACK.statuses, new: 1 },
+      kinds: { idea: 1 },
+      view: 'open',
+      kind: null,
+      entries: [feedback(7, changes)],
+      paged: false,
+      older: false,
+      now: NOW,
+    });
+    const run = { admin: DEFAULT_ADMIN_COMMAND, issue: 'publish-feedback' };
+    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), run)).slice(0, 3)).toEqual([
+      'publish-feedback 7 publishes the issue in one go',
+      `${RUN} draft 7`,
+      `${RUN} issue 7 &#60;number&#62;`,
+    ]);
+    // Not without the player's agreement, nor once the issue is recorded, nor for a kind this
+    // build doesn't know, which it couldn't draft.
+    for (const changes of [
+      { publicIssue: false },
+      { publicIssue: true, issue: 42, status: 'issue' as const },
+      { publicIssue: true, kind: 'later' as Feedback['kind'] },
+    ]) {
+      expect(renderFeedbackPage(listing(changes), run), JSON.stringify(changes)).not.toContain('publish-feedback');
+    }
+    // The operator set it, and it is escaped all the same.
+    const odd = renderFeedbackPage(listing({ publicIssue: true }), { ...run, issue: '<b>go</b>' });
+    expect(odd).toContain('<code>&#60;b&#62;go&#60;/b&#62; 7</code>');
     expect(odd).not.toMatch(INERT);
   });
 

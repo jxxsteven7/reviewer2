@@ -33,6 +33,10 @@ export interface Config {
   // What the status page puts in front of the arguments of the operator's commands it shows, for
   // copying: how admin.cjs is run where the server is (statusPage.ts).
   adminCommand: string;
+  // A command of the operator's that publishes a piece of feedback as an issue in one go, given its
+  // id, which the status page shows first among the commands for feedback that may become an issue,
+  // or null for none (statusPage.ts).
+  issueCommand: string | null;
   // The server's secret, which email fingerprints are made with, and the mailer's socket. Without
   // both, accounts have no email (docs/architecture.md).
   secret: string | null;
@@ -139,6 +143,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     contentDir: env.CONTENT_DIR?.trim() ? resolve(root, env.CONTENT_DIR.trim()) : null,
     statusPort,
     adminCommand: env.ADMIN_COMMAND?.trim() || DEFAULT_ADMIN_COMMAND,
+    issueCommand: env.ISSUE_COMMAND?.trim() || null,
     secret: serverSecret(env),
     mailerSocket: socketPath('MAILER_SOCKET', env.MAILER_SOCKET),
     agentSocket: socketPath('AGENT_SOCKET', env.AGENT_SOCKET),

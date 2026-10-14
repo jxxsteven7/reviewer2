@@ -171,10 +171,13 @@ describe('the status server', () => {
     history = new History(),
     stats = () => server.app.stats(),
     adminCommand = DEFAULT_ADMIN_COMMAND,
-  }: { history?: History; stats?: () => Stats; adminCommand?: string } = {}) {
+    issueCommand = null,
+  }: { history?: History; stats?: () => Stats; adminCommand?: string; issueCommand?: string | null } = {}) {
     const log = (event: string, fields?: Record<string, unknown>) =>
       server.logs.push({ event, ...(fields ? { fields } : {}) });
-    const started = createServer(createStatusHandler(stats, history, server.feedback, log, adminCommand));
+    const started = createServer(
+      createStatusHandler(stats, history, server.feedback, log, { admin: adminCommand, issue: issueCommand }),
+    );
     status = started;
     await new Promise<void>((resolve) => started.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(started.address() as AddressInfo).port}`;
@@ -370,6 +373,34 @@ describe('the status server', () => {
     const page = await get(base, '/feedback');
     expect(page.body).toContain('<p class="command"><code>npm run admin -- feedback resolve 1 &#60;pr&#62;</code></p>');
     expect(page.body).not.toContain('node server/dist/admin.cjs');
+  });
+
+  test('puts the command that ISSUE_COMMAND names first, for feedback that may become an issue', async () => {
+    server = await startServer();
+    const add = (publicIssue: boolean) =>
+      server.feedback.add({
+        kind: 'idea',
+        text: 'Number 1',
+        contact: null,
+        credit: null,
+        link: null,
+        accountId: null,
+        publicIssue,
+        version: 'test',
+        language: 'en',
+        page: 'home',
+        userAgent: null,
+      });
+    add(true);
+    add(false);
+    await startStatus({ issueCommand: 'publish-feedback' });
+    const page = await get(base, '/feedback');
+    const first = (id: number) =>
+      page.body.split(`<article><p class="head"><span>#${id}`)[1]?.match(/<code>([^<]*)<\/code>/)?.[1];
+    expect(first(1)).toBe('publish-feedback 1');
+    expect(page.body).toContain('<code>node server/dist/admin.cjs feedback draft 1</code>');
+    expect(first(2)).toBe('node server/dist/admin.cjs feedback resolve 2 &#60;pr&#62;');
+    expect(page.body).not.toContain('publish-feedback 2');
   });
 
   test('shows the feedback of one kind, a page at a time', async () => {

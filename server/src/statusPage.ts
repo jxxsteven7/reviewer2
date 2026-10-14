@@ -236,6 +236,14 @@ const VIEWS: Record<PageView, string> = {
 // ADMIN_COMMAND (config.ts) says how admin.cjs is run where the server is.
 export const DEFAULT_ADMIN_COMMAND = 'node server/dist/admin.cjs';
 
+// The commands that the feedback page shows are made of: how admin.cjs is run (`admin`), and,
+// where the operator has one, a command of theirs that publishes a piece of feedback as an issue in
+// one go, given its id (`issue`, ISSUE_COMMAND in config.ts).
+export interface FeedbackCommands {
+  admin: string;
+  issue?: string | null;
+}
+
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
 const day = (iso: string) => iso.slice(0, 10);
@@ -277,17 +285,21 @@ function trail(feedback: Feedback, now: number): string {
 }
 
 // The `admin.cjs feedback` commands that may come next for the feedback (admin.ts), as text for
-// the operator to copy to a terminal, each on a line of its own with `prefix` in front, under a
+// the operator to copy to a terminal, each on a line of its own with `run.admin` in front, under a
 // heading that is folded until it is opened. Which they are follows the feedback's status. In the
-// trash, only the way out. Otherwise: the issue, to draft, when this build knows the kind, and to
-// record or to take back, for feedback whose player agreed to one; the pull request, to record or
-// to take back; adopting it, while it is neither thanked nor closed, which can't be undone; closing
-// or reopening it; and the trash, unless an acknowledgment points at it. The page shows the
+// trash, only the way out. Otherwise: the issue, for feedback whose player agreed to one: first,
+// where the operator has a command that publishes it in one go (`run.issue`), that command with the
+// id, when this build knows the kind; then, to do it by hand, to draft it, when this build knows the
+// kind, and to record it; or, once there is one, to take it back. Then the pull request, to record
+// or to take back; adopting it, while it is neither thanked nor closed, which can't be undone;
+// closing or reopening it; and the trash, unless an acknowledgment points at it. The page shows the
 // commands and runs none of them.
-function commands(feedback: Feedback, prefix: string): string {
+function commands(feedback: Feedback, run: FeedbackCommands): string {
   const { id, kind, publicIssue, issue, resolvedPr, acknowledgmentId, closedAt, deletedAt } = feedback;
-  const line = (command: string, note = '') =>
-    `<p class="command"><code>${escape(`${prefix} feedback ${command}`)}</code>${note === '' ? '' : ` ${note}`}</p>`;
+  const shown = (command: string, note: string) =>
+    `<p class="command"><code>${escape(command)}</code>${note === '' ? '' : ` ${note}`}</p>`;
+  const line = (command: string, note = '') => shown(`${run.admin} feedback ${command}`, note);
+  const known = Object.hasOwn(KINDS, kind);
   const lines =
     deletedAt !== null
       ? [line(`restore ${id}`)]
@@ -295,7 +307,11 @@ function commands(feedback: Feedback, prefix: string): string {
           ...(publicIssue !== true
             ? []
             : issue === null
-              ? [...(Object.hasOwn(KINDS, kind) ? [line(`draft ${id}`)] : []), line(`issue ${id} <number>`)]
+              ? [
+                  ...(run.issue && known ? [shown(`${run.issue} ${id}`, 'publishes the issue in one go')] : []),
+                  ...(known ? [line(`draft ${id}`)] : []),
+                  line(`issue ${id} <number>`),
+                ]
               : [line(`issue ${id} --clear`)]),
           line(resolvedPr === null ? `resolve ${id} <pr>` : `resolve ${id} --clear`),
           ...(acknowledgmentId === null && closedAt === null ? [line(`adopt ${id}`, "can't be undone")] : []),
@@ -315,7 +331,7 @@ function commands(feedback: Feedback, prefix: string): string {
 // account's owner, for a bug the browser, and last the commands that may come next, folded. Older
 // feedback, from before players were asked about an issue, may not be published. A kind that this
 // server doesn't know, from a later one that it was rolled back from, shows as it is.
-function entry(feedback: Feedback, now: number, prefix: string): string {
+function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
   const head = [
     `#${feedback.id}`,
     (KINDS as Partial<Record<string, string>>)[feedback.kind] ?? escape(feedback.kind),
@@ -347,7 +363,7 @@ function entry(feedback: Feedback, now: number, prefix: string): string {
     `<p class="meta">${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
     `<p class="meta">${credit}</p>` +
     (feedback.userAgent === null ? '' : `<p class="meta">Browser: ${escape(feedback.userAgent)}</p>`) +
-    commands(feedback, prefix) +
+    commands(feedback, run) +
     '</article>'
   );
 }
@@ -391,9 +407,9 @@ function choices({ statuses, kinds, view, kind }: FeedbackListing): string {
   );
 }
 
-// The feedback page: the choices, the entries of one page, each with its commands with `prefix` in
-// front, and the way to the latest and to the older ones.
-function feedbackList(listing: FeedbackListing, prefix: string): string {
+// The feedback page: the choices, the entries of one page, each with its commands (`run`), and the
+// way to the latest and to the older ones.
+function feedbackList(listing: FeedbackListing, run: FeedbackCommands): string {
   const { total, view, kind, entries, paged, older, now } = listing;
   if (total === 0) return '<p class="note">None yet.</p>';
   const links = [
@@ -403,7 +419,7 @@ function feedbackList(listing: FeedbackListing, prefix: string): string {
   return (
     choices(listing) +
     (entries.length === 0 && !paged ? '<p class="note">None here.</p>' : '') +
-    entries.map((feedback) => entry(feedback, now, prefix)).join('') +
+    entries.map((feedback) => entry(feedback, now, run)).join('') +
     (links.length > 0 ? `<p class="more">${links.join(' &middot; ')}</p>` : '')
   );
 }
@@ -552,14 +568,14 @@ function agents({ agents: ai }: Stats): string {
 }
 
 // The feedback that players sent, newest first, a page at a time, of one view and of every kind
-// or of one, each with the commands that may come next, with `adminCommand` in front: ADMIN_COMMAND,
-// or DEFAULT_ADMIN_COMMAND (config.ts).
-export function renderFeedbackPage(feedback: FeedbackListing, adminCommand: string): string {
+// or of one, each with the commands that may come next (`run`): ADMIN_COMMAND, or
+// DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs, and ISSUE_COMMAND, if any (config.ts).
+export function renderFeedbackPage(feedback: FeedbackListing, run: FeedbackCommands): string {
   return document(
     'feedback',
     'Feedback',
     `${feedback.total} in all, newest first &middot; what became of it is changed with <code>admin.cjs feedback</code>`,
-    feedbackList(feedback, adminCommand),
+    feedbackList(feedback, run),
     false,
   );
 }

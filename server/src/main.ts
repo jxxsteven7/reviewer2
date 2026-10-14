@@ -246,7 +246,14 @@ export async function main({
   let status: HttpServer | null = null;
   if (statusPort !== null && history !== null) {
     const page = createServer(
-      createStatusHandler(server.stats, history, feedback, log, config.adminCommand, () => accounts.store.counts(7)),
+      createStatusHandler(
+        server.stats,
+        history,
+        feedback,
+        log,
+        { admin: config.adminCommand, issue: config.issueCommand },
+        () => accounts.store.counts(7),
+      ),
     );
     status = page;
     // The page is the operator's alone. A port that can't be opened, because something else has
