@@ -81,7 +81,7 @@ const standing = computed<Standing>(() =>
     ? standingOf(player.value.handle, account.summary?.handle ?? null, friendsView.value)
     : { kind: 'stranger' },
 );
-const friend = computed(() => (standing.value?.kind === 'friend' ? standing.value.friend : null));
+const friend = computed(() => (standing.value.kind === 'friend' ? standing.value.friend : null));
 // What the viewer may do as a friend, once the list has come or can't be had.
 const friendly = computed(() =>
   befriendable.value && (friendsView.value !== null || friendsFailed.value !== null) ? standing.value : null,

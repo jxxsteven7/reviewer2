@@ -84,6 +84,7 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(ann.getByText(text.friends.requestSent)).toBeVisible();
   await expect(ann.getByRole('dialog')).toHaveCount(0);
   await expect(annsFriends.getByLabel(text.friends.search.label)).toHaveValue('');
+  await expect(annsFriends.getByLabel(text.friends.search.label)).toBeFocused();
   // Found again, Cat's panel says that the request went.
   await searchFriends(ann, catName);
   await expect(catForAnn.getByRole('button', { name: text.friends.requestPending })).toBeDisabled();
@@ -112,6 +113,8 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(catsPanel).toBeVisible();
   await ann.keyboard.press('Escape');
   await expect(ann.getByRole('dialog')).toHaveCount(0);
+  // The focus comes back to the avatar that opened the panel.
+  await expect(annsFriends.locator('.card', { hasText: catName }).getByRole('button', avatarOf(catName))).toBeFocused();
   // Now Ann is a friend, whom the panel offers a name or parting; a part of a name finds nobody, and
   // Cat finds herself.
   await searchFriends(cat, annName);

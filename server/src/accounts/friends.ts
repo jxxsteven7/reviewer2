@@ -140,6 +140,7 @@ export class Friendships {
   // how many requests went.
   prune(): number {
     this.#requests.prune();
+    this.#finds.prune();
     return this.store.pruneDeclined(new Date(this.clock() - this.limits.declineCooldownMs).toISOString());
   }
 

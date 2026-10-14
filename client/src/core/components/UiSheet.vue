@@ -112,9 +112,12 @@ watch(
   { immediate: true },
 );
 
+// A sheet taken off the page while it is open, with the part that holds it, gives the focus back
+// as a closed one does, so that it doesn't fall to the top of the page.
 onBeforeUnmount(() => {
   leave();
   document.removeEventListener('keydown', onKey);
+  if (props.open) returnFocus?.focus?.();
 });
 </script>
 

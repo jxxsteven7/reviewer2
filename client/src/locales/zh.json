@@ -763,7 +763,7 @@
     "friend_note_too_long": "最多 50 个字。",
     "friend_alias_invalid": "备注里有看不见的字符。",
     "friend_alias_too_long": "最多 20 个字。",
-    "friend_find_limited": "这一小时搜得太多了，稍后再试。",
+    "friend_find_limited": "这一小时搜得太多了，过一会儿再试。",
     "friends_full": "你们中有人的好友已满。",
     "no_such_request": "没有这个好友请求。",
     "not_friends": "你们不是好友。",
@@ -1105,7 +1105,8 @@
       "label": "按用户名或主页链接找人",
       "placeholder": "完整的用户名",
       "submit": "搜索",
-      "notFound": "没有这个用户名。要输入完整的用户名，大小写都行。"
+      "notFound": "没有这个用户名。要输入完整的用户名，大小写都行。",
+      "badLink": "这不是玩家主页的链接。请原样粘贴主页的链接。"
     }
   },
   "ranks": {

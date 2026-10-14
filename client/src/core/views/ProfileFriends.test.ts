@@ -2,10 +2,12 @@
 import type { DuoView, FriendsView, FriendView, ProfileView } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { ref } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
+import ProfilePanel from '../components/ProfilePanel.vue';
+import { closeProfile } from '../profilePanel';
 import ProfileFriends from './ProfileFriends.vue';
 
 // The friends on the account page, with what the account has played with each and the titles
@@ -51,13 +53,20 @@ const friend = (username: string, duo: DuoView | null): FriendView => ({
   duo,
 });
 
+// The section with the site's panel of an account beside it (profilePanel.ts), which the search
+// and the avatars open, as App.vue holds it beside the page.
+const SectionWithPanel = defineComponent({
+  render: () => h('div', [h(ProfileFriends), h(ProfilePanel)]),
+});
+
 function mountWith(
   friends: FriendView[],
   locale: 'en' | 'zh' = 'en',
   requests: Pick<FriendsView, 'incoming' | 'outgoing'> = { incoming: [], outgoing: [] },
 ) {
   list.view = ref<FriendsView>({ friends, ...requests });
-  return mount(ProfileFriends, {
+  closeProfile();
+  return mount(SectionWithPanel, {
     global: {
       plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })],
       stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' }, teleport: true },
@@ -121,6 +130,25 @@ describe('ProfileFriends', () => {
     expect(bob?.classes()).not.toContain('offline');
     expect(cat?.classes()).toContain('offline');
     expect(cat?.get('.where').text()).toBe('offline');
+  });
+
+  test('answers a request on its card as the panels do, and takes one back', async () => {
+    asks.answerFriend.mockClear();
+    const bob = { handle: 'b0b000000000', username: 'Bob', avatar: null, note: 'Hi' };
+    const cat = { handle: 'ca7000000000', username: 'Cat', avatar: null };
+    const wrapper = mountWith([], 'en', { incoming: [bob], outgoing: [cat] });
+    const card = (name: string) => {
+      const found = wrapper.findAll('.request').find((request) => request.get('.name').text() === name);
+      if (!found) throw new Error(`no request of ${name}`);
+      return found;
+    };
+    expect(card('Bob').get('.note').text()).toBe('\u201cHi\u201d');
+    await card('Bob').findAll('.end button')[0]?.trigger('click');
+    expect(asks.answerFriend).toHaveBeenLastCalledWith('Bob', 'accept');
+    await card('Bob').findAll('.end button')[1]?.trigger('click');
+    expect(asks.answerFriend).toHaveBeenLastCalledWith('Bob', 'decline');
+    await card('Cat').get('.end button').trigger('click');
+    expect(asks.answerFriend).toHaveBeenLastCalledWith('Cat', 'remove');
   });
 
   test('asks a friend in a private room to be let in, and says so while the request stands', async () => {
@@ -358,6 +386,62 @@ describe('the search on the account page', () => {
     wrapper.unmount();
   });
 
+  test("asks the server for nothing that can't be a username, and knows a link that leads to no page", async () => {
+    const wrapper = mountWith([]);
+    const said = () => wrapper.get('form.search .note.error').text();
+    // Longer than a name, or with a link in it that is no page's: no search is spent.
+    await search(wrapper, 'x'.repeat(17));
+    expect(said()).toBe("No account has that username. Type the full username; capitals don't matter.");
+    await search(wrapper, 'Come and play https://reviewer2.example/room/K7QX tonight');
+    expect(said()).toBe("That isn't the link to a player's page. Paste the link as the page shares it.");
+    await search(wrapper, 'https://reviewer2.example/p/0123456789');
+    expect(said()).toBe("That isn't the link to a player's page. Paste the link as the page shares it.");
+    expect(send).not.toHaveBeenCalled();
+    expect(signedIn.request).not.toHaveBeenCalled();
+    // The box takes more than a name's length, for a link with the text around it.
+    expect(Number(wrapper.get('form.search input').attributes('maxlength'))).toBeGreaterThan(256);
+    wrapper.unmount();
+  });
+
+  test('keeps the button, and gives the focus back to the box once a request has gone', async () => {
+    // The server answers the search once told to.
+    let answer: (found: object) => void = () => {};
+    send.mockImplementation((event) =>
+      event === 'friends:find' ? new Promise<object>((resolve) => (answer = resolve)) : Promise.resolve({ ok: true }),
+    );
+    list.view = ref<FriendsView>({ friends: [], incoming: [], outgoing: [] });
+    closeProfile();
+    // On the page, so that the focus moves; the sheets are drawn in place.
+    const wrapper = mount(SectionWithPanel, {
+      global: {
+        plugins: [createI18n({ legacy: false, locale: 'en', messages: { en, zh } })],
+        stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' }, teleport: true },
+      },
+      attachTo: document.body,
+    });
+    const input = wrapper.get('form.search input').element as HTMLInputElement;
+    await wrapper.get('form.search input').setValue('Cat');
+    const button = wrapper.get('form.search button');
+    (button.element as HTMLButtonElement).focus();
+    // The button stays as it is while the search is on its way, so that the focus stays with it.
+    await wrapper.get('form.search').trigger('submit');
+    await flushPromises();
+    expect(button.attributes('disabled')).toBeUndefined();
+    expect(document.activeElement).toBe(button.element);
+    answer({ ok: true, ...cat });
+    await flushPromises();
+    expect(panel(wrapper).get('h2').text()).toBe('Cat');
+    expect(document.activeElement?.closest('[role=dialog]')).not.toBeNull();
+    await panel(wrapper).findAll('.panel-actions button')[0]?.trigger('click');
+    await sheet(wrapper, 'Add Cat as a friend').get('form').trigger('submit');
+    await flushPromises();
+    expect(asks.requestFriend).toHaveBeenCalledWith({ username: 'Cat' }, null);
+    expect(wrapper.find('[role=dialog]').exists()).toBe(false);
+    expect(input.value).toBe('');
+    expect(document.activeElement).toBe(input);
+    wrapper.unmount();
+  });
+
   test('says under the box why nobody was found, until the box changes', async () => {
     const wrapper = mountWith([]);
     const said = () => wrapper.find('form.search .note.error');
@@ -369,7 +453,7 @@ describe('the search on the account page', () => {
     expect(said().exists()).toBe(false);
     finds({ ok: false, error: 'friend_find_limited' });
     await search(wrapper, 'Cat');
-    expect(said().text()).toBe("You've searched too often this hour. Try again later.");
+    expect(said().text()).toBe("You've searched a lot this hour. Try again later.");
     await search(wrapper, 'https://reviewer2.example/p/000000000000');
     expect(said().text()).toBe('There is no such page. The account may have been deleted.');
     wrapper.unmount();

@@ -763,7 +763,7 @@
     "friend_note_too_long": "Use at most 50 characters.",
     "friend_alias_invalid": "That alias has characters in it that don't show.",
     "friend_alias_too_long": "Use at most 20 characters.",
-    "friend_find_limited": "You've searched too often this hour. Try again later.",
+    "friend_find_limited": "You've searched a lot this hour. Try again later.",
     "friends_full": "One of you has as many friends as an account can have.",
     "no_such_request": "There is no such request.",
     "not_friends": "You aren't friends with that account.",
@@ -1105,7 +1105,8 @@
       "label": "Find someone by username or page link",
       "placeholder": "Full username",
       "submit": "Search",
-      "notFound": "No account has that username. Type the full username; capitals don't matter."
+      "notFound": "No account has that username. Type the full username; capitals don't matter.",
+      "badLink": "That isn't the link to a player's page. Paste the link as the page shares it."
     }
   },
   "ranks": {

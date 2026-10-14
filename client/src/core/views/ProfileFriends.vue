@@ -1,22 +1,21 @@
 <script setup lang="ts">
 import {
   ACCOUNT_API,
+  cleanName,
   DUO_TITLES,
   formatCode,
   handleInLink,
-  MAX_NAME_INPUT,
   type Ack,
   type FriendView,
   type ProfileView,
 } from '@reviewer2/shared';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { request } from '../account';
 import AliasSheet from '../components/AliasSheet.vue';
 import AvatarButton from '../components/AvatarButton.vue';
 import FoldedTitles from '../components/FoldedTitles.vue';
-import ProfilePanel from '../components/ProfilePanel.vue';
 import TitleInfo from '../components/TitleInfo.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
@@ -24,34 +23,38 @@ import UiSheet from '../components/UiSheet.vue';
 import UnfriendSheet from '../components/UnfriendSheet.vue';
 import { duoLine } from '../duos';
 import { errorKey } from '../errors';
-import { askToJoin } from '../friends';
+import { answerFriend, askToJoin } from '../friends';
+import { openProfile } from '../profilePanel';
 import { send, whenConnected } from '../socket';
-import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import { useFriendsList } from '../useFriendsList';
 
 // The account's friends (docs/architecture.md#friends): the search for someone to ask, the requests
 // waiting for an answer each way, the line that came with each request for the account under its
 // name, and the friends, each on a card: the avatar, which opens the friend's panel
-// (ProfilePanel.vue), the name and whether they are online and where; under it, in small type, what the account has played
-// with them, and the titles they hold among its friends (docs/architecture.md#friend-duos), on one
-// line, folded where they don't fit. The friends' board above the list sums the titles up, in the
-// same look, each with the avatar and the name of the friends who hold it, the avatar opening
-// their panel as on the cards. A friend who is offline has the whole card faded, still readable. A
-// friend in a public room can be joined from here; one in a private room only by their invitation,
-// which the account may ask them for (askToJoin), and which the card says it has while the request
-// stands. A friend whom the account has given a name of its own (an alias, for the account alone)
-// goes by it, with the username after it in small grey type, here and in the sheets about them.
-// The card's "more" button opens a sheet with the friend's name, from which the account gives them
-// a name, or takes it away by leaving it empty, or removes them, after asking first. A change made
-// here comes back as the word that the server sends both sides, on which the list is asked for
-// again (useFriendsList); after a refusal it is asked for here, since the list may have been out of
-// date.
+// (ProfilePanel.vue), the name and whether they are online and where; under it, in small type,
+// what the account has played with them, and the titles they hold among its friends
+// (docs/architecture.md#friend-duos), on one line, folded where they don't fit. The friends' board
+// above the list sums the titles up, in the same look, each with the avatar and the name of the
+// friends who hold it, the avatar opening their panel as on the cards. A friend who is offline has
+// the whole card faded, still readable. A friend in a public room can be joined from here; one in
+// a private room only by their invitation, which the account may ask them for (askToJoin), and
+// which the card says it has while the request stands. A friend whom the account has given a name
+// of its own (an alias, for the account alone) goes by it, with the username after it in small
+// grey type, here and in the sheets about them. The card's "more" button opens a sheet with the
+// friend's name, from which the account gives them a name, or takes it away by leaving it empty,
+// or removes them, after asking first. The requests are answered, and taken back, as the panels
+// answer them (answerFriend). A change made here comes back as the word that the server sends
+// both sides, on which the list is asked for again (useFriendsList), as it is after a refusal,
+// since the list may have been out of date.
 //
 // The search finds someone by their whole username, or by a link to their page pasted with any
 // text around it, and opens their panel, as a tap on an avatar does (ProfilePanel.vue). Once
 // something has gone through there, the panel closes and the box is cleared. A name that is no
 // account's, and a link to no page, are said under the box, which forgets them as it changes.
+// Text that can't be a username, since it is longer than one or holds what one can't, is said to
+// name no account here, without asking the server, so that it costs none of the hour's searches,
+// and one that holds a link that leads to no page is said to be no such link.
 const { t } = useI18n();
 const { view, failed, load } = useFriendsList();
 // The friend whose "more" sheet is open, the one being given a name, and the one about to be
@@ -61,11 +64,13 @@ const naming = ref<FriendView | null>(null);
 const removing = ref<FriendView | null>(null);
 const { busy, run } = useBusy();
 
-// The search as typed, why it found nobody, and the account it found.
+// The search as typed, and why it found nobody. The box takes a link with the text that a chat
+// shares it with, which is longer than a name may be.
+const MAX_SEARCH_INPUT = 1000;
+const searchForm = ref<HTMLFormElement | null>(null);
 const query = ref('');
 const searchProblem = ref<string | undefined>();
 type Found = { handle: string; username: string };
-const found = ref<Found | null>(null);
 watch(query, () => (searchProblem.value = undefined));
 
 // The account that the text names: by a link to its page, read as the public page it leads to,
@@ -77,10 +82,18 @@ async function lookUp(text: string): Promise<Ack<{ found: Found }>> {
     const reply = await request<{ profile: ProfileView }>(`${ACCOUNT_API.profiles}${handle}`);
     return reply.ok ? { ok: true, found: { handle: reply.profile.handle, username: reply.profile.username } } : reply;
   }
+  // What can't be a username is no account's, as the server would say; what looks like a link and
+  // holds none to a page is said so, since it is the link that is wrong, not the name.
+  if (cleanName(text) === null) return { ok: false, error: text.includes('://') ? 'bad_link' : 'no_such_account' };
   if (!(await whenConnected())) return { ok: false, error: 'offline' };
   const reply = await send<Found>('friends:find', { username: text });
   return reply.ok ? { ok: true, found: { handle: reply.handle, username: reply.username } } : reply;
 }
+
+const SEARCH_PROBLEMS: Record<string, string> = {
+  no_such_account: 'friends.search.notFound',
+  bad_link: 'friends.search.badLink',
+};
 
 async function search() {
   const text = query.value.trim();
@@ -90,17 +103,19 @@ async function search() {
   const reply = await run(() => lookUp(text));
   if (!reply) return;
   if (!reply.ok) {
-    searchProblem.value = t(reply.error === 'no_such_account' ? 'friends.search.notFound' : errorKey(reply.error));
+    searchProblem.value = t(SEARCH_PROBLEMS[reply.error] ?? errorKey(reply.error));
     return;
   }
-  found.value = reply.found;
+  openProfile(reply.found.handle, reply.found.username, foundDone);
 }
 
-// Something went through in the panel of the account found: the panel closes, and the box is ready
-// for the next.
-function foundDone() {
-  closeAll();
+// Something went through in the panel of the account found: the box is cleared, and the focus
+// comes to it for the next search, once the panel has given it back to the button, which is
+// disabled while the box is empty.
+async function foundDone() {
   query.value = '';
+  await nextTick();
+  searchForm.value?.querySelector('input')?.focus();
 }
 
 // Each title that a friend holds, with the friends who hold it, in the order of the titles.
@@ -113,12 +128,9 @@ const board = computed(() =>
 
 const games = (friend: FriendView) => (friend.duo ? duoLine(t, friend.duo) : '');
 
-// The answers to a request in the list, and taking one back.
-async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:remove', name: string) {
-  const reply = await run(() => send(message, { username: name }));
-  if (!reply || reply.ok) return;
-  toastError(reply.error);
-  void load();
+// The answers to a request in the list, and taking one back, as the panels answer (friends.ts).
+async function answer(reply: 'accept' | 'decline' | 'remove', name: string) {
+  await run(() => answerFriend(name, reply));
 }
 
 async function ask(friend: FriendView) {
@@ -126,7 +138,6 @@ async function ask(friend: FriendView) {
 }
 
 function closeAll() {
-  found.value = null;
   managing.value = null;
   naming.value = null;
   removing.value = null;
@@ -135,19 +146,21 @@ function closeAll() {
 
 <template>
   <div class="friends">
-    <form class="search" role="search" @submit.prevent="search">
+    <form ref="searchForm" class="search" role="search" @submit.prevent="search">
       <UiField
         v-model="query"
         :label="t('friends.search.label')"
         :placeholder="t('friends.search.placeholder')"
-        :maxlength="MAX_NAME_INPUT"
+        :maxlength="MAX_SEARCH_INPUT"
         autocomplete="off"
         inputmode="search"
         enterkeyhint="search"
         :error="searchProblem"
       >
         <template #beside>
-          <UiButton type="submit" :disabled="busy || !query.trim()">{{ t('friends.search.submit') }}</UiButton>
+          <!-- Not disabled while a search is on its way, which would let the focus go, and the panel
+               that opens then give it back to nothing: a second press meanwhile is nothing (useBusy). -->
+          <UiButton type="submit" :disabled="!query.trim()">{{ t('friends.search.submit') }}</UiButton>
         </template>
       </UiField>
     </form>
@@ -172,20 +185,10 @@ function closeAll() {
             >
             <span v-if="other.note" class="note">{{ t('friends.noteQuoted', { note: other.note }) }}</span>
             <span class="end">
-              <UiButton
-                variant="primary"
-                size="small"
-                :disabled="busy"
-                @click="answer('friends:accept', other.username)"
-              >
+              <UiButton variant="primary" size="small" :disabled="busy" @click="answer('accept', other.username)">
                 {{ t('friends.accept') }}
               </UiButton>
-              <UiButton
-                variant="quiet"
-                size="small"
-                :disabled="busy"
-                @click="answer('friends:decline', other.username)"
-              >
+              <UiButton variant="quiet" size="small" :disabled="busy" @click="answer('decline', other.username)">
                 {{ t('friends.decline') }}
               </UiButton>
             </span>
@@ -208,7 +211,7 @@ function closeAll() {
               ><span class="name">{{ other.username }}</span></span
             >
             <span class="end">
-              <UiButton variant="quiet" size="small" :disabled="busy" @click="answer('friends:remove', other.username)">
+              <UiButton variant="quiet" size="small" :disabled="busy" @click="answer('remove', other.username)">
                 {{ t('friends.withdraw') }}
               </UiButton>
             </span>
@@ -327,14 +330,6 @@ function closeAll() {
       :username="removing?.username ?? ''"
       @close="closeAll"
       @removed="closeAll"
-    />
-
-    <ProfilePanel
-      :open="found !== null"
-      :handle="found?.handle ?? ''"
-      :username="found?.username ?? ''"
-      @close="found = null"
-      @done="foundDone"
     />
   </div>
 </template>
