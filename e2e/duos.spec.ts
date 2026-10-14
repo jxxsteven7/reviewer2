@@ -98,7 +98,7 @@ test('friends who win together become co-first authors, which they alone are tol
 
   // The decision of the latest game on her record: red won with blue far behind.
   const latest = ann.locator('.records .record').first();
-  await latest.getByRole('button', { name: text.game.letter.verdicts.oral }).click();
+  await latest.getByRole('button', { name: text.game.letter.short.oral }).click();
   await expect(ann.getByRole('dialog', { name: text.game.letter.verdicts.oral })).toContainText(
     text.game.letter.explain.oral,
   );

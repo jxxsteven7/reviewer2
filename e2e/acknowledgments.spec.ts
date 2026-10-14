@@ -8,7 +8,7 @@ import { expect, newPlayer, TEXT, test } from './helpers';
 // from the database (contributions.spec.ts), and the sponsors last (sponsors.spec.ts).
 const file = parseAcknowledgments(readFileSync(join(import.meta.dirname, '..', 'ACKNOWLEDGMENTS.md'), 'utf8'));
 
-test('the home page shows ACKNOWLEDGMENTS.md as it is written, between the contributions and the sponsors', async ({
+test('the home page shows ACKNOWLEDGMENTS.md as it is written, after the contributions and the sponsors', async ({
   browser,
 }) => {
   for (const language of ['en', 'zh'] as const) {
@@ -16,7 +16,7 @@ test('the home page shows ACKNOWLEDGMENTS.md as it is written, between the contr
     const page = await newPlayer(browser, language);
     await page.goto('/');
     await page.getByRole('button', { name: new RegExp(`^${words.language[language]}`) }).click();
-    await expect(page.locator('.thanks > .fold')).toHaveClass([/contributions/, /acknowledgments/, /sponsors/]);
+    await expect(page.locator('.thanks > .fold')).toHaveClass([/contributions/, /sponsors/, /acknowledgments/]);
     const fold = page.locator('.fold.acknowledgments');
     const toggle = fold.locator('h2 button');
     await expect(toggle).toHaveText(words.acknowledgments.title);

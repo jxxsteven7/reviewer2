@@ -11,6 +11,7 @@ import {
   joinByLink,
   keyCard,
   newPlayer,
+  plural,
   register,
   reveal,
   seatTable,
@@ -134,13 +135,9 @@ test('players with accounts and guests play a whole match, and find its title on
   // The accounts keep the match, and Ann's title.
   await ann.goto('/account');
   await expect(ann.locator('.titles')).toHaveText(text.account.profile.titleNames.best_paper);
-  const matches = ann.locator('.records .record-stats .block').nth(2);
-  await expect(matches.locator('dd')).toHaveText([
-    '1',
-    interpolate(text.account.profile.recordStats.won, { won: '1' }),
-  ]);
+  // One match finished, and won.
+  await expect(ann.locator('.records .record-stats .block .value')).toHaveText(['2', /%$/, '1', '1']);
   // Both games were the match's, and say which of its games they were.
-  await expect(ann.locator('.records .record-stats .block .value').first()).toHaveText('2');
   await expect(ann.locator('.records .record:not(.match) .tag')).toHaveText([
     interpolate(text.account.profile.matchTag, { game: '2', games: '2' }),
     interpolate(text.account.profile.matchTag, { game: '1', games: '2' }),
@@ -148,8 +145,8 @@ test('players with accounts and guests play a whole match, and find its title on
   const match = ann.locator('.records .match');
   await expect(match).toHaveCount(1);
   await expect(match).toContainText(text.match.titleNames.best_paper);
-  await expect(match).toContainText(interpolate(text.account.profile.matchGames, { games: '2' }));
-  await expect(match).toContainText(/Place 1 of 4/);
+  await expect(match).toContainText(plural(text.account.profile.matchGames, 2));
+  await expect(match).toContainText(/1\/4 · /);
   await bob.goto('/account');
   await expect(bob.locator('.records .match')).toHaveCount(1);
 });

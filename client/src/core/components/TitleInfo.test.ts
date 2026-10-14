@@ -100,7 +100,7 @@ describe('TitlePills', () => {
     const pills = wrapper.findAll('li > button.pill');
     expect(pills.map((pill) => pill.text())).toEqual([
       'Best Paper Award ×2',
-      'Game black hole',
+      'Academic Trash',
       'Five Submissions, Five Acceptances',
       'Contributions: Suggestions ×3',
       'Contributions: Word lists',

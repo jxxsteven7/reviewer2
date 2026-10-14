@@ -289,8 +289,8 @@
     "stopped": "比赛提前结束了",
     "stoppedNote": "比赛没有打完，不发称号。",
     "titleNames": {
-      "best_paper": "Best Paper Award",
-      "black_hole": "游戏黑洞"
+      "best_paper": "最佳论文",
+      "black_hole": "学术垃圾"
     },
     "blackHoleLine": "你这么菜，多半会被拒稿吧！",
     "again": "再开一场",
@@ -427,12 +427,20 @@
       "title": "审稿意见",
       "titleFor": "审稿意见 · {group}",
       "verdicts": {
-        "oral": "录用（口头报告）",
-        "spotlight": "录用（Spotlight）",
-        "poster": "录用（海报）",
-        "deskReject": "直接拒稿",
-        "reject": "拒稿",
-        "withdrawn": "撤稿"
+        "oral": "Accept (Oral)",
+        "spotlight": "Accept (Spotlight)",
+        "poster": "Accept (Poster)",
+        "deskReject": "Desk Reject",
+        "reject": "Reject",
+        "withdrawn": "Withdrawn"
+      },
+      "short": {
+        "oral": "Oral",
+        "spotlight": "Spotlight",
+        "poster": "Poster",
+        "deskReject": "Desk Reject",
+        "reject": "Reject",
+        "withdrawn": "Withdrawn"
       },
       "explain": {
         "oral": "这一组赢了，对方组还有 4 个或更多关键词没找到。",
@@ -964,8 +972,8 @@
       "yourPassword": "你的密码",
       "titles": "称号",
       "titleNames": {
-        "best_paper": "Best Paper Award",
-        "black_hole": "游戏黑洞",
+        "best_paper": "最佳论文",
+        "black_hole": "学术垃圾",
         "missed_deadline": "DDL过了忘投稿",
         "deadline_hero": "DDL战神",
         "opening_record": "首开纪录",
@@ -983,7 +991,7 @@
         "linkPlaceholder": "https://",
         "bio": "一句简介",
         "bioCount": "{count}/{max} 个字符，按纯文本显示。",
-        "showRecord": "公开战绩：普通对局和比赛中的对局各自的局数、胜场、胜率，以及比赛场数和夺冠次数",
+        "showRecord": "公开战绩：总对局、总胜率、比赛场次和夺冠次数",
         "showThanks": "公开反馈贡献次数（包括匿名提的）",
         "save": "保存主页",
         "saved": "主页已更新。",
@@ -995,24 +1003,21 @@
       },
       "record": "战绩",
       "recordStats": {
-        "games": "局数",
-        "rate": "胜率",
-        "matches": "比赛",
-        "won": "夺冠 {won} 场",
-        "ordinary": "普通对局 {games} 局 {wins} 胜",
-        "inMatches": "比赛中的对局 {games} 局 {wins} 胜"
+        "games": "总对局",
+        "rate": "总胜率",
+        "matches": "比赛场次",
+        "won": "夺冠次数"
       },
       "noRecords": "还没有战绩。登录后在座位上打完的每一局都会记在这里。",
       "recent": "最近 20 局",
       "recordsAgain": "重试",
       "recordLine": "{side}，{role}",
-      "ordinaryTag": "普通对局",
-      "matchTag": "比赛 · 第 {game}/{games} 局",
-      "watchAgain": "回放",
+      "ordinaryTag": "普通",
+      "matchTag": "比赛 {game}/{games}",
       "watchAgainOf": "回放 {when} 的这一局",
       "recentMatches": "最近 20 场比赛",
-      "matchLine": "{players} 人中第 {rank} 名 · {score} 分",
-      "matchGames": "{games} 局",
+      "matchLine": "{rank}/{players} 名 · {score} 分",
+      "matchGames": "{count} 局 | {count} 局",
       "roles": {
         "captain": "导师",
         "guesser": "学生"

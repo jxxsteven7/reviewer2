@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import { formatDay, formatMoment } from './dates';
+import { formatDay, formatStamp } from './dates';
 
 // The time zone of the process, put back after each test: one that had none gets none back,
 // since a string, even "undefined", would be a zone.
@@ -28,9 +28,15 @@ describe('a day', () => {
 });
 
 describe('a moment', () => {
-  test('is written in the language of the page, in its time zone, or as ISO', () => {
+  test('is the day and the time in numbers, in the time zone of the page', () => {
     process.env.TZ = 'Asia/Shanghai';
-    expect(formatMoment('2026-10-01T23:59:00.000Z', 'en')).toBe('Oct 2, 2026, 7:59 AM');
-    expect(formatMoment('2026-10-01T23:59:00.000Z', 'no such locale')).toBe('2026-10-01 23:59');
+    expect(formatStamp('2026-10-01T23:59:00.000Z')).toEqual({ day: '2026.10.02', time: '07:59' });
+    expect(formatStamp('2026-10-14T10:08:00.000Z')).toEqual({ day: '2026.10.14', time: '18:08' });
+    process.env.TZ = 'America/New_York';
+    expect(formatStamp('2026-10-01T03:05:00.000Z')).toEqual({ day: '2026.09.30', time: '23:05' });
+  });
+
+  test('is the day of the ISO string, without a time, when it is no date', () => {
+    expect(formatStamp('2026-10-01Tnonsense')).toEqual({ day: '2026.10.01', time: '' });
   });
 });

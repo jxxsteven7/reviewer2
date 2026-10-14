@@ -5,7 +5,6 @@ import {
   createRoom,
   expect,
   gameOf,
-  interpolate,
   joinByLink,
   logIn,
   mailedLink,
@@ -94,20 +93,17 @@ test('players with accounts play a whole game with guests, and find it on their 
   await ann.goto('/account');
   // The game is an ordinary one, outside a match.
   const stats = ann.locator('.records .record-stats');
-  await expect(stats.locator('.block .value')).toHaveText(['1', annWon ? '100%' : '0%', '0']);
-  await expect(stats.locator('.split')).toHaveText(
-    interpolate(text.account.profile.recordStats.ordinary, { games: '1', wins: annWon ? '1' : '0' }),
-  );
+  await expect(stats.locator('.block .value')).toHaveText(['1', annWon ? '100%' : '0%', '0', '0']);
   await expect(ann.locator('.records .record .tag')).toHaveText([text.account.profile.ordinaryTag]);
   const record = ann.locator('.records .record');
   await expect(record).toHaveCount(1);
-  await expect(record).toContainText(text.game.letter.verdicts[annWon ? 'poster' : 'reject']);
+  await expect(record).toContainText(text.game.letter.short[annWon ? 'poster' : 'reject']);
   await expect(record).toContainText(`${text.lobby.group.red}, ${text.account.profile.roles.captain}`);
   // However narrow the page, nothing on the line runs under the button on its right.
   expect(
     await record.evaluate((line) => {
       const button = line.querySelector('.watch')?.getBoundingClientRect();
-      const words = [...line.querySelectorAll('.what *')].map((part) => part.getBoundingClientRect());
+      const words = [...line.querySelectorAll(':scope > :not(.watch)')].map((part) => part.getBoundingClientRect());
       return button !== undefined && words.every((part) => part.right <= button.left);
     }),
   ).toBe(true);

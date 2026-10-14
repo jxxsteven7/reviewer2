@@ -138,7 +138,7 @@ describe('the ranking of a match', () => {
     line('Eve', { total: 6, rank: null, left: true, playerId: null }),
   ];
 
-  test('shows the titles, with the line for the black hole', () => {
+  test('shows the titles, with the line for Academic Trash', () => {
     const wrapper = mount(MatchResults, {
       props: { room: room({ standings, status: 'over', played: 3, game: 3 }) },
       global: global(),
@@ -148,18 +148,18 @@ describe('the ranking of a match', () => {
     const items = wrapper.findAll('li');
     expect(items.map((item) => item.get('.rank').text())).toEqual(['1', '1', '3', '4', '\u2013']);
     expect(items.at(0)?.text()).toContain('Best Paper Award');
-    expect(items.at(3)?.text()).toContain('Game black hole');
+    expect(items.at(3)?.text()).toContain('Academic Trash');
     expect(items.at(3)?.text()).toContain('Playing like that, your paper is probably getting rejected!');
     expect(items.at(4)?.text()).toContain('left');
     expect(items.at(3)?.get('.total').text()).toBe('\u22124');
   });
 
-  test('says in Chinese what the black hole will hear', () => {
+  test('says in Chinese what Academic Trash will hear', () => {
     const wrapper = mount(MatchResults, {
       props: { room: room({ standings, status: 'over', played: 3, game: 3 }) },
       global: global('zh'),
     });
-    expect(wrapper.text()).toContain('\u6e38\u620f\u9ed1\u6d1e');
+    expect(wrapper.text()).toContain('\u5b66\u672f\u5783\u573e');
     expect(wrapper.text()).toContain('\u4f60\u8fd9\u4e48\u83dc\uff0c\u591a\u534a\u4f1a\u88ab\u62d2\u7a3f\u5427\uff01');
   });
 

@@ -290,7 +290,7 @@
     "stoppedNote": "It ended before its last game, so no titles were awarded.",
     "titleNames": {
       "best_paper": "Best Paper Award",
-      "black_hole": "Game black hole"
+      "black_hole": "Academic Trash"
     },
     "blackHoleLine": "Playing like that, your paper is probably getting rejected!",
     "again": "Another match",
@@ -430,6 +430,14 @@
         "oral": "Accept (Oral)",
         "spotlight": "Accept (Spotlight)",
         "poster": "Accept (Poster)",
+        "deskReject": "Desk Reject",
+        "reject": "Reject",
+        "withdrawn": "Withdrawn"
+      },
+      "short": {
+        "oral": "Oral",
+        "spotlight": "Spotlight",
+        "poster": "Poster",
         "deskReject": "Desk Reject",
         "reject": "Reject",
         "withdrawn": "Withdrawn"
@@ -965,7 +973,7 @@
       "titles": "Titles",
       "titleNames": {
         "best_paper": "Best Paper Award",
-        "black_hole": "Game black hole",
+        "black_hole": "Academic Trash",
         "missed_deadline": "Forgot to Submit",
         "deadline_hero": "Deadline Hero",
         "opening_record": "Opened the Scoring",
@@ -983,7 +991,7 @@
         "linkPlaceholder": "https://",
         "bio": "One line about you",
         "bioCount": "{count}/{max} characters. Shown as plain text.",
-        "showRecord": "Show my record: games, wins and win rates, outside matches and in them, and matches finished and won",
+        "showRecord": "Show my record: games, win rate, matches and matches won",
         "showThanks": "Show how many of my feedback contributions were adopted, anonymous ones included",
         "save": "Save the page",
         "saved": "Your page has been updated.",
@@ -998,21 +1006,18 @@
         "games": "Games",
         "rate": "Win rate",
         "matches": "Matches",
-        "won": "won {won}",
-        "ordinary": "Ordinary games: {games}, won {wins}",
-        "inMatches": "In matches: {games}, won {wins}"
+        "won": "Won"
       },
       "noRecords": "No games yet. The games that you finish in a seat while you are logged in are kept here.",
       "recent": "The last 20 games",
       "recordsAgain": "Try again",
       "recordLine": "{side}, {role}",
-      "ordinaryTag": "Ordinary game",
-      "matchTag": "Match · game {game}/{games}",
-      "watchAgain": "Watch again",
+      "ordinaryTag": "Ordinary",
+      "matchTag": "Match {game}/{games}",
       "watchAgainOf": "Watch the game of {when} again",
       "recentMatches": "The last 20 matches",
-      "matchLine": "Place {rank} of {players} · Total: {score}",
-      "matchGames": "{games}-game match",
+      "matchLine": "{rank}/{players} · {score} pts",
+      "matchGames": "{count} game | {count} games",
       "roles": {
         "captain": "PI",
         "guesser": "Student"
