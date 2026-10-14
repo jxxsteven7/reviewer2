@@ -116,7 +116,7 @@ describe('a clue', () => {
     const request = clueRequest({ language: 'zh', settings: defaultSettings('zh'), cards });
     const reply = allowed(await giveClue(request, turn(model)));
     expect(reply).toMatchObject({ ok: true, word: '生物' });
-    expect(model.asked[0]?.system).toContain('write the clue in Chinese, as one word of at most 4 Chinese characters');
+    expect(model.asked[0]?.system).toContain('write the clue in Chinese, as one word of at most 2 Chinese characters');
   });
 
   test('fails with the model, and says what it had considered', async () => {
