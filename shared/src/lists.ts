@@ -139,13 +139,19 @@ export function readLines<Kind extends string, Entry>(
 }
 
 // The size of a text in UTF-8, as the server finds it on disk.
-export function utf8Length(text: string): number {
+function utf8Length(text: string): number {
   let count = 0;
   for (const char of text) {
     const code = char.codePointAt(0) as number;
     count += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
   }
   return count;
+}
+
+// Why a list is too large for the server to read, or null while it isn't.
+export function sizeProblem(text: string): ListProblem | null {
+  if (utf8Length(text) <= MAX_LIST_BYTES) return null;
+  return { line: 1, message: `A list has at most ${MAX_LIST_BYTES} bytes, or the server won't read it.` };
 }
 
 // The list that the sections read from `text` make, with the rules of the whole file: at most
@@ -157,9 +163,8 @@ export function finish<Kind extends string, Entry>(
   problems: ListProblem[],
   noOne: number[],
 ): ParsedList<Kind, Entry> {
-  if (utf8Length(text) > MAX_LIST_BYTES) {
-    problems.push({ line: 1, message: `A list has at most ${MAX_LIST_BYTES} bytes, or the server won't read it.` });
-  }
+  const size = sizeProblem(text);
+  if (size) problems.push(size);
   for (const { line, written } of sections) {
     if (written === 0) problems.push({ line, message: 'A section holds one entry or more.' });
   }

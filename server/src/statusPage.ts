@@ -272,8 +272,9 @@ function badge(feedback: Feedback): string {
 }
 
 // Everything that became of the feedback, in the order it happens, or '' for feedback that is
-// new. The days left in the trash count from `now`; feedback that was adopted, which only
-// feedback adopted on its way to the trash is, is kept there instead (store/feedback.ts).
+// new. The days left in the trash count from `now`; feedback that was adopted or is an issue,
+// which only feedback adopted or recorded on its way to the trash is, or feedback in the trash as
+// an issue from before issues kept feedback out of it, is kept there instead (store/feedback.ts).
 function trail(feedback: Feedback, now: number): string {
   const steps = [
     ...(feedback.issue === null ? [] : [`published as issue #${feedback.issue}`]),
@@ -284,9 +285,11 @@ function trail(feedback: Feedback, now: number): string {
       ? []
       : [
           `in the trash since ${escape(day(feedback.deletedAt))}, ` +
-            (feedback.adoptedAt === null
-              ? `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`
-              : 'kept: thanked'),
+            (feedback.adoptedAt !== null
+              ? 'kept: thanked'
+              : feedback.issue !== null
+                ? 'kept: issue'
+                : `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`),
         ]),
   ];
   return steps.length === 0 ? '' : `<p class="trail">${steps.join(' &middot; ')}</p>`;
@@ -303,8 +306,8 @@ function trail(feedback: Feedback, now: number): string {
 // it is neither adopted nor closed, which can't be undone: the operator's command adopts it as it
 // records the pull request, and asks for what the player contributed itself, so `adopt` and the
 // sentences show only without it; once it is adopted, saying again what the player contributed.
-// Last, closing or reopening it, and the trash, unless it was adopted or is an issue. The page shows
-// the commands and runs none of them.
+// Last, closing it, unless it was adopted, or reopening it, and the trash, unless it was adopted
+// or is an issue. The page shows the commands and runs none of them.
 function commands(feedback: Feedback, run: FeedbackCommands): string {
   const { id, kind, issue, resolvedPr, adoptedAt, closedAt, deletedAt } = feedback;
   const prefix = run.feedback ? run.feedback : `${run.admin} feedback`;
@@ -334,7 +337,7 @@ function commands(feedback: Feedback, run: FeedbackCommands): string {
             : !run.feedback && adoptable
               ? [line(`adopt ${id}${sentences}`, "can't be undone")]
               : []),
-          line(closedAt === null ? `close ${id}` : `reopen ${id}`),
+          ...(closedAt !== null ? [line(`reopen ${id}`)] : adoptedAt === null ? [line(`close ${id}`)] : []),
           ...(adoptedAt === null && issue === null ? [line(`delete ${id}`)] : []),
         ];
   return `<details><summary>Commands</summary>${lines.join('')}</details>`;

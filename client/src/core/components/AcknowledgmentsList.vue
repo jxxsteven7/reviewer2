@@ -7,9 +7,9 @@ import FoldedList from './FoldedList.vue';
 // The acknowledgments on the home page (docs/architecture.md#acknowledgments): ACKNOWLEDGMENTS.md,
 // which the maintainers write as they like, in any language, as the server reads it. It comes as
 // headings, paragraphs and lists of text, bold, italic and links (shared/src/acknowledgments.ts),
-// shown as they are written whatever the page's language, never as markup. The file's rules are
-// checked before it is merged and before the server shows it. Nothing in it is counted, so the
-// card's title is its name alone.
+// shown as they are written whatever the page's language, never as markup; what the parser makes
+// nothing of shows as written too. The file's rules are checked before it is merged and before
+// the server shows it. Nothing in it is counted, so the card's title is its name alone.
 const { t } = useI18n();
 
 type Acknowledgments = { blocks: AcknowledgmentBlock[] };

@@ -146,8 +146,9 @@ export function checkCredit(text: string | undefined): CreditCheck {
 const LINK =
   /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z](?:[a-z0-9-]*[a-z0-9])?(?::\d{1,5})?(?:[/?#][!-[\]-~]*)?$/i;
 // An HTML character reference, such as &amp;, which Markdown would turn into the character, so
-// that a list of thanks on GitHub and the home page would link to different addresses.
-const REFERENCE = /&#?\w+;/;
+// that a list of thanks on GitHub and the home page would link to different addresses, or show
+// different text (acknowledgments.ts).
+export const CHARACTER_REFERENCE = /&#?\w+;/;
 // What Markdown reads as markup in a link, which is kept percent-encoded; a browser reads it the
 // same, and a link with a parenthesis, as Wikipedia's, is common enough not to be refused.
 const LINK_MARKUP = /[()]/g;
@@ -165,7 +166,7 @@ export function checkWebLink(text: string | undefined): WebLinkCheck {
   if (text.length > MAX_LINK_INPUT) return { link: null, problem: 'web_link_too_long' };
   const typed = text.trim();
   if (typed === '') return { link: null, problem: null };
-  if (!LINK.test(typed) || REFERENCE.test(typed)) return { link: null, problem: 'web_link_invalid' };
+  if (!LINK.test(typed) || CHARACTER_REFERENCE.test(typed)) return { link: null, problem: 'web_link_invalid' };
   const link = typed.replace(LINK_MARKUP, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
   if (link.length > MAX_LINK_LENGTH) return { link: null, problem: 'web_link_too_long' };
   return { link, problem: null };

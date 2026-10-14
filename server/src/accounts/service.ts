@@ -118,6 +118,9 @@ export interface AccountsOptions {
   // room they may take together.
   avatars?: AvatarFiles;
   maxAvatarBytes?: number;
+  // The server's feedback, which an account's page counts the contributions of; without it, as in
+  // tests of the accounts alone, the feedback is read from the database here.
+  feedback?: FeedbackStore;
 }
 
 export class Accounts {
@@ -128,8 +131,8 @@ export class Accounts {
   readonly replays: ReplayStore;
   readonly agentPlays: AgentPlayStore;
   readonly titles: TitleStore;
-  // The feedback, read here for the feedback contributions that an account's page counts, which
-  // the operator adopts (admin.ts).
+  // The feedback, for the feedback contributions that an account's page counts, which the operator
+  // adopts (admin.ts).
   readonly #feedback: FeedbackStore;
   // The friendships between accounts, and their rules (friends.ts).
   readonly friends: Friendships;
@@ -170,7 +173,7 @@ export class Accounts {
     this.replays = new ReplayStore(options.db, clock);
     this.agentPlays = new AgentPlayStore(options.db);
     this.titles = new TitleStore(options.db, clock);
-    this.#feedback = new FeedbackStore(options.db, clock);
+    this.#feedback = options.feedback ?? new FeedbackStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
     this.likes = new LikeStore(options.db, clock);
     this.settings = new SettingStore(options.db);

@@ -265,9 +265,13 @@ legend {
   flex: 1 1 12rem;
 }
 
-/* The way to the account page, a small sticker of its own like the account's entry on a page. */
+/* The way to the account page, a small sticker of its own like the account's entry on a page, as
+   tall as a finger. */
 .sign-in {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  min-height: 44px;
   padding: var(--space-1) var(--space-3);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);

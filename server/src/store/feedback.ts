@@ -232,15 +232,17 @@ export class FeedbackStore {
     this.#account = db.prepare('SELECT id, username FROM accounts WHERE username_key = ?');
     this.#clear = db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?');
     // The operator's notes. Each statement carries its rule, so that it can't be broken by
-    // mistake: a row is closed once and reopened once, never in the trash; it is adopted once,
-    // never in the trash, and only what the player contributed is written again afterwards; it goes
-    // to the trash once, unless it was adopted, and comes back once; and the purge leaves a row
-    // that was adopted alone, in case the feedback was adopted on its way out, which admin.ts
-    // refuses, but it reads before it writes.
+    // mistake: a row is closed once, unless it was adopted, and reopened once, never in the trash;
+    // it is adopted once, as an issue, neither closed nor in the trash, and only what the player
+    // contributed is written again afterwards; it goes to the trash once, unless it was adopted or
+    // is an issue, and comes back once; and the purge leaves a row that was adopted or is an issue
+    // alone, in case the feedback was adopted or recorded as an issue on its way out, which
+    // admin.ts refuses, but it reads before it writes, or was in the trash as an issue before
+    // issues kept feedback out of it.
     this.#setIssue = db.prepare('UPDATE feedback SET issue = ? WHERE id = ?');
     this.#resolve = db.prepare('UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?');
     this.#close = db.prepare(
-      'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL',
+      'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL AND adopted_at IS NULL',
     );
     this.#reopen = db.prepare(
       'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
@@ -250,11 +252,11 @@ export class FeedbackStore {
     );
     this.#restore = db.prepare('UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL');
     this.#purge = db.prepare(
-      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL',
+      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL AND issue IS NULL',
     );
     this.#adopt = db.prepare(
       'UPDATE feedback SET adopted_at = ?, summary_zh = ?, summary_en = ? ' +
-        'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL',
+        'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL AND closed_at IS NULL AND issue IS NOT NULL',
     );
     this.#describe = db.prepare(
       'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
@@ -376,7 +378,7 @@ export class FeedbackStore {
   }
 
   // Closes the feedback, as not adopted, and says whether it did: not when it is closed already,
-  // in the trash, or not there.
+  // was adopted, is in the trash, or isn't there.
   close(id: number): boolean {
     return Number(this.#close.run(new Date(this.now()).toISOString(), id).changes) > 0;
   }
@@ -388,8 +390,8 @@ export class FeedbackStore {
   }
 
   // Adopts the feedback, which lists it among the feedback contributions, with what the player
-  // contributed, and says whether it did: not when it was adopted already, is in the trash, or
-  // isn't there. admin.ts sees that it has an issue first.
+  // contributed, and says whether it did: not when it was adopted already, is closed, is in the
+  // trash, is no GitHub issue, or isn't there.
   adopt(id: number, { zh, en }: ContributionSummary): boolean {
     return Number(this.#adopt.run(new Date(this.now()).toISOString(), zh, en, id).changes) > 0;
   }
@@ -442,8 +444,8 @@ export class FeedbackStore {
     return Number(this.#restore.run(id).changes) > 0;
   }
 
-  // Deletes the feedback that has been in the trash for 30 days, for good, unless it was adopted,
-  // and says how much it deleted. The one way a row ever goes.
+  // Deletes the feedback that has been in the trash for 30 days, for good, unless it was adopted
+  // or is a GitHub issue, and says how much it deleted. The one way a row ever goes.
   purge(): number {
     const cutoff = new Date(this.now() - this.limits.trashMs).toISOString();
     return Number(this.#purge.run(cutoff).changes);

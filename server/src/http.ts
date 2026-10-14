@@ -81,6 +81,24 @@ export function pathOf(target: string): string {
 
 const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
 
+// Answers a GET with the JSON that `body` makes, or with 500 when it throws: an error there would
+// otherwise end the process, since nothing else catches it. `where` names the answer in the log.
+function answerJson(
+  req: IncomingMessage,
+  res: ServerResponse,
+  where: string,
+  body: () => string,
+  log?: HttpOptions['log'],
+): void {
+  if (!methodAllowed(req, res)) return;
+  try {
+    send(res, 200, 'application/json', body());
+  } catch (error) {
+    log?.('error', { where, message: error instanceof Error ? error.message : String(error) });
+    send(res, 500, 'application/json', JSON.stringify({ ok: false, error: 'internal' }));
+  }
+}
+
 export function createRequestHandler({
   publicDir,
   version,
@@ -98,20 +116,12 @@ export function createRequestHandler({
     setSecurityHeaders(req, res);
     const path = pathOf(req.url ?? '/');
     const list = LISTS.get(path);
-    if (list !== undefined || path === CONTRIBUTIONS_API) {
-      if (!methodAllowed(req, res)) return;
-      // An error here would end the process, since nothing else catches it.
-      try {
-        const body =
-          list === undefined ? JSON.stringify({ ok: true, contributions: contributions() }) : lists.answer(list);
-        send(res, 200, 'application/json', body);
-      } catch (error) {
-        log?.('error', {
-          where: list === undefined ? 'contributions' : 'lists',
-          message: error instanceof Error ? error.message : String(error),
-        });
-        send(res, 500, 'application/json', JSON.stringify({ ok: false, error: 'internal' }));
-      }
+    if (list !== undefined) {
+      answerJson(req, res, 'lists', () => lists.answer(list), log);
+      return;
+    }
+    if (path === CONTRIBUTIONS_API) {
+      answerJson(req, res, 'contributions', () => JSON.stringify({ ok: true, contributions: contributions() }), log);
       return;
     }
     if (accounts?.(req, res, path)) return;

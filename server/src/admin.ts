@@ -64,12 +64,13 @@ import { KINDS } from './statusPage';
 // the home page at once (docs/architecture.md#feedback-contributions), by the name the player left
 // or as anonymous, counted for the account they were logged in to, if any, with a sentence in
 // each language on what they contributed, and says when the name is another account's username.
-// Only feedback that is a GitHub issue may be adopted, and it keeps one. `describe` writes those
-// sentences again; `close` and `reopen` record whether it was closed without being adopted;
-// `delete` puts it in the trash, from which `restore` takes it back and the server deletes it for
-// good after 30 days, and `trash` lists what is there. Feedback that was adopted can't be deleted,
-// since the home page lists it, nor can feedback that is an issue, which is public and is closed
-// instead. Nothing changes what a player sent, or deletes reports: those are archives
+// Only feedback that is a GitHub issue may be adopted, and it keeps one; closed feedback is
+// reopened first. `describe` writes those sentences again; `close` and `reopen` record whether it
+// was closed without being adopted, which adopted feedback can't be; `delete` puts it in the
+// trash, from which `restore` takes it back and the server deletes it for good after 30 days, and
+// `trash` lists what is there. Feedback that was adopted can't be deleted, since the home page
+// lists it, nor can feedback that is an issue, which is public and is closed instead. Nothing
+// changes what a player sent, or deletes reports: those are archives
 // (docs/architecture.md#feedback).
 // `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
 // and never what the database keeps in place of passwords, email addresses and logins; `accounts
@@ -204,10 +205,12 @@ const REPORTS_SHOWN = 100;
 const TRASH_SHOWN = 100;
 
 // How long feedback in the trash has left: "27 days left", "1 day left", or "0 days left" on the
-// day the next purge takes it; or that it is kept, since it was adopted, which only feedback
-// adopted on its way to the trash is (store/feedback.ts).
+// day the next purge takes it; or that it is kept, since it was adopted or is a GitHub issue,
+// which only feedback adopted or recorded on its way to the trash is, or feedback that was in the
+// trash as an issue before issues kept feedback out of it (store/feedback.ts).
 function trashTime(feedback: Feedback, daysLeft: number): string {
   if (feedback.adoptedAt !== null) return 'kept: thanked';
+  if (feedback.issue !== null) return 'kept: issue';
   return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
 }
 
@@ -325,7 +328,9 @@ function issueBody({ kind, text, credit }: Feedback): string {
 // missing (a usage error) or break the rules.
 function summaryOf({ zh, en }: Flags, print: Print): ContributionSummary | 1 | 2 {
   if (zh === undefined || en === undefined) {
-    print('Say what the player contributed in both languages: --zh "<一句>" --en "<a sentence>".');
+    print(
+      'Say what the player contributed in both languages: --zh "<a sentence in Chinese>" --en "<a sentence in English>".',
+    );
     return 2;
   }
   const zhCheck = checkSummary(zh);
@@ -531,6 +536,12 @@ const COMMANDS: Record<string, Command> = {
         inTrash(print, found);
         return 1;
       }
+      // Closed feedback was set aside as not adopted; the status page files it as closed and
+      // offers no adoption, so it is reopened first.
+      if (found.closedAt !== null) {
+        print(`Feedback #${found.id} is closed. Reopen it first: feedback reopen ${found.id}.`);
+        return 1;
+      }
       if (found.issue === null) {
         print(
           `Feedback #${found.id} is no GitHub issue. Every adopted piece of feedback is one: publish it first, or ` +
@@ -538,10 +549,13 @@ const COMMANDS: Record<string, Command> = {
         );
         return 1;
       }
-      // The feedback was read a moment ago, so it has been adopted or put in the trash since only if
-      // someone else is running a command at the same time.
+      // The feedback was read a moment ago, so it has changed since only if someone else is running
+      // a command at the same time.
       if (!data.feedback.adopt(found.id, summary)) {
-        print(`Feedback #${found.id} was adopted or moved to the trash just now. Look at it again.`);
+        print(
+          `Feedback #${found.id} was adopted, closed or moved to the trash just now, or its issue was taken back. ` +
+            'Look at it again.',
+        );
         return 1;
       }
       const as = found.credit === null ? 'as an anonymous player' : `as ${found.credit}`;
@@ -703,8 +717,13 @@ const COMMANDS: Record<string, Command> = {
         inTrash(print, found);
         return 1;
       }
+      // Closing says that the feedback wasn't adopted; adopted feedback stays on the home page.
+      if (found.adoptedAt !== null) {
+        print(`Feedback #${found.id} was adopted, and the home page lists it, so it can't be closed.`);
+        return 1;
+      }
       if (!data.feedback.close(found.id)) {
-        print(`Feedback #${found.id} is closed already.`);
+        print(`Feedback #${found.id} is closed already${found.closedAt === null ? ', or adopted just now' : ''}.`);
         return 1;
       }
       print(`Closed feedback #${found.id}. It stays, for the record; feedback reopen ${found.id} opens it again.`);
@@ -861,6 +880,7 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Pr
       get accounts() {
         return (accounts ??= new Accounts({
           db,
+          feedback: this.feedback,
           now: () => performance.now(),
           avatars: new DirectoryAvatars(join(dataDir, AVATAR_DIR), { owner: false }),
         }));

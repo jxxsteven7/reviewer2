@@ -425,6 +425,10 @@ describe('the feedback', () => {
         ],
       }),
     ).toContain('<p class="trail">adopted 2026-07-31 &middot; in the trash since 2026-08-01, kept: thanked</p>');
+    // So is an issue, recorded there, or from before issues kept feedback out of the trash.
+    expect(
+      page({ total: 1, entries: [feedback(1, { issue: 42, deletedAt: '2026-08-01T12:00:00.000Z', status: 'trash' })] }),
+    ).toContain('<p class="trail">published as issue #42 &middot; in the trash since 2026-08-01, kept: issue</p>');
   });
 
   test("points out a name that is another account's username, in bold", () => {
@@ -521,12 +525,11 @@ describe('the feedback', () => {
       `${RUN} adopt 7 ${SENTENCES} can't be undone`,
       `${RUN} close 7`,
     ]);
-    // Thanked: neither adopted again, its issue taken back nor deleted, but what the player
-    // contributed may be said again.
+    // Thanked: neither adopted again, its issue taken back, closed nor deleted, but what the
+    // player contributed may be said again.
     expect(of({ issue: 42, adoptedAt: '2026-10-08T10:00:00.000Z', status: 'thanked' })).toEqual([
       `${RUN} resolve 7 &#60;pr&#62;`,
       `${RUN} describe 7 ${SENTENCES}`,
-      `${RUN} close 7`,
     ]);
     // Closed: reopened rather than closed, and not adopted; as an issue, still not deleted.
     expect(of({ issue: 42, closedAt: '2026-10-06T10:00:00.000Z', status: 'closed' })).toEqual([
@@ -636,7 +639,7 @@ describe('the feedback', () => {
       commands(
         renderFeedbackPage(listing({ issue: 42, adoptedAt: '2026-10-02T00:00:00.000Z', status: 'thanked' }), run),
       ),
-    ).toEqual(['triage-feedback resolve 7 &#60;pr&#62;', 'triage-feedback describe 7', 'triage-feedback close 7']);
+    ).toEqual(['triage-feedback resolve 7 &#60;pr&#62;', 'triage-feedback describe 7']);
     expect(commands(renderFeedbackPage(listing({ deletedAt: '2026-10-01T00:00:00.000Z' }), run))).toEqual([
       'triage-feedback restore 7',
     ]);

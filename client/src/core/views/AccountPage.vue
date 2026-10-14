@@ -5,7 +5,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { account, loadAccount } from '../account';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
-import { connection, reconnect } from '../socket';
 import ProfileView from './ProfileView.vue';
 import SignIn from './SignIn.vue';
 
@@ -14,8 +13,8 @@ import SignIn from './SignIn.vue';
 //
 // A public room sends a guest here with the way back as `next` (RoomNotice): the room, or the
 // screen of one; no other path is honored. Logging in leads back there. A page that is logged in
-// already, as when the player logged in from another tab, goes back at once, with a new
-// connection: the one it has was made as a guest, which the room refused.
+// already, as when the player logged in from another tab, goes back at once; its connection, made
+// as a guest, which the room refused, is made again by loadAccount() (account.ts).
 //
 // The account's own page is for a page that stays. One that is about to leave keeps showing what
 // it showed, the loading line or the form, busy, until the navigation lands: the account's own page
@@ -40,7 +39,6 @@ onMounted(async () => {
     leaving.value = false;
     return;
   }
-  if (connection.everConnected) reconnect();
   await router.replace(next.value);
 });
 </script>

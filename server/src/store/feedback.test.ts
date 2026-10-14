@@ -79,6 +79,7 @@ describe('the feedback', () => {
     feedback.add(entry({ accountId: ann.id }));
     expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: 1, username: 'Ann', adoptedAt: null });
     expect(feedback.byId(2)).toMatchObject({ credit: null, accountId: 1, username: 'Ann' });
+    feedback.setIssue(1, 42);
     expect(feedback.adopt(1, { zh: '提出了更多领域', en: 'Suggested more fields' })).toBe(true);
     expect(feedback.byId(1)).toMatchObject({
       adoptedAt: '2026-10-09T12:00:00.000Z',
@@ -219,18 +220,31 @@ describe('what became of the feedback', () => {
       status: 'thanked',
     });
     now += DAY;
-    expect(feedback.close(1)).toBe(true);
-    expect(feedback.byId(1)).toMatchObject({ closedAt: '2026-10-11T12:00:00.000Z', status: 'closed' });
-    // Adopted feedback can't go to the trash; feedback that wasn't can, closed or not.
+    // Adopted feedback is neither closed, which would say that it wasn't adopted, nor put in the
+    // trash; feedback that wasn't adopted can be, closed or not, unless it is an issue.
+    expect(feedback.close(1)).toBe(false);
     expect(feedback.delete(1)).toBe(false);
-    expect(feedback.byId(1)).toMatchObject({ deletedAt: null, status: 'closed' });
+    expect(feedback.byId(1)).toMatchObject({ closedAt: null, deletedAt: null, status: 'thanked' });
     feedback.add(entry());
+    expect(feedback.close(2)).toBe(true);
+    expect(feedback.byId(2)).toMatchObject({ closedAt: '2026-10-11T12:00:00.000Z', status: 'closed' });
     now += DAY;
     expect(feedback.delete(2)).toBe(true);
     expect(feedback.byId(2)).toMatchObject({ deletedAt: '2026-10-12T12:00:00.000Z', status: 'trash' });
+    // Closed feedback, which was set aside, is reopened before it is adopted, and only an issue is.
+    feedback.add(entry());
+    feedback.setIssue(3, 43);
+    feedback.close(3);
+    expect(adopt(3)).toBe(false);
+    feedback.reopen(3);
+    feedback.setIssue(3, null);
+    expect(adopt(3)).toBe(false);
+    feedback.setIssue(3, 43);
+    expect(adopt(3)).toBe(true);
+    expect(feedback.byId(3)).toMatchObject({ status: 'thanked', issue: 43 });
     // What the player sent is as it was throughout.
     expect(feedback.byId(1)).toMatchObject({ text: 'More fields, please.', createdAt: '2026-10-09T12:00:00.000Z' });
-    expect(feedback.count()).toBe(2);
+    expect(feedback.count()).toBe(3);
   });
 
   test('records the pull request, which can be changed or cleared, with the time of the note', () => {
@@ -288,6 +302,7 @@ describe('what became of the feedback', () => {
     expect(feedback.byId(1)).toMatchObject({ deletedAt: null, resolvedPr: 50, status: 'closed' });
     expect(feedback.restore(1)).toBe(false);
     // Adopted feedback stays: the home page lists it.
+    feedback.setIssue(2, 41);
     expect(adopt(2)).toBe(true);
     expect(feedback.delete(2)).toBe(false);
     expect(feedback.byId(2)).toMatchObject({ deletedAt: null, status: 'thanked' });
@@ -339,12 +354,16 @@ describe('what became of the feedback', () => {
     expect(DEFAULT_FEEDBACK_LIMITS.trashMs).toBe(30 * DAY);
   });
 
-  test('is never purged once it was adopted, even if it was adopted in the trash', () => {
+  test('is never purged once it was adopted or is an issue, even if that came in the trash', () => {
     const feedback = store();
+    feedback.add(entry());
     feedback.add(entry());
     feedback.add(entry());
     feedback.delete(1);
     feedback.delete(2);
+    feedback.delete(3);
+    // An issue in the trash, as `feedback issue` recorded before issues kept feedback out of it.
+    feedback.setIssue(3, 42);
     // admin.ts refuses to adopt feedback in the trash, but it reads before it writes, so feedback
     // deleted in between would be adopted all the same.
     expect(adopt(1)).toBe(false);
@@ -353,8 +372,13 @@ describe('what became of the feedback', () => {
     expect(feedback.purge()).toBe(1);
     expect(feedback.byId(2)).toBeUndefined();
     expect(feedback.byId(1)).toMatchObject({ status: 'trash', adoptedAt: '2026-10-09T12:00:00.000Z' });
+    expect(feedback.byId(3)).toMatchObject({ status: 'trash', issue: 42 });
     expect(feedback.daysLeft(feedback.byId(1) as Feedback)).toBe(0);
     expect(feedback.purge()).toBe(0);
+    // Its issue taken back, it goes.
+    feedback.setIssue(3, null);
+    expect(feedback.purge()).toBe(1);
+    expect(feedback.byId(3)).toBeUndefined();
     // Restored, it is thanked, as it was.
     expect(feedback.restore(1)).toBe(true);
     expect(feedback.byId(1)).toMatchObject({ status: 'thanked', deletedAt: null });
@@ -368,10 +392,12 @@ describe('what became of the feedback', () => {
     }
     feedback.setIssue(2, 42);
     feedback.resolve(3, 50);
+    feedback.setIssue(4, 44);
     adopt(4);
     feedback.close(5);
     feedback.delete(6);
     // Resolved by a pull request and thanked, both; and resolved, then closed.
+    feedback.setIssue(7, 47);
     feedback.resolve(7, 51);
     adopt(7);
     feedback.resolve(8, 52);
@@ -451,6 +477,7 @@ describe('the feedback contributions', () => {
     feedback.add(entry({ credit: 'Ann' }));
     feedback.add(entry());
     expect(feedback.describe(1, SAID)).toBe(false);
+    feedback.setIssue(1, 41);
     feedback.adopt(1, SAID);
     expect(feedback.describe(1, { zh: '提出了计时器', en: 'Suggested a timer' })).toBe(true);
     expect(feedback.contributions()[0]?.summary).toEqual({ zh: '提出了计时器', en: 'Suggested a timer' });
@@ -497,7 +524,10 @@ describe('the feedback contributions', () => {
       feedback.add(entry({ kind, credit, accountId }));
     }
     // Feedback that wasn't adopted counts for nothing.
-    for (const id of [1, 2, 3, 4, 5]) feedback.adopt(id, SAID);
+    for (const id of [1, 2, 3, 4, 5]) {
+      feedback.setIssue(id, 40 + id);
+      feedback.adopt(id, SAID);
+    }
     expect(feedback.counts(ann.id)).toEqual([
       { kind: 'idea', count: 2 },
       { kind: 'bug', count: 1 },

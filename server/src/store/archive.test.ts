@@ -12,7 +12,7 @@ import { MIGRATIONS } from './migrations';
 // the pull request, adopted or not, with what the player contributed, closed or not, in the trash
 // or not), and a deleted account is unlinked from both, which its foreign keys do. The one way a
 // row of feedback goes is the purge of what has been in the trash for 30 days, and feedback that
-// was adopted never goes. These tests fail when code that breaks that is added; change them only
+// was adopted or is a GitHub issue never goes. These tests fail when code that breaks that is added; change them only
 // with a maintainer's agreement.
 
 const SOURCE = join(import.meta.dirname, '..');
@@ -36,13 +36,13 @@ const ALLOWED = [
   'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
   'UPDATE feedback SET issue = ? WHERE id = ?',
   'UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?',
-  'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL',
+  'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL AND adopted_at IS NULL',
   'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
   'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND adopted_at IS NULL AND issue IS NULL',
   'UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL',
-  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL',
+  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL AND issue IS NULL',
   'UPDATE feedback SET adopted_at = ?, summary_zh = ?, summary_en = ? ' +
-    'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL',
+    'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL AND closed_at IS NULL AND issue IS NOT NULL',
   'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
 ];
 
@@ -60,7 +60,7 @@ const REBUILD = {
   statements: ['DROP TABLE feedback', 'ALTER TABLE new_feedback RENAME TO feedback'],
 };
 
-// Migration 16 lets the names left with the feedback that is there link to their profiles, drops
+// Migration 17 lets the names left with the feedback that is there link to their profiles, drops
 // the link that came with a name and whether the player agreed to a public issue, which nothing
 // uses any more, marks the feedback that the acknowledgments adopted as adopted, and drops the
 // table of acknowledgments, whose rows that adopted no feedback are in ACKNOWLEDGMENTS.md
@@ -298,7 +298,7 @@ describe('the archive', () => {
       "db.prepare('UPDATE feedback SET issue = ? WHERE id = ?')",
       "db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL ' + 'AND created_at < ?')",
       "db.prepare('DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' + " +
-        "'adopted_at IS NULL')",
+        "'adopted_at IS NULL AND issue IS NULL')",
       "db.prepare('UPDATE accounts SET username = ? WHERE id = ?')",
       "db.prepare('DELETE FROM feedback_drafts')",
       "db.prepare('INSERT INTO reports (created_at, reporter_id) VALUES (?, ?)')",

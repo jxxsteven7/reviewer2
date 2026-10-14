@@ -9,8 +9,9 @@ import { expect, newPlayer, register, TEXT, test } from './helpers';
 // from the database, with what the operator wrote, while the account's page counts it. The name
 // opens a card of the player's profile, as the box on the form, ticked until the player unticks
 // it, lets it, and the card the whole page; unticked, the name stays plain text. The public page shows the counts once its owner shows
-// them. A guest is asked to log in first, and may send all the same. The command runs on the
-// server's data directory, which e2e/server.mjs makes where playwright.config.ts says.
+// them. A guest is asked to log in first, and may send all the same; one who logs in in another
+// tab is logged in on this one too. The command runs on the server's data directory, which
+// e2e/server.mjs makes where playwright.config.ts says.
 const text = TEXT.en;
 const dataDir = process.env.E2E_DATA_DIR as string;
 const own = (name: string) => `${name} ${Math.random().toString(36).slice(2, 7)}`;
@@ -180,4 +181,34 @@ test('a guest is asked to log in first, comes back after, and may send without',
   await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
   await expect(sheet).not.toContainText(text.feedback.guest);
   await expect(sheet.getByLabel(text.feedback.text)).toHaveValue('Typed before logging in.');
+});
+
+test('a login in another tab counts for the feedback sent from this one', async ({ browser }, testInfo) => {
+  const page = await newPlayer(browser, 'en');
+  await page.goto('/');
+  await page.getByRole('button', { name: /^English/ }).click();
+  // The connection of this tab is a guest's when the form opens.
+  await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
+  const sheet = page.getByRole('dialog', { name: text.feedback.title });
+  await expect(sheet).toContainText(text.feedback.guest);
+  const other = await page.context().newPage();
+  await register(other, own('Di'));
+  await other.close();
+  // Following the way to the account page, the tab finds itself logged in, and comes back.
+  await sheet.getByRole('link', { name: text.feedback.signIn }).click();
+  await expect(page.getByRole('heading', { name: text.account.profile.title })).toBeVisible();
+  await expect(page.locator('section.profile')).toBeVisible();
+  await page.goBack();
+  await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
+  await expect(sheet).not.toContainText(text.feedback.guest);
+  const credit = own('Di');
+  const idea = `Show the clue's number on the board. (${testInfo.project.name} ${credit})`;
+  await sheet.getByLabel(text.feedback.text).fill(idea);
+  await sheet.getByLabel(text.feedback.credit).fill(credit);
+  await expect(sheet.getByLabel(text.feedback.linkProfile)).toBeChecked();
+  await sheet.getByRole('button', { name: text.feedback.submit, exact: true }).click();
+  await expect(sheet).toBeHidden();
+  const sent = feedbackWith(idea);
+  expect(sent.account_id).not.toBeNull();
+  expect(sent.link_profile).toBe(1);
 });

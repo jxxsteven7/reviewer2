@@ -423,7 +423,9 @@ describe('feedback adopt', () => {
     store.add(feedback());
     store.setIssue(1, 41);
     expect(run('feedback', 'adopt', '1')).toBe(2);
-    expect(printed).toEqual(['Say what the player contributed in both languages: --zh "<一句>" --en "<a sentence>".']);
+    expect(printed).toEqual([
+      'Say what the player contributed in both languages: --zh "<a sentence in Chinese>" --en "<a sentence in English>".',
+    ]);
     expect(run('feedback', 'adopt', '1', '--zh', ZH)).toBe(2);
     // A flag without its value is a usage error, as for any command.
     expect(run('feedback', 'adopt', '1', '--zh', ZH, '--en')).toBe(2);
@@ -449,6 +451,38 @@ describe('feedback adopt', () => {
     expect(run('feedback', 'restore', '1')).toBe(0);
     expect(adopt('1')).toBe(0);
     expect(store.contributions()).toHaveLength(1);
+  });
+
+  test('refuses closed feedback, which was set aside, until it is reopened', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Ann' }));
+    store.setIssue(1, 41);
+    expect(run('feedback', 'close', '1')).toBe(0);
+    expect(adopt('1')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #1 is closed. Reopen it first: feedback reopen 1.');
+    expect(store.byId(1)).toMatchObject({ adoptedAt: null, status: 'closed' });
+    expect(run('feedback', 'reopen', '1')).toBe(0);
+    expect(adopt('1')).toBe(0);
+    // Adopted, it can't be closed: the home page lists it.
+    expect(run('feedback', 'close', '1')).toBe(1);
+    expect(printed.at(-1)).toBe("Feedback #1 was adopted, and the home page lists it, so it can't be closed.");
+    expect(store.byId(1)?.status).toBe('thanked');
+  });
+
+  test('says what another command did meanwhile when the feedback can no longer be adopted', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Ann' }));
+    store.setIssue(1, 41);
+    // Between the command's reading and its writing, someone else closes the feedback.
+    vi.spyOn(FeedbackStore.prototype, 'adopt').mockImplementation(function (this: FeedbackStore) {
+      store.close(1);
+      return false;
+    });
+    expect(adopt('1')).toBe(1);
+    expect(printed.at(-1)).toBe(
+      'Feedback #1 was adopted, closed or moved to the trash just now, or its issue was taken back. Look at it again.',
+    );
+    expect(store.byId(1)).toMatchObject({ adoptedAt: null, status: 'closed' });
   });
 
   test("says when the name is another account's username, which may be someone passing for its owner", () => {
@@ -1005,9 +1039,14 @@ describe('feedback delete, restore and trash', () => {
     expect(run('feedback', 'delete', '2')).toBe(0);
     // As `feedback adopt` would have, had it read the feedback just before it went to the trash.
     database.db.exec("UPDATE feedback SET adopted_at = '2026-11-01T09:00:00.000Z' WHERE id = 1");
+    // And an issue in the trash, as `feedback issue` recorded before issues kept feedback out of it.
+    store.add(feedback());
+    expect(run('feedback', 'delete', '3')).toBe(0);
+    database.db.exec('UPDATE feedback SET issue = 42 WHERE id = 3');
     vi.setSystemTime(NOW + 31 * 24 * 60 * 60_000);
     expect(run('feedback', 'trash')).toBe(0);
-    expect(printed.slice(-2)).toEqual([
+    expect(printed.slice(-3)).toEqual([
+      '#3  2026-11-01  kept: issue  idea  A timer, please.',
       '#2  2026-11-01  0 days left  idea  A timer, please.',
       '#1  2026-11-01  kept: thanked  idea  A timer, please.',
     ]);
@@ -1017,6 +1056,7 @@ describe('feedback delete, restore and trash', () => {
     expect(printed.at(-1)).toBe('Feedback #2 is in the trash already, 0 days left.');
     expect(store.purge()).toBe(1);
     expect(store.byId(1)).toMatchObject({ status: 'trash', adoptedAt: '2026-11-01T09:00:00.000Z' });
+    expect(store.byId(3)).toMatchObject({ status: 'trash', issue: 42 });
   });
 
   test('say what another command did meanwhile when the feedback can no longer go to the trash', () => {
@@ -1032,7 +1072,10 @@ describe('feedback delete, restore and trash', () => {
         return original.call(this, id);
       });
     };
-    meanwhile((id) => store.adopt(id, { zh: ZH, en: EN }));
+    meanwhile((id) => {
+      database.db.prepare('UPDATE feedback SET issue = 41 WHERE id = ?').run(id);
+      store.adopt(id, { zh: ZH, en: EN });
+    });
     expect(run('feedback', 'delete', '1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 was adopted just now, so it stays.');
     expect(store.byId(1)).toMatchObject({ deletedAt: null, summaryEn: EN });

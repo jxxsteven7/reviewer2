@@ -105,6 +105,34 @@ describe('the account', () => {
     expect(account.summary).toBeNull();
   });
 
+  test('makes the connection again when it was made as someone else, as after a login in another tab', async () => {
+    const on = Object.fromEntries(listeners);
+    connection.everConnected = true;
+    // Before the connection has said whom it was made for, there is nothing to compare.
+    fetchMock.mockResolvedValueOnce(json({ ok: true, account: summary, mail: false }));
+    await loadAccount();
+    expect(reconnect).not.toHaveBeenCalled();
+    // Made as a guest, it is made again once the server says that the browser is logged in, and
+    // not while the two agree.
+    on['session']?.({ version: 'dev', account: null });
+    fetchMock.mockResolvedValueOnce(json({ ok: true, account: summary, mail: false }));
+    await loadAccount();
+    expect(reconnect).toHaveBeenCalledTimes(1);
+    on['session']?.({ version: 'dev', account: { username: 'Ann', avatar: null } });
+    fetchMock.mockResolvedValueOnce(json({ ok: true, account: summary, mail: false }));
+    await loadAccount();
+    expect(reconnect).toHaveBeenCalledTimes(1);
+    // Made for the account, it is made again once the browser is a guest, as after a logout
+    // elsewhere; a connection that dropped is one that will say again whom it is for.
+    fetchMock.mockResolvedValueOnce(json({ ok: true, account: null, mail: false }));
+    await loadAccount();
+    expect(reconnect).toHaveBeenCalledTimes(2);
+    on['disconnect']?.('transport close');
+    fetchMock.mockResolvedValueOnce(json({ ok: true, account: summary, mail: false }));
+    await loadAccount();
+    expect(reconnect).toHaveBeenCalledTimes(2);
+  });
+
   test('waits for the answer to a request that changes who it is, rather than act on account:ended', async () => {
     const on = Object.fromEntries(listeners);
     connection.everConnected = true;
