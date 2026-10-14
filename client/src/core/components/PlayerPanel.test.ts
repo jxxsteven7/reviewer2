@@ -303,7 +303,6 @@ describe('PlayerPanel', () => {
     await flushPromises();
     expect(dialogs()).toHaveLength(2);
     const page = dialogs()[1] as HTMLElement;
-    expect(page.classList).toContain('tall');
     expect(page.textContent).toContain('Hi <b>there</b>');
     expect(page.querySelector('.bio b')).toBeNull();
     expect(page.querySelector<HTMLAnchorElement>('a.link')?.getAttribute('rel')).toBe('nofollow ugc noopener');

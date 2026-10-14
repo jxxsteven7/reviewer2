@@ -111,7 +111,7 @@ test('friends who win together become co-first authors, which they alone are tol
     .getByRole('dialog', { name: names.Bob as string })
     .getByRole('button', { name: text.room.panel.fullPage })
     .click();
-  const duo = ann.locator('[role=dialog].tall .profile-card section.duo');
+  const duo = ann.locator('[role=dialog]:has(button.back) .profile-card section.duo');
   await expect(duo.locator('h3')).toHaveText(interpolate(text.playerPage.duo, { name: names.Bob as string }));
   await expect(duo.locator('.badge')).toHaveText(text.duos.names.coauthor);
   const page = await bob.evaluate(() => fetch('/api/account').then((reply) => reply.json()));

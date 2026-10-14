@@ -146,7 +146,7 @@ describe('feedback', () => {
     expect(JSON.stringify(server.feedback.latest(10))).not.toMatch(/orcid|mailto|publicIssue/);
   });
 
-  test("lets a name left from an account link to its profile, with the player's yes alone", async () => {
+  test('lists feedback signed from an account by the account, whatever name came along', async () => {
     server = await startServer({ socketLimits: { ...DEFAULT_SOCKET_LIMITS, feedbackPerWindow: 10 } });
     const ann = new Browser(server.url);
     await ann.register('Ann');
@@ -157,12 +157,19 @@ describe('feedback', () => {
     expect(await loggedIn.send('meta:feedback', message({ text: 'No', credit: 'Ann L', linkProfile: false }))).toEqual({
       ok: true,
     });
-    // From an older page, which doesn't ask.
+    // From an older page, which doesn't ask, the name is the player's own.
     expect(await loggedIn.send('meta:feedback', message({ text: 'Not asked', credit: 'Ann L' }))).toEqual({ ok: true });
-    // Without a name, or without an account, there is nothing to link.
+    // Signed with the account, the name is its username, with no name sent, as the form sends it
+    // now, or with one, as older pages sent it; a guest has no account to sign with.
     expect(await loggedIn.send('meta:feedback', message({ text: 'No name', linkProfile: true }))).toEqual({ ok: true });
     expect(await guest.send('meta:feedback', message({ text: 'Guest', credit: 'Bob', linkProfile: true }))).toEqual({
       ok: true,
+    });
+    // With no name to fall back on, feedback to be signed with an account that the connection
+    // doesn't have is refused rather than kept as anonymous.
+    expect(await guest.send('meta:feedback', message({ text: 'Logged out', linkProfile: true }))).toEqual({
+      ok: false,
+      error: 'feedback_unsigned',
     });
     expect(
       server.feedback
@@ -170,10 +177,10 @@ describe('feedback', () => {
         .map(({ text, credit, username, linkProfile }) => [text, credit, username, linkProfile]),
     ).toEqual([
       ['Guest', 'Bob', null, false],
-      ['No name', null, 'Ann', false],
+      ['No name', 'Ann', 'Ann', true],
       ['Not asked', 'Ann L', 'Ann', false],
       ['No', 'Ann L', 'Ann', false],
-      ['A timer for the clues, please.', 'Ann L', 'Ann', true],
+      ['A timer for the clues, please.', 'Ann', 'Ann', true],
     ]);
     // The same feedback with the other answer is other feedback.
     expect(await loggedIn.send('meta:feedback', message({ credit: 'Ann L', linkProfile: false }))).toEqual({
@@ -233,7 +240,6 @@ describe('feedback', () => {
       ['idea', null],
       ['game', 'Ann'],
     ]);
-    expect(server.feedback.kinds()).toEqual({ game: 1, idea: 1, bug: 1, words: 1 });
   });
 
   test('keeps a long user agent only so far', async () => {

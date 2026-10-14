@@ -1,4 +1,4 @@
-import { usernameKey, type FeedbackKind } from '@reviewer2/shared';
+import { usernameKey } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
@@ -85,10 +85,10 @@ describe('the feedback', () => {
       adoptedAt: '2026-10-09T12:00:00.000Z',
       summaryZh: '提出了更多领域',
       summaryEn: 'Suggested more fields',
-      status: 'thanked',
+      status: 'resolved',
     });
     new AccountStore(db).delete(ann.id);
-    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: null, username: null, status: 'thanked' });
+    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: null, username: null, status: 'resolved' });
   });
 
   test("says when its name is another account's username, however the name is written", () => {
@@ -103,8 +103,12 @@ describe('the feedback', () => {
     feedback.add(entry({ credit: 'Cat', accountId: cat.id }));
     feedback.add(entry({ credit: 'Dan' }));
     feedback.add(entry());
+    // Signed with the account, the name was its username then, which nobody passed for, even
+    // though another account has the name now.
+    feedback.add(entry({ credit: 'Cat', accountId: bob.id, linkProfile: true }));
     const taken = () => feedback.latest(10).map(({ id, nameTakenBy }) => [id, nameTakenBy]);
     expect(taken()).toEqual([
+      [6, null],
       [5, null],
       [4, null],
       [3, null],
@@ -159,20 +163,6 @@ describe('the feedback', () => {
     expect(feedback.latest(2, 1)).toEqual([]);
   });
 
-  test('is read of one kind, and counted by kind', () => {
-    const feedback = store();
-    for (const kind of ['game', 'idea', 'game', 'bug', 'game'] as const) feedback.add(entry({ kind }));
-    expect(feedback.latest(10, undefined, 'game').map(({ id, kind }) => [id, kind])).toEqual([
-      [5, 'game'],
-      [3, 'game'],
-      [1, 'game'],
-    ]);
-    expect(feedback.latest(1, 5, 'game').map(({ id }) => id)).toEqual([3]);
-    expect(feedback.latest(10, undefined, 'words')).toEqual([]);
-    expect(feedback.latest(10).map(({ id }) => id)).toEqual([5, 4, 3, 2, 1]);
-    expect(feedback.kinds()).toEqual({ game: 3, idea: 1, bug: 1 });
-  });
-
   test('of a language or a page that does not exist is refused by the database too', () => {
     const feedback = store();
     expect(() => feedback.add(entry({ language: 'fr' as NewFeedback['language'] }))).toThrow(/CHECK constraint/);
@@ -211,20 +201,21 @@ describe('what became of the feedback', () => {
       issue: 42,
       resolvedPr: 50,
       resolvedAt: '2026-10-10T12:00:00.000Z',
-      status: 'resolved',
+      // Its pull request recorded but not adopted yet, it still waits as an issue.
+      status: 'issue',
     });
     expect(adopt(1)).toBe(true);
     expect(feedback.byId(1)).toMatchObject({
       adoptedAt: '2026-10-10T12:00:00.000Z',
       resolvedPr: 50,
-      status: 'thanked',
+      status: 'resolved',
     });
     now += DAY;
     // Adopted feedback is neither closed, which would say that it wasn't adopted, nor put in the
     // trash; feedback that wasn't adopted can be, closed or not, unless it is an issue.
     expect(feedback.close(1)).toBe(false);
     expect(feedback.delete(1)).toBe(false);
-    expect(feedback.byId(1)).toMatchObject({ closedAt: null, deletedAt: null, status: 'thanked' });
+    expect(feedback.byId(1)).toMatchObject({ closedAt: null, deletedAt: null, status: 'resolved' });
     feedback.add(entry());
     expect(feedback.close(2)).toBe(true);
     expect(feedback.byId(2)).toMatchObject({ closedAt: '2026-10-11T12:00:00.000Z', status: 'closed' });
@@ -241,7 +232,7 @@ describe('what became of the feedback', () => {
     expect(adopt(3)).toBe(false);
     feedback.setIssue(3, 43);
     expect(adopt(3)).toBe(true);
-    expect(feedback.byId(3)).toMatchObject({ status: 'thanked', issue: 43 });
+    expect(feedback.byId(3)).toMatchObject({ status: 'resolved', issue: 43 });
     // What the player sent is as it was throughout.
     expect(feedback.byId(1)).toMatchObject({ text: 'More fields, please.', createdAt: '2026-10-09T12:00:00.000Z' });
     expect(feedback.count()).toBe(3);
@@ -305,7 +296,7 @@ describe('what became of the feedback', () => {
     feedback.setIssue(2, 41);
     expect(adopt(2)).toBe(true);
     expect(feedback.delete(2)).toBe(false);
-    expect(feedback.byId(2)).toMatchObject({ deletedAt: null, status: 'thanked' });
+    expect(feedback.byId(2)).toMatchObject({ deletedAt: null, status: 'resolved' });
     // So does feedback that is an issue, which is public, closed or not, until the issue is taken
     // back.
     feedback.setIssue(3, 42);
@@ -379,13 +370,13 @@ describe('what became of the feedback', () => {
     feedback.setIssue(3, null);
     expect(feedback.purge()).toBe(1);
     expect(feedback.byId(3)).toBeUndefined();
-    // Restored, it is thanked, as it was.
+    // Restored, it is resolved, as it was.
     expect(feedback.restore(1)).toBe(true);
-    expect(feedback.byId(1)).toMatchObject({ status: 'thanked', deletedAt: null });
+    expect(feedback.byId(1)).toMatchObject({ status: 'resolved', deletedAt: null });
     expect(feedback.count()).toBe(1);
   });
 
-  test('is read by view, and counted by status and by kind within a view', () => {
+  test('is read by status, or all of it, and counted by status', () => {
     const feedback = store();
     for (const kind of ['idea', 'bug', 'idea', 'bug', 'idea', 'words', 'bug', 'idea'] as const) {
       feedback.add(entry({ kind }));
@@ -396,44 +387,32 @@ describe('what became of the feedback', () => {
     adopt(4);
     feedback.close(5);
     feedback.delete(6);
-    // Resolved by a pull request and thanked, both; and resolved, then closed.
+    // Adopted with a pull request recorded; and a pull request recorded, then closed.
     feedback.setIssue(7, 47);
     feedback.resolve(7, 51);
     adopt(7);
     feedback.resolve(8, 52);
     feedback.close(8);
-    const ids = (view: FeedbackView, kind: FeedbackKind | null = null) =>
-      feedback.latest(10, undefined, kind, view).map(({ id }) => id);
+    const ids = (view: FeedbackView) => feedback.latest(10, undefined, view).map(({ id }) => id);
+    // All of it, in the trash too, newest first.
     expect(ids('all')).toEqual([8, 7, 6, 5, 4, 3, 2, 1]);
-    // Open is what still waits: new, or published as an issue.
-    expect(ids('open')).toEqual([2, 1]);
     expect(ids('new')).toEqual([1]);
-    expect(ids('issue')).toEqual([2]);
-    // Resolved and thanked go by the facts, and overlap; closed feedback is closed alone.
-    expect(ids('resolved')).toEqual([7, 3]);
-    expect(ids('thanked')).toEqual([7, 4]);
+    // An issue is published as one, or has a pull request recorded but isn't adopted.
+    expect(ids('issue')).toEqual([3, 2]);
+    // Resolved is what was adopted, with a pull request recorded or not; closed feedback is closed
+    // alone. No view overlaps another.
+    expect(ids('resolved')).toEqual([7, 4]);
     expect(ids('closed')).toEqual([8, 5]);
     expect(ids('trash')).toEqual([6]);
-    expect(ids('open', 'idea')).toEqual([1]);
-    expect(ids('open', 'bug')).toEqual([2]);
-    expect(ids('resolved', 'bug')).toEqual([7]);
-    expect(ids('trash', 'idea')).toEqual([]);
-    expect(feedback.latest(1, 7, 'bug', 'thanked').map(({ id }) => id)).toEqual([4]);
-    expect(feedback.statuses()).toEqual({ new: 1, issue: 1, resolved: 2, thanked: 2, closed: 2, trash: 1 });
-    expect(feedback.statuses('idea')).toEqual({ new: 1, issue: 0, resolved: 1, thanked: 0, closed: 2, trash: 0 });
-    expect(feedback.statuses('game')).toEqual({ new: 0, issue: 0, resolved: 0, thanked: 0, closed: 0, trash: 0 });
-    expect(feedback.kinds()).toEqual({ idea: 4, bug: 3, words: 1 });
-    expect(feedback.kinds('open')).toEqual({ idea: 1, bug: 1 });
-    expect(feedback.kinds('resolved')).toEqual({ idea: 1, bug: 1 });
-    expect(feedback.kinds('trash')).toEqual({ words: 1 });
-    expect(feedback.kinds('new')).toEqual({ idea: 1 });
+    expect(feedback.latest(1, 7, 'resolved').map(({ id }) => id)).toEqual([4]);
+    expect(feedback.statuses()).toEqual({ new: 1, issue: 2, resolved: 2, closed: 2, trash: 1 });
   });
 });
 
 describe('the feedback contributions', () => {
   const SAID = { zh: '提出了更多领域', en: 'Suggested more fields' };
 
-  test('are the adopted feedback, the latest first, by the name left with it or anonymous', () => {
+  test('are the adopted feedback, the latest first, by the account that signed it, the name left with it or anonymous', () => {
     const feedback = store();
     const accounts = new AccountStore(db);
     const ann = accounts.create('Ann', 'ann', 'h');
@@ -457,12 +436,21 @@ describe('the feedback contributions', () => {
     // Only once.
     expect(feedback.adopt(1, { zh: '又一次', en: 'Again' })).toBe(false);
     expect(feedback.contributions()).toEqual([
-      { kind: 'game', name: null, profile: null, summary: SAID, issue: 44, month: '2026-11' },
-      { kind: 'words', name: 'Cat', profile: null, summary: SAID, issue: 43, month: '2026-11' },
-      { kind: 'bug', name: 'Bob', profile: null, summary: SAID, issue: 42, month: '2026-11' },
-      { kind: 'idea', name: 'Ann L', profile: ann.handle, summary: SAID, issue: 41, month: '2026-10' },
+      { kind: 'game', name: null, profile: null, avatar: null, summary: SAID, issue: 44, month: '2026-11' },
+      { kind: 'words', name: 'Cat', profile: null, avatar: null, summary: SAID, issue: 43, month: '2026-11' },
+      { kind: 'bug', name: 'Bob', profile: null, avatar: null, summary: SAID, issue: 42, month: '2026-11' },
+      { kind: 'idea', name: 'Ann', profile: ann.handle, avatar: null, summary: SAID, issue: 41, month: '2026-10' },
     ]);
-    // Once Ann's account is gone, her name links nowhere.
+    // Signed with the account, the contribution shows it as it is now: its username, rather than
+    // the name that an older page sent along, and its avatar.
+    accounts.setAvatar(ann.id, 'a1b2.webp');
+    accounts.rename(ann.id, 'Annie', 'annie');
+    expect(feedback.contributions().at(-1)).toMatchObject({
+      name: 'Annie',
+      profile: ann.handle,
+      avatar: '/avatars/a1b2.webp',
+    });
+    // Once Ann's account is gone, the name it was sent with is left, and links nowhere.
     accounts.delete(ann.id);
     expect(feedback.contributions().map(({ name, profile }) => [name, profile])).toEqual([
       [null, null],
@@ -470,6 +458,7 @@ describe('the feedback contributions', () => {
       ['Bob', null],
       ['Ann L', null],
     ]);
+    expect(feedback.contributions().at(-1)?.avatar).toBeNull();
   });
 
   test('say what the player contributed once the operator has written it, which can be written again', () => {
@@ -481,7 +470,7 @@ describe('the feedback contributions', () => {
     feedback.adopt(1, SAID);
     expect(feedback.describe(1, { zh: '提出了计时器', en: 'Suggested a timer' })).toBe(true);
     expect(feedback.contributions()[0]?.summary).toEqual({ zh: '提出了计时器', en: 'Suggested a timer' });
-    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann', text: 'More fields, please.', status: 'thanked' });
+    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann', text: 'More fields, please.', status: 'resolved' });
     expect(feedback.describe(3, SAID)).toBe(false);
     // Adopted before the sentences were kept, as migration 17 leaves the feedback that the
     // acknowledgments adopted, it says nothing yet, and has no issue.
@@ -490,6 +479,7 @@ describe('the feedback contributions', () => {
       kind: 'idea',
       name: null,
       profile: null,
+      avatar: null,
       summary: null,
       issue: null,
       month: '2026-10',

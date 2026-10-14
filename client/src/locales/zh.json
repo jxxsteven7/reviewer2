@@ -720,6 +720,7 @@
     "contact_too_long": "联系方式最多 100 个字。",
     "credit_invalid": "署名需要 1 到 16 个可见字符。",
     "credit_reserved": "这个名字是保留的，请换一个。",
+    "feedback_unsigned": "没能用账号署名。请重试、重新登录，或者改选匿名。",
     "feedback_limited": "同一个网络 10 分钟内最多发 3 条反馈，请稍后再试。",
     "feedback_full": "服务器暂时没有空间接收新的反馈，抱歉。",
     "report_too_long": "最多 300 字。",
@@ -813,9 +814,15 @@
     "count": "{count} / {max}",
     "contact": "联系方式（选填）",
     "contactHint": "邮箱、微信号或别的能联系到你的方式。",
-    "credit": "署名（选填）",
-    "creditHint": "不填就匿名。被采纳后，这个名字会列在首页的反馈贡献里，也会写在 GitHub issue 上。任意名字都可以，比如 GitHub 用户名。登录后提并勾选下面的选项，点这个名字就能打开你的公开主页。",
-    "linkProfile": "在反馈贡献里，点我的署名可以打开我的主页",
+    "signature": "被采纳后怎么列出你",
+    "signatures": {
+      "signed": "署名",
+      "anonymous": "匿名"
+    },
+    "anonymousHint": "首页的反馈贡献里会列为一位匿名玩家，GitHub issue 上也不写名字。",
+    "accountHint": "首页的反馈贡献会显示你的头像和用户名，点头像或用户名能打开你的账号面板；GitHub issue 上会写你的用户名。",
+    "credit": "名字",
+    "creditHint": "署名需要填一个名字，不想填就选匿名。这个名字会列在首页的反馈贡献里，也会写在 GitHub issue 上。任意名字都可以，比如 GitHub 用户名。",
     "gameNote": "希望我们下一个做什么游戏？说说一局怎么玩、好玩在哪里。",
     "bugNote": "报告 bug 时会附带浏览器的 User-Agent，方便查找问题：里面有浏览器和系统的名称、版本，有的手机还有型号。",
     "submit": "发送",
@@ -824,7 +831,7 @@
   "contributions": {
     "title": "反馈贡献",
     "counted": "反馈贡献 | 反馈贡献 · {count} 位 | 反馈贡献 · {count} 位",
-    "intro": "感谢建议、新游戏点子、bug 和词被采纳的玩家。采纳的是想法，最后的做法可能不一样，点编号能看到讨论和改动。提建议时可以留署名，不留就匿名列出。",
+    "intro": "感谢建议、新游戏点子、bug 和词被采纳的玩家。采纳的是想法，最后的做法可能不一样，点编号能看到讨论和改动。提建议时可以署名：有账号就显示头像和用户名，没有账号就留一个名字；不署名就匿名列出。",
     "kinds": {
       "idea": "建议",
       "game": "新游戏",
@@ -832,8 +839,7 @@
       "words": "词库"
     },
     "anonymous": "一位匿名玩家",
-    "none": "还没有被采纳的反馈。来做第一个吧！",
-    "fullPage": "打开完整主页"
+    "none": "还没有被采纳的反馈。来做第一个吧！"
   },
   "acknowledgments": {
     "title": "致谢",
@@ -1072,9 +1078,7 @@
     "none": "还没有好友。在上面搜用户名，或者在房间里点一下玩家的头像。",
     "online": "在线",
     "offline": "离线",
-    "inPublicRoom": "在房间 {code}",
-    "inRoom": "在房间里",
-    "join": "加入",
+    "join": "加入房间",
     "more": "{name}：更多",
     "moreTitles": "再显示 {count} 个称号 | 再显示 {count} 个称号",
     "refresh": "刷新",
@@ -1089,6 +1093,7 @@
     "invitationJoin": "加入",
     "invitationIgnore": "忽略",
     "askJoin": "申请加入",
+    "askJoinRoom": "申请加入房间",
     "asked": "已申请",
     "askSent": "已发送申请。对方邀请你时，这里会收到邀请。",
     "askNotice": "{name}想加入",

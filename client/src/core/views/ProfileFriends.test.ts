@@ -58,6 +58,11 @@ const friend = (username: string, duo: DuoView | null): FriendView => ({
 const SectionWithPanel = defineComponent({
   render: () => h('div', [h(ProfileFriends), h(ProfilePanel)]),
 });
+// A link of the router, which hands its address to the slot of a `custom` one, as RouterLink does.
+const routerLink = {
+  props: { to: String, custom: Boolean },
+  template: '<slot v-if="custom" :href="to" :navigate="() => undefined" /><a v-else :href="to"><slot /></a>',
+};
 
 function mountWith(
   friends: FriendView[],
@@ -69,7 +74,7 @@ function mountWith(
   return mount(SectionWithPanel, {
     global: {
       plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })],
-      stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' }, teleport: true },
+      stubs: { RouterLink: routerLink, teleport: true },
     },
   });
 }
@@ -115,7 +120,7 @@ describe('ProfileFriends', () => {
     ).toEqual(["View Bob's profile", "View Cat's profile"]);
   });
 
-  test("opens each friend's panel from their avatar, with the name as plain text and where they are beside it", async () => {
+  test("opens each friend's panel from their avatar, with the name as plain text and the way into their room beside it", async () => {
     const online = { ...friend('Bob', null), online: true, room: { code: 'K7QX' } };
     const wrapper = mountWith([online, friend('Cat', null)]);
     const [bob, cat] = wrapper.findAll('.list .friend');
@@ -124,12 +129,18 @@ describe('ProfileFriends', () => {
     await flushPromises();
     expect(wrapper.get('[role=dialog]:has(.panel-body) h2').text()).toBe('Bob');
     expect(bob?.get('.name').element.tagName).toBe('SPAN');
-    expect(bob?.get('.where').text().replace(/\s+/g, ' ')).toBe('online \u00b7 In room R2-K7QX');
+    // Online: a green dot on the avatar, with the word for screen readers alone, and the way into
+    // the room on the name's line.
+    expect(bob?.find('.face .dot').exists()).toBe(true);
+    expect(bob?.get('.top .sr-only').text()).toBe('online');
+    expect(bob?.get('.top a.join').text()).toBe('Join room');
     expect(bob?.get('a.join').attributes('href')).toBe('/room/K7QX');
-    // An offline friend's whole card fades.
+    // An offline friend's whole card fades, with no dot.
     expect(bob?.classes()).not.toContain('offline');
     expect(cat?.classes()).toContain('offline');
-    expect(cat?.get('.where').text()).toBe('offline');
+    expect(cat?.find('.dot').exists()).toBe(false);
+    expect(cat?.get('.top .sr-only').text()).toBe('offline');
+    expect(cat?.find('.join').exists()).toBe(false);
   });
 
   test('answers a request on its card as the panels do, and takes one back', async () => {
@@ -155,10 +166,9 @@ describe('ProfileFriends', () => {
     const inPrivate = { ...friend('Bob', null), online: true, room: { code: null } };
     const wrapper = mountWith([inPrivate, { ...friend('Cat', null), online: true, room: { code: null }, asked: true }]);
     const [bob, cat] = wrapper.findAll('.list .friend');
-    expect(bob?.get('.where').text().replace(/\s+/g, ' ')).toBe('online \u00b7 In a room');
     expect(bob?.find('a.join').exists()).toBe(false);
-    const asking = bob?.get('button.join');
-    expect(asking?.text()).toBe('Ask to join');
+    const asking = bob?.get('.top button.join');
+    expect(asking?.text()).toBe('Ask to join room');
     await asking?.trigger('click');
     expect(askToJoin).toHaveBeenCalledWith('Bob');
     expect(cat?.get('button.join').text()).toBe('Asked');
@@ -324,9 +334,9 @@ describe('the search on the account page', () => {
     await panel(asked).findAll('.panel-actions button')[1]?.trigger('click');
     await flushPromises();
     // The whole page, which says the same of the request.
-    const whole = asked.get('[role=dialog].tall');
-    expect(whole.get('h2').text()).toBe('Cat');
-    expect(whole.get('.actions').text()).toContain('Request sent');
+    const whole = asked.findAll('[role=dialog]').at(-1);
+    expect(whole?.get('h2').text()).toBe('Cat');
+    expect(whole?.get('.actions').text()).toContain('Request sent');
     asked.unmount();
 
     // Cat asked the account, with a line, which the panel shows, and the account accepts.
@@ -373,6 +383,9 @@ describe('the search on the account page', () => {
     finds({ ok: true, handle: 'me0000000000', username: 'Me' });
     await search(self, 'me');
     expect(panel(self).text()).toContain('This is you.');
+    // The way to the account page, where the account is changed, and its page as others see it.
+    const mine = panel(self).get('.panel-actions a');
+    expect([mine.text(), mine.attributes('href')]).toEqual(['My account', '/account']);
     expect(offers(self).map(([text]) => text)).toEqual(['Open the full page']);
     self.unmount();
   });
@@ -415,7 +428,7 @@ describe('the search on the account page', () => {
     const wrapper = mount(SectionWithPanel, {
       global: {
         plugins: [createI18n({ legacy: false, locale: 'en', messages: { en, zh } })],
-        stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' }, teleport: true },
+        stubs: { RouterLink: routerLink, teleport: true },
       },
       attachTo: document.body,
     });

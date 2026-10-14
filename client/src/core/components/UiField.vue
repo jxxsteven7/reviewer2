@@ -165,10 +165,15 @@ textarea::placeholder {
   opacity: 0.7;
 }
 
+/* The text area keeps its size, with no handle to resize it in a corner, and sits a little inside
+   the round box, so that its scrollbar, once it scrolls, stays clear of the round corners; its
+   padding makes up the rest. */
 textarea {
-  padding: var(--space-3) var(--space-4);
+  margin: var(--space-1);
+  padding: calc(var(--space-3) - var(--space-1)) calc(var(--space-4) - var(--space-1));
+  border-radius: var(--radius-small);
   line-height: 1.45;
-  resize: vertical;
+  resize: none;
 }
 
 .prefix + input {

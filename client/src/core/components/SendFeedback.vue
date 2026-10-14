@@ -16,12 +16,13 @@ import {
 import { computed, reactive, ref, toRefs, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRoute } from 'vue-router';
-import { account } from '../account';
+import { account, loadAccount } from '../account';
 import { errorKey } from '../errors';
 import { currentLanguage } from '../i18n';
 import { connect, send } from '../socket';
 import { toast } from '../toast';
 import { useBusy } from '../useBusy';
+import PlayerAvatar from './PlayerAvatar.vue';
 import UiButton from './UiButton.vue';
 import UiField from './UiField.vue';
 import UiSheet from './UiSheet.vue';
@@ -36,21 +37,26 @@ import UiSheet from './UiSheet.vue';
 // as anonymous. Along with them go the build of this page, the language it is shown in and whether
 // it is the home page or a room, but never the room's code. With a bug, the server also keeps the
 // browser's user agent, which it reads from the connection, and the panel says so. The server
-// keeps the account the player is logged in to, whether they left a name or not, and a player
-// logged in who leaves a name may let it open their public page from the feedback contributions,
-// which the panel offers ticked until they untick it; a guest is asked
-// to log in first, by a way to the account page that brings them back to their room, if they are
-// in one, and may send it all the same. A new game, which the player suggests the project make next, gets a word on
-// what to write.
+// keeps the account the player is logged in to, whether they sign the feedback or not. The player
+// chooses to sign, which the panel offers first, or to stay anonymous: a player who is logged in
+// signs with the account, which the contributions show by its avatar and username, either opening
+// the account's panel (ProfilePanel.vue), and a guest leaves a name of their own, which signing
+// then asks for. A guest is asked to log in first, by a way to the account page that brings them
+// back to their room, if they are in one, and may send it all the same. Feedback that the server
+// couldn't sign with the account makes the page ask again who the browser is, so that the form
+// follows. A new game, which the player suggests the project make next, gets a word on what to
+// write.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.
+type Signature = 'anonymous' | 'signed';
+const SIGNATURES: readonly Signature[] = ['signed', 'anonymous'];
 const draft = reactive({
   kind: 'idea' as FeedbackKind,
   text: '',
   contact: '',
+  signature: 'signed' as Signature,
   credit: '',
-  linkProfile: true,
 });
 </script>
 
@@ -60,7 +66,8 @@ const { t } = useI18n();
 const name = useId();
 const open = ref(false);
 const route = useRoute();
-const { kind, text, contact, credit, linkProfile } = toRefs(draft);
+const signatureName = useId();
+const { kind, text, contact, signature, credit } = toRefs(draft);
 // Whether the server has said that this browser is a guest, who is asked to log in first.
 const guest = computed(() => account.loaded && account.summary === null);
 // From a room, the account page leads back to it once the player has logged in (AccountPage.vue);
@@ -75,12 +82,14 @@ const { busy, run } = useBusy();
 const checked = computed(() => checkFeedback(text.value));
 const checkedContact = computed(() => checkContact(contact.value));
 const checkedCredit = computed(() => checkCredit(credit.value));
-// Whether the name may open the player's public page: offered once anything is typed as the name,
-// even a name that the rules refuse, by a player who is logged in.
-const offersProfile = computed(
-  () => account.summary !== null && (checkedCredit.value.credit !== null || checkedCredit.value.problem !== null),
-);
-watch([kind, text, contact, credit, linkProfile], () => (refused.value = undefined));
+// Who signs: the account, for a player who is logged in, or a name of their own, which a guest
+// types, and which the feedback needs then. Until the server has said who this browser is, nobody
+// is asked for a name, which a player who turns out to be logged in wouldn't need, and nothing
+// signed is sent, which would go without a name or an account, as anonymous.
+const signer = computed(() => (signature.value === 'signed' ? account.summary : null));
+const asksName = computed(() => signature.value === 'signed' && account.loaded && account.summary === null);
+const waitsForAccount = computed(() => signature.value === 'signed' && !account.loaded);
+watch([kind, text, contact, signature, credit], () => (refused.value = undefined));
 
 const count = computed(() => t('feedback.count', { count: textLength(checked.value.text), max: MAX_FEEDBACK_LENGTH }));
 const textProblem = computed(() =>
@@ -93,7 +102,11 @@ const creditProblem = computed(() =>
   checkedCredit.value.problem ? t(errorKey(checkedCredit.value.problem)) : undefined,
 );
 const ready = computed(
-  () => checked.value.problem === null && checkedContact.value.problem === null && checkedCredit.value.problem === null,
+  () =>
+    checked.value.problem === null &&
+    checkedContact.value.problem === null &&
+    !waitsForAccount.value &&
+    (!asksName.value || (checkedCredit.value.problem === null && checkedCredit.value.credit !== null)),
 );
 
 // The home page may have no connection yet. It is made when the panel opens, so that it is there
@@ -104,13 +117,15 @@ function openPanel() {
 }
 
 function submit() {
+  if (!ready.value) return;
   void run(async () => {
     const message: FeedbackMessage = {
       kind: kind.value,
       text: checked.value.text,
       ...(checkedContact.value.contact === null ? {} : { contact: checkedContact.value.contact }),
-      ...(checkedCredit.value.credit === null ? {} : { credit: checkedCredit.value.credit }),
-      ...(offersProfile.value && checkedCredit.value.credit !== null ? { linkProfile: linkProfile.value } : {}),
+      ...(asksName.value && checkedCredit.value.credit !== null ? { credit: checkedCredit.value.credit } : {}),
+      // The server takes the account's username for the name.
+      ...(signer.value === null ? {} : { linkProfile: true }),
       // The schema takes 64 characters; a build is named by its commit.
       version: __APP_VERSION__.slice(0, 64),
       language: currentLanguage(),
@@ -119,13 +134,17 @@ function submit() {
     const reply = await send('meta:feedback', message);
     if (!reply.ok) {
       refused.value = t(errorKey(reply.error));
+      // Feedback that couldn't be signed with the account: the login may have ended, or the
+      // connection may not be the account's yet. The page asks again who the browser is, on which
+      // the form asks a guest for a name, or the connection is made again as the account.
+      if (reply.error === 'feedback_unsigned') void loadAccount();
       return;
     }
     kind.value = 'idea';
     text.value = '';
     contact.value = '';
+    signature.value = 'signed';
     credit.value = '';
-    linkProfile.value = true;
     open.value = false;
     toast('feedback.sent');
   });
@@ -145,9 +164,9 @@ function submit() {
       </div>
       <p class="note">{{ t('feedback.privacy') }}</p>
 
-      <fieldset class="kinds">
+      <fieldset class="choices kinds">
         <legend>{{ t('feedback.kind') }}</legend>
-        <label v-for="option in FEEDBACK_KINDS" :key="option" class="kind">
+        <label v-for="option in FEEDBACK_KINDS" :key="option" class="choice">
           <input v-model="kind" type="radio" :name="name" :value="option" />
           <span>{{ t(`feedback.kinds.${option}`) }}</span>
         </label>
@@ -173,7 +192,22 @@ function submit() {
         :error="contactProblem"
         enterkeyhint="next"
       />
+      <fieldset class="choices signatures">
+        <legend>{{ t('feedback.signature') }}</legend>
+        <label v-for="option in SIGNATURES" :key="option" class="choice">
+          <input v-model="signature" type="radio" :name="signatureName" :value="option" />
+          <span>{{ t(`feedback.signatures.${option}`) }}</span>
+        </label>
+      </fieldset>
+      <template v-if="signer">
+        <p class="signer">
+          <PlayerAvatar :name="signer.username" :avatar="signer.avatar" size="medium" />
+          <span>{{ signer.username }}</span>
+        </p>
+        <p class="note">{{ t('feedback.accountHint') }}</p>
+      </template>
       <UiField
+        v-else-if="asksName"
         v-model="credit"
         :label="t('feedback.credit')"
         :hint="t('feedback.creditHint')"
@@ -181,10 +215,7 @@ function submit() {
         :error="creditProblem"
         enterkeyhint="send"
       />
-      <label v-if="offersProfile" class="profile">
-        <input v-model="linkProfile" type="checkbox" />
-        <span>{{ t('feedback.linkProfile') }}</span>
-      </label>
+      <p v-else-if="signature === 'anonymous'" class="note">{{ t('feedback.anonymousHint') }}</p>
       <p v-if="kind === 'bug'" class="note">{{ t('feedback.bugNote') }}</p>
 
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>
@@ -205,7 +236,7 @@ function submit() {
   font-size: var(--text-sm);
 }
 
-.kinds {
+.choices {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -222,29 +253,32 @@ legend {
   font-weight: var(--weight-bold);
 }
 
-.kind {
+/* A choice, a little smaller than a button, so that the four kinds fit on one line in Chinese on a
+   phone; English, whose names are longer, may take two. */
+.choice {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  padding: 0 var(--space-4);
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-2);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
+  font-size: var(--text-sm);
   font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
-.kind:has(input:checked) {
+.choice:has(input:checked) {
   background: var(--bg);
 }
 
-.kind:has(input:focus-visible) {
+.choice:has(input:focus-visible) {
   outline: var(--line-strong) solid var(--focus);
   outline-offset: 2px;
 }
 
-.kind input {
+.choice input {
   margin: 0;
   accent-color: var(--ink);
 }
@@ -281,23 +315,13 @@ legend {
   text-decoration: none;
 }
 
-/* The choice to let the name open the player's page: a row as tall as a finger, with a big box. */
-.profile {
+/* The account that signs, as the contributions will show it: its avatar and its username. */
+.signer {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  font-size: var(--text-sm);
+  gap: var(--space-3);
   font-weight: var(--weight-bold);
-  cursor: pointer;
-}
-
-.profile input {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .problem {

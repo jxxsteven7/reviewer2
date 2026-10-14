@@ -344,8 +344,8 @@ describe('feedback adopt', () => {
     vi.useFakeTimers({ now: Date.parse('2026-10-14T08:00:00.000Z') });
     expect(adopt('1')).toBe(0);
     expect(printed).toEqual([
-      'Adopted feedback #1, issue #41. The home page lists it now, as Ann L., counted for the account Ann, ' +
-        'saying that the player contributed:',
+      "Adopted feedback #1, issue #41. The home page lists it now, as Ann, with the account's avatar, counted " +
+        'for the account Ann, saying that the player contributed:',
       `  zh: ${ZH}`,
       `  en: ${EN}`,
     ]);
@@ -362,22 +362,39 @@ describe('feedback adopt', () => {
         'account Ann, saying that the player contributed:',
     );
     expect(store.byId(1)).toMatchObject({
-      status: 'thanked',
+      status: 'resolved',
       adoptedAt: '2026-10-14T08:00:00.000Z',
       summaryZh: ZH,
       summaryEn: EN,
     });
     expect(store.contributions()).toEqual([
-      { kind: 'bug', name: null, profile: null, summary: { zh: ZH, en: EN }, issue: 43, month: '2026-10' },
+      {
+        kind: 'bug',
+        name: null,
+        profile: null,
+        avatar: null,
+        summary: { zh: ZH, en: EN },
+        issue: 43,
+        month: '2026-10',
+      },
       {
         kind: 'words',
         name: 'octocat',
         profile: null,
+        avatar: null,
         summary: { zh: '加了词', en: 'Added words' },
         issue: 42,
         month: '2026-10',
       },
-      { kind: 'idea', name: 'Ann L.', profile: ann.handle, summary: { zh: ZH, en: EN }, issue: 41, month: '2026-10' },
+      {
+        kind: 'idea',
+        name: 'Ann',
+        profile: ann.handle,
+        avatar: null,
+        summary: { zh: ZH, en: EN },
+        issue: 41,
+        month: '2026-10',
+      },
     ]);
     expect(accounts.summary(ann).contributions).toEqual([
       { kind: 'idea', count: 1 },
@@ -466,7 +483,7 @@ describe('feedback adopt', () => {
     // Adopted, it can't be closed: the home page lists it.
     expect(run('feedback', 'close', '1')).toBe(1);
     expect(printed.at(-1)).toBe("Feedback #1 was adopted, and the home page lists it, so it can't be closed.");
-    expect(store.byId(1)?.status).toBe('thanked');
+    expect(store.byId(1)?.status).toBe('resolved');
   });
 
   test('says what another command did meanwhile when the feedback can no longer be adopted', () => {
@@ -888,7 +905,8 @@ describe('feedback resolve', () => {
     store.add(feedback());
     expect(run('feedback', 'resolve', '1', '50')).toBe(0);
     expect(printed.at(-1)).toBe('Feedback #1 is resolved by PR #50, https://github.com/jxxsteven7/reviewer2/pull/50.');
-    expect(store.byId(1)).toMatchObject({ resolvedPr: 50, status: 'resolved', text: 'A timer, please.' });
+    // Not adopted, it still waits, as an issue does.
+    expect(store.byId(1)).toMatchObject({ resolvedPr: 50, status: 'issue', text: 'A timer, please.' });
     expect(store.byId(1)?.resolvedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(run('feedback', 'resolve', '1', '51')).toBe(0);
     expect(printed.at(-1)).toBe(
@@ -901,10 +919,10 @@ describe('feedback resolve', () => {
     expect(store.byId(1)).toMatchObject({ resolvedPr: null, resolvedAt: null, status: 'new' });
     expect(run('feedback', 'resolve', '1', '--clear')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 has no pull request recorded.');
-    // With its issue, the issue stays beside it.
+    // With its issue, the issue stays beside it, and it waits for the adoption as an issue.
     expect(run('feedback', 'issue', '2', '42')).toBe(0);
     expect(run('feedback', 'resolve', '2', '52')).toBe(0);
-    expect(store.byId(2)).toMatchObject({ issue: 42, resolvedPr: 52, status: 'resolved' });
+    expect(store.byId(2)).toMatchObject({ issue: 42, resolvedPr: 52, status: 'issue' });
     for (const number of ['0', '-1', '4.5', 'x', '--all']) {
       expect(run('feedback', 'resolve', '1', number)).toBe(1);
       expect(printed.at(-1)).toBe(`${number} is not the number of a pull request.`);
@@ -990,7 +1008,7 @@ describe('feedback delete, restore and trash', () => {
     expect(adopt('3')).toBe(0);
     expect(run('feedback', 'delete', '3')).toBe(1);
     expect(printed.at(-1)).toBe("Feedback #3 was adopted, and the home page lists it, so it can't be deleted.");
-    expect(store.byId(3)?.status).toBe('thanked');
+    expect(store.byId(3)?.status).toBe('resolved');
 
     // Back out of the trash, closed if it was.
     expect(run('feedback', 'restore', '2')).toBe(0);
@@ -998,7 +1016,7 @@ describe('feedback delete, restore and trash', () => {
     expect(store.byId(2)).toMatchObject({ status: 'closed', deletedAt: null });
     expect(run('feedback', 'restore', '1')).toBe(0);
     expect(printed.at(-1)).toBe('Restored feedback #1 from the trash.');
-    expect(store.byId(1)).toMatchObject({ status: 'resolved', deletedAt: null });
+    expect(store.byId(1)).toMatchObject({ status: 'issue', deletedAt: null });
     expect(run('feedback', 'restore', '1')).toBe(1);
     expect(printed.at(-1)).toBe("Feedback #1 isn't in the trash.");
     expect(run('feedback', 'trash')).toBe(0);
@@ -1048,10 +1066,10 @@ describe('feedback delete, restore and trash', () => {
     expect(printed.slice(-3)).toEqual([
       '#3  2026-11-01  kept: issue  idea  A timer, please.',
       '#2  2026-11-01  0 days left  idea  A timer, please.',
-      '#1  2026-11-01  kept: thanked  idea  A timer, please.',
+      '#1  2026-11-01  kept: adopted  idea  A timer, please.',
     ]);
     expect(run('feedback', 'delete', '1')).toBe(1);
-    expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, kept: thanked.');
+    expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, kept: adopted.');
     expect(run('feedback', 'delete', '2')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #2 is in the trash already, 0 days left.');
     expect(store.purge()).toBe(1);
