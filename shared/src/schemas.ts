@@ -48,16 +48,17 @@ export const ROOM_MESSAGES = {
   'meta:fields': none,
   'meta:rooms': none,
   'meta:seats': none,
-  // Feedback for the author. Its text, contact, credit and link are for the rules in feedback.ts
-  // to judge, which refuse a long text before looking at it, so that it gets feedback_too_long and
-  // not bad_request. The server takes no message of more than 16 KB at all (server.ts).
+  // Feedback for the author. Its text, contact and credit are for the rules in feedback.ts to
+  // judge, which refuse a long text before looking at it, so that it gets feedback_too_long and
+  // not bad_request. The server takes no message of more than 16 KB at all (server.ts). What older
+  // pages sent besides, a link for the name and whether the player agreed to a public issue, is
+  // dropped here, as anything else the schema doesn't name.
   'meta:feedback': z.object({
     kind: z.enum(FEEDBACK_KINDS),
     text: z.string(),
     contact: z.string().optional(),
     credit: z.string().optional(),
-    link: z.string().optional(),
-    publicIssue: z.boolean().optional(),
+    linkProfile: z.boolean().optional(),
     version: z.string().max(64),
     language: z.enum(LANGUAGES),
     page: z.enum(FEEDBACK_PAGES),

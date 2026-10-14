@@ -1,7 +1,6 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ACKNOWLEDGMENT_HEADINGS, parseAcknowledgments, usernameKey } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { jpeg } from '../test/images';
 import { addAccounts } from '../test/statistics';
@@ -85,11 +84,12 @@ describe('avatar remove', () => {
       ['feedback', 'draft'],
       ['feedback', 'draft', '1', '2'],
       ['feedback', 'draft', '1', '--ban'],
-      ['acknowledgments', 'add', 'Ann', '--kind'],
-      ['acknowledgments', 'add', 'Ann', '--kind', 'words', '--ban'],
-      ['acknowledgments', 'add', 'Ann', '--no-account', '--kind'],
-      ['acknowledgments', 'add', 'Ann', '--kind', 'words', '--no-account', '--account'],
-      ['acknowledgments', 'list', '1'],
+      ['feedback', 'adopt', '1', '--zh'],
+      ['feedback', 'adopt', '1', '--zh', 'x', '--en', 'y', '--json'],
+      ['feedback', 'describe', '1', '--ban'],
+      // The acknowledgments are ACKNOWLEDGMENTS.md alone now, and no command thanks anyone by hand.
+      ['acknowledgments', 'add', 'Ann', '--kind', 'words', '--no-account'],
+      ['acknowledgments', 'list'],
       ['feedback', 'issue', '1'],
       ['feedback', 'issue', '1', '2', '--clear'],
       ['feedback', 'resolve', '1'],
@@ -99,11 +99,9 @@ describe('avatar remove', () => {
       ['feedback', 'restore', '1', '--ban'],
       ['feedback', 'trash', '1'],
       ['feedback', 'purge'],
-      // The acknowledgments are an archive, which no command changes.
-      ['acknowledgments', 'remove', '1'],
-      ['acknowledgments', 'link', '1', 'Ann'],
-      ['acknowledgments', 'unlink', '1'],
-      ['acknowledgments', 'markdown'],
+      // What a player sent, and the adoption, are an archive, which no command changes.
+      ['feedback', 'unadopt', '1'],
+      ['feedback', 'edit', '1'],
     ]) {
       expect(run(...args), args.join(' ')).toBe(2);
       expect(printed.at(-1)).toMatch(/^usage: /);
@@ -250,9 +248,8 @@ const feedback = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
   text: 'A timer, please.',
   contact: null,
   credit: null,
-  link: null,
   accountId: null,
-  publicIssue: false,
+  linkProfile: false,
   version: 'v1',
   language: 'en',
   page: 'home',
@@ -328,144 +325,179 @@ describe('reports list', () => {
   });
 });
 
-// The entry that a command printed for ACKNOWLEDGMENTS.md, as the file's rules read it once the
-// operator has said what the player did.
-function printedEntry(heading: string) {
-  const line = (printed.at(-1) as string).replace('<what they did>', 'suggested a timer');
-  return parseAcknowledgments(`## ${heading}\n\n${line}\n`);
-}
+// What a player contributed, as --zh and --en say it, which `feedback adopt` and `feedback describe`
+// take.
+const ZH = '提出了计时器';
+const EN = 'Suggested a timer';
+const SAID = ['--zh', ZH, '--en', EN];
+const adopt = (id: string, ...said: string[]) => run('feedback', 'adopt', id, ...(said.length > 0 ? said : SAID));
 
 describe('feedback adopt', () => {
-  test('records the adoption, counted for the account of a player who left a name, and prints the entry', () => {
-    const ann = accounts.store.create('Ann', 'ann', 'hash');
-    const store = new FeedbackStore(database.db);
-    store.add(feedback({ credit: 'Ann L.', link: 'https://ann.example/', accountId: ann?.id }));
-    store.add(feedback({ kind: 'words', credit: 'octocat' }));
-    store.add(feedback({ kind: 'bug' }));
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed).toEqual([
-      'Adopted feedback #1 as acknowledgment #1, for Helpful discussions, counted for the account Ann.',
-      'For ACKNOWLEDGMENTS.md, under "## Helpful discussions", once you say what they did in English:',
-      '- [Ann L\\.](https://ann.example/) \u{2014} <what they did>',
-    ]);
-    expect(printedEntry('Helpful discussions')).toEqual({
-      sections: [
-        {
-          kind: 'feedback',
-          entries: [{ name: 'Ann L.', link: 'https://ann.example/', contribution: 'suggested a timer' }],
-        },
-      ],
-      problems: [],
-    });
-    expect(run('feedback', 'adopt', '2')).toBe(0);
-    expect(printed.slice(-3)).toEqual([
-      'Adopted feedback #2 as acknowledgment #2, for Data, counted for no account.',
-      'For ACKNOWLEDGMENTS.md, under "## Data", once you say what they did in English:',
-      '- octocat \u{2014} <what they did>',
-    ]);
-    // Feedback without a name is adopted too, and its player stays anonymous.
-    expect(run('feedback', 'adopt', '3')).toBe(0);
-    expect(printed.slice(-3)).toEqual([
-      'Adopted feedback #3 as acknowledgment #3, for Helpful discussions, from a player who left no name.',
-      'For ACKNOWLEDGMENTS.md, under "## Helpful discussions", once you say what they did in English:',
-      '- An anonymous player \u{2014} <what they did>',
-    ]);
-    expect(printedEntry('Helpful discussions').sections[0]?.entries).toEqual([
-      { name: null, link: null, contribution: 'suggested a timer' },
-    ]);
-    expect(accounts.acknowledgments.all()).toEqual([
-      expect.objectContaining({
-        id: 1,
-        name: 'Ann L.',
-        kind: 'feedback',
-        feedbackId: 1,
-        accountId: 1,
-        username: 'Ann',
-      }),
-      expect.objectContaining({ id: 2, name: 'octocat', kind: 'words', feedbackId: 2, accountId: null }),
-      expect.objectContaining({ id: 3, name: '', kind: 'feedback', feedbackId: 3, accountId: null }),
-    ]);
-    expect(accounts.summary(ann as NonNullable<typeof ann>).acknowledgments).toEqual([{ kind: 'feedback', count: 1 }]);
-    expect(store.byId(1)?.acknowledgmentId).toBe(1);
-
-    // Only once, and only feedback that is there.
-    expect(run('feedback', 'adopt', '1')).toBe(1);
-    expect(printed.at(-1)).toBe('Feedback #1 was adopted already, as acknowledgment #1.');
-    expect(run('feedback', 'adopt', '4')).toBe(1);
-    expect(printed.at(-1)).toBe('There is no feedback #4.');
-    expect(run('feedback', 'adopt', 'x')).toBe(1);
-    expect(printed.at(-1)).toBe('There is no feedback #x.');
-    expect(accounts.acknowledgments.all()).toHaveLength(3);
-  });
-
-  test('counts no account for feedback without a name, even from a player who was logged in', () => {
+  test('lists the feedback among the contributions at once, by its name, counted for its account', () => {
     const ann = accounts.store.create('Ann', 'ann', 'hash');
     if (!ann) throw new Error('no account');
-    // The server keeps no account for feedback without a name, but an older row might have one.
-    new FeedbackStore(database.db).add(feedback({ accountId: ann.id }));
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(accounts.acknowledgments.all()[0]).toMatchObject({ name: '', accountId: null });
-    expect(accounts.summary(ann).acknowledgments).toEqual([]);
-  });
-
-  test('thanks a new game that was suggested in the helpful discussions, with its issue', () => {
-    const ann = accounts.store.create('Ann', 'ann', 'hash');
     const store = new FeedbackStore(database.db);
-    store.add(
-      feedback({ kind: 'game', credit: 'Ann', link: 'https://ann.example/', publicIssue: true, accountId: ann?.id }),
+    store.add(feedback({ credit: 'Ann L.', accountId: ann.id, linkProfile: true }));
+    store.add(feedback({ kind: 'words', credit: 'octocat' }));
+    store.add(feedback({ kind: 'bug', accountId: ann.id }));
+    for (const id of [1, 2, 3]) store.setIssue(id, 40 + id);
+    vi.useFakeTimers({ now: Date.parse('2026-10-14T08:00:00.000Z') });
+    expect(adopt('1')).toBe(0);
+    expect(printed).toEqual([
+      'Adopted feedback #1, issue #41. The home page lists it now, as Ann L., counted for the account Ann, ' +
+        'saying that the player contributed:',
+      `  zh: ${ZH}`,
+      `  en: ${EN}`,
+    ]);
+    expect(adopt('2', '--zh', '加了词', '--en', 'Added words')).toBe(0);
+    expect(printed.at(-3)).toBe(
+      'Adopted feedback #2, issue #42. The home page lists it now, as octocat, counted for no account, ' +
+        'saying that the player contributed:',
     );
-    expect(run('feedback', 'issue', '1', '43')).toBe(0);
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed.slice(-3)).toEqual([
-      'Adopted feedback #1 as acknowledgment #1, for Helpful discussions, counted for the account Ann.',
-      'For ACKNOWLEDGMENTS.md, under "## Helpful discussions", once you say what they did in English:',
-      '- [Ann](https://ann.example/) \u{2014} <what they did> (#43)',
+    // Feedback without a name is adopted too: its player stays anonymous, and it counts for the
+    // account all the same.
+    expect(adopt('3')).toBe(0);
+    expect(printed.at(-3)).toBe(
+      'Adopted feedback #3, issue #43. The home page lists it now, as an anonymous player, counted for the ' +
+        'account Ann, saying that the player contributed:',
+    );
+    expect(store.byId(1)).toMatchObject({
+      status: 'thanked',
+      adoptedAt: '2026-10-14T08:00:00.000Z',
+      summaryZh: ZH,
+      summaryEn: EN,
+    });
+    expect(store.contributions()).toEqual([
+      { kind: 'bug', name: null, profile: null, summary: { zh: ZH, en: EN }, issue: 43, month: '2026-10' },
+      {
+        kind: 'words',
+        name: 'octocat',
+        profile: null,
+        summary: { zh: '加了词', en: 'Added words' },
+        issue: 42,
+        month: '2026-10',
+      },
+      { kind: 'idea', name: 'Ann L.', profile: ann.handle, summary: { zh: ZH, en: EN }, issue: 41, month: '2026-10' },
     ]);
-    expect(accounts.acknowledgments.all()).toEqual([
-      expect.objectContaining({ name: 'Ann', kind: 'feedback', feedbackId: 1, accountId: ann?.id }),
+    expect(accounts.summary(ann).contributions).toEqual([
+      { kind: 'idea', count: 1 },
+      { kind: 'bug', count: 1 },
     ]);
+
+    // Only once, and only feedback that is there.
+    expect(adopt('1')).toBe(1);
+    expect(printed.at(-1)).toBe(
+      'Feedback #1 was adopted already, on 2026-10-14. To say again what the player contributed: ' +
+        'feedback describe 1 --zh <sentence> --en <sentence>.',
+    );
+    expect(adopt('4')).toBe(1);
+    expect(printed.at(-1)).toBe('There is no feedback #4.');
+    expect(adopt('x')).toBe(1);
+    expect(printed.at(-1)).toBe('There is no feedback #x.');
+    expect(store.contributions()).toHaveLength(3);
   });
 
-  test('puts the number of its issue in the entry, or of its pull request when there is no issue', () => {
+  test('takes only feedback that is a GitHub issue, which it keeps', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ credit: 'Bob', publicIssue: true }));
-    store.add(feedback({ credit: 'Cat' }));
-    store.setIssue(1, 42);
-    store.resolve(1, 50);
-    store.resolve(2, 51);
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed.at(-1)).toBe('- Bob \u{2014} <what they did> (#42)');
-    expect(run('feedback', 'adopt', '2')).toBe(0);
-    expect(printed.at(-1)).toBe('- Cat \u{2014} <what they did> (#51)');
+    store.add(feedback({ credit: 'Ann' }));
+    expect(adopt('1')).toBe(1);
+    expect(printed.at(-1)).toBe(
+      'Feedback #1 is no GitHub issue. Every adopted piece of feedback is one: publish it first, or record one ' +
+        'made by hand with feedback issue 1 <number>.',
+    );
+    expect(store.byId(1)?.adoptedAt).toBeNull();
+    expect(run('feedback', 'issue', '1', '43')).toBe(0);
+    expect(adopt('1')).toBe(0);
+    // The issue may be put right, but not taken away.
+    expect(run('feedback', 'issue', '1', '--clear')).toBe(1);
+    expect(printed.at(-1)).toBe(
+      'Feedback #1 was adopted, and keeps an issue, which the home page links. Record another number in its ' +
+        'place if #43 is wrong: feedback issue 1 <number>.',
+    );
+    expect(run('feedback', 'issue', '1', '44')).toBe(0);
+    expect(store.contributions()[0]?.issue).toBe(44);
   });
 
-  test('refuses feedback in the trash, which the acknowledgment would point at on its way out', () => {
+  test('takes what the player contributed in both languages, by the rules of a contribution', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback());
+    store.setIssue(1, 41);
+    expect(run('feedback', 'adopt', '1')).toBe(2);
+    expect(printed).toEqual(['Say what the player contributed in both languages: --zh "<一句>" --en "<a sentence>".']);
+    expect(run('feedback', 'adopt', '1', '--zh', ZH)).toBe(2);
+    // A flag without its value is a usage error, as for any command.
+    expect(run('feedback', 'adopt', '1', '--zh', ZH, '--en')).toBe(2);
+    expect(printed.at(-1)).toMatch(/^usage: /);
+    printed = [];
+    expect(adopt('1', '--zh', ' \u200b ', '--en', 'x'.repeat(101))).toBe(1);
+    expect(printed).toEqual(['--zh shows nothing.', '--en has more than 100 characters.']);
+    expect(store.byId(1)?.adoptedAt).toBeNull();
+    // Cleaned as a bio is: one line, without hidden characters or spaces at its ends.
+    expect(adopt('1', '--zh', ` 提出了\n计时器\u200b `, '--en', `${'x'.repeat(100)} `)).toBe(0);
+    expect(store.byId(1)).toMatchObject({ summaryZh: '提出了 计时器', summaryEn: 'x'.repeat(100) });
+  });
+
+  test('refuses feedback in the trash, which would be listed on its way out', () => {
     const store = new FeedbackStore(database.db);
     store.add(feedback({ credit: 'Ann' }));
     expect(run('feedback', 'delete', '1')).toBe(0);
-    expect(run('feedback', 'adopt', '1')).toBe(1);
+    // Recorded as an issue in the trash, as `feedback issue` allows.
+    expect(store.setIssue(1, 41)).toBe(true);
+    expect(adopt('1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 is in the trash. Restore it first: feedback restore 1.');
-    expect(accounts.acknowledgments.all()).toEqual([]);
+    expect(store.contributions()).toEqual([]);
     expect(run('feedback', 'restore', '1')).toBe(0);
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(accounts.acknowledgments.all()).toHaveLength(1);
+    expect(adopt('1')).toBe(0);
+    expect(store.contributions()).toHaveLength(1);
   });
 
   test("says when the name is another account's username, which may be someone passing for its owner", () => {
     accounts.store.create('Cat', 'cat', 'hash');
-    new FeedbackStore(database.db).add(feedback({ credit: 'CAT' }));
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed.slice(0, 2)).toEqual([
-      'Adopted feedback #1 as acknowledgment #1, for Helpful discussions, counted for no account.',
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'CAT' }));
+    store.setIssue(1, 41);
+    expect(adopt('1')).toBe(0);
+    expect(printed.at(-1)).toBe(
       "CAT is also the username of the account Cat, which didn't send the feedback. Make sure that they are " +
-        'the same person before you list the name.',
+        'the same person.',
+    );
+  });
+});
+
+describe('feedback describe', () => {
+  test('says again what the player contributed, of adopted feedback alone', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Ann' }));
+    store.setIssue(1, 41);
+    expect(run('feedback', 'describe', '1', ...SAID)).toBe(1);
+    expect(printed).toEqual([
+      "Feedback #1 isn't adopted. Adopt it with feedback adopt 1 --zh <sentence> --en <sentence>.",
     ]);
+    expect(store.byId(1)).toMatchObject({ adoptedAt: null, summaryZh: null });
+    expect(adopt('1')).toBe(0);
+    printed = [];
+    expect(run('feedback', 'describe', '1', '--zh', '提出了倒计时', '--en', 'Suggested a countdown')).toBe(0);
+    expect(printed).toEqual([
+      'Feedback #1 now says that the player contributed:',
+      '  zh: 提出了倒计时',
+      '  en: Suggested a countdown',
+      'It said:',
+      `  zh: ${ZH}`,
+      `  en: ${EN}`,
+    ]);
+    expect(store.contributions()[0]).toMatchObject({
+      name: 'Ann',
+      summary: { zh: '提出了倒计时', en: 'Suggested a countdown' },
+    });
+    expect(run('feedback', 'describe', '1', '--zh', '提出了倒计时')).toBe(2);
+    expect(run('feedback', 'describe', '2', ...SAID)).toBe(1);
+    expect(printed.at(-1)).toBe('There is no feedback #2.');
   });
 });
 
 describe('feedback draft', () => {
   const ZWSP = '\u200b';
-  const AGREED = 'that a player sent through the feedback form, published with their agreement:';
+  const SENT = 'that a player sent through the feedback form:';
   const hint = (id: number) =>
     `Create the issue on GitHub with this title and body, then record its number: feedback issue ${id} <number>.`;
   // The command's exit code and what it printed, which the next run starts afresh.
@@ -479,15 +511,13 @@ describe('feedback draft', () => {
     return JSON.parse(printed.splice(0).join('\n')) as { id: number; kind: string; title: string; body: string };
   };
 
-  test('writes the title and the body of the issue for feedback whose player agreed, and says what comes next', () => {
+  test('writes the title and the body of the issue for any feedback, and says what comes next', () => {
     const store = new FeedbackStore(database.db);
     store.add(
       feedback({
         text: 'AI agent player',
         contact: 'me@example.com',
         credit: 'Ann L',
-        link: 'https://ann.example/',
-        publicIssue: true,
         version: 'v0.1.10',
         userAgent: 'Mozilla/5.0',
       }),
@@ -497,7 +527,7 @@ describe('feedback draft', () => {
       lines: [
         'Idea: AI agent player',
         '',
-        `An idea ${AGREED}`,
+        `An idea ${SENT}`,
         '',
         '> AI agent player',
         '',
@@ -512,20 +542,20 @@ describe('feedback draft', () => {
 
   test('with --json prints the draft on one line, with the id and the kind for a script', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ kind: 'bug', text: 'Line one\nLine two', credit: 'Ann', publicIssue: true }));
+    store.add(feedback({ kind: 'bug', text: 'Line one\nLine two', credit: 'Ann' }));
     expect(run('feedback', 'draft', '1', '--json')).toBe(0);
     expect(printed).toEqual([
       JSON.stringify({
         id: 1,
         kind: 'bug',
         title: 'Bug: Line one',
-        body: `A bug report ${AGREED}\n\n> Line one\n> Line two\n\nReported by Ann.`,
+        body: `A bug report ${SENT}\n\n> Line one\n> Line two\n\nReported by Ann.`,
       }),
     ]);
     expect(Object.keys(JSON.parse(printed[0] as string) as object)).toEqual(['id', 'kind', 'title', 'body']);
   });
 
-  test('holds the text and the name alone, which is all the player agreed to', () => {
+  test('holds the text and the name alone, which is all that the form says is published', () => {
     const store = new FeedbackStore(database.db);
     const ann = accounts.store.create('Ann', 'ann', 'hash');
     store.add(
@@ -534,9 +564,7 @@ describe('feedback draft', () => {
         text: 'The board is gone.',
         contact: 'wechat: r2',
         credit: 'Ann L',
-        link: 'https://ann.example/',
         accountId: ann?.id,
-        publicIssue: true,
         version: 'v0.1.10',
         language: 'zh',
         page: 'room',
@@ -545,7 +573,7 @@ describe('feedback draft', () => {
     );
     const { title, body } = drafted('1');
     expect(title).toBe('Bug: The board is gone.');
-    expect(body).toBe(`A bug report ${AGREED}\n\n> The board is gone\\.\n\nReported by Ann L.`);
+    expect(body).toBe(`A bug report ${SENT}\n\n> The board is gone\\.\n\nReported by Ann L.`);
     // No contact, link, account, version, language, page, browser, time or id.
     expect(`${title}\n${body}`).not.toMatch(
       /wechat|r2|ann\.example|account|v0\.1\.10|Chinese|zh|room|Mozilla|20\d\d|#1/,
@@ -554,44 +582,43 @@ describe('feedback draft', () => {
 
   test('opens by the kind, as the status page calls it, and names who sent it, or an anonymous player', () => {
     const store = new FeedbackStore(database.db);
-    for (const kind of ['idea', 'game', 'bug', 'words'] as const)
-      store.add(feedback({ kind, credit: 'Ann', publicIssue: true }));
-    for (const kind of ['idea', 'bug'] as const) store.add(feedback({ kind, publicIssue: true }));
+    for (const kind of ['idea', 'game', 'bug', 'words'] as const) store.add(feedback({ kind, credit: 'Ann' }));
+    for (const kind of ['idea', 'bug'] as const) store.add(feedback({ kind }));
     expect(drafted('1')).toEqual({
       id: 1,
       kind: 'idea',
       title: 'Idea: A timer, please.',
-      body: `An idea ${AGREED}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
+      body: `An idea ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
     });
     expect(drafted('2')).toMatchObject({
       title: 'New game: A timer, please.',
-      body: `An idea for a new game ${AGREED}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
+      body: `An idea for a new game ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
     });
     expect(drafted('3')).toMatchObject({
       title: 'Bug: A timer, please.',
-      body: `A bug report ${AGREED}\n\n> A timer\\, please\\.\n\nReported by Ann.`,
+      body: `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by Ann.`,
     });
     expect(drafted('4')).toMatchObject({
       title: 'Word lists: A timer, please.',
-      body: `A suggestion for the word lists ${AGREED}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
+      body: `A suggestion for the word lists ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
     });
-    expect(drafted('5').body).toBe(`An idea ${AGREED}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
-    expect(drafted('6').body).toBe(`A bug report ${AGREED}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
+    expect(drafted('5').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
+    expect(drafted('6').body).toBe(`A bug report ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
   });
 
   test('takes the first line for the title, on one line, cut after 60 characters that a reader sees', () => {
     const store = new FeedbackStore(database.db);
     const han = '\u6c49';
     const family = '\u{1f468}\u200d\u{1f469}\u200d\u{1f467}';
-    store.add(feedback({ text: `${'x'.repeat(60)}\nThe second line`, publicIssue: true }));
-    store.add(feedback({ text: 'x'.repeat(61), publicIssue: true }));
-    store.add(feedback({ text: han.repeat(61), publicIssue: true }));
-    store.add(feedback({ text: `${'x'.repeat(59)}${family}${family}`, publicIssue: true }));
-    store.add(feedback({ text: ' Spaced \t  out \nand more', publicIssue: true }));
-    store.add(feedback({ text: `${'x'.repeat(59)} and more`, publicIssue: true }));
-    store.add(feedback({ text: family.repeat(61), publicIssue: true }));
+    store.add(feedback({ text: `${'x'.repeat(60)}\nThe second line` }));
+    store.add(feedback({ text: 'x'.repeat(61) }));
+    store.add(feedback({ text: han.repeat(61) }));
+    store.add(feedback({ text: `${'x'.repeat(59)}${family}${family}` }));
+    store.add(feedback({ text: ' Spaced \t  out \nand more' }));
+    store.add(feedback({ text: `${'x'.repeat(59)} and more` }));
+    store.add(feedback({ text: family.repeat(61) }));
     const chain = Array.from({ length: 80 }, () => '\u{1f468}').join('\u200d');
-    store.add(feedback({ text: `${chain} and more`, publicIssue: true }));
+    store.add(feedback({ text: `${chain} and more` }));
     expect(drafted('1').title).toBe(`Idea: ${'x'.repeat(60)}`);
     expect(drafted('2').title).toBe(`Idea: ${'x'.repeat(60)}\u2026`);
     expect(drafted('3').title).toBe(`Idea: ${han.repeat(60)}\u2026`);
@@ -612,9 +639,9 @@ describe('feedback draft', () => {
 
   test('quotes every line of the text as one quotation, with a blank line as a bare >', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ kind: 'bug', text: 'Steps:\n1. Lock the phone\n\n2. Come back', publicIssue: true }));
+    store.add(feedback({ kind: 'bug', text: 'Steps:\n1. Lock the phone\n\n2. Come back' }));
     expect(drafted('1').body).toBe(
-      `A bug report ${AGREED}\n\n> Steps\\:\n> 1\\. Lock the phone\n>\n> 2\\. Come back\n\nSent by an anonymous player.`,
+      `A bug report ${SENT}\n\n> Steps\\:\n> 1\\. Lock the phone\n>\n> 2\\. Come back\n\nSent by an anonymous player.`,
     );
   });
 
@@ -630,7 +657,6 @@ describe('feedback draft', () => {
           '7ccd7e7e3bd9256e1cb82d4993944a842502dc58 :+1: at 10:30:45, by the feedback form\n' +
           '$x^2$ costs $5 or $$\\color{red}{\\Huge y}$$\n$$\n\\sum\n$$',
         credit: '[@bob](#1)',
-        publicIssue: true,
       }),
     );
     const { title, body } = drafted('1');
@@ -646,7 +672,7 @@ describe('feedback draft', () => {
     // row, are left alone.
     expect(body).toBe(
       [
-        `A bug report ${AGREED}`,
+        `A bug report ${SENT}`,
         '',
         `> \\# Heading \\@${ZWSP}octocat\\, see \\#${ZWSP}12\\, GH\\-${ZWSP}13 and f${ZWSP}bcd508 \\:${ZWSP}tada\\:`,
         '>',
@@ -669,8 +695,8 @@ describe('feedback draft', () => {
 
   test('keeps the quotation from becoming an alert', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ text: '[!WARNING]\nDanger ahead', publicIssue: true }));
-    store.add(feedback({ text: '[!note]\n\nSee [!tip] here', kind: 'bug', publicIssue: true }));
+    store.add(feedback({ text: '[!WARNING]\nDanger ahead' }));
+    store.add(feedback({ text: '[!note]\n\nSee [!tip] here', kind: 'bug' }));
     // GitHub shows a quotation whose first line is [!NOTE], [!TIP], [!IMPORTANT], [!WARNING] or
     // [!CAUTION] alone, in any case, as an alert, once Markdown has taken the backslashes away, so
     // a zero-width space follows the [ of every [!.
@@ -686,16 +712,16 @@ describe('feedback draft', () => {
 
   test('leaves a time, a date, a fraction and a word of few hexadecimal digits alone', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ text: 'Froze at 10:30:45 on 10/13, 1/2 of the time, with feedback', publicIssue: true }));
+    store.add(feedback({ text: 'Froze at 10:30:45 on 10/13, 1/2 of the time, with feedback' }));
     const { title, body } = drafted('1');
     expect(title).toBe('Idea: Froze at 10:30:45 on 10/13, 1/2 of the time, with feedback');
     expect(body).not.toContain(ZWSP);
   });
 
-  test('escapes a name as the acknowledgments do, and unlinks it', () => {
+  test('escapes a name as the lists of thanks do, and unlinks it', () => {
     const store = new FeedbackStore(database.db);
     for (const credit of ['--Ann', '#1 fan', '<b>Ann</b>', '@octocat', 'Dr. Who', '$\\Huge Ann$']) {
-      store.add(feedback({ credit, publicIssue: true }));
+      store.add(feedback({ credit }));
     }
     const signed = (id: string) => drafted(id).body.split('\n').at(-1);
     expect(signed('1')).toBe('Suggested by \\-\\-Ann.');
@@ -706,16 +732,12 @@ describe('feedback draft', () => {
     expect(signed('6')).toBe(`Suggested by ${ZWSP}\\$\\\\Huge Ann${ZWSP}\\$.`);
   });
 
-  test("refuses feedback whose player didn't agree or wasn't asked, in the trash, published already, or not there", () => {
+  test('refuses feedback in the trash, published already, or not there, and drafts any other', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback());
-    store.add(feedback({ publicIssue: null }));
-    store.add(feedback({ publicIssue: true }));
-    store.add(feedback({ publicIssue: true }));
-    store.add(feedback({ publicIssue: true }));
-    const refused = "The player didn't agree to feedback #1 being published as an issue.";
-    expect(draft('1')).toEqual({ code: 1, lines: [refused] });
-    expect(draft('2')).toEqual({ code: 1, lines: [refused.replace('#1', '#2')] });
+    for (let i = 0; i < 5; i += 1) store.add(feedback());
+    // Any feedback is drafted: every adopted piece is an issue.
+    expect(draft('1').code).toBe(0);
+    expect(draft('2').code).toBe(0);
     expect(run('feedback', 'delete', '3')).toBe(0);
     printed = [];
     expect(draft('3')).toEqual({
@@ -740,11 +762,11 @@ describe('feedback draft', () => {
     // A kind from a later server, which this one was rolled back from, has no title or opening.
     database.db.exec("UPDATE feedback SET kind = 'later' WHERE id = 5");
     expect(draft('5')).toEqual({ code: 1, lines: ["This build doesn't know the kind later of feedback #5."] });
-    expect(draft('1', '--json').code).toBe(1);
+    expect(draft('3', '--json').code).toBe(1);
   });
 
   test('only reads, on a database that no server has open, and leaves no WAL behind', () => {
-    new FeedbackStore(database.db).add(feedback({ publicIssue: true }));
+    new FeedbackStore(database.db).add(feedback());
     database.db.close();
     expect(draft('1').code).toBe(0);
     expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
@@ -752,9 +774,9 @@ describe('feedback draft', () => {
 });
 
 describe('feedback issue', () => {
-  test('records the issue that feedback was published as, if its player agreed', () => {
+  test('records the issue that feedback was published as', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ publicIssue: true }));
+    store.add(feedback());
     store.add(feedback());
     expect(run('feedback', 'issue', '1', '42')).toBe(0);
     expect(printed.at(-1)).toBe('Feedback #1 is issue #42, https://github.com/jxxsteven7/reviewer2/issues/42.');
@@ -765,9 +787,8 @@ describe('feedback issue', () => {
       'Feedback #1 is issue #43, https://github.com/jxxsteven7/reviewer2/issues/43, no longer #42.',
     );
 
-    expect(run('feedback', 'issue', '2', '44')).toBe(1);
-    expect(printed.at(-1)).toBe("The player didn't agree to feedback #2 being published as an issue.");
-    expect(store.byId(2)?.issue).toBeNull();
+    expect(run('feedback', 'issue', '2', '44')).toBe(0);
+    expect(store.byId(2)?.issue).toBe(44);
     for (const number of ['0', '-1', '4.5', 'x']) {
       expect(run('feedback', 'issue', '1', number)).toBe(1);
       expect(printed.at(-1)).toBe(`${number} is not the number of an issue.`);
@@ -776,68 +797,41 @@ describe('feedback issue', () => {
     expect(printed.at(-1)).toBe('There is no feedback #3.');
     expect(store.byId(1)?.issue).toBe(43);
   });
-
-  test('says how to put the entry right once the feedback is adopted', () => {
-    const store = new FeedbackStore(database.db);
-    store.add(feedback({ credit: 'Ann', publicIssue: true }));
-    store.add(feedback({ credit: 'Bob', publicIssue: true }));
-
-    // Adopted first, the entry was printed without a number, for the operator to add it.
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed.at(-1)).toBe('- Ann \u{2014} <what they did>');
-    expect(run('feedback', 'issue', '1', '42')).toBe(0);
-    expect(printed.at(-1)).toBe('Put (#42) at the end of its entry in ACKNOWLEDGMENTS.md.');
-
-    // Recorded first, the entry was printed with the number; a new one replaces it.
-    expect(run('feedback', 'issue', '2', '43')).toBe(0);
-    expect(run('feedback', 'adopt', '2')).toBe(0);
-    expect(printed.at(-1)).toBe('- Bob \u{2014} <what they did> (#43)');
-    expect(run('feedback', 'issue', '2', '43')).toBe(0);
-    expect(printed.at(-1)).toBe('Feedback #2 is issue #43, https://github.com/jxxsteven7/reviewer2/issues/43.');
-    expect(run('feedback', 'issue', '2', '44')).toBe(0);
-    expect(printed.slice(-2)).toEqual([
-      'Feedback #2 is issue #44, https://github.com/jxxsteven7/reviewer2/issues/44, no longer #43.',
-      'Replace (#43) with (#44) in its entry in ACKNOWLEDGMENTS.md.',
-    ]);
-  });
 });
 
 describe('feedback issue --clear', () => {
-  test('takes the issue out, and says how to put the entry right once the feedback is adopted', () => {
+  test("takes the issue out, of feedback that wasn't adopted", () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ credit: 'Ann', publicIssue: true }));
-    store.add(feedback({ publicIssue: true }));
+    store.add(feedback({ credit: 'Ann' }));
+    store.add(feedback());
     expect(run('feedback', 'issue', '1', '--clear')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 has no issue recorded.');
     expect(run('feedback', 'issue', '1', '42')).toBe(0);
     expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
     expect(printed.at(-1)).toBe('Feedback #1 is no longer recorded as issue #42.');
     expect(store.byId(1)).toMatchObject({ issue: null, status: 'new', text: 'A timer, please.' });
-    // Clearing takes no agreement, as recording does: a mistake must be put right either way.
     expect(run('feedback', 'issue', '2', '43')).toBe(0);
-    database.db.exec('UPDATE feedback SET public_issue = 0 WHERE id = 2');
     expect(run('feedback', 'issue', '2', '--clear')).toBe(0);
     expect(store.byId(2)?.issue).toBeNull();
+    // Adopted feedback keeps its issue, which the home page links.
     expect(run('feedback', 'issue', '1', '44')).toBe(0);
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
-    expect(printed.slice(-2)).toEqual([
-      'Feedback #1 is no longer recorded as issue #44.',
-      'Take (#44) out of its entry in ACKNOWLEDGMENTS.md.',
-    ]);
+    expect(adopt('1')).toBe(0);
+    expect(run('feedback', 'issue', '1', '--clear')).toBe(1);
+    expect(store.byId(1)?.issue).toBe(44);
     expect(run('feedback', 'issue', '3', '--clear')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #3.');
   });
 
-  test('says where the feedback is when it is in the trash, like resolve', () => {
+  test('refuses an issue for feedback in the trash, and says where it is when one is taken back', () => {
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ publicIssue: true }));
+    store.add(feedback());
     expect(run('feedback', 'delete', '1')).toBe(0);
-    expect(run('feedback', 'issue', '1', '42')).toBe(0);
-    expect(printed.slice(-2)).toEqual([
-      'Feedback #1 is issue #42, https://github.com/jxxsteven7/reviewer2/issues/42.',
-      'It is in the trash, by the way: feedback restore 1 brings it back.',
-    ]);
+    // The trash would delete it in 30 days, with its issue still public.
+    expect(run('feedback', 'issue', '1', '42')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #1 is in the trash. Restore it first: feedback restore 1.');
+    expect(store.byId(1)).toMatchObject({ issue: null });
+    // Feedback that went to the trash before the rule may have one all the same.
+    store.setIssue(1, 42);
     expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
     expect(printed.slice(-2)).toEqual([
       'Feedback #1 is no longer recorded as issue #42.',
@@ -853,51 +847,11 @@ describe('feedback issue --clear', () => {
   });
 });
 
-describe('the entry of adopted feedback', () => {
-  // The entry ends in the issue's number, or the pull request's when there is no issue, and the
-  // hints follow the number as the notes change it.
-  test('is put right as the issue and the pull request come and go', () => {
-    const store = new FeedbackStore(database.db);
-    store.add(feedback({ credit: 'Bob', publicIssue: true }));
-    expect(run('feedback', 'resolve', '1', '50')).toBe(0);
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(printed.at(-1)).toBe('- Bob \u{2014} <what they did> (#50)');
-    expect(run('feedback', 'issue', '1', '42')).toBe(0);
-    expect(printed.at(-1)).toBe('Replace (#50) with (#42) in its entry in ACKNOWLEDGMENTS.md.');
-    expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
-    expect(printed.at(-1)).toBe('Replace (#42) with (#50) in its entry in ACKNOWLEDGMENTS.md.');
-    expect(run('feedback', 'resolve', '1', '51')).toBe(0);
-    expect(printed.at(-1)).toBe('Replace (#50) with (#51) in its entry in ACKNOWLEDGMENTS.md.');
-    expect(run('feedback', 'resolve', '1', '51')).toBe(0);
-    expect(printed.at(-1)).toBe('Feedback #1 is resolved by PR #51, https://github.com/jxxsteven7/reviewer2/pull/51.');
-    expect(run('feedback', 'resolve', '1', '--clear')).toBe(0);
-    expect(printed.at(-1)).toBe('Take (#51) out of its entry in ACKNOWLEDGMENTS.md.');
-    expect(run('feedback', 'resolve', '1', '52')).toBe(0);
-    expect(printed.at(-1)).toBe('Put (#52) at the end of its entry in ACKNOWLEDGMENTS.md.');
-    expect(run('feedback', 'issue', '1', '43')).toBe(0);
-    expect(printed.at(-1)).toBe('Replace (#52) with (#43) in its entry in ACKNOWLEDGMENTS.md.');
-    // With an issue, the pull request isn't in the entry, so it can change without a word.
-    expect(run('feedback', 'resolve', '1', '53')).toBe(0);
-    expect(printed.at(-1)).toBe(
-      'Feedback #1 is resolved by PR #53, https://github.com/jxxsteven7/reviewer2/pull/53, no longer #52.',
-    );
-    expect(run('feedback', 'resolve', '1', '--clear')).toBe(0);
-    expect(printed.at(-1)).toBe('Feedback #1 is no longer recorded as resolved by PR #53.');
-    expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
-    expect(printed.at(-1)).toBe('Take (#43) out of its entry in ACKNOWLEDGMENTS.md.');
-    // Not adopted, there is no entry to put right.
-    store.add(feedback({ publicIssue: true }));
-    expect(run('feedback', 'resolve', '2', '54')).toBe(0);
-    expect(run('feedback', 'issue', '2', '44')).toBe(0);
-    expect(printed.at(-1)).toBe('Feedback #2 is issue #44, https://github.com/jxxsteven7/reviewer2/issues/44.');
-  });
-});
-
 describe('feedback resolve', () => {
   test('records the pull request that resolved any feedback, which can be changed or cleared', () => {
     const store = new FeedbackStore(database.db);
     store.add(feedback());
-    store.add(feedback({ publicIssue: true }));
+    store.add(feedback());
     expect(run('feedback', 'resolve', '1', '50')).toBe(0);
     expect(printed.at(-1)).toBe('Feedback #1 is resolved by PR #50, https://github.com/jxxsteven7/reviewer2/pull/50.');
     expect(store.byId(1)).toMatchObject({ resolvedPr: 50, status: 'resolved', text: 'A timer, please.' });
@@ -964,21 +918,24 @@ describe('feedback delete, restore and trash', () => {
     const NOW = Date.UTC(2026, 10, 1, 9);
     vi.useFakeTimers({ now: NOW });
     const store = new FeedbackStore(database.db);
-    store.add(feedback({ text: 'BUY CHEAP WATCHES\nat spam.example', publicIssue: true }));
+    store.add(feedback({ text: 'BUY CHEAP WATCHES\nat spam.example' }));
     store.add(feedback({ kind: 'bug', text: 'x'.repeat(70) }));
     store.add(feedback({ credit: 'Ann' }));
     expect(run('feedback', 'trash')).toBe(0);
     expect(printed).toEqual(['The trash is empty.']);
-    expect(run('feedback', 'issue', '1', '42')).toBe(0);
+    expect(run('feedback', 'resolve', '1', '50')).toBe(0);
     expect(run('feedback', 'close', '2')).toBe(0);
 
     expect(run('feedback', 'delete', '1')).toBe(0);
-    expect(printed.slice(-2)).toEqual([
+    expect(printed.at(-1)).toBe(
       'Moved feedback #1 to the trash. The server deletes it for good in 30 days; feedback restore 1 brings it ' +
         'back before then.',
-      'Issue #42 stays as it is on GitHub; close it there if need be.',
-    ]);
-    expect(store.byId(1)).toMatchObject({ status: 'trash', issue: 42, text: 'BUY CHEAP WATCHES\nat spam.example' });
+    );
+    expect(store.byId(1)).toMatchObject({
+      status: 'trash',
+      resolvedPr: 50,
+      text: 'BUY CHEAP WATCHES\nat spam.example',
+    });
     vi.setSystemTime(NOW + 3 * 24 * 60 * 60_000 + 1);
     expect(run('feedback', 'delete', '2')).toBe(0);
     expect(printed.at(-1)).toBe(
@@ -994,13 +951,11 @@ describe('feedback delete, restore and trash', () => {
       `#2  2026-11-04  30 days left  bug  ${'x'.repeat(60)}...`,
       '#1  2026-11-01  27 days left  idea  BUY CHEAP WATCHES / at spam.example',
     ]);
-    // The feedback adopted can't go, since its acknowledgment points at it.
-    expect(run('feedback', 'adopt', '3')).toBe(0);
+    // The feedback adopted can't go, since the home page lists it.
+    store.setIssue(3, 45);
+    expect(adopt('3')).toBe(0);
     expect(run('feedback', 'delete', '3')).toBe(1);
-    expect(printed.at(-1)).toBe(
-      "Feedback #3 was adopted as acknowledgment #1, which points at it, so it can't be deleted. Close it " +
-        'instead: feedback close 3.',
-    );
+    expect(printed.at(-1)).toBe("Feedback #3 was adopted, and the home page lists it, so it can't be deleted.");
     expect(store.byId(3)?.status).toBe('thanked');
 
     // Back out of the trash, closed if it was.
@@ -1009,7 +964,7 @@ describe('feedback delete, restore and trash', () => {
     expect(store.byId(2)).toMatchObject({ status: 'closed', deletedAt: null });
     expect(run('feedback', 'restore', '1')).toBe(0);
     expect(printed.at(-1)).toBe('Restored feedback #1 from the trash.');
-    expect(store.byId(1)).toMatchObject({ status: 'issue', deletedAt: null });
+    expect(store.byId(1)).toMatchObject({ status: 'resolved', deletedAt: null });
     expect(run('feedback', 'restore', '1')).toBe(1);
     expect(printed.at(-1)).toBe("Feedback #1 isn't in the trash.");
     expect(run('feedback', 'trash')).toBe(0);
@@ -1021,6 +976,25 @@ describe('feedback delete, restore and trash', () => {
     expect(store.count()).toBe(3);
   });
 
+  test('keep feedback that is a GitHub issue, which is public, out of the trash: it is closed instead', () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback());
+    expect(run('feedback', 'issue', '1', '42')).toBe(0);
+    for (const closed of [false, true]) {
+      expect(run('feedback', 'delete', '1')).toBe(1);
+      expect(printed.at(-1)).toBe(
+        "Feedback #1 is issue #42, which is public, so it can't be deleted: close it instead with feedback close 1. " +
+          'If the issue was recorded by mistake, take it back first with feedback issue 1 --clear.',
+      );
+      expect(store.byId(1)).toMatchObject({ deletedAt: null, issue: 42, status: closed ? 'closed' : 'issue' });
+      if (!closed) expect(run('feedback', 'close', '1')).toBe(0);
+    }
+    // Taken back as a mistake, it may go.
+    expect(run('feedback', 'issue', '1', '--clear')).toBe(0);
+    expect(run('feedback', 'delete', '1')).toBe(0);
+    expect(store.byId(1)?.status).toBe('trash');
+  });
+
   test('show feedback adopted on its way to the trash as kept there, not as purged any day', () => {
     const NOW = Date.UTC(2026, 10, 1, 9);
     vi.useFakeTimers({ now: NOW });
@@ -1030,7 +1004,7 @@ describe('feedback delete, restore and trash', () => {
     expect(run('feedback', 'delete', '1')).toBe(0);
     expect(run('feedback', 'delete', '2')).toBe(0);
     // As `feedback adopt` would have, had it read the feedback just before it went to the trash.
-    accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: 1, accountId: null });
+    database.db.exec("UPDATE feedback SET adopted_at = '2026-11-01T09:00:00.000Z' WHERE id = 1");
     vi.setSystemTime(NOW + 31 * 24 * 60 * 60_000);
     expect(run('feedback', 'trash')).toBe(0);
     expect(printed.slice(-2)).toEqual([
@@ -1042,7 +1016,7 @@ describe('feedback delete, restore and trash', () => {
     expect(run('feedback', 'delete', '2')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #2 is in the trash already, 0 days left.');
     expect(store.purge()).toBe(1);
-    expect(store.byId(1)).toMatchObject({ status: 'trash', acknowledgmentId: 1 });
+    expect(store.byId(1)).toMatchObject({ status: 'trash', adoptedAt: '2026-11-01T09:00:00.000Z' });
   });
 
   test('say what another command did meanwhile when the feedback can no longer go to the trash', () => {
@@ -1058,10 +1032,15 @@ describe('feedback delete, restore and trash', () => {
         return original.call(this, id);
       });
     };
-    meanwhile((id) => accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: id, accountId: null }));
+    meanwhile((id) => store.adopt(id, { zh: ZH, en: EN }));
     expect(run('feedback', 'delete', '1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 was adopted just now, so it stays.');
-    expect(store.byId(1)).toMatchObject({ deletedAt: null, acknowledgmentId: 1 });
+    expect(store.byId(1)).toMatchObject({ deletedAt: null, summaryEn: EN });
+    store.add(feedback());
+    meanwhile((id) => store.setIssue(id, 42));
+    expect(run('feedback', 'delete', '4')).toBe(1);
+    expect(printed.at(-1)).toBe('Feedback #4 was recorded as an issue just now, so it stays.');
+    expect(store.byId(4)).toMatchObject({ deletedAt: null, issue: 42 });
     meanwhile((id) => original.call(store, id));
     expect(run('feedback', 'delete', '2')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #2 was moved to the trash just now.');
@@ -1094,107 +1073,5 @@ describe('feedback delete, restore and trash', () => {
     expect(run('feedback', 'delete', '1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, 0 days left.');
     expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
-  });
-});
-
-describe('acknowledgments', () => {
-  test('are added by hand, with the entry for ACKNOWLEDGMENTS.md, and listed', () => {
-    accounts.store.create('Bob', 'bob', 'hash');
-    expect(run('acknowledgments', 'list')).toBe(0);
-    expect(printed.at(-1)).toBe('No acknowledgments yet.');
-
-    expect(run('acknowledgments', 'add', ' Bob  B ', '--kind', 'playtesting', '--account', 'bob')).toBe(0);
-    expect(printed.slice(-3)).toEqual([
-      'Added acknowledgment #1: Bob B, for Pilot study, counted for the account Bob.',
-      'For ACKNOWLEDGMENTS.md, under "## Pilot study", once you say what they did in English:',
-      '- Bob B \u{2014} <what they did>',
-    ]);
-    expect(printedEntry('Pilot study').problems).toEqual([]);
-    expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words', '--no-account')).toBe(0);
-    expect(printed.at(-3)).toBe('Added acknowledgment #2: Cat, for Data, counted for no account.');
-    expect(run('acknowledgments', 'add', 'x'.repeat(17), '--kind', 'words', '--no-account')).toBe(1);
-    expect(printed.at(-1)).toBe('The name must have 1 to 16 visible characters, as a nickname does.');
-    expect(run('acknowledgments', 'add', ' ', '--kind', 'words', '--no-account')).toBe(1);
-    expect(printed.at(-1)).toBe('The name must have 1 to 16 visible characters, as a nickname does.');
-    expect(run('acknowledgments', 'add', 'Reviewer 2', '--kind', 'words', '--no-account')).toBe(1);
-    expect(printed.at(-1)).toBe('Reviewer 2 is a reserved name, which no nickname may be either.');
-    expect(run('acknowledgments', 'add', 'Dan', '--kind', 'praise', '--no-account')).toBe(2);
-    expect(printed.at(-1)).toBe('--kind must be one of feedback, words, playtesting.');
-    expect(run('acknowledgments', 'add', 'Dan', '--kind', 'words', '--account', 'Nobody')).toBe(1);
-    expect(printed.at(-1)).toBe('No account is called Nobody.');
-    expect(accounts.acknowledgments.all()).toHaveLength(2);
-
-    expect(run('acknowledgments', 'list')).toBe(0);
-    expect(printed.at(-1)).toBe(
-      [
-        `#1  ${new Date().toISOString().slice(0, 10)}  playtesting  -  Bob B  (account Bob)`,
-        `#2  ${new Date().toISOString().slice(0, 10)}  words        -  Cat`,
-      ].join('\n'),
-    );
-  });
-
-  test('say either which account they count for or that there is none, so that none is left out', () => {
-    accounts.store.create('Bob', 'bob', 'hash');
-    // The reason, then the usage of this command alone.
-    const told = [
-      'Add --account <username> or --no-account, one or the other, to say whether it counts for an account, ' +
-        "so that one isn't left out by mistake.",
-      'usage: admin.cjs acknowledgments add <name> --kind feedback|words|playtesting --account <username>|--no-account',
-    ];
-    expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting')).toBe(2);
-    expect(printed.slice(-2)).toEqual(told);
-    expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting', '--account', 'bob', '--no-account')).toBe(2);
-    expect(printed.slice(-2)).toEqual(told);
-    expect(accounts.acknowledgments.all()).toEqual([]);
-    expect(run('acknowledgments', 'add', 'Bob', '--no-account', '--kind', 'playtesting')).toBe(0);
-    expect(printed.at(-3)).toBe('Added acknowledgment #1: Bob, for Pilot study, counted for no account.');
-    expect(run('acknowledgments', 'add', 'Bob', '--account', 'bob', '--kind', 'playtesting')).toBe(0);
-    expect(printed.at(-3)).toBe('Added acknowledgment #2: Bob, for Pilot study, counted for the account Bob.');
-  });
-
-  test('are listed in columns that line up whatever the names are made of', () => {
-    accounts.store.create('\u5f20\u4e09', usernameKey('\u5f20\u4e09'), 'hash');
-    const store = new FeedbackStore(database.db);
-    for (let id = 1; id <= 11; id += 1) store.add(feedback());
-    store.add(feedback({ credit: '\u674e\u56db' }));
-    expect(run('feedback', 'adopt', '12')).toBe(0);
-    expect(run('acknowledgments', 'add', '\u5f20\u4e09\u4e30', '--kind', 'words', '--account', '\u5f20\u4e09')).toBe(0);
-    expect(run('acknowledgments', 'add', 'Bob', '--kind', 'playtesting', '--no-account')).toBe(0);
-    expect(run('feedback', 'adopt', '1')).toBe(0);
-    expect(run('acknowledgments', 'list')).toBe(0);
-    // A terminal shows a Chinese character two columns wide, so the names and the usernames come
-    // after the columns.
-    const day = new Date().toISOString().slice(0, 10);
-    expect(printed.at(-1)?.split('\n')).toEqual([
-      `#1  ${day}  feedback     feedback #12  \u674e\u56db`,
-      `#2  ${day}  words        -             \u5f20\u4e09\u4e30  (account \u5f20\u4e09)`,
-      `#3  ${day}  playtesting  -             Bob`,
-      `#4  ${day}  feedback     feedback #1   (anonymous)`,
-    ]);
-  });
-
-  test('are listed on a database that no server has open, leaving nothing behind', () => {
-    expect(run('acknowledgments', 'add', 'Cat', '--kind', 'words', '--no-account')).toBe(0);
-    database.db.close();
-    rmSync(join(dir, AVATAR_DIR), { recursive: true });
-    expect(run('acknowledgments', 'list')).toBe(0);
-    expect(printed.at(-1)).toMatch(/^#1 .* Cat$/);
-    // It only reads: neither the WAL's files nor the avatars' directory are left behind.
-    expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
-    expect(existsSync(join(dir, AVATAR_DIR))).toBe(false);
-  });
-
-  test('take a name that begins with --, as a nickname may, and print it escaped', () => {
-    expect(run('acknowledgments', 'add', '--Ann', '--kind', 'words', '--no-account')).toBe(0);
-    expect(printed.at(-3)).toBe('Added acknowledgment #1: --Ann, for Data, counted for no account.');
-    expect(printed.at(-1)).toBe('- \\-\\-Ann \u{2014} <what they did>');
-    expect(printedEntry('Data').sections[0]?.entries[0]?.name).toBe('--Ann');
-  });
-
-  test('call the kinds as the interface does', () => {
-    const en = JSON.parse(readFileSync(new URL('../../client/src/locales/en.json', import.meta.url), 'utf8')) as {
-      acknowledgments: { kinds: Record<string, string> };
-    };
-    expect(ACKNOWLEDGMENT_HEADINGS).toEqual(en.acknowledgments.kinds);
   });
 });

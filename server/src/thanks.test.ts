@@ -111,9 +111,13 @@ describe('the lists of thanks', () => {
   test('are the bundled ones without a directory', () => {
     const bundled = new ThanksLists(null, () => expect.fail('nothing to log'), BUNDLED);
     expect(JSON.parse(bundled.answer('sponsors'))).toEqual({ ok: true, sections: bundledSponsors });
-    expect(sections(bundled.answer('acknowledgments'))).toEqual([
-      { kind: 'words', entries: [{ name: 'Ann', link: null, contribution: 'added words' }] },
-    ]);
+    expect(JSON.parse(bundled.answer('acknowledgments'))).toEqual({
+      ok: true,
+      blocks: [
+        { kind: 'heading', level: 2, pieces: [{ kind: 'text', text: 'Data' }] },
+        { kind: 'list', items: [[{ kind: 'text', text: 'Ann \u{2014} added words' }]] },
+      ],
+    });
     // By default, as the build bundled them, which is the repository's when running from source.
     const repository = new ThanksLists(null, () => {});
     expect(sections(repository.answer('sponsors'))).toEqual(
@@ -135,9 +139,42 @@ describe('the lists of thanks', () => {
     ]);
     expect(logs).toHaveLength(2);
     // The other list has no file here, so it is the bundled one.
-    expect(sections(lists.answer('acknowledgments'))).toEqual(
-      sections(new ThanksLists(null, () => {}, BUNDLED).answer('acknowledgments')),
-    );
+    expect(lists.answer('acknowledgments')).toBe(new ThanksLists(null, () => {}, BUNDLED).answer('acknowledgments'));
+  });
+
+  test('read the acknowledgments as the maintainers write them, and refuse what GitHub would show otherwise', () => {
+    const path = join(dir, 'ACKNOWLEDGMENTS.md');
+    write('# Acknowledgments\n\nThanks to **Ann**, who [tested](https://ann.example/) it.\n\n- Bob\n', path);
+    expect(JSON.parse(lists.answer('acknowledgments'))).toEqual({
+      ok: true,
+      blocks: [
+        {
+          kind: 'paragraph',
+          pieces: [
+            { kind: 'text', text: 'Thanks to ' },
+            { kind: 'strong', text: 'Ann' },
+            { kind: 'text', text: ', who ' },
+            { kind: 'link', text: 'tested', href: 'https://ann.example/' },
+            { kind: 'text', text: ' it.' },
+          ],
+        },
+        { kind: 'list', items: [[{ kind: 'text', text: 'Bob' }]] },
+      ],
+    });
+    expect(logs).toEqual([{ event: 'thanks_list_read', fields: { file: path, entries: 2 } }]);
+    write('# Acknowledgments\n\nThanks to <b>Ann</b>.\n', path);
+    expect(lists.answer('acknowledgments')).toBe(new ThanksLists(null, () => {}, BUNDLED).answer('acknowledgments'));
+    expect(logs.at(-1)).toEqual({
+      event: 'thanks_list_skipped',
+      fields: {
+        file: path,
+        reason: 'breaks the rules',
+        problems: 1,
+        line: 3,
+        message: 'Leave HTML out: the home page shows no tags.',
+        shown: 'bundled',
+      },
+    });
   });
 
   test('fall back to the bundled ones for a file that cannot be used, and say why once', () => {

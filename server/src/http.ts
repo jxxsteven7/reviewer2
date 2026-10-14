@@ -1,12 +1,13 @@
 import { existsSync } from 'node:fs';
 import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http';
-import { LIST_API, type ListName } from '@reviewer2/shared';
+import { CONTRIBUTIONS_API, LIST_API, type Contribution, type ListName } from '@reviewer2/shared';
 import sirv from 'sirv';
 import type { ThanksLists } from './thanks';
 
 // HTTP for everything that isn't Socket.IO: the built front end, with the SPA fallback to
-// index.html for routes such as /room/K7QX, /healthz, the lists of thanks for the home page
-// (thanks.ts), and the account API under /api with the avatars under /avatars
+// index.html for routes such as /room/K7QX, /healthz, the lists of thanks and the feedback
+// contributions for the home page (thanks.ts, store/feedback.ts), and the account API under /api
+// with the avatars under /avatars
 // (accounts/http.ts). docs/architecture.md describes what it answers and why; the reasons for each
 // header are also beside the code that sets it.
 
@@ -14,6 +15,8 @@ export interface HttpOptions {
   publicDir: string;
   version: string;
   lists: ThanksLists;
+  // The feedback contributions, as anyone may see them, read from the database at each request.
+  contributions: () => Contribution[];
   // Answers the paths that it knows, the account API's, and says whether it did.
   accounts?: (req: IncomingMessage, res: ServerResponse, path: string) => boolean;
   log?: (event: string, fields?: Record<string, unknown>) => void;
@@ -78,7 +81,14 @@ export function pathOf(target: string): string {
 
 const NOT_BUILT = 'The front end has not been built. Run npm run build and restart the server, or use npm run dev.\n';
 
-export function createRequestHandler({ publicDir, version, lists, accounts, log }: HttpOptions): RequestListener {
+export function createRequestHandler({
+  publicDir,
+  version,
+  lists,
+  contributions,
+  accounts,
+  log,
+}: HttpOptions): RequestListener {
   const startedAt = Date.now();
   // sirv lists the files when it starts, so it only serves the front end that was built then.
   // A new build needs a restart: until then, a new index.html would name assets sirv doesn't know.
@@ -88,13 +98,18 @@ export function createRequestHandler({ publicDir, version, lists, accounts, log 
     setSecurityHeaders(req, res);
     const path = pathOf(req.url ?? '/');
     const list = LISTS.get(path);
-    if (list !== undefined) {
+    if (list !== undefined || path === CONTRIBUTIONS_API) {
       if (!methodAllowed(req, res)) return;
       // An error here would end the process, since nothing else catches it.
       try {
-        send(res, 200, 'application/json', lists.answer(list));
+        const body =
+          list === undefined ? JSON.stringify({ ok: true, contributions: contributions() }) : lists.answer(list);
+        send(res, 200, 'application/json', body);
       } catch (error) {
-        log?.('error', { where: 'lists', message: error instanceof Error ? error.message : String(error) });
+        log?.('error', {
+          where: list === undefined ? 'contributions' : 'lists',
+          message: error instanceof Error ? error.message : String(error),
+        });
         send(res, 500, 'application/json', JSON.stringify({ ok: false, error: 'internal' }));
       }
       return;

@@ -1,4 +1,4 @@
-import type { AcknowledgmentCount } from './acknowledgments';
+import type { ContributionCount } from './contributions';
 import type { DuoView } from './duos';
 import type { Rank } from './ranks';
 import { cleanName } from './names';
@@ -141,7 +141,7 @@ export interface TitleCount {
 }
 
 // What an account's owner writes on its public profile, and what of the rest they choose to
-// show there: the record, as counts, and the acknowledgments.
+// show there: the record, as counts, and the feedback contributions, as counts (contributions.ts).
 export interface ProfileSettings {
   link: string | null;
   bio: string | null;
@@ -154,8 +154,8 @@ export interface ProfileSettings {
 // uploaded avatar, or null for the default one, which the client draws from the username. `points`
 // are those of every game finished, from which the client tells the rank (ranks.ts). `streaks` are
 // the longest runs of wins and of losses on the record, which the page shows as titles
-// (streaks.ts). `acknowledgments` is how often the account is thanked for each kind of help
-// (acknowledgments.ts). `profile` is what the owner put on the public profile, with `banned` for
+// (streaks.ts). `contributions` is how much of its feedback of each kind was adopted
+// (contributions.ts). `profile` is what the owner put on the public profile, with `banned` for
 // an account that the operator has barred from writing a link or a bio there. `likes` is how many
 // accounts like the profile, and `requests` how many friend requests wait for the owner's answer
 // (friends.ts).
@@ -169,7 +169,7 @@ export interface AccountSummary {
   points: number;
   titles: TitleCount[];
   streaks: BestStreaks;
-  acknowledgments: AcknowledgmentCount[];
+  contributions: ContributionCount[];
   profile: ProfileSettings & { banned: boolean };
   likes: number;
   requests: number;
@@ -178,7 +178,7 @@ export interface AccountSummary {
 // A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's
 // number, username, avatar, rank, the day it registered (`createdAt`, as YYYY-MM-DD in UTC, and
 // never the time), its titles and its streaks, which the page shows as titles too (streaks.ts);
-// the link and the bio its owner wrote, if any; its record and its acknowledgments, if its owner
+// the link and the bio its owner wrote, if any; its record and its contributions, if its owner
 // shows them, else null; and how many accounts like it. `liked` says whether the viewer likes it,
 // and `mine` whether the viewer is its owner; both are false for a guest. `duo` is what the viewer
 // has played with the owner, for a viewer who is the owner's friend and shares a game with them,
@@ -195,7 +195,7 @@ export interface ProfileView {
   link: string | null;
   bio: string | null;
   record: RecordCounts | null;
-  acknowledgments: AcknowledgmentCount[] | null;
+  contributions: ContributionCount[] | null;
   likes: number;
   liked: boolean;
   mine: boolean;

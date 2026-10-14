@@ -94,6 +94,7 @@ export function createAppServer(options: AppOptions): AppServer {
       publicDir: options.publicDir,
       version: options.version,
       lists: options.lists ?? new ThanksLists(null, log),
+      contributions: () => options.feedback.contributions(),
       log,
       ...(accounts && {
         accounts: createAccountApi({

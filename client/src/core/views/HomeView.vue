@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import tipCode from '../../assets/wechat-tip.jpg';
 import AccountEntry from '../components/AccountEntry.vue';
 import AcknowledgmentsList from '../components/AcknowledgmentsList.vue';
+import ContributionsList from '../components/ContributionsList.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import SendFeedback from '../components/SendFeedback.vue';
@@ -23,11 +24,11 @@ import PublicRooms from './PublicRooms.vue';
 // The home page: the way back to any room where the player still has a seat, the tagline, a line
 // on how to play, the ways into a room, by its number, by the rooms that friends are in or from the
 // list of public rooms, the first game on a big sticker with the games to come below it, the
-// acknowledgments and the sponsors, folded, and footnotes, which offer a way to buy the author a
-// cola and the way to send them feedback, each with a drawing, and name the build's version. The
-// author, linked to their page, follows the line on how to play, or on a narrow English page the
-// tagline, whose last line has room for them there; the page holds both and shows one. On a wide
-// screen the games stand on the right, beside the rest.
+// feedback contributions, the acknowledgments and the sponsors, folded, and footnotes, which offer
+// a way to buy the author a cola and the way to send them feedback, each with a drawing, and name
+// the build's version. The author, linked to their page, follows the line on how to play, or on a
+// narrow English page the tagline, whose last line has room for them there; the page holds both
+// and shows one. On a wide screen the games stand on the right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
@@ -111,6 +112,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
       </section>
 
       <div class="thanks">
+        <ContributionsList />
         <AcknowledgmentsList />
         <SponsorsList @tip="tipping = true" />
       </div>
@@ -335,7 +337,7 @@ ol {
   gap: var(--space-5);
 }
 
-/* The acknowledgments and the sponsors, a folded card each. */
+/* The feedback contributions, the acknowledgments and the sponsors, a folded card each. */
 .thanks {
   display: flex;
   flex-direction: column;

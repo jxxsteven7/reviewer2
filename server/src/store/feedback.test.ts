@@ -2,7 +2,6 @@ import { usernameKey, type FeedbackKind } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
-import { AcknowledgmentStore } from './acknowledgments';
 import { databaseBytes, openDatabase } from './database';
 import {
   DEFAULT_FEEDBACK_LIMITS,
@@ -33,9 +32,8 @@ const entry = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
   text: 'More fields, please.',
   contact: null,
   credit: null,
-  link: null,
   accountId: null,
-  publicIssue: false,
+  linkProfile: false,
   version: 'v0.0.15',
   language: 'en',
   page: 'home',
@@ -57,9 +55,11 @@ describe('the feedback', () => {
       resolvedAt: null,
       closedAt: null,
       deletedAt: null,
+      adoptedAt: null,
+      summaryZh: null,
+      summaryEn: null,
       status: 'new',
       username: null,
-      acknowledgmentId: null,
       nameTakenBy: null,
     };
     expect(feedback.latest(10)).toEqual([
@@ -70,22 +70,24 @@ describe('the feedback', () => {
     expect(feedback.byId(3)).toBeUndefined();
   });
 
-  test('comes with the name for the acknowledgments, its link, its account while there is one, and its adoption', () => {
+  test('comes with the name for the contributions, its account while there is one, and its adoption', () => {
     const feedback = store();
     const ann = new AccountStore(db).create('Ann', 'ann', 'h');
     if (!ann) throw new Error('no account');
-    feedback.add(entry({ credit: 'Ann L', link: 'https://ann.example/', accountId: ann.id }));
+    feedback.add(entry({ credit: 'Ann L', accountId: ann.id }));
+    // An account without a name, as a player who was logged in and left none sends it.
+    feedback.add(entry({ accountId: ann.id }));
+    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: 1, username: 'Ann', adoptedAt: null });
+    expect(feedback.byId(2)).toMatchObject({ credit: null, accountId: 1, username: 'Ann' });
+    expect(feedback.adopt(1, { zh: '提出了更多领域', en: 'Suggested more fields' })).toBe(true);
     expect(feedback.byId(1)).toMatchObject({
-      credit: 'Ann L',
-      link: 'https://ann.example/',
-      accountId: 1,
-      username: 'Ann',
-      acknowledgmentId: null,
+      adoptedAt: '2026-10-09T12:00:00.000Z',
+      summaryZh: '提出了更多领域',
+      summaryEn: 'Suggested more fields',
+      status: 'thanked',
     });
-    new AcknowledgmentStore(db).add({ name: 'Ann L', kind: 'feedback', feedbackId: 1, accountId: ann.id });
-    expect(feedback.byId(1)).toMatchObject({ acknowledgmentId: 1 });
     new AccountStore(db).delete(ann.id);
-    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: null, username: null, acknowledgmentId: 1 });
+    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: null, username: null, status: 'thanked' });
   });
 
   test("says when its name is another account's username, however the name is written", () => {
@@ -114,24 +116,23 @@ describe('the feedback', () => {
     expect(taken().every(([, name]) => name === null)).toBe(true);
   });
 
-  test('says whether the player agreed to a public issue, and remembers the issue it was published as', () => {
+  test('says whether its name may link to its profile, and remembers the issue it was published as', () => {
     const feedback = store();
     feedback.add(entry());
-    feedback.add(entry({ publicIssue: true }));
-    // Feedback from before players were asked, and from a page that didn't ask.
-    db.exec(
-      "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'idea', 'Old', 'v1', 'en', 'home')",
-    );
-    feedback.add(entry({ publicIssue: null }));
-    expect(feedback.latest(10).map(({ publicIssue, issue }) => [publicIssue, issue])).toEqual([
-      [null, null],
-      [null, null],
-      [true, null],
-      [false, null],
+    feedback.add(entry({ credit: 'Ann', linkProfile: true }));
+    expect(feedback.latest(10).map(({ id, linkProfile }) => [id, linkProfile])).toEqual([
+      [2, true],
+      [1, false],
     ]);
+    expect(() => db.exec('UPDATE feedback SET link_profile = 2 WHERE id = 1')).toThrow(/CHECK constraint/);
+    // The link that came with a name, and whether the player agreed to a public issue, are gone.
+    const columns = (db.prepare('PRAGMA table_info(feedback)').all() as { name: string }[]).map(({ name }) => name);
+    expect(columns).toContain('link_profile');
+    expect(columns).not.toContain('link');
+    expect(columns).not.toContain('public_issue');
     expect(feedback.setIssue(2, 42)).toBe(true);
     expect(feedback.setIssue(5, 42)).toBe(false);
-    expect(feedback.byId(2)).toMatchObject({ publicIssue: true, issue: 42, text: 'More fields, please.' });
+    expect(feedback.byId(2)).toMatchObject({ issue: 42, text: 'More fields, please.' });
     expect(() => feedback.setIssue(2, 0)).toThrow(/CHECK constraint/);
     // The number can be put right, or taken out.
     expect(feedback.setIssue(2, 43)).toBe(true);
@@ -189,13 +190,17 @@ describe('the feedback', () => {
 });
 
 describe('what became of the feedback', () => {
-  // Feedback adopted by the operator, which thanks its player.
-  const adopt = (id: number) =>
-    new AcknowledgmentStore(db).add({ name: '', kind: 'feedback', feedbackId: id, accountId: null });
+  // Feedback adopted by the operator, which lists it among the contributions.
+  const SAID = { zh: '提出了更多领域', en: 'Suggested more fields' };
+  const adopt = (id: number) => store().adopt(id, SAID);
+  // As the operator's adoption would be, had it read the feedback just before it went to the trash
+  // (admin.ts): adopt() itself refuses feedback in the trash.
+  const adoptedMeanwhile = (id: number) =>
+    db.prepare("UPDATE feedback SET adopted_at = '2026-10-09T12:00:00.000Z' WHERE id = ?").run(id);
 
   test('is its status, the first of the trail that holds, and the trail stays beside it', () => {
     const feedback = store();
-    feedback.add(entry({ publicIssue: true }));
+    feedback.add(entry());
     expect(feedback.byId(1)?.status).toBe('new');
     expect(feedback.setIssue(1, 42)).toBe(true);
     expect(feedback.byId(1)).toMatchObject({ issue: 42, status: 'issue' });
@@ -207,8 +212,12 @@ describe('what became of the feedback', () => {
       resolvedAt: '2026-10-10T12:00:00.000Z',
       status: 'resolved',
     });
-    expect(adopt(1)).toBe(1);
-    expect(feedback.byId(1)).toMatchObject({ acknowledgmentId: 1, resolvedPr: 50, status: 'thanked' });
+    expect(adopt(1)).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({
+      adoptedAt: '2026-10-10T12:00:00.000Z',
+      resolvedPr: 50,
+      status: 'thanked',
+    });
     now += DAY;
     expect(feedback.close(1)).toBe(true);
     expect(feedback.byId(1)).toMatchObject({ closedAt: '2026-10-11T12:00:00.000Z', status: 'closed' });
@@ -263,26 +272,36 @@ describe('what became of the feedback', () => {
     expect(feedback.reopen(2)).toBe(false);
   });
 
-  test('goes to the trash once, unless it was adopted, and comes back as it was', () => {
+  test('goes to the trash once, unless it was adopted or is an issue, and comes back as it was', () => {
     const feedback = store();
-    feedback.add(entry({ publicIssue: true }));
+    feedback.add(entry());
     feedback.add(entry({ credit: 'Ann' }));
-    feedback.setIssue(1, 42);
+    feedback.add(entry());
+    feedback.resolve(1, 50);
     feedback.close(1);
     expect(feedback.restore(1)).toBe(false);
     expect(feedback.delete(1)).toBe(true);
     expect(feedback.delete(1)).toBe(false);
-    expect(feedback.byId(1)).toMatchObject({ issue: 42, status: 'trash' });
+    expect(feedback.byId(1)).toMatchObject({ resolvedPr: 50, status: 'trash' });
     // Back out of the trash, it is closed, as it was.
     expect(feedback.restore(1)).toBe(true);
-    expect(feedback.byId(1)).toMatchObject({ deletedAt: null, issue: 42, status: 'closed' });
+    expect(feedback.byId(1)).toMatchObject({ deletedAt: null, resolvedPr: 50, status: 'closed' });
     expect(feedback.restore(1)).toBe(false);
-    // The acknowledgment points at the feedback it came from, so that feedback stays.
-    expect(adopt(2)).toBe(1);
+    // Adopted feedback stays: the home page lists it.
+    expect(adopt(2)).toBe(true);
     expect(feedback.delete(2)).toBe(false);
     expect(feedback.byId(2)).toMatchObject({ deletedAt: null, status: 'thanked' });
+    // So does feedback that is an issue, which is public, closed or not, until the issue is taken
+    // back.
+    feedback.setIssue(3, 42);
     expect(feedback.delete(3)).toBe(false);
-    expect(feedback.restore(3)).toBe(false);
+    feedback.close(3);
+    expect(feedback.delete(3)).toBe(false);
+    expect(feedback.byId(3)).toMatchObject({ deletedAt: null, issue: 42, status: 'closed' });
+    feedback.setIssue(3, null);
+    expect(feedback.delete(3)).toBe(true);
+    expect(feedback.delete(4)).toBe(false);
+    expect(feedback.restore(4)).toBe(false);
   });
 
   test('is purged 30 days after it went to the trash, and nothing else ever is', () => {
@@ -320,7 +339,7 @@ describe('what became of the feedback', () => {
     expect(DEFAULT_FEEDBACK_LIMITS.trashMs).toBe(30 * DAY);
   });
 
-  test('is never purged while an acknowledgment points at it, even if it was adopted in the trash', () => {
+  test('is never purged once it was adopted, even if it was adopted in the trash', () => {
     const feedback = store();
     feedback.add(entry());
     feedback.add(entry());
@@ -328,11 +347,12 @@ describe('what became of the feedback', () => {
     feedback.delete(2);
     // admin.ts refuses to adopt feedback in the trash, but it reads before it writes, so feedback
     // deleted in between would be adopted all the same.
-    expect(adopt(1)).toBe(1);
+    expect(adopt(1)).toBe(false);
+    adoptedMeanwhile(1);
     now = START + 31 * DAY;
     expect(feedback.purge()).toBe(1);
     expect(feedback.byId(2)).toBeUndefined();
-    expect(feedback.byId(1)).toMatchObject({ status: 'trash', acknowledgmentId: 1 });
+    expect(feedback.byId(1)).toMatchObject({ status: 'trash', adoptedAt: '2026-10-09T12:00:00.000Z' });
     expect(feedback.daysLeft(feedback.byId(1) as Feedback)).toBe(0);
     expect(feedback.purge()).toBe(0);
     // Restored, it is thanked, as it was.
@@ -344,7 +364,7 @@ describe('what became of the feedback', () => {
   test('is read by view, and counted by status and by kind within a view', () => {
     const feedback = store();
     for (const kind of ['idea', 'bug', 'idea', 'bug', 'idea', 'words', 'bug', 'idea'] as const) {
-      feedback.add(entry({ kind, publicIssue: true }));
+      feedback.add(entry({ kind }));
     }
     feedback.setIssue(2, 42);
     feedback.resolve(3, 50);
@@ -384,6 +404,110 @@ describe('what became of the feedback', () => {
   });
 });
 
+describe('the feedback contributions', () => {
+  const SAID = { zh: '提出了更多领域', en: 'Suggested more fields' };
+
+  test('are the adopted feedback, the latest first, by the name left with it or anonymous', () => {
+    const feedback = store();
+    const accounts = new AccountStore(db);
+    const ann = accounts.create('Ann', 'ann', 'h');
+    const bob = accounts.create('Bob', 'bob', 'h');
+    if (!ann || !bob) throw new Error('no account');
+    // Ann let her name link to her profile, Bob didn't, though he shows his contributions there;
+    // the third player had no account, and the fourth left no name while logged in to Ann's.
+    accounts.setProfile(bob.id, { link: null, bio: null, showRecord: false, showThanks: true });
+    feedback.add(entry({ credit: 'Ann L', accountId: ann.id, linkProfile: true }));
+    feedback.add(entry({ kind: 'bug', credit: 'Bob', accountId: bob.id }));
+    feedback.add(entry({ kind: 'words', credit: 'Cat', linkProfile: true }));
+    feedback.add(entry({ kind: 'game', accountId: ann.id, linkProfile: true }));
+    feedback.add(entry({ credit: 'Dan' }));
+    for (const id of [1, 2, 3, 4]) feedback.setIssue(id, 40 + id);
+    expect(feedback.contributions()).toEqual([]);
+    expect(feedback.adopt(1, SAID)).toBe(true);
+    now += 40 * DAY;
+    expect(feedback.adopt(2, SAID)).toBe(true);
+    expect(feedback.adopt(3, SAID)).toBe(true);
+    expect(feedback.adopt(4, SAID)).toBe(true);
+    // Only once.
+    expect(feedback.adopt(1, { zh: '又一次', en: 'Again' })).toBe(false);
+    expect(feedback.contributions()).toEqual([
+      { kind: 'game', name: null, profile: null, summary: SAID, issue: 44, month: '2026-11' },
+      { kind: 'words', name: 'Cat', profile: null, summary: SAID, issue: 43, month: '2026-11' },
+      { kind: 'bug', name: 'Bob', profile: null, summary: SAID, issue: 42, month: '2026-11' },
+      { kind: 'idea', name: 'Ann L', profile: ann.handle, summary: SAID, issue: 41, month: '2026-10' },
+    ]);
+    // Once Ann's account is gone, her name links nowhere.
+    accounts.delete(ann.id);
+    expect(feedback.contributions().map(({ name, profile }) => [name, profile])).toEqual([
+      [null, null],
+      ['Cat', null],
+      ['Bob', null],
+      ['Ann L', null],
+    ]);
+  });
+
+  test('say what the player contributed once the operator has written it, which can be written again', () => {
+    const feedback = store();
+    feedback.add(entry({ credit: 'Ann' }));
+    feedback.add(entry());
+    expect(feedback.describe(1, SAID)).toBe(false);
+    feedback.adopt(1, SAID);
+    expect(feedback.describe(1, { zh: '提出了计时器', en: 'Suggested a timer' })).toBe(true);
+    expect(feedback.contributions()[0]?.summary).toEqual({ zh: '提出了计时器', en: 'Suggested a timer' });
+    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann', text: 'More fields, please.', status: 'thanked' });
+    expect(feedback.describe(3, SAID)).toBe(false);
+    // Adopted before the sentences were kept, as migration 17 leaves the feedback that the
+    // acknowledgments adopted, it says nothing yet, and has no issue.
+    db.exec("UPDATE feedback SET adopted_at = '2026-10-01T00:00:00.000Z' WHERE id = 2");
+    expect(feedback.contributions()[1]).toEqual({
+      kind: 'idea',
+      name: null,
+      profile: null,
+      summary: null,
+      issue: null,
+      month: '2026-10',
+    });
+  });
+
+  test('leave out a kind that this server does not know, and are never adopted in the trash', () => {
+    const feedback = store();
+    feedback.add(entry({ kind: 'later' as NewFeedback['kind'] }));
+    feedback.add(entry());
+    feedback.adopt(1, SAID);
+    expect(feedback.contributions()).toEqual([]);
+    feedback.delete(2);
+    expect(feedback.adopt(2, SAID)).toBe(false);
+    expect(feedback.byId(2)).toMatchObject({ adoptedAt: null, status: 'trash' });
+  });
+
+  test('are counted for the account they came from, by kind, those without a name too', () => {
+    const feedback = store();
+    const accounts = new AccountStore(db);
+    const ann = accounts.create('Ann', 'ann', 'h');
+    const bob = accounts.create('Bob', 'bob', 'h');
+    if (!ann || !bob) throw new Error('no account');
+    for (const [kind, credit, accountId] of [
+      ['bug', 'Ann', ann.id],
+      ['idea', null, ann.id],
+      ['idea', 'Ann', ann.id],
+      ['words', 'Ann', ann.id],
+      ['idea', 'Bob', bob.id],
+      ['game', 'Ann', ann.id],
+    ] as const) {
+      feedback.add(entry({ kind, credit, accountId }));
+    }
+    // Feedback that wasn't adopted counts for nothing.
+    for (const id of [1, 2, 3, 4, 5]) feedback.adopt(id, SAID);
+    expect(feedback.counts(ann.id)).toEqual([
+      { kind: 'idea', count: 2 },
+      { kind: 'bug', count: 1 },
+      { kind: 'words', count: 1 },
+    ]);
+    expect(feedback.counts(bob.id)).toEqual([{ kind: 'idea', count: 1 }]);
+    expect(feedback.counts(99)).toEqual([]);
+  });
+});
+
 describe('no more feedback is taken', () => {
   test('once there are as many as the limit', () => {
     const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxEntries: 3 });
@@ -396,13 +520,12 @@ describe('no more feedback is taken', () => {
   test('once the feedback holds more than the limit', () => {
     const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxBytes: 20_000 });
     expect(feedback.full()).toBeNull();
-    // A Chinese character takes three bytes, so each of these holds 3,323 with its contact, its
-    // name, its link and its version.
+    // A Chinese character takes three bytes, so each of these holds 3,123 with its contact, its
+    // name and its version.
     const large = entry({
       text: '\u{8bcd}'.repeat(1000),
       contact: 'x'.repeat(100),
       credit: 'y'.repeat(16),
-      link: `https://${'z'.repeat(189)}.cn`,
     });
     for (let i = 0; i < 6; i += 1) feedback.add(large);
     expect(feedback.full()).toBeNull();

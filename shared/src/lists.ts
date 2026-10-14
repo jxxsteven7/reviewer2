@@ -1,17 +1,18 @@
-import { checkCredit, checkLink, MAX_LINK_LENGTH } from './feedback';
+import { checkCredit, checkWebLink, MAX_LINK_LENGTH } from './feedback';
 import { MAX_NAME_LENGTH } from './protocol';
 
 // The lists of thanks on the home page, ACKNOWLEDGMENTS.md and SPONSORS.md
-// (docs/architecture.md#lists-of-thanks), are Markdown of one shape: an introduction, then
-// sections, each under a heading of its own and holding entries of one line each. The server reads
-// them (server/src/thanks.ts) and the home page asks it for what they list. What both lists have
-// in common is here, so that one parser checks both, for the server and for the test that keeps
-// the files in shape; acknowledgments.ts and sponsors.ts hold the rules of each.
+// (docs/architecture.md#lists-of-thanks). The server reads them (server/src/thanks.ts) and the
+// home page asks it for what they hold. The acknowledgments are written as the maintainers like
+// (acknowledgments.ts); the sponsors are Markdown of one shape, an introduction, then sections,
+// each under a heading of its own and holding entries of one line each, which this file reads,
+// with the rules of the entries in sponsors.ts.
 
 // The largest list that the server reads, in bytes.
 export const MAX_LIST_BYTES = 64 * 1024;
 
-// Where the home page asks the server for each list, which it answers with { ok: true, sections }.
+// Where the home page asks the server for each list, which it answers with { ok: true, blocks } for
+// the acknowledgments and { ok: true, sections } for the sponsors.
 export const LIST_API = { acknowledgments: '/api/acknowledgments', sponsors: '/api/sponsors' } as const;
 export type ListName = keyof typeof LIST_API;
 
@@ -79,9 +80,8 @@ export function parseName(who: string, list: ListName): { name: string; link: st
     return `"${name}" can't be a name for the ${list}: it needs 1 to ${MAX_NAME_LENGTH} visible characters, as a nickname does, and mustn't be a reserved name.`;
   }
   const link = linked ? (linked[2] as string) : null;
-  if (link !== null && checkLink(link, name).link !== link) {
-    const printed = list === 'acknowledgments' ? ', as the commands print it' : '';
-    return `"${link}" can't be a link for the ${list}: it must start with https://, hold no email address, &...; reference or \\, have at most ${MAX_LINK_LENGTH} characters, and have ( ) percent-encoded${printed}.`;
+  if (link !== null && checkWebLink(link).link !== link) {
+    return `"${link}" can't be a link for the ${list}: it must start with https://, hold no email address, &...; reference or \\, have at most ${MAX_LINK_LENGTH} characters, and have ( ) percent-encoded.`;
   }
   return { name, link };
 }
@@ -139,7 +139,7 @@ export function readLines<Kind extends string, Entry>(
 }
 
 // The size of a text in UTF-8, as the server finds it on disk.
-function bytes(text: string): number {
+export function utf8Length(text: string): number {
   let count = 0;
   for (const char of text) {
     const code = char.codePointAt(0) as number;
@@ -157,7 +157,7 @@ export function finish<Kind extends string, Entry>(
   problems: ListProblem[],
   noOne: number[],
 ): ParsedList<Kind, Entry> {
-  if (bytes(text) > MAX_LIST_BYTES) {
+  if (utf8Length(text) > MAX_LIST_BYTES) {
     problems.push({ line: 1, message: `A list has at most ${MAX_LIST_BYTES} bytes, or the server won't read it.` });
   }
   for (const { line, written } of sections) {

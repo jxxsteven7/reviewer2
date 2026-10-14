@@ -482,4 +482,37 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE friendships ADD COLUMN requester_alias TEXT;
   ALTER TABLE friendships ADD COLUMN addressee_alias TEXT;
   `,
+  // 17: feedback contributions (docs/architecture.md#feedback-contributions). The players thanked
+  // for their feedback are the feedback that the operator adopted, and nothing else, so adopting it
+  // becomes one more of the operator's notes on the feedback, and the table of acknowledgments
+  // goes: ACKNOWLEDGMENTS.md, which the maintainers write by hand, thanks everyone else.
+  //
+  // - feedback gets when it was adopted, which a row that is adopted has and keeps, and what the
+  //   player contributed, as the operator writes it, in Chinese and in English, for the home page.
+  //   The partial index finds the adopted rows quickly.
+  // - feedback gets whether the player let the name they left link to the public profile of the
+  //   account they sent it from, which the home page then does. The feedback that is there may,
+  //   as its players agreed with the maintainers.
+  // - the link that came with a name, and whether the player agreed to a public issue, go: every
+  //   adopted piece of feedback is an issue now, and a name links to the player's profile, where
+  //   they keep a link of their own. SQLite drops a column whose CHECK is its own.
+  // - every acknowledgment that adopted feedback marks that feedback adopted when it was, with no
+  //   sentences yet, which the operator writes afterwards. Its name and account were the
+  //   feedback's own. Those added by hand, which point at no feedback, aren't kept: they are in
+  //   ACKNOWLEDGMENTS.md.
+  //
+  // The archive's guard (archive.test.ts) allows the changes to the rows and the columns here alone.
+  `
+  ALTER TABLE feedback ADD COLUMN adopted_at TEXT;
+  ALTER TABLE feedback ADD COLUMN summary_zh TEXT;
+  ALTER TABLE feedback ADD COLUMN summary_en TEXT;
+  ALTER TABLE feedback ADD COLUMN link_profile INTEGER NOT NULL DEFAULT 0 CHECK (link_profile IN (0, 1));
+  UPDATE feedback SET link_profile = 1;
+  ALTER TABLE feedback DROP COLUMN link;
+  ALTER TABLE feedback DROP COLUMN public_issue;
+  UPDATE feedback SET adopted_at = (SELECT credited_at FROM acknowledgments WHERE feedback_id = feedback.id)
+    WHERE id IN (SELECT feedback_id FROM acknowledgments);
+  DROP TABLE acknowledgments;
+  CREATE INDEX feedback_adopted ON feedback (adopted_at) WHERE adopted_at IS NOT NULL;
+  `,
 ];

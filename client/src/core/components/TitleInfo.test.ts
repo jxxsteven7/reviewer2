@@ -81,7 +81,7 @@ describe('TitleInfo', () => {
 });
 
 describe('TitlePills', () => {
-  test('makes every title, streak and acknowledgment a button that explains it', async () => {
+  test('makes every title, streak and count of contributions a button that explains it', async () => {
     const wrapper = mount(TitlePills, {
       props: {
         titles: [
@@ -89,7 +89,10 @@ describe('TitlePills', () => {
           { title: 'black_hole', count: 1 },
         ],
         streaks: [{ kind: 'wins', length: 5, title: 'Five Submissions, Five Acceptances' }],
-        acknowledgments: [{ kind: 'words', count: 1 }],
+        contributions: [
+          { kind: 'idea', count: 3 },
+          { kind: 'words', count: 1 },
+        ],
       },
       global: global(),
       attachTo: document.body,
@@ -99,7 +102,8 @@ describe('TitlePills', () => {
       'Best Paper Award ×2',
       'Game black hole',
       'Five Submissions, Five Acceptances',
-      'Acknowledged: Data',
+      'Contributions: Suggestions ×3',
+      'Contributions: Word lists',
     ]);
     expect(pills[2]?.classes()).toEqual(expect.arrayContaining(['streak', 'wins']));
     const explained: string[] = [];
@@ -113,7 +117,8 @@ describe('TitlePills', () => {
     expect(explained[1]).toContain('the lowest total');
     expect(explained[2]).toContain('The longest run of games won in a row on the record: 5.');
     expect(explained[2]).toContain('The title comes at 3 in a row.');
-    expect(explained[3]).toContain('words for the word lists');
+    expect(explained[3]).toContain('A suggestion of theirs was adopted, whether they left a name or not.');
+    expect(explained[4]).toContain('Words of theirs for the word lists were adopted');
     wrapper.unmount();
   });
 

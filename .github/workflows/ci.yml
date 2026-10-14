@@ -71,10 +71,11 @@ jobs:
           curl --fail --silent http://127.0.0.1:3000/healthz | grep -q "\"version\":\"${SHA::7}\""
           curl --fail --silent http://127.0.0.1:3000/ | grep -q '<div id="app">'
           curl --fail --silent http://127.0.0.1:3000/room/K7QX | grep -q '<div id="app">'
-          # The lists of thanks come with the bundle, which has no copy of the repository beside it.
-          for list in acknowledgments sponsors; do
-            curl --fail --silent "http://127.0.0.1:3000/api/$list" | grep -q '^{"ok":true,"sections":\['
-          done
+          # The lists of thanks come with the bundle, which has no copy of the repository beside it, and
+          # the feedback contributions from the database.
+          curl --fail --silent http://127.0.0.1:3000/api/acknowledgments | grep -q '^{"ok":true,"blocks":\['
+          curl --fail --silent http://127.0.0.1:3000/api/sponsors | grep -q '^{"ok":true,"sections":\['
+          curl --fail --silent http://127.0.0.1:3000/api/contributions | grep -q '^{"ok":true,"contributions":\['
           # The server sends the compressed copies that the build wrote.
           curl --fail --silent --head --header 'Accept-Encoding: br' http://127.0.0.1:3000/ | grep -qi '^content-encoding: br'
           # The bundle opened its database in DATA_DIR, and every line of its log is JSON.

@@ -63,7 +63,6 @@ describe('a database in DATA_DIR', () => {
     // sqlite_sequence is SQLite's own, for the ids that are never given out twice.
     expect(tables(database.db)).toEqual([
       'accounts',
-      'acknowledgments',
       'agent_plays',
       'email_tokens',
       'feedback',
@@ -737,6 +736,72 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 
+  test('of the sixteenth release marks the feedback that was adopted, and leaves the acknowledgments behind', async () => {
+    const sixteenth = await open(dir, MIGRATIONS.slice(0, 16));
+    sixteenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES (1, 'Ann', 'ann', 'h', 'now');
+      INSERT INTO feedback (id, created_at, kind, text, version, language, page, credit, account_id, link, public_issue, issue)
+        VALUES (1, '2026-10-01T08:00:00.000Z', 'idea', 'AI players', 'v1', 'en', 'home', 'Ann L', 1, 'https://ann.example/', 1, 57);
+      INSERT INTO feedback (id, created_at, kind, text, version, language, page, public_issue)
+        VALUES (2, '2026-10-02T08:00:00.000Z', 'bug', 'Stuck', 'v1', 'en', 'room', 0);
+      INSERT INTO feedback (id, created_at, kind, text, version, language, page, deleted_at)
+        VALUES (3, '2026-10-03T08:00:00.000Z', 'words', 'More words', 'v1', 'zh', 'home', '2026-10-04T08:00:00.000Z');
+      INSERT INTO acknowledgments VALUES (NULL, 'Ann L', 'feedback', '2026-10-05T09:00:00.000Z', 1, 1);
+      INSERT INTO acknowledgments VALUES (NULL, 'Bob', 'playtesting', '2026-10-06T09:00:00.000Z', NULL, 1);
+      INSERT INTO acknowledgments VALUES (NULL, 'Cat', 'words', '2026-10-07T09:00:00.000Z', 3, NULL);
+      INSERT INTO acknowledgments VALUES (NULL, 'Dan', 'feedback', '2026-10-08T09:00:00.000Z', 9, NULL);
+    `);
+    const before = sixteenth.db.prepare('SELECT * FROM feedback ORDER BY id').all();
+    sixteenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 17));
+    expect(migrated).toMatchObject({ schema: 17, migratedFrom: 16 });
+    const { db } = migrated;
+    // The feedback that an acknowledgment adopted is adopted when it was, with nothing said yet of
+    // what its player contributed, in the trash or not; every name may link to its profile; the
+    // link and the answer about a public issue are gone; the rest is as it was. The
+    // acknowledgments added by hand, and one whose feedback was deleted by hand, are gone with their
+    // table.
+    const adopted: Record<number, string> = { 1: '2026-10-05T09:00:00.000Z', 3: '2026-10-07T09:00:00.000Z' };
+    expect(db.prepare('SELECT * FROM feedback ORDER BY id').all()).toEqual(
+      before.map((row) => ({
+        ...Object.fromEntries(Object.entries(row).filter(([column]) => column !== 'link' && column !== 'public_issue')),
+        link_profile: 1,
+        adopted_at: adopted[row.id as number] ?? null,
+        summary_zh: null,
+        summary_en: null,
+      })),
+    );
+    expect(before.map((row) => [row.link, row.public_issue])).toEqual([
+      ['https://ann.example/', 1],
+      [null, 0],
+      [null, null],
+    ]);
+    // New feedback may link to its profile or not, and says no unless told.
+    db.exec(
+      "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'idea', 'New', 'v2', 'en', 'home')",
+    );
+    expect(db.prepare('SELECT link_profile FROM feedback WHERE id = 4').get()).toEqual({ link_profile: 0 });
+    expect(() => db.exec('UPDATE feedback SET link_profile = 2 WHERE id = 4')).toThrow(/CHECK/);
+    expect(tables(db)).not.toContain('acknowledgments');
+    expect(
+      db.prepare("SELECT name FROM sqlite_schema WHERE type = 'index' AND tbl_name = 'feedback' ORDER BY name").all(),
+    ).toEqual([
+      { name: 'feedback_account' },
+      { name: 'feedback_adopted' },
+      { name: 'feedback_contact_expiry' },
+      { name: 'feedback_trash' },
+    ]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    // The account still goes from its feedback when it is deleted, and the adoption stays.
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT credit, account_id, adopted_at FROM feedback WHERE id = 1').get()).toEqual({
+      credit: 'Ann L',
+      account_id: null,
+      adopted_at: '2026-10-05T09:00:00.000Z',
+    });
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(
@@ -896,7 +961,6 @@ describe('a database in memory', () => {
     });
     expect(tables(database.db)).toEqual([
       'accounts',
-      'acknowledgments',
       'agent_plays',
       'email_tokens',
       'feedback',

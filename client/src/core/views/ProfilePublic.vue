@@ -25,8 +25,8 @@ import { toast } from '../toast';
 import { useBusy } from '../useBusy';
 
 // The account's public page, as its owner sets it up (docs/architecture.md#public-profiles): the
-// link and the line about themselves that anyone may read, whether the record and the
-// acknowledgments show there too, the way to the page itself, and who likes it, with a way to ask
+// link and the line about themselves that anyone may read, whether the record and the counts of
+// the feedback contributions show there too, the way to the page itself, and who likes it, with a way to ask
 // those who aren't friends yet. The form says what is wrong with the link or the bio before it is
 // sent, by the rules that the server applies (shared/src/accounts.ts).
 const props = defineProps<{ summary: AccountSummary }>();

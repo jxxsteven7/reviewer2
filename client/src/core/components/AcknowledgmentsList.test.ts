@@ -7,32 +7,31 @@ import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
 import AcknowledgmentsList from './AcknowledgmentsList.vue';
 
-// The list is what the server reads from ACKNOWLEDGMENTS.md; here, the sections of a file made up
+// The card is what the server reads from ACKNOWLEDGMENTS.md; here, the blocks of a file made up
 // for the tests, which the server answers with.
-const DASH = '\u{2014}';
+const FRIENDS = '\u670b\u53cb\u4eec'; // "Friends", in Chinese, as the maintainers may write it
 const FILE = [
   '# Acknowledgments',
+  '<!-- For GitHub alone. -->',
   '',
-  'We thank the players who helped.',
+  `## ${FRIENDS}`,
   '',
-  '## Pilot study',
+  'Reviewer 2 began with **five friends**, who played',
+  'the *very* first games.',
   '',
-  `- Bob ${DASH} played the first games`,
+  '### Pilot study',
   '',
-  '## Helpful discussions',
-  '',
-  `- [Ann L](https://ann.example/) ${DASH} suggested public rooms (#40)`,
-  `- An anonymous player ${DASH} reported the reconnect bug (#42, #43)`,
-  `- Dr\\. Who ${DASH} found a typo`,
+  '- [Ann L](https://ann.example/) tested on her phone',
+  '- Dr\\. Who found a typo',
 ].join('\n');
 
 const fetchMock = vi.fn<typeof fetch>();
-const answer = (sections: unknown) => new Response(JSON.stringify({ ok: true, sections }), { status: 200 });
+const answer = (blocks: unknown) => new Response(JSON.stringify({ ok: true, blocks }), { status: 200 });
 
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset();
-  fetchMock.mockImplementation(async () => answer(parseAcknowledgments(FILE).sections));
+  fetchMock.mockImplementation(async () => answer(parseAcknowledgments(FILE).blocks));
 });
 
 afterEach(() => {
@@ -57,9 +56,6 @@ async function toggle(wrapper: ReturnType<typeof mount>) {
   await flushPromises();
 }
 
-// "Acknowledgments", with how many people the list names.
-const title = (people: string) => `Acknowledgments \u{b7} ${people}`;
-
 describe('the acknowledgments', () => {
   test('are asked for once, when the card is shown, which stays folded until it is opened', async () => {
     const wrapper = await shown();
@@ -80,59 +76,48 @@ describe('the acknowledgments', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  test('count in their title the people they name, each once, and every anonymous player', async () => {
-    expect((await shown()).get('h2').text()).toBe(title('4 people'));
-    const ann = { name: 'Ann', link: null, contribution: 'tested' };
-    const anonymous = { name: null, link: null, contribution: 'tested' };
-    fetchMock.mockImplementation(async () =>
-      answer([
-        { kind: 'feedback', entries: [ann, anonymous] },
-        { kind: 'playtesting', entries: [ann, anonymous] },
-      ]),
+  test('have a title of their name alone, which counts nobody, in the language of the page', async () => {
+    expect((await shown()).get('h2').text()).toBe('Acknowledgments');
+    // "Acknowledgments", in Chinese.
+    expect((await shown('zh')).get('h2').text()).toBe('\u81f4\u8c22');
+  });
+
+  test('show the file as it is written, headings, paragraphs, lists, bold, italic and links', async () => {
+    const wrapper = await opened();
+    expect(wrapper.find('.intro').exists()).toBe(false);
+    expect(wrapper.get('h3').text()).toBe(FRIENDS);
+    expect(wrapper.get('h4').text()).toBe('Pilot study');
+    expect(wrapper.get('.list > p').text()).toBe(
+      'Reviewer 2 began with five friends, who played the very first games.',
     );
-    expect((await shown()).get('h2').text()).toBe(title('3 people'));
-    fetchMock.mockImplementation(async () => answer([{ kind: 'feedback', entries: [ann] }]));
-    expect((await shown()).get('h2').text()).toBe(title('1 person'));
-  });
-
-  test('show the sections of the file, in its order, under the headings of the interface', async () => {
-    const wrapper = await opened();
-    const groups = wrapper.findAll('section');
-    expect(groups.map((group) => group.get('h3').text())).toEqual(['Pilot study', 'Helpful discussions']);
-    expect(groups[0]?.findAll('li').map((item) => item.text())).toEqual(['Bob \u{2014} played the first games']);
-    expect(groups[1]?.findAll('li').map((item) => item.text())).toEqual([
-      'Ann L \u{2014} suggested public rooms (#40)',
-      'An anonymous player \u{2014} reported the reconnect bug (#42, #43)',
-      'Dr. Who \u{2014} found a typo',
+    expect(wrapper.get('strong').text()).toBe('five friends');
+    expect(wrapper.get('em').text()).toBe('very');
+    expect(wrapper.findAll('li').map((item) => item.text())).toEqual([
+      'Ann L tested on her phone',
+      'Dr. Who found a typo',
     ]);
-  });
-
-  test("link a name to its player's page, as the site's own links are not, and numbers to the repository", async () => {
-    const wrapper = await opened();
-    const ann = wrapper.get('a.name');
-    expect(ann.text()).toBe('Ann L');
-    expect(ann.attributes()).toMatchObject({
+    const link = wrapper.get('li a');
+    expect(link.text()).toBe('Ann L');
+    expect(link.attributes()).toMatchObject({
       href: 'https://ann.example/',
       target: '_blank',
       rel: 'nofollow ugc noopener',
     });
-    expect(wrapper.findAll('a.name')).toHaveLength(1);
-    const issues = wrapper.findAll('.what a');
-    expect(issues.map((link) => [link.text(), link.attributes('href')])).toEqual([
-      ['#40', 'https://github.com/jxxsteven7/reviewer2/issues/40'],
-      ['#42', 'https://github.com/jxxsteven7/reviewer2/issues/42'],
-      ['#43', 'https://github.com/jxxsteven7/reviewer2/issues/43'],
-    ]);
+    // The title and the comment are for GitHub alone.
+    expect(wrapper.text()).not.toContain('# Acknowledgments');
+    expect(wrapper.text()).not.toContain('For GitHub alone');
   });
 
-  test('show a name as plain text, and link it only to an https page', async () => {
+  test('show what they are sent as plain text, and link only to an https page', async () => {
     fetchMock.mockImplementation(async () =>
       answer([
         {
-          kind: 'feedback',
-          entries: [
-            { name: '<b>Ann</b>', link: 'javascript:alert(1)', contribution: 'tested' },
-            { name: 'Bob', link: 'http://bob.example/', contribution: 'tested' },
+          kind: 'paragraph',
+          pieces: [
+            { kind: 'text', text: '<b>Ann</b> ' },
+            { kind: 'link', text: 'here', href: 'javascript:alert(1)' },
+            { kind: 'text', text: ' and ' },
+            { kind: 'link', text: 'there', href: 'http://bob.example/' },
           ],
         },
       ]),
@@ -140,33 +125,14 @@ describe('the acknowledgments', () => {
     const wrapper = await opened();
     expect(wrapper.findAll('a')).toHaveLength(0);
     expect(wrapper.find('b').exists()).toBe(false);
-    expect(wrapper.findAll('li').map((item) => item.text())).toEqual([
-      '<b>Ann</b> \u{2014} tested',
-      'Bob \u{2014} tested',
-    ]);
+    expect(wrapper.get('.list > p').text()).toBe('<b>Ann</b> here and there');
   });
 
-  test('call the sections and an anonymous player in the language of the page, and leave the rest in English', async () => {
-    const wrapper = await opened('zh');
-    // "Acknowledgments", by 4 people, in Chinese.
-    expect(wrapper.get('h2').text()).toBe('\u81f4\u8c22 \u00b7 4 \u4f4d');
-    // "Pilot study" and "Helpful discussions".
-    expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual([
-      '\u9884\u5b9e\u9a8c',
-      '\u6709\u76ca\u7684\u8ba8\u8bba',
-    ]);
-    // "An anonymous player".
-    expect(wrapper.findAll('li')[2]?.text()).toBe(
-      '\u4e00\u4f4d\u533f\u540d\u73a9\u5bb6 \u{2014} reported the reconnect bug (#42, #43)',
-    );
-  });
-
-  test('say so when there is nobody yet', async () => {
+  test('say so when there is nothing yet', async () => {
     fetchMock.mockImplementation(async () => answer([]));
     const wrapper = await opened();
     expect(wrapper.get('h2').text()).toBe('Acknowledgments');
-    expect(wrapper.text()).toContain('No one yet. Be the first!');
-    expect(wrapper.find('section').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Nothing here yet.');
   });
 
   test('say that they are loading, and when they could not be, and try again', async () => {
@@ -177,21 +143,18 @@ describe('the acknowledgments', () => {
     answered(new Response('Bad gateway', { status: 502 }));
     await flushPromises();
     expect(wrapper.text()).toContain("The list couldn't be loaded.");
-    expect(wrapper.get('h2').text()).toBe('Acknowledgments');
     await wrapper.get('.failed button').trigger('click');
     await flushPromises();
     expect(wrapper.text()).not.toContain("The list couldn't be loaded.");
-    expect(wrapper.findAll('li')).toHaveLength(4);
-    expect(wrapper.get('h2').text()).toBe(title('4 people'));
+    expect(wrapper.findAll('li')).toHaveLength(2);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   test('are asked for again when the card is opened after they could not be loaded', async () => {
     fetchMock.mockImplementationOnce(async () => new Response('Bad gateway', { status: 502 }));
     const wrapper = await shown();
-    expect(wrapper.get('h2').text()).toBe('Acknowledgments');
     await toggle(wrapper);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(wrapper.findAll('li')).toHaveLength(4);
+    expect(wrapper.findAll('li')).toHaveLength(2);
   });
 });

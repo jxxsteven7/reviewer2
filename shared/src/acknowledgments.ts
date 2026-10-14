@@ -1,119 +1,191 @@
-import {
-  escapeName,
-  finish,
-  type ListFormat,
-  type ListProblem,
-  type ListSection,
-  parseName,
-  readLines,
-  SEPARATOR,
-} from './lists';
+import { checkWebLink } from './feedback';
+import { type ListProblem, MAX_LIST_BYTES, utf8Length } from './lists';
 
-// The acknowledgments (docs/architecture.md#acknowledgments). The list is ACKNOWLEDGMENTS.md in
-// the repository, which maintainers write by hand and the home page shows as the server reads it;
-// its rules are here, and those that it shares with SPONSORS.md in lists.ts. Apart from it, the
-// server's acknowledgments table records whom the operator thanked, which an account's page
-// counts and which nobody else sees.
+// The acknowledgments (docs/architecture.md#acknowledgments): ACKNOWLEDGMENTS.md in the
+// repository, which the maintainers write by hand, as they like and in any language, and which the
+// home page shows as the server reads it. It thanks whoever they want to thank, with an account or
+// without; the players whose feedback was adopted are listed apart, from the database
+// (contributions.ts).
+//
+// The file is Markdown, of which the home page shows a little, the same as GitHub does: headings
+// of two or three #, paragraphs, lists of "- " or "* " items, one line each, links as
+// [text](https://...), **bold** and *italic*, and a backslash before a punctuation mark to write
+// the mark itself. A title of one # and comments of one line, <!-- ... -->, are for GitHub alone.
+// Anything else shows as it is written. What GitHub would show otherwise than the home page is
+// refused: HTML, character references such as &lt;, images, web addresses that aren't written as
+// links, and links that the link rules of the feedback form refuse (checkWebLink in feedback.ts).
+// The page is built from what this returns, never from HTML, so nothing in the file becomes markup.
 
-// What someone is thanked for: ideas, new games and bug reports, the word lists, or playtesting.
-export const ACKNOWLEDGMENT_KINDS = ['feedback', 'words', 'playtesting'] as const;
-export type AcknowledgmentKind = (typeof ACKNOWLEDGMENT_KINDS)[number];
+// A piece of a line: text, bold or italic text, or a link.
+export type AcknowledgmentPiece =
+  { kind: 'text' | 'strong' | 'em'; text: string } | { kind: 'link'; text: string; href: string };
 
-// The heading of each kind's section in ACKNOWLEDGMENTS.md, as a paper's acknowledgments put it.
-// The home page shows them in its own language (acknowledgments.kinds in the locale files).
-export const ACKNOWLEDGMENT_HEADINGS: Record<AcknowledgmentKind, string> = {
-  feedback: 'Helpful discussions',
-  words: 'Data',
-  playtesting: 'Pilot study',
-};
+// A heading, a paragraph, or a list, whose items are a line each.
+export type AcknowledgmentBlock =
+  | { kind: 'heading'; level: 2 | 3; pieces: AcknowledgmentPiece[] }
+  | { kind: 'paragraph'; pieces: AcknowledgmentPiece[] }
+  | { kind: 'list'; items: AcknowledgmentPiece[][] };
 
-// What an entry has in place of a name for a player who left none. No name can be this: it is
-// longer than a nickname may be.
-export const ANONYMOUS = 'An anonymous player';
+const TITLE = /^# /;
+const HEADING = /^(#{2,3}) +(.*)$/;
+const DEEPER = /^#{4,} /;
+const ITEM = /^[-*] +(.*)$/;
+const COMMENT = /^<!--.*-->$/;
+const ESCAPE = /\\([!-/:-@[-`{-~])/g;
+// [text](address), where the text may hold escaped brackets.
+const LINK = /^\[((?:\\.|[^\\\]])+)\]\(([^\s()]*)\)/;
+const PUNCTUATION = /[!-/:-@[-`{-~]/;
 
-// The longest description of what someone did.
-export const MAX_CONTRIBUTION_LENGTH = 200;
+// What would show otherwise on GitHub than on the home page.
+const HTML = /<[A-Za-z/!?]/;
+const REFERENCE = /&#?\w+;/;
+const IMAGE = /!\[/;
+const ADDRESS = /https?:\/\/|www\./i;
 
-// The repository, whose issues and pull requests an entry may name by number, as #12.
-export const REPOSITORY_URL = 'https://github.com/jxxsteven7/reviewer2';
+const unescape = (text: string): string => text.replace(ESCAPE, '$1');
 
-// One entry: the name, or null for an anonymous player, the link that may go with a name, and
-// what they did, in English.
-export interface Acknowledgment {
-  name: string | null;
-  link: string | null;
-  contribution: string;
+// A line's pieces, and what in them breaks the rules.
+function readPieces(text: string): { pieces: AcknowledgmentPiece[]; problems: string[] } {
+  const pieces: AcknowledgmentPiece[] = [];
+  const problems: string[] = [];
+  let plain = '';
+  const push = (piece: AcknowledgmentPiece) => {
+    if (plain !== '') pieces.push({ kind: 'text', text: plain });
+    plain = '';
+    pieces.push(piece);
+  };
+  let at = 0;
+  while (at < text.length) {
+    const char = text[at] as string;
+    const next = text[at + 1];
+    if (char === '\\' && next !== undefined && PUNCTUATION.test(next)) {
+      plain += next;
+      at += 2;
+      continue;
+    }
+    const link = char === '[' ? LINK.exec(text.slice(at)) : null;
+    if (link) {
+      const href = link[2] as string;
+      if (checkWebLink(href).link !== href) {
+        problems.push(
+          `"${href}" can't be a link here: it must start with https://, hold no email address, &...; reference or \\, and have at most 200 characters.`,
+        );
+      }
+      push({ kind: 'link', text: unescape(link[1] as string), href });
+      at += link[0].length;
+      continue;
+    }
+    if (text.startsWith('**', at)) {
+      const end = text.indexOf('**', at + 2);
+      if (end > at + 2) {
+        push({ kind: 'strong', text: unescape(text.slice(at + 2, end)) });
+        at = end + 2;
+        continue;
+      }
+    } else if (char === '*') {
+      const end = text.indexOf('*', at + 1);
+      if (end > at + 1 && text[end + 1] !== '*') {
+        push({ kind: 'em', text: unescape(text.slice(at + 1, end)) });
+        at = end + 1;
+        continue;
+      }
+    }
+    plain += char;
+    at += 1;
+  }
+  if (plain !== '') pieces.push({ kind: 'text', text: plain });
+  if (pieces.some((piece) => piece.kind !== 'link' && ADDRESS.test(piece.text))) {
+    problems.push('Write a web address as a link, [text](https://...), which the home page links too.');
+  }
+  return { pieces, problems };
 }
 
-export type AcknowledgmentSection = ListSection<AcknowledgmentKind, Acknowledgment>;
-
-// How often an account is thanked for each kind, on its own page.
-export interface AcknowledgmentCount {
-  kind: AcknowledgmentKind;
-  count: number;
-}
-
-// What GitHub would not show as it is written in what someone did, which the home page shows as
-// plain text: Markdown's characters, an @mention, an HTML character reference such as &lt;, an
-// emoji code such as :tada:, and a web address, which it would link.
-const MARKUP = /[\\`*_[\]<>~@]|&#?\w+;|:[\w+-]+:|https?:\/\/|www\./i;
-// An issue or pull request named by its number, #12, which the home page links: after a space, a
-// bracket, (, or the start, so not inside a word such as C#10 or a path such as a/#12, and with no
-// 0 in front.
-const ISSUE = /(^|[ (])#([1-9]\d*)(?!\w)/;
-
-// An entry as ACKNOWLEDGMENTS.md has it, one line.
-export function acknowledgmentLine({ name, link, contribution }: Acknowledgment): string {
-  const who = name === null ? ANONYMOUS : link === null ? escapeName(name) : `[${escapeName(name)}](${link})`;
-  return `- ${who}${SEPARATOR}${contribution}`;
-}
-
-// What someone did, in pieces of text and numbers of issues, as the home page shows it. The
-// pieces are what split() gives with the two groups of ISSUE: the text before, what came before
-// the #, and the number.
-export const contributionPieces = (contribution: string): { text: string; issue: boolean }[] =>
-  contribution.split(ISSUE).map((text, index) => ({ text, issue: index % 3 === 2 }));
-
-function checkContribution(contribution: string): string | null {
-  if (!/^[ -~]+$/.test(contribution) || contribution.trim() !== contribution) {
-    return 'Say what they did in English, in printable ASCII, with no spaces at the ends.';
-  }
-  if (MARKUP.test(contribution)) {
-    return 'Leave Markdown out of what they did: no \\ ` * _ [ ] < > ~ @, &...; references, :emoji: codes or web addresses.';
-  }
-  if (contributionPieces(contribution).some(({ text, issue }) => !issue && text.includes('#'))) {
-    return 'Name an issue or pull request as #12, after a space or a bracket.';
-  }
-  if (contribution.length > MAX_CONTRIBUTION_LENGTH) {
-    return `Say what they did in at most ${MAX_CONTRIBUTION_LENGTH} characters.`;
-  }
+// What in a line, as it is written, the home page would show otherwise than GitHub.
+function markupProblem(line: string): string | null {
+  if (HTML.test(line)) return 'Leave HTML out: the home page shows no tags.';
+  if (REFERENCE.test(line)) return 'Write the character itself, not a reference such as &lt;.';
+  if (IMAGE.test(line)) return 'Leave images out: the home page shows none.';
   return null;
 }
 
-// What follows the "- " of an entry, or what is wrong with it. The contribution can't hold the
-// separator, so the last one ends the name, whatever the name is made of.
-function parseEntry(text: string): Acknowledgment | string {
-  const at = text.lastIndexOf(SEPARATOR);
-  if (at < 0) return `An entry is "- <name>${SEPARATOR}<what they did>".`;
-  const who = text.slice(0, at);
-  const contribution = text.slice(at + SEPARATOR.length);
-  const wrong = checkContribution(contribution);
-  if (wrong) return wrong;
-  if (who === ANONYMOUS) return { name: null, link: null, contribution };
-  const named = parseName(who, 'acknowledgments');
-  return typeof named === 'string' ? named : { ...named, contribution };
-}
-
-const FORMAT: ListFormat<AcknowledgmentKind, Acknowledgment> = {
-  list: 'acknowledgments',
-  headings: ACKNOWLEDGMENT_HEADINGS,
-  shape: `- <name>${SEPARATOR}<what they did>`,
-  entry: parseEntry,
-};
-
-// ACKNOWLEDGMENTS.md as the home page shows it, and what in it breaks the rules: an introduction,
-// then the sections, in any order, by the rules of lists.ts.
-export function parseAcknowledgments(text: string): { sections: AcknowledgmentSection[]; problems: ListProblem[] } {
-  const { sections, problems, noOne } = readLines(text.split(/\r?\n/), 1, FORMAT);
-  return finish(text, sections, problems, noOne);
+// ACKNOWLEDGMENTS.md as the home page shows it, and what in it breaks the rules, each on a line
+// counted from 1. A line that breaks them is left out.
+export function parseAcknowledgments(text: string): { blocks: AcknowledgmentBlock[]; problems: ListProblem[] } {
+  const blocks: AcknowledgmentBlock[] = [];
+  const problems: ListProblem[] = [];
+  if (utf8Length(text) > MAX_LIST_BYTES) {
+    problems.push({ line: 1, message: `A list has at most ${MAX_LIST_BYTES} bytes, or the server won't read it.` });
+  }
+  // The paragraph or the list that the next line may go on, and the text of the paragraph so far.
+  let open: { kind: 'paragraph'; lines: string[] } | { kind: 'list' } | null = null;
+  let blank = false;
+  const pieces = (written: string, line: number): AcknowledgmentPiece[] => {
+    const read = readPieces(written);
+    for (const message of read.problems) problems.push({ line, message });
+    return read.pieces;
+  };
+  // A paragraph's lines are checked one by one, as they come, so that a problem is told on its
+  // line, and read together once the paragraph ends, as bold text may go on to the next line.
+  const close = () => {
+    if (open?.kind === 'paragraph') blocks.push({ kind: 'paragraph', pieces: readPieces(open.lines.join(' ')).pieces });
+    open = null;
+  };
+  text.split(/\r?\n/).forEach((raw, index) => {
+    const number = index + 1;
+    const line = raw.trim();
+    if (line === '') {
+      if (open?.kind === 'paragraph') close();
+      blank = true;
+      return;
+    }
+    const wasBlank = blank;
+    blank = false;
+    if (COMMENT.test(line)) return;
+    const wrong = markupProblem(line);
+    if (wrong) {
+      problems.push({ line: number, message: wrong });
+      return;
+    }
+    if (TITLE.test(line)) {
+      if (blocks.length > 0 || open !== null) {
+        problems.push({ line: number, message: 'Only the title at the top has one #; a heading has ## or ###.' });
+      }
+      return;
+    }
+    if (DEEPER.test(line)) {
+      problems.push({ line: number, message: 'A heading has ## or ###.' });
+      return;
+    }
+    const heading = HEADING.exec(line);
+    if (heading) {
+      close();
+      const level = (heading[1] as string).length as 2 | 3;
+      blocks.push({ kind: 'heading', level, pieces: pieces(heading[2] as string, number) });
+      return;
+    }
+    const item = ITEM.exec(line);
+    if (item) {
+      if (open?.kind !== 'list') {
+        close();
+        blocks.push({ kind: 'list', items: [] });
+        open = { kind: 'list' };
+      }
+      (blocks.at(-1) as { items: AcknowledgmentPiece[][] }).items.push(pieces(item[1] as string, number));
+      return;
+    }
+    // A line after an item, with no blank line between them, goes on with that item, as on GitHub.
+    if (open?.kind === 'list' && !wasBlank) {
+      const items = (blocks.at(-1) as { items: AcknowledgmentPiece[][] }).items;
+      items[items.length - 1] = [...(items.at(-1) as AcknowledgmentPiece[]), ...pieces(` ${line}`, number)];
+      return;
+    }
+    pieces(line, number);
+    if (open?.kind === 'paragraph') open.lines.push(line);
+    else {
+      close();
+      open = { kind: 'paragraph', lines: [line] };
+    }
+  });
+  close();
+  return { blocks, problems };
 }

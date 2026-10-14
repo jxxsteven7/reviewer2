@@ -1,4 +1,13 @@
-import { usernameKey, type FeedbackKind, type FeedbackPage, type Language } from '@reviewer2/shared';
+import {
+  type Contribution,
+  type ContributionCount,
+  type ContributionSummary,
+  FEEDBACK_KINDS,
+  type FeedbackKind,
+  type FeedbackPage,
+  type Language,
+  usernameKey,
+} from '@reviewer2/shared';
 import type { DatabaseSync, SQLOutputValue, StatementSync } from 'node:sqlite';
 import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 
@@ -9,10 +18,11 @@ import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 // archive of suggestions: nothing here changes what the player sent, and the one way a row goes
 // is the purge of what the operator put in the trash 30 days before (archive.test.ts). Beside the
 // text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it was
-// published as, the pull request that resolved it, whether it was closed, and whether it is in
-// the trash. A player who wants to be thanked for feedback that is adopted leaves a name for it,
-// perhaps with a link, and then, if they were logged in, the feedback remembers their account
-// (docs/architecture.md#acknowledgments).
+// published as, the pull request that resolved it, when it was adopted and what the player
+// contributed, whether it was closed, and whether it is in the trash. Feedback that was adopted is
+// a feedback contribution, which the home page lists by the name the player left with it, or as
+// anonymous, and which counts for the account they were logged in to, if they were
+// (docs/architecture.md#feedback-contributions).
 //
 // Reports of players are kept here too, in a table of their own (migration 6), and are an archive
 // as the feedback was: no row is deleted or changed. Unlike feedback, a report says who sent it,
@@ -52,12 +62,12 @@ export const feedbackLimits = (maxEntries: number): FeedbackLimits => ({
 });
 
 // What became of a piece of feedback, from the operator's notes, the first of these that holds:
-// in the trash; closed without being adopted; thanked, by the acknowledgment that adopting it
-// made; resolved, by a pull request; published as a GitHub issue; or new. The page shows the
-// status, and the whole trail beside it. As views, they go by the facts, and may overlap: the
-// resolved feedback is all that a pull request resolved, thanked or not, unless it is closed or in
-// the trash, and the thanked is all that was thanked, resolved or not, likewise; the others are the
-// feedback of that status.
+// in the trash; closed without being adopted; thanked, by being adopted, which lists it among the
+// feedback contributions; resolved, by a pull request; published as a GitHub issue; or new. The
+// page shows the status, and the whole trail beside it. As views, they go by the facts, and may
+// overlap: the resolved feedback is all that a pull request resolved, thanked or not, unless it is
+// closed or in the trash, and the thanked is all that was thanked, resolved or not, likewise; the
+// others are the feedback of that status.
 export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'thanked', 'closed', 'trash'] as const;
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
@@ -74,14 +84,12 @@ export interface NewFeedback {
   kind: FeedbackKind;
   text: string;
   contact: string | null;
-  // The name for the acknowledgments, the link that came with it, and the account that gave it, if
-  // the player was logged in.
+  // The name for the feedback contributions, if the player left one, and the account they were
+  // logged in to, if they were, whether they left a name or not; and whether they let the name
+  // link to that account's public profile, which only a name and an account can.
   credit: string | null;
-  link: string | null;
   accountId: number | null;
-  // Whether the player agreed to the feedback being published as a GitHub issue, or null when the
-  // page didn't ask, as a page from before players were asked doesn't.
-  publicIssue: boolean | null;
+  linkProfile: boolean;
   // The build of the page that sent it.
   version: string;
   language: Language;
@@ -105,12 +113,15 @@ export interface Feedback extends NewFeedback {
   // When the operator put it in the trash, or null while it isn't there.
   deletedAt: string | null;
   status: FeedbackStatus;
+  // When the operator adopted it, or null while they haven't, and what the player contributed, in
+  // Chinese and in English, as the operator wrote it then or since.
+  adoptedAt: string | null;
+  summaryZh: string | null;
+  summaryEn: string | null;
   // The username of the account, while it has one.
   username: string | null;
-  // The acknowledgment that adopting it made, if the operator has.
-  acknowledgmentId: number | null;
   // The username of another account than the one it came from, when the name for the
-  // acknowledgments is that username. The name may be anyone's, but then it may also be someone
+  // feedback contributions is that username. The name may be anyone's, but then it may also be someone
   // passing for the account's owner, which the operator is told before adopting it.
   nameTakenBy: string | null;
 }
@@ -137,15 +148,15 @@ export interface Report extends Omit<NewReport, 'reporterId'> {
 // The status, as a column, in the order of FEEDBACK_STATUSES from the last to the first.
 const STATUS =
   "CASE WHEN f.deleted_at IS NOT NULL THEN 'trash' WHEN f.closed_at IS NOT NULL THEN 'closed' " +
-  "WHEN k.id IS NOT NULL THEN 'thanked' WHEN f.resolved_pr IS NOT NULL THEN 'resolved' " +
+  "WHEN f.adopted_at IS NOT NULL THEN 'thanked' WHEN f.resolved_pr IS NOT NULL THEN 'resolved' " +
   "WHEN f.issue IS NOT NULL THEN 'issue' ELSE 'new' END AS status";
 const COLUMNS =
-  'f.id, f.created_at AS createdAt, f.kind, f.text, f.contact, f.credit, f.link, f.account_id AS accountId, ' +
-  'f.public_issue AS publicIssue, f.issue, f.resolved_pr AS resolvedPr, f.resolved_at AS resolvedAt, ' +
-  'f.closed_at AS closedAt, f.deleted_at AS deletedAt, f.version, f.language, f.page, f.user_agent AS userAgent, ' +
-  `a.username, k.id AS acknowledgmentId, ${STATUS}`;
-const FROM =
-  'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id LEFT JOIN acknowledgments k ON k.feedback_id = f.id';
+  'f.id, f.created_at AS createdAt, f.kind, f.text, f.contact, f.credit, f.account_id AS accountId, ' +
+  'f.link_profile AS linkProfile, f.issue, ' +
+  'f.resolved_pr AS resolvedPr, f.resolved_at AS resolvedAt, f.adopted_at AS adoptedAt, f.summary_zh AS summaryZh, ' +
+  'f.summary_en AS summaryEn, f.closed_at AS closedAt, f.deleted_at AS deletedAt, f.version, f.language, f.page, ' +
+  `f.user_agent AS userAgent, a.username, ${STATUS}`;
+const FROM = 'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id';
 // Every row as Feedback, and the kind and the status of every row, for counting. Both are read as
 // subqueries, so that `status` in a WHERE clause names the column above and nothing that a table
 // joined in may come to have.
@@ -182,6 +193,10 @@ export class FeedbackStore {
   readonly #delete: StatementSync;
   readonly #restore: StatementSync;
   readonly #purge: StatementSync;
+  readonly #adopt: StatementSync;
+  readonly #describe: StatementSync;
+  readonly #contributions: StatementSync;
+  readonly #counts: StatementSync;
   readonly #report: StatementSync;
   readonly #reports: StatementSync;
   readonly #reportCount: StatementSync;
@@ -192,16 +207,16 @@ export class FeedbackStore {
     readonly limits: FeedbackLimits = DEFAULT_FEEDBACK_LIMITS,
   ) {
     this.#insert = db.prepare(
-      'INSERT INTO feedback (created_at, kind, text, contact, credit, link, account_id, public_issue, version, ' +
-        'language, page, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO feedback (created_at, kind, text, contact, credit, account_id, link_profile, version, ' +
+        'language, page, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     this.#count = db.prepare('SELECT count(*) AS count FROM feedback');
     // What the feedback holds, in bytes of UTF-8, which is what it takes in the file, give or take
     // the pages around it.
     this.#size = db.prepare(
       'SELECT coalesce(sum(length(CAST(text AS BLOB)) + coalesce(length(CAST(contact AS BLOB)), 0) + ' +
-        'coalesce(length(CAST(credit AS BLOB)), 0) + coalesce(length(CAST(link AS BLOB)), 0) + ' +
-        'coalesce(length(CAST(user_agent AS BLOB)), 0) + length(version)), 0) AS bytes FROM feedback',
+        'coalesce(length(CAST(credit AS BLOB)), 0) + coalesce(length(CAST(user_agent AS BLOB)), 0) + ' +
+        'length(version)), 0) AS bytes FROM feedback',
     );
     this.#latest = db.prepare(
       `SELECT * FROM ${ROWS} WHERE id < ? AND kind = coalesce(?, kind) AND ${VIEW} ORDER BY id DESC LIMIT ?`,
@@ -217,10 +232,11 @@ export class FeedbackStore {
     this.#account = db.prepare('SELECT id, username FROM accounts WHERE username_key = ?');
     this.#clear = db.prepare('UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?');
     // The operator's notes. Each statement carries its rule, so that it can't be broken by
-    // mistake: a row is closed once and reopened once, never in the trash; it goes to the trash
-    // once, unless an acknowledgment points at it, and comes back once; and the purge leaves a row
-    // that an acknowledgment points at alone, in case the feedback was adopted on its way out,
-    // which admin.ts refuses, but it reads before it writes.
+    // mistake: a row is closed once and reopened once, never in the trash; it is adopted once,
+    // never in the trash, and only what the player contributed is written again afterwards; it goes
+    // to the trash once, unless it was adopted, and comes back once; and the purge leaves a row
+    // that was adopted alone, in case the feedback was adopted on its way out, which admin.ts
+    // refuses, but it reads before it writes.
     this.#setIssue = db.prepare('UPDATE feedback SET issue = ? WHERE id = ?');
     this.#resolve = db.prepare('UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?');
     this.#close = db.prepare(
@@ -230,13 +246,30 @@ export class FeedbackStore {
       'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
     );
     this.#delete = db.prepare(
-      'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND ' +
-        'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
+      'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND adopted_at IS NULL AND issue IS NULL',
     );
     this.#restore = db.prepare('UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL');
     this.#purge = db.prepare(
-      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND ' +
-        'NOT EXISTS (SELECT 1 FROM acknowledgments WHERE feedback_id = feedback.id)',
+      'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL',
+    );
+    this.#adopt = db.prepare(
+      'UPDATE feedback SET adopted_at = ?, summary_zh = ?, summary_en = ? ' +
+        'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL',
+    );
+    this.#describe = db.prepare(
+      'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
+    );
+    // The contributions as anyone sees them. The handle of the profile goes with a name left from
+    // an account by a player who let it link there, and with nothing else.
+    this.#contributions = db.prepare(
+      'SELECT f.kind, f.credit AS name, ' +
+        'CASE WHEN f.credit IS NOT NULL AND f.link_profile = 1 THEN a.handle END AS profile, ' +
+        'f.summary_zh AS summaryZh, f.summary_en AS summaryEn, f.issue, substr(f.adopted_at, 1, 7) AS month ' +
+        'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id ' +
+        'WHERE f.adopted_at IS NOT NULL ORDER BY f.adopted_at DESC, f.id DESC',
+    );
+    this.#counts = db.prepare(
+      'SELECT kind, count(*) AS count FROM feedback WHERE account_id = ? AND adopted_at IS NOT NULL GROUP BY kind',
     );
     this.#report = db.prepare(
       'INSERT INTO reports (created_at, reporter_id, reported_id, reported_name, room_code, text) ' +
@@ -261,7 +294,7 @@ export class FeedbackStore {
 
   // Keeps the feedback and returns its id.
   add(feedback: NewFeedback): number {
-    const { kind, text, contact, credit, link, accountId, publicIssue, version, language, page, userAgent } = feedback;
+    const { kind, text, contact, credit, accountId, linkProfile, version, language, page, userAgent } = feedback;
     const createdAt = new Date(this.now()).toISOString();
     const { lastInsertRowid } = this.#insert.run(
       createdAt,
@@ -269,9 +302,8 @@ export class FeedbackStore {
       text,
       contact,
       credit,
-      link,
       accountId,
-      publicIssue === null ? null : publicIssue ? 1 : 0,
+      linkProfile ? 1 : 0,
       version,
       language,
       page,
@@ -322,8 +354,7 @@ export class FeedbackStore {
   // A row as Feedback, with Feedback.nameTakenBy, which is looked up here and not in the query
   // because only usernameKey() (shared/src/accounts.ts) says which username a name is.
   #fromRow(row: Record<string, SQLOutputValue>): Feedback {
-    const publicIssue = row.publicIssue === null ? null : row.publicIssue === 1;
-    const feedback = { ...row, publicIssue } as unknown as Omit<Feedback, 'nameTakenBy'>;
+    const feedback = { ...row, linkProfile: row.linkProfile === 1 } as unknown as Omit<Feedback, 'nameTakenBy'>;
     const owner =
       feedback.credit === null
         ? undefined
@@ -332,8 +363,7 @@ export class FeedbackStore {
   }
 
   // Records the GitHub issue that the feedback was published as, or with null that it wasn't.
-  // Says whether there is such feedback. Only feedback whose player agreed may be published,
-  // which admin.ts sees to.
+  // Says whether there is such feedback. Adopted feedback keeps an issue, which admin.ts sees to.
   setIssue(id: number, issue: number | null): boolean {
     return Number(this.#setIssue.run(issue, id).changes) > 0;
   }
@@ -357,9 +387,51 @@ export class FeedbackStore {
     return Number(this.#reopen.run(id).changes) > 0;
   }
 
+  // Adopts the feedback, which lists it among the feedback contributions, with what the player
+  // contributed, and says whether it did: not when it was adopted already, is in the trash, or
+  // isn't there. admin.ts sees that it has an issue first.
+  adopt(id: number, { zh, en }: ContributionSummary): boolean {
+    return Number(this.#adopt.run(new Date(this.now()).toISOString(), zh, en, id).changes) > 0;
+  }
+
+  // Writes again what the player contributed, and says whether it did: not when the feedback wasn't
+  // adopted or isn't there. Nothing else of a contribution ever changes.
+  describe(id: number, { zh, en }: ContributionSummary): boolean {
+    return Number(this.#describe.run(zh, en, id).changes) > 0;
+  }
+
+  // The feedback contributions, the latest adopted first, of the kinds the server knows.
+  contributions(): Contribution[] {
+    const rows = this.#contributions.all() as unknown as (Omit<Contribution, 'summary'> & {
+      summaryZh: string | null;
+      summaryEn: string | null;
+    })[];
+    return rows.flatMap(({ kind, name, profile, summaryZh, summaryEn, issue, month }) =>
+      (FEEDBACK_KINDS as readonly string[]).includes(kind)
+        ? [
+            {
+              kind,
+              name,
+              profile,
+              summary: summaryZh && summaryEn ? { zh: summaryZh, en: summaryEn } : null,
+              issue,
+              month,
+            },
+          ]
+        : [],
+    );
+  }
+
+  // How many contributions of each kind count for the account, those without a name included, in
+  // the order of the kinds.
+  counts(accountId: number): ContributionCount[] {
+    const rows = this.#counts.all(accountId) as unknown as ContributionCount[];
+    return FEEDBACK_KINDS.flatMap((kind) => rows.filter((row) => row.kind === kind));
+  }
+
   // Puts the feedback in the trash, from which purge() deletes it after 30 days, and says whether
-  // it did: not when it is there already, not there at all, or was adopted, since the
-  // acknowledgment points at it.
+  // it did: not when it is there already, not there at all, was adopted, since the home page lists
+  // it, or is a GitHub issue, which is public and is closed instead.
   delete(id: number): boolean {
     return Number(this.#delete.run(new Date(this.now()).toISOString(), id).changes) > 0;
   }
@@ -370,8 +442,8 @@ export class FeedbackStore {
     return Number(this.#restore.run(id).changes) > 0;
   }
 
-  // Deletes the feedback that has been in the trash for 30 days, for good, unless an
-  // acknowledgment points at it, and says how much it deleted. The one way a row ever goes.
+  // Deletes the feedback that has been in the trash for 30 days, for good, unless it was adopted,
+  // and says how much it deleted. The one way a row ever goes.
   purge(): number {
     const cutoff = new Date(this.now() - this.limits.trashMs).toISOString();
     return Number(this.#purge.run(cutoff).changes);

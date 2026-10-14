@@ -99,7 +99,7 @@ describe('PlayerPanel', () => {
     link: 'https://bob.example/',
     bio: 'Hi <b>there</b>',
     record: null,
-    acknowledgments: null,
+    contributions: null,
     likes: 2,
     liked: false,
     mine: false,

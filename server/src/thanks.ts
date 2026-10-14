@@ -9,8 +9,9 @@ import {
 } from '@reviewer2/shared';
 
 // The lists of thanks on the home page, ACKNOWLEDGMENTS.md and SPONSORS.md
-// (docs/architecture.md#lists-of-thanks), as the page asks for them: { ok: true, sections }, in
-// JSON.
+// (docs/architecture.md#lists-of-thanks), as the page asks for them, in JSON: { ok: true, blocks }
+// for the acknowledgments, which the maintainers write as they like (acknowledgments.ts), and
+// { ok: true, sections } for the sponsors (sponsors.ts).
 //
 // The build bundles the lists as the repository has them (build.mjs). With CONTENT_DIR, the server
 // shows the copies in that directory instead, as they change there, without a new build or a
@@ -28,9 +29,24 @@ export const LIST_FILES: Record<ListName, string> = {
   sponsors: 'SPONSORS.md',
 };
 
-const PARSERS: Record<ListName, (text: string) => { sections: { entries: unknown[] }[]; problems: ListProblem[] }> = {
-  acknowledgments: parseAcknowledgments,
-  sponsors: parseSponsors,
+// Each list as the page is sent it, how many things it holds, for the log, and what in it breaks
+// the rules.
+interface Read {
+  answer: Record<string, unknown>;
+  entries: number;
+  problems: ListProblem[];
+}
+
+const PARSERS: Record<ListName, (text: string) => Read> = {
+  acknowledgments(text) {
+    const { blocks, problems } = parseAcknowledgments(text);
+    return { answer: { blocks }, entries: blocks.length, problems };
+  },
+  sponsors(text) {
+    const { sections, problems } = parseSponsors(text);
+    const entries = sections.reduce((count, { entries }) => count + entries.length, 0);
+    return { answer: { sections }, entries, problems };
+  },
 };
 
 // The lists that the build bundled, or the repository's when the server runs from source.
@@ -43,7 +59,7 @@ function bundled(): Record<ListName, string> {
   };
 }
 
-const toAnswer = (sections: unknown) => JSON.stringify({ ok: true, sections });
+const toAnswer = (answer: Record<string, unknown>) => JSON.stringify({ ok: true, ...answer });
 
 const errorReason = (error: unknown) =>
   (error as NodeJS.ErrnoException).code ?? (error instanceof Error ? error.message : String(error));
@@ -96,8 +112,8 @@ export class ThanksLists {
     lists: Record<ListName, string> = bundled(),
   ) {
     this.bundled = {
-      acknowledgments: toAnswer(PARSERS.acknowledgments(lists.acknowledgments).sections),
-      sponsors: toAnswer(PARSERS.sponsors(lists.sponsors).sections),
+      acknowledgments: toAnswer(PARSERS.acknowledgments(lists.acknowledgments).answer),
+      sponsors: toAnswer(PARSERS.sponsors(lists.sponsors).answer),
     };
   }
 
@@ -123,13 +139,12 @@ export class ThanksLists {
       // Not kept, so that the next request tries the file again.
       if (list.retry) return result;
     } else {
-      const { sections, problems } = PARSERS[name](list.text);
+      const { answer, entries, problems } = PARSERS[name](list.text);
       if (problems.length > 0) {
         const [{ line, message }] = problems as [ListProblem];
         result = this.skip(name, path, { reason: 'breaks the rules', problems: problems.length, line, message });
       } else {
-        result = toAnswer(sections);
-        const entries = sections.reduce((count, { entries }) => count + entries.length, 0);
+        result = toAnswer(answer);
         this.say(name, `read ${version}`, 'thanks_list_read', { file: path, entries });
       }
     }

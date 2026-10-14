@@ -1,8 +1,8 @@
 import {
   DUO_MIN,
   STREAK_MIN,
-  type AcknowledgmentKind,
   type DuoTitle,
+  type FeedbackKind,
   type Language,
   type StreakKind,
   type Title,
@@ -11,7 +11,7 @@ import { streakTitle } from './streaks';
 
 // Every title that a page shows, which a tap explains (TitleInfo.vue,
 // docs/architecture.md#titles): the titles that matches award and games bring, the streaks, the
-// acknowledgments, the author's badge, the decision letter that a group gets at the end of a game,
+// feedback contributions, the author's badge, the decision letter that a group gets at the end of a game,
 // and the titles that friends hold among an account's friends. The academic rank opens its ladder instead
 // (RankLadder.vue). What each title is and how it is won is under titles, duos and
 // game.letter.explain in the locale files. A streak is the longest of its kind on the record,
@@ -20,7 +20,7 @@ import { streakTitle } from './streaks';
 export type TitleRef =
   | { kind: 'award'; title: Title }
   | { kind: 'streak'; streak: StreakKind; length: number; best: boolean }
-  | { kind: 'thanks'; thanks: AcknowledgmentKind }
+  | { kind: 'contribution'; contribution: FeedbackKind }
   | { kind: 'author' }
   | { kind: 'verdict'; verdict: string }
   | { kind: 'duo'; duo: DuoTitle };
@@ -35,8 +35,8 @@ export function titleName(t: Translate, title: TitleRef, language: Language): st
       return t(`account.profile.titleNames.${title.title}`);
     case 'streak':
       return streakTitle(t, title.streak, title.length, language);
-    case 'thanks':
-      return t('account.profile.acknowledged', { kind: t(`acknowledgments.kinds.${title.thanks}`) });
+    case 'contribution':
+      return t('account.profile.contributed', { kind: t(`contributions.kinds.${title.contribution}`) });
     case 'author':
       return t('playerPage.author');
     case 'verdict':
@@ -56,8 +56,8 @@ export function titleExplanation(t: Translate, title: TitleRef): string[] {
         t(`titles.${title.best ? 'streak' : 'streakNow'}.${title.streak}`, { n: title.length }),
         t('titles.streakCounts', { min: STREAK_MIN }),
       ];
-    case 'thanks':
-      return [t(`titles.thanks.${title.thanks}`)];
+    case 'contribution':
+      return [t(`titles.contribution.${title.contribution}`)];
     case 'author':
       return [t('titles.author')];
     case 'verdict':

@@ -26,7 +26,7 @@ describe('registering', () => {
       status: 200,
       body: {
         ok: true,
-        account: { username: 'Ann Lee', avatar: null, email: 'none', titles: [], acknowledgments: [] },
+        account: { username: 'Ann Lee', avatar: null, email: 'none', titles: [], contributions: [] },
         mail: false,
       },
     });

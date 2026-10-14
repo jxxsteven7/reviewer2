@@ -26,7 +26,8 @@ export const MAX_FEEDBACK_LENGTH = 1000;
 export const MAX_FEEDBACK_INPUT = 4000;
 export const MAX_CONTACT_LENGTH = 100;
 export const MAX_CONTACT_INPUT = 400;
-// The longest link for the acknowledgments as it is kept, and the longest that is looked at.
+// The longest link that a player gives of themselves, on a public profile, as it is kept, and the
+// longest that is looked at.
 export const MAX_LINK_LENGTH = 200;
 export const MAX_LINK_INPUT = 400;
 // The note that may come with a report of a player (room:report), and the longest that is looked at.
@@ -42,8 +43,6 @@ export const FEEDBACK_ERRORS = [
   'contact_too_long',
   'credit_invalid',
   'credit_reserved',
-  'credit_link_invalid',
-  'credit_link_too_long',
   'feedback_limited',
   'feedback_full',
 ] as const;
@@ -55,17 +54,20 @@ export const REPORT_ERRORS = ['not_public', 'report_too_long', 'report_limited',
 export type ReportError = (typeof REPORT_ERRORS)[number];
 
 // What the client sends with meta:feedback: what the player wrote, and what comes along by itself.
-// `credit` is the name to list in the acknowledgments should the feedback be adopted
-// (acknowledgments.ts), and `link` a page about them that goes with it. `publicIssue` says that the
-// player agrees to the feedback being published as a GitHub issue, with the name if there is one
-// and never the contact. `version` is the build of the page, which may be older than the server's.
+// `credit` is the name to list among the feedback contributions should the feedback be adopted
+// (contributions.ts), which is also the name on the GitHub issue that it then becomes; without
+// one, the player is listed as anonymous. `linkProfile` says that a player who is logged in and
+// leaves a name lets that name link to their public profile there; the form ticks it until they
+// untick it, and without a name or an account it means nothing. `version` is the build of the
+// page, which may be older than the server's. Pages from before carried a link for the name and
+// whether the player agreed to a public issue, which the server ignores, and no `linkProfile`,
+// which is then no.
 export interface FeedbackMessage {
   kind: FeedbackKind;
   text: string;
   contact?: string;
   credit?: string;
-  link?: string;
-  publicIssue?: boolean;
+  linkProfile?: boolean;
   version: string;
   language: Language;
   page: FeedbackPage;
@@ -123,22 +125,16 @@ export interface CreditCheck {
   problem: 'credit_invalid' | 'credit_reserved' | null;
 }
 
-// The name for the acknowledgments is optional, and follows the rules of a nickname (names.ts):
-// it is shown beside other names, so it is refused, not cleaned, when it holds something hidden or
-// is longer than 16 characters, and it may not be a reserved name (accounts.ts), which nobody may
-// pass for. One that shows nothing is none.
+// The name for the feedback contributions is optional, and follows the rules of a nickname
+// (names.ts): it is shown beside other names, so it is refused, not cleaned, when it holds
+// something hidden or is longer than 16 characters, and it may not be a reserved name
+// (accounts.ts), which nobody may pass for. One that shows nothing is none.
 export function checkCredit(text: string | undefined): CreditCheck {
   if (typeof text !== 'string' || !showsSomething(text)) return { credit: null, problem: null };
   const credit = cleanName(text);
   if (credit === null) return { credit: null, problem: 'credit_invalid' };
   if (isReservedName(credit)) return { credit: null, problem: 'credit_reserved' };
   return { credit, problem: null };
-}
-
-export interface LinkCheck {
-  // The link as it is kept, or null when there is none.
-  link: string | null;
-  problem: 'credit_link_invalid' | 'credit_link_too_long' | null;
 }
 
 // A web address of https: a host name with a dot in it, a port perhaps, and then nothing but
@@ -150,15 +146,15 @@ export interface LinkCheck {
 const LINK =
   /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z](?:[a-z0-9-]*[a-z0-9])?(?::\d{1,5})?(?:[/?#][!-[\]-~]*)?$/i;
 // An HTML character reference, such as &amp;, which Markdown would turn into the character, so
-// that ACKNOWLEDGMENTS.md on GitHub and the home page would link to different addresses.
+// that a list of thanks on GitHub and the home page would link to different addresses.
 const REFERENCE = /&#?\w+;/;
 // What Markdown reads as markup in a link, which is kept percent-encoded; a browser reads it the
 // same, and a link with a parenthesis, as Wikipedia's, is common enough not to be refused.
 const LINK_MARKUP = /[()]/g;
 
 // A web address that a player gives of themselves, as it is kept, or null for none, or why it
-// can't be one: the link that may go with the name for the acknowledgments, and the link on a
-// public profile (accounts.ts) take the same rules. One that is only spaces is none.
+// can't be one: the link on a public profile (accounts.ts), and those in the lists of thanks
+// (acknowledgments.ts, lists.ts), take these rules. One that is only spaces is none.
 export interface WebLinkCheck {
   link: string | null;
   problem: 'web_link_invalid' | 'web_link_too_long' | null;
@@ -172,18 +168,6 @@ export function checkWebLink(text: string | undefined): WebLinkCheck {
   if (!LINK.test(typed) || REFERENCE.test(typed)) return { link: null, problem: 'web_link_invalid' };
   const link = typed.replace(LINK_MARKUP, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
   if (link.length > MAX_LINK_LENGTH) return { link: null, problem: 'web_link_too_long' };
-  return { link, problem: null };
-}
-
-// The link that may go with the name for the acknowledgments, to a page about the player, such as
-// a homepage or a profile on GitHub, ORCID or Google Scholar. It goes with a name only, and is
-// dropped without one. ACKNOWLEDGMENTS.md takes links by the same rules, as they are kept here
-// (acknowledgments.ts).
-export function checkLink(text: string | undefined, credit: string | null): LinkCheck {
-  if (credit === null) return { link: null, problem: null };
-  const { link, problem } = checkWebLink(text);
-  if (problem === 'web_link_invalid') return { link, problem: 'credit_link_invalid' };
-  if (problem === 'web_link_too_long') return { link, problem: 'credit_link_too_long' };
   return { link, problem: null };
 }
 

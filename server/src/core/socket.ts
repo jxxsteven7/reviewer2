@@ -5,7 +5,6 @@ import {
   checkCredit,
   checkFeedback,
   checkFriendNote,
-  checkLink,
   checkReport,
   cleanName,
   INVITE_COOLDOWN_MS,
@@ -991,25 +990,23 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     // Feedback for the author, which the status page shows. What is kept is what the player wrote
     // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
-    // who they are, unless they left a name for the acknowledgments: then the account they are
-    // logged in to, if any, is kept with it, so that the acknowledgment can be counted for it. The
-    // log gets its number and kind, and never its text, contact, name or link. Only what was kept
+    // who they are but the name they may leave for the feedback contributions and the account
+    // they are logged in to, if any, with a name or without, so that the feedback counts for it
+    // once it is adopted, and whether the name may link to that account's public profile, which
+    // takes a name, an account and the player's yes. The log gets its number and kind, and never
+    // its text, contact or name. Only what was kept
     // counts against the address, so that a player who is told to shorten their text doesn't lose
     // a turn for it, and feedback that the address sent once already in the window is answered as
     // it was the first time, without being kept or counted again.
     on(handlers, 'meta:feedback', (message) => {
-      const { kind, text, contact, credit, link, version: pageVersion, language, page } = message;
+      const { kind, text, contact, credit, linkProfile, version: pageVersion, language, page } = message;
       const checked = checkFeedback(text);
       if (checked.problem) return fail(checked.problem);
       const given = checkContact(contact);
       if (given.problem) return fail(given.problem);
       const named = checkCredit(credit);
       if (named.problem) return fail(named.problem);
-      const linked = checkLink(link, named.credit);
-      if (linked.problem) return fail(linked.problem);
-      // A page from before players were asked about a public issue sends no answer.
-      const publicIssue = message.publicIssue ?? null;
-      const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, linked.link, publicIssue]);
+      const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, linkProfile === true]);
       if (feedbackSeen.has(key)) return ok();
       if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
       const full = feedback.full();
@@ -1020,15 +1017,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }
       const userAgent = socket.handshake.headers['user-agent'];
       // An account that has been deleted since the handshake is nobody's.
-      const account = named.credit !== null && conn.account ? accounts?.store.byId(conn.account.id) : undefined;
+      const account = conn.account ? accounts?.store.byId(conn.account.id) : undefined;
       const id = feedback.add({
         kind,
         text: checked.text,
         contact: given.contact,
         credit: named.credit,
-        link: linked.link,
         accountId: account?.id ?? null,
-        publicIssue,
+        linkProfile: linkProfile === true && named.credit !== null && account !== undefined,
         version: pageVersion,
         language,
         page,

@@ -257,10 +257,10 @@ const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ?
 // for feedback published as one, and for feedback that is resolved or thanked, both that apply,
 // such as "Resolved #72 &middot; Thanked", the pull request's number with the first.
 function badge(feedback: Feedback): string {
-  const { status, issue, resolvedPr, acknowledgmentId } = feedback;
+  const { status, issue, resolvedPr, adoptedAt } = feedback;
   const done = [
     ...(resolvedPr === null ? [] : [`Resolved #${resolvedPr}`]),
-    ...(acknowledgmentId === null ? [] : ['Thanked']),
+    ...(adoptedAt === null ? [] : ['Thanked']),
   ];
   const label =
     status === 'issue'
@@ -272,20 +272,19 @@ function badge(feedback: Feedback): string {
 }
 
 // Everything that became of the feedback, in the order it happens, or '' for feedback that is
-// new. The days left in the trash count from `now`; feedback that an acknowledgment points at,
-// which only feedback adopted on its way to the trash is, is kept there instead
-// (store/feedback.ts).
+// new. The days left in the trash count from `now`; feedback that was adopted, which only
+// feedback adopted on its way to the trash is, is kept there instead (store/feedback.ts).
 function trail(feedback: Feedback, now: number): string {
   const steps = [
     ...(feedback.issue === null ? [] : [`published as issue #${feedback.issue}`]),
     ...(feedback.resolvedPr === null ? [] : [`resolved by PR #${feedback.resolvedPr}`]),
-    ...(feedback.acknowledgmentId === null ? [] : [`thanked as acknowledgment #${feedback.acknowledgmentId}`]),
+    ...(feedback.adoptedAt === null ? [] : [`adopted ${escape(day(feedback.adoptedAt))}`]),
     ...(feedback.closedAt === null ? [] : [`closed ${escape(day(feedback.closedAt))}`]),
     ...(feedback.deletedAt === null
       ? []
       : [
           `in the trash since ${escape(day(feedback.deletedAt))}, ` +
-            (feedback.acknowledgmentId === null
+            (feedback.adoptedAt === null
               ? `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`
               : 'kept: thanked'),
         ]),
@@ -297,15 +296,20 @@ function trail(feedback: Feedback, now: number): string {
 // the operator to copy to a terminal, each on a line of its own with `run.feedback` in front where
 // the operator has that command, and `run.admin` and `feedback` otherwise, under a heading that is
 // folded until it is opened. Which they are follows the feedback's status. In the trash, only the
-// way out. Otherwise: the issue, for feedback whose player agreed to one: first, with the
-// operator's command, to publish it in one go, when this build knows the kind; then, to do it by
-// hand, to draft it, when this build knows the kind, and to record it; or, once there is one, to
-// take it back. Then the pull request, to record or to take back; adopting it, while it is neither
-// thanked nor closed, which can't be undone; closing or reopening it; and the trash, unless an
-// acknowledgment points at it. The page shows the commands and runs none of them.
+// way out. Otherwise: the issue: first, with the operator's command, to publish it in one go, when
+// this build knows the kind; then, to do it by hand, to draft it, when this build knows the kind,
+// and to record it; or, once there is one, to take it back unless it was adopted, which keeps its
+// issue. Then the pull request, to record or to take back. Adopting it, once it is an issue, while
+// it is neither adopted nor closed, which can't be undone: the operator's command adopts it as it
+// records the pull request, and asks for what the player contributed itself, so `adopt` and the
+// sentences show only without it; once it is adopted, saying again what the player contributed.
+// Last, closing or reopening it, and the trash, unless it was adopted or is an issue. The page shows
+// the commands and runs none of them.
 function commands(feedback: Feedback, run: FeedbackCommands): string {
-  const { id, kind, publicIssue, issue, resolvedPr, acknowledgmentId, closedAt, deletedAt } = feedback;
+  const { id, kind, issue, resolvedPr, adoptedAt, closedAt, deletedAt } = feedback;
   const prefix = run.feedback ? run.feedback : `${run.admin} feedback`;
+  const sentences = run.feedback ? '' : ' --zh "<sentence>" --en "<sentence>"';
+  const adoptable = issue !== null && adoptedAt === null && closedAt === null;
   const line = (command: string, note = '') =>
     `<p class="command"><code>${escape(`${prefix} ${command}`)}</code>${note === '' ? '' : ` ${note}`}</p>`;
   const known = Object.hasOwn(KINDS, kind);
@@ -313,33 +317,39 @@ function commands(feedback: Feedback, run: FeedbackCommands): string {
     deletedAt !== null
       ? [line(`restore ${id}`)]
       : [
-          ...(publicIssue !== true
-            ? []
-            : issue === null
-              ? [
-                  ...(run.feedback && known ? [line(`publish ${id}`, 'publishes the issue in one go')] : []),
-                  ...(known ? [line(`draft ${id}`)] : []),
-                  line(`issue ${id} <number>`),
-                ]
-              : [line(`issue ${id} --clear`)]),
-          line(resolvedPr === null ? `resolve ${id} <pr>` : `resolve ${id} --clear`),
-          ...(acknowledgmentId === null && closedAt === null ? [line(`adopt ${id}`, "can't be undone")] : []),
+          ...(issue === null
+            ? [
+                ...(run.feedback && known ? [line(`publish ${id}`, 'publishes the issue in one go')] : []),
+                ...(known ? [line(`draft ${id}`)] : []),
+                line(`issue ${id} <number>`),
+              ]
+            : adoptedAt === null
+              ? [line(`issue ${id} --clear`)]
+              : []),
+          ...(run.feedback && adoptable
+            ? [line(`resolve ${id} <pr>`, "records the pull request and adopts it, which can't be undone")]
+            : [line(resolvedPr === null ? `resolve ${id} <pr>` : `resolve ${id} --clear`)]),
+          ...(adoptedAt !== null
+            ? [line(`describe ${id}${sentences}`)]
+            : !run.feedback && adoptable
+              ? [line(`adopt ${id}${sentences}`, "can't be undone")]
+              : []),
           line(closedAt === null ? `close ${id}` : `reopen ${id}`),
-          ...(acknowledgmentId === null ? [line(`delete ${id}`)] : []),
+          ...(adoptedAt === null && issue === null ? [line(`delete ${id}`)] : []),
         ];
   return `<details><summary>Commands</summary>${lines.join('')}</details>`;
 }
 
-// Players wrote the text, the contact, the name and the link, and the page sent the version, so all
-// of it is escaped like anything else that comes from outside, and the link is shown, not linked.
+// Players wrote the text, the contact and the name, the operator what the player contributed, and
+// the page sent the version, so all of it is escaped like anything else that comes from outside.
 // The text keeps its line breaks. The top line is the id, the kind and the time, with the status
-// at its end; the trail, when there is one, comes after the text, and the rest below it: the
-// version, the language, the page it came from, whether the player agreed to a public issue, the
-// contact, the name for the acknowledgments with its link and the account it was given from, in
-// bold with another account whose username it is, which may be someone passing for that
-// account's owner, for a bug the browser, and last the commands that may come next, folded. Older
-// feedback, from before players were asked about an issue, may not be published. A kind that this
-// server doesn't know, from a later one that it was rolled back from, shows as it is.
+// at its end; the trail, when there is one, comes after the text, and, for adopted feedback, what
+// the player contributed, as the home page shows it; the rest below: the version, the language,
+// the page it came from, the contact, the name for the feedback contributions, the account it was
+// sent from, whether the player let the name link to that account's profile, and, in bold,
+// another account whose username the name is, which may be someone passing for that account's
+// owner, for a bug the browser, and last the commands that may come next (`run`), folded. A kind
+// that this server doesn't know, from a later one that it was rolled back from, shows as it is.
 function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
   const head = [
     `#${feedback.id}`,
@@ -350,24 +360,30 @@ function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
     `version ${escape(feedback.version)}`,
     LANGUAGES[feedback.language],
     `from the ${PAGES[feedback.page]}`,
-    ...(feedback.issue !== null
-      ? []
-      : [feedback.publicIssue ? '<strong>may be published as an issue</strong>' : 'not to be published']),
   ];
   const credit =
-    feedback.credit === null
-      ? 'No name for the acknowledgments'
-      : `Name for the acknowledgments: ${escape(feedback.credit)}` +
-        (feedback.link === null ? '' : ` &middot; link ${escape(feedback.link)}`) +
-        (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
-        (feedback.nameTakenBy === null
-          ? ''
-          : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
-            "which didn't send it</strong>");
+    (feedback.credit === null
+      ? 'No name: listed as anonymous'
+      : `Name for the contributions: ${escape(feedback.credit)}`) +
+    (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
+    (feedback.credit === null || feedback.username === null || !feedback.linkProfile
+      ? ''
+      : ' &middot; links to their profile') +
+    (feedback.credit === null || feedback.nameTakenBy === null
+      ? ''
+      : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
+        "which didn't send it</strong>");
+  const contributed =
+    feedback.adoptedAt === null
+      ? ''
+      : feedback.summaryZh === null || feedback.summaryEn === null
+        ? '<p class="meta">Contributed: <strong>not written yet</strong></p>'
+        : `<p class="meta">Contributed: ${escape(feedback.summaryZh)} &middot; ${escape(feedback.summaryEn)}</p>`;
   return (
     `<article><p class="head"><span>${head.join(' &middot; ')}</span>${badge(feedback)}</p>` +
     `<p class="text">${escape(feedback.text)}</p>` +
     trail(feedback, now) +
+    contributed +
     `<p class="meta">${facts.join(' &middot; ')}</p>` +
     `<p class="meta">${feedback.contact === null ? 'No contact' : `Contact: ${escape(feedback.contact)}`}</p>` +
     `<p class="meta">${credit}</p>` +
