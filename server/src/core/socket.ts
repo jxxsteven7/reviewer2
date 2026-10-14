@@ -1414,8 +1414,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
           playing: room.phase !== 'lobby',
           friends: [],
         };
-        const { handle, username, alias, avatar } = friendView(me.account.id, row, null);
-        const asked = asks.between(me.account.id, row.id) !== undefined;
+        const { handle, username, alias, avatar, asked } = friendView(me.account.id, row, null);
         entry.friends.push({ handle, username, ...(alias ? { alias } : {}), avatar, ...(asked ? { asked } : {}) });
         found.set(room, entry);
       }

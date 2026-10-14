@@ -460,7 +460,9 @@ export interface Table {
 // it creates or joins the room, for a test that needs a player's connection set up in some other
 // way or a player logged in to an account with the same name, `setup` on
 // Ann's room setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before
-// she starts the game. The game has started when this returns.
+// she starts the game. The game has started when this returns. The tests' clues are English words
+// of up to eight letters, which a Chinese room counts as up to four characters, more than its
+// default allows, so a Chinese room is set to four.
 export async function seatTable(
   browser: Browser,
   language: Language,
@@ -471,7 +473,10 @@ export async function seatTable(
   const ann = await newPlayer(browser, language);
   snapshotsOf(ann);
   await prepare?.(ann, 'Ann');
-  const url = await createRoom(ann, language, 'Ann', setup);
+  const url = await createRoom(ann, language, 'Ann', async (page) => {
+    if (language === 'zh') await setSetting(page, TEXT.zh.settings.clueLength.zh, 4);
+    await setup?.(page);
+  });
   // The others join at the same time, as separate people do.
   const join = async (name: string, joining: Joining = {}) => {
     const page = await newPlayer(browser, language);
