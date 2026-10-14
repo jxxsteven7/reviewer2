@@ -347,7 +347,7 @@ function commands(feedback: Feedback, run: FeedbackCommands): string {
 // at its end; the trail, when there is one, comes after the text, and, for adopted feedback, what
 // the player contributed, as the home page shows it; the rest below: the version, the language,
 // the page it came from, the contact, the name for the feedback contributions, the account it was
-// sent from, whether the player let the name link to that account's profile, and, in bold,
+// sent from, whether the player signed it with that account, and, in bold,
 // another account whose username the name is, which may be someone passing for that account's
 // owner, for a bug the browser, and last the commands that may come next (`run`), folded. A kind
 // that this server doesn't know, from a later one that it was rolled back from, shows as it is.
@@ -369,7 +369,7 @@ function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
     (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
     (feedback.credit === null || feedback.username === null || !feedback.linkProfile
       ? ''
-      : ' &middot; links to their profile') +
+      : ' &middot; signed with the account') +
     (feedback.credit === null || feedback.nameTakenBy === null
       ? ''
       : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
