@@ -1,13 +1,15 @@
-import type { InvitationView } from '@reviewer2/shared';
+import type { InvitationView, JoinAskView } from '@reviewer2/shared';
 import { reactive, ref } from 'vue';
 import { account, loadAccount } from './account';
 import { send, socket, whenConnected } from './socket';
 import { toast, toastError } from './toast';
 
 // What this browser hears of its account's friends (docs/architecture.md#friends): the invitations
-// to rooms, which show on whatever page is open until they are followed, ignored or lapse, and the
-// word that the friends or the requests changed, on which a page that shows them asks again; and
-// the way to ask someone to be friends, from wherever a page offers it.
+// to rooms, which show on whatever page is open until they are followed, ignored or lapse; the
+// requests of friends to be let into the room the account is in, which show on the room's page
+// until they are answered, ignored or lapse; and the word that the friends or the requests changed,
+// on which a page that shows them asks again. Also the ways to ask someone to be friends, and to ask
+// a friend to be let into their room, from wherever a page offers them.
 
 // Asks an account to be friends, by their username or by their seat in the room, with a line for
 // them if the player wrote one, and tells the player how it went: friends at once, when the other
@@ -70,10 +72,61 @@ socket.on('friends:invited', (invitation: InvitationView) => {
 // account's, or lapsed. One this page doesn't show is nothing to it.
 socket.on('friends:uninvited', ({ id }: { id: string }) => forget(id));
 
+// Asks a friend who is in a room to be let in, and tells the player how it went: the friend may
+// invite them, which comes as an invitation. Says whether the request went through.
+export async function askToJoin(username: string): Promise<boolean> {
+  if (!(await whenConnected())) {
+    toastError('offline');
+    return false;
+  }
+  const reply = await send('friends:ask', { username });
+  if (!reply.ok) {
+    toastError(reply.error);
+    return false;
+  }
+  toast('friends.askSent');
+  return true;
+}
+
+export const asks = reactive<JoinAskView[]>([]);
+const askTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+// Takes a request to be let in off the page.
+export function forgetAsk(id: string): void {
+  clearTimeout(askTimers.get(id));
+  askTimers.delete(id);
+  const index = asks.findIndex((ask) => ask.id === id);
+  if (index !== -1) asks.splice(index, 1);
+}
+
+// The player ignores a request to be let in: it goes off the page, and the server forgets it, so
+// that no connection of theirs hears it again, and whoever asked may ask again.
+export function dismissAsk(id: string): void {
+  forgetAsk(id);
+  void send('friends:dismiss', { id });
+}
+
+// As with invitations, every connection of the account hears a request, and one that comes while it
+// stands hears it again: the same one shows once, for as long as it stands.
+socket.on('friends:asked', (ask: JoinAskView) => {
+  forgetAsk(ask.id);
+  asks.push(ask);
+  while (asks.length > MOST_SHOWN) forgetAsk((asks[0] as JoinAskView).id);
+  askTimers.set(
+    ask.id,
+    setTimeout(() => forgetAsk(ask.id), ask.expiresInMs),
+  );
+});
+
+// A request has ended, however it ended: answered or ignored from another page of the account's,
+// or lapsed. One this page doesn't show is nothing to it.
+socket.on('friends:unasked', ({ id }: { id: string }) => forgetAsk(id));
+
 // A new connection is whoever the browser is now, who may be someone else, and hears again the
-// invitations that stand for them.
+// invitations and the requests that stand for them.
 socket.on('connect', () => {
   for (const { id } of [...invitations]) forget(id);
+  for (const { id } of [...asks]) forgetAsk(id);
 });
 
 // Goes up whenever the account's friends or requests change, by this page or by the other side.

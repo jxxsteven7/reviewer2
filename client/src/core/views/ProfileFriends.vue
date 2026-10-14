@@ -23,6 +23,7 @@ import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { duoLine } from '../duos';
 import { errorKey } from '../errors';
+import { askToJoin } from '../friends';
 import { send } from '../socket';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
@@ -37,7 +38,8 @@ import { useFriendsList } from '../useFriendsList';
 // friends' board above the list sums the titles up, in the same look, each with the avatar and the
 // name of the friends who hold it, the avatar leading to their page as on the cards. A friend who is offline has the whole card
 // faded, still readable. A friend in a public room can be joined from here; one in a private room
-// only by their invitation. A friend whom the account has given a name of its own (an alias, for
+// only by their invitation, which the account may ask them for (askToJoin), and which the card says
+// it has while the request stands. A friend whom the account has given a name of its own (an alias, for
 // the account alone) goes by it, with the username after it in small grey type, here and in the
 // sheets about them. The card's "more" button opens a sheet with the friend's name, from which the
 // account gives them a name, or takes it away by leaving it empty, or removes them, after asking
@@ -108,6 +110,10 @@ async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:r
   if (reply.ok) return;
   toastError(reply.error);
   void load();
+}
+
+async function ask(friend: FriendView) {
+  await run(() => askToJoin(friend.username));
 }
 
 function startNaming(friend: FriendView) {
@@ -275,6 +281,15 @@ async function saveAlias() {
               <RouterLink v-if="friend.room?.code" :to="`/room/${friend.room.code}`" class="join">{{
                 t('friends.join')
               }}</RouterLink>
+              <button
+                v-else-if="friend.room"
+                type="button"
+                class="join"
+                :disabled="busy || friend.asked"
+                @click="ask(friend)"
+              >
+                {{ t(friend.asked ? 'friends.asked' : 'friends.askJoin') }}
+              </button>
               <button
                 type="button"
                 class="more"
@@ -515,19 +530,30 @@ h3 {
   margin: 0;
 }
 
-/* Joining is an ink pill whose box reaches 44 px high, out of sight. */
+/* Joining, or asking to, is an ink pill whose box reaches 44 px high, out of sight; once asked, it
+   is grey. */
 .join {
   position: relative;
   display: inline-flex;
   align-items: center;
   min-height: 36px;
   padding: 0 var(--space-3);
+  border: 0;
   border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--on-ink);
+  font: inherit;
   font-size: var(--text-sm);
   font-weight: var(--weight-black);
   text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.join:disabled {
+  background: var(--paper-2);
+  color: var(--ink-2);
+  cursor: default;
 }
 
 .join::before {

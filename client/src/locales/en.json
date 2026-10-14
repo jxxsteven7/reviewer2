@@ -59,6 +59,10 @@
       "join": "Join",
       "refresh": "Refresh"
     },
+    "friendsPlaying": {
+      "title": "Friends playing",
+      "and": ", "
+    },
     "seats": {
       "waiting": "You're still in room {code} (waiting for the game to start)",
       "playing": "You're still in room {code} (game in progress)",
@@ -728,6 +732,10 @@
     "friend_removed": "The chair removed that friend from this room, so they can't be invited back.",
     "invite_cooldown": "You invited that friend a moment ago. Wait a minute.",
     "invitation_expired": "This invitation has lapsed. Ask for another one, or join by the room's number.",
+    "friend_not_in_room": "That friend isn't in a room right now.",
+    "already_in_room": "You're in that room already.",
+    "join_ask_pending": "You've asked them already. Wait for their answer.",
+    "join_ask_limited": "You've asked to join too often this hour. Try again later.",
     "no_such_profile": "There is no such page. The account may have been deleted.",
     "self_like": "You can't like your own page.",
     "like_limited": "You have liked enough pages for today. Try again tomorrow.",
@@ -990,7 +998,7 @@
   },
   "friends": {
     "title": "Friends",
-    "intro": "Friends see whether you're online and which public room you're in, and can invite you into theirs.",
+    "intro": "Friends see whether you're online and which room you're in (without the number of a private one), can invite you into theirs, and can ask to join yours.",
     "addLabel": "Their username",
     "addSubmit": "Send a request",
     "noteLabel": "A line for them (optional)",
@@ -1031,6 +1039,13 @@
     "invitation": "{name} invited you to room {code}",
     "invitationJoin": "Join",
     "invitationIgnore": "Ignore",
+    "askJoin": "Ask to join",
+    "asked": "Asked",
+    "askSent": "Asked. If they invite you, you'll see it here.",
+    "askNotice": "{name} would like to join",
+    "askInvite": "Invite",
+    "askIgnore": "Ignore",
+    "askInvited": "Invitation sent to {name}.",
     "addFromRoom": "Add friend",
     "addTitle": "Add {name} as a friend",
     "requestPending": "Request sent",

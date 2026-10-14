@@ -136,6 +136,9 @@ export const ROOM_MESSAGES = {
   'friends:remove': z.object({ username: name }),
   'friends:invite': z.object({ username: name }),
   'friends:ignore': z.object({ id: z.string().max(64) }),
+  'friends:rooms': none,
+  'friends:ask': z.object({ username: name }),
+  'friends:dismiss': z.object({ id: z.string().max(64) }),
 } as const;
 
 export type RoomMessage = keyof typeof ROOM_MESSAGES;

@@ -1,4 +1,4 @@
-import type { InvitationView } from '@reviewer2/shared';
+import type { InvitationView, JoinAskView } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 // The connection, as the invitations see it: the handlers it registers, and what the page sends.
@@ -13,7 +13,7 @@ const mock = vi.hoisted(() => {
 });
 vi.mock('./socket', () => mock);
 
-import { ignore, invitations, requestFriend } from './friends';
+import { askToJoin, asks, dismissAsk, ignore, invitations, requestFriend } from './friends';
 import { toasts } from './toast';
 
 // What the server says.
@@ -87,5 +87,44 @@ describe('a request to be friends', () => {
     expect(await requestFriend({ username: 'Cy' })).toBe(false);
     expect(mock.send).not.toHaveBeenCalledWith('friends:request', { username: 'Cy' });
     expect(heard()).toBe('errors.offline');
+  });
+});
+
+describe('the requests to be let into the room', () => {
+  const ask = (id: string, expiresInMs = 600_000): JoinAskView => ({
+    id,
+    roomId: 'room-1',
+    from: { username: 'Bob', avatar: null },
+    expiresInMs,
+  });
+  const asked = () => asks.map(({ id }) => id);
+
+  test('show as they come, the same one once, and go when they lapse, end, are ignored or a new connection comes', () => {
+    hear('friends:asked', ask('a', 1000));
+    hear('friends:asked', ask('b'));
+    hear('friends:asked', ask('a', 1000));
+    hear('friends:asked', ask('c'));
+    expect(asked()).toEqual(['b', 'a', 'c']);
+    vi.advanceTimersByTime(1000);
+    expect(asked()).toEqual(['b', 'c']);
+    hear('friends:unasked', { id: 'b' });
+    dismissAsk('c');
+    expect(asked()).toEqual([]);
+    expect(mock.send).toHaveBeenCalledWith('friends:dismiss', { id: 'c' });
+    hear('friends:asked', ask('d'));
+    hear('friends:invited', invitation('e'));
+    hear('connect');
+    expect(asked()).toEqual([]);
+    expect(shown()).toEqual([]);
+  });
+
+  test('go out over a connection, and the player hears how it went', async () => {
+    const heard = () => toasts.at(-1)?.key;
+    expect(await askToJoin('Ann')).toBe(true);
+    expect(mock.send).toHaveBeenCalledWith('friends:ask', { username: 'Ann' });
+    expect(heard()).toBe('friends.askSent');
+    mock.send.mockResolvedValueOnce({ ok: false, error: 'join_ask_pending' });
+    expect(await askToJoin('Ann')).toBe(false);
+    expect(heard()).toBe('errors.join_ask_pending');
   });
 });

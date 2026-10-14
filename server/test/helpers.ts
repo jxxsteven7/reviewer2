@@ -8,6 +8,7 @@ import type {
   EmoteEvent,
   FriendLimits,
   InvitationView,
+  JoinAskView,
   MailRequest,
   RoomView,
   Session,
@@ -264,10 +265,13 @@ export class TestClient {
   readonly closed: ClosedReason[] = [];
   readonly emotes: EmoteEvent[] = [];
   readonly sessions: Session[] = [];
-  // The invitations to rooms that the connection was sent, the IDs of those it heard had ended,
-  // and how often it heard that its account's friends or requests changed.
+  // The invitations to rooms that the connection was sent, the IDs of those it heard had ended, the
+  // same of the requests to be let into its room, and how often it heard that its account's friends
+  // or requests changed.
   readonly invitations: InvitationView[] = [];
   readonly uninvited: string[] = [];
+  readonly asks: JoinAskView[] = [];
+  readonly unasked: string[] = [];
   friendsChanged = 0;
   // How often the server said that the connection's login had ended, and why it disconnected.
   loginsEnded = 0;
@@ -282,6 +286,8 @@ export class TestClient {
     socket.on('session', (session: Session) => this.sessions.push(session));
     socket.on('friends:invited', (invitation: InvitationView) => this.invitations.push(invitation));
     socket.on('friends:uninvited', ({ id }: { id: string }) => this.uninvited.push(id));
+    socket.on('friends:asked', (ask: JoinAskView) => this.asks.push(ask));
+    socket.on('friends:unasked', ({ id }: { id: string }) => this.unasked.push(id));
     socket.on('friends:changed', () => (this.friendsChanged += 1));
     socket.on('account:ended', () => (this.loginsEnded += 1));
     socket.on('disconnect', (reason) => this.disconnects.push(reason));

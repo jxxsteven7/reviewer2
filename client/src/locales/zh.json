@@ -59,6 +59,10 @@
       "join": "加入",
       "refresh": "刷新"
     },
+    "friendsPlaying": {
+      "title": "好友在玩",
+      "and": "、"
+    },
     "seats": {
       "waiting": "你还在房间 {code} 里（等待开局）",
       "playing": "你还在房间 {code} 里（游戏进行中）",
@@ -728,6 +732,10 @@
     "friend_removed": "房主把这位好友移出了这个房间，不能再邀请。",
     "invite_cooldown": "刚邀请过这位好友，一分钟后再试。",
     "invitation_expired": "这个邀请已经失效。请对方再邀请一次，或者凭房间号加入。",
+    "friend_not_in_room": "这位好友现在不在房间里。",
+    "already_in_room": "你已经在这个房间里了。",
+    "join_ask_pending": "已经申请过了，等对方回复。",
+    "join_ask_limited": "这一小时申请得太多了，稍后再试。",
     "no_such_profile": "没有这个主页，账号可能已经注销。",
     "self_like": "不能给自己的主页点赞。",
     "like_limited": "今天点赞已经够多了，明天再来。",
@@ -990,7 +998,7 @@
   },
   "friends": {
     "title": "好友",
-    "intro": "好友能看到你是否在线、在哪个公开房间，并能邀请你进他们的房间。",
+    "intro": "好友能看到你是否在线、在哪个房间（私密房间不显示房号），能邀请你进他们的房间，也能申请加入你的房间。",
     "addLabel": "对方的用户名",
     "addSubmit": "发送请求",
     "noteLabel": "附一句话（可选）",
@@ -1031,6 +1039,13 @@
     "invitation": "{name} 邀请你加入房间 {code}",
     "invitationJoin": "加入",
     "invitationIgnore": "忽略",
+    "askJoin": "申请加入",
+    "asked": "已申请",
+    "askSent": "已发送申请。对方邀请你时，这里会收到邀请。",
+    "askNotice": "{name}想加入",
+    "askInvite": "邀请",
+    "askIgnore": "忽略",
+    "askInvited": "已邀请{name}。",
     "addFromRoom": "加为好友",
     "addTitle": "加 {name} 为好友",
     "requestPending": "已发送请求",

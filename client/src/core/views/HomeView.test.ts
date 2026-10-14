@@ -17,6 +17,7 @@ vi.mock('../../games', async () => {
   return { games: { keywords: { Rules: RulesSheet, defaultSettings } } };
 });
 vi.mock('../account', () => ({ account: { loaded: true, summary: null, mail: false } }));
+vi.mock('../friends', () => ({ askToJoin: vi.fn(), friendsVersion: { value: 0 } }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const stubs = [
@@ -24,6 +25,7 @@ const stubs = [
   'AcknowledgmentsList',
   'BackToRoom',
   'CreateRoom',
+  'FriendsPlaying',
   'JoinRoom',
   'PageMasthead',
   'SendFeedback',
@@ -72,6 +74,7 @@ describe('the tip sheet', () => {
           'AcknowledgmentsList',
           'BackToRoom',
           'CreateRoom',
+          'FriendsPlaying',
           'JoinRoom',
           'PageMasthead',
           'SendFeedback',

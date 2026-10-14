@@ -18,6 +18,8 @@ vi.mock('../useFriendsList', () => ({
 const send = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
 vi.mock('../socket', () => ({ send }));
 vi.mock('../toast', () => ({ toast: vi.fn(), toastError: vi.fn() }));
+const askToJoin = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('../friends', () => ({ askToJoin }));
 
 const NONE = { wonTogether: 0, lostTogether: 0, against: 0, beat: 0, beaten: 0 };
 // The line keeps each number with its word by no-break spaces; the test reads them as spaces.
@@ -95,6 +97,20 @@ describe('ProfileFriends', () => {
     expect(bob?.classes()).not.toContain('offline');
     expect(cat?.classes()).toContain('offline');
     expect(cat?.get('.where').text()).toBe('offline');
+  });
+
+  test('asks a friend in a private room to be let in, and says so while the request stands', async () => {
+    const inPrivate = { ...friend('Bob', null), online: true, room: { code: null } };
+    const wrapper = mountWith([inPrivate, { ...friend('Cat', null), online: true, room: { code: null }, asked: true }]);
+    const [bob, cat] = wrapper.findAll('.list .friend');
+    expect(bob?.get('.where').text().replace(/\s+/g, ' ')).toBe('online \u00b7 In a room');
+    expect(bob?.find('a.join').exists()).toBe(false);
+    const asking = bob?.get('button.join');
+    expect(asking?.text()).toBe('Ask to join');
+    await asking?.trigger('click');
+    expect(askToJoin).toHaveBeenCalledWith('Bob');
+    expect(cat?.get('button.join').text()).toBe('Asked');
+    expect(cat?.get('button.join').attributes('disabled')).toBeDefined();
   });
 
   const press = async (wrapper: ReturnType<typeof mountWith>, text: string) => {
