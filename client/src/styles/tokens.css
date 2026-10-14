@@ -104,6 +104,11 @@
   --shift-2: 5px;
   --shift-3: 6px;
   --scrim: rgb(26 26 46 / 45%);
+  /* The avatar of someone a room waits for, who is offline or hasn't come yet: a white veil over
+     it, and its outline as the ink would look under the veil. Over the avatar rather than through
+     it, so that nothing behind shows through, such as a group's color or the next avatar. */
+  --veil: rgb(255 255 255 / 50%);
+  --ink-veiled: #8d8d97;
   /* The one soft shadow, under the masthead that stays at the top of a page once the page has
      scrolled under it: a hard one there would look like a line. */
   --shade: rgb(26 26 46 / 18%);

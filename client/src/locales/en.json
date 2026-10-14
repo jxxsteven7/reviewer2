@@ -324,6 +324,7 @@
     "noLimit": "No limit on guesses",
     "clock": "{seconds} seconds left",
     "remaining": "{count}",
+    "piTag": "PI",
     "card": {
       "red": "Red",
       "blue": "Blue",

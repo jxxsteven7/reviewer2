@@ -81,7 +81,7 @@ useDeadlineHeroes(
     />
     <StreakNotices :room="room" large />
     <div class="main" :class="{ over: game.result }">
-      <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" />
+      <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" :groups="groups" />
       <PausedNotice v-if="game.paused" large />
       <KeywordsBoard
         v-else

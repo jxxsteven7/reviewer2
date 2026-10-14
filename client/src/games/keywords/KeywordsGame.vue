@@ -75,7 +75,7 @@ import { useScoreFloats } from './useScoreFloats';
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
-const { data, mySeat, mySide, isChair } = useKeywords(room);
+const { data, mySeat, mySide, isChair, groups } = useKeywords(room);
 const match = computed(() => room.value.match);
 
 // The line that the folded table shows during the game: the match's progress, and the viewer's
@@ -422,7 +422,7 @@ const status = computed(() => {
       :match="match"
       @again="again"
     />
-    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" clock-apart />
+    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" :groups="groups" :me="room.me" clock-apart />
     <div
       v-if="!game.result && (game.clock || isChair)"
       ref="clockBar"

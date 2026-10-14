@@ -94,7 +94,10 @@ describe('PlayerName', () => {
       },
       global: global(),
     });
-    expect(played.findAll('.mark').map((mark) => mark.text())).toEqual(['AI playing', 'offline']);
+    // Offline, said to a screen reader alone, with the avatar of someone the room waits for.
+    expect(played.findAll('.mark').map((mark) => mark.text())).toEqual(['AI playing']);
+    expect(played.get('.sr-only').text()).toBe('offline');
+    expect(played.find('.avatar.veiled .wait').exists()).toBe(true);
     expect(played.get('.avatar').find('svg').exists()).toBe(false);
   });
 });

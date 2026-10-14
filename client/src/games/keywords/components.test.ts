@@ -921,6 +921,38 @@ describe('TurnStrip', () => {
     expect(timed.get('.clock').attributes('aria-label')).toBe('42 seconds left');
   });
 
+  test("shows each group's PI and students in its bar, the viewer first, and names the group to a screen reader", () => {
+    const player = (id: string, online = true) => ({ id, name: id, online });
+    const groups = [
+      {
+        team: 'red' as const,
+        captain: player('ann'),
+        guessers: [player('cat'), player('bob'), player('dan', false), player('eve')],
+      },
+      { team: 'blue' as const, captain: player('fay', false), guessers: [] },
+    ];
+    const strip = mount(TurnStrip, { props: { game, guessRule: 'free', groups, me: 'bob' }, global: global() });
+    const [red, blue] = strip.findAll('.score');
+    expect(red?.get('.sr-only').text()).toBe('Red group');
+    expect(red?.get('.pi-tag').text()).toBe('PI');
+    // The viewer first, then the others in their order; on a phone two of them and "+2".
+    const students = red?.findAll('.students .face') ?? [];
+    expect(students.map((face) => face.get('.avatar .initial').attributes('data-initial'))).toEqual([
+      'B',
+      'C',
+      'D',
+      'E',
+    ]);
+    expect(students[0]?.find('.avatar.me').exists()).toBe(true);
+    expect(students.map((face) => face.classes('extra'))).toEqual([false, false, true, true]);
+    expect(red?.get('.more.few').text()).toBe('+2');
+    expect(red?.find('.more.many').exists()).toBe(false);
+    // Dan is offline, as is Fay, the blue PI, who has no students.
+    expect(students[2]?.find('.avatar .wait').exists()).toBe(true);
+    expect(blue?.get('.pi .avatar .wait').exists()).toBe(true);
+    expect(blue?.find('.divider').exists()).toBe(false);
+  });
+
   test('keeps the clock still while the game is paused, as on a big screen', async () => {
     vi.useFakeTimers();
     try {
@@ -1340,8 +1372,10 @@ describe('GameRosters', () => {
       global: global(),
     });
     expect(nobody.find('.spectators').exists()).toBe(false);
-    // Whether a player is online is a dot on the avatar's corner.
-    expect(red.find('.face .dot.on').exists()).toBe(true);
+    // Nothing marks a player who is online; one who is offline has the dots of someone the room
+    // waits for, in a faded avatar.
+    expect(red.find('.dot').exists()).toBe(false);
+    expect(red.find('.avatar .wait').exists()).toBe(false);
   });
 
   test('raises the numbers that the floats give, on the avatars of their players', () => {

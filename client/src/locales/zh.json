@@ -324,6 +324,7 @@
     "noLimit": "不限次数",
     "clock": "还剩 {seconds} 秒",
     "remaining": "{count}",
+    "piTag": "导师",
     "card": {
       "red": "红",
       "blue": "蓝",
