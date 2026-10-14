@@ -66,8 +66,8 @@ test('friends are made in a room and by username, invited into a private room, a
   await annsFriends.getByRole('button', { name: text.friends.accept }).click();
   const bobsLine = annsFriends.locator('.card', { hasText: bobName });
   await expect(bobsLine).not.toContainText('We met at the workshop');
-  await expect(bobsLine).toContainText(text.friends.online);
-  await expect(bobsLine).toContainText(interpolate(text.friends.inPublicRoom, { code: `R2-${first.slice(-4)}` }));
+  // Online, by the green dot on his avatar, and in a public room, which the card leads into.
+  await expect(bobsLine.locator('.face .dot')).toBeVisible();
   await expect(bobsLine.getByRole('link', { name: text.friends.join })).toHaveAttribute(
     'href',
     `/room/${first.slice(-4)}`,
@@ -151,8 +151,10 @@ test('friends are made in a room and by username, invited into a private room, a
   // page, sees the invitation there and follows it into the room.
   const second = await createRoom(ann, 'en', '');
   await bob.goto('/account');
-  // Bob has no seat in this one, and isn't told its number.
-  await expect(bob.locator('.friends .card', { hasText: annName })).toContainText(text.friends.inRoom);
+  // Bob has no seat in this one, and isn't told its number: he may ask to be let in.
+  await expect(
+    bob.locator('.friends .card', { hasText: annName }).getByRole('button', { name: text.friends.askJoinRoom }),
+  ).toBeVisible();
   await expect(
     bob.locator('.friends .card', { hasText: annName }).getByRole('link', { name: text.friends.join }),
   ).toHaveCount(0);
@@ -211,7 +213,7 @@ test('friends are made in a room and by username, invited into a private room, a
   await ann.keyboard.press('Escape');
   await cat.locator('.friends').getByRole('button', { name: text.friends.refresh }).click();
   const annsLine = cat.locator('.friends .card', { hasText: annName });
-  await expect(annsLine).toContainText(interpolate(text.friends.inPublicRoom, { code: `R2-${code}` }));
+  await expect(annsLine.getByRole('link', { name: text.friends.join })).toHaveAttribute('href', `/room/${code}`);
   await annsLine.getByRole('link', { name: text.friends.join }).click();
   await cat.waitForURL(second);
   await cat.getByRole('button', { name: text.room.join.submit, exact: true }).click();
@@ -272,11 +274,10 @@ test('a friend in a private room is asked to let a player in, and invites them o
   // Cat asks from Ann's card on her account page; Ann ignores it, and Cat may ask again.
   await cat.reload();
   const annsCard = cat.locator('.friends .card', { hasText: annName });
-  await expect(annsCard).toContainText(text.friends.inRoom);
-  await annsCard.getByRole('button', { name: text.friends.askJoin }).click();
+  await annsCard.getByRole('button', { name: text.friends.askJoinRoom }).click();
   await expect(annsCard.getByRole('button', { name: text.friends.asked })).toBeDisabled();
   const catsNotice = ann.locator('.join-ask', { hasText: catName });
   await catsNotice.getByRole('button', { name: text.friends.askIgnore }).click();
   await expect(catsNotice).toHaveCount(0);
-  await expect(annsCard.getByRole('button', { name: text.friends.askJoin })).toBeEnabled();
+  await expect(annsCard.getByRole('button', { name: text.friends.askJoinRoom })).toBeEnabled();
 });

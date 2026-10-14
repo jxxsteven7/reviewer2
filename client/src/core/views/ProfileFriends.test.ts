@@ -120,7 +120,7 @@ describe('ProfileFriends', () => {
     ).toEqual(["View Bob's profile", "View Cat's profile"]);
   });
 
-  test("opens each friend's panel from their avatar, with the name as plain text and where they are beside it", async () => {
+  test("opens each friend's panel from their avatar, with the name as plain text and the way into their room beside it", async () => {
     const online = { ...friend('Bob', null), online: true, room: { code: 'K7QX' } };
     const wrapper = mountWith([online, friend('Cat', null)]);
     const [bob, cat] = wrapper.findAll('.list .friend');
@@ -129,12 +129,18 @@ describe('ProfileFriends', () => {
     await flushPromises();
     expect(wrapper.get('[role=dialog]:has(.panel-body) h2').text()).toBe('Bob');
     expect(bob?.get('.name').element.tagName).toBe('SPAN');
-    expect(bob?.get('.where').text().replace(/\s+/g, ' ')).toBe('online \u00b7 In room R2-K7QX');
+    // Online: a green dot on the avatar, with the word for screen readers alone, and the way into
+    // the room on the name's line.
+    expect(bob?.find('.face .dot').exists()).toBe(true);
+    expect(bob?.get('.top .sr-only').text()).toBe('online');
+    expect(bob?.get('.top a.join').text()).toBe('Join room');
     expect(bob?.get('a.join').attributes('href')).toBe('/room/K7QX');
-    // An offline friend's whole card fades.
+    // An offline friend's whole card fades, with no dot.
     expect(bob?.classes()).not.toContain('offline');
     expect(cat?.classes()).toContain('offline');
-    expect(cat?.get('.where').text()).toBe('offline');
+    expect(cat?.find('.dot').exists()).toBe(false);
+    expect(cat?.get('.top .sr-only').text()).toBe('offline');
+    expect(cat?.find('.join').exists()).toBe(false);
   });
 
   test('answers a request on its card as the panels do, and takes one back', async () => {
@@ -160,10 +166,9 @@ describe('ProfileFriends', () => {
     const inPrivate = { ...friend('Bob', null), online: true, room: { code: null } };
     const wrapper = mountWith([inPrivate, { ...friend('Cat', null), online: true, room: { code: null }, asked: true }]);
     const [bob, cat] = wrapper.findAll('.list .friend');
-    expect(bob?.get('.where').text().replace(/\s+/g, ' ')).toBe('online \u00b7 In a room');
     expect(bob?.find('a.join').exists()).toBe(false);
-    const asking = bob?.get('button.join');
-    expect(asking?.text()).toBe('Ask to join');
+    const asking = bob?.get('.top button.join');
+    expect(asking?.text()).toBe('Ask to join room');
     await asking?.trigger('click');
     expect(askToJoin).toHaveBeenCalledWith('Bob');
     expect(cat?.get('button.join').text()).toBe('Asked');
