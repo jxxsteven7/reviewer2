@@ -250,11 +250,11 @@ describe('ADMIN_COMMAND', () => {
   });
 });
 
-describe('ISSUE_COMMAND', () => {
+describe('FEEDBACK_COMMAND', () => {
   test('is none unless it is set, and is trimmed', () => {
-    for (const ISSUE_COMMAND of [undefined, '', ' ']) {
-      expect(loadConfig({ ISSUE_COMMAND }).issueCommand, JSON.stringify(ISSUE_COMMAND)).toBeNull();
+    for (const FEEDBACK_COMMAND of [undefined, '', ' ']) {
+      expect(loadConfig({ FEEDBACK_COMMAND }).feedbackCommand, JSON.stringify(FEEDBACK_COMMAND)).toBeNull();
     }
-    expect(loadConfig({ ISSUE_COMMAND: ' publish-feedback\n' }).issueCommand).toBe('publish-feedback');
+    expect(loadConfig({ FEEDBACK_COMMAND: ' triage-feedback\n' }).feedbackCommand).toBe('triage-feedback');
   });
 });

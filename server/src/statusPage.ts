@@ -236,12 +236,13 @@ const VIEWS: Record<PageView, string> = {
 // ADMIN_COMMAND (config.ts) says how admin.cjs is run where the server is.
 export const DEFAULT_ADMIN_COMMAND = 'node server/dist/admin.cjs';
 
-// The commands that the feedback page shows are made of: how admin.cjs is run (`admin`), and,
-// where the operator has one, a command of theirs that publishes a piece of feedback as an issue in
-// one go, given its id (`issue`, ISSUE_COMMAND in config.ts).
+// What the commands that the feedback page shows are made of: how admin.cjs is run (`admin`), or,
+// where the operator has one, a command of theirs that takes the subcommands of `admin.cjs
+// feedback`, and `publish <id>`, which publishes the feedback as an issue in one go (`feedback`,
+// FEEDBACK_COMMAND in config.ts).
 export interface FeedbackCommands {
   admin: string;
-  issue?: string | null;
+  feedback?: string | null;
 }
 
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
@@ -285,20 +286,20 @@ function trail(feedback: Feedback, now: number): string {
 }
 
 // The `admin.cjs feedback` commands that may come next for the feedback (admin.ts), as text for
-// the operator to copy to a terminal, each on a line of its own with `run.admin` in front, under a
-// heading that is folded until it is opened. Which they are follows the feedback's status. In the
-// trash, only the way out. Otherwise: the issue, for feedback whose player agreed to one: first,
-// where the operator has a command that publishes it in one go (`run.issue`), that command with the
-// id, when this build knows the kind; then, to do it by hand, to draft it, when this build knows the
-// kind, and to record it; or, once there is one, to take it back. Then the pull request, to record
-// or to take back; adopting it, while it is neither thanked nor closed, which can't be undone;
-// closing or reopening it; and the trash, unless an acknowledgment points at it. The page shows the
-// commands and runs none of them.
+// the operator to copy to a terminal, each on a line of its own with `run.feedback` in front where
+// the operator has that command, and `run.admin` and `feedback` otherwise, under a heading that is
+// folded until it is opened. Which they are follows the feedback's status. In the trash, only the
+// way out. Otherwise: the issue, for feedback whose player agreed to one: first, with the
+// operator's command, to publish it in one go, when this build knows the kind; then, to do it by
+// hand, to draft it, when this build knows the kind, and to record it; or, once there is one, to
+// take it back. Then the pull request, to record or to take back; adopting it, while it is neither
+// thanked nor closed, which can't be undone; closing or reopening it; and the trash, unless an
+// acknowledgment points at it. The page shows the commands and runs none of them.
 function commands(feedback: Feedback, run: FeedbackCommands): string {
   const { id, kind, publicIssue, issue, resolvedPr, acknowledgmentId, closedAt, deletedAt } = feedback;
-  const shown = (command: string, note: string) =>
-    `<p class="command"><code>${escape(command)}</code>${note === '' ? '' : ` ${note}`}</p>`;
-  const line = (command: string, note = '') => shown(`${run.admin} feedback ${command}`, note);
+  const prefix = run.feedback ? run.feedback : `${run.admin} feedback`;
+  const line = (command: string, note = '') =>
+    `<p class="command"><code>${escape(`${prefix} ${command}`)}</code>${note === '' ? '' : ` ${note}`}</p>`;
   const known = Object.hasOwn(KINDS, kind);
   const lines =
     deletedAt !== null
@@ -308,7 +309,7 @@ function commands(feedback: Feedback, run: FeedbackCommands): string {
             ? []
             : issue === null
               ? [
-                  ...(run.issue && known ? [shown(`${run.issue} ${id}`, 'publishes the issue in one go')] : []),
+                  ...(run.feedback && known ? [line(`publish ${id}`, 'publishes the issue in one go')] : []),
                   ...(known ? [line(`draft ${id}`)] : []),
                   line(`issue ${id} <number>`),
                 ]
@@ -568,8 +569,8 @@ function agents({ agents: ai }: Stats): string {
 }
 
 // The feedback that players sent, newest first, a page at a time, of one view and of every kind
-// or of one, each with the commands that may come next (`run`): ADMIN_COMMAND, or
-// DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs, and ISSUE_COMMAND, if any (config.ts).
+// or of one, each with the commands that may come next (`run`): FEEDBACK_COMMAND, where it is
+// set, or ADMIN_COMMAND, or DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs (config.ts).
 export function renderFeedbackPage(feedback: FeedbackListing, run: FeedbackCommands): string {
   return document(
     'feedback',

@@ -251,7 +251,7 @@ export async function main({
         history,
         feedback,
         log,
-        { admin: config.adminCommand, issue: config.issueCommand },
+        { admin: config.adminCommand, feedback: config.feedbackCommand },
         () => accounts.store.counts(7),
       ),
     );

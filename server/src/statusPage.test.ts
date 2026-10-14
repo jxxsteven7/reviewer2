@@ -572,7 +572,7 @@ describe('the feedback', () => {
     expect(odd).not.toMatch(INERT);
   });
 
-  test("puts the operator's command that publishes an issue in one go first, where there is one", () => {
+  test("puts the operator's feedback command in front of every command, with publish first where it may", () => {
     const listing = (changes: Partial<Feedback>): FeedbackListing => ({
       total: 1,
       statuses: { ...NO_FEEDBACK.statuses, new: 1 },
@@ -584,24 +584,43 @@ describe('the feedback', () => {
       older: false,
       now: NOW,
     });
-    const run = { admin: DEFAULT_ADMIN_COMMAND, issue: 'publish-feedback' };
-    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), run)).slice(0, 3)).toEqual([
-      'publish-feedback 7 publishes the issue in one go',
-      `${RUN} draft 7`,
-      `${RUN} issue 7 &#60;number&#62;`,
+    const run = { admin: DEFAULT_ADMIN_COMMAND, feedback: 'triage-feedback' };
+    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), run))).toEqual([
+      'triage-feedback publish 7 publishes the issue in one go',
+      'triage-feedback draft 7',
+      'triage-feedback issue 7 &#60;number&#62;',
+      'triage-feedback resolve 7 &#60;pr&#62;',
+      "triage-feedback adopt 7 can't be undone",
+      'triage-feedback close 7',
+      'triage-feedback delete 7',
     ]);
-    // Not without the player's agreement, nor once the issue is recorded, nor for a kind this
-    // build doesn't know, which it couldn't draft.
+    expect(commands(renderFeedbackPage(listing({ deletedAt: '2026-10-01T00:00:00.000Z' }), run))).toEqual([
+      'triage-feedback restore 7',
+    ]);
+    // No publish without the player's agreement, nor once the issue is recorded, nor for a kind
+    // this build doesn't know, which it couldn't draft.
     for (const changes of [
       { publicIssue: false },
       { publicIssue: true, issue: 42, status: 'issue' as const },
       { publicIssue: true, kind: 'later' as Feedback['kind'] },
     ]) {
-      expect(renderFeedbackPage(listing(changes), run), JSON.stringify(changes)).not.toContain('publish-feedback');
+      const shown = commands(renderFeedbackPage(listing(changes), run));
+      expect(
+        shown.filter((command) => command.includes(' publish ')),
+        JSON.stringify(changes),
+      ).toEqual([]);
+      expect(
+        shown.every((command) => command.startsWith('triage-feedback ')),
+        JSON.stringify(changes),
+      ).toBe(true);
     }
+    // Without it, the page is as it was: no publish.
+    expect(commands(renderFeedbackPage(listing({ publicIssue: true }), { admin: DEFAULT_ADMIN_COMMAND }))[0]).toBe(
+      `${RUN} draft 7`,
+    );
     // The operator set it, and it is escaped all the same.
-    const odd = renderFeedbackPage(listing({ publicIssue: true }), { ...run, issue: '<b>go</b>' });
-    expect(odd).toContain('<code>&#60;b&#62;go&#60;/b&#62; 7</code>');
+    const odd = renderFeedbackPage(listing({ publicIssue: true }), { ...run, feedback: '<b>go</b>' });
+    expect(odd).toContain('<code>&#60;b&#62;go&#60;/b&#62; publish 7</code>');
     expect(odd).not.toMatch(INERT);
   });
 

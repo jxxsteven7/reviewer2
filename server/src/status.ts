@@ -27,8 +27,8 @@ import type { FeedbackStore } from './store/feedback';
 // otherwise, of one status, or in the trash. `/reports` is the reports that players sent of each
 // other, paged the same way. All of it is read-only: what became of the feedback is changed with
 // admin.cjs alone, whose commands the feedback page shows as text to copy, with ADMIN_COMMAND in
-// front, and, where the operator has one, the command that publishes feedback as an issue in one
-// go (ISSUE_COMMAND).
+// front, or the operator's own command for them, which can also publish an issue in one go
+// (FEEDBACK_COMMAND).
 
 export const STATUS_HOST = '127.0.0.1';
 
@@ -105,7 +105,7 @@ export function createStatusHandler(
   feedback: FeedbackStore,
   log: Log,
   // What the commands that the feedback page shows are made of: ADMIN_COMMAND, or
-  // DEFAULT_ADMIN_COMMAND, and ISSUE_COMMAND, if any (config.ts).
+  // DEFAULT_ADMIN_COMMAND, and FEEDBACK_COMMAND, if any (config.ts).
   commands: FeedbackCommands,
   // How many accounts there are, and how many are new.
   accounts: () => AccountCounts = () => ({ total: 0, recent: 0 }),
