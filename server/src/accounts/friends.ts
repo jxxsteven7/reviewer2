@@ -12,13 +12,16 @@ export type FriendResult<Data extends object = object> = ({ ok: true } & Data) |
 
 const refuse = (error: FriendError): { ok: false; error: FriendError } => ({ ok: false, error });
 
-const DAY_MS = 24 * 60 * 60_000;
+const HOUR_MS = 60 * 60_000;
+const DAY_MS = 24 * HOUR_MS;
 
 export class Friendships {
   readonly store: FriendStore;
   readonly limits: FriendLimits;
   // Per account and day: requests, counting those that came to nothing.
   readonly #requests: WindowCounter;
+  // Per account and hour: searches by username, counting those that found nobody.
+  readonly #finds: WindowCounter;
 
   constructor(
     db: DatabaseSync,
@@ -30,6 +33,7 @@ export class Friendships {
     this.limits = { ...FRIEND_LIMITS, ...limits };
     this.store = new FriendStore(db, clock);
     this.#requests = new WindowCounter(this.limits.requestsPerDay, DAY_MS, now);
+    this.#finds = new WindowCounter(this.limits.findsPerHour, HOUR_MS, now);
   }
 
   // Counts a request against the account's day, before anything is looked up for it, so that a
@@ -41,6 +45,12 @@ export class Friendships {
   // Gives back one of the day's requests, for one that came to nothing and told nothing new.
   refund(accountId: number): void {
     this.#requests.refund(String(accountId));
+  }
+
+  // Counts a search by username against the account's hour, before the name is looked up, so that
+  // a name that finds no account costs the same as one that does. False when the hour is used up.
+  takeFind(accountId: number): boolean {
+    return this.#finds.take(String(accountId));
   }
 
   // One account asks another to be friends, with a line for them, if any, which the caller has
@@ -130,6 +140,7 @@ export class Friendships {
   // how many requests went.
   prune(): number {
     this.#requests.prune();
+    this.#finds.prune();
     return this.store.pruneDeclined(new Date(this.clock() - this.limits.declineCooldownMs).toISOString());
   }
 

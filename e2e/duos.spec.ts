@@ -1,5 +1,17 @@
 import { DUO_MIN } from '@reviewer2/shared';
-import { expect, interpolate, logIn, newPlayer, redWins, register, seatTable, TEXT, test } from './helpers';
+import {
+  askFriend,
+  avatarOf,
+  expect,
+  interpolate,
+  logIn,
+  newPlayer,
+  redWins,
+  register,
+  seatTable,
+  TEXT,
+  test,
+} from './helpers';
 
 // Friend duos end to end (docs/architecture.md#friend-duos): Ann, red's PI, and Bob, red's student,
 // are friends, and red wins three games in a row. At the end of the third, each is told that the
@@ -24,12 +36,7 @@ test('friends who win together become co-first authors, which they alone are tol
   await register(annAlone, names.Ann as string);
   await register(bobAlone, names.Bob as string);
   await annAlone.goto('/account');
-  await annAlone
-    .locator('.friends')
-    .getByLabel(text.friends.addLabel)
-    .fill(names.Bob as string);
-  await annAlone.locator('.friends').getByRole('button', { name: text.friends.addSubmit }).click();
-  await expect(annAlone.getByText(text.friends.requestSent)).toBeVisible();
+  await askFriend(annAlone, names.Bob as string);
   await bobAlone.goto('/account');
   await bobAlone.locator('.friends').getByRole('button', { name: text.friends.accept }).click();
   await expect(bobAlone.locator('.friends .list .friend', { hasText: names.Ann as string })).toBeVisible();
@@ -97,13 +104,19 @@ test('friends who win together become co-first authors, which they alone are tol
   );
   await ann.keyboard.press('Escape');
 
-  // Bob's profile shows Ann what the two have played; she is the only one it shows that to.
-  await bobsLine.getByRole('link', { name: names.Bob as string }).click();
-  const duo = ann.locator('.profile-card section.duo');
+  // Bob's page, which his avatar's panel opens, shows Ann what the two have played; she is the only
+  // one it shows that to.
+  await bobsLine.getByRole('button', avatarOf(names.Bob as string)).click();
+  await ann
+    .getByRole('dialog', { name: names.Bob as string })
+    .getByRole('button', { name: text.room.panel.fullPage })
+    .click();
+  const duo = ann.locator('[role=dialog].tall .profile-card section.duo');
   await expect(duo.locator('h3')).toHaveText(interpolate(text.playerPage.duo, { name: names.Bob as string }));
   await expect(duo.locator('.badge')).toHaveText(text.duos.names.coauthor);
+  const page = await bob.evaluate(() => fetch('/api/account').then((reply) => reply.json()));
   const stranger = table.captains.blue;
-  await stranger.goto(ann.url());
+  await stranger.goto(`/p/${(page as { account: { handle: string } }).account.handle}`);
   await expect(stranger.locator('.profile-card .name')).toHaveText(names.Bob as string);
   await expect(stranger.locator('.profile-card section.duo')).toHaveCount(0);
 });

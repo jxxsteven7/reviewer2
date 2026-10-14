@@ -232,6 +232,42 @@ describe('a friend request', () => {
   });
 });
 
+describe('the search by username', () => {
+  test('finds an account by its whole name, in any case or width, and nobody by a part of it', async () => {
+    server = await startServer();
+    const { client: ann } = await person('Ann');
+    const { browser: bobs } = await person('Bobby');
+    const bob = (await bobs.account()) as { handle: string };
+    const found = { ok: true, handle: bob.handle, username: 'Bobby' };
+    expect(await ann.send('friends:find', { username: 'Bobby' })).toEqual(found);
+    expect(await ann.send('friends:find', { username: '  ＢＯＢＢＹ ' })).toEqual(found);
+    expect(await ann.send('friends:find', { username: 'Bob' })).toEqual({ ok: false, error: 'no_such_account' });
+    // Oneself too: the page says so.
+    expect(await ann.send('friends:find', { username: 'ann' })).toMatchObject({ ok: true, username: 'Ann' });
+    // Nothing for a guest, and nothing that isn't a name.
+    const guest = track(await TestClient.connect(server.url));
+    expect(await guest.send('friends:find', { username: 'Bobby' })).toEqual({ ok: false, error: 'account_required' });
+    expect(await ann.send('friends:find', {})).toEqual({ ok: false, error: 'bad_request' });
+  });
+
+  test('costs one of the hour, whether or not it finds an account, and none of the day of requests', async () => {
+    server = await startServer({ friendLimits: { findsPerHour: 3, requestsPerDay: 1 } });
+    const { client: ann } = await person('Ann');
+    await person('Bob');
+    expect(await ann.send('friends:find', { username: 'Nobody' })).toEqual({ ok: false, error: 'no_such_account' });
+    expect(await ann.send('friends:find', { username: 'Bob' })).toMatchObject({ ok: true });
+    expect(await ann.send('friends:find', { username: 'Nobody' })).toEqual({ ok: false, error: 'no_such_account' });
+    expect(await ann.send('friends:find', { username: 'Bob' })).toEqual({ ok: false, error: 'friend_find_limited' });
+    // The request still has the day's one.
+    expect(await ann.send('friends:request', { username: 'Bob' })).toEqual({ ok: true, status: 'pending' });
+    // Another account has an hour of its own, and the hour passes.
+    const { client: cat } = await person('Cat');
+    expect(await cat.send('friends:find', { username: 'Bob' })).toMatchObject({ ok: true });
+    server.advance(60 * 60_000);
+    expect(await ann.send('friends:find', { username: 'Bob' })).toMatchObject({ ok: true });
+  });
+});
+
 describe('the line with a friend request', () => {
   test('goes to the account asked alone, and is gone once the request is answered', async () => {
     server = await startServer();

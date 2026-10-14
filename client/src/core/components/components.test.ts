@@ -1,16 +1,24 @@
 // @vitest-environment happy-dom
-import { mount, RouterLinkStub } from '@vue/test-utils';
+import { mount } from '@vue/test-utils';
 import { describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import { provideOpenPlayer } from '../playerPanel';
+import { shownProfile } from '../profilePanel';
 import AvatarButton from './AvatarButton.vue';
 import BackButton from './BackButton.vue';
 import FieldPicker from './FieldPicker.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
+import ProfilePanel from './ProfilePanel.vue';
 import UiSheet from './UiSheet.vue';
+
+// The panel that an avatar opens outside a room reads the page, which no server answers here.
+vi.mock('../account', async (actual) => ({
+  ...(await actual<typeof import('../account')>()),
+  request: vi.fn(async () => ({ ok: false, error: 'no_such_profile' })),
+}));
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
 const global = () => ({ plugins: [i18n()] });
@@ -139,13 +147,25 @@ describe('AvatarButton', () => {
     expect(wrapper.get('.avatar').attributes('aria-hidden')).toBe('true');
   });
 
-  test("leads to a player's page outside a room", () => {
-    const wrapper = mount(AvatarButton, {
-      props: { to: '/p/abc', name: 'Bob' },
-      global: { ...global(), stubs: { RouterLink: RouterLinkStub } },
-    });
-    expect(wrapper.getComponent(RouterLinkStub).props('to')).toBe('/p/abc');
-    expect(wrapper.getComponent(RouterLinkStub).attributes('aria-label')).toBe("View Bob's profile");
+  test("opens the account's panel outside a room, as a room's avatar opens the player's", async () => {
+    // The site's one panel (profilePanel.ts), which App.vue holds, here beside the avatar.
+    const page = () => h('div', [h(AvatarButton, { handle: 'b0b000000000', name: 'Bob' }), h(ProfilePanel)]);
+    const wrapper = mount(page, { global: global(), attachTo: document.body });
+    const avatar = wrapper.get('button.avatar-button');
+    expect(avatar.attributes('aria-label')).toBe("View Bob's profile");
+    expect(avatar.attributes('aria-haspopup')).toBe('dialog');
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    (avatar.element as HTMLButtonElement).focus();
+    await avatar.trigger('click');
+    expect(shownProfile.value).toEqual({ handle: 'b0b000000000', username: 'Bob' });
+    await vi.waitFor(() => expect(document.querySelector('[role=dialog] h2')?.textContent?.trim()).toBe('Bob'));
+    expect(document.activeElement?.closest('[role=dialog]')).not.toBeNull();
+    document.querySelector<HTMLButtonElement>('[role=dialog] button.close')?.click();
+    await nextTick();
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    // The focus comes back to the avatar.
+    expect(document.activeElement).toBe(avatar.element);
+    wrapper.unmount();
   });
 });
 
@@ -221,6 +241,19 @@ describe('UiSheet', () => {
     expect(wrapper.emitted('back')).toHaveLength(1);
     expect(wrapper.emitted('close')).toBeUndefined();
     wrapper.unmount();
+  });
+
+  test('gives the focus back when it is taken off the page open, as when it is closed', async () => {
+    const button = document.createElement('button');
+    button.id = 'opener';
+    document.body.append(button);
+    button.focus();
+    const wrapper = sheet('e', true);
+    await nextTick();
+    expect(document.activeElement?.closest('[role=dialog]')).not.toBeNull();
+    wrapper.unmount();
+    expect(active()).toBe('opener');
+    button.remove();
   });
 
   test('takes the keys and the focus when it is created open', async () => {

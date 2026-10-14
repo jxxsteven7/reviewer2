@@ -6,13 +6,15 @@ import { RouterLink } from 'vue-router';
 import { account, request } from '../account';
 import { formatDay } from '../dates';
 import { errorKey } from '../errors';
-import { requestFriend } from '../friends';
+import { standingOf } from '../friends';
 import { useLanguage } from '../i18n';
 import { connect } from '../socket';
 import { streakTitles as titlesOf } from '../streaks';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
+import { useFriendsList } from '../useFriendsList';
 import DuoSummary from './DuoSummary.vue';
+import FriendActions from './FriendActions.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
 import RankLadder from './RankLadder.vue';
@@ -26,10 +28,12 @@ import UiButton from './UiButton.vue';
 // chose to put there: a link, a line about themselves, the record as counts (RecordStats.vue) and
 // the feedback contributions as counts. The bio is shown as the text it is, never as markup, and
 // the link as the address it is, which opens in a new tab and which search engines are told not
-// to follow. The rank opens the ladder of every rank, with this one marked and no points, which the profile never
-// shows. Anyone may look; an account that isn't the owner may like the profile and ask the owner to
-// be friends. A friend of the owner also sees what the two have played together
-// (docs/architecture.md#friend-duos), which nobody else is sent.
+// to follow. The rank opens the ladder of every rank, with this one marked and no points, which
+// the profile never shows. Anyone may look; an account that isn't the owner may like the profile
+// and, beside the like, do what a room's panel and the search's panel offer by how the two stand
+// (FriendActions.vue): ask the owner to be friends, see that it has asked, answer the owner's
+// request, or give a friend a name or part. A friend of the owner also sees what the two have
+// played together (docs/architecture.md#friend-duos), which nobody else is sent.
 //
 // In a room's panel (PlayerPanel.vue), whose title is the player's name, the card has no name of
 // its own (`named` false), and is `brief` until the viewer opens the whole page: the avatar, the
@@ -101,11 +105,14 @@ async function toggleLike(): Promise<void> {
   });
 }
 
-async function befriend(): Promise<void> {
-  const current = profile.value;
-  if (!current) return;
-  await run(() => requestFriend({ username: current.username }));
-}
+// The viewer's friends and requests, asked for while the whole page shows to an account that isn't
+// the owner. Until they come, the page offers neither a request nor an answer.
+const { view: friends, failed: friendsFailed } = useFriendsList(computed(() => canAct.value && !props.brief));
+const standing = computed(() =>
+  profile.value && (friends.value !== null || friendsFailed.value !== null)
+    ? standingOf(profile.value.handle, viewer.value?.handle ?? null, friends.value)
+    : null,
+);
 
 // A connection is asked for early, so that the first tap on "Add friend" doesn't wait for one.
 watch(
@@ -168,9 +175,13 @@ watch(
           >
             {{ t(profile.liked ? 'playerPage.liked' : 'playerPage.like') }}
           </UiButton>
-          <UiButton v-if="canAct" size="small" variant="quiet" :disabled="busy" @click="befriend">
-            {{ t('friends.addFromRoom') }}
-          </UiButton>
+          <FriendActions
+            v-if="canAct && standing"
+            compact
+            :standing="standing"
+            :name="profile.username"
+            :who="{ username: profile.username }"
+          />
           <RouterLink v-if="profile.mine" to="/account" class="edit">{{ t('playerPage.edit') }}</RouterLink>
           <span v-else-if="guest" class="hint">{{ t('playerPage.logInToLike') }}</span>
         </div>
@@ -303,11 +314,12 @@ watch(
   white-space: nowrap;
 }
 
+/* The likes and the buttons beside them, close enough that a phone's row holds them all. */
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-2);
 }
 
 .likes {

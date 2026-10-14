@@ -188,10 +188,17 @@ describe('PlayerPanel', () => {
   });
 
   // The viewer's friends list, as the server sends it, and every other message answered with `reply`.
-  const friendsAre = (friends: object[], outgoing: object[] = [], reply: object = { ok: true }) =>
+  const friendsAre = (
+    friends: object[],
+    outgoing: object[] = [],
+    reply: object = { ok: true },
+    incoming: object[] = [],
+  ) =>
     send.mockImplementation(async (event) =>
-      event === 'friends:list' ? { ok: true, friends, incoming: [], outgoing } : { ok: true, ...reply },
+      event === 'friends:list' ? { ok: true, friends, incoming, outgoing } : { ok: true, ...reply },
     );
+  const namesIn = (dialog: HTMLElement | undefined) =>
+    [...(dialog?.querySelectorAll('button') ?? [])].map((element) => element.textContent?.trim());
 
   test('offers an account to ask a player with an account to be friends, first, and says how it went', async () => {
     signedIn.account.summary = { username: 'Cat', avatar: null };
@@ -200,10 +207,11 @@ describe('PlayerPanel', () => {
     await flushPromises();
     expect(send).toHaveBeenCalledWith('friends:list');
     expect(names()).toEqual(['\u00d7', 'Add friend', 'Move to the spectators', 'Make chair', 'Remove from the room']);
-    // A sheet of its own asks for a line for them, which may be left out.
+    // A sheet of its own, over the panel, asks for a line for them, which may be left out.
     button('Add friend').click();
     await flushPromises();
-    expect(names()).toEqual(['\u00d7', 'Send a request', 'Cancel']);
+    expect(dialogs()).toHaveLength(2);
+    expect(namesIn(dialogs()[1])).toEqual(['\u00d7', 'Send a request', 'Cancel']);
     button('Send a request').click();
     await flushPromises();
     expect(send).toHaveBeenCalledWith('friends:request', { playerId: 'bob' });
@@ -216,14 +224,14 @@ describe('PlayerPanel', () => {
     asGuest.unmount();
   });
 
-  test("offers no request to a friend, whom it calls by the viewer's name for them, nor again to whoever was asked", async () => {
+  test("offers a friend, whom it calls by the viewer's name for them, a name or parting, and whoever was asked nothing", async () => {
     signedIn.account.summary = { username: 'Cat', avatar: null };
     signedIn.request.mockResolvedValue({ ok: false, error: 'no_such_profile' });
     const bobs = { ...bob, rank: 'phd' as const, handle: 'b0b000000000' };
     friendsAre([{ handle: 'b0b000000000', username: 'Bob', alias: 'Bobby', avatar: null }]);
     const friendly = panel('bob', view('cat', false, bobs));
     await flushPromises();
-    expect(names()).toEqual(['\u00d7', 'Open the full page']);
+    expect(names()).toEqual(['\u00d7', 'Edit alias', 'Remove friend', 'Open the full page']);
     expect(dialogs()[0]?.querySelector('h2')?.textContent?.trim()).toBe('Bobby Bob');
     expect(dialogs()[0]?.querySelector('h2 .subtitle')?.textContent?.trim()).toBe('Bob');
     friendly.unmount();
@@ -233,6 +241,51 @@ describe('PlayerPanel', () => {
     expect(names()).toEqual(['\u00d7', 'Request sent', 'Open the full page']);
     expect(button('Request sent').disabled).toBe(true);
     asked.unmount();
+  });
+
+  test('answers in the panel whoever asked the viewer, with the line they sent', async () => {
+    signedIn.account.summary = { username: 'Cat', avatar: null };
+    signedIn.request.mockResolvedValue({ ok: false, error: 'no_such_profile' });
+    const bobs = { ...bob, rank: 'phd' as const, handle: 'b0b000000000' };
+    friendsAre([], [], { ok: true }, [{ handle: 'b0b000000000', username: 'Bob', avatar: null, note: 'Hello' }]);
+    const wrapper = panel('bob', view('cat', false, bobs));
+    await flushPromises();
+    expect(dialogs()[0]?.querySelector('.asked-you')?.textContent).toBe(
+      'They asked to be your friend\u201cHello\u201d',
+    );
+    expect(names()).toEqual(['\u00d7', 'Accept', 'Decline', 'Open the full page']);
+    button('Accept').click();
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('friends:accept', { username: 'Bob' });
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  test('gives a friend a name, or parts after asking, in sheets over the panel', async () => {
+    signedIn.account.summary = { username: 'Cat', avatar: null };
+    signedIn.request.mockResolvedValue({ ok: false, error: 'no_such_profile' });
+    const bobs = { ...bob, rank: 'phd' as const, handle: 'b0b000000000' };
+    friendsAre([{ handle: 'b0b000000000', username: 'Bob', alias: 'Bobby', avatar: null }]);
+    const wrapper = panel('bob', view('cat', false, bobs));
+    await flushPromises();
+    button('Edit alias').click();
+    await flushPromises();
+    expect(dialogs()[1]?.querySelector('h2')?.textContent?.trim()).toBe('Alias for Bob');
+    expect(dialogs()[1]?.querySelector<HTMLInputElement>('input')?.value).toBe('Bobby');
+    button('Cancel').click();
+    await flushPromises();
+    expect(dialogs()).toHaveLength(1);
+    button('Remove friend').click();
+    await flushPromises();
+    expect(dialogs()[1]?.textContent).toContain('Remove Bob from your friends?');
+    expect(send).not.toHaveBeenCalledWith('friends:remove', expect.anything());
+    [...(dialogs()[1]?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
+      .find((element) => element.textContent?.trim() === 'Remove friend')
+      ?.click();
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('friends:remove', { username: 'Bob' });
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    wrapper.unmount();
   });
 
   test('shows a brief card of an account, and its whole page over the panel, with the way back to it', async () => {

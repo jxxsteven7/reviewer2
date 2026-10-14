@@ -1,4 +1,4 @@
-import type { InvitationView, JoinAskView } from '@reviewer2/shared';
+import type { FriendRequestView, FriendsView, FriendView, InvitationView, JoinAskView } from '@reviewer2/shared';
 import { reactive, ref } from 'vue';
 import { account, loadAccount } from './account';
 import { send, socket, whenConnected } from './socket';
@@ -8,8 +8,9 @@ import { toast, toastError } from './toast';
 // to rooms, which show on whatever page is open until they are followed, ignored or lapse; the
 // requests of friends to be let into the room the account is in, which show on the room's page
 // until they are answered, ignored or lapse; and the word that the friends or the requests changed,
-// on which a page that shows them asks again. Also the ways to ask someone to be friends, and to ask
-// a friend to be let into their room, from wherever a page offers them.
+// on which a page that shows them asks again. Also the ways to ask someone to be friends, to answer
+// them, to part, and to ask a friend to be let into their room, from wherever a page offers them,
+// and how the account stands with someone, which says which of these a page offers.
 
 // Asks an account to be friends, by their username or by their seat in the room, with a line for
 // them if the player wrote one, and tells the player how it went: friends at once, when the other
@@ -34,6 +35,47 @@ export async function requestFriend(
   }
   toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
   return true;
+}
+
+// Answers the request of the account with this username, or ends the friendship with it, from a
+// panel or a page (FriendActions.vue), and tells the player when the two have become friends or
+// why it didn't go through; after a refusal, every list of friends on the page is asked for again,
+// since the one that offered this may have been out of date. Says whether it went through.
+export async function answerFriend(username: string, answer: 'accept' | 'decline' | 'remove'): Promise<boolean> {
+  if (!(await whenConnected())) {
+    toastError('offline');
+    return false;
+  }
+  const reply = await send(`friends:${answer}`, { username });
+  if (!reply.ok) {
+    toastError(reply.error);
+    friendsVersion.value += 1;
+    return false;
+  }
+  if (answer === 'accept') toast('friends.nowFriends');
+  return true;
+}
+
+// How the account stands with another, by the other's handle and as the account's own friends list
+// has it (useFriendsList): the account itself, a friend, someone who has asked it, someone it has
+// asked, or a stranger. Whatever offers to ask someone to be friends, a room's player panel, the
+// search on the account page and a public page, asks this, so that all of them offer the same. A
+// list that can't be had leaves a stranger, since the server judges a request anyway.
+export type Standing =
+  | { kind: 'self' }
+  | { kind: 'friend'; friend: FriendView }
+  | { kind: 'incoming'; request: FriendRequestView }
+  | { kind: 'outgoing' }
+  | { kind: 'stranger' };
+
+export function standingOf(handle: string, own: string | null, view: FriendsView | null): Standing {
+  if (handle === own) return { kind: 'self' };
+  const friend = view?.friends.find((other) => other.handle === handle);
+  if (friend) return { kind: 'friend', friend };
+  const request = view?.incoming.find((other) => other.handle === handle);
+  if (request) return { kind: 'incoming', request };
+  if (view?.outgoing.some((other) => other.handle === handle)) return { kind: 'outgoing' };
+  return { kind: 'stranger' };
 }
 
 export const invitations = reactive<InvitationView[]>([]);

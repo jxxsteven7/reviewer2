@@ -1,4 +1,4 @@
-import type { InvitationView, JoinAskView } from '@reviewer2/shared';
+import type { FriendsView, InvitationView, JoinAskView } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 // The connection, as the invitations see it: the handlers it registers, and what the page sends.
@@ -13,7 +13,17 @@ const mock = vi.hoisted(() => {
 });
 vi.mock('./socket', () => mock);
 
-import { askToJoin, asks, dismissAsk, ignore, invitations, requestFriend } from './friends';
+import {
+  answerFriend,
+  askToJoin,
+  asks,
+  dismissAsk,
+  friendsVersion,
+  ignore,
+  invitations,
+  requestFriend,
+  standingOf,
+} from './friends';
 import { toasts } from './toast';
 
 // What the server says.
@@ -87,6 +97,55 @@ describe('a request to be friends', () => {
     expect(await requestFriend({ username: 'Cy' })).toBe(false);
     expect(mock.send).not.toHaveBeenCalledWith('friends:request', { username: 'Cy' });
     expect(heard()).toBe('errors.offline');
+  });
+});
+
+describe('an answer to someone else', () => {
+  test('goes over a connection, and the player hears of a friendship and of a refusal', async () => {
+    const heard = () => toasts.at(-1)?.key;
+    const before = toasts.length;
+    mock.send.mockResolvedValueOnce({ ok: true });
+    expect(await answerFriend('Bob', 'decline')).toBe(true);
+    expect(mock.send).toHaveBeenCalledWith('friends:decline', { username: 'Bob' });
+    expect(toasts.length).toBe(before);
+    mock.send.mockResolvedValueOnce({ ok: true });
+    expect(await answerFriend('Bob', 'accept')).toBe(true);
+    expect(mock.send).toHaveBeenCalledWith('friends:accept', { username: 'Bob' });
+    expect(heard()).toBe('friends.nowFriends');
+    // A refusal is told, and every list on the page is asked for again.
+    const version = friendsVersion.value;
+    mock.send.mockResolvedValueOnce({ ok: false, error: 'not_friends' });
+    expect(await answerFriend('Bob', 'remove')).toBe(false);
+    expect(mock.send).toHaveBeenCalledWith('friends:remove', { username: 'Bob' });
+    expect(heard()).toBe('errors.not_friends');
+    expect(friendsVersion.value).toBe(version + 1);
+    mock.whenConnected.mockResolvedValueOnce(false);
+    mock.send.mockClear();
+    expect(await answerFriend('Bob', 'accept')).toBe(false);
+    expect(mock.send).not.toHaveBeenCalled();
+    expect(heard()).toBe('errors.offline');
+  });
+});
+
+describe('how the account stands with someone', () => {
+  test("is read from the account's own list by the other's handle", () => {
+    const other = (handle: string) => ({ handle, username: handle, avatar: null });
+    const friend = { ...other('f00000000000'), online: false, room: null, duo: null };
+    const view: FriendsView = {
+      friends: [friend],
+      incoming: [{ ...other('1a0000000000'), note: 'Hi' }],
+      outgoing: [other('0a0000000000')],
+    };
+    expect(standingOf('5e1f00000000', '5e1f00000000', view)).toEqual({ kind: 'self' });
+    expect(standingOf('f00000000000', '5e1f00000000', view)).toEqual({ kind: 'friend', friend });
+    expect(standingOf('1a0000000000', '5e1f00000000', view)).toEqual({
+      kind: 'incoming',
+      request: { ...other('1a0000000000'), note: 'Hi' },
+    });
+    expect(standingOf('0a0000000000', '5e1f00000000', view)).toEqual({ kind: 'outgoing' });
+    expect(standingOf('5a0000000000', '5e1f00000000', view)).toEqual({ kind: 'stranger' });
+    // Without the list, anyone else is a stranger, whom the server judges anyway.
+    expect(standingOf('f00000000000', null, null)).toEqual({ kind: 'stranger' });
   });
 });
 

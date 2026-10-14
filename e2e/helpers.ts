@@ -745,6 +745,29 @@ export async function logIn(page: Page, username: string, password = 'correct ho
   await page.waitForURL(/\/$/);
 }
 
+// Searches the friends section of the account page, which is open, for a username or a link to a
+// page, as the account typed or pasted it.
+export async function searchFriends(page: Page, query: string): Promise<void> {
+  const text = TEXT[await pageLanguage(page)];
+  const friends = page.locator('.friends');
+  await friends.getByLabel(text.friends.search.label).fill(query);
+  await friends.getByRole('button', { name: text.friends.search.submit, exact: true }).click();
+}
+
+// Asks an account to be friends from the account page, which is open: the search finds them by
+// their username, and their panel asks, in the sheet with a line for them, if one is given.
+export async function askFriend(page: Page, username: string, line?: string): Promise<void> {
+  const text = TEXT[await pageLanguage(page)];
+  await searchFriends(page, username);
+  await page.getByRole('dialog').getByRole('button', { name: text.friends.addFromRoom }).click();
+  // The sheet lies over the panel; its title names them as the server does, whatever the case typed.
+  const sheet = page.getByRole('dialog', { name: interpolate(text.friends.addTitle, { name: username }) });
+  if (line !== undefined) await sheet.getByLabel(text.friends.noteLabel).fill(line);
+  await sheet.getByRole('button', { name: text.friends.addSubmit }).click();
+  // The word of the last request, since the word of one asked a moment ago may still be up.
+  await expect(page.getByText(text.friends.requestSent).last()).toBeVisible();
+}
+
 // The language that a page shows its interface in, before it has chosen one: the browser's.
 async function pageLanguage(page: Page): Promise<Language> {
   return (await page.evaluate(() => navigator.language)).startsWith('zh') ? 'zh' : 'en';

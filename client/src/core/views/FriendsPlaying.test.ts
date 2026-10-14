@@ -75,12 +75,12 @@ describe('the rooms that friends are in', () => {
     expect(open?.get('.names').text()).toBe('Ann');
     expect(open?.get('.status').text()).toBe('Game in progress');
     expect(open?.get('a.join').attributes('href')).toBe('/room/K7QX');
-    expect(open?.get('a.avatar-button').attributes('href')).toBe('/p/ann000000000');
+    expect(open?.get('button.avatar-button').attributes('aria-label')).toBe("View Ann's profile");
     // A private room shows no number; asking goes to the first friend in it.
     expect(closed?.get('.names').text()).toBe('Bobby, Cat');
     expect(closed?.get('.status').text()).toBe('Waiting for players');
     expect(closed?.text()).not.toContain('R2-');
-    await closed?.get('button').trigger('click');
+    await closed?.get('button.button').trigger('click');
     expect(friends.askToJoin).toHaveBeenCalledWith('Bob');
   });
 
@@ -88,8 +88,8 @@ describe('the rooms that friends are in', () => {
     const asked = { ...ROOMS[1], friends: [{ ...ann, asked: true as const }] } as FriendRoomView;
     mock.send.mockResolvedValue({ ok: true, rooms: [asked] });
     const wrapper = await mounted();
-    expect(wrapper.get('.room button').text()).toBe('Asked');
-    expect(wrapper.get('.room button').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.room button.button').text()).toBe('Asked');
+    expect(wrapper.get('.room button.button').attributes('disabled')).toBeDefined();
     mock.send.mockResolvedValue({ ok: true, rooms: ROOMS });
     friends.friendsVersion.value += 1;
     await flushPromises();
@@ -118,6 +118,6 @@ describe('the rooms that friends are in', () => {
     const wrapper = await mounted();
     expect(wrapper.get('h2').text()).toBe('\u597d\u53cb\u5728\u73a9');
     expect(wrapper.findAll('.room')[1]?.get('.names').text()).toBe('Bobby\u3001Cat');
-    expect(wrapper.findAll('.room')[1]?.get('button').text()).toBe('\u7533\u8bf7\u52a0\u5165');
+    expect(wrapper.findAll('.room')[1]?.get('button.button').text()).toBe('\u7533\u8bf7\u52a0\u5165');
   });
 });

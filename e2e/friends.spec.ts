@@ -1,8 +1,22 @@
-import { createRoom, expect, interpolate, joinByLink, newPlayer, register, roomMenu, TEXT, test } from './helpers';
+import {
+  askFriend,
+  avatarOf,
+  createRoom,
+  expect,
+  interpolate,
+  joinByLink,
+  newPlayer,
+  register,
+  roomMenu,
+  searchFriends,
+  TEXT,
+  test,
+} from './helpers';
 
 // Friends, invitations and academic ranks end to end (docs/architecture.md#friends): a player asks
-// another to be friends from the player menu in a room, the other accepts on the account page, a
-// friend is asked by username too; the friend list says who is online and where; an invitation,
+// another to be friends from the player menu in a room, the other accepts on the account page; on
+// the account page, a player finds another by username or by a link to their page, and asks or
+// answers in their panel; the friend list says who is online and where; an invitation,
 // which shows on the account page, leads into a private room; a public room is joined from the
 // list; and the rank shows beside the name in the room and on the account page. A friend in a
 // private room is asked to let a player in, from the home page or the account page, and invites
@@ -58,14 +72,61 @@ test('friends are made in a room and by username, invited into a private room, a
     'href',
     `/room/${first.slice(-4)}`,
   );
-  // Ann asks Cat by username, and Cat accepts on her own page, which heard of the request.
-  await annsFriends.getByLabel(text.friends.addLabel).fill(catName.toUpperCase());
-  await annsFriends.getByRole('button', { name: text.friends.addSubmit }).click();
+  // Ann finds Cat by her username, in capitals, which the search reads as names are compared, and
+  // asks her from her panel, with a line for her. The panel and the box are cleared after.
+  await searchFriends(ann, catName.toUpperCase());
+  const catForAnn = ann.getByRole('dialog', { name: catName });
+  await expect(catForAnn.locator('.profile-card')).toContainText(text.ranks.names.kindergarten);
+  await catForAnn.getByRole('button', { name: text.friends.addFromRoom }).click();
+  const askingCat = ann.getByRole('dialog', { name: interpolate(text.friends.addTitle, { name: catName }) });
+  await askingCat.getByLabel(text.friends.noteLabel).fill('Lab mate?');
+  await askingCat.getByRole('button', { name: text.friends.addSubmit }).click();
   await expect(ann.getByText(text.friends.requestSent)).toBeVisible();
+  await expect(ann.getByRole('dialog')).toHaveCount(0);
+  await expect(annsFriends.getByLabel(text.friends.search.label)).toHaveValue('');
+  await expect(annsFriends.getByLabel(text.friends.search.label)).toBeFocused();
+  // Found again, Cat's panel says that the request went.
+  await searchFriends(ann, catName);
+  await expect(catForAnn.getByRole('button', { name: text.friends.requestPending })).toBeDisabled();
+  await ann.keyboard.press('Escape');
+  // Cat finds Ann by the link to her page, pasted with words around it, and accepts in Ann's panel,
+  // which shows Ann's line.
+  const annsPage = await ann.getByRole('link', { name: text.account.profile.public.view }).getAttribute('href');
   await cat.goto('/account');
-  await cat.locator('.friends').getByRole('button', { name: text.friends.accept }).click();
+  await searchFriends(cat, `Here is my page: ${new URL(annsPage as string, ann.url()).href} see you`);
+  const annForCat = cat.getByRole('dialog', { name: annName });
+  await expect(annForCat).toContainText(text.friends.askedYou);
+  await expect(annForCat).toContainText(interpolate(text.friends.noteQuoted, { note: 'Lab mate?' }));
+  await annForCat.getByRole('button', { name: text.friends.accept, exact: true }).click();
+  await expect(cat.getByText(text.friends.nowFriends)).toBeVisible();
   await expect(cat.locator('.friends .card', { hasText: annName })).toContainText(text.friends.online);
   await expect(annsFriends.locator('.card', { hasText: catName })).toContainText(text.friends.online);
+  // Outside a room too, a tap on an avatar opens the panel, and the whole page rises over it.
+  await annsFriends.locator('.card', { hasText: catName }).getByRole('button', avatarOf(catName)).click();
+  const catsPanel = ann.getByRole('dialog', { name: catName });
+  await expect(catsPanel.getByRole('button', { name: text.friends.aliasEdit })).toBeVisible();
+  await catsPanel.getByRole('button', { name: text.room.panel.fullPage }).click();
+  const catsPage = ann.locator('[role=dialog].tall');
+  await expect(catsPage.getByRole('button', { name: text.friends.short.remove, exact: true })).toBeVisible();
+  await catsPage.getByRole('button', { name: text.room.panel.back }).click();
+  await expect(catsPage).toHaveCount(0);
+  await expect(catsPanel).toBeVisible();
+  await ann.keyboard.press('Escape');
+  await expect(ann.getByRole('dialog')).toHaveCount(0);
+  // The focus comes back to the avatar that opened the panel.
+  await expect(annsFriends.locator('.card', { hasText: catName }).getByRole('button', avatarOf(catName))).toBeFocused();
+  // Now Ann is a friend, whom the panel offers a name or parting; a part of a name finds nobody, and
+  // Cat finds herself.
+  await searchFriends(cat, annName);
+  await expect(annForCat.getByRole('button', { name: text.friends.aliasEdit })).toBeVisible();
+  await expect(annForCat.getByRole('button', { name: text.friends.removeFriend })).toBeVisible();
+  await expect(annForCat.getByRole('button', { name: text.friends.addFromRoom })).toHaveCount(0);
+  await cat.keyboard.press('Escape');
+  await searchFriends(cat, annName.slice(0, -1));
+  await expect(cat.locator('.friends .search')).toContainText(text.friends.search.notFound);
+  await searchFriends(cat, catName);
+  await expect(cat.getByRole('dialog', { name: catName })).toContainText(text.friends.self);
+  await cat.keyboard.press('Escape');
 
   // The rank on the account page: a kindergartner with no points, 30 short of primary school. The
   // rank opens the ladder of every rank, the kindergartner marked at the bottom and Reviewer 2 at
@@ -167,11 +228,10 @@ test('a friend in a private room is asked to let a player in, and invites them o
   await register(bob, bobName);
   const cat = await newPlayer(browser, 'en');
   await register(cat, catName);
-  // Ann asks Bob and Cat by username, and both accept.
+  // Ann finds Bob and Cat by username and asks them, and both accept.
   await ann.goto('/account');
   for (const name of [bobName, catName]) {
-    await ann.locator('.friends').getByLabel(text.friends.addLabel).fill(name);
-    await ann.locator('.friends').getByRole('button', { name: text.friends.addSubmit }).click();
+    await askFriend(ann, name);
     await expect(ann.locator('.friends .card', { hasText: name })).toBeVisible();
   }
   for (const page of [bob, cat]) {

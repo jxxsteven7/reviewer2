@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import {
-  checkFriendNote,
   checkReport,
-  FRIEND_NOTE_LENGTH,
-  MAX_FRIEND_NOTE_INPUT,
   MAX_REPORT_INPUT,
   MAX_REPORT_LENGTH,
   textLength,
@@ -15,13 +12,14 @@ import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { account } from '../account';
 import { errorKey } from '../errors';
-import { requestFriend } from '../friends';
+import { standingOf, type Standing } from '../friends';
 import { mayBefriend, mayReport } from '../manage';
 import { act, send } from '../socket';
 import { toast } from '../toast';
 import { useBusy } from '../useBusy';
 import { useFriendsList } from '../useFriendsList';
 import AgentProfileCard from './AgentProfileCard.vue';
+import FriendActions from './FriendActions.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import ProfileCard from './ProfileCard.vue';
 import UiButton from './UiButton.vue';
@@ -34,13 +32,13 @@ import UiSheet from './UiSheet.vue';
 // It shows who the player is: for an account, a brief profile card (ProfileCard.vue), with the rank,
 // the number, the day of registration and the titles; for an AI player, its own page at once
 // (AgentProfileCard.vue; docs/architecture.md#ai-players); for a guest, who has no page, the avatar
-// and a word that they have none. Under it, what the viewer may do with the player: ask them to be
-// friends, for an account that may (docs/architecture.md#friends), in a sheet of its own with a
-// line for them, if the viewer likes, which the keyboard comes up for only on a tap, since most
-// send none, or, once asked, a word that the request went, and nothing for a friend; the chair's
-// actions, which move them to the spectators, hand them the chair, or remove them after a warning
-// that says for how long, which is for good from a public room and two minutes from a private one,
-// or, for an AI player, remove it at once, since it may be invited again
+// and a word that they have none. Under it, what the viewer may do with the player: for an account
+// that may (docs/architecture.md#friends), by how the two stand, what the search's panel and a
+// public page offer too (FriendActions.vue): ask them to be friends, in a sheet of its own with a
+// line for them, see that the request went, answer theirs, or give a friend a name or part; the
+// chair's actions, which move them to the spectators, hand them the chair, or remove them after a
+// warning that says for how long, which is for good from a public room and two minutes from a
+// private one, or, for an AI player, remove it at once, since it may be invited again
 // (docs/architecture.md#ai-players); in a public room, the way for anyone with an account to report
 // them to the operator (docs/architecture.md#public-rooms). Last, for an account, the whole page,
 // which rises as a second sheet of its own height over the panel, scrolls inside, and leads back to
@@ -58,9 +56,7 @@ const { busy, run } = useBusy();
 const removing = ref(false);
 const reporting = ref(false);
 const reading = ref(false);
-const befriending = ref(false);
 const note = ref('');
-const friendNote = ref('');
 const refused = ref<string | undefined>();
 
 // The player as the room has them now: a player who leaves the room takes the panel along.
@@ -79,12 +75,16 @@ const befriendable = computed(() => player.value !== null && mayBefriend(props.r
 // The viewer's friends and requests, asked for while the panel is open on someone they may ask; a
 // list that can't be had leaves the way to ask, which the server judges anyway.
 const { view: friendsView, failed: friendsFailed } = useFriendsList(befriendable);
-const friend = computed(() => friendsView.value?.friends.find(({ handle }) => handle === player.value?.handle) ?? null);
-const asked = computed(
-  () => friendsView.value?.outgoing.some(({ handle }) => handle === player.value?.handle) ?? false,
+// A player whose page the room doesn't name is a stranger, whom the server judges anyway.
+const standing = computed<Standing>(() =>
+  player.value?.handle
+    ? standingOf(player.value.handle, account.summary?.handle ?? null, friendsView.value)
+    : { kind: 'stranger' },
 );
-const canBefriend = computed(
-  () => befriendable.value && (friendsView.value !== null || friendsFailed.value !== null) && !friend.value,
+const friend = computed(() => (standing.value.kind === 'friend' ? standing.value.friend : null));
+// What the viewer may do as a friend, once the list has come or can't be had.
+const friendly = computed(() =>
+  befriendable.value && (friendsView.value !== null || friendsFailed.value !== null) ? standing.value : null,
 );
 const title = computed(() => friend.value?.alias ?? player.value?.name ?? '');
 const subtitle = computed(() => (friend.value?.alias ? (player.value?.name ?? null) : null));
@@ -94,15 +94,8 @@ const noteProblem = computed(() => (checked.value.problem ? t(errorKey(checked.v
 const count = computed(() =>
   t('feedback.count', { count: textLength(checked.value.text ?? ''), max: MAX_REPORT_LENGTH }),
 );
-const friendChecked = computed(() => checkFriendNote(friendNote.value));
-const friendNoteProblem = computed(() =>
-  friendChecked.value.problem ? t(errorKey(friendChecked.value.problem)) : undefined,
-);
-const friendNoteCount = computed(() =>
-  t('friends.noteCount', { count: textLength(friendChecked.value.note ?? ''), max: FRIEND_NOTE_LENGTH }),
-);
-// Any sheet over the panel hides it.
-const over = computed(() => removing.value || reporting.value || befriending.value);
+// The chair's warning and the report hide the panel; the sheets of what friends do lie over it.
+const over = computed(() => removing.value || reporting.value);
 
 // The sheets close with the panel, and a new player starts afresh.
 watch(
@@ -111,9 +104,7 @@ watch(
     removing.value = false;
     reporting.value = false;
     reading.value = false;
-    befriending.value = false;
     note.value = '';
-    friendNote.value = '';
     refused.value = undefined;
   },
 );
@@ -123,14 +114,6 @@ async function manage(message: 'room:spectate' | 'room:remove' | 'room:chair') {
   if (!target) return;
   await run(() => act(message, { playerId: target.id }));
   emit('close');
-}
-
-// A request to be friends, by the player's seat (friends.ts), with the line for them, if any,
-// which the other side answers on their account page.
-async function befriend() {
-  const target = player.value;
-  if (!target || friendChecked.value.problem) return;
-  if (await run(() => requestFriend({ playerId: target.id }, friendChecked.value.note))) emit('close');
 }
 
 async function report() {
@@ -164,10 +147,14 @@ async function report() {
       </div>
 
       <div class="actions">
-        <UiButton v-if="canBefriend && asked" disabled>{{ t('friends.requestPending') }}</UiButton>
-        <UiButton v-else-if="canBefriend" :disabled="busy" @click="befriending = true">{{
-          t('friends.addFromRoom')
-        }}</UiButton>
+        <!-- A request goes by the player's seat (friends.ts). -->
+        <FriendActions
+          v-if="friendly"
+          :standing="friendly"
+          :name="player.name"
+          :who="{ playerId: player.id }"
+          @done="emit('close')"
+        />
         <UiButton v-if="isChair && isAgent" variant="danger" :disabled="busy" @click="manage('room:remove')">
           {{ t('lobby.manage.remove') }}
         </UiButton>
@@ -194,29 +181,6 @@ async function report() {
     @close="emit('close')"
   >
     <ProfileCard v-if="player?.handle" :handle="player.handle" :named="false" />
-  </UiSheet>
-
-  <UiSheet
-    :open="player !== null && befriending"
-    :title="t('friends.addTitle', { name: player?.name ?? '' })"
-    :focus-input="false"
-    @close="befriending = false"
-  >
-    <form class="actions" @submit.prevent="befriend">
-      <UiField
-        v-model="friendNote"
-        :label="t('friends.noteLabel')"
-        :maxlength="MAX_FRIEND_NOTE_INPUT"
-        autocomplete="off"
-        enterkeyhint="send"
-        :hint="friendNoteCount"
-        :error="friendNoteProblem"
-      />
-      <UiButton variant="primary" type="submit" :disabled="busy || friendChecked.problem !== null">
-        {{ t('friends.addSubmit') }}
-      </UiButton>
-      <UiButton variant="quiet" @click="befriending = false">{{ t('lobby.manage.cancel') }}</UiButton>
-    </form>
   </UiSheet>
 
   <UiSheet :open="player !== null && removing" :title="t('lobby.manage.remove')" @close="removing = false">

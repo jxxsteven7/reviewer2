@@ -61,6 +61,16 @@ describe('ProfilePublic', () => {
     toasts.toastError.mockReset();
   });
 
+  test('leads to the page, and says that others find the account by its whole username or by the link', async () => {
+    const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
+    await flushPromises();
+    expect(wrapper.get('.view').text()).toBe('Open my page');
+    expect(wrapper.get('.view + .found').text()).toBe(
+      'Others can find you in the friend search on their account page, by your full username or by pasting the link to your page.',
+    );
+    wrapper.unmount();
+  });
+
   test('keeps what the owner has typed when the summary is asked for again, and shows what was saved', async () => {
     const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
     await flushPromises();
@@ -209,9 +219,10 @@ describe('ProfilePublic', () => {
     expect(signedIn.request).toHaveBeenCalledWith('/api/account/likers');
     const line = wrapper.get('.likers .line');
     expect(line.text()).toContain('Bob');
-    expect(line.find('a').attributes('href')).toBe('/p/f6e5d4c3b2a1');
+    // The avatar opens Bob's panel, as everywhere.
+    expect(line.get('.avatar-button').attributes('aria-haspopup')).toBe('dialog');
     socket.send.mockResolvedValueOnce({ ok: true, status: 'pending' });
-    await line.get('button').trigger('click');
+    await line.get('button.button').trigger('click');
     await flushPromises();
     expect(socket.send).toHaveBeenCalledWith('friends:request', { username: 'Bob' });
     expect(toasts.toast).toHaveBeenCalledWith('friends.requestSent');
@@ -220,7 +231,7 @@ describe('ProfilePublic', () => {
     friendsVersion.value += 1;
     await flushPromises();
     expect(wrapper.get('.likers .line').text()).toContain('Friend');
-    expect(wrapper.get('.likers .line').find('button').exists()).toBe(false);
+    expect(wrapper.get('.likers .line').find('button.button').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Only the latest');
     wrapper.unmount();
   });

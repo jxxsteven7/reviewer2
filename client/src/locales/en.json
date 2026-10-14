@@ -763,6 +763,7 @@
     "friend_note_too_long": "Use at most 50 characters.",
     "friend_alias_invalid": "That alias has characters in it that don't show.",
     "friend_alias_too_long": "Use at most 20 characters.",
+    "friend_find_limited": "You've searched a lot this hour. Try again later.",
     "friends_full": "One of you has as many friends as an account can have.",
     "no_such_request": "There is no such request.",
     "not_friends": "You aren't friends with that account.",
@@ -970,6 +971,7 @@
         "title": "Public page",
         "intro": "Anyone can open your page and see your username, avatar, rank, titles, player number, the day you registered and how many accounts like it. What else is there is up to you.",
         "view": "Open my page",
+        "found": "Others can find you in the friend search on their account page, by your full username or by pasting the link to your page.",
         "link": "Link",
         "linkHint": "A page of yours, starting with https://: a homepage, GitHub, ORCID… Shown as the address it is.",
         "linkPlaceholder": "https://",
@@ -1044,7 +1046,6 @@
   "friends": {
     "title": "Friends",
     "intro": "Friends see whether you're online, which room you're in (without the number of a private one) and whether a game is on there, can invite you into theirs, and can ask to join yours.",
-    "addLabel": "Their username",
     "addSubmit": "Send a request",
     "noteLabel": "A line for them (optional)",
     "noteCount": "{count}/{max}",
@@ -1056,8 +1057,11 @@
     "accept": "Accept",
     "decline": "Decline",
     "withdraw": "Withdraw",
-    "remove": "Remove",
     "removeFriend": "Remove friend",
+    "short": {
+      "alias": "Alias",
+      "remove": "Remove"
+    },
     "aliasEdit": "Edit alias",
     "aliasTitle": "Alias for {name}",
     "aliasLabel": "Alias",
@@ -1065,7 +1069,7 @@
     "aliasSave": "Save",
     "aliasWithName": "{alias} ({username})",
     "removeConfirm": "Remove {name} from your friends? You can send a new request later.",
-    "none": "No friends yet. Add one by username, or tap a player's avatar in a room.",
+    "none": "No friends yet. Search for a username above, or tap a player's avatar in a room.",
     "online": "online",
     "offline": "offline",
     "inPublicRoom": "In room {code}",
@@ -1094,7 +1098,16 @@
     "addFromRoom": "Add friend",
     "addTitle": "Add {name} as a friend",
     "requestPending": "Request sent",
-    "requestsWaiting": "{count} request is waiting for your answer. | {count} requests are waiting for your answer."
+    "askedYou": "They asked to be your friend",
+    "self": "This is you.",
+    "requestsWaiting": "{count} request is waiting for your answer. | {count} requests are waiting for your answer.",
+    "search": {
+      "label": "Find someone by username or page link",
+      "placeholder": "Full username",
+      "submit": "Search",
+      "notFound": "No account has that username. Type the full username; capitals don't matter.",
+      "badLink": "That isn't the link to a player's page. Paste the link as the page shares it."
+    }
   },
   "ranks": {
     "title": "Academic rank",

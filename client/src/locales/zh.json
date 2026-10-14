@@ -763,6 +763,7 @@
     "friend_note_too_long": "最多 50 个字。",
     "friend_alias_invalid": "备注里有看不见的字符。",
     "friend_alias_too_long": "最多 20 个字。",
+    "friend_find_limited": "这一小时搜得太多了，过一会儿再试。",
     "friends_full": "你们中有人的好友已满。",
     "no_such_request": "没有这个好友请求。",
     "not_friends": "你们不是好友。",
@@ -970,6 +971,7 @@
         "title": "公开主页",
         "intro": "任何人都能打开你的主页，看到用户名、头像、学术头衔、称号、玩家编号、注册日期和点赞数。其余的由你决定。",
         "view": "打开我的主页",
+        "found": "别人在账号页的好友搜索里输入你完整的用户名，或者粘贴你主页的链接，就能找到你。",
         "link": "公开链接",
         "linkHint": "介绍你自己的网页，以 https:// 开头：个人主页、GitHub、ORCID 等。按原样显示网址。",
         "linkPlaceholder": "https://",
@@ -1044,7 +1046,6 @@
   "friends": {
     "title": "好友",
     "intro": "好友能看到你是否在线、在哪个房间（私密房间不显示房号）、房间里是否在对局，能邀请你进他们的房间，也能申请加入你的房间。",
-    "addLabel": "对方的用户名",
     "addSubmit": "发送请求",
     "noteLabel": "附一句话（可选）",
     "noteCount": "{count}/{max}",
@@ -1056,8 +1057,11 @@
     "accept": "接受",
     "decline": "拒绝",
     "withdraw": "撤回",
-    "remove": "删除",
     "removeFriend": "删除好友",
+    "short": {
+      "alias": "改备注",
+      "remove": "删除好友"
+    },
     "aliasEdit": "改备注",
     "aliasTitle": "给 {name} 改备注",
     "aliasLabel": "备注",
@@ -1065,7 +1069,7 @@
     "aliasSave": "保存",
     "aliasWithName": "{alias}（{username}）",
     "removeConfirm": "确定把 {name} 从好友中删除吗？以后可以重新发送请求。",
-    "none": "还没有好友。按用户名添加，或者在房间里点一下玩家的头像。",
+    "none": "还没有好友。在上面搜用户名，或者在房间里点一下玩家的头像。",
     "online": "在线",
     "offline": "离线",
     "inPublicRoom": "在房间 {code}",
@@ -1094,7 +1098,16 @@
     "addFromRoom": "加为好友",
     "addTitle": "加 {name} 为好友",
     "requestPending": "已发送请求",
-    "requestsWaiting": "{count} 个请求等你处理。 | {count} 个请求等你处理。"
+    "askedYou": "对方向你发了好友请求",
+    "self": "这是你自己。",
+    "requestsWaiting": "{count} 个请求等你处理。 | {count} 个请求等你处理。",
+    "search": {
+      "label": "按用户名或主页链接找人",
+      "placeholder": "完整的用户名",
+      "submit": "搜索",
+      "notFound": "没有这个用户名。要输入完整的用户名，大小写都行。",
+      "badLink": "这不是玩家主页的链接。请原样粘贴主页的链接。"
+    }
   },
   "ranks": {
     "title": "学术头衔",
