@@ -27,8 +27,8 @@ import { formatList } from '../../core/i18n';
 // which nobody sees until the game is over (docs/games/keywords.md#the-clue). A line at the top
 // asks for them, loud until the PI has marked a card: a sticker in the tint of the PI's group,
 // `team`, with a small "Tips" tag at its start, which screen readers skip. Then it is a quiet line
-// that counts and names them. Nothing more asks for marks: a clue may go without any. The number follows how many are
-// marked, until the PI picks a number themselves.
+// that counts and names them. Nothing more asks for marks: a clue may go without any. The number
+// follows how many are marked, until the PI picks a number themselves.
 //
 // The word and the number picked are models, so that the game can keep them as a draft while the
 // PI prepares the clue ahead of their turn, when `canGive` is false: the panel then says that

@@ -13,11 +13,12 @@ import { useKeywords } from './useKeywords';
 // message counts as read as it comes. On a phone it is a button with the number of new messages,
 // which opens the thread as a sheet: with the keyboard up at once while there is nothing to read
 // yet, and without it once there is, since the player may only want to read; the sheet keeps above
-// the keyboard once it comes up, with the line at its foot and the messages scrolling above it. The server sends the chat only to the group's own PI and
-// students, so spectators and screens get nothing at all. The line a student is writing, `draft`,
-// and its sending are the page's (useChatLine.ts), so that they outlive the sheet, which throws
-// the thread away as it closes, and the panel, which gives way to the button as the page narrows:
-// this component only shows the line and asks the page to send it.
+// the keyboard once it comes up, with the line at its foot and the messages scrolling above it. The
+// server sends the chat only to the group's own PI and students, so spectators and screens get
+// nothing at all. The line a student is writing, `draft`, and its sending are the page's
+// (useChatLine.ts), so that they outlive the sheet, which throws the thread away as it closes, and
+// the panel, which gives way to the button as the page narrows: this component only shows the line
+// and asks the page to send it.
 const props = withDefaults(defineProps<{ room: RoomView; panel?: boolean; sending: boolean }>(), {
   panel: false,
 });

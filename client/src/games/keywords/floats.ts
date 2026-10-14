@@ -39,8 +39,9 @@ export function revealedBetween(
 export const endsBetween = (before: KeywordsView, after: KeywordsView): boolean =>
   before.gameId === after.gameId && before.result === null && (after.result?.winner ?? null) !== null;
 
-// A number as it rises: with its sign, and a true minus.
-export const signed = (points: number): string => (points > 0 ? `+${points}` : `\u2212${Math.abs(points)}`);
+// A number as it rises: with its sign. The minus is the hyphen-minus, which the hand that sets the
+// numbers has (fonts.ts); the true minus sign it lacks would come in another font.
+export const signed = (points: number): string => (points > 0 ? `+${points}` : `-${Math.abs(points)}`);
 
 // Where a player plays as the scores count them: the group of the seat they are in, and their role
 // in it, which is the PI's for whoever has seen the key in this game (match.ts on the server).

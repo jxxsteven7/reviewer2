@@ -103,6 +103,14 @@ test('players with accounts play a whole game with guests, and find it on their 
   await expect(record).toHaveCount(1);
   await expect(record).toContainText(text.game.letter.verdicts[annWon ? 'poster' : 'reject']);
   await expect(record).toContainText(`${text.lobby.group.red}, ${text.account.profile.roles.captain}`);
+  // However narrow the page, nothing on the line runs under the button on its right.
+  expect(
+    await record.evaluate((line) => {
+      const button = line.querySelector('.watch')?.getBoundingClientRect();
+      const words = [...line.querySelectorAll('.what *')].map((part) => part.getBoundingClientRect());
+      return button !== undefined && words.every((part) => part.right <= button.left);
+    }),
+  ).toBe(true);
 
   const dan = table.guessers.blue;
   await dan.goto('/account');

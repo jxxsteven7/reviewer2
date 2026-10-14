@@ -332,8 +332,14 @@
     "characterWarning": "This clue has a character in common with a word still on the board, as a Chinese character, a number however it is written, or the English or the pinyin of a character: {words}. It's your call.",
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
     "gestures": {
-      "choose": "Tap: choose · double-tap: ours · triple-tap: theirs · hold: R2?",
-      "mark": "Double-tap: ours · triple-tap: theirs · hold: R2? · the same again clears it"
+      "choose": "Tap: choose · double-tap: ours · triple-tap: theirs · hold: R2? · or keys 1, 2, 3",
+      "mark": "Double-tap: ours · triple-tap: theirs · hold: R2? · or keys 1, 2, 3 · the same again clears it",
+      "keys": "Key 1 marks it as ours, 2 as theirs, 3 as maybe Reviewer 2; the same key again clears the mark.",
+      "markAs": {
+        "ours": "Mark {word} as ours",
+        "theirs": "Mark {word} as theirs",
+        "r2": "Mark {word} as maybe Reviewer 2"
+      }
     },
     "chosenBy": "chosen by {names}",
     "noted": {
@@ -737,7 +743,7 @@
     "friend_alias_too_long": "Use at most 20 characters.",
     "friends_full": "One of you has as many friends as an account can have.",
     "no_such_request": "There is no such request.",
-    "not_friends": "Only friends can be invited.",
+    "not_friends": "You aren't friends with that account.",
     "friend_offline": "That friend isn't online right now.",
     "friend_in_room": "That friend is in this room already.",
     "friend_removed": "The chair removed that friend from this room, so they can't be invited back.",
@@ -1010,7 +1016,7 @@
   },
   "friends": {
     "title": "Friends",
-    "intro": "Friends see whether you're online and which room you're in (without the number of a private one), can invite you into theirs, and can ask to join yours.",
+    "intro": "Friends see whether you're online, which room you're in (without the number of a private one) and whether a game is on there, can invite you into theirs, and can ask to join yours.",
     "addLabel": "Their username",
     "addSubmit": "Send a request",
     "noteLabel": "A line for them (optional)",

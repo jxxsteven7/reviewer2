@@ -1,7 +1,15 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { hasHan, LANGUAGES, wordKey, type BoardWord, type FieldInfo, type Language } from '@reviewer2/shared';
+import {
+  hasHan,
+  LANGUAGES,
+  toSimplified,
+  wordKey,
+  type BoardWord,
+  type FieldInfo,
+  type Language,
+} from '@reviewer2/shared';
 import { pinyinOf } from './pinyin';
 import { shuffle, type Rng } from './random';
 
@@ -88,11 +96,12 @@ export class WordLibrary {
   }
 
   // The English meanings of the Chinese characters of a word, each once, in the order of the
-  // characters: for the cards of the lists, and for the chair's own words.
+  // characters: for the cards of the lists, and for the chair's own words. The dictionary has the
+  // simplified characters, so a word in traditional ones is read as the clue check reads it.
   glossesOf(word: string): string[] {
     if (!hasHan(word)) return [];
     const found = new Set<string>();
-    for (const char of word) for (const gloss of this.#glosses.get(char) ?? []) found.add(gloss);
+    for (const char of toSimplified(word)) for (const gloss of this.#glosses.get(char) ?? []) found.add(gloss);
     return [...found];
   }
 

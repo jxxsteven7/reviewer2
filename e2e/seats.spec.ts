@@ -44,6 +44,11 @@ test('a latecomer who comes to play gets a seat in the smaller group in the midd
   await table.spectator.getByRole('button', playFor('blue')).click();
   await openGroups(table.captains.red);
   await expect(table.captains.red.locator('.rosters .group.blue')).toContainText('Eve');
+  // Ann's name, with the marks of the viewer and the chair after it, is shown whole: where the
+  // line is too long, the rank gives way first (PlayerName.vue).
+  const ann = table.captains.red.locator('.rosters .group.red .player', { hasText: 'Ann' }).locator('.name');
+  await expect(ann).toHaveText('Ann');
+  expect(await ann.evaluate((name) => name.scrollWidth <= name.clientWidth)).toBe(true);
 
   const fay = await newPlayer(browser);
   await joinByLink(fay, table.url, 'Fay', 'en');

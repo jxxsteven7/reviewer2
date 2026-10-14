@@ -692,6 +692,15 @@ describe('a character in common, however it is written', () => {
     });
     expect(checkClue('six', board('6G'))).toMatchObject({ problem: 'clue_on_board' });
     expect(checkClue('ten', board('Top 10'))).toMatchObject({ problem: 'clue_on_board' });
+    // The character for two that counts things, as in the Chinese word for "two-stage", is two as
+    // well: "2" and "two" alike have a character in common with the card.
+    const twoStage = { word: '两阶段', revealed: false, glosses: ['two', 'both', 'stage'] };
+    for (const clue of ['2', 'two', '二']) {
+      expect(check(clue, [twoStage]), clue).toMatchObject({
+        problem: 'clue_on_board',
+        conflict: { kind: 'character' },
+      });
+    }
   });
 
   test("leaves a cheque's numerals alone, which are other words too", () => {
@@ -711,7 +720,7 @@ describe('a character in common, however it is written', () => {
       problem: 'clue_on_board',
       conflict: { card: 1, kind: 'character' },
     });
-    // A word of two letters is too short to count.
+    // Three letters are enough; a word of two is too short to count.
     expect(check('net', [roadNet]).problem).toBe('clue_on_board');
     expect(checkClue('it', [{ word: ROAD_NET, revealed: false, glosses: ['it'] }], CHINESE).problem).toBeNull();
   });

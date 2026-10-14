@@ -346,12 +346,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (recorded.size > 1) safely('duos', () => noteDuos(room, recorded));
     const kept = room.record();
     if (!kept) return;
-    // An account deleted during the game no longer counts as having played, and what it said goes
-    // from the log, as it would have if the account had been deleted after the game.
-    const players = kept.accounts.filter(({ accountId }) => accounts.store.byId(accountId) !== undefined);
-    const forgotten = new Set(
-      kept.accounts.filter((player) => !players.includes(player)).map(({ playerId }) => playerId),
-    );
+    const { players, forgotten } = stillThere(kept.accounts);
     const gameLog = kept.log && unsay(kept.log, forgotten);
     safely('replay', () => {
       const stored = accounts.keepGame({
@@ -464,6 +459,18 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     else keepReview(room);
   }
 
+  // Which of those who played in a game, by account, are still there, and the player IDs of those
+  // whose account was deleted meanwhile: they no longer count as having played, and what they said
+  // goes from the log (unsay), as it would have if the account had been deleted after the game.
+  function stillThere(played: readonly { playerId: string; accountId: number }[]): {
+    players: { playerId: string; accountId: number }[];
+    forgotten: Set<string>;
+  } {
+    const players = played.filter(({ accountId }) => accounts?.store.byId(accountId) !== undefined);
+    const forgotten = new Set(played.filter((player) => !players.includes(player)).map(({ playerId }) => playerId));
+    return { players, forgotten };
+  }
+
   // What the groups said after the end of the game, as they talked it over, goes into the game's
   // record as the room leaves the game behind (Room.review()): when the chair plays again or starts
   // the next match, and when the room closes. What an account deleted meanwhile said is left out,
@@ -473,10 +480,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     safely('records', () => {
       const review = room.review();
       if (!review) return;
-      const players = review.accounts.filter(({ accountId }) => accounts.store.byId(accountId) !== undefined);
-      const forgotten = new Set(
-        review.accounts.filter((player) => !players.includes(player)).map(({ playerId }) => playerId),
-      );
+      const { players, forgotten } = stillThere(review.accounts);
       accounts.keepReview(review.gameId, unsay({ entries: review.entries }, forgotten).entries, players);
     });
   }

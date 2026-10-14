@@ -33,7 +33,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 What we promise players:
 
 - **An account is recommended, not required.** A nickname is enough to play; an account keeps your avatar, records, rank and titles from game to game.
-- **Only your friends** see whether you are online and whether you are in a room, and the room's code only when it is public. The players in a room see who is in it with them, as always; nobody else learns any of this.
+- **Only your friends** see whether you are online and whether you are in a room, whether a game is on there and which of their other friends are in it with you, and the room's code only when it is public or they are in the room too. The players in a room see who is in it with them, as always; nobody else learns any of this.
 - **A line with a friend request** is for the account you ask alone, and is deleted once the request is answered or withdrawn. **The names you give your friends** are yours alone: your friends aren't told, and nobody else sees them.
 - **Friend titles**, such as your Co-First Author, are counted from the games you played with each friend, and only you see them: on your friends list and on a friend's page.
 - **Your public page** shows anyone who opens it your username, avatar, rank, titles, player number and the day you registered, with the link and the line you chose to write; your record and your acknowledgments only if you turn that on. Everyone sees how many accounts like it; only you see which.

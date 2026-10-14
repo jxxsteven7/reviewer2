@@ -99,12 +99,12 @@ describe('a card revealed between two snapshots', () => {
   test('changes the points of the group that revealed it, by role, and nobody else', () => {
     const reveal = { color: 'neutral' as const, by: 'red' as const };
     const forBob = revealFloats(data('red'), 'bob', reveal);
-    expect(forBob.mine).toEqual({ text: '\u22121', team: 'red' });
+    expect(forBob.mine).toEqual({ text: '-1', team: 'red' });
     expect(Object.fromEntries(forBob.players)).toEqual({
-      ann: { text: '\u22122', team: 'red' },
-      bob: { text: '\u22121', team: 'red' },
+      ann: { text: '-2', team: 'red' },
+      bob: { text: '-1', team: 'red' },
     });
-    expect(revealFloats(data('red'), 'ann', reveal).mine).toEqual({ text: '\u22122', team: 'red' });
+    expect(revealFloats(data('red'), 'ann', reveal).mine).toEqual({ text: '-2', team: 'red' });
     // The other group, and a spectator, see nothing on the card.
     expect(revealFloats(data('blue'), 'dan', reveal).mine).toBeNull();
     expect(revealFloats(data(null), 'eve', reveal).mine).toBeNull();
@@ -152,6 +152,6 @@ describe('the end of a game', () => {
   });
 
   test('writes a number with its sign and a true minus', () => {
-    expect([3, 1, -2].map(signed)).toEqual(['+3', '+1', '\u22122']);
+    expect([3, 1, -2].map(signed)).toEqual(['+3', '+1', '-2']);
   });
 });

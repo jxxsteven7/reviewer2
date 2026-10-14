@@ -217,6 +217,8 @@ describe('the English of the characters', () => {
     expect(library.pool(['ml'], 'zh')[0]).toMatchObject({ word: zh(0), glosses: ['word', 'term'] });
     expect(library.pool(['ml'], 'en')[0]).not.toHaveProperty('glosses');
     expect(library.glossesOf(`${WORD}\u8bed`)).toEqual(['word', 'term', 'language']);
+    // A chair's word in traditional characters has the meanings of their simplified forms.
+    expect(library.glossesOf('\u8a5e\u8a9e')).toEqual(['word', 'term', 'language']);
     expect(library.glossesOf('Word')).toEqual([]);
     expect(library.glossed).toBe(2);
   });

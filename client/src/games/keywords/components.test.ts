@@ -1452,7 +1452,7 @@ describe('KeywordsGame', () => {
     // No row of tools: the line above the guess bar's buttons says what taps do.
     expect(wrapper.find('.mark-tools').exists()).toBe(false);
     expect(wrapper.get('.guess-bar .hint').text()).toBe(
-      'Tap: choose \u00b7 double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2?',
+      'Tap: choose \u00b7 double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 or keys 1, 2, 3',
     );
     await tapCard(wrapper, 0, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
@@ -1510,13 +1510,50 @@ describe('KeywordsGame', () => {
     expect(wrapper.find('.guess-bar').exists()).toBe(false);
     expect(wrapper.get('.status').text()).toBe('The Blue group is guessing.');
     expect(wrapper.get('.gestures').text()).toBe(
-      'Double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 the same again clears it',
+      'Double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 or keys 1, 2, 3 \u00b7 the same again clears it',
     );
     send.mockClear();
     await tapCard(wrapper, 1);
     expect(send).not.toHaveBeenCalled();
     await tapCard(wrapper, 1, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'ours' });
+  });
+
+  test('tells assistive technology of the keys that mark a card, and offers buttons that mark the focused one', async () => {
+    const wrapper = mount(KeywordsGame, {
+      props: {
+        room: marked([], {
+          team: 'blue',
+          cards: [{ word: 'Done', revealed: true, color: 'red' }, ...cards('Model', 'Journal')],
+        }),
+      },
+      global: global(),
+    });
+    // The first card is revealed: it takes no mark, and so says nothing of the keys.
+    expect(card(wrapper, 0)?.attributes('aria-keyshortcuts')).toBeUndefined();
+    expect(card(wrapper, 0)?.attributes('aria-describedby')).toBeUndefined();
+    const keys = card(wrapper, 1)?.attributes('aria-describedby');
+    expect(card(wrapper, 1)?.attributes('aria-keyshortcuts')).toBe('1 2 3');
+    expect(wrapper.get(`[id="${keys}"]`).text()).toBe(
+      'Key 1 marks it as ours, 2 as theirs, 3 as maybe Reviewer 2; the same key again clears the mark.',
+    );
+    // No card has had the focus: no buttons yet. Once one has, the buttons mark it, for a screen
+    // reader on a phone, which can neither tap a card several times nor press a key.
+    expect(wrapper.find('.mark-buttons').exists()).toBe(false);
+    await card(wrapper, 1)?.trigger('focus');
+    const buttons = wrapper.get('.mark-buttons');
+    expect(buttons.classes()).toContain('sr-only');
+    expect(buttons.findAll('button').map((button) => button.text())).toEqual([
+      'Mark Model as ours',
+      'Mark Model as theirs',
+      'Mark Model as maybe Reviewer 2',
+    ]);
+    send.mockClear();
+    await buttons.findAll('button')[1]?.trigger('click');
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
+    // A revealed card gets none.
+    await card(wrapper, 0)?.trigger('focus');
+    expect(wrapper.find('.mark-buttons').exists()).toBe(false);
   });
 
   test("shows a PI the group's marks small in the corner, which a PI can't change", async () => {

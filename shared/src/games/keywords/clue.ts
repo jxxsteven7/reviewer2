@@ -114,15 +114,18 @@ const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'o
 const SPACES = /\s+/gu;
 
 // Numbers, which count as characters (docs/games/keywords.md#the-clue): a digit, a Chinese numeral
-// and an English number word that stand for the same number are the same character. The capital
-// numerals that cheques use are left out, since they are other words as well, as in the Chinese
-// word for "land". A run of digits counts digit by digit, and as a whole too when it is a number
-// that a Chinese numeral or an English word of its own names: "10" is "1", "0" and "10".
+// and an English number word that stand for the same number are the same character. The Chinese
+// numerals are those of zero to ten, a hundred, a thousand and ten thousand, and the character for
+// two that counts things, which is two in nearly every word of the lists. The capital numerals that
+// cheques use are left out, since they are other words as well, as in the Chinese word for "land".
+// A run of digits counts digit by digit, and as a whole too when it is a number that a Chinese
+// numeral or an English word of its own names: "10" is "1", "0" and "10".
 const HAN_NUMBERS = new Map([
   ['\u3007', '0'],
   ['\u96f6', '0'],
   ['\u4e00', '1'],
   ['\u4e8c', '2'],
+  ['\u4e24', '2'],
   ['\u4e09', '3'],
   ['\u56db', '4'],
   ['\u4e94', '5'],

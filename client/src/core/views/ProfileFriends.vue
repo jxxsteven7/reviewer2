@@ -36,16 +36,16 @@ import { useFriendsList } from '../useFriendsList';
 // under it, in small type, what the account has played with them, and the titles they hold among
 // its friends (docs/architecture.md#friend-duos), on one line, folded where they don't fit. The
 // friends' board above the list sums the titles up, in the same look, each with the avatar and the
-// name of the friends who hold it, the avatar leading to their page as on the cards. A friend who is offline has the whole card
-// faded, still readable. A friend in a public room can be joined from here; one in a private room
-// only by their invitation, which the account may ask them for (askToJoin), and which the card says
-// it has while the request stands. A friend whom the account has given a name of its own (an alias, for
-// the account alone) goes by it, with the username after it in small grey type, here and in the
-// sheets about them. The card's "more" button opens a sheet with the friend's name, from which the
-// account gives them a name, or takes it away by leaving it empty, or removes them, after asking
-// first. A change made here comes back as the word that the server sends both sides, on which the
-// list is asked for again (useFriendsList); after a refusal it is asked for here, since the list may
-// have been out of date.
+// name of the friends who hold it, the avatar leading to their page as on the cards. A friend who
+// is offline has the whole card faded, still readable. A friend in a public room can be joined from
+// here; one in a private room only by their invitation, which the account may ask them for
+// (askToJoin), and which the card says it has while the request stands. A friend whom the account
+// has given a name of its own (an alias, for the account alone) goes by it, with the username after
+// it in small grey type, here and in the sheets about them. The card's "more" button opens a sheet
+// with the friend's name, from which the account gives them a name, or takes it away by leaving it
+// empty, or removes them, after asking first. A change made here comes back as the word that the
+// server sends both sides, on which the list is asked for again (useFriendsList); after a refusal
+// it is asked for here, since the list may have been out of date.
 const { t } = useI18n();
 const { view, failed, load } = useFriendsList();
 const username = ref('');

@@ -1,6 +1,7 @@
 import type { DuoView } from './duos';
 import { checkChat } from './games/keywords/chat';
-import { dropHidden, showsSomething, textLength, trimMarks, trimStrays } from './text';
+import { checkName } from './names';
+import { textLength } from './text';
 
 // Friends and invitations (docs/architecture.md#friends), for accounts alone. Two accounts are
 // friends once one has asked and the other has accepted; either may decline or end it. Friends see
@@ -133,13 +134,11 @@ export function checkAlias(raw: string): {
   problem: 'friend_alias_invalid' | 'friend_alias_too_long' | null;
 } {
   if (typeof raw !== 'string') return { alias: null, problem: 'friend_alias_invalid' };
-  if (raw.length > MAX_FRIEND_ALIAS_INPUT) return { alias: null, problem: 'friend_alias_too_long' };
-  const alias = raw.normalize('NFKC').replace(/\s+/gu, ' ').trim();
-  if (alias === '') return { alias: null, problem: null };
-  const hidden = dropHidden(alias) !== alias || trimMarks(alias) !== alias || trimStrays(alias) !== alias;
-  if (hidden || !showsSomething(alias)) return { alias: null, problem: 'friend_alias_invalid' };
-  if (textLength(alias) > FRIEND_ALIAS_LENGTH) return { alias, problem: 'friend_alias_too_long' };
-  return { alias, problem: null };
+  const { name, problem } = checkName(raw, FRIEND_ALIAS_LENGTH, MAX_FRIEND_ALIAS_INPUT);
+  if (problem === 'empty') return { alias: null, problem: null };
+  if (problem === 'hidden') return { alias: null, problem: 'friend_alias_invalid' };
+  if (problem === 'too_long') return { alias: name === '' ? null : name, problem: 'friend_alias_too_long' };
+  return { alias: name, problem: null };
 }
 
 // The other side of a request that is still open, in either direction, with the note that came

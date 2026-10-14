@@ -34,11 +34,10 @@ import UiSheet from './UiSheet.vue';
 // It shows who the player is: for an account, a brief profile card (ProfileCard.vue), with the rank,
 // the number, the day of registration and the titles; for an AI player, its own page at once
 // (AgentProfileCard.vue; docs/architecture.md#ai-players); for a guest, who has no page, the avatar
-// and a word that they have none. Under it, what the viewer may do with the player:
-// ask them to be friends, for an account that may (docs/architecture.md#friends), in a sheet of its
-// own with a line for them, if the viewer likes, which the keyboard comes up for only on a tap,
-// since most send none, or, once asked, a word that the request went, and nothing for a friend; the
-// chair's
+// and a word that they have none. Under it, what the viewer may do with the player: ask them to be
+// friends, for an account that may (docs/architecture.md#friends), in a sheet of its own with a
+// line for them, if the viewer likes, which the keyboard comes up for only on a tap, since most
+// send none, or, once asked, a word that the request went, and nothing for a friend; the chair's
 // actions, which move them to the spectators, hand them the chair, or remove them after a warning
 // that says for how long, which is for good from a public room and two minutes from a private one,
 // or, for an AI player, remove it at once, since it may be invited again

@@ -1,8 +1,8 @@
-import type { KeywordsRoomData, KeywordsView, RoomView } from '@reviewer2/shared';
-import { onBeforeUnmount, ref, shallowRef, watch, type Ref } from 'vue';
+import type { KeywordsRoomData, RoomView } from '@reviewer2/shared';
+import { computed, onBeforeUnmount, ref, shallowRef, type Ref } from 'vue';
 import type { Float, Shown } from '../../core/components/ScoreFloat.vue';
-import { connection } from '../../core/socket';
 import { endFloats, endsBetween, revealedBetween, revealFloats } from './floats';
+import { useLiveViews } from './useLiveViews';
 
 // How long a number rises on a card or an avatar, and in the middle of the screen at the end, a
 // little longer than its animation (ScoreFloat.vue).
@@ -16,10 +16,10 @@ const AFTER_REVEAL_MS = 900;
 // game shows where the groups stand beside the board; and at the end of the game, what it added to
 // the viewer's points, in the middle of the screen, and to each player's, on their avatar.
 //
-// Only what happens in front of the viewer rises: a snapshot that comes with a new connection, as
-// after a reload or a locked screen, or while the page is out of sight, catches the page up without
-// a word, and so does one with several cards revealed at once. A game that an AI has played in
-// brings nobody points, and nothing rises.
+// Only what happens in front of the viewer rises (useLiveViews.ts): a snapshot that comes with a
+// new connection, as after a reload or a locked screen, or while the page is out of sight, catches
+// the page up without a word, and so does one with several cards revealed at once. A game that an
+// AI has played in brings nobody points, and nothing rises.
 export function useScoreFloats(room: Ref<RoomView>) {
   const card = ref<(Shown & { card: number }) | null>(null);
   const players = shallowRef(new Map<string, Shown>());
@@ -54,16 +54,12 @@ export function useScoreFloats(room: Ref<RoomView>) {
     });
   }
 
-  let before: { view: KeywordsView; connects: number } | null = null;
-  watch(
-    () => (room.value.data as KeywordsRoomData).game,
-    (view) => {
-      const last = before;
-      before = view ? { view, connects: connection.connects } : null;
-      if (!view || !last || last.connects !== connection.connects || document.visibilityState === 'hidden') return;
+  useLiveViews(
+    computed(() => (room.value.data as KeywordsRoomData).game),
+    (last, view) => {
       if (room.value.agentsPlayed) return;
       const data = room.value.data as KeywordsRoomData;
-      const reveal = revealedBetween(last.view, view);
+      const reveal = revealedBetween(last, view);
       if (reveal) {
         const { mine, players: others } = revealFloats(data, room.value.me, reveal);
         if (mine) {
@@ -76,7 +72,7 @@ export function useScoreFloats(room: Ref<RoomView>) {
         }
         showPlayers(others, FLOAT_MS);
       }
-      if (endsBetween(last.view, view)) {
+      if (endsBetween(last, view)) {
         const { mine, players: others } = endFloats(data, room.value.me, room.value.points);
         if (mine) {
           key += 1;
@@ -91,8 +87,6 @@ export function useScoreFloats(room: Ref<RoomView>) {
         else showPlayers(others, END_FLOAT_MS);
       }
     },
-    // The view that the page opens with is the first to compare with, and brings nothing itself.
-    { immediate: true },
   );
 
   onBeforeUnmount(() => {

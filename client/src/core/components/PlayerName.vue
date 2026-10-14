@@ -11,7 +11,8 @@ import ScoreFloat, { type Shown } from './ScoreFloat.vue';
 // (docs/architecture.md#ai-players). In a room, the avatar opens the player's panel, for everyone,
 // the viewer included (AvatarButton.vue); the name is plain text. Whether the player is online is a
 // small dot on the avatar's bottom right corner, green or grey, as on the friends list. Everything
-// stays on one line: a name too long for it is cut short, and the rank before it, never the marks.
+// stays on one line: where it is too long, the rank is cut short first, down to nothing, and only
+// then the name, never the marks.
 // A `float` is a number that rises from the avatar, what a card or the end of a game did to the
 // player's points (ScoreFloat.vue).
 withDefaults(defineProps<{ player: PlayerView; me: boolean; chair: boolean; float?: Shown | null }>(), {
@@ -34,8 +35,10 @@ const { t } = useI18n();
       <ScoreFloat v-if="float" :key="float.key" :float="float" size="avatar" />
     </span>
     <span class="label">
-      <span class="name">{{ player.name }}</span>
-      <span v-if="player.rank" class="rank">{{ t(`ranks.names.${player.rank}`) }}</span>
+      <span class="who">
+        <span class="name">{{ player.name }}</span>
+        <span v-if="player.rank" class="rank">{{ t(`ranks.names.${player.rank}`) }}</span>
+      </span>
       <span v-if="me" class="mark">{{ t('room.you') }}</span>
       <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
       <span v-if="player.agent" class="mark agent"><AgentIcon />{{ t('room.agent') }}</span>
@@ -87,10 +90,22 @@ const { t } = useI18n();
   min-width: 0;
 }
 
-/* The name gives way first, then the rank; the marks never do. */
-.name {
+/* The name and the rank give way; the marks never do. In their box, the rank shrinks first, down
+   to nothing, since it is the only part that can: the name's box is clamped to the whole of theirs
+   instead, so that it is cut short only once the rank is gone. What the box then still hides is the
+   gap and the empty rank. */
+.who {
+  display: inline-flex;
   flex: 0 1 auto;
-  min-width: 2.5em;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.name {
+  flex: none;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -101,7 +116,7 @@ const { t } = useI18n();
 }
 
 .rank {
-  flex: 0 100 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   color: var(--ink-2);

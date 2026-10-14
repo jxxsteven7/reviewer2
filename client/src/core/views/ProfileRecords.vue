@@ -186,7 +186,8 @@ h3 {
 }
 
 /* A game on a line: when it ended and what kind it was, then the group, the role and the decision,
-   which go to a second line on a phone, and the way to watch it again on the right. */
+   which go to a second line on a phone, and a third where the first is too long, and the way to
+   watch it again on the right. */
 .record {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -211,10 +212,13 @@ h3 {
   min-width: 0;
 }
 
+/* A line too long for the column, as the English date and tag are on a phone, wraps rather than
+   run under the button on the right. */
 .line {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 0 var(--space-2);
   min-width: 0;
   min-height: 32px;
 }

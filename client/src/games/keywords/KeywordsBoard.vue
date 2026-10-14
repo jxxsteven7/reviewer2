@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { otherTeam, type CardView, type Mark, type Team } from '@reviewer2/shared';
+import { MARKS, otherTeam, type CardView, type Mark, type Team } from '@reviewer2/shared';
+import { computed, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Shown } from '../../core/components/ScoreFloat.vue';
 import KeywordsCard from './KeywordsCard.vue';
@@ -14,9 +15,12 @@ import type { Chooser } from './useKeywords';
 // `notes` are the marks of the viewer's group, by card, for its students and its PI, and `team` that
 // group; the PI only reads them (`quietNotes`), small inside a card's corner, clear of the numbers
 // of the cards a clue is meant for. A student's board takes `gestures` (useCardGestures.ts): one tap
-// chooses a card, two, three and a long press mark it, which the board says with `mark`. `float`
-// is what the card that has just been revealed did to the viewer's points, which rises from it
-// (ScoreFloat.vue).
+// chooses a card, two, three and a long press mark it, which the board says with `mark`, and so do
+// the keys 1, 2 and 3 on a card that has the focus, which each such card tells assistive
+// technology of. For whoever can neither tap a card several times nor press a key, as with a
+// screen reader on a phone, three buttons that only screen readers find follow the cards, and mark
+// the card that had the focus last. `float` is what the card that has just been revealed did to
+// the viewer's points, which rises from it (ScoreFloat.vue).
 const props = withDefaults(
   defineProps<{
     cards: CardView[];
@@ -71,6 +75,15 @@ const press = (card: number, event: PointerEvent) => props.gestures && gestures.
 const key = (card: number, event: KeyboardEvent) => props.gestures && gestures.key(card, event);
 // A long press on a phone opens no menu.
 const menu = (event: Event) => props.gestures && event.preventDefault();
+// Which cards take a mark, and how screen readers are told of the keys for it.
+const markable = (card: CardView) => props.gestures && !card.revealed;
+const keysId = useId();
+// The card that had the focus last, for the buttons that mark it, while it is still face down.
+const focused = ref<number | null>(null);
+const named = computed(() => {
+  const card = focused.value === null ? undefined : props.cards[focused.value];
+  return card && markable(card) ? { index: focused.value as number, word: card.word } : null;
+});
 </script>
 
 <template>
@@ -89,7 +102,10 @@ const menu = (event: Event) => props.gestures && event.preventDefault();
       :note="card.revealed ? null : noteOf(index)"
       :note-quiet="quietNotes"
       :float="float?.card === index ? float : null"
+      :aria-keyshortcuts="markable(card) ? '1 2 3' : undefined"
+      :aria-describedby="markable(card) ? keysId : undefined"
       @select="select"
+      @focus="focused = index"
       @pointerdown="press(index, $event)"
       @pointermove="gestures.move"
       @pointerup="gestures.letGo"
@@ -98,6 +114,14 @@ const menu = (event: Event) => props.gestures && event.preventDefault();
       @keydown="key(index, $event)"
       @contextmenu="menu"
     />
+    <template v-if="gestures">
+      <p :id="keysId" class="sr-only">{{ t('game.gestures.keys') }}</p>
+      <div v-if="named" class="sr-only mark-buttons">
+        <button v-for="mark in MARKS" :key="mark" type="button" @click="named && emit('mark', named.index, mark)">
+          {{ t(`game.gestures.markAs.${mark}`, { word: named.word }) }}
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
