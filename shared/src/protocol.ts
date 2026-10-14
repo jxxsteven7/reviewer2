@@ -129,6 +129,7 @@ export const EMOTES = [
   'first_author',
   'coauthor',
   'all_nighter',
+  'mine_mine',
 ] as const;
 export type Emote = (typeof EMOTES)[number];
 export const EMOTE_COOLDOWN_MS = 10_000;

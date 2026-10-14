@@ -6,7 +6,8 @@ import { Browser, startServer, TestClient, until, type TestServer } from './help
 // The titles that a game brings, over real sockets (docs/games/keywords.md#titles): a PI who gives
 // no clue in time is called out to the room at once, with how many times their account has missed
 // the deadline, and gets Forgot to Submit when the game goes on the record; a guest is called out
-// without a count and keeps nothing, and a withdrawn game brings nothing.
+// without a count and keeps nothing, and a withdrawn game brings nothing. A PI and a student who
+// beat the deadline are called out and kept the same way, as deadline heroes.
 
 let server: TestServer;
 const clients: TestClient[] = [];
@@ -114,5 +115,84 @@ describe('Forgot to Submit', () => {
     expect(server.db.prepare("SELECT count(*) AS n FROM titles WHERE title = 'missed_deadline'").get()).toEqual({
       n: 3,
     });
+  });
+});
+
+describe('Deadline Hero', () => {
+  test('is called out to the room when the card comes, counted for an account, and kept when the game ends', async () => {
+    server = await startServer({ games: [keywordsGame] });
+    // Ann, red's PI, has been a deadline hero once before; Bob, her student, never.
+    const anns = new Browser(server.url);
+    const bobs = new Browser(server.url);
+    expect((await anns.register('Ann')).body).toEqual({ ok: true });
+    expect((await bobs.register('Bob')).body).toEqual({ ok: true });
+    server.accounts.titles.awardForGame(1, 'deadline_hero', 'earlier', 2);
+    const ann = await anns.connect();
+    clients.push(ann);
+    const settings = { ...defaultSettings('en'), firstClueTime: 30, clueTime: 30, guessTime: 30 };
+    const created = await ann.send('room:create', { game: 'keywords', language: 'en', fields: ['general'], settings });
+    if (!created.ok) throw new Error(created.error);
+    const code = created.code as string;
+    await ann.waitFor((state) => state.code === code);
+    const bob = await bobs.connect();
+    clients.push(bob);
+    await expectOk(bob.send('room:join', { code, play: false }));
+    const join = async (name: string) => {
+      const client = await TestClient.connect(server.url);
+      clients.push(client);
+      await expectOk(client.send('room:join', { code, name }));
+      return client;
+    };
+    const [cat, dan] = [await join('Cat'), await join('Dan')];
+    const everyone = [ann, bob, cat, dan];
+    await expectOk(ann.send('keywords:seat', { team: 'red', role: 'captain' }));
+    await expectOk(bob.send('keywords:seat', { team: 'red', role: 'guesser' }));
+    await expectOk(cat.send('keywords:seat', { team: 'blue', role: 'captain' }));
+    await expectOk(dan.send('keywords:seat', { team: 'blue', role: 'guesser' }));
+    await ann.waitFor((state) => (state.data as KeywordsRoomData).startProblems.length === 0, 'ready');
+    await expectOk(ann.send('room:start', { round: ann.state?.round }));
+    for (const client of everyone) await client.waitFor((state) => state.phase === 'playing', 'the game');
+    if (board(ann).team === 'blue') {
+      server.advance(30_000);
+      await settle(everyone);
+      await ann.waitFor(
+        (state) => ((state.data as KeywordsRoomData).game as KeywordsView).team === 'red',
+        "red's turn",
+      );
+    }
+
+    // Ann gives her clue with 2 seconds left, and Bob reveals one of red's cards with 2 seconds left
+    // of the guesses: both are heroes at once, Ann for the second time.
+    server.advance(28_000);
+    await expectOk(ann.send('keywords:clue', { ...moment(board(ann)), word: 'Hint', count: 2 }));
+    await settle(everyone);
+    server.advance(28_000);
+    const own = (team: 'red' | 'blue') => board(ann).cards.findIndex((card) => card.color === team && !card.revealed);
+    await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('red') }));
+    await settle(everyone);
+    const hailed = (client: TestClient) =>
+      board(client).events.flatMap(({ kind, player, count }) => (kind === 'hero' ? [{ player, count }] : []));
+    for (const client of everyone) {
+      expect(hailed(client)).toEqual([
+        { player: bob.me, count: 1 },
+        { player: ann.me, count: 2 },
+      ]);
+    }
+    // Another card of red's in the same turn makes nobody a hero again.
+    await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('red') }));
+    await settle(everyone);
+    expect(hailed(dan)).toHaveLength(2);
+
+    // Red's turn ends; blue reveals Reviewer 2, and the game goes on the record.
+    await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('blue') }));
+    await settle(everyone);
+    await expectOk(cat.send('keywords:clue', { ...moment(board(cat)), word: 'Hint', count: 1 }));
+    await settle(everyone);
+    const reviewer2 = board(cat).cards.findIndex((card) => card.color === 'reviewer2');
+    await expectOk(dan.send('keywords:reveal', { ...moment(board(dan)), card: reviewer2 }));
+    for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
+    await until(() => server.accounts.records.view(1).ordinary.games === 1, "Ann's record");
+    expect((await anns.account())?.titles).toEqual([{ title: 'deadline_hero', count: 2 }]);
+    expect((await bobs.account())?.titles).toEqual([{ title: 'deadline_hero', count: 1 }]);
   });
 });

@@ -33,6 +33,7 @@ import GuessBar from './GuessBar.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
 import { missedLine } from './missed';
+import { heroLine } from './heroes';
 import ReplayViewer from './ReplayViewer.vue';
 import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
@@ -1991,6 +1992,54 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.clue-log .missing')).toHaveLength(6);
     expect(wrapper.find('.clue-log .event').exists()).toBe(false);
     bubbles.splice(0);
+  });
+
+  test('calls out a deadline hero the moment the card that makes them one is revealed, counted for an account', async () => {
+    bubbles.splice(0);
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const hero = (player: string, count?: number) => ({
+      turn: 2,
+      kind: 'hero' as const,
+      team: 'red' as const,
+      player,
+      ...(count === undefined ? {} : { count }),
+    });
+    const calls = () => bubbles.map((bubble) => ('call' in bubble ? [bubble.name, bubble.call] : null));
+    const { t } = i18n().global;
+    const line = (player: string, name: string) => t(`game.hero.lines.${heroLine('g1', 2, player)}`, { name });
+    let shown = data.game as KeywordsView;
+    const show = async (changes: Partial<KeywordsView>) => {
+      shown = { ...shown, ...changes };
+      await wrapper.setProps({ room: { ...view, data: { ...data, game: shown } } });
+    };
+    // Bob reveals a card of red's: his first in the last seconds, which makes him a hero, and the
+    // first of Ann's last-second clue, which makes her one, her third time.
+    const turned = (...indexes: number[]) => ({
+      cards: shown.cards.map((card, index) =>
+        indexes.includes(index) ? { ...card, revealed: true, color: 'red' as const } : card,
+      ),
+      history: [
+        {
+          ...(shown.history[0] as ClueRecord),
+          guesses: indexes.map((card) => ({ card, color: 'red' as const, player: 'bob', lastSeconds: true as const })),
+        },
+      ],
+    });
+    const wrapper = mount(KeywordsGame, {
+      props: { room: { ...view, data: { ...data, game: shown } } },
+      global: global(),
+    });
+    await show({ ...turned(0), events: [hero('bob'), hero('ann', 3)] });
+    expect(calls()).toEqual([
+      ['Bob', line('bob', 'Bob')],
+      ['Ann', `${line('ann', 'Ann')} (\u00d73)`],
+    ]);
+    bubbles.splice(0);
+    // A snapshot that catches the page up with several cards at once says nothing.
+    await show({ ...turned(0, 1, 2), events: [...shown.events, hero('cat')] });
+    expect(bubbles).toEqual([]);
+    expect(wrapper.find('.clue-log .event').exists()).toBe(false);
   });
 
   test('shows both letters to a player who sat down only after the game, as to a spectator', () => {

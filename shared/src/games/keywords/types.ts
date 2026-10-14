@@ -86,25 +86,32 @@ export interface CardView {
 // the clue and on each guess, is when it came, in milliseconds from the start of the game; for a
 // turn without a clue, when its time ran out. Replays from before these were kept have none of
 // them, and a turn without a clue had no captain before the missed deadlines were counted.
+// `lastSeconds`, on the clue and on each guess, says that it came in the last DEADLINE_HERO_MS of
+// the phase's time limit (docs/games/keywords.md#titles).
 export interface ClueRecord {
   turn: number;
   team: Team;
   word: string | null;
   count: ClueCount | null;
-  guesses: { card: number; color: CardColor; player: string; at?: number }[];
+  guesses: { card: number; color: CardColor; player: string; at?: number; lastSeconds?: true }[];
   timedOut?: true;
   captain?: string;
   targets?: number[];
   at?: number;
+  lastSeconds?: true;
 }
+
+// How close to the end of its time limit a clue or a guess makes its giver a deadline hero.
+export const DEADLINE_HERO_MS = 3000;
 
 // What happened in a game besides the clues and the guesses: the chair paused the game and resumed
 // it, and a group asked for an extension, for the clue log; and a captain missed the deadline for
-// their clue, which the room hears of at once (docs/games/keywords.md#titles), while the clue log
-// has the turn without a clue already. Each is noted with the turn it came in; an extension and a
-// missed deadline name the group. A game keeps the last EVENTS_KEPT of them, more than a game has,
-// so that no number of pauses can grow its snapshots without end.
-export const EVENT_KINDS = ['paused', 'resumed', 'extended', 'missed'] as const;
+// their clue, or someone became a deadline hero, which the room hears of at once
+// (docs/games/keywords.md#titles), while the clue log has the turn already. Each is noted with the
+// turn it came in; an extension, a missed deadline and a deadline hero name the group. A game keeps
+// the last EVENTS_KEPT of them, more than a game has, so that no number of pauses can grow its
+// snapshots without end.
+export const EVENT_KINDS = ['paused', 'resumed', 'extended', 'missed', 'hero'] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENTS_KEPT = 50;
 
@@ -114,6 +121,8 @@ export interface GameEvent {
   team?: Team;
   // A missed deadline names the captain, by player ID, and, for a captain with an account, how many
   // times they have missed one, this time included, as their titles and the game so far count them.
+  // A deadline hero names the PI or the student in the same way, with how many times they have been
+  // one.
   player?: string;
   count?: number;
 }

@@ -43,6 +43,7 @@ import RulesSheet from './RulesSheet.vue';
 import TurnStrip from './TurnStrip.vue';
 import { useChatLine } from './useChatLine';
 import { useKeywords, type Chooser } from './useKeywords';
+import { useDeadlineHeroes } from './useDeadlineHeroes';
 import { useMissedDeadlines } from './useMissedDeadlines';
 import { useScoreFloats } from './useScoreFloats';
 
@@ -343,7 +344,8 @@ const resume = () => run(() => act('keywords:resume', { gameId: game.value.gameI
 const again = () => run(() => act('room:again', { gameId: game.value.gameId }));
 
 // Everyone hears of an extension as it comes: the newest event, when it is one. A PI who misses the
-// deadline for a clue is called out to the whole room (useMissedDeadlines.ts).
+// deadline for a clue is called out to the whole room (useMissedDeadlines.ts), and so is a deadline
+// hero (useDeadlineHeroes.ts).
 watch(
   () => game.value.events.length,
   (count, before) => {
@@ -354,6 +356,10 @@ watch(
   },
 );
 useMissedDeadlines(
+  game,
+  computed(() => room.value.players),
+);
+useDeadlineHeroes(
   game,
   computed(() => room.value.players),
 );

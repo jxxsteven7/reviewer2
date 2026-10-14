@@ -127,6 +127,52 @@ describe('the titles of a game', () => {
     });
   });
 
+  test('give a deadline hero Deadline Hero once for each turn that made them one, under whichever ID they had', () => {
+    const late = { ...guess(0, 'red'), lastSeconds: true as const };
+    const history: ClueRecord[] = [
+      // Ann's last-second clue finds a card of red's, and Bob reveals two in the last seconds.
+      {
+        turn: 1,
+        team: 'red',
+        word: 'Late',
+        count: 3,
+        captain: 'ann',
+        lastSeconds: true,
+        guesses: [late, { ...late, card: 1 }],
+      },
+      {
+        turn: 2,
+        team: 'blue',
+        word: 'Two',
+        count: 1,
+        captain: 'cat',
+        guesses: [{ ...guess(17, 'neutral'), player: 'dee' }],
+      },
+      // Ann, back as ann-2, gives another last-second clue, which finds nothing of red's; Bob
+      // reveals a card of red's in time.
+      {
+        turn: 3,
+        team: 'red',
+        word: 'Rush',
+        count: 1,
+        captain: 'ann-2',
+        lastSeconds: true,
+        guesses: [guess(17, 'neutral')],
+      },
+      { turn: 4, team: 'blue', word: 'Calm', count: 1, captain: 'cat', guesses: [] },
+      { turn: 5, team: 'red', word: 'Fast', count: 2, captain: 'ann-2', lastSeconds: true, guesses: [guess(2, 'red')] },
+    ];
+    expect(titles(played(history, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
+      ann: [
+        { title: 'deadline_hero', turn: 1 },
+        { title: 'deadline_hero', turn: 5 },
+      ],
+      bob: [{ title: 'deadline_hero', turn: 1 }],
+      cat: [],
+      dee: [],
+    });
+  });
+
   test('are none for a game that was withdrawn', () => {
     const data = played([missed(1, 'red', 'ann')], { winner: null, reason: 'withdrawn' });
     expect(results(data)).toBeNull();

@@ -140,6 +140,13 @@ const SOUNDS: Record<Emote, (audio: AudioContext, at: number) => void> = {
     }
     tone(audio, { type: 'sine', from: 1568, at: at + 0.5, length: 0.5, volume: 0.12 });
   },
+  // Two little hops up, twice: mine, mine.
+  mine_mine(audio, at) {
+    for (let i = 0; i < 2; i += 1) {
+      tone(audio, { type: 'triangle', from: 587, to: 784, at: at + i * 0.32, length: 0.12, volume: 0.16 });
+      tone(audio, { type: 'triangle', from: 784, at: at + i * 0.32 + 0.13, length: 0.14, volume: 0.16 });
+    }
+  },
 };
 
 let audio: AudioContext | null = null;

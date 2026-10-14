@@ -376,6 +376,16 @@
       },
       "count": "{line} (×{count})"
     },
+    "hero": {
+      "lines": {
+        "1": "{name} submitted with three seconds to spare. Accepted!",
+        "2": "Deadline Hero {name}: three seconds left, and nailed it!",
+        "3": "Note from the editors: {name}'s manuscript arrived at 23:59:58.",
+        "4": "{name} raced the deadline, and won this time.",
+        "5": "{name}: “Submitted!” The portal closed right behind them."
+      },
+      "count": "{line} (×{count})"
+    },
     "events": {
       "paused": "The chair paused the game",
       "resumed": "The game went on",
@@ -599,7 +609,8 @@
       "resubmit": "Rejected again. Fine, we'll try another venue.",
       "first_author": "Carry me and I'll make you first author.",
       "coauthor": "Same coauthors on the next one?",
-      "all_nighter": "Don't leave, we're pulling an all-nighter."
+      "all_nighter": "Don't leave, we're pulling an all-nighter.",
+      "mine_mine": "mine mine"
     },
     "bubble": "{name}: {phrase}",
     "mute": "Mute the sounds",
@@ -916,6 +927,7 @@
         "best_paper": "Best Paper Award",
         "black_hole": "Game black hole",
         "missed_deadline": "Forgot to Submit",
+        "deadline_hero": "Deadline Hero",
         "opening_record": "Opened the Scoring",
         "heavenly_hand": "Heavenly Hand"
       },
@@ -1146,6 +1158,7 @@
       "best_paper": "Awarded at the end of a match to the player with the highest total. Players level at the top all get it; when everyone is level, nobody does.",
       "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it.",
       "missed_deadline": "For a PI whose time for a clue ran out before they gave one: the paper was written, it just never left the desktop. Earned again with every missed deadline, in each game that ends by itself while you are logged in and in your seat.",
+      "deadline_hero": "For a PI who gives a clue in the last 3 seconds of their time, when it finds at least one of the group's cards, and for a student who reveals one of the group's cards in the last 3 seconds of the guesses: submitted at 23:59:57, and accepted. Earned again in every turn that makes you one, in each game with time limits that ends by itself while you are logged in and in your seat.",
       "opening_record": "For everyone in a group whose very first clue of a game names 3 cards or more, and whose students then find that many of the group's cards before revealing anything else. The lab's first paper, accepted without a single revision.",
       "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all."
     },

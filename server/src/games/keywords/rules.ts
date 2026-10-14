@@ -5,6 +5,7 @@ import {
   cleanClue,
   clueCounts,
   clueOptions,
+  DEADLINE_HERO_MS,
   EVENTS_KEPT,
   EXTENSION_SECONDS,
   otherTeam,
@@ -110,6 +111,22 @@ const noted = (state: KeywordsState, kind: EventKind, team?: Team): KeywordsStat
   events: [...state.events, { turn: state.turn, kind, ...(team ? { team } : {}) }].slice(-EVENTS_KEPT),
 });
 
+// Whether something that comes at `at` comes in the last seconds of the phase's time limit, where
+// the phase has one (docs/games/keywords.md#titles).
+const inLastSeconds = (state: KeywordsState, at: number): boolean =>
+  state.clock !== null && state.clock.ends - at <= DEADLINE_HERO_MS;
+
+// The deadline heroes of a turn, by player ID (docs/games/keywords.md#titles): its PI, if their clue
+// came in the last seconds of their time and found at least one of the group's own cards, and every
+// student who revealed one of the group's own cards in the last seconds of the guesses. Each is a
+// hero once a turn, however many cards it took.
+export function heroesOf(record: ClueRecord): Set<string> {
+  const own = record.guesses.filter((guess) => guess.color === record.team);
+  const heroes = new Set(own.flatMap((guess) => (guess.lastSeconds ? [guess.player] : [])));
+  if (record.lastSeconds && record.captain !== undefined && own.length > 0) heroes.add(record.captain);
+  return heroes;
+}
+
 function endTurn(state: KeywordsState, at: number): KeywordsState {
   return {
     ...state,
@@ -169,6 +186,7 @@ export function giveClue(
     captain: actor.id,
     at: at - state.startedAt,
     ...(targets.length > 0 ? { targets } : {}),
+    ...(inLastSeconds(state, at) ? { lastSeconds: true as const } : {}),
   };
   return ok({
     ...state,
@@ -230,8 +248,16 @@ export function mark(
 
 // One of the current team's guessers reveals a card. The board has changed then, so everyone's
 // choice is cleared, and the guessers choose again if their turn goes on. Neither group's mark
-// stays on the card: its color is there for all to see.
-export function reveal(state: KeywordsState, actor: Actor, action: Moment & { card: number }, at: number): Outcome {
+// stays on the card: its color is there for all to see. Whoever the card makes a deadline hero
+// (heroesOf) is noted in the events, for the room to hear at once, with how many times they have
+// been one now, as `heroes` counts those before, or without, for a player whom nobody counts.
+export function reveal(
+  state: KeywordsState,
+  actor: Actor,
+  action: Moment & { card: number },
+  at: number,
+  heroes: (playerId: string) => number | null = () => null,
+): Outcome {
   const denied = refusal(state, action, actor, 'guesser');
   if (denied) return refuse(denied);
   if (state.phase !== 'guess') return refuse('wrong_phase');
@@ -246,7 +272,13 @@ export function reveal(state: KeywordsState, actor: Actor, action: Moment & { ca
           ...record,
           guesses: [
             ...record.guesses,
-            { card: action.card, color: target.color, player: actor.id, at: at - state.startedAt },
+            {
+              card: action.card,
+              color: target.color,
+              player: actor.id,
+              at: at - state.startedAt,
+              ...(inLastSeconds(state, at) ? { lastSeconds: true as const } : {}),
+            },
           ],
         }
       : record,
@@ -255,6 +287,21 @@ export function reveal(state: KeywordsState, actor: Actor, action: Moment & { ca
     red: state.marks.red.filter(({ card }) => card !== action.card),
     blue: state.marks.blue.filter(({ card }) => card !== action.card),
   };
+  const before = state.history.at(-1);
+  const after = history.at(-1);
+  const known = before ? heroesOf(before) : new Set<string>();
+  const hailed: GameEvent[] = [...(after ? heroesOf(after) : [])]
+    .filter((player) => !known.has(player))
+    .map((player) => {
+      const count = heroes(player);
+      return {
+        turn: state.turn,
+        kind: 'hero',
+        team: state.team,
+        player,
+        ...(count !== null ? { count: count + 1 } : {}),
+      };
+    });
   const next: KeywordsState = {
     ...state,
     cards,
@@ -262,6 +309,7 @@ export function reveal(state: KeywordsState, actor: Actor, action: Moment & { ca
     guessesMade: state.guessesMade + 1,
     selections: [],
     marks,
+    ...(hailed.length > 0 ? { events: [...state.events, ...hailed].slice(-EVENTS_KEPT) } : {}),
   };
 
   // Reviewer 2 rejects the group that reveals them, whatever else is on the board.
