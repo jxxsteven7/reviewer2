@@ -42,6 +42,8 @@ function room(me: string | null, streaks: StreakNotice[]): RoomView {
     match: null,
     streaks,
     duos: [],
+    agentsPlayed: false,
+    points: [],
     data: {},
   };
 }

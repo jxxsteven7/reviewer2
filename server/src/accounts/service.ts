@@ -29,6 +29,7 @@ import {
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
+import type { GameLogEntry } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { AcknowledgmentStore } from '../store/acknowledgments';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
@@ -769,6 +770,17 @@ export class Accounts {
       data = null;
     }
     return this.store.transaction(() => this.replays.add(game, data));
+  }
+
+  // Adds what the groups said after the end of a game to its record (ReplayStore.addToLog), in one
+  // transaction. A full database keeps nothing more, as for a new game. Says whether it was kept.
+  keepReview(
+    gameId: string,
+    entries: readonly GameLogEntry[],
+    players: readonly { playerId: string; accountId: number }[],
+  ): boolean {
+    if (this.#full()) return false;
+    return this.store.transaction(() => this.replays.addToLog(gameId, entries, players));
   }
 
   // The replay of a game that the account played in, or null when there is none or the account

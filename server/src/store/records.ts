@@ -15,7 +15,7 @@ import {
   type TitleCount,
 } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
-import { unsay, type GameEnding, type GameLogData } from '../core/gameLog';
+import { unsay, type GameEnding, type GameLogData, type GameLogEntry } from '../core/gameLog';
 import type { GameOutcome } from '../core/game';
 import type { AgentPlay } from '../core/room';
 
@@ -344,6 +344,7 @@ export class ReplayStore {
   readonly #read: StatementSync;
   readonly #said: StatementSync;
   readonly #unsay: StatementSync;
+  readonly #log: StatementSync;
   readonly #agentPlay: StatementSync;
 
   constructor(
@@ -372,6 +373,7 @@ export class ReplayStore {
         'WHERE account_id = ? AND log IS NOT NULL GROUP BY replays.game_id',
     );
     this.#unsay = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
+    this.#log = db.prepare('SELECT log FROM replays WHERE game_id = ? AND log IS NOT NULL');
     // The account of a person an AI played for, if it is still there.
     this.#agentPlay = db.prepare(
       'INSERT OR IGNORE INTO agent_plays (game_id, player_id, persona, takeover, account_id, side, role, won, ' +
@@ -433,6 +435,26 @@ export class ReplayStore {
         play.feats?.best?.found ?? null,
       );
     }
+    return true;
+  }
+
+  // Adds to the log of a game that is kept what the groups said after its end, as they talked it
+  // over (Room.review()), with the accounts of the player IDs it doesn't know yet, such as of
+  // someone who came back to the room after the end. A game kept without a log, as one whose log
+  // grew too long, keeps none; one that isn't kept, nothing. Says whether the log grew. The caller
+  // runs this in one transaction, and has taken out what deleted accounts said.
+  addToLog(
+    gameId: string,
+    entries: readonly GameLogEntry[],
+    players: readonly { playerId: string; accountId: number }[],
+  ): boolean {
+    const row = this.#log.get(gameId) as { log: string } | undefined;
+    if (row === undefined || entries.length === 0) return false;
+    const kept = JSON.parse(row.log) as GameLogData;
+    const truncated = kept.truncated === true || entries.some(({ type }) => type === 'truncated');
+    const log: GameLogData = { ...kept, entries: [...kept.entries, ...entries], ...(truncated ? { truncated } : {}) };
+    this.#unsay.run(JSON.stringify(log), gameId);
+    for (const { playerId, accountId } of players) this.#player.run(gameId, playerId, accountId);
     return true;
   }
 

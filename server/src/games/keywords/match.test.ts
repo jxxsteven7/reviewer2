@@ -1,7 +1,11 @@
 import {
+  bonusPoints,
+  cardPoints,
+  revealPoints,
   SPECTATOR,
   type CardColor,
   type ClueRecord,
+  type KeywordsScoreDetail,
   type MatchRules,
   type RoomPhase,
   type Seat,
@@ -129,6 +133,34 @@ describe('the score of a game', () => {
       bo: { role: 'captain', ...blue },
       bea: { role: 'guesser', ...blue },
     });
+  });
+
+  // The client shows each revealed card's points as it is revealed (revealPoints()), and what the end
+  // of the game adds (bonusPoints()), which must come to what the server scores.
+  test('adds up to what each card and the end bring, as the client shows them', () => {
+    const games = [
+      played(),
+      redWins(ALL_RED, 9),
+      redWins([guess(0, 'red', 'ron'), guess(17, 'neutral', 'ron')], 2, [
+        { turn: 1, team: 'red', word: 'Big', count: 4, guesses: ALL_RED.slice(1, 5), captain: 'rex' },
+        { turn: 2, team: 'blue', word: 'Miss', count: 1, guesses: [guess(9, 'blue', 'bea'), guess(5, 'red', 'bea')] },
+      ]),
+    ];
+    for (const game of games) {
+      for (const { key, points, detail } of scoreGame(game, SEATED, keyOf) ?? []) {
+        const id = key.replace('key-', '') as keyof typeof PLAYERS;
+        const role = PIS.includes(id) ? 'captain' : 'guesser';
+        const cards = game.history.reduce(
+          (sum, record) =>
+            sum +
+            record.guesses.reduce((add, { color }) => add + revealPoints(color, record.team, PLAYERS[id], role), 0),
+          0,
+        );
+        const scored = detail as KeywordsScoreDetail;
+        expect(cards, id).toBe(cardPoints(scored));
+        expect(cards + bonusPoints(scored), id).toBe(points);
+      }
+    }
   });
 
   test('costs every student of a larger group the same', () => {

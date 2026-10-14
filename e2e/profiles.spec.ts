@@ -42,9 +42,9 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await expect(link).toHaveAttribute('href', 'https://ann.example/me');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'nofollow ugc noopener');
-  // The record that Ann shows, as a table: no games, no rates and no matches yet.
-  await expect(card.locator('.record-table tr.total td')).toHaveText(['0', '0', '\u2014']);
-  await expect(card.locator('.record-table .matches')).toHaveText(text.account.profile.recordTable.noMatches);
+  // The record that Ann shows, as numbers: no games, no rate and no matches yet.
+  await expect(card.locator('.record-stats .block .value')).toHaveText(['0', '\u2014', '0']);
+  await expect(card.locator('.record-stats .split')).toHaveCount(0);
   await expect(card).toContainText(interpolate(text.playerPage.likes, { count: '0' }));
   // The rank opens the ladder of every rank, Ann's marked and her points nowhere on it.
   await card.locator('.rank-button').click();

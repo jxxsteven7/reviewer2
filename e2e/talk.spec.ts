@@ -216,3 +216,91 @@ test("a student's half-written line outlives the sheet's closing and the page's 
   await chatOf(student);
   await expect(input()).toHaveValue('Second row, on the');
 });
+
+test('after the game the group talks it over, its PI too, and the review shows it last', async ({ browser }) => {
+  const { table, team, other, student, name, states } = await groupOfTwo(browser);
+  const chat = text.game.chat;
+  const chair = table.captains.red;
+  await chair.getByRole('button', { name: text.game.end }).click();
+  await chair.locator('[role=dialog]').getByRole('button', { name: text.game.end }).click();
+  for (const page of [...Object.values(table.captains), ...Object.values(table.guessers)]) {
+    await expect(page.locator('.letter').first()).toBeVisible();
+  }
+
+  // The student and the PI both write; the other group sees none of it.
+  const captain = table.captains[team];
+  for (const [page, line] of [
+    [student, 'That was close'],
+    [captain, 'Should have said Gradient'],
+  ] as const) {
+    const thread = await chatOf(page);
+    await expect(thread).toContainText(chat.review);
+    await page.getByLabel(chat.input).fill(line);
+    await page.getByLabel(chat.input).press('Enter');
+    await expect(page.locator('.chat .message.own .text').last()).toHaveText(line);
+    if (isPhone(page)) await closeSheet(page);
+  }
+  const thread = await chatOf(student);
+  await expect(thread.locator('.turn').last().locator('.turn-title')).toHaveText(chat.after);
+  await expect(thread.locator('.turn').last().locator('.message .text')).toHaveText([
+    'That was close',
+    'Should have said Gradient',
+  ]);
+  if (isPhone(student)) await closeSheet(student);
+  await expect(await chatOf(table.guessers[other])).not.toContainText('That was close');
+  if (isPhone(table.guessers[other])) await closeSheet(table.guessers[other]);
+  for (const page of [table.spectator, table.screen]) {
+    await expect(page.locator('.open-chat, .chat-panel')).toHaveCount(0);
+  }
+
+  // The review ends with it, under its own heading.
+  await student.getByRole('button', { name: text.game.review }).click();
+  const talk = student.locator('[role=dialog] .talk');
+  await expect(talk.locator('h3')).toHaveText(text.replay.talk);
+  await expect(talk.locator('.line .name')).toHaveText([name, table.names.captains[team]]);
+  for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
+});
+
+test('on a phone the chat brings up the keyboard only while it is empty, and keeps the line above it', async ({
+  browser,
+}) => {
+  const { student, fay } = await groupOfTwo(browser);
+  test.skip(!isPhone(student), 'The chat is a sheet on a phone alone.');
+  const input = (page: Page) => page.getByLabel(text.game.chat.input);
+  // Nothing to read yet: the input takes the focus, which brings the keyboard up.
+  await student.locator('.open-chat').click();
+  await expect(input(student)).toBeFocused();
+  await closeSheet(student);
+  await chatOf(fay);
+  for (let line = 1; line <= 12; line += 1) {
+    await input(fay).fill(`Line ${line}`);
+    await input(fay).press('Enter');
+    // One at a time: a line sent while the one before is on its way waits in the input.
+    await expect(fay.locator('.chat .message.own')).toHaveCount(line);
+  }
+  await expect(fay.locator('.chat .message.own')).toHaveCount(12);
+  // Messages to read: the sheet itself takes the focus, and no keyboard comes up.
+  await student.locator('.open-chat').click();
+  const sheet = student.locator('[role=dialog]');
+  await expect(sheet).toBeFocused();
+  await expect(input(student)).not.toBeFocused();
+  // The keyboard comes up as the student taps the input, and takes the bottom of the screen: the
+  // sheet keeps above it, the input in sight at its foot and the newest message above it, while the
+  // messages scroll.
+  await input(student).click();
+  const size = student.viewportSize();
+  if (!size) throw new Error('the page has no viewport');
+  const left = Math.round(size.height * 0.55);
+  await student.setViewportSize({ width: size.width, height: left });
+  await expect(async () => {
+    const box = await input(student).boundingBox();
+    expect(box).not.toBeNull();
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(left);
+    expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+  }).toPass();
+  const list = sheet.locator('.turns');
+  expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await expect(sheet.locator('.message').last()).toBeInViewport();
+  await student.setViewportSize(size);
+  await expect(input(student)).toBeInViewport();
+});

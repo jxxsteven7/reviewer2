@@ -3,6 +3,7 @@ import { otherTeam, type CardView, type Mark, type Team } from '@reviewer2/share
 import { useI18n } from 'vue-i18n';
 import KeywordsCard from './KeywordsCard.vue';
 import type { Chooser } from './useKeywords';
+import type { Shown } from '../../core/components/ScoreFloat.vue';
 
 // The 5 by 5 board. Cards can be chosen only when the viewer may reveal one, or, while a PI
 // marks the cards a clue is meant for, only the group's own that are still to be found
@@ -10,6 +11,8 @@ import type { Chooser } from './useKeywords';
 // chosen it. A `large` board, for a big screen, sets its words in bigger type. A `marked` card is
 // the one a replay's step is about, and `targets` are the cards a PI meant, in the order marked.
 // `notes` are the marks of the viewer's group, by card, for its students, and `team` that group.
+// `float` is what the card that has just been revealed did to the viewer's points, which rises from
+// it (ScoreFloat.vue).
 const props = withDefaults(
   defineProps<{
     cards: CardView[];
@@ -23,6 +26,7 @@ const props = withDefaults(
     targets?: number[];
     notes?: ReadonlyMap<number, Mark>;
     team?: Team | null;
+    float?: (Shown & { card: number }) | null;
   }>(),
   {
     choosers: () => [],
@@ -32,6 +36,7 @@ const props = withDefaults(
     targets: () => [],
     notes: () => new Map(),
     team: null,
+    float: null,
   },
 );
 const open = (card: CardView) =>
@@ -61,6 +66,7 @@ const { t } = useI18n();
       :marked="marked === index"
       :target="order(index)"
       :note="card.revealed ? null : noteOf(index)"
+      :float="float?.card === index ? float : null"
       @select="emit('select', $event)"
     />
   </div>

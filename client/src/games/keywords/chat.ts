@@ -12,8 +12,10 @@ const GAMES_KEPT = 8;
 
 type Seen = [gameId: string, id: number][];
 
+// The messages of a turn, or those written after the game (`after`), which come last.
 export interface ChatTurn {
   turn: number;
+  after?: true;
   messages: ChatMessage[];
 }
 
@@ -21,8 +23,9 @@ export function byTurn(messages: readonly ChatMessage[]): ChatTurn[] {
   const turns: ChatTurn[] = [];
   for (const message of messages) {
     const last = turns.at(-1);
-    if (last?.turn === message.turn) last.messages.push(message);
-    else turns.push({ turn: message.turn, messages: [message] });
+    const after = message.after === true;
+    if (last && last.turn === message.turn && (last.after === true) === after) last.messages.push(message);
+    else turns.push({ turn: message.turn, ...(after ? { after: true as const } : {}), messages: [message] });
   }
   return turns;
 }

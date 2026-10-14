@@ -237,8 +237,10 @@ const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, '
 
 // The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
 // change to either. Version 2 brought the students' marks, the homophone rule of a Chinese room and
-// the hold on the quick reactions of whoever has seen the key while the students guess.
-export const RULES_VERSION = 2;
+// the hold on the quick reactions of whoever has seen the key while the students guess; version 3
+// the numbers, the English and the pinyin of a character as the same character in the clue check,
+// and the groups' talk after the game, the PI's included.
+export const RULES_VERSION = 3;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -251,7 +253,9 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
     act(data, playerId, (game, actor) => reveal(game, actor, guess, ctx.now())),
   'keywords:pass': (data, ctx, playerId, moment) =>
     act(data, playerId, (game, actor) => pass(game, actor, moment, ctx.now())),
-  'keywords:say': (data, _ctx, playerId, line) => act(data, playerId, (game, actor) => say(game, actor, line)),
+  // After the game, whoever played for a group may talk it over with it (rules.ts).
+  'keywords:say': (data, ctx, playerId, line) =>
+    act(data, playerId, (game, actor) => say(game, actor, line, data.seating.sides.get(ctx.keyOf(playerId)) ?? null)),
   // Only the chair pauses and resumes, whoever that is by now: the room passes the chair on after
   // a while when the chair is offline.
   'keywords:pause': (data, ctx, playerId, moment) =>

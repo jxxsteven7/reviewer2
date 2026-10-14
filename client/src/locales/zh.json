@@ -316,15 +316,16 @@
     "unlimited": "不限",
     "sendClue": "给出提示",
     "targetsHint": "先点牌标出这条提示想指的牌，数字会跟着变。对局中谁都看不到，复盘看得到。",
+    "tips": "Tips",
     "targetsMarked": "已标 {count} 张：{words}。赛后公开。 | 已标 {count} 张：{words}。赛后公开。",
     "quoted": "「{word}」",
     "onBoard": "{word}还在牌上。提示词不能是牌上的词，也不能是牌上的词的一部分。",
     "formOnBoard": "{word}还在牌上，这个提示重复了词库列出的它的另一种形式。本房间的提示词规则不允许这样做。",
-    "characterOnBoard": "这个提示和牌上的{word}有相同的汉字。本房间的提示词规则不允许这样做。",
+    "characterOnBoard": "这个提示和牌上的{word}有相同的字：相同的汉字、写法不同的同一个数字，或者其中某个字的英文、拼音都算。本房间的提示词规则不允许这样做。",
     "insideOnBoard": "这个提示包含了牌上的{word}。本房间的提示词规则不允许这样做。",
     "similar": "这可能是牌上某个词的另一种形式：{words}。规则不允许这样做，但程序判断不准，由你决定。",
     "formWarning": "这个提示重复了词库列出的牌上某个词的另一种形式：{words}。本房间的提示词规则把决定权交给你。",
-    "characterWarning": "这个提示和牌上的词有相同的汉字：{words}。由你决定。",
+    "characterWarning": "这个提示和牌上还没翻开的词有相同的字（相同的汉字、写法不同的同一个数字，或者某个字的英文、拼音）：{words}。由你决定。",
     "insideWarning": "这个提示包含了牌上的词：{words}。它可能会暴露这个词，由你决定。",
     "pick": "点一张牌选中它，组里的人都能看到；商量好了再翻开。",
     "tools": {
@@ -470,7 +471,9 @@
       "send": "发送",
       "count": "{count}/{max}",
       "readOnly": "导师可以看本组的讨论，但不能发言：提示就是导师能说的全部。",
-      "over": "本局已经结束，不能再发言了。",
+      "over": "终局后，只有在本局为本组上过场的人能在这里发言。",
+      "review": "本局已经结束，可以和本组继续讨论复盘，导师也能发言，直到下一局开始。",
+      "after": "复盘讨论",
       "you": "我",
       "someone": "已离开的玩家"
     },
@@ -507,7 +510,8 @@
     "timedOut": "时间到，本轮结束。",
     "someone": "已离开的玩家",
     "won": "{group}获胜。",
-    "withdrawn": "主持撤回了这一局。"
+    "withdrawn": "主持撤回了这一局。",
+    "talk": "复盘讨论"
   },
   "settings": {
     "title": "本房间的规则",
@@ -718,6 +722,9 @@
     "request_declined": "你的请求最近被拒绝过，一周后才能再发。",
     "friend_requests_full": "待回应的好友请求太多了，等一些有了回应再发。",
     "friend_limited": "今天发出的好友请求已经够多了，明天再试。",
+    "friend_note_too_long": "最多 50 个字。",
+    "friend_alias_invalid": "备注里有看不见的字符。",
+    "friend_alias_too_long": "最多 20 个字。",
     "friends_full": "你们中有人的好友已满。",
     "no_such_request": "没有这个好友请求。",
     "not_friends": "只能邀请好友。",
@@ -828,12 +835,13 @@
       "en": "提示是一个词。| 提示最多 {count} 个词。"
     },
     "clueCommon": "提示不能是牌上的词、牌上的词的一部分，也不能是牌上的词在另一种语言里的说法。导师不能说别的话，也不能比划。",
+    "clueCharacter": "同一个数字不管怎么写都算同一个字：6、六、six。一个字的英文和拼音（3 个字母以上）也算这个字：ball、qiu 都算“球”。板上有“大”时，big、great 也算“大”。",
     "clueSound": "提示不要用和牌上的词同音的字，比如用“鸡音”提示“基因”。系统不会拦，靠大家自觉。",
     "clueQuiet": "学生猜牌时，两组导师都不能发表情，本局当过导师的人也不能。",
     "clueTargets": "出题时，导师可以点牌标出这条提示想指的牌，数字会跟着变。对局中谁都看不到这些标记，赛后在提示记录和回放里公开。",
     "clueRule": {
-      "strict": "本房间的提示词规则是严格：词库列出的牌上词语的其他形式、和牌上的词有相同汉字的提示，以及中文房间里包含了牌上的词的提示，都不能用。程序只能猜测的其他形式会给出警告，由导师决定。",
-      "loose": "本房间的提示词规则是宽松：牌上词语的其他形式、相同的汉字，以及包含了牌上的词的提示，都只给出警告，由导师决定。"
+      "strict": "本房间的提示词规则是严格：词库列出的牌上词语的其他形式、和牌上的词有相同的字的提示，以及中文房间里包含了牌上的词的提示，都不能用。程序只能猜测的其他形式会给出警告，由导师决定。",
+      "loose": "本房间的提示词规则是宽松：牌上词语的其他形式、相同的字，以及包含了牌上的词的提示，都只给出警告，由导师决定。"
     },
     "timeTitle": "时间",
     "time": "上面的设置写明了每个阶段有多少时间。轮次信息下方的进度条显示剩余时间，页面往下滚时它会固定在屏幕顶部。",
@@ -929,22 +937,22 @@
         "friend": "好友"
       },
       "record": "战绩",
-      "recordTable": {
+      "recordStats": {
         "games": "局数",
-        "wins": "胜",
         "rate": "胜率",
-        "ordinary": "普通对局",
-        "inMatches": "比赛中的对局",
-        "total": "合计",
-        "matches": "比赛 {played} 场，夺冠 {won} 场",
-        "noMatches": "还没有打完的比赛。"
+        "matches": "比赛",
+        "won": "夺冠 {won} 场",
+        "ordinary": "普通对局 {games} 局 {wins} 胜",
+        "inMatches": "比赛中的对局 {games} 局 {wins} 胜"
       },
       "noRecords": "还没有战绩。登录后在座位上打完的每一局都会记在这里。",
       "recent": "最近 20 局",
       "recordsAgain": "重试",
       "recordLine": "{side}，{role}",
+      "ordinaryTag": "普通对局",
       "matchTag": "比赛 · 第 {game}/{games} 局",
       "watchAgain": "回放",
+      "watchAgainOf": "回放 {when} 的这一局",
       "recentMatches": "最近 20 场比赛",
       "matchLine": "{players} 人中第 {rank} 名 · {score} 分",
       "matchGames": "{games} 局",
@@ -989,6 +997,9 @@
     "intro": "好友能看到你是否在线、在哪个公开房间，并能邀请你进他们的房间。",
     "addLabel": "对方的用户名",
     "addSubmit": "发送请求",
+    "noteLabel": "附一句话（可选）",
+    "noteCount": "{count}/{max}",
+    "noteQuoted": "“{note}”",
     "requestSent": "好友请求已发送。",
     "nowFriends": "你们成为好友了。",
     "incoming": "收到的请求",
@@ -998,6 +1009,12 @@
     "withdraw": "撤回",
     "remove": "删除",
     "removeFriend": "删除好友",
+    "aliasEdit": "改备注",
+    "aliasTitle": "给 {name} 改备注",
+    "aliasLabel": "备注",
+    "aliasHint": "只有你自己看得到。清空就是删掉备注，最多 20 个字。",
+    "aliasSave": "保存",
+    "aliasWithName": "{alias}（{username}）",
     "removeConfirm": "确定把 {name} 从好友中删除吗？以后可以重新发送请求。",
     "none": "还没有好友。按用户名添加，或者在房间里点一下玩家的头像。",
     "online": "在线",
@@ -1019,6 +1036,8 @@
     "invitationJoin": "加入",
     "invitationIgnore": "忽略",
     "addFromRoom": "加为好友",
+    "addTitle": "加 {name} 为好友",
+    "requestPending": "已发送请求",
     "requestsWaiting": "{count} 个请求等你处理。 | {count} 个请求等你处理。"
   },
   "ranks": {

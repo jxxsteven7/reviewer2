@@ -8,7 +8,8 @@ import UiButton from './UiButton.vue';
 
 // The invitations to rooms that this account has received (docs/architecture.md#friends), in the
 // column of short messages at the top of whatever page is open: who invited them to which room,
-// with the way in and the way to ignore it. Joining takes the invitation along, which stands in
+// with the way in and the way to ignore it. An inviter whom the account has given a name of its
+// own goes by it, with the username after it. Joining takes the invitation along, which stands in
 // for the room's code, and so leads into a private room too; the server uses it up once the
 // player is in.
 const { t } = useI18n();
@@ -24,7 +25,14 @@ function join(id: string, code: string): void {
   <div v-for="invitation in invitations" :key="invitation.id" class="invitation" role="status">
     <p class="line">
       <PlayerAvatar :name="invitation.from.username" :avatar="invitation.from.avatar" />
-      <span>{{ t('friends.invitation', { name: invitation.from.username, code: formatCode(invitation.code) }) }}</span>
+      <span>{{
+        t('friends.invitation', {
+          name: invitation.from.alias
+            ? t('friends.aliasWithName', { alias: invitation.from.alias, username: invitation.from.username })
+            : invitation.from.username,
+          code: formatCode(invitation.code),
+        })
+      }}</span>
     </p>
     <div class="actions">
       <UiButton variant="primary" size="small" @click="join(invitation.id, invitation.code)">

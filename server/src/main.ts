@@ -68,7 +68,12 @@ export async function main({
   const words = loadWordLibrary(config.wordsDir, (file, reason, term) =>
     log(term === undefined ? 'word_list_skipped' : 'term_skipped', { file, term, reason }),
   );
-  log('word_lists_loaded', { fields: words.fields().map(({ id, counts }) => ({ id, ...counts })) });
+  // `glossed` counts the characters whose English meanings the clue check knows (words.ts): none
+  // when the dictionary beside the lists is missing.
+  log('word_lists_loaded', {
+    fields: words.fields().map(({ id, counts }) => ({ id, ...counts })),
+    glossed: words.glossed,
+  });
 
   const database = await openDatabase(config.dataDir, { log });
   const { db } = database;

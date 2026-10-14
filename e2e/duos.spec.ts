@@ -84,7 +84,7 @@ test('friends who win together become co-first authors, which they alone are tol
   await expect(bobsLine.locator('.folded-titles .title .pill')).toHaveText(text.duos.names.coauthor);
   const board = ann.locator('.friends .board');
   await expect(board.locator('li')).toHaveCount(1);
-  await expect(board.locator('.holder-names')).toHaveText(names.Bob as string);
+  await expect(board.locator('.holder-name')).toHaveText(names.Bob as string);
   await bobsLine.locator('.folded-titles .title .pill').click();
   await expect(ann.getByRole('dialog', { name: text.duos.names.coauthor })).toContainText(text.duos.private);
   await ann.keyboard.press('Escape');

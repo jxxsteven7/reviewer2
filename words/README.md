@@ -47,6 +47,10 @@ List what a game can't work out itself: inflections and derived words beyond a p
 |---|---|---|
 | Team word guessing (`keywords`) | `zh`, `en`, `forms` | Terms with several meanings or associations ("attention", "baseline"). A board needs 25 different words in the room's language; up to 5 Chinese characters or 14 letters fit a card. The other language's term, and under the strict rule the `forms`, may not be given as a clue |
 
+### The English of the characters
+
+`dictionary/han-glosses.json` gives the English meanings of every Chinese character that the lists use, from CC-CEDICT, for the clue check, which takes the English of a character on the board for the character. It is no word list, and is built rather than edited: after adding words with new characters, run `node scripts/build-han-glosses.mjs <cedict_ts.u8> <version>`, as the script says.
+
 ### Terms that give each other away
 
 "Gene" and "Gene editing": a clue for one points at the other, so the game never deals them together. Two terms clash when one lies inside the other: one is the other or its plain plural; every part of one is a part of the other ("Model" and "Mixture models"); a run of Chinese characters in one lies inside the other's ("电" and "电场"); one is the other's term in the other language; or every part of one is a part of one of the other's `forms`. A part in common is not enough ("Data science" and "Data cleaning"), nor a shared Chinese character. In each language that a list has 25 terms of, 25 of them must be free of clashes with each other.

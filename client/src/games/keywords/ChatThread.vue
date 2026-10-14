@@ -11,17 +11,24 @@ import { useKeywords } from './useKeywords';
 // this beside the board, in a panel that is open all the time, or on a phone in a sheet, which
 // throws the thread away as it closes: so the line, `draft`, and the sending are the page's
 // (useChatLine.ts), and the thread only shows and edits the one and asks for the other. Students
-// write one line at a time; PIs read but can't write, and after the game nobody can.
+// write one line at a time; PIs read but can't write. Once the game is over, everyone who played
+// for the group, its PI too, may talk it over, until the next game, under a heading of its own
+// after the turns; whoever only sat down after the end reads.
 const props = defineProps<{ room: RoomView; sending: boolean }>();
 const draft = defineModel<string>('draft', { required: true });
 const emit = defineEmits<{ send: [] }>();
 const { t } = useI18n();
-const { data, mySeat } = useKeywords(toRef(props, 'room'));
+const { data, mySeat, mySide } = useKeywords(toRef(props, 'room'));
 
 const game = computed(() => data.value.game);
 const chat = computed(() => game.value?.chat ?? []);
 const turns = computed(() => byTurn(chat.value));
-const canWrite = computed(() => mySeat.value?.role === 'guesser' && game.value?.phase !== 'over');
+const over = computed(() => game.value?.phase === 'over');
+const canWrite = computed(() =>
+  over.value
+    ? (mySeat.value?.team ?? null) !== null && mySeat.value?.team === mySide.value
+    : mySeat.value?.role === 'guesser',
+);
 
 // The list shows the newest message as the thread comes into view, which is when it is mounted,
 // and follows new ones only while it is at its end, so that a player reading older messages
@@ -62,13 +69,24 @@ function send() {
   // message is likely to follow, so the input gets the focus back.
   input.value?.focus();
 }
+
+// A player who comes to write sees the newest message: once the input has the focus, and again
+// once a phone's keyboard has come up and the list has got shorter.
+const KEYBOARD_MS = 400;
+function toEnd() {
+  const scroll = () => {
+    if (list.value) list.value.scrollTop = list.value.scrollHeight;
+  };
+  void nextTick(scroll);
+  setTimeout(scroll, KEYBOARD_MS);
+}
 </script>
 
 <template>
   <div class="chat">
     <ol v-if="turns.length" ref="list" class="turns">
-      <li v-for="turn in turns" :key="turn.turn" class="turn">
-        <h3 class="turn-title">{{ t('game.turn', { turn: turn.turn }) }}</h3>
+      <li v-for="turn in turns" :key="turn.after ? 'after' : turn.turn" class="turn">
+        <h3 class="turn-title">{{ turn.after ? t('game.chat.after') : t('game.turn', { turn: turn.turn }) }}</h3>
         <p
           v-for="message in turn.messages"
           :key="message.id"
@@ -101,6 +119,7 @@ function send() {
           enterkeyhint="send"
           :aria-invalid="tooLong ? 'true' : undefined"
           aria-describedby="chat-hint"
+          @focus="toEnd"
         />
         <UiButton variant="primary" type="submit" :disabled="check.problem !== null || sending">
           {{ t('game.chat.send') }}
@@ -110,7 +129,8 @@ function send() {
         {{ tooLong ? t('errors.chat_too_long') : t('game.chat.count', { count: length, max: MAX_CHAT_LENGTH }) }}
       </p>
     </form>
-    <p v-else class="note">{{ game?.phase === 'over' ? t('game.chat.over') : t('game.chat.readOnly') }}</p>
+    <p v-if="canWrite && over" class="note">{{ t('game.chat.review') }}</p>
+    <p v-else-if="!canWrite" class="note">{{ over ? t('game.chat.over') : t('game.chat.readOnly') }}</p>
   </div>
 </template>
 
@@ -173,11 +193,13 @@ function send() {
 
 .empty,
 .note {
+  flex: none;
   color: var(--ink-2);
 }
 
 .compose {
   display: flex;
+  flex: none;
   flex-direction: column;
   gap: var(--space-1);
   padding-top: var(--space-3);

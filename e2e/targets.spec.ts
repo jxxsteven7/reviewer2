@@ -29,7 +29,7 @@ for (const language of ['en', 'zh'] as const) {
     const guesser = table.guessers[team];
 
     // The clue panel says that the PI may mark cards.
-    await expect(captain.locator('.clue-panel .targets.none')).toHaveText(text.game.targetsHint);
+    await expect(captain.locator('.clue-panel .targets.none')).toHaveText(`${text.game.tips} ${text.game.targetsHint}`);
     // Two of the group's own hidden cards, marked in this order; the other group's can't be.
     const cards = captain.locator('.board .card');
     const own = await cards.evaluateAll(

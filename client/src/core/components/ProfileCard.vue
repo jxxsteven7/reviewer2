@@ -16,14 +16,14 @@ import DuoSummary from './DuoSummary.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
 import RankLadder from './RankLadder.vue';
-import RecordTable from './RecordTable.vue';
+import RecordStats from './RecordStats.vue';
 import TitlePills from './TitlePills.vue';
 import UiButton from './UiButton.vue';
 
 // A public profile (docs/architecture.md#public-profiles), by the handle of its account, on its
 // own page and in a room's player panel: the avatar, the username, the rank,
 // the number and the day of registration, the titles, the streaks among them, and what the owner
-// chose to put there: a link, a line about themselves, the record as counts (RecordTable.vue) and
+// chose to put there: a link, a line about themselves, the record as counts (RecordStats.vue) and
 // the acknowledgments. The bio is shown as the text it is, never as markup, and the link as the
 // address it is, which opens in a new tab and which search engines are told not to follow. The
 // rank opens the ladder of every rank, with this one marked and no points, which the profile never
@@ -154,7 +154,7 @@ watch(
           profile.link
         }}</a>
 
-        <RecordTable v-if="profile.record" :counts="profile.record" />
+        <RecordStats v-if="profile.record" :counts="profile.record" />
 
         <div class="actions">
           <span class="likes num">{{ t('playerPage.likes', { count: profile.likes }) }}</span>

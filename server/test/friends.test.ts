@@ -217,6 +217,81 @@ describe('a friend request', () => {
   });
 });
 
+describe('the line with a friend request', () => {
+  test('goes to the account asked alone, and is gone once the request is answered', async () => {
+    server = await startServer();
+    const { client: ann } = await person('Ann');
+    const { client: bob } = await person('Bob');
+    const { client: cat } = await person('Cat');
+    // Cleaned as a line of the chat is, at most 50 characters, and refused before it costs a request.
+    expect(await ann.send('friends:request', { username: 'Bob', note: 'x'.repeat(51) })).toEqual({
+      ok: false,
+      error: 'friend_note_too_long',
+    });
+    expect(await ann.send('friends:request', { username: 'Bob', note: ' We met at\nthe workshop ' })).toEqual({
+      ok: true,
+      status: 'pending',
+    });
+    expect(await cat.send('friends:request', { username: 'Bob', note: ' ' })).toEqual({ ok: true, status: 'pending' });
+    expect((await listOf(bob)).incoming).toEqual([
+      { handle: expect.any(String), username: 'Ann', avatar: null, note: 'We met at the workshop' },
+      { handle: expect.any(String), username: 'Cat', avatar: null },
+    ]);
+    // Ann, who sent it, doesn't see it again.
+    expect((await listOf(ann)).outgoing).toEqual([{ handle: expect.any(String), username: 'Bob', avatar: null }]);
+    // Once answered, nobody reads it: the database no longer has it.
+    expect(await bob.send('friends:accept', { username: 'Ann' })).toEqual({ ok: true });
+    expect(await bob.send('friends:decline', { username: 'Cat' })).toEqual({ ok: true });
+    expect(server.db.prepare('SELECT note FROM friendships').all()).toEqual([{ note: null }, { note: null }]);
+  });
+});
+
+describe('the name an account gives a friend', () => {
+  test('is for the account alone, for a friend alone, and goes with the friendship', async () => {
+    server = await startServer();
+    const { client: ann } = await person('Ann');
+    const { browser: bobs, client: bob } = await person('Bob');
+    await person('Cat');
+    await befriend(ann, bob);
+    const before = bob.friendsChanged;
+    expect(await ann.send('friends:alias', { username: 'Bob', alias: '  Bobby  the  Chair ' })).toEqual({ ok: true });
+    expect((await listOf(ann)).friends[0]).toMatchObject({ username: 'Bob', alias: 'Bobby the Chair' });
+    // Bob is told nothing, and sees nothing of it.
+    expect(bob.friendsChanged).toBe(before);
+    expect((await listOf(bob)).friends[0]).not.toHaveProperty('alias');
+    // It comes with Bob's invitations to Ann, to Ann alone.
+    const { chair } = await roomOf(bobs);
+    expect(await chair.send('friends:invite', { username: 'Ann' })).toEqual({ ok: true });
+    await until(() => ann.invitations.length === 1, 'the invitation');
+    expect(ann.invitations[0]?.from).toEqual({ username: 'Bob', alias: 'Bobby the Chair', avatar: null });
+    // The rules of a nickname, with up to 20 characters.
+    expect(await ann.send('friends:alias', { username: 'Bob', alias: 'x'.repeat(21) })).toEqual({
+      ok: false,
+      error: 'friend_alias_too_long',
+    });
+    expect(await ann.send('friends:alias', { username: 'Bob', alias: 'Bo\u200bb' })).toEqual({
+      ok: false,
+      error: 'friend_alias_invalid',
+    });
+    // Only for a friend; a name that is no account's is answered as a stranger's.
+    for (const username of ['Cat', 'Nobody']) {
+      expect(await ann.send('friends:alias', { username, alias: 'Kitty' })).toEqual({
+        ok: false,
+        error: 'not_friends',
+      });
+    }
+    // An empty one takes it away; ending the friendship takes both sides' away.
+    expect(await bob.send('friends:alias', { username: 'Ann', alias: 'Annie' })).toEqual({ ok: true });
+    expect(await ann.send('friends:alias', { username: 'Bob', alias: '' })).toEqual({ ok: true });
+    expect((await listOf(ann)).friends[0]).not.toHaveProperty('alias');
+    expect(await ann.send('friends:alias', { username: 'Bob', alias: 'Bobby' })).toEqual({ ok: true });
+    expect(await ann.send('friends:remove', { username: 'Bob' })).toEqual({ ok: true });
+    await befriend(ann, bob);
+    expect((await listOf(ann)).friends[0]).not.toHaveProperty('alias');
+    expect((await listOf(bob)).friends[0]).not.toHaveProperty('alias');
+  });
+});
+
 describe('friends', () => {
   test('see whether the other is online, on any device, and in which public room, and nobody else does', async () => {
     server = await startServer();

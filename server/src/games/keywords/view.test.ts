@@ -73,6 +73,20 @@ describe('what each player sees of the cards', () => {
     }
   });
 
+  test("only the captains get the English of a card's characters, while the game is on and the card face down", () => {
+    const state = playing();
+    state.cards = state.cards.map((card, i) => (i <= 1 ? { ...card, glosses: ['ball', 'sphere'] } : card));
+    for (const seat of Object.values(SEATS)) {
+      const view = viewFor(state, seat, 0);
+      // Card 0 has been revealed, card 1 hasn't.
+      expect(view.cards[0]).not.toHaveProperty('glosses');
+      if (seat.role === 'captain') expect(view.cards[1]?.glosses).toEqual(['ball', 'sphere']);
+      else expect(view.cards[1]).not.toHaveProperty('glosses');
+    }
+    const over = viewFor(accepted(withdraw(state, { gameId: 'game-1' })), redCaptain, 0);
+    expect(over.cards.some((card) => 'glosses' in card)).toBe(false);
+  });
+
   test('all views share the public facts of the game', () => {
     const state = talking();
     const shared = { turn: 1, team: 'red', phase: 'guess', startingTeam: 'red', guessesMade: 1, guessesLeft: 2 };

@@ -715,6 +715,28 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 
+  test('of the fifteenth release keeps its friendships, without lines and names, when they get them', async () => {
+    const fifteenth = await open(dir, MIGRATIONS.slice(0, 15));
+    fifteenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES
+        (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now'), (3, 'Cat', 'cat', 'h', 'now');
+      INSERT INTO friendships (requester_id, addressee_id, status, created_at, answered_at) VALUES
+        (1, 2, 'accepted', 'then', 'now'), (3, 1, 'pending', 'now', NULL);
+    `);
+    fifteenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 16));
+    expect(migrated).toMatchObject({ schema: 16, migratedFrom: 15 });
+    const { db } = migrated;
+    expect(
+      db.prepare('SELECT status, note, requester_alias, addressee_alias FROM friendships ORDER BY id').all(),
+    ).toEqual([
+      { status: 'accepted', note: null, requester_alias: null, addressee_alias: null },
+      { status: 'pending', note: null, requester_alias: null, addressee_alias: null },
+    ]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(

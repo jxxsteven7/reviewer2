@@ -1,4 +1,4 @@
-import { CHAT_KEPT, EVENTS_KEPT, MAX_CHAT_LENGTH, otherTeam, type ClueCount } from '@reviewer2/shared';
+import { CHAT_KEPT, EVENTS_KEPT, MAX_CHAT_LENGTH, otherTeam, type ClueCount, type Team } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
 import {
@@ -15,6 +15,7 @@ import {
   say,
   select,
   withdraw,
+  type Actor,
 } from './rules';
 import { guessesLeft, remaining, type KeywordsState } from './state';
 import { accepted, captain, gameState, guesser, now, refused, setup, spectator, STANDARD } from './testing';
@@ -67,7 +68,10 @@ describe('giving a clue', () => {
   });
 
   test('records the clue as it was typed, without invisible characters', () => {
-    const state = gameState();
+    // Cards without digits, which a clue with a digit would have a character in common with.
+    const state = gameState({
+      cards: gameState().cards.map((card, index) => ({ ...card, word: `Card${String.fromCharCode(65 + index)}` })),
+    });
     const typed = (word: string) =>
       accepted(giveClue(state, captain('red'), { ...now(state), word, count: 1 }, 0)).clue;
     // A superscript two and full-width letters stay what they are, although the check folds them.
@@ -500,12 +504,30 @@ describe('the group chat', () => {
     expect(refused(said(state, spectator))).toBe('not_guesser');
   });
 
-  test('refuses a message for another game, and any message once the game is over', () => {
+  test('refuses a message for another game', () => {
     const state = gameState();
     expect(refused(say(state, ann, { gameId: 'other', text: 'Hello' }))).toBe('stale');
     const over = accepted(withdraw(state, now(state)));
-    expect(refused(said(over))).toBe('game_over');
-    expect(refused(say(over, ann, { gameId: 'other', text: 'Hello' }))).toBe('stale');
+    expect(refused(say(over, ann, { gameId: 'other', text: 'Hello' }, 'red'))).toBe('stale');
+  });
+
+  test('stays open once the game is over to whoever played for the group, its PI too, marked as after it', () => {
+    let over = accepted(withdraw(accepted(said(gameState())), now(gameState())));
+    const after = (actor: Actor, side: Team | null, text = 'gg') =>
+      say(over, actor, { gameId: over.gameId, text }, side);
+    over = accepted(after(ann, 'red'));
+    over = accepted(after(captain('red'), 'red', 'Well played'));
+    expect(over.chat.red).toEqual([
+      { id: 1, player: 'ann', turn: 1, text: 'Hello' },
+      { id: 2, player: 'ann', turn: 1, text: 'gg', after: true },
+      { id: 3, player: 'red-captain', turn: 1, text: 'Well played', after: true },
+    ]);
+    // Nobody who didn't play for the group, such as someone who sat down in it after the end, nor
+    // anyone who only watched.
+    expect(refused(after(ann, null))).toBe('game_over');
+    expect(refused(after(guesser('red', 'eve'), 'blue'))).toBe('game_over');
+    expect(refused(after(spectator, null))).toBe('game_over');
+    expect(refused(after(ann, 'red', ' '))).toBe('chat_empty');
   });
 
   test('refuses empty and overlong messages, after the checks on the player', () => {

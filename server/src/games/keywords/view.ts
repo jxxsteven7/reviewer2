@@ -8,6 +8,9 @@ import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state'
 //   cards only, and the other cards carry no color at all, not even an empty one, so that
 //   nothing gives the key away in the browser's developer tools. Once the game is over,
 //   everyone sees every color.
+// - Captains also get the English meanings of the characters of each card that is still face
+//   down, while the game is on, for the clue check on their screen: nobody else gives a clue, and
+//   they are many.
 // - A group's chat goes to its own captain and guessers, and the cards that its guessers have
 //   chosen go to them while it is the group's turn. Nobody else gets either: the keys are absent.
 // - A group's marks go to its guessers alone, in either group's turn, until the game is over. Its
@@ -22,6 +25,7 @@ import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state'
 // long the current phase has left.
 export function viewFor(state: KeywordsState, viewer: Seat, at: number): KeywordsView {
   const showKey = viewer.role === 'captain' || state.phase === 'over';
+  const glossed = viewer.role === 'captain' && state.phase !== 'over';
   const paused = state.pause !== null;
   const view: KeywordsView = {
     gameId: state.gameId,
@@ -31,13 +35,14 @@ export function viewFor(state: KeywordsState, viewer: Seat, at: number): Keyword
     startingTeam: state.startingTeam,
     cards: paused
       ? []
-      : state.cards.map(({ word, color, revealed, translations, forms, pinyin }): CardView => ({
+      : state.cards.map(({ word, color, revealed, translations, forms, pinyin, glosses }): CardView => ({
           word,
           revealed,
           ...(revealed || showKey ? { color } : {}),
           ...(translations ? { translations: [...translations] } : {}),
           ...(forms ? { forms: [...forms] } : {}),
           ...(pinyin ? { pinyin } : {}),
+          ...(glossed && glosses && !revealed ? { glosses: [...glosses] } : {}),
         })),
     paused,
     remaining: { red: remaining(state.cards, 'red'), blue: remaining(state.cards, 'blue') },

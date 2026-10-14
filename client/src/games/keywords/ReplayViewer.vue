@@ -11,8 +11,13 @@ import KeywordsBoard from './KeywordsBoard.vue';
 // clue, who revealed what and whether it was right. The cards the PI meant with the turn's clue, if
 // they marked any, carry their numbers through the turn, and the clue's step names them. The
 // slider goes to any step, the buttons to the next and the last one. It takes a replay object and
-// nothing else, so that the results page and the account page show one the same way.
-const props = defineProps<{ replay: KeywordsReplay }>();
+// nothing else, so that the results page and the account page show one the same way; the results
+// page adds what the viewer's group has said since the game ended (`talk`), which comes last, under
+// the board, as the group talks the game over.
+const props = withDefaults(
+  defineProps<{ replay: KeywordsReplay; talk?: readonly { id: number; name: string; text: string }[] }>(),
+  { talk: () => [] },
+);
 const { t, locale } = useI18n();
 const INFINITY = '\u221e';
 
@@ -96,6 +101,13 @@ const lines = computed(() => {
       :targets="targets"
       :lang="HTML_LANG[replay.language]"
     />
+    <section v-if="talk.length > 0" class="talk">
+      <h3 class="section-title">{{ t('replay.talk') }}</h3>
+      <p v-for="line in talk" :key="line.id" class="line">
+        <span class="name">{{ line.name }}</span>
+        <span>{{ line.text }}</span>
+      </p>
+    </section>
   </div>
 </template>
 
@@ -145,5 +157,25 @@ input[type='range'] {
 
 .step.blue {
   background: var(--blue-tint);
+}
+
+/* What the group said after the game, as the chat shows it. */
+.talk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.talk .line {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.talk .name {
+  margin-right: var(--space-2);
+  font-weight: var(--weight-black);
 }
 </style>

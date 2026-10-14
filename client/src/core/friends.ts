@@ -9,16 +9,23 @@ import { toast, toastError } from './toast';
 // word that the friends or the requests changed, on which a page that shows them asks again; and
 // the way to ask someone to be friends, from wherever a page offers it.
 
-// Asks an account to be friends, by their username or by their seat in the room, and tells the
-// player how it went: friends at once, when the other side had asked already, or a request sent,
-// which the other side answers on their account page. The page may have no connection yet, and
-// the message goes over one. Says whether the request went through.
-export async function requestFriend(who: { username: string } | { playerId: string }): Promise<boolean> {
+// Asks an account to be friends, by their username or by their seat in the room, with a line for
+// them if the player wrote one, and tells the player how it went: friends at once, when the other
+// side had asked already, or a request sent, which the other side answers on their account page.
+// The page may have no connection yet, and the message goes over one. Says whether the request
+// went through.
+export async function requestFriend(
+  who: { username: string } | { playerId: string },
+  note: string | null = null,
+): Promise<boolean> {
   if (!(await whenConnected())) {
     toastError('offline');
     return false;
   }
-  const reply = await send<{ status: 'pending' | 'accepted' }>('friends:request', who);
+  const reply = await send<{ status: 'pending' | 'accepted' }>('friends:request', {
+    ...who,
+    ...(note === null ? {} : { note }),
+  });
   if (!reply.ok) {
     toastError(reply.error);
     return false;

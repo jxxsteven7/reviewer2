@@ -316,15 +316,16 @@
     "unlimited": "No limit",
     "sendClue": "Give the clue",
     "targetsHint": "First tap the cards this clue is meant for, and the number follows. Nobody sees them during the game; the replay shows them.",
+    "tips": "Tips",
     "targetsMarked": "{count} card marked: {words}. Everyone sees it after the game. | {count} cards marked: {words}. Everyone sees them after the game.",
     "quoted": "“{word}”",
     "onBoard": "{word} is on the board. A clue can't be a word on the board, or part of one.",
     "formOnBoard": "{word} is on the board, and this clue repeats a form of it that the word lists give. This room's clue check doesn't allow it.",
-    "characterOnBoard": "This clue has a Chinese character in common with {word}, which is on the board. This room's clue check doesn't allow it.",
+    "characterOnBoard": "This clue has a character in common with {word}, which is on the board: a Chinese character, a number however it is written, or the English or the pinyin of one of its characters. This room's clue check doesn't allow it.",
     "insideOnBoard": "This clue contains {word}, which is on the board. This room's clue check doesn't allow it.",
     "similar": "This may be another form of a word still on the board: {words}. The rules don't allow that, but the check can't be sure, so it's your call.",
     "formWarning": "This clue repeats a form that the word lists give of a word still on the board: {words}. This room's clue check leaves it to you.",
-    "characterWarning": "This clue has a Chinese character in common with a word still on the board: {words}. It's your call.",
+    "characterWarning": "This clue has a character in common with a word still on the board, as a Chinese character, a number however it is written, or the English or the pinyin of a character: {words}. It's your call.",
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
     "pick": "Tap a card to choose it. Your group sees your choice; reveal it once you agree.",
     "tools": {
@@ -470,7 +471,9 @@
       "send": "Send",
       "count": "{count}/{max}",
       "readOnly": "As the PI you can read your group's chat but not write in it: the clue is all a PI may say.",
-      "over": "The game is over, so nobody can write any more.",
+      "over": "After the game, only those who played for the group in it can write here.",
+      "review": "The game is over: talk it over with your group, the PI too, until the next game.",
+      "after": "After the game",
       "you": "You",
       "someone": "A player who left"
     },
@@ -507,7 +510,8 @@
     "timedOut": "Time ran out, and the turn ended.",
     "someone": "A player who left",
     "won": "The {group} won.",
-    "withdrawn": "The chair withdrew the game."
+    "withdrawn": "The chair withdrew the game.",
+    "talk": "Talking it over"
   },
   "settings": {
     "title": "Rules of this room",
@@ -718,6 +722,9 @@
     "request_declined": "Your request was declined recently. Try again in a week.",
     "friend_requests_full": "Too many requests are waiting for an answer. Wait for some of them.",
     "friend_limited": "You have sent enough friend requests for today. Try again tomorrow.",
+    "friend_note_too_long": "Use at most 50 characters.",
+    "friend_alias_invalid": "That alias has characters in it that don't show.",
+    "friend_alias_too_long": "Use at most 20 characters.",
     "friends_full": "One of you has as many friends as an account can have.",
     "no_such_request": "There is no such request.",
     "not_friends": "Only friends can be invited.",
@@ -828,12 +835,13 @@
       "en": "A clue is one word. | A clue has at most {count} words."
     },
     "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
+    "clueCharacter": "A number is the same character however it is written: 6, 六 and six. So are the English of a character and its pinyin, of three letters or more: ball and qiu are the same character as 球. With 大 on the board, big and great count as 大 too.",
     "clueSound": "In a Chinese room, don't give a clue that sounds like a word on the board, such as 鸡音 (jīyīn) for 基因 (jīyīn, gene). The game doesn't check this: it's up to everyone to play fair.",
     "clueQuiet": "While the students guess, neither group's PI may send a quick reaction, nor may anyone who has been a PI in this game.",
     "clueTargets": "When giving a clue, the PI may tap cards to mark the ones it is meant for, and the number follows. Nobody sees the marks during the game; afterwards, the clue log and the replay show them.",
     "clueRule": {
-      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a Chinese character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
-      "loose": "This room's clue check is loose: other forms of a word on the board, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."
+      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
+      "loose": "This room's clue check is loose: other forms of a word on the board, characters in common with one, and clues that contain one only bring a warning, and the PI decides."
     },
     "timeTitle": "Time",
     "time": "The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.",
@@ -929,22 +937,22 @@
         "friend": "Friend"
       },
       "record": "Record",
-      "recordTable": {
+      "recordStats": {
         "games": "Games",
-        "wins": "Won",
         "rate": "Win rate",
-        "ordinary": "Ordinary games",
-        "inMatches": "Games in matches",
-        "total": "Total",
-        "matches": "Matches: {played} · Finished first: {won}",
-        "noMatches": "No match finished yet."
+        "matches": "Matches",
+        "won": "won {won}",
+        "ordinary": "Ordinary games: {games}, won {wins}",
+        "inMatches": "In matches: {games}, won {wins}"
       },
       "noRecords": "No games yet. The games that you finish in a seat while you are logged in are kept here.",
       "recent": "The last 20 games",
       "recordsAgain": "Try again",
       "recordLine": "{side}, {role}",
+      "ordinaryTag": "Ordinary game",
       "matchTag": "Match · game {game}/{games}",
       "watchAgain": "Watch again",
+      "watchAgainOf": "Watch the game of {when} again",
       "recentMatches": "The last 20 matches",
       "matchLine": "Place {rank} of {players} · Total: {score}",
       "matchGames": "{games}-game match",
@@ -989,6 +997,9 @@
     "intro": "Friends see whether you're online and which public room you're in, and can invite you into theirs.",
     "addLabel": "Their username",
     "addSubmit": "Send a request",
+    "noteLabel": "A line for them (optional)",
+    "noteCount": "{count}/{max}",
+    "noteQuoted": "“{note}”",
     "requestSent": "The request has been sent.",
     "nowFriends": "You're friends now.",
     "incoming": "Requests for you",
@@ -998,6 +1009,12 @@
     "withdraw": "Withdraw",
     "remove": "Remove",
     "removeFriend": "Remove friend",
+    "aliasEdit": "Edit alias",
+    "aliasTitle": "Alias for {name}",
+    "aliasLabel": "Alias",
+    "aliasHint": "Only you see it. Leave it empty to remove it. At most 20 characters.",
+    "aliasSave": "Save",
+    "aliasWithName": "{alias} ({username})",
     "removeConfirm": "Remove {name} from your friends? You can send a new request later.",
     "none": "No friends yet. Add one by username, or tap a player's avatar in a room.",
     "online": "online",
@@ -1019,6 +1036,8 @@
     "invitationJoin": "Join",
     "invitationIgnore": "Ignore",
     "addFromRoom": "Add friend",
+    "addTitle": "Add {name} as a friend",
+    "requestPending": "Request sent",
     "requestsWaiting": "{count} request is waiting for your answer. | {count} requests are waiting for your answer."
   },
   "ranks": {

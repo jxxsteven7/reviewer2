@@ -330,17 +330,34 @@ export function expire(state: KeywordsState, at: number, missed: () => Missed | 
 }
 
 // A guesser writes to their group, in either team's turn. Captains can't write: the clue is all
-// they may say. A message names its game but no turn, because it is welcome in whatever turn it
+// they may say. Once the game is over, the groups talk it over: whoever played for a group in the
+// game, its PI too, may write to it from the seat in it, until the next game, and the message is
+// marked as written after the game. `side` is the group that the actor played for in the game, if
+// any (Seating.sides); a seat taken after the end makes nobody a player of the game, and so gives
+// nobody a say. A message names its game but no turn, because it is welcome in whatever turn it
 // arrives. A group keeps its latest messages only.
-export function say(state: KeywordsState, actor: Actor, action: Pick<Moment, 'gameId'> & { text: string }): Outcome {
+export function say(
+  state: KeywordsState,
+  actor: Actor,
+  action: Pick<Moment, 'gameId'> & { text: string },
+  side: Team | null = null,
+): Outcome {
   if (action.gameId !== state.gameId) return refuse('stale');
-  if (state.phase === 'over') return refuse('game_over');
-  if (actor.team === null || actor.role !== 'guesser') return refuse('not_guesser');
+  const over = state.phase === 'over';
+  if (over && (actor.team === null || actor.team !== side)) return refuse('game_over');
+  if (!over && (actor.team === null || actor.role !== 'guesser')) return refuse('not_guesser');
+  const team = actor.team as Team;
   const { text, problem } = checkChat(action.text);
   if (problem) return refuse(problem);
-  const said = state.chat[actor.team];
-  const message = { id: (said.at(-1)?.id ?? 0) + 1, player: actor.id, turn: state.turn, text };
-  return ok({ ...state, chat: { ...state.chat, [actor.team]: [...said, message].slice(-CHAT_KEPT) } });
+  const said = state.chat[team];
+  const message = {
+    id: (said.at(-1)?.id ?? 0) + 1,
+    player: actor.id,
+    turn: state.turn,
+    text,
+    ...(over ? { after: true as const } : {}),
+  };
+  return ok({ ...state, chat: { ...state.chat, [team]: [...said, message].slice(-CHAT_KEPT) } });
 }
 
 // The chair ends the game early. Nobody wins. A withdrawal names its game like every other

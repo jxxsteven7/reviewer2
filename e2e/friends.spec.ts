@@ -26,18 +26,30 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(annInRoom).toContainText(text.ranks.names.kindergarten);
   await expect(ann.locator('.lobby .player', { hasText: bobName })).toContainText(text.ranks.names.kindergarten);
 
-  // Bob asks Ann to be friends from her panel, which her avatar opens.
+  // Bob asks Ann to be friends from her panel, which her avatar opens, with a line for her.
   await annInRoom.locator('.avatar-button').click();
   await bob.getByRole('button', { name: text.friends.addFromRoom }).click();
+  const asking = bob.getByRole('dialog', { name: interpolate(text.friends.addTitle, { name: annName }) });
+  await asking.getByLabel(text.friends.noteLabel).fill('We met at the  workshop');
+  await asking.getByRole('button', { name: text.friends.addSubmit }).click();
   await expect(bob.getByText(text.friends.requestSent)).toBeVisible();
+  // Asked once, the panel says so, and asks no more.
+  await annInRoom.locator('.avatar-button').click();
+  await expect(bob.getByRole('button', { name: text.friends.requestPending })).toBeDisabled();
+  await expect(bob.getByRole('button', { name: text.friends.addFromRoom })).toHaveCount(0);
+  await bob.keyboard.press('Escape');
 
-  // Ann accepts on her account page, where the request is waiting, and then sees Bob among her
-  // friends, online and in a room, whose number she isn't told since the room is private.
+  // Ann accepts on her account page, where the request is waiting with Bob's line, and then sees Bob
+  // among her friends, online and in a room, whose number she isn't told since the room is private.
+  // The line is gone with the request.
   await ann.goto('/account');
   const annsFriends = ann.locator('.friends');
-  await expect(annsFriends.locator('.card', { hasText: bobName })).toBeVisible();
+  await expect(annsFriends.locator('.card', { hasText: bobName })).toContainText(
+    interpolate(text.friends.noteQuoted, { note: 'We met at the workshop' }),
+  );
   await annsFriends.getByRole('button', { name: text.friends.accept }).click();
   const bobsLine = annsFriends.locator('.card', { hasText: bobName });
+  await expect(bobsLine).not.toContainText('We met at the workshop');
   await expect(bobsLine).toContainText(text.friends.online);
   await expect(bobsLine).toContainText(text.friends.inRoom);
   await expect(bobsLine.getByRole('link', { name: text.friends.join })).toHaveCount(0);
@@ -74,6 +86,19 @@ test('friends are made in a room and by username, invited into a private room, a
   const second = await createRoom(ann, 'en', '');
   await bob.goto('/account');
   await expect(bob.locator('.friends .card', { hasText: annName })).toContainText(text.friends.inRoom);
+  // Bob gives Ann a name of his own, from her card's "more" button, which he alone sees.
+  await bob
+    .locator('.friends .card', { hasText: annName })
+    .getByRole('button', { name: interpolate(text.friends.more, { name: annName }) })
+    .click();
+  await bob.getByRole('button', { name: text.friends.aliasEdit }).click();
+  const naming = bob.getByRole('dialog', { name: interpolate(text.friends.aliasTitle, { name: annName }) });
+  await naming.getByLabel(text.friends.aliasLabel).fill('Annie');
+  await naming.getByRole('button', { name: text.friends.aliasSave }).click();
+  await expect(naming).toHaveCount(0);
+  const annForBob = bob.locator('.friends .card', { hasText: annName });
+  await expect(annForBob.locator('.name')).toHaveText('Annie');
+  await expect(annForBob.locator('.username')).toHaveText(annName);
   await expect(ann.locator('.lobby-head .share').getByRole('button', { name: text.friends.invite })).toHaveCount(0);
   const bar = ann.locator('.start-dock .start-actions');
   await expect(bar.locator('.button')).toHaveText([text.lobby.shuffle, text.friends.invite, text.lobby.start]);
@@ -84,13 +109,25 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(sheet.locator('.friend', { hasText: bobName })).toContainText(text.friends.invited);
   const code = second.slice(-4);
   const invitation = bob.locator('.invitation', { hasText: annName });
-  await expect(invitation).toContainText(interpolate(text.friends.invitation, { name: annName, code: `R2-${code}` }));
+  await expect(invitation).toContainText(
+    interpolate(text.friends.invitation, {
+      name: interpolate(text.friends.aliasWithName, { alias: 'Annie', username: annName }),
+      code: `R2-${code}`,
+    }),
+  );
   await invitation.getByRole('button', { name: text.friends.invitationJoin }).click();
   await bob.waitForURL(/\/room\/[0-9A-Z]{4}\?invite=/);
   await expect(bob.locator('.name-form')).toContainText(bobName);
   await bob.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(bob.locator('.lobby')).toContainText(annName);
   await expect(bob).toHaveURL(second);
+  // In the room Ann goes by her username, and her panel, by Bob's name for her, offers no request.
+  await expect(bob.locator('.lobby .player', { hasText: annName }).locator('.name')).toHaveText(annName);
+  await bob.locator('.lobby .player', { hasText: annName }).locator('.avatar-button').click();
+  const annsPanel = bob.getByRole('dialog', { name: `Annie ${annName}` });
+  await expect(annsPanel).toBeVisible();
+  await expect(annsPanel.getByRole('button', { name: text.friends.addFromRoom })).toHaveCount(0);
+  await bob.keyboard.press('Escape');
   await expect(ann.locator('.lobby')).toContainText(bobName);
   await ann.keyboard.press('Escape');
   await expect(sheet).toHaveCount(0);

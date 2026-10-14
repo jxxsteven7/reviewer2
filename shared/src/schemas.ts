@@ -123,7 +123,14 @@ export const ROOM_MESSAGES = {
   // username, or by the player's ID in the room that the connection is in; the rest name a friend,
   // or the other side of a request, by username, and an invitation by its ID.
   'friends:list': none,
-  'friends:request': z.object({ username: name.optional(), playerId: playerId.optional() }),
+  'friends:request': z.object({
+    username: name.optional(),
+    playerId: playerId.optional(),
+    // A line for the other side, which the rules in friends.ts judge.
+    note: z.string().optional(),
+  }),
+  // The name the account gives a friend, which the rules in friends.ts judge; an empty one is none.
+  'friends:alias': z.object({ username: name, alias: z.string() }),
   'friends:accept': z.object({ username: name }),
   'friends:decline': z.object({ username: name }),
   'friends:remove': z.object({ username: name }),
@@ -248,6 +255,8 @@ const agentGame = {
         translations: terms.optional(),
         forms: terms.optional(),
         pinyin: term.optional(),
+        // The English meanings of up to five characters (BoardWord.glosses), a few each.
+        glosses: z.array(term).max(200).optional(),
       }),
     )
     .length(BOARD_SIZE),

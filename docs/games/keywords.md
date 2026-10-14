@@ -19,7 +19,7 @@ The first game. Its module is `keywords`; the name players see lives in the loca
 - To start, each group needs an online captain and guesser. With [AI players](#ai-players), every time limit must be on and a person must sit in a group.
 - The server draws 25 different words with the crypto module and a random starting group: 9 cards for it, 8 for the other, 7 irrelevant papers, 1 Reviewer 2. The words come from the chair's fields and the chair's own words ([Custom words](#custom-words)), unused ones first.
 - No word on a board gives another away. Two words clash when one lies inside the other: it is the other or its plain plural, each of its pieces is a piece of the other or of one of its forms, or it is the other's term in another language. Pieces are the parts the strict clue rule counts ([The clue](#the-clue)) plus lone letters and numbers. "Gene" and "Gene editing" clash; "Data science" and "Data cleaning" don't. `cardsClash()` in `shared/src/games/keywords/clue.ts` decides; the draw is described in [../architecture.md](../architecture.md#games).
-- A card carries its term in the other language, its `forms` and, for a Chinese word, its `pinyin` (worked out by the server with [pinyin-pro](https://github.com/zh-lx/pinyin-pro), MIT), in every view.
+- A card carries its term in the other language, its `forms` and, for a Chinese word, its `pinyin` (worked out by the server with [pinyin-pro](https://github.com/zh-lx/pinyin-pro), MIT), in every view. A Chinese word also carries the English meanings of its characters (`glosses`, from the dictionary in `words/dictionary/`), for the captains alone, while the game is on, and only on the cards still face down ([The clue](#the-clue)).
 
 ## Settings
 
@@ -57,7 +57,17 @@ The captain's screen runs the check while typing, and the server again. A clue i
 
 A plain plural ends in "-s", or "-es" after s, x, z, ch or sh.
 
-**Strict refuses, loose only warns:** a listed form of a card (`forms`), in any of the ways above, forms of both languages counting in either room; a Chinese character in common with a board word; and, in a Chinese room, where a Latin word on the board stands out, a board word or part of four Latin letters or more inside the clue ("dockerfile" beside "Docker", "Pythonic" beside "Python"), unless the clue may be another form of the word by its ending.
+**Strict refuses, loose only warns:** a listed form of a card (`forms`), in any of the ways above, forms of both languages counting in either room; a character in common with a board word; and, in a Chinese room, where a Latin word on the board stands out, a board word or part of four Latin letters or more inside the clue ("dockerfile" beside "Docker", "Pythonic" beside "Python"), unless the clue may be another form of the word by its ending.
+
+**A character in common** is more than the same Chinese character:
+
+- **Numbers** are the same character however they are written: a digit, a Chinese numeral (the characters for zero to ten, a hundred, a thousand and ten thousand) and an English number word (zero to ten, hundred, thousand), on either side. "6", the numeral for six and "six" all have a character in common with a card that has the numeral for six in it, and "five" with the card "5G"; in an English room, "6" with "Six Sigma". A run of digits counts digit by digit, and as a whole too when it is ten, a hundred, a thousand or ten thousand. The capital numerals of cheques don't count: the one for six is also the first character of the Chinese word for "land".
+- **The English of a character:** a word of the clue of three letters or more that is one of the English meanings of a Chinese character of the card (its `glosses`), or a plain plural of one: "ball" for the last character of the Chinese word for "rebound", "web" for the last one of the word for "road network". With the character for "big" on the board, "big" and "great" count too.
+- **The pinyin of a character:** a word of the clue of three letters or more that is the pinyin of one of the card's characters, without tones, with "v" or "ü" alike: "qiu" for the ball of "rebound". Two letters are too often an English word ("he", "an") to count.
+
+Element symbols ("K" for potassium), other characters that sound alike and riddles are left to the players. Letters, digits and Chinese characters may be mixed in a clue as before.
+
+The meanings come from [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict) (CC BY-SA 4.0): `scripts/build-han-glosses.mjs` keeps the entries of one character for the characters of the word lists, cleans each meaning to single English words, and writes `words/dictionary/han-glosses.json`, with a few meanings added by hand.
 
 **Warned under either rule**, where the check can only guess: another ending of a board word ("-ing", "-ed", "-ion", an irregular plural); in an English room, a board word or part of four letters or more inside the clue ("support" beside "Port"), which would be refused too often there; and a card's term in another language, or a part of it, inside the clue.
 
@@ -69,7 +79,7 @@ Revealed words no longer count.
 
 **Preparing ahead.** Whenever it isn't their turn to give a clue, while the game is on and not paused, a PI prepares the next one: the word, the number and the marks, in the same panel, which stays open under the status line, below the board, so that the PI watches the other group guess above it; there is nothing to open or fold. A pause hides it with the board, and the draft waits. The draft stays in the PI's browser alone, in local storage under `r2.clueDraft` with the ID of the game, and nothing of it reaches the server until the clue is given: nobody else, their own group included, can tell that a PI is preparing or what. It comes back after a reload, unless the clue went meanwhile, and goes once the clue is given, when the game ends and when another game starts; without working storage it lasts as long as the page. The draft follows the board: a marked card that is revealed meanwhile loses its mark, and the panel says so, and a number picked that the rule no longer offers the group, as under the free rule once a card of theirs was found, goes back to following the marks. When the PI's turn comes it is the same panel, with the draft in it, and the PI gives the clue themselves: nothing is sent on its own.
 
-The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0).
+The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scripts/build-han-variants.mjs` from [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0); the English meanings of the characters by `scripts/build-han-glosses.mjs` from CC-CEDICT.
 
 ## Time limits
 
@@ -95,9 +105,22 @@ Each group has three things the other never sees.
 
 **The group chat.** A guesser may write to their group at any time during a game. Captains read but can't write: the clue is all they say. Spectators and screens see none. A message is one line of up to 200 characters, cleaned as `shared/src/text.ts` says. Each group keeps its latest 20 messages; it goes with every snapshot, lasts one game and stays readable after the end.
 
+**After the game** the groups talk it over, each in its own chat, until the next game starts or the room closes: everyone who played for the group in the game may write to it from a seat in it, its PI too; whoever only sat down after the end reads, and the other group still sees nothing (`game_over` for anyone else). A message written then is marked as written after the game (`after`), and the chat shows those under a heading of their own after the turns, as the review does at its end. The record of the game keeps them, after its end ([Replays](#replays)).
+
+On a phone the chat opens as a sheet: with the keyboard up at once while there is nothing to read, and without it once there is, since the player may only want to read. Once the keyboard is up, the sheet keeps above it, as tall as the screen that the keyboard leaves, with the line at its foot and the messages scrolling above it, at the newest.
+
 ## Quick reactions
 
 Anyone in the room may send a quick reaction ([../architecture.md](../architecture.md#messages)), except whoever has seen the key, while a group's students are guessing, paused or not: the PIs of both groups, and anyone who has been a PI in this game and has stepped out to watch (`keyViewers` in `seats.ts`, by member key, so that leaving the room and coming back changes nothing). They see every color, and a reaction then could point the students to a card. The server refuses with `emote_not_now` (`GameModule.mayEmote`), and each member's view says whether they may react now (`mayEmote`), so that the button is greyed out meanwhile.
+
+## Points as they come
+
+A game's points, as a match scores them ([Matches](#matches)), show as they come, as numbers that rise from where they were won and fade, handwritten in the color of the group they are for, with no ground but a white ring that keeps them readable on a card of their own color, and fading where they are for those who ask their devices for less motion. Nothing else shows a score during a game; a match's progress stays folded under the board.
+
+- **A card revealed** in front of the viewer rises from the card with what it did to the viewer's own points, as the group they play for in the game and their role price it: +1 for a card of the group's that its students revealed, the PI too; for an irrelevant paper, the other group's card and Reviewer 2 that they revealed, -1, -2 and -3 for a student and -2, -3 and -5 for the PI. A card that the other group reveals changes nothing for the viewer's group, and a spectator's or a screen's card shows nothing. On a wide screen, where the groups stand beside the board, each player in a group's seat whose points it changed has their own number rise from their avatar at the same time; on a phone, where the groups are a sheet, only the card's.
+- **The end of the game** rises big in the middle of the screen with what the end added to the viewer's points: the win and the bonuses together (+3 for a winning student, +4 for the PI, and the big clues, the opening record and the heavenly hand), and nothing for whoever has none. On a wide screen each player's rises from their avatar too. The decision letter above says the result; the number says no word of it.
+- The numbers come from what everyone sees, the colors of the revealed cards, the group that revealed each and the seats, priced by the same table as the server's score (`revealPoints()` and `bonusPoints()` in `shared/src/games/keywords/score.ts`); what the end added comes from the points that the snapshot ending the game carries for each player (`RoomView.points`), as the records keep them.
+- Only what happens in front of the viewer rises: nothing for the snapshot that catches a page up after a reload or a locked screen, for several cards revealed at once, or across a pause; nothing in a game withdrawn by the chair, and nothing at all in a game that an AI has played in (`RoomView.agentsPlayed`), which brings nobody points.
 
 ## Winning
 
@@ -107,19 +130,19 @@ Revealing **Reviewer 2** ends the game at once: that group loses. Otherwise a gr
 
 Once a game is over, the results page offers a **review**: the page builds a replay from the view, which now carries every color, and `ReplayViewer` plays it step by step, a step for each clue and each guess, with the board as it stood, who revealed what, and whether it was right. The replay object (`KeywordsReplay` in `shared/src/games/keywords/replay.ts`) holds the board with its colors, the record, the result and the names of those who revealed a card, by player ID; `replaySteps()` turns it into the steps. It names the AI players who played (`agents`), by their persona. The record says who gave each clue (`captain`), the cards they meant (`targets`), which the replay marks with their numbers through the clue's turn, and when each clue and guess came, in milliseconds from the start (`at`); replays from before have none of these. The server builds the same object at the end of a game (`GameModule.replay()`) and keeps it for the players with accounts ([../architecture.md](../architecture.md#replays)); a withdrawn game has none, and neither has a game of a room with [custom words](#custom-words).
 
-The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but choosing a card, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; a line of the group chat is kept as what the player said, as the chat shows it. Choosing a card is left out because students choose and choose again before they reveal, as much for the fun of it as to decide. The record says how the game began (`GameModule.setup`): the language, the settings, the group that started and the board with every color; and how it came out, once it is over (`GameModule.outcome`): the group that won, and whether it found every card of its own (`found`) or the other group revealed Reviewer 2 (`reviewer2`). Of the marks, it keeps no single one but how they stood: those of the group that reveals a card, as they were when it did, and both groups' when a turn ends and when the game ends, by itself or withdrawn by the chair (`keywords:marks`, by nobody, with the group and its marks; `GameModule.logChanges`), unless a group has none; a game cut short when its room closes has no last note, since nothing in the game changed. Replays carry no marks. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it. The game waits for the PI of the group on turn while the clue is due, and for its students while they guess (`GameModule.due`), so a timer that ends a phase names those of them who were offline. The rules are at version 2 (`RULES_VERSION`), which goes up with every change to the rules or the scoring: version 2 brought the marks, the homophone rule and the hold on the quick reactions of whoever has seen the key.
+The record of a game ([../architecture.md](../architecture.md#game-records)) logs every message of this game but choosing a card, as its schema reads it, without the game's ID and with the clue's word cleaned as the record keeps it; a line of the group chat is kept as what the player said, as the chat shows it, and what the groups say after the end comes after its `end`. The review on the results page ends with what the viewer's group has said since the game ended, under a heading of its own; the replay that the server keeps, which goes to the players of both groups, has none of the chat. Choosing a card is left out because students choose and choose again before they reveal, as much for the fun of it as to decide. The record says how the game began (`GameModule.setup`): the language, the settings, the group that started and the board with every color; and how it came out, once it is over (`GameModule.outcome`): the group that won, and whether it found every card of its own (`found`) or the other group revealed Reviewer 2 (`reviewer2`). Of the marks, it keeps no single one but how they stood: those of the group that reveals a card, as they were when it did, and both groups' when a turn ends and when the game ends, by itself or withdrawn by the chair (`keywords:marks`, by nobody, with the group and its marks; `GameModule.logChanges`), unless a group has none; a game cut short when its room closes has no last note, since nothing in the game changed. Replays carry no marks. It says where each player is, by group and role (`GameModule.seated`), and everyone who has sat in a group during the game has played in it. The game waits for the PI of the group on turn while the clue is due, and for its students while they guess (`GameModule.due`), so a timer that ends a phase names those of them who were offline. The rules are at version 3 (`RULES_VERSION`), which goes up with every change to the rules or the scoring: version 2 brought the marks, the homophone rule and the hold on the quick reactions of whoever has seen the key; version 3 the numbers, the English and the pinyin of a character as a character in common, and the groups' talk after the game.
 
 ## What each player sees
 
 | Seat | Cards | Of the groups | Can do |
 |---|---|---|---|
-| Captain | All words and colors | Their group's chat and choices | Give the clue |
+| Captain | All words and colors; the English of the characters of the cards still face down | Their group's chat and choices | Give the clue |
 | Guesser | All words; revealed colors | Their group's chat, choices and marks | Choose, mark, reveal, end the turn, write |
 | Spectator, screen | Like a guesser | Nothing | Watch |
 | While paused | No cards at all | As before | Write to the group |
-| After the game | Every color | As before | Review the game |
+| After the game | Every color | As before, no marks | Review the game; write to the group, PI included, for whoever played for it |
 
-`view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups, no `selections` key outside the group whose turn it is, and no `marks` key outside a group's guessers or after the game; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone.
+`view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups, no `selections` key outside the group whose turn it is, and no `marks` key outside a group's guessers or after the game; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone; the `glosses` of a card to the captains alone, while the game is on and the card is face down.
 
 ## Seats
 
@@ -152,7 +175,7 @@ On top of the room messages ([../architecture.md](../architecture.md#messages));
 | `keywords:mark` | `gameId`, `card` (0 to 24), `mark` (`ours`, `theirs`, `r2`, or `null`) | Either group's guessers, in any turn; at most about 10 messages a second, as for every message |
 | `keywords:reveal` | `gameId`, `turn`, `card` | The current guessers |
 | `keywords:pass` | `gameId`, `turn` | The current guessers |
-| `keywords:say` | `gameId`, `text` | Either group's guessers, in any turn |
+| `keywords:say` | `gameId`, `text` | Either group's guessers, in any turn; after the game, whoever played for the group, its PI too (`game_over` for anyone else) |
 | `keywords:pause`, `keywords:resume` | `gameId` | The chair; `not_chair`, `paused`, `not_paused` |
 | `keywords:extend` | `gameId`, `turn` | The current captain in the clue phase, a current guesser in the guess phase; `no_extension`, `extension_used` |
 
@@ -163,7 +186,7 @@ The settings travel in `room:create` and `room:settings` as `guessRule`, `clueRu
 Before a game action, the server ends a phase whose time has run out. Then:
 
 1. `stale`: an earlier game or turn, or no game.
-2. `game_over`.
+2. `game_over`, but for a chat message from someone who played for the group in their seat.
 3. `paused`, for everything but a chat message and a withdrawal. A pause and a resumption need the chair first (`not_chair`), and then a game that isn't paused, or is (`paused`, `not_paused`).
 4. `not_your_turn`, `not_captain`, `not_guesser`; a chat message and a mark only need a guesser.
 5. `wrong_phase`, such as revealing before the clue.

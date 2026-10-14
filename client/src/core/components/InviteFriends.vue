@@ -13,7 +13,8 @@ import UiSheet from './UiSheet.vue';
 
 // The sheet from which a member invites friends into the room (docs/architecture.md#friends): the
 // friends who are online and not here yet, each with a button, which says "Invited" once they are.
-// The list is asked for whenever the sheet opens, since who is online changes all the time.
+// The list is asked for whenever the sheet opens, since who is online changes all the time. A
+// friend goes by the name the account gives them, if any, with the username after it.
 const props = defineProps<{ open: boolean; room: RoomView }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
@@ -53,7 +54,10 @@ async function invite(username: string) {
       <ul v-else class="friends">
         <li v-for="friend in candidates" :key="friend.username" class="friend">
           <PlayerAvatar :name="friend.username" :avatar="friend.avatar" />
-          <span class="name">{{ friend.username }}</span>
+          <span class="name"
+            >{{ friend.alias ?? friend.username
+            }}<small v-if="friend.alias" class="username">{{ friend.username }}</small></span
+          >
           <UiButton size="small" :disabled="busy || invited.has(friend.username)" @click="invite(friend.username)">
             {{ t(invited.has(friend.username) ? 'friends.invited' : 'friends.inviteOne') }}
           </UiButton>
@@ -103,5 +107,11 @@ async function invite(username: string) {
   font-weight: var(--weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.username {
+  margin-left: var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--text-xs);
 }
 </style>

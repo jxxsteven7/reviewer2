@@ -56,6 +56,8 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
     },
     streaks: [],
     duos: [],
+    agentsPlayed: false,
+    points: [],
     data: {},
     ...overrides,
   };

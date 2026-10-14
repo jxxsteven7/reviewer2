@@ -144,6 +144,16 @@ export class GameLog {
     return this.#overflowed;
   }
 
+  // How many entries the log holds, and the entries from the one at `index` on: what has been added
+  // to the log since it had `index` entries. A log that grew too long holds none.
+  get size(): number {
+    return this.#entries.length;
+  }
+
+  since(index: number): GameLogEntry[] {
+    return this.#entries.slice(index);
+  }
+
   // The log to keep, or null when it grew too long.
   data(): GameLogData | null {
     return this.#overflowed ? null : this.#data();

@@ -131,6 +131,8 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     match: null,
     streaks: [],
     duos: [],
+    agentsPlayed: false,
+    points: [],
     data,
   };
 }
@@ -305,14 +307,49 @@ describe('GroupChat', () => {
     expect(wrapper.text()).toContain('the clue is all a PI may say');
   });
 
-  test('closes the input once the game is over', async () => {
-    const wrapper = mount(GroupChat, {
-      props: { room: room('bob', messages, 'over'), draft: '', sending: false },
-      global: global(),
-    });
+  test('stays open after the game to those who played for the group, the PI too, after the turns', async () => {
+    const talk: ChatMessage[] = [...messages, { id: 4, player: 'ann', turn: 2, text: 'well played', after: true }];
+    for (const me of ['bob', 'ann']) {
+      const wrapper = mount(GroupChat, {
+        props: { room: room(me, talk, 'over'), draft: '', sending: false },
+        global: global(),
+      });
+      await wrapper.get('button').trigger('click');
+      expect(wrapper.find('input').exists()).toBe(true);
+      expect(wrapper.text()).toContain('The game is over: talk it over with your group');
+      expect(wrapper.findAll('.turn').map((turn) => turn.get('.turn-title').text())).toEqual([
+        'Turn 1',
+        'Turn 2',
+        'After the game',
+      ]);
+      wrapper.unmount();
+    }
+    // Whoever sat down in the group after the end reads.
+    const late = room('eve', talk, 'over');
+    (late.data as KeywordsRoomData).seats = { ...seats, eve: { team: 'red', role: 'guesser' } };
+    const wrapper = mount(GroupChat, { props: { room: late, draft: '', sending: false }, global: global() });
     await wrapper.get('button').trigger('click');
     expect(wrapper.find('input').exists()).toBe(false);
-    expect(wrapper.text()).toContain('The game is over');
+    expect(wrapper.text()).toContain('After the game, only those who played for the group in it can write here.');
+    // The messages read here count for no other test.
+    localStorage.clear();
+  });
+
+  test('brings up the keyboard on opening while there is nothing to read, and not once there is', async () => {
+    const opened = async (chat: ChatMessage[]) => {
+      const wrapper = mount(GroupChat, {
+        props: { room: room('bob', chat), draft: '', sending: false },
+        global: global(),
+        attachTo: document.body,
+      });
+      await wrapper.get('button').trigger('click');
+      await flushPromises();
+      const focused = document.activeElement?.tagName;
+      wrapper.unmount();
+      return focused;
+    };
+    expect(await opened([])).toBe('INPUT');
+    expect(await opened(messages)).toBe('SECTION');
   });
 
   test('offers nothing to someone without a chat, such as a spectator', () => {
@@ -680,7 +717,8 @@ describe('CluePanel', () => {
     const wrapper = panel();
     await wrapper.get('input').setValue(NUMBER);
     expect(wrapper.findAll('.warning').map((line) => line.text())).toEqual([
-      `This clue has a Chinese character in common with a word still on the board: \u201cData\u201d (${DATA}). ` +
+      'This clue has a character in common with a word still on the board, as a Chinese character, a number ' +
+        `however it is written, or the English or the pinyin of a character: \u201cData\u201d (${DATA}). ` +
         "It's your call.",
     ]);
     // In an English room, a clue that contains a word on the board is a warning under either rule.
@@ -727,10 +765,12 @@ describe('CluePanel', () => {
   test('asks the PI loudly to mark the cards the clue is for, and counts and names them once marked', async () => {
     const wrapper = panel();
     await wrapper.setProps({ team: 'red' });
-    // A sticker in the group's tint until a card is marked.
+    // A sticker in the group's tint until a card is marked, with a "Tips" tag for the eye alone.
     expect(wrapper.get('.targets').classes()).toEqual(['targets', 'none', 'red']);
+    expect(wrapper.get('.targets .tips').text()).toBe('Tips');
+    expect(wrapper.get('.targets .tips').attributes('aria-hidden')).toBe('true');
     expect(wrapper.get('.targets').text()).toBe(
-      'First tap the cards this clue is meant for, and the number follows. ' +
+      'Tips First tap the cards this clue is meant for, and the number follows. ' +
         'Nobody sees them during the game; the replay shows them.',
     );
     await wrapper.setProps({ targets: [1] });
@@ -911,6 +951,15 @@ describe('ReplayViewer', () => {
     result: { winner: 'red', reason: 'found' },
     players: { bob: 'Bob' },
   };
+
+  test('shows last what the group has said since the game ended, and nothing without it', () => {
+    const talk = [{ id: 4, name: 'Ann', text: 'Well played' }];
+    const wrapper = mount(ReplayViewer, { props: { replay, talk }, global: global() });
+    expect(wrapper.get('.talk h3').text()).toBe('Talking it over');
+    expect(wrapper.get('.talk .line .name').text()).toBe('Ann');
+    expect(wrapper.get('.talk .line').text()).toContain('Well played');
+    expect(mount(ReplayViewer, { props: { replay }, global: global() }).find('.talk').exists()).toBe(false);
+  });
 
   test("shows the cards the PI meant through the clue's turn, and names them at the clue", async () => {
     const meant: KeywordsReplay = { ...replay, history: [{ ...(replay.history[0] as ClueRecord), targets: [1, 0] }] };
@@ -1149,8 +1198,8 @@ describe('RulesSheet', () => {
     const zh = await clueLines('zh');
     expect(sound(zh)).toHaveLength(1);
     expect(sound(zh)[0]).toContain('\u9e21\u97f3 (j\u012by\u012bn) for \u57fa\u56e0');
-    // Right after the line on what a clue can't be.
-    expect(zh.indexOf(sound(zh)[0] as string)).toBe(2);
+    // Right after the lines on what a clue can't be.
+    expect(zh.indexOf(sound(zh)[0] as string)).toBe(3);
     expect(sound(await clueLines('en'))).toEqual([]);
     for (const lines of [zh, await clueLines('en')]) {
       expect(lines).toContain(
@@ -1262,6 +1311,43 @@ describe('SettingsForm', () => {
 });
 
 describe('GameRosters', () => {
+  test('puts each role on a line of its own, one player a line, and no spectators without any', () => {
+    const view = room('bob');
+    const data = view.data as KeywordsRoomData;
+    const wrapper = mount(GameRosters, { props: { room: view }, global: global() });
+    const red = wrapper.get('.group.red');
+    expect(red.findAll('.seat').map((seat) => seat.get('.role').text())).toEqual(['PI', 'Students']);
+    expect(
+      red
+        .findAll('.seat')[1]
+        ?.findAll('li')
+        .map((line) => line.get('.name').text()),
+    ).toEqual(['Bob', 'Cat']);
+    // "You" and "Chair" stay on the line of the name.
+    expect(
+      red
+        .findAll('.seat')[1]
+        ?.findAll('li')[0]
+        ?.findAll('.label .mark')
+        .map((mark) => mark.text()),
+    ).toEqual(['you']);
+    expect(wrapper.find('.spectators').exists()).toBe(true);
+    const nobody = mount(GameRosters, {
+      props: { room: { ...view, data: { ...data, seats: { ...data.seats, eve: { team: 'blue', role: 'guesser' } } } } },
+      global: global(),
+    });
+    expect(nobody.find('.spectators').exists()).toBe(false);
+    // Whether a player is online is a dot on the avatar's corner.
+    expect(red.find('.face .dot.on').exists()).toBe(true);
+  });
+
+  test('raises the numbers that the floats give, on the avatars of their players', () => {
+    const floats = new Map([['bob', { key: 1, text: '+1', team: 'red' as const }]]);
+    const wrapper = mount(GameRosters, { props: { room: room('bob'), floats }, global: global() });
+    expect(wrapper.findAll('.score-float').map((float) => float.text())).toEqual(['+1']);
+    expect(wrapper.get('.score-float').attributes('aria-hidden')).toBe('true');
+  });
+
   test('lets whoever plays from the next game of a match change their mind and just watch', async () => {
     const view = room('eve');
     const data = view.data as KeywordsRoomData;

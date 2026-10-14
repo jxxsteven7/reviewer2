@@ -11,7 +11,9 @@ import { useKeywords } from './useKeywords';
 // The group chat (docs/games/keywords.md): the group's messages by turn, with the line a student
 // writes (ChatThread.vue). Beside the board, as a `panel`, it is open all the time, and every
 // message counts as read as it comes. On a phone it is a button with the number of new messages,
-// which opens the thread as a sheet. The server sends the chat only to the group's own PI and
+// which opens the thread as a sheet: with the keyboard up at once while there is nothing to read
+// yet, and without it once there is, since the player may only want to read; the sheet keeps above
+// the keyboard once it comes up, with the line at its foot and the messages scrolling above it. The server sends the chat only to the group's own PI and
 // students, so spectators and screens get nothing at all. The line a student is writing, `draft`,
 // and its sending are the page's (useChatLine.ts), so that they outlive the sheet, which throws
 // the thread away as it closes, and the panel, which gives way to the button as the page narrows:
@@ -68,8 +70,8 @@ watch(
         {{ t('game.chat.open') }}
         <span v-if="fresh" class="badge num" aria-hidden="true">{{ fresh }}</span>
       </UiButton>
-      <UiSheet :open="open" :title="title" @close="open = false">
-        <ChatThread v-model:draft="draft" :room="room" :sending="sending" @send="emit('send')" />
+      <UiSheet :open="open" :title="title" :focus-input="chat.length === 0" fit-screen @close="open = false">
+        <ChatThread v-model:draft="draft" class="in-sheet" :room="room" :sending="sending" @send="emit('send')" />
       </UiSheet>
     </template>
   </template>
@@ -91,6 +93,19 @@ watch(
    through the whole game; the list scrolls. */
 .chat-panel :deep(.turns) {
   max-height: 14rem;
+}
+
+/* In the sheet, the thread fills the sheet's column: the messages take what the line at the foot
+   leaves, and scroll. */
+.in-sheet {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.in-sheet :deep(.turns) {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .badge {

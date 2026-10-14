@@ -49,6 +49,7 @@ const sections = computed(() => [
     text: [
       t(`rules.clue.${props.language}`, { count: props.settings.clueLength }, props.settings.clueLength),
       t('rules.clueCommon'),
+      t('rules.clueCharacter'),
       ...(props.language === 'zh' ? [t('rules.clueSound')] : []),
       t('rules.clueQuiet'),
       t('rules.clueTargets'),

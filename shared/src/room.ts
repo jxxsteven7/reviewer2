@@ -38,6 +38,15 @@ export function nextChair(players: readonly Pick<PlayerView, 'id' | 'online' | '
   return (people.find((player) => player.online) ?? people[0])?.id ?? null;
 }
 
+// What the game that has just ended brought a member who played in it: its points, as the records
+// keep them (docs/architecture.md#academic-ranks), and where they came from, in the game's own terms
+// (for the team word guessing game, `KeywordsScoreDetail`).
+export interface GamePoints {
+  playerId: string;
+  points: number;
+  detail?: unknown;
+}
+
 export interface RoomView<Game = unknown> {
   // A new random ID for every room, so that a code that is used again later never mixes two rooms up.
   roomId: string;
@@ -83,6 +92,14 @@ export interface RoomView<Game = unknown> {
   // The titles that the game which has just ended brought the viewer's friends who played in it
   // (duos.ts), told to the viewer alone. Empty for anyone else, a screen and in any other phase.
   duos: DuoNotice[];
+  // Whether an AI has played in the game being played or the one that has just ended, as an AI
+  // player or for someone who was offline: such a game brings nobody points
+  // (docs/architecture.md#ai-players). False in the waiting room.
+  agentsPlayed: boolean;
+  // The points of the game that has just ended, for each member in the room who played in it, which
+  // the game shows as it ends. Empty in any other phase, and after a game that brings no points: one
+  // that the chair withdrew, or that an AI played in.
+  points: GamePoints[];
   // The game's own part of the view, built for this viewer alone.
   data: Game;
 }

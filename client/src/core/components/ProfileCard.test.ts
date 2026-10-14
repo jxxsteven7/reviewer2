@@ -90,16 +90,16 @@ describe('ProfileCard', () => {
       target: '_blank',
       rel: 'nofollow ugc noopener',
     });
-    // The record, as a table, when the owner shows it.
-    const rows = wrapper
-      .findAll('.record-table tbody tr')
-      .map((row) => row.findAll('th, td').map((cell) => cell.text()));
-    expect(rows).toEqual([
-      ['Ordinary games', '8', '5', '62%'],
-      ['Games in matches', '4', '2', '50%'],
-      ['Total', '12', '7', '58%'],
+    // The record, as numbers, when the owner shows it.
+    const blocks = wrapper
+      .findAll('.record-stats .block')
+      .map((block) => block.findAll('dt, dd').map((cell) => cell.text()));
+    expect(blocks).toEqual([
+      ['Games', '12'],
+      ['Win rate', '58%'],
+      ['Matches', '3', 'won 1'],
     ]);
-    expect(wrapper.get('.record-table .matches').text()).toBe('Matches: 3 · Finished first: 1');
+    expect(wrapper.get('.record-stats .split').text()).toBe('Ordinary games: 8, won 5 · In matches: 4, won 2');
     expect(text).toContain('Acknowledged: Helpful discussions');
     expect(text).toContain('♥ 4');
     // A guest can neither like nor ask, and is told why.

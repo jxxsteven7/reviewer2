@@ -15,6 +15,7 @@ import EmoteButton from '../../core/components/EmoteButton.vue';
 import EndMatchButton from '../../core/components/EndMatchButton.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
+import ScoreFloat from '../../core/components/ScoreFloat.vue';
 import StreakNotices from '../../core/components/StreakNotices.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
@@ -44,6 +45,7 @@ import TurnStrip from './TurnStrip.vue';
 import { useChatLine } from './useChatLine';
 import { useKeywords, type Chooser } from './useKeywords';
 import { useMissedDeadlines } from './useMissedDeadlines';
+import { useScoreFloats } from './useScoreFloats';
 
 // A game in progress, and its result. The banner that says what is going on for the viewer, the
 // turn strip, the clock, the board and what the viewer can do now come first. On a wide screen the
@@ -57,6 +59,10 @@ import { useMissedDeadlines } from './useMissedDeadlines';
 // the game, a notice stands in place of the board, with the way to resume for the chair too, and
 // the clock stands still. A group whose turn it is may ask for an extension, where the room allows
 // one. Once the game has ended, the review opens the replay.
+//
+// As cards are revealed, what each did to the viewer's points rises from it, and on a wide screen
+// what it did to each player's from their avatar beside the board; at the end, what the game added
+// to the viewer's points rises big in the middle of the screen (useScoreFloats.ts).
 //
 // In a match, its table stands under the board while the game is on, folded to a line with the
 // progress and the viewer's place, since it is seldom looked at then; the chair's button to end
@@ -370,10 +376,21 @@ useMissedDeadlines(
   game,
   computed(() => room.value.players),
 );
+const floats = useScoreFloats(room);
 
-// The review of the game that has ended, step by step, for everyone who sees the result.
+// The review of the game that has ended, step by step, for everyone who sees the result, with what
+// the viewer's group has said since the end, as it talks the game over.
 const reviewing = ref(false);
 const replay = computed(() => replayOf(game.value, room.value.language, room.value.players));
+const talk = computed(() =>
+  (game.value.chat ?? [])
+    .filter((message) => message.after)
+    .map(({ id, player, text }) => ({
+      id,
+      name: room.value.players.find((other) => other.id === player)?.name ?? t('game.chat.someone'),
+      text,
+    })),
+);
 
 const ending = ref(false);
 async function withdraw() {
@@ -458,6 +475,7 @@ const status = computed(() => {
           :targets="isCaptain && !game.result ? draft.targets : []"
           :notes="student ? marks : undefined"
           :team="mySeat?.team ?? null"
+          :float="floats.card.value"
           @select="tap"
         />
         <div class="actions">
@@ -515,7 +533,7 @@ const status = computed(() => {
       <aside class="side">
         <div class="column">
           <GroupChat v-if="wide" v-model:draft="chatLine" :room="room" :sending="sending" panel @send="say" />
-          <GameRosters v-if="wide" :room="room" />
+          <GameRosters v-if="wide" :room="room" :floats="floats.players.value" />
         </div>
         <div class="column">
           <ClueLog v-if="wide" :game="game" />
@@ -542,8 +560,12 @@ const status = computed(() => {
     </UiSheet>
 
     <UiSheet :open="reviewing" :title="t('replay.title')" @close="reviewing = false">
-      <ReplayViewer v-if="replay" :replay="replay" />
+      <ReplayViewer v-if="replay" :replay="replay" :talk="talk" />
     </UiSheet>
+
+    <Teleport to="body">
+      <ScoreFloat v-if="floats.end.value" :key="floats.end.value.key" :float="floats.end.value" size="end" />
+    </Teleport>
 
     <UiSheet :open="ending" :title="t('game.end')" @close="ending = false">
       <div class="confirm">

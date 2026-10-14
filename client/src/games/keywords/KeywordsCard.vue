@@ -3,6 +3,7 @@ import { hasHan, type CardView, type Language, type Mark, type Team } from '@rev
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
+import ScoreFloat, { type Shown } from '../../core/components/ScoreFloat.vue';
 import { formatList, HTML_LANG } from '../../core/i18n';
 import { hyphenate } from './hyphenate';
 import MarkSticker from './MarkSticker.vue';
@@ -18,7 +19,8 @@ import type { Chooser } from './useKeywords';
 // they were marked: on the PI's board while they mark them, and for everyone once the game is over.
 // A `note` is the mark that the viewer's group has put on a hidden card, for its students alone: the
 // card takes the tint of the color it stands for, unless it is the viewer's choice, and the mark's
-// round sticker hangs on its bottom left corner.
+// round sticker hangs on its bottom left corner. A `float` is what the card did to the viewer's
+// points as it was revealed, which rises from it.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -30,8 +32,9 @@ const props = withDefaults(
     marked?: boolean;
     target?: number | null;
     note?: { mark: Mark; color: Team | 'r2' } | null;
+    float?: Shown | null;
   }>(),
-  { large: false, marked: false, target: null, note: null },
+  { large: false, marked: false, target: null, note: null, float: null },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t, locale } = useI18n();
@@ -99,6 +102,7 @@ const ariaLabel = computed(() =>
     }}</span>
     <span v-if="target !== null" class="target num" aria-hidden="true">{{ target }}</span>
     <MarkSticker v-if="note" class="note" :mark="note.mark" :color="note.color" />
+    <ScoreFloat v-if="float" :key="float.key" :float="float" />
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar
         v-for="chooser in choosers"

@@ -36,7 +36,7 @@ for (const language of ['en', 'zh'] as const) {
     // or fold, and the board in sight above it; until a card is marked, its first line asks for one.
     const draft = captain.locator('.clue-panel.draft');
     await expect(draft.locator('.ahead')).toHaveText(text.game.prepareNote);
-    await expect(draft.locator('.targets.none')).toHaveText(text.game.targetsHint);
+    await expect(draft.locator('.targets.none')).toHaveText(`${text.game.tips} ${text.game.targetsHint}`);
     await expect(draft.locator('.targets.none')).toHaveClass(new RegExp(`\\b${team}\\b`));
     await expect(captain.locator('.prepare, [aria-expanded]')).toHaveCount(0);
     await expect(captain.locator('.board')).toBeInViewport();

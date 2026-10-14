@@ -77,6 +77,8 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   match: null,
   streaks: [],
   duos: [],
+  agentsPlayed: false,
+  points: [],
   data: { ...data, settings },
 });
 

@@ -12,6 +12,7 @@ import {
   type AgentPersona,
   type BoardWord,
   type DuoNotice,
+  type GamePoints,
   type Language,
   type MatchRules,
   type PublicRoom,
@@ -25,7 +26,7 @@ import {
 import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
 import type { AgentFeats, GameContext, GameModule, GameOutcome, PlayerResult, Viewer } from './game';
-import { GameLog, type GameEnding, type GameLogData, type GameLogEvent } from './gameLog';
+import { GameLog, type GameEnding, type GameLogData, type GameLogEntry, type GameLogEvent } from './gameLog';
 import { newPlayerId } from './identity';
 import { Match, type Present } from './match';
 import { pinyinOf } from './pinyin';
@@ -240,6 +241,10 @@ export class Room {
   // How the current game came to an end, for its record, once it has: by itself, withdrawn by the
   // chair, or cut short when the room closed (cut()). Null while it is on.
   #ending: GameEnding | null = null;
+  // How many entries the log had when the game ended, or when what the groups said after the end
+  // was last handed to the record (review()): those after it are still to be kept. Null while the
+  // game is on.
+  #reviewed: number | null = null;
   // Whether an AI has played in the current game, as an AI player or for someone who was offline:
   // such a game brings nobody points, a streak or a friend title (docs/architecture.md#ai-players).
   #agentsPlayed = false;
@@ -702,7 +707,8 @@ export class Room {
       if (this.public && parsed.words.length > 0) return fail('custom_words_private');
       custom = parsed.words.map((word) => {
         const pinyin = pinyinOf(word);
-        return pinyin === null ? { word } : { word, pinyin };
+        const glosses = this.#words.glossesOf(word);
+        return { word, ...(pinyin === null ? {} : { pinyin }), ...(glosses.length > 0 ? { glosses } : {}) };
       });
     }
     let fields = this.fields;
@@ -759,6 +765,7 @@ export class Room {
     this.#agentLog = new AgentLog(gameId, this.#now());
     this.#setup = this.game.setup?.(data) ?? null;
     this.#ending = null;
+    this.#reviewed = null;
     this.#agentsPlayed = Object.keys(agents).length > 0;
     this.#tookOverFor.clear();
     this.#usedWords = draw.used;
@@ -820,6 +827,7 @@ export class Room {
     this.#agentLog = null;
     this.#setup = null;
     this.#ending = null;
+    this.#reviewed = null;
     this.#agentsPlayed = false;
     this.#tookOverFor.clear();
     this.#streaks.clear();
@@ -981,11 +989,14 @@ export class Room {
   }
 
   // Notes a game's message that changed the game, as the game says to (GameModule.logged): what
-  // it carried and what the player said, or nothing of it at all, as of a card chosen.
+  // it carried and what the player said, or nothing of it at all, as of a card chosen. Once the game
+  // has ended, and until the room leaves it behind, the log goes on with what the players say as
+  // they talk it over, after its `end`, and nothing else (review()).
   #noteMessage(id: string, type: string, payload: unknown, agent?: AgentPersona): void {
-    if (this.phase !== 'playing' || !this.#log) return;
+    if ((this.phase !== 'playing' && this.phase !== 'ended') || !this.#log) return;
     const note = this.game.logged ? this.game.logged(type, payload) : {};
-    if (note !== null) this.#log.add(this.#now(), id, type, { data: note.data, said: note.said, agent });
+    if (note === null || (this.phase === 'ended' && note.said === undefined)) return;
+    this.#log.add(this.#now(), id, type, { data: note.data, said: note.said, agent });
   }
 
   // Notes a step of an AI in the AI's log of the game it was asked for, `gameId`, at `at` on the
@@ -1011,6 +1022,7 @@ export class Room {
   #ended(ending: GameEnding, why?: string): void {
     this.#note(null, 'end', ending === 'finished' ? undefined : { ending, ...(why === undefined ? {} : { why }) });
     this.#ending = ending;
+    this.#reviewed = this.#log?.size ?? null;
   }
 
   // The room closes while its game is on: the game ends there, unfinished, for its record
@@ -1166,18 +1178,13 @@ export class Room {
   // - Whether it was a game of a match, its language, its fields, and the version of its rules.
   record(): GameRecordData | null {
     if (this.#ending === null || !this.#log || this.customWords.length > 0) return null;
-    const keys = new Set(
-      this.game.participants?.(this.data, this.context) ??
-        (this.results() ?? []).map(({ playerId }) => this.context.keyOf(playerId)),
-    );
-    const accounts: { playerId: string; accountId: number }[] = [];
+    const keys = this.#participants();
+    const accounts = this.#accountsOf(keys);
     const kinds = new Map<string, keyof GameRecordData['counts']>();
     for (const member of this.members.values()) {
-      if (member.account && keys.has(member.key)) accounts.push({ playerId: member.id, accountId: member.account.id });
       kinds.set(member.key, member.agent ? 'agents' : member.account ? 'accounts' : 'guests');
     }
-    for (const [playerId, { key, accountId, agent }] of this.#gone) {
-      if (accountId !== null && keys.has(key)) accounts.push({ playerId, accountId });
+    for (const { key, accountId, agent } of this.#gone.values()) {
       if (!kinds.has(key)) kinds.set(key, agent ? 'agents' : accountId !== null ? 'accounts' : 'guests');
     }
     const counts = { accounts: 0, guests: 0, agents: 0 };
@@ -1204,6 +1211,43 @@ export class Room {
       rules: this.game.rulesVersion ?? null,
       words: this.#words.hash,
     };
+  }
+
+  // The member keys of everyone who played in the game.
+  #participants(): Set<string> {
+    return new Set(
+      this.game.participants?.(this.data, this.context) ??
+        (this.results() ?? []).map(({ playerId }) => this.context.keyOf(playerId)),
+    );
+  }
+
+  // Which of those who played in the game, with these member keys, had which account, by the player
+  // ID they had, those who left included: a player who left and came back has had two.
+  #accountsOf(keys: ReadonlySet<string>): { playerId: string; accountId: number }[] {
+    const accounts: { playerId: string; accountId: number }[] = [];
+    for (const member of this.members.values()) {
+      if (member.account && keys.has(member.key)) accounts.push({ playerId: member.id, accountId: member.account.id });
+    }
+    for (const [playerId, { key, accountId }] of this.#gone) {
+      if (accountId !== null && keys.has(key)) accounts.push({ playerId, accountId });
+    }
+    return accounts;
+  }
+
+  // What the groups have said since the game ended, as they talk it over, that the record of the
+  // game doesn't have yet (docs/architecture.md#game-records): the entries of the log after its
+  // `end`, or after those handed over last time, with which player ID was which account, also for
+  // someone who came back after the end under a new ID. The socket layer adds them to the record as
+  // the room leaves the game behind: when the chair plays again or starts the next match, and when
+  // the room closes. Each entry is handed over once. Null when there is nothing new, and for a game
+  // that has no record (record()).
+  review(): { gameId: string; entries: GameLogEntry[]; accounts: { playerId: string; accountId: number }[] } | null {
+    const log = this.#log;
+    if (this.#reviewed === null || !log || log.overflowed || this.customWords.length > 0) return null;
+    const entries = log.since(this.#reviewed);
+    this.#reviewed = log.size;
+    if (entries.length === 0) return null;
+    return { gameId: log.gameId, entries, accounts: this.#accountsOf(this.#participants()) };
   }
 
   // What the AI players did in the game, if it finished: each that was in a seat at the end, and
@@ -1377,6 +1421,17 @@ export class Room {
     // before they are on the board.
     const chair = (viewer: Viewer) =>
       this.phase === 'lobby' && 'playerId' in viewer && viewer.playerId === this.chairId;
+    // The points that the game brought each member who played in it, as Room.points() scores them,
+    // built when the first viewer asks, with the game's part.
+    let points: GamePoints[] | undefined;
+    const pointsView = (): GamePoints[] => {
+      if (this.phase !== 'ended' || this.#agentsPlayed) return [];
+      const scores = this.game.match?.score(this.data, context) ?? [];
+      return scores.flatMap(({ key, points: total, detail }) => {
+        const member = this.memberByKey(key);
+        return member ? [{ playerId: member.id, points: total, ...(detail === undefined ? {} : { detail }) }] : [];
+      });
+    };
     return (viewer) => ({
       ...shared,
       me: 'playerId' in viewer ? viewer.playerId : null,
@@ -1384,6 +1439,8 @@ export class Room {
       match: match === undefined ? (match = matchView()) : match,
       streaks: this.#streakNotices(viewer),
       duos: this.#duoNotices(viewer),
+      agentsPlayed: this.phase !== 'lobby' && this.#agentsPlayed,
+      points: (points ??= pointsView()),
       data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }

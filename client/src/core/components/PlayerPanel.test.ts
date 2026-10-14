@@ -16,7 +16,7 @@ vi.mock('../socket', () => ({
   connect: vi.fn(),
   onceConnected: vi.fn(),
   whenConnected: vi.fn(async () => true),
-  socket: { connected: false, on: vi.fn() },
+  socket: { connected: true, on: vi.fn(), off: vi.fn() },
 }));
 // Who the browser is, and the request that the player's page in the sheet makes for the profile.
 const signedIn = vi.hoisted(() => ({
@@ -52,6 +52,8 @@ const view = (me: string, isPublic: boolean, player: PlayerView = bob): RoomView
   match: null,
   streaks: [],
   duos: [],
+  agentsPlayed: false,
+  points: [],
   data: {},
 });
 
@@ -185,12 +187,24 @@ describe('PlayerPanel', () => {
     wrapper.unmount();
   });
 
+  // The viewer's friends list, as the server sends it, and every other message answered with `reply`.
+  const friendsAre = (friends: object[], outgoing: object[] = [], reply: object = { ok: true }) =>
+    send.mockImplementation(async (event) =>
+      event === 'friends:list' ? { ok: true, friends, incoming: [], outgoing } : { ok: true, ...reply },
+    );
+
   test('offers an account to ask a player with an account to be friends, first, and says how it went', async () => {
     signedIn.account.summary = { username: 'Cat', avatar: null };
-    send.mockResolvedValue({ ok: true, status: 'pending' });
+    friendsAre([], [], { status: 'pending' });
     const wrapper = panel('bob', view('ann', false, { ...bob, rank: 'phd' }));
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('friends:list');
     expect(names()).toEqual(['\u00d7', 'Add friend', 'Move to the spectators', 'Make chair', 'Remove from the room']);
+    // A sheet of its own asks for a line for them, which may be left out.
     button('Add friend').click();
+    await flushPromises();
+    expect(names()).toEqual(['\u00d7', 'Send a request', 'Cancel']);
+    button('Send a request').click();
     await flushPromises();
     expect(send).toHaveBeenCalledWith('friends:request', { playerId: 'bob' });
     expect(wrapper.emitted('close')).toHaveLength(1);
@@ -200,6 +214,25 @@ describe('PlayerPanel', () => {
     const asGuest = panel('bob', view('cat', false, { ...bob, rank: 'phd' }));
     expect(names()).toEqual(['\u00d7']);
     asGuest.unmount();
+  });
+
+  test("offers no request to a friend, whom it calls by the viewer's name for them, nor again to whoever was asked", async () => {
+    signedIn.account.summary = { username: 'Cat', avatar: null };
+    signedIn.request.mockResolvedValue({ ok: false, error: 'no_such_profile' });
+    const bobs = { ...bob, rank: 'phd' as const, handle: 'b0b000000000' };
+    friendsAre([{ handle: 'b0b000000000', username: 'Bob', alias: 'Bobby', avatar: null }]);
+    const friendly = panel('bob', view('cat', false, bobs));
+    await flushPromises();
+    expect(names()).toEqual(['\u00d7', 'Open the full page']);
+    expect(dialogs()[0]?.querySelector('h2')?.textContent?.trim()).toBe('Bobby Bob');
+    expect(dialogs()[0]?.querySelector('h2 .subtitle')?.textContent?.trim()).toBe('Bob');
+    friendly.unmount();
+    friendsAre([], [{ handle: 'b0b000000000', username: 'Bob', avatar: null }]);
+    const asked = panel('bob', view('cat', false, bobs));
+    await flushPromises();
+    expect(names()).toEqual(['\u00d7', 'Request sent', 'Open the full page']);
+    expect(button('Request sent').disabled).toBe(true);
+    asked.unmount();
   });
 
   test('shows a brief card of an account, and its whole page over the panel, with the way back to it', async () => {

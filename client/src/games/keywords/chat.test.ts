@@ -21,6 +21,22 @@ describe('the group chat', () => {
     expect(byTurn([])).toEqual([]);
   });
 
+  test('puts what was written after the game apart, last, though it has the last turn', () => {
+    const after = [
+      ...messages,
+      { ...message(6, 'a', 4), after: true as const },
+      { ...message(7, 'b', 4), after: true as const },
+    ];
+    expect(
+      byTurn(after).map(({ turn, after: late, messages: some }) => [turn, late ?? false, some.map(({ id }) => id)]),
+    ).toEqual([
+      [1, false, [1, 2]],
+      [3, false, [3, 4]],
+      [4, false, [5]],
+      [4, true, [6, 7]],
+    ]);
+  });
+
   test("counts the others' messages after the last one seen", () => {
     expect(unread(messages, 0, 'a')).toBe(3);
     expect(unread(messages, 3, 'a')).toBe(2);

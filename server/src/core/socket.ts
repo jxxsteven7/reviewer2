@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
 import {
+  checkAlias,
   checkContact,
   checkCredit,
   checkFeedback,
+  checkFriendNote,
   checkLink,
   checkReport,
   cleanName,
@@ -439,9 +441,27 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
 
   // A room that closes with its game on cuts the game short there, which keeps its record
-  // (Room.cut()).
+  // (Room.cut()); one that closes after its game ended keeps what the groups said since.
   function cut(room: Room, why: string): void {
     if (room.cut(why)) safely('records', () => keepRecords(room));
+    else keepReview(room);
+  }
+
+  // What the groups said after the end of the game, as they talked it over, goes into the game's
+  // record as the room leaves the game behind (Room.review()): when the chair plays again or starts
+  // the next match, and when the room closes. What an account deleted meanwhile said is left out,
+  // as from the rest of the log.
+  function keepReview(room: Room): void {
+    if (!accounts) return;
+    safely('records', () => {
+      const review = room.review();
+      if (!review) return;
+      const players = review.accounts.filter(({ accountId }) => accounts.store.byId(accountId) !== undefined);
+      const forgotten = new Set(
+        review.accounts.filter((player) => !players.includes(player)).map(({ playerId }) => playerId),
+      );
+      accounts.keepReview(review.gameId, unsay({ entries: review.entries }, forgotten).entries, players);
+    });
   }
 
   // Takes connections out of their room and tells them why, apart from `except`, which have been
@@ -643,12 +663,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // A friend as the account page shows them: online or not, and where, which only friends learn
   // (docs/architecture.md#friends), and what the two have played together
   // (docs/architecture.md#friend-duos). A private room is shown without its code.
-  function friendView({ id, handle, username, avatar }: FriendRow, duo: DuoView | null): FriendView {
+  function friendView({ id, handle, username, avatar, alias }: FriendRow, duo: DuoView | null): FriendView {
     const online = isOnline(id);
     const room = online ? roomOf(id) : undefined;
     return {
       handle,
       username,
+      ...(alias ? { alias } : {}),
       avatar: avatarUrl({ avatar }),
       online,
       room: room ? { code: room.public ? room.code : null } : null,
@@ -656,21 +677,28 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     };
   }
 
-  const requestView = ({ handle, username, avatar }: FriendRow): FriendRequestView => ({
+  const requestView = ({ handle, username, avatar, note }: FriendRow): FriendRequestView => ({
     handle,
     username,
     avatar: avatarUrl({ avatar }),
+    ...(note ? { note } : {}),
   });
 
   // An invitation as the invited account hears it. The inviter is still in the room, or the
-  // invitation would no longer stand.
+  // invitation would no longer stand, and comes with the name that the invitee gives them, if any,
+  // which goes to the invitee alone.
   function invitationView(invitation: Invitation): InvitationView {
     const inviter = invitation.room.memberByKey(invitation.inviterKey);
+    const alias = accounts?.friends.store.aliasOf(invitation.inviteeId, invitation.inviterId) ?? null;
     return {
       id: invitation.id,
       code: invitation.room.code,
       roomId: invitation.room.id,
-      from: { username: inviter?.name ?? '', avatar: inviter?.account?.avatar ?? null },
+      from: {
+        username: inviter?.name ?? '',
+        ...(alias === null ? {} : { alias }),
+        avatar: inviter?.account?.avatar ?? null,
+      },
       expiresInMs: invitations.remaining(invitation),
     };
   }
@@ -1143,10 +1171,18 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     );
 
     on(handlers, 'room:end', ({ gameId }) => asChair(socket, (room) => changed(room, room.withdraw(gameId))));
-    on(handlers, 'room:again', ({ gameId }) => asChair(socket, (room) => changed(room, room.again(gameId))));
+    on(handlers, 'room:again', ({ gameId }) =>
+      asChair(socket, (room) => {
+        keepReview(room);
+        return changed(room, room.again(gameId));
+      }),
+    );
     on(handlers, 'room:matchEnd', ({ matchId }) => asChair(socket, (room) => changed(room, room.endMatch(matchId))));
     on(handlers, 'room:matchNext', ({ matchId, match }) =>
-      asChair(socket, (room) => changed(room, room.nextMatch(matchId, match))),
+      asChair(socket, (room) => {
+        keepReview(room);
+        return changed(room, room.nextMatch(matchId, match));
+      }),
     );
     on(handlers, 'room:shuffle', () => asChair(socket, (room) => changed(room, room.shuffle())));
     on(handlers, 'room:spectate', ({ playerId }) => asChair(socket, (room) => changed(room, room.bench(playerId))));
@@ -1223,9 +1259,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // to have an account, so asking them costs one of the day's requests only if one goes out: it is
     // taken once the player is found, and given back if the request is refused. Both sides hear
     // that something changed.
-    on(handlers, 'friends:request', ({ username, playerId }) => {
+    on(handlers, 'friends:request', ({ username, playerId, note: text }) => {
       const me = accountOf(conn);
       if (!me.ok) return me;
+      // The line comes first, so that one that is too long costs none of the day's requests.
+      const { note, problem } = checkFriendNote(text);
+      if (problem) return fail(problem);
       const friends = (accounts as Accounts).friends;
       let target: Account | undefined;
       if (playerId !== undefined) {
@@ -1242,7 +1281,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }
       if (!target) return fail('no_such_account');
       if (playerId !== undefined && !friends.take(me.account.id)) return fail('friend_limited');
-      const result = friends.request(me.account.id, target.id);
+      const result = friends.request(me.account.id, target.id, note);
       if (!result.ok) {
         if (playerId !== undefined) friends.refund(me.account.id);
         return result;
@@ -1266,6 +1305,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         tellFriends(me.account.id, other.id);
         return ok();
       };
+    // The name the account gives a friend, for itself alone: only its own connections hear that
+    // something changed. A name that is no account's is answered as a stranger's.
+    on(handlers, 'friends:alias', ({ username, alias: text }) => {
+      const me = accountOf(conn);
+      if (!me.ok) return me;
+      const { alias, problem } = checkAlias(text);
+      if (problem) return fail(problem);
+      const other = (accounts as Accounts).byName(username);
+      if (!other) return fail('not_friends');
+      const result = (accounts as Accounts).friends.alias(me.account.id, other.id, alias);
+      if (!result.ok) return result;
+      tellAccount(me.account.id, 'friends:changed');
+      return ok();
+    });
     on(handlers, 'friends:accept', about('accept'));
     on(handlers, 'friends:decline', about('decline'));
     on(handlers, 'friends:remove', about('remove'));

@@ -1,11 +1,19 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { BOARD_SIZE, cardsClash, LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
 import { afterAll, describe, expect, test } from 'vitest';
 import { seededRng } from './random';
-import { drawWords, FALLBACK_WORDS, loadWordLibrary, WordLibrary, type Clash, type WordListData } from './words';
+import {
+  drawWords,
+  FALLBACK_WORDS,
+  GLOSSES_FILE,
+  loadWordLibrary,
+  WordLibrary,
+  type Clash,
+  type WordListData,
+} from './words';
 
 // Chinese test words are written as \u escapes (docs/rules/language.md).
 const zh = (i: number) => `\u8bcd${i}`;
@@ -194,6 +202,50 @@ describe('the word library', () => {
     });
     const library = new WordLibrary([field('a', ['modeling']), field('b', ['Modeling', 'modelled'])]);
     expect(library.pool(['a', 'b'], 'en')).toEqual([{ word: 'Model', forms: ['modeling', 'modelled'] }]);
+  });
+});
+
+describe('the English of the characters', () => {
+  const WORD = '\u8bcd'; // the character of zh(), "word"
+
+  test('gives a Chinese word the meanings of its characters, once each, and an English word none', () => {
+    const glosses = new Map([
+      [WORD, ['word', 'term']],
+      ['\u8bed', ['language', 'word']],
+    ]);
+    const library = new WordLibrary([list('ml', 2)], () => {}, glosses);
+    expect(library.pool(['ml'], 'zh')[0]).toMatchObject({ word: zh(0), glosses: ['word', 'term'] });
+    expect(library.pool(['ml'], 'en')[0]).not.toHaveProperty('glosses');
+    expect(library.glossesOf(`${WORD}\u8bed`)).toEqual(['word', 'term', 'language']);
+    expect(library.glossesOf('Word')).toEqual([]);
+    expect(library.glossed).toBe(2);
+  });
+
+  test('reads them from beside the lists, and goes without them when they are missing or broken', () => {
+    const lists = mkdtempSync(join(tmpdir(), 'reviewer2-glosses-'));
+    try {
+      writeFileSync(join(lists, 'ml.json'), JSON.stringify(list('ml', 26)));
+      expect(loadWordLibrary(lists).glossed).toBe(0);
+      mkdirSync(join(lists, 'dictionary'));
+      writeFileSync(join(lists, GLOSSES_FILE), JSON.stringify({ glosses: { [WORD]: ['Word'], x: 'none' } }));
+      const skipped: unknown[][] = [];
+      const library = loadWordLibrary(lists, (...report) => skipped.push(report));
+      expect(library.glossesOf(zh(1))).toEqual(['word']);
+      expect(skipped).toEqual([[GLOSSES_FILE, 'meanings that are not a list of text', 'x']]);
+      writeFileSync(join(lists, GLOSSES_FILE), '{ nope');
+      const broken: string[] = [];
+      expect(loadWordLibrary(lists, (file) => broken.push(file)).glossed).toBe(0);
+      expect(broken).toEqual([GLOSSES_FILE]);
+    } finally {
+      rmSync(lists, { recursive: true, force: true });
+    }
+  });
+
+  test('knows the characters that players gave away in English at the table', () => {
+    const library = loadWordLibrary(join(import.meta.dirname, '..', '..', '..', 'words'));
+    // The ball of the Chinese word for "rebound", and the net of the one for "road network".
+    expect(library.glossesOf('\u7bee\u677f\u7403')).toContain('ball');
+    expect(library.glossesOf('\u8def\u7f51')).toEqual(expect.arrayContaining(['net', 'web']));
   });
 });
 

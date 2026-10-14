@@ -19,10 +19,12 @@ import type {
 export interface Card {
   word: string;
   // The same term in the other languages of the word library, if it has any, the other forms of
-  // the term that the library lists, in any language, and the pinyin of a Chinese word.
+  // the term that the library lists, in any language, the pinyin of a Chinese word and the English
+  // meanings of its characters.
   translations?: readonly string[];
   forms?: readonly string[];
   pinyin?: string;
+  glosses?: readonly string[];
   color: CardColor;
   revealed: boolean;
 }
