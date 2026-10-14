@@ -802,6 +802,24 @@ describe('a database in DATA_DIR', () => {
     });
   });
 
+  test('of the seventeenth release keeps its replays when they get whether a game was practice', async () => {
+    const seventeenth = await open(dir, MIGRATIONS.slice(0, 17));
+    seventeenth.db.exec(
+      "INSERT INTO replays (game_id, game, ended_at, ending, agents) VALUES ('g', 'keywords', 'now', 'finished', 3)",
+    );
+    seventeenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 18));
+    expect(migrated).toMatchObject({ schema: 18, migratedFrom: 17 });
+    const { db } = migrated;
+    // A game from before says nothing of it, whether or not an AI played in it.
+    expect(db.prepare('SELECT game_id, ending, agents, practice FROM replays').all()).toEqual([
+      { game_id: 'g', ending: 'finished', agents: 3, practice: null },
+    ]);
+    db.exec("UPDATE replays SET practice = 1 WHERE game_id = 'g'");
+    expect(() => db.exec("UPDATE replays SET practice = 2 WHERE game_id = 'g'")).toThrow(/CHECK/);
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(

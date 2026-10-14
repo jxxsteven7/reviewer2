@@ -515,4 +515,10 @@ export const MIGRATIONS: readonly string[] = [
   DROP TABLE acknowledgments;
   CREATE INDEX feedback_adopted ON feedback (adopted_at) WHERE adopted_at IS NOT NULL;
   `,
+  // 18: practice rooms (docs/architecture.md#practice-rooms). Each game gets whether it was played
+  // in a room made to play with AI players, apart from one where the chair invited them; the
+  // records from before have nothing here.
+  `
+  ALTER TABLE replays ADD COLUMN practice INTEGER CHECK (practice IN (0, 1));
+  `,
 ];

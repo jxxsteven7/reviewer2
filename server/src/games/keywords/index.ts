@@ -22,7 +22,15 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import { agentLimitReached, agentMove, agentProblems, agentSeat, agentTask, personSeated } from './agents';
+import {
+  agentLimitReached,
+  agentMove,
+  agentProblems,
+  agentSeat,
+  agentTask,
+  personSeated,
+  practiceSeats,
+} from './agents';
 import type { AgentFeats, GameContext, GameLogNote, GameModule, GameTitle, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
@@ -439,6 +447,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return sit(data, ctx, playerId, wanted);
   },
 
+  practice: practiceSeats,
   agentTask,
   agentMove: (data, _ctx, playerId, task, answer, made) => agentMove(data, playerId, task, answer, made),
 

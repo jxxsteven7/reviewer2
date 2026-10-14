@@ -48,6 +48,7 @@ export const ROOM_MESSAGES = {
   'meta:fields': none,
   'meta:rooms': none,
   'meta:seats': none,
+  'meta:agents': none,
   // Feedback for the author. Its text, contact and credit are for the rules in feedback.ts to
   // judge, which refuse a long text before looking at it, so that it gets feedback_too_long and
   // not bad_request. The server takes no message of more than 16 KB at all (server.ts). What older
@@ -65,7 +66,9 @@ export const ROOM_MESSAGES = {
   }),
   // A room starts with its game's default settings when `settings` is left out. A creator who is
   // logged in has their username as the name, and needs to give none. With `match`, the room plays
-  // a match by those rules; with `public`, it is listed for anyone with an account to join.
+  // a match by those rules; with `public`, it is listed for anyone with an account to join. With
+  // `practice`, it is a practice room (docs/architecture.md#practice-rooms): the creator plays the
+  // role they name, as the game calls it, AI players take the other seats, and the game starts.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
@@ -75,6 +78,7 @@ export const ROOM_MESSAGES = {
     play,
     match: match.optional(),
     public: z.boolean().optional(),
+    practice: z.object({ role: z.string().max(32) }).optional(),
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out

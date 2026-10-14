@@ -165,6 +165,10 @@ Where the chair may have them ([../architecture.md](../architecture.md#ai-player
 
 It knows what the seat it plays sees, no more: a student never the colors of the cards still face down. It reads no chat. What it says and does goes through the same rules and checks as anyone's.
 
+## Practice rooms
+
+In a [practice room](../architecture.md#practice-rooms), the roles are `captain` and `guesser`: its creator takes that seat in the red group, and Reviewer 1 the red group's other role and both of the blue group's, invited in that order, so that a person sits first (`needs_human`). The default time limits are on, as a game with AI players needs (`needs_timers`).
+
 ## Messages
 
 On top of the room messages ([../architecture.md](../architecture.md#messages)); schemas in `shared/src/schemas.ts`.

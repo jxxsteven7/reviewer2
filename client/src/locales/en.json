@@ -20,6 +20,29 @@
     "intro": "Join a room, pick a nickname, and play!",
     "players": "4–30 players",
     "newRoom": "New room",
+    "practice": {
+      "entry": "Practice with Reviewer\u00a01",
+      "entryHint": "Just you and three AI players",
+      "offline": "Reviewer\u00a01 is offline for now",
+      "intro": "Play on your own: you are the PI or a student, and Reviewer\u00a01 takes the other three seats.",
+      "loginTitle": "Log in to start",
+      "loginHint": "Registering takes only a username and a password.",
+      "roleTitle": "You play as",
+      "roles": {
+        "captain": "PI",
+        "guesser": "Student"
+      },
+      "roleHints": {
+        "captain": "You give the clues, and Reviewer\u00a01 guesses as your student.",
+        "guesser": "Reviewer\u00a01 gives the clues as your PI, and you guess."
+      },
+      "you": "You",
+      "fieldsTwo": "{first} and {second}",
+      "fieldsMore": "{first}, {second} and others, {count} in all",
+      "chooseField": "Choose at least one word list to start.",
+      "note": "Practice games bring no points, streaks or titles.",
+      "start": "Start"
+    },
     "forthcoming": "Forthcoming",
     "games": {
       "keywords": {
@@ -660,6 +683,7 @@
     "agents_not_allowed": "AI players can't be invited here: they are for private rooms, and only for some accounts while they are tried out.",
     "agents_in_room": "Remove the AI players first: public rooms and matches have none.",
     "player_is_agent": "That's an AI player: the chair can only remove it.",
+    "agents_offline": "Reviewer\u00a01 is offline for now. Try again in a while.",
     "game_over": "The game is over.",
     "not_your_turn": "It's not your group's turn.",
     "not_captain": "Only the PI can give the clue.",

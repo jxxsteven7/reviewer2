@@ -46,6 +46,10 @@ export const RETRY_MS = 10_000;
 export const MAX_RETRY_MS = 60_000;
 // How often the agent is asked whether it is back, once it has failed.
 export const PING_MS = 30_000;
+// How long what the agent last said holds, while it is up, for whoever asks whether the AI players
+// can play (recheck()): past it, they are asked again. Nothing asks the agent while no AI plays,
+// so without this a model that went away meanwhile would go unseen until the next game.
+export const FRESH_MS = 30_000;
 // The most moves that one answer can make, which no game comes near: a guard against a game whose
 // agentMove() would go on for ever.
 const MAX_MOVES = 30;
@@ -108,6 +112,11 @@ export class AgentDriver {
   // The timer of each room that waits for someone offline to be played for.
   readonly #wakeups = new Map<Room, { at: number; timer: unknown }>();
   #ping: unknown = null;
+  // When the agent last answered as one that is there, whether a recheck() is on its way, and
+  // whether the server has stopped, after which an answer that comes changes nothing.
+  #heard = -Infinity;
+  #rechecking = false;
+  #closed = false;
   // When the AI's steps of the last hour were asked for, and when those that failed did.
   #steps: number[] = [];
   #failures: number[] = [];
@@ -181,8 +190,25 @@ export class AgentDriver {
     this.#failures = this.#failures.filter((at) => at >= since);
   }
 
+  // Asks the agent whether it is still there, for a page that is about to offer the AI players, as
+  // the home page does with practice rooms (docs/architecture.md#practice-rooms), unless it has
+  // answered in the last FRESH_MS or is down, when the pings every PING_MS see to it. What the
+  // agent answers changes `state` for the next one who asks.
+  recheck(): void {
+    const { now, channel } = this.#options;
+    if (!this.state.up || this.#rechecking || now() - this.#heard < FRESH_MS) return;
+    this.#rechecking = true;
+    void channel.ask({ v: 1, kind: 'ping' }, 5_000).then((outcome) => {
+      this.#rechecking = false;
+      if (this.#closed) return;
+      if (outcome.ok && outcome.kind === 'ping') this.#heard = now();
+      else this.#down();
+    });
+  }
+
   // Stops asking whether the agent is back, when the server stops.
   close(): void {
+    this.#closed = true;
     if (this.#ping !== null) this.#options.timers.stop(this.#ping);
     this.#ping = null;
     for (const room of [...this.#running.keys(), ...this.#wakeups.keys()]) this.forget(room);
@@ -305,10 +331,15 @@ export class AgentDriver {
         if (!outcome.ok) {
           this.#failures.push(now());
           log('agent_failed', { code: room.code, kind: run.task.kind, error: outcome.error });
-          if (DOWN_ERRORS.has(outcome.error)) this.#down();
-          else if (!late) this.#retry(room, id, run);
+          if (DOWN_ERRORS.has(outcome.error)) {
+            this.#down();
+            return;
+          }
+          this.#heard = now();
+          if (!late) this.#retry(room, id, run);
           return;
         }
+        this.#heard = now();
         if (late || outcome.kind === 'ping') return;
         run.answer = outcome;
         this.#next(room, id, run);
@@ -391,6 +422,7 @@ export class AgentDriver {
     this.#ping = null;
     void this.#options.channel.ask({ v: 1, kind: 'ping' }, 5_000).then((outcome) => {
       if (outcome.ok && outcome.kind === 'ping') {
+        this.#heard = this.#options.now();
         if (this.state.up) return;
         this.state.up = true;
         this.#options.log('agent_up', { model: outcome.model });

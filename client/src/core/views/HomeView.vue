@@ -19,16 +19,18 @@ import CreateRoom from './CreateRoom.vue';
 import JoinRoom from './JoinRoom.vue';
 import LanguageGate from './LanguageGate.vue';
 import FriendsPlaying from './FriendsPlaying.vue';
+import PracticeRoom from './PracticeRoom.vue';
 import PublicRooms from './PublicRooms.vue';
 
 // The home page: the way back to any room where the player still has a seat, the tagline, a line
 // on how to play, the ways into a room, by its number, by the rooms that friends are in or from the
-// list of public rooms, the first game on a big sticker with the games to come below it, the
-// feedback contributions, the acknowledgments and the sponsors, folded, and footnotes, which offer
-// a way to buy the author a cola and the way to send them feedback, each with a drawing, and name
-// the build's version. The author, linked to their page, follows the line on how to play, or on a
-// narrow English page the tagline, whose last line has room for them there; the page holds both
-// and shows one. On a wide screen the games stand on the right, beside the rest.
+// list of public rooms, the first game on a big sticker, with the way to practise it with
+// Reviewer 1, the games to come below it, the feedback contributions, the acknowledgments and the
+// sponsors, folded, and footnotes, which offer a way to buy the author a cola and the way to send
+// them feedback, each with a drawing, and name the build's version. The author, linked to their
+// page, follows the line on how to play, or on a narrow English page the tagline, whose last line
+// has room for them there; the page holds both and shows one. On a wide screen the games stand on
+// the right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
@@ -99,6 +101,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
             </div>
             <p class="summary">{{ t('home.games.keywords.summary') }}</p>
             <p class="meta">{{ t('home.players') }}</p>
+            <PracticeRoom v-if="!creating" />
             <CreateRoom v-if="creating" game="keywords" :words-needed="BOARD_SIZE" @cancel="creating = false" />
           </li>
           <li v-for="game in forthcoming" :key="game" class="entry forthcoming">
@@ -231,7 +234,8 @@ ol {
 }
 
 /* The first game is a big sticker that takes the row: its name and players on one row, the
-   summary below, the button at the bottom, and the room setup after that when it opens. The
+   summary below, the button and the way to practise at the bottom, and the room setup after that
+   when it opens, in their place. The
    dashed stickers of the games to come follow, with room above them. */
 .entry:not(.forthcoming) {
   display: grid;
@@ -241,6 +245,7 @@ ol {
     'title meta'
     'summary summary'
     'button button'
+    'practice practice'
     'create create';
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -263,6 +268,10 @@ ol {
 
 .entry:not(.forthcoming) > :deep(.create) {
   grid-area: create;
+}
+
+.entry:not(.forthcoming) > :deep(.practice) {
+  grid-area: practice;
 }
 
 .title {

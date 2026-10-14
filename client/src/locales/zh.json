@@ -20,6 +20,29 @@
     "intro": "加入房间，取个昵称就能玩！",
     "players": "4–30 人",
     "newRoom": "新建房间",
+    "practice": {
+      "entry": "和一号审稿人练一局",
+      "entryHint": "一个人也能玩，AI 坐满其余座位",
+      "offline": "一号审稿人暂时不在线",
+      "intro": "一个人也能玩：你当导师或学生，其余三个座位由一号审稿人坐满。",
+      "loginTitle": "登录后就能开始",
+      "loginHint": "注册只要用户名和密码。",
+      "roleTitle": "你来当",
+      "roles": {
+        "captain": "导师",
+        "guesser": "学生"
+      },
+      "roleHints": {
+        "captain": "你出题，一号审稿人当你的学生来猜。",
+        "guesser": "一号审稿人当导师出题，你来猜。"
+      },
+      "you": "你",
+      "fieldsTwo": "{first}、{second}",
+      "fieldsMore": "{first}、{second} 等 {count} 个",
+      "chooseField": "先选至少一个词库，才能开局。",
+      "note": "练习局不加学术积分，也不算连胜和称号。",
+      "start": "开局"
+    },
     "forthcoming": "即将发表",
     "games": {
       "keywords": {
@@ -660,6 +683,7 @@
     "agents_not_allowed": "这里不能邀请 AI 玩家：AI 只能进私密房间，内测期间也只对部分账号开放。",
     "agents_in_room": "请先移出 AI 玩家：公开房间和比赛里不能有 AI。",
     "player_is_agent": "这是 AI 玩家，房主只能把它移出房间。",
+    "agents_offline": "一号审稿人暂时不在线，过一会儿再试吧。",
     "game_over": "游戏已经结束了。",
     "not_your_turn": "现在没轮到你们组。",
     "not_captain": "只有导师可以给提示。",
