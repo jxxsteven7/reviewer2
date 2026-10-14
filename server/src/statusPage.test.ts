@@ -253,19 +253,20 @@ describe('the feedback', () => {
     const status = renderStatusPage(stats(), [], NOW);
     expect(text(status)).toContain('Feedback None yet.');
     expect(status).toContain('<meta http-equiv="refresh" content="5">');
+    // Open is new and issue alone; one piece of feedback was resolved and thanked, and counts in both.
     const some = renderStatusPage(stats(), [], NOW, {
-      total: 12,
+      total: 11,
       statuses: { new: 3, issue: 2, resolved: 1, thanked: 2, closed: 3, trash: 1 },
     });
     expect(some).toContain(
-      '<p class="pills"><a class="badge" href="/feedback">Open <b>8</b></a>' +
+      '<p class="pills"><a class="badge" href="/feedback">Open <b>5</b></a>' +
         '<a class="badge new" href="/feedback?status=new">New <b>3</b></a>' +
         '<a class="badge issue" href="/feedback?status=issue">Issue <b>2</b></a>' +
         '<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>1</b></a>' +
         '<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>2</b></a>' +
         '<a class="badge closed" href="/feedback?status=closed">Closed <b>3</b></a>' +
         '<a class="badge trash" href="/feedback?status=trash">Trash <b>1</b></a></p>' +
-        '<p class="note">12 in all &middot; <a href="/feedback">Read it</a></p>',
+        '<p class="note">11 in all &middot; <a href="/feedback">Read it</a></p>',
     );
     expect(some).not.toContain('<article>');
 
@@ -361,8 +362,15 @@ describe('the feedback', () => {
 
   test('shows the whole trail of what became of it, and how long the trash has left', () => {
     const html = page({
-      total: 4,
+      total: 6,
       entries: [
+        feedback(6, { acknowledgmentId: 8, status: 'thanked' }),
+        feedback(5, {
+          resolvedPr: 72,
+          resolvedAt: '2026-10-05T10:00:00.000Z',
+          acknowledgmentId: 9,
+          status: 'thanked',
+        }),
         feedback(4, { resolvedPr: 50, resolvedAt: '2026-10-05T10:00:00.000Z', status: 'resolved' }),
         feedback(3, {
           issue: 42,
@@ -376,7 +384,10 @@ describe('the feedback', () => {
         feedback(1, { deletedAt: '2026-09-08T11:59:59.000Z', status: 'trash' }),
       ],
     });
-    expect(html).toContain('<span class="badge resolved">PR #50</span>');
+    // The badge writes out all that the feedback came to: resolved, thanked, or both.
+    expect(html).toContain('<span class="badge resolved">Resolved #50</span>');
+    expect(html).toContain('<span class="badge thanked">Resolved #72 &middot; Thanked</span>');
+    expect(html).toContain('<span class="badge thanked">Thanked</span>');
     expect(html).toContain('<p class="trail">resolved by PR #50</p>');
     expect(html).toContain('<span class="badge closed">Closed</span>');
     expect(html).toContain(
@@ -628,13 +639,13 @@ describe('the feedback', () => {
     const statuses = { new: 2, issue: 1, resolved: 1, thanked: 1, closed: 2, trash: 1 };
     const open = page({ total: 8, statuses, kinds: { idea: 3, game: 2 }, entries: [feedback(8)] });
     expect(open).toContain(
-      '<p class="pills"><strong>Open <b>5</b></strong><a href="/feedback?status=new">New <b>2</b></a>' +
+      '<p class="pills"><strong>Open <b>3</b></strong><a href="/feedback?status=new">New <b>2</b></a>' +
         '<a href="/feedback?status=issue">Issue <b>1</b></a><a href="/feedback?status=resolved">Resolved <b>1</b></a>' +
         '<a href="/feedback?status=thanked">Thanked <b>1</b></a><a href="/feedback?status=closed">Closed <b>2</b></a>' +
         '<a href="/feedback?status=trash">Trash <b>1</b></a></p>',
     );
     const trash = page({ total: 8, statuses, kinds: { idea: 1 }, view: 'trash', entries: [feedback(3)], kind: 'idea' });
-    expect(trash).toContain('<a href="/feedback?kind=idea">Open <b>5</b></a>');
+    expect(trash).toContain('<a href="/feedback?kind=idea">Open <b>3</b></a>');
     expect(trash).toContain('<strong>Trash <b>1</b></strong>');
     expect(trash).toContain('<a href="/feedback?status=closed&amp;kind=idea">Closed <b>2</b></a>');
     expect(page({ total: 8, statuses, view: 'closed' })).toContain('<p class="note">None here.</p>');

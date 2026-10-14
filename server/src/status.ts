@@ -23,9 +23,10 @@ import type { FeedbackStore } from './store/feedback';
 // alone. That is why it needs no password. `/` is the page and `/status.json` the same numbers
 // for scripts. `/feedback` is the feedback that players sent, a page of it at a time:
 // `/feedback?before=<id>` shows what came before that one, `/feedback?kind=<kind>` only the
-// feedback of one kind, and `/feedback?status=<status>` only what is open, which it shows
-// otherwise, of one status, or in the trash. `/reports` is the reports that players sent of each
-// other, paged the same way. All of it is read-only: what became of the feedback is changed with
+// feedback of one kind, and `/feedback?status=<status>` one view of a status, where the resolved
+// and the thanked go by the facts and may overlap, or what is in the trash; without it, what is
+// open, new or published as an issue. `/reports` is the reports that players sent of each other,
+// paged the same way. All of it is read-only: what became of the feedback is changed with
 // admin.cjs alone, whose commands the feedback page shows as text to copy, with ADMIN_COMMAND in
 // front, or the operator's own command for them, which can also publish an issue in one go
 // (FEEDBACK_COMMAND).

@@ -442,12 +442,12 @@ describe('the status server', () => {
 
   test('shows the open feedback unless asked for a status, with the trail of each and the trash with its days left', async () => {
     server = await startServer();
-    for (let i = 1; i <= 6; i += 1) {
+    for (let i = 1; i <= 7; i += 1) {
       server.feedback.add({
         kind: i % 2 === 0 ? 'bug' : 'idea',
         text: `Number ${i}`,
         contact: null,
-        credit: i === 4 ? 'Ann' : null,
+        credit: i === 4 || i === 7 ? 'Ann' : null,
         link: null,
         accountId: null,
         publicIssue: true,
@@ -462,45 +462,59 @@ describe('the status server', () => {
     server.accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: 4, accountId: null });
     server.feedback.close(5);
     server.feedback.delete(6);
+    // Resolved and thanked at once, which is neither open nor one of the two alone.
+    server.feedback.resolve(7, 51);
+    server.accounts.acknowledgments.add({ name: 'Ann', kind: 'feedback', feedbackId: 7, accountId: null });
     await startStatus();
     const shown = (body: string) =>
       [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
 
+    // Open is what still waits: new, or published as an issue.
     const open = (await get(base, '/feedback')).body;
-    expect(shown(open)).toEqual([4, 3, 2, 1]);
-    expect(open).toContain('<strong>Open <b>4</b></strong>');
+    expect(shown(open)).toEqual([2, 1]);
+    expect(open).toContain('<strong>Open <b>2</b></strong>');
+    expect(open).toContain('<a href="/feedback?status=resolved">Resolved <b>2</b></a>');
+    expect(open).toContain('<a href="/feedback?status=thanked">Thanked <b>2</b></a>');
     expect(open).toContain('<a href="/feedback?status=closed">Closed <b>1</b></a>');
     expect(open).toContain('<a href="/feedback?status=trash">Trash <b>1</b></a>');
-    expect(open).toContain('<strong>All <b>4</b></strong><a href="/feedback?kind=idea">Idea <b>2</b></a>');
+    expect(open).toContain('<strong>All <b>2</b></strong><a href="/feedback?kind=idea">Idea <b>1</b></a>');
     expect(open).toContain('<span class="badge issue">Issue #42</span>');
-    expect(open).toContain('<p class="trail">resolved by PR #50</p>');
-    expect(open).toContain('<p class="trail">thanked as acknowledgment #1</p>');
     for (const [query, ids] of [
       ['?status=new', [1]],
       ['?status=issue', [2]],
-      ['?status=resolved', [3]],
-      ['?status=thanked', [4]],
+      ['?status=resolved', [7, 3]],
+      ['?status=thanked', [7, 4]],
       ['?status=closed', [5]],
       ['?status=trash', [6]],
       ['?status=trash&kind=idea', []],
-      ['?status=open&kind=bug', [4, 2]],
-      ['?status=open&before=3', [2, 1]],
+      ['?status=open&kind=bug', [2]],
+      ['?status=open&before=2', [1]],
+      ['?status=resolved&kind=idea', [7, 3]],
       // A status that isn't one is taken for none.
-      ['?status=all', [4, 3, 2, 1]],
-      ['?status=', [4, 3, 2, 1]],
-      ['?status=Trash', [4, 3, 2, 1]],
+      ['?status=all', [2, 1]],
+      ['?status=', [2, 1]],
+      ['?status=Trash', [2, 1]],
     ] as const) {
       expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual([...ids]);
     }
+    // The badges write out what the feedback came to.
+    const resolved = (await get(base, '/feedback?status=resolved')).body;
+    expect(resolved).toContain('<span class="badge thanked">Resolved #51 &middot; Thanked</span>');
+    expect(resolved).toContain('<span class="badge resolved">Resolved #50</span>');
+    expect(resolved).toContain('<p class="trail">resolved by PR #50</p>');
+    const thanked = (await get(base, '/feedback?status=thanked')).body;
+    expect(thanked).toContain('<span class="badge thanked">Thanked</span>');
+    expect(thanked).toContain('<p class="trail">thanked as acknowledgment #1</p>');
     const trash = (await get(base, '/feedback?status=trash')).body;
     expect(trash).toContain('<span class="badge trash">Trash</span>');
     expect(trash).toMatch(/<p class="trail">in the trash since \d{4}-\d{2}-\d{2}, 30 days left<\/p>/);
     expect(trash).toContain('<a href="/feedback?status=closed">Closed <b>1</b></a>');
     expect(trash).toContain('<strong>All <b>1</b></strong>');
     const status = (await get(base, '/')).body;
-    expect(status).toContain('<a class="badge" href="/feedback">Open <b>4</b></a>');
-    expect(status).toContain('<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>1</b></a>');
-    expect(status).toContain('<p class="note">6 in all &middot; <a href="/feedback">Read it</a></p>');
+    expect(status).toContain('<a class="badge" href="/feedback">Open <b>2</b></a>');
+    expect(status).toContain('<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>2</b></a>');
+    expect(status).toContain('<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>2</b></a>');
+    expect(status).toContain('<p class="note">7 in all &middot; <a href="/feedback">Read it</a></p>');
   });
 
   test('answers only to the names of this machine, on any port, to keep a page elsewhere from reading it', async () => {
