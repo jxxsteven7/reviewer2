@@ -15,7 +15,7 @@ import SignIn from './SignIn.vue';
 // screen of one; no other path is honored. Logging in leads back there. A page that is logged in
 // already, as when the player logged in from another tab, goes back at once; its connection, made
 // as a guest, which the room refused, is made again by loadAccount() (account.ts). With
-// `register`, the form opens on registering.
+// `register`, the form opens on registering, as the home page's way to practice asks for a guest.
 //
 // The account's own page is for a page that stays. One that is about to leave keeps showing what
 // it showed, the loading line or the form, busy, until the navigation lands: the account's own page

@@ -24,7 +24,7 @@ import PublicRooms from './PublicRooms.vue';
 
 // The home page: the way back to any room where the player still has a seat, the tagline, a line
 // on how to play, the ways into a room, by its number, by the rooms that friends are in or from the
-// list of public rooms, the first game on a big sticker, with the way to practise it with
+// list of public rooms, the first game on a big sticker, with the way to practice it with
 // Reviewer 1, the games to come below it, the feedback contributions, the acknowledgments and the
 // sponsors, folded, and footnotes, which offer a way to buy the author a cola and the way to send
 // them feedback, each with a drawing, and name the build's version. The author, linked to their
@@ -234,9 +234,9 @@ ol {
 }
 
 /* The first game is a big sticker that takes the row: its name and players on one row, the
-   summary below, the button and the way to practise at the bottom, and the room setup after that
-   when it opens, in their place. The
-   dashed stickers of the games to come follow, with room above them. */
+   summary below, the button and the way to practice at the bottom, and the room setup in the
+   place of the way to practice when it opens. The dashed stickers of the games to come follow,
+   with room above them. */
 .entry:not(.forthcoming) {
   display: grid;
   width: 100%;
@@ -245,7 +245,6 @@ ol {
     'title meta'
     'summary summary'
     'button button'
-    'practice practice'
     'create create';
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -266,12 +265,9 @@ ol {
   justify-self: stretch;
 }
 
-.entry:not(.forthcoming) > :deep(.create) {
-  grid-area: create;
-}
-
+.entry:not(.forthcoming) > :deep(.create),
 .entry:not(.forthcoming) > :deep(.practice) {
-  grid-area: practice;
+  grid-area: create;
 }
 
 .title {

@@ -110,4 +110,4 @@ Reviewer 2 免费、无广告。如果你喜欢，可以在首页底部用微信
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)，`words/dictionary/han-glosses.json`（词库里汉字的英文释义，由 [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict) 生成）也一样。
 
-<!-- readme-sync: b7aa27835e04445bf4cf26e4a34b61544303dd35fff08f8c926b8820161529ac -->
+<!-- readme-sync: d661abe91e38862b4395d0a8218e09bb866f9685b7d6a1bc57e42d64126732bd -->

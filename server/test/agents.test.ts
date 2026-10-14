@@ -916,7 +916,7 @@ describe('a game that an AI played in', () => {
 describe('a practice room', () => {
   // Someone with an account, which the operator has not let have AI players, makes a practice room
   // and plays it as `role`.
-  async function practise(role: string, name = 'Ann') {
+  async function practice(role: string, name = 'Ann') {
     const browser = new Browser(server.url);
     if (!(await browser.register(name)).body.ok) throw new Error('could not register');
     const client = track(await browser.connect());
@@ -951,7 +951,7 @@ describe('a practice room', () => {
   }
 
   test('is made for any account, as the PI or a student, with Reviewer 1 in the other seats, and starts', async () => {
-    const { client: ann, code, state } = await practise('captain');
+    const { client: ann, code, state } = await practice('captain');
     const seats = roomData(state).seats;
     expect(seats[ann.me as string]).toEqual({ team: 'red', role: 'captain' });
     expect(aiOf(state).map((player) => ({ persona: player.agent, seat: seats[player.id] }))).toEqual([
@@ -968,9 +968,23 @@ describe('a practice room', () => {
     });
     expect(server.logs).toContainEqual({ event: 'game_started', fields: { code, players: 4 } });
 
-    const { client: bea, state: other } = await practise('guesser', 'Bea');
+    const { browser, client: bea, state: other } = await practice('guesser', 'Bea');
     expect(roomData(other).seats[bea.me as string]).toEqual({ team: 'red', role: 'guesser' });
     expect(roomData(other).seats[aiOf(other)[0]?.id as string]).toEqual({ team: 'red', role: 'captain' });
+
+    // In an ordinary room of her own, Bea still can't invite them: her account isn't let.
+    const ordinary = track(await browser.connect());
+    const made = await ordinary.send('room:create', {
+      game: 'keywords',
+      language: 'en',
+      fields: ['general'],
+      play: true,
+    });
+    if (!made.ok) throw new Error(`could not make a room: ${made.error}`);
+    await ordinary.waitFor((state) => state.code === made.code, 'the ordinary room');
+    await seat(ordinary, 'red', 'captain');
+    expect(ordinary.state?.agents).toBe(false);
+    expect(await invite(ordinary, 'red', 'captain')).toEqual({ ok: false, error: 'agents_not_allowed' });
   });
 
   test('is for an account, with a role of the game and nothing else, while the agent answers', async () => {
@@ -1018,7 +1032,7 @@ describe('a practice room', () => {
   });
 
   test('marks each of its games on the record, plays for its chair while offline, and takes AI players again', async () => {
-    const { browser, client: ann, code, roomId } = await practise('captain');
+    const { browser, client: ann, code, roomId } = await practice('captain');
     // Bob comes to watch, so that a person is there while Ann is away.
     const bob = track(await joinRoom(server.url, code, 'Bob', { play: false }));
     await toRedTurn(code);
@@ -1036,6 +1050,9 @@ describe('a practice room', () => {
     await expectOk(back.send('room:end', { gameId: truth(code).gameId }));
     await expectOk(back.send('room:again', { gameId: back.state?.gameId }));
     const lobby = await back.waitFor((state) => state.phase === 'lobby', 'the waiting room');
+    // With AI players in it, the room can't be listed, as no room with them can; a match is only
+    // ever set as a room is made, which `practice` refuses (above).
+    expect(await back.send('room:public', { public: true })).toEqual({ ok: false, error: 'agents_in_room' });
     // Ann sends an AI player away and invites Reviewer 1 back, then plays another game.
     const blue = aiOf(lobby).find((player) => roomData(lobby).seats[player.id]?.team === 'blue');
     await expectOk(back.send('room:remove', { playerId: blue?.id }));

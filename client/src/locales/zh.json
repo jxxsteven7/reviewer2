@@ -38,7 +38,7 @@
       },
       "you": "你",
       "fieldsTwo": "{first}、{second}",
-      "fieldsMore": "{first}、{second} 等 {count} 个",
+      "fieldsMore": "{first}、{second}和另外 {rest} 个",
       "chooseField": "先选至少一个词库，才能开局。",
       "note": "练习局不加学术积分，也不算连胜和称号。",
       "start": "开局"

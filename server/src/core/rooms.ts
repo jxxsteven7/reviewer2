@@ -133,7 +133,7 @@ export class Rooms {
     }
     const joined = room.join(key, name, play || seats !== null, account);
     if (!joined.ok) return joined;
-    const seated = seats ? practise(room, joined.member, seats) : null;
+    const seated = seats ? seatPractice(room, joined.member, seats) : null;
     if (seated && !seated.ok) return seated;
     this.#rooms.set(code, room);
     return { ok: true, room, member: joined.member };
@@ -222,7 +222,7 @@ export class Rooms {
 
 // Seats the creator of a practice room where the game puts them, through the game's own message as
 // their page would send it, and then its AI players.
-function practise(room: Room, member: Member, seats: PracticeSeats): Ack {
+function seatPractice(room: Room, member: Member, seats: PracticeSeats): Ack {
   const seated = room.act(member.id, seats.seat.type, seats.seat.payload);
   if (!seated.ok) return seated;
   for (const seat of seats.agents) {

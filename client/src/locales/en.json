@@ -38,7 +38,7 @@
       },
       "you": "You",
       "fieldsTwo": "{first} and {second}",
-      "fieldsMore": "{first}, {second} and others, {count} in all",
+      "fieldsMore": "{first}, {second} and {rest} more",
       "chooseField": "Choose at least one word list to start.",
       "note": "Practice games bring no points, streaks or titles.",
       "start": "Start"

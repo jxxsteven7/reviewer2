@@ -16,7 +16,7 @@ import { useBusy } from '../useBusy';
 // Both lead to `next`, the room that sent the player here (AccountPage), or else home. The form is
 // busy from the moment it sends until the page has left, and says so: the account page keeps the
 // form meanwhile, although the browser is logged in already. It opens on logging in, or on
-// registering for a page that asks for that, as the home page's way to practise does for a guest.
+// registering for a page that asks for that, as the home page's way to practice does for a guest.
 const props = defineProps<{ next?: string | undefined; register?: boolean }>();
 // Whether the form is busy, as the account page hears it (v-model:busy): a copy, since a model with
 // a listener reads as the parent last rendered it, and the guard against a second submit must read

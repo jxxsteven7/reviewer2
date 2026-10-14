@@ -89,6 +89,11 @@ describe('creating a room', () => {
     expect(chair.state?.screens).toBe(0);
   });
 
+  test('offers no practice room on a server without an agent', async () => {
+    const client = await connect();
+    expect(await client.send('meta:agents')).toEqual({ ok: true, available: null });
+  });
+
   test('checks what it is given', async () => {
     const client = await connect();
     const create = (payload: Record<string, unknown>) =>

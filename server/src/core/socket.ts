@@ -979,11 +979,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
     on(handlers, 'meta:rooms', () => ok({ rooms: rooms.listed() }));
     // Whether the AI players answer now, for the home page to offer a practice room or say that
-    // they are offline (docs/architecture.md#practice-rooms). What the agent said last is the
-    // answer, and the agent is asked again for the next one if that was a while ago.
+    // they are offline (docs/architecture.md#practice-rooms), or null on a server without an
+    // agent, where the home page offers none. What the agent said last is the answer, and the
+    // agent is asked again for the next one if that was a while ago.
     on(handlers, 'meta:agents', () => {
-      driver?.recheck();
-      return ok({ available: driver?.state.up ?? false });
+      if (!driver) return ok({ available: null });
+      driver.recheck();
+      return ok({ available: driver.state.up });
     });
 
     // The rooms where the connection still has a seat, the newest first, for the home page to

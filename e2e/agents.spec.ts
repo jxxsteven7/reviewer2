@@ -219,7 +219,7 @@ test('Reviewer 1 advises a student of its group, who reveals the cards', async (
 // hasn't let have AI players opens "Practice with Reviewer 1", sees itself as the red PI beside
 // three of Reviewer 1, starts, and is in the game at once, where the AI players play the blue
 // group's turn by themselves and Reviewer 1 guesses Pat's clue as Pat's student.
-test('anyone with an account practises with Reviewer 1 from the home page', async ({ browser }) => {
+test('anyone with an account practices with Reviewer 1 from the home page', async ({ browser }) => {
   test.setTimeout(90_000);
   const name = own('Pat');
   const pat = await newPlayer(browser, 'en');

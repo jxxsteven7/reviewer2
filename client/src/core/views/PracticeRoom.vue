@@ -13,7 +13,7 @@ import { errorKey } from '../errors';
 import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
 import {
-  agentsAvailable,
+  agents,
   checkAgents,
   DEFAULT_FIELDS,
   PRACTICE_ROLES,
@@ -32,7 +32,7 @@ import { useBusy } from '../useBusy';
 // those of the last practice room, which the browser remembers, or the PI and the general list;
 // the lists fold into one line, which names them, so that the whole sheet fits on a phone's
 // screen. A guest is asked to log in or register. While the AI players don't answer, the button
-// says so and can't be pressed.
+// says so and can't be pressed; on a server without an agent, there is no button at all.
 const { t, locale } = useI18n();
 const router = useRouter();
 const id = useId();
@@ -43,7 +43,8 @@ const folded = ref(true);
 const formError = ref<string | undefined>();
 const { busy, run } = useBusy();
 const language = computed(() => locale.value as Language);
-const offline = computed(() => agentsAvailable.value === false);
+const offered = computed(() => agents.value !== 'none');
+const offline = computed(() => agents.value === 'down');
 const persona = computed(() => t('agents.personas.reviewer1'));
 
 checkAgents();
@@ -67,7 +68,7 @@ watch(
 );
 
 // The chosen lists in a line, in the order of the setup's list: one or two by name, more as the
-// first two and how many in all.
+// first two and how many there are beyond those.
 const summary = computed(() => {
   if (!fields.value) return t('create.loadingFields');
   const names = fields.value.filter((field) => chosen.value.includes(field.id)).map(({ name }) => name[language.value]);
@@ -75,7 +76,7 @@ const summary = computed(() => {
   if (first === undefined) return t('home.practice.chooseField');
   if (second === undefined) return first;
   if (names.length === 2) return t('home.practice.fieldsTwo', { first, second });
-  return t('home.practice.fieldsMore', { first, second, count: names.length });
+  return t('home.practice.fieldsMore', { first, second, rest: names.length - 2 });
 });
 
 // Who sits where: the player in the red group as the role chosen, Reviewer 1 everywhere else.
@@ -111,7 +112,7 @@ async function start() {
   );
   if (!reply) return;
   if (!reply.ok) {
-    if (reply.error === 'agents_offline') agentsAvailable.value = false;
+    if (reply.error === 'agents_offline') agents.value = 'down';
     formError.value = t(errorKey(reply.error));
     return;
   }
@@ -121,7 +122,7 @@ async function start() {
 </script>
 
 <template>
-  <div class="practice">
+  <div v-if="offered" class="practice">
     <button type="button" class="entry" :disabled="offline" @click="show">
       <PlayerAvatar :name="persona" agent size="medium" />
       <span class="text">
@@ -134,7 +135,8 @@ async function start() {
     </button>
 
     <UiSheet :open="open" :title="t('home.practice.entry')" @close="open = false">
-      <div v-if="!account.summary" class="sheet">
+      <p v-if="!account.loaded" class="note">{{ t('account.loading') }}</p>
+      <div v-else-if="!account.summary" class="sheet">
         <p class="note">{{ t('home.practice.intro') }}</p>
         <p class="login">
           <strong>{{ t('home.practice.loginTitle') }}</strong>

@@ -41,15 +41,18 @@ export function storePractice(role: PracticeRole, fields: readonly string[]): vo
   writeStored(FIELDS_KEY, JSON.stringify(fields));
 }
 
-// Whether the server's AI players answer now, or null until the server has said. The home page asks
-// when it is shown and again when the practice sheet opens; the server refuses a practice room
-// while they don't anyway.
-export const agentsAvailable = shallowRef<boolean | null>(null);
+// The server's AI players, as the server last said: unknown until it has answered, none on a server
+// without an agent, where the home page offers no practice room, up while they answer, and down
+// while they don't. The home page asks when it is shown and again when the practice sheet opens;
+// the server refuses a practice room while they are down anyway.
+export type AgentsStatus = 'unknown' | 'none' | 'up' | 'down';
+export const agents = shallowRef<AgentsStatus>('unknown');
 
 export function checkAgents(): void {
   onceConnected(() => {
-    void send<{ available: boolean }>('meta:agents').then((reply) => {
-      if (reply.ok) agentsAvailable.value = reply.available;
+    void send<{ available: boolean | null }>('meta:agents').then((reply) => {
+      if (!reply.ok) return;
+      agents.value = reply.available === null ? 'none' : reply.available ? 'up' : 'down';
     });
   });
 }

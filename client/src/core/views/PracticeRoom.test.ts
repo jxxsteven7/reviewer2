@@ -4,7 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { fields } from '../fields';
 import { i18n, setLanguage } from '../i18n';
-import { agentsAvailable } from '../practice';
+import { agents } from '../practice';
 import { clearMemory, readStored, writeStored } from '../storage';
 import PracticeRoom from './PracticeRoom.vue';
 
@@ -42,7 +42,8 @@ beforeEach(() => {
   localStorage.clear();
   clearMemory();
   fields.value = FIELDS;
-  agentsAvailable.value = null;
+  agents.value = 'unknown';
+  signedIn.account.loaded = true;
   signedIn.account.summary = { username: 'Ann', avatar: null };
   socket.replies = { 'meta:agents': { ok: true, available: true }, 'room:create': { ok: true, code: 'ABCD' } };
   socket.send.mockReset();
@@ -78,7 +79,7 @@ const submit = async (sheet: HTMLElement) => {
   await flushPromises();
 };
 
-describe('practising with Reviewer 1', () => {
+describe('practicing with Reviewer 1', () => {
   test('opens as the PI with the general list, with Reviewer 1 in the other seats, and makes the room', async () => {
     const { sheet } = await opened();
     expect(socket.send).toHaveBeenCalledWith('meta:agents');
@@ -116,7 +117,7 @@ describe('practising with Reviewer 1', () => {
     const physics = [...sheet.querySelectorAll<HTMLInputElement>('.fields input')][2];
     physics?.click();
     await flushPromises();
-    expect(summary(sheet)).toBe('General, Machine learning and others, 3 in all');
+    expect(summary(sheet)).toBe('General, Machine learning and 1 more');
     // The player turns to the PI, which the seats follow.
     sheet.querySelector<HTMLInputElement>('.roles input[value="captain"]')?.click();
     await flushPromises();
@@ -167,9 +168,23 @@ describe('practising with Reviewer 1', () => {
     expect(startButton(sheet)?.disabled).toBe(true);
   });
 
-  test('asks a guest to log in or to register', async () => {
+  test('shows nothing on a server without an agent', async () => {
+    socket.replies['meta:agents'] = { ok: true, available: null };
+    const wrapper = mount(PracticeRoom, { attachTo: document.body, global: { plugins: [i18n] } });
+    await flushPromises();
+    expect(wrapper.find('.practice').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  test('asks a guest to log in or to register, once the page knows them for one', async () => {
+    signedIn.account.loaded = false;
     signedIn.account.summary = null;
     const { sheet } = await opened();
+    expect(sheet.querySelector('form')).toBeNull();
+    expect(sheet.querySelector('.row')).toBeNull();
+    expect(sheet.textContent).toContain('Loading\u2026');
+    signedIn.account.loaded = true;
+    await flushPromises();
     expect(sheet.querySelector('form')).toBeNull();
     expect(sheet.textContent).toContain('Log in to start');
     const [login, register] = [...sheet.querySelectorAll<HTMLButtonElement>('.row button')];
