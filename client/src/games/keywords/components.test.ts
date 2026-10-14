@@ -1592,13 +1592,14 @@ describe('KeywordsGame', () => {
     expect(wrapper.find('.mark-buttons').exists()).toBe(false);
   });
 
-  test("shows a PI the group's marks small in the corner, which a PI can't change", async () => {
+  test("shows a PI the group's marks on the corner where the students see them, which a PI can't change", async () => {
     const wrapper = mount(KeywordsGame, {
       props: { room: marked([{ card: 0, mark: 'ours' }], {}, 'ann') },
       global: global(),
     });
     const sticker = card(wrapper, 0)?.find('.note');
-    expect(sticker?.classes()).toContain('quiet');
+    expect(sticker?.exists()).toBe(true);
+    expect(sticker?.classes()).not.toContain('small');
     expect(card(wrapper, 0)?.classes()).not.toContain('noted');
     expect(card(wrapper, 0)?.attributes('aria-label')).toContain('marked as ours');
     send.mockClear();

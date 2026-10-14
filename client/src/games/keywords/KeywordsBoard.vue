@@ -126,12 +126,13 @@ const named = computed(() => {
 </template>
 
 <style scoped>
-/* The gap leaves room for the shadows and for the avatars on the cards' corners. */
+/* The gap leaves room for the shadows and for what hangs on the cards' corners (KeywordsCard), and
+   the padding for what hangs over the board's edges. */
 .board {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 9px 8px;
-  padding: 6px 4px 4px 0;
+  padding: 7px 4px 4px 0;
   container-type: inline-size;
 }
 
@@ -139,6 +140,7 @@ const named = computed(() => {
   .board {
     gap: 12px;
     padding-top: 8px;
+    padding-bottom: 6px;
   }
 }
 </style>
