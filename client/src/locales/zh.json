@@ -266,7 +266,7 @@
       "choose": "大家自己选"
     },
     "groupingHint": {
-      "random": "开局时随机分组，并选出两组的导师。",
+      "random": "开局时随机分组，导师轮流当。",
       "choose": "大家在大厅里自己选组和位置。"
     },
     "progress": "第 {game} / {games} 局",

@@ -453,10 +453,13 @@ describe('groups drawn at random', () => {
     const ab = { ann: 'red', bob: 'red', cat: 'blue', dee: 'blue' } as const;
     const ac = { ann: 'red', cat: 'red', bob: 'blue', dee: 'blue' } as const;
     const ad = { ann: 'blue', dee: 'blue', bob: 'red', cat: 'red' } as const;
-    expect(new Set(draws(match([ab, ac])).map(pairing))).toEqual(new Set(['ann+dee']));
+    // Ann and cat are the PIs, having been one the fewest times, so bob and dee join one each: which,
+    // the games before decide.
+    const pis = { bob: 1, dee: 1 };
+    expect(new Set(draws(match([ab, ac], pis)).map(pairing))).toEqual(new Set(['ann+dee']));
     // Every pairing has come once: the one of the first game is the one longest ago.
-    expect(new Set(draws(match([ab, ac, ad])).map(pairing))).toEqual(new Set(['ann+bob']));
-    expect(new Set(draws(match([ad, ac, ab])).map(pairing))).toEqual(new Set(['ann+dee']));
+    expect(new Set(draws(match([ab, ac, ad], pis)).map(pairing))).toEqual(new Set(['ann+bob']));
+    expect(new Set(draws(match([ad, ac, ab], pis)).map(pairing))).toEqual(new Set(['ann+dee']));
   });
 
   test('know nothing of the players who are new, and draw anything in the first game', () => {
@@ -465,21 +468,17 @@ describe('groups drawn at random', () => {
     expect(new Set(draws(match([{ eve: 'red', zoe: 'blue' }])).map(pairing)).size).toBe(3);
   });
 
-  test("make each group's PI whoever has been one the fewest times, online first", () => {
-    for (const drawn of draws(match([], { ann: 2, bob: 1, cat: 1 }), new Set(['ann', 'bob', 'cat']))) {
-      const pis = [captainOf(drawn, 'red'), captainOf(drawn, 'blue')];
-      // Dee has been none but is offline, so in her group the one online is PI, however often.
-      for (const pi of pis) {
-        const team = seatOf(drawn, pi as string).team;
-        const group = four.filter((id) => seatOf(drawn, id).team === team);
-        const online = group.filter((id) => id !== 'dee');
-        const times = (id: string) => ({ ann: 2, bob: 1, cat: 1, dee: 0 })[id] as number;
-        expect(times(pi as string)).toBe(Math.min(...online.map(times)));
-        expect(pi).not.toBe('dee');
-      }
+  test('make the two who have been PIs the fewest times the PIs, one of each group, online first', () => {
+    // Dee has been none but is offline, so bob and cat, who have been one the fewest times of those
+    // online, are the PIs, whatever the groups: they are never dealt into one.
+    const drawn = draws(match([], { ann: 2, bob: 1, cat: 1 }), new Set(['ann', 'bob', 'cat']));
+    for (const seating of drawn) {
+      expect(new Set([captainOf(seating, 'red'), captainOf(seating, 'blue')])).toEqual(new Set(['bob', 'cat']));
       // A PI and a student in each group.
-      expect([...drawn.seats.values()].filter((seat) => seat.role === 'guesser')).toHaveLength(2);
+      expect([...seating.seats.values()].filter((seat) => seat.role === 'guesser')).toHaveLength(2);
     }
+    // Which group each is the PI of is drawn too.
+    expect(new Set(drawn.map((seating) => captainOf(seating, 'red')))).toEqual(new Set(['bob', 'cat']));
   });
 });
 
@@ -589,6 +588,26 @@ describe('a match of the game', () => {
     }
   });
 
+  test('with groups drawn at random makes everyone a PI once before anyone is one twice', () => {
+    // How many games each player was a PI in.
+    const times = (players: string[], games: number, seed: number) => {
+      const counts = new Map(players.map((id) => [id, 0]));
+      for (const seating of drawnMatch(players, games, seed)) {
+        for (const pi of [captainOf(seating, 'red'), captainOf(seating, 'blue')]) {
+          counts.set(pi as string, (counts.get(pi as string) ?? 0) + 1);
+        }
+      }
+      return [...counts.values()].sort();
+    };
+    const six = [...ids, 'fay'];
+    const eight = [...six, 'gus', 'hal'];
+    for (let seed = 0; seed < 50; seed += 1) {
+      expect(times(six, 3, seed), `six players, seed ${seed}`).toEqual([1, 1, 1, 1, 1, 1]);
+      expect(times(eight, 4, seed), `eight players, seed ${seed}`).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
+      expect(times(ids.slice(0, 4), 3, seed), `four players, seed ${seed}`).toEqual([1, 1, 2, 2]);
+    }
+  });
+
   test('with groups drawn at random keeps them more apart than drawing again once when they repeat', () => {
     let drawn = 0;
     let before = 0;
@@ -622,6 +641,38 @@ describe('a match of the game', () => {
     for (const id of ['ann', 'bob', 'cat', 'dee'].filter((other) => other !== pi)) {
       expect(of(id)?.points, id).toBe(0);
     }
+  });
+
+  test('costs the PI who left the seat before the time ran out, as it would in the seat', () => {
+    const data = start(withMatch({ teams: 'fixed', grouping: 'choose' }, chosen));
+    const game = data.game as KeywordsState;
+    const pi = captainOf(data.seating, game.team) as string;
+    const late = { ...context(ids, { phase: 'playing' }), now: () => (game.clock?.ends ?? 0) + 1 };
+    const missedBy = (expired: KeywordsData) => {
+      expect(expired.game?.events.at(-1)).toMatchObject({ kind: 'missed', team: game.team });
+      return keywordsGame.match?.score(expired, late)?.find(({ key }) => key === keyOf(pi));
+    };
+    // The PI steps down to watch, the seat stands empty when the time runs out, and the PI takes it
+    // back afterwards: the turn costs them as it would have in the seat.
+    const stepped = seat(data, pi, SPECTATOR, 'playing');
+    if (!stepped.ok) throw new Error(stepped.error);
+    expect(captainOf(stepped.data.seating, game.team)).toBeNull();
+    const expired = keywordsGame.tick(stepped.data, late);
+    expect(expired.game?.history[0]).toMatchObject({ word: null, timedOut: true, captain: pi });
+    const back = seat(expired, pi, { team: game.team, role: 'captain' }, 'playing');
+    if (!back.ok) throw new Error(back.error);
+    expect(missedBy(back.data)).toMatchObject({ points: -5, detail: { role: 'captain', missed: 1 } });
+    // So does leaving the room.
+    const gone = keywordsGame.tick(keywordsGame.leave(data, pi), late);
+    expect(gone.game?.history[0]).toMatchObject({ captain: pi });
+    expect(missedBy(gone)).toMatchObject({ points: -5 });
+    // Someone who takes the empty seat over pays instead.
+    const student = game.team === 'red' ? 'bob' : 'dee';
+    const taken = seat(stepped.data, student, { team: game.team, role: 'captain' }, 'playing');
+    if (!taken.ok) throw new Error(taken.error);
+    const theirs = keywordsGame.tick(taken.data, late);
+    expect(theirs.game?.history[0]).toMatchObject({ captain: student });
+    expect(missedBy(theirs)?.points).toBe(0);
   });
 
   test('lets a newcomer watch the game that is on, and seats them for the next one', () => {

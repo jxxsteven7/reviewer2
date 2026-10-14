@@ -266,7 +266,7 @@
       "choose": "Chosen by the players"
     },
     "groupingHint": {
-      "random": "The groups and their PIs are drawn when the game starts.",
+      "random": "The groups are drawn when the game starts, and the PIs take turns.",
       "choose": "Everyone picks a group and a seat in the waiting room."
     },
     "progress": "Game {game} of {games}",

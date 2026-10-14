@@ -13,7 +13,7 @@ import {
   type Team,
 } from '@reviewer2/shared';
 import type { MatchScore } from '../../core/game';
-import { pick, type Rng } from '../../core/random';
+import { pick, shuffle, type Rng } from '../../core/random';
 import { dealGroups, smallerTeam, type Member, type Seating } from './seats';
 import type { KeywordsState } from './state';
 
@@ -103,8 +103,8 @@ export function heavenlyHand(game: KeywordsState, team: Team): boolean {
 // played for a group in it, by member key, as its PI, having seen the key, or as a student, with
 // what the group's students found and revealed wrongly, whether it won, its opening record and
 // heavenly hand, and a PI's big clues and missed deadlines. A big clue goes to the PI who gave it,
-// and a missed deadline to the PI who was in the seat, by the member key that `keyOf` gives, also
-// once they have left. Null for a game that the chair withdrew.
+// and a missed deadline to the PI whom the record blames (index.ts), by the member key that
+// `keyOf` gives, also once they have left. Null for a game that the chair withdrew.
 export function scoreGame(
   game: KeywordsState,
   seating: Pick<Seating, 'sides' | 'keyViewers'>,
@@ -163,9 +163,22 @@ export function afterScoredGame(match: MatchSeating, seating: Seating): MatchSea
   return { ...match, captained, groups, locked };
 }
 
-// Makes each group's PI the one of its players who has been a PI the fewest times, someone online
-// before someone who isn't, and one of them at random when several have been as often. The others
-// in the group are its students.
+// Of these players, the one whose turn it is to be a PI: whoever has been one the fewest times in
+// the match, someone online before someone who isn't, and one of them at random when several have
+// been as often.
+function nextPI(players: readonly Member[], match: MatchSeating, online: ReadonlySet<string>, rng: Rng): Member {
+  const times = (key: string) => match.captained.get(key) ?? 0;
+  const there = players.filter(({ id }) => online.has(id));
+  const pool = there.length > 0 ? there : players;
+  const fewest = Math.min(...pool.map(({ key }) => times(key)));
+  return pick(
+    pool.filter(({ key }) => times(key) === fewest),
+    rng,
+  );
+}
+
+// Makes each group's PI the one of its players whose turn it is (nextPI), and the others its
+// students.
 function seatPIs(
   seats: Map<string, Seat>,
   playing: readonly Member[],
@@ -173,19 +186,11 @@ function seatPIs(
   online: ReadonlySet<string>,
   rng: Rng,
 ): void {
-  const times = (key: string) => match.captained.get(key) ?? 0;
   for (const team of TEAMS) {
     const group = playing.filter(({ id }) => seats.get(id)?.team === team);
     if (group.length === 0) continue;
     for (const { id } of group) seats.set(id, { team, role: 'guesser' });
-    const there = group.filter(({ id }) => online.has(id));
-    const pool = there.length > 0 ? there : group;
-    const fewest = Math.min(...pool.map(({ key }) => times(key)));
-    const { id } = pick(
-      pool.filter(({ key }) => times(key) === fewest),
-      rng,
-    );
-    seats.set(id, { team, role: 'captain' });
+    seats.set(nextPI(group, match, online, rng).id, { team, role: 'captain' });
   }
 }
 
@@ -234,11 +239,14 @@ function together(deal: Seating, keyOf: (playerId: string) => string, groups: Ma
   return count;
 }
 
-// Draws the groups for a match's game, as it starts: of DRAWS deals, each as the chair's shuffle
-// deals (seats.ts), the one that puts together the fewest players who have played together in the
-// match's earlier games (together), or one of them at random when several do as well. Then each
-// group's PI is whoever has been a PI the fewest times, as with fixed groups (seatPIs), so that the
-// PIs take turns.
+// Draws the groups for a match's game, as it starts, so that the PIs take turns and the groups
+// mix. First the PIs: of everyone who plays, the one whose turn it is (nextPI), and then the one
+// whose turn it is among the others, each the PI of one group, which a draw decides. They come
+// before the groups because the two whose turn it is could otherwise be dealt into one group, where
+// only one of them can be its PI. Then the groups: of DRAWS deals of the others around the PIs,
+// each as the chair's shuffle deals (seats.ts), the one that puts together the fewest players who
+// have played together in the match's earlier games (together), or one of them at random when
+// several do as well. The draw needs its players online (drawProblems).
 export function drawGroups(
   seating: Seating,
   members: readonly Member[],
@@ -248,17 +256,26 @@ export function drawGroups(
 ): Seating {
   const keys = new Map(members.map(({ id, key }) => [id, key]));
   const keyOf = (id: string) => keys.get(id) ?? id;
-  const deals = Array.from({ length: DRAWS }, () => dealGroups(seating, rng, online));
+  const playing = members.filter(({ id }) => (seating.seats.get(id)?.team ?? null) !== null);
+  // Everyone who plays goes back to a student's seat, so that the PIs alone hold a PI's seat.
+  const seats = new Map(seating.seats);
+  for (const [id, seat] of seating.seats) if (seat.team !== null) seats.set(id, { team: seat.team, role: 'guesser' });
+  const pis: Member[] = [];
+  for (const team of shuffle(TEAMS, rng)) {
+    const rest = playing.filter((member) => !pis.includes(member));
+    if (rest.length === 0) break;
+    const pi = nextPI(rest, match, online, rng);
+    pis.push(pi);
+    seats.set(pi.id, { team, role: 'captain' });
+  }
+  const kept = new Set(pis.map(({ id }) => id));
+  const deals = Array.from({ length: DRAWS }, () => dealGroups({ ...seating, seats }, rng, online, kept));
   const counted = deals.map((deal) => ({ deal, count: together(deal, keyOf, match.groups) }));
   const fewest = Math.min(...counted.map(({ count }) => count));
-  const { deal } = pick(
+  return pick(
     counted.filter(({ count }) => count === fewest),
     rng,
-  );
-  const seats = new Map(deal.seats);
-  const playing = members.filter(({ id }) => (seats.get(id)?.team ?? null) !== null);
-  seatPIs(seats, playing, match, online, rng);
-  return { ...deal, seats };
+  ).deal;
 }
 
 function movedSet(set: ReadonlySet<string>, from: string, to: string): ReadonlySet<string> {
