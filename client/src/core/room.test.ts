@@ -34,6 +34,7 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
   game: 'keywords',
   language: 'en',
   fields: ['general'],
+  randomFields: false,
   public: false,
   customWordCount: 0,
   phase: 'lobby',

@@ -1,5 +1,6 @@
 import {
   cleanName,
+  drawFields,
   EMOTE_COOLDOWN_MS,
   MAX_PLAYERS,
   MAX_SCREENS,
@@ -109,6 +110,8 @@ export interface RoomOptions {
   language: Language;
   // As chooseFields() returned them.
   fields: string[];
+  // Whether every game draws its lists anew (RoomView.randomFields).
+  randomFields?: boolean;
   // Listed on the home page for anyone with an account to join (docs/architecture.md#public-rooms).
   public?: boolean;
   // Made from the home page to play with AI players (docs/architecture.md#practice-rooms).
@@ -124,18 +127,30 @@ export interface RoomOptions {
 // The fields that a room is to play with, once each, or why it can't play with them: one of them
 // isn't in the library, or together with the chair's own words they have too few words in the
 // room's language. Rooms are created and their fields changed only through this check, so a room
-// that exists can always deal a game.
+// that exists can always deal a game. A room that draws its fields anew for every game (`random`)
+// keeps the ones chosen for when it stops, and only needs a field to draw from.
 export function chooseFields(
   words: WordLibrary,
   fields: readonly string[],
   language: Language,
   needed: number,
   custom: readonly BoardWord[] = [],
+  random = false,
 ): Ack<{ fields: string[] }> {
   const chosen = [...new Set(fields)];
   if (!chosen.every((id) => words.has(id))) return fail('bad_fields');
+  if (random) return usableFields(words, language, needed).length > 0 ? { ok: true, fields: chosen } : fail('no_words');
   if (poolOf(words, chosen, language, custom).length < needed) return fail('no_words');
   return { ok: true, fields: chosen };
+}
+
+// The fields with enough words in a language for a game of their own, which a random draw draws
+// from (drawFields in shared/src/protocol.ts).
+export function usableFields(words: WordLibrary, language: Language, needed: number): string[] {
+  return words
+    .fields()
+    .filter((field) => field.counts[language] >= needed)
+    .map((field) => field.id);
 }
 
 // Every word that a room's games draw from: the words of its fields and the chair's own words,
@@ -191,6 +206,11 @@ export class Room {
   readonly language: Language;
   readonly createdAt: number;
   fields: string[];
+  // Whether every game draws its fields anew, at random, which it then plays with alone
+  // (RoomView.randomFields).
+  randomFields: boolean;
+  // The fields that the game being played, or just ended, drew its words from.
+  #gameFields: string[] = [];
   // The chair's own words, which the games draw from along with the fields, each with its
   // pinyin when it is Chinese (docs/games/keywords.md#custom-words). A private room's alone.
   customWords: BoardWord[] = [];
@@ -278,6 +298,7 @@ export class Room {
     this.game = options.game;
     this.language = options.language;
     this.fields = [...options.fields];
+    this.randomFields = options.randomFields ?? false;
     this.public = options.public ?? false;
     this.practice = options.practice ?? false;
     this.#words = options.words;
@@ -702,11 +723,17 @@ export class Room {
     return true;
   }
 
-  // The chair changes the fields, the game's own settings, their own words, or any of them, in the
-  // waiting room. All change together or none does: one that won't do refuses the others with it.
+  // The chair changes the fields, whether every game draws them anew, the game's own settings, their
+  // own words, or any of them, in the waiting room. All change together or none does: one that
+  // won't do refuses the others with it.
   // The chair's words come as the text they were pasted as, and are checked as the editor checks
   // them (parseCustomWords); a public room takes none, since they are for a private one.
-  setSettings(changes: { fields?: readonly string[]; settings?: unknown; words?: string }): Ack {
+  setSettings(changes: {
+    fields?: readonly string[];
+    randomFields?: boolean;
+    settings?: unknown;
+    words?: string;
+  }): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
     // A match plays all its games by the same settings, once one of them has counted.
     if (this.match?.status === 'on' && this.match.played > 0) return fail('match_locked');
@@ -721,14 +748,16 @@ export class Room {
         return { word, ...(pinyin === null ? {} : { pinyin }), ...(glosses.length > 0 ? { glosses } : {}) };
       });
     }
+    const random = changes.randomFields ?? this.randomFields;
     let fields = this.fields;
-    if (changes.fields !== undefined || custom !== this.customWords) {
+    if (changes.fields !== undefined || custom !== this.customWords || random !== this.randomFields) {
       const chosen = chooseFields(
         this.#words,
         changes.fields ?? this.fields,
         this.language,
         this.game.wordsNeeded,
         custom,
+        random,
       );
       if (!chosen.ok) return chosen;
       fields = chosen.fields;
@@ -740,8 +769,9 @@ export class Room {
       data = configured.data;
     }
     const sameWords = custom.map(({ word }) => word).join('\n') === this.customWords.map(({ word }) => word).join('\n');
-    if (data === this.data && sameFields(fields, this.fields) && sameWords) return done;
+    if (data === this.data && sameFields(fields, this.fields) && sameWords && random === this.randomFields) return done;
     this.fields = fields;
+    this.randomFields = random;
     this.customWords = custom;
     this.data = data;
     this.changed();
@@ -753,14 +783,18 @@ export class Room {
   // connection had stalled, is stale, even when the room is back in the waiting room by now.
   //
   // The room draws the words itself, preferring those that it hasn't played with yet, and keeping
-  // apart those that clash with each other, as far as it can. `clashes` says how many pairs of
+  // apart those that clash with each other, as far as it can. A room that draws its fields anew
+  // draws them first, and tells nobody which they were but the game's record. `clashes` says how many pairs of
   // the words drawn clash all the same: it is 0 unless the draw found no way to keep them apart.
   start(round: number): Ack<{ clashes: number }> {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (this.match && this.match.status !== 'on') return fail('match_over');
     if (!this.game.canStart(this.data, this.context)) return fail('cannot_start');
-    const pool = poolOf(this.#words, this.fields, this.language, this.customWords);
+    const fields = this.randomFields
+      ? drawFields(usableFields(this.#words, this.language, this.game.wordsNeeded), (below) => this.#rng.int(below))
+      : this.fields;
+    const pool = poolOf(this.#words, fields, this.language, this.customWords);
     const clash = this.game.wordsClash?.bind(this.game);
     const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng, clash);
     // chooseFields() has made sure of this, and the library doesn't change while the server runs.
@@ -779,6 +813,7 @@ export class Room {
     this.#agentsPlayed = Object.keys(agents).length > 0;
     this.#tookOverFor.clear();
     this.#usedWords = draw.used;
+    this.#gameFields = [...fields];
     this.gameId = gameId;
     this.round += 1;
     this.phase = 'playing';
@@ -1218,7 +1253,7 @@ export class Room {
       match: this.match !== null,
       practice: this.practice,
       language: this.language,
-      fields: [...this.fields],
+      fields: [...this.#gameFields],
       rules: this.game.rulesVersion ?? null,
       words: this.#words.hash,
     };
@@ -1380,6 +1415,7 @@ export class Room {
       game: this.game.id,
       language: this.language,
       fields: [...this.fields],
+      randomFields: this.randomFields,
       players: this.members.size,
       playing: this.phase === 'playing',
     };
@@ -1402,6 +1438,7 @@ export class Room {
       game: this.game.id,
       language: this.language,
       fields: [...this.fields],
+      randomFields: this.randomFields,
       public: this.public,
       customWordCount: this.customWords.length,
       phase: this.phase,

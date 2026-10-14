@@ -1066,11 +1066,22 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // no match and has the game's default settings. Its game starts as soon as its creator is in it,
     // online; should it not, they are in its waiting room with the AI players, as in any room.
     on(handlers, 'room:create', (message) => {
-      const { game, language, fields, settings, name: nickname, play, match, public: listed, practice } = message;
+      const {
+        game,
+        language,
+        fields,
+        randomFields,
+        settings,
+        name: nickname,
+        play,
+        match,
+        public: listed,
+        practice,
+      } = message;
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
-      if (practice && (match || listed || settings !== undefined)) return fail('bad_request');
+      if (practice && (match || listed || settings !== undefined || randomFields)) return fail('bad_request');
       const refusal = listed ? publicRefusal(conn) : null;
       if (refusal) return refusal;
       if (practice && !accountOf(conn).ok) return fail('account_required');
@@ -1086,6 +1097,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         game: module,
         language,
         fields,
+        randomFields: randomFields ?? false,
         settings,
         key: conn.key,
         name,
@@ -1102,11 +1114,31 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         game,
         language,
         fields: room.fields,
+        randomFields: room.randomFields,
         match: match?.games ?? null,
         public: room.public,
         practice: practice?.role ?? null,
       });
       enter(socket, room, member);
+      // The account's next room setup starts from this one (RoomSetup in shared/src/accounts.ts).
+      if (account) {
+        accounts?.rememberRoomSetup(
+          account.id,
+          practice
+            ? { practice: { role: practice.role, fields: room.fields } }
+            : {
+                room: {
+                  game,
+                  fields: room.fields,
+                  randomFields: room.randomFields,
+                  ...(settings === undefined ? {} : { settings }),
+                  match: match ?? null,
+                  public: room.public,
+                  play: play ?? false,
+                },
+              },
+        );
+      }
       if (room.practice) {
         const started = room.start(room.round);
         if (started.ok) logStart(room, started.clashes);

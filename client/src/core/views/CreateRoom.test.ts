@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { fields } from '../fields';
 import { i18n, setLanguage } from '../i18n';
+import { clearMemory, readStored, writeStored } from '../storage';
 import CreateRoom from './CreateRoom.vue';
 
 const socket = vi.hoisted(() => ({
@@ -37,6 +38,8 @@ const FIELDS: FieldInfo[] = [
 ];
 
 beforeEach(() => {
+  localStorage.clear();
+  clearMemory();
   signedIn.account.summary = null;
   setLanguage('en', { remember: false });
   fields.value = FIELDS;
@@ -69,7 +72,7 @@ describe('the room setup', () => {
   test('says to choose a list, and creates no room, until one is chosen', async () => {
     const wrapper = await opened();
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
-    expect(byId(wrapper, lists(wrapper).attributes('aria-labelledby')).text()).toBe('Word lists');
+    expect(lists(wrapper).attributes('aria-label')).toBe('Word lists');
     expect(byId(wrapper, lists(wrapper).attributes('aria-describedby')).text()).toBe(HINT);
     await wrapper.get('form').trigger('submit');
     await flushPromises();
@@ -89,7 +92,14 @@ describe('the room setup', () => {
   });
 
   test('asks a player who is logged in for no nickname, and sends none', async () => {
-    signedIn.account.summary = { username: 'Ann Lee', avatar: null, email: 'none', titles: [], contributions: [] };
+    signedIn.account.summary = {
+      username: 'Ann Lee',
+      avatar: null,
+      email: 'none',
+      titles: [],
+      contributions: [],
+      roomSetup: {},
+    };
     const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
     expect(wrapper.find('input[autocomplete="nickname"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('As Ann Lee');
@@ -100,6 +110,80 @@ describe('the room setup', () => {
     const payload = socket.send.mock.calls[0]?.[1];
     expect(payload).toMatchObject({ fields: ['general'] });
     expect(payload).not.toHaveProperty('name');
+  });
+
+  test('starts from the last room as far as it still holds, and keeps this one for the next', async () => {
+    writeStored(
+      'r2.roomSetup',
+      JSON.stringify({
+        game: 'keywords',
+        fields: ['ml', 'gone'],
+        randomFields: false,
+        match: { games: 5, teams: 'switch', grouping: 'random' },
+        public: true,
+        play: false,
+      }),
+    );
+    const wrapper = await opened();
+    expect(box(wrapper, 0).element.checked).toBe(false);
+    expect(box(wrapper, 1).element.checked).toBe(true);
+    expect(wrapper.get('.field-fold .summary').text()).toBe('Machine learning');
+    expect(wrapper.get<HTMLInputElement>('.match-form input[inputmode="numeric"]').element.value).toBe('5');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    // A guest's room is private, whatever the last one was.
+    const payload = socket.send.mock.calls[0]?.[1];
+    expect(payload).toMatchObject({
+      fields: ['ml'],
+      match: { games: 5, teams: 'switch', grouping: 'random' },
+      play: false,
+    });
+    expect(payload).not.toHaveProperty('public');
+    expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toEqual({
+      game: 'keywords',
+      fields: ['ml'],
+      randomFields: false,
+      match: { games: 5, teams: 'switch', grouping: 'random' },
+      public: false,
+      play: false,
+    });
+  });
+
+  test("starts an account's room from the setup that the server kept for it", async () => {
+    const room = { game: 'keywords', fields: ['general'], randomFields: false, match: null, public: true, play: true };
+    signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: { room } };
+    const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
+    expect(box(wrapper, 0).element.checked).toBe(true);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ fields: ['general'], public: true, play: true });
+    expect(readStored('r2.roomSetup')).toBeNull();
+  });
+
+  test('may draw the lists anew for every game, which needs none chosen', async () => {
+    const wrapper = await opened();
+    await wrapper.get<HTMLInputElement>('.each input').setValue(true);
+    expect(wrapper.text()).not.toContain(HINT);
+    expect(wrapper.get('.field-fold .summary').text()).toBe('Random lists each game');
+    expect(box(wrapper, 0).element.disabled).toBe(true);
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ fields: [], randomFields: true });
+  });
+
+  test('chooses every list there is words enough in, or some of them at random, at least one', async () => {
+    fields.value = [...FIELDS, { id: 'tiny', name: { zh: 'T', en: 'Tiny' }, counts: { zh: 3, en: 3 } }];
+    const wrapper = await opened();
+    const checked = () => wrapper.findAll<HTMLInputElement>('.fields input:checked').map((input) => input.element);
+    const [atRandom, all] = wrapper.findAll('.tool');
+    await all!.trigger('click');
+    expect(checked()).toHaveLength(2);
+    for (let draw = 0; draw < 12; draw += 1) {
+      await atRandom!.trigger('click');
+      expect(checked().length).toBeGreaterThan(0);
+      expect(box(wrapper, 2).element.checked).toBe(false);
+    }
   });
 
   test('creates a private room unless a public one is chosen, which takes an account', async () => {
@@ -113,7 +197,7 @@ describe('the room setup', () => {
     await flushPromises();
     expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('public');
 
-    signedIn.account.summary = { username: 'Ann', avatar: null };
+    signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: {} };
     await flushPromises();
     expect(choice()[1]?.attributes('disabled')).toBeUndefined();
     expect(wrapper.text()).toContain('Listed on the home page, for anyone with an account to join.');

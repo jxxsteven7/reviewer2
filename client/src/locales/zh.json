@@ -37,8 +37,6 @@
         "guesser": "一号审稿人当导师出题，你来猜。"
       },
       "you": "你",
-      "fieldsTwo": "{first}、{second}",
-      "fieldsMore": "{first}、{second}和另外 {rest} 个",
       "chooseField": "先选至少一个词库，才能开局。",
       "note": "练习局不加学术积分，也不算连胜和称号。",
       "start": "开局"
@@ -80,7 +78,8 @@
       "waiting": "等人中",
       "playing": "已开局",
       "join": "加入",
-      "refresh": "刷新"
+      "refresh": "刷新",
+      "randomFields": "每局随机词库"
     },
     "friendsPlaying": {
       "title": "好友在玩",
@@ -96,6 +95,16 @@
     "language": "语言",
     "languageHint": "房间里的一切，包括牌上的词，都将使用{language}。",
     "fields": "词库",
+    "fieldsNone": "还没选词库",
+    "fieldsTwo": "{first}、{second}",
+    "fieldsMore": "{first}、{second}和另外 {rest} 个",
+    "fieldsChosen": "已选 {count} 个",
+    "fieldsDrawn": "开局时再抽",
+    "fieldsAll": "全选",
+    "fieldsRandom": "随机选",
+    "fieldsEach": "每局重新随机",
+    "fieldsEachHint": "每局开局时，每个词库各自随机选或不选（至少一个）。勾上后下面手选的不用。",
+    "fieldsEachSummary": "每局随机：开局时从所有词库里随机选",
     "fieldTerms": "{count} 个词",
     "fieldTooSmall": "这种语言的词不够",
     "noFields": "这种语言暂时还没有可用的词库。",
@@ -207,7 +216,6 @@
     "agentNote": "有 AI 参与的局不加学术积分，也不算连胜、称号和好友称号。",
     "takeoverNote": "玩家轮到自己时掉线满 20 秒，由 AI 代为托管，回来就交还。",
     "desk": "主持台",
-    "fields": "词库",
     "save": "保存",
     "saveHint": "开始游戏时也会保存这些改动。",
     "shuffle": "随机分组",

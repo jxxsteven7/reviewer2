@@ -85,6 +85,23 @@ export function settingsProblems(
   return problems;
 }
 
+// Settings that a room set up earlier had (RoomSetup), as a room in this language may take them:
+// each that still will do, and the default in place of any that won't, such as a clue length
+// beyond what the language allows, or that is missing.
+export function restoreSettings(saved: unknown, language: Language): KeywordsSettings {
+  const defaults = defaultSettings(language);
+  if (saved === null || typeof saved !== 'object' || Array.isArray(saved)) return defaults;
+  const kept = { ...defaults } as Record<keyof KeywordsSettings, unknown>;
+  for (const key of Object.keys(defaults) as (keyof KeywordsSettings)[]) {
+    if (key in saved) kept[key] = (saved as Record<string, unknown>)[key];
+  }
+  const settings = kept as unknown as KeywordsSettings;
+  for (const key of Object.keys(settingsProblems(settings, language)) as (keyof KeywordsSettings)[]) {
+    kept[key] = defaults[key];
+  }
+  return settings;
+}
+
 export const sameSettings = (a: KeywordsSettings, b: KeywordsSettings): boolean =>
   (Object.keys(a) as (keyof KeywordsSettings)[]).every((key) => a[key] === b[key]);
 

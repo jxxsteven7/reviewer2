@@ -3,9 +3,13 @@ import type { FieldInfo, Language } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 
 // Choosing the word lists for a room. A list without enough words in the room's language can't
-// be chosen.
+// be chosen, and none can while the picker is `disabled`, as when the room draws its lists for
+// every game; what is chosen still shows, greyed out.
 
-const props = defineProps<{ fields: FieldInfo[]; language: Language; needed: number }>();
+const props = withDefaults(
+  defineProps<{ fields: FieldInfo[]; language: Language; needed: number; disabled?: boolean }>(),
+  { disabled: false },
+);
 const model = defineModel<string[]>({ required: true });
 const { t } = useI18n();
 
@@ -19,11 +23,11 @@ function toggle(id: string, on: boolean) {
 <template>
   <ul class="fields">
     <li v-for="field in fields" :key="field.id">
-      <label :class="{ disabled: !usable(field) }">
+      <label :class="{ disabled: disabled || !usable(field) }">
         <input
           type="checkbox"
           :checked="model.includes(field.id)"
-          :disabled="!usable(field)"
+          :disabled="disabled || !usable(field)"
           @change="toggle(field.id, ($event.target as HTMLInputElement).checked)"
         />
         <span class="name">{{ field.name[language] }}</span>
@@ -67,7 +71,8 @@ label:has(input:focus-visible) {
   outline-offset: 2px;
 }
 
-label.disabled {
+label.disabled,
+label.disabled:has(input:checked) {
   border-color: var(--neutral);
   background: var(--paper-2);
   color: var(--ink-2);

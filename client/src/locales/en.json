@@ -37,8 +37,6 @@
         "guesser": "Reviewer\u00a01 gives the clues as your PI, and you guess."
       },
       "you": "You",
-      "fieldsTwo": "{first} and {second}",
-      "fieldsMore": "{first}, {second} and {rest} more",
       "chooseField": "Choose at least one word list to start.",
       "note": "Practice games bring no points, streaks or titles.",
       "start": "Start"
@@ -80,7 +78,8 @@
       "waiting": "Waiting for players",
       "playing": "Game in progress",
       "join": "Join",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "randomFields": "Random lists each game"
     },
     "friendsPlaying": {
       "title": "Friends playing",
@@ -96,6 +95,16 @@
     "language": "Language",
     "languageHint": "Everything in the room, the words on the cards included, will be in {language}.",
     "fields": "Word lists",
+    "fieldsNone": "No list chosen yet",
+    "fieldsTwo": "{first} and {second}",
+    "fieldsMore": "{first}, {second} and {rest} more",
+    "fieldsChosen": "{count} chosen",
+    "fieldsDrawn": "Drawn as each game starts",
+    "fieldsAll": "Select all",
+    "fieldsRandom": "Random",
+    "fieldsEach": "New random lists each game",
+    "fieldsEachHint": "As each game starts, every list is in or out at random (at least one). The ticks below are then not used.",
+    "fieldsEachSummary": "Random lists each game",
     "fieldTerms": "{count} terms",
     "fieldTooSmall": "Not enough terms in this language",
     "noFields": "No word lists are available in this language yet.",
@@ -207,7 +216,6 @@
     "agentNote": "A game that an AI plays in brings nobody points, a streak, a title or a friend title.",
     "takeoverNote": "A player who is offline for 20 seconds in their turn is played for by an AI until they are back.",
     "desk": "Chair's desk",
-    "fields": "Word lists",
     "save": "Save",
     "saveHint": "Starting the game saves these as well.",
     "shuffle": "Shuffle the groups",

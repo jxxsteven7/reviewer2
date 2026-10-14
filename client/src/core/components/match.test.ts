@@ -35,6 +35,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
     game: 'keywords',
     language: 'en',
     fields: ['general'],
+    randomFields: false,
     public: false,
     customWordCount: 0,
     phase: 'ended',

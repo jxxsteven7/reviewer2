@@ -498,3 +498,38 @@ describe('a replay', () => {
     expect((await records(ann)).ordinary.games).toBe(1);
   });
 });
+
+describe('the last room setup', () => {
+  test('is kept for an account as it makes a room, the last one alone, and for nobody else', async () => {
+    server = await startServer();
+    const ann = await loggedIn('Ann');
+    expect((await ann.account())?.roomSetup).toEqual({});
+    await roomOf(ann, { settings: { level: 2 }, play: true });
+    expect((await ann.account())?.roomSetup).toEqual({
+      room: {
+        game: 'test',
+        fields: ['general'],
+        randomFields: false,
+        settings: { level: 2 },
+        match: null,
+        public: false,
+        play: true,
+      },
+    });
+    await roomOf(ann, { fields: ['general', 'tiny'], randomFields: true });
+    expect((await ann.account())?.roomSetup).toEqual({
+      room: { game: 'test', fields: ['general', 'tiny'], randomFields: true, match: null, public: false, play: false },
+    });
+    // A room that isn't made keeps nothing, and a guest's rooms are nobody's.
+    const chair = track(await ann.connect());
+    expect(await chair.send('room:create', { game: 'test', language: 'en', fields: ['nope'] })).toEqual({
+      ok: false,
+      error: 'bad_fields',
+    });
+    await createRoom(server.url, 'Bob').then(({ chair: bob }) => track(bob));
+    expect(server.db.prepare('SELECT username FROM accounts WHERE room_setup IS NOT NULL').all()).toEqual([
+      { username: 'Ann' },
+    ]);
+    expect((await ann.account())?.roomSetup).toMatchObject({ room: { fields: ['general', 'tiny'] } });
+  });
+});

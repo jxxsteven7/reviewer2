@@ -69,10 +69,13 @@ export const ROOM_MESSAGES = {
   // a match by those rules; with `public`, it is listed for anyone with an account to join. With
   // `practice`, it is a practice room (docs/architecture.md#practice-rooms): the creator plays the
   // role they name, as the game calls it, AI players take the other seats, and the game starts.
+  // With `randomFields`, every game draws its word lists anew (drawFields in protocol.ts), and
+  // `fields` may be empty; a practice room takes none.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
     fields,
+    randomFields: z.boolean().optional(),
     settings: settings.optional(),
     name: name.optional(),
     play,
@@ -97,11 +100,12 @@ export const ROOM_MESSAGES = {
   'room:emote': z.object({ emote: z.enum(EMOTES) }),
   // A member reports another to the operator, with a note that the rules in feedback.ts judge.
   'room:report': z.object({ playerId, text: z.string().optional() }),
-  // The chair's controls. The settings change the word lists, the game's own settings, the
-  // chair's own words, as the text they were pasted as (parseCustomWords in custom.ts), or any
-  // of them.
+  // The chair's controls. The settings change the word lists, whether every game draws them anew,
+  // the game's own settings, the chair's own words, as the text they were pasted as
+  // (parseCustomWords in custom.ts), or any of them.
   'room:settings': z.object({
     fields: fields.optional(),
+    randomFields: z.boolean().optional(),
     settings: settings.optional(),
     words: z.string().max(MAX_CUSTOM_INPUT).optional(),
   }),

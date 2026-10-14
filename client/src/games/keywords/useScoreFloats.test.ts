@@ -62,6 +62,7 @@ function room(view: KeywordsView, more: Partial<RoomView> = {}): RoomView {
     game: 'keywords',
     language: 'en',
     fields: ['general'],
+    randomFields: false,
     public: false,
     customWordCount: 0,
     phase: 'playing',

@@ -1,4 +1,4 @@
-import { defaultSettings, type Language } from '@reviewer2/shared';
+import { defaultSettings, restoreSettings, type Language } from '@reviewer2/shared';
 import type { Component } from 'vue';
 import KeywordsGame from './keywords/KeywordsGame.vue';
 import KeywordsLobby from './keywords/KeywordsLobby.vue';
@@ -11,7 +11,8 @@ import SettingsForm from './keywords/SettingsForm.vue';
 // screen, and the replay of a finished game, which takes the replay the server kept. The room page
 // picks them by the room's game. The room setup asks the game for the form of its own settings,
 // which it binds with v-model to the settings and with v-model:valid to whether they will do, and
-// for the settings that the form starts with in a room's language. The home page shows the rules
+// for the settings that the form starts with in a room's language: the defaults, or those of the
+// creator's last room as far as they still will do. The home page shows the rules
 // beside the game's name, as a `link` with the `defaults`, for the settings and the language given.
 export interface GameScreens {
   Lobby: Component;
@@ -21,6 +22,7 @@ export interface GameScreens {
   Settings: Component;
   Rules: Component;
   defaultSettings(language: Language): object;
+  restoreSettings(saved: unknown, language: Language): object;
 }
 
 export const games: Record<string, GameScreens> = {
@@ -32,5 +34,6 @@ export const games: Record<string, GameScreens> = {
     Settings: SettingsForm,
     Rules: RulesSheet,
     defaultSettings,
+    restoreSettings,
   },
 };

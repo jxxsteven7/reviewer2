@@ -66,13 +66,26 @@ export interface FieldInfo {
   counts: Record<Language, number>;
 }
 
+// Word lists drawn at random (docs/architecture.md#rooms): each of the lists that have enough words
+// for a game in the room's language, `usable`, goes in on the toss of a coin, and one of them at
+// random when every coin lands tails, so that a draw always has a list. The room setup's "choose at
+// random" draws so, and a room that draws its lists anew for every game does at every start. `int`
+// is the caller's randomness: a whole number from 0 up to, but not including, `below`.
+export function drawFields(usable: readonly string[], int: (below: number) => number): string[] {
+  if (usable.length === 0) return [];
+  const drawn = usable.filter(() => int(2) === 1);
+  return drawn.length > 0 ? drawn : [usable[int(usable.length)] as string];
+}
+
 // A public room as the list on the home page shows it (meta:rooms): nothing about who is in it but
-// how many, and whether a game is on.
+// how many, and whether a game is on. A room that draws its lists anew for every game says so in
+// place of naming them.
 export interface PublicRoom {
   code: string;
   game: string;
   language: Language;
   fields: string[];
+  randomFields: boolean;
   players: number;
   playing: boolean;
 }

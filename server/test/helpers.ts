@@ -36,13 +36,13 @@ import { fakeGame } from './fakeGame';
 // as the latency of a heartbeat or the time a turn has left, doesn't depend on how long the test
 // itself takes.
 
-const list = (id: string, count: number): WordListData => ({
+export const wordList = (id: string, count: number): WordListData => ({
   id,
   name: { zh: id, en: id },
   terms: Array.from({ length: count }, (_, i) => ({ id: `${id}-${i}`, zh: `${id}\u8bcd${i}`, en: `${id} word ${i}` })),
 });
 
-export const testWords = () => new WordLibrary([list('general', 40), list('tiny', 2)]);
+export const testWords = () => new WordLibrary([wordList('general', 40), wordList('tiny', 2)]);
 
 // A mailer that keeps what it is asked to send, and answers `outcome`.
 export class FakeMail implements MailChannel {

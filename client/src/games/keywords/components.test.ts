@@ -120,6 +120,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     game: 'keywords',
     language: 'en',
     fields: ['general'],
+    randomFields: false,
     public: false,
     customWordCount: 0,
     phase: 'playing',

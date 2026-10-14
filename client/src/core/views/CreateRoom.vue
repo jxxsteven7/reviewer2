@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { games } from '../../games';
 import { account } from '../account';
-import FieldPicker from '../components/FieldPicker.vue';
+import FieldFold from '../components/FieldFold.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import MatchForm from '../components/MatchForm.vue';
 import PlayChoice from '../components/PlayChoice.vue';
@@ -15,24 +15,32 @@ import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
 import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
+import { keepRoomSetup, keptMatch, lastRoom } from '../roomSetup';
 import { storedName, storeName } from '../session';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
-// lists, the game's own settings, whether it is an ordinary room or a match, and the match's
-// rules, whether the room is private or listed on the home page, the creator's nickname, and
-// whether they play or only watch. The creator becomes the chair either way. A creator who is
-// logged in has their username, and is asked for no nickname; only they may list the room.
+// lists, folded into a line (FieldFold.vue), or lists drawn anew for every game, the game's own
+// settings, whether it is an ordinary room or a match, and the match's rules, whether the room is
+// private or listed on the home page, the creator's nickname, and whether they play or only watch.
+// The creator becomes the chair either way. A creator who is logged in has their username, and is
+// asked for no nickname; only they may list the room. The setup starts from the last one
+// (roomSetup.ts), as far as it still holds: lists that the language has too few words in drop out,
+// a setting that no longer will do is the game's default, and a guest's room is private.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
 const router = useRouter();
 
-const chosen = ref<string[]>([]);
+const last = lastRoom();
+const chosen = ref<string[]>(
+  Array.isArray(last?.fields) ? last.fields.filter((field): field is string => typeof field === 'string') : [],
+);
+const randomFields = ref(last?.randomFields === true);
 const { name, clean, problem, refuse } = useNameField(storedName());
-const play = ref(true);
+const play = ref(typeof last?.play === 'boolean' ? last.play : true);
 // What the server had against the form, apart from the name, which the name field shows.
 const formError = ref<string | undefined>();
 const { busy, run } = useBusy();
@@ -42,33 +50,44 @@ const usable = computed(() =>
 );
 // The game's settings, with its own form, which also says whether they will do.
 const screens = computed(() => games[props.game]);
-const settings = ref<object | undefined>(screens.value?.defaultSettings(language.value));
+const settings = ref<object | undefined>(
+  last?.game === props.game && last.settings !== undefined
+    ? screens.value?.restoreSettings(last.settings, language.value)
+    : screens.value?.defaultSettings(language.value),
+);
 const settingsValid = ref(true);
 // An ordinary room, or a match by these rules.
-const isMatch = ref(false);
-const match = ref<MatchRules>(defaultMatchRules());
+const lastMatch = keptMatch(last?.match);
+const isMatch = ref(lastMatch !== null);
+const match = ref<MatchRules>(lastMatch ?? defaultMatchRules());
 const matchValid = ref(true);
 const group = useId();
 // Private, as rooms always were, or public (docs/architecture.md#public-rooms).
-const isPublic = ref(false);
+const isPublic = ref(last?.public === true && account.summary !== null);
 const visibility = useId();
 
-// The creator chooses the lists: none is chosen to begin with. When a change of language leaves
-// a chosen list without enough words, it drops out, and nothing is chosen in its place.
-watch(usable, (lists) => {
-  const ids = new Set(lists.map((field) => field.id));
-  chosen.value = chosen.value.filter((id) => ids.has(id));
-});
+// The creator chooses the lists, those of the last room to begin with. When the lists come, or a
+// change of language leaves a chosen list without enough words, it drops out, and nothing is
+// chosen in its place.
+watch(
+  usable,
+  (lists) => {
+    if (!fields.value) return;
+    const ids = new Set(lists.map((field) => field.id));
+    chosen.value = chosen.value.filter((id) => ids.has(id));
+  },
+  { immediate: true },
+);
 // Whether to say that a list must be chosen: while there are lists to choose from and none is.
 // The group of lists points at the hint, so that a screen reader reads it with them. The button
 // can't: it is disabled while the hint shows, so the keyboard never reaches it.
-const needsField = computed(() => usable.value.length > 0 && !chosen.value.length);
+const needsField = computed(() => usable.value.length > 0 && !chosen.value.length && !randomFields.value);
 const id = useId();
 // Whether the form will do. create() checks it too, since a form can be submitted without its
 // button. A creator who is logged in needs no nickname: theirs is the username.
 const ready = computed(
   () =>
-    chosen.value.length > 0 &&
+    (chosen.value.length > 0 || randomFields.value) &&
     (!!clean.value || account.summary !== null) &&
     settingsValid.value &&
     (!isMatch.value || matchValid.value),
@@ -86,6 +105,7 @@ async function create() {
       game: props.game,
       language: currentLanguage(),
       fields: chosen.value,
+      ...(randomFields.value ? { randomFields: true } : {}),
       ...(settings.value ? { settings: settings.value } : {}),
       ...(isMatch.value ? { match: match.value } : {}),
       ...(isPublic.value ? { public: true } : {}),
@@ -100,6 +120,17 @@ async function create() {
     return;
   }
   if (!account.summary) storeName(clean.value ?? name.value.trim());
+  keepRoomSetup({
+    room: {
+      game: props.game,
+      fields: [...chosen.value],
+      randomFields: randomFields.value,
+      ...(settings.value ? { settings: settings.value } : {}),
+      match: isMatch.value ? { ...match.value } : null,
+      public: isPublic.value,
+      play: play.value,
+    },
+  });
   await router.push(`/room/${reply.code}`);
 }
 </script>
@@ -115,19 +146,17 @@ async function create() {
     <section
       class="step"
       role="group"
-      :aria-labelledby="`${id}-fields`"
+      :aria-label="t('create.fields')"
       :aria-describedby="needsField ? `${id}-hint` : undefined"
     >
-      <h3 :id="`${id}-fields`">{{ t('create.fields') }}</h3>
-      <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
-      <FieldPicker
-        v-else-if="usable.length"
+      <FieldFold
         v-model="chosen"
+        v-model:random="randomFields"
         :fields="fields"
         :language="language"
         :needed="wordsNeeded"
+        each-game
       />
-      <p v-else class="hint">{{ t('create.noFields') }}</p>
     </section>
 
     <section v-if="screens && settings" class="step">
@@ -213,7 +242,6 @@ async function create() {
 }
 
 .step > :deep(.field),
-.step > :deep(.fields),
 .step > :deep(.settings-form) {
   align-self: stretch;
 }

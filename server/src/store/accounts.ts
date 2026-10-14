@@ -118,6 +118,8 @@ export class AccountStore {
   readonly #profile: StatementSync;
   readonly #profileBan: StatementSync;
   readonly #profiles: StatementSync;
+  readonly #setup: StatementSync;
+  readonly #setSetup: StatementSync;
   readonly #delete: StatementSync;
   readonly #count: StatementSync;
   readonly #counts: StatementSync;
@@ -135,6 +137,8 @@ export class AccountStore {
     this.#byHandle = db.prepare(`SELECT ${COLUMNS} FROM accounts WHERE handle = ?`);
     this.#profile = db.prepare('UPDATE accounts SET link = ?, bio = ?, show_record = ?, show_thanks = ? WHERE id = ?');
     this.#profileBan = db.prepare('UPDATE accounts SET profile_banned = ? WHERE id = ?');
+    this.#setup = db.prepare('SELECT room_setup AS setup FROM accounts WHERE id = ?');
+    this.#setSetup = db.prepare('UPDATE accounts SET room_setup = ? WHERE id = ?');
     this.#profiles = db.prepare(
       'SELECT id, username, link, bio FROM accounts WHERE link IS NOT NULL OR bio IS NOT NULL ORDER BY id',
     );
@@ -284,6 +288,17 @@ export class AccountStore {
 
   setProfileBanned(id: number, banned: boolean): void {
     this.#profileBan.run(banned ? 1 : 0, id);
+  }
+
+  // How the account last set up a room (migration 19), as the JSON that setRoomSetup() wrote, or
+  // null for none.
+  roomSetup(id: number): string | null {
+    const row = this.#setup.get(id) as { setup: string | null } | undefined;
+    return row?.setup ?? null;
+  }
+
+  setRoomSetup(id: number, setup: string): void {
+    this.#setSetup.run(setup, id);
   }
 
   // Every account with a link or a bio on its profile, oldest first, for the operator to look over.

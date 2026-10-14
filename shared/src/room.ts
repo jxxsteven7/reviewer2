@@ -56,6 +56,10 @@ export interface RoomView<Game = unknown> {
   game: string;
   language: Language;
   fields: string[];
+  // Whether every game draws its word lists anew, at random, from those with enough words in the
+  // room's language (drawFields in protocol.ts), whatever `fields` holds: the room keeps those for
+  // when the chair turns this off again. Nobody is told which lists a game drew.
+  randomFields: boolean;
   // Whether the room is listed on the home page for anyone with an account to join, rather than
   // open only to those who have its code (docs/architecture.md#public-rooms).
   public: boolean;

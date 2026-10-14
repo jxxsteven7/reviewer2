@@ -26,6 +26,7 @@ const summary: AccountSummary = {
   profile: { link: null, bio: null, showRecord: false, showThanks: false, banned: false },
   likes: 0,
   requests: 0,
+  roomSetup: {},
 };
 
 const mountPage = () =>

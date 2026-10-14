@@ -61,6 +61,7 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   game: 'keywords',
   language: 'en',
   fields: ['general'],
+  randomFields: false,
   public: false,
   customWordCount: 0,
   phase: 'lobby',
@@ -215,6 +216,7 @@ describe('KeywordsLobby', () => {
     // The words didn't change, so they don't go along.
     expect(send).toHaveBeenCalledWith('room:settings', {
       fields: ['general'],
+      randomFields: false,
       settings: { ...defaultSettings('en'), clueRule: 'loose' },
     });
     // Once the room has the settings, there is nothing left to save.
@@ -257,7 +259,10 @@ describe('KeywordsLobby', () => {
     await chair.find('.start-bar .primary').trigger('click');
     await flushPromises();
     expect(send.mock.calls.filter(([event]) => event !== 'meta:fields')).toEqual([
-      ['room:settings', { fields: ['general'], settings: { ...defaultSettings('en'), guessRule: 'standard' } }],
+      [
+        'room:settings',
+        { fields: ['general'], randomFields: false, settings: { ...defaultSettings('en'), guessRule: 'standard' } },
+      ],
       ['room:start', { round: 2 }],
     ]);
   });
@@ -275,6 +280,7 @@ describe('KeywordsLobby', () => {
     await chair.get('.save button').trigger('click');
     expect(send).toHaveBeenCalledWith('room:settings', {
       fields: ['general'],
+      randomFields: false,
       settings: defaultSettings('en'),
       words: 'Alpha, Beta\nalpha',
     });
@@ -291,6 +297,25 @@ describe('KeywordsLobby', () => {
     expect(player.text()).not.toContain('Alpha');
   });
 
+  test('lets the chair have every game draw its word lists anew, which needs none chosen', async () => {
+    fields.value = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 300, en: 300 } }];
+    const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
+    await flushPromises();
+    await chair.get('.field-fold .each input').setValue(true);
+    expect(chair.get('.field-fold .summary').text()).toBe('Random lists each game');
+    expect(chair.get<HTMLInputElement>('.fields input').element.disabled).toBe(true);
+    await chair.get('.save button').trigger('click');
+    expect(send).toHaveBeenCalledWith('room:settings', {
+      fields: ['general'],
+      randomFields: true,
+      settings: defaultSettings('en'),
+    });
+    // Once the room draws its lists, there is nothing left to save.
+    await chair.setProps({ room: { ...view('ann', 0), randomFields: true } });
+    expect(chair.find('.save').exists()).toBe(false);
+    expect(chair.get<HTMLInputElement>('.field-fold .each input').element.checked).toBe(true);
+  });
+
   test('needs a word list unless the chair has 25 words of their own', async () => {
     fields.value = [{ id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 300, en: 300 } }];
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
@@ -304,6 +329,7 @@ describe('KeywordsLobby', () => {
     await chair.get('.save button').trigger('click');
     expect(send).toHaveBeenCalledWith('room:settings', {
       fields: [],
+      randomFields: false,
       settings: defaultSettings('en'),
       words: words(25),
     });

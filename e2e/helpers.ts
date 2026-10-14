@@ -365,9 +365,10 @@ async function chooseToWatch(page: Page, language: Language, { watch = false }: 
   if (watch) await page.getByRole('radio', { name: TEXT[language].room.join.watch }).check();
 }
 
-// Creates a room with the general word list. The room setup starts with no list chosen and won't
-// create the room until one is. `setup` runs on the room setup once the name is filled in, for a
-// test that wants other settings than the defaults.
+// Creates a room with the general word list. A first room setup starts with no list chosen, its
+// lists open, and won't create the room until one is; a later one starts from the last room, its
+// lists folded away (roomSetup.ts), which this opens. `setup` runs on the room setup once the
+// name is filled in, for a test that wants other settings than the defaults.
 export async function createRoom(
   page: Page,
   language: Language,
@@ -383,14 +384,22 @@ export async function createRoom(
   const gate = page.getByRole('button', { name: new RegExp(`^${literally(text.language[language])}`) });
   if (await gate.count()) await gate.click();
   await page.getByRole('button', { name: text.home.newRoom }).click();
+  const fold = page.locator('.field-fold .toggle');
+  await expect(fold.locator('.summary')).not.toHaveText(text.create.loadingFields);
+  if ((await fold.getAttribute('aria-expanded')) !== 'true') await fold.click();
   await expect(page.locator('.fields li').first()).toBeVisible();
   // A player who is logged in has their username, and is asked for no name.
   const field = page.getByLabel(text.create.name);
   if (await field.count()) await field.fill(name);
   const submit = page.getByRole('button', { name: text.create.submit });
-  await expect(submit).toBeDisabled();
-  await expect(page.getByText(text.create.chooseField)).toBeVisible();
-  await page.getByLabel(general.name[language]).check();
+  const generalList = page.getByLabel(general.name[language]);
+  if (!(await generalList.isChecked())) {
+    if (!(await page.locator('.field-fold input:checked').count())) {
+      await expect(submit).toBeDisabled();
+      await expect(page.getByText(text.create.chooseField)).toBeVisible();
+    }
+    await generalList.check();
+  }
   await expect(submit).toBeEnabled();
   await setup?.(page);
   await chooseToWatch(page, language, joining);
