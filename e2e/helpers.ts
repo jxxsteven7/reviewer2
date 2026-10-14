@@ -764,7 +764,8 @@ export async function askFriend(page: Page, username: string, line?: string): Pr
   const sheet = page.getByRole('dialog', { name: interpolate(text.friends.addTitle, { name: username }) });
   if (line !== undefined) await sheet.getByLabel(text.friends.noteLabel).fill(line);
   await sheet.getByRole('button', { name: text.friends.addSubmit }).click();
-  await expect(page.getByText(text.friends.requestSent)).toBeVisible();
+  // The word of the last request, since the word of one asked a moment ago may still be up.
+  await expect(page.getByText(text.friends.requestSent).last()).toBeVisible();
 }
 
 // The language that a page shows its interface in, before it has chosen one: the browser's.
