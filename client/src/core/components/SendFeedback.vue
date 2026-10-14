@@ -243,15 +243,18 @@ legend {
   font-weight: var(--weight-bold);
 }
 
+/* A choice, a little smaller than a button, so that the four kinds fit on one line in Chinese on a
+   phone; English, whose names are longer, may take two. */
 .choice {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  padding: 0 var(--space-4);
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-2);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
+  font-size: var(--text-sm);
   font-weight: var(--weight-bold);
   cursor: pointer;
 }
