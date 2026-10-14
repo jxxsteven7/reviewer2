@@ -94,9 +94,10 @@ export interface KeywordsData {
   settings: KeywordsSettings;
   seating: Seating;
   game: KeywordsState | null;
-  // Whoever has left each group's PI seat while the game is on, by player ID: a deadline that the
-  // group misses while its seat stays empty costs them (missedBy), as it would in the seat, so that
-  // stepping down before the deadline and taking the seat back afterwards saves nothing.
+  // Whoever has left each group's PI seat of their own accord while the game is on, by player ID,
+  // stepping down or leaving the room: a deadline that the group misses while its seat stays empty
+  // costs them (missedBy), as it would in the seat, so that stepping down before the deadline and
+  // taking the seat back afterwards saves nothing. A PI whom the chair benched isn't noted (bench).
   vacated: Record<Team, string | null>;
   // The game's part of the match that the room plays, if it plays one (match.ts).
   match: MatchSeating | null;
@@ -398,9 +399,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     };
   },
 
+  // A PI whom the chair benches didn't choose to leave the seat, so a deadline missed while it
+  // stays empty costs them nothing; the chair benching themselves is stepping down.
   bench(data, ctx, playerId) {
     const seated = sit(data, ctx, playerId, SPECTATOR);
-    return seated.ok ? seated.data : data;
+    if (!seated.ok || seated.data === data) return data;
+    return playerId === ctx.chairId ? seated.data : { ...seated.data, vacated: data.vacated };
   },
 
   // A match whose groups are fixed, or drawn when its game starts, has nothing for the chair to

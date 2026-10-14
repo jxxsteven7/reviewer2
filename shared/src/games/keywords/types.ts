@@ -79,9 +79,11 @@ export interface CardView {
 // and `count` are null. `timedOut` marks a turn that ended because its time ran out, before the
 // clue or during the guesses. Each guess names the player who revealed the card, by player ID.
 //
-// `captain` is the player who gave the clue, or who was in the captain's seat when the time for it
-// ran out, if anyone was, and `targets` the cards that they marked as the ones the clue was meant
-// for, if they marked any (docs/games/keywords.md#the-clue). The targets are the captain's secret
+// `captain` is the player who gave the clue, or, for a turn whose time ran out before the clue, the
+// captain whom the missed deadline costs, if anyone: whoever was in the seat, or, when it was empty,
+// the one who left it during the game (docs/games/keywords.md#time-limits). `targets` are the cards
+// that they marked as the ones the clue was meant for, if they marked any
+// (docs/games/keywords.md#the-clue). The targets are the captain's secret
 // until the game is over: no view carries them before then, the captain's own included. `at`, on
 // the clue and on each guess, is when it came, in milliseconds from the start of the game; for a
 // turn without a clue, when its time ran out. Replays from before these were kept have none of

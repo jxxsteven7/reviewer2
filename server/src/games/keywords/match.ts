@@ -71,7 +71,7 @@ export const counts = (game: KeywordsState): boolean => game.result?.reason !== 
 type Mistakes = Pick<KeywordsScoreDetail, 'irrelevant' | 'wrong' | 'reviewer2'>;
 const noMistakes = (): Mistakes => ({ irrelevant: 0, wrong: 0, reviewer2: 0 });
 
-// Whether a turn is one whose captain gave no clue in time, with the captain who was in the seat.
+// Whether a turn is one whose captain gave no clue in time, with the captain whom it costs.
 export const missedDeadline = (record: ClueRecord): boolean =>
   record.word === null && record.timedOut === true && record.captain !== undefined;
 

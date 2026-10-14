@@ -673,6 +673,21 @@ describe('a match of the game', () => {
     const theirs = keywordsGame.tick(taken.data, late);
     expect(theirs.game?.history[0]).toMatchObject({ captain: student });
     expect(missedBy(theirs)?.points).toBe(0);
+    // A PI whom the chair benches didn't choose to leave: the empty seat costs nobody, and the PI
+    // nothing once back in it.
+    const chair = { ...context(ids, { phase: 'playing' }), chairId: student };
+    const benched = keywordsGame.bench(data, chair, pi);
+    expect(captainOf(benched.seating, game.team)).toBeNull();
+    const spared = keywordsGame.tick(benched, late);
+    expect(spared.game?.history[0]).toMatchObject({ word: null, timedOut: true });
+    expect(spared.game?.history[0]).not.toHaveProperty('captain');
+    expect(spared.game?.events).toHaveLength(0);
+    const returned = seat(spared, pi, { team: game.team, role: 'captain' }, 'playing');
+    if (!returned.ok) throw new Error(returned.error);
+    expect(keywordsGame.match?.score(returned.data, late)?.find(({ key }) => key === keyOf(pi))?.points).toBe(0);
+    // The chair benching themselves is stepping down.
+    const self = keywordsGame.bench(data, { ...chair, chairId: pi }, pi);
+    expect(missedBy(keywordsGame.tick(self, late))).toMatchObject({ points: -5 });
   });
 
   test('lets a newcomer watch the game that is on, and seats them for the next one', () => {
