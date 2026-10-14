@@ -720,7 +720,7 @@
     "contact_too_long": "联系方式最多 100 个字。",
     "credit_invalid": "署名需要 1 到 16 个可见字符。",
     "credit_reserved": "这个名字是保留的，请换一个。",
-    "feedback_unsigned": "你已经退出登录，没法用账号署名。请重新登录，或者改选匿名。",
+    "feedback_unsigned": "没能用账号署名。请重试、重新登录，或者改选匿名。",
     "feedback_limited": "同一个网络 10 分钟内最多发 3 条反馈，请稍后再试。",
     "feedback_full": "服务器暂时没有空间接收新的反馈，抱歉。",
     "report_too_long": "最多 300 字。",
@@ -820,7 +820,7 @@
       "anonymous": "匿名"
     },
     "anonymousHint": "首页的反馈贡献里会列为一位匿名玩家，GitHub issue 上也不写名字。",
-    "accountHint": "首页的反馈贡献会显示你的头像和用户名，点头像或用户名能打开你的公开主页；GitHub issue 上会写你的用户名。",
+    "accountHint": "首页的反馈贡献会显示你的头像和用户名，点头像或用户名能打开你的账号面板；GitHub issue 上会写你的用户名。",
     "credit": "名字",
     "creditHint": "署名需要填一个名字，不想填就选匿名。这个名字会列在首页的反馈贡献里，也会写在 GitHub issue 上。任意名字都可以，比如 GitHub 用户名。",
     "gameNote": "希望我们下一个做什么游戏？说说一局怎么玩、好玩在哪里。",

@@ -16,7 +16,7 @@ import {
 import { computed, reactive, ref, toRefs, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRoute } from 'vue-router';
-import { account } from '../account';
+import { account, loadAccount } from '../account';
 import { errorKey } from '../errors';
 import { currentLanguage } from '../i18n';
 import { connect, send } from '../socket';
@@ -39,11 +39,13 @@ import UiSheet from './UiSheet.vue';
 // browser's user agent, which it reads from the connection, and the panel says so. The server
 // keeps the account the player is logged in to, whether they sign the feedback or not. The player
 // chooses to sign, which the panel offers first, or to stay anonymous: a player who is logged in
-// signs with the account, which the contributions show by its avatar and username, the avatar
-// opening their public page, and a guest leaves a name of their own, which signing then asks for.
-// A guest is asked to log in first, by a way to the account page that brings them back to their
-// room, if they are in one, and may send it all the same. A new game, which the player suggests
-// the project make next, gets a word on what to write.
+// signs with the account, which the contributions show by its avatar and username, either opening
+// the account's panel (ProfilePanel.vue), and a guest leaves a name of their own, which signing
+// then asks for. A guest is asked to log in first, by a way to the account page that brings them
+// back to their room, if they are in one, and may send it all the same. Feedback that the server
+// couldn't sign with the account makes the page ask again who the browser is, so that the form
+// follows. A new game, which the player suggests the project make next, gets a word on what to
+// write.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.
@@ -82,9 +84,11 @@ const checkedContact = computed(() => checkContact(contact.value));
 const checkedCredit = computed(() => checkCredit(credit.value));
 // Who signs: the account, for a player who is logged in, or a name of their own, which a guest
 // types, and which the feedback needs then. Until the server has said who this browser is, nobody
-// is asked for a name, which a player who turns out to be logged in wouldn't need.
+// is asked for a name, which a player who turns out to be logged in wouldn't need, and nothing
+// signed is sent, which would go without a name or an account, as anonymous.
 const signer = computed(() => (signature.value === 'signed' ? account.summary : null));
 const asksName = computed(() => signature.value === 'signed' && account.loaded && account.summary === null);
+const waitsForAccount = computed(() => signature.value === 'signed' && !account.loaded);
 watch([kind, text, contact, signature, credit], () => (refused.value = undefined));
 
 const count = computed(() => t('feedback.count', { count: textLength(checked.value.text), max: MAX_FEEDBACK_LENGTH }));
@@ -101,6 +105,7 @@ const ready = computed(
   () =>
     checked.value.problem === null &&
     checkedContact.value.problem === null &&
+    !waitsForAccount.value &&
     (!asksName.value || (checkedCredit.value.problem === null && checkedCredit.value.credit !== null)),
 );
 
@@ -129,6 +134,10 @@ function submit() {
     const reply = await send('meta:feedback', message);
     if (!reply.ok) {
       refused.value = t(errorKey(reply.error));
+      // Feedback that couldn't be signed with the account: the login may have ended, or the
+      // connection may not be the account's yet. The page asks again who the browser is, on which
+      // the form asks a guest for a name, or the connection is made again as the account.
+      if (reply.error === 'feedback_unsigned') void loadAccount();
       return;
     }
     kind.value = 'idea';
@@ -206,7 +215,7 @@ function submit() {
         :error="creditProblem"
         enterkeyhint="send"
       />
-      <p v-else class="note">{{ t('feedback.anonymousHint') }}</p>
+      <p v-else-if="signature === 'anonymous'" class="note">{{ t('feedback.anonymousHint') }}</p>
       <p v-if="kind === 'bug'" class="note">{{ t('feedback.bugNote') }}</p>
 
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>

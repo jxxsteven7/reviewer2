@@ -14,17 +14,16 @@ import UiSheet from './UiSheet.vue';
 // The panel of an account outside a room (docs/architecture.md#public-profiles): what a tap on an
 // avatar opens on the account page and the home page (AvatarButton.vue), and on an account among
 // the feedback contributions (ContributionsList.vue), and the search on the account page for the
-// account it finds (ProfileFriends.vue), the same as a room's player panel
-// (PlayerPanel.vue) without what only a room has, so that nobody leaves the page to look. The site
-// has one, which App.vue holds and which opens on whichever account was last asked for
-// (profilePanel.ts). Its title is the username, or the name the viewer gives a friend, with the
-// username after it in small grey type. A brief card, and under it what the viewer may do by how
-// the two stand (FriendActions.vue), once the viewer's own friends list has come or can't be had,
-// or, for the viewer's own account, a word that it is theirs and the way to the account page,
-// where they change it, as in a room; last, the whole page, as others see it, which rises as a
-// second sheet of its own height over the panel, scrolls inside past the most a sheet may be, and
-// leads back to it. Once something has gone through, whoever opened the panel hears so, and the
-// panel closes.
+// account it finds (ProfileFriends.vue), the same as a room's player panel (PlayerPanel.vue)
+// without what only a room has, so that nobody leaves the page to look. The site has one, which
+// App.vue holds and which opens on whichever account was last asked for (profilePanel.ts). Its
+// title is the username, or the name the viewer gives a friend, with the username after it in
+// small grey type. A brief card, and under it what the viewer may do by how the two stand
+// (FriendActions.vue), once the viewer's own friends list has come or can't be had, or, for the
+// viewer's own account, a word that it is theirs and the way to the account page, where they
+// change it, as in a room; last, the whole page, as others see it, which rises as a second sheet
+// of its own height over the panel, scrolls inside past the most a sheet may be, and leads back to
+// it. Once something has gone through, whoever opened the panel hears so, and the panel closes.
 const { t } = useI18n();
 const shown = shownProfile;
 const open = computed(() => shown.value !== null);

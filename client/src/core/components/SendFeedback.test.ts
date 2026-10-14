@@ -12,8 +12,12 @@ const socket = vi.hoisted(() => ({
   connect: vi.fn(),
 }));
 vi.mock('../socket', () => socket);
-// Who the browser is, as the server last said: a guest, until a test logs in.
-const signedIn = vi.hoisted(() => ({ account: null as unknown as { loaded: boolean; summary: object | null } }));
+// Who the browser is, as the server last said: a guest, until a test logs in; and the page's way
+// of asking again, which a test answers by setting what the server would have said.
+const signedIn = vi.hoisted(() => ({
+  account: null as unknown as { loaded: boolean; summary: object | null },
+  loadAccount: vi.fn(),
+}));
 vi.mock('../account', () => {
   signedIn.account = reactive({ loaded: true, summary: null, mail: false });
   return signedIn;
@@ -32,6 +36,7 @@ beforeEach(() => {
   socket.send.mockReset();
   socket.send.mockResolvedValue({ ok: true });
   socket.connect.mockReset();
+  signedIn.loadAccount.mockReset();
   toasts.splice(0);
   signedIn.account.loaded = true;
   signedIn.account.summary = null;
@@ -180,7 +185,7 @@ describe('the feedback panel', () => {
     expect(credit(wrapper)).toBeUndefined();
     expect(wrapper.get('.signer').text()).toBe('ann');
     expect(wrapper.find('.signer .avatar').exists()).toBe(true);
-    expect(wrapper.text()).toContain('a tap on either opens your public page');
+    expect(wrapper.text()).toContain('a tap on either opens your panel');
     await wrapper.get('textarea').setValue('Hi');
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
@@ -218,14 +223,61 @@ describe('the feedback panel', () => {
     signedIn.account.loaded = false;
     const wrapper = await opened();
     expect(wrapper.find('.guest').exists()).toBe(false);
-    // Nor for a name, which a player who turns out to be logged in wouldn't need: once the server
-    // has answered, a guest is asked for one.
+    // Nor for a name, which a player who turns out to be logged in wouldn't need, and nothing is
+    // sent signed meanwhile, which would go as anonymous; nor is anything said of anonymity, which
+    // the player didn't choose. Once the server has answered, a guest is asked for a name.
     expect(checked(wrapper, 'signed')).toBe(true);
     expect(credit(wrapper)).toBeUndefined();
     expect(wrapper.find('.signer').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('You are listed as an anonymous player');
+    await wrapper.get('textarea').setValue('Early');
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send).not.toHaveBeenCalled();
+    // Anonymous feedback waits for nobody.
+    await anonymous(wrapper);
+    expect(wrapper.text()).toContain('You are listed as an anonymous player');
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await sign(wrapper);
     signedIn.account.loaded = true;
     await flushPromises();
     expect(credit(wrapper)).toBeDefined();
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    await credit(wrapper)?.setValue('Ann');
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await wrapper.get('textarea').setValue('');
+  });
+
+  test("asks again who the browser is when the server couldn't sign with the account", async () => {
+    signedIn.account.summary = { username: 'ann', avatar: null };
+    socket.send.mockResolvedValue({ ok: false, error: 'feedback_unsigned' });
+    const wrapper = await opened();
+    await wrapper.get('textarea').setValue('Signed, I thought');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toBe(
+      "The feedback couldn't be signed with your account. Try again, log in again, or choose Anonymously.",
+    );
+    expect(signedIn.loadAccount).toHaveBeenCalledOnce();
+    expect(toasts).toEqual([]);
+    // The login had ended: the form turns to a guest's, asking for a name, with the refusal still
+    // up and what was written kept.
+    signedIn.account.summary = null;
+    await flushPromises();
+    expect(wrapper.find('.guest').exists()).toBe(true);
+    expect(wrapper.find('.signer').exists()).toBe(false);
+    expect(credit(wrapper)).toBeDefined();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('Signed, I thought');
+    // Any other refusal leaves the question alone.
+    socket.send.mockResolvedValue({ ok: false, error: 'feedback_limited' });
+    await credit(wrapper)?.setValue('Ann');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(signedIn.loadAccount).toHaveBeenCalledOnce();
+    await wrapper.get('textarea').setValue('');
+    await credit(wrapper)?.setValue('');
   });
 
   test('says that a bug report takes the browser along, and only then', async () => {
