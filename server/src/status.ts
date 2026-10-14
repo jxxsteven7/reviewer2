@@ -24,11 +24,11 @@ import type { FeedbackStore } from './store/feedback';
 // for scripts. `/feedback` is the feedback that players sent, a page of it at a time:
 // `/feedback?before=<id>` shows what came before that one, and `/feedback?status=<view>` all of
 // it or the feedback of one status, such as what is resolved or in the trash; without it, or with
-// a view that the page doesn't know, what is open, which nobody has dealt with yet. `/reports` is the reports that players sent of each other,
-// paged the same way. All of it is read-only: what became of the feedback is changed with
-// admin.cjs alone, whose commands the feedback page shows as text to copy, with ADMIN_COMMAND in
-// front, or the operator's own command for them, which can also publish an issue in one go
-// (FEEDBACK_COMMAND).
+// a view that the page doesn't know, what is open, which nobody has dealt with yet. `/reports` is
+// the reports that players sent of each other, paged the same way. All of it is read-only: what
+// became of the feedback is changed with admin.cjs alone, whose commands the feedback page shows
+// as text to copy, with ADMIN_COMMAND in front, or the operator's own command for them, which can
+// also publish an issue in one go (FEEDBACK_COMMAND).
 
 export const STATUS_HOST = '127.0.0.1';
 

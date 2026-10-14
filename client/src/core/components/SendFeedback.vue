@@ -42,8 +42,8 @@ import UiSheet from './UiSheet.vue';
 // signs with the account, which the contributions show by its avatar and username, the avatar
 // opening their public page, and a guest leaves a name of their own, which signing then asks for.
 // A guest is asked to log in first, by a way to the account page that brings them back to their
-// room, if they are in one, and may send it all the same. A new game, which the player suggests the project make next, gets a word on
-// what to write.
+// room, if they are in one, and may send it all the same. A new game, which the player suggests
+// the project make next, gets a word on what to write.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.

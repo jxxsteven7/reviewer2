@@ -18,7 +18,7 @@ const STYLE = `
 :root {
   --bg: #f4efe6; --paper: #ffffff; --ink: #1a1a2e; --ink-2: #4b4b60; --line: #bdb6a8;
   --yellow: #ffd23f; --blue: #2d5bff; --blue-tint: #d5dfff; --blue-deep: #1f44d6;
-  --red: #f2543d; --red-tint: #ffd6cf; --neutral: #bdb6a8; --mint: #5fd3a0; --focus: #2d5bff;
+  --red: #f2543d; --red-tint: #ffd6cf; --neutral: #bdb6a8; --focus: #2d5bff;
   --outline: 2px; --radius: 12px; --shadow: 3px 3px 0 var(--ink);
 }
 * { box-sizing: border-box; }
@@ -575,8 +575,9 @@ function agents({ agents: ai }: Stats): string {
 <dl>${tile('Agent', ai.up ? 'Up' : '<strong>Down</strong>')}${tile('In rooms', ai.players)}${tile('Steps', ai.steps, 'in the last hour')}${tile('Failed', ai.failures, 'in the last hour')}</dl></section>`;
 }
 
-// The feedback that players sent, newest first, a page at a time, of one view, each with the commands that may come next (`run`): FEEDBACK_COMMAND, where it is
-// set, or ADMIN_COMMAND, or DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs (config.ts).
+// The feedback that players sent, newest first, a page at a time, of one view, each with the
+// commands that may come next (`run`): FEEDBACK_COMMAND, where it is set, or ADMIN_COMMAND, or
+// DEFAULT_ADMIN_COMMAND, in front of those of admin.cjs (config.ts).
 export function renderFeedbackPage(feedback: FeedbackListing, run: FeedbackCommands): string {
   return document(
     'feedback',
