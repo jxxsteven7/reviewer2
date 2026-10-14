@@ -209,7 +209,7 @@ const TRASH_SHOWN = 100;
 // which only feedback adopted or recorded on its way to the trash is, or feedback that was in the
 // trash as an issue before issues kept feedback out of it (store/feedback.ts).
 function trashTime(feedback: Feedback, daysLeft: number): string {
-  if (feedback.adoptedAt !== null) return 'kept: thanked';
+  if (feedback.adoptedAt !== null) return 'kept: adopted';
   if (feedback.issue !== null) return 'kept: issue';
   return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
 }

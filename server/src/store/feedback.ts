@@ -62,13 +62,12 @@ export const feedbackLimits = (maxEntries: number): FeedbackLimits => ({
 });
 
 // What became of a piece of feedback, from the operator's notes, the first of these that holds:
-// in the trash; closed without being adopted; thanked, by being adopted, which lists it among the
-// feedback contributions; resolved, by a pull request; published as a GitHub issue; or new. The
-// page shows the status, and the whole trail beside it. As views, they go by the facts, and may
-// overlap: the resolved feedback is all that a pull request resolved, thanked or not, unless it is
-// closed or in the trash, and the thanked is all that was thanked, resolved or not, likewise; the
-// others are the feedback of that status.
-export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'thanked', 'closed', 'trash'] as const;
+// in the trash; closed without being adopted; resolved, by being adopted, which lists it among the
+// feedback contributions, whether a pull request was recorded or not; published as a GitHub issue,
+// or recorded as resolved by a pull request without being adopted, which still waits for the
+// adoption; or new. The page shows the status, and the whole trail beside it. As views, each is
+// the feedback of that status, and none overlaps another.
+export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'closed', 'trash'] as const;
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
 // What is read: the feedback of one view above, the open feedback, which still waits for the
@@ -148,8 +147,8 @@ export interface Report extends Omit<NewReport, 'reporterId'> {
 // The status, as a column, in the order of FEEDBACK_STATUSES from the last to the first.
 const STATUS =
   "CASE WHEN f.deleted_at IS NOT NULL THEN 'trash' WHEN f.closed_at IS NOT NULL THEN 'closed' " +
-  "WHEN f.adopted_at IS NOT NULL THEN 'thanked' WHEN f.resolved_pr IS NOT NULL THEN 'resolved' " +
-  "WHEN f.issue IS NOT NULL THEN 'issue' ELSE 'new' END AS status";
+  "WHEN f.adopted_at IS NOT NULL THEN 'resolved' " +
+  "WHEN f.issue IS NOT NULL OR f.resolved_pr IS NOT NULL THEN 'issue' ELSE 'new' END AS status";
 const COLUMNS =
   'f.id, f.created_at AS createdAt, f.kind, f.text, f.contact, f.credit, f.account_id AS accountId, ' +
   'f.link_profile AS linkProfile, f.issue, ' +
@@ -161,15 +160,10 @@ const FROM = 'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id';
 // subqueries, so that `status` in a WHERE clause names the column above and nothing that a table
 // joined in may come to have.
 const ROWS = `(SELECT ${COLUMNS} ${FROM})`;
-const KINDS_AND_STATUSES = `(SELECT f.kind, f.resolved_pr AS resolvedPr, ${STATUS} ${FROM})`;
-// Whether a row is resolved, as the view goes: a pull request resolved it, and it is neither
-// closed nor in the trash, whether it was thanked too or not.
-const RESOLVED = "resolvedPr IS NOT NULL AND status IN ('resolved', 'thanked')";
-// The rows of a view, given twice: every row, the open ones, the resolved ones, or those of the
-// status that the view names.
-const VIEW =
-  "CASE ? WHEN 'all' THEN 1 WHEN 'open' THEN status IN ('new', 'issue') " +
-  `WHEN 'resolved' THEN ${RESOLVED} ELSE status = ? END`;
+const KINDS_AND_STATUSES = `(SELECT f.kind, ${STATUS} ${FROM})`;
+// The rows of a view, given twice: every row, the open ones, or those of the status that the view
+// names.
+const VIEW = "CASE ? WHEN 'all' THEN 1 WHEN 'open' THEN status IN ('new', 'issue') ELSE status = ? END";
 
 // The parameters of VIEW.
 const viewParams = (view: FeedbackView): [string, string] => [view, view];
@@ -224,7 +218,7 @@ export class FeedbackStore {
     this.#kinds = db.prepare(`SELECT kind, count(*) AS count FROM ${KINDS_AND_STATUSES} WHERE ${VIEW} GROUP BY kind`);
     this.#statuses = db.prepare(
       "SELECT coalesce(sum(status = 'new'), 0) AS new, coalesce(sum(status = 'issue'), 0) AS issue, " +
-        `coalesce(sum(${RESOLVED}), 0) AS resolved, coalesce(sum(status = 'thanked'), 0) AS thanked, ` +
+        "coalesce(sum(status = 'resolved'), 0) AS resolved, " +
         "coalesce(sum(status = 'closed'), 0) AS closed, coalesce(sum(status = 'trash'), 0) AS trash " +
         `FROM ${KINDS_AND_STATUSES} WHERE kind = coalesce(?, kind)`,
     );
@@ -338,8 +332,8 @@ export class FeedbackStore {
     return Object.fromEntries(rows.map(({ kind, count }) => [kind, count]));
   }
 
-  // How much feedback there is in each view of a status (FEEDBACK_STATUSES), of one kind or of
-  // every kind, with 0 for one that has none. Feedback that was resolved and thanked counts in both.
+  // How much feedback there is of each status (FEEDBACK_STATUSES), of one kind or of every kind,
+  // with 0 for one that has none.
   statuses(kind: FeedbackKind | null = null): Record<FeedbackStatus, number> {
     const row = this.#statuses.get(kind) as Record<FeedbackStatus, number>;
     return Object.fromEntries(FEEDBACK_STATUSES.map((status) => [status, row[status]])) as Record<

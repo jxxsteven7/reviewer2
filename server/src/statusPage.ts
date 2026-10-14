@@ -73,8 +73,7 @@ polyline { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
 .pills strong { background: var(--ink); color: var(--yellow); }
 .badge.new { background: var(--yellow); }
 .badge.issue { background: var(--blue-tint); }
-.badge.resolved { background: var(--mint); }
-.badge.thanked { background: var(--ink); color: var(--yellow); }
+.badge.resolved { background: var(--ink); color: var(--yellow); }
 .badge.closed { background: var(--neutral); }
 .badge.trash { background: var(--red-tint); }
 .pills a b, .badge b { font-weight: 800; }
@@ -185,8 +184,7 @@ function chart(samples: readonly Sample[], now: number): string {
 }
 
 // What the feedback page shows: the open feedback, which still waits for the operator, new or
-// published as an issue, or the feedback of one status, where the resolved and the thanked go by
-// the facts and may overlap (store/feedback.ts).
+// published as an issue, or the feedback of one status (store/feedback.ts).
 export const FEEDBACK_VIEWS = ['open', ...FEEDBACK_STATUSES] as const;
 export type PageView = (typeof FEEDBACK_VIEWS)[number];
 
@@ -195,8 +193,7 @@ export type PageView = (typeof FEEDBACK_VIEWS)[number];
 export interface FeedbackListing {
   // How much feedback there is in all, the trash included.
   total: number;
-  // How much there is in each view of a status, of the kind shown, and of each kind, in the view
-  // shown.
+  // How much there is of each status, of the kind shown, and of each kind, in the view shown.
   statuses: Record<FeedbackStatus, number>;
   kinds: Record<string, number>;
   view: PageView;
@@ -229,7 +226,6 @@ const VIEWS: Record<PageView, string> = {
   new: 'New',
   issue: 'Issue',
   resolved: 'Resolved',
-  thanked: 'Thanked',
   closed: 'Closed',
   trash: 'Trash',
 };
@@ -253,20 +249,19 @@ const day = (iso: string) => iso.slice(0, 10);
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
-// The badge of a status, in its colors, with what it stands for written out: the issue's number
-// for feedback published as one, and for feedback that is resolved or thanked, both that apply,
-// such as "Resolved #72 &middot; Thanked", the pull request's number with the first.
+// The badge of a status, in its colors, with what it stands for written out: for feedback that
+// waits as an issue, the issue's number and the pull request's, when one was recorded without the
+// adoption, such as "Issue #77 &middot; PR #76", which tells the operator that the adoption is
+// still to come; for resolved feedback, that is, adopted, the pull request's number and the
+// issue's, such as "Resolved &middot; PR #76 &middot; issue #77".
 function badge(feedback: Feedback): string {
-  const { status, issue, resolvedPr, adoptedAt } = feedback;
-  const done = [
-    ...(resolvedPr === null ? [] : [`Resolved #${resolvedPr}`]),
-    ...(adoptedAt === null ? [] : ['Thanked']),
-  ];
+  const { status, issue, resolvedPr } = feedback;
+  const pr = resolvedPr === null ? [] : [`PR #${resolvedPr}`];
   const label =
     status === 'issue'
-      ? `Issue #${issue}`
-      : status === 'resolved' || status === 'thanked'
-        ? done.join(' &middot; ')
+      ? [...(issue === null ? [] : [`Issue #${issue}`]), ...pr].join(' &middot; ')
+      : status === 'resolved'
+        ? ['Resolved', ...pr, ...(issue === null ? [] : [`issue #${issue}`])].join(' &middot; ')
         : VIEWS[status];
   return `<span class="badge ${status}">${label}</span>`;
 }
@@ -286,7 +281,7 @@ function trail(feedback: Feedback, now: number): string {
       : [
           `in the trash since ${escape(day(feedback.deletedAt))}, ` +
             (feedback.adoptedAt !== null
-              ? 'kept: thanked'
+              ? 'kept: adopted'
               : feedback.issue !== null
                 ? 'kept: issue'
                 : `${plural(daysLeft(feedback.deletedAt, now), 'day')} left`),
@@ -525,12 +520,11 @@ export interface FeedbackCounts {
 
 export const NO_FEEDBACK: FeedbackCounts = {
   total: 0,
-  statuses: { new: 0, issue: 0, resolved: 0, thanked: 0, closed: 0, trash: 0 },
+  statuses: { new: 0, issue: 0, resolved: 0, closed: 0, trash: 0 },
 };
 
-// The feedback on the status page: how much there is in each view of a status, each the way to
-// that view, and of the open feedback, new or published as an issue, the way to the page itself.
-// Feedback that was resolved and thanked counts in both.
+// The feedback on the status page: how much there is of each status, each the way to that view,
+// and of the open feedback, new or published as an issue, the way to the page itself.
 function feedbackCounts({ total, statuses }: FeedbackCounts): string {
   if (total === 0) return '<p class="note">None yet.</p>';
   const open = statuses.new + statuses.issue;

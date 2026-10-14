@@ -254,17 +254,16 @@ describe('the feedback', () => {
     const status = renderStatusPage(stats(), [], NOW);
     expect(text(status)).toContain('Feedback None yet.');
     expect(status).toContain('<meta http-equiv="refresh" content="5">');
-    // Open is new and issue alone; one piece of feedback was resolved and thanked, and counts in both.
+    // Open is new and issue alone, and no status overlaps another.
     const some = renderStatusPage(stats(), [], NOW, {
       total: 11,
-      statuses: { new: 3, issue: 2, resolved: 1, thanked: 2, closed: 3, trash: 1 },
+      statuses: { new: 3, issue: 2, resolved: 2, closed: 3, trash: 1 },
     });
     expect(some).toContain(
       '<p class="pills"><a class="badge" href="/feedback">Open <b>5</b></a>' +
         '<a class="badge new" href="/feedback?status=new">New <b>3</b></a>' +
         '<a class="badge issue" href="/feedback?status=issue">Issue <b>2</b></a>' +
-        '<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>1</b></a>' +
-        '<a class="badge thanked" href="/feedback?status=thanked">Thanked <b>2</b></a>' +
+        '<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>2</b></a>' +
         '<a class="badge closed" href="/feedback?status=closed">Closed <b>3</b></a>' +
         '<a class="badge trash" href="/feedback?status=trash">Trash <b>1</b></a></p>' +
         '<p class="note">11 in all &middot; <a href="/feedback">Read it</a></p>',
@@ -325,24 +324,26 @@ describe('the feedback', () => {
           adoptedAt: '2026-10-08T10:00:00.000Z',
           summaryZh: '提出了更多领域',
           summaryEn: 'Suggested more fields',
-          status: 'thanked',
+          status: 'resolved',
         }),
         feedback(2, {
           credit: 'Bob',
           username: null,
           issue: 41,
           adoptedAt: '2026-10-08T10:00:00.000Z',
-          status: 'thanked',
+          status: 'resolved',
         }),
         feedback(1),
       ],
     });
     const shown = text(html);
     expect(shown).toContain(
-      '#3 &middot; Idea &middot; 2026-10-09 13:05 UTC Thanked More fields, please. published as issue #42 ' +
+      '#3 &middot; Idea &middot; 2026-10-09 13:05 UTC Resolved &middot; issue #42 More fields, please. ' +
+        'published as issue #42 ' +
         '&middot; adopted 2026-10-08 Contributed: 提出了更多领域 &middot; Suggested more fields version v0.0.15',
     );
-    expect(html).toContain('<span class="badge thanked">Thanked</span>');
+    // Adopted without a pull request recorded, it is resolved all the same.
+    expect(html).toContain('<span class="badge resolved">Resolved &middot; issue #42</span>');
     expect(shown).toContain('No contact Name for the contributions: Ann L &middot; account Ann');
     // Adopted before what the player contributed was written, as the migration leaves it.
     expect(shown).toContain('adopted 2026-10-08 Contributed: not written yet version');
@@ -372,15 +373,15 @@ describe('the feedback', () => {
     const html = page({
       total: 6,
       entries: [
-        feedback(6, { issue: 41, adoptedAt: '2026-10-06T10:00:00.000Z', status: 'thanked' }),
+        feedback(6, { issue: 41, adoptedAt: '2026-10-06T10:00:00.000Z', status: 'resolved' }),
         feedback(5, {
           resolvedPr: 72,
           resolvedAt: '2026-10-05T10:00:00.000Z',
           issue: 40,
           adoptedAt: '2026-10-05T11:00:00.000Z',
-          status: 'thanked',
+          status: 'resolved',
         }),
-        feedback(4, { resolvedPr: 50, resolvedAt: '2026-10-05T10:00:00.000Z', status: 'resolved' }),
+        feedback(4, { issue: 43, resolvedPr: 50, resolvedAt: '2026-10-05T10:00:00.000Z', status: 'issue' }),
         feedback(3, {
           issue: 42,
           resolvedPr: 50,
@@ -393,11 +394,14 @@ describe('the feedback', () => {
         feedback(1, { deletedAt: '2026-09-08T11:59:59.000Z', status: 'trash' }),
       ],
     });
-    // The badge writes out all that the feedback came to: resolved, thanked, or both.
-    expect(html).toContain('<span class="badge resolved">Resolved #50</span>');
-    expect(html).toContain('<span class="badge thanked">Resolved #72 &middot; Thanked</span>');
-    expect(html).toContain('<span class="badge thanked">Thanked</span>');
-    expect(html).toContain('<p class="trail">resolved by PR #50</p>');
+    // The badge writes out all that the feedback came to: adopted, with the pull request and the
+    // issue, or with the issue alone; and an issue whose pull request was recorded without the
+    // adoption, which still waits for it.
+    expect(html).toContain('<span class="badge resolved">Resolved &middot; PR #72 &middot; issue #40</span>');
+    expect(html).toContain('<span class="badge resolved">Resolved &middot; issue #41</span>');
+    expect(html).toContain('<span class="badge issue">Issue #43 &middot; PR #50</span>');
+    expect(html).toContain('<p class="trail">published as issue #43 &middot; resolved by PR #50</p>');
+    expect(html).not.toContain('Thanked');
     expect(html).toContain('<span class="badge closed">Closed</span>');
     expect(html).toContain(
       '<p class="trail">published as issue #42 &middot; resolved by PR #50 &middot; adopted 2026-10-05 ' +
@@ -424,7 +428,7 @@ describe('the feedback', () => {
           }),
         ],
       }),
-    ).toContain('<p class="trail">adopted 2026-07-31 &middot; in the trash since 2026-08-01, kept: thanked</p>');
+    ).toContain('<p class="trail">adopted 2026-07-31 &middot; in the trash since 2026-08-01, kept: adopted</p>');
     // So is an issue, recorded there, or from before issues kept feedback out of the trash.
     expect(
       page({ total: 1, entries: [feedback(1, { issue: 42, deletedAt: '2026-08-01T12:00:00.000Z', status: 'trash' })] }),
@@ -517,17 +521,18 @@ describe('the feedback', () => {
       `${RUN} adopt 7 ${SENTENCES} can't be undone`,
       `${RUN} close 7`,
     ]);
-    // Published and resolved: either can be taken back, there is nothing to draft, and it may be
-    // adopted, but not deleted: the issue is public, so it is closed instead.
-    expect(of({ issue: 42, resolvedPr: 50, status: 'resolved' })).toEqual([
+    // Published, with its pull request recorded but not adopted yet: either can be taken back,
+    // there is nothing to draft, and it may be adopted, but not deleted: the issue is public, so it
+    // is closed instead.
+    expect(of({ issue: 42, resolvedPr: 50, status: 'issue' })).toEqual([
       `${RUN} issue 7 --clear`,
       `${RUN} resolve 7 --clear`,
       `${RUN} adopt 7 ${SENTENCES} can't be undone`,
       `${RUN} close 7`,
     ]);
-    // Thanked: neither adopted again, its issue taken back, closed nor deleted, but what the
+    // Resolved, that is, adopted: neither adopted again, its issue taken back, closed nor deleted, but what the
     // player contributed may be said again.
-    expect(of({ issue: 42, adoptedAt: '2026-10-08T10:00:00.000Z', status: 'thanked' })).toEqual([
+    expect(of({ issue: 42, adoptedAt: '2026-10-08T10:00:00.000Z', status: 'resolved' })).toEqual([
       `${RUN} resolve 7 &#60;pr&#62;`,
       `${RUN} describe 7 ${SENTENCES}`,
     ]);
@@ -637,7 +642,7 @@ describe('the feedback', () => {
     ]);
     expect(
       commands(
-        renderFeedbackPage(listing({ issue: 42, adoptedAt: '2026-10-02T00:00:00.000Z', status: 'thanked' }), run),
+        renderFeedbackPage(listing({ issue: 42, adoptedAt: '2026-10-02T00:00:00.000Z', status: 'resolved' }), run),
       ),
     ).toEqual(['triage-feedback resolve 7 &#60;pr&#62;', 'triage-feedback describe 7']);
     expect(commands(renderFeedbackPage(listing({ deletedAt: '2026-10-01T00:00:00.000Z' }), run))).toEqual([
@@ -665,12 +670,12 @@ describe('the feedback', () => {
   });
 
   test('shows each view with how much there is of it, of the kind shown, and the open feedback by default', () => {
-    const statuses = { new: 2, issue: 1, resolved: 1, thanked: 1, closed: 2, trash: 1 };
+    const statuses = { new: 2, issue: 1, resolved: 1, closed: 2, trash: 1 };
     const open = page({ total: 8, statuses, kinds: { idea: 3, game: 2 }, entries: [feedback(8)] });
     expect(open).toContain(
       '<p class="pills"><strong>Open <b>3</b></strong><a href="/feedback?status=new">New <b>2</b></a>' +
         '<a href="/feedback?status=issue">Issue <b>1</b></a><a href="/feedback?status=resolved">Resolved <b>1</b></a>' +
-        '<a href="/feedback?status=thanked">Thanked <b>1</b></a><a href="/feedback?status=closed">Closed <b>2</b></a>' +
+        '<a href="/feedback?status=closed">Closed <b>2</b></a>' +
         '<a href="/feedback?status=trash">Trash <b>1</b></a></p>',
     );
     const trash = page({ total: 8, statuses, kinds: { idea: 1 }, view: 'trash', entries: [feedback(3)], kind: 'idea' });
