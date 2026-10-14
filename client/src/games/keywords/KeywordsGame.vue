@@ -100,7 +100,8 @@ const matchSummary = computed(() => {
 // Where a player's points in a game came from, in a few words: a PI's line starts with the role,
 // since a PI plays for higher stakes, and the group's opening record and heavenly hand stand by
 // name. The detail comes from the server as it is: one from before a count of irrelevant papers
-// reads as none, and one from before the PI's stakes as a student's, without the bonuses.
+// reads as none, one from before the PI's stakes as a student's, without the bonuses, and one from
+// before the cost of a missed deadline without any.
 function describe(detail: unknown): string {
   const {
     role,
@@ -109,6 +110,7 @@ function describe(detail: unknown): string {
     irrelevant = 0,
     wrong,
     reviewer2,
+    missed = 0,
     bigClues = 0,
     openingRecord,
     heavenlyHand,
@@ -120,6 +122,7 @@ function describe(detail: unknown): string {
     irrelevant > 0 ? t('game.scoreDetail.irrelevant', { count: irrelevant }) : null,
     wrong > 0 ? t('game.scoreDetail.wrong', { count: wrong }) : null,
     reviewer2 > 0 ? t('game.scoreDetail.reviewer2') : null,
+    missed > 0 ? t('game.scoreDetail.missed', { count: missed }) : null,
     bigClues > 0 ? t('game.scoreDetail.bigClue', { count: bigClues }) : null,
     openingRecord ? t('game.scoreDetail.openingRecord') : null,
     heavenlyHand ? t('game.scoreDetail.heavenlyHand') : null,

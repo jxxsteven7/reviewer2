@@ -20,6 +20,8 @@ import type { CardColor, Team } from './types';
 //   more point.
 // - The heavenly hand: a group that wins in the turn of its first clue gives each student 1 more
 //   point, and the PI 3.
+// - A missed deadline: a PI whose time for the clue runs out loses 5 points each time, and the
+//   students nothing.
 //
 // The bonuses add up: a heavenly hand comes with the win, and usually with a big clue and the
 // opening record too.
@@ -27,6 +29,7 @@ export const POINTS = {
   guesser: { found: 1, won: 3, irrelevant: -1, wrong: -2, reviewer2: -3, openingRecord: 1, heavenlyHand: 1 },
   captain: { found: 1, won: 4, irrelevant: -2, wrong: -3, reviewer2: -5, openingRecord: 1, heavenlyHand: 3 },
   bigClue: 1,
+  missed: -5,
 } as const;
 
 // A clue makes a big clue once the students find this many of the group's cards with it.
@@ -39,7 +42,8 @@ export const bigClueCards = (found: number): number => Math.max(0, found - BIG_C
 
 // Where a player's points in a game came from. The details of the games scored before the PI's
 // stakes have none of `role`, `bigClues`, `openingRecord` and `heavenlyHand`; they read as a
-// student's, with none of the bonuses.
+// student's, with none of the bonuses. Those scored before the cost of a missed deadline have no
+// `missed`, and cost nothing for one.
 export interface KeywordsScoreDetail {
   // Whether the player was the group's PI, who has seen the key, or one of its students.
   role?: 'captain' | 'guesser';
@@ -53,6 +57,8 @@ export interface KeywordsScoreDetail {
   reviewer2: number;
   // The PI's alone: the cards that their clues found from the fourth on, one point each.
   bigClues?: number;
+  // The PI's alone: the turns in which their time for the clue ran out, 5 points each.
+  missed?: number;
   // Whether the group's first clue made the opening record, and whether the group won in its turn.
   openingRecord?: boolean;
   heavenlyHand?: boolean;
@@ -80,7 +86,12 @@ export function bonusPoints(detail: KeywordsScoreDetail): number {
   );
 }
 
-export const pointsFor = (detail: KeywordsScoreDetail): number => cardPoints(detail) + bonusPoints(detail);
+// What the PI's missed deadlines cost them.
+export const missedPoints = (detail: KeywordsScoreDetail): number =>
+  detail.missed ? detail.missed * POINTS.missed : 0;
+
+export const pointsFor = (detail: KeywordsScoreDetail): number =>
+  cardPoints(detail) + bonusPoints(detail) + missedPoints(detail);
 
 // What one revealed card does to the points of a player who plays for `team` in `role`, when the
 // students of the group `by` revealed it: what the card adds to cardPoints() of the player's

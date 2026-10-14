@@ -171,7 +171,7 @@ export const endGame = (seating: Seating): Seating => ({
 // again once, and the second deal stands, whatever it is. Four players can be split three ways, so
 // a single deal would keep the groups one time in three; dealing again makes it one in nine, and
 // one in a hundred for five or six players, while every deal stays possible. A match that draws its
-// groups as each game starts does the same against the groups of the game before.
+// groups as each game starts chooses among several deals instead (drawGroups in match.ts).
 export function shuffleGroups(
   seating: Seating,
   rng: Rng,
@@ -197,7 +197,13 @@ function groupsOf(seating: Seating): string {
 
 const sameGroups = (a: Seating, b: Seating) => groupsOf(a) === groupsOf(b);
 
-function dealGroups(seating: Seating, rng: Rng, online: ReadonlySet<string>, kept: ReadonlySet<string>): Seating {
+// One deal of the shuffle, as above.
+export function dealGroups(
+  seating: Seating,
+  rng: Rng,
+  online: ReadonlySet<string>,
+  kept: ReadonlySet<string> = new Set(),
+): Seating {
   const seated = [...seating.seats]
     .filter(([id, seat]) => seat.role !== 'spectator' && !kept.has(id))
     .map(([id]) => id);

@@ -8,12 +8,13 @@ import {
   type KeywordsScoreDetail,
   type Lineup,
   type MatchRules,
+  type Seat,
   type StartProblem,
   type Team,
 } from '@reviewer2/shared';
 import type { MatchScore } from '../../core/game';
 import { pick, type Rng } from '../../core/random';
-import { smallerTeam, type Member, type Seating } from './seats';
+import { dealGroups, smallerTeam, type Member, type Seating } from './seats';
 import type { KeywordsState } from './state';
 
 // The game's part of a match (docs/games/keywords.md#matches): how the groups are made from one
@@ -25,8 +26,11 @@ export interface MatchSeating {
   // by member key.
   locked: ReadonlyMap<string, Team>;
   // How many scored games each player has been a PI in, by member key, which decides whose turn it
-  // is next with fixed groups.
+  // is next.
   captained: ReadonlyMap<string, number>;
+  // The groups of each scored game, oldest first: the group that each player played for in it, by
+  // member key. Groups drawn at random keep apart those who have played together (drawGroups).
+  groups: readonly ReadonlyMap<string, Team>[];
   // Those who came to play while a game was on, by member key. They play from the next game.
   waiting: ReadonlySet<string>;
 }
@@ -35,6 +39,7 @@ export const newMatchSeating = (rules: MatchRules): MatchSeating => ({
   rules: { ...rules },
   locked: new Map(),
   captained: new Map(),
+  groups: [],
   waiting: new Set(),
 });
 
@@ -66,6 +71,10 @@ export const counts = (game: KeywordsState): boolean => game.result?.reason !== 
 type Mistakes = Pick<KeywordsScoreDetail, 'irrelevant' | 'wrong' | 'reviewer2'>;
 const noMistakes = (): Mistakes => ({ irrelevant: 0, wrong: 0, reviewer2: 0 });
 
+// Whether a turn is one whose captain gave no clue in time, with the captain who was in the seat.
+export const missedDeadline = (record: ClueRecord): boolean =>
+  record.word === null && record.timedOut === true && record.captain !== undefined;
+
 // A group's first clue of the game: its first turn with a clue, since a turn whose time ran out
 // before the clue had none. Null before the group has given one.
 export const firstClue = (game: KeywordsState, team: Team): ClueRecord | null =>
@@ -93,8 +102,9 @@ export function heavenlyHand(game: KeywordsState, team: Team): boolean {
 // Each player's points in a game, as they stand (shared/src/games/keywords/score.ts): everyone who
 // played for a group in it, by member key, as its PI, having seen the key, or as a student, with
 // what the group's students found and revealed wrongly, whether it won, its opening record and
-// heavenly hand, and a PI's big clues. A big clue goes to the PI who gave it, by the member key
-// that `keyOf` gives, also once they have left. Null for a game that the chair withdrew.
+// heavenly hand, and a PI's big clues and missed deadlines. A big clue goes to the PI who gave it,
+// and a missed deadline to the PI who was in the seat, by the member key that `keyOf` gives, also
+// once they have left. Null for a game that the chair withdrew.
 export function scoreGame(
   game: KeywordsState,
   seating: Pick<Seating, 'sides' | 'keyViewers'>,
@@ -104,7 +114,12 @@ export function scoreGame(
   const found: Record<Team, number> = { red: 0, blue: 0 };
   const mistakes: Record<Team, Mistakes> = { red: noMistakes(), blue: noMistakes() };
   const bigClues = new Map<string, number>();
+  const missed = new Map<string, number>();
   for (const record of game.history) {
+    if (missedDeadline(record)) {
+      const key = keyOf(record.captain as string);
+      missed.set(key, (missed.get(key) ?? 0) + 1);
+    }
     for (const guess of record.guesses) {
       const tally = mistakes[record.team];
       if (guess.color === record.team) found[record.team] += 1;
@@ -129,21 +144,49 @@ export function scoreGame(
       bigClues: pi ? (bigClues.get(key) ?? 0) : 0,
       openingRecord: openingRecord(game, team),
       heavenlyHand: heavenlyHand(game, team),
+      missed: pi ? (missed.get(key) ?? 0) : 0,
     };
     return { key, points: pointsFor(detail), detail };
   });
 }
 
 // What a scored game leaves to the rest of the match: everyone who was a PI in it has been one
-// once more, and with groups that don't change, everyone who played for a group plays for it from
-// now on. Those who played for it already keep it.
+// once more, its groups are the latest, and with groups that don't change, everyone who played for
+// a group plays for it from now on. Those who played for it already keep it.
 export function afterScoredGame(match: MatchSeating, seating: Seating): MatchSeating {
   const captained = new Map(match.captained);
   for (const key of seating.keyViewers) captained.set(key, (captained.get(key) ?? 0) + 1);
-  if (match.rules.teams !== 'fixed') return { ...match, captained };
+  const groups = [...match.groups, new Map(seating.sides)];
+  if (match.rules.teams !== 'fixed') return { ...match, captained, groups };
   const locked = new Map(match.locked);
   for (const [key, team] of seating.sides) if (!locked.has(key)) locked.set(key, team);
-  return { ...match, captained, locked };
+  return { ...match, captained, groups, locked };
+}
+
+// Makes each group's PI the one of its players who has been a PI the fewest times, someone online
+// before someone who isn't, and one of them at random when several have been as often. The others
+// in the group are its students.
+function seatPIs(
+  seats: Map<string, Seat>,
+  playing: readonly Member[],
+  match: MatchSeating,
+  online: ReadonlySet<string>,
+  rng: Rng,
+): void {
+  const times = (key: string) => match.captained.get(key) ?? 0;
+  for (const team of TEAMS) {
+    const group = playing.filter(({ id }) => seats.get(id)?.team === team);
+    if (group.length === 0) continue;
+    for (const { id } of group) seats.set(id, { team, role: 'guesser' });
+    const there = group.filter(({ id }) => online.has(id));
+    const pool = there.length > 0 ? there : group;
+    const fewest = Math.min(...pool.map(({ key }) => times(key)));
+    const { id } = pick(
+      pool.filter(({ key }) => times(key) === fewest),
+      rng,
+    );
+    seats.set(id, { team, role: 'captain' });
+  }
 }
 
 // Seats everyone who plays for the next game of a match whose groups are fixed: each in their own
@@ -167,20 +210,55 @@ export function arrangeFixed(
   for (const { id } of newcomers) {
     seats.set(id, { team: smallerTeam({ ...seating, seats }, rng), role: 'guesser' });
   }
-  for (const team of TEAMS) {
-    const group = playing.filter(({ id }) => seats.get(id)?.team === team);
-    if (group.length === 0) continue;
-    const there = group.filter(({ id }) => online.has(id));
-    const pool = there.length > 0 ? there : group;
-    const times = (key: string) => match.captained.get(key) ?? 0;
-    const fewest = Math.min(...pool.map(({ key }) => times(key)));
-    const { id } = pick(
-      pool.filter(({ key }) => times(key) === fewest),
-      rng,
-    );
-    seats.set(id, { team, role: 'captain' });
-  }
+  seatPIs(seats, playing, match, online, rng);
   return { ...seating, seats };
+}
+
+// How many deals drawGroups() chooses from.
+export const DRAWS = 20;
+
+// How often a deal puts together players who have played together in the match: each pair of
+// players in one group counts once for every earlier game in which they were in one group too, and
+// a later game counts more, as many times as its number, so that the game before counts most.
+function together(deal: Seating, keyOf: (playerId: string) => string, groups: MatchSeating['groups']): number {
+  const players = [...deal.seats].flatMap(([id, { team }]) => (team === null ? [] : [{ key: keyOf(id), team }]));
+  let count = 0;
+  groups.forEach((game, index) => {
+    players.forEach((one, at) => {
+      for (const other of players.slice(at + 1)) {
+        const side = game.get(one.key);
+        if (one.team === other.team && side !== undefined && side === game.get(other.key)) count += index + 1;
+      }
+    });
+  });
+  return count;
+}
+
+// Draws the groups for a match's game, as it starts: of DRAWS deals, each as the chair's shuffle
+// deals (seats.ts), the one that puts together the fewest players who have played together in the
+// match's earlier games (together), or one of them at random when several do as well. Then each
+// group's PI is whoever has been a PI the fewest times, as with fixed groups (seatPIs), so that the
+// PIs take turns.
+export function drawGroups(
+  seating: Seating,
+  members: readonly Member[],
+  match: MatchSeating,
+  online: ReadonlySet<string>,
+  rng: Rng,
+): Seating {
+  const keys = new Map(members.map(({ id, key }) => [id, key]));
+  const keyOf = (id: string) => keys.get(id) ?? id;
+  const deals = Array.from({ length: DRAWS }, () => dealGroups(seating, rng, online));
+  const counted = deals.map((deal) => ({ deal, count: together(deal, keyOf, match.groups) }));
+  const fewest = Math.min(...counted.map(({ count }) => count));
+  const { deal } = pick(
+    counted.filter(({ count }) => count === fewest),
+    rng,
+  );
+  const seats = new Map(deal.seats);
+  const playing = members.filter(({ id }) => (seats.get(id)?.team ?? null) !== null);
+  seatPIs(seats, playing, match, online, rng);
+  return { ...deal, seats };
 }
 
 function movedSet(set: ReadonlySet<string>, from: string, to: string): ReadonlySet<string> {
@@ -202,10 +280,11 @@ export function rekeySeating(seating: Seating, from: string, to: string): Seatin
 }
 
 // What the match remembers of a guest, it remembers of their account from now on, added to what it
-// knew of the account already: the games as a PI, and whether they play from the next game. With
-// fixed groups, the account plays for `team`, the group of the seat that the guest has now, if any,
-// or else for the guest's group, or else for its own: an account that played for the other group
-// earlier in the match and left plays on for the group it sits in, since the seat stands.
+// knew of the account already: the games as a PI, the groups they played in, and whether they play
+// from the next game. With fixed groups, the account plays for `team`, the group of the seat that
+// the guest has now, if any, or else for the guest's group, or else for its own: an account that
+// played for the other group earlier in the match and left plays on for the group it sits in, since
+// the seat stands.
 export function rekeyMatch(match: MatchSeating, from: string, to: string, team: Team | undefined): MatchSeating {
   const locked = new Map(match.locked);
   const group = team ?? locked.get(from) ?? locked.get(to);
@@ -216,5 +295,13 @@ export function rekeyMatch(match: MatchSeating, from: string, to: string, team: 
   const times = (captained.get(from) ?? 0) + (captained.get(to) ?? 0);
   captained.delete(from);
   if (times > 0) captained.set(to, times);
-  return { rules: match.rules, locked, captained, waiting: movedSet(match.waiting, from, to) };
+  const groups = match.groups.map((game) => {
+    const side = game.get(from);
+    if (side === undefined) return game;
+    const moved = new Map(game);
+    moved.delete(from);
+    if (!moved.has(to)) moved.set(to, side);
+    return moved;
+  });
+  return { rules: match.rules, locked, captained, groups, waiting: movedSet(match.waiting, from, to) };
 }

@@ -138,9 +138,14 @@ describe('the room setup', () => {
     await wrapper.findAll<HTMLInputElement>('.kind input').at(1)!.setValue(true);
     const form = wrapper.get('.match-form');
     expect(form.get<HTMLInputElement>('input[inputmode="numeric"]').element.value).toBe('3');
+    // Groups that may change, made again after every game, by default; fixed groups are made for
+    // the first game.
+    const radios = form.findAll<HTMLInputElement>('input[type="radio"]');
+    expect(radios.map((radio) => radio.element.checked)).toEqual([false, true, true, false]);
+    expect(form.text()).toContain('After every game');
+    await radios.at(0)!.setValue(true);
     expect(form.text()).toContain('Groups for the first game');
-    // Groups that may change are made again after every game.
-    await form.findAll<HTMLInputElement>('input[type="radio"]').at(1)!.setValue(true);
+    await radios.at(1)!.setValue(true);
     expect(form.text()).toContain('After every game');
     await form.findAll<HTMLInputElement>('input[type="radio"]').at(3)!.setValue(true);
     await form.get('input[inputmode="numeric"]').setValue('5');

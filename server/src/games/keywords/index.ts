@@ -11,7 +11,6 @@ import {
   TEAMS,
   verdictFor,
   type AgentPersona,
-  type ClueRecord,
   type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
@@ -55,10 +54,12 @@ import {
   afterScoredGame,
   arrangeFixed,
   counts,
+  drawGroups,
   drawProblems,
   firstClue,
   heavenlyHand,
   lineupOf,
+  missedDeadline,
   newMatchSeating,
   openingRecord,
   rekeyMatch,
@@ -248,8 +249,9 @@ const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, '
 // change to either. Version 2 brought the students' marks, the homophone rule of a Chinese room and
 // the hold on the quick reactions of whoever has seen the key while the students guess; version 3
 // the numbers, the English and the pinyin of a character as the same character in the clue check,
-// and the groups' talk after the game, the PI's included.
-export const RULES_VERSION = 3;
+// and the groups' talk after the game, the PI's included; version 4 the 5 points that a PI loses
+// for each missed deadline, and boards on which no row or column is all one group's cards.
+export const RULES_VERSION = 4;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -299,10 +301,6 @@ function heroBefore(game: KeywordsState, ctx: GameContext, playerId: string): nu
   const key = ctx.keyOf(playerId);
   return held + game.history.filter((record) => [...heroesOf(record)].some((hero) => ctx.keyOf(hero) === key)).length;
 }
-
-// Whether a turn is one whose captain gave no clue in time, with the captain who was in the seat.
-const missedDeadline = (record: ClueRecord): boolean =>
-  record.word === null && record.timedOut === true && record.captain !== undefined;
 
 // The titles that a game which ended by itself brought a player who played for `team` in it, by
 // their member key (docs/games/keywords.md#titles), each with the turn it came in: Forgot to
@@ -382,10 +380,14 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   canStart: (data, ctx) => problemsOf(data, ctx).length === 0,
 
-  // A match's game whose groups are drawn deals everyone who plays into the groups as the chair's
-  // shuffle does, and starts with those groups.
+  // A match's game whose groups are drawn deals everyone who plays into the groups, apart from
+  // those who have played together, with the PIs taking turns (match.ts), and starts with those
+  // groups.
   start(data, ctx, words, gameId) {
-    const seating = lineupOf(data.match) === 'draw' ? shuffleGroups(data.seating, ctx.rng, online(ctx)) : data.seating;
+    const seating =
+      data.match && lineupOf(data.match) === 'draw'
+        ? drawGroups(data.seating, membersOf(ctx), data.match, online(ctx), ctx.rng)
+        : data.seating;
     return {
       ...data,
       seating: startGame(seating, ctx.keyOf),
