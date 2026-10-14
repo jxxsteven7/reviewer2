@@ -104,6 +104,9 @@
   --shift-2: 5px;
   --shift-3: 6px;
   --scrim: rgb(26 26 46 / 45%);
+  /* The one soft shadow, under the masthead that stays at the top of a page once the page has
+     scrolled under it: a hard one there would look like a line. */
+  --shade: rgb(26 26 46 / 18%);
 
   /* How wide a page gets: forms, the home page, and rooms. */
   --page-narrow: 40rem;
