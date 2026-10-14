@@ -106,7 +106,7 @@ test('friends are made in a room and by username, invited into a private room, a
   const catsPanel = ann.getByRole('dialog', { name: catName });
   await expect(catsPanel.getByRole('button', { name: text.friends.aliasEdit })).toBeVisible();
   await catsPanel.getByRole('button', { name: text.room.panel.fullPage }).click();
-  const catsPage = ann.locator('[role=dialog].tall');
+  const catsPage = ann.locator('[role=dialog]:has(button.back)');
   await expect(catsPage.getByRole('button', { name: text.friends.short.remove, exact: true })).toBeVisible();
   await catsPage.getByRole('button', { name: text.room.panel.back }).click();
   await expect(catsPage).toHaveCount(0);

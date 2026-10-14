@@ -7,11 +7,12 @@ import { expect, newPlayer, register, TEXT, test } from './helpers';
 // The feedback contributions end to end: a player with an account suggests a new game, signed with
 // the account, the operator adopts it with the command once it is a GitHub issue, and the home
 // page lists it from the database, by the account's avatar and username, with what the operator
-// wrote, while the account's page counts it. The avatar and the name open a card of the player's
-// profile, and the card the whole page; feedback sent anonymously names nobody, and counts for
-// the account all the same. The public page shows the counts once its owner shows them. A guest is asked to log in first, and may send all the same; one who logs in in another
-// tab is logged in on this one too. The command runs on the server's data directory, which
-// e2e/server.mjs makes where playwright.config.ts says.
+// wrote, while the account's page counts it. The avatar and the name open the account's panel, as
+// an avatar does anywhere, and the panel the whole page over it; feedback sent anonymously names
+// nobody, and counts for the account all the same. The public page shows the counts once its
+// owner shows them. A guest is asked to log in first, and may send all the same; one who logs in
+// in another tab is logged in on this one too. The command runs on the server's data directory,
+// which e2e/server.mjs makes where playwright.config.ts says.
 const text = TEXT.en;
 const dataDir = process.env.E2E_DATA_DIR as string;
 const own = (name: string) => `${name} ${Math.random().toString(36).slice(2, 7)}`;
@@ -113,7 +114,7 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   const address = await setup.getByRole('link', { name: text.account.profile.public.view }).getAttribute('href');
 
   // The home page lists it at once, by the account's avatar and username, with what was contributed
-  // and its issue, and they open the player's card.
+  // and its issue, and they open the account's panel.
   await page.goto('/');
   const fold = page.locator('.fold.contributions');
   await fold.locator('h2 button').click();
@@ -128,13 +129,37 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   await expect(person.locator('.avatar')).toBeVisible();
   // No underline: the avatar says that it opens a player.
   await expect(person).toHaveCSS('text-decoration-line', 'none');
-  // It opens a card over the home page, titled with the name, and the card the way to the page.
+  // It opens the panel over the home page, titled with the username, which says that it is the
+  // viewer: the whole page shows the account as others see it, over the panel, without leaving the
+  // home page, and the way to the account page, where it is changed, opens that page at its top.
   await person.click();
   const panel = page.getByRole('dialog', { name: username });
-  await expect(panel.locator('.profile-card')).toContainText(username);
-  await panel.getByRole('link', { name: text.contributions.fullPage }).click();
-  await page.waitForURL(`**${address}`);
-  // The page shows the counts only once its owner shows them.
+  await expect(panel).toContainText(text.friends.self);
+  await panel.getByRole('button', { name: text.room.panel.fullPage }).click();
+  const whole = page.locator('[role=dialog]:has(button.back)');
+  await expect(whole.locator('.profile-card')).toContainText(text.playerPage.edit);
+  await whole.getByRole('button', { name: text.room.panel.back }).click();
+  await expect(whole).toHaveCount(0);
+  await expect(page).toHaveURL(/\/$/);
+  await panel.getByRole('link', { name: text.room.panel.myAccount }).click();
+  await page.waitForURL(/\/account$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Another player's panel offers to ask them to be friends.
+  const other = await newPlayer(browser, 'en');
+  await register(other, own('Bob'));
+  await other.goto('/');
+  await other.getByRole('button', { name: /^English/ }).click();
+  const otherFold = other.locator('.fold.contributions');
+  await otherFold.locator('h2 button').click();
+  await otherFold.locator('li', { hasText: username }).getByRole('button', { name: username }).click();
+  await expect(
+    other.getByRole('dialog', { name: username }).getByRole('button', { name: text.friends.addFromRoom }),
+  ).toBeVisible();
+
+  // The public page shows the counts only once its owner shows them.
+  await page.goto(address as string);
   const card = page.locator('.profile-card');
   const pill = card.getByText(`Contributions: ${text.contributions.kinds.game}`);
   await expect(card).toContainText(username);

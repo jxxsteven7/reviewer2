@@ -58,6 +58,11 @@ const friend = (username: string, duo: DuoView | null): FriendView => ({
 const SectionWithPanel = defineComponent({
   render: () => h('div', [h(ProfileFriends), h(ProfilePanel)]),
 });
+// A link of the router, which hands its address to the slot of a `custom` one, as RouterLink does.
+const routerLink = {
+  props: { to: String, custom: Boolean },
+  template: '<slot v-if="custom" :href="to" :navigate="() => undefined" /><a v-else :href="to"><slot /></a>',
+};
 
 function mountWith(
   friends: FriendView[],
@@ -69,7 +74,7 @@ function mountWith(
   return mount(SectionWithPanel, {
     global: {
       plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })],
-      stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' }, teleport: true },
+      stubs: { RouterLink: routerLink, teleport: true },
     },
   });
 }
@@ -324,9 +329,9 @@ describe('the search on the account page', () => {
     await panel(asked).findAll('.panel-actions button')[1]?.trigger('click');
     await flushPromises();
     // The whole page, which says the same of the request.
-    const whole = asked.get('[role=dialog].tall');
-    expect(whole.get('h2').text()).toBe('Cat');
-    expect(whole.get('.actions').text()).toContain('Request sent');
+    const whole = asked.findAll('[role=dialog]').at(-1);
+    expect(whole?.get('h2').text()).toBe('Cat');
+    expect(whole?.get('.actions').text()).toContain('Request sent');
     asked.unmount();
 
     // Cat asked the account, with a line, which the panel shows, and the account accepts.
@@ -373,6 +378,9 @@ describe('the search on the account page', () => {
     finds({ ok: true, handle: 'me0000000000', username: 'Me' });
     await search(self, 'me');
     expect(panel(self).text()).toContain('This is you.');
+    // The way to the account page, where the account is changed, and its page as others see it.
+    const mine = panel(self).get('.panel-actions a');
+    expect([mine.text(), mine.attributes('href')]).toEqual(['My account', '/account']);
     expect(offers(self).map(([text]) => text)).toEqual(['Open the full page']);
     self.unmount();
   });
@@ -415,7 +423,7 @@ describe('the search on the account page', () => {
     const wrapper = mount(SectionWithPanel, {
       global: {
         plugins: [createI18n({ legacy: false, locale: 'en', messages: { en, zh } })],
-        stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' }, teleport: true },
+        stubs: { RouterLink: routerLink, teleport: true },
       },
       attachTo: document.body,
     });

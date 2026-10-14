@@ -12,8 +12,10 @@ import ScreenPage from './core/views/ScreenPage.vue';
 
 // Views are imported statically, so the whole app is one bundle: a tab left open across a
 // deploy can't then ask for a lazily loaded chunk that the new build no longer has.
+// A page opens at its top, and the browser's back and forward return to where it was.
 export const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/account', name: 'account', component: AccountPage },

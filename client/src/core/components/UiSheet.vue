@@ -17,10 +17,9 @@ import { useVisualViewport } from '../useVisualViewport';
 // the chair's menu from the groups on a phone, lies over it, and only the sheet on top listens to
 // the keys.
 //
-// A `tall` sheet is as tall as a sheet may be, however much it holds, and scrolls inside, as a page
-// shown over the one below. A sheet with a way `back`, named by that text, has a round button with
-// an arrow before its title, as the close button has its cross after it, which takes the viewer
-// back to the sheet it was opened from.
+// A sheet with a way `back`, named by that text, has a round button with an arrow before its title,
+// as the close button has its cross after it, which takes the viewer back to the sheet it was
+// opened from.
 //
 // A `subtitle` follows the title in small grey type, as a friend's username follows the name the
 // account gives them.
@@ -35,13 +34,12 @@ const props = withDefaults(
   defineProps<{
     open: boolean;
     title: string;
-    tall?: boolean;
     back?: string | null;
     subtitle?: string | null;
     focusInput?: boolean;
     fitScreen?: boolean;
   }>(),
-  { tall: false, back: null, subtitle: null, focusInput: true, fitScreen: false },
+  { back: null, subtitle: null, focusInput: true, fitScreen: false },
 );
 const emit = defineEmits<{ close: []; back: [] }>();
 const { t } = useI18n();
@@ -127,7 +125,7 @@ onBeforeUnmount(() => {
       <section
         ref="panel"
         class="panel"
-        :class="{ tall, fit: fitScreen }"
+        :class="{ fit: fitScreen }"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="id"
@@ -254,11 +252,6 @@ h2 {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.4;
-}
-
-.panel.tall {
-  height: 88vh;
-  height: 88dvh;
 }
 
 /* Fitted to the part of the screen that the keyboard leaves: the backdrop is that part, and the

@@ -230,13 +230,12 @@ describe('UiSheet', () => {
 
   test('has a round button back before its title when it leads back to another', async () => {
     const wrapper = mount(UiSheet, {
-      props: { open: true, title: 'Page', back: 'Back', tall: true },
+      props: { open: true, title: 'Page', back: 'Back' },
       global: global(),
       attachTo: document.body,
     });
     const back = document.querySelector<HTMLButtonElement>('[role=dialog] button.back');
     expect(back?.getAttribute('aria-label')).toBe('Back');
-    expect(document.querySelector('[role=dialog]')?.classList).toContain('tall');
     back?.click();
     expect(wrapper.emitted('back')).toHaveLength(1);
     expect(wrapper.emitted('close')).toBeUndefined();
