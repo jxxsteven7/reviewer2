@@ -8,7 +8,7 @@ import {
   type Team,
 } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';
+import { FRESH_MS, PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';
 import type { GameLogData } from '../src/core/gameLog';
 import { WordLibrary } from '../src/core/words';
 import { keywordsGame, type KeywordsData } from '../src/games/keywords';
@@ -910,5 +910,160 @@ describe('a game that an AI played in', () => {
         you: { wonTogether: 0, lostTogether: 0, beat: 0, beaten: 1, takenOver: 0 },
       },
     });
+  });
+});
+
+describe('a practice room', () => {
+  // Someone with an account, which the operator has not let have AI players, makes a practice room
+  // and plays it as `role`.
+  async function practice(role: string, name = 'Ann') {
+    const browser = new Browser(server.url);
+    if (!(await browser.register(name)).body.ok) throw new Error('could not register');
+    const client = track(await browser.connect());
+    await until(() => server.app.stats().agents?.up === true, 'the agent');
+    const reply = await client.send('room:create', {
+      game: 'keywords',
+      language: 'en',
+      fields: ['general'],
+      practice: { role },
+    });
+    if (!reply.ok) throw new Error(`could not make a practice room: ${reply.error}`);
+    const code = reply.code as string;
+    const state = await client.waitFor((view) => view.code === code && view.phase === 'playing', 'the game');
+    return { browser, client, code, roomId: reply.roomId as string, state };
+  }
+
+  // Plays the blue group's turn, of AI players alone, if the game began with it: its student
+  // reveals a paper that is no group's, which ends the turn.
+  async function toRedTurn(code: string) {
+    if (truth(code).team === 'red') return;
+    agent.play = (request) => {
+      if (request.kind === 'clue') return scriptedPlay(request);
+      const paper = truth(code).cards.findIndex((card) => card.color === 'neutral' && !card.revealed);
+      return { ok: true, kind: 'guess', picks: [paper], reason: 'A hunch.', note: SCRIPT_NOTE };
+    };
+    await until(() => agent.questions.some((request) => request.kind === 'clue'), 'the clue question');
+    server.advance(CLUE_PACE_MS);
+    await until(() => agent.questions.some((request) => request.kind === 'guess'), 'the guess question');
+    server.advance(GUESS_PACE_MS);
+    await until(() => truth(code).team === 'red', 'the red turn');
+    agent.play = scriptedPlay;
+  }
+
+  test('is made for any account, as the PI or a student, with Reviewer 1 in the other seats, and starts', async () => {
+    const { client: ann, code, state } = await practice('captain');
+    const seats = roomData(state).seats;
+    expect(seats[ann.me as string]).toEqual({ team: 'red', role: 'captain' });
+    expect(aiOf(state).map((player) => ({ persona: player.agent, seat: seats[player.id] }))).toEqual([
+      { persona: 'reviewer1', seat: { team: 'red', role: 'guesser' } },
+      { persona: 'reviewer1', seat: { team: 'blue', role: 'captain' } },
+      { persona: 'reviewer1', seat: { team: 'blue', role: 'guesser' } },
+    ]);
+    // The chair may invite them, as in no other room of an account that the operator hasn't let.
+    expect(state.agents).toBe(true);
+    expect(roomOf(code)).toMatchObject({ practice: true, public: false, match: null, chairId: ann.me });
+    expect(server.logs).toContainEqual({
+      event: 'room_created',
+      fields: expect.objectContaining({ code, practice: 'captain', public: false }),
+    });
+    expect(server.logs).toContainEqual({ event: 'game_started', fields: { code, players: 4 } });
+
+    const { browser, client: bea, state: other } = await practice('guesser', 'Bea');
+    expect(roomData(other).seats[bea.me as string]).toEqual({ team: 'red', role: 'guesser' });
+    expect(roomData(other).seats[aiOf(other)[0]?.id as string]).toEqual({ team: 'red', role: 'captain' });
+
+    // In an ordinary room of her own, Bea still can't invite them: her account isn't let.
+    const ordinary = track(await browser.connect());
+    const made = await ordinary.send('room:create', {
+      game: 'keywords',
+      language: 'en',
+      fields: ['general'],
+      play: true,
+    });
+    if (!made.ok) throw new Error(`could not make a room: ${made.error}`);
+    await ordinary.waitFor((state) => state.code === made.code, 'the ordinary room');
+    await seat(ordinary, 'red', 'captain');
+    expect(ordinary.state?.agents).toBe(false);
+    expect(await invite(ordinary, 'red', 'captain')).toEqual({ ok: false, error: 'agents_not_allowed' });
+  });
+
+  test('is for an account, with a role of the game and nothing else, while the agent answers', async () => {
+    const ask = (client: TestClient, extra: object = {}) =>
+      client.send('room:create', {
+        game: 'keywords',
+        language: 'en',
+        fields: ['general'],
+        practice: { role: 'captain' },
+        ...extra,
+      });
+    const guest = track(await TestClient.connect(server.url));
+    expect(await ask(guest, { name: 'Gus' })).toEqual({ ok: false, error: 'account_required' });
+    const browser = new Browser(server.url);
+    expect((await browser.register('Ann')).body).toEqual({ ok: true });
+    const ann = track(await browser.connect());
+    await until(() => server.app.stats().agents?.up === true, 'the agent');
+    expect(await ann.send('meta:agents')).toEqual({ ok: true, available: true });
+    expect(await ask(ann, { practice: { role: 'spectator' } })).toEqual({ ok: false, error: 'bad_request' });
+    expect(await ask(ann, { public: true })).toEqual({ ok: false, error: 'bad_request' });
+    expect(await ask(ann, { match: RULES })).toEqual({ ok: false, error: 'bad_request' });
+    expect(await ask(ann, { settings: defaultSettings('en') })).toEqual({ ok: false, error: 'bad_request' });
+    expect(server.app.rooms.size).toBe(0);
+
+    // The agent goes while no AI plays, which nothing finds out by itself. Whoever asks within
+    // FRESH_MS of its last answer hears what it said then; whoever asks after that hears it too, and
+    // has it asked again, for the next one who asks.
+    const pings = () => agent.asked.filter((request) => request.kind === 'ping').length;
+    const before = pings();
+    agent.up = false;
+    expect(await ann.send('meta:agents')).toEqual({ ok: true, available: true });
+    expect(pings()).toBe(before);
+    server.advance(FRESH_MS);
+    expect(await ann.send('meta:agents')).toEqual({ ok: true, available: true });
+    await until(() => server.app.stats().agents?.up === false, 'the agent down');
+    expect(pings()).toBe(before + 1);
+    expect(await ann.send('meta:agents')).toEqual({ ok: true, available: false });
+    expect(await ask(ann)).toEqual({ ok: false, error: 'agents_offline' });
+    expect(server.app.rooms.size).toBe(0);
+    // It is back at the next ping.
+    agent.up = true;
+    server.advance(PING_MS);
+    await until(() => server.app.stats().agents?.up === true, 'the agent back');
+    expect(await ann.send('meta:agents')).toEqual({ ok: true, available: true });
+  });
+
+  test('marks each of its games on the record, plays for its chair while offline, and takes AI players again', async () => {
+    const { browser, client: ann, code, roomId } = await practice('captain');
+    // Bob comes to watch, so that a person is there while Ann is away.
+    const bob = track(await joinRoom(server.url, code, 'Bob', { play: false }));
+    await toRedTurn(code);
+    const token = ann.token;
+    const annId = await goes(ann, bob);
+    server.advance(TAKEOVER_MS);
+    await bob.waitFor((state) => playerIn(state, annId)?.takenOver === true, 'the takeover');
+    await until(() => agent.questions.some((request) => request.kind === 'clue' && request.team === 'red'));
+    server.advance(CLUE_PACE_MS);
+    await until(() => truth(code).phase === 'guess', 'the clue');
+    expect(truth(code).history.at(-1)).toMatchObject({ word: 'zebra', captain: annId });
+
+    const back = track(await browser.connect({ token, code, roomId }));
+    await back.waitFor((state) => state.me === annId && !playerIn(state, annId)?.takenOver, 'Ann back');
+    await expectOk(back.send('room:end', { gameId: truth(code).gameId }));
+    await expectOk(back.send('room:again', { gameId: back.state?.gameId }));
+    const lobby = await back.waitFor((state) => state.phase === 'lobby', 'the waiting room');
+    // With AI players in it, the room can't be listed, as no room with them can; a match is only
+    // ever set as a room is made, which `practice` refuses (above).
+    expect(await back.send('room:public', { public: true })).toEqual({ ok: false, error: 'agents_in_room' });
+    // Ann sends an AI player away and invites Reviewer 1 back, then plays another game.
+    const blue = aiOf(lobby).find((player) => roomData(lobby).seats[player.id]?.team === 'blue');
+    await expectOk(back.send('room:remove', { playerId: blue?.id }));
+    await back.waitFor((state) => aiOf(state).length === 2, 'two AI players');
+    await expectOk(invite(back, 'blue', 'captain'));
+    await start(back);
+    await expectOk(back.send('room:end', { gameId: truth(code).gameId }));
+    await until(() => (server.db.prepare('SELECT count(*) AS n FROM replays').get() as { n: number }).n === 2);
+    expect(server.db.prepare('SELECT ending, practice, takeover FROM replays ORDER BY started_at').all()).toEqual([
+      { ending: 'withdrawn', practice: 1, takeover: 1 },
+      { ending: 'withdrawn', practice: 1, takeover: 0 },
+    ]);
   });
 });

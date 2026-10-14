@@ -111,6 +111,8 @@ export interface RoomOptions {
   fields: string[];
   // Listed on the home page for anyone with an account to join (docs/architecture.md#public-rooms).
   public?: boolean;
+  // Made from the home page to play with AI players (docs/architecture.md#practice-rooms).
+  practice?: boolean;
   words: WordLibrary;
   rng: Rng;
   now: () => number;
@@ -175,6 +177,7 @@ export interface GameRecordData {
   takeover: boolean;
   agentPlays: AgentPlay[];
   match: boolean;
+  practice: boolean;
   language: string;
   fields: string[];
   rules: number | null;
@@ -192,6 +195,9 @@ export class Room {
   // pinyin when it is Chinese (docs/games/keywords.md#custom-words). A private room's alone.
   customWords: BoardWord[] = [];
   public: boolean;
+  // A practice room (docs/architecture.md#practice-rooms), made to play with AI players. It stays
+  // one whoever chairs it, and may have AI players whatever the chair's account.
+  readonly practice: boolean;
   phase: RoomPhase = 'lobby';
   rev = 0;
   chairId: string | null = null;
@@ -273,6 +279,7 @@ export class Room {
     this.language = options.language;
     this.fields = [...options.fields];
     this.public = options.public ?? false;
+    this.practice = options.practice ?? false;
     this.#words = options.words;
     this.#rng = options.rng;
     this.#now = options.now;
@@ -331,11 +338,14 @@ export class Room {
 
   // Whether the chair may invite AI players now, and a player who is offline in their turn is played
   // for (docs/architecture.md#ai-players): the server has an agent, the room is private and plays no
-  // match, and the operator has let the chair's account have AI players. AI players who are in the
-  // room already stay when this stops being so, as when the chair passes to someone else.
+  // match, and it is a practice room or the operator has let the chair's account have AI players.
+  // AI players who are in the room already stay when this stops being so, as when the chair passes
+  // to someone else.
   agentsAllowed(): boolean {
     const chair = this.chairId === null ? undefined : this.members.get(this.chairId);
-    return this.#agents !== null && !this.public && this.match === null && chair?.account?.agents === true;
+    return (
+      this.#agents !== null && !this.public && this.match === null && (this.practice || chair?.account?.agents === true)
+    );
   }
 
   // Whether any AI players are in the room.
@@ -1206,6 +1216,7 @@ export class Room {
       takeover: this.#tookOverFor.size > 0,
       agentPlays: this.#agentPlays(),
       match: this.match !== null,
+      practice: this.practice,
       language: this.language,
       fields: [...this.fields],
       rules: this.game.rulesVersion ?? null,

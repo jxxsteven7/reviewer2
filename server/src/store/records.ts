@@ -331,6 +331,7 @@ export interface NewReplay {
   takeover?: boolean;
   agentPlays?: readonly AgentPlay[];
   match?: boolean;
+  practice?: boolean;
   language?: string;
   fields?: readonly string[];
   version?: string;
@@ -353,8 +354,8 @@ export class ReplayStore {
   ) {
     this.#insert = db.prepare(
       'INSERT OR IGNORE INTO replays (game_id, game, ended_at, data, log, agent_log, ending, winner, reason, ' +
-        'started_at, setup, accounts, guests, agents, takeover, in_match, language, fields, version, rules, words) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'started_at, setup, accounts, guests, agents, takeover, in_match, practice, language, fields, version, rules, ' +
+        'words) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     // An account that is gone by now, deleted while the game was on, is left out.
     this.#player = db.prepare(
@@ -409,6 +410,7 @@ export class ReplayStore {
           game.counts?.agents ?? null,
           flag(game.takeover),
           flag(game.match),
+          flag(game.practice),
           game.language ?? null,
           json(game.fields),
           game.version ?? null,

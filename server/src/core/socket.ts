@@ -363,6 +363,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         takeover: kept.takeover,
         agentPlays: kept.agentPlays,
         match: kept.match,
+        practice: kept.practice,
         language: kept.language,
         fields: kept.fields,
         version,
@@ -660,6 +661,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const account = conn.account && accounts?.store.byId(conn.account.id);
     if (!account) return fail('account_required');
     return account.publicBarred ? fail('public_barred') : null;
+  }
+
+  // A game has started in a room: by the chair, or as a practice room was made. Only a draw that
+  // found no way to keep the words apart has clashes (Room.start).
+  function logStart(room: Room, clashes: number): void {
+    log('game_started', { code: room.code, players: room.members.size });
+    if (clashes > 0) {
+      log('words_clashed', { code: room.code, language: room.language, fields: room.fields, clashes });
+    }
   }
 
   // --- friends and invitations (docs/architecture.md#friends) -------------------------------
@@ -968,6 +978,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'meta:fields', () => ok({ fields: words.fields() }));
     on(handlers, 'meta:rooms', () => ok({ rooms: rooms.listed() }));
+    // Whether the AI players answer now, for the home page to offer a practice room or say that
+    // they are offline (docs/architecture.md#practice-rooms), or null on a server without an
+    // agent, where the home page offers none. What the agent said last is the answer, and the
+    // agent is asked again for the next one if that was a while ago.
+    on(handlers, 'meta:agents', () => {
+      if (!driver) return ok({ available: null });
+      driver.recheck();
+      return ok({ available: driver.state.up });
+    });
 
     // The rooms where the connection still has a seat, the newest first, for the home page to
     // offer the way back (docs/architecture.md): by its key, which is its account's on every
@@ -1037,12 +1056,18 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok();
     });
 
-    on(handlers, 'room:create', ({ game, language, fields, settings, name: nickname, play, match, public: listed }) => {
+    // A practice room (docs/architecture.md#practice-rooms) is for an account, and is private, plays
+    // no match and has the game's default settings. Its game starts as soon as its creator is in it,
+    // online; should it not, they are in its waiting room with the AI players, as in any room.
+    on(handlers, 'room:create', (message) => {
+      const { game, language, fields, settings, name: nickname, play, match, public: listed, practice } = message;
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
+      if (practice && (match || listed || settings !== undefined)) return fail('bad_request');
       const refusal = listed ? publicRefusal(conn) : null;
       if (refusal) return refusal;
+      if (practice && !accountOf(conn).ok) return fail('account_required');
       const as = newcomer(nickname ?? '');
       if (!as.ok) return as;
       const { name, account } = as;
@@ -1062,6 +1087,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         account,
         ...(match ? { match } : {}),
         public: listed ?? false,
+        ...(practice ? { practice: practice.role } : {}),
       });
       if (!created.ok) return created;
       const { room, member } = created;
@@ -1072,8 +1098,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         fields: room.fields,
         match: match?.games ?? null,
         public: room.public,
+        practice: practice?.role ?? null,
       });
       enter(socket, room, member);
+      if (room.practice) {
+        const started = room.start(room.round);
+        if (started.ok) logStart(room, started.clashes);
+        changed(room, started);
+      }
       return ok({ code: room.code, roomId: room.id });
     });
 
@@ -1200,16 +1232,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'room:start', ({ round }) =>
       asChair(socket, (room) => {
         const result = room.start(round);
-        if (result.ok) log('game_started', { code: room.code, players: room.members.size });
-        // Only a draw that found no way to keep the words apart has clashes (Room.start).
-        if (result.ok && result.clashes > 0) {
-          log('words_clashed', {
-            code: room.code,
-            language: room.language,
-            fields: room.fields,
-            clashes: result.clashes,
-          });
-        }
+        if (result.ok) logStart(room, result.clashes);
         return changed(room, result);
       }),
     );

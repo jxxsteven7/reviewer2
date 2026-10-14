@@ -1,7 +1,15 @@
-import { parseCode, type Ack, type Language, type MatchRules, type PublicRoom, type Title } from '@reviewer2/shared';
+import {
+  parseCode,
+  type Ack,
+  type AgentPersona,
+  type Language,
+  type MatchRules,
+  type PublicRoom,
+  type Title,
+} from '@reviewer2/shared';
 import { fail } from './answers';
 import { newCode } from './codes';
-import type { GameModule } from './game';
+import type { GameModule, PracticeSeats } from './game';
 import type { Rng } from './random';
 import { chooseFields, Room, type AgentState, type Member, type MemberAccount } from './room';
 import type { WordLibrary } from './words';
@@ -42,6 +50,9 @@ export interface SweepResult {
   failed: { room: Room; error: unknown }[];
 }
 
+// The AI players of a practice room (docs/architecture.md#practice-rooms).
+export const PRACTICE_PERSONA: AgentPersona = 'reviewer1';
+
 export class Rooms {
   readonly #rooms = new Map<string, Room>();
 
@@ -66,7 +77,10 @@ export class Rooms {
   // full, or the fields, the game's settings or the name won't do. `key` is the creator's member
   // key, and `play` says whether they have come to play or only to watch. Without settings, the
   // room has the game's defaults. With `match`, the room plays a match by those rules; with
-  // `public`, it is listed on the home page.
+  // `public`, it is listed on the home page. With `practice`, a role as the game names it, it is a
+  // practice room (docs/architecture.md#practice-rooms): the creator sits in that role and AI
+  // players take the other seats, for the game to start once the creator is online. It needs the
+  // agent to answer, since its AI players play at once.
   //
   // The room is listed only once its creator has joined it. A game module that throws there
   // leaves no room behind: one without a member would belong to whoever found its code first.
@@ -81,9 +95,16 @@ export class Rooms {
     account?: MemberAccount | null;
     match?: MatchRules;
     public?: boolean;
+    practice?: string;
   }): Ack<{ room: Room; member: Member }> {
-    const { game, language, key, name, play = false, account = null } = options;
+    const { game, language, key, name, play = false, account = null, practice } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
+    let seats: PracticeSeats | null = null;
+    if (practice !== undefined) {
+      seats = game.practice?.(practice) ?? null;
+      if (!seats) return fail('bad_request');
+      if (!this.agents?.up) return fail('agents_offline');
+    }
     const chosen = chooseFields(this.words, options.fields, language, game.wordsNeeded);
     if (!chosen.ok) return chosen;
     let code = newCode(this.rng);
@@ -94,6 +115,7 @@ export class Rooms {
       language,
       fields: chosen.fields,
       public: options.public ?? false,
+      practice: seats !== null,
       words: this.words,
       rng: this.rng,
       now: this.now,
@@ -109,8 +131,10 @@ export class Rooms {
       const started = room.startMatch(options.match);
       if (!started.ok) return started;
     }
-    const joined = room.join(key, name, play, account);
+    const joined = room.join(key, name, play || seats !== null, account);
     if (!joined.ok) return joined;
+    const seated = seats ? seatPractice(room, joined.member, seats) : null;
+    if (seated && !seated.ok) return seated;
     this.#rooms.set(code, room);
     return { ok: true, room, member: joined.member };
   }
@@ -194,4 +218,16 @@ export class Rooms {
       if (changed) result.changed.push(room);
     }
   }
+}
+
+// Seats the creator of a practice room where the game puts them, through the game's own message as
+// their page would send it, and then its AI players.
+function seatPractice(room: Room, member: Member, seats: PracticeSeats): Ack {
+  const seated = room.act(member.id, seats.seat.type, seats.seat.payload);
+  if (!seated.ok) return seated;
+  for (const seat of seats.agents) {
+    const added = room.addAgent(PRACTICE_PERSONA, seat);
+    if (!added.ok) return added;
+  }
+  return seated;
 }

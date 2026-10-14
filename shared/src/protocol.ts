@@ -54,6 +54,7 @@ export const ROOM_ERRORS = [
   'agents_not_allowed',
   'agents_in_room',
   'player_is_agent',
+  'agents_offline',
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 

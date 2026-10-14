@@ -50,6 +50,15 @@ describe('signing in', () => {
     expect(router.push).toHaveBeenLastCalledWith('/');
   });
 
+  test('opens on registering when the page asks for it', async () => {
+    const tabs = (register?: boolean) =>
+      mount(SignIn, { props: { register }, global: { plugins: [i18n], stubs: { RouterLink: true } } })
+        .findAll('.tab')
+        .map((tab) => tab.attributes('aria-pressed'));
+    expect(tabs()).toEqual(['true', 'false']);
+    expect(tabs(true)).toEqual(['false', 'true']);
+  });
+
   test('tells whoever registers what becomes of the record of their games', async () => {
     const wrapper = mount(SignIn, { global: { plugins: [i18n], stubs: { RouterLink: true } } });
     expect(wrapper.text()).not.toContain('Games are recorded.');

@@ -1,6 +1,6 @@
 import { TEAMS, type AgentAnswer, type AgentGame, type StartProblem } from '@reviewer2/shared';
 import { KEYWORDS_MESSAGES } from '@reviewer2/shared/schemas';
-import type { AgentMove, AgentTask, GameContext } from '../../core/game';
+import type { AgentMove, AgentTask, GameContext, PracticeSeats } from '../../core/game';
 import type { KeywordsData } from './index';
 import { seatOf, type Seating } from './seats';
 import { viewFor } from './view';
@@ -50,6 +50,22 @@ export function agentSeat(seat: unknown): { team: (typeof TEAMS)[number]; role: 
   if (!parsed.success) return null;
   const { team, role } = parsed.data;
   return team !== null && role !== 'spectator' ? { team, role } : null;
+}
+
+// The seats of a practice room (docs/games/keywords.md#practice-rooms): its creator in the red group,
+// as its PI or as a student, and AI players in the three other seats, the red group's other role
+// first, so that a person sits in a group before any AI player does (needs_human).
+export function practiceSeats(role: string): PracticeSeats | null {
+  if (role !== 'captain' && role !== 'guesser') return null;
+  const other = role === 'captain' ? 'guesser' : 'captain';
+  return {
+    seat: { type: 'keywords:seat', payload: { team: 'red', role } },
+    agents: [
+      { team: 'red', role: other },
+      { team: 'blue', role: 'captain' },
+      { team: 'blue', role: 'guesser' },
+    ],
+  };
 }
 
 // What a seat is to do now: the group's PI gives the clue in its turn, and a student plays the

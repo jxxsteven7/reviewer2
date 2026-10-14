@@ -214,3 +214,42 @@ test('Reviewer 1 advises a student of its group, who reveals the cards', async (
     for (const card of game.cards) if (!card.revealed) expect(card).not.toHaveProperty('color');
   }
 });
+
+// Practice from the home page (docs/architecture.md#practice-rooms): an account that the operator
+// hasn't let have AI players opens "Practice with Reviewer 1", sees itself as the red PI beside
+// three of Reviewer 1, starts, and is in the game at once, where the AI players play the blue
+// group's turn by themselves and Reviewer 1 guesses Pat's clue as Pat's student.
+test('anyone with an account practices with Reviewer 1 from the home page', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const name = own('Pat');
+  const pat = await newPlayer(browser, 'en');
+  snapshotsOf(pat);
+  await register(pat, name);
+  // The language gate stands on the browser's first visit to the home page.
+  await expect(pat.locator('.gate, .home').first()).toBeVisible();
+  const gate = pat.getByRole('button', { name: new RegExp(`^${text.language.en}`) });
+  if (await gate.count()) await gate.click();
+  await pat.locator('button.entry').click();
+  const sheet = pat.locator('[role=dialog]');
+  await expect(sheet.locator('.group.red')).toContainText(name);
+  await expect(sheet.locator('.group.red')).toContainText(text.home.practice.you);
+  await expect(sheet.locator('.group.blue .name')).toHaveText([reviewer, reviewer]);
+  await sheet.locator('button.start').click();
+  await pat.waitForURL(/\/room\//);
+  await expect(pat.locator('.keywords-game')).toBeVisible();
+  const state = snapshotsOf(pat).at(-1);
+  expect(state?.players.filter((player) => player.agent)).toHaveLength(3);
+  expect((state?.data as { seats: Record<string, unknown> }).seats[state?.me ?? '']).toEqual({
+    team: 'red',
+    role: 'captain',
+  });
+
+  if ((await teamOnTurn(pat)) === 'blue') {
+    // The blue student reveals a paper of nobody's, which Pat's key shows, and the turn is red's.
+    await tellModel(pat, 'neutral');
+    await expect.poll(() => teamOnTurn(pat), { timeout: 30_000 }).toBe('red');
+  }
+  const index = await tellModel(pat, 'red');
+  await giveClue(pat, 'Hint', 1, 'en');
+  await expect(card(pat, index)).toHaveClass(/revealed/, { timeout: 30_000 });
+});

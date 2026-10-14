@@ -133,6 +133,14 @@ export interface AgentMove {
   payload: unknown;
 }
 
+// The seats of a practice room (GameModule.practice): the game's message that takes its creator to
+// their seat, as their page would send it, and the seats of the AI players, in the order they are
+// invited, as seatAgent() reads a seat.
+export interface PracticeSeats {
+  seat: { type: string; payload: unknown };
+  agents: unknown[];
+}
+
 // One player's points in a game of a match, by member key, with the game's own detail of where
 // they came from, which the match's table shows.
 export interface MatchScore {
@@ -265,6 +273,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // refuses with one of its codes, as for a seat that is taken. The context already knows the
   // newcomer's member key and persona.
   seatAgent?(data: Data, ctx: GameContext, playerId: string, seat: unknown): GameUpdate<Data>;
+  // A practice room (docs/architecture.md#practice-rooms): where its creator sits for the role they
+  // chose, as the game names its roles, and where the AI players sit who take the other seats. Null
+  // for a role that the game doesn't have. A game without this has no practice rooms.
+  practice?(role: string): PracticeSeats | null;
   // What a seat is to do now when an AI plays it: an AI player's own seat, or the seat of a player
   // who is offline in their turn. Null when there is nothing for it to do. The context's isOnline
   // says who is there to play, which counts a person who has been offline for a short while as

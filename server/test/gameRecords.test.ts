@@ -39,7 +39,8 @@ const kinds = () =>
   server.db
     .prepare(
       'SELECT ending, winner, reason, data IS NOT NULL AS replay, accounts, guests, agents, takeover, ' +
-        'in_match AS inMatch, language, fields, version, rules, words, setup, started_at <= ended_at AS ordered ' +
+        'in_match AS inMatch, practice, language, fields, version, rules, words, setup, ' +
+        'started_at <= ended_at AS ordered ' +
         'FROM replays',
     )
     .all();
@@ -161,6 +162,7 @@ describe('the record of a game of the team word guessing game', () => {
       agents: 0,
       takeover: 0,
       inMatch: 0,
+      practice: 0,
       language: 'en',
       fields: '["general"]',
       version: 'test',
