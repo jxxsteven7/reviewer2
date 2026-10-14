@@ -2030,7 +2030,8 @@ describe('KeywordsGame', () => {
       props: { room: { ...view, data: { ...data, game: shown } } },
       global: global(),
     });
-    await show({ ...turned(0), events: [hero('bob'), hero('ann', 3)] });
+    // Bob's first time has no count.
+    await show({ ...turned(0), events: [hero('bob', 1), hero('ann', 3)] });
     expect(calls()).toEqual([
       ['Bob', line('bob', 'Bob')],
       ['Ann', `${line('ann', 'Ann')} (\u00d73)`],
