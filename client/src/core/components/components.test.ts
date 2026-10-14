@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { mount, RouterLinkStub } from '@vue/test-utils';
+import { mount } from '@vue/test-utils';
 import { describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
@@ -11,6 +11,12 @@ import FieldPicker from './FieldPicker.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
 import UiSheet from './UiSheet.vue';
+
+// The panel that an avatar opens outside a room reads the page, which no server answers here.
+vi.mock('../account', async (actual) => ({
+  ...(await actual<typeof import('../account')>()),
+  request: vi.fn(async () => ({ ok: false, error: 'no_such_profile' })),
+}));
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
 const global = () => ({ plugins: [i18n()] });
@@ -139,13 +145,22 @@ describe('AvatarButton', () => {
     expect(wrapper.get('.avatar').attributes('aria-hidden')).toBe('true');
   });
 
-  test("leads to a player's page outside a room", () => {
+  test("opens the account's panel outside a room, as a room's avatar opens the player's", async () => {
     const wrapper = mount(AvatarButton, {
-      props: { to: '/p/abc', name: 'Bob' },
-      global: { ...global(), stubs: { RouterLink: RouterLinkStub } },
+      props: { handle: 'b0b000000000', name: 'Bob' },
+      global: global(),
+      attachTo: document.body,
     });
-    expect(wrapper.getComponent(RouterLinkStub).props('to')).toBe('/p/abc');
-    expect(wrapper.getComponent(RouterLinkStub).attributes('aria-label')).toBe("View Bob's profile");
+    const avatar = wrapper.get('button.avatar-button');
+    expect(avatar.attributes('aria-label')).toBe("View Bob's profile");
+    expect(avatar.attributes('aria-haspopup')).toBe('dialog');
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    await avatar.trigger('click');
+    await vi.waitFor(() => expect(document.querySelector('[role=dialog] h2')?.textContent?.trim()).toBe('Bob'));
+    document.querySelector<HTMLButtonElement>('[role=dialog] button.close')?.click();
+    await nextTick();
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    wrapper.unmount();
   });
 });
 

@@ -4,6 +4,7 @@ import {
   checkPassword,
   checkUsername,
   HANDLE,
+  handleInLink,
   MAX_BIO_INPUT,
   MAX_BIO_LENGTH,
   isReservedName,
@@ -156,6 +157,26 @@ describe('a handle', () => {
     expect(HANDLE.test('0123456789ab')).toBe(true);
     for (const wrong of ['', '0123456789', '0123456789abc', '0123456789AB', '0123456789ag', '../etc/passwd']) {
       expect(HANDLE.test(wrong), wrong).toBe(false);
+    }
+  });
+
+  test('is read from a link to its page, with text around it, on any host and in either case', () => {
+    expect(handleInLink('https://reviewer2.example/p/0123456789ab')).toBe('0123456789ab');
+    expect(handleInLink('Add me! http://10.0.0.2:8080/p/0123456789AB?from=chat#top')).toBe('0123456789ab');
+    expect(handleInLink('来加我呀https://www.reviewer2.example/p/0123456789ab/，等你')).toBe('0123456789ab');
+    for (const wrong of [
+      'Ann',
+      '0123456789ab',
+      '/p/0123456789ab',
+      'reviewer2.example/p/0123456789ab',
+      'https://reviewer2.example/p/0123456789',
+      'https://reviewer2.example/p/0123456789abc',
+      'https://reviewer2.example/p/0123456789ag',
+      'https://reviewer2.example/room/K7QX',
+      'https://reviewer2.example/x/p/0123456789ab',
+      'ftp://reviewer2.example/p/0123456789ab',
+    ]) {
+      expect(handleInLink(wrong), wrong).toBeNull();
     }
   });
 });

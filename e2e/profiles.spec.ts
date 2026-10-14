@@ -55,12 +55,16 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await ladder.getByRole('button', { name: text.room.close }).click();
   await expect(ladder).toHaveCount(0);
 
-  // Bob likes the page, and asks Ann to be friends from it.
+  // Bob likes the page, and asks Ann to be friends from it, in the sheet with a line for her that a
+  // room's panel has too; the page then says that the request went.
   await card.getByRole('button', { name: text.playerPage.like, exact: true }).click();
   await expect(card.getByRole('button', { name: text.playerPage.liked })).toBeVisible();
   await expect(card).toContainText(interpolate(text.playerPage.likes, { count: '1' }));
   await card.getByRole('button', { name: text.friends.addFromRoom }).click();
+  const asking = bob.getByRole('dialog', { name: interpolate(text.friends.addTitle, { name: annName }) });
+  await asking.getByRole('button', { name: text.friends.addSubmit }).click();
   await expect(bob.getByText(text.friends.requestSent)).toBeVisible();
+  await expect(card.getByRole('button', { name: text.friends.requestPending })).toBeDisabled();
 
   // Ann's home page counts the request on her avatar; her account page shows Bob among those who
   // liked her page, not yet a friend, and the request, which she accepts.
@@ -77,8 +81,11 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await ann.locator('.friends').getByRole('button', { name: text.friends.accept }).click();
   await expect(ann.locator('.friends .friend', { hasText: bobName })).toContainText(text.friends.online);
   await expect(ann.locator('.profile h2 .badge')).toHaveCount(0);
-  // The list of likers hears of it too, without a reload.
+  // The list of likers hears of it too, without a reload, and so does Ann's page, which Bob has open
+  // and which offers him nothing more.
   await expect(ann.locator('.likers .line', { hasText: bobName })).toContainText(text.account.profile.public.friend);
+  await expect(card.getByRole('button', { name: text.friends.requestPending })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: text.friends.addFromRoom })).toHaveCount(0);
 
   // Ann opens her own page from the account page: no way to like it, and the round button back to
   // the account page.

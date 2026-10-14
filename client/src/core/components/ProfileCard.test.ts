@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ProfileView } from '@reviewer2/shared';
+import type { FriendsView, ProfileView } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
@@ -27,6 +27,25 @@ const socket = vi.hoisted(() => ({
 vi.mock('../socket', () => socket);
 const toasts = vi.hoisted(() => ({ toast: vi.fn(), toastError: vi.fn() }));
 vi.mock('../toast', () => toasts);
+// The viewer's friends and requests, as the card is mounted, and whether it asked for them.
+const NO_FRIENDS: FriendsView = { friends: [], incoming: [], outgoing: [] };
+const friends = vi.hoisted(() => ({ view: null as unknown, shown: [] as boolean[] }));
+vi.mock('../useFriendsList', async () => {
+  const { ref, watch } = await import('vue');
+  return {
+    useFriendsList: (shown: { value: boolean }) => {
+      watch(
+        () => shown.value,
+        (on) => friends.shown.push(on),
+        { immediate: true },
+      );
+      return { view: ref(friends.view), failed: ref(null), load: vi.fn() };
+    },
+  };
+});
+
+// The buttons at the foot of the page: the like, and beside it what the viewer may do as a friend.
+const ACTIONS = '.actions button';
 
 const global = () => ({
   plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })],
@@ -66,6 +85,9 @@ describe('ProfileCard', () => {
     toasts.toastError.mockReset();
     signedIn.account.loaded = true;
     signedIn.account.summary = null;
+    friends.view = NO_FRIENDS;
+    friends.shown = [];
+    document.body.innerHTML = '';
   });
 
   test('shows the profile as the server sent it, the bio and the link as text, with the author marked', async () => {
@@ -103,7 +125,7 @@ describe('ProfileCard', () => {
     expect(text).toContain('Contributions: Bugs');
     expect(text).toContain('♥ 4');
     // A guest can neither like nor ask, and is told why.
-    expect(wrapper.findAll('.actions button')).toHaveLength(0);
+    expect(wrapper.findAll(ACTIONS)).toHaveLength(0);
     expect(text).toContain('Log in to like this page');
     expect(socket.connect).not.toHaveBeenCalled();
     wrapper.unmount();
@@ -171,16 +193,16 @@ describe('ProfileCard', () => {
     expect(signedIn.request).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain('Ann');
     expect(wrapper.text()).not.toContain('Log in to like');
-    expect(wrapper.findAll('.actions button')).toHaveLength(0);
+    expect(wrapper.findAll(ACTIONS)).toHaveLength(0);
     signedIn.account.summary = { handle: 'f6e5d4c3b2a1' };
     signedIn.account.loaded = true;
     await flushPromises();
     expect(signedIn.request).toHaveBeenCalledTimes(1);
-    expect(wrapper.findAll('.actions button')).toHaveLength(2);
+    expect(wrapper.findAll(ACTIONS)).toHaveLength(2);
     signedIn.account.summary = null;
     await flushPromises();
     expect(signedIn.request).toHaveBeenCalledTimes(2);
-    expect(wrapper.findAll('.actions button')).toHaveLength(0);
+    expect(wrapper.findAll(ACTIONS)).toHaveLength(0);
     expect(wrapper.text()).toContain('Log in to like');
     wrapper.unmount();
   });
@@ -215,13 +237,66 @@ describe('ProfileCard', () => {
     expect(signedIn.request).toHaveBeenNthCalledWith(4, '/api/profile/unlike', { handle: 'a1b2c3d4e5f6' });
     expect(wrapper.text()).toContain('♥ 4');
 
+    // The request goes from the sheet that a room's panel has too, with a line for her if any.
+    expect(friends.shown).toEqual([false, true]);
     socket.send.mockResolvedValue({ ok: true, status: 'pending' });
     const friend = wrapper.findAll('button').find((button) => button.text() === 'Add friend');
     await friend?.trigger('click');
+    const sheet = document.body.querySelector<HTMLElement>('[role=dialog]');
+    expect(sheet?.querySelector('h2')?.textContent?.trim()).toBe('Add Ann as a friend');
+    const line = sheet?.querySelector('input') as HTMLInputElement;
+    line.value = 'Loved your clue';
+    line.dispatchEvent(new Event('input'));
+    sheet?.querySelector('form')?.dispatchEvent(new Event('submit'));
     await flushPromises();
-    expect(socket.send).toHaveBeenCalledWith('friends:request', { username: 'Ann' });
+    expect(socket.send).toHaveBeenCalledWith('friends:request', { username: 'Ann', note: 'Loved your clue' });
     expect(toasts.toast).toHaveBeenCalledWith('friends.requestSent');
+    expect(document.body.querySelector('[role=dialog]')).toBeNull();
     wrapper.unmount();
+  });
+
+  test('offers by how the two stand what the panels offer: the request sent, an answer, a name or parting', async () => {
+    signedIn.account.summary = { handle: 'f6e5d4c3b2a1' };
+    const other = { handle: 'a1b2c3d4e5f6', username: 'Ann', avatar: null };
+    const buttons = async (view: FriendsView) => {
+      friends.view = view;
+      signedIn.request.mockResolvedValueOnce({ ok: true, profile: profile() });
+      const wrapper = mount(ProfileCard, {
+        props: { handle: 'a1b2c3d4e5f6' },
+        global: global(),
+        attachTo: document.body,
+      });
+      await flushPromises();
+      return { wrapper, buttons: wrapper.findAll(ACTIONS) };
+    };
+
+    const asked = await buttons({ ...NO_FRIENDS, outgoing: [other] });
+    expect(asked.buttons.map((button) => button.text())).toEqual(['Like', 'Request sent']);
+    expect(asked.buttons[1]?.attributes('disabled')).toBeDefined();
+    asked.wrapper.unmount();
+
+    const asking = await buttons({ ...NO_FRIENDS, incoming: [{ ...other, note: 'Hi' }] });
+    expect(asking.wrapper.get('.actions .asked-you').text()).toBe('They asked to be your friend\u201cHi\u201d');
+    expect(asking.buttons.map((button) => button.text())).toEqual(['Like', 'Accept', 'Decline']);
+    socket.send.mockResolvedValue({ ok: true });
+    await asking.buttons[1]?.trigger('click');
+    await flushPromises();
+    expect(socket.send).toHaveBeenCalledWith('friends:accept', { username: 'Ann' });
+    expect(toasts.toast).toHaveBeenCalledWith('friends.nowFriends');
+    asking.wrapper.unmount();
+
+    const friend = { ...other, online: true, room: null, duo: null };
+    const friendly = await buttons({ ...NO_FRIENDS, friends: [friend] });
+    expect(friendly.buttons.map((button) => button.text())).toEqual(['Like', 'Alias', 'Remove']);
+    friendly.wrapper.unmount();
+    // Nor does a brief card in a panel, which asks for no list.
+    friends.shown = [];
+    signedIn.request.mockResolvedValueOnce({ ok: true, profile: profile() });
+    const brief = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6', brief: true }, global: global() });
+    await flushPromises();
+    expect(friends.shown).toEqual([false]);
+    expect(brief.find('.actions').exists()).toBe(false);
+    brief.unmount();
   });
 
   test('keeps the page up when it can not be read again after a like, and says why', async () => {
@@ -239,8 +314,8 @@ describe('ProfileCard', () => {
     expect(toasts.toastError).toHaveBeenCalledWith('offline');
     expect(wrapper.text()).toContain('Ann');
     expect(wrapper.text()).toContain('♥ 4');
-    expect(wrapper.findAll('.actions button')).toHaveLength(2);
-    expect(wrapper.findAll('.actions button')[0]?.attributes('disabled')).toBeUndefined();
+    expect(wrapper.findAll(ACTIONS)).toHaveLength(2);
+    expect(wrapper.findAll(ACTIONS)[0]?.attributes('disabled')).toBeUndefined();
     wrapper.unmount();
   });
 
@@ -270,7 +345,7 @@ describe('ProfileCard', () => {
     signedIn.request.mockResolvedValueOnce({ ok: true, profile: profile({ mine: true }) });
     const mine = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
     await flushPromises();
-    expect(mine.findAll('.actions button')).toHaveLength(0);
+    expect(mine.findAll(ACTIONS)).toHaveLength(0);
     expect(mine.text()).toContain('This is your page');
     mine.unmount();
     signedIn.request.mockResolvedValueOnce({ ok: false, error: 'no_such_profile' });

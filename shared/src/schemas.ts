@@ -124,10 +124,12 @@ export const ROOM_MESSAGES = {
   'room:chair': z.object({ playerId }),
   'room:dismiss': none,
   'room:close': none,
-  // Friends and invitations (friends.ts), for accounts. A request names the other account by its
-  // username, or by the player's ID in the room that the connection is in; the rest name a friend,
-  // or the other side of a request, by username, and an invitation by its ID.
+  // Friends and invitations (friends.ts), for accounts. The search finds an account by its whole
+  // username. A request names the other account by its username, or by the player's ID in the room
+  // that the connection is in; the rest name a friend, or the other side of a request, by username,
+  // and an invitation by its ID.
   'friends:list': none,
+  'friends:find': z.object({ username: name }),
   'friends:request': z.object({
     username: name.optional(),
     playerId: playerId.optional(),

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-import type { DuoView, FriendsView, FriendView } from '@reviewer2/shared';
-import { mount } from '@vue/test-utils';
-import { describe, expect, test, vi } from 'vitest';
+import type { DuoView, FriendsView, FriendView, ProfileView } from '@reviewer2/shared';
+import { flushPromises, mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ref } from 'vue';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
@@ -9,17 +9,35 @@ import zh from '../../locales/zh.json';
 import ProfileFriends from './ProfileFriends.vue';
 
 // The friends on the account page, with what the account has played with each and the titles
-// they hold among its friends (docs/architecture.md#friend-duos).
+// they hold among its friends (docs/architecture.md#friend-duos), and the search for someone to ask
+// (docs/architecture.md#friends).
 
 const list = vi.hoisted(() => ({ view: null as unknown }));
 vi.mock('../useFriendsList', () => ({
   useFriendsList: () => ({ view: list.view, failed: ref(null), load: vi.fn() }),
 }));
-const send = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
-vi.mock('../socket', () => ({ send }));
+const send = vi.hoisted(() => vi.fn<(event: string, payload?: object) => Promise<object>>(async () => ({ ok: true })));
+vi.mock('../socket', () => ({
+  send,
+  connect: vi.fn(),
+  whenConnected: async () => true,
+  socket: { connected: true, on: vi.fn(), off: vi.fn() },
+}));
 vi.mock('../toast', () => ({ toast: vi.fn(), toastError: vi.fn() }));
-const askToJoin = vi.hoisted(() => vi.fn(async () => true));
-vi.mock('../friends', () => ({ askToJoin }));
+const asks = vi.hoisted(() => ({
+  askToJoin: vi.fn(async () => true),
+  answerFriend: vi.fn(async () => true),
+  requestFriend: vi.fn(async () => true),
+}));
+const { askToJoin } = asks;
+vi.mock('../friends', async (actual) => ({ ...(await actual<typeof import('../friends')>()), ...asks }));
+// Who the account is, and the public pages that the panel and a pasted link read.
+const signedIn = vi.hoisted(() => ({
+  account: { loaded: true, summary: { handle: 'me0000000000' } },
+  request: vi.fn<(path: string) => Promise<object>>(async () => ({ ok: false, error: 'no_such_profile' })),
+  loadAccount: vi.fn(),
+}));
+vi.mock('../account', () => signedIn);
 
 const NONE = { wonTogether: 0, lostTogether: 0, against: 0, beat: 0, beaten: 0 };
 // The line keeps each number with its word by no-break spaces; the test reads them as spaces.
@@ -33,8 +51,12 @@ const friend = (username: string, duo: DuoView | null): FriendView => ({
   duo,
 });
 
-function mountWith(friends: FriendView[], locale: 'en' | 'zh' = 'en') {
-  list.view = ref<FriendsView>({ friends, incoming: [], outgoing: [] });
+function mountWith(
+  friends: FriendView[],
+  locale: 'en' | 'zh' = 'en',
+  requests: Pick<FriendsView, 'incoming' | 'outgoing'> = { incoming: [], outgoing: [] },
+) {
+  list.view = ref<FriendsView>({ friends, ...requests });
   return mount(ProfileFriends, {
     global: {
       plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })],
@@ -79,17 +101,19 @@ describe('ProfileFriends', () => {
     expect(
       board
         .findAll('li')[0]
-        ?.findAll('.holder a')
-        .map((link) => link.attributes('aria-label')),
+        ?.findAll('.holder button')
+        .map((avatar) => avatar.attributes('aria-label')),
     ).toEqual(["View Bob's profile", "View Cat's profile"]);
   });
 
-  test("leads from each friend's avatar to their page, with the name as plain text and where they are beside it", () => {
+  test("opens each friend's panel from their avatar, with the name as plain text and where they are beside it", async () => {
     const online = { ...friend('Bob', null), online: true, room: { code: 'K7QX' } };
     const wrapper = mountWith([online, friend('Cat', null)]);
     const [bob, cat] = wrapper.findAll('.list .friend');
-    expect(bob?.get('a.avatar-button').attributes('href')).toBe('/p/bob00000000');
-    expect(bob?.get('a.avatar-button').attributes('aria-label')).toBe("View Bob's profile");
+    expect(bob?.get('button.avatar-button').attributes('aria-label')).toBe("View Bob's profile");
+    await bob?.get('button.avatar-button').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[role=dialog]:has(.panel-body) h2').text()).toBe('Bob');
     expect(bob?.get('.name').element.tagName).toBe('SPAN');
     expect(bob?.get('.where').text().replace(/\s+/g, ' ')).toBe('online \u00b7 In room R2-K7QX');
     expect(bob?.get('a.join').attributes('href')).toBe('/room/K7QX');
@@ -121,6 +145,7 @@ describe('ProfileFriends', () => {
 
   test('removes a friend from behind the card\'s "more" button, after asking', async () => {
     send.mockClear();
+    asks.answerFriend.mockClear();
     const wrapper = mountWith([friend('Bob', null)]);
     const more = wrapper.get('.friend button.more');
     expect(more.attributes('aria-label')).toBe('More for Bob');
@@ -136,9 +161,11 @@ describe('ProfileFriends', () => {
     ]);
     await press(wrapper, 'Remove friend');
     expect(wrapper.get('[role=dialog]').text()).toContain('Remove Bob from your friends?');
-    expect(send).not.toHaveBeenCalled();
+    expect(asks.answerFriend).not.toHaveBeenCalled();
     await press(wrapper, 'Remove friend');
-    expect(send).toHaveBeenCalledWith('friends:remove', { username: 'Bob' });
+    await flushPromises();
+    expect(asks.answerFriend).toHaveBeenCalledWith('Bob', 'remove');
+    expect(wrapper.find('[role=dialog]').exists()).toBe(false);
   });
 
   test("gives a friend a name of the account's own, which shows with the username after it", async () => {
@@ -177,5 +204,183 @@ describe('ProfileFriends', () => {
     expect(plain(wrapper.find('.friend .games').text())).toBe('同队 3 胜 2 负');
     expect(wrapper.find('.board li .pill').text()).toBe('共同一作');
     expect(wrapper.find('.board li .holder-name').text()).toBe('Bob');
+  });
+});
+
+describe('the search on the account page', () => {
+  const page = (handle: string, username: string): ProfileView => ({
+    id: 5,
+    handle,
+    username,
+    avatar: null,
+    rank: 'phd',
+    createdAt: '2026-10-01',
+    titles: [],
+    streaks: { wins: 0, losses: 0 },
+    link: null,
+    bio: null,
+    record: null,
+    contributions: null,
+    likes: 0,
+    liked: false,
+    mine: false,
+    duo: null,
+  });
+  const cat = { handle: 'ca7000000000', username: 'Cat', avatar: null };
+
+  beforeEach(() => {
+    send.mockReset();
+    signedIn.request.mockReset();
+    signedIn.request.mockImplementation(async (path) => {
+      const handle = path.split('/').at(-1) as string;
+      return handle === cat.handle
+        ? { ok: true, profile: page(handle, 'Cat') }
+        : { ok: false, error: 'no_such_profile' };
+    });
+    asks.answerFriend.mockClear();
+    asks.requestFriend.mockClear();
+  });
+
+  // Whoever the server finds by name, and every other message answered with { ok: true }.
+  const finds = (found: object) =>
+    send.mockImplementation(async (event) => (event === 'friends:find' ? found : { ok: true }));
+  const search = async (wrapper: ReturnType<typeof mountWith>, text: string) => {
+    await wrapper.get('form.search input').setValue(text);
+    await wrapper.get('form.search').trigger('submit');
+    await flushPromises();
+  };
+  const panel = (wrapper: ReturnType<typeof mountWith>) => wrapper.get('[role=dialog]:has(.panel-body)');
+  const offers = (wrapper: ReturnType<typeof mountWith>) =>
+    panel(wrapper)
+      .findAll('.panel-actions button')
+      .map((button) => [button.text(), button.attributes('disabled') !== undefined]);
+  // A sheet over the panel, by its title.
+  const sheet = (wrapper: ReturnType<typeof mountWith>, title: string) => {
+    const found = wrapper.findAll('[role=dialog]').find((dialog) => dialog.get('h2').text() === title);
+    if (!found) throw new Error(`no sheet "${title}"`);
+    return found;
+  };
+
+  test('finds an account by its whole username, and asks it in a sheet with a line for it', async () => {
+    finds({ ok: true, ...cat });
+    const wrapper = mountWith([]);
+    expect(wrapper.get('form.search button').attributes('disabled')).toBeDefined();
+    await search(wrapper, ' cat ');
+    expect(send).toHaveBeenCalledWith('friends:find', { username: 'cat' });
+    expect(panel(wrapper).get('h2').text()).toBe('Cat');
+    expect(panel(wrapper).text()).toContain('PhD student');
+    expect(offers(wrapper)).toEqual([
+      ['Add friend', false],
+      ['Open the full page', false],
+    ]);
+    // The sheet with a line for them lies over the panel.
+    await panel(wrapper).findAll('.panel-actions button')[0]?.trigger('click');
+    expect(wrapper.findAll('[role=dialog]')).toHaveLength(2);
+    const asking = sheet(wrapper, 'Add Cat as a friend');
+    await asking.get('input').setValue('Lab mate?');
+    await asking.get('form').trigger('submit');
+    await flushPromises();
+    expect(asks.requestFriend).toHaveBeenCalledWith({ username: 'Cat' }, 'Lab mate?');
+    expect(wrapper.find('[role=dialog]').exists()).toBe(false);
+    expect((wrapper.get('form.search input').element as HTMLInputElement).value).toBe('');
+  });
+
+  test('offers by how the two stand, and the whole page over the panel', async () => {
+    const asked = mountWith([], 'en', { incoming: [], outgoing: [cat] });
+    finds({ ok: true, ...cat });
+    await search(asked, 'Cat');
+    expect(offers(asked)).toEqual([
+      ['Request sent', true],
+      ['Open the full page', false],
+    ]);
+    await panel(asked).findAll('.panel-actions button')[1]?.trigger('click');
+    await flushPromises();
+    // The whole page, which says the same of the request.
+    const whole = asked.get('[role=dialog].tall');
+    expect(whole.get('h2').text()).toBe('Cat');
+    expect(whole.get('.actions').text()).toContain('Request sent');
+    asked.unmount();
+
+    // Cat asked the account, with a line, which the panel shows, and the account accepts.
+    const asking = mountWith([], 'en', { incoming: [{ ...cat, note: 'Hello' }], outgoing: [] });
+    await search(asking, 'Cat');
+    expect(panel(asking).get('.asked-you').text()).toBe('They asked to be your friend\u201cHello\u201d');
+    expect(offers(asking).map(([text]) => text)).toEqual(['Accept', 'Decline', 'Open the full page']);
+    await panel(asking).findAll('.panel-actions button')[0]?.trigger('click');
+    await flushPromises();
+    expect(asks.answerFriend).toHaveBeenCalledWith('Cat', 'accept');
+    expect(asking.find('[role=dialog]').exists()).toBe(false);
+    asking.unmount();
+
+    // A friend goes by the account's name for them, and may be given another, or parted from.
+    const friendly = mountWith([{ ...friend('Cat', null), handle: cat.handle, alias: 'Kitty' }]);
+    await search(friendly, 'Cat');
+    expect(panel(friendly).get('h2').text()).toBe('Kitty Cat');
+    expect(offers(friendly)).toEqual([
+      ['Edit alias', false],
+      ['Remove friend', false],
+      ['Open the full page', false],
+    ]);
+    await panel(friendly).findAll('.panel-actions button')[0]?.trigger('click');
+    expect((sheet(friendly, 'Alias for Cat').get('input').element as HTMLInputElement).value).toBe('Kitty');
+    await sheet(friendly, 'Alias for Cat').get('form').trigger('submit');
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('friends:alias', { username: 'Cat', alias: 'Kitty' });
+    expect(friendly.find('[role=dialog]').exists()).toBe(false);
+    await search(friendly, 'Cat');
+    await panel(friendly).findAll('.panel-actions button')[1]?.trigger('click');
+    const parting = sheet(friendly, 'Cat');
+    expect(parting.text()).toContain('Remove Cat from your friends?');
+    await parting
+      .findAll('button')
+      .find((button) => button.text() === 'Remove friend')
+      ?.trigger('click');
+    await flushPromises();
+    expect(asks.answerFriend).toHaveBeenCalledWith('Cat', 'remove');
+    expect(friendly.find('[role=dialog]').exists()).toBe(false);
+    friendly.unmount();
+
+    // The account itself.
+    const self = mountWith([]);
+    finds({ ok: true, handle: 'me0000000000', username: 'Me' });
+    await search(self, 'me');
+    expect(panel(self).text()).toContain('This is you.');
+    expect(offers(self).map(([text]) => text)).toEqual(['Open the full page']);
+    self.unmount();
+  });
+
+  test('reads a link to a page, with words around it, as the page and not as a name', async () => {
+    const wrapper = mountWith([]);
+    await search(wrapper, 'Add me: https://reviewer2.example/p/CA7000000000 thanks');
+    expect(signedIn.request).toHaveBeenCalledWith('/api/profile/ca7000000000');
+    expect(send).not.toHaveBeenCalledWith('friends:find', expect.anything());
+    expect(panel(wrapper).get('h2').text()).toBe('Cat');
+    wrapper.unmount();
+  });
+
+  test('says under the box why nobody was found, until the box changes', async () => {
+    const wrapper = mountWith([]);
+    const said = () => wrapper.find('form.search .note.error');
+    finds({ ok: false, error: 'no_such_account' });
+    await search(wrapper, 'Ca');
+    expect(said().text()).toBe("No account has that username. Type the full username; capitals don't matter.");
+    expect(wrapper.find('[role=dialog]').exists()).toBe(false);
+    await wrapper.get('form.search input').setValue('Cat');
+    expect(said().exists()).toBe(false);
+    finds({ ok: false, error: 'friend_find_limited' });
+    await search(wrapper, 'Cat');
+    expect(said().text()).toBe("You've searched too often this hour. Try again later.");
+    await search(wrapper, 'https://reviewer2.example/p/000000000000');
+    expect(said().text()).toBe('There is no such page. The account may have been deleted.');
+    wrapper.unmount();
+  });
+
+  test('says it in Chinese too', async () => {
+    finds({ ok: false, error: 'no_such_account' });
+    const wrapper = mountWith([], 'zh');
+    expect(wrapper.get('form.search label').text()).toBe('按用户名或主页链接找人');
+    await search(wrapper, 'Ca');
+    expect(wrapper.get('form.search .note.error').text()).toBe('没有这个用户名。要输入完整的用户名，大小写都行。');
+    wrapper.unmount();
   });
 });

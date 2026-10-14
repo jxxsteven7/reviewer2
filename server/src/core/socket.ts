@@ -1322,6 +1322,19 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       });
     });
 
+    // The search on the account page: the account that a whole username names, as names are
+    // compared, with the handle that its public profile is read by. The hour's count is taken
+    // before the name is looked up, so that a name that finds nobody costs as much as one that
+    // finds someone (docs/architecture.md#threat-model).
+    on(handlers, 'friends:find', ({ username }) => {
+      const me = accountOf(conn);
+      if (!me.ok) return me;
+      if (!(accounts as Accounts).friends.takeFind(me.account.id)) return fail('friend_find_limited');
+      const target = (accounts as Accounts).byName(username);
+      if (!target) return fail('no_such_account');
+      return ok({ handle: target.handle, username: target.username });
+    });
+
     // A request to be friends, to an account by its username, or to a player in the room that the
     // connection is in, who must have an account. By username, the day's count is taken before the
     // name is looked up, so that trying names costs as much as asking. A player in the room is known

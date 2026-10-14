@@ -17,6 +17,8 @@ export interface FriendLimits {
   maxIncoming: number;
   // How many requests an account may send a day, counting those that were refused.
   requestsPerDay: number;
+  // How many searches by username an account may make an hour, counting those that found nobody.
+  findsPerHour: number;
   // How long after a request was declined whoever was declined can't ask the same account again.
   declineCooldownMs: number;
 }
@@ -26,6 +28,7 @@ export const FRIEND_LIMITS: Readonly<FriendLimits> = Object.freeze({
   maxOutgoing: 20,
   maxIncoming: 50,
   requestsPerDay: 30,
+  findsPerHour: 30,
   declineCooldownMs: 7 * 24 * 60 * 60_000,
 });
 
@@ -65,6 +68,7 @@ export const FRIEND_ERRORS = [
   'friend_note_too_long',
   'friend_alias_invalid',
   'friend_alias_too_long',
+  'friend_find_limited',
 ] as const;
 export type FriendError = (typeof FRIEND_ERRORS)[number];
 

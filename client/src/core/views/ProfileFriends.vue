@@ -1,76 +1,107 @@
 <script setup lang="ts">
 import {
-  checkAlias,
-  checkFriendNote,
+  ACCOUNT_API,
   DUO_TITLES,
-  FRIEND_NOTE_LENGTH,
   formatCode,
-  MAX_FRIEND_ALIAS_INPUT,
-  MAX_FRIEND_NOTE_INPUT,
+  handleInLink,
   MAX_NAME_INPUT,
-  PROFILE_PATH,
-  textLength,
+  type Ack,
   type FriendView,
+  type ProfileView,
 } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
+import { request } from '../account';
+import AliasSheet from '../components/AliasSheet.vue';
 import AvatarButton from '../components/AvatarButton.vue';
 import FoldedTitles from '../components/FoldedTitles.vue';
+import ProfilePanel from '../components/ProfilePanel.vue';
 import TitleInfo from '../components/TitleInfo.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
+import UnfriendSheet from '../components/UnfriendSheet.vue';
 import { duoLine } from '../duos';
 import { errorKey } from '../errors';
 import { askToJoin } from '../friends';
-import { send } from '../socket';
-import { toast, toastError } from '../toast';
+import { send, whenConnected } from '../socket';
+import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 import { useFriendsList } from '../useFriendsList';
 
-// The account's friends (docs/architecture.md#friends): the way to ask someone by their username,
-// with a line for them if the account likes, the requests waiting for an answer each way, the line
-// that came with each request for the account under its name, and the friends, each on a card: the
-// avatar, which leads to the account's public page, the name and whether they are online and where;
-// under it, in small type, what the account has played with them, and the titles they hold among
-// its friends (docs/architecture.md#friend-duos), on one line, folded where they don't fit. The
-// friends' board above the list sums the titles up, in the same look, each with the avatar and the
-// name of the friends who hold it, the avatar leading to their page as on the cards. A friend who
-// is offline has the whole card faded, still readable. A friend in a public room can be joined from
-// here; one in a private room only by their invitation, which the account may ask them for
-// (askToJoin), and which the card says it has while the request stands. A friend whom the account
-// has given a name of its own (an alias, for the account alone) goes by it, with the username after
-// it in small grey type, here and in the sheets about them. The card's "more" button opens a sheet
-// with the friend's name, from which the account gives them a name, or takes it away by leaving it
-// empty, or removes them, after asking first. A change made here comes back as the word that the
-// server sends both sides, on which the list is asked for again (useFriendsList); after a refusal
-// it is asked for here, since the list may have been out of date.
+// The account's friends (docs/architecture.md#friends): the search for someone to ask, the requests
+// waiting for an answer each way, the line that came with each request for the account under its
+// name, and the friends, each on a card: the avatar, which opens the friend's panel
+// (ProfilePanel.vue), the name and whether they are online and where; under it, in small type, what the account has played
+// with them, and the titles they hold among its friends (docs/architecture.md#friend-duos), on one
+// line, folded where they don't fit. The friends' board above the list sums the titles up, in the
+// same look, each with the avatar and the name of the friends who hold it, the avatar opening
+// their panel as on the cards. A friend who is offline has the whole card faded, still readable. A
+// friend in a public room can be joined from here; one in a private room only by their invitation,
+// which the account may ask them for (askToJoin), and which the card says it has while the request
+// stands. A friend whom the account has given a name of its own (an alias, for the account alone)
+// goes by it, with the username after it in small grey type, here and in the sheets about them.
+// The card's "more" button opens a sheet with the friend's name, from which the account gives them
+// a name, or takes it away by leaving it empty, or removes them, after asking first. A change made
+// here comes back as the word that the server sends both sides, on which the list is asked for
+// again (useFriendsList); after a refusal it is asked for here, since the list may have been out of
+// date.
+//
+// The search finds someone by their whole username, or by a link to their page pasted with any
+// text around it, and opens their panel, as a tap on an avatar does (ProfilePanel.vue). Once
+// something has gone through there, the panel closes and the box is cleared. A name that is no
+// account's, and a link to no page, are said under the box, which forgets them as it changes.
 const { t } = useI18n();
 const { view, failed, load } = useFriendsList();
-const username = ref('');
-const note = ref('');
-const problem = ref<string | undefined>();
-const checkedNote = computed(() => checkFriendNote(note.value));
-const noteProblem = computed(() => (checkedNote.value.problem ? t(errorKey(checkedNote.value.problem)) : undefined));
-const noteCount = computed(() =>
-  t('friends.noteCount', { count: textLength(checkedNote.value.note ?? ''), max: FRIEND_NOTE_LENGTH }),
-);
-// The friend whose "more" sheet is open, the one being given a name, with the name as typed, and
-// the one about to be removed.
+// The friend whose "more" sheet is open, the one being given a name, and the one about to be
+// removed.
 const managing = ref<FriendView | null>(null);
 const naming = ref<FriendView | null>(null);
-const alias = ref('');
-const aliasRefused = ref<string | undefined>();
 const removing = ref<FriendView | null>(null);
 const { busy, run } = useBusy();
-const checkedAlias = computed(() => checkAlias(alias.value));
-const aliasProblem = computed(
-  () => aliasRefused.value ?? (checkedAlias.value.problem ? t(errorKey(checkedAlias.value.problem)) : undefined),
-);
-watch(alias, () => (aliasRefused.value = undefined));
 
-watch(username, () => (problem.value = undefined));
+// The search as typed, why it found nobody, and the account it found.
+const query = ref('');
+const searchProblem = ref<string | undefined>();
+type Found = { handle: string; username: string };
+const found = ref<Found | null>(null);
+watch(query, () => (searchProblem.value = undefined));
+
+// The account that the text names: by a link to its page, read as the public page it leads to,
+// which anyone may read and which costs none of the hour's searches, or else by its whole
+// username, which the server looks up (friends:find).
+async function lookUp(text: string): Promise<Ack<{ found: Found }>> {
+  const handle = handleInLink(text);
+  if (handle !== null) {
+    const reply = await request<{ profile: ProfileView }>(`${ACCOUNT_API.profiles}${handle}`);
+    return reply.ok ? { ok: true, found: { handle: reply.profile.handle, username: reply.profile.username } } : reply;
+  }
+  if (!(await whenConnected())) return { ok: false, error: 'offline' };
+  const reply = await send<Found>('friends:find', { username: text });
+  return reply.ok ? { ok: true, found: { handle: reply.handle, username: reply.username } } : reply;
+}
+
+async function search() {
+  const text = query.value.trim();
+  if (!text) return;
+  // A word against the last try is stale once another is made.
+  searchProblem.value = undefined;
+  const reply = await run(() => lookUp(text));
+  if (!reply) return;
+  if (!reply.ok) {
+    searchProblem.value = t(reply.error === 'no_such_account' ? 'friends.search.notFound' : errorKey(reply.error));
+    return;
+  }
+  found.value = reply.found;
+}
+
+// Something went through in the panel of the account found: the panel closes, and the box is ready
+// for the next.
+function foundDone() {
+  closeAll();
+  query.value = '';
+}
 
 // Each title that a friend holds, with the friends who hold it, in the order of the titles.
 const board = computed(() =>
@@ -80,34 +111,12 @@ const board = computed(() =>
   }),
 );
 
-const page = (handle: string) => `${PROFILE_PATH}${handle}`;
 const games = (friend: FriendView) => (friend.duo ? duoLine(t, friend.duo) : '');
 
-async function request() {
-  if (checkedNote.value.problem) return;
-  const line = checkedNote.value.note;
-  const reply = await run(() =>
-    send<{ status: 'pending' | 'accepted' }>('friends:request', {
-      username: username.value,
-      ...(line === null ? {} : { note: line }),
-    }),
-  );
-  if (!reply) return;
-  if (!reply.ok) {
-    problem.value = t(errorKey(reply.error));
-    return;
-  }
-  username.value = '';
-  note.value = '';
-  toast(reply.status === 'accepted' ? 'friends.nowFriends' : 'friends.requestSent');
-}
-
+// The answers to a request in the list, and taking one back.
 async function answer(message: 'friends:accept' | 'friends:decline' | 'friends:remove', name: string) {
   const reply = await run(() => send(message, { username: name }));
-  if (!reply) return;
-  removing.value = null;
-  managing.value = null;
-  if (reply.ok) return;
+  if (!reply || reply.ok) return;
   toastError(reply.error);
   void load();
 }
@@ -116,57 +125,33 @@ async function ask(friend: FriendView) {
   await run(() => askToJoin(friend.username));
 }
 
-function startNaming(friend: FriendView) {
-  alias.value = friend.alias ?? '';
-  aliasRefused.value = undefined;
-  naming.value = friend;
-}
-
 function closeAll() {
+  found.value = null;
   managing.value = null;
   naming.value = null;
   removing.value = null;
-}
-
-async function saveAlias() {
-  const friend = naming.value;
-  if (!friend || checkedAlias.value.problem) return;
-  const reply = await run(() => send('friends:alias', { username: friend.username, alias: alias.value }));
-  if (!reply) return;
-  if (!reply.ok) {
-    aliasRefused.value = t(errorKey(reply.error));
-    return;
-  }
-  closeAll();
-  void load();
 }
 </script>
 
 <template>
   <div class="friends">
-    <p class="hint">{{ t('friends.intro') }}</p>
-    <form class="add" @submit.prevent="request">
+    <form class="search" role="search" @submit.prevent="search">
       <UiField
-        v-model="username"
-        :label="t('friends.addLabel')"
+        v-model="query"
+        :label="t('friends.search.label')"
+        :placeholder="t('friends.search.placeholder')"
         :maxlength="MAX_NAME_INPUT"
         autocomplete="off"
-        enterkeyhint="send"
-        :error="problem"
-      />
-      <UiField
-        v-model="note"
-        :label="t('friends.noteLabel')"
-        :maxlength="MAX_FRIEND_NOTE_INPUT"
-        autocomplete="off"
-        enterkeyhint="send"
-        :hint="noteCount"
-        :error="noteProblem"
-      />
-      <UiButton type="submit" :disabled="busy || !username.trim() || checkedNote.problem !== null">{{
-        t('friends.addSubmit')
-      }}</UiButton>
+        inputmode="search"
+        enterkeyhint="search"
+        :error="searchProblem"
+      >
+        <template #beside>
+          <UiButton type="submit" :disabled="busy || !query.trim()">{{ t('friends.search.submit') }}</UiButton>
+        </template>
+      </UiField>
     </form>
+    <p class="hint">{{ t('friends.intro') }}</p>
 
     <p v-if="failed" class="hint">{{ t(errorKey(failed)) }}</p>
     <p v-else-if="view === null" class="hint">{{ t('friends.loading') }}</p>
@@ -177,7 +162,7 @@ async function saveAlias() {
           <li v-for="other in view.incoming" :key="other.username" class="card request">
             <AvatarButton
               class="face"
-              :to="page(other.handle)"
+              :handle="other.handle"
               :name="other.username"
               :avatar="other.avatar"
               size="medium"
@@ -214,7 +199,7 @@ async function saveAlias() {
           <li v-for="other in view.outgoing" :key="other.username" class="card request">
             <AvatarButton
               class="face"
-              :to="page(other.handle)"
+              :handle="other.handle"
               :name="other.username"
               :avatar="other.avatar"
               size="medium"
@@ -239,7 +224,7 @@ async function saveAlias() {
             <li v-for="{ title, holders } in board" :key="title">
               <TitleInfo :title="{ kind: 'duo', duo: title }" class="pill" />
               <span v-for="friend in holders" :key="friend.username" class="holder">
-                <AvatarButton :to="page(friend.handle)" :name="friend.username" :avatar="friend.avatar" />
+                <AvatarButton :handle="friend.handle" :name="friend.username" :avatar="friend.avatar" />
                 <span class="holder-name">{{ friend.alias ?? friend.username }}</span>
               </span>
             </li>
@@ -255,7 +240,7 @@ async function saveAlias() {
           >
             <AvatarButton
               class="face"
-              :to="page(friend.handle)"
+              :handle="friend.handle"
               :name="friend.username"
               :avatar="friend.avatar"
               size="medium"
@@ -324,49 +309,42 @@ async function saveAlias() {
       @close="closeAll"
     >
       <div class="confirm">
-        <UiButton :disabled="busy" @click="managing && startNaming(managing)">{{ t('friends.aliasEdit') }}</UiButton>
-        <UiButton variant="danger" :disabled="busy" @click="removing = managing">
-          {{ t('friends.removeFriend') }}
-        </UiButton>
+        <UiButton @click="naming = managing">{{ t('friends.aliasEdit') }}</UiButton>
+        <UiButton variant="danger" @click="removing = managing">{{ t('friends.removeFriend') }}</UiButton>
         <UiButton variant="quiet" @click="closeAll">{{ t('account.cancel') }}</UiButton>
       </div>
     </UiSheet>
 
-    <UiSheet
+    <AliasSheet
       :open="naming !== null"
-      :title="t('friends.aliasTitle', { name: naming?.username ?? '' })"
+      :username="naming?.username ?? ''"
+      :alias="naming?.alias ?? null"
       @close="closeAll"
-    >
-      <form class="confirm" @submit.prevent="saveAlias">
-        <UiField
-          v-model="alias"
-          :label="t('friends.aliasLabel')"
-          :maxlength="MAX_FRIEND_ALIAS_INPUT"
-          autocomplete="off"
-          enterkeyhint="done"
-          :hint="t('friends.aliasHint')"
-          :error="aliasProblem"
-        />
-        <UiButton variant="primary" type="submit" :disabled="busy || checkedAlias.problem !== null">
-          {{ t('friends.aliasSave') }}
-        </UiButton>
-        <UiButton variant="quiet" @click="closeAll">{{ t('account.cancel') }}</UiButton>
-      </form>
-    </UiSheet>
+      @saved="closeAll"
+    />
+    <UnfriendSheet
+      :open="removing !== null"
+      :username="removing?.username ?? ''"
+      @close="closeAll"
+      @removed="closeAll"
+    />
 
-    <UiSheet :open="removing !== null" :title="removing?.username ?? ''" @close="closeAll">
-      <div class="confirm">
-        <p>{{ t('friends.removeConfirm', { name: removing?.username ?? '' }) }}</p>
-        <UiButton variant="danger" :disabled="busy" @click="answer('friends:remove', removing?.username ?? '')">
-          {{ t('friends.removeFriend') }}
-        </UiButton>
-        <UiButton variant="quiet" @click="closeAll">{{ t('account.cancel') }}</UiButton>
-      </div>
-    </UiSheet>
+    <ProfilePanel
+      :open="found !== null"
+      :handle="found?.handle ?? ''"
+      :username="found?.username ?? ''"
+      @close="found = null"
+      @done="foundDone"
+    />
   </div>
 </template>
 
 <style scoped>
+/* The search across the section, with its button beside the box. */
+.search {
+  align-self: stretch;
+}
+
 .friends,
 .group,
 .confirm {
@@ -387,18 +365,6 @@ async function saveAlias() {
 .hint {
   color: var(--ink-2);
   font-size: var(--text-sm);
-}
-
-/* The username, the line for them, and the button under both. */
-.add {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-self: stretch;
-}
-
-.add > button {
-  align-self: flex-start;
 }
 
 h3 {

@@ -26,9 +26,10 @@ import { useBusy } from '../useBusy';
 
 // The account's public page, as its owner sets it up (docs/architecture.md#public-profiles): the
 // link and the line about themselves that anyone may read, whether the record and the counts of
-// the feedback contributions show there too, the way to the page itself, and who likes it, with a way to ask
-// those who aren't friends yet. The form says what is wrong with the link or the bio before it is
-// sent, by the rules that the server applies (shared/src/accounts.ts).
+// the feedback contributions show there too, the way to the page itself, with a word that others
+// find the account in the friend search by its whole username or by the page's link, and who likes
+// it, with a way to ask those who aren't friends yet. The form says what is wrong with the link or
+// the bio before it is sent, by the rules that the server applies (shared/src/accounts.ts).
 const props = defineProps<{ summary: AccountSummary }>();
 const { t } = useI18n();
 const { busy, run } = useBusy();
@@ -151,6 +152,7 @@ async function befriend(liker: LikerView): Promise<void> {
   <div class="public">
     <p class="hint">{{ t('account.profile.public.intro') }}</p>
     <RouterLink :to="page" class="view">{{ t('account.profile.public.view') }}</RouterLink>
+    <p class="hint found">{{ t('account.profile.public.found') }}</p>
     <p v-if="summary.profile.banned" class="problem">{{ t('account.profile.public.banned') }}</p>
     <form class="form" @submit.prevent="save">
       <!-- A barred account may still choose what else it shows, so only these two are disabled. -->
@@ -197,7 +199,7 @@ async function befriend(liker: LikerView): Promise<void> {
       <p v-else-if="likers.length === 0" class="hint">{{ t('account.profile.public.noLikes') }}</p>
       <ul v-else class="list">
         <li v-for="liker in likers" :key="liker.handle" class="line">
-          <AvatarButton :to="`${PROFILE_PATH}${liker.handle}`" :name="liker.username" :avatar="liker.avatar" />
+          <AvatarButton :handle="liker.handle" :name="liker.username" :avatar="liker.avatar" />
           <span class="name">{{ liker.username }}</span>
           <span v-if="liker.friend" class="hint">{{ t('account.profile.public.friend') }}</span>
           <UiButton v-else variant="quiet" size="small" :disabled="busy" @click="befriend(liker)">
@@ -226,6 +228,11 @@ async function befriend(liker: LikerView): Promise<void> {
 .hint {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+/* How others find the account, close under the link to its page. */
+.found {
+  margin-top: calc(-1 * var(--space-2));
 }
 
 .view {
@@ -285,7 +292,7 @@ h3 {
   background: var(--paper-2);
 }
 
-/* The name is one line of text; the avatar before it leads to the liker's page. */
+/* The name is one line of text; the avatar before it opens the liker's panel. */
 .name {
   flex: 1;
   min-width: 0;

@@ -41,6 +41,16 @@ export const AVATAR_PATH = '/avatars/';
 // accounts up. The profile's page is PROFILE_PATH followed by the handle.
 export const HANDLE = /^[0-9a-f]{12}$/;
 export const PROFILE_PATH = '/p/';
+// The handle in a link to a profile, as a player pastes one into the friend search on the account
+// page (docs/architecture.md#friends): an http or https address on any host whose path is
+// PROFILE_PATH and a handle, in either case, with any text around it, as a link shared in a chat
+// often has. Null when the text holds no such link. A username, of at most MAX_NAME_LENGTH
+// characters, is too short to hold one, so the search never takes one for the other.
+const PROFILE_LINK = new RegExp(`https?://[^\\s/?#]+${PROFILE_PATH}([0-9a-f]{12})(?![0-9a-z])`, 'i');
+export function handleInLink(text: string): string | null {
+  return PROFILE_LINK.exec(text)?.[1]?.toLowerCase() ?? null;
+}
+
 // The one line that an account may write about itself, in the characters a reader sees once it has
 // been cleaned, and the longest text that is looked at at all.
 export const MAX_BIO_LENGTH = 80;
