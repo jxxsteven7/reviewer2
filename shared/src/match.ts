@@ -25,7 +25,12 @@ export interface MatchRules {
   grouping: MatchGrouping;
 }
 
-export const defaultMatchRules = (): MatchRules => ({ games: MATCH_GAMES.default, teams: 'fixed', grouping: 'random' });
+// By default the groups are drawn again for every game.
+export const defaultMatchRules = (): MatchRules => ({
+  games: MATCH_GAMES.default,
+  teams: 'switch',
+  grouping: 'random',
+});
 
 // Whether the number of games will do: a whole number in range. The room setup checks it with
 // this, and the server's schema (schemas.ts) by MATCH_GAMES.

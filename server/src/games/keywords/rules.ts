@@ -340,8 +340,8 @@ export interface Missed {
 
 // Ends the phase whose time has run out by `at`, and gives the state back as it is when none has,
 // or while the game is paused, when the clock stands still. A captain who gave no clue in time
-// loses the turn, which the record notes as a turn without a clue, with the captain who was in the
-// seat, if any, whom `missed` names; it is asked only then. The events note the missed deadline,
+// loses the turn, which the record notes as a turn without a clue, with the captain whom it costs,
+// if any, whom `missed` names; it is asked only then. The events note the missed deadline,
 // with how many times the captain has missed one now. Guessers who run out of time end their turn,
 // whether or not they have revealed a card, and the record notes that on the turn's clue. Either
 // way the other group's turn begins, and its time counts from now. An action meant for the turn

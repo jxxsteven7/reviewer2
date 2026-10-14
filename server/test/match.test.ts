@@ -153,6 +153,7 @@ describe('a match', () => {
       bigClues: 0,
       openingRecord: false,
       heavenlyHand: false,
+      missed: 0,
     });
 
     // The settings stay as they were for the rest of the match.

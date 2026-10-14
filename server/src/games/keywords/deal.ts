@@ -11,10 +11,25 @@ import {
 import { pick, shuffle, type Rng } from '../../core/random';
 import type { Card } from './state';
 
+// The board's side: it is 5 cards by 5, row by row.
+const SIDE = 5;
+
+// Whether a row or a column of the board is all one team's cards, which would make the board too
+// easy. Diagonals don't count.
+export function fullLine(colors: readonly CardColor[]): boolean {
+  const lines = Array.from({ length: SIDE }, (_, line) => [
+    Array.from({ length: SIDE }, (_, at) => colors[line * SIDE + at]),
+    Array.from({ length: SIDE }, (_, at) => colors[at * SIDE + line]),
+  ]).flat();
+  return lines.some((cards) => TEAMS.some((team) => cards.every((color) => color === team)));
+}
+
 // Lays out a board: the 25 words in random places, a random team to start, and the colors
 // shuffled independently of the words. The starting team gets 9 cards and the other team 8;
-// 7 cards are irrelevant papers and 1 is Reviewer 2. A word may come with its translations, its
-// forms, its pinyin and the English meanings of its characters, which stay with its card.
+// 7 cards are irrelevant papers and 1 is Reviewer 2. A row or a column all of one team's cards is
+// shuffled away: the colors are shuffled again, the words staying where they are, until none is,
+// which about one board in 30 needs. A word may come with its translations, its forms, its pinyin
+// and the English meanings of its characters, which stay with its card.
 export function deal(words: readonly (string | BoardWord)[], rng: Rng): { cards: Card[]; startingTeam: Team } {
   const terms = words.map((word): BoardWord => (typeof word === 'string' ? { word } : word));
   // Two spellings of one word, such as "Coauthor" and "co-author", are one word: the clue check
@@ -31,7 +46,8 @@ export function deal(words: readonly (string | BoardWord)[], rng: Rng): { cards:
     ...Array<CardColor>(CARD_COUNTS.reviewer2).fill('reviewer2'),
   ];
   const places = shuffle(terms, rng);
-  const shuffled = shuffle(colors, rng);
+  let shuffled = shuffle(colors, rng);
+  while (fullLine(shuffled)) shuffled = shuffle(colors, rng);
   return {
     startingTeam,
     cards: places.map(({ word, translations, forms, pinyin, glosses }, index) => ({

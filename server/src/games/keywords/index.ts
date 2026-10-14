@@ -11,7 +11,6 @@ import {
   TEAMS,
   verdictFor,
   type AgentPersona,
-  type ClueRecord,
   type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
@@ -55,10 +54,12 @@ import {
   afterScoredGame,
   arrangeFixed,
   counts,
+  drawGroups,
   drawProblems,
   firstClue,
   heavenlyHand,
   lineupOf,
+  missedDeadline,
   newMatchSeating,
   openingRecord,
   rekeyMatch,
@@ -93,9 +94,16 @@ export interface KeywordsData {
   settings: KeywordsSettings;
   seating: Seating;
   game: KeywordsState | null;
+  // Whoever has left each group's PI seat of their own accord while the game is on, by player ID,
+  // stepping down or leaving the room: a deadline that the group misses while its seat stays empty
+  // costs them (missedBy), as it would in the seat, so that stepping down before the deadline and
+  // taking the seat back afterwards saves nothing. A PI whom the chair benched isn't noted (bench).
+  vacated: Record<Team, string | null>;
   // The game's part of the match that the room plays, if it plays one (match.ts).
   match: MatchSeating | null;
 }
+
+const nobodyVacated = (): Record<Team, string | null> => ({ red: null, blue: null });
 
 const online = (ctx: GameContext) => new Set(ctx.playerIds().filter((id) => ctx.isOnline(id)));
 
@@ -152,8 +160,22 @@ function sit(data: KeywordsData, ctx: GameContext, playerId: string, wanted: Sea
   if (change.seating === data.seating && match === data.match) return { ok: true, data };
   return {
     ok: true,
-    data: { ...data, seating: change.seating, game: withoutSelection(data.game, playerId), match },
+    data: {
+      ...data,
+      seating: change.seating,
+      game: withoutSelection(data.game, playerId),
+      vacated: vacatedBy(data, playerId, change.seating),
+      match,
+    },
   };
+}
+
+// What the game remembers of who has left a PI seat (KeywordsData.vacated) once `after` is the
+// seating: the player, if they held a group's PI seat while the game is on and hold it no more.
+function vacatedBy(data: KeywordsData, playerId: string, after: Seating): KeywordsData['vacated'] {
+  const { team, role } = seatOf(data.seating, playerId);
+  if (stageOf(data) !== 'on' || role !== 'captain' || team === null) return data.vacated;
+  return captainOf(after, team) === playerId ? data.vacated : { ...data.vacated, [team]: playerId };
 }
 
 function matchRefusal(data: KeywordsData, match: MatchSeating, member: Member, wanted: SeatRequest) {
@@ -248,8 +270,9 @@ const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, '
 // change to either. Version 2 brought the students' marks, the homophone rule of a Chinese room and
 // the hold on the quick reactions of whoever has seen the key while the students guess; version 3
 // the numbers, the English and the pinyin of a character as the same character in the clue check,
-// and the groups' talk after the game, the PI's included.
-export const RULES_VERSION = 3;
+// and the groups' talk after the game, the PI's included; version 4 the 5 points that a PI loses
+// for each missed deadline, and boards on which no row or column is all one group's cards.
+export const RULES_VERSION = 4;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -275,14 +298,16 @@ const actions: { [M in KeywordsMessage]: Action<M> } = {
     act(data, playerId, (game, actor) => extend(game, actor, moment)),
 };
 
-// The captain in the seat of the group whose time for the clue has run out, and how many times
-// they had missed the deadline before: as their account's titles count it, and in this game so far,
-// whose titles are awarded only at its end. A guest's misses go uncounted, and so does everyone's
-// in a game that awards no titles, as one with AI players (GameContext.titleCount).
+// The captain in the seat of the group whose time for the clue has run out, or, when the seat is
+// empty, the one who left it during the game (KeywordsData.vacated), and how many times they had
+// missed the deadline before: as their account's titles count it, and in this game so far, whose
+// titles are awarded only at its end. A guest's misses go uncounted, and so does everyone's in a
+// game that awards no titles, as one with AI players (GameContext.titleCount).
 function missedBy(data: KeywordsData, ctx: GameContext): Missed | null {
   const game = data.game;
-  const captain = game && captainOf(data.seating, game.team);
-  if (!game || captain === null) return null;
+  if (!game) return null;
+  const captain = captainOf(data.seating, game.team) ?? data.vacated[game.team];
+  if (captain === null) return null;
   const held = ctx.titleCount(captain, 'missed_deadline');
   if (held === null) return { captain, before: null };
   const key = ctx.keyOf(captain);
@@ -299,10 +324,6 @@ function heroBefore(game: KeywordsState, ctx: GameContext, playerId: string): nu
   const key = ctx.keyOf(playerId);
   return held + game.history.filter((record) => [...heroesOf(record)].some((hero) => ctx.keyOf(hero) === key)).length;
 }
-
-// Whether a turn is one whose captain gave no clue in time, with the captain who was in the seat.
-const missedDeadline = (record: ClueRecord): boolean =>
-  record.word === null && record.timedOut === true && record.captain !== undefined;
 
 // The titles that a game which ended by itself brought a player who played for `team` in it, by
 // their member key (docs/games/keywords.md#titles), each with the turn it came in: Forgot to
@@ -332,7 +353,13 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // editing" can't share a board.
   wordsClash: cardsClash,
 
-  create: (language) => ({ settings: defaultSettings(language), seating: emptySeating(), game: null, match: null }),
+  create: (language) => ({
+    settings: defaultSettings(language),
+    seating: emptySeating(),
+    game: null,
+    vacated: nobodyVacated(),
+    match: null,
+  }),
 
   // The settings come whole, and must suit the room's language: a Chinese room counts the clue's
   // characters, an English room its words.
@@ -360,17 +387,24 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return seating === data.seating ? data : { ...data, seating };
   },
 
-  // A captain who leaves frees the seat; the key viewers remember them anyway, and the groups
-  // remember whom each player has played for.
-  leave: (data, playerId) => ({
-    ...data,
-    seating: removeSeat(data.seating, playerId),
-    game: withoutSelection(data.game, playerId),
-  }),
+  // A captain who leaves frees the seat; the key viewers remember them anyway, the groups remember
+  // whom each player has played for, and a deadline missed while the seat stays empty costs them.
+  leave(data, playerId) {
+    const seating = removeSeat(data.seating, playerId);
+    return {
+      ...data,
+      seating,
+      game: withoutSelection(data.game, playerId),
+      vacated: vacatedBy(data, playerId, seating),
+    };
+  },
 
+  // A PI whom the chair benches didn't choose to leave the seat, so a deadline missed while it
+  // stays empty costs them nothing; the chair benching themselves is stepping down.
   bench(data, ctx, playerId) {
     const seated = sit(data, ctx, playerId, SPECTATOR);
-    return seated.ok ? seated.data : data;
+    if (!seated.ok || seated.data === data) return data;
+    return playerId === ctx.chairId ? seated.data : { ...seated.data, vacated: data.vacated };
   },
 
   // A match whose groups are fixed, or drawn when its game starts, has nothing for the chair to
@@ -382,14 +416,19 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   canStart: (data, ctx) => problemsOf(data, ctx).length === 0,
 
-  // A match's game whose groups are drawn deals everyone who plays into the groups as the chair's
-  // shuffle does, and starts with those groups.
+  // A match's game whose groups are drawn deals everyone who plays into the groups, apart from
+  // those who have played together, with the PIs taking turns (match.ts), and starts with those
+  // groups.
   start(data, ctx, words, gameId) {
-    const seating = lineupOf(data.match) === 'draw' ? shuffleGroups(data.seating, ctx.rng, online(ctx)) : data.seating;
+    const seating =
+      data.match && lineupOf(data.match) === 'draw'
+        ? drawGroups(data.seating, membersOf(ctx), data.match, online(ctx), ctx.rng)
+        : data.seating;
     return {
       ...data,
       seating: startGame(seating, ctx.keyOf),
       game: newGame(words, ctx.rng, { gameId, settings: data.settings, language: ctx.language }, ctx.now()),
+      vacated: nobodyVacated(),
     };
   },
 
