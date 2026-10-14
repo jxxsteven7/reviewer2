@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, textLength, type RoomView } from '@reviewer2/shared';
-import { computed, nextTick, ref, toRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AvatarButton from '../../core/components/AvatarButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
@@ -80,11 +80,30 @@ function toEnd() {
   void nextTick(scroll);
   setTimeout(scroll, KEYBOARD_MS);
 }
+
+// A list at its end stays there as it gets shorter or taller, as when a phone's keyboard comes up or
+// goes, however long the keyboard takes. Where the player has scrolled up to read, it stays put.
+let atEnd = true;
+function scrolled() {
+  const element = list.value;
+  if (element) atEnd = element.scrollHeight - element.scrollTop - element.clientHeight <= NEAR_END;
+}
+const resized =
+  typeof ResizeObserver === 'function'
+    ? new ResizeObserver(() => {
+        if (atEnd && list.value) list.value.scrollTop = list.value.scrollHeight;
+      })
+    : null;
+watch(list, (element, old) => {
+  if (old) resized?.unobserve(old);
+  if (element) resized?.observe(element);
+});
+onBeforeUnmount(() => resized?.disconnect());
 </script>
 
 <template>
   <div class="chat">
-    <ol v-if="turns.length" ref="list" class="turns">
+    <ol v-if="turns.length" ref="list" class="turns" @scroll.passive="scrolled">
       <li v-for="turn in turns" :key="turn.after ? 'after' : turn.turn" class="turn">
         <h3 class="turn-title">{{ turn.after ? t('game.chat.after') : t('game.turn', { turn: turn.turn }) }}</h3>
         <p

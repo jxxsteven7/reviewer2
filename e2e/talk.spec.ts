@@ -301,6 +301,8 @@ test('on a phone the chat brings up the keyboard only while it is empty, and kee
   // sheet keeps above it, the input in sight at its foot and the newest message above it, while the
   // messages scroll.
   await input(student).click();
+  // The keyboard takes its time, longer than the page waits before it looks at the list again.
+  await student.waitForTimeout(600);
   const size = student.viewportSize();
   if (!size) throw new Error('the page has no viewport');
   const left = Math.round(size.height * 0.55);
