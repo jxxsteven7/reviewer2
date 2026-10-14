@@ -327,14 +327,9 @@
     "formWarning": "This clue repeats a form that the word lists give of a word still on the board: {words}. This room's clue check leaves it to you.",
     "characterWarning": "This clue has a character in common with a word still on the board, as a Chinese character, a number however it is written, or the English or the pinyin of a character: {words}. It's your call.",
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
-    "pick": "Tap a card to choose it. Your group sees your choice; reveal it once you agree.",
-    "tools": {
-      "label": "A tap on a card",
-      "choose": "Choose",
-      "ours": "Ours",
-      "theirs": "Theirs",
-      "r2": "R2?",
-      "hint": "Tap a card to mark it, and again to clear it. Only your group's students see the marks."
+    "gestures": {
+      "choose": "Tap: choose · double-tap: ours · triple-tap: theirs · hold: R2?",
+      "mark": "Double-tap: ours · triple-tap: theirs · hold: R2? · the same again clears it"
     },
     "chosenBy": "chosen by {names}",
     "noted": {
@@ -829,6 +824,7 @@
     },
     "revealTitle": "Revealing a card",
     "reveal": "One of your group's cards: go on. An irrelevant paper or a card of the other group: your turn ends, and the other group's card counts for them. Reviewer 2: your paper is rejected, and your group loses at once.",
+    "marks": "A group's students may mark the cards still face down for each other, at any time: double-tap a card for one of ours, triple-tap it for one of theirs, hold it for maybe Reviewer 2 (with the keyboard: 1, 2 and 3), and do the same again to clear the mark. The group's students and its PI see the marks; the PI can't set them.",
     "clueTitle": "Clues",
     "clue": {
       "zh": "A clue is one word of at most one character: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation such as GPU is fine, but not the English for a word on the board, nor its pinyin. | A clue is one word of at most {count} characters: a Chinese character counts as one, two letters or digits as one. An English word or abbreviation such as GPU is fine, but not the English for a word on the board, nor its pinyin.",

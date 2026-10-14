@@ -35,7 +35,6 @@ import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
-import MarkTools, { type Tool } from './MarkTools.vue';
 import PausedNotice from './PausedNotice.vue';
 import { replayOf } from './replay';
 import ReplayViewer from './ReplayViewer.vue';
@@ -206,33 +205,17 @@ async function choose(card: number) {
 }
 
 // A student's marks for the group (docs/games/keywords.md#talking-it-over), which the server sends
-// to the group's students alone, in either group's turn. The tool in use says what a tap on a card
-// does: choose it, in the group's own guess phase, or mark it. A tap with a mark puts it on the card,
-// or takes it off if the card has that mark already, whoever put it there; the last tap of the
-// group stands. As with the choice, the viewer's own taps show at once, until the server has
-// answered every one on its way.
-//
-// The tools are a student's while the game is on and not paused. Choosing comes back by itself
-// when the group's guess phase begins; when it ends, the student goes on with the mark they used
-// last, the group's own at first. A pause in the phase, which hides the tools with the board,
-// changes nothing: the tool is as the student left it when the game goes on.
+// to the group's students and its PI, in either group's turn. A student marks a card with a gesture
+// (useCardGestures.ts): two taps for one of the group's own, three for one of the other group's, a
+// long press for maybe Reviewer 2, or 1, 2 and 3 from the keyboard; one tap chooses the card in the
+// group's own guess phase, and does nothing otherwise. The same mark again takes it off, whoever put
+// it there; the last of the group stands. As with the choice, the viewer's own marks show at once,
+// until the server has answered every one on its way. The PI only reads the marks. Marking is a
+// student's while the game is on and not paused, when there is no board anyway.
 const student = computed(
   () => mySeat.value?.role === 'guesser' && mySeat.value.team !== null && !game.value.result && !paused.value,
 );
-const guessPhase = computed(() => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser');
-const tool = ref<Tool>('choose');
-let lastMark: Mark = 'ours';
-watch(tool, (current) => {
-  if (current !== 'choose') lastMark = current;
-});
-watch(
-  guessPhase,
-  (guessing) => {
-    if (guessing) tool.value = 'choose';
-    else if (tool.value === 'choose') tool.value = lastMark;
-  },
-  { immediate: true },
-);
+const readsMarks = computed(() => (mySeat.value?.team ?? null) !== null && !game.value.result);
 const pendingMarks = ref(new Map<number, Mark | null>());
 let marksOnTheWay = 0;
 const marks = computed(() => {
@@ -243,11 +226,10 @@ const marks = computed(() => {
   }
   return shown;
 });
-const noting = computed(() => student.value && tool.value !== 'choose');
 
-async function note(card: number) {
-  if (tool.value === 'choose') return;
-  const next = marks.value.get(card) === tool.value ? null : tool.value;
+async function note(card: number, mark: Mark) {
+  if (!student.value) return;
+  const next = marks.value.get(card) === mark ? null : mark;
   pendingMarks.value.set(card, next);
   marksOnTheWay += 1;
   await act('keywords:mark', { gameId: game.value.gameId, card, mark: next });
@@ -335,12 +317,11 @@ watch(
   },
 );
 // Whether a tap on the board marks a card a clue is meant for: for the PI giving a clue or preparing
-// one. Otherwise it chooses a card for a student, or puts the group's mark on it.
+// one. Otherwise one tap chooses a card for a student whose group guesses.
 const marking = computed(() => canClue.value || mayPrepare.value);
 function tap(card: number) {
   if (marking.value) mark(card);
-  else if (noting.value) void note(card);
-  else void choose(card);
+  else if (canGuess.value) void choose(card);
 }
 
 // The moves that change the game go one at a time, so that a double tap can't send one twice.
@@ -467,31 +448,26 @@ const status = computed(() => {
         <KeywordsBoard
           v-else
           :cards="game.cards"
-          :selectable="canGuess || marking || noting"
+          :selectable="canGuess || marking || student"
           :selected="marking ? null : choice"
           :choosers="choosers"
           :lang="HTML_LANG[room.language]"
           :targeting="marking ? (mySeat?.team ?? null) : null"
           :targets="isCaptain && !game.result ? draft.targets : []"
-          :notes="student ? marks : undefined"
+          :notes="readsMarks ? marks : undefined"
+          :quiet-notes="isCaptain"
+          :gestures="student"
           :team="mySeat?.team ?? null"
           :float="floats.card.value"
           @select="tap"
+          @mark="note"
         />
         <div class="actions">
           <GroupChat v-if="!wide" v-model:draft="chatLine" :room="room" :sending="sending" @send="say" />
           <div v-if="student || status || data.joinsNext" class="play">
-            <MarkTools v-if="student && mySeat?.team" v-model="tool" :team="mySeat.team" :can-choose="canGuess" />
-            <GuessBar
-              v-if="canGuess"
-              :game="game"
-              :selected="choice"
-              :busy="busy"
-              :quiet="tool !== 'choose'"
-              @reveal="reveal"
-              @pass="pass"
-            />
+            <GuessBar v-if="canGuess" :game="game" :selected="choice" :busy="busy" @reveal="reveal" @pass="pass" />
             <p v-else-if="status" class="status">{{ status }}</p>
+            <p v-if="student && !canGuess" class="gestures">{{ t('game.gestures.mark') }}</p>
             <p v-if="data.joinsNext" class="joins-next">{{ t('match.joinsNext') }}</p>
           </div>
           <!--
@@ -694,6 +670,11 @@ const status = computed(() => {
 
 .status {
   font-weight: var(--weight-bold);
+}
+
+.gestures {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
 }
 
 .joins-next {

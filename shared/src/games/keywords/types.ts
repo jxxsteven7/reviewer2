@@ -182,8 +182,8 @@ export interface KeywordsView {
   // and screens don't. It goes on after the game, for those who played for the group to talk it
   // over.
   chat?: ChatMessage[];
-  // The marks of the viewer's own group, while the game is on. Only its guessers get this: its
-  // captain, who sees every color, the other group, spectators and screens don't.
+  // The marks of the viewer's own group, while the game is on. Its guessers and its captain, who
+  // only reads them, get this; the other group, spectators and screens don't.
   marks?: CardMark[];
 }
 

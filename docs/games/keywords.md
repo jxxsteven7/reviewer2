@@ -101,7 +101,9 @@ Each group has three things the other never sees.
 
 **Choosing a card.** In their group's guess phase, a guesser may choose a card, or take it back; the group's guessers and captain see who chose which. Choices clear at every reveal and when the turn or game ends; a guesser who leaves takes theirs along.
 
-**Marking cards.** At any time during a game but a pause, in either group's turn, a guesser may mark a hidden card for their group (`keywords:mark`): as `ours`, one of the group's own, `theirs`, one of the other group's, or `r2`, maybe Reviewer 2; or clear its mark with `null`. A card has one mark for each group, the last one standing, whoever set it, and the marks don't say who did. Only the group's guessers get them (`marks`): not its captain, who sees every color, nor the other group, spectators or screens. A card's marks, both groups', go when it is revealed, and nobody gets any once the game is over.
+**Marking cards.** At any time during a game but a pause, in either group's turn, a guesser may mark a hidden card for their group (`keywords:mark`): as `ours`, one of the group's own, `theirs`, one of the other group's, or `r2`, maybe Reviewer 2; or clear its mark with `null`. A card has one mark for each group, the last one standing, whoever set it, and the marks don't say who did. The group's guessers and its captain get them (`marks`), the captain to read them and so see what the students make of the board, without setting any; the other group, spectators and screens don't. A card's marks, both groups', go when it is revealed, and nobody gets any once the game is over.
+
+A student marks with taps, without tools to pick first (`useCardGestures.ts`): one tap chooses a card, in the group's own guess phase, and does nothing otherwise; two taps mark it `ours`, three `theirs`, and holding it down for half a second `r2`; the same again clears the mark, and another puts that one in its place. One tap waits a quarter of a second for the next before it counts. From the keyboard, 1, 2 and 3 mark the card that has the focus. A long press selects no text and opens no menu. The line under the board says which tap does what. A student's card that is marked takes the tint of the color the mark stands for, with the mark's sticker hanging on its bottom left corner; the captain's keeps the tint of its color, with a small sticker inside its bottom right corner, clear of the numbers of the cards a clue is meant for.
 
 **The group chat.** A guesser may write to their group at any time during a game. Captains read but can't write: the clue is all they say. Spectators and screens see none. A message is one line of up to 200 characters, cleaned as `shared/src/text.ts` says. Each group keeps its latest 20 messages; it goes with every snapshot, lasts one game and stays readable after the end.
 
@@ -136,13 +138,13 @@ The record of a game ([../architecture.md](../architecture.md#game-records)) log
 
 | Seat | Cards | Of the groups | Can do |
 |---|---|---|---|
-| Captain | All words and colors; the English of the characters of the cards still face down | Their group's chat and choices | Give the clue |
+| Captain | All words and colors; the English of the characters of the cards still face down | Their group's chat, choices and marks | Give the clue |
 | Guesser | All words; revealed colors | Their group's chat, choices and marks | Choose, mark, reveal, end the turn, write |
 | Spectator, screen | Like a guesser | Nothing | Watch |
 | While paused | No cards at all | As before | Write to the group |
 | After the game | Every color | As before, no marks | Review the game; write to the group, PI included, for whoever played for it |
 
-`view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups, no `selections` key outside the group whose turn it is, and no `marks` key outside a group's guessers or after the game; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone; the `glosses` of a card to the captains alone, while the game is on and the card is face down.
+`view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups, no `selections` key outside the group whose turn it is, and no `marks` key outside a group's guessers and captain, or after the game; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone; the `glosses` of a card to the captains alone, while the game is on and the card is face down.
 
 ## Seats
 
@@ -172,7 +174,7 @@ On top of the room messages ([../architecture.md](../architecture.md#messages));
 | `keywords:seat` | `team` (`red`, `blue`, `null`), `role` (`captain`, `guesser`, `spectator`) | Any member, within the seat rules |
 | `keywords:clue` | `gameId`, `turn`, `word`, `count` (1 to the cards left under `free`; 0 to 9 or `"unlimited"` under `standard`), `targets`? (the cards meant) | The current captain |
 | `keywords:select` | `gameId`, `turn`, `card` (0 to 24, or `null`) | The current guessers |
-| `keywords:mark` | `gameId`, `card` (0 to 24), `mark` (`ours`, `theirs`, `r2`, or `null`) | Either group's guessers, in any turn; at most about 10 messages a second, as for every message |
+| `keywords:mark` | `gameId`, `card` (0 to 24), `mark` (`ours`, `theirs`, `r2`, or `null`) | Either group's guessers, in any turn; at most about 10 messages a second, as for every message; the captains read the marks but can't set them |
 | `keywords:reveal` | `gameId`, `turn`, `card` | The current guessers |
 | `keywords:pass` | `gameId`, `turn` | The current guessers |
 | `keywords:say` | `gameId`, `text` | Either group's guessers, in any turn; after the game, whoever played for the group, its PI too (`game_over` for anyone else) |

@@ -38,6 +38,7 @@ import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
+import { HOLD_MS, TAP_MS } from './useCardGestures';
 import { useChatLine } from './useChatLine';
 
 const send = vi.hoisted(() =>
@@ -1394,21 +1395,30 @@ describe('KeywordsGame', () => {
   const later = () => new Promise<{ ok: boolean }>((resolve) => answers.push(() => resolve({ ok: true })));
   const card = (wrapper: ReturnType<typeof mount>, index: number) => wrapper.findAll('.board button')[index];
 
+  // A student's taps on a card (useCardGestures.ts), which count once the time for one more is over.
+  async function tapCard(wrapper: ReturnType<typeof mount>, index: number, taps = 1) {
+    vi.useFakeTimers();
+    for (let tap = 0; tap < taps; tap += 1) await card(wrapper, index)?.trigger('click');
+    vi.advanceTimersByTime(TAP_MS);
+    vi.useRealTimers();
+    await flushPromises();
+  }
+
   test('shows a choice at once and sends it, takes it back, and reveals the card chosen last', async () => {
     send.mockImplementation(later);
     const wrapper = mount(KeywordsGame, { props: { room: room('bob') }, global: global() });
 
-    await card(wrapper, 1)?.trigger('click');
+    await tapCard(wrapper, 1);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 1 });
     expect(card(wrapper, 1)?.classes()).toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').text()).toBe('Reveal \u201cModel\u201d');
 
     // A second tap takes the choice back, also before the first one has been answered.
-    await card(wrapper, 1)?.trigger('click');
+    await tapCard(wrapper, 1);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: null });
     expect(card(wrapper, 1)?.classes()).not.toContain('selected');
 
-    await card(wrapper, 2)?.trigger('click');
+    await tapCard(wrapper, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 2 });
     await wrapper.get('.guess-bar button.primary').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:reveal', { gameId: 'g1', turn: 2, card: 2 });
@@ -1423,7 +1433,7 @@ describe('KeywordsGame', () => {
     // and the next choice can be revealed again.
     expect(card(wrapper, 2)?.classes()).not.toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').text()).toBe('Reveal a card');
-    await card(wrapper, 0)?.trigger('click');
+    await tapCard(wrapper, 0);
     expect(card(wrapper, 0)?.classes()).toContain('selected');
     expect(wrapper.get('.guess-bar button.primary').attributes('disabled')).toBeUndefined();
     send.mockImplementation(async () => ({ ok: true }));
@@ -1435,45 +1445,45 @@ describe('KeywordsGame', () => {
     const data = view.data as KeywordsRoomData;
     return { ...view, data: { ...data, game: { ...(data.game as KeywordsView), marks, ...change } } };
   };
-  const tool = (wrapper: ReturnType<typeof mount>, name: string) =>
-    wrapper.findAll('.mark-tools .tool').find((button) => button.text() === name);
-
-  test('lets a student mark cards for the group, take a mark back, and go back to choosing', async () => {
+  test('lets a student mark cards for the group with taps and a long press, and take a mark back', async () => {
     send.mockImplementation(later);
     const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
-    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
-    expect(wrapper.find('.mark-tools .hint').exists()).toBe(false);
-
-    await tool(wrapper, 'Ours')?.trigger('click');
-    expect(tool(wrapper, 'Ours')?.attributes('aria-pressed')).toBe('true');
-    expect(wrapper.get('.mark-tools .hint').text()).toBe(
-      "Tap a card to mark it, and again to clear it. Only your group's students see the marks.",
+    // No row of tools: the line above the guess bar's buttons says what taps do.
+    expect(wrapper.find('.mark-tools').exists()).toBe(false);
+    expect(wrapper.get('.guess-bar .hint').text()).toBe(
+      'Tap: choose \u00b7 double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2?',
     );
-    // The guess bar keeps its buttons, and leaves the hint to the tools.
-    expect(wrapper.find('.guess-bar .hint').exists()).toBe(false);
-    await card(wrapper, 0)?.trigger('click');
+    await tapCard(wrapper, 0, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
+    expect(send).not.toHaveBeenCalledWith('keywords:select', expect.anything());
     expect(card(wrapper, 0)?.classes()).toEqual(expect.arrayContaining(['noted', 'note-red']));
     expect(card(wrapper, 0)?.classes()).not.toContain('selected');
-    // The same mark again takes it off, before the first tap has been answered.
-    await card(wrapper, 0)?.trigger('click');
+    // The same mark again takes it off, before the first has been answered.
+    await tapCard(wrapper, 0, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: null });
     expect(card(wrapper, 0)?.classes()).not.toContain('noted');
-
-    await tool(wrapper, 'Theirs')?.trigger('click');
-    await card(wrapper, 1)?.trigger('click');
+    await tapCard(wrapper, 1, 3);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
     expect(card(wrapper, 1)?.classes()).toContain('note-blue');
+    // A long press, and the click that ends it, which chooses nothing.
+    vi.useFakeTimers();
+    await card(wrapper, 2)?.trigger('pointerdown', { isPrimary: true, button: 0, clientX: 5, clientY: 5 });
+    vi.advanceTimersByTime(HOLD_MS);
+    await card(wrapper, 2)?.trigger('pointerup');
+    await card(wrapper, 2)?.trigger('click');
+    vi.advanceTimersByTime(TAP_MS);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'r2' });
     for (const answer of answers.splice(0)) answer();
     await flushPromises();
-
-    await tool(wrapper, 'Choose')?.trigger('click');
-    await card(wrapper, 2)?.trigger('click');
+    // One tap chooses, once the time for a second has passed.
+    await tapCard(wrapper, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 2 });
     send.mockImplementation(async () => ({ ok: true }));
   });
 
-  test("shows the group's marks from the server, and changes a teammate's mark with another tool", async () => {
+  test("shows the group's marks from the server, and changes a teammate's mark, also from the keyboard", async () => {
     const wrapper = mount(KeywordsGame, {
       props: {
         room: marked([
@@ -1486,59 +1496,58 @@ describe('KeywordsGame', () => {
     expect(card(wrapper, 0)?.classes()).toContain('note-r2');
     expect(card(wrapper, 0)?.attributes('aria-label')).toBe('Baseline, not revealed, marked as maybe Reviewer 2');
     expect(card(wrapper, 2)?.classes()).toContain('note-red');
-    await tool(wrapper, 'Ours')?.trigger('click');
-    await card(wrapper, 0)?.trigger('click');
+    await card(wrapper, 0)?.trigger('keydown', { key: '1' });
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 0, mark: 'ours' });
+    await card(wrapper, 2)?.trigger('keydown', { key: '1' });
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: null });
+    await card(wrapper, 1)?.trigger('keydown', { key: '3' });
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'r2' });
   });
 
-  test("greys choosing out while the other group guesses, and comes back to it in the group's guess phase", async () => {
+  test('marks while the other group guesses, where one tap chooses nothing', async () => {
     const wrapper = mount(KeywordsGame, { props: { room: marked([], { team: 'blue' }) }, global: global() });
-    expect(tool(wrapper, 'Choose')?.attributes('disabled')).toBeDefined();
-    expect(tool(wrapper, 'Ours')?.attributes('aria-pressed')).toBe('true');
     expect(wrapper.find('.guess-bar').exists()).toBe(false);
     expect(wrapper.get('.status').text()).toBe('The Blue group is guessing.');
-    await card(wrapper, 1)?.trigger('click');
+    expect(wrapper.get('.gestures').text()).toBe(
+      'Double-tap: ours \u00b7 triple-tap: theirs \u00b7 hold: R2? \u00b7 the same again clears it',
+    );
+    send.mockClear();
+    await tapCard(wrapper, 1);
+    expect(send).not.toHaveBeenCalled();
+    await tapCard(wrapper, 1, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'ours' });
-    // The group's turn comes, and the student chooses again; when it goes, the mark used last is back.
-    await wrapper.setProps({ room: marked([{ card: 1, mark: 'ours' }]) });
-    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
-    await tool(wrapper, 'R2?')?.trigger('click');
-    await tool(wrapper, 'Choose')?.trigger('click');
-    await wrapper.setProps({ room: marked([{ card: 1, mark: 'ours' }], { team: 'blue' }) });
-    expect(tool(wrapper, 'R2?')?.attributes('aria-pressed')).toBe('true');
   });
 
-  test("keeps the tool a student chose through a pause in the group's guess phase", async () => {
-    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
-    expect(tool(wrapper, 'Choose')?.attributes('aria-pressed')).toBe('true');
-    await tool(wrapper, 'Theirs')?.trigger('click');
-    // The chair pauses the game: the tools go with the board, and come back as they were.
-    await wrapper.setProps({ room: marked([], { paused: true, cards: [] }) });
-    expect(wrapper.find('.mark-tools').exists()).toBe(false);
-    await wrapper.setProps({ room: marked([]) });
-    expect(tool(wrapper, 'Theirs')?.attributes('aria-pressed')).toBe('true');
-    expect(tool(wrapper, 'Choose')?.attributes('disabled')).toBeUndefined();
-    await card(wrapper, 2)?.trigger('click');
-    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'theirs' });
-  });
-
-  test('gives no tools and no marks to a PI or a spectator, nor once the game is paused or over', async () => {
-    const marks = [{ card: 0, mark: 'ours' as const }];
-    for (const me of ['ann', 'eve']) {
-      const wrapper = mount(KeywordsGame, { props: { room: marked(marks, {}, me) }, global: global() });
-      expect(wrapper.find('.mark-tools').exists(), me).toBe(false);
-      expect(wrapper.find('.board .noted').exists(), me).toBe(false);
-    }
-    const over = mount(KeywordsGame, {
-      props: { room: marked(undefined, { phase: 'over', result: { winner: 'red', reason: 'found' } }) },
+  test("shows a PI the group's marks small in the corner, which a PI can't change", async () => {
+    const wrapper = mount(KeywordsGame, {
+      props: { room: marked([{ card: 0, mark: 'ours' }], {}, 'ann') },
       global: global(),
     });
-    expect(over.find('.mark-tools').exists()).toBe(false);
+    const sticker = card(wrapper, 0)?.find('.note');
+    expect(sticker?.classes()).toContain('quiet');
+    expect(card(wrapper, 0)?.classes()).not.toContain('noted');
+    expect(card(wrapper, 0)?.attributes('aria-label')).toContain('marked as ours');
+    send.mockClear();
+    await card(wrapper, 0)?.trigger('keydown', { key: '2' });
+    await tapCard(wrapper, 0, 2);
+    expect(send).not.toHaveBeenCalledWith('keywords:mark', expect.anything());
+  });
+
+  test('gives no marks to a spectator, nor once the game is paused or over', async () => {
+    const marks = [{ card: 0, mark: 'ours' as const }];
+    const eve = mount(KeywordsGame, { props: { room: marked(marks, {}, 'eve') }, global: global() });
+    expect(eve.find('.board .note').exists()).toBe(false);
+    expect(eve.find('.gestures').exists()).toBe(false);
+    const over = mount(KeywordsGame, {
+      props: { room: marked(marks, { phase: 'over', result: { winner: 'red', reason: 'found' } }) },
+      global: global(),
+    });
+    expect(over.find('.board .note').exists()).toBe(false);
     const paused = mount(KeywordsGame, {
       props: { room: marked(marks, { paused: true, cards: [] }) },
       global: global(),
     });
-    expect(paused.find('.mark-tools').exists()).toBe(false);
+    expect(paused.find('.gestures').exists()).toBe(false);
   });
 
   test('says nothing under the board of who the viewer is or what the others chose, but who plays next', async () => {

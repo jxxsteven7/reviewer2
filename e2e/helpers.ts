@@ -274,7 +274,8 @@ export function expectNoKey(states: RoomView[]): number {
 
 // No snapshot that this page received during a game held another group's chat or its choices of
 // cards. A page outside the groups has neither key; a page in a group has its own group's chat,
-// and its choices only in its turn. Only a group's students get its marks, while the game is on.
+// and its choices only in its turn. Only a group's students and its PI get its marks, while the game
+// is on.
 // Returns how many snapshots it checked.
 export function expectOwnGroupOnly(states: RoomView[]): number {
   let checked = 0;
@@ -289,7 +290,7 @@ export function expectOwnGroupOnly(states: RoomView[]): number {
     checked += 1;
     const team = state.me === null ? null : (seats[state.me]?.team ?? null);
     const role = state.me === null ? 'spectator' : seats[state.me]?.role;
-    if (role !== 'guesser' || game.phase === 'over') expect(game).not.toHaveProperty('marks');
+    if (role === 'spectator' || game.phase === 'over') expect(game).not.toHaveProperty('marks');
     if (team === null) {
       expect(game).not.toHaveProperty('chat');
       expect(game).not.toHaveProperty('selections');

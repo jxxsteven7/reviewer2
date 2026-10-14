@@ -7,13 +7,12 @@ import UiSheet from '../../core/components/UiSheet.vue';
 
 // A student reveals cards in two steps: tap a card to choose it, then confirm here. That keeps
 // a stray tap on a phone from revealing anything. Ending the turn asks for a confirmation too,
-// since its button sits next to "Reveal" and the guesses it gives up can't be taken back. While the
-// student marks cards rather than chooses them, the bar is `quiet`: the tools above say what a tap
-// does, and the bar keeps only its buttons.
-const props = withDefaults(
-  defineProps<{ game: KeywordsView; selected: number | null; busy?: boolean; quiet?: boolean }>(),
-  { busy: false, quiet: false },
-);
+// since its button sits next to "Reveal" and the guesses it gives up can't be taken back. The line
+// above the buttons says what taps on a card do: one chooses it, and two, three and a long press
+// mark it for the group (useCardGestures.ts).
+const props = withDefaults(defineProps<{ game: KeywordsView; selected: number | null; busy?: boolean }>(), {
+  busy: false,
+});
 const emit = defineEmits<{ reveal: [index: number]; pass: [] }>();
 const { t } = useI18n();
 
@@ -30,8 +29,8 @@ function pass() {
   <div class="guess-bar">
     <!-- The hint keeps its room once a card is chosen, so that the bar, and the page under it,
          don't move under the finger that chose it. -->
-    <p v-if="!quiet" class="hint" :class="{ hidden: chosen }" :aria-hidden="chosen ? 'true' : undefined">
-      {{ t('game.pick') }}
+    <p class="hint" :class="{ hidden: chosen }" :aria-hidden="chosen ? 'true' : undefined">
+      {{ t('game.gestures.choose') }}
     </p>
     <div class="buttons">
       <UiButton variant="primary" :disabled="!chosen || busy" @click="selected !== null && emit('reveal', selected)">

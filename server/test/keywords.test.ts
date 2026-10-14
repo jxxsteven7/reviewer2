@@ -156,16 +156,14 @@ function expectOwnGroupOnly(client: TestClient, team: Team | null, group: readon
   expect(checked).toBeGreaterThan(0);
 }
 
-// Checks expectOwnGroupOnly for everyone at a table whose seats didn't change. No captain ever gets
-// a group's marks.
+// Checks expectOwnGroupOnly for everyone at a table whose seats didn't change. A captain gets its own
+// group's marks, as its students do, and never the other group's.
 function expectGroupsApart(table: Table) {
   for (const team of TEAMS) {
     const group = [table.captains[team].me, table.guessers[team].me];
     expectOwnGroupOnly(table.captains[team], team, group);
     expectOwnGroupOnly(table.guessers[team], team, group);
-    for (const state of table.captains[team].states) {
-      expect((state.data as KeywordsRoomData).game ?? {}).not.toHaveProperty('marks');
-    }
+    expect(board(table.captains[team]).marks).toEqual(board(table.guessers[team]).marks);
   }
   expectOwnGroupOnly(table.spectator, null);
   expectOwnGroupOnly(table.screen, null);
@@ -843,7 +841,7 @@ describe('talking it over', () => {
     expectGroupsApart(table);
   });
 
-  test("a guesser marks cards for their group's guessers alone, in either turn, and a reveal clears them", async () => {
+  test("a guesser marks cards for their group's guessers and PI alone, in either turn, and a reveal clears them", async () => {
     const table = await seatTable();
     const team = board(table.captains.red).team;
     const other = otherTeam(team);
@@ -860,9 +858,10 @@ describe('talking it over', () => {
     await settle(table);
     for (const client of [bob, eve]) expect(board(client).marks).toEqual([{ card: 3, mark: 'ours' }]);
     expect(board(table.guessers[other]).marks).toEqual([{ card: 5, mark: 'theirs' }]);
-    for (const client of [table.captains.red, table.captains.blue, table.screen]) {
-      expect(board(client)).not.toHaveProperty('marks');
-    }
+    // Each group's PI reads its own marks; the screen has none.
+    expect(board(table.captains[team]).marks).toEqual([{ card: 3, mark: 'ours' }]);
+    expect(board(table.captains[other]).marks).toEqual([{ card: 5, mark: 'theirs' }]);
+    expect(board(table.screen)).not.toHaveProperty('marks');
 
     // Eve changes Bob's mark, and the last one stands; the same mark again changes nothing.
     await expectOk(mark(eve, 3, 'r2'));

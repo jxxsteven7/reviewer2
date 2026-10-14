@@ -176,18 +176,20 @@ describe("what each player sees of a group's marks", () => {
     return accepted(mark(state, guesser('blue'), { gameId: state.gameId, card: 9, mark: 'theirs' }));
   };
 
-  test("each group's guessers see the group's own marks, in either group's turn", () => {
-    expect(viewFor(marking(), redGuesser, 0).marks).toEqual([
-      { card: 3, mark: 'ours' },
-      { card: 17, mark: 'r2' },
-    ]);
-    expect(viewFor(marking(), blueGuesser, 0).marks).toEqual([{ card: 9, mark: 'theirs' }]);
+  test("each group's guessers and captain see the group's own marks, in either group's turn", () => {
+    for (const seat of [redGuesser, redCaptain]) {
+      expect(viewFor(marking(), seat, 0).marks).toEqual([
+        { card: 3, mark: 'ours' },
+        { card: 17, mark: 'r2' },
+      ]);
+    }
+    for (const seat of [blueGuesser, blueCaptain]) {
+      expect(viewFor(marking(), seat, 0).marks).toEqual([{ card: 9, mark: 'theirs' }]);
+    }
   });
 
-  test('captains, spectators and screens see no marks at all', () => {
-    for (const seat of [redCaptain, blueCaptain, SPECTATOR]) {
-      expect('marks' in viewFor(marking(), seat, 0)).toBe(false);
-    }
+  test('spectators and screens see no marks at all', () => {
+    expect('marks' in viewFor(marking(), SPECTATOR, 0)).toBe(false);
   });
 
   test('a group with no marks yet gets an empty list, and nobody gets any once the game is over', () => {
