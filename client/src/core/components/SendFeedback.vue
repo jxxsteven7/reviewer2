@@ -81,9 +81,10 @@ const checked = computed(() => checkFeedback(text.value));
 const checkedContact = computed(() => checkContact(contact.value));
 const checkedCredit = computed(() => checkCredit(credit.value));
 // Who signs: the account, for a player who is logged in, or a name of their own, which a guest
-// types, and which the feedback needs then.
+// types, and which the feedback needs then. Until the server has said who this browser is, nobody
+// is asked for a name, which a player who turns out to be logged in wouldn't need.
 const signer = computed(() => (signature.value === 'signed' ? account.summary : null));
-const asksName = computed(() => signature.value === 'signed' && account.summary === null);
+const asksName = computed(() => signature.value === 'signed' && account.loaded && account.summary === null);
 watch([kind, text, contact, signature, credit], () => (refused.value = undefined));
 
 const count = computed(() => t('feedback.count', { count: textLength(checked.value.text), max: MAX_FEEDBACK_LENGTH }));

@@ -179,13 +179,14 @@ onBeforeUnmount(() => {
 
 /* What scrolls is inside the panel, a little below its top edge and, where it is round, above its
    bottom edge, so that the scrollbar stays clear of the round corners rather than running over
-   them. Its padding makes up the rest of the panel's space around the content. */
+   them. Its padding makes up the rest of the panel's space around the content, and at the top
+   leaves room for the focus ring of the head's buttons, which would otherwise be clipped. */
 .scroller {
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: var(--space-4);
+  margin-top: var(--space-2);
   overflow-y: auto;
-  padding: 0 var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
+  padding: var(--space-2) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
 }
 
 /* The panel takes the focus when it opens, so that the keyboard and screen readers start inside it,
@@ -297,8 +298,8 @@ h2 {
   }
 
   .scroller {
-    margin-bottom: var(--space-4);
-    padding: var(--space-1) var(--space-5);
+    margin: var(--space-3) 0 var(--space-4);
+    padding: var(--space-2) var(--space-5) var(--space-1);
   }
 }
 </style>

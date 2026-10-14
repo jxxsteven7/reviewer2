@@ -156,11 +156,11 @@ const COLUMNS =
   'f.summary_en AS summaryEn, f.closed_at AS closedAt, f.deleted_at AS deletedAt, f.version, f.language, f.page, ' +
   `f.user_agent AS userAgent, a.username, ${STATUS}`;
 const FROM = 'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id';
-// Every row as Feedback, and the status of every row, for counting. Both are read as subqueries,
-// so that `status` in a WHERE clause names the column above and nothing that a table joined in may
-// come to have.
+// Every row as Feedback, and the status of every row, for counting, which reads the feedback's
+// own columns alone. Both are read as subqueries, so that `status` in a WHERE clause names the
+// column above and nothing that a table joined in may come to have.
 const ROWS = `(SELECT ${COLUMNS} ${FROM})`;
-const STATUSES = `(SELECT ${STATUS} ${FROM})`;
+const STATUSES = `(SELECT ${STATUS} FROM feedback f)`;
 // The rows of a view, given twice: every row, or those of the status that the view names.
 const VIEW = "CASE ? WHEN 'all' THEN 1 ELSE status = ? END";
 
@@ -332,11 +332,13 @@ export class FeedbackStore {
   }
 
   // A row as Feedback, with Feedback.nameTakenBy, which is looked up here and not in the query
-  // because only usernameKey() (shared/src/accounts.ts) says which username a name is.
+  // because only usernameKey() (shared/src/accounts.ts) says which username a name is. Feedback
+  // signed with an account has the username that the server gave it, which nobody passed for,
+  // even if the account was renamed since and another took the name.
   #fromRow(row: Record<string, SQLOutputValue>): Feedback {
     const feedback = { ...row, linkProfile: row.linkProfile === 1 } as unknown as Omit<Feedback, 'nameTakenBy'>;
     const owner =
-      feedback.credit === null
+      feedback.credit === null || feedback.linkProfile
         ? undefined
         : (this.#account.get(usernameKey(feedback.credit)) as { id: number; username: string } | undefined);
     return { ...feedback, nameTakenBy: owner && owner.id !== feedback.accountId ? owner.username : null };

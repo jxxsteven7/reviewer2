@@ -35,14 +35,16 @@ export const MAX_REPORT_LENGTH = 300;
 export const MAX_REPORT_INPUT = 1200;
 
 // What the server may answer meta:feedback with besides the codes that every message can get.
-// `feedback_limited` is the limit per address; `feedback_full` means that the server takes no more
-// feedback for now.
+// `feedback_unsigned` means that the feedback was to be signed with the account, but the connection
+// has none, as when the login ended; `feedback_limited` is the limit per address; `feedback_full`
+// means that the server takes no more feedback for now.
 export const FEEDBACK_ERRORS = [
   'feedback_empty',
   'feedback_too_long',
   'contact_too_long',
   'credit_invalid',
   'credit_reserved',
+  'feedback_unsigned',
   'feedback_limited',
   'feedback_full',
 ] as const;
@@ -60,7 +62,9 @@ export type ReportError = (typeof REPORT_ERRORS)[number];
 // the feedback with their account: the server takes the account's username for the name, and the
 // contributions show it with the account's avatar, which opens their public profile. The form
 // asks whether to stay anonymous or sign; a player who signs without an account leaves a name of
-// their own. Without an account, `linkProfile` means nothing. `version` is the build of the page,
+// their own. Without an account, `linkProfile` means nothing when a name comes along, and is
+// refused (`feedback_unsigned`) when none does, rather than listing as anonymous a player who
+// chose to sign. `version` is the build of the page,
 // which may be older than the server's. Pages from before carried a link for the name and whether
 // the player agreed to a public issue, which the server ignores, and no `linkProfile`, which is
 // then no.

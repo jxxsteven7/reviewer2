@@ -180,7 +180,7 @@ describe('the feedback panel', () => {
     expect(credit(wrapper)).toBeUndefined();
     expect(wrapper.get('.signer').text()).toBe('ann');
     expect(wrapper.find('.signer .avatar').exists()).toBe(true);
-    expect(wrapper.text()).toContain('a tap on your avatar opens your public page');
+    expect(wrapper.text()).toContain('a tap on either opens your public page');
     await wrapper.get('textarea').setValue('Hi');
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
@@ -216,7 +216,16 @@ describe('the feedback panel', () => {
     expect((await opened()).find('.guest').exists()).toBe(false);
     signedIn.account.summary = null;
     signedIn.account.loaded = false;
-    expect((await opened()).find('.guest').exists()).toBe(false);
+    const wrapper = await opened();
+    expect(wrapper.find('.guest').exists()).toBe(false);
+    // Nor for a name, which a player who turns out to be logged in wouldn't need: once the server
+    // has answered, a guest is asked for one.
+    expect(checked(wrapper, 'signed')).toBe(true);
+    expect(credit(wrapper)).toBeUndefined();
+    expect(wrapper.find('.signer').exists()).toBe(false);
+    signedIn.account.loaded = true;
+    await flushPromises();
+    expect(credit(wrapper)).toBeDefined();
   });
 
   test('says that a bug report takes the browser along, and only then', async () => {

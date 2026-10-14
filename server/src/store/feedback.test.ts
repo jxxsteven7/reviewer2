@@ -103,8 +103,12 @@ describe('the feedback', () => {
     feedback.add(entry({ credit: 'Cat', accountId: cat.id }));
     feedback.add(entry({ credit: 'Dan' }));
     feedback.add(entry());
+    // Signed with the account, the name was its username then, which nobody passed for, even
+    // though another account has the name now.
+    feedback.add(entry({ credit: 'Cat', accountId: bob.id, linkProfile: true }));
     const taken = () => feedback.latest(10).map(({ id, nameTakenBy }) => [id, nameTakenBy]);
     expect(taken()).toEqual([
+      [6, null],
       [5, null],
       [4, null],
       [3, null],

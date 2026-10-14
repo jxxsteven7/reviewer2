@@ -165,6 +165,12 @@ describe('feedback', () => {
     expect(await guest.send('meta:feedback', message({ text: 'Guest', credit: 'Bob', linkProfile: true }))).toEqual({
       ok: true,
     });
+    // With no name to fall back on, feedback to be signed with an account that the connection
+    // doesn't have is refused rather than kept as anonymous.
+    expect(await guest.send('meta:feedback', message({ text: 'Logged out', linkProfile: true }))).toEqual({
+      ok: false,
+      error: 'feedback_unsigned',
+    });
     expect(
       server.feedback
         .latest(10)

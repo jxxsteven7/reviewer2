@@ -1014,11 +1014,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // once it is adopted, and whether the name links to that account's public profile. A player
     // who is logged in and signs the feedback (`linkProfile`) is listed by the account, with its
     // username as the name, whatever name was sent along, as older pages may; anyone else may
-    // leave a name of their own. The log gets its number and kind, and never its text, contact or
-    // name. Only what was kept
-    // counts against the address, so that a player who is told to shorten their text doesn't lose
-    // a turn for it, and feedback that the address sent once already in the window is answered as
-    // it was the first time, without being kept or counted again.
+    // leave a name of their own. Feedback to be signed with an account that the connection no
+    // longer has, as when the login ended after the page was loaded, is refused with no name to
+    // fall back on, rather than kept as anonymous. The log gets its number and kind, and never its
+    // text, contact or name. Only what was kept counts against the address, so that a player who
+    // is told to shorten their text doesn't lose a turn for it, and feedback that the address sent
+    // once already in the window is answered as it was the first time, without being kept or
+    // counted again.
     on(handlers, 'meta:feedback', (message) => {
       const { kind, text, contact, credit, linkProfile, version: pageVersion, language, page } = message;
       const checked = checkFeedback(text);
@@ -1030,6 +1032,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const linked = linkProfile === true && account !== undefined;
       const named = linked ? { credit: account.username, problem: null } : checkCredit(credit);
       if (named.problem) return fail(named.problem);
+      if (linkProfile === true && !linked && named.credit === null) return fail('feedback_unsigned');
       const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, linked]);
       if (feedbackSeen.has(key)) return ok();
       if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
