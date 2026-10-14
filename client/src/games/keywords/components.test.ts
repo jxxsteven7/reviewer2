@@ -540,13 +540,23 @@ describe('DecisionLetter', () => {
 describe('KeywordsCard', () => {
   const card = { word: 'Baseline', revealed: false };
 
-  test('shows who in the group has chosen it, as avatars, and names them to screen readers', () => {
+  test('shows who in the group has chosen it, as avatars, faded while offline, and names them to screen readers', () => {
     const wrapper = mount(KeywordsCard, {
-      props: { card, index: 3, selectable: true, selected: false, choosers: [{ name: 'Ann' }, { name: 'Cat' }] },
+      props: {
+        card,
+        index: 3,
+        selectable: true,
+        selected: false,
+        choosers: [
+          { name: 'Ann', online: true },
+          { name: 'Cat', online: false },
+        ],
+      },
       global: global(),
     });
     expect(wrapper.get('.choosers').attributes('aria-hidden')).toBe('true');
-    expect(wrapper.findAll('.choosers .avatar')).toHaveLength(2);
+    expect(wrapper.findAll('.choosers .avatar').map((avatar) => avatar.classes('veiled'))).toEqual([false, true]);
+    expect(wrapper.find('.choosers .wait').exists()).toBe(false);
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann and Cat');
   });
 
@@ -1575,6 +1585,80 @@ describe('KeywordsGame', () => {
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'theirs' });
   });
 
+  test('opens the menu on a press with a key held that the browser takes for a right click, once', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
+    // On a Mac, a click with Control held is a right click: the press comes first, then the
+    // browser's word of a context menu, and the press is over.
+    vi.useFakeTimers();
+    await card(wrapper, 1)?.trigger('pointerdown', {
+      isPrimary: true,
+      button: 0,
+      pointerType: 'mouse',
+      ctrlKey: true,
+      clientX: 5,
+      clientY: 5,
+    });
+    card(wrapper, 1)?.element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await flushPromises();
+    expect(menuItems(wrapper)).toHaveLength(3);
+    vi.advanceTimersByTime(HOLD_MS);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(wrapper.findAll('.mark-menu')).toHaveLength(1);
+    expect(card(wrapper, 1)?.classes()).not.toContain('pressing');
+    await chooseMark(wrapper, 2);
+    expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 1, mark: 'r2' });
+  });
+
+  test('gives the card the focus again as the menu closes, and a key ends the press for the next tap', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global(), attachTo: document.body });
+    await holdCard(wrapper, 1);
+    // The menu takes the focus as it opens, which this page, laid out by nobody, needs a hand with.
+    menuItems(wrapper)[0]?.focus();
+    expect(document.activeElement).toBe(menuItems(wrapper)[0]);
+    await chooseMark(wrapper, 0);
+    await flushPromises();
+    expect(card(wrapper, 1)?.classes()).not.toContain('lifting');
+    expect(document.activeElement).toBe(card(wrapper, 1)?.element);
+    // Enter on the card, which the browser clicks with, chooses it: the press that opened the menu
+    // is long over.
+    await card(wrapper, 1)?.trigger('keydown', { key: 'Enter' });
+    await tapCard(wrapper, 1);
+    expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 1 });
+    wrapper.unmount();
+    document.body.innerHTML = '';
+  });
+
+  test('closes the menu by itself once the card is revealed, or the student may no longer mark', async () => {
+    const view = marked([]);
+    const wrapper = mount(KeywordsGame, { props: { room: view }, global: global() });
+    await holdCard(wrapper, 1);
+    expect(menuItems(wrapper)).toHaveLength(3);
+    // A teammate reveals the card meanwhile.
+    const data = view.data as KeywordsRoomData;
+    const game = data.game as KeywordsView;
+    const cards = game.cards.map((card, index) =>
+      index === 1 ? { ...card, revealed: true, color: 'neutral' as const } : card,
+    );
+    await wrapper.setProps({ room: { ...view, data: { ...data, game: { ...game, cards } } } });
+    await flushPromises();
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    expect(card(wrapper, 1)?.classes()).not.toContain('lifting');
+    // The game ends while the menu is open.
+    await holdCard(wrapper, 2);
+    expect(menuItems(wrapper)).toHaveLength(3);
+    const over = {
+      ...game,
+      cards,
+      phase: 'over' as const,
+      result: { winner: 'red' as const, reason: 'found' as const },
+    };
+    await wrapper.setProps({ room: { ...view, data: { ...data, game: over } } });
+    await flushPromises();
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    expect(card(wrapper, 2)?.classes()).not.toContain('lifting');
+  });
+
   test("shows the group's marks from the server, and changes a teammate's mark, also from the keyboard", async () => {
     const wrapper = mount(KeywordsGame, {
       props: {
@@ -2220,6 +2304,17 @@ describe('KeywordsGame', () => {
     expect(sheet?.querySelector('.match-table')?.textContent).toContain('Game 2 of 3');
     // The table under the board is gone.
     expect(bob.find('.match-fold').exists()).toBe(false);
+    // The sheet closes as the game ends, when the table comes under the letters.
+    const data = view.data as KeywordsRoomData;
+    const over = {
+      ...(data.game as KeywordsView),
+      phase: 'over' as const,
+      result: { winner: 'red' as const, reason: 'found' as const },
+    };
+    await bob.setProps({ room: { ...view, me: 'bob', match, data: { ...data, game: over } } });
+    await flushPromises();
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    expect(bob.find('.match-table.between').exists()).toBe(true);
     bob.unmount();
     // The chair's button to end the match stands among the tools, in sight, not in the sheet.
     const chair = game('ann');
@@ -2229,7 +2324,7 @@ describe('KeywordsGame', () => {
     document.body.innerHTML = '';
   });
 
-  test('lists the titles of an ordinary game under its letter, once it is over, for those who won any', () => {
+  test('lists the titles of a game under its letter once it is over, where no table lists them', () => {
     const view = room('bob');
     const data = view.data as KeywordsRoomData;
     const titles = { ann: [{ title: 'missed_deadline' as const, count: 2 }], bob: [] };
@@ -2247,6 +2342,41 @@ describe('KeywordsGame', () => {
     const lines = over.findAll('.game-titles li');
     expect(lines.map((line) => line.get('.title-name').text())).toEqual(['Ann']);
     expect(lines[0]?.findAll('.title-line > .pill').map((pill) => pill.text())).toEqual(['Forgot to Submit \u00d72']);
+    // Between the games of a match, the table lists them; after its last game, the ranking stands
+    // in the table's place, and the titles come under it.
+    const standing = (playerId: string, rank: number): StandingView => ({
+      playerId,
+      name: playerId,
+      total: 0,
+      delta: 0,
+      games: 1,
+      rank,
+      left: false,
+    });
+    const match: RoomView['match'] = {
+      id: 'm1',
+      rules: { games: 2, teams: 'fixed', grouping: 'choose' },
+      played: 1,
+      status: 'on',
+      game: 1,
+      standings: [standing('ann', 1), standing('bob', 2)],
+    };
+    const between = mount(KeywordsGame, {
+      props: { room: { ...view, match, data: { ...data, game, titles } } },
+      global: global(),
+    });
+    expect(between.find('.game-titles').exists()).toBe(false);
+    expect(between.findAll('.match-table .title-line > .pill').map((pill) => pill.text())).toEqual([
+      'Forgot to Submit \u00d72',
+    ]);
+    const last = mount(KeywordsGame, {
+      props: {
+        room: { ...view, match: { ...match, played: 2, status: 'over', game: 2 }, data: { ...data, game, titles } },
+      },
+      global: global(),
+    });
+    expect(last.find('.match-results').exists()).toBe(true);
+    expect(last.findAll('.game-titles .title-name').map((name) => name.text())).toEqual(['Ann']);
   });
 
   test("says between the games where the points came from, and reads an older detail as a student's", () => {

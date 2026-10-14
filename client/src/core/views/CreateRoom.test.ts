@@ -2,6 +2,8 @@
 import type { FieldInfo } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { h } from 'vue';
+import { games, type GameScreens } from '../../games';
 import { fields } from '../fields';
 import { i18n, setLanguage } from '../i18n';
 import { clearMemory, readStored, writeStored } from '../storage';
@@ -141,12 +143,52 @@ describe('the room setup', () => {
     expect(payload).not.toHaveProperty('public');
     expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toEqual({
       game: 'keywords',
+      language: 'en',
       fields: ['ml'],
       randomFields: false,
       match: { games: 5, teams: 'switch', grouping: 'random' },
       public: false,
       play: false,
     });
+  });
+
+  test('creates no room from the last setup before the lists have come, which check its lists', async () => {
+    fields.value = null;
+    writeStored('r2.roomSetup', JSON.stringify({ game: 'keywords', fields: ['ml', 'gone'] }));
+    const wrapper = await opened();
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send).not.toHaveBeenCalled();
+    fields.value = FIELDS;
+    await flushPromises();
+    expect(submit(wrapper).attributes('disabled')).toBeUndefined();
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ fields: ['ml'] });
+  });
+
+  test("reads the last room's settings for this language, told which language they were kept in", async () => {
+    const restoreSettings = vi.fn(() => ({ restored: true }));
+    games.keywords = {
+      Settings: { render: () => h('div') },
+      defaultSettings: () => ({}),
+      restoreSettings,
+    } as unknown as GameScreens;
+    try {
+      writeStored(
+        'r2.roomSetup',
+        JSON.stringify({ game: 'keywords', language: 'zh', fields: ['ml'], settings: { clueLength: 2 } }),
+      );
+      await opened();
+      expect(restoreSettings).toHaveBeenLastCalledWith({ clueLength: 2 }, 'en', 'zh');
+      // A setup kept before the language was, or with one that is none, says nothing of it.
+      writeStored('r2.roomSetup', JSON.stringify({ game: 'keywords', language: 'xx', fields: ['ml'], settings: {} }));
+      await opened();
+      expect(restoreSettings).toHaveBeenLastCalledWith({}, 'en', null);
+    } finally {
+      delete games.keywords;
+    }
   });
 
   test("starts an account's room from the setup that the server kept for it", async () => {

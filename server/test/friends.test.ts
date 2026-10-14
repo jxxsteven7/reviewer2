@@ -496,6 +496,8 @@ describe('an invitation', () => {
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: true });
     expect(await chair.send('friends:invite', { username: 'Cat' })).toEqual({ ok: true });
     await until(() => bob.invitations.length === 1 && cat.invitations.length === 1, 'the invitations');
+    const invited = () => chair.state?.invited?.map(({ username }) => username) ?? [];
+    expect(invited()).toEqual(['Bob', 'Cat']);
     const bobsFirst = bob.invitations[0]?.id as string;
     const catsFirst = cat.invitations[0]?.id as string;
     // Bob comes in with his. Every connection of his hears that it is used up, and his next
@@ -531,6 +533,8 @@ describe('an invitation', () => {
     await until(() => tablet.invitations.length === 1, "Cat's invitation on the tablet");
     expect(await cat.send('friends:ignore', { id: catsSecond })).toEqual({ ok: true });
     await until(() => tablet.uninvited.includes(catsSecond), 'the tablet hearing that it was ignored');
+    // The inviter sees the room anew, with Cat no longer waited for.
+    await until(() => invited().join() === 'Dan', 'the inviter hearing that Cat ignored it');
     const laptop = track(await cats.connect());
     await laptop.send('sys:ping');
     expect(laptop.invitations).toEqual([]);
@@ -538,12 +542,36 @@ describe('an invitation', () => {
       ok: false,
       error: 'invitation_expired',
     });
-    // Ann and Dan part, and the invitation goes with the friendship.
+    // Ann and Dan part, and the invitation goes with the friendship: the sweep finds it, and the
+    // inviter then waits for nobody.
     expect(await ann.send('friends:remove', { username: 'Dan' })).toEqual({ ok: true });
     expect(await dan.send('room:join', { invitation: dan.invitations[0]?.id, play: true })).toEqual({
       ok: false,
       error: 'invitation_expired',
     });
+    server.app.sockets.sweep();
+    await chair.waitFor((state) => state.invited === undefined, 'the inviter waiting for nobody');
+  });
+
+  test('reaches a friend who is offline only if they come online before it lapses', async () => {
+    server = await startServer();
+    const { browser: anns, client: ann } = await person('Ann');
+    const { browser: cats, client: cat } = await person('Cat');
+    await befriend(ann, cat, 'Cat');
+    const { chair } = await roomOf(anns);
+    cat.close();
+    await expect
+      .poll(async () => (await listOf(chair)).friends.find(({ username }) => username === 'Cat')?.online)
+      .toBe(false);
+    expect(await chair.send('friends:invite', { username: 'Cat' })).toEqual({ ok: true });
+    await chair.waitFor((state) => state.invited?.length === 1, 'whom Ann invited');
+    // Cat comes too late: no connection of hers hears of it, and the inviter waits for nobody.
+    server.advance(INVITATION_MS);
+    const late = track(await cats.connect());
+    await late.send('sys:ping');
+    expect(late.invitations).toEqual([]);
+    server.app.sockets.sweep();
+    await chair.waitFor((state) => state.invited === undefined, 'the inviter hearing that it lapsed');
   });
 
   test('lapses after ten minutes, when the inviter leaves or when the room closes', async () => {
@@ -565,6 +593,10 @@ describe('an invitation', () => {
     const phone = track(await bobsPhone.connect());
     await phone.send('sys:ping');
     expect(phone.invitations).toEqual([]);
+    // The sweep finds it, and the inviter, who had Bob among those invited, has nobody now.
+    expect(chair.state?.invited).toEqual([{ username: 'Bob', avatar: null }]);
+    server.app.sockets.sweep();
+    await chair.waitFor((state) => state.invited === undefined, 'the inviter hearing that it lapsed');
     // A connection of the invited account that comes while an invitation stands hears it, with the
     // time it has left; a friend's invitation is no good to anyone else.
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: true });

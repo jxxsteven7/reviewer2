@@ -489,7 +489,7 @@ describe('KeywordsLobby, public or private', () => {
     await member.get('.start-dock .invite-friends').trigger('click');
     await flushPromises();
     expect(send).toHaveBeenCalledWith('friends:list');
-    expect(member.get('.invite').text()).toContain('Friends online come first.');
+    expect(member.get('.invite').text()).toContain('Friends who are online come first.');
     // The chair with an account: the invitation between the shuffle and the start.
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     expect(chair.get('.start-bar').classes()).not.toContain('member');
@@ -528,6 +528,8 @@ describe('KeywordsLobby, public or private', () => {
       ]);
       await lobby.setProps({ room: { ...room, players: [...room.players, fay], invited: [] } });
       expect(faces()).toEqual([['F', 'came']]);
+      // With nobody waited for, the button says what a tap does.
+      expect(lobby.get('.invited-friends').attributes('aria-label')).toBe('Invite friends');
       vi.advanceTimersByTime(2000);
       await flushPromises();
       expect(lobby.find('.invited-friends').exists()).toBe(false);

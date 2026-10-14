@@ -22,7 +22,9 @@ import type { Chooser } from './useKeywords';
 // students the card takes the tint of the color it stands for, unless it is the viewer's choice;
 // for the PI, who only reads it (`noteQuiet`), the card keeps the tint of its own color. Every
 // board has its corners in the same places, the color's word inside the top left, the choosers'
-// avatars on the top right, the PI's number on the bottom left and the mark on the bottom right.
+// avatars on the top right, faded for a chooser who is offline, too small for the dots that mark
+// someone the room waits for elsewhere (PlayerAvatar.vue), the PI's number on the bottom left and
+// the mark on the bottom right.
 // A `float` is what the card did to the viewer's points as it was revealed, which rises from it.
 const props = withDefaults(
   defineProps<{
@@ -116,6 +118,7 @@ const ariaLabel = computed(() =>
         :name="chooser.name"
         :avatar="chooser.avatar"
         :agent="chooser.agent !== undefined"
+        :faded="!chooser.online"
       />
     </span>
   </button>

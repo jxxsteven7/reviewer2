@@ -1,5 +1,6 @@
 import type { ContributionCount } from './contributions';
 import type { DuoView } from './duos';
+import type { Language } from './language';
 import type { MatchRules } from './match';
 import type { Rank } from './ranks';
 import { cleanName } from './names';
@@ -194,9 +195,13 @@ export interface AccountSummary {
 export interface RoomSetup {
   room?: {
     game: string;
+    // The room's language, which isn't restored, since a room's is the page's, but which says what
+    // the settings were for: a clue's length is counted in characters in one language and in words
+    // in another. Missing from a setup kept before it was.
+    language?: Language;
     fields: string[];
     randomFields: boolean;
-    // The game's own settings, as the creator chose them, or none for its defaults.
+    // The game's own settings, as the game took them, or none for its defaults.
     settings?: unknown;
     match: MatchRules | null;
     public: boolean;

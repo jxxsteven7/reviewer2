@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { MatchView, RoomView, TitleCount } from '@reviewer2/shared';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points, signedPoints } from '../points';
+import { useTitleFolds } from '../useTitleFolds';
 import EndMatchButton from './EndMatchButton.vue';
 import AvatarButton from './AvatarButton.vue';
 import TitleLine from './TitleLine.vue';
@@ -36,16 +37,7 @@ const offline = (id: string | null) =>
 const { t } = useI18n();
 const titles = (id: string | null) => (id !== null && props.titlesOf ? props.titlesOf(id) : []);
 // The lines whose titles are unfolded; a tap on the line, but on a button, folds them again.
-const unfolded = ref(new Set<string>());
-const setOpen = (id: string, open: boolean) => {
-  const next = new Set(unfolded.value);
-  if (open) next.add(id);
-  else next.delete(id);
-  unfolded.value = next;
-};
-const fold = (id: string | null, event: MouseEvent) => {
-  if (id !== null && !(event.target as Element | null)?.closest('button')) setOpen(id, false);
-};
+const { unfolded, setOpen, fold } = useTitleFolds();
 
 const match = computed(() => props.room.match as MatchView);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);

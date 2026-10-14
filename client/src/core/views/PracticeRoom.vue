@@ -22,7 +22,7 @@ import {
   storePractice,
   type PracticeRole,
 } from '../practice';
-import { keepRoomSetup } from '../roomSetup';
+import { keepRoomSetup, keptFields } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 
@@ -68,8 +68,7 @@ watch(
   usable,
   (ids) => {
     if (!fields.value) return;
-    const from = chosenOnce ? chosen.value : (lastFields() ?? DEFAULT_FIELDS);
-    chosen.value = from.filter((field) => ids.has(field));
+    chosen.value = keptFields(chosenOnce ? chosen.value : (lastFields() ?? DEFAULT_FIELDS), ids);
     chosenOnce = true;
   },
   { immediate: true },

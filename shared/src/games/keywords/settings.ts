@@ -87,14 +87,18 @@ export function settingsProblems(
 
 // Settings that a room set up earlier had (RoomSetup), as a room in this language may take them:
 // each that still will do, and the default in place of any that won't, such as a clue length
-// beyond what the language allows, or that is missing.
-export function restoreSettings(saved: unknown, language: Language): KeywordsSettings {
+// beyond what the language allows, or that is missing. `from` is the language of the room that
+// had them, where it is known: a clue's length is counted in characters in a Chinese room and in
+// words in an English one, so one from the other language starts from the default, as the form
+// does when the language changes (SettingsForm.vue).
+export function restoreSettings(saved: unknown, language: Language, from: Language | null = null): KeywordsSettings {
   const defaults = defaultSettings(language);
   if (saved === null || typeof saved !== 'object' || Array.isArray(saved)) return defaults;
   const kept = { ...defaults } as Record<keyof KeywordsSettings, unknown>;
   for (const key of Object.keys(defaults) as (keyof KeywordsSettings)[]) {
     if (key in saved) kept[key] = (saved as Record<string, unknown>)[key];
   }
+  if (from !== null && from !== language) kept.clueLength = defaults.clueLength;
   const settings = kept as unknown as KeywordsSettings;
   for (const key of Object.keys(settingsProblems(settings, language)) as (keyof KeywordsSettings)[]) {
     kept[key] = defaults[key];

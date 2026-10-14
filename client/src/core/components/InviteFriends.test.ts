@@ -18,7 +18,8 @@ import InviteFriends from './InviteFriends.vue';
 
 // Every friend who isn't in the room, those online first, with their dot, and those offline after
 // them, faded, whom an invitation reaches once they come online; whom the viewer has invited, as
-// the room's view says, are invited still when the sheet opens again.
+// the room's view says, are invited still when the sheet opens again, and may be invited again
+// once the room's view no longer says so, as when they ignored the invitation.
 
 const friend = (username: string, online: boolean): FriendView => ({
   handle: `${username.toLowerCase()}000000000`.slice(0, 12),
@@ -75,7 +76,14 @@ describe('the sheet to invite friends', () => {
     lines[1]?.querySelector('button')?.click();
     await flushPromises();
     expect(mock.send).toHaveBeenCalledWith('friends:invite', { username: 'Dan' });
+    // The server sends the room again, with Dan invited, before it answers; and again without him
+    // once he has ignored it, when he may be invited anew.
+    await wrapper.setProps({ room: room(['Eve', 'Dan']) });
     expect(lines[1]?.querySelector('button')?.textContent?.trim()).toBe('Invited');
+    expect(lines[1]?.querySelector('button')?.disabled).toBe(true);
+    await wrapper.setProps({ room: room(['Eve']) });
+    expect(lines[1]?.querySelector('button')?.textContent?.trim()).toBe('Invite (seen once online)');
+    expect(lines[1]?.querySelector('button')?.disabled).toBe(false);
     wrapper.unmount();
   });
 });

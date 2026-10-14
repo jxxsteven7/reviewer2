@@ -92,7 +92,7 @@ const problemKey = (item: StartProblem) =>
 const personSeated = computed(() =>
   props.room.players.some((player) => player.agent === undefined && data.value.seats[player.id]?.team),
 );
-// An account may invite its friends who are online into the room, from the start bar
+// An account may invite its friends into the room, online or not, from the start bar
 // (docs/architecture.md#friends).
 const mayInviteFriends = computed(() => account.summary !== null);
 const invitingFriends = ref(false);

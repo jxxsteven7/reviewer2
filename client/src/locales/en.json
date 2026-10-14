@@ -1039,7 +1039,7 @@
       "matchTag": "Match {game}/{games}",
       "watchAgainOf": "Watch the game of {when} again",
       "recentMatches": "The last 20 matches",
-      "matchLine": "{rank}/{players} · {score} pts",
+      "matchLine": "{rank}/{players} · {score} pt | {rank}/{players} · {score} pts",
       "matchGames": "{count} game | {count} games",
       "roles": {
         "captain": "PI",
@@ -1112,7 +1112,7 @@
     "refresh": "Refresh",
     "loading": "Loading…",
     "invite": "Invite friends",
-    "inviteIntro": "Friends online come first. An invitation lasts 10 minutes, and a friend offline sees it on coming online meanwhile.",
+    "inviteIntro": "Friends who are online come first. An invitation lasts 10 minutes; a friend who is offline sees it if they come online in that time.",
     "inviteNone": "You have no friends yet.",
     "inviteAllHere": "Your friends are all in this room already.",
     "inviteOne": "Invite",

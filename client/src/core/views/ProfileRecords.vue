@@ -89,22 +89,24 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
           <span class="tag">{{
             record.match ? t('account.profile.matchTag', record.match) : t('account.profile.ordinaryTag')
           }}</span>
-          <span class="role" :class="record.side"
-            ><span class="sr-only">{{
-              t('account.profile.recordLine', {
-                side: label(`lobby.group.${record.side}`, record.side),
-                role: role(record),
-              })
-            }}</span
-            ><span aria-hidden="true">{{ role(record) }}</span></span
-          >
-          <TitleInfo
-            v-if="explained(record.verdict)"
-            :title="{ kind: 'verdict', verdict: record.verdict }"
-            class="verdict"
-            >{{ short(record.verdict) }}</TitleInfo
-          >
-          <span v-else class="verdict">{{ short(record.verdict) }}</span>
+          <span class="outcome">
+            <span class="role" :class="record.side"
+              ><span class="sr-only">{{
+                t('account.profile.recordLine', {
+                  side: label(`lobby.group.${record.side}`, record.side),
+                  role: role(record),
+                })
+              }}</span
+              ><span aria-hidden="true">{{ role(record) }}</span></span
+            >
+            <TitleInfo
+              v-if="explained(record.verdict)"
+              :title="{ kind: 'verdict', verdict: record.verdict }"
+              class="verdict"
+              >{{ short(record.verdict) }}</TitleInfo
+            >
+            <span v-else class="verdict">{{ short(record.verdict) }}</span>
+          </span>
           <button
             v-if="record.replay && games[record.game]"
             type="button"
@@ -132,7 +134,11 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
           >
           <span class="tag">{{ t('account.profile.matchGames', match.games) }}</span>
           <span class="part">{{
-            t('account.profile.matchLine', { rank: match.rank, players: match.players, score: points(match.score) })
+            t(
+              'account.profile.matchLine',
+              { rank: match.rank, players: match.players, score: points(match.score) },
+              Math.abs(match.score),
+            )
           }}</span>
           <TitleInfo v-if="match.title" :title="{ kind: 'award', title: match.title }" class="verdict award">{{
             t(`match.titleNames.${match.title}`)
@@ -206,7 +212,10 @@ h3 {
 }
 
 /* The lines of a list share its columns, so that the tags, the roles and the places start at the
-   same place on every line, each column as wide as its widest entry. */
+   same place on every line, each column as wide as its widest entry. The decision follows its role
+   on the same line, rather than in a column of its own: that lines the decisions up where the roles
+   are as wide as each other, as in Chinese, and leaves the decision its room where they aren't, as
+   in English, where "Student" is far wider than "PI". */
 @supports (grid-template-columns: subgrid) {
   .list {
     display: grid;
@@ -214,7 +223,7 @@ h3 {
   }
 
   .list.games {
-    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
   }
 
   .list.matches {
@@ -252,10 +261,11 @@ h3 {
   font-weight: var(--weight-bold);
 }
 
-/* Whether it was an ordinary game or one of a match, in a small tag. */
+/* Whether it was an ordinary game or one of a match, in a small tag, as snug as the role's, so
+   that a phone has room for the decision after them. */
 .tag {
   justify-self: start;
-  padding: 0 var(--space-2);
+  padding: 0 6px;
   border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
@@ -263,10 +273,20 @@ h3 {
   font-weight: var(--weight-bold);
 }
 
+/* The role and the decision, together on the line, the decision cut short where they have no room. */
+.outcome {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 /* The role, in the tint of the group's color, which the chip says to a screen reader too. */
 .role {
+  flex: none;
   justify-self: start;
-  padding: 0 var(--space-2);
+  padding: 0 6px;
   border-radius: var(--radius-pill);
   font-size: var(--text-xs);
   font-weight: var(--weight-black);

@@ -27,6 +27,7 @@ import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
 import { useStickyHeight } from '../../core/useStickyHeight';
+import { useTitleFolds } from '../../core/useTitleFolds';
 import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
@@ -65,14 +66,15 @@ import { useScoreFloats } from './useScoreFloats';
 // what it did to each player's from their avatar beside the board; at the end, what the game added
 // to the viewer's points rises big in the middle of the screen (useScoreFloats.ts).
 //
-// In a match, its table stands under the board while the game is on, folded to a line with the
-// progress and the viewer's place, since it is seldom looked at then; the chair's button to end
-// the match stands among the tools instead. Once the game has ended, the
-// table follows the letters, with where each player's points came from, or the final ranking does
-// when the match is over. The streaks that the game brought the players to come right after the
-// letters, before the match's table, and the titles that it brought the player's friends after
-// them; their notices are on the page from the start, out of sight, so that a screen reader is
-// told of them.
+// In a match, its table opens in a sheet while the game is on, from a button beside the chat, the
+// groups and the clue log on a phone and among the tools on a wide screen, since it is seldom
+// looked at then; the chair's button to end the match stands among the tools. Once the game has
+// ended, the table follows the letters, with where each player's points came from, or the final
+// ranking does when the match is over, and then the titles that the game brought each player,
+// where the table doesn't list them: under an ordinary game's letter, and under the ranking. The
+// streaks that the game brought the players to come right after the letters, before the match's
+// table, and the titles that it brought the player's friends after them; their notices are on the
+// page from the start, out of sight, so that a screen reader is told of them.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -80,29 +82,22 @@ const { data, mySeat, mySide, isChair, groups } = useKeywords(room);
 const match = computed(() => room.value.match);
 
 // A match's progress during the game: a button beside the chat, the groups and the clue log on a
-// phone, and among the tools on a wide screen, which opens the table in a sheet.
+// phone, and among the tools on a wide screen, which opens the table in a sheet. The sheet closes
+// as the game ends, when the table takes its place under the letters.
 const matchOpen = ref(false);
 
 // The titles that the game so far has brought each player, as the server counts them
-// (KeywordsRoomData.titles): in the match's table, and under an ordinary game's letter once it
-// is over, a player a line, the avatar beside the first line, in the order of the room. A tap on
-// a line, but on a button, folds its titles again.
+// (KeywordsRoomData.titles): in the match's table, and once the game is over, where the table
+// isn't shown, under an ordinary game's letter and under a match's final ranking, a player a line,
+// the avatar beside the first line, in the order of the room. A tap on a line, but on a button,
+// folds its titles again.
 const titlesOf = (playerId: string) => data.value.titles[playerId] ?? [];
 const earned = computed(() =>
   room.value.players
     .map((player) => ({ player, titles: titlesOf(player.id) }))
     .filter(({ titles }) => titles.length > 0),
 );
-const titlesOpen = ref(new Set<string>());
-const showTitles = (id: string, open: boolean) => {
-  const next = new Set(titlesOpen.value);
-  if (open) next.add(id);
-  else next.delete(id);
-  titlesOpen.value = next;
-};
-const foldTitles = (id: string, event: MouseEvent) => {
-  if (!(event.target as Element | null)?.closest('button')) showTitles(id, false);
-};
+const { unfolded: titlesOpen, setOpen: showTitles, fold: foldTitles } = useTitleFolds();
 
 // Where a player's points in a game came from, in a few words: a PI's line starts with the role,
 // since a PI plays for higher stakes, and the group's opening record and heavenly hand stand by
@@ -158,6 +153,15 @@ const game = computed(() => data.value.game as KeywordsView);
 const { draft: chatLine, sending, say } = useChatLine(game);
 const moment = computed(() => ({ gameId: game.value.gameId, turn: game.value.turn }));
 const paused = computed(() => game.value.paused);
+const listsTitles = computed(
+  () => game.value.result !== null && (!match.value || match.value.status !== 'on') && earned.value.length > 0,
+);
+watch(
+  () => game.value.result,
+  (result) => {
+    if (result) matchOpen.value = false;
+  },
+);
 const myTurn = computed(() => mySeat.value?.team === game.value.team);
 const canClue = computed(
   () => game.value.phase === 'clue' && myTurn.value && mySeat.value?.role === 'captain' && !paused.value,
@@ -213,13 +217,14 @@ async function choose(card: number) {
 }
 
 // A student's marks for the group (docs/games/keywords.md#talking-it-over), which the server sends
-// to the group's students and its PI, in either group's turn. A student marks a card with a gesture
-// (useCardGestures.ts): two taps for one of the group's own, three for one of the other group's, a
-// long press for maybe Reviewer 2, or 1, 2 and 3 from the keyboard; one tap chooses the card in the
-// group's own guess phase, and does nothing otherwise. The same mark again takes it off, whoever put
-// it there; the last of the group stands. As with the choice, the viewer's own marks show at once,
-// until the server has answered every one on its way. The PI only reads the marks. Marking is a
-// student's while the game is on and not paused, when there is no board anyway.
+// to the group's students and its PI, in either group's turn. A student marks a card from the menu
+// that a long press on it, or a right click, opens (useCardGestures.ts, MarkMenu.vue), with the
+// group's own, the other group's or maybe Reviewer 2, or with 1, 2 and 3 from the keyboard; a tap
+// chooses the card in the group's own guess phase, and does nothing otherwise. The same mark again
+// takes it off, whoever put it there; the last of the group stands. As with the choice, the
+// viewer's own marks show at once, until the server has answered every one on its way. The PI only
+// reads the marks. Marking is a student's while the game is on and not paused, when there is no
+// board anyway.
 const student = computed(
   () => mySeat.value?.role === 'guesser' && mySeat.value.team !== null && !game.value.result && !paused.value,
 );
@@ -449,7 +454,7 @@ const status = computed(() => {
         <p class="scoring">{{ t('game.scoring') }}</p>
       </MatchTable>
     </template>
-    <section v-if="game.result && !match && earned.length" class="game-titles">
+    <section v-if="listsTitles" class="game-titles">
       <h2 class="section-title">{{ t('match.gameTitles') }}</h2>
       <ul>
         <li v-for="{ player, titles } in earned" :key="player.id" @click="foldTitles(player.id, $event)">

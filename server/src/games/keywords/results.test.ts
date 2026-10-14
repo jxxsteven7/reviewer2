@@ -199,5 +199,11 @@ describe('the titles in the view', () => {
     const view = keywordsGame.views(data, ctx)({ playerId: 'eve' });
     expect(view.titles).toEqual({ ann: [{ title: 'missed_deadline', count: 2 }] });
     expect(keywordsGame.views({ ...data, game: null }, ctx)({ playerId: 'eve' }).titles).toEqual({});
+    // A game that the chair withdrew awards none, so the view has none either.
+    const withdrawn = {
+      ...data,
+      game: { ...data.game, phase: 'over' as const, result: { winner: null, reason: 'withdrawn' as const } },
+    };
+    expect(keywordsGame.views(withdrawn, ctx)({ playerId: 'eve' }).titles).toEqual({});
   });
 });

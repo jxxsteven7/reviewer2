@@ -86,6 +86,8 @@ watch([() => props.titles.map(({ title, count }) => `${title}${count}`).join(), 
 </template>
 
 <style scoped>
+/* The line clips nothing, so that a pill's focus ring and the reach of its tap stay in sight: the
+   pills it shows fit by its measure. */
 .title-line {
   position: relative;
   display: flex;
@@ -93,22 +95,24 @@ watch([() => props.titles.map(({ title, count }) => `${title}${count}`).join(), 
   flex-wrap: nowrap;
   align-items: center;
   gap: 4px;
-  overflow: hidden;
   contain: inline-size;
 }
 
 .title-line.open {
   flex-wrap: wrap;
-  overflow: visible;
 }
 
-/* The hidden copy that the pills are measured on. */
+/* The hidden copy that the pills are measured on, in a box of no size, so that it takes no room
+   and scrolls nothing sideways. */
 .copy {
   position: absolute;
   top: 0;
   left: 0;
   display: flex;
   gap: 4px;
+  width: 0;
+  height: 0;
+  overflow: hidden;
   visibility: hidden;
   white-space: nowrap;
   pointer-events: none;

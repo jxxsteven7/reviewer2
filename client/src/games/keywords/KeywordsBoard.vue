@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MARKS, otherTeam, type CardView, type Mark, type Team } from '@reviewer2/shared';
-import { computed, ref, useId } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Shown } from '../../core/components/ScoreFloat.vue';
 import KeywordsCard from './KeywordsCard.vue';
@@ -71,7 +71,7 @@ const markCard = (card: number, chosen: Mark) => {
   const target = props.cards[card];
   if (target && markable(target)) emit('mark', card, chosen);
 };
-const gestures = useCardGestures({
+const cardGestures = useCardGestures({
   tap: (card) => emit('select', card),
   hold: (card) => {
     const target = props.cards[card];
@@ -82,15 +82,26 @@ const gestures = useCardGestures({
   },
   mark: markCard,
 });
-const pressing = gestures.pressing;
+// The menu closes by itself once its card can take no mark: it was revealed meanwhile, or the
+// viewer may no longer mark, as when the game has ended.
+watch(
+  () => {
+    const card = holding.value === null ? undefined : props.cards[holding.value.index];
+    return holding.value !== null && !(card && markable(card) && props.team);
+  },
+  (over) => {
+    if (over) holding.value = null;
+  },
+);
+const pressing = cardGestures.pressing;
 function select(card: number) {
-  if (props.gestures) gestures.click(card);
+  if (props.gestures) cardGestures.click(card);
   else emit('select', card);
 }
-const press = (card: number, event: PointerEvent) => props.gestures && gestures.press(card, event);
-const key = (card: number, event: KeyboardEvent) => props.gestures && gestures.key(card, event);
+const press = (card: number, event: PointerEvent) => props.gestures && cardGestures.press(card, event);
+const key = (card: number, event: KeyboardEvent) => props.gestures && cardGestures.key(card, event);
 // A long press on a phone opens no menu of the browser's, and a right click opens ours.
-const contextMenu = (card: number, event: Event) => props.gestures && gestures.contextMenu(card, event);
+const contextMenu = (card: number, event: Event) => props.gestures && cardGestures.contextMenu(card, event);
 // How screen readers are told of the keys for a mark.
 const keysId = useId();
 // The card that had the focus last, for the buttons that mark it, while it is still face down.
@@ -123,10 +134,10 @@ const named = computed(() => {
       @select="select"
       @focus="focused = index"
       @pointerdown="press(index, $event)"
-      @pointermove="gestures.move"
-      @pointerup="gestures.letGo"
-      @pointercancel="gestures.letGo"
-      @pointerleave="gestures.letGo"
+      @pointermove="cardGestures.move"
+      @pointerup="cardGestures.letGo"
+      @pointercancel="cardGestures.letGo"
+      @pointerleave="cardGestures.letGo"
       @keydown="key(index, $event)"
       @contextmenu="contextMenu(index, $event)"
     />

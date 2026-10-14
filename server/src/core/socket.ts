@@ -681,11 +681,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
 
   // A game has started in a room: by the chair, or as a practice room was made. Only a draw that
-  // found no way to keep the words apart has clashes (Room.start).
+  // found no way to keep the words apart has clashes (Room.start), which the log blames on the
+  // fields that the game drew from, those drawn anew for it where the room draws them.
   function logStart(room: Room, clashes: number): void {
     log('game_started', { code: room.code, players: room.members.size });
     if (clashes > 0) {
-      log('words_clashed', { code: room.code, language: room.language, fields: room.fields, clashes });
+      log('words_clashed', { code: room.code, language: room.language, fields: [...room.gameFields], clashes });
     }
   }
 
@@ -1137,23 +1138,28 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         practice: practice?.role ?? null,
       });
       enter(socket, room, member);
-      // The account's next room setup starts from this one (RoomSetup in shared/src/accounts.ts).
+      // The account's next room setup starts from this one (RoomSetup in shared/src/accounts.ts),
+      // with the game's settings as the game took them. The room is made whatever comes of
+      // keeping it.
       if (account) {
-        accounts?.rememberRoomSetup(
-          account.id,
-          practice
-            ? { practice: { role: practice.role, fields: room.fields } }
-            : {
-                room: {
-                  game,
-                  fields: room.fields,
-                  randomFields: room.randomFields,
-                  ...(settings === undefined ? {} : { settings }),
-                  match: match ?? null,
-                  public: room.public,
-                  play: play ?? false,
+        safely('room_setup', () =>
+          accounts?.rememberRoomSetup(
+            account.id,
+            practice
+              ? { practice: { role: practice.role, fields: room.fields } }
+              : {
+                  room: {
+                    game,
+                    language,
+                    fields: room.fields,
+                    randomFields: room.randomFields,
+                    ...(settings === undefined ? {} : { settings: room.gameSettings ?? settings }),
+                    match: match ?? null,
+                    public: room.public,
+                    play: play ?? false,
+                  },
                 },
-              },
+          ),
         );
       }
       if (room.practice) {
@@ -1460,10 +1466,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'friends:decline', about('decline'));
     on(handlers, 'friends:remove', about('remove'));
 
-    // A member invites a friend who is online into the room, once a minute for the same friend; a
-    // name that is no account's is answered as a stranger's. Every connection of the friend hears
-    // it; what admits them, or doesn't, is room:join's to say, except that whoever the chair has
-    // removed isn't invited to come and be refused.
+    // A member invites a friend into the room, online or not, once a minute for the same friend;
+    // a name that is no account's is answered as a stranger's. Every connection of the friend
+    // hears it, and one that comes while it stands hears it then; what admits them, or doesn't, is
+    // room:join's to say, except that whoever the chair has removed isn't invited to come and be
+    // refused. The inviter gets the room again, with the friend among those they invited.
     on(handlers, 'friends:invite', ({ username }) => {
       const found = membership(socket);
       if (!found) return fail('not_member');

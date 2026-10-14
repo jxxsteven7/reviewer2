@@ -74,14 +74,18 @@ watch(
   { immediate: true },
 );
 
+// The button names those still waited for; while there are none, only one who has just come, it
+// names what a tap does.
 const waiting = computed(() => entries.value.filter((entry) => !entry.came));
 const label = computed(() =>
-  t('friends.invitedList', {
-    names: formatList(
-      locale.value,
-      waiting.value.map(({ username }) => username),
-    ),
-  }),
+  waiting.value.length > 0
+    ? t('friends.invitedList', {
+        names: formatList(
+          locale.value,
+          waiting.value.map(({ username }) => username),
+        ),
+      })
+    : t('friends.invite'),
 );
 </script>
 

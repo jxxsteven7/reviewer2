@@ -106,4 +106,16 @@ describe('settings kept from an earlier room', () => {
       expect(restoreSettings(nothing, 'en')).toEqual(defaultSettings('en'));
     }
   });
+
+  test('start the clue length over where they were kept in the other language, which counts it otherwise', () => {
+    // Two characters in a Chinese room would be two words in an English one.
+    expect(restoreSettings({ clueLength: 2, clueTime: 45 }, 'en', 'zh')).toEqual({
+      ...defaultSettings('en'),
+      clueTime: 45,
+    });
+    expect(restoreSettings({ clueLength: 1 }, 'zh', 'en').clueLength).toBe(2);
+    // Kept in the same language, or before the language was kept, the length stays.
+    expect(restoreSettings({ clueLength: 2 }, 'en', 'en').clueLength).toBe(2);
+    expect(restoreSettings({ clueLength: 2 }, 'en', null).clueLength).toBe(2);
+  });
 });

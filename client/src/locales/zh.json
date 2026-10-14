@@ -1039,7 +1039,7 @@
       "matchTag": "比赛 {game}/{games}",
       "watchAgainOf": "回放 {when} 的这一局",
       "recentMatches": "最近 20 场比赛",
-      "matchLine": "{rank}/{players} 名 · {score} 分",
+      "matchLine": "{rank}/{players} 名 · {score} 分 | {rank}/{players} 名 · {score} 分",
       "matchGames": "{count} 局 | {count} 局",
       "roles": {
         "captain": "导师",

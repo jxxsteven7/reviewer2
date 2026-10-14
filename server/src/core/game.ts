@@ -181,6 +181,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // checks them all and refuses them with bad_settings when it can't take them. Settings that
   // change nothing give the data back as it is.
   configure(data: Data, ctx: GameContext, settings: unknown): GameUpdate<Data>;
+  // The game's own settings, as the room plays by them: whole, and checked, as configure() took
+  // them. The server keeps them with how the room was set up (RoomSetup); for a module without
+  // this, it keeps the settings as the chair's message carried them.
+  settingsOf?(data: Data): unknown;
   // A newcomer, who has come to play or only to watch. The game decides what that means, such as
   // a seat in a group; the context already knows the newcomer's member key.
   join(data: Data, ctx: GameContext, playerId: string, play: boolean): Data;

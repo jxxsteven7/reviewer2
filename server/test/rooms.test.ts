@@ -729,6 +729,13 @@ describe("the chair's controls", () => {
         lists.join(),
       ).toBe(true);
       for (const list of lists) drawn.add(list);
+      // The room knows which lists it drew, for the game's record; the words came from those.
+      const drewFrom = server.app.rooms.find(created.code)?.gameFields ?? [];
+      expect(drewFrom.length).toBeGreaterThan(0);
+      expect(
+        lists.every((list) => drewFrom.includes(list)),
+        `${lists.join()} from ${drewFrom.join()}`,
+      ).toBe(true);
       // The view still has the lists that the chair chose, none, and nothing of the draw.
       expect(bob.state).toMatchObject({ fields: [], randomFields: true });
       await chair.send('test:finish');
@@ -742,6 +749,7 @@ describe("the chair's controls", () => {
     expect(await start(chair)).toEqual({ ok: true });
     await bob.waitFor((view) => view.phase === 'playing' && view.round === 9);
     expect(game(bob).words.every((word) => word.startsWith('b word'))).toBe(true);
+    expect(server.app.rooms.find(created.code)?.gameFields).toEqual(['b']);
   });
 
   test('refuses a practice room that draws its lists', async () => {

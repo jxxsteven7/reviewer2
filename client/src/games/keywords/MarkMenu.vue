@@ -10,8 +10,10 @@ import MarkSticker from './MarkSticker.vue';
 // card's own marked out. Choosing one puts it on the card, and choosing the card's own takes it off;
 // a tap beside the menu or on the card, or Escape, closes it with the card as it was. The card that
 // lifts is a copy of the one on the board, which hides meanwhile; its word keeps the size it has
-// there (the board hides the card itself while the menu is open). Where the device asks for less motion, nothing lifts or grows: it all fades. On a phone
-// that can, it opens with a short buzz.
+// there (the board hides the card itself while the menu is open). Once the menu has closed, the
+// card has the focus again if the menu had it. Where the device asks for less motion, nothing lifts
+// or grows: the page dims at once, and the menu fades in and out. On a phone that can, it opens
+// with a short buzz.
 const props = defineProps<{ source: HTMLElement; word: string; current: Mark | null; team: Team }>();
 const emit = defineEmits<{ choose: [mark: Mark]; close: [] }>();
 const { t } = useI18n();
@@ -74,9 +76,10 @@ function close(mark?: Mark) {
   const hadFocus = menu.value?.contains(document.activeElement) ?? false;
   timer = setTimeout(
     () => {
-      if (hadFocus) props.source.focus({ preventScroll: true });
       if (mark) emit('choose', mark);
       emit('close');
+      // The card on the board shows again once the board has heard, and can take the focus then.
+      if (hadFocus) void nextTick(() => props.source.focus({ preventScroll: true }));
     },
     reduced() ? 150 : 220,
   );
@@ -247,15 +250,21 @@ onBeforeUnmount(() => {
   font-weight: var(--weight-bold);
 }
 
+/* Less motion: nothing lifts or grows, and the menu fades, which outweighs the page's rule that
+   cuts every transition short (base.css). */
 @media (prefers-reduced-motion: reduce) {
   .lifted,
   .open .lifted,
-  .closing .lifted,
+  .closing .lifted {
+    transform: none;
+    transition: none;
+  }
+
   .menu,
   .open .menu,
   .closing .menu {
     transform: none;
-    transition: opacity 150ms linear;
+    transition: opacity 150ms linear !important;
   }
 }
 </style>

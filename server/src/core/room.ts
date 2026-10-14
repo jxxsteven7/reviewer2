@@ -211,6 +211,9 @@ export class Room {
   randomFields: boolean;
   // The fields that the game being played, or just ended, drew its words from.
   #gameFields: string[] = [];
+  get gameFields(): readonly string[] {
+    return this.#gameFields;
+  }
   // The chair's own words, which the games draw from along with the fields, each with its
   // pinyin when it is Chinese (docs/games/keywords.md#custom-words). A private room's alone.
   customWords: BoardWord[] = [];
@@ -311,6 +314,12 @@ export class Room {
     this.lastSeen = this.createdAt;
     this.#lobbySince = this.createdAt;
     this.data = options.game.create(options.language);
+  }
+
+  // The game's own settings as the room plays by them, where the game tells them
+  // (GameModule.settingsOf), or undefined.
+  get gameSettings(): unknown {
+    return this.game.settingsOf?.(this.data);
   }
 
   get context(): GameContext {

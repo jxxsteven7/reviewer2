@@ -504,10 +504,12 @@ describe('the last room setup', () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     expect((await ann.account())?.roomSetup).toEqual({});
-    await roomOf(ann, { settings: { level: 2 }, play: true });
+    // The settings are kept as the game took them, without what it left out.
+    await roomOf(ann, { settings: { level: 2, extra: true }, play: true });
     expect((await ann.account())?.roomSetup).toEqual({
       room: {
         game: 'test',
+        language: 'en',
         fields: ['general'],
         randomFields: false,
         settings: { level: 2 },
@@ -516,9 +518,17 @@ describe('the last room setup', () => {
         play: true,
       },
     });
-    await roomOf(ann, { fields: ['general', 'tiny'], randomFields: true });
+    await roomOf(ann, { language: 'zh', fields: ['general', 'tiny'], randomFields: true });
     expect((await ann.account())?.roomSetup).toEqual({
-      room: { game: 'test', fields: ['general', 'tiny'], randomFields: true, match: null, public: false, play: false },
+      room: {
+        game: 'test',
+        language: 'zh',
+        fields: ['general', 'tiny'],
+        randomFields: true,
+        match: null,
+        public: false,
+        play: false,
+      },
     });
     // A room that isn't made keeps nothing, and a guest's rooms are nobody's.
     const chair = track(await ann.connect());

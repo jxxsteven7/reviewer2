@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defaultMatchRules, MAX_NAME_INPUT, type Language, type MatchRules } from '@reviewer2/shared';
+import { defaultMatchRules, LANGUAGES, MAX_NAME_INPUT, type Language, type MatchRules } from '@reviewer2/shared';
 import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -15,7 +15,7 @@ import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
 import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
-import { keepRoomSetup, keptMatch, lastRoom } from '../roomSetup';
+import { keepRoomSetup, keptFields, keptMatch, lastRoom } from '../roomSetup';
 import { storedName, storeName } from '../session';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
@@ -35,9 +35,7 @@ const { t, locale } = useI18n();
 const router = useRouter();
 
 const last = lastRoom();
-const chosen = ref<string[]>(
-  Array.isArray(last?.fields) ? last.fields.filter((field): field is string => typeof field === 'string') : [],
-);
+const chosen = ref<string[]>(keptFields(last?.fields));
 const randomFields = ref(last?.randomFields === true);
 const { name, clean, problem, refuse } = useNameField(storedName());
 const play = ref(typeof last?.play === 'boolean' ? last.play : true);
@@ -48,11 +46,16 @@ const language = computed(() => locale.value as Language);
 const usable = computed(() =>
   (fields.value ?? []).filter((field) => field.counts[language.value] >= props.wordsNeeded),
 );
-// The game's settings, with its own form, which also says whether they will do.
+// The game's settings, with its own form, which also says whether they will do: those of the last
+// room, which the game reads for this language, knowing the last room's, if it was kept.
 const screens = computed(() => games[props.game]);
 const settings = ref<object | undefined>(
   last?.game === props.game && last.settings !== undefined
-    ? screens.value?.restoreSettings(last.settings, language.value)
+    ? screens.value?.restoreSettings(
+        last.settings,
+        language.value,
+        LANGUAGES.find((known) => known === last.language) ?? null,
+      )
     : screens.value?.defaultSettings(language.value),
 );
 const settingsValid = ref(true);
@@ -73,8 +76,7 @@ watch(
   usable,
   (lists) => {
     if (!fields.value) return;
-    const ids = new Set(lists.map((field) => field.id));
-    chosen.value = chosen.value.filter((id) => ids.has(id));
+    chosen.value = keptFields(chosen.value, new Set(lists.map((field) => field.id)));
   },
   { immediate: true },
 );
@@ -84,9 +86,11 @@ watch(
 const needsField = computed(() => usable.value.length > 0 && !chosen.value.length && !randomFields.value);
 const id = useId();
 // Whether the form will do. create() checks it too, since a form can be submitted without its
-// button. A creator who is logged in needs no nickname: theirs is the username.
+// button. The lists must have come, so that those chosen have been checked against them. A
+// creator who is logged in needs no nickname: theirs is the username.
 const ready = computed(
   () =>
+    fields.value !== null &&
     (chosen.value.length > 0 || randomFields.value) &&
     (!!clean.value || account.summary !== null) &&
     settingsValid.value &&
@@ -123,6 +127,7 @@ async function create() {
   keepRoomSetup({
     room: {
       game: props.game,
+      language: currentLanguage(),
       fields: [...chosen.value],
       randomFields: randomFields.value,
       ...(settings.value ? { settings: settings.value } : {}),

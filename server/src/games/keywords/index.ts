@@ -328,11 +328,11 @@ function titlesOf(game: KeywordsState, team: Team, key: string, keyOf: (playerId
 
 // The titles that the game so far has brought each player whom its titles go to, by player ID,
 // each with how many times it came, for the view (KeywordsRoomData.titles): once the game is over,
-// those that results() awards.
+// those that results() awards, so none for a game that the chair withdrew, which awards none.
 function titlesSoFar(data: KeywordsData, ctx: GameContext): Record<string, TitleCount[]> {
   const game = data.game;
   const earned: Record<string, TitleCount[]> = {};
-  if (!game) return earned;
+  if (!game || !counts(game)) return earned;
   for (const [playerId, seat] of data.seating.seats) {
     if (seat.team === null || !ctx.awardsTitles(playerId)) continue;
     const counts = new Map<Title, number>();
@@ -363,6 +363,8 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     }
     return { ok: true, data: sameSettings(parsed.data, data.settings) ? data : { ...data, settings: parsed.data } };
   },
+
+  settingsOf: (data) => data.settings,
 
   // A newcomer who has come to play becomes a guesser in a group (seats.ts); anyone else watches
   // until they take a seat.

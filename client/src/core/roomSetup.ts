@@ -37,9 +37,12 @@ export function keepRoomSetup(part: RoomSetup): void {
   else if (part.room) writeStored(KEY, JSON.stringify(part.room));
 }
 
-// The word lists of a setup that are still usable, by ID.
-export const keptFields = (fields: unknown, usable: ReadonlySet<string>): string[] =>
-  Array.isArray(fields) ? fields.filter((id): id is string => typeof id === 'string' && usable.has(id)) : [];
+// The word lists of a setup, by ID, as far as they can be read, and among those that are usable
+// where the usable ones are known: before the lists have come, they aren't.
+export const keptFields = (fields: unknown, usable?: ReadonlySet<string>): string[] =>
+  Array.isArray(fields)
+    ? fields.filter((id): id is string => typeof id === 'string' && (usable === undefined || usable.has(id)))
+    : [];
 
 // The match rules of a setup, if they still hold.
 export function keptMatch(rules: unknown): MatchRules | null {

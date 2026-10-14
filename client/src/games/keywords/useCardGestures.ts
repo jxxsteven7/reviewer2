@@ -6,7 +6,8 @@ import { onBeforeUnmount, ref } from 'vue';
 // for it (MarkMenu.vue), as a right click does with a mouse. While the press is held, the card sinks
 // into its shadow (`pressing`). A press held long enough opens the menu, and the click that ends it
 // counts for nothing; one that moves away first, as when the page scrolls, is no press. From the
-// keyboard, 1, 2 and 3 mark the card that has the focus, and Enter or Space taps it.
+// keyboard, 1, 2 and 3 mark the card that has the focus, and Enter or Space taps it: a key ends
+// whatever press there was, so the tap counts.
 export const HOLD_MS = 400;
 const MOVE_PX = 10;
 
@@ -62,15 +63,19 @@ export function useCardGestures(on: {
     if (hold && Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > MOVE_PX) letGo();
   }
 
-  // A long press on a phone opens no menu of the browser's, and a mouse's right click opens ours.
+  // A long press on a phone opens no menu of the browser's, and a mouse's right click opens ours,
+  // also where the right click is a press with a key held, as on a Mac with Control: that press is
+  // over then.
   function contextMenu(card: number, event: Event) {
     event.preventDefault();
-    if (!mouse || hold) return;
+    if (!mouse) return;
+    letGo();
     held = null;
     on.hold(card);
   }
 
   function key(card: number, event: KeyboardEvent) {
+    held = null;
     const mark = KEYS[event.key];
     if (!mark || event.altKey || event.ctrlKey || event.metaKey) return;
     event.preventDefault();
