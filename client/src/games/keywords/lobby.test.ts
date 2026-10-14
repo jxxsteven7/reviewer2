@@ -489,11 +489,56 @@ describe('KeywordsLobby, public or private', () => {
     await member.get('.start-dock .invite-friends').trigger('click');
     await flushPromises();
     expect(send).toHaveBeenCalledWith('friends:list');
-    expect(member.get('.invite').text()).toContain('Your friends who are online.');
+    expect(member.get('.invite').text()).toContain('Friends online come first.');
     // The chair with an account: the invitation between the shuffle and the start.
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     expect(chair.get('.start-bar').classes()).not.toContain('member');
     expect(bar(chair)).toEqual(['Shuffle the groups', 'Invite friends', 'Start the game']);
+    expect(chair.find('.invited-friends').exists()).toBe(false);
+  });
+
+  test('shows whom the viewer invited beside the line, waited for, and a friend who came in for a moment', async () => {
+    vi.useFakeTimers();
+    try {
+      account.summary = { username: 'Ann', avatar: null } as unknown as typeof account.summary;
+      const invited = [
+        { username: 'Fay', avatar: null },
+        { username: 'Gus', avatar: null },
+      ];
+      const lobby = mount(KeywordsLobby, { props: { room: { ...view('ann', 0), invited } }, global: global() });
+      const faces = () =>
+        lobby
+          .findAll('.invited-friends .face')
+          .map((face) => [
+            face.get('.avatar .initial').attributes('data-initial'),
+            face.find('.wait').exists() ? 'waiting' : face.classes('came') ? 'came' : '?',
+          ]);
+      expect(faces()).toEqual([
+        ['F', 'waiting'],
+        ['G', 'waiting'],
+      ]);
+      expect(lobby.get('.invited-friends').attributes('aria-label')).toBe('Invited: Fay and Gus');
+      // Fay comes in: she shows as there for a moment, and goes. Gus ignores his: he goes at once.
+      const room = view('ann', 0);
+      const fay = { id: 'fay', name: 'Fay', online: true };
+      await lobby.setProps({ room: { ...room, players: [...room.players, fay], invited: [invited[1]!] } });
+      expect(faces()).toEqual([
+        ['F', 'came'],
+        ['G', 'waiting'],
+      ]);
+      await lobby.setProps({ room: { ...room, players: [...room.players, fay], invited: [] } });
+      expect(faces()).toEqual([['F', 'came']]);
+      vi.advanceTimersByTime(2000);
+      await flushPromises();
+      expect(lobby.find('.invited-friends').exists()).toBe(false);
+      // A click opens the sheet to invite friends.
+      await lobby.setProps({ room: { ...room, invited } });
+      await lobby.get('.invited-friends').trigger('click');
+      await flushPromises();
+      expect(send).toHaveBeenCalledWith('friends:list');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

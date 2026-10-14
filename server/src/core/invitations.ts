@@ -55,6 +55,14 @@ export class Invitations {
     return [...(this.#byInvitee.get(inviteeId) ?? [])].filter((invitation) => this.stands(invitation));
   }
 
+  // The invitations that an account has sent into a room and that still stand, the oldest first,
+  // for the inviter's own view of the room.
+  by(room: Room, inviterId: number): Invitation[] {
+    return [...this.#byId.values()]
+      .filter((invitation) => invitation.room === room && invitation.inviterId === inviterId && this.stands(invitation))
+      .sort((a, b) => a.at - b.at);
+  }
+
   // Whether an invitation still stands: it is young enough, its room is open, the inviter is still
   // in it, and the two are still friends.
   stands(invitation: Invitation): boolean {

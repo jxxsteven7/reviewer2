@@ -17,6 +17,7 @@ import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import FieldFold from '../../core/components/FieldFold.vue';
 import InviteFriends from '../../core/components/InviteFriends.vue';
+import InvitedFriends from '../../core/components/InvitedFriends.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
@@ -243,7 +244,10 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
       :class="{ 'below-banner': reconnecting }"
     >
       <div class="start-bar" :class="{ member: !isChair }">
-        <p class="readiness" :class="{ ready }">{{ readiness }}</p>
+        <div class="ready-line">
+          <p class="readiness" :class="{ ready }">{{ readiness }}</p>
+          <InvitedFriends v-if="mayInviteFriends" :room="room" @open="invitingFriends = true" />
+        </div>
         <div class="start-actions">
           <UiButton v-if="isChair && lineup === 'free'" size="small" @click="act('room:shuffle')">{{
             t('lobby.shuffle')
@@ -547,8 +551,17 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   box-shadow: var(--shadow-2);
 }
 
-.readiness {
+/* The line, with the avatars of the friends invited at its right end. */
+.ready-line {
+  display: flex;
   flex: 1 1 14rem;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.readiness {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   color: var(--red-deep);
@@ -570,7 +583,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   gap: var(--space-2);
 }
 
-.start-bar:not(.member) .readiness {
+.start-bar:not(.member) .ready-line {
   flex-basis: 100%;
 }
 
@@ -586,8 +599,11 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   padding-left: var(--space-3);
 }
 
-.member .readiness {
+.member .ready-line {
   flex: 1 1 8rem;
+}
+
+.member .readiness {
   white-space: normal;
 }
 
@@ -600,7 +616,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 }
 
 @media (min-width: 40rem) {
-  .start-bar:not(.member) .readiness {
+  .start-bar:not(.member) .ready-line {
     flex: 1 1 14rem;
   }
 

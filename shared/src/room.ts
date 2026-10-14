@@ -29,6 +29,12 @@ export interface PlayerView {
   takenOver?: true;
 }
 
+// A friend whom the viewer has invited, as the start bar shows them.
+export interface InvitedView {
+  username: string;
+  avatar: string | null;
+}
+
 // Who chairs the room when the chair has gone: the first to have joined among those online, or
 // else among everyone, in the order of `players`, which is the order they joined in. An AI player
 // never chairs a room. Nobody when there is no one. The server hands the chair over with this, and
@@ -68,6 +74,10 @@ export interface RoomView<Game = unknown> {
   // edits them; for everyone else the key is absent.
   customWordCount: number;
   customWords?: string[];
+  // The friends whom the viewer has invited into the room and who haven't come, while the
+  // invitations stand, the oldest first (docs/architecture.md#friends): for the member who sent
+  // them alone, and absent for everyone else and while there are none.
+  invited?: InvitedView[];
   phase: RoomPhase;
   // How many games this room has started. A start gives the number it saw, so that one that
   // comes late or twice can't start a game that nobody asked for.

@@ -405,24 +405,33 @@ describe('friends', () => {
 });
 
 describe('an invitation', () => {
-  test('goes to a friend who is online, once a minute, and lets them into a private room', async () => {
+  test('goes to a friend, once a minute, and lets them into a private room', async () => {
     server = await startServer();
     const { browser: anns, client: ann } = await person('Ann');
     const { client: bob } = await person('Bob');
-    const { client: cat } = await person('Cat');
+    const { browser: cats, client: cat } = await person('Cat');
     await person('Dan');
     await befriend(ann, bob);
     await befriend(ann, cat, 'Cat');
     const { chair, code, roomId } = await roomOf(anns);
-    // Only a member may invite, only a friend may be invited, and only one who is online.
+    // Only a member may invite, and only a friend may be invited, online or not: one who is offline
+    // hears of it as they come, while it stands.
     expect(await ann.send('friends:invite', { username: 'Bob' })).toEqual({ ok: false, error: 'not_member' });
     expect(await chair.send('friends:invite', { username: 'Dan' })).toEqual({ ok: false, error: 'not_friends' });
     cat.close();
     await expect
       .poll(async () => (await listOf(chair)).friends.find(({ username }) => username === 'Cat')?.online)
       .toBe(false);
-    expect(await chair.send('friends:invite', { username: 'Cat' })).toEqual({ ok: false, error: 'friend_offline' });
+    expect(await chair.send('friends:invite', { username: 'Cat' })).toEqual({ ok: true });
+    const catAgain = track(await cats.connect());
+    await until(() => catAgain.invitations.length === 1, "Cat's invitation as she comes");
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: true });
+    // The inviter sees whom they invited, the oldest first, and nobody else does.
+    await chair.waitFor((state) => state.invited?.length === 2, 'whom Ann invited');
+    expect(chair.state?.invited).toEqual([
+      { username: 'Cat', avatar: null },
+      { username: 'Bob', avatar: null },
+    ]);
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: false, error: 'invite_cooldown' });
     await until(() => bob.invitations.length === 1, 'the invitation');
     const [invitation] = bob.invitations;
@@ -440,7 +449,10 @@ describe('an invitation', () => {
       language: 'en',
     });
     expect(await bob.send('room:join', { invitation: invitation?.id, play: true })).toEqual({ ok: true, code, roomId });
-    await chair.waitFor((state) => state.players.length === 2, 'Bob in the room');
+    // Bob is in the room, so Ann's view has Cat alone left to come.
+    await chair.waitFor((state) => state.players.length === 2 && state.invited?.length === 1, 'Bob in the room');
+    expect(chair.state?.invited).toEqual([{ username: 'Cat', avatar: null }]);
+    expect(bob.state).not.toHaveProperty('invited');
     // Bob is in the room already, so there is no inviting him again.
     server.advance(INVITE_COOLDOWN_MS);
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: false, error: 'friend_in_room' });

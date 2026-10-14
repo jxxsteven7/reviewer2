@@ -19,6 +19,7 @@ import {
   type FriendRoomView,
   type FriendView,
   type InvitationView,
+  type InvitedView,
   type JoinAskView,
   type Rank,
   type SeatedRoom,
@@ -209,12 +210,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const accountSockets = new Map<number, Set<string>>();
   // Invitations to rooms, and how often a member may invite the same friend
   // (docs/architecture.md#friends). However an invitation ends, every connection of the invited
-  // account hears so, and takes it off the page.
+  // account hears so, and takes it off the page, and the inviter gets the room again without it.
   const invitations = new Invitations(
     now,
     isOpen,
     (a, b) => accounts?.friends.areFriends(a, b) ?? false,
-    ({ id, inviteeId }) => tellAccount(inviteeId, 'friends:uninvited', { id }),
+    ({ id, inviteeId, room, inviterKey }) => {
+      tellAccount(inviteeId, 'friends:uninvited', { id });
+      const inviter = room.memberByKey(inviterKey);
+      if (inviter && isOpen(room)) send(room, inviter.sockets, { playerId: inviter.id });
+    },
   );
   const invites = new WindowCounter(1, INVITE_COOLDOWN_MS, now);
   // Requests to be let into a friend's room, and how many an account sends an hour. However a
@@ -265,10 +270,22 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const ids = [...socketIds];
     if (ids.length === 0) return;
     try {
-      io.to(ids).emit('room:state', view(viewer));
+      const state = view(viewer);
+      const invited = 'playerId' in viewer ? invitedBy(room, viewer.playerId) : [];
+      io.to(ids).emit('room:state', invited.length > 0 ? { ...state, invited } : state);
     } catch (error) {
       report(error, 'view', { code: room.code });
     }
+  }
+
+  // The friends whom a member has invited into the room, while the invitations stand.
+  function invitedBy(room: Room, playerId: string): InvitedView[] {
+    const accountId = room.members.get(playerId)?.account?.id;
+    if (accountId === undefined || !accounts) return [];
+    return invitations.by(room, accountId).flatMap(({ inviteeId }) => {
+      const friend = accounts.store.byId(inviteeId);
+      return friend ? [{ username: friend.username, avatar: avatarUrl(friend) }] : [];
+    });
   }
 
   // The last game of each room whose end has been logged.
@@ -1456,10 +1473,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (!friend || !(accounts as Accounts).friends.areFriends(me.account.id, friend.id)) return fail('not_friends');
       if (found.room.memberByKey(accountKey(friend.id))) return fail('friend_in_room');
       if (found.room.removal(accountKey(friend.id))) return fail('friend_removed');
-      if (!isOnline(friend.id)) return fail('friend_offline');
       if (!invites.take(`${me.account.id}\n${friend.id}`)) return fail('invite_cooldown');
       const invitation = invitations.create(found.room, me.account.id, found.member.key, friend.id);
       tellAccount(friend.id, 'friends:invited', invitationView(invitation));
+      send(found.room, found.member.sockets, { playerId: found.member.id });
       // An invitation answers whatever the friend asked to be let in, whoever they asked.
       asks.answered(found.room, friend.id);
       return ok();
