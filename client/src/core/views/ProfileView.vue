@@ -360,8 +360,10 @@ h1 {
   position: relative;
   display: inline-flex;
   min-height: 0;
-  margin-inline-start: var(--space-2);
+  /* 8 px from the name to the word: this and the padding, with no border. */
+  margin-inline-start: var(--space-1);
   padding: 0 var(--space-1);
+  border: 0;
   color: var(--ink-2);
   font-size: var(--text-xs);
   line-height: 1.2;
@@ -371,7 +373,10 @@ h1 {
 .who .name-line .rename::before {
   content: '';
   position: absolute;
-  inset: calc((1.2em - 44px) / 2) 0;
+  inset-inline: 0;
+  top: 50%;
+  height: 44px;
+  margin-top: -22px;
 }
 
 /* The rank is a sticker that opens the ladder, which lifts and presses as a button does (`press`
