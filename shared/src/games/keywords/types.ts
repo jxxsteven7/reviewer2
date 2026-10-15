@@ -87,8 +87,7 @@ export interface CardView {
 // (docs/games/keywords.md#the-clue). The targets are the captain's secret
 // until the game is over: no view carries them before then, the captain's own included. `at`, on
 // the clue and on each guess, is when it came, in milliseconds from the start of the game; for a
-// turn without a clue, when its time ran out. Replays from before these were kept have none of
-// them, and a turn without a clue had no captain before the missed deadlines were counted.
+// turn without a clue, when its time ran out.
 // `lastSeconds`, on the clue and on each guess, says that it came in the last DEADLINE_HERO_MS of
 // the phase's time limit (docs/games/keywords.md#titles).
 export interface ClueRecord {
@@ -96,11 +95,11 @@ export interface ClueRecord {
   team: Team;
   word: string | null;
   count: ClueCount | null;
-  guesses: { card: number; color: CardColor; player: string; at?: number; lastSeconds?: true }[];
+  guesses: { card: number; color: CardColor; player: string; at: number; lastSeconds?: true }[];
   timedOut?: true;
   captain?: string;
   targets?: number[];
-  at?: number;
+  at: number;
   lastSeconds?: true;
 }
 

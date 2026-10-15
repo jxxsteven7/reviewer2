@@ -55,14 +55,17 @@ export type GameLogEvent = (typeof GAME_LOG_EVENTS)[number];
 // online. `start` is where everyone in the room was when the game began, by player ID, as the game
 // describes each of them (GameModule.seated), or null for a game that doesn't say. `agents` names
 // the AI players among them, by player ID, with the persona each played as; a game without any has
-// none. `deleted` has the player IDs of the accounts deleted since, in the order they went, once
-// each; a log without any has none.
+// none. `guests` has the number in the room of each guest who played in the game, by player ID: a
+// guest who left and came back has had two IDs with the one number. A game without any has none.
+// `deleted` has the player IDs of the accounts deleted since, in the order they went, once each; a
+// log without any has none.
 export interface GameLogData {
   v: 2;
   game: string;
   gameId: string;
   start: Record<string, unknown> | null;
   agents?: Record<string, string>;
+  guests?: Record<string, number>;
   entries: GameLogEntry[];
   truncated?: true;
   deleted?: string[];

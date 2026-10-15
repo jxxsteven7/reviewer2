@@ -247,7 +247,7 @@ describe('a view', () => {
   test('is a copy that cannot change the game', () => {
     const state: KeywordsState = talking();
     const view = viewFor(state, redCaptain, 0);
-    view.history[0]?.guesses.push({ card: 5, color: 'red', player: 'bob' });
+    view.history[0]?.guesses.push({ card: 5, color: 'red', player: 'bob', at: 0 });
     if (view.clue) view.clue.word = 'changed';
     view.selections?.pop();
     if (view.selections?.[0]) view.selections[0].card = 24;

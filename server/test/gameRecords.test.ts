@@ -38,7 +38,8 @@ const kept = () =>
 const kinds = () =>
   server.db
     .prepare(
-      'SELECT ending, winner, reason, data IS NOT NULL AS replay, accounts, guests, agents, takeover, ' +
+      "SELECT ending, winner, reason, (ending = 'finished' AND log IS NOT NULL) AS replay, accounts, guests, " +
+        'agents, takeover, ' +
         'in_match AS inMatch, practice, language, fields, version, rules, words, setup, ' +
         'started_at <= ended_at AS ordered ' +
         'FROM replays',
@@ -148,6 +149,12 @@ describe('the record of a game of the team word guessing game', () => {
     ]);
     const log = JSON.parse(kept()[0]?.log as string) as GameLogData;
     expect(log).toMatchObject({ v: 2, game: 'keywords', gameId: clue.gameId });
+    // The guests who played, Gus included, by their numbers in the room.
+    expect(log.guests).toEqual({
+      [cat.state?.me as string]: 1,
+      [dan.state?.me as string]: 2,
+      [gus.state?.me as string]: 3,
+    });
     // What kind of game it was: finished, won by the other group when this one revealed Reviewer 2,
     // with a replay; three players with accounts and three guests, Gus included and Eve, who
     // watched, not.
@@ -521,12 +528,14 @@ describe('the record of a game', () => {
     expect(kept()).toEqual([]);
   });
 
-  test('keeps the replay and the players without a log that grew too long, and says so', async () => {
+  test('keeps the players without a log that grew too long, and so without a replay, and says so', async () => {
     server = await startServer({ games: [fakeGame] });
-    await played({ press: 'x'.repeat(10_000), times: 14 });
+    const { anns, gameId } = await played({ press: 'x'.repeat(10_000), times: 14 });
     await until(() => server.logs.some(({ event }) => event === 'game_log_too_large'), 'the log line');
     await until(() => kept().length === 1, 'the record');
     expect(kept()[0]?.log).toBeNull();
+    expect(kinds()).toMatchObject([{ ending: 'finished', replay: 0 }]);
     expect(players()).toHaveLength(1);
+    expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
   });
 });

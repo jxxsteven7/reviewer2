@@ -43,6 +43,7 @@ function view(overrides: Partial<KeywordsView> = {}): KeywordsView {
 const record = (team: 'red' | 'blue', guesses: ClueRecord['guesses']): ClueRecord => ({
   turn: 1,
   team,
+  at: 0,
   word: 'Hint',
   count: 2,
   guesses,
@@ -74,7 +75,7 @@ describe('a card revealed between two snapshots', () => {
   const before = view();
   const one = view({
     cards: [card(true, 'blue'), card(false), card(false)],
-    history: [record('red', [{ card: 0, color: 'blue', player: 'bob' }])],
+    history: [record('red', [{ card: 0, color: 'blue', player: 'bob', at: 0 }])],
   });
 
   test('is the one card turned face up, with its color and the group whose students revealed it', () => {
@@ -87,8 +88,8 @@ describe('a card revealed between two snapshots', () => {
       cards: [card(true, 'blue'), card(true, 'red'), card(false)],
       history: [
         record('red', [
-          { card: 0, color: 'blue', player: 'bob' },
-          { card: 1, color: 'red', player: 'bob' },
+          { card: 0, color: 'blue', player: 'bob', at: 0 },
+          { card: 1, color: 'red', player: 'bob', at: 0 },
         ]),
       ],
     });

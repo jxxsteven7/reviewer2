@@ -16,7 +16,6 @@ import {
   type MatchRules,
   type PublicRoom,
   type Rank,
-  type ReplayMember,
   type RoomPhase,
   type RoomView,
   type Streak,
@@ -344,25 +343,12 @@ export class Room {
       chairId: this.chairId,
       now: this.#now,
       keyOf: (id) => this.members.get(id)?.key ?? this.#gone.get(id)?.key ?? id,
-      whoIs: (id) => this.#whoIs(id),
       isOnline: (id) => this.isOnline(id),
       agentOf: (id) => this.members.get(id)?.agent ?? this.#gone.get(id)?.agent ?? null,
       playerIds: () => [...this.members.keys()],
       titleCount: (id, title) => this.#titleCountOf(id, title),
       awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#agentsPlayed,
     };
-  }
-
-  // Whether a member, or one who has left during the game, has an account, is a guest, by number,
-  // or is an AI player, by persona (GameContext.whoIs); null for nobody the room knows.
-  #whoIs(id: string): ReplayMember | null {
-    const member = this.members.get(id);
-    const gone = this.#gone.get(id);
-    const agent = member?.agent ?? gone?.agent ?? null;
-    if (agent !== null) return { agent };
-    const guest = member ? member.guest : (gone?.guest ?? null);
-    if (guest !== null) return { guest };
-    return this.#accountIdOf(id) !== null ? { account: true } : null;
   }
 
   // The account of a member, or of one who has left during the game, or null for a guest.
@@ -451,9 +437,7 @@ export class Room {
   // A new member, who has come to play or only to watch. The first one chairs the room. A member
   // with an account comes with its username as the name; a guest has a number, the one they had
   // here before if their browser has been in the room, or else the next one. Names never clash:
-  // usernames are unique, and no username may be a guest's name (shared/src/accounts.ts), so an
-  // account named like one from before that rule stands beside the guest with that number, as it
-  // is, rather than being kept out.
+  // usernames are unique, and no username may be a guest's name (shared/src/accounts.ts).
   join(
     key: string,
     play = false,
@@ -1182,15 +1166,6 @@ export class Room {
     return this.phase === 'ended' ? (this.game.results?.(this.data, this.context) ?? null) : null;
   }
 
-  // The game that has just ended, to watch again, as the game gives it, or null when there is
-  // nothing to keep (GameModule.replay). A room with words of the chair's own keeps none: the
-  // words stay with the room, and a replay would carry those that were on the board
-  // (docs/games/keywords.md#custom-words).
-  replay(): unknown {
-    if (this.phase !== 'ended' || this.customWords.length > 0) return null;
-    return this.game.replay?.(this.data, this.context) ?? null;
-  }
-
   // The streak that the game which has just ended brought a member to, which the socket layer tells
   // the room once it has kept the records (docs/architecture.md#streaks). One of STREAK_MIN games or
   // more goes into the snapshots, which say whose it is and who may see it (views); a shorter one is
@@ -1257,7 +1232,8 @@ export class Room {
   //
   // - How it ended, and for a game that finished who won and how (GameModule.outcome), how long it
   //   took, and how it began (GameModule.setup).
-  // - Its log, or null when it grew too long to keep, and the AI's own log, if an AI played.
+  // - Its log, or null when it grew too long to keep, with the number of each guest who played in
+  //   it, and the AI's own log, if an AI played.
   // - Which of those who played in it had which account, by the player ID they had, those who left
   //   during the game included; a player who left and came back has had two. Guests have no
   //   account, and are not in it.
@@ -1281,12 +1257,14 @@ export class Room {
       if (kind) counts[kind] += 1;
     }
     const agentLog = this.#agentLog && !this.#agentLog.empty ? this.#agentLog.data() : null;
+    const log = this.#log.data();
+    const guests = this.#guestsOf(keys);
     return {
       ending: this.#ending,
       outcome: this.#ending === 'finished' ? (this.game.outcome?.(this.data) ?? null) : null,
       durationMs: Math.max(0, Math.round(this.#now() - this.#log.startedAt)),
       setup: this.#setup,
-      log: this.#log.data(),
+      log: log && (Object.keys(guests).length > 0 ? { ...log, guests } : log),
       overflowed: this.#log.overflowed,
       agentLog,
       accounts,
@@ -1321,6 +1299,19 @@ export class Room {
       if (accountId !== null && keys.has(key)) accounts.push({ playerId, accountId });
     }
     return accounts;
+  }
+
+  // The number of each guest who played in the game, with these member keys, by the player ID they
+  // had, those who left included: a guest who left and came back has had two.
+  #guestsOf(keys: ReadonlySet<string>): Record<string, number> {
+    const guests: Record<string, number> = {};
+    for (const member of this.members.values()) {
+      if (member.guest !== null && keys.has(member.key)) guests[member.id] = member.guest;
+    }
+    for (const [playerId, { key, guest }] of this.#gone) {
+      if (guest !== null && keys.has(key)) guests[playerId] = guest;
+    }
+    return guests;
   }
 
   // What the groups have said since the game ended, as they talk it over, that the record of the

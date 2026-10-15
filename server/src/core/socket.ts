@@ -325,9 +325,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   //
   // Then every game, however it ended, finished, withdrawn or cut short, and whoever played in it,
   // leaves the record of the game itself (docs/architecture.md#game-records): how it ended and what
-  // kind of game it was, how it began, the replay to watch again if it finished
-  // (GameModule.replay()), the log of everything that happened with the AI's own log beside it, and
-  // which player was which account. A game with words of the chair's own leaves none
+  // kind of game it was, how it began, the log of everything that happened with the AI's own log
+  // beside it, and which player was which account, from which a game that finished is watched
+  // again (docs/architecture.md#replays). A game with words of the chair's own leaves none
   // (Room.record()). Whatever else is to be kept of a game goes here, after the records.
   function keepRecords(room: Room): void {
     if (!accounts || room.gameId === null) return;
@@ -368,7 +368,6 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         ending: kept.ending,
         outcome: kept.outcome,
         durationMs: kept.durationMs,
-        replay: room.replay(),
         setup: kept.setup,
         log: gameLog,
         agentLog: kept.agentLog,

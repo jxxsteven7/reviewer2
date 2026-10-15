@@ -21,7 +21,7 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import { keptReplay, shownReplay } from './replay';
+import { shownReplay, type KeywordsSetup } from './replay';
 import {
   agentLimitReached,
   agentMove,
@@ -519,7 +519,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   // How the game began: the language and the settings, the group that starts, and the board, every
   // card's color included. It goes into the record of the game alone, which stays on the server.
-  setup(data) {
+  setup(data): KeywordsSetup | null {
     const game = data.game;
     if (!game) return null;
     return {
@@ -617,9 +617,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     );
   },
 
-  // The game that has just ended, to watch again, and a kept one as an account opens it
-  // (replay.ts).
-  replay: keptReplay,
+  // A kept game as an account watches it again (replay.ts).
   showReplay: shownReplay,
 
   views(data, ctx) {

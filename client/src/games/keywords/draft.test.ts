@@ -9,6 +9,7 @@ const KEY = 'r2.clueDraft';
 const clue = (turn: number, team: 'red' | 'blue', word: string | null): ClueRecord => ({
   turn,
   team,
+  at: 0,
   word,
   count: word === null ? null : 1,
   guesses: [],

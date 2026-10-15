@@ -889,6 +889,159 @@ describe('a database in DATA_DIR', () => {
     ]);
   });
 
+  test('of the twentieth release has every game in the newest format, and leaves behind what it can not complete', async () => {
+    const twentieth = await open(dir, MIGRATIONS.slice(0, 20));
+    const log = (gameId: string, more: Record<string, unknown> = {}) =>
+      JSON.stringify({
+        v: 2,
+        game: 'keywords',
+        gameId,
+        start: {},
+        entries: [{ t: 1, by: null, type: 'end' }],
+        ...more,
+      });
+    const setup = JSON.stringify({ language: 'en', startingTeam: 'red', cards: [] });
+    // A replay as the server kept it before the replays were worked out from the logs, with a guest's
+    // number among who was who.
+    const data = JSON.stringify({
+      gameId: 'g',
+      cards: [],
+      history: [],
+      members: { p1: { account: true }, p2: { guest: 4 } },
+    });
+    const kept = (gameId: string, endedAt: string, more = '') => `
+      INSERT INTO replays (game_id, game, ended_at, data, log, ending, winner, reason, started_at, setup, accounts,
+        guests, agents, takeover, in_match, practice, language, fields, version, rules, words)
+      VALUES ('${gameId}', 'keywords', '${endedAt}', NULL, '${log(gameId)}', 'finished', 'red', 'found',
+        '${endedAt}', '${setup}', 1, 0, 0, 0, 0, 0, 'en', '["general"]', 'v0', 4, 'abc') ${more};`;
+    twentieth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES
+        (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
+      -- The games from before they were kept: records alone, which ended before the first game kept
+      -- with its whole record, and a game with words of the chair's own, which ended after it.
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict) VALUES
+        (1, 'keywords', 'early', '2026-10-01T10:00:00.000Z', 'red', 'captain', 'red', 1, 'oral'),
+        (2, 'keywords', 'early', '2026-10-01T10:00:00.000Z', 'blue', 'captain', 'red', 0, 'reject');
+      -- A game kept without a log, and one with a log of the first version, neither with what kind of
+      -- game it was, each with a record, a title of the game and who was who.
+      INSERT INTO replays (game_id, game, ended_at, data, ending) VALUES
+        ('nolog', 'keywords', '2026-10-02T10:00:00.000Z', '{"gameId":"nolog"}', 'finished');
+      INSERT INTO replays (game_id, game, ended_at, data, log, ending) VALUES
+        ('first', 'keywords', '2026-10-02T11:00:00.000Z', '{"gameId":"first"}', '${log('first', { v: 1 })}', 'finished');
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points) VALUES
+        (1, 'keywords', 'nolog', '2026-10-02T10:00:00.000Z', 'red', 'guesser', 'red', 1, 'oral', 30),
+        (1, 'keywords', 'first', '2026-10-02T11:00:00.000Z', 'red', 'guesser', 'red', 1, 'oral', 20),
+        (2, 'keywords', 'first', '2026-10-02T11:00:00.000Z', 'blue', 'captain', 'red', 0, 'reject', -5);
+      INSERT INTO game_players VALUES ('first', 'p1', 1), ('first', 'p2', 2);
+      INSERT INTO titles (account_id, title, game_id, turn, awarded_at) VALUES (1, 'deadline_hero', 'nolog', 1, 'now');
+      -- A match of those days, which no record names, with its title, and a title from before the
+      -- matches had IDs.
+      INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
+        (1, 'keywords', 'm-old', '2026-10-02T12:00:00.000Z', 3, 1, 2, 40, 'best_paper'),
+        (2, 'keywords', 'm-old', '2026-10-02T12:00:00.000Z', 3, 2, 2, 10, NULL);
+      INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (1, 'best_paper', 'm-old', 'now');
+      INSERT INTO titles (account_id, title, awarded_at) VALUES (2, 'black_hole', 'now');
+      -- The games kept with their whole record: one from before the practice rooms, with the replay
+      -- that the server kept, and a guest among who was who; one in a match of a single game, with
+      -- its title; one an AI played in; and one abandoned. A game with words of the chair's own has
+      -- a record alone.
+      ${kept('whole', '2026-10-03T10:00:00.000Z')}
+      UPDATE replays SET practice = NULL, guests = 1, data = '${data}' WHERE game_id = 'whole';
+      ${kept('matched', '2026-10-03T11:00:00.000Z')}
+      UPDATE replays SET in_match = 1 WHERE game_id = 'matched';
+      ${kept('ai', '2026-10-03T12:00:00.000Z')}
+      UPDATE replays SET agents = 1, agent_log = '{}' WHERE game_id = 'ai';
+      ${kept('cut', '2026-10-03T13:00:00.000Z')}
+      UPDATE replays SET ending = 'abandoned', winner = NULL, reason = NULL, practice = NULL WHERE game_id = 'cut';
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
+        match_id, match_game, match_games, agents) VALUES
+        (1, 'keywords', 'whole', '2026-10-03T10:00:00.000Z', 'red', 'captain', 'red', 1, 'oral', 12, NULL, NULL, NULL, 0),
+        (1, 'keywords', 'matched', '2026-10-03T11:00:00.000Z', 'red', 'captain', 'blue', 0, 'reject', -3, 'm1', 1, 1, 0),
+        (1, 'keywords', 'ai', '2026-10-03T12:00:00.000Z', 'red', 'captain', 'red', 1, 'oral', 0, NULL, NULL, NULL, 1),
+        (1, 'keywords', 'custom', '2026-10-03T14:00:00.000Z', 'red', 'captain', 'red', 1, 'oral', 8, NULL, NULL, NULL, 0);
+      INSERT INTO game_players VALUES ('whole', 'p1', 1), ('matched', 'p1', 1), ('ai', 'p1', 1);
+      INSERT INTO agent_plays (game_id, player_id, persona, takeover) VALUES ('ai', 'r1', 'reviewer1', 0);
+      INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
+        (1, 'keywords', 'm1', '2026-10-03T11:00:00.000Z', 1, 2, 2, -3, 'black_hole');
+      INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (1, 'black_hole', 'm1', 'now');
+      INSERT INTO titles (account_id, title, game_id, turn, awarded_at) VALUES (1, 'opening_record', 'whole', 1, 'now');
+      -- A game kept with its whole record but a guest whose number nothing says, in a match.
+      ${kept('guest', '2026-10-03T15:00:00.000Z')}
+      UPDATE replays SET guests = 1, in_match = 1 WHERE game_id = 'guest';
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
+        match_id, match_game, match_games) VALUES
+        (2, 'keywords', 'guest', '2026-10-03T15:00:00.000Z', 'red', 'captain', 'red', 1, 'oral', 15, 'm2', 1, 1);
+      INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
+        (2, 'keywords', 'm2', '2026-10-03T15:00:00.000Z', 1, 1, 2, 15, 'best_paper');
+      INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (2, 'best_paper', 'm2', 'now');
+      -- The streaks as they stood, counting everything.
+      INSERT INTO streaks VALUES (1, 9, 9, 9, 1), (2, 9, 9, 9, 1);
+    `);
+    twentieth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 21));
+    expect(migrated).toMatchObject({ schema: 21, migratedFrom: 20 });
+    const { db } = migrated;
+    const all = (sql: string) => db.prepare(sql).all();
+    // The games that couldn't be completed are gone, with their records, titles and who was who.
+    expect(all('SELECT game_id AS game, practice FROM replays ORDER BY game_id')).toEqual([
+      { game: 'ai', practice: 0 },
+      { game: 'cut', practice: 0 },
+      { game: 'matched', practice: 0 },
+      { game: 'whole', practice: 0 },
+    ]);
+    expect(all('SELECT account_id AS account, game_id AS game FROM game_records ORDER BY id')).toEqual([
+      { account: 1, game: 'whole' },
+      { account: 1, game: 'matched' },
+      { account: 1, game: 'ai' },
+      { account: 1, game: 'custom' },
+    ]);
+    expect(all('SELECT game_id AS game, player_id AS player FROM game_players ORDER BY game_id')).toEqual([
+      { game: 'ai', player: 'p1' },
+      { game: 'matched', player: 'p1' },
+      { game: 'whole', player: 'p1' },
+    ]);
+    expect(all('SELECT game_id AS game FROM agent_plays')).toEqual([{ game: 'ai' }]);
+    // The matches with them: the old one, which no record names, and the one a removed game was in.
+    expect(all('SELECT match_id AS match FROM match_records')).toEqual([{ match: 'm1' }]);
+    expect(
+      all('SELECT account_id AS account, title, match_id AS match, game_id AS game FROM titles ORDER BY id'),
+    ).toEqual([
+      { account: 1, title: 'black_hole', match: 'm1', game: null },
+      { account: 1, title: 'opening_record', match: null, game: 'whole' },
+    ]);
+    // The replay that the server kept is gone; the guest's number is in the log, for the replay
+    // worked out from it.
+    expect(
+      (all("SELECT name FROM pragma_table_info('replays')") as { name: string }[]).map(({ name }) => name),
+    ).not.toContain('data');
+    const whole = db.prepare("SELECT log FROM replays WHERE game_id = 'whole'").get() as { log: string };
+    expect(JSON.parse(whole.log)).toMatchObject({ guests: { p2: 4 } });
+    // The streaks, counted again over the records that are left, without the game an AI played in:
+    // Ann won, lost, and won with words of her own; Bob has no record left.
+    expect(all('SELECT * FROM streaks')).toEqual([{ account_id: 1, best_wins: 1, best_losses: 1, run: 1, run_won: 1 }]);
+    // Nothing in the old formats can come back.
+    const refused = (sql: string) => expect(() => db.exec(sql), sql).toThrow(/constraint/i);
+    refused("INSERT INTO titles (account_id, title, awarded_at) VALUES (1, 'black_hole', 'now')");
+    refused(
+      "INSERT INTO titles (account_id, title, match_id, game_id, turn, awarded_at) VALUES (1, 'x', 'm1', 'g', 1, 'now')",
+    );
+    refused("INSERT INTO replays (game_id, game, ended_at, ending) VALUES ('x', 'keywords', 'now', 'finished')");
+    refused(
+      'INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict) ' +
+        "VALUES (1, 'keywords', 'x', 'now', 'red', 'captain', 'red', 1, 'oral')",
+    );
+    refused(
+      'INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points, agents) ' +
+        "VALUES (1, 'keywords', 'x', 'now', 'red', 'captain', 'red', 1, 'oral', 5, 1)",
+    );
+    refused(
+      'INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points, agents, ' +
+        "match_id) VALUES (1, 'keywords', 'x', 'now', 'red', 'captain', 'red', 1, 'oral', 5, 0, 'm1')",
+    );
+    expect(pragma(db, 'foreign_key_check')).toBeUndefined();
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(

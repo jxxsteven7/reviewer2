@@ -1,105 +1,162 @@
 import {
+  SPECTATOR,
   TEAMS,
   type AgentPersona,
+  type ClueCount,
   type KeywordsReplay,
+  type KeywordsSettings,
+  type Language,
+  type ReplayCard,
   type ReplayGroup,
-  type ReplayMember,
   type ReplayPerson,
+  type Seat,
   type ShownReplay,
   type Team,
 } from '@reviewer2/shared';
-import type { GameContext, KeptReplay } from '../../core/game';
+import type { KeptReplay } from '../../core/game';
 import type { GameLogData } from '../../core/gameLog';
-import type { KeywordsData } from './index';
-import { seatOf } from './seats';
-import { copyRecord } from './state';
+import {
+  applyClue,
+  applyExtension,
+  applyPause,
+  applyResume,
+  applyReveal,
+  applyTimeout,
+  beginGame,
+  endTurn,
+} from './rules';
+import type { KeywordsState } from './state';
 
-// The replays of the team word guessing game (docs/architecture.md#replays): what the server keeps
-// of a game that finished (GameModule.replay), and how an account that played in it sees it
-// (GameModule.showReplay).
+// The replays of the team word guessing game (docs/architecture.md#replays): a kept game as an
+// account that played in it watches it again (GameModule.showReplay), worked out as it is opened
+// from how the game began and its log. The log holds every move that changed the game, in order,
+// and every seat taken, changed or left, so the game is played through again with them, by the
+// functions that made the moves (rules.ts), which take each move as the rules took it then.
 
-// The game that has just ended, to watch again (shared/src/games/keywords/replay.ts): the whole
-// board with its colors, the record of the clues and the guesses, the groups as the game ended, in
-// the order of the room, and who everyone in them was, and whoever gave a clue or revealed a card
-// and has left since: an account as no more than that, a guess by number, and an AI player by its
-// persona. A withdrawn game is nothing to watch.
-export function keptReplay(data: KeywordsData, ctx: GameContext): KeywordsReplay | null {
-  const game = data.game;
-  if (!game?.result || game.result.winner === null) return null;
-  const ids = ctx.playerIds();
-  const groups = TEAMS.map((team): ReplayGroup => {
-    const inSeat = (role: 'captain' | 'guesser') =>
-      ids.filter((id) => {
-        const seat = seatOf(data.seating, id);
-        return seat.team === team && seat.role === role;
-      });
-    return { team, captain: inSeat('captain')[0] ?? null, guessers: inSeat('guesser') };
-  });
-  const members: Record<string, ReplayMember> = {};
-  for (const id of [...groupIds(groups), ...historyIds(game.history)]) {
-    const who = members[id] === undefined ? ctx.whoIs(id) : null;
-    if (who) members[id] = who;
+// How a game began, as its record keeps it (GameModule.setup): the language and the settings, the
+// group that started, and the board with every color.
+export interface KeywordsSetup {
+  language: Language;
+  settings: KeywordsSettings;
+  startingTeam: Team;
+  cards: ReplayCard[];
+}
+
+// A seat as the log has it, where the game said a member was (GameModule.seated).
+function seatIn(value: unknown): Seat {
+  const { team, role } = (value ?? {}) as { team?: Team | null; role?: string };
+  return team && TEAMS.includes(team) && (role === 'captain' || role === 'guesser') ? { team, role } : SPECTATOR;
+}
+
+// The game that a kept log tells, if it finished: the board, the record of the clues and the
+// guesses, the result, and the groups as it ended, each PI and its students by player ID, in the
+// order of the room. The seats are where everyone was as the game began, and then every seat that
+// someone took as they came or by moving, every seat left for the spectators, by moving or by the
+// chair's bench, and every seat of someone who left the room, removed or not. A PI who left the
+// seat of their own accord while it stays empty is named on a clue that the time ran out on, as the
+// game names them (KeywordsData.vacated): not one whom the chair benched. What the groups said
+// after the end changes nothing. Null for a game that didn't finish.
+export function replayOf(setup: KeywordsSetup, log: GameLogData): KeywordsReplay | null {
+  let state: KeywordsState = beginGame(
+    {
+      gameId: log.gameId,
+      settings: setup.settings,
+      language: setup.language,
+      startingTeam: setup.startingTeam,
+      cards: setup.cards.map(({ word, color }) => ({ word, color, revealed: false })),
+    },
+    0,
+  );
+  const seats = new Map(Object.entries(log.start ?? {}).map(([id, seat]) => [id, seatIn(seat)]));
+  const vacated: Record<Team, string | null> = { red: null, blue: null };
+  const leaves = (id: string) => {
+    const seat = seats.get(id);
+    if (seat?.role === 'captain') vacated[seat.team] = id;
+  };
+  const captain = (team: Team) =>
+    [...seats].find(([, seat]) => seat.team === team && seat.role === 'captain')?.[0] ?? null;
+  for (const { t, by, type, data } of log.entries) {
+    if (type === 'end') break;
+    const carried = (data ?? {}) as Record<string, unknown>;
+    if (type === 'join' && by !== null) {
+      seats.set(by, seatIn(carried.seat));
+    } else if (type === 'keywords:seat' && by !== null) {
+      leaves(by);
+      seats.set(by, seatIn(carried));
+    } else if (type === 'leave' && by !== null) {
+      leaves(by);
+      seats.delete(by);
+    } else if (type === 'bench') {
+      const player = carried.player as string;
+      if (player === by) leaves(player);
+      seats.set(player, SPECTATOR);
+    } else if (type === 'keywords:clue' && by !== null) {
+      const { word, count, targets = [] } = carried as { word: string; count: ClueCount; targets?: number[] };
+      state = applyClue(state, by, { word, count, targets }, t);
+    } else if (type === 'keywords:reveal' && by !== null) {
+      state = applyReveal(state, by, carried.card as number, t);
+    } else if (type === 'keywords:pass') {
+      state = endTurn(state, t);
+    } else if (type === 'keywords:pause') {
+      state = applyPause(state, t);
+    } else if (type === 'keywords:resume') {
+      state = applyResume(state, t);
+    } else if (type === 'keywords:extend') {
+      state = applyExtension(state);
+    } else if (type === 'tick') {
+      const blamed = captain(state.team) ?? vacated[state.team];
+      state = applyTimeout(state, t, () => (blamed === null ? null : { captain: blamed, before: null }));
+    }
   }
+  if (!state.result || state.result.winner === null) return null;
+  const inSeat = (team: Team, role: 'captain' | 'guesser') =>
+    [...seats].filter(([, seat]) => seat.team === team && seat.role === role).map(([id]) => id);
   return {
-    gameId: game.gameId,
-    language: game.language,
-    startingTeam: game.startingTeam,
-    cards: game.cards.map(({ word, color }) => ({ word, color })),
-    history: game.history.map(copyRecord),
-    result: { ...game.result },
-    groups,
-    members,
+    gameId: log.gameId,
+    language: setup.language,
+    startingTeam: setup.startingTeam,
+    cards: setup.cards.map(({ word, color }) => ({ word, color })),
+    history: state.history,
+    result: state.result,
+    groups: TEAMS.map((team): ReplayGroup => ({
+      team,
+      captain: inSeat(team, 'captain')[0] ?? null,
+      guessers: inSeat(team, 'guesser'),
+    })),
   };
 }
 
-// A kept replay as an account sees it: the groups, as kept or, for a replay from before they were,
-// worked out from the record of the game, and who everyone was. An account that played is shown as
-// it is now, and one deleted since as deleted; a guest by their number; an AI player by its
-// persona. A replay from before says nothing of who was who: a player there whose account is gone
-// can't be told from a guest, so each of them is shown as a guest, numbered in the order of the
-// seats. One from before the records of the games (docs/architecture.md#game-records) knows only
-// the accounts that revealed a card under their username (migration 20), and its PIs are unknown:
-// the clues of that time don't say who gave them. Someone a new
-// replay doesn't know is left out, as a player who left.
-export function shownReplay({ replay: kept, log: read, accounts, viewer }: KeptReplay): ShownReplay {
-  const replay = kept as KeywordsReplay;
-  // The record of the game is read for a replay from before the groups were kept alone.
-  const log = replay.groups ? null : read();
-  const groups = replay.groups ?? groupsFromLog(log) ?? groupsFromHistory(replay);
-  const agents: Record<string, string> = { ...log?.agents, ...replay.agents };
+// A kept game as an account sees it, if it finished, with who everyone in the groups and the record
+// was: an account that played in it as it is now, and one deleted since as deleted (the log's
+// `deleted`); an AI player by its persona, and a guest by their number in the room, as the log
+// names them. Someone else, as an account that the log doesn't know any more, is left out. `me` is
+// the player ID that the account watching had in the groups, or else in the record.
+export function shownReplay({ setup, log, accounts, viewer }: KeptReplay): ShownReplay | null {
+  const replay = replayOf(setup as KeywordsSetup, log);
+  if (!replay) return null;
+  const deleted = new Set(log.deleted);
   const people: Record<string, ReplayPerson> = {};
-  let guests = 0;
-  for (const id of [...groupIds(groups), ...historyIds(replay.history)]) {
+  for (const id of [...groupIds(replay.groups), ...historyIds(replay.history)]) {
     if (people[id]) continue;
     const account = accounts.get(id);
-    const member = replay.members?.[id];
+    const agent = log.agents?.[id];
+    const guest = log.guests?.[id];
     if (account) {
       people[id] = {
         name: account.username,
         ...(account.avatar === null ? {} : { avatar: account.avatar }),
         handle: account.handle,
       };
-    } else if (member) {
-      people[id] = 'account' in member ? { deleted: true } : { ...member };
-    } else if (agents[id]) {
-      people[id] = { agent: agents[id] as AgentPersona };
-    } else if (!replay.members) {
-      guests += 1;
-      people[id] = { guest: guests };
+    } else if (deleted.has(id)) {
+      people[id] = { deleted: true };
+    } else if (agent !== undefined) {
+      people[id] = { agent: agent as AgentPersona };
+    } else if (guest !== undefined) {
+      people[id] = { guest };
     }
   }
-  const me = groupIds(groups).find((id) => viewer.has(id)) ?? [...viewer].find((id) => people[id]) ?? null;
-  return {
-    gameId: replay.gameId,
-    language: replay.language,
-    startingTeam: replay.startingTeam,
-    cards: replay.cards,
-    history: replay.history,
-    result: replay.result,
-    groups,
-    people,
-    me,
-  };
+  const me = groupIds(replay.groups).find((id) => viewer.has(id)) ?? [...viewer].find((id) => people[id]) ?? null;
+  return { ...replay, people, me };
 }
 
 // Everyone in the groups: each group's PI, then its students.
@@ -112,44 +169,3 @@ const historyIds = (history: KeywordsReplay['history']) =>
     ...(record.captain === undefined ? [] : [record.captain]),
     ...record.guesses.map(({ player }) => player),
   ]);
-
-// The groups from the record of the game, as they stood at its end, as a replay that keeps them has
-// them: where everyone sat when it began, and then, in order, every seat that someone took as they
-// came or by moving, and every seat left by someone who moved to the spectators, was moved there by
-// the chair, was removed or left the room. Null without a record, as for the games from before
-// there were any.
-function groupsFromLog(log: GameLogData | null): ReplayGroup[] | null {
-  if (!log?.start) return null;
-  const seats = new Map<string, { team: Team; role: 'captain' | 'guesser' }>();
-  const sit = (id: string, seat: unknown) => {
-    const { team, role } = (seat ?? {}) as { team?: Team | null; role?: string };
-    if (team && TEAMS.includes(team) && (role === 'captain' || role === 'guesser')) seats.set(id, { team, role });
-    else seats.delete(id);
-  };
-  for (const [id, seat] of Object.entries(log.start)) sit(id, seat);
-  for (const { by, type, data } of log.entries) {
-    const about = (data as { player?: string } | undefined)?.player;
-    if (type === 'join' && by !== null) sit(by, (data as { seat?: unknown } | undefined)?.seat);
-    else if (type === 'keywords:seat' && by !== null) sit(by, data);
-    else if (type === 'leave' && by !== null) seats.delete(by);
-    else if ((type === 'bench' || type === 'remove') && about !== undefined) seats.delete(about);
-  }
-  const inSeat = (team: Team, role: 'captain' | 'guesser') =>
-    [...seats].filter(([, seat]) => seat.team === team && seat.role === role).map(([id]) => id);
-  return TEAMS.map((team): ReplayGroup => ({
-    team,
-    captain: inSeat(team, 'captain')[0] ?? null,
-    guessers: inSeat(team, 'guesser'),
-  }));
-}
-
-// The groups from the clues and the guesses alone, for a game without a record: whoever gave a
-// group's clues was its PI, and whoever revealed its cards one of its students.
-function groupsFromHistory(replay: KeywordsReplay): ReplayGroup[] {
-  return TEAMS.map((team): ReplayGroup => {
-    const records = replay.history.filter((record) => record.team === team);
-    const captain = records.find((record) => record.captain !== undefined)?.captain ?? null;
-    const guessers = [...new Set(records.flatMap((record) => record.guesses.map(({ player }) => player)))];
-    return { team, captain, guessers: guessers.filter((id) => id !== captain) };
-  });
-}
