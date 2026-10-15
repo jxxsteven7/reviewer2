@@ -4,7 +4,7 @@ import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { account } from '../account';
-import FieldPicker from '../components/FieldPicker.vue';
+import FieldFold from '../components/FieldFold.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
@@ -22,6 +22,7 @@ import {
   storePractice,
   type PracticeRole,
 } from '../practice';
+import { keepRoomSetup, keptFields } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 
@@ -29,17 +30,23 @@ import { useBusy } from '../useBusy';
 // (docs/architecture.md#practice-rooms): a button that opens a sheet, where an account picks its
 // role, the language and the word lists, and starts a game in a new private room, where Reviewer 1
 // takes the three other seats. The sheet shows who will sit where. The role and the lists are
-// those of the last practice room, which the browser remembers, or the PI and the general list;
-// the lists fold into one line, which names them, so that the whole sheet fits on a phone's
-// screen. A guest is asked to log in or register. While the AI players don't answer, the button
+// those of the account's last practice room (RoomSetup), or of the browser's from before accounts
+// kept it, or the PI and the general list; the lists fold into one line, which names them, so that
+// the whole sheet fits on a phone's screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't answer, the button
 // says so and can't be pressed; on a server without an agent, there is no button at all.
 const { t, locale } = useI18n();
 const router = useRouter();
 const id = useId();
 const open = ref(false);
-const role = ref<PracticeRole>(storedRole());
+// The account's last practice room, as the server keeps it, or the browser's.
+const lastRole = (): PracticeRole =>
+  PRACTICE_ROLES.find((known) => known === account.summary?.roomSetup.practice?.role) ?? storedRole();
+const lastFields = (): string[] | null => {
+  const kept = account.summary?.roomSetup.practice?.fields;
+  return kept && kept.length > 0 ? kept : storedFields();
+};
+const role = ref<PracticeRole>(lastRole());
 const chosen = ref<string[]>([]);
-const folded = ref(true);
 const formError = ref<string | undefined>();
 const { busy, run } = useBusy();
 const language = computed(() => locale.value as Language);
@@ -51,7 +58,8 @@ checkAgents();
 
 // The lists with enough words for a game in the room's language. The lists of the last practice
 // room, or the general one, are chosen once the lists are here; a change of language then drops a
-// chosen list that hasn't enough words in the new one, as in the room setup.
+// chosen list that hasn't enough words in the new one, as in the room setup. They are chosen again
+// each time the sheet opens, from what the account has kept since.
 const usable = computed(
   () => new Set((fields.value ?? []).filter((field) => field.counts[language.value] >= BOARD_SIZE).map(({ id }) => id)),
 );
@@ -60,24 +68,11 @@ watch(
   usable,
   (ids) => {
     if (!fields.value) return;
-    const from = chosenOnce ? chosen.value : (storedFields() ?? DEFAULT_FIELDS);
-    chosen.value = from.filter((field) => ids.has(field));
+    chosen.value = keptFields(chosenOnce ? chosen.value : (lastFields() ?? DEFAULT_FIELDS), ids);
     chosenOnce = true;
   },
   { immediate: true },
 );
-
-// The chosen lists in a line, in the order of the setup's list: one or two by name, more as the
-// first two and how many there are beyond those.
-const summary = computed(() => {
-  if (!fields.value) return t('create.loadingFields');
-  const names = fields.value.filter((field) => chosen.value.includes(field.id)).map(({ name }) => name[language.value]);
-  const [first, second] = names;
-  if (first === undefined) return t('home.practice.chooseField');
-  if (second === undefined) return first;
-  if (names.length === 2) return t('home.practice.fieldsTwo', { first, second });
-  return t('home.practice.fieldsMore', { first, second, rest: names.length - 2 });
-});
 
 // Who sits where: the player in the red group as the role chosen, Reviewer 1 everywhere else.
 const seats = computed(() => {
@@ -93,7 +88,8 @@ const ready = computed(() => account.summary !== null && !offline.value && chose
 
 function show() {
   formError.value = undefined;
-  folded.value = true;
+  role.value = lastRole();
+  if (fields.value) chosen.value = keptFields(lastFields() ?? DEFAULT_FIELDS, usable.value);
   open.value = true;
   loadFields();
   checkAgents();
@@ -117,6 +113,7 @@ async function start() {
     return;
   }
   storePractice(role.value, chosen.value);
+  keepRoomSetup({ practice: { role: role.value, fields: [...chosen.value] } });
   await router.push(`/room/${reply.code}`);
 }
 </script>
@@ -181,31 +178,8 @@ async function start() {
           <LanguageSwitch />
         </div>
 
-        <div class="fold">
-          <button
-            type="button"
-            class="toggle"
-            :aria-expanded="!folded"
-            :aria-controls="`${id}-fields`"
-            @click="folded = !folded"
-          >
-            <span class="fold-text">
-              <span class="fold-title">{{ t('create.fields') }}</span>
-              <span class="fold-summary">{{ summary }}</span>
-            </span>
-          </button>
-          <div v-show="!folded" :id="`${id}-fields`" class="fold-list">
-            <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
-            <FieldPicker
-              v-else-if="usable.size > 0"
-              v-model="chosen"
-              :fields="fields"
-              :language="language"
-              :needed="BOARD_SIZE"
-            />
-            <p v-else class="hint">{{ t('create.noFields') }}</p>
-          </div>
-        </div>
+        <FieldFold v-model="chosen" :fields="fields" :language="language" :needed="BOARD_SIZE" />
+        <p v-if="fields && usable.size > 0 && chosen.length === 0" class="hint">{{ t('home.practice.chooseField') }}</p>
 
         <p class="note">{{ t('home.practice.note') }}</p>
         <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
@@ -472,72 +446,6 @@ legend {
 .language strong {
   margin-inline-end: var(--space-3);
   font-weight: var(--weight-black);
-}
-
-/* The word lists, folded into one line that names them, as the home page folds its lists of
-   thanks: the whole line is the button, with its marker in front. */
-.fold {
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius-panel);
-  background: var(--paper);
-  box-shadow: var(--shadow-1);
-}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-height: 52px;
-  padding: var(--space-2) var(--space-4);
-  border: 0;
-  border-radius: calc(var(--radius-panel) - var(--line));
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.toggle::before {
-  content: '\25B8';
-  font-size: var(--text-xs);
-}
-
-.toggle[aria-expanded='true']::before {
-  content: '\25BE';
-}
-
-@media (hover: hover) {
-  .toggle:hover {
-    background: var(--paper-2);
-  }
-}
-
-.fold-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.fold-title {
-  font-weight: var(--weight-black);
-  line-height: 1.3;
-}
-
-.fold-summary {
-  overflow: hidden;
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fold-list {
-  padding: var(--space-1) var(--space-4) var(--space-4);
 }
 
 .problem {

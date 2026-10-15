@@ -53,8 +53,19 @@ async function groupOfTwo(browser: Browser) {
   return { table, team, other, fay, fayStates, student, name, states: [...table.everyone, fayStates] };
 }
 
-// Longer than a tap waits for the next one (useCardGestures.ts).
-const TAP_WAIT = 400;
+// Holding a card down opens the menu of marks (MarkMenu.vue), where the student chooses one: the
+// card's own takes it off again.
+async function holdToMark(page: Page, index: number, mark: keyof typeof text.game.gestures.marks): Promise<void> {
+  const found = await card(page, index).boundingBox();
+  if (!found) throw new Error('the card has no box');
+  await page.mouse.move(found.x + found.width / 2, found.y + found.height / 2);
+  await page.mouse.down();
+  const menu = page.locator('.mark-menu [role=menu]');
+  await expect(menu).toBeVisible();
+  await page.mouse.up();
+  await menu.getByRole('menuitemradio', { name: text.game.gestures.marks[mark] }).click();
+  await expect(page.locator('.mark-menu')).toHaveCount(0);
+}
 
 // The choosers of a card hang on it as avatars, and the card's accessible name says who they are.
 const chosenBy = (names: string) => new RegExp(`, chosen by ${names}$`);
@@ -96,44 +107,49 @@ test("a group's students see each other's choices, and nobody else does", async 
   for (const recorded of states) expect(expectOwnGroupOnly(recorded)).toBeGreaterThan(0);
 });
 
-test("a group's students mark cards for each other with taps, which their PI reads and nobody else sees", async ({
+test("a group's students mark cards for each other from a menu, which their PI reads and nobody else sees", async ({
   browser,
 }) => {
   const { table, team, other, fay, student, states } = await groupOfTwo(browser);
   const captain = table.captains[team];
-  // No tools to pick: the line under the board says which taps do what, and one tap chooses
-  // nothing before the group's clue.
+  // No tools to pick: the line under the board says how to mark a card, and a tap chooses nothing
+  // before the group's clue.
   await expect(student.locator('.mark-tools')).toHaveCount(0);
   await expect(student.locator('.play .gestures')).toHaveText(text.game.gestures.mark);
   const own = await keyCard(captain, team);
   const theirs = await keyCard(captain, other);
   const paper = await keyCard(captain, 'neutral');
   await card(student, own).click();
-  // A tap counts once the time for another has passed.
-  await student.waitForTimeout(TAP_WAIT);
   await expect(card(student, own)).not.toHaveClass(/noted|selected/);
-  // Two taps: one of the group's own.
-  await card(student, own).dblclick();
+  await expect(student.locator('.mark-menu')).toHaveCount(0);
+  // Held down: the menu, and one of the group's own.
+  await holdToMark(student, own, 'ours');
   await expect(card(fay, own)).toHaveClass(new RegExp(`note-${team}`));
   await expect(card(fay, own)).toHaveAttribute('aria-label', /, marked as ours$/);
   // The group's PI reads it, small in the corner, on the card's own tint; the other PI doesn't.
-  await expect(card(captain, own).locator('.note.quiet')).toBeVisible();
+  await expect(card(captain, own).locator('.note')).toBeVisible();
   await expect(card(captain, own)).toHaveAttribute('aria-label', /, marked as ours$/);
   await expect(card(captain, own)).not.toHaveClass(/noted/);
   await expect(table.captains[other].locator('.board .note')).toHaveCount(0);
 
-  // Fay marks another card as the other group's with three taps, and a third as maybe Reviewer 2
-  // by holding it down; the student takes the first mark off again with two more taps.
-  await card(fay, theirs).click({ clickCount: 3 });
+  // Fay marks another card as the other group's from the menu that a right click opens, and a
+  // third as maybe Reviewer 2 by holding it down; Escape closes the menu with the card as it was,
+  // and the student takes the first mark off again by choosing it once more.
+  await card(fay, theirs).click({ button: 'right' });
+  await fay.locator('.mark-menu').getByRole('menuitemradio', { name: text.game.gestures.marks.theirs }).click();
   await expect(card(student, theirs)).toHaveClass(new RegExp(`note-${other}`));
-  const box = await card(fay, paper).boundingBox();
-  if (!box) throw new Error('the card has no box');
-  await fay.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await fay.mouse.down();
-  await fay.waitForTimeout(700);
-  await fay.mouse.up();
+  await holdToMark(fay, paper, 'r2');
   await expect(card(student, paper)).toHaveClass(/note-r2/);
-  await card(student, own).dblclick();
+  await card(student, own).click({ button: 'right' });
+  const menu = student.locator('.mark-menu [role=menu]');
+  await expect(menu.getByRole('menuitemradio', { name: text.game.gestures.marks.ours })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await student.keyboard.press('Escape');
+  await expect(student.locator('.mark-menu')).toHaveCount(0);
+  await expect(card(fay, own)).toHaveClass(new RegExp(`note-${team}`));
+  await holdToMark(student, own, 'ours');
   await expect(card(fay, own)).not.toHaveClass(/noted/);
   // From the keyboard, 1 marks the card that has the focus as one of the group's own.
   await card(student, own).focus();
@@ -141,7 +157,7 @@ test("a group's students mark cards for each other with taps, which their PI rea
   await expect(card(fay, own)).toHaveClass(new RegExp(`note-${team}`));
 
   // The other group's marks are its own; no spectator or screen has marks.
-  await card(table.guessers[other], paper).dblclick();
+  await holdToMark(table.guessers[other], paper, 'ours');
   await expect(card(table.guessers[other], paper)).toHaveClass(new RegExp(`note-${other}`));
   await expect(card(student, paper)).toHaveClass(/note-r2/);
   for (const page of [table.spectator, table.screen]) await expect(page.locator('.board .note')).toHaveCount(0);

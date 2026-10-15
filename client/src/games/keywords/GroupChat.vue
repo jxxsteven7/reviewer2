@@ -68,7 +68,7 @@ watch(
         :aria-label="fresh ? t('game.chat.openUnread', { count: fresh }) : t('game.chat.open')"
         @click="open = true"
       >
-        {{ t('game.chat.open') }}
+        {{ t('game.buttons.chat') }}
         <span v-if="fresh" class="badge num" aria-hidden="true">{{ fresh }}</span>
       </UiButton>
       <UiSheet :open="open" :title="title" :focus-input="chat.length === 0" fit-screen @close="open = false">

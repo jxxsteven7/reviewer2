@@ -11,11 +11,14 @@ export function formatDay(iso: string, locale: string): string {
   }
 }
 
-// A moment, as the date and the time where the page is.
-export function formatMoment(iso: string, locale: string): string {
-  try {
-    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-  } catch {
-    return iso.slice(0, 16).replace('T', ' ');
-  }
+// A moment as numbers alone, where the page is, the same in every language: the day as
+// 2026.10.14 and the time as 18:08, for the lines of an account's record.
+export function formatStamp(iso: string): { day: string; time: string } {
+  const moment = new Date(iso);
+  if (Number.isNaN(moment.getTime())) return { day: iso.slice(0, 10).replaceAll('-', '.'), time: '' };
+  const two = (value: number) => String(value).padStart(2, '0');
+  return {
+    day: `${moment.getFullYear()}.${two(moment.getMonth() + 1)}.${two(moment.getDate())}`,
+    time: `${two(moment.getHours())}:${two(moment.getMinutes())}`,
+  };
 }

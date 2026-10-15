@@ -56,7 +56,6 @@ export const FRIEND_ERRORS = [
   'friends_full',
   'no_such_request',
   'not_friends',
-  'friend_offline',
   'friend_in_room',
   'friend_removed',
   'invite_cooldown',

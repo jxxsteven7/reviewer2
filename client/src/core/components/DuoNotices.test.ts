@@ -27,6 +27,7 @@ function room(duos: DuoNotice[]): RoomView {
     game: 'keywords',
     language: 'en',
     fields: ['general'],
+    randomFields: false,
     public: false,
     customWordCount: 0,
     phase: 'ended',

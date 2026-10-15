@@ -25,8 +25,8 @@ import PublicRooms from './PublicRooms.vue';
 // The home page: the way back to any room where the player still has a seat, the tagline, a line
 // on how to play, the ways into a room, by its number, by the rooms that friends are in or from the
 // list of public rooms, the first game on a big sticker, with the way to practice it with
-// Reviewer 1, the games to come below it, the feedback contributions, the acknowledgments and the
-// sponsors, folded, and footnotes, which offer a way to buy the author a cola and the way to send
+// Reviewer 1, the games to come below it, the feedback contributions, the sponsors and the
+// acknowledgments, folded, and footnotes, which offer a way to buy the author a cola and the way to send
 // them feedback, each with a drawing, and name the build's version. The author, linked to their
 // page, follows the line on how to play, or on a narrow English page the tagline, whose last line
 // has room for them there; the page holds both and shows one. On a wide screen the games stand on
@@ -116,8 +116,8 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
 
       <div class="thanks">
         <ContributionsList />
-        <AcknowledgmentsList />
         <SponsorsList @tip="tipping = true" />
+        <AcknowledgmentsList />
       </div>
     </main>
 

@@ -820,6 +820,24 @@ describe('a database in DATA_DIR', () => {
     expect(() => db.exec("UPDATE replays SET practice = 2 WHERE game_id = 'g'")).toThrow(/CHECK/);
   });
 
+  test('of the eighteenth release keeps its accounts when they get how they last set up a room', async () => {
+    const eighteenth = await open(dir, MIGRATIONS.slice(0, 18));
+    eighteenth.db.exec(
+      "INSERT INTO accounts (id, username, username_key, password, handle, created_at) VALUES (1, 'Ann', 'ann', 'h', 'k', 'now')",
+    );
+    eighteenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 19));
+    expect(migrated).toMatchObject({ schema: 19, migratedFrom: 18 });
+    const { db } = migrated;
+    expect(db.prepare('SELECT username, room_setup FROM accounts').all()).toEqual([
+      { username: 'Ann', room_setup: null },
+    ]);
+    db.exec(`UPDATE accounts SET room_setup = '{"practice":{"role":"captain","fields":["general"]}}' WHERE id = 1`);
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(db.prepare('SELECT count(*) AS n FROM accounts').get()).toEqual({ n: 0 });
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(

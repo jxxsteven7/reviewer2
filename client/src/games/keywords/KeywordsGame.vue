@@ -15,17 +15,19 @@ import EmoteButton from '../../core/components/EmoteButton.vue';
 import EndMatchButton from '../../core/components/EndMatchButton.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
+import AvatarButton from '../../core/components/AvatarButton.vue';
+import TitleLine from '../../core/components/TitleLine.vue';
 import ScoreFloat from '../../core/components/ScoreFloat.vue';
 import StreakNotices from '../../core/components/StreakNotices.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
-import { points } from '../../core/points';
 import { act, reconnecting } from '../../core/socket';
 import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
 import { useStickyHeight } from '../../core/useStickyHeight';
+import { useTitleFolds } from '../../core/useTitleFolds';
 import ClockBar from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
@@ -64,38 +66,38 @@ import { useScoreFloats } from './useScoreFloats';
 // what it did to each player's from their avatar beside the board; at the end, what the game added
 // to the viewer's points rises big in the middle of the screen (useScoreFloats.ts).
 //
-// In a match, its table stands under the board while the game is on, folded to a line with the
-// progress and the viewer's place, since it is seldom looked at then; the chair's button to end
-// the match stands among the tools instead. Once the game has ended, the
-// table follows the letters, with where each player's points came from, or the final ranking does
-// when the match is over. The streaks that the game brought the players to come right after the
-// letters, before the match's table, and the titles that it brought the player's friends after
-// them; their notices are on the page from the start, out of sight, so that a screen reader is
-// told of them.
+// In a match, its table opens in a sheet while the game is on, from a button beside the chat, the
+// groups and the clue log on a phone and among the tools on a wide screen, since it is seldom
+// looked at then; the chair's button to end the match stands among the tools. Once the game has
+// ended, the table follows the letters, with where each player's points came from, or the final
+// ranking does when the match is over, and then the titles that the game brought each player,
+// where the table doesn't list them: under an ordinary game's letter, and under the ranking. The
+// streaks that the game brought the players to come right after the letters, before the match's
+// table, and the titles that it brought the player's friends after them; their notices are on the
+// page from the start, out of sight, so that a screen reader is told of them.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
-const { data, mySeat, mySide, isChair } = useKeywords(room);
+const { data, mySeat, mySide, isChair, groups } = useKeywords(room);
 const match = computed(() => room.value.match);
 
-// The line that the folded table shows during the game: the match's progress, and the viewer's
-// place and total once they have one, which takes a scored game. The total's size picks the
-// plural of "point", for the languages that have one.
-const standing = computed(
-  () => match.value?.standings.find((line) => line.playerId !== null && line.playerId === room.value.me) ?? null,
+// A match's progress during the game: a button beside the chat, the groups and the clue log on a
+// phone, and among the tools on a wide screen, which opens the table in a sheet. The sheet closes
+// as the game ends, when the table takes its place under the letters.
+const matchOpen = ref(false);
+
+// The titles that the game so far has brought each player, as the server counts them
+// (KeywordsRoomData.titles): in the match's table, and once the game is over, where the table
+// isn't shown, under an ordinary game's letter and under a match's final ranking, a player a line,
+// the avatar beside the first line, in the order of the room. A tap on a line, but on a button,
+// folds its titles again.
+const titlesOf = (playerId: string) => data.value.titles[playerId] ?? [];
+const earned = computed(() =>
+  room.value.players
+    .map((player) => ({ player, titles: titlesOf(player.id) }))
+    .filter(({ titles }) => titles.length > 0),
 );
-const matchSummary = computed(() => {
-  if (!match.value) return '';
-  const parts = [
-    t('match.progressTitle'),
-    t('match.progress', { game: match.value.game, games: match.value.rules.games }),
-  ];
-  if (standing.value && standing.value.rank !== null) {
-    const { rank, total } = standing.value;
-    parts.push(t('match.yourStanding', { rank, points: points(total) }, Math.abs(total)));
-  }
-  return parts.join(' \u00b7 ');
-});
+const { unfolded: titlesOpen, setOpen: showTitles, fold: foldTitles } = useTitleFolds();
 
 // Where a player's points in a game came from, in a few words: a PI's line starts with the role,
 // since a PI plays for higher stakes, and the group's opening record and heavenly hand stand by
@@ -154,6 +156,15 @@ const game = computed(() => data.value.game as KeywordsView);
 const { draft: chatLine, sending, say } = useChatLine(game);
 const moment = computed(() => ({ gameId: game.value.gameId, turn: game.value.turn }));
 const paused = computed(() => game.value.paused);
+const listsTitles = computed(
+  () => game.value.result !== null && (!match.value || match.value.status !== 'on') && earned.value.length > 0,
+);
+watch(
+  () => game.value.result,
+  (result) => {
+    if (result) matchOpen.value = false;
+  },
+);
 const myTurn = computed(() => mySeat.value?.team === game.value.team);
 const canClue = computed(
   () => game.value.phase === 'clue' && myTurn.value && mySeat.value?.role === 'captain' && !paused.value,
@@ -209,13 +220,14 @@ async function choose(card: number) {
 }
 
 // A student's marks for the group (docs/games/keywords.md#talking-it-over), which the server sends
-// to the group's students and its PI, in either group's turn. A student marks a card with a gesture
-// (useCardGestures.ts): two taps for one of the group's own, three for one of the other group's, a
-// long press for maybe Reviewer 2, or 1, 2 and 3 from the keyboard; one tap chooses the card in the
-// group's own guess phase, and does nothing otherwise. The same mark again takes it off, whoever put
-// it there; the last of the group stands. As with the choice, the viewer's own marks show at once,
-// until the server has answered every one on its way. The PI only reads the marks. Marking is a
-// student's while the game is on and not paused, when there is no board anyway.
+// to the group's students and its PI, in either group's turn. A student marks a card from the menu
+// that a long press on it, or a right click, opens (useCardGestures.ts, MarkMenu.vue), with the
+// group's own, the other group's or maybe Reviewer 2, or with 1, 2 and 3 from the keyboard; a tap
+// chooses the card in the group's own guess phase, and does nothing otherwise. The same mark again
+// takes it off, whoever put it there; the last of the group stands. As with the choice, the
+// viewer's own marks show at once, until the server has answered every one on its way. The PI only
+// reads the marks. Marking is a student's while the game is on and not paused, when there is no
+// board anyway.
 const student = computed(
   () => mySeat.value?.role === 'guesser' && mySeat.value.team !== null && !game.value.result && !paused.value,
 );
@@ -425,7 +437,7 @@ const status = computed(() => {
       :match="match"
       @again="again"
     />
-    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" clock-apart />
+    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" :groups="groups" :me="room.me" clock-apart />
     <div
       v-if="!game.result && (game.clock || isChair)"
       ref="clockBar"
@@ -441,10 +453,32 @@ const status = computed(() => {
     <DuoNotices :room="room" />
     <template v-if="game.result && match">
       <MatchResults v-if="match.status !== 'on'" :room="room" />
-      <MatchTable v-else :room="room" :describe="describe" class="between">
+      <MatchTable v-else :room="room" :describe="describe" :titles-of="titlesOf" class="between">
         <p class="scoring">{{ t('game.scoring') }}</p>
       </MatchTable>
     </template>
+    <section v-if="listsTitles" class="game-titles">
+      <h2 class="section-title">{{ t('match.gameTitles') }}</h2>
+      <ul>
+        <li v-for="{ player, titles } in earned" :key="player.id" @click="foldTitles(player.id, $event)">
+          <AvatarButton
+            :player-id="player.id"
+            :name="player.name"
+            :avatar="player.avatar"
+            :agent="player.agent !== undefined"
+            :waiting="!player.online"
+          />
+          <span class="title-rest">
+            <strong class="title-name">{{ player.name }}</strong>
+            <TitleLine
+              :titles="titles"
+              :open="titlesOpen.has(player.id)"
+              @update:open="showTitles(player.id, $event)"
+            />
+          </span>
+        </li>
+      </ul>
+    </section>
 
     <div class="layout">
       <div class="main">
@@ -502,17 +536,16 @@ const status = computed(() => {
             {{ t('game.extend') }}
           </UiButton>
           <div v-if="!wide" class="panels">
-            <UiButton class="open-groups" size="small" @click="panel = 'groups'">{{ t('game.groups') }}</UiButton>
-            <UiButton class="open-log" size="small" @click="panel = 'log'">{{ t('game.log') }}</UiButton>
+            <UiButton class="open-groups" size="small" @click="panel = 'groups'">{{
+              t('game.buttons.groups')
+            }}</UiButton>
+            <UiButton class="open-log" size="small" @click="panel = 'log'">{{ t('game.buttons.log') }}</UiButton>
+            <UiButton v-if="match && !game.result" class="open-match" size="small" @click="matchOpen = true">
+              {{ t('game.buttons.match') }}
+            </UiButton>
           </div>
         </div>
         <p v-if="!game.result" class="note">{{ t('game.keyNote') }}</p>
-        <details v-if="match && !game.result" class="match-fold">
-          <summary>{{ matchSummary }}</summary>
-          <MatchTable :room="room" :endable="false">
-            <p class="scoring">{{ t('game.scoring') }}</p>
-          </MatchTable>
-        </details>
       </div>
 
       <aside class="side">
@@ -523,6 +556,9 @@ const status = computed(() => {
         <div class="column">
           <ClueLog v-if="wide" :game="game" />
           <div class="tools">
+            <UiButton v-if="wide && match && !game.result" class="open-match" size="small" @click="matchOpen = true">
+              {{ t('match.progressTitle') }}
+            </UiButton>
             <RulesSheet :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
             <UiButton v-if="replay" class="review" variant="quiet" size="small" @click="reviewing = true">
               {{ t('game.review') }}
@@ -542,6 +578,12 @@ const status = computed(() => {
     </UiSheet>
     <UiSheet v-if="!wide" :open="panel === 'log'" :title="t('game.log')" @close="panel = null">
       <ClueLog :game="game" class="in-sheet" />
+    </UiSheet>
+
+    <UiSheet :open="matchOpen" :title="t('match.progressTitle')" @close="matchOpen = false">
+      <MatchTable v-if="match" :room="room" :endable="false" :titles-of="titlesOf" class="in-sheet">
+        <p class="scoring">{{ t('game.scoring') }}</p>
+      </MatchTable>
     </UiSheet>
 
     <UiSheet :open="reviewing" :title="t('replay.title')" @close="reviewing = false">
@@ -623,17 +665,19 @@ const status = computed(() => {
   scroll-padding-top: calc(var(--banner-height) + var(--sticky-height, 3rem));
 }
 
-/* The bar under the board: on a phone the chat and the panel buttons on one row, and then what the
-   viewer can do: a student's tools first. The rows are drawn from the elements as they are, through
-   display: contents. */
+/* The bar under the board: on a phone the chat, the groups, the clue log and a match's progress on
+   one row of four buttons as wide as each other, in Chinese and in English alike, each label on one
+   line, and then what the viewer can do: a student's tools first. Outside a match the fourth place
+   stays empty, and the others keep their width. The rows are drawn from the elements as they are,
+   through display: contents. */
 .actions {
   display: grid;
   grid-template-areas:
-    'chat groups log .'
+    'chat groups log match'
     'panel panel panel panel'
     'draft draft draft draft'
     'extend extend extend extend';
-  grid-template-columns: auto auto auto minmax(0, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-2);
   margin-top: var(--space-3);
   padding: var(--space-2) 0;
@@ -653,6 +697,26 @@ const status = computed(() => {
 
 .open-log {
   grid-area: log;
+}
+
+.open-match {
+  grid-area: match;
+}
+
+.actions > :deep(.open-chat),
+.panels > .button {
+  position: relative;
+  padding: 0 var(--space-1);
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* The count of new lines on the chat button's corner, so that the label keeps its line. */
+.actions > :deep(.open-chat .badge) {
+  position: absolute;
+  top: -9px;
+  right: -7px;
+  border: 2px solid var(--bg);
 }
 
 .actions > :deep(.clue-panel),
@@ -708,55 +772,53 @@ const status = computed(() => {
   display: contents;
 }
 
-/* A match's table during the game, folded to a line with the progress and the viewer's place: it
-   is seldom looked at while the game is on. Open, the table loses its own frame and header, which
-   the fold has. */
-.match-fold {
-  margin-top: var(--space-4);
-  padding: 0 var(--space-4);
+/* An ordinary game's titles, under its letter: a player a line, the avatar beside the first line,
+   whatever the titles take below it once unfolded. */
+.game-titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
 }
 
-.match-fold summary {
+.game-titles ul {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
-  min-height: 48px;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
+  margin: 0;
+  padding: 0;
   list-style: none;
-  cursor: pointer;
 }
 
-.match-fold summary::-webkit-details-marker {
-  display: none;
+.game-titles li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
-/* The triangle is for the eye alone: its alternative text is empty, so that a screen reader
-   doesn't read it out as part of the line. The first declaration of each pair is for the browsers
-   that don't know the form with the alternative text. */
-.match-fold summary::before {
-  content: '\25B8';
-  content: '\25B8' / '';
-  font-size: var(--text-xs);
+.title-rest {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-2);
+  min-width: 0;
 }
 
-.match-fold[open] summary::before {
-  content: '\25BE';
-  content: '\25BE' / '';
-}
-
-.match-fold > :deep(.match-table) {
-  padding: 0 0 var(--space-4);
-  border: 0;
-  box-shadow: none;
-}
-
-.match-fold :deep(.match-table > header) {
-  display: none;
+.title-name {
+  flex: 1000 1 4em;
+  min-width: 0;
+  max-width: max-content;
+  overflow: hidden;
+  font-weight: var(--weight-bold);
+  line-height: 26px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Inside a sheet, the sheet's frame and title do: it says "Groups" or "Clue log" already. */

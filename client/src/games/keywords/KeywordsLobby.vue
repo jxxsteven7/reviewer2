@@ -15,8 +15,9 @@ import {
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
-import FieldPicker from '../../core/components/FieldPicker.vue';
+import FieldFold from '../../core/components/FieldFold.vue';
 import InviteFriends from '../../core/components/InviteFriends.vue';
+import InvitedFriends from '../../core/components/InvitedFriends.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
@@ -91,7 +92,7 @@ const problemKey = (item: StartProblem) =>
 const personSeated = computed(() =>
   props.room.players.some((player) => player.agent === undefined && data.value.seats[player.id]?.team),
 );
-// An account may invite its friends who are online into the room, from the start bar
+// An account may invite its friends into the room, online or not, from the start bar
 // (docs/architecture.md#friends).
 const mayInviteFriends = computed(() => account.summary !== null);
 const invitingFriends = ref(false);
@@ -105,14 +106,22 @@ const agentName = computed(() => t('agents.personas.reviewer1'));
 const invite = (team: Team, role: 'captain' | 'guesser') =>
   act('room:addAgent', { persona: 'reviewer1', seat: { team, role } });
 
-// The chair's choice of word lists, which is only sent when they save it. Every snapshot brings
-// the room's lists as a new array, so they are compared by their contents: an unsaved choice
-// survives the snapshots that others cause by taking seats or coming and going.
+// The chair's choice of word lists, and of whether every game draws them anew, which is only sent
+// when they save it. Every snapshot brings the room's lists as a new array, so they are compared
+// by their contents: an unsaved choice survives the snapshots that others cause by taking seats or
+// coming and going.
 const roomFields = computed(() => [...props.room.fields].sort().join());
 const chosenFields = ref<string[]>([...props.room.fields]);
-const fieldsChanged = computed(() => [...chosenFields.value].sort().join() !== roomFields.value);
+const chosenRandom = ref(props.room.randomFields);
+const fieldsChanged = computed(
+  () => [...chosenFields.value].sort().join() !== roomFields.value || chosenRandom.value !== props.room.randomFields,
+);
 
 watch(roomFields, () => (chosenFields.value = [...props.room.fields]));
+watch(
+  () => props.room.randomFields,
+  (random) => (chosenRandom.value = random),
+);
 
 // The chair's settings, kept the same way until they are saved with the word lists.
 const roomSettings = computed(() => data.value.settings);
@@ -146,7 +155,7 @@ const unsaved = computed(() => !locked.value && (fieldsChanged.value || settings
 // With enough words of the chair's own, the room needs no word list at all.
 const savable = computed(
   () =>
-    (chosenFields.value.length > 0 || words.value.words.length >= BOARD_SIZE) &&
+    (chosenFields.value.length > 0 || chosenRandom.value || words.value.words.length >= BOARD_SIZE) &&
     settingsValid.value &&
     wordsValid.value,
 );
@@ -155,6 +164,7 @@ const savable = computed(
 const save = () =>
   act('room:settings', {
     fields: chosenFields.value,
+    randomFields: chosenRandom.value,
     settings: chosenSettings.value,
     ...(wordsChanged.value ? { words: wordsText.value } : {}),
   });
@@ -234,7 +244,10 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
       :class="{ 'below-banner': reconnecting }"
     >
       <div class="start-bar" :class="{ member: !isChair }">
-        <p class="readiness" :class="{ ready }">{{ readiness }}</p>
+        <div class="ready-line">
+          <p class="readiness" :class="{ ready }">{{ readiness }}</p>
+          <InvitedFriends v-if="mayInviteFriends" :room="room" @open="invitingFriends = true" />
+        </div>
         <div class="start-actions">
           <UiButton v-if="isChair && lineup === 'free'" size="small" @click="act('room:shuffle')">{{
             t('lobby.shuffle')
@@ -352,14 +365,13 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
           <h2 class="section-title">{{ t('lobby.desk') }}</h2>
           <p v-if="locked" class="hint">{{ t('match.locked') }}</p>
           <template v-else>
-            <h3 class="label">{{ t('lobby.fields') }}</h3>
-            <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
-            <FieldPicker
-              v-else
+            <FieldFold
               v-model="chosenFields"
+              v-model:random="chosenRandom"
               :fields="fields"
               :language="room.language"
               :needed="BOARD_SIZE"
+              each-game
             />
             <h3 class="label">
               <label for="custom-words">{{ t('settings.customWords') }}</label>
@@ -539,8 +551,17 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   box-shadow: var(--shadow-2);
 }
 
-.readiness {
+/* The line, with the avatars of the friends invited at its right end. */
+.ready-line {
+  display: flex;
   flex: 1 1 14rem;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.readiness {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   color: var(--red-deep);
@@ -562,7 +583,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   gap: var(--space-2);
 }
 
-.start-bar:not(.member) .readiness {
+.start-bar:not(.member) .ready-line {
   flex-basis: 100%;
 }
 
@@ -578,8 +599,11 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   padding-left: var(--space-3);
 }
 
-.member .readiness {
+.member .ready-line {
   flex: 1 1 8rem;
+}
+
+.member .readiness {
   white-space: normal;
 }
 
@@ -592,7 +616,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 }
 
 @media (min-width: 40rem) {
-  .start-bar:not(.member) .readiness {
+  .start-bar:not(.member) .ready-line {
     flex: 1 1 14rem;
   }
 
@@ -732,9 +756,12 @@ dd .vacant {
   margin-bottom: var(--space-3);
 }
 
-.desk .label + .settings-form,
-.desk .label + .fields {
+.desk .label + .settings-form {
   margin-top: var(--space-2);
+}
+
+.desk .field-fold {
+  margin-top: var(--space-3);
 }
 
 .words {

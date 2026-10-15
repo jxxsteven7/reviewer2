@@ -47,6 +47,7 @@ const summary = (
   profile: { link: null, bio: 'Hi', showRecord: false, showThanks: false, banned: false, ...profile },
   likes: 1,
   requests: 0,
+  roomSetup: {},
   ...changes,
 });
 const liker = (friend: boolean) => ({ handle: 'f6e5d4c3b2a1', username: 'Bob', avatar: null, friend });

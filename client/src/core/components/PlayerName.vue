@@ -9,8 +9,9 @@ import ScoreFloat, { type Shown } from './ScoreFloat.vue';
 // account, small beside the name, and marks for "you", the chair, an AI player, with the robot's
 // head that is its avatar too, and a player whose turns an AI plays while they are away
 // (docs/architecture.md#ai-players). In a room, the avatar opens the player's panel, for everyone,
-// the viewer included (AvatarButton.vue); the name is plain text. Whether the player is online is a
-// small dot on the avatar's bottom right corner, green or grey, as on the friends list. Everything
+// the viewer included (AvatarButton.vue); the name is plain text. A player who is offline has the
+// avatar of someone the room waits for, faded, with three grey dots in it (PlayerAvatar.vue), and
+// their name greyed; only a screen reader is told the word for it. Everything
 // stays on one line: where it is too long, the rank is cut short first, down to nothing, and only
 // then the name, never the marks.
 // A `float` is a number that rises from the avatar, what a card or the end of a game did to the
@@ -29,9 +30,8 @@ const { t } = useI18n();
         :name="player.name"
         :avatar="player.avatar"
         :agent="player.agent !== undefined"
-        :class="{ away: !player.online }"
+        :waiting="!player.online"
       />
-      <span class="dot" :class="{ on: player.online }" aria-hidden="true"></span>
       <ScoreFloat v-if="float" :key="float.key" :float="float" size="avatar" />
     </span>
     <span class="label">
@@ -43,7 +43,7 @@ const { t } = useI18n();
       <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
       <span v-if="player.agent" class="mark agent"><AgentIcon />{{ t('room.agent') }}</span>
       <span v-if="player.takenOver" class="mark agent">{{ t('room.takenOver') }}</span>
-      <span v-if="!player.online" class="mark">{{ t('room.offline') }}</span>
+      <span v-if="!player.online" class="sr-only">{{ t('room.offline') }}</span>
     </span>
   </span>
 </template>
@@ -59,27 +59,11 @@ const { t } = useI18n();
   font-weight: var(--weight-bold);
 }
 
-/* The avatar, with the dot on its corner and the numbers that rise from it. */
+/* The avatar, with the numbers that rise from it. */
 .face {
   position: relative;
   display: inline-flex;
   flex: none;
-}
-
-.dot {
-  position: absolute;
-  right: -3px;
-  bottom: -3px;
-  width: 11px;
-  height: 11px;
-  border: var(--line-thin) solid var(--ink);
-  border-radius: 50%;
-  background: var(--neutral);
-  pointer-events: none;
-}
-
-.dot.on {
-  background: var(--online);
 }
 
 .label {
@@ -126,10 +110,6 @@ const { t } = useI18n();
   white-space: nowrap;
 }
 
-.away {
-  opacity: 0.5;
-}
-
 .mark {
   flex: none;
   padding: 0 var(--space-2);
@@ -140,11 +120,6 @@ const { t } = useI18n();
   font-weight: var(--weight-bold);
   line-height: 1.6;
   white-space: nowrap;
-}
-
-.offline .mark:last-child {
-  background: var(--neutral);
-  color: var(--on-neutral);
 }
 
 /* An AI and the AI that plays for someone wear the same outlined mark, apart from the solid ones. */

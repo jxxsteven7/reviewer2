@@ -9,12 +9,25 @@ import AgentIcon from './AgentIcon.vue';
 // that can't be loaded, as after the operator took it down, falls back to the default. The name is
 // said beside the avatar wherever one shows, so the avatar adds nothing to the text: a screen reader
 // skips it, and the initial is drawn by CSS, so that "Eve: ..." doesn't read or copy as "EEve: ...".
+// In a room, the avatar of someone the room is waiting for, who is offline or has been invited and
+// hasn't come yet, is `waiting`: faded under a white veil, with three grey dots in the middle that
+// light up in turn, as a chat shows someone typing (docs/architecture.md#rooms). One too small for
+// the dots, as on a card's corner, is only `faded`.
 const props = withDefaults(
-  defineProps<{ name: string; avatar?: string | null; agent?: boolean; size?: 'small' | 'medium' | 'large' }>(),
+  defineProps<{
+    name: string;
+    avatar?: string | null;
+    agent?: boolean;
+    size?: 'small' | 'medium' | 'large';
+    waiting?: boolean;
+    faded?: boolean;
+  }>(),
   {
     avatar: null,
     agent: false,
     size: 'small',
+    waiting: false,
+    faded: false,
   },
 );
 const failed = ref(false);
@@ -26,10 +39,16 @@ const picture = computed(() => (props.avatar && !failed.value ? props.avatar : n
 </script>
 
 <template>
-  <span class="avatar" :class="size" aria-hidden="true" :style="picture ? undefined : { background: colorOf(name) }">
+  <span
+    class="avatar"
+    :class="[size, { veiled: waiting || faded }]"
+    aria-hidden="true"
+    :style="picture ? undefined : { background: colorOf(name) }"
+  >
     <img v-if="picture" :src="picture" alt="" @error="failed = true" />
     <AgentIcon v-else-if="agent" class="face" />
     <span v-else class="initial num" :data-initial="initialOf(name)"></span>
+    <span v-if="waiting" class="wait"><i></i><i></i><i></i></span>
   </span>
 </template>
 
@@ -82,5 +101,63 @@ img {
 .face {
   width: 70%;
   height: 70%;
+}
+
+.veiled {
+  position: relative;
+  border-color: var(--ink-veiled);
+}
+
+.veiled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--veil);
+}
+
+/* Three small dots, a little apart, sized by the avatar's own type. */
+.wait {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12em;
+}
+
+.wait i {
+  width: 0.24em;
+  height: 0.24em;
+  border-radius: 50%;
+  background: var(--ink-2);
+  box-shadow: 0 0 0 1px var(--paper);
+  animation: wait 1.4s ease-in-out infinite;
+}
+
+.wait i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.wait i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes wait {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+  }
+
+  30% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wait i {
+    animation: none;
+  }
 }
 </style>

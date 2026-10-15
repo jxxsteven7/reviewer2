@@ -56,7 +56,7 @@ describe('a public room', () => {
     // The list is for anyone, logged in or not, and says only what the home page shows.
     const visitor = track(await TestClient.connect(server.url));
     expect(await listed(visitor)).toEqual([
-      { code, game: 'test', language: 'en', fields: ['general'], players: 1, playing: false },
+      { code, game: 'test', language: 'en', fields: ['general'], randomFields: false, players: 1, playing: false },
     ]);
     // A room that isn't public is as it always was, and isn't listed.
     const { chair: other } = await createRoom(server.url, 'Guest');

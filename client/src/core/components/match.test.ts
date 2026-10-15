@@ -35,6 +35,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
     game: 'keywords',
     language: 'en',
     fields: ['general'],
+    randomFields: false,
     public: false,
     customWordCount: 0,
     phase: 'ended',
@@ -72,7 +73,7 @@ describe('the table of a match', () => {
     line('Cat', { total: 0, delta: null, rank: null, left: true, playerId: null }),
   ];
 
-  test('shows the game, and each player with their place, total and points', () => {
+  test('shows the game, and each player with their place, total and points, with no heading over the first two', () => {
     const wrapper = mount(MatchTable, { props: { room: room({ standings, game: 2 }) }, global: global() });
     expect(wrapper.text()).toContain('Game 2 of 3');
     const rows = wrapper.findAll('tbody tr').map((row) => row.findAll('td').map((cell) => cell.text()));
@@ -81,19 +82,45 @@ describe('the table of a match', () => {
       ['2', 'Bob', '\u22122', '\u22123'],
       ['\u2013', 'Catleft', '0', '\u2013'],
     ]);
+    // The viewer's line is yellow, and says "you" to a screen reader alone.
     expect(wrapper.find('tbody tr').classes()).toContain('me');
-    expect(wrapper.findAll('thead th').at(3)?.text()).toBe('This game');
+    expect(wrapper.find('tbody tr .sr-only').text()).toBe('you');
+    // The place and the player have headings for a screen reader alone, and this game's points a
+    // short one, which a screen reader hears whole.
+    const heads = wrapper.findAll('thead th');
+    expect(heads.slice(0, 2).map((head) => head.find('.sr-only').text())).toEqual(['Place', 'Player']);
+    expect(heads.at(3)?.text()).toBe('This');
+    expect(heads.at(3)?.attributes('aria-label')).toBe('This game');
   });
 
   test('calls the points those of the last game in the waiting room', () => {
     const wrapper = mount(MatchTable, { props: { room: room({ standings }, { phase: 'lobby' }) }, global: global() });
-    expect(wrapper.findAll('thead th').at(3)?.text()).toBe('Last game');
+    expect(wrapper.findAll('thead th').at(3)?.text()).toBe('Last');
+    expect(wrapper.findAll('thead th').at(3)?.attributes('aria-label')).toBe('Last game');
   });
 
   test('says where the points came from when the game describes them', () => {
     const describe = (detail: unknown) => JSON.stringify(detail);
     const wrapper = mount(MatchTable, { props: { room: room({ standings }), describe }, global: global() });
-    expect(wrapper.findAll('.detail').map((detail) => detail.text())).toEqual(['{"found":1,"won":true}']);
+    // Once on the name's line, for a wide table, and once under it, for a narrow one.
+    expect(wrapper.findAll('.detail.below').map((detail) => detail.text())).toEqual(['{"found":1,"won":true}']);
+    expect(wrapper.findAll('.detail.inline').map((detail) => detail.text())).toEqual(['{"found":1,"won":true}']);
+  });
+
+  test('puts the titles that the game brought each player on their line', () => {
+    const titlesOf = (id: string) =>
+      id === 'ann'
+        ? [
+            { title: 'deadline_hero' as const, count: 2 },
+            { title: 'opening_record' as const, count: 1 },
+          ]
+        : [];
+    const wrapper = mount(MatchTable, { props: { room: room({ standings }), titlesOf }, global: global() });
+    const pills = () =>
+      wrapper.findAll('tbody tr').map((row) => row.findAll('.title-line > .pill').map((pill) => pill.text()));
+    // A browser that lays nothing out shows them all.
+    expect(pills()).toEqual([['Deadline Hero \u00d72', 'Opened the Scoring'], [], []]);
+    expect(wrapper.find('.title-line > button.more').exists()).toBe(false);
   });
 
   test('says who will be listed while nobody is', () => {
@@ -138,7 +165,7 @@ describe('the ranking of a match', () => {
     line('Eve', { total: 6, rank: null, left: true, playerId: null }),
   ];
 
-  test('shows the titles, with the line for the black hole', () => {
+  test('shows the titles, with the line for Academic Trash', () => {
     const wrapper = mount(MatchResults, {
       props: { room: room({ standings, status: 'over', played: 3, game: 3 }) },
       global: global(),
@@ -148,18 +175,18 @@ describe('the ranking of a match', () => {
     const items = wrapper.findAll('li');
     expect(items.map((item) => item.get('.rank').text())).toEqual(['1', '1', '3', '4', '\u2013']);
     expect(items.at(0)?.text()).toContain('Best Paper Award');
-    expect(items.at(3)?.text()).toContain('Game black hole');
+    expect(items.at(3)?.text()).toContain('Academic Trash');
     expect(items.at(3)?.text()).toContain('Playing like that, your paper is probably getting rejected!');
     expect(items.at(4)?.text()).toContain('left');
     expect(items.at(3)?.get('.total').text()).toBe('\u22124');
   });
 
-  test('says in Chinese what the black hole will hear', () => {
+  test('says in Chinese what Academic Trash will hear', () => {
     const wrapper = mount(MatchResults, {
       props: { room: room({ standings, status: 'over', played: 3, game: 3 }) },
       global: global('zh'),
     });
-    expect(wrapper.text()).toContain('\u6e38\u620f\u9ed1\u6d1e');
+    expect(wrapper.text()).toContain('\u5b66\u672f\u5783\u573e');
     expect(wrapper.text()).toContain('\u4f60\u8fd9\u4e48\u83dc\uff0c\u591a\u534a\u4f1a\u88ab\u62d2\u7a3f\u5427\uff01');
   });
 

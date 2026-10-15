@@ -88,6 +88,7 @@ export class Rooms {
     game: GameModule;
     language: Language;
     fields: readonly string[];
+    randomFields?: boolean;
     settings?: unknown;
     key: string;
     name: string;
@@ -105,7 +106,14 @@ export class Rooms {
       if (!seats) return fail('bad_request');
       if (!this.agents?.up) return fail('agents_offline');
     }
-    const chosen = chooseFields(this.words, options.fields, language, game.wordsNeeded);
+    const chosen = chooseFields(
+      this.words,
+      options.fields,
+      language,
+      game.wordsNeeded,
+      [],
+      options.randomFields ?? false,
+    );
     if (!chosen.ok) return chosen;
     let code = newCode(this.rng);
     while (this.#rooms.has(code)) code = newCode(this.rng);
@@ -114,6 +122,7 @@ export class Rooms {
       game,
       language,
       fields: chosen.fields,
+      randomFields: options.randomFields ?? false,
       public: options.public ?? false,
       practice: seats !== null,
       words: this.words,

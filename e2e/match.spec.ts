@@ -11,6 +11,7 @@ import {
   joinByLink,
   keyCard,
   newPlayer,
+  plural,
   register,
   reveal,
   seatTable,
@@ -102,14 +103,20 @@ test('players with accounts and guests play a whole match, and find its title on
   await expect(ann.locator('.match-table')).toContainText(interpolate(text.match.progress, { game: '1', games: '2' }));
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
-  // During the game the table is folded under the board, to a line with the progress.
-  await expect(ann.locator('.match-fold summary')).toContainText(text.match.progressTitle);
+  // During the game a button opens the match's progress in a sheet.
+  await ann.locator('.open-match').click();
+  const progress = ann.getByRole('dialog', { name: text.match.progressTitle });
+  await expect(progress.locator('.match-table')).toContainText(
+    interpolate(text.match.progress, { game: '1', games: '2' }),
+  );
+  await ann.keyboard.press('Escape');
+  await expect(progress).toBeHidden();
 
   const onTurn = await playQuickly(pages, 'en', ann);
   // Between the games: everyone's points in this game, under the letters. Ann's group leads, its PI
   // first with the 4 for winning, and the 1 for the card it found when it was on turn.
   const between = cat.locator('.match-table.between');
-  await expect(between).toContainText(text.match.delta);
+  await expect(between.locator('thead th').last()).toHaveAccessibleName(text.match.delta);
   await expect(between.locator('tbody tr')).toHaveCount(4);
   await expect(between.locator('tbody tr').first()).toContainText(onTurn ? '+5' : '+4');
   await expect(cat.getByText(text.match.waitNext)).toBeVisible();
@@ -134,13 +141,9 @@ test('players with accounts and guests play a whole match, and find its title on
   // The accounts keep the match, and Ann's title.
   await ann.goto('/account');
   await expect(ann.locator('.titles')).toHaveText(text.account.profile.titleNames.best_paper);
-  const matches = ann.locator('.records .record-stats .block').nth(2);
-  await expect(matches.locator('dd')).toHaveText([
-    '1',
-    interpolate(text.account.profile.recordStats.won, { won: '1' }),
-  ]);
+  // One match finished, and won.
+  await expect(ann.locator('.records .record-stats .block .value')).toHaveText(['2', /%$/, '1', '1']);
   // Both games were the match's, and say which of its games they were.
-  await expect(ann.locator('.records .record-stats .block .value').first()).toHaveText('2');
   await expect(ann.locator('.records .record:not(.match) .tag')).toHaveText([
     interpolate(text.account.profile.matchTag, { game: '2', games: '2' }),
     interpolate(text.account.profile.matchTag, { game: '1', games: '2' }),
@@ -148,8 +151,8 @@ test('players with accounts and guests play a whole match, and find its title on
   const match = ann.locator('.records .match');
   await expect(match).toHaveCount(1);
   await expect(match).toContainText(text.match.titleNames.best_paper);
-  await expect(match).toContainText(interpolate(text.account.profile.matchGames, { games: '2' }));
-  await expect(match).toContainText(/Place 1 of 4/);
+  await expect(match).toContainText(plural(text.account.profile.matchGames, 2));
+  await expect(match).toContainText(/1\/4 · /);
   await bob.goto('/account');
   await expect(bob.locator('.records .match')).toHaveCount(1);
 });

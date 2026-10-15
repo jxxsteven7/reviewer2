@@ -20,8 +20,10 @@ const props = withDefaults(
     avatar?: string | null;
     agent?: boolean;
     size?: 'small' | 'medium' | 'large';
+    // Faded, with the dots of someone the room waits for (PlayerAvatar.vue).
+    waiting?: boolean;
   }>(),
-  { playerId: null, handle: null, avatar: null, agent: false, size: 'small' },
+  { playerId: null, handle: null, avatar: null, agent: false, size: 'small', waiting: false },
 );
 const open = useOpenPlayer();
 const { t } = useI18n();
@@ -37,7 +39,7 @@ const press = () => props.playerId !== null && open?.(props.playerId);
     aria-haspopup="dialog"
     @click="openProfile(handle, name)"
   >
-    <PlayerAvatar :name="name" :avatar="avatar" :agent="agent" :size="size" />
+    <PlayerAvatar :name="name" :avatar="avatar" :agent="agent" :size="size" :waiting="waiting" />
   </button>
   <button
     v-else-if="open && playerId !== null"
@@ -46,9 +48,9 @@ const press = () => props.playerId !== null && open?.(props.playerId);
     :aria-label="t('room.viewProfile', { name })"
     @click="press"
   >
-    <PlayerAvatar :name="name" :avatar="avatar" :agent="agent" :size="size" />
+    <PlayerAvatar :name="name" :avatar="avatar" :agent="agent" :size="size" :waiting="waiting" />
   </button>
-  <PlayerAvatar v-else :name="name" :avatar="avatar" :agent="agent" :size="size" />
+  <PlayerAvatar v-else :name="name" :avatar="avatar" :agent="agent" :size="size" :waiting="waiting" />
 </template>
 
 <style scoped>

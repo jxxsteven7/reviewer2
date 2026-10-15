@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { FieldInfo } from '@reviewer2/shared';
+import type { FieldInfo, RoomSetup } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { fields } from '../fields';
@@ -21,7 +21,11 @@ vi.mock('../fields', async () => {
 });
 // Ann, unless a test makes a guest of her.
 const signedIn = vi.hoisted(() => ({
-  account: { loaded: true, summary: null as { username: string; avatar: null } | null, mail: false },
+  account: {
+    loaded: true,
+    summary: null as { username: string; avatar: null; roomSetup: RoomSetup } | null,
+    mail: false,
+  },
 }));
 vi.mock('../account', async () => {
   const { reactive } = await import('vue');
@@ -44,7 +48,7 @@ beforeEach(() => {
   fields.value = FIELDS;
   agents.value = 'unknown';
   signedIn.account.loaded = true;
-  signedIn.account.summary = { username: 'Ann', avatar: null };
+  signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: {} };
   socket.replies = { 'meta:agents': { ok: true, available: true }, 'room:create': { ok: true, code: 'ABCD' } };
   socket.send.mockReset();
   socket.send.mockImplementation((event) => Promise.resolve(socket.replies[event] ?? { ok: false, error: 'bad' }));
@@ -67,7 +71,7 @@ async function opened() {
 }
 
 const checkedRole = (sheet: HTMLElement) => sheet.querySelector<HTMLInputElement>('.roles input:checked')?.value;
-const summary = (sheet: HTMLElement) => sheet.querySelector('.fold-summary')?.textContent?.trim();
+const summary = (sheet: HTMLElement) => sheet.querySelector('.field-fold .summary')?.textContent?.trim();
 const startButton = (sheet: HTMLElement) => sheet.querySelector<HTMLButtonElement>('button.start');
 // Who sits in each seat of a group, as the sheet shows them.
 const seats = (sheet: HTMLElement, team: string) =>
@@ -140,7 +144,8 @@ describe('practicing with Reviewer 1', () => {
     await flushPromises();
     sheet.querySelector<HTMLInputElement>('.fields input:checked')?.click();
     await flushPromises();
-    expect(summary(sheet)).toBe('Choose at least one word list to start.');
+    expect(summary(sheet)).toBe('No list chosen yet');
+    expect(sheet.textContent).toContain('Choose at least one word list to start.');
     expect(startButton(sheet)?.disabled).toBe(true);
     await submit(sheet);
     expect(socket.send).not.toHaveBeenCalledWith('room:create', expect.anything());

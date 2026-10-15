@@ -119,9 +119,9 @@ describe('ProfileCard', () => {
     expect(blocks).toEqual([
       ['Games', '12'],
       ['Win rate', '58%'],
-      ['Matches', '3', 'won 1'],
+      ['Matches', '3'],
+      ['Won', '1'],
     ]);
-    expect(wrapper.get('.record-stats .split').text()).toBe('Ordinary games: 8, won 5 · In matches: 4, won 2');
     expect(text).toContain('Contributions: Bugs');
     expect(text).toContain('♥ 4');
     // A guest can neither like nor ask, and is told why.

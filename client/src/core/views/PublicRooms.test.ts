@@ -35,8 +35,24 @@ vi.mock('../account', async () => {
 });
 
 const ROOMS: PublicRoom[] = [
-  { code: 'K7QX', game: 'keywords', language: 'en', fields: ['general', 'ml'], players: 3, playing: false },
-  { code: 'ABCD', game: 'keywords', language: 'zh', fields: ['general'], players: 12, playing: true },
+  {
+    code: 'K7QX',
+    game: 'keywords',
+    language: 'en',
+    fields: ['general', 'ml'],
+    randomFields: false,
+    players: 3,
+    playing: false,
+  },
+  {
+    code: 'ABCD',
+    game: 'keywords',
+    language: 'zh',
+    fields: ['general'],
+    randomFields: false,
+    players: 12,
+    playing: true,
+  },
 ];
 
 beforeEach(() => {

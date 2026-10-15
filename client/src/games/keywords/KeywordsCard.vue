@@ -13,16 +13,19 @@ import type { Chooser } from './useKeywords';
 // the table. A card whose color the viewer may know without its being revealed (a PI's key, or
 // the end of the game) is tinted. Every color also comes with a short label in the corner, so that
 // color is never the only signal; the accessible name says the color in full. The others in the
-// group who have chosen the card hang their avatars on its corner; the card's accessible name says
-// who they are. On a big screen the cards are `large`, with bigger type. A `marked` card, in a
+// group who have chosen the card hang their avatars on its top right corner; the card's accessible
+// name says who they are. On a big screen the cards are `large`, with bigger type. A `marked` card, in a
 // replay, is outlined. A `target` is one of the cards a PI meant with a clue, numbered in the order
 // they were marked: on the PI's board while they mark them, and for everyone once the game is over.
-// A `note` is the mark that the viewer's group has put on a hidden card, for its students alone: the
-// card takes the tint of the color it stands for, unless it is the viewer's choice, and the mark's
-// round sticker hangs on its bottom left corner; for the group's PI, who only reads it (`noteQuiet`),
-// the card keeps the tint of its color and a small sticker sits inside the bottom right corner,
-// clear of the number of a card a clue is meant for. A `float` is what the card did to the viewer's
-// points as it was revealed, which rises from it.
+// A `note` is the mark that the viewer's group has put on a hidden card: the mark's round sticker
+// hangs on the card's bottom right corner, the same for its students and its PI, and for the
+// students the card takes the tint of the color it stands for, unless it is the viewer's choice;
+// for the PI, who only reads it (`noteQuiet`), the card keeps the tint of its own color. Every
+// board has its corners in the same places, the color's word inside the top left, the choosers'
+// avatars on the top right, faded for a chooser who is offline, too small for the dots that mark
+// someone the room waits for elsewhere (PlayerAvatar.vue), the PI's number on the bottom left and
+// the mark on the bottom right.
+// A `float` is what the card did to the viewer's points as it was revealed, which rises from it.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -104,14 +107,9 @@ const ariaLabel = computed(() =>
       t('game.stamp')
     }}</span>
     <span v-if="target !== null" class="target num" aria-hidden="true">{{ target }}</span>
-    <MarkSticker
-      v-if="note"
-      class="note"
-      :class="{ quiet: noteQuiet }"
-      :mark="note.mark"
-      :color="note.color"
-      :small="noteQuiet"
-    />
+    <Transition name="pop">
+      <MarkSticker v-if="note" :key="note.mark" class="note" :mark="note.mark" :color="note.color" />
+    </Transition>
     <ScoreFloat v-if="float" :key="float.key" :float="float" />
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar
@@ -120,6 +118,7 @@ const ariaLabel = computed(() =>
         :name="chooser.name"
         :avatar="chooser.avatar"
         :agent="chooser.agent !== undefined"
+        :faded="!chooser.online"
       />
     </span>
   </button>
@@ -310,38 +309,59 @@ const ariaLabel = computed(() =>
   color: var(--on-r2);
 }
 
+/* The corners: what hangs on them reaches a little over the card's edge, into the gap between the
+   rows, which stays as narrow as it is. The avatars hang higher, clear of the word under them, and
+   the stickers lower; where a card's sticker is right above the avatars of the card below, the two
+   overlap by a hair, the avatars in front. On a wider screen, whose cards are bigger, so are the
+   corners, and on a big screen's large cards bigger still. */
+.card {
+  --corner: 18px;
+  --corner-face: 22px;
+  --corner-up: 7px;
+  --corner-down: 4px;
+  --corner-side: 3px;
+}
+
+@media (min-width: 40rem) {
+  .card {
+    --corner: 26px;
+    --corner-face: 30px;
+    --corner-up: 5px;
+    --corner-down: 5px;
+  }
+}
+
+.card.large {
+  --corner: 30px;
+  --corner-face: 36px;
+  --corner-up: 6px;
+  --corner-down: 6px;
+}
+
 /* The avatars of the students who chose the card hang on its top right corner. */
 .choosers {
   position: absolute;
-  top: -9px;
-  right: -7px;
+  top: calc(var(--corner-up) * -1);
+  right: calc(var(--corner-side) * -1);
   display: flex;
   flex-direction: row-reverse;
 }
 
 .choosers :deep(.avatar) {
-  width: 24px;
-  height: 24px;
-  font-size: 0.75rem;
+  width: var(--corner-face);
+  height: var(--corner-face);
+  font-size: calc(var(--corner-face) * 0.5);
   box-shadow: var(--shadow-1);
 }
 
 .choosers :deep(.avatar + .avatar) {
-  margin-right: -8px;
+  margin-right: calc(var(--corner-face) * -0.35);
 }
 
-.large .choosers :deep(.avatar) {
-  width: 30px;
-  height: 30px;
-  font-size: 0.9rem;
-}
-
-/* One of the cards a PI meant: a dashed ring, and its place in the order on a round sticker in the
-   bottom left corner, clear of the students' avatars, which come and go on the PI's board while
-   the group guesses: on the card's own top right corner, and on the one below, whose avatars
-   reach up into the gap that a sticker on the right would reach down into. The ring gives way to
-   the focus ring, which the scoped rule would otherwise beat, so that a PI moving by keyboard sees
-   which of the marked cards has the focus; the sticker still says that the card is marked. */
+/* One of the cards a PI meant: a dashed ring, and its place in the order on a round sticker on the
+   bottom left corner. The ring gives way to the focus ring, which the scoped rule would otherwise
+   beat, so that a PI moving by keyboard sees which of the marked cards has the focus; the sticker
+   still says that the card is marked. */
 .targeted {
   outline: var(--line) dashed var(--ink);
   outline-offset: 2px;
@@ -353,34 +373,27 @@ const ariaLabel = computed(() =>
 
 .target {
   position: absolute;
-  bottom: -9px;
-  left: -7px;
+  bottom: calc(var(--corner-down) * -1);
+  left: calc(var(--corner-side) * -1);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 5px;
+  min-width: var(--corner);
+  height: var(--corner);
+  padding: 0 4px;
   border: var(--line-thin) solid var(--paper);
-  border-radius: 11px;
+  border-radius: calc(var(--corner) / 2);
   background: var(--ink);
   box-shadow: var(--shadow-1);
   color: var(--on-ink);
-  font-size: 12px;
+  font-size: calc(var(--corner) * 0.58);
   font-weight: var(--weight-black);
   line-height: 1;
 }
 
-.large .target {
-  min-width: 28px;
-  height: 28px;
-  border-radius: 14px;
-  font-size: 15px;
-}
-
-/* A card that the viewer's group has marked: the tint of the color the mark stands for, unless it
-   is the viewer's choice, and the mark's sticker on the bottom left corner, where a PI's numbered
-   sticker would be on a PI's board, which never has marks. */
+/* A card that the viewer's group has marked: for its students, the tint of the color the mark
+   stands for, unless it is the viewer's choice, and for everyone in it the mark's sticker on the
+   bottom right corner. */
 .noted.note-red:not(.selected) {
   background: var(--red-tint);
 }
@@ -393,19 +406,65 @@ const ariaLabel = computed(() =>
   background: var(--r2-tint);
 }
 
-.note {
+.card .note {
   position: absolute;
-  bottom: -9px;
-  left: -7px;
+  right: calc(var(--corner-side) * -1);
+  bottom: calc(var(--corner-down) * -1);
+  width: var(--corner);
+  height: var(--corner);
   box-shadow: var(--shadow-1);
 }
 
-/* The PI's: small, inside the bottom right corner, where nothing hangs. */
-.note.quiet {
-  right: 3px;
-  bottom: 3px;
-  left: auto;
-  box-shadow: none;
+/* A mark that comes pops onto the corner, and one that goes shrinks away. */
+.pop-enter-active {
+  animation: pop 420ms cubic-bezier(0.2, 1.35, 0.4, 1) both;
+}
+
+.pop-leave-active {
+  animation: unpop 240ms ease-in both;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0);
+  }
+
+  60% {
+    transform: scale(1.3);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes unpop {
+  from {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.3);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+/* A press held on a student's card: it sinks into its shadow until the menu of marks opens. */
+.pressing {
+  box-shadow: 1px 1px 0 var(--ink);
+  transform: translate(2px, 2px) scale(0.96);
+  transition:
+    transform 400ms cubic-bezier(0.3, 0, 0.2, 1),
+    box-shadow 400ms cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+/* The card whose menu of marks is open, which a copy of lifts out of the page meanwhile. */
+.lifting {
+  visibility: hidden;
 }
 
 /* The card that a replay's step is about. */

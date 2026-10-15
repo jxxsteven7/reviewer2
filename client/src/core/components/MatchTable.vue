@@ -1,31 +1,51 @@
 <script setup lang="ts">
-import type { MatchView, RoomView } from '@reviewer2/shared';
+import type { MatchView, RoomView, TitleCount } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points, signedPoints } from '../points';
+import { useTitleFolds } from '../useTitleFolds';
 import EndMatchButton from './EndMatchButton.vue';
 import AvatarButton from './AvatarButton.vue';
+import TitleLine from './TitleLine.vue';
 
 // The scores of a match, which everyone in the room sees: which game it is, and each player's
-// place, total and points in the game in focus, as the server counted them. The game describes
-// where the points came from, with `describe`, when it wants to, as between two games. The chair
-// may end the match early from here, unless the game puts that button elsewhere (`endable`). In a
-// narrow column the avatar, the name and the marks keep to one line, the name cut short with an
-// ellipsis (its title has the whole), and the numbers keep their room.
+// place, total and points in the game in focus, as the server counted them, one line each. The
+// place and the player need no heading, which only a screen reader is told, so the place and the
+// avatar stand at the line's left edge and the numbers take only the room they need. The viewer's
+// own line is yellow, which says "you" to the eye; a screen reader hears it. Someone offline has
+// the avatar of someone the room waits for (PlayerAvatar.vue). The game describes where the points
+// came from, with `describe`, when it wants to, as between two games, and gives the titles that
+// the game in focus brought each player so far, with `titlesOf`: they follow the name on its line
+// (TitleLine.vue), the name cut short first where the line is short, and on a line of their own
+// under it where even then the first title wouldn't fit whole. On a wide table, the description
+// comes on the name's line too, and the titles at its right end. The chair may end the match early
+// from here, unless the game puts that button elsewhere (`endable`).
 const props = withDefaults(
-  defineProps<{ room: RoomView; describe?: ((detail: unknown) => string) | null; endable?: boolean }>(),
-  { describe: null, endable: true },
+  defineProps<{
+    room: RoomView;
+    describe?: ((detail: unknown) => string) | null;
+    titlesOf?: ((playerId: string) => TitleCount[]) | null;
+    endable?: boolean;
+  }>(),
+  { describe: null, titlesOf: null, endable: true },
 );
 // A line's player while they are still in the room, whose panel a tap on the avatar opens.
 const inRoom = (id: string | null) =>
   id !== null && props.room.players.some((player) => player.id === id) ? id : null;
+const offline = (id: string | null) =>
+  id !== null && props.room.players.some((player) => player.id === id && !player.online);
 const { t } = useI18n();
+const titles = (id: string | null) => (id !== null && props.titlesOf ? props.titlesOf(id) : []);
+// The lines whose titles are unfolded; a tap on the line, but on a button, folds them again.
+const { unfolded, setOpen, fold } = useTitleFolds();
 
 const match = computed(() => props.room.match as MatchView);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
 // In the waiting room the points are those of the last game; otherwise of the game on or just
 // ended.
 const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastDelta') : t('match.delta')));
+// English heads the column with one short word, "This" or "Last", which a screen reader hears whole.
+const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDeltaShort') : t('match.deltaShort')));
 </script>
 
 <template>
@@ -38,10 +58,14 @@ const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastD
     <table v-else>
       <thead>
         <tr>
-          <th scope="col" class="rank">{{ t('match.rank') }}</th>
-          <th scope="col">{{ t('match.player') }}</th>
+          <th scope="col" class="rank">
+            <span class="sr-only">{{ t('match.rank') }}</span>
+          </th>
+          <th scope="col">
+            <span class="sr-only">{{ t('match.player') }}</span>
+          </th>
           <th scope="col" class="number">{{ t('match.total') }}</th>
-          <th scope="col" class="number">{{ deltaLabel }}</th>
+          <th scope="col" class="number" :aria-label="deltaLabel">{{ deltaHead }}</th>
         </tr>
       </thead>
       <tbody>
@@ -49,16 +73,35 @@ const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastD
           v-for="(line, index) in match.standings"
           :key="line.playerId ?? `left-${index}`"
           :class="{ me: line.playerId !== null && line.playerId === room.me, left: line.left }"
+          @click="fold(line.playerId, $event)"
         >
           <td class="rank num">{{ line.rank ?? '\u2013' }}</td>
           <td class="who">
             <span class="name-line">
-              <AvatarButton :player-id="inRoom(line.playerId)" :name="line.name" :avatar="line.avatar" />
-              <span class="name" :title="line.name">{{ line.name }}</span>
-              <span v-if="line.playerId !== null && line.playerId === room.me" class="mark">{{ t('room.you') }}</span>
-              <span v-if="line.left" class="mark">{{ t('match.left') }}</span>
+              <AvatarButton
+                :player-id="inRoom(line.playerId)"
+                :name="line.name"
+                :avatar="line.avatar"
+                :waiting="offline(line.playerId)"
+              />
+              <span class="rest">
+                <span class="name" :title="line.name">{{ line.name }}</span>
+                <span v-if="line.playerId !== null && line.playerId === room.me" class="sr-only">{{
+                  t('room.you')
+                }}</span>
+                <span v-if="line.left" class="mark">{{ t('match.left') }}</span>
+                <span v-if="describe && line.detail !== undefined" class="detail inline">{{
+                  describe(line.detail)
+                }}</span>
+                <TitleLine
+                  v-if="titles(line.playerId).length"
+                  :titles="titles(line.playerId)"
+                  :open="unfolded.has(line.playerId ?? '')"
+                  @update:open="setOpen(line.playerId ?? '', $event)"
+                />
+              </span>
             </span>
-            <span v-if="describe && line.detail !== undefined" class="detail">{{ describe(line.detail) }}</span>
+            <span v-if="describe && line.detail !== undefined" class="detail below">{{ describe(line.detail) }}</span>
           </td>
           <td class="number total num">{{ points(line.total) }}</td>
           <td
@@ -147,14 +190,14 @@ td:last-child {
   background: var(--bg);
 }
 
-.rank {
-  width: 2.5rem;
+.rank,
+.number {
+  width: 1%;
   font-weight: var(--weight-display);
+  white-space: nowrap;
 }
 
 .number {
-  width: 3.5rem;
-  font-weight: var(--weight-display);
   text-align: right;
 }
 
@@ -164,19 +207,40 @@ td:last-child {
 
 .name-line {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 2px var(--space-2);
+  gap: var(--space-2);
   min-height: 36px;
   min-width: 0;
   font-weight: var(--weight-bold);
 }
 
+.name-line > :first-child {
+  flex: none;
+}
+
+/* After the avatar: the name, cut short where the line is short, but to about four characters at
+   least, and then the titles, which go to a line of their own under the name where even then the
+   first of them wouldn't fit whole beside it. */
+.rest {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-2);
+  min-width: 0;
+}
+
 .name {
-  overflow-wrap: anywhere;
+  flex: 1000 1 4em;
+  min-width: 0;
+  max-width: max-content;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mark {
+  flex: none;
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--ink);
@@ -191,6 +255,10 @@ td:last-child {
   padding-bottom: var(--space-1);
   color: var(--ink-2);
   font-size: var(--text-xs);
+}
+
+.detail.inline {
+  display: none;
 }
 
 .me .name {
@@ -217,40 +285,24 @@ td:last-child {
   margin-top: var(--space-1);
 }
 
-/* In a narrow column, such as the fold under the board on a narrow phone, the name column takes
-   what the numbers leave, and each line stays one line. The columns of the place and the numbers
-   keep room for their headings in capitals, "PLACE" and "TOTAL", whose letters stand closer, so
-   that a space is left between one heading and the next. */
-@container (max-width: 17rem) {
-  table {
-    table-layout: fixed;
+/* A wide table, as under the decision letter on a wide screen: a line each, with where the points
+   came from after the name and the titles at the line's right end. Where they don't all fit, as a
+   long detail on a table not much wider than this, the detail goes whole under the name, and its
+   words wrap only where even that line is too short for it: the table never grows past its box. */
+@container (min-width: 34rem) {
+  .detail.inline {
+    display: inline;
+    flex: 0 1 auto;
+    padding: 0;
+    font-weight: var(--weight-text);
   }
 
-  th {
-    letter-spacing: 0;
+  .detail.below {
+    display: none;
   }
 
-  th.rank {
-    width: 3rem;
-  }
-
-  th.number {
-    width: 2.75rem;
-  }
-
-  th,
-  td {
-    padding-right: var(--space-1);
-  }
-
-  .name-line {
-    flex-wrap: nowrap;
-  }
-
-  .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .rest :deep(.title-line) {
+    justify-content: flex-end;
   }
 }
 </style>

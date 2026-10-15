@@ -79,6 +79,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (!isLevel(level)) return { ok: false, error: 'bad_settings' };
     return { ok: true, data: level === data.level ? data : { ...data, level } };
   },
+  settingsOf: (data) => ({ level: data.level }),
   deadline: (data) => data.alarm,
   tick(data, ctx) {
     if (data.broken === 'tick') throw new Error('ticking broke');

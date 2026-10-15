@@ -1,13 +1,16 @@
 import { INVITATION_MS } from '@reviewer2/shared';
 import { randomId } from './random';
 import type { Room } from './room';
+import type { Timers } from './socket';
 
 // Invitations to rooms (docs/architecture.md#friends): a member of a room invites a friend, who
 // may then come in with the invitation in place of the code, into a private room too. An invitation
 // stands for INVITATION_MS, unless the room closes, the inviter leaves it or the two part first,
 // and goes when the friend comes into the room or ignores it. However it ends, `ended` hears of
-// it, so that the pages of the invited account can take it down. It is written down nowhere: it
-// lives in memory, and ends with the server.
+// it, so that the pages of the invited account can take it down, and the inviter's: one that
+// lapses by its age ends on a timer, as it lapses, and one that no longer stands for another
+// reason is found by prune(). It is written down nowhere: it lives in memory, and ends with the
+// server.
 
 export interface Invitation {
   id: string;
@@ -19,6 +22,8 @@ export interface Invitation {
   inviteeId: number;
   // When it was made, on the room's clock.
   at: number;
+  // The timer that ends it as it lapses by its age.
+  timer: unknown;
 }
 
 export class Invitations {
@@ -31,12 +36,23 @@ export class Invitations {
     private readonly isOpen: (room: Room) => boolean,
     // Whether two accounts are friends: an invitation lasts no longer than the friendship.
     private readonly areFriends: (a: number, b: number) => boolean,
-    // Hears of every invitation that ends: used up, ignored, or found to have lapsed.
-    private readonly ended: (invitation: Invitation) => void = () => {},
+    // Hears of every invitation that ends: used up, ignored, lapsed, or found to have lapsed.
+    private readonly ended: (invitation: Invitation) => void,
+    // Runs the timer that ends an invitation as it lapses by its age.
+    private readonly timers: Timers,
   ) {}
 
   create(room: Room, inviterId: number, inviterKey: string, inviteeId: number): Invitation {
-    const invitation: Invitation = { id: randomId(), room, inviterId, inviterKey, inviteeId, at: this.now() };
+    const invitation: Invitation = {
+      id: randomId(),
+      room,
+      inviterId,
+      inviterKey,
+      inviteeId,
+      at: this.now(),
+      timer: null,
+    };
+    invitation.timer = this.timers.start(() => this.#drop(invitation), INVITATION_MS);
     this.#byId.set(invitation.id, invitation);
     const own = this.#byInvitee.get(inviteeId) ?? new Set<Invitation>();
     this.#byInvitee.set(inviteeId, own.add(invitation));
@@ -53,6 +69,14 @@ export class Invitations {
   // that has just come.
   for(inviteeId: number): Invitation[] {
     return [...(this.#byInvitee.get(inviteeId) ?? [])].filter((invitation) => this.stands(invitation));
+  }
+
+  // The invitations that an account has sent into a room and that still stand, the oldest first,
+  // for the inviter's own view of the room.
+  by(room: Room, inviterId: number): Invitation[] {
+    return [...this.#byId.values()]
+      .filter((invitation) => invitation.room === room && invitation.inviterId === inviterId && this.stands(invitation))
+      .sort((a, b) => a.at - b.at);
   }
 
   // Whether an invitation still stands: it is young enough, its room is open, the inviter is still
@@ -95,6 +119,7 @@ export class Invitations {
   }
 
   #drop(invitation: Invitation): void {
+    this.timers.stop(invitation.timer);
     this.#byId.delete(invitation.id);
     const own = this.#byInvitee.get(invitation.inviteeId);
     own?.delete(invitation);

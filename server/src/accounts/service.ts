@@ -10,6 +10,7 @@ import {
   duoViews,
   MAIL_LINK_MS,
   MAX_REPLAY_BYTES,
+  MAX_ROOM_SETUP,
   rankFor,
   usernameKey,
   type AccountError,
@@ -26,6 +27,7 @@ import {
   type ProfileView,
   type Rank,
   type RecordsView,
+  type RoomSetup,
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
@@ -209,7 +211,29 @@ export class Accounts {
       profile: { ...account.profile, banned: account.profileBanned },
       likes: this.likes.count(account.id),
       requests: this.friends.store.counts(account.id).incoming,
+      roomSetup: this.roomSetupOf(account.id),
     };
+  }
+
+  // How the account last set up a room and a practice room (RoomSetup), or nothing of what can't
+  // be read.
+  roomSetupOf(accountId: number): RoomSetup {
+    const text = this.store.roomSetup(accountId);
+    if (text === null) return {};
+    try {
+      const setup: unknown = JSON.parse(text);
+      return setup !== null && typeof setup === 'object' && !Array.isArray(setup) ? (setup as RoomSetup) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  // Keeps how the account has just set up a room or a practice room, the other part as it was. A
+  // setup too large to keep, or a database too full to write it to, leaves the last one in place.
+  rememberRoomSetup(accountId: number, part: RoomSetup): void {
+    const text = JSON.stringify({ ...this.roomSetupOf(accountId), ...part });
+    if (text.length > MAX_ROOM_SETUP || this.#full()) return;
+    this.store.setRoomSetup(accountId, text);
   }
 
   // The public profile of the account with this handle, as the viewer sees it

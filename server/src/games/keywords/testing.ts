@@ -90,6 +90,7 @@ export function seatedGame() {
     agentOf: () => null,
     playerIds: () => players,
     titleCount: () => null,
+    awardsTitles: () => false,
   };
   let data = keywordsGame.create('en');
   for (const id of players) data = keywordsGame.join(data, ctx, id, false);

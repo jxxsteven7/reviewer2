@@ -19,6 +19,7 @@ import {
   type FriendRoomView,
   type FriendView,
   type InvitationView,
+  type InvitedView,
   type JoinAskView,
   type Rank,
   type SeatedRoom,
@@ -51,8 +52,9 @@ import type { WordLibrary } from './words';
 // module. Every handler runs from start to finish without awaiting anything, so two messages can
 // never interleave.
 
-// Starts and stops the timers for the games' deadlines. The server uses setTimeout; the tests
-// put in timers that run on their own clock.
+// Starts and stops the timers for the games' deadlines and for the invitations that lapse
+// (invitations.ts). The server uses setTimeout; the tests put in timers that run on their own
+// clock.
 export interface Timers {
   // Runs `run` once, `ms` milliseconds from now, and returns what stops it.
   start(run: () => void, ms: number): unknown;
@@ -209,12 +211,19 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const accountSockets = new Map<number, Set<string>>();
   // Invitations to rooms, and how often a member may invite the same friend
   // (docs/architecture.md#friends). However an invitation ends, every connection of the invited
-  // account hears so, and takes it off the page.
+  // account hears so, and takes it off the page, and the inviter gets the room again without it;
+  // one that lapses by its age ends on a timer, with no message waiting.
   const invitations = new Invitations(
     now,
     isOpen,
     (a, b) => accounts?.friends.areFriends(a, b) ?? false,
-    ({ id, inviteeId }) => tellAccount(inviteeId, 'friends:uninvited', { id }),
+    ({ id, inviteeId, room, inviterKey }) =>
+      safely('invitation', () => {
+        tellAccount(inviteeId, 'friends:uninvited', { id });
+        const inviter = room.memberByKey(inviterKey);
+        if (inviter && isOpen(room)) send(room, inviter.sockets, { playerId: inviter.id });
+      }),
+    timers,
   );
   const invites = new WindowCounter(1, INVITE_COOLDOWN_MS, now);
   // Requests to be let into a friend's room, and how many an account sends an hour. However a
@@ -265,10 +274,22 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const ids = [...socketIds];
     if (ids.length === 0) return;
     try {
-      io.to(ids).emit('room:state', view(viewer));
+      const state = view(viewer);
+      const invited = 'playerId' in viewer ? invitedBy(room, viewer.playerId) : [];
+      io.to(ids).emit('room:state', invited.length > 0 ? { ...state, invited } : state);
     } catch (error) {
       report(error, 'view', { code: room.code });
     }
+  }
+
+  // The friends whom a member has invited into the room, while the invitations stand.
+  function invitedBy(room: Room, playerId: string): InvitedView[] {
+    const accountId = room.members.get(playerId)?.account?.id;
+    if (accountId === undefined || !accounts) return [];
+    return invitations.by(room, accountId).flatMap(({ inviteeId }) => {
+      const friend = accounts.store.byId(inviteeId);
+      return friend ? [{ username: friend.username, avatar: avatarUrl(friend) }] : [];
+    });
   }
 
   // The last game of each room whose end has been logged.
@@ -664,11 +685,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
 
   // A game has started in a room: by the chair, or as a practice room was made. Only a draw that
-  // found no way to keep the words apart has clashes (Room.start).
+  // found no way to keep the words apart has clashes (Room.start), which the log blames on the
+  // fields that the game drew from, those drawn anew for it where the room draws them.
   function logStart(room: Room, clashes: number): void {
     log('game_started', { code: room.code, players: room.members.size });
     if (clashes > 0) {
-      log('words_clashed', { code: room.code, language: room.language, fields: room.fields, clashes });
+      log('words_clashed', { code: room.code, language: room.language, fields: [...room.gameFields], clashes });
     }
   }
 
@@ -1066,11 +1088,22 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // no match and has the game's default settings. Its game starts as soon as its creator is in it,
     // online; should it not, they are in its waiting room with the AI players, as in any room.
     on(handlers, 'room:create', (message) => {
-      const { game, language, fields, settings, name: nickname, play, match, public: listed, practice } = message;
+      const {
+        game,
+        language,
+        fields,
+        randomFields,
+        settings,
+        name: nickname,
+        play,
+        match,
+        public: listed,
+        practice,
+      } = message;
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
-      if (practice && (match || listed || settings !== undefined)) return fail('bad_request');
+      if (practice && (match || listed || settings !== undefined || randomFields)) return fail('bad_request');
       const refusal = listed ? publicRefusal(conn) : null;
       if (refusal) return refusal;
       if (practice && !accountOf(conn).ok) return fail('account_required');
@@ -1086,6 +1119,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         game: module,
         language,
         fields,
+        randomFields: randomFields ?? false,
         settings,
         key: conn.key,
         name,
@@ -1102,11 +1136,36 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         game,
         language,
         fields: room.fields,
+        randomFields: room.randomFields,
         match: match?.games ?? null,
         public: room.public,
         practice: practice?.role ?? null,
       });
       enter(socket, room, member);
+      // The account's next room setup starts from this one (RoomSetup in shared/src/accounts.ts),
+      // with the game's settings as the game took them. The room is made whatever comes of
+      // keeping it.
+      if (account) {
+        safely('room_setup', () =>
+          accounts?.rememberRoomSetup(
+            account.id,
+            practice
+              ? { practice: { role: practice.role, fields: room.fields } }
+              : {
+                  room: {
+                    game,
+                    language,
+                    fields: room.fields,
+                    randomFields: room.randomFields,
+                    ...(settings === undefined ? {} : { settings: room.gameSettings ?? settings }),
+                    match: match ?? null,
+                    public: room.public,
+                    play: play ?? false,
+                  },
+                },
+          ),
+        );
+      }
       if (room.practice) {
         const started = room.start(room.round);
         if (started.ok) logStart(room, started.clashes);
@@ -1411,10 +1470,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'friends:decline', about('decline'));
     on(handlers, 'friends:remove', about('remove'));
 
-    // A member invites a friend who is online into the room, once a minute for the same friend; a
-    // name that is no account's is answered as a stranger's. Every connection of the friend hears
-    // it; what admits them, or doesn't, is room:join's to say, except that whoever the chair has
-    // removed isn't invited to come and be refused.
+    // A member invites a friend into the room, online or not, once a minute for the same friend;
+    // a name that is no account's is answered as a stranger's. Every connection of the friend
+    // hears it, and one that comes while it stands hears it then; what admits them, or doesn't, is
+    // room:join's to say, except that whoever the chair has removed isn't invited to come and be
+    // refused. The inviter gets the room again, with the friend among those they invited.
     on(handlers, 'friends:invite', ({ username }) => {
       const found = membership(socket);
       if (!found) return fail('not_member');
@@ -1424,10 +1484,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (!friend || !(accounts as Accounts).friends.areFriends(me.account.id, friend.id)) return fail('not_friends');
       if (found.room.memberByKey(accountKey(friend.id))) return fail('friend_in_room');
       if (found.room.removal(accountKey(friend.id))) return fail('friend_removed');
-      if (!isOnline(friend.id)) return fail('friend_offline');
       if (!invites.take(`${me.account.id}\n${friend.id}`)) return fail('invite_cooldown');
       const invitation = invitations.create(found.room, me.account.id, found.member.key, friend.id);
       tellAccount(friend.id, 'friends:invited', invitationView(invitation));
+      send(found.room, found.member.sockets, { playerId: found.member.id });
       // An invitation answers whatever the friend asked to be let in, whoever they asked.
       asks.answered(found.room, friend.id);
       return ok();

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { GameModule } from '../src/core/game';
 import { seededRng } from '../src/core/random';
 import { DEFAULT_SOCKET_LIMITS } from '../src/core/socket';
-import { loadWordLibrary } from '../src/core/words';
+import { loadWordLibrary, WordLibrary } from '../src/core/words';
 import type { FakeView } from './fakeGame';
 import { fakeGame } from './fakeGame';
 import {
@@ -14,6 +14,7 @@ import {
   startServer,
   TestClient,
   until,
+  wordList,
   type Reply,
   type TestServer,
 } from './helpers';
@@ -701,6 +702,67 @@ describe("the chair's controls", () => {
     const created = await createRoom(server.url, 'Bob', { fields, language: 'zh' });
     track(created.chair);
     expect(server.app.rooms.find(created.code)?.fields).toEqual(fields);
+  });
+
+  test('can have every game draw its lists anew, from those with enough words, and tells nobody which', async () => {
+    await server.close();
+    server = await startServer({
+      words: new WordLibrary([wordList('a', 40), wordList('b', 40), wordList('c', 40), wordList('tiny', 2)]),
+      // Eight games in a row take more messages than a burst allows.
+      socketLimits: { messageBurst: 100 },
+    });
+    // A room that draws its lists needs none chosen; one that doesn't still does.
+    const created = await createRoom(server.url, 'Ann', { fields: [], randomFields: true });
+    const chair = track(created.chair);
+    expect(chair.state).toMatchObject({ fields: [], randomFields: true });
+    expect(server.app.rooms.find(created.code)?.listing()).toMatchObject({ fields: [], randomFields: true });
+    expect(await chair.send('room:settings', { randomFields: false })).toEqual({ ok: false, error: 'no_words' });
+    expect(await chair.send('room:settings', { fields: ['nope'] })).toEqual({ ok: false, error: 'bad_fields' });
+    const bob = await join(created.code, 'Bob');
+    const drawn = new Set<string>();
+    for (let round = 0; round < 8; round += 1) {
+      expect(await start(chair)).toEqual({ ok: true });
+      await bob.waitFor((view) => view.phase === 'playing' && view.round === round + 1);
+      const lists = game(bob).words.map((word) => word.split(' ')[0] as string);
+      expect(
+        lists.every((list) => ['a', 'b', 'c'].includes(list)),
+        lists.join(),
+      ).toBe(true);
+      for (const list of lists) drawn.add(list);
+      // The room knows which lists it drew, for the game's record; the words came from those.
+      const drewFrom = server.app.rooms.find(created.code)?.gameFields ?? [];
+      expect(drewFrom.length).toBeGreaterThan(0);
+      expect(
+        lists.every((list) => drewFrom.includes(list)),
+        `${lists.join()} from ${drewFrom.join()}`,
+      ).toBe(true);
+      // The view still has the lists that the chair chose, none, and nothing of the draw.
+      expect(bob.state).toMatchObject({ fields: [], randomFields: true });
+      await chair.send('test:finish');
+      await chair.waitFor((view) => view.phase === 'ended');
+      expect(await again(chair)).toEqual({ ok: true });
+      await chair.waitFor((view) => view.phase === 'lobby');
+    }
+    expect([...drawn].sort()).toEqual(['a', 'b', 'c']);
+    // Turned off, the room plays with the lists chosen again.
+    expect(await chair.send('room:settings', { fields: ['b'], randomFields: false })).toEqual({ ok: true });
+    expect(await start(chair)).toEqual({ ok: true });
+    await bob.waitFor((view) => view.phase === 'playing' && view.round === 9);
+    expect(game(bob).words.every((word) => word.startsWith('b word'))).toBe(true);
+    expect(server.app.rooms.find(created.code)?.gameFields).toEqual(['b']);
+  });
+
+  test('refuses a practice room that draws its lists', async () => {
+    const client = await connect();
+    expect(
+      await client.send('room:create', {
+        game: 'test',
+        language: 'en',
+        fields: ['general'],
+        randomFields: true,
+        practice: { role: 'captain' },
+      }),
+    ).toEqual({ ok: false, error: 'bad_request' });
   });
 
   test("can change the game's settings in the waiting room, with the fields or without them", async () => {

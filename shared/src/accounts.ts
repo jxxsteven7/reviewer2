@@ -1,5 +1,7 @@
 import type { ContributionCount } from './contributions';
 import type { DuoView } from './duos';
+import type { Language } from './language';
+import type { MatchRules } from './match';
 import type { Rank } from './ranks';
 import { cleanName } from './names';
 import type { BestStreaks } from './streaks';
@@ -168,7 +170,7 @@ export interface ProfileSettings {
 // (contributions.ts). `profile` is what the owner put on the public profile, with `banned` for
 // an account that the operator has barred from writing a link or a bio there. `likes` is how many
 // accounts like the profile, and `requests` how many friend requests wait for the owner's answer
-// (friends.ts).
+// (friends.ts). `roomSetup` is how the account last set up a room and a practice room.
 export interface AccountSummary {
   id: number;
   handle: string;
@@ -183,7 +185,33 @@ export interface AccountSummary {
   profile: ProfileSettings & { banned: boolean };
   likes: number;
   requests: number;
+  roomSetup: RoomSetup;
 }
+
+// How an account last set up a room and a practice room (docs/architecture.md#accounts), which the
+// next setup starts from: what the room took when it was made, kept by the server as the room was
+// created. The page checks it again as it reads it back, since the word lists, the rules and the
+// language may have changed meanwhile, and drops what no longer holds.
+export interface RoomSetup {
+  room?: {
+    game: string;
+    // The room's language, which isn't restored, since a room's is the page's, but which says what
+    // the settings were for: a clue's length is counted in characters in one language and in words
+    // in another. Missing from a setup kept before it was.
+    language?: Language;
+    fields: string[];
+    randomFields: boolean;
+    // The game's own settings, as the game took them, or none for its defaults.
+    settings?: unknown;
+    match: MatchRules | null;
+    public: boolean;
+    play: boolean;
+  };
+  practice?: { role: string; fields: string[] };
+}
+
+// The most that the server keeps of a setup, as JSON: a setup that would take more isn't kept.
+export const MAX_ROOM_SETUP = 4096;
 
 // A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's
 // number, username, avatar, rank, the day it registered (`createdAt`, as YYYY-MM-DD in UTC, and

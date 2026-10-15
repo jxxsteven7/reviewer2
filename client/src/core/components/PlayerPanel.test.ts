@@ -39,6 +39,7 @@ const view = (me: string, isPublic: boolean, player: PlayerView = bob): RoomView
   game: 'keywords',
   language: 'en',
   fields: ['general'],
+  randomFields: false,
   public: isPublic,
   customWordCount: 0,
   phase: 'lobby',

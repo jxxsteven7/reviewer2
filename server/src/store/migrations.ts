@@ -521,4 +521,10 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE replays ADD COLUMN practice INTEGER CHECK (practice IN (0, 1));
   `,
+  // 19: how an account last set up a room and a practice room (RoomSetup in shared/src/accounts.ts,
+  // docs/architecture.md#accounts), which the next room setup starts from: JSON that the server
+  // writes as a room is created, and reads for the owner's summary alone. It goes with the account.
+  `
+  ALTER TABLE accounts ADD COLUMN room_setup TEXT;
+  `,
 ];
