@@ -286,18 +286,15 @@ td:last-child {
 }
 
 /* A wide table, as under the decision letter on a wide screen: a line each, with where the points
-   came from after the name and the titles at the line's right end. */
+   came from after the name and the titles at the line's right end. Where they don't all fit, as a
+   long detail on a table not much wider than this, the detail goes whole under the name, and its
+   words wrap only where even that line is too short for it: the table never grows past its box. */
 @container (min-width: 34rem) {
-  .rest {
-    flex-wrap: nowrap;
-  }
-
   .detail.inline {
     display: inline;
-    flex: none;
+    flex: 0 1 auto;
     padding: 0;
     font-weight: var(--weight-text);
-    white-space: nowrap;
   }
 
   .detail.below {
