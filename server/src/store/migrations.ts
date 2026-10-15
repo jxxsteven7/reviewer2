@@ -553,7 +553,8 @@ export const MIGRATIONS: readonly string[] = [
   //
   // - the games kept from before the record of every game (migration 15), which keep nothing of what
   //   kind of game they were, `started_at` and the rest, and so most of them have no log, or a log
-  //   of the first version; the games kept with guests whose numbers nothing says; and the records
+  //   of the first version; any other game whose log isn't of the second version (gameLog.ts); the
+  //   games kept with guests whose numbers nothing says; and the records
   //   of the games from before games were kept, which have no kept game and ended before the first
   //   that was kept with its whole record. A game with words of the chair's own, which leaves no
   //   record of the game, keeps its records. Each goes with its records, the titles that it
@@ -585,7 +586,8 @@ export const MIGRATIONS: readonly string[] = [
 
   CREATE TEMP TABLE gone_games (game_id TEXT PRIMARY KEY);
   INSERT INTO gone_games SELECT game_id FROM replays
-    WHERE started_at IS NULL OR (guests > 0 AND log IS NOT NULL AND json_type(log, '$.guests') IS NULL);
+    WHERE started_at IS NULL OR (log IS NOT NULL AND json_extract(log, '$.v') IS NOT 2)
+      OR (guests > 0 AND log IS NOT NULL AND json_type(log, '$.guests') IS NULL);
   INSERT OR IGNORE INTO gone_games SELECT game_id FROM game_records
     WHERE game_id NOT IN (SELECT game_id FROM replays)
       AND ended_at < coalesce((SELECT min(ended_at) FROM replays WHERE started_at IS NOT NULL), '9999');

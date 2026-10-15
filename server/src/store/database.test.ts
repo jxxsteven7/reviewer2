@@ -966,6 +966,9 @@ describe('a database in DATA_DIR', () => {
         (1, 'keywords', 'm1', '2026-10-03T11:00:00.000Z', 1, 2, 2, -3, 'black_hole');
       INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (1, 'black_hole', 'm1', 'now');
       INSERT INTO titles (account_id, title, game_id, turn, awarded_at) VALUES (1, 'opening_record', 'whole', 1, 'now');
+      -- A game kept with what kind of game it was, but a log of the first version.
+      ${kept('oldlog', '2026-10-03T14:30:00.000Z')}
+      UPDATE replays SET log = '${log('oldlog', { v: 1 })}' WHERE game_id = 'oldlog';
       -- A game kept with its whole record but a guest whose number nothing says, in a match.
       ${kept('guest', '2026-10-03T15:00:00.000Z')}
       UPDATE replays SET guests = 1, in_match = 1 WHERE game_id = 'guest';
