@@ -85,7 +85,6 @@ export function seatedGame() {
     chairId: 'ann',
     now: () => 0,
     keyOf: (id) => `key-${id}`,
-    whoIs: () => ({ account: true }),
     isOnline: () => true,
     agentOf: () => null,
     playerIds: () => players,

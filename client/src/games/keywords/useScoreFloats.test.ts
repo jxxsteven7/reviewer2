@@ -32,9 +32,10 @@ function game(revealed: number[], result: KeywordsView['result'] = null): Keywor
       {
         turn: 1,
         team: 'red',
+        at: 0,
         word: 'Hint',
         count: 2,
-        guesses: revealed.map((card) => ({ card, color: 'red' as const, player: 'bob' })),
+        guesses: revealed.map((card) => ({ card, color: 'red' as const, player: 'bob', at: 0 })),
       },
     ],
     events: [],

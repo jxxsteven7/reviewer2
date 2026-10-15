@@ -105,7 +105,7 @@ export function createAppServer(options: AppOptions): AppServer {
           log,
           // Asked only once the server answers requests, when the rooms are there.
           agentsLive: (persona) => agentsIn(rooms.all(), persona),
-          showReplay: (kept) => games.get(kept.game)?.showReplay?.(kept) ?? kept.replay,
+          showReplay: (kept) => games.get(kept.game)?.showReplay?.(kept) ?? null,
         }),
       }),
     }),

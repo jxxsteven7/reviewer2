@@ -1,11 +1,12 @@
 import type { KeywordsRoomData, KeywordsView, ShownReplay, Team } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
+import type { GameLogData } from '../src/core/gameLog';
 import { keywordsGame } from '../src/games/keywords';
 import { Browser, startServer, TestClient, until, type TestServer } from './helpers';
 
-// A replay as it is kept and as it is shown (docs/architecture.md#replays): the groups and who was
-// who, without the name of any account, which the server puts in as the replay is opened, as the
-// account is then, or as deleted.
+// A replay as it is shown (docs/architecture.md#replays): worked out from the record of the game as
+// it is opened, with the groups and who was who, each account as it is then, or as deleted. The
+// record names no account.
 
 let server: TestServer;
 const clients: TestClient[] = [];
@@ -21,7 +22,7 @@ const track = (client: TestClient) => {
 };
 
 const board = (client: TestClient) => (client.state?.data as KeywordsRoomData).game as KeywordsView;
-const kept = () => server.db.prepare('SELECT game_id AS gameId, data FROM replays').all() as { data: string }[];
+const kept = () => server.db.prepare('SELECT game_id AS gameId, log FROM replays').all() as { log: string }[];
 
 // Ann and Bob, with accounts, are red's PI and student; two guests are blue's. Red gives a clue,
 // and Bob reveals Reviewer 2, which ends the game.
@@ -74,7 +75,7 @@ async function finished() {
   const ids = Object.fromEntries(
     everyone.map((client, index) => [['ann', 'bob', 'cat', 'dan'][index], client.state?.me]),
   );
-  return { anns, bobs, ids: ids as Record<'ann' | 'bob' | 'cat' | 'dan', string>, gameId };
+  return { anns, bobs, ids: ids as Record<'ann' | 'bob' | 'cat' | 'dan', string>, gameId, seen: board(ann) };
 }
 
 const open = async (browser: Browser, gameId: string) => {
@@ -84,23 +85,22 @@ const open = async (browser: Browser, gameId: string) => {
 };
 
 describe('a replay', () => {
-  test('keeps the groups and who was who, but no account by name', async () => {
+  test('is kept as the record of the game, which names no account, and the guests by number', async () => {
     const { ids } = await finished();
-    const data = kept()[0]?.data as string;
-    expect(data).not.toContain('Ann');
-    expect(data).not.toContain('Bob');
-    const replay = JSON.parse(data) as Record<string, unknown>;
-    expect(replay.players).toBeUndefined();
-    expect(replay.groups).toEqual([
-      { team: 'red', captain: ids.ann, guessers: [ids.bob] },
-      { team: 'blue', captain: ids.cat, guessers: [ids.dan] },
-    ]);
-    expect(replay.members).toEqual({
-      [ids.ann]: { account: true },
-      [ids.bob]: { account: true },
-      [ids.cat]: { guest: 1 },
-      [ids.dan]: { guest: 2 },
-    });
+    const columns = server.db.prepare("SELECT name FROM pragma_table_info('replays')").all() as { name: string }[];
+    expect(columns.map(({ name }) => name)).not.toContain('data');
+    const log = kept()[0]?.log as string;
+    expect(log).not.toContain('Ann');
+    expect(log).not.toContain('Bob');
+    expect((JSON.parse(log) as GameLogData).guests).toEqual({ [ids.cat]: 1, [ids.dan]: 2 });
+  });
+
+  test('is the game as the players saw it end: the board, the record and the result', async () => {
+    const { anns, gameId, seen } = await finished();
+    const shown = await open(anns, gameId);
+    expect(shown.cards).toEqual(seen.cards.map(({ word, color }) => ({ word, color })));
+    expect(shown.history).toEqual(seen.history);
+    expect(shown.result).toEqual(seen.result);
   });
 
   test('shows each account as it is now, a deleted one as deleted, and the guests by number', async () => {
@@ -126,43 +126,5 @@ describe('a replay', () => {
     const after = await open(anns, gameId);
     expect(after.people[ids.bob]).toEqual({ deleted: true });
     expect(JSON.stringify(after)).not.toContain('Bob');
-  });
-
-  test('from before the groups were kept shows a deleted account as the record marks it, or else as a guest', async () => {
-    const { anns, bobs, ids, gameId } = await finished();
-    // The replay as it was kept before: without the groups and who was who.
-    const old = JSON.parse(kept()[0]?.data as string) as Record<string, unknown>;
-    delete old.groups;
-    delete old.members;
-    server.db.prepare('UPDATE replays SET data = ?').run(JSON.stringify(old));
-    // Shown, it has the guests by number, in the order of the seats, and the accounts as they are now.
-    const shown = await open(anns, gameId);
-    expect(shown.people[ids.cat]).toEqual({ guest: 1 });
-    expect(shown.people[ids.dan]).toEqual({ guest: 2 });
-    expect(shown.people[ids.bob]).toMatchObject({ name: 'Bob' });
-    expect(shown.groups).toEqual([
-      { team: 'red', captain: ids.ann, guessers: [ids.bob] },
-      { team: 'blue', captain: ids.cat, guessers: [ids.dan] },
-    ]);
-    expect((await bobs.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
-    expect(kept()[0]?.data).not.toContain('Bob');
-    // The record marks Bob's player ID as a deleted account's: he is shown as one, by no name, and
-    // the guests keep their numbers.
-    const after = await open(anns, gameId);
-    expect([ids.bob, ids.cat, ids.dan].map((id) => after.people[id])).toEqual([
-      { deleted: true },
-      { guest: 1 },
-      { guest: 2 },
-    ]);
-    expect(JSON.stringify(after)).not.toContain('Bob');
-    // Without the mark, as for an account deleted before the records marked them, Bob can't be told
-    // from a guest: he is the first of them, in the order of the seats.
-    server.db.prepare("UPDATE replays SET log = json_remove(log, '$.deleted')").run();
-    const unmarked = await open(anns, gameId);
-    expect([ids.bob, ids.cat, ids.dan].map((id) => unmarked.people[id])).toEqual([
-      { guest: 1 },
-      { guest: 2 },
-      { guest: 3 },
-    ]);
   });
 });

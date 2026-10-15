@@ -24,10 +24,15 @@ import {
 } from '@reviewer2/shared';
 import type { Rng } from '../../core/random';
 import { deal } from './deal';
-import { guessesLeft, remaining, type Clock, type KeywordsState } from './state';
+import { guessesLeft, remaining, type Card, type Clock, type KeywordsState } from './state';
 
 // The rules of the game as pure functions: each takes a state and returns the next one, or the
 // reason it refuses. docs/games/keywords.md describes them.
+//
+// Each rule that a player's move goes through checks the move, and then hands it to the function
+// that makes it (`apply...`), which checks nothing. The replay of a kept game (replay.ts) makes the
+// moves of its log with those alone: the log holds the moves that the rules took, under the rules of
+// their time, which may have been other than today's.
 //
 // Every check runs in the same order: is the action for this game and this turn, is the game
 // paused, is it this player's to make, is it the right moment, and only then is its content
@@ -67,7 +72,15 @@ const clockFor = (seconds: number, at: number): Clock | null =>
   seconds > 0 ? { ends: at + seconds * 1000, length: seconds * 1000 } : null;
 
 export function newGame(words: readonly (string | BoardWord)[], rng: Rng, setup: Setup, at: number): KeywordsState {
-  const { cards, startingTeam } = deal(words, rng);
+  return beginGame({ ...setup, ...deal(words, rng) }, at);
+}
+
+// A game on a board that is dealt already, as it stands when it starts at `at`: the first group's
+// PI is to give a clue.
+export function beginGame(
+  { cards, startingTeam, ...setup }: Setup & { cards: Card[]; startingTeam: Team },
+  at: number,
+): KeywordsState {
   return {
     ...setup,
     startedAt: at,
@@ -127,7 +140,8 @@ export function heroesOf(record: ClueRecord): Set<string> {
   return heroes;
 }
 
-function endTurn(state: KeywordsState, at: number): KeywordsState {
+// The other group's turn, whose time counts from `at`.
+export function endTurn(state: KeywordsState, at: number): KeywordsState {
   return {
     ...state,
     team: otherTeam(state.team),
@@ -175,27 +189,36 @@ export function giveClue(
   if (problem) return refuse(problem);
   const targets = targetsOf(state, action.targets);
   if (targets === null) return refuse('bad_targets');
+  return ok(applyClue(state, actor.id, { word: cleanClue(action.word), count: action.count, targets }, at));
+}
 
-  const word = cleanClue(action.word);
+// The clue of `captain`, as the record keeps it, with the cards it is meant for, if any: the
+// group's students are to guess.
+export function applyClue(
+  state: KeywordsState,
+  captain: string,
+  { word, count, targets }: { word: string; count: ClueCount; targets: readonly number[] },
+  at: number,
+): KeywordsState {
   const record: ClueRecord = {
     turn: state.turn,
     team: state.team,
     word,
-    count: action.count,
+    count,
     guesses: [],
-    captain: actor.id,
+    captain,
     at: at - state.startedAt,
-    ...(targets.length > 0 ? { targets } : {}),
+    ...(targets.length > 0 ? { targets: [...targets] } : {}),
     ...(inLastSeconds(state, at) ? { lastSeconds: true as const } : {}),
   };
-  return ok({
+  return {
     ...state,
     phase: 'guess',
     clock: clockFor(state.settings.guessTime, at),
-    clue: { word, count: action.count },
+    clue: { word, count },
     guessesMade: 0,
     history: [...state.history, record],
-  });
+  };
 }
 
 // One of the current team's guessers chooses a card without revealing it, or takes the choice
@@ -264,8 +287,19 @@ export function reveal(
   const target = Number.isInteger(action.card) ? state.cards[action.card] : undefined;
   if (!target) return refuse('no_such_card');
   if (target.revealed) return refuse('card_revealed');
+  return ok(applyReveal(state, actor.id, action.card, at, heroes));
+}
 
-  const cards = state.cards.map((card, index) => (index === action.card ? { ...card, revealed: true } : card));
+// The card that `player` reveals, which ends the game, the turn or neither.
+export function applyReveal(
+  state: KeywordsState,
+  player: string,
+  card: number,
+  at: number,
+  heroes: (playerId: string) => number | null = () => null,
+): KeywordsState {
+  const target = state.cards[card] as Card;
+  const cards = state.cards.map((each, index) => (index === card ? { ...each, revealed: true } : each));
   const history = state.history.map((record, index) =>
     index === state.history.length - 1
       ? {
@@ -273,9 +307,9 @@ export function reveal(
           guesses: [
             ...record.guesses,
             {
-              card: action.card,
+              card,
               color: target.color,
-              player: actor.id,
+              player,
               at: at - state.startedAt,
               ...(inLastSeconds(state, at) ? { lastSeconds: true as const } : {}),
             },
@@ -284,8 +318,8 @@ export function reveal(
       : record,
   );
   const marks = {
-    red: state.marks.red.filter(({ card }) => card !== action.card),
-    blue: state.marks.blue.filter(({ card }) => card !== action.card),
+    red: state.marks.red.filter((mark) => mark.card !== card),
+    blue: state.marks.blue.filter((mark) => mark.card !== card),
   };
   const before = state.history.at(-1);
   const after = history.at(-1);
@@ -313,13 +347,13 @@ export function reveal(
   };
 
   // Reviewer 2 rejects the group that reveals them, whatever else is on the board.
-  if (target.color === 'reviewer2') return ok(finish(next, otherTeam(state.team), 'reviewer2'));
+  if (target.color === 'reviewer2') return finish(next, otherTeam(state.team), 'reviewer2');
   // A group wins as soon as all its cards are revealed, even by the other group.
   for (const team of TEAMS) {
-    if (remaining(cards, team) === 0) return ok(finish(next, team, 'found'));
+    if (remaining(cards, team) === 0) return finish(next, team, 'found');
   }
-  if (target.color !== state.team) return ok(endTurn(next, at));
-  return ok(guessesLeft(next) === 0 ? endTurn(next, at) : next);
+  if (target.color !== state.team) return endTurn(next, at);
+  return guessesLeft(next) === 0 ? endTurn(next, at) : next;
 }
 
 // The current team's guessers end their turn, which they may do once they have revealed a card.
@@ -348,6 +382,15 @@ export interface Missed {
 // that ended is stale from then on.
 export function expire(state: KeywordsState, at: number, missed: () => Missed | null = () => null): KeywordsState {
   if (state.phase === 'over' || state.pause || !state.clock || at < state.clock.ends) return state;
+  return applyTimeout(state, at, missed);
+}
+
+// The time of the phase ran out at `at`.
+export function applyTimeout(
+  state: KeywordsState,
+  at: number,
+  missed: () => Missed | null = () => null,
+): KeywordsState {
   if (state.phase === 'guess') {
     const history = state.history.map((record, index) =>
       index === state.history.length - 1 ? { ...record, timedOut: true as const } : record,
@@ -424,8 +467,13 @@ export function pause(state: KeywordsState, chair: boolean, action: Pick<Moment,
   if (state.phase === 'over') return refuse('game_over');
   if (!chair) return refuse('not_chair');
   if (state.pause) return refuse('paused');
+  return ok(applyPause(state, at));
+}
+
+// The clock stops at `at`, with the time the phase has left.
+export function applyPause(state: KeywordsState, at: number): KeywordsState {
   const left = state.clock ? Math.max(0, state.clock.ends - at) : null;
-  return ok(noted({ ...state, pause: { left } }, 'paused'));
+  return noted({ ...state, pause: { left } }, 'paused');
 }
 
 // The chair, whoever that is by now, resumes the game: the clock goes on from where it stopped.
@@ -434,9 +482,14 @@ export function resume(state: KeywordsState, chair: boolean, action: Pick<Moment
   if (state.phase === 'over') return refuse('game_over');
   if (!chair) return refuse('not_chair');
   if (!state.pause) return refuse('not_paused');
-  const clock =
-    state.clock && state.pause.left !== null ? { ends: at + state.pause.left, length: state.clock.length } : null;
-  return ok(noted({ ...state, clock, pause: null }, 'resumed'));
+  return ok(applyResume(state, at));
+}
+
+// The clock goes on at `at` from where it stopped.
+export function applyResume(state: KeywordsState, at: number): KeywordsState {
+  const left = state.pause?.left ?? null;
+  const clock = state.clock && left !== null ? { ends: at + left, length: state.clock.length } : null;
+  return noted({ ...state, clock, pause: null }, 'resumed');
 }
 
 // A group asks for its extension: EXTENSION_SECONDS more for the phase it is in, once a game, in
@@ -447,7 +500,12 @@ export function extend(state: KeywordsState, actor: Actor, action: Moment): Outc
   if (denied) return refuse(denied);
   if (!state.settings.extensions || !state.clock) return refuse('no_extension');
   if (state.extended[state.team]) return refuse('extension_used');
+  return ok(applyExtension(state));
+}
+
+// The group on turn has its extension: EXTENSION_SECONDS more for the phase.
+export function applyExtension(state: KeywordsState): KeywordsState {
   const more = EXTENSION_SECONDS * 1000;
-  const clock = { ends: state.clock.ends + more, length: state.clock.length + more };
-  return ok(noted({ ...state, clock, extended: { ...state.extended, [state.team]: true } }, 'extended', state.team));
+  const clock = state.clock && { ends: state.clock.ends + more, length: state.clock.length + more };
+  return noted({ ...state, clock, extended: { ...state.extended, [state.team]: true } }, 'extended', state.team);
 }

@@ -1038,6 +1038,8 @@
       "recordLine": "{side}，{role}",
       "ordinaryTag": "普通",
       "matchTag": "比赛 {game}/{games}",
+      "agentsTag": "这局有 AI，不计积分",
+      "agentsGame": "有 AI 的对局",
       "watchAgainOf": "回放 {when} 的这一局",
       "recentMatches": "最近 20 场比赛",
       "matchLine": "{rank}/{players} 名 · {score} 分 | {rank}/{players} 名 · {score} 分",
@@ -1259,7 +1261,8 @@
       "bug": "报的 bug 被采纳了，匿名报的也算。首页的反馈贡献里能看到大家的。",
       "words": "给词库提的词被采纳了，匿名提的也算。首页的反馈贡献里能看到大家的。"
     },
-    "author": "第一个注册的账号，属于这个游戏的作者。"
+    "author": "第一个注册的账号，属于这个游戏的作者。",
+    "agents": "这局有 AI 玩家，或有 AI 替掉线的人玩过。"
   },
   "duos": {
     "names": {

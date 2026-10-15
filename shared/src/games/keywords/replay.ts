@@ -5,18 +5,14 @@ import type { CardColor, ClueCount, ClueRecord, GameResult, Team } from './types
 // A finished game, to be replayed step by step (ReplayViewer on the client): the board as it was
 // dealt, with every color, which the end of a game shows everyone anyway, the clues and the
 // guesses as the record has them, the groups and who everyone in them was. The page builds one from
-// the view when a game ends, for the review on the results page; the server keeps one for the
-// players with accounts (docs/architecture.md#replays), and shows it to them as ShownReplay.
+// the view when a game ends, for the review on the results page; the server works one out from the
+// record of a game it kept, for the players with accounts (docs/architecture.md#replays), and shows
+// it to them as ShownReplay.
 
 export interface ReplayCard {
   word: string;
   color: CardColor;
 }
-
-// Someone who played in a game, as a kept replay has them: an account, of which it keeps nothing
-// but that it is one, so that the server shows the account as it is when the replay is opened, and
-// a deleted one as deleted; a guest, by their number in the room; or an AI player, by its persona.
-export type ReplayMember = { account: true } | { guest: number } | { agent: AgentPersona };
 
 // A group as the game ended: its PI and its students, by player ID, in the order of their seats.
 export interface ReplayGroup {
@@ -25,6 +21,7 @@ export interface ReplayGroup {
   guessers: string[];
 }
 
+// The game: the board, the record, the result, and the groups as the game ended.
 export interface KeywordsReplay {
   gameId: string;
   language: Language;
@@ -32,15 +29,7 @@ export interface KeywordsReplay {
   cards: ReplayCard[];
   history: ClueRecord[];
   result: GameResult;
-  // The groups as the game ended, and who was who, by player ID: everyone in the groups, and
-  // whoever gave a clue or revealed a card and has left since. Replays from before have neither;
-  // the server works the groups out from the record of the game as it shows them.
-  groups?: ReplayGroup[];
-  members?: Record<string, ReplayMember>;
-  // Replays from before: the AI players' personas, by player ID. They kept the name that each
-  // player who revealed a card had in the game too, which nothing showed any more, and which went
-  // (migration 20, docs/architecture.md#replays).
-  agents?: Record<string, AgentPersona>;
+  groups: ReplayGroup[];
 }
 
 // Someone in a replay as it is shown: an account by its username, avatar and handle as they are
@@ -54,17 +43,13 @@ export interface ReplayPerson {
   agent?: AgentPersona;
 }
 
-// A replay as the viewer shows it: the game, the groups and who everyone in it was, by player ID.
-// `me` is the player ID that the viewer had in it, if any, whom the groups show first among the
-// students, as they do in the game.
-export interface ShownReplay extends Omit<KeywordsReplay, 'groups' | 'members' | 'agents'> {
-  groups: ReplayGroup[];
+// A replay as the viewer shows it: the game, and who everyone in it was, by player ID. `me` is the
+// player ID that the viewer had in it, if any, whom the groups show first among the students, as
+// they do in the game.
+export interface ShownReplay extends KeywordsReplay {
   people: Record<string, ReplayPerson>;
   me: string | null;
 }
-
-// The largest replay the server keeps, as JSON, in bytes.
-export const MAX_REPLAY_BYTES = 64 * 1024;
 
 // One step of a replay: how the game stood after one thing happened. The first step is the
 // start, with nothing revealed; then each turn brings a step for its clue, or for the time that
@@ -94,7 +79,8 @@ export function replaySteps(replay: Pick<KeywordsReplay, 'history'>): ReplayStep
     steps.push({ ...turn, guess: null, timedOut: clue === null && record.timedOut === true, revealed });
     for (const guess of record.guesses) {
       revealed = [...revealed, guess.card];
-      steps.push({ ...turn, guess: { ...guess, right: guess.color === record.team }, timedOut: false, revealed });
+      const { card, color, player } = guess;
+      steps.push({ ...turn, guess: { card, color, player, right: color === record.team }, timedOut: false, revealed });
     }
     if (clue !== null && record.timedOut) steps.push({ ...turn, guess: null, timedOut: true, revealed });
   }

@@ -125,9 +125,15 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   // How the game began, for its record: the words. How it came out: everyone won, by finishing.
   setup: (data) => ({ words: data.words }),
   outcome: (data) => (data.withdrawn ? null : { winner: 'all', reason: 'finish' }),
-  // A finished game, to watch again: what was pressed, and the words, which no one but the
-  // players should read back from the database.
-  replay: (data) => (data.withdrawn ? null : { presses: data.presses, words: data.words }),
+  // A finished game, watched again: how many presses its log has before its end, and the words,
+  // which no one but the players should read back from the database. A game that didn't finish has
+  // nothing to watch.
+  showReplay: ({ setup, log }) => {
+    const end = log.entries.findIndex(({ type }) => type === 'end');
+    if (end === -1 || log.entries[end]?.data !== undefined) return null;
+    const presses = log.entries.slice(0, end).filter(({ type }) => type === 'test:press').length;
+    return { presses, words: (setup as { words: string[] }).words };
+  },
   // Whoever came to play has played, also after leaving, and is a player wherever they are; the
   // others watch. The log keeps what a press carried and what was said. The game waits for its
   // players while the alarm is set.

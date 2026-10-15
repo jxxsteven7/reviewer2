@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
 import { request } from '../account';
+import AgentIcon from '../components/AgentIcon.vue';
 import RecordStats from '../components/RecordStats.vue';
 import TitleInfo from '../components/TitleInfo.vue';
 import UiButton from '../components/UiButton.vue';
@@ -16,8 +17,10 @@ import { useBusy } from '../useBusy';
 
 // The account's record: the numbers of games, wins and matches (RecordStats.vue); then the last 20
 // games, a line each: when it ended, in numbers, whether it was an ordinary game or which game of
-// its match, the role on a chip in the group's tint, and the decision that the group got, by its
-// short English name in every language, with a round button on the right to watch it again; then
+// its match, or, for a game that an AI played in, which is never one of a match, the robot's head
+// and "AI" in their place, which a tap explains, the role on a chip in the group's tint, and the
+// decision that the group got, by its short English name in every language, with a round button
+// on the right to watch it again; then
 // the last 20 matches, in the same look, each with its games, its place and total, and its title on
 // the right. The columns of a list line up from one line to the next where the browser has
 // subgrids. What doesn't fit, a long decision or title, is cut short with an ellipsis; a tap on it
@@ -86,7 +89,11 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
           <span class="when num"
             ><span>{{ stamp(record.endedAt).day }}</span> <span>{{ stamp(record.endedAt).time }}</span></span
           >
-          <span class="tag">{{
+          <TitleInfo v-if="record.agents" :title="{ kind: 'agents' }" class="tag agents"
+            ><AgentIcon /><span aria-hidden="true">{{ t('room.agent') }}</span
+            ><span class="sr-only">{{ t('account.profile.agentsTag') }}</span></TitleInfo
+          >
+          <span v-else class="tag">{{
             record.match ? t('account.profile.matchTag', record.match) : t('account.profile.ordinaryTag')
           }}</span>
           <span class="outcome">
@@ -277,6 +284,21 @@ h3 {
   background: var(--paper);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
+}
+
+/* A game that an AI played in has the robot's head and "AI" in its tag, the word underlined as a
+   button that a tap explains is (TitleInfo.vue), which reaches 44px high to tap, out of sight. */
+.tag.agents {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tag.agents::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 22px) 0;
 }
 
 /* The role and the decision, together on the line, the decision cut short where they have no room. */
