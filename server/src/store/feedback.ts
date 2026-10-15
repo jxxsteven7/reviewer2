@@ -21,9 +21,9 @@ import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 // text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it was
 // published as, the pull request that resolved it, when it was adopted and what the player
 // contributed, whether it was closed, and whether it is in the trash. Feedback that was adopted is
-// a feedback contribution, which the home page lists by the name the player left with it, or as
-// anonymous, and which counts for the account they were logged in to, if they were
-// (docs/architecture.md#feedback-contributions).
+// a feedback contribution, which the home page lists by the account that signed it as the account
+// is now, by the name a guest left with it, or as anonymous, and which counts for the account the
+// player was logged in to, if they were (docs/architecture.md#feedback-contributions).
 //
 // Reports of players are kept here too, in a table of their own (migration 6), and are an archive
 // as the feedback was: no row is deleted or changed. Unlike feedback, a report says who sent it,
@@ -83,9 +83,12 @@ export interface NewFeedback {
   kind: FeedbackKind;
   text: string;
   contact: string | null;
-  // The name for the feedback contributions, if the player left one, and the account they were
-  // logged in to, if they were, whether they left a name or not; and whether they let the name
-  // link to that account's public profile, which only a name and an account can.
+  // Who it is from, in one of three ways: signed with the account the player was logged in to
+  // (`linkProfile`), which keeps no name, since the account's is looked up whenever it is shown;
+  // anonymous, with the account if they were logged in to one, so that it counts for the account;
+  // or, from a guest alone, with the name they left (`credit`). add() keeps it in one of these
+  // ways whatever it is given: feedback from an account keeps no name, and a name that comes with
+  // an account, as a page from before signing sent it, signs with the account.
   credit: string | null;
   accountId: number | null;
   linkProfile: boolean;
@@ -117,11 +120,12 @@ export interface Feedback extends NewFeedback {
   adoptedAt: string | null;
   summaryZh: string | null;
   summaryEn: string | null;
-  // The username of the account, while it has one.
+  // The username of the account, while it has one. Feedback signed with an account that is gone
+  // has neither an account nor a name: it is a deleted player's.
   username: string | null;
-  // The username of another account than the one it came from, when the name for the
-  // feedback contributions is that username. The name may be anyone's, but then it may also be someone
-  // passing for the account's owner, which the operator is told before adopting it.
+  // The username of an account, when a guest's name is that username. The name may be anyone's,
+  // but then it may also be someone passing for the account's owner, which the operator is told
+  // before adopting it.
   nameTakenBy: string | null;
 }
 
@@ -251,16 +255,18 @@ export class FeedbackStore {
       'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
     );
     // The contributions as anyone sees them. Feedback signed with an account is listed by the
-    // account's username as it is now, with the handle of its profile and its avatar, and by the
-    // name it was sent with once the account is gone; nothing else has a handle or an avatar.
+    // account as it is now, its username, the handle of its profile and its avatar, and once the
+    // account is gone as a deleted player's, by no name; a guest's by the name they left; nothing
+    // else has a name, a handle or an avatar. Adopted feedback is a GitHub issue, which adopt() and
+    // admin.ts see to, so a row without one, which only a hand on the database makes, is left out.
     this.#contributions = db.prepare(
-      'SELECT f.kind, CASE WHEN f.credit IS NOT NULL AND f.link_profile = 1 THEN coalesce(a.username, f.credit) ' +
-        'ELSE f.credit END AS name, ' +
-        'CASE WHEN f.credit IS NOT NULL AND f.link_profile = 1 THEN a.handle END AS profile, ' +
-        'CASE WHEN f.credit IS NOT NULL AND f.link_profile = 1 THEN a.avatar END AS avatar, ' +
+      'SELECT f.kind, CASE WHEN f.link_profile = 1 THEN a.username ELSE f.credit END AS name, ' +
+        'CASE WHEN f.link_profile = 1 THEN a.handle END AS profile, ' +
+        'CASE WHEN f.link_profile = 1 THEN a.avatar END AS avatar, ' +
+        'f.link_profile = 1 AND a.id IS NULL AS deleted, ' +
         'f.summary_zh AS summaryZh, f.summary_en AS summaryEn, f.issue, substr(f.adopted_at, 1, 7) AS month ' +
         'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id ' +
-        'WHERE f.adopted_at IS NOT NULL ORDER BY f.adopted_at DESC, f.id DESC',
+        'WHERE f.adopted_at IS NOT NULL AND f.issue IS NOT NULL ORDER BY f.adopted_at DESC, f.id DESC',
     );
     this.#counts = db.prepare(
       'SELECT kind, count(*) AS count FROM feedback WHERE account_id = ? AND adopted_at IS NOT NULL GROUP BY kind',
@@ -286,18 +292,19 @@ export class FeedbackStore {
     return databaseBytes(this.db) > this.limits.maxDatabaseBytes ? 'database' : null;
   }
 
-  // Keeps the feedback and returns its id.
+  // Keeps the feedback and returns its id, in one of the three ways of NewFeedback.
   add(feedback: NewFeedback): number {
     const { kind, text, contact, credit, accountId, linkProfile, version, language, page, userAgent } = feedback;
+    const signed = accountId !== null && (linkProfile || credit !== null);
     const createdAt = new Date(this.now()).toISOString();
     const { lastInsertRowid } = this.#insert.run(
       createdAt,
       kind,
       text,
       contact,
-      credit,
+      accountId === null ? credit : null,
       accountId,
-      linkProfile ? 1 : 0,
+      signed ? 1 : 0,
       version,
       language,
       page,
@@ -332,16 +339,15 @@ export class FeedbackStore {
   }
 
   // A row as Feedback, with Feedback.nameTakenBy, which is looked up here and not in the query
-  // because only usernameKey() (shared/src/accounts.ts) says which username a name is. Feedback
-  // signed with an account has the username that the server gave it, which nobody passed for,
-  // even if the account was renamed since and another took the name.
+  // because only usernameKey() (shared/src/accounts.ts) says which username a name is. Only a
+  // guest leaves a name; feedback signed with an account keeps none to pass for anyone.
   #fromRow(row: Record<string, SQLOutputValue>): Feedback {
     const feedback = { ...row, linkProfile: row.linkProfile === 1 } as unknown as Omit<Feedback, 'nameTakenBy'>;
     const owner =
-      feedback.credit === null || feedback.linkProfile
+      feedback.credit === null
         ? undefined
         : (this.#account.get(usernameKey(feedback.credit)) as { id: number; username: string } | undefined);
-    return { ...feedback, nameTakenBy: owner && owner.id !== feedback.accountId ? owner.username : null };
+    return { ...feedback, nameTakenBy: owner ? owner.username : null };
   }
 
   // Records the GitHub issue that the feedback was published as, or with null that it wasn't.
@@ -384,11 +390,12 @@ export class FeedbackStore {
 
   // The feedback contributions, the latest adopted first, of the kinds the server knows.
   contributions(): Contribution[] {
-    const rows = this.#contributions.all() as unknown as (Omit<Contribution, 'summary'> & {
+    const rows = this.#contributions.all() as unknown as (Omit<Contribution, 'summary' | 'deleted'> & {
+      deleted: number;
       summaryZh: string | null;
       summaryEn: string | null;
     })[];
-    return rows.flatMap(({ kind, name, profile, avatar, summaryZh, summaryEn, issue, month }) =>
+    return rows.flatMap(({ kind, name, profile, avatar, deleted, summaryZh, summaryEn, issue, month }) =>
       (FEEDBACK_KINDS as readonly string[]).includes(kind)
         ? [
             {
@@ -396,6 +403,7 @@ export class FeedbackStore {
               name,
               profile,
               avatar: avatar === null ? null : `${AVATAR_PATH}${avatar}`,
+              deleted: deleted === 1,
               summary: summaryZh && summaryEn ? { zh: summaryZh, en: summaryEn } : null,
               issue,
               month,

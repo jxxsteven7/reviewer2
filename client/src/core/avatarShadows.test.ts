@@ -28,13 +28,24 @@ describe('the shadow of an avatar', () => {
   });
 
   test('goes with the press, and from an avatar whose button can not be pressed', () => {
-    expect(rule('core/components/InvitedFriends.vue', '.invited-friends:active .face :deep(.avatar)')).toContain(
-      'box-shadow: none',
-    );
-    expect(rule('core/components/AccountEntry.vue', '.avatar-link:active :deep(.avatar)')).toContain(
-      'box-shadow: none',
-    );
-    expect(rule('core/components/ContributionsList.vue', '.person:active :deep(.avatar)')).toContain(
+    // The press of every sticker takes the shadow (base.css), from an avatar that moves in its
+    // button as from a button.
+    const base = readFileSync(join(import.meta.dirname, '..', 'styles', 'base.css'), 'utf8');
+    const pressed = base.slice(base.indexOf('.press:not(:disabled):active,'));
+    expect(pressed.slice(0, pressed.indexOf('}'))).toContain('.press-host:not(:disabled):active .press-part');
+    expect(pressed.slice(0, pressed.indexOf('}'))).toContain('box-shadow: none');
+    for (const file of [
+      'core/components/AvatarButton.vue',
+      'core/components/InvitedFriends.vue',
+      'core/components/AccountEntry.vue',
+      'core/components/ContributionsList.vue',
+    ]) {
+      const source = readFileSync(join(import.meta.dirname, '..', file), 'utf8');
+      expect(source, file).toMatch(/class="[^"]*\bpress-host\b/);
+      expect(source, file).toMatch(/class="press-part"/);
+    }
+    // Reviewer 1's avatar is in a sticker that moves as a whole, and loses its shadow with it.
+    expect(rule('core/views/PracticeRoom.vue', '.entry:active:not(:disabled) :deep(.avatar)')).toContain(
       'box-shadow: none',
     );
     expect(rule('core/views/PracticeRoom.vue', '.entry:disabled :deep(.avatar)')).toContain('box-shadow: none');

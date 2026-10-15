@@ -547,4 +547,21 @@ export const MIGRATIONS: readonly string[] = [
 
   UPDATE replays SET data = json_remove(data, '$.players') WHERE json_type(data, '$.players') IS NOT NULL;
   `,
+  // 21: feedback signed with an account keeps the account alone (docs/architecture.md#feedback):
+  // the account's username and avatar are looked up whenever the feedback is shown, and once the
+  // account is gone it is a deleted player's, by no name. Feedback is from then on in one of three
+  // ways: signed with an account, with no name; anonymous, with the account if the player was
+  // logged in; or a guest's, with the name they left. The feedback that is there is put in them:
+  // - what migration 17 marked as signed but had no name was anonymous, and what had a name but no
+  //   account is a guest's name, whether its player never had an account or deleted it since;
+  // - a name typed while logged in to an account, which older pages sent, signs with the account,
+  //   as its players agreed with the maintainers;
+  // - the name that feedback signed with an account kept goes.
+  //
+  // The archive's guard (archive.test.ts) allows these changes here alone, as the maintainers agreed.
+  `
+  UPDATE feedback SET link_profile = 0 WHERE link_profile = 1 AND (credit IS NULL OR account_id IS NULL);
+  UPDATE feedback SET link_profile = 1 WHERE link_profile = 0 AND credit IS NOT NULL AND account_id IS NOT NULL;
+  UPDATE feedback SET credit = NULL WHERE link_profile = 1;
+  `,
 ];

@@ -47,12 +47,13 @@ const press = () => props.playerId !== null && open?.(props.playerId);
   <button
     v-if="handle"
     type="button"
-    class="avatar-button"
+    class="avatar-button press-host"
     :aria-label="t('room.viewProfile', { name })"
     aria-haspopup="dialog"
     @click="openProfile(handle, name)"
   >
     <PlayerAvatar
+      class="press-part"
       :name="name"
       :initial="initial"
       :guest="guest"
@@ -65,11 +66,12 @@ const press = () => props.playerId !== null && open?.(props.playerId);
   <button
     v-else-if="open && playerId !== null"
     type="button"
-    class="avatar-button"
+    class="avatar-button press-host"
     :aria-label="t('room.viewProfile', { name })"
     @click="press"
   >
     <PlayerAvatar
+      class="press-part"
       :name="name"
       :initial="initial"
       :guest="guest"
@@ -112,16 +114,10 @@ const press = () => props.playerId !== null && open?.(props.playerId);
   inset: calc(50% - 22px);
 }
 
+/* The avatar wears the hard shadow of a sticker that can be pressed, and moves as one does
+   (`press-part` in base.css). */
 .avatar-button > :deep(.avatar) {
   box-shadow: var(--shadow-1);
-  transition:
-    transform var(--motion),
-    box-shadow var(--motion);
-}
-
-.avatar-button:active > :deep(.avatar) {
-  transform: translate(var(--shift-1), var(--shift-1));
-  box-shadow: none;
 }
 
 .avatar-button:focus-visible {

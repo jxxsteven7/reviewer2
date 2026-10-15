@@ -575,7 +575,7 @@
     },
     "timedOut": "Time ran out, and the turn ended.",
     "someone": "A player who left",
-    "deleted": "Deleted account",
+    "deleted": "Deleted player",
     "deletedInitial": "D",
     "won": "The {group} won.",
     "withdrawn": "The chair withdrew the game.",
@@ -851,7 +851,7 @@
       "anonymous": "Anonymously"
     },
     "anonymousHint": "You are listed as an anonymous player among the feedback contributions on the home page, and the GitHub issue names nobody.",
-    "accountHint": "The feedback contributions on the home page show your avatar and username, and a tap on either opens your panel. Your username appears on the GitHub issue.",
+    "accountHint": "The feedback contributions on the home page show your account's avatar and username as they are now, and a tap on either opens your panel; once you delete the account, they show a deleted player. The GitHub issue shows your username as it was when the issue was published, and keeps it.",
     "credit": "Your name",
     "creditHint": "Signing needs a name; to leave none, choose Anonymously. The name is listed among the feedback contributions on the home page, and on the GitHub issue. Any name will do, such as your GitHub username.",
     "gameNote": "Which game should we make next? Say how a round goes and what makes it fun.",
@@ -870,6 +870,7 @@
       "words": "Word lists"
     },
     "anonymous": "An anonymous player",
+    "deleted": "A deleted player",
     "none": "No feedback has been adopted yet. Be the first!"
   },
   "acknowledgments": {
@@ -1048,7 +1049,7 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, feedback contributions counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it: the replays show you as a deleted account, without your name, and what you said in games stays, anonymous like the rest of the game records and no longer linked to you. This can't be undone.",
+      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, feedback contributions counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it: the feedback contributions you signed show a deleted player, though GitHub issues already published keep the name on them; the replays show you as a deleted player, without your name, and what you said in games stays, anonymous like the rest of the game records and no longer linked to you. This can't be undone.",
       "deleteSubmit": "Delete for good"
     },
     "avatar": {
@@ -1340,6 +1341,6 @@
   },
   "privacy": {
     "recordsTitle": "Game records",
-    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chat. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as deleted, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted account, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
+    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chat. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as a deleted player, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted player, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
   }
 }

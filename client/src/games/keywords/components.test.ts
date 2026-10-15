@@ -632,6 +632,18 @@ describe('CluePanel', () => {
   const counts = (wrapper: ReturnType<typeof panel>) =>
     wrapper.findAll('.counts button').map((button) => button.text());
 
+  test('offers the numbers as stickers that lift and press, but for the one chosen, which stays pressed', async () => {
+    const wrapper = panel();
+    const pressing = () => wrapper.findAll('.counts button').map((button) => button.classes('press'));
+    const chosenAt = () => wrapper.findAll('.counts button').findIndex((button) => button.classes('chosen'));
+    expect(pressing().filter((pressed) => !pressed)).toHaveLength(1);
+    expect(pressing()[chosenAt()]).toBe(false);
+    await wrapper.findAll('.counts button')[0]?.trigger('click');
+    expect(chosenAt()).toBe(0);
+    expect(pressing()[0]).toBe(false);
+    expect(pressing().slice(1).every(Boolean)).toBe(true);
+  });
+
   test('names the card that a clue repeats, and the translation when that is what it repeats', async () => {
     const wrapper = panel();
     await wrapper.get('input').setValue('models');
@@ -1032,7 +1044,7 @@ describe('ReplayViewer', () => {
     expect(buttons.map((button) => button.attributes('aria-label'))).toEqual([
       "View Ann's profile",
       "View Guest 2's profile",
-      "View Deleted account's profile",
+      "View Deleted player's profile",
       "View Reviewer 1's profile",
     ]);
     expect(buttons[2]?.get('.initial').attributes('data-initial')).toBe('D');

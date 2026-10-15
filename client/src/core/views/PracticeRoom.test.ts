@@ -157,6 +157,8 @@ describe('practicing with Reviewer 1', () => {
     await flushPromises();
     const entry = wrapper.get<HTMLButtonElement>('button.entry');
     expect(entry.element.disabled).toBe(true);
+    // A sticker that lifts and presses as a button does (base.css), but not while it is grey.
+    expect(entry.classes()).toContain('press');
     expect(entry.text()).toContain('Reviewer\u00a01 is offline for now');
     wrapper.unmount();
 

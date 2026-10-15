@@ -28,7 +28,7 @@ function choose(language: Language) {
         v-for="language in LANGUAGES"
         :key="language"
         type="button"
-        class="choice"
+        class="choice press press-large"
         :lang="HTML_LANG[language]"
         @click="choose(language)"
       >
@@ -86,6 +86,8 @@ function choose(language: Language) {
   gap: var(--space-4);
 }
 
+/* Each language is a large sticker, which lifts and presses as far as its shadow goes
+   (`press-large` in base.css). */
 .choice {
   display: flex;
   flex-direction: column;
@@ -97,14 +99,6 @@ function choose(language: Language) {
   box-shadow: var(--shadow-2);
   text-align: center;
   cursor: pointer;
-  transition:
-    transform var(--motion),
-    box-shadow var(--motion);
-}
-
-.choice:active {
-  transform: translate(var(--shift-2), var(--shift-2));
-  box-shadow: none;
 }
 
 .name {

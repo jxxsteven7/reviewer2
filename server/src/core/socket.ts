@@ -1005,18 +1005,18 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     // Feedback for the author, which the status page shows. What is kept is what the player wrote
     // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
-    // who they are but the name they may leave for the feedback contributions and the account
-    // they are logged in to, if any, with a name or without, so that the feedback counts for it
-    // once it is adopted, and whether the name links to that account's public profile. A player
-    // who is logged in and signs the feedback (`linkProfile`) is listed by the account, with its
-    // username as the name, whatever name was sent along, as older pages may; anyone else may
-    // leave a name of their own. Feedback to be signed with an account that the connection no
-    // longer has, as when the login ended after the page was loaded, is refused with no name to
-    // fall back on, rather than kept as anonymous. The log gets its number and kind, and never its
-    // text, contact or name. Only what was kept counts against the address, so that a player who
-    // is told to shorten their text doesn't lose a turn for it, and feedback that the address sent
-    // once already in the window is answered as it was the first time, without being kept or
-    // counted again.
+    // who they are but the account they are logged in to, if any, so that the feedback counts for
+    // it once it is adopted, and whether they signed with it, or a guest's name for the feedback
+    // contributions. A player who is logged in signs with the account (`linkProfile`), which keeps
+    // no name, since its username is looked up whenever the feedback is shown, or stays anonymous;
+    // a name that comes along, as older pages sent it, signs with the account too, and goes. A
+    // guest may leave a name of their own. Feedback to be signed with an account that the
+    // connection no longer has, as when the login ended after the page was loaded, is refused with
+    // no name to fall back on, rather than kept as anonymous. The log gets its number and kind, and
+    // never its text, contact or name. Only what was kept counts against the address, so that a
+    // player who is told to shorten their text doesn't lose a turn for it, and feedback that the
+    // address sent once already in the window is answered as it was the first time, without being
+    // kept or counted again.
     on(handlers, 'meta:feedback', (message) => {
       const { kind, text, contact, credit, linkProfile, version: pageVersion, language, page } = message;
       const checked = checkFeedback(text);
@@ -1025,11 +1025,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (given.problem) return fail(given.problem);
       // An account that has been deleted since the handshake is nobody's.
       const account = conn.account ? accounts?.store.byId(conn.account.id) : undefined;
-      const linked = linkProfile === true && account !== undefined;
-      const named = linked ? { credit: account.username, problem: null } : checkCredit(credit);
+      // A name that came along, whatever it is: from an account, it signs with the account.
+      const offered = checkCredit(credit);
+      const signed =
+        account !== undefined && (linkProfile === true || offered.credit !== null || offered.problem !== null);
+      const named = account ? { credit: null, problem: null } : offered;
       if (named.problem) return fail(named.problem);
-      if (linkProfile === true && !linked && named.credit === null) return fail('feedback_unsigned');
-      const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, linked]);
+      if (linkProfile === true && !signed && named.credit === null) return fail('feedback_unsigned');
+      const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, signed ? account.id : null]);
       if (feedbackSeen.has(key)) return ok();
       if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
       const full = feedback.full();
@@ -1045,7 +1048,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         contact: given.contact,
         credit: named.credit,
         accountId: account?.id ?? null,
-        linkProfile: linked,
+        linkProfile: signed,
         version: pageVersion,
         language,
         page,

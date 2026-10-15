@@ -25,21 +25,22 @@ export interface ContributionSummary {
   en: string;
 }
 
-// One contribution as anyone sees it: the kind of feedback; the name the player left, or null for
-// one who left none; the handle of the public profile that the name links to, which only feedback
-// signed with an account has (`linkProfile`, feedback.ts), whose name is then the account's
-// username as it is now, and the address of the account's avatar, or null for the default one,
-// which the page draws from the name; what they contributed, or null until the operator writes
-// it; the GitHub issue it became, or null for feedback adopted before every adopted piece became
-// one; and the month it was adopted, YYYY-MM in UTC. Never the text or the contact, nor the
-// account of a contribution without a name or of feedback that wasn't signed with it.
+// One contribution as anyone sees it: the kind of feedback; who it is from: for feedback signed
+// with an account (`linkProfile`, feedback.ts), the account as it is now, its username, the
+// handle of its public profile and the address of its avatar, or null for the default one, which
+// the page draws from the name, or once the account is gone, `deleted` and nothing else; for a
+// guest, the name they left; or no name, for an anonymous player; what they contributed, or null
+// until the operator writes it; the GitHub issue it became; and the month it was adopted, YYYY-MM
+// in UTC. Never the text or the contact, nor the account of a contribution that wasn't signed
+// with it.
 export interface Contribution {
   kind: FeedbackKind;
   name: string | null;
   profile: string | null;
   avatar: string | null;
+  deleted: boolean;
   summary: ContributionSummary | null;
-  issue: number | null;
+  issue: number;
   month: string;
 }
 

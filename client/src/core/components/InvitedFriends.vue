@@ -90,7 +90,13 @@ const label = computed(() =>
 </script>
 
 <template>
-  <button v-if="entries.length" type="button" class="invited-friends" :aria-label="label" @click="emit('open')">
+  <button
+    v-if="entries.length"
+    type="button"
+    class="invited-friends press-host"
+    :aria-label="label"
+    @click="emit('open')"
+  >
     <span
       v-for="(entry, index) in entries.slice(0, SHOWN)"
       :key="entry.username"
@@ -98,7 +104,7 @@ const label = computed(() =>
       :class="{ came: entry.came, leaving: entry.leaving }"
       :style="{ zIndex: SHOWN - index }"
     >
-      <PlayerAvatar :name="entry.username" :avatar="entry.avatar" :waiting="!entry.came" />
+      <PlayerAvatar class="press-part" :name="entry.username" :avatar="entry.avatar" :waiting="!entry.came" />
     </span>
     <span v-if="entries.length > SHOWN" class="more num" aria-hidden="true">+{{ entries.length - SHOWN }}</span>
   </button>
@@ -134,17 +140,9 @@ const label = computed(() =>
 }
 
 /* The avatars open the sheet to invite friends, so they wear the hard shadow of what a tap opens
-   (docs/design.md), and the press takes it away. */
+   (docs/design.md), and move as stickers do (`press-part` in base.css). */
 .face :deep(.avatar) {
   box-shadow: var(--shadow-1);
-  transition:
-    transform var(--motion),
-    box-shadow var(--motion);
-}
-
-.invited-friends:active .face :deep(.avatar) {
-  transform: translate(var(--shift-1), var(--shift-1));
-  box-shadow: none;
 }
 
 .more {
