@@ -1026,6 +1026,18 @@ describe('a database in DATA_DIR', () => {
         (1, 'keywords', 'm1', '2026-10-03T11:00:00.000Z', 1, 2, 2, -3, 'black_hole');
       INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (1, 'black_hole', 'm1', 'now');
       INSERT INTO titles (account_id, title, game_id, turn, awarded_at) VALUES (1, 'opening_record', 'whole', 1, 'now');
+      -- A game played under the rules before today's (version 4), whose points and titles were
+      -- counted under them, in a match of its own, with its titles.
+      ${kept('older', '2026-10-03T14:10:00.000Z')}
+      UPDATE replays SET rules = 3, in_match = 1 WHERE game_id = 'older';
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
+        match_id, match_game, match_games) VALUES
+        (2, 'keywords', 'older', '2026-10-03T14:10:00.000Z', 'red', 'captain', 'red', 1, 'oral', 25, 'm3', 1, 1);
+      INSERT INTO game_players VALUES ('older', 'p1', 2);
+      INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
+        (2, 'keywords', 'm3', '2026-10-03T14:10:00.000Z', 1, 1, 2, 25, 'best_paper');
+      INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (2, 'best_paper', 'm3', 'now');
+      INSERT INTO titles (account_id, title, game_id, turn, awarded_at) VALUES (2, 'deadline_hero', 'older', 2, 'now');
       -- A game kept with what kind of game it was, but a log of the first version.
       ${kept('oldlog', '2026-10-03T14:30:00.000Z')}
       UPDATE replays SET log = '${log('oldlog', { v: 1 })}' WHERE game_id = 'oldlog';

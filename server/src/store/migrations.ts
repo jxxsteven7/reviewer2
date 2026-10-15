@@ -566,16 +566,19 @@ export const MIGRATIONS: readonly string[] = [
   `,
   // 22: every game kept in the newest format (docs/architecture.md#game-records), and replays worked
   // out from the record of the game as they are opened (docs/architecture.md#replays). What the
-  // database holds can't complete what came before, and goes:
+  // database holds can't complete, or counted under other rules, goes, as the maintainers decided
+  // before the first public release:
   //
   // - the games kept from before the record of every game (migration 15), which keep nothing of what
   //   kind of game they were, `started_at` and the rest, and so most of them have no log, or a log
   //   of the first version; any other game whose log isn't of the second version (gameLog.ts); the
-  //   games kept with guests whose numbers nothing says; and the records
-  //   of the games from before games were kept, which have no kept game and ended before the first
-  //   that was kept with its whole record. A game with words of the chair's own, which leaves no
-  //   record of the game, keeps its records. Each goes with its records, the titles that it
-  //   brought, who was who in it and what the AI players did in it.
+  //   games kept with guests whose numbers nothing says; the games of the first game played under
+  //   rules before version 4, those of today (RULES_VERSION in server/src/games/keywords/index.ts),
+  //   whose points and titles were counted under other rules; and the records that have no kept
+  //   game and ended before the first game kept under today's rules, from before games were kept
+  //   or under those other rules. A game with words of the chair's own, which leaves no record of
+  //   the game, keeps its records since. Each goes with its records, the titles that it brought, who
+  //   was who in it and what the AI players did in it.
   // - the matches from before the records of games named their match (migration 14), which no
   //   record names, and those that a game that goes was played in, with the titles that they
   //   awarded; and the titles from before the matches had IDs, of neither a match nor a game.
@@ -604,10 +607,12 @@ export const MIGRATIONS: readonly string[] = [
   CREATE TEMP TABLE gone_games (game_id TEXT PRIMARY KEY);
   INSERT INTO gone_games SELECT game_id FROM replays
     WHERE started_at IS NULL OR (log IS NOT NULL AND json_extract(log, '$.v') IS NOT 2)
-      OR (guests > 0 AND log IS NOT NULL AND json_type(log, '$.guests') IS NULL);
+      OR (guests > 0 AND log IS NOT NULL AND json_type(log, '$.guests') IS NULL)
+      OR (game = 'keywords' AND rules IS NOT 4);
   INSERT OR IGNORE INTO gone_games SELECT game_id FROM game_records
-    WHERE game_id NOT IN (SELECT game_id FROM replays)
-      AND ended_at < coalesce((SELECT min(ended_at) FROM replays WHERE started_at IS NOT NULL), '9999');
+    WHERE game_id NOT IN (SELECT game_id FROM replays) AND ended_at < coalesce(
+      (SELECT min(ended_at) FROM replays WHERE started_at IS NOT NULL AND game = 'keywords' AND rules = 4), '9999'
+    );
 
   CREATE TEMP TABLE gone_matches (match_id TEXT PRIMARY KEY);
   INSERT OR IGNORE INTO gone_matches SELECT match_id FROM game_records
