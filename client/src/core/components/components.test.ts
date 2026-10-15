@@ -12,7 +12,9 @@ import FieldPicker from './FieldPicker.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
 import ProfilePanel from './ProfilePanel.vue';
+import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
+import LanguageGate from '../views/LanguageGate.vue';
 
 // The panel that an avatar opens outside a room reads the page, which no server answers here.
 vi.mock('../account', async (actual) => ({
@@ -289,5 +291,45 @@ describe('UiSheet', () => {
     await nextTick();
     expect(active()).toBe('name');
     withField.unmount();
+  });
+});
+
+// The press of a sticker (base.css): on a computer, a hover lifts it a pixel, with its shadow a
+// pixel longer; a press pushes it into its shadow, the same on every sticker that can be pressed.
+describe('the press of a sticker', () => {
+  test('is on every button but a quiet one, and a primary one, which has no shadow, only moves', () => {
+    const variants = ['secondary', 'primary', 'danger', 'red', 'blue', 'quiet'] as const;
+    const classes = variants.map((variant) =>
+      mount(UiButton, { props: { variant }, slots: { default: 'Go' }, global: global() })
+        .get('button')
+        .classes(),
+    );
+    expect(classes.map((names) => [names.includes('press'), names.includes('press-flat')])).toEqual([
+      [true, false],
+      [true, true],
+      [true, false],
+      [true, false],
+      [true, false],
+      [false, false],
+    ]);
+    // A link that looks like a button too.
+    const link = mount(UiButton, { props: { href: '/account' }, slots: { default: 'Go' }, global: global() });
+    expect(link.get('a').classes()).toContain('press');
+  });
+
+  test('moves the avatar of a button that opens a panel, and nothing that opens none', () => {
+    const opens = mount(AvatarButton, { props: { handle: 'b0b000000000', name: 'Bob' }, global: global() });
+    expect(opens.get('button').classes()).toContain('press-host');
+    expect(opens.get('.avatar').classes()).toContain('press-part');
+    const still = mount(AvatarButton, { props: { playerId: 'b', name: 'Bob' }, global: global() });
+    expect(still.find('.press-host').exists()).toBe(false);
+    expect(still.get('.avatar').classes()).not.toContain('press-part');
+  });
+
+  test('is on the two cards of the choice of language, which press as far as their shadow goes', () => {
+    const gate = mount(LanguageGate, { global: global() });
+    const choices = gate.findAll('button.choice');
+    expect(choices).toHaveLength(2);
+    expect(choices.every((choice) => choice.classes('press') && choice.classes('press-large'))).toBe(true);
   });
 });

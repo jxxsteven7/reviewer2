@@ -87,9 +87,9 @@ describe('the feedback', () => {
     expect(feedback.byId(2)).toMatchObject({ credit: null, accountId: 1, linkProfile: false, username: 'Ann' });
     expect(feedback.byId(3)).toMatchObject({ credit: 'Ann L', accountId: null, linkProfile: false, username: null });
     expect(feedback.byId(4)).toMatchObject({ credit: null, accountId: 1, linkProfile: true, username: 'Ann' });
-    expect(db.prepare('SELECT count(*) AS n FROM feedback WHERE account_id IS NOT NULL AND credit IS NOT NULL').get()).toEqual(
-      { n: 0 },
-    );
+    expect(
+      db.prepare('SELECT count(*) AS n FROM feedback WHERE account_id IS NOT NULL AND credit IS NOT NULL').get(),
+    ).toEqual({ n: 0 });
     feedback.setIssue(1, 42);
     expect(feedback.adopt(1, { zh: '提出了更多领域', en: 'Suggested more fields' })).toBe(true);
     expect(feedback.byId(1)).toMatchObject({

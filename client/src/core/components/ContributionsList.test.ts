@@ -33,7 +33,16 @@ const CONTRIBUTIONS: Contribution[] = [
     issue: 82,
     month: '2026-11',
   },
-  { kind: 'idea', name: 'Lizi', profile: null, avatar: null, deleted: false, summary: SUMMARY, issue: 57, month: '2026-10' },
+  {
+    kind: 'idea',
+    name: 'Lizi',
+    profile: null,
+    avatar: null,
+    deleted: false,
+    summary: SUMMARY,
+    issue: 57,
+    month: '2026-10',
+  },
   {
     kind: 'idea',
     name: null,
@@ -44,7 +53,16 @@ const CONTRIBUTIONS: Contribution[] = [
     issue: 41,
     month: '2026-10',
   },
-  { kind: 'idea', name: 'Ann', profile: 'a1b2c3d4e5f6', avatar: null, deleted: false, summary: null, issue: 30, month: '2026-09' },
+  {
+    kind: 'idea',
+    name: 'Ann',
+    profile: 'a1b2c3d4e5f6',
+    avatar: null,
+    deleted: false,
+    summary: null,
+    issue: 30,
+    month: '2026-09',
+  },
 ];
 
 const fetchMock = vi.fn<typeof fetch>();

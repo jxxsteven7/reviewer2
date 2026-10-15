@@ -101,6 +101,41 @@ button {
   box-shadow: var(--shadow-2);
 }
 
+/* A sticker that can be pressed (docs/design.md), the same everywhere: on a computer, a hover
+   lifts it a pixel, with its shadow a pixel longer; a press pushes it into its shadow, which goes;
+   both ease. `press` is on a sticker that is its own button. Where the button is larger than the
+   sticker that moves, as an avatar's, the button is the `press-host` and the sticker the
+   `press-part`. A large sticker, with the large shadow, presses as far (`press-large`), and an ink
+   one, which has no shadow, only moves when pressed (`press-flat`). Nothing moves while the button
+   is disabled. */
+.press,
+.press-part {
+  --press-shift: var(--shift-1);
+
+  transition:
+    transform var(--motion),
+    box-shadow var(--motion),
+    background-color var(--motion);
+}
+
+.press-large {
+  --press-shift: var(--shift-2);
+}
+
+@media (hover: hover) {
+  .press:not(:disabled, .press-flat):hover,
+  .press-host:not(:disabled):hover > .press-part {
+    transform: translate(-1px, -1px);
+    box-shadow: calc(var(--press-shift) + 1px) calc(var(--press-shift) + 1px) 0 var(--ink);
+  }
+}
+
+.press:not(:disabled):active,
+.press-host:not(:disabled):active > .press-part {
+  transform: translate(var(--press-shift), var(--press-shift));
+  box-shadow: none;
+}
+
 /* Text for screen readers only. */
 .sr-only {
   position: absolute;

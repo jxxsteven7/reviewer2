@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// Buttons, which look like stickers: an ink outline, a hard shadow, and a press that pushes the
-// sticker into its shadow. "primary" is the one main action on a screen, "secondary" the others,
-// "quiet" a link-like action without the outline, and "danger" an action that can't be undone.
-// "red" and "blue" are the bright buttons of the home page. With an `href`, the button is a link
-// that looks like one, such as one that opens another page.
+// Buttons, which look like stickers: an ink outline, a hard shadow, and the press of every sticker
+// (`press` in base.css), a lift on hover and a push into its shadow. "primary" is the one main
+// action on a screen, "secondary" the others, "quiet" a link-like action without the outline, and
+// "danger" an action that can't be undone. "red" and "blue" are the bright buttons of the home
+// page. With an `href`, the button is a link that looks like one, such as one that opens another
+// page.
 withDefaults(
   defineProps<{
     variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'red' | 'blue';
@@ -14,13 +15,17 @@ withDefaults(
   }>(),
   { variant: 'secondary', size: 'normal', type: 'button', disabled: false, href: undefined },
 );
+
+// A quiet button doesn't move, and an ink one, which has no shadow, moves only when pressed.
+const pressed = (variant: string) =>
+  variant === 'quiet' ? null : { press: true, 'press-flat': variant === 'primary' };
 </script>
 
 <template>
-  <a v-if="href" :href="href" :class="['button', variant, size]">
+  <a v-if="href" :href="href" :class="['button', variant, size, pressed(variant)]">
     <slot />
   </a>
-  <button v-else :type="type" :class="['button', variant, size]" :disabled="disabled">
+  <button v-else :type="type" :class="['button', variant, size, pressed(variant)]" :disabled="disabled">
     <slot />
   </button>
 </template>
@@ -44,15 +49,6 @@ withDefaults(
   text-decoration: none;
   cursor: pointer;
   touch-action: manipulation;
-  transition:
-    transform var(--motion),
-    box-shadow var(--motion),
-    background-color var(--motion);
-}
-
-.button:not(:disabled):active {
-  transform: translate(var(--shift-1), var(--shift-1));
-  box-shadow: none;
 }
 
 /* Small buttons take less room sideways, but stay 44 px high to tap (docs/design.md). */
@@ -94,10 +90,7 @@ withDefaults(
   background: none;
   box-shadow: none;
   font-weight: var(--weight-bold);
-}
-
-.quiet:not(:disabled):active {
-  transform: none;
+  transition: background-color var(--motion);
 }
 
 .danger {
@@ -119,22 +112,8 @@ withDefaults(
 }
 
 @media (hover: hover) {
-  .button:not(:disabled, .quiet, .primary):hover {
-    transform: translate(-1px, -1px);
-    box-shadow: calc(var(--shift-1) + 1px) calc(var(--shift-1) + 1px) 0 var(--ink);
-  }
-
-  .button:not(:disabled):active {
-    transform: translate(var(--shift-1), var(--shift-1));
-    box-shadow: none;
-  }
-
   .quiet:not(:disabled):hover {
     background: var(--paper-2);
-  }
-
-  .quiet:not(:disabled):active {
-    transform: none;
   }
 }
 </style>

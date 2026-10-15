@@ -146,11 +146,16 @@ async function logOut() {
       <div class="head">
         <PlayerAvatar :name="summary.username" :avatar="summary.avatar" size="large" />
         <div class="who">
-          <div class="line">
+          <div class="line name-line">
             <span id="profile-username" class="name">{{ summary.username }}</span>
-            <UiButton v-if="editing !== 'username'" variant="quiet" size="small" @click="editing = 'username'">{{
-              t('account.profile.rename')
-            }}</UiButton>
+            <UiButton
+              v-if="editing !== 'username'"
+              variant="quiet"
+              size="small"
+              class="rename"
+              @click="editing = 'username'"
+              >{{ t('account.profile.rename') }}</UiButton
+            >
           </div>
           <p class="line meta">
             <PlayerNumber :id="summary.id" />
@@ -180,7 +185,7 @@ async function logOut() {
 
     <section class="part" aria-labelledby="profile-rank">
       <h2 id="profile-rank">{{ t('ranks.title') }}</h2>
-      <button type="button" class="rank-button" aria-haspopup="dialog" @click="ladder = true">
+      <button type="button" class="rank-button press" aria-haspopup="dialog" @click="ladder = true">
         <span class="rank-line">
           <span class="rank">{{ t(`ranks.names.${rank}`) }}</span>
           <span class="num">{{ t('ranks.points', { points: summary.points }) }}</span>
@@ -355,8 +360,33 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-/* The rank is a sticker that opens the ladder: pressing it moves it by its shift and drops the
-   shadow, as a button. */
+/* "Rename" follows the username at its bottom right, after its last word: small and quiet, on the
+   name's baseline, and reaching 44 px high to the finger (docs/design.md) without making the line
+   taller. */
+.who .name-line {
+  display: block;
+}
+
+.who .name-line .rename {
+  position: relative;
+  display: inline-flex;
+  min-height: 0;
+  margin-inline-start: var(--space-2);
+  padding: 0 var(--space-1);
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+
+.who .name-line .rename::before {
+  content: '';
+  position: absolute;
+  inset: calc((1.2em - 44px) / 2) 0;
+}
+
+/* The rank is a sticker that opens the ladder, which lifts and presses as a button does (`press`
+   in base.css). */
 .rank-button {
   display: flex;
   flex-direction: column;
@@ -371,11 +401,6 @@ h1 {
   box-shadow: var(--shadow-1);
   text-align: left;
   cursor: pointer;
-}
-
-.rank-button:active {
-  transform: translate(var(--shift-1), var(--shift-1));
-  box-shadow: none;
 }
 
 .rank-line {

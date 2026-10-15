@@ -226,8 +226,8 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
     <header class="lobby-head">
       <p class="kicker">
         {{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}
-        <button v-if="isChair" type="button" class="visibility" @click="switchVisibility">
-          <span class="tag" :class="{ listed: room.public }">{{
+        <button v-if="isChair" type="button" class="visibility press-host" @click="switchVisibility">
+          <span class="tag" :class="{ listed: room.public, 'press-part': !room.public }">{{
             t(room.public ? 'room.public' : 'room.private')
           }}</span>
           <span class="sr-only">{{ t(room.public ? 'room.makePrivate' : 'room.makePublic') }}</span>
@@ -469,7 +469,8 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 }
 
 /* The chair's tag is a sticker to tap, 44 px high to the finger (docs/design.md): white while the
-   room is private, ink and flat once it is listed, as the others see it. */
+   room is private, when it lifts and presses as a sticker does (`press-part` in base.css), and ink
+   and flat once it is listed, as the others see it. */
 .visibility {
   display: inline-flex;
   align-items: center;
@@ -490,24 +491,12 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   background: var(--paper);
   box-shadow: var(--shadow-1);
   color: var(--ink);
-  transition:
-    transform var(--motion),
-    box-shadow var(--motion);
 }
 
 .visibility .tag.listed {
   background: var(--ink);
   box-shadow: none;
   color: var(--on-ink);
-}
-
-.visibility:active .tag {
-  transform: translate(var(--shift-1), var(--shift-1));
-  box-shadow: none;
-}
-
-.visibility:active .tag.listed {
-  transform: none;
 }
 
 /* The chair's start bar, which stays at the top of the screen as the page scrolls, and under the
