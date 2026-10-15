@@ -93,4 +93,16 @@ main {
 .room-actions {
   display: contents;
 }
+
+/* On the narrowest phones, below about 350 px, the row that stays has no room to spare beside the
+   tile: the room's number and the two buttons stand closer, with less space inside the buttons. */
+@media (max-width: 21.99rem) {
+  .masthead.pinned :deep(.end) {
+    gap: var(--space-1);
+  }
+
+  .masthead.pinned :deep(.button.small) {
+    padding: 0 var(--space-2);
+  }
+}
 </style>

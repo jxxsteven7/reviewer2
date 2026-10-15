@@ -30,7 +30,10 @@ import { useVisualViewport } from '../useVisualViewport';
 // account gives them.
 //
 // A sheet that isn't to `focusInput` takes the focus itself as it opens, so that a phone shows no
-// keyboard before the viewer asks for one, as a chat opened only to read it. A sheet that is to
+// keyboard before the viewer asks for one, as a chat opened only to read it. As it closes, the
+// focus goes back to what opened it, without scrolling: the button was in sight a moment ago, and
+// one in a bar that stays at the top of the screen, as the room menu's, would otherwise have the
+// browser scroll the page to where the bar stands on it, below the scroll padding. A sheet that is to
 // `fitScreen` keeps to the part of the screen that a phone's keyboard leaves (useVisualViewport.ts)
 // and holds its content in a column as tall as it may be, so that what the content keeps at its
 // foot, such as the line a player writes, stays in sight above the keyboard while the rest
@@ -122,7 +125,7 @@ watch(
     } else if (was) {
       leave();
       document.removeEventListener('keydown', onKey);
-      returnFocus?.focus?.();
+      returnFocus?.focus?.({ preventScroll: true });
     }
   },
   { immediate: true },
@@ -133,7 +136,7 @@ watch(
 onBeforeUnmount(() => {
   leave();
   document.removeEventListener('keydown', onKey);
-  if (props.open) returnFocus?.focus?.();
+  if (props.open) returnFocus?.focus?.({ preventScroll: true });
 });
 </script>
 

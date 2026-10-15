@@ -21,7 +21,7 @@ import { copyRecord } from './state';
 // The game that has just ended, to watch again (shared/src/games/keywords/replay.ts): the whole
 // board with its colors, the record of the clues and the guesses, the groups as the game ended, in
 // the order of the room, and who everyone in them was, and whoever gave a clue or revealed a card
-// and has left since: an account as no more than that, a guess by number, and an AI player by its
+// and has left since: an account as no more than that, a guest by number, and an AI player by its
 // persona. A withdrawn game is nothing to watch.
 export function keptReplay(data: KeywordsData, ctx: GameContext): KeywordsReplay | null {
   const game = data.game;
@@ -56,17 +56,19 @@ export function keptReplay(data: KeywordsData, ctx: GameContext): KeywordsReplay
 // worked out from the record of the game, and who everyone was. An account that played is shown as
 // it is now, and one deleted since as deleted; a guest by their number; an AI player by its
 // persona. A replay from before says nothing of who was who: a player there whose account is gone
-// can't be told from a guest, so each of them is shown as a guest, numbered in the order of the
-// seats. One from before the records of the games (docs/architecture.md#game-records) knows only
-// the accounts that revealed a card under their username (migration 20), and its PIs are unknown:
-// the clues of that time don't say who gave them. Someone a new
-// replay doesn't know is left out, as a player who left.
+// is shown as deleted where the record of the game marks them as an account deleted since
+// (docs/architecture.md#game-records), and otherwise as a guest, numbered in the order of the
+// seats, since an account deleted before the records marked them can't be told from a guest. One
+// from before the records knows only the accounts that revealed a card under their username
+// (migration 20), and its PIs are unknown: the clues of that time don't say who gave them. Someone
+// a new replay doesn't know is left out, as a player who left.
 export function shownReplay({ replay: kept, log: read, accounts, viewer }: KeptReplay): ShownReplay {
   const replay = kept as KeywordsReplay;
   // The record of the game is read for a replay from before the groups were kept alone.
   const log = replay.groups ? null : read();
   const groups = replay.groups ?? groupsFromLog(log) ?? groupsFromHistory(replay);
   const agents: Record<string, string> = { ...log?.agents, ...replay.agents };
+  const deleted = new Set(log?.deleted);
   const people: Record<string, ReplayPerson> = {};
   let guests = 0;
   for (const id of [...groupIds(groups), ...historyIds(replay.history)]) {
@@ -83,6 +85,8 @@ export function shownReplay({ replay: kept, log: read, accounts, viewer }: KeptR
       people[id] = 'account' in member ? { deleted: true } : { ...member };
     } else if (agents[id]) {
       people[id] = { agent: agents[id] as AgentPersona };
+    } else if (deleted.has(id)) {
+      people[id] = { deleted: true };
     } else if (!replay.members) {
       guests += 1;
       people[id] = { guest: guests };

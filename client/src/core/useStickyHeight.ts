@@ -10,14 +10,17 @@ import { onBeforeUnmount, onMounted, watch, type Ref } from 'vue';
 // The scroll padding brings a field that takes the focus into view below the bar where the field
 // was out of sight. One that was in sight, but under the bar, stays there in WebKit, which scrolls
 // only for what is out of the viewport: so the page scrolls it out from under the bar itself. Only
-// what comes after the bar on the page can be under it; what comes before, as the masthead's
-// buttons, is left alone.
+// what the page scrolls can be under the bar: what comes after it on the page and moves with the
+// page. What comes before, as the masthead's buttons, is left alone, and so is whatever lies over
+// the page, fixed to the screen, as a sheet or the menu of marks, which the page's scrolling moves
+// nowhere.
 export function useStickyHeight(bar: Ref<HTMLElement | null>): void {
   const uncover = (event: FocusEvent) => {
     const field = event.target;
     const sticky = bar.value;
     if (!sticky || !(field instanceof Element) || sticky.contains(field)) return;
     if (!(sticky.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
+    if (!scrollsWithPage(field)) return;
     const covered = sticky.getBoundingClientRect().bottom - field.getBoundingClientRect().top;
     if (covered > 0) window.scrollBy({ top: -covered, behavior: 'instant' });
   };
@@ -42,4 +45,12 @@ export function useStickyHeight(bar: Ref<HTMLElement | null>): void {
     observer.disconnect();
     root.style.removeProperty('--sticky-height');
   });
+}
+
+// Whether an element moves as the page scrolls: one within anything fixed to the screen doesn't.
+function scrollsWithPage(element: Element): boolean {
+  for (let each: Element | null = element; each && each !== document.body; each = each.parentElement) {
+    if (getComputedStyle(each).position === 'fixed') return false;
+  }
+  return true;
 }

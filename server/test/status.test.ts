@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { History, type Stats } from '../src/stats';
 import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
 import { DEFAULT_ADMIN_COMMAND } from '../src/statusPage';
-import { createRoom, joinRoom, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
+import { createRoom, joinRoom, loggedIn, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
 
 // The numbers that the `stats` line and the status page show, counted on a real server, and the
 // status page's own HTTP server.
@@ -227,10 +227,15 @@ describe('the status server', () => {
 
   test('shows nobody: no codes, room IDs, names, tokens or addresses', async () => {
     server = await startServer({ trustProxy: true });
+    // A guest chairs, and an account is in the room with them, which calls it by its username. The
+    // feedback comes from the guest: one sent from an account names the account on the page, by
+    // design (feedback.test.ts).
     const { chair, code, roomId } = await createRoom(server.url);
-    const quentin = await joinRoom(server.url, code);
+    const quentin = await joinRoom(server.url, code, {}, await loggedIn(server.url, 'Quentin'));
     const screen = await TestClient.connect(server.url, {}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
     clients.push(chair, quentin, screen);
+    await chair.waitFor((state) => state.players.length === 2);
+    expect(chair.state?.players.map(({ name }) => name)).toEqual(['Guest 1', 'Quentin']);
     expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
     expect(
       await chair.send('meta:feedback', {
@@ -251,7 +256,7 @@ describe('the status server', () => {
         quentin.token,
         chair.me,
         quentin.me,
-        'Zelda',
+        'Guest 1',
         'Quentin',
         '203.0.113',
       ]) {

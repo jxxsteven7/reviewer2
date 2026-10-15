@@ -1,7 +1,15 @@
 import { MAX_REPLAY_BYTES, type RecordsView } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import { fakeGame } from './fakeGame';
-import { Browser, createRoom, startServer, TestClient, until, type TestServer } from './helpers';
+import {
+  Browser,
+  createRoom,
+  loggedIn as registered,
+  startServer,
+  TestClient,
+  until,
+  type TestServer,
+} from './helpers';
 import { jpeg } from './images';
 
 const NO_MATCHES = { played: 0, won: 0, recent: [] };
@@ -25,12 +33,7 @@ const track = (client: TestClient) => {
   return client;
 };
 
-async function loggedIn(name: string) {
-  const browser = new Browser(server.url);
-  const reply = await browser.register(name);
-  if (!reply.body.ok) throw new Error(`could not register ${name}: ${String(reply.body.error)}`);
-  return browser;
-}
+const loggedIn = (name: string) => registered(server.url, name);
 
 async function guest() {
   return track(await TestClient.connect(server.url));

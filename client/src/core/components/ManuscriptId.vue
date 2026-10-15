@@ -66,4 +66,11 @@ const { t } = useI18n();
     white-space: nowrap;
   }
 }
+
+/* On the narrowest phones, below about 350 px, the number keeps the least room around it. */
+@media (max-width: 21.99rem) {
+  .tight {
+    padding: 0 var(--space-2);
+  }
+}
 </style>

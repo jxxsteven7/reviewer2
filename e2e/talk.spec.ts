@@ -172,6 +172,31 @@ test('the lifted copy of a card starts where the card rests, and lands where it 
   await expect(target).toHaveCSS('visibility', 'visible');
 });
 
+// The menu of marks lies over the page, fixed to the screen: a page scrolled down to the board stays
+// where it is as the menu takes the focus, and as it gives it back to the card.
+test.describe('on a phone scrolled to the board', () => {
+  test.use({ viewport: { width: 390, height: 420 } });
+
+  test('the menu of marks leaves the page where it is', async ({ browser }) => {
+    const table = await seatTable(browser, 'en');
+    const student = table.guessers.red;
+    const target = card(student, 12);
+    await target.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    const scrolled = await student.evaluate(() => window.scrollY);
+    expect(scrolled, 'the page scrolled to the board').toBeGreaterThan(0);
+    const rest = await target.boundingBox();
+    if (!rest) throw new Error('the card has no box');
+    await student.mouse.move(rest.x + rest.width / 2, rest.y + rest.height / 2);
+    await student.mouse.down();
+    await expect(student.locator('.mark-menu [role=menu]')).toBeVisible();
+    await student.mouse.up();
+    expect(await student.evaluate(() => window.scrollY), 'the page under the open menu').toBe(scrolled);
+    await student.keyboard.press('Escape');
+    await expect(student.locator('.mark-menu')).toHaveCount(0);
+    expect(await student.evaluate(() => window.scrollY), 'the page once the menu has closed').toBe(scrolled);
+  });
+});
+
 // The choosers of a card hang on it as avatars, and the card's accessible name says who they are.
 const chosenBy = (names: string) => new RegExp(`, chosen by ${names}$`);
 

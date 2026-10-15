@@ -90,6 +90,18 @@ test('the chair starts from a bar that stays in sight, and the game opens at its
   );
   expect((await box(ann, '.start-bar')).top).toBeLessThan((await box(ann, 'header.masthead')).bottom + 40);
   expect((await box(ann, '.start-bar')).top).toBeGreaterThanOrEqual((await box(ann, 'header.masthead')).bottom);
+  // The room menu opens from the masthead and closes without the page moving under it: neither as
+  // the sheet takes the focus, nor as it gives the focus back to the button in the masthead. The
+  // button is tapped where it is, as a finger taps it: a click by its locator would first scroll
+  // the page to where the button stands in it, as the browser brings an element into view.
+  const foot = await ann.evaluate(() => window.scrollY);
+  const button = await box(ann, 'header.masthead .room-button');
+  await ann.mouse.click((button.left + button.right) / 2, (button.top + button.bottom) / 2);
+  await expect(ann.locator('[role=dialog]:has(.room-menu)')).toBeVisible();
+  expect(await ann.evaluate(() => window.scrollY), 'the page under the open menu').toBe(foot);
+  await ann.keyboard.press('Escape');
+  await expect(ann.locator('[role=dialog]')).toHaveCount(0);
+  expect(await ann.evaluate(() => window.scrollY), 'the page once the menu has closed').toBe(foot);
   await bar.getByRole('button', { name: text.lobby.start }).click();
 
   // The game opens at its top, with the turn strip and the clock in sight, and no banner; the
@@ -168,6 +180,13 @@ test.describe('on a 320 px phone', () => {
     const url = await createRoom(ann, 'en');
     await seatRoom(browser, ann, url);
     await expect(ann.locator('.start-bar .ready')).toBeVisible();
+    // The masthead, which stays at the top, has room for the room's number and the two buttons
+    // beside the tile, on one row, with nothing to scroll sideways to.
+    expect((await box(ann, 'header.masthead .manuscript')).left).toBeGreaterThanOrEqual(
+      (await box(ann, 'header.masthead .tile')).right,
+    );
+    expect((await box(ann, 'header.masthead .room-button')).right).toBeLessThanOrEqual(320);
+    expect(await ann.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
     const line = await box(ann, '.start-bar .readiness');
     const shuffle = await box(ann, '.start-bar .button:not(.primary)');
     const start = await box(ann, '.start-bar .primary');

@@ -702,16 +702,18 @@ export class Room {
   adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
     const member = this.members.get(id);
     if (!member || member.account) return false;
-    if (this.game.rekey) this.data = this.game.rekey(this.data, id, member.key, key);
-    this.match?.rekey(member.key, key);
+    const from = member.key;
+    if (this.game.rekey) this.data = this.game.rekey(this.data, id, from, key);
     // Whoever reported the guest has reported the same player, whom they don't report anew.
-    const reporters = this.#reported.get(member.key);
-    this.#reported.delete(member.key);
+    const reporters = this.#reported.get(from);
+    this.#reported.delete(from);
     if (reporters) this.#reported.set(key, new Set([...(this.#reported.get(key) ?? []), ...reporters]));
     member.key = key;
     member.account = { ...account };
     member.guest = null;
     member.name = username;
+    // The match's line of the guest is the account's from now on, shown as the account is.
+    this.match?.rekey(from, key, this.#who(member));
     this.changed();
     return true;
   }

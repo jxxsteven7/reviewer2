@@ -142,11 +142,12 @@ export class Match {
     return this.#final;
   }
 
-  // A guest's seat became an account's: the guest's line becomes the account's. They are the same
-  // person, so when the account has a line of its own already, from before it left the room, the
-  // two are added up. The places at the end stay as they were: the guest's goes to the account,
-  // and the view shows the total that it was given for.
-  rekey(from: string, to: string): void {
+  // A guest's seat became an account's: the guest's line becomes the account's, shown as the
+  // account is (`who`), also once it has left the room. They are the same person, so when the
+  // account has a line of its own already, from before it left the room, the two are added up. The
+  // places at the end stay as they were: the guest's goes to the account, and the view shows the
+  // total that it was given for.
+  rekey(from: string, to: string, who: Who): void {
     const entry = this.#entries.get(from);
     if (!entry) return;
     const own = this.#entries.get(to);
@@ -155,9 +156,10 @@ export class Match {
       own.games += entry.games;
       if (entry.last && (own.last === null || entry.last.gameId === this.#lastGameId)) own.last = entry.last;
       this.#entries.delete(from);
+      Object.assign(own, who);
     } else {
       const entries = [...this.#entries].map(([key, value]): [string, Entry] =>
-        key === from ? [to, { ...value, key: to }] : [key, value],
+        key === from ? [to, { ...value, ...who, key: to }] : [key, value],
       );
       this.#entries.clear();
       for (const [key, value] of entries) this.#entries.set(key, value);

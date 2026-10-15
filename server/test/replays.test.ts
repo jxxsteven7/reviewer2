@@ -128,7 +128,7 @@ describe('a replay', () => {
     expect(JSON.stringify(after)).not.toContain('Bob');
   });
 
-  test('from before the groups were kept shows whoever has no account there as a guest', async () => {
+  test('from before the groups were kept shows a deleted account as the record marks it, or else as a guest', async () => {
     const { anns, bobs, ids, gameId } = await finished();
     // The replay as it was kept before: without the groups and who was who.
     const old = JSON.parse(kept()[0]?.data as string) as Record<string, unknown>;
@@ -146,9 +146,20 @@ describe('a replay', () => {
     ]);
     expect((await bobs.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
     expect(kept()[0]?.data).not.toContain('Bob');
-    // Bob can't be told from a guest any more: he is the first of them, in the order of the seats.
+    // The record marks Bob's player ID as a deleted account's: he is shown as one, by no name, and
+    // the guests keep their numbers.
     const after = await open(anns, gameId);
     expect([ids.bob, ids.cat, ids.dan].map((id) => after.people[id])).toEqual([
+      { deleted: true },
+      { guest: 1 },
+      { guest: 2 },
+    ]);
+    expect(JSON.stringify(after)).not.toContain('Bob');
+    // Without the mark, as for an account deleted before the records marked them, Bob can't be told
+    // from a guest: he is the first of them, in the order of the seats.
+    server.db.prepare("UPDATE replays SET log = json_remove(log, '$.deleted')").run();
+    const unmarked = await open(anns, gameId);
+    expect([ids.bob, ids.cat, ids.dan].map((id) => unmarked.people[id])).toEqual([
       { guest: 1 },
       { guest: 2 },
       { guest: 3 },

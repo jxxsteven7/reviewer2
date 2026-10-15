@@ -1,7 +1,16 @@
 import type { KeywordsRoomData, KeywordsView, MatchRules, MatchView, RecordsView, Team } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import { keywordsGame } from '../src/games/keywords';
-import { Browser, createRoom, joinRoom, startServer, TestClient, type Reply, type TestServer } from './helpers';
+import {
+  Browser,
+  createRoom,
+  joinRoom,
+  loggedIn as registered,
+  startServer,
+  TestClient,
+  type Reply,
+  type TestServer,
+} from './helpers';
 
 // Matches over real sockets: whole matches of the team word guessing game, the chair's controls,
 // players who come and go, and what accounts keep of a match. The scoring itself is tested in
@@ -39,12 +48,7 @@ async function settle(everyone: TestClient[]) {
   for (const client of everyone) await client.waitFor((state) => state.rev >= rev, `rev ${rev}`);
 }
 
-async function loggedIn(name: string) {
-  const browser = new Browser(server.url);
-  const reply = await browser.register(name);
-  if (!reply.body.ok) throw new Error(`could not register ${name}: ${String(reply.body.error)}`);
-  return browser;
-}
+const loggedIn = (name: string) => registered(server.url, name);
 
 const RULES: MatchRules = { games: 2, teams: 'switch', grouping: 'random' };
 
@@ -395,6 +399,28 @@ describe('a match', () => {
     expect(standing?.games).toBe(2);
     const records = (await browser.request('/api/account/records')).body.records as RecordsView;
     expect(records.matches.recent[0]).toMatchObject({ score: standing?.total, rank: standing?.rank, games: 2 });
+  });
+
+  test("shows the line of a guest who logged in as the account's, also once it has left the room", async () => {
+    server = await startServer({ games: [keywordsGame] });
+    const { code, players, everyone } = await matchRoom({ teams: 'fixed' });
+    const ann = players.Ann;
+    await start(ann, everyone);
+    await playOneTurn(everyone);
+    await expectOk(ann.send('room:again', { gameId: ann.state?.gameId }));
+    await settle(everyone);
+    const dan = players.Dan;
+    const { roomId } = dan.state ?? {};
+    dan.close();
+    const browser = await loggedIn('Dana');
+    const back = track(await browser.connect({ token: dan.token, code, roomId }));
+    await back.waitFor((state) => state.code === code && state.players.some(({ name }) => name === 'Dana'));
+    // Dana leaves before the next game: her line stays, as the account's, with no number.
+    await expectOk(back.send('room:leave'));
+    await ann.waitFor((state) => !state.players.some(({ name }) => name === 'Dana'), 'Dana to have left');
+    expect(standingOf(ann, 'Dana')).toMatchObject({ playerId: null, left: true, games: 1 });
+    expect(standingOf(ann, 'Dana')).not.toHaveProperty('guest');
+    expect(matchOf(ann).standings.map(({ name }) => personOf(name))).not.toContain('Dan');
   });
 
   test('lets newcomers play from the next game, and lists those who left without ranking them', async () => {

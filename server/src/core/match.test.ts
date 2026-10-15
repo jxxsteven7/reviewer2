@@ -229,14 +229,35 @@ describe('the table of a match', () => {
   test("moves a guest's line to their account, and adds it to the account's own", () => {
     const match = new Match({ ...RULES, games: 3 });
     match.score('g1', scores({ guest: 3, account: 1 }), presentOnly('guest', 'account'));
-    match.rekey('guest', 'newcomer');
+    match.rekey('guest', 'newcomer', who('newcomer'));
     expect(match.view('lobby', null, null, presentOnly('newcomer', 'account')).standings).toMatchObject([
       { name: 'newcomer', total: 3, games: 1 },
       { name: 'account', total: 1, games: 1 },
     ]);
-    match.rekey('newcomer', 'account');
+    match.rekey('newcomer', 'account', who('account'));
     expect(match.view('lobby', null, null, presentOnly('account')).standings).toMatchObject([
       { name: 'account', total: 4, games: 2, delta: 3 },
+    ]);
+  });
+
+  test("shows a guest's line that became an account's as the account, also once it has left", () => {
+    const match = new Match({ ...RULES, games: 3 });
+    match.score('g1', scores({ guest: 3 }), (key) =>
+      key === 'guest' ? { id: 'g', ...who('Guest 3', null, 3) } : null,
+    );
+    match.rekey('guest', 'account', who('alice', '/avatars/a.webp'));
+    const line = (view: ReturnType<Match['view']>) =>
+      view.standings.map(({ name, guest, avatar, left }) => ({ name, guest, avatar, left }));
+    expect(line(match.view('lobby', null, null, () => null))).toEqual([
+      { name: 'alice', avatar: '/avatars/a.webp', left: true },
+    ]);
+    // So is one added to the account's own line, which the account may have left under an older name.
+    match.score('g2', scores({ guest: 1 }), (key) =>
+      key === 'guest' ? { id: 'g', ...who('Guest 3', null, 3) } : null,
+    );
+    match.rekey('guest', 'account', who('Alice', '/avatars/a.webp'));
+    expect(line(match.view('lobby', null, null, () => null))).toEqual([
+      { name: 'Alice', avatar: '/avatars/a.webp', left: true },
     ]);
   });
 
@@ -245,7 +266,7 @@ describe('the table of a match', () => {
     match.score('g1', scores({ ann: 6, account: 3 }), presentOnly('ann', 'account'));
     // The account left, and the same person played the last game as a guest, then logged in.
     match.score('g2', scores({ ann: 0, guest: 3, cat: -3 }), presentOnly('ann', 'guest', 'cat'));
-    match.rekey('guest', 'account');
+    match.rekey('guest', 'account', who('account'));
     const view = match.view('ended', 'g2', null, presentOnly('ann', 'account', 'cat'));
     expect(view.status).toBe('over');
     expect(view.standings.map(({ name, rank, total, title }) => ({ name, rank, total, title }))).toEqual([

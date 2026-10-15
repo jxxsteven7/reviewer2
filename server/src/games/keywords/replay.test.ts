@@ -97,6 +97,45 @@ describe('a replay from before the groups were kept', () => {
     expect(shown.me).toBeNull();
   });
 
+  test('with a record, shows the accounts it marks as deleted since as deleted, among guests numbered as before', () => {
+    const log = {
+      v: 2 as const,
+      game: 'keywords',
+      gameId: 'g1',
+      start: {
+        ann: { team: 'red', role: 'captain' },
+        bob: { team: 'red', role: 'guesser' },
+        cat: { team: 'blue', role: 'captain' },
+        r1: { team: 'blue', role: 'guesser' },
+      },
+      entries: [],
+    };
+    const ann = { username: 'Ann', avatar: null, handle: 'h1' };
+    const before = shownReplay({
+      replay: old,
+      log: () => log,
+      accounts: new Map([
+        ['ann', ann],
+        ['bob', { username: 'Bob', avatar: null, handle: 'h2' }],
+      ]),
+      viewer: new Set(['ann']),
+    });
+    expect(before.people).toMatchObject({ bob: { name: 'Bob' }, cat: { guest: 1 } });
+    // Bob deletes his account: the record marks his player ID, and Cat keeps her number.
+    const after = shownReplay({
+      replay: old,
+      log: () => ({ ...log, deleted: ['bob'] }),
+      accounts: new Map([['ann', ann]]),
+      viewer: new Set(['ann']),
+    });
+    expect(after.people).toEqual({
+      ann: { name: 'Ann', handle: 'h1' },
+      bob: { deleted: true },
+      cat: { guest: 1 },
+      r1: { agent: 'reviewer1' },
+    });
+  });
+
   test('that keeps the groups reads no record', () => {
     const kept: KeywordsReplay = {
       ...old,

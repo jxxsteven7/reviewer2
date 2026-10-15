@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="strip" :class="[game.phase === 'over' ? 'over' : game.team, { urgent: banner?.urgent }]">
+  <section class="strip" :class="game.phase === 'over' ? 'over' : game.team">
     <!-- The lines are read out as they change; the bars, whose avatars are buttons, aren't. -->
     <div class="lines" aria-live="polite">
       <p v-if="who" class="who" :class="seat?.team ?? 'spectator'">{{ who }}</p>
