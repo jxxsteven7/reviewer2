@@ -852,7 +852,7 @@
       "anonymous": "Anonymously"
     },
     "anonymousHint": "You are listed as an anonymous player among the feedback contributions on the home page, and the GitHub issue names nobody.",
-    "accountHint": "The feedback contributions on the home page show your avatar and username, and a tap on either opens your panel. Your username appears on the GitHub issue.",
+    "accountHint": "The feedback contributions on the home page show your account's avatar and username as they are now, and a tap on either opens your panel; once you delete the account, they show a deleted player. The GitHub issue shows your username as it was when the issue was published, and keeps it.",
     "credit": "Your name",
     "creditHint": "Signing needs a name; to leave none, choose Anonymously. The name is listed among the feedback contributions on the home page, and on the GitHub issue. Any name will do, such as your GitHub username.",
     "gameNote": "Which game should we make next? Say how a round goes and what makes it fun.",
@@ -871,6 +871,7 @@
       "words": "Word lists"
     },
     "anonymous": "An anonymous player",
+    "deleted": "A deleted player",
     "none": "No feedback has been adopted yet. Be the first!"
   },
   "acknowledgments": {

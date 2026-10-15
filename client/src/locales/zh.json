@@ -852,7 +852,7 @@
       "anonymous": "匿名"
     },
     "anonymousHint": "首页的反馈贡献里会列为一位匿名玩家，GitHub issue 上也不写名字。",
-    "accountHint": "首页的反馈贡献会显示你的头像和用户名，点头像或用户名能打开你的账号面板；GitHub issue 上会写你的用户名。",
+    "accountHint": "首页的反馈贡献按你账号现在的头像和用户名显示，点头像或用户名能打开你的账号面板，注销后显示为「已注销玩家」；GitHub issue 上会写发 issue 时的用户名，之后不会改。",
     "credit": "名字",
     "creditHint": "署名需要填一个名字，不想填就选匿名。这个名字会列在首页的反馈贡献里，也会写在 GitHub issue 上。任意名字都可以，比如 GitHub 用户名。",
     "gameNote": "希望我们下一个做什么游戏？说说一局怎么玩、好玩在哪里。",
@@ -871,6 +871,7 @@
       "words": "词库"
     },
     "anonymous": "一位匿名玩家",
+    "deleted": "已注销玩家",
     "none": "还没有被采纳的反馈。来做第一个吧！"
   },
   "acknowledgments": {

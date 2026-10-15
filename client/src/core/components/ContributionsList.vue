@@ -10,12 +10,15 @@ import PlayerAvatar from './PlayerAvatar.vue';
 
 // The feedback contributions on the home page (docs/architecture.md#feedback-contributions): the
 // feedback that the operator adopted, which the server reads from its database, newest first, in a
-// section for each kind of feedback that has any. Each is the name its player left, or "an
-// anonymous player"; what they contributed, as the operator wrote it in the page's language; the
-// GitHub issue it became, where the discussion and the changes are; and the month it was adopted.
-// Feedback signed with an account comes with the handle of its profile, and shows the account's
-// avatar before its username: a tap on either opens the account's panel over the home page, as an
-// avatar does anywhere else (ProfilePanel.vue). Any other name, and what they did, is plain text.
+// section for each kind of feedback that has any. Each says who it is from: the account that
+// signed it, "a deleted player" once that account is gone, the name a guest left, or "an
+// anonymous player"; then what they contributed, as the operator wrote it in the page's language;
+// the GitHub issue it became, where the discussion and the changes are; and the month it was
+// adopted. Feedback signed with an account comes with the handle of its profile, and shows the
+// account's avatar before its username: a tap on either opens the account's panel over the home
+// page, as an avatar does anywhere else (ProfilePanel.vue). Any other name, and what they did, is
+// plain text. What follows the name is one piece, which wraps under itself rather than under the
+// name, and an avatar hangs in a column of its own before the name.
 const { t } = useI18n();
 const language = useLanguage();
 
@@ -39,55 +42,86 @@ const sections = ({ contributions }: Contributions) =>
         :heading="t(`contributions.kinds.${section.kind}`)"
         :entries="section.entries"
       >
-        <button
-          v-if="entry.name !== null && entry.profile"
-          type="button"
-          class="name person"
-          aria-haspopup="dialog"
-          @click="openProfile(entry.profile, entry.name)"
-        >
-          <PlayerAvatar :name="entry.name" :avatar="entry.avatar" />
-          <span>{{ entry.name }}</span>
-        </button>
-        <span v-else class="name">{{ entry.name ?? t('contributions.anonymous') }}</span>
-        <template v-if="entry.summary">
-          <span class="dash"> &mdash; </span>
-          <span class="what">{{ entry.summary[language] }}</span>
-        </template>
-        <span class="meta"
-          >&nbsp;<template v-if="entry.issue !== null"
-            ><a :href="`${REPOSITORY_URL}/issues/${entry.issue}`" target="_blank" rel="noopener noreferrer"
-              >#{{ entry.issue }}</a
+        <span class="entry" :class="{ hangs: entry.name !== null && entry.profile }">
+          <button
+            v-if="entry.name !== null && entry.profile"
+            type="button"
+            class="name person"
+            aria-haspopup="dialog"
+            @click="openProfile(entry.profile, entry.name)"
+          >
+            <PlayerAvatar :name="entry.name" :avatar="entry.avatar" />
+            <span>{{ entry.name }}</span>
+          </button>
+          <span v-else class="name">{{
+            entry.deleted ? t('contributions.deleted') : (entry.name ?? t('contributions.anonymous'))
+          }}</span>
+          <span v-if="entry.summary" class="dash"> &mdash; </span>
+          <span class="said">
+            <span v-if="entry.summary" class="what">{{ entry.summary[language] }}</span>
+            <span class="meta"
+              >&nbsp;<a :href="`${REPOSITORY_URL}/issues/${entry.issue}`" target="_blank" rel="noopener noreferrer"
+                >#{{ entry.issue }}</a
+              >
+              &middot; {{ entry.month }}</span
             >
-            &middot; </template
-          >{{ entry.month }}</span
-        >
+          </span>
+        </span>
       </FoldedSection>
     </template>
   </FoldedList>
 </template>
 
 <style scoped>
+/* Who, then what they contributed as one piece, which wraps under itself rather than under the
+   name. An avatar hangs in a column of its own before the name, so that the name lines up with the
+   names of the entries without one. */
+.entry {
+  display: flex;
+  align-items: baseline;
+}
+
+.entry.hangs {
+  padding-inline-start: calc(26px + var(--space-2));
+}
+
 .name {
+  flex: none;
+  max-width: 45%;
   color: var(--ink);
   font-weight: var(--weight-bold);
 }
 
+.dash {
+  flex: none;
+  white-space: pre;
+}
+
+.said {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* An account that opens its panel: its avatar and its username, as a player shows in a room, with
-   no underline; the avatar says that it is a player to tap. */
+   no underline; the avatar says that it is a player to tap, and hangs before the username, in the
+   column the entry keeps for it, centred on the username's line. */
 .person {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  max-width: 100%;
+  position: relative;
+  display: inline-block;
   padding: 0;
   border: 0;
   background: none;
   font: inherit;
   font-weight: var(--weight-bold);
   text-align: start;
-  vertical-align: middle;
   cursor: pointer;
+}
+
+.person :deep(.avatar) {
+  position: absolute;
+  inset-inline-end: calc(100% + var(--space-2));
+  top: 50%;
+  margin-top: -13px;
 }
 
 .person:focus-visible {
