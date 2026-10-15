@@ -238,20 +238,19 @@ describe('the record of a game of the team word guessing game', () => {
     // The game's ID is the log's own, not each message's.
     expect(log.entries.some((entry) => JSON.stringify(entry.data ?? {}).includes('gameId'))).toBe(false);
 
-    // Fay deletes her account: the record no longer says who she was, nor what she said, and keeps
-    // the rest, that she said something included.
+    // Fay deletes her account: the record no longer says who she was. What she said stays, as
+    // nobody's, and the log marks her player ID as an account deleted since, so that it can be told
+    // apart from a guest's.
     const deleted = await (browsers.Fay as Browser).request('/api/account/delete', { password: 'correct horse' });
     expect(deleted.body).toEqual({ ok: true });
     expect(players()).toHaveLength(2);
-    expect(kept()[0]?.log).toContain(fayId);
-    expect(kept()[0]?.log).not.toContain('Fay was here');
-    expect(kept()[0]?.log).toContain('The secret plan');
+    expect(players().some((player) => player.playerId === fayId)).toBe(false);
     const after = JSON.parse(kept()[0]?.log as string) as GameLogData;
-    expect(after.entries.find((entry) => entry.type === 'keywords:say' && entry.by === fayId)).toEqual({
-      t: expect.any(Number),
+    expect(after.entries.find((entry) => entry.type === 'keywords:say' && entry.by === fayId)).toMatchObject({
       by: fayId,
-      type: 'keywords:say',
+      said: 'Fay was here',
     });
+    expect(after.deleted).toEqual([fayId]);
   });
 });
 
@@ -338,16 +337,15 @@ describe('what the groups say after the end of a game', () => {
     expect(talkIn(logOf(second))).toEqual([{ by: bob.state?.me, type: 'keywords:say', said: 'Again?' }]);
     expect(talkIn(logOf(first))).toEqual(talk);
 
-    // Bob deletes his account: what he said goes, as from the rest of the log.
+    // Bob deletes his account: what he said stays, as nobody's, and his player ID is marked.
     expect((await bobs.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
-    expect(talkIn(logOf(first))).toEqual([
-      { by: bob.state?.me, type: 'keywords:say', said: undefined },
-      ...talk.slice(1),
-    ]);
-    expect(talkIn(logOf(second))).toEqual([{ by: bob.state?.me, type: 'keywords:say', said: undefined }]);
+    expect(talkIn(logOf(first))).toEqual(talk);
+    expect(talkIn(logOf(second))).toEqual([{ by: bob.state?.me, type: 'keywords:say', said: 'Again?' }]);
+    expect(logOf(first).deleted).toEqual([bob.state?.me]);
+    expect(logOf(second).deleted).toEqual([bob.state?.me]);
   });
 
-  test('leave out what an account deleted before the room leaves the game said', async () => {
+  test('keep what an account deleted before the room leaves the game said, and mark it', async () => {
     const { ann, bob, everyone, bobs } = await seated();
     const gameId = await playAndEnd(ann, everyone);
     await until(() => kept().length === 1, 'the record');
@@ -356,9 +354,10 @@ describe('what the groups say after the end of a game', () => {
     expect(await ann.send('keywords:say', { gameId, text: 'Bye, Bob' })).toEqual({ ok: true });
     expect(await ann.send('room:again', { gameId })).toEqual({ ok: true });
     expect(talkIn(logOf(gameId))).toEqual([
-      { by: bob.state?.me, type: 'keywords:say', said: undefined },
+      { by: bob.state?.me, type: 'keywords:say', said: 'Bye' },
       { by: ann.state?.me, type: 'keywords:say', said: 'Bye, Bob' },
     ]);
+    expect(logOf(gameId).deleted).toEqual([bob.state?.me]);
   });
 });
 
@@ -375,7 +374,7 @@ describe('the record of a game', () => {
     const reply = await ann.send('room:create', { game: 'test', language: 'en', fields: ['general'], play: true });
     if (!reply.ok) throw new Error(reply.error);
     const bob = track(await TestClient.connect(server.url));
-    await bob.send('room:join', { code: reply.code, name: 'Bob', play: true });
+    await bob.send('room:join', { code: reply.code, play: true });
     await ann.waitFor((state) => state.players.length === 2);
     if (options.words) {
       expect(await ann.send('room:settings', { words: options.words.join('\n') })).toEqual({ ok: true });
@@ -407,7 +406,7 @@ describe('the record of a game', () => {
     });
     if (!reply.ok) throw new Error(reply.error);
     const bob = track(await TestClient.connect(server.url));
-    await bob.send('room:join', { code: reply.code, name: 'Bob', play: true });
+    await bob.send('room:join', { code: reply.code, play: true });
     await ann.waitFor((state) => state.players.length === 2);
     await ann.send('room:start', { round: 0 });
     const { gameId } = (await ann.waitFor((state) => state.phase === 'playing')) as { gameId: string };
@@ -471,13 +470,15 @@ describe('the record of a game', () => {
     expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
   });
 
-  test('is kept when the one player with an account deleted it during the game, without her and what she said', async () => {
+  test('is kept when the one player with an account deleted it during the game, without her, her player ID marked', async () => {
     server = await startServer();
     await played({ say: 'mine alone', forget: true });
     await until(() => kept().length === 1, 'the record');
     expect(players()).toEqual([]);
-    expect(kept()[0]?.log).not.toContain('mine alone');
-    expect(kept()[0]?.log).toContain('test:say');
+    const log = JSON.parse(kept()[0]?.log as string) as GameLogData;
+    const said = log.entries.find((entry) => entry.type === 'test:say');
+    expect(said).toMatchObject({ said: 'mine alone' });
+    expect(log.deleted).toEqual([said?.by]);
   });
 
   test('is kept for a game cut short when its chair closes the room', async () => {

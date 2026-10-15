@@ -7,7 +7,7 @@ import { newCode } from './codes';
 import { isToken, memberKey, newToken } from './identity';
 import { seededRng } from './random';
 import { TokenBucket, WindowCounter } from './rateLimit';
-import { MAX_BROWSERS, MAX_REMOVED, REMOVED_FOR_MS, type Room } from './room';
+import { MAX_BROWSERS, MAX_GUESTS, MAX_REMOVED, REMOVED_FOR_MS, type MemberAccount, type Room } from './room';
 import { Rooms } from './rooms';
 
 describe('room codes', () => {
@@ -30,7 +30,6 @@ describe('the list of rooms', () => {
         language: 'en',
         fields: ['general'],
         key: 'a-member-key',
-        name: 'Ann',
       });
       if (!created.ok) throw new Error(created.error);
       return created.room;
@@ -169,20 +168,92 @@ describe('rate limits', () => {
   });
 });
 
-// A room with its chair, public or private, on a clock that a test moves.
-function roomOf(listed: boolean, clock: { now: number } = { now: 0 }) {
+// A room with its chair, public or private, on a clock that a test moves. The chair is a guest
+// unless they come with an account.
+function roomOf(
+  listed: boolean,
+  clock: { now: number } = { now: 0 },
+  as: { username: string; account: MemberAccount } | null = null,
+) {
   const rooms = new Rooms(testWords(), seededRng(3), () => clock.now);
   const created = rooms.create({
     game: fakeGame,
     language: 'en',
     fields: ['general'],
     key: 'chair',
-    name: 'Ann',
     public: listed,
+    as,
   });
   if (!created.ok) throw new Error(created.error);
   return created.room;
 }
+
+// Bob's account, for a member who comes logged in.
+const bob: { username: string; account: MemberAccount } = {
+  username: 'Bob',
+  account: { id: 1, handle: 'a1b2c3d4e5f6', avatar: null, rank: 'undergraduate', agents: false },
+};
+
+// A member who comes into a room, where the test expects them to be let in.
+function joinOf(room: Room, ...args: Parameters<Room['join']>) {
+  const joined = room.join(...args);
+  if (!joined.ok) throw new Error(joined.error);
+  return joined.member;
+}
+
+describe('guests', () => {
+  test('are numbered in the order they first came in, and a member with an account has none', () => {
+    const room = roomOf(false);
+    joinOf(room, 'seat-1');
+    const account = joinOf(room, 'account:bob', false, bob);
+    joinOf(room, 'seat-2', true);
+    expect(account).toMatchObject({ name: 'Bob', guest: null });
+    const players = room.view({ screen: true }).players;
+    expect(players.map(({ name, guest }) => ({ name, guest }))).toEqual([
+      { name: 'Guest 1', guest: 1 },
+      { name: 'Guest 2', guest: 2 },
+      { name: 'Bob' },
+      { name: 'Guest 3', guest: 3 },
+    ]);
+    // Bob's line in the view has no number at all, not even an undefined one.
+    expect(players[2]).not.toHaveProperty('guest');
+  });
+
+  test('have their number again when they come back, and a number is never given twice', () => {
+    const room = roomOf(false);
+    const ann = joinOf(room, 'seat-a');
+    const cat = joinOf(room, 'seat-c');
+    expect([ann.guest, cat.guest]).toEqual([2, 3]);
+    room.drop(ann.id);
+    expect(joinOf(room, 'seat-d').guest).toBe(4);
+    expect(joinOf(room, 'seat-a')).toMatchObject({ name: 'Guest 2', guest: 2 });
+    // Nor when the guest with the highest number has left before the next one comes.
+    room.drop(cat.id);
+    expect(joinOf(room, 'seat-e').guest).toBe(5);
+  });
+
+  test('lose their number when they log in, which their browser has again as a guest', () => {
+    const room = roomOf(false);
+    const guest = joinOf(room, 'seat-a');
+    room.attach(guest, 'socket-a');
+    expect(room.adopt(guest.id, 'account:bob', 'Bob', bob.account)).toBe(true);
+    expect(guest).toMatchObject({ key: 'account:bob', name: 'Bob', guest: null });
+    expect(room.view({ screen: true }).players[1]).not.toHaveProperty('guest');
+    // Bob logs out, and his browser comes back as the guest it was.
+    room.drop(guest.id);
+    expect(joinOf(room, 'seat-a')).toMatchObject({ name: 'Guest 2', guest: 2 });
+    expect(joinOf(room, 'seat-b').guest).toBe(3);
+  });
+
+  test('are remembered up to a limit, the earliest forgotten first, who then comes back as a new guest', () => {
+    // The chair has an account, so that the only guests are those who come and go.
+    const room = roomOf(false, { now: 0 }, bob);
+    room.drop(joinOf(room, 'first').id);
+    for (let i = 0; i < MAX_GUESTS; i += 1) room.drop(joinOf(room, `seat-${i}`).id);
+    expect(joinOf(room, 'seat-0').guest).toBe(2);
+    expect(joinOf(room, 'first').guest).toBe(MAX_GUESTS + 2);
+  });
+});
 
 describe('screens', () => {
   test('fill a room at five, but in a public room a key that has one only takes its place', () => {
@@ -202,7 +273,7 @@ describe('screens', () => {
 describe('removals', () => {
   // A newcomer, connected from the browser with the key `browser-<i>`, whom the chair removes.
   function removeNewcomer(room: Room, i: number) {
-    const joined = room.join(`seat-${i}`, `Guest ${i}`);
+    const joined = room.join(`seat-${i}`);
     if (!joined.ok) throw new Error(joined.error);
     room.attach(joined.member, `socket-${i}`, `browser-${i}`);
     return room.remove(joined.member.id);
@@ -226,7 +297,7 @@ describe('removals', () => {
     expect(unlisted.removal('seat-1')).toBe('removed_recently');
     clock.now += 1;
     expect(unlisted.removal('seat-1', 'browser-1')).toBeNull();
-    expect(unlisted.join('seat-1', 'Guest 1')).toMatchObject({ ok: true });
+    expect(unlisted.join('seat-1')).toMatchObject({ ok: true });
     clock.now += 24 * 60 * 60_000;
     listed.forgetOldRemovals();
     expect(listed.removal('nobody', 'browser-1')).toBe('removed');
@@ -258,13 +329,7 @@ describe('removals', () => {
     // A guest on browser 7 is removed, and then, two minutes later, an account on the same browser.
     expect(removeNewcomer(room, 7)).toMatchObject({ ok: true });
     clock.now += REMOVED_FOR_MS;
-    const joined = room.join('account:bob', 'Bob', false, {
-      id: 1,
-      handle: 'a1b2c3d4e5f6',
-      avatar: null,
-      rank: 'undergraduate',
-      agents: false,
-    });
+    const joined = room.join('account:bob', false, bob);
     if (!joined.ok) throw new Error(joined.error);
     room.attach(joined.member, 'socket-bob', 'browser-7');
     expect(room.remove(joined.member.id)).toMatchObject({ ok: true });
@@ -277,13 +342,7 @@ describe('removals', () => {
 
   test('keep a member out by the last few browsers they were on, with or without a connection', () => {
     const room = roomOf(true);
-    const joined = room.join('account:bob', 'Bob', false, {
-      id: 1,
-      handle: 'a1b2c3d4e5f6',
-      avatar: null,
-      rank: 'undergraduate',
-      agents: false,
-    });
+    const joined = room.join('account:bob', false, bob);
     if (!joined.ok) throw new Error(joined.error);
     for (let i = 0; i <= MAX_BROWSERS; i += 1) {
       room.attach(joined.member, `socket-${i}`, `browser-${i}`);

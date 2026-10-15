@@ -7,20 +7,19 @@ import {
   MAX_BIO_INPUT,
   MAX_BIO_LENGTH,
   MAX_LINK_INPUT,
-  PROFILE_PATH,
   textLength,
   type AccountSummary,
   type LikerView,
 } from '@reviewer2/shared';
 import { computed, nextTick, onMounted, ref, watch, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { RouterLink } from 'vue-router';
 import { loadAccount, request } from '../account';
 import AvatarButton from '../components/AvatarButton.vue';
 import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
 import { friendsVersion, requestFriend } from '../friends';
+import { openProfile } from '../profilePanel';
 import { toast } from '../toast';
 import { useBusy } from '../useBusy';
 
@@ -28,8 +27,11 @@ import { useBusy } from '../useBusy';
 // link and the line about themselves that anyone may read, whether the record and the counts of
 // the feedback contributions show there too, the way to the page itself, with a word that others
 // find the account in the friend search by its whole username or by the page's link, and who likes
-// it, with a way to ask those who aren't friends yet. The form says what is wrong with the link or
-// the bio before it is sent, by the rules that the server applies (shared/src/accounts.ts).
+// it, with a way to ask those who aren't friends yet. The page opens in the sheet that shows an
+// account's page anywhere on the site (profilePanel.ts), as a tap on an avatar does: the page of
+// its own, /p/<handle>, is for the link that the player shares. The form says what is wrong with
+// the link or the bio before it is sent, by the rules that the server applies
+// (shared/src/accounts.ts).
 const props = defineProps<{ summary: AccountSummary }>();
 const { t } = useI18n();
 const { busy, run } = useBusy();
@@ -92,7 +94,6 @@ const changed = computed(() => {
     showThanks.value !== profile.showThanks
   );
 });
-const page = computed(() => `${PROFILE_PATH}${props.summary.handle}`);
 
 // Saves the form. The fields follow what was kept only once the summary has been read again: when
 // it can't be, they keep what was typed, which the owner may save again, instead of going back to
@@ -151,7 +152,9 @@ async function befriend(liker: LikerView): Promise<void> {
 <template>
   <div class="public">
     <p class="hint">{{ t('account.profile.public.intro') }}</p>
-    <RouterLink :to="page" class="view">{{ t('account.profile.public.view') }}</RouterLink>
+    <button type="button" class="view" aria-haspopup="dialog" @click="openProfile(summary.handle, summary.username)">
+      {{ t('account.profile.public.view') }}
+    </button>
     <p class="hint found">{{ t('account.profile.public.found') }}</p>
     <p v-if="summary.profile.banned" class="problem">{{ t('account.profile.public.banned') }}</p>
     <form class="form" @submit.prevent="save">
@@ -235,13 +238,20 @@ async function befriend(liker: LikerView): Promise<void> {
   margin-top: calc(-1 * var(--space-2));
 }
 
+/* A link to look at, which opens a sheet rather than a page. */
 .view {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
   min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--ink);
+  font: inherit;
   font-weight: var(--weight-bold);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .check {

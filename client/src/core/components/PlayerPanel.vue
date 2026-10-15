@@ -32,7 +32,7 @@ import UiSheet from './UiSheet.vue';
 // It shows who the player is: for an account, a brief profile card (ProfileCard.vue), with the rank,
 // the number, the day of registration and the titles; for an AI player, its own page at once
 // (AgentProfileCard.vue; docs/architecture.md#ai-players); for a guest, who has no page, the avatar
-// and a word that they have none. Under it, what the viewer may do with the player: for an account
+// alone, under the title that names them. Under it, what the viewer may do with the player: for an account
 // that may (docs/architecture.md#friends), by how the two stand, what the search's panel and a
 // public page offer too (FriendActions.vue): ask them to be friends, in a sheet of its own with a
 // line for them, see that the request went, answer theirs, or give a friend a name or part; the
@@ -139,13 +139,7 @@ async function report() {
     <div v-if="player" class="panel-body">
       <ProfileCard v-if="player.handle" :handle="player.handle" brief :named="false" />
       <AgentProfileCard v-else-if="player.agent" :persona="player.agent" />
-      <div v-else class="nobody">
-        <PlayerAvatar :name="player.name" :avatar="player.avatar" size="large" />
-        <div class="what">
-          <span class="tag">{{ t('room.panel.guest') }}</span>
-          <span class="hint">{{ t('room.panel.guestNote') }}</span>
-        </div>
-      </div>
+      <PlayerAvatar v-else :name="player.name" :avatar="player.avatar" size="large" />
 
       <div class="actions">
         <!-- A request goes by the player's seat (friends.ts). -->
@@ -235,29 +229,6 @@ async function report() {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-/* A guest or an AI player: the avatar, and a word of what they are. */
-.nobody {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.what {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.tag {
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--paper-2);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
 }
 
 .hint {

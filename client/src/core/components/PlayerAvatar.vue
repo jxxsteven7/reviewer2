@@ -12,10 +12,12 @@ import AgentIcon from './AgentIcon.vue';
 // In a room, the avatar of someone the room is waiting for, who is offline or has been invited and
 // hasn't come yet, is `waiting`: faded under a white veil, with three grey dots in the middle that
 // light up in turn, as a chat shows someone typing (docs/architecture.md#rooms). One too small for
-// the dots, as on a card's corner, is only `faded`.
+// the dots, as on a card's corner, is only `faded`. An `initial` takes the place of the name's
+// first character, for a name whose first character says nothing, as a deleted account's.
 const props = withDefaults(
   defineProps<{
     name: string;
+    initial?: string | null;
     avatar?: string | null;
     agent?: boolean;
     size?: 'small' | 'medium' | 'large';
@@ -23,6 +25,7 @@ const props = withDefaults(
     faded?: boolean;
   }>(),
   {
+    initial: null,
     avatar: null,
     agent: false,
     size: 'small',
@@ -47,7 +50,7 @@ const picture = computed(() => (props.avatar && !failed.value ? props.avatar : n
   >
     <img v-if="picture" :src="picture" alt="" @error="failed = true" />
     <AgentIcon v-else-if="agent" class="face" />
-    <span v-else class="initial num" :data-initial="initialOf(name)"></span>
+    <span v-else class="initial num" :data-initial="initial ?? initialOf(name)"></span>
     <span v-if="waiting" class="wait"><i></i><i></i><i></i></span>
   </span>
 </template>

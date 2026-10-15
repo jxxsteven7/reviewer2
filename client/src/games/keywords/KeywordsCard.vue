@@ -338,7 +338,8 @@ const ariaLabel = computed(() =>
   --corner-down: 6px;
 }
 
-/* The avatars of the students who chose the card hang on its top right corner. */
+/* The avatars of the students who chose the card hang on its top right corner, without the shadow
+   of an avatar that a tap opens (docs/design.md): a tap on them chooses the card. */
 .choosers {
   position: absolute;
   top: calc(var(--corner-up) * -1);
@@ -351,7 +352,6 @@ const ariaLabel = computed(() =>
   width: var(--corner-face);
   height: var(--corner-face);
   font-size: calc(var(--corner-face) * 0.5);
-  box-shadow: var(--shadow-1);
 }
 
 .choosers :deep(.avatar + .avatar) {
@@ -462,9 +462,13 @@ const ariaLabel = computed(() =>
     box-shadow 400ms cubic-bezier(0.3, 0, 0.2, 1);
 }
 
-/* The card whose menu of marks is open, which a copy of lifts out of the page meanwhile. */
-.lifting {
+/* The card whose menu of marks is open, which a copy of lifts out of the page meanwhile: it is
+   hidden at once at rest, where the press no longer sinks it, so that the copy, measured from it,
+   lands where it shows again. */
+.card.lifting {
   visibility: hidden;
+  transform: none;
+  transition: none;
 }
 
 /* The card that a replay's step is about. */

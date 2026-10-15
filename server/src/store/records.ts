@@ -15,7 +15,7 @@ import {
   type TitleCount,
 } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
-import { unsay, type GameEnding, type GameLogData, type GameLogEntry } from '../core/gameLog';
+import { markDeleted, type GameEnding, type GameLogData, type GameLogEntry } from '../core/gameLog';
 import type { GameOutcome } from '../core/game';
 import type { AgentPlay } from '../core/room';
 
@@ -339,12 +339,23 @@ export interface NewReplay {
   words?: string;
 }
 
+// A kept game for an account to watch again (ReplayStore.read): the game, the replay as the game gave
+// it, the log, if it was kept, and which player ID was which account, for those still there.
+export interface KeptGame {
+  game: string;
+  replay: unknown;
+  log: GameLogData | null;
+  players: { playerId: string; accountId: number }[];
+}
+
 export class ReplayStore {
   readonly #insert: StatementSync;
   readonly #player: StatementSync;
   readonly #read: StatementSync;
-  readonly #said: StatementSync;
-  readonly #unsay: StatementSync;
+  readonly #players: StatementSync;
+  readonly #played: StatementSync;
+  readonly #setLog: StatementSync;
+  readonly #setData: StatementSync;
   readonly #log: StatementSync;
   readonly #agentPlay: StatementSync;
 
@@ -364,16 +375,20 @@ export class ReplayStore {
     // Only an account that has the game on its record may read it, and only a game that finished
     // has a replay.
     this.#read = db.prepare(
-      'SELECT data FROM replays WHERE game_id = ? AND data IS NOT NULL AND ' +
+      'SELECT game, data, log FROM replays WHERE game_id = ? AND data IS NOT NULL AND ' +
         'EXISTS (SELECT 1 FROM game_records WHERE account_id = ? AND game_id = replays.game_id)',
     );
-    // The logs of the games that an account played in, with the IDs it had in each.
-    this.#said = db.prepare(
-      'SELECT replays.game_id AS gameId, log, json_group_array(player_id) AS playerIds FROM game_players ' +
-        'JOIN replays ON replays.game_id = game_players.game_id ' +
-        'WHERE account_id = ? AND log IS NOT NULL GROUP BY replays.game_id',
+    this.#players = db.prepare(
+      'SELECT player_id AS playerId, account_id AS accountId FROM game_players WHERE game_id = ? ORDER BY rowid',
     );
-    this.#unsay = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
+    // The logs and the replays of the games that an account played in, with the IDs it had in each.
+    this.#played = db.prepare(
+      'SELECT replays.game_id AS gameId, log, data, json_group_array(player_id) AS playerIds FROM game_players ' +
+        'JOIN replays ON replays.game_id = game_players.game_id ' +
+        'WHERE account_id = ? AND (log IS NOT NULL OR data IS NOT NULL) GROUP BY replays.game_id',
+    );
+    this.#setLog = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
+    this.#setData = db.prepare('UPDATE replays SET data = ? WHERE game_id = ?');
     this.#log = db.prepare('SELECT log FROM replays WHERE game_id = ? AND log IS NOT NULL');
     // The account of a person an AI played for, if it is still there.
     this.#agentPlay = db.prepare(
@@ -442,39 +457,67 @@ export class ReplayStore {
 
   // Adds to the log of a game that is kept what the groups said after its end, as they talked it
   // over (Room.review()), with the accounts of the player IDs it doesn't know yet, such as of
-  // someone who came back to the room after the end. A game kept without a log, as one whose log
-  // grew too long, keeps none; one that isn't kept, nothing. Says whether the log grew. The caller
-  // runs this in one transaction, and has taken out what deleted accounts said.
+  // someone who came back to the room after the end, and marks the player IDs of the accounts
+  // deleted meanwhile (`deleted`). A game kept without a log, as one whose log grew too long, keeps
+  // none; one that isn't kept, nothing. Says whether the log grew. The caller runs this in one
+  // transaction.
   addToLog(
     gameId: string,
     entries: readonly GameLogEntry[],
     players: readonly { playerId: string; accountId: number }[],
+    deleted: Iterable<string> = [],
   ): boolean {
     const row = this.#log.get(gameId) as { log: string } | undefined;
     if (row === undefined || entries.length === 0) return false;
     const kept = JSON.parse(row.log) as GameLogData;
     const truncated = kept.truncated === true || entries.some(({ type }) => type === 'truncated');
-    const log: GameLogData = { ...kept, entries: [...kept.entries, ...entries], ...(truncated ? { truncated } : {}) };
-    this.#unsay.run(JSON.stringify(log), gameId);
+    const log: GameLogData = markDeleted(
+      { ...kept, entries: [...kept.entries, ...entries], ...(truncated ? { truncated } : {}) },
+      deleted,
+    );
+    this.#setLog.run(JSON.stringify(log), gameId);
     for (const { playerId, accountId } of players) this.#player.run(gameId, playerId, accountId);
     return true;
   }
 
-  // The replay of a game, for an account that played in it, or null.
-  read(accountId: number, gameId: string): unknown {
-    const row = this.#read.get(gameId, accountId) as { data: string } | undefined;
-    return row === undefined ? null : (JSON.parse(row.data) as unknown);
+  // The replay of a game, with what else it takes to show it, for an account that played in it,
+  // or null.
+  read(accountId: number, gameId: string): KeptGame | null {
+    const row = this.#read.get(gameId, accountId) as { game: string; data: string; log: string | null } | undefined;
+    if (row === undefined) return null;
+    return {
+      game: row.game,
+      replay: JSON.parse(row.data) as unknown,
+      log: row.log === null ? null : (JSON.parse(row.log) as GameLogData),
+      players: this.#players.all(gameId) as { playerId: string; accountId: number }[],
+    };
   }
 
-  // Takes what the account said out of the logs of the games it played in (unsay), for an account
-  // that is being deleted: its rows in game_players go with it, by their foreign key, and the
-  // rest of each game stays. The caller runs this in the transaction that deletes the account.
-  unsay(accountId: number): void {
-    const rows = this.#said.all(accountId) as { gameId: string; log: string; playerIds: string }[];
-    for (const { gameId, log, playerIds } of rows) {
-      const kept = JSON.parse(log) as GameLogData;
-      const without = unsay(kept, new Set(JSON.parse(playerIds) as string[]));
-      if (without !== kept) this.#unsay.run(JSON.stringify(without), gameId);
+  // Forgets who the account was in the games it played in, for an account that is being deleted:
+  // its rows in game_players go with it, by their foreign key, and the rest of each game stays.
+  // Each log marks the player IDs it had (markDeleted), with what it said kept, as nobody's; and
+  // a replay from before the replays kept no names loses the name it had there, which such a
+  // replay keeps by player ID in `players`, the one place a replay has names. The caller runs this
+  // in the transaction that deletes the account.
+  forget(accountId: number): void {
+    const rows = this.#played.all(accountId) as {
+      gameId: string;
+      log: string | null;
+      data: string | null;
+      playerIds: string;
+    }[];
+    for (const { gameId, log, data, playerIds } of rows) {
+      const ids = JSON.parse(playerIds) as string[];
+      if (log !== null) {
+        const kept = JSON.parse(log) as GameLogData;
+        const marked = markDeleted(kept, ids);
+        if (marked !== kept) this.#setLog.run(JSON.stringify(marked), gameId);
+      }
+      const replay = data === null ? null : (JSON.parse(data) as { players?: Record<string, unknown> });
+      if (replay?.players && ids.some((id) => id in (replay.players as object))) {
+        for (const id of ids) delete replay.players[id];
+        this.#setData.run(JSON.stringify(replay), gameId);
+      }
     }
   }
 }

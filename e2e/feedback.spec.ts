@@ -33,7 +33,7 @@ test('a bug report goes from the home page to the server, which logs its number 
     .getByLabel(text.feedback.text)
     .fill(`Lock the phone in a game,\nand the board is gone when it comes back. (${testInfo.project.name})`);
   await sheet.getByLabel(text.feedback.contact).fill('reviewer@example.com');
-  // A name that can't be a nickname holds the report back.
+  // A name longer than a name may be holds the report back.
   const credit = sheet.getByLabel(text.feedback.credit);
   await credit.fill('x'.repeat(17));
   await expect(sheet).toContainText(text.errors.credit_invalid);

@@ -86,15 +86,15 @@ interface Table {
 // Ann chairs and captains red, Bob guesses for red, Cat captains blue, Dan guesses for blue, Eve
 // watches, and a screen shows the room.
 async function seatTable(start = true, settings?: Partial<KeywordsSettings>): Promise<Table> {
-  const { chair: ann, code } = await createRoom(server.url, 'Ann', {
+  const { chair: ann, code } = await createRoom(server.url, {
     game: 'keywords',
     ...(settings ? { settings: { ...defaultSettings('en'), ...settings } } : {}),
   });
   const [bob, cat, dan, eve] = await Promise.all([
-    joinRoom(server.url, code, 'Bob'),
-    joinRoom(server.url, code, 'Cat'),
-    joinRoom(server.url, code, 'Dan'),
-    joinRoom(server.url, code, 'Eve'),
+    joinRoom(server.url, code),
+    joinRoom(server.url, code),
+    joinRoom(server.url, code),
+    joinRoom(server.url, code),
   ]);
   const screen = await TestClient.connect(server.url);
   expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
@@ -176,7 +176,7 @@ const context = (): GameContext => ({
   chairId: 'ann',
   now: () => 0,
   keyOf: (id) => id,
-  nameOf: (id) => id,
+  whoIs: () => ({ account: true }),
   isOnline: () => true,
   agentOf: () => null,
   playerIds: () => ['ann', 'bob', 'cat'],
@@ -216,7 +216,7 @@ describe('the view', () => {
 
 describe('seats and starting', () => {
   test('the waiting room shows what is missing', async () => {
-    const { chair } = await createRoom(server.url, 'Ann', { game: 'keywords' });
+    const { chair } = await createRoom(server.url, { game: 'keywords' });
     clients.push(chair);
     expect(data(chair).startProblems).toEqual([
       { problem: 'needs_captain', team: 'red' },
@@ -489,7 +489,7 @@ describe('the settings', () => {
   });
 
   test('must be whole and suit the language of the room', async () => {
-    const { chair } = await createRoom(server.url, 'Ann', { game: 'keywords' });
+    const { chair } = await createRoom(server.url, { game: 'keywords' });
     clients.push(chair);
     const english = defaultSettings('en');
     for (const settings of [
@@ -616,13 +616,13 @@ describe('the time limits', () => {
 
 describe('coming to play', () => {
   test('a newcomer who comes to play becomes a student of the smaller group, and the others watch', async () => {
-    const { chair: ann, code } = await createRoom(server.url, 'Ann', { game: 'keywords', play: true });
+    const { chair: ann, code } = await createRoom(server.url, { game: 'keywords', play: true });
     clients.push(ann);
     const annSeat = data(ann).seats[ann.me];
     expect(annSeat?.role).toBe('guesser');
-    const bob = await joinRoom(server.url, code, 'Bob', { play: true });
-    const cat = await joinRoom(server.url, code, 'Cat', { play: false });
-    const dan = await joinRoom(server.url, code, 'Dan');
+    const bob = await joinRoom(server.url, code, { play: true });
+    const cat = await joinRoom(server.url, code, { play: false });
+    const dan = await joinRoom(server.url, code);
     clients.push(bob, cat, dan);
     const seats = data(dan).seats;
     expect(seats[bob.me]).toEqual({ team: otherTeam(annSeat?.team ?? 'red'), role: 'guesser' });
@@ -639,7 +639,7 @@ describe('coming to play', () => {
     const ann = table.captains.red;
     // A latecomer evens out the groups.
     await expectOk(table.spectator.send('keywords:seat', { team: 'blue', role: 'guesser' }));
-    const fay = await joinRoom(server.url, table.code, 'Fay', { play: true });
+    const fay = await joinRoom(server.url, table.code, { play: true });
     clients.push(fay);
     expect(data(fay).seats[fay.me]).toEqual({ team: 'red', role: 'guesser' });
     expect(data(fay).side).toBe('red');
@@ -649,7 +649,7 @@ describe('coming to play', () => {
     await expectOk(dan.send('room:leave'));
     const danBack = await TestClient.connect(server.url, { token: dan.token });
     clients.push(danBack);
-    expect(await danBack.send('room:join', { code: table.code, name: 'Dan', play: true })).toMatchObject({ ok: true });
+    expect(await danBack.send('room:join', { code: table.code, play: true })).toMatchObject({ ok: true });
     await danBack.waitFor((state) => state.me !== null);
     expect(data(danBack).seats[danBack.me]).toEqual({ team: 'blue', role: 'guesser' });
 
@@ -657,9 +657,7 @@ describe('coming to play', () => {
     await expectOk(ann.send('room:leave'));
     const annBack = await TestClient.connect(server.url, { token: ann.token });
     clients.push(annBack);
-    expect(await annBack.send('room:join', { code: table.code, name: 'Ann', play: true })).toMatchObject({
-      ok: true,
-    });
+    expect(await annBack.send('room:join', { code: table.code, play: true })).toMatchObject({ ok: true });
     await annBack.waitFor((state) => state.me !== null);
     expect(data(annBack).seats[annBack.me]).toEqual(SPECTATOR);
     expect(data(annBack).side).toBe('red');
@@ -668,7 +666,7 @@ describe('coming to play', () => {
   test('after the game has ended, whoever sits down for the next one is no player of this one', async () => {
     const table = await seatTable();
     await expectOk(table.captains.red.send('room:end', { gameId: board(table.captains.red).gameId }));
-    const fay = await joinRoom(server.url, table.code, 'Fay', { play: true });
+    const fay = await joinRoom(server.url, table.code, { play: true });
     clients.push(fay);
     expect(data(fay).seats[fay.me]?.role).toBe('guesser');
     expect(data(fay).side).toBeNull();
@@ -734,9 +732,10 @@ describe('seats during a game', () => {
   test('a captain who leaves can be replaced, and cannot come back as a guesser', async () => {
     const table = await seatTable();
     const ann = table.captains.red;
+    const annId = ann.me;
     await expectOk(ann.send('room:leave'));
     const eve = table.spectator;
-    await eve.waitFor((state) => !state.players.some((player) => player.name === 'Ann'), 'Ann gone');
+    await eve.waitFor((state) => !state.players.some(({ id }) => id === annId), 'Ann gone');
     expect(board(eve).cards.some((card) => !card.revealed && card.color)).toBe(false);
 
     await expectOk(eve.send('keywords:seat', { team: 'red', role: 'captain' }));
@@ -748,7 +747,7 @@ describe('seats during a game', () => {
 
     const back = await TestClient.connect(server.url, { token: ann.token });
     clients.push(back);
-    expect(await back.send('room:join', { code: table.code, name: 'Ann' })).toMatchObject({ ok: true });
+    expect(await back.send('room:join', { code: table.code, play: false })).toMatchObject({ ok: true });
     await back.waitFor((state) => state.me !== null);
     expect(data(back).keyViewers).toContain(back.me);
     expect(await back.send('keywords:seat', { team: 'red', role: 'guesser' })).toEqual({

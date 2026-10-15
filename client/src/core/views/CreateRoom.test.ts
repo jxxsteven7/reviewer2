@@ -51,9 +51,7 @@ beforeEach(() => {
 });
 
 async function opened() {
-  const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
-  await wrapper.get('input[autocomplete="nickname"]').setValue('Ann');
-  return wrapper;
+  return mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
 }
 
 type Wrapper = Awaited<ReturnType<typeof opened>>;
@@ -89,11 +87,19 @@ describe('the room setup', () => {
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
-    expect(socket.send).toHaveBeenCalledWith('room:create', expect.objectContaining({ fields: ['ml'], name: 'Ann' }));
+    expect(socket.send).toHaveBeenCalledWith('room:create', expect.objectContaining({ fields: ['ml'] }));
     expect(push).toHaveBeenCalledWith('/room/ABCD');
   });
 
-  test('asks a player who is logged in for no nickname, and sends none', async () => {
+  // A guest has the number that the room gives them, and a player who is logged in their username.
+  test('asks nobody for a name, and sends none', async () => {
+    const guest = await opened();
+    expect(guest.findAll('input[type="text"]')).toHaveLength(0);
+    await box(guest, 0).setValue(true);
+    await guest.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('name');
+    socket.send.mockClear();
     signedIn.account.summary = {
       username: 'Ann Lee',
       avatar: null,

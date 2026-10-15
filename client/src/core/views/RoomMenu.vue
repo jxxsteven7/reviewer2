@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MAX_NAME_INPUT, nextChair, type Ack, type PlayerView, type RoomView } from '@reviewer2/shared';
+import { nextChair, type Ack, type PlayerView, type RoomView } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -9,34 +9,30 @@ import PlayerAvatar from '../components/PlayerAvatar.vue';
 import SendFeedback from '../components/SendFeedback.vue';
 import SoundToggle from '../components/SoundToggle.vue';
 import UiButton from '../components/UiButton.vue';
-import UiField from '../components/UiField.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { closeRoom, leaveRoom } from '../room';
-import { storeName } from '../session';
-import { act, send } from '../socket';
+import { act } from '../socket';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
-import { useNameField } from '../useNameField';
 
 // The room menu, behind the "Room" button in the masthead: who you are, whether the room is public
-// or private, ways to rename yourself or leave, for an account the way to invite friends during a
+// or private, the way to leave, for an account the way to invite friends during a
 // game and while a finished match's ranking stands in the waiting room (docs/architecture.md#friends),
 // which the waiting room's start bar has otherwise, the switch for the sounds, which the quick
 // reactions offer too,
 // and the way to send the author feedback. The chair can also list the room on the home page or
 // take it off, in the waiting room (as the tag beside the waiting room's heading does), and close
 // the room for everyone, in the waiting room, during a game and after it. A player who is logged
-// in is called by their username, which changes on the account page, not here. Each action opens
-// its own sheet over the menu, as it did when they stood at the foot of the page.
+// in is called by their username, which changes on the account page, and a guest by the number the
+// room gave them. Each action opens its own sheet over the menu, as it did when they stood at the
+// foot of the page.
 const props = defineProps<{ room: RoomView; me: PlayerView }>();
 const { t } = useI18n();
 const router = useRouter();
 const open = ref(false);
-const renaming = ref(false);
 const inviting = ref(false);
 const leaving = ref(false);
 const closing = ref(false);
-const { name, clean, problem, refuse } = useNameField();
 const { busy, run } = useBusy();
 
 const isChair = computed(() => props.room.chairId === props.me.id);
@@ -57,22 +53,6 @@ const leaveText = computed(() => {
 watch(isChair, (chair) => {
   if (!chair) closing.value = false;
 });
-
-function startRenaming() {
-  name.value = props.me.name;
-  renaming.value = true;
-}
-
-async function rename() {
-  const reply = await run(() => send('room:rename', { name: name.value }));
-  if (!reply) return;
-  if (!reply.ok) {
-    refuse(reply.error);
-    return;
-  }
-  storeName(clean.value ?? name.value.trim());
-  renaming.value = false;
-}
 
 // Leaving and closing both end on the home page.
 async function goAway(action: () => Promise<Ack>) {
@@ -110,8 +90,7 @@ const setPublic = (value: boolean) => act('room:public', { public: value });
         <UiButton v-else :disabled="!account.summary" @click="setPublic(true)">{{ t('room.makePublic') }}</UiButton>
         <p v-if="!room.public" class="hint">{{ t(account.summary ? 'room.publicHint' : 'room.publicNeedsAccount') }}</p>
       </template>
-      <UiButton v-if="!account.summary" @click="startRenaming">{{ t('room.rename') }}</UiButton>
-      <UiButton v-else-if="room.phase !== 'lobby' || matchOver" @click="inviting = true">{{
+      <UiButton v-if="account.summary && (room.phase !== 'lobby' || matchOver)" @click="inviting = true">{{
         t('friends.invite')
       }}</UiButton>
       <SoundToggle />
@@ -122,19 +101,6 @@ const setPublic = (value: boolean) => act('room:public', { public: value });
   </UiSheet>
 
   <InviteFriends :open="inviting" :room="room" @close="inviting = false" />
-
-  <UiSheet :open="renaming" :title="t('room.rename')" @close="renaming = false">
-    <form class="sheet-form" @submit.prevent="rename">
-      <UiField
-        v-model="name"
-        :label="t('room.join.name')"
-        :maxlength="MAX_NAME_INPUT"
-        enterkeyhint="done"
-        :error="problem"
-      />
-      <UiButton variant="primary" type="submit" :disabled="busy || !clean">{{ t('room.renameSubmit') }}</UiButton>
-    </form>
-  </UiSheet>
 
   <UiSheet :open="leaving" :title="t('room.leave')" @close="leaving = false">
     <div class="sheet-form">

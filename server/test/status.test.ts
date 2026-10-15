@@ -37,9 +37,9 @@ describe('the numbers', () => {
       countries: [],
     });
 
-    const { chair, code } = await createRoom(server.url, 'Ann');
-    const bob = await joinRoom(server.url, code, 'Bob');
-    const other = await createRoom(server.url, 'Cy');
+    const { chair, code } = await createRoom(server.url);
+    const bob = await joinRoom(server.url, code);
+    const other = await createRoom(server.url);
     clients.push(chair, bob, other.chair);
     expect(await chair.send('room:start', { round: 0 })).toEqual({ ok: true });
     expect(server.app.stats()).toMatchObject({
@@ -227,8 +227,8 @@ describe('the status server', () => {
 
   test('shows nobody: no codes, room IDs, names, tokens or addresses', async () => {
     server = await startServer({ trustProxy: true });
-    const { chair, code, roomId } = await createRoom(server.url, 'Zelda');
-    const quentin = await joinRoom(server.url, code, 'Quentin');
+    const { chair, code, roomId } = await createRoom(server.url);
+    const quentin = await joinRoom(server.url, code);
     const screen = await TestClient.connect(server.url, {}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
     clients.push(chair, quentin, screen);
     expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });

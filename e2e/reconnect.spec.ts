@@ -23,7 +23,7 @@ test('a player who reloads the page is back in their seat', async ({ browser }) 
   const guesser = table.guessers[team];
   await guesser.reload();
   await expect(guesser.locator('.keywords-game')).toBeVisible();
-  await expect(guesser.locator('form.name-form')).toHaveCount(0);
+  await expect(guesser.locator('form.join-form')).toHaveCount(0);
   await revealByKey(table, team);
 });
 
@@ -40,9 +40,9 @@ test('a player who goes to the home page and back is in their seat at once', asy
   const before = received.length;
   await guesser.goBack();
   // At once: from what the connection has, with no handshake and no new snapshot, so the page
-  // never says that the room is opening or asks for a name.
+  // never says that the room is opening or asks whether the player plays.
   await expect(guesser.locator('.strip .clue .word')).toHaveText(clue, { timeout: 2_000 });
-  await expect(guesser.locator('.loading, .banner, form.name-form')).toHaveCount(0);
+  await expect(guesser.locator('.loading, .banner, form.join-form')).toHaveCount(0);
   expect(received.length, 'snapshots received on the way back').toBe(before);
   await revealByKey(table, team);
 });
@@ -62,8 +62,8 @@ test('a player who opens the home page anew is offered the way back to their sea
   expect(new URL(guesser.url()).pathname).toBe('/');
   await seat.getByRole('link', { name: TEXT.en.home.seats.back }).click();
   await expect(guesser).toHaveURL(new RegExp(`/room/${code}$`));
-  await expect(guesser.locator('.role-banner .who')).toHaveText(seatSaid(team));
-  await expect(guesser.locator('form.name-form')).toHaveCount(0);
+  await expect(guesser.locator('.strip .who')).toHaveText(seatSaid(team));
+  await expect(guesser.locator('form.join-form')).toHaveCount(0);
   await giveClue(table.captains[team], 'Hint', 2, 'en');
   await revealByKey(table, team);
 });

@@ -21,7 +21,7 @@ const mock = vi.hoisted(() => {
 vi.mock('./socket', () => mock);
 
 import { i18n } from './i18n';
-import { closeRoom, closeRoomPage, entry, leaveRoom, openRoom, room, submitName } from './room';
+import { closeRoom, closeRoomPage, entry, leaveRoom, openRoom, room, submitChoice } from './room';
 
 const emit = (event: string, payload?: unknown) => mock.handlers.get(event)?.(payload);
 const fail = (error: string, extra: object = {}): Ack => ({ ok: false, error, ...extra });
@@ -74,6 +74,40 @@ describe('the room page', () => {
     expect(mock.setHandshake).toHaveBeenLastCalledWith({ code: 'K7QX', roomId: 'room-a' });
   });
 
+  test('names a guest by their number, in the table of a match too, in the language of the interface', async () => {
+    i18n.global.locale.value = 'en';
+    const withGuests = {
+      ...view('K7QX', 'room-a', 'ann'),
+      players: [
+        { id: 'ann', name: 'Ann', online: true },
+        { id: 'g3', name: 'Guest 3', guest: 3, online: true },
+      ],
+      match: {
+        id: 'm1',
+        rules: { games: 3, teams: 'switch' as const, grouping: 'random' as const },
+        played: 0,
+        status: 'on' as const,
+        game: 1,
+        standings: [
+          { playerId: null, name: 'Guest 1', guest: 1, total: 0, delta: null, games: 1, rank: null, left: true },
+        ],
+      },
+    };
+    mock.send.mockImplementation(async () => {
+      emit('room:state', withGuests);
+      return ok('K7QX', 'room-a');
+    });
+    openRoom('K7QX');
+    await flushPromises();
+    expect(room.value?.players.map((player) => player.name)).toEqual(['Ann', 'Guest 3']);
+    expect(room.value?.match?.standings[0]?.name).toBe('Guest 1');
+    i18n.global.locale.value = 'zh';
+    await flushPromises();
+    expect(room.value?.players.map((player) => player.name)).toEqual(['Ann', '\u6e38\u5ba23']);
+    expect(room.value?.match?.standings[0]?.name).toBe('\u6e38\u5ba21');
+    i18n.global.locale.value = 'en';
+  });
+
   test('names an AI player by its persona, in the language of the interface', async () => {
     i18n.global.locale.value = 'en';
     const withAi = {
@@ -96,37 +130,37 @@ describe('the room page', () => {
     i18n.global.locale.value = 'en';
   });
 
-  test('keeps a newcomer on the name form when the server refuses the name', async () => {
-    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'zh' }));
+  test('keeps a newcomer on the form when the server refuses them, and sends no name', async () => {
+    mock.send.mockResolvedValueOnce(fail('play_required', { language: 'zh' }));
     openRoom('K7QX');
     await flushPromises();
-    expect(entry.status).toBe('needs_name');
+    expect(entry.status).toBe('needs_choice');
     expect(entry.language).toBe('zh');
 
-    mock.send.mockResolvedValueOnce(fail('name_taken'));
-    const reply = await submitName('Ann', true);
-    expect(reply).toEqual(fail('name_taken'));
-    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', name: 'Ann', play: true });
-    mock.send.mockResolvedValueOnce(fail('name_taken'));
-    await submitName('Ann', false);
-    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', name: 'Ann', play: false });
-    expect(entry.status).toBe('needs_name');
+    mock.send.mockResolvedValueOnce(fail('room_full'));
+    const reply = await submitChoice(true);
+    expect(reply).toEqual(fail('room_full'));
+    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', play: true });
+    mock.send.mockResolvedValueOnce(fail('room_full'));
+    await submitChoice(false);
+    expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', play: false });
+    expect(entry.status).toBe('needs_choice');
   });
 
-  test('takes a newcomer off the name form when the room has come to take accounts only', async () => {
-    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+  test('takes a newcomer off the form when the room has come to take accounts only', async () => {
+    mock.send.mockResolvedValueOnce(fail('play_required', { language: 'en' }));
     openRoom('K7QX');
     await flushPromises();
-    expect(entry.status).toBe('needs_name');
+    expect(entry.status).toBe('needs_choice');
     // The chair listed the room meanwhile: the notice shows the way to log in and come back.
     mock.send.mockResolvedValueOnce(fail('account_required'));
-    await submitName('Ann', true);
+    await submitChoice(true);
     expect(entry.status).toBe('failed');
     expect(entry.error).toBe('account_required');
   });
 
   test('joins with an invitation in place of the code, once, and leaves for the notice when it has lapsed', async () => {
-    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+    mock.send.mockResolvedValueOnce(fail('play_required', { language: 'en' }));
     openRoom('K7QX', { invitation: 'inv-1' });
     await flushPromises();
     expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', invitation: 'inv-1' });
@@ -136,7 +170,7 @@ describe('the room page', () => {
       emit('room:state', view('K7QX', 'room-a', 'ann'));
       return fail('timeout');
     });
-    await submitName(undefined, true);
+    await submitChoice(true);
     expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', invitation: 'inv-1', play: true });
     expect(entry.status).toBe('in');
     // After a reconnect the page is a member, and asks by the code and the room's ID alone.
@@ -145,27 +179,27 @@ describe('the room page', () => {
     await flushPromises();
     expect(mock.send).toHaveBeenLastCalledWith('room:join', { code: 'K7QX', roomId: 'room-a' });
 
-    // An invitation that lapsed while the newcomer was on the name form.
+    // An invitation that lapsed while the newcomer was on the form.
     closeRoomPage();
-    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+    mock.send.mockResolvedValueOnce(fail('play_required', { language: 'en' }));
     openRoom('K7QX', { invitation: 'inv-2' });
     await flushPromises();
     mock.send.mockResolvedValueOnce(fail('invitation_expired'));
-    await submitName(undefined, true);
+    await submitChoice(true);
     expect(entry.status).toBe('failed');
     expect(entry.error).toBe('invitation_expired');
   });
 
   test('ignores the snapshots and the closing of a room the page has left', async () => {
     // The connection is still in room B, which keeps sending snapshots, while the page wants A.
-    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+    mock.send.mockResolvedValueOnce(fail('play_required', { language: 'en' }));
     openRoom('AAAA');
     await flushPromises();
     emit('room:state', view('BBBB', 'room-b', 'ann'));
-    expect(entry.status).toBe('needs_name');
+    expect(entry.status).toBe('needs_choice');
     expect(room.value).toBeNull();
     emit('room:closed', { reason: 'removed' });
-    expect(entry.status).toBe('needs_name');
+    expect(entry.status).toBe('needs_choice');
 
     emit('room:state', view('AAAA', 'room-a', 'ann'));
     expect(entry.status).toBe('in');
@@ -179,14 +213,14 @@ describe('the room page', () => {
     mock.send.mockReturnValueOnce(new Promise<Ack>((resolve) => (answer = resolve)));
     openRoom('AAAA');
     closeRoomPage();
-    mock.send.mockResolvedValueOnce(fail('name_required', { language: 'en' }));
+    mock.send.mockResolvedValueOnce(fail('play_required', { language: 'en' }));
     openRoom('BBBB');
     await flushPromises();
-    expect(entry.status).toBe('needs_name');
+    expect(entry.status).toBe('needs_choice');
 
     answer(fail('room_not_found'));
     await flushPromises();
-    expect(entry.status).toBe('needs_name');
+    expect(entry.status).toBe('needs_choice');
   });
 
   test('starts from the snapshot the connection has been sent already', () => {
@@ -215,12 +249,12 @@ describe('the room page', () => {
     expect((await goAway()).ok).toBe(true);
     expect(mock.send).toHaveBeenLastCalledWith(message);
     expect(entry.status).toBe('idle');
-    mock.send.mockResolvedValue(fail('name_required', { language: 'en' }));
+    mock.send.mockResolvedValue(fail('play_required', { language: 'en' }));
     openRoom('K7QX');
     expect(room.value).toBeNull();
     expect(entry.status).toBe('joining');
     await flushPromises();
-    expect(entry.status).toBe('needs_name');
+    expect(entry.status).toBe('needs_choice');
   });
 
   test('makes a fresh connection when the server does not answer', async () => {

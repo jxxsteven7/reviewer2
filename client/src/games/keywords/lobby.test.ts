@@ -101,6 +101,16 @@ const withAgents = (
 };
 
 describe('KeywordsLobby', () => {
+  // The banner that stood at the top of the waiting room is gone: the reaction button goes into the
+  // room's masthead, left of the room menu (RoomPage.vue).
+  test('puts the reaction button in the masthead, and has no banner', () => {
+    const lobby = mount(KeywordsLobby, { props: { room: withAgents('bob') }, global: global() });
+    expect(lobby.find('.role-banner').exists()).toBe(false);
+    const teleport = lobby.get('teleport-stub');
+    expect(teleport.attributes('to')).toBe('#room-actions');
+    expect(teleport.find('.emote-button').exists()).toBe(true);
+  });
+
   beforeEach(() => {
     send.mockReset();
     send.mockImplementation(async (event) => (event === 'meta:fields' ? { ok: true, fields: [] } : { ok: true }));

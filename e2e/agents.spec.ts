@@ -70,7 +70,7 @@ async function chairWithAgents(browser: Parameters<typeof newPlayer>[0]) {
   snapshotsOf(ann);
   await register(ann, name);
   expect(admin('agents', 'allow', name)).toBe(`${name} may invite AI players to the private rooms they chair.`);
-  const url = await createRoom(ann, 'en', '');
+  const url = await createRoom(ann, 'en');
   return { ann, name, url };
 }
 
@@ -93,8 +93,7 @@ test('Reviewer 1 plays a group, and gives the clue of a PI who is offline until 
   await expect(red.getByRole('button', { name: invite })).toHaveCount(0);
 
   const bob = await newPlayer(browser, 'en');
-  snapshotsOf(bob);
-  await joinByLink(bob, url, 'Bob', 'en');
+  await joinByLink(bob, url, 'en');
   await sit(bob, 'blue', 'guesser', 'en');
   // Bob opens Reviewer 1's page from its avatar, in its panel: player number 0, and how many of it
   // are in the rooms, which the tests running beside this one share.
@@ -178,12 +177,10 @@ test('Reviewer 1 advises a student of its group, who reveals the cards', async (
 
   // Bob is a red student beside the AI student; Cat is the blue student.
   const bob = await newPlayer(browser, 'en');
-  snapshotsOf(bob);
-  await joinByLink(bob, url, 'Bob', 'en');
+  await joinByLink(bob, url, 'en');
   await sit(bob, 'red', 'guesser', 'en');
   const cat = await newPlayer(browser, 'en');
-  snapshotsOf(cat);
-  await joinByLink(cat, url, 'Cat', 'en');
+  await joinByLink(cat, url, 'en');
   await sit(cat, 'blue', 'guesser', 'en');
   await expect(ann.locator('.start-bar .ready')).toBeVisible();
   await ann.getByRole('button', { name: text.lobby.start }).click();

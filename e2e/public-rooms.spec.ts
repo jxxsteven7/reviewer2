@@ -25,7 +25,7 @@ test('a public room is joined from the home page with an account, and a removed 
   const bobName = own('Bob');
   const ann = await newPlayer(browser, 'en');
   await register(ann, annName);
-  const url = await createRoom(ann, 'en', '', async (page) => {
+  const url = await createRoom(ann, 'en', async (page) => {
     await page.getByRole('radio', { name: new RegExp(`^${text.create.public}\\b`) }).check();
   });
   // The chair's tag beside the heading says that the room is public, and is theirs to switch.
@@ -51,7 +51,7 @@ test('a public room is joined from the home page with an account, and a removed 
   await bob.getByLabel(text.account.password, { exact: true }).fill('correct horse');
   await bob.getByRole('button', { name: text.account.signIn.registerSubmit }).click();
   await bob.waitForURL(url);
-  await expect(bob.locator('.name-form')).toContainText(bobName);
+  await expect(bob.locator('.join-form')).toContainText(bobName);
   await bob.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(bob.locator('.lobby')).toContainText(annName);
   await expect(ann.locator('.lobby')).toContainText(bobName);
@@ -92,7 +92,7 @@ test('a public room is joined from the home page with an account, and a removed 
   expect(admin('accounts', 'bar', bobName)).toContain(`${bobName} may not create or join public rooms.`);
   const cat = await newPlayer(browser, 'en');
   await register(cat, own('Cat'));
-  const other = await createRoom(cat, 'en', '', async (page) => {
+  const other = await createRoom(cat, 'en', async (page) => {
     await page.getByRole('radio', { name: new RegExp(`^${text.create.public}\\b`) }).check();
   });
   await bobsPhone.goto(other);

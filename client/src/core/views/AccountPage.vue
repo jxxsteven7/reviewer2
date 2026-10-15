@@ -46,7 +46,7 @@ onMounted(async () => {
 
 <template>
   <div class="page account-page">
-    <PageMasthead><LanguageSwitch /></PageMasthead>
+    <PageMasthead back><LanguageSwitch /></PageMasthead>
     <main>
       <SignIn
         v-if="signingIn || (account.loaded && !account.summary)"

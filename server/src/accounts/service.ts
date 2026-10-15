@@ -31,6 +31,7 @@ import {
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
+import type { KeptReplay } from '../core/game';
 import type { GameLogEntry } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
@@ -373,11 +374,6 @@ export class Accounts {
     return name === null ? undefined : this.store.byKey(usernameKey(name));
   }
 
-  // Whether a guest's nickname is someone's username.
-  reserved(nickname: string): boolean {
-    return this.byName(nickname) !== undefined;
-  }
-
   async register(ip: string, rawName: string, password: string): Promise<AccountResult<{ secret: string }>> {
     const { registrations, failedRegistrations } = this.counters;
     if (!registrations.allowed(ip) || !failedRegistrations.allowed(ip)) return refuse('register_limited');
@@ -514,8 +510,8 @@ export class Accounts {
       if (!this.#stillLoggedIn(login)) return null;
       const ended = this.sessions.deleteForAccount(id);
       const others = this.friends.others(id);
-      // What it said in its games goes before the rows that say which player it was in them.
-      this.replays.unsay(id);
+      // Its games forget it before the rows that say which player it was in them go.
+      this.replays.forget(id);
       const account = this.store.delete(id);
       return account ? { ended, account, others } : null;
     });
@@ -806,15 +802,28 @@ export class Accounts {
     gameId: string,
     entries: readonly GameLogEntry[],
     players: readonly { playerId: string; accountId: number }[],
+    deleted: Iterable<string> = [],
   ): boolean {
     if (this.#full()) return false;
-    return this.store.transaction(() => this.replays.addToLog(gameId, entries, players));
+    return this.store.transaction(() => this.replays.addToLog(gameId, entries, players, deleted));
   }
 
-  // The replay of a game that the account played in, or null when there is none or the account
-  // didn't play in it; the two aren't told apart, so that nobody learns which games were kept.
-  replayOf(login: Login, gameId: string): unknown {
-    return this.replays.read(login.account.id, gameId);
+  // The replay of a game that the account played in, with what it takes to show it
+  // (GameModule.showReplay): the log of the game, the accounts that played in it as they are now,
+  // and the player IDs that this one had. Null when there is none or the account didn't play in
+  // it; the two aren't told apart, so that nobody learns which games were kept.
+  replayOf(login: Login, gameId: string): (KeptReplay & { game: string }) | null {
+    const kept = this.replays.read(login.account.id, gameId);
+    if (kept === null) return null;
+    const accounts = new Map<string, { username: string; avatar: string | null; handle: string }>();
+    const viewer = new Set<string>();
+    for (const { playerId, accountId } of kept.players) {
+      const account = this.store.byId(accountId);
+      if (!account) continue;
+      accounts.set(playerId, { username: account.username, avatar: avatarUrl(account), handle: account.handle });
+      if (accountId === login.account.id) viewer.add(playerId);
+    }
+    return { game: kept.game, replay: kept.replay, log: kept.log, accounts, viewer };
   }
 
   // Keeps a match that has run its course on an account's record, with the title that it awarded,

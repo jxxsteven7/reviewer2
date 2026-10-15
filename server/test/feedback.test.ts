@@ -195,7 +195,7 @@ describe('feedback', () => {
 
   test('keeps nothing that says who sent it, even from someone in a room', async () => {
     server = await startServer({ trustProxy: true });
-    const { chair, code, roomId } = await createRoom(server.url, 'Zelda');
+    const { chair, code, roomId } = await createRoom(server.url);
     clients.push(chair);
     expect(await chair.send('meta:feedback', message({ kind: 'bug', page: 'room' }))).toEqual({ ok: true });
     const kept = JSON.stringify(server.feedback.latest(10));

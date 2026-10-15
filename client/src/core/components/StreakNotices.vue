@@ -176,7 +176,7 @@ const announcement = computed(() =>
 .who {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   vertical-align: middle;
 }
 

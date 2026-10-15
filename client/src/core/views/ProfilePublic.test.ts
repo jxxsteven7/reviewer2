@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import { friendsVersion } from '../friends';
+import { shownProfile } from '../profilePanel';
 import ProfilePublic from './ProfilePublic.vue';
 
 // The requests the section makes, and the connection, which the friends module listens on.
@@ -62,10 +63,15 @@ describe('ProfilePublic', () => {
     toasts.toastError.mockReset();
   });
 
-  test('leads to the page, and says that others find the account by its whole username or by the link', async () => {
+  test('opens the page in the sheet, not at its own address, and says that others find the account by its whole username or by the link', async () => {
     const wrapper = mount(ProfilePublic, { props: { summary: summary() }, global: global() });
     await flushPromises();
     expect(wrapper.get('.view').text()).toBe('Open my page');
+    expect(wrapper.get('.view').element.tagName).toBe('BUTTON');
+    expect(wrapper.find('a[href^="/p/"]').exists()).toBe(false);
+    await wrapper.get('.view').trigger('click');
+    expect(shownProfile.value).toEqual({ handle: 'a1b2c3d4e5f6', username: 'Ann' });
+    shownProfile.value = null;
     expect(wrapper.get('.view + .found').text()).toBe(
       'Others can find you in the friend search on their account page, by your full username or by pasting the link to your page.',
     );

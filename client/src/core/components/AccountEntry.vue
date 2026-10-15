@@ -59,6 +59,20 @@ const { t } = useI18n();
   justify-content: center;
 }
 
+/* The avatar leads to the account page, so it wears the hard shadow of what a tap opens
+   (docs/design.md), and the press takes it away. */
+.avatar-link :deep(.avatar) {
+  box-shadow: var(--shadow-1);
+  transition:
+    transform var(--motion),
+    box-shadow var(--motion);
+}
+
+.avatar-link:active :deep(.avatar) {
+  transform: translate(var(--shift-1), var(--shift-1));
+  box-shadow: none;
+}
+
 .badge {
   position: absolute;
   top: 2px;

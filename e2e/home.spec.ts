@@ -11,7 +11,7 @@ for (const language of ['en', 'zh'] as const) {
     const text = TEXT[language];
     const page = await newPlayer(browser, language);
     // Creating a room goes through the home page, and the room has no reward code.
-    await createRoom(page, language, 'Ann');
+    await createRoom(page, language);
     await expect(page.getByRole('button', { name: text.footer.tip })).toHaveCount(0);
     await page.getByRole('link', { name: TEXT.en.app.name, exact: true }).click();
 

@@ -7,12 +7,17 @@ import { randomId } from './random';
 // says how each player scored. Players are known by their member key, so that someone who drops
 // out and comes back, or reloads the page, finds their total where they left it.
 
-interface Entry {
-  key: string;
-  // The name and avatar that the player had when last seen in the room, for the table to show
-  // after they have left it.
+// How a player shows in the table: their name, their number if they are a guest, which the client
+// names them by (PlayerView.guest), and their avatar.
+export interface Who {
   name: string;
+  guest: number | null;
   avatar: string | null;
+}
+
+// The player as they were when last seen in the room, for the table to show after they have left it.
+interface Entry extends Who {
+  key: string;
   total: number;
   // How many scored games the player took part in.
   games: number;
@@ -28,7 +33,7 @@ export interface Placing {
 }
 
 // Who a member key is in the room now, or null for someone who has left it.
-export type Present = (key: string) => { id: string; name: string; avatar: string | null } | null;
+export type Present = (key: string) => (Who & { id: string }) | null;
 
 // Places by total, best first, with ties sharing a place and the next place skipping as many as
 // shared it: 1, 1, 3.
@@ -87,10 +92,10 @@ export class Match {
   }
 
   // Lists a player who plays in a game that starts, with no points if they are new.
-  enter(key: string, name: string, avatar: string | null): void {
+  enter(key: string, { name, guest, avatar }: Who): void {
     const entry = this.#entries.get(key);
-    if (entry) Object.assign(entry, { name, avatar });
-    else this.#entries.set(key, { key, name, avatar, total: 0, games: 0, last: null });
+    if (entry) Object.assign(entry, { name, guest, avatar });
+    else this.#entries.set(key, { key, name, guest, avatar, total: 0, games: 0, last: null });
   }
 
   // Adds up a game that has ended. The match is over once it has scored as many games as its rules
@@ -99,9 +104,9 @@ export class Match {
     if (this.#status !== 'on' || this.#lastGameId === gameId) return;
     for (const { key, points, detail } of scores) {
       const member = present(key);
-      if (!this.#entries.has(key)) this.enter(key, member?.name ?? '', member?.avatar ?? null);
+      if (!this.#entries.has(key)) this.enter(key, member ?? { name: '', guest: null, avatar: null });
       const entry = this.#entries.get(key) as Entry;
-      if (member) Object.assign(entry, { name: member.name, avatar: member.avatar });
+      if (member) Object.assign(entry, { name: member.name, guest: member.guest, avatar: member.avatar });
       entry.total += points;
       entry.games += 1;
       entry.last = { gameId, points, detail };
@@ -176,10 +181,11 @@ export class Match {
       const placing = this.#final?.get(entry.key);
       const current = now.get(entry.key);
       const last = focus !== null && entry.last?.gameId === focus ? entry.last : null;
-      const avatar = member ? member.avatar : entry.avatar;
+      const { name, guest, avatar } = member ?? entry;
       return {
         playerId: member?.id ?? null,
-        name: member?.name ?? entry.name,
+        name,
+        ...(guest !== null ? { guest } : {}),
         ...(avatar ? { avatar } : {}),
         // Once the match is over, the total is the one the player was ranked with: a guest's line
         // that joins an account's afterwards (rekey) changes the account's total, not the ranking.

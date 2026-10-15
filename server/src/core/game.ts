@@ -9,6 +9,7 @@ import type {
   RoomPhase,
   Title,
 } from '@reviewer2/shared';
+import type { GameLogData } from './gameLog';
 import type { Rng } from './random';
 
 // What the shared layer needs from a game (docs/architecture.md). The shared layer runs rooms,
@@ -27,9 +28,9 @@ export interface GameContext {
   // A player's member key, which stays the same when they leave and come back. The room also
   // knows the keys of those who have left during the current game.
   keyOf(playerId: string): string;
-  // A player's name in the room, also of one who has left during the current game, for what a
-  // game keeps of them, such as a replay.
-  nameOf(playerId: string): string;
+  // Who a player is, also one who has left during the current game, for what a game keeps of them,
+  // such as a replay; null for someone the room doesn't know.
+  whoIs(playerId: string): Who | null;
   // An AI player is online while the server's agent answers (docs/architecture.md#ai-players).
   isOnline(playerId: string): boolean;
   // The persona of an AI player, or null for a person.
@@ -44,6 +45,22 @@ export interface GameContext {
   // Whether the game's titles go to a player, also to one who has left during the current game:
   // to one with an account, where the server keeps accounts, in a game that no AI has played in.
   awardsTitles(playerId: string): boolean;
+}
+
+// Who a player is, for what a game keeps of them: someone with an account, of which nothing is kept
+// but that it is one, so that the name, the avatar and the page are the account's own as they are
+// when they are shown, and a deleted account shows as one; a guest, by their number in the room; or
+// an AI player, by its persona.
+export type Who = { account: true } | { guest: number } | { agent: AgentPersona };
+
+// A replay as it was kept, for an account to watch (GameModule.showReplay): the replay as the game
+// gave it, the log of the game, if it was kept (gameLog.ts), the accounts that played in it as they
+// are now, by the player ID each had, and the IDs that the account watching had in it.
+export interface KeptReplay {
+  replay: unknown;
+  log: GameLogData | null;
+  accounts: ReadonlyMap<string, { username: string; avatar: string | null; handle: string }>;
+  viewer: ReadonlySet<string>;
 }
 
 // Who is looking: a member of the room, or a screen that only watches.
@@ -228,6 +245,11 @@ export interface GameModule<Data = unknown, View = unknown> {
   // keep, as one that the chair withdrew. The room asks once, when the game has ended and a
   // player with an account took part.
   replay?(data: Data, ctx: GameContext): unknown;
+  // A kept replay as an account opens it (docs/architecture.md#replays): with the groups and who
+  // everyone in them was, the accounts as they are now and the deleted ones as deleted, worked out
+  // from the record of the game for a replay from before the groups were kept. Without this, the
+  // replay goes as it was kept.
+  showReplay?(kept: KeptReplay): unknown;
   // A guest's seat has become an account's (docs/architecture.md#accounts): the member `playerId`
   // is known by the member key `to` instead of `from` from now on, and whatever the game remembers
   // by the old key, it remembers by the new one. The seat stands, and what the game knows of the

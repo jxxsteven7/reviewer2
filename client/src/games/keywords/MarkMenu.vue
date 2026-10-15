@@ -12,10 +12,13 @@ import MarkSticker from './MarkSticker.vue';
 // press, not a click: a finger lifted from the card once the menu has opened lands its click on the
 // card's copy, which must not close the menu. The keys count wherever the focus is while the menu
 // is open. The card that lifts is a copy of the one on the board, which hides meanwhile; its word
-// keeps the size it has there (the board hides the card itself while the menu is open). Once the
-// menu has closed, the card has the focus again if the menu had it. Where the device asks for less
-// motion, nothing lifts or grows: the page dims at once, and the menu fades in and out. On a phone
-// that can, it opens with a short buzz.
+// keeps the size it has there (the board hides the card itself while the menu is open, at rest, as
+// it lies when nothing presses it, which is where the copy is measured from). The copy lands where
+// the card is as the menu closes, which is somewhere else if the page has moved meanwhile, as when
+// a finger dragged it or a clue put a line above the board; the card shows again once the copy has
+// landed. Once the menu has closed, the card has the focus again if the menu had it. Where the
+// device asks for less motion, nothing lifts or grows: the page dims at once, and the menu fades in
+// and out. On a phone that can, it opens with a short buzz.
 const props = defineProps<{ source: HTMLElement; word: string; current: Mark | null; team: Team }>();
 const emit = defineEmits<{ choose: [mark: Mark]; close: [] }>();
 const { t } = useI18n();
@@ -29,12 +32,12 @@ const open = ref(false);
 const closing = ref(false);
 const rect = props.source.getBoundingClientRect();
 const place = ref<Record<string, string>>({ left: '0px', top: '0px' });
-const cardStyle = {
+const cardStyle = ref({
   left: `${rect.left}px`,
   top: `${rect.top}px`,
   width: `${rect.width}px`,
   height: `${rect.height}px`,
-};
+});
 const label = computed(() => t('game.gestures.menu', { word: props.word }));
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -71,21 +74,33 @@ onMounted(async () => {
   document.addEventListener('keydown', key);
 });
 
+// How long the copy takes to land (.closing .lifted). The menu waits a little longer at most, in
+// case the end of the move goes unheard, as in a tab that is out of sight.
+const LAND_MS = 220;
 let timer: ReturnType<typeof setTimeout> | null = null;
+let landed: (() => void) | null = null;
 function close(mark?: Mark) {
   if (closing.value) return;
   closing.value = true;
   open.value = false;
   const hadFocus = hasFocus();
-  timer = setTimeout(
-    () => {
-      if (mark) emit('choose', mark);
-      emit('close');
-      // The card on the board shows again once the board has heard, and can take the focus then.
-      if (hadFocus) void nextTick(() => props.source.focus({ preventScroll: true }));
-    },
-    reduced() ? 150 : 220,
-  );
+  const now = props.source.getBoundingClientRect();
+  cardStyle.value = { ...cardStyle.value, left: `${now.left}px`, top: `${now.top}px` };
+  landed = () => {
+    if (!landed) return;
+    landed = null;
+    if (timer) clearTimeout(timer);
+    if (mark) emit('choose', mark);
+    emit('close');
+    // The card on the board shows again once the board has heard, and can take the focus then.
+    if (hadFocus) void nextTick(() => props.source.focus({ preventScroll: true }));
+  };
+  timer = setTimeout(landed, reduced() ? 150 : LAND_MS + 60);
+}
+
+// The copy has landed once its move has ended, not the menu's or the shadow's.
+function onTransitionEnd(event: TransitionEvent) {
+  if (closing.value && event.target === lifted.value && event.propertyName === 'transform') landed?.();
 }
 
 // Escape and Tab close the menu, wherever the focus is: Tab leaves no menu for the page behind
@@ -119,7 +134,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div class="mark-menu" :class="{ open, closing }">
       <div class="scrim" @pointerdown="close()"></div>
-      <div ref="lifted" class="lifted" :style="cardStyle" @pointerdown="close()"></div>
+      <div ref="lifted" class="lifted" :style="cardStyle" @pointerdown="close()" @transitionend="onTransitionEnd"></div>
       <div ref="menu" class="menu" role="menu" :aria-label="label" :style="place">
         <button
           v-for="mark in MARKS"
@@ -184,13 +199,18 @@ onBeforeUnmount(() => {
   box-shadow: 7px 9px 0 var(--ink);
 }
 
+/* It lands with its shadow, in one move, also where the card is now somewhere else. */
 .closing .lifted {
   transform: none;
-  transition: transform 220ms cubic-bezier(0.3, 0, 0.2, 1);
+  transition:
+    transform 220ms cubic-bezier(0.3, 0, 0.2, 1),
+    left 220ms cubic-bezier(0.3, 0, 0.2, 1),
+    top 220ms cubic-bezier(0.3, 0, 0.2, 1);
 }
 
 .closing .lifted > :deep(.card) {
   box-shadow: var(--shadow-1);
+  transition: box-shadow 220ms cubic-bezier(0.3, 0, 0.2, 1);
 }
 
 /* The menu grows from the card. */

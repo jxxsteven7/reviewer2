@@ -1,21 +1,30 @@
 <script setup lang="ts">
-import { replaySteps, type CardView, type KeywordsReplay, type ReplayStep } from '@reviewer2/shared';
+import { replaySteps, TEAMS, type CardView, type ReplayStep, type ShownReplay, type Team } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';
 import { formatList, HTML_LANG } from '../../core/i18n';
+import { nameOf } from '../../core/names';
+import { provideOpenPlayer } from '../../core/playerPanel';
+import GroupBars, { type Group, type Member } from './GroupBars.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
+import ReplayPanel from './ReplayPanel.vue';
 
 // A finished game, step by step (shared/src/games/keywords/replay.ts): the board as it stood at
 // each step, with every color, the card the step is about outlined, and above it the turn, the
-// clue, who revealed what and whether it was right. The cards the PI meant with the turn's clue, if
+// clue, who revealed what and whether it was right, and the two groups' bars, as in the game, with
+// the cards each had still to find (GroupBars.vue). The cards the PI meant with the turn's clue, if
 // they marked any, carry their numbers through the turn, and the clue's step names them. The
-// slider goes to any step, the buttons to the next and the last one. It takes a replay object and
-// nothing else, so that the results page and the account page show one the same way; the results
-// page adds what the viewer's group has said since the game ended (`talk`), which comes last, under
-// the board, as the group talks the game over.
+// slider goes to any step, the buttons to the next and the last one. It takes a replay as it is
+// shown and nothing else, so that the results page and the account page show one the same way; the
+// results page adds what the viewer's group has said since the game ended (`talk`), which comes
+// last, under the board, as the group talks the game over.
+//
+// Everyone in the bars is named as the page names them (names.ts), and every avatar opens the
+// replay's own panel (ReplayPanel.vue), with the moves of that player, any of which takes the
+// replay to its step.
 const props = withDefaults(
-  defineProps<{ replay: KeywordsReplay; talk?: readonly { id: number; name: string; text: string }[] }>(),
+  defineProps<{ replay: ShownReplay; talk?: readonly { id: number; name: string; text: string }[] }>(),
   { talk: () => [] },
 );
 const { t, locale } = useI18n();
@@ -36,15 +45,51 @@ const cards = computed<CardView[]>(() =>
   props.replay.cards.map((card, index) => ({ ...card, revealed: step.value.revealed.includes(index) })),
 );
 const group = (team: 'red' | 'blue') => t(`lobby.group.${team}`);
+// How many cards each group had still to find at the step.
+const remaining = computed(
+  () =>
+    Object.fromEntries(
+      TEAMS.map((team) => [
+        team,
+        props.replay.cards.filter((card, index) => card.color === team && !step.value.revealed.includes(index)).length,
+      ]),
+    ) as Record<Team, number>,
+);
 // The cards the PI meant with the clue of the step's turn, in the order marked.
 const targets = computed(() => props.replay.history.find((record) => record.turn === step.value.turn)?.targets ?? []);
 
-// Who revealed a card: an AI player by its persona's name (docs/architecture.md#ai-players), anyone
-// else by the name they had in the game.
-function nameOf(playerId: string): string {
-  const persona = props.replay.agents?.[playerId];
-  if (persona) return t(`agents.personas.${persona}`);
-  return props.replay.players[playerId] ?? t('replay.someone');
+// Who someone was, by the name the page gives them, or as a player who left, whom the replay doesn't
+// know.
+function nameFor(playerId: string): string {
+  const person = props.replay.people[playerId];
+  return person ? nameOf(person) : t('replay.someone');
+}
+
+// The groups, as the bars show them: an account by its avatar, and a deleted one by its initial.
+const member = (id: string): Member => {
+  const person = props.replay.people[id];
+  return {
+    id,
+    name: nameFor(id),
+    initial: person?.deleted ? t('replay.deletedInitial') : null,
+    avatar: person?.avatar ?? null,
+    ...(person?.agent ? { agent: person.agent } : {}),
+  };
+};
+const groups = computed<Group[]>(() =>
+  props.replay.groups.map(({ team, captain, guessers }) => ({
+    team,
+    captain: captain === null ? null : member(captain),
+    guessers: guessers.map(member),
+  })),
+);
+
+// The player whose panel is open, from an avatar in the bars.
+const opened = ref<string | null>(null);
+provideOpenPlayer((playerId) => (opened.value = playerId));
+function go(to: number) {
+  opened.value = null;
+  at.value = to;
 }
 
 // What the step says, line by line.
@@ -59,7 +104,7 @@ const lines = computed(() => {
     found.push(t('game.meant', { words: formatList(locale.value, words) }));
   }
   if (guess) {
-    const name = nameOf(guess.player);
+    const name = nameFor(guess.player);
     const word = props.replay.cards[guess.card]?.word ?? '';
     const outcome = guess.right
       ? t('replay.right')
@@ -93,6 +138,7 @@ const lines = computed(() => {
     <div class="step" :class="step.team ?? 'start'" aria-live="polite">
       <p v-for="line in lines" :key="line">{{ line }}</p>
     </div>
+    <GroupBars :groups="groups" :remaining="remaining" :me="replay.me" />
     <KeywordsBoard
       :cards="cards"
       :selectable="false"
@@ -108,6 +154,7 @@ const lines = computed(() => {
         <span>{{ line.text }}</span>
       </p>
     </section>
+    <ReplayPanel :replay="replay" :player-id="opened" @close="opened = null" @go="go" />
   </div>
 </template>
 

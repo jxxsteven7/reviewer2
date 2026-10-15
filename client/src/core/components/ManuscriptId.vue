@@ -2,13 +2,15 @@
 import { formatCode } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 
-// The room's number, as a pill: "Manuscript R2-K7QX".
-defineProps<{ code: string }>();
+// The room's number, as a pill: "Manuscript R2-K7QX". A `tight` one shares a phone's masthead with
+// two buttons, which leave no room for the English word: the number stands alone there, and screen
+// readers still hear the word.
+defineProps<{ code: string; tight?: boolean }>();
 const { t } = useI18n();
 </script>
 
 <template>
-  <span class="manuscript">
+  <span class="manuscript" :class="{ tight }">
     <span class="label">{{ t('room.manuscript') }}</span>
     <span class="code num">{{ formatCode(code) }}</span>
   </span>
@@ -36,5 +38,16 @@ const { t } = useI18n();
   font-size: var(--text-lg);
   font-weight: var(--weight-display);
   letter-spacing: 0.06em;
+}
+
+@media (max-width: 39.99rem) {
+  .tight:lang(en) .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 </style>

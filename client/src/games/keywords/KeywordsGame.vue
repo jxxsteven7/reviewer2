@@ -40,7 +40,6 @@ import KeywordsBoard from './KeywordsBoard.vue';
 import PausedNotice from './PausedNotice.vue';
 import { replayOf } from './replay';
 import ReplayViewer from './ReplayViewer.vue';
-import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import TurnStrip from './TurnStrip.vue';
 import { useChatLine } from './useChatLine';
@@ -49,15 +48,16 @@ import { useDeadlineHeroes } from './useDeadlineHeroes';
 import { useMissedDeadlines } from './useMissedDeadlines';
 import { useScoreFloats } from './useScoreFloats';
 
-// A game in progress, and its result. The banner that says what is going on for the viewer, the
-// turn strip, the clock, the board and what the viewer can do now come first. On a wide screen the
+// A game in progress, and its result. The turn strip, which says who the viewer is and what is
+// going on for them, the clock, the board and what the viewer can do now come first. On a wide screen the
 // group chat, open all the time, and the groups stand on the left of the board, and the clue log
 // with the tools on its right; on a phone the groups and the clue log open as sheets from the two
 // buttons in the bar under the board, so that the board comes first, and the chat from a third.
 //
-// The clock stays at the top of the screen, and the chair's button to pause the game and resume it
-// stands at its end, in reach wherever the page is scrolled and away from the cards and the clue;
-// in a game without a time limit the chair has the button there alone. While the chair has paused
+// The clock stays at the top of the screen, with the reaction button at its end and the chair's
+// button to pause the game and resume it after that, in reach wherever the page is scrolled and
+// away from the cards and the clue; in a game without a time limit, and once the game is over, the
+// buttons are there alone. While the chair has paused
 // the game, a notice stands in place of the board, with the way to resume for the chair too, and
 // the clock stands still. A group whose turn it is may ask for an extension, where the room allows
 // one. Once the game has ended, the review opens the replay.
@@ -143,8 +143,8 @@ const panel = ref<'groups' | 'log' | null>(null);
 watch(wide, () => {
   panel.value = null;
 });
-// The height of the bar with the clock, taller for the chair, goes into the page's scroll padding,
-// so that a card reached with the keyboard comes into view below it.
+// The height of the bar with the clock and the reaction button, taller for the chair, goes into the
+// page's scroll padding, so that a card reached with the keyboard comes into view below it.
 const clockBar = ref<HTMLElement | null>(null);
 useStickyHeight(clockBar);
 
@@ -383,7 +383,9 @@ const floats = useScoreFloats(room);
 // The review of the game that has ended, step by step, for everyone who sees the result, with what
 // the viewer's group has said since the end, as it talks the game over.
 const reviewing = ref(false);
-const replay = computed(() => replayOf(game.value, room.value.language, room.value.players));
+const replay = computed(() =>
+  replayOf(game.value, room.value.language, room.value.players, data.value.seats, room.value.me),
+);
 const talk = computed(() =>
   (game.value.chat ?? [])
     .filter((message) => message.after)
@@ -413,8 +415,8 @@ watch(
 );
 
 // The status line under the board, for whoever has nothing to do just then: whose PI is giving the
-// clue, or which group is guessing. Who the viewer is, the banner says, and whom the others in their
-// group chose, the cards; whoever plays from a match's next game is told so under the line.
+// clue, or which group is guessing. Who the viewer is, the turn strip says, and whom the others in
+// their group chose, the cards; whoever plays from a match's next game is told so under the line.
 const status = computed(() => {
   if (canClue.value || game.value.result || paused.value || canGuess.value) return null;
   return game.value.phase === 'clue'
@@ -425,9 +427,6 @@ const status = computed(() => {
 
 <template>
   <section class="keywords-game">
-    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="game">
-      <EmoteButton :held="!data.mayEmote" />
-    </RoleBanner>
     <DecisionLetter
       v-if="game.result"
       :game="game"
@@ -437,15 +436,25 @@ const status = computed(() => {
       :match="match"
       @again="again"
     />
-    <TurnStrip v-else :game="game" :guess-rule="data.settings.guessRule" :groups="groups" :me="room.me" clock-apart />
-    <div
-      v-if="!game.result && (game.clock || isChair)"
-      ref="clockBar"
-      class="sticky-clock"
-      :class="{ 'below-banner': reconnecting }"
-    >
-      <ClockBar v-if="game.clock" :clock="game.clock" :frozen="paused" />
-      <UiButton v-if="isChair" class="pause" size="small" :disabled="busy" @click="paused ? resume() : pause()">
+    <TurnStrip
+      v-else
+      :game="game"
+      :guess-rule="data.settings.guessRule"
+      :seat="mySeat ?? SPECTATOR"
+      :groups="groups"
+      :me="room.me"
+      clock-apart
+    />
+    <div ref="clockBar" class="sticky-clock" :class="{ 'below-banner': reconnecting }">
+      <ClockBar v-if="game.clock && !game.result" :clock="game.clock" :frozen="paused" />
+      <EmoteButton :held="!data.mayEmote" />
+      <UiButton
+        v-if="isChair && !game.result"
+        class="pause"
+        size="small"
+        :disabled="busy"
+        @click="paused ? resume() : pause()"
+      >
         {{ paused ? t('game.resume') : t('game.pause') }}
       </UiButton>
     </div>
@@ -615,10 +624,11 @@ const status = computed(() => {
   min-width: 0;
 }
 
-/* The clock stays at the top of the screen while the page scrolls, and under the banner while the
-   page reconnects, with the chair's button to pause at its end. It is kept thin, and its
-   background reaches the edges of the screen, so that no card shows through it beside the column.
-   Without a clock, the chair's button stands there alone, on the right. */
+/* The bar with the clock stays at the top of the screen while the page scrolls, and under the
+   banner while the page reconnects, with the reaction button at its end, and the chair's button to
+   pause after it. It is kept thin, and its background reaches the edges of the screen, so that no
+   card shows through it beside the column. Without a clock, as in a game without time limits and
+   once the game is over, the buttons stand there alone, on the right. */
 .sticky-clock {
   position: sticky;
   top: 0;
@@ -643,7 +653,8 @@ const status = computed(() => {
   min-height: 32px;
 }
 
-.sticky-clock > .pause {
+.sticky-clock > .pause,
+.sticky-clock > .emote-button {
   flex: none;
 }
 

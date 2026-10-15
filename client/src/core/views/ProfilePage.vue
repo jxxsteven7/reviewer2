@@ -2,7 +2,6 @@
 import { HANDLE } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import BackButton from '../components/BackButton.vue';
 import AccountEntry from '../components/AccountEntry.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
@@ -10,7 +9,8 @@ import ProfileCard from '../components/ProfileCard.vue';
 import { errorKey } from '../errors';
 
 // A player's public page, /p/<handle> (docs/architecture.md#public-profiles), which anyone may
-// open, with or without an account. An address that can't be a handle is answered as the server
+// open, with or without an account, from the link that its player shares: the site itself shows an
+// account's page in a sheet (ProfilePanel.vue). The way back, when there is one, is in the masthead. An address that can't be a handle is answered as the server
 // answers a handle that is no account's.
 const props = defineProps<{ handle: string }>();
 const { t } = useI18n();
@@ -19,9 +19,8 @@ const valid = computed(() => HANDLE.test(props.handle));
 
 <template>
   <div class="page player-page">
-    <PageMasthead><AccountEntry /><LanguageSwitch /></PageMasthead>
+    <PageMasthead back><AccountEntry /><LanguageSwitch /></PageMasthead>
     <main>
-      <BackButton />
       <section class="card">
         <h1>{{ t('playerPage.title') }}</h1>
         <ProfileCard v-if="valid" :handle="handle" />

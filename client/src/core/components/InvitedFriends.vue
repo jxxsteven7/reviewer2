@@ -133,6 +133,20 @@ const label = computed(() =>
   opacity: 0;
 }
 
+/* The avatars open the sheet to invite friends, so they wear the hard shadow of what a tap opens
+   (docs/design.md), and the press takes it away. */
+.face :deep(.avatar) {
+  box-shadow: var(--shadow-1);
+  transition:
+    transform var(--motion),
+    box-shadow var(--motion);
+}
+
+.invited-friends:active .face :deep(.avatar) {
+  transform: translate(var(--shift-1), var(--shift-1));
+  box-shadow: none;
+}
+
 .more {
   margin-left: var(--space-1);
   font-size: var(--text-xs);

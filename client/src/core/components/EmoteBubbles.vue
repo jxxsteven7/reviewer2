@@ -3,8 +3,8 @@ import { bubbles } from '../emotes';
 import PlayerAvatar from './PlayerAvatar.vue';
 
 // The quick reactions as they arrive, "Name: phrase", with the sender's avatar, at the top of the
-// page for a few seconds, over the masthead rather than the banner below it, which says whose move
-// it is, and the room's calls about a player, louder: ink with the table's yellow, a megaphone and
+// page for a few seconds, over the masthead rather than the turn strip below it, which says whose
+// move it is, and the room's calls about a player, louder: ink with the table's yellow, a megaphone and
 // the player's avatar before the line, kept to the masthead's height on a phone as far as a line
 // of two rows goes. They let every tap through to the page underneath. `large` is for a big screen
 // across a room.
@@ -59,19 +59,16 @@ defineProps<{ large?: boolean }>();
 
 .bubble :deep(.avatar) {
   margin-right: var(--space-1);
-  vertical-align: -0.45em;
+  vertical-align: middle;
 }
 
 /* A call, which the whole room is meant to notice: ink, flat as ink is, with yellow type, after a
-   megaphone that is for the eye alone. The megaphone, the avatar and the line sit side by side, so
-   that two rows of the line, with the padding and the border, stay within the masthead's 64px and
-   leave the banner under it, which says whose move it is, in view. The first declaration of the
-   pair is for the browsers that don't know the form with the alternative text. */
+   megaphone that is for the eye alone. The megaphone, the avatar and the line run on as one text,
+   centred line by line, so that the avatar stays beside the first word when the line wraps, and two
+   rows of it, with the padding and the border, stay within the masthead's 64px and leave the turn
+   strip under it, which says whose move it is, in view. The first declaration of the pair is for the
+   browsers that don't know the form with the alternative text. */
 .call {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-width: var(--line-strong);
   background: var(--ink);
@@ -88,16 +85,11 @@ defineProps<{ large?: boolean }>();
 .call::before {
   content: '\1F4E2';
   content: '\1F4E2' / '';
-  flex: none;
+  margin-right: var(--space-2);
 }
 
 .call :deep(.avatar) {
-  flex: none;
-  margin: 0;
-}
-
-.call span {
-  min-width: 0;
+  margin: 0 var(--space-2) 0 0;
 }
 
 .large {

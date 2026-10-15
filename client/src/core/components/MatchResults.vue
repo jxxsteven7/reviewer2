@@ -55,12 +55,7 @@ async function next(nextRules: MatchRules | null) {
         :class="[line.title, { me: line.playerId !== null && line.playerId === room.me, left: line.left }]"
       >
         <span class="rank num">{{ line.rank ?? '\u2013' }}</span>
-        <AvatarButton
-          :player-id="inRoom(line.playerId)"
-          :name="line.name"
-          :avatar="line.avatar"
-          :size="line.title ? 'medium' : 'small'"
-        />
+        <AvatarButton :player-id="inRoom(line.playerId)" :name="line.name" :avatar="line.avatar" size="medium" />
         <span class="who">
           <span class="name">
             {{ line.name }}

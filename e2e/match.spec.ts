@@ -10,6 +10,7 @@ import {
   interpolate,
   joinByLink,
   keyCard,
+  nameOf,
   newPlayer,
   plural,
   register,
@@ -85,21 +86,20 @@ test('players with accounts and guests play a whole match, and find its title on
   await register(ann, names.Ann);
   // The groups are drawn for the first game and stay the same: the PI's seat goes round, so Ann and
   // her teammate are each their group's PI once, which plays for higher stakes, and finish level.
-  const url = await createRoom(ann, 'en', '', (page) =>
+  const url = await createRoom(ann, 'en', (page) =>
     chooseMatch(page, 'en', { games: 2, teams: 'fixed', grouping: 'random' }),
   );
-  const join = async (name: string, account?: string) => {
+  const join = async (account?: string) => {
     const page = await newPlayer(browser, 'en');
-    snapshotsOf(page);
     if (account) await register(page, account);
-    await joinByLink(page, url, name, 'en');
+    await joinByLink(page, url, 'en');
     return page;
   };
-  const [bob, cat, dan] = await Promise.all([join('Bob', names.Bob), join('Cat'), join('Dan')]);
+  const [bob, cat, dan] = await Promise.all([join(names.Bob), join(), join()]);
   const pages = [ann, bob, cat, dan];
 
   // The groups are drawn when the game starts: the waiting room lists everyone who plays.
-  await expect(ann.locator('.pool')).toContainText('Dan');
+  await expect(ann.locator('.pool')).toContainText(nameOf(dan));
   await expect(ann.locator('.match-table')).toContainText(interpolate(text.match.progress, { game: '1', games: '2' }));
   await ann.getByRole('button', { name: text.lobby.start }).click();
   for (const page of pages) await expect(page.locator('.keywords-game')).toBeVisible();
@@ -160,17 +160,15 @@ test('players with accounts and guests play a whole match, and find its title on
 test('a match whose groups may change draws them again for every game', async ({ browser }) => {
   const text = TEXT.en;
   const ann = await newPlayer(browser, 'en');
-  snapshotsOf(ann);
-  const url = await createRoom(ann, 'en', 'Ann', (page) =>
+  const url = await createRoom(ann, 'en', (page) =>
     chooseMatch(page, 'en', { games: 2, teams: 'switch', grouping: 'random' }),
   );
-  const join = async (name: string) => {
+  const join = async () => {
     const page = await newPlayer(browser, 'en');
-    snapshotsOf(page);
-    await joinByLink(page, url, name, 'en');
+    await joinByLink(page, url, 'en');
     return page;
   };
-  const [bob, cat, dan] = await Promise.all([join('Bob'), join('Cat'), join('Dan')]);
+  const [bob, cat, dan] = await Promise.all([join(), join(), join()]);
   const pages = [ann, bob, cat, dan];
   // The groups are drawn when each game starts: a PI and a student in each, from everyone who
   // plays, who are back in the pool between the games.
@@ -186,12 +184,12 @@ test('a match whose groups may change draws them again for every game', async ({
       ).toEqual(['captain', 'guesser']);
     }
   };
-  await expect(ann.locator('.pool')).toContainText('Dan');
+  await expect(ann.locator('.pool')).toContainText(nameOf(dan));
   await ann.getByRole('button', { name: text.lobby.start }).click();
   await drawn();
   await playQuickly(pages, 'en', ann);
   await ann.getByRole('button', { name: text.match.next }).click();
-  await expect(ann.locator('.lobby .pool')).toContainText('Dan');
+  await expect(ann.locator('.lobby .pool')).toContainText(nameOf(dan));
   await expect(ann.locator('.lobby .match-table')).toContainText(
     interpolate(text.match.progress, { game: '2', games: '2' }),
   );

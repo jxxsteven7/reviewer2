@@ -1,4 +1,16 @@
-import { closeSheet, createRoom, joinByLink, newPlayer, roomMenu, seatTable, TEXT, expect, test } from './helpers';
+import {
+  closeSheet,
+  createRoom,
+  expect,
+  interpolate,
+  joinByLink,
+  nameOf,
+  newPlayer,
+  roomMenu,
+  seatTable,
+  test,
+  TEXT,
+} from './helpers';
 
 // The chair closes the room for everyone (docs/architecture.md). Every page that is open hears at
 // once, a page that was offline hears when it comes back, and the number leads nowhere.
@@ -20,7 +32,7 @@ test('the chair closes the room in the middle of a game, and every page is told'
   }
   // A reaction sent just before the room closes doesn't outlive it.
   const eve = table.spectator;
-  await eve.locator('.role-banner').getByRole('button', { name: TEXT.en.emotes.open }).click();
+  await eve.locator('.sticky-clock').getByRole('button', { name: TEXT.en.emotes.open }).click();
   await eve.locator('[role=dialog]').getByRole('button', { name: TEXT.en.emotes.phrases.deadline }).click();
   for (const page of others) await expect(page.locator('.bubble')).toHaveCount(1);
   await (await roomMenu(ann)).getByRole('button', { name: TEXT.en.room.closeRoom }).click();
@@ -52,9 +64,9 @@ test('the chair closes the room in the middle of a game, and every page is told'
 
 test("the chair's leave sheet offers to close the room instead", async ({ browser }) => {
   const ann = await newPlayer(browser);
-  const url = await createRoom(ann, 'en', 'Ann');
+  const url = await createRoom(ann, 'en');
   const bob = await newPlayer(browser);
-  await joinByLink(bob, url, 'Bob', 'en');
+  await joinByLink(bob, url, 'en');
 
   // Bob isn't the chair: his sheet only lets him leave.
   await (await roomMenu(bob)).getByRole('button', { name: TEXT.en.room.leave }).click();
@@ -64,7 +76,7 @@ test("the chair's leave sheet offers to close the room instead", async ({ browse
 
   await (await roomMenu(ann)).getByRole('button', { name: TEXT.en.room.leave }).click();
   const sheet = ann.getByRole('dialog', { name: TEXT.en.room.leave });
-  await expect(sheet).toContainText('Bob will chair the room');
+  await expect(sheet).toContainText(interpolate(TEXT.en.room.leaveChair, { name: nameOf(bob) }));
   await sheet.getByRole('button', { name: TEXT.en.room.closeInstead }).click();
   const closing = ann.getByRole('dialog', { name: TEXT.en.room.closeRoom });
   await expect(closing).toContainText(TEXT.en.room.closeConfirm);

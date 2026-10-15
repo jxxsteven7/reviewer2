@@ -9,6 +9,7 @@ import { shownProfile } from '../profilePanel';
 import AvatarButton from './AvatarButton.vue';
 import BackButton from './BackButton.vue';
 import FieldPicker from './FieldPicker.vue';
+import PageMasthead from './PageMasthead.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
 import ProfilePanel from './ProfilePanel.vue';
@@ -188,6 +189,43 @@ describe('BackButton', () => {
   });
 });
 
+describe('PageMasthead', () => {
+  // The wordmark links home, which takes a router.
+  const masthead = (back: boolean) =>
+    mount(PageMasthead, {
+      props: { back },
+      global: { ...global(), stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    });
+
+  // A room's masthead scrolls away with the page, but in the waiting room, where it is pinned.
+  test("stays at the top of a room's page where it is pinned, with the tile alone on a narrow screen", () => {
+    const room = mount(PageMasthead, {
+      props: { compact: true },
+      global: { ...global(), stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    });
+    expect(room.classes()).not.toContain('sticky');
+    const waiting = mount(PageMasthead, {
+      props: { compact: true, pinned: true },
+      global: { ...global(), stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    });
+    expect(waiting.classes()).toEqual(expect.arrayContaining(['sticky', 'pinned']));
+    expect(waiting.get('.wordmark').classes()).toContain('compact');
+  });
+
+  test('has the way back before the wordmark, on a page that asks for it and has a page before', () => {
+    window.history.replaceState({ back: '/' }, '');
+    const page = masthead(true);
+    expect(page.find('.start > .back-button + .wordmark').exists()).toBe(true);
+    expect(page.get('.wordmark').classes()).toContain('tight');
+    expect(masthead(false).find('.back-button').exists()).toBe(false);
+    // A page opened from a shared link has nothing before it.
+    window.history.replaceState(null, '');
+    const shared = masthead(true);
+    expect(shared.find('.back-button').exists()).toBe(false);
+    expect(shared.get('.wordmark').classes()).not.toContain('tight');
+  });
+});
+
 describe('UiSheet', () => {
   // A sheet on the page's body, with three buttons in it, named by a prefix.
   function sheet(title: string, open = false) {
@@ -229,6 +267,63 @@ describe('UiSheet', () => {
     expect(under.emitted('close')).toHaveLength(1);
     under.unmount();
     over.unmount();
+  });
+
+  // The player's panel is on the page from the moment the room is entered, and the groups only from
+  // the start of the game: the one opened last lies on top, wherever it is on the page.
+  test('lays the sheet opened last over the others, whichever came onto the page first', async () => {
+    const first = sheet('a');
+    const second = sheet('b');
+    const layer = (title: string) =>
+      Number(
+        [...document.querySelectorAll<HTMLElement>('.backdrop')].find((backdrop) =>
+          backdrop.querySelector('h2')?.textContent?.includes(title),
+        )?.style.zIndex,
+      );
+    await second.setProps({ open: true });
+    await first.setProps({ open: true });
+    expect(layer('a')).toBeGreaterThan(layer('b'));
+    // Every sheet stays under the emotes (25), the toasts (30) and the menu of marks (35).
+    expect(layer('a')).toBeLessThan(25);
+    await first.setProps({ open: false });
+    await first.setProps({ open: true });
+    expect(layer('a')).toBeGreaterThan(layer('b'));
+    // Closed and opened again, the one below comes back on top.
+    await second.setProps({ open: false });
+    await second.setProps({ open: true });
+    expect(layer('b')).toBeGreaterThan(layer('a'));
+    first.unmount();
+    second.unmount();
+  });
+
+  test('casts a shadow under its head once what is under it has scrolled, also a list of its own', async () => {
+    const list = h('div', { class: 'list' }, 'Lines');
+    const wrapper = mount(UiSheet, {
+      props: { open: true, title: 'Talk' },
+      slots: { default: () => list },
+      global: global(),
+      attachTo: document.body,
+    });
+    await nextTick();
+    const head = () => document.querySelector('[role=dialog] .head');
+    const scroll = (element: Element | null, top: number) => {
+      if (!(element instanceof HTMLElement)) throw new Error('nothing to scroll');
+      element.scrollTop = top;
+      element.dispatchEvent(new Event('scroll'));
+    };
+    // The head is above what scrolls, not in it.
+    expect(document.querySelector('[role=dialog] .scroller .head')).toBeNull();
+    expect(head()?.classList).not.toContain('scrolled');
+    scroll(document.querySelector('[role=dialog] .scroller'), 40);
+    await nextTick();
+    expect(head()?.classList).toContain('scrolled');
+    scroll(document.querySelector('[role=dialog] .scroller'), 0);
+    await nextTick();
+    expect(head()?.classList).not.toContain('scrolled');
+    scroll(document.querySelector('[role=dialog] .list'), 12);
+    await nextTick();
+    expect(head()?.classList).toContain('scrolled');
+    wrapper.unmount();
   });
 
   test('has a round button back before its title when it leads back to another', async () => {

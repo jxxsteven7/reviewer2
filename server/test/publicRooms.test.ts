@@ -59,7 +59,7 @@ describe('a public room', () => {
       { code, game: 'test', language: 'en', fields: ['general'], randomFields: false, players: 1, playing: false },
     ]);
     // A room that isn't public is as it always was, and isn't listed.
-    const { chair: other } = await createRoom(server.url, 'Guest');
+    const { chair: other } = await createRoom(server.url);
     track(other);
     expect(other.state?.public).toBe(false);
     expect(await listed(visitor)).toHaveLength(1);
@@ -68,7 +68,7 @@ describe('a public room', () => {
   test("can't be created by a guest, or by an account the operator has barred", async () => {
     server = await startServer();
     const guest = track(await TestClient.connect(server.url));
-    expect(await guest.send('room:create', { ...CREATE, name: 'Guest' })).toEqual({
+    expect(await guest.send('room:create', CREATE)).toEqual({
       ok: false,
       error: 'account_required',
     });
@@ -87,15 +87,15 @@ describe('a public room', () => {
     const ann = await loggedIn('Ann');
     const { chair, code } = await publicRoom(ann);
     const guest = track(await TestClient.connect(server.url));
-    // Before the question for a name, so that nobody types one for nothing.
+    // Before the question whether they play, so that nobody answers it for nothing.
     expect(await guest.send('room:join', { code })).toEqual({ ok: false, error: 'account_required' });
-    expect(await guest.send('room:join', { code, name: 'Guest', play: true })).toEqual({
+    expect(await guest.send('room:join', { code, play: true })).toEqual({
       ok: false,
       error: 'account_required',
     });
     const bob = await loggedIn('Bob');
     const visitor = track(await bob.connect());
-    expect(await visitor.send('room:join', { code })).toEqual({ ok: false, error: 'name_required', language: 'en' });
+    expect(await visitor.send('room:join', { code })).toEqual({ ok: false, error: 'play_required', language: 'en' });
     expect(await visitor.send('room:join', { code, play: true })).toMatchObject({ ok: true });
     await chair.waitFor((state) => state.players.length === 2);
     expect((await listed(guest))[0]).toMatchObject({ players: 2 });
@@ -144,14 +144,14 @@ describe('a public room', () => {
     server = await startServer({ socketLimits: { failedLookupsPerMinute: 2 } });
     const ann = await loggedIn('Ann');
     const { code } = await publicRoom(ann);
-    const { chair: other, code: privateCode } = await createRoom(server.url, 'Guest');
+    const { chair: other, code: privateCode } = await createRoom(server.url);
     track(other);
     // Someone at the same address, as every client here is, has used up the wrong codes of a minute.
     const guesser = track(await TestClient.connect(server.url));
     for (let i = 0; i < 2; i += 1) {
       expect(await guesser.send('room:join', { code: 'ZZZZ' })).toEqual({ ok: false, error: 'room_not_found' });
     }
-    expect(await guesser.send('room:join', { code: privateCode, name: 'Gus' })).toEqual({
+    expect(await guesser.send('room:join', { code: privateCode, play: false })).toEqual({
       ok: false,
       error: 'rate_limited',
     });
@@ -184,7 +184,7 @@ describe('a public room', () => {
     const ann = await loggedIn('Ann');
     const bob = await loggedIn('Bob');
     const { code } = await publicRoom(ann);
-    const { code: privateCode } = await createRoom(server.url, 'Guest');
+    const { code: privateCode } = await createRoom(server.url);
     server.accounts.store.setPublicBarred(2, true);
     const visitor = track(await bob.connect());
     expect(await visitor.send('room:join', { code, play: true })).toEqual({ ok: false, error: 'public_barred' });
@@ -200,7 +200,7 @@ describe('a public room', () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { chair, code } = await publicRoom(ann, { public: false });
-    const guest = track(await joinRoom(server.url, code, 'Guest'));
+    const guest = track(await joinRoom(server.url, code));
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
     await guest.waitFor((state) => state.public);
     const browser = new Browser(server.url);
@@ -210,7 +210,7 @@ describe('a public room', () => {
     const asBob = track(await browser.connect({ token: guest.token, code }));
     expect(await asBob.send('room:join', { code, play: true })).toEqual({ ok: false, error: 'public_barred' });
     expect(asBob.states).toEqual([]);
-    expect(chair.state?.players.map(({ name }) => name)).toEqual(['Ann', 'Guest']);
+    expect(chair.state?.players.map(({ name }) => name)).toEqual(['Ann', 'Guest 1']);
   });
 
   test('goes off the list by the next sweep when the operator bars its chair', async () => {
@@ -240,7 +240,7 @@ describe('a public room', () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { chair, code } = await publicRoom(ann, { public: false });
-    const guest = track(await joinRoom(server.url, code, 'Guest', { play: true }));
+    const guest = track(await joinRoom(server.url, code, { play: true }));
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
     await guest.waitFor((state) => state.public);
     // A guest who isn't the chair changes nothing.
@@ -286,7 +286,7 @@ describe('a public room', () => {
     // A full room isn't listed; the test game's room takes 30. The guests join while the room is
     // off the list, as a room may be listed with the guests who were in it.
     expect(await second.send('room:public', { public: false })).toEqual({ ok: true });
-    for (let i = 0; i < 29; i += 1) track(await joinRoom(server.url, secondCode, `Guest ${i}`, { play: false }));
+    for (let i = 0; i < 29; i += 1) track(await joinRoom(server.url, secondCode, { play: false }));
     await second.waitFor((state) => state.players.length === 30);
     expect(await second.send('room:public', { public: true })).toEqual({ ok: true });
     await second.waitFor((state) => state.public);
@@ -311,9 +311,9 @@ describe('a public room', () => {
 
   test('is listed and unlisted by the chair in the waiting room, with an account that may', async () => {
     server = await startServer();
-    const { chair, code } = await createRoom(server.url, 'Guest');
+    const { chair, code } = await createRoom(server.url);
     track(chair);
-    const bob = await joinRoom(server.url, code, 'Bob');
+    const bob = await joinRoom(server.url, code);
     track(bob);
     const visitor = track(await TestClient.connect(server.url));
     // Not for members, and not for a guest chair.
@@ -324,7 +324,7 @@ describe('a public room', () => {
     const ann = await loggedIn('Ann');
     const { chair: annsChair, code: annsCode, roomId } = await publicRoom(ann, { public: false });
     expect(annsChair.state?.public).toBe(false);
-    track(await joinRoom(server.url, annsCode, 'Guest', { play: true }));
+    track(await joinRoom(server.url, annsCode, { play: true }));
     await annsChair.waitFor((state) => state.players.length === 2);
     expect(await annsChair.send('room:public', { public: true })).toEqual({ ok: true });
     await annsChair.waitFor((state) => state.public);
@@ -350,7 +350,7 @@ describe('a public room', () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { chair, code } = await publicRoom(ann, { public: false });
-    const guest = track(await joinRoom(server.url, code, 'Guest'));
+    const guest = track(await joinRoom(server.url, code));
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
     await guest.waitFor((state) => state.public);
     expect(guest.state?.players).toHaveLength(2);
@@ -359,7 +359,7 @@ describe('a public room', () => {
     await back.waitFor((state) => state.code === code);
     expect(back.me).toBe(guest.me);
     const another = track(await TestClient.connect(server.url));
-    expect(await another.send('room:join', { code, name: 'Late', play: true })).toEqual({
+    expect(await another.send('room:join', { code, play: true })).toEqual({
       ok: false,
       error: 'account_required',
     });
@@ -394,7 +394,7 @@ describe('a removed player', () => {
     expect(await fresh.send('room:join', { code, play: true })).toEqual({ ok: false, error: 'removed' });
     // Nor does logging out on a browser that was: it stays out as a guest, by its own token.
     const loggedOut = track(await TestClient.connect(server.url, { token: laptop.token }));
-    expect(await loggedOut.send('room:join', { code, name: 'Robert', play: true })).toEqual({
+    expect(await loggedOut.send('room:join', { code, play: true })).toEqual({
       ok: false,
       error: 'removed',
     });
@@ -412,7 +412,7 @@ describe('a removed player', () => {
     const laptop = track(await bob.connect());
     expect(await laptop.send('room:join', { code, play: true })).toMatchObject({ ok: true });
     // Bob's phone is in the room as a guest.
-    const phone = track(await joinRoom(server.url, code, 'Bobby'));
+    const phone = track(await joinRoom(server.url, code));
     await chair.waitFor((state) => state.players.length === 3);
     expect(await chair.send('room:remove', { playerId: laptop.me })).toEqual({ ok: true });
     await chair.waitFor((state) => state.players.length === 2);
@@ -423,7 +423,7 @@ describe('a removed player', () => {
     expect(await asBob.send('sys:ping')).toEqual({ ok: true });
     expect(asBob.states).toEqual([]);
     expect(await asBob.send('room:join', { code, play: true })).toEqual({ ok: false, error: 'removed_recently' });
-    expect(chair.state?.players.map(({ name }) => name)).toEqual(['Ann', 'Bobby']);
+    expect(chair.state?.players.map(({ name }) => name)).toEqual(['Ann', 'Guest 1']);
   });
 
   test('removed while offline stays out by the browsers they were on, as one removed online does', async () => {
@@ -441,7 +441,7 @@ describe('a removed player', () => {
     await chair.waitFor((state) => state.players.length === 1);
     // Logged out, the laptop is a guest by its token, and stays out; so does a new account on it.
     const loggedOut = track(await TestClient.connect(server.url, { token: laptop.token }));
-    expect(await loggedOut.send('room:join', { code, name: 'Robert', play: true })).toEqual({
+    expect(await loggedOut.send('room:join', { code, play: true })).toEqual({
       ok: false,
       error: 'removed',
     });
@@ -453,13 +453,13 @@ describe('a removed player', () => {
 
   test('loses the screen their browser put up as a guest, also after logging in there', async () => {
     server = await startServer();
-    const { chair, code } = await createRoom(server.url, 'Ann');
+    const { chair, code } = await createRoom(server.url);
     track(chair);
     // A guest's browser takes a seat and puts up a screen, and then registers. The seat becomes the
     // account's when its page comes back; the screen, which hasn't reconnected, has the guest's key.
     const browser = new Browser(server.url);
     const seat = track(await browser.connect());
-    expect(await seat.send('room:join', { code, name: 'Gus', play: true })).toMatchObject({ ok: true });
+    expect(await seat.send('room:join', { code, play: true })).toMatchObject({ ok: true });
     const screen = track(await browser.connect({ token: seat.token }));
     expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
     expect((await browser.register('Gus')).body).toMatchObject({ ok: true });
@@ -479,10 +479,10 @@ describe('a removed player', () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { chair, code } = await publicRoom(ann, { public: false });
-    const guest = track(await joinRoom(server.url, code, 'Guest'));
+    const guest = track(await joinRoom(server.url, code));
     expect(await chair.send('room:remove', { playerId: guest.me })).toEqual({ ok: true });
     await until(() => guest.closed.includes('removed_recently'), 'the guest hears');
-    expect(await guest.send('room:join', { code, name: 'Someone else', play: true })).toEqual({
+    expect(await guest.send('room:join', { code, play: true })).toEqual({
       ok: false,
       error: 'removed_recently',
     });
@@ -513,16 +513,16 @@ describe('a removed player', () => {
 
     // Removed from it while it is private, a guest waits two minutes, also when it is made public
     // meanwhile; then, as a newcomer to a public room, they need an account.
-    const guest = track(await joinRoom(server.url, code, 'Guest'));
+    const guest = track(await joinRoom(server.url, code));
     expect(await chair.send('room:remove', { playerId: guest.me })).toEqual({ ok: true });
     await until(() => guest.closed.includes('removed_recently'), 'the guest hears');
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
-    expect(await guest.send('room:join', { code, name: 'Guest', play: true })).toEqual({
+    expect(await guest.send('room:join', { code, play: true })).toEqual({
       ok: false,
       error: 'removed_recently',
     });
     server.advance(REMOVED_FOR_MS);
-    expect(await guest.send('room:join', { code, name: 'Guest', play: true })).toEqual({
+    expect(await guest.send('room:join', { code, play: true })).toEqual({
       ok: false,
       error: 'account_required',
     });
@@ -587,15 +587,15 @@ describe('a report', () => {
     expect(server.feedback.reportCount()).toBe(2);
   });
 
-  test('names a guest who was there before the room was listed by the name they had', async () => {
+  test('names a guest who was there before the room was listed by their number', async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { chair, code } = await publicRoom(ann, { public: false });
-    const guest = track(await joinRoom(server.url, code, 'Guest'));
+    const guest = track(await joinRoom(server.url, code));
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
     await guest.waitFor((state) => state.public);
     expect(await chair.send('room:report', { playerId: guest.me })).toEqual({ ok: true });
-    expect(server.feedback.reports(10)[0]).toMatchObject({ reported: null, reportedId: null, reportedName: 'Guest' });
+    expect(server.feedback.reports(10)[0]).toMatchObject({ reported: null, reportedId: null, reportedName: 'Guest 1' });
     // A guest has no account to report from.
     expect(await guest.send('room:report', { playerId: chair.me })).toEqual({ ok: false, error: 'account_required' });
     // The guest registers, and their seat becomes the account's: the same report isn't kept again.
@@ -627,7 +627,7 @@ describe('a report', () => {
     expect(await outside.send('room:report', { playerId: visitor.me })).toEqual({ ok: false, error: 'not_member' });
     // Not in a room that isn't public.
     const { chair: privateChair, code } = await publicRoom(ann, { public: false });
-    const guest = track(await joinRoom(server.url, code, 'Guest'));
+    const guest = track(await joinRoom(server.url, code));
     expect(await privateChair.send('room:report', { playerId: guest.me })).toEqual({
       ok: false,
       error: 'not_public',
@@ -658,7 +658,7 @@ describe('a report', () => {
     const { chair, code } = await publicRoom(ann, { public: false });
     const guests: TestClient[] = [];
     for (let i = 0; i < DEFAULT_SOCKET_LIMITS.reportsPerHour; i += 1) {
-      guests.push(track(await joinRoom(server.url, code, `Guest ${i}`, { play: false })));
+      guests.push(track(await joinRoom(server.url, code, { play: false })));
     }
     expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
     const visitor = track(await bob.connect());

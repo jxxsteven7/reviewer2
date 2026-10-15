@@ -1,18 +1,19 @@
 import { parseCode, type Ack, type ClosedReason, type Language, type RoomView } from '@reviewer2/shared';
 import { reactive, shallowRef, watch } from 'vue';
 import { i18n } from './i18n';
+import { nameOf, type Named } from './names';
 import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 // The room this page shows, as the server last described it, and how far the page has got in
 // entering it (docs/architecture.md).
 
-export type EntryStatus = 'idle' | 'connecting' | 'joining' | 'needs_name' | 'in' | 'not_found' | 'closed' | 'failed';
+export type EntryStatus = 'idle' | 'connecting' | 'joining' | 'needs_choice' | 'in' | 'not_found' | 'closed' | 'failed';
 
 export const room = shallowRef<RoomView | null>(null);
 
 export const entry = reactive<{
   status: EntryStatus;
-  // The room's language, known before joining from the server's name_required answer.
+  // The room's language, known before joining from the server's play_required answer.
   language: Language | null;
   closed: ClosedReason | null;
   error: string | null;
@@ -52,18 +53,19 @@ function isWanted(view: RoomView): boolean {
   return wanted.roomId === undefined ? view.code === parseCode(wanted.code) : view.roomId === wanted.roomId;
 }
 
-// The room as the page shows it. An AI player goes by the name of its persona, in the language of
-// the interface (docs/architecture.md#ai-players): the server knows the persona alone, and its name
-// is in the locale files, so it is put in here, once for every page that shows the player, and
-// again when the visitor switches the language.
+// The room as the page shows it. A guest goes by their number and an AI player by the name of its
+// persona, in the language of the interface (names.ts; docs/architecture.md#players-and-identity):
+// the server knows the number and the persona alone, and the words for them are in the locale
+// files, so they are put in here, in the players and in a match's table, once for every page that
+// shows the player, and again when the visitor switches the language.
 let shown: RoomView | null = null;
 
 function named(view: RoomView): RoomView {
-  if (!view.players.some((player) => player.agent)) return view;
-  const players = view.players.map((player) =>
-    player.agent ? { ...player, name: i18n.global.t(`agents.personas.${player.agent}`) } : player,
-  );
-  return { ...view, players };
+  const renamed = <Who extends Named & { name: string }>(who: Who): Who =>
+    who.guest === undefined && who.agent === undefined ? who : { ...who, name: nameOf(who) };
+  const players = view.players.map(renamed);
+  const match = view.match && { ...view.match, standings: view.match.standings.map(renamed) };
+  return { ...view, players, match };
 }
 
 watch(i18n.global.locale, () => {
@@ -109,13 +111,12 @@ socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => {
 // After every reconnect, ask to enter again. The handshake has usually put the player back
 // already, and asking again does no harm; it also notices a seat that was lost while offline.
 socket.on('connect', () => {
-  if (wanted && entry.status !== 'needs_name') void ask();
+  if (wanted && entry.status !== 'needs_choice') void ask();
 });
 
-// A newcomer's name, and whether they have come to play or only to watch. A newcomer who is logged
-// in gives no name: theirs is the username.
+// Whether a newcomer has come to play or only to watch. Nobody gives a name: a newcomer who is
+// logged in has their username, and a guest the number that the room gives them.
 interface Newcomer {
-  name?: string | undefined;
   play: boolean;
 }
 
@@ -123,7 +124,7 @@ async function ask(newcomer?: Newcomer): Promise<Ack> {
   const asked = wanted;
   if (!asked) return { ok: false, error: 'unknown' };
   const { code, screen, roomId, invitation } = asked;
-  // A newcomer stays on the name form while their name is on its way; the form says so itself.
+  // A newcomer stays on the form while their choice is on its way; the form says so itself.
   if (entry.status !== 'in' && !newcomer) entry.status = 'joining';
   const reply = await send<{ code: string; roomId: string }>(screen ? 'room:watch' : 'room:join', {
     code,
@@ -139,8 +140,8 @@ async function ask(newcomer?: Newcomer): Promise<Ack> {
     return reply;
   }
   switch (reply.error) {
-    case 'name_required':
-      Object.assign(entry, { status: 'needs_name', language: reply.language ?? null });
+    case 'play_required':
+      Object.assign(entry, { status: 'needs_choice', language: reply.language ?? null });
       break;
     case 'room_not_found':
       wanted = null;
@@ -151,13 +152,13 @@ async function ask(newcomer?: Newcomer): Promise<Ack> {
       break; // the next connection asks again
     case 'timeout':
       // The server didn't answer in time. A fresh connection asks again, as after a ping that goes
-      // unanswered. A newcomer's name goes back to the form, which asks them to try again.
+      // unanswered. A newcomer's choice goes back to the form, which asks them to try again.
       if (!newcomer) reconnect();
       break;
     default:
-      // A newcomer whose name was refused stays on the name form, which shows the reason; one
-      // whom the room, public by now, sends to log in leaves it for the notice, which has the
-      // way to the account page and back, and so does one whose invitation lapsed meanwhile.
+      // A newcomer who was refused stays on the form, which shows the reason; one whom the room,
+      // public by now, sends to log in leaves it for the notice, which has the way to the account
+      // page and back, and so does one whose invitation lapsed meanwhile.
       if (!newcomer || reply.error === 'account_required' || reply.error === 'invitation_expired') {
         Object.assign(entry, { status: 'failed', error: reply.error });
       }
@@ -180,9 +181,8 @@ export function openRoom(
   else connect();
 }
 
-// A newcomer's name, and whether they have come to play or only to watch.
-export const submitName = (name: string | undefined, play: boolean): Promise<Ack> =>
-  ask(name === undefined ? { play } : { name, play });
+// Whether a newcomer has come to play or only to watch.
+export const submitChoice = (play: boolean): Promise<Ack> => ask({ play });
 
 // The page goes elsewhere. The player keeps their seat until the room drops them.
 export function closeRoomPage(): void {

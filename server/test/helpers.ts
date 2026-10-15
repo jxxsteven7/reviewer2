@@ -341,14 +341,14 @@ export class TestClient {
   }
 }
 
-// A room with its chair and the reply to the create message.
-export async function createRoom(url: string, name = 'Ann', payload: Record<string, unknown> = {}) {
+// A room with its chair, a guest unless the payload says otherwise, and the reply to the create
+// message.
+export async function createRoom(url: string, payload: Record<string, unknown> = {}) {
   const chair = await TestClient.connect(url);
   const reply = await chair.send('room:create', {
     game: 'test',
     language: 'en',
     fields: ['general'],
-    name,
     ...payload,
   });
   if (!reply.ok) throw new Error(`could not create a room: ${reply.error}`);
@@ -356,9 +356,10 @@ export async function createRoom(url: string, name = 'Ann', payload: Record<stri
   return { chair, code: reply.code as string, roomId: reply.roomId as string };
 }
 
-export async function joinRoom(url: string, code: string, name: string, payload: Record<string, unknown> = {}) {
+// A guest who joins a room, to watch unless the payload says to play.
+export async function joinRoom(url: string, code: string, payload: Record<string, unknown> = {}) {
   const client = await TestClient.connect(url);
-  const reply = await client.send('room:join', { code, name, ...payload });
+  const reply = await client.send('room:join', { code, play: false, ...payload });
   if (!reply.ok) throw new Error(`could not join: ${reply.error}`);
   await client.waitFor((state) => state.code === code);
   return client;
