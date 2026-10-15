@@ -10,10 +10,11 @@ import { MIGRATIONS } from './migrations';
 // deleted. The only changes are the ones that the players were promised and the operator's notes:
 // a contact is cleared after 90 days, what became of the feedback is recorded (the GitHub issue,
 // the pull request, adopted or not, with what the player contributed, closed or not, in the trash
-// or not), and a deleted account is unlinked from both, which its foreign keys do. The one way a
-// row of feedback goes is the purge of what has been in the trash for 30 days, and feedback that
-// was adopted or is a GitHub issue never goes. These tests fail when code that breaks that is added; change them only
-// with a maintainer's agreement.
+// or not), and a deleted account is unlinked from both, which its foreign keys do; besides them,
+// the migrations named below, each once, as the maintainers agreed. The one way a row of feedback
+// goes is the purge of what has been in the trash for 30 days, and feedback that was adopted or is
+// a GitHub issue never goes. These tests fail when code that breaks that is added; change them
+// only with a maintainer's agreement.
 
 const SOURCE = join(import.meta.dirname, '..');
 const MIGRATIONS_FILE = join(import.meta.dirname, 'migrations.ts');
@@ -78,6 +79,20 @@ const RETIREMENT = {
   ],
 };
 
+// Migration 20 keeps feedback signed with an account by the account alone: it drops the name that
+// such feedback kept, marks as anonymous what migration 17 marked as signed without a name, as a
+// guest's what it marked so without an account, and as signed a name typed while logged in
+// (store/migrations.ts). The maintainers agreed to each. Its statements are allowed there and in no
+// other migration.
+const SIGNING = {
+  migration: 20,
+  statements: [
+    'UPDATE feedback SET link_profile = 0 WHERE link_profile = 1 AND (credit IS NULL OR account_id IS NULL)',
+    'UPDATE feedback SET link_profile = 1 WHERE link_profile = 0 AND credit IS NOT NULL AND account_id IS NOT NULL',
+    'UPDATE feedback SET credit = NULL WHERE link_profile = 1',
+  ],
+};
+
 // The strings in TypeScript code, as the SQL in them is written: a literal, or literals joined with
 // +, as a long statement is, with <expression> for anything else that is joined to them or put in a
 // template. Comments, which don't run, are left out.
@@ -139,11 +154,11 @@ function offending(sql: string, allowed: readonly string[] = ALLOWED): string[] 
 // The same for the strings in TypeScript code.
 const offendingCode = (code: string): string[] => strings(code).flatMap((sql) => offending(sql));
 
-// The same for each migration, with the rebuild allowed in migration 5 alone, and the end of the
-// acknowledgments in migration 17 alone.
+// The same for each migration, with the rebuild allowed in migration 5 alone, the end of the
+// acknowledgments in migration 17 alone, and the signing by the account in migration 20 alone.
 const offendingMigrations = (migrations: readonly string[]): string[] =>
   migrations.flatMap((migration, index) => {
-    const once = [REBUILD, RETIREMENT].find(({ migration: number }) => number === index + 1);
+    const once = [REBUILD, RETIREMENT, SIGNING].find(({ migration: number }) => number === index + 1);
     const allowed = once ? [...ALLOWED, ...once.statements] : ALLOWED;
     return offending(migration, allowed).map((statement) => `migration ${index + 1}: ${statement}`);
   });
@@ -223,6 +238,21 @@ describe('the archive', () => {
         `${retirement}\n  UPDATE feedback SET adopted_at = NULL;\n`,
       ]),
     ).toEqual([`migration ${RETIREMENT.migration}: UPDATE feedback SET adopted_at = NULL`]);
+  });
+
+  test('allows the signing by the account in migration 20 and in no other migration', () => {
+    const signing = MIGRATIONS[SIGNING.migration - 1] as string;
+    expect(offending(signing)).toEqual(SIGNING.statements);
+    expect(offendingMigrations([...MIGRATIONS, signing])).toEqual(
+      SIGNING.statements.map((statement) => `migration ${MIGRATIONS.length + 1}: ${statement}`),
+    );
+    // Any other change there.
+    expect(
+      offendingMigrations([
+        ...MIGRATIONS.slice(0, SIGNING.migration - 1),
+        `${signing}\n  UPDATE feedback SET credit = NULL;\n`,
+      ]),
+    ).toEqual([`migration ${SIGNING.migration}: UPDATE feedback SET credit = NULL`]);
   });
 
   test('would be found changed, however the SQL is written', () => {

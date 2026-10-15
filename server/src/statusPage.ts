@@ -346,11 +346,12 @@ function commands(feedback: Feedback, run: FeedbackCommands): string {
 // The text keeps its line breaks. The top line is the id, the kind and the time, with the status
 // at its end; the trail, when there is one, comes after the text, and, for adopted feedback, what
 // the player contributed, as the home page shows it; the rest below: the version, the language,
-// the page it came from, the contact, the name for the feedback contributions, the account it was
-// sent from, whether the player signed it with that account, and, in bold,
-// another account whose username the name is, which may be someone passing for that account's
-// owner, for a bug the browser, and last the commands that may come next (`run`), folded. A kind
-// that this server doesn't know, from a later one that it was rolled back from, shows as it is.
+// the page it came from, the contact, who it is from for the feedback contributions: the account
+// that signed it, by its username as it is now, or that the account is gone; a guest's name, and,
+// in bold, an account whose username the name is, which may be someone passing for that account's
+// owner; or no name, with the account it was sent from, if any; for a bug the browser, and last
+// the commands that may come next (`run`), folded. A kind that this server doesn't know, from a
+// later one that it was rolled back from, shows as it is.
 function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
   const head = [
     `#${feedback.id}`,
@@ -362,18 +363,18 @@ function entry(feedback: Feedback, now: number, run: FeedbackCommands): string {
     LANGUAGES[feedback.language],
     `from the ${PAGES[feedback.page]}`,
   ];
-  const credit =
-    (feedback.credit === null
-      ? 'No name: listed as anonymous'
-      : `Name for the contributions: ${escape(feedback.credit)}`) +
-    (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`) +
-    (feedback.credit === null || feedback.username === null || !feedback.linkProfile
-      ? ''
-      : ' &middot; signed with the account') +
-    (feedback.credit === null || feedback.nameTakenBy === null
-      ? ''
-      : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
-        "which didn't send it</strong>");
+  const credit = feedback.linkProfile
+    ? feedback.username === null
+      ? 'Signed with an account since deleted'
+      : `Signed with the account ${escape(feedback.username)}`
+    : feedback.credit === null
+      ? 'No name: listed as anonymous' +
+        (feedback.username === null ? '' : ` &middot; account ${escape(feedback.username)}`)
+      : `Name for the contributions: ${escape(feedback.credit)}` +
+        (feedback.nameTakenBy === null
+          ? ''
+          : ` &middot; <strong>also the username of the account ${escape(feedback.nameTakenBy)}, ` +
+            "which didn't send it</strong>");
   const contributed =
     feedback.adoptedAt === null
       ? ''

@@ -308,13 +308,15 @@ describe('the feedback', () => {
     expect(html).not.toContain('class="trail"');
   });
 
-  test('shows the name for the contributions, the account it came from, and what was adopted', () => {
+  test('shows who signed it, the account it came from, and what was adopted', () => {
     const html = page({
-      total: 4,
+      total: 5,
       entries: [
-        feedback(4, { username: 'Ann' }),
+        feedback(5, { linkProfile: true, accountId: null, username: null }),
+        feedback(4, { accountId: 1, username: 'Ann' }),
         feedback(3, {
-          credit: 'Ann L',
+          linkProfile: true,
+          accountId: 1,
           username: 'Ann',
           issue: 42,
           adoptedAt: '2026-10-08T10:00:00.000Z',
@@ -324,7 +326,6 @@ describe('the feedback', () => {
         }),
         feedback(2, {
           credit: 'Bob',
-          username: null,
           issue: 41,
           adoptedAt: '2026-10-08T10:00:00.000Z',
           status: 'resolved',
@@ -340,12 +341,14 @@ describe('the feedback', () => {
     );
     // Adopted without a pull request recorded, it is resolved all the same.
     expect(html).toContain('<span class="badge resolved">Resolved &middot; issue #42</span>');
-    expect(shown).toContain('No contact Name for the contributions: Ann L &middot; account Ann');
-    // Adopted before what the player contributed was written, as the migration leaves it.
+    // Signed with the account, by its username as it is now, or by nobody once it is gone.
+    expect(shown).toContain('No contact Signed with the account Ann Commands');
+    expect(shown).toContain('No contact Signed with an account since deleted Commands');
+    // Adopted before what the player contributed was written.
     expect(shown).toContain('adopted 2026-10-08 Contributed: not written yet version');
+    // A guest's name, which comes with no account.
     expect(shown).toContain('No contact Name for the contributions: Bob Commands');
-    expect(shown).not.toContain('Bob &middot; account');
-    // An account without a name: listed as anonymous, and counted for the account.
+    // An account without signing: listed as anonymous, and counted for the account.
     expect(shown).toContain('No contact No name: listed as anonymous &middot; account Ann Commands');
     expect(shown.match(/Contributed:/g)).toHaveLength(2);
     expect(shown).not.toContain('also the username');
@@ -431,32 +434,27 @@ describe('the feedback', () => {
     ).toContain('<p class="trail">published as issue #42 &middot; in the trash since 2026-08-01, kept: issue</p>');
   });
 
-  test("points out a name that is another account's username, in bold", () => {
+  test("points out a guest's name that is an account's username, in bold", () => {
     const html = page({
       total: 2,
-      entries: [
-        feedback(2, { credit: 'cat', username: 'Bob', nameTakenBy: 'Cat' }),
-        feedback(1, { credit: 'Cat', nameTakenBy: 'Cat' }),
-      ],
+      entries: [feedback(2, { credit: 'cat', nameTakenBy: 'Cat' }), feedback(1, { credit: 'Dan' })],
     });
-    expect(text(html)).toContain(
-      "Name for the contributions: cat &middot; account Bob &middot; also the username of the account Cat, which didn't send it",
-    );
     expect(html).toContain(
-      "Name for the contributions: Cat &middot; <strong>also the username of the account Cat, which didn't send it</strong>",
+      "Name for the contributions: cat &middot; <strong>also the username of the account Cat, which didn't send it</strong>",
     );
+    expect(text(html)).toContain('Name for the contributions: Dan Commands');
   });
 
   test('escapes everything that came from outside', () => {
     const html = page({
-      total: 1,
+      total: 2,
       entries: [
+        feedback(2, { linkProfile: true, accountId: 1, username: '<u>ann</u>' }),
         feedback(1, {
           kind: '<i>later</i>' as Feedback['kind'],
           text: '<script>alert("text")</script><img src=x onerror=alert(1)>',
           contact: "<a href='javascript:alert(1)'>me</a>",
           credit: '<i>Ann</i>',
-          username: '<u>ann</u>',
           adoptedAt: '2026-10-08T10:00:00.000Z',
           summaryZh: '<b>提出</b>',
           summaryEn: '<script>alert("summary")</script>',
@@ -470,9 +468,8 @@ describe('the feedback', () => {
     expect(html.replace(/<nav[\s\S]*?<\/nav>/, '').replace(/<div class="filters">[\s\S]*?<\/div>/, '')).not.toMatch(
       /<script|<img|<a |<b>|<i>|<u>|<s>|onerror=alert\(1\)>/,
     );
-    expect(html).toContain(
-      'Name for the contributions: &#60;i&#62;Ann&#60;/i&#62; &middot; account &#60;u&#62;ann&#60;/u&#62;',
-    );
+    expect(html).toContain('Name for the contributions: &#60;i&#62;Ann&#60;/i&#62; &middot;');
+    expect(html).toContain('Signed with the account &#60;u&#62;ann&#60;/u&#62;');
     expect(html).toContain(
       'Contributed: &#60;b&#62;提出&#60;/b&#62; &middot; &#60;script&#62;alert(&#34;summary&#34;)&#60;/script&#62;',
     );

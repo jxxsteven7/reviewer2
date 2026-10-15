@@ -61,9 +61,10 @@ import { KINDS } from './statusPage';
 // feedback, which the status page shows (docs/architecture.md#feedback) and which only these
 // commands change: `issue` records the GitHub issue it was published as; `resolve` the pull
 // request that resolved it; `adopt` adopts it, which lists it among the feedback contributions on
-// the home page at once (docs/architecture.md#feedback-contributions), by the name the player left
-// or as anonymous, counted for the account they were logged in to, if any, with a sentence in
-// each language on what they contributed, and says when the name is another account's username.
+// the home page at once (docs/architecture.md#feedback-contributions), by the account that signed
+// it as the account is now, or as a deleted player once it is gone, by a guest's name, or as
+// anonymous, counted for the account the player was logged in to, if any, with a sentence in each
+// language on what they contributed, and says when a guest's name is an account's username.
 // Only feedback that is a GitHub issue may be adopted, and it keeps one; closed feedback is
 // reopened first. `describe` writes those sentences again; `close` and `reopen` record whether it
 // was closed without being adopted, which adopted feedback can't be; `delete` puts it in the
@@ -315,11 +316,14 @@ function issueTitle({ kind, text }: Feedback): string {
 }
 
 // The body, in Markdown: the opening sentence, the text as one quotation, line by line, with a
-// blank line kept as a bare >, and who sent it: the name, or that the player left none.
-function issueBody({ kind, text, credit }: Feedback): string {
+// blank line kept as a bare >, and who sent it: the username of the account that signed it, as it
+// is when the draft is written, or a deleted player once the account is gone; a guest's name; or
+// that the player left none.
+function issueBody({ kind, text, credit, linkProfile, username }: Feedback): string {
   const quoted = text.split('\n').map((line) => (line === '' ? '>' : `> ${literal(line)}`));
   const sent = kind === 'bug' ? 'Reported' : 'Suggested';
-  const who = credit === null ? 'Sent by an anonymous player.' : `${sent} by ${literal(credit)}.`;
+  const name = linkProfile ? (username === null ? 'a deleted player' : literal(username)) : credit && literal(credit);
+  const who = name === null ? 'Sent by an anonymous player.' : `${sent} by ${name}.`;
   return [`${OPENINGS[kind]} that a player sent through the feedback form:`, '', ...quoted, '', who].join('\n');
 }
 
@@ -558,20 +562,22 @@ const COMMANDS: Record<string, Command> = {
         );
         return 1;
       }
-      // Signed with the account, it is listed by the account's username, with its avatar.
-      const as =
-        found.credit === null
+      // Signed with the account, it is listed by the account's username, with its avatar, or as a
+      // deleted player once the account is gone.
+      const as = found.linkProfile
+        ? found.username === null
+          ? 'as a deleted player'
+          : `as ${found.username}, with the account's avatar`
+        : found.credit === null
           ? 'as an anonymous player'
-          : found.linkProfile && found.username !== null
-            ? `as ${found.username}, with the account's avatar`
-            : `as ${found.credit}`;
+          : `as ${found.credit}`;
       print(
         `Adopted feedback #${found.id}, issue #${found.issue}. The home page lists it now, ${as}, ` +
           `${counted(found.username)}, saying that the player contributed:`,
       );
       printSummary(print, summary.zh, summary.en);
-      // The name may be anyone's, but one that is another account's username may be someone passing
-      // for its owner, which the status page points out too.
+      // A guest's name may be anyone's, but one that is an account's username may be someone
+      // passing for its owner, which the status page points out too.
       if (found.nameTakenBy !== null) {
         print(
           `${found.credit} is also the username of the account ${found.nameTakenBy}, which didn't send the ` +
