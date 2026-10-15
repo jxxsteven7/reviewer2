@@ -6,6 +6,7 @@ import type {
   BoardWord,
   Language,
   MatchRules,
+  ReplayMember,
   RoomPhase,
   Title,
 } from '@reviewer2/shared';
@@ -30,7 +31,7 @@ export interface GameContext {
   keyOf(playerId: string): string;
   // Who a player is, also one who has left during the current game, for what a game keeps of them,
   // such as a replay; null for someone the room doesn't know.
-  whoIs(playerId: string): Who | null;
+  whoIs(playerId: string): ReplayMember | null;
   // An AI player is online while the server's agent answers (docs/architecture.md#ai-players).
   isOnline(playerId: string): boolean;
   // The persona of an AI player, or null for a person.
@@ -47,19 +48,22 @@ export interface GameContext {
   awardsTitles(playerId: string): boolean;
 }
 
-// Who a player is, for what a game keeps of them: someone with an account, of which nothing is kept
-// but that it is one, so that the name, the avatar and the page are the account's own as they are
-// when they are shown, and a deleted account shows as one; a guest, by their number in the room; or
-// an AI player, by its persona.
-export type Who = { account: true } | { guest: number } | { agent: AgentPersona };
+// An account that played in a game, as a replay shows it: its username, avatar and handle as they
+// are when the replay is opened.
+export interface ShownAccount {
+  username: string;
+  avatar: string | null;
+  handle: string;
+}
 
 // A replay as it was kept, for an account to watch (GameModule.showReplay): the replay as the game
-// gave it, the log of the game, if it was kept (gameLog.ts), the accounts that played in it as they
-// are now, by the player ID each had, and the IDs that the account watching had in it.
+// gave it; the log of the game, if it was kept (gameLog.ts), read when asked for, since a replay
+// that keeps its groups has no need of it; the accounts that played in it as they are now, by the
+// player ID each had; and the IDs that the account watching had in it.
 export interface KeptReplay {
   replay: unknown;
-  log: GameLogData | null;
-  accounts: ReadonlyMap<string, { username: string; avatar: string | null; handle: string }>;
+  log: () => GameLogData | null;
+  accounts: ReadonlyMap<string, ShownAccount>;
   viewer: ReadonlySet<string>;
 }
 

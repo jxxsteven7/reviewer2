@@ -31,7 +31,7 @@ import {
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
-import type { KeptReplay } from '../core/game';
+import type { KeptReplay, ShownAccount } from '../core/game';
 import type { GameLogEntry } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
@@ -815,7 +815,7 @@ export class Accounts {
   replayOf(login: Login, gameId: string): (KeptReplay & { game: string }) | null {
     const kept = this.replays.read(login.account.id, gameId);
     if (kept === null) return null;
-    const accounts = new Map<string, { username: string; avatar: string | null; handle: string }>();
+    const accounts = new Map<string, ShownAccount>();
     const viewer = new Set<string>();
     for (const { playerId, accountId } of kept.players) {
       const account = this.store.byId(accountId);

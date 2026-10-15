@@ -41,12 +41,14 @@ describe('JoinForm', () => {
 
   test('shows a player who is logged in their username, and nothing held against a join that was granted', async () => {
     signedIn.account.summary = { username: 'Ann', avatar: null, email: 'none', titles: [], contributions: [] };
-    room.submitChoice.mockResolvedValue({ ok: false, error: 'name_taken' });
+    room.submitChoice.mockResolvedValue({ ok: false, error: 'removed_recently' });
     const wrapper = mount(JoinForm, { props: { code: 'ABCD' }, global: { plugins: [i18n] } });
     expect(wrapper.text()).toContain('Ann');
     await joined(wrapper);
     expect(room.submitChoice).toHaveBeenCalledWith(true);
-    expect(wrapper.get('[role="alert"]').text()).toBe('Someone in the room already has that name.');
+    expect(wrapper.get('[role="alert"]').text()).toBe(
+      'You were removed from this room. You can come back in two minutes.',
+    );
     room.submitChoice.mockResolvedValue({ ok: true });
     await joined(wrapper);
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);

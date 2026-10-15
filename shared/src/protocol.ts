@@ -31,8 +31,6 @@ export const ROOM_ERRORS = [
   'room_full',
   'screens_full',
   'play_required',
-  'name_invalid',
-  'name_taken',
   'account_required',
   'public_barred',
   'removed',

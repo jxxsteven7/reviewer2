@@ -85,7 +85,12 @@ function close(mark?: Mark) {
   open.value = false;
   const hadFocus = hasFocus();
   const now = props.source.getBoundingClientRect();
-  cardStyle.value = { ...cardStyle.value, left: `${now.left}px`, top: `${now.top}px` };
+  cardStyle.value = {
+    left: `${now.left}px`,
+    top: `${now.top}px`,
+    width: `${now.width}px`,
+    height: `${now.height}px`,
+  };
   landed = () => {
     if (!landed) return;
     landed = null;

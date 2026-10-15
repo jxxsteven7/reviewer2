@@ -696,8 +696,6 @@
     "room_full": "This room is full.",
     "screens_full": "This room already has the most screens it can have.",
     "play_required": "Choose whether you play or watch.",
-    "name_invalid": "Use 1 to 16 visible characters.",
-    "name_taken": "Someone in the room already has that name.",
     "account_required": "Public rooms take an account: log in or register.",
     "public_barred": "Your account can't enter public rooms.",
     "removed": "The chair removed you from this room, so you can't come back to it.",
@@ -1050,7 +1048,7 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, feedback contributions counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it: the replays show you as a deleted account, without your name. What you said in games stays, anonymous like the rest of the game records. This can't be undone.",
+      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, feedback contributions counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it: the replays show you as a deleted account, without your name, and what you said in games stays, anonymous like the rest of the game records and no longer linked to you. This can't be undone.",
       "deleteSubmit": "Delete for good"
     },
     "avatar": {
@@ -1342,6 +1340,6 @@
   },
   "privacy": {
     "recordsTitle": "Game records",
-    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. If you delete your account, what you said in them stays, anonymous like the rest of the records and no longer linked to you."
+    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chat. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as deleted, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted account, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
   }
 }

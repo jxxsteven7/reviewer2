@@ -251,10 +251,13 @@ onBeforeUnmount(() => {
   opacity: 1;
 }
 
+/* A title too long for the head wraps with its lines as even as can be, rather than leaving the
+   last word alone on the second line, as "Moves by Guest 1" would leave the number. */
 h2 {
   flex: 1;
   min-width: 0;
   font-size: var(--text-2xl);
+  text-wrap: balance;
 }
 
 .subtitle {

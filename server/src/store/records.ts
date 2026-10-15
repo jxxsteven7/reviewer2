@@ -340,11 +340,12 @@ export interface NewReplay {
 }
 
 // A kept game for an account to watch again (ReplayStore.read): the game, the replay as the game gave
-// it, the log, if it was kept, and which player ID was which account, for those still there.
+// it, the log, if it was kept, read when asked for, and which player ID was which account, for those
+// still there.
 export interface KeptGame {
   game: string;
   replay: unknown;
-  log: GameLogData | null;
+  log: () => GameLogData | null;
   players: { playerId: string; accountId: number }[];
 }
 
@@ -355,7 +356,6 @@ export class ReplayStore {
   readonly #players: StatementSync;
   readonly #played: StatementSync;
   readonly #setLog: StatementSync;
-  readonly #setData: StatementSync;
   readonly #log: StatementSync;
   readonly #agentPlay: StatementSync;
 
@@ -381,14 +381,13 @@ export class ReplayStore {
     this.#players = db.prepare(
       'SELECT player_id AS playerId, account_id AS accountId FROM game_players WHERE game_id = ? ORDER BY rowid',
     );
-    // The logs and the replays of the games that an account played in, with the IDs it had in each.
+    // The logs of the games that an account played in, with the IDs it had in each.
     this.#played = db.prepare(
-      'SELECT replays.game_id AS gameId, log, data, json_group_array(player_id) AS playerIds FROM game_players ' +
+      'SELECT replays.game_id AS gameId, log, json_group_array(player_id) AS playerIds FROM game_players ' +
         'JOIN replays ON replays.game_id = game_players.game_id ' +
-        'WHERE account_id = ? AND (log IS NOT NULL OR data IS NOT NULL) GROUP BY replays.game_id',
+        'WHERE account_id = ? AND log IS NOT NULL GROUP BY replays.game_id',
     );
     this.#setLog = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
-    this.#setData = db.prepare('UPDATE replays SET data = ? WHERE game_id = ?');
     this.#log = db.prepare('SELECT log FROM replays WHERE game_id = ? AND log IS NOT NULL');
     // The account of a person an AI played for, if it is still there.
     this.#agentPlay = db.prepare(
@@ -485,39 +484,26 @@ export class ReplayStore {
   read(accountId: number, gameId: string): KeptGame | null {
     const row = this.#read.get(gameId, accountId) as { game: string; data: string; log: string | null } | undefined;
     if (row === undefined) return null;
+    let log: GameLogData | null | undefined;
     return {
       game: row.game,
       replay: JSON.parse(row.data) as unknown,
-      log: row.log === null ? null : (JSON.parse(row.log) as GameLogData),
+      log: () => (log ??= row.log === null ? null : (JSON.parse(row.log) as GameLogData)),
       players: this.#players.all(gameId) as { playerId: string; accountId: number }[],
     };
   }
 
   // Forgets who the account was in the games it played in, for an account that is being deleted:
   // its rows in game_players go with it, by their foreign key, and the rest of each game stays.
-  // Each log marks the player IDs it had (markDeleted), with what it said kept, as nobody's; and
-  // a replay from before the replays kept no names loses the name it had there, which such a
-  // replay keeps by player ID in `players`, the one place a replay has names. The caller runs this
-  // in the transaction that deletes the account.
+  // Each log marks the player IDs it had (markDeleted), with what it said kept, as nobody's. The
+  // replays have no name to lose (migration 20). The caller runs this in the transaction that
+  // deletes the account.
   forget(accountId: number): void {
-    const rows = this.#played.all(accountId) as {
-      gameId: string;
-      log: string | null;
-      data: string | null;
-      playerIds: string;
-    }[];
-    for (const { gameId, log, data, playerIds } of rows) {
-      const ids = JSON.parse(playerIds) as string[];
-      if (log !== null) {
-        const kept = JSON.parse(log) as GameLogData;
-        const marked = markDeleted(kept, ids);
-        if (marked !== kept) this.#setLog.run(JSON.stringify(marked), gameId);
-      }
-      const replay = data === null ? null : (JSON.parse(data) as { players?: Record<string, unknown> });
-      if (replay?.players && ids.some((id) => id in (replay.players as object))) {
-        for (const id of ids) delete replay.players[id];
-        this.#setData.run(JSON.stringify(replay), gameId);
-      }
+    const rows = this.#played.all(accountId) as { gameId: string; log: string; playerIds: string }[];
+    for (const { gameId, log, playerIds } of rows) {
+      const kept = JSON.parse(log) as GameLogData;
+      const marked = markDeleted(kept, JSON.parse(playerIds) as string[]);
+      if (marked !== kept) this.#setLog.run(JSON.stringify(marked), gameId);
     }
   }
 }

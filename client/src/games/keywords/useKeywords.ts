@@ -12,7 +12,7 @@ import { act } from '../../core/socket';
 
 // A player who has chosen a card, as the card shows them: their name and their avatar, faded while
 // they are offline.
-export type Chooser = Pick<PlayerView, 'name' | 'avatar' | 'agent' | 'online'>;
+export type Chooser = Pick<PlayerView, 'name' | 'guest' | 'avatar' | 'agent' | 'online'>;
 
 // What the game's screens need to know about the room, worked out once.
 export function useKeywords(room: Ref<RoomView>) {

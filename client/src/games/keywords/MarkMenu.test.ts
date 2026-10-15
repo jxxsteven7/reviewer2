@@ -13,14 +13,12 @@ function cardAt(box: { left: number; top: number }) {
   card.className = 'card';
   card.innerHTML = '<span class="word">Model</span>';
   document.body.append(card);
-  const place = { ...box };
+  const place = { ...box, width: 60, height: 40 };
   card.getBoundingClientRect = () =>
     ({
       ...place,
-      width: 60,
-      height: 40,
-      right: place.left + 60,
-      bottom: place.top + 40,
+      right: place.left + place.width,
+      bottom: place.top + place.height,
       x: place.left,
       y: place.top,
     }) as DOMRect;
@@ -34,8 +32,9 @@ describe('MarkMenu', () => {
   });
 
   // The page can move while the menu is open, as when a finger drags it, or when a clue puts a line
-  // above the board: the card lands where the card on the board is now.
-  test('lands the lifted card where the card on the board is as the menu closes', async () => {
+  // above the board, and the board can be laid out anew, as when the phone is turned: the card lands
+  // where the card on the board is now, at its size.
+  test('lands the lifted card where the card on the board is as the menu closes, at its size', async () => {
     const { card, place } = cardAt({ left: 100, top: 300 });
     const wrapper = mount(MarkMenu, {
       props: { source: card, word: 'Model', current: null, team: 'red' },
@@ -44,12 +43,15 @@ describe('MarkMenu', () => {
     });
     await flushPromises();
     const lifted = () => wrapper.get<HTMLElement>('.lifted').element.style;
-    expect([lifted().left, lifted().top]).toEqual(['100px', '300px']);
+    const box = () => [lifted().left, lifted().top, lifted().width, lifted().height];
+    expect(box()).toEqual(['100px', '300px', '60px', '40px']);
     place.top = 210;
+    place.width = 72;
+    place.height = 48;
     vi.useFakeTimers();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await flushPromises();
-    expect([lifted().left, lifted().top]).toEqual(['100px', '210px']);
+    expect(box()).toEqual(['100px', '210px', '72px', '48px']);
     // The card on the board shows again once the lifted one has landed.
     expect(wrapper.emitted('close')).toBeUndefined();
     vi.advanceTimersByTime(300);

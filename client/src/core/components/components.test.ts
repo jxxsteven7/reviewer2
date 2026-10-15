@@ -142,6 +142,15 @@ describe('PlayerAvatar', () => {
     expect(fallback.attributes('style')).toContain('background');
     expect(fallback.attributes('aria-hidden')).toBe('true');
   });
+
+  test("is colored by a guest's number, whatever the page calls them", () => {
+    const styleOf = (name: string, guest?: number) =>
+      mount(PlayerAvatar, { props: { name, guest } }).attributes('style');
+    expect(styleOf('Guest 3', 3)).toContain('var(--avatar-3)');
+    expect(styleOf('\u{6e38}\u{5ba2}3', 3)).toBe(styleOf('Guest 3', 3));
+    expect(styleOf('Guest 11', 11)).toContain('var(--avatar-3)');
+    expect(styleOf('Guest 3')).not.toBe(styleOf('\u{6e38}\u{5ba2}3'));
+  });
 });
 
 describe('AvatarButton', () => {

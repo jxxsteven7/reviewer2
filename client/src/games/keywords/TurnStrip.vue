@@ -65,26 +65,25 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section
-    class="strip"
-    :class="[game.phase === 'over' ? 'over' : game.team, { urgent: banner?.urgent }]"
-    aria-live="polite"
-  >
-    <p v-if="who" class="who" :class="seat?.team ?? 'spectator'">{{ who }}</p>
-    <p class="line">
-      <span class="phase display"
-        >{{ parts.text }}<span v-if="parts.dots" class="dots">{{ parts.dots }}</span></span
-      >
-      <span class="turn num">{{ t('game.turn', { turn: game.turn }) }}</span>
-    </p>
-    <p v-if="game.clue" class="clue">
-      <span class="label">{{ t('game.clue') }}</span>
-      <span class="word">{{ game.clue.word }}</span>
-      <span class="count num">{{ count }}</span>
-      <span v-if="guessRule === 'standard'" class="left num">
-        {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
-      </span>
-    </p>
+  <section class="strip" :class="[game.phase === 'over' ? 'over' : game.team, { urgent: banner?.urgent }]">
+    <!-- The lines are read out as they change; the bars, whose avatars are buttons, aren't. -->
+    <div class="lines" aria-live="polite">
+      <p v-if="who" class="who" :class="seat?.team ?? 'spectator'">{{ who }}</p>
+      <p class="line">
+        <span class="phase display"
+          >{{ parts.text }}<span v-if="parts.dots" class="dots">{{ parts.dots }}</span></span
+        >
+        <span class="turn num">{{ t('game.turn', { turn: game.turn }) }}</span>
+      </p>
+      <p v-if="game.clue" class="clue">
+        <span class="label">{{ t('game.clue') }}</span>
+        <span class="word">{{ game.clue.word }}</span>
+        <span class="count num">{{ count }}</span>
+        <span v-if="guessRule === 'standard'" class="left num">
+          {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
+        </span>
+      </p>
+    </div>
     <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" :frozen="game.paused" />
     <GroupBars :groups="groups" :remaining="game.remaining" :me="me" />
   </section>
@@ -101,6 +100,12 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .line {

@@ -116,6 +116,7 @@ onBeforeUnmount(() => resized?.disconnect());
             v-if="playerOf(message.player)"
             :player-id="message.player"
             :name="playerOf(message.player)?.name ?? ''"
+            :guest="playerOf(message.player)?.guest"
             :avatar="playerOf(message.player)?.avatar"
             :agent="playerOf(message.player)?.agent !== undefined"
           />

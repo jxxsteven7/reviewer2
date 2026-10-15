@@ -232,6 +232,22 @@ describe('guests', () => {
     expect(joinOf(room, 'seat-e').guest).toBe(5);
   });
 
+  // No username may be a guest's name any more; an account named so from before stands beside the
+  // guest with that number, as it is, since nothing goes by the names.
+  test('stand beside an account named like one of them, from before no username could be', () => {
+    const room = roomOf(false);
+    const guest = joinOf(room, 'seat-a');
+    const named = { username: 'Guest 2', account: { ...bob.account, id: 2 } };
+    expect(joinOf(room, 'account:named', true, named)).toMatchObject({ name: 'Guest 2', guest: null });
+    expect(guest).toMatchObject({ name: 'Guest 2', guest: 2 });
+    // The account's name follows its username, whatever the guests are called.
+    expect(room.updateAccount(guest.id, 'Guest 3', null, 'undergraduate', false)).toBe(false);
+    const account = room.view({ screen: true }).players[2]?.id as string;
+    expect(room.updateAccount(account, 'Guest 3', null, 'undergraduate', false)).toBe(true);
+    expect(room.view({ screen: true }).players[2]).toMatchObject({ name: 'Guest 3' });
+    expect(room.view({ screen: true }).players[2]).not.toHaveProperty('guest');
+  });
+
   test('lose their number when they log in, which their browser has again as a guest', () => {
     const room = roomOf(false);
     const guest = joinOf(room, 'seat-a');

@@ -1,12 +1,10 @@
 import {
-  cleanName,
   drawFields,
   EMOTE_COOLDOWN_MS,
   MAX_PLAYERS,
   MAX_SCREENS,
   nextChair,
   parseCustomWords,
-  sameName,
   STREAK_MIN,
   wordKey,
   type Ack,
@@ -18,6 +16,7 @@ import {
   type MatchRules,
   type PublicRoom,
   type Rank,
+  type ReplayMember,
   type RoomPhase,
   type RoomView,
   type Streak,
@@ -26,10 +25,10 @@ import {
 } from '@reviewer2/shared';
 import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
-import type { AgentFeats, GameContext, GameModule, GameOutcome, PlayerResult, Viewer, Who } from './game';
+import type { AgentFeats, GameContext, GameModule, GameOutcome, PlayerResult, Viewer } from './game';
 import { GameLog, type GameEnding, type GameLogData, type GameLogEntry, type GameLogEvent } from './gameLog';
 import { newPlayerId } from './identity';
-import { Match, type Present, type Who as MatchWho } from './match';
+import { Match, type Present, type Who } from './match';
 import { pinyinOf } from './pinyin';
 import { randomId, type Rng } from './random';
 import { drawWords, type WordLibrary } from './words';
@@ -92,8 +91,7 @@ export const MAX_BROWSERS = 10;
 
 // Someone the chair removes from a private room must wait this long before they may come back;
 // from a public room, whose code anyone can read off the list, they stay out for as long as the
-// room lasts. Either way, nobody else may take their name for this long, so that they don't seem
-// to have come straight back.
+// room lasts.
 export const REMOVED_FOR_MS = 2 * 60_000;
 // How many removals a room remembers. Only the chair adds to them, so the limit is for a chair who
 // removes newcomer after newcomer, which would otherwise grow the room for as long as it lasts;
@@ -108,11 +106,9 @@ export const MAX_GUESTS = 500;
 // status page does of a report: the client has words of its own for it, in either language.
 export const guestLabel = (guest: number): string => `Guest ${guest}`;
 
-// One removal: the name the member had, until when they must wait and their name is held, whether
-// they stay out for good, as from a room that was public when they were removed, and every key
-// they stay out by.
+// One removal: until when the member must wait, whether they stay out for good, as from a room
+// that was public when they were removed, and every key they stay out by.
 interface Removal {
-  name: string;
   until: number;
   forGood: boolean;
   keys: string[];
@@ -359,7 +355,7 @@ export class Room {
 
   // Whether a member, or one who has left during the game, has an account, is a guest, by number,
   // or is an AI player, by persona (GameContext.whoIs); null for nobody the room knows.
-  #whoIs(id: string): Who | null {
+  #whoIs(id: string): ReplayMember | null {
     const member = this.members.get(id);
     const gone = this.#gone.get(id);
     const agent = member?.agent ?? gone?.agent ?? null;
@@ -454,7 +450,10 @@ export class Room {
 
   // A new member, who has come to play or only to watch. The first one chairs the room. A member
   // with an account comes with its username as the name; a guest has a number, the one they had
-  // here before if their browser has been in the room, or else the next one.
+  // here before if their browser has been in the room, or else the next one. Names never clash:
+  // usernames are unique, and no username may be a guest's name (shared/src/accounts.ts), so an
+  // account named like one from before that rule stands beside the guest with that number, as it
+  // is, rather than being kept out.
   join(
     key: string,
     play = false,
@@ -462,22 +461,12 @@ export class Room {
   ): Ack<{ member: Member }> {
     const refusal = this.refusal(key);
     if (refusal) return fail(refusal);
-    let name: string;
-    let guest: number | null = null;
-    if (as) {
-      const username = cleanName(as.username);
-      if (username === null) return fail('name_invalid');
-      if (this.#nameTaken(username)) return fail('name_taken');
-      name = username;
-    } else {
-      guest = this.#guestNumbers.get(key) ?? this.#guestCount + 1;
-      name = guestLabel(guest);
-    }
+    const guest = as ? null : (this.#guestNumbers.get(key) ?? this.#guestCount + 1);
 
     const member: Member = {
       id: newPlayerId(),
       key,
-      name,
+      name: as ? as.username : guestLabel(guest as number),
       account: as && { ...as.account },
       guest,
       sockets: new Set(),
@@ -691,13 +680,12 @@ export class Room {
   }
 
   // A member's account has a new username, a new avatar, a new rank, or AI players allowed or not.
-  // The name changes too, unless someone else in the room has it, as a guest may have since before
-  // the account was renamed: then the member keeps the name they had here. Returns whether the room
-  // looks any different.
+  // The name changes with the username. Returns whether the room looks any different.
   updateAccount(id: string, username: string, avatar: string | null, rank: Rank, agents: boolean): boolean {
     const member = this.members.get(id);
     if (!member?.account) return false;
-    const renamed = this.#takeUsername(member, username);
+    const renamed = member.name !== username;
+    member.name = username;
     const { account } = member;
     if (!renamed && account.avatar === avatar && account.rank === rank && account.agents === agents) return false;
     account.avatar = avatar;
@@ -708,9 +696,9 @@ export class Room {
   }
 
   // A guest's seat becomes an account's: the member logged in or registered while they were in the
-  // room, and is found by the account's key from now on. The name becomes the username, as for
-  // updateAccount(), and the guest's number goes; their browser keeps it in the room, should they
-  // come back as a guest. False when the member isn't a guest here.
+  // room, and is found by the account's key from now on. The name becomes the username, and the
+  // guest's number goes; their browser keeps it in the room, should they come back as a guest.
+  // False when the member isn't a guest here.
   adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
     const member = this.members.get(id);
     if (!member || member.account) return false;
@@ -723,17 +711,8 @@ export class Room {
     member.key = key;
     member.account = { ...account };
     member.guest = null;
-    this.#takeUsername(member, username);
+    member.name = username;
     this.changed();
-    return true;
-  }
-
-  // Gives a member their username as the name in the room, unless someone else here has it, and
-  // says whether the name changed.
-  #takeUsername(member: Member, username: string): boolean {
-    const name = cleanName(username);
-    if (name === null || name === member.name || this.#nameTaken(name, member.id)) return false;
-    member.name = name;
     return true;
   }
 
@@ -993,7 +972,7 @@ export class Room {
   };
 
   // How a member shows in the match's table.
-  #who = (member: Member): MatchWho => ({
+  #who = (member: Member): Who => ({
     name: member.name,
     guest: member.guest,
     avatar: member.account?.avatar ?? null,
@@ -1046,7 +1025,6 @@ export class Room {
     const sockets = this.drop(id);
     if (member.agent) return { ok: true, sockets, keys: [], reason: 'removed_recently' };
     const removal: Removal = {
-      name: member.name,
       until: this.#now() + REMOVED_FOR_MS,
       forGood: this.public,
       keys: [...new Set([member.key, ...member.browsers])],
@@ -1561,21 +1539,6 @@ export class Room {
 
   view(viewer: Viewer): RoomView {
     return this.views()(viewer);
-  }
-
-  // A name is taken by a member who has it, and for a while by a member who was removed with it.
-  // A removal goes by the member key, which another browser gets around; it should at least not
-  // come back as the same person.
-  // An AI player goes by its persona, which no person may have (shared/src/accounts.ts), so it takes
-  // no name.
-  #nameTaken(name: string, except?: string): boolean {
-    for (const member of this.members.values()) {
-      if (member.id !== except && !member.agent && sameName(member.name, name)) return true;
-    }
-    for (const removed of this.#removals) {
-      if (removed.until > this.#now() && sameName(removed.name, name)) return true;
-    }
-    return false;
   }
 
   // The member who joined first among those online, or else among everyone: the rule is shared with

@@ -128,18 +128,15 @@ describe('a replay', () => {
     expect(JSON.stringify(after)).not.toContain('Bob');
   });
 
-  test('from before the groups were kept forgets the name of a deleted account', async () => {
+  test('from before the groups were kept shows whoever has no account there as a guest', async () => {
     const { anns, bobs, ids, gameId } = await finished();
-    // The replay as it was kept before: the names of those who revealed a card.
+    // The replay as it was kept before: without the groups and who was who.
     const old = JSON.parse(kept()[0]?.data as string) as Record<string, unknown>;
     delete old.groups;
     delete old.members;
-    old.players = { [ids.bob]: 'Bob', [ids.dan]: 'Dan' };
     server.db.prepare('UPDATE replays SET data = ?').run(JSON.stringify(old));
-    // Shown, it names nobody by the name it kept: the guests by number, in the order of the seats,
-    // and the accounts as they are now.
+    // Shown, it has the guests by number, in the order of the seats, and the accounts as they are now.
     const shown = await open(anns, gameId);
-    expect(JSON.stringify(shown)).not.toContain('"Dan"');
     expect(shown.people[ids.cat]).toEqual({ guest: 1 });
     expect(shown.people[ids.dan]).toEqual({ guest: 2 });
     expect(shown.people[ids.bob]).toMatchObject({ name: 'Bob' });
@@ -148,7 +145,6 @@ describe('a replay', () => {
       { team: 'blue', captain: ids.cat, guessers: [ids.dan] },
     ]);
     expect((await bobs.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
-    expect(JSON.parse(kept()[0]?.data as string)).toMatchObject({ players: { [ids.dan]: 'Dan' } });
     expect(kept()[0]?.data).not.toContain('Bob');
     // Bob can't be told from a guest any more: he is the first of them, in the order of the seats.
     const after = await open(anns, gameId);

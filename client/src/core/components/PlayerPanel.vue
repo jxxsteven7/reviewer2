@@ -139,7 +139,7 @@ async function report() {
     <div v-if="player" class="panel-body">
       <ProfileCard v-if="player.handle" :handle="player.handle" brief :named="false" />
       <AgentProfileCard v-else-if="player.agent" :persona="player.agent" />
-      <PlayerAvatar v-else :name="player.name" :avatar="player.avatar" size="large" />
+      <PlayerAvatar v-else :name="player.name" :guest="player.guest" :avatar="player.avatar" size="large" />
 
       <div class="actions">
         <!-- A request goes by the player's seat (friends.ts). -->

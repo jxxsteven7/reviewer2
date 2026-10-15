@@ -72,6 +72,7 @@ function linesOf(action: ReplayAction): string[] {
         v-else
         :name="name"
         :initial="person.deleted ? t('replay.deletedInitial') : null"
+        :guest="person.guest"
         :avatar="person.avatar"
         size="large"
       />

@@ -37,10 +37,9 @@ export interface KeywordsReplay {
   // the server works the groups out from the record of the game as it shows them.
   groups?: ReplayGroup[];
   members?: Record<string, ReplayMember>;
-  // Replays from before: the name that each player who revealed a card had in the game, and the AI
-  // players' personas, by player ID. Nothing shows the names any more, and deleting an account takes
-  // its own out (docs/architecture.md#replays).
-  players?: Record<string, string>;
+  // Replays from before: the AI players' personas, by player ID. They kept the name that each
+  // player who revealed a card had in the game too, which nothing showed any more, and which went
+  // (migration 20, docs/architecture.md#replays).
   agents?: Record<string, AgentPersona>;
 }
 
@@ -58,7 +57,7 @@ export interface ReplayPerson {
 // A replay as the viewer shows it: the game, the groups and who everyone in it was, by player ID.
 // `me` is the player ID that the viewer had in it, if any, whom the groups show first among the
 // students, as they do in the game.
-export interface ShownReplay extends Omit<KeywordsReplay, 'groups' | 'members' | 'players' | 'agents'> {
+export interface ShownReplay extends Omit<KeywordsReplay, 'groups' | 'members' | 'agents'> {
   groups: ReplayGroup[];
   people: Record<string, ReplayPerson>;
   me: string | null;

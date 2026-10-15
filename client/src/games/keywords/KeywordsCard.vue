@@ -116,6 +116,7 @@ const ariaLabel = computed(() =>
         v-for="chooser in choosers"
         :key="chooser.name"
         :name="chooser.name"
+        :guest="chooser.guest"
         :avatar="chooser.avatar"
         :agent="chooser.agent !== undefined"
         :faded="!chooser.online"

@@ -24,6 +24,12 @@ export function colorOf(name: string): string {
   return `var(--avatar-${(fnv1a(usernameKey(name)) % AVATAR_COLORS) + 1})`;
 }
 
+// The color of a guest's default avatar, by their number in the room: the same whatever the guest
+// is called, in either language (names.ts), and another for each of the next few guests.
+export function guestColorOf(guest: number): string {
+  return `var(--avatar-${(Math.max(0, guest - 1) % AVATAR_COLORS) + 1})`;
+}
+
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
   new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
 

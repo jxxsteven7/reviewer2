@@ -18,6 +18,7 @@ export interface Member {
   name: string;
   initial?: string | null;
   avatar?: string | null;
+  guest?: number;
   agent?: string;
   online?: boolean;
 }
@@ -54,6 +55,7 @@ const studentsOf = (team: Team) => {
             :name="piOf(team)!.name"
             :initial="piOf(team)!.initial"
             :avatar="piOf(team)!.avatar"
+            :guest="piOf(team)!.guest"
             :agent="piOf(team)!.agent !== undefined"
             :waiting="piOf(team)!.online === false"
           />
@@ -73,6 +75,7 @@ const studentsOf = (team: Team) => {
               :name="student.name"
               :initial="student.initial"
               :avatar="student.avatar"
+              :guest="student.guest"
               :agent="student.agent !== undefined"
               :waiting="student.online === false"
             />
@@ -130,6 +133,11 @@ const studentsOf = (team: Team) => {
    front covers the next, so that each is tapped where it shows. */
 .face :deep(.avatar-button::before) {
   inset: calc(50% - 22px) 0;
+}
+
+/* The focus ring is ink here: the page's blue would be lost on the blue bar, and faint on the red. */
+.faces :deep(.avatar-button:focus-visible) {
+  outline-color: var(--ink);
 }
 
 .pi {

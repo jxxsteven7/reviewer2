@@ -13,7 +13,12 @@ export type Bubble = {
   id: number;
   name: string;
   avatar?: string | undefined;
+  // A guest's number, for the color of their avatar (PlayerAvatar.vue).
+  guest?: number | undefined;
 } & ({ emote: Emote } | { call: string });
+
+// Whom a bubble shows: a player, as the room has them.
+type Shown = { name: string; avatar?: string | undefined; guest?: number | undefined };
 
 // How long a bubble stays, a call a little longer, and how many show at once (show).
 const SHOWN_MS = 4000;
@@ -42,10 +47,10 @@ function show(bubble: Bubble, ms: number): void {
 
 // The room calls out something about a player, for everyone on the page to see and hear: the
 // line, with the player's avatar, and the sound of a reaction.
-export function callOut(player: { name: string; avatar?: string | undefined }, line: string, sound: Emote): void {
+export function callOut(player: Shown, line: string, sound: Emote): void {
   const id = nextId;
   nextId += 1;
-  show({ id, name: player.name, avatar: player.avatar, call: line }, CALL_MS);
+  show({ id, name: player.name, avatar: player.avatar, guest: player.guest, call: line }, CALL_MS);
   playSound(sound);
 }
 
@@ -57,7 +62,7 @@ socket.on('room:emote', ({ roomId, playerId, emote }: EmoteEvent) => {
   if (!sender || !EMOTES.includes(emote)) return;
   const id = nextId;
   nextId += 1;
-  show({ id, name: sender.name, avatar: sender.avatar, emote }, SHOWN_MS);
+  show({ id, name: sender.name, avatar: sender.avatar, guest: sender.guest, emote }, SHOWN_MS);
   playSound(emote);
 });
 

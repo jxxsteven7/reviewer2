@@ -838,6 +838,37 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT count(*) AS n FROM accounts').get()).toEqual({ n: 0 });
   });
 
+  test('of the nineteenth release loses the names its replays kept, and keeps the rest of them', async () => {
+    const nineteenth = await open(dir, MIGRATIONS.slice(0, 19));
+    const named = JSON.stringify({
+      gameId: 'g',
+      cards: [{ word: 'Model', color: 'red' }],
+      history: [{ turn: 1, team: 'red', word: 'Hint', count: 1, guesses: [{ card: 0, color: 'red', player: 'p1' }] }],
+      players: { p1: 'Ann', p2: '\u{6e38}\u{5ba2}' },
+      agents: { p3: 'reviewer1' },
+    });
+    const kept = JSON.stringify({ gameId: 'h', cards: [], history: [], groups: [], members: { p1: { guest: 1 } } });
+    nineteenth.db.exec(`
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('g', 'keywords', 'now', 'finished', '${named}');
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('h', 'keywords', 'now', 'finished', '${kept}');
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('i', 'keywords', 'now', 'withdrawn', NULL);
+    `);
+    nineteenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 20));
+    expect(migrated).toMatchObject({ schema: 20, migratedFrom: 19 });
+    const rows = migrated.db.prepare('SELECT game_id AS gameId, data FROM replays ORDER BY game_id').all() as {
+      gameId: string;
+      data: string | null;
+    }[];
+    expect(rows.map(({ gameId, data }) => [gameId, data === null ? null : JSON.parse(data)])).toEqual([
+      ['g', { ...JSON.parse(named), players: undefined }],
+      ['h', JSON.parse(kept)],
+      ['i', null],
+    ]);
+    expect(rows[0]?.data).not.toContain('Ann');
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(

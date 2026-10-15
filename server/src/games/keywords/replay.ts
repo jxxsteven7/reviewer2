@@ -55,13 +55,17 @@ export function keptReplay(data: KeywordsData, ctx: GameContext): KeywordsReplay
 // A kept replay as an account sees it: the groups, as kept or, for a replay from before they were,
 // worked out from the record of the game, and who everyone was. An account that played is shown as
 // it is now, and one deleted since as deleted; a guest by their number; an AI player by its
-// persona. A replay from before keeps no more than the names of those who revealed a card, which
-// are never shown: a player there whose account is gone can't be told from a guest, so each of them
-// is shown as a guest, numbered in the order of the seats. Someone a new replay doesn't know is left
-// out, as a player who left.
-export function shownReplay({ replay: kept, log, accounts, viewer }: KeptReplay): ShownReplay {
+// persona. A replay from before says nothing of who was who: a player there whose account is gone
+// can't be told from a guest, so each of them is shown as a guest, numbered in the order of the
+// seats. One from before the records of the games (docs/architecture.md#game-records) says which
+// account was which player only for the accounts still there, so the account asking is shown as a
+// guest too, and its PIs are unknown: the clues of that time don't say who gave them. Someone a new
+// replay doesn't know is left out, as a player who left.
+export function shownReplay({ replay: kept, log: read, accounts, viewer }: KeptReplay): ShownReplay {
   const replay = kept as KeywordsReplay;
-  const groups = replay.groups ?? groupsFromLog(log, replay) ?? groupsFromHistory(replay);
+  // The record of the game is read for a replay from before the groups were kept alone.
+  const log = replay.groups ? null : read();
+  const groups = replay.groups ?? groupsFromLog(log) ?? groupsFromHistory(replay);
   const agents: Record<string, string> = { ...log?.agents, ...replay.agents };
   const people: Record<string, ReplayPerson> = {};
   let guests = 0;
@@ -109,26 +113,34 @@ const historyIds = (history: KeywordsReplay['history']) =>
     ...record.guesses.map(({ player }) => player),
   ]);
 
-// The groups from the record of the game: where everyone sat when it began, and the group that each
-// player who came during the game and gave a clue or revealed a card was seated in. Null without a
-// record, as for the games from before there were any.
-function groupsFromLog(log: GameLogData | null, replay: KeywordsReplay): ReplayGroup[] | null {
+// The groups from the record of the game, as they stood at its end, as a replay that keeps them has
+// them: where everyone sat when it began, and then, in order, every seat that someone took as they
+// came or by moving, and every seat left by someone who moved to the spectators, was moved there by
+// the chair, was removed or left the room. Null without a record, as for the games from before
+// there were any.
+function groupsFromLog(log: GameLogData | null): ReplayGroup[] | null {
   if (!log?.start) return null;
-  const groups = TEAMS.map((team): ReplayGroup => ({ team, captain: null, guessers: [] }));
-  const place = (id: string, seat: unknown) => {
+  const seats = new Map<string, { team: Team; role: 'captain' | 'guesser' }>();
+  const sit = (id: string, seat: unknown) => {
     const { team, role } = (seat ?? {}) as { team?: Team | null; role?: string };
-    const group = groups.find((each) => each.team === team);
-    if (!group) return;
-    if (role === 'captain') group.captain ??= id;
-    else if (role === 'guesser' && !group.guessers.includes(id)) group.guessers.push(id);
+    if (team && TEAMS.includes(team) && (role === 'captain' || role === 'guesser')) seats.set(id, { team, role });
+    else seats.delete(id);
   };
-  for (const [id, seat] of Object.entries(log.start)) place(id, seat);
-  const played = new Set(historyIds(replay.history));
-  for (const entry of log.entries) {
-    if (entry.type !== 'join' || entry.by === null || !played.has(entry.by)) continue;
-    place(entry.by, (entry.data as { seat?: unknown } | undefined)?.seat);
+  for (const [id, seat] of Object.entries(log.start)) sit(id, seat);
+  for (const { by, type, data } of log.entries) {
+    const about = (data as { player?: string } | undefined)?.player;
+    if (type === 'join' && by !== null) sit(by, (data as { seat?: unknown } | undefined)?.seat);
+    else if (type === 'keywords:seat' && by !== null) sit(by, data);
+    else if (type === 'leave' && by !== null) seats.delete(by);
+    else if ((type === 'bench' || type === 'remove') && about !== undefined) seats.delete(about);
   }
-  return groups;
+  const inSeat = (team: Team, role: 'captain' | 'guesser') =>
+    [...seats].filter(([, seat]) => seat.team === team && seat.role === role).map(([id]) => id);
+  return TEAMS.map((team): ReplayGroup => ({
+    team,
+    captain: inSeat(team, 'captain')[0] ?? null,
+    guessers: inSeat(team, 'guesser'),
+  }));
 }
 
 // The groups from the clues and the guesses alone, for a game without a record: whoever gave a

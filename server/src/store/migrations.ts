@@ -527,4 +527,10 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE accounts ADD COLUMN room_setup TEXT;
   `,
+  // 20: replays keep no names (docs/architecture.md#replays). The replays from before kept the name
+  // that each player who revealed a card had in the game, by player ID (`players`): a guest's
+  // nickname, or an account's username as it was then. Nothing shows them any more, and they go.
+  `
+  UPDATE replays SET data = json_remove(data, '$.players') WHERE json_type(data, '$.players') IS NOT NULL;
+  `,
 ];

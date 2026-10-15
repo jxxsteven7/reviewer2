@@ -81,7 +81,7 @@ const setPublic = (value: boolean) => act('room:public', { public: value });
   <UiSheet :open="open" :title="t('room.menu')" @close="open = false">
     <div class="room-menu">
       <p class="who">
-        <PlayerAvatar :name="me.name" :avatar="me.avatar" size="medium" />
+        <PlayerAvatar :name="me.name" :guest="me.guest" :avatar="me.avatar" size="medium" />
         <span class="name">{{ me.name }}</span>
       </p>
       <p class="visibility">{{ t(room.public ? 'room.listed' : 'room.unlisted') }}</p>

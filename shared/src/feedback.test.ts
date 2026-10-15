@@ -110,6 +110,10 @@ describe('the name for the feedback contributions', () => {
     expect(checkCredit('  Ann   Lee ')).toEqual({ credit: 'Ann Lee', problem: null });
     expect(checkCredit('octocat')).toEqual({ credit: 'octocat', problem: null });
     expect(checkCredit(HELLO)).toEqual({ credit: HELLO, problem: null });
+    // Nobody signs as a guest of a room either (accounts.ts).
+    for (const name of ['Guest 42', 'guest1', '\u{6e38}\u{5ba2}7', '\u{8bbf}\u{5ba2} 3']) {
+      expect(checkCredit(name), name).toEqual({ credit: null, problem: 'credit_reserved' });
+    }
     for (const text of [`Ann${ZERO_WIDTH_SPACE}Lee`, 'x'.repeat(17), `e${ACUTE.repeat(9)}`]) {
       expect(checkCredit(text), JSON.stringify(text)).toEqual({ credit: null, problem: 'credit_invalid' });
     }

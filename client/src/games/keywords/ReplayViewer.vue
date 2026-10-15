@@ -72,6 +72,7 @@ const member = (id: string): Member => {
     id,
     name: nameFor(id),
     initial: person?.deleted ? t('replay.deletedInitial') : null,
+    ...(person?.guest === undefined ? {} : { guest: person.guest }),
     avatar: person?.avatar ?? null,
     ...(person?.agent ? { agent: person.agent } : {}),
   };

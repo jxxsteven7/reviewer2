@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { colorOf, initialOf } from '../avatar';
+import { colorOf, guestColorOf, initialOf } from '../avatar';
 import AgentIcon from './AgentIcon.vue';
 
 // A player's avatar, always a circle with an ink outline: the picture that they uploaded, or the
@@ -13,11 +13,14 @@ import AgentIcon from './AgentIcon.vue';
 // hasn't come yet, is `waiting`: faded under a white veil, with three grey dots in the middle that
 // light up in turn, as a chat shows someone typing (docs/architecture.md#rooms). One too small for
 // the dots, as on a card's corner, is only `faded`. An `initial` takes the place of the name's
-// first character, for a name whose first character says nothing, as a deleted account's.
+// first character, for a name whose first character says nothing, as a deleted account's. A
+// `guest`, by their number, gets the color of the number rather than of the name, which the page
+// gives them in its own language (names.ts): the same color whatever they are called.
 const props = withDefaults(
   defineProps<{
     name: string;
     initial?: string | null;
+    guest?: number | null;
     avatar?: string | null;
     agent?: boolean;
     size?: 'small' | 'medium' | 'large';
@@ -26,6 +29,7 @@ const props = withDefaults(
   }>(),
   {
     initial: null,
+    guest: null,
     avatar: null,
     agent: false,
     size: 'small',
@@ -46,7 +50,7 @@ const picture = computed(() => (props.avatar && !failed.value ? props.avatar : n
     class="avatar"
     :class="[size, { veiled: waiting || faded }]"
     aria-hidden="true"
-    :style="picture ? undefined : { background: colorOf(name) }"
+    :style="picture ? undefined : { background: guest === null ? colorOf(name) : guestColorOf(guest) }"
   >
     <img v-if="picture" :src="picture" alt="" @error="failed = true" />
     <AgentIcon v-else-if="agent" class="face" />

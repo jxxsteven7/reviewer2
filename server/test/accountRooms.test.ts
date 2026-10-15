@@ -271,7 +271,7 @@ describe('a login that ends', () => {
 });
 
 describe('an account that changes', () => {
-  test('shows its new name in the rooms it is in, unless the room holds it for someone else', async () => {
+  test('shows its new name in the rooms it is in, at once', async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { chair, code } = await roomOf(ann);
@@ -288,15 +288,15 @@ describe('an account that changes', () => {
     // The account's own pages hear of it.
     await until(() => chair.account?.username === 'Annabel', 'the new session');
 
-    // The chair removes Cat, whose name the room holds for a while, so that nobody comes back as
-    // Cat at once. Cat's account takes another name, and Ann's takes "Cat", which it keeps out of
-    // the room.
+    // The chair removes Cat, who stays out by the keys of her account and her browser, not by her
+    // name: once her account takes another name and Ann's takes "Cat", the room shows Ann as Cat.
     expect(await chair.send('room:remove', { playerId: catInRoom.me })).toEqual({ ok: true });
     await visitor.waitFor((state) => state.players.length === 2, 'Cat removed');
     await cat.request('/api/account/username', { username: 'Cathy' });
     await ann.request('/api/account/username', { username: 'Cat' });
     await until(() => chair.account?.username === 'Cat', 'the second session');
-    expect(names(visitor)).toEqual(['Annabel', 'Guest 1']);
+    await visitor.waitFor((state) => state.players.some(({ name }) => name === 'Cat'), 'the name again');
+    expect(names(visitor)).toEqual(['Cat', 'Guest 1']);
   });
 
   test('that is deleted leaves every room it was in, whatever a game makes of that', async () => {

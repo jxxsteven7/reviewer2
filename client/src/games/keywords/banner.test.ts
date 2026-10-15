@@ -75,9 +75,9 @@ describe('the banner', () => {
   test('says who the viewer is, in front of their seat, without a colon', () => {
     expect(en.banner.seat).toMatch(/^You are /);
     expect(en.banner.spectator).toMatch(/^You are /);
-    // "你是 ", with a space and no colon after it.
+    // "你是 ", with a space and no colon after it; a spectator is told "你在旁听".
     expect(zh.banner.seat).toMatch(/^\u4f60\u662f /);
-    expect(zh.banner.spectator).toMatch(/^\u4f60\u662f /);
+    expect(zh.banner.spectator).toBe('\u4f60\u5728\u65c1\u542c');
     for (const line of [en.banner.seat, en.banner.spectator, zh.banner.seat, zh.banner.spectator]) {
       expect(line).not.toMatch(/[:\uff1a]/);
     }

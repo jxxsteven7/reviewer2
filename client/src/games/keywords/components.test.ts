@@ -2619,6 +2619,9 @@ describe('KeywordsGame', () => {
     // otherwise; the tools at the foot of the page have no way to pause.
     const chair = mount(KeywordsGame, { props: { room: paused('ann') }, global: global() });
     expect(chair.findAll('.tools button').map((button) => button.text())).toEqual(['How to play', 'End the game']);
+    // With the clock, the reaction button comes first, then the chair's button to pause or resume.
+    expect(chair.find('.sticky-clock [role="timer"]').exists()).toBe(true);
+    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React', 'Resume the game']);
     await chair.get('.paused button').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     send.mockClear();
@@ -2628,6 +2631,7 @@ describe('KeywordsGame', () => {
     const playing = mount(KeywordsGame, { props: { room: room('ann') }, global: global() });
     expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause the game');
     expect(playing.get('.sticky-clock .pause').text()).toBe('Pause the game');
+    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React', 'Pause the game']);
     await playing.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
   });
