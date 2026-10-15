@@ -58,6 +58,7 @@ async function next(nextRules: MatchRules | null) {
         <AvatarButton
           :player-id="inRoom(line.playerId)"
           :name="line.name"
+          :username="line.username"
           :guest="line.guest"
           :avatar="line.avatar"
           size="medium"

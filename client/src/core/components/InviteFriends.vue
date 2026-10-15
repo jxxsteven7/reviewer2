@@ -28,9 +28,10 @@ const { view, failed, load } = useFriendsList(toRef(props, 'open'));
 const invited = (username: string) => (props.room.invited ?? []).some((friend) => friend.username === username);
 const { busy, run } = useBusy();
 
-// A member with an account is called by their username, so a friend whose name is in the room is
-// here already; the server refuses the others that are, should the names not tell.
-const here = computed(() => new Set(props.room.players.map(({ name }) => name)));
+// The room keeps the username of a member with an account beside whatever it calls them (room.ts),
+// so a friend whose username is in the room is here already; the server refuses the others that
+// are, should the names not tell.
+const here = computed(() => new Set(props.room.players.map(({ name, username }) => username ?? name)));
 const friends = computed(() => view.value?.friends ?? []);
 const candidates = computed(() => {
   const away = friends.value.filter((friend) => !here.value.has(friend.username));

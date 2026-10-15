@@ -21,6 +21,7 @@ const mock = vi.hoisted(() => {
 vi.mock('./socket', () => mock);
 
 import { i18n } from './i18n';
+import { knowAliases } from './names';
 import { closeRoom, closeRoomPage, entry, leaveRoom, openRoom, room, submitChoice } from './room';
 
 const emit = (event: string, payload?: unknown) => mock.handlers.get(event)?.(payload);
@@ -128,6 +129,63 @@ describe('the room page', () => {
     await flushPromises();
     expect(room.value?.players[1]?.name).toBe('\u4e00\u53f7\u5ba1\u7a3f\u4eba');
     i18n.global.locale.value = 'en';
+  });
+
+  // The viewer's own names for their friends (names.ts), in the players and in a match's table,
+  // with the username kept beside, which the default avatar is drawn from; never on a big screen,
+  // which the whole room sees, and anew as the names change.
+  test("names a friend by the viewer's name for them, but not on a big screen", async () => {
+    const withFriend = (me: string | null): RoomView => ({
+      ...view('K7QX', 'room-a', me),
+      players: [
+        { id: 'ann', name: 'Ann', online: true, handle: 'a77000000000' },
+        { id: 'bob', name: 'Bob', online: true, handle: 'b0b000000000' },
+        { id: 'g3', name: 'Guest 3', guest: 3, online: true },
+      ],
+      match: {
+        id: 'm1',
+        rules: { games: 3, teams: 'switch' as const, grouping: 'random' as const },
+        played: 0,
+        status: 'on' as const,
+        game: 1,
+        standings: [
+          { playerId: 'bob', name: 'Bob', total: 0, delta: null, games: 1, rank: null, left: false },
+          { playerId: null, name: 'Bob', total: 0, delta: null, games: 1, rank: null, left: true },
+        ],
+      },
+    });
+    knowAliases([{ handle: 'b0b000000000', alias: 'Bobby' }]);
+    mock.send.mockImplementation(async () => {
+      emit('room:state', withFriend('ann'));
+      return ok('K7QX', 'room-a');
+    });
+    openRoom('K7QX');
+    await flushPromises();
+    expect(room.value?.players.map((player) => player.name)).toEqual(['Ann', 'Bobby', 'Guest 3']);
+    expect(room.value?.players.map((player) => player.username)).toEqual(['Ann', 'Bob', undefined]);
+    // Someone who has left the table is known by the name alone.
+    expect(room.value?.match?.standings.map((line) => [line.name, line.username])).toEqual([
+      ['Bobby', 'Bob'],
+      ['Bob', undefined],
+    ]);
+    knowAliases([{ handle: 'b0b000000000', alias: 'Prof. B' }]);
+    await flushPromises();
+    expect(room.value?.players[1]?.name).toBe('Prof. B');
+    knowAliases([]);
+    await flushPromises();
+    expect(room.value?.players[1]?.name).toBe('Bob');
+
+    knowAliases([{ handle: 'b0b000000000', alias: 'Bobby' }]);
+    closeRoomPage();
+    mock.send.mockImplementation(async () => {
+      emit('room:state', withFriend(null));
+      return ok('K7QX', 'room-a');
+    });
+    openRoom('K7QX', { screen: true });
+    await flushPromises();
+    expect(room.value?.players.map((player) => player.name)).toEqual(['Ann', 'Bob', 'Guest 3']);
+    expect(room.value?.match?.standings[0]?.name).toBe('Bob');
+    knowAliases([]);
   });
 
   test('keeps a newcomer on the form when the server refuses them, and sends no name', async () => {

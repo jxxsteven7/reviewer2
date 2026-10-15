@@ -37,7 +37,12 @@ const announcement = computed(() => notices.value.map((item) => `${headline(item
       <i18n-t :keypath="`duos.notice.${notice.title}`" tag="p" class="headline" scope="global">
         <template #name>
           <span class="who">
-            <AvatarButton :player-id="player.id" :name="player.name" :avatar="player.avatar" />
+            <AvatarButton
+              :player-id="player.id"
+              :name="player.name"
+              :username="player.username"
+              :avatar="player.avatar"
+            />
             <strong>{{ player.name }}</strong>
           </span>
         </template>

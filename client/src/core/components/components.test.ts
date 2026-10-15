@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
+import { knowAliases } from '../names';
 import { provideOpenPlayer } from '../playerPanel';
 import { shownProfile } from '../profilePanel';
 import AvatarButton from './AvatarButton.vue';
@@ -154,6 +155,19 @@ describe('PlayerAvatar', () => {
     expect(styleOf('Guest 11', 11)).toContain('var(--avatar-3)');
     expect(styleOf('Guest 3')).not.toBe(styleOf('\u{6e38}\u{5ba2}3'));
   });
+  // The room names a friend by the viewer's name for them, with the username kept beside
+  // (room.ts): the name says who it is, and the default avatar is still the username's.
+  test("names a friend by the viewer's name for them, and draws the avatar from the username", () => {
+    const player = { id: 'b', name: 'Prof. B', username: 'Bob', handle: 'b0b000000000', online: true };
+    const named = mount(PlayerName, { props: { player, me: false, chair: false }, global: global() });
+    const plain = mount(PlayerName, {
+      props: { player: { id: 'b', name: 'Bob', online: true }, me: false, chair: false },
+      global: global(),
+    });
+    expect(named.get('.name').text()).toBe('Prof. B');
+    expect(named.get('.initial').attributes('data-initial')).toBe('B');
+    expect(named.get('.avatar').attributes('style')).toBe(plain.get('.avatar').attributes('style'));
+  });
 });
 
 describe('AvatarButton', () => {
@@ -182,6 +196,33 @@ describe('AvatarButton', () => {
     // The focus comes back to the avatar.
     expect(document.activeElement).toBe(avatar.element);
     wrapper.unmount();
+  });
+});
+
+describe('ProfilePanel', () => {
+  test("names a friend by the viewer's name for them, with the username after it, on the panel and the whole page", async () => {
+    knowAliases([{ handle: 'b0b000000000', alias: 'Bobby' }]);
+    const page = () =>
+      h('div', [h(AvatarButton, { handle: 'b0b000000000', name: 'Bobby', username: 'Bob' }), h(ProfilePanel)]);
+    const wrapper = mount(page, { global: global(), attachTo: document.body });
+    const avatar = wrapper.get('button.avatar-button');
+    expect(avatar.attributes('aria-label')).toBe("View Bobby's profile");
+    expect(wrapper.get('.initial').attributes('data-initial')).toBe('B');
+    await avatar.trigger('click');
+    expect(shownProfile.value).toEqual({ handle: 'b0b000000000', username: 'Bob' });
+    const heading = (index: number) => document.querySelectorAll('[role=dialog] h2')[index];
+    await vi.waitFor(() => expect(heading(0)?.textContent?.trim()).toBe('Bobby Bob'));
+    expect(heading(0)?.querySelector('.subtitle')?.textContent?.trim()).toBe('Bob');
+    [...document.querySelectorAll<HTMLButtonElement>('[role=dialog] button')]
+      .find((button) => button.textContent?.trim() === 'Open the full page')
+      ?.click();
+    await nextTick();
+    expect(heading(1)?.textContent?.trim()).toBe('Bobby Bob');
+    expect(heading(1)?.querySelector('.subtitle')?.textContent?.trim()).toBe('Bob');
+    document.querySelector<HTMLButtonElement>('[role=dialog] button.close')?.click();
+    await nextTick();
+    wrapper.unmount();
+    knowAliases([]);
   });
 });
 

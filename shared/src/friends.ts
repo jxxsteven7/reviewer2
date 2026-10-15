@@ -123,9 +123,9 @@ export interface FriendRoomView {
 }
 
 // The name that an account gives a friend (docs/architecture.md#friends), for itself alone, as a
-// phone's contacts have: the friend doesn't learn of it, and nobody else sees it. It shows beside
-// the username on the account's page, in the panel of the friend in a room and where the account
-// invites friends, never in a game itself, where everyone goes by their username. One line of at
+// phone's contacts have: the friend doesn't learn of it, and nobody else sees it. The account's
+// pages call the friend by it wherever they name them, in rooms and games too, and never on a
+// room's big screen, which the whole room sees (client/src/core/names.ts). One line of at
 // most FRIEND_ALIAS_LENGTH characters, cleaned as a nickname is (names.ts): full-width forms folded,
 // spaces collapsed, and refused with something in it that a reader can't see. An empty alias is
 // none, which takes the old one away.

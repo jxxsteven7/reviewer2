@@ -1,6 +1,14 @@
-import type { FriendRequestView, FriendsView, FriendView, InvitationView, JoinAskView } from '@reviewer2/shared';
+import type {
+  FriendRequestView,
+  FriendsView,
+  FriendView,
+  InvitationView,
+  JoinAskView,
+  Session,
+} from '@reviewer2/shared';
 import { reactive, ref } from 'vue';
 import { account, loadAccount } from './account';
+import { knowAliases } from './names';
 import { send, socket, whenConnected } from './socket';
 import { toast, toastError } from './toast';
 
@@ -8,7 +16,8 @@ import { toast, toastError } from './toast';
 // to rooms, which show on whatever page is open until they are followed, ignored or lapse; the
 // requests of friends to be let into the room the account is in, which show on the room's page
 // until they are answered, ignored or lapse; and the word that the friends or the requests changed,
-// on which a page that shows them asks again. Also the ways to ask someone to be friends, to answer
+// on which a page that shows them asks again; and the names that the account gives its friends,
+// which the whole page shows (names.ts). Also the ways to ask someone to be friends, to answer
 // them, to part, and to ask a friend to be let into their room, from wherever a page offers them,
 // and how the account stands with someone, which says which of these a page offers.
 
@@ -171,10 +180,35 @@ socket.on('connect', () => {
   for (const { id } of [...asks]) forgetAsk(id);
 });
 
+// The names that the account gives its friends, which every page shows wherever it names them
+// (names.ts): read from the account's friends list as each connection of an account is made, since
+// it may be someone else's now, and again whenever the friends change, as when the account renames
+// one. Only the latest answer counts, and one that doesn't come leaves the names as they were. A
+// guest's connection has none.
+let signedIn = false;
+let reads = 0;
+
+async function readNames(): Promise<void> {
+  const turn = (reads += 1);
+  const reply = await send<FriendsView>('friends:list');
+  if (turn === reads && signedIn && reply.ok) knowAliases(reply.friends);
+}
+
+socket.on('session', ({ account: connected }: Session) => {
+  signedIn = connected !== null;
+  if (signedIn) void readNames();
+  else {
+    reads += 1;
+    knowAliases([]);
+  }
+});
+
 // Goes up whenever the account's friends or requests change, by this page or by the other side.
-// The account's summary, which counts the requests waiting for an answer, is asked for again too.
+// The account's summary, which counts the requests waiting for an answer, is asked for again too,
+// and so are the names.
 export const friendsVersion = ref(0);
 socket.on('friends:changed', () => {
   friendsVersion.value += 1;
   if (account.summary) void loadAccount();
+  if (signedIn) void readNames();
 });

@@ -429,8 +429,8 @@ describe('an invitation', () => {
     // The inviter sees whom they invited, the oldest first, and nobody else does.
     await chair.waitFor((state) => state.invited?.length === 2, 'whom Ann invited');
     expect(chair.state?.invited).toEqual([
-      { username: 'Cat', avatar: null },
-      { username: 'Bob', avatar: null },
+      { handle: expect.any(String), username: 'Cat', avatar: null },
+      { handle: expect.any(String), username: 'Bob', avatar: null },
     ]);
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: false, error: 'invite_cooldown' });
     await until(() => bob.invitations.length === 1, 'the invitation');
@@ -451,7 +451,7 @@ describe('an invitation', () => {
     expect(await bob.send('room:join', { invitation: invitation?.id, play: true })).toEqual({ ok: true, code, roomId });
     // Bob is in the room, so Ann's view has Cat alone left to come.
     await chair.waitFor((state) => state.players.length === 2 && state.invited?.length === 1, 'Bob in the room');
-    expect(chair.state?.invited).toEqual([{ username: 'Cat', avatar: null }]);
+    expect(chair.state?.invited).toEqual([{ handle: expect.any(String), username: 'Cat', avatar: null }]);
     expect(bob.state).not.toHaveProperty('invited');
     // Bob is in the room already, so there is no inviting him again.
     server.advance(INVITE_COOLDOWN_MS);

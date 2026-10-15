@@ -15,12 +15,12 @@ defineProps<{ large?: boolean }>();
   <TransitionGroup tag="div" name="bubble" class="bubbles" :class="{ large }" aria-live="polite">
     <p v-for="bubble in bubbles" :key="bubble.id" class="bubble" :class="{ call: 'call' in bubble }">
       <template v-if="'call' in bubble">
-        <PlayerAvatar :name="bubble.name" :guest="bubble.guest" :avatar="bubble.avatar" />
+        <PlayerAvatar :name="bubble.username ?? bubble.name" :guest="bubble.guest" :avatar="bubble.avatar" />
         <span>{{ bubble.call }}</span>
       </template>
       <i18n-t v-else keypath="emotes.bubble" tag="span" scope="global">
         <template #name>
-          <PlayerAvatar :name="bubble.name" :guest="bubble.guest" :avatar="bubble.avatar" />
+          <PlayerAvatar :name="bubble.username ?? bubble.name" :guest="bubble.guest" :avatar="bubble.avatar" />
           <strong>{{ bubble.name }}</strong>
         </template>
         <template #phrase>{{ $t(`emotes.phrases.${bubble.emote}`) }}</template>

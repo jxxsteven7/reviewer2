@@ -1,7 +1,7 @@
 import { parseCode, type Ack, type ClosedReason, type Language, type RoomView } from '@reviewer2/shared';
 import { reactive, shallowRef, watch } from 'vue';
 import { i18n } from './i18n';
-import { nameOf, type Named } from './names';
+import { friendAliases, nameOf, type Named } from './names';
 import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 // The room this page shows, as the server last described it, and how far the page has got in
@@ -57,18 +57,31 @@ function isWanted(view: RoomView): boolean {
 // persona, in the language of the interface (names.ts; docs/architecture.md#players-and-identity):
 // the server knows the number and the persona alone, and the words for them are in the locale
 // files, so they are put in here, in the players and in a match's table, once for every page that
-// shows the player, and again when the visitor switches the language.
+// shows the player, and again when the visitor switches the language. So is the name that the
+// viewer gives a friend (docs/architecture.md#friends), which the server never sends to the room,
+// again whenever the viewer renames one, with the username kept beside it, for the default avatar
+// and to tell accounts apart; but not on a big screen, which the whole room sees, whoever is logged
+// in on it. Someone who has left a match's table is known by the name alone, and keeps it.
 let shown: RoomView | null = null;
 
 function named(view: RoomView): RoomView {
-  const renamed = <Who extends Named & { name: string }>(who: Who): Who =>
-    who.guest === undefined && who.agent === undefined ? who : { ...who, name: nameOf(who) };
-  const players = view.players.map(renamed);
-  const match = view.match && { ...view.match, standings: view.match.standings.map(renamed) };
+  const aliased = view.me !== null;
+  const handles = new Map(view.players.map(({ id, handle }) => [id, handle]));
+  const renamed = <Who extends Named & { name: string; username?: string }>(who: Who, handle = who.handle): Who => {
+    if (handle !== undefined) return { ...who, name: nameOf({ ...who, handle }, aliased), username: who.name };
+    return who.guest === undefined && who.agent === undefined ? who : { ...who, name: nameOf(who) };
+  };
+  const players = view.players.map((player) => renamed(player));
+  const match = view.match && {
+    ...view.match,
+    standings: view.match.standings.map((line) =>
+      renamed(line, line.playerId === null ? undefined : handles.get(line.playerId)),
+    ),
+  };
   return { ...view, players, match };
 }
 
-watch(i18n.global.locale, () => {
+watch([i18n.global.locale, friendAliases], () => {
   if (shown && room.value?.roomId === shown.roomId) room.value = named(shown);
 });
 

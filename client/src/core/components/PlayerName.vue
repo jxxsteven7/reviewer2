@@ -28,6 +28,7 @@ const { t } = useI18n();
       <AvatarButton
         :player-id="player.id"
         :name="player.name"
+        :username="player.username"
         :guest="player.guest"
         :avatar="player.avatar"
         :agent="player.agent !== undefined"

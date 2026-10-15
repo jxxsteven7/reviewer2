@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { account } from '../account';
 import { standingOf } from '../friends';
+import { aliasOf } from '../names';
 import { closeProfile, shownProfile } from '../profilePanel';
 import { useFriendsList } from '../useFriendsList';
 import FriendActions from './FriendActions.vue';
@@ -17,8 +18,8 @@ import UiSheet from './UiSheet.vue';
 // account it finds (ProfileFriends.vue), the same as a room's player panel (PlayerPanel.vue)
 // without what only a room has, so that nobody leaves the page to look. The site has one, which
 // App.vue holds and which opens on whichever account was last asked for (profilePanel.ts). Its
-// title is the username, or the name the viewer gives a friend, with the username after it in
-// small grey type. A brief card, and under it what the viewer may do by how the two stand
+// title, and the whole page's, is the username, or the name the viewer gives a friend (names.ts),
+// with the username after it in small grey type. A brief card, and under it what the viewer may do by how the two stand
 // (FriendActions.vue), once the viewer's own friends list has come or can't be had, or, for the
 // viewer's own account, a word that it is theirs and the way to the account page, where they
 // change it, as in a room; last, the whole page, as others see it, a second sheet of its own height
@@ -36,7 +37,7 @@ const standing = computed(() =>
     ? standingOf(handle.value, account.summary.handle, view.value)
     : null,
 );
-const friend = computed(() => (standing.value?.kind === 'friend' ? standing.value.friend : null));
+const alias = computed(() => aliasOf(handle.value));
 // The viewer's own account, known without the friends list.
 const mine = computed(() => account.summary !== null && account.summary.handle === handle.value);
 
@@ -57,12 +58,7 @@ function done() {
 </script>
 
 <template>
-  <UiSheet
-    :open="open"
-    :title="friend?.alias ?? username"
-    :subtitle="friend?.alias ? username : null"
-    @close="closeProfile"
-  >
+  <UiSheet :open="open" :title="alias ?? username" :subtitle="alias === null ? null : username" @close="closeProfile">
     <div class="panel-body">
       <ProfileCard :handle="handle" brief :named="false" />
       <p v-if="mine" class="hint">{{ t('friends.self') }}</p>
@@ -84,7 +80,8 @@ function done() {
 
   <UiSheet
     :open="open && reading"
-    :title="username"
+    :title="alias ?? username"
+    :subtitle="alias === null ? null : username"
     :back="t('room.panel.back')"
     @back="reading = false"
     @close="closeProfile"

@@ -314,6 +314,7 @@ function closeAll() {
     <UnfriendSheet
       :open="removing !== null"
       :username="removing?.username ?? ''"
+      :alias="removing?.alias ?? null"
       @close="closeAll"
       @removed="closeAll"
     />

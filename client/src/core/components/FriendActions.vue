@@ -87,6 +87,7 @@ function finish() {
       <UnfriendSheet
         :open="removing"
         :username="standing.friend.username"
+        :alias="standing.friend.alias ?? null"
         @close="removing = false"
         @removed="finish"
       />

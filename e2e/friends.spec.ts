@@ -1,15 +1,19 @@
+import type { Page } from '@playwright/test';
 import {
   askFriend,
   avatarOf,
+  closeSheet,
   createRoom,
   expect,
   interpolate,
   joinByLink,
   newPlayer,
+  openGroups,
   pageAddress,
   register,
   roomMenu,
   searchFriends,
+  seatTable,
   TEXT,
   test,
 } from './helpers';
@@ -21,7 +25,8 @@ import {
 // which shows on the account page, leads into a private room; a public room is joined from the
 // list; and the rank shows beside the name in the room and on the account page. A friend in a
 // private room is asked to let a player in, from the home page or the account page, and invites
-// them, or ignores it.
+// them, or ignores it. A friend goes by the name the player gives them wherever the player's pages
+// name them, in a room and its game too, and nowhere else: not to others, nor on a big screen.
 //
 // All tests share one server, so every account here has a part that is the test's own.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
@@ -193,11 +198,12 @@ test('friends are made in a room and by username, invited into a private room, a
   await bob.waitForURL(/\/room\/[0-9A-Z]{4}\?invite=/);
   await expect(bob.locator('.join-form')).toContainText(bobName);
   await bob.getByRole('button', { name: text.room.join.submit, exact: true }).click();
-  await expect(bob.locator('.lobby')).toContainText(annName);
+  await expect(bob.locator('.lobby')).toContainText('Annie');
   await expect(bob).toHaveURL(second);
-  // In the room Ann goes by her username, and her panel, by Bob's name for her, offers no request.
-  await expect(bob.locator('.lobby .player', { hasText: annName }).locator('.name')).toHaveText(annName);
-  await bob.locator('.lobby .player', { hasText: annName }).locator('.avatar-button').click();
+  // In the room too Ann goes by Bob's name for her, and her panel, with her username after it,
+  // offers no request.
+  await expect(bob.locator('.lobby .player', { hasText: 'Annie' }).locator('.name')).toHaveText('Annie');
+  await bob.locator('.lobby .player', { hasText: 'Annie' }).locator('.avatar-button').click();
   const annsPanel = bob.getByRole('dialog', { name: `Annie ${annName}` });
   await expect(annsPanel).toBeVisible();
   await expect(annsPanel.getByRole('button', { name: text.friends.addFromRoom })).toHaveCount(0);
@@ -282,4 +288,72 @@ test('a friend in a private room is asked to let a player in, and invites them o
   await catsNotice.getByRole('button', { name: text.friends.askIgnore }).click();
   await expect(catsNotice).toHaveCount(0);
   await expect(annsCard.getByRole('button', { name: text.friends.askJoinRoom })).toBeEnabled();
+});
+
+test("a friend goes by the player's name for them in a game, to the player alone and not on a big screen", async ({
+  browser,
+}) => {
+  const text = TEXT.zh;
+  const names: Record<string, string> = {};
+  // Ann and Bob have accounts; the others are guests.
+  const table = await seatTable(browser, 'zh', async (page, seat) => {
+    if (seat !== 'Ann' && seat !== 'Bob') return;
+    names[seat] = own(seat);
+    await register(page, names[seat]);
+  });
+  const { red: ann, blue: cat } = table.captains;
+  const bob = table.guessers.red;
+  const annName = names.Ann as string;
+  const bobName = names.Bob as string;
+  const avatar = (page: Page, name: string) =>
+    page.getByRole('button', { name: interpolate(text.room.viewProfile, { name }), exact: true }).first();
+
+  // Bob asks Ann to be friends from her avatar in the game, and she accepts from his.
+  await avatar(bob, annName).click();
+  await bob.getByRole('dialog').getByRole('button', { name: text.friends.addFromRoom }).click();
+  await bob
+    .getByRole('dialog', { name: interpolate(text.friends.addTitle, { name: annName }) })
+    .getByRole('button', { name: text.friends.addSubmit })
+    .click();
+  await expect(bob.getByText(text.friends.requestSent)).toBeVisible();
+  await avatar(ann, bobName).click();
+  await ann.getByRole('dialog').getByRole('button', { name: text.friends.accept }).click();
+  await expect(ann.getByRole('dialog')).toHaveCount(0);
+
+  // Bob gives her a name of his own from her panel; the game calls her by it at once, for him.
+  const rename = async (shown: string, alias: string) => {
+    await avatar(bob, shown).click();
+    await bob.getByRole('dialog').getByRole('button', { name: text.friends.aliasEdit }).click();
+    const naming = bob.getByRole('dialog', { name: interpolate(text.friends.aliasTitle, { name: annName }) });
+    await naming.getByLabel(text.friends.aliasLabel).fill(alias);
+    await naming.getByRole('button', { name: text.friends.aliasSave }).click();
+    await expect(bob.getByRole('dialog')).toHaveCount(0);
+  };
+  await rename(annName, '\u5b89\u59ae\u8001\u5e08');
+  await expect(avatar(bob, '\u5b89\u59ae\u8001\u5e08')).toBeVisible();
+  const groups = await openGroups(bob);
+  await expect(groups.locator('.player .name', { hasText: '\u5b89\u59ae\u8001\u5e08' })).toBeVisible();
+  await expect(groups).not.toContainText(annName);
+  await closeSheet(bob);
+  // Her panel says who she is, by his name for her and then her username.
+  await avatar(bob, '\u5b89\u59ae\u8001\u5e08').click();
+  await expect(bob.getByRole('dialog', { name: `\u5b89\u59ae\u8001\u5e08 ${annName}` })).toBeVisible();
+  await closeSheet(bob);
+
+  // Anyone else calls her by her username, and so does a big screen, even one in Bob's browser, as
+  // a reaction of hers shows.
+  await expect(avatar(cat, annName)).toBeVisible();
+  const bobsScreen = await bob.context().newPage();
+  await bobsScreen.goto(`${table.url}/screen`);
+  await expect(bobsScreen.locator('.screen-game .board .card')).toHaveCount(25);
+  await ann.locator('.sticky-clock').getByRole('button', { name: text.emotes.open }).click();
+  await ann.locator('[role=dialog]').getByRole('button', { name: text.emotes.phrases.reviewer2 }).click();
+  const said = (name: string) => interpolate(text.emotes.bubble, { name, phrase: text.emotes.phrases.reviewer2 });
+  await expect(bob.locator('.bubble')).toHaveText(said('\u5b89\u59ae\u8001\u5e08'));
+  for (const page of [cat, table.screen, bobsScreen]) await expect(page.locator('.bubble')).toHaveText(said(annName));
+
+  // Another name shows without a reload.
+  await rename('\u5b89\u59ae\u8001\u5e08', '\u5b89\u59ae');
+  await expect(avatar(bob, '\u5b89\u59ae')).toBeVisible();
+  await expect(avatar(bob, '\u5b89\u59ae\u8001\u5e08')).toHaveCount(0);
 });

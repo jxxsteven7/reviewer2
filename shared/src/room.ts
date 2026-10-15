@@ -14,8 +14,12 @@ export interface PlayerView {
   id: string;
   // An account's username, an AI player's persona, or for a guest "Guest" and the number, for
   // whatever reads the view without the interface's words; the client names guests and AI players
-  // in the language of the interface (docs/architecture.md#players-and-identity).
+  // in the language of the interface (docs/architecture.md#players-and-identity), and a friend by
+  // the name the viewer gives them, if any (docs/architecture.md#friends).
   name: string;
+  // Set by the client alone: an account's username, kept as it puts another name in `name`, for
+  // the default avatar, which is drawn from the username, and to tell accounts apart.
+  username?: string;
   // A guest's number in the room: guests are numbered in the order they first came in, and a guest
   // who leaves and comes back from the same browser has the same number again. Nobody else has one.
   guest?: number;
@@ -35,8 +39,10 @@ export interface PlayerView {
   takenOver?: true;
 }
 
-// A friend whom the viewer has invited, as the start bar shows them.
+// A friend whom the viewer has invited, as the start bar shows them, with the handle of their
+// public profile (accounts.ts), by which the client finds the name the viewer gives them.
 export interface InvitedView {
+  handle: string;
   username: string;
   avatar: string | null;
 }

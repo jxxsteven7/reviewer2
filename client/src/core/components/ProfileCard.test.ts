@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
+import { knowAliases } from '../names';
 import ProfileCard from './ProfileCard.vue';
 
 // Who the browser is, and the requests the card makes.
@@ -157,6 +158,29 @@ describe('ProfileCard', () => {
     await flushPromises();
     expect(stranger.find('section.duo').exists()).toBe(false);
     stranger.unmount();
+  });
+
+  // The page of a friend whom the viewer gives a name, as a shared link opens it (ProfilePage.vue):
+  // the name, with the username after it in small grey type, and the name where it says the two.
+  test("names a friend by the viewer's name for them, with the username after it", async () => {
+    signedIn.account.summary = { handle: 'b1b2c3d4e5f6' };
+    knowAliases([{ handle: 'a1b2c3d4e5f6', alias: 'Prof. A' }]);
+    const duo = { wonTogether: 5, lostTogether: 2, against: 4, beat: 1, beaten: 3, titles: [] };
+    signedIn.request.mockResolvedValue({ ok: true, profile: profile({ duo }) });
+    const wrapper = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
+    await flushPromises();
+    expect(wrapper.get('.name').text()).toBe('Prof. A Ann');
+    expect(wrapper.get('.name .username').text()).toBe('Ann');
+    expect(wrapper.get('.initial').attributes('data-initial')).toBe('A');
+    expect(wrapper.get('section.duo h3').text()).toBe('You and Prof. A');
+    wrapper.unmount();
+    knowAliases([]);
+
+    const plain = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
+    await flushPromises();
+    expect(plain.get('.name').text()).toBe('Ann');
+    expect(plain.find('.name .username').exists()).toBe(false);
+    plain.unmount();
   });
 
   test('is not the author for any other account, and hides what the owner does not show', async () => {

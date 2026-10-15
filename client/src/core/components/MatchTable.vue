@@ -81,6 +81,7 @@ const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDe
               <AvatarButton
                 :player-id="inRoom(line.playerId)"
                 :name="line.name"
+                :username="line.username"
                 :guest="line.guest"
                 :avatar="line.avatar"
                 :waiting="offline(line.playerId)"

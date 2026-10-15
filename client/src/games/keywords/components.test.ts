@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { computed, defineComponent, h } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { bubbles } from '../../core/emotes';
+import { knowAliases } from '../../core/names';
 import { clearMemory, readStored, writeStored } from '../../core/storage';
 import { seenIn } from './chat';
 import { toasts } from '../../core/toast';
@@ -513,6 +514,32 @@ describe('KeywordsCard', () => {
     expect(wrapper.findAll('.choosers .avatar').map((avatar) => avatar.classes('veiled'))).toEqual([false, true]);
     expect(wrapper.find('.choosers .wait').exists()).toBe(false);
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann and Cat');
+  });
+
+  // Names that the viewer gives friends need not differ, from each other or from usernames: the
+  // avatars are the usernames', and each chooser shows once.
+  test("names a friend by the viewer's name for them, with the username's avatar", () => {
+    const wrapper = mount(KeywordsCard, {
+      props: {
+        card,
+        index: 3,
+        selectable: true,
+        selected: false,
+        choosers: [
+          { name: 'Prof. A', username: 'Ann', online: true },
+          { name: 'Prof. A', username: 'Abe', online: true },
+        ],
+      },
+      global: global(),
+    });
+    expect(wrapper.findAll('.choosers .initial').map((initial) => initial.attributes('data-initial'))).toEqual([
+      'A',
+      'A',
+    ]);
+    expect(wrapper.findAll('.choosers .avatar')).toHaveLength(2);
+    expect(wrapper.get('button').attributes('aria-label')).toBe(
+      'Baseline, not revealed, chosen by Prof. A and Prof. A',
+    );
   });
 
   test("shows the group's mark in the tint of its color, with its sticker, and names it to screen readers", () => {
@@ -1050,6 +1077,40 @@ describe('ReplayViewer', () => {
     ]);
     expect(buttons[2]?.get('.initial').attributes('data-initial')).toBe('D');
     expect(buttons[1]?.get('.initial').attributes('data-initial')).toBe('G');
+  });
+
+  // The viewer's own name for a friend, as everywhere (names.ts): in the bars, the steps and the
+  // panel, with the username after it on the panel's whole page; the avatar is the username's.
+  test("names a friend by the viewer's name for them, with the username after it on the whole page", async () => {
+    knowAliases([{ handle: 'h-ann', alias: 'Prof. A' }]);
+    const byAnn: ShownReplay = {
+      ...replay,
+      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'ann', at: 0 }] }],
+    };
+    const wrapper = mount(ReplayViewer, {
+      props: { replay: byAnn },
+      global: { ...global(), stubs: { teleport: true, ProfileCard: true } },
+    });
+    await wrapper.get('input[type="range"]').setValue('2');
+    expect(wrapper.get('.step').text()).toContain('Prof. A revealed “Baseline”');
+    const ann = wrapper.findAll('.scores button.avatar-button')[0];
+    expect(ann?.attributes('aria-label')).toBe("View Prof. A's profile");
+    expect(ann?.get('.initial').attributes('data-initial')).toBe('A');
+    await ann?.trigger('click');
+    const dialogs = () => wrapper.findAll('[role="dialog"]');
+    expect(dialogs()[0]?.get('h2').text()).toBe('Prof. A Ann');
+    const button = (text: string) =>
+      dialogs()[0]
+        ?.findAll('.actions button')
+        .find((found) => found.text() === text);
+    await button('Open the full page')?.trigger('click');
+    expect(dialogs()[1]?.get('h2').text()).toBe('Prof. A Ann');
+    expect(dialogs()[1]?.get('h2 .subtitle').text()).toBe('Ann');
+    await dialogs()[1]?.get('button.back').trigger('click');
+    await button('View moves')?.trigger('click');
+    expect(dialogs()[1]?.get('h2').text()).toBe('Moves by Prof. A');
+    wrapper.unmount();
+    knowAliases([]);
   });
 
   test("opens a player's panel from their avatar, with their moves over it, which take the replay to their step", async () => {
