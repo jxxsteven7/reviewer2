@@ -166,13 +166,16 @@ describe('the feedback contributions', () => {
     expect(wrapper.findAll('.name')[3]?.text()).toBe('\u4e00\u4f4d\u533f\u540d\u73a9\u5bb6');
   });
 
-  test('keep what follows the name in one piece, which wraps under itself, and hang the avatar before it', async () => {
+  test('keep what follows the name in one piece, the dash with it, which wraps under itself, and hang the avatar', async () => {
     const wrapper = await opened();
     const items = wrapper.findAll('li');
-    // Every entry: who, then the rest as one piece, the dash first when there is a sentence.
+    // Every entry: who, then the rest as one piece, which goes to a line of its own after a long
+    // name: the dash, when there is a sentence, and what follows it, which wraps under itself.
     for (const item of items) {
-      expect(item.get('.said').find('.meta').exists()).toBe(true);
-      expect(item.find('.dash').exists()).toBe(item.find('.what').exists());
+      const rest = item.get('.entry > .rest');
+      expect(rest.get('.said').find('.meta').exists()).toBe(true);
+      expect(rest.find('.dash').exists()).toBe(item.find('.what').exists());
+      expect(item.findAll('.entry > .dash')).toHaveLength(0);
     }
     // An entry with an avatar keeps a column for it; the others start at the edge.
     expect(items.map((item) => item.get('.entry').classes('hangs'))).toEqual([false, false, true, false, true]);

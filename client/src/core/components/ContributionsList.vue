@@ -18,7 +18,8 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // account's avatar before its username: a tap on either opens the account's panel over the home
 // page, as an avatar does anywhere else (ProfilePanel.vue). Any other name, and what they did, is
 // plain text. What follows the name is one piece, which wraps under itself rather than under the
-// name, and an avatar hangs in a column of its own before the name.
+// name, and goes to a line of its own after a long name; an avatar hangs in a column of its own
+// before the name.
 const { t } = useI18n();
 const language = useLanguage();
 
@@ -56,15 +57,18 @@ const sections = ({ contributions }: Contributions) =>
           <span v-else class="name">{{
             entry.deleted ? t('contributions.deleted') : (entry.name ?? t('contributions.anonymous'))
           }}</span>
-          <span v-if="entry.summary" class="dash"> &mdash; </span>
-          <span class="said">
-            <span v-if="entry.summary" class="what">{{ entry.summary[language] }}</span>
-            <span class="meta"
-              >&nbsp;<a :href="`${REPOSITORY_URL}/issues/${entry.issue}`" target="_blank" rel="noopener noreferrer"
-                >#{{ entry.issue }}</a
+          <!-- The space before the dash reads in the text, and takes no room in the line (.rest). -->
+          <span class="rest"
+            >{{ ' ' }}<span v-if="entry.summary" class="dash">&mdash; </span>
+            <span class="said">
+              <span v-if="entry.summary" class="what">{{ entry.summary[language] }}</span>
+              <span class="meta"
+                >&nbsp;<a :href="`${REPOSITORY_URL}/issues/${entry.issue}`" target="_blank" rel="noopener noreferrer"
+                  >#{{ entry.issue }}</a
+                >
+                &middot; {{ entry.month }}</span
               >
-              &middot; {{ entry.month }}</span
-            >
+            </span>
           </span>
         </span>
       </FoldedSection>
@@ -73,11 +77,15 @@ const sections = ({ contributions }: Contributions) =>
 </template>
 
 <style scoped>
-/* Who, then what they contributed as one piece, which wraps under itself rather than under the
-   name. An avatar hangs in a column of its own before the name, so that the name lines up with the
-   names of the entries without one. */
+/* Who, then the rest as one piece: the dash, and what they contributed, which wraps under itself
+   (the gap before the dash is the name's margin, so that the rest starts at the edge of a line of
+   its own)
+   rather than under the name. After a name too long to leave the rest three fifths of the line,
+   the rest goes to a line of its own, under the name. An avatar hangs in a column of its own before
+   the name, so that the name lines up with the names of the entries without one. */
 .entry {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
 }
 
@@ -87,9 +95,17 @@ const sections = ({ contributions }: Contributions) =>
 
 .name {
   flex: none;
-  max-width: 45%;
+  max-width: 100%;
+  margin-inline-end: 0.3em;
   color: var(--ink);
   font-weight: var(--weight-bold);
+}
+
+.rest {
+  display: flex;
+  flex: 1 1 60%;
+  align-items: baseline;
+  min-width: 0;
 }
 
 .dash {
