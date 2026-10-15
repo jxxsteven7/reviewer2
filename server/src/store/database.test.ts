@@ -1041,15 +1041,26 @@ describe('a database in DATA_DIR', () => {
       -- A game kept with what kind of game it was, but a log of the first version.
       ${kept('oldlog', '2026-10-03T14:30:00.000Z')}
       UPDATE replays SET log = '${log('oldlog', { v: 1 })}' WHERE game_id = 'oldlog';
-      -- A game kept with its whole record but a guest whose number nothing says, in a match.
+      -- A game kept with its whole record but a guest whose number nothing says, the first game of
+      -- a match of two, whose second game is whole, with a title of that game.
       ${kept('guest', '2026-10-03T15:00:00.000Z')}
       UPDATE replays SET guests = 1, in_match = 1 WHERE game_id = 'guest';
+      ${kept('paired', '2026-10-03T15:30:00.000Z')}
+      UPDATE replays SET in_match = 1 WHERE game_id = 'paired';
       INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
         match_id, match_game, match_games) VALUES
-        (2, 'keywords', 'guest', '2026-10-03T15:00:00.000Z', 'red', 'captain', 'red', 1, 'oral', 15, 'm2', 1, 1);
+        (2, 'keywords', 'guest', '2026-10-03T15:00:00.000Z', 'red', 'captain', 'red', 1, 'oral', 15, 'm2', 1, 2),
+        (2, 'keywords', 'paired', '2026-10-03T15:30:00.000Z', 'red', 'captain', 'red', 1, 'oral', 10, 'm2', 2, 2);
+      INSERT INTO game_players VALUES ('guest', 'p1', 2), ('paired', 'p1', 2);
       INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
-        (2, 'keywords', 'm2', '2026-10-03T15:00:00.000Z', 1, 1, 2, 15, 'best_paper');
+        (2, 'keywords', 'm2', '2026-10-03T15:30:00.000Z', 2, 1, 2, 25, 'best_paper');
       INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (2, 'best_paper', 'm2', 'now');
+      INSERT INTO titles (account_id, title, game_id, turn, awarded_at) VALUES (2, 'opening_record', 'paired', 1, 'now');
+      -- A game kept with two guests, of whom the replay that the server kept numbers one.
+      ${kept('half', '2026-10-03T16:00:00.000Z')}
+      UPDATE replays SET guests = 2, data = '${data}' WHERE game_id = 'half';
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points) VALUES
+        (2, 'keywords', 'half', '2026-10-03T16:00:00.000Z', 'red', 'captain', 'red', 1, 'oral', 7);
       -- The streaks as they stood, counting everything, and Ann and Bob, friends, who played together
       -- in the games that go.
       INSERT INTO streaks VALUES (1, 9, 9, 9, 1), (2, 9, 9, 9, 1);
@@ -1061,7 +1072,8 @@ describe('a database in DATA_DIR', () => {
     expect(migrated).toMatchObject({ schema: 22, migratedFrom: 21 });
     const { db } = migrated;
     const all = (sql: string) => db.prepare(sql).all();
-    // The games that couldn't be completed are gone, with their records, titles and who was who.
+    // The games that couldn't be completed are gone, with their records, titles and who was who, and
+    // so is the whole game of the match that the game with the unnumbered guest was in.
     expect(all('SELECT game_id AS game, practice FROM replays ORDER BY game_id')).toEqual([
       { game: 'ai', practice: 0 },
       { game: 'cut', practice: 0 },

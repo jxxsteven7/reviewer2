@@ -538,4 +538,35 @@ describe('the record of a game', () => {
     expect(players()).toHaveLength(1);
     expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
   });
+
+  test("keeps the other players' records and the game when the database refuses one player's record", async () => {
+    server = await startServer();
+    // Ann and Cal, with accounts, play. The database refuses Ann's record, as the checks on the
+    // table refuse a record in an old format; the server says so, and keeps the rest.
+    server.db.exec(
+      'CREATE TRIGGER refuse_ann BEFORE INSERT ON game_records WHEN NEW.account_id = 1 ' +
+        "BEGIN SELECT RAISE(ABORT, 'refused'); END",
+    );
+    const anns = new Browser(server.url);
+    const cals = new Browser(server.url);
+    expect((await anns.register('Ann')).body).toEqual({ ok: true });
+    expect((await cals.register('Cal')).body).toEqual({ ok: true });
+    const ann = track(await anns.connect());
+    const reply = await ann.send('room:create', { game: 'test', language: 'en', fields: ['general'], play: true });
+    if (!reply.ok) throw new Error(reply.error);
+    const cal = track(await cals.connect());
+    expect(await cal.send('room:join', { code: reply.code, play: true })).toMatchObject({ ok: true });
+    await ann.waitFor((state) => state.players.length === 2);
+    expect(await ann.send('room:start', { round: 0 })).toEqual({ ok: true });
+    await ann.waitFor((state) => state.phase === 'playing');
+    expect(await ann.send('test:finish')).toEqual({ ok: true });
+    await ann.waitFor((state) => state.phase === 'ended');
+    await until(() => kept().length === 1, 'the record');
+    expect(server.db.prepare('SELECT account_id AS account FROM game_records').all()).toEqual([{ account: 2 }]);
+    expect(players()).toEqual([
+      { playerId: ann.state?.me, accountId: 1 },
+      { playerId: cal.state?.me, accountId: 2 },
+    ]);
+    expect(server.logs.filter(({ event }) => event === 'error').map(({ fields }) => fields?.where)).toEqual(['record']);
+  });
 });

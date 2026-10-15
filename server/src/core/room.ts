@@ -682,12 +682,15 @@ export class Room {
   // A guest's seat becomes an account's: the member logged in or registered while they were in the
   // room, and is found by the account's key from now on. The name becomes the username, and the
   // guest's number goes; their browser keeps it in the room, should they come back as a guest.
-  // False when the member isn't a guest here.
+  // What the guest did under the IDs they had before leaving and coming back during the game is
+  // found by the new key too, as a guest's still, so that the record of the game keeps their
+  // number. False when the member isn't a guest here.
   adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
     const member = this.members.get(id);
     if (!member || member.account) return false;
     const from = member.key;
     if (this.game.rekey) this.data = this.game.rekey(this.data, id, from, key);
+    for (const gone of this.#gone.values()) if (gone.key === from) gone.key = key;
     // Whoever reported the guest has reported the same player, whom they don't report anew.
     const reporters = this.#reported.get(from);
     this.#reported.delete(from);

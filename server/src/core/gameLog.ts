@@ -56,7 +56,8 @@ export type GameLogEvent = (typeof GAME_LOG_EVENTS)[number];
 // describes each of them (GameModule.seated), or null for a game that doesn't say. `agents` names
 // the AI players among them, by player ID, with the persona each played as; a game without any has
 // none. `guests` has the number in the room of each guest who played in the game, by player ID: a
-// guest who left and came back has had two IDs with the one number. A game without any has none.
+// guest who left and came back has had two IDs with the one number, and one who logged in during
+// the game keeps it for the IDs they had as a guest. A game without any has none.
 // `deleted` has the player IDs of the accounts deleted since, in the order they went, once each; a
 // log without any has none.
 export interface GameLogData {

@@ -1,4 +1,11 @@
-import { defaultSettings, TEAMS, type KeywordsSettings, type ReplayGroup, type ShownReplay } from '@reviewer2/shared';
+import {
+  defaultSettings,
+  TEAMS,
+  type KeywordsSettings,
+  type ReplayGroup,
+  type ShownReplay,
+  type Team,
+} from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import { testWords } from '../../../test/helpers';
 import type { GameLogData } from '../../core/gameLog';
@@ -202,8 +209,8 @@ describe('a replay worked out from the log of the game', () => {
 });
 
 // Random games in a room, with players who come, sit, change seats, are benched or removed, leave
-// and come back, time that runs out and a chair who pauses: the replay worked out from each game's
-// log is the game as it was played, with the groups as it ended.
+// and come back, guests who log in, time that runs out and a chair who pauses: the replay worked
+// out from each game's log is the game as it was played, with the groups as it ended.
 
 const letters = (n: number): string =>
   (n < 26 ? '' : letters(Math.floor(n / 26) - 1)) + String.fromCharCode(97 + (n % 26));
@@ -227,6 +234,7 @@ function play(seed: number) {
   if (!created.ok) throw new Error(created.error);
   const room: Room = created.room;
   let socket = 0;
+  let logins = 0;
   const attach = (id: string) => {
     const member = room.members.get(id);
     if (member) room.attach(member, `s${(socket += 1)}`);
@@ -313,11 +321,19 @@ function play(seed: number) {
     } else if (roll < 82) {
       const id = anyone();
       if (everyone.length > 2) room.drop(id);
-    } else if (roll < 86) {
+    } else if (roll < 84) {
       // Someone new, or someone coming back with the key they had.
       const key = rng.int(2) === 0 ? `k${keys.length}` : pick(keys, rng);
       if (!keys.includes(key)) keys.push(key);
       if (!room.memberByKey(key)) join(key, rng.int(2) === 0);
+    } else if (roll < 86) {
+      // A guest logs in.
+      const guests = everyone.filter((id) => room.members.get(id)?.guest !== null);
+      if (guests.length > 0) {
+        logins += 1;
+        const id = 100 + logins;
+        room.adopt(pick(guests, rng), `a${id}`, `User${id}`, account(id).account);
+      }
     } else if (roll < 90) {
       room.act(room.chairId ?? anyone(), pick(['keywords:pause', 'keywords:resume'], rng), { gameId });
     } else if (roll < 92) {
@@ -397,5 +413,95 @@ describe('the replay of a random game', () => {
     }
     // Enough of the games finished for this to say something.
     expect(finished).toBeGreaterThan(40);
+  });
+});
+
+// A guest who leaves during the game and comes back with the same browser has their number again,
+// and keeps it for what they did before leaving once they log in: the record of the game numbers
+// both IDs they had as a guest, and the account they have since is theirs from then on.
+describe('the replay of a game in which a guest logged in', () => {
+  test('shows what they did as a guest by their number, and what they did since as the account', () => {
+    const clock = { now: 0 };
+    const rooms = new Rooms(testWords(), seededRng(7), () => clock.now);
+    const account = (id: number) => ({
+      username: `User${id}`,
+      account: { id, handle: `handle${id}`, avatar: null, rank: 'undergraduate' as const, agents: false },
+    });
+    const created = rooms.create({
+      game: keywordsGame,
+      language: 'en',
+      fields: ['general'],
+      key: 'k1',
+      play: true,
+      as: account(1),
+    });
+    if (!created.ok) throw new Error(created.error);
+    const room: Room = created.room;
+    room.attach(created.member, 's1');
+    const changed = room.setSettings({
+      settings: { ...defaultSettings('en'), firstClueTime: 0, clueTime: 0, guessTime: 0 },
+    });
+    if (!changed.ok) throw new Error(changed.error);
+    const join = (key: string, as: ReturnType<typeof account> | null = null) => {
+      const joined = room.join(key, true, as);
+      if (!joined.ok) throw new Error(joined.error);
+      room.attach(joined.member, `s-${joined.member.id}`);
+      return joined.member.id;
+    };
+    const ann = created.member.id;
+    const bob = join('k2', account(2));
+    const cat = join('k3', account(3));
+    const guest = join('kg');
+    const seat = (id: string, team: Team, role: 'captain' | 'guesser') => room.act(id, 'keywords:seat', { team, role });
+    seat(ann, 'red', 'captain');
+    seat(guest, 'red', 'guesser');
+    seat(bob, 'blue', 'captain');
+    seat(cat, 'blue', 'guesser');
+    expect(room.start(room.round)).toMatchObject({ ok: true });
+    const game = () => (room.data as KeywordsData).game as NonNullable<KeywordsData['game']>;
+    const gameId = room.gameId as string;
+    const moment = () => ({ gameId, turn: game().turn });
+    const own = (team: Team) => game().cards.findIndex((card) => card.color === team && !card.revealed);
+    // Blue plays its turn first when the deal gave it the first turn.
+    if (game().team === 'blue') {
+      expect(room.act(bob, 'keywords:clue', { ...moment(), word: 'Zqa', count: 1 })).toMatchObject({ ok: true });
+      expect(room.act(cat, 'keywords:reveal', { ...moment(), card: own('blue') })).toMatchObject({ ok: true });
+      expect(room.act(cat, 'keywords:pass', moment())).toMatchObject({ ok: true });
+    }
+    expect(room.act(ann, 'keywords:clue', { ...moment(), word: 'Zqb', count: 2 })).toMatchObject({ ok: true });
+    expect(room.act(guest, 'keywords:reveal', { ...moment(), card: own('red') })).toMatchObject({ ok: true });
+    // The guest leaves, comes back with the same browser, which gives them their number again, logs
+    // in, and reveals Reviewer 2, which ends the game.
+    room.drop(guest);
+    const back = join('kg');
+    expect(room.members.get(back)?.guest).toBe(1);
+    seat(back, 'red', 'guesser');
+    expect(room.adopt(back, 'k9', 'User9', account(9).account)).toBe(true);
+    const reviewer2 = game().cards.findIndex((card) => card.color === 'reviewer2');
+    expect(room.act(back, 'keywords:reveal', { ...moment(), card: reviewer2 })).toMatchObject({ ok: true });
+    expect(room.phase).toBe('ended');
+
+    const record = room.record();
+    if (!record?.log) throw new Error('no record');
+    expect(record.log.guests).toEqual({ [guest]: 1 });
+    expect(record.accounts).toContainEqual({ playerId: back, accountId: 9 });
+    expect(record.counts).toEqual({ accounts: 4, guests: 0, agents: 0 });
+    const replay = shownReplay({
+      setup: record.setup,
+      log: record.log,
+      accounts: new Map(
+        record.accounts.map(({ playerId, accountId }) => [
+          playerId,
+          { username: `User${accountId}`, avatar: null, handle: `handle${accountId}` },
+        ]),
+      ),
+      viewer: new Set(),
+    });
+    expect(replay?.groups).toEqual([
+      { team: 'red', captain: ann, guessers: [back] },
+      { team: 'blue', captain: bob, guessers: [cat] },
+    ]);
+    expect(replay?.people[guest]).toEqual({ guest: 1 });
+    expect(replay?.people[back]).toMatchObject({ name: 'User9' });
   });
 });

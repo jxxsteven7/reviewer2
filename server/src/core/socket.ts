@@ -341,20 +341,30 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
-      const record = {
-        game: room.game.id,
-        gameId,
-        points: points?.get(member.key) ?? 0,
-        match,
-        agents: room.agentsPlayed,
-        ...result,
-      };
-      const streak = accounts.record(account.id, record);
-      if (streak) {
-        room.noteStreak(member.id, streak);
-        recorded.set(account.id, { playerId: member.id, side: result.side, won: result.won });
-      }
-      room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id), account.agents);
+      // What goes wrong for one account, as a record that the database refuses, keeps neither the
+      // others' records nor the game from being kept.
+      safely('record', () => {
+        const record = {
+          game: room.game.id,
+          gameId,
+          points: points?.get(member.key) ?? 0,
+          match,
+          agents: room.agentsPlayed,
+          ...result,
+        };
+        const streak = accounts.record(account.id, record);
+        if (streak) {
+          room.noteStreak(member.id, streak);
+          recorded.set(account.id, { playerId: member.id, side: result.side, won: result.won });
+        }
+        room.updateAccount(
+          member.id,
+          account.username,
+          avatarUrl(account),
+          accounts.rankOf(account.id),
+          account.agents,
+        );
+      });
     }
     if (recorded.size > 1) safely('duos', () => noteDuos(room, recorded));
     const kept = room.record();

@@ -572,7 +572,7 @@ export const MIGRATIONS: readonly string[] = [
   // - the games kept from before the record of every game (migration 15), which keep nothing of what
   //   kind of game they were, `started_at` and the rest, and so most of them have no log, or a log
   //   of the first version; any other game whose log isn't of the second version (gameLog.ts); the
-  //   games kept with guests whose numbers nothing says; the games of the first game played under
+  //   games kept with a guest whose number nothing says; the games of the first game played under
   //   rules before version 4, those of today (RULES_VERSION in server/src/games/keywords/index.ts),
   //   whose points and titles were counted under other rules; and the records that have no kept
   //   game and ended before the first game kept under today's rules, from before games were kept
@@ -580,13 +580,16 @@ export const MIGRATIONS: readonly string[] = [
   //   the game, keeps its records since. Each goes with its records, the titles that it brought, who
   //   was who in it and what the AI players did in it.
   // - the matches from before the records of games named their match (migration 14), which no
-  //   record names, and those that a game that goes was played in, with the titles that they
-  //   awarded; and the titles from before the matches had IDs, of neither a match nor a game.
+  //   record names, and those that a game that goes was played in, with their other games and the
+  //   titles that they awarded; and the titles from before the matches had IDs, of neither a match
+  //   nor a game.
   //
   // The rest is completed: a game from before the practice rooms (migration 18) wasn't played in
   // one. The replays that the server kept go (`data`): a replay is worked out from how the game began
   // and its log, as the game is opened, and the log gets the number of each guest who played in it
-  // (`guests`), from the replay that kept it. The tables of the games, their records and the titles
+  // (`guests`), from the replay that kept it, which numbered those in the groups at the end and
+  // those who gave a clue or revealed a card: a game with a guest that it doesn't number goes, as
+  // above. The tables of the games, their records and the titles
   // are rebuilt, as migration 14 rebuilt the titles, every row kept with its id and the count that
   // AUTOINCREMENT goes on from, so that nothing in an old format comes back: a kept game has
   // everything that the record of every game keeps, and a winner only when it finished; a title
@@ -607,7 +610,8 @@ export const MIGRATIONS: readonly string[] = [
   CREATE TEMP TABLE gone_games (game_id TEXT PRIMARY KEY);
   INSERT INTO gone_games SELECT game_id FROM replays
     WHERE started_at IS NULL OR (log IS NOT NULL AND json_extract(log, '$.v') IS NOT 2)
-      OR (guests > 0 AND log IS NOT NULL AND json_type(log, '$.guests') IS NULL)
+      OR (guests > 0 AND log IS NOT NULL
+        AND (SELECT count(DISTINCT member.value) FROM json_each(replays.log, '$.guests') AS member) < guests)
       OR (game = 'keywords' AND rules IS NOT 4);
   INSERT OR IGNORE INTO gone_games SELECT game_id FROM game_records
     WHERE game_id NOT IN (SELECT game_id FROM replays) AND ended_at < coalesce(
@@ -619,6 +623,8 @@ export const MIGRATIONS: readonly string[] = [
     WHERE match_id IS NOT NULL AND game_id IN (SELECT game_id FROM gone_games);
   INSERT OR IGNORE INTO gone_matches SELECT match_id FROM match_records
     WHERE match_id NOT IN (SELECT match_id FROM game_records WHERE match_id IS NOT NULL);
+  INSERT OR IGNORE INTO gone_games SELECT game_id FROM game_records
+    WHERE match_id IN (SELECT match_id FROM gone_matches);
 
   DELETE FROM game_records WHERE game_id IN (SELECT game_id FROM gone_games);
   DELETE FROM replays WHERE game_id IN (SELECT game_id FROM gone_games);
