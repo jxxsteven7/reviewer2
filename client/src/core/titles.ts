@@ -12,7 +12,8 @@ import { streakTitle } from './streaks';
 // Every title that a page shows, which a tap explains (TitleInfo.vue,
 // docs/architecture.md#titles): the titles that matches award and games bring, the streaks, the
 // feedback contributions, the author's badge, the decision letter that a group gets at the end of a game,
-// and the titles that friends hold among an account's friends. The academic rank opens its ladder instead
+// the mark of a game on the record that an AI played in, and the titles that friends hold among an
+// account's friends. The academic rank opens its ladder instead
 // (RankLadder.vue). What each title is and how it is won is under titles, duos and
 // game.letter.explain in the locale files. A streak is the longest of its kind on the record,
 // `best`, as the pills on the account page and the public profile show it, or else the run that
@@ -23,6 +24,7 @@ export type TitleRef =
   | { kind: 'contribution'; contribution: FeedbackKind }
   | { kind: 'author' }
   | { kind: 'verdict'; verdict: string }
+  | { kind: 'agents' }
   | { kind: 'duo'; duo: DuoTitle };
 
 // A component's translator, as far as the titles need it.
@@ -41,6 +43,8 @@ export function titleName(t: Translate, title: TitleRef, language: Language): st
       return t('playerPage.author');
     case 'verdict':
       return t(`game.letter.verdicts.${title.verdict}`);
+    case 'agents':
+      return t('account.profile.agentsGame');
     case 'duo':
       return t(`duos.names.${title.duo}`);
   }
@@ -62,6 +66,8 @@ export function titleExplanation(t: Translate, title: TitleRef): string[] {
       return [t('titles.author')];
     case 'verdict':
       return [t(`game.letter.explain.${title.verdict}`)];
+    case 'agents':
+      return [t('titles.agents'), t('lobby.agentNote')];
     case 'duo':
       return [t(`duos.explain.${title.duo}`, { min: DUO_MIN }), t('duos.private')];
   }
