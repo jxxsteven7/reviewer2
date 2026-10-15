@@ -848,10 +848,21 @@ describe('a database in DATA_DIR', () => {
       agents: { p3: 'reviewer1' },
     });
     const kept = JSON.stringify({ gameId: 'h', cards: [], history: [], groups: [], members: { p1: { guest: 1 } } });
+    // A game from after game_players, whose names say nothing more than its rows.
+    const later = JSON.stringify({ gameId: 'j', cards: [], history: [], players: { p1: 'Ann', p9: 'Cy' } });
     nineteenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES
+        (1, 'ann', 'ann', 'h', 'now'), (2, 'Bo', 'bo', 'h', 'now'), (3, 'Cy', 'cy', 'h', 'now');
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict) VALUES
+        (1, 'keywords', 'g', 'now', 'red', 'guesser', 'red', 1, 'oral'),
+        (2, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral'),
+        (1, 'keywords', 'j', 'now', 'red', 'guesser', 'red', 1, 'oral'),
+        (3, 'keywords', 'j', 'now', 'blue', 'guesser', 'red', 0, 'oral');
       INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('g', 'keywords', 'now', 'finished', '${named}');
       INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('h', 'keywords', 'now', 'finished', '${kept}');
       INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('i', 'keywords', 'now', 'withdrawn', NULL);
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('j', 'keywords', 'now', 'finished', '${later}');
+      INSERT INTO game_players VALUES ('j', 'p1', 1);
     `);
     nineteenth.db.close();
 
@@ -865,8 +876,17 @@ describe('a database in DATA_DIR', () => {
       ['g', { ...JSON.parse(named), players: undefined }],
       ['h', JSON.parse(kept)],
       ['i', null],
+      ['j', { ...JSON.parse(later), players: undefined }],
     ]);
     expect(rows[0]?.data).not.toContain('Ann');
+    // Ann revealed a card in the game from before as "Ann", now "ann"; the guest and Bo, a PI,
+    // whom the replay never named, give no row, nor does Cy in the game that had its rows.
+    expect(
+      migrated.db.prepare('SELECT game_id, player_id, account_id FROM game_players ORDER BY game_id').all(),
+    ).toEqual([
+      { game_id: 'g', player_id: 'p1', account_id: 1 },
+      { game_id: 'j', player_id: 'p1', account_id: 1 },
+    ]);
   });
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {

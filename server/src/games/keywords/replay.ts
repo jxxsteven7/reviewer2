@@ -57,9 +57,9 @@ export function keptReplay(data: KeywordsData, ctx: GameContext): KeywordsReplay
 // it is now, and one deleted since as deleted; a guest by their number; an AI player by its
 // persona. A replay from before says nothing of who was who: a player there whose account is gone
 // can't be told from a guest, so each of them is shown as a guest, numbered in the order of the
-// seats. One from before the records of the games (docs/architecture.md#game-records) says which
-// account was which player only for the accounts still there, so the account asking is shown as a
-// guest too, and its PIs are unknown: the clues of that time don't say who gave them. Someone a new
+// seats. One from before the records of the games (docs/architecture.md#game-records) knows only
+// the accounts that revealed a card under their username (migration 20), and its PIs are unknown:
+// the clues of that time don't say who gave them. Someone a new
 // replay doesn't know is left out, as a player who left.
 export function shownReplay({ replay: kept, log: read, accounts, viewer }: KeptReplay): ShownReplay {
   const replay = kept as KeywordsReplay;
