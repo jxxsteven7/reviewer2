@@ -1044,7 +1044,7 @@ describe('ReplayViewer', () => {
     expect(buttons.map((button) => button.attributes('aria-label'))).toEqual([
       "View Ann's profile",
       "View Guest 2's profile",
-      "View Deleted account's profile",
+      "View Deleted player's profile",
       "View Reviewer 1's profile",
     ]);
     expect(buttons[2]?.get('.initial').attributes('data-initial')).toBe('D');
