@@ -31,7 +31,8 @@ import type { KeywordsState } from './state';
 // account that played in it watches it again (GameModule.showReplay), worked out as it is opened
 // from how the game began and its log. The log holds every move that changed the game, in order,
 // and every seat taken, changed or left, so the game is played through again with them, by the
-// functions that made the moves (rules.ts), which take each move as the rules took it then.
+// functions that made the moves (rules.ts), which take each move as the rules took it then, and say
+// what it was as the rules do now, such as a move in the last seconds of its phase.
 
 // How a game began, as its record keeps it (GameModule.setup): the language and the settings, the
 // group that started, and the board with every color.
