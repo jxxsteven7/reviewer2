@@ -119,6 +119,18 @@ describe('useStickyHeight', () => {
       focus(button);
     }
     expect(scrollBy).not.toHaveBeenCalled();
+    // Nor can a sheet that lies over the page, fixed to the screen at the end of the body, however
+    // high its panel stands: the page's scrolling moves it nowhere.
+    const sheet = document.createElement('div');
+    sheet.style.position = 'fixed';
+    const panel = document.createElement('section');
+    panel.tabIndex = -1;
+    sheet.append(panel);
+    document.body.append(sheet);
+    place(panel, 80, 500);
+    focus(panel);
+    expect(scrollBy).not.toHaveBeenCalled();
+    sheet.remove();
     // Nothing once the bar is gone, or the page.
     await wrapper.setProps({ shown: false });
     await nextTick();

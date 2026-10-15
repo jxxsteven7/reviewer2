@@ -349,16 +349,37 @@ describe('UiSheet', () => {
     wrapper.unmount();
   });
 
+  // The button that opened the sheet may be in a bar that stays at the top of the screen, as the
+  // room menu's is: the focus goes back to it without the page being scrolled to where the bar
+  // stands on it.
+  test('gives the focus back to what opened it, without scrolling, when it closes', async () => {
+    const button = document.createElement('button');
+    button.id = 'opener';
+    document.body.append(button);
+    button.focus();
+    const focus = vi.spyOn(button, 'focus');
+    const wrapper = sheet('d', true);
+    await nextTick();
+    expect(document.activeElement?.closest('[role=dialog]')).not.toBeNull();
+    await wrapper.setProps({ open: false });
+    expect(active()).toBe('opener');
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    wrapper.unmount();
+    button.remove();
+  });
+
   test('gives the focus back when it is taken off the page open, as when it is closed', async () => {
     const button = document.createElement('button');
     button.id = 'opener';
     document.body.append(button);
     button.focus();
+    const focus = vi.spyOn(button, 'focus');
     const wrapper = sheet('e', true);
     await nextTick();
     expect(document.activeElement?.closest('[role=dialog]')).not.toBeNull();
     wrapper.unmount();
     expect(active()).toBe('opener');
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     button.remove();
   });
 
