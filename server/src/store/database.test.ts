@@ -13,6 +13,7 @@ import {
   type Database,
 } from './database';
 import { MIGRATIONS } from './migrations';
+import { RecordStore } from './records';
 
 const NOW = Date.UTC(2026, 9, 9, 13, 30, 5);
 
@@ -974,8 +975,10 @@ describe('a database in DATA_DIR', () => {
       INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
         (2, 'keywords', 'm2', '2026-10-03T15:00:00.000Z', 1, 1, 2, 15, 'best_paper');
       INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (2, 'best_paper', 'm2', 'now');
-      -- The streaks as they stood, counting everything.
+      -- The streaks as they stood, counting everything, and Ann and Bob, friends, who played together
+      -- in the games that go.
       INSERT INTO streaks VALUES (1, 9, 9, 9, 1), (2, 9, 9, 9, 1);
+      INSERT INTO friendships (requester_id, addressee_id, status, created_at) VALUES (1, 2, 'accepted', 'now');
     `);
     twentieth.db.close();
 
@@ -1020,6 +1023,10 @@ describe('a database in DATA_DIR', () => {
     // The streaks, counted again over the records that are left, without the game an AI played in:
     // Ann won, lost, and won with words of her own; Bob has no record left.
     expect(all('SELECT * FROM streaks')).toEqual([{ account_id: 1, best_wins: 1, best_losses: 1, run: 1, run_won: 1 }]);
+    // The ranks and what friends played together are worked out from the records that are left.
+    const records = new RecordStore(db);
+    expect([records.points(1), records.points(2)]).toEqual([17, 0]);
+    expect(records.duos(1)).toEqual(new Map());
     // Nothing in the old formats can come back.
     const refused = (sql: string) => expect(() => db.exec(sql), sql).toThrow(/constraint/i);
     refused("INSERT INTO titles (account_id, title, awarded_at) VALUES (1, 'black_hole', 'now')");
