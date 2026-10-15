@@ -300,13 +300,11 @@ function give() {
     box-shadow var(--motion);
 }
 
-/* The others lift and press as a sticker does (`press` in base.css); the chosen one stays pressed. */
+/* The others lift and press as a sticker does (`press` in base.css); the chosen one stays pressed,
+   in ink. */
 .count.chosen {
   transform: translate(var(--shift-1), var(--shift-1));
   box-shadow: none;
-}
-
-.count.chosen {
   background: var(--ink);
   color: var(--on-ink);
 }

@@ -124,7 +124,7 @@ function submit() {
       text: checked.value.text,
       ...(checkedContact.value.contact === null ? {} : { contact: checkedContact.value.contact }),
       ...(asksName.value && checkedCredit.value.credit !== null ? { credit: checkedCredit.value.credit } : {}),
-      // The server takes the account's username for the name.
+      // Signed with the account, which the server keeps in place of any name.
       ...(signer.value === null ? {} : { linkProfile: true }),
       // The schema takes 64 characters; a build is named by its commit.
       version: __APP_VERSION__.slice(0, 64),

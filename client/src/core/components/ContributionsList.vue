@@ -78,11 +78,10 @@ const sections = ({ contributions }: Contributions) =>
 
 <style scoped>
 /* Who, then the rest as one piece: the dash, and what they contributed, which wraps under itself
-   (the gap before the dash is the name's margin, so that the rest starts at the edge of a line of
-   its own)
-   rather than under the name. After a name too long to leave the rest three fifths of the line,
-   the rest goes to a line of its own, under the name. An avatar hangs in a column of its own before
-   the name, so that the name lines up with the names of the entries without one. */
+   rather than under the name; the gap before the dash is the name's margin, so that the rest
+   starts at the edge of a line of its own. After a name too long to leave the rest three fifths of
+   the line, the rest goes to a line of its own, under the name. An avatar hangs in a column of its
+   own before the name; an entry without one starts at the edge. */
 .entry {
   display: flex;
   flex-wrap: wrap;

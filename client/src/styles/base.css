@@ -105,12 +105,14 @@ button {
    lifts it a pixel, with its shadow a pixel longer; a press pushes it into its shadow, which goes;
    both ease. `press` is on a sticker that is its own button. Where the button is larger than the
    stickers that move in it, as an avatar's or a stack of avatars, the button is the `press-host`
-   and each sticker a `press-part`. A large sticker, with the large shadow, presses as far (`press-large`), and an ink
-   one, which has no shadow, only moves when pressed (`press-flat`). Nothing moves while the button
-   is disabled. */
+   and each sticker a `press-part`. A large sticker, with the large shadow, presses as far
+   (`press-large`), and an ink one, which has no shadow, only moves when pressed (`press-flat`). A
+   sticker whose shadow isn't ink, as a faded one's, sets `--press-ink` to its color, which the
+   lift keeps. Nothing moves while the button is disabled. */
 .press,
 .press-part {
   --press-shift: var(--shift-1);
+  --press-ink: var(--ink);
 
   transition:
     transform var(--motion),
@@ -126,7 +128,7 @@ button {
   .press:not(:disabled, .press-flat):hover,
   .press-host:not(:disabled):hover .press-part {
     transform: translate(-1px, -1px);
-    box-shadow: calc(var(--press-shift) + 1px) calc(var(--press-shift) + 1px) 0 var(--ink);
+    box-shadow: calc(var(--press-shift) + 1px) calc(var(--press-shift) + 1px) 0 var(--press-ink);
   }
 }
 
