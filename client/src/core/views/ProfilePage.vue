@@ -5,13 +5,15 @@ import { useI18n } from 'vue-i18n';
 import AccountEntry from '../components/AccountEntry.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
+import PageTitle from '../components/PageTitle.vue';
 import ProfileCard from '../components/ProfileCard.vue';
 import { errorKey } from '../errors';
 
 // A player's public page, /p/<handle> (docs/architecture.md#public-profiles), which anyone may
 // open, with or without an account, from the link that its player shares: the site itself shows an
-// account's page in a sheet (ProfilePanel.vue). The way back, when there is one, is in the masthead. An address that can't be a handle is answered as the server
-// answers a handle that is no account's.
+// account's page in a sheet (ProfilePanel.vue). The way back, when there is one, is on the bar of
+// its title (PageTitle.vue). An address that can't be a handle is answered as the server answers a
+// handle that is no account's.
 const props = defineProps<{ handle: string }>();
 const { t } = useI18n();
 const valid = computed(() => HANDLE.test(props.handle));
@@ -21,8 +23,8 @@ const valid = computed(() => HANDLE.test(props.handle));
   <div class="page player-page">
     <PageMasthead back><AccountEntry /><LanguageSwitch /></PageMasthead>
     <main>
+      <PageTitle>{{ t('playerPage.title') }}</PageTitle>
       <section class="card">
-        <h1>{{ t('playerPage.title') }}</h1>
         <ProfileCard v-if="valid" :handle="handle" />
         <p v-else class="hint">{{ t(errorKey('no_such_profile')) }}</p>
       </section>
@@ -32,7 +34,7 @@ const valid = computed(() => HANDLE.test(props.handle));
 
 <style scoped>
 main {
-  padding: var(--space-3) 0 var(--space-7);
+  padding-bottom: var(--space-7);
 }
 
 .card {
@@ -40,16 +42,11 @@ main {
   flex-direction: column;
   gap: var(--space-4);
   max-width: 34rem;
-  margin-top: var(--space-3);
   padding: var(--space-4);
   border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
-}
-
-h1 {
-  font-size: var(--text-2xl);
 }
 
 .hint {

@@ -136,8 +136,6 @@ async function logOut() {
 
 <template>
   <section class="profile">
-    <h1>{{ t('account.profile.title') }}</h1>
-
     <section class="part identity" aria-labelledby="profile-username">
       <div class="head">
         <PlayerAvatar :name="summary.username" :avatar="summary.avatar" size="large" />
@@ -292,11 +290,6 @@ async function logOut() {
   flex-direction: column;
   gap: var(--space-4);
   max-width: 34rem;
-  margin-top: var(--space-3);
-}
-
-h1 {
-  font-size: var(--text-2xl);
 }
 
 .part {

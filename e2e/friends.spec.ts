@@ -102,7 +102,8 @@ test('friends are made in a room and by username, invited into a private room, a
   await expect(cat.getByText(text.friends.nowFriends)).toBeVisible();
   await expect(cat.locator('.friends .card', { hasText: annName })).toContainText(text.friends.online);
   await expect(annsFriends.locator('.card', { hasText: catName })).toContainText(text.friends.online);
-  // Outside a room too, a tap on an avatar opens the panel, and the whole page rises over it.
+  // Outside a room too, a tap on an avatar opens the panel, and the whole page takes its place until
+  // the way back.
   await annsFriends.locator('.card', { hasText: catName }).getByRole('button', avatarOf(catName)).click();
   const catsPanel = ann.getByRole('dialog', { name: catName });
   await expect(catsPanel.getByRole('button', { name: text.friends.aliasEdit })).toBeVisible();

@@ -123,4 +123,7 @@
   --banner-height: 2.5rem;
 
   --motion: 160ms;
+  /* A sheet with a way back slides in and, going back, out (UiSheet.vue). */
+  --motion-sheet-in: 260ms;
+  --motion-sheet-out: 220ms;
 }

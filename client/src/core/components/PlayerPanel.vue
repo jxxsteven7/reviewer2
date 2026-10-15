@@ -41,10 +41,10 @@ import UiSheet from './UiSheet.vue';
 // private one, or, for an AI player, remove it at once, since it may be invited again
 // (docs/architecture.md#ai-players); in a public room, the way for anyone with an account to report
 // them to the operator (docs/architecture.md#public-rooms). Last, for an account, the whole page,
-// which rises as a second sheet of its own height over the panel, scrolls inside past the most a
-// sheet may be, and leads back to it (docs/architecture.md#public-profiles); for the viewer's own
-// account, the way to the account's page too. The server decides who may do what; the panel only
-// shows what the viewer may ask for.
+// a second sheet of its own height over the panel, which it hides meanwhile (UiSheet.vue), that
+// scrolls inside past the most a sheet may be and leads back to it
+// (docs/architecture.md#public-profiles); for the viewer's own account, the way to the account's
+// page too. The server decides who may do what; the panel only shows what the viewer may ask for.
 //
 // For an account, the panel asks for the viewer's own friends list as it opens: a friend goes by
 // the name the viewer gives them, if any, in the title, with the username after it in small grey

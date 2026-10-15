@@ -21,9 +21,9 @@ import UiSheet from './UiSheet.vue';
 // small grey type. A brief card, and under it what the viewer may do by how the two stand
 // (FriendActions.vue), once the viewer's own friends list has come or can't be had, or, for the
 // viewer's own account, a word that it is theirs and the way to the account page, where they
-// change it, as in a room; last, the whole page, as others see it, which rises as a second sheet
-// of its own height over the panel, scrolls inside past the most a sheet may be, and leads back to
-// it. Once something has gone through, whoever opened the panel hears so, and the panel closes.
+// change it, as in a room; last, the whole page, as others see it, a second sheet of its own height
+// over the panel, which it hides meanwhile (UiSheet.vue), that scrolls inside past the most a sheet
+// may be and leads back to it. Once something has gone through, whoever opened the panel hears so, and the panel closes.
 const { t } = useI18n();
 const shown = shownProfile;
 const open = computed(() => shown.value !== null);

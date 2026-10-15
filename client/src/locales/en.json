@@ -956,7 +956,6 @@
     "passwordHint": "8 to 128 characters.",
     "as": "As {name}",
     "signIn": {
-      "title": "Your account",
       "intro": "An account is optional: you can play without one. With one, rooms show your name and avatar, and the games you finish are kept on your record.",
       "login": "Log in",
       "register": "Register",

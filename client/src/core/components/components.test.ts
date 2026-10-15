@@ -10,6 +10,7 @@ import AvatarButton from './AvatarButton.vue';
 import BackButton from './BackButton.vue';
 import FieldPicker from './FieldPicker.vue';
 import PageMasthead from './PageMasthead.vue';
+import PageTitle from './PageTitle.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerName from './PlayerName.vue';
 import ProfilePanel from './ProfilePanel.vue';
@@ -223,17 +224,34 @@ describe('PageMasthead', () => {
     expect(waiting.get('.wordmark').classes()).toContain('compact');
   });
 
-  test('has the way back before the wordmark, on a page that asks for it and has a page before', () => {
+  // A page with a way back keeps the bar of its title at the top once there is a page to go back
+  // to, and the masthead scrolls away (docs/design.md); otherwise the masthead stays.
+  test('gives the top to the bar of the title on a page with a page before, and stays otherwise', () => {
     window.history.replaceState({ back: '/' }, '');
     const page = masthead(true);
-    expect(page.find('.start > .back-button + .wordmark').exists()).toBe(true);
-    expect(page.get('.wordmark').classes()).toContain('tight');
-    expect(masthead(false).find('.back-button').exists()).toBe(false);
+    expect(page.classes()).not.toContain('sticky');
+    expect(page.find('.back-button').exists()).toBe(false);
+    expect(masthead(false).classes()).toContain('sticky');
     // A page opened from a shared link has nothing before it.
     window.history.replaceState(null, '');
-    const shared = masthead(true);
-    expect(shared.find('.back-button').exists()).toBe(false);
-    expect(shared.get('.wordmark').classes()).not.toContain('tight');
+    expect(masthead(true).classes()).toContain('sticky');
+  });
+});
+
+describe('PageTitle', () => {
+  const title = () => mount(PageTitle, { slots: { default: 'Your account' }, global: global() });
+
+  test('has the way back before the title, and stays at the top, when there is a page before', () => {
+    window.history.replaceState({ back: '/' }, '');
+    const bar = title();
+    expect(bar.find('.back-button + h1').exists()).toBe(true);
+    expect(bar.get('h1').text()).toBe('Your account');
+    expect(bar.classes()).toContain('pinned');
+    window.history.replaceState(null, '');
+    const alone = title();
+    expect(alone.find('.back-button').exists()).toBe(false);
+    expect(alone.get('h1').text()).toBe('Your account');
+    expect(alone.classes()).not.toContain('pinned');
   });
 });
 
@@ -349,6 +367,60 @@ describe('UiSheet', () => {
     expect(wrapper.emitted('back')).toHaveLength(1);
     expect(wrapper.emitted('close')).toBeUndefined();
     wrapper.unmount();
+  });
+
+  // A sheet with a way back leads back to the sheet under it, which needs no showing meanwhile: it is
+  // hidden, scrim and all, and comes back as it was once the one over it has gone. A sheet with no way
+  // back lies over the other, which stays in sight.
+  test('hides the sheet under one with a way back, until that one goes', async () => {
+    const under = sheet('a');
+    const over = mount(UiSheet, {
+      props: { open: false, title: 'b', back: 'Back' },
+      global: global(),
+      attachTo: document.body,
+    });
+    const plain = sheet('c');
+    const backdrop = (title: string) =>
+      [...document.querySelectorAll<HTMLElement>('.backdrop')].find(
+        (element) => element.querySelector('h2')?.textContent === title,
+      );
+    await under.setProps({ open: true });
+    await over.setProps({ open: true });
+    expect(backdrop('a')?.classList).toContain('covered');
+    expect(backdrop('a')?.hasAttribute('inert')).toBe(true);
+    expect(backdrop('b')?.classList).not.toContain('covered');
+    await over.setProps({ open: false });
+    expect(backdrop('a')?.classList).not.toContain('covered');
+    expect(backdrop('a')?.hasAttribute('inert')).toBe(false);
+    await plain.setProps({ open: true });
+    expect(backdrop('a')?.classList).not.toContain('covered');
+    under.unmount();
+    over.unmount();
+    plain.unmount();
+  });
+
+  // Every sheet comes and goes at once, so that the sheet that takes its place is alone on the page,
+  // but one with a way back that the viewer goes back from, which slides away. The transition is the
+  // real one here, not the stub that the tests otherwise put in its place.
+  test('goes at once when closed, and slides away only as the viewer goes back', async () => {
+    const open = (back: string | null) =>
+      mount(UiSheet, {
+        props: { open: true, title: 'x', back },
+        global: { ...global(), stubs: { transition: false } },
+        attachTo: document.body,
+      });
+    const plain = open(null);
+    await plain.setProps({ open: false });
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    plain.unmount();
+    const page = open('Back');
+    await page.setProps({ open: false });
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    await page.setProps({ open: true });
+    document.querySelector<HTMLButtonElement>('[role=dialog] button.back')?.click();
+    await page.setProps({ open: false });
+    expect(document.querySelector('.backdrop.slide-out [role=dialog]')).not.toBeNull();
+    page.unmount();
   });
 
   // The button that opened the sheet may be in a bar that stays at the top of the screen, as the

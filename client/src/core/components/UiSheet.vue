@@ -1,9 +1,11 @@
 <script lang="ts">
 import { shallowReactive } from 'vue';
 
-// The sheets that are open on the page, the one on top last. Shared by every sheet, which is why
-// it lives outside the setup: each instance has its own copy of what is declared there.
+// The sheets that are open on the page, the one on top last, and those of them with a way back.
+// Shared by every sheet, which is why they live outside the setup: each instance has its own copy of
+// what is declared there.
 const openSheets = shallowReactive<symbol[]>([]);
+const sheetsWithBack = shallowReactive(new Set<symbol>());
 </script>
 
 <script setup lang="ts">
@@ -24,7 +26,12 @@ import { useVisualViewport } from '../useVisualViewport';
 //
 // A sheet with a way `back`, named by that text, has a round button with an arrow before its title,
 // as the close button has its cross after it, which takes the viewer back to the sheet it was
-// opened from.
+// opened from. That sheet, right under it, needs no showing meanwhile: it is hidden, scrim and all,
+// out of reach of the keys and of assistive technology, and comes back as it was, where it was
+// scrolled to, once the viewer goes back (docs/design.md). The sheet with the way back slides up
+// from the bottom on a phone, and rises a little into place as a dialog, while the one under it
+// fades out; going back, it slides down again while the one under it fades in. Closed, it goes at
+// once with the rest, as every sheet does.
 //
 // A `subtitle` follows the title in small grey type, as a friend's username follows the name the
 // account gives them.
@@ -69,6 +76,13 @@ const screen = useVisualViewport(computed(() => props.open && props.fitScreen));
 const me = Symbol('sheet');
 // From 20, the layer of a sheet that is alone, to 24, under the emotes' 25 (EmoteBubbles.vue).
 const layer = computed(() => 20 + Math.min(Math.max(openSheets.indexOf(me), 0), 4));
+// Whether the sheet right over this one has a way back, which leads here.
+const covered = computed(() => {
+  const above = openSheets[openSheets.indexOf(me) + 1];
+  return openSheets.includes(me) && above !== undefined && sheetsWithBack.has(above);
+});
+// Whether the viewer went back from this sheet, which then slides away, rather than closing it.
+const wentBack = ref(false);
 const placed = computed(() => ({
   zIndex: layer.value,
   ...(screen.value ? { top: `${screen.value.top}px`, height: `${screen.value.height}px`, bottom: 'auto' } : {}),
@@ -79,6 +93,20 @@ const FOCUSABLE = 'input, textarea, button, [href], [tabindex]:not([tabindex="-1
 function leave() {
   const at = openSheets.indexOf(me);
   if (at >= 0) openSheets.splice(at, 1);
+  sheetsWithBack.delete(me);
+}
+
+// The focus goes back to what opened the sheet. What opened a sheet with a way back is in the sheet
+// under it, hidden until the page has drawn it again.
+function giveFocusBack() {
+  const target = returnFocus;
+  if (target?.closest('.covered')) void nextTick(() => target.focus({ preventScroll: true }));
+  else target?.focus?.({ preventScroll: true });
+}
+
+function goBack() {
+  wentBack.value = true;
+  emit('back');
 }
 
 function onKey(event: KeyboardEvent) {
@@ -116,8 +144,10 @@ watch(
   async (open, was) => {
     if (open) {
       scrolled.value = false;
+      wentBack.value = false;
       returnFocus = document.activeElement as HTMLElement | null;
       openSheets.push(me);
+      if (props.back) sheetsWithBack.add(me);
       document.addEventListener('keydown', onKey);
       await nextTick();
       const input = props.focusInput ? panel.value?.querySelector<HTMLElement>('input:not([type="checkbox"])') : null;
@@ -125,7 +155,7 @@ watch(
     } else if (was) {
       leave();
       document.removeEventListener('keydown', onKey);
-      returnFocus?.focus?.({ preventScroll: true });
+      giveFocusBack();
     }
   },
   { immediate: true },
@@ -136,39 +166,50 @@ watch(
 onBeforeUnmount(() => {
   leave();
   document.removeEventListener('keydown', onKey);
-  if (props.open) returnFocus?.focus?.({ preventScroll: true });
+  if (props.open) giveFocusBack();
 });
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="backdrop" :style="placed" @click.self="emit('close')">
-      <section
-        ref="panel"
-        class="panel"
-        :class="{ fit: fitScreen }"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="id"
-        tabindex="-1"
-        @scroll.capture.passive="onScroll"
+    <!-- Only a sheet with a way back moves, in and, going back, out: every other sheet, and one that
+         is closed, comes and goes at once, without even the frames that a transition waits. -->
+    <Transition :css="!!back && (open || wentBack)" enter-active-class="slide-in" leave-active-class="slide-out">
+      <div
+        v-if="open"
+        class="backdrop"
+        :class="{ 'with-back': back, covered }"
+        :style="placed"
+        :inert="covered || undefined"
+        @click.self="emit('close')"
       >
-        <header class="head" :class="{ scrolled }">
-          <button v-if="back" type="button" class="round back" :aria-label="back" @click="emit('back')">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
-          </button>
-          <h2 :id="id">
-            {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
-          </h2>
-          <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
-            &times;
-          </button>
-        </header>
-        <div ref="scroller" class="scroller">
-          <div class="body"><slot /></div>
-        </div>
-      </section>
-    </div>
+        <section
+          ref="panel"
+          class="panel"
+          :class="{ fit: fitScreen }"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="id"
+          tabindex="-1"
+          @scroll.capture.passive="onScroll"
+        >
+          <header class="head" :class="{ scrolled }">
+            <button v-if="back" type="button" class="round back" :aria-label="back" @click="goBack">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
+            </button>
+            <h2 :id="id">
+              {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
+            </h2>
+            <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
+              &times;
+            </button>
+          </header>
+          <div ref="scroller" class="scroller">
+            <div class="body"><slot /></div>
+          </div>
+        </section>
+      </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -270,6 +311,68 @@ h2 {
   font-weight: var(--weight-bold);
 }
 
+/* A sheet with a way back hides the one under it, which it leads back to. That one's scrim goes, as
+   the sheet over it has its own; it fades out, and then hides from the keys and assistive technology
+   too. Going back, it is there at once and fades in. */
+.backdrop.covered {
+  background: transparent;
+}
+
+.panel {
+  transition: opacity var(--motion-sheet-out) ease-out;
+}
+
+.covered > .panel {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity var(--motion-sheet-in) ease-out,
+    visibility 0s linear var(--motion-sheet-in);
+}
+
+/* The sheet with the way back slides up from the bottom instead of rising, and down again as the
+   viewer goes back, with the scrim as it is: the one under it goes and comes at the same moment. The
+   backdrop's own animation, which changes nothing, is what the transition times itself by. */
+.with-back > .panel {
+  animation: none;
+}
+
+.with-back.slide-in {
+  animation: hold var(--motion-sheet-in);
+}
+
+.with-back.slide-in > .panel {
+  animation: slide-in var(--motion-sheet-in) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.with-back.slide-out {
+  background: transparent;
+  pointer-events: none;
+  animation: hold var(--motion-sheet-out);
+}
+
+.with-back.slide-out > .panel {
+  animation: slide-out var(--motion-sheet-out) cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes hold {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes slide-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
 /* The round buttons at either end of the title: back, with its arrow, and close, with its cross. */
 .round {
   display: inline-flex;
@@ -341,6 +444,21 @@ h2 {
   .scroller {
     margin-bottom: var(--space-4);
     padding: var(--space-2) var(--space-5) var(--space-1);
+  }
+
+  /* A dialog with a way back rises a little into place, and sinks back as the viewer goes back. */
+  @keyframes slide-in {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-out {
+    to {
+      transform: translateY(40px);
+      opacity: 0;
+    }
   }
 }
 </style>

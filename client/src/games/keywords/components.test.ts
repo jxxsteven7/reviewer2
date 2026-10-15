@@ -1051,7 +1051,7 @@ describe('ReplayViewer', () => {
     expect(buttons[1]?.get('.initial').attributes('data-initial')).toBe('G');
   });
 
-  test("opens a player's panel from their avatar, with their moves, which take the replay to their step", async () => {
+  test("opens a player's panel from their avatar, with their moves over it, which take the replay to their step", async () => {
     // The cards of an account's page and an AI player's read the server, which isn't here.
     const wrapper = mount(ReplayViewer, {
       props: { replay },
@@ -1067,9 +1067,17 @@ describe('ReplayViewer', () => {
         ?.findAll('.actions button')
         .map((button) => button.text());
     expect(actions()).toEqual(['View moves']);
+    // The moves lie over the panel, which they hide until the way back leads to it again.
+    const top = () => dialogs().at(-1);
     await dialogs()[0]?.get('.actions button').trigger('click');
-    expect(dialogs()[0]?.get('h2').text()).toBe('Moves by Guest 2');
-    const moves = dialogs()[0]?.findAll('.move') ?? [];
+    expect(dialogs()).toHaveLength(2);
+    expect(wrapper.get('.backdrop.covered h2').text()).toBe('Guest 2');
+    expect(top()?.get('h2').text()).toBe('Moves by Guest 2');
+    await top()?.get('button.back').trigger('click');
+    expect(dialogs()).toHaveLength(1);
+    expect(wrapper.find('.backdrop.covered').exists()).toBe(false);
+    await dialogs()[0]?.get('.actions button').trigger('click');
+    const moves = top()?.findAll('.move') ?? [];
     expect(moves.map((move) => move.text())).toEqual([
       "Turn 1 · Red groupRevealed \u201cBaseline\u201d: right, one of the group's own",
     ]);
@@ -1084,8 +1092,8 @@ describe('ReplayViewer', () => {
         .map((button) => button.text()),
     ).toEqual(['View moves', 'Open the full page']);
     await dialogs()[0]?.get('.actions button').trigger('click');
-    expect(dialogs()[0]?.get('.move').text()).toBe('Turn 1 · Red groupClue: Science 21 right of 1 revealed');
-    await dialogs()[0]?.get('.move').trigger('click');
+    expect(top()?.get('.move').text()).toBe('Turn 1 · Red groupClue: Science 21 right of 1 revealed');
+    await top()?.get('.move').trigger('click');
     expect(wrapper.get('.position').text()).toBe('Step 2 of 3');
   });
 });

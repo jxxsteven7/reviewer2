@@ -14,9 +14,9 @@ import { nameOf } from '../../core/names';
 // (PlayerPanel.vue), with nothing of the chair's: for an account, its brief profile card and the
 // way to the whole page; for an AI player, its own page; for a guest and a deleted account, the
 // avatar under the title that names them. For everyone, the way to their moves in the game, a
-// sheet of its own with the way back, as the whole page has: as a PI, each clue, the cards meant
-// and how far the group got with it; as a student, each card revealed and whether it was right
-// (actionsOf in shared/src/games/keywords/replay.ts). A tap on a move closes the panel and takes
+// sheet of its own over the panel, which it hides until the way back (UiSheet.vue), as the whole
+// page does: as a PI, each clue, the cards meant and how far the group got with it; as a student,
+// each card revealed and whether it was right (actionsOf in shared/src/games/keywords/replay.ts). A tap on a move closes the panel and takes
 // the replay to its step (`go`).
 const props = defineProps<{ replay: ShownReplay; playerId: string | null }>();
 const emit = defineEmits<{ close: []; go: [step: number] }>();
@@ -64,7 +64,7 @@ function linesOf(action: ReplayAction): string[] {
 </script>
 
 <template>
-  <UiSheet :open="person !== null && !reading && !acting" :title="name" @close="emit('close')">
+  <UiSheet :open="person !== null" :title="name" @close="emit('close')">
     <div v-if="person" class="panel-body">
       <ProfileCard v-if="person.handle" :handle="person.handle" brief :named="false" />
       <AgentProfileCard v-else-if="person.agent" :persona="person.agent" />

@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import BackButton from '../components/BackButton.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
+import PageTitle from '../components/PageTitle.vue';
 
-// The frame of the pages that links in mails lead to, and of the one that sends those mails.
+// The frame of the pages that links in mails lead to, and of the one that sends those mails: the
+// title on its bar, with the way back when there is a page before (PageTitle.vue), and the page in a
+// card under it.
 defineProps<{ title: string }>();
 </script>
 
 <template>
   <div class="page mail-page">
-    <PageMasthead><LanguageSwitch /></PageMasthead>
+    <PageMasthead back><LanguageSwitch /></PageMasthead>
     <main>
-      <BackButton />
+      <PageTitle>{{ title }}</PageTitle>
       <section class="content">
-        <h1>{{ title }}</h1>
         <slot />
       </section>
     </main>
@@ -22,7 +23,7 @@ defineProps<{ title: string }>();
 
 <style scoped>
 main {
-  padding: var(--space-3) 0 var(--space-7);
+  padding-bottom: var(--space-7);
 }
 
 .content {
@@ -30,16 +31,11 @@ main {
   flex-direction: column;
   gap: var(--space-4);
   max-width: 26rem;
-  margin-top: var(--space-3);
   padding: var(--space-5) var(--space-4);
   border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
-}
-
-h1 {
-  font-size: var(--text-2xl);
 }
 
 .content :deep(.problem) {
