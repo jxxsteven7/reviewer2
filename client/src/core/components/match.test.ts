@@ -179,6 +179,8 @@ describe('the ranking of a match', () => {
     expect(items.at(3)?.text()).toContain('Playing like that, your paper is probably getting rejected!');
     expect(items.at(4)?.text()).toContain('left');
     expect(items.at(3)?.get('.total').text()).toBe('\u22124');
+    // Every line's avatar is as large, with a title or without.
+    expect(items.map((item) => item.get('.avatar').classes('medium'))).toEqual([true, true, true, true, true]);
   });
 
   test('says in Chinese what Academic Trash will hear', () => {

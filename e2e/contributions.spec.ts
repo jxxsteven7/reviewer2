@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
-import { expect, newPlayer, register, TEXT, test } from './helpers';
+import { expect, newPlayer, pageAddress, register, TEXT, test } from './helpers';
 
 // The feedback contributions end to end: a player with an account suggests a new game, signed with
 // the account, the operator adopts it with the command once it is a GitHub issue, and the home
@@ -111,7 +111,7 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   const titles = page.getByRole('region', { name: text.account.profile.titles });
   await expect(titles).toContainText(`Contributions: ${text.contributions.kinds.game}`);
   const setup = page.locator('.public');
-  const address = await setup.getByRole('link', { name: text.account.profile.public.view }).getAttribute('href');
+  const address = await pageAddress(page);
 
   // The home page lists it at once, by the account's avatar and username, with what was contributed
   // and its issue, and they open the account's panel.
@@ -159,7 +159,7 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   ).toBeVisible();
 
   // The public page shows the counts only once its owner shows them.
-  await page.goto(address as string);
+  await page.goto(address);
   const card = page.locator('.profile-card');
   const pill = card.getByText(`Contributions: ${text.contributions.kinds.game}`);
   await expect(card).toContainText(username);
@@ -168,7 +168,7 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   await setup.getByLabel(text.account.profile.public.showThanks).check();
   await setup.getByRole('button', { name: text.account.profile.public.save }).click();
   await expect(page.getByText(text.account.profile.public.saved)).toBeVisible();
-  await page.goto(address as string);
+  await page.goto(address);
   await expect(pill).toBeVisible();
 });
 

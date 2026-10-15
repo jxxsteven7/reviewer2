@@ -41,7 +41,7 @@ const time = computed(() => {
 });
 const sections = computed(() => [
   { title: t('rules.goalTitle'), text: [t('rules.goal')] },
-  { title: t('rules.rolesTitle'), text: [t('rules.roles')] },
+  { title: t('rules.rolesTitle'), text: [t('rules.roles'), t('rules.avatars')] },
   { title: t('rules.turnTitle'), text: [t(`rules.turn.${props.settings.guessRule}`)] },
   { title: t('rules.revealTitle'), text: [t('rules.reveal'), t('rules.marks')] },
   {

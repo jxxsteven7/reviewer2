@@ -16,8 +16,8 @@ import {
 // hidden there too.
 test('a guesser who can only long-poll never receives the key', async ({ browser }) => {
   let cut = 0;
-  const table = await seatTable(browser, 'en', async (page, name) => {
-    if (name !== 'Bob') return;
+  const table = await seatTable(browser, 'en', async (page, seat) => {
+    if (seat !== 'Bob') return;
     await page.routeWebSocket(/\/socket\.io\//, (socket) => {
       cut += 1;
       socket.close();

@@ -341,14 +341,15 @@ export class TestClient {
   }
 }
 
-// A room with its chair and the reply to the create message.
-export async function createRoom(url: string, name = 'Ann', payload: Record<string, unknown> = {}) {
-  const chair = await TestClient.connect(url);
+// A room with its chair, a guest unless the payload says otherwise, and the reply to the create
+// message.
+// Creates a room, as a guest, or as the account that a browser is logged in to (`as`).
+export async function createRoom(url: string, payload: Record<string, unknown> = {}, as?: Browser) {
+  const chair = as ? await as.connect() : await TestClient.connect(url);
   const reply = await chair.send('room:create', {
     game: 'test',
     language: 'en',
     fields: ['general'],
-    name,
     ...payload,
   });
   if (!reply.ok) throw new Error(`could not create a room: ${reply.error}`);
@@ -356,9 +357,11 @@ export async function createRoom(url: string, name = 'Ann', payload: Record<stri
   return { chair, code: reply.code as string, roomId: reply.roomId as string };
 }
 
-export async function joinRoom(url: string, code: string, name: string, payload: Record<string, unknown> = {}) {
-  const client = await TestClient.connect(url);
-  const reply = await client.send('room:join', { code, name, ...payload });
+// A guest who joins a room, to watch unless the payload says to play.
+// Joins a room, as a guest, or as the account that a browser is logged in to (`as`).
+export async function joinRoom(url: string, code: string, payload: Record<string, unknown> = {}, as?: Browser) {
+  const client = as ? await as.connect() : await TestClient.connect(url);
+  const reply = await client.send('room:join', { code, play: false, ...payload });
   if (!reply.ok) throw new Error(`could not join: ${reply.error}`);
   await client.waitFor((state) => state.code === code);
   return client;
@@ -374,6 +377,14 @@ export interface ApiResponse {
 // A browser's side of the account API: requests that come from the page, as a browser sends them,
 // with the login cookie that the last answer set. `headers` replace or add to what a browser
 // would send, and leave out what they give as ''.
+// A browser logged in to a new account with this username.
+export async function loggedIn(url: string, username: string): Promise<Browser> {
+  const browser = new Browser(url);
+  const reply = await browser.register(username);
+  if (!reply.body.ok) throw new Error(`could not register ${username}: ${String(reply.body.error)}`);
+  return browser;
+}
+
 export class Browser {
   cookie = '';
 

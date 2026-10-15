@@ -838,14 +838,65 @@ describe('a database in DATA_DIR', () => {
     expect(db.prepare('SELECT count(*) AS n FROM accounts').get()).toEqual({ n: 0 });
   });
 
-  test('of the nineteenth release keeps its feedback in the three ways it is signed now', async () => {
+  test('of the nineteenth release loses the names its replays kept, and keeps the rest of them', async () => {
     const nineteenth = await open(dir, MIGRATIONS.slice(0, 19));
+    const named = JSON.stringify({
+      gameId: 'g',
+      cards: [{ word: 'Model', color: 'red' }],
+      history: [{ turn: 1, team: 'red', word: 'Hint', count: 1, guesses: [{ card: 0, color: 'red', player: 'p1' }] }],
+      players: { p1: 'Ann', p2: '\u{6e38}\u{5ba2}' },
+      agents: { p3: 'reviewer1' },
+    });
+    const kept = JSON.stringify({ gameId: 'h', cards: [], history: [], groups: [], members: { p1: { guest: 1 } } });
+    // A game from after game_players, whose names say nothing more than its rows.
+    const later = JSON.stringify({ gameId: 'j', cards: [], history: [], players: { p1: 'Ann', p9: 'Cy' } });
     nineteenth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at) VALUES
+        (1, 'ann', 'ann', 'h', 'now'), (2, 'Bo', 'bo', 'h', 'now'), (3, 'Cy', 'cy', 'h', 'now');
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict) VALUES
+        (1, 'keywords', 'g', 'now', 'red', 'guesser', 'red', 1, 'oral'),
+        (2, 'keywords', 'g', 'now', 'red', 'captain', 'red', 1, 'oral'),
+        (1, 'keywords', 'j', 'now', 'red', 'guesser', 'red', 1, 'oral'),
+        (3, 'keywords', 'j', 'now', 'blue', 'guesser', 'red', 0, 'oral');
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('g', 'keywords', 'now', 'finished', '${named}');
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('h', 'keywords', 'now', 'finished', '${kept}');
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('i', 'keywords', 'now', 'withdrawn', NULL);
+      INSERT INTO replays (game_id, game, ended_at, ending, data) VALUES ('j', 'keywords', 'now', 'finished', '${later}');
+      INSERT INTO game_players VALUES ('j', 'p1', 1);
+    `);
+    nineteenth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 20));
+    expect(migrated).toMatchObject({ schema: 20, migratedFrom: 19 });
+    const rows = migrated.db.prepare('SELECT game_id AS gameId, data FROM replays ORDER BY game_id').all() as {
+      gameId: string;
+      data: string | null;
+    }[];
+    expect(rows.map(({ gameId, data }) => [gameId, data === null ? null : JSON.parse(data)])).toEqual([
+      ['g', { ...JSON.parse(named), players: undefined }],
+      ['h', JSON.parse(kept)],
+      ['i', null],
+      ['j', { ...JSON.parse(later), players: undefined }],
+    ]);
+    expect(rows[0]?.data).not.toContain('Ann');
+    // Ann revealed a card in the game from before as "Ann", now "ann"; the guest and Bo, a PI,
+    // whom the replay never named, give no row, nor does Cy in the game that had its rows.
+    expect(
+      migrated.db.prepare('SELECT game_id, player_id, account_id FROM game_players ORDER BY game_id').all(),
+    ).toEqual([
+      { game_id: 'g', player_id: 'p1', account_id: 1 },
+      { game_id: 'j', player_id: 'p1', account_id: 1 },
+    ]);
+  });
+
+  test('of the twentieth release keeps its feedback in the three ways it is signed now', async () => {
+    const twentieth = await open(dir, MIGRATIONS.slice(0, 20));
+    twentieth.db.exec(`
       INSERT INTO accounts (id, username, username_key, password, handle, created_at) VALUES (1, 'Ann', 'ann', 'h', 'k1', 'now');
       INSERT INTO accounts (id, username, username_key, password, handle, created_at) VALUES (2, 'Bob', 'bob', 'h', 'k2', 'now');
     `);
     const add = (id: number, credit: string | null, accountId: number | null, linkProfile: number) =>
-      nineteenth.db
+      twentieth.db
         .prepare(
           'INSERT INTO feedback (id, created_at, kind, text, contact, version, language, page, credit, account_id, ' +
             "link_profile, issue, adopted_at, summary_zh, summary_en) VALUES (?, 'now', 'idea', ?, 'c', 'v1', 'en', " +
@@ -864,11 +915,11 @@ describe('a database in DATA_DIR', () => {
     add(6, null, 2, 0);
     add(7, 'Dan', null, 0);
     add(8, null, null, 0);
-    const before = nineteenth.db.prepare('SELECT * FROM feedback ORDER BY id').all();
-    nineteenth.db.close();
+    const before = twentieth.db.prepare('SELECT * FROM feedback ORDER BY id').all();
+    twentieth.db.close();
 
-    const migrated = await open(dir, MIGRATIONS.slice(0, 20));
-    expect(migrated).toMatchObject({ schema: 20, migratedFrom: 19 });
+    const migrated = await open(dir, MIGRATIONS.slice(0, 21));
+    expect(migrated).toMatchObject({ schema: 21, migratedFrom: 20 });
     const { db } = migrated;
     // Feedback from an account is signed with it, keeping no name, or anonymous; a name is a
     // guest's alone; everything else, the rows themselves included, is as it was.

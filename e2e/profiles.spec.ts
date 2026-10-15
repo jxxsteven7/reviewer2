@@ -1,10 +1,11 @@
-import { createRoom, expect, interpolate, joinByLink, newPlayer, register, TEXT, test } from './helpers';
+import { createRoom, expect, interpolate, joinByLink, newPlayer, pageAddress, register, TEXT, test } from './helpers';
 
 // Public profiles end to end (docs/architecture.md#public-profiles): a player sets up the page on
 // the account page; another opens it by its address, sees the number, the line as the text it is,
 // the link and the record, likes it and asks to be friends; the owner sees the badge on the home
-// page, the liker on the account page, and accepts; a guest sees the count and nothing to do; and
-// in a room, the page opens from the player menu in a sheet, so that nobody leaves the room.
+// page, the liker on the account page, and accepts, and looks at the page in a sheet; a guest sees
+// the count and nothing to do; and in a room, the page opens from the player menu in a sheet, so
+// that nobody leaves the room.
 //
 // All tests share one server, so every account here has a part that is the test's own.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
@@ -19,7 +20,8 @@ test('a public page is set up, opened by its address and from a room, liked and 
   const bob = await newPlayer(browser, 'en');
   await register(bob, bobName);
 
-  // Ann writes a link and a line, shows her record, and finds her number and the way to her page.
+  // Ann writes a link and a line, shows her record, and finds her number; the page's address is
+  // the one she shares.
   await ann.goto('/account');
   const setup = ann.locator('.public');
   await setup.getByLabel(text.account.profile.public.link).fill(' https://ann.example/me ');
@@ -28,7 +30,7 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await setup.getByRole('button', { name: text.account.profile.public.save }).click();
   await expect(ann.getByText(text.account.profile.public.saved)).toBeVisible();
   await expect(ann.locator('.profile .number')).toContainText(/Player No\. \d+/);
-  const address = await setup.getByRole('link', { name: text.account.profile.public.view }).getAttribute('href');
+  const address = await pageAddress(ann);
   expect(address).toMatch(/^\/p\/[0-9a-f]{12}$/);
 
   // Bob opens it by its address: the line is text, not markup, and the link is the address it is.
@@ -65,15 +67,20 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await expect(bob.getByText(text.friends.requestSent)).toBeVisible();
   await expect(card.getByRole('button', { name: text.friends.requestPending })).toBeDisabled();
 
-  // Ann's home page counts the request on her avatar; her account page shows Bob among those who
-  // liked her page, not yet a friend, and the request, which she accepts.
+  // Ann's home page counts the request on her avatar, which leads to her account page, with the way
+  // back at the start of the masthead. The account page shows Bob among those who liked her page,
+  // not yet a friend, and the request, which she accepts.
   await ann.goto('/');
   // The language gate stands on the browser's first visit to the home page.
   await expect(ann.locator('.gate, .home').first()).toBeVisible();
   const gate = ann.getByRole('button', { name: new RegExp(`^${text.language.en}`) });
   if (await gate.count()) await gate.click();
   await expect(ann.locator('.avatar-link .badge')).toHaveText('1');
-  await ann.goto('/account');
+  await ann.locator('.avatar-link').click();
+  await ann.waitForURL(/\/account$/);
+  const back = ann.locator('header.masthead .start > .back-button');
+  await expect(back).toHaveAccessibleName(text.account.back);
+  await expect(ann.locator('main .back-button')).toHaveCount(0);
   await expect(ann.locator('.profile h2 .badge')).toHaveText('1');
   const liker = ann.locator('.likers .line', { hasText: bobName });
   await expect(liker.getByRole('button', { name: text.friends.addFromRoom })).toBeVisible();
@@ -86,13 +93,21 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await expect(card.getByRole('button', { name: text.friends.requestPending })).toHaveCount(0);
   await expect(card.getByRole('button', { name: text.friends.addFromRoom })).toHaveCount(0);
 
-  // Ann opens her own page from the account page: no way to like it, and the round button back to
-  // the account page.
-  await ann.getByRole('link', { name: text.account.profile.public.view }).click();
-  await expect(ann.locator('.profile-card')).toContainText(text.playerPage.edit);
-  expect(await ann.locator('.profile-card .actions button').count()).toBe(0);
-  await ann.getByRole('button', { name: text.account.back }).click();
+  // Ann looks at her own page from the account page, in the sheet that shows an account's page
+  // anywhere on the site, without leaving the account page: the panel says that it is hers, and the
+  // whole page over it offers no way to like it. The way back leads home.
+  await ann.getByRole('button', { name: text.account.profile.public.view }).click();
+  const mine = ann.getByRole('dialog', { name: annName, exact: true });
+  await expect(mine).toContainText(text.friends.self);
+  await mine.getByRole('button', { name: text.room.panel.fullPage }).click();
+  const whole = ann.locator('[role=dialog]:has(button.back)');
+  await expect(whole.locator('.profile-card')).toContainText(text.playerPage.edit);
+  expect(await whole.locator('.profile-card .actions button').count()).toBe(0);
+  await ann.keyboard.press('Escape');
+  await expect(ann.getByRole('dialog')).toHaveCount(0);
   await expect(ann).toHaveURL(/\/account$/);
+  await back.click();
+  await expect(ann).toHaveURL(/\/$/);
 
   // A guest sees the count and the line, and nothing to do; an address that is no page says so.
   const guest = await newPlayer(browser, 'en');
@@ -107,8 +122,8 @@ test('a public page is set up, opened by its address and from a room, liked and 
 
   // In a room, Bob taps Ann's avatar: her panel, with a brief card, and her whole page over it,
   // from which he goes back to the panel. He stays in the room throughout.
-  const room = await createRoom(ann, 'en', '');
-  await joinByLink(bob, room, '', 'en');
+  const room = await createRoom(ann, 'en');
+  await joinByLink(bob, room, 'en');
   await bob
     .locator('.lobby .player', { hasText: annName })
     .getByRole('button', { name: `View ${annName}'s profile` })

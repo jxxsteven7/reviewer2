@@ -208,11 +208,15 @@ describe('feedback', () => {
 
   test('keeps nothing that says who sent it, even from someone in a room', async () => {
     server = await startServer({ trustProxy: true });
-    const { chair, code, roomId } = await createRoom(server.url, 'Zelda');
+    // A guest in the room, whom the room calls by a number: nothing of the room goes with the
+    // feedback, the guest's name there included. One sent from an account is linked to it, by
+    // design (above).
+    const { chair, code, roomId } = await createRoom(server.url);
     clients.push(chair);
+    expect(chair.state?.players.map(({ name }) => name)).toEqual(['Guest 1']);
     expect(await chair.send('meta:feedback', message({ kind: 'bug', page: 'room' }))).toEqual({ ok: true });
     const kept = JSON.stringify(server.feedback.latest(10));
-    for (const secret of [code, roomId, chair.token, chair.me, 'Zelda', '127.0.0.1']) {
+    for (const secret of [code, roomId, chair.token, chair.me, 'Guest 1', '127.0.0.1']) {
       expect(kept, secret).not.toContain(secret);
     }
   });

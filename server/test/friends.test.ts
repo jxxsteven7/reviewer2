@@ -111,10 +111,10 @@ describe('a friend request', () => {
     // A player who has left, or has no account, can't be asked; nor can oneself.
     expect(await ann.send('friends:request', { playerId: 'nobody' })).toEqual({ ok: false, error: 'no_such_player' });
     const guest = track(await TestClient.connect(server.url));
-    expect(await guest.send('room:join', { code, name: 'Cat', play: false })).toMatchObject({ ok: true });
-    const catId = (await ann.waitFor((view) => view.players.length === 3)).players.find(({ name }) => name === 'Cat')
-      ?.id as string;
-    expect(await ann.send('friends:request', { playerId: catId })).toEqual({ ok: false, error: 'no_such_account' });
+    expect(await guest.send('room:join', { code, play: false })).toMatchObject({ ok: true });
+    const { players } = await ann.waitFor((view) => view.players.length === 3);
+    const guestId = players.find((player) => player.guest === 1)?.id as string;
+    expect(await ann.send('friends:request', { playerId: guestId })).toEqual({ ok: false, error: 'no_such_account' });
     expect(await ann.send('friends:request', { username: 'Ann' })).toEqual({ ok: false, error: 'self_friend' });
     expect(await ann.send('friends:request', { username: 'Nobody' })).toEqual({ ok: false, error: 'no_such_account' });
     expect(await ann.send('friends:request', {})).toEqual({ ok: false, error: 'bad_request' });
@@ -167,12 +167,12 @@ describe('a friend request', () => {
     const { chair: bob, code } = await roomOf(bobs);
     expect(await ann.send('room:join', { code, play: false })).toMatchObject({ ok: true });
     const guest = track(await TestClient.connect(server.url));
-    expect(await guest.send('room:join', { code, name: 'Guest', play: false })).toMatchObject({ ok: true });
+    expect(await guest.send('room:join', { code, play: false })).toMatchObject({ ok: true });
     const state = await ann.waitFor((view) => view.players.length === 3);
     const idOf = (name: string) => state.players.find((player) => player.name === name)?.id as string;
     // Asking a guest, or a player who isn't there, sends nothing and costs nothing; nor does asking
     // Bob again and again once he is a friend: he has an account, as his rank in the room says.
-    expect(await ann.send('friends:request', { playerId: idOf('Guest') })).toEqual({
+    expect(await ann.send('friends:request', { playerId: idOf('Guest 1') })).toEqual({
       ok: false,
       error: 'no_such_account',
     });
@@ -445,7 +445,7 @@ describe('an invitation', () => {
     // Bob comes in with the invitation alone, and is asked whether he plays, as any newcomer is.
     expect(await bob.send('room:join', { invitation: invitation?.id })).toEqual({
       ok: false,
-      error: 'name_required',
+      error: 'play_required',
       language: 'en',
     });
     expect(await bob.send('room:join', { invitation: invitation?.id, play: true })).toEqual({ ok: true, code, roomId });
@@ -613,7 +613,7 @@ describe('an invitation', () => {
     expect(await chair.send('friends:invite', { username: 'Cat' })).toEqual({ ok: true });
     await until(() => cat.invitations.length === 1, "Cat's invitation");
     const guest = track(await TestClient.connect(server.url));
-    expect(await guest.send('room:join', { code, name: 'Guest', play: false })).toMatchObject({ ok: true });
+    expect(await guest.send('room:join', { code, play: false })).toMatchObject({ ok: true });
     expect(await chair.send('room:leave')).toEqual({ ok: true });
     expect(await cat.send('room:join', { invitation: cat.invitations[0]?.id })).toEqual({
       ok: false,

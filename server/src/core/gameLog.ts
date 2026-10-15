@@ -2,8 +2,9 @@
 // from its start to its end, with when it came and who did it. The room keeps one for the game it
 // is playing, and the record of the game keeps it, on the server alone, however the game ended. The
 // game says what of its messages the log keeps (GameModule.logged). What a player said in their
-// group's chat is kept apart in its entry, as `said`, so that it can be taken out again when their
-// account is deleted (unsay).
+// group's chat is kept apart in its entry, as `said`, so that whoever reads the records can leave it
+// out where it matters; the player IDs of accounts deleted since are marked (markDeleted), so that
+// what they said can be told apart from a guest's.
 
 // The largest log that is kept, as JSON, in bytes. A whole game makes a few kilobytes; a player who
 // sends message after message could make it grow without end, and every room holds its log in
@@ -54,7 +55,8 @@ export type GameLogEvent = (typeof GAME_LOG_EVENTS)[number];
 // online. `start` is where everyone in the room was when the game began, by player ID, as the game
 // describes each of them (GameModule.seated), or null for a game that doesn't say. `agents` names
 // the AI players among them, by player ID, with the persona each played as; a game without any has
-// none.
+// none. `deleted` has the player IDs of the accounts deleted since, in the order they went, once
+// each; a log without any has none.
 export interface GameLogData {
   v: 2;
   game: string;
@@ -63,6 +65,7 @@ export interface GameLogData {
   agents?: Record<string, string>;
   entries: GameLogEntry[];
   truncated?: true;
+  deleted?: string[];
 }
 
 // How a game came to an end, for its record (docs/architecture.md#game-records): by itself;
@@ -172,19 +175,12 @@ export class GameLog {
   }
 }
 
-// A kept log without what the players with these IDs said: the entries stay, so that the log still
-// shows that they said something and when, and lose their `said`. Returns the log as it was when
-// they said nothing in it. For the account that is deleted, by the IDs it had in the game
-// (docs/architecture.md#game-records).
-export function unsay<Log extends { entries: GameLogEntry[] }>(log: Log, playerIds: ReadonlySet<string>): Log {
-  if (!log.entries.some(({ by, said }) => said !== undefined && by !== null && playerIds.has(by))) return log;
-  return {
-    ...log,
-    entries: log.entries.map((entry) => {
-      if (entry.said === undefined || entry.by === null || !playerIds.has(entry.by)) return entry;
-      const rest = { ...entry };
-      delete rest.said;
-      return rest;
-    }),
-  };
+// A kept log with these player IDs marked as those of an account deleted since, the account that is
+// deleted, by the IDs it had in the game (docs/architecture.md#game-records). What they said stays,
+// as nobody's: nothing links the IDs to the account any more. Returns the log as it was when it has
+// them marked already.
+export function markDeleted<Log extends { deleted?: string[] }>(log: Log, playerIds: Iterable<string>): Log {
+  const marked = new Set(log.deleted);
+  const added = [...new Set(playerIds)].filter((id) => !marked.has(id));
+  return added.length === 0 ? log : { ...log, deleted: [...marked, ...added] };
 }

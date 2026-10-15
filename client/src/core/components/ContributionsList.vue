@@ -46,11 +46,11 @@ const sections = ({ contributions }: Contributions) =>
           <button
             v-if="entry.name !== null && entry.profile"
             type="button"
-            class="name person"
+            class="name person press-host"
             aria-haspopup="dialog"
             @click="openProfile(entry.profile, entry.name)"
           >
-            <PlayerAvatar :name="entry.name" :avatar="entry.avatar" />
+            <PlayerAvatar class="press-part" :name="entry.name" :avatar="entry.avatar" />
             <span>{{ entry.name }}</span>
           </button>
           <span v-else class="name">{{
@@ -103,8 +103,9 @@ const sections = ({ contributions }: Contributions) =>
 }
 
 /* An account that opens its panel: its avatar and its username, as a player shows in a room, with
-   no underline; the avatar says that it is a player to tap, and hangs before the username, in the
-   column the entry keeps for it, centred on the username's line. */
+   no underline; the avatar, which wears the hard shadow of what a tap opens and moves as a sticker
+   does (`press-part` in base.css), hangs before the username, in the column the entry keeps for
+   it, centred on the username's line. */
 .person {
   position: relative;
   display: inline-block;
@@ -122,6 +123,7 @@ const sections = ({ contributions }: Contributions) =>
   inset-inline-end: calc(100% + var(--space-2));
   top: 50%;
   margin-top: -13px;
+  box-shadow: var(--shadow-1);
 }
 
 .person:focus-visible {

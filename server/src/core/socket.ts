@@ -6,9 +6,7 @@ import {
   checkFeedback,
   checkFriendNote,
   checkReport,
-  cleanName,
   INVITE_COOLDOWN_MS,
-  isReservedName,
   JOIN_ASKS_PER_HOUR,
   type Ack,
   type ClosedReason,
@@ -36,7 +34,7 @@ import type { FriendRow } from '../store/friends';
 import type { AgentChannel } from './agentChannel';
 import { AgentDriver } from './agents';
 import { fail, type Refusal } from './answers';
-import { unsay } from './gameLog';
+import { markDeleted } from './gameLog';
 import { clientCountry, clientIp } from './clientIp';
 import type { GameModule, Viewer } from './game';
 import { accountKey, isToken, memberKey, newToken } from './identity';
@@ -95,9 +93,6 @@ export interface SocketLimits {
   // codes that belong to no room, which keeps anyone from trying codes until one fits.
   roomsPerMinute: number;
   failedLookupsPerMinute: number;
-  // Per address and hour: nicknames refused for being someone's username, which says that the
-  // account exists, as registering the name would.
-  reservedNamesPerHour: number;
   // Per address: how much feedback it may send in each window of `feedbackWindowMs`.
   feedbackPerWindow: number;
   feedbackWindowMs: number;
@@ -112,7 +107,6 @@ export const DEFAULT_SOCKET_LIMITS: Readonly<SocketLimits> = Object.freeze({
   messageBurst: 20,
   roomsPerMinute: 5,
   failedLookupsPerMinute: 20,
-  reservedNamesPerHour: 30,
   feedbackPerWindow: 3,
   feedbackWindowMs: 10 * 60_000,
   reportsPerHour: 5,
@@ -175,7 +169,6 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
   const creations = new WindowCounter(limits.roomsPerMinute, 60_000, now);
   const failedLookups = new WindowCounter(limits.failedLookupsPerMinute, 60_000, now);
-  const reservedNames = new WindowCounter(limits.reservedNamesPerHour, 60 * 60_000, now);
   const feedbackSent = new WindowCounter(limits.feedbackPerWindow, limits.feedbackWindowMs, now);
   const reportsSent = new WindowCounter(limits.reportsPerHour, 60 * 60_000, now);
   // The feedback that each address sent in the last window, as a hash of what was kept and when,
@@ -367,7 +360,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const kept = room.record();
     if (!kept) return;
     const { players, forgotten } = stillThere(kept.accounts);
-    const gameLog = kept.log && unsay(kept.log, forgotten);
+    const gameLog = kept.log && markDeleted(kept.log, forgotten);
     safely('replay', () => {
       const stored = accounts.keepGame({
         game: room.game.id,
@@ -481,8 +474,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   }
 
   // Which of those who played in a game, by account, are still there, and the player IDs of those
-  // whose account was deleted meanwhile: they no longer count as having played, and what they said
-  // goes from the log (unsay), as it would have if the account had been deleted after the game.
+  // whose account was deleted meanwhile: they no longer count as having played, and the log marks
+  // them (markDeleted), as it would have if the account had been deleted after the game.
   function stillThere(played: readonly { playerId: string; accountId: number }[]): {
     players: { playerId: string; accountId: number }[];
     forgotten: Set<string>;
@@ -494,15 +487,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // What the groups said after the end of the game, as they talked it over, goes into the game's
   // record as the room leaves the game behind (Room.review()): when the chair plays again or starts
-  // the next match, and when the room closes. What an account deleted meanwhile said is left out,
-  // as from the rest of the log.
+  // the next match, and when the room closes. The player IDs of an account deleted meanwhile are
+  // marked, as in the rest of the log.
   function keepReview(room: Room): void {
     if (!accounts) return;
     safely('records', () => {
       const review = room.review();
       if (!review) return;
       const { players, forgotten } = stillThere(review.accounts);
-      accounts.keepReview(review.gameId, unsay({ entries: review.entries }, forgotten).entries, players);
+      accounts.keepReview(review.gameId, review.entries, players, forgotten);
     });
   }
 
@@ -965,34 +958,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     safely('handshake', () => comeBack(socket, auth));
 
-    // The name that someone who comes into a room has there: their username, when they are logged
-    // in, or else the nickname they gave, which may not be anyone's username, nor one of the names
-    // that nobody may register. The account is read again each time, since it may have been renamed
-    // since the connection was made.
-    function newcomer(
-      nickname: string,
-    ): { ok: true; name: string; account: MemberAccount | null } | ReturnType<typeof fail> {
-      if (conn.account) {
-        const account = accounts?.store.byId(conn.account.id);
-        if (!account) return fail('not_member');
-        return { ok: true, name: account.username, account: memberAccount(account) };
-      }
-      if (cleanName(nickname) === null) return fail('name_invalid');
-      return nameFree(nickname) ?? { ok: true, name: nickname, account: null };
-    }
-
-    // Why a guest may not have a nickname, or null when they may. Hearing that a name is someone's
-    // username says that the account exists, as registering the name would, so an address may hear
-    // it only so often; past that, every nickname it gives is refused for the rest of the hour,
-    // since being let in would say as much (docs/architecture.md). The reserved names are public,
-    // and say nothing.
-    function nameFree(nickname: string): ReturnType<typeof fail> | null {
-      if (isReservedName(nickname)) return fail('name_reserved');
-      if (!accounts) return null;
-      if (!reservedNames.allowed(conn.ip)) return fail('rate_limited');
-      if (!accounts.reserved(nickname)) return null;
-      reservedNames.add(conn.ip);
-      return fail('name_reserved');
+    // Who someone who comes into a room is there: the account they are logged in to, with its
+    // username, or else a guest, whom the room gives a number. The account is read again each
+    // time, since it may have been renamed since the connection was made.
+    function newcomer():
+      { ok: true; as: { username: string; account: MemberAccount } | null } | ReturnType<typeof fail> {
+      if (!conn.account) return { ok: true, as: null };
+      const account = accounts?.store.byId(conn.account.id);
+      if (!account) return fail('not_member');
+      return { ok: true, as: { username: account.username, account: memberAccount(account) } };
     }
 
     const handlers: Handlers = new Map();
@@ -1091,18 +1065,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // no match and has the game's default settings. Its game starts as soon as its creator is in it,
     // online; should it not, they are in its waiting room with the AI players, as in any room.
     on(handlers, 'room:create', (message) => {
-      const {
-        game,
-        language,
-        fields,
-        randomFields,
-        settings,
-        name: nickname,
-        play,
-        match,
-        public: listed,
-        practice,
-      } = message;
+      const { game, language, fields, randomFields, settings, play, match, public: listed, practice } = message;
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
@@ -1110,9 +1073,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const refusal = listed ? publicRefusal(conn) : null;
       if (refusal) return refusal;
       if (practice && !accountOf(conn).ok) return fail('account_required');
-      const as = newcomer(nickname ?? '');
-      if (!as.ok) return as;
-      const { name, account } = as;
+      const entering = newcomer();
+      if (!entering.ok) return entering;
+      const { as } = entering;
+      const account = as?.account ?? null;
       // From here on the attempt counts against the address, whatever comes of it. Checking the
       // fields goes through all of their words, which costs more than anything else a message
       // can ask for. The chair's messages that do the same need a room first; this one is open
@@ -1125,9 +1089,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         randomFields: randomFields ?? false,
         settings,
         key: conn.key,
-        name,
         play,
-        account,
+        as,
         ...(match ? { match } : {}),
         public: listed ?? false,
         ...(practice ? { practice: practice.role } : {}),
@@ -1181,7 +1144,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // from there on they are a newcomer like any other, whom a removal or the account requirement of
     // a public room keeps out as it would anyone. Whoever has a seat comes back by the code, whether
     // or not the invitation that brought them still stands.
-    on(handlers, 'room:join', ({ code, name, roomId, play, invitation }) => {
+    on(handlers, 'room:join', ({ code, roomId, play, invitation }) => {
       if (code === undefined && invitation === undefined) return fail('bad_request');
       const room =
         invitation === undefined
@@ -1194,19 +1157,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (room.rev !== sent.get(room)) broadcast(room);
         return ok({ code: room.code, roomId: room.id });
       }
-      // Whatever keeps a newcomer out comes before the question for a name: nobody should fill
-      // in the form only to hear that they were removed, that a public room takes only players
-      // with accounts, or that the room is full.
+      // Whatever keeps a newcomer out comes before the question whether they play: nobody should
+      // answer it only to hear that they were removed, that a public room takes only players with
+      // accounts, or that the room is full.
       const refusal = admission(room, conn) ?? (room.full() ? fail('room_full') : null);
       if (refusal) return refusal;
-      // A newcomer says who they are and whether they have come to play: a guest with a name and a
-      // choice, and a player with an account, whose name is the username, with the choice alone.
-      if (name === undefined && (!conn.account || play === undefined)) {
-        return { ...fail('name_required'), language: room.language };
-      }
-      const as = newcomer(name ?? '');
-      if (!as.ok) return as;
-      const joined = room.join(conn.key, as.name, play, as.account);
+      // A newcomer says whether they have come to play or only to watch.
+      if (play === undefined) return { ...fail('play_required'), language: room.language };
+      const entering = newcomer();
+      if (!entering.ok) return entering;
+      const joined = room.join(conn.key, play, entering.as);
       if (!joined.ok) return joined;
       enter(socket, room, joined.member);
       return ok({ code: room.code, roomId: room.id });
@@ -1225,16 +1185,6 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (room.members.size === 0) shut(room, 'expired', 'empty');
       else broadcast(room);
       return ok();
-    });
-
-    on(handlers, 'room:rename', ({ name }) => {
-      const found = membership(socket);
-      if (!found) return fail('not_member');
-      if (!found.member.account && cleanName(name) !== null) {
-        const refusal = nameFree(name);
-        if (refusal) return refusal;
-      }
-      return changed(found.room, found.room.rename(found.member.id, name));
     });
 
     // A quick reaction goes to every connection in the room, screens and the sender's own tabs

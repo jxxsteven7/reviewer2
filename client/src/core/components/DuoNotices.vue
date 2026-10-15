@@ -88,7 +88,7 @@ const announcement = computed(() => notices.value.map((item) => `${headline(item
 .who {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   vertical-align: middle;
 }
 

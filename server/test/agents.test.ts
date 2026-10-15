@@ -151,7 +151,7 @@ function playReds(reds: number[]) {
 
 describe('inviting AI players', () => {
   test('takes a chair whose account the operator lets have them, in a private room', async () => {
-    const { chair: guest, code } = await createRoom(server.url, 'Gus', { game: 'keywords' });
+    const { chair: guest, code } = await createRoom(server.url, { game: 'keywords' });
     track(guest);
     expect(guest.state?.agents).toBe(false);
     expect(await invite(guest, 'red', 'captain')).toEqual({ ok: false, error: 'agents_not_allowed' });
@@ -201,7 +201,7 @@ describe('inviting AI players', () => {
       agents: { players: 2, up: true, steps: 0, failures: 0 },
     });
     // Only the chair invites them.
-    const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
+    const bob = track(await joinRoom(server.url, code, { play: true }));
     expect(await invite(bob, 'blue', 'captain')).toEqual({ ok: false, error: 'not_chair' });
   });
 
@@ -278,7 +278,7 @@ describe('an AI player in the room', () => {
 async function againstAi() {
   const { browser, chair: ann, code } = await chairRoom();
   await until(() => ann.state?.agents === true, 'the agent');
-  const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
+  const bob = track(await joinRoom(server.url, code, { play: true }));
   await seat(ann, 'blue', 'captain');
   await seat(bob, 'blue', 'guesser');
   await expectOk(invite(ann, 'red', 'captain'));
@@ -296,8 +296,8 @@ async function againstAi() {
 async function withCat() {
   const { chair: ann, code, roomId } = await chairRoom();
   await until(() => ann.state?.agents === true, 'the agent');
-  const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
-  const cat = track(await joinRoom(server.url, code, 'Cat', { play: true }));
+  const bob = track(await joinRoom(server.url, code, { play: true }));
+  const cat = track(await joinRoom(server.url, code, { play: true }));
   await seat(ann, 'blue', 'captain');
   await seat(bob, 'blue', 'guesser');
   await seat(cat, 'red', 'guesser');
@@ -520,14 +520,14 @@ describe('the AI players of a group', () => {
 });
 
 // Ann chairs and is the blue PI, Bob is a blue student, and the red group is Cat, its PI, with
-// `students` as its students, all people. The game is at the red group's turn.
-async function people(students: string[], settings: Partial<KeywordsSettings> = {}) {
+// `students` students, Dan and then Eve, all people. The game is at the red group's turn.
+async function people(students: number, settings: Partial<KeywordsSettings> = {}) {
   const { browser, chair: ann, code, roomId } = await chairRoom(true, settings);
   await until(() => ann.state?.agents === true, 'the agent');
-  const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
-  const cat = track(await joinRoom(server.url, code, 'Cat', { play: true }));
+  const bob = track(await joinRoom(server.url, code, { play: true }));
+  const cat = track(await joinRoom(server.url, code, { play: true }));
   const reds: TestClient[] = [];
-  for (const name of students) reds.push(track(await joinRoom(server.url, code, name, { play: true })));
+  for (let i = 0; i < students; i += 1) reds.push(track(await joinRoom(server.url, code, { play: true })));
   await seat(ann, 'blue', 'captain');
   await seat(bob, 'blue', 'guesser');
   await seat(cat, 'red', 'captain');
@@ -548,7 +548,7 @@ async function goes(client: TestClient, watcher: TestClient) {
 
 describe('an AI that plays for someone offline', () => {
   test('plays their turn once they have been offline long enough, and stops when they are back', async () => {
-    const { ann, cat, code, roomId } = await people(['Dan']);
+    const { ann, cat, code, roomId } = await people(1);
     const token = cat.token;
     const catId = await goes(cat, ann);
     server.advance(TAKEOVER_MS - 1);
@@ -567,7 +567,7 @@ describe('an AI that plays for someone offline', () => {
   });
 
   test('leaves the turn to the people of the group who are there', async () => {
-    const { ann, cat, reds, code } = await people(['Dan', 'Eve']);
+    const { ann, cat, reds, code } = await people(2);
     const [dan] = reds as [TestClient, TestClient];
     const game = truth(code);
     await expectOk(cat.send('keywords:clue', { gameId: game.gameId, turn: game.turn, word: 'zebra', count: 1 }));
@@ -581,7 +581,7 @@ describe('an AI that plays for someone offline', () => {
   });
 
   test('plays for one student of a group at most, when every one of them is offline', async () => {
-    const { ann, cat, reds, code } = await people(['Dan', 'Eve']);
+    const { ann, cat, reds, code } = await people(2);
     const [dan, eve] = reds as [TestClient, TestClient];
     const targets = redTargets(code);
     playReds(targets);
@@ -610,9 +610,9 @@ describe('an AI that plays for someone offline', () => {
   test('leaves the guesses to the AI student of the group, when its people are offline', async () => {
     const { chair: ann, code } = await chairRoom();
     await until(() => ann.state?.agents === true, 'the agent');
-    const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
-    const cat = track(await joinRoom(server.url, code, 'Cat', { play: true }));
-    const dan = track(await joinRoom(server.url, code, 'Dan', { play: true }));
+    const bob = track(await joinRoom(server.url, code, { play: true }));
+    const cat = track(await joinRoom(server.url, code, { play: true }));
+    const dan = track(await joinRoom(server.url, code, { play: true }));
     await seat(ann, 'blue', 'captain');
     await seat(bob, 'blue', 'guesser');
     await seat(cat, 'red', 'captain');
@@ -640,7 +640,7 @@ describe('an AI that plays for someone offline', () => {
   });
 
   test('asks again in a room without time limits, when the agent had no answer', async () => {
-    const { ann, cat, code } = await people(['Dan'], NO_TIMERS);
+    const { ann, cat, code } = await people(1, NO_TIMERS);
     let asked = 0;
     agent.play = (request) => {
       asked += 1;
@@ -661,7 +661,7 @@ describe('an AI that plays for someone offline', () => {
   });
 
   test('lets go of someone offline while the agent is down, and takes them over again once it is back', async () => {
-    const { ann, cat, code } = await people(['Dan'], NO_TIMERS);
+    const { ann, cat, code } = await people(1, NO_TIMERS);
     const catId = await goes(cat, ann);
     agent.up = false;
     server.advance(TAKEOVER_MS);
@@ -692,8 +692,8 @@ describe('a game that an AI played in', () => {
   test('counts no missed deadline of a PI with an account, since it awards no title', async () => {
     const { chair: ann, code } = await chairRoom(true, { firstClueTime: 30, clueTime: 10, guessTime: 20 });
     await until(() => ann.state?.agents === true, 'the agent');
-    const bob = track(await joinRoom(server.url, code, 'Bob', { play: true }));
-    const cat = track(await joinRoom(server.url, code, 'Cat', { play: true }));
+    const bob = track(await joinRoom(server.url, code, { play: true }));
+    const cat = track(await joinRoom(server.url, code, { play: true }));
     await seat(ann, 'red', 'captain');
     await seat(bob, 'blue', 'captain');
     await seat(cat, 'blue', 'guesser');
@@ -772,10 +772,13 @@ describe('a game that an AI played in', () => {
       status: 404,
       body: { error: 'no_such_profile' },
     });
-    // Ann deletes her account: the record stays, the AI's log with it, and says no longer who she was.
+    // Ann deletes her account: the record stays, the AI's log with it, and says no longer who she
+    // was. The log of the game marks her player ID as that of an account deleted since.
     expect((await browser.request('/api/account/delete', { password: 'correct horse' })).body).toEqual({ ok: true });
     expect(server.db.prepare('SELECT count(*) AS n FROM game_players').get()).toEqual({ n: 0 });
-    expect(kept()).toEqual([row]);
+    const [after] = kept();
+    expect({ ...after, log: null }).toEqual({ ...row, log: null });
+    expect(JSON.parse(after?.log ?? '{}')).toEqual({ ...JSON.parse(row?.log ?? '{}'), deleted: [ann.me] });
   });
 
   test('keeps in the AI log an answer that came too late, and none from the game before', async () => {
@@ -836,7 +839,7 @@ describe('a game that an AI played in', () => {
   });
 
   test('counts one that an AI played in for someone offline, whose moves the logs mark', async () => {
-    const { ann, cat, reds, code } = await people(['Dan']);
+    const { ann, cat, reds, code } = await people(1);
     const [dan] = reds as [TestClient];
     const catId = await goes(cat, ann);
     server.advance(TAKEOVER_MS);
@@ -997,7 +1000,7 @@ describe('a practice room', () => {
         ...extra,
       });
     const guest = track(await TestClient.connect(server.url));
-    expect(await ask(guest, { name: 'Gus' })).toEqual({ ok: false, error: 'account_required' });
+    expect(await ask(guest)).toEqual({ ok: false, error: 'account_required' });
     const browser = new Browser(server.url);
     expect((await browser.register('Ann')).body).toEqual({ ok: true });
     const ann = track(await browser.connect());
@@ -1034,7 +1037,7 @@ describe('a practice room', () => {
   test('marks each of its games on the record, plays for its chair while offline, and takes AI players again', async () => {
     const { browser, client: ann, code, roomId } = await practice('captain');
     // Bob comes to watch, so that a person is there while Ann is away.
-    const bob = track(await joinRoom(server.url, code, 'Bob', { play: false }));
+    const bob = track(await joinRoom(server.url, code, { play: false }));
     await toRedTurn(code);
     const token = ann.token;
     const annId = await goes(ann, bob);

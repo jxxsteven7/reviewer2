@@ -1,13 +1,18 @@
+<script lang="ts">
+// Whether the page has a page on the site to go back to. The router keeps the address of the page
+// before in the history's state (`back`), and none for the first page of a visit.
+export const canGoBack = (): boolean => typeof (window.history.state as { back?: unknown } | null)?.back === 'string';
+</script>
+
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 
 // The way back to the page that the viewer came from on the site (docs/architecture.md#public-profiles):
 // a round button with an arrow, as a sheet's close button is round with a cross. A page opened on
 // its own, as from a shared link, a mail or a new tab, has nothing on the site to go back to, and
-// no button: the wordmark at the top leads home. The router keeps the address of the page before in
-// the history's state (`back`), and none for the first page of a visit.
+// no button: the wordmark at the top leads home.
 const { t } = useI18n();
-const previous = typeof (window.history.state as { back?: unknown } | null)?.back === 'string';
+const previous = canGoBack();
 const back = () => window.history.back();
 </script>
 

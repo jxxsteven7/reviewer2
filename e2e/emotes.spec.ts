@@ -20,7 +20,7 @@ test('a reaction reaches every page, and the sender waits before the next', asyn
     table.screen,
   ];
 
-  await eve.locator('.role-banner').getByRole('button', { name: text.emotes.open }).click();
+  await eve.locator('.sticky-clock').getByRole('button', { name: text.emotes.open }).click();
   // The panel offers every phrase, each on a row that a thumb can hit: 44 pixels, give or take the
   // fraction of a pixel that a desktop layout rounds away.
   const dialog = eve.locator('[role=dialog]');
@@ -33,20 +33,22 @@ test('a reaction reaches every page, and the sender waits before the next', asyn
   await dialog.getByRole('button', { name: text.emotes.phrases.reviewer2 }).click();
   await expect(dialog).toHaveCount(0);
   for (const page of everyone) {
-    await expect(page.locator('.bubble')).toHaveText(bubble('Eve', text.emotes.phrases.reviewer2));
+    await expect(page.locator('.bubble')).toHaveText(bubble(table.names.spectator, text.emotes.phrases.reviewer2));
   }
 
   // Eve's button counts down; Bob has a wait of his own, and sends one of the newer phrases.
-  await expect(eve.locator('.role-banner button')).toBeDisabled();
-  await expect(eve.locator('.role-banner button')).toHaveText(/\(\d+\)/);
+  await expect(eve.locator('.sticky-clock .emote-button button')).toBeDisabled();
+  await expect(eve.locator('.sticky-clock .emote-button button')).toHaveText(/\(\d+\)/);
   const bob = table.guessers.red;
-  await bob.locator('.role-banner').getByRole('button', { name: text.emotes.open }).click();
+  await bob.locator('.sticky-clock').getByRole('button', { name: text.emotes.open }).click();
   await bob.locator('[role=dialog]').getByRole('button', { name: text.emotes.phrases.p_hacking }).click();
-  await expect(table.screen.locator('.bubble').last()).toHaveText(bubble('Bob', text.emotes.phrases.p_hacking));
+  await expect(table.screen.locator('.bubble').last()).toHaveText(
+    bubble(table.names.guessers.red, text.emotes.phrases.p_hacking),
+  );
 
   // After ten seconds, Eve can send another.
-  await expect(eve.locator('.role-banner button')).toHaveText(text.emotes.open, { timeout: 15_000 });
-  await expect(eve.locator('.role-banner button')).toBeEnabled();
+  await expect(eve.locator('.sticky-clock .emote-button button')).toHaveText(text.emotes.open, { timeout: 15_000 });
+  await expect(eve.locator('.sticky-clock .emote-button button')).toBeEnabled();
 
   // The screen, which nobody has clicked, asks for a click to turn its sounds on, until someone does.
   await expect(table.screen.locator('.sound-hint')).toHaveText(text.emotes.locked);
@@ -58,7 +60,7 @@ test("a PI's reactions are held while the students guess, and come back when the
   const table = await seatTable(browser, 'en');
   const team = await teamOnTurn(table.captains.red);
   const pis = [table.captains.red, table.captains.blue];
-  const button = (page: (typeof pis)[number]) => page.locator('.role-banner .emote-button .button');
+  const button = (page: (typeof pis)[number]) => page.locator('.sticky-clock .emote-button .button');
   await giveClue(table.captains[team], 'Hint', 1, 'en');
   for (const pi of pis) {
     await expect(button(pi)).toHaveAttribute('aria-disabled', 'true');

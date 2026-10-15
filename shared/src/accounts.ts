@@ -314,8 +314,7 @@ export type UsernameCheck = { username: string; problem: null } | { username: nu
 // full-width forms, without the silent characters that a reader can't see, and with case folded.
 // JavaScript has no full case folding, so the text goes to upper case and back: that folds the
 // sharp s with "ss", and the final sigma with the other sigma. A name that only differs from a
-// username in these ways is the same name, for registering, for logging in, and for a guest's
-// nickname.
+// username in these ways is the same name, for registering, for logging in, and in a room.
 export function usernameKey(name: string): string {
   return name.normalize('NFKC').replace(SILENT, '').toUpperCase().toLowerCase().normalize('NFKC');
 }
@@ -363,9 +362,16 @@ function reservedKey(name: string): string {
   return usernameKey(name).replace(/[\s._\-\u{b7}]/gu, '');
 }
 
-// Whether a name is one of the reserved names. A guest may not take one as a nickname either:
-// they are reserved so that nobody can pass for the people who run the game.
-export const isReservedName = (name: string): boolean => RESERVED.has(reservedKey(name));
+// The names that a room calls its guests by, a word for a guest and their number, in either
+// language (docs/architecture.md#players-and-identity), compared as the reserved names are.
+const GUEST_NAME = /^(?:guest|\u{6e38}\u{5ba2}|\u{8bbf}\u{5ba2})\d+$/u;
+
+// Whether a name is one of the reserved names, or a guest's: they are reserved so that nobody can
+// pass for the people who run the game, or for a guest.
+export const isReservedName = (name: string): boolean => {
+  const key = reservedKey(name);
+  return RESERVED.has(key) || GUEST_NAME.test(key);
+};
 
 // A username as it will be kept and shown, or why it can't be one.
 export function checkUsername(raw: string): UsernameCheck {

@@ -9,6 +9,7 @@ import {
   isPhone,
   joinByLink,
   keyCard,
+  nameOf,
   newPlayer,
   openGroups,
   playFor,
@@ -42,15 +43,25 @@ async function groupOfTwo(browser: Browser) {
   const team = await teamOnTurn(table.captains.red);
   const other = otherTeam(team);
   const fay = await newPlayer(browser);
+  await joinByLink(fay, table.url, 'en', { watch: true });
   const fayStates = snapshotsOf(fay);
-  await joinByLink(fay, table.url, 'Fay', 'en', { watch: true });
   await openGroups(fay);
   await fay.getByRole('button', playFor(team)).click();
   await closeSheet(fay);
-  await expect(fay.locator('.role-banner .who')).toHaveText(seatSaid(team));
+  await expect(fay.locator('.strip .who')).toHaveText(seatSaid(team));
   const student = table.guessers[team];
   const name = table.names.guessers[team];
-  return { table, team, other, fay, fayStates, student, name, states: [...table.everyone, fayStates] };
+  return {
+    table,
+    team,
+    other,
+    fay,
+    fayStates,
+    fayName: nameOf(fay),
+    student,
+    name,
+    states: [...table.everyone, fayStates],
+  };
 }
 
 // Holding a card down opens the menu of marks (MarkMenu.vue), where the student chooses one: the
@@ -67,11 +78,130 @@ async function holdToMark(page: Page, index: number, mark: keyof typeof text.gam
   await expect(page.locator('.mark-menu')).toHaveCount(0);
 }
 
+// Where a box of the page is, as the browser lays it out.
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// The card that lifts while the menu of marks is open is a copy, measured from the card at rest,
+// not where the press sank it 3 pixels down and to the right; it lands where the card is as the menu
+// closes, also when the page has scrolled meanwhile, and the card shows again only once it has
+// landed (MarkMenu.vue).
+test('the lifted copy of a card starts where the card rests, and lands where it is when the menu closes', async ({
+  browser,
+  browserName,
+}) => {
+  // Headless WebKit on a runner without a GPU draws the blurred scrim behind the menu so slowly
+  // that it draws nothing while the menu stands, a scroll included, and hears the end of the
+  // copy's move only after the menu has given up waiting for it: the landing can't be watched there.
+  test.skip(browserName === 'webkit', 'WebKit draws nothing behind the menu on the runner');
+  const table = await seatTable(browser, 'en');
+  const student = table.guessers.red;
+  // A card in the board's middle row, which is in sight at the top of the page with room to scroll
+  // further on either screen.
+  const target = card(student, 12);
+  await student.evaluate(() => window.scrollTo(0, 0));
+  await expect(target).toBeInViewport();
+  const rest = await target.boundingBox();
+  if (!rest) throw new Error('the card has no box');
+  await student.mouse.move(rest.x + rest.width / 2, rest.y + rest.height / 2);
+  await student.mouse.down();
+  await expect(student.locator('.mark-menu [role=menu]')).toBeVisible();
+  await student.mouse.up();
+  // The copy's own box, before it lifts by a transform of its own.
+  const placed = await student.locator('.mark-menu .lifted').evaluate((lifted): Box => ({
+    x: parseFloat(lifted.style.left),
+    y: parseFloat(lifted.style.top),
+    width: parseFloat(lifted.style.width),
+    height: parseFloat(lifted.style.height),
+  }));
+  for (const side of ['x', 'y', 'width', 'height'] as const) {
+    expect(Math.abs(placed[side] - rest[side]), `the copy's ${side} as the card's at rest`).toBeLessThanOrEqual(0.5);
+  }
+
+  // The page scrolls under the menu, as a finger can drag it, and the menu closes: where the copy
+  // is as its move ends, which is where it stays until the card shows again, and, in every frame
+  // until the menu has gone, whether the card shows beside it. The frames alone can't say where
+  // the copy landed: a machine that is slow to draw may draw none between the end of the move and
+  // the menu going.
+  await student.evaluate(() => window.scrollBy(0, 90));
+  const now = await target.boundingBox();
+  if (!now) throw new Error('the card has no box');
+  expect(Math.round(rest.y - now.y), 'how far the page scrolled').toBe(90);
+  await student.evaluate(() => {
+    const frames: boolean[] = [];
+    const landed: Box[] = [];
+    Object.assign(window, { frames_: frames, landed_: landed });
+    const card = document.querySelectorAll('.board .card')[12] as Element;
+    const lifted = document.querySelector('.mark-menu .lifted') as HTMLElement;
+    // Heard on the way down, before the menu's own listener, which takes the copy out.
+    document.addEventListener(
+      'transitionend',
+      (event) => {
+        if (event.target !== lifted || event.propertyName !== 'transform') return;
+        const { x, y, width, height } = lifted.getBoundingClientRect();
+        landed.push({ x, y, width, height });
+      },
+      true,
+    );
+    const tick = () => {
+      if (!document.querySelector('.mark-menu .lifted')) return;
+      frames.push(getComputedStyle(card).visibility !== 'hidden');
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await student.keyboard.press('Escape');
+  await expect(student.locator('.mark-menu')).toHaveCount(0);
+  const { frames, landed } = await student.evaluate(() => {
+    const { frames_, landed_ } = window as unknown as { frames_: boolean[]; landed_: Box[] };
+    return { frames: frames_, landed: landed_ };
+  });
+  const last = landed.at(-1);
+  if (!last) throw new Error('the copy never landed');
+  for (const side of ['x', 'y', 'width', 'height'] as const) {
+    expect(Math.abs(last[side] - now[side]), `the landed copy's ${side} as the card's`).toBeLessThanOrEqual(1);
+  }
+  expect(
+    frames.filter((shown) => shown),
+    'frames in which the card showed beside its copy',
+  ).toEqual([]);
+  await expect(target).toHaveCSS('visibility', 'visible');
+});
+
+// The menu of marks lies over the page, fixed to the screen: a page scrolled down to the board stays
+// where it is as the menu takes the focus, and as it gives it back to the card.
+test.describe('on a phone scrolled to the board', () => {
+  test.use({ viewport: { width: 390, height: 420 } });
+
+  test('the menu of marks leaves the page where it is', async ({ browser }) => {
+    const table = await seatTable(browser, 'en');
+    const student = table.guessers.red;
+    const target = card(student, 12);
+    await target.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    const scrolled = await student.evaluate(() => window.scrollY);
+    expect(scrolled, 'the page scrolled to the board').toBeGreaterThan(0);
+    const rest = await target.boundingBox();
+    if (!rest) throw new Error('the card has no box');
+    await student.mouse.move(rest.x + rest.width / 2, rest.y + rest.height / 2);
+    await student.mouse.down();
+    await expect(student.locator('.mark-menu [role=menu]')).toBeVisible();
+    await student.mouse.up();
+    expect(await student.evaluate(() => window.scrollY), 'the page under the open menu').toBe(scrolled);
+    await student.keyboard.press('Escape');
+    await expect(student.locator('.mark-menu')).toHaveCount(0);
+    expect(await student.evaluate(() => window.scrollY), 'the page once the menu has closed').toBe(scrolled);
+  });
+});
+
 // The choosers of a card hang on it as avatars, and the card's accessible name says who they are.
 const chosenBy = (names: string) => new RegExp(`, chosen by ${names}$`);
 
 test("a group's students see each other's choices, and nobody else does", async ({ browser }) => {
-  const { table, team, other, fay, student, name, states } = await groupOfTwo(browser);
+  const { table, team, other, fay, fayName, student, name, states } = await groupOfTwo(browser);
   const captain = table.captains[team];
   await giveClue(captain, 'Hint', 2, 'en');
   await expect(student.locator('.guess-bar')).toBeVisible();
@@ -87,12 +217,12 @@ test("a group's students see each other's choices, and nobody else does", async 
 
   // Fay chooses another card, takes the choice back, and joins the first one.
   await card(fay, another).click();
-  await expect(card(student, another)).toHaveAttribute('aria-label', chosenBy('Fay'));
+  await expect(card(student, another)).toHaveAttribute('aria-label', chosenBy(fayName));
   await card(fay, another).click();
   await expect(card(student, another).locator('.choosers')).toHaveCount(0);
   await card(fay, own).click();
-  await expect(card(student, own)).toHaveAttribute('aria-label', chosenBy('Fay'));
-  await expect(card(captain, own)).toHaveAttribute('aria-label', chosenBy(`${name} and Fay`));
+  await expect(card(student, own)).toHaveAttribute('aria-label', chosenBy(fayName));
+  await expect(card(captain, own)).toHaveAttribute('aria-label', chosenBy(`${name} and ${fayName}`));
   for (const page of [table.captains[other], table.guessers[other], table.spectator, table.screen]) {
     await expect(page.locator('.board .choosers')).toHaveCount(0);
   }

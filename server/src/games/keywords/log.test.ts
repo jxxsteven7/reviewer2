@@ -20,7 +20,7 @@ describe('the log of the team word guessing game', () => {
     chairId: 'ann',
     now: () => 0,
     keyOf: (id) => keys[id] ?? id,
-    nameOf: (id) => id,
+    whoIs: () => ({ account: true }),
     isOnline: () => true,
     agentOf: () => null,
     playerIds: () => Object.keys(keys),

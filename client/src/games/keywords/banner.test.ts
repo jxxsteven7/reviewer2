@@ -38,18 +38,15 @@ describe('the banner', () => {
     expect(bannerFor(SPECTATOR, game('red', 'guess'))).toEqual({ line: 'watchGuess', group: 'red', urgent: false });
   });
 
-  test('says the same to everyone in the waiting room and after the game', () => {
+  test('says the same to everyone after the game', () => {
     for (const seat of [redPi, redStudent, SPECTATOR]) {
-      expect(bannerFor(seat, null)).toEqual({ line: 'lobby', group: null, urgent: false });
-      expect(bannerFor(seat, null, true)).toEqual({ line: 'lobbyChair', group: null, urgent: false });
       expect(bannerFor(seat, game('red', 'guess', true))).toEqual({ line: 'over', group: null, urgent: false });
-      expect(bannerFor(seat, game('red', 'over'), true)).toEqual({ line: 'over', group: null, urgent: false });
+      expect(bannerFor(seat, game('red', 'over'))).toEqual({ line: 'over', group: null, urgent: false });
     }
   });
 
   test('ends a line that waits for someone in an ellipsis, a move in an exclamation mark, and the rest in a full stop', () => {
     const waiting: BannerLine[] = [
-      'lobby',
       'studentsGuessing',
       'piThinking',
       'otherClue',
@@ -58,7 +55,7 @@ describe('the banner', () => {
       'watchGuess',
     ];
     const moves: BannerLine[] = ['yourClue', 'yourGuess'];
-    const rest: BannerLine[] = ['lobbyChair', 'over', 'paused'];
+    const rest: BannerLine[] = ['over', 'paused'];
     const lines = (text: Locale) => text.banner.lines;
     for (const line of waiting) {
       expect(lines(en)[line]).toMatch(/[^\u2026]\u2026$/);
@@ -78,9 +75,9 @@ describe('the banner', () => {
   test('says who the viewer is, in front of their seat, without a colon', () => {
     expect(en.banner.seat).toMatch(/^You are /);
     expect(en.banner.spectator).toMatch(/^You are /);
-    // "你是 ", with a space and no colon after it.
+    // "你是 ", with a space and no colon after it; a spectator is told "你在旁听".
     expect(zh.banner.seat).toMatch(/^\u4f60\u662f /);
-    expect(zh.banner.spectator).toMatch(/^\u4f60\u662f /);
+    expect(zh.banner.spectator).toBe('\u4f60\u5728\u65c1\u542c');
     for (const line of [en.banner.seat, en.banner.spectator, zh.banner.seat, zh.banner.spectator]) {
       expect(line).not.toMatch(/[:\uff1a]/);
     }

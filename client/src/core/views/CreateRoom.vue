@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defaultMatchRules, LANGUAGES, MAX_NAME_INPUT, type Language, type MatchRules } from '@reviewer2/shared';
+import { defaultMatchRules, LANGUAGES, type Language, type MatchRules } from '@reviewer2/shared';
 import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -11,22 +11,19 @@ import MatchForm from '../components/MatchForm.vue';
 import PlayChoice from '../components/PlayChoice.vue';
 import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
-import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
 import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
 import { keepRoomSetup, keptFields, keptMatch, lastRoom } from '../roomSetup';
-import { storedName, storeName } from '../session';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
-import { useNameField } from '../useNameField';
 
 // Setting up a room: the language (the interface language, which the switch changes), the word
 // lists, folded into a line (FieldFold.vue), or lists drawn anew for every game, the game's own
 // settings, whether it is an ordinary room or a match, and the match's rules, whether the room is
-// private or listed on the home page, the creator's nickname, and whether they play or only watch.
-// The creator becomes the chair either way. A creator who is logged in has their username, and is
-// asked for no nickname; only they may list the room. The setup starts from the last one
+// private or listed on the home page, and whether the creator plays or only watches. The creator
+// becomes the chair either way. A creator who is logged in has their username, and only they may
+// list the room; a guest has a number in the room, and gives no name. The setup starts from the last one
 // (roomSetup.ts), as far as it still holds: lists that the language has too few words in drop out,
 // a setting that no longer will do is the game's default, and a guest's room is private.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
@@ -37,9 +34,8 @@ const router = useRouter();
 const last = lastRoom();
 const chosen = ref<string[]>(keptFields(last?.fields));
 const randomFields = ref(last?.randomFields === true);
-const { name, clean, problem, refuse } = useNameField(storedName());
 const play = ref(typeof last?.play === 'boolean' ? last.play : true);
-// What the server had against the form, apart from the name, which the name field shows.
+// What the server had against the form.
 const formError = ref<string | undefined>();
 const { busy, run } = useBusy();
 const language = computed(() => locale.value as Language);
@@ -86,20 +82,16 @@ watch(
 const needsField = computed(() => usable.value.length > 0 && !chosen.value.length && !randomFields.value);
 const id = useId();
 // Whether the form will do. create() checks it too, since a form can be submitted without its
-// button. The lists must have come, so that those chosen have been checked against them. A
-// creator who is logged in needs no nickname: theirs is the username.
+// button. The lists must have come, so that those chosen have been checked against them.
 const ready = computed(
   () =>
     fields.value !== null &&
     (chosen.value.length > 0 || randomFields.value) &&
-    (!!clean.value || account.summary !== null) &&
     settingsValid.value &&
     (!isMatch.value || matchValid.value),
 );
 
 onMounted(loadFields);
-
-const NAME_ERRORS = ['name_required', 'name_invalid', 'name_taken', 'name_reserved'];
 
 async function create() {
   if (!ready.value) return;
@@ -113,17 +105,14 @@ async function create() {
       ...(settings.value ? { settings: settings.value } : {}),
       ...(isMatch.value ? { match: match.value } : {}),
       ...(isPublic.value ? { public: true } : {}),
-      ...(account.summary ? {} : { name: name.value }),
       play: play.value,
     }),
   );
   if (!reply) return;
   if (!reply.ok) {
-    if (NAME_ERRORS.includes(reply.error) && !account.summary) refuse(reply.error);
-    else formError.value = t(errorKey(reply.error));
+    formError.value = t(errorKey(reply.error));
     return;
   }
-  if (!account.summary) storeName(clean.value ?? name.value.trim());
   keepRoomSetup({
     room: {
       game: props.game,
@@ -209,15 +198,6 @@ async function create() {
           <strong>{{ account.summary.username }}</strong>
         </template>
       </i18n-t>
-      <UiField
-        v-else
-        v-model="name"
-        :label="t('create.name')"
-        :maxlength="MAX_NAME_INPUT"
-        autocomplete="nickname"
-        enterkeyhint="go"
-        :error="problem"
-      />
       <PlayChoice v-model="play" />
     </section>
 

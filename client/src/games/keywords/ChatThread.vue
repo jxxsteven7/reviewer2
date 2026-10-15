@@ -116,6 +116,7 @@ onBeforeUnmount(() => resized?.disconnect());
             v-if="playerOf(message.player)"
             :player-id="message.player"
             :name="playerOf(message.player)?.name ?? ''"
+            :guest="playerOf(message.player)?.guest"
             :avatar="playerOf(message.player)?.avatar"
             :agent="playerOf(message.player)?.agent !== undefined"
           />
@@ -200,9 +201,10 @@ onBeforeUnmount(() => resized?.disconnect());
   background: var(--bg);
 }
 
-/* The avatar's button sits on the line's baseline, which puts the avatar level with the name. */
+/* The avatar's middle is level with the middle of the name's first line. */
 .message :deep(.avatar-button) {
-  margin-right: var(--space-1);
+  margin-right: var(--space-2);
+  vertical-align: middle;
 }
 
 .name {

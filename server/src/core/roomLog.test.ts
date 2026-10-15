@@ -15,14 +15,16 @@ function table(game: typeof fakeGame = fakeGame) {
     language: 'en',
     fields: ['general'],
     key: 'key-ann',
-    name: 'Ann',
     play: true,
-    account: { id: 1, handle: 'a1b2c3d4e5f6', avatar: null, rank: 'undergraduate', agents: false },
+    as: {
+      username: 'Ann',
+      account: { id: 1, handle: 'a1b2c3d4e5f6', avatar: null, rank: 'undergraduate', agents: false },
+    },
   });
   if (!created.ok) throw new Error(created.error);
   const { room, member: ann } = created;
   room.attach(ann, 'socket-ann');
-  const joined = room.join('key-bob', 'Bob', true);
+  const joined = room.join('key-bob', true);
   if (!joined.ok) throw new Error(joined.error);
   const bob = joined.member;
   room.attach(bob, 'socket-bob');
@@ -59,10 +61,10 @@ describe('the log of a game', () => {
     room.attach(bob, 'socket-bob-3');
     room.bench(bob.id);
     // Whoever comes during the game is noted with where the game has put them.
-    const cat = room.join('key-cat', 'Cat', false);
+    const cat = room.join('key-cat', false);
     if (!cat.ok) throw new Error(cat.error);
     room.remove(cat.member.id);
-    const dee = room.join('key-dee', 'Dee', true);
+    const dee = room.join('key-dee', true);
     if (!dee.ok) throw new Error(dee.error);
     room.handOver(bob.id);
     // The game started at 0 on the room's clock.
@@ -122,12 +124,9 @@ describe('the log of a game', () => {
 
   test('says which account each player had, those who left included, and no guest', () => {
     const { room, ann, bob } = table();
-    const fay = room.join('key-fay', 'Fay', true, {
-      id: 3,
-      handle: 'b2c3d4e5f6a1',
-      avatar: null,
-      rank: 'undergraduate',
-      agents: false,
+    const fay = room.join('key-fay', true, {
+      username: 'Fay',
+      account: { id: 3, handle: 'b2c3d4e5f6a1', avatar: null, rank: 'undergraduate', agents: false },
     });
     if (!fay.ok) throw new Error(fay.error);
     room.attach(fay.member as Member, 'socket-fay');
@@ -139,6 +138,21 @@ describe('the log of a game', () => {
       { playerId: fay.member.id, accountId: 3 },
     ]);
     expect(room.record()?.accounts.some(({ playerId }) => playerId === bob.id)).toBe(false);
+  });
+
+  test('lets the game tell who each player is, those who left during the game included', () => {
+    const { room, ann, bob } = table();
+    const cat = room.join('key-cat', true);
+    if (!cat.ok) throw new Error(cat.error);
+    room.start(0);
+    room.drop(bob.id);
+    // Ann has an account, which is all that the game learns of her; Bob and Cat are the room's
+    // first two guests, and Bob is still the first after he has left.
+    const { whoIs } = room.context;
+    expect(whoIs(ann.id)).toEqual({ account: true });
+    expect(whoIs(bob.id)).toEqual({ guest: 1 });
+    expect(whoIs(cat.member.id)).toEqual({ guest: 2 });
+    expect(whoIs('nobody')).toBeNull();
   });
 
   test('is for one game: none before its end, and a new one for the next game', () => {

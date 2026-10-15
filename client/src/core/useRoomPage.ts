@@ -3,6 +3,10 @@ import { games } from '../games';
 import { browserLanguage, setLanguage, storedLanguage } from './i18n';
 import { closeRoomPage, entry, openRoom, room } from './room';
 
+// The id of the place in a room's masthead, left of the room menu, where the waiting room puts its
+// reaction button (RoomPage.vue).
+export const ROOM_ACTIONS = 'room-actions';
+
 // What the room page and the screen page share. They enter the room when they open, whenever the
 // code in the address changes, and whenever the address brings an invitation, which stands in for
 // the code (docs/architecture.md#friends), show the whole page in the room's language for as long

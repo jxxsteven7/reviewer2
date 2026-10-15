@@ -211,6 +211,12 @@ h3 {
   background: var(--bg);
 }
 
+/* A match's line ends in its title, a word, which keeps the inset its start has; a game's ends in
+   the round button, which needs less. */
+.record.match {
+  padding-right: var(--space-3);
+}
+
 /* The lines of a list share its columns, so that the tags, the roles and the places start at the
    same place on every line, each column as wide as its widest entry. The decision follows its role
    on the same line, rather than in a column of its own: that lines the decisions up where the roles

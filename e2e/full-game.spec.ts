@@ -1,12 +1,20 @@
 import { otherTeam } from '@reviewer2/shared';
 import {
+  avatarOf,
+  closeSheet,
   expectNoKey,
   gameOf,
+  giveClue,
   interpolate,
+  joinByLink,
+  keyCard,
+  newPlayer,
   playToTheEnd,
+  playTurn,
+  reveal,
   seatTable,
-  sideChannel,
   snapshotsOf,
+  teamOnTurn,
   TEXT,
   expect,
   test,
@@ -52,7 +60,7 @@ for (const language of ['en', 'zh'] as const) {
     await expect(table.spectator.locator('.board .card.known, .board .card.revealed')).toHaveCount(25);
 
     // The review of the game keeps its step through the snapshots that others cause, such as a
-    // spectator's new name.
+    // newcomer's arrival.
     const ann = table.captains.red;
     await ann.getByRole('button', { name: text.game.review }).click();
     const replay = ann.locator('.replay');
@@ -62,8 +70,7 @@ for (const language of ['en', 'zh'] as const) {
     const second = interpolate(text.replay.step, { step: '2', steps: String(steps) });
     await expect(replay.locator('.position')).toHaveText(second);
     const before = snapshotsOf(ann).length;
-    const tab = await sideChannel(table.spectator, table.url);
-    expect(await tab.send('room:rename', { name: 'Eva' })).toMatchObject({ ok: true });
+    await joinByLink(await newPlayer(browser, language), table.url, language, { watch: true });
     await expect.poll(() => snapshotsOf(ann).length).toBeGreaterThan(before);
     await expect(replay.locator('.position')).toHaveText(second);
 
@@ -78,3 +85,60 @@ for (const language of ['en', 'zh'] as const) {
     }
   });
 }
+
+// The review of a game that has ended (ReplayViewer.vue) shows the two groups' bars above the board,
+// with the cards each group had still to find at the step. Every avatar in them opens the player's
+// panel, whose list of the player's moves takes the review to the step of any of them.
+test("the review's group bars open each player's moves, which take the review to their step", async ({ browser }) => {
+  const table = await seatTable(browser, 'en');
+  const text = TEXT.en;
+  // The group on turn finds one of its cards; then the other group reveals Reviewer 2, which ends
+  // the game in five steps: the start, two clues and two cards.
+  const first = await teamOnTurn(table.captains.red);
+  await playTurn(table, 1);
+  const second = first === 'red' ? 'blue' : 'red';
+  await giveClue(table.captains[second], 'Hint', 1, 'en');
+  await reveal(table.guessers[second], await keyCard(table.captains[second], 'reviewer2'));
+  const eve = table.spectator;
+  await expect(eve.locator('.letter').first()).toBeVisible();
+
+  await eve.getByRole('button', { name: text.game.review }).click();
+  const replay = eve.locator('[role=dialog] .replay');
+  const step = (at: number) => interpolate(text.replay.step, { step: String(at), steps: '5' });
+  const left = (team: 'red' | 'blue') => replay.locator(`.scores .score.${team} > span:last-child`);
+  await expect(replay.locator('.position')).toHaveText(step(1));
+  // The group that went first had nine cards to find, the other eight.
+  await expect(left(first)).toHaveText('9');
+  await expect(left(second)).toHaveText('8');
+
+  // The first group's student, a guest, has the avatar alone in the panel, and the one move.
+  const name = table.names.guessers[first];
+  await replay.locator('.scores').getByRole('button', avatarOf(name)).click();
+  const panel = eve.getByRole('dialog', { name, exact: true });
+  await expect(panel.locator('.avatar .initial')).toHaveAttribute('data-initial', 'G');
+  await panel.getByRole('button', { name: text.replay.actions.open }).click();
+  const moves = eve.getByRole('dialog', { name: interpolate(text.replay.actions.title, { name }), exact: true });
+  await expect(moves.locator('.move')).toHaveCount(1);
+  await expect(moves.locator('.move')).toContainText(text.replay.right);
+  await moves.locator('.move').click();
+  // The panel and the list close, and the review is at the card that the student revealed.
+  await expect(panel).toHaveCount(0);
+  await expect(moves).toHaveCount(0);
+  await expect(replay.locator('.position')).toHaveText(step(3));
+  await expect(left(first)).toHaveText('8');
+  await expect(left(second)).toHaveText('8');
+
+  // The other group's PI gave the clue of the fourth step.
+  const pi = table.names.captains[second];
+  await replay.locator('.scores').getByRole('button', avatarOf(pi)).click();
+  await eve
+    .getByRole('dialog', { name: pi, exact: true })
+    .getByRole('button', { name: text.replay.actions.open })
+    .click();
+  const clues = eve.getByRole('dialog', { name: interpolate(text.replay.actions.title, { name: pi }), exact: true });
+  await expect(clues.locator('.move')).toHaveCount(1);
+  await clues.locator('.move').click();
+  await expect(replay.locator('.position')).toHaveText(step(4));
+  await closeSheet(eve);
+  await expect(eve.getByRole('dialog')).toHaveCount(0);
+});

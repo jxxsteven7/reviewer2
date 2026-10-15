@@ -9,7 +9,6 @@ import {
   register,
   roomMenu,
   sit,
-  snapshotsOf,
   TEXT,
   test,
 } from './helpers';
@@ -26,20 +25,25 @@ const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`
 async function box(page: Page, selector: string) {
   const found = await page.locator(selector).boundingBox();
   if (!found) throw new Error(`${selector} has no box`);
-  return { top: found.y, bottom: found.y + found.height, width: found.width };
+  return {
+    top: found.y,
+    bottom: found.y + found.height,
+    left: found.x,
+    right: found.x + found.width,
+    width: found.width,
+  };
 }
 
 const scrollToFoot = (page: Page) => page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
 
 // Ann chairs; Bob, Cat and Dan take the other seats.
 async function seatRoom(browser: Browser, ann: Page, url: string): Promise<[Page, Page, Page]> {
-  const join = async (name: string) => {
+  const join = async () => {
     const page = await newPlayer(browser, 'en');
-    snapshotsOf(page);
-    await joinByLink(page, url, name, 'en');
+    await joinByLink(page, url, 'en');
     return page;
   };
-  const [bob, cat, dan] = await Promise.all([join('Bob'), join('Cat'), join('Dan')]);
+  const [bob, cat, dan] = await Promise.all([join(), join(), join()]);
   await Promise.all([
     sit(ann, 'red', 'captain', 'en'),
     sit(bob, 'red', 'guesser', 'en'),
@@ -51,8 +55,7 @@ async function seatRoom(browser: Browser, ann: Page, url: string): Promise<[Page
 
 test('the chair starts from a bar that stays in sight, and the game opens at its top', async ({ browser }) => {
   const ann = await newPlayer(browser, 'en');
-  snapshotsOf(ann);
-  const url = await createRoom(ann, 'en', 'Ann');
+  const url = await createRoom(ann, 'en');
 
   // Alone, the chair reads on the first screen what is still missing, and can't start yet.
   const bar = ann.locator('.start-bar');
@@ -76,16 +79,38 @@ test('the chair starts from a bar that stays in sight, and the game opens at its
   await expect(words).toBeInViewport();
   expect((await box(ann, '.desk textarea')).top).toBeGreaterThanOrEqual((await box(ann, '.start-bar')).bottom);
 
-  // At the foot of the desk the bar is still at the top of the screen.
+  // At the foot of the desk the masthead is still at the top of the screen, with the reaction
+  // button left of the room menu, and the bar right under it.
   await scrollToFoot(ann);
   await expect(bar).toBeInViewport();
-  expect((await box(ann, '.start-bar')).top).toBeLessThan(40);
+  expect((await box(ann, 'header.masthead')).top).toBe(0);
+  await expect(ann.locator('header.masthead .emote-button')).toBeVisible();
+  expect((await box(ann, 'header.masthead .emote-button')).right).toBeLessThanOrEqual(
+    (await box(ann, 'header.masthead .room-button')).left,
+  );
+  expect((await box(ann, '.start-bar')).top).toBeLessThan((await box(ann, 'header.masthead')).bottom + 40);
+  expect((await box(ann, '.start-bar')).top).toBeGreaterThanOrEqual((await box(ann, 'header.masthead')).bottom);
+  // The room menu opens from the masthead and closes without the page moving under it: neither as
+  // the sheet takes the focus, nor as it gives the focus back to the button in the masthead. The
+  // button is tapped where it is, as a finger taps it: a click by its locator would first scroll
+  // the page to where the button stands in it, as the browser brings an element into view.
+  const foot = await ann.evaluate(() => window.scrollY);
+  const button = await box(ann, 'header.masthead .room-button');
+  await ann.mouse.click((button.left + button.right) / 2, (button.top + button.bottom) / 2);
+  await expect(ann.locator('[role=dialog]:has(.room-menu)')).toBeVisible();
+  expect(await ann.evaluate(() => window.scrollY), 'the page under the open menu').toBe(foot);
+  await ann.keyboard.press('Escape');
+  await expect(ann.locator('[role=dialog]')).toHaveCount(0);
+  expect(await ann.evaluate(() => window.scrollY), 'the page once the menu has closed').toBe(foot);
   await bar.getByRole('button', { name: text.lobby.start }).click();
 
-  // The game opens at its top, with the banner and the clock in sight.
+  // The game opens at its top, with the turn strip and the clock in sight, and no banner; the
+  // reaction button is in the clock's bar now.
   await expect(ann.locator('.keywords-game')).toBeVisible();
   await expect.poll(() => ann.evaluate(() => window.scrollY)).toBe(0);
-  await expect(ann.locator('.role-banner')).toBeInViewport();
+  await expect(ann.locator('.strip')).toBeInViewport();
+  await expect(ann.locator('.role-banner')).toHaveCount(0);
+  await expect(ann.locator('.sticky-clock .emote-button + .pause')).toBeVisible();
 
   // The room menu has the switch for the sounds, the same as the quick reactions': off in one is
   // off in the other.
@@ -94,7 +119,7 @@ test('the chair starts from a bar that stays in sight, and the game opens at its
   await expect(switchInMenu).not.toBeChecked();
   await switchInMenu.check();
   await ann.keyboard.press('Escape');
-  await ann.locator('.role-banner').getByRole('button', { name: text.emotes.open }).click();
+  await ann.locator('.sticky-clock').getByRole('button', { name: text.emotes.open }).click();
   const reactions = ann.locator('[role=dialog]', { has: ann.locator('.phrase') });
   await expect(reactions.locator('.sound-toggle input')).toBeChecked();
   await reactions.locator('.sound-toggle input').uncheck();
@@ -104,11 +129,10 @@ test('the chair starts from a bar that stays in sight, and the game opens at its
 
 test('the chair switches the room between public and private from the tag beside the heading', async ({ browser }) => {
   const ann = await newPlayer(browser, 'en');
-  snapshotsOf(ann);
   await register(ann, own('Ann'));
-  const url = await createRoom(ann, 'en', '');
+  const url = await createRoom(ann, 'en');
   const bob = await newPlayer(browser, 'en');
-  await joinByLink(bob, url, 'Bob', 'en');
+  await joinByLink(bob, url, 'en');
 
   // Eve, on the home page, finds the room among the public rooms once it is listed, and no more
   // once it is private again; the list is asked for afresh each time.
@@ -153,10 +177,16 @@ test.describe('on a 320 px phone', () => {
   }, testInfo) => {
     test.skip(!isPhone(testInfo), 'the bar wraps only where the screen is narrow');
     const ann = await newPlayer(browser, 'en');
-    snapshotsOf(ann);
-    const url = await createRoom(ann, 'en', 'Ann');
+    const url = await createRoom(ann, 'en');
     await seatRoom(browser, ann, url);
     await expect(ann.locator('.start-bar .ready')).toBeVisible();
+    // The masthead, which stays at the top, has room for the room's number and the two buttons
+    // beside the tile, on one row, with nothing to scroll sideways to.
+    expect((await box(ann, 'header.masthead .manuscript')).left).toBeGreaterThanOrEqual(
+      (await box(ann, 'header.masthead .tile')).right,
+    );
+    expect((await box(ann, 'header.masthead .room-button')).right).toBeLessThanOrEqual(320);
+    expect(await ann.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
     const line = await box(ann, '.start-bar .readiness');
     const shuffle = await box(ann, '.start-bar .button:not(.primary)');
     const start = await box(ann, '.start-bar .primary');
@@ -189,10 +219,9 @@ test.describe('on a 320 px phone', () => {
 
 test('a chair without an account is told how to list the room, and comes back as the chair', async ({ browser }) => {
   const gus = await newPlayer(browser, 'en');
-  snapshotsOf(gus);
-  const url = await createRoom(gus, 'en', 'Gus');
+  const url = await createRoom(gus, 'en');
   const hal = await newPlayer(browser, 'en');
-  await joinByLink(hal, url, 'Hal', 'en');
+  await joinByLink(hal, url, 'en');
   // A guest has no friends to invite.
   await expect(gus.locator('.start-dock .invite-friends')).toHaveCount(0);
 

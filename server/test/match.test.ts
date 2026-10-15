@@ -1,7 +1,16 @@
 import type { KeywordsRoomData, KeywordsView, MatchRules, MatchView, RecordsView, Team } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import { keywordsGame } from '../src/games/keywords';
-import { Browser, createRoom, joinRoom, startServer, TestClient, type Reply, type TestServer } from './helpers';
+import {
+  Browser,
+  createRoom,
+  joinRoom,
+  loggedIn as registered,
+  startServer,
+  TestClient,
+  type Reply,
+  type TestServer,
+} from './helpers';
 
 // Matches over real sockets: whole matches of the team word guessing game, the chair's controls,
 // players who come and go, and what accounts keep of a match. The scoring itself is tested in
@@ -9,9 +18,13 @@ import { Browser, createRoom, joinRoom, startServer, TestClient, type Reply, typ
 
 let server: TestServer;
 const clients: TestClient[] = [];
+// Who the players are in a test, by the names that the room gives them: a guest is "Guest" and
+// their number there, and a player with an account goes by the username.
+const people = new Map<string, string>();
 
 afterEach(async () => {
   for (const client of clients.splice(0)) client.close();
+  people.clear();
   await server.close();
 });
 
@@ -35,30 +48,28 @@ async function settle(everyone: TestClient[]) {
   for (const client of everyone) await client.waitFor((state) => state.rev >= rev, `rev ${rev}`);
 }
 
-async function loggedIn(name: string) {
-  const browser = new Browser(server.url);
-  const reply = await browser.register(name);
-  if (!reply.body.ok) throw new Error(`could not register ${name}: ${String(reply.body.error)}`);
-  return browser;
-}
+const loggedIn = (name: string) => registered(server.url, name);
 
 const RULES: MatchRules = { games: 2, teams: 'switch', grouping: 'random' };
 
 // A match room with Ann in the chair and Bob, Cat and Dan playing. Each of them may be a browser
-// with an account; the others are guests.
+// with an account; the others are guests, numbered in the order they came in.
 async function matchRoom(rules: Partial<MatchRules> = {}, accounts: Record<string, Browser> = {}) {
   const create = { game: 'keywords', language: 'en', fields: ['general'], play: true, match: { ...RULES, ...rules } };
   const players: Record<string, TestClient> = {};
   let code = '';
+  let guests = 0;
   for (const name of ['Ann', 'Bob', 'Cat', 'Dan']) {
     const browser = accounts[name];
     const client = track(browser ? await browser.connect() : await TestClient.connect(server.url));
     const reply = code
-      ? await client.send('room:join', { code, play: true, ...(browser ? {} : { name }) })
-      : await client.send('room:create', { ...create, ...(browser ? {} : { name }) });
+      ? await client.send('room:join', { code, play: true })
+      : await client.send('room:create', create);
     if (!reply.ok) throw new Error(`${name}: ${reply.error}`);
     code ||= reply.code as string;
     await client.waitFor((state) => state.code === code);
+    if (!browser) guests += 1;
+    expect(known(client, name)).toBe(browser ? name : `Guest ${guests}`);
     players[name] = client;
   }
   const everyone = Object.values(players);
@@ -106,11 +117,23 @@ async function playOneTurn(everyone: TestClient[]) {
   return { team, captain, guesser, won };
 }
 
+// A player's name in the room, which the test knows them by as `person` from now on.
+function known(client: TestClient, person: string): string {
+  const name = client.state?.players.find(({ id }) => id === client.me)?.name as string;
+  people.set(name, person);
+  return name;
+}
+
+// Who has a name in the room, as the test knows them.
+const personOf = (name: string) => people.get(name) ?? name;
 const pointsOf = (client: TestClient) =>
-  Object.fromEntries(matchOf(client).standings.map(({ name, delta }) => [name, delta]));
+  Object.fromEntries(matchOf(client).standings.map(({ name, delta }) => [personOf(name), delta]));
 const totalsOf = (client: TestClient) =>
-  Object.fromEntries(matchOf(client).standings.map(({ name, total }) => [name, total]));
-const nameOf = (client: TestClient) => client.state?.players.find(({ id }) => id === client.me)?.name as string;
+  Object.fromEntries(matchOf(client).standings.map(({ name, total }) => [personOf(name), total]));
+const nameOf = (client: TestClient) =>
+  personOf(client.state?.players.find(({ id }) => id === client.me)?.name as string);
+const standingOf = (client: TestClient, person: string) =>
+  matchOf(client).standings.find(({ name }) => personOf(name) === person);
 
 describe('a match', () => {
   test('is played game by game, scores everyone and ranks them at the end, with titles', async () => {
@@ -137,6 +160,13 @@ describe('a match', () => {
     expect(matchOf(ann).standings.map(({ total, delta }) => ({ total, delta }))).toEqual(
       Array.from({ length: 4 }, () => ({ total: 0, delta: 0 })),
     );
+    // The lines of Cat and Dan, who are guests, have their numbers, by which the client names
+    // them; those of Ann and Bob, who have accounts, have none.
+    const numbered = matchOf(ann).standings.filter((standing) => 'guest' in standing);
+    expect(Object.fromEntries(numbered.map(({ name, guest }) => [personOf(name), { name, guest }]))).toEqual({
+      Cat: { name: 'Guest 1', guest: 1 },
+      Dan: { name: 'Guest 2', guest: 2 },
+    });
     const first = await playOneTurn(everyone);
     const loser = (client: TestClient) => nameOf(client);
     expect(pointsOf(ann)).toEqual({ [loser(first.captain)]: 1 - 5, [loser(first.guesser)]: 1 - 3, ...first.won });
@@ -231,8 +261,9 @@ describe('a match', () => {
     const count = (table: string) => (server.db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n;
     expect(count('match_records')).toBe(2);
     const titles = count('titles');
-    // Whatever changes in the room after the end records nothing more.
-    await expectOk(players.Cat.send('room:rename', { name: 'Cathy' }));
+    // Whatever changes in the room after the end records nothing more, such as Bob's new name.
+    await accounts.Bob.request('/api/account/username', { username: 'Robert' });
+    await ann.waitFor((state) => state.players.some(({ name }) => name === 'Robert'), "Bob's new name");
     await settle(everyone);
     server.accounts.recordMatch(1, {
       game: 'keywords',
@@ -326,13 +357,14 @@ describe('a match', () => {
     const side = data(dan).side;
     const total = totalsOf(ann).Dan;
     dan.close();
-    await ann.waitFor((state) => state.players.find(({ name }) => name === 'Dan')?.online === false);
+    const danId = dan.me;
+    await ann.waitFor((state) => state.players.find(({ id }) => id === danId)?.online === false);
     const back = track(await TestClient.connect(server.url, { token: dan.token, code, roomId }));
     await back.waitFor((state) => state.code === code);
     expect(data(back).side).toBe(side);
     expect(data(back).seats[back.me]?.team).toBe(side);
     expect(totalsOf(back).Dan).toBe(total);
-    expect(matchOf(back).standings.find(({ name }) => name === 'Dan')).toMatchObject({ left: false });
+    expect(standingOf(back, 'Dan')).toMatchObject({ left: false, guest: 4 });
   });
 
   test('moves the total of a guest who logs in to their account, which keeps the match', async () => {
@@ -355,16 +387,40 @@ describe('a match', () => {
     await back.waitFor((state) => state.code === code && state.players.some(({ name }) => name === 'Dana'));
     expect(data(back).side).toBe(side);
     expect(totalsOf(back)).toMatchObject({ Dana: total });
-    expect(matchOf(back).standings.map(({ name }) => name)).not.toContain('Dan');
+    expect(matchOf(back).standings.map(({ name }) => personOf(name))).not.toContain('Dan');
+    // Dana has an account now, and her line has no number any more.
+    expect(standingOf(back, 'Dana')).not.toHaveProperty('guest');
 
     const table = [ann, players.Bob, players.Cat, back];
     await settle(table);
     await start(ann, table);
     await playOneTurn(table);
-    const standing = matchOf(ann).standings.find(({ name }) => name === 'Dana');
+    const standing = standingOf(ann, 'Dana');
     expect(standing?.games).toBe(2);
     const records = (await browser.request('/api/account/records')).body.records as RecordsView;
     expect(records.matches.recent[0]).toMatchObject({ score: standing?.total, rank: standing?.rank, games: 2 });
+  });
+
+  test("shows the line of a guest who logged in as the account's, also once it has left the room", async () => {
+    server = await startServer({ games: [keywordsGame] });
+    const { code, players, everyone } = await matchRoom({ teams: 'fixed' });
+    const ann = players.Ann;
+    await start(ann, everyone);
+    await playOneTurn(everyone);
+    await expectOk(ann.send('room:again', { gameId: ann.state?.gameId }));
+    await settle(everyone);
+    const dan = players.Dan;
+    const { roomId } = dan.state ?? {};
+    dan.close();
+    const browser = await loggedIn('Dana');
+    const back = track(await browser.connect({ token: dan.token, code, roomId }));
+    await back.waitFor((state) => state.code === code && state.players.some(({ name }) => name === 'Dana'));
+    // Dana leaves before the next game: her line stays, as the account's, with no number.
+    await expectOk(back.send('room:leave'));
+    await ann.waitFor((state) => !state.players.some(({ name }) => name === 'Dana'), 'Dana to have left');
+    expect(standingOf(ann, 'Dana')).toMatchObject({ playerId: null, left: true, games: 1 });
+    expect(standingOf(ann, 'Dana')).not.toHaveProperty('guest');
+    expect(matchOf(ann).standings.map(({ name }) => personOf(name))).not.toContain('Dan');
   });
 
   test('lets newcomers play from the next game, and lists those who left without ranking them', async () => {
@@ -378,27 +434,28 @@ describe('a match', () => {
     await expectOk(players.Dan.send('keywords:seat', { team: 'blue', role: 'guesser' }));
     await start(ann, everyone);
 
-    const eve = track(await joinRoom(server.url, code, 'Eve', { play: true }));
+    const eve = track(await joinRoom(server.url, code, { play: true }));
+    expect(known(eve, 'Eve')).toBe('Guest 5');
     expect(data(eve)).toMatchObject({ joinsNext: true, seats: { [eve.me]: { team: null, role: 'spectator' } } });
     expect(await eve.send('keywords:seat', { team: 'red', role: 'guesser' })).toEqual({
       ok: false,
       error: 'between_games',
     });
     await playOneTurn([...everyone, eve]);
-    expect(matchOf(ann).standings.map(({ name }) => name)).not.toContain('Eve');
+    expect(matchOf(ann).standings.map(({ name }) => personOf(name))).not.toContain('Eve');
 
     await expectOk(ann.send('room:again', { gameId: ann.state?.gameId }));
     await settle([...everyone, eve]);
     // The groups stay; Eve joins one, and each group has a PI who wasn't one.
     const teams = (client: TestClient) =>
       Object.fromEntries(
-        (client.state?.players ?? []).map(({ id, name }) => [name, (data(client).seats[id] ?? {}).team]),
+        (client.state?.players ?? []).map(({ id, name }) => [personOf(name), (data(client).seats[id] ?? {}).team]),
       );
     expect(teams(ann)).toMatchObject({ Ann: 'red', Bob: 'red', Cat: 'blue', Dan: 'blue' });
     expect(teams(ann).Eve).not.toBeNull();
     const captains = Object.entries(data(ann).seats)
       .filter(([, seat]) => seat.role === 'captain')
-      .map(([id]) => ann.state?.players.find((player) => player.id === id)?.name);
+      .map(([id]) => personOf(ann.state?.players.find((player) => player.id === id)?.name ?? ''));
     expect(captains).not.toContain('Ann');
     expect(captains).not.toContain('Cat');
     expect(await players.Bob.send('keywords:seat', { team: 'blue', role: 'guesser' })).toEqual({
@@ -422,8 +479,9 @@ describe('a match', () => {
     await playOneTurn([...left, eve]);
     const view = matchOf(ann);
     expect(view.status).toBe('over');
-    expect(view.standings.find(({ name }) => name === 'Dan')).toMatchObject({ left: true, rank: null, playerId: null });
-    expect(view.standings.find(({ name }) => name === 'Eve')).toMatchObject({ left: false, games: 1 });
+    // Dan's line keeps the number he had as a guest.
+    expect(standingOf(ann, 'Dan')).toMatchObject({ name: 'Guest 4', guest: 4, left: true, rank: null, playerId: null });
+    expect(standingOf(ann, 'Eve')).toMatchObject({ guest: 5, left: false, games: 1 });
     expect(view.standings.filter(({ rank }) => rank !== null)).toHaveLength(4);
   });
 });
@@ -431,7 +489,7 @@ describe('a match', () => {
 describe('a room that is not a match', () => {
   test('has no match, and refuses what is about one', async () => {
     server = await startServer({ games: [keywordsGame] });
-    const { chair } = await createRoom(server.url, 'Ann', { game: 'keywords', play: true });
+    const { chair } = await createRoom(server.url, { game: 'keywords', play: true });
     track(chair);
     expect(chair.state?.match).toBeNull();
     expect(data(chair).lineup).toBe('free');
@@ -442,7 +500,7 @@ describe('a room that is not a match', () => {
   test("can't be made a match with rules that won't do, or for a game that has no matches", async () => {
     server = await startServer({ games: [keywordsGame] });
     const client = track(await TestClient.connect(server.url));
-    const create = { game: 'keywords', language: 'en', fields: ['general'], name: 'Ann' };
+    const create = { game: 'keywords', language: 'en', fields: ['general'] };
     for (const match of [
       { ...RULES, games: 0 },
       { ...RULES, games: 11 },

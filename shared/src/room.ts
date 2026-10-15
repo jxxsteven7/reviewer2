@@ -12,7 +12,13 @@ export type RoomPhase = 'lobby' | 'playing' | 'ended';
 
 export interface PlayerView {
   id: string;
+  // An account's username, an AI player's persona, or for a guest "Guest" and the number, for
+  // whatever reads the view without the interface's words; the client names guests and AI players
+  // in the language of the interface (docs/architecture.md#players-and-identity).
   name: string;
+  // A guest's number in the room: guests are numbered in the order they first came in, and a guest
+  // who leaves and comes back from the same browser has the same number again. Nobody else has one.
+  guest?: number;
   online: boolean;
   // The address of the avatar that a player with an account uploaded. Without it, the client
   // draws the default avatar from the name.

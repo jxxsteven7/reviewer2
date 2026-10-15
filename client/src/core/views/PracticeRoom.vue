@@ -215,6 +215,16 @@ async function start() {
   touch-action: manipulation;
 }
 
+/* Reviewer 1's avatar wears the hard shadow of what a tap opens (docs/design.md), as the button
+   does, unless the button can't be pressed. */
+.entry :deep(.avatar) {
+  box-shadow: var(--shadow-1);
+}
+
+.entry:active:not(:disabled) :deep(.avatar) {
+  box-shadow: none;
+}
+
 .entry:focus-visible {
   outline: var(--line-strong) solid var(--focus);
   outline-offset: 2px;
@@ -259,6 +269,7 @@ async function start() {
 
 .entry:disabled :deep(.avatar) {
   border-color: var(--ink-2);
+  box-shadow: none;
   opacity: 0.55;
   filter: grayscale(1);
 }

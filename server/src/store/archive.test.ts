@@ -79,13 +79,13 @@ const RETIREMENT = {
   ],
 };
 
-// Migration 20 keeps feedback signed with an account by the account alone: it drops the name that
+// Migration 21 keeps feedback signed with an account by the account alone: it drops the name that
 // such feedback kept, marks as anonymous what migration 17 marked as signed without a name, as a
 // guest's what it marked so without an account, and as signed a name typed while logged in
 // (store/migrations.ts). The maintainers agreed to each. Its statements are allowed there and in no
 // other migration.
 const SIGNING = {
-  migration: 20,
+  migration: 21,
   statements: [
     'UPDATE feedback SET link_profile = 0 WHERE link_profile = 1 AND (credit IS NULL OR account_id IS NULL)',
     'UPDATE feedback SET link_profile = 1 WHERE link_profile = 0 AND credit IS NOT NULL AND account_id IS NOT NULL',
@@ -155,7 +155,7 @@ function offending(sql: string, allowed: readonly string[] = ALLOWED): string[] 
 const offendingCode = (code: string): string[] => strings(code).flatMap((sql) => offending(sql));
 
 // The same for each migration, with the rebuild allowed in migration 5 alone, the end of the
-// acknowledgments in migration 17 alone, and the signing by the account in migration 20 alone.
+// acknowledgments in migration 17 alone, and the signing by the account in migration 21 alone.
 const offendingMigrations = (migrations: readonly string[]): string[] =>
   migrations.flatMap((migration, index) => {
     const once = [REBUILD, RETIREMENT, SIGNING].find(({ migration: number }) => number === index + 1);
@@ -240,7 +240,7 @@ describe('the archive', () => {
     ).toEqual([`migration ${RETIREMENT.migration}: UPDATE feedback SET adopted_at = NULL`]);
   });
 
-  test('allows the signing by the account in migration 20 and in no other migration', () => {
+  test('allows the signing by the account in migration 21 and in no other migration', () => {
     const signing = MIGRATIONS[SIGNING.migration - 1] as string;
     expect(offending(signing)).toEqual(SIGNING.statements);
     expect(offendingMigrations([...MIGRATIONS, signing])).toEqual(

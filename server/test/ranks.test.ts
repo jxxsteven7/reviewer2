@@ -55,20 +55,21 @@ describe('academic ranks', () => {
     await ann.waitFor((state) => state.code === code);
     const bob = track(await bobs.connect());
     expect(await bob.send('room:join', { code, play: false })).toMatchObject({ ok: true });
-    const join = async (name: string) => {
+    const join = async () => {
       const client = track(await TestClient.connect(server.url));
-      expect(await client.send('room:join', { code, name })).toMatchObject({ ok: true });
+      expect(await client.send('room:join', { code, play: false })).toMatchObject({ ok: true });
       return client;
     };
-    const [cat, dan] = [await join('Cat'), await join('Dan')];
+    // Cat and Dan are guests.
+    const [cat, dan] = [await join(), await join()];
     const everyone = [ann, bob, cat, dan];
     await ann.waitFor((state) => state.players.length === 4);
     // The ranks that the players bring, and none for the guests.
     expect(ann.state?.players.map(({ name, rank }) => [name, rank])).toEqual([
       ['Ann', 'undergraduate'],
       ['Bob', 'kindergarten'],
-      ['Cat', undefined],
-      ['Dan', undefined],
+      ['Guest 1', undefined],
+      ['Guest 2', undefined],
     ]);
 
     // Ann and Bob are red, Cat and Dan blue.
