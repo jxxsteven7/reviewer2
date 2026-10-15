@@ -156,7 +156,7 @@ function give() {
         type="button"
         role="radio"
         class="count num"
-        :class="{ chosen: count === option }"
+        :class="{ chosen: count === option, press: count !== option }"
         :aria-checked="count === option"
         :aria-label="option === 'unlimited' ? t('game.unlimited') : String(option)"
         @click="picked = option"
@@ -300,13 +300,11 @@ function give() {
     box-shadow var(--motion);
 }
 
-.count:active,
+/* The others lift and press as a sticker does (`press` in base.css); the chosen one stays pressed,
+   in ink. */
 .count.chosen {
   transform: translate(var(--shift-1), var(--shift-1));
   box-shadow: none;
-}
-
-.count.chosen {
   background: var(--ink);
   color: var(--on-ink);
 }

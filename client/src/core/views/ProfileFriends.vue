@@ -574,7 +574,10 @@ h3 {
   opacity: 0.45;
 }
 
+/* The avatar's shadow fades with it, lifted as well as at rest (`--press-ink` in base.css). */
 .offline .face :deep(.avatar) {
+  --press-ink: var(--neutral);
+
   box-shadow: var(--shift-1) var(--shift-1) 0 var(--neutral);
 }
 

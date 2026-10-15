@@ -27,7 +27,7 @@ import type { AgentPlay } from '../core/room';
 // however it ended (migrations 7, 12 and 15, docs/architecture.md#game-records): what kind of game
 // it was, how it began, its log, which of its players had which account, and the AI's own log of
 // it with what the AI players did in it (docs/architecture.md#ai-players), from which a game that
-// finished is watched again (migration 21, docs/architecture.md#replays). What friends have played
+// finished is watched again (migration 22, docs/architecture.md#replays). What friends have played
 // together is worked out from the records (migration 13, docs/architecture.md#friend-duos).
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
@@ -102,7 +102,7 @@ export class RecordStore {
   ) {
     // A game is recorded once for each account, however often the end of the game is reported.
     // Unlike OR IGNORE, ON CONFLICT passes over that alone, and still refuses a record that the
-    // table's checks refuse (migration 21).
+    // table's checks refuse (migration 22).
     this.#insert = db.prepare(
       'INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, ' +
         'points, match_id, match_game, match_games, agents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +

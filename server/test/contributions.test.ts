@@ -5,8 +5,8 @@ import { afterEach, expect, test } from 'vitest';
 import { Browser, startServer, type TestServer } from './helpers';
 
 // The feedback contributions over HTTP: the home page's list, which is the adopted feedback, by the
-// name left with each or anonymous, with the profile only for a name its player let link there;
-// and an account's counts, which its owner sees, and anyone else only if the owner shows them. The
+// account that signed each as it is now, with its profile, a guest's name, or anonymous; and an
+// account's counts, which its owner sees, and anyone else only if the owner shows them. The
 // acknowledgments are ACKNOWLEDGMENTS.md, which the server reads for the home page (thanks.ts).
 
 let server: TestServer;
@@ -23,28 +23,29 @@ test('are listed for anyone, and counted for the account they came from', async 
   await ann.register('Ann');
   const { handle } = (await ann.account()) as { handle: string };
   const guest = new Browser(server.url);
-  const add = (credit: string | null, linkProfile: boolean, kind: 'idea' | 'bug' = 'idea') =>
+  const add = (credit: string | null, accountId: number | null, linkProfile: boolean, kind: 'idea' | 'bug' = 'idea') =>
     server.feedback.add({
       kind,
       text: 'A timer, please.',
       contact: 'me@example.com',
       credit,
-      accountId: 1,
+      accountId,
       linkProfile,
       version: 'v1',
       language: 'en',
       page: 'home',
       userAgent: null,
     });
-  add('Ann L', true);
-  add(null, false, 'bug');
-  add('Ann L', false);
+  // Signed with Ann's account, anonymous from it, and a guest's name.
+  add(null, 1, true);
+  add(null, 1, false, 'bug');
+  add('Ann L', null, false);
   for (const id of [1, 2, 3]) {
     server.feedback.setIssue(id, 40 + id);
     server.feedback.adopt(id, SAID);
   }
   // Not adopted, it isn't listed.
-  add('Ann L', true);
+  add(null, 1, true);
 
   const list = await guest.request(CONTRIBUTIONS_API);
   expect(list.status).toBe(200);
@@ -52,9 +53,9 @@ test('are listed for anyone, and counted for the account they came from', async 
   expect(list.body).toEqual({
     ok: true,
     contributions: [
-      { kind: 'idea', name: 'Ann L', profile: null, avatar: null, summary: SAID, issue: 43, month },
-      { kind: 'bug', name: null, profile: null, avatar: null, summary: SAID, issue: 42, month },
-      { kind: 'idea', name: 'Ann', profile: handle, avatar: null, summary: SAID, issue: 41, month },
+      { kind: 'idea', name: 'Ann L', profile: null, avatar: null, deleted: false, summary: SAID, issue: 43, month },
+      { kind: 'bug', name: null, profile: null, avatar: null, deleted: false, summary: SAID, issue: 42, month },
+      { kind: 'idea', name: 'Ann', profile: handle, avatar: null, deleted: false, summary: SAID, issue: 41, month },
     ],
   });
   // Never the text, the contact, or the account but for feedback signed with it, which shows its
@@ -64,7 +65,7 @@ test('are listed for anyone, and counted for the account they came from', async 
 
   expect(await ann.account()).toMatchObject({
     contributions: [
-      { kind: 'idea', count: 2 },
+      { kind: 'idea', count: 1 },
       { kind: 'bug', count: 1 },
     ],
   });
@@ -74,7 +75,7 @@ test('are listed for anyone, and counted for the account they came from', async 
   expect((await guest.request(`/api/profile/${handle}`)).body).toMatchObject({
     profile: {
       contributions: [
-        { kind: 'idea', count: 2 },
+        { kind: 'idea', count: 1 },
         { kind: 'bug', count: 1 },
       ],
     },

@@ -70,15 +70,26 @@ describe('the feedback', () => {
     expect(feedback.byId(3)).toBeUndefined();
   });
 
-  test('comes with the name for the contributions, its account while there is one, and its adoption', () => {
+  test('is signed with the account it came from, which keeps no name, or anonymous, and only a guest leaves a name', () => {
     const feedback = store();
     const ann = new AccountStore(db).create('Ann', 'ann', 'h');
     if (!ann) throw new Error('no account');
-    feedback.add(entry({ credit: 'Ann L', accountId: ann.id }));
-    // An account without a name, as a player who was logged in and left none sends it.
+    // Signed with the account: the name that came along isn't kept, as the account's is looked up.
+    feedback.add(entry({ credit: 'Ann L', accountId: ann.id, linkProfile: true }));
+    // Logged in without signing: anonymous, counted for the account.
     feedback.add(entry({ accountId: ann.id }));
-    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: 1, username: 'Ann', adoptedAt: null });
-    expect(feedback.byId(2)).toMatchObject({ credit: null, accountId: 1, username: 'Ann' });
+    // A guest's name of their own, which links to no account whatever the page asked.
+    feedback.add(entry({ credit: 'Ann L', linkProfile: true }));
+    // A name of its own from an account, as a page from before signing sent it, signs with the
+    // account all the same.
+    feedback.add(entry({ credit: 'Annie', accountId: ann.id }));
+    expect(feedback.byId(1)).toMatchObject({ credit: null, accountId: 1, linkProfile: true, username: 'Ann' });
+    expect(feedback.byId(2)).toMatchObject({ credit: null, accountId: 1, linkProfile: false, username: 'Ann' });
+    expect(feedback.byId(3)).toMatchObject({ credit: 'Ann L', accountId: null, linkProfile: false, username: null });
+    expect(feedback.byId(4)).toMatchObject({ credit: null, accountId: 1, linkProfile: true, username: 'Ann' });
+    expect(
+      db.prepare('SELECT count(*) AS n FROM feedback WHERE account_id IS NOT NULL AND credit IS NOT NULL').get(),
+    ).toEqual({ n: 0 });
     feedback.setIssue(1, 42);
     expect(feedback.adopt(1, { zh: '提出了更多领域', en: 'Suggested more fields' })).toBe(true);
     expect(feedback.byId(1)).toMatchObject({
@@ -87,28 +98,26 @@ describe('the feedback', () => {
       summaryEn: 'Suggested more fields',
       status: 'resolved',
     });
+    // Once the account is gone, the feedback is signed by nobody that is left, and names nobody.
     new AccountStore(db).delete(ann.id);
-    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann L', accountId: null, username: null, status: 'resolved' });
+    expect(feedback.byId(1)).toMatchObject({ credit: null, accountId: null, linkProfile: true, username: null });
+    expect(feedback.byId(1)?.status).toBe('resolved');
   });
 
-  test("says when its name is another account's username, however the name is written", () => {
+  test("says when a guest's name is an account's username, however the name is written", () => {
     const feedback = store();
     const accounts = new AccountStore(db);
     const cat = accounts.create('Cat', usernameKey('Cat'), 'h');
-    const bob = accounts.create('Bob', usernameKey('Bob'), 'h');
-    if (!cat || !bob) throw new Error('no account');
+    if (!cat) throw new Error('no account');
     feedback.add(entry({ credit: 'CAT' }));
-    feedback.add(entry({ credit: 'cat', accountId: bob.id }));
-    // The account's own username, and a name that is nobody's.
-    feedback.add(entry({ credit: 'Cat', accountId: cat.id }));
+    feedback.add(entry({ credit: 'cat' }));
+    // A name that is nobody's, no name, and Cat's own feedback, signed with the account, which
+    // keeps no name to pass for anyone.
     feedback.add(entry({ credit: 'Dan' }));
     feedback.add(entry());
-    // Signed with the account, the name was its username then, which nobody passed for, even
-    // though another account has the name now.
-    feedback.add(entry({ credit: 'Cat', accountId: bob.id, linkProfile: true }));
+    feedback.add(entry({ accountId: cat.id, linkProfile: true }));
     const taken = () => feedback.latest(10).map(({ id, nameTakenBy }) => [id, nameTakenBy]);
     expect(taken()).toEqual([
-      [6, null],
       [5, null],
       [4, null],
       [3, null],
@@ -123,8 +132,10 @@ describe('the feedback', () => {
 
   test('says whether its name may link to its profile, and remembers the issue it was published as', () => {
     const feedback = store();
+    const ann = new AccountStore(db).create('Ann', 'ann', 'h');
+    if (!ann) throw new Error('no account');
     feedback.add(entry());
-    feedback.add(entry({ credit: 'Ann', linkProfile: true }));
+    feedback.add(entry({ accountId: ann.id, linkProfile: true }));
     expect(feedback.latest(10).map(({ id, linkProfile }) => [id, linkProfile])).toEqual([
       [2, true],
       [1, false],
@@ -412,19 +423,19 @@ describe('what became of the feedback', () => {
 describe('the feedback contributions', () => {
   const SAID = { zh: '提出了更多领域', en: 'Suggested more fields' };
 
-  test('are the adopted feedback, the latest first, by the account that signed it, the name left with it or anonymous', () => {
+  test('are the adopted feedback, the latest first, by the account that signed it as it is now, a guest name or anonymous', () => {
     const feedback = store();
     const accounts = new AccountStore(db);
     const ann = accounts.create('Ann', 'ann', 'h');
     const bob = accounts.create('Bob', 'bob', 'h');
     if (!ann || !bob) throw new Error('no account');
-    // Ann let her name link to her profile, Bob didn't, though he shows his contributions there;
-    // the third player had no account, and the fourth left no name while logged in to Ann's.
+    // Ann signed with her account; Bob stayed anonymous, though he shows his contributions on his
+    // profile; Cat was a guest who left her name; the fourth left none.
     accounts.setProfile(bob.id, { link: null, bio: null, showRecord: false, showThanks: true });
-    feedback.add(entry({ credit: 'Ann L', accountId: ann.id, linkProfile: true }));
-    feedback.add(entry({ kind: 'bug', credit: 'Bob', accountId: bob.id }));
-    feedback.add(entry({ kind: 'words', credit: 'Cat', linkProfile: true }));
-    feedback.add(entry({ kind: 'game', accountId: ann.id, linkProfile: true }));
+    feedback.add(entry({ accountId: ann.id, linkProfile: true }));
+    feedback.add(entry({ kind: 'bug', accountId: bob.id }));
+    feedback.add(entry({ kind: 'words', credit: 'Cat' }));
+    feedback.add(entry({ kind: 'game' }));
     feedback.add(entry({ credit: 'Dan' }));
     for (const id of [1, 2, 3, 4]) feedback.setIssue(id, 40 + id);
     expect(feedback.contributions()).toEqual([]);
@@ -435,28 +446,29 @@ describe('the feedback contributions', () => {
     expect(feedback.adopt(4, SAID)).toBe(true);
     // Only once.
     expect(feedback.adopt(1, { zh: '又一次', en: 'Again' })).toBe(false);
+    const nobody = { profile: null, avatar: null, deleted: false, summary: SAID };
     expect(feedback.contributions()).toEqual([
-      { kind: 'game', name: null, profile: null, avatar: null, summary: SAID, issue: 44, month: '2026-11' },
-      { kind: 'words', name: 'Cat', profile: null, avatar: null, summary: SAID, issue: 43, month: '2026-11' },
-      { kind: 'bug', name: 'Bob', profile: null, avatar: null, summary: SAID, issue: 42, month: '2026-11' },
-      { kind: 'idea', name: 'Ann', profile: ann.handle, avatar: null, summary: SAID, issue: 41, month: '2026-10' },
+      { kind: 'game', name: null, ...nobody, issue: 44, month: '2026-11' },
+      { kind: 'words', name: 'Cat', ...nobody, issue: 43, month: '2026-11' },
+      { kind: 'bug', name: null, ...nobody, issue: 42, month: '2026-11' },
+      { kind: 'idea', name: 'Ann', ...nobody, profile: ann.handle, issue: 41, month: '2026-10' },
     ]);
-    // Signed with the account, the contribution shows it as it is now: its username, rather than
-    // the name that an older page sent along, and its avatar.
+    // Signed with the account, the contribution shows it as it is now: its username and its avatar.
     accounts.setAvatar(ann.id, 'a1b2.webp');
     accounts.rename(ann.id, 'Annie', 'annie');
     expect(feedback.contributions().at(-1)).toMatchObject({
       name: 'Annie',
       profile: ann.handle,
       avatar: '/avatars/a1b2.webp',
+      deleted: false,
     });
-    // Once Ann's account is gone, the name it was sent with is left, and links nowhere.
+    // Once Ann's account is gone, it is a deleted player's: no name, no profile, no avatar.
     accounts.delete(ann.id);
-    expect(feedback.contributions().map(({ name, profile }) => [name, profile])).toEqual([
-      [null, null],
-      ['Cat', null],
-      ['Bob', null],
-      ['Ann L', null],
+    expect(feedback.contributions().map(({ name, profile, deleted }) => [name, profile, deleted])).toEqual([
+      [null, null, false],
+      ['Cat', null, false],
+      [null, null, false],
+      [null, null, true],
     ]);
     expect(feedback.contributions().at(-1)?.avatar).toBeNull();
   });
@@ -472,16 +484,20 @@ describe('the feedback contributions', () => {
     expect(feedback.contributions()[0]?.summary).toEqual({ zh: '提出了计时器', en: 'Suggested a timer' });
     expect(feedback.byId(1)).toMatchObject({ credit: 'Ann', text: 'More fields, please.', status: 'resolved' });
     expect(feedback.describe(3, SAID)).toBe(false);
-    // Adopted before the sentences were kept, as migration 17 leaves the feedback that the
-    // acknowledgments adopted, it says nothing yet, and has no issue.
+    // Adopted feedback is an issue (adopt() sees to it); a row adopted without one, which only a
+    // hand on the database makes, isn't listed, rather than listed without its issue.
     db.exec("UPDATE feedback SET adopted_at = '2026-10-01T00:00:00.000Z' WHERE id = 2");
+    expect(feedback.contributions()).toHaveLength(1);
+    // Adopted before the sentences were written, it says nothing yet.
+    db.exec('UPDATE feedback SET issue = 42 WHERE id = 2');
     expect(feedback.contributions()[1]).toEqual({
       kind: 'idea',
       name: null,
       profile: null,
       avatar: null,
+      deleted: false,
       summary: null,
-      issue: null,
+      issue: 42,
       month: '2026-10',
     });
   });

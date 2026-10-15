@@ -890,8 +890,68 @@ describe('a database in DATA_DIR', () => {
     ]);
   });
 
-  test('of the twentieth release has every game in the newest format, and leaves behind what it can not complete', async () => {
+  test('of the twentieth release keeps its feedback in the three ways it is signed now', async () => {
     const twentieth = await open(dir, MIGRATIONS.slice(0, 20));
+    twentieth.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, handle, created_at) VALUES (1, 'Ann', 'ann', 'h', 'k1', 'now');
+      INSERT INTO accounts (id, username, username_key, password, handle, created_at) VALUES (2, 'Bob', 'bob', 'h', 'k2', 'now');
+    `);
+    const add = (id: number, credit: string | null, accountId: number | null, linkProfile: number) =>
+      twentieth.db
+        .prepare(
+          'INSERT INTO feedback (id, created_at, kind, text, contact, version, language, page, credit, account_id, ' +
+            "link_profile, issue, adopted_at, summary_zh, summary_en) VALUES (?, 'now', 'idea', ?, 'c', 'v1', 'en', " +
+            "'home', ?, ?, ?, ?, 'then', '提出了', 'Suggested')",
+        )
+        .run(id, `Text ${id}`, credit, accountId, linkProfile, 40 + id);
+    // Signed with the account, with the username it had then, or with a name its player typed
+    // and let link to the profile; without a name, which migration 17 marked as signed with the
+    // rest; a guest's name, marked so too; a name typed while logged in and not linked; anonymous
+    // while logged in; and a guest's name and nothing at all, as they are now.
+    add(1, 'Ann', 1, 1);
+    add(2, 'Bobby', 2, 1);
+    add(3, null, 1, 1);
+    add(4, 'Cat', null, 1);
+    add(5, 'Annie', 1, 0);
+    add(6, null, 2, 0);
+    add(7, 'Dan', null, 0);
+    add(8, null, null, 0);
+    const before = twentieth.db.prepare('SELECT * FROM feedback ORDER BY id').all();
+    twentieth.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 21));
+    expect(migrated).toMatchObject({ schema: 21, migratedFrom: 20 });
+    const { db } = migrated;
+    // Feedback from an account is signed with it, keeping no name, or anonymous; a name is a
+    // guest's alone; everything else, the rows themselves included, is as it was.
+    const signed: Record<number, [string | null, number]> = {
+      1: [null, 1],
+      2: [null, 1],
+      3: [null, 0],
+      4: ['Cat', 0],
+      5: [null, 1],
+      6: [null, 0],
+      7: ['Dan', 0],
+      8: [null, 0],
+    };
+    expect(db.prepare('SELECT * FROM feedback ORDER BY id').all()).toEqual(
+      before.map((row) => {
+        const [credit, link] = signed[row.id as number] ?? [];
+        return { ...row, credit, link_profile: link };
+      }),
+    );
+    expect(
+      db
+        .prepare(
+          'SELECT count(*) AS n FROM feedback WHERE NOT ((link_profile = 1 AND credit IS NULL AND account_id IS NOT NULL) ' +
+            'OR (link_profile = 0 AND (credit IS NULL OR account_id IS NULL)))',
+        )
+        .get(),
+    ).toEqual({ n: 0 });
+  });
+
+  test('of the twenty-first release has every game in the newest format, and leaves behind what it can not complete', async () => {
+    const twentyFirst = await open(dir, MIGRATIONS.slice(0, 21));
     const log = (gameId: string, more: Record<string, unknown> = {}) =>
       JSON.stringify({
         v: 2,
@@ -915,7 +975,7 @@ describe('a database in DATA_DIR', () => {
         guests, agents, takeover, in_match, practice, language, fields, version, rules, words)
       VALUES ('${gameId}', 'keywords', '${endedAt}', NULL, '${log(gameId)}', 'finished', 'red', 'found',
         '${endedAt}', '${setup}', 1, 0, 0, 0, 0, 0, 'en', '["general"]', 'v0', 4, 'abc') ${more};`;
-    twentieth.db.exec(`
+    twentyFirst.db.exec(`
       INSERT INTO accounts (id, username, username_key, password, created_at) VALUES
         (1, 'Ann', 'ann', 'h', 'now'), (2, 'Bob', 'bob', 'h', 'now');
       -- The games from before they were kept: records alone, which ended before the first game kept
@@ -983,10 +1043,10 @@ describe('a database in DATA_DIR', () => {
       INSERT INTO streaks VALUES (1, 9, 9, 9, 1), (2, 9, 9, 9, 1);
       INSERT INTO friendships (requester_id, addressee_id, status, created_at) VALUES (1, 2, 'accepted', 'now');
     `);
-    twentieth.db.close();
+    twentyFirst.db.close();
 
-    const migrated = await open(dir, MIGRATIONS.slice(0, 21));
-    expect(migrated).toMatchObject({ schema: 21, migratedFrom: 20 });
+    const migrated = await open(dir, MIGRATIONS.slice(0, 22));
+    expect(migrated).toMatchObject({ schema: 22, migratedFrom: 21 });
     const { db } = migrated;
     const all = (sql: string) => db.prepare(sql).all();
     // The games that couldn't be completed are gone, with their records, titles and who was who.

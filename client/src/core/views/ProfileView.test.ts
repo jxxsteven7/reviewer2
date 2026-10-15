@@ -49,6 +49,10 @@ describe('ProfileView', () => {
     expect(card.text()).toContain('Registered Oct 1, 2026');
     const buttons = () => card.findAll('button').map((button) => button.text());
     expect(buttons()).toEqual(['Rename', 'Upload a picture', 'Use the default']);
+    // "Rename" follows the name in its line, small and quiet, at the name's bottom right.
+    expect(card.get('#profile-username').element.nextElementSibling?.classList.contains('rename')).toBe(true);
+    // The rank is a sticker that lifts and presses as a button does.
+    expect(wrapper.get('.rank-button').classes()).toContain('press');
     // The username has no card of its own any more.
     expect(wrapper.findAll('h2').map((heading) => heading.text())).not.toContain('Username');
 

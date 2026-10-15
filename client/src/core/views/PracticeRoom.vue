@@ -120,7 +120,7 @@ async function start() {
 
 <template>
   <div v-if="offered" class="practice">
-    <button type="button" class="entry" :disabled="offline" @click="show">
+    <button type="button" class="entry press" :disabled="offline" @click="show">
       <PlayerAvatar :name="persona" agent size="medium" />
       <span class="text">
         <span class="main">{{ t('home.practice.entry') }}</span>
@@ -194,7 +194,8 @@ async function start() {
 
 <style scoped>
 /* A second sticker in the game's card, under "New room": Reviewer 1's avatar, two lines and an
-   arrow. Grey, with the reason in its second line, while the AI players don't answer. */
+   arrow, which lifts and presses as "New room" does (`press` in base.css). Grey, with the reason in
+   its second line, while the AI players don't answer. */
 .entry {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -212,11 +213,6 @@ async function start() {
   text-align: start;
   cursor: pointer;
   touch-action: manipulation;
-}
-
-.entry:active:not(:disabled) {
-  box-shadow: none;
-  transform: translate(2px, 2px);
 }
 
 /* Reviewer 1's avatar wears the hard shadow of what a tap opens (docs/design.md), as the button

@@ -373,6 +373,7 @@ describe('feedback adopt', () => {
         name: null,
         profile: null,
         avatar: null,
+        deleted: false,
         summary: { zh: ZH, en: EN },
         issue: 43,
         month: '2026-10',
@@ -382,6 +383,7 @@ describe('feedback adopt', () => {
         name: 'octocat',
         profile: null,
         avatar: null,
+        deleted: false,
         summary: { zh: '加了词', en: 'Added words' },
         issue: 42,
         month: '2026-10',
@@ -391,6 +393,7 @@ describe('feedback adopt', () => {
         name: 'Ann',
         profile: ann.handle,
         avatar: null,
+        deleted: false,
         summary: { zh: ZH, en: EN },
         issue: 41,
         month: '2026-10',
@@ -412,6 +415,21 @@ describe('feedback adopt', () => {
     expect(adopt('x')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #x.');
     expect(store.contributions()).toHaveLength(3);
+  });
+
+  test('lists feedback signed with an account that is gone as a deleted player, counted for no account', () => {
+    const bob = accounts.store.create('Bob', 'bob', 'hash');
+    if (!bob) throw new Error('no account');
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ accountId: bob.id, linkProfile: true }));
+    store.setIssue(1, 41);
+    accounts.store.delete(bob.id);
+    expect(adopt('1')).toBe(0);
+    expect(printed[0]).toBe(
+      'Adopted feedback #1, issue #41. The home page lists it now, as a deleted player, counted for no account, ' +
+        'saying that the player contributed:',
+    );
+    expect(store.contributions()).toMatchObject([{ name: null, profile: null, deleted: true, issue: 41 }]);
   });
 
   test('takes only feedback that is a GitHub issue, which it keeps', () => {
@@ -624,11 +642,24 @@ describe('feedback draft', () => {
     );
     const { title, body } = drafted('1');
     expect(title).toBe('Bug: The board is gone.');
-    expect(body).toBe(`A bug report ${SENT}\n\n> The board is gone\\.\n\nReported by Ann L.`);
+    expect(body).toBe(`A bug report ${SENT}\n\n> The board is gone\\.\n\nReported by Ann.`);
     // No contact, link, account, version, language, page, browser, time or id.
     expect(`${title}\n${body}`).not.toMatch(
       /wechat|r2|ann\.example|account|v0\.1\.10|Chinese|zh|room|Mozilla|20\d\d|#1/,
     );
+  });
+
+  test('names feedback signed with an account by the account as it is now, or a deleted player', () => {
+    const store = new FeedbackStore(database.db);
+    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    if (!ann) throw new Error('no account');
+    store.add(feedback({ accountId: ann.id, linkProfile: true }));
+    store.add(feedback({ kind: 'bug', accountId: ann.id, linkProfile: true }));
+    accounts.store.rename(ann.id, 'Annie', 'annie');
+    expect(drafted('1').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Annie.`);
+    accounts.store.delete(ann.id);
+    expect(drafted('1').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by a deleted player.`);
+    expect(drafted('2').body).toBe(`A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by a deleted player.`);
   });
 
   test('opens by the kind, as the status page calls it, and names who sent it, or an anonymous player', () => {

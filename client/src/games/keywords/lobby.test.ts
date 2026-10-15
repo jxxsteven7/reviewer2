@@ -439,12 +439,17 @@ describe('KeywordsLobby, public or private', () => {
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     const tag = chair.get('.lobby-head button.visibility');
     expect(tag.get('.tag').text()).toBe('Private');
+    // The white tag is a sticker that lifts and presses in its larger button (base.css).
+    expect(tag.classes()).toContain('press-host');
+    expect(tag.get('.tag').classes()).toContain('press-part');
     expect(tag.text()).toContain('Make the room public');
     await tag.trigger('click');
     expect(send).toHaveBeenLastCalledWith('room:public', { public: true });
     await chair.setProps({ room: { ...view('ann', 0), public: true } });
     expect(tag.get('.tag').text()).toBe('Public');
     expect(tag.get('.tag').classes()).toContain('listed');
+    // Ink, it is flat, and doesn't move.
+    expect(tag.get('.tag').classes()).not.toContain('press-part');
     expect(tag.text()).toContain('Make the room private');
     await tag.trigger('click');
     expect(send).toHaveBeenLastCalledWith('room:public', { public: false });

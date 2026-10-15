@@ -15,7 +15,7 @@ const { t } = useI18n();
     <RouterLink
       v-if="account.summary"
       to="/account"
-      class="entry avatar-link"
+      class="entry avatar-link press-host"
       :aria-label="
         account.summary.requests > 0
           ? t(
@@ -26,7 +26,12 @@ const { t } = useI18n();
           : t('account.entryLabel', { name: account.summary.username })
       "
     >
-      <PlayerAvatar :name="account.summary.username" :avatar="account.summary.avatar" size="medium" />
+      <PlayerAvatar
+        class="press-part"
+        :name="account.summary.username"
+        :avatar="account.summary.avatar"
+        size="medium"
+      />
       <span v-if="account.summary.requests > 0" class="badge num" aria-hidden="true">{{
         account.summary.requests
       }}</span>
@@ -60,17 +65,9 @@ const { t } = useI18n();
 }
 
 /* The avatar leads to the account page, so it wears the hard shadow of what a tap opens
-   (docs/design.md), and the press takes it away. */
+   (docs/design.md), and moves as a sticker does (`press-part` in base.css). */
 .avatar-link :deep(.avatar) {
   box-shadow: var(--shadow-1);
-  transition:
-    transform var(--motion),
-    box-shadow var(--motion);
-}
-
-.avatar-link:active :deep(.avatar) {
-  transform: translate(var(--shift-1), var(--shift-1));
-  box-shadow: none;
 }
 
 .badge {

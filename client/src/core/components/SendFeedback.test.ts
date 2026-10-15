@@ -190,7 +190,7 @@ describe('the feedback panel', () => {
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');
     await flushPromises();
-    // The server takes the account's username for the name.
+    // Signed with the account, which the server keeps in place of any name.
     expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ linkProfile: true });
     expect(socket.send.mock.calls[0]?.[1]).not.toHaveProperty('credit');
 

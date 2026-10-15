@@ -98,8 +98,8 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   await send(page, 'game', idea, username, true);
 
   const sent = feedbackWith(idea);
-  // The server takes the account's username for the name.
-  expect(sent).toMatchObject({ kind: 'game', credit: username, link_profile: 1, adopted_at: null });
+  // Signed with the account, which keeps no name: the home page looks the username up.
+  expect(sent).toMatchObject({ kind: 'game', credit: null, link_profile: 1, adopted_at: null });
   expect(sent.account_id).not.toBeNull();
   // Adopted feedback is a GitHub issue first; the operator writes what the player contributed.
   admin('feedback', 'adopt', String(sent.id), ...SUMMARY);
@@ -245,5 +245,5 @@ test('a login in another tab counts for the feedback sent from this one', async 
   await expect(sheet).toBeHidden();
   const sent = feedbackWith(idea);
   expect(sent.account_id).not.toBeNull();
-  expect(sent).toMatchObject({ credit: username, link_profile: 1 });
+  expect(sent).toMatchObject({ credit: null, link_profile: 1 });
 });

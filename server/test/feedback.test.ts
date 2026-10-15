@@ -93,13 +93,15 @@ describe('feedback', () => {
     }
   });
 
-  test('keeps the name for the contributions, and the account that sent it, with a name or without', async () => {
+  test("keeps a guest's name, and the account of a player who is logged in, signed with it or not", async () => {
     server = await startServer();
     const ann = new Browser(server.url);
     await ann.register('Ann');
     const loggedIn = await ann.connect();
     const guest = await connect();
     clients.push(loggedIn);
+    // A name typed while logged in, as an older page sent it, signs with the account, which keeps
+    // no name of its own.
     expect(await loggedIn.send('meta:feedback', message({ credit: '  Ann   L ' }))).toEqual({ ok: true });
     expect(await guest.send('meta:feedback', message({ text: 'As a guest', credit: 'octocat' }))).toEqual({ ok: true });
     // Without a name, a player stays anonymous, and the feedback counts for their account all the
@@ -108,15 +110,17 @@ describe('feedback', () => {
       ok: true,
     });
     expect(
-      server.feedback.latest(10).map(({ text, credit, accountId, username }) => [text, credit, accountId, username]),
+      server.feedback
+        .latest(10)
+        .map(({ text, credit, accountId, username, linkProfile }) => [text, credit, accountId, username, linkProfile]),
     ).toEqual([
-      ['Anonymous', null, 1, 'Ann'],
-      ['As a guest', 'octocat', null, null],
-      ['A timer for the clues, please.', 'Ann L', 1, 'Ann'],
+      ['Anonymous', null, 1, 'Ann', false],
+      ['As a guest', 'octocat', null, null, false],
+      ['A timer for the clues, please.', null, 1, 'Ann', true],
     ]);
     // The log has the name no more than the text.
-    expect(JSON.stringify(server.logs)).not.toContain('Ann L');
-    // A name that can't be a nickname is refused, and nothing is kept.
+    expect(JSON.stringify(server.logs)).not.toContain('octocat');
+    // A guest's name that can't be a nickname is refused, and nothing is kept.
     for (const credit of ['x'.repeat(MAX_NAME_LENGTH + 1), 'Ann\u200bL']) {
       expect(await guest.send('meta:feedback', message({ text: 'Refused', credit }))).toEqual({
         ok: false,
@@ -146,22 +150,24 @@ describe('feedback', () => {
     expect(JSON.stringify(server.feedback.latest(10))).not.toMatch(/orcid|mailto|publicIssue/);
   });
 
-  test('lists feedback signed from an account by the account, whatever name came along', async () => {
+  test('keeps feedback from an account signed with it, with no name, whatever name came along', async () => {
     server = await startServer({ socketLimits: { ...DEFAULT_SOCKET_LIMITS, feedbackPerWindow: 10 } });
     const ann = new Browser(server.url);
     await ann.register('Ann');
     const loggedIn = await ann.connect();
     clients.push(loggedIn);
     const guest = await connect();
+    // Signed with the account, with no name sent, as the form sends it now, or with one, as older
+    // pages sent it, which goes: the account's username is looked up whenever it is shown.
     expect(await loggedIn.send('meta:feedback', message({ credit: 'Ann L', linkProfile: true }))).toEqual({ ok: true });
+    expect(await loggedIn.send('meta:feedback', message({ text: 'No name', linkProfile: true }))).toEqual({ ok: true });
+    // A name typed while logged in signs with the account too, asked or not, since an account's
+    // feedback is signed with it or anonymous.
     expect(await loggedIn.send('meta:feedback', message({ text: 'No', credit: 'Ann L', linkProfile: false }))).toEqual({
       ok: true,
     });
-    // From an older page, which doesn't ask, the name is the player's own.
     expect(await loggedIn.send('meta:feedback', message({ text: 'Not asked', credit: 'Ann L' }))).toEqual({ ok: true });
-    // Signed with the account, the name is its username, with no name sent, as the form sends it
-    // now, or with one, as older pages sent it; a guest has no account to sign with.
-    expect(await loggedIn.send('meta:feedback', message({ text: 'No name', linkProfile: true }))).toEqual({ ok: true });
+    // A guest has no account to sign with, and keeps the name they left.
     expect(await guest.send('meta:feedback', message({ text: 'Guest', credit: 'Bob', linkProfile: true }))).toEqual({
       ok: true,
     });
@@ -177,15 +183,22 @@ describe('feedback', () => {
         .map(({ text, credit, username, linkProfile }) => [text, credit, username, linkProfile]),
     ).toEqual([
       ['Guest', 'Bob', null, false],
-      ['No name', 'Ann', 'Ann', true],
-      ['Not asked', 'Ann L', 'Ann', false],
-      ['No', 'Ann L', 'Ann', false],
-      ['A timer for the clues, please.', 'Ann', 'Ann', true],
+      ['Not asked', null, 'Ann', true],
+      ['No', null, 'Ann', true],
+      ['No name', null, 'Ann', true],
+      ['A timer for the clues, please.', null, 'Ann', true],
     ]);
-    // The same feedback with the other answer is other feedback.
-    expect(await loggedIn.send('meta:feedback', message({ credit: 'Ann L', linkProfile: false }))).toEqual({
+    // The same feedback signed again, with another name or none, is the same feedback, kept once.
+    expect(await loggedIn.send('meta:feedback', message({ credit: 'Annie', linkProfile: false }))).toEqual({
       ok: true,
     });
+    expect(server.feedback.count()).toBe(5);
+    // Signed by another account, it is other feedback.
+    const bob = new Browser(server.url);
+    await bob.register('Bob');
+    const bobs = await bob.connect();
+    clients.push(bobs);
+    expect(await bobs.send('meta:feedback', message({ linkProfile: true }))).toEqual({ ok: true });
     expect(server.feedback.count()).toBe(6);
     expect(await loggedIn.send('meta:feedback', message({ credit: 'Ann L', linkProfile: 'yes' }))).toEqual({
       ok: false,
