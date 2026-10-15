@@ -4,7 +4,6 @@ import {
   MAX_CUSTOM_INPUT,
   otherTeam,
   parseCustomWords,
-  SPECTATOR,
   sameSettings,
   type KeywordsSettings,
   type PlayerView,
@@ -30,16 +29,17 @@ import { fields, loadFields } from '../../core/fields';
 import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
 import { act, reconnecting } from '../../core/socket';
+import { ROOM_ACTIONS } from '../../core/useRoomPage';
 import { useStickyHeight } from '../../core/useStickyHeight';
-import RoleBanner from './RoleBanner.vue';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
 import { useKeywords } from './useKeywords';
 
-// The waiting room: the banner that says where the viewer sits, the two groups with their PI and
-// students, the spectators and the screens, the room's settings, and the chair's desk with the
-// word lists, the chair's own words and the settings. The chair's start bar stands above it all
-// and stays at the top of the screen as the page scrolls, so that the start button is at hand
+// The waiting room: the two groups with their PI and students, the viewer marked among them, the
+// spectators and the screens, the room's settings, and the chair's desk with the word lists, the
+// chair's own words and the settings. The reaction button is in the room's masthead, which stays at
+// the top of the screen in the waiting room (RoomPage.vue). The chair's start bar stands above it
+// all and stays under the masthead as the page scrolls, so that the start button is at hand
 // from the first screen to the foot of the desk: whether everyone needed is seated, or the first
 // thing still missing, and under it the shuffle, the invitation to friends for an account, and the
 // start button, sharing their row evenly however many there are. A member with an account who
@@ -220,9 +220,9 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 
 <template>
   <section class="lobby">
-    <RoleBanner :seat="mySeat ?? SPECTATOR" :game="null" :chair="isChair">
+    <Teleport defer :to="`#${ROOM_ACTIONS}`">
       <EmoteButton />
-    </RoleBanner>
+    </Teleport>
     <header class="lobby-head">
       <p class="kicker">
         {{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}
@@ -510,14 +510,15 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   transform: none;
 }
 
-/* The chair's start bar, which stays at the top of the screen as the page scrolls, and under the
-   banner while the page reconnects, as the game's clock does. Its background reaches the edges of
+/* The chair's start bar, which stays at the top of the screen as the page scrolls, under the
+   room's masthead, which stays there too in the waiting room (--pinned-height, PageMasthead.vue),
+   and under the banner while the page reconnects, as the game's clock does. Its background reaches the edges of
    the screen and covers its own sticker's shadow, so that nothing shows through beside it. A field
    of the desk that the page brings into view stays below it: the bar's height, as measured
    (useStickyHeight), and the banner's go into the page's scroll padding. */
 .start-dock {
   position: sticky;
-  top: 0;
+  top: var(--pinned-height, 0px);
   z-index: 5;
   margin-bottom: var(--space-2);
   padding: var(--space-2) 0 var(--space-3);
@@ -527,11 +528,11 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 }
 
 .start-dock.below-banner {
-  top: var(--banner-height);
+  top: calc(var(--banner-height) + var(--pinned-height, 0px));
 }
 
 :global(html:has(.start-dock)) {
-  scroll-padding-top: calc(var(--banner-height) + var(--sticky-height, 8rem));
+  scroll-padding-top: calc(var(--banner-height) + var(--pinned-height, 0px) + var(--sticky-height, 8rem));
 }
 
 /* One line for whether the room is ready, and the buttons under it, or beside it where there is

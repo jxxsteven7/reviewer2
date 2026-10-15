@@ -527,4 +527,24 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE accounts ADD COLUMN room_setup TEXT;
   `,
+  // 20: replays keep no names (docs/architecture.md#replays). The replays from before kept the name
+  // that each player who revealed a card had in the game, by player ID (`players`): a guest's
+  // nickname, or an account's username as it was then. Nothing shows them any more, and they go.
+  // Before they go, they say who was who in the games from before game_players (migration 12),
+  // which have no rows there: a name that is the username of just one account on the game's
+  // records, ignoring case, makes that player ID the account's. A name no such account has, a
+  // guest's or one changed since, gives nothing.
+  `
+  INSERT OR IGNORE INTO game_players (game_id, player_id, account_id)
+  SELECT replays.game_id, named.key, min(accounts.id)
+  FROM replays, json_each(replays.data, '$.players') AS named
+  JOIN game_records ON game_records.game_id = replays.game_id
+  JOIN accounts ON accounts.id = game_records.account_id AND lower(accounts.username) = lower(named.value)
+  WHERE json_type(replays.data, '$.players') = 'object'
+    AND NOT EXISTS (SELECT 1 FROM game_players WHERE game_players.game_id = replays.game_id)
+  GROUP BY replays.game_id, named.key
+  HAVING count(*) = 1;
+
+  UPDATE replays SET data = json_remove(data, '$.players') WHERE json_type(data, '$.players') IS NOT NULL;
+  `,
 ];

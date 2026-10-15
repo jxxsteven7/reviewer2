@@ -4,13 +4,13 @@ import {
   defaultSettings,
   type ChatMessage,
   type ClueRecord,
-  type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
   type MatchView,
   type RoomView,
   type Seat,
+  type ShownReplay,
   type StandingView,
 } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
@@ -35,7 +35,6 @@ import KeywordsGame from './KeywordsGame.vue';
 import { missedLine } from './missed';
 import { heroLine } from './heroes';
 import ReplayViewer from './ReplayViewer.vue';
-import RoleBanner from './RoleBanner.vue';
 import RulesSheet from './RulesSheet.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
@@ -392,50 +391,6 @@ describe('GroupChat', () => {
     });
     expect(wrapper.find('.chat-panel').exists()).toBe(false);
     expect(wrapper.text()).toBe('');
-  });
-});
-
-describe('RoleBanner', () => {
-  const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
-
-  test("stands out on the viewer's move, and says so in the tab's title for as long as it lasts", async () => {
-    document.title = 'Reviewer 2';
-    const wrapper = mount(RoleBanner, { props: { seat: seats.bob as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('You are Red group · Student');
-    expect(wrapper.find('.line').text()).toBe('Your turn to guess!');
-    expect(wrapper.classes()).toEqual(expect.arrayContaining(['red', 'urgent']));
-    expect(document.title).toBe('Your turn!');
-
-    await wrapper.setProps({ game: { ...game, phase: 'clue' } });
-    expect(wrapper.find('.line').text()).toBe('Your PI is thinking of a clue\u2026');
-    expect(wrapper.find('.line .dots').text()).toBe('\u2026');
-    expect(wrapper.classes()).not.toContain('urgent');
-    expect(document.title).toBe('Reviewer 2');
-
-    await wrapper.setProps({ game });
-    expect(document.title).toBe('Your turn!');
-    wrapper.unmount();
-    expect(document.title).toBe('Reviewer 2');
-  });
-
-  test('tells a spectator who is doing what', () => {
-    const wrapper = mount(RoleBanner, { props: { seat: seats.eve as Seat, game }, global: global() });
-    expect(wrapper.find('.who').text()).toBe('You are a spectator');
-    expect(wrapper.find('.line').text()).toBe('The Red group is guessing\u2026');
-    expect(wrapper.classes()).toEqual(['role-banner', 'spectator']);
-  });
-
-  test('reads out its words as they change, but not the button beside them', () => {
-    const wrapper = mount(RoleBanner, {
-      props: { seat: seats.eve as Seat, game },
-      slots: { default: '<button>React (9)</button>' },
-      global: global(),
-    });
-    const live = wrapper.findAll('[aria-live]');
-    expect(live).toHaveLength(1);
-    expect(live[0]?.find('.line').text()).toBe('The Red group is guessing\u2026');
-    expect(live[0]?.find('button').exists()).toBe(false);
-    expect(wrapper.find('button').text()).toBe('React (9)');
   });
 });
 
@@ -912,6 +867,32 @@ describe('CluePanel', () => {
 describe('TurnStrip', () => {
   const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
 
+  // The banner over the strip is gone: the strip says who the viewer is and what is going on for
+  // them now, and the tab's title says so on their move.
+  test("says who the viewer is and what is going on for them, and on their move the tab's title says so", async () => {
+    document.title = 'Reviewer 2';
+    const strip = mount(TurnStrip, { props: { game, guessRule: 'free', seat: seats.bob }, global: global() });
+    expect(strip.get('.who').text()).toBe('You are Red group \u00b7 Student');
+    expect(strip.get('.who').classes()).toContain('red');
+    expect(strip.get('.phase').text()).toBe('Your turn to guess!');
+    expect(document.title).toBe('Your turn!');
+    await strip.setProps({ game: { ...game, phase: 'clue' } });
+    expect(strip.get('.phase').text()).toBe('Your PI is thinking of a clue\u2026');
+    expect(strip.get('.phase .dots').text()).toBe('\u2026');
+    expect(document.title).toBe('Reviewer 2');
+    await strip.setProps({ game });
+    expect(document.title).toBe('Your turn!');
+    strip.unmount();
+    expect(document.title).toBe('Reviewer 2');
+    // A spectator is told who is doing what, and a big screen what the current group is doing.
+    const spectator = mount(TurnStrip, { props: { game, guessRule: 'free', seat: seats.eve }, global: global() });
+    expect(spectator.get('.who').text()).toBe('You are a spectator');
+    expect(spectator.get('.phase').text()).toBe('The Red group is guessing\u2026');
+    const screen = mount(TurnStrip, { props: { game, guessRule: 'free' }, global: global() });
+    expect(screen.find('.who').exists()).toBe(false);
+    expect(screen.get('.phase').text()).toBe('Red group is guessing');
+  });
+
   test('shows how many guesses are left under the standard rule only', () => {
     const standard = mount(TurnStrip, { props: { game, guessRule: 'standard' }, global: global() });
     expect(standard.get('.left').text()).toBe('3 more to reveal');
@@ -930,38 +911,6 @@ describe('TurnStrip', () => {
       global: global(),
     });
     expect(timed.get('.clock').attributes('aria-label')).toBe('42 seconds left');
-  });
-
-  test("shows each group's PI and students in its bar, the viewer first, and names the group to a screen reader", () => {
-    const player = (id: string, online = true) => ({ id, name: id, online });
-    const groups = [
-      {
-        team: 'red' as const,
-        captain: player('ann'),
-        guessers: [player('cat'), player('bob'), player('dan', false), player('eve')],
-      },
-      { team: 'blue' as const, captain: player('fay', false), guessers: [] },
-    ];
-    const strip = mount(TurnStrip, { props: { game, guessRule: 'free', groups, me: 'bob' }, global: global() });
-    const [red, blue] = strip.findAll('.score');
-    expect(red?.get('.sr-only').text()).toBe('Red group');
-    expect(red?.get('.pi-tag').text()).toBe('PI');
-    // The viewer first, then the others in their order; on a phone two of them and "+2".
-    const students = red?.findAll('.students .face') ?? [];
-    expect(students.map((face) => face.get('.avatar .initial').attributes('data-initial'))).toEqual([
-      'B',
-      'C',
-      'D',
-      'E',
-    ]);
-    expect(students[0]?.find('.avatar.me').exists()).toBe(true);
-    expect(students.map((face) => face.classes('extra'))).toEqual([false, false, true, true]);
-    expect(red?.get('.more.few').text()).toBe('+2');
-    expect(red?.find('.more.many').exists()).toBe(false);
-    // Dan is offline, as is Fay, the blue PI, who has no students.
-    expect(students[2]?.find('.avatar .wait').exists()).toBe(true);
-    expect(blue?.find('.pi .avatar .wait').exists()).toBe(true);
-    expect(blue?.find('.divider').exists()).toBe(false);
   });
 
   test('keeps the clock still while the game is paused, as on a big screen', async () => {
@@ -984,7 +933,7 @@ describe('TurnStrip', () => {
 });
 
 describe('ReplayViewer', () => {
-  const replay: KeywordsReplay = {
+  const replay: ShownReplay = {
     gameId: 'g1',
     language: 'en',
     startingTeam: 'red',
@@ -993,9 +942,28 @@ describe('ReplayViewer', () => {
       { word: 'Model', color: 'blue' },
       { word: 'Journal', color: 'reviewer2' },
     ],
-    history: [{ turn: 1, team: 'red', word: 'Science', count: 2, guesses: [{ card: 0, color: 'red', player: 'bob' }] }],
+    history: [
+      {
+        turn: 1,
+        team: 'red',
+        word: 'Science',
+        count: 2,
+        captain: 'ann',
+        guesses: [{ card: 0, color: 'red', player: 'bob' }],
+      },
+    ],
     result: { winner: 'red', reason: 'found' },
-    players: { bob: 'Bob' },
+    groups: [
+      { team: 'red', captain: 'ann', guessers: ['bob'] },
+      { team: 'blue', captain: 'cat', guessers: ['dee'] },
+    ],
+    people: {
+      ann: { name: 'Ann', handle: 'h-ann' },
+      bob: { guest: 2 },
+      cat: { deleted: true },
+      dee: { agent: 'reviewer1' },
+    },
+    me: 'bob',
   };
 
   test('shows last what the group has said since the game ended, and nothing without it', () => {
@@ -1008,7 +976,7 @@ describe('ReplayViewer', () => {
   });
 
   test("shows the cards the PI meant through the clue's turn, and names them at the clue", async () => {
-    const meant: KeywordsReplay = { ...replay, history: [{ ...(replay.history[0] as ClueRecord), targets: [1, 0] }] };
+    const meant: ShownReplay = { ...replay, history: [{ ...(replay.history[0] as ClueRecord), targets: [1, 0] }] };
     const wrapper = mount(ReplayViewer, { props: { replay: meant }, global: global() });
     expect(wrapper.findAll('.target')).toHaveLength(0);
     await wrapper.get('input[type="range"]').setValue('1');
@@ -1022,16 +990,22 @@ describe('ReplayViewer', () => {
     expect(wrapper.findAll('.target')).toHaveLength(2);
   });
 
-  test('names an AI player who revealed a card by its persona', async () => {
-    const withAi: KeywordsReplay = {
-      ...replay,
-      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'ai' }] }],
-      players: { ai: 'reviewer1' },
-      agents: { ai: 'reviewer1' },
-    };
-    const wrapper = mount(ReplayViewer, { props: { replay: withAi }, global: global() });
+  test('names a guest who revealed a card by their number, an AI player by its persona, and someone gone as gone', async () => {
+    const wrapper = mount(ReplayViewer, { props: { replay }, global: global() });
     await wrapper.get('input[type="range"]').setValue('2');
+    expect(wrapper.get('.step').text()).toContain('Guest 2 revealed \u201cBaseline\u201d');
+    const byAi: ShownReplay = {
+      ...replay,
+      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'dee' }] }],
+    };
+    await wrapper.setProps({ replay: byAi });
     expect(wrapper.get('.step').text()).toContain('Reviewer 1 revealed \u201cBaseline\u201d');
+    const byNobody: ShownReplay = {
+      ...replay,
+      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'zed' }] }],
+    };
+    await wrapper.setProps({ replay: byNobody });
+    expect(wrapper.get('.step').text()).toContain('A player who left revealed');
   });
 
   test('keeps its step when the same game comes again, and starts over with another game', async () => {
@@ -1039,10 +1013,68 @@ describe('ReplayViewer', () => {
     await wrapper.get('input[type="range"]').setValue('2');
     expect(wrapper.get('.position').text()).toBe('Step 3 of 3');
     // The results page builds the replay anew from every snapshot, as when someone's phone locks.
-    await wrapper.setProps({ replay: { ...replay, players: { ...replay.players } } });
+    await wrapper.setProps({ replay: { ...replay, people: { ...replay.people } } });
     expect(wrapper.get('.position').text()).toBe('Step 3 of 3');
     await wrapper.setProps({ replay: { ...replay, gameId: 'g2' } });
     expect(wrapper.get('.position').text()).toBe('Step 1 of 3');
+  });
+
+  test('shows the groups above the board, with what each had still to find at the step, the viewer first', async () => {
+    const wrapper = mount(ReplayViewer, { props: { replay }, global: global() });
+    const bars = () => wrapper.findAll('.scores .score');
+    expect(bars().map((bar) => bar.get('.sr-only').text())).toEqual(['Red group', 'Blue group']);
+    const left = () => bars().map((bar) => bar.find(':scope > span:last-child').text());
+    expect(left()).toEqual(['1', '1']);
+    await wrapper.get('input[type="range"]').setValue('2');
+    expect(left()).toEqual(['0', '1']);
+    // Everyone's avatar opens their panel; a deleted account shows as deleted.
+    const buttons = wrapper.findAll('.scores button.avatar-button');
+    expect(buttons.map((button) => button.attributes('aria-label'))).toEqual([
+      "View Ann's profile",
+      "View Guest 2's profile",
+      "View Deleted account's profile",
+      "View Reviewer 1's profile",
+    ]);
+    expect(buttons[2]?.get('.initial').attributes('data-initial')).toBe('D');
+    expect(buttons[1]?.get('.initial').attributes('data-initial')).toBe('G');
+  });
+
+  test("opens a player's panel from their avatar, with their moves, which take the replay to their step", async () => {
+    // The cards of an account's page and an AI player's read the server, which isn't here.
+    const wrapper = mount(ReplayViewer, {
+      props: { replay },
+      global: { ...global(), stubs: { teleport: true, ProfileCard: true, AgentProfileCard: true } },
+    });
+    const dialogs = () => wrapper.findAll('[role="dialog"]');
+    await wrapper.findAll('.scores button.avatar-button')[1]?.trigger('click');
+    expect(dialogs()).toHaveLength(1);
+    expect(dialogs()[0]?.get('h2').text()).toBe('Guest 2');
+    // A guest has no page, and nothing of the chair's is here.
+    const actions = () =>
+      dialogs()[0]
+        ?.findAll('.actions button')
+        .map((button) => button.text());
+    expect(actions()).toEqual(['View moves']);
+    await dialogs()[0]?.get('.actions button').trigger('click');
+    expect(dialogs()[0]?.get('h2').text()).toBe('Moves by Guest 2');
+    const moves = dialogs()[0]?.findAll('.move') ?? [];
+    expect(moves.map((move) => move.text())).toEqual([
+      "Turn 1 · Red groupRevealed \u201cBaseline\u201d: right, one of the group's own",
+    ]);
+    await moves[0]?.trigger('click');
+    expect(dialogs()).toHaveLength(0);
+    expect(wrapper.get('.position').text()).toBe('Step 3 of 3');
+    // The PI's clue, from the PI's panel, which has the way to the whole page too.
+    await wrapper.findAll('.scores button.avatar-button')[0]?.trigger('click');
+    expect(
+      dialogs()[0]
+        ?.findAll('.actions button')
+        .map((button) => button.text()),
+    ).toEqual(['View moves', 'Open the full page']);
+    await dialogs()[0]?.get('.actions button').trigger('click');
+    expect(dialogs()[0]?.get('.move').text()).toBe('Turn 1 · Red groupClue: Science 21 right of 1 revealed');
+    await dialogs()[0]?.get('.move').trigger('click');
+    expect(wrapper.get('.position').text()).toBe('Step 2 of 3');
   });
 });
 
@@ -1213,6 +1245,15 @@ describe('RulesSheet', () => {
   const EXTENSION = 'Each group may once a game ask for 30 seconds more for the phase it is in.';
   const PAUSE =
     'The chair can pause the game at any time. The board is hidden until the chair resumes it, and the clock goes on from where it stopped.';
+
+  test('says which avatars can be tapped, with the roles', async () => {
+    const wrapper = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
+    await wrapper.get('button').trigger('click');
+    const roles = wrapper.findAll('.rules section').find((found) => found.get('h3').text() === 'Roles');
+    expect(roles?.findAll('p').at(-1)?.text()).toBe(
+      "An avatar with a shadow can be tapped: it opens the player's page, or for a guest or an AI player, their panel.",
+    );
+  });
 
   test('tells what time does in the phases that have a limit, and nothing about the others', async () => {
     expect(await timeLines({})).toEqual([BAR, CLUE, GUESS, PAUSE]);
@@ -1463,11 +1504,12 @@ describe('KeywordsGame', () => {
   // The menu is drawn in place here, where the tests stub the teleport to the end of the page.
   const menuItems = (wrapper: ReturnType<typeof mount>) =>
     wrapper.findAll<HTMLButtonElement>('.mark-menu [role="menuitemradio"]').map((item) => item.element);
-  // A mark chosen in the open menu, which closes it, and then puts the mark on the card.
+  // A mark chosen in the open menu, which closes it, and then puts the mark on the card: the lifted
+  // copy's move never ends here, so the menu waits for it as long as it does at most (MarkMenu.vue).
   async function chooseMark(wrapper: ReturnType<typeof mount>, index: number) {
     vi.useFakeTimers();
     menuItems(wrapper)[index]?.click();
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
   }
@@ -1553,7 +1595,7 @@ describe('KeywordsGame', () => {
     await holdCard(wrapper, 2);
     vi.useFakeTimers();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
@@ -1579,7 +1621,7 @@ describe('KeywordsGame', () => {
     send.mockClear();
     vi.useFakeTimers();
     pressOn(wrapper.get('.mark-menu .scrim').element);
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
@@ -1589,7 +1631,7 @@ describe('KeywordsGame', () => {
     await holdCard(wrapper, 1);
     vi.useFakeTimers();
     pressOn(wrapper.get('.mark-menu .lifted').element);
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
@@ -1687,7 +1729,7 @@ describe('KeywordsGame', () => {
     const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     menuItems(wrapper)[0]?.dispatchEvent(tab);
     expect(tab.defaultPrevented).toBe(true);
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
@@ -2570,14 +2612,17 @@ describe('KeywordsGame', () => {
     expect(student.text()).toContain('The chair has paused the game.');
     expect(student.find('.guess-bar').exists()).toBe(false);
     expect(student.find('.paused button').exists()).toBe(false);
-    expect(student.find('.sticky-clock button').exists()).toBe(false);
-    expect(student.get('.role-banner .line').text()).toBe('The game is paused.');
+    expect(student.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React']);
+    expect(student.get('.strip .phase').text()).toBe('The game is paused.');
     // The clock stands still at what the server said.
     expect(student.get('[role="timer"]').attributes('aria-label')).toBe('42 seconds left');
     // The chair resumes, from the notice or from the end of the clock, which pauses the game
     // otherwise; the tools at the foot of the page have no way to pause.
     const chair = mount(KeywordsGame, { props: { room: paused('ann') }, global: global() });
     expect(chair.findAll('.tools button').map((button) => button.text())).toEqual(['How to play', 'End the game']);
+    // With the clock, the reaction button comes first, then the chair's button to pause or resume.
+    expect(chair.find('.sticky-clock [role="timer"]').exists()).toBe(true);
+    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React', 'Resume the game']);
     await chair.get('.paused button').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     send.mockClear();
@@ -2587,13 +2632,14 @@ describe('KeywordsGame', () => {
     const playing = mount(KeywordsGame, { props: { room: room('ann') }, global: global() });
     expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause the game');
     expect(playing.get('.sticky-clock .pause').text()).toBe('Pause the game');
+    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React', 'Pause the game']);
     await playing.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
   });
 
-  // A game without a time limit has no clock: the chair's button to pause stands at the top alone,
-  // and the others have nothing there.
-  test('gives the chair the button to pause at the top of a game without a clock', async () => {
+  // A game without a time limit has no clock: the reaction button and the chair's button to pause
+  // stand at the top alone, and the others have the reaction button there.
+  test('keeps the reaction button, and the chair the button to pause, at the top of a game without a clock', async () => {
     const view = room('bob');
     const data = view.data as KeywordsRoomData;
     const game = { ...(data.game as KeywordsView), clock: null };
@@ -2605,11 +2651,23 @@ describe('KeywordsGame', () => {
         .get('.strip + .sticky-clock')
         .findAll('button')
         .map((button) => button.text()),
-    ).toEqual(['Pause the game']);
+    ).toEqual(['React', 'Pause the game']);
     await chair.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
     const student = mount(KeywordsGame, { props: { room: untimed('bob') }, global: global() });
-    expect(student.find('.sticky-clock').exists()).toBe(false);
+    expect(student.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React']);
+    // Once the game is over, the reaction button stays there, alone.
+    const over = { ...game, phase: 'over' as const, result: { winner: 'red' as const, reason: 'found' as const } };
+    await chair.setProps({
+      room: { ...untimed('ann'), data: { ...data, side: 'red', game: { ...over, clock: { left: 0, total: 90_000 } } } },
+    });
+    expect(
+      chair
+        .get('.sticky-clock')
+        .findAll('button')
+        .map((button) => button.text()),
+    ).toEqual(['React']);
+    expect(chair.find('.sticky-clock [role="timer"]').exists()).toBe(false);
   });
 
   test("offers the group's extension in its own turn, where the room allows one, and tells everyone of it", async () => {
@@ -2703,8 +2761,10 @@ describe('KeywordsGame', () => {
     expect(wrapper.find('.strip .clock').exists()).toBe(false);
     const bar = wrapper.get('.strip + .sticky-clock');
     expect(bar.get('.clock').attributes('aria-label')).toBe('42 seconds left');
-    // Bob isn't the chair: there is no button to pause beside his clock.
-    expect(bar.find('button').exists()).toBe(false);
+    // Bob isn't the chair: there is no button to pause beside his clock, only his reaction button,
+    // where the banner that stood above the strip had it.
+    expect(bar.findAll('button').map((button) => button.text())).toEqual(['React']);
+    expect(wrapper.find('.role-banner').exists()).toBe(false);
     expect(bar.classes()).not.toContain('below-banner');
     page.connection.connected = false;
     await flushPromises();

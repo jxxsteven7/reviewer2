@@ -1,18 +1,22 @@
 import type { MatchRules } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import type { MatchScore } from './game';
-import { Match, rankings, titlesFor, type Present } from './match';
+import { Match, rankings, titlesFor, type Present, type Who } from './match';
 
 // The match itself: totals, places and titles. How a game scores is the game's (see the tests of
 // games/keywords/match.ts); how the room drives a match is in test/match.test.ts.
 
 const RULES: MatchRules = { games: 2, teams: 'switch', grouping: 'random' };
 
-// Everyone in `here` is in the room, with their key as their name and as their player ID.
+// Everyone in `here` is in the room, with an account, their key as their name and as their player
+// ID, and no avatar.
 const presentOnly =
   (...here: string[]): Present =>
   (key) =>
-    here.includes(key) ? { id: `id-${key}`, name: key, avatar: null } : null;
+    here.includes(key) ? { id: `id-${key}`, ...who(key) } : null;
+
+// A player as the table shows them: with an account unless they have a guest's number.
+const who = (name: string, avatar: string | null = null, guest: number | null = null): Who => ({ name, guest, avatar });
 
 const scores = (points: Record<string, number>): MatchScore[] =>
   Object.entries(points).map(([key, value]) => ({ key, points: value, detail: { value } }));
@@ -86,7 +90,7 @@ describe('a match', () => {
 
   test('ranks only those still in the room who took part in a scored game', () => {
     const match = new Match(RULES);
-    match.enter('new', 'New', null);
+    match.enter('new', who('New'));
     match.score('g1', scores({ ann: 4, bob: 9, cat: 2, gone: 20 }), presentOnly('ann', 'bob', 'cat', 'gone', 'new'));
     expect(match.final).toBeNull();
     const view = match.view('ended', 'g1', null, presentOnly('ann', 'bob', 'cat', 'new'));
@@ -123,7 +127,7 @@ describe('a match', () => {
 
   test('stopped before any game has scored ranks nobody', () => {
     const match = new Match(RULES);
-    match.enter('ann', 'ann', null);
+    match.enter('ann', who('ann'));
     match.finish('stopped', presentOnly('ann'));
     expect(match.final).toEqual(new Map());
     expect(match.view('lobby', null, null, presentOnly('ann'))).toMatchObject({ game: 1, played: 0 });
@@ -135,8 +139,8 @@ describe('the table of a match', () => {
 
   test('shows the points of the game being played as they stand, apart from the totals', () => {
     const match = new Match(RULES);
-    match.enter('ann', 'ann', null);
-    match.enter('bob', 'bob', null);
+    match.enter('ann', who('ann'));
+    match.enter('bob', who('bob'));
     const view = match.view('playing', 'g1', scores({ ann: 2, bob: -1 }), here);
     expect(view).toMatchObject({ game: 1, played: 0, status: 'on' });
     expect(view.standings).toEqual([
@@ -181,30 +185,79 @@ describe('the table of a match', () => {
     expect(view.standings[0]).toMatchObject({ total: 2, delta: null });
   });
 
-  test('keeps the name and avatar of those who left, and shows those of the players who are here', () => {
+  test('keeps the name, number and avatar of those who left, and shows those of the players who are here', () => {
     const match = new Match(RULES);
-    match.enter('ann', 'Ann', '/avatars/a.webp');
-    match.enter('bob', 'Bob', null);
+    match.enter('ann', who('Ann', '/avatars/a.webp'));
+    match.enter('bob', who('Guest 1', null, 1));
+    match.enter('cat', who('Guest 2', null, 2));
+    // Bob has logged in since, as Bobby, and has no number any more; Cat is still a guest.
     const view = match.view('lobby', null, null, (key) =>
-      key === 'bob' ? { id: 'b', name: 'Bobby', avatar: '/avatars/b.webp' } : null,
+      key === 'bob'
+        ? { id: 'b', ...who('Bobby', '/avatars/b.webp') }
+        : key === 'cat'
+          ? { id: 'c', ...who('Guest 2', null, 2) }
+          : null,
     );
-    expect(view.standings.map(({ playerId, name, avatar, left }) => ({ playerId, name, avatar, left }))).toEqual([
+    const shown = view.standings.map(({ playerId, name, guest, avatar, left }) => ({
+      playerId,
+      name,
+      guest,
+      avatar,
+      left,
+    }));
+    expect(shown).toEqual([
       { playerId: 'b', name: 'Bobby', avatar: '/avatars/b.webp', left: false },
+      { playerId: 'c', name: 'Guest 2', guest: 2, left: false },
       { playerId: null, name: 'Ann', avatar: '/avatars/a.webp', left: true },
+    ]);
+    // A player with an account has no number at all, rather than one that is null.
+    expect(view.standings.filter((standing) => 'guest' in standing).map(({ name }) => name)).toEqual(['Guest 2']);
+  });
+
+  test('keeps the number of a guest who left, from when they were last seen', () => {
+    const match = new Match(RULES);
+    match.score('g1', scores({ ann: 2, guest: 1 }), (key) =>
+      key === 'guest' ? { id: 'g', ...who('Guest 3', null, 3) } : presentOnly('ann')(key),
+    );
+    const view = match.view('ended', 'g1', null, presentOnly('ann'));
+    expect(view.standings.map(({ name, guest, left }) => ({ name, guest, left }))).toEqual([
+      { name: 'ann', left: false },
+      { name: 'Guest 3', guest: 3, left: true },
     ]);
   });
 
   test("moves a guest's line to their account, and adds it to the account's own", () => {
     const match = new Match({ ...RULES, games: 3 });
     match.score('g1', scores({ guest: 3, account: 1 }), presentOnly('guest', 'account'));
-    match.rekey('guest', 'newcomer');
+    match.rekey('guest', 'newcomer', who('newcomer'));
     expect(match.view('lobby', null, null, presentOnly('newcomer', 'account')).standings).toMatchObject([
       { name: 'newcomer', total: 3, games: 1 },
       { name: 'account', total: 1, games: 1 },
     ]);
-    match.rekey('newcomer', 'account');
+    match.rekey('newcomer', 'account', who('account'));
     expect(match.view('lobby', null, null, presentOnly('account')).standings).toMatchObject([
       { name: 'account', total: 4, games: 2, delta: 3 },
+    ]);
+  });
+
+  test("shows a guest's line that became an account's as the account, also once it has left", () => {
+    const match = new Match({ ...RULES, games: 3 });
+    match.score('g1', scores({ guest: 3 }), (key) =>
+      key === 'guest' ? { id: 'g', ...who('Guest 3', null, 3) } : null,
+    );
+    match.rekey('guest', 'account', who('alice', '/avatars/a.webp'));
+    const line = (view: ReturnType<Match['view']>) =>
+      view.standings.map(({ name, guest, avatar, left }) => ({ name, guest, avatar, left }));
+    expect(line(match.view('lobby', null, null, () => null))).toEqual([
+      { name: 'alice', avatar: '/avatars/a.webp', left: true },
+    ]);
+    // So is one added to the account's own line, which the account may have left under an older name.
+    match.score('g2', scores({ guest: 1 }), (key) =>
+      key === 'guest' ? { id: 'g', ...who('Guest 3', null, 3) } : null,
+    );
+    match.rekey('guest', 'account', who('Alice', '/avatars/a.webp'));
+    expect(line(match.view('lobby', null, null, () => null))).toEqual([
+      { name: 'Alice', avatar: '/avatars/a.webp', left: true },
     ]);
   });
 
@@ -213,7 +266,7 @@ describe('the table of a match', () => {
     match.score('g1', scores({ ann: 6, account: 3 }), presentOnly('ann', 'account'));
     // The account left, and the same person played the last game as a guest, then logged in.
     match.score('g2', scores({ ann: 0, guest: 3, cat: -3 }), presentOnly('ann', 'guest', 'cat'));
-    match.rekey('guest', 'account');
+    match.rekey('guest', 'account', who('account'));
     const view = match.view('ended', 'g2', null, presentOnly('ann', 'account', 'cat'));
     expect(view.status).toBe('over');
     expect(view.standings.map(({ name, rank, total, title }) => ({ name, rank, total, title }))).toEqual([
@@ -225,7 +278,7 @@ describe('the table of a match', () => {
 
   test('lists the ranked by their place at the end, before those who came back unranked', () => {
     const match = new Match({ ...RULES, games: 1 });
-    match.enter('bob', 'bob', null);
+    match.enter('bob', who('bob'));
     match.score('g1', scores({ ann: 4, bob: 12, cat: 2 }), presentOnly('ann', 'cat'));
     // Bob left during the last game, and is back after the end.
     const view = match.view('ended', 'g1', null, presentOnly('ann', 'bob', 'cat'));

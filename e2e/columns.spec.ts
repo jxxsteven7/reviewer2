@@ -6,8 +6,8 @@ import {
   isPhone,
   playToTheEnd,
   playTurn,
+  register,
   seatTable,
-  sideChannel,
   teamOnTurn,
   test,
   TEXT,
@@ -22,6 +22,16 @@ import {
 const text = TEXT.en;
 // One spacing between the panels of a column, and a pixel to spare.
 const SPACING = 25;
+
+// A username as long as a name may be, with a part that is the test's own, since all tests share
+// one server, on which a registered name is nobody else's.
+const longName = () => `Bartholomew L${Math.random().toString(36).slice(2, 5).padEnd(3, '0')}`;
+
+// Dan takes the longest name there is: he registers it, before he joins the room.
+const withLongName = (name: string) => async (page: Page, seat: string) => {
+  if (seat === 'Dan') await register(page, name);
+};
+const asMatch = (page: Page) => chooseMatch(page, 'en', { games: 3, teams: 'fixed', grouping: 'choose' });
 
 async function box(locator: Locator) {
   const found = await locator.boundingBox();
@@ -105,12 +115,8 @@ test("in a match, the tools open the table with each line on one line, and the c
   browser,
 }, testInfo) => {
   test.skip(isPhone(testInfo), 'on a wide screen only');
-  const table = await seatTable(browser, 'en', undefined, (page) =>
-    chooseMatch(page, 'en', { games: 3, teams: 'fixed', grouping: 'choose' }),
-  );
-  // Dan takes the longest name there is.
-  const tab = await sideChannel(table.guessers.blue, table.url);
-  expect(await tab.send('room:rename', { name: 'Bartholomew Long' })).toMatchObject({ ok: true });
+  const name = longName();
+  const table = await seatTable(browser, 'en', withLongName(name), asMatch);
   for (let turn = 1; turn <= 4; turn += 1) await playTurn(table, turn);
 
   // The match's progress is a button among the tools, and the columns stand at the top beside the
@@ -133,10 +139,7 @@ test("in a match, the tools open the table with each line on one line, and the c
   await expect(sheet.locator('.match-table')).toContainText(
     interpolate(text.match.progress, { game: '1', games: '3' }),
   );
-  await expect(sheet.locator('tbody .name', { hasText: 'Bartholomew Long' })).toHaveAttribute(
-    'title',
-    'Bartholomew Long',
-  );
+  await expect(sheet.locator('tbody .name', { hasText: name })).toHaveAttribute('title', name);
   await settled(sheet);
   const rows = await sheet.locator('tbody tr').all();
   expect(rows).toHaveLength(4);
@@ -174,11 +177,8 @@ test.describe('on a 320 px phone', () => {
 
   test("the match's table keeps its headings apart and its lines on one line", async ({ browser }, testInfo) => {
     test.skip(!isPhone(testInfo), 'the sheet is the same at every width, but a phone is where it gets narrow');
-    const table = await seatTable(browser, 'en', undefined, (page) =>
-      chooseMatch(page, 'en', { games: 3, teams: 'fixed', grouping: 'choose' }),
-    );
-    const tab = await sideChannel(table.guessers.blue, table.url);
-    expect(await tab.send('room:rename', { name: 'Bartholomew Long' })).toMatchObject({ ok: true });
+    const name = longName();
+    const table = await seatTable(browser, 'en', withLongName(name), asMatch);
     await playTurn(table, 1);
 
     const student = table.guessers.red;
@@ -210,9 +210,6 @@ test.describe('on a 320 px phone', () => {
       expect((await box(row.locator('.name-line'))).height).toBeLessThanOrEqual(40);
       expect((await box(row.locator('.name'))).height).toBeLessThanOrEqual(26);
     }
-    await expect(sheet.locator('tbody .name', { hasText: 'Bartholomew Long' })).toHaveAttribute(
-      'title',
-      'Bartholomew Long',
-    );
+    await expect(sheet.locator('tbody .name', { hasText: name })).toHaveAttribute('title', name);
   });
 });

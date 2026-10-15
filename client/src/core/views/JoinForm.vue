@@ -1,25 +1,21 @@
 <script setup lang="ts">
-import { formatCode, MAX_NAME_INPUT, parseCode } from '@reviewer2/shared';
+import { formatCode, parseCode } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { account } from '../account';
 import PlayChoice from '../components/PlayChoice.vue';
 import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
-import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
-import { submitName } from '../room';
-import { storedName, storeName } from '../session';
+import { submitChoice } from '../room';
 import { useBusy } from '../useBusy';
-import { useNameField } from '../useNameField';
 
-// A newcomer gives a nickname before joining, and says whether they have come to play or only to
-// watch. The page is already in the room's language. A name that the server refuses comes back
-// here with the reason, for another try. A newcomer who is logged in joins with their username,
-// and is shown what the server had against that below the form, since there is no field for it.
+// A newcomer says whether they have come to play or only to watch before joining. Nobody gives a
+// name: a newcomer who is logged in joins with their username, which the form shows, and a guest
+// as the guest the room numbers them. The page is already in the room's language. What the server
+// had against joining shows below the form, for another try.
 const props = defineProps<{ code: string }>();
 const { t } = useI18n();
-const { name, clean, problem, refuse } = useNameField(storedName());
 const formError = ref<string | undefined>();
 const play = ref(true);
 const { busy, run } = useBusy();
@@ -28,20 +24,13 @@ const number = computed(() => formatCode(parseCode(props.code) ?? props.code));
 
 async function join() {
   formError.value = undefined;
-  const reply = await run(() => submitName(account.summary ? undefined : name.value, play.value));
-  if (!reply) return;
-  if (reply.ok) {
-    if (!account.summary) storeName(clean.value ?? name.value.trim());
-  } else if (account.summary) {
-    formError.value = t(errorKey(reply.error));
-  } else {
-    refuse(reply.error);
-  }
+  const reply = await run(() => submitChoice(play.value));
+  if (reply && !reply.ok) formError.value = t(errorKey(reply.error));
 }
 </script>
 
 <template>
-  <form class="name-form" @submit.prevent="join">
+  <form class="join-form" @submit.prevent="join">
     <h1>{{ t('room.join.title', { code: number }) }}</h1>
     <i18n-t v-if="account.summary" keypath="account.as" tag="p" class="as" scope="global">
       <template #name>
@@ -49,25 +38,16 @@ async function join() {
         <strong>{{ account.summary.username }}</strong>
       </template>
     </i18n-t>
-    <UiField
-      v-else
-      v-model="name"
-      :label="t('room.join.name')"
-      :maxlength="MAX_NAME_INPUT"
-      autocomplete="nickname"
-      enterkeyhint="go"
-      :error="problem"
-    />
     <PlayChoice v-model="play" />
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
-    <UiButton variant="primary" type="submit" :disabled="busy || !(clean || account.summary)">
+    <UiButton variant="primary" type="submit" :disabled="busy">
       {{ t('room.join.submit') }}
     </UiButton>
   </form>
 </template>
 
 <style scoped>
-.name-form {
+.join-form {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -79,10 +59,6 @@ async function join() {
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
-}
-
-.name-form > :deep(.field) {
-  align-self: stretch;
 }
 
 h1 {

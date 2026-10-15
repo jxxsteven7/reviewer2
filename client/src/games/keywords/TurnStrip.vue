@@ -1,110 +1,91 @@
 <script setup lang="ts">
-import { TEAMS, type GuessRule, type KeywordsView, type PlayerView, type Team } from '@reviewer2/shared';
-import { computed } from 'vue';
+import type { GuessRule, KeywordsView, Seat } from '@reviewer2/shared';
+import { computed, onBeforeUnmount, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
-import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
+import { bannerFor } from './banner';
 import ClockBar from './ClockBar.vue';
+import GroupBars, { type Group } from './GroupBars.vue';
 
 // Whose turn it is, in which phase, with the current clue, how much time the phase has left and
-// how many cards each group still has to find, on one sticker above the board. The phase is set
-// in the display fonts, in the current group's color. Under the free guess rule, a clue's number
-// sets no limit, so there is none to show. The game page shows the clock apart, under the strip,
-// where it can stay at the top of the screen (KeywordsGame).
+// how many cards each group still has to find, on one sticker above the board. Under the free guess
+// rule, a clue's number sets no limit, so there is none to show. The game page shows the clock
+// apart, under the strip, where it can stay at the top of the screen (KeywordsGame).
 //
-// Each group's bar shows who is in it rather than its name, which only a screen reader is told:
-// the PI's avatar first, with a small tag on its lower edge, then a thin line, then the students,
-// overlapping, each in front of the next, the viewer first among them and ringed in white, the
-// others in the order of their seats. A phone has room for two students and a wider screen for six;
-// "+n" counts the rest. Someone offline has the avatar of someone the room waits for (PlayerAvatar).
-interface Group {
-  team: Team;
-  captain: PlayerView | null;
-  guessers: PlayerView[];
-}
+// For a member of the room, the `seat` they are in: the strip says first, in small type in the
+// color of their group, who they are, and then, in the display fonts, in the current group's
+// color, what is going on for them now (banner.ts), such as "Your turn to guess!"; on their move
+// the tab's title says so too, for a player who has gone to another tab while they wait. A line
+// that waits for someone ends in an ellipsis, which breathes a little, by CSS alone: the words stay
+// as they are. A big screen, which nobody sits at, says what the current group is doing.
+//
+// Under it, the two groups' bars (GroupBars.vue).
 const props = withDefaults(
   defineProps<{
     game: KeywordsView;
     guessRule: GuessRule;
+    seat?: Seat | null;
     clockApart?: boolean;
     groups?: Group[];
     me?: string | null;
   }>(),
-  { clockApart: false, groups: () => [], me: null },
+  { seat: null, clockApart: false, groups: () => [], me: null },
 );
 const { t } = useI18n();
 
-// The most students a bar shows on a phone, and on a wider screen.
-const FEW = 2;
-const MANY = 6;
-
-const groupOf = (team: Team) => props.groups.find((group) => group.team === team);
-const piOf = (team: Team) => groupOf(team)?.captain ?? null;
-const studentsOf = (team: Team) => {
-  const guessers = groupOf(team)?.guessers ?? [];
-  return [...guessers.filter(({ id }) => id === props.me), ...guessers.filter(({ id }) => id !== props.me)];
-};
-
 const group = computed(() => t(`lobby.group.${props.game.team}`));
-const phase = computed(() => t(`game.phase.${props.game.phase}`, { group: group.value }));
+const banner = computed(() => (props.seat ? bannerFor(props.seat, props.game) : null));
+const who = computed(() => {
+  if (!props.seat) return null;
+  const { team, role } = props.seat;
+  if (team === null) return t('banner.spectator');
+  return t('banner.seat', { group: t(`lobby.group.${team}`), role: t(`banner.roles.${role}`) });
+});
+const line = computed(() => {
+  if (!banner.value) return t(`game.phase.${props.game.phase}`, { group: group.value });
+  const about = banner.value.group;
+  return t(`banner.lines.${banner.value.line}`, { group: about ? t(`lobby.group.${about}`) : '' });
+});
+// The line's words, and the ellipsis it ends in while someone is waited for, if any.
+const parts = computed(() => {
+  const found = /^(.*?)(\u2026+)$/su.exec(line.value);
+  return found ? { text: found[1] ?? '', dots: found[2] ?? '' } : { text: line.value, dots: '' };
+});
 const count = computed(() => {
   const value = props.game.clue?.count;
   return value === 'unlimited' ? '\u221e' : String(value ?? '');
 });
+
+const title = document.title;
+watchEffect(() => {
+  document.title = banner.value?.urgent ? t('banner.tabTitle') : title;
+});
+onBeforeUnmount(() => {
+  document.title = title;
+});
 </script>
 
 <template>
-  <section class="strip" :class="game.phase === 'over' ? 'over' : game.team" aria-live="polite">
-    <p class="line">
-      <span class="phase display">{{ phase }}</span>
-      <span class="turn num">{{ t('game.turn', { turn: game.turn }) }}</span>
-    </p>
-    <p v-if="game.clue" class="clue">
-      <span class="label">{{ t('game.clue') }}</span>
-      <span class="word">{{ game.clue.word }}</span>
-      <span class="count num">{{ count }}</span>
-      <span v-if="guessRule === 'standard'" class="left num">
-        {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
-      </span>
-    </p>
-    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" :frozen="game.paused" />
-    <p class="scores">
-      <span v-for="team in TEAMS" :key="team" class="score num" :class="team">
-        <span class="faces">
-          <span class="sr-only">{{ t(`lobby.group.${team}`) }}</span>
-          <span v-if="piOf(team)" class="pi" aria-hidden="true">
-            <PlayerAvatar
-              :name="piOf(team)!.name"
-              :avatar="piOf(team)!.avatar"
-              :agent="piOf(team)!.agent !== undefined"
-              :waiting="!piOf(team)!.online"
-              :class="{ me: piOf(team)!.id === me }"
-            />
-            <span class="pi-tag">{{ t('game.piTag') }}</span>
-          </span>
-          <span v-if="piOf(team) && studentsOf(team).length" class="divider" aria-hidden="true"></span>
-          <span class="students" aria-hidden="true">
-            <span
-              v-for="(student, index) in studentsOf(team).slice(0, MANY)"
-              :key="student.id"
-              class="face"
-              :class="{ extra: index >= FEW }"
-              :style="{ zIndex: MANY - index }"
-            >
-              <PlayerAvatar
-                :name="student.name"
-                :avatar="student.avatar"
-                :agent="student.agent !== undefined"
-                :waiting="!student.online"
-                :class="{ me: student.id === me }"
-              />
-            </span>
-            <span v-if="studentsOf(team).length > FEW" class="more few">+{{ studentsOf(team).length - FEW }}</span>
-            <span v-if="studentsOf(team).length > MANY" class="more many">+{{ studentsOf(team).length - MANY }}</span>
-          </span>
+  <section class="strip" :class="game.phase === 'over' ? 'over' : game.team">
+    <!-- The lines are read out as they change; the bars, whose avatars are buttons, aren't. -->
+    <div class="lines" aria-live="polite">
+      <p v-if="who" class="who" :class="seat?.team ?? 'spectator'">{{ who }}</p>
+      <p class="line">
+        <span class="phase display"
+          >{{ parts.text }}<span v-if="parts.dots" class="dots">{{ parts.dots }}</span></span
+        >
+        <span class="turn num">{{ t('game.turn', { turn: game.turn }) }}</span>
+      </p>
+      <p v-if="game.clue" class="clue">
+        <span class="label">{{ t('game.clue') }}</span>
+        <span class="word">{{ game.clue.word }}</span>
+        <span class="count num">{{ count }}</span>
+        <span v-if="guessRule === 'standard'" class="left num">
+          {{ game.guessesLeft === null ? t('game.noLimit') : t('game.guessesLeft', { count: game.guessesLeft }) }}
         </span>
-        <span>{{ t('game.remaining', { count: game.remaining[team] }) }}</span>
-      </span>
-    </p>
+      </p>
+    </div>
+    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" :frozen="game.paused" />
+    <GroupBars :groups="groups" :remaining="game.remaining" :me="me" />
   </section>
 </template>
 
@@ -121,6 +102,12 @@ const count = computed(() => {
   box-shadow: var(--shadow-2);
 }
 
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .line {
   display: flex;
   flex-wrap: wrap;
@@ -129,8 +116,47 @@ const count = computed(() => {
   gap: var(--space-1) var(--space-3);
 }
 
+/* Who the viewer is, over the line, close to it, in the color of their group. */
+.who {
+  margin-bottom: calc(-1 * var(--space-2));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.who.red {
+  color: var(--red-deep);
+}
+
+.who.blue {
+  color: var(--blue-deep);
+}
+
+.who.spectator {
+  color: var(--ink-2);
+}
+
 .phase {
   font-size: var(--text-2xl);
+}
+
+/* The ellipsis of a line that waits breathes, gently. It stays an inline, so that a narrow screen
+   never wraps it onto a line of its own. */
+.dots {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots {
+    animation: none;
+  }
 }
 
 .strip.red .phase {
@@ -188,146 +214,5 @@ const count = computed(() => {
   margin-left: auto;
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
-}
-
-.scores {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.score {
-  display: flex;
-  flex: 1 1 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-width: 0;
-  min-height: 46px;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-card);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-black);
-}
-
-/* Who is in the group, in the bar's middle from top to bottom: the PI's tag hangs over the lower
-   edge of the avatar, inside the bar. */
-.faces {
-  --face: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-}
-
-.faces :deep(.avatar) {
-  width: var(--face);
-  height: var(--face);
-  font-size: 0.85rem;
-}
-
-.faces :deep(.avatar.me) {
-  box-shadow: 0 0 0 2px var(--paper);
-}
-
-.pi {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-}
-
-.pi-tag {
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  z-index: 2;
-  padding: 0 4px;
-  border: 1.5px solid var(--paper);
-  border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--on-ink);
-  font-family: var(--font-sans);
-  font-size: 9px;
-  font-weight: var(--weight-black);
-  line-height: 12px;
-  white-space: nowrap;
-  transform: translateX(-50%);
-}
-
-.divider {
-  flex: none;
-  width: 2px;
-  height: 22px;
-  border-radius: 1px;
-  background: currentcolor;
-  opacity: 0.4;
-}
-
-.students {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.face {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-}
-
-.face + .face {
-  margin-left: -5px;
-}
-
-.face.extra,
-.more.many {
-  display: none;
-}
-
-.more {
-  margin-left: 4px;
-  font-size: var(--text-xs);
-}
-
-/* On a wide screen, a little more room: six students, and the bars a little taller. */
-@media (min-width: 64rem) {
-  .score {
-    min-height: 48px;
-    padding: 0 var(--space-4);
-  }
-
-  .faces {
-    --face: 30px;
-  }
-
-  .face + .face {
-    margin-left: -4px;
-  }
-
-  .pi-tag {
-    bottom: -5px;
-    font-size: 10px;
-  }
-
-  .face.extra {
-    display: inline-flex;
-  }
-
-  .more.few {
-    display: none;
-  }
-
-  .more.many {
-    display: inline;
-  }
-}
-
-.score.red {
-  background: var(--red);
-  color: var(--on-red);
-}
-
-.score.blue {
-  background: var(--blue);
-  color: var(--on-blue);
 }
 </style>

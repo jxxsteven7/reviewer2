@@ -44,8 +44,8 @@ test('friends who win together become co-first authors, which they alone are tol
   await expect(bobAlone.locator('.friends .friend .rest')).toHaveCount(0);
   await expect(bobAlone.locator('.friends .board')).toHaveCount(0);
 
-  const table = await seatTable(browser, 'en', async (page, name) => {
-    if (names[name]) await logIn(page, names[name]);
+  const table = await seatTable(browser, 'en', async (page, seat) => {
+    if (names[seat]) await logIn(page, names[seat]);
   });
   const ann = table.captains.red;
   const bob = table.guessers.red;

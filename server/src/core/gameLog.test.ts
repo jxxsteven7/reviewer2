@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { GameLog, MAX_GAME_LOG_BYTES, MAX_SAID_BYTES, unsay } from './gameLog';
+import { GameLog, markDeleted, MAX_GAME_LOG_BYTES, MAX_SAID_BYTES } from './gameLog';
 
 describe('the log of a game', () => {
   test('notes each thing in order, from the start of the game, with who did it, what it carried and what was said', () => {
@@ -90,20 +90,27 @@ describe('the log of a game', () => {
   });
 });
 
-describe('taking out what players said', () => {
-  test('takes out the lines of those players alone, and keeps that they said something, and when', () => {
+describe('marking the players of a deleted account', () => {
+  test('adds their IDs once each, in the order they went, and keeps what they said', () => {
     const log = new GameLog('test', 'g1', 0, null);
     log.add(1, 'a', 'say', { said: 'mine' });
     log.add(2, 'b', 'say', { said: 'theirs' });
-    log.add(3, 'a', 'press', { data: 'kept' });
     const kept = log.data();
     if (!kept) throw new Error('no log');
-    expect(unsay(kept, new Set(['a'])).entries).toEqual([
-      { t: 1, by: 'a', type: 'say' },
-      { t: 2, by: 'b', type: 'say', said: 'theirs' },
-      { t: 3, by: 'a', type: 'press', data: 'kept' },
-    ]);
-    // A log they said nothing in comes back as it was.
-    expect(unsay(kept, new Set(['c']))).toBe(kept);
+    const marked = markDeleted(kept, ['b', 'a', 'b']);
+    expect(marked.deleted).toEqual(['b', 'a']);
+    expect(marked.entries).toBe(kept.entries);
+    // An account deleted later adds its own after them, and nobody is marked twice.
+    expect(markDeleted(marked, ['a', 'c']).deleted).toEqual(['b', 'a', 'c']);
+    // The log it was made from is left as it was.
+    expect(kept.deleted).toBeUndefined();
+  });
+
+  test('gives the same log back when there is nobody new to mark', () => {
+    const log = { entries: [], deleted: ['a'] };
+    expect(markDeleted(log, ['a'])).toBe(log);
+    expect(markDeleted(log, [])).toBe(log);
+    const unmarked: { entries: unknown[]; deleted?: string[] } = { entries: [] };
+    expect(markDeleted(unmarked, new Set<string>())).toBe(unmarked);
   });
 });

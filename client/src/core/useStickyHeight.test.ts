@@ -32,9 +32,21 @@ const Bar = defineComponent({
   setup(props) {
     const bar = ref<HTMLElement | null>(null);
     useStickyHeight(bar);
-    return () => (props.shown ? h('div', { ref: bar, class: 'bar' }) : null);
+    // A button before the bar, as the masthead's; the bar, with a button of its own; and the fields
+    // of the page after it.
+    return () =>
+      h('div', [
+        h('button', { class: 'before' }),
+        props.shown ? h('div', { ref: bar, class: 'bar' }, [h('button', { class: 'own' })]) : null,
+        h('input', { class: 'field' }),
+      ]);
   },
 });
+
+// Puts an element where the test says it is on the screen.
+const place = (element: Element, top: number, height: number) => {
+  element.getBoundingClientRect = () => ({ top, bottom: top + height, height }) as DOMRect;
+};
 
 const stickyHeight = () => document.documentElement.style.getPropertyValue('--sticky-height');
 
@@ -73,6 +85,63 @@ describe('useStickyHeight', () => {
     expect(stickyHeight()).toBe('52px');
     wrapper.unmount();
     expect(stickyHeight()).toBe('');
+  });
+
+  // WebKit scrolls a field that takes the focus into view only when it is out of the viewport; one
+  // under the bar, in the viewport, it leaves there.
+  test('scrolls a field that takes the focus out from under the bar, and nothing else', async () => {
+    const scrollBy = vi.fn();
+    vi.stubGlobal('scrollBy', scrollBy);
+    const wrapper = mount(Bar, { props: { shown: true }, attachTo: document.body });
+    await nextTick();
+    const bar = wrapper.get('.bar').element;
+    const field = wrapper.get<HTMLInputElement>('.field').element;
+    place(bar, 64, 124);
+    const focus = (element: Element) => element.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    // Under the bar: by how far the bar reaches over it.
+    place(field, 35, 40);
+    focus(field);
+    expect(scrollBy).toHaveBeenCalledWith({ top: -153, behavior: 'instant' });
+    // Above the viewport, where the browser scrolled for a field taller than the room below the bar.
+    scrollBy.mockClear();
+    place(field, -129, 300);
+    focus(field);
+    expect(scrollBy).toHaveBeenCalledWith({ top: -317, behavior: 'instant' });
+    // Below the bar, as the scroll padding puts it: nothing to do.
+    scrollBy.mockClear();
+    place(field, 188, 40);
+    focus(field);
+    expect(scrollBy).not.toHaveBeenCalled();
+    // The bar's own button and one before the bar on the page can't be under it.
+    for (const other of ['.own', '.before']) {
+      const button = wrapper.get(other).element;
+      place(button, 10, 44);
+      focus(button);
+    }
+    expect(scrollBy).not.toHaveBeenCalled();
+    // Nor can a sheet that lies over the page, fixed to the screen at the end of the body, however
+    // high its panel stands: the page's scrolling moves it nowhere.
+    const sheet = document.createElement('div');
+    sheet.style.position = 'fixed';
+    const panel = document.createElement('section');
+    panel.tabIndex = -1;
+    sheet.append(panel);
+    document.body.append(sheet);
+    place(panel, 80, 500);
+    focus(panel);
+    expect(scrollBy).not.toHaveBeenCalled();
+    sheet.remove();
+    // Nothing once the bar is gone, or the page.
+    await wrapper.setProps({ shown: false });
+    await nextTick();
+    place(field, 35, 40);
+    focus(field);
+    expect(scrollBy).not.toHaveBeenCalled();
+    wrapper.unmount();
+    document.body.append(field);
+    focus(field);
+    expect(scrollBy).not.toHaveBeenCalled();
+    field.remove();
   });
 
   test('leaves the stylesheet to guess in a browser without ResizeObserver', async () => {

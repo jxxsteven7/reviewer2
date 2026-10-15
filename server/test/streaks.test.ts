@@ -67,7 +67,7 @@ describe('streaks', () => {
     const bob = await join(track(await (browsers.Bob as Browser).connect()));
     const cat = await join(track(await (browsers.Cat as Browser).connect()));
     const dan = track(await TestClient.connect(server.url));
-    expect(await dan.send('room:join', { code, name: 'Dan' })).toMatchObject({ ok: true });
+    expect(await dan.send('room:join', { code, play: false })).toMatchObject({ ok: true });
     const eve = await join(track(await (browsers.Eve as Browser).connect()), false);
     const screen = track(await TestClient.connect(server.url));
     expect(await screen.send('room:watch', { code, roomId })).toMatchObject({ ok: true });
@@ -138,7 +138,7 @@ describe('streaks', () => {
     if (!reply.ok) throw new Error(reply.error);
     await ann.waitFor((state) => state.code === reply.code);
     const bob = track(await TestClient.connect(server.url));
-    expect(await bob.send('room:join', { code: reply.code, name: 'Bob', play: true })).toMatchObject({ ok: true });
+    expect(await bob.send('room:join', { code: reply.code, play: true })).toMatchObject({ ok: true });
     await ann.waitFor((state) => state.players.length === 2);
     // A game, finished (which Ann wins, as the test game is won by everyone who plays; Bob is a
     // guest, with no record) or withdrawn, and the streaks that the snapshot ending it tells of.

@@ -90,6 +90,20 @@ const sections = ({ contributions }: Contributions) =>
   cursor: pointer;
 }
 
+/* The avatar wears the hard shadow of what a tap opens (docs/design.md), and the press takes it
+   away. */
+.person :deep(.avatar) {
+  box-shadow: var(--shadow-1);
+  transition:
+    transform var(--motion),
+    box-shadow var(--motion);
+}
+
+.person:active :deep(.avatar) {
+  transform: translate(var(--shift-1), var(--shift-1));
+  box-shadow: none;
+}
+
 .person:focus-visible {
   outline: var(--line-strong) solid var(--focus);
   outline-offset: 2px;

@@ -89,6 +89,7 @@ export function createAppServer(options: AppOptions): AppServer {
   const { accounts } = options;
   // A login cookie without Secure goes over plain HTTP, where anyone on the way can read it.
   if (accounts && !cookieSecure) log('cookies_not_secure', { hint: 'only for plain HTTP, as in development' });
+  const games = new Map(options.games.map((game) => [game.id, game]));
   const http = createServer(
     createRequestHandler({
       publicDir: options.publicDir,
@@ -104,6 +105,7 @@ export function createAppServer(options: AppOptions): AppServer {
           log,
           // Asked only once the server answers requests, when the rooms are there.
           agentsLive: (persona) => agentsIn(rooms.all(), persona),
+          showReplay: (kept) => games.get(kept.game)?.showReplay?.(kept) ?? kept.replay,
         }),
       }),
     }),
@@ -129,7 +131,7 @@ export function createAppServer(options: AppOptions): AppServer {
   const sockets = attachSockets(io, {
     rooms,
     words: options.words,
-    games: new Map(options.games.map((game) => [game.id, game])),
+    games,
     now,
     timers: options.timers ?? realTimers,
     version: options.version,

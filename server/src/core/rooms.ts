@@ -91,14 +91,14 @@ export class Rooms {
     randomFields?: boolean;
     settings?: unknown;
     key: string;
-    name: string;
     play?: boolean;
-    account?: MemberAccount | null;
+    // The creator's account, with its username, or null for a guest.
+    as?: { username: string; account: MemberAccount } | null;
     match?: MatchRules;
     public?: boolean;
     practice?: string;
   }): Ack<{ room: Room; member: Member }> {
-    const { game, language, key, name, play = false, account = null, practice } = options;
+    const { game, language, key, play = false, as = null, practice } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
     let seats: PracticeSeats | null = null;
     if (practice !== undefined) {
@@ -140,7 +140,7 @@ export class Rooms {
       const started = room.startMatch(options.match);
       if (!started.ok) return started;
     }
-    const joined = room.join(key, name, play || seats !== null, account);
+    const joined = room.join(key, play || seats !== null, as);
     if (!joined.ok) return joined;
     const seated = seats ? seatPractice(room, joined.member, seats) : null;
     if (seated && !seated.ok) return seated;

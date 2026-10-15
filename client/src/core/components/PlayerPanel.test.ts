@@ -134,11 +134,17 @@ describe('PlayerPanel', () => {
     wrapper.unmount();
   });
 
-  test("says a guest has no page, opens an AI player's own page, and gives the chair one action on an AI", async () => {
-    const guest = panel('bob', view('cat', false));
-    expect(dialogs()[0]?.querySelector('.nobody')?.textContent).toContain('GuestGuests have no page.');
+  test("shows a guest by the avatar and the name alone, opens an AI player's own page, and gives the chair one action on an AI", async () => {
+    const guest = panel('g2', view('cat', false, { id: 'g2', name: 'Guest 2', guest: 2, online: true }));
+    expect(dialogs()[0]?.querySelector('h2')?.textContent).toBe('Guest 2');
+    expect(dialogs()[0]?.querySelector('.panel-body')?.textContent).toBe('');
+    expect(dialogs()[0]?.querySelector('.panel-body .avatar .initial')?.getAttribute('data-initial')).toBe('G');
     expect(names()).toEqual(['\u00d7']);
     guest.unmount();
+    // The chair has their actions on a guest.
+    const chairs = panel('g2', view('ann', false, { id: 'g2', name: 'Guest 2', guest: 2, online: true }));
+    expect(names()).toEqual(['\u00d7', 'Move to the spectators', 'Make chair', 'Remove from the room']);
+    chairs.unmount();
     signedIn.request.mockResolvedValue({
       ok: true,
       profile: {

@@ -1,7 +1,9 @@
 <script lang="ts">
+import { shallowReactive } from 'vue';
+
 // The sheets that are open on the page, the one on top last. Shared by every sheet, which is why
 // it lives outside the setup: each instance has its own copy of what is declared there.
-const openSheets: symbol[] = [];
+const openSheets = shallowReactive<symbol[]>([]);
 </script>
 
 <script setup lang="ts">
@@ -15,7 +17,10 @@ import { useVisualViewport } from '../useVisualViewport';
 // panel itself when there is none, so that no button or switch, such as the one for the sounds, is
 // armed by opening it; Tab then stays inside the panel. A sheet opened from another one, such as
 // the chair's menu from the groups on a phone, lies over it, and only the sheet on top listens to
-// the keys.
+// the keys. Sheets lie in the order they were opened, whatever their order on the page: the
+// player's panel, which a room puts on the page as it is entered, lies over the groups, which come
+// only with the game, when it is opened from them. They all stay under the emotes, the toasts and
+// the menu of marks.
 //
 // A sheet with a way `back`, named by that text, has a round button with an arrow before its title,
 // as the close button has its cross after it, which takes the viewer back to the sheet it was
@@ -25,7 +30,10 @@ import { useVisualViewport } from '../useVisualViewport';
 // account gives them.
 //
 // A sheet that isn't to `focusInput` takes the focus itself as it opens, so that a phone shows no
-// keyboard before the viewer asks for one, as a chat opened only to read it. A sheet that is to
+// keyboard before the viewer asks for one, as a chat opened only to read it. As it closes, the
+// focus goes back to what opened it, without scrolling: the button was in sight a moment ago, and
+// one in a bar that stays at the top of the screen, as the room menu's, would otherwise have the
+// browser scroll the page to where the bar stands on it, below the scroll padding. A sheet that is to
 // `fitScreen` keeps to the part of the screen that a phone's keyboard leaves (useVisualViewport.ts)
 // and holds its content in a column as tall as it may be, so that what the content keeps at its
 // foot, such as the line a player writes, stays in sight above the keyboard while the rest
@@ -45,17 +53,29 @@ const emit = defineEmits<{ close: []; back: [] }>();
 const { t } = useI18n();
 const id = useId();
 const panel = ref<HTMLElement | null>(null);
+// Whether what scrolls in the panel has left its top: the content, or a list of its own, as the
+// chat's thread in a sheet fitted to the screen. Scroll events don't bubble, so the panel hears them
+// as they go down to their target; a list that scrolls sideways leaves the content as it was.
+const scroller = ref<HTMLElement | null>(null);
+const scrolled = ref(false);
+const onScroll = (event: Event) => {
+  const list = event.target instanceof HTMLElement && event.target !== scroller.value ? event.target : null;
+  scrolled.value = (scroller.value?.scrollTop ?? 0) > 0 || (list?.scrollTop ?? 0) > 0;
+};
 // The subtitle as it follows the title, a space apart, so that the heading reads as two words.
 const spacedSubtitle = computed(() => ` ${props.subtitle ?? ''}`);
 let returnFocus: HTMLElement | null = null;
 const screen = useVisualViewport(computed(() => props.open && props.fitScreen));
-const placed = computed(() =>
-  screen.value ? { top: `${screen.value.top}px`, height: `${screen.value.height}px`, bottom: 'auto' } : undefined,
-);
+const me = Symbol('sheet');
+// From 20, the layer of a sheet that is alone, to 24, under the emotes' 25 (EmoteBubbles.vue).
+const layer = computed(() => 20 + Math.min(Math.max(openSheets.indexOf(me), 0), 4));
+const placed = computed(() => ({
+  zIndex: layer.value,
+  ...(screen.value ? { top: `${screen.value.top}px`, height: `${screen.value.height}px`, bottom: 'auto' } : {}),
+}));
 
 const FOCUSABLE = 'input, textarea, button, [href], [tabindex]:not([tabindex="-1"])';
 
-const me = Symbol('sheet');
 function leave() {
   const at = openSheets.indexOf(me);
   if (at >= 0) openSheets.splice(at, 1);
@@ -95,6 +115,7 @@ watch(
   () => props.open,
   async (open, was) => {
     if (open) {
+      scrolled.value = false;
       returnFocus = document.activeElement as HTMLElement | null;
       openSheets.push(me);
       document.addEventListener('keydown', onKey);
@@ -104,7 +125,7 @@ watch(
     } else if (was) {
       leave();
       document.removeEventListener('keydown', onKey);
-      returnFocus?.focus?.();
+      returnFocus?.focus?.({ preventScroll: true });
     }
   },
   { immediate: true },
@@ -115,7 +136,7 @@ watch(
 onBeforeUnmount(() => {
   leave();
   document.removeEventListener('keydown', onKey);
-  if (props.open) returnFocus?.focus?.();
+  if (props.open) returnFocus?.focus?.({ preventScroll: true });
 });
 </script>
 
@@ -130,19 +151,20 @@ onBeforeUnmount(() => {
         aria-modal="true"
         :aria-labelledby="id"
         tabindex="-1"
+        @scroll.capture.passive="onScroll"
       >
-        <div class="scroller">
-          <header class="head">
-            <button v-if="back" type="button" class="round back" :aria-label="back" @click="emit('back')">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
-            </button>
-            <h2 :id="id">
-              {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
-            </h2>
-            <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
-              &times;
-            </button>
-          </header>
+        <header class="head" :class="{ scrolled }">
+          <button v-if="back" type="button" class="round back" :aria-label="back" @click="emit('back')">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
+          </button>
+          <h2 :id="id">
+            {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
+          </h2>
+          <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
+            &times;
+          </button>
+        </header>
+        <div ref="scroller" class="scroller">
           <div class="body"><slot /></div>
         </div>
       </section>
@@ -175,14 +197,12 @@ onBeforeUnmount(() => {
   animation: rise var(--motion) ease-out;
 }
 
-/* What scrolls is inside the panel, a little below its top edge and, where it is round, above its
-   bottom edge, so that the scrollbar stays clear of the round corners rather than running over
-   them. Its padding makes up the rest of the panel's space around the content, and at the top
-   leaves room for the focus ring of the head's buttons, which would otherwise be clipped. */
+/* What scrolls is under the head and, where the panel is round, above its bottom edge, so that
+   the scrollbar stays clear of the round corners rather than running over them. Its padding makes
+   up the rest of the panel's space around the content. */
 .scroller {
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: var(--space-2);
   overflow-y: auto;
   padding: var(--space-2) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
 }
@@ -201,18 +221,46 @@ onBeforeUnmount(() => {
   }
 }
 
+/* The head stays at the top of the panel while the content scrolls under it, with a soft shadow
+   under it once the content has scrolled, as under a page's masthead (PageMasthead.vue). Its
+   padding leaves room for the focus ring of its buttons, which would otherwise be clipped. */
 .head {
+  position: relative;
+  z-index: 1;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-2);
 }
 
+/* The shadow reaches across the panel's own padding (.panel in base.css), from one side of the
+   panel to the other. */
+.head::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: calc(-1 * var(--space-4));
+  left: calc(-1 * var(--space-4));
+  height: 12px;
+  background: linear-gradient(var(--shade), transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion);
+}
+
+.head.scrolled::after {
+  opacity: 1;
+}
+
+/* A title too long for the head wraps with its lines as even as can be, rather than leaving the
+   last word alone on the second line, as "Moves by Guest 1" would leave the number. */
 h2 {
   flex: 1;
   min-width: 0;
   font-size: var(--text-2xl);
+  text-wrap: balance;
 }
 
 .subtitle {
@@ -266,10 +314,6 @@ h2 {
   overflow: hidden;
 }
 
-.fit .head {
-  flex: none;
-}
-
 .fit .body {
   display: flex;
   flex: 1 1 auto;
@@ -290,8 +334,12 @@ h2 {
     box-shadow: var(--shadow-3);
   }
 
+  .head {
+    padding: calc(var(--space-3) + var(--space-2)) var(--space-5) var(--space-2);
+  }
+
   .scroller {
-    margin: var(--space-3) 0 var(--space-4);
+    margin-bottom: var(--space-4);
     padding: var(--space-2) var(--space-5) var(--space-1);
   }
 }

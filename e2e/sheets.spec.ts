@@ -1,11 +1,12 @@
-import { createRoom, expect, newPlayer, test } from './helpers';
+import { avatarOf, createRoom, expect, isPhone, newPlayer, openGroups, seatTable, test } from './helpers';
 
 // A sheet takes the focus as it opens, so that the keyboard and screen readers start inside it, but
-// draws no focus ring around itself: the controls inside it keep theirs (UiSheet.vue).
+// draws no focus ring around itself: the controls inside it keep theirs. Sheets lie in the order
+// they were opened, whatever their order on the page (UiSheet.vue).
 
 test('a sheet opened from the keyboard takes the focus without a ring of its own', async ({ browser }) => {
   const ann = await newPlayer(browser);
-  await createRoom(ann, 'en', 'Ann');
+  await createRoom(ann, 'en');
 
   await ann.locator('.masthead .room-button').focus();
   await ann.keyboard.press('Enter');
@@ -21,4 +22,23 @@ test('a sheet opened from the keyboard takes the focus without a ring of its own
   const close = sheet.locator('.close');
   await expect(close).toBeFocused();
   expect(await close.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
+});
+
+// The player's panel is on the page from the moment the room is entered, and the groups' sheet only
+// from the start of the game, after it: by their order on the page, the groups would cover the panel
+// that they open.
+test("on a phone, a player's panel opened from the groups lies over them", async ({ browser }, testInfo) => {
+  test.skip(!isPhone(testInfo), 'on a wide screen the groups stand beside the board');
+  const table = await seatTable(browser, 'en');
+  const bob = table.guessers.red;
+  const name = table.names.captains.red;
+  await (await openGroups(bob)).getByRole('button', avatarOf(name)).click();
+  const panel = bob.getByRole('dialog', { name, exact: true });
+  await expect(panel).toBeVisible();
+  // A tap in the middle of the panel lands on the panel, not on the groups' sheet.
+  const onTop = await panel.evaluate((dialog) => {
+    const box = dialog.getBoundingClientRect();
+    return dialog.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+  });
+  expect(onTop, 'the panel is on top').toBe(true);
 });

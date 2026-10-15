@@ -12,7 +12,6 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { changeLogin, loadAccount, request } from '../account';
-import BackButton from '../components/BackButton.vue';
 import PlayerAvatar from '../components/PlayerAvatar.vue';
 import PlayerNumber from '../components/PlayerNumber.vue';
 import RankLadder from '../components/RankLadder.vue';
@@ -137,10 +136,7 @@ async function logOut() {
 
 <template>
   <section class="profile">
-    <div class="title-row">
-      <BackButton />
-      <h1>{{ t('account.profile.title') }}</h1>
-    </div>
+    <h1>{{ t('account.profile.title') }}</h1>
 
     <section class="part identity" aria-labelledby="profile-username">
       <div class="head">
@@ -296,13 +292,6 @@ async function logOut() {
 
 h1 {
   font-size: var(--text-2xl);
-}
-
-/* The way back, when there is one, and the title on one row. */
-.title-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
 }
 
 .part {

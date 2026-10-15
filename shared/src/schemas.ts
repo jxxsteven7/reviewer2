@@ -64,20 +64,20 @@ export const ROOM_MESSAGES = {
     language: z.enum(LANGUAGES),
     page: z.enum(FEEDBACK_PAGES),
   }),
-  // A room starts with its game's default settings when `settings` is left out. A creator who is
-  // logged in has their username as the name, and needs to give none. With `match`, the room plays
-  // a match by those rules; with `public`, it is listed for anyone with an account to join. With
-  // `practice`, it is a practice room (docs/architecture.md#practice-rooms): the creator plays the
-  // role they name, as the game calls it, AI players take the other seats, and the game starts.
-  // With `randomFields`, every game draws its word lists anew (drawFields in protocol.ts), and
-  // `fields` may be empty; a practice room takes none.
+  // A room starts with its game's default settings when `settings` is left out. Nobody gives a
+  // name: a creator who is logged in has their username, and a guest a number in the room
+  // (docs/architecture.md#players-and-identity). With `match`, the room plays a match by those
+  // rules; with `public`, it is listed for anyone with an account to join. With `practice`, it is a
+  // practice room (docs/architecture.md#practice-rooms): the creator plays the role they name, as
+  // the game calls it, AI players take the other seats, and the game starts. With `randomFields`,
+  // every game draws its word lists anew (drawFields in protocol.ts), and `fields` may be empty; a
+  // practice room takes none.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
     fields,
     randomFields: z.boolean().optional(),
     settings: settings.optional(),
-    name: name.optional(),
     play,
     match: match.optional(),
     public: z.boolean().optional(),
@@ -89,14 +89,12 @@ export const ROOM_MESSAGES = {
   // one of the two must be there.
   'room:join': z.object({
     code: code.optional(),
-    name: name.optional(),
     roomId: roomId.nullish(),
     play,
     invitation: z.string().max(64).optional(),
   }),
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
-  'room:rename': z.object({ name }),
   'room:emote': z.object({ emote: z.enum(EMOTES) }),
   // A member reports another to the operator, with a note that the rules in feedback.ts judge.
   'room:report': z.object({ playerId, text: z.string().optional() }),

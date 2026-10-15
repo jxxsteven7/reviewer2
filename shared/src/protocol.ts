@@ -30,11 +30,7 @@ export const ROOM_ERRORS = [
   'room_not_found',
   'room_full',
   'screens_full',
-  'name_required',
-  'name_invalid',
-  'name_taken',
-  'name_reserved',
-  'account_name',
+  'play_required',
   'account_required',
   'public_barred',
   'removed',
@@ -100,8 +96,8 @@ export interface SeatedRoom {
 }
 
 // What the server answers a message with: that it did what was asked, with whatever it has to
-// say about it, or that it didn't, with an error code. `language` comes with name_required alone:
-// it is the room's language, for the form that asks a newcomer for a name. `waitMs` comes with
+// say about it, or that it didn't, with an error code. `language` comes with play_required alone:
+// it is the room's language, for the form that asks a newcomer whether they play. `waitMs` comes with
 // emote_cooldown alone: how much longer the member has to wait before the next reaction.
 export type Ack<Data extends object = object> =
   ({ ok: true } & Data) | { ok: false; error: string; language?: Language; waitMs?: number };

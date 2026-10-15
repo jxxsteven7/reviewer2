@@ -13,6 +13,7 @@ import { ACCOUNT_REQUESTS } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { methodAllowed } from '../http';
 import { clientIp } from '../core/clientIp';
+import type { KeptReplay } from '../core/game';
 import { AVATAR_CONTENT_TYPES, AVATAR_FILE } from './avatars';
 import { clearedCookie, fromThisSite, loginCookie, readLoginCookie } from './cookies';
 import type { AccountFailure, AccountResult, Accounts, Login } from './service';
@@ -38,6 +39,9 @@ export interface AccountApiOptions {
   // How many of an AI player are in the rooms now, as AI players and playing for someone offline,
   // and in how many rooms, for its page. Without this, none.
   agentsLive?: (persona: AgentPersona) => { players: number; rooms: number };
+  // A kept replay as the account opens it, as its game shows it (GameModule.showReplay). Without
+  // this, the replay as it was kept.
+  showReplay?: (kept: KeptReplay & { game: string }) => unknown;
   // Whether the login cookie is Secure, which it is unless the server is told that it is served
   // over plain HTTP (COOKIE_SECURE=0).
   secureCookies: boolean;
@@ -118,7 +122,14 @@ function post<Schema extends z.ZodType>(
   return { method: 'POST', schema, login, handle: handle as Route['handle'] };
 }
 
-export function createAccountApi({ accounts, secureCookies, trustProxy, log, agentsLive }: AccountApiOptions) {
+export function createAccountApi({
+  accounts,
+  secureCookies,
+  trustProxy,
+  log,
+  agentsLive,
+  showReplay = (kept) => kept.replay,
+}: AccountApiOptions) {
   const signedIn = (secret: string) => loginCookie(secret, secureCookies);
   const signedOut = clearedCookie(secureCookies);
   const state = (login: Login | null): AccountState => ({
@@ -138,8 +149,8 @@ export function createAccountApi({ accounts, secureCookies, trustProxy, log, age
     [ACCOUNT_API.replay]: post(
       ACCOUNT_REQUESTS.replay,
       ({ login, body }) => {
-        const replay = accounts.replayOf(login as Login, body.gameId);
-        return replay === null ? failure('no_replay') : ok({ replay });
+        const kept = accounts.replayOf(login as Login, body.gameId);
+        return kept === null ? failure('no_replay') : ok({ replay: showReplay(kept) });
       },
       true,
     ),

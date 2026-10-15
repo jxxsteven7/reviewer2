@@ -39,7 +39,7 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     chairId: null,
     now: () => 0,
     keyOf,
-    nameOf: (id) => id,
+    whoIs: () => ({ account: true }),
     isOnline: (id) => !offline.includes(id),
     agentOf: () => null,
     playerIds: () => ids,

@@ -8,6 +8,7 @@ import {
   joinByLink,
   logIn,
   mailedLink,
+  nameOf,
   newPlayer,
   openGroups,
   playToTheEnd,
@@ -22,11 +23,10 @@ import {
 // Accounts end to end: a game played by players with accounts and guests, on the records; the
 // name and the avatar that rooms show; an email address bound with the link in a mail, and a
 // forgotten password reset with another; and an account deleted. Guests play as they always did,
-// in this file and in all the others.
+// in this file and in all the others, by the numbers their rooms give them.
 //
-// All tests share one server, on which a registered name is nobody else's, a guest's included. So
-// every account and address here has a part that is the test's own, and no guest in any test is
-// called that.
+// All tests share one server, on which a registered name is nobody else's. So every account and
+// address here has a part that is the test's own.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
 
 // The requests that a page makes for its records, which only the account's own page asks for: a
@@ -66,8 +66,8 @@ test('players with accounts play a whole game with guests, and find it on their 
   // Ann chairs the room as red's PI and Dan guesses for blue, both logged in; Bob, Cat and Eve are
   // guests.
   const usernames: Record<string, string> = { Ann: own('Ann'), Dan: own('Dan') };
-  const table = await seatTable(browser, 'en', async (page, name) => {
-    if (usernames[name]) await register(page, usernames[name]);
+  const table = await seatTable(browser, 'en', async (page, seat) => {
+    if (usernames[seat]) await register(page, usernames[seat]);
   });
   const ann = table.captains.red;
   // Their names in the room are their usernames, with the default avatar, which is the initial.
@@ -76,13 +76,15 @@ test('players with accounts play a whole game with guests, and find it on their 
   await expect(await openGroups(table.spectator)).toContainText(usernames.Dan as string);
 
   await playToTheEnd(table);
-  // Nobody's snapshots say more about a player than the name, whether they are online, the avatar
-  // and the rank: nothing of an account, a login or an address.
+  // Nobody's snapshots say more about a player than the name, a guest's number, whether they are
+  // online, the avatar and the rank: nothing of an account, a login or an address.
   for (const states of table.everyone) {
     for (const state of states) {
       for (const player of state.players) {
         expect(
-          Object.keys(player).filter((key) => !['id', 'name', 'online', 'avatar', 'rank', 'handle'].includes(key)),
+          Object.keys(player).filter(
+            (key) => !['id', 'name', 'guest', 'online', 'avatar', 'rank', 'handle'].includes(key),
+          ),
         ).toEqual([]);
       }
     }
@@ -115,19 +117,14 @@ test('players with accounts play a whole game with guests, and find it on their 
   );
 });
 
-test('a new name and avatar show in the room, and a guest can not take a registered name', async ({ browser }) => {
+test('a new name and avatar show in the room', async ({ browser }) => {
   const text = TEXT.zh;
   const name = own('\u{5b89}\u{59ae}');
   const ann = await newPlayer(browser, 'zh');
   await register(ann, name);
-  const url = await createRoom(ann, 'zh', '');
+  const url = await createRoom(ann, 'zh');
   const guest = await newPlayer(browser, 'zh');
-  // In any case, the name is the account's.
-  await guest.goto(url);
-  await guest.getByLabel(text.room.join.name).fill(name.toUpperCase());
-  await guest.getByRole('button', { name: text.room.join.submit, exact: true }).click();
-  await expect(guest.getByText(text.errors.name_reserved)).toBeVisible();
-  await joinByLink(guest, url, '\u{9c8d}\u{52c3}', 'zh');
+  await joinByLink(guest, url, 'zh');
   await expect(guest.locator('.lobby')).toContainText(name);
 
   // Ann goes to her page and back, as a player can at any time, and keeps her seat.
@@ -161,29 +158,26 @@ test('a new name and avatar show in the room, and a guest can not take a registe
   await ann.goto(url);
   const menu = await roomMenu(ann);
   await expect(menu.locator('.who img')).toHaveAttribute('src', avatar as string);
-  // A player with an account renames on the account page, not in the room.
-  await expect(menu.getByRole('button', { name: text.room.rename })).toHaveCount(0);
 });
 
 test('a guest who registers in the middle of a game keeps their seat, as the account', async ({ browser }) => {
-  const text = TEXT.en;
   const chair = await newPlayer(browser);
-  const url = await createRoom(chair, 'en', 'Chair');
+  const url = await createRoom(chair, 'en');
   const player = await newPlayer(browser);
+  await joinByLink(player, url, 'en');
+  const guest = nameOf(player);
+  await expect(chair.locator('.lobby')).toContainText(guest);
+  // Ann registers on the account page, and opens the room again: the seat she took as a guest is
+  // hers, as the account, by its username, and the guest's number is gone.
   const name = own('Ann');
-  await joinByLink(player, url, name, 'en');
-  await expect(chair.locator('.lobby')).toContainText(name);
-  // Ann registers her nickname on the account page, and opens the room again: the seat she took as
-  // a guest is hers, as the account.
   await register(player, name);
   await player.goto(url);
   await expect(player.locator('.lobby')).toBeVisible();
-  await expect(player.locator('.name-form')).toHaveCount(0);
+  await expect(player.locator('.join-form')).toHaveCount(0);
   const menu = await roomMenu(player);
   await expect(menu.locator('.who')).toContainText(name);
   await expect(chair.locator('.lobby .player', { hasText: name })).toHaveCount(1);
-  // A player with an account renames on the account page, not in the room.
-  await expect(menu.getByRole('button', { name: text.room.rename })).toHaveCount(0);
+  await expect(chair.locator('.lobby')).not.toContainText(guest);
 });
 
 test('a password change keeps the browser logged in, on the page and on its connection', async ({ browser }) => {
@@ -193,7 +187,7 @@ test('a password change keeps the browser logged in, on the page and on its conn
   const records = recordsRequests(page);
   await register(page, name);
   expect(records).toEqual([]);
-  const url = await createRoom(page, 'en', '');
+  const url = await createRoom(page, 'en');
   // To the account page from the home page, without loading the page again: the connection, which
   // the server closes with the login, is the one the page keeps using.
   await page.goBack();

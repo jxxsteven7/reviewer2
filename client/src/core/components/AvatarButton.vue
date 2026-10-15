@@ -11,19 +11,32 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // screen, or for a player who has left the room, it is the avatar alone. Outside a room, the avatar
 // of an account, by the `handle` of its page, opens the account's panel (ProfilePanel.vue, the
 // site's one, profilePanel.ts) in the same look, as a room's does, so that a tap on an avatar does
-// the same everywhere. `name` is the player's name, an account's username.
+// the same everywhere. `name` is the player's name, an account's username, `initial` what the
+// default avatar shows in place of its first character, and `guest` a guest's number, for the
+// default avatar's color (PlayerAvatar.vue).
 const props = withDefaults(
   defineProps<{
     playerId?: string | null;
     handle?: string | null;
     name: string;
+    initial?: string | null;
+    guest?: number | null;
     avatar?: string | null;
     agent?: boolean;
     size?: 'small' | 'medium' | 'large';
     // Faded, with the dots of someone the room waits for (PlayerAvatar.vue).
     waiting?: boolean;
   }>(),
-  { playerId: null, handle: null, avatar: null, agent: false, size: 'small', waiting: false },
+  {
+    playerId: null,
+    handle: null,
+    initial: null,
+    guest: null,
+    avatar: null,
+    agent: false,
+    size: 'small',
+    waiting: false,
+  },
 );
 const open = useOpenPlayer();
 const { t } = useI18n();
@@ -39,7 +52,15 @@ const press = () => props.playerId !== null && open?.(props.playerId);
     aria-haspopup="dialog"
     @click="openProfile(handle, name)"
   >
-    <PlayerAvatar :name="name" :avatar="avatar" :agent="agent" :size="size" :waiting="waiting" />
+    <PlayerAvatar
+      :name="name"
+      :initial="initial"
+      :guest="guest"
+      :avatar="avatar"
+      :agent="agent"
+      :size="size"
+      :waiting="waiting"
+    />
   </button>
   <button
     v-else-if="open && playerId !== null"
@@ -48,9 +69,26 @@ const press = () => props.playerId !== null && open?.(props.playerId);
     :aria-label="t('room.viewProfile', { name })"
     @click="press"
   >
-    <PlayerAvatar :name="name" :avatar="avatar" :agent="agent" :size="size" :waiting="waiting" />
+    <PlayerAvatar
+      :name="name"
+      :initial="initial"
+      :guest="guest"
+      :avatar="avatar"
+      :agent="agent"
+      :size="size"
+      :waiting="waiting"
+    />
   </button>
-  <PlayerAvatar v-else :name="name" :avatar="avatar" :agent="agent" :size="size" :waiting="waiting" />
+  <PlayerAvatar
+    v-else
+    :name="name"
+    :initial="initial"
+    :guest="guest"
+    :avatar="avatar"
+    :agent="agent"
+    :size="size"
+    :waiting="waiting"
+  />
 </template>
 
 <style scoped>

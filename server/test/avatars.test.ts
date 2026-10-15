@@ -92,7 +92,7 @@ describe('an avatar', () => {
   test('shows beside the name in the rooms the account is in', async () => {
     server = await startServer();
     const ann = await account('Ann');
-    const { code } = await createRoom(server.url, 'Cat');
+    const { code } = await createRoom(server.url);
     const own = await ann.connect();
     clients.push(own);
     await own.send('room:join', { code, play: true });

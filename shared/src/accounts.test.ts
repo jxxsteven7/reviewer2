@@ -67,9 +67,26 @@ describe('a username', () => {
     }
     expect(checkUsername('Reviewer 3').problem).toBeNull();
     expect(checkUsername('administrators').problem).toBeNull();
-    // A guest's nickname may not be one either.
     expect(isReservedName('Reviewer 2')).toBe(true);
     expect(isReservedName('Reviewer 3')).toBe(false);
+  });
+
+  // A room calls its guests by their numbers, in either language, which no account may pass for.
+  test("may not be a guest's name in a room, in either language", () => {
+    for (const name of [
+      'Guest 1',
+      'guest12',
+      'GUEST_3',
+      '\u{ff27}uest 4',
+      '\u{6e38}\u{5ba2}1',
+      '\u{6e38}\u{5ba2} 27',
+      '\u{8bbf}\u{5ba2}5',
+    ]) {
+      expect(checkUsername(name).problem, name).toBe('username_reserved');
+    }
+    for (const name of ['Guest', 'Guesthouse 1', 'Guest one', '\u{6e38}\u{5ba2}\u{5c0f}\u{738b}']) {
+      expect(checkUsername(name).problem, name).toBeNull();
+    }
   });
 });
 

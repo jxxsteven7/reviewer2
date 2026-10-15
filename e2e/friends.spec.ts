@@ -6,6 +6,7 @@ import {
   interpolate,
   joinByLink,
   newPlayer,
+  pageAddress,
   register,
   roomMenu,
   searchFriends,
@@ -36,8 +37,8 @@ test('friends are made in a room and by username, invited into a private room, a
   await register(cat, catName);
 
   // Ann's private room, where Bob joins her. Both are kindergartners, which shows beside their names.
-  const first = await createRoom(ann, 'en', '');
-  await joinByLink(bob, first, '', 'en');
+  const first = await createRoom(ann, 'en');
+  await joinByLink(bob, first, 'en');
   const annInRoom = bob.locator('.lobby .player', { hasText: annName });
   await expect(annInRoom).toContainText(text.ranks.names.kindergarten);
   await expect(ann.locator('.lobby .player', { hasText: bobName })).toContainText(text.ranks.names.kindergarten);
@@ -91,9 +92,9 @@ test('friends are made in a room and by username, invited into a private room, a
   await ann.keyboard.press('Escape');
   // Cat finds Ann by the link to her page, pasted with words around it, and accepts in Ann's panel,
   // which shows Ann's line.
-  const annsPage = await ann.getByRole('link', { name: text.account.profile.public.view }).getAttribute('href');
+  const annsPage = await pageAddress(ann);
   await cat.goto('/account');
-  await searchFriends(cat, `Here is my page: ${new URL(annsPage as string, ann.url()).href} see you`);
+  await searchFriends(cat, `Here is my page: ${new URL(annsPage, ann.url()).href} see you`);
   const annForCat = cat.getByRole('dialog', { name: annName });
   await expect(annForCat).toContainText(text.friends.askedYou);
   await expect(annForCat).toContainText(interpolate(text.friends.noteQuoted, { note: 'Lab mate?' }));
@@ -149,7 +150,7 @@ test('friends are made in a room and by username, invited into a private room, a
   // Ann makes a second private room and invites Bob from the start bar at the top of the waiting
   // room, beside the start button; the share row has no invitation. Bob, who is on his account
   // page, sees the invitation there and follows it into the room.
-  const second = await createRoom(ann, 'en', '');
+  const second = await createRoom(ann, 'en');
   await bob.goto('/account');
   // Bob has no seat in this one, and isn't told its number: he may ask to be let in.
   await expect(
@@ -189,7 +190,7 @@ test('friends are made in a room and by username, invited into a private room, a
   );
   await invitation.getByRole('button', { name: text.friends.invitationJoin }).click();
   await bob.waitForURL(/\/room\/[0-9A-Z]{4}\?invite=/);
-  await expect(bob.locator('.name-form')).toContainText(bobName);
+  await expect(bob.locator('.join-form')).toContainText(bobName);
   await bob.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(bob.locator('.lobby')).toContainText(annName);
   await expect(bob).toHaveURL(second);
@@ -244,7 +245,7 @@ test('a friend in a private room is asked to let a player in, and invites them o
 
   // Ann makes a private room. Bob's home page shows it among the rooms his friends are in, without
   // its number, and he asks to join.
-  const code = (await createRoom(ann, 'en', '')).slice(-4);
+  const code = (await createRoom(ann, 'en')).slice(-4);
   await bob.goto('/');
   await bob.getByRole('button', { name: new RegExp(`^${text.language.en}`) }).click();
   const playing = bob.locator('.friends-playing');

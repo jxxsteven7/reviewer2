@@ -8,7 +8,7 @@ import type { Persona } from './personas';
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'keywords-2';
+export const PROMPT_VERSION = 'keywords-3';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
 
@@ -42,14 +42,37 @@ function earlierClues(game: AgentGame): string {
 
 // What a clue may be in the room (clueOptions() in shared/src/games/keywords/settings.ts), as the
 // strict clue rule has it, which the agent keeps to even where the room's rule is loose.
+//
+// Told to write one word, a model nearly always gives a common word of two characters in a Chinese
+// room, though a single character, with its several meanings and the many words it forms, often
+// ties more cards together. So the model is told that a clue may be a single character, or
+// characters that need not form a word, and, where the room allows more than one character, to
+// offer at least one single character among its candidates. The agent gives the first candidate
+// that the rules take (keywords.ts), so the best must come first, whether it is single or not.
 function clueRules(game: AgentGame): string {
   const { clueLength } = game.settings;
   if (game.language === 'zh') {
-    return (
-      `Clue rules: write the clue in Chinese, as one word of at most ${clueLength} Chinese characters (two Latin ` +
-      'letters or digits count as one character). It must not be a word on the board, contain one or share any ' +
-      'Chinese character with one, and it must not be the English term or the pinyin of a word on the board.'
-    );
+    const offBoard =
+      'It must not be a word on the board, contain one or share any Chinese character with one, and it must not ' +
+      'be the English term or the pinyin of a word on the board.';
+    if (clueLength === 1) {
+      return [
+        'Clue rules: write the clue in Chinese, as a single Chinese character (two Latin letters or digits count as ' +
+          'one character). Through its different meanings and the different words it forms, one character can tie ' +
+          'several related cards together.',
+        offBoard,
+        'Put the best candidate first.',
+      ].join(' ');
+    }
+    return [
+      'Clue rules: write the clue in Chinese, as a single Chinese character, or a few characters that need not be a ' +
+        `dictionary word, at most ${clueLength} Chinese characters (two Latin letters or digits count as one ` +
+        'character). A single character is often the best clue: through its different meanings and the different ' +
+        'words it forms, it can tie several related cards together.',
+      offBoard,
+      'At least one of the three candidates must be a single character. Put the best candidate first, whether it ' +
+        'is a single character or not.',
+    ].join(' ');
   }
   const words = clueLength === 1 ? 'exactly one English word' : `at most ${clueLength} English words`;
   return (

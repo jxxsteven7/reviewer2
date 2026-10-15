@@ -9,7 +9,9 @@ import {
   type TestInfo,
 } from '@playwright/test';
 import {
+  ACCOUNT_API,
   checkClue,
+  PROFILE_PATH,
   type CardColor,
   type KeywordsRoomData,
   type KeywordsView,
@@ -42,8 +44,8 @@ export function plural(template: string, count: number): string {
   return interpolate(form ?? template, { count: String(count) });
 }
 
-// What the banner at the top of a room says of the viewer's seat (RoleBanner.vue): their group and
-// role, or that they watch.
+// What the turn strip of a game says of the viewer's seat (TurnStrip.vue): their group and role, or
+// that they watch.
 export function seatSaid(
   team: Team | null,
   role: 'captain' | 'guesser' = 'guesser',
@@ -367,16 +369,18 @@ async function chooseToWatch(page: Page, language: Language, { watch = false }: 
 
 // Creates a room with the general word list. A first room setup starts with no list chosen, its
 // lists open, and won't create the room until one is; a later one starts from the last room, its
-// lists folded away (roomSetup.ts), which this opens. `setup` runs on the room setup once the
-// name is filled in, for a test that wants other settings than the defaults.
+// lists folded away (roomSetup.ts), which this opens. Nobody gives a name: a guest is numbered by
+// the room, and an account has its username. `setup` runs on the room setup once a list is chosen,
+// for a test that wants other settings than the defaults. The page's snapshots are recorded from
+// here on (snapshotsOf), so that nameOf can tell what the room calls the player.
 export async function createRoom(
   page: Page,
   language: Language,
-  name: string,
   setup?: (page: Page) => Promise<void>,
   joining: Joining = {},
 ): Promise<string> {
   const text = TEXT[language];
+  snapshotsOf(page);
   await page.goto('/');
   // The language gate stands on the browser's first visit. Its button begins with the language's
   // name, and goes on with a description.
@@ -388,9 +392,6 @@ export async function createRoom(
   await expect(fold.locator('.summary')).not.toHaveText(text.create.loadingFields);
   if ((await fold.getAttribute('aria-expanded')) !== 'true') await fold.click();
   await expect(page.locator('.fields li').first()).toBeVisible();
-  // A player who is logged in has their username, and is asked for no name.
-  const field = page.getByLabel(text.create.name);
-  if (await field.count()) await field.fill(name);
   const submit = page.getByRole('button', { name: text.create.submit });
   const generalList = page.getByLabel(general.name[language]);
   if (!(await generalList.isChecked())) {
@@ -409,22 +410,39 @@ export async function createRoom(
   return page.url();
 }
 
-export async function joinByLink(
-  page: Page,
-  url: string,
-  name: string,
-  language: Language,
-  joining: Joining = {},
-): Promise<void> {
+// A newcomer joins by the room's link, on the form that asks only whether they play or watch
+// (JoinForm.vue). The page's snapshots are recorded from here on, as for createRoom.
+export async function joinByLink(page: Page, url: string, language: Language, joining: Joining = {}): Promise<void> {
   const text = TEXT[language];
+  snapshotsOf(page);
   await page.goto(url);
-  await expect(page.locator('.name-form')).toBeVisible();
-  // A player who is logged in has their username, and is asked for no name.
-  const field = page.getByLabel(text.room.join.name);
-  if (await field.count()) await field.fill(name);
+  await expect(page.locator('.join-form')).toBeVisible();
   await chooseToWatch(page, language, joining);
   await page.getByRole('button', { name: text.room.join.submit, exact: true }).click();
   await expect(page.locator('.lobby, .keywords-game').first()).toBeVisible();
+}
+
+// What the interface calls the guest with this number in a room in the language.
+export const guestName = (number: number, language: Language = 'en'): string =>
+  interpolate(TEXT[language].room.guest, { number: String(number) });
+
+// The name that the player of a page goes by in its room, as the pages show it (names.ts): a
+// guest's number in the room's language, which is the page's, or an account's username. It is read
+// from the page's latest snapshot, which createRoom and joinByLink record: guests who join at the
+// same time are numbered in whatever order the server hears them, so a test asks the room rather
+// than guessing.
+export function nameOf(page: Page): string {
+  const state = snapshotsOf(page).at(-1);
+  const me = state?.players.find((player) => player.id === state.me);
+  if (!state || !me) throw new Error('the page has no seat in a room that it recorded');
+  return me.guest === undefined ? me.name : guestName(me.guest, state.language);
+}
+
+// The address of the public page of the account that the page is logged in to. The account page
+// opens it in a sheet rather than linking to it, so it is asked of the server.
+export async function pageAddress(page: Page): Promise<string> {
+  const reply = await page.evaluate((path) => fetch(path).then((response) => response.json()), ACCOUNT_API.account);
+  return `${PROFILE_PATH}${(reply as { account: { handle: string } }).account.handle}`;
 }
 
 // A player in the waiting room takes a seat, and the page's snapshots confirm it. While the others
@@ -453,8 +471,8 @@ export interface Table {
   url: string;
   captains: Record<Team, Page>;
   guessers: Record<Team, Page>;
-  // The names the pages above joined with.
-  names: { captains: Record<Team, string>; guessers: Record<Team, string> };
+  // The names that the room gives the pages above (nameOf), as every page shows them.
+  names: { captains: Record<Team, string>; guessers: Record<Team, string>; spectator: string };
   spectator: Page;
   screen: Page;
   // What the guessers, the spectator and the screen received, which must never hold the key.
@@ -464,34 +482,36 @@ export interface Table {
 }
 
 // Ann chairs the room and is red's PI, Bob guesses for red, Cat is blue's PI and Dan guesses for
-// blue. Eve watches, and a screen shows the room. Everyone but Eve comes to play, so the server
-// seats them first, and they move to their seats from there. `prepare` runs on each page before
-// it creates or joins the room, for a test that needs a player's connection set up in some other
-// way or a player logged in to an account with the same name, `setup` on
-// Ann's room setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before
-// she starts the game. The game has started when this returns. The tests' clues are English words
-// of up to eight letters, which a Chinese room counts as up to four characters, more than its
-// default allows, so a Chinese room is set to four.
+// blue. Eve watches, and a screen shows the room. These are the seats' names in the tests alone:
+// the room numbers the guests as they come in, Ann first and the others in whatever order the
+// server hears them, and `names` holds what it calls each. Everyone but Eve comes to play, so the
+// server seats them first, and they move to their seats from there. `prepare` runs on each page,
+// with the seat's name, before it creates or joins the room, for a test that needs a player's
+// connection set up in some other way or a player logged in to an account, `setup` on Ann's room
+// setup (createRoom), and `desk` at Ann's desk once everyone is seated, just before she starts the
+// game. The game has started when this returns. The tests' clues are English words of up to eight
+// letters, which a Chinese room counts as up to four characters, more than its default allows, so a
+// Chinese room is set to four.
 export async function seatTable(
   browser: Browser,
   language: Language,
-  prepare?: (page: Page, name: string) => Promise<void>,
+  prepare?: (page: Page, seat: string) => Promise<void>,
   setup?: (page: Page) => Promise<void>,
   desk?: (chair: Page) => Promise<void>,
 ): Promise<Table> {
   const ann = await newPlayer(browser, language);
   snapshotsOf(ann);
   await prepare?.(ann, 'Ann');
-  const url = await createRoom(ann, language, 'Ann', async (page) => {
+  const url = await createRoom(ann, language, async (page) => {
     if (language === 'zh') await setSetting(page, TEXT.zh.settings.clueLength.zh, 4);
     await setup?.(page);
   });
   // The others join at the same time, as separate people do.
-  const join = async (name: string, joining: Joining = {}) => {
+  const join = async (seat: string, joining: Joining = {}) => {
     const page = await newPlayer(browser, language);
     snapshotsOf(page);
-    await prepare?.(page, name);
-    await joinByLink(page, url, name, language, joining);
+    await prepare?.(page, seat);
+    await joinByLink(page, url, language, joining);
     return page;
   };
   const [bob, cat, dan, eve] = await Promise.all([join('Bob'), join('Cat'), join('Dan'), join('Eve', { watch: true })]);
@@ -519,7 +539,11 @@ export async function seatTable(
     url,
     captains: { red: ann, blue: cat },
     guessers: { red: bob, blue: dan },
-    names: { captains: { red: 'Ann', blue: 'Cat' }, guessers: { red: 'Bob', blue: 'Dan' } },
+    names: {
+      captains: { red: nameOf(ann), blue: nameOf(cat) },
+      guessers: { red: nameOf(bob), blue: nameOf(dan) },
+      spectator: nameOf(eve),
+    },
     spectator: eve,
     screen,
     public: [bob, dan, eve, screen].map(snapshotsOf),
@@ -528,7 +552,7 @@ export async function seatTable(
 }
 
 // The room menu, behind the "Room" button in the masthead: the player's name and avatar, and
-// the ways to rename, leave and close the room. Opens it and returns it.
+// the ways to leave and close the room. Opens it and returns it.
 export async function roomMenu(page: Page): Promise<Locator> {
   await page.locator('.masthead .room-button').click();
   const menu = page.locator('[role=dialog]:has(.room-menu)');

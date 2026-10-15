@@ -117,7 +117,6 @@
     "publicHint": "Listed on the home page, for anyone with an account to join.",
     "publicNeedsAccount": "Log in or register to create a public room.",
     "loadingFields": "Loading the word lists...",
-    "name": "Your name",
     "submit": "Create the room",
     "cancel": "Cancel"
   },
@@ -137,15 +136,12 @@
     "panel": {
       "fullPage": "Open the full page",
       "myAccount": "My account",
-      "guest": "Guest",
-      "guestNote": "Guests have no page.",
       "back": "Back"
     },
     "reconnecting": "Reconnecting...",
     "joining": "Opening the room...",
     "join": {
       "title": "Join {code}",
-      "name": "Your name",
       "submit": "Join",
       "as": "Taking part",
       "play": "Play",
@@ -172,8 +168,6 @@
     "offline": "offline",
     "agent": "AI",
     "takenOver": "AI playing",
-    "rename": "Change name",
-    "renameSubmit": "Save",
     "leave": "Leave the room",
     "leaveConfirm": "Leave this room? Your seat will be given up.",
     "leaveChair": "Leave this room? Your seat will be given up, and {name} will chair the room.",
@@ -183,6 +177,7 @@
     "closeConfirm": "Close this room for everyone? Everyone in it, big screens included, is told that it has closed, and its number stops working.",
     "closeConfirmGame": "Close this room for everyone? The game in progress ends without a winner. Everyone in it, big screens included, is told that the room has closed, and its number stops working.",
     "menu": "Room",
+    "guest": "Guest {number}",
     "public": "Public",
     "private": "Private",
     "listed": "Public room: listed on the home page for anyone with an account.",
@@ -580,9 +575,19 @@
     },
     "timedOut": "Time ran out, and the turn ended.",
     "someone": "A player who left",
+    "deleted": "Deleted account",
+    "deletedInitial": "D",
     "won": "The {group} won.",
     "withdrawn": "The chair withdrew the game.",
-    "talk": "Talking it over"
+    "talk": "Talking it over",
+    "actions": {
+      "open": "View moves",
+      "title": "Moves by {name}",
+      "none": "No moves in this game.",
+      "found": "{found} right of {guesses} revealed",
+      "stopped": "Stopped at “{word}”: {outcome}",
+      "revealed": "Revealed “{word}”: {outcome}"
+    }
   },
   "settings": {
     "title": "Rules of this room",
@@ -640,8 +645,6 @@
       "guesser": "Student"
     },
     "lines": {
-      "lobby": "Waiting for the chair to start the game…",
-      "lobbyChair": "Start the game below once both groups are ready.",
       "over": "The game is over.",
       "paused": "The game is paused.",
       "yourClue": "Your turn to give a clue!",
@@ -692,11 +695,7 @@
     "room_not_found": "No room has that number.",
     "room_full": "This room is full.",
     "screens_full": "This room already has the most screens it can have.",
-    "name_required": "Enter a name.",
-    "name_invalid": "Use 1 to 16 visible characters.",
-    "name_taken": "Someone in the room already has that name.",
-    "name_reserved": "That name belongs to an account, or is reserved. Choose another, or log in.",
-    "account_name": "Your name in rooms is your username. Change it on your account page.",
+    "play_required": "Choose whether you play or watch.",
     "account_required": "Public rooms take an account: log in or register.",
     "public_barred": "Your account can't enter public rooms.",
     "removed": "The chair removed you from this room, so you can't come back to it.",
@@ -908,6 +907,7 @@
     "goal": "Two research groups, red and blue, each have keywords hidden among the 25 cards on the board. The group that finds all of its keywords first wins.",
     "rolesTitle": "Roles",
     "roles": "Each group has one PI and as many students as it likes. The PIs see which cards belong to whom; the students see only the words.",
+    "avatars": "An avatar with a shadow can be tapped: it opens the player's page, or for a guest or an AI player, their panel.",
     "turnTitle": "A turn",
     "turn": {
       "free": "The PI gives a clue and a number: how many cards the clue points to, from 1 to the cards the group has left. The students then reveal cards one at a time, and go on for as long as they find their group's cards. Once they have revealed a card, they may end the turn.",
@@ -1048,7 +1048,7 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, feedback contributions counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it. This can't be undone.",
+      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, feedback contributions counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it: the replays show you as a deleted account, without your name, and what you said in games stays, anonymous like the rest of the game records and no longer linked to you. This can't be undone.",
       "deleteSubmit": "Delete for good"
     },
     "avatar": {
@@ -1340,6 +1340,6 @@
   },
   "privacy": {
     "recordsTitle": "Game records",
-    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. Deleting your account deletes what you said in them."
+    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chat. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as deleted, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted account, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
   }
 }

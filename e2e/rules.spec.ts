@@ -52,9 +52,9 @@ test('under the standard rule, an unlimited clue allows any number of guesses, u
 
 test('the chair changes the rules in the waiting room, and everyone sees them', async ({ browser }) => {
   const ann = await newPlayer(browser, 'en');
-  const url = await createRoom(ann, 'en', 'Ann');
+  const url = await createRoom(ann, 'en');
   const bob = await newPlayer(browser, 'en');
-  await joinByLink(bob, url, 'Bob', 'en');
+  await joinByLink(bob, url, 'en');
   const summary = bob.locator('.settings-summary');
   await expect(summary).toContainText(settings.guess.free);
   await expect(summary).toContainText(settings.clue.strict);

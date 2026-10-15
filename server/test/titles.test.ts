@@ -49,13 +49,14 @@ describe('Forgot to Submit', () => {
     const bob = await bobs.connect();
     clients.push(bob);
     await expectOk(bob.send('room:join', { code, play: false }));
-    const join = async (name: string) => {
+    // Cat and Dan are guests.
+    const join = async () => {
       const client = await TestClient.connect(server.url);
       clients.push(client);
-      await expectOk(client.send('room:join', { code, name }));
+      await expectOk(client.send('room:join', { code, play: false }));
       return client;
     };
-    const [cat, dan] = [await join('Cat'), await join('Dan')];
+    const [cat, dan] = [await join(), await join()];
     const screen = await TestClient.connect(server.url);
     clients.push(screen);
     await expectOk(screen.send('room:watch', { code }));
@@ -137,13 +138,14 @@ describe('Deadline Hero', () => {
     const bob = await bobs.connect();
     clients.push(bob);
     await expectOk(bob.send('room:join', { code, play: false }));
-    const join = async (name: string) => {
+    // Cat and Dan are guests.
+    const join = async () => {
       const client = await TestClient.connect(server.url);
       clients.push(client);
-      await expectOk(client.send('room:join', { code, name }));
+      await expectOk(client.send('room:join', { code, play: false }));
       return client;
     };
-    const [cat, dan] = [await join('Cat'), await join('Dan')];
+    const [cat, dan] = [await join(), await join()];
     const everyone = [ann, bob, cat, dan];
     await expectOk(ann.send('keywords:seat', { team: 'red', role: 'captain' }));
     await expectOk(bob.send('keywords:seat', { team: 'red', role: 'guesser' }));

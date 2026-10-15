@@ -21,8 +21,8 @@ test('a winning streak is cheered by the whole room, and a losing streak told to
   test.slow(browserName === 'webkit', 'three games on WebKit take a while');
   const text = TEXT.en;
   const names: Record<string, string> = { Ann: own('Ann'), Dan: own('Dan') };
-  const table = await seatTable(browser, 'en', async (page, name) => {
-    if (names[name]) await register(page, names[name]);
+  const table = await seatTable(browser, 'en', async (page, seat) => {
+    if (names[seat]) await register(page, names[seat]);
   });
   const ann = table.captains.red;
   const dan = table.guessers.blue;

@@ -10,8 +10,6 @@ import {
   SPECTATOR,
   TEAMS,
   verdictFor,
-  type AgentPersona,
-  type KeywordsReplay,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
@@ -23,6 +21,7 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
+import { keptReplay, shownReplay } from './replay';
 import {
   agentLimitReached,
   agentMove,
@@ -85,7 +84,7 @@ import {
   type Seating,
   type SeatRequest,
 } from './seats';
-import { copyRecord, remaining, type KeywordsState } from './state';
+import { remaining, type KeywordsState } from './state';
 import { viewFor } from './view';
 
 // The team word guessing game as a GameModule: the rules in rules.ts and seats.ts, connected to
@@ -618,33 +617,10 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     );
   },
 
-  // The game that has just ended, to watch again (shared/src/games/keywords/replay.ts): the whole
-  // board with its colors, the record of the clues and the guesses, and the name that everyone who
-  // revealed a card had. A withdrawn game is nothing to watch.
-  replay(data, ctx): KeywordsReplay | null {
-    const game = data.game;
-    if (!game?.result || game.result.winner === null) return null;
-    const players: Record<string, string> = {};
-    for (const record of game.history) {
-      for (const { player } of record.guesses) players[player] ??= ctx.nameOf(player);
-    }
-    // The AI players: those in a group, and whoever revealed a card and has since been removed.
-    const agents: Record<string, AgentPersona> = {};
-    for (const id of [...ctx.playerIds(), ...Object.keys(players)]) {
-      const persona = ctx.agentOf(id);
-      if (persona !== null && (seatOf(data.seating, id).team !== null || id in players)) agents[id] = persona;
-    }
-    return {
-      gameId: game.gameId,
-      language: game.language,
-      startingTeam: game.startingTeam,
-      cards: game.cards.map(({ word, color }) => ({ word, color })),
-      history: game.history.map(copyRecord),
-      result: { ...game.result },
-      players,
-      ...(Object.keys(agents).length > 0 ? { agents } : {}),
-    };
-  },
+  // The game that has just ended, to watch again, and a kept one as an account opens it
+  // (replay.ts).
+  replay: keptReplay,
+  showReplay: shownReplay,
 
   views(data, ctx) {
     const members = ctx.playerIds();
