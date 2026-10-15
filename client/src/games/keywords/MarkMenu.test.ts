@@ -52,9 +52,11 @@ describe('MarkMenu', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await flushPromises();
     expect(box()).toEqual(['100px', '210px', '72px', '48px']);
-    // The card on the board shows again once the lifted one has landed.
+    // The card on the board shows again once the lifted one has landed, or after a while at most.
     expect(wrapper.emitted('close')).toBeUndefined();
     vi.advanceTimersByTime(300);
+    expect(wrapper.emitted('close')).toBeUndefined();
+    vi.advanceTimersByTime(800);
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
 

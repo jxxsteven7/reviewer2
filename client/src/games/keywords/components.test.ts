@@ -1504,11 +1504,12 @@ describe('KeywordsGame', () => {
   // The menu is drawn in place here, where the tests stub the teleport to the end of the page.
   const menuItems = (wrapper: ReturnType<typeof mount>) =>
     wrapper.findAll<HTMLButtonElement>('.mark-menu [role="menuitemradio"]').map((item) => item.element);
-  // A mark chosen in the open menu, which closes it, and then puts the mark on the card.
+  // A mark chosen in the open menu, which closes it, and then puts the mark on the card: the lifted
+  // copy's move never ends here, so the menu waits for it as long as it does at most (MarkMenu.vue).
   async function chooseMark(wrapper: ReturnType<typeof mount>, index: number) {
     vi.useFakeTimers();
     menuItems(wrapper)[index]?.click();
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
   }
@@ -1594,7 +1595,7 @@ describe('KeywordsGame', () => {
     await holdCard(wrapper, 2);
     vi.useFakeTimers();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
@@ -1620,7 +1621,7 @@ describe('KeywordsGame', () => {
     send.mockClear();
     vi.useFakeTimers();
     pressOn(wrapper.get('.mark-menu .scrim').element);
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
@@ -1630,7 +1631,7 @@ describe('KeywordsGame', () => {
     await holdCard(wrapper, 1);
     vi.useFakeTimers();
     pressOn(wrapper.get('.mark-menu .lifted').element);
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
@@ -1728,7 +1729,7 @@ describe('KeywordsGame', () => {
     const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     menuItems(wrapper)[0]?.dispatchEvent(tab);
     expect(tab.defaultPrevented).toBe(true);
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(1_000);
     vi.useRealTimers();
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);

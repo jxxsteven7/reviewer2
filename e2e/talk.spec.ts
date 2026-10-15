@@ -117,35 +117,51 @@ test('the lifted copy of a card starts where the card rests, and lands where it 
     expect(Math.abs(placed[side] - rest[side]), `the copy's ${side} as the card's at rest`).toBeLessThanOrEqual(0.5);
   }
 
-  // The page scrolls under the menu, as a finger can drag it, and the menu closes: every frame
-  // until the menu has gone, the copy's box, and whether the card shows.
+  // The page scrolls under the menu, as a finger can drag it, and the menu closes: where the copy
+  // is as its move ends, which is where it stays until the card shows again, and, in every frame
+  // until the menu has gone, whether the card shows beside it. The frames alone can't say where
+  // the copy landed: a machine that is slow to draw may draw none between the end of the move and
+  // the menu going.
   await student.evaluate(() => window.scrollBy(0, 90));
   const now = await target.boundingBox();
   if (!now) throw new Error('the card has no box');
   expect(Math.round(rest.y - now.y), 'how far the page scrolled').toBe(90);
   await student.evaluate(() => {
-    const frames: (Box & { shown: boolean })[] = [];
-    Object.assign(window, { frames_: frames });
+    const frames: boolean[] = [];
+    const landed: Box[] = [];
+    Object.assign(window, { frames_: frames, landed_: landed });
     const card = document.querySelectorAll('.board .card')[12] as Element;
+    const lifted = document.querySelector('.mark-menu .lifted') as HTMLElement;
+    // Heard on the way down, before the menu's own listener, which takes the copy out.
+    document.addEventListener(
+      'transitionend',
+      (event) => {
+        if (event.target !== lifted || event.propertyName !== 'transform') return;
+        const { x, y, width, height } = lifted.getBoundingClientRect();
+        landed.push({ x, y, width, height });
+      },
+      true,
+    );
     const tick = () => {
-      const lifted = document.querySelector('.mark-menu .lifted');
-      if (!lifted) return;
-      const { x, y, width, height } = lifted.getBoundingClientRect();
-      frames.push({ x, y, width, height, shown: getComputedStyle(card).visibility !== 'hidden' });
+      if (!document.querySelector('.mark-menu .lifted')) return;
+      frames.push(getComputedStyle(card).visibility !== 'hidden');
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   });
   await student.keyboard.press('Escape');
   await expect(student.locator('.mark-menu')).toHaveCount(0);
-  const frames = await student.evaluate(() => (window as unknown as { frames_: (Box & { shown: boolean })[] }).frames_);
-  const last = frames.at(-1);
-  if (!last) throw new Error('no frame was recorded');
+  const { frames, landed } = await student.evaluate(() => {
+    const { frames_, landed_ } = window as unknown as { frames_: boolean[]; landed_: Box[] };
+    return { frames: frames_, landed: landed_ };
+  });
+  const last = landed.at(-1);
+  if (!last) throw new Error('the copy never landed');
   for (const side of ['x', 'y', 'width', 'height'] as const) {
     expect(Math.abs(last[side] - now[side]), `the landed copy's ${side} as the card's`).toBeLessThanOrEqual(1);
   }
   expect(
-    frames.filter((frame) => frame.shown),
+    frames.filter((shown) => shown),
     'frames in which the card showed beside its copy',
   ).toEqual([]);
   await expect(target).toHaveCSS('visibility', 'visible');

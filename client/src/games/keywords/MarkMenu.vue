@@ -74,9 +74,10 @@ onMounted(async () => {
   document.addEventListener('keydown', key);
 });
 
-// How long the copy takes to land (.closing .lifted). The menu waits a little longer at most, in
-// case the end of the move goes unheard, as in a tab that is out of sight.
-const LAND_MS = 220;
+// The copy takes 220 ms to land (.closing .lifted). The menu waits for the end of its move this
+// much longer at most, in case it goes unheard, as in a tab that is out of sight, or comes late, as
+// on a machine that is slow to draw.
+const LAND_AT_MOST_MS = 1000;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let landed: (() => void) | null = null;
 function close(mark?: Mark) {
@@ -100,7 +101,7 @@ function close(mark?: Mark) {
     // The card on the board shows again once the board has heard, and can take the focus then.
     if (hadFocus) void nextTick(() => props.source.focus({ preventScroll: true }));
   };
-  timer = setTimeout(landed, reduced() ? 150 : LAND_MS + 60);
+  timer = setTimeout(landed, reduced() ? 150 : LAND_AT_MOST_MS);
 }
 
 // The copy has landed once its move has ended, not the menu's or the shadow's.
