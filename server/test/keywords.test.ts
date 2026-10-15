@@ -176,7 +176,6 @@ const context = (): GameContext => ({
   chairId: 'ann',
   now: () => 0,
   keyOf: (id) => id,
-  whoIs: () => ({ account: true }),
   isOnline: () => true,
   agentOf: () => null,
   playerIds: () => ['ann', 'bob', 'cat'],

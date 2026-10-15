@@ -9,7 +9,6 @@ import {
   duoGame,
   duoViews,
   MAIL_LINK_MS,
-  MAX_REPLAY_BYTES,
   MAX_ROOM_SETUP,
   rankFor,
   usernameKey,
@@ -780,20 +779,13 @@ export class Accounts {
     });
   }
 
-  // Keeps the record of a game (docs/architecture.md#game-records), however it ended, with its
-  // replay to watch again if it finished (docs/architecture.md#replays), its logs and which player
-  // was which account, once for each game, unless the database is full, which the log says. A
-  // replay larger than MAX_REPLAY_BYTES as JSON is left out, and the log says so too; the rest of
-  // the record is kept. The game's log has a limit of its own (gameLog.ts). Says whether the game
-  // was kept.
+  // Keeps the record of a game (docs/architecture.md#game-records), however it ended, with how it
+  // began, its logs and which player was which account, once for each game, unless the database is
+  // full, which the log says. The game's log has a limit of its own (gameLog.ts). Says whether the
+  // game was kept.
   keepGame(game: NewReplay): boolean {
     if (this.#full()) return false;
-    let data: string | null = game.replay === null || game.replay === undefined ? null : JSON.stringify(game.replay);
-    if (data !== null && Buffer.byteLength(data) > MAX_REPLAY_BYTES) {
-      this.#log('replay_too_large', { bytes: Buffer.byteLength(data), limit: MAX_REPLAY_BYTES });
-      data = null;
-    }
-    return this.store.transaction(() => this.replays.add(game, data));
+    return this.store.transaction(() => this.replays.add(game));
   }
 
   // Adds what the groups said after the end of a game to its record (ReplayStore.addToLog), in one
@@ -808,10 +800,10 @@ export class Accounts {
     return this.store.transaction(() => this.replays.addToLog(gameId, entries, players, deleted));
   }
 
-  // The replay of a game that the account played in, with what it takes to show it
-  // (GameModule.showReplay): the log of the game, the accounts that played in it as they are now,
-  // and the player IDs that this one had. Null when there is none or the account didn't play in
-  // it; the two aren't told apart, so that nobody learns which games were kept.
+  // What it takes to show the replay of a game that the account played in (GameModule.showReplay):
+  // how the game began and its log, the accounts that played in it as they are now, and the player
+  // IDs that this one had. Null when there is none or the account didn't play in it; the two aren't
+  // told apart, so that nobody learns which games were kept.
   replayOf(login: Login, gameId: string): (KeptReplay & { game: string }) | null {
     const kept = this.replays.read(login.account.id, gameId);
     if (kept === null) return null;
@@ -823,7 +815,7 @@ export class Accounts {
       accounts.set(playerId, { username: account.username, avatar: avatarUrl(account), handle: account.handle });
       if (accountId === login.account.id) viewer.add(playerId);
     }
-    return { game: kept.game, replay: kept.replay, log: kept.log, accounts, viewer };
+    return { game: kept.game, setup: kept.setup, log: kept.log, accounts, viewer };
   }
 
   // Keeps a match that has run its course on an account's record, with the title that it awarded,

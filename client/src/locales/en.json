@@ -1039,6 +1039,8 @@
       "recordLine": "{side}, {role}",
       "ordinaryTag": "Ordinary",
       "matchTag": "Match {game}/{games}",
+      "agentsTag": "AI played in it: no points",
+      "agentsGame": "A game with AI",
       "watchAgainOf": "Watch the game of {when} again",
       "recentMatches": "The last 20 matches",
       "matchLine": "{rank}/{players} · {score} pt | {rank}/{players} · {score} pts",
@@ -1260,7 +1262,8 @@
       "bug": "A bug they reported was adopted, whether they left a name or not. The feedback contributions on the home page list everyone's.",
       "words": "Words of theirs for the word lists were adopted, whether they left a name or not. The feedback contributions on the home page list everyone's."
     },
-    "author": "The first account to register belongs to the author of the game."
+    "author": "The first account to register belongs to the author of the game.",
+    "agents": "An AI played in this game, as a player or for someone who was offline."
   },
   "duos": {
     "names": {

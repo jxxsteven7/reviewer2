@@ -260,8 +260,9 @@ export interface AccountState {
 // the team word guessing game, `side` is the group and `role` is captain or guesser. `replay`
 // says whether the server kept the game to watch again (docs/architecture.md#replays), which the
 // page asks for with the game's ID. `match` says which game of a match it was, from 1, and how many
-// games the match was to have, or is null for a game outside a match, as is every game from before
-// the records kept that.
+// games the match was to have, or is null for a game outside a match. `agents` says that an AI
+// played in it, as a player or for someone who was offline, which brought nobody points
+// (docs/architecture.md#ai-players).
 export interface GameRecord {
   game: string;
   gameId: string;
@@ -273,6 +274,7 @@ export interface GameRecord {
   won: boolean;
   verdict: string;
   match: { game: number; games: number } | null;
+  agents: boolean;
 }
 
 // A match on an account's record: when it ended, how many games it had, the place the player

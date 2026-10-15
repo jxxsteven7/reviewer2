@@ -94,7 +94,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     guessesMade: 0,
     guessesLeft: 3,
     clock: null,
-    history: [{ turn: 2, team: 'red', word: 'Science', count: 2, guesses: [] }],
+    history: [{ turn: 2, team: 'red', at: 0, word: 'Science', count: 2, guesses: [] }],
     events: [],
     extended: { red: false, blue: false },
     result: null,
@@ -958,10 +958,11 @@ describe('ReplayViewer', () => {
       {
         turn: 1,
         team: 'red',
+        at: 0,
         word: 'Science',
         count: 2,
         captain: 'ann',
-        guesses: [{ card: 0, color: 'red', player: 'bob' }],
+        guesses: [{ card: 0, color: 'red', player: 'bob', at: 0 }],
       },
     ],
     result: { winner: 'red', reason: 'found' },
@@ -1008,13 +1009,13 @@ describe('ReplayViewer', () => {
     expect(wrapper.get('.step').text()).toContain('Guest 2 revealed \u201cBaseline\u201d');
     const byAi: ShownReplay = {
       ...replay,
-      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'dee' }] }],
+      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'dee', at: 0 }] }],
     };
     await wrapper.setProps({ replay: byAi });
     expect(wrapper.get('.step').text()).toContain('Reviewer 1 revealed \u201cBaseline\u201d');
     const byNobody: ShownReplay = {
       ...replay,
-      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'zed' }] }],
+      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'zed', at: 0 }] }],
     };
     await wrapper.setProps({ replay: byNobody });
     expect(wrapper.get('.step').text()).toContain('A player who left revealed');
@@ -1165,16 +1166,17 @@ describe('ClueLog', () => {
   test('says when a turn ran out of time, before the clue or during the guesses', () => {
     const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
     const history: KeywordsView['history'] = [
-      { turn: 1, team: 'red', word: null, count: null, guesses: [], timedOut: true },
+      { turn: 1, team: 'red', at: 0, word: null, count: null, guesses: [], timedOut: true },
       {
         turn: 2,
         team: 'blue',
+        at: 0,
         word: 'Science',
         count: 2,
-        guesses: [{ card: 0, color: 'blue', player: 'dan' }],
+        guesses: [{ card: 0, color: 'blue', player: 'dan', at: 0 }],
         timedOut: true,
       },
-      { turn: 3, team: 'red', word: 'Loss', count: 1, guesses: [] },
+      { turn: 3, team: 'red', at: 0, word: 'Loss', count: 1, guesses: [] },
     ];
     const wrapper = mount(ClueLog, { props: { game: { ...game, history } }, global: global() });
     const items = wrapper.findAll('li');
@@ -1208,13 +1210,14 @@ describe('ClueLog', () => {
   test('names the cards a PI meant, once they are known, and how many of them the group found', () => {
     const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
     const history: KeywordsView['history'] = [
-      { turn: 1, team: 'red', word: 'Loss', count: 1, guesses: [] },
+      { turn: 1, team: 'red', at: 0, word: 'Loss', count: 1, guesses: [] },
       {
         turn: 2,
         team: 'red',
+        at: 0,
         word: 'Science',
         count: 2,
-        guesses: [{ card: 0, color: 'red', player: 'bob' }],
+        guesses: [{ card: 0, color: 'red', player: 'bob', at: 0 }],
         targets: [2, 0],
       },
     ];
@@ -1227,7 +1230,14 @@ describe('ClueLog', () => {
   test('shows a revealed card by its color alone while the game is paused, since there is no board', () => {
     const game = (room('bob').data as KeywordsRoomData).game as KeywordsView;
     const history: KeywordsView['history'] = [
-      { turn: 2, team: 'red', word: 'Science', count: 2, guesses: [{ card: 1, color: 'red', player: 'bob' }] },
+      {
+        turn: 2,
+        team: 'red',
+        at: 0,
+        word: 'Science',
+        count: 2,
+        guesses: [{ card: 1, color: 'red', player: 'bob', at: 0 }],
+      },
     ];
     const wrapper = mount(ClueLog, {
       props: { game: { ...game, history, cards: [], paused: true } },
@@ -1974,7 +1984,7 @@ describe('KeywordsGame', () => {
     // Once the server's snapshot has the clue, the marks go with it.
     await flushPromises();
     expect(wrapper.findAll('.target')).toHaveLength(2);
-    const record: ClueRecord = { turn: 2, team: 'red', word: 'Science', count: 2, guesses: [] };
+    const record: ClueRecord = { turn: 2, team: 'red', at: 0, word: 'Science', count: 2, guesses: [] };
     await wrapper.setProps({
       room: { ...view, data: { ...data, game: { ...game, phase: 'guess', history: [...game.history, record] } } },
     });
@@ -2056,7 +2066,7 @@ describe('KeywordsGame', () => {
     // The server's snapshot has the clue, and with it the draft is gone: from the board, the
     // panel and the storage. While the group guesses, the PI prepares the next one in the same
     // panel, empty again.
-    const record: ClueRecord = { turn: 2, team: 'red', word: 'Theory', count: 2, guesses: [] };
+    const record: ClueRecord = { turn: 2, team: 'red', at: 0, word: 'Theory', count: 2, guesses: [] };
     await wrapper.setProps({
       room: waiting({ team: 'red', phase: 'guess', clue: { word: 'Theory', count: 2 }, history: [...HISTORY, record] }),
     });
@@ -2085,8 +2095,8 @@ describe('KeywordsGame', () => {
     });
     // The snapshot that the connection brings back says that the clue went, and the next one was
     // given meanwhile too, so that two records came at once.
-    const mine: ClueRecord = { turn: 2, team: 'red', word: 'Theory', count: 1, guesses: [] };
-    const theirs: ClueRecord = { turn: 3, team: 'blue', word: 'Method', count: 1, guesses: [] };
+    const mine: ClueRecord = { turn: 2, team: 'red', at: 0, word: 'Theory', count: 1, guesses: [] };
+    const theirs: ClueRecord = { turn: 3, team: 'blue', at: 0, word: 'Method', count: 1, guesses: [] };
     await wrapper.setProps({ room: waiting({ turn: 3, history: [...HISTORY, mine, theirs] }) });
     expect(wrapper.findAll('.target')).toHaveLength(0);
     expect(typed(wrapper)).toBe('');
@@ -2125,7 +2135,7 @@ describe('KeywordsGame', () => {
     expect(wrapper.get('.clue-panel').classes()).not.toContain('draft');
     // The time ran out: the record has no word, and the draft waits in the panel for the next
     // turn, while the PI watches the other group play above it.
-    const timedOut: ClueRecord = { turn: 2, team: 'red', word: null, count: null, guesses: [], timedOut: true };
+    const timedOut: ClueRecord = { turn: 2, team: 'red', at: 0, word: null, count: null, guesses: [], timedOut: true };
     await wrapper.setProps({ room: waiting({ turn: 3, history: [...HISTORY, timedOut] }) });
     expect(wrapper.get('.clue-panel').classes()).toContain('draft');
     expect(typed(wrapper)).toBe('Theory');
@@ -2261,6 +2271,7 @@ describe('KeywordsGame', () => {
     const late = (turn: number, captain: string): ClueRecord => ({
       turn,
       team: 'blue',
+      at: 0,
       word: null,
       count: null,
       guesses: [],
@@ -2308,7 +2319,11 @@ describe('KeywordsGame', () => {
     // A page that slept through a miss and the clue after it, or wakes with the next clock well
     // on its way, says nothing: the moment has passed.
     await show({
-      history: [...shown.history, late(6, 'ann'), { turn: 7, team: 'red', word: 'Later', count: 1, guesses: [] }],
+      history: [
+        ...shown.history,
+        late(6, 'ann'),
+        { turn: 7, team: 'red', at: 0, word: 'Later', count: 1, guesses: [] },
+      ],
       events: [...shown.events, missed(6, 'ann', 4)],
     });
     expect(bubbles).toEqual([]);
@@ -2360,7 +2375,13 @@ describe('KeywordsGame', () => {
       history: [
         {
           ...(shown.history[0] as ClueRecord),
-          guesses: indexes.map((card) => ({ card, color: 'red' as const, player: 'bob', lastSeconds: true as const })),
+          guesses: indexes.map((card) => ({
+            card,
+            color: 'red' as const,
+            player: 'bob',
+            at: 0,
+            lastSeconds: true as const,
+          })),
         },
       ],
     });
@@ -2727,7 +2748,14 @@ describe('KeywordsGame', () => {
         { word: 'Journal', revealed: false, color: 'reviewer2' },
       ],
       history: [
-        { turn: 2, team: 'red', word: 'Science', count: 2, guesses: [{ card: 0, color: 'red', player: 'bob' }] },
+        {
+          turn: 2,
+          team: 'red',
+          at: 0,
+          word: 'Science',
+          count: 2,
+          guesses: [{ card: 0, color: 'red', player: 'bob', at: 0 }],
+        },
       ],
       result: { winner: 'red', reason: 'found' },
     };

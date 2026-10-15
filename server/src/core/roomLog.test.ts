@@ -140,19 +140,31 @@ describe('the log of a game', () => {
     expect(room.record()?.accounts.some(({ playerId }) => playerId === bob.id)).toBe(false);
   });
 
-  test('lets the game tell who each player is, those who left during the game included', () => {
+  test('names the guests who played by their numbers in the room, those who left included', () => {
     const { room, ann, bob } = table();
     const cat = room.join('key-cat', true);
-    if (!cat.ok) throw new Error(cat.error);
+    const dee = room.join('key-dee', false);
+    if (!cat.ok || !dee.ok) throw new Error('no join');
     room.start(0);
     room.drop(bob.id);
-    // Ann has an account, which is all that the game learns of her; Bob and Cat are the room's
-    // first two guests, and Bob is still the first after he has left.
-    const { whoIs } = room.context;
-    expect(whoIs(ann.id)).toEqual({ account: true });
-    expect(whoIs(bob.id)).toEqual({ guest: 1 });
-    expect(whoIs(cat.member.id)).toEqual({ guest: 2 });
-    expect(whoIs('nobody')).toBeNull();
+    // Ann has an account; Bob and Cat are the room's first two guests, and Bob is still the first
+    // after leaving. Dee only watches.
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()?.log?.guests).toEqual({ [bob.id]: 1, [cat.member.id]: 2 });
+  });
+
+  test('names no guests when none played', () => {
+    const { room, ann, bob } = table();
+    room.drop(bob.id);
+    const eve = room.join('key-eve', true, {
+      username: 'Eve',
+      account: { id: 2, handle: 'b1c2d3e4f5a6', avatar: null, rank: 'undergraduate', agents: false },
+    });
+    if (!eve.ok) throw new Error(eve.error);
+    room.attach(eve.member, 'socket-eve');
+    expect(room.start(0)).toMatchObject({ ok: true });
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()?.log).not.toHaveProperty('guests');
   });
 
   test('is for one game: none before its end, and a new one for the next game', () => {

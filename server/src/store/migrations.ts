@@ -564,4 +564,188 @@ export const MIGRATIONS: readonly string[] = [
   UPDATE feedback SET link_profile = 1 WHERE link_profile = 0 AND credit IS NOT NULL AND account_id IS NOT NULL;
   UPDATE feedback SET credit = NULL WHERE link_profile = 1;
   `,
+  // 22: every game kept in the newest format (docs/architecture.md#game-records), and replays worked
+  // out from the record of the game as they are opened (docs/architecture.md#replays). What the
+  // database holds can't complete, or counted under other rules, goes, as the maintainers decided
+  // before the first public release:
+  //
+  // - the games kept from before the record of every game (migration 15), which keep nothing of what
+  //   kind of game they were, `started_at` and the rest, and so most of them have no log, or a log
+  //   of the first version; any other game whose log isn't of the second version (gameLog.ts); the
+  //   games kept with a guest whose number nothing says; the games of the first game played under
+  //   rules before version 4, those of today (RULES_VERSION in server/src/games/keywords/index.ts),
+  //   whose points and titles were counted under other rules; and the records that have no kept
+  //   game and ended before the first game kept under today's rules, from before games were kept
+  //   or under those other rules. A game with words of the chair's own, which leaves no record of
+  //   the game, keeps its records since. Each goes with its records, the titles that it brought, who
+  //   was who in it and what the AI players did in it.
+  // - the matches from before the records of games named their match (migration 14), which no
+  //   record names, and those that a game that goes was played in, with their other games and the
+  //   titles that they awarded; and the titles from before the matches had IDs, of neither a match
+  //   nor a game.
+  //
+  // The rest is completed: a game from before the practice rooms (migration 18) wasn't played in
+  // one. The replays that the server kept go (`data`): a replay is worked out from how the game began
+  // and its log, as the game is opened, and the log gets the number of each guest who played in it
+  // (`guests`), from the replay that kept it, which numbered those in the groups at the end and
+  // those who gave a clue or revealed a card: a game with a guest that it doesn't number goes, as
+  // above. The tables of the games, their records and the titles
+  // are rebuilt, as migration 14 rebuilt the titles, every row kept with its id and the count that
+  // AUTOINCREMENT goes on from, so that nothing in an old format comes back: a kept game has
+  // everything that the record of every game keeps, and a winner only when it finished; a title
+  // comes from one match or one turn of one game; a game record has its points and whether an AI
+  // played in it, which brings no points and is never a game of a match. The streaks are counted
+  // again, as migration 10 counted them, over the records that are left, without the games that an
+  // AI played in (migration 15).
+  `
+  UPDATE replays SET log = json_set(log, '$.guests', json((
+    SELECT json_group_object(member.key, json_extract(member.value, '$.guest'))
+    FROM json_each(replays.data, '$.members') AS member
+    WHERE json_type(member.value, '$.guest') = 'integer'
+  )))
+  WHERE log IS NOT NULL AND json_type(log, '$.guests') IS NULL AND EXISTS (
+    SELECT 1 FROM json_each(replays.data, '$.members') AS member WHERE json_type(member.value, '$.guest') = 'integer'
+  );
+
+  CREATE TEMP TABLE gone_games (game_id TEXT PRIMARY KEY);
+  INSERT INTO gone_games SELECT game_id FROM replays
+    WHERE started_at IS NULL OR (log IS NOT NULL AND json_extract(log, '$.v') IS NOT 2)
+      OR (guests > 0 AND log IS NOT NULL
+        AND (SELECT count(DISTINCT member.value) FROM json_each(replays.log, '$.guests') AS member) < guests)
+      OR (game = 'keywords' AND rules IS NOT 4);
+  INSERT OR IGNORE INTO gone_games SELECT game_id FROM game_records
+    WHERE game_id NOT IN (SELECT game_id FROM replays) AND ended_at < coalesce(
+      (SELECT min(ended_at) FROM replays WHERE started_at IS NOT NULL AND game = 'keywords' AND rules = 4), '9999'
+    );
+
+  CREATE TEMP TABLE gone_matches (match_id TEXT PRIMARY KEY);
+  INSERT OR IGNORE INTO gone_matches SELECT match_id FROM game_records
+    WHERE match_id IS NOT NULL AND game_id IN (SELECT game_id FROM gone_games);
+  INSERT OR IGNORE INTO gone_matches SELECT match_id FROM match_records
+    WHERE match_id NOT IN (SELECT match_id FROM game_records WHERE match_id IS NOT NULL);
+  INSERT OR IGNORE INTO gone_games SELECT game_id FROM game_records
+    WHERE match_id IN (SELECT match_id FROM gone_matches);
+
+  DELETE FROM game_records WHERE game_id IN (SELECT game_id FROM gone_games);
+  DELETE FROM replays WHERE game_id IN (SELECT game_id FROM gone_games);
+  DELETE FROM game_players WHERE game_id NOT IN (SELECT game_id FROM replays);
+  DELETE FROM agent_plays WHERE game_id NOT IN (SELECT game_id FROM replays);
+  DELETE FROM match_records WHERE match_id IN (SELECT match_id FROM gone_matches);
+  DELETE FROM titles WHERE match_id IS NULL AND game_id IS NULL;
+  DELETE FROM titles WHERE match_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM match_records WHERE match_records.match_id = titles.match_id AND match_records.account_id = titles.account_id
+  );
+  DELETE FROM titles WHERE game_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM game_records WHERE game_records.game_id = titles.game_id AND game_records.account_id = titles.account_id
+  );
+  DROP TABLE gone_games;
+  DROP TABLE gone_matches;
+  UPDATE replays SET practice = 0 WHERE practice IS NULL;
+
+  CREATE TABLE new_replays (
+    game_id TEXT PRIMARY KEY,
+    game TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    log TEXT,
+    agent_log TEXT,
+    ending TEXT NOT NULL CHECK (ending IN ('finished', 'withdrawn', 'abandoned', 'interrupted')),
+    winner TEXT,
+    reason TEXT,
+    started_at TEXT NOT NULL,
+    setup TEXT,
+    accounts INTEGER NOT NULL,
+    guests INTEGER NOT NULL,
+    agents INTEGER NOT NULL,
+    takeover INTEGER NOT NULL CHECK (takeover IN (0, 1)),
+    in_match INTEGER NOT NULL CHECK (in_match IN (0, 1)),
+    practice INTEGER NOT NULL CHECK (practice IN (0, 1)),
+    language TEXT NOT NULL,
+    fields TEXT NOT NULL,
+    version TEXT NOT NULL,
+    rules INTEGER,
+    words TEXT NOT NULL,
+    CHECK (ending = 'finished' OR (winner IS NULL AND reason IS NULL))
+  ) STRICT;
+  INSERT INTO new_replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup,
+      accounts, guests, agents, takeover, in_match, practice, language, fields, version, rules, words)
+    SELECT game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup,
+      accounts, guests, agents, takeover, in_match, practice, language, fields, version, rules, words FROM replays;
+  DROP TABLE replays;
+  ALTER TABLE new_replays RENAME TO replays;
+
+  CREATE TABLE new_titles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    match_id TEXT,
+    game_id TEXT,
+    turn INTEGER CHECK (turn > 0),
+    awarded_at TEXT NOT NULL,
+    CHECK ((game_id IS NULL) = (turn IS NULL)),
+    CHECK ((match_id IS NULL) <> (game_id IS NULL))
+  ) STRICT;
+  INSERT INTO new_titles (id, account_id, title, match_id, game_id, turn, awarded_at)
+    SELECT id, account_id, title, match_id, game_id, turn, awarded_at FROM titles;
+  DELETE FROM sqlite_sequence WHERE name = 'new_titles';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_titles', seq FROM sqlite_sequence WHERE name = 'titles';
+  DROP TABLE titles;
+  ALTER TABLE new_titles RENAME TO titles;
+  CREATE INDEX titles_account ON titles (account_id);
+  CREATE UNIQUE INDEX titles_match ON titles (account_id, title, match_id) WHERE match_id IS NOT NULL;
+  CREATE UNIQUE INDEX titles_game ON titles (account_id, title, game_id, turn) WHERE game_id IS NOT NULL;
+
+  CREATE TABLE new_game_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    game TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    side TEXT NOT NULL,
+    role TEXT NOT NULL,
+    winner TEXT NOT NULL,
+    won INTEGER NOT NULL CHECK (won IN (0, 1)),
+    verdict TEXT NOT NULL,
+    points INTEGER NOT NULL,
+    match_id TEXT,
+    match_game INTEGER,
+    match_games INTEGER,
+    agents INTEGER NOT NULL CHECK (agents IN (0, 1)),
+    UNIQUE (account_id, game_id),
+    CHECK ((match_id IS NULL) = (match_game IS NULL) AND (match_id IS NULL) = (match_games IS NULL)),
+    CHECK (match_game BETWEEN 1 AND match_games),
+    CHECK (agents = 0 OR (points = 0 AND match_id IS NULL))
+  ) STRICT;
+  INSERT INTO new_game_records (id, account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
+      match_id, match_game, match_games, agents)
+    SELECT id, account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
+      match_id, match_game, match_games, agents FROM game_records;
+  DELETE FROM sqlite_sequence WHERE name = 'new_game_records';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_game_records', seq FROM sqlite_sequence WHERE name = 'game_records';
+  DROP TABLE game_records;
+  ALTER TABLE new_game_records RENAME TO game_records;
+  CREATE INDEX game_records_recent ON game_records (account_id, id DESC);
+  CREATE INDEX game_records_game ON game_records (game_id);
+
+  DELETE FROM streaks;
+  WITH ordered AS (
+    SELECT account_id, id, won,
+      row_number() OVER (PARTITION BY account_id ORDER BY id)
+        - row_number() OVER (PARTITION BY account_id, won ORDER BY id) AS run_key
+    FROM game_records WHERE agents = 0
+  ), runs AS (
+    SELECT account_id, won, count(*) AS length, max(id) AS last_id
+    FROM ordered GROUP BY account_id, won, run_key
+  ), latest AS (
+    SELECT account_id, won, length FROM runs
+    WHERE last_id = (SELECT max(id) FROM game_records WHERE game_records.account_id = runs.account_id AND agents = 0)
+  )
+  INSERT INTO streaks (account_id, best_wins, best_losses, run, run_won)
+  SELECT runs.account_id,
+    max(CASE WHEN runs.won = 1 THEN runs.length ELSE 0 END),
+    max(CASE WHEN runs.won = 0 THEN runs.length ELSE 0 END),
+    latest.length,
+    latest.won
+  FROM runs JOIN latest ON latest.account_id = runs.account_id
+  GROUP BY runs.account_id;
+  `,
 ];

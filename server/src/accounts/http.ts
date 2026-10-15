@@ -39,8 +39,8 @@ export interface AccountApiOptions {
   // How many of an AI player are in the rooms now, as AI players and playing for someone offline,
   // and in how many rooms, for its page. Without this, none.
   agentsLive?: (persona: AgentPersona) => { players: number; rooms: number };
-  // A kept replay as the account opens it, as its game shows it (GameModule.showReplay). Without
-  // this, the replay as it was kept.
+  // A kept game as the account watches it again, as its game shows it (GameModule.showReplay), or
+  // null when there is nothing to watch. Without this, there are no replays.
   showReplay?: (kept: KeptReplay & { game: string }) => unknown;
   // Whether the login cookie is Secure, which it is unless the server is told that it is served
   // over plain HTTP (COOKIE_SECURE=0).
@@ -128,7 +128,7 @@ export function createAccountApi({
   trustProxy,
   log,
   agentsLive,
-  showReplay = (kept) => kept.replay,
+  showReplay = () => null,
 }: AccountApiOptions) {
   const signedIn = (secret: string) => loginCookie(secret, secureCookies);
   const signedOut = clearedCookie(secureCookies);
@@ -145,12 +145,13 @@ export function createAccountApi({
       handle: ({ login }) => ok({ records: accounts.recordsOf(login as Login) }),
     },
     // A game to watch again, by its ID, for an account that played in it; for anyone else, and
-    // for a game that wasn't kept, there is no such replay.
+    // for a game that wasn't kept or has nothing to watch, there is no such replay.
     [ACCOUNT_API.replay]: post(
       ACCOUNT_REQUESTS.replay,
       ({ login, body }) => {
         const kept = accounts.replayOf(login as Login, body.gameId);
-        return kept === null ? failure('no_replay') : ok({ replay: showReplay(kept) });
+        const replay = kept === null ? null : showReplay(kept);
+        return replay === null ? failure('no_replay') : ok({ replay });
       },
       true,
     ),

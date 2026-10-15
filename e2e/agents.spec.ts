@@ -210,6 +210,21 @@ test('Reviewer 1 advises a student of its group, who reveals the cards', async (
     if (!game || game.phase === 'over') continue;
     for (const card of game.cards) if (!card.revealed) expect(card).not.toHaveProperty('color');
   }
+
+  // Bob reveals Reviewer 2, which ends the game. On Ann's record it is a game that an AI played in:
+  // the robot and "AI" in place of "Ordinary", which a tap explains.
+  await reveal(bob, await keyCard(ann, 'reviewer2'));
+  await expect(ann.locator('.letter').first()).toBeVisible();
+  await ann.goto('/account');
+  const line = ann.locator('.games .record').first();
+  const tag = line.getByRole('button', { name: text.account.profile.agentsTag });
+  await expect(tag).toBeVisible();
+  await expect(tag.locator('.agent-icon')).toHaveCount(1);
+  await expect(line).not.toContainText(text.account.profile.ordinaryTag);
+  await tag.click();
+  const explained = ann.getByRole('dialog', { name: text.account.profile.agentsGame });
+  await expect(explained).toContainText(text.titles.agents);
+  await expect(explained).toContainText(text.lobby.agentNote);
 });
 
 // Practice from the home page (docs/architecture.md#practice-rooms): an account that the operator

@@ -57,10 +57,11 @@ describe('the results of a game', () => {
 });
 
 describe('the titles of a game', () => {
-  const guess = (card: number, color: CardColor) => ({ card, color, player: 'bob' });
+  const guess = (card: number, color: CardColor) => ({ card, color, player: 'bob', at: 0 });
   const missed = (turn: number, team: 'red' | 'blue', captain?: string): ClueRecord => ({
     turn,
     team,
+    at: 0,
     word: null,
     count: null,
     guesses: [],
@@ -81,7 +82,15 @@ describe('the titles of a game', () => {
       missed(3, 'red', 'ann-2'),
       // A turn whose captain's seat was empty blames nobody.
       missed(4, 'blue'),
-      { turn: 5, team: 'red' as const, word: 'Late', count: 1, guesses: [guess(24, 'reviewer2')], captain: 'ann' },
+      {
+        turn: 5,
+        team: 'red' as const,
+        at: 0,
+        word: 'Late',
+        count: 1,
+        guesses: [guess(24, 'reviewer2')],
+        captain: 'ann',
+      },
     ];
     expect(titles(played(history, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
       ann: [
@@ -99,8 +108,8 @@ describe('the titles of a game', () => {
     const all = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((card) => guess(card, 'red'));
     const history = [
       missed(1, 'red', 'ann'),
-      { turn: 2, team: 'blue' as const, word: 'Two', count: 1, guesses: [guess(17, 'neutral')], captain: 'cat' },
-      { turn: 3, team: 'red' as const, word: 'All', count: 'unlimited' as const, guesses: all, captain: 'ann' },
+      { turn: 2, team: 'blue' as const, at: 0, word: 'Two', count: 1, guesses: [guess(17, 'neutral')], captain: 'cat' },
+      { turn: 3, team: 'red' as const, at: 0, word: 'All', count: 'unlimited' as const, guesses: all, captain: 'ann' },
     ];
     // "Unlimited" names no number: a heavenly hand without the opening record.
     expect(titles(played(history, { winner: 'red', reason: 'found' }))).toEqual({
@@ -135,6 +144,7 @@ describe('the titles of a game', () => {
       {
         turn: 1,
         team: 'red',
+        at: 0,
         word: 'Late',
         count: 3,
         captain: 'ann',
@@ -144,6 +154,7 @@ describe('the titles of a game', () => {
       {
         turn: 2,
         team: 'blue',
+        at: 0,
         word: 'Two',
         count: 1,
         captain: 'cat',
@@ -154,14 +165,24 @@ describe('the titles of a game', () => {
       {
         turn: 3,
         team: 'red',
+        at: 0,
         word: 'Rush',
         count: 1,
         captain: 'ann-2',
         lastSeconds: true,
         guesses: [guess(17, 'neutral')],
       },
-      { turn: 4, team: 'blue', word: 'Calm', count: 1, captain: 'cat', guesses: [] },
-      { turn: 5, team: 'red', word: 'Fast', count: 2, captain: 'ann-2', lastSeconds: true, guesses: [guess(2, 'red')] },
+      { turn: 4, team: 'blue', at: 0, word: 'Calm', count: 1, captain: 'cat', guesses: [] },
+      {
+        turn: 5,
+        team: 'red',
+        at: 0,
+        word: 'Fast',
+        count: 2,
+        captain: 'ann-2',
+        lastSeconds: true,
+        guesses: [guess(2, 'red')],
+      },
     ];
     expect(titles(played(history, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
       ann: [
@@ -183,9 +204,9 @@ describe('the titles of a game', () => {
 describe('the titles in the view', () => {
   test('count what the game so far has brought each player whom its titles go to', () => {
     const history: ClueRecord[] = [
-      { turn: 1, team: 'red', word: null, count: null, guesses: [], timedOut: true, captain: 'ann' },
-      { turn: 2, team: 'blue', word: null, count: null, guesses: [], timedOut: true, captain: 'cat' },
-      { turn: 3, team: 'red', word: null, count: null, guesses: [], timedOut: true, captain: 'ann-2' },
+      { turn: 1, team: 'red', at: 0, word: null, count: null, guesses: [], timedOut: true, captain: 'ann' },
+      { turn: 2, team: 'blue', at: 0, word: null, count: null, guesses: [], timedOut: true, captain: 'cat' },
+      { turn: 3, team: 'red', at: 0, word: null, count: null, guesses: [], timedOut: true, captain: 'ann-2' },
     ];
     const data = { ...ended(null), game: { ...gameState({ turn: 4 }), history } };
     const ctx = {

@@ -6,7 +6,6 @@ import type {
   BoardWord,
   Language,
   MatchRules,
-  ReplayMember,
   RoomPhase,
   Title,
 } from '@reviewer2/shared';
@@ -29,9 +28,6 @@ export interface GameContext {
   // A player's member key, which stays the same when they leave and come back. The room also
   // knows the keys of those who have left during the current game.
   keyOf(playerId: string): string;
-  // Who a player is, also one who has left during the current game, for what a game keeps of them,
-  // such as a replay; null for someone the room doesn't know.
-  whoIs(playerId: string): ReplayMember | null;
   // An AI player is online while the server's agent answers (docs/architecture.md#ai-players).
   isOnline(playerId: string): boolean;
   // The persona of an AI player, or null for a person.
@@ -56,13 +52,12 @@ export interface ShownAccount {
   handle: string;
 }
 
-// A replay as it was kept, for an account to watch (GameModule.showReplay): the replay as the game
-// gave it; the log of the game, if it was kept (gameLog.ts), read when asked for, since a replay
-// that keeps its groups has no need of it; the accounts that played in it as they are now, by the
-// player ID each had; and the IDs that the account watching had in it.
+// A kept game, for an account to watch again (GameModule.showReplay): how it began
+// (GameModule.setup) and its log (gameLog.ts), as its record keeps them; the accounts that played
+// in it as they are now, by the player ID each had; and the IDs that the account watching had in it.
 export interface KeptReplay {
-  replay: unknown;
-  log: () => GameLogData | null;
+  setup: unknown;
+  log: GameLogData;
   accounts: ReadonlyMap<string, ShownAccount>;
   viewer: ReadonlySet<string>;
 }
@@ -244,15 +239,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // with accounts, or null when the game counts for no record, as one that the chair withdrew.
   // Whoever only watched takes no part. The room asks once, when the game has ended.
   results?(data: Data, ctx: GameContext): PlayerResult[] | null;
-  // The game that has just ended, as something to watch again (docs/architecture.md#replays):
-  // whatever the game's own replay viewer takes, as JSON, or null when the game is nothing to
-  // keep, as one that the chair withdrew. The room asks once, when the game has ended and a
-  // player with an account took part.
-  replay?(data: Data, ctx: GameContext): unknown;
-  // A kept replay as an account opens it (docs/architecture.md#replays): with the groups and who
-  // everyone in them was, the accounts as they are now and the deleted ones as deleted, worked out
-  // from the record of the game for a replay from before the groups were kept. Without this, the
-  // replay goes as it was kept.
+  // A kept game as an account watches it again (docs/architecture.md#replays): whatever the game's
+  // own replay viewer takes, worked out from how the game began and its log, with who everyone was,
+  // the accounts as they are now and the deleted ones as deleted; or null when the log has nothing
+  // to watch, as for a game that didn't finish. A game without this has no replays.
   showReplay?(kept: KeptReplay): unknown;
   // A guest's seat has become an account's (docs/architecture.md#accounts): the member `playerId`
   // is known by the member key `to` instead of `from` from now on, and whatever the game remembers
@@ -267,9 +257,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // everyone right after start(), for how the game began, and about whoever comes during the game,
   // since the game may seat them. Without this, the log says nothing of where anyone is.
   seated?(data: Data, playerId: string): unknown;
-  // How the game that has just started began, for its log: what it takes, with the moves in the
-  // log, to play the game through again, such as the board with every color, and the settings.
-  // The log stays on the server. Without this, the log says nothing of it.
+  // How the game that has just started began, for its record: what it takes, with the moves in the
+  // log, to play the game through again, as its replay does (showReplay), such as the board with
+  // every color, and the settings. The record stays on the server. Without this, it says nothing
+  // of it.
   setup?(data: Data): unknown;
   // What the log keeps of one of the game's messages that changed the game, with the payload as
   // the message carried it, or null to keep nothing of it, as of a card chosen and chosen again.

@@ -33,7 +33,27 @@ const play = (playerId: string, changes: Partial<AgentPlay>): AgentPlay => ({
 });
 
 const keep = (gameId: string, agentPlays: AgentPlay[]) =>
-  replays.add({ game: 'keywords', gameId, ending: 'finished', durationMs: 1, replay: null, agentPlays }, null);
+  replays.add({
+    game: 'keywords',
+    gameId,
+    ending: 'finished',
+    outcome: null,
+    durationMs: 1,
+    setup: null,
+    log: null,
+    agentLog: null,
+    players: [],
+    counts: { accounts: 1, guests: 0, agents: 1 },
+    takeover: false,
+    agentPlays,
+    match: false,
+    practice: true,
+    language: 'en',
+    fields: ['general'],
+    version: 'test',
+    rules: 4,
+    words: '0123456789abcdef',
+  });
 
 describe('the AI page', () => {
   test('counts a game once, with the AI as the PI of both groups and playing for two people in it', () => {

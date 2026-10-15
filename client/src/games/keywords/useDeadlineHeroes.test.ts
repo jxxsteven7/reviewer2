@@ -37,9 +37,16 @@ function game(revealed: number[], events: KeywordsView['events'] = []): Keywords
       {
         turn: 1,
         team: 'red',
+        at: 0,
         word: 'Hint',
         count: 2,
-        guesses: revealed.map((card) => ({ card, color: 'red' as const, player: 'bob', lastSeconds: true as const })),
+        guesses: revealed.map((card) => ({
+          card,
+          color: 'red' as const,
+          player: 'bob',
+          at: 0,
+          lastSeconds: true as const,
+        })),
       },
     ],
     events,

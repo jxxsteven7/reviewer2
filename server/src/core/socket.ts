@@ -325,9 +325,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   //
   // Then every game, however it ended, finished, withdrawn or cut short, and whoever played in it,
   // leaves the record of the game itself (docs/architecture.md#game-records): how it ended and what
-  // kind of game it was, how it began, the replay to watch again if it finished
-  // (GameModule.replay()), the log of everything that happened with the AI's own log beside it, and
-  // which player was which account. A game with words of the chair's own leaves none
+  // kind of game it was, how it began, the log of everything that happened with the AI's own log
+  // beside it, and which player was which account, from which a game that finished is watched
+  // again (docs/architecture.md#replays). A game with words of the chair's own leaves none
   // (Room.record()). Whatever else is to be kept of a game goes here, after the records.
   function keepRecords(room: Room): void {
     if (!accounts || room.gameId === null) return;
@@ -341,20 +341,30 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
-      const record = {
-        game: room.game.id,
-        gameId,
-        points: points?.get(member.key) ?? 0,
-        match,
-        agents: room.agentsPlayed,
-        ...result,
-      };
-      const streak = accounts.record(account.id, record);
-      if (streak) {
-        room.noteStreak(member.id, streak);
-        recorded.set(account.id, { playerId: member.id, side: result.side, won: result.won });
-      }
-      room.updateAccount(member.id, account.username, avatarUrl(account), accounts.rankOf(account.id), account.agents);
+      // What goes wrong for one account, as a record that the database refuses, keeps neither the
+      // others' records nor the game from being kept.
+      safely('record', () => {
+        const record = {
+          game: room.game.id,
+          gameId,
+          points: points?.get(member.key) ?? 0,
+          match,
+          agents: room.agentsPlayed,
+          ...result,
+        };
+        const streak = accounts.record(account.id, record);
+        if (streak) {
+          room.noteStreak(member.id, streak);
+          recorded.set(account.id, { playerId: member.id, side: result.side, won: result.won });
+        }
+        room.updateAccount(
+          member.id,
+          account.username,
+          avatarUrl(account),
+          accounts.rankOf(account.id),
+          account.agents,
+        );
+      });
     }
     if (recorded.size > 1) safely('duos', () => noteDuos(room, recorded));
     const kept = room.record();
@@ -368,7 +378,6 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         ending: kept.ending,
         outcome: kept.outcome,
         durationMs: kept.durationMs,
-        replay: room.replay(),
         setup: kept.setup,
         log: gameLog,
         agentLog: kept.agentLog,
