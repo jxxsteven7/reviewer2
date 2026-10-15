@@ -682,9 +682,10 @@ export class Room {
   // A guest's seat becomes an account's: the member logged in or registered while they were in the
   // room, and is found by the account's key from now on. The name becomes the username, and the
   // guest's number goes; their browser keeps it in the room, should they come back as a guest.
-  // What the guest did under the IDs they had before leaving and coming back during the game is
-  // found by the new key too, as a guest's still, so that the record of the game keeps their
-  // number. False when the member isn't a guest here.
+  // The IDs they had before leaving and coming back during the game are found by the new key too:
+  // the record of the game still numbers them as the guest's, and what the game counts of what
+  // they did under them, as points and titles, is the account's, as it is for a guest who logs in
+  // without leaving. False when the member isn't a guest here.
   adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
     const member = this.members.get(id);
     if (!member || member.account) return false;
