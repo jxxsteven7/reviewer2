@@ -104,9 +104,13 @@ function close(mark?: Mark) {
   timer = setTimeout(landed, reduced() ? 150 : LAND_AT_MOST_MS);
 }
 
-// The copy has landed once its move has ended, not the menu's or the shadow's.
+// The copy has landed once its move has ended, not the menu's or the shadow's, nor its lift, which
+// can end in the very frame in which the menu starts closing, with the copy still in the air.
 function onTransitionEnd(event: TransitionEvent) {
-  if (closing.value && event.target === lifted.value && event.propertyName === 'transform') landed?.();
+  const copy = lifted.value;
+  if (!closing.value || !copy || event.target !== copy || event.propertyName !== 'transform') return;
+  const transform = getComputedStyle(copy).transform;
+  if (!transform || transform === 'none') landed?.();
 }
 
 // Escape and Tab close the menu, wherever the focus is: Tab leaves no menu for the page behind

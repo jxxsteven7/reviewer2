@@ -79,4 +79,27 @@ describe('MarkMenu', () => {
     wrapper.get('.lifted').element.dispatchEvent(landed);
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
+
+  // The lift ends late when the menu closes in its last frame: the end of it comes with the copy
+  // still in the air, on its way down, and must not take the copy away there.
+  test('takes the end of the lift, heard as the menu closes, for no landing', async () => {
+    const { card } = cardAt({ left: 100, top: 300 });
+    const wrapper = mount(MarkMenu, {
+      props: { source: card, word: 'Model', current: null, team: 'red' },
+      global: { plugins: [i18n()], stubs: { teleport: true } },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    vi.useFakeTimers();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await flushPromises();
+    const copy = wrapper.get<HTMLElement>('.lifted').element;
+    const ended = () => Object.assign(new Event('transitionend', { bubbles: true }), { propertyName: 'transform' });
+    copy.style.transform = 'matrix(1.14, 0, 0, 1.14, -3, -4)';
+    copy.dispatchEvent(ended());
+    expect(wrapper.emitted('close')).toBeUndefined();
+    copy.style.transform = 'none';
+    copy.dispatchEvent(ended());
+    expect(wrapper.emitted('close')).toHaveLength(1);
+  });
 });
