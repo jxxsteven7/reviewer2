@@ -1,10 +1,10 @@
 import { join } from 'node:path';
-import { BOARD_SIZE, cardsClash, LANGUAGES } from '@reviewer2/shared';
+import { BOARD_SIZE, cardsClash, LANGUAGES, otherTeam, TEAMS, type CardColor } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { seededRng } from '../../core/random';
+import { pick, seededRng, shuffle } from '../../core/random';
 import { drawWords, loadWordLibrary } from '../../core/words';
 import { keywordsGame } from '.';
-import { deal } from './deal';
+import { deal, fullLine } from './deal';
 import { remaining } from './state';
 
 const WORDS = Array.from({ length: 25 }, (_, i) => `Term${i}`);
@@ -79,6 +79,51 @@ describe('dealing', () => {
       if (index % 2 === 0) expect(card.translations).toEqual([`Other${index}`]);
       else expect('translations' in card).toBe(false);
     }
+  });
+});
+
+// A row or a column all of one group's cards would make the board too easy, so the deal shuffles
+// it away; the rules don't say so.
+describe('a row or a column of one group', () => {
+  const board = (colored: Record<number, CardColor>) =>
+    Array.from({ length: 25 }, (_, index): CardColor => colored[index] ?? 'neutral');
+  const cells = (indexes: number[], color: CardColor) => Object.fromEntries(indexes.map((index) => [index, color]));
+
+  test('is a whole row or a whole column of red or blue cards, but no diagonal', () => {
+    expect(fullLine(board(cells([5, 6, 7, 8, 9], 'red')))).toBe(true);
+    expect(fullLine(board(cells([2, 7, 12, 17, 22], 'blue')))).toBe(true);
+    expect(fullLine(board(cells([0, 6, 12, 18, 24], 'red')))).toBe(false);
+    expect(fullLine(board(cells([4, 8, 12, 16, 20], 'blue')))).toBe(false);
+    expect(fullLine(board({ ...cells([5, 6, 7, 8], 'red'), 9: 'blue' }))).toBe(false);
+    expect(fullLine(board(cells([0, 1, 2, 3], 'red')))).toBe(false);
+    expect(fullLine(board({}))).toBe(false);
+  });
+
+  test('never comes in a deal, which shuffles the colors again and leaves the words where they were', () => {
+    let shuffledAgain = 0;
+    for (let seed = 0; seed < 1000; seed += 1) {
+      const { cards, startingTeam } = deal(WORDS, seededRng(seed));
+      const colors = cards.map((card) => card.color);
+      expect(fullLine(colors), `seed ${seed}`).toBe(false);
+      // The deal as it goes until the colors are shuffled for the first time.
+      const rng = seededRng(seed);
+      pick(TEAMS, rng);
+      const places = shuffle(WORDS, rng);
+      const first = shuffle(
+        [
+          ...Array<CardColor>(9).fill(startingTeam),
+          ...Array<CardColor>(8).fill(otherTeam(startingTeam)),
+          ...Array<CardColor>(7).fill('neutral'),
+          'reviewer2' as const,
+        ],
+        rng,
+      );
+      expect(cards.map((card) => card.word)).toEqual(places);
+      if (fullLine(first)) shuffledAgain += 1;
+    }
+    // About one board in 30.
+    expect(shuffledAgain).toBeGreaterThan(15);
+    expect(shuffledAgain).toBeLessThan(60);
   });
 });
 

@@ -1208,7 +1208,7 @@ describe('RulesSheet', () => {
   };
   const BAR =
     'The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.';
-  const CLUE = 'A PI who gives no clue in time loses the turn to the other group.';
+  const CLUE = 'A PI who gives no clue in time loses the turn to the other group, and 5 points of their own.';
   const GUESS = 'Students whose time runs out end their turn, even if they have revealed nothing.';
   const EXTENSION = 'Each group may once a game ask for 30 seconds more for the phase it is in.';
   const PAUSE =
@@ -2499,6 +2499,19 @@ describe('KeywordsGame', () => {
           openingRecord: false,
           heavenlyHand: false,
         }),
+        // A PI who missed the deadline twice.
+        standing('Fay', {
+          role: 'captain',
+          found: 3,
+          won: false,
+          irrelevant: 1,
+          wrong: 0,
+          reviewer2: 0,
+          bigClues: 0,
+          openingRecord: false,
+          heavenlyHand: false,
+          missed: 2,
+        }),
         // From before the PI's stakes, and from before a count of irrelevant papers.
         standing('Bob', { found: 2, won: true, irrelevant: 1, wrong: 1, reviewer2: 0 }),
         standing('Eve', { found: 0, won: false, irrelevant: 0, wrong: 0, reviewer2: 1 }),
@@ -2512,6 +2525,7 @@ describe('KeywordsGame', () => {
     expect(wrapper.findAll('.between .detail.below').map((detail) => detail.text())).toEqual([
       'PI \u00b7 found 9 \u00b7 won \u00b7 big clue +6 \u00b7 Opened the Scoring \u00b7 Heavenly Hand',
       "found 2 \u00b7 irrelevant paper \u00d71 \u00b7 other group's card \u00d71",
+      'PI \u00b7 found 3 \u00b7 irrelevant paper \u00d71 \u00b7 missed deadline \u00d72',
       "found 2 \u00b7 won \u00b7 irrelevant paper \u00d71 \u00b7 other group's card \u00d71",
       'Reviewer 2',
       'found 1',
@@ -2519,6 +2533,7 @@ describe('KeywordsGame', () => {
     const scoring = wrapper.get('.between .scoring').text();
     expect(scoring).toContain('+3 for each student and +4 for the PI');
     expect(scoring).toContain('costs each student 1, 2 and 3, and the PI 2, 3 and 5');
+    expect(scoring).toContain('Every turn in which the PI gives no clue in time costs the PI 5.');
   });
 
   test('renders the group chat once, and keeps it after the game', async () => {

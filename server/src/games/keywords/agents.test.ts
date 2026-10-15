@@ -45,6 +45,7 @@ function data(game: KeywordsState | null = gameState(), seats = SEATS): Keywords
     settings: defaultSettings('en'),
     seating: { ...emptySeating(), seats: new Map(seats) },
     game,
+    vacated: { red: null, blue: null },
     match: null,
   };
 }

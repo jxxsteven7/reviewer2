@@ -274,7 +274,7 @@
       "choose": "Chosen by the players"
     },
     "groupingHint": {
-      "random": "The groups and their PIs are drawn when the game starts.",
+      "random": "The groups are drawn when the game starts, and the PIs take turns.",
       "choose": "Everyone picks a group and a seat in the waiting room."
     },
     "progress": "Game {game} of {games}",
@@ -310,7 +310,7 @@
     "waitAgain": "Waiting for the chair to decide what comes next.",
     "joinsNext": "You play from the next game.",
     "drawn": "Players",
-    "drawnNote": "The groups and their PIs are drawn at random when the game starts, and drawn again once if they repeat the last game's groups.",
+    "drawnNote": "The groups are drawn at random when the game starts, keeping apart those who have often played together, and the PIs take turns: whoever has been one the fewest times goes next.",
     "play": "Play",
     "fixedNote": "The groups stay the same for the whole match, and the PI changes from game to game.",
     "locked": "The word lists and the rules stay as they are until the match is over."
@@ -547,7 +547,7 @@
       "you": "You",
       "someone": "A player who left"
     },
-    "scoring": "Scores in a match: every own card that your group's students find, +1 for everyone in the group; winning, +3 for each student and +4 for the PI. Every irrelevant paper, card of the other group and Reviewer 2 that your students reveal, whoever of them it was, costs each student 1, 2 and 3, and the PI 2, 3 and 5. A big clue, with which the students find 4 of the group's cards or more: +1 for its PI for each from the fourth on. Opening the scoring, when the students find as many cards as the group's first clue names, 3 or more, before anything else: +1 for everyone. A heavenly hand, winning in the turn of the first clue: +1 for each student, +3 for the PI.",
+    "scoring": "Scores in a match: every own card that your group's students find, +1 for everyone in the group; winning, +3 for each student and +4 for the PI. Every irrelevant paper, card of the other group and Reviewer 2 that your students reveal, whoever of them it was, costs each student 1, 2 and 3, and the PI 2, 3 and 5. Every turn in which the PI gives no clue in time costs the PI 5. A big clue, with which the students find 4 of the group's cards or more: +1 for its PI for each from the fourth on. Opening the scoring, when the students find as many cards as the group's first clue names, 3 or more, before anything else: +1 for everyone. A heavenly hand, winning in the turn of the first clue: +1 for each student, +3 for the PI.",
     "scoreDetail": {
       "captain": "PI",
       "found": "found {count}",
@@ -555,6 +555,7 @@
       "irrelevant": "irrelevant paper ×{count}",
       "wrong": "other group's card ×{count}",
       "reviewer2": "Reviewer 2",
+      "missed": "missed deadline ×{count}",
       "bigClue": "big clue +{count}",
       "openingRecord": "Opened the Scoring",
       "heavenlyHand": "Heavenly Hand"
@@ -931,7 +932,7 @@
     },
     "timeTitle": "Time",
     "time": "The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.",
-    "timeClue": "A PI who gives no clue in time loses the turn to the other group.",
+    "timeClue": "A PI who gives no clue in time loses the turn to the other group, and 5 points of their own.",
     "timeGuess": "Students whose time runs out end their turn, even if they have revealed nothing.",
     "extension": "Each group may once a game ask for 30 seconds more for the phase it is in.",
     "pause": "The chair can pause the game at any time. The board is hidden until the chair resumes it, and the clock goes on from where it stopped.",

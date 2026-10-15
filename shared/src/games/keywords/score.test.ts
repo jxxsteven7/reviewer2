@@ -3,6 +3,7 @@ import {
   bigClueCards,
   bonusPoints,
   cardPoints,
+  missedPoints,
   POINTS,
   pointsFor,
   revealPoints,
@@ -49,6 +50,13 @@ describe('the points of a game', () => {
     expect(pi({ found: 9, won: true, bigClues: 6, openingRecord: true, heavenlyHand: true })).toBe(9 + 4 + 6 + 1 + 3);
   });
 
+  test('cost the PI 5 for each missed deadline, and the students nothing', () => {
+    expect(POINTS.missed).toBe(-5);
+    expect(pi({ missed: 1 })).toBe(-5);
+    expect(pi({ found: 9, won: true, missed: 2 })).toBe(9 + 4 - 10);
+    expect(student({ found: 9, won: true })).toBe(9 + 3);
+  });
+
   test("read a detail from before the PI's stakes as a student's, without bonuses", () => {
     expect(pointsFor({ found: 4, won: true, irrelevant: 1, wrong: 0, reviewer2: 1 })).toBe(4 + 3 - 1 - 3);
   });
@@ -74,8 +82,8 @@ describe('a revealed card', () => {
   });
 });
 
-describe('the points of a game split in two', () => {
-  test('are the cards and the bonuses of the end, which add up to the whole', () => {
+describe('the points of a game split up', () => {
+  test('are the cards, the bonuses of the end and the missed deadlines, which add up to the whole', () => {
     const detail: KeywordsScoreDetail = {
       role: 'captain',
       found: 6,
@@ -86,10 +94,13 @@ describe('the points of a game split in two', () => {
       bigClues: 2,
       openingRecord: true,
       heavenlyHand: false,
+      missed: 1,
     };
     expect(cardPoints(detail)).toBe(6 - 2 - 3);
     expect(bonusPoints(detail)).toBe(4 + 2 + 1);
-    expect(cardPoints(detail) + bonusPoints(detail)).toBe(pointsFor(detail));
+    expect(missedPoints(detail)).toBe(-5);
+    expect(cardPoints(detail) + bonusPoints(detail) + missedPoints(detail)).toBe(pointsFor(detail));
+    expect(missedPoints({ ...NOTHING, found: 3 })).toBe(0);
     expect(bonusPoints({ ...NOTHING, role: 'guesser', won: true })).toBe(3);
     expect(bonusPoints({ ...NOTHING, found: 3 })).toBe(0);
   });
