@@ -1548,11 +1548,11 @@ describe('KeywordsGame', () => {
     await chooseMark(wrapper, 2);
     expect(send).toHaveBeenLastCalledWith('keywords:mark', { gameId: 'g1', card: 2, mark: 'r2' });
     expect(card(wrapper, 2)?.classes()).toContain('note-r2');
-    // Escape closes the menu, and the card keeps what it had.
+    // Escape closes the menu, wherever the focus is, and the card keeps what it had.
     send.mockClear();
     await holdCard(wrapper, 2);
     vi.useFakeTimers();
-    wrapper.find('.mark-menu').element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     vi.advanceTimersByTime(300);
     vi.useRealTimers();
     await flushPromises();
@@ -1561,6 +1561,60 @@ describe('KeywordsGame', () => {
     for (const answer of answers.splice(0)) answer();
     await flushPromises();
     send.mockImplementation(async () => ({ ok: true }));
+  });
+
+  // A press on something in the menu, as the browser dispatches it. Vue drops an event that a
+  // test's trigger() stamps with a time before the menu was mounted, as under the fake timers.
+  const pressOn = (element: Element) => element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+  test('keeps the menu open through the click that lands on the lifted card, and closes it on a press beside it', async () => {
+    const wrapper = mount(KeywordsGame, { props: { room: marked([]) }, global: global() });
+    await holdCard(wrapper, 1);
+    // On a phone, the click that ends the press lands on the card's copy, which the menu lifted
+    // under the finger, or beside it: a click closes nothing.
+    await wrapper.get('.mark-menu .lifted').trigger('click');
+    await wrapper.get('.mark-menu .scrim').trigger('click');
+    expect(menuItems(wrapper)).toHaveLength(3);
+    // A press beside the menu closes it, with the card as it was.
+    send.mockClear();
+    vi.useFakeTimers();
+    pressOn(wrapper.get('.mark-menu .scrim').element);
+    vi.advanceTimersByTime(300);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    expect(card(wrapper, 1)?.classes()).not.toContain('lifting');
+    expect(send).not.toHaveBeenCalled();
+    // So does a press on the lifted card.
+    await holdCard(wrapper, 1);
+    vi.useFakeTimers();
+    pressOn(wrapper.get('.mark-menu .lifted').element);
+    vi.advanceTimersByTime(300);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+  });
+
+  test('sinks no revealed card under a press, which opens no menu', async () => {
+    const wrapper = mount(KeywordsGame, {
+      props: {
+        room: marked([], { cards: [{ word: 'Done', revealed: true, color: 'red' }, ...cards('Model', 'Journal')] }),
+      },
+      global: global(),
+    });
+    vi.useFakeTimers();
+    const press = { isPrimary: true, button: 0, pointerType: 'touch', clientX: 5, clientY: 5 };
+    await card(wrapper, 0)?.trigger('pointerdown', press);
+    expect(card(wrapper, 0)?.classes()).not.toContain('pressing');
+    vi.advanceTimersByTime(HOLD_MS);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    // A card face down sinks while it is pressed.
+    await card(wrapper, 1)?.trigger('pointerdown', press);
+    expect(card(wrapper, 1)?.classes()).toContain('pressing');
+    await card(wrapper, 1)?.trigger('pointerup');
+    expect(card(wrapper, 1)?.classes()).not.toContain('pressing');
   });
 
   test('opens the menu of marks on a right click with a mouse, and on no press that moves away', async () => {
@@ -1625,16 +1679,30 @@ describe('KeywordsGame', () => {
     await card(wrapper, 1)?.trigger('keydown', { key: 'Enter' });
     await tapCard(wrapper, 1);
     expect(send).toHaveBeenLastCalledWith('keywords:select', { gameId: 'g1', turn: 2, card: 1 });
+    // Tab closes the menu too, rather than leaving it open over the page behind the scrim, and
+    // gives the card the focus again.
+    await holdCard(wrapper, 2);
+    menuItems(wrapper)[0]?.focus();
+    vi.useFakeTimers();
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    menuItems(wrapper)[0]?.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(true);
+    vi.advanceTimersByTime(300);
+    vi.useRealTimers();
+    await flushPromises();
+    expect(wrapper.find('.mark-menu').exists()).toBe(false);
+    expect(document.activeElement).toBe(card(wrapper, 2)?.element);
     wrapper.unmount();
     document.body.innerHTML = '';
   });
 
   test('closes the menu by itself once the card is revealed, or the student may no longer mark', async () => {
     const view = marked([]);
-    const wrapper = mount(KeywordsGame, { props: { room: view }, global: global() });
+    const wrapper = mount(KeywordsGame, { props: { room: view }, global: global(), attachTo: document.body });
     await holdCard(wrapper, 1);
     expect(menuItems(wrapper)).toHaveLength(3);
-    // A teammate reveals the card meanwhile.
+    menuItems(wrapper)[0]?.focus();
+    // A teammate reveals the card meanwhile: the menu goes, and the card has the focus again.
     const data = view.data as KeywordsRoomData;
     const game = data.game as KeywordsView;
     const cards = game.cards.map((card, index) =>
@@ -1644,6 +1712,7 @@ describe('KeywordsGame', () => {
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
     expect(card(wrapper, 1)?.classes()).not.toContain('lifting');
+    expect(document.activeElement).toBe(card(wrapper, 1)?.element);
     // The game ends while the menu is open.
     await holdCard(wrapper, 2);
     expect(menuItems(wrapper)).toHaveLength(3);
@@ -1657,6 +1726,8 @@ describe('KeywordsGame', () => {
     await flushPromises();
     expect(wrapper.find('.mark-menu').exists()).toBe(false);
     expect(card(wrapper, 2)?.classes()).not.toContain('lifting');
+    wrapper.unmount();
+    document.body.innerHTML = '';
   });
 
   test("shows the group's marks from the server, and changes a teammate's mark, also from the keyboard", async () => {

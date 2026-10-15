@@ -335,11 +335,11 @@ function titlesSoFar(data: KeywordsData, ctx: GameContext): Record<string, Title
   if (!game || !counts(game)) return earned;
   for (const [playerId, seat] of data.seating.seats) {
     if (seat.team === null || !ctx.awardsTitles(playerId)) continue;
-    const counts = new Map<Title, number>();
+    const tally = new Map<Title, number>();
     for (const { title } of titlesOf(game, seat.team, ctx.keyOf(playerId), ctx.keyOf)) {
-      counts.set(title, (counts.get(title) ?? 0) + 1);
+      tally.set(title, (tally.get(title) ?? 0) + 1);
     }
-    if (counts.size > 0) earned[playerId] = [...counts].map(([title, count]) => ({ title, count }));
+    if (tally.size > 0) earned[playerId] = [...tally].map(([title, count]) => ({ title, count }));
   }
   return earned;
 }

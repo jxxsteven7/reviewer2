@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MARKS, otherTeam, type CardView, type Mark, type Team } from '@reviewer2/shared';
-import { computed, ref, useId, watch } from 'vue';
+import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Shown } from '../../core/components/ScoreFloat.vue';
 import KeywordsCard from './KeywordsCard.vue';
@@ -64,33 +64,39 @@ const emit = defineEmits<{ select: [index: number]; mark: [index: number, mark: 
 const { t } = useI18n();
 // A revealed card takes no mark, and opens no menu of marks.
 const markable = (card: CardView) => props.gestures && !card.revealed;
-const board = ref<HTMLElement | null>(null);
-// The card whose menu of marks is open, with the element that the menu lifts a copy of.
-const holding = ref<{ index: number; source: HTMLElement } | null>(null);
-const markCard = (card: number, chosen: Mark) => {
+const takesMark = (card: number) => {
   const target = props.cards[card];
-  if (target && markable(target)) emit('mark', card, chosen);
+  return target !== undefined && markable(target) && !!props.team;
+};
+const board = ref<HTMLElement | null>(null);
+// The card whose menu of marks is open, with the element that the menu lifts a copy of, and the
+// menu itself.
+const holding = ref<{ index: number; source: HTMLElement } | null>(null);
+const menu = ref<InstanceType<typeof MarkMenu> | null>(null);
+const markCard = (card: number, chosen: Mark) => {
+  if (takesMark(card)) emit('mark', card, chosen);
 };
 const cardGestures = useCardGestures({
   tap: (card) => emit('select', card),
+  // A press is held only on a card that takes a mark: another sinks nothing.
+  holds: takesMark,
   hold: (card) => {
-    const target = props.cards[card];
     const source = [...(board.value?.children ?? [])].filter((child) => child.classList.contains('card'))[card];
-    if (target && markable(target) && props.team && source instanceof HTMLElement) {
-      holding.value = { index: card, source };
-    }
+    if (takesMark(card) && source instanceof HTMLElement) holding.value = { index: card, source };
   },
   mark: markCard,
 });
-// The menu closes by itself once its card can take no mark: it was revealed meanwhile, or the
-// viewer may no longer mark, as when the game has ended.
+// The menu closes by itself, at once, once its card can take no mark: it was revealed meanwhile,
+// or the viewer may no longer mark, as when the game has ended. The card has the focus again if
+// the menu had it, once the board shows it again.
 watch(
-  () => {
-    const card = holding.value === null ? undefined : props.cards[holding.value.index];
-    return holding.value !== null && !(card && markable(card) && props.team);
-  },
+  () => holding.value !== null && !takesMark(holding.value.index),
   (over) => {
-    if (over) holding.value = null;
+    if (!over || holding.value === null) return;
+    const { source } = holding.value;
+    const hadFocus = menu.value?.hasFocus() ?? false;
+    holding.value = null;
+    if (hadFocus) void nextTick(() => source.focus({ preventScroll: true }));
   },
 );
 const pressing = cardGestures.pressing;
@@ -143,6 +149,7 @@ const named = computed(() => {
     />
     <MarkMenu
       v-if="gestures && holding && team"
+      ref="menu"
       :source="holding.source"
       :word="cards[holding.index]?.word ?? ''"
       :current="notes.get(holding.index) ?? null"

@@ -528,7 +528,8 @@ describe('an invitation', () => {
     const catsSecond = cat.invitations[1]?.id as string;
     expect(await dan.send('friends:ignore', { id: catsSecond })).toEqual({ ok: true });
     await cat.send('sys:ping');
-    expect(cat.uninvited).toEqual([]);
+    // Cat has heard of her first alone, which lapsed as the clock moved.
+    expect(cat.uninvited).toEqual([catsFirst]);
     const tablet = track(await cats.connect());
     await until(() => tablet.invitations.length === 1, "Cat's invitation on the tablet");
     expect(await cat.send('friends:ignore', { id: catsSecond })).toEqual({ ok: true });
@@ -565,13 +566,13 @@ describe('an invitation', () => {
       .toBe(false);
     expect(await chair.send('friends:invite', { username: 'Cat' })).toEqual({ ok: true });
     await chair.waitFor((state) => state.invited?.length === 1, 'whom Ann invited');
-    // Cat comes too late: no connection of hers hears of it, and the inviter waits for nobody.
+    // Cat comes too late: no connection of hers hears of it, and the inviter waits for nobody, as
+    // soon as it lapsed.
     server.advance(INVITATION_MS);
+    await chair.waitFor((state) => state.invited === undefined, 'the inviter hearing that it lapsed');
     const late = track(await cats.connect());
     await late.send('sys:ping');
     expect(late.invitations).toEqual([]);
-    server.app.sockets.sweep();
-    await chair.waitFor((state) => state.invited === undefined, 'the inviter hearing that it lapsed');
   });
 
   test('lapses after ten minutes, when the inviter leaves or when the room closes', async () => {
@@ -585,18 +586,19 @@ describe('an invitation', () => {
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: true });
     await until(() => bob.invitations.length === 1, 'the invitation');
     const old = bob.invitations[0]?.id as string;
-    // Lapsed by its age. A connection of Bob's that comes now hears nothing of it.
+    await chair.waitFor((state) => state.invited?.length === 1, 'whom Ann invited');
+    // Lapsed by its age: it ends as it lapses, with no sweep, and Bob hears so, while the inviter,
+    // who had Bob among those invited, has nobody now. A connection of Bob's that comes now hears
+    // nothing of it.
     server.advance(INVITATION_MS);
+    await until(() => bob.uninvited.includes(old), 'word of the lapsed invitation');
+    await chair.waitFor((state) => state.invited === undefined, 'the inviter hearing that it lapsed');
     expect(await bob.send('room:join', { invitation: old })).toEqual({ ok: false, error: 'invitation_expired' });
     const bobsPhone = new Browser(server.url);
     await bobsPhone.logIn('Bob');
     const phone = track(await bobsPhone.connect());
     await phone.send('sys:ping');
     expect(phone.invitations).toEqual([]);
-    // The sweep finds it, and the inviter, who had Bob among those invited, has nobody now.
-    expect(chair.state?.invited).toEqual([{ username: 'Bob', avatar: null }]);
-    server.app.sockets.sweep();
-    await chair.waitFor((state) => state.invited === undefined, 'the inviter hearing that it lapsed');
     // A connection of the invited account that comes while an invitation stands hears it, with the
     // time it has left; a friend's invitation is no good to anyone else.
     expect(await chair.send('friends:invite', { username: 'Bob' })).toEqual({ ok: true });
@@ -621,10 +623,12 @@ describe('an invitation', () => {
       ok: false,
       error: 'invitation_expired',
     });
-    // The sweep finds the invitations that have lapsed, and every connection of the invited hears so.
+    // The sweep finds the invitations that have lapsed otherwise, and every connection of the
+    // invited hears so.
     server.app.sockets.sweep();
-    await until(() => cat.uninvited.length === 1 && phone.uninvited.length === 2, 'word of the lapsed invitations');
+    await until(() => cat.uninvited.length === 1 && phone.uninvited.length === 1, 'word of the lapsed invitations');
     expect(cat.uninvited).toEqual([cat.invitations[0]?.id]);
+    expect(phone.uninvited).toEqual([fresh]);
     expect(bob.uninvited).toEqual([old, fresh]);
     // Lapsed because the room closed.
     const { chair: again } = await roomOf(anns);

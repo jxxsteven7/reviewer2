@@ -52,8 +52,9 @@ import type { WordLibrary } from './words';
 // module. Every handler runs from start to finish without awaiting anything, so two messages can
 // never interleave.
 
-// Starts and stops the timers for the games' deadlines. The server uses setTimeout; the tests
-// put in timers that run on their own clock.
+// Starts and stops the timers for the games' deadlines and for the invitations that lapse
+// (invitations.ts). The server uses setTimeout; the tests put in timers that run on their own
+// clock.
 export interface Timers {
   // Runs `run` once, `ms` milliseconds from now, and returns what stops it.
   start(run: () => void, ms: number): unknown;
@@ -210,16 +211,19 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   const accountSockets = new Map<number, Set<string>>();
   // Invitations to rooms, and how often a member may invite the same friend
   // (docs/architecture.md#friends). However an invitation ends, every connection of the invited
-  // account hears so, and takes it off the page, and the inviter gets the room again without it.
+  // account hears so, and takes it off the page, and the inviter gets the room again without it;
+  // one that lapses by its age ends on a timer, with no message waiting.
   const invitations = new Invitations(
     now,
     isOpen,
     (a, b) => accounts?.friends.areFriends(a, b) ?? false,
-    ({ id, inviteeId, room, inviterKey }) => {
-      tellAccount(inviteeId, 'friends:uninvited', { id });
-      const inviter = room.memberByKey(inviterKey);
-      if (inviter && isOpen(room)) send(room, inviter.sockets, { playerId: inviter.id });
-    },
+    ({ id, inviteeId, room, inviterKey }) =>
+      safely('invitation', () => {
+        tellAccount(inviteeId, 'friends:uninvited', { id });
+        const inviter = room.memberByKey(inviterKey);
+        if (inviter && isOpen(room)) send(room, inviter.sockets, { playerId: inviter.id });
+      }),
+    timers,
   );
   const invites = new WindowCounter(1, INVITE_COOLDOWN_MS, now);
   // Requests to be let into a friend's room, and how many an account sends an hour. However a

@@ -89,7 +89,7 @@ const ready = computed(() => account.summary !== null && !offline.value && chose
 function show() {
   formError.value = undefined;
   role.value = lastRole();
-  if (fields.value) chosen.value = (lastFields() ?? DEFAULT_FIELDS).filter((field) => usable.value.has(field));
+  if (fields.value) chosen.value = keptFields(lastFields() ?? DEFAULT_FIELDS, usable.value);
   open.value = true;
   loadFields();
   checkAgents();

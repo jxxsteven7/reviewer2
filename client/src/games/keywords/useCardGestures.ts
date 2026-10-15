@@ -4,10 +4,11 @@ import { onBeforeUnmount, ref } from 'vue';
 // How a student's taps on a card become what they mean (docs/games/keywords.md#talking-it-over): a
 // tap chooses the card at once, whatever marks it has, and holding it down opens the menu of marks
 // for it (MarkMenu.vue), as a right click does with a mouse. While the press is held, the card sinks
-// into its shadow (`pressing`). A press held long enough opens the menu, and the click that ends it
-// counts for nothing; one that moves away first, as when the page scrolls, is no press. From the
-// keyboard, 1, 2 and 3 mark the card that has the focus, and Enter or Space taps it: a key ends
-// whatever press there was, so the tap counts.
+// into its shadow (`pressing`); a card that takes no mark (`holds`) neither sinks nor opens a menu.
+// A press held long enough opens the menu, and the click that ends it counts for nothing; one that
+// moves away first, as when the page scrolls, is no press. From the keyboard, 1, 2 and 3 mark the
+// card that has the focus, and Enter or Space taps it: a key ends whatever press there was, so the
+// tap counts.
 export const HOLD_MS = 400;
 const MOVE_PX = 10;
 
@@ -15,6 +16,7 @@ const KEYS: Record<string, Mark> = { '1': 'ours', '2': 'theirs', '3': 'r2' };
 
 export function useCardGestures(on: {
   tap: (card: number) => void;
+  holds: (card: number) => boolean;
   hold: (card: number) => void;
   mark: (card: number, mark: Mark) => void;
 }) {
@@ -44,7 +46,7 @@ export function useCardGestures(on: {
     held = null;
     letGo();
     mouse = event.pointerType === 'mouse';
-    if (!event.isPrimary || event.button !== 0) return;
+    if (!event.isPrimary || event.button !== 0 || !on.holds(card)) return;
     pressing.value = card;
     hold = {
       card,

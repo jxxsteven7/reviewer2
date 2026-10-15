@@ -8,12 +8,14 @@ import MarkSticker from './MarkSticker.vue';
 // on the card opens, or a right click: the page dims and blurs, the card lifts out of it, and the
 // menu grows from it, below it, or above it near the bottom of the screen, with the three marks, the
 // card's own marked out. Choosing one puts it on the card, and choosing the card's own takes it off;
-// a tap beside the menu or on the card, or Escape, closes it with the card as it was. The card that
-// lifts is a copy of the one on the board, which hides meanwhile; its word keeps the size it has
-// there (the board hides the card itself while the menu is open). Once the menu has closed, the
-// card has the focus again if the menu had it. Where the device asks for less motion, nothing lifts
-// or grows: the page dims at once, and the menu fades in and out. On a phone that can, it opens
-// with a short buzz.
+// a press beside the menu or on the card, or Escape or Tab, closes it with the card as it was. A
+// press, not a click: a finger lifted from the card once the menu has opened lands its click on the
+// card's copy, which must not close the menu. The keys count wherever the focus is while the menu
+// is open. The card that lifts is a copy of the one on the board, which hides meanwhile; its word
+// keeps the size it has there (the board hides the card itself while the menu is open). Once the
+// menu has closed, the card has the focus again if the menu had it. Where the device asks for less
+// motion, nothing lifts or grows: the page dims at once, and the menu fades in and out. On a phone
+// that can, it opens with a short buzz.
 const props = defineProps<{ source: HTMLElement; word: string; current: Mark | null; team: Team }>();
 const emit = defineEmits<{ choose: [mark: Mark]; close: [] }>();
 const { t } = useI18n();
@@ -66,6 +68,7 @@ onMounted(async () => {
     });
   }
   requestAnimationFrame(() => requestAnimationFrame(() => (open.value = true)));
+  document.addEventListener('keydown', key);
 });
 
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -73,7 +76,7 @@ function close(mark?: Mark) {
   if (closing.value) return;
   closing.value = true;
   open.value = false;
-  const hadFocus = menu.value?.contains(document.activeElement) ?? false;
+  const hadFocus = hasFocus();
   timer = setTimeout(
     () => {
       if (mark) emit('choose', mark);
@@ -85,13 +88,15 @@ function close(mark?: Mark) {
   );
 }
 
+// Escape and Tab close the menu, wherever the focus is: Tab leaves no menu for the page behind
+// the scrim. The arrows move the focus among the marks while it is in the menu.
 function key(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' || event.key === 'Tab') {
     event.preventDefault();
     close();
     return;
   }
-  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+  if ((event.key !== 'ArrowDown' && event.key !== 'ArrowUp') || !hasFocus()) return;
   event.preventDefault();
   const items = [...(menu.value?.querySelectorAll<HTMLElement>('button') ?? [])];
   const at = items.indexOf(document.activeElement as HTMLElement);
@@ -99,16 +104,22 @@ function key(event: KeyboardEvent) {
   items[next]?.focus();
 }
 
+// Whether the focus is in the menu, for the board, which takes the menu down at once when its
+// card can take no mark any more, and gives the card the focus back then.
+const hasFocus = () => menu.value?.contains(document.activeElement) ?? false;
+defineExpose({ hasFocus });
+
 onBeforeUnmount(() => {
   if (timer) clearTimeout(timer);
+  document.removeEventListener('keydown', key);
 });
 </script>
 
 <template>
   <Teleport to="body">
-    <div class="mark-menu" :class="{ open, closing }" @keydown="key">
-      <div class="scrim" @click="close()"></div>
-      <div ref="lifted" class="lifted" :style="cardStyle" @click="close()"></div>
+    <div class="mark-menu" :class="{ open, closing }">
+      <div class="scrim" @pointerdown="close()"></div>
+      <div ref="lifted" class="lifted" :style="cardStyle" @pointerdown="close()"></div>
       <div ref="menu" class="menu" role="menu" :aria-label="label" :style="place">
         <button
           v-for="mark in MARKS"
