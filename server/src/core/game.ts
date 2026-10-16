@@ -217,10 +217,6 @@ export interface MatchHooks<Data> {
   lineup(data: Data): string[];
 }
 
-// The games that the server plays, by ID, for whatever holds a game's data against its game.
-export const gameById = (games: readonly GameModule[], id: string): GameModule | undefined =>
-  games.find((game) => game.id === id);
-
 export interface GameModule<Data = unknown, View = unknown> {
   id: string;
   // How many words a game needs from the word library.
