@@ -302,16 +302,18 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     cleared(FRIEND_LIMITS.declineCooldownMs),
   );
 
-  // Logins and the links in mails, which end (docs/architecture.md#accounts).
+  // Logins and the links in mails, which end (docs/architecture.md#accounts). Their rows are
+  // named by the account that each is of, never by the hash of the token that is their key: the
+  // hashes stand for the tokens in the database, and no command prints them.
   sql(
-    'logins kept past their time',
-    'SELECT hex(token_hash) FROM sessions WHERE used_at <= ? OR created_at <= ?',
+    'accounts with a login kept past its time',
+    'SELECT DISTINCT account_id FROM sessions WHERE used_at <= ? OR created_at <= ?',
     cleared(DEFAULT_SESSION_LIMITS.idleMs),
     cleared(DEFAULT_SESSION_LIMITS.lifetimeMs),
   );
   sql(
-    'links in mails kept past their time',
-    'SELECT hex(token_hash) FROM email_tokens WHERE expires_at <= ?',
+    'accounts with a link in a mail kept past its time',
+    'SELECT DISTINCT account_id FROM email_tokens WHERE expires_at <= ?',
     cleared(0),
   );
 

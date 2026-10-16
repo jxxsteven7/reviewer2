@@ -346,8 +346,18 @@ describe('the check of the data', () => {
       "UPDATE friendships SET status = 'declined', note = NULL, answered_at = '2026-10-01T00:00:00.000Z' WHERE id = 1",
       ['1'],
     ],
-    ['logins kept past their time', "UPDATE sessions SET used_at = '2026-09-01T00:00:00.000Z'", ['01']],
-    ['links in mails kept past their time', "UPDATE email_tokens SET expires_at = '2026-10-16T09:00:00.000Z'", ['02']],
+    // Two logins of one account past their time name the account once, and never a token's hash.
+    [
+      'accounts with a login kept past its time',
+      "UPDATE sessions SET used_at = '2026-09-01T00:00:00.000Z'; " +
+        "INSERT INTO sessions VALUES (x'03', 1, '2026-08-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z')",
+      ['1'],
+    ],
+    [
+      'accounts with a link in a mail kept past its time',
+      "UPDATE email_tokens SET expires_at = '2026-10-16T09:00:00.000Z'",
+      ['1'],
+    ],
   ])('finds %s', (rule, sql, ids) => {
     expect(broken(sql)).toEqual({ rule, count: ids.length, ids });
   });
