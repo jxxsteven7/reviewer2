@@ -46,7 +46,7 @@ export interface AppServer {
 export interface AppOptions
   extends Pick<Config, 'publicDir' | 'version'>, Partial<Pick<Config, 'trustProxy' | 'cookieSecure'>> {
   words: WordLibrary;
-  games: GameModule[];
+  games: readonly GameModule[];
   feedback: FeedbackStore;
   // Accounts, which keep their data in the same database. Without them, the server has no
   // account API and every player is a guest.

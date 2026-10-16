@@ -142,7 +142,14 @@ test('players with accounts and guests play a whole match, and find its title on
   await ann.goto('/account');
   await expect(ann.locator('.titles')).toHaveText(text.account.profile.titleNames.best_paper);
   // One match finished, and won.
-  await expect(ann.locator('.records .record-stats .block .value')).toHaveText(['2', /%$/, '1', '1']);
+  await expect(ann.locator('.records .record-stats .block .value')).toHaveText([
+    '2',
+    /%$/,
+    /%$|\u2014/,
+    /%$|\u2014/,
+    '1',
+    '1',
+  ]);
   // Both games were the match's, and say which of its games they were.
   await expect(ann.locator('.records .record:not(.match) .tag')).toHaveText([
     interpolate(text.account.profile.matchTag, { game: '2', games: '2' }),

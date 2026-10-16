@@ -182,13 +182,16 @@ describe('the reports', () => {
 
   test('escape what players wrote, and say what became of the accounts', () => {
     const html = renderReportsPage({
-      total: 2,
+      total: 3,
       entries: [
+        // A guest's name, which no account has, comes with no account; any other name with none is
+        // an account's since deleted.
+        report(3, { reporter: null, reported: null, reportedId: null, reportedName: 'Guest 3', text: null }),
         report(2, {
           reporter: null,
           reported: null,
           reportedId: null,
-          reportedName: '<i>Guest</i>',
+          reportedName: '<i>Guest</i> 7',
           text: '<script>x</script>',
         }),
         report(1, { reported: '<b>Bob</b>', reporter: '<u>Ann</u>', reportedBarred: true }),
@@ -197,7 +200,8 @@ describe('the reports', () => {
       older: false,
     });
     expect(html).not.toMatch(/<script>|<i>|<b>Bob|<u>/);
-    expect(html).toContain('<p class="text">&#60;i&#62;Guest&#60;/i&#62; (no account)</p>');
+    expect(html).toContain('<p class="text">Guest 3 (a guest)</p>');
+    expect(html).toContain('<p class="text">&#60;i&#62;Guest&#60;/i&#62; 7 (a deleted account)</p>');
     expect(html).toContain('<p class="meta">Reported by a deleted account</p>');
     expect(html).toContain('<p class="text">&#60;script&#62;x&#60;/script&#62;</p>');
     expect(html).toContain('account &#60;b&#62;Bob&#60;/b&#62; &middot; <strong>barred from public rooms</strong>');

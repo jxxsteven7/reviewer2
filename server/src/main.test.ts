@@ -3,7 +3,7 @@ import { createServer, type AddressInfo, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { LIST_API, SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
+import { LIST_API, RECORDS_NOTICE_VERSION, SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { until } from '../test/helpers';
 import { main, type MainOptions, type Running } from './main';
@@ -142,9 +142,9 @@ describe('starting', () => {
       storage: 'file',
       file: join(data, DATABASE_FILE),
       journal: 'wal',
-      schema: 22,
+      schema: 23,
     });
-    expect(logged('database_migrated')).toEqual({ from: 0, to: 22, snapshot: null });
+    expect(logged('database_migrated')).toEqual({ from: 0, to: 23, snapshot: null });
     first.feedback.add({
       kind: 'idea',
       text: 'Kept',
@@ -323,7 +323,7 @@ describe('starting', () => {
       page: 'room',
       userAgent: 'Agent',
     });
-    started.accounts.store.create('Ann', 'ann', 'scrypt$hash');
+    started.accounts.store.create('Ann', 'ann', 'scrypt$hash', RECORDS_NOTICE_VERSION);
     await until(() => events().includes('status_listening'), 'the status page');
     const status = await (await fetch(`http://127.0.0.1:${statusPort}/`)).text();
     expect(status).toContain('<p class="note">1 in all &middot; <a href="/feedback">Read it</a></p>');

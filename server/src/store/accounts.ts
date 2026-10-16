@@ -131,8 +131,11 @@ export class AccountStore {
     private readonly db: DatabaseSync,
     private readonly now: () => number = () => Date.now(),
   ) {
+    // With the version of the notice on how games are recorded that the player agreed to, and when
+    // (migration 23).
     this.#insert = db.prepare(
-      'INSERT INTO accounts (username, username_key, password, handle, created_at) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO accounts (username, username_key, password, handle, consent_version, consented_at, created_at) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?)',
     );
     this.#byHandle = db.prepare(`SELECT ${COLUMNS} FROM accounts WHERE handle = ?`);
     this.#profile = db.prepare('UPDATE accounts SET link = ?, bio = ?, show_record = ?, show_thanks = ? WHERE id = ?');
@@ -179,18 +182,15 @@ export class AccountStore {
     );
   }
 
-  // A new account, with a handle of its own, or null when another has the same key already. A
-  // handle that another account has, which chance allows once in 2^48 draws, is drawn again.
-  create(username: string, key: string, password: string): Account | null {
+  // A new account, with a handle of its own, which agreed to the version `consent` of the notice
+  // on how games are recorded, now (RECORDS_NOTICE_VERSION in shared/src/accounts.ts, which the
+  // caller checks), or null when another has the same key already. A handle that another account
+  // has, which chance allows once in 2^48 draws, is drawn again.
+  create(username: string, key: string, password: string, consent: number): Account | null {
     for (;;) {
       try {
-        const { lastInsertRowid } = this.#insert.run(
-          username,
-          key,
-          password,
-          newHandle(),
-          new Date(this.now()).toISOString(),
-        );
+        const now = new Date(this.now()).toISOString();
+        const { lastInsertRowid } = this.#insert.run(username, key, password, newHandle(), consent, now, now);
         return this.byId(Number(lastInsertRowid)) ?? null;
       } catch (error) {
         if (!isUniqueFailure(error)) throw error;

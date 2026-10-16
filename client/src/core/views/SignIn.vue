@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { ACCOUNT_API, checkPassword, checkUsername, MAX_NAME_INPUT, MAX_PASSWORD_INPUT } from '@reviewer2/shared';
+import {
+  ACCOUNT_API,
+  checkPassword,
+  checkUsername,
+  MAX_NAME_INPUT,
+  MAX_PASSWORD_INPUT,
+  RECORDS_NOTICE_VERSION,
+} from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -9,9 +16,12 @@ import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
 import { useBusy } from '../useBusy';
 
-// Logging in, or registering an account, which only needs a username and a password. Both forms
-// say what is wrong with what is typed before it is sent, by the rules that the server applies
-// (shared/src/accounts.ts), and what the server refused after. Registering logs the browser in.
+// Logging in, or registering an account, which only needs a username and a password, and the
+// player's agreement to the notice on how games are recorded, which the form shows and a box under
+// it takes (RECORDS_NOTICE_VERSION, docs/architecture.md#accounts): the request says which version
+// of the notice the player agreed to. Both forms say what is wrong with what is typed before it is
+// sent, by the rules that the server applies (shared/src/accounts.ts), and what the server refused
+// after. Registering logs the browser in.
 // Both lead to `next`, the room that sent the player here (AccountPage), or else home. The form is
 // busy from the moment it sends until the page has left, and says so: the account page keeps the
 // form meanwhile, although the browser is logged in already. It opens on logging in, or on
@@ -26,6 +36,7 @@ const router = useRouter();
 const mode = ref<'login' | 'register'>(props.register ? 'register' : 'login');
 const username = ref('');
 const password = ref('');
+const agreed = ref(false);
 const refused = ref<string | undefined>();
 const { busy, run } = useBusy();
 
@@ -43,13 +54,20 @@ const passwordProblem = computed(() => {
   return problem ? t(errorKey(problem)) : undefined;
 });
 const ready = computed(
-  () => username.value.trim() !== '' && password.value !== '' && !usernameProblem.value && !passwordProblem.value,
+  () =>
+    username.value.trim() !== '' &&
+    password.value !== '' &&
+    !usernameProblem.value &&
+    !passwordProblem.value &&
+    (mode.value === 'login' || agreed.value),
 );
 
 async function submit() {
-  const path = mode.value === 'login' ? ACCOUNT_API.login : ACCOUNT_API.register;
+  const registering = mode.value === 'register';
+  const path = registering ? ACCOUNT_API.register : ACCOUNT_API.login;
   await run(async () => {
-    const reply = await logIn(path, { username: username.value, password: password.value });
+    const body = { username: username.value, password: password.value };
+    const reply = await logIn(path, registering ? { ...body, consent: RECORDS_NOTICE_VERSION } : body);
     if (reply.ok) await router.push(props.next ?? '/');
     else refused.value = t(errorKey(reply.error));
   });
@@ -89,6 +107,10 @@ async function submit() {
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>
       <p v-if="mode === 'register'" class="note">{{ t('account.signIn.noEmail') }}</p>
       <p v-if="mode === 'register'" class="note">{{ t('privacy.records') }}</p>
+      <label v-if="mode === 'register'" class="agree">
+        <input v-model="agreed" type="checkbox" />
+        <span>{{ t('account.signIn.agree') }}</span>
+      </label>
       <div class="actions">
         <UiButton variant="primary" type="submit" :disabled="busy || !ready">
           {{ t(mode === 'login' ? 'account.signIn.loginSubmit' : 'account.signIn.registerSubmit') }}
@@ -151,6 +173,26 @@ async function submit() {
 .note {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+/* The box to tick, as tall as a button, with the words beside it. */
+.agree {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  min-height: 44px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.agree input {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--ink);
+  cursor: pointer;
 }
 
 .actions {

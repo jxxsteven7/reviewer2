@@ -59,6 +59,13 @@ export const MAX_BIO_LENGTH = 80;
 export const MAX_BIO_INPUT = 400;
 // The first account is the author's: the one who set the site up registered before anyone could.
 export const AUTHOR_ACCOUNT = 1;
+
+// The version of the notice on how games are recorded (privacy.records in the locale files), which
+// whoever registers agrees to, and which the account keeps with the time (migration 23): not the
+// version of the software, which changes with every release, but of what the notice says. Raise it
+// by one only when what is recorded or what it is used for changes in substance, so that the
+// accounts that agreed to an earlier notice can be told apart, and asked again.
+export const RECORDS_NOTICE_VERSION = 1;
 // How many of the accounts that like a profile its owner is shown, the latest first.
 export const LIKERS_SHOWN = 100;
 
@@ -108,6 +115,7 @@ export const ACCOUNT_ERRORS = [
   'login_failed',
   'login_limited',
   'register_limited',
+  'consent_required',
   'email_invalid',
   'email_limited',
   'mail_unavailable',
@@ -289,12 +297,14 @@ export interface MatchRecord {
   title: MatchTitle | null;
 }
 
-// How many games the account has finished and won, outside matches and in them, and how many
-// matches it has finished, and finished first in, alone or level with others
-// (docs/architecture.md#accounts).
+// How many games the account has finished and won, outside matches and in them, in each role of
+// the first game, as a group's PI (`captain`) and as a student (`guesser`), counting every game as
+// the total does, and how many matches it has finished, and finished first in, alone or level with
+// others (docs/architecture.md#accounts).
 export interface RecordCounts {
   ordinary: { games: number; wins: number };
   inMatches: { games: number; wins: number };
+  roles: Record<'captain' | 'guesser', { games: number; wins: number }>;
   matches: { played: number; won: number };
 }
 
@@ -368,12 +378,14 @@ function reservedKey(name: string): string {
 // language (docs/architecture.md#players-and-identity), compared as the reserved names are.
 const GUEST_NAME = /^(?:guest|\u{6e38}\u{5ba2}|\u{8bbf}\u{5ba2})\d+$/u;
 
+// Whether a name is a guest's, as a room calls them: no account has one, so a report of a player
+// by such a name with no account is of a guest, and one by any other name is of an account since
+// deleted (docs/architecture.md#public-rooms).
+export const isGuestName = (name: string): boolean => GUEST_NAME.test(reservedKey(name));
+
 // Whether a name is one of the reserved names, or a guest's: they are reserved so that nobody can
 // pass for the people who run the game, or for a guest.
-export const isReservedName = (name: string): boolean => {
-  const key = reservedKey(name);
-  return RESERVED.has(key) || GUEST_NAME.test(key);
-};
+export const isReservedName = (name: string): boolean => RESERVED.has(reservedKey(name)) || isGuestName(name);
 
 // A username as it will be kept and shown, or why it can't be one.
 export function checkUsername(raw: string): UsernameCheck {

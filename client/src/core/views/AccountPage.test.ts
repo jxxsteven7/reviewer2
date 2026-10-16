@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { ACCOUNT_API, type Ack } from '@reviewer2/shared';
+import { ACCOUNT_API, RECORDS_NOTICE_VERSION, type Ack } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { h, reactive } from 'vue';
@@ -83,6 +83,7 @@ async function signIn(wrapper: ReturnType<typeof mount>, mode: 'login' | 'regist
   if (mode === 'register') await wrapper.findAll('.tab')[1]?.trigger('click');
   await wrapper.get('input[autocomplete="username"]').setValue('Ann');
   await wrapper.get(`input[autocomplete="${mode === 'login' ? 'current' : 'new'}-password"]`).setValue('correct horse');
+  if (mode === 'register') await wrapper.get('.agree input').setValue(true);
   await wrapper.get('form').trigger('submit');
   await flushPromises();
 }
@@ -117,7 +118,11 @@ describe('the account page', () => {
     for (const [mode, next, path] of ways) {
       const wrapper = await open(next, false);
       await signIn(wrapper, mode);
-      expect(signedIn.logIn).toHaveBeenCalledWith(ACCOUNT_API[mode], { username: 'Ann', password: 'correct horse' });
+      expect(signedIn.logIn).toHaveBeenCalledWith(ACCOUNT_API[mode], {
+        username: 'Ann',
+        password: 'correct horse',
+        ...(mode === 'register' ? { consent: RECORDS_NOTICE_VERSION } : {}),
+      });
       expect(router.push).toHaveBeenCalledExactlyOnceWith(path);
       // Until the navigation lands, the form stays, busy, and the account's own page is never built.
       expect(profileMounted).not.toHaveBeenCalled();

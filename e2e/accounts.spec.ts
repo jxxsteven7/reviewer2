@@ -95,7 +95,9 @@ test('players with accounts play a whole game with guests, and find it on their 
   await ann.goto('/account');
   // The game is an ordinary one, outside a match.
   const stats = ann.locator('.records .record-stats');
-  await expect(stats.locator('.block .value')).toHaveText(['1', annWon ? '100%' : '0%', '0', '0']);
+  // Ann was the red PI: her rate as a PI is her rate, and she has none as a student.
+  const rate = annWon ? '100%' : '0%';
+  await expect(stats.locator('.block .value')).toHaveText(['1', rate, rate, '\u2014', '0', '0']);
   await expect(ann.locator('.records .record .tag')).toHaveText([text.account.profile.ordinaryTag]);
   const record = ann.locator('.records .record');
   await expect(record).toHaveCount(1);

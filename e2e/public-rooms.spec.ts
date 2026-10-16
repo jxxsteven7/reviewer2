@@ -49,6 +49,7 @@ test('a public room is joined from the home page with an account, and a removed 
   await bob.getByRole('button', { name: text.account.signIn.register, exact: true }).click();
   await bob.getByLabel(text.account.username).fill(bobName);
   await bob.getByLabel(text.account.password, { exact: true }).fill('correct horse');
+  await bob.getByLabel(text.account.signIn.agree).check();
   await bob.getByRole('button', { name: text.account.signIn.registerSubmit }).click();
   await bob.waitForURL(url);
   await expect(bob.locator('.join-form')).toContainText(bobName);

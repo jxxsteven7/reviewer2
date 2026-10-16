@@ -13,6 +13,7 @@ import type {
   RoomView,
   Session,
 } from '@reviewer2/shared';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { io as connect, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 import { fingerprintKey } from '../src/accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS, type AccountLimits } from '../src/accounts/limits';
@@ -434,8 +435,10 @@ export class Browser {
     return this.request('/api/account/avatar', bytes, { 'content-type': type, ...headers });
   }
 
-  register(username: string, password = 'correct horse') {
-    return this.request('/api/register', { username, password });
+  // Registers, having agreed to the records notice as it is now, or to another version of it, or
+  // to none (null).
+  register(username: string, password = 'correct horse', consent: number | null = RECORDS_NOTICE_VERSION) {
+    return this.request('/api/register', { username, password, ...(consent === null ? {} : { consent }) });
   }
 
   logIn(username: string, password = 'correct horse') {

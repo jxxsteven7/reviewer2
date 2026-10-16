@@ -210,6 +210,7 @@ test('a guest is asked to log in first, comes back after, and may send without',
   await page.getByRole('button', { name: text.account.signIn.register, exact: true }).click();
   await page.getByLabel(text.account.username).fill(own('Cy'));
   await page.getByLabel(text.account.password, { exact: true }).fill('correct horse');
+  await page.getByLabel(text.account.signIn.agree).check();
   await page.getByRole('button', { name: text.account.signIn.registerSubmit }).click();
   await page.waitForURL(/\/$/);
   await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();

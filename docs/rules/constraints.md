@@ -27,6 +27,14 @@ Reviewers check these item by item.
 - Mobile-first, and works in WeChat's built-in browser.
 - Reconnection keeps working: after a refresh or a locked screen, players return to their room, team and role.
 
+## Data
+
+Every row of the database is in the newest format, so that whoever reads the records, the code or a study, reads one format.
+
+- **Before 1.0.0, which is now:** a change to how anything is kept comes with a migration in the same PR that brings every row that is there to the new format; the code reads one format; what can't be brought over goes, with whatever depends on it; and `admin.cjs data check` passes on the data it leaves ([architecture.md](../architecture.md#data)).
+- **After 1.0.0:** one format is still the aim. Rows that a migration at the start can't bring over in one go may be brought over in batches, and until then the code reads both formats; the PR says which rows are still in the old format, how they are brought over and by when, and the reading of the old format goes once they are. Deleting data that players can see takes a maintainer's agreement.
+- **Always:** what is recorded and what it is used for is said as it is in both READMEs, on the registration page and in the warning before an account is deleted, and a change to either changes them in the same PR; and every row of a game's data names its game, so that a second game needs no change to the data of the first.
+
 ## Secrets
 
 - Never commit passwords, keys or tokens. Use environment variables; `.env` is ignored by git.

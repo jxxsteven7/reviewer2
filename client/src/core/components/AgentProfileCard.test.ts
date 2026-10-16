@@ -28,8 +28,9 @@ const page = (changes: Partial<AgentProfileView> = {}): AgentProfileView => ({
   number: 0,
   live: { players: 4, rooms: 3 },
   games: 12,
-  wins: 7,
-  roles: { captain: { games: 8, wins: 5 }, guesser: { games: 6, wins: 3 } },
+  seats: 14,
+  wins: 8,
+  roles: { captain: { seats: 8, wins: 5 }, guesser: { seats: 6, wins: 3 } },
   clues: 30,
   found: 37,
   reviewer2: 2,
@@ -57,8 +58,14 @@ describe('AgentProfileCard', () => {
     expect(text).toContain('Reviewer 1');
     expect(text).toContain('Player No. 0');
     expect(text).toContain('Clones in the rooms right now: 4 · Rooms: 3');
-    expect(text).toContain('Games: 12 · Won: 7');
-    expect(text).toContain('As a PI: 8 played, 5 won · As a student: 6 played, 3 won');
+    // The games, and the share of its seats won, in all and in each role, over how many seats.
+    expect(wrapper.findAll('.block').map((block) => block.findAll('dt, dd').map((cell) => cell.text()))).toEqual([
+      ['Games', '12'],
+      ['Win rate', '57%', '14 seats'],
+      ['PI', '62%', '8 seats'],
+      ['Student', '50%', '6 seats'],
+    ]);
+    expect(wrapper.find('.stat-blocks').classes()).not.toContain('roles');
     expect(text).toContain('Cards found per clue: 1.2');
     expect(text).toContain('Best clue: “Zebra”, 4 cards found');
     expect(text).toContain('Times it revealed Reviewer 2: 2');
@@ -78,8 +85,9 @@ describe('AgentProfileCard', () => {
     const empty = page({
       live: { players: 0, rooms: 0 },
       games: 0,
+      seats: 0,
       wins: 0,
-      roles: { captain: { games: 0, wins: 0 }, guesser: { games: 0, wins: 0 } },
+      roles: { captain: { seats: 0, wins: 0 }, guesser: { seats: 0, wins: 0 } },
       clues: 0,
       found: 0,
       reviewer2: 0,
@@ -92,6 +100,7 @@ describe('AgentProfileCard', () => {
     expect(wrapper.text()).toContain('No clones in the rooms right now');
     expect(wrapper.text()).toContain('No game with it has finished yet.');
     expect(wrapper.find('.stats').exists()).toBe(false);
+    expect(wrapper.find('.block').exists()).toBe(false);
   });
 
   test('shows an account what it has played with it, apart, in Chinese too', async () => {
@@ -106,6 +115,7 @@ describe('AgentProfileCard', () => {
     expect(mine.text()).toContain('对阵：你赢 0 局，输 3 局');
     expect(mine.text()).toContain('替你托管：1 局');
     expect(wrapper.text()).toContain('最得意的线索：「Zebra」，翻对 4 张');
+    expect(wrapper.findAll('.block')[1]?.text()).toBe('总胜率57%14 次');
   });
 
   test('shows why it could not be read', async () => {

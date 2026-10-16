@@ -748,4 +748,171 @@ export const MIGRATIONS: readonly string[] = [
   FROM runs JOIN latest ON latest.account_id = runs.account_id
   GROUP BY runs.account_id;
   `,
+  // 23: every row of a game's data names its game, nothing is kept that the records can give, and
+  // every account says what it agreed to, as the maintainers decided before the first public
+  // release (docs/rules/constraints.md#data). The tables are rebuilt as migration 22 rebuilt the
+  // records, every row kept with its id and the count that AUTOINCREMENT goes on from, so that
+  // nothing in an old format comes back:
+  //
+  // - streaks go (docs/architecture.md#streaks): they are counted from the records whenever they
+  //   are asked for, which the records allow, since every game on them says whether it was won and
+  //   in which order it came. Before the table goes, the rows in it are held against the count,
+  //   and a row that differs stops the migration: the count is the one that migration 22 made,
+  //   over the games that no AI played in, and the two can only differ where the records were
+  //   changed by hand.
+  // - accounts are rebuilt with the handle no longer nullable, which the code alone made sure of
+  //   since migration 11 (an account without one, which there shouldn't be, draws one), and with
+  //   which version of the notice on how games are recorded the account agreed to and when
+  //   (RECORDS_NOTICE_VERSION in shared/src/accounts.ts, docs/architecture.md#accounts). The
+  //   accounts that are there agreed to the first version, as the maintainers confirmed with
+  //   their players, at the time of the migration.
+  // - titles get the game that the match or the game of each was of, from its record; a title
+  //   that no record answers for, which migration 22 left none of, goes.
+  // - agent_plays get the game too, from the record of the game, and what the game counts of an
+  //   AI player in a seat, which was five columns of the first game's own counts, becomes one
+  //   column of JSON (`feats`) in the game's own shape, as the game gives it
+  //   (GameModule.agentFeats), as how a game began and its log are kept: a second game keeps its
+  //   own counts there without a change to the table. A row for someone the AI played for keeps
+  //   none, as the code never gave it any. A row of a game that isn't kept, which migration 22
+  //   left none of, goes.
+  `
+  CREATE TEMP TABLE streaks_counted (
+    account_id INTEGER PRIMARY KEY,
+    best_wins INTEGER NOT NULL,
+    best_losses INTEGER NOT NULL,
+    run INTEGER NOT NULL,
+    run_won INTEGER NOT NULL
+  );
+  WITH ordered AS (
+    SELECT account_id, id, won,
+      row_number() OVER (PARTITION BY account_id ORDER BY id)
+        - row_number() OVER (PARTITION BY account_id, won ORDER BY id) AS run_key
+    FROM game_records WHERE agents = 0
+  ), runs AS (
+    SELECT account_id, won, count(*) AS length, max(id) AS last_id
+    FROM ordered GROUP BY account_id, won, run_key
+  ), latest AS (
+    SELECT account_id, won, length FROM runs
+    WHERE last_id = (SELECT max(id) FROM game_records WHERE game_records.account_id = runs.account_id AND agents = 0)
+  )
+  INSERT INTO streaks_counted (account_id, best_wins, best_losses, run, run_won)
+  SELECT runs.account_id,
+    max(CASE WHEN runs.won = 1 THEN runs.length ELSE 0 END),
+    max(CASE WHEN runs.won = 0 THEN runs.length ELSE 0 END),
+    latest.length,
+    latest.won
+  FROM runs JOIN latest ON latest.account_id = runs.account_id
+  GROUP BY runs.account_id;
+  CREATE TEMP TABLE streaks_differ (
+    account_id INTEGER CONSTRAINT streaks_differ_from_the_records CHECK (account_id IS NULL)
+  );
+  INSERT INTO streaks_differ
+    SELECT account_id FROM (
+      SELECT account_id, best_wins, best_losses, run, run_won FROM streaks
+      EXCEPT SELECT account_id, best_wins, best_losses, run, run_won FROM streaks_counted
+    )
+    UNION SELECT account_id FROM (
+      SELECT account_id, best_wins, best_losses, run, run_won FROM streaks_counted
+      EXCEPT SELECT account_id, best_wins, best_losses, run, run_won FROM streaks
+    );
+  DROP TABLE streaks_differ;
+  DROP TABLE streaks_counted;
+  DROP TABLE streaks;
+
+  CREATE TABLE new_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    handle TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL,
+    username_key TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    email_fp BLOB UNIQUE,
+    avatar TEXT,
+    avatar_banned INTEGER NOT NULL DEFAULT 0 CHECK (avatar_banned IN (0, 1)),
+    public_barred INTEGER NOT NULL DEFAULT 0 CHECK (public_barred IN (0, 1)),
+    profile_banned INTEGER NOT NULL DEFAULT 0 CHECK (profile_banned IN (0, 1)),
+    agents INTEGER NOT NULL DEFAULT 0 CHECK (agents IN (0, 1)),
+    link TEXT,
+    bio TEXT,
+    show_record INTEGER NOT NULL DEFAULT 0 CHECK (show_record IN (0, 1)),
+    show_thanks INTEGER NOT NULL DEFAULT 0 CHECK (show_thanks IN (0, 1)),
+    room_setup TEXT,
+    consent_version INTEGER NOT NULL CHECK (consent_version > 0),
+    consented_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  ) STRICT;
+  INSERT INTO new_accounts (id, handle, username, username_key, password, email_fp, avatar, avatar_banned,
+      public_barred, profile_banned, agents, link, bio, show_record, show_thanks, room_setup,
+      consent_version, consented_at, created_at)
+    SELECT id, coalesce(handle, lower(hex(randomblob(6)))), username, username_key, password, email_fp, avatar,
+      avatar_banned, public_barred, profile_banned, agents, link, bio, show_record, show_thanks, room_setup,
+      1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), created_at FROM accounts;
+  DELETE FROM sqlite_sequence WHERE name = 'new_accounts';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_accounts', seq FROM sqlite_sequence WHERE name = 'accounts';
+  DROP TABLE accounts;
+  ALTER TABLE new_accounts RENAME TO accounts;
+  CREATE INDEX accounts_avatar ON accounts (avatar) WHERE avatar IS NOT NULL;
+
+  DELETE FROM titles WHERE match_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM match_records WHERE match_records.match_id = titles.match_id AND match_records.account_id = titles.account_id
+  );
+  DELETE FROM titles WHERE game_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM game_records WHERE game_records.game_id = titles.game_id AND game_records.account_id = titles.account_id
+  );
+  CREATE TABLE new_titles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    game TEXT NOT NULL,
+    title TEXT NOT NULL,
+    match_id TEXT,
+    game_id TEXT,
+    turn INTEGER CHECK (turn > 0),
+    awarded_at TEXT NOT NULL,
+    CHECK ((game_id IS NULL) = (turn IS NULL)),
+    CHECK ((match_id IS NULL) <> (game_id IS NULL))
+  ) STRICT;
+  INSERT INTO new_titles (id, account_id, game, title, match_id, game_id, turn, awarded_at)
+    SELECT id, account_id,
+      CASE WHEN match_id IS NOT NULL
+        THEN (SELECT game FROM match_records WHERE match_records.match_id = titles.match_id
+              AND match_records.account_id = titles.account_id)
+        ELSE (SELECT game FROM game_records WHERE game_records.game_id = titles.game_id
+              AND game_records.account_id = titles.account_id)
+      END,
+      title, match_id, game_id, turn, awarded_at FROM titles;
+  DELETE FROM sqlite_sequence WHERE name = 'new_titles';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_titles', seq FROM sqlite_sequence WHERE name = 'titles';
+  DROP TABLE titles;
+  ALTER TABLE new_titles RENAME TO titles;
+  CREATE INDEX titles_account ON titles (account_id);
+  CREATE UNIQUE INDEX titles_match ON titles (account_id, title, match_id) WHERE match_id IS NOT NULL;
+  CREATE UNIQUE INDEX titles_game ON titles (account_id, title, game_id, turn) WHERE game_id IS NOT NULL;
+
+  DELETE FROM agent_plays WHERE game_id NOT IN (SELECT game_id FROM replays);
+  CREATE TABLE new_agent_plays (
+    game_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    game TEXT NOT NULL,
+    persona TEXT NOT NULL,
+    takeover INTEGER NOT NULL CHECK (takeover IN (0, 1)),
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    side TEXT,
+    role TEXT,
+    won INTEGER CHECK (won IN (0, 1)),
+    feats TEXT CHECK (feats IS NULL OR json_type(feats) = 'object'),
+    PRIMARY KEY (game_id, player_id)
+  ) STRICT;
+  INSERT INTO new_agent_plays (game_id, player_id, game, persona, takeover, account_id, side, role, won, feats)
+    SELECT game_id, player_id,
+      (SELECT game FROM replays WHERE replays.game_id = agent_plays.game_id),
+      persona, takeover, account_id, side, role, won,
+      CASE WHEN takeover = 1 THEN NULL ELSE json_object(
+        'clues', clues, 'found', found, 'reviewer2', reviewer2,
+        'best', CASE WHEN best_word IS NULL THEN NULL ELSE json_object('word', best_word, 'found', best_found) END
+      ) END
+    FROM agent_plays;
+  DROP TABLE agent_plays;
+  ALTER TABLE new_agent_plays RENAME TO agent_plays;
+  CREATE INDEX agent_plays_persona ON agent_plays (persona);
+  CREATE INDEX agent_plays_account ON agent_plays (account_id);
+  `,
 ];

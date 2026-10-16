@@ -220,7 +220,9 @@ const email = z.string().max(4 * MAX_EMAIL_LENGTH);
 const linkToken = z.string().max(64);
 
 export const ACCOUNT_REQUESTS = {
-  register: z.object({ username: z.string(), password }),
+  // `consent` is the version of the notice on how games are recorded that the player agreed to
+  // (RECORDS_NOTICE_VERSION in accounts.ts); the rules answer a missing or an older one.
+  register: z.object({ username: z.string(), password, consent: z.number().int().optional() }),
   login: z.object({ username: z.string(), password }),
   logout: none,
   username: z.object({ username: z.string() }),

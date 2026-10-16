@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import {
   BUSY_TIMEOUT_MS,
   DATABASE_FILE,
@@ -13,6 +14,7 @@ import {
   type Database,
 } from './database';
 import { MIGRATIONS } from './migrations';
+import { AccountStore } from './accounts';
 import { RecordStore } from './records';
 
 const NOW = Date.UTC(2026, 9, 9, 13, 30, 5);
@@ -77,7 +79,6 @@ describe('a database in DATA_DIR', () => {
       'sessions',
       'settings',
       'sqlite_sequence',
-      'streaks',
       'titles',
     ]);
     expect(schemaVersion(database.db)).toBe(MIGRATIONS.length);
@@ -1136,6 +1137,137 @@ describe('a database in DATA_DIR', () => {
     expect(pragma(db, 'foreign_key_check')).toBeUndefined();
   });
 
+  // A database of the twenty-second release: two accounts, one without a handle, with their games,
+  // match, titles and what the AI did, and the streaks as the release kept them.
+  async function twentySecond(streaks = '(1, 2, 1, 1, 0)') {
+    const database = await open(dir, MIGRATIONS.slice(0, 22));
+    database.db.exec(`
+      INSERT INTO accounts (id, username, username_key, password, created_at, handle, show_record, room_setup) VALUES
+        (1, 'Ann', 'ann', 'h', '2026-10-01T00:00:00.000Z', 'aaaaaaaaaaaa', 1, '{"room":{}}'),
+        (2, 'Bob', 'bob', 'h', '2026-10-02T00:00:00.000Z', NULL, 0, NULL);
+      INSERT INTO replays (game_id, game, ended_at, log, ending, winner, reason, started_at, accounts, guests,
+        agents, takeover, in_match, practice, language, fields, version, words) VALUES
+        ('g1', 'keywords', 'now', '{"v":2}', 'finished', 'red', 'found', 'now', 1, 0, 1, 1, 0, 1, 'en', '[]', 'v', 'w');
+      -- Ann won twice and lost once, then played a game with an AI; the streaks say so.
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
+        match_id, match_game, match_games, agents) VALUES
+        (1, 'keywords', 'g1', 'now', 'red', 'captain', 'red', 1, 'oral', 0, NULL, NULL, NULL, 1),
+        (1, 'keywords', 'g2', 'now', 'red', 'captain', 'red', 1, 'oral', 10, 'm1', 1, 1, 0),
+        (1, 'keywords', 'g3', 'now', 'red', 'captain', 'red', 1, 'oral', 10, NULL, NULL, NULL, 0),
+        (1, 'keywords', 'g4', 'now', 'red', 'captain', 'blue', 0, 'reject', -3, NULL, NULL, NULL, 0);
+      INSERT INTO streaks VALUES ${streaks};
+      INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
+        (1, 'keywords', 'm1', 'now', 1, 1, 2, 10, 'best_paper');
+      INSERT INTO titles (id, account_id, title, match_id, game_id, turn, awarded_at) VALUES
+        (5, 1, 'best_paper', 'm1', NULL, NULL, 'now'),
+        (6, 1, 'opening_record', NULL, 'g3', 1, 'now'),
+        (7, 1, 'black_hole', 'm9', NULL, NULL, 'now');
+      INSERT INTO agent_plays (game_id, player_id, persona, takeover, account_id, side, role, won,
+        clues, found, reviewer2, best_word, best_found) VALUES
+        ('g1', 'a', 'reviewer1', 0, NULL, 'red', 'guesser', 1, 0, 0, 1, NULL, NULL),
+        ('g1', 'b', 'reviewer1', 0, NULL, 'blue', 'captain', 0, 2, 3, 0, 'Pair', 2),
+        ('g1', 'p2', 'reviewer1', 1, 2, 'blue', 'guesser', 0, 0, 0, 0, NULL, NULL),
+        ('gone', 'c', 'reviewer1', 0, NULL, 'red', 'captain', 1, 1, 1, 0, 'One', 1);
+    `);
+    database.db.close();
+  }
+
+  test('of the twenty-second release names the game on every row, keeps what each account agreed to, and counts its streaks', async () => {
+    await twentySecond();
+    const migrated = await open(dir, MIGRATIONS.slice(0, 23));
+    expect(migrated).toMatchObject({ schema: 23, migratedFrom: 22 });
+    const { db } = migrated;
+    const all = (sql: string) => db.prepare(sql).all();
+    // Every account has a handle, and agreed to the first version of the records notice at the time
+    // of the migration; the rest of each is as it was.
+    const accounts = all(
+      'SELECT id, handle, username, show_record AS showRecord, room_setup AS setup, consent_version AS consent, ' +
+        'consented_at AS consentedAt, created_at AS createdAt FROM accounts ORDER BY id',
+    );
+    expect(accounts).toEqual([
+      {
+        id: 1,
+        handle: 'aaaaaaaaaaaa',
+        username: 'Ann',
+        showRecord: 1,
+        setup: '{"room":{}}',
+        consent: 1,
+        consentedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/),
+        createdAt: '2026-10-01T00:00:00.000Z',
+      },
+      {
+        id: 2,
+        handle: expect.stringMatching(/^[0-9a-f]{12}$/),
+        username: 'Bob',
+        showRecord: 0,
+        setup: null,
+        consent: 1,
+        consentedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/),
+        createdAt: '2026-10-02T00:00:00.000Z',
+      },
+    ]);
+    // The titles name their game; the title of a match that no record names is gone; the ids go on
+    // from where they were.
+    expect(all('SELECT id, game, title, match_id AS match, game_id AS gameId FROM titles ORDER BY id')).toEqual([
+      { id: 5, game: 'keywords', title: 'best_paper', match: 'm1', gameId: null },
+      { id: 6, game: 'keywords', title: 'opening_record', match: null, gameId: 'g3' },
+    ]);
+    db.exec(
+      "INSERT INTO titles (account_id, game, title, match_id, awarded_at) VALUES (2, 'keywords', 'best_paper', 'm2', 'now')",
+    );
+    expect(all('SELECT max(id) AS id FROM titles')).toEqual([{ id: 8 }]);
+    // What the AI did names the game and keeps the game's counts as JSON, as the code writes them;
+    // a row for someone it played for keeps none; a row of a game that isn't kept is gone.
+    expect(all('SELECT player_id AS player, game, feats FROM agent_plays ORDER BY player_id')).toEqual([
+      { player: 'a', game: 'keywords', feats: '{"clues":0,"found":0,"reviewer2":1,"best":null}' },
+      { player: 'b', game: 'keywords', feats: '{"clues":2,"found":3,"reviewer2":0,"best":{"word":"Pair","found":2}}' },
+      { player: 'p2', game: 'keywords', feats: null },
+    ]);
+    expect(all("SELECT account_id AS account FROM agent_plays WHERE player_id = 'p2'")).toEqual([{ account: 2 }]);
+    // The streaks are counted from the records: the game with an AI counts for none.
+    expect(tables(db)).not.toContain('streaks');
+    const records = new RecordStore(db);
+    expect(records.streaks(1)).toEqual({ wins: 2, losses: 1 });
+    expect(records.streaks(2)).toEqual({ wins: 0, losses: 0 });
+    // The ids of accounts go on from where they were, and everything of an account still goes with
+    // it, the AI's row for it unlinked.
+    const store = new AccountStore(db);
+    expect(store.create('Cat', 'cat', 'h', RECORDS_NOTICE_VERSION)?.id).toBe(3);
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(all('SELECT count(*) AS n FROM titles')).toEqual([{ n: 1 }]);
+    expect(all('SELECT count(*) AS n FROM game_records')).toEqual([{ n: 0 }]);
+    db.exec('DELETE FROM accounts WHERE id = 2');
+    expect(all("SELECT account_id AS account FROM agent_plays WHERE player_id = 'p2'")).toEqual([{ account: null }]);
+    // Nothing in the old formats can come back.
+    const refused = (sql: string) => expect(() => db.exec(sql), sql).toThrow(/constraint/i);
+    refused(
+      "INSERT INTO accounts (username, username_key, password, created_at, handle) VALUES ('D', 'd', 'h', 'now', 'dddddddddddd')",
+    );
+    refused(
+      'INSERT INTO accounts (username, username_key, password, created_at, consent_version, consented_at) ' +
+        "VALUES ('D', 'd', 'h', 'now', 1, 'now')",
+    );
+    refused(
+      'INSERT INTO accounts (username, username_key, password, created_at, handle, consent_version, consented_at) ' +
+        "VALUES ('D', 'd', 'h', 'now', 'dddddddddddd', 0, 'now')",
+    );
+    refused("INSERT INTO titles (account_id, title, match_id, awarded_at) VALUES (3, 'best_paper', 'm3', 'now')");
+    refused(
+      "INSERT INTO agent_plays (game_id, player_id, game, persona, takeover, feats) VALUES ('g1', 'x', 'keywords', 'reviewer1', 0, '[1]')",
+    );
+    refused("INSERT INTO agent_plays (game_id, player_id, persona, takeover) VALUES ('g1', 'y', 'reviewer1', 0)");
+    expect(pragma(db, 'foreign_key_check')).toBeUndefined();
+  });
+
+  test('of the twenty-second release is left as it was when its streaks differ from its records', async () => {
+    await twentySecond('(1, 3, 1, 1, 0)');
+    await expect(open(dir, MIGRATIONS.slice(0, 23))).rejects.toThrow('streaks_differ_from_the_records');
+    const after = new DatabaseSync(join(dir, DATABASE_FILE));
+    expect(schemaVersion(after)).toBe(22);
+    expect(tables(after)).toContain('streaks');
+    after.close();
+  });
+
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));
     first.db.exec(
@@ -1308,7 +1440,6 @@ describe('a database in memory', () => {
       'sessions',
       'settings',
       'sqlite_sequence',
-      'streaks',
       'titles',
     ]);
     expect(readdirSync(dir)).toEqual([]);

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { jpeg } from '../test/images';
 import { addAccounts } from '../test/statistics';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
@@ -34,7 +35,7 @@ afterEach(() => {
 const run = (...args: string[]) => admin(args, { DATA_DIR: dir }, (line) => printed.push(line));
 
 function annWithAvatar(): string {
-  const ann = accounts.store.create('Ann Lee', 'ann lee', 'hash');
+  const ann = accounts.store.create('Ann Lee', 'ann lee', 'hash', RECORDS_NOTICE_VERSION);
   if (!ann) throw new Error('no account');
   const file = accounts.avatars.save(jpeg(), 'jpeg');
   accounts.store.setAvatar(ann.id, file);
@@ -111,7 +112,7 @@ describe('avatar remove', () => {
 
 describe('profile clear', () => {
   function annWithProfile() {
-    const ann = accounts.store.create('Ann Lee', 'ann lee', 'hash');
+    const ann = accounts.store.create('Ann Lee', 'ann lee', 'hash', RECORDS_NOTICE_VERSION);
     if (!ann) throw new Error('no account');
     accounts.store.setProfile(ann.id, { link: 'https://ann.example/', bio: 'Hi', showRecord: true, showThanks: false });
     return ann;
@@ -151,9 +152,9 @@ describe('profile list', () => {
     expect(run('profile', 'list')).toBe(0);
     expect(printed).toEqual(['No profile has a link or a bio.']);
     printed.length = 0;
-    const ann = accounts.store.create('Ann', 'ann', 'hash');
-    const bob = accounts.store.create('Bob', 'bob', 'hash');
-    accounts.store.create('Cy', 'cy', 'hash');
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
+    const bob = accounts.store.create('Bob', 'bob', 'hash', RECORDS_NOTICE_VERSION);
+    accounts.store.create('Cy', 'cy', 'hash', RECORDS_NOTICE_VERSION);
     if (!ann || !bob) throw new Error('no account');
     accounts.store.setProfile(ann.id, {
       link: 'https://ann.example/',
@@ -259,7 +260,7 @@ const feedback = (changes: Partial<NewFeedback> = {}): NewFeedback => ({
 
 describe('accounts bar', () => {
   test('keeps an account out of public rooms, until accounts unbar', () => {
-    accounts.store.create('Ann Lee', 'ann lee', 'hash');
+    accounts.store.create('Ann Lee', 'ann lee', 'hash', RECORDS_NOTICE_VERSION);
     expect(run('accounts', 'bar', 'ANN LEE')).toBe(0);
     expect(printed).toEqual(['Ann Lee may not create or join public rooms. Private rooms are still open to them.']);
     expect(accounts.store.byKey('ann lee')).toMatchObject({ publicBarred: true });
@@ -276,7 +277,7 @@ describe('accounts bar', () => {
 
 describe('agents', () => {
   test('let an account invite AI players, until agents deny, and list those that may', () => {
-    accounts.store.create('Ann Lee', 'ann lee', 'hash');
+    accounts.store.create('Ann Lee', 'ann lee', 'hash', RECORDS_NOTICE_VERSION);
     expect(run('agents', 'list')).toBe(0);
     expect(printed).toEqual(['No account may invite AI players.']);
     expect(run('agents', 'allow', 'ANN LEE')).toBe(0);
@@ -296,8 +297,8 @@ describe('agents', () => {
 describe('reports list', () => {
   test('prints the latest reports, with whom they name and the note on one line', () => {
     vi.useFakeTimers({ now: Date.UTC(2026, 10, 1, 9) });
-    const ann = accounts.store.create('Ann', 'ann', 'hash');
-    const bob = accounts.store.create('Bob', 'bob', 'hash');
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
+    const bob = accounts.store.create('Bob', 'bob', 'hash', RECORDS_NOTICE_VERSION);
     if (!ann || !bob) throw new Error('no account');
     expect(run('reports', 'list')).toBe(0);
     expect(printed).toEqual(['No reports yet.']);
@@ -312,14 +313,17 @@ describe('reports list', () => {
     printed = [];
     expect(run('reports', 'list')).toBe(0);
     expect(printed).toEqual(['1 report:', '#1  2026-11-01  Ann reported Bob (account Bob) in R2-K7QX: Rude / clues']);
-    store.report({ reporterId: bob.id, reportedId: null, reportedName: 'Guest', roomCode: 'K7QX', text: null });
+    store.report({ reporterId: bob.id, reportedId: null, reportedName: 'Guest 3', roomCode: 'K7QX', text: null });
+    // A report of Ann, whose account goes: the name it keeps may be someone else's by now.
+    store.report({ reporterId: bob.id, reportedId: ann.id, reportedName: 'Ann', roomCode: 'K7QX', text: null });
     accounts.store.setPublicBarred(bob.id, true);
     accounts.store.delete(ann.id);
     printed = [];
     expect(run('reports', 'list')).toBe(0);
     expect(printed).toEqual([
-      '2 reports in all, the latest 2 first:',
-      '#2  2026-11-01  Bob reported Guest in R2-K7QX',
+      '3 reports in all, the latest 3 first:',
+      '#3  2026-11-01  Bob reported Ann (deleted account) in R2-K7QX',
+      '#2  2026-11-01  Bob reported Guest 3 in R2-K7QX',
       '#1  2026-11-01  (deleted account) reported Bob (account Bob, barred) in R2-K7QX: Rude / clues',
     ]);
   });
@@ -334,7 +338,7 @@ const adopt = (id: string, ...said: string[]) => run('feedback', 'adopt', id, ..
 
 describe('feedback adopt', () => {
   test('lists the feedback among the contributions at once, by its name, counted for its account', () => {
-    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
     if (!ann) throw new Error('no account');
     const store = new FeedbackStore(database.db);
     store.add(feedback({ credit: 'Ann L.', accountId: ann.id, linkProfile: true }));
@@ -418,7 +422,7 @@ describe('feedback adopt', () => {
   });
 
   test('lists feedback signed with an account that is gone as a deleted player, counted for no account', () => {
-    const bob = accounts.store.create('Bob', 'bob', 'hash');
+    const bob = accounts.store.create('Bob', 'bob', 'hash', RECORDS_NOTICE_VERSION);
     if (!bob) throw new Error('no account');
     const store = new FeedbackStore(database.db);
     store.add(feedback({ accountId: bob.id, linkProfile: true }));
@@ -521,7 +525,7 @@ describe('feedback adopt', () => {
   });
 
   test("says when the name is another account's username, which may be someone passing for its owner", () => {
-    accounts.store.create('Cat', 'cat', 'hash');
+    accounts.store.create('Cat', 'cat', 'hash', RECORDS_NOTICE_VERSION);
     const store = new FeedbackStore(database.db);
     store.add(feedback({ credit: 'CAT' }));
     store.setIssue(1, 41);
@@ -626,7 +630,7 @@ describe('feedback draft', () => {
 
   test('holds the text and the name alone, which is all that the form says is published', () => {
     const store = new FeedbackStore(database.db);
-    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
     store.add(
       feedback({
         kind: 'bug',
@@ -651,7 +655,7 @@ describe('feedback draft', () => {
 
   test('names feedback signed with an account by the account as it is now, or a deleted player', () => {
     const store = new FeedbackStore(database.db);
-    const ann = accounts.store.create('Ann', 'ann', 'hash');
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
     if (!ann) throw new Error('no account');
     store.add(feedback({ accountId: ann.id, linkProfile: true }));
     store.add(feedback({ kind: 'bug', accountId: ann.id, linkProfile: true }));
@@ -1165,5 +1169,46 @@ describe('feedback delete, restore and trash', () => {
     expect(run('feedback', 'delete', '1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 is in the trash already, 0 days left.');
     expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
+  });
+});
+
+describe('data check', () => {
+  const ann = () => {
+    const account = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
+    if (!account) throw new Error('no account');
+    return account;
+  };
+
+  test('says that every check passed, on a database that no server has open, and leaves no WAL behind', () => {
+    ann();
+    database.db.close();
+    expect(run('data', 'check')).toBe(0);
+    expect(printed).toEqual(['Every check passed.']);
+    expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
+  });
+
+  test('prints each rule broken with how many rows break it and the first few, by id, and exits with 1', () => {
+    const account = ann();
+    accounts.store.setAvatar(account.id, 'gone.webp');
+    const many = Array.from({ length: 12 }, (_, i) => `('x${String(i).padStart(2, '0')}', 'p', ${account.id})`);
+    database.db.exec(`INSERT INTO game_players VALUES ${many.join(', ')}`);
+    expect(run('data', 'check')).toBe(1);
+    expect(printed).toEqual([
+      'accounts whose avatar file is missing: 1 row: 1',
+      'players of games that are not kept: 12 rows: ' +
+        'x00:p, x01:p, x02:p, x03:p, x04:p, x05:p, x06:p, x07:p, x08:p, x09:p and 2 more',
+      '2 checks failed.',
+    ]);
+  });
+
+  test('leaves the avatar files unchecked where there is no directory of them, and says so', () => {
+    const account = ann();
+    accounts.store.setAvatar(account.id, 'gone.webp');
+    rmSync(join(dir, AVATAR_DIR), { recursive: true });
+    expect(run('data', 'check')).toBe(0);
+    expect(printed).toEqual([
+      `There is no ${AVATAR_DIR} directory in ${dir}, so the avatar files were not checked.`,
+      'Every check passed.',
+    ]);
   });
 });

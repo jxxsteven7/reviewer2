@@ -1,4 +1,4 @@
-import { usernameKey } from '@reviewer2/shared';
+import { RECORDS_NOTICE_VERSION, usernameKey } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { AccountStore } from './accounts';
@@ -72,7 +72,7 @@ describe('the feedback', () => {
 
   test('is signed with the account it came from, which keeps no name, or anonymous, and only a guest leaves a name', () => {
     const feedback = store();
-    const ann = new AccountStore(db).create('Ann', 'ann', 'h');
+    const ann = new AccountStore(db).create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
     if (!ann) throw new Error('no account');
     // Signed with the account: the name that came along isn't kept, as the account's is looked up.
     feedback.add(entry({ credit: 'Ann L', accountId: ann.id, linkProfile: true }));
@@ -107,7 +107,7 @@ describe('the feedback', () => {
   test("says when a guest's name is an account's username, however the name is written", () => {
     const feedback = store();
     const accounts = new AccountStore(db);
-    const cat = accounts.create('Cat', usernameKey('Cat'), 'h');
+    const cat = accounts.create('Cat', usernameKey('Cat'), 'h', RECORDS_NOTICE_VERSION);
     if (!cat) throw new Error('no account');
     feedback.add(entry({ credit: 'CAT' }));
     feedback.add(entry({ credit: 'cat' }));
@@ -132,7 +132,7 @@ describe('the feedback', () => {
 
   test('says whether its name may link to its profile, and remembers the issue it was published as', () => {
     const feedback = store();
-    const ann = new AccountStore(db).create('Ann', 'ann', 'h');
+    const ann = new AccountStore(db).create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
     if (!ann) throw new Error('no account');
     feedback.add(entry());
     feedback.add(entry({ accountId: ann.id, linkProfile: true }));
@@ -426,8 +426,8 @@ describe('the feedback contributions', () => {
   test('are the adopted feedback, the latest first, by the account that signed it as it is now, a guest name or anonymous', () => {
     const feedback = store();
     const accounts = new AccountStore(db);
-    const ann = accounts.create('Ann', 'ann', 'h');
-    const bob = accounts.create('Bob', 'bob', 'h');
+    const ann = accounts.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
+    const bob = accounts.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
     if (!ann || !bob) throw new Error('no account');
     // Ann signed with her account; Bob stayed anonymous, though he shows his contributions on his
     // profile; Cat was a guest who left her name; the fourth left none.
@@ -516,8 +516,8 @@ describe('the feedback contributions', () => {
   test('are counted for the account they came from, by kind, those without a name too', () => {
     const feedback = store();
     const accounts = new AccountStore(db);
-    const ann = accounts.create('Ann', 'ann', 'h');
-    const bob = accounts.create('Bob', 'bob', 'h');
+    const ann = accounts.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
+    const bob = accounts.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
     if (!ann || !bob) throw new Error('no account');
     for (const [kind, credit, accountId] of [
       ['bug', 'Ann', ann.id],
@@ -627,8 +627,8 @@ describe('a report', () => {
   test('is kept with who reported whom, read back newest first, and stays when an account goes', () => {
     const feedback = store();
     const accounts = new AccountStore(db);
-    const ann = accounts.create('Ann', 'ann', 'h');
-    const bob = accounts.create('Bob', 'bob', 'h');
+    const ann = accounts.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
+    const bob = accounts.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
     if (!ann || !bob) throw new Error('no account');
     expect(
       feedback.report({ reporterId: ann.id, reportedId: bob.id, reportedName: 'Bob', roomCode: 'K7QX', text: 'Rude' }),
@@ -675,7 +675,7 @@ describe('a report', () => {
 
   test('is refused when the database is too large', () => {
     const feedback = store({ ...DEFAULT_FEEDBACK_LIMITS, maxDatabaseBytes: 1 });
-    const ann = new AccountStore(db).create('Ann', 'ann', 'h');
+    const ann = new AccountStore(db).create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
     if (!ann) throw new Error('no account');
     expect(
       feedback.report({ reporterId: ann.id, reportedId: null, reportedName: 'X', roomCode: 'K7QX', text: null }),
