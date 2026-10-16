@@ -26,7 +26,7 @@ import { act, reconnecting } from '../../core/socket';
 import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
-import { useScrolled } from '../../core/useScrolled';
+import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import { useTitleFolds } from '../../core/useTitleFolds';
 import ClockBar from './ClockBar.vue';
@@ -56,8 +56,8 @@ import { useScoreFloats } from './useScoreFloats';
 // with the tools on its right; on a phone the groups and the clue log open as sheets from the two
 // buttons in the bar under the board, so that the board comes first, and the chat from a third.
 //
-// The clock stays at the top of the screen, with a soft shadow under it once the page has scrolled,
-// as under a page's masthead, with the chair's button to pause the game and resume it after it and
+// The clock stays at the top of the screen, with a soft shadow under it while the page passes under
+// it, as under a page's masthead, with the chair's button to pause the game and resume it after it and
 // the reaction button at the end, where everyone has it, in reach wherever the page is scrolled and
 // away from the cards and the clue; in a game without a time limit, and once the game is over, the
 // buttons are there alone. While the chair has paused the game, a notice stands
@@ -151,7 +151,7 @@ watch(wide, () => {
 // page's scroll padding, so that a card reached with the keyboard comes into view below it.
 const clockBar = ref<HTMLElement | null>(null);
 useStickyHeight(clockBar);
-const scrolled = useScrolled();
+const stuck = useStuck(clockBar);
 
 const game = computed(() => data.value.game as KeywordsView);
 // The line a student is writing to their group, and its sending, kept by the page: the chat's
@@ -451,7 +451,7 @@ const status = computed(() => {
       :me="room.me"
       clock-apart
     />
-    <div ref="clockBar" class="sticky-clock" :class="{ 'below-banner': reconnecting, scrolled }">
+    <div ref="clockBar" class="sticky-clock" :class="{ 'below-banner': reconnecting, stuck }">
       <ClockBar v-if="game.clock && !game.result" :clock="game.clock" :frozen="paused" />
       <UiButton
         v-if="isChair && !game.result"
@@ -653,8 +653,8 @@ const status = computed(() => {
   clip-path: inset(0 -100vmax -12px);
 }
 
-/* The soft shadow under the bar once the page has scrolled, from one edge of the screen to the
-   other, as under a page's masthead (PageMasthead.vue). */
+/* The soft shadow under the bar while it is stuck at the top with the page passing under it, from
+   one edge of the screen to the other, as under a page's masthead (PageMasthead.vue). */
 .sticky-clock::after {
   content: '';
   position: absolute;
@@ -668,7 +668,7 @@ const status = computed(() => {
   transition: opacity var(--motion);
 }
 
-.sticky-clock.scrolled::after {
+.sticky-clock.stuck::after {
   opacity: 1;
 }
 

@@ -30,7 +30,7 @@ import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
 import { act, reconnecting } from '../../core/socket';
 import { ROOM_ACTIONS } from '../../core/useRoomPage';
-import { useScrolled } from '../../core/useScrolled';
+import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
@@ -201,7 +201,7 @@ const readiness = computed(() => {
 // focus comes into view below it, however many rows the bar has.
 const dock = ref<HTMLElement | null>(null);
 useStickyHeight(dock);
-const scrolled = useScrolled();
+const stuck = useStuck(dock);
 
 // The chair switches the room between public and private from the tag beside the heading, as in
 // the room menu, and without asking again. Listing it takes an account: a guest is told so, with
@@ -243,7 +243,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
       v-if="(isChair || mayInviteFriends) && !finished"
       ref="dock"
       class="start-dock"
-      :class="{ 'below-banner': reconnecting, scrolled }"
+      :class="{ 'below-banner': reconnecting, stuck }"
     >
       <div class="start-bar" :class="{ member: !isChair }">
         <div class="ready-line">
@@ -519,9 +519,9 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   clip-path: inset(0 -100vmax -12px);
 }
 
-/* The soft shadow under the bar once the page has scrolled, as under a page's masthead
-   (PageMasthead.vue), which draws none while this bar stays under it: the lowest bar that stays
-   has the shade. */
+/* The soft shadow under the bar while it is stuck under the masthead with the page passing under
+   it, as under a page's masthead (PageMasthead.vue), which draws none while this bar stays under
+   it: the lowest bar that stays has the shade. */
 .start-dock::after {
   content: '';
   position: absolute;
@@ -535,7 +535,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   transition: opacity var(--motion);
 }
 
-.start-dock.scrolled::after {
+.start-dock.stuck::after {
   opacity: 1;
 }
 
