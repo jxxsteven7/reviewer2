@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import { friendsVersion } from '../friends';
+import { knowAliases } from '../names';
 import { shownProfile } from '../profilePanel';
 import ProfilePublic from './ProfilePublic.vue';
 
@@ -240,6 +241,12 @@ describe('ProfilePublic', () => {
     expect(wrapper.get('.likers .line').text()).toContain('Friend');
     expect(wrapper.get('.likers .line').find('button.button').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Only the latest');
+    // A friend goes by the owner's name for them (names.ts), with the username's avatar.
+    knowAliases([{ handle: 'f6e5d4c3b2a1', alias: 'Prof. B' }]);
+    await flushPromises();
+    expect(wrapper.get('.likers .line .name').text()).toBe('Prof. B');
+    expect(wrapper.get('.likers .line .initial').attributes('data-initial')).toBe('B');
+    knowAliases([]);
     wrapper.unmount();
   });
 

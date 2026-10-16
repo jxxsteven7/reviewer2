@@ -138,6 +138,17 @@ button {
   box-shadow: none;
 }
 
+/* The username after the name that the viewer gives a friend, in small grey type, as a sheet's
+   subtitle (UiSheet.vue), a friend's card (ProfileCard.vue) and the questions before acting on a
+   friend (PlayerPanel.vue) have it: such a name may be anyone's, and the username says who it is
+   (usernameAfter in names.ts). Sans at bold, so that it reads the same after a display heading. */
+.username-after {
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
 /* Text for screen readers only. */
 .sr-only {
   position: absolute;

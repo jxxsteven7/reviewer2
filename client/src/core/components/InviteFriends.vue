@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { RoomView } from '@reviewer2/shared';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { errorKey } from '../errors';
+import type { ShownRoom } from '../room';
 import { send } from '../socket';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
@@ -21,16 +21,17 @@ import UiSheet from './UiSheet.vue';
 // invitation or it has lapsed. The list is asked for whenever the sheet opens, since who is online
 // changes all the time. A friend goes by the name the account gives them, if any, with the username
 // after it.
-const props = defineProps<{ open: boolean; room: RoomView }>();
+const props = defineProps<{ open: boolean; room: ShownRoom }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
 const { view, failed, load } = useFriendsList(toRef(props, 'open'));
 const invited = (username: string) => (props.room.invited ?? []).some((friend) => friend.username === username);
 const { busy, run } = useBusy();
 
-// A member with an account is called by their username, so a friend whose name is in the room is
-// here already; the server refuses the others that are, should the names not tell.
-const here = computed(() => new Set(props.room.players.map(({ name }) => name)));
+// The room keeps the username of a member with an account beside whatever it calls them (room.ts),
+// so a friend whose username is in the room is here already; the server refuses the others that
+// are, should the names not tell.
+const here = computed(() => new Set(props.room.players.map(({ name, username }) => username ?? name)));
 const friends = computed(() => view.value?.friends ?? []);
 const candidates = computed(() => {
   const away = friends.value.filter((friend) => !here.value.has(friend.username));

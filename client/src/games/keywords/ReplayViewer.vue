@@ -65,12 +65,14 @@ function nameFor(playerId: string): string {
   return person ? nameOf(person) : t('replay.someone');
 }
 
-// The groups, as the bars show them: an account by its avatar, and a deleted one by its initial.
+// The groups, as the bars show them: an account by its avatar, drawn from its username whatever
+// the page calls it, and a deleted one by its initial.
 const member = (id: string): Member => {
   const person = props.replay.people[id];
   return {
     id,
     name: nameFor(id),
+    ...(person?.handle === undefined || person.name === undefined ? {} : { username: person.name }),
     initial: person?.deleted ? t('replay.deletedInitial') : null,
     ...(person?.guest === undefined ? {} : { guest: person.guest }),
     avatar: person?.avatar ?? null,

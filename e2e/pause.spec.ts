@@ -34,7 +34,7 @@ test('the chair pauses the game, which hides the board and stops the clock, and 
 
   const dealt = game()?.cards.map((card) => card.word) ?? [];
   expect(dealt).toHaveLength(25);
-  // The chair's button to pause stands at the end of the clock, after the reaction button, and the
+  // The chair's button to pause stands after the clock, before the reaction button, and the
   // bar stays at the top of the screen, so it is in sight at the foot of the page too. Nobody else
   // has one, only the reaction button, and the tools at the foot of the page don't.
   const bar = ann.locator('.sticky-clock');
@@ -121,7 +121,7 @@ test('the chair pauses a game without a clock from the top of the screen', async
   await expect(ann.locator('[role="timer"]')).toHaveCount(0);
   await expect(bob.locator('.sticky-clock button')).toHaveText([text.emotes.open]);
   const bar = ann.locator('.sticky-clock');
-  await expect(bar.locator('button')).toHaveText([text.emotes.open, text.game.pause]);
+  await expect(bar.locator('button')).toHaveText([text.game.pause, text.emotes.open]);
   await ann.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect(bar.getByRole('button', { name: text.game.pause })).toBeInViewport();
   await bar.getByRole('button', { name: text.game.pause }).click();

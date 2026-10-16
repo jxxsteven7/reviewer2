@@ -105,12 +105,12 @@ test('the chair starts from a bar that stays in sight, and the game opens at its
   await bar.getByRole('button', { name: text.lobby.start }).click();
 
   // The game opens at its top, with the turn strip and the clock in sight, and no banner; the
-  // reaction button is in the clock's bar now.
+  // reaction button is in the clock's bar now, after the chair's button to pause.
   await expect(ann.locator('.keywords-game')).toBeVisible();
   await expect.poll(() => ann.evaluate(() => window.scrollY)).toBe(0);
   await expect(ann.locator('.strip')).toBeInViewport();
   await expect(ann.locator('.role-banner')).toHaveCount(0);
-  await expect(ann.locator('.sticky-clock .emote-button + .pause')).toBeVisible();
+  await expect(ann.locator('.sticky-clock .pause + .emote-button')).toBeVisible();
 
   // The room menu has the switch for the sounds, the same as the quick reactions': off in one is
   // off in the other.

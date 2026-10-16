@@ -58,7 +58,6 @@ async function submit() {
 
 <template>
   <section class="sign-in">
-    <h1>{{ t('account.signIn.title') }}</h1>
     <p class="intro">{{ t('account.signIn.intro') }}</p>
     <div class="tabs" role="group">
       <button type="button" class="tab" :aria-pressed="mode === 'login'" @click="mode = 'login'">
@@ -108,16 +107,11 @@ async function submit() {
   flex-direction: column;
   gap: var(--space-4);
   max-width: 26rem;
-  margin-top: var(--space-3);
   padding: var(--space-5) var(--space-4);
   border: var(--line-strong) solid var(--ink);
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
-}
-
-h1 {
-  font-size: var(--text-2xl);
 }
 
 .tabs {

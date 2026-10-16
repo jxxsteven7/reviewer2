@@ -166,6 +166,18 @@ describe('the account page', () => {
     expect(socket.reconnect).not.toHaveBeenCalled();
   });
 
+  // The page's title stands on the bar under the masthead (PageTitle.vue), whatever the page shows:
+  // the form has no title of its own.
+  test('has its title on the bar above the form and the account alike', async () => {
+    for (const loggedIn of [false, true]) {
+      const wrapper = await open(undefined, loggedIn);
+      expect(wrapper.get('.page-title h1').text()).toBe('Your account');
+      expect(wrapper.findAll('h1')).toHaveLength(1);
+      expect(wrapper.get('page-masthead-stub').attributes('back')).toBe('true');
+      wrapper.unmount();
+    }
+  });
+
   test('turns the form into the account after a login elsewhere, as in another tab', async () => {
     // Whether a room sent the player here or not: the page was a guest's when it was opened.
     for (const next of [undefined, '/room/K7QX']) {

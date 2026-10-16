@@ -1,14 +1,14 @@
 import type { FriendsView } from '@reviewer2/shared';
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
-import { friendsVersion } from './friends';
-import { connect, send, socket } from './socket';
+import { friendsVersion, listFriends } from './friends';
+import { connect, socket } from './socket';
 
 // The account's friends and requests, for the parts of a page that show them (ProfileFriends,
 // InviteFriends; docs/architecture.md#friends). The list is asked for when the part is shown, on
 // every connection after that, since one that comes after a break may have missed a change and who
 // is online changes all the time, whenever the server says that the friends or the requests
-// changed, and on request. `shown` says whether the part is on the screen; nothing is asked while
-// it isn't.
+// changed, and on request; parts that ask at the same moment share one answer (listFriends).
+// `shown` says whether the part is on the screen; nothing is asked while it isn't.
 export function useFriendsList(shown: Ref<boolean> = ref(true)) {
   const view = ref<FriendsView | null>(null);
   // Why the last answer didn't come, if it didn't.
@@ -18,7 +18,7 @@ export function useFriendsList(shown: Ref<boolean> = ref(true)) {
   async function load() {
     const turn = (asked += 1);
     failed.value = null;
-    const reply = await send<FriendsView>('friends:list');
+    const reply = await listFriends();
     if (turn !== asked) return; // asked again meanwhile, and that answer counts
     if (reply.ok) view.value = { friends: reply.friends, incoming: reply.incoming, outgoing: reply.outgoing };
     else {

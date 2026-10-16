@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { RoomView } from '@reviewer2/shared';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatList } from '../i18n';
+import { nameOf } from '../names';
+import type { ShownRoom } from '../room';
 import PlayerAvatar from './PlayerAvatar.vue';
 
 // The friends whom the viewer has invited into the room and who haven't come, in the start bar
@@ -11,13 +12,15 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // A friend who comes in turns to their own colors for a moment, the dots stilled, and fades away:
 // the list of who is in the room has them from then on. One whose
 // invitation ends otherwise, ignored or lapsed, goes at once. The page tells the two apart by
-// whether the name came into the room as it went from the invitations. A tap opens the sheet to
-// invite friends. Four show, and "+n" counts the rest.
-const props = defineProps<{ room: RoomView }>();
+// whether the username came into the room as it went from the invitations. The button names them
+// as the page names friends (names.ts). A tap opens the sheet to invite friends. Four show, and
+// "+n" counts the rest.
+const props = defineProps<{ room: ShownRoom }>();
 const emit = defineEmits<{ open: [] }>();
 const { t, locale } = useI18n();
 
 interface Entry {
+  handle: string;
   username: string;
   avatar: string | null;
   came: boolean;
@@ -46,7 +49,7 @@ watch(
   () => [props.room.invited ?? [], props.room.players] as const,
   ([invited, players]) => {
     const standing = new Map(invited.map((friend) => [friend.username, friend]));
-    const here = new Set(players.map(({ name }) => name));
+    const here = new Set(players.map(({ name, username }) => username ?? name));
     const next: Entry[] = [];
     for (const entry of entries.value) {
       if (standing.has(entry.username)) next.push({ ...entry, came: false, leaving: false });
@@ -66,7 +69,7 @@ watch(
     }
     for (const friend of invited) {
       if (!next.some((entry) => entry.username === friend.username)) {
-        next.push({ username: friend.username, avatar: friend.avatar, came: false, leaving: false });
+        next.push({ ...friend, came: false, leaving: false });
       }
     }
     entries.value = next;
@@ -82,7 +85,7 @@ const label = computed(() =>
     ? t('friends.invitedList', {
         names: formatList(
           locale.value,
-          waiting.value.map(({ username }) => username),
+          waiting.value.map(({ username, handle }) => nameOf({ name: username, handle })),
         ),
       })
     : t('friends.invite'),

@@ -19,6 +19,7 @@ import UiButton from '../components/UiButton.vue';
 import UiField from '../components/UiField.vue';
 import { errorKey } from '../errors';
 import { friendsVersion, requestFriend } from '../friends';
+import { nameOf } from '../names';
 import { openProfile } from '../profilePanel';
 import { toast } from '../toast';
 import { useBusy } from '../useBusy';
@@ -202,8 +203,13 @@ async function befriend(liker: LikerView): Promise<void> {
       <p v-else-if="likers.length === 0" class="hint">{{ t('account.profile.public.noLikes') }}</p>
       <ul v-else class="list">
         <li v-for="liker in likers" :key="liker.handle" class="line">
-          <AvatarButton :handle="liker.handle" :name="liker.username" :avatar="liker.avatar" />
-          <span class="name">{{ liker.username }}</span>
+          <AvatarButton
+            :handle="liker.handle"
+            :name="nameOf({ name: liker.username, handle: liker.handle })"
+            :username="liker.username"
+            :avatar="liker.avatar"
+          />
+          <span class="name">{{ nameOf({ name: liker.username, handle: liker.handle }) }}</span>
           <span v-if="liker.friend" class="hint">{{ t('account.profile.public.friend') }}</span>
           <UiButton v-else variant="quiet" size="small" :disabled="busy" @click="befriend(liker)">
             {{ t('friends.addFromRoom') }}

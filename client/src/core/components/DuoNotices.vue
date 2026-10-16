@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { DuoNotice, PlayerView, RoomView } from '@reviewer2/shared';
+import type { DuoNotice } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { duoLineKey } from '../duos';
+import type { ShownPlayer, ShownRoom } from '../room';
 import AvatarButton from './AvatarButton.vue';
 import TitleInfo from './TitleInfo.vue';
 
@@ -11,7 +12,7 @@ import TitleInfo from './TitleInfo.vue';
 // each, with the title, which a tap explains, the friend by name, the count that won it, and a
 // line for the occasion. Only the viewer is told, so the screens have none. A screen reader is
 // told of them by a live region that is on the page throughout the game, as for the streaks.
-const props = defineProps<{ room: RoomView }>();
+const props = defineProps<{ room: ShownRoom }>();
 const { t } = useI18n();
 
 // The friends who are still in the room, by name; a notice of someone the page doesn't know goes
@@ -23,7 +24,7 @@ const notices = computed(() =>
   }),
 );
 const line = (notice: DuoNotice) => t(duoLineKey(props.room.gameId ?? '', notice.playerId, notice.title));
-const headline = ({ notice, player }: { notice: DuoNotice; player: PlayerView }) =>
+const headline = ({ notice, player }: { notice: DuoNotice; player: ShownPlayer }) =>
   t(`duos.notice.${notice.title}`, { name: player.name, count: notice.count });
 const announcement = computed(() => notices.value.map((item) => `${headline(item)} ${line(item.notice)}`).join(' '));
 </script>
@@ -37,7 +38,12 @@ const announcement = computed(() => notices.value.map((item) => `${headline(item
       <i18n-t :keypath="`duos.notice.${notice.title}`" tag="p" class="headline" scope="global">
         <template #name>
           <span class="who">
-            <AvatarButton :player-id="player.id" :name="player.name" :avatar="player.avatar" />
+            <AvatarButton
+              :player-id="player.id"
+              :name="player.name"
+              :username="player.username"
+              :avatar="player.avatar"
+            />
             <strong>{{ player.name }}</strong>
           </span>
         </template>

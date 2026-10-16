@@ -6,24 +6,17 @@ import { RouterLink } from 'vue-router';
 // gate, where it is the title. The tile is drawn by CSS inside a span that assistive technology
 // skips, so that the link reads as "Reviewer 2" and nothing more: generated content on the link
 // itself would join its name. A `compact` wordmark, in a room's masthead, shows the tile alone
-// on a narrow screen, and keeps the name for assistive technology. A `tight` one, beside the way
-// back in a page's masthead, does so only on the narrowest phones, below about 370px.
-withDefaults(defineProps<{ size?: 'medium' | 'large'; link?: boolean; compact?: boolean; tight?: boolean }>(), {
+// on a narrow screen, and keeps the name for assistive technology.
+withDefaults(defineProps<{ size?: 'medium' | 'large'; link?: boolean; compact?: boolean }>(), {
   size: 'medium',
   link: true,
   compact: false,
-  tight: false,
 });
 const { t } = useI18n();
 </script>
 
 <template>
-  <component
-    :is="link ? RouterLink : 'p'"
-    :to="link ? '/' : undefined"
-    class="wordmark"
-    :class="[size, { compact, tight }]"
-  >
+  <component :is="link ? RouterLink : 'p'" :to="link ? '/' : undefined" class="wordmark" :class="[size, { compact }]">
     <span class="tile" aria-hidden="true"></span>
     <span class="name">{{ t('app.name') }}</span>
   </component>
@@ -74,21 +67,9 @@ const { t } = useI18n();
 }
 
 /* On a narrow screen a room's masthead has room for the room's number and menu beside the
-   tile, but not for the name, and on the narrowest phones a page's has none beside the way back
-   and the switch of the language. */
+   tile, but not for the name. */
 @media (max-width: 39.99rem) {
   .compact .name {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 23.12rem) {
-  .tight .name {
     position: absolute;
     width: 1px;
     height: 1px;

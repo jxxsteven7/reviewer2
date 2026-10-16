@@ -114,8 +114,8 @@ const ariaLabel = computed(() =>
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar
         v-for="chooser in choosers"
-        :key="chooser.name"
-        :name="chooser.name"
+        :key="chooser.username ?? chooser.name"
+        :name="chooser.username ?? chooser.name"
         :guest="chooser.guest"
         :avatar="chooser.avatar"
         :agent="chooser.agent !== undefined"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useOpenPlayer } from '../playerPanel';
 import { openProfile } from '../profilePanel';
@@ -11,14 +12,16 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // screen, or for a player who has left the room, it is the avatar alone. Outside a room, the avatar
 // of an account, by the `handle` of its page, opens the account's panel (ProfilePanel.vue, the
 // site's one, profilePanel.ts) in the same look, as a room's does, so that a tap on an avatar does
-// the same everywhere. `name` is the player's name, an account's username, `initial` what the
-// default avatar shows in place of its first character, and `guest` a guest's number, for the
-// default avatar's color (PlayerAvatar.vue).
+// the same everywhere. `name` is the player's name as the page gives it, `username` an account's
+// username where the name is the viewer's own for a friend (names.ts), which the default avatar is
+// drawn from all the same, `initial` what the default avatar shows in place of its first character,
+// and `guest` a guest's number, for the default avatar's color (PlayerAvatar.vue).
 const props = withDefaults(
   defineProps<{
     playerId?: string | null;
     handle?: string | null;
     name: string;
+    username?: string | null;
     initial?: string | null;
     guest?: number | null;
     avatar?: string | null;
@@ -30,6 +33,7 @@ const props = withDefaults(
   {
     playerId: null,
     handle: null,
+    username: null,
     initial: null,
     guest: null,
     avatar: null,
@@ -41,6 +45,7 @@ const props = withDefaults(
 const open = useOpenPlayer();
 const { t } = useI18n();
 const press = () => props.playerId !== null && open?.(props.playerId);
+const drawnFrom = computed(() => props.username ?? props.name);
 </script>
 
 <template>
@@ -50,11 +55,11 @@ const press = () => props.playerId !== null && open?.(props.playerId);
     class="avatar-button press-host"
     :aria-label="t('room.viewProfile', { name })"
     aria-haspopup="dialog"
-    @click="openProfile(handle, name)"
+    @click="openProfile(handle, username ?? name)"
   >
     <PlayerAvatar
       class="press-part"
-      :name="name"
+      :name="drawnFrom"
       :initial="initial"
       :guest="guest"
       :avatar="avatar"
@@ -72,7 +77,7 @@ const press = () => props.playerId !== null && open?.(props.playerId);
   >
     <PlayerAvatar
       class="press-part"
-      :name="name"
+      :name="drawnFrom"
       :initial="initial"
       :guest="guest"
       :avatar="avatar"
@@ -83,7 +88,7 @@ const press = () => props.playerId !== null && open?.(props.playerId);
   </button>
   <PlayerAvatar
     v-else
-    :name="name"
+    :name="drawnFrom"
     :initial="initial"
     :guest="guest"
     :avatar="avatar"

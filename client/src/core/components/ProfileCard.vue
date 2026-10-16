@@ -7,6 +7,7 @@ import { account, request } from '../account';
 import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { standingOf } from '../friends';
+import { nameOf, usernameAfter } from '../names';
 import { useLanguage } from '../i18n';
 import { connect } from '../socket';
 import { streakTitles as titlesOf } from '../streaks';
@@ -34,6 +35,10 @@ import UiButton from './UiButton.vue';
 // (FriendActions.vue): ask the owner to be friends, see that it has asked, answer the owner's
 // request, or give a friend a name or part. A friend of the owner also sees what the two have
 // played together (docs/architecture.md#friend-duos), which nobody else is sent.
+//
+// The owner goes by the name that the viewer gives them as a friend, if any (names.ts), with the
+// username after it in small grey type, since such a name may be anyone's, and by that name where
+// the page says the two of them.
 //
 // In a room's panel (PlayerPanel.vue), whose title is the player's name, the card has no name of
 // its own (`named` false), and is `brief` until the viewer opens the whole page: the avatar, the
@@ -82,6 +87,12 @@ watch(
 );
 
 const viewer = computed(() => account.summary);
+const name = computed(() =>
+  profile.value ? nameOf({ name: profile.value.username, handle: profile.value.handle }) : '',
+);
+const username = computed(() =>
+  profile.value ? usernameAfter({ name: name.value, username: profile.value.username }) : null,
+);
 const canAct = computed(() => viewer.value !== null && profile.value !== null && !profile.value.mine);
 // A guest, once the server has said so: until then, the card offers nothing and explains nothing.
 const guest = computed(() => account.loaded && viewer.value === null);
@@ -132,7 +143,9 @@ watch(
       <div class="head">
         <PlayerAvatar :name="profile.username" :avatar="profile.avatar" size="large" />
         <div class="who">
-          <span v-if="named" class="name">{{ profile.username }}</span>
+          <span v-if="named" class="name"
+            >{{ name }}<small v-if="username !== null" class="username-after">{{ ` ${username}` }}</small></span
+          >
           <button type="button" class="rank-button" aria-haspopup="dialog" @click="ladder = true">
             <span class="rank">{{ t(`ranks.names.${profile.rank}`) }}</span>
             <span class="sr-only">{{ t('ranks.ladder.open') }}</span>
@@ -152,7 +165,7 @@ watch(
 
       <template v-if="!brief">
         <section v-if="profile.duo" class="duo" aria-labelledby="profile-duo">
-          <h3 id="profile-duo">{{ t('playerPage.duo', { name: profile.username }) }}</h3>
+          <h3 id="profile-duo">{{ t('playerPage.duo', { name }) }}</h3>
           <DuoSummary :duo="profile.duo" />
         </section>
 

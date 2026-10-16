@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { createRoom, expect, interpolate, joinByLink, newPlayer, pageAddress, register, TEXT, test } from './helpers';
 
 // Public profiles end to end (docs/architecture.md#public-profiles): a player sets up the page on
@@ -68,8 +69,9 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await expect(card.getByRole('button', { name: text.friends.requestPending })).toBeDisabled();
 
   // Ann's home page counts the request on her avatar, which leads to her account page, with the way
-  // back at the start of the masthead. The account page shows Bob among those who liked her page,
-  // not yet a friend, and the request, which she accepts.
+  // back before its title, on the bar that takes the masthead's place at the top of the screen as
+  // the page scrolls. The account page shows Bob among those who liked her page, not yet a friend,
+  // and the request, which she accepts.
   await ann.goto('/');
   // The language gate stands on the browser's first visit to the home page.
   await expect(ann.locator('.gate, .home').first()).toBeVisible();
@@ -78,9 +80,23 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await expect(ann.locator('.avatar-link .badge')).toHaveText('1');
   await ann.locator('.avatar-link').click();
   await ann.waitForURL(/\/account$/);
-  const back = ann.locator('header.masthead .start > .back-button');
+  const back = ann.locator('main .page-title > .back-button');
   await expect(back).toHaveAccessibleName(text.account.back);
-  await expect(ann.locator('main .back-button')).toHaveCount(0);
+  await expect(ann.locator('header.masthead .back-button')).toHaveCount(0);
+  const onTop = (page: Page) =>
+    page.evaluate(() => document.elementFromPoint(innerWidth / 2, 4)?.closest('.page-title, .masthead')?.className);
+  await ann.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(() => onTop(ann)).toContain('page-title');
+  await ann.evaluate(() => window.scrollTo(0, 0));
+  // Opened on its own, as in a new tab, the account page has nothing to go back to, and keeps the
+  // masthead at the top.
+  const tab = await ann.context().newPage();
+  await tab.goto('/account');
+  await expect(tab.locator('.page-title h1')).toHaveText(text.account.profile.title);
+  await expect(tab.getByRole('button', { name: text.account.back })).toHaveCount(0);
+  await tab.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(() => onTop(tab)).toContain('masthead');
+  await tab.close();
   await expect(ann.locator('.profile h2 .badge')).toHaveText('1');
   const liker = ann.locator('.likers .line', { hasText: bobName });
   await expect(liker.getByRole('button', { name: text.friends.addFromRoom })).toBeVisible();
@@ -120,8 +136,8 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await guest.goto('/p/000000000000');
   await expect(guest.locator('.player-page')).toContainText(text.errors.no_such_profile);
 
-  // In a room, Bob taps Ann's avatar: her panel, with a brief card, and her whole page over it,
-  // from which he goes back to the panel. He stays in the room throughout.
+  // In a room, Bob taps Ann's avatar: her panel, with a brief card, and her whole page, which hides
+  // the panel until he goes back to it. He stays in the room throughout.
   const room = await createRoom(ann, 'en');
   await joinByLink(bob, room, 'en');
   await bob
@@ -131,12 +147,23 @@ test('a public page is set up, opened by its address and from a room, liked and 
   const panel = bob.locator('[role=dialog]:not(:has(button.back))', { has: bob.locator('.profile-card') });
   await expect(panel.locator('.profile-card .number')).toContainText(/Player No\. \d+/);
   await expect(panel.locator('.profile-card')).not.toContainText('https://ann.example/me');
+  // The panel stays on the page meanwhile, the same one, where it was scrolled to: marked, and
+  // scrolled as far as it goes, which is nowhere when it all fits.
+  await panel.evaluate((element) => element.setAttribute('data-kept', 'yes'));
+  const scroller = panel.locator('.scroller');
+  const scrolledTo = await scroller.evaluate((element) => {
+    element.scrollTop = 40;
+    return element.scrollTop;
+  });
   await panel.getByRole('button', { name: text.room.panel.fullPage }).click();
   const page = bob.locator('[role=dialog]:has(button.back)');
   await expect(page.locator('.profile-card')).toContainText('https://ann.example/me');
+  await expect(panel).toBeHidden();
   await page.getByRole('button', { name: text.room.panel.back }).click();
   await expect(page).toHaveCount(0);
   await expect(panel).toBeVisible();
+  await expect(panel).toHaveAttribute('data-kept', 'yes');
+  expect(await scroller.evaluate((element) => element.scrollTop)).toBe(scrolledTo);
   await expect(bob).toHaveURL(room);
   await bob.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);

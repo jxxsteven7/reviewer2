@@ -3,22 +3,23 @@ import {
   type CardColor,
   type KeywordsView,
   type Language,
-  type PlayerView,
   type ReplayPerson,
   type Seat,
   type ShownReplay,
 } from '@reviewer2/shared';
+import type { ShownPlayer } from '../../core/room';
 
 // The replay of the game that has just ended, from the view, for the review on the results page
 // (ReplayViewer), as the server shows the replays it keeps (docs/architecture.md#replays): once a
 // game is over, every view carries every color. The groups are those in the seats now, in the order
-// of the room, and everyone is who the room says they are, under the name the room gives them;
-// someone who left during the game is no one the room knows. Null while the game is on, when there
+// of the room, and everyone is who the room says they are, under the name the room gives them, or,
+// for an account, its username, which the replay names as any replay does (names.ts); someone who
+// left during the game is no one the room knows. Null while the game is on, when there
 // is nothing to review yet.
 export function replayOf(
   game: KeywordsView,
   language: Language,
-  players: readonly PlayerView[],
+  players: readonly ShownPlayer[],
   seats: Readonly<Record<string, Seat>>,
   me: string | null,
 ): ShownReplay | null {
@@ -26,9 +27,9 @@ export function replayOf(
   const inSeat = (team: string, role: Seat['role']) =>
     players.filter(({ id }) => seats[id]?.team === team && seats[id]?.role === role).map(({ id }) => id);
   const people: Record<string, ReplayPerson> = {};
-  for (const { id, name, guest, agent, avatar, handle } of players) {
+  for (const { id, name, username, guest, agent, avatar, handle } of players) {
     people[id] = {
-      name,
+      name: username ?? name,
       ...(guest === undefined ? {} : { guest }),
       ...(agent === undefined ? {} : { agent }),
       ...(avatar === undefined ? {} : { avatar }),

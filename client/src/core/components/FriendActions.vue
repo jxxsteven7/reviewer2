@@ -14,7 +14,8 @@ import UnfriendSheet from './UnfriendSheet.vue';
 // (BefriendSheet.vue); see that a request went; accept or decline the other's request, with the
 // line that came with it; give a friend a name (AliasSheet.vue) or end the friendship, after asking
 // first (UnfriendSheet.vue). The account itself is offered nothing here. `name` is the other's
-// username, and `who` how a request finds them: by username, or by their seat in the room.
+// username, never the name the viewer gives a friend, since it names a stranger, and `who` how a
+// request finds them: by username, or by their seat in the room.
 //
 // Its buttons and the word of a request lie among those of the place that shows it, in its column,
 // or, `compact`, as small buttons in its row, as beside the like on a public page, with the word of
@@ -86,6 +87,7 @@ function finish() {
       />
       <UnfriendSheet
         :open="removing"
+        :handle="standing.friend.handle"
         :username="standing.friend.username"
         @close="removing = false"
         @removed="finish"

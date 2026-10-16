@@ -33,8 +33,9 @@ const friend = (username: string, online: boolean): FriendView => ({
 const room = (invited: string[]): RoomView =>
   ({
     players: [
-      { id: 'p1', name: 'Ann', online: true },
-      { id: 'p2', name: 'Cat', online: true },
+      { id: 'p1', name: 'Ann', username: 'Ann', online: true },
+      // A friend in the room goes by the viewer's name for them, the username beside (room.ts).
+      { id: 'p2', name: 'Kitty', username: 'Cat', online: true },
     ],
     invited: invited.map((username) => ({ username, avatar: null })),
   }) as unknown as RoomView;

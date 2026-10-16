@@ -248,6 +248,9 @@ test('an address is bound with the link in a mail, and resets a forgotten passwo
   await laptop.getByLabel(text.account.profile.newPassword).fill('battery staple');
   await laptop.getByRole('button', { name: text.account.reset.submit }).click();
   await expect(laptop.locator('.profile .name')).toHaveText(name);
+  // The account page takes the used link's place: there is no way back to it, and the masthead stays.
+  await expect(laptop.getByRole('button', { name: text.account.back })).toHaveCount(0);
+  await expect(laptop.locator('header.masthead')).toHaveClass(/sticky/);
 
   // The phone was logged out, and the old password no longer works.
   await phone.reload();

@@ -281,7 +281,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (accountId === undefined || !accounts) return [];
     return invitations.by(room, accountId).flatMap(({ inviteeId }) => {
       const friend = accounts.store.byId(inviteeId);
-      return friend ? [{ username: friend.username, avatar: avatarUrl(friend) }] : [];
+      return friend ? [{ handle: friend.handle, username: friend.username, avatar: avatarUrl(friend) }] : [];
     });
   }
 

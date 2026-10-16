@@ -1,6 +1,15 @@
-import type { FriendRequestView, FriendsView, FriendView, InvitationView, JoinAskView } from '@reviewer2/shared';
+import type {
+  Ack,
+  FriendRequestView,
+  FriendsView,
+  FriendView,
+  InvitationView,
+  JoinAskView,
+  Session,
+} from '@reviewer2/shared';
 import { reactive, ref } from 'vue';
 import { account, loadAccount } from './account';
+import { knowAliases } from './names';
 import { send, socket, whenConnected } from './socket';
 import { toast, toastError } from './toast';
 
@@ -8,7 +17,8 @@ import { toast, toastError } from './toast';
 // to rooms, which show on whatever page is open until they are followed, ignored or lapse; the
 // requests of friends to be let into the room the account is in, which show on the room's page
 // until they are answered, ignored or lapse; and the word that the friends or the requests changed,
-// on which a page that shows them asks again. Also the ways to ask someone to be friends, to answer
+// on which a page that shows them asks again; and the names that the account gives its friends,
+// which the whole page shows (names.ts). Also the ways to ask someone to be friends, to answer
 // them, to part, and to ask a friend to be let into their room, from wherever a page offers them,
 // and how the account stands with someone, which says which of these a page offers.
 
@@ -171,10 +181,55 @@ socket.on('connect', () => {
   for (const { id } of [...asks]) forgetAsk(id);
 });
 
+// The account's friends list, as the server has it. The parts of a page that show it
+// (useFriendsList.ts) and the names below ask for it on the same occasions, so whoever asks while
+// an answer is on its way gets that answer: the server works the list out once. An answer that
+// the connection it was asked over won't bring is nobody's; the next connection asks anew.
+let listing: Promise<Ack<FriendsView>> | null = null;
+
+export function listFriends(): Promise<Ack<FriendsView>> {
+  listing ??= send<FriendsView>('friends:list').finally(() => {
+    listing = null;
+  });
+  return listing;
+}
+
+socket.on('disconnect', () => {
+  listing = null;
+});
+
+// The names that the account gives its friends, which every page shows wherever it names them
+// (names.ts): read from the account's friends list as each connection of an account is made, and
+// again whenever the friends change, as when the account renames one. Only the latest answer
+// counts, and one that doesn't come leaves the names as they were, as long as they are the same
+// account's: a connection made as someone else, as after a login in another tab, or as a guest,
+// drops the names at once, before the new account's have come, since they are nobody's business
+// but their own.
+let signedInAs: string | null = null;
+let reads = 0;
+
+async function readNames(): Promise<void> {
+  const turn = (reads += 1);
+  const reply = await listFriends();
+  if (turn === reads && signedInAs !== null && reply.ok) knowAliases(reply.friends);
+}
+
+socket.on('session', ({ account: connected }: Session) => {
+  const username = connected?.username ?? null;
+  if (username !== signedInAs) {
+    reads += 1;
+    knowAliases([]);
+  }
+  signedInAs = username;
+  if (username !== null) void readNames();
+});
+
 // Goes up whenever the account's friends or requests change, by this page or by the other side.
-// The account's summary, which counts the requests waiting for an answer, is asked for again too.
+// The account's summary, which counts the requests waiting for an answer, is asked for again too,
+// and so are the names.
 export const friendsVersion = ref(0);
 socket.on('friends:changed', () => {
   friendsVersion.value += 1;
   if (account.summary) void loadAccount();
+  if (signedInAs !== null) void readNames();
 });

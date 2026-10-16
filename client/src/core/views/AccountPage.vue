@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { account, loadAccount } from '../account';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
+import PageTitle from '../components/PageTitle.vue';
 import ProfileView from './ProfileView.vue';
 import SignIn from './SignIn.vue';
 
@@ -48,6 +49,7 @@ onMounted(async () => {
   <div class="page account-page">
     <PageMasthead back><LanguageSwitch /></PageMasthead>
     <main>
+      <PageTitle>{{ t('account.profile.title') }}</PageTitle>
       <SignIn
         v-if="signingIn || (account.loaded && !account.summary)"
         v-model:busy="signingIn"
@@ -62,11 +64,10 @@ onMounted(async () => {
 
 <style scoped>
 main {
-  padding: var(--space-3) 0 var(--space-7);
+  padding-bottom: var(--space-7);
 }
 
 .loading {
-  margin-top: var(--space-5);
   font-weight: var(--weight-bold);
 }
 </style>

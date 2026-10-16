@@ -18,6 +18,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { computed, defineComponent, h } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { bubbles } from '../../core/emotes';
+import { knowAliases } from '../../core/names';
+import type { ShownRoom } from '../../core/room';
 import { clearMemory, readStored, writeStored } from '../../core/storage';
 import { seenIn } from './chat';
 import { toasts } from '../../core/toast';
@@ -189,6 +191,25 @@ describe('GroupChat', () => {
     expect(turns[1]?.text()).toContain('You');
     expect(turns[1]?.text()).toContain('Cat');
     expect(wrapper.find('.badge').exists()).toBe(false);
+  });
+
+  // The room names a friend by the viewer's name for them, with the username kept beside (room.ts):
+  // a message says the name, and its avatar is still the username's.
+  test("names a friend by the viewer's name for them, and draws the avatar from the username", async () => {
+    const view = room('bob', messages);
+    const named: ShownRoom = {
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cat' ? { ...player, name: 'Kitty', username: 'Cat', handle: 'ca7000000000' } : player,
+      ),
+    };
+    const wrapper = mount(GroupChat, { props: { room: named, draft: '', sending: false }, global: global() });
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.findAll('.message .name').map((name) => name.text())).toEqual(['Kitty', 'You', 'Kitty']);
+    expect(wrapper.get('.message .initial').attributes('data-initial')).toBe('C');
+    const plain = mount(GroupChat, { props: { room: view, draft: '', sending: false }, global: global() });
+    await plain.get('button').trigger('click');
+    expect(wrapper.get('.message .avatar').attributes('style')).toBe(plain.get('.message .avatar').attributes('style'));
   });
 
   test('lets a student send only a message that passes the check', async () => {
@@ -513,6 +534,32 @@ describe('KeywordsCard', () => {
     expect(wrapper.findAll('.choosers .avatar').map((avatar) => avatar.classes('veiled'))).toEqual([false, true]);
     expect(wrapper.find('.choosers .wait').exists()).toBe(false);
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, not revealed, chosen by Ann and Cat');
+  });
+
+  // Names that the viewer gives friends need not differ, from each other or from usernames: the
+  // avatars are the usernames', and each chooser shows once.
+  test("names a friend by the viewer's name for them, with the username's avatar", () => {
+    const wrapper = mount(KeywordsCard, {
+      props: {
+        card,
+        index: 3,
+        selectable: true,
+        selected: false,
+        choosers: [
+          { name: 'Prof. A', username: 'Ann', online: true },
+          { name: 'Prof. A', username: 'Abe', online: true },
+        ],
+      },
+      global: global(),
+    });
+    expect(wrapper.findAll('.choosers .initial').map((initial) => initial.attributes('data-initial'))).toEqual([
+      'A',
+      'A',
+    ]);
+    expect(wrapper.findAll('.choosers .avatar')).toHaveLength(2);
+    expect(wrapper.get('button').attributes('aria-label')).toBe(
+      'Baseline, not revealed, chosen by Prof. A and Prof. A',
+    );
   });
 
   test("shows the group's mark in the tint of its color, with its sticker, and names it to screen readers", () => {
@@ -1052,7 +1099,41 @@ describe('ReplayViewer', () => {
     expect(buttons[1]?.get('.initial').attributes('data-initial')).toBe('G');
   });
 
-  test("opens a player's panel from their avatar, with their moves, which take the replay to their step", async () => {
+  // The viewer's own name for a friend, as everywhere (names.ts): in the bars, the steps and the
+  // panel, with the username after it on the panel's whole page; the avatar is the username's.
+  test("names a friend by the viewer's name for them, with the username after it on the whole page", async () => {
+    knowAliases([{ handle: 'h-ann', alias: 'Prof. A' }]);
+    const byAnn: ShownReplay = {
+      ...replay,
+      history: [{ ...(replay.history[0] as ClueRecord), guesses: [{ card: 0, color: 'red', player: 'ann', at: 0 }] }],
+    };
+    const wrapper = mount(ReplayViewer, {
+      props: { replay: byAnn },
+      global: { ...global(), stubs: { teleport: true, ProfileCard: true } },
+    });
+    await wrapper.get('input[type="range"]').setValue('2');
+    expect(wrapper.get('.step').text()).toContain('Prof. A revealed “Baseline”');
+    const ann = wrapper.findAll('.scores button.avatar-button')[0];
+    expect(ann?.attributes('aria-label')).toBe("View Prof. A's profile");
+    expect(ann?.get('.initial').attributes('data-initial')).toBe('A');
+    await ann?.trigger('click');
+    const dialogs = () => wrapper.findAll('[role="dialog"]');
+    expect(dialogs()[0]?.get('h2').text()).toBe('Prof. A Ann');
+    const button = (text: string) =>
+      dialogs()[0]
+        ?.findAll('.actions button')
+        .find((found) => found.text() === text);
+    await button('Open the full page')?.trigger('click');
+    expect(dialogs()[1]?.get('h2').text()).toBe('Prof. A Ann');
+    expect(dialogs()[1]?.get('h2 .subtitle').text()).toBe('Ann');
+    await dialogs()[1]?.get('button.back').trigger('click');
+    await button('View moves')?.trigger('click');
+    expect(dialogs()[1]?.get('h2').text()).toBe('Moves by Prof. A');
+    wrapper.unmount();
+    knowAliases([]);
+  });
+
+  test("opens a player's panel from their avatar, with their moves over it, which take the replay to their step", async () => {
     // The cards of an account's page and an AI player's read the server, which isn't here.
     const wrapper = mount(ReplayViewer, {
       props: { replay },
@@ -1068,9 +1149,17 @@ describe('ReplayViewer', () => {
         ?.findAll('.actions button')
         .map((button) => button.text());
     expect(actions()).toEqual(['View moves']);
+    // The moves lie over the panel, which they hide until the way back leads to it again.
+    const top = () => dialogs().at(-1);
     await dialogs()[0]?.get('.actions button').trigger('click');
-    expect(dialogs()[0]?.get('h2').text()).toBe('Moves by Guest 2');
-    const moves = dialogs()[0]?.findAll('.move') ?? [];
+    expect(dialogs()).toHaveLength(2);
+    expect(wrapper.get('.backdrop.covered h2').text()).toBe('Guest 2');
+    expect(top()?.get('h2').text()).toBe('Moves by Guest 2');
+    await top()?.get('button.back').trigger('click');
+    expect(dialogs()).toHaveLength(1);
+    expect(wrapper.find('.backdrop.covered').exists()).toBe(false);
+    await dialogs()[0]?.get('.actions button').trigger('click');
+    const moves = top()?.findAll('.move') ?? [];
     expect(moves.map((move) => move.text())).toEqual([
       "Turn 1 · Red groupRevealed \u201cBaseline\u201d: right, one of the group's own",
     ]);
@@ -1085,8 +1174,8 @@ describe('ReplayViewer', () => {
         .map((button) => button.text()),
     ).toEqual(['View moves', 'Open the full page']);
     await dialogs()[0]?.get('.actions button').trigger('click');
-    expect(dialogs()[0]?.get('.move').text()).toBe('Turn 1 · Red groupClue: Science 21 right of 1 revealed');
-    await dialogs()[0]?.get('.move').trigger('click');
+    expect(top()?.get('.move').text()).toBe('Turn 1 · Red groupClue: Science 21 right of 1 revealed');
+    await top()?.get('.move').trigger('click');
     expect(wrapper.get('.position').text()).toBe('Step 2 of 3');
   });
 });
@@ -2653,9 +2742,10 @@ describe('KeywordsGame', () => {
     // otherwise; the tools at the foot of the page have no way to pause.
     const chair = mount(KeywordsGame, { props: { room: paused('ann') }, global: global() });
     expect(chair.findAll('.tools button').map((button) => button.text())).toEqual(['How to play', 'End the game']);
-    // With the clock, the reaction button comes first, then the chair's button to pause or resume.
+    // With the clock, the chair's button to pause or resume comes first, then the reaction button,
+    // which is at the end of the bar for everyone.
     expect(chair.find('.sticky-clock [role="timer"]').exists()).toBe(true);
-    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React', 'Resume the game']);
+    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Resume the game', 'React']);
     await chair.get('.paused button').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     send.mockClear();
@@ -2665,12 +2755,12 @@ describe('KeywordsGame', () => {
     const playing = mount(KeywordsGame, { props: { room: room('ann') }, global: global() });
     expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause the game');
     expect(playing.get('.sticky-clock .pause').text()).toBe('Pause the game');
-    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['React', 'Pause the game']);
+    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Pause the game', 'React']);
     await playing.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
   });
 
-  // A game without a time limit has no clock: the reaction button and the chair's button to pause
+  // A game without a time limit has no clock: the chair's button to pause and the reaction button
   // stand at the top alone, and the others have the reaction button there.
   test('keeps the reaction button, and the chair the button to pause, at the top of a game without a clock', async () => {
     const view = room('bob');
@@ -2684,7 +2774,7 @@ describe('KeywordsGame', () => {
         .get('.strip + .sticky-clock')
         .findAll('button')
         .map((button) => button.text()),
-    ).toEqual(['React', 'Pause the game']);
+    ).toEqual(['Pause the game', 'React']);
     await chair.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
     const student = mount(KeywordsGame, { props: { room: untimed('bob') }, global: global() });

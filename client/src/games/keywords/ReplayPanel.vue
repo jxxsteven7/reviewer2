@@ -8,16 +8,16 @@ import ProfileCard from '../../core/components/ProfileCard.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { formatList } from '../../core/i18n';
-import { nameOf } from '../../core/names';
+import { nameOf, usernameAfter } from '../../core/names';
 
 // The panel that an avatar opens in a replay (ReplayViewer.vue), in the look of the room's
 // (PlayerPanel.vue), with nothing of the chair's: for an account, its brief profile card and the
 // way to the whole page; for an AI player, its own page; for a guest and a deleted account, the
 // avatar under the title that names them. For everyone, the way to their moves in the game, a
-// sheet of its own with the way back, as the whole page has: as a PI, each clue, the cards meant
-// and how far the group got with it; as a student, each card revealed and whether it was right
-// (actionsOf in shared/src/games/keywords/replay.ts). A tap on a move closes the panel and takes
-// the replay to its step (`go`).
+// sheet of its own over the panel, which it hides until the way back (UiSheet.vue), as the whole
+// page does: as a PI, each clue, the cards meant and how far the group got with it; as a student,
+// each card revealed and whether it was right (actionsOf in shared/src/games/keywords/replay.ts).
+// A tap on a move closes the panel and takes the replay to its step (`go`).
 const props = defineProps<{ replay: ShownReplay; playerId: string | null }>();
 const emit = defineEmits<{ close: []; go: [step: number] }>();
 const { t, locale } = useI18n();
@@ -25,6 +25,11 @@ const INFINITY = '∞';
 
 const person = computed(() => (props.playerId === null ? null : (props.replay.people[props.playerId] ?? null)));
 const name = computed(() => (person.value ? nameOf(person.value) : ''));
+// The username follows the name that the viewer gives a friend, on the panel and the whole page, as
+// in a room (PlayerPanel.vue).
+const username = computed(() =>
+  person.value?.handle === undefined ? null : usernameAfter({ name: name.value, username: person.value.name ?? '' }),
+);
 const reading = ref(false);
 const acting = ref(false);
 // Each player starts afresh, on the panel.
@@ -64,7 +69,7 @@ function linesOf(action: ReplayAction): string[] {
 </script>
 
 <template>
-  <UiSheet :open="person !== null && !reading && !acting" :title="name" @close="emit('close')">
+  <UiSheet :open="person !== null" :title="name" :subtitle="username" @close="emit('close')">
     <div v-if="person" class="panel-body">
       <ProfileCard v-if="person.handle" :handle="person.handle" brief :named="false" />
       <AgentProfileCard v-else-if="person.agent" :persona="person.agent" />
@@ -86,6 +91,7 @@ function linesOf(action: ReplayAction): string[] {
   <UiSheet
     :open="person !== null && reading"
     :title="name"
+    :subtitle="username"
     :back="t('room.panel.back')"
     @back="reading = false"
     @close="emit('close')"

@@ -7,6 +7,7 @@ import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
 import ProfilePanel from '../components/ProfilePanel.vue';
+import { knowAliases } from '../names';
 import { closeProfile } from '../profilePanel';
 import ProfileFriends from './ProfileFriends.vue';
 
@@ -293,8 +294,12 @@ describe('the search on the account page', () => {
       .findAll('.panel-actions button')
       .map((button) => [button.text(), button.attributes('disabled') !== undefined]);
   // A sheet over the panel, by its title.
+  // The topmost sheet with the title: a friend's panel and the sheet over it may share one.
   const sheet = (wrapper: ReturnType<typeof mountWith>, title: string) => {
-    const found = wrapper.findAll('[role=dialog]').find((dialog) => dialog.get('h2').text() === title);
+    const found = wrapper
+      .findAll('[role=dialog]')
+      .filter((dialog) => dialog.get('h2').text() === title)
+      .at(-1);
     if (!found) throw new Error(`no sheet "${title}"`);
     return found;
   };
@@ -350,7 +355,9 @@ describe('the search on the account page', () => {
     expect(asking.find('[role=dialog]').exists()).toBe(false);
     asking.unmount();
 
-    // A friend goes by the account's name for them, and may be given another, or parted from.
+    // A friend goes by the account's name for them, as the page names friends (names.ts), and may
+    // be given another, or parted from, after a sheet that names them so, the username after it.
+    knowAliases([{ handle: cat.handle, alias: 'Kitty' }]);
     const friendly = mountWith([{ ...friend('Cat', null), handle: cat.handle, alias: 'Kitty' }]);
     await search(friendly, 'Cat');
     expect(panel(friendly).get('h2').text()).toBe('Kitty Cat');
@@ -367,8 +374,9 @@ describe('the search on the account page', () => {
     expect(friendly.find('[role=dialog]').exists()).toBe(false);
     await search(friendly, 'Cat');
     await panel(friendly).findAll('.panel-actions button')[1]?.trigger('click');
-    const parting = sheet(friendly, 'Cat');
-    expect(parting.text()).toContain('Remove Cat from your friends?');
+    const parting = sheet(friendly, 'Kitty Cat');
+    expect(parting.get('h2 .subtitle').text()).toBe('Cat');
+    expect(parting.text()).toContain('Remove Kitty from your friends?');
     await parting
       .findAll('button')
       .find((button) => button.text() === 'Remove friend')
@@ -377,6 +385,7 @@ describe('the search on the account page', () => {
     expect(asks.answerFriend).toHaveBeenCalledWith('Cat', 'remove');
     expect(friendly.find('[role=dialog]').exists()).toBe(false);
     friendly.unmount();
+    knowAliases([]);
 
     // The account itself.
     const self = mountWith([]);

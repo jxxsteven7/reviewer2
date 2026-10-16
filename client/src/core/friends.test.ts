@@ -21,9 +21,11 @@ import {
   friendsVersion,
   ignore,
   invitations,
+  listFriends,
   requestFriend,
   standingOf,
 } from './friends';
+import { aliasOf, knowAliases } from './names';
 import { toasts } from './toast';
 
 // What the server says.
@@ -124,6 +126,111 @@ describe('an answer to someone else', () => {
     expect(await answerFriend('Bob', 'accept')).toBe(false);
     expect(mock.send).not.toHaveBeenCalled();
     expect(heard()).toBe('errors.offline');
+  });
+});
+
+// The names that the account gives its friends, which the page shows wherever it names them
+// (names.ts): read with the friends list as an account's connection is made and whenever the
+// friends change, and gone with a guest's.
+describe("the names of the account's friends", () => {
+  const listed = (alias: string) => ({
+    ok: true,
+    friends: [{ handle: 'b0b000000000', username: 'Bob', alias, avatar: null, online: true, room: null, duo: null }],
+    incoming: [],
+    outgoing: [],
+  });
+
+  afterEach(() => knowAliases([]));
+
+  test("are read as an account's connection is made, again when the friends change, and go with a guest's", async () => {
+    mock.send.mockResolvedValueOnce(listed('Bobby'));
+    hear('session', { version: '1', account: { username: 'Ann', avatar: null } });
+    await vi.runAllTimersAsync();
+    expect(mock.send).toHaveBeenCalledWith('friends:list');
+    expect(aliasOf('b0b000000000')).toBe('Bobby');
+
+    mock.send.mockResolvedValueOnce(listed('Prof. B'));
+    hear('friends:changed');
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBe('Prof. B');
+
+    mock.send.mockClear();
+    hear('session', { version: '1', account: null });
+    hear('friends:changed');
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBeNull();
+    expect(mock.send).not.toHaveBeenCalledWith('friends:list');
+  });
+
+  test('go at once with a connection made as someone else, and stay through one made as the same account', async () => {
+    mock.send.mockResolvedValueOnce(listed('Bobby'));
+    hear('session', { version: '1', account: { username: 'Ann', avatar: null } });
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBe('Bobby');
+    // The same account's connection, made again, keeps the names while its list is on its way,
+    // and when the list doesn't come.
+    hear('disconnect');
+    mock.send.mockResolvedValueOnce({ ok: false, error: 'timeout' });
+    hear('session', { version: '1', account: { username: 'Ann', avatar: null } });
+    expect(aliasOf('b0b000000000')).toBe('Bobby');
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBe('Bobby');
+    // Another account's, as after a login in another tab, drops them before its own list has come,
+    // and an answer to the first account's question is nothing to it.
+    hear('disconnect');
+    let answerLate: (reply: object) => void = () => {};
+    mock.send.mockImplementationOnce(() => new Promise((resolve) => (answerLate = resolve)));
+    hear('session', { version: '1', account: { username: 'Ann', avatar: null } });
+    hear('disconnect');
+    mock.send.mockResolvedValueOnce(listed('Prof. B'));
+    hear('session', { version: '1', account: { username: 'Cat', avatar: null } });
+    expect(aliasOf('b0b000000000')).toBeNull();
+    answerLate(listed('Bobby'));
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBe('Prof. B');
+  });
+
+  test('come with the list that the parts of the page ask for, asked once for all of them', async () => {
+    let answer: (reply: object) => void = () => {};
+    mock.send.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    const [first, second] = [listFriends(), listFriends()];
+    hear('session', { version: '1', account: { username: 'Ann', avatar: null } });
+    expect(mock.send).toHaveBeenCalledTimes(1);
+    answer(listed('Bobby'));
+    expect(await first).toEqual(listed('Bobby'));
+    expect(await second).toEqual(listed('Bobby'));
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBe('Bobby');
+    // Once answered, the next question goes out; so does one over a new connection, whatever the
+    // old one still owes.
+    mock.send.mockResolvedValueOnce(listed('Prof. B'));
+    await listFriends();
+    expect(mock.send).toHaveBeenCalledTimes(2);
+    mock.send.mockImplementationOnce(() => new Promise(() => {}));
+    void listFriends();
+    hear('disconnect');
+    mock.send.mockResolvedValueOnce(listed('Prof. B'));
+    expect(await listFriends()).toEqual(listed('Prof. B'));
+    expect(mock.send).toHaveBeenCalledTimes(4);
+  });
+
+  test("keep what they were when a list can't be had, and take only the latest answer", async () => {
+    knowAliases([{ handle: 'b0b000000000', alias: 'Bobby' }]);
+    mock.send.mockResolvedValueOnce({ ok: false, error: 'offline' });
+    hear('session', { version: '1', account: { username: 'Ann', avatar: null } });
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBe('Bobby');
+
+    let answerLate: (reply: object) => void = () => {};
+    mock.send.mockImplementationOnce(() => new Promise((resolve) => (answerLate = resolve)));
+    hear('friends:changed');
+    hear('disconnect');
+    mock.send.mockResolvedValueOnce(listed('Prof. B'));
+    hear('friends:changed');
+    await vi.runAllTimersAsync();
+    answerLate(listed('Old'));
+    await vi.runAllTimersAsync();
+    expect(aliasOf('b0b000000000')).toBe('Prof. B');
   });
 });
 

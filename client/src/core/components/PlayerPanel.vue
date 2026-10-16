@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-  checkReport,
-  MAX_REPORT_INPUT,
-  MAX_REPORT_LENGTH,
-  textLength,
-  type PlayerView,
-  type RoomView,
-} from '@reviewer2/shared';
+import { checkReport, MAX_REPORT_INPUT, MAX_REPORT_LENGTH, textLength } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
@@ -14,6 +7,8 @@ import { account } from '../account';
 import { errorKey } from '../errors';
 import { standingOf, type Standing } from '../friends';
 import { mayBefriend, mayReport } from '../manage';
+import { usernameAfter } from '../names';
+import type { ShownPlayer, ShownRoom } from '../room';
 import { act, send } from '../socket';
 import { toast } from '../toast';
 import { useBusy } from '../useBusy';
@@ -27,7 +22,10 @@ import UiField from './UiField.vue';
 import UiSheet from './UiSheet.vue';
 
 // The panel that a tap on a player's avatar opens in a room (AvatarButton.vue), one sheet over the
-// room, so that the viewer stays in it: a game goes on meanwhile. Its title is the player's name.
+// room, so that the viewer stays in it: a game goes on meanwhile. Its title is the player's name,
+// as the room gives it (room.ts): for a friend, the name the viewer gives them, if any, with the
+// username after it in small grey type, as on the account page, on the whole page and where the
+// panel asks before it acts on them too, since such a name may be anyone's.
 //
 // It shows who the player is: for an account, a brief profile card (ProfileCard.vue), with the rank,
 // the number, the day of registration and the titles; for an AI player, its own page at once
@@ -41,16 +39,11 @@ import UiSheet from './UiSheet.vue';
 // private one, or, for an AI player, remove it at once, since it may be invited again
 // (docs/architecture.md#ai-players); in a public room, the way for anyone with an account to report
 // them to the operator (docs/architecture.md#public-rooms). Last, for an account, the whole page,
-// which rises as a second sheet of its own height over the panel, scrolls inside past the most a
-// sheet may be, and leads back to it (docs/architecture.md#public-profiles); for the viewer's own
-// account, the way to the account's page too. The server decides who may do what; the panel only
-// shows what the viewer may ask for.
-//
-// For an account, the panel asks for the viewer's own friends list as it opens: a friend goes by
-// the name the viewer gives them, if any, in the title, with the username after it in small grey
-// type, as on the account page. Nothing in the room itself, where everyone goes by their username,
-// shows that name.
-const props = defineProps<{ playerId: string | null; room: RoomView }>();
+// a second sheet of its own height over the panel, which it hides meanwhile (UiSheet.vue), that
+// scrolls inside past the most a sheet may be and leads back to it
+// (docs/architecture.md#public-profiles); for the viewer's own account, the way to the account's
+// page too. The server decides who may do what; the panel only shows what the viewer may ask for.
+const props = defineProps<{ playerId: string | null; room: ShownRoom }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
 const { busy, run } = useBusy();
@@ -61,7 +54,7 @@ const note = ref('');
 const refused = ref<string | undefined>();
 
 // The player as the room has them now: a player who leaves the room takes the panel along.
-const player = computed<PlayerView | null>(
+const player = computed<ShownPlayer | null>(
   () => props.room.players.find((other) => other.id === props.playerId) ?? null,
 );
 watch(player, (now) => {
@@ -82,13 +75,11 @@ const standing = computed<Standing>(() =>
     ? standingOf(player.value.handle, account.summary?.handle ?? null, friendsView.value)
     : { kind: 'stranger' },
 );
-const friend = computed(() => (standing.value.kind === 'friend' ? standing.value.friend : null));
 // What the viewer may do as a friend, once the list has come or can't be had.
 const friendly = computed(() =>
   befriendable.value && (friendsView.value !== null || friendsFailed.value !== null) ? standing.value : null,
 );
-const title = computed(() => friend.value?.alias ?? player.value?.name ?? '');
-const subtitle = computed(() => (friend.value?.alias ? (player.value?.name ?? null) : null));
+const username = computed(() => (player.value ? usernameAfter(player.value) : null));
 const mine = computed(() => isMe.value && account.summary !== null);
 const checked = computed(() => checkReport(note.value));
 const noteProblem = computed(() => (checked.value.problem ? t(errorKey(checked.value.problem)) : undefined));
@@ -135,7 +126,7 @@ async function report() {
 </script>
 
 <template>
-  <UiSheet :open="player !== null && !over" :title="title" :subtitle="subtitle" @close="emit('close')">
+  <UiSheet :open="player !== null && !over" :title="player?.name ?? ''" :subtitle="username" @close="emit('close')">
     <div v-if="player" class="panel-body">
       <ProfileCard v-if="player.handle" :handle="player.handle" brief :named="false" />
       <AgentProfileCard v-else-if="player.agent" :persona="player.agent" />
@@ -146,7 +137,7 @@ async function report() {
         <FriendActions
           v-if="friendly"
           :standing="friendly"
-          :name="player.name"
+          :name="player.username ?? player.name"
           :who="{ playerId: player.id }"
           @done="emit('close')"
         />
@@ -170,6 +161,7 @@ async function report() {
   <UiSheet
     :open="player !== null && reading && !over"
     :title="player?.name ?? ''"
+    :subtitle="username"
     :back="t('room.panel.back')"
     @back="reading = false"
     @close="emit('close')"
@@ -179,13 +171,15 @@ async function report() {
 
   <UiSheet :open="player !== null && removing" :title="t('lobby.manage.remove')" @close="removing = false">
     <div class="actions">
-      <p>
-        {{
-          t(room.public ? 'lobby.manage.removeConfirm' : 'lobby.manage.removeConfirmPrivate', {
-            name: player?.name ?? '',
-          })
-        }}
-      </p>
+      <i18n-t
+        :keypath="room.public ? 'lobby.manage.removeConfirm' : 'lobby.manage.removeConfirmPrivate'"
+        tag="p"
+        scope="global"
+      >
+        <template #name
+          >{{ player?.name ?? '' }}<small v-if="username" class="username-after">{{ ` ${username}` }}</small></template
+        >
+      </i18n-t>
       <UiButton variant="danger" :disabled="busy" @click="manage('room:remove')">{{
         t('lobby.manage.remove')
       }}</UiButton>
@@ -196,6 +190,7 @@ async function report() {
   <UiSheet
     :open="player !== null && reporting"
     :title="t('lobby.manage.reportTitle', { name: player?.name ?? '' })"
+    :subtitle="username"
     @close="reporting = false"
   >
     <form class="actions" @submit.prevent="report">

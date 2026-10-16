@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
+import { knowAliases } from '../names';
 import { closeProfile, shownProfile } from '../profilePanel';
 import ContributionsList from './ContributionsList.vue';
 
@@ -148,6 +149,23 @@ describe('the feedback contributions', () => {
     await people[0]?.trigger('click');
     expect(shownProfile.value).toEqual({ handle: 'a1b2c3d4e5f6', username: 'Ann' });
     wrapper.unmount();
+  });
+
+  // An account that the viewer gives a name as a friend goes by it (names.ts), with its own avatar
+  // still, and its panel opens on the account.
+  test("name a friend by the viewer's name for them", async () => {
+    knowAliases([{ handle: 'a1b2c3d4e5f6', alias: 'Prof. A' }]);
+    const wrapper = await opened();
+    const people = wrapper.findAll('button.person');
+    expect(people.map((person) => person.text())).toEqual(['Prof. A', 'Prof. A']);
+    expect(people[0]?.get('.initial').attributes('data-initial')).toBe('A');
+    // The heading counts people, not names.
+    expect(wrapper.get('h2').text()).toContain('4 people');
+    await people[0]?.trigger('click');
+    expect(shownProfile.value).toEqual({ handle: 'a1b2c3d4e5f6', username: 'Ann' });
+    closeProfile();
+    wrapper.unmount();
+    knowAliases([]);
   });
 
   test('say what was contributed in the language of the page, and the rest as it is', async () => {

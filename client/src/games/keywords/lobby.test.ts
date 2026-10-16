@@ -6,6 +6,7 @@ import { createI18n } from 'vue-i18n';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { account } from '../../core/account';
 import { fields } from '../../core/fields';
+import { knowAliases } from '../../core/names';
 import en from '../../locales/en.json';
 import KeywordsLobby from './KeywordsLobby.vue';
 
@@ -516,9 +517,11 @@ describe('KeywordsLobby, public or private', () => {
     vi.useFakeTimers();
     try {
       account.summary = { username: 'Ann', avatar: null } as unknown as typeof account.summary;
+      // The viewer gives Gus a name of their own (names.ts).
+      knowAliases([{ handle: '6u5000000000', alias: 'Gustav' }]);
       const invited = [
-        { username: 'Fay', avatar: null },
-        { username: 'Gus', avatar: null },
+        { handle: 'fa9000000000', username: 'Fay', avatar: null },
+        { handle: '6u5000000000', username: 'Gus', avatar: null },
       ];
       const lobby = mount(KeywordsLobby, { props: { room: { ...view('ann', 0), invited } }, global: global() });
       const faces = () =>
@@ -532,10 +535,11 @@ describe('KeywordsLobby, public or private', () => {
         ['F', 'waiting'],
         ['G', 'waiting'],
       ]);
-      expect(lobby.get('.invited-friends').attributes('aria-label')).toBe('Invited: Fay and Gus');
-      // Fay comes in: she shows as there for a moment, and goes. Gus ignores his: he goes at once.
+      expect(lobby.get('.invited-friends').attributes('aria-label')).toBe('Invited: Fay and Gustav');
+      // Fay comes in: she shows as there for a moment, and goes, though the room calls her by the
+      // viewer's name for her (room.ts). Gus ignores his: he goes at once.
       const room = view('ann', 0);
-      const fay = { id: 'fay', name: 'Fay', online: true };
+      const fay = { id: 'fay', name: 'Fay the Great', username: 'Fay', handle: 'fa9000000000', online: true };
       await lobby.setProps({ room: { ...room, players: [...room.players, fay], invited: [invited[1]!] } });
       expect(faces()).toEqual([
         ['F', 'came'],
@@ -554,6 +558,7 @@ describe('KeywordsLobby, public or private', () => {
       await flushPromises();
       expect(send).toHaveBeenCalledWith('friends:list');
     } finally {
+      knowAliases([]);
       vi.useRealTimers();
     }
   });

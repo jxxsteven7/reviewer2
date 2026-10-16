@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, textLength, type RoomView } from '@reviewer2/shared';
+import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, textLength } from '@reviewer2/shared';
 import { computed, nextTick, onBeforeUnmount, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AvatarButton from '../../core/components/AvatarButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
+import type { ShownRoom } from '../../core/room';
 import { byTurn } from './chat';
 import { useKeywords } from './useKeywords';
 
@@ -14,7 +15,7 @@ import { useKeywords } from './useKeywords';
 // write one line at a time; PIs read but can't write. Once the game is over, everyone who played
 // for the group, its PI too, may talk it over, until the next game, under a heading of its own
 // after the turns; whoever only sat down after the end reads.
-const props = defineProps<{ room: RoomView; sending: boolean }>();
+const props = defineProps<{ room: ShownRoom; sending: boolean }>();
 const draft = defineModel<string>('draft', { required: true });
 const emit = defineEmits<{ send: [] }>();
 const { t } = useI18n();
@@ -116,6 +117,7 @@ onBeforeUnmount(() => resized?.disconnect());
             v-if="playerOf(message.player)"
             :player-id="message.player"
             :name="playerOf(message.player)?.name ?? ''"
+            :username="playerOf(message.player)?.username"
             :guest="playerOf(message.player)?.guest"
             :avatar="playerOf(message.player)?.avatar"
             :agent="playerOf(message.player)?.agent !== undefined"

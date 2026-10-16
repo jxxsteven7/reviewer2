@@ -16,6 +16,8 @@ import AvatarButton from '../../core/components/AvatarButton.vue';
 export interface Member {
   id: string;
   name: string;
+  // An account's username, which its default avatar is drawn from (AvatarButton.vue).
+  username?: string;
   initial?: string | null;
   avatar?: string | null;
   guest?: number;
@@ -53,6 +55,7 @@ const studentsOf = (team: Team) => {
           <AvatarButton
             :player-id="piOf(team)!.id"
             :name="piOf(team)!.name"
+            :username="piOf(team)!.username"
             :initial="piOf(team)!.initial"
             :avatar="piOf(team)!.avatar"
             :guest="piOf(team)!.guest"
@@ -73,6 +76,7 @@ const studentsOf = (team: Team) => {
             <AvatarButton
               :player-id="student.id"
               :name="student.name"
+              :username="student.username"
               :initial="student.initial"
               :avatar="student.avatar"
               :guest="student.guest"

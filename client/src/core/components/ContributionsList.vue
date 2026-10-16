@@ -2,6 +2,7 @@
 import { type Contribution, CONTRIBUTIONS_API, FEEDBACK_KINDS, REPOSITORY_URL } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import { useLanguage } from '../i18n';
+import { nameOf } from '../names';
 import { openProfile } from '../profilePanel';
 import { countPeople } from '../thanks';
 import FoldedList from './FoldedList.vue';
@@ -15,11 +16,11 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // anonymous player"; then what they contributed, as the operator wrote it in the page's language;
 // the GitHub issue it became, where the discussion and the changes are; and the month it was
 // adopted. Feedback signed with an account comes with the handle of its profile, and shows the
-// account's avatar before its username: a tap on either opens the account's panel over the home
-// page, as an avatar does anywhere else (ProfilePanel.vue). Any other name, and what they did, is
-// plain text. What follows the name is one piece, which wraps under itself rather than under the
-// name, and goes to a line of its own after a long name; an avatar hangs in a column of its own
-// before the name.
+// account's avatar before its username, or the name that the viewer gives a friend (names.ts): a
+// tap on either opens the account's panel over the home page, as an avatar does anywhere else
+// (ProfilePanel.vue). Any other name, and what they did, is plain text. What follows the name is
+// one piece, which wraps under itself rather than under the name, and goes to a line of its own
+// after a long name; an avatar hangs in a column of its own before the name.
 const { t } = useI18n();
 const language = useLanguage();
 
@@ -52,7 +53,7 @@ const sections = ({ contributions }: Contributions) =>
             @click="openProfile(entry.profile, entry.name)"
           >
             <PlayerAvatar class="press-part" :name="entry.name" :avatar="entry.avatar" />
-            <span>{{ entry.name }}</span>
+            <span>{{ nameOf({ name: entry.name, handle: entry.profile }) }}</span>
           </button>
           <span v-else class="name">{{
             entry.deleted ? t('contributions.deleted') : (entry.name ?? t('contributions.anonymous'))

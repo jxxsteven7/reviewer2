@@ -1,7 +1,16 @@
-import { parseCode, type Ack, type ClosedReason, type Language, type RoomView } from '@reviewer2/shared';
+import {
+  parseCode,
+  type Ack,
+  type ClosedReason,
+  type Language,
+  type MatchView,
+  type PlayerView,
+  type RoomView,
+  type StandingView,
+} from '@reviewer2/shared';
 import { reactive, shallowRef, watch } from 'vue';
 import { i18n } from './i18n';
-import { nameOf, type Named } from './names';
+import { friendAliases, nameOf, type Named } from './names';
 import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 // The room this page shows, as the server last described it, and how far the page has got in
@@ -9,7 +18,15 @@ import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 export type EntryStatus = 'idle' | 'connecting' | 'joining' | 'needs_choice' | 'in' | 'not_found' | 'closed' | 'failed';
 
-export const room = shallowRef<RoomView | null>(null);
+// The room as the page shows it (named below): the server's view, with the players and the lines
+// of a match's table named as the page names them, and the `username` of an account kept beside
+// the name the page gives it, which the server never sends.
+export type ShownPlayer = PlayerView & { username?: string };
+export type ShownStanding = StandingView & { username?: string };
+export type ShownMatch = Omit<MatchView, 'standings'> & { standings: ShownStanding[] };
+export type ShownRoom = Omit<RoomView, 'players' | 'match'> & { players: ShownPlayer[]; match: ShownMatch | null };
+
+export const room = shallowRef<ShownRoom | null>(null);
 
 export const entry = reactive<{
   status: EntryStatus;
@@ -57,18 +74,34 @@ function isWanted(view: RoomView): boolean {
 // persona, in the language of the interface (names.ts; docs/architecture.md#players-and-identity):
 // the server knows the number and the persona alone, and the words for them are in the locale
 // files, so they are put in here, in the players and in a match's table, once for every page that
-// shows the player, and again when the visitor switches the language.
+// shows the player, and again when the visitor switches the language. So is the name that the
+// viewer gives a friend (docs/architecture.md#friends), which the server never sends to the room,
+// again whenever the viewer renames one, with the username kept beside it, for the default avatar
+// and to tell accounts apart; but not on a big screen, which the whole room sees, whoever is logged
+// in on it. Someone who has left a match's table is known by the name alone, and keeps it.
 let shown: RoomView | null = null;
 
-function named(view: RoomView): RoomView {
-  const renamed = <Who extends Named & { name: string }>(who: Who): Who =>
-    who.guest === undefined && who.agent === undefined ? who : { ...who, name: nameOf(who) };
-  const players = view.players.map(renamed);
-  const match = view.match && { ...view.match, standings: view.match.standings.map(renamed) };
+function named(view: RoomView): ShownRoom {
+  const aliased = view.me !== null;
+  const handles = new Map(view.players.map(({ id, handle }) => [id, handle]));
+  const renamed = <Who extends Named & { name: string }>(
+    who: Who,
+    handle = who.handle,
+  ): Who & { username?: string } => {
+    if (handle !== undefined) return { ...who, name: nameOf({ ...who, handle }, aliased), username: who.name };
+    return who.guest === undefined && who.agent === undefined ? who : { ...who, name: nameOf(who) };
+  };
+  const players = view.players.map((player) => renamed(player));
+  const match = view.match && {
+    ...view.match,
+    standings: view.match.standings.map((line) =>
+      renamed(line, line.playerId === null ? undefined : handles.get(line.playerId)),
+    ),
+  };
   return { ...view, players, match };
 }
 
-watch(i18n.global.locale, () => {
+watch([i18n.global.locale, friendAliases], () => {
   if (shown && room.value?.roomId === shown.roomId) room.value = named(shown);
 });
 

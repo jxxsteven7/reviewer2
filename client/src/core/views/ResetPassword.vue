@@ -12,7 +12,8 @@ import { useMailLink } from '../useMailLink';
 import MailLinkPage from './MailLinkPage.vue';
 
 // Sets a new password with the link from a mail, which works once and for 30 minutes. Setting it
-// logs the account out everywhere else, and this browser in.
+// logs the account out everywhere else, and this browser in, and the account page takes this one's
+// place in the history: a page whose link is used up is no page to go back to (docs/design.md).
 const { t } = useI18n();
 const router = useRouter();
 const token = useMailLink();
@@ -32,7 +33,7 @@ async function reset() {
   const reply = await run(() => logIn(ACCOUNT_API.reset, { token, password: password.value }));
   if (!reply) return;
   if (reply.ok) {
-    await router.push('/account');
+    await router.replace('/account');
   } else if (reply.error === 'link_invalid') {
     invalid.value = true;
   } else {
