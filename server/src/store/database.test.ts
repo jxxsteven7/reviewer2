@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import {
   BUSY_TIMEOUT_MS,
   DATABASE_FILE,
@@ -1231,7 +1232,7 @@ describe('a database in DATA_DIR', () => {
     // The ids of accounts go on from where they were, and everything of an account still goes with
     // it, the AI's row for it unlinked.
     const store = new AccountStore(db);
-    expect(store.create('Cat', 'cat', 'h')?.id).toBe(3);
+    expect(store.create('Cat', 'cat', 'h', RECORDS_NOTICE_VERSION)?.id).toBe(3);
     db.exec('DELETE FROM accounts WHERE id = 1');
     expect(all('SELECT count(*) AS n FROM titles')).toEqual([{ n: 1 }]);
     expect(all('SELECT count(*) AS n FROM game_records')).toEqual([{ n: 0 }]);

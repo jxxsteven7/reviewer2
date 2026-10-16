@@ -13,6 +13,7 @@ import type { GameModule } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { DEFAULT_FEEDBACK_LIMITS } from './feedback';
 import { DEFAULT_SESSION_LIMITS } from './sessions';
+import { SNAPSHOT_MS } from './snapshots';
 
 // The check of the data (docs/rules/constraints.md#data, `admin.cjs data check`): every rule that
 // the code takes for granted of what the database holds, and that the schema alone can't make
@@ -23,8 +24,13 @@ import { DEFAULT_SESSION_LIMITS } from './sessions';
 //
 // The rules of time, which the server's housekeeping keeps (main.ts): a contact kept past its 90
 // days, a login unused for 30 days or a year old, a link in a mail past its time, and a declined
-// friend request past its wait. On a copy of the database taken days ago they find what the server
-// would have cleared since; on the server's own data, nothing.
+// friend request past its wait. The housekeeping runs once an hour, so each rule allows an hour
+// more than it does: on the server's own data they find nothing, and on a copy of the database
+// taken days ago what the server would have cleared since.
+
+// How long a row may be kept past its time before the housekeeping, which runs once an hour, with
+// the snapshot (main.ts), clears it.
+const HOUSEKEEPING_MS = SNAPSHOT_MS;
 
 export interface DataProblem {
   // The rule, as a sentence.
@@ -111,70 +117,46 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   }
 
   // The record of every game (docs/architecture.md#game-records), and the replay of each that
-  // finished (docs/architecture.md#replays).
+  // finished (docs/architecture.md#replays): every rule of them in one pass, a game at a time, since
+  // the logs are most of the database and all of them at once would be too much to hold.
   const known = new Map(games.map((game) => [game.id, game]));
-  const replays = db
-    .prepare('SELECT game_id AS id, game, ending, log, setup, agent_log AS agentLog, fields, guests FROM replays')
-    .all() as Row[];
-  found(
-    'games of a game that this server does not play',
-    replays.filter(({ game }) => !known.has(String(game))).map(({ id }) => String(id)),
+  const unplayed: string[] = [];
+  const badFields: string[] = [];
+  const badJson: string[] = [];
+  const badLogs: string[] = [];
+  const fewGuests: string[] = [];
+  const noReplay: string[] = [];
+  const replays = db.prepare(
+    'SELECT game_id AS id, game, ending, log, setup, agent_log AS agentLog, fields, guests FROM replays',
   );
-  found(
-    'games whose fields are not a JSON list of names',
-    replays
-      .filter(({ fields }) => {
-        const list = parse(fields);
-        return !Array.isArray(list) || list.some((field) => typeof field !== 'string');
-      })
-      .map(({ id }) => String(id)),
-  );
-  found(
-    'games whose setup or AI log is not JSON',
-    replays
-      .filter(
-        ({ setup, agentLog }) =>
-          (setup !== null && parse(setup) === BAD) || (agentLog !== null && parse(agentLog) === BAD),
-      )
-      .map(({ id }) => String(id)),
-  );
-  const logs = new Map<string, GameLogData>();
-  found(
-    'games whose log is not in the newest format',
-    replays
-      .filter(({ id, game, log }) => {
-        if (log === null) return false;
-        const data = parse(log);
-        if (!isGameLog(data, String(game), String(id))) return true;
-        logs.set(String(id), data);
-        return false;
-      })
-      .map(({ id }) => String(id)),
-  );
-  found(
-    'games whose log numbers fewer guests than played in them',
-    replays
-      .filter(({ id, guests }) => {
-        const log = logs.get(String(id));
-        return log !== undefined && new Set(Object.values(log.guests ?? {})).size < Number(guests);
-      })
-      .map(({ id }) => String(id)),
-  );
-  found(
-    'finished games whose replay cannot be worked out from their record',
-    replays
-      .filter(({ id, game, ending, setup }) => {
-        const log = logs.get(String(id));
-        const module = known.get(String(game));
-        if (ending !== 'finished' || log === undefined || module?.showReplay === undefined) return false;
-        try {
-          return module.showReplay({ setup: parse(setup), log, accounts: new Map(), viewer: new Set() }) === null;
-        } catch {
-          return true;
-        }
-      })
-      .map(({ id }) => String(id)),
-  );
+  for (const row of replays.iterate() as Iterable<Row>) {
+    const id = String(row.id);
+    const module = known.get(String(row.game));
+    if (module === undefined) unplayed.push(id);
+    const fields = parse(row.fields);
+    if (!Array.isArray(fields) || fields.some((field) => typeof field !== 'string')) badFields.push(id);
+    const setup = parse(row.setup);
+    if (setup === BAD || parse(row.agentLog) === BAD) badJson.push(id);
+    if (row.log === null) continue;
+    const log = parse(row.log);
+    if (!isGameLog(log, String(row.game), id)) {
+      badLogs.push(id);
+      continue;
+    }
+    if (new Set(Object.values(log.guests ?? {})).size < Number(row.guests)) fewGuests.push(id);
+    if (row.ending !== 'finished' || module?.showReplay === undefined) continue;
+    try {
+      if (module.showReplay({ setup, log, accounts: new Map(), viewer: new Set() }) === null) noReplay.push(id);
+    } catch {
+      noReplay.push(id);
+    }
+  }
+  found('games of a game that this server does not play', unplayed);
+  found('games whose fields are not a JSON list of names', badFields);
+  found('games whose setup or AI log is not JSON', badJson);
+  found('games whose log is not in the newest format', badLogs);
+  found('games whose log numbers fewer guests than played in them', fewGuests);
+  found('finished games whose replay cannot be worked out from their record', noReplay);
 
   // What accounts keep of the games (docs/architecture.md#accounts), each row against the record
   // of its game, where the game is kept: a game with words of the chair's own leaves records alone.
@@ -192,6 +174,12 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'records of games that disagree with the record of the game on whether it was in a match',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
       'WHERE (r.match_id IS NOT NULL) <> (g.in_match = 1)',
+  );
+  // The roles of the first game, which its records name as the game names its seats: a group's PI
+  // (`captain`) and its students (`guesser`), whose games the pages count apart (RecordCounts).
+  sql(
+    'records of the first game in a role it does not have',
+    "SELECT id FROM game_records WHERE game = 'keywords' AND role NOT IN ('captain', 'guesser')",
   );
   sql(
     'players of games that are not kept',
@@ -249,6 +237,10 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
         "(json_type(feats, '$.best.word') = 'text' AND json_type(feats, '$.best.found') = 'integer')))",
     ),
   );
+  sql(
+    'AI plays of the first game in a role it does not have',
+    play("WHERE game = 'keywords' AND role IS NOT NULL AND role NOT IN ('captain', 'guesser')"),
+  );
 
   // The feedback (docs/architecture.md#feedback): what it may be, and what it may have become.
   found(
@@ -267,9 +259,12 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'feedback in the trash that is an issue',
     'SELECT id FROM feedback WHERE deleted_at IS NOT NULL AND issue IS NOT NULL',
   );
+  // Feedback signed with an account keeps the account and no name, and once the account is deleted
+  // neither, since the account goes from it (ON DELETE SET NULL): a contribution from a deleted
+  // player (docs/architecture.md#feedback-contributions).
   sql(
-    'feedback signed with an account that has no account or keeps a name',
-    'SELECT id FROM feedback WHERE link_profile = 1 AND (account_id IS NULL OR credit IS NOT NULL)',
+    'feedback signed with an account that keeps a name',
+    'SELECT id FROM feedback WHERE link_profile = 1 AND credit IS NOT NULL',
   );
   sql(
     'feedback with a pull request but no time for it, or the other way round',
@@ -279,10 +274,12 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'feedback with the sentences of a contribution in one language, or without them though adopted, or with them though not',
     'SELECT id FROM feedback WHERE (summary_zh IS NULL) <> (summary_en IS NULL) OR (adopted_at IS NULL) <> (summary_zh IS NULL)',
   );
+  // What the housekeeping clears, with the hour it may be behind.
+  const cleared = (ms: number) => iso(moment - ms - HOUSEKEEPING_MS);
   sql(
     'feedback with a contact kept past its time',
     'SELECT id FROM feedback WHERE contact IS NOT NULL AND created_at < ?',
-    iso(moment - DEFAULT_FEEDBACK_LIMITS.contactMs),
+    cleared(DEFAULT_FEEDBACK_LIMITS.contactMs),
   );
 
   // Friends (docs/architecture.md#friends): the line comes with a request and goes with its answer,
@@ -302,20 +299,20 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   sql(
     'declined friend requests kept past their wait',
     "SELECT id FROM friendships WHERE status = 'declined' AND answered_at <= ?",
-    iso(moment - FRIEND_LIMITS.declineCooldownMs),
+    cleared(FRIEND_LIMITS.declineCooldownMs),
   );
 
   // Logins and the links in mails, which end (docs/architecture.md#accounts).
   sql(
     'logins kept past their time',
     'SELECT hex(token_hash) FROM sessions WHERE used_at <= ? OR created_at <= ?',
-    iso(moment - DEFAULT_SESSION_LIMITS.idleMs),
-    iso(moment - DEFAULT_SESSION_LIMITS.lifetimeMs),
+    cleared(DEFAULT_SESSION_LIMITS.idleMs),
+    cleared(DEFAULT_SESSION_LIMITS.lifetimeMs),
   );
   sql(
     'links in mails kept past their time',
     'SELECT hex(token_hash) FROM email_tokens WHERE expires_at <= ?',
-    iso(moment),
+    cleared(0),
   );
 
   return problems;

@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { AccountStore } from '../src/store/accounts';
 import { RecordStore } from '../src/store/records';
 import { SessionStore } from '../src/store/sessions';
@@ -16,7 +17,7 @@ export function addAccounts(db: DatabaseSync, now: number): void {
   const sessions = new SessionStore(db, clock);
   const records = new RecordStore(db, clock);
   const create = (name: string) => {
-    const account = accounts.create(name, name.toLowerCase(), 'scrypt$hash');
+    const account = accounts.create(name, name.toLowerCase(), 'scrypt$hash', RECORDS_NOTICE_VERSION);
     if (!account) throw new Error(`${name} is taken`);
     return account;
   };

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import type { AgentPlay } from '../core/room';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
@@ -58,7 +59,7 @@ const keep = (gameId: string, agentPlays: AgentPlay[]) =>
 describe('the AI page', () => {
   test('counts a game once, with the AI as the PI of both groups and playing for two people in it', () => {
     const accounts = new AccountStore(db);
-    const ann = accounts.create('Ann', 'ann', 'h');
+    const ann = accounts.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
     if (!ann) throw new Error('no account');
     keep('g1', [
       play('a', {

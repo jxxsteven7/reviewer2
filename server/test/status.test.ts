@@ -1,6 +1,7 @@
 import { createServer, request, type IncomingHttpHeaders, type Server } from 'node:http';
 import { createConnection, type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { History, type Stats } from '../src/stats';
 import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
 import { DEFAULT_ADMIN_COMMAND } from '../src/statusPage';
@@ -269,8 +270,8 @@ describe('the status server', () => {
 
   test('shows the reports a page at a time, with the way to bar an account', async () => {
     server = await startServer();
-    const ann = server.accounts.store.create('Ann', 'ann', 'h');
-    const bob = server.accounts.store.create('Bob', 'bob', 'h');
+    const ann = server.accounts.store.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
+    const bob = server.accounts.store.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
     if (!ann || !bob) throw new Error('no account');
     const total = FEEDBACK_SHOWN + 2;
     for (let i = 1; i <= total; i += 1) {

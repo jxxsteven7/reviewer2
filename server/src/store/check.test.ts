@@ -1,12 +1,14 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { FRIEND_LIMITS, RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { fakeGame } from '../../test/fakeGame';
 import { keywordsGame } from '../games/keywords';
 import { AccountStore } from './accounts';
 import { checkData, IDS_SHOWN, type DataProblem } from './check';
 import { openDatabase } from './database';
-import { FeedbackStore } from './feedback';
+import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore } from './feedback';
 import { RecordStore, ReplayStore, TitleStore } from './records';
+import { DEFAULT_SESSION_LIMITS } from './sessions';
 
 // The check of the data (docs/rules/constraints.md#data): a database with a row of every kind, in
 // the newest format, passes every rule, and each rule finds the rows that break it, by id alone.
@@ -19,8 +21,8 @@ let db: DatabaseSync;
 beforeEach(async () => {
   ({ db } = await openDatabase(null));
   const accounts = new AccountStore(db, () => NOW);
-  const ann = accounts.create('Ann', 'ann', 'h');
-  const bob = accounts.create('Bob', 'bob', 'h');
+  const ann = accounts.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
+  const bob = accounts.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
   if (!ann || !bob) throw new Error('no account');
   accounts.setRoomSetup(ann.id, '{"room":{"game":"test"}}');
   const replays = new ReplayStore(db, () => NOW);
@@ -161,6 +163,13 @@ beforeEach(async () => {
     INSERT INTO email_tokens VALUES (x'02', 1, 'reset', NULL, '${new Date(NOW + DAY).toISOString()}');
     INSERT INTO likes VALUES (1, 2, 'now');
   `);
+  // Feedback signed with an account that was deleted since, which keeps neither the account nor a
+  // name: a contribution from a deleted player.
+  const cat = accounts.create('Cat', 'cat', 'h', RECORDS_NOTICE_VERSION);
+  if (!cat) throw new Error('no account');
+  piece({ accountId: cat.id, linkProfile: true });
+  db.exec("UPDATE feedback SET issue = 9, adopted_at = 'now', summary_zh = 'z', summary_en = 'e' WHERE id = 5");
+  accounts.delete(cat.id);
 });
 
 afterEach(() => db.close());
@@ -243,6 +252,11 @@ describe('the check of the data', () => {
       "UPDATE replays SET in_match = 1 WHERE game_id = 'g1'",
       ['1'],
     ],
+    [
+      'records of the first game in a role it does not have',
+      "UPDATE game_records SET game = 'keywords', role = 'spectator' WHERE id = 5",
+      ['5'],
+    ],
     ['players of games that are not kept', "INSERT INTO game_players VALUES ('g9', 'p1', 1)", ['g9:p1']],
     [
       'records of matches with no game of the match on the record',
@@ -284,14 +298,19 @@ describe('the check of the data', () => {
         `'{"clues":"two","found":0,"reviewer2":0,"best":null}')`,
       ['k1:z'],
     ],
+    [
+      'AI plays of the first game in a role it does not have',
+      'INSERT INTO replays (game_id, game, ended_at, ending, winner, reason, started_at, accounts, guests, agents, ' +
+        "takeover, in_match, practice, language, fields, version, rules, words) VALUES ('k1', 'keywords', 'now', " +
+        "'finished', 'red', 'found', 'now', 1, 0, 1, 0, 0, 1, 'en', '[]', 'v', 4, 'w'); " +
+        "INSERT INTO agent_plays VALUES ('k1', 'z', 'keywords', 'reviewer1', 0, NULL, 'red', 'spectator', 1, " +
+        `'{"clues":0,"found":0,"reviewer2":0,"best":null}')`,
+      ['k1:z'],
+    ],
     ['feedback of a kind there is not', "UPDATE feedback SET kind = 'rant' WHERE id = 4", ['4']],
     ['feedback adopted without being an open issue', 'UPDATE feedback SET issue = NULL WHERE id = 1', ['1']],
     ['feedback in the trash that is an issue', 'UPDATE feedback SET issue = 8 WHERE id = 2', ['2']],
-    [
-      'feedback signed with an account that has no account or keeps a name',
-      "UPDATE feedback SET credit = 'Ann' WHERE id = 1",
-      ['1'],
-    ],
+    ['feedback signed with an account that keeps a name', "UPDATE feedback SET credit = 'Ann' WHERE id = 1", ['1']],
     [
       'feedback with a pull request but no time for it, or the other way round',
       'UPDATE feedback SET resolved_at = NULL WHERE id = 3',
@@ -328,9 +347,20 @@ describe('the check of the data', () => {
       ['1'],
     ],
     ['logins kept past their time', "UPDATE sessions SET used_at = '2026-09-01T00:00:00.000Z'", ['01']],
-    ['links in mails kept past their time', "UPDATE email_tokens SET expires_at = '2026-10-16T11:00:00.000Z'", ['02']],
+    ['links in mails kept past their time', "UPDATE email_tokens SET expires_at = '2026-10-16T09:00:00.000Z'", ['02']],
   ])('finds %s', (rule, sql, ids) => {
     expect(broken(sql)).toEqual({ rule, count: ids.length, ids });
+  });
+
+  test('leaves what ended less than an hour ago to the housekeeping, which runs once an hour', () => {
+    const ago = (ms: number) => new Date(NOW - ms - 30 * 60_000).toISOString();
+    db.exec(`
+      UPDATE feedback SET created_at = '${ago(DEFAULT_FEEDBACK_LIMITS.contactMs)}' WHERE id = 2;
+      UPDATE friendships SET status = 'declined', note = NULL, answered_at = '${ago(FRIEND_LIMITS.declineCooldownMs)}';
+      UPDATE sessions SET used_at = '${ago(DEFAULT_SESSION_LIMITS.idleMs)}';
+      UPDATE email_tokens SET expires_at = '${ago(0)}';
+    `);
+    expect(check()).toEqual([]);
   });
 
   test('says how many rows break a rule, and names the first few', () => {

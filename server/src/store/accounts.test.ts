@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { addAccounts } from '../../test/statistics';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
@@ -31,7 +32,7 @@ afterEach(() => db.close());
 const hash = (text: string) => createHash('sha256').update(text).digest();
 const hex = (hashes: Uint8Array[]) => hashes.map((value) => Buffer.from(value).toString('hex')).sort();
 const account = (name = 'Ann') => {
-  const created = accounts.create(name, name.toLowerCase(), 'scrypt$hash');
+  const created = accounts.create(name, name.toLowerCase(), 'scrypt$hash', RECORDS_NOTICE_VERSION);
   if (!created) throw new Error(`${name} is taken`);
   return created;
 };
@@ -63,7 +64,7 @@ describe('an account', () => {
 
   test('can not take a key that another has, nor rename itself to one', () => {
     account('Ann');
-    expect(accounts.create('ANN', 'ann', 'h')).toBeNull();
+    expect(accounts.create('ANN', 'ann', 'h', RECORDS_NOTICE_VERSION)).toBeNull();
     const bob = account('Bob');
     expect(accounts.rename(bob.id, 'ANN', 'ann')).toBe(false);
     expect(accounts.rename(bob.id, 'Bobby', 'bobby')).toBe(true);
@@ -198,10 +199,10 @@ describe('the statistics of the accounts', () => {
     try {
       const read = new AccountStore(reader.db);
       const write = new AccountStore(writer.db);
-      write.create('Ann', 'ann', 'hash');
+      write.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
       const counts = read.snapshot(() => {
         const before = read.count();
-        write.create('Bob', 'bob', 'hash');
+        write.create('Bob', 'bob', 'hash', RECORDS_NOTICE_VERSION);
         return [before, read.count()];
       });
       expect(counts).toEqual([1, 1]);

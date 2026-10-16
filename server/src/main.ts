@@ -9,7 +9,7 @@ import { loadConfig } from './config';
 import { socketAgent } from './core/agentChannel';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
 import { loadWordLibrary } from './core/words';
-import { keywordsGame } from './games/keywords';
+import { GAMES } from './games';
 import { log as defaultLog } from './log';
 import { createAppServer, type AppServer } from './server';
 import { History, watchStats } from './stats';
@@ -160,7 +160,7 @@ export async function main({
     server = createAppServer({
       ...config,
       words,
-      games: [keywordsGame],
+      games: GAMES,
       ...(config.agentSocket !== null && { agent: socketAgent(config.agentSocket) }),
       feedback,
       accounts,

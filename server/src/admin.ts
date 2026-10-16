@@ -16,7 +16,7 @@ import {
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { loadConfig } from './config';
-import { keywordsGame } from './games/keywords';
+import { GAMES } from './games';
 import { AccountStore } from './store/accounts';
 import { checkData } from './store/check';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
@@ -460,7 +460,12 @@ const COMMANDS: Record<string, Command> = {
     flags: [],
     readOnly: true,
     run({ db, dataDir }, _words, _flags, print) {
-      const problems = checkData(db, { games: [keywordsGame], avatarDir: join(dataDir, AVATAR_DIR) });
+      // The avatar files are looked for where the server keeps them; a copy of the database alone,
+      // as a snapshot is, has none to look for.
+      const avatarDir = join(dataDir, AVATAR_DIR);
+      const avatars = existsSync(avatarDir);
+      if (!avatars) print(`There is no ${AVATAR_DIR} directory in ${dataDir}, so the avatar files were not checked.`);
+      const problems = checkData(db, { games: GAMES, avatarDir: avatars ? avatarDir : null });
       if (problems.length === 0) {
         print('Every check passed.');
         return 0;

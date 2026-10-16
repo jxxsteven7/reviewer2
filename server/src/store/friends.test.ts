@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
 import { FriendStore } from './friends';
@@ -19,7 +20,7 @@ beforeEach(async () => {
 afterEach(() => db.close());
 
 const account = (name: string) => {
-  const created = accounts.create(name, name.toLowerCase(), 'h');
+  const created = accounts.create(name, name.toLowerCase(), 'h', RECORDS_NOTICE_VERSION);
   if (!created) throw new Error(`${name} is taken`);
   return created.id;
 };

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
-import { RECORDS_NOTICE_VERSION, type ProfileSettings } from '@reviewer2/shared';
+import type { ProfileSettings } from '@reviewer2/shared';
 import { DEFAULT_SESSION_LIMITS } from './sessions';
 
 // The accounts table (migration 2, docs/architecture.md). This module only reads and writes rows:
@@ -182,10 +182,11 @@ export class AccountStore {
     );
   }
 
-  // A new account, with a handle of its own, which agreed to this version of the notice on how
-  // games are recorded now (RECORDS_NOTICE_VERSION), or null when another has the same key already.
-  // A handle that another account has, which chance allows once in 2^48 draws, is drawn again.
-  create(username: string, key: string, password: string, consent: number = RECORDS_NOTICE_VERSION): Account | null {
+  // A new account, with a handle of its own, which agreed to the version `consent` of the notice
+  // on how games are recorded, now (RECORDS_NOTICE_VERSION in shared/src/accounts.ts, which the
+  // caller checks), or null when another has the same key already. A handle that another account
+  // has, which chance allows once in 2^48 draws, is drawn again.
+  create(username: string, key: string, password: string, consent: number): Account | null {
     for (;;) {
       try {
         const now = new Date(this.now()).toISOString();
