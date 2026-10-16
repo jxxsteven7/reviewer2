@@ -1,4 +1,5 @@
 import {
+  firstCardTurn,
   firstClue,
   firstTurnReject,
   heavenlyHand,
@@ -43,7 +44,8 @@ export function titlesOf(
   if (!first) return titles;
   if (openingRecord(game, team)) titles.push({ title: 'opening_record', turn: first.turn });
   if (heavenlyHand(game, team)) titles.push({ title: 'heavenly_hand', turn: first.turn });
-  if (instantReject(game, team)) titles.push({ title: 'instant_reject', turn: first.turn });
+  if (instantReject(game, team))
+    titles.push({ title: 'instant_reject', turn: (firstCardTurn(game, team) ?? first).turn });
   if (firstTurnReject(game, team)) titles.push({ title: 'first_turn_reject', turn: first.turn });
   return titles;
 }

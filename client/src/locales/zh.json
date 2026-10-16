@@ -717,6 +717,7 @@
     "too_many_rooms": "服务器已满，请稍后再试。",
     "room_not_found": "没有这个编号的房间。",
     "room_full": "这个房间已经满了。",
+    "room_crowded": "这一局进进出出的人太多了，要等这局结束才能进房间或换座位。",
     "screens_full": "这个房间的投屏数量已达上限。",
     "play_required": "请选择参加游戏还是旁听。",
     "account_required": "公开房间需要账号，请登录或注册。",

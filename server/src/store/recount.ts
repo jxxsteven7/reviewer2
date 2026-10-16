@@ -130,18 +130,23 @@ export const keyFor =
   };
 
 // Counts one kept game that finished, with the accounts of its player IDs (`who`). A game that the
-// module can't play through, as one whose record is broken, counts as one whose log doesn't tell.
+// module can't play through, as one whose record is broken, or whose record isn't even JSON, counts
+// as one whose log doesn't tell.
 function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, number>): CountedGame | Uncounted {
-  const log = JSON.parse(row.log) as GameLogData;
+  const played = ((): { log: GameLogData; count: Recount | null } | null => {
+    try {
+      const log = JSON.parse(row.log) as GameLogData;
+      const setup = row.setup === null ? null : (JSON.parse(row.setup) as unknown);
+      const keyOf = keyFor(who, log);
+      const recount = module.recount as NonNullable<GameModule['recount']>;
+      return { log, count: recount({ setup, log, language: row.language, keyOf }) };
+    } catch {
+      return null;
+    }
+  })();
+  if (played === null || played.count === null) return { gameId: row.gameId, matchId: row.matchId, reason: 'log' };
+  const { log, count } = played;
   const keyOf = keyFor(who, log);
-  const setup = row.setup === null ? null : (JSON.parse(row.setup) as unknown);
-  let count: Recount | null;
-  try {
-    count = (module.recount as NonNullable<GameModule['recount']>)({ setup, log, language: row.language, keyOf });
-  } catch {
-    count = null;
-  }
-  if (count === null) return { gameId: row.gameId, matchId: row.matchId, reason: 'log' };
   // A game that an AI played in brings nobody points or titles (docs/architecture.md#ai-players).
   const agents = row.agents > 0 || row.takeover === 1;
   const points = new Map(count.scores.map(({ key, points: won }) => [key, won]));

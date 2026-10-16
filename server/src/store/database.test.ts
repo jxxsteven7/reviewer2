@@ -1546,6 +1546,24 @@ describe('a database in DATA_DIR', () => {
     expect((JSON.parse(row.log) as GameLogData).match).toEqual({ numbers: { p1: 1, p2: 2, p4: 3 } });
   });
 
+  test('of the twenty-third release lets go of the AI log of a game that no AI made a move in', async () => {
+    // An AI was asked for Ann while she was offline in g5, and she was back before it answered.
+    await twentyThird(`
+      INSERT INTO replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup, accounts, guests,
+        agents, takeover, in_match, practice, language, fields, version, rules, words) VALUES
+        ('g5', 'keywords', '2026-10-05T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g5","start":null,"entries":[]}',
+          '{"v":1,"gameId":"g5","steps":[]}', 'abandoned', NULL, NULL, '2026-10-05T00:00:00.000Z', NULL,
+          1, 0, 0, 0, 0, 0, 'en', '["general"]', 'v', 4, 'w');
+    `);
+    const { db } = await open(dir, MIGRATIONS.slice(0, 24));
+    expect(
+      db.prepare("SELECT game_id AS id, agent_log AS log FROM replays WHERE game_id IN ('g4', 'g5')").all(),
+    ).toEqual([
+      { id: 'g4', log: '{"v":1,"gameId":"g4","steps":[]}' },
+      { id: 'g5', log: null },
+    ]);
+  });
+
   test('of the twenty-third release lets go of the records that have no record of the game, and the matches left with no game', async () => {
     await twentyThird(`
       INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points, match_id, match_game, match_games, agents) VALUES

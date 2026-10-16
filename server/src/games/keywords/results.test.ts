@@ -128,6 +128,29 @@ describe('the titles of a game', () => {
     });
     // A game that the chair withdrew after it counts for no record, and so for no title.
     expect(results(played(first, { winner: null, reason: 'withdrawn' }))).toBeNull();
+    // Red's students ran out of time in the turn of their first clue before they revealed a card:
+    // their first card of the game came in the turn of their second clue, and was Reviewer 2, in
+    // that turn, and no fall at the first hurdle beside it.
+    const later = [
+      {
+        turn: 1,
+        team: 'red' as const,
+        at: 0,
+        word: 'One',
+        count: 1,
+        guesses: [],
+        timedOut: true as const,
+        captain: 'ann',
+      },
+      { turn: 2, team: 'blue' as const, at: 0, word: 'One', count: 1, guesses: [guess(9, 'blue')], captain: 'cat' },
+      { turn: 3, team: 'red' as const, at: 0, word: 'Two', count: 2, guesses: [r2], captain: 'ann' },
+    ];
+    expect(titles(played(later, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
+      ann: [{ title: 'instant_reject', turn: 3 }],
+      bob: [{ title: 'instant_reject', turn: 3 }],
+      cat: [],
+      dee: [],
+    });
   });
 
   test('give everyone in a group the fall at the first hurdle for Reviewer 2 later in the turn of its first clue, and never both', () => {

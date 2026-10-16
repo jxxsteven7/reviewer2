@@ -14,6 +14,7 @@ import {
   RECORDS_NOTICE_VERSION,
   TITLES,
   usernameKey,
+  type Language,
 } from '@reviewer2/shared';
 import { AVATAR_FILE } from '../accounts/avatars';
 import type { AgentLogData } from '../core/agentLog';
@@ -196,15 +197,20 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
       const ids = (players.all(id) as { playerId: string }[]).map(({ playerId }) => playerId);
       if (log.match === undefined || ids.some((playerId) => numbers[playerId] === undefined)) unnumbered.push(id);
     }
-    if (row.ending !== 'finished' || module?.showReplay === undefined || !isLanguage(row.language)) continue;
+    if (row.ending !== 'finished' || module?.showReplay === undefined) continue;
     try {
-      const kept = { setup, log, language: row.language, accounts: new Map(), viewer: new Set<string>() };
+      const kept = { setup, log, language: row.language as Language, accounts: new Map(), viewer: new Set<string>() };
       if (module.showReplay(kept) === null) noReplay.push(id);
     } catch {
       noReplay.push(id);
     }
   }
   found('games of a game that this server does not play', unplayed);
+  each(
+    'games whose language is not one there is',
+    'SELECT game_id AS id, language FROM replays',
+    ({ language }) => !isLanguage(language),
+  );
   found('games whose fields are not a JSON list of names', badFields);
   found('games whose setup or AI log is not JSON', badJson);
   found("games whose setup is not in the game's shape", badSetup);

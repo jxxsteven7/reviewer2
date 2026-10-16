@@ -111,8 +111,11 @@ export const MAX_GUESTS = 500;
 // has a share of its own: their moves, their seats and their comings and goings, counted by member
 // key, so that leaving and coming back starts no new count. A whole game takes a player a few dozen
 // entries. Past this many, the room refuses what they send and takes them in no more, so that no
-// one member can flood the log, which is kept whole. Only many members flooding together reach the
-// limit of the log itself, on which the room closes (socket.ts).
+// one member can flood the log, which is kept whole. Whoever comes and goes under one browser key
+// after another has a new count each time, and crowds the log instead (CROWDED_GAME_LOG_BYTES):
+// the room then takes nobody in and lets nobody change seats until the game ends (`room_crowded`),
+// and the game's own moves, which are few, go on. Only a game left to its timers for hours reaches
+// the limit of the log itself, on which the room closes (socket.ts).
 export const MAX_LOGGED_PER_MEMBER = 200;
 
 // How the server calls a guest, by their number, where it says something of them itself, as the
@@ -462,6 +465,7 @@ export class Room {
     const refusal = this.refusal(key);
     if (refusal) return fail(refusal);
     if (this.#flooded(key)) return fail('rate_limited');
+    if (this.#crowded()) return fail('room_crowded');
     const guest = as ? null : (this.#guestNumbers.get(key) ?? this.#guestCount + 1);
 
     const member: Member = {
@@ -1086,12 +1090,14 @@ export class Room {
   // A game message from a member. Whatever the game had due by now happens first, so that a
   // message which arrives after its turn's time has run out finds the turn over, even when the
   // timer that ends it hasn't fired yet. A member who has flooded the log of the game is refused
-  // (MAX_LOGGED_PER_MEMBER). `agent` is the persona of an AI that sends it for a person who is
-  // offline in their turn (docs/architecture.md#ai-players).
+  // (MAX_LOGGED_PER_MEMBER), and so is a change of seat once the log is crowded (LogNote.seat).
+  // `agent` is the persona of an AI that sends it for a person who is offline in their turn
+  // (docs/architecture.md#ai-players).
   act(id: string, type: string, payload: unknown, agent?: AgentPersona): Ack {
     this.expire();
     const key = this.members.get(id)?.key;
     if (key !== undefined && this.#flooded(key)) return fail('rate_limited');
+    if (this.#crowded() && this.game.logged?.(type, payload)?.seat) return fail('room_crowded');
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return refusalOf(result);
     if (result.data !== this.data) {
@@ -1132,6 +1138,13 @@ export class Room {
   #chairFlooded(): boolean {
     const chair = this.chairId === null ? undefined : this.members.get(this.chairId);
     return chair !== undefined && this.#flooded(chair.key);
+  }
+
+  // Whether the log of the game being played is crowded with comings and goings (gameLog.ts), on
+  // which the room takes nobody in and lets nobody change seats until the game ends. After the
+  // end, the log takes in nothing but what the groups say, and the room is open again.
+  #crowded(): boolean {
+    return this.phase === 'playing' && (this.#log?.crowded ?? false);
   }
 
   // Notes a step of an AI in the AI's log of the game it was asked for, `gameId`, at `at` on the
@@ -1180,8 +1193,9 @@ export class Room {
     return this.#ending;
   }
 
-  // Whether the log of the game being played has grown as large as a log may (gameLog.ts), on
-  // which the socket layer closes the room, with the game cut short.
+  // Whether the log of the game being played has grown as large as a log may (gameLog.ts), which
+  // only a game left to its timers for hours does, on which the socket layer closes the room, with
+  // the game cut short.
   get logFull(): boolean {
     return this.phase === 'playing' && (this.#log?.full ?? false);
   }
@@ -1416,8 +1430,8 @@ export class Room {
   // someone who came back after the end under a new ID. The socket layer adds them to the record as
   // the room leaves the game behind: when the chair plays again or starts the next match, and when
   // the room closes. Each entry is handed over once, with, in a match, everyone's number in the
-  // match as it stands then (matchNumbers), which numbers whoever came back after the end under a
-  // new ID. Null when there is nothing new.
+  // match as it stands then (matchNumbers), from which the record numbers whoever came back after
+  // the end under a new ID, and nobody anew (ReplayStore.addToLog). Null when there is nothing new.
   review(): {
     gameId: string;
     entries: GameLogEntry[];

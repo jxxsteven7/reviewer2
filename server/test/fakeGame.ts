@@ -3,7 +3,8 @@ import type { GameModule } from '../src/core/game';
 // A tiny game for testing the shared layer. Players press a button; each viewer sees a line
 // meant only for them, which shows whether snapshots are really built per connection. A player can
 // also break one part of the game, which then throws until someone mends it, and set an alarm,
-// which rings by itself at its time, and say something, as in a chat. The game has one setting, a
+// which rings by itself at its time, say something, as in a chat, and sit back after being moved
+// to the spectators, which is a change of seat rather than a move. The game has one setting, a
 // level from 1 to 3. A game that is finished, rather than withdrawn, is won by everyone who came to
 // play, for the records, and brings whoever said something in it the Deadline Hero title, so that
 // the titles of the records can be tested; it scores no points.
@@ -183,7 +184,13 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   },
   seated: (data, id) => (data.players.includes(id) ? 'player' : 'watcher'),
   logged: (type, payload) =>
-    type === 'test:press' ? { data: payload ?? null } : type === 'test:say' ? { said: String(payload) } : {},
+    type === 'test:press'
+      ? { data: payload ?? null }
+      : type === 'test:say'
+        ? { said: String(payload) }
+        : type === 'test:sit'
+          ? { seat: true }
+          : {},
   due: (data) => (data.alarm === null ? [] : data.players),
   again: (data) => ({ ...data, words: [], gameId: null, over: false, alarm: null }),
   handle(data, ctx, _playerId, type, payload) {
@@ -207,6 +214,9 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
       const talkers = data.talkers.includes(_playerId) ? data.talkers : [...data.talkers, _playerId];
       return { ok: true, data: { ...data, said: data.said + 1, talkers } };
     }
+    // A player who was moved to the spectators sits back: a change of seat, not a move of the game.
+    if (type === 'test:sit')
+      return { ok: true, data: { ...data, benched: data.benched.filter((id) => id !== _playerId) } };
     if (type === 'test:finish') return { ok: true, data: { ...data, over: true, alarm: null } };
     // The alarm rings this many milliseconds from now, by the room's clock.
     if (type === 'test:alarm') return { ok: true, data: { ...data, alarm: ctx.now() + (payload as number) } };

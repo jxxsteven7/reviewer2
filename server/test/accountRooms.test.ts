@@ -363,7 +363,6 @@ describe('the record of games', () => {
       winner: 'all',
       won: true,
       verdict: 'pressed 1',
-      replay: true,
       match: null,
       agents: false,
     };
@@ -463,7 +462,7 @@ describe('a replay', () => {
     await chair.waitFor((state) => state.phase === 'ended');
     await until(() => server.db.prepare('SELECT count(*) AS count FROM game_records').get()?.count === 1, 'the record');
     expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
-    expect((await records(ann)).recent[0]).toMatchObject({ gameId, replay: true });
+    expect((await records(ann)).recent[0]).toMatchObject({ gameId });
     expect(await replay(ann, gameId)).toMatchObject({ status: 200 });
   });
 

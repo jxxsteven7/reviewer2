@@ -29,6 +29,7 @@ export const ROOM_ERRORS = [
   'too_many_rooms',
   'room_not_found',
   'room_full',
+  'room_crowded',
   'screens_full',
   'play_required',
   'account_required',

@@ -17,7 +17,6 @@ const game = (gameId: string, more: Partial<GameRecord> = {}): GameRecord => ({
   game: 'keywords',
   gameId,
   endedAt: '2026-10-15T13:40:00.000Z',
-  replay: true,
   side: 'red',
   role: 'guesser',
   winner: 'red',

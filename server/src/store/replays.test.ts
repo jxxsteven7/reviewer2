@@ -51,18 +51,20 @@ describe('what the groups said after the end', () => {
         match: { id: 'm1', game: 1, games: 1 },
       }),
     );
-    // Bob came back under a new ID, p3, with the same number, and Ann's guest line had gone into
-    // her account's meanwhile.
+    // Bob came back under a new ID, p3, with the same number. Ann has logged in since the end to an
+    // account that played in the match before, so her line went into its, and p1 has its number
+    // now: the log keeps the numbers and the lines as they stood at the end, when the match's
+    // places were written, and numbers p3 alone.
     const said = [{ t: 9, by: 'p3', type: 'keywords:say', said: 'gg' }];
     expect(
       store.addToLog('g1', said, [{ playerId: 'p3', accountId: bob }], [], {
-        numbers: { p1: 1, p3: 2 },
-        merged: { 3: 1, 4: 1 },
+        numbers: { p1: 4, p3: 2 },
+        merged: { 3: 1, 1: 4 },
       }),
     ).toBe(true);
     expect(logOf('g1')).toMatchObject({
       entries: [{ type: 'end' }, ...said],
-      match: { numbers: { p1: 1, p2: 2, p3: 2 }, merged: { 3: 1, 4: 1 } },
+      match: { numbers: { p1: 1, p2: 2, p3: 2 }, merged: { 3: 1 } },
     });
     expect(playersOf('g1')).toEqual([
       { id: 'p1', account: ann },

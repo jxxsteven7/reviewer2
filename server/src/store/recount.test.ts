@@ -236,6 +236,9 @@ describe('counting a game again', () => {
       },
     };
     expect(countGames(db, broken).uncounted).toEqual([{ gameId: 'g1', matchId: null, reason: 'log' }]);
+    // So does one whose record isn't even JSON.
+    db.exec("UPDATE replays SET log = '{' WHERE game_id = 'g1'");
+    expect(countGames(db, fakeGame).uncounted).toEqual([{ gameId: 'g1', matchId: null, reason: 'log' }]);
   });
 
   test('cannot count a game of a match whose log numbers nobody who scored', () => {

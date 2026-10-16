@@ -2,6 +2,8 @@ import type { KeywordsRoomData, KeywordsView, MatchRules, MatchView, RecordsView
 import { afterEach, describe, expect, test } from 'vitest';
 import type { GameLogData } from '../src/core/gameLog';
 import { keywordsGame } from '../src/games/keywords';
+import { checkData } from '../src/store/check';
+import { countGames, countMatches } from '../src/store/recount';
 import {
   Browser,
   createRoom,
@@ -401,6 +403,74 @@ describe('a match', () => {
         .prepare('SELECT account_id AS account FROM game_players WHERE game_id = ? AND player_id = ?')
         .get(gameId, back.me),
     ).toEqual({ account: server.accounts.byName('Bob')?.id });
+  });
+
+  test('keeps its places on the record as they were when a guest logs in after the end to an account that played in it', async () => {
+    server = await startServer({ games: [keywordsGame] });
+    const browsers = {
+      Ann: await loggedIn('Ann'),
+      Bob: await loggedIn('Bob'),
+      Cat: await loggedIn('Cat'),
+      Dan: await loggedIn('Dan'),
+    };
+    const { code, players, everyone } = await matchRoom({ teams: 'fixed', grouping: 'choose' }, browsers);
+    const ann = players.Ann;
+    await expectOk(players.Ann.send('keywords:seat', { team: 'red', role: 'captain' }));
+    await expectOk(players.Bob.send('keywords:seat', { team: 'red', role: 'guesser' }));
+    await expectOk(players.Cat.send('keywords:seat', { team: 'blue', role: 'captain' }));
+    await expectOk(players.Dan.send('keywords:seat', { team: 'blue', role: 'guesser' }));
+    await start(ann, everyone);
+    await playOneTurn(everyone);
+    await expectOk(ann.send('room:again', { gameId: ann.state?.gameId }));
+    await settle(everyone);
+    // Dan leaves, and a guest takes his place for the last game, as blue's PI, whose turn it is.
+    await expectOk(players.Dan.send('room:leave'));
+    const left = everyone.filter((client) => client !== players.Dan);
+    await settle(left);
+    const guest = track(await joinRoom(server.url, code, { play: true }));
+    known(guest, 'Guest');
+    const table = [...left, guest];
+    await settle(table);
+    await expectOk(guest.send('keywords:seat', { team: 'blue', role: 'captain' }));
+    await start(ann, table);
+    await playOneTurn(table);
+    expect(matchOf(ann).status).toBe('over');
+    const gameId = ann.state?.gameId as string;
+    const places = () =>
+      server.db
+        .prepare(
+          'SELECT a.username AS name, m.rank, m.score, m.players, t.title FROM match_records AS m ' +
+            'JOIN accounts AS a ON a.id = m.account_id LEFT JOIN titles AS t ON t.match_id = m.match_id ' +
+            'AND t.account_id = m.account_id ORDER BY m.rank, name',
+        )
+        .all();
+    const kept = places();
+    expect(kept).toHaveLength(3);
+    expect(kept.map(({ name }) => name)).not.toContain('Dan');
+    // The guest was Dan all along, and logs in as him, which joins his two lines; then he talks the
+    // game over, and the chair closes the room, which adds what he said to the record.
+    const { roomId } = guest.state ?? {};
+    guest.close();
+    const back = track(await browsers.Dan.connect({ token: guest.token, code, roomId }));
+    await back.waitFor((state) => state.code === code && state.players.some(({ name }) => name === 'Dan'));
+    await expectOk(back.send('keywords:say', { gameId, text: 'gg' }));
+    await expectOk(ann.send('room:close'));
+    await until(() => logOf(gameId).entries.some(({ said }) => said === 'gg'), 'the talk kept');
+    // The record of the match adds up again to the places as they were, and the check agrees.
+    expect(places()).toEqual(kept);
+    const counted = countMatches(countGames(server.db, keywordsGame).counted);
+    const names = new Map(
+      (server.db.prepare('SELECT id, username FROM accounts').all() as { id: number; username: string }[]).map(
+        ({ id, username }) => [id, username],
+      ),
+    );
+    const standings = [...(counted.values().next().value?.standings ?? [])]
+      .map(([account, { rank, total, title }]) => ({ name: names.get(account), rank, score: total, title }))
+      .sort((a, b) => a.rank - b.rank || String(a.name).localeCompare(String(b.name)));
+    expect(standings.filter(({ name }) => name !== 'Dan')).toEqual(
+      kept.map(({ name, rank, score, title }) => ({ name, rank, score, title })),
+    );
+    expect(checkData(server.db, { games: [keywordsGame] }).filter(({ rule }) => /match/.test(rule))).toEqual([]);
   });
 
   test('moves the total of a guest who logs in to their account, which keeps the match', async () => {

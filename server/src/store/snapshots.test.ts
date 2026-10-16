@@ -192,14 +192,15 @@ describe('the hourly snapshots', () => {
     expect(BEFORE_MIGRATION_MS).toBe(7 * 24 * HOUR);
   });
 
-  test('keep a snapshot from before a recount for a week, as one from before a migration', () => {
+  test('keep only the latest snapshot from before a recount, for a week, as one from before a migration', () => {
     const snapshots = join(dir, 'snapshots');
     mkdirSync(snapshots);
-    const recounted = snapshotName(START, BEFORE_RECOUNT_SUFFIX);
-    writeFileSync(join(snapshots, recounted), '');
-    pruneSnapshots(snapshots, START + BEFORE_MIGRATION_MS);
-    expect(readdirSync(snapshots)).toEqual([recounted]);
-    pruneSnapshots(snapshots, START + BEFORE_MIGRATION_MS + 1000);
+    // Three starts whose recount failed, seconds apart.
+    const attempts = [0, 3000, 6000].map((ms) => snapshotName(START + ms, BEFORE_RECOUNT_SUFFIX));
+    for (const file of attempts) writeFileSync(join(snapshots, file), '');
+    pruneSnapshots(snapshots, START + 6000 + BEFORE_MIGRATION_MS);
+    expect(readdirSync(snapshots)).toEqual([attempts[2]]);
+    pruneSnapshots(snapshots, START + 6000 + BEFORE_MIGRATION_MS + 1000);
     expect(readdirSync(snapshots)).toEqual([]);
   });
 

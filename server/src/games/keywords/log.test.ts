@@ -53,9 +53,11 @@ describe('the log of the team word guessing game', () => {
     expect(logged('keywords:reveal', { gameId, turn: 3, card: 7 })).toEqual({ data: { turn: 3, card: 7 } });
     expect(logged('keywords:pass', { gameId, turn: 3 })).toEqual({ data: { turn: 3 } });
     expect(logged('keywords:extend', { gameId, turn: 3 })).toEqual({ data: { turn: 3 } });
-    // A seat change says where a player is from then on, and a pause is the chair's alone.
+    // A seat change says where a player is from then on, and that it moves the player rather
+    // than the game; a pause is the chair's alone.
     expect(logged('keywords:seat', { team: 'red', role: 'captain' })).toEqual({
       data: { team: 'red', role: 'captain' },
+      seat: true,
     });
     expect(logged('keywords:pause', { gameId })).toEqual({});
     expect(logged('keywords:resume', { gameId })).toEqual({});

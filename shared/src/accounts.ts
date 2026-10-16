@@ -278,17 +278,15 @@ export interface AccountState {
 }
 
 // One game on an account's record, as the game module described the player's part in it. For
-// the team word guessing game, `side` is the group and `role` is captain or guesser. `replay`
-// says whether the server kept the game to watch again (docs/architecture.md#replays), which the
-// page asks for with the game's ID. `match` says which game of a match it was, from 1, and how many
-// games the match was to have, or is null for a game outside a match. `agents` says that an AI
-// played in it, as a player or for someone who was offline, which brought nobody points
-// (docs/architecture.md#ai-players).
+// the team word guessing game, `side` is the group and `role` is captain or guesser. Every game on
+// the record can be watched again (docs/architecture.md#replays), which the page asks for with the
+// game's ID. `match` says which game of a match it was, from 1, and how many games the match was to
+// have, or is null for a game outside a match. `agents` says that an AI played in it, as a player
+// or for someone who was offline, which brought nobody points (docs/architecture.md#ai-players).
 export interface GameRecord {
   game: string;
   gameId: string;
   endedAt: string;
-  replay: boolean;
   side: string;
   role: string;
   winner: string;

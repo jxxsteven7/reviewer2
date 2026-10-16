@@ -256,7 +256,7 @@ export class RecordStore {
   // The counts, and the latest games and matches.
   view(accountId: number, limit = RECENT_RECORDS): RecordsView {
     const counts = this.counts(accountId);
-    type Row = Omit<GameRecord, 'won' | 'replay' | 'match' | 'agents'> & {
+    type Row = Omit<GameRecord, 'won' | 'match' | 'agents'> & {
       won: number;
       agents: number;
       matchGame: number | null;
@@ -265,7 +265,6 @@ export class RecordStore {
     const recent = (this.#recent.all(accountId, limit) as Row[]).map(({ matchGame, matchGames, ...row }) => ({
       ...row,
       won: row.won === 1,
-      replay: true,
       agents: row.agents === 1,
       match: matchGame === null || matchGames === null ? null : { game: matchGame, games: matchGames },
     }));
@@ -488,10 +487,13 @@ export class ReplayStore {
 
   // Adds to the log of a game that is kept what the groups said after its end, as they talked it
   // over (Room.review()), with the accounts of the player IDs it doesn't know yet, such as of
-  // someone who came back to the room after the end, and, in a match, everyone's number in the
-  // match as it stands now (`match`), which numbers such an ID too, and marks the player IDs of the
-  // accounts deleted meanwhile (`deleted`). A game that isn't kept gets nothing. Says whether the
-  // log grew. The caller runs this in one transaction.
+  // someone who came back to the room after the end, and, in a match, the numbers in the match of
+  // the player IDs it doesn't number yet, from everyone's as they stand now (`match`). The numbers
+  // it has, and the lines that had gone into another by the end, stand as they were when the game
+  // ended: the match's places were written then, and the match adds up again to them (recount.ts)
+  // whatever a login after the end changed. It marks the player IDs of the accounts deleted
+  // meanwhile (`deleted`). A game that isn't kept gets nothing. Says whether the log grew. The
+  // caller runs this in one transaction.
   addToLog(
     gameId: string,
     entries: readonly GameLogEntry[],
@@ -507,8 +509,8 @@ export class ReplayStore {
       match === null
         ? kept.match
         : {
-            numbers: { ...kept.match?.numbers, ...match.numbers },
-            ...(kept.match?.merged || match.merged ? { merged: { ...kept.match?.merged, ...match.merged } } : {}),
+            numbers: { ...match.numbers, ...kept.match?.numbers },
+            ...(kept.match?.merged ? { merged: kept.match.merged } : {}),
           };
     const log: GameLogData = markDeleted(
       {

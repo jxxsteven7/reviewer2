@@ -717,6 +717,7 @@
     "too_many_rooms": "The server is full. Please try again later.",
     "room_not_found": "No room has that number.",
     "room_full": "This room is full.",
+    "room_crowded": "This game has seen so many comings and goings that nobody can join or change seats until it ends.",
     "screens_full": "This room already has the most screens it can have.",
     "play_required": "Choose whether you play or watch.",
     "account_required": "Public rooms take an account: log in or register.",

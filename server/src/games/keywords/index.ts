@@ -231,7 +231,8 @@ type Action<M extends KeywordsMessage> = (
 // as the chat shows it (checkChat), which the log keeps apart. Nothing is kept of a card chosen:
 // students choose and choose again before they reveal one, for the fun of it as much as anything.
 // Nor of each mark, which a group sets and changes as it talks: the log keeps how a group's marks
-// stood when it acted instead (markNotes).
+// stood when it acted instead (markNotes). Taking a seat moves the player rather than the game,
+// which the room refuses once the log is crowded (LogNote.seat).
 function logNote(type: string, payload: unknown): LogNote | null {
   if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:select' || type === 'keywords:mark') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
@@ -240,6 +241,7 @@ function logNote(type: string, payload: unknown): LogNote | null {
   delete data.gameId;
   if (type === 'keywords:say') return { said: checkChat(data.text as string).text };
   if (type === 'keywords:clue') data.word = cleanClue(data.word as string);
+  if (type === 'keywords:seat') return { data, seat: true };
   return Object.keys(data).length > 0 ? { data } : {};
 }
 

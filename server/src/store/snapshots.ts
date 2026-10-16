@@ -15,7 +15,8 @@ export const BEFORE_MIGRATION_MS = 7 * 24 * 60 * 60_000;
 
 // The hourly snapshots, the snapshots from before a migration, which have the version that the
 // migration went to after the time, and those from before the records were counted again under
-// new rules (store/recount.ts), kept as the ones from before a migration are.
+// new rules (store/recount.ts), of which the latest is kept, for as long as one from before a
+// migration.
 const STAMP = '(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})Z';
 const HOURLY = new RegExp(`^reviewer2-${STAMP}\\.db$`);
 const BEFORE_MIGRATION = new RegExp(`^reviewer2-${STAMP}-before-v(\\d+)\\.db$`);
@@ -89,7 +90,8 @@ function timeOf(file: string, kind: RegExp): number | null {
 // supersedes, all by the time in their names. An earlier snapshot to the same version comes from
 // a start whose migration failed; the database hasn't moved on since, unless the service went
 // back to the release before, and then the later snapshot is the one that has what it wrote. Of
-// the snapshots from before a recount, those older than a week go.
+// the snapshots from before a recount, all but the latest go, for the same reason, and the latest
+// once it is older than a week.
 export function pruneSnapshots(dir: string, now: number, kept = SNAPSHOTS_KEPT): void {
   const files = readdirSync(dir);
   const hourly = files.filter((file) => HOURLY.test(file)).sort();
@@ -103,8 +105,9 @@ export function pruneSnapshots(dir: string, now: number, kept = SNAPSHOTS_KEPT):
     const time = timeOf(file, BEFORE_MIGRATION) ?? 0;
     return time < now - BEFORE_MIGRATION_MS || latestByVersion.get(match[7] ?? '') !== file;
   });
-  const beforeRecount = files.filter(
-    (file) => BEFORE_RECOUNT.test(file) && (timeOf(file, BEFORE_RECOUNT) ?? 0) < now - BEFORE_MIGRATION_MS,
+  const recounts = files.filter((file) => BEFORE_RECOUNT.test(file)).sort();
+  const beforeRecount = recounts.filter(
+    (file) => file !== recounts.at(-1) || (timeOf(file, BEFORE_RECOUNT) ?? 0) < now - BEFORE_MIGRATION_MS,
   );
   for (const file of [...hourly.slice(0, Math.max(0, hourly.length - kept)), ...beforeMigration, ...beforeRecount]) {
     rmSync(join(dir, file), { force: true });

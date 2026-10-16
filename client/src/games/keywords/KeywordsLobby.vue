@@ -504,10 +504,10 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 /* The chair's start bar, which stays at the top of the screen as the page scrolls, under the
    room's masthead, which stays there too in the waiting room (--pinned-height, PageMasthead.vue),
    and under the banner while the page reconnects, as the game's clock does. Its background reaches
-   the edges of the screen and covers its own sticker's shadow, so that nothing shows through beside
-   it; the clip leaves room under the bar for its shade. A field of the desk that the page brings
-   into view stays below it: the bar's height, as measured (useStickyHeight), and the banner's go
-   into the page's scroll padding. */
+   the edges of the screen, as a masthead's does (PageMasthead.vue), and covers its own sticker's
+   shadow, so that nothing shows through beside it, and nothing below it, where the shade falls on
+   what passes under the bar. A field of the desk that the page brings into view stays below it: the
+   bar's height, as measured (useStickyHeight), and the banner's go into the page's scroll padding. */
 .start-dock {
   position: sticky;
   top: var(--pinned-height, 0px);
@@ -515,8 +515,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   margin-bottom: var(--space-2);
   padding: var(--space-2) 0 var(--space-3);
   background: var(--bg);
-  box-shadow: 0 0 0 100vmax var(--bg);
-  clip-path: inset(0 -100vmax -12px);
+  border-image: linear-gradient(var(--bg), var(--bg)) 0 fill / 0 / 0 100vmax;
 }
 
 /* The soft shadow under the bar while it is stuck under the masthead with the page passing under

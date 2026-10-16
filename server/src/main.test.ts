@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { until } from '../test/helpers';
 import { main, type MainOptions, type Running } from './main';
 import { DATABASE_FILE, openDatabase, SNAPSHOT_DIR } from './store/database';
+import { MIGRATIONS } from './store/migrations';
 
 // Starting and stopping the server as index.ts does, with an environment, a log and an exit of
 // the tests' own.
@@ -187,6 +188,36 @@ describe('starting', () => {
     const file = saved()[0]?.fields?.file;
     expect(file).toMatch(/^reviewer2-\d{8}T\d{6}Z\.db$/);
     expect(readdirSync(join(data, SNAPSHOT_DIR))).toContain(file);
+  });
+
+  test('keeps one snapshot from before a recount that fails on every start, or the one from before the migration', async () => {
+    const data = join(dir, 'data');
+    mkdirSync(data);
+    // A database of the release before, with a finished game whose record can't be played through.
+    const old = await openDatabase(data, { migrations: MIGRATIONS.slice(0, 23) });
+    old.db.exec(`
+      INSERT INTO replays (game_id, game, ended_at, log, ending, winner, reason, started_at, setup, accounts, guests, agents,
+        takeover, in_match, practice, language, fields, version, rules, words) VALUES
+        ('g1', 'keywords', '2026-10-01T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g1","start":null,"entries":[]}',
+          'finished', 'red', 'found', '2026-10-01T00:00:00.000Z', NULL, 0, 2, 0, 0, 0, 0, 'en', '["ml"]', 'v', 4, 'w')
+    `);
+    old.db.close();
+    const cannot = /the record of game g1 cannot be counted again/;
+    // The first start migrates, after a snapshot, which serves the recount too.
+    await expect(start({ DATA_DIR: data })).rejects.toThrow(cannot);
+    expect(logged('database_migrated')).toMatchObject({ from: 23, to: 24 });
+    const snapshots = () => readdirSync(join(data, SNAPSHOT_DIR)).sort();
+    expect(snapshots()).toEqual([expect.stringMatching(/-before-v24\.db$/)]);
+    // The service is started again every few seconds after a start that failed: each start takes
+    // a snapshot of its own now, and keeps the latest alone.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await expect(start({ DATA_DIR: data })).rejects.toThrow(cannot);
+    }
+    expect(snapshots()).toEqual([
+      expect.stringMatching(/-before-v24\.db$/),
+      expect.stringMatching(/-before-recount\.db$/),
+    ]);
   });
 
   test('clears a contact that is 90 days old, from the files and not only the table', async () => {

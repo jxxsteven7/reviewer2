@@ -474,6 +474,19 @@ describe('the check of the data', () => {
     ]);
   });
 
+  test('finds a game whose language is none', () => {
+    expect(brokenBy("UPDATE replays SET language = 'xx' WHERE game_id = 'g1'")).toEqual([
+      { rule: 'games whose language is not one there is', count: 1, ids: ['g1'] },
+    ]);
+  });
+
+  test('finds a game whose record is not JSON, which cannot be counted again', () => {
+    expect(brokenBy("UPDATE replays SET log = '{' WHERE game_id = 'g1'")).toEqual([
+      { rule: 'games whose log is not in the newest format', count: 1, ids: ['g1'] },
+      { rule: 'finished games whose records cannot be counted again from their record', count: 1, ids: ['g1'] },
+    ]);
+  });
+
   test('finds a finished game whose replay cannot be worked out, which cannot be counted again either', () => {
     expect(brokenBy(`UPDATE replays SET log = json_set(log, '$.entries', json('[]')) WHERE game_id = 'g1'`)).toEqual([
       { rule: 'finished games whose replay cannot be worked out from their record', count: 1, ids: ['g1'] },

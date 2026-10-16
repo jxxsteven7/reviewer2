@@ -952,7 +952,9 @@ export const MIGRATIONS: readonly string[] = [
   //   game, since the match scored them all the same, in the order of the accounts' ids, which
   //   changes no place and no total; how the first game began
   //   loses the language and marks every card as a word of the lists (`custom`), since no game with
-  //   the chair's own words was kept before this migration.
+  //   the chair's own words was kept before this migration. The AI log of a game that no AI made a
+  //   move in, as of one asked for someone who was back before it answered, goes: the room keeps
+  //   none such any more (Room.record), and the check of the data takes none.
   // - game_records keeps what is the player's alone: the side, the role, whether they won, the
   //   verdict and the points. The winner, the time, whether an AI played and the place in the match
   //   are the record of the game's.
@@ -1062,7 +1064,8 @@ export const MIGRATIONS: readonly string[] = [
   INSERT INTO new_replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup,
       accounts, guests, agents, takeover, in_match, practice, language, fields, version, rules, words,
       match_id, match_game, match_games)
-    SELECT game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at,
+    SELECT game_id, game, ended_at, log, CASE WHEN agents > 0 OR takeover = 1 THEN agent_log END, ending, winner, reason,
+      started_at,
       CASE WHEN game = 'keywords' AND setup IS NOT NULL THEN json_set(json_remove(setup, '$.language'), '$.cards', (
         SELECT json_group_array(json_set(card.value, '$.custom', json('false')) ORDER BY card.key)
         FROM json_each(replays.setup, '$.cards') AS card

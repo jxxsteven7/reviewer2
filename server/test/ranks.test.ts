@@ -115,7 +115,7 @@ describe('academic ranks', () => {
     await until(() => records.points(1) === RANK_POINTS.master - 1 + points.Ann, "Ann's points");
     expect(records.points(2)).toBe(points.Bob);
     // The game went on the records with its points, and once to the replays, to watch again.
-    expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: true, replay: true });
+    expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: true });
     expect(server.db.prepare("SELECT count(*) AS count FROM replays WHERE game_id <> 'earlier'").get()).toEqual({
       count: 1,
     });

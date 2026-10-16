@@ -1,5 +1,7 @@
 import {
   endPoints,
+  openingRecord,
+  POINTS,
   revealBonus,
   revealPoints,
   type CardColor,
@@ -82,20 +84,34 @@ export function revealFloats(
 
 // What the end of the game adds to the points of the viewer and of each player in a group's seat:
 // the win and the heavenly hand (endPoints()), as the server scored them, for those who have any;
-// the big clues and the opening record rose with their cards.
+// the big clues and the opening record rose with their cards. `risen` names the groups whose
+// opening record rose with its card in front of the viewer: for a student of such a group that has
+// the heavenly hand instead by the end, which outdoes it, the end's number is that point less, so
+// that what rose adds up to the record, which has no point for the opening record.
 export function endFloats(
   data: KeywordsRoomData,
   me: string | null,
   points: readonly GamePoints[],
+  risen: ReadonlySet<Team> = new Set(),
 ): { mine: Float | null; players: Map<string, Float> } {
   const players = new Map<string, Float>();
   let mine: Float | null = null;
   for (const { playerId, detail } of points) {
-    const bonus = detail === undefined ? 0 : endPoints(detail as KeywordsScoreDetail);
-    if (bonus <= 0) continue;
+    if (detail === undefined) continue;
+    const scored = detail as KeywordsScoreDetail;
     const team = data.seats[playerId]?.team ?? null;
+    const side = playerId === me && data.side !== null ? data.side : team;
+    const outdone = side !== null && risen.has(side) && scored.role === 'guesser' && scored.heavenlyHand;
+    const bonus = endPoints(scored) - (outdone ? POINTS.guesser.openingRecord : 0);
+    if (bonus <= 0) continue;
     if (team !== null) players.set(playerId, { text: signed(bonus), team });
     if (playerId === me && data.side !== null) mine = { text: signed(bonus), team: data.side };
   }
   return { mine, players };
 }
+
+// Whether the card revealed last made a group's opening record, between two snapshots of a game in
+// a row: the one card that brings the point of it (revealBonus()), which the heavenly hand may
+// outdo by the end (endFloats()).
+export const openingRose = (before: KeywordsView, after: KeywordsView, by: Team): boolean =>
+  openingRecord(after, by) && !openingRecord(before, by);

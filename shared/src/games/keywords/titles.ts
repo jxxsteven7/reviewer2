@@ -38,10 +38,15 @@ export function openingRecord(game: Played, team: Team): boolean {
   return opening.length === first.count && opening.every((guess) => guess.color === team) && !heavenlyHand(game, team);
 }
 
+// The turn in which a group's students revealed their first card of the game: that of the group's
+// first clue, unless their time ran out before they revealed one in it. Null before they have.
+export const firstCardTurn = (game: Played, team: Team): ClueRecord | null =>
+  game.history.find((record) => record.team === team && record.guesses.length > 0) ?? null;
+
 // Whether the first card that a group's students revealed in the game was Reviewer 2: an instant
-// desk reject. The first card comes in the turn of the group's first clue.
+// desk reject.
 export function instantReject(game: Played, team: Team): boolean {
-  return firstClue(game, team)?.guesses[0]?.color === 'reviewer2';
+  return firstCardTurn(game, team)?.guesses[0]?.color === 'reviewer2';
 }
 
 // Whether a group's students revealed Reviewer 2 in the turn of the group's first clue, but not as

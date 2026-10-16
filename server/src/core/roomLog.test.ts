@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { fakeGame } from '../../test/fakeGame';
 import { testWords } from '../../test/helpers';
+import { CROWDED_GAME_LOG_BYTES } from './gameLog';
 import { seededRng } from './random';
 import { MAX_LOGGED_PER_MEMBER, type Member, type Room } from './room';
 import { Rooms } from './rooms';
@@ -353,6 +354,38 @@ describe('the record of a game', () => {
     expect(log?.entries.filter(({ by }) => by === bob.id)).toHaveLength(MAX_LOGGED_PER_MEMBER + 1);
     expect(log?.entries.filter(({ type }) => type === 'test:press')).toHaveLength(MAX_LOGGED_PER_MEMBER + 1);
     // The next game starts afresh.
+    room.again(room.gameId as string);
+    expect(room.join('key-bob', true)).toMatchObject({ ok: true });
+  });
+
+  test('takes nobody in and lets nobody change seats once the log is crowded, and lets the game go on', () => {
+    const { room, ann, bob } = table();
+    room.start(0);
+    // Presses of a kilobyte each, well within what one member may add, crowd the log; Bob sits
+    // back after each, as long as he may.
+    const press = 'x'.repeat(1024);
+    let presses = 0;
+    while (room.act(bob.id, 'test:sit', undefined).ok) {
+      expect(room.act(ann.id, 'test:press', press)).toMatchObject({ ok: true });
+      presses += 1;
+    }
+    expect(presses).toBeGreaterThan(CROWDED_GAME_LOG_BYTES / 2048);
+    expect(presses).toBeLessThan(MAX_LOGGED_PER_MEMBER);
+    expect(room.join('key-new', true)).toEqual({ ok: false, error: 'room_crowded' });
+    expect(room.act(bob.id, 'test:sit', undefined)).toEqual({ ok: false, error: 'room_crowded' });
+    // The game's own moves go on, and whoever leaves is noted and can't come back for this game.
+    expect(room.act(bob.id, 'test:press', 'still playing')).toMatchObject({ ok: true });
+    room.drop(bob.id);
+    expect(room.join('key-bob', true)).toEqual({ ok: false, error: 'room_crowded' });
+    expect(room.logFull).toBe(false);
+    expect(entries(room).slice(-4)).toEqual([
+      [0, bob.id, 'test:press', 'still playing'],
+      [0, bob.id, 'leave', undefined],
+      [0, ann.id, 'test:finish', undefined],
+      [0, null, 'end', undefined],
+    ]);
+    // After the end, and in the next game, the room is open again.
+    expect(room.join('key-new', true)).toMatchObject({ ok: true });
     room.again(room.gameId as string);
     expect(room.join('key-bob', true)).toMatchObject({ ok: true });
   });

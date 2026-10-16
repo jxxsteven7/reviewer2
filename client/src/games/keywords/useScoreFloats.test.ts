@@ -1,5 +1,11 @@
 // @vitest-environment happy-dom
-import { defaultSettings, type KeywordsRoomData, type KeywordsView, type RoomView } from '@reviewer2/shared';
+import {
+  defaultSettings,
+  type ClueRecord,
+  type KeywordsRoomData,
+  type KeywordsView,
+  type RoomView,
+} from '@reviewer2/shared';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref } from 'vue';
@@ -147,5 +153,42 @@ describe('the numbers that rise', () => {
     expect(floats().end.value).toMatchObject({ text: '+3', team: 'red' });
     vi.advanceTimersByTime(END_FLOAT_MS);
     expect(floats().end.value).toBeNull();
+  });
+
+  test('allow at the end for the point of an opening record that rose, which the heavenly hand outdid', async () => {
+    // Five cards, all red, and a first clue of 4: the fourth card makes the opening record, and the
+    // fifth wins the game in the same turn, the heavenly hand.
+    const five = (revealed: number[], result: KeywordsView['result'] = null): KeywordsView => {
+      const view = game(revealed, result);
+      return {
+        ...view,
+        cards: [0, 1, 2, 3, 4].map((index) =>
+          revealed.includes(index) ? { ...hidden(index), revealed: true, color: 'red' as const } : hidden(index),
+        ),
+        history: [{ ...(view.history[0] as ClueRecord), count: 4 }],
+      };
+    };
+    const { current, floats } = floatsFor(room(five([0, 1, 2])));
+    current.value = room(five([0, 1, 2, 3]));
+    await nextTick();
+    expect(floats().card.value).toMatchObject({ text: '+2', team: 'red' });
+    const detail = {
+      role: 'guesser',
+      found: 5,
+      won: true,
+      irrelevant: 0,
+      wrong: 0,
+      reviewer2: 0,
+      bigClues: 0,
+      missed: 0,
+      openingRecord: false,
+      heavenlyHand: true,
+    };
+    current.value = room(five([0, 1, 2, 3, 4], { winner: 'red', reason: 'found' }), {
+      phase: 'ended',
+      points: [{ playerId: 'bob', points: 9, detail }],
+    });
+    await nextTick();
+    expect(floats().end.value).toMatchObject({ text: '+3', team: 'red' });
   });
 });

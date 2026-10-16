@@ -203,6 +203,18 @@ describe('the end of a game', () => {
       ann: { text: '+7', team: 'red' },
       bob: { text: '+4', team: 'red' },
     });
+    // Red's opening record rose with its card, and the heavenly hand outdid it by the end: Bob's
+    // number is that point less, and the PI's, who had none for it, as it was.
+    const outdone = endFloats(data('red'), 'bob', heavenly, new Set(['red']));
+    expect(outdone.mine).toEqual({ text: '+3', team: 'red' });
+    expect(Object.fromEntries(outdone.players)).toEqual({
+      ann: { text: '+7', team: 'red' },
+      bob: { text: '+3', team: 'red' },
+    });
+    expect(Object.fromEntries(endFloats(data('red'), 'bob', heavenly, new Set(['blue'])).players)).toEqual({
+      ann: { text: '+7', team: 'red' },
+      bob: { text: '+4', team: 'red' },
+    });
     expect(endFloats(data('blue'), 'dan', points).mine).toBeNull();
     expect(endFloats(data(null), 'eve', points).mine).toBeNull();
     expect(endFloats(data('red'), 'ann', []).players.size).toBe(0);

@@ -147,10 +147,13 @@ export interface AgentFeats {
 // What the log of a game keeps of one of the game's messages that changed the game
 // (docs/architecture.md#game-records): what the message carried, as the game reads it, and, for a
 // line of a group's chat, what the player said, which the log keeps apart, so that it can be taken
-// out again when their account is deleted.
+// out again when their account is deleted. A message that moves the player to another seat rather
+// than playing the game says so (`seat`): the room refuses those, with newcomers, once the log of
+// the game is crowded with comings and goings (Room.act, gameLog.ts).
 export interface LogNote {
   data?: unknown;
   said?: string;
+  seat?: true;
 }
 
 // An entry that the log of a game keeps of a change of the game's own (GameModule.logChanges): its

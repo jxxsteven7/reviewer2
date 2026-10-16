@@ -16,13 +16,14 @@ const KEY = 'r2.roomSetup';
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
-// The rooms the browser last set up, by game, as far as they can be read.
+// The rooms the browser last set up, by game, as far as they can be read. A room kept before they
+// were kept by game, which named its game, is left behind: the next room written replaces it.
 function storedRooms(): Record<string, unknown> {
   const text = readStored(KEY);
   if (text === null) return {};
   try {
     const rooms: unknown = JSON.parse(text);
-    return isObject(rooms) ? rooms : {};
+    return isObject(rooms) && typeof rooms.game !== 'string' ? rooms : {};
   } catch {
     return {};
   }

@@ -11,11 +11,17 @@
 // the rules change (store/recount.ts). What the players say may take up to MAX_SAID_BYTES of it,
 // past which the log keeps no more of it, and notes once that it has left it out. The rest, which
 // says who sat where and what they did, each member may add a few hundred entries to
-// (MAX_LOGGED_PER_MEMBER in room.ts), past which the room refuses what they send; the whole of it
-// has MAX_GAME_LOG_BYTES, which only many members flooding together reach: the log is then full
-// (`full`), and the room closes with its game cut short there (socket.ts), so that no room can grow
-// without end in the server's memory. The log is kept whole, with the end that says why.
+// (MAX_LOGGED_PER_MEMBER in room.ts), past which the room refuses what they send. Past
+// CROWDED_GAME_LOG_BYTES of it, many times what a game takes, the log is crowded (`crowded`) with
+// comings and goings, as of guests who come and go under one browser key after another, and the
+// room takes nobody in and lets nobody change seats until the game ends, while the game's own
+// moves go on, which are few: the cards on the board, a clue a turn, and the timers. The whole of
+// it has MAX_GAME_LOG_BYTES, which only a game left to its timers for hours reaches: the log is
+// then full (`full`), and the room closes with its game cut short there (socket.ts), so that no
+// room can grow without end in the server's memory. The log is kept whole, with the end that says
+// why.
 export const MAX_GAME_LOG_BYTES = 128 * 1024;
+export const CROWDED_GAME_LOG_BYTES = 64 * 1024;
 export const MAX_SAID_BYTES = 48 * 1024;
 
 // One thing that happened: when, in milliseconds from the start of the game on the room's clock;
@@ -154,7 +160,18 @@ export class GameLog {
   // Whether the log has grown as large as a log may, apart from what the players said, which has
   // its own share: a flood of messages, on which the room closes.
   get full(): boolean {
-    return this.#bytes - this.#saidBytes > MAX_GAME_LOG_BYTES;
+    return this.#doneBytes > MAX_GAME_LOG_BYTES;
+  }
+
+  // Whether the log is crowded with comings and goings, on which the room takes nobody in and lets
+  // nobody change seats until the game ends.
+  get crowded(): boolean {
+    return this.#doneBytes > CROWDED_GAME_LOG_BYTES;
+  }
+
+  // The size of what was done, apart from what was said.
+  get #doneBytes(): number {
+    return this.#bytes - this.#saidBytes;
   }
 
   // How many entries the log holds, and the entries from the one at `index` on: what has been added

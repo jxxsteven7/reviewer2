@@ -168,6 +168,23 @@ describe('the room setup', () => {
     });
   });
 
+  test('leaves a last room kept before rooms were kept by game behind, and writes this one in its place', async () => {
+    writeStored(
+      'r2.roomSetup',
+      JSON.stringify({ game: 'keywords', fields: ['ml'], match: null, public: true, play: false }),
+    );
+    const wrapper = await opened();
+    expect(box(wrapper, 0).element.checked).toBe(false);
+    expect(box(wrapper, 1).element.checked).toBe(false);
+    await box(wrapper, 0).setValue(true);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ fields: ['general'], play: true });
+    expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toEqual({
+      keywords: { language: 'en', fields: ['general'], randomFields: false, match: null, public: false, play: true },
+    });
+  });
+
   test('creates no room from the last setup before the lists have come, which check its lists', async () => {
     fields.value = null;
     writeStored('r2.roomSetup', JSON.stringify({ keywords: { fields: ['ml', 'gone'] } }));
