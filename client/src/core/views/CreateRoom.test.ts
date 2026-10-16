@@ -91,10 +91,14 @@ describe('the room setup', () => {
     expect(push).toHaveBeenCalledWith('/room/ABCD');
   });
 
-  // A guest has the number that the room gives them, and a player who is logged in their username.
+  // A guest has the number that the room gives them, and a player who is logged in their username,
+  // which the masthead shows; the guest alone is told that the games are recorded.
   test('asks nobody for a name, and sends none', async () => {
     const guest = await opened();
     expect(guest.findAll('input[type="text"]')).toHaveLength(0);
+    expect(guest.get('.notice').text()).toBe(
+      'Games are recorded, the group chat included, to train AI players and for research; nothing published carries names.',
+    );
     await box(guest, 0).setValue(true);
     await guest.get('form').trigger('submit');
     await flushPromises();
@@ -110,7 +114,8 @@ describe('the room setup', () => {
     };
     const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
     expect(wrapper.find('input[autocomplete="nickname"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain('As Ann Lee');
+    expect(wrapper.text()).not.toContain('Ann Lee');
+    expect(wrapper.find('.notice').exists()).toBe(false);
     await box(wrapper, 0).setValue(true);
     expect(submit(wrapper).attributes('disabled')).toBeUndefined();
     await wrapper.get('form').trigger('submit');

@@ -32,6 +32,8 @@ describe('JoinForm', () => {
     const wrapper = mount(JoinForm, { props: { code: 'ABCD' }, global: { plugins: [i18n] } });
     expect(wrapper.find('input[autocomplete="nickname"]').exists()).toBe(false);
     expect(wrapper.findAll('input[type="text"]')).toHaveLength(0);
+    // A guest is told that the games are recorded, which an account agreed to as it registered.
+    expect(wrapper.get('.notice').text()).toContain('Games are recorded');
     // The second choice is to watch.
     await wrapper.findAll('input[type="radio"]')[1]?.setValue(true);
     await joined(wrapper);
@@ -43,7 +45,8 @@ describe('JoinForm', () => {
     signedIn.account.summary = { username: 'Ann', avatar: null, email: 'none', titles: [], contributions: [] };
     room.submitChoice.mockResolvedValue({ ok: false, error: 'removed_recently' });
     const wrapper = mount(JoinForm, { props: { code: 'ABCD' }, global: { plugins: [i18n] } });
-    expect(wrapper.text()).toContain('Ann');
+    expect(wrapper.text()).toContain('As Ann');
+    expect(wrapper.find('.notice').exists()).toBe(false);
     await joined(wrapper);
     expect(room.submitChoice).toHaveBeenCalledWith(true);
     expect(wrapper.get('[role="alert"]').text()).toBe(

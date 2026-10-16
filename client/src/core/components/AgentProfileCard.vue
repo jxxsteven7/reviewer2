@@ -4,15 +4,20 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { account, request } from '../account';
 import { errorKey } from '../errors';
+import { winRate } from '../rates';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
+import StatBlocks, { type StatBlock } from './StatBlocks.vue';
 
 // The page of an AI player (docs/architecture.md#ai-players), in the panel that a tap on its
-// avatar opens in a room: player number 0, how many of it are in the rooms right now, and what it has done in
-// the games that finished, as counts; and, for an account, what the viewer has played with it,
-// which nobody else is sent.
+// avatar opens in a room: player number 0, how many of it are in the rooms right now, and what it
+// has done in the games that finished, as counts: the games, and the share of its seats in them
+// that it won, in all and as a PI and as a student, on blocks as a player's record shows them
+// (StatBlocks.vue), each over how many seats, since in a practice room it sits in both groups of
+// one game; then what its clues found and the rest, line by line; and, for an account, what the
+// viewer has played with it, which nobody else is sent.
 const props = defineProps<{ persona: AgentPersona }>();
-const { t, n } = useI18n();
+const { t, n, locale } = useI18n();
 const profile = ref<AgentProfileView | null>(null);
 const failed = ref<string | undefined>();
 
@@ -45,6 +50,21 @@ watch(
 );
 
 const name = computed(() => t(`agents.personas.${props.persona}`));
+const blocks = computed<StatBlock[]>(() => {
+  if (profile.value === null) return [];
+  const { games, seats, wins, roles } = profile.value;
+  const rate = (label: string, won: number, over: number): StatBlock => ({
+    label: t(`account.profile.recordStats.${label}`),
+    value: winRate(won, over, locale.value),
+    detail: t('account.profile.recordStats.seatCount', { count: over }, over),
+  });
+  return [
+    { label: t('account.profile.recordStats.games'), value: String(games) },
+    rate('rate', wins, seats),
+    rate('captain', roles.captain.wins, roles.captain.seats),
+    rate('guesser', roles.guesser.wins, roles.guesser.seats),
+  ];
+});
 // Cards found per clue, to one decimal place.
 const perClue = computed(() =>
   profile.value && profile.value.clues > 0
@@ -89,18 +109,8 @@ const you = computed(() => {
       </section>
 
       <p v-if="profile.games === 0 && profile.takeovers === 0" class="hint">{{ t('agents.profile.none') }}</p>
-      <ul v-else class="stats">
-        <li class="num">{{ t('agents.profile.record', { games: profile.games, wins: profile.wins }) }}</li>
-        <li class="num">
-          {{
-            t('agents.profile.roles', {
-              piGames: profile.roles.captain.games,
-              piWins: profile.roles.captain.wins,
-              studentGames: profile.roles.guesser.games,
-              studentWins: profile.roles.guesser.wins,
-            })
-          }}
-        </li>
+      <StatBlocks v-else class="record-stats" :blocks="blocks" />
+      <ul v-if="profile.games > 0 || profile.takeovers > 0" class="stats">
         <li v-if="perClue !== null" class="num">{{ t('agents.profile.perClue', { average: perClue }) }}</li>
         <li v-if="profile.best" class="num">{{ t('agents.profile.best', profile.best, profile.best.found) }}</li>
         <li class="num">{{ t('agents.profile.reviewer2', { count: profile.reviewer2 }) }}</li>

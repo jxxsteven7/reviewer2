@@ -765,6 +765,7 @@ export async function register(page: Page, username: string, password = 'correct
   await page.getByRole('button', { name: text.account.signIn.register, exact: true }).click();
   await page.getByLabel(text.account.username).fill(username);
   await page.getByLabel(text.account.password, { exact: true }).fill(password);
+  await page.getByLabel(text.account.signIn.agree).check();
   await page.getByRole('button', { name: text.account.signIn.registerSubmit }).click();
   await page.waitForURL(/\/$/);
 }

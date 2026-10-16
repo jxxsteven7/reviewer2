@@ -13,7 +13,8 @@ import { jpeg } from './images';
 
 const NO_MATCHES = { played: 0, won: 0, recent: [] };
 const NONE = { games: 0, wins: 0 };
-const NO_RECORDS = { ordinary: NONE, inMatches: NONE, recent: [], matches: NO_MATCHES };
+const NO_ROLES = { captain: NONE, guesser: NONE };
+const NO_RECORDS = { ordinary: NONE, inMatches: NONE, roles: NO_ROLES, recent: [], matches: NO_MATCHES };
 
 // Accounts in rooms: who a connection is, the name and seat of a player with an account, the
 // guests beside them and those who log in, what happens to connections when a login ends or the
@@ -366,7 +367,13 @@ describe('the record of games', () => {
       match: null,
       agents: false,
     };
-    const one = { ordinary: { games: 1, wins: 1 }, inMatches: NONE, recent: [record], matches: NO_MATCHES };
+    const one = {
+      ordinary: { games: 1, wins: 1 },
+      inMatches: NONE,
+      roles: NO_ROLES,
+      recent: [record],
+      matches: NO_MATCHES,
+    };
     expect(await records(ann)).toEqual(one);
     expect(await records(bob)).toEqual(one);
     // Dee only watched.

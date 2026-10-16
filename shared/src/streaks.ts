@@ -3,7 +3,8 @@
 // they ended. A streak of STREAK_MIN games or more earns a title, named with the number in words
 // (numbers.ts): "Three Submissions, Three Acceptances" for wins and "Three Submissions, Three
 // Rejections" for losses, and the same in Chinese with the number in Chinese characters. The server
-// keeps the streaks (server/src/store/records.ts) and tells the room of them when a game ends.
+// counts the streaks from the record whenever they are asked for (server/src/store/records.ts) and
+// tells the room of them when a game ends.
 
 export const STREAK_MIN = 3;
 

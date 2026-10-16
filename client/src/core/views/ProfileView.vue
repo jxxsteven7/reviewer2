@@ -266,7 +266,21 @@ async function logOut() {
 
     <UiSheet :open="editing === 'delete'" :title="t('account.profile.delete')" @close="editing = null">
       <form class="sheet-form" @submit.prevent="remove">
-        <p>{{ t('account.profile.deleteWarning') }}</p>
+        <div class="warning">
+          <p>
+            <strong>{{ t('account.profile.deleteWarning.goneLead') }}</strong
+            >{{ t('account.profile.deleteWarning.gone') }}
+          </p>
+          <p>
+            <strong>{{ t('account.profile.deleteWarning.keptLead') }}</strong
+            >{{ t('account.profile.deleteWarning.kept') }}
+          </p>
+          <p>
+            <strong>{{ t('account.profile.deleteWarning.beyondLead') }}</strong
+            >{{ t('account.profile.deleteWarning.beyond') }}
+          </p>
+          <p>{{ t('account.profile.deleteWarning.final') }}</p>
+        </div>
         <UiField
           v-model="current"
           type="password"
@@ -439,6 +453,13 @@ async function logOut() {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* What deleting the account does, in three parts, each with its lead in bold. */
+.warning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .buttons {

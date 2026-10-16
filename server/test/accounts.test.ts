@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { PasswordHasher } from '../src/accounts/passwords';
+import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { Browser, fastHasher, startServer, type TestServer } from './helpers';
 
 // The account API over HTTP: registering, logging in and out, renaming, changing the password and
@@ -69,6 +70,22 @@ describe('registering', () => {
         body: { error: 'username_taken' },
       });
     }
+  });
+
+  test('takes only a player who agreed to the records notice as it is now, and keeps which one and when', async () => {
+    server = await startServer();
+    const browser = new Browser(server.url);
+    for (const consent of [null, 0, RECORDS_NOTICE_VERSION + 1]) {
+      expect(await browser.register('Ann', 'correct horse', consent), String(consent)).toMatchObject({
+        status: 400,
+        body: { ok: false, error: 'consent_required' },
+      });
+    }
+    expect(server.accounts.store.count()).toBe(0);
+    expect(await browser.register('Ann')).toMatchObject({ status: 200 });
+    expect(server.db.prepare('SELECT consent_version AS version, consented_at AS at FROM accounts').all()).toEqual([
+      { version: RECORDS_NOTICE_VERSION, at: expect.stringMatching(/^\d{4}-\d\d-\d\dT/) },
+    ]);
   });
 
   test('gives a name that two ask for at once to one of them', async () => {
@@ -362,7 +379,7 @@ describe('every request', () => {
   test('that changes something must come from a page of this site', async () => {
     server = await startServer();
     const browser = new Browser(server.url);
-    const body = { username: 'Ann', password: 'correct horse' };
+    const body = { username: 'Ann', password: 'correct horse', consent: RECORDS_NOTICE_VERSION };
     expect(await browser.request('/api/register', body, { origin: 'https://evil.example' })).toMatchObject({
       status: 403,
       body: { error: 'bad_origin' },
@@ -381,7 +398,7 @@ describe('every request', () => {
   test('that changes something must be JSON, of at most 4 KB', async () => {
     server = await startServer();
     const browser = new Browser(server.url);
-    const body = { username: 'Ann', password: 'correct horse' };
+    const body = { username: 'Ann', password: 'correct horse', consent: RECORDS_NOTICE_VERSION };
     expect(await browser.request('/api/register', body, { 'content-type': 'text/plain' })).toMatchObject({
       status: 415,
     });

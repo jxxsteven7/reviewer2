@@ -6,6 +6,7 @@ import {
   cleanName,
   escapeName,
   formatCode,
+  isGuestName,
   MAX_SUMMARY_LENGTH,
   REPOSITORY_URL,
   usernameKey,
@@ -15,7 +16,9 @@ import {
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { loadConfig } from './config';
+import { keywordsGame } from './games/keywords';
 import { AccountStore } from './store/accounts';
+import { checkData } from './store/check';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
 import { FeedbackStore, type Feedback, type Report } from './store/feedback';
 import { MIGRATIONS } from './store/migrations';
@@ -45,6 +48,7 @@ import { KINDS } from './statusPage';
 //   node server/dist/admin.cjs feedback restore <id>
 //   node server/dist/admin.cjs feedback trash
 //   node server/dist/admin.cjs reports list
+//   node server/dist/admin.cjs data check
 //
 // adminCli.ts runs this, as index.ts runs main.ts.
 //
@@ -76,8 +80,12 @@ import { KINDS } from './statusPage';
 // `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
 // and never what the database keeps in place of passwords, email addresses and logins; `accounts
 // bar` keeps an account out of public rooms, as for a player others reported, and `accounts unbar`
-// lets it back in. `reports list` shows the latest reports that players sent of each other.
-// `accounts`, `feedback draft`, `trash`, `reports list` and `profile list` only read.
+// lets it back in. `reports list` shows the latest reports that players sent of each other, and
+// says when the account reported has been deleted since, whose username may be someone else's by
+// now. `data check` holds every row against the rules that the code takes for granted of the data
+// (store/check.ts, docs/rules/constraints.md#data), and prints each rule broken with the rows that
+// break it, by id alone, or that every check passed; it exits with 1 when any is broken.
+// `accounts`, `feedback draft`, `trash`, `reports list`, `profile list` and `data check` only read.
 // DATA_DIR names the server's data, as it does for the server. The database is opened as it is,
 // never migrated, and the server may go on running meanwhile.
 
@@ -105,6 +113,7 @@ const USAGE = [
   '  feedback restore <id>',
   '  feedback trash',
   '  reports list',
+  '  data check',
 ].join('\n');
 
 type Flags = { ban?: true; json?: true; zh?: string; en?: string };
@@ -131,6 +140,7 @@ function parse(args: readonly string[]): { words: string[]; flags: Flags } | nul
 
 interface Data {
   db: DatabaseSync;
+  dataDir: string;
   accounts: Accounts;
   feedback: FeedbackStore;
 }
@@ -235,6 +245,8 @@ const trashNote = (print: Print, { id, deletedAt }: Feedback) => {
 
 // One report as the operator reads it: the id, the date, who reported whom, in which room, and the
 // note. The player reported is named as they were in the room, with their account, if they had one.
+// A report keeps no account that is gone, so a name that no guest has with no account is of an
+// account deleted since, which is said, so that whoever has the username now isn't taken for them.
 function reportLine({
   id,
   createdAt,
@@ -245,8 +257,8 @@ function reportLine({
   roomCode,
   text,
 }: Report): string {
-  const who =
-    reported === null ? reportedName : `${reportedName} (account ${reported}${reportedBarred ? ', barred' : ''})`;
+  let who = `${reportedName} (account ${reported}${reportedBarred ? ', barred' : ''})`;
+  if (reported === null) who = isGuestName(reportedName) ? reportedName : `${reportedName} (deleted account)`;
   return (
     `#${id}  ${createdAt.slice(0, 10)}  ${reporter ?? '(deleted account)'} reported ${who} in ${formatCode(roomCode)}` +
     (text === null ? '' : `: ${text.replace(/\n/g, ' / ')}`)
@@ -441,6 +453,24 @@ const COMMANDS: Record<string, Command> = {
       print(total === 1 ? '1 report:' : `${total} reports in all, the latest ${Math.min(total, REPORTS_SHOWN)} first:`);
       for (const report of reports) print(reportLine(report));
       return 0;
+    },
+  },
+  'data check': {
+    words: 0,
+    flags: [],
+    readOnly: true,
+    run({ db, dataDir }, _words, _flags, print) {
+      const problems = checkData(db, { games: [keywordsGame], avatarDir: join(dataDir, AVATAR_DIR) });
+      if (problems.length === 0) {
+        print('Every check passed.');
+        return 0;
+      }
+      for (const { rule, count, ids } of problems) {
+        const shown = count > ids.length ? `${ids.join(', ')} and ${count - ids.length} more` : ids.join(', ');
+        print(`${rule}: ${count === 1 ? '1 row' : `${count} rows`}: ${shown}`);
+      }
+      print(`${problems.length === 1 ? '1 check' : `${problems.length} checks`} failed.`);
+      return 1;
     },
   },
   'avatar remove': {
@@ -889,6 +919,7 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Pr
     let feedback: FeedbackStore | undefined;
     const data: Data = {
       db,
+      dataDir,
       get accounts() {
         return (accounts ??= new Accounts({
           db,

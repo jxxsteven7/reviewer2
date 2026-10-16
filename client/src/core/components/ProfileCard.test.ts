@@ -67,6 +67,7 @@ const profile = (changes: Partial<ProfileView> = {}): ProfileView => ({
   record: {
     ordinary: { games: 8, wins: 5 },
     inMatches: { games: 4, wins: 2 },
+    roles: { captain: { games: 6, wins: 4 }, guesser: { games: 6, wins: 3 } },
     matches: { played: 3, won: 1 },
   },
   contributions: [{ kind: 'bug', count: 1 }],
@@ -120,6 +121,8 @@ describe('ProfileCard', () => {
     expect(blocks).toEqual([
       ['Games', '12'],
       ['Win rate', '58%'],
+      ['PI', '66%', '6 games'],
+      ['Student', '50%', '6 games'],
       ['Matches', '3'],
       ['Won', '1'],
     ]);

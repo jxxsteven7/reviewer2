@@ -312,14 +312,17 @@ describe('reports list', () => {
     printed = [];
     expect(run('reports', 'list')).toBe(0);
     expect(printed).toEqual(['1 report:', '#1  2026-11-01  Ann reported Bob (account Bob) in R2-K7QX: Rude / clues']);
-    store.report({ reporterId: bob.id, reportedId: null, reportedName: 'Guest', roomCode: 'K7QX', text: null });
+    store.report({ reporterId: bob.id, reportedId: null, reportedName: 'Guest 3', roomCode: 'K7QX', text: null });
+    // A report of Ann, whose account goes: the name it keeps may be someone else's by now.
+    store.report({ reporterId: bob.id, reportedId: ann.id, reportedName: 'Ann', roomCode: 'K7QX', text: null });
     accounts.store.setPublicBarred(bob.id, true);
     accounts.store.delete(ann.id);
     printed = [];
     expect(run('reports', 'list')).toBe(0);
     expect(printed).toEqual([
-      '2 reports in all, the latest 2 first:',
-      '#2  2026-11-01  Bob reported Guest in R2-K7QX',
+      '3 reports in all, the latest 3 first:',
+      '#3  2026-11-01  Bob reported Ann (deleted account) in R2-K7QX',
+      '#2  2026-11-01  Bob reported Guest 3 in R2-K7QX',
       '#1  2026-11-01  (deleted account) reported Bob (account Bob, barred) in R2-K7QX: Rude / clues',
     ]);
   });

@@ -31,6 +31,7 @@ const game = (gameId: string, more: Partial<GameRecord> = {}): GameRecord => ({
 const records: RecordsView = {
   ordinary: { games: 2, wins: 2 },
   inMatches: { games: 1, wins: 1 },
+  roles: { captain: { games: 1, wins: 0 }, guesser: { games: 2, wins: 2 } },
   matches: { played: 0, won: 0, recent: [] },
   recent: [
     game('with-ai', { agents: true, side: 'blue', role: 'captain', verdict: 'deskReject', won: false }),

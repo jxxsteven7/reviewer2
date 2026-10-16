@@ -772,6 +772,7 @@
     "login_failed": "The username or the password is wrong.",
     "login_limited": "Too many wrong passwords. Wait a while, or reset the password by email.",
     "register_limited": "Too many accounts from here. Try again later.",
+    "consent_required": "Tick the box to agree to how games are recorded first.",
     "email_invalid": "That isn't an email address.",
     "email_limited": "Too many mails asked for. Try again later.",
     "mail_unavailable": "Email isn't available on this server.",
@@ -962,7 +963,8 @@
       "loginSubmit": "Log in",
       "registerSubmit": "Create the account",
       "forgot": "Forgot your password?",
-      "noEmail": "No email address is needed. You can add one later on your account page, so that a forgotten password can be reset."
+      "noEmail": "No email address is needed. You can add one later on your account page, so that a forgotten password can be reset.",
+      "agree": "I have read and agree to how games are recorded, as above"
     },
     "profile": {
       "title": "Your account",
@@ -1015,7 +1017,7 @@
         "linkPlaceholder": "https://",
         "bio": "One line about you",
         "bioCount": "{count}/{max} characters. Shown as plain text.",
-        "showRecord": "Show my record: games, win rate, matches and matches won",
+        "showRecord": "Show my record: games, win rates, matches and matches won",
         "showThanks": "Show how many of my feedback contributions were adopted, anonymous ones included",
         "save": "Save the page",
         "saved": "Your page has been updated.",
@@ -1029,6 +1031,10 @@
       "recordStats": {
         "games": "Games",
         "rate": "Win rate",
+        "captain": "PI",
+        "guesser": "Student",
+        "gameCount": "{count} game | {count} games",
+        "seatCount": "{count} seat | {count} seats",
         "matches": "Matches",
         "won": "Won"
       },
@@ -1050,7 +1056,15 @@
       },
       "logout": "Log out",
       "delete": "Delete the account",
-      "deleteWarning": "Your account, its record, its rank, its friendships, its titles and its avatar are deleted for good, and the username is free for anyone to take. Feedback that you sent, feedback contributions counted for the account, and the replays of games you played in, which others played in too, stay, no longer linked to it: the feedback contributions you signed show a deleted player, though GitHub issues already published keep the name on them; the replays show you as a deleted player, without your name, and what you said in games stays, anonymous like the rest of the game records and no longer linked to you. This can't be undone.",
+      "deleteWarning": {
+        "goneLead": "Deleted for good: ",
+        "gone": "the account, its public page, record, rank, titles, friendships, likes and avatar. The username is free for anyone to take.",
+        "keptLead": "Kept, no longer linked to you: ",
+        "kept": "the games you played in, which others played in too, whose replays show you as a deleted player, with what you said in the group chat kept anonymous; the feedback and contributions you sent, which show a deleted player where you signed them, though GitHub issues already published keep the name; and the reports you sent or got.",
+        "beyondLead": "Can't be taken back: ",
+        "beyond": "game records already used to train the AI players or published as a dataset, which never held your name or account. The server's backups keep your data until they expire.",
+        "final": "This can't be undone."
+      },
       "deleteSubmit": "Delete for good"
     },
     "avatar": {
@@ -1330,8 +1344,6 @@
       "live": "Clones in the rooms right now: {players} · Rooms: {rooms}",
       "liveNone": "No clones in the rooms right now",
       "none": "No game with it has finished yet.",
-      "record": "Games: {games} · Won: {wins}",
-      "roles": "As a PI: {piGames} played, {piWins} won · As a student: {studentGames} played, {studentWins} won",
       "perClue": "Cards found per clue: {average}",
       "best": "Best clue: “{word}”, {found} card found | Best clue: “{word}”, {found} cards found",
       "reviewer2": "Times it revealed Reviewer 2: {count}",
@@ -1343,6 +1355,7 @@
   },
   "privacy": {
     "recordsTitle": "Game records",
+    "guestNotice": "Games are recorded, the group chat included, to train AI players and for research; nothing published carries names.",
     "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chat. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as a deleted player, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted player, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
   }
 }

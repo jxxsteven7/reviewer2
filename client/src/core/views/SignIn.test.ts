@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { ACCOUNT_API, type Ack } from '@reviewer2/shared';
+import { ACCOUNT_API, RECORDS_NOTICE_VERSION, type Ack } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { i18n, setLanguage } from '../i18n';
@@ -28,6 +28,7 @@ async function signIn(next?: string, mode: 'login' | 'register' = 'login') {
   if (mode === 'register') await wrapper.findAll('.tab')[1]?.trigger('click');
   await wrapper.get('input[autocomplete="username"]').setValue('Ann');
   await wrapper.get(`input[autocomplete="${mode === 'login' ? 'current' : 'new'}-password"]`).setValue('correct horse');
+  if (mode === 'register') await wrapper.get('.agree input').setValue(true);
   await wrapper.get('form').trigger('submit');
   await flushPromises();
   return wrapper;
@@ -44,6 +45,7 @@ describe('signing in', () => {
     expect(signedIn.logIn).toHaveBeenLastCalledWith(ACCOUNT_API.register, {
       username: 'Ann',
       password: 'correct horse',
+      consent: RECORDS_NOTICE_VERSION,
     });
     expect(router.push).toHaveBeenLastCalledWith('/room/K7QX');
     await signIn(undefined, 'register');
@@ -59,11 +61,18 @@ describe('signing in', () => {
     expect(tabs(true)).toEqual(['false', 'true']);
   });
 
-  test('tells whoever registers what becomes of the record of their games', async () => {
+  test('tells whoever registers what becomes of the record of their games, and registers nobody who has not agreed', async () => {
     const wrapper = mount(SignIn, { global: { plugins: [i18n], stubs: { RouterLink: true } } });
     expect(wrapper.text()).not.toContain('Games are recorded.');
+    expect(wrapper.find('.agree').exists()).toBe(false);
     await wrapper.findAll('.tab')[1]?.trigger('click');
     expect(wrapper.text()).toContain("used to train and test the game's AI players");
+    expect(wrapper.get('.agree').text()).toBe('I have read and agree to how games are recorded, as above');
+    await wrapper.get('input[autocomplete="username"]').setValue('Ann');
+    await wrapper.get('input[autocomplete="new-password"]').setValue('correct horse');
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
+    await wrapper.get('.agree input').setValue(true);
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
   });
 
   test('is busy, and says so, until the page has left', async () => {

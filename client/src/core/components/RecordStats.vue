@@ -2,86 +2,39 @@
 import type { RecordCounts } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { winRate } from '../rates';
+import StatBlocks, { type StatBlock } from './StatBlocks.vue';
 
 // An account's record as counts (docs/architecture.md#accounts), on the account's page and on its
-// public page when its owner shows it: four numbers on small blocks of their own, the games finished,
-// in matches or not, the share of them won, as a whole percentage rounded down, so that 100% is a
-// record without a loss, which a record without games doesn't have, the matches finished, and how
-// many of them the account finished first, level with others too.
+// public page when its owner shows it: six numbers on small blocks of their own (StatBlocks.vue),
+// the games finished, in matches or not, the share of them won (rates.ts), the share won as a
+// group's PI and as a student, each over how many games, which count every game as the total does,
+// the matches finished, and how many of them the account finished first, level with others too.
 const props = defineProps<{ counts: RecordCounts }>();
 const { t, locale } = useI18n();
-
-const NO_RATE = '\u2014';
 
 const total = computed(() => {
   const { ordinary, inMatches } = props.counts;
   return { games: ordinary.games + inMatches.games, wins: ordinary.wins + inMatches.wins };
 });
-const rate = computed(() => {
-  const { games, wins } = total.value;
-  const percent = new Intl.NumberFormat(locale.value, { style: 'percent', maximumFractionDigits: 0 });
-  return games === 0 ? NO_RATE : percent.format(Math.floor((wins * 100) / games) / 100);
+const blocks = computed<StatBlock[]>(() => {
+  const { roles, matches } = props.counts;
+  const role = (key: 'captain' | 'guesser'): StatBlock => ({
+    label: t(`account.profile.recordStats.${key}`),
+    value: winRate(roles[key].wins, roles[key].games, locale.value),
+    detail: t('account.profile.recordStats.gameCount', { count: roles[key].games }, roles[key].games),
+  });
+  return [
+    { label: t('account.profile.recordStats.games'), value: String(total.value.games) },
+    { label: t('account.profile.recordStats.rate'), value: winRate(total.value.wins, total.value.games, locale.value) },
+    role('captain'),
+    role('guesser'),
+    { label: t('account.profile.recordStats.matches'), value: String(matches.played) },
+    { label: t('account.profile.recordStats.won'), value: String(matches.won) },
+  ];
 });
 </script>
 
 <template>
-  <dl class="record-stats">
-    <div class="block">
-      <dt>{{ t('account.profile.recordStats.games') }}</dt>
-      <dd class="value num">{{ total.games }}</dd>
-    </div>
-    <div class="block">
-      <dt>{{ t('account.profile.recordStats.rate') }}</dt>
-      <dd class="value num">{{ rate }}</dd>
-    </div>
-    <div class="block">
-      <dt>{{ t('account.profile.recordStats.matches') }}</dt>
-      <dd class="value num">{{ counts.matches.played }}</dd>
-    </div>
-    <div class="block">
-      <dt>{{ t('account.profile.recordStats.won') }}</dt>
-      <dd class="value num">{{ counts.matches.won }}</dd>
-    </div>
-  </dl>
+  <StatBlocks class="record-stats" :blocks="blocks" roles />
 </template>
-
-<style scoped>
-/* Four blocks side by side, as wide as each other, at phone width too. */
-.record-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.block {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  border: var(--line-thin) solid var(--ink);
-  border-radius: var(--radius-card);
-  background: var(--paper);
-}
-
-dt {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--ink-2);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-dd {
-  margin: 0;
-}
-
-.value {
-  font-size: var(--text-xl);
-  font-weight: var(--weight-display);
-  line-height: 1.2;
-}
-</style>

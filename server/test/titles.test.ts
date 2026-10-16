@@ -38,7 +38,7 @@ describe('Forgot to Submit', () => {
     const bobs = new Browser(server.url);
     expect((await anns.register('Ann')).body).toEqual({ ok: true });
     expect((await bobs.register('Bob')).body).toEqual({ ok: true });
-    server.accounts.titles.awardForGame(1, 'missed_deadline', 'earlier', 3);
+    server.accounts.titles.awardForGame(1, 'keywords', 'missed_deadline', 'earlier', 3);
     const ann = await anns.connect();
     clients.push(ann);
     const settings = { ...defaultSettings('en'), firstClueTime: 30, clueTime: 30, guessTime: 30 };
@@ -127,7 +127,7 @@ describe('Deadline Hero', () => {
     const bobs = new Browser(server.url);
     expect((await anns.register('Ann')).body).toEqual({ ok: true });
     expect((await bobs.register('Bob')).body).toEqual({ ok: true });
-    server.accounts.titles.awardForGame(1, 'deadline_hero', 'earlier', 2);
+    server.accounts.titles.awardForGame(1, 'keywords', 'deadline_hero', 'earlier', 2);
     const ann = await anns.connect();
     clients.push(ann);
     const settings = { ...defaultSettings('en'), firstClueTime: 30, clueTime: 30, guessTime: 30 };

@@ -11,8 +11,10 @@ import { submitChoice } from '../room';
 import { useBusy } from '../useBusy';
 
 // A newcomer says whether they have come to play or only to watch before joining. Nobody gives a
-// name: a newcomer who is logged in joins with their username, which the form shows, and a guest
-// as the guest the room numbers them. The page is already in the room's language. What the server
+// name: a newcomer who is logged in joins with their username, which the form shows, since the
+// masthead of this page shows the room and not the account, and a guest as the guest the room
+// numbers them, told in a line that the games are recorded, which an account agreed to as it
+// registered (privacy.guestNotice). The page is already in the room's language. What the server
 // had against joining shows below the form, for another try.
 const props = defineProps<{ code: string }>();
 const { t } = useI18n();
@@ -40,6 +42,7 @@ async function join() {
     </i18n-t>
     <PlayChoice v-model="play" />
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
+    <p v-if="!account.summary" class="notice">{{ t('privacy.guestNotice') }}</p>
     <UiButton variant="primary" type="submit" :disabled="busy">
       {{ t('room.join.submit') }}
     </UiButton>
@@ -76,5 +79,10 @@ h1 {
   color: var(--red-deep);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
+}
+
+.notice {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
 }
 </style>

@@ -156,7 +156,7 @@ export function createAccountApi({
       true,
     ),
     [ACCOUNT_API.register]: post(ACCOUNT_REQUESTS.register, async ({ ip, login, body }) => {
-      const result = await accounts.register(ip, body.username, body.password);
+      const result = await accounts.register(ip, body.username, body.password, body.consent);
       if (!result.ok) return failure(result.error);
       // A browser that was logged in to another account is logged out of it.
       if (login) accounts.logOut(login);

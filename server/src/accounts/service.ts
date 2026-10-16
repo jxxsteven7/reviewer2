@@ -11,6 +11,7 @@ import {
   MAIL_LINK_MS,
   MAX_ROOM_SETUP,
   rankFor,
+  RECORDS_NOTICE_VERSION,
   usernameKey,
   type AccountError,
   type AccountSummary,
@@ -373,7 +374,15 @@ export class Accounts {
     return name === null ? undefined : this.store.byKey(usernameKey(name));
   }
 
-  async register(ip: string, rawName: string, password: string): Promise<AccountResult<{ secret: string }>> {
+  // Registers, for a player who agreed to the notice on how games are recorded as it is now
+  // (`consent`, RECORDS_NOTICE_VERSION): a page that shows an earlier notice, or none, is refused
+  // (consent_required), and the account keeps the version it agreed to, with the time.
+  async register(
+    ip: string,
+    rawName: string,
+    password: string,
+    consent: number | undefined,
+  ): Promise<AccountResult<{ secret: string }>> {
     const { registrations, failedRegistrations } = this.counters;
     if (!registrations.allowed(ip) || !failedRegistrations.allowed(ip)) return refuse('register_limited');
     const failed = (error: AccountFailure) => {
@@ -384,6 +393,7 @@ export class Accounts {
     if (checked.problem) return failed(checked.problem);
     const passwordProblem = checkPassword(password);
     if (passwordProblem) return failed(passwordProblem);
+    if (consent !== RECORDS_NOTICE_VERSION) return failed('consent_required');
     if (this.#full()) return refuse('storage_full');
     const key = usernameKey(checked.username);
     if (this.store.byKey(key)) return failed('username_taken');
@@ -396,7 +406,7 @@ export class Accounts {
     }
     const secret = newSecret();
     const account = this.store.transaction(() => {
-      const created = this.store.create(checked.username, key, hashed.hash);
+      const created = this.store.create(checked.username, key, hashed.hash, consent);
       if (created) this.sessions.create(hashSecret(secret), created.id);
       return created;
     });
@@ -772,7 +782,7 @@ export class Accounts {
       const streak = this.records.add(accountId, record);
       if (streak) {
         for (const { title, turn } of record.titles ?? []) {
-          this.titles.awardForGame(accountId, title, record.gameId, turn);
+          this.titles.awardForGame(accountId, record.game, title, record.gameId, turn);
         }
       }
       return streak;
@@ -825,7 +835,7 @@ export class Accounts {
     if (this.#full() || this.store.byId(accountId) === undefined) return false;
     return this.store.transaction(() => {
       const added = this.records.addMatch(accountId, record);
-      if (added && record.title) this.titles.award(accountId, record.title, record.matchId);
+      if (added && record.title) this.titles.award(accountId, record.game, record.title, record.matchId);
       return added;
     });
   }

@@ -733,7 +733,7 @@ describe('a game that an AI played in', () => {
       .prepare('SELECT points, won FROM game_records WHERE account_id = ?')
       .all(account?.id ?? 0);
     expect(records).toEqual([{ points: 0, won: 1 }]);
-    expect(server.db.prepare('SELECT * FROM streaks WHERE account_id = ?').all(account?.id ?? 0)).toEqual([]);
+    expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({ wins: 0, losses: 0 });
     const [row] = kept();
     const log = JSON.parse(row?.log ?? '{}') as { agents: Record<string, string> };
     expect(Object.values(log.agents)).toEqual(['reviewer1', 'reviewer1']);
@@ -752,8 +752,9 @@ describe('a game that an AI played in', () => {
         number: 0,
         live: { players: 2, rooms: 1 },
         games: 1,
+        seats: 2,
         wins: 0,
-        roles: { captain: { games: 1, wins: 0 }, guesser: { games: 1, wins: 0 } },
+        roles: { captain: { seats: 1, wins: 0 }, guesser: { seats: 1, wins: 0 } },
         clues: 1,
         found: 0,
         reviewer2: 1,
@@ -855,7 +856,7 @@ describe('a game that an AI played in', () => {
     expect(
       server.db.prepare('SELECT points, won, agents FROM game_records WHERE account_id = ?').all(account?.id ?? 0),
     ).toEqual([{ points: 0, won: 1, agents: 1 }]);
-    expect(server.db.prepare('SELECT * FROM streaks').all()).toEqual([]);
+    expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({ wins: 0, losses: 0 });
     const [row] = kept();
     const log = JSON.parse(row?.log ?? '{}') as GameLogData;
     expect(log.agents).toBeUndefined();
@@ -904,8 +905,9 @@ describe('a game that an AI played in', () => {
       ok: true,
       profile: {
         games: 1,
-        wins: 1,
-        roles: { captain: { games: 1, wins: 1 }, guesser: { games: 1, wins: 1 } },
+        seats: 2,
+        wins: 2,
+        roles: { captain: { seats: 1, wins: 1 }, guesser: { seats: 1, wins: 1 } },
         clues: 1,
         found: 2,
         reviewer2: 0,

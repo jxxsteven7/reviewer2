@@ -9,7 +9,6 @@ import FieldFold from '../components/FieldFold.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import MatchForm from '../components/MatchForm.vue';
 import PlayChoice from '../components/PlayChoice.vue';
-import PlayerAvatar from '../components/PlayerAvatar.vue';
 import UiButton from '../components/UiButton.vue';
 import { errorKey } from '../errors';
 import { fields, loadFields } from '../fields';
@@ -22,10 +21,12 @@ import { useBusy } from '../useBusy';
 // lists, folded into a line (FieldFold.vue), or lists drawn anew for every game, the game's own
 // settings, whether it is an ordinary room or a match, and the match's rules, whether the room is
 // private or listed on the home page, and whether the creator plays or only watches. The creator
-// becomes the chair either way. A creator who is logged in has their username, and only they may
-// list the room; a guest has a number in the room, and gives no name. The setup starts from the last one
-// (roomSetup.ts), as far as it still holds: lists that the language has too few words in drop out,
-// a setting that no longer will do is the game's default, and a guest's room is private.
+// becomes the chair either way. A creator who is logged in has their username, which the masthead
+// shows, and only they may list the room; a guest has a number in the room, and gives no name, and
+// is told in a line that the games are recorded, which an account agreed to as it registered
+// (privacy.guestNotice). The setup starts from the last one (roomSetup.ts), as far as it still
+// holds: lists that the language has too few words in drop out, a setting that no longer will do
+// is the game's default, and a guest's room is private.
 const props = defineProps<{ game: string; wordsNeeded: number }>();
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
@@ -192,18 +193,13 @@ async function create() {
     </section>
 
     <section class="step">
-      <i18n-t v-if="account.summary" keypath="account.as" tag="p" class="as" scope="global">
-        <template #name>
-          <PlayerAvatar :name="account.summary.username" :avatar="account.summary.avatar" />
-          <strong>{{ account.summary.username }}</strong>
-        </template>
-      </i18n-t>
       <PlayChoice v-model="play" />
     </section>
 
     <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
 
     <p v-if="needsField" :id="`${id}-hint`" class="hint">{{ t('create.chooseField') }}</p>
+    <p v-if="!account.summary" class="notice">{{ t('privacy.guestNotice') }}</p>
     <div class="actions">
       <UiButton variant="primary" type="submit" :disabled="busy || !ready">{{ t('create.submit') }}</UiButton>
       <UiButton variant="quiet" @click="emit('cancel')">{{ t('create.cancel') }}</UiButton>
@@ -240,15 +236,9 @@ h3 {
   font-size: var(--text-sm);
 }
 
-.as {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.as :deep(.avatar) {
-  margin-right: calc(var(--space-2) * -0.5);
+.notice {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
 }
 
 .kind {

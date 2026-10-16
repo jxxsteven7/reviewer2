@@ -234,6 +234,7 @@ test('a chair without an account is told how to list the room, and comes back as
   await gus.getByRole('button', { name: text.account.signIn.register, exact: true }).click();
   await gus.getByLabel(text.account.username).fill(name);
   await gus.getByLabel(text.account.password, { exact: true }).fill('correct horse');
+  await gus.getByLabel(text.account.signIn.agree).check();
   await gus.getByRole('button', { name: text.account.signIn.registerSubmit }).click();
 
   // Back in the room, in the same seat, still the chair: the start bar is there, and the tag lists

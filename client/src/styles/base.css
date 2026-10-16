@@ -7,6 +7,10 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Room for the scrollbar whether the page scrolls or not, so that the wordmark is in the same
+     place at the top of every page (docs/design.md), the short home page and the long account
+     page alike, where the browser's scrollbar takes space. */
+  scrollbar-gutter: stable;
 }
 
 body {
