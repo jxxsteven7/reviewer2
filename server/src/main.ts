@@ -15,6 +15,8 @@ import { createAppServer, type AppServer } from './server';
 import { History, watchStats } from './stats';
 import { createStatusHandler, STATUS_HOST } from './status';
 import { openDatabase, truncateWal } from './store/database';
+import { hasGamesOf, recountDue, recountRecords } from './store/recount';
+import { BEFORE_RECOUNT_SUFFIX, snapshotName, writeSnapshot } from './store/snapshots';
 import { FeedbackStore, feedbackLimits } from './store/feedback';
 import { SNAPSHOT_MS, Snapshots } from './store/snapshots';
 import { ThanksLists } from './thanks';
@@ -92,6 +94,26 @@ export async function main({
     if (database.migratedFrom !== null) {
       const snapshot = database.beforeMigration === null ? null : basename(database.beforeMigration);
       log('database_migrated', { from: database.migratedFrom, to: database.schema, snapshot });
+    }
+  }
+  // The records of a game whose rules have changed since they were counted are counted again from
+  // the record of every game (store/recount.ts), after a snapshot, as a migration runs. A record
+  // that can't be counted again stops the server, as a migration that fails does, with the database
+  // as it was. A database with no game of the kind to count, as a new one, gets no snapshot and no
+  // line, only the note of the rules it is counted under.
+  const due = recountDue(db, GAMES);
+  if (due.length > 0) {
+    const snapshot =
+      database.snapshots === null || !hasGamesOf(db, due)
+        ? null
+        : await writeSnapshot(db, database.snapshots, snapshotName(Date.now(), BEFORE_RECOUNT_SUFFIX));
+    const report = recountRecords(db, due);
+    if (report.games > 0) {
+      log('records_recounted', {
+        rules: due.map(({ id, rulesVersion }) => ({ game: id, version: rulesVersion })),
+        ...report,
+        snapshot: snapshot === null ? null : basename(snapshot),
+      });
     }
   }
   const feedback = new FeedbackStore(db, undefined, feedbackLimits(config.maxFeedback));

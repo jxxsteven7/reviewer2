@@ -2,6 +2,7 @@ import { STREAK_MIN, type KeywordsRoomData, type KeywordsView, type Team } from 
 import { afterEach, describe, expect, test } from 'vitest';
 import { keywordsGame } from '../src/games/keywords';
 import { Browser, startServer, TestClient, until, type TestServer } from './helpers';
+import { keepGame } from './keptGame';
 
 // Streaks over real sockets (docs/architecture.md#streaks): the end of a game puts the streak it
 // brought each player with an account to into the snapshot that ends the game. A winning streak
@@ -33,12 +34,13 @@ async function settle(everyone: TestClient[]) {
 // Earlier games on an account's record, in order: a game lost for each L, won for each W.
 function history(accountId: number, pattern: string) {
   [...pattern].forEach((result, i) => {
+    const game = i % 2 === 0 ? 'keywords' : 'test';
+    keepGame(server.db, `earlier-${accountId}-${i}`, { game });
     server.accounts.records.add(accountId, {
-      game: i % 2 === 0 ? 'keywords' : 'test',
+      game,
       gameId: `earlier-${accountId}-${i}`,
-      side: 'red',
+      side: result === 'W' ? 'red' : 'blue',
       role: 'guesser',
-      winner: 'red',
       won: result === 'W',
       verdict: 'v',
       points: 0,

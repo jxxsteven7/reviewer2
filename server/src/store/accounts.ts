@@ -169,10 +169,12 @@ export class AccountStore {
       'SELECT substr(created_at, 1, 10) AS day, count(*) AS count FROM accounts WHERE created_at >= ? ' +
         'GROUP BY day ORDER BY day',
     );
+    // When a game on the record ended, the record of the game says (migration 24).
     this.#activeSince = db.prepare(
       'SELECT count(*) AS count FROM accounts WHERE ' +
         'EXISTS (SELECT 1 FROM sessions WHERE account_id = accounts.id AND used_at >= ?) OR ' +
-        'EXISTS (SELECT 1 FROM game_records WHERE account_id = accounts.id AND ended_at >= ?)',
+        'EXISTS (SELECT 1 FROM game_records JOIN replays ON replays.game_id = game_records.game_id ' +
+        'WHERE game_records.account_id = accounts.id AND replays.ended_at >= ?)',
     );
     this.#list = db.prepare(
       'SELECT id, username, created_at AS createdAt, ' +

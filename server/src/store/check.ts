@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import {
@@ -6,12 +6,21 @@ import {
   FEEDBACK_KINDS,
   FRIEND_LIMITS,
   HANDLE,
+  isLanguage,
+  MATCH_GROUPINGS,
+  MATCH_TEAMS,
+  matchGamesValid,
+  MAX_ROOM_SETUP,
   RECORDS_NOTICE_VERSION,
+  TITLES,
   usernameKey,
 } from '@reviewer2/shared';
+import { AVATAR_FILE } from '../accounts/avatars';
+import type { AgentLogData } from '../core/agentLog';
 import type { GameModule } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { DEFAULT_FEEDBACK_LIMITS } from './feedback';
+import { countedUnder, countGames, countMatches } from './recount';
 import { DEFAULT_SESSION_LIMITS } from './sessions';
 import { SNAPSHOT_MS } from './snapshots';
 
@@ -20,7 +29,13 @@ import { SNAPSHOT_MS } from './snapshots';
 // sure of, held against every row, so that the operator can see that every row is in the newest
 // format before the first public release and after every migration since. It reads and never
 // writes. A rule finds the rows that break it, by their ids and nothing else: no name, no text, no
-// contact, so that what it prints can be passed on.
+// contact, so that what it prints can be passed on. What the schema makes sure of, as the foreign
+// keys from every row of a game's data to the record of its game (migration 24), is checked by
+// SQLite's own check alone.
+//
+// The shapes of a game's own, such as how one of its games began, are the game's to judge
+// (GameModule.shapes), and what its records count, the game's to count again (GameModule.recount):
+// nothing here names a game.
 //
 // The rules of time, which the server's housekeeping keeps (main.ts): a contact kept past its 90
 // days, a login unused for 30 days or a year old, a link in a mail past its time, and a declined
@@ -50,6 +65,9 @@ export interface CheckOptions {
 
 // How many ids of each rule are kept.
 export const IDS_SHOWN = 10;
+// How much of the name of an avatar file that no account shows is printed: enough to find the
+// file, and not the whole hash of the image.
+export const AVATAR_NAME_SHOWN = 8;
 
 type Row = Record<string, unknown>;
 
@@ -74,6 +92,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     );
   const iso = (ms: number) => new Date(ms).toISOString();
   const moment = now();
+  const known = new Map(games.map((game) => [game.id, game]));
 
   // SQLite's own checks.
   const integrity = (db.prepare('PRAGMA integrity_check').all() as { integrity_check: string }[]).map(
@@ -99,14 +118,19 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     ({ username, key }) => usernameKey(String(username)) !== key,
   );
   each(
-    'accounts whose last room setup is not a JSON object',
+    'accounts whose last room setup is not in its shape',
     'SELECT id, room_setup AS setup FROM accounts WHERE room_setup IS NOT NULL',
-    ({ setup }) => !isObject(parse(setup)),
+    ({ setup }) => String(setup).length > MAX_ROOM_SETUP || !isRoomSetup(parse(setup), known),
   );
   sql(
     'accounts that agreed to no version of the records notice there is',
     'SELECT id FROM accounts WHERE consent_version < 1 OR consent_version > ?',
     RECORDS_NOTICE_VERSION,
+  );
+  each(
+    'accounts whose avatar is not named as an avatar file is',
+    'SELECT id, avatar FROM accounts WHERE avatar IS NOT NULL',
+    ({ avatar }) => !AVATAR_FILE.test(String(avatar)),
   );
   if (avatarDir !== null) {
     each(
@@ -114,21 +138,39 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
       'SELECT id, avatar FROM accounts WHERE avatar IS NOT NULL',
       ({ avatar }) => !existsSync(join(avatarDir, String(avatar))),
     );
+    // A file that no account shows, which the server clears away as it starts (Accounts.clearAvatars),
+    // named by the start of its name alone.
+    const shown = new Set(
+      (db.prepare('SELECT avatar FROM accounts WHERE avatar IS NOT NULL').all() as Row[]).map((row) =>
+        String(row.avatar),
+      ),
+    );
+    found(
+      'avatar files that no account shows',
+      readdirSync(avatarDir)
+        .filter((name) => AVATAR_FILE.test(name) && !shown.has(name))
+        .map((name) => name.slice(0, AVATAR_NAME_SHOWN)),
+    );
   }
 
   // The record of every game (docs/architecture.md#game-records), and the replay of each that
   // finished (docs/architecture.md#replays): every rule of them in one pass, a game at a time, since
   // the logs are most of the database and all of them at once would be too much to hold.
-  const known = new Map(games.map((game) => [game.id, game]));
   const unplayed: string[] = [];
   const badFields: string[] = [];
   const badJson: string[] = [];
+  const badSetup: string[] = [];
   const badLogs: string[] = [];
   const fewGuests: string[] = [];
+  const unnumbered: string[] = [];
+  const badAgentLogs: string[] = [];
+  const agentLogsWithoutAgents: string[] = [];
   const noReplay: string[] = [];
   const replays = db.prepare(
-    'SELECT game_id AS id, game, ending, log, setup, agent_log AS agentLog, fields, guests FROM replays',
+    'SELECT game_id AS id, game, ending, log, setup, agent_log AS agentLog, fields, guests, agents, takeover, ' +
+      'match_id AS matchId, language FROM replays',
   );
+  const players = db.prepare('SELECT player_id AS playerId FROM game_players WHERE game_id = ?');
   for (const row of replays.iterate() as Iterable<Row>) {
     const id = String(row.id);
     const module = known.get(String(row.game));
@@ -136,17 +178,28 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     const fields = parse(row.fields);
     if (!Array.isArray(fields) || fields.some((field) => typeof field !== 'string')) badFields.push(id);
     const setup = parse(row.setup);
-    if (setup === BAD || parse(row.agentLog) === BAD) badJson.push(id);
-    if (row.log === null) continue;
+    const agentLog = parse(row.agentLog);
+    if (setup === BAD || agentLog === BAD) badJson.push(id);
+    else if (module?.shapes && !module.shapes.setup(setup)) badSetup.push(id);
+    if (agentLog !== BAD && agentLog !== null) {
+      if (!isAgentLog(agentLog, id)) badAgentLogs.push(id);
+      if (Number(row.agents) === 0 && Number(row.takeover) === 0) agentLogsWithoutAgents.push(id);
+    }
     const log = parse(row.log);
     if (!isGameLog(log, String(row.game), id)) {
       badLogs.push(id);
       continue;
     }
     if (new Set(Object.values(log.guests ?? {})).size < Number(row.guests)) fewGuests.push(id);
-    if (row.ending !== 'finished' || module?.showReplay === undefined) continue;
+    if (row.matchId !== null) {
+      const numbers = log.match?.numbers ?? {};
+      const ids = (players.all(id) as { playerId: string }[]).map(({ playerId }) => playerId);
+      if (log.match === undefined || ids.some((playerId) => numbers[playerId] === undefined)) unnumbered.push(id);
+    }
+    if (row.ending !== 'finished' || module?.showReplay === undefined || !isLanguage(row.language)) continue;
     try {
-      if (module.showReplay({ setup, log, accounts: new Map(), viewer: new Set() }) === null) noReplay.push(id);
+      const kept = { setup, log, language: row.language, accounts: new Map(), viewer: new Set<string>() };
+      if (module.showReplay(kept) === null) noReplay.push(id);
     } catch {
       noReplay.push(id);
     }
@@ -154,60 +207,169 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   found('games of a game that this server does not play', unplayed);
   found('games whose fields are not a JSON list of names', badFields);
   found('games whose setup or AI log is not JSON', badJson);
+  found("games whose setup is not in the game's shape", badSetup);
   found('games whose log is not in the newest format', badLogs);
   found('games whose log numbers fewer guests than played in them', fewGuests);
+  found('games of a match whose log does not number every player in it', unnumbered);
+  found('games whose AI log is not in the newest format', badAgentLogs);
+  found('games with an AI log that no AI played in', agentLogsWithoutAgents);
   found('finished games whose replay cannot be worked out from their record', noReplay);
 
   // What accounts keep of the games (docs/architecture.md#accounts), each row against the record
-  // of its game, where the game is kept: a game with words of the chair's own leaves records alone.
+  // of its game, which the foreign keys tie it to, and against what the game counts of the record
+  // of the game under the rules of today (recount.ts): the points, the verdict and the titles of
+  // each record of a game, and the place, the total and the title of each record of a match.
   sql(
     'records of games that disagree with the record of the game',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
-      "WHERE r.game <> g.game OR g.ending <> 'finished' OR r.winner IS NOT g.winner OR r.won <> (r.side = g.winner)",
+      "WHERE g.ending <> 'finished' OR r.won <> (r.side = g.winner)",
   );
   sql(
-    'records of games that disagree with the record of the game on whether an AI played',
+    'records of games that an AI played in, with points',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
-      'WHERE r.agents <> (g.agents > 0 OR g.takeover = 1)',
+      'WHERE (g.agents > 0 OR g.takeover = 1) AND r.points <> 0',
+  );
+  each(
+    'records of games in a role the game does not have',
+    'SELECT id, game, role FROM game_records',
+    ({ game, role }) => {
+      const shapes = known.get(String(game))?.shapes;
+      return shapes !== undefined && !shapes.role(String(role));
+    },
   );
   sql(
-    'records of games that disagree with the record of the game on whether it was in a match',
-    'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
-      'WHERE (r.match_id IS NOT NULL) <> (g.in_match = 1)',
+    'records of matches with no game of the match kept',
+    'SELECT m.id FROM match_records AS m WHERE NOT EXISTS (SELECT 1 FROM replays AS g ' +
+      'WHERE g.match_id = m.match_id AND g.game = m.game)',
   );
-  // The roles of the first game, which its records name as the game names its seats: a group's PI
-  // (`captain`) and its students (`guesser`), whose games the pages count apart (RecordCounts).
-  sql(
-    'records of the first game in a role it does not have',
-    "SELECT id FROM game_records WHERE game = 'keywords' AND role NOT IN ('captain', 'guesser')",
-  );
-  sql(
-    'players of games that are not kept',
-    "SELECT game_id || ':' || player_id FROM game_players WHERE game_id NOT IN (SELECT game_id FROM replays)",
+  found(
+    'titles that are not ones there are',
+    (
+      db
+        .prepare('SELECT id FROM titles WHERE title NOT IN (' + TITLES.map(() => '?').join(', ') + ')')
+        .all(...TITLES) as Row[]
+    ).map((row) => String(row.id)),
   );
   sql(
-    'records of matches with no game of the match on the record',
-    'SELECT m.id FROM match_records AS m WHERE NOT EXISTS (SELECT 1 FROM game_records AS r ' +
-      'WHERE r.match_id = m.match_id AND r.account_id = m.account_id AND r.game = m.game)',
+    'titles of another game than the record they go with',
+    'SELECT t.id FROM titles AS t WHERE ' +
+      '(t.match_id IS NOT NULL AND t.game <> (SELECT game FROM match_records AS m ' +
+      'WHERE m.match_id = t.match_id AND m.account_id = t.account_id)) OR ' +
+      '(t.game_id IS NOT NULL AND t.game <> (SELECT game FROM game_records AS r ' +
+      'WHERE r.game_id = t.game_id AND r.account_id = t.account_id))',
   );
-  sql(
-    'titles of matches that the record of the match does not award',
-    'SELECT t.id FROM titles AS t WHERE t.match_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM match_records AS m ' +
-      'WHERE m.match_id = t.match_id AND m.account_id = t.account_id AND m.game = t.game AND m.title = t.title)',
+  const otherRules: string[] = [];
+  const uncounted: string[] = [];
+  const miscounted: number[] = [];
+  const wrongTitles: number[] = [];
+  const misranked: number[] = [];
+  const wrongMatchTitles: number[] = [];
+  const records = db.prepare(
+    'SELECT id, account_id AS account, side, role, won, verdict, points FROM game_records WHERE game_id = ?',
   );
-  sql(
-    'titles of games that are not on the record',
-    'SELECT t.id FROM titles AS t WHERE t.game_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM game_records AS r ' +
-      'WHERE r.game_id = t.game_id AND r.account_id = t.account_id AND r.game = t.game)',
+  const gameTitles = db.prepare('SELECT account_id AS account, title, turn FROM titles WHERE game_id = ?');
+  const matchRecords = db.prepare(
+    'SELECT m.id, m.account_id AS account, m.games, m.rank, m.players, m.score, t.title FROM match_records AS m ' +
+      'LEFT JOIN titles AS t ON t.account_id = m.account_id AND t.match_id = m.match_id WHERE m.match_id = ?',
   );
+  for (const module of games) {
+    if (module.recount === undefined) continue;
+    const counted = countGames(db, module);
+    const games = counted.counted.length + counted.uncounted.length;
+    if (games > 0 && module.rulesVersion !== undefined && countedUnder(db, module.id) !== module.rulesVersion) {
+      otherRules.push(module.id);
+    }
+    uncounted.push(...counted.uncounted.map(({ gameId }) => gameId));
+    for (const game of counted.counted) {
+      type Record = {
+        id: number;
+        account: number;
+        side: string;
+        role: string;
+        won: number;
+        verdict: string;
+        points: number;
+      };
+      const rows = records.all(game.gameId) as Record[];
+      for (const row of rows) {
+        const count = game.records.get(row.account);
+        if (
+          !count ||
+          count.side !== row.side ||
+          count.role !== row.role ||
+          count.won !== (row.won === 1) ||
+          count.verdict !== row.verdict ||
+          count.points !== row.points
+        ) {
+          miscounted.push(row.id);
+        }
+      }
+      const titles = gameTitles.all(game.gameId) as { account: number; title: string; turn: number }[];
+      for (const row of rows) {
+        const expected = new Set(
+          (game.records.get(row.account)?.titles ?? []).map(({ title, turn }) => `${title}:${turn}`),
+        );
+        const stored = new Set(
+          titles.filter(({ account }) => account === row.account).map(({ title, turn }) => `${title}:${turn}`),
+        );
+        if (!sameSet(expected, stored)) wrongTitles.push(row.id);
+      }
+    }
+    // The records of a match whose games are all kept and counted, against what they add up to; a
+    // match with no game kept, or with a game that can't be counted, is reported as such above.
+    const matches = countMatches(counted.counted);
+    const uncountable = new Set(counted.uncounted.map(({ matchId }) => matchId));
+    const kept = new Set(
+      (
+        db
+          .prepare('SELECT DISTINCT match_id AS id FROM replays WHERE game = ? AND match_id IS NOT NULL')
+          .all(module.id) as Row[]
+      ).map((row) => String(row.id)),
+    );
+    const matchIds = new Set(
+      (db.prepare('SELECT DISTINCT match_id AS id FROM match_records WHERE game = ?').all(module.id) as Row[]).map(
+        (row) => String(row.id),
+      ),
+    );
+    for (const matchId of matchIds) {
+      type Record = {
+        id: number;
+        account: number;
+        games: number;
+        rank: number;
+        players: number;
+        score: number;
+        title: string | null;
+      };
+      if (!kept.has(matchId) || uncountable.has(matchId)) continue;
+      const match = matches.get(matchId);
+      for (const row of matchRecords.all(matchId) as Record[]) {
+        const standing = match?.standings.get(row.account);
+        if (
+          !match ||
+          !standing ||
+          row.games !== match.games ||
+          row.rank !== standing.rank ||
+          row.players !== match.players ||
+          row.score !== standing.total
+        ) {
+          misranked.push(row.id);
+        } else if (row.title !== standing.title) {
+          wrongMatchTitles.push(row.id);
+        }
+      }
+    }
+  }
+  found("games whose records are counted under other rules than today's", otherRules);
+  found('finished games whose records cannot be counted again from their record', uncounted);
+  found('records of games that are not what their record counts', miscounted);
+  found('records of games whose titles are not what their record brings', wrongTitles);
+  found('records of matches that are not what their games add up to', misranked);
+  found('records of matches whose title is not what their games award', wrongMatchTitles);
 
   // What the AI players did (docs/architecture.md#ai-players).
   const play = (statement: string) =>
     `SELECT game_id || ':' || player_id FROM agent_plays AS p ${statement}`.replace(/\s+/g, ' ');
-  sql(
-    'AI plays of games that are not kept, or of another game than the record says',
-    play('WHERE NOT EXISTS (SELECT 1 FROM replays AS g WHERE g.game_id = p.game_id AND g.game = p.game)'),
-  );
   found(
     'AI plays of a persona there is not',
     (
@@ -227,20 +389,15 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'AI seats in a game whose record counts no AI player',
     play('WHERE takeover = 0 AND (SELECT agents FROM replays AS g WHERE g.game_id = p.game_id) = 0'),
   );
-  // The counts of the first game (AgentFeats in core/game.ts), in its shape.
-  sql(
-    'AI seats of the first game whose counts are not in its shape',
-    play(
-      "WHERE takeover = 0 AND game = 'keywords' AND NOT (" +
-        "json_type(feats, '$.clues') = 'integer' AND json_type(feats, '$.found') = 'integer' AND " +
-        "json_type(feats, '$.reviewer2') = 'integer' AND (json_type(feats, '$.best') = 'null' OR " +
-        "(json_type(feats, '$.best.word') = 'text' AND json_type(feats, '$.best.found') = 'integer')))",
-    ),
-  );
-  sql(
-    'AI plays of the first game in a role it does not have',
-    play("WHERE game = 'keywords' AND role IS NOT NULL AND role NOT IN ('captain', 'guesser')"),
-  );
+  const plays = "SELECT game_id || ':' || player_id AS id, game, role, feats, takeover FROM agent_plays";
+  each("AI seats whose counts are not in the game's shape", plays, ({ game, feats, takeover }) => {
+    const shapes = known.get(String(game))?.shapes;
+    return shapes !== undefined && Number(takeover) === 0 && !shapes.feats(parse(feats));
+  });
+  each('AI plays in a role the game does not have', plays, ({ game, role }) => {
+    const shapes = known.get(String(game))?.shapes;
+    return shapes !== undefined && role !== null && !shapes.role(String(role));
+  });
 
   // The feedback (docs/architecture.md#feedback): what it may be, and what it may have become.
   found(
@@ -334,17 +491,92 @@ function parse(text: unknown): unknown {
 
 const isObject = (value: unknown): value is Row => value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>): boolean =>
+  a.size === b.size && [...a].every((item) => b.has(item));
+
+const isStrings = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+// Whether a value is a map of player IDs to values of one kind, as the log keeps its guests, AI
+// players and numbers, or missing.
+const ids = (value: unknown, kind: 'string' | 'number') =>
+  value === undefined || (isObject(value) && Object.values(value).every((each) => typeof each === kind));
+
 // Whether a log is in the newest format (gameLog.ts), of this game and this game id.
 function isGameLog(data: unknown, game: string, gameId: string): data is GameLogData {
   if (!isObject(data) || data.v !== 2 || data.game !== game || data.gameId !== gameId) return false;
   if (!Array.isArray(data.entries) || !(data.start === null || isObject(data.start))) return false;
-  const ids = (value: unknown, kind: 'string' | 'number') =>
-    value === undefined || (isObject(value) && Object.values(value).every((each) => typeof each === kind));
+  const match = data.match;
   return (
     ids(data.agents, 'string') &&
     ids(data.guests, 'number') &&
-    (data.deleted === undefined ||
-      (Array.isArray(data.deleted) && data.deleted.every((id) => typeof id === 'string'))) &&
+    (match === undefined ||
+      (isObject(match) &&
+        match.numbers !== undefined &&
+        ids(match.numbers, 'number') &&
+        ids(match.merged, 'number') &&
+        Object.keys(match).every((key) => key === 'numbers' || key === 'merged'))) &&
+    (data.deleted === undefined || isStrings(data.deleted)) &&
     data.entries.every((entry) => isObject(entry) && typeof entry.t === 'number' && typeof entry.type === 'string')
   );
 }
+
+// Whether an AI's log is in the newest format (agentLog.ts), of this game id: every step says
+// when, which seat, which persona and what it was to do.
+function isAgentLog(data: unknown, gameId: string): data is AgentLogData {
+  if (!isObject(data) || data.v !== 1 || data.gameId !== gameId || !Array.isArray(data.steps)) return false;
+  if (!(data.truncated === undefined || data.truncated === true)) return false;
+  return data.steps.every(
+    (step) =>
+      isObject(step) &&
+      typeof step.t === 'number' &&
+      typeof step.by === 'string' &&
+      AGENT_PERSONAS.includes(step.persona as (typeof AGENT_PERSONAS)[number]) &&
+      typeof step.kind === 'string' &&
+      (step.takeover === undefined || step.takeover === true) &&
+      (step.late === undefined || step.late === true) &&
+      (step.error === undefined || typeof step.error === 'string'),
+  );
+}
+
+// Whether a value is how an account last set up its rooms (RoomSetup in shared/src/accounts.ts): by
+// game, each with a room, a practice room or both, in their shapes, the game's settings and the
+// practice room's role as the game judges them.
+function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): boolean {
+  if (!isObject(value)) return false;
+  return Object.entries(value).every(([id, setup]) => {
+    const game = games.get(id);
+    if (game === undefined || !isObject(setup)) return false;
+    const keys = Object.keys(setup);
+    if (keys.length === 0 || !keys.every((key) => key === 'room' || key === 'practice')) return false;
+    const { room, practice } = setup;
+    if (room !== undefined) {
+      if (!isObject(room) || !isLanguage(room.language) || !isStrings(room.fields)) return false;
+      if (
+        typeof room.randomFields !== 'boolean' ||
+        typeof room.public !== 'boolean' ||
+        typeof room.play !== 'boolean'
+      ) {
+        return false;
+      }
+      if (!(room.match === null || isMatchRules(room.match))) return false;
+      if (room.settings !== undefined && game.shapes !== undefined && !game.shapes.settings(room.settings))
+        return false;
+      const fields = ['language', 'fields', 'randomFields', 'settings', 'match', 'public', 'play'];
+      if (!Object.keys(room).every((key) => fields.includes(key))) return false;
+    }
+    if (practice !== undefined) {
+      if (!isObject(practice) || typeof practice.role !== 'string' || !isStrings(practice.fields)) return false;
+      if (game.shapes !== undefined && !game.shapes.role(practice.role)) return false;
+      if (!Object.keys(practice).every((key) => key === 'role' || key === 'fields')) return false;
+    }
+    return true;
+  });
+}
+
+const isMatchRules = (value: unknown): boolean =>
+  isObject(value) &&
+  matchGamesValid(value.games) &&
+  MATCH_TEAMS.includes(value.teams as (typeof MATCH_TEAMS)[number]) &&
+  MATCH_GROUPINGS.includes(value.grouping as (typeof MATCH_GROUPINGS)[number]) &&
+  Object.keys(value).length === 3;

@@ -196,17 +196,19 @@ export interface AccountSummary {
   roomSetup: RoomSetup;
 }
 
-// How an account last set up a room and a practice room (docs/architecture.md#accounts), which the
-// next setup starts from: what the room took when it was made, kept by the server as the room was
-// created. The page checks it again as it reads it back, since the word lists, the rules and the
-// language may have changed meanwhile, and drops what no longer holds.
-export interface RoomSetup {
+// How an account last set up a room and a practice room of each game (docs/architecture.md#accounts),
+// by the game's ID, which the next setup of that game starts from: what the room took when it was
+// made, kept by the server as the room was created (migration 24). The page checks it again as it
+// reads it back, since the word lists, the rules and the language may have changed meanwhile, and
+// drops what no longer holds.
+export type RoomSetup = Record<string, GameRoomSetup>;
+
+export interface GameRoomSetup {
   room?: {
-    game: string;
     // The room's language, which isn't restored, since a room's is the page's, but which says what
     // the settings were for: a clue's length is counted in characters in one language and in words
-    // in another. Missing from a setup kept before it was.
-    language?: Language;
+    // in another.
+    language: Language;
     fields: string[];
     randomFields: boolean;
     // The game's own settings, as the game took them, or none for its defaults.

@@ -1,6 +1,7 @@
 import type { DuoNotice, DuoView, FriendsView } from '@reviewer2/shared';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { Browser, startServer, TestClient, type TestServer } from './helpers';
+import { keepGame } from './keptGame';
 
 // Friend duos over real sockets and HTTP (docs/architecture.md#friend-duos): what an account has
 // played with each friend, on the friends list and on a friend's public profile, which nobody but
@@ -47,13 +48,13 @@ let earlier = 0;
 function wonTogether(accountIds: number[], games: number) {
   for (let i = 0; i < games; i += 1) {
     earlier += 1;
+    keepGame(server.db, `earlier-${earlier}`, { game: 'test', outcome: { winner: 'all', reason: 'finish' } });
     for (const accountId of accountIds) {
       server.accounts.records.add(accountId, {
         game: 'test',
         gameId: `earlier-${earlier}`,
         side: 'all',
         role: 'player',
-        winner: 'all',
         won: true,
         verdict: 'v',
         points: 0,

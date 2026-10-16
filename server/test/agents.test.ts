@@ -854,8 +854,13 @@ describe('a game that an AI played in', () => {
     await ann.waitFor((state) => state.phase === 'ended', 'the end');
     const account = server.accounts.byName('Ann');
     expect(
-      server.db.prepare('SELECT points, won, agents FROM game_records WHERE account_id = ?').all(account?.id ?? 0),
-    ).toEqual([{ points: 0, won: 1, agents: 1 }]);
+      server.db
+        .prepare(
+          'SELECT r.points, r.won, g.takeover FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
+            'WHERE r.account_id = ?',
+        )
+        .all(account?.id ?? 0),
+    ).toEqual([{ points: 0, won: 1, takeover: 1 }]);
     expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({ wins: 0, losses: 0 });
     const [row] = kept();
     const log = JSON.parse(row?.log ?? '{}') as GameLogData;

@@ -33,11 +33,12 @@ const settings: KeywordsSettings = {
   clueTime: 30,
   guessTime: 30,
 };
-const setup = { language: 'en', settings, startingTeam: 'red', cards };
+const setup = { settings, startingTeam: 'red', cards };
 const shown = (log: GameLogData, accounts: [string, string][] = [], viewer: string[] = []) =>
   shownReplay({
     setup,
     log,
+    language: 'en',
     accounts: new Map(accounts.map(([id, username]) => [id, { username, avatar: null, handle: `h-${id}` }])),
     viewer: new Set(viewer),
   });
@@ -365,6 +366,7 @@ describe('the replay of a random game', () => {
       const replay = shownReplay({
         setup: record.setup,
         log: record.log,
+        language: room.language,
         accounts: new Map(
           [...accounts].map(([id, number]) => [
             id,
@@ -510,6 +512,7 @@ describe('the replay of a game in which a guest logged in', () => {
     const replay = shownReplay({
       setup: record.setup,
       log: record.log,
+      language: room.language,
       accounts: new Map(
         record.accounts.map(({ playerId, accountId }) => [
           playerId,

@@ -449,7 +449,7 @@ describe('a replay', () => {
     expect((await replay(ann, gameId)).body).toEqual({ ok: true, replay: kept });
   });
 
-  test("is not kept for a room with the chair's own words, while the records are", async () => {
+  test("is kept for a room with the chair's own words, like any other", async () => {
     server = await startServer();
     const ann = await loggedIn('Ann');
     const { chair, code } = await roomOf(ann, { play: true });
@@ -462,9 +462,9 @@ describe('a replay', () => {
     await chair.send('test:finish');
     await chair.waitFor((state) => state.phase === 'ended');
     await until(() => server.db.prepare('SELECT count(*) AS count FROM game_records').get()?.count === 1, 'the record');
-    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 0 });
-    expect((await records(ann)).recent[0]).toMatchObject({ gameId, replay: false });
-    expect(await replay(ann, gameId)).toMatchObject({ status: 404 });
+    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
+    expect((await records(ann)).recent[0]).toMatchObject({ gameId, replay: true });
+    expect(await replay(ann, gameId)).toMatchObject({ status: 200 });
   });
 
   test('is kept when nobody with an account played, for nobody to watch', async () => {
@@ -491,27 +491,29 @@ describe('the last room setup', () => {
     // The settings are kept as the game took them, without what it left out.
     await roomOf(ann, { settings: { level: 2, extra: true }, play: true });
     expect((await ann.account())?.roomSetup).toEqual({
-      room: {
-        game: 'test',
-        language: 'en',
-        fields: ['general'],
-        randomFields: false,
-        settings: { level: 2 },
-        match: null,
-        public: false,
-        play: true,
+      test: {
+        room: {
+          language: 'en',
+          fields: ['general'],
+          randomFields: false,
+          settings: { level: 2 },
+          match: null,
+          public: false,
+          play: true,
+        },
       },
     });
     await roomOf(ann, { language: 'zh', fields: ['general', 'tiny'], randomFields: true });
     expect((await ann.account())?.roomSetup).toEqual({
-      room: {
-        game: 'test',
-        language: 'zh',
-        fields: ['general', 'tiny'],
-        randomFields: true,
-        match: null,
-        public: false,
-        play: false,
+      test: {
+        room: {
+          language: 'zh',
+          fields: ['general', 'tiny'],
+          randomFields: true,
+          match: null,
+          public: false,
+          play: false,
+        },
       },
     });
     // A room that isn't made keeps nothing, and a guest's rooms are nobody's.
@@ -524,6 +526,6 @@ describe('the last room setup', () => {
     expect(server.db.prepare('SELECT username FROM accounts WHERE room_setup IS NOT NULL').all()).toEqual([
       { username: 'Ann' },
     ]);
-    expect((await ann.account())?.roomSetup).toMatchObject({ room: { fields: ['general', 'tiny'] } });
+    expect((await ann.account())?.roomSetup).toMatchObject({ test: { room: { fields: ['general', 'tiny'] } } });
   });
 });

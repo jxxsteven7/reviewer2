@@ -29,7 +29,8 @@ export function fullLine(colors: readonly CardColor[]): boolean {
 // 7 cards are irrelevant papers and 1 is Reviewer 2. A row or a column all of one team's cards is
 // shuffled away: the colors are shuffled again, the words staying where they are, until none is,
 // which about one board in 30 needs. A word may come with its translations, its forms, its pinyin
-// and the English meanings of its characters, which stay with its card.
+// and the English meanings of its characters, and as one of the chair's own, which stay with its
+// card.
 export function deal(words: readonly (string | BoardWord)[], rng: Rng): { cards: Card[]; startingTeam: Team } {
   const terms = words.map((word): BoardWord => (typeof word === 'string' ? { word } : word));
   // Two spellings of one word, such as "Coauthor" and "co-author", are one word: the clue check
@@ -50,12 +51,13 @@ export function deal(words: readonly (string | BoardWord)[], rng: Rng): { cards:
   while (fullLine(shuffled)) shuffled = shuffle(colors, rng);
   return {
     startingTeam,
-    cards: places.map(({ word, translations, forms, pinyin, glosses }, index) => ({
+    cards: places.map(({ word, translations, forms, pinyin, glosses, custom }, index) => ({
       word,
       ...(translations?.length ? { translations: [...translations] } : {}),
       ...(forms?.length ? { forms: [...forms] } : {}),
       ...(pinyin ? { pinyin } : {}),
       ...(glosses?.length ? { glosses: [...glosses] } : {}),
+      ...(custom ? { custom } : {}),
       color: shuffled[index] as CardColor,
       revealed: false,
     })),

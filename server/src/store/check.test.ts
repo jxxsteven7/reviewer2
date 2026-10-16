@@ -1,4 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { FRIEND_LIMITS, RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { fakeGame } from '../../test/fakeGame';
@@ -8,6 +11,7 @@ import { checkData, IDS_SHOWN, type DataProblem } from './check';
 import { openDatabase } from './database';
 import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore } from './feedback';
 import { RecordStore, ReplayStore, TitleStore } from './records';
+import { countedUnderKey } from './recount';
 import { DEFAULT_SESSION_LIMITS } from './sessions';
 
 // The check of the data (docs/rules/constraints.md#data): a database with a row of every kind, in
@@ -15,6 +19,7 @@ import { DEFAULT_SESSION_LIMITS } from './sessions';
 
 const NOW = Date.UTC(2026, 9, 16, 12);
 const DAY = 24 * 60 * 60_000;
+const AVATAR = `${'a'.repeat(64)}.webp`;
 
 let db: DatabaseSync;
 
@@ -24,8 +29,26 @@ beforeEach(async () => {
   const ann = accounts.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
   const bob = accounts.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
   if (!ann || !bob) throw new Error('no account');
-  accounts.setRoomSetup(ann.id, '{"room":{"game":"test"}}');
+  accounts.setRoomSetup(
+    ann.id,
+    JSON.stringify({
+      test: {
+        room: {
+          language: 'en',
+          fields: ['general'],
+          randomFields: false,
+          settings: { level: 2 },
+          match: { games: 1, teams: 'switch', grouping: 'random' },
+          public: false,
+          play: true,
+        },
+        practice: { role: 'player', fields: ['general'] },
+      },
+    }),
+  );
+  accounts.setAvatar(ann.id, AVATAR);
   const replays = new ReplayStore(db, () => NOW);
+  // Ann (p1) and someone else (p2) play; p1 presses once, p2 says something.
   const log = (gameId: string, more: object = {}) => ({
     v: 2 as const,
     game: 'test',
@@ -51,7 +74,8 @@ beforeEach(async () => {
     counts: { accounts: 1, guests: 1, agents: 0 },
     takeover: false,
     agentPlays: [],
-    match: false,
+    match: null,
+    inMatch: false,
     practice: false,
     language: 'en',
     fields: ['general'],
@@ -60,14 +84,25 @@ beforeEach(async () => {
     words: 'w',
     ...more,
   });
-  // A game with a guest, one of a match, one with an AI in a seat and playing for Bob, one that was
-  // abandoned, and a game with words of the chair's own, which leaves a record alone.
+  // A game with a guest; the one game of a match, which Bob (p2) played in too, both numbered; a
+  // game with an AI in a seat and playing for Bob; and a game that was abandoned.
   replays.add(kept('g1', { log: log('g1', { guests: { p2: 1 } }) }));
-  replays.add(kept('g2', { match: true, counts: { accounts: 2, guests: 0, agents: 0 } }));
+  replays.add(
+    kept('g2', {
+      log: log('g2', { match: { numbers: { p1: 1, p2: 2 } } }),
+      players: [
+        { playerId: 'p1', accountId: ann.id },
+        { playerId: 'p2', accountId: bob.id },
+      ],
+      match: { id: 'm1', game: 1, games: 1 },
+      inMatch: true,
+      counts: { accounts: 2, guests: 0, agents: 0 },
+    }),
+  );
   replays.add(
     kept('g3', {
       log: log('g3', { agents: { a: 'reviewer1' } }),
-      agentLog: { steps: [] },
+      agentLog: { v: 1, gameId: 'g3', steps: [{ t: 1, by: 'a', persona: 'reviewer1', kind: 'press', answer: {} }] },
       counts: { accounts: 2, guests: 0, agents: 1 },
       takeover: true,
       agentPlays: [
@@ -108,30 +143,23 @@ beforeEach(async () => {
     gameId,
     side: 'all',
     role: 'player',
-    winner: 'all',
     won: true,
     verdict: 'pressed 1',
-    points: 5,
+    points: 0,
     ...more,
   });
   records.add(ann.id, record('g1'));
-  records.add(ann.id, record('g2', { match: { id: 'm1', game: 1, games: 1 } }));
-  records.add(bob.id, record('g2', { match: { id: 'm1', game: 1, games: 1 } }));
-  records.add(ann.id, record('g3', { points: 0, agents: true }));
-  records.add(ann.id, record('custom'));
-  records.addMatch(ann.id, {
-    game: 'test',
-    matchId: 'm1',
-    games: 1,
-    rank: 1,
-    players: 2,
-    score: 5,
-    title: 'best_paper',
-  });
-  records.addMatch(bob.id, { game: 'test', matchId: 'm1', games: 1, rank: 2, players: 2, score: 5, title: null });
-  const titles = new TitleStore(db, () => NOW);
-  titles.award(ann.id, 'test', 'best_paper', 'm1');
-  titles.awardForGame(ann.id, 'test', 'opening_record', 'g1', 1);
+  records.add(ann.id, record('g2'));
+  records.add(bob.id, record('g2'));
+  records.add(ann.id, record('g3'));
+  // Both scored nothing in the match, so both finished first, and the match awarded no title.
+  records.addMatch(ann.id, { game: 'test', matchId: 'm1', games: 1, rank: 1, players: 2, score: 0 });
+  records.addMatch(bob.id, { game: 'test', matchId: 'm1', games: 1, rank: 1, players: 2, score: 0 });
+  // Bob said something in the game of the match, which brings him the title.
+  new TitleStore(db).awardForGame(bob.id, 'test', 'deadline_hero', 'g2', 1);
+  // The records of both games are counted under the rules of today.
+  const counted = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
+  for (const game of [fakeGame, keywordsGame]) counted.run(countedUnderKey(game.id), String(game.rulesVersion));
   const feedback = new FeedbackStore(db, () => NOW);
   const piece = (more: object = {}) =>
     feedback.add({
@@ -177,11 +205,16 @@ afterEach(() => db.close());
 // The server plays the first game and the fake one of the tests.
 const check = () => checkData(db, { games: [keywordsGame, fakeGame], now: () => NOW });
 
-// Breaks the data with `sql`, with foreign keys off as a hand's edit might, and gives the one
-// problem that the check then finds.
-function broken(sql: string): DataProblem {
+// Breaks the data with `sql`, with foreign keys off as a hand's edit might, and gives the problems
+// that the check then finds.
+function brokenBy(sql: string): DataProblem[] {
   db.exec(`PRAGMA foreign_keys = OFF; ${sql}; PRAGMA foreign_keys = ON`);
-  const problems = check();
+  return check();
+}
+
+// Breaks the data so that the check finds one problem, and gives it.
+function broken(sql: string): DataProblem {
+  const problems = brokenBy(sql);
   expect(problems).toHaveLength(1);
   return problems[0] as DataProblem;
 }
@@ -192,9 +225,13 @@ describe('the check of the data', () => {
   });
 
   test('finds rows that point at nothing, and a file that fails the integrity check', () => {
-    expect(broken('DELETE FROM accounts WHERE id = 2')).toMatchObject({
+    expect(brokenBy('DELETE FROM accounts WHERE id = 2')[0]).toMatchObject({
       rule: 'rows point at nothing',
-      ids: expect.arrayContaining(['game_records#3', 'match_records#2', 'friendships#1', 'likes']),
+      ids: expect.arrayContaining(['game_records#3', 'match_records#2', 'titles#1', 'friendships#1', 'likes']),
+    });
+    expect(brokenBy("DELETE FROM replays WHERE game_id = 'g2'")[0]).toMatchObject({
+      rule: 'rows point at nothing',
+      ids: expect.arrayContaining(['game_records#2', 'game_records#3', 'game_players#2', 'game_players#3']),
     });
   });
 
@@ -205,9 +242,30 @@ describe('the check of the data', () => {
       ['2'],
     ],
     ['accounts whose key is not that of their username', "UPDATE accounts SET username = 'Bobby' WHERE id = 2", ['2']],
+    ['accounts whose last room setup is not in its shape', "UPDATE accounts SET room_setup = '[1' WHERE id = 1", ['1']],
     [
-      'accounts whose last room setup is not a JSON object',
-      "UPDATE accounts SET room_setup = '[1' WHERE id = 1",
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = '{"chess":{"room":{}}}' WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_remove(room_setup, '$.test.room.language') WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.settings.level', 9) WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.practice.role', 'painter') WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.game', 'test') WHERE id = 1`,
       ['1'],
     ],
     [
@@ -216,8 +274,14 @@ describe('the check of the data', () => {
       ['1'],
     ],
     [
+      'accounts whose avatar is not named as an avatar file is',
+      "UPDATE accounts SET avatar = 'me.png' WHERE id = 1",
+      ['1'],
+    ],
+    [
       'games of a game that this server does not play',
-      `UPDATE replays SET game = 'chess', log = json_set(log, '$.game', 'chess') WHERE game_id = 'g4'`,
+      `UPDATE replays SET game = 'chess', log = json_set(log, '$.game', 'chess') WHERE game_id = 'g4'; ` +
+        "UPDATE game_players SET game = 'chess' WHERE game_id = 'g4'",
       ['g4'],
     ],
     [
@@ -226,54 +290,38 @@ describe('the check of the data', () => {
       ['g4'],
     ],
     ['games whose setup or AI log is not JSON', "UPDATE replays SET agent_log = '{' WHERE game_id = 'g3'", ['g3']],
+    [
+      "games whose setup is not in the game's shape",
+      `UPDATE replays SET setup = '{"words":[1]}' WHERE game_id = 'g4'`,
+      ['g4'],
+    ],
     ['games whose log is not in the newest format', `UPDATE replays SET log = '{"v":1}' WHERE game_id = 'g4'`, ['g4']],
+    [
+      'games whose log is not in the newest format',
+      `UPDATE replays SET log = json_set(log, '$.match', json('{"numbers":{"p1":"one"}}')) WHERE game_id = 'g4'`,
+      ['g4'],
+    ],
     [
       'games whose log numbers fewer guests than played in them',
       `UPDATE replays SET log = json_remove(log, '$.guests') WHERE game_id = 'g1'`,
       ['g1'],
     ],
     [
-      'finished games whose replay cannot be worked out from their record',
-      `UPDATE replays SET log = json_set(log, '$.entries', json('[]')) WHERE game_id = 'g1'`,
-      ['g1'],
+      'games whose AI log is not in the newest format',
+      `UPDATE replays SET agent_log = '{"v":1,"gameId":"g3","steps":[{"t":1}]}' WHERE game_id = 'g3'`,
+      ['g3'],
     ],
     [
-      'records of games that disagree with the record of the game',
-      'UPDATE game_records SET won = 0 WHERE id = 1',
-      ['1'],
+      'games with an AI log that no AI played in',
+      `UPDATE replays SET agent_log = '{"v":1,"gameId":"g4","steps":[]}' WHERE game_id = 'g4'`,
+      ['g4'],
     ],
     [
-      'records of games that disagree with the record of the game on whether an AI played',
-      'UPDATE game_records SET agents = 0, points = 3 WHERE id = 4',
-      ['4'],
-    ],
-    [
-      'records of games that disagree with the record of the game on whether it was in a match',
-      "UPDATE replays SET in_match = 1 WHERE game_id = 'g1'",
-      ['1'],
-    ],
-    [
-      'records of the first game in a role it does not have',
-      "UPDATE game_records SET game = 'keywords', role = 'spectator' WHERE id = 5",
-      ['5'],
-    ],
-    ['players of games that are not kept', "INSERT INTO game_players VALUES ('g9', 'p1', 1)", ['g9:p1']],
-    [
-      'records of matches with no game of the match on the record',
+      'records of matches with no game of the match kept',
       "UPDATE match_records SET match_id = 'm2' WHERE id = 2",
       ['2'],
     ],
-    [
-      'titles of matches that the record of the match does not award',
-      "UPDATE match_records SET title = 'black_hole' WHERE id = 1",
-      ['1'],
-    ],
-    ['titles of games that are not on the record', "UPDATE titles SET game_id = 'g9' WHERE id = 2", ['2']],
-    [
-      'AI plays of games that are not kept, or of another game than the record says',
-      "UPDATE agent_plays SET game = 'chess' WHERE player_id = 'p2'",
-      ['g3:p2'],
-    ],
+    ['titles of another game than the record they go with', "UPDATE titles SET game = 'keywords' WHERE id = 1", ['1']],
     [
       'AI plays of a persona there is not',
       "UPDATE agent_plays SET persona = 'reviewer3' WHERE player_id = 'a'",
@@ -290,22 +338,14 @@ describe('the check of the data', () => {
       ['g3:a'],
     ],
     [
-      'AI seats of the first game whose counts are not in its shape',
-      'INSERT INTO replays (game_id, game, ended_at, ending, winner, reason, started_at, accounts, guests, agents, ' +
-        "takeover, in_match, practice, language, fields, version, rules, words) VALUES ('k1', 'keywords', 'now', " +
-        "'finished', 'red', 'found', 'now', 1, 0, 1, 0, 0, 1, 'en', '[]', 'v', 4, 'w'); " +
-        "INSERT INTO agent_plays VALUES ('k1', 'z', 'keywords', 'reviewer1', 0, NULL, 'red', 'captain', 1, " +
-        `'{"clues":"two","found":0,"reviewer2":0,"best":null}')`,
-      ['k1:z'],
+      "AI seats whose counts are not in the game's shape",
+      `UPDATE agent_plays SET feats = '{"presses":"two"}' WHERE player_id = 'a'`,
+      ['g3:a'],
     ],
     [
-      'AI plays of the first game in a role it does not have',
-      'INSERT INTO replays (game_id, game, ended_at, ending, winner, reason, started_at, accounts, guests, agents, ' +
-        "takeover, in_match, practice, language, fields, version, rules, words) VALUES ('k1', 'keywords', 'now', " +
-        "'finished', 'red', 'found', 'now', 1, 0, 1, 0, 0, 1, 'en', '[]', 'v', 4, 'w'); " +
-        "INSERT INTO agent_plays VALUES ('k1', 'z', 'keywords', 'reviewer1', 0, NULL, 'red', 'spectator', 1, " +
-        `'{"clues":0,"found":0,"reviewer2":0,"best":null}')`,
-      ['k1:z'],
+      'AI plays in a role the game does not have',
+      "UPDATE agent_plays SET role = 'spectator' WHERE player_id = 'a'",
+      ['g3:a'],
     ],
     ['feedback of a kind there is not', "UPDATE feedback SET kind = 'rant' WHERE id = 4", ['4']],
     ['feedback adopted without being an open issue', 'UPDATE feedback SET issue = NULL WHERE id = 1', ['1']],
@@ -362,6 +402,87 @@ describe('the check of the data', () => {
     expect(broken(sql)).toEqual({ rule, count: ids.length, ids });
   });
 
+  // The records against what the games count again from the record of each game (recount.ts).
+  test.each([
+    [
+      "games whose records are counted under other rules than today's",
+      `UPDATE settings SET value = '6' WHERE key = '${countedUnderKey('test')}'`,
+      ['test'],
+    ],
+    [
+      'records of games that are not what their record counts',
+      'UPDATE game_records SET points = 5 WHERE id = 1',
+      ['1'],
+    ],
+    [
+      'records of games that are not what their record counts',
+      "UPDATE game_records SET verdict = 'pressed 2' WHERE id = 1",
+      ['1'],
+    ],
+    ['records of games whose titles are not what their record brings', 'DELETE FROM titles WHERE id = 1', ['3']],
+    [
+      'records of games whose titles are not what their record brings',
+      "INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (1, 'test', 'opening_record', 'g1', 1)",
+      ['1'],
+    ],
+    [
+      'records of matches that are not what their games add up to',
+      'UPDATE match_records SET rank = 2 WHERE id = 2',
+      ['2'],
+    ],
+    [
+      'records of matches whose title is not what their games award',
+      "INSERT INTO titles (account_id, game, title, match_id) VALUES (1, 'test', 'best_paper', 'm1')",
+      ['1'],
+    ],
+  ])('finds %s', (rule, sql, ids) => {
+    expect(broken(sql)).toEqual({ rule, count: ids.length, ids });
+  });
+
+  test("finds a game of a match whose log leaves a player unnumbered, which also can't be counted again", () => {
+    for (const path of ['$.match.numbers.p2', '$.match']) {
+      expect(brokenBy(`UPDATE replays SET log = json_remove(log, '${path}') WHERE game_id = 'g2'`)).toEqual([
+        { rule: 'games of a match whose log does not number every player in it', count: 1, ids: ['g2'] },
+        { rule: 'finished games whose records cannot be counted again from their record', count: 1, ids: ['g2'] },
+      ]);
+    }
+  });
+
+  // A record that disagrees with the record of the game, or with the game, on a fact disagrees with
+  // what the game counts of it too.
+  test.each([
+    [
+      'records of games that disagree with the record of the game',
+      'UPDATE game_records SET won = 0 WHERE id = 1',
+      ['1'],
+    ],
+    ['records of games that an AI played in, with points', 'UPDATE game_records SET points = 3 WHERE id = 4', ['4']],
+    [
+      'records of games in a role the game does not have',
+      "UPDATE game_records SET role = 'spectator' WHERE id = 1",
+      ['1'],
+    ],
+  ])('finds %s, and the record not what its record counts', (rule, sql, ids) => {
+    expect(brokenBy(sql)).toEqual([
+      { rule, count: ids.length, ids },
+      { rule: 'records of games that are not what their record counts', count: ids.length, ids },
+    ]);
+  });
+
+  test('finds a finished game whose replay cannot be worked out, which cannot be counted again either', () => {
+    expect(brokenBy(`UPDATE replays SET log = json_set(log, '$.entries', json('[]')) WHERE game_id = 'g1'`)).toEqual([
+      { rule: 'finished games whose replay cannot be worked out from their record', count: 1, ids: ['g1'] },
+      { rule: 'finished games whose records cannot be counted again from their record', count: 1, ids: ['g1'] },
+    ]);
+  });
+
+  test('finds a title that is not one, which the record does not bring either', () => {
+    expect(brokenBy("UPDATE titles SET title = 'worst_paper'")).toEqual([
+      { rule: 'titles that are not ones there are', count: 1, ids: ['1'] },
+      { rule: 'records of games whose titles are not what their record brings', count: 1, ids: ['3'] },
+    ]);
+  });
+
   test('leaves what ended less than an hour ago to the housekeeping, which runs once an hour', () => {
     const ago = (ms: number) => new Date(NOW - ms - 30 * 60_000).toISOString();
     db.exec(`
@@ -374,21 +495,34 @@ describe('the check of the data', () => {
   });
 
   test('says how many rows break a rule, and names the first few', () => {
-    const many = Array.from({ length: 15 }, (_, i) => `('x${String(i).padStart(2, '0')}', 'p', ${1 + (i % 2)})`).join(
-      ', ',
-    );
-    expect(broken(`INSERT INTO game_players VALUES ${many}`)).toEqual({
-      rule: 'players of games that are not kept',
+    const many = Array.from(
+      { length: 15 },
+      (_, i) =>
+        `('g3', 'x${String(i).padStart(2, '0')}', 'test', 'reviewer3', 0, NULL, 'all', 'player', 1, '{"presses":1}')`,
+    ).join(', ');
+    expect(broken(`INSERT INTO agent_plays VALUES ${many}`)).toEqual({
+      rule: 'AI plays of a persona there is not',
       count: 15,
-      ids: Array.from({ length: IDS_SHOWN }, (_, i) => `x${String(i).padStart(2, '0')}:p`),
+      ids: Array.from({ length: IDS_SHOWN }, (_, i) => `g3:x${String(i).padStart(2, '0')}`),
     });
   });
 
-  test('looks for the avatar files where it is told to', () => {
-    db.exec("UPDATE accounts SET avatar = 'missing.webp' WHERE id = 1");
-    expect(check()).toEqual([]);
-    expect(checkData(db, { games: [keywordsGame, fakeGame], avatarDir: '/nonexistent', now: () => NOW })).toEqual([
-      { rule: 'accounts whose avatar file is missing', count: 1, ids: ['1'] },
-    ]);
+  test('looks for the avatar files where it is told to, and names a file that no account shows by its start', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'r2-avatars-'));
+    try {
+      expect(check()).toEqual([]);
+      const found = (problems: DataProblem[]) => problems.filter(({ rule }) => rule.includes('avatar'));
+      expect(found(checkData(db, { games: [keywordsGame, fakeGame], avatarDir: dir, now: () => NOW }))).toEqual([
+        { rule: 'accounts whose avatar file is missing', count: 1, ids: ['1'] },
+      ]);
+      writeFileSync(join(dir, AVATAR), '');
+      writeFileSync(join(dir, `${'b'.repeat(64)}.jpg`), '');
+      writeFileSync(join(dir, 'notes.txt'), '');
+      expect(found(checkData(db, { games: [keywordsGame, fakeGame], avatarDir: dir, now: () => NOW }))).toEqual([
+        { rule: 'avatar files that no account shows', count: 1, ids: ['bbbbbbbb'] },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

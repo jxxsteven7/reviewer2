@@ -13,11 +13,14 @@ export const SNAPSHOTS_KEPT = 3;
 // Long enough to notice what a migration broke, and to go back to the database from before it.
 export const BEFORE_MIGRATION_MS = 7 * 24 * 60 * 60_000;
 
-// The hourly snapshots, and the snapshots from before a migration, which have the version that
-// the migration went to after the time.
+// The hourly snapshots, the snapshots from before a migration, which have the version that the
+// migration went to after the time, and those from before the records were counted again under
+// new rules (store/recount.ts), kept as the ones from before a migration are.
 const STAMP = '(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})Z';
 const HOURLY = new RegExp(`^reviewer2-${STAMP}\\.db$`);
 const BEFORE_MIGRATION = new RegExp(`^reviewer2-${STAMP}-before-v(\\d+)\\.db$`);
+const BEFORE_RECOUNT = new RegExp(`^reviewer2-${STAMP}-before-recount\\.db$`);
+export const BEFORE_RECOUNT_SUFFIX = '-before-recount';
 // What a snapshot is written to before it gets its name, and the files that SQLite keeps beside it
 // while it is open.
 const TEMPORARY = /\.tmp(-wal|-shm|-journal)?$/;
@@ -85,7 +88,8 @@ function timeOf(file: string, kind: RegExp): number | null {
 // migration those older than a week at `now` and those that a later one to the same version
 // supersedes, all by the time in their names. An earlier snapshot to the same version comes from
 // a start whose migration failed; the database hasn't moved on since, unless the service went
-// back to the release before, and then the later snapshot is the one that has what it wrote.
+// back to the release before, and then the later snapshot is the one that has what it wrote. Of
+// the snapshots from before a recount, those older than a week go.
 export function pruneSnapshots(dir: string, now: number, kept = SNAPSHOTS_KEPT): void {
   const files = readdirSync(dir);
   const hourly = files.filter((file) => HOURLY.test(file)).sort();
@@ -99,7 +103,10 @@ export function pruneSnapshots(dir: string, now: number, kept = SNAPSHOTS_KEPT):
     const time = timeOf(file, BEFORE_MIGRATION) ?? 0;
     return time < now - BEFORE_MIGRATION_MS || latestByVersion.get(match[7] ?? '') !== file;
   });
-  for (const file of [...hourly.slice(0, Math.max(0, hourly.length - kept)), ...beforeMigration]) {
+  const beforeRecount = files.filter(
+    (file) => BEFORE_RECOUNT.test(file) && (timeOf(file, BEFORE_RECOUNT) ?? 0) < now - BEFORE_MIGRATION_MS,
+  );
+  for (const file of [...hourly.slice(0, Math.max(0, hourly.length - kept)), ...beforeMigration, ...beforeRecount]) {
     rmSync(join(dir, file), { force: true });
   }
 }

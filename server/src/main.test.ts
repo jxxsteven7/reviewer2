@@ -142,9 +142,9 @@ describe('starting', () => {
       storage: 'file',
       file: join(data, DATABASE_FILE),
       journal: 'wal',
-      schema: 23,
+      schema: 24,
     });
-    expect(logged('database_migrated')).toEqual({ from: 0, to: 23, snapshot: null });
+    expect(logged('database_migrated')).toEqual({ from: 0, to: 24, snapshot: null });
     first.feedback.add({
       kind: 'idea',
       text: 'Kept',

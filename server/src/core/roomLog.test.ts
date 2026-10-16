@@ -270,6 +270,54 @@ describe('the record of a game', () => {
     expect(room.record()?.log?.entries.at(-1)).toMatchObject({ type: 'end', data: { ending: 'interrupted' } });
   });
 
+  test("numbers everyone in a match in its log, keeps a guest's number through a login, and notes a line that went into another", () => {
+    // The fake game played as a match: everyone who plays scores nothing.
+    const matchGame: typeof fakeGame = {
+      ...fakeGame,
+      match: {
+        setup: (data) => data,
+        score: (data, ctx) => data.players.map((id) => ({ key: ctx.keyOf(id), points: 0, detail: null })),
+        lineup: (data) => data.players,
+      },
+    };
+    const { room, ann, bob } = table(matchGame);
+    expect(room.startMatch({ games: 3, teams: 'switch', grouping: 'choose' })).toEqual({ ok: true });
+    // Nothing of a match in the record of an ordinary game: one that nobody is numbered in yet.
+    room.start(0);
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()?.log.match).toEqual({ numbers: { [ann.id]: 1, [bob.id]: 2 } });
+    room.again(room.gameId as string);
+    // Bob, a guest, logs in to a new account: his number stays, and Cat, who comes to watch, has
+    // none until she plays.
+    const account = { id: 2, handle: 'b2c3d4e5f6a1', avatar: null, rank: 'undergraduate' as const, agents: false };
+    expect(room.adopt(bob.id, 'key-bob-account', 'Bob', account)).toBe(true);
+    const joined = room.join('key-cat', false);
+    if (!joined.ok) throw new Error(joined.error);
+    room.start(1);
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()?.log.match).toEqual({ numbers: { [ann.id]: 1, [bob.id]: 2 } });
+    room.again(room.gameId as string);
+    // Ann leaves and comes back as a guest, who plays the third game and then logs in to her
+    // account: the guest's line goes into hers, which the log says.
+    room.drop(ann.id);
+    const back = room.join('key-ann-guest', true);
+    if (!back.ok) throw new Error(back.error);
+    room.attach(back.member, 'socket-ann-2');
+    room.start(2);
+    expect(room.record()).toBeNull();
+    expect(
+      room.adopt(back.member.id, 'key-ann', 'Ann', {
+        id: 1,
+        handle: 'a1b2c3d4e5f6',
+        avatar: null,
+        rank: 'undergraduate',
+        agents: false,
+      }),
+    ).toBe(true);
+    room.act(back.member.id, 'test:finish', undefined);
+    expect(room.record()?.log.match).toEqual({ numbers: { [back.member.id]: 1, [bob.id]: 2 }, merged: { '3': 1 } });
+  });
+
   test('says when an AI played for someone who was offline', () => {
     const { room, ann, bob } = table();
     room.start(0);

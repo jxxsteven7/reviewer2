@@ -127,10 +127,9 @@ describe('the log of the team word guessing game', () => {
     const game = data.game;
     if (!game) throw new Error('no game');
     expect(keywordsGame.setup?.(data)).toEqual({
-      language: 'en',
       settings: game.settings,
       startingTeam: game.startingTeam,
-      cards: game.cards.map(({ word, color }) => ({ word, color })),
+      cards: game.cards.map(({ word, color }) => ({ word, color, custom: false })),
     });
     // The PI of the group on turn while the clue is due, then its students.
     const pi = game.team === 'red' ? 'ann' : 'cat';

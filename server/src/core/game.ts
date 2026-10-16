@@ -52,14 +52,48 @@ export interface ShownAccount {
   handle: string;
 }
 
-// A kept game, for an account to watch again (GameModule.showReplay): how it began
-// (GameModule.setup) and its log (gameLog.ts), as its record keeps them; the accounts that played
-// in it as they are now, by the player ID each had; and the IDs that the account watching had in it.
-export interface KeptReplay {
+// A kept game, as its record keeps it (docs/architecture.md#game-records): how it began
+// (GameModule.setup), its log (gameLog.ts) and its language.
+export interface KeptGame {
   setup: unknown;
   log: GameLogData;
+  language: Language;
+}
+
+// A kept game, for an account to watch again (GameModule.showReplay): the accounts that played in it
+// as they are now, by the player ID each had, and the IDs that the account watching had in it.
+export interface KeptReplay extends KeptGame {
   accounts: ReadonlyMap<string, ShownAccount>;
   viewer: ReadonlySet<string>;
+}
+
+// A kept game that finished, counted again (GameModule.recount): with who each player ID was, as
+// the room knew them while the game was on (GameContext.keyOf): one key for an account, whichever
+// IDs it had in the game, one for a guest, by their number, and one for an AI player.
+export interface KeptCount extends KeptGame {
+  keyOf(playerId: string): string;
+}
+
+// What a kept game that finished counts under the rules of today (GameModule.recount): everyone's
+// part in it as it ended, as results() gave it then, by the player ID each had at the end, and the
+// points of everyone who played for a side, by member key, as the match scores a game
+// (MatchHooks.score).
+export interface Recount {
+  results: PlayerResult[];
+  scores: MatchScore[];
+}
+
+// What the rows of a game's data hold in the game's own shape (GameModule.shapes), for the check of
+// the data (store/check.ts), which names no game: whether a value is how one of its games began
+// (`setup`, as GameModule.setup gives it), the game's settings as a room setup keeps them
+// (`settings`, as GameModule.settingsOf gives them), one of the roles that its records name
+// (`role`), and what it counts of an AI player in a seat (`feats`, as GameModule.agentFeats gives
+// it).
+export interface GameShapes {
+  setup(value: unknown): boolean;
+  settings(value: unknown): boolean;
+  role(role: string): boolean;
+  feats(value: unknown): boolean;
 }
 
 // Who is looking: a member of the room, or a screen that only watches.
@@ -183,6 +217,10 @@ export interface MatchHooks<Data> {
   lineup(data: Data): string[];
 }
 
+// The games that the server plays, by ID, for whatever holds a game's data against its game.
+export const gameById = (games: readonly GameModule[], id: string): GameModule | undefined =>
+  games.find((game) => game.id === id);
+
 export interface GameModule<Data = unknown, View = unknown> {
   id: string;
   // How many words a game needs from the word library.
@@ -244,6 +282,16 @@ export interface GameModule<Data = unknown, View = unknown> {
   // the accounts as they are now and the deleted ones as deleted; or null when the log has nothing
   // to watch, as for a game that didn't finish. A game without this has no replays.
   showReplay?(kept: KeptReplay): unknown;
+  // A kept game that finished, counted again under the rules of today
+  // (docs/architecture.md#game-records): what results() and the match's score gave at its end, worked
+  // out from how the game began and its log, as the replay is, or null when the log doesn't tell,
+  // as for a game that didn't finish. The server counts every kept game of the game again when its
+  // rules change (store/recount.ts), and the check of the data holds the records against it. A game
+  // without this keeps its records as they were counted.
+  recount?(kept: KeptCount): Recount | null;
+  // The shapes of the game's own in its data, for the check of the data. A game without this has
+  // them unchecked.
+  shapes?: GameShapes;
   // A guest's seat has become an account's (docs/architecture.md#accounts): the member `playerId`
   // is known by the member key `to` instead of `from` from now on, and whatever the game remembers
   // by the old key, it remembers by the new one. The seat stands, and what the game knows of the

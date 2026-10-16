@@ -25,7 +25,14 @@ import {
 import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
 import type { AgentFeats, GameContext, GameModule, GameOutcome, PlayerResult, Viewer } from './game';
-import { GameLog, type GameEnding, type GameLogData, type GameLogEntry, type GameLogEvent } from './gameLog';
+import {
+  GameLog,
+  type GameEnding,
+  type GameLogData,
+  type GameLogEntry,
+  type GameLogEvent,
+  type MatchNumbers,
+} from './gameLog';
 import { newPlayerId } from './identity';
 import { Match, type Present, type Who } from './match';
 import { pinyinOf } from './pinyin';
@@ -193,8 +200,7 @@ export interface GameRecordData {
   outcome: GameOutcome | null;
   durationMs: number;
   setup: unknown;
-  log: GameLogData | null;
-  overflowed: boolean;
+  log: GameLogData;
   agentLog: AgentLogData | null;
   accounts: { playerId: string; accountId: number }[];
   counts: { accounts: number; guests: number; agents: number };
@@ -772,7 +778,12 @@ export class Room {
       custom = parsed.words.map((word) => {
         const pinyin = pinyinOf(word);
         const glosses = this.#words.glossesOf(word);
-        return { word, ...(pinyin === null ? {} : { pinyin }), ...(glosses.length > 0 ? { glosses } : {}) };
+        return {
+          word,
+          ...(pinyin === null ? {} : { pinyin }),
+          ...(glosses.length > 0 ? { glosses } : {}),
+          custom: true as const,
+        };
       });
     }
     const random = changes.randomFields ?? this.randomFields;
@@ -1121,6 +1132,12 @@ export class Room {
     return this.#ending;
   }
 
+  // Whether the log of the game being played has grown as large as a log may (gameLog.ts), on
+  // which the socket layer closes the room, with the game cut short.
+  get logFull(): boolean {
+    return this.phase === 'playing' && (this.#log?.full ?? false);
+  }
+
   // Where everyone in the room is in the game, by player ID, as the game describes each of them
   // (GameModule.seated), for how the game began; null for a game that doesn't say.
   #seating(data: unknown): Record<string, unknown> | null {
@@ -1233,13 +1250,12 @@ export class Room {
 
   // What the record keeps of the game that has come to an end (docs/architecture.md#game-records),
   // however it did: finished, withdrawn, or cut short when the room closed (cut()). Null while it
-  // is on, and for a game with words of the chair's own, which stay with the room
-  // (docs/games/keywords.md#custom-words).
+  // is on.
   //
   // - How it ended, and for a game that finished who won and how (GameModule.outcome), how long it
   //   took, and how it began (GameModule.setup).
-  // - Its log, or null when it grew too long to keep, with the number of each guest who played in
-  //   it, and the AI's own log, if an AI played.
+  // - Its log, with the number of each guest who played in it and, in a match, everyone's number in
+  //   the match (matchNumbers), and the AI's own log, if an AI played.
   // - Which of those who played in it had which account, by the player ID they had, those who left
   //   during the game included; a player who left and came back has had two. Guests have no
   //   account, and are not in it.
@@ -1247,7 +1263,7 @@ export class Room {
   //   whether an AI played for someone who was offline.
   // - Whether it was a game of a match, its language, its fields, and the version of its rules.
   record(): GameRecordData | null {
-    if (this.#ending === null || !this.#log || this.customWords.length > 0) return null;
+    if (this.#ending === null || !this.#log) return null;
     const keys = this.#participants();
     const accounts = this.#accountsOf(keys);
     const kinds = new Map<string, keyof GameRecordData['counts']>();
@@ -1263,15 +1279,18 @@ export class Room {
       if (kind) counts[kind] += 1;
     }
     const agentLog = this.#agentLog && !this.#agentLog.empty ? this.#agentLog.data() : null;
-    const log = this.#log.data();
     const guests = this.#guestsOf(keys);
+    const match = this.#matchNumbers();
     return {
       ending: this.#ending,
       outcome: this.#ending === 'finished' ? (this.game.outcome?.(this.data) ?? null) : null,
       durationMs: Math.max(0, Math.round(this.#now() - this.#log.startedAt)),
       setup: this.#setup,
-      log: log && (Object.keys(guests).length > 0 ? { ...log, guests } : log),
-      overflowed: this.#log.overflowed,
+      log: {
+        ...this.#log.data(),
+        ...(Object.keys(guests).length > 0 ? { guests } : {}),
+        ...(match === null ? {} : { match }),
+      },
       agentLog,
       accounts,
       counts,
@@ -1320,16 +1339,34 @@ export class Room {
     return guests;
   }
 
+  // In a room that plays a match, the number in the match of everyone in the room who has one, and
+  // of those who left during the game, by player ID, with the numbers that have gone into another
+  // (Match.merged), for the log of the game (docs/architecture.md#matches). Null in any other room.
+  #matchNumbers(): MatchNumbers | null {
+    const { match } = this;
+    if (!match) return null;
+    const numbers: Record<string, number> = {};
+    for (const member of this.members.values()) {
+      const number = match.numberOf(member.key);
+      if (number !== null) numbers[member.id] = number;
+    }
+    for (const [playerId, { key }] of this.#gone) {
+      const number = match.numberOf(key);
+      if (number !== null) numbers[playerId] = number;
+    }
+    const merged = Object.fromEntries([...match.merged].map(([from, into]) => [String(from), into]));
+    return { numbers, ...(match.merged.size > 0 ? { merged } : {}) };
+  }
+
   // What the groups have said since the game ended, as they talk it over, that the record of the
   // game doesn't have yet (docs/architecture.md#game-records): the entries of the log after its
   // `end`, or after those handed over last time, with which player ID was which account, also for
   // someone who came back after the end under a new ID. The socket layer adds them to the record as
   // the room leaves the game behind: when the chair plays again or starts the next match, and when
-  // the room closes. Each entry is handed over once. Null when there is nothing new, and for a game
-  // that has no record (record()).
+  // the room closes. Each entry is handed over once. Null when there is nothing new.
   review(): { gameId: string; entries: GameLogEntry[]; accounts: { playerId: string; accountId: number }[] } | null {
     const log = this.#log;
-    if (this.#reviewed === null || !log || log.overflowed || this.customWords.length > 0) return null;
+    if (this.#reviewed === null || !log) return null;
     const entries = log.since(this.#reviewed);
     this.#reviewed = log.size;
     if (entries.length === 0) return null;

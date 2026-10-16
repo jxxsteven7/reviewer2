@@ -153,7 +153,6 @@ describe('the room setup', () => {
     });
     expect(payload).not.toHaveProperty('public');
     expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toEqual({
-      game: 'keywords',
       language: 'en',
       fields: ['ml'],
       randomFields: false,
@@ -203,8 +202,8 @@ describe('the room setup', () => {
   });
 
   test("starts an account's room from the setup that the server kept for it", async () => {
-    const room = { game: 'keywords', fields: ['general'], randomFields: false, match: null, public: true, play: true };
-    signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: { room } };
+    const room = { language: 'en', fields: ['general'], randomFields: false, match: null, public: true, play: true };
+    signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: { keywords: { room } } };
     const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
     expect(box(wrapper, 0).element.checked).toBe(true);
     await wrapper.get('form').trigger('submit');

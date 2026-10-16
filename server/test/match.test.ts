@@ -11,6 +11,7 @@ import {
   type Reply,
   type TestServer,
 } from './helpers';
+import { keepGame } from './keptGame';
 
 // Matches over real sockets: whole matches of the team word guessing game, the chair's controls,
 // players who come and go, and what accounts keep of a match. The scoring itself is tested in
@@ -140,12 +141,12 @@ describe('a match', () => {
     server = await startServer({ games: [keywordsGame] });
     const accounts = { Ann: await loggedIn('Ann'), Bob: await loggedIn('Bob') };
     // Ann won a game of another kind before the match, for her streaks.
+    keepGame(server.db, 'earlier', { game: 'test' });
     server.accounts.records.add(1, {
       game: 'test',
       gameId: 'earlier',
       side: 'red',
       role: 'guesser',
-      winner: 'red',
       won: true,
       verdict: 'v',
       points: 0,
@@ -265,15 +266,11 @@ describe('a match', () => {
     await accounts.Bob.request('/api/account/username', { username: 'Robert' });
     await ann.waitFor((state) => state.players.some(({ name }) => name === 'Robert'), "Bob's new name");
     await settle(everyone);
-    server.accounts.recordMatch(1, {
-      game: 'keywords',
-      matchId: view.id,
-      games: 2,
-      rank: 1,
-      players: 4,
-      score: 99,
-      title: 'best_paper',
-    });
+    server.accounts.recordMatch(
+      1,
+      { game: 'keywords', matchId: view.id, games: 2, rank: 1, players: 4, score: 99 },
+      'best_paper',
+    );
     expect([count('match_records'), count('titles')]).toEqual([2, titles]);
     expect(server.logs.filter(({ event }) => event === 'match_ended')).toHaveLength(1);
 

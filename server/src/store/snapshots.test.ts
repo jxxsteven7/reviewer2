@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { BEFORE_MIGRATION_MS, pruneSnapshots, snapshotName, Snapshots, writeSnapshot } from './snapshots';
+import {
+  BEFORE_MIGRATION_MS,
+  BEFORE_RECOUNT_SUFFIX,
+  pruneSnapshots,
+  snapshotName,
+  Snapshots,
+  writeSnapshot,
+} from './snapshots';
 
 const HOUR = 60 * 60_000;
 const START = Date.UTC(2026, 9, 9, 1, 0, 0);
@@ -183,6 +190,17 @@ describe('the hourly snapshots', () => {
     pruneSnapshots(snapshots, START + BEFORE_MIGRATION_MS + 1000);
     expect(readdirSync(snapshots)).toEqual([]);
     expect(BEFORE_MIGRATION_MS).toBe(7 * 24 * HOUR);
+  });
+
+  test('keep a snapshot from before a recount for a week, as one from before a migration', () => {
+    const snapshots = join(dir, 'snapshots');
+    mkdirSync(snapshots);
+    const recounted = snapshotName(START, BEFORE_RECOUNT_SUFFIX);
+    writeFileSync(join(snapshots, recounted), '');
+    pruneSnapshots(snapshots, START + BEFORE_MIGRATION_MS);
+    expect(readdirSync(snapshots)).toEqual([recounted]);
+    pruneSnapshots(snapshots, START + BEFORE_MIGRATION_MS + 1000);
+    expect(readdirSync(snapshots)).toEqual([]);
   });
 
   test('keep only the latest snapshot from before a migration to each version', () => {

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { PasswordHasher } from '../src/accounts/passwords';
 import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { Browser, fastHasher, startServer, type TestServer } from './helpers';
+import { keepGame } from './keptGame';
 
 // The account API over HTTP: registering, logging in and out, renaming, changing the password and
 // deleting the account, with every way each of them can be refused, the login cookie, and the
@@ -324,12 +325,12 @@ describe('deleting the account', () => {
     await browser.register('Ann');
     const other = new Browser(server.url);
     await other.logIn('Ann');
+    keepGame(server.db, 'g');
     server.accounts.records.add(1, {
       game: 'keywords',
       gameId: 'g',
       side: 'red',
       role: 'captain',
-      winner: 'red',
       won: true,
       verdict: 'oral',
       points: 11,

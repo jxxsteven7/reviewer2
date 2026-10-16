@@ -295,6 +295,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // the chair's withdrawal, or because someone left. And it is where the timer for the game's next
   // deadline is set, since only a change can move it.
   function broadcast(room: Room): void {
+    // A game whose log has grown as large as a log may is a flood of messages, and its room closes
+    // with the game cut short there (gameLog.ts): the record keeps the whole log, with the end that
+    // says why.
+    if (room.logFull) {
+      shut(room, 'expired', 'flood');
+      return;
+    }
     if (room.phase === 'ended' && room.gameId !== null && endLogged.get(room) !== room.gameId) {
       endLogged.set(room, room.gameId);
       log('game_ended', { code: room.code });
@@ -314,48 +321,52 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (driver) safely('agents', () => driver.poke(room));
   }
 
-  // What the end of a game leaves behind. A game that finished leaves its part in it on the record
-  // of each player with an account, as the game describes it (GameModule.results()), with the
-  // points it brought them (Room.points()), the match it was played in, if any (Room.matchGame()),
-  // and the titles it brought them; the streak it brought them to, which the room tells in the
-  // snapshot that ends the game (Room.noteStreak()); their ranks as they are now for everyone to
-  // see; and the titles that the game brought friends who played in it, which the room tells each
-  // account alone (Room.noteDuos()). A game that an AI played in brings nobody points, a streak or
-  // a title (docs/architecture.md#ai-players). Whoever had left by then has no part in its end.
+  // What the end of a game leaves behind. First, every game, however it ended, finished, withdrawn
+  // or cut short, and whoever played in it, leaves the record of the game itself
+  // (docs/architecture.md#game-records): how it ended and what kind of game it was, how it began,
+  // the log of everything that happened with the AI's own log beside it, which player was which
+  // account, and, for a game that a match scored, its place in the match (Room.matchGame()), from
+  // which a game that finished is watched again (docs/architecture.md#replays), and its records are
+  // counted again when the rules change (store/recount.ts).
   //
-  // Then every game, however it ended, finished, withdrawn or cut short, and whoever played in it,
-  // leaves the record of the game itself (docs/architecture.md#game-records): how it ended and what
-  // kind of game it was, how it began, the log of everything that happened with the AI's own log
-  // beside it, and which player was which account, from which a game that finished is watched
-  // again (docs/architecture.md#replays). A game with words of the chair's own leaves none
-  // (Room.record()). Whatever else is to be kept of a game goes here, after the records.
+  // Then a game that finished leaves each player with an account their part in it, as the game
+  // describes it (GameModule.results()), with the points it brought them (Room.points()) and the
+  // titles it brought them, which the database ties to the record of the game; the streak it
+  // brought them to, which the room tells in the snapshot that ends the game (Room.noteStreak());
+  // their ranks as they are now for everyone to see; and the titles that the game brought friends
+  // who played in it, which the room tells each account alone (Room.noteDuos()). A game that an AI
+  // played in brings nobody points, a streak or a title (docs/architecture.md#ai-players). Whoever
+  // had left by then has no part in its end. A game that couldn't be kept, as when the database is
+  // full, leaves no records either.
   function keepRecords(room: Room): void {
     if (!accounts || room.gameId === null) return;
     const gameId = room.gameId;
+    if (!keepGame(room)) return;
     const results = room.ending === 'finished' ? room.results() : null;
     const points = room.points();
-    const match = room.matchGame();
     // Those whose game went on the record, by account ID, with their player ID, side and result.
     const recorded = new Map<number, DuoPart & { playerId: string }>();
-    for (const { playerId, ...result } of results ?? []) {
+    for (const { playerId, side, role, won, verdict, titles } of results ?? []) {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
-      // What goes wrong for one account, as a record that the database refuses, keeps neither the
-      // others' records nor the game from being kept.
+      // What goes wrong for one account, as a record that the database refuses, keeps the others'
+      // records from nothing.
       safely('record', () => {
         const record = {
           game: room.game.id,
           gameId,
+          side,
+          role,
+          won,
+          verdict,
           points: points?.get(member.key) ?? 0,
-          match,
-          agents: room.agentsPlayed,
-          ...result,
+          titles,
         };
         const streak = accounts.record(account.id, record);
         if (streak) {
           room.noteStreak(member.id, streak);
-          recorded.set(account.id, { playerId: member.id, side: result.side, won: result.won });
+          recorded.set(account.id, { playerId: member.id, side, won });
         }
         room.updateAccount(
           member.id,
@@ -367,25 +378,31 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       });
     }
     if (recorded.size > 1) safely('duos', () => noteDuos(room, recorded));
+  }
+
+  // Keeps the record of the game that has come to an end (Room.record()), and says whether it is
+  // kept: now, or from an earlier report of the same end.
+  function keepGame(room: Room): boolean {
     const kept = room.record();
-    if (!kept) return;
+    if (!accounts || !kept || room.gameId === null) return false;
     const { players, forgotten } = stillThere(kept.accounts);
-    const gameLog = kept.log && markDeleted(kept.log, forgotten);
+    let stored = false;
     safely('replay', () => {
-      const stored = accounts.keepGame({
+      stored = accounts.keepGame({
         game: room.game.id,
-        gameId,
+        gameId: room.gameId as string,
         ending: kept.ending,
         outcome: kept.outcome,
         durationMs: kept.durationMs,
         setup: kept.setup,
-        log: gameLog,
+        log: markDeleted(kept.log, forgotten),
         agentLog: kept.agentLog,
         players,
         counts: kept.counts,
         takeover: kept.takeover,
         agentPlays: kept.agentPlays,
-        match: kept.match,
+        match: room.matchGame(),
+        inMatch: kept.match,
         practice: kept.practice,
         language: kept.language,
         fields: kept.fields,
@@ -393,10 +410,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         rules: kept.rules,
         words: kept.words,
       });
-      // A log that grew too long is worth a line only when the rest of the record was kept: what
-      // kept the record out, such as a full database, has a line of its own.
-      if (stored && kept.overflowed) log('game_log_too_large', { code: room.code });
     });
+    return stored;
   }
 
   // Tells each account whose game went on the record of the titles that the game brought friends
@@ -428,8 +443,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     for (const [key, { rank, total, title }] of match.final) {
       const account = room.memberByKey(key)?.account;
       if (!account) continue;
-      const record = { game: room.game.id, matchId: match.id, games: match.played, rank, players, score: total, title };
-      safely('records', () => accounts.recordMatch(account.id, record));
+      const record = { game: room.game.id, matchId: match.id, games: match.played, rank, players, score: total };
+      safely('records', () => accounts.recordMatch(account.id, record, title));
     }
   }
 
@@ -1124,11 +1139,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         safely('room_setup', () =>
           accounts?.rememberRoomSetup(
             account.id,
+            game,
             practice
               ? { practice: { role: practice.role, fields: room.fields } }
               : {
                   room: {
-                    game,
                     language,
                     fields: room.fields,
                     randomFields: room.randomFields,

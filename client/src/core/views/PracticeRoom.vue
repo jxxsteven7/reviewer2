@@ -22,7 +22,7 @@ import {
   storePractice,
   type PracticeRole,
 } from '../practice';
-import { keepRoomSetup, keptFields } from '../roomSetup';
+import { keepRoomSetup, keptFields, lastPractice } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 
@@ -35,14 +35,16 @@ import { useBusy } from '../useBusy';
 // the whole sheet fits on a phone's screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't answer, the button
 // says so and can't be pressed; on a server without an agent, there is no button at all.
 const { t, locale } = useI18n();
+// The first game, whose practice rooms these are.
+const GAME = 'keywords';
+
 const router = useRouter();
 const id = useId();
 const open = ref(false);
 // The account's last practice room, as the server keeps it, or the browser's.
-const lastRole = (): PracticeRole =>
-  PRACTICE_ROLES.find((known) => known === account.summary?.roomSetup.practice?.role) ?? storedRole();
+const lastRole = (): PracticeRole => PRACTICE_ROLES.find((known) => known === lastPractice(GAME)?.role) ?? storedRole();
 const lastFields = (): string[] | null => {
-  const kept = account.summary?.roomSetup.practice?.fields;
+  const kept = lastPractice(GAME)?.fields;
   return kept && kept.length > 0 ? kept : storedFields();
 };
 const role = ref<PracticeRole>(lastRole());
@@ -100,7 +102,7 @@ async function start() {
   formError.value = undefined;
   const reply = await run(() =>
     send<{ code: string }>('room:create', {
-      game: 'keywords',
+      game: GAME,
       language: currentLanguage(),
       fields: chosen.value,
       practice: { role: role.value },
@@ -113,7 +115,7 @@ async function start() {
     return;
   }
   storePractice(role.value, chosen.value);
-  keepRoomSetup({ practice: { role: role.value, fields: [...chosen.value] } });
+  keepRoomSetup(GAME, { practice: { role: role.value, fields: [...chosen.value] } });
   await router.push(`/room/${reply.code}`);
 }
 </script>

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { Browser, startServer, until, type TestServer } from './helpers';
+import { keepGame } from './keptGame';
 
 // Public profiles over HTTP (docs/architecture.md#public-profiles): what anyone sees of an account
 // by its handle, what the owner writes there and chooses to show, the likes, with their limit, and
@@ -65,12 +66,12 @@ describe('a public profile', () => {
     expect((await profileOf(ann.browser, ann.handle)).profile).toMatchObject({ mine: true, liked: false });
     // The streaks go out with the titles, for the page to name them (docs/architecture.md#streaks).
     for (let i = 0; i < 3; i += 1) {
+      keepGame(server.db, `earlier-${i}`, { game: 'test' });
       server.accounts.records.add(ann.id, {
         game: 'test',
         gameId: `earlier-${i}`,
         side: 'red',
         role: 'guesser',
-        winner: 'red',
         won: true,
         verdict: 'v',
         points: 0,

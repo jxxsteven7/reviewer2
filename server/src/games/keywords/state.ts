@@ -25,6 +25,9 @@ export interface Card {
   forms?: readonly string[];
   pinyin?: string;
   glosses?: readonly string[];
+  // A word of the chair's own (docs/games/keywords.md#custom-words), which the record of the game
+  // marks; a word of the lists has none.
+  custom?: true;
   color: CardColor;
   revealed: boolean;
 }

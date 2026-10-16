@@ -18,6 +18,10 @@ export interface Who {
 // The player as they were when last seen in the room, for the table to show after they have left it.
 interface Entry extends Who {
   key: string;
+  // The player's number in the match, from 1 in the order in which the players entered it
+  // (docs/architecture.md#matches), by which the records of its games know them, whether or not
+  // they have an account, and across the games of the match.
+  number: number;
   total: number;
   // How many scored games the player took part in.
   games: number;
@@ -70,6 +74,10 @@ export class Match {
   #lastGameId: string | null = null;
   // In the order in which the players entered the match.
   readonly #entries = new Map<string, Entry>();
+  // How many numbers have been given out, and the numbers that have gone into another, where a
+  // guest's line joined an account's that was there already (rekey), each by the one it went into.
+  #numbered = 0;
+  readonly #merged = new Map<number, number>();
   // The places at the end, which stay as they were then, whoever leaves afterwards.
   #final: Map<string, Placing> | null = null;
 
@@ -91,11 +99,25 @@ export class Match {
     return this.#lastGameId;
   }
 
-  // Lists a player who plays in a game that starts, with no points if they are new.
+  // Lists a player who plays in a game that starts, with the next number and no points if they are
+  // new.
   enter(key: string, { name, guest, avatar }: Who): void {
     const entry = this.#entries.get(key);
     if (entry) Object.assign(entry, { name, guest, avatar });
-    else this.#entries.set(key, { key, name, guest, avatar, total: 0, games: 0, last: null });
+    else {
+      this.#numbered += 1;
+      this.#entries.set(key, { key, number: this.#numbered, name, guest, avatar, total: 0, games: 0, last: null });
+    }
+  }
+
+  // The number in the match of a member key, or null for one that hasn't entered it.
+  numberOf(key: string): number | null {
+    return this.#entries.get(key)?.number ?? null;
+  }
+
+  // The numbers that have gone into another, by the one each went into.
+  get merged(): ReadonlyMap<number, number> {
+    return this.#merged;
   }
 
   // Adds up a game that has ended. The match is over once it has scored as many games as its rules
@@ -142,16 +164,17 @@ export class Match {
     return this.#final;
   }
 
-  // A guest's seat became an account's: the guest's line becomes the account's, shown as the
-  // account is (`who`), also once it has left the room. They are the same person, so when the
-  // account has a line of its own already, from before it left the room, the two are added up. The
-  // places at the end stay as they were: the guest's goes to the account, and the view shows the
-  // total that it was given for.
+  // A guest's seat became an account's: the guest's line becomes the account's, with its number,
+  // shown as the account is (`who`), also once it has left the room. They are the same person, so
+  // when the account has a line of its own already, from before it left the room, the two are added
+  // up, and the guest's number goes into the account's (`merged`). The places at the end stay as
+  // they were: the guest's goes to the account, and the view shows the total that it was given for.
   rekey(from: string, to: string, who: Who): void {
     const entry = this.#entries.get(from);
     if (!entry) return;
     const own = this.#entries.get(to);
     if (own) {
+      this.#merged.set(entry.number, own.number);
       own.total += entry.total;
       own.games += entry.games;
       if (entry.last && (own.last === null || entry.last.gameId === this.#lastGameId)) own.last = entry.last;
