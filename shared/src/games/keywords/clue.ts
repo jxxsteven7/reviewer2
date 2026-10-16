@@ -28,7 +28,11 @@ export type ClueProblem =
 //   strict rule in a Chinese room, where a Latin word on the board stands out; a warning in an
 //   English room, where "support" would give "Port" away otherwise, and for the card's term in
 //   another language.
-export type ClueMatchKind = 'same' | 'form' | 'character' | 'similar' | 'inside';
+// - 'prefix': it is Latin letters alone, however few, that the card's word or a part of it starts
+//   with, such as "mode" for "Model", "data" for "Datacenter", "sci" for "Data science" or "s" for
+//   "SEI": the first letters of a word give it away. Refused under the strict rule; a warning under
+//   the loose rule, and for the card's term in another language.
+export type ClueMatchKind = 'same' | 'form' | 'character' | 'similar' | 'inside' | 'prefix';
 
 // A card that the clue runs into, with the text that the clue runs into: the card's word, one
 // of its translations or one of its forms.
@@ -349,6 +353,16 @@ function contains(clue: Word, word: Word): boolean {
   return inner.some((text) => clue.key !== text && clue.key.includes(text));
 }
 
+// The clue is Latin letters alone that the word, or one of its pieces, a lone letter included,
+// starts with and goes on from: "mode" for "Model", "s" for "SEI", "p" for "P-value". A clue that
+// is the word or the piece itself repeats it.
+function startsWord(clue: Word, word: Word): boolean {
+  if (clue.key === '' || !LATIN_ONLY.test(clue.key)) return false;
+  return [word.key, ...word.pieces].some(
+    (text) => LATIN_ONLY.test(text) && text.length > clue.key.length && text.startsWith(clue.key),
+  );
+}
+
 // What the clue does to one card that is still on the board: what refuses it in any case, what
 // refuses it under the strict rule, and what only brings a warning, each the first that applies.
 // `clues` holds the whole clue and, when it has several words, each of them, so that a word of a
@@ -405,12 +419,13 @@ function judge(clues: readonly Word[], card: ClueCard, index: number, insideRefu
       : null);
   const strict =
     form === undefined
-      ? (character ?? (insideRefused && !similar ? ofWord(contains, 'inside') : null))
+      ? (character ?? ofWord(startsWord, 'prefix') ?? (insideRefused && !similar ? ofWord(contains, 'inside') : null))
       : { card: index, text: form, kind: 'form' as const };
   const warned =
     similar ??
     ofTranslation((clue, other) => repeats(clue, other) || resembles(clue, other), 'similar') ??
     ofTranslation(sharesCharacter, 'character') ??
+    ofTranslation(startsWord, 'prefix') ??
     ofWord(contains, 'inside') ??
     ofTranslation(contains, 'inside');
   return { refused: null, strict, warned };

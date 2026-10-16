@@ -92,18 +92,70 @@ describe('the titles of a game', () => {
         captain: 'ann',
       },
     ];
+    // Red's first card, in the turn of its first clue, was Reviewer 2: an instant desk reject.
     expect(titles(played(history, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
       ann: [
         { title: 'missed_deadline', turn: 1 },
         { title: 'missed_deadline', turn: 3 },
+        { title: 'instant_reject', turn: 5 },
       ],
-      bob: [],
+      bob: [{ title: 'instant_reject', turn: 5 }],
       cat: [{ title: 'missed_deadline', turn: 2 }],
       dee: [],
     });
   });
 
-  test('give everyone in a group the opening record and the heavenly hand of its first clue', () => {
+  test('give everyone in a group the instant desk reject for Reviewer 2 as its first card, whichever group guessed first', () => {
+    const r2 = guess(24, 'reviewer2');
+    // Blue found a card with its first clue; red's first card was Reviewer 2.
+    const second = [
+      { turn: 1, team: 'blue' as const, at: 0, word: 'One', count: 1, guesses: [guess(9, 'blue')], captain: 'cat' },
+      { turn: 2, team: 'red' as const, at: 0, word: 'Two', count: 2, guesses: [r2], captain: 'ann' },
+    ];
+    expect(titles(played(second, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
+      ann: [{ title: 'instant_reject', turn: 2 }],
+      bob: [{ title: 'instant_reject', turn: 2 }],
+      cat: [],
+      dee: [],
+    });
+    // Blue's first card was Reviewer 2, in the first turn of the game.
+    const first = [{ turn: 1, team: 'blue' as const, at: 0, word: 'One', count: 1, guesses: [r2], captain: 'cat' }];
+    expect(titles(played(first, { winner: 'red', reason: 'reviewer2' }))).toEqual({
+      ann: [],
+      bob: [],
+      cat: [{ title: 'instant_reject', turn: 1 }],
+      dee: [{ title: 'instant_reject', turn: 1 }],
+    });
+  });
+
+  test('give everyone in a group the fall at the first hurdle for Reviewer 2 later in the turn of its first clue, and never both', () => {
+    const r2 = guess(24, 'reviewer2');
+    // Red found a card, then revealed Reviewer 2, in the turn of its first clue: it fell at the
+    // first hurdle, and had no instant desk reject.
+    const first = [
+      { turn: 1, team: 'red' as const, at: 0, word: 'Two', count: 2, guesses: [guess(0, 'red'), r2], captain: 'ann' },
+    ];
+    expect(titles(played(first, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
+      ann: [{ title: 'first_turn_reject', turn: 1 }],
+      bob: [{ title: 'first_turn_reject', turn: 1 }],
+      cat: [],
+      dee: [],
+    });
+    // Reviewer 2 in the turn of a group's second clue brings neither title.
+    const later = [
+      { turn: 1, team: 'red' as const, at: 0, word: 'One', count: 1, guesses: [guess(0, 'red')], captain: 'ann' },
+      { turn: 2, team: 'blue' as const, at: 0, word: 'One', count: 1, guesses: [guess(9, 'blue')], captain: 'cat' },
+      { turn: 3, team: 'red' as const, at: 0, word: 'Two', count: 2, guesses: [guess(1, 'red'), r2], captain: 'ann' },
+    ];
+    expect(titles(played(later, { winner: 'blue', reason: 'reviewer2' }))).toEqual({
+      ann: [],
+      bob: [],
+      cat: [],
+      dee: [],
+    });
+  });
+
+  test('give everyone in a group the opening record or the heavenly hand of its first clue, never both', () => {
     // Red's PI ran out of time first, so red's first clue is that of turn 3: 9 cards at once.
     const all = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((card) => guess(card, 'red'));
     const history = [
@@ -121,32 +173,50 @@ describe('the titles of a game', () => {
       cat: [],
       dee: [],
     });
+    // A clue of 9 that finds all 9 would make the opening record too, but the heavenly hand outdoes
+    // it.
     const numbered = history.map((record) => (record.turn === 3 ? { ...record, count: 9 } : record));
     expect(titles(played(numbered, { winner: 'red', reason: 'found' }))).toMatchObject({
       ann: [
         { title: 'missed_deadline', turn: 1 },
-        { title: 'opening_record', turn: 3 },
         { title: 'heavenly_hand', turn: 3 },
       ],
-      bob: [
-        { title: 'opening_record', turn: 3 },
-        { title: 'heavenly_hand', turn: 3 },
-      ],
+      bob: [{ title: 'heavenly_hand', turn: 3 }],
       cat: [],
       dee: [],
     });
+    // A clue of 4 whose four cards come first, then a wrong one: the opening record, and the game
+    // goes on.
+    const opened = history.map((record) =>
+      record.turn === 3 ? { ...record, count: 4, guesses: [...all.slice(0, 4), guess(17, 'neutral')] } : record,
+    );
+    expect(titles(played(opened, { winner: 'blue', reason: 'found' }))).toMatchObject({
+      ann: [
+        { title: 'missed_deadline', turn: 1 },
+        { title: 'opening_record', turn: 3 },
+      ],
+      bob: [{ title: 'opening_record', turn: 3 }],
+      cat: [],
+      dee: [],
+    });
+    // A clue of 3 is too small for the opening record.
+    const small = history.map((record) =>
+      record.turn === 3 ? { ...record, count: 3, guesses: all.slice(0, 3) } : record,
+    );
+    expect(titles(played(small, { winner: 'blue', reason: 'found' })).bob).toEqual([]);
   });
 
   test('give a deadline hero Deadline Hero once for each turn that made them one, under whichever ID they had', () => {
     const late = { ...guess(0, 'red'), lastSeconds: true as const };
     const history: ClueRecord[] = [
-      // Ann's last-second clue finds a card of red's, and Bob reveals two in the last seconds.
+      // Ann's last-second clue of 2 is followed to the letter, and Bob reveals both cards in the last
+      // seconds.
       {
         turn: 1,
         team: 'red',
         at: 0,
         word: 'Late',
-        count: 3,
+        count: 2,
         captain: 'ann',
         lastSeconds: true,
         guesses: [late, { ...late, card: 1 }],
@@ -178,7 +248,7 @@ describe('the titles of a game', () => {
         team: 'red',
         at: 0,
         word: 'Fast',
-        count: 2,
+        count: 1,
         captain: 'ann-2',
         lastSeconds: true,
         guesses: [guess(2, 'red')],

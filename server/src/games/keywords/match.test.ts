@@ -221,7 +221,7 @@ describe('the score of a game', () => {
     expect(pointsOf(scores).rex).toBe(9 - 3 * 2 + 1);
   });
 
-  test('gives everyone in a group a point for the opening record, and nothing for a near miss', () => {
+  test('gives the students a point for the opening record, the PI nothing, and nobody anything for a near miss', () => {
     const opening = (count: ClueRecord['count'], guesses: Guess[], before: ClueRecord[] = []) =>
       detailsOf(
         scoreGame(
@@ -235,50 +235,50 @@ describe('the score of a game', () => {
           keyOf,
         ),
       );
-    const three = [guess(0, 'red', 'ron'), guess(1, 'red', 'rae'), guess(2, 'red', 'ron')];
-    // 3 named, 3 found first, and a wrong card after them changes nothing.
-    expect(opening(3, [...three, guess(17, 'neutral', 'ron')])).toMatchObject({
+    const four = [guess(0, 'red', 'ron'), guess(1, 'red', 'rae'), guess(2, 'red', 'ron'), guess(3, 'red', 'rae')];
+    // 4 named, 4 found first, and a wrong card after them changes nothing.
+    expect(opening(4, [...four, guess(17, 'neutral', 'ron')])).toMatchObject({
       rex: { openingRecord: true },
       ron: { openingRecord: true },
       rae: { openingRecord: true },
       bo: { openingRecord: false },
     });
-    // A wrong card among the first three, a clue of 2, of 0 or unlimited, too few found: none.
+    // A wrong card among the first four, a clue of 3, of 0 or unlimited, too few found: none.
     const broken = [guess(0, 'red', 'ron'), guess(17, 'neutral', 'ron')];
-    expect(opening(3, broken).rex).toMatchObject({ openingRecord: false });
-    expect(opening(2, three.slice(0, 2)).rex).toMatchObject({ openingRecord: false });
-    expect(opening(0, three).rex).toMatchObject({ openingRecord: false });
-    expect(opening('unlimited', three).rex).toMatchObject({ openingRecord: false });
-    expect(opening(4, three).rex).toMatchObject({ openingRecord: false });
+    expect(opening(4, broken).rex).toMatchObject({ openingRecord: false });
+    expect(opening(3, four.slice(0, 3)).rex).toMatchObject({ openingRecord: false });
+    expect(opening(0, four).rex).toMatchObject({ openingRecord: false });
+    expect(opening('unlimited', four).rex).toMatchObject({ openingRecord: false });
+    expect(opening(5, four).rex).toMatchObject({ openingRecord: false });
     // A turn whose time ran out before the clue isn't the first clue: the next one is.
     const lost: ClueRecord = { turn: 1, team: 'red', at: 0, word: null, count: null, guesses: [], timedOut: true };
     const blue: ClueRecord = { turn: 2, team: 'blue', at: 0, word: 'Blue', count: 1, guesses: [] };
-    expect(opening(3, three, [lost, blue]).ron).toMatchObject({ openingRecord: true });
+    expect(opening(4, four, [lost, blue]).ron).toMatchObject({ openingRecord: true });
     // A second clue that would have made it is too late.
-    const first: ClueRecord = { turn: 1, team: 'red', at: 0, word: 'One', count: 1, guesses: [guess(3, 'red', 'ron')] };
-    expect(opening(3, three, [first, blue]).ron).toMatchObject({ openingRecord: false });
-    // Students and PI alike: one point each.
+    const first: ClueRecord = { turn: 1, team: 'red', at: 0, word: 'One', count: 1, guesses: [guess(4, 'red', 'ron')] };
+    expect(opening(4, four, [first, blue]).ron).toMatchObject({ openingRecord: false });
+    // The students get a point each; the PI has the big clue for the fourth card instead.
     const scores = scoreGame(
-      gameState({ history: [{ ...lost, word: 'Go', count: 3, guesses: three }] }),
+      gameState({ history: [{ ...lost, word: 'Go', count: 4, guesses: four, captain: 'rex' }] }),
       SEATED,
       keyOf,
     );
-    expect(pointsOf(scores)).toMatchObject({ rex: 3 + 1, ron: 3 + 1, rae: 3 + 1 });
+    expect(pointsOf(scores)).toMatchObject({ rex: 4 + 1, ron: 4 + 1, rae: 4 + 1 });
   });
 
-  test('gives a group that wins with its first clue the heavenly hand, which adds up with the rest', () => {
+  test('gives a group that wins with its first clue the heavenly hand, which adds up with the rest and outdoes the opening record', () => {
     const game = redWins(ALL_RED, 9);
     expect(detailsOf(scoreGame(game, SEATED, keyOf))).toMatchObject({
-      rex: { role: 'captain', found: 9, won: true, bigClues: 6, openingRecord: true, heavenlyHand: true },
-      ron: { role: 'guesser', found: 9, won: true, bigClues: 0, openingRecord: true, heavenlyHand: true },
+      rex: { role: 'captain', found: 9, won: true, bigClues: 6, openingRecord: false, heavenlyHand: true },
+      ron: { role: 'guesser', found: 9, won: true, bigClues: 0, openingRecord: false, heavenlyHand: true },
       bo: { heavenlyHand: false, openingRecord: false },
     });
-    // The PI: 9 cards, the win, 6 cards from the fourth on, the opening record and 3; a student: 9,
-    // the win, the opening record and 1.
+    // The PI: 9 cards, the win, 6 cards from the fourth on and 3; a student: 9, the win and 1. The
+    // opening record, which the clue of 9 made on the way, is outdone, and brings nothing besides.
     expect(pointsOf(scoreGame(game, SEATED, keyOf))).toMatchObject({
-      rex: 9 + 4 + 6 + 1 + 3,
-      ron: 9 + 3 + 1 + 1,
-      rae: 9 + 3 + 1 + 1,
+      rex: 9 + 4 + 6 + 3,
+      ron: 9 + 3 + 1,
+      rae: 9 + 3 + 1,
     });
     // After blue's first turn, red's first clue still counts.
     const blue: ClueRecord = {

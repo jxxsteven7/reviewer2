@@ -87,11 +87,13 @@ const PROBLEMS: Partial<Record<ClueMatchKind, string>> = {
   form: 'game.formOnBoard',
   character: 'game.characterOnBoard',
   inside: 'game.insideOnBoard',
+  prefix: 'game.prefixOnBoard',
 };
 const WARNINGS: Partial<Record<ClueMatchKind, string>> = {
   form: 'game.formWarning',
   character: 'game.characterWarning',
   inside: 'game.insideWarning',
+  prefix: 'game.prefixWarning',
 };
 const warningOf = (match: ClueMatch) => WARNINGS[match.kind] ?? 'game.similar';
 

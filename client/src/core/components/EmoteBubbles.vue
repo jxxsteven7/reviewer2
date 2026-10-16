@@ -4,10 +4,10 @@ import PlayerAvatar from './PlayerAvatar.vue';
 
 // The quick reactions as they arrive, "Name: phrase", with the sender's avatar, at the top of the
 // page for a few seconds, over the masthead rather than the turn strip below it, which says whose
-// move it is, and the room's calls about a player, louder: ink with the table's yellow, a megaphone and
-// the player's avatar before the line, kept to the masthead's height on a phone as far as a line
-// of two rows goes. They let every tap through to the page underneath. `large` is for a big screen
-// across a room.
+// move it is, and the room's calls about a player or a group, louder: ink with the table's yellow, a
+// megaphone and the player's avatar, or a disc in the group's color, before the line, kept to the
+// masthead's height on a phone as far as a line of two rows goes. They let every tap through to the
+// page underneath. `large` is for a big screen across a room.
 defineProps<{ large?: boolean }>();
 </script>
 
@@ -15,7 +15,8 @@ defineProps<{ large?: boolean }>();
   <TransitionGroup tag="div" name="bubble" class="bubbles" :class="{ large }" aria-live="polite">
     <p v-for="bubble in bubbles" :key="bubble.id" class="bubble" :class="{ call: 'call' in bubble }">
       <template v-if="'call' in bubble">
-        <PlayerAvatar :name="bubble.username ?? bubble.name" :guest="bubble.guest" :avatar="bubble.avatar" />
+        <span v-if="bubble.team" class="group-mark" :class="bubble.team" aria-hidden="true"></span>
+        <PlayerAvatar v-else :name="bubble.username ?? bubble.name" :guest="bubble.guest" :avatar="bubble.avatar" />
         <span>{{ bubble.call }}</span>
       </template>
       <i18n-t v-else keypath="emotes.bubble" tag="span" scope="global">
@@ -90,6 +91,25 @@ defineProps<{ large?: boolean }>();
 
 .call :deep(.avatar) {
   margin: 0 var(--space-2) 0 0;
+}
+
+/* A call about a group has the group's color, on a disc the size of a small avatar. */
+.group-mark {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  margin-right: var(--space-2);
+  border: var(--line) solid var(--on-ink);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.group-mark.red {
+  background: var(--red);
+}
+
+.group-mark.blue {
+  background: var(--blue);
 }
 
 .large {

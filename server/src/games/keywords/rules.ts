@@ -129,16 +129,34 @@ const noted = (state: KeywordsState, kind: EventKind, team?: Team): KeywordsStat
 const inLastSeconds = (state: KeywordsState, at: number): boolean =>
   state.clock !== null && state.clock.ends - at <= DEADLINE_HERO_MS;
 
-// The deadline heroes of a turn, by player ID (docs/games/keywords.md#titles): its PI, if their clue
-// came in the last seconds of their time and found at least one of the group's own cards, and every
-// student who revealed one of the group's own cards in the last seconds of the guesses. Each is a
-// hero once a turn, however many cards it took.
-export function heroesOf(record: ClueRecord): Set<string> {
+// The deadline heroes of a turn, by player ID (docs/games/keywords.md#titles): every student who
+// revealed one of the group's own cards in the last seconds of the guesses, and the PI, if their
+// clue came in the last seconds of their time and the students followed it to the letter: they
+// found as many of the group's cards as its number says before they revealed anything else, or,
+// with fewer cards left than the number, every card the group had left, with no mistake, which wins
+// the game in the turn (`won`). A clue of 0 or "unlimited" names no number to follow. Each is a hero
+// once a turn, however many cards it took.
+export function heroesOf(record: ClueRecord, won = false): Set<string> {
   const own = record.guesses.filter((guess) => guess.color === record.team);
   const heroes = new Set(own.flatMap((guess) => (guess.lastSeconds ? [guess.player] : [])));
-  if (record.lastSeconds && record.captain !== undefined && own.length > 0) heroes.add(record.captain);
+  if (record.lastSeconds && record.captain !== undefined && followed(record, won)) heroes.add(record.captain);
   return heroes;
 }
+
+// Whether the students followed a clue to the letter: its number of the group's own cards before
+// any other, or every card the group had left without a mistake, when the turn won the game.
+function followed(record: ClueRecord, won: boolean): boolean {
+  const { count, guesses } = record;
+  const own = (guess: ClueRecord['guesses'][number]) => guess.color === record.team;
+  if (won && guesses.every(own)) return true;
+  if (typeof count !== 'number' || count === 0) return false;
+  return guesses.length >= count && guesses.slice(0, count).every(own);
+}
+
+// Whether a turn of the game won it for the group on turn: the game is over, won by the group that
+// found its last card, in that turn.
+export const wonInTurn = (game: Pick<KeywordsState, 'history' | 'result'>, record: ClueRecord): boolean =>
+  game.result?.winner === record.team && game.result.reason === 'found' && game.history.at(-1) === record;
 
 // The other group's turn, whose time counts from `at`.
 export function endTurn(state: KeywordsState, at: number): KeywordsState {
@@ -324,7 +342,8 @@ export function applyReveal(
   const before = state.history.at(-1);
   const after = history.at(-1);
   const known = before ? heroesOf(before) : new Set<string>();
-  const hailed: GameEvent[] = [...(after ? heroesOf(after) : [])]
+  const won = remaining(cards, state.team) === 0;
+  const hailed: GameEvent[] = [...(after ? heroesOf(after, won) : [])]
     .filter((player) => !known.has(player))
     .map((player) => {
       const count = heroes(player);

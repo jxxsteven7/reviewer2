@@ -12,9 +12,10 @@ export const END_FLOAT_MS = 2600;
 const AFTER_REVEAL_MS = 900;
 
 // The numbers that rise as the game goes (floats.ts): on the card that has just been revealed, the
-// viewer's own; on the avatars of the players whose points it changed, each their own, which the
-// game shows where the groups stand beside the board; and at the end of the game, what it added to
-// the viewer's points, in the middle of the screen, and to each player's, on their avatar.
+// viewer's own, the bonus it brings included; on the avatars of the players whose points it changed,
+// each their own, which the game shows where the groups stand beside the board; and at the end of
+// the game, what it added to the viewer's points, in the middle of the screen, and to each player's,
+// on their avatar.
 //
 // Only what happens in front of the viewer rises (useLiveViews.ts): a snapshot that comes with a
 // new connection, as after a reload or a locked screen, or while the page is out of sight, catches
@@ -61,7 +62,7 @@ export function useScoreFloats(room: Ref<RoomView>) {
       const data = room.value.data as KeywordsRoomData;
       const reveal = revealedBetween(last, view);
       if (reveal) {
-        const { mine, players: others } = revealFloats(data, room.value.me, reveal);
+        const { mine, players: others } = revealFloats(data, room.value.me, reveal, last, view);
         if (mine) {
           key += 1;
           const shown = { ...mine, key, card: reveal.card };

@@ -1,7 +1,16 @@
-import { TEAMS, verdictFor, type Team } from '@reviewer2/shared';
+import {
+  firstClue,
+  firstTurnReject,
+  heavenlyHand,
+  instantReject,
+  openingRecord,
+  TEAMS,
+  verdictFor,
+  type Team,
+} from '@reviewer2/shared';
 import type { GameTitle, PlayerResult } from '../../core/game';
-import { firstClue, heavenlyHand, missedDeadline, openingRecord } from './match';
-import { heroesOf } from './rules';
+import { missedDeadline } from './match';
+import { heroesOf, wonInTurn } from './rules';
 import type { Seating } from './seats';
 import { remaining, type KeywordsState } from './state';
 
@@ -14,7 +23,8 @@ import { remaining, type KeywordsState } from './state';
 // The titles that a game which ended by itself brought a player who played for `team` in it, by
 // their member key, each with the turn it came in: Forgot to Submit for each turn in which their
 // time for the clue ran out, Deadline Hero for each turn that made them one (heroesOf), and for
-// everyone in the group, the opening record and the heavenly hand of its first clue.
+// everyone in the group, what its first clue brought it (shared/src/games/keywords/titles.ts): the
+// opening record or the heavenly hand, and the instant desk reject or the fall at the first hurdle.
 export function titlesOf(
   game: KeywordsState,
   team: Team,
@@ -25,13 +35,16 @@ export function titlesOf(
     ...(missedDeadline(record) && keyOf(record.captain ?? '') === key
       ? [{ title: 'missed_deadline' as const, turn: record.turn }]
       : []),
-    ...([...heroesOf(record)].some((hero) => keyOf(hero) === key)
+    ...([...heroesOf(record, wonInTurn(game, record))].some((hero) => keyOf(hero) === key)
       ? [{ title: 'deadline_hero' as const, turn: record.turn }]
       : []),
   ]);
   const first = firstClue(game, team);
-  if (first && openingRecord(game, team)) titles.push({ title: 'opening_record', turn: first.turn });
-  if (first && heavenlyHand(game, team)) titles.push({ title: 'heavenly_hand', turn: first.turn });
+  if (!first) return titles;
+  if (openingRecord(game, team)) titles.push({ title: 'opening_record', turn: first.turn });
+  if (heavenlyHand(game, team)) titles.push({ title: 'heavenly_hand', turn: first.turn });
+  if (instantReject(game, team)) titles.push({ title: 'instant_reject', turn: first.turn });
+  if (firstTurnReject(game, team)) titles.push({ title: 'first_turn_reject', turn: first.turn });
   return titles;
 }
 

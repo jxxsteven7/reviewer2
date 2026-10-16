@@ -237,8 +237,13 @@ describe('a match', () => {
           },
         ],
       });
+      // The games of the match bring their own titles too: a group that reveals Reviewer 2 in the
+      // turn of its first clue falls at the first hurdle.
       const summary = await accounts[name].account();
-      expect(summary?.titles).toEqual(standing?.title ? [{ title: standing.title, count: 1 }] : []);
+      const titles = (summary?.titles ?? []) as { title: string; count: number }[];
+      expect(titles.filter(({ title }) => title !== 'first_turn_reject')).toEqual(
+        standing?.title ? [{ title: standing.title, count: 1 }] : [],
+      );
     }
     // The match's games go on the players' streaks one by one, in a row with the games before the
     // match (docs/architecture.md#streaks): Ann's streaks are what her record, the game she won

@@ -273,12 +273,16 @@ const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, '
   (seatOf(data.seating, playerId).role !== 'captain' && !data.seating.keyViewers.has(ctx.keyOf(playerId)));
 
 // The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
-// change to either. Version 2 brought the students' marks, the homophone rule of a Chinese room and
-// the hold on the quick reactions of whoever has seen the key while the students guess; version 3
-// the numbers, the English and the pinyin of a character as the same character in the clue check,
+// change to either; the records of every kept game are then counted again under the new version
+// (store/recount.ts). Version 2 brought the students' marks, the homophone rule of a Chinese room
+// and the hold on the quick reactions of whoever has seen the key while the students guess; version
+// 3 the numbers, the English and the pinyin of a character as the same character in the clue check,
 // and the groups' talk after the game, the PI's included; version 4 the 5 points that a PI loses
-// for each missed deadline, and boards on which no row or column is all one group's cards.
-export const RULES_VERSION = 4;
+// for each missed deadline, and boards on which no row or column is all one group's cards; version
+// 5 the opening record from a first clue of 4 or more, which brings the PI no point and which the
+// heavenly hand outdoes, the instant desk reject and the fall at the first hurdle, the PI's deadline
+// hero for a clue followed to the letter, and no clue that a Latin word on the board starts with.
+export const RULES_VERSION = 5;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),

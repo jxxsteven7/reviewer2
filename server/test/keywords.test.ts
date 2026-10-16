@@ -720,7 +720,7 @@ describe('quick reactions', () => {
 
   test('come from spectators as well as players, and reach the screen', async () => {
     const table = await seatTable();
-    await expectOk(table.spectator.send('room:emote', { emote: 'deadline' }));
+    await expectOk(table.spectator.send('room:emote', { emote: 'waiting' }));
     await expectOk(table.guessers.red.send('room:emote', { emote: 'waiting' }));
     await until(() => table.screen.emotes.length === 2, 'the screen hears both');
     expect(table.screen.emotes.map(({ playerId }) => playerId)).toEqual([table.spectator.me, table.guessers.red.me]);

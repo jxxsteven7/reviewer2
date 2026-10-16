@@ -33,7 +33,7 @@ test('the chair closes the room in the middle of a game, and every page is told'
   // A reaction sent just before the room closes doesn't outlive it.
   const eve = table.spectator;
   await eve.locator('.sticky-clock').getByRole('button', { name: TEXT.en.emotes.open }).click();
-  await eve.locator('[role=dialog]').getByRole('button', { name: TEXT.en.emotes.phrases.deadline }).click();
+  await eve.locator('[role=dialog]').getByRole('button', { name: TEXT.en.emotes.phrases.waiting }).click();
   for (const page of others) await expect(page.locator('.bubble')).toHaveCount(1);
   await (await roomMenu(ann)).getByRole('button', { name: TEXT.en.room.closeRoom }).click();
   const sheet = ann.getByRole('dialog', { name: TEXT.en.room.closeRoom });

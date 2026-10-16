@@ -184,8 +184,9 @@ describe('Deadline Hero', () => {
       );
     }
 
-    // Ann gives her clue with 2 seconds left, and Bob reveals one of red's cards with 2 seconds left
-    // of the guesses: both are heroes at once, Ann for the second time.
+    // Ann gives her clue of 2 with 2 seconds left, and Bob reveals one of red's cards with 2 seconds
+    // left of the guesses: Bob is a hero at once; Ann once the students have followed her clue to
+    // the letter, with the second card, for the second time.
     server.advance(28_000);
     await expectOk(ann.send('keywords:clue', { ...moment(board(ann)), word: 'Hint', count: 2 }));
     await settle(everyone);
@@ -195,16 +196,15 @@ describe('Deadline Hero', () => {
     await settle(everyone);
     const hailed = (client: TestClient) =>
       board(client).events.flatMap(({ kind, player, count }) => (kind === 'hero' ? [{ player, count }] : []));
+    for (const client of everyone) expect(hailed(client)).toEqual([{ player: bob.me, count: 1 }]);
+    await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('red') }));
+    await settle(everyone);
     for (const client of everyone) {
       expect(hailed(client)).toEqual([
         { player: bob.me, count: 1 },
         { player: ann.me, count: 2 },
       ]);
     }
-    // Another card of red's in the same turn makes nobody a hero again.
-    await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('red') }));
-    await settle(everyone);
-    expect(hailed(dan)).toHaveLength(2);
 
     // Red's turn ends; blue reveals Reviewer 2, and the game goes on the record.
     await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('blue') }));

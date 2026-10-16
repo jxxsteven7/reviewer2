@@ -746,8 +746,8 @@ describe('deadline heroes', () => {
   const TIMED = { ...STANDARD, firstClueTime: 90, clueTime: 60, guessTime: 30 };
   // A game that starts at 0: the first clue is due at 90 s, and the guesses 30 s after the clue.
   const timed = (settings = TIMED) => newGame(WORDS, seededRng(3), setup('timed', settings), 0);
-  const clue = (state: KeywordsState, at: number) =>
-    accepted(giveClue(state, captain(state.team), { ...now(state), word: 'Gradient', count: 'unlimited' }, at));
+  const clue = (state: KeywordsState, at: number, count: ClueCount = 'unlimited') =>
+    accepted(giveClue(state, captain(state.team), { ...now(state), word: 'Gradient', count }, at));
   const flip = (
     state: KeywordsState,
     color: CardColor,
@@ -774,20 +774,44 @@ describe('deadline heroes', () => {
     expect(record?.guesses[0]).not.toHaveProperty('lastSeconds');
   });
 
-  test("make the PI one with the first of the group's cards that a last-second clue finds, once a turn", () => {
-    let state = clue(timed(), 88_000);
+  test('make the PI one with the card that follows a last-second clue to the letter, once a turn', () => {
+    // A clue of 2 with 2 seconds left: the first card of the group's is not enough, the second is.
+    let state = clue(timed(), 88_000, 2);
     const team = state.team;
     const before = new Map([[`${team}-captain`, 2]]);
-    state = flip(state, team, 100_000, guesser(team), (player) => before.get(player) ?? null);
+    const count = (player: string) => before.get(player) ?? null;
+    state = flip(state, team, 100_000, guesser(team), count);
+    expect(hailed(state)).toEqual([]);
+    state = flip(state, team, 101_000, guesser(team), count);
     expect(hailed(state)).toEqual([{ turn: 1, kind: 'hero', team, player: `${team}-captain`, count: 3 }]);
-    state = flip(state, team, 101_000);
+    state = flip(state, team, 102_000);
     expect(hailed(state)).toHaveLength(1);
     expect(heroesOf(state.history[0] as ClueRecord)).toEqual(new Set([`${team}-captain`]));
-    // A last-second clue that finds nothing of the group's makes nobody a hero; nor does a clue in time.
-    const wrong = flip(clue(timed(), 88_000), otherTeam(team), 100_000);
+    // A wrong card before the number is reached makes nobody a hero, nor does a clue in time, nor a
+    // clue of 0 or "unlimited", which names no number to follow.
+    const wrong = flip(flip(clue(timed(), 88_000, 2), team, 100_000), otherTeam(team), 101_000);
     expect(hailed(wrong)).toEqual([]);
     expect(heroesOf(wrong.history[0] as ClueRecord).size).toBe(0);
-    expect(hailed(flip(clue(timed(), 80_000), team, 100_000))).toEqual([]);
+    expect(hailed(flip(flip(clue(timed(), 80_000, 2), team, 100_000), team, 101_000))).toEqual([]);
+    expect(hailed(flip(flip(clue(timed(), 88_000), team, 100_000), team, 101_000))).toEqual([]);
+    expect(hailed(flip(clue(timed(), 88_000, 0), team, 100_000))).toEqual([]);
+    // With fewer cards left than the number, every card left without a mistake wins the game in the
+    // turn, which makes the PI a hero too.
+    const record: ClueRecord = {
+      turn: 1,
+      team,
+      at: 0,
+      word: 'All',
+      count: 3,
+      captain: `${team}-captain`,
+      lastSeconds: true,
+      guesses: [
+        { card: 0, color: team, player: 'p', at: 0 },
+        { card: 1, color: team, player: 'p', at: 0 },
+      ],
+    };
+    expect(heroesOf(record, true)).toEqual(new Set([`${team}-captain`]));
+    expect(heroesOf(record, false).size).toBe(0);
   });
 
   test("make a student one with a card of the group's in the last seconds of the guesses, once a turn", () => {
