@@ -3,11 +3,11 @@ import {
   type CardColor,
   type KeywordsView,
   type Language,
-  type PlayerView,
   type ReplayPerson,
   type Seat,
   type ShownReplay,
 } from '@reviewer2/shared';
+import type { ShownPlayer } from '../../core/room';
 
 // The replay of the game that has just ended, from the view, for the review on the results page
 // (ReplayViewer), as the server shows the replays it keeps (docs/architecture.md#replays): once a
@@ -19,7 +19,7 @@ import {
 export function replayOf(
   game: KeywordsView,
   language: Language,
-  players: readonly PlayerView[],
+  players: readonly ShownPlayer[],
   seats: Readonly<Record<string, Seat>>,
   me: string | null,
 ): ShownReplay | null {

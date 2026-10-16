@@ -21,12 +21,16 @@ export interface Named {
 }
 
 // The names that the viewer gives their friends, by handle, from the account's friends list
-// (friends.ts), and none for a guest.
+// (friends.ts), and none for a guest. A list that names everyone as before changes nothing, so
+// that what follows the names, as the room's view does (room.ts), isn't made anew for nothing.
 const aliases = shallowRef<ReadonlyMap<string, string>>(new Map());
 export const friendAliases: Readonly<Ref<ReadonlyMap<string, string>>> = aliases;
 
 export function knowAliases(friends: readonly { handle: string; alias?: string }[]): void {
-  aliases.value = new Map(friends.flatMap(({ handle, alias }) => (alias ? [[handle, alias] as const] : [])));
+  const next = new Map(friends.flatMap(({ handle, alias }) => (alias ? [[handle, alias] as const] : [])));
+  const known = aliases.value;
+  if (next.size === known.size && [...next].every(([handle, alias]) => known.get(handle) === alias)) return;
+  aliases.value = next;
 }
 
 export function aliasOf(handle: string | undefined): string | null {

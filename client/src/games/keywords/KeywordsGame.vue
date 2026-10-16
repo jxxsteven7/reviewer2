@@ -6,7 +6,6 @@ import {
   type KeywordsScoreDetail,
   type KeywordsView,
   type Mark,
-  type RoomView,
 } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -22,6 +21,7 @@ import StreakNotices from '../../core/components/StreakNotices.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
 import { HTML_LANG } from '../../core/i18n';
+import type { ShownRoom } from '../../core/room';
 import { act, reconnecting } from '../../core/socket';
 import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
@@ -75,7 +75,7 @@ import { useScoreFloats } from './useScoreFloats';
 // streaks that the game brought the players to come right after the letters, before the match's
 // table, and the titles that it brought the player's friends after them; their notices are on the
 // page from the start, out of sight, so that a screen reader is told of them.
-const props = defineProps<{ room: RoomView }>();
+const props = defineProps<{ room: ShownRoom }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
 const { data, mySeat, mySide, isChair, groups } = useKeywords(room);

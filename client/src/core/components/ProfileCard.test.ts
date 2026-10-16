@@ -170,7 +170,7 @@ describe('ProfileCard', () => {
     const wrapper = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
     await flushPromises();
     expect(wrapper.get('.name').text()).toBe('Prof. A Ann');
-    expect(wrapper.get('.name .username').text()).toBe('Ann');
+    expect(wrapper.get('.name .username-after').text()).toBe('Ann');
     expect(wrapper.get('.initial').attributes('data-initial')).toBe('A');
     expect(wrapper.get('section.duo h3').text()).toBe('You and Prof. A');
     wrapper.unmount();
@@ -179,7 +179,7 @@ describe('ProfileCard', () => {
     const plain = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
     await flushPromises();
     expect(plain.get('.name').text()).toBe('Ann');
-    expect(plain.find('.name .username').exists()).toBe(false);
+    expect(plain.find('.name .username-after').exists()).toBe(false);
     plain.unmount();
   });
 

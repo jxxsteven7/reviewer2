@@ -16,8 +16,8 @@ import { nameOf, usernameAfter } from '../../core/names';
 // avatar under the title that names them. For everyone, the way to their moves in the game, a
 // sheet of its own over the panel, which it hides until the way back (UiSheet.vue), as the whole
 // page does: as a PI, each clue, the cards meant and how far the group got with it; as a student,
-// each card revealed and whether it was right (actionsOf in shared/src/games/keywords/replay.ts). A tap on a move closes the panel and takes
-// the replay to its step (`go`).
+// each card revealed and whether it was right (actionsOf in shared/src/games/keywords/replay.ts).
+// A tap on a move closes the panel and takes the replay to its step (`go`).
 const props = defineProps<{ replay: ShownReplay; playerId: string | null }>();
 const emit = defineEmits<{ close: []; go: [step: number] }>();
 const { t, locale } = useI18n();

@@ -168,6 +168,11 @@ describe('the room page', () => {
       ['Bobby', 'Bob'],
       ['Bob', undefined],
     ]);
+    // The same names again, as every connection reads them, leave the room as it is.
+    const asShown = room.value;
+    knowAliases([{ handle: 'b0b000000000', alias: 'Bobby' }]);
+    await flushPromises();
+    expect(room.value).toBe(asShown);
     knowAliases([{ handle: 'b0b000000000', alias: 'Prof. B' }]);
     await flushPromises();
     expect(room.value?.players[1]?.name).toBe('Prof. B');

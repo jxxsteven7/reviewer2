@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { setLanguage } from './i18n';
-import { aliasOf, knowAliases, nameOf, usernameAfter } from './names';
+import { aliasOf, friendAliases, knowAliases, nameOf, usernameAfter } from './names';
 
 beforeEach(() => {
   setLanguage('en', { remember: false });
@@ -37,6 +37,17 @@ describe('nameOf', () => {
     expect(nameOf({ name: 'Bob', handle: 'b0b000000000' })).toBe('Bob');
     expect(aliasOf('b0b000000000')).toBeNull();
     expect(aliasOf(undefined)).toBeNull();
+  });
+
+  test('changes nothing on a list that names everyone as before', () => {
+    const known = friendAliases.value;
+    knowAliases([{ handle: 'ca7000000000' }, { handle: 'b0b000000000', alias: 'Bobby' }]);
+    expect(friendAliases.value).toBe(known);
+    knowAliases([
+      { handle: 'b0b000000000', alias: 'Bobby' },
+      { handle: 'ca7000000000', alias: 'Cathy' },
+    ]);
+    expect(friendAliases.value).not.toBe(known);
   });
 });
 

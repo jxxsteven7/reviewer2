@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-  checkReport,
-  MAX_REPORT_INPUT,
-  MAX_REPORT_LENGTH,
-  textLength,
-  type PlayerView,
-  type RoomView,
-} from '@reviewer2/shared';
+import { checkReport, MAX_REPORT_INPUT, MAX_REPORT_LENGTH, textLength } from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
@@ -15,6 +8,7 @@ import { errorKey } from '../errors';
 import { standingOf, type Standing } from '../friends';
 import { mayBefriend, mayReport } from '../manage';
 import { usernameAfter } from '../names';
+import type { ShownPlayer, ShownRoom } from '../room';
 import { act, send } from '../socket';
 import { toast } from '../toast';
 import { useBusy } from '../useBusy';
@@ -49,7 +43,7 @@ import UiSheet from './UiSheet.vue';
 // scrolls inside past the most a sheet may be and leads back to it
 // (docs/architecture.md#public-profiles); for the viewer's own account, the way to the account's
 // page too. The server decides who may do what; the panel only shows what the viewer may ask for.
-const props = defineProps<{ playerId: string | null; room: RoomView }>();
+const props = defineProps<{ playerId: string | null; room: ShownRoom }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
 const { busy, run } = useBusy();
@@ -60,7 +54,7 @@ const note = ref('');
 const refused = ref<string | undefined>();
 
 // The player as the room has them now: a player who leaves the room takes the panel along.
-const player = computed<PlayerView | null>(
+const player = computed<ShownPlayer | null>(
   () => props.room.players.find((other) => other.id === props.playerId) ?? null,
 );
 watch(player, (now) => {
@@ -143,7 +137,7 @@ async function report() {
         <FriendActions
           v-if="friendly"
           :standing="friendly"
-          :name="player.name"
+          :name="player.username ?? player.name"
           :who="{ playerId: player.id }"
           @done="emit('close')"
         />
@@ -183,7 +177,7 @@ async function report() {
         scope="global"
       >
         <template #name
-          >{{ player?.name ?? '' }}<small v-if="username" class="username">{{ ` ${username}` }}</small></template
+          >{{ player?.name ?? '' }}<small v-if="username" class="username-after">{{ ` ${username}` }}</small></template
         >
       </i18n-t>
       <UiButton variant="danger" :disabled="busy" @click="manage('room:remove')">{{
@@ -233,12 +227,6 @@ async function report() {
 }
 
 .hint {
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-}
-
-/* The username after a friend's name, as a sheet's subtitle has it (UiSheet.vue). */
-.username {
   color: var(--ink-2);
   font-size: var(--text-sm);
 }

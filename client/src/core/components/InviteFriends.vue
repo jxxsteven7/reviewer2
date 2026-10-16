@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { RoomView } from '@reviewer2/shared';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { errorKey } from '../errors';
+import type { ShownRoom } from '../room';
 import { send } from '../socket';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
@@ -21,7 +21,7 @@ import UiSheet from './UiSheet.vue';
 // invitation or it has lapsed. The list is asked for whenever the sheet opens, since who is online
 // changes all the time. A friend goes by the name the account gives them, if any, with the username
 // after it.
-const props = defineProps<{ open: boolean; room: RoomView }>();
+const props = defineProps<{ open: boolean; room: ShownRoom }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
 const { view, failed, load } = useFriendsList(toRef(props, 'open'));

@@ -33,8 +33,8 @@ import { useVisualViewport } from '../useVisualViewport';
 // fades out; going back, it slides down again while the one under it fades in. Closed, it goes at
 // once with the rest, as every sheet does.
 //
-// A `subtitle` follows the title in small grey type, as a friend's username follows the name the
-// account gives them.
+// A `subtitle` follows the title in small grey type (.username-after in base.css), as a friend's
+// username follows the name the account gives them.
 //
 // A sheet that isn't to `focusInput` takes the focus itself as it opens, so that a phone shows no
 // keyboard before the viewer asks for one, as a chat opened only to read it. As it closes, the
@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
             </button>
             <h2 :id="id">
-              {{ title }}<small v-if="subtitle" class="subtitle">{{ spacedSubtitle }}</small>
+              {{ title }}<small v-if="subtitle" class="subtitle username-after">{{ spacedSubtitle }}</small>
             </h2>
             <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
               &times;
@@ -302,13 +302,6 @@ h2 {
   min-width: 0;
   font-size: var(--text-2xl);
   text-wrap: balance;
-}
-
-.subtitle {
-  color: var(--ink-2);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
 }
 
 /* A sheet with a way back hides the one under it, which it leads back to. That one's scrim goes, as

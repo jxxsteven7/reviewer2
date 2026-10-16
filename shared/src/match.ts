@@ -47,8 +47,6 @@ export interface StandingView {
   // The player's ID in the room, or null for someone who has left it.
   playerId: string | null;
   name: string;
-  // Set by the client alone, as on a player (PlayerView.username).
-  username?: string;
   // A guest's number in the room, by which the client names them (PlayerView.guest).
   guest?: number;
   avatar?: string;

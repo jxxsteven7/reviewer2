@@ -25,6 +25,7 @@ const onScroll = () => {
   scrolled.value = window.scrollY > 0;
 };
 onMounted(() => {
+  if (yields) return;
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
 });
@@ -44,7 +45,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: 64px;
+  min-height: var(--masthead-height);
   padding-top: env(safe-area-inset-top);
 }
 
@@ -91,7 +92,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
 }
 
 :global(html:has(.masthead.pinned)) {
-  --pinned-height: calc(64px + env(safe-area-inset-top));
+  --pinned-height: calc(var(--masthead-height) + env(safe-area-inset-top));
 }
 
 .pinned .end {
@@ -102,6 +103,6 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
    masthead rather than under it, and below the bars that stay with it, which say so for
    themselves. */
 :global(html:has(:where(.masthead.sticky))) {
-  scroll-padding-top: calc(64px + env(safe-area-inset-top) + var(--space-3));
+  scroll-padding-top: calc(var(--masthead-height) + env(safe-area-inset-top) + var(--space-3));
 }
 </style>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { MatchRules, MatchView, RoomView } from '@reviewer2/shared';
+import type { MatchRules } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points } from '../points';
+import type { ShownMatch, ShownRoom } from '../room';
 import { act } from '../socket';
 import { useBusy } from '../useBusy';
 import MatchForm from './MatchForm.vue';
@@ -16,14 +17,14 @@ import UiSheet from './UiSheet.vue';
 // ended early has places but no titles, and a tap on a title says what it is (TitleInfo.vue),
 // except on a screen, which nobody taps. The chair starts another match, with rules that they may
 // change, or makes the room an ordinary one again.
-const props = defineProps<{ room: RoomView }>();
+const props = defineProps<{ room: ShownRoom }>();
 // A line's player while they are still in the room, whose panel a tap on the avatar opens.
 const inRoom = (id: string | null) =>
   id !== null && props.room.players.some((player) => player.id === id) ? id : null;
 const { t } = useI18n();
 const { busy, run } = useBusy();
 
-const match = computed(() => props.room.match as MatchView);
+const match = computed(() => props.room.match as ShownMatch);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
 
 const choosing = ref(false);

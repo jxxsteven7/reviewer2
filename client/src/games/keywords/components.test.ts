@@ -19,6 +19,7 @@ import { computed, defineComponent, h } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { bubbles } from '../../core/emotes';
 import { knowAliases } from '../../core/names';
+import type { ShownRoom } from '../../core/room';
 import { clearMemory, readStored, writeStored } from '../../core/storage';
 import { seenIn } from './chat';
 import { toasts } from '../../core/toast';
@@ -190,6 +191,25 @@ describe('GroupChat', () => {
     expect(turns[1]?.text()).toContain('You');
     expect(turns[1]?.text()).toContain('Cat');
     expect(wrapper.find('.badge').exists()).toBe(false);
+  });
+
+  // The room names a friend by the viewer's name for them, with the username kept beside (room.ts):
+  // a message says the name, and its avatar is still the username's.
+  test("names a friend by the viewer's name for them, and draws the avatar from the username", async () => {
+    const view = room('bob', messages);
+    const named: ShownRoom = {
+      ...view,
+      players: view.players.map((player) =>
+        player.id === 'cat' ? { ...player, name: 'Kitty', username: 'Cat', handle: 'ca7000000000' } : player,
+      ),
+    };
+    const wrapper = mount(GroupChat, { props: { room: named, draft: '', sending: false }, global: global() });
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.findAll('.message .name').map((name) => name.text())).toEqual(['Kitty', 'You', 'Kitty']);
+    expect(wrapper.get('.message .initial').attributes('data-initial')).toBe('C');
+    const plain = mount(GroupChat, { props: { room: view, draft: '', sending: false }, global: global() });
+    await plain.get('button').trigger('click');
+    expect(wrapper.get('.message .avatar').attributes('style')).toBe(plain.get('.message .avatar').attributes('style'));
   });
 
   test('lets a student send only a message that passes the check', async () => {

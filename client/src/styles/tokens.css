@@ -121,6 +121,9 @@
   /* The height of the banner that says a page is reconnecting, which a game's clock sticks under
      and the short messages make room for. */
   --banner-height: 2.5rem;
+  /* The height of a page's masthead, and of the bar of a page's title that takes its place at the
+     top of the screen (PageMasthead.vue, PageTitle.vue). */
+  --masthead-height: 64px;
 
   --motion: 160ms;
   /* A sheet with a way back slides in and, going back, out (UiSheet.vue). */

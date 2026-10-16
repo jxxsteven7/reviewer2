@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { RoomView } from '@reviewer2/shared';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatList } from '../i18n';
 import { nameOf } from '../names';
+import type { ShownRoom } from '../room';
 import PlayerAvatar from './PlayerAvatar.vue';
 
 // The friends whom the viewer has invited into the room and who haven't come, in the start bar
@@ -15,7 +15,7 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // whether the username came into the room as it went from the invitations. The button names them
 // as the page names friends (names.ts). A tap opens the sheet to invite friends. Four show, and
 // "+n" counts the rest.
-const props = defineProps<{ room: RoomView }>();
+const props = defineProps<{ room: ShownRoom }>();
 const emit = defineEmits<{ open: [] }>();
 const { t, locale } = useI18n();
 

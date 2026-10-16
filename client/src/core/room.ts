@@ -1,4 +1,13 @@
-import { parseCode, type Ack, type ClosedReason, type Language, type RoomView } from '@reviewer2/shared';
+import {
+  parseCode,
+  type Ack,
+  type ClosedReason,
+  type Language,
+  type MatchView,
+  type PlayerView,
+  type RoomView,
+  type StandingView,
+} from '@reviewer2/shared';
 import { reactive, shallowRef, watch } from 'vue';
 import { i18n } from './i18n';
 import { friendAliases, nameOf, type Named } from './names';
@@ -9,7 +18,15 @@ import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 export type EntryStatus = 'idle' | 'connecting' | 'joining' | 'needs_choice' | 'in' | 'not_found' | 'closed' | 'failed';
 
-export const room = shallowRef<RoomView | null>(null);
+// The room as the page shows it (named below): the server's view, with the players and the lines
+// of a match's table named as the page names them, and the `username` of an account kept beside
+// the name the page gives it, which the server never sends.
+export type ShownPlayer = PlayerView & { username?: string };
+export type ShownStanding = StandingView & { username?: string };
+export type ShownMatch = Omit<MatchView, 'standings'> & { standings: ShownStanding[] };
+export type ShownRoom = Omit<RoomView, 'players' | 'match'> & { players: ShownPlayer[]; match: ShownMatch | null };
+
+export const room = shallowRef<ShownRoom | null>(null);
 
 export const entry = reactive<{
   status: EntryStatus;
@@ -64,10 +81,13 @@ function isWanted(view: RoomView): boolean {
 // in on it. Someone who has left a match's table is known by the name alone, and keeps it.
 let shown: RoomView | null = null;
 
-function named(view: RoomView): RoomView {
+function named(view: RoomView): ShownRoom {
   const aliased = view.me !== null;
   const handles = new Map(view.players.map(({ id, handle }) => [id, handle]));
-  const renamed = <Who extends Named & { name: string; username?: string }>(who: Who, handle = who.handle): Who => {
+  const renamed = <Who extends Named & { name: string }>(
+    who: Who,
+    handle = who.handle,
+  ): Who & { username?: string } => {
     if (handle !== undefined) return { ...who, name: nameOf({ ...who, handle }, aliased), username: who.name };
     return who.guest === undefined && who.agent === undefined ? who : { ...who, name: nameOf(who) };
   };

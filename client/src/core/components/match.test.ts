@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
+import type { ShownStanding } from '../room';
 import MatchResults from './MatchResults.vue';
 import MatchTable from './MatchTable.vue';
 
@@ -91,6 +92,17 @@ describe('the table of a match', () => {
     expect(heads.slice(0, 2).map((head) => head.find('.sr-only').text())).toEqual(['Place', 'Player']);
     expect(heads.at(3)?.text()).toBe('This');
     expect(heads.at(3)?.attributes('aria-label')).toBe('This game');
+  });
+
+  // The room names a friend by the viewer's name for them, with the username kept beside (room.ts):
+  // the line says the name, and the default avatar is still the username's.
+  test("names a friend by the viewer's name for them, and draws the avatar from the username", () => {
+    const bobby: ShownStanding = { ...line('Bob'), name: 'Prof. B', username: 'Bob' };
+    const named = mount(MatchTable, { props: { room: room({ standings: [bobby] }) }, global: global() });
+    const plain = mount(MatchTable, { props: { room: room({ standings: [line('Bob')] }) }, global: global() });
+    expect(named.get('tbody .name').text()).toBe('Prof. B');
+    expect(named.get('.initial').attributes('data-initial')).toBe('B');
+    expect(named.get('.avatar').attributes('style')).toBe(plain.get('.avatar').attributes('style'));
   });
 
   test('calls the points those of the last game in the waiting room', () => {

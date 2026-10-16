@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
-import type { PlayerView, RoomView } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import en from '../../locales/en.json';
+import { knowAliases } from '../names';
+import type { ShownPlayer, ShownRoom } from '../room';
 import PlayerPanel from './PlayerPanel.vue';
 
 const send = vi.hoisted(() =>
@@ -29,10 +30,10 @@ vi.mock('../account', () => signedIn);
 const router = () =>
   createRouter({ history: createMemoryHistory(), routes: [{ path: '/:any(.*)*', component: { render: () => null } }] });
 const global = () => ({ plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } }), router()] });
-const bob: PlayerView = { id: 'bob', name: 'Bob', online: true };
-const ai: PlayerView = { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' };
+const bob: ShownPlayer = { id: 'bob', name: 'Bob', online: true };
+const ai: ShownPlayer = { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' };
 
-const view = (me: string, isPublic: boolean, player: PlayerView = bob): RoomView => ({
+const view = (me: string, isPublic: boolean, player: ShownPlayer = bob): ShownRoom => ({
   roomId: 'room-1',
   code: 'K7QX',
   rev: 1,
@@ -86,7 +87,7 @@ describe('PlayerPanel', () => {
   });
 
   const names = () => buttons().map((element) => element.textContent?.trim());
-  const panel = (playerId: string, room: RoomView) =>
+  const panel = (playerId: string, room: ShownRoom) =>
     mount(PlayerPanel, { props: { playerId, room }, global: global() });
   const profile = {
     id: 7,
@@ -105,7 +106,7 @@ describe('PlayerPanel', () => {
     liked: false,
     mine: false,
   };
-  const withPage: PlayerView = { ...bob, rank: 'phd', handle: 'a1b2c3d4e5f6' };
+  const withPage: ShownPlayer = { ...bob, rank: 'phd', handle: 'a1b2c3d4e5f6' };
 
   test('removes a player only after the chair has confirmed it, saying for how long', async () => {
     // From a public room, for good.
@@ -206,7 +207,7 @@ describe('PlayerPanel', () => {
     await flushPromises();
     const asked = dialogs()[0]?.querySelector('p');
     expect(asked?.textContent).toBe("Remove Bobby Bob from the room? They won't be able to come back to it.");
-    expect(asked?.querySelector('.username')?.textContent?.trim()).toBe('Bob');
+    expect(asked?.querySelector('.username-after')?.textContent?.trim()).toBe('Bob');
     button('Cancel').click();
     await flushPromises();
     button('Report to the operator').click();
@@ -227,7 +228,7 @@ describe('PlayerPanel', () => {
     await flushPromises();
     button('Remove from the room').click();
     await flushPromises();
-    expect(dialogs()[0]?.querySelector('.username')).toBeNull();
+    expect(dialogs()[0]?.querySelector('.username-after')).toBeNull();
     plain.unmount();
   });
 
@@ -274,6 +275,7 @@ describe('PlayerPanel', () => {
     // As the room names a friend (room.ts): by the viewer's name for them, the username beside.
     const bobs = { ...bob, name: 'Bobby', username: 'Bob', rank: 'phd' as const, handle: 'b0b000000000' };
     friendsAre([{ handle: 'b0b000000000', username: 'Bob', alias: 'Bobby', avatar: null }]);
+    knowAliases([{ handle: 'b0b000000000', alias: 'Bobby' }]);
     const friendly = panel('bob', view('cat', false, bobs));
     await flushPromises();
     expect(names()).toEqual(['\u00d7', 'Edit alias', 'Remove friend', 'Open the full page']);
@@ -334,6 +336,7 @@ describe('PlayerPanel', () => {
     expect(send).toHaveBeenCalledWith('friends:remove', { username: 'Bob' });
     expect(wrapper.emitted('close')).toHaveLength(1);
     wrapper.unmount();
+    knowAliases([]);
   });
 
   test('shows a brief card of an account, and its whole page over the panel, with the way back to it', async () => {

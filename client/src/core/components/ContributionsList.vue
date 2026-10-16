@@ -17,10 +17,10 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // the GitHub issue it became, where the discussion and the changes are; and the month it was
 // adopted. Feedback signed with an account comes with the handle of its profile, and shows the
 // account's avatar before its username, or the name that the viewer gives a friend (names.ts): a
-// tap on either opens the account's panel over the home page, as an avatar does anywhere else (ProfilePanel.vue). Any other name, and what they did, is
-// plain text. What follows the name is one piece, which wraps under itself rather than under the
-// name, and goes to a line of its own after a long name; an avatar hangs in a column of its own
-// before the name.
+// tap on either opens the account's panel over the home page, as an avatar does anywhere else
+// (ProfilePanel.vue). Any other name, and what they did, is plain text. What follows the name is
+// one piece, which wraps under itself rather than under the name, and goes to a line of its own
+// after a long name; an avatar hangs in a column of its own before the name.
 const { t } = useI18n();
 const language = useLanguage();
 

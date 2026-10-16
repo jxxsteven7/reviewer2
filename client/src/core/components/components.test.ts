@@ -221,6 +221,13 @@ describe('ProfilePanel', () => {
     expect(heading(1)?.querySelector('.subtitle')?.textContent?.trim()).toBe('Bob');
     document.querySelector<HTMLButtonElement>('[role=dialog] button.close')?.click();
     await nextTick();
+    // A name that is the username itself has nothing after it.
+    knowAliases([{ handle: 'b0b000000000', alias: 'Bob' }]);
+    await avatar.trigger('click');
+    await vi.waitFor(() => expect(heading(0)?.textContent?.trim()).toBe('Bob'));
+    expect(heading(0)?.querySelector('.subtitle')).toBeNull();
+    document.querySelector<HTMLButtonElement>('[role=dialog] button.close')?.click();
+    await nextTick();
     wrapper.unmount();
     knowAliases([]);
   });
@@ -269,10 +276,15 @@ describe('PageMasthead', () => {
   // to, and the masthead scrolls away (docs/design.md); otherwise the masthead stays.
   test('gives the top to the bar of the title on a page with a page before, and stays otherwise', () => {
     window.history.replaceState({ back: '/' }, '');
+    const listened = vi.spyOn(window, 'addEventListener');
     const page = masthead(true);
     expect(page.classes()).not.toContain('sticky');
     expect(page.find('.back-button').exists()).toBe(false);
+    // A masthead that scrolls away has no shadow to show, and doesn't watch the page scroll.
+    expect(listened).not.toHaveBeenCalledWith('scroll', expect.anything(), expect.anything());
     expect(masthead(false).classes()).toContain('sticky');
+    expect(listened).toHaveBeenCalledWith('scroll', expect.anything(), expect.anything());
+    listened.mockRestore();
     // A page opened from a shared link has nothing before it.
     window.history.replaceState(null, '');
     expect(masthead(true).classes()).toContain('sticky');

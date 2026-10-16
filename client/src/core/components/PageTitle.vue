@@ -34,7 +34,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 64px;
+  min-height: var(--masthead-height);
 }
 
 h1 {
@@ -70,6 +70,6 @@ h1 {
 
 /* What the page scrolls to stops below the bar, as below a masthead that stays. */
 :global(html:has(:where(.page-title.pinned))) {
-  scroll-padding-top: calc(64px + env(safe-area-inset-top) + var(--space-3));
+  scroll-padding-top: calc(var(--masthead-height) + env(safe-area-inset-top) + var(--space-3));
 }
 </style>

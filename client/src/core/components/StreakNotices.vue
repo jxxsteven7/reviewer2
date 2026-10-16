@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { RoomView, StreakNotice } from '@reviewer2/shared';
+import type { StreakNotice } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLanguage } from '../i18n';
+import type { ShownRoom } from '../room';
 import { streakLineKey, streakTitle } from '../streaks';
 import AvatarButton from './AvatarButton.vue';
 import TitleInfo from './TitleInfo.vue';
@@ -18,7 +19,7 @@ import TitleInfo from './TitleInfo.vue';
 // A screen reader is told of them by a live region that is on the page throughout the game, out of
 // sight, since one that comes with its contents is often passed over; the notices themselves come
 // and go with the end of the game.
-const props = defineProps<{ room: RoomView; large?: boolean }>();
+const props = defineProps<{ room: ShownRoom; large?: boolean }>();
 const { t } = useI18n();
 
 const language = useLanguage();

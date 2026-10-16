@@ -1,21 +1,14 @@
-import {
-  SPECTATOR,
-  TEAMS,
-  type KeywordsRoomData,
-  type PlayerView,
-  type RoomView,
-  type Seat,
-  type Team,
-} from '@reviewer2/shared';
+import { SPECTATOR, TEAMS, type KeywordsRoomData, type Seat, type Team } from '@reviewer2/shared';
 import { computed, type Ref } from 'vue';
+import type { ShownPlayer, ShownRoom } from '../../core/room';
 import { act } from '../../core/socket';
 
 // A player who has chosen a card, as the card shows them: their name and their avatar, faded while
 // they are offline.
-export type Chooser = Pick<PlayerView, 'name' | 'username' | 'guest' | 'avatar' | 'agent' | 'online'>;
+export type Chooser = Pick<ShownPlayer, 'name' | 'username' | 'guest' | 'avatar' | 'agent' | 'online'>;
 
 // What the game's screens need to know about the room, worked out once.
-export function useKeywords(room: Ref<RoomView>) {
+export function useKeywords(room: Ref<ShownRoom>) {
   const data = computed(() => room.value.data as KeywordsRoomData);
   const seatOf = (id: string): Seat => data.value.seats[id] ?? SPECTATOR;
   const players = computed(() => room.value.players);
@@ -25,7 +18,7 @@ export function useKeywords(room: Ref<RoomView>) {
   // The group the viewer plays for in this game, if any. They can't sit in the other one.
   const mySide = computed(() => data.value.side);
 
-  const inSeat = (team: Team | null, role: Seat['role']): PlayerView[] =>
+  const inSeat = (team: Team | null, role: Seat['role']): ShownPlayer[] =>
     players.value.filter((player) => {
       const seat = seatOf(player.id);
       return seat.team === team && seat.role === role;

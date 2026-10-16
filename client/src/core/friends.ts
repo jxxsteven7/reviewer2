@@ -1,4 +1,5 @@
 import type {
+  Ack,
   FriendRequestView,
   FriendsView,
   FriendView,
@@ -180,27 +181,47 @@ socket.on('connect', () => {
   for (const { id } of [...asks]) forgetAsk(id);
 });
 
+// The account's friends list, as the server has it. The parts of a page that show it
+// (useFriendsList.ts) and the names below ask for it on the same occasions, so whoever asks while
+// an answer is on its way gets that answer: the server works the list out once. An answer that
+// the connection it was asked over won't bring is nobody's; the next connection asks anew.
+let listing: Promise<Ack<FriendsView>> | null = null;
+
+export function listFriends(): Promise<Ack<FriendsView>> {
+  listing ??= send<FriendsView>('friends:list').finally(() => {
+    listing = null;
+  });
+  return listing;
+}
+
+socket.on('disconnect', () => {
+  listing = null;
+});
+
 // The names that the account gives its friends, which every page shows wherever it names them
-// (names.ts): read from the account's friends list as each connection of an account is made, since
-// it may be someone else's now, and again whenever the friends change, as when the account renames
-// one. Only the latest answer counts, and one that doesn't come leaves the names as they were. A
-// guest's connection has none.
-let signedIn = false;
+// (names.ts): read from the account's friends list as each connection of an account is made, and
+// again whenever the friends change, as when the account renames one. Only the latest answer
+// counts, and one that doesn't come leaves the names as they were, as long as they are the same
+// account's: a connection made as someone else, as after a login in another tab, or as a guest,
+// drops the names at once, before the new account's have come, since they are nobody's business
+// but their own.
+let signedInAs: string | null = null;
 let reads = 0;
 
 async function readNames(): Promise<void> {
   const turn = (reads += 1);
-  const reply = await send<FriendsView>('friends:list');
-  if (turn === reads && signedIn && reply.ok) knowAliases(reply.friends);
+  const reply = await listFriends();
+  if (turn === reads && signedInAs !== null && reply.ok) knowAliases(reply.friends);
 }
 
 socket.on('session', ({ account: connected }: Session) => {
-  signedIn = connected !== null;
-  if (signedIn) void readNames();
-  else {
+  const username = connected?.username ?? null;
+  if (username !== signedInAs) {
     reads += 1;
     knowAliases([]);
   }
+  signedInAs = username;
+  if (username !== null) void readNames();
 });
 
 // Goes up whenever the account's friends or requests change, by this page or by the other side.
@@ -210,5 +231,5 @@ export const friendsVersion = ref(0);
 socket.on('friends:changed', () => {
   friendsVersion.value += 1;
   if (account.summary) void loadAccount();
-  if (signedIn) void readNames();
+  if (signedInAs !== null) void readNames();
 });

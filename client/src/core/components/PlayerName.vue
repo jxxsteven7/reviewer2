@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { PlayerView } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
+import type { ShownPlayer } from '../room';
 import AgentIcon from './AgentIcon.vue';
 import AvatarButton from './AvatarButton.vue';
 import ScoreFloat, { type Shown } from './ScoreFloat.vue';
@@ -16,7 +16,7 @@ import ScoreFloat, { type Shown } from './ScoreFloat.vue';
 // then the name, never the marks.
 // A `float` is a number that rises from the avatar, what a card or the end of a game did to the
 // player's points (ScoreFloat.vue).
-withDefaults(defineProps<{ player: PlayerView; me: boolean; chair: boolean; float?: Shown | null }>(), {
+withDefaults(defineProps<{ player: ShownPlayer; me: boolean; chair: boolean; float?: Shown | null }>(), {
   float: null,
 });
 const { t } = useI18n();

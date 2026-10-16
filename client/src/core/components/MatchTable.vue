@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { MatchView, RoomView, TitleCount } from '@reviewer2/shared';
+import type { TitleCount } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points, signedPoints } from '../points';
+import type { ShownMatch, ShownRoom } from '../room';
 import { useTitleFolds } from '../useTitleFolds';
 import EndMatchButton from './EndMatchButton.vue';
 import AvatarButton from './AvatarButton.vue';
@@ -22,7 +23,7 @@ import TitleLine from './TitleLine.vue';
 // from here, unless the game puts that button elsewhere (`endable`).
 const props = withDefaults(
   defineProps<{
-    room: RoomView;
+    room: ShownRoom;
     describe?: ((detail: unknown) => string) | null;
     titlesOf?: ((playerId: string) => TitleCount[]) | null;
     endable?: boolean;
@@ -39,7 +40,7 @@ const titles = (id: string | null) => (id !== null && props.titlesOf ? props.tit
 // The lines whose titles are unfolded; a tap on the line, but on a button, folds them again.
 const { unfolded, setOpen, fold } = useTitleFolds();
 
-const match = computed(() => props.room.match as MatchView);
+const match = computed(() => props.room.match as ShownMatch);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
 // In the waiting room the points are those of the last game; otherwise of the game on or just
 // ended.

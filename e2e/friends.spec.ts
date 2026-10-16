@@ -340,6 +340,32 @@ test("a friend goes by the player's name for them in a game, to the player alone
   await expect(bob.getByRole('dialog', { name: `\u5b89\u59ae\u8001\u5e08 ${annName}` })).toBeVisible();
   await closeSheet(bob);
 
+  // Ann names Bob too, and the group's chat, which she reads as its PI, calls him by it, while
+  // his own line is his.
+  await avatar(ann, bobName).click();
+  await ann.getByRole('dialog').getByRole('button', { name: text.friends.aliasEdit }).click();
+  const namingBob = ann.getByRole('dialog', { name: interpolate(text.friends.aliasTitle, { name: bobName }) });
+  await namingBob.getByLabel(text.friends.aliasLabel).fill('\u5c0f\u9c8d');
+  await namingBob.getByRole('button', { name: text.friends.aliasSave }).click();
+  await expect(ann.getByRole('dialog')).toHaveCount(0);
+  const openChat = async (page: Page) => {
+    const button = page.locator('.open-chat');
+    if (await button.count()) await button.click();
+    const chat = page.locator('.chat');
+    await expect(chat).toBeVisible();
+    return chat;
+  };
+  await openChat(bob);
+  await bob.getByLabel(text.game.chat.input).fill('\u7b2c\u4e8c\u884c\uff1f');
+  await bob.getByLabel(text.game.chat.input).press('Enter');
+  await expect(bob.locator('.chat .message.own .text')).toHaveText('\u7b2c\u4e8c\u884c\uff1f');
+  await expect(bob.locator('.chat .message.own .name')).toHaveText(text.game.chat.you);
+  await closeSheet(bob);
+  const annsChat = await openChat(ann);
+  await expect(annsChat.locator('.message .name')).toHaveText('\u5c0f\u9c8d');
+  await expect(annsChat).not.toContainText(bobName);
+  await closeSheet(ann);
+
   // Anyone else calls her by her username, and so does a big screen, even one in Bob's browser, as
   // a reaction of hers shows.
   await expect(avatar(cat, annName)).toBeVisible();

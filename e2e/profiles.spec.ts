@@ -147,6 +147,14 @@ test('a public page is set up, opened by its address and from a room, liked and 
   const panel = bob.locator('[role=dialog]:not(:has(button.back))', { has: bob.locator('.profile-card') });
   await expect(panel.locator('.profile-card .number')).toContainText(/Player No\. \d+/);
   await expect(panel.locator('.profile-card')).not.toContainText('https://ann.example/me');
+  // The panel stays on the page meanwhile, the same one, where it was scrolled to: marked, and
+  // scrolled as far as it goes, which is nowhere when it all fits.
+  await panel.evaluate((element) => element.setAttribute('data-kept', 'yes'));
+  const scroller = panel.locator('.scroller');
+  const scrolledTo = await scroller.evaluate((element) => {
+    element.scrollTop = 40;
+    return element.scrollTop;
+  });
   await panel.getByRole('button', { name: text.room.panel.fullPage }).click();
   const page = bob.locator('[role=dialog]:has(button.back)');
   await expect(page.locator('.profile-card')).toContainText('https://ann.example/me');
@@ -154,6 +162,8 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await page.getByRole('button', { name: text.room.panel.back }).click();
   await expect(page).toHaveCount(0);
   await expect(panel).toBeVisible();
+  await expect(panel).toHaveAttribute('data-kept', 'yes');
+  expect(await scroller.evaluate((element) => element.scrollTop)).toBe(scrolledTo);
   await expect(bob).toHaveURL(room);
   await bob.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);

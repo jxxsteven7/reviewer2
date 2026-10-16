@@ -7,7 +7,7 @@ import { account, request } from '../account';
 import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { standingOf } from '../friends';
-import { aliasOf } from '../names';
+import { nameOf, usernameAfter } from '../names';
 import { useLanguage } from '../i18n';
 import { connect } from '../socket';
 import { streakTitles as titlesOf } from '../streaks';
@@ -87,7 +87,12 @@ watch(
 );
 
 const viewer = computed(() => account.summary);
-const alias = computed(() => (profile.value ? aliasOf(profile.value.handle) : null));
+const name = computed(() =>
+  profile.value ? nameOf({ name: profile.value.username, handle: profile.value.handle }) : '',
+);
+const username = computed(() =>
+  profile.value ? usernameAfter({ name: name.value, username: profile.value.username }) : null,
+);
 const canAct = computed(() => viewer.value !== null && profile.value !== null && !profile.value.mine);
 // A guest, once the server has said so: until then, the card offers nothing and explains nothing.
 const guest = computed(() => account.loaded && viewer.value === null);
@@ -139,8 +144,7 @@ watch(
         <PlayerAvatar :name="profile.username" :avatar="profile.avatar" size="large" />
         <div class="who">
           <span v-if="named" class="name"
-            >{{ alias ?? profile.username
-            }}<small v-if="alias !== null" class="username">{{ ` ${profile.username}` }}</small></span
+            >{{ name }}<small v-if="username !== null" class="username-after">{{ ` ${username}` }}</small></span
           >
           <button type="button" class="rank-button" aria-haspopup="dialog" @click="ladder = true">
             <span class="rank">{{ t(`ranks.names.${profile.rank}`) }}</span>
@@ -161,7 +165,7 @@ watch(
 
       <template v-if="!brief">
         <section v-if="profile.duo" class="duo" aria-labelledby="profile-duo">
-          <h3 id="profile-duo">{{ t('playerPage.duo', { name: alias ?? profile.username }) }}</h3>
+          <h3 id="profile-duo">{{ t('playerPage.duo', { name }) }}</h3>
           <DuoSummary :duo="profile.duo" />
         </section>
 
@@ -230,14 +234,6 @@ watch(
   font-size: var(--text-xl);
   font-weight: var(--weight-black);
   overflow-wrap: anywhere;
-}
-
-/* The username after a friend's name, as a sheet's subtitle has it (UiSheet.vue). */
-.name .username {
-  color: var(--ink-2);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
 }
 
 /* The rank is one line of display type that opens the ladder. Padding that the margins take back
