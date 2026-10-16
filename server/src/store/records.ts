@@ -15,7 +15,7 @@ import {
   type TitleCount,
 } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
-import { markDeleted, type GameEnding, type GameLogData, type GameLogEntry } from '../core/gameLog';
+import { markDeleted, type GameEnding, type GameLogData, type GameLogEntry, type MatchNumbers } from '../core/gameLog';
 import type { GameOutcome } from '../core/game';
 import type { AgentPlay } from '../core/room';
 
@@ -488,21 +488,35 @@ export class ReplayStore {
 
   // Adds to the log of a game that is kept what the groups said after its end, as they talked it
   // over (Room.review()), with the accounts of the player IDs it doesn't know yet, such as of
-  // someone who came back to the room after the end, and marks the player IDs of the accounts
-  // deleted meanwhile (`deleted`). A game that isn't kept gets nothing. Says whether the log grew.
-  // The caller runs this in one transaction.
+  // someone who came back to the room after the end, and, in a match, everyone's number in the
+  // match as it stands now (`match`), which numbers such an ID too, and marks the player IDs of the
+  // accounts deleted meanwhile (`deleted`). A game that isn't kept gets nothing. Says whether the
+  // log grew. The caller runs this in one transaction.
   addToLog(
     gameId: string,
     entries: readonly GameLogEntry[],
     players: readonly { playerId: string; accountId: number }[],
     deleted: Iterable<string> = [],
+    match: MatchNumbers | null = null,
   ): boolean {
     const row = this.#log.get(gameId) as { game: string; log: string } | undefined;
     if (row === undefined || entries.length === 0) return false;
     const kept = JSON.parse(row.log) as GameLogData;
     const truncated = kept.truncated === true || entries.some(({ type }) => type === 'truncated');
+    const numbered: MatchNumbers | undefined =
+      match === null
+        ? kept.match
+        : {
+            numbers: { ...kept.match?.numbers, ...match.numbers },
+            ...(kept.match?.merged || match.merged ? { merged: { ...kept.match?.merged, ...match.merged } } : {}),
+          };
     const log: GameLogData = markDeleted(
-      { ...kept, entries: [...kept.entries, ...entries], ...(truncated ? { truncated } : {}) },
+      {
+        ...kept,
+        entries: [...kept.entries, ...entries],
+        ...(truncated ? { truncated } : {}),
+        ...(numbered === undefined ? {} : { match: numbered }),
+      },
       deleted,
     );
     this.#setLog.run(JSON.stringify(log), gameId);

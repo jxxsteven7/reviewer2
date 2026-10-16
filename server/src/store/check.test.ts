@@ -269,6 +269,11 @@ describe('the check of the data', () => {
       ['1'],
     ],
     [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.fields', json('["${'x'.repeat(4100)}"]')) WHERE id = 1`,
+      ['1'],
+    ],
+    [
       'accounts that agreed to no version of the records notice there is',
       'UPDATE accounts SET consent_version = 9 WHERE id = 1',
       ['1'],

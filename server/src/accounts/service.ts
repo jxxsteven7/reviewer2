@@ -34,7 +34,7 @@ import {
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import type { KeptReplay, ShownAccount } from '../core/game';
-import type { GameLogEntry } from '../core/gameLog';
+import type { GameLogEntry, MatchNumbers } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { FeedbackStore } from '../store/feedback';
@@ -232,13 +232,13 @@ export class Accounts {
   }
 
   // Keeps how the account has just set up a room or a practice room of the game `game`, the other
-  // part of that game's and the other games' as they were. A setup too large to keep, or a database
-  // too full to write it to, leaves the last one in place.
+  // part of that game's and the other games' as they were. A game's setup too large to keep, or a
+  // database too full to write it to, leaves the last one in place.
   rememberRoomSetup(accountId: number, game: string, part: GameRoomSetup): void {
     const kept = this.roomSetupOf(accountId);
-    const text = JSON.stringify({ ...kept, [game]: { ...kept[game], ...part } });
-    if (text.length > MAX_ROOM_SETUP || this.#full()) return;
-    this.store.setRoomSetup(accountId, text);
+    const own = { ...kept[game], ...part };
+    if (JSON.stringify(own).length > MAX_ROOM_SETUP || this.#full()) return;
+    this.store.setRoomSetup(accountId, JSON.stringify({ ...kept, [game]: own }));
   }
 
   // The public profile of the account with this handle, as the viewer sees it
@@ -810,9 +810,10 @@ export class Accounts {
     entries: readonly GameLogEntry[],
     players: readonly { playerId: string; accountId: number }[],
     deleted: Iterable<string> = [],
+    match: MatchNumbers | null = null,
   ): boolean {
     if (this.#full()) return false;
-    return this.store.transaction(() => this.replays.addToLog(gameId, entries, players, deleted));
+    return this.store.transaction(() => this.replays.addToLog(gameId, entries, players, deleted, match));
   }
 
   // What it takes to show the replay of a game that the account played in (GameModule.showReplay):

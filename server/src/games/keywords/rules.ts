@@ -144,13 +144,14 @@ export function heroesOf(record: ClueRecord, won = false): Set<string> {
 }
 
 // Whether the students followed a clue to the letter: its number of the group's own cards before
-// any other, or every card the group had left without a mistake, when the turn won the game.
+// any other, or, with fewer cards left than the number, every card the group had left without a
+// mistake, which won the game in the turn. A clue of 0 or "unlimited" names no number to follow.
 function followed(record: ClueRecord, won: boolean): boolean {
   const { count, guesses } = record;
-  const own = (guess: ClueRecord['guesses'][number]) => guess.color === record.team;
-  if (won && guesses.every(own)) return true;
   if (typeof count !== 'number' || count === 0) return false;
-  return guesses.length >= count && guesses.slice(0, count).every(own);
+  const own = (guess: ClueRecord['guesses'][number]) => guess.color === record.team;
+  if (guesses.length >= count) return guesses.slice(0, count).every(own);
+  return won && guesses.every(own);
 }
 
 // Whether a turn of the game won it for the group on turn: the game is over, won by the group that

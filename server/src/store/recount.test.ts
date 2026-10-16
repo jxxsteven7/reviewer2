@@ -8,7 +8,7 @@ import type { GameLogData } from '../core/gameLog';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
 import { RecordStore, ReplayStore, TitleStore } from './records';
-import { countedUnder, countGames, countMatches, hasGamesOf, recountDue, recountRecords } from './recount';
+import { countedUnder, countGames, countMatches, hasGamesOf, keyFor, recountDue, recountRecords } from './recount';
 
 // The records counted again from the record of every game (docs/architecture.md#game-records), with
 // the fake game of the tests, whose recount gives everyone who came to play the game, with the
@@ -187,6 +187,55 @@ describe('counting a game again', () => {
         [bob, 2],
       ]),
     });
+  });
+
+  test('knows an account deleted since by its number in the match, under every ID it had', () => {
+    // p2 and p3 were one account, which left and came back, and has deleted itself since; p4 was a
+    // guest, whose line went into p5's account.
+    keep('g1', { p1: ann, p2: null, p3: null, p4: null, p5: bob }, [{ t: 1, by: 'p3', type: 'test:say', said: 'hi' }], {
+      match: { id: 'm1', game: 1, games: 1 },
+      log: {
+        guests: { p4: 1 },
+        match: { numbers: { p1: 1, p2: 2, p3: 2, p4: 3, p5: 4 }, merged: { 3: 4 } },
+        deleted: ['p2', 'p3'],
+      },
+    });
+    const log = JSON.parse(db.prepare("SELECT log FROM replays WHERE game_id = 'g1'").get()?.log as string);
+    const keyOf = keyFor(
+      new Map([
+        ['p1', ann],
+        ['p5', bob],
+      ]),
+      log as GameLogData,
+    );
+    expect(['p1', 'p2', 'p3', 'p4', 'p5', 'p9'].map(keyOf)).toEqual([
+      `account:${ann}`,
+      'number:2',
+      'number:2',
+      'guest:1',
+      `account:${bob}`,
+      'p9',
+    ]);
+    const { counted } = countGames(db, fakeGame);
+    expect(counted[0]?.match?.points).toEqual(
+      new Map([
+        [1, 0],
+        [2, 0],
+        [3, 0],
+        [4, 0],
+      ]),
+    );
+  });
+
+  test('cannot count a game that cannot be played through, as one whose log does not tell', () => {
+    keep('g1', { p1: ann }, []);
+    const broken: GameModule = {
+      ...fakeGame,
+      recount: () => {
+        throw new TypeError('no such card');
+      },
+    };
+    expect(countGames(db, broken).uncounted).toEqual([{ gameId: 'g1', matchId: null, reason: 'log' }]);
   });
 
   test('cannot count a game of a match whose log numbers nobody who scored', () => {

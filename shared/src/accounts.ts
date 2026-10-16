@@ -230,7 +230,8 @@ export interface GameRoomSetup {
   practice?: { role: string; fields: string[] };
 }
 
-// The most that the server keeps of a setup, as JSON: a setup that would take more isn't kept.
+// The most that the server keeps of one game's setup, as JSON: a setup that would take more isn't
+// kept.
 export const MAX_ROOM_SETUP = 4096;
 
 // A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's

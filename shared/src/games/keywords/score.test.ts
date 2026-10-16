@@ -98,25 +98,41 @@ describe('a revealed card', () => {
     at: 0,
   });
   const after = (guesses: ClueRecord['guesses']) => ({
-    history: [{ turn: 1, team: 'red' as const, at: 0, word: 'Hint', count: 5, guesses }],
+    history: [{ turn: 1, team: 'red' as const, at: 0, word: 'Hint', count: 5, captain: 'ann', guesses }],
     result: null,
   });
   const own = Array.from({ length: 5 }, (_, i) => guess('red', i));
   const steps = Array.from({ length: 6 }, (_, i) => after(own.slice(0, i)));
-  const bonus = (step: number, role: 'captain' | 'guesser') =>
-    revealBonus(steps[step - 1] as (typeof steps)[number], steps[step] as (typeof steps)[number], 'red', 'red', role);
+  const bonus = (step: number, role: 'captain' | 'guesser', player = role === 'captain' ? 'ann' : 'bob') =>
+    revealBonus(
+      steps[step - 1] as (typeof steps)[number],
+      steps[step] as (typeof steps)[number],
+      'red',
+      'red',
+      role,
+      player,
+    );
 
-  test('brings the PI a point of the big clue with each own card from the fourth on', () => {
+  test('brings the PI who gave the clue a point of the big clue with each own card from the fourth on', () => {
     expect([1, 2, 3, 4, 5].map((step) => bonus(step, 'captain'))).toEqual([0, 0, 0, 1, 1]);
+    // Another PI of the group, as one who took the seat over, has no big clue.
+    expect([4, 5].map((step) => bonus(step, 'captain', 'eve'))).toEqual([0, 0]);
   });
 
   test('brings the students the point of the opening record with the card that makes it', () => {
     expect([1, 2, 3, 4, 5].map((step) => bonus(step, 'guesser'))).toEqual([0, 0, 0, 0, 1]);
     // A wrong card brings nobody a bonus, and neither does a card that the other group reveals.
     const wrong = after([...own.slice(0, 4), guess('blue', 9)]);
-    expect(revealBonus(steps[4] as (typeof steps)[number], wrong, 'red', 'red', 'captain')).toBe(0);
+    expect(revealBonus(steps[4] as (typeof steps)[number], wrong, 'red', 'red', 'captain', 'ann')).toBe(0);
     expect(
-      revealBonus(steps[4] as (typeof steps)[number], steps[5] as (typeof steps)[number], 'red', 'blue', 'guesser'),
+      revealBonus(
+        steps[4] as (typeof steps)[number],
+        steps[5] as (typeof steps)[number],
+        'red',
+        'blue',
+        'guesser',
+        'dan',
+      ),
     ).toBe(0);
   });
 });

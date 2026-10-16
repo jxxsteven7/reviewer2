@@ -1,5 +1,6 @@
 import type { KeywordsRoomData, KeywordsView, MatchRules, MatchView, RecordsView, Team } from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
+import type { GameLogData } from '../src/core/gameLog';
 import { keywordsGame } from '../src/games/keywords';
 import {
   Browser,
@@ -8,6 +9,7 @@ import {
   loggedIn as registered,
   startServer,
   TestClient,
+  until,
   type Reply,
   type TestServer,
 } from './helpers';
@@ -37,6 +39,10 @@ const track = (client: TestClient) => {
 const data = (client: TestClient) => client.state?.data as KeywordsRoomData;
 const board = (client: TestClient) => data(client).game as KeywordsView;
 const matchOf = (client: TestClient) => client.state?.match as MatchView;
+const logOf = (gameId: string) =>
+  JSON.parse(
+    (server.db.prepare('SELECT log FROM replays WHERE game_id = ?').get(gameId) as { log: string }).log,
+  ) as GameLogData;
 const moment = (view: KeywordsView) => ({ gameId: view.gameId, turn: view.turn });
 
 async function expectOk(reply: Promise<Reply>) {
@@ -367,6 +373,34 @@ describe('a match', () => {
     expect(data(back).seats[back.me]?.team).toBe(side);
     expect(totalsOf(back).Dan).toBe(total);
     expect(standingOf(back, 'Dan')).toMatchObject({ left: false, guest: 4 });
+  });
+
+  test('numbers in the log of a game whoever comes back after its end to talk it over', async () => {
+    server = await startServer({ games: [keywordsGame] });
+    const bobs = await loggedIn('Bob');
+    const { code, players, everyone } = await matchRoom({ teams: 'fixed' }, { Bob: bobs });
+    const ann = players.Ann;
+    await start(ann, everyone);
+    await playOneTurn(everyone);
+    const gameId = ann.state?.gameId as string;
+    // Bob leaves and comes back, under a new player ID, and says something; the chair plays on.
+    const bob = players.Bob;
+    const wasId = bob.me;
+    await expectOk(bob.send('room:leave'));
+    const back = track(await bobs.connect());
+    expect(await back.send('room:join', { code, play: true })).toMatchObject({ ok: true });
+    await back.waitFor((state) => state.code === code);
+    expect(back.me).not.toBe(wasId);
+    await expectOk(back.send('keywords:say', { gameId, text: 'gg' }));
+    await expectOk(ann.send('room:again', { gameId }));
+    await until(() => logOf(gameId).entries.some(({ said }) => said === 'gg'), 'the talk kept');
+    const { numbers } = logOf(gameId).match ?? { numbers: {} };
+    expect(numbers[back.me]).toBe(numbers[wasId]);
+    expect(
+      server.db
+        .prepare('SELECT account_id AS account FROM game_players WHERE game_id = ? AND player_id = ?')
+        .get(gameId, back.me),
+    ).toEqual({ account: server.accounts.byName('Bob')?.id });
   });
 
   test('moves the total of a guest who logs in to their account, which keeps the match', async () => {

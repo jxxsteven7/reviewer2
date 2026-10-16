@@ -812,6 +812,9 @@ describe('deadline heroes', () => {
     };
     expect(heroesOf(record, true)).toEqual(new Set([`${team}-captain`]));
     expect(heroesOf(record, false).size).toBe(0);
+    // A clue of 0 or "unlimited" that the students win the game with names no number to follow.
+    expect(heroesOf({ ...record, count: 'unlimited' }, true).size).toBe(0);
+    expect(heroesOf({ ...record, count: 0 }, true).size).toBe(0);
   });
 
   test("make a student one with a card of the group's in the last seconds of the guesses, once a turn", () => {

@@ -361,7 +361,7 @@
     "formWarning": "This clue repeats a form that the word lists give of a word still on the board: {words}. This room's clue check leaves it to you.",
     "characterWarning": "This clue has a character in common with a word still on the board, as a Chinese character, a number however it is written, or the English or the pinyin of a character: {words}. It's your call.",
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
-    "prefixOnBoard": "{word} on the board starts with this clue. This room's clue rule doesn't allow that.",
+    "prefixOnBoard": "{word} on the board starts with this clue. This room's clue check doesn't allow it.",
     "prefixWarning": "A word still on the board starts with this clue: {words}. It may give that word away, so it's your call.",
     "gestures": {
       "choose": "Tap: choose · hold: mark · or keys 1, 2, 3",

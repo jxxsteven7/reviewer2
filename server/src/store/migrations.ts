@@ -931,9 +931,9 @@ export const MIGRATIONS: readonly string[] = [
   // - how the first game began (`setup`) must name the language of the record of the game, which
   //   it goes on naming alone;
   // - every kept game must have its log, which the records are counted again from;
-  // - the games of a match must be ones whose players can be numbered (below): no guest, no account
-  //   deleted since, and every account on the record of the match in every game of the match, as
-  //   the maintainers' own data has them. Other data would need a hand.
+  // - the games of a match must be ones whose players can be numbered (below): no guest and no
+  //   account deleted since among them, and everyone on the record of the match among the players
+  //   of its games, as the maintainers' own data has them. Other data would need a hand.
   //
   // Then what can't be brought over goes, with whatever depends on it, which the maintainers' own
   // data has none of: the records of games that have no record of the game, from before every game
@@ -947,8 +947,10 @@ export const MIGRATIONS: readonly string[] = [
   //   how many games the match was to have, for a game that a match scored, which finished with no
   //   AI; `in_match` stays, for the games of a match room that weren't scored. Its log is never
   //   null: a game of a match gets everyone's number in the match into its log (GameLogData.match),
-  //   by player ID, as the room writes it from now on, the numbers given here by account, in the
-  //   order of the accounts' ids, which changes no place and no total; how the first game began
+  //   by player ID, as the room writes it from now on, the numbers given here to every account that
+  //   played in a game of the match, also one that left before the end and has no record of the
+  //   game, since the match scored them all the same, in the order of the accounts' ids, which
+  //   changes no place and no total; how the first game began
   //   loses the language and marks every card as a word of the lists (`custom`), since no game with
   //   the chair's own words was kept before this migration.
   // - game_records keeps what is the player's alone: the side, the role, whether they won, the
@@ -1009,9 +1011,12 @@ export const MIGRATIONS: readonly string[] = [
     SELECT g.game_id FROM replays AS g
     WHERE EXISTS (SELECT 1 FROM game_records AS r WHERE r.game_id = g.game_id AND r.match_id IS NOT NULL)
       AND (g.guests > 0 OR json_array_length(g.log, '$.deleted') > 0)
-    UNION SELECT r.game_id FROM game_records AS r JOIN match_records AS m ON m.match_id = r.match_id
-    WHERE r.game_id IN (SELECT game_id FROM replays) AND NOT EXISTS (
-      SELECT 1 FROM game_players AS p WHERE p.game_id = r.game_id AND p.account_id = m.account_id
+    UNION SELECT m.match_id FROM match_records AS m
+    WHERE EXISTS (
+      SELECT 1 FROM game_records AS r WHERE r.match_id = m.match_id AND r.game_id IN (SELECT game_id FROM replays)
+    ) AND NOT EXISTS (
+      SELECT 1 FROM game_players AS p JOIN game_records AS r ON r.game_id = p.game_id
+      WHERE r.match_id = m.match_id AND p.account_id = m.account_id
     );
   DROP TABLE match_games_unnumbered;
 
@@ -1073,7 +1078,8 @@ export const MIGRATIONS: readonly string[] = [
 
   CREATE TEMP TABLE match_numbers AS
     SELECT match_id, account_id, dense_rank() OVER (PARTITION BY match_id ORDER BY account_id) AS number
-    FROM (SELECT DISTINCT match_id, account_id FROM game_records WHERE match_id IS NOT NULL);
+    FROM (SELECT DISTINCT g.match_id, p.account_id FROM replays AS g
+      JOIN game_players AS p ON p.game_id = g.game_id WHERE g.match_id IS NOT NULL);
   UPDATE replays SET log = json_set(log, '$.match', json_object('numbers', (
     SELECT json_group_object(p.player_id, n.number) FROM game_players AS p
     JOIN match_numbers AS n ON n.match_id = replays.match_id AND n.account_id = p.account_id

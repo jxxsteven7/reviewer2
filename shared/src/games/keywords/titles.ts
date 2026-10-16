@@ -1,4 +1,3 @@
-import { OPENING_RECORD } from './score';
 import type { ClueRecord, GameResult, Team } from './types';
 
 // The titles that a group earns together in a game (docs/games/keywords.md#titles), judged from the
@@ -7,6 +6,9 @@ import type { ClueRecord, GameResult, Team } from './types';
 // as each card comes, to call them out to the room (client/src/games/keywords/useGroupCalls.ts).
 // Two pairs: the heavenly hand outdoes the opening record, and the instant desk reject the fall at
 // the first hurdle, so a group gets one of each pair at most.
+
+// The least number of the first clue that can make the opening record.
+export const OPENING_RECORD = 4;
 
 // What the titles are judged from: the record so far, and the result once the game is over.
 export interface Played {

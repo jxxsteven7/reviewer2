@@ -78,9 +78,11 @@ const scrolled = yields ? ref(false) : useScrolled();
   opacity: 1;
 }
 
-/* In a waiting room, the chair's start bar stays under the masthead and draws the shade itself
-   (KeywordsLobby.vue): the lowest bar that stays has it. */
-:global(html:has(.start-dock)) .masthead.scrolled::after {
+/* In a waiting room, the chair's start bar stays under the masthead, and once it is stuck there it
+   draws the shade itself (KeywordsLobby.vue): the lowest bar that is stuck has it. The whole
+   selector is global: a scoped selector can't reach the html element, and a `:global()` that stops
+   before the masthead's own part would be compiled down to the html element alone. */
+:global(html:has(.start-dock.stuck) .masthead.scrolled::after) {
   opacity: 0;
 }
 

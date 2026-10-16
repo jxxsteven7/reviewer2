@@ -7,7 +7,7 @@ import { missedLine } from './missed';
 // A PI whose time for a clue runs out is called out to the whole room at once, the PI included,
 // and the screens too (docs/games/keywords.md#titles): a teasing line about the missed deadline
 // (missed.ts), with the PI's name and, for an account, how many times they have missed one, this
-// time included, to the sound of the "deadline" reaction.
+// time included, to the sound of a deadline passing (sound.ts).
 //
 // The call is for the moment, so a snapshot calls out a missed deadline only when it has just
 // happened: the newest turn of the record is one whose PI gave no clue in time, it wasn't there in

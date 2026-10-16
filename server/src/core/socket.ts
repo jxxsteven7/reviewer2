@@ -519,7 +519,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const review = room.review();
       if (!review) return;
       const { players, forgotten } = stillThere(review.accounts);
-      accounts.keepReview(review.gameId, review.entries, players, forgotten);
+      accounts.keepReview(review.gameId, review.entries, players, forgotten, review.match);
     });
   }
 

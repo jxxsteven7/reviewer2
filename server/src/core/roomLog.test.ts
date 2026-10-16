@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { fakeGame } from '../../test/fakeGame';
 import { testWords } from '../../test/helpers';
 import { seededRng } from './random';
-import type { Member, Room } from './room';
+import { MAX_LOGGED_PER_MEMBER, type Member, type Room } from './room';
 import { Rooms } from './rooms';
 
 // What a room notes in the log of the game it plays (docs/architecture.md#game-records).
@@ -318,12 +318,42 @@ describe('the record of a game', () => {
     expect(room.record()?.log.match).toEqual({ numbers: { [back.member.id]: 1, [bob.id]: 2 }, merged: { '3': 1 } });
   });
 
-  test('says when an AI played for someone who was offline', () => {
+  test('says when an AI played for someone who was offline, with the AI log, which an AI that made no move leaves none of', () => {
     const { room, ann, bob } = table();
     room.start(0);
+    const step = { by: bob.id, persona: 'reviewer1' as const, takeover: true as const, kind: 'press' };
+    // The AI was asked for Bob, and its answer came once Bob was back: no move was made.
+    room.noteAgent(room.gameId, 1, { ...step, late: true });
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()).toMatchObject({ takeover: false, agentLog: null, counts: { agents: 0 } });
+    room.again(room.gameId as string);
+
+    room.start(1);
+    room.noteAgent(room.gameId, 2, { ...step, answer: 'for Bob' });
     room.act(bob.id, 'test:press', 'for Bob', 'reviewer1');
     room.act(ann.id, 'test:finish', undefined);
     expect(room.record()?.takeover).toBe(true);
     expect(room.record()?.log?.entries[0]).toMatchObject({ by: bob.id, agent: 'reviewer1' });
+    expect(room.record()?.agentLog?.steps).toEqual([{ t: 2, ...step, answer: 'for Bob' }]);
+  });
+
+  test('takes at most MAX_LOGGED_PER_MEMBER entries from one member, who is then refused, and taken in no more', () => {
+    const { room, ann, bob } = table();
+    room.start(0);
+    for (let press = 0; press < MAX_LOGGED_PER_MEMBER; press += 1) {
+      expect(room.act(bob.id, 'test:press', press)).toMatchObject({ ok: true });
+    }
+    expect(room.act(bob.id, 'test:press', 'one more')).toEqual({ ok: false, error: 'rate_limited' });
+    expect(room.act(ann.id, 'test:press', 'for Ann')).toMatchObject({ ok: true });
+    // Bob leaves and comes back with the same browser: the count is his still.
+    room.drop(bob.id);
+    expect(room.join('key-bob', true)).toEqual({ ok: false, error: 'rate_limited' });
+    room.act(ann.id, 'test:finish', undefined);
+    const log = room.record()?.log;
+    expect(log?.entries.filter(({ by }) => by === bob.id)).toHaveLength(MAX_LOGGED_PER_MEMBER + 1);
+    expect(log?.entries.filter(({ type }) => type === 'test:press')).toHaveLength(MAX_LOGGED_PER_MEMBER + 1);
+    // The next game starts afresh.
+    room.again(room.gameId as string);
+    expect(room.join('key-bob', true)).toMatchObject({ ok: true });
   });
 });

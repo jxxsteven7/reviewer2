@@ -40,12 +40,14 @@ function view(overrides: Partial<KeywordsView> = {}): KeywordsView {
   };
 }
 
+// Ann gives red's clues, Cat blue's.
 const record = (team: 'red' | 'blue', guesses: ClueRecord['guesses']): ClueRecord => ({
   turn: 1,
   team,
   at: 0,
   word: 'Hint',
   count: 2,
+  captain: team === 'red' ? 'ann' : 'cat',
   guesses,
 });
 
@@ -143,6 +145,16 @@ describe('a card revealed between two snapshots', () => {
     expect(fifth.mine).toEqual({ text: '+2', team: 'blue' });
     expect(Object.fromEntries(fifth.players)).toEqual({
       cat: { text: '+2', team: 'blue' },
+      dan: { text: '+2', team: 'blue' },
+    });
+    // The big clue is the clue-giver's: a PI who took the seat over from one who left has only the
+    // card's point.
+    const left = (found: number) =>
+      view({ history: [{ ...record('blue', guesses(found)), count: 5, captain: 'gone' }] });
+    const taken = revealFloats(data('blue'), 'cat', reveal, left(4), left(5));
+    expect(taken.mine).toEqual({ text: '+1', team: 'blue' });
+    expect(Object.fromEntries(taken.players)).toEqual({
+      cat: { text: '+1', team: 'blue' },
       dan: { text: '+2', team: 'blue' },
     });
   });

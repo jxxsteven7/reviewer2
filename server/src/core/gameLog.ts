@@ -10,8 +10,9 @@
 // what happened in a game is ever dropped from its log: the records are counted again from it when
 // the rules change (store/recount.ts). What the players say may take up to MAX_SAID_BYTES of it,
 // past which the log keeps no more of it, and notes once that it has left it out. The rest, which
-// says who sat where and what they did, has MAX_GAME_LOG_BYTES, which only a flood of messages
-// reaches, such as a player who changes seats ten times a second for an hour: the log is then full
+// says who sat where and what they did, each member may add a few hundred entries to
+// (MAX_LOGGED_PER_MEMBER in room.ts), past which the room refuses what they send; the whole of it
+// has MAX_GAME_LOG_BYTES, which only many members flooding together reach: the log is then full
 // (`full`), and the room closes with its game cut short there (socket.ts), so that no room can grow
 // without end in the server's memory. The log is kept whole, with the end that says why.
 export const MAX_GAME_LOG_BYTES = 128 * 1024;

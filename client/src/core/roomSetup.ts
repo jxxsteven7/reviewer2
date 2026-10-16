@@ -5,9 +5,9 @@ import { readStored, writeStored } from './storage';
 // How the browser last set up a room and a practice room of each game (RoomSetup in
 // shared/src/accounts.ts, docs/architecture.md#accounts), which the next setup starts from: an
 // account's as the server keeps it, with the browser's own from before as a fallback, and a guest's
-// in the browser's storage. The server keeps an account's as the room is made; the page writes it
-// into the summary it has too, so that the next setup starts from it before the page asks for the
-// summary again.
+// in the browser's storage, by game as the server keeps them. The server keeps an account's as the
+// room is made; the page writes it into the summary it has too, so that the next setup starts from
+// it before the page asks for the summary again.
 
 type LastRoom = NonNullable<GameRoomSetup['room']>;
 
@@ -16,21 +16,27 @@ const KEY = 'r2.roomSetup';
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
-function storedRoom(): Partial<LastRoom> | null {
+// The rooms the browser last set up, by game, as far as they can be read.
+function storedRooms(): Record<string, unknown> {
   const text = readStored(KEY);
-  if (text === null) return null;
+  if (text === null) return {};
   try {
-    const room: unknown = JSON.parse(text);
-    return isObject(room) ? (room as Partial<LastRoom>) : null;
+    const rooms: unknown = JSON.parse(text);
+    return isObject(rooms) ? rooms : {};
   } catch {
-    return null;
+    return {};
   }
+}
+
+function storedRoom(game: string): Partial<LastRoom> | null {
+  const room = storedRooms()[game];
+  return isObject(room) ? (room as Partial<LastRoom>) : null;
 }
 
 // The last setup of a room of the game `game`, as far as it can be read: anything may be missing
 // or out of shape, which the setup checks part by part as it takes it (CreateRoom.vue).
 export function lastRoom(game: string): Partial<LastRoom> | null {
-  return account.summary?.roomSetup[game]?.room ?? storedRoom();
+  return account.summary?.roomSetup[game]?.room ?? storedRoom(game);
 }
 
 // The last practice room of the game, as the server keeps it for an account, or null.
@@ -42,7 +48,7 @@ export function keepRoomSetup(game: string, part: GameRoomSetup): void {
   if (account.summary) {
     const kept = account.summary.roomSetup;
     account.summary.roomSetup = { ...kept, [game]: { ...kept[game], ...part } };
-  } else if (part.room) writeStored(KEY, JSON.stringify(part.room));
+  } else if (part.room) writeStored(KEY, JSON.stringify({ ...storedRooms(), [game]: part.room }));
 }
 
 // The word lists of a setup, by ID, as far as they can be read, and among those that are usable

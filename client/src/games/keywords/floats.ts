@@ -64,17 +64,17 @@ export function revealFloats(
   before: KeywordsView,
   after: KeywordsView,
 ): { mine: Float | null; players: Map<string, Float> } {
-  const pointsFor = (team: Team, role: 'captain' | 'guesser') =>
-    revealPoints(reveal.color, reveal.by, team, role) + revealBonus(before, after, reveal.by, team, role);
+  const pointsFor = (id: string, team: Team, role: 'captain' | 'guesser') =>
+    revealPoints(reveal.color, reveal.by, team, role) + revealBonus(before, after, reveal.by, team, role, id);
   const players = new Map<string, Float>();
   for (const id of Object.keys(data.seats)) {
     const place = placeOf(data, id);
-    const points = place ? pointsFor(place.team, place.role) : 0;
+    const points = place ? pointsFor(id, place.team, place.role) : 0;
     if (place && points !== 0) players.set(id, { text: signed(points), team: place.team });
   }
   let mine: Float | null = null;
   if (me !== null && data.side !== null) {
-    const points = pointsFor(data.side, data.keyViewers.includes(me) ? 'captain' : 'guesser');
+    const points = pointsFor(me, data.side, data.keyViewers.includes(me) ? 'captain' : 'guesser');
     if (points !== 0) mine = { text: signed(points), team: data.side };
   }
   return { mine, players };

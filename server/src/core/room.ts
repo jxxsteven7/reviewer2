@@ -107,6 +107,13 @@ export const MAX_REMOVED = 200;
 // theirs again. A room has at most MAX_PLAYERS members at once; the limit is for guests who come and
 // go without end, past which the earliest is forgotten, and comes back as a new guest.
 export const MAX_GUESTS = 500;
+// How much one member may add to the log of a game (gameLog.ts), apart from what they say, which
+// has a share of its own: their moves, their seats and their comings and goings, counted by member
+// key, so that leaving and coming back starts no new count. A whole game takes a player a few dozen
+// entries. Past this many, the room refuses what they send and takes them in no more, so that no
+// one member can flood the log, which is kept whole. Only many members flooding together reach the
+// limit of the log itself, on which the room closes (socket.ts).
+export const MAX_LOGGED_PER_MEMBER = 200;
 
 // How the server calls a guest, by their number, where it says something of them itself, as the
 // status page does of a report: the client has words of its own for it, in either language.
@@ -280,6 +287,9 @@ export class Room {
     string,
     { key: string; accountId: number | null; guest: number | null; agent: AgentPersona | null }
   >();
+  // How many entries each member has added to the log of the current game, by member key, apart
+  // from what they said (MAX_LOGGED_PER_MEMBER).
+  readonly #logged = new Map<string, number>();
   // The log of the game being played or just ended (docs/architecture.md#game-records), from its
   // start until the room goes back to the waiting room, and the AI's own log beside it.
   #log: GameLog | null = null;
@@ -451,6 +461,7 @@ export class Room {
   ): Ack<{ member: Member }> {
     const refusal = this.refusal(key);
     if (refusal) return fail(refusal);
+    if (this.#flooded(key)) return fail('rate_limited');
     const guest = as ? null : (this.#guestNumbers.get(key) ?? this.#guestCount + 1);
 
     const member: Member = {
@@ -688,16 +699,25 @@ export class Room {
   // A guest's seat becomes an account's: the member logged in or registered while they were in the
   // room, and is found by the account's key from now on. The name becomes the username, and the
   // guest's number goes; their browser keeps it in the room, should they come back as a guest.
-  // The IDs they had before leaving and coming back during the game are found by the new key too:
-  // the record of the game still numbers them as the guest's, and what the game counts of what
-  // they did under them, as points and titles, is the account's, as it is for a guest who logs in
-  // without leaving. False when the member isn't a guest here.
+  // The IDs they had before leaving and coming back during the game are found by the new key too,
+  // and are the account's on the record of the game, which still numbers them as the guest's, so
+  // that what the game counts of what they did under them, as points and titles, is the account's,
+  // as it is for a guest who logs in without leaving, when the record is counted again as well
+  // (store/recount.ts). What they added to the log counts on as the account's
+  // (MAX_LOGGED_PER_MEMBER). False when the member isn't a guest here.
   adopt(id: string, key: string, username: string, account: MemberAccount): boolean {
     const member = this.members.get(id);
     if (!member || member.account) return false;
     const from = member.key;
     if (this.game.rekey) this.data = this.game.rekey(this.data, id, from, key);
-    for (const gone of this.#gone.values()) if (gone.key === from) gone.key = key;
+    for (const gone of this.#gone.values()) {
+      if (gone.key === from) Object.assign(gone, { key, accountId: account.id });
+    }
+    const logged = this.#logged.get(from);
+    if (logged !== undefined) {
+      this.#logged.delete(from);
+      this.#logged.set(key, (this.#logged.get(key) ?? 0) + logged);
+    }
     // Whoever reported the guest has reported the same player, whom they don't report anew.
     const reporters = this.#reported.get(from);
     this.#reported.delete(from);
@@ -856,6 +876,7 @@ export class Room {
     this.round += 1;
     this.phase = 'playing';
     this.#gone.clear();
+    this.#logged.clear();
     this.#streaks.clear();
     this.#duos.clear();
     // Whoever plays in a match's game is in its table from the start, with no points if new.
@@ -906,6 +927,7 @@ export class Room {
     this.phase = 'lobby';
     this.#lobbySince = this.#now();
     this.#gone.clear();
+    this.#logged.clear();
     this.#log = null;
     this.#agentLog = null;
     this.#setup = null;
@@ -1002,6 +1024,7 @@ export class Room {
   bench(id: string): Ack {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');
+    if (this.#chairFlooded()) return fail('rate_limited');
     if (member.agent) {
       this.#note(this.chairId, 'remove', { player: id });
       this.drop(id);
@@ -1022,6 +1045,7 @@ export class Room {
   remove(id: string): Ack<{ sockets: string[]; keys: string[]; reason: 'removed' | 'removed_recently' }> {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');
+    if (this.#chairFlooded()) return fail('rate_limited');
     this.#note(this.chairId, 'remove', { player: id });
     const sockets = this.drop(id);
     if (member.agent) return { ok: true, sockets, keys: [], reason: 'removed_recently' };
@@ -1045,6 +1069,7 @@ export class Room {
     if (!member) return fail('no_such_player');
     if (member.agent) return fail('player_is_agent');
     if (!this.isOnline(id)) return fail('player_offline');
+    if (this.#chairFlooded()) return fail('rate_limited');
     this.#passChair(id, this.chairId);
     this.changed();
     return done;
@@ -1060,10 +1085,13 @@ export class Room {
 
   // A game message from a member. Whatever the game had due by now happens first, so that a
   // message which arrives after its turn's time has run out finds the turn over, even when the
-  // timer that ends it hasn't fired yet. `agent` is the persona of an AI that sends it for a
-  // person who is offline in their turn (docs/architecture.md#ai-players).
+  // timer that ends it hasn't fired yet. A member who has flooded the log of the game is refused
+  // (MAX_LOGGED_PER_MEMBER). `agent` is the persona of an AI that sends it for a person who is
+  // offline in their turn (docs/architecture.md#ai-players).
   act(id: string, type: string, payload: unknown, agent?: AgentPersona): Ack {
     this.expire();
+    const key = this.members.get(id)?.key;
+    if (key !== undefined && this.#flooded(key)) return fail('rate_limited');
     const result = this.game.handle(this.data, this.context, id, type, payload);
     if (!result.ok) return refusalOf(result);
     if (result.data !== this.data) {
@@ -1086,6 +1114,24 @@ export class Room {
     const note = this.game.logged ? this.game.logged(type, payload) : {};
     if (note === null || (this.phase === 'ended' && note.said === undefined)) return;
     this.#log.add(this.#now(), id, type, { data: note.data, said: note.said, agent });
+    if (note.said === undefined) this.#countLogged(id);
+  }
+
+  // Counts an entry of the log against the member who added it, by their member key, also once
+  // they have left.
+  #countLogged(id: string): void {
+    const key = this.members.get(id)?.key ?? this.#gone.get(id)?.key;
+    if (key !== undefined) this.#logged.set(key, (this.#logged.get(key) ?? 0) + 1);
+  }
+
+  // Whether a member key has added to the log of the current game as much as one may.
+  #flooded(key: string): boolean {
+    return (this.#logged.get(key) ?? 0) >= MAX_LOGGED_PER_MEMBER;
+  }
+
+  #chairFlooded(): boolean {
+    const chair = this.chairId === null ? undefined : this.members.get(this.chairId);
+    return chair !== undefined && this.#flooded(chair.key);
   }
 
   // Notes a step of an AI in the AI's log of the game it was asked for, `gameId`, at `at` on the
@@ -1103,7 +1149,9 @@ export class Room {
   // Notes one of the room's own events in the log of the game being played
   // (docs/architecture.md#game-records). Outside a game, there is nothing to note it in.
   #note(by: string | null, type: GameLogEvent, data?: unknown): void {
-    if (this.phase === 'playing') this.#log?.add(this.#now(), by, type, { data });
+    if (this.phase !== 'playing' || !this.#log) return;
+    this.#log.add(this.#now(), by, type, { data });
+    if (by !== null) this.#countLogged(by);
   }
 
   // Ends the log of the game, which has come to an end in this way. A game that finished by itself
@@ -1255,10 +1303,13 @@ export class Room {
   // - How it ended, and for a game that finished who won and how (GameModule.outcome), how long it
   //   took, and how it began (GameModule.setup).
   // - Its log, with the number of each guest who played in it and, in a match, everyone's number in
-  //   the match (matchNumbers), and the AI's own log, if an AI played.
+  //   the match (matchNumbers), and the AI's own log, if an AI played in it, as an AI player or for
+  //   someone who was offline: what the AI was asked when it came to no move, as an answer that
+  //   came once the person was back, is not kept.
   // - Which of those who played in it had which account, by the player ID they had, those who left
-  //   during the game included; a player who left and came back has had two. Guests have no
-  //   account, and are not in it.
+  //   during the game included; a player who left and came back has had two, and a guest who
+  //   logged in during the game has the account under the IDs they had as a guest too (adopt).
+  //   Guests have no account, and are not in it.
   // - How many played in it, by member key, with an account, as guests and as AI players, and
   //   whether an AI played for someone who was offline.
   // - Whether it was a game of a match, its language, its fields, and the version of its rules.
@@ -1278,7 +1329,8 @@ export class Room {
       const kind = kinds.get(key);
       if (kind) counts[kind] += 1;
     }
-    const agentLog = this.#agentLog && !this.#agentLog.empty ? this.#agentLog.data() : null;
+    const played = counts.agents > 0 || this.#tookOverFor.size > 0;
+    const agentLog = played && this.#agentLog && !this.#agentLog.empty ? this.#agentLog.data() : null;
     const guests = this.#guestsOf(keys);
     const match = this.#matchNumbers();
     return {
@@ -1363,14 +1415,26 @@ export class Room {
   // `end`, or after those handed over last time, with which player ID was which account, also for
   // someone who came back after the end under a new ID. The socket layer adds them to the record as
   // the room leaves the game behind: when the chair plays again or starts the next match, and when
-  // the room closes. Each entry is handed over once. Null when there is nothing new.
-  review(): { gameId: string; entries: GameLogEntry[]; accounts: { playerId: string; accountId: number }[] } | null {
+  // the room closes. Each entry is handed over once, with, in a match, everyone's number in the
+  // match as it stands then (matchNumbers), which numbers whoever came back after the end under a
+  // new ID. Null when there is nothing new.
+  review(): {
+    gameId: string;
+    entries: GameLogEntry[];
+    accounts: { playerId: string; accountId: number }[];
+    match: MatchNumbers | null;
+  } | null {
     const log = this.#log;
     if (this.#reviewed === null || !log) return null;
     const entries = log.since(this.#reviewed);
     this.#reviewed = log.size;
     if (entries.length === 0) return null;
-    return { gameId: log.gameId, entries, accounts: this.#accountsOf(this.#participants()) };
+    return {
+      gameId: log.gameId,
+      entries,
+      accounts: this.#accountsOf(this.#participants()),
+      match: this.#matchNumbers(),
+    };
   }
 
   // What the AI players did in the game, if it finished: each that was in a seat at the end, and

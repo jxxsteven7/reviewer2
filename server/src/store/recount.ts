@@ -1,6 +1,6 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import type { Language, MatchTitle } from '@reviewer2/shared';
-import type { GameModule, GameTitle } from '../core/game';
+import type { GameModule, GameTitle, Recount } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { rankings, titlesFor } from '../core/match';
 
@@ -49,17 +49,23 @@ export interface CountedGame {
 }
 
 // A match that ran its course, added up from its games: each account's place, total and title.
+export interface Standing {
+  rank: number;
+  total: number;
+  title: MatchTitle | null;
+}
+
 export interface CountedMatch {
   id: string;
   game: string;
   games: number;
   players: number;
-  standings: Map<number, { rank: number; total: number; title: MatchTitle | null }>;
+  standings: Map<number, Standing>;
 }
 
 // Why a kept game that finished can't be counted from its record: its log doesn't tell how it came
-// out, or, in a match, numbers nobody who scored; with the match it was scored in, if any, whose
-// records can't be counted either then.
+// out, or can't be played through at all, or, in a match, numbers somebody who scored with no number
+// at all; with the match it was scored in, if any, whose records can't be counted either then.
 export type Uncounted = { gameId: string; matchId: string | null; reason: 'log' | 'numbers' };
 
 interface GameRow {
@@ -105,21 +111,36 @@ export function countGames(db: DatabaseSync, module: GameModule): { counted: Cou
   return { counted, uncounted };
 }
 
-// Counts one kept game that finished, with the accounts of its player IDs (`who`). Who each player
-// ID was, for the game: an account by its ID, a guest by their number, an AI player by its persona,
-// and anyone else, as an account deleted since, by the ID alone.
-function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, number>): CountedGame | Uncounted {
-  const log = JSON.parse(row.log) as GameLogData;
-  const keyOf = (playerId: string): string => {
+// Who each player ID was in a kept game, for its count (KeptCount.keyOf), from the accounts of its
+// player IDs (`who`, as game_players has them) and its log: an account by its ID, whichever IDs it
+// had in the game, a guest by their number, an AI player by its persona, and anyone else, as an
+// account deleted since, by their number in the match, so that the IDs they had in a game of a
+// match are one player still, or else by the ID alone.
+export const keyFor =
+  (who: ReadonlyMap<string, number>, log: GameLogData) =>
+  (playerId: string): string => {
     const account = who.get(playerId);
     if (account !== undefined) return `account:${account}`;
     const guest = log.guests?.[playerId];
     if (guest !== undefined) return `guest:${guest}`;
     const agent = log.agents?.[playerId];
-    return agent === undefined ? playerId : `agent:${agent}`;
+    if (agent !== undefined) return `agent:${agent}`;
+    const number = log.match?.numbers[playerId];
+    return number === undefined ? playerId : `number:${number}`;
   };
+
+// Counts one kept game that finished, with the accounts of its player IDs (`who`). A game that the
+// module can't play through, as one whose record is broken, counts as one whose log doesn't tell.
+function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, number>): CountedGame | Uncounted {
+  const log = JSON.parse(row.log) as GameLogData;
+  const keyOf = keyFor(who, log);
   const setup = row.setup === null ? null : (JSON.parse(row.setup) as unknown);
-  const count = (module.recount as NonNullable<GameModule['recount']>)({ setup, log, language: row.language, keyOf });
+  let count: Recount | null;
+  try {
+    count = (module.recount as NonNullable<GameModule['recount']>)({ setup, log, language: row.language, keyOf });
+  } catch {
+    count = null;
+  }
   if (count === null) return { gameId: row.gameId, matchId: row.matchId, reason: 'log' };
   // A game that an AI played in brings nobody points or titles (docs/architecture.md#ai-players).
   const agents = row.agents > 0 || row.takeover === 1;
@@ -223,7 +244,7 @@ export function countMatches(games: readonly CountedGame[]): Map<string, Counted
       .map(([key, total]) => ({ key: String(key), total }));
     const ranks = rankings(ranked);
     const titles = titlesFor(ranked);
-    const standings = new Map<number, { rank: number; total: number; title: MatchTitle | null }>();
+    const standings = new Map<number, Standing>();
     for (const [account, number] of accounts) {
       const rank = ranks.get(String(number));
       if (rank === undefined) continue;
@@ -271,9 +292,109 @@ export interface RecountReport {
 const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>): boolean =>
   a.size === b.size && [...a].every((item) => b.has(item));
 
-// The titles of a game or a match, as a set that two counts of them are compared by.
-const titleSet = (titles: Iterable<{ account: number; title: string; turn: number | null }>): Set<string> =>
-  new Set([...titles].map(({ account, title, turn }) => `${account}:${title}:${turn ?? ''}`));
+// A record of a game held against the count of the game: whether it is of an account the count
+// seats at the end (`count`, or null), and where it has one, whether it disagrees with the count on
+// a fact, the side, the role and whether they won (`fact`), on what the count gives, the points and
+// the verdict (`counted`), or on the titles that the game brought the account (`titles`).
+export interface HeldRecord {
+  id: number;
+  account: number;
+  count: CountedRecord | null;
+  fact: boolean;
+  counted: boolean;
+  titles: boolean;
+}
+
+// A record of a match held against what its games add up to: whether it is of an account they
+// rank (`standing`, or null), and where it has one, whether it disagrees with it on the games, the
+// place, the players ranked or the total (`counted`), or on the title (`title`).
+export interface HeldMatchRecord {
+  id: number;
+  account: number;
+  standing: Standing | null;
+  counted: boolean;
+  title: boolean;
+}
+
+// Holds the records of games and matches, as the database has them, against what the games count
+// again (countGames, countMatches), one rule for the recount (recountRecords), which sets them
+// right by it, and for the check of the data (check.ts), which reports what differs.
+export class HeldRecords {
+  readonly #records: StatementSync;
+  readonly #titles: StatementSync;
+  readonly #matchRecords: StatementSync;
+
+  constructor(db: DatabaseSync) {
+    this.#records = db.prepare(
+      'SELECT id, account_id AS account, side, role, won, verdict, points FROM game_records WHERE game_id = ?',
+    );
+    this.#titles = db.prepare('SELECT account_id AS account, title, turn FROM titles WHERE game_id = ?');
+    this.#matchRecords = db.prepare(
+      'SELECT m.id, m.account_id AS account, m.games, m.rank, m.players, m.score, t.title FROM match_records AS m ' +
+        'LEFT JOIN titles AS t ON t.account_id = m.account_id AND t.match_id = m.match_id WHERE m.match_id = ?',
+    );
+  }
+
+  // The records of a counted game, each held against the count.
+  game(game: CountedGame): HeldRecord[] {
+    type Row = {
+      id: number;
+      account: number;
+      side: string;
+      role: string;
+      won: number;
+      verdict: string;
+      points: number;
+    };
+    type Stored = { account: number; title: string; turn: number };
+    const stored = this.#titles.all(game.gameId) as Stored[];
+    const titleSet = (titles: readonly { title: string; turn: number | null }[]) =>
+      new Set(titles.map(({ title, turn }) => `${title}:${turn ?? ''}`));
+    return (this.#records.all(game.gameId) as Row[]).map((row) => {
+      const count = game.records.get(row.account) ?? null;
+      return {
+        id: row.id,
+        account: row.account,
+        count,
+        fact: count !== null && (count.side !== row.side || count.role !== row.role || count.won !== (row.won === 1)),
+        counted: count !== null && (count.points !== row.points || count.verdict !== row.verdict),
+        titles:
+          count !== null &&
+          !sameSet(titleSet(stored.filter(({ account }) => account === row.account)), titleSet(count.titles)),
+      };
+    });
+  }
+
+  // The records of a match, each held against what its games add up to, or against nothing, for a
+  // match whose games don't add up (`counted` null): each is then of nobody they rank.
+  match(matchId: string, counted: CountedMatch | null): HeldMatchRecord[] {
+    type Row = {
+      id: number;
+      account: number;
+      games: number;
+      rank: number;
+      players: number;
+      score: number;
+      title: string | null;
+    };
+    return (this.#matchRecords.all(matchId) as Row[]).map((row) => {
+      const standing = counted?.standings.get(row.account) ?? null;
+      return {
+        id: row.id,
+        account: row.account,
+        standing,
+        counted:
+          standing !== null &&
+          counted !== null &&
+          (row.games !== counted.games ||
+            row.rank !== standing.rank ||
+            row.players !== counted.players ||
+            row.score !== standing.total),
+        title: standing !== null && row.title !== standing.title,
+      };
+    });
+  }
+}
 
 // Counts the records of every kept game of these games again, under the rules of today, in one
 // transaction: each record gets the points and the verdict that the log counts, and the titles that
@@ -288,6 +409,13 @@ export function recountRecords(db: DatabaseSync, games: readonly GameModule[]): 
   const report: RecountReport = { games: 0, records: 0, titles: 0, matches: 0 };
   db.exec('BEGIN IMMEDIATE');
   try {
+    const held = new HeldRecords(db);
+    const update = db.prepare('UPDATE game_records SET points = ?, verdict = ? WHERE id = ?');
+    const dropTitles = db.prepare('DELETE FROM titles WHERE game_id = ?');
+    const addTitle = db.prepare('INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (?, ?, ?, ?, ?)');
+    const updateMatch = db.prepare('UPDATE match_records SET games = ?, rank = ?, players = ?, score = ? WHERE id = ?');
+    const dropMatchTitles = db.prepare('DELETE FROM titles WHERE match_id = ?');
+    const addMatchTitle = db.prepare('INSERT INTO titles (account_id, game, title, match_id) VALUES (?, ?, ?, ?)');
     for (const module of games) {
       const version = module.rulesVersion;
       if (version === undefined) continue;
@@ -298,74 +426,42 @@ export function recountRecords(db: DatabaseSync, games: readonly GameModule[]): 
           `the record of game ${gameId} cannot be counted again: ${reason === 'log' ? 'its log does not tell how it came out' : 'its log does not number everyone who scored in its match'}`,
         );
       }
-      const records = db.prepare(
-        'SELECT id, account_id AS accountId, side, role, won, verdict, points FROM game_records WHERE game_id = ?',
-      );
-      const update = db.prepare('UPDATE game_records SET points = ?, verdict = ? WHERE id = ?');
-      const gameTitles = db.prepare('SELECT account_id AS account, title, turn FROM titles WHERE game_id = ?');
-      const dropTitles = db.prepare('DELETE FROM titles WHERE game_id = ?');
-      const addTitle = db.prepare('INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (?, ?, ?, ?, ?)');
-      type Stored = { account: number; title: string; turn: number | null };
       for (const game of counted) {
-        type Row = {
-          id: number;
-          accountId: number;
-          side: string;
-          role: string;
-          won: number;
-          verdict: string;
-          points: number;
-        };
-        const expected: Stored[] = [];
-        for (const row of records.all(game.gameId) as Row[]) {
-          const count = game.records.get(row.accountId);
-          if (!count) throw new Error(`record ${row.id} of game ${game.gameId} is of nobody the log seats at its end`);
-          if (count.side !== row.side || count.role !== row.role || count.won !== (row.won === 1)) {
-            throw new Error(
-              `record ${row.id} of game ${game.gameId} disagrees with the log on who played where and won`,
-            );
-          }
-          if (count.points !== row.points || count.verdict !== row.verdict) {
-            update.run(count.points, count.verdict, row.id);
+        const records = held.game(game);
+        for (const { id, count, fact, counted: differs } of records) {
+          if (!count) throw new Error(`record ${id} of game ${game.gameId} is of nobody the log seats at its end`);
+          if (fact)
+            throw new Error(`record ${id} of game ${game.gameId} disagrees with the log on who played where and won`);
+          if (differs) {
+            update.run(count.points, count.verdict, id);
             report.records += 1;
           }
-          for (const { title, turn } of count.titles) expected.push({ account: row.accountId, title, turn });
         }
-        if (!sameSet(titleSet(gameTitles.all(game.gameId) as Stored[]), titleSet(expected))) {
+        if (records.some(({ titles }) => titles)) {
           dropTitles.run(game.gameId);
-          for (const { account, title, turn } of expected) addTitle.run(account, game.game, title, game.gameId, turn);
+          for (const { account, count } of records) {
+            for (const { title, turn } of count?.titles ?? [])
+              addTitle.run(account, game.game, title, game.gameId, turn);
+          }
           report.titles += 1;
         }
         report.games += 1;
       }
-      const matchRecords = db.prepare(
-        'SELECT id, account_id AS accountId, games, rank, players, score FROM match_records WHERE match_id = ?',
-      );
-      const updateMatch = db.prepare(
-        'UPDATE match_records SET games = ?, rank = ?, players = ?, score = ? WHERE id = ?',
-      );
-      const matchTitles = db.prepare(
-        'SELECT account_id AS account, title, NULL AS turn FROM titles WHERE match_id = ?',
-      );
-      const dropMatchTitles = db.prepare('DELETE FROM titles WHERE match_id = ?');
-      const addMatchTitle = db.prepare('INSERT INTO titles (account_id, game, title, match_id) VALUES (?, ?, ?, ?)');
       for (const match of countMatches(counted).values()) {
-        type Row = { id: number; accountId: number; games: number; rank: number; players: number; score: number };
+        const records = held.match(match.id, match);
         let changed = false;
-        const expected: Stored[] = [];
-        for (const row of matchRecords.all(match.id) as Row[]) {
-          const standing = match.standings.get(row.accountId);
-          if (!standing) throw new Error(`record ${row.id} of match ${match.id} is of nobody its games rank`);
-          const { rank, total, title } = standing;
-          if (row.games !== match.games || row.rank !== rank || row.players !== match.players || row.score !== total) {
-            updateMatch.run(match.games, rank, match.players, total, row.id);
+        for (const { id, standing, counted: differs } of records) {
+          if (!standing) throw new Error(`record ${id} of match ${match.id} is of nobody its games rank`);
+          if (differs) {
+            updateMatch.run(match.games, standing.rank, match.players, standing.total, id);
             changed = true;
           }
-          if (title !== null) expected.push({ account: row.accountId, title, turn: null });
         }
-        if (!sameSet(titleSet(matchTitles.all(match.id) as Stored[]), titleSet(expected))) {
+        if (records.some(({ title }) => title)) {
           dropMatchTitles.run(match.id);
-          for (const { account, title } of expected) addMatchTitle.run(account, match.game, title, match.id);
+          for (const { account, standing } of records) {
+            if (standing?.title) addMatchTitle.run(account, match.game, standing.title, match.id);
+          }
           changed = true;
         }
         if (changed) report.matches += 1;

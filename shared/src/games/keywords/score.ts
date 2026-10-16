@@ -1,5 +1,4 @@
-import type { Played } from './titles';
-import { openingRecord } from './titles';
+import { openingRecord, type Played } from './titles';
 import type { CardColor, ClueRecord, Team } from './types';
 
 // How a game of a match is scored, for each player (docs/games/keywords.md#matches). The server
@@ -33,10 +32,9 @@ export const POINTS = {
   missed: -5,
 } as const;
 
-// A clue makes a big clue once the students find this many of the group's cards with it.
+// A clue makes a big clue once the students find this many of the group's cards with it. The least
+// number of the first clue that can make the opening record is OPENING_RECORD (titles.ts).
 export const BIG_CLUE = 4;
-// The least number of the first clue that can make the opening record.
-export const OPENING_RECORD = 4;
 
 // The cards found with one clue that count for a big clue: those from the fourth on.
 export const bigClueCards = (found: number): number => Math.max(0, found - BIG_CLUE + 1);
@@ -112,18 +110,26 @@ export function revealPoints(color: CardColor, by: Team, team: Team, role: 'capt
   return prices.wrong;
 }
 
-// The bonus that the card revealed last brings a player who plays for the group `by`, whose
-// students revealed it, in `role`, as the game stood before the card and as it stands after: for
-// the PI, a point of the big clue with each of the group's cards that the clue finds from the
-// fourth on; for a student, the point of the opening record with the card that makes it. A card
-// that the other group reveals brings nothing.
-export function revealBonus(before: Played, after: Played, by: Team, team: Team, role: 'captain' | 'guesser'): number {
+// The bonus that the card revealed last brings the player `player`, who plays for the group `by`,
+// whose students revealed it, in `role`, as the game stood before the card and as it stands after:
+// for the PI who gave the clue, a point of the big clue with each of the group's cards that the
+// clue finds from the fourth on, and nothing for another PI of the group, as one who took the seat
+// over; for a student, the point of the opening record with the card that makes it. A card that
+// the other group reveals brings nothing.
+export function revealBonus(
+  before: Played,
+  after: Played,
+  by: Team,
+  team: Team,
+  role: 'captain' | 'guesser',
+  player: string,
+): number {
   if (by !== team) return 0;
   const record = after.history.at(-1) as ClueRecord | undefined;
   if (record === undefined || record.team !== by || record.guesses.at(-1)?.color !== by) return 0;
   if (role === 'captain') {
     const found = record.guesses.filter((guess) => guess.color === by).length;
-    return found >= BIG_CLUE ? POINTS.bigClue : 0;
+    return record.captain === player && found >= BIG_CLUE ? POINTS.bigClue : 0;
   }
   return openingRecord(after, by) && !openingRecord(before, by) ? POINTS.guesser.openingRecord : 0;
 }

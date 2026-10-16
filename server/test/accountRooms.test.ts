@@ -528,4 +528,27 @@ describe('the last room setup', () => {
     ]);
     expect((await ann.account())?.roomSetup).toMatchObject({ test: { room: { fields: ['general', 'tiny'] } } });
   });
+
+  test("is kept by game, each within its own size, whatever the other games' take", async () => {
+    server = await startServer();
+    const ann = await loggedIn('Ann');
+    const account = server.accounts.byName('Ann');
+    if (!account) throw new Error('no account');
+    // Another game's setup, as large as one may be: this game's is kept beside it all the same.
+    const other = {
+      chess: {
+        room: {
+          language: 'en',
+          fields: ['x'.repeat(4000)],
+          randomFields: false,
+          match: null,
+          public: false,
+          play: true,
+        },
+      },
+    };
+    server.accounts.store.setRoomSetup(account.id, JSON.stringify(other));
+    await roomOf(ann, { play: true });
+    expect((await ann.account())?.roomSetup).toMatchObject({ ...other, test: { room: { fields: ['general'] } } });
+  });
 });

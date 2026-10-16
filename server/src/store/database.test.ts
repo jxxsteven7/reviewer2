@@ -13,6 +13,7 @@ import {
   truncateWal,
   type Database,
 } from './database';
+import type { GameLogData } from '../core/gameLog';
 import { MIGRATIONS } from './migrations';
 import { AccountStore } from './accounts';
 import { streaksOf } from './records';
@@ -1517,7 +1518,7 @@ describe('a database in DATA_DIR', () => {
       'match_games_whose_players_cannot_be_numbered',
     ],
     [
-      'an account on the record of a match did not play in one of its games',
+      'an account on the record of a match played in none of its games',
       "DELETE FROM game_players WHERE game_id = 'g1' AND player_id = 'p2'",
       'match_games_whose_players_cannot_be_numbered',
     ],
@@ -1530,6 +1531,19 @@ describe('a database in DATA_DIR', () => {
       after.prepare("SELECT count(*) AS n FROM pragma_table_info('match_records') WHERE name = 'title'").get(),
     ).toEqual({ n: 1 });
     after.close();
+  });
+
+  test('of the twenty-third release numbers everyone who played in a game of a match, also one who left before its end', async () => {
+    // Dan sat in the game of the match and left before the end: the match scored him, and he has
+    // no record of the game.
+    await twentyThird(`
+      INSERT INTO accounts (id, handle, username, username_key, password, consent_version, consented_at, created_at) VALUES
+        (4, 'dddddddddddd', 'Dan', 'dan', 'h', 1, 'now', '2026-10-04T00:00:00.000Z');
+      INSERT INTO game_players (game_id, player_id, account_id) VALUES ('g1', 'p4', 4);
+    `);
+    const { db } = await open(dir, MIGRATIONS.slice(0, 24));
+    const row = db.prepare("SELECT log FROM replays WHERE game_id = 'g1'").get() as { log: string };
+    expect((JSON.parse(row.log) as GameLogData).match).toEqual({ numbers: { p1: 1, p2: 2, p4: 3 } });
   });
 
   test('of the twenty-third release lets go of the records that have no record of the game, and the matches left with no game', async () => {

@@ -126,6 +126,8 @@ describe('the titles of a game', () => {
       cat: [{ title: 'instant_reject', turn: 1 }],
       dee: [{ title: 'instant_reject', turn: 1 }],
     });
+    // A game that the chair withdrew after it counts for no record, and so for no title.
+    expect(results(played(first, { winner: null, reason: 'withdrawn' }))).toBeNull();
   });
 
   test('give everyone in a group the fall at the first hurdle for Reviewer 2 later in the turn of its first clue, and never both', () => {

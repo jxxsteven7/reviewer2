@@ -20,7 +20,7 @@ import type { AgentLogData } from '../core/agentLog';
 import type { GameModule } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { DEFAULT_FEEDBACK_LIMITS } from './feedback';
-import { countedUnder, countGames, countMatches } from './recount';
+import { countedUnder, countGames, countMatches, HeldRecords } from './recount';
 import { DEFAULT_SESSION_LIMITS } from './sessions';
 import { SNAPSHOT_MS } from './snapshots';
 
@@ -120,7 +120,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   each(
     'accounts whose last room setup is not in its shape',
     'SELECT id, room_setup AS setup FROM accounts WHERE room_setup IS NOT NULL',
-    ({ setup }) => String(setup).length > MAX_ROOM_SETUP || !isRoomSetup(parse(setup), known),
+    ({ setup }) => !isRoomSetup(parse(setup), known),
   );
   sql(
     'accounts that agreed to no version of the records notice there is',
@@ -264,55 +264,19 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   const wrongTitles: number[] = [];
   const misranked: number[] = [];
   const wrongMatchTitles: number[] = [];
-  const records = db.prepare(
-    'SELECT id, account_id AS account, side, role, won, verdict, points FROM game_records WHERE game_id = ?',
-  );
-  const gameTitles = db.prepare('SELECT account_id AS account, title, turn FROM titles WHERE game_id = ?');
-  const matchRecords = db.prepare(
-    'SELECT m.id, m.account_id AS account, m.games, m.rank, m.players, m.score, t.title FROM match_records AS m ' +
-      'LEFT JOIN titles AS t ON t.account_id = m.account_id AND t.match_id = m.match_id WHERE m.match_id = ?',
-  );
+  const held = new HeldRecords(db);
   for (const module of games) {
     if (module.recount === undefined) continue;
     const counted = countGames(db, module);
-    const games = counted.counted.length + counted.uncounted.length;
-    if (games > 0 && module.rulesVersion !== undefined && countedUnder(db, module.id) !== module.rulesVersion) {
+    const gameCount = counted.counted.length + counted.uncounted.length;
+    if (gameCount > 0 && module.rulesVersion !== undefined && countedUnder(db, module.id) !== module.rulesVersion) {
       otherRules.push(module.id);
     }
     uncounted.push(...counted.uncounted.map(({ gameId }) => gameId));
     for (const game of counted.counted) {
-      type Record = {
-        id: number;
-        account: number;
-        side: string;
-        role: string;
-        won: number;
-        verdict: string;
-        points: number;
-      };
-      const rows = records.all(game.gameId) as Record[];
-      for (const row of rows) {
-        const count = game.records.get(row.account);
-        if (
-          !count ||
-          count.side !== row.side ||
-          count.role !== row.role ||
-          count.won !== (row.won === 1) ||
-          count.verdict !== row.verdict ||
-          count.points !== row.points
-        ) {
-          miscounted.push(row.id);
-        }
-      }
-      const titles = gameTitles.all(game.gameId) as { account: number; title: string; turn: number }[];
-      for (const row of rows) {
-        const expected = new Set(
-          (game.records.get(row.account)?.titles ?? []).map(({ title, turn }) => `${title}:${turn}`),
-        );
-        const stored = new Set(
-          titles.filter(({ account }) => account === row.account).map(({ title, turn }) => `${title}:${turn}`),
-        );
-        if (!sameSet(expected, stored)) wrongTitles.push(row.id);
+      for (const { id, count, fact, counted: differs, titles } of held.game(game)) {
+        if (!count || fact || differs) miscounted.push(id);
+        if (titles) wrongTitles.push(id);
       }
     }
     // The records of a match whose games are all kept and counted, against what they add up to; a
@@ -332,31 +296,10 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
       ),
     );
     for (const matchId of matchIds) {
-      type Record = {
-        id: number;
-        account: number;
-        games: number;
-        rank: number;
-        players: number;
-        score: number;
-        title: string | null;
-      };
       if (!kept.has(matchId) || uncountable.has(matchId)) continue;
-      const match = matches.get(matchId);
-      for (const row of matchRecords.all(matchId) as Record[]) {
-        const standing = match?.standings.get(row.account);
-        if (
-          !match ||
-          !standing ||
-          row.games !== match.games ||
-          row.rank !== standing.rank ||
-          row.players !== match.players ||
-          row.score !== standing.total
-        ) {
-          misranked.push(row.id);
-        } else if (row.title !== standing.title) {
-          wrongMatchTitles.push(row.id);
-        }
+      for (const { id, standing, counted: differs, title } of held.match(matchId, matches.get(matchId) ?? null)) {
+        if (!standing || differs) misranked.push(id);
+        else if (title) wrongMatchTitles.push(id);
       }
     }
   }
@@ -491,9 +434,6 @@ function parse(text: unknown): unknown {
 
 const isObject = (value: unknown): value is Row => value !== null && typeof value === 'object' && !Array.isArray(value);
 
-const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>): boolean =>
-  a.size === b.size && [...a].every((item) => b.has(item));
-
 const isStrings = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');
 
@@ -540,13 +480,13 @@ function isAgentLog(data: unknown, gameId: string): data is AgentLogData {
 }
 
 // Whether a value is how an account last set up its rooms (RoomSetup in shared/src/accounts.ts): by
-// game, each with a room, a practice room or both, in their shapes, the game's settings and the
-// practice room's role as the game judges them.
+// game, each with a room, a practice room or both, in their shapes and no larger than a game's
+// setup may be, the game's settings and the practice room's role as the game judges them.
 function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): boolean {
   if (!isObject(value)) return false;
   return Object.entries(value).every(([id, setup]) => {
     const game = games.get(id);
-    if (game === undefined || !isObject(setup)) return false;
+    if (game === undefined || !isObject(setup) || JSON.stringify(setup).length > MAX_ROOM_SETUP) return false;
     const keys = Object.keys(setup);
     if (keys.length === 0 || !keys.every((key) => key === 'room' || key === 'practice')) return false;
     const { room, practice } = setup;
